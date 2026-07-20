@@ -528,7 +528,7 @@ const openProject = (project: CaptureProject) => {
 <style scoped>
 .hud-wrapper {
   width: 100%;
-  background: var(--color-bg-card); /* Solid opaque background to avoid transparency rendering issues */
+  background: var(--color-bg-surface); /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);

@@ -132,7 +132,7 @@ const labelStyle = computed(() => {
   min-width: 80px;
   height: 2.75rem;
   padding: 0.4rem 0.8rem;
-  background-color: var(--color-bg-card);
+  background-color: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);

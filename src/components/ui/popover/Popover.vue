@@ -91,7 +91,7 @@ defineExpose({
 
 .popover-content {
   position: absolute;
-  background-color: var(--color-bg-card);
+  background-color: var(--color-bg-element);
   color: var(--text-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
