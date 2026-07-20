@@ -27,6 +27,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:isPlaying', value: boolean): void
   (e: 'update:currentTime', value: number): void
+  (e: 'duration-change', value: number): void
 }>()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -79,10 +80,28 @@ let cursorImgElement: HTMLImageElement | null = null
 // Setup offscreen Video Element
 const videoEl = document.createElement('video')
 videoEl.muted = true
-videoEl.loop = true
+videoEl.preload = 'auto'
 videoEl.playsInline = true
 
+const videoError = ref<string | null>(null)
+
+const handleVideoMetadata = () => {
+  if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
+    emit('duration-change', Math.ceil(videoEl.duration))
+  }
+}
+
+const handleVideoError = () => {
+  videoError.value = 'Unable to load this video file.'
+}
+
+videoEl.addEventListener('loadedmetadata', handleVideoMetadata)
+videoEl.addEventListener('error', handleVideoError)
+
 const loadVideo = () => {
+  videoError.value = null
+  videoEl.pause()
+  videoEl.currentTime = 0
   videoEl.src = props.videoSrc
   videoEl.load()
 }
@@ -166,7 +185,10 @@ const draw = () => {
     ctx.fill()
     ctx.clip()
     
-    if (videoEl.readyState >= 2) {
+    if (videoError.value) {
+      ctx.fillStyle = '#ef4444'
+      ctx.fillText(videoError.value, canvas.width / 2, canvas.height / 2)
+    } else if (videoEl.readyState >= 2) {
       ctx.drawImage(videoEl, dx, dy, dw, dh)
     } else {
       ctx.fillStyle = '#334155'
@@ -268,6 +290,8 @@ onUnmounted(() => {
     cancelAnimationFrame(animationFrameId)
   }
   videoEl.pause()
+  videoEl.removeEventListener('loadedmetadata', handleVideoMetadata)
+  videoEl.removeEventListener('error', handleVideoError)
   videoEl.src = ''
   videoEl.load()
 })

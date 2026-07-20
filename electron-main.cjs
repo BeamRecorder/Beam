@@ -3,6 +3,7 @@ const { spawn } = require('child_process')
 const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
+const { pathToFileURL } = require('url')
 const readline = require('readline')
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs')
 
@@ -160,12 +161,14 @@ ipcMain.handle(CAPTURE_CHANNEL, async (_event, command, payload) => {
   }
   if (command === 'stop') {
     const session = await captureEngine.request('stop')
-    if (session && session.sessionId) {
-      const videosPath = app.getPath('videos')
-      const videoFile = path.join(videosPath, 'DemoRecorder', session.sessionId, 'screen', 'segment-0001.mp4')
-      if (fs.existsSync(videoFile)) {
-        session.videoSrc = `file:///${videoFile.replace(/\\/g, '/')}`
-      }
+    if (session && session.manifestPath) {
+      const sessionDirectory = path.dirname(session.manifestPath)
+      const video = fs.existsSync(path.join(sessionDirectory, 'screen'))
+        ? fs.readdirSync(path.join(sessionDirectory, 'screen'))
+            .filter((filename) => /\.mp4$/i.test(filename))
+            .sort()[0]
+        : null
+      if (video) session.videoSrc = pathToFileURL(path.join(sessionDirectory, 'screen', video)).href
     }
     return session
   }
@@ -186,6 +189,60 @@ ipcMain.handle('window:getSources', async (_event, types) => {
     appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
   }))
 })
+
+function safeProjectPath(projectDirectory, relativePath) {
+  if (typeof relativePath !== 'string' || !relativePath) return null
+  const root = path.resolve(projectDirectory)
+  const candidate = path.resolve(root, relativePath)
+  return candidate === root || candidate.startsWith(`${root}${path.sep}`) ? candidate : null
+}
+
+function findProjectPreview(projectDirectory, sessions) {
+  for (const session of [...sessions].reverse()) {
+    const sessionDirectory = safeProjectPath(projectDirectory, session.relativePath)
+    if (!sessionDirectory || !fs.existsSync(sessionDirectory)) continue
+    const screenDirectory = path.join(sessionDirectory, 'screen')
+    if (!fs.existsSync(screenDirectory)) continue
+    const video = fs.readdirSync(screenDirectory)
+      .filter((filename) => /\.mp4$/i.test(filename))
+      .sort()[0]
+    if (video) return pathToFileURL(path.join(screenDirectory, video)).href
+  }
+  return null
+}
+
+function listProjects() {
+  const outputRoot = path.join(app.getPath('videos'), 'DemoRecorder')
+  if (!fs.existsSync(outputRoot)) return []
+
+  return fs.readdirSync(outputRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith('project-'))
+    .map((entry) => {
+      const projectDirectory = path.join(outputRoot, entry.name)
+      const manifestPath = path.join(projectDirectory, 'project.json')
+      try {
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+        const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
+        const id = typeof manifest.projectId === 'string' ? manifest.projectId : entry.name.slice('project-'.length)
+        return {
+          id,
+          name: typeof manifest.name === 'string' && manifest.name.trim()
+            ? manifest.name
+            : `Project ${id.slice(0, 8)}`,
+          createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '',
+          updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '',
+          sessionCount: sessions.length,
+          previewSrc: findProjectPreview(projectDirectory, sessions),
+        }
+      } catch {
+        return null
+      }
+    })
+    .filter(Boolean)
+    .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)))
+}
+
+ipcMain.handle('projects:list', () => listProjects())
 
 ipcMain.on('window:close', (event) => {
   const webContents = event.sender

@@ -16,6 +16,16 @@ export interface CaptureSession {
   state: CaptureState
   sessionId?: string | null
   manifestPath?: string | null
+  videoSrc?: string | null
+}
+
+export interface CaptureProject {
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  sessionCount: number
+  previewSrc: string | null
 }
 
 export interface StartRecordingOptions {
@@ -105,6 +115,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   dragStart(): void
   drag(): void
   getSources(types?: string[]): Promise<any[]>
+  listProjects(): Promise<CaptureProject[]>
 }
 
 export interface CaptureSource {
@@ -155,7 +166,10 @@ const mockCapture: DesktopCaptureApi = {
   getSources: async () => [
     { id: 'screen:1', name: 'Desktop 1 (Mock)', thumbnail: '/wallpapers/sonoma-light.jpg' },
     { id: 'window:1', name: 'VS Code (Mock)', thumbnail: '/wallpapers/ventura.jpg' }
-  ]
+  ],
+  listProjects: async () => {
+    throw new Error('La liste des projets est disponible uniquement dans Electron.')
+  }
 }
 
 if (typeof window !== 'undefined' && !window.capture) {

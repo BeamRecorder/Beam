@@ -142,6 +142,7 @@ onMounted(() => {
           :is-video-enabled="isVideoEnabled"
           :selected-wallpaper="selectedWallpaper"
           :video-src="playerVideoSrc"
+          @duration-change="duration = $event"
         />
       </div>
 

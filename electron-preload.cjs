@@ -24,4 +24,5 @@ contextBridge.exposeInMainWorld('capture', Object.freeze({
   dragStart: () => ipcRenderer.send('window:dragStart'),
   drag: () => ipcRenderer.send('window:drag'),
   getSources: (types) => ipcRenderer.invoke('window:getSources', types),
+  listProjects: () => ipcRenderer.invoke('projects:list'),
 }))

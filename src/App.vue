@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import HUD from './components/hud/HUD.vue'
 import VideoEditor from './components/video-editor/VideoEditor.vue'
 
-import { capture } from './capture-api'
+import { capture, type CaptureProject } from './capture-api'
 
 const currentView = ref<'hud' | 'editor'>('hud')
 const currentVideoSrc = ref<string | null>(null)
@@ -28,6 +28,11 @@ const handleStopRecording = (session: any) => {
   }
   setView('editor')
 }
+
+const handleOpenProject = (project: CaptureProject) => {
+  currentVideoSrc.value = project.previewSrc
+  setView('editor')
+}
 </script>
 
 <template>
@@ -37,7 +42,7 @@ const handleStopRecording = (session: any) => {
       v-show="currentView === 'hud'" 
       @start-recording="handleStartRecording"
       @stop-recording="handleStopRecording"
-      @open-project="setView('editor')"
+      @open-project="handleOpenProject"
     />
 
     <VideoEditor 

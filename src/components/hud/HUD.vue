@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { capture } from '../../capture-api'
-import type { CaptureCatalog, CaptureSource } from '../../capture-api'
+import type { CaptureCatalog, CaptureProject, CaptureSource } from '../../capture-api'
 import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
 import Badge from '~/ui/badge/Badge.vue'
@@ -9,6 +9,7 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import WindowSelect from '~/ui/select/WindowSelect.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import Switch from '~/ui/switch/Switch.vue'
+import ProjectPicker from './ProjectPicker.vue'
 import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight, Sun, Moon } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 
@@ -25,6 +26,7 @@ const sources = ref<CaptureSource[]>([])
 
 // View State (Main vs Settings)
 const showSettings = ref(false)
+const showProjectPicker = ref(false)
 
 // Preference settings
 const recordHighQuality = ref(true)
@@ -54,6 +56,7 @@ const selectedMicId = ref('no-audio')
 // Timer / Duration simulation
 const recordingTime = ref('00:00')
 let timerInterval: ReturnType<typeof setInterval> | null = null
+let previewsRefreshInterval: ReturnType<typeof setInterval> | null = null
 const secondsElapsed = ref(0)
 
 const startTimer = () => {
@@ -99,7 +102,7 @@ let lastHeight = 360
 
 const updateWindowSize = () => {
   let targetHeight = 360
-  if (showSettings.value) {
+  if (showSettings.value || showProjectPicker.value) {
     targetHeight = 480
   } else {
     const isDropdownOpen = activeDropdowns.value > 0
@@ -136,7 +139,7 @@ const updateWindowSize = () => {
 }
 
 const hudHeight = computed(() => {
-  if (showSettings.value) {
+  if (showSettings.value || showProjectPicker.value) {
     return 480
   }
   return activeTab.value === 'window' ? 420 : 360
@@ -160,6 +163,10 @@ watch(activeTab, () => {
 
 // Watch settings view toggle to update window size
 watch(showSettings, () => {
+  updateWindowSize()
+})
+
+watch(showProjectPicker, () => {
   updateWindowSize()
 })
 
@@ -238,14 +245,17 @@ onMounted(async () => {
   await discoverSources()
   await loadPreviews()
   // Periodically refresh window previews when settings is not open and not recording
-  setInterval(() => {
+  previewsRefreshInterval = setInterval(() => {
     if (!showSettings.value && !isRecording.value && activeTab.value === 'window') {
       void loadPreviews()
     }
   }, 5000)
 })
 
-onBeforeUnmount(stopTimer)
+onBeforeUnmount(() => {
+  stopTimer()
+  if (previewsRefreshInterval) clearInterval(previewsRefreshInterval)
+})
 
 const closeApp = () => {
   capture.close()
@@ -254,6 +264,19 @@ const closeApp = () => {
 const minimizeApp = () => {
   capture.minimize()
 }
+
+const openProjectPicker = () => {
+  showSettings.value = false
+  showProjectPicker.value = true
+}
+
+const closeProjectPicker = () => {
+  showProjectPicker.value = false
+}
+
+const openProject = (project: CaptureProject) => {
+  emit('open-project', project)
+}
 </script>
 
 <template>
@@ -261,7 +284,15 @@ const minimizeApp = () => {
     <!-- Header -->
     <header class="hud-header">
       <div class="logo-section">
-        <template v-if="showSettings">
+        <template v-if="showProjectPicker">
+          <div style="-webkit-app-region: no-drag; display: inline-flex; align-items: center;">
+            <Button variant="ghost" size="sm" class="back-btn" @click="closeProjectPicker">
+              <template #icon><ChevronLeft class="btn-icon" /></template>
+            </Button>
+          </div>
+          <span class="logo-text">Open a project</span>
+        </template>
+        <template v-else-if="showSettings">
           <div style="-webkit-app-region: no-drag; display: inline-flex; align-items: center;">
             <Button variant="ghost" size="sm" class="back-btn" @click="showSettings = false">
               <template #icon><ChevronLeft class="btn-icon" /></template>
@@ -283,7 +314,7 @@ const minimizeApp = () => {
           <template #icon><Minus class="btn-icon" /></template>
         </Button>
         <Button 
-          v-if="!showSettings"
+          v-if="!showSettings && !showProjectPicker"
           variant="ghost" 
           size="sm" 
           @click="showSettings = true"
@@ -296,8 +327,17 @@ const minimizeApp = () => {
       </div>
     </header>
 
-    <!-- Settings Overlay View -->
-    <div v-if="showSettings" class="settings-body animate-fade-in">
+    <Transition name="hud-view" mode="out-in">
+      <!-- Project Picker View -->
+      <ProjectPicker
+        v-if="showProjectPicker"
+        key="project-picker"
+        @back="closeProjectPicker"
+        @open-project="openProject"
+      />
+
+      <!-- Settings Overlay View -->
+      <div v-else-if="showSettings" key="settings" class="settings-body">
       <div class="settings-list">
         <div class="settings-item">
           <div class="item-label-group">
@@ -370,10 +410,10 @@ const minimizeApp = () => {
           Return to HUD
         </Button>
       </div>
-    </div>
+      </div>
 
-    <!-- Main HUD Form -->
-    <div v-else class="hud-body">
+      <!-- Main HUD Form -->
+      <div v-else key="hud" class="hud-body">
       <!-- Tabs (Screen / Window) -->
       <ButtonGroup class="mode-tabs">
         <Button 
@@ -470,12 +510,18 @@ const minimizeApp = () => {
 
       <!-- Open existing project button (Subtle style) -->
       <div class="web-link-container">
-        <button type="button" class="web-link-text project-btn" @click="emit('open-project')">
-          <span>Open an existing project</span>
-          <ArrowUpRight class="web-link-icon" />
-        </button>
+        <Button
+          variant="link"
+          size="sm"
+          class="web-link-text project-btn"
+          :icon="ArrowUpRight"
+          @click="openProjectPicker"
+        >
+          Open an existing project
+        </Button>
       </div>
-    </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -581,6 +627,21 @@ const minimizeApp = () => {
   flex-direction: column;
   gap: 14px;
   overflow: visible; /* Prevent clipping of dropdown popovers */
+}
+
+.hud-view-enter-active,
+.hud-view-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-view-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.hud-view-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .settings-body {

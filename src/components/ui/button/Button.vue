@@ -5,13 +5,13 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import Tooltip from '../tooltip/Tooltip.vue'
 import { Loader } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab'
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card'
     size?: 'sm' | 'md' | 'lg'
     loading?: boolean
     disabled?: boolean
@@ -19,6 +19,8 @@ const props = withDefaults(
     tooltip?: string
     tooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
     type?: 'button' | 'submit' | 'reset'
+    icon?: Component
+    iconOnly?: boolean
   }>(),
   {
     variant: 'primary',
@@ -29,6 +31,7 @@ const props = withDefaults(
     tooltip: '',
     tooltipPosition: 'top',
     type: 'button',
+    iconOnly: false,
   }
 )
 
@@ -43,6 +46,7 @@ const buttonClasses = computed(() => {
     `btn-${props.size}`,
     { 'btn-loading': props.loading },
     { 'btn-block': props.block },
+    { 'btn-icon-only': props.iconOnly },
   ]
 })
 
@@ -70,6 +74,9 @@ const handleClick = (event: MouseEvent) => {
       @click="handleClick"
     >
       <Loader v-if="loading" class="icon-spin btn-icon" />
+      <span v-if="icon && !$slots.icon && !loading" class="btn-icon-wrapper">
+        <component :is="icon" class="btn-icon" />
+      </span>
       <span v-if="$slots.icon && !loading" class="btn-icon-wrapper">
         <slot name="icon" />
       </span>
@@ -188,6 +195,53 @@ const handleClick = (event: MouseEvent) => {
 }
 .btn-link:hover:not(:disabled) {
   color: var(--color-orange-hover);
+}
+
+.btn-card {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  text-align: left;
+  background: var(--color-bg-element);
+  border-color: var(--color-border);
+  color: var(--text-primary);
+}
+
+.btn-card:hover:not(:disabled) {
+  border-color: var(--color-orange-border);
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+
+.btn-card:focus-visible {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 2px;
+}
+
+.btn-card.is-selected {
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 2px var(--color-orange-light);
+}
+
+.btn-card .btn-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.btn-icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 /* Tab/Segmented Variant */
