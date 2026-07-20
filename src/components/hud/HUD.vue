@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { capture } from '../../capture-api'
-import type { CaptureCatalog, CaptureProject, CaptureSource } from '../../capture-api'
+import { capture } from '../../api/capture'
+import type { CaptureCatalog, CapturePreview, CaptureProject, CaptureSource } from '../../api/types/capture-api'
 import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
 import Badge from '~/ui/badge/Badge.vue'
@@ -33,7 +33,7 @@ const recordHighQuality = ref(true)
 const countdownSeconds = ref(3) // 0 for Off, 3, 5, 10
 
 // Previews
-const previews = ref<any[]>([])
+const previews = ref<CapturePreview[]>([])
 const selectedSourceId = ref<string | null>(null)
 
 // Sources lists (Camera / Microphone)
@@ -86,7 +86,7 @@ const loadPreviews = async () => {
     
     // Auto-select first source if none or invalid is selected
     if (results.length > 0) {
-      if (!selectedSourceId.value || !results.some((r: any) => r.id === selectedSourceId.value)) {
+      if (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value)) {
         selectedSourceId.value = results[0].id
       }
     } else {
@@ -225,7 +225,7 @@ const discoverSources = async () => {
   isBusy.value = true
   errorMessage.value = ''
   try {
-    const catalog = await capture.discover() as CaptureCatalog
+    const catalog: CaptureCatalog = await capture.discover()
     sources.value = Array.isArray(catalog.sources) ? catalog.sources : []
     const defaultCamera = sources.value.find((source) => source.kind === 'camera' && source.isDefault)
       ?? sources.value.find((source) => source.kind === 'camera')

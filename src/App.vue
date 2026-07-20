@@ -3,7 +3,8 @@ import { ref } from 'vue'
 import HUD from './components/hud/HUD.vue'
 import VideoEditor from './components/video-editor/VideoEditor.vue'
 
-import { capture, type CaptureProject, type ProjectEditorData } from './capture-api'
+import { capture } from './api/capture'
+import type { CaptureProject, ProjectEditorData } from './api/types/capture-api'
 
 const currentView = ref<'hud' | 'editor'>('hud')
 const currentVideoSrc = ref<string | null>(null)

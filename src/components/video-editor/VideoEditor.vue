@@ -24,8 +24,8 @@ const props = withDefaults(
   }
 )
 
-import { capture } from '../../capture-api'
-import type { CaptureProject, ProjectEditorData } from '../../capture-api'
+import { capture } from '../../api/capture'
+import type { CaptureProject, ProjectEditorData } from '../../api/types/capture-api'
 
 const emit = defineEmits<{
   (event: 'back-to-hud'): void

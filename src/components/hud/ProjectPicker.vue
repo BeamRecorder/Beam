@@ -5,7 +5,8 @@ import { ArrowLeft, Check, Film, FolderOpen, RefreshCw } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
-import { capture, type CaptureProject } from '../../capture-api'
+import { capture } from '../../api/capture'
+import type { CaptureProject } from '../../api/types/capture-api'
 
 let cachedProjects: CaptureProject[] | null = null
 

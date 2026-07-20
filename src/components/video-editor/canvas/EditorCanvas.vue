@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { Play, Pause } from '@lucide/vue'
-import type { ProjectEditorData } from '../../../capture-api'
+import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { CursorType } from '../composables/useCursorReplacer'
 import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../composables/cursorPlayback'
 

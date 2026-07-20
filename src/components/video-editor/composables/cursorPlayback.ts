@@ -4,7 +4,7 @@ import type {
   CursorMoveEvent,
   CursorShapeEvent,
   CursorShapeAsset,
-} from '../../../capture-api'
+} from '../../../api/types/capture-api'
 
 export interface CursorPlaybackState {
   x: number

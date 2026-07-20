@@ -7,7 +7,8 @@ import Dialog from '~/ui/dialog/Dialog.vue'
 import Divider from '~/ui/divider/Divider.vue'
 import ProjectPicker from '../hud/ProjectPicker.vue'
 import { Check, ChevronDown, Pencil, Plus, Trash2, X } from '@lucide/vue'
-import { capture, type CaptureProject } from '../../capture-api'
+import { capture } from '../../api/capture'
+import type { CaptureProject } from '../../api/types/capture-api'
 
 const props = withDefaults(
   defineProps<{
