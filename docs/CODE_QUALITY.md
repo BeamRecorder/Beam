@@ -10,6 +10,7 @@ The goal is maintainable, readable code with the smallest implementation that ma
 - Keep side effects at boundaries: IPC, filesystem, media, clocks, and native APIs.
 - Avoid speculative abstractions, duplicate logic, hidden mutable state, and clever one-liners that obscure behavior.
 - Use names that describe domain behavior. Comments should explain a constraint or decision, not restate the code.
+- NO compatibility layers, no fallbacks, no stubs, no placeholders.
 
 ## TypeScript rules
 
