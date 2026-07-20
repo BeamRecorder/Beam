@@ -102,7 +102,7 @@ const deleteProject = async () => {
 <template>
   <div class="project-switcher" @mousedown.stop>
     <div v-if="isRenameOpen" class="project-name-edit">
-      <Input v-model="renameValue" placeholder="Project name" :disabled="projectBusy" />
+      <Input v-model="renameValue" size="sm" width="170px" placeholder="Project name" :disabled="projectBusy" />
       <Button
         variant="primary"
         size="sm"
@@ -188,15 +188,6 @@ const deleteProject = async () => {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.project-name-edit :deep(.input-wrapper) {
-  width: 170px;
-  height: 32px;
-}
-
-.project-name-edit :deep(.input-element) {
-  font-size: 13px;
 }
 
 .project-menu-panel {

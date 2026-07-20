@@ -40,8 +40,9 @@ const visible = ref(false)
 
 .tooltip-content {
   position: absolute;
-  background-color: var(--color-dark-blue);
-  color: var(--text-light);
+  background-color: var(--color-bg-element);
+  color: var(--text-primary);
+  border: 1px solid var(--color-border);
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
@@ -71,7 +72,7 @@ const visible = ref(false)
   left: 50%;
   transform: translateX(-50%);
   border-width: 5px 5px 0 5px;
-  border-color: var(--color-dark-blue) transparent transparent transparent;
+  border-color: var(--color-bg-element) transparent transparent transparent;
 }
 
 /* Bottom positioning */
@@ -85,7 +86,7 @@ const visible = ref(false)
   left: 50%;
   transform: translateX(-50%);
   border-width: 0 5px 5px 5px;
-  border-color: transparent transparent var(--color-dark-blue) transparent;
+  border-color: transparent transparent var(--color-bg-element) transparent;
 }
 
 /* Left positioning */
@@ -99,7 +100,7 @@ const visible = ref(false)
   top: 50%;
   transform: translateY(-50%);
   border-width: 5px 0 5px 5px;
-  border-color: transparent transparent transparent var(--color-dark-blue);
+  border-color: transparent transparent transparent var(--color-bg-element);
 }
 
 /* Right positioning */
@@ -113,7 +114,7 @@ const visible = ref(false)
   top: 50%;
   transform: translateY(-50%);
   border-width: 5px 5px 5px 0;
-  border-color: transparent var(--color-dark-blue) transparent transparent;
+  border-color: transparent var(--color-bg-element) transparent transparent;
 }
 
 /* Transitions */

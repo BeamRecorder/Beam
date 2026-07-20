@@ -6,6 +6,8 @@ defineProps<{
   disabled?: boolean
   error?: boolean | string
   id?: string
+  size?: 'sm' | 'md'
+  width?: string
 }>()
 
 defineEmits<{
@@ -14,7 +16,11 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="input-wrapper" :class="{ 'is-disabled': disabled, 'is-error': !!error }">
+  <div
+    class="input-wrapper"
+    :class="[{ 'is-disabled': disabled, 'is-error': !!error }, `input-${size || 'md'}`]"
+    :style="width ? { width } : undefined"
+  >
     <div v-if="$slots.prefix" class="input-prefix">
       <slot name="prefix" />
     </div>
@@ -47,6 +53,14 @@ defineEmits<{
   border-radius: var(--radius-md);
   padding: 0 0.75rem;
   transition: all 0.2s ease;
+}
+
+.input-wrapper.input-sm {
+  height: 2rem;
+}
+
+.input-wrapper.input-sm .input-element {
+  font-size: 0.8125rem;
 }
 
 .input-wrapper:focus-within:not(.is-disabled):not(.is-error) {
