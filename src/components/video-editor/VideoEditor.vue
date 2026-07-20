@@ -27,7 +27,7 @@ const props = withDefaults(
 import { capture } from '../../api/capture'
 import type { CaptureProject, ProjectEditorData } from '../../api/types/capture-api'
 import type { ZoomElement } from './zoom/zoom-types'
-import { buildAutomaticZoomElements } from './zoom/zoom-suggestions'
+import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from './zoom/zoom-suggestions'
 
 const emit = defineEmits<{
   (event: 'back-to-hud'): void
@@ -91,7 +91,7 @@ const generateZooms = async (automatic = false) => {
   ]
   generatedSessions.value = [
     ...generatedSessions.value.filter((record) => record.sessionId !== data.sessionId),
-    { sessionId: data.sessionId, algorithmVersion: 1, generatedAt: new Date().toISOString() },
+    { sessionId: data.sessionId, algorithmVersion: ZOOM_ALGORITHM_VERSION, generatedAt: new Date().toISOString() },
   ]
   selectedZoomId.value = generated[0]?.id ?? null
   await saveZoomState()
@@ -99,7 +99,9 @@ const generateZooms = async (automatic = false) => {
 }
 
 watch(() => props.editorData?.sessionId, (sessionId) => {
-  if (!sessionId || !props.editorData || generatedSessions.value.some((record) => record.sessionId === sessionId)) return
+  if (!sessionId || !props.editorData || generatedSessions.value.some(
+    (record) => record.sessionId === sessionId && record.algorithmVersion >= ZOOM_ALGORITHM_VERSION,
+  )) return
   void generateZooms(true).catch((error) => console.error('Failed to generate zooms:', error))
 }, { immediate: true })
 

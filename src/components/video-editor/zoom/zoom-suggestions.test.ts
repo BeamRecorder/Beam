@@ -5,7 +5,7 @@ import { buildAutomaticZoomElements } from './zoom-suggestions'
 const move = (ms: number, x: number, y: number): CursorEvent => ({
   event: 'move', sessionNs: ms * 1_000_000, pixelX: 0, pixelY: 0, normalizedX: x, normalizedY: y, visible: true,
 })
-const click = (ms: number, button = 0): CursorEvent => ({ event: 'button', sessionNs: ms * 1_000_000, button, pressed: true })
+const click = (ms: number, button = 1): CursorEvent => ({ event: 'button', sessionNs: ms * 1_000_000, button, pressed: true })
 
 describe('buildAutomaticZoomElements', () => {
   it('creates a padded zoom from a left click with a cursor position', () => {
@@ -20,7 +20,7 @@ describe('buildAutomaticZoomElements', () => {
   })
 
   it('ignores secondary clicks, invisible cursor data, and invalid durations', () => {
-    expect(buildAutomaticZoomElements({ events: [move(1_000, 0.5, 0.5), click(1_000, 1)], sessionId: 'session', durationMs: 5_000 })).toEqual([])
+    expect(buildAutomaticZoomElements({ events: [move(1_000, 0.5, 0.5), click(1_000, 2)], sessionId: 'session', durationMs: 5_000 })).toEqual([])
     expect(buildAutomaticZoomElements({ events: [click(1_000)], sessionId: 'session', durationMs: 0 })).toEqual([])
   })
 })

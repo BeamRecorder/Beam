@@ -4,6 +4,8 @@ import { DEFAULT_ZOOM_SCALE, DEFAULT_ZOOM_SPEED, type ZoomElement, type ZoomFocu
 export const CLICK_CLUSTER_GAP_MS = 2500
 export const CLICK_CLUSTER_DISTANCE = 0.12
 export const ZOOM_REGION_PADDING_MS = 500
+export const ZOOM_ALGORITHM_VERSION = 2
+const LEFT_MOUSE_BUTTON = 1
 
 interface ClickPoint {
   timeMs: number
@@ -25,7 +27,8 @@ function cursorPositionAt(events: CursorEvent[], timeMs: number): ZoomFocus | nu
 
 function leftClickPoints(events: CursorEvent[]): ClickPoint[] {
   return events.flatMap((event) => {
-    if (event.event !== 'button' || event.button !== 0 || !event.pressed) return []
+    // Capture backends persist mouse buttons as 1=left, 2=right, 3=middle.
+    if (event.event !== 'button' || event.button !== LEFT_MOUSE_BUTTON || !event.pressed) return []
     const focus = cursorPositionAt(events, eventTimeMs(event))
     return focus ? [{ timeMs: eventTimeMs(event), focus }] : []
   })
