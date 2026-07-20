@@ -9,7 +9,8 @@ fn generated_project_name(project_id: ProjectId) -> String {
     const NOUNS: [&str; 8] = [
         "Aurora", "Canvas", "Comet", "Horizon", "Orbit", "Pixel", "Signal", "Studio",
     ];
-    let bytes = project_id.as_uuid().as_bytes();
+    let uuid = project_id.as_uuid();
+    let bytes = uuid.as_bytes();
     format!(
         "{} {}",
         ADJECTIVES[usize::from(bytes[0]) % ADJECTIVES.len()],
