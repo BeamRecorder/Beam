@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('capture', Object.freeze({
   minimize: () => ipcRenderer.send('window:minimize'),
   setPosition: (x, y) => ipcRenderer.send('window:setPosition', x, y),
   setSize: (width, height) => ipcRenderer.send('window:setSize', width, height),
+  setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),
   dragStart: () => ipcRenderer.send('window:dragStart'),
   drag: () => ipcRenderer.send('window:drag'),
   getSources: (types) => ipcRenderer.invoke('window:getSources', types),

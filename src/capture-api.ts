@@ -99,6 +99,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   minimize(): void
   setPosition(x: number, y: number): void
   setSize(width: number, height: number): void
+  setSizeSmooth(width: number, height: number): void
   dragStart(): void
   drag(): void
   getSources(types?: string[]): Promise<any[]>

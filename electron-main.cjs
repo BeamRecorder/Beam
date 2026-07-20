@@ -204,6 +204,45 @@ ipcMain.on('window:setSize', (event, width, height) => {
   }
 })
 
+let resizeInterval = null
+ipcMain.on('window:setSizeSmooth', (event, width, height) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) {
+    const [currWidth, currHeight] = win.getSize()
+    const targetWidth = Math.round(width)
+    const targetHeight = Math.round(height)
+    
+    if (resizeInterval) {
+      clearInterval(resizeInterval)
+    }
+    
+    if (Math.abs(currHeight - targetHeight) < 5) {
+      win.setSize(targetWidth, targetHeight)
+      return
+    }
+    
+    const steps = 12
+    let step = 0
+    
+    win.setResizable(true)
+    
+    resizeInterval = setInterval(() => {
+      step++
+      const ease = 1 - Math.pow(1 - (step / steps), 3)
+      const nextWidth = Math.round(currWidth + (targetWidth - currWidth) * ease)
+      const nextHeight = Math.round(currHeight + (targetHeight - currHeight) * ease)
+      
+      win.setSize(nextWidth, nextHeight)
+      
+      if (step >= steps) {
+        clearInterval(resizeInterval)
+        win.setResizable(false)
+      }
+    }, 16)
+  }
+})
+
 let dragStartMouse = null
 let dragStartWin = null
 

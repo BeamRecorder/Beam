@@ -96,13 +96,24 @@ const loadPreviews = async () => {
 const activeDropdowns = ref(0)
 
 const updateWindowSize = () => {
+  if (showSettings.value) {
+    window.capture.setSizeSmooth(320, 480)
+    return
+  }
   const isDropdownOpen = activeDropdowns.value > 0
   if (activeTab.value === 'window') {
-    window.capture.setSize(320, isDropdownOpen ? 580 : 420)
+    window.capture.setSizeSmooth(320, isDropdownOpen ? 580 : 420)
   } else {
-    window.capture.setSize(320, isDropdownOpen ? 520 : 360)
+    window.capture.setSizeSmooth(320, isDropdownOpen ? 520 : 360)
   }
 }
+
+const hudHeight = computed(() => {
+  if (showSettings.value) {
+    return 480
+  }
+  return activeTab.value === 'window' ? 420 : 360
+})
 
 const handleDropdownToggle = (isOpen: boolean) => {
   if (isOpen) {
@@ -118,6 +129,11 @@ watch(activeTab, () => {
   previews.value = []
   updateWindowSize()
   void loadPreviews()
+})
+
+// Watch settings view toggle to update window size
+watch(showSettings, () => {
+  updateWindowSize()
 })
 
 // Control functions
@@ -214,7 +230,7 @@ const minimizeApp = () => {
 </script>
 
 <template>
-  <div class="hud-wrapper" :class="[activeTab, { 'settings-open': showSettings }]">
+  <div class="hud-wrapper" :class="[activeTab, { 'settings-open': showSettings }]" :style="{ height: `${hudHeight}px` }">
     <!-- Header -->
     <header class="hud-header">
       <div class="logo-section">
@@ -439,7 +455,6 @@ const minimizeApp = () => {
 <style scoped>
 .hud-wrapper {
   width: 100%;
-  height: 100%;
   background: var(--color-bg-card); /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
