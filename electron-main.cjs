@@ -211,6 +211,109 @@ function findProjectPreview(projectDirectory, sessions) {
   return null
 }
 
+function readCursorEvents(cursorPath) {
+  if (!fs.existsSync(cursorPath)) return null
+  try {
+    const parsed = JSON.parse(fs.readFileSync(cursorPath, 'utf8'))
+    return Array.isArray(parsed) ? parsed : null
+  } catch {
+    // Keep old/incomplete recordings usable when the finalized JSON is still JSONL.
+    return fs.readFileSync(cursorPath, 'utf8')
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .flatMap((line) => {
+        try { return [JSON.parse(line)] } catch { return [] }
+      })
+  }
+}
+
+function readProjectEditorData(projectId) {
+  const directory = projectDirectory(projectId)
+  const manifest = readProjectManifest(directory)
+  const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
+
+  for (const session of [...sessions].reverse()) {
+    const sessionDirectory = safeProjectPath(directory, session.relativePath)
+    if (!sessionDirectory || !fs.existsSync(sessionDirectory)) continue
+
+    const sessionManifestPath = [
+      path.join(sessionDirectory, 'manifest.json'),
+      path.join(sessionDirectory, 'manifest.partial.json'),
+    ].find((candidate) => fs.existsSync(candidate))
+    if (!sessionManifestPath) continue
+
+    let sessionManifest
+    try {
+      sessionManifest = JSON.parse(fs.readFileSync(sessionManifestPath, 'utf8'))
+    } catch {
+      continue
+    }
+
+    const screenDirectory = path.join(sessionDirectory, 'screen')
+    const video = fs.existsSync(screenDirectory)
+      ? fs.readdirSync(screenDirectory).filter((filename) => /\.mp4$/i.test(filename)).sort()[0]
+      : null
+
+    const tracks = Array.isArray(sessionManifest.tracks)
+      ? sessionManifest.tracks.map((track) => ({
+          ...track,
+          assets: Array.isArray(track.segments)
+            ? track.segments.map((segment) => {
+                const assetPath = safeProjectPath(sessionDirectory, segment.path)
+                const exists = Boolean(assetPath && fs.existsSync(assetPath))
+                return {
+                  ...segment,
+                  src: exists ? pathToFileURL(assetPath).href : null,
+                  exists,
+                }
+              })
+            : [],
+        }))
+      : []
+
+    const cursorDirectory = path.join(sessionDirectory, 'cursor')
+    const cursorPath = path.join(cursorDirectory, 'cursor.json')
+    const shapesPath = path.join(cursorDirectory, 'shapes.json')
+    const events = readCursorEvents(cursorPath)
+    let shapeMetadata = {}
+    if (fs.existsSync(shapesPath)) {
+      try {
+        shapeMetadata = JSON.parse(fs.readFileSync(shapesPath, 'utf8')) || {}
+      } catch {
+        shapeMetadata = {}
+      }
+    }
+
+    const shapes = {}
+    for (const [shapeId, metadata] of Object.entries(shapeMetadata)) {
+      const shapePath = path.join(cursorDirectory, 'shapes', `${shapeId}.png`)
+      if (!fs.existsSync(shapePath)) continue
+      shapes[shapeId] = {
+        src: pathToFileURL(shapePath).href,
+        hotspot: metadata?.hotspot || metadata || { x: 0, y: 0 },
+      }
+    }
+
+    return {
+      sessionId: session.sessionId,
+      manifest: sessionManifest,
+      videoSrc: video ? pathToFileURL(path.join(screenDirectory, video)).href : null,
+      tracks,
+      cursor: {
+        available: Array.isArray(events),
+        events: Array.isArray(events) ? events : [],
+        shapes,
+        missing: [
+          ...(Array.isArray(events) ? [] : ['cursor.json']),
+          ...Object.keys(shapeMetadata).filter((shapeId) => !shapes[shapeId]).map((shapeId) => `shapes/${shapeId}.png`),
+        ],
+      },
+    }
+  }
+
+  return null
+}
+
 function projectsRoot() {
   return path.join(app.getPath('videos'), 'DemoRecorder')
 }
@@ -275,6 +378,10 @@ function listProjects() {
 }
 
 ipcMain.handle('projects:list', () => listProjects())
+
+ipcMain.handle('projects:editor-data', (_event, payload = {}) => {
+  return readProjectEditorData(payload.projectId)
+})
 
 ipcMain.handle('projects:create', (_event, options = {}) => {
   const id = randomUUID()

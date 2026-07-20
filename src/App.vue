@@ -3,11 +3,12 @@ import { ref } from 'vue'
 import HUD from './components/hud/HUD.vue'
 import VideoEditor from './components/video-editor/VideoEditor.vue'
 
-import { capture, type CaptureProject } from './capture-api'
+import { capture, type CaptureProject, type ProjectEditorData } from './capture-api'
 
 const currentView = ref<'hud' | 'editor'>('hud')
 const currentVideoSrc = ref<string | null>(null)
 const currentProject = ref<CaptureProject | null>(null)
+const currentEditorData = ref<ProjectEditorData | null>(null)
 
 const setView = (view: 'hud' | 'editor') => {
   currentView.value = view
@@ -22,6 +23,7 @@ const setView = (view: 'hud' | 'editor') => {
 const handleStartRecording = () => {
   currentVideoSrc.value = null
   currentProject.value = null
+  currentEditorData.value = null
 }
 
 const handleStopRecording = async (session: any) => {
@@ -33,8 +35,12 @@ const handleStopRecording = async (session: any) => {
     currentProject.value = projects.find((project) => project.previewSrc === session?.videoSrc)
       ?? projects[0]
       ?? null
+    currentEditorData.value = currentProject.value
+      ? await capture.getProjectEditorData(currentProject.value.id)
+      : null
   } catch {
     currentProject.value = null
+    currentEditorData.value = null
   }
   setView('editor')
 }
@@ -42,6 +48,12 @@ const handleStopRecording = async (session: any) => {
 const handleOpenProject = (project: CaptureProject) => {
   currentProject.value = project
   currentVideoSrc.value = project.previewSrc
+  currentEditorData.value = null
+  void capture.getProjectEditorData(project.id)
+    .then((data) => {
+      if (currentProject.value?.id === project.id) currentEditorData.value = data
+    })
+    .catch((error) => console.error('Failed to load project editor data:', error))
   setView('editor')
 }
 </script>
@@ -59,6 +71,7 @@ const handleOpenProject = (project: CaptureProject) => {
     <VideoEditor 
       v-if="currentView === 'editor'"
       :video-src="currentVideoSrc"
+      :editor-data="currentEditorData"
       :project="currentProject"
       @back-to-hud="setView('hud')"
       @open-project="handleOpenProject"

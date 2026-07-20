@@ -1,27 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { Play, Pause } from '@lucide/vue'
+import type { ProjectEditorData } from '../../../capture-api'
 import type { CursorType } from '../composables/useCursorReplacer'
-import { useCursorReplacer } from '../composables/useCursorReplacer'
+import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../composables/cursorPlayback'
 
 const props = defineProps<{
   isPlaying: boolean
   currentTime: number
   duration: number
-  
-  // Cursor options
   selectedCursor: CursorType
   cursorSize: number
   cursorColor: string
   enableShadow: boolean
   enableRipple: boolean
-  
-  // Track status
   isVideoEnabled: boolean
-
-  // Wallpaper and source files
   selectedWallpaper: string
   videoSrc: string
+  editorData?: ProjectEditorData | null
 }>()
 
 const emit = defineEmits<{
@@ -32,58 +28,29 @@ const emit = defineEmits<{
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
+const videoError = ref<string | null>(null)
 
-const { getCursorImage } = useCursorReplacer()
+const logicalSize = ref({ width: 0, height: 0 })
+const deviceScale = ref(1)
+const cursorImages = new Map<string, HTMLImageElement>()
+let resizeObserver: ResizeObserver | null = null
+let animationFrameId: number | null = null
+let lastDrawTime = 0
 
-// Simulated cursor positions (keyframe track)
-const cursorTrack = [
-  { t: 0, x: 200, y: 150 },
-  { t: 3, x: 350, y: 200 },
-  { t: 7, x: 600, y: 350 },
-  { t: 10, x: 250, y: 450 },
-  { t: 15, x: 550, y: 180 },
-  { t: 20, x: 700, y: 400 },
-  { t: 25, x: 400, y: 300 },
-  { t: 30, x: 200, y: 150 },
-]
-
-// Clicking ripples list
 interface Ripple {
   x: number
   y: number
   radius: number
-  maxRadius: number
   alpha: number
 }
 const ripples = ref<Ripple[]>([])
 
-// Interpolate cursor position based on currentTime
-const getCursorPos = (t: number) => {
-  const loopT = t % 30
-  for (let i = 0; i < cursorTrack.length - 1; i++) {
-    const p1 = cursorTrack[i]
-    const p2 = cursorTrack[i + 1]
-    if (loopT >= p1.t && loopT <= p2.t) {
-      const ratio = (loopT - p1.t) / (p2.t - p1.t)
-      return {
-        x: p1.x + (p2.x - p1.x) * ratio,
-        y: p1.y + (p2.y - p1.y) * ratio,
-      }
-    }
-  }
-  return { x: 200, y: 150 }
-}
-
-let animationFrameId: number | null = null
-let cursorImgElement: HTMLImageElement | null = null
-
-// Setup offscreen Video Element
 const videoEl = document.createElement('video')
 videoEl.muted = true
 videoEl.preload = 'auto'
 videoEl.playsInline = true
 
-const videoError = ref<string | null>(null)
+const effectiveVideoSrc = computed(() => props.editorData?.videoSrc || props.videoSrc)
 
 const handleVideoMetadata = () => {
   if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
@@ -102,193 +69,225 @@ const loadVideo = () => {
   videoError.value = null
   videoEl.pause()
   videoEl.currentTime = 0
-  videoEl.src = props.videoSrc
+  videoEl.src = effectiveVideoSrc.value
   videoEl.load()
 }
-watch(() => props.videoSrc, loadVideo, { immediate: true })
+watch(effectiveVideoSrc, loadVideo, { immediate: true })
 
 watch(() => props.isPlaying, (playing) => {
   if (playing) {
-    videoEl.play().catch(err => console.error('Failed to play video element:', err))
+    videoEl.play().catch((error) => console.error('Failed to play video element:', error))
   } else {
     videoEl.pause()
   }
 })
 
 watch(() => props.currentTime, (time) => {
-  if (Math.abs(videoEl.currentTime - time) > 0.15) {
-    videoEl.currentTime = time
-  }
+  if (Math.abs(videoEl.currentTime - time) > 0.15) videoEl.currentTime = time
 })
 
-// Setup Wallpaper image loading
 const wallpaperImg = new Image()
-const loadWallpaper = () => {
-  wallpaperImg.src = props.selectedWallpaper
-}
+const loadWallpaper = () => { wallpaperImg.src = props.selectedWallpaper }
 watch(() => props.selectedWallpaper, loadWallpaper, { immediate: true })
 
-// Load cursor image when configuration changes
-const loadCursor = async () => {
-  cursorImgElement = await getCursorImage(props.selectedCursor, props.cursorSize, props.cursorColor)
+const loadCursorAssets = () => {
+  cursorImages.clear()
+  const shapes = props.editorData?.cursor.shapes ?? {}
+  for (const [shapeId, shape] of Object.entries(shapes)) {
+    const image = new Image()
+    image.onload = () => { cursorImages.set(shapeId, image) }
+    image.src = shape.src
+  }
+}
+watch(() => props.editorData, loadCursorAssets, { immediate: true })
+
+const resizeCanvas = () => {
+  const canvas = canvasRef.value
+  const container = containerRef.value
+  if (!canvas || !container) return
+
+  const width = Math.max(1, container.clientWidth)
+  const height = Math.max(1, container.clientHeight)
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  deviceScale.value = dpr
+  logicalSize.value = { width, height }
+
+  const backingWidth = Math.max(1, Math.round(width * dpr))
+  const backingHeight = Math.max(1, Math.round(height * dpr))
+  if (canvas.width !== backingWidth) canvas.width = backingWidth
+  if (canvas.height !== backingHeight) canvas.height = backingHeight
 }
 
-watch(() => [props.selectedCursor, props.cursorSize, props.cursorColor], loadCursor, { immediate: true })
+const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  if (!props.isVideoEnabled) {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
+    ctx.fillRect(0, 0, width, height)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '16px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('Video track disabled', width / 2, height / 2)
+    return null
+  }
 
-// Main draw loop
+  const margin = 50
+  const availWidth = Math.max(1, width - margin * 2)
+  const availHeight = Math.max(1, height - margin * 2)
+  const videoWidth = videoEl.videoWidth || 1920
+  const videoHeight = videoEl.videoHeight || 1080
+  const aspect = videoWidth / videoHeight
+  let dw = availWidth
+  let dh = availWidth / aspect
+  if (dh > availHeight) {
+    dh = availHeight
+    dw = availHeight * aspect
+  }
+  const dx = (width - dw) / 2
+  const dy = (height - dh) / 2
+
+  ctx.save()
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
+  ctx.shadowBlur = 24
+  ctx.shadowOffsetY = 12
+  ctx.fillStyle = '#1e1e1e'
+  ctx.beginPath()
+  ctx.roundRect(dx, dy, dw, dh, 10)
+  ctx.fill()
+  ctx.clip()
+
+  if (videoError.value) {
+    ctx.fillStyle = '#ef4444'
+    ctx.font = '14px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(videoError.value, width / 2, height / 2)
+  } else if (videoEl.readyState >= 2) {
+    // The canvas is DPR-scaled, so this draw remains sharp on HiDPI displays.
+    ctx.drawImage(videoEl, dx, dy, dw, dh)
+  } else {
+    ctx.fillStyle = '#334155'
+    ctx.fillRect(dx, dy, dw, dh)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '14px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('Loading video recording...', width / 2, height / 2)
+  }
+  ctx.restore()
+  return { dx, dy, dw, dh }
+}
+
+const drawCursorWarning = (ctx: CanvasRenderingContext2D, message: string, width: number) => {
+  ctx.save()
+  ctx.font = '11px sans-serif'
+  ctx.textAlign = 'right'
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.82)'
+  const padding = 8
+  const textWidth = ctx.measureText(message).width
+  ctx.roundRect(width - textWidth - padding * 2 - 8, 12, textWidth + padding * 2, 26, 6)
+  ctx.fill()
+  ctx.fillStyle = '#fbbf24'
+  ctx.fillText(message, width - 8 - padding, 29)
+  ctx.restore()
+}
+
 const draw = () => {
   const canvas = canvasRef.value
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // 1. Draw Wallpaper background
+  const { width, height } = logicalSize.value
+  if (!width || !height) {
+    animationFrameId = requestAnimationFrame(draw)
+    return
+  }
+  ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0)
+  ctx.clearRect(0, 0, width, height)
+
   if (wallpaperImg.complete && wallpaperImg.naturalWidth > 0) {
-    ctx.drawImage(wallpaperImg, 0, 0, canvas.width, canvas.height)
+    ctx.drawImage(wallpaperImg, 0, 0, width, height)
   } else {
     ctx.fillStyle = '#1e1e24'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillRect(0, 0, width, height)
   }
 
-  // 2. Draw Video recording frame
-  let dx = 0, dy = 0, dw = 0, dh = 0
-  if (props.isVideoEnabled) {
-    const margin = 50
-    const availWidth = canvas.width - (margin * 2)
-    const availHeight = canvas.height - (margin * 2)
-    
-    const videoWidth = videoEl.videoWidth || 1920
-    const videoHeight = videoEl.videoHeight || 1080
-    const aspect = videoWidth / videoHeight
-    
-    dw = availWidth
-    dh = availWidth / aspect
-    
-    if (dh > availHeight) {
-      dh = availHeight
-      dw = availHeight * aspect
+  const videoWindow = drawVideoWindow(ctx, width, height)
+  const cursorData = props.editorData?.cursor
+  if (videoWindow && cursorData?.available) {
+    const time = props.currentTime
+    if (props.enableRipple && props.isPlaying && time >= lastDrawTime) {
+      for (const button of buttonEventsBetween(cursorData.events, lastDrawTime, time)) {
+        const state = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000)
+        if (!state) continue
+        ripples.value.push({
+          x: videoWindow.dx + state.x * videoWindow.dw,
+          y: videoWindow.dy + state.y * videoWindow.dh,
+          radius: 2,
+          alpha: 1,
+        })
+      }
     }
-    
-    dx = (canvas.width - dw) / 2
-    dy = (canvas.height - dh) / 2
-    
-    ctx.save()
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
-    ctx.shadowBlur = 24
-    ctx.shadowOffsetX = 0
-    ctx.shadowOffsetY = 12
-    
-    // Draw window backing
-    ctx.fillStyle = '#1e1e1e'
-    ctx.beginPath()
-    ctx.roundRect(dx, dy, dw, dh, 10)
-    ctx.fill()
-    ctx.clip()
-    
-    if (videoError.value) {
-      ctx.fillStyle = '#ef4444'
-      ctx.fillText(videoError.value, canvas.width / 2, canvas.height / 2)
-    } else if (videoEl.readyState >= 2) {
-      ctx.drawImage(videoEl, dx, dy, dw, dh)
-    } else {
-      ctx.fillStyle = '#334155'
-      ctx.fillRect(dx, dy, dw, dh)
-      ctx.fillStyle = '#ffffff'
-      ctx.font = '14px sans-serif'
-      ctx.textAlign = 'center'
-      ctx.fillText('Loading video recording...', canvas.width / 2, canvas.height / 2)
-    }
-    ctx.restore()
-  } else {
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '16px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText('Video track disabled', canvas.width / 2, canvas.height / 2)
-  }
+    lastDrawTime = time
 
-  // 3. Draw Ripples
-  if (props.enableRipple) {
-    ripples.value.forEach((ripple, index) => {
+    for (const ripple of ripples.value) {
       ctx.strokeStyle = `rgba(255, 90, 31, ${ripple.alpha})`
       ctx.lineWidth = 3
       ctx.beginPath()
       ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2)
       ctx.stroke()
-      
       if (props.isPlaying) {
         ripple.radius += 1.5
         ripple.alpha -= 0.04
       }
-      if (ripple.alpha <= 0) {
-        ripples.value.splice(index, 1)
+    }
+    ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0)
+
+    const state = cursorStateAt(cursorData.events, props.currentTime)
+    const asset = cursorAssetForState(state, cursorData.shapes)
+    const image = state?.shapeId ? cursorImages.get(state.shapeId) : null
+    if (state?.visible && asset && image && image.complete && image.naturalWidth > 0) {
+      const scale = props.cursorSize / image.naturalWidth
+      const drawWidth = image.naturalWidth * scale
+      const drawHeight = image.naturalHeight * scale
+      const pointerX = videoWindow.dx + state.x * videoWindow.dw
+      const pointerY = videoWindow.dy + state.y * videoWindow.dh
+      ctx.save()
+      if (props.enableShadow) {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
+        ctx.shadowBlur = 6
+        ctx.shadowOffsetX = 2
+        ctx.shadowOffsetY = 3
       }
-    })
+      ctx.drawImage(
+        image,
+        pointerX - asset.hotspot.x * scale,
+        pointerY - asset.hotspot.y * scale,
+        drawWidth,
+        drawHeight,
+      )
+      ctx.restore()
+    } else if (state?.shapeId && !asset) {
+      drawCursorWarning(ctx, 'Cursor shape missing', width)
+    }
+  } else if (props.isVideoEnabled && cursorData && !cursorData.available) {
+    drawCursorWarning(ctx, 'Cursor data missing', width)
   }
 
-  // 4. Draw Custom Cursor
-  if (props.isVideoEnabled && cursorImgElement) {
-    const pos = getCursorPos(props.currentTime)
-    
-    // Keep cursor within video window boundaries for realism
-    const localX = dx + (pos.x / 800) * dw
-    const localY = dy + (pos.y / 600) * dh
-
-    if (props.isPlaying && (props.currentTime * 10) % 30 === 0 && Math.random() > 0.7) {
-      ripples.value.push({
-        x: localX,
-        y: localY,
-        radius: 2,
-        maxRadius: 24,
-        alpha: 1.0
-      })
-    }
-
-    ctx.save()
-    if (props.enableShadow) {
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
-      ctx.shadowBlur = 6
-      ctx.shadowOffsetX = 2
-      ctx.shadowOffsetY = 3
-    }
-    
-    ctx.drawImage(
-      cursorImgElement, 
-      localX - (props.selectedCursor === 'grabbing' || props.selectedCursor === 'text' ? props.cursorSize / 2 : 0), 
-      localY - (props.selectedCursor === 'grabbing' || props.selectedCursor === 'text' ? props.cursorSize / 2 : 0)
-    )
-    ctx.restore()
-  }
-
-  // Update time if playing
   if (props.isPlaying) {
     const nextTime = props.currentTime + 0.016
     emit('update:currentTime', nextTime >= props.duration ? 0 : nextTime)
   }
-
   animationFrameId = requestAnimationFrame(draw)
-}
-
-const resizeCanvas = () => {
-  const canvas = canvasRef.value
-  const container = containerRef.value
-  if (!canvas || !container) return
-  canvas.width = container.clientWidth
-  canvas.height = container.clientHeight
 }
 
 onMounted(() => {
   resizeCanvas()
-  window.addEventListener('resize', resizeCanvas)
+  resizeObserver = new ResizeObserver(resizeCanvas)
+  if (containerRef.value) resizeObserver.observe(containerRef.value)
   draw()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', resizeCanvas)
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId)
-  }
+  resizeObserver?.disconnect()
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
   videoEl.pause()
   videoEl.removeEventListener('loadedmetadata', handleVideoMetadata)
   videoEl.removeEventListener('error', handleVideoError)
@@ -300,7 +299,6 @@ onUnmounted(() => {
 <template>
   <div class="canvas-island" ref="containerRef">
     <canvas ref="canvasRef" class="editor-canvas"></canvas>
-
     <div class="canvas-play-controls">
       <button class="play-btn" @click="emit('update:isPlaying', !isPlaying)">
         <Play v-if="!isPlaying" class="ctrl-icon" />

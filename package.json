@@ -23,6 +23,7 @@
     "@vueuse/electron": "^14.3.0",
     "@vueuse/motion": "^3.0.3",
     "pinia": "^4.0.2",
+    "vitest": "^4.1.10",
     "vue": "^3.5.39"
   },
   "devDependencies": {

@@ -15,15 +15,17 @@ const props = withDefaults(
   defineProps<{
     videoSrc?: string | null
     project?: CaptureProject | null
+    editorData?: ProjectEditorData | null
   }>(),
   {
     videoSrc: null,
     project: null,
+    editorData: null,
   }
 )
 
 import { capture } from '../../capture-api'
-import type { CaptureProject } from '../../capture-api'
+import type { CaptureProject, ProjectEditorData } from '../../capture-api'
 
 const emit = defineEmits<{
   (event: 'back-to-hud'): void
@@ -145,6 +147,7 @@ watch(() => props.videoSrc, (videoSrc) => {
           :is-video-enabled="isVideoEnabled"
           :selected-wallpaper="selectedWallpaper"
           :video-src="playerVideoSrc"
+          :editor-data="editorData"
           @duration-change="duration = $event"
         />
       </div>

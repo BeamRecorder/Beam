@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('capture', Object.freeze({
   drag: () => ipcRenderer.send('window:drag'),
   getSources: (types) => ipcRenderer.invoke('window:getSources', types),
   listProjects: () => ipcRenderer.invoke('projects:list'),
+  getProjectEditorData: (projectId) => ipcRenderer.invoke('projects:editor-data', { projectId }),
   createProject: (options = {}) => ipcRenderer.invoke('projects:create', options),
   renameProject: (projectId, name) => ipcRenderer.invoke('projects:rename', { projectId, name }),
   deleteProject: (projectId) => ipcRenderer.invoke('projects:delete', { projectId }),
