@@ -111,15 +111,14 @@ const playheadStyle = computed(() => {
   };
 });
 
-// Perform scrub calculation with 1s margins
+// Perform scrub calculation clamped between 0 and duration
 const handleScrub = (e: MouseEvent) => {
   if (!ticksAreaRef.value) return;
   const rect = ticksAreaRef.value.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
   const percentage = clickX / rect.width;
   const targetTime = percentage * props.duration;
-  const margin = 1; // 1 second margin allowance
-  emit('update:currentTime', Math.max(-margin, Math.min(props.duration + margin, targetTime)));
+  emit('update:currentTime', Math.max(0, Math.min(props.duration, targetTime)));
 };
 
 // Handle timeline scrubbing on drag
@@ -172,8 +171,8 @@ const onScroll = () => {
   updateVisibleThumbnails();
 };
 
-// React to zoom level / video source changes
-watch(() => [props.zoomLevel, props.videoSrc], () => {
+// React to zoom level / video source / duration changes
+watch(() => [props.zoomLevel, props.videoSrc, props.duration], () => {
   // Let DOM update width first, then request visible frames
   setTimeout(updateVisibleThumbnails, 50);
 }, { immediate: true });

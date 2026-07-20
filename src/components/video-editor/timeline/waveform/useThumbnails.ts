@@ -9,8 +9,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   let hiddenVideo: HTMLVideoElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let canvasCtx: CanvasRenderingContext2D | null = null;
-  let resolveSeek: (() => void) | null = null;
-
   // Watch videoSrcRef changes and update hiddenVideo src
   watch(videoSrcRef, (newSrc) => {
     if (hiddenVideo && newSrc) {
@@ -31,15 +29,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
       hiddenVideo.playsInline = true;
       hiddenVideo.preload = "auto";
 
-      // Wait for seek completes
-      hiddenVideo.addEventListener("seeked", () => {
-        console.log("[useThumbnails] Hidden video seeked successfully");
-        if (resolveSeek) {
-          resolveSeek();
-          resolveSeek = null;
-        }
-      });
-
       hiddenVideo.addEventListener("loadedmetadata", () => {
         console.log(
           "[useThumbnails] Hidden video loadedmetadata. duration:",
@@ -52,10 +41,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
           "[useThumbnails] Hidden video error occurred:",
           hiddenVideo?.error,
         );
-        if (resolveSeek) {
-          resolveSeek();
-          resolveSeek = null;
-        }
       });
 
       hiddenVideo.addEventListener("stalled", () => {
@@ -115,28 +100,29 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                 console.log("[useThumbnails] Seeking hidden video to:", time);
                 hiddenVideo.currentTime = time;
 
-                // Promise to wait for seek complete with a fallback timeout
+                 // Promise to wait for seek complete with a fallback timeout
                 await new Promise<void>((resolve) => {
                   let resolved = false;
+
+                  const onSeeked = () => {
+                    if (!resolved) {
+                      resolved = true;
+                      clearTimeout(timeout);
+                      console.log("[useThumbnails] Hidden video seeked successfully for time:", time);
+                      resolve();
+                    }
+                  };
+
                   const timeout = setTimeout(() => {
                     if (!resolved) {
                       resolved = true;
-                      resolveSeek = null;
-                      console.warn(
-                        "[useThumbnails] Seek timed out for time:",
-                        time,
-                      );
+                      hiddenVideo!.removeEventListener("seeked", onSeeked);
+                      console.warn("[useThumbnails] Seek timed out for time:", time);
                       resolve();
                     }
                   }, 500);
 
-                  resolveSeek = () => {
-                    if (!resolved) {
-                      resolved = true;
-                      clearTimeout(timeout);
-                      resolve();
-                    }
-                  };
+                  hiddenVideo!.addEventListener("seeked", onSeeked, { once: true });
                 });
               }
 
