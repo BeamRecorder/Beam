@@ -34,6 +34,13 @@ const handleSelect = (option: Option, close: () => void) => {
   emit('update:modelValue', option.value)
   close()
 }
+const labelStyle = computed(() => {
+  const text = selectedOption.value ? selectedOption.value.label : props.placeholder
+  const len = text.length
+  if (len > 28) return { fontSize: '0.75rem' }
+  if (len > 20) return { fontSize: '0.85rem' }
+  return {}
+})
 </script>
 
 <template>
@@ -45,7 +52,11 @@ const handleSelect = (option: Option, close: () => void) => {
         :class="{ 'is-open': isOpen, 'is-disabled': disabled }" 
         :disabled="disabled"
       >
-        <span class="select-label" :class="{ 'is-placeholder': !selectedOption }">
+        <span 
+          class="select-label" 
+          :class="{ 'is-placeholder': !selectedOption }"
+          :style="labelStyle"
+        >
           {{ selectedOption ? selectedOption.label : placeholder }}
         </span>
         <ChevronDown class="select-chevron" :class="{ 'rotate': isOpen }" />

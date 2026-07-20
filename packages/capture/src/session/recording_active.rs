@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+mod metrics;
+
 use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
@@ -12,10 +14,12 @@ use crate::model::CursorSelection;
 #[cfg(any(feature = "microphone", feature = "system-audio", feature = "camera"))]
 use crate::model::TrackFormat;
 
+use super::periodic_reporter::{PeriodicReporter, SourceWatch};
 use super::recording_support::*;
 
 #[derive(Default)]
 pub(super) struct ActiveRecordings {
+    reporter: Option<PeriodicReporter>,
     #[cfg(windows)]
     screen: Option<crate::screen::win::WindowsRecording>,
     #[cfg(target_os = "macos")]
@@ -36,52 +40,27 @@ pub(super) struct ActiveRecordings {
     cursor: Option<crate::cursor::mac::MacCursorRecording>,
 }
 
+pub(super) struct OpenContext<'a> {
+    pub(super) request: &'a CaptureRequest,
+    pub(super) snapshot: &'a CatalogSnapshot,
+    pub(super) layout: &'a crate::storage::SessionLayout,
+    pub(super) generation: u32,
+    pub(super) start_ns: u64,
+    pub(super) tracks: &'a mut [TrackMetadata],
+    pub(super) start_gate: &'a Arc<super::StartGate>,
+}
+
 impl ActiveRecordings {
-    pub(super) fn open(
-        &mut self,
-        request: &CaptureRequest,
-        snapshot: &CatalogSnapshot,
-        layout: &crate::storage::SessionLayout,
-        generation: u32,
-        start_ns: u64,
-        tracks: &mut [TrackMetadata],
-        start_gate: &Arc<super::StartGate>,
-    ) -> Result<(), CaptureError> {
-        if let Some(ScreenSelection::Source { source_id }) = &request.screen {
-            #[cfg(any(windows, target_os = "macos"))]
-            {
-                let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
-                #[cfg(windows)]
-                {
-                    self.screen = Some(crate::screen::win::WindowsRecording::start(
-                        source_id,
-                        &path,
-                        u32::try_from(request.recording.video_bitrate_bps).unwrap_or(u32::MAX),
-                        request.recording.target_fps,
-                        matches!(request.cursor, CursorSelection::Separate { .. }),
-                        start_gate.clone(),
-                    )?);
-                }
-                #[cfg(target_os = "macos")]
-                {
-                    self.screen = Some(crate::screen::mac::MacRecording::start(
-                        source_id,
-                        &path,
-                        request.recording.target_fps,
-                        matches!(request.cursor, CursorSelection::Separate { .. }),
-                        start_gate.clone(),
-                    )?);
-                }
-                add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
-            }
-            #[cfg(not(any(windows, target_os = "macos")))]
-            {
-                let _ = source_id;
-                return Err(CaptureError::Unsupported(
-                    "native session screen recording is unavailable on this platform".into(),
-                ));
-            }
-        }
+    pub(super) fn open(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
+        let OpenContext {
+            request,
+            snapshot,
+            layout,
+            generation,
+            start_ns,
+            tracks,
+            start_gate,
+        } = context;
         #[cfg(feature = "microphone")]
         if let Some(selection) = &request.microphone {
             let path = segment_path(layout, TrackKind::Microphone, generation, "wav");
@@ -185,6 +164,7 @@ impl ActiveRecordings {
                 &path,
                 u32::try_from(request.recording.video_bitrate_bps / 2).unwrap_or(u32::MAX),
                 request.recording.queue_capacity,
+                start_gate.clone(),
             ) {
                 Ok(recording) => Some(recording),
                 Err(error) => {
@@ -209,11 +189,12 @@ impl ActiveRecordings {
         }
         #[cfg(all(target_os = "macos", feature = "camera"))]
         if let Some(selection) = &request.camera {
-            let path = segment_path(layout, TrackKind::Camera, generation, "mjpeg");
+            let path = segment_path(layout, TrackKind::Camera, generation, "mp4");
             self.camera = match crate::camera::mac::MacCameraRecording::start(
                 selection,
                 &path,
                 start_gate.clone(),
+                request.recording.queue_capacity,
             ) {
                 Ok(recording) => Some(recording),
                 Err(error) => {
@@ -226,14 +207,14 @@ impl ActiveRecordings {
             {
                 let format = recording.format();
                 track.format = TrackFormat::Video {
-                    codec: "mjpeg".into(),
+                    codec: "h264".into(),
                     width: format.width(),
                     height: format.height(),
                     nominal_fps: format.frame_rate(),
                 };
             }
             if self.camera.is_some() {
-                add_segment(tracks, TrackKind::Camera, generation, "mjpeg", start_ns)?;
+                add_segment(tracks, TrackKind::Camera, generation, "mp4", start_ns)?;
             }
         }
         #[cfg(all(windows, feature = "cursor"))]
@@ -297,8 +278,68 @@ impl ActiveRecordings {
             ));
             track.status = TrackStatus::Recording;
         }
+        self.open_screen(request, layout, generation, start_ns, tracks, start_gate)?;
         let _ = snapshot;
+        let samplers = metrics::samplers(self, tracks);
+        if !samplers.is_empty() {
+            self.reporter = Some(PeriodicReporter::start(
+                layout.health(),
+                layout.timing(),
+                start_gate.clone(),
+                start_ns,
+                samplers,
+                source_watches(request, snapshot, tracks),
+            )?);
+        }
         Ok(())
+    }
+
+    fn open_screen(
+        &mut self,
+        request: &CaptureRequest,
+        layout: &crate::storage::SessionLayout,
+        generation: u32,
+        start_ns: u64,
+        tracks: &mut [TrackMetadata],
+        start_gate: &Arc<super::StartGate>,
+    ) -> Result<(), CaptureError> {
+        let Some(ScreenSelection::Source { source_id }) = &request.screen else {
+            return Ok(());
+        };
+        #[cfg(any(windows, target_os = "macos"))]
+        {
+            let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
+            #[cfg(windows)]
+            {
+                self.screen = Some(crate::screen::win::WindowsRecording::start(
+                    source_id,
+                    &path,
+                    u32::try_from(request.recording.video_bitrate_bps).unwrap_or(u32::MAX),
+                    request.recording.target_fps,
+                    matches!(request.cursor, CursorSelection::Separate { .. }),
+                    start_gate.clone(),
+                )?);
+            }
+            #[cfg(target_os = "macos")]
+            {
+                self.screen = Some(crate::screen::mac::MacRecording::start(
+                    source_id,
+                    &path,
+                    request.recording.target_fps,
+                    matches!(request.cursor, CursorSelection::Separate { .. }),
+                    start_gate.clone(),
+                )?);
+            }
+            add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
+            Ok(())
+        }
+        #[cfg(not(any(windows, target_os = "macos")))]
+        {
+            let _ = (source_id, layout, generation, start_ns, tracks, start_gate);
+            Err(CaptureError::Unsupported(
+                "native session screen recording is unavailable on this platform".into(),
+            ))
+        }
     }
 
     pub(super) fn stop(
@@ -308,6 +349,9 @@ impl ActiveRecordings {
     ) -> Result<(), CaptureError> {
         #[allow(unused_mut)]
         let mut first_error = None;
+        if let Some(reporter) = self.reporter.take() {
+            record_result(reporter.stop(), &mut first_error);
+        }
         #[cfg(windows)]
         if let Some(recording) = self.screen.take() {
             let metrics = recording.metrics();
@@ -383,7 +427,9 @@ impl ActiveRecordings {
             let metrics = recording.metrics();
             record_result(recording.stop().map(|_| ()), &mut first_error);
             if let Some(track) = track_mut(tracks, TrackKind::Camera) {
-                track.metrics.frames_received += metrics.frames_received();
+                track.metrics.frames_acquired += metrics.frames_acquired();
+                track.metrics.frames_encoded += metrics.frames_encoded();
+                track.metrics.frames_received += metrics.frames_encoded();
                 track.metrics.frames_dropped += metrics.frames_dropped();
                 track.metrics.interruptions += metrics.interruptions();
             }
@@ -420,4 +466,51 @@ impl ActiveRecordings {
         }
         Ok(())
     }
+}
+
+fn source_watches(
+    request: &CaptureRequest,
+    snapshot: &CatalogSnapshot,
+    tracks: &[TrackMetadata],
+) -> Vec<SourceWatch> {
+    let mut selected = Vec::new();
+    if let Some(ScreenSelection::Source { source_id }) = &request.screen {
+        selected.push((TrackKind::Screen, source_id));
+    }
+    if let Some(selection) = &request.microphone {
+        selected.push((TrackKind::Microphone, &selection.source_id));
+    }
+    if let Some(selection) = &request.camera {
+        selected.push((TrackKind::Camera, &selection.source_id));
+    }
+    if let Some(crate::model::SystemAudioSelection::OutputDevice(source_id)) = &request.system_audio
+    {
+        selected.push((TrackKind::SystemAudio, source_id));
+    } else if request.system_audio.is_some()
+        && let Some(source) = snapshot
+            .sources
+            .iter()
+            .find(|source| {
+                source.kind == crate::model::SourceKind::SystemAudio && source.is_default
+            })
+            .or_else(|| {
+                snapshot
+                    .sources
+                    .iter()
+                    .find(|source| source.kind == crate::model::SourceKind::SystemAudio)
+            })
+    {
+        selected.push((TrackKind::SystemAudio, &source.id));
+    }
+    selected
+        .into_iter()
+        .filter_map(|(kind, source_id)| {
+            let track = track_for(tracks, kind)?;
+            let source = snapshot
+                .sources
+                .iter()
+                .find(|source| &source.id == source_id)?;
+            Some(SourceWatch::new(track.track_id, source.clone()))
+        })
+        .collect()
 }

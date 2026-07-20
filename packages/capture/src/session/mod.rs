@@ -1,6 +1,7 @@
 mod coordinator;
 mod health;
 mod pause;
+mod periodic_reporter;
 mod preparation;
 mod recording;
 mod recording_active;

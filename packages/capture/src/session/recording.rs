@@ -11,7 +11,10 @@ use crate::{
     storage::{ManifestWriter, ProjectLayout, create_or_update_project},
 };
 
-use super::{recording_active::ActiveRecordings, recording_support::*};
+use super::{
+    recording_active::{ActiveRecordings, OpenContext},
+    recording_support::*,
+};
 
 /// A prepared native recording session controlled by the JSONL engine.
 pub struct RecordingSession {
@@ -191,15 +194,15 @@ impl RecordingSession {
         self.generation = self.generation.saturating_add(1);
         let generation = self.generation;
         let mut opened = ActiveRecordings::default();
-        let result = opened.open(
-            &self.request,
-            &self.snapshot,
-            &self.layout,
+        let result = opened.open(OpenContext {
+            request: &self.request,
+            snapshot: &self.snapshot,
+            layout: &self.layout,
             generation,
             start_ns,
-            &mut self.manifest.tracks,
+            tracks: &mut self.manifest.tracks,
             start_gate,
-        );
+        });
         if let Err(error) = result {
             start_gate.cancel();
             let _cleanup = opened.stop(&mut self.manifest.tracks, start_ns);

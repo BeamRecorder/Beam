@@ -93,21 +93,19 @@ impl WindowsCameraRecording {
         let metrics = Arc::new(CameraCaptureMetrics::default());
         let thread_metrics = metrics.clone();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
+        let config = CameraLoopConfig {
+            index,
+            selection,
+            output,
+            bitrate,
+            queue_capacity,
+            start_gate,
+            cancel: thread_cancel,
+            metrics: thread_metrics,
+        };
         let thread = std::thread::Builder::new()
             .name("capture-windows-camera".into())
-            .spawn(move || {
-                camera_loop(
-                    index,
-                    selection,
-                    &output,
-                    bitrate,
-                    queue_capacity,
-                    &start_gate,
-                    &thread_cancel,
-                    &thread_metrics,
-                    &ready_sender,
-                )
-            })
+            .spawn(move || camera_loop(config, &ready_sender))
             .map_err(backend_error)?;
         let format = ready_receiver
             .recv()
@@ -149,21 +147,26 @@ impl Drop for WindowsCameraRecording {
     }
 }
 
-fn camera_loop(
+struct CameraLoopConfig {
     index: u32,
     selection: RequestedFormat<'static>,
-    output: &Path,
+    output: std::path::PathBuf,
     bitrate: u32,
     queue_capacity: usize,
-    start_gate: &Arc<StartGate>,
-    cancel: &AtomicBool,
-    metrics: &Arc<CameraCaptureMetrics>,
+    start_gate: Arc<StartGate>,
+    cancel: Arc<AtomicBool>,
+    metrics: Arc<CameraCaptureMetrics>,
+}
+
+fn camera_loop(
+    config: CameraLoopConfig,
     ready: &mpsc::SyncSender<Result<CameraFormat, CaptureError>>,
 ) -> Result<u64, CaptureError> {
-    let opened = open_camera(index, selection).and_then(|(mut camera, selected_format)| {
-        camera.open_stream()?;
-        Ok((camera, selected_format))
-    });
+    let opened =
+        open_camera(config.index, config.selection).and_then(|(mut camera, selected_format)| {
+            camera.open_stream()?;
+            Ok((camera, selected_format))
+        });
     let (mut camera, format) = match opened {
         Ok(opened) => opened,
         Err(error) => {
@@ -172,10 +175,11 @@ fn camera_loop(
         }
     };
     let resolution = format.resolution();
-    let (frame_sender, frame_receiver) = bounded::<EncodedFrame>(queue_capacity);
+    let (frame_sender, frame_receiver) = bounded::<EncodedFrame>(config.queue_capacity);
     let (encoder_ready_sender, encoder_ready_receiver) = mpsc::sync_channel(1);
-    let encoder_output = output.to_owned();
-    let writer_metrics = metrics.clone();
+    let encoder_output = config.output.clone();
+    let writer_metrics = config.metrics.clone();
+    let bitrate = config.bitrate;
     let encoder = std::thread::Builder::new()
         .name("capture-windows-camera-encoder".into())
         .spawn(move || {
@@ -236,7 +240,7 @@ fn camera_loop(
     ready
         .send(Ok(format))
         .map_err(|_| CaptureError::Backend("camera startup receiver closed".into()))?;
-    if let Err(error) = start_gate.wait() {
+    if let Err(error) = config.start_gate.wait() {
         let _stopped = camera.stop_stream();
         drop(frame_sender);
         let _joined = encoder.join();
@@ -245,13 +249,16 @@ fn camera_loop(
     let mut rgba = vec![0; expected_buffer_len(resolution.width(), resolution.height())];
     let started = Instant::now();
     let mut capture_error = None;
-    while !cancel.load(Ordering::Acquire) {
+    while !config.cancel.load(Ordering::Acquire) {
         if let Err(error) = camera.write_frame_to_buffer::<RgbAFormat>(&mut rgba) {
-            metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+            config.metrics.interruptions.fetch_add(1, Ordering::Relaxed);
             capture_error = Some(backend_error(error));
             break;
         }
-        metrics.frames_acquired.fetch_add(1, Ordering::Relaxed);
+        config
+            .metrics
+            .frames_acquired
+            .fetch_add(1, Ordering::Relaxed);
         rgba_to_bottom_up_bgra(&mut rgba, resolution.width(), resolution.height());
         let timestamp = i64::try_from(started.elapsed().as_nanos() / 100).unwrap_or(i64::MAX);
         match frame_sender.try_send(EncodedFrame {
@@ -262,11 +269,14 @@ fn camera_loop(
                 rgba = vec![0; expected_buffer_len(resolution.width(), resolution.height())];
             }
             Err(TrySendError::Full(frame)) => {
-                metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
+                config
+                    .metrics
+                    .frames_dropped
+                    .fetch_add(1, Ordering::Relaxed);
                 rgba = frame.buffer;
             }
             Err(TrySendError::Disconnected(_)) => {
-                metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+                config.metrics.interruptions.fetch_add(1, Ordering::Relaxed);
                 capture_error = Some(CaptureError::Backend(
                     "camera encoder stopped unexpectedly".into(),
                 ));
@@ -284,7 +294,7 @@ fn camera_loop(
     }
     stop_result?;
     encoder_result?;
-    Ok(metrics.frames_encoded())
+    Ok(config.metrics.frames_encoded())
 }
 
 struct EncodedFrame {

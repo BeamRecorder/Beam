@@ -1,6 +1,4 @@
 use std::{
-    fs::File,
-    io::{BufWriter, Write},
     path::Path,
     sync::{
         Arc,
@@ -10,7 +8,7 @@ use std::{
     thread::JoinHandle,
 };
 
-use jpeg_encoder::{ColorType, Encoder};
+use crossbeam_channel::TrySendError;
 use nokhwa::{
     Camera,
     pixel_format::RgbAFormat,
@@ -19,17 +17,31 @@ use nokhwa::{
 
 use crate::{CaptureError, model::CameraSelection, session::StartGate};
 
+use super::writer::{VideoFrame, spawn_writer};
+
 #[derive(Debug, Default)]
 pub struct MacCameraMetrics {
-    frames_received: AtomicU64,
+    frames_acquired: AtomicU64,
+    frames_encoded: AtomicU64,
     frames_dropped: AtomicU64,
     interruptions: AtomicU64,
 }
 
 impl MacCameraMetrics {
+    pub(super) fn encoded_one(&self) {
+        self.frames_encoded.fetch_add(1, Ordering::Relaxed);
+    }
+    #[must_use]
+    pub fn frames_acquired(&self) -> u64 {
+        self.frames_acquired.load(Ordering::Relaxed)
+    }
+    #[must_use]
+    pub fn frames_encoded(&self) -> u64 {
+        self.frames_encoded.load(Ordering::Relaxed)
+    }
     #[must_use]
     pub fn frames_received(&self) -> u64 {
-        self.frames_received.load(Ordering::Relaxed)
+        self.frames_encoded()
     }
     #[must_use]
     pub fn frames_dropped(&self) -> u64 {
@@ -53,6 +65,7 @@ impl MacCameraRecording {
         selection: &CameraSelection,
         output: &Path,
         start_gate: Arc<StartGate>,
+        queue_capacity: usize,
     ) -> Result<Self, CaptureError> {
         let index = selection
             .source_id
@@ -84,6 +97,7 @@ impl MacCameraRecording {
                     &thread_metrics,
                     &ready_sender,
                     &start_gate,
+                    queue_capacity,
                 )
             })
             .map_err(backend_error)?;
@@ -117,7 +131,7 @@ impl MacCameraRecording {
                 .join()
                 .map_err(|_| CaptureError::Backend("macOS camera thread panicked".into()))?;
         }
-        Ok(self.metrics.frames_received())
+        Ok(self.metrics.frames_encoded())
     }
 }
 
@@ -132,9 +146,10 @@ fn camera_loop(
     desired: CameraFormat,
     output: &Path,
     cancel: &AtomicBool,
-    metrics: &MacCameraMetrics,
+    metrics: &Arc<MacCameraMetrics>,
     ready: &mpsc::SyncSender<Result<CameraFormat, CaptureError>>,
     start_gate: &Arc<StartGate>,
+    queue_capacity: usize,
 ) -> Result<u64, CaptureError> {
     let requested = RequestedFormat::new::<RgbAFormat>(RequestedFormatType::Closest(desired));
     let opened = Camera::new(CameraIndex::Index(index), requested)
@@ -156,36 +171,49 @@ fn camera_loop(
         }
     };
     let format = camera.camera_format();
-    let width = u16::try_from(format.width()).map_err(backend_error)?;
-    let height = u16::try_from(format.height()).map_err(backend_error)?;
-    let expected = usize::from(width)
-        .saturating_mul(usize::from(height))
+    let width = format.width();
+    let height = format.height();
+    let expected = usize::try_from(width)
+        .map_err(backend_error)?
+        .saturating_mul(usize::try_from(height).map_err(backend_error)?)
         .saturating_mul(4);
     let mut rgba = vec![0; expected];
-    let file = File::create(output).map_err(|error| CaptureError::storage(output, error))?;
-    let mut writer = BufWriter::new(file);
+    let (frame_sender, writer) = spawn_writer(
+        output,
+        width,
+        height,
+        queue_capacity.max(1),
+        metrics.clone(),
+    )?;
     ready
         .send(Ok(format))
         .map_err(|_| CaptureError::Backend("camera startup receiver closed".into()))?;
     start_gate.wait()?;
+    let started = std::time::Instant::now();
     while !cancel.load(Ordering::Acquire) {
         if let Err(error) = camera.write_frame_to_buffer::<RgbAFormat>(&mut rgba) {
             metrics.interruptions.fetch_add(1, Ordering::Relaxed);
             return Err(backend_error(error));
         }
-        if let Err(error) =
-            Encoder::new(&mut writer, 85).encode(&rgba, width, height, ColorType::Rgba)
-        {
-            metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
-            return Err(backend_error(error));
+        metrics.frames_acquired.fetch_add(1, Ordering::Relaxed);
+        let timestamp_ns = i64::try_from(started.elapsed().as_nanos()).unwrap_or(i64::MAX);
+        match frame_sender.try_send(VideoFrame {
+            rgba: rgba.clone(),
+            timestamp_ns,
+        }) {
+            Ok(()) => {}
+            Err(TrySendError::Full(_)) => {
+                metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
+            }
+            Err(TrySendError::Disconnected(_)) => {
+                return Err(CaptureError::Backend("macOS camera writer stopped".into()));
+            }
         }
-        metrics.frames_received.fetch_add(1, Ordering::Relaxed);
     }
     camera.stop_stream().map_err(backend_error)?;
-    writer
-        .flush()
-        .map_err(|error| CaptureError::storage(output, error))?;
-    Ok(metrics.frames_received())
+    drop(frame_sender);
+    writer.finish()?;
+    Ok(metrics.frames_encoded())
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {

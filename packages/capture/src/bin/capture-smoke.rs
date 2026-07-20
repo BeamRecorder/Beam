@@ -10,6 +10,10 @@ use capture::{
     protocol::write_json_line,
 };
 
+#[cfg(all(windows, feature = "camera"))]
+#[path = "capture_smoke/camera.rs"]
+mod camera_smoke;
+
 fn main() {
     let code = match run() {
         Ok(()) => 0,
@@ -42,7 +46,11 @@ fn run() -> Result<(), capture::CaptureError> {
     }
     #[cfg(all(windows, feature = "camera"))]
     if mode == "camera" {
-        return record_windows_camera();
+        return camera_smoke::record_windows_camera();
+    }
+    #[cfg(all(windows, feature = "camera"))]
+    if mode == "camera-raw" {
+        return camera_smoke::probe_windows_camera_raw();
     }
     if mode == "full" {
         return record_full_session();
@@ -365,71 +373,6 @@ fn record_windows_system_audio() -> Result<(), capture::CaptureError> {
             "channels": channels,
             "samplesWritten": samples,
             "samplesReceived": metrics.samples_received(),
-            "interruptions": metrics.interruptions(),
-        }),
-    )
-}
-
-#[cfg(all(windows, feature = "camera"))]
-fn record_windows_camera() -> Result<(), capture::CaptureError> {
-    use capture::{
-        camera::win::WindowsCameraRecording,
-        model::{CameraSelection, SourceId},
-    };
-
-    let snapshot = NativeCatalog::default().snapshot()?;
-    let source_id = match argument_value("--source") {
-        Some(id) => SourceId::new(id)?,
-        None => snapshot
-            .sources
-            .iter()
-            .find(|source| source.kind == SourceKind::Camera)
-            .map(|source| source.id.clone())
-            .ok_or_else(|| capture::CaptureError::SourceNotFound("default camera".into()))?,
-    };
-    let duration = argument_value("--duration")
-        .map(|value| value.parse::<u64>())
-        .transpose()
-        .map_err(|error| capture::CaptureError::Protocol(error.to_string()))?
-        .unwrap_or(10);
-    let output = argument_value("--output")
-        .map_or_else(|| PathBuf::from("capture-smoke-camera.mp4"), PathBuf::from);
-    let recording = WindowsCameraRecording::start(
-        &CameraSelection {
-            source_id: source_id.clone(),
-            preferred_width: Some(1280),
-            preferred_height: Some(720),
-            preferred_fps: Some(30),
-            preferred_pixel_format: None,
-        },
-        &output,
-        6_000_000,
-        8,
-        {
-            let gate = std::sync::Arc::new(capture::session::StartGate::new());
-            gate.release(0)?;
-            gate
-        },
-    )?;
-    let metrics = recording.metrics();
-    let format = recording.format();
-    std::thread::sleep(Duration::from_secs(duration));
-    recording.stop()?;
-    write_json_line(
-        &mut io::stdout().lock(),
-        &serde_json::json!({
-            "mode": "camera",
-            "sourceId": source_id,
-            "path": output,
-            "durationSeconds": duration,
-            "width": format.width(),
-            "height": format.height(),
-            "fps": format.frame_rate(),
-            "pixelFormat": format.format().to_string(),
-            "framesReceived": metrics.frames_received(),
-            "framesAcquired": metrics.frames_acquired(),
-            "framesEncoded": metrics.frames_encoded(),
-            "framesDropped": metrics.frames_dropped(),
             "interruptions": metrics.interruptions(),
         }),
     )

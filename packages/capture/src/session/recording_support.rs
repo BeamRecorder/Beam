@@ -18,14 +18,16 @@ impl Drop for RecordingSession {
     fn drop(&mut self) {
         if matches!(
             self.state(),
-            super::SessionState::Recording | super::SessionState::Paused
+            super::SessionState::Armed
+                | super::SessionState::Recording
+                | super::SessionState::Paused
+                | super::SessionState::Degraded
         ) {
             let _result = self.stop();
         }
     }
 }
 
-#[cfg(any(windows, target_os = "macos", feature = "microphone"))]
 pub(super) fn record_result(result: Result<(), CaptureError>, first: &mut Option<CaptureError>) {
     if let Err(error) = result {
         first.get_or_insert(error);
@@ -182,6 +184,10 @@ pub(super) fn track_mut(
     tracks.iter_mut().find(|track| track.kind == kind)
 }
 
+pub(super) fn track_for(tracks: &[TrackMetadata], kind: TrackKind) -> Option<&TrackMetadata> {
+    tracks.iter().find(|track| track.kind == kind)
+}
+
 pub(super) fn segment_path(
     layout: &crate::storage::SessionLayout,
     kind: TrackKind,
@@ -211,6 +217,8 @@ pub(super) fn update_video_metrics(
     dropped: u64,
 ) {
     if let Some(track) = track_mut(tracks, kind) {
+        track.metrics.frames_acquired += received;
+        track.metrics.frames_encoded += received;
         track.metrics.frames_received += received;
         track.metrics.frames_dropped += dropped;
     }
@@ -381,7 +389,7 @@ pub(super) fn write_health_snapshot(
     Ok(())
 }
 
-fn append_jsonl(path: &Path, value: &impl serde::Serialize) -> Result<(), CaptureError> {
+pub(super) fn append_jsonl(path: &Path, value: &impl serde::Serialize) -> Result<(), CaptureError> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)

@@ -9,6 +9,7 @@ const props = withDefaults(
     size?: 'sm' | 'md' | 'lg'
     loading?: boolean
     disabled?: boolean
+    block?: boolean
     tooltip?: string
     tooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
     type?: 'button' | 'submit' | 'reset'
@@ -18,6 +19,7 @@ const props = withDefaults(
     size: 'md',
     loading: false,
     disabled: false,
+    block: false,
     tooltip: '',
     tooltipPosition: 'top',
     type: 'button',
@@ -34,6 +36,7 @@ const buttonClasses = computed(() => {
     `btn-${props.variant}`,
     `btn-${props.size}`,
     { 'btn-loading': props.loading },
+    { 'btn-block': props.block },
   ]
 })
 
@@ -51,7 +54,7 @@ const handleClick = (event: MouseEvent) => {
   <component
     :is="tooltip ? Tooltip : 'div'"
     v-bind="tooltip ? { content: tooltip, position: tooltipPosition } : {}"
-    class="btn-container"
+    :class="['btn-container', { 'btn-block': block }]"
   >
     <button
       :type="type"
@@ -63,7 +66,7 @@ const handleClick = (event: MouseEvent) => {
       <span v-if="$slots.icon && !loading" class="btn-icon-wrapper">
         <slot name="icon" />
       </span>
-      <span class="btn-content">
+      <span v-if="$slots.default" class="btn-content">
         <slot />
       </span>
     </button>
@@ -73,6 +76,11 @@ const handleClick = (event: MouseEvent) => {
 <style scoped>
 .btn-container {
   display: inline-block;
+}
+
+.btn-container.btn-block {
+  display: block;
+  width: 100%;
 }
 
 .btn {
@@ -88,6 +96,10 @@ const handleClick = (event: MouseEvent) => {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   user-select: none;
+}
+
+.btn.btn-block {
+  width: 100%;
 }
 
 .btn:disabled {

@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron')
 const { spawn } = require('child_process')
 const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
+const { buildDefaultCaptureConfig } = require('./capture-config.cjs')
 
 const CAPTURE_CHANNEL = 'capture:request'
 const REQUEST_TIMEOUT_MS = 30_000
@@ -111,9 +112,20 @@ class CaptureEngine {
       // An idle or already failed session has nothing to finalize.
     }
     child.stdin.end()
-    setTimeout(() => {
-      if (this.process === child && !child.killed) child.kill()
-    }, 2_000).unref()
+    await new Promise((resolve) => {
+      if (child.exitCode !== null) {
+        resolve()
+        return
+      }
+      const timeout = setTimeout(() => {
+        if (this.process === child && !child.killed) child.kill()
+        resolve()
+      }, 2_000)
+      child.once('exit', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+    })
   }
 }
 
@@ -132,6 +144,16 @@ const allowedCommands = new Set([
 ])
 
 ipcMain.handle(CAPTURE_CHANNEL, async (_event, command, payload) => {
+  if (command === 'start-default-recording') {
+    const options = payload?.options || {}
+    const catalog = await captureEngine.request('discover')
+    const config = buildDefaultCaptureConfig(catalog, options, {
+      platform: process.platform,
+      defaultOutputRoot: path.join(app.getPath('videos'), 'DemoRecorder'),
+    })
+    await captureEngine.request('prepare', { config })
+    return captureEngine.request('start')
+  }
   if (command === 'start-recording') {
     await captureEngine.request('prepare', { config: payload.config })
     return captureEngine.request('start')
@@ -140,10 +162,89 @@ ipcMain.handle(CAPTURE_CHANNEL, async (_event, command, payload) => {
   return captureEngine.request(command, payload)
 })
 
+ipcMain.handle('window:getSources', async (_event, types) => {
+  const sources = await desktopCapturer.getSources({
+    types: types || ['window', 'screen'],
+    thumbnailSize: { width: 300, height: 200 },
+    fetchWindowIcons: true,
+  })
+  return sources.map(source => ({
+    id: source.id,
+    name: source.name,
+    thumbnail: source.thumbnail.toDataURL(),
+    appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
+  }))
+})
+
+ipcMain.on('window:close', (event) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) win.close()
+})
+
+ipcMain.on('window:minimize', (event) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) win.minimize()
+})
+
+ipcMain.on('window:setPosition', (event, x, y) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) {
+    win.setPosition(Math.round(x), Math.round(y))
+  }
+})
+
+ipcMain.on('window:setSize', (event, width, height) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) {
+    const [x, y] = win.getPosition()
+    win.setBounds({
+      x: x,
+      y: y,
+      width: Math.round(width),
+      height: Math.round(height)
+    })
+  }
+})
+
+let dragStartMouse = null
+let dragStartWin = null
+
+ipcMain.on('window:dragStart', (event) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) {
+    const { screen } = require('electron')
+    dragStartMouse = screen.getCursorScreenPoint()
+    dragStartWin = win.getPosition()
+  }
+})
+
+ipcMain.on('window:drag', (event) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win && dragStartMouse && dragStartWin) {
+    const { screen } = require('electron')
+    const currentMouse = screen.getCursorScreenPoint()
+    const dx = currentMouse.x - dragStartMouse.x
+    const dy = currentMouse.y - dragStartMouse.y
+    win.setPosition(Math.round(dragStartWin[0] + dx), Math.round(dragStartWin[1] + dy))
+  }
+})
+
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 320,
+    height: 480,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    maximizable: false,
+    hasShadow: true,
     webPreferences: {
       preload: path.join(__dirname, 'electron-preload.cjs'),
       nodeIntegration: false,
@@ -153,7 +254,10 @@ function createWindow() {
   })
 
   if (app.isPackaged) win.loadFile(path.join(__dirname, 'dist/index.html'))
-  else win.loadURL('http://localhost:6500')
+  else {
+    win.loadURL('http://localhost:6500')
+    win.webContents.openDevTools({ mode: 'detach' }) // Open DevTools detached
+  }
 }
 
 app.whenReady().then(() => {
@@ -163,8 +267,16 @@ app.whenReady().then(() => {
   })
 })
 
-app.on('before-quit', () => {
-  void captureEngine.shutdown()
+let quitAfterCaptureShutdown = false
+let captureShutdown = null
+
+app.on('before-quit', (event) => {
+  if (quitAfterCaptureShutdown) return
+  event.preventDefault()
+  captureShutdown ??= captureEngine.shutdown().finally(() => {
+    quitAfterCaptureShutdown = true
+    app.quit()
+  })
 })
 
 app.on('window-all-closed', () => {

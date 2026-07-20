@@ -18,6 +18,19 @@ npm run electron:dev
 
 Le preload isolé expose uniquement `window.capture`. Le renderer n'a accès ni à Node.js ni à une primitive IPC générique.
 
+Le démarrage le plus simple choisit automatiquement l'écran par défaut :
+
+```ts
+const session = await window.capture.startRecording({
+  microphoneId: null,
+  cameraId: null,
+  systemAudio: true,
+})
+await window.capture.stop()
+```
+
+Les IDs facultatifs viennent de `await window.capture.discover()`. Sans ID explicite, `startRecording` choisit le périphérique marqué par défaut puis le premier disponible. Les enregistrements vont par défaut dans `Videos/DemoRecorder`.
+
 ```ts
 import { capture, type CaptureConfig } from '~/capture-api'
 

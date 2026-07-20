@@ -5,12 +5,17 @@
   "type": "module",
   "main": "electron-main.cjs",
   "scripts": {
+    "test": "node --test test/*.test.cjs",
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "capture:build": "cargo build -p capture --bin capture-engine --release",
+    "dev:all": "node start-dev.cjs",
+    "capture:build-dev": "cargo build -p capture --bin capture-engine",
+    "capture:build-release": "cargo build -p capture --bin capture-engine --release",
+    "build:dev": "npm run capture:build-dev && vue-tsc -b && vite build --mode development",
+    "build:release": "npm run capture:build-release && vue-tsc -b && vite build",
+    "build": "npm run build:release",
     "preview": "vite preview",
-    "electron:dev": "electron .",
-    "electron:build": "npm run build && npm run capture:build && electron-builder"
+    "electron:dev": "npm run capture:build-dev && electron .",
+    "electron:build": "npm run build:release && electron-builder"
   },
   "dependencies": {
     "@lucide/vue": "^1.25.0",

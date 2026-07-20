@@ -107,7 +107,8 @@ Implémenté dans le code :
 - Capture audio système ScreenCaptureKit dans un WAV séparé avec channel borné.
 - Capture microphone via CPAL.
 - Curseur séparé via CoreGraphics : position, boutons, visibilité et région de source.
-- Capture caméra Nokhwa dans un sidecar Motion JPEG `.mjpeg`.
+- Capture caméra Nokhwa dans un sidecar MP4 H.264 via `AVAssetWriter`.
+- Acquisition caméra et encodage séparés par une queue bornée, avec timestamps par frame et compteurs acquis/encodés/droppés.
 - Intégration de toutes ces pistes dans `RecordingSession`.
 
 Backends :
@@ -172,6 +173,20 @@ Ne pas masquer le défaut en écrivant simplement `30` dans le manifeste : la ca
 
 ### P0 — Absence de vraie barrière de démarrage multipiste
 
+État du correctif logiciel au 20 juillet 2026 :
+
+- `StartGate` est un signal one-shot partagé qui transporte le même `t0` vers tous les waiters et possède un chemin d'annulation réveillant les threads armés;
+- `RecordingSession::start` prépare désormais le segment et tous les backends avant de lire l'horloge, fixe ensuite `session_start_monotonic_ns`, puis libère le gate;
+- écran, microphone, audio système, caméra et curseur utilisent ce même gate sous Windows et macOS;
+- les writers asynchrones microphone/audio, les writers caméra et les fichiers curseur acquittent leur création avant que le backend soit considéré armé;
+- les callbacks temps réel microphone et ScreenCaptureKit rejettent toute unité antérieure à la libération sans verrou dans le callback audio;
+- les boucles caméra, WASAPI et curseur attendent le gate avant leur première unité et sont réveillées par l'annulation;
+- un échec obligatoire pendant l'armement annule le gate avant le rollback et la jointure des backends déjà préparés;
+- pause/reprise crée une nouvelle barrière par génération de segments;
+- les tests prouvent que plusieurs waiters reçoivent exactement le même `t0`, qu'aucun n'est libéré avant le signal et que l'annulation les réveille.
+
+Le sous-ensemble écran/audio système/curseur compile pour `x86_64-pc-windows-msvc` et `aarch64-apple-darwin`. Il reste obligatoire de mesurer sur les OS réels le premier timestamp natif de chaque piste, les offsets à `t0` et l'absence de thread après les scénarios d'échec matériel.
+
 `RecordingSession::start` fixe actuellement `session_start_monotonic_ns`, puis `ActiveRecordings::open` démarre les backends l'un après l'autre. L'écran, le micro, l'audio système, la caméra et le curseur n'ont donc pas un armement commun avant `t0`.
 
 Conséquences observées :
@@ -220,22 +235,33 @@ L'écriture MP4 actuelle dépend de `SCRecordingOutput`, exposé avec la feature
 
 Le plan original vise ScreenCaptureKit à partir de macOS 13. Pour couvrir 13/14, ajouter un chemin basé sur les `CMSampleBuffer`/pixel buffers et AVAssetWriter ou VideoToolbox, sélectionné au runtime. Ne pas retirer le chemin direct macOS 15.
 
-### P1 — Caméra macOS non conforme au format vidéo cible
+### P1 — Caméra macOS H.264 implémentée, validation native manquante
 
-Le backend actuel encode chaque frame en JPEG dans le thread d'acquisition et concatène les images dans `.mjpeg`. Cela sert de premier sidecar indépendant, mais le plan demande un writer vidéo H.264/HEVC dans un conteneur éditable et un callback non bloquant.
+Le backend a été remplacé par un pipeline acquisition → queue bornée → `AVAssetWriter`. Le thread Nokhwa ne fait plus d'encodage ni d'I/O disque : il horodate la frame, incrémente `frames_acquired` et tente un envoi non bloquant. La saturation incrémente `frames_dropped`. Le writer convertit RGBA vers un `CVPixelBuffer` BGRA, encode H.264 dans MP4 et incrémente `frames_encoded`.
 
-À faire :
+L'ouverture caméra et l'initialisation complète de l'asset writer précèdent l'acquittement de préparation et le `StartGate`. La session et le manifeste annoncent désormais `h264`/`.mp4`.
 
-- channel borné entre acquisition et writer;
-- timestamps par frame;
-- AVAssetWriter/VideoToolbox ou writer commun;
-- MP4 H.264/HEVC;
-- compteur de drops et événement de santé lors de saturation;
-- négociation et preuve 720p30/1080p30.
+Restent obligatoires avant clôture :
+
+- compiler ce chemin dans une CI/macOS native avec le SDK Apple (le cross-check Linux local est arrêté dans les build scripts C de `objc_exception`/`mozjpeg-sys`, faute de SDK et toolchain macOS);
+- vérifier sur matériel que les MP4 sont lisibles et que leur durée/cadence correspond aux timestamps;
+- prouver 720p30 et 1080p30, saturation comprise;
+- vérifier arrêt, annulation pendant la préparation et erreur encodeur sans thread restant.
 
 ### P1 — Santé, timestamps et hot-plug incomplets
 
-`timing.jsonl` reçoit surtout une ancre au démarrage et à la reprise. `health.jsonl` reçoit principalement un snapshot à l'arrêt. Le plan exige des événements périodiques et immédiats pour :
+État du reporter périodique au 20 juillet 2026 :
+
+- chaque segment actif démarre un thread `capture-health-reporter` armé sur le même `StartGate` que les pistes;
+- il écrit chaque seconde un `TrackHealth` par piste active dans `health.jsonl` et une `TimingAnchor` correspondante dans `timing.jsonl`;
+- les snapshots proviennent directement des métriques atomiques des backends et couvrent frames acquises/encodées/droppées, samples reçus/droppés et interruptions;
+- pause et stop ferment puis joignent le reporter avant de fermer les backends, ce qui évite les écritures concurrentes pendant la finalisation;
+- un test accéléré vérifie plusieurs émissions, la monotonie de `sessionNs`, la progression de la position native et la cardinalité identique santé/timing;
+- la compilation croisée du reporter intégré passe pour les sous-ensembles natifs Windows et macOS.
+
+Les événements immédiats spécialisés de hot-unplug, changement du périphérique par défaut, changement de format, perte de source, erreur encodeur et disque plein doivent encore être reliés aux notifications natives; le snapshot périodique permet déjà d'observer drops, saturation et interruptions.
+
+Le reporter couvre désormais la périodicité. Le plan exige encore des événements natifs immédiats spécialisés pour :
 
 - drops/discontinuités;
 - dérive;

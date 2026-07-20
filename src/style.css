@@ -74,7 +74,6 @@
   --radius-full: 9999px;
 
   /* Global Setup */
-  background-color: var(--color-light-blue);
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -90,10 +89,21 @@
   padding: 0;
 }
 
-body {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+html, body {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  background: transparent !important;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
 }
 
 h1, h2, h3, h4, h5, h6 {

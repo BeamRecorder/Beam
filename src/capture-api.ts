@@ -18,6 +18,25 @@ export interface CaptureSession {
   manifestPath?: string | null
 }
 
+export interface StartRecordingOptions {
+  projectId?: string
+  screenKind?: 'display' | 'window'
+  screenId?: string
+  microphoneId?: string | null
+  cameraId?: string | null
+  systemAudio?: boolean
+  cursor?: boolean
+  outputRoot?: string
+  targetFps?: number
+  videoBitrateBps?: number
+  queueCapacity?: number
+  minimumFreeBytes?: number
+  cameraWidth?: number
+  cameraHeight?: number
+  cameraFps?: number
+  failurePolicy?: 'fail-fast' | 'continue-without-optional-tracks'
+}
+
 export interface RecordingSettings {
   outputRoot: string
   videoBitrateBps: number
@@ -65,6 +84,8 @@ export interface CaptureApi {
   permissions(): Promise<unknown>
   formats(sourceId: string): Promise<unknown>
   prepare(config: CaptureConfig): Promise<CaptureSession>
+  /** Découvre les sources, choisit l'écran par défaut et applique les réglages recommandés. */
+  startRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   /** Avec une config, prépare et démarre en un seul appel. Sans config, démarre la session préparée. */
   start(config?: CaptureConfig): Promise<CaptureSession>
   pause(): Promise<CaptureSession>
@@ -73,9 +94,31 @@ export interface CaptureApi {
   status(): Promise<CaptureSession>
 }
 
+export interface DesktopCaptureApi extends CaptureApi {
+  close(): void
+  minimize(): void
+  setPosition(x: number, y: number): void
+  setSize(width: number, height: number): void
+  dragStart(): void
+  drag(): void
+  getSources(types?: string[]): Promise<any[]>
+}
+
+export interface CaptureSource {
+  id: string
+  kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'
+  label: string
+  isDefault: boolean
+}
+
+export interface CaptureCatalog {
+  sources: CaptureSource[]
+  capabilities: Record<string, boolean>
+}
+
 declare global {
   interface Window {
-    capture: CaptureApi
+    capture: DesktopCaptureApi
   }
 }
 
