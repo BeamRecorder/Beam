@@ -11,6 +11,10 @@ import Input from '~/ui/input/Input.vue'
 import { capture } from '../../api/capture'
 import type { CaptureProject } from '../../api/types/capture-api'
 
+const vFocus = {
+  mounted: (el: HTMLInputElement) => el.focus(),
+}
+
 let cachedProjects: CaptureProject[] | null = null
 
 const emit = defineEmits<{
@@ -113,7 +117,6 @@ const newProjectError = ref('')
 const newProjectBusy = ref(false)
 
 // Rename project states
-const isRenameOpen = ref(false)
 const renameProjectId = ref('')
 const renameValue = ref('')
 const renameError = ref('')
@@ -148,24 +151,35 @@ const handleCreateProject = async () => {
   }
 }
 
-const openRenameDialog = (project: CaptureProject) => {
+const startRename = (project: CaptureProject) => {
   renameProjectId.value = project.id
   renameValue.value = project.name
   renameError.value = ''
-  isRenameOpen.value = true
+}
+
+const cancelRename = () => {
+  renameProjectId.value = ''
+  renameValue.value = ''
 }
 
 const handleRenameProject = async () => {
-  if (!renameValue.value.trim()) return
+  const trimmed = renameValue.value.trim()
+  const originalProject = projects.value.find(p => p.id === renameProjectId.value)
+  if (!trimmed || (originalProject && originalProject.name === trimmed)) {
+    cancelRename()
+    return
+  }
   renameBusy.value = true
   renameError.value = ''
   try {
-    await capture.renameProject(renameProjectId.value, renameValue.value)
+    await capture.renameProject(renameProjectId.value, trimmed)
     cachedProjects = null
     await loadProjects()
-    isRenameOpen.value = false
+    cancelRename()
   } catch (error) {
     renameError.value = error instanceof Error ? error.message : String(error)
+    console.error('Rename failed:', renameError.value)
+    cancelRename()
   } finally {
     renameBusy.value = false
   }
@@ -305,7 +319,19 @@ defineExpose({
                 </div>
                 <div class="project-card-info">
                   <div class="project-title-row">
-                    <span class="project-card-name" :title="project.name">{{ project.name }}</span>
+                    <input
+                      v-if="renameProjectId === project.id"
+                      v-focus
+                      v-model="renameValue"
+                      class="project-rename-input"
+                      :disabled="renameBusy"
+                      @click.stop
+                      @mousedown.stop
+                      @keydown.enter.stop="handleRenameProject"
+                      @keydown.esc.stop="cancelRename"
+                      @blur="handleRenameProject"
+                    />
+                    <span v-else class="project-card-name" :title="project.name">{{ project.name }}</span>
                     <div class="project-card-actions" @click.stop @mousedown.stop>
                       <Popover align="right" direction="down" @toggle="handlePopoverToggle">
                         <template #trigger="{ isOpen }">
@@ -320,7 +346,7 @@ defineExpose({
                         </template>
                         <template #default="{ close }">
                           <div class="action-menu-content">
-                            <Button variant="ghost" size="sm" :icon="Pencil" class="menu-action-item" @click.stop="openRenameDialog(project); close()">
+                            <Button variant="ghost" size="sm" :icon="Pencil" class="menu-action-item" @click.stop="startRename(project); close()">
                               Rename
                             </Button>
                             <Button variant="ghost" size="sm" :icon="Trash2" class="menu-action-item delete-item" @click.stop="confirmDeleteProject(project); close()">
@@ -367,19 +393,7 @@ defineExpose({
       </template>
     </Dialog>
 
-    <!-- Rename Project Dialog -->
-    <Dialog :is-open="isRenameOpen" title="Rename project" size="sm" @close="isRenameOpen = false">
-      <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
-        <Input v-model="renameValue" placeholder="Project name" :disabled="renameBusy" autofocus @keyup.enter="handleRenameProject" />
-        <p v-if="renameError" style="color: var(--color-error); font-size: 11px; margin: 0;">{{ renameError }}</p>
-      </div>
-      <template #footer="{ close }">
-        <ButtonGroup>
-          <Button variant="ghost" size="sm" :disabled="renameBusy" @click="close">Cancel</Button>
-          <Button variant="primary" size="sm" :loading="renameBusy" :disabled="!renameValue.trim()" @click="handleRenameProject">Rename</Button>
-        </ButtonGroup>
-      </template>
-    </Dialog>
+
 
     <!-- Delete Project Confirmation Dialog -->
     <Dialog :is-open="isDeleteConfirmOpen" :title="`Delete ${deleteProjectName}?`" size="sm" @close="isDeleteConfirmOpen = false">
@@ -653,6 +667,21 @@ defineExpose({
   font-weight: 700;
   flex: 1;
   line-height: 1.2;
+}
+
+.project-rename-input {
+  font-size: 11px;
+  font-weight: 700;
+  flex: 1;
+  line-height: 1.2;
+  border: 1px solid var(--color-primary);
+  background: var(--color-bg-element);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 1px 4px;
+  outline: none;
+  font-family: inherit;
+  width: 100%;
 }
 
 .project-card-meta {
