@@ -3,6 +3,10 @@ export interface ZoomFocus {
   cy: number
 }
 
+export interface ZoomFocusKeyframe extends ZoomFocus {
+  timeMs: number
+}
+
 export type ZoomSource = 'automatic' | 'manual'
 
 export interface ZoomElement {
@@ -11,6 +15,7 @@ export interface ZoomElement {
   startMs: number
   endMs: number
   focus: ZoomFocus
+  focusKeyframes: ZoomFocusKeyframe[]
   scale: number
   speed: number
   source: ZoomSource

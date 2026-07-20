@@ -1,5 +1,5 @@
 import type { CursorEvent, CursorMoveEvent } from '../../../api/types/capture-session'
-import { DEFAULT_ZOOM_SCALE, DEFAULT_ZOOM_SPEED, type ZoomElement, type ZoomFocus } from './zoom-types'
+import { DEFAULT_ZOOM_SCALE, DEFAULT_ZOOM_SPEED, type ZoomElement, type ZoomFocus, type ZoomFocusKeyframe } from './zoom-types'
 
 export const CLICK_CLUSTER_GAP_MS = 650
 export const CLICK_CLUSTER_DISTANCE = 0.07
@@ -11,6 +11,7 @@ const LEFT_MOUSE_BUTTON = 1
 interface ClickPoint {
   timeMs: number
   focus: ZoomFocus
+  focusKeyframes: ZoomFocusKeyframe[]
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -31,7 +32,22 @@ function leftClickPoints(events: CursorEvent[]): ClickPoint[] {
     // Capture backends persist mouse buttons as 1=left, 2=right, 3=middle.
     if (event.event !== 'button' || event.button !== LEFT_MOUSE_BUTTON || !event.pressed) return []
     const focus = cursorPositionAt(events, eventTimeMs(event))
-    return focus ? [{ timeMs: eventTimeMs(event), focus }] : []
+    if (!focus) return []
+    const pressTimeMs = eventTimeMs(event)
+    const release = events.find((candidate) =>
+      candidate.event === 'button' && candidate.button === LEFT_MOUSE_BUTTON && !candidate.pressed && eventTimeMs(candidate) > pressTimeMs,
+    )
+    const moves = release
+      ? events.filter((candidate): candidate is CursorMoveEvent =>
+        candidate.event === 'move' && candidate.visible && eventTimeMs(candidate) >= pressTimeMs && eventTimeMs(candidate) <= eventTimeMs(release),
+      )
+      : []
+    const lastMove = moves.at(-1)
+    const isDrag = Boolean(lastMove && Math.hypot(lastMove.normalizedX - focus.cx, lastMove.normalizedY - focus.cy) > 0.015)
+    const focusKeyframes = isDrag
+      ? [{ timeMs: pressTimeMs, ...focus }, ...moves.map((move) => ({ timeMs: eventTimeMs(move), cx: clamp(move.normalizedX, 0, 1), cy: clamp(move.normalizedY, 0, 1) }))]
+      : []
+    return [{ timeMs: pressTimeMs, focus, focusKeyframes }]
   })
 }
 
@@ -82,6 +98,7 @@ export function buildAutomaticZoomElements(params: {
         startMs: Math.round(startMs),
         endMs: Math.round(endMs),
         focus: focusForCluster(cluster),
+        focusKeyframes: cluster.length === 1 ? cluster[0].focusKeyframes : [],
         scale: DEFAULT_ZOOM_SCALE,
         speed: DEFAULT_ZOOM_SPEED,
         source: 'automatic' as const,

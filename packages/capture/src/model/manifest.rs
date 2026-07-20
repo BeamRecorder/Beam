@@ -55,12 +55,22 @@ pub struct ZoomFocus {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ZoomFocusKeyframe {
+    pub time_ms: u64,
+    pub cx: f64,
+    pub cy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ZoomElement {
     pub id: String,
     pub session_id: String,
     pub start_ms: u64,
     pub end_ms: u64,
     pub focus: ZoomFocus,
+    #[serde(default)]
+    pub focus_keyframes: Vec<ZoomFocusKeyframe>,
     pub scale: f64,
     pub speed: f64,
     pub source: String,

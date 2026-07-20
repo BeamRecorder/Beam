@@ -255,12 +255,18 @@ function validateZoomState(value) {
       !isFiniteNumber(element.speed) || element.speed < 0.5 || element.speed > 2 ||
       !['automatic', 'manual'].includes(element.source)
     ) throw new Error('Propriétés de zoom invalides')
+    const focusKeyframes = element.focusKeyframes === undefined ? [] : element.focusKeyframes
+    if (!Array.isArray(focusKeyframes) || focusKeyframes.some((keyframe) =>
+      !keyframe || !isFiniteNumber(keyframe.timeMs) || keyframe.timeMs < element.startMs || keyframe.timeMs > element.endMs ||
+      !isFiniteNumber(keyframe.cx) || !isFiniteNumber(keyframe.cy) || keyframe.cx < 0 || keyframe.cx > 1 || keyframe.cy < 0 || keyframe.cy > 1,
+    )) throw new Error('Trajectoire de zoom invalide')
     return {
       id: element.id,
       sessionId: element.sessionId,
       startMs: Math.round(element.startMs),
       endMs: Math.round(element.endMs),
       focus: { cx: element.focus.cx, cy: element.focus.cy },
+      focusKeyframes: focusKeyframes.map((keyframe) => ({ timeMs: Math.round(keyframe.timeMs), cx: keyframe.cx, cy: keyframe.cy })),
       scale: element.scale,
       speed: element.speed,
       source: element.source,

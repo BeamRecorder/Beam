@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { zoomAtTime } from './zoom-playback'
 import type { ZoomElement } from './zoom-types'
 
-const zoom: ZoomElement = { id: 'zoom', sessionId: 'session', startMs: 1_000, endMs: 2_000, focus: { cx: 0.3, cy: 0.7 }, scale: 2, speed: 1, source: 'automatic' }
+const zoom: ZoomElement = { id: 'zoom', sessionId: 'session', startMs: 1_000, endMs: 2_000, focus: { cx: 0.3, cy: 0.7 }, focusKeyframes: [], scale: 2, speed: 1, source: 'automatic' }
 
 describe('zoomAtTime', () => {
   it('returns null outside an element', () => expect(zoomAtTime([zoom], 999)).toBeNull())

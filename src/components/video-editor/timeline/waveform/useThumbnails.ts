@@ -118,12 +118,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                   canvas.height,
                 );
                 const dataUrlResult = canvas.toDataURL("image/jpeg", 0.6); // low quality for performance
-
-                // Return to worker
-                console.log(
-                  "[useThumbnails] Sending frame response to worker for time:",
-                  time,
-                );
                 worker?.postMessage({
                   type: "frame-response",
                   time,
@@ -155,10 +149,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   // Request frames based on virtualized scroll viewport
   const requestVisibleFrames = (visibleTimestamps: number[]) => {
     initWorker();
-    console.log(
-      "[useThumbnails] Requesting visible frames from worker:",
-      visibleTimestamps,
-    );
     worker?.postMessage({
       type: "request-frames",
       visibleTimes: visibleTimestamps,

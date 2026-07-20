@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from "~/ui/button/Button.vue";
+import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import Input from "~/ui/input/Input.vue";
 import Popover from "~/ui/popover/Popover.vue";
 import { MousePointer, Sparkles, Trash2 } from "@lucide/vue";
@@ -24,6 +25,15 @@ const updateNumber = (
   const numValue = Number(value);
   if (!props.selectedZoom || !Number.isFinite(numValue)) return;
   emit("update", { ...props.selectedZoom, [key]: numValue });
+};
+
+const setMode = (source: ZoomElement["source"]) => {
+  if (!props.selectedZoom || props.selectedZoom.source === source) return;
+  emit("update", {
+    ...props.selectedZoom,
+    source,
+    focusKeyframes: source === 'manual' ? [] : props.selectedZoom.focusKeyframes,
+  });
 };
 </script>
 
@@ -68,9 +78,23 @@ const updateNumber = (
       </template>
     </Popover>
     <template v-if="selectedZoom">
+      <ButtonGroup>
+        <Button
+          size="sm"
+          :variant="selectedZoom.source === 'automatic' ? 'primary' : 'ghost'"
+          @click="setMode('automatic')"
+        >Auto</Button>
+        <Button
+          size="sm"
+          :variant="selectedZoom.source === 'manual' ? 'primary' : 'ghost'"
+          @click="setMode('manual')"
+        >Manual</Button>
+      </ButtonGroup>
       <p class="hint">
-        <MousePointer :size="14" /> Drag the target on the canvas to choose the
-        focus.
+        <MousePointer :size="14" />
+        {{ selectedZoom.source === 'manual'
+          ? 'Drag the selection box on the canvas to choose the framing.'
+          : 'Auto zoom uses the recorded cursor path. Switch to Manual to adjust it.' }}
       </p>
       <label
         >Scale
@@ -81,6 +105,7 @@ const updateNumber = (
           :max="3"
           :step="0.05"
           size="sm"
+          :disabled="selectedZoom.source === 'automatic'"
           @update:model-value="updateNumber('scale', $event)"
         />
       </label>
@@ -93,6 +118,7 @@ const updateNumber = (
           :max="2"
           :step="0.1"
           size="sm"
+          :disabled="selectedZoom.source === 'automatic'"
           @update:model-value="updateNumber('speed', $event)"
         />
       </label>
@@ -103,6 +129,7 @@ const updateNumber = (
           :model-value="selectedZoom.startMs"
           :min="0"
           size="sm"
+          :disabled="selectedZoom.source === 'automatic'"
           @update:model-value="updateNumber('startMs', $event)"
         />
       </label>
@@ -113,6 +140,7 @@ const updateNumber = (
           :model-value="selectedZoom.endMs"
           :min="0"
           size="sm"
+          :disabled="selectedZoom.source === 'automatic'"
           @update:model-value="updateNumber('endMs', $event)"
         />
       </label>

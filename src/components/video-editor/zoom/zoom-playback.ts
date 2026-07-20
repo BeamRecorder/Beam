@@ -7,7 +7,6 @@ export interface AppliedZoom {
 
 const ENTER_MS = 480
 const EXIT_MS = 550
-const clamp = (value: number) => Math.min(1, Math.max(0, value))
 const easeOutCubic = (value: number) => 1 - (1 - value) ** 3
 const easeInCubic = (value: number) => value ** 3
 
@@ -22,9 +21,27 @@ function phaseProgress(element: ZoomElement, timeMs: number) {
   return 1
 }
 
+function focusAtTime(element: ZoomElement, timeMs: number): ZoomFocus {
+  const keyframes = element.focusKeyframes
+  if (keyframes.length === 0 || timeMs <= keyframes[0].timeMs) return element.focus
+  const nextIndex = keyframes.findIndex((keyframe) => keyframe.timeMs > timeMs)
+  if (nextIndex === -1) return keyframes.at(-1) ?? element.focus
+  const previous = keyframes[nextIndex - 1]
+  const next = keyframes[nextIndex]
+  const ratio = (timeMs - previous.timeMs) / Math.max(1, next.timeMs - previous.timeMs)
+  return { cx: previous.cx + (next.cx - previous.cx) * ratio, cy: previous.cy + (next.cy - previous.cy) * ratio }
+}
+
 export function zoomAtTime(elements: ZoomElement[], timeMs: number): AppliedZoom | null {
-  const active = elements.find((element) => timeMs >= element.startMs && timeMs <= element.endMs)
-  if (!active) return null
-  const progress = phaseProgress(active, timeMs)
-  return { scale: 1 + (active.scale - 1) * clamp(progress), focus: active.focus }
+  const active = elements.filter((element) => timeMs >= element.startMs && timeMs <= element.endMs)
+  if (active.length === 0) return null
+  const weighted = active.map((element) => ({ element, progress: phaseProgress(element, timeMs) }))
+  const totalWeight = weighted.reduce((total, entry) => total + entry.progress, 0)
+  if (totalWeight <= 0) return { scale: 1, focus: focusAtTime(weighted[0].element, timeMs) }
+  const focus = weighted.reduce((total, entry) => {
+    const point = focusAtTime(entry.element, timeMs)
+    return { cx: total.cx + point.cx * entry.progress, cy: total.cy + point.cy * entry.progress }
+  }, { cx: 0, cy: 0 })
+  const scale = weighted.reduce((total, entry) => total + (entry.element.scale - 1) * entry.progress, 0) / totalWeight
+  return { scale: 1 + scale, focus: { cx: focus.cx / totalWeight, cy: focus.cy / totalWeight } }
 }

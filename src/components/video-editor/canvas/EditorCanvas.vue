@@ -46,11 +46,15 @@ const videoWindowBounds = ref<{ dx: number; dy: number; dw: number; dh: number }
 const focusTargetStyle = computed(() => {
   const bounds = videoWindowBounds.value
   if (!props.selectedZoom || !bounds) return { display: 'none' }
+  const selectionScale = Math.max(1, props.selectedZoom.scale)
   return {
-    left: `${bounds.dx + props.selectedZoom.focus.cx * bounds.dw}px`,
-    top: `${bounds.dy + props.selectedZoom.focus.cy * bounds.dh}px`,
+    left: `${bounds.dx + props.selectedZoom.focus.cx * bounds.dw - bounds.dw / selectionScale / 2}px`,
+    top: `${bounds.dy + props.selectedZoom.focus.cy * bounds.dh - bounds.dh / selectionScale / 2}px`,
+    width: `${bounds.dw / selectionScale}px`,
+    height: `${bounds.dh / selectionScale}px`,
   }
 })
+const isMovingSelection = ref(false)
 
 interface Ripple {
   x: number
@@ -251,11 +255,29 @@ const transformedPoint = (point: { x: number; y: number }, videoWindow: { focusX
 const updateSelectedFocus = (event: PointerEvent) => {
   const canvas = canvasRef.value
   const bounds = videoWindowBounds.value
-  if (!canvas || !bounds || !props.selectedZoom) return
+  if (!canvas || !bounds || !props.selectedZoom || props.selectedZoom.source !== 'manual') return
   const rect = canvas.getBoundingClientRect()
   const cx = Math.min(1, Math.max(0, (event.clientX - rect.left - bounds.dx) / bounds.dw))
   const cy = Math.min(1, Math.max(0, (event.clientY - rect.top - bounds.dy) / bounds.dh))
   emit('update:zoom', { ...props.selectedZoom, focus: { cx, cy } })
+}
+
+const beginSelectionMove = (event: PointerEvent) => {
+  if (props.selectedZoom?.source !== 'manual') return
+  isMovingSelection.value = true
+  canvasRef.value?.setPointerCapture(event.pointerId)
+  updateSelectedFocus(event)
+}
+
+const moveSelection = (event: PointerEvent) => {
+  if (isMovingSelection.value) updateSelectedFocus(event)
+}
+
+const endSelectionMove = (event: PointerEvent) => {
+  isMovingSelection.value = false
+  if (canvasRef.value?.hasPointerCapture(event.pointerId)) {
+    canvasRef.value.releasePointerCapture(event.pointerId)
+  }
 }
 
 const drawCursorWarning = (ctx: CanvasRenderingContext2D, message: string, width: number) => {
@@ -383,8 +405,21 @@ onUnmounted(() => {
 
 <template>
   <div class="canvas-island" ref="containerRef">
-    <canvas ref="canvasRef" class="editor-canvas" @pointerdown="updateSelectedFocus"></canvas>
-    <div class="zoom-focus-target" :style="focusTargetStyle" aria-hidden="true"></div>
+    <canvas
+      ref="canvasRef"
+      class="editor-canvas"
+      :class="{ 'is-selection-editable': selectedZoom?.source === 'manual' }"
+      @pointerdown="beginSelectionMove"
+      @pointermove="moveSelection"
+      @pointerup="endSelectionMove"
+      @pointercancel="endSelectionMove"
+    ></canvas>
+    <div
+      class="zoom-selection-box"
+      :class="{ locked: selectedZoom?.source !== 'manual' }"
+      :style="focusTargetStyle"
+      aria-hidden="true"
+    ></div>
     <div class="canvas-play-controls">
       <button class="play-btn" @click="emit('update:isPlaying', !isPlaying)">
         <Play v-if="!isPlaying" class="ctrl-icon" />
@@ -418,15 +453,21 @@ onUnmounted(() => {
   display: block;
 }
 
-.zoom-focus-target {
+.editor-canvas.is-selection-editable {
+  cursor: move;
+}
+
+.zoom-selection-box {
   position: absolute;
-  width: 20px;
-  height: 20px;
   border: 2px solid var(--color-primary);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
   pointer-events: none;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.zoom-selection-box.locked {
+  border-style: dashed;
+  opacity: 0.7;
 }
 
 .canvas-play-controls {

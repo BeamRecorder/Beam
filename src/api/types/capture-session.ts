@@ -70,12 +70,17 @@ export interface ZoomFocus {
   cy: number
 }
 
+export interface ZoomFocusKeyframe extends ZoomFocus {
+  timeMs: number
+}
+
 export interface ZoomElement {
   id: string
   sessionId: string
   startMs: number
   endMs: number
   focus: ZoomFocus
+  focusKeyframes: ZoomFocusKeyframe[]
   scale: number
   speed: number
   source: 'automatic' | 'manual'
