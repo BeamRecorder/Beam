@@ -188,6 +188,18 @@ ipcMain.on('window:minimize', (event) => {
   if (win) win.minimize()
 })
 
+ipcMain.on('window:maximize', (event) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) win.maximize()
+})
+
+ipcMain.on('window:unmaximize', (event) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) win.unmaximize()
+})
+
 ipcMain.on('window:setPosition', (event, x, y) => {
   const webContents = event.sender
   const win = BrowserWindow.fromWebContents(webContents)
