@@ -91,11 +91,12 @@ defineExpose({
 
 .popover-content {
   position: absolute;
-  background-color: white;
+  background-color: var(--color-bg-card);
+  color: var(--text-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  padding: 12px;
+  padding: 4px 0;
   z-index: 50;
   min-width: 220px;
 }

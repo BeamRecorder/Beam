@@ -39,16 +39,18 @@
   --color-dark-blue-light: #1e293b;
   --color-dark-blue-lighter: #334155;
   
-  --color-light-blue: #f8fafc;
-  --color-light-blue-hover: #f1f5f9;
+  --color-light-blue: #f5f5f7;
+  --color-light-blue-hover: #e8e8ed;
   
   --color-border: #e2e8f0;
   --color-border-dark: #334155;
   
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-light: #f8fafc;
+  --text-primary: #1e1e1e;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --text-light: #f5f5f7;
+  --color-bg-card: #f5f5f7; /* Off-white / broken white card background */
+  --color-bg-element: #ffffff; /* White element background */
 
   /* Status Colors */
   --color-success: #10b981;
@@ -64,10 +66,11 @@
   
   /* Shadow & Blur */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   
+  /* Radials */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -80,6 +83,19 @@
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:root.dark {
+  --color-border: #333333;
+  --color-border-dark: #444444;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-muted: #757575;
+  --color-light-blue: #1e1e1e;
+  --color-light-blue-hover: #2c2c2c;
+  --color-bg-card: #1e1e1e; /* Figma Canvas background */
+  --color-bg-element: #2c2c2c; /* Figma Panel background */
+  --color-dark-blue: #ffffff;
 }
 
 /* Base resets */
@@ -173,4 +189,31 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.25rem;
   margin-bottom: 0.75rem;
   color: var(--color-dark-blue);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+:root.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+:root.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }

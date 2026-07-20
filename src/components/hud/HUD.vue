@@ -7,9 +7,13 @@ import Badge from '~/ui/badge/Badge.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import WindowSelect from '~/ui/select/WindowSelect.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
-import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight } from '@lucide/vue'
+import Switch from '~/ui/switch/Switch.vue'
+import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight, Sun, Moon } from '@lucide/vue'
+import { useThemeStore } from '~/stores/theme'
 
 const emit = defineEmits(['start-recording', 'stop-recording'])
+
+const themeStore = useThemeStore()
 
 // Window state
 const activeTab = ref<'screen' | 'window'>('screen')
@@ -23,7 +27,7 @@ const showSettings = ref(false)
 
 // Preference settings
 const recordHighQuality = ref(true)
-const showCountdown = ref(true)
+const countdownSeconds = ref(3) // 0 for Off, 3, 5, 10
 
 // Previews
 const previews = ref<any[]>([])
@@ -263,14 +267,59 @@ const minimizeApp = () => {
             <span class="item-title">High Quality</span>
             <span class="item-desc">Record in 60fps HD</span>
           </div>
-          <input type="checkbox" v-model="recordHighQuality" class="custom-checkbox" />
+          <div style="-webkit-app-region: no-drag;">
+            <Switch v-model="recordHighQuality" />
+          </div>
         </div>
         <div class="settings-item">
           <div class="item-label-group">
             <span class="item-title">Countdown</span>
-            <span class="item-desc">Show 3s countdown before start</span>
+            <span class="item-desc">Select delay before start</span>
           </div>
-          <input type="checkbox" v-model="showCountdown" class="custom-checkbox" />
+          <div style="width: 80px; -webkit-app-region: no-drag;">
+            <Select 
+              v-model="countdownSeconds"
+              :options="[
+                { value: 0, label: 'Off' },
+                { value: 3, label: '3s' },
+                { value: 5, label: '5s' },
+                { value: 10, label: '10s' }
+              ]"
+              direction="up"
+            />
+          </div>
+        </div>
+        <div class="settings-item">
+          <div class="item-label-group">
+            <span class="item-title">Theme</span>
+            <span class="item-desc">Choose color mode</span>
+          </div>
+          <ButtonGroup style="width: auto; max-width: 140px; -webkit-app-region: no-drag;">
+            <Button 
+              :class="{ active: themeStore.theme === 'light' }"
+              variant="ghost"
+              size="sm"
+              @click="themeStore.theme = 'light'"
+            >
+              <template #icon><Sun class="btn-icon" /></template>
+            </Button>
+            <Button 
+              :class="{ active: themeStore.theme === 'dark' }"
+              variant="ghost"
+              size="sm"
+              @click="themeStore.theme = 'dark'"
+            >
+              <template #icon><Moon class="btn-icon" /></template>
+            </Button>
+            <Button 
+              :class="{ active: themeStore.theme === 'system' }"
+              variant="ghost"
+              size="sm"
+              @click="themeStore.theme = 'system'"
+            >
+              <template #icon><Monitor class="btn-icon" /></template>
+            </Button>
+          </ButtonGroup>
         </div>
       </div>
       <div class="settings-footer">
@@ -384,7 +433,7 @@ const minimizeApp = () => {
 <style scoped>
 .hud-wrapper {
   width: 100%;
-  background: #ffffff; /* Solid opaque background to avoid transparency rendering issues */
+  background: var(--color-bg-card); /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
@@ -541,7 +590,7 @@ const minimizeApp = () => {
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: #f8fafc;
+  background: var(--color-light-blue);
 }
 
 .previews-empty {
@@ -721,7 +770,7 @@ const minimizeApp = () => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: #f8fafc;
+  background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -735,7 +784,7 @@ const minimizeApp = () => {
 .item-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
 }
 
 .item-desc {

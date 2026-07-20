@@ -41,12 +41,17 @@
 }
 
 .btn-group :deep(.btn.active) {
-  background: white;
+  background: var(--color-bg-element);
   color: var(--color-orange);
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border) !important;
 }
 
 .btn-group :deep(.btn.active:hover:not(:disabled)) {
-  background: white;
+  background: var(--color-bg-element);
+}
+
+:root.dark .btn-group {
+  background: #181818 !important;
 }
 </style>

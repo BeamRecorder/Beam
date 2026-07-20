@@ -93,10 +93,10 @@ const labelStyle = computed(() => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-width: 200px;
+  min-width: 80px;
   height: 2.75rem;
   padding: 0.6rem 1rem;
-  background-color: white;
+  background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
@@ -145,7 +145,7 @@ const labelStyle = computed(() => {
 
 .select-options {
   list-style: none;
-  padding: 4px;
+  padding: 0 4px;
   margin: 0;
   max-height: 140px;
   overflow-y: auto;
