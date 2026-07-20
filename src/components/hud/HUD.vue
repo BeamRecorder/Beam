@@ -10,6 +10,7 @@ import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight, Sun, Moon } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
+import { useMotion } from '@vueuse/motion'
 
 const emit = defineEmits(['start-recording', 'stop-recording'])
 
@@ -32,6 +33,29 @@ const countdownSeconds = ref(3) // 0 for Off, 3, 5, 10
 // Previews
 const previews = ref<any[]>([])
 const selectedSourceId = ref<string | null>(null)
+
+// Motion wrapper
+const hudRef = ref<HTMLElement | null>(null)
+let motionInstance: any = null
+
+const targetHeight = computed(() => {
+  if (showSettings.value) return 360
+  return activeTab.value === 'window' ? 420 : 360
+})
+
+watch(targetHeight, (newHeight) => {
+  if (motionInstance) {
+    motionInstance.apply({
+      height: newHeight,
+      transition: {
+        type: 'spring',
+        stiffness: 260,
+        damping: 26,
+        mass: 0.8,
+      }
+    })
+  }
+})
 
 // Sources lists (Camera / Microphone)
 const cameraOptions = computed(() => [
@@ -191,6 +215,13 @@ const discoverSources = async () => {
 }
 
 onMounted(async () => {
+  if (hudRef.value) {
+    motionInstance = useMotion(hudRef, {
+      initial: {
+        height: targetHeight.value,
+      },
+    })
+  }
   updateWindowSize()
   await discoverSources()
   await loadPreviews()
@@ -214,7 +245,12 @@ const minimizeApp = () => {
 </script>
 
 <template>
-  <div class="hud-wrapper" :class="[activeTab, { 'settings-open': showSettings }]">
+  <div 
+    ref="hudRef" 
+    class="hud-wrapper" 
+    :class="[activeTab, { 'settings-open': showSettings }]"
+    :style="{ height: `${targetHeight}px` }"
+  >
     <!-- Header -->
     <header class="hud-header">
       <div class="logo-section">
@@ -445,16 +481,6 @@ const minimizeApp = () => {
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
-  overflow: visible; /* Let popovers overflow the card! */
-  transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.hud-wrapper.screen, .hud-wrapper.settings-open {
-  height: 360px;
-}
-
-.hud-wrapper.window {
-  height: 420px;
 }
 
 .hud-header {
