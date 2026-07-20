@@ -67,42 +67,45 @@ const displayValue = computed(() => {
   width: 100%;
   height: 38px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   overflow: hidden;
   display: flex;
   align-items: center;
   transition:
-    border-color var(--fast),
-    background var(--fast);
+    border-color var(--fast) ease,
+    background var(--fast) ease;
 }
+
 .big-slider-container:hover {
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  border-color: var(--color-primary);
 }
+
 .big-slider-overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 14px;
   pointer-events: none;
   z-index: 1;
 }
+
 .big-slider-label {
   font-size: 11px;
   font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
 .big-slider-value {
   font-size: 12px;
   font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  color: var(--text-primary);
   font-family: monospace;
 }
+
 .big-slider-input {
   -webkit-appearance: none;
   appearance: none;
@@ -122,8 +125,8 @@ const displayValue = computed(() => {
   appearance: none;
   width: 2px;
   height: 38px;
-  background: #ffffff;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  background: var(--color-primary);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
   cursor: ew-resize;
   border: none;
 }
@@ -132,8 +135,8 @@ const displayValue = computed(() => {
 .big-slider-input::-moz-range-thumb {
   width: 2px;
   height: 38px;
-  background: #ffffff;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  background: var(--color-primary);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
   cursor: ew-resize;
   border: none;
   border-radius: 0;

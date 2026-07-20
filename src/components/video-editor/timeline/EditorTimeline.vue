@@ -173,7 +173,7 @@ const playheadStyle = computed(() => {
 }
 
 .icon-btn:hover {
-  background: var(--color-light-blue-hover);
+  background: var(--color-bg-surface-hover);
   color: var(--text-primary);
 }
 
@@ -224,7 +224,7 @@ const playheadStyle = computed(() => {
   top: 0;
   bottom: -150px; /* Stretch through all tracks */
   width: 2px;
-  background: var(--color-orange);
+  background: var(--color-primary);
   z-index: 10;
   pointer-events: none;
   transition: left 0.05s linear;
@@ -234,7 +234,7 @@ const playheadStyle = computed(() => {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--color-orange);
+  background: var(--color-primary);
   position: absolute;
   top: 0;
   left: -5px;
@@ -247,7 +247,7 @@ const playheadStyle = computed(() => {
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--color-border);
-  background: var(--color-light-blue);
+  background: var(--color-bg-surface);
   transition: opacity 0.2s ease;
 }
 
@@ -290,15 +290,15 @@ const playheadStyle = computed(() => {
 .track-block {
   height: 32px;
   margin: 7px 12px;
-  background: var(--color-orange-light);
-  border: 1px dashed var(--color-orange);
+  background: var(--color-primary-light);
+  border: 1px dashed var(--color-primary);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   padding: 0 12px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-orange);
+  color: var(--color-primary);
 }
 
 .audio-content {
@@ -308,7 +308,7 @@ const playheadStyle = computed(() => {
 .waveform-wave {
   height: 20px;
   margin: 14px 12px;
-  background: repeating-linear-gradient(90deg, var(--color-orange) 0px, var(--color-orange) 2px, transparent 2px, transparent 6px);
+  background: repeating-linear-gradient(90deg, var(--color-primary) 0px, var(--color-primary) 2px, transparent 2px, transparent 6px);
   opacity: 0.6;
   border-radius: 2px;
 }

@@ -64,12 +64,12 @@ defineEmits<{
 }
 
 .input-wrapper:focus-within:not(.is-disabled):not(.is-error) {
-  border-color: var(--color-orange);
-  box-shadow: 0 0 0 2px var(--color-orange-light);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .input-wrapper.is-disabled {
-  background-color: var(--color-light-blue);
+  background-color: var(--color-bg-surface);
   color: var(--text-muted);
   cursor: not-allowed;
 }

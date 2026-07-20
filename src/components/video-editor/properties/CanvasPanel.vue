@@ -64,7 +64,7 @@ const emit = defineEmits<{
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-light-blue);
+  background: var(--color-bg-surface);
   width: 100%;
 }
 
@@ -97,12 +97,12 @@ const emit = defineEmits<{
 }
 
 .background-item:hover {
-  background-color: var(--color-light-blue-hover);
+  background-color: var(--color-bg-surface-hover);
 }
 
 .background-item.active {
-  background-color: var(--color-orange-light);
-  border: 1px solid var(--color-orange-border);
+  background-color: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
 }
 
 .background-preview {

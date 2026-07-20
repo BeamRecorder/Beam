@@ -71,11 +71,11 @@ const toggle = () => {
 }
 
 .switch-button:focus-visible {
-  box-shadow: 0 0 0 2px var(--color-orange-light);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .switch-button.is-checked {
-  background-color: var(--color-orange);
+  background-color: var(--color-primary);
 }
 
 .switch-thumb {

@@ -32,14 +32,14 @@ withDefaults(
 }
 
 .badge-primary {
-  background-color: var(--color-orange-light);
-  color: var(--color-orange);
-  border: 1px solid var(--color-orange-border);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
 }
 
 .badge-secondary {
-  background-color: var(--color-orange-light);
-  color: var(--color-orange);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .badge-success {

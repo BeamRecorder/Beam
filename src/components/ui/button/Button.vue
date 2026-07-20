@@ -143,11 +143,11 @@ const handleClick = (event: MouseEvent) => {
 
 /* Variants */
 .btn-primary {
-  background-color: var(--color-orange);
+  background-color: var(--color-primary);
   color: white;
 }
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--color-orange-hover);
+  background-color: var(--color-primary-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 90, 31, 0.2);
 }
@@ -161,7 +161,7 @@ const handleClick = (event: MouseEvent) => {
   color: var(--text-primary);
 }
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-light-blue-hover);
+  background-color: var(--color-bg-surface-hover);
   border-color: var(--color-border-dark);
 }
 
@@ -184,7 +184,7 @@ const handleClick = (event: MouseEvent) => {
   color: var(--text-primary);
 }
 .btn-outline:hover:not(:disabled) {
-  background-color: var(--color-light-blue-hover);
+  background-color: var(--color-bg-surface-hover);
   border-color: var(--color-border-dark);
 }
 
@@ -193,20 +193,20 @@ const handleClick = (event: MouseEvent) => {
   color: var(--text-primary);
 }
 .btn-ghost:hover:not(:disabled) {
-  background-color: var(--color-light-blue-hover);
+  background-color: var(--color-bg-surface-hover);
   border-color: var(--color-border);
 }
 
 .btn-link {
   background-color: transparent;
-  color: var(--color-orange);
+  color: var(--color-primary);
   padding: 0 !important;
   height: auto !important;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 .btn-link:hover:not(:disabled) {
-  color: var(--color-orange-hover);
+  color: var(--color-primary-hover);
 }
 
 .btn-card {
@@ -225,19 +225,19 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .btn-card:hover:not(:disabled) {
-  border-color: var(--color-orange-border);
+  border-color: var(--color-primary-border);
   transform: translateY(-1px);
   box-shadow: none;
 }
 
 .btn-card:focus-visible {
-  outline: 2px solid var(--color-orange);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .btn-card.is-selected {
-  border-color: var(--color-orange);
-  box-shadow: 0 0 0 2px var(--color-orange-light);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .btn-card .btn-content {
@@ -284,7 +284,7 @@ const handleClick = (event: MouseEvent) => {
 
 .btn-tab.active {
   background: var(--color-bg-element);
-  color: var(--color-orange);
+  color: var(--color-primary);
   box-shadow: var(--shadow-sm);
   border-color: var(--color-border);
 }

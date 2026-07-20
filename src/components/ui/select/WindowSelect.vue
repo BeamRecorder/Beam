@@ -144,16 +144,16 @@ const labelStyle = computed(() => {
 }
 
 .select-trigger:hover:not(.is-disabled) {
-  border-color: var(--color-dark-blue-lighter);
+  border-color: var(--color-border-strong);
 }
 
 .select-trigger.is-open {
-  border-color: var(--color-orange);
-  box-shadow: 0 0 0 2px var(--color-orange-light);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .select-trigger.is-disabled {
-  background-color: var(--color-light-blue);
+  background-color: var(--color-bg-surface);
   color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -242,13 +242,13 @@ const labelStyle = computed(() => {
 }
 
 .select-option:hover {
-  background-color: var(--color-light-blue-hover);
+  background-color: var(--color-bg-surface-hover);
   color: var(--text-primary);
 }
 
 .select-option.is-selected {
-  background-color: var(--color-orange-light);
-  color: var(--color-orange);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -301,7 +301,7 @@ const labelStyle = computed(() => {
 .option-check {
   width: 1rem;
   height: 1rem;
-  color: var(--color-orange);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 

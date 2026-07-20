@@ -46,7 +46,7 @@ const handleInput = (event: Event) => {
         :disabled="disabled"
         class="slider-input"
         :style="{
-          background: `linear-gradient(to right, var(--color-orange) 0%, var(--color-orange) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`
+          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`
         }"
         @input="handleInput"
       />
@@ -97,7 +97,7 @@ const handleInput = (event: Event) => {
   height: 24px;
   border-radius: 50%;
   background: white;
-  border: 4px solid var(--color-orange);
+  border: 4px solid var(--color-primary);
   box-shadow: var(--shadow-md);
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
 }
@@ -105,7 +105,7 @@ const handleInput = (event: Event) => {
 .slider-input:hover:not(:disabled)::-webkit-slider-thumb {
   transform: scale(1.2);
   box-shadow: var(--shadow-lg);
-  border-color: var(--color-orange-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .slider-input:active:not(:disabled)::-webkit-slider-thumb {
@@ -118,7 +118,7 @@ const handleInput = (event: Event) => {
   height: 24px;
   border-radius: 50%;
   background: white;
-  border: 4px solid var(--color-orange);
+  border: 4px solid var(--color-primary);
   box-shadow: var(--shadow-md);
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
   cursor: pointer;
@@ -127,7 +127,7 @@ const handleInput = (event: Event) => {
 .slider-input:hover:not(:disabled)::-moz-range-thumb {
   transform: scale(1.2);
   box-shadow: var(--shadow-lg);
-  border-color: var(--color-orange-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .slider-input:active:not(:disabled)::-moz-range-thumb {
@@ -138,7 +138,7 @@ const handleInput = (event: Event) => {
   font-family: var(--font-sans);
   font-size: 1.1rem;
   font-weight: 800;
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
   min-width: 2.5rem;
   text-align: right;
 }

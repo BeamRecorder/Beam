@@ -25,28 +25,32 @@
 }
 
 :root {
-  /* Color Palette */
-  --color-orange: #ff5a1f;
-  --color-orange-hover: #e04810;
-  --color-orange-light: rgba(255, 90, 31, 0.1);
-  --color-orange-border: rgba(255, 90, 31, 0.3);
+  /* Color Palette - Primary/Accent */
+  --color-primary: #ff5a1f;
+  --color-primary-hover: #e04810;
+  --color-primary-light: rgba(255, 90, 31, 0.1);
+  --color-primary-border: rgba(255, 90, 31, 0.3);
 
-  --color-dark-blue: #0f172a;
-  --color-dark-blue-light: #1e293b;
-  --color-dark-blue-lighter: #334155;
+  /* Backgrounds & Surfaces */
+  --color-bg-surface: #f5f5f7;
+  --color-bg-surface-hover: #e8e8ed;
+  --color-bg-element: #ffffff;
   
-  --color-light-blue: #f5f5f7;
-  --color-light-blue-hover: #e8e8ed;
-  
+  /* Borders */
   --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
   --color-border-dark: #334155;
   
+  /* Texts */
   --text-primary: #1e1e1e;
   --text-secondary: #555555;
   --text-muted: #888888;
   --text-light: #f5f5f7;
-  --color-bg-card: #f5f5f7; /* Off-white / broken white card background */
-  --color-bg-element: #ffffff; /* White element background */
+
+  /* Component Specific / Aliases */
+  --accent: var(--color-primary);
+  --surface: var(--color-bg-surface);
+  --fast: 0.15s;
 
   /* Status Colors */
   --color-success: #10b981;
@@ -82,16 +86,23 @@
 }
 
 :root.dark {
+  /* Backgrounds & Surfaces */
+  --color-bg-surface: #1e1e1e;
+  --color-bg-surface-hover: #2c2c2c;
+  --color-bg-element: #2c2c2c;
+
+  /* Borders */
   --color-border: #333333;
+  --color-border-strong: #444444;
   --color-border-dark: #444444;
+
+  /* Texts */
   --text-primary: #ffffff;
   --text-secondary: #b3b3b3;
   --text-muted: #757575;
-  --color-light-blue: #1e1e1e;
-  --color-light-blue-hover: #2c2c2c;
-  --color-bg-card: #1e1e1e; /* Figma Canvas background */
-  --color-bg-element: #2c2c2c; /* Figma Panel background */
-  --color-dark-blue: #ffffff;
+
+  /* Component Specific / Aliases */
+  --surface: var(--color-bg-surface);
 }
 
 /* Base resets */
@@ -121,7 +132,7 @@ html, body {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-headline);
   font-weight: 700;
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
   line-height: 1.25;
 }
 
@@ -178,13 +189,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .card:hover {
   box-shadow: var(--shadow-md);
-  border-color: var(--color-orange-border);
+  border-color: var(--color-primary-border);
 }
 
 .card-title {
   font-size: 1.25rem;
   margin-bottom: 0.75rem;
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
 }
 
 /* Custom Scrollbars */

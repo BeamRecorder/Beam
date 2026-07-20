@@ -239,7 +239,7 @@ defineExpose({
 }
 
 .project-picker-heading h1 {
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
   font-size: 18px;
   letter-spacing: -0.4px;
 }
@@ -320,7 +320,7 @@ defineExpose({
   place-items: center;
   border-radius: 50%;
   color: white;
-  background: var(--color-orange);
+  background: var(--color-primary);
 }
 
 .selected-indicator svg {

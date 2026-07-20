@@ -117,8 +117,8 @@ const toastStore = useToastStore()
 }
 
 .toast-close:hover {
-  background-color: var(--color-light-blue-hover);
-  color: var(--color-orange);
+  background-color: var(--color-bg-surface-hover);
+  color: var(--color-primary);
 }
 
 .close-icon {

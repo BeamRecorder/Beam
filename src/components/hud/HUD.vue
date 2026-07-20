@@ -568,7 +568,7 @@ const openProject = (project: CaptureProject) => {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 3px solid var(--color-orange);
+  border: 3px solid var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -578,13 +578,13 @@ const openProject = (project: CaptureProject) => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--color-orange);
+  background: var(--color-primary);
 }
 
 .logo-text {
   font-size: 16px;
   font-weight: 700;
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
   letter-spacing: -0.5px;
 }
 
@@ -655,7 +655,7 @@ const openProject = (project: CaptureProject) => {
 
 /* Tabs */
 .tabs-container {
-  background: var(--color-light-blue-hover);
+  background: var(--color-bg-surface-hover);
   border-radius: var(--radius-md);
   padding: 4px;
   display: flex;
@@ -682,7 +682,7 @@ const openProject = (project: CaptureProject) => {
 
 .tab-btn.active {
   background: white;
-  color: var(--color-orange);
+  color: var(--color-primary);
   box-shadow: var(--shadow-sm);
 }
 
@@ -728,7 +728,7 @@ const openProject = (project: CaptureProject) => {
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-light-blue);
+  background: var(--color-bg-surface);
 }
 
 .previews-empty {
@@ -759,12 +759,12 @@ const openProject = (project: CaptureProject) => {
 }
 
 .preview-card:hover {
-  border-color: var(--color-dark-blue-lighter);
+  border-color: var(--color-border-strong);
 }
 
 .preview-card.is-selected {
-  border-color: var(--color-orange);
-  box-shadow: 0 0 0 2px var(--color-orange-light);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .thumbnail-wrapper {
@@ -891,7 +891,7 @@ const openProject = (project: CaptureProject) => {
 }
 
 .web-link-text:hover {
-  color: var(--color-orange);
+  color: var(--color-primary);
 }
 
 .web-link-icon {
@@ -937,7 +937,7 @@ const openProject = (project: CaptureProject) => {
 .custom-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: var(--color-orange);
+  accent-color: var(--color-primary);
   cursor: pointer;
 }
 

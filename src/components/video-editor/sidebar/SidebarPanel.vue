@@ -65,7 +65,7 @@ const menuItems = [
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 3px solid var(--color-orange);
+  border: 3px solid var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,7 +75,7 @@ const menuItems = [
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--color-orange);
+  background: var(--color-primary);
 }
 
 .nav-menu {
@@ -102,13 +102,13 @@ const menuItems = [
 }
 
 .nav-btn:hover {
-  background: var(--color-light-blue-hover);
+  background: var(--color-bg-surface-hover);
   color: var(--text-primary);
 }
 
 .nav-btn.active {
-  background: var(--color-orange-light);
-  color: var(--color-orange);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .nav-icon {

@@ -7,7 +7,7 @@
 <style scoped>
 .btn-group {
   display: flex;
-  background: var(--color-light-blue-hover) !important;
+  background: var(--color-bg-surface-hover) !important;
   border-radius: var(--radius-md);
   padding: 4px;
   border: 1px solid var(--color-border);

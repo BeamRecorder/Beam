@@ -132,7 +132,7 @@ onUnmounted(() => {
   font-family: var(--font-headline);
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
 }
 
 .dialog-close {
@@ -149,8 +149,8 @@ onUnmounted(() => {
 }
 
 .dialog-close:hover {
-  background-color: var(--color-light-blue-hover);
-  color: var(--color-orange);
+  background-color: var(--color-bg-surface-hover);
+  color: var(--color-primary);
 }
 
 .close-icon {
@@ -171,7 +171,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  background-color: var(--color-light-blue);
+  background-color: var(--color-bg-surface);
 }
 
 /* Overlay Fade Transition */

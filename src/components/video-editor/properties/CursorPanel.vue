@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Slider from '~/ui/slider/Slider.vue'
+import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'
 import type { CursorType } from '../composables/useCursorReplacer'
@@ -49,11 +49,12 @@ const colorOptions = [
     </div>
 
     <div class="prop-item">
-      <label class="prop-label">Cursor Size: {{ cursorSize }}px</label>
-      <Slider 
+      <BigSlider 
         :model-value="cursorSize" 
         :min="16" 
-        :max="64" 
+        :max="64"
+        label="Cursor Size"
+        :format-value="(val) => `${val}px`"
         @update:modelValue="emit('update:cursorSize', $event)"
       />
     </div>
