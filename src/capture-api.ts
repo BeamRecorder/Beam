@@ -125,4 +125,41 @@ declare global {
   }
 }
 
-export const capture: CaptureApi = window.capture
+const mockCapture: DesktopCaptureApi = {
+  discover: async () => ({
+    sources: [
+      { id: 'cam1', kind: 'camera', label: 'FaceTime HD Camera (Mock)', isDefault: true },
+      { id: 'mic1', kind: 'microphone', label: 'MacBook Pro Microphone (Mock)', isDefault: true }
+    ],
+    capabilities: {}
+  }),
+  capabilities: async () => ({}),
+  permissions: async () => ({}),
+  formats: async () => ({}),
+  prepare: async () => ({ state: 'armed' }),
+  startRecording: async () => ({ state: 'recording', sessionId: 'mock-session-id' }),
+  start: async () => ({ state: 'recording' }),
+  pause: async () => ({ state: 'paused' }),
+  resume: async () => ({ state: 'recording' }),
+  stop: async () => ({ state: 'completed', sessionId: 'mock-session-id', videoSrc: '/wallpapers/wispysky.mp4' }),
+  status: async () => ({ state: 'idle' }),
+  close: () => console.log('Mock close'),
+  minimize: () => console.log('Mock minimize'),
+  maximize: () => console.log('Mock maximize'),
+  unmaximize: () => console.log('Mock unmaximize'),
+  setPosition: () => {},
+  setSize: () => {},
+  setSizeSmooth: () => {},
+  dragStart: () => {},
+  drag: () => {},
+  getSources: async () => [
+    { id: 'screen:1', name: 'Desktop 1 (Mock)', thumbnail: '/wallpapers/sonoma-light.jpg' },
+    { id: 'window:1', name: 'VS Code (Mock)', thumbnail: '/wallpapers/ventura.jpg' }
+  ]
+}
+
+if (typeof window !== 'undefined' && !window.capture) {
+  window.capture = mockCapture
+}
+
+export const capture: DesktopCaptureApi = window.capture

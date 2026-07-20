@@ -311,7 +311,7 @@ function createWindow() {
       preload: path.join(__dirname, 'electron-preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      sandbox: false,
       webSecurity: false,
     },
   })

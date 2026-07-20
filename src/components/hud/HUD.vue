@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { capture } from '../../capture-api'
 import type { CaptureCatalog, CaptureSource } from '../../capture-api'
 import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
@@ -77,12 +78,12 @@ const stopTimer = () => {
 const loadPreviews = async () => {
   try {
     const type = activeTab.value === 'screen' ? 'screen' : 'window'
-    const results = await window.capture.getSources([type])
+    const results = await capture.getSources([type])
     previews.value = results
     
     // Auto-select first source if none or invalid is selected
     if (results.length > 0) {
-      if (!selectedSourceId.value || !results.some(r => r.id === selectedSourceId.value)) {
+      if (!selectedSourceId.value || !results.some((r: any) => r.id === selectedSourceId.value)) {
         selectedSourceId.value = results[0].id
       }
     } else {
@@ -111,7 +112,7 @@ const updateWindowSize = () => {
 
   if (targetHeight > lastHeight) {
     // Grow the Electron window instantly so the CSS height transition of the card is not clipped
-    window.capture.setSize(320, targetHeight)
+    capture.setSize(320, targetHeight)
   } else if (targetHeight < lastHeight) {
     // Wait for the card's CSS transition (200ms) to complete before shrinking the Electron window
     setTimeout(() => {
@@ -127,7 +128,7 @@ const updateWindowSize = () => {
         }
       }
       if (currentTarget === targetHeight) {
-        window.capture.setSize(320, targetHeight)
+        capture.setSize(320, targetHeight)
       }
     }, 200)
   }
@@ -187,7 +188,7 @@ const toggleRecording = async () => {
         }
       }
 
-      const session = await window.capture.startRecording({
+      const session = await capture.startRecording({
         screenKind: activeTab.value === 'window' ? 'window' : 'display',
         screenId: rustScreenId,
         microphoneId: selectedMicId.value === 'no-audio' ? null : selectedMicId.value,
@@ -201,7 +202,7 @@ const toggleRecording = async () => {
       startTimer()
       emit('start-recording', session)
     } else {
-      const session = await window.capture.stop()
+      const session = await capture.stop()
       stopTimer()
       isRecording.value = false
       emit('stop-recording', session)
@@ -217,7 +218,7 @@ const discoverSources = async () => {
   isBusy.value = true
   errorMessage.value = ''
   try {
-    const catalog = await window.capture.discover() as CaptureCatalog
+    const catalog = await capture.discover() as CaptureCatalog
     sources.value = Array.isArray(catalog.sources) ? catalog.sources : []
     const defaultCamera = sources.value.find((source) => source.kind === 'camera' && source.isDefault)
       ?? sources.value.find((source) => source.kind === 'camera')
@@ -247,11 +248,11 @@ onMounted(async () => {
 onBeforeUnmount(stopTimer)
 
 const closeApp = () => {
-  window.capture.close()
+  capture.close()
 }
 
 const minimizeApp = () => {
-  window.capture.minimize()
+  capture.minimize()
 }
 </script>
 

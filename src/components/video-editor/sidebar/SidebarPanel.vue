@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { MousePointer, Scissors, Volume2, Sparkles, Monitor } from '@lucide/vue'
+import { MousePointer, Scissors, Volume2, Monitor } from "@lucide/vue";
 
 defineProps<{
-  activeTab: string
-}>()
+  activeTab: string;
+}>();
 
 const emit = defineEmits<{
-  (e: 'select-tab', tab: string): void
-}>()
+  (e: "select-tab", tab: string): void;
+}>();
 
 const menuItems = [
-  { id: 'cursor', label: 'Cursor', icon: MousePointer },
-  { id: 'canvas', label: 'Canvas', icon: Monitor },
-  { id: 'trim', label: 'Trim', icon: Scissors },
-  { id: 'audio', label: 'Audio', icon: Volume2 },
-]
+  { id: "cursor", label: "Cursor", icon: MousePointer },
+  { id: "canvas", label: "Canvas", icon: Monitor },
+  { id: "trim", label: "Trim", icon: Scissors },
+  { id: "audio", label: "Audio", icon: Volume2 },
+];
 </script>
 
 <template>
@@ -24,10 +24,10 @@ const menuItems = [
         <div class="logo-core"></div>
       </div>
     </div>
-    
+
     <nav class="nav-menu">
-      <button 
-        v-for="item in menuItems" 
+      <button
+        v-for="item in menuItems"
         :key="item.id"
         class="nav-btn"
         :class="{ active: activeTab === item.id }"

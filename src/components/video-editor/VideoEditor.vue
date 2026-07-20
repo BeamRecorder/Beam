@@ -19,6 +19,8 @@ const props = withDefaults(
   }
 )
 
+import { capture } from '../../capture-api'
+
 const emit = defineEmits(['back-to-hud'])
 
 // Load composables
@@ -49,15 +51,15 @@ const handleSelectTab = (tab: string) => {
 }
 
 const closeApp = () => {
-  window.capture.close()
+  capture.close()
 }
 
 const minimizeApp = () => {
-  window.capture.minimize()
+  capture.minimize()
 }
 
 const handleExit = () => {
-  window.capture.unmaximize()
+  capture.unmaximize()
   emit('back-to-hud')
 }
 
@@ -65,7 +67,7 @@ onMounted(() => {
   if (props.videoSrc) {
     playerVideoSrc.value = props.videoSrc
   }
-  window.capture.maximize()
+  capture.maximize()
 })
 </script>
 

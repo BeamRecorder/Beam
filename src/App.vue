@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import HUD from './components/hud/HUD.vue'
 import VideoEditor from './components/video-editor/VideoEditor.vue'
 
+import { capture } from './capture-api'
+
 const currentView = ref<'hud' | 'editor'>('hud')
 const currentVideoSrc = ref<string | null>(null)
 
@@ -10,9 +12,9 @@ const setView = (view: 'hud' | 'editor') => {
   currentView.value = view
   
   if (view === 'editor') {
-    window.capture.setSize(760, 480)
+    capture.setSize(760, 480)
   } else {
-    window.capture.setSize(320, 480)
+    capture.setSize(320, 480)
   }
 }
 
