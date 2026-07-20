@@ -1,0 +1,87 @@
+[package]
+name = "capture"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[features]
+default = ["screen", "microphone", "system-audio", "cursor", "camera", "recording"]
+screen = []
+microphone = ["dep:cpal"]
+system-audio = []
+cursor = []
+camera = ["dep:nokhwa"]
+recording = ["dep:hound"]
+hardware-tests = []
+
+[dependencies]
+crossbeam-channel = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+uuid = { version = "1", features = ["serde", "v7"] }
+time = { version = "0.3", features = ["formatting"] }
+cpal = { version = "0.18.1", optional = true }
+nokhwa = { version = "0.10.11", optional = true, default-features = false, features = ["input-native", "decoding"] }
+hound = { version = "3", optional = true }
+png = "0.18"
+sha2 = "0.10"
+fs2 = "0.4"
+
+[target.'cfg(windows)'.dependencies]
+windows-capture = "2.0.0"
+wasapi = "0.23"
+parking_lot = "0.12"
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D11", "Win32_Graphics_Dxgi", "Win32_Graphics_Gdi", "Win32_Media_Audio", "Win32_System_Com", "Win32_System_Performance", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+screencapturekit = { version = "8.0.1", features = ["macos_15_0"] }
+core-graphics = "0.25"
+objc2-av-foundation = { version = "0.3.2", default-features = false, features = ["AVCaptureDevice", "AVMediaFormat"] }
+jpeg-encoder = "0.7"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+pipewire = { version = "0.10.0", optional = true }
+ashpd = { version = "0.13", optional = true, default-features = false, features = ["tokio"] }
+tokio = { version = "1", optional = true, default-features = false, features = ["rt", "sync"] }
+x11rb = { version = "0.13", optional = true, features = ["xfixes"] }
+
+[dev-dependencies]
+tempfile = "3"
+walkdir = "2"
+proptest = "1"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_lifetimes = "deny"
+unused_qualifications = "warn"
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = "deny"
+correctness = "deny"
+suspicious = "deny"
+complexity = "deny"
+perf = "deny"
+style = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+
+[[bin]]
+name = "capture-engine"
+path = "src/bin/capture-engine.rs"
+
+[[bin]]
+name = "capture-probe"
+path = "src/bin/capture-probe.rs"
+
+[[bin]]
+name = "capture-smoke"
+path = "src/bin/capture-smoke.rs"

@@ -1,0 +1,136 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+
+#[cfg(target_os = "linux")]
+use crate::model::{MediaFormat, SourceCapabilities, SourceId, SourceKind, SourceSelectionMode};
+use crate::{
+    CaptureError,
+    model::{CaptureCapabilities, PermissionSnapshot, SourceDescriptor},
+};
+
+use super::{CatalogSnapshot, SourceCatalog};
+
+#[derive(Debug, Default)]
+pub struct NativeCatalog {
+    generation: AtomicU64,
+}
+
+impl SourceCatalog for NativeCatalog {
+    fn snapshot(&self) -> Result<CatalogSnapshot, CaptureError> {
+        #[allow(unused_mut)]
+        let mut sources = platform_screen_sources()?;
+        #[cfg(feature = "microphone")]
+        sources.extend(crate::audio::microphone::discover_microphones()?);
+        #[cfg(all(feature = "system-audio", windows))]
+        sources.extend(crate::audio::system::win::discover_outputs()?);
+        #[cfg(all(feature = "system-audio", target_os = "macos"))]
+        sources.push(SourceDescriptor {
+            id: crate::model::SourceId::new("sck:system-audio:screen-capture-mix")?,
+            kind: crate::model::SourceKind::SystemAudio,
+            label: "ScreenCaptureKit system audio".into(),
+            is_default: true,
+            selection_mode: crate::model::SourceSelectionMode::Direct,
+            capabilities: crate::model::SourceCapabilities {
+                formats: vec![crate::model::MediaFormat::Audio {
+                    sample_rate: 48_000,
+                    channels: 2,
+                    sample_format: "f32".into(),
+                }],
+                ..crate::model::SourceCapabilities::default()
+            },
+        });
+        #[cfg(feature = "camera")]
+        sources.extend(crate::camera::discover_cameras()?);
+        let (capabilities, permissions, limitations) = platform_metadata();
+        Ok(CatalogSnapshot {
+            generation: self
+                .generation
+                .fetch_add(1, Ordering::Relaxed)
+                .saturating_add(1),
+            created_at_utc: utc_now()?,
+            capabilities,
+            permissions,
+            limitations,
+            sources,
+        })
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
+    use crate::screen::linux::{LinuxDisplayServer, display_server};
+    if matches!(display_server(), LinuxDisplayServer::Wayland) {
+        return Ok(vec![SourceDescriptor {
+            id: SourceId::new("portal:system-picker")?,
+            kind: SourceKind::Display,
+            label: "System screen/window picker".into(),
+            is_default: true,
+            selection_mode: SourceSelectionMode::Portal,
+            capabilities: SourceCapabilities {
+                supports_cursor_exclusion: true,
+                supports_system_audio: true,
+                ..SourceCapabilities::default()
+            },
+        }]);
+    }
+    let display = std::env::var("DISPLAY").unwrap_or_else(|_| ":0".into());
+    Ok(vec![SourceDescriptor {
+        id: SourceId::new(format!("x11:{display}"))?,
+        kind: SourceKind::Display,
+        label: format!("X11 display {display}"),
+        is_default: true,
+        selection_mode: SourceSelectionMode::Direct,
+        capabilities: SourceCapabilities {
+            formats: vec![MediaFormat::Video {
+                width: 0,
+                height: 0,
+                fps: 60,
+                pixel_format: None,
+            }],
+            supports_cursor_exclusion: true,
+            supports_system_audio: false,
+        },
+    }])
+}
+
+#[cfg(target_os = "linux")]
+fn platform_metadata() -> (CaptureCapabilities, PermissionSnapshot, Vec<String>) {
+    let capabilities = crate::screen::linux::capabilities();
+    let permissions = crate::screen::linux::permissions();
+    let mut limitations = Vec::new();
+    if capabilities.portal_selection && !capabilities.separate_cursor {
+        limitations.push("The active Wayland compositor has not advertised separate cursor metadata; negotiate it when opening the portal stream".into());
+    }
+    (capabilities, permissions, limitations)
+}
+
+#[cfg(target_os = "macos")]
+fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
+    Ok(crate::screen::mac::discover_sources().unwrap_or_default())
+}
+#[cfg(target_os = "macos")]
+fn platform_metadata() -> (CaptureCapabilities, PermissionSnapshot, Vec<String>) {
+    (
+        crate::screen::mac::capabilities(),
+        crate::screen::mac::permissions(),
+        Vec::new(),
+    )
+}
+
+#[cfg(windows)]
+fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
+    crate::screen::win::discover_sources()
+}
+#[cfg(windows)]
+fn platform_metadata() -> (CaptureCapabilities, PermissionSnapshot, Vec<String>) {
+    (
+        crate::screen::win::capabilities(),
+        crate::screen::win::permissions(),
+        Vec::new(),
+    )
+}
+
+pub fn utc_now() -> Result<String, CaptureError> {
+    time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .map_err(|error| CaptureError::Backend(error.to_string()))
+}

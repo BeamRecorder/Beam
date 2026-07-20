@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Rust build artifacts
+target/
+target-windows/
+**/*.rs.bk
+
+# Electron build artifacts
+dist_electron/
+
