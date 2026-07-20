@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useVirtualList } from '@vueuse/core'
 import Popover from '../popover/Popover.vue'
+import Skeleton from '../skeleton/Skeleton.vue'
 import { ChevronDown, Check } from '@lucide/vue'
 
 interface WindowOption {
@@ -68,9 +69,14 @@ const labelStyle = computed(() => {
         :disabled="disabled"
       >
         <div class="trigger-content-wrapper">
-          <div v-if="selectedOption" class="selected-thumbnail-wrapper">
-            <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" />
-            <img v-if="selectedOption.appIcon" :src="selectedOption.appIcon" class="trigger-app-icon" />
+          <div class="selected-thumbnail-wrapper">
+            <template v-if="selectedOption">
+              <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" />
+              <img v-if="selectedOption.appIcon" :src="selectedOption.appIcon" class="trigger-app-icon" />
+            </template>
+            <template v-else>
+              <Skeleton variant="linear" width="100%" height="100%" />
+            </template>
           </div>
           <span 
             class="select-label" 
