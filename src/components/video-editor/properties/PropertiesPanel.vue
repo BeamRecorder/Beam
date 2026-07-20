@@ -89,7 +89,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .properties-island {
-  width: 260px;
+  width: 320px;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);

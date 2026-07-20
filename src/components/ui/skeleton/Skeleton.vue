@@ -49,9 +49,9 @@ const skeletonStyle = computed(() => ({
 .shimmer-linear {
   background: linear-gradient(
     90deg,
-    #f1f5f9 25%,
-    #e2e8f0 37%,
-    #f1f5f9 63%
+    var(--color-bg-surface) 25%,
+    var(--color-bg-surface-hover) 37%,
+    var(--color-bg-surface) 63%
   );
   background-size: 200% 100%;
   animation: shimmer-linear 1.5s infinite linear;
@@ -76,9 +76,9 @@ const skeletonStyle = computed(() => ({
 .shimmer-radial {
   background: radial-gradient(
     circle,
-    #f1f5f9 10%,
-    #e2e8f0 60%,
-    #f1f5f9 90%
+    var(--color-bg-surface) 10%,
+    var(--color-bg-surface-hover) 60%,
+    var(--color-bg-surface) 90%
   );
   background-position: center;
   animation: shimmer-radial 2s infinite ease-in-out;

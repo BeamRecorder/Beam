@@ -2,6 +2,7 @@
 import { computed, ref, onMounted, watch } from 'vue';
 import { Video, Volume2, Mic, MousePointer, Paintbrush } from '@lucide/vue';
 import { useThumbnails } from './waveform/useThumbnails';
+import Skeleton from '~/ui/skeleton/Skeleton.vue';
 
 const props = defineProps<{
   currentTime: number;
@@ -17,10 +18,42 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:currentTime', value: number): void;
+  (e: 'update:zoomLevel', value: number): void;
 }>();
 
 const tracksScrollRef = ref<HTMLDivElement | null>(null);
 const tracksViewportRef = ref<HTMLDivElement | null>(null);
+
+// Generate stable heights for simulated waveforms
+const systemAudioWaveBars = computed(() => {
+  const barCount = 120; // fixed count of bars to avoid overflow issues
+  const bars = [];
+  for (let i = 0; i < barCount; i++) {
+    const height = 8 + Math.abs(Math.sin(i * 0.15)) * 18 + Math.abs(Math.cos(i * 0.4)) * 6;
+    bars.push(height);
+  }
+  return bars;
+});
+
+const micAudioWaveBars = computed(() => {
+  const barCount = 120;
+  const bars = [];
+  for (let i = 0; i < barCount; i++) {
+    const height = 4 + Math.abs(Math.sin(i * 0.3)) * 15 + Math.abs(Math.cos(i * 0.6)) * 5;
+    bars.push(height);
+  }
+  return bars;
+});
+
+// Handle Ctrl + Wheel Zoom
+const handleWheel = (e: WheelEvent) => {
+  if (e.ctrlKey) {
+    e.preventDefault();
+    const zoomDelta = e.deltaY < 0 ? 15 : -15;
+    const newZoom = Math.max(100, Math.min(500, props.zoomLevel + zoomDelta));
+    emit('update:zoomLevel', newZoom);
+  }
+};
 
 // Initialize thumbnail extraction composable
 const { thumbnails, requestVisibleFrames } = useThumbnails(props.videoSrc || '');
@@ -130,19 +163,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="timeline-tracks-container" ref="tracksScrollRef" @scroll="onScroll">
+  <div class="timeline-tracks-container" ref="tracksScrollRef" @scroll="onScroll" @wheel="handleWheel">
     <div class="timeline-viewport" ref="tracksViewportRef" :style="tracksWidthStyle">
       
       <!-- Ruler/Header -->
       <div class="timeline-ruler" @mousedown="handleMouseDown">
         <div 
           v-for="sec in duration + 1" 
-          v-show="sec % (zoomLevel > 300 ? 1 : 5) === 0"
           :key="sec" 
           class="ruler-marker"
-          :style="{ left: `${(sec / duration) * 100}%` }"
+          :class="{ 'is-major': (sec - 1) % 5 === 0 }"
+          :style="{ left: `${((sec - 1) / duration) * 100}%` }"
         >
-          {{ sec }}s
+          <span v-if="(sec - 1) % 5 === 0" class="marker-label">{{ sec - 1 }}s</span>
+          <div class="marker-tick"></div>
         </div>
         
         <!-- Scrub Playhead vertical indicator line -->
@@ -175,7 +209,7 @@ onMounted(() => {
                   class="thumbnail-img" 
                   alt="frame"
                 />
-                <div v-else class="thumbnail-placeholder"></div>
+                <Skeleton v-else width="100%" height="100%" radius="0" />
               </div>
             </div>
           </div>
@@ -191,7 +225,7 @@ onMounted(() => {
             <div class="audio-block">
               <!-- Waveform bars representation -->
               <div class="audio-waveform-simulated">
-                <div v-for="n in 30" :key="n" class="wave-bar" :style="{ height: `${10 + Math.random() * 25}px` }"></div>
+                <div v-for="(height, index) in systemAudioWaveBars" :key="index" class="wave-bar" :style="{ height: `${height}px` }"></div>
               </div>
             </div>
           </div>
@@ -206,7 +240,7 @@ onMounted(() => {
           <div class="track-content audio-content">
             <div class="audio-block">
               <div class="audio-waveform-simulated">
-                <div v-for="n in 30" :key="n" class="wave-bar" :style="{ height: `${5 + Math.random() * 20}px` }"></div>
+                <div v-for="(height, index) in micAudioWaveBars" :key="index" class="wave-bar" :style="{ height: `${height}px` }"></div>
               </div>
             </div>
           </div>
@@ -269,12 +303,33 @@ onMounted(() => {
 
 .ruler-marker {
   position: absolute;
-  top: 3px;
-  transform: translateX(-50%);
-  font-size: 9px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.marker-label {
+  font-size: 8px;
   font-weight: 700;
   color: var(--text-muted);
   font-family: monospace;
+  position: absolute;
+  bottom: 8px;
+  transform: translateY(-50%);
+}
+
+.marker-tick {
+  width: 1px;
+  height: 4px;
+  background-color: var(--color-border-strong);
+}
+
+.is-major .marker-tick {
+  height: 8px;
+  background-color: var(--color-border-dark);
 }
 
 /* Playhead */

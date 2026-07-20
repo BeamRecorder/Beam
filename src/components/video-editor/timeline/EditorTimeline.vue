@@ -72,7 +72,7 @@ onUnmounted(() => {
     <TimelineTracks
       :current-time="currentTime"
       :duration="duration"
-      :zoom-level="zoomLevel"
+      v-model:zoom-level="zoomLevel"
       :video-src="videoSrc || null"
       :is-video-enabled="isVideoEnabled"
       :is-system-audio-enabled="isSystemAudioEnabled"

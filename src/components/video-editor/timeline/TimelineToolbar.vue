@@ -45,44 +45,51 @@ const handleZoomOut = () => {
 
 <template>
   <div class="timeline-toolbar">
-    <!-- Left Navigation Controls -->
-    <div class="nav-controls">
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="SkipBack"
-        tooltip="Go to Start"
-        @click="emit('update:currentTime', 0)"
-      />
-      <Button
-        variant="primary"
-        size="sm"
-        icon-only
-        :icon="isPlaying ? Pause : Play"
-        :tooltip="isPlaying ? 'Pause' : 'Play'"
-        class="play-pause-btn"
-        @click="emit('update:isPlaying', !isPlaying)"
-      />
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="SkipForward"
-        tooltip="Go to End"
-        @click="emit('update:currentTime', duration)"
-      />
+    <!-- Left Section -->
+    <div class="left-section">
+      <span class="section-title">Timeline</span>
     </div>
 
-    <!-- Center Time Display -->
-    <div class="time-display-container">
-      <span class="time-current">{{ formatTime(currentTime) }}</span>
-      <span class="time-separator">/</span>
-      <span class="time-total">{{ formatTime(duration) }}</span>
+    <!-- Centered Controls -->
+    <div class="center-controls">
+      <div class="nav-controls">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="SkipBack"
+          tooltip="Go to Start"
+          @click="emit('update:currentTime', 0)"
+        />
+        <Button
+          variant="primary"
+          size="sm"
+          icon-only
+          :icon="isPlaying ? Pause : Play"
+          :tooltip="isPlaying ? 'Pause' : 'Play'"
+          class="play-pause-btn"
+          @click="emit('update:isPlaying', !isPlaying)"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="SkipForward"
+          tooltip="Go to End"
+          @click="emit('update:currentTime', duration)"
+        />
+      </div>
+
+      <div class="time-display-container">
+        <span class="time-current">{{ formatTime(currentTime) }}</span>
+        <span class="time-separator">/</span>
+        <span class="time-total">{{ formatTime(duration) }}</span>
+      </div>
     </div>
 
     <!-- Right Zoom Controls -->
     <div class="zoom-controls">
+      <span class="zoom-percent-text" @click="handleZoomReset" title="Double click to reset zoom">{{ zoomPercentageText }}</span>
       <Button
         variant="ghost"
         size="sm"
@@ -92,25 +99,6 @@ const handleZoomOut = () => {
         :disabled="zoomLevel <= 100"
         @click="handleZoomOut"
       />
-      
-      <button 
-        class="zoom-reset-btn" 
-        title="Reset Zoom to 100%"
-        @click="handleZoomReset"
-      >
-        {{ zoomPercentageText }}
-      </button>
-
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="ZoomIn"
-        tooltip="Zoom In"
-        :disabled="zoomLevel >= 500"
-        @click="handleZoomIn"
-      />
-
       <input
         type="range"
         min="100"
@@ -119,6 +107,15 @@ const handleZoomOut = () => {
         :value="zoomLevel"
         class="zoom-slider"
         @input="emit('update:zoomLevel', parseFloat(($event.target as HTMLInputElement).value))"
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="ZoomIn"
+        tooltip="Zoom In"
+        :disabled="zoomLevel >= 500"
+        @click="handleZoomIn"
       />
     </div>
   </div>
@@ -134,6 +131,28 @@ const handleZoomOut = () => {
   border-bottom: 1px solid var(--color-border);
   height: 48px;
   user-select: none;
+}
+
+.left-section {
+  display: flex;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.center-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .nav-controls {
@@ -178,7 +197,7 @@ const handleZoomOut = () => {
   gap: 8px;
 }
 
-.zoom-reset-btn {
+.zoom-percent-text {
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -192,7 +211,7 @@ const handleZoomOut = () => {
   transition: all var(--fast) ease;
 }
 
-.zoom-reset-btn:hover {
+.zoom-percent-text:hover {
   background: var(--color-bg-surface-hover);
   color: var(--text-primary);
   border-color: var(--color-border-strong);
