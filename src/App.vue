@@ -4,6 +4,7 @@ import HUD from './components/hud/HUD.vue'
 import VideoEditor from './components/video-editor/VideoEditor.vue'
 
 const currentView = ref<'hud' | 'editor'>('hud')
+const currentVideoSrc = ref<string | null>(null)
 
 const setView = (view: 'hud' | 'editor') => {
   currentView.value = view
@@ -15,9 +16,14 @@ const setView = (view: 'hud' | 'editor') => {
   }
 }
 
-const handleStartRecording = () => {}
+const handleStartRecording = () => {
+  currentVideoSrc.value = null
+}
 
-const handleStopRecording = () => {
+const handleStopRecording = (session: any) => {
+  if (session && session.videoSrc) {
+    currentVideoSrc.value = session.videoSrc
+  }
   setView('editor')
 }
 </script>
@@ -34,6 +40,7 @@ const handleStopRecording = () => {
 
     <VideoEditor 
       v-if="currentView === 'editor'"
+      :video-src="currentVideoSrc"
       @back-to-hud="setView('hud')"
     />
   </div>

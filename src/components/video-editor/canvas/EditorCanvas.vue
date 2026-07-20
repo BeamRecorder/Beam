@@ -18,6 +18,10 @@ const props = defineProps<{
   
   // Track status
   isVideoEnabled: boolean
+
+  // Wallpaper and source files
+  selectedWallpaper: string
+  videoSrc: string
 }>()
 
 const emit = defineEmits<{
@@ -32,14 +36,14 @@ const { getCursorImage } = useCursorReplacer()
 
 // Simulated cursor positions (keyframe track)
 const cursorTrack = [
-  { t: 0, x: 100, y: 100 },
-  { t: 3, x: 250, y: 150 },
-  { t: 7, x: 500, y: 300 },
-  { t: 10, x: 150, y: 400 },
-  { t: 15, x: 450, y: 120 },
-  { t: 20, x: 600, y: 380 },
-  { t: 25, x: 300, y: 250 },
-  { t: 30, x: 100, y: 100 },
+  { t: 0, x: 200, y: 150 },
+  { t: 3, x: 350, y: 200 },
+  { t: 7, x: 600, y: 350 },
+  { t: 10, x: 250, y: 450 },
+  { t: 15, x: 550, y: 180 },
+  { t: 20, x: 700, y: 400 },
+  { t: 25, x: 400, y: 300 },
+  { t: 30, x: 200, y: 150 },
 ]
 
 // Clicking ripples list
@@ -66,11 +70,44 @@ const getCursorPos = (t: number) => {
       }
     }
   }
-  return { x: 100, y: 100 }
+  return { x: 200, y: 150 }
 }
 
 let animationFrameId: number | null = null
 let cursorImgElement: HTMLImageElement | null = null
+
+// Setup offscreen Video Element
+const videoEl = document.createElement('video')
+videoEl.muted = true
+videoEl.loop = true
+videoEl.playsInline = true
+
+const loadVideo = () => {
+  videoEl.src = props.videoSrc
+  videoEl.load()
+}
+watch(() => props.videoSrc, loadVideo, { immediate: true })
+
+watch(() => props.isPlaying, (playing) => {
+  if (playing) {
+    videoEl.play().catch(err => console.error('Failed to play video element:', err))
+  } else {
+    videoEl.pause()
+  }
+})
+
+watch(() => props.currentTime, (time) => {
+  if (Math.abs(videoEl.currentTime - time) > 0.15) {
+    videoEl.currentTime = time
+  }
+})
+
+// Setup Wallpaper image loading
+const wallpaperImg = new Image()
+const loadWallpaper = () => {
+  wallpaperImg.src = props.selectedWallpaper
+}
+watch(() => props.selectedWallpaper, loadWallpaper, { immediate: true })
 
 // Load cursor image when configuration changes
 const loadCursor = async () => {
@@ -86,59 +123,62 @@ const draw = () => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // 1. Clear background
-  ctx.fillStyle = '#0f172a' // Dark editor canvas bg
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-  // 2. Draw Video/Screen simulation
-  if (props.isVideoEnabled) {
-    // Draw a mock desktop screen with beautiful graphics
-    ctx.fillStyle = '#1e293b'
-    ctx.fillRect(40, 40, canvas.width - 80, canvas.height - 80)
-    
-    // Draw a browser mockup inside the mock screen
-    ctx.fillStyle = '#334155'
-    ctx.fillRect(80, 80, canvas.width - 160, canvas.height - 160)
-    
-    // Browser header
-    ctx.fillStyle = '#475569'
-    ctx.fillRect(80, 80, canvas.width - 160, 32)
-    
-    // Browser circles (red, yellow, green)
-    ctx.fillStyle = '#ef4444'
-    ctx.beginPath(); ctx.arc(96, 96, 6, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#eab308'
-    ctx.beginPath(); ctx.arc(112, 96, 6, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#22c55e'
-    ctx.beginPath(); ctx.arc(128, 96, 6, 0, Math.PI * 2); ctx.fill()
-    
-    // Simulated Code editor / content text inside browser
-    ctx.fillStyle = '#ff5a1f'
-    ctx.fillRect(100, 150, 200, 16)
-    ctx.fillStyle = '#38bdf8'
-    ctx.fillRect(100, 180, 150, 16)
-    ctx.fillStyle = '#a7f3d0'
-    ctx.fillRect(100, 210, 280, 16)
-    ctx.fillStyle = '#f472b6'
-    ctx.fillRect(100, 240, 180, 16)
-
-    // Animated orbiting widget to show playback is happening
-    if (props.isPlaying) {
-      const angle = (props.currentTime * 2) % (Math.PI * 2)
-      ctx.fillStyle = '#ff5a1f'
-      ctx.beginPath()
-      ctx.arc(
-        canvas.width / 2 + Math.cos(angle) * 80,
-        canvas.height / 2 + Math.sin(angle) * 80,
-        14,
-        0,
-        Math.PI * 2
-      )
-      ctx.fill()
-    }
+  // 1. Draw Wallpaper background
+  if (wallpaperImg.complete && wallpaperImg.naturalWidth > 0) {
+    ctx.drawImage(wallpaperImg, 0, 0, canvas.width, canvas.height)
   } else {
-    // Disabled track overlay
-    ctx.fillStyle = '#020617'
+    ctx.fillStyle = '#1e1e24'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+
+  // 2. Draw Video recording frame
+  let dx = 0, dy = 0, dw = 0, dh = 0
+  if (props.isVideoEnabled) {
+    const margin = 50
+    const availWidth = canvas.width - (margin * 2)
+    const availHeight = canvas.height - (margin * 2)
+    
+    const videoWidth = videoEl.videoWidth || 1920
+    const videoHeight = videoEl.videoHeight || 1080
+    const aspect = videoWidth / videoHeight
+    
+    dw = availWidth
+    dh = availWidth / aspect
+    
+    if (dh > availHeight) {
+      dh = availHeight
+      dw = availHeight * aspect
+    }
+    
+    dx = (canvas.width - dw) / 2
+    dy = (canvas.height - dh) / 2
+    
+    ctx.save()
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
+    ctx.shadowBlur = 24
+    ctx.shadowOffsetX = 0
+    ctx.shadowOffsetY = 12
+    
+    // Draw window backing
+    ctx.fillStyle = '#1e1e1e'
+    ctx.beginPath()
+    ctx.roundRect(dx, dy, dw, dh, 10)
+    ctx.fill()
+    ctx.clip()
+    
+    if (videoEl.readyState >= 2) {
+      ctx.drawImage(videoEl, dx, dy, dw, dh)
+    } else {
+      ctx.fillStyle = '#334155'
+      ctx.fillRect(dx, dy, dw, dh)
+      ctx.fillStyle = '#ffffff'
+      ctx.font = '14px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText('Loading video recording...', canvas.width / 2, canvas.height / 2)
+    }
+    ctx.restore()
+  } else {
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = '#ffffff'
     ctx.font = '16px sans-serif'
@@ -155,7 +195,6 @@ const draw = () => {
       ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2)
       ctx.stroke()
       
-      // Update ripple size & opacity
       if (props.isPlaying) {
         ripple.radius += 1.5
         ripple.alpha -= 0.04
@@ -170,11 +209,14 @@ const draw = () => {
   if (props.isVideoEnabled && cursorImgElement) {
     const pos = getCursorPos(props.currentTime)
     
-    // Add ripple automatically on pre-defined keyframe ticks to simulate clicking
+    // Keep cursor within video window boundaries for realism
+    const localX = dx + (pos.x / 800) * dw
+    const localY = dy + (pos.y / 600) * dh
+
     if (props.isPlaying && (props.currentTime * 10) % 30 === 0 && Math.random() > 0.7) {
       ripples.value.push({
-        x: pos.x,
-        y: pos.y,
+        x: localX,
+        y: localY,
         radius: 2,
         maxRadius: 24,
         alpha: 1.0
@@ -191,8 +233,8 @@ const draw = () => {
     
     ctx.drawImage(
       cursorImgElement, 
-      pos.x - (props.selectedCursor === 'grabbing' || props.selectedCursor === 'text' ? props.cursorSize / 2 : 0), 
-      pos.y - (props.selectedCursor === 'grabbing' || props.selectedCursor === 'text' ? props.cursorSize / 2 : 0)
+      localX - (props.selectedCursor === 'grabbing' || props.selectedCursor === 'text' ? props.cursorSize / 2 : 0), 
+      localY - (props.selectedCursor === 'grabbing' || props.selectedCursor === 'text' ? props.cursorSize / 2 : 0)
     )
     ctx.restore()
   }
@@ -225,6 +267,9 @@ onUnmounted(() => {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId)
   }
+  videoEl.pause()
+  videoEl.src = ''
+  videoEl.load()
 })
 </script>
 
@@ -279,6 +324,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   box-shadow: var(--shadow-md);
+  z-index: 20;
 }
 
 .play-btn {

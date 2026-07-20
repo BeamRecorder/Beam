@@ -158,6 +158,17 @@ ipcMain.handle(CAPTURE_CHANNEL, async (_event, command, payload) => {
     await captureEngine.request('prepare', { config: payload.config })
     return captureEngine.request('start')
   }
+  if (command === 'stop') {
+    const session = await captureEngine.request('stop')
+    if (session && session.sessionId) {
+      const videosPath = app.getPath('videos')
+      const videoFile = path.join(videosPath, 'DemoRecorder', session.sessionId, 'screen', 'segment-0001.mp4')
+      if (fs.existsSync(videoFile)) {
+        session.videoSrc = `file:///${videoFile.replace(/\\/g, '/')}`
+      }
+    }
+    return session
+  }
   if (!allowedCommands.has(command)) throw new Error(`Commande de capture interdite: ${command}`)
   return captureEngine.request(command, payload)
 })
@@ -301,6 +312,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      webSecurity: false,
     },
   })
 

@@ -10,6 +10,15 @@ import { ArrowLeft, Download, Minus, X } from '@lucide/vue'
 import { useVideoPlayer } from './composables/useVideoPlayer'
 import { useCursorReplacer } from './composables/useCursorReplacer'
 
+const props = withDefaults(
+  defineProps<{
+    videoSrc?: string | null
+  }>(),
+  {
+    videoSrc: null
+  }
+)
+
 const emit = defineEmits(['back-to-hud'])
 
 // Load composables
@@ -18,6 +27,8 @@ const {
   currentTime,
   duration,
   volume,
+  videoSrc: playerVideoSrc,
+  selectedWallpaper,
   isVideoEnabled,
   isSystemAudioEnabled,
   isMicAudioEnabled,
@@ -51,7 +62,9 @@ const handleExit = () => {
 }
 
 onMounted(() => {
-  // Maximize the window automatically when editor opens
+  if (props.videoSrc) {
+    playerVideoSrc.value = props.videoSrc
+  }
   window.capture.maximize()
 })
 </script>
@@ -109,6 +122,7 @@ onMounted(() => {
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
+          v-model:selectedWallpaper="selectedWallpaper"
         />
 
         <!-- Canvas/Player Island -->
@@ -124,6 +138,8 @@ onMounted(() => {
           :enable-ripple="enableRipple"
           
           :is-video-enabled="isVideoEnabled"
+          :selected-wallpaper="selectedWallpaper"
+          :video-src="playerVideoSrc"
         />
       </div>
 
