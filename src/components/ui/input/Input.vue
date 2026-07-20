@@ -48,7 +48,7 @@ defineEmits<{
   align-items: center;
   width: 100%;
   height: 2.75rem;
-  background-color: var(--color-bg-element);
+  background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0 0.75rem;

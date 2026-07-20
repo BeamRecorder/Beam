@@ -96,7 +96,7 @@ const labelStyle = computed(() => {
   min-width: 80px;
   height: 2.75rem;
   padding: 0.6rem 1rem;
-  background-color: var(--color-bg-element);
+  background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
