@@ -42,10 +42,13 @@ const cursorImages = new Map<string, HTMLImageElement>()
 let resizeObserver: ResizeObserver | null = null
 let animationFrameId: number | null = null
 let lastDrawTime = 0
+let previousCamera: { focusX: number; focusY: number; scale: number } | null = null
+let renderedCamera: { focusX: number; focusY: number; scale: number } | null = null
+let lastCameraUpdateMs = 0
 const videoWindowBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null)
 const focusTargetStyle = computed(() => {
   const bounds = videoWindowBounds.value
-  if (!props.selectedZoom || !bounds) return { display: 'none' }
+  if (!props.selectedZoom || props.selectedZoom.source !== 'manual' || props.isPlaying || !bounds) return { display: 'none' }
   const selectionScale = Math.max(1, props.selectedZoom.scale)
   return {
     left: `${bounds.dx + props.selectedZoom.focus.cx * bounds.dw - bounds.dw / selectionScale / 2}px`,
@@ -86,6 +89,8 @@ videoEl.addEventListener('error', handleVideoError)
 
 const loadVideo = () => {
   videoError.value = null
+  previousCamera = null
+  renderedCamera = null
   videoEl.pause()
   videoEl.currentTime = 0
   videoEl.src = effectiveVideoSrc.value
@@ -98,6 +103,8 @@ watch(() => props.isPlaying, (playing) => {
     videoEl.play().catch((error) => console.error('Failed to play video element:', error))
   } else {
     videoEl.pause()
+    previousCamera = null
+    renderedCamera = null
   }
 })
 
@@ -222,35 +229,92 @@ const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: n
   const focusX = dx + (zoom?.focus.cx ?? 0.5) * dw
   const focusY = dy + (zoom?.focus.cy ?? 0.5) * dh
   const scale = zoom?.scale ?? 1
-  ctx.translate(dx + dw / 2, dy + dh / 2)
-  ctx.scale(scale, scale)
-  ctx.translate(-focusX, -focusY)
+  const drawAtCamera = (camera: { focusX: number; focusY: number; scale: number }, alpha: number) => {
+    ctx.save()
+    ctx.globalAlpha = alpha
+    ctx.translate(dx + dw / 2, dy + dh / 2)
+    ctx.scale(camera.scale, camera.scale)
+    ctx.translate(-camera.focusX, -camera.focusY)
+    if (videoEl.readyState >= 1) ctx.drawImage(videoEl, dx, dy, dw, dh)
+    ctx.restore()
+  }
+
+  const targetCamera = { focusX, focusY, scale }
+  const now = performance.now()
+  const deltaMs = Math.min(80, Math.max(1, now - lastCameraUpdateMs))
+  lastCameraUpdateMs = now
+  if (!props.isPlaying || !renderedCamera) {
+    renderedCamera = targetCamera
+  } else {
+    const smoothing = 1 - Math.exp(-deltaMs / 85)
+    renderedCamera = {
+      focusX: renderedCamera.focusX + (targetCamera.focusX - renderedCamera.focusX) * smoothing,
+      focusY: renderedCamera.focusY + (targetCamera.focusY - renderedCamera.focusY) * smoothing,
+      scale: renderedCamera.scale + (targetCamera.scale - renderedCamera.scale) * smoothing,
+    }
+  }
+  const camera = renderedCamera
+  const previous = previousCamera
+  const cameraDistance = previous
+    ? Math.hypot(focusX - previous.focusX, focusY - previous.focusY) + Math.abs(scale - previous.scale) * Math.max(dw, dh)
+    : 0
+  if (props.isPlaying && previous && cameraDistance > 0.5 && videoEl.readyState >= 1) {
+    for (let sample = 1; sample <= 3; sample += 1) {
+      const progress = sample / 4
+      drawAtCamera({
+        focusX: previous.focusX + (focusX - previous.focusX) * progress,
+        focusY: previous.focusY + (focusY - previous.focusY) * progress,
+        scale: previous.scale + (scale - previous.scale) * progress,
+      }, 0.09)
+    }
+  }
 
   if (videoError.value) {
+    ctx.save()
+    ctx.translate(dx + dw / 2, dy + dh / 2)
+    ctx.scale(scale, scale)
+    ctx.translate(-focusX, -focusY)
     ctx.fillStyle = '#ef4444'
     ctx.font = '14px sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(videoError.value, focusX, focusY)
+    ctx.restore()
   } else if (videoEl.readyState >= 1) {
-    // The canvas is DPR-scaled, so this draw remains sharp on HiDPI displays.
-    ctx.drawImage(videoEl, dx, dy, dw, dh)
+    drawAtCamera(camera, 1)
   } else {
+    ctx.save()
+    ctx.translate(dx + dw / 2, dy + dh / 2)
+    ctx.scale(scale, scale)
+    ctx.translate(-focusX, -focusY)
     ctx.fillStyle = '#334155'
     ctx.fillRect(dx, dy, dw, dh)
     ctx.fillStyle = '#ffffff'
     ctx.font = '14px sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText('Loading video recording...', width / 2, height / 2)
+    ctx.restore()
   }
   ctx.restore()
+  previousCamera = camera
   videoWindowBounds.value = { dx, dy, dw, dh }
   return { dx, dy, dw, dh, focusX, focusY, scale }
 }
 
-const transformedPoint = (point: { x: number; y: number }, videoWindow: { focusX: number; focusY: number; scale: number }) => ({
-  x: videoWindow.focusX + (point.x - videoWindow.focusX) * videoWindow.scale,
-  y: videoWindow.focusY + (point.y - videoWindow.focusY) * videoWindow.scale,
-})
+const drawInCameraSpace = (
+  ctx: CanvasRenderingContext2D,
+  videoWindow: { dx: number; dy: number; dw: number; dh: number; focusX: number; focusY: number; scale: number },
+  drawContent: () => void,
+) => {
+  ctx.save()
+  ctx.beginPath()
+  ctx.roundRect(videoWindow.dx, videoWindow.dy, videoWindow.dw, videoWindow.dh, 10)
+  ctx.clip()
+  ctx.translate(videoWindow.dx + videoWindow.dw / 2, videoWindow.dy + videoWindow.dh / 2)
+  ctx.scale(videoWindow.scale, videoWindow.scale)
+  ctx.translate(-videoWindow.focusX, -videoWindow.focusY)
+  drawContent()
+  ctx.restore()
+}
 
 const updateSelectedFocus = (event: PointerEvent) => {
   const canvas = canvasRef.value
@@ -328,32 +392,26 @@ const draw = () => {
     }
     lastDrawTime = time
 
-    for (const ripple of ripples.value) {
-      const position = transformedPoint(ripple, videoWindow)
-      ctx.strokeStyle = `rgba(255, 90, 31, ${ripple.alpha})`
-      ctx.lineWidth = 3
-      ctx.beginPath()
-      ctx.arc(position.x, position.y, ripple.radius * videoWindow.scale, 0, Math.PI * 2)
-      ctx.stroke()
-      if (props.isPlaying) {
-        ripple.radius += 1.5
-        ripple.alpha -= 0.04
-      }
-    }
-    ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0)
-
     const state = cursorStateAt(cursorData.events, props.currentTime)
     const asset = cursorAssetForState(state, cursorData.shapes)
     const image = state?.shapeId ? cursorImages.get(state.shapeId) : null
-    if (state?.visible && asset && image && image.complete && image.naturalWidth > 0) {
-      const scale = props.cursorSize / image.naturalWidth
-      const drawWidth = image.naturalWidth * scale
-      const drawHeight = image.naturalHeight * scale
-      const pointer = transformedPoint({
-        x: videoWindow.dx + state.x * videoWindow.dw,
-        y: videoWindow.dy + state.y * videoWindow.dh,
-      }, videoWindow)
-      ctx.save()
+    drawInCameraSpace(ctx, videoWindow, () => {
+      for (const ripple of ripples.value) {
+        ctx.strokeStyle = `rgba(255, 90, 31, ${ripple.alpha})`
+        ctx.lineWidth = 3
+        ctx.beginPath()
+        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2)
+        ctx.stroke()
+        if (props.isPlaying) {
+          ripple.radius += 1.5
+          ripple.alpha -= 0.04
+        }
+      }
+
+      if (!state?.visible || !asset || !image || !image.complete || image.naturalWidth <= 0) return
+      const cursorScale = props.cursorSize / image.naturalWidth
+      const pointerX = videoWindow.dx + state.x * videoWindow.dw
+      const pointerY = videoWindow.dy + state.y * videoWindow.dh
       if (props.enableShadow) {
         ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
         ctx.shadowBlur = 6
@@ -362,22 +420,23 @@ const draw = () => {
       }
       ctx.drawImage(
         image,
-        pointer.x - asset.hotspot.x * scale * videoWindow.scale,
-        pointer.y - asset.hotspot.y * scale * videoWindow.scale,
-        drawWidth * videoWindow.scale,
-        drawHeight * videoWindow.scale,
+        pointerX - asset.hotspot.x * cursorScale,
+        pointerY - asset.hotspot.y * cursorScale,
+        image.naturalWidth * cursorScale,
+        image.naturalHeight * cursorScale,
       )
-      ctx.restore()
-    } else if (state?.shapeId && !asset) {
+    })
+    ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0)
+
+    if (state?.shapeId && !asset) {
       drawCursorWarning(ctx, 'Cursor shape missing', width)
     }
   } else if (props.isVideoEnabled && cursorData && !cursorData.available) {
     drawCursorWarning(ctx, 'Cursor data missing', width)
   }
 
-  if (props.isPlaying) {
-    const nextTime = props.currentTime + 0.016
-    emit('update:currentTime', nextTime >= props.duration ? 0 : nextTime)
+  if (props.isPlaying && videoEl.readyState >= 1) {
+    emit('update:currentTime', videoEl.ended ? 0 : videoEl.currentTime)
   }
   animationFrameId = requestAnimationFrame(draw)
 }

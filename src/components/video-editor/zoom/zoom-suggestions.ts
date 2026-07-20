@@ -5,7 +5,7 @@ export const CLICK_CLUSTER_GAP_MS = 650
 export const CLICK_CLUSTER_DISTANCE = 0.07
 export const DUPLICATE_CLICK_GAP_MS = 120
 export const ZOOM_REGION_PADDING_MS = 900
-export const ZOOM_ALGORITHM_VERSION = 2
+export const ZOOM_ALGORITHM_VERSION = 3
 const LEFT_MOUSE_BUTTON = 1
 
 interface ClickPoint {
@@ -78,6 +78,19 @@ function focusForCluster(cluster: ClickPoint[]): ZoomFocus {
   return { cx: focus.cx / cluster.length, cy: focus.cy / cluster.length }
 }
 
+function removeOverlappingWindows(elements: ZoomElement[]): ZoomElement[] {
+  const sorted = [...elements].sort((left, right) => left.startMs - right.startMs)
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = sorted[index - 1]
+    const current = sorted[index]
+    if (current.startMs >= previous.endMs) continue
+    const boundary = Math.round((previous.endMs + current.startMs) / 2)
+    previous.endMs = Math.max(previous.startMs + 1, boundary)
+    current.startMs = Math.min(current.endMs - 1, boundary)
+  }
+  return sorted
+}
+
 export function buildAutomaticZoomElements(params: {
   events: CursorEvent[]
   sessionId: string
@@ -85,7 +98,7 @@ export function buildAutomaticZoomElements(params: {
 }): ZoomElement[] {
   const { events, sessionId, durationMs } = params
   if (durationMs <= 0) return []
-  return clusterClicks(removeDuplicateClicks(leftClickPoints(events)))
+  const elements = clusterClicks(removeDuplicateClicks(leftClickPoints(events)))
     .map<ZoomElement | null>((cluster) => {
       const first = cluster[0]
       const last = cluster.at(-1) ?? first
@@ -105,4 +118,5 @@ export function buildAutomaticZoomElements(params: {
       }
     })
     .filter((element): element is ZoomElement => element !== null)
+  return removeOverlappingWindows(elements)
 }
