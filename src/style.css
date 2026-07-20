@@ -40,7 +40,17 @@
   --color-border: #e2e8f0;
   --color-border-strong: #cbd5e1;
   --color-border-dark: #334155;
-  
+
+  /* Track Colors */
+  --color-track-video: #6366f1;
+  --color-track-video-light: rgba(99, 102, 241, 0.15);
+  --color-track-audio: #10b981;
+  --color-track-audio-light: rgba(16, 185, 129, 0.15);
+  --color-track-cursor: #f43f5e;
+  --color-track-cursor-light: rgba(244, 63, 94, 0.15);
+  --color-track-annotation: #f59e0b;
+  --color-track-annotation-light: rgba(245, 158, 11, 0.15);
+
   /* Texts */
   --text-primary: #1e1e1e;
   --text-secondary: #555555;

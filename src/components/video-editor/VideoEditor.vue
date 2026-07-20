@@ -149,7 +149,7 @@ watch(() => props.videoSrc, (videoSrc) => {
           
           :is-video-enabled="isVideoEnabled"
           :selected-background="selectedBackgroundMedia"
-          :video-src="playerVideoSrc"
+          :video-src="playerVideoSrc || ''"
           :editor-data="editorData"
           @duration-change="duration = $event"
         />
@@ -161,6 +161,7 @@ watch(() => props.videoSrc, (videoSrc) => {
           v-model:currentTime="currentTime"
           v-model:isPlaying="isPlaying"
           :duration="duration"
+          :video-src="playerVideoSrc"
           
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
