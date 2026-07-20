@@ -219,7 +219,7 @@ const minimizeApp = () => {
     <header class="hud-header">
       <div class="logo-section">
         <template v-if="showSettings">
-          <div style="-webkit-app-region: no-drag;">
+          <div style="-webkit-app-region: no-drag; display: inline-flex; align-items: center;">
             <Button variant="ghost" size="sm" class="back-btn" @click="showSettings = false">
               <template #icon><ChevronLeft class="btn-icon" /></template>
             </Button>
@@ -297,7 +297,7 @@ const minimizeApp = () => {
           <ButtonGroup style="width: auto; max-width: 140px; -webkit-app-region: no-drag;">
             <Button 
               :class="{ active: themeStore.theme === 'light' }"
-              variant="ghost"
+              variant="tab"
               size="sm"
               @click="themeStore.theme = 'light'"
             >
@@ -305,7 +305,7 @@ const minimizeApp = () => {
             </Button>
             <Button 
               :class="{ active: themeStore.theme === 'dark' }"
-              variant="ghost"
+              variant="tab"
               size="sm"
               @click="themeStore.theme = 'dark'"
             >
@@ -313,7 +313,7 @@ const minimizeApp = () => {
             </Button>
             <Button 
               :class="{ active: themeStore.theme === 'system' }"
-              variant="ghost"
+              variant="tab"
               size="sm"
               @click="themeStore.theme = 'system'"
             >
@@ -332,21 +332,21 @@ const minimizeApp = () => {
     <!-- Main HUD Form -->
     <div v-else class="hud-body">
       <!-- Tabs (Screen / Window) -->
-      <ButtonGroup>
+      <ButtonGroup class="mode-tabs">
         <Button 
           :class="{ active: activeTab === 'screen' }"
-          variant="ghost"
+          variant="tab"
           @click="activeTab = 'screen'"
         >
-          <template #icon><Monitor class="tab-icon" /></template>
+          <template #icon><Monitor class="btn-icon" /></template>
           Screen
         </Button>
         <Button 
           :class="{ active: activeTab === 'window' }"
-          variant="ghost"
+          variant="tab"
           @click="activeTab = 'window'"
         >
-          <template #icon><Layout class="tab-icon" /></template>
+          <template #icon><Layout class="btn-icon" /></template>
           Window
         </Button>
       </ButtonGroup>

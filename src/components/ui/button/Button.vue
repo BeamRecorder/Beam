@@ -11,7 +11,7 @@ import { Loader } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link'
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab'
     size?: 'sm' | 'md' | 'lg'
     loading?: boolean
     disabled?: boolean
@@ -163,16 +163,16 @@ const handleClick = (event: MouseEvent) => {
 .btn-outline {
   background-color: transparent;
   border-color: var(--color-border);
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
 }
 .btn-outline:hover:not(:disabled) {
   background-color: var(--color-light-blue-hover);
-  border-color: var(--color-dark-blue-lighter);
+  border-color: var(--color-border-dark);
 }
 
 .btn-ghost {
   background-color: transparent;
-  color: var(--color-dark-blue);
+  color: var(--text-primary);
 }
 .btn-ghost:hover:not(:disabled) {
   background-color: var(--color-light-blue-hover);
@@ -188,6 +188,43 @@ const handleClick = (event: MouseEvent) => {
 }
 .btn-link:hover:not(:disabled) {
   color: var(--color-orange-hover);
+}
+
+/* Tab/Segmented Variant */
+.btn-tab {
+  flex: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
+  height: auto;
+  padding: 6px 12px;
+  transition: all 0.2s ease;
+  justify-content: center;
+}
+
+.btn-tab:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.02);
+  transform: none;
+  box-shadow: none;
+}
+
+:root.dark .btn-tab:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.btn-tab.active {
+  background: var(--color-bg-element);
+  color: var(--color-orange);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-border);
+}
+
+.btn-tab.active:hover:not(:disabled) {
+  background: var(--color-bg-element);
 }
 
 /* Loader and Icon Animation */
