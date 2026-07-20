@@ -1,10 +1,10 @@
-import { ref, onUnmounted, reactive, watch, type Ref } from 'vue';
-import ThumbnailWorker from './thumbnail.worker?worker&inline';
+import { ref, onUnmounted, reactive, watch, type Ref } from "vue";
+import ThumbnailWorker from "./thumbnail.worker?worker&inline";
 
 export function useThumbnails(videoSrcRef: Ref<string | null>) {
   const thumbnails = reactive<Record<number, string>>({});
   const isExtracting = ref(false);
-  
+
   let worker: Worker | null = null;
   let hiddenVideo: HTMLVideoElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
@@ -21,97 +21,163 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
 
   const initVideoAndCanvas = () => {
     if (!hiddenVideo) {
-      hiddenVideo = document.createElement('video');
-      console.log('[useThumbnails] Initializing hidden video element with src:', videoSrcRef.value);
-      hiddenVideo.src = videoSrcRef.value || '';
+      hiddenVideo = document.createElement("video");
+      console.log(
+        "[useThumbnails] Initializing hidden video element with src:",
+        videoSrcRef.value,
+      );
+      hiddenVideo.src = videoSrcRef.value || "";
       hiddenVideo.muted = true;
       hiddenVideo.playsInline = true;
-      hiddenVideo.preload = 'auto';
-      
+      hiddenVideo.preload = "auto";
+
       // Wait for seek completes
-      hiddenVideo.addEventListener('seeked', () => {
-        console.log('[useThumbnails] Hidden video seeked successfully');
+      hiddenVideo.addEventListener("seeked", () => {
+        console.log("[useThumbnails] Hidden video seeked successfully");
         if (resolveSeek) {
           resolveSeek();
           resolveSeek = null;
         }
       });
 
-      hiddenVideo.addEventListener('loadedmetadata', () => {
-        console.log('[useThumbnails] Hidden video loadedmetadata. duration:', hiddenVideo?.duration);
+      hiddenVideo.addEventListener("loadedmetadata", () => {
+        console.log(
+          "[useThumbnails] Hidden video loadedmetadata. duration:",
+          hiddenVideo?.duration,
+        );
       });
 
-      hiddenVideo.addEventListener('error', (e) => {
-        console.error('[useThumbnails] Hidden video error occurred:', hiddenVideo?.error);
+      hiddenVideo.addEventListener("error", (_e) => {
+        console.error(
+          "[useThumbnails] Hidden video error occurred:",
+          hiddenVideo?.error,
+        );
         if (resolveSeek) {
           resolveSeek();
           resolveSeek = null;
         }
       });
 
-      hiddenVideo.addEventListener('stalled', () => {
-        console.warn('[useThumbnails] Hidden video loading stalled');
+      hiddenVideo.addEventListener("stalled", () => {
+        console.warn("[useThumbnails] Hidden video loading stalled");
       });
     }
 
     if (!canvas) {
-      canvas = document.createElement('canvas');
+      canvas = document.createElement("canvas");
       canvas.width = 120; // low resolution thumbnails for fast performance
       canvas.height = 68; // 16:9 aspect ratio roughly
-      canvasCtx = canvas.getContext('2d');
+      canvasCtx = canvas.getContext("2d");
     }
   };
 
   const initWorker = () => {
     if (!worker) {
-      console.log('[useThumbnails] Instantiating inline thumbnail worker...');
+      console.log("[useThumbnails] Instantiating inline thumbnail worker...");
       worker = new ThumbnailWorker();
 
       worker.onmessage = async (event: MessageEvent) => {
         const { type, time, dataUrl } = event.data;
-        console.log('[useThumbnails] Received message from worker:', type, { time, hasDataUrl: !!dataUrl });
+        console.log("[useThumbnails] Received message from worker:", type, {
+          time,
+          hasDataUrl: !!dataUrl,
+        });
 
-        if (type === 'extract-frame') {
+        if (type === "extract-frame") {
           if (!hiddenVideo || !canvas || !canvasCtx) {
             initVideoAndCanvas();
           }
 
           try {
             isExtracting.value = true;
-            // Seek video to target time
             if (hiddenVideo) {
-              hiddenVideo.currentTime = time;
-              
-              // Promise to wait for seek complete
-              await new Promise<void>((resolve) => {
-                resolveSeek = resolve;
-              });
+              // Ensure metadata is loaded before any seek attempt
+              if (hiddenVideo.readyState < 1) {
+                console.log(
+                  "[useThumbnails] Video metadata not loaded yet, waiting...",
+                );
+                await new Promise<void>((resolve) => {
+                  hiddenVideo!.addEventListener(
+                    "loadedmetadata",
+                    () => resolve(),
+                    { once: true },
+                  );
+                });
+              }
+
+              // Gotcha: if target time is already very close to current time, skip seek since 'seeked' might not fire
+              if (Math.abs(hiddenVideo.currentTime - time) < 0.05) {
+                console.log(
+                  "[useThumbnails] Video already at target time, skipping seek:",
+                  time,
+                );
+              } else {
+                console.log("[useThumbnails] Seeking hidden video to:", time);
+                hiddenVideo.currentTime = time;
+
+                // Promise to wait for seek complete with a fallback timeout
+                await new Promise<void>((resolve) => {
+                  let resolved = false;
+                  const timeout = setTimeout(() => {
+                    if (!resolved) {
+                      resolved = true;
+                      resolveSeek = null;
+                      console.warn(
+                        "[useThumbnails] Seek timed out for time:",
+                        time,
+                      );
+                      resolve();
+                    }
+                  }, 500);
+
+                  resolveSeek = () => {
+                    if (!resolved) {
+                      resolved = true;
+                      clearTimeout(timeout);
+                      resolve();
+                    }
+                  };
+                });
+              }
 
               // Draw frame to low-res canvas
               if (canvas) {
-                canvasCtx?.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
-                const dataUrlResult = canvas.toDataURL('image/jpeg', 0.6); // low quality for performance
-                
+                canvasCtx?.drawImage(
+                  hiddenVideo,
+                  0,
+                  0,
+                  canvas.width,
+                  canvas.height,
+                );
+                const dataUrlResult = canvas.toDataURL("image/jpeg", 0.6); // low quality for performance
+
                 // Return to worker
-                console.log('[useThumbnails] Sending frame response to worker for time:', time);
-                worker?.postMessage({
-                  type: 'frame-response',
+                console.log(
+                  "[useThumbnails] Sending frame response to worker for time:",
                   time,
-                  dataUrl: dataUrlResult
+                );
+                worker?.postMessage({
+                  type: "frame-response",
+                  time,
+                  dataUrl: dataUrlResult,
                 });
               }
             }
           } catch (e) {
-            console.error('[useThumbnails] Failed to extract frame at time:', time, e);
-            worker?.postMessage({
-              type: 'frame-response',
+            console.error(
+              "[useThumbnails] Failed to extract frame at time:",
               time,
-              dataUrl: null
+              e,
+            );
+            worker?.postMessage({
+              type: "frame-response",
+              time,
+              dataUrl: null,
             });
           } finally {
             isExtracting.value = false;
           }
-        } else if (type === 'frame-ready') {
+        } else if (type === "frame-ready") {
           thumbnails[time] = dataUrl;
         }
       };
@@ -121,16 +187,19 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   // Request frames based on virtualized scroll viewport
   const requestVisibleFrames = (visibleTimestamps: number[]) => {
     initWorker();
-    console.log('[useThumbnails] Requesting visible frames from worker:', visibleTimestamps);
+    console.log(
+      "[useThumbnails] Requesting visible frames from worker:",
+      visibleTimestamps,
+    );
     worker?.postMessage({
-      type: 'request-frames',
-      visibleTimes: visibleTimestamps
+      type: "request-frames",
+      visibleTimes: visibleTimestamps,
     });
   };
 
   const clearCache = () => {
-    worker?.postMessage({ type: 'clear' });
-    Object.keys(thumbnails).forEach(key => {
+    worker?.postMessage({ type: "clear" });
+    Object.keys(thumbnails).forEach((key) => {
       delete thumbnails[Number(key)];
     });
   };
@@ -148,6 +217,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
     thumbnails,
     isExtracting,
     requestVisibleFrames,
-    clearCache
+    clearCache,
   };
 }

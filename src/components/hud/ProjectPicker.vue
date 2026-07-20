@@ -12,7 +12,14 @@ import { capture } from '../../api/capture'
 import type { CaptureProject } from '../../api/types/capture-api'
 
 const vFocus = {
-  mounted: (el: HTMLInputElement) => el.focus(),
+  mounted: (el: HTMLElement) => {
+    if (el instanceof HTMLInputElement) {
+      el.focus()
+    } else {
+      const input = el.querySelector('input')
+      if (input) input.focus()
+    }
+  },
 }
 
 let cachedProjects: CaptureProject[] | null = null
@@ -319,10 +326,11 @@ defineExpose({
                 </div>
                 <div class="project-card-info">
                   <div class="project-title-row">
-                    <input
+                    <Input
                       v-if="renameProjectId === project.id"
                       v-focus
                       v-model="renameValue"
+                      size="sm"
                       class="project-rename-input"
                       :disabled="renameBusy"
                       @click.stop
@@ -670,18 +678,18 @@ defineExpose({
 }
 
 .project-rename-input {
+  flex: 1;
   font-size: 11px;
   font-weight: 700;
-  flex: 1;
-  line-height: 1.2;
-  border: 1px solid var(--color-primary);
-  background: var(--color-bg-element);
-  color: var(--text-primary);
-  border-radius: 4px;
-  padding: 1px 4px;
-  outline: none;
-  font-family: inherit;
-  width: 100%;
+  height: 20px !important;
+  padding: 0 4px !important;
+  border-radius: 4px !important;
+  min-width: 0;
+}
+
+.project-rename-input :deep(.input-element) {
+  font-size: 11px !important;
+  font-weight: 700 !important;
 }
 
 .project-card-meta {
