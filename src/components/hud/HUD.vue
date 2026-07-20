@@ -10,7 +10,7 @@ import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import ProjectPicker from './ProjectPicker.vue'
 import TopbarHUD from './TopbarHUD.vue'
-import { Monitor, Layout, ArrowUpRight, Sun, Moon, Volume2, Mic, Video } from '@lucide/vue'
+import { Monitor, Layout, ArrowUpRight, Sun, Moon, Volume2, VolumeX, Mic, MicOff, Video, VideoOff } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 
 const emit = defineEmits(['start-recording', 'stop-recording', 'open-project'])
@@ -246,6 +246,7 @@ const discoverSources = async () => {
       ?? sources.value.find((source) => source.kind === 'microphone')
     selectedCameraId.value = defaultCamera?.id ?? 'off'
     selectedMicId.value = defaultMic?.id ?? 'no-audio'
+    systemAudioMode.value = catalog.capabilities.systemAudio === false ? 'off' : 'on'
     selectedScreenId.value = sources.value.find((source) => source.kind === 'display' && source.isDefault)?.id
       ?? sources.value.find((source) => source.kind === 'display')?.id
       ?? null
@@ -457,7 +458,11 @@ const openProject = (project: CaptureProject) => {
             <!-- Audio and input devices -->
             <div class="selectors-stack">
               <div class="device-row">
-                <Volume2 class="device-icon" />
+                <component
+                  :is="systemAudioMode === 'off' ? VolumeX : Volume2"
+                  class="device-icon"
+                  :class="{ 'is-unavailable': systemAudioMode === 'off' }"
+                />
                 <Select
                   v-model="systemAudioMode"
                   :options="systemAudioOptions"
@@ -467,7 +472,11 @@ const openProject = (project: CaptureProject) => {
               </div>
 
               <div class="device-row">
-                <Mic class="device-icon" />
+                <component
+                  :is="selectedMicId === 'no-audio' ? MicOff : Mic"
+                  class="device-icon"
+                  :class="{ 'is-unavailable': selectedMicId === 'no-audio' }"
+                />
                 <div v-if="isBusy && sources.length === 0">
                   <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
                 </div>
@@ -481,7 +490,11 @@ const openProject = (project: CaptureProject) => {
               </div>
 
               <div class="device-row">
-                <Video class="device-icon" />
+                <component
+                  :is="selectedCameraId === 'off' ? VideoOff : Video"
+                  class="device-icon"
+                  :class="{ 'is-unavailable': selectedCameraId === 'off' }"
+                />
                 <div v-if="isBusy && sources.length === 0">
                   <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
                 </div>
@@ -831,6 +844,10 @@ const openProject = (project: CaptureProject) => {
   width: 17px;
   height: 17px;
   color: var(--text-secondary);
+}
+
+.device-icon.is-unavailable {
+  color: var(--color-error);
 }
 
 .selector-field {
