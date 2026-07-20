@@ -87,14 +87,30 @@ const loadPreviews = async () => {
   }
 }
 
-// Watch tab change to reload previews and resize window
-watch(activeTab, (newTab) => {
-  previews.value = []
-  if (newTab === 'window') {
-    window.capture.setSize(320, 480)
+const activeDropdowns = ref(0)
+
+const updateWindowSize = () => {
+  const isDropdownOpen = activeDropdowns.value > 0
+  if (activeTab.value === 'window') {
+    window.capture.setSize(320, isDropdownOpen ? 600 : 480)
   } else {
-    window.capture.setSize(320, 360)
+    window.capture.setSize(320, isDropdownOpen ? 520 : 360)
   }
+}
+
+const handleDropdownToggle = (isOpen: boolean) => {
+  if (isOpen) {
+    activeDropdowns.value++
+  } else {
+    activeDropdowns.value = Math.max(0, activeDropdowns.value - 1)
+  }
+  updateWindowSize()
+}
+
+// Watch tab change to reload previews and resize window
+watch(activeTab, () => {
+  previews.value = []
+  updateWindowSize()
   void loadPreviews()
 })
 
@@ -106,20 +122,20 @@ const toggleRecording = async () => {
   try {
     if (!isRecording.value) {
       // Find matching Rust catalog ID for the selected preview source
-      let rustScreenId: string | null = null
+      let rustScreenId: string | undefined = undefined
       if (selectedSourceId.value) {
         if (activeTab.value === 'window') {
           // Electron window ID: "window:12345"
           const hwndDec = Number(selectedSourceId.value.replace('window:', ''))
           const hwndHex = hwndDec.toString(16).toLowerCase()
           const match = sources.value.find(s => s.kind === 'window' && s.id.toLowerCase().includes(hwndHex))
-          rustScreenId = match ? match.id : null
+          rustScreenId = match ? match.id : undefined
         } else {
           // Electron screen ID: "screen:0:0"
           const screenIndexStr = selectedSourceId.value.split(':')[1] || '0'
           const screenIndex = parseInt(screenIndexStr, 10)
           const rustScreens = sources.value.filter(s => s.kind === 'display')
-          rustScreenId = rustScreens[screenIndex]?.id ?? rustScreens[0]?.id ?? null
+          rustScreenId = rustScreens[screenIndex]?.id ?? rustScreens[0]?.id ?? undefined
         }
       }
 
@@ -169,11 +185,7 @@ const discoverSources = async () => {
 }
 
 onMounted(async () => {
-  if (activeTab.value === 'screen') {
-    window.capture.setSize(320, 360)
-  } else {
-    window.capture.setSize(320, 480)
-  }
+  updateWindowSize()
   await discoverSources()
   await loadPreviews()
   // Periodically refresh window previews when settings is not open and not recording
@@ -196,14 +208,16 @@ const minimizeApp = () => {
 </script>
 
 <template>
-  <div class="hud-wrapper">
+  <div class="hud-wrapper" :class="[activeTab, { 'settings-open': showSettings }]">
     <!-- Header -->
     <header class="hud-header">
       <div class="logo-section">
         <template v-if="showSettings">
-          <Button variant="ghost" size="sm" class="back-btn" @click="showSettings = false">
-            <template #icon><ChevronLeft class="btn-icon" /></template>
-          </Button>
+          <div style="-webkit-app-region: no-drag;">
+            <Button variant="ghost" size="sm" class="back-btn" @click="showSettings = false">
+              <template #icon><ChevronLeft class="btn-icon" /></template>
+            </Button>
+          </div>
           <span class="logo-text">Preferences</span>
         </template>
         <template v-else>
@@ -316,7 +330,7 @@ const minimizeApp = () => {
             v-model="selectedCameraId" 
             :options="cameraOptions" 
             :disabled="isRecording || isBusy"
-            direction="up"
+            @toggle="handleDropdownToggle"
           />
         </div>
 
@@ -326,7 +340,7 @@ const minimizeApp = () => {
             v-model="selectedMicId" 
             :options="micOptions" 
             :disabled="isRecording || isBusy"
-            direction="up"
+            @toggle="handleDropdownToggle"
           />
         </div>
       </div>
@@ -365,14 +379,21 @@ const minimizeApp = () => {
 <style scoped>
 .hud-wrapper {
   width: 100%;
-  height: 100%;
   background: #ffffff; /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible; /* Let popovers overflow the card! */
+}
+
+.hud-wrapper.screen, .hud-wrapper.settings-open {
+  height: 360px;
+}
+
+.hud-wrapper.window {
+  height: 480px;
 }
 
 .hud-header {

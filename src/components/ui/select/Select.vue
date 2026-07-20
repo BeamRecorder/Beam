@@ -112,8 +112,8 @@ const labelStyle = computed(() => {
 }
 
 .select-trigger.is-open {
-  border-color: var(--color-blue);
-  box-shadow: 0 0 0 2px var(--color-blue-light);
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 2px var(--color-orange-light);
 }
 
 .select-trigger.is-disabled {
