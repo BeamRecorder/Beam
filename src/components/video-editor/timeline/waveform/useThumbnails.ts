@@ -20,21 +20,12 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   const initVideoAndCanvas = () => {
     if (!hiddenVideo) {
       hiddenVideo = document.createElement("video");
-      console.log(
-        "[useThumbnails] Initializing hidden video element with src:",
-        videoSrcRef.value,
-      );
       hiddenVideo.src = videoSrcRef.value || "";
       hiddenVideo.muted = true;
       hiddenVideo.playsInline = true;
       hiddenVideo.preload = "auto";
 
-      hiddenVideo.addEventListener("loadedmetadata", () => {
-        console.log(
-          "[useThumbnails] Hidden video loadedmetadata. duration:",
-          hiddenVideo?.duration,
-        );
-      });
+      hiddenVideo.addEventListener("loadedmetadata", () => {});
 
       hiddenVideo.addEventListener("error", (_e) => {
         console.error(
@@ -58,15 +49,10 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
 
   const initWorker = () => {
     if (!worker) {
-      console.log("[useThumbnails] Instantiating inline thumbnail worker...");
       worker = new ThumbnailWorker();
 
       worker.onmessage = async (event: MessageEvent) => {
         const { type, time, dataUrl } = event.data;
-        console.log("[useThumbnails] Received message from worker:", type, {
-          time,
-          hasDataUrl: !!dataUrl,
-        });
 
         if (type === "extract-frame") {
           if (!hiddenVideo || !canvas || !canvasCtx) {
@@ -78,9 +64,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
             if (hiddenVideo) {
               // Ensure metadata is loaded before any seek attempt
               if (hiddenVideo.readyState < 1) {
-                console.log(
-                  "[useThumbnails] Video metadata not loaded yet, waiting...",
-                );
                 await new Promise<void>((resolve) => {
                   hiddenVideo!.addEventListener(
                     "loadedmetadata",
@@ -92,15 +75,10 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
 
               // Gotcha: if target time is already very close to current time, skip seek since 'seeked' might not fire
               if (Math.abs(hiddenVideo.currentTime - time) < 0.05) {
-                console.log(
-                  "[useThumbnails] Video already at target time, skipping seek:",
-                  time,
-                );
               } else {
-                console.log("[useThumbnails] Seeking hidden video to:", time);
                 hiddenVideo.currentTime = time;
 
-                 // Promise to wait for seek complete with a fallback timeout
+                // Promise to wait for seek complete with a fallback timeout
                 await new Promise<void>((resolve) => {
                   let resolved = false;
 
@@ -108,7 +86,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                     if (!resolved) {
                       resolved = true;
                       clearTimeout(timeout);
-                      console.log("[useThumbnails] Hidden video seeked successfully for time:", time);
                       resolve();
                     }
                   };
@@ -117,12 +94,17 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                     if (!resolved) {
                       resolved = true;
                       hiddenVideo!.removeEventListener("seeked", onSeeked);
-                      console.warn("[useThumbnails] Seek timed out for time:", time);
+                      console.warn(
+                        "[useThumbnails] Seek timed out for time:",
+                        time,
+                      );
                       resolve();
                     }
                   }, 500);
 
-                  hiddenVideo!.addEventListener("seeked", onSeeked, { once: true });
+                  hiddenVideo!.addEventListener("seeked", onSeeked, {
+                    once: true,
+                  });
                 });
               }
 
