@@ -87,9 +87,14 @@ const loadPreviews = async () => {
   }
 }
 
-// Watch tab change to reload previews
-watch(activeTab, () => {
+// Watch tab change to reload previews and resize window
+watch(activeTab, (newTab) => {
   previews.value = []
+  if (newTab === 'window') {
+    window.capture.setSize(320, 480)
+  } else {
+    window.capture.setSize(320, 360)
+  }
   void loadPreviews()
 })
 
@@ -164,11 +169,16 @@ const discoverSources = async () => {
 }
 
 onMounted(async () => {
+  if (activeTab.value === 'screen') {
+    window.capture.setSize(320, 360)
+  } else {
+    window.capture.setSize(320, 480)
+  }
   await discoverSources()
   await loadPreviews()
   // Periodically refresh window previews when settings is not open and not recording
   setInterval(() => {
-    if (!showSettings.value && !isRecording.value) {
+    if (!showSettings.value && !isRecording.value && activeTab.value === 'window') {
       void loadPreviews()
     }
   }, 5000)
@@ -306,6 +316,7 @@ const minimizeApp = () => {
             v-model="selectedCameraId" 
             :options="cameraOptions" 
             :disabled="isRecording || isBusy"
+            direction="up"
           />
         </div>
 
@@ -315,6 +326,7 @@ const minimizeApp = () => {
             v-model="selectedMicId" 
             :options="micOptions" 
             :disabled="isRecording || isBusy"
+            direction="up"
           />
         </div>
       </div>
@@ -326,6 +338,7 @@ const minimizeApp = () => {
         <Button 
           :variant="isRecording ? 'outline' : 'primary'"
           size="md"
+          :block="true"
           class="record-btn-override"
           :class="{ 'recording': isRecording }"
           :disabled="isBusy"
@@ -439,7 +452,16 @@ const minimizeApp = () => {
   color: var(--color-error) !important;
 }
 
-.hud-body, .settings-body {
+.hud-body {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: visible; /* Prevent clipping of dropdown popovers */
+}
+
+.settings-body {
   flex: 1;
   padding: 16px;
   display: flex;
@@ -577,7 +599,6 @@ const minimizeApp = () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  align-items: center;
   width: 100%;
 }
 
@@ -586,7 +607,6 @@ const minimizeApp = () => {
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  max-width: 260px;
 }
 
 .field-label-text {

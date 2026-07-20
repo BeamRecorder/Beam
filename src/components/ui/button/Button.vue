@@ -1,3 +1,9 @@
+<script lang="ts">
+export default {
+  inheritAttrs: false
+}
+</script>
+
 <script setup lang="ts">
 import { computed } from 'vue'
 import Tooltip from '../tooltip/Tooltip.vue'
@@ -57,6 +63,7 @@ const handleClick = (event: MouseEvent) => {
     :class="['btn-container', { 'btn-block': block }]"
   >
     <button
+      v-bind="$attrs"
       :type="type"
       :class="buttonClasses"
       :disabled="disabled || loading"

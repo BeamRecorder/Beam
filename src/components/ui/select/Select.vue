@@ -14,15 +14,18 @@ const props = withDefaults(
     options: Option[]
     placeholder?: string
     disabled?: boolean
+    direction?: 'up' | 'down'
   }>(),
   {
     placeholder: 'Select an option',
     disabled: false,
+    direction: 'down',
   }
 )
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void
+  (e: 'toggle', isOpen: boolean): void
 }>()
 
 const selectedOption = computed(() => {
@@ -44,7 +47,7 @@ const labelStyle = computed(() => {
 </script>
 
 <template>
-  <Popover align="left" class="select-popover">
+  <Popover align="left" :direction="direction" :block="true" class="select-popover" @toggle="$emit('toggle', $event)">
     <template #trigger="{ isOpen }">
       <button 
         type="button" 
@@ -144,7 +147,7 @@ const labelStyle = computed(() => {
   list-style: none;
   padding: 4px;
   margin: 0;
-  max-height: 250px;
+  max-height: 140px;
   overflow-y: auto;
 }
 
