@@ -34,6 +34,8 @@ The goal is maintainable, readable code with the smallest implementation that ma
 ## Testing and coverage
 
 Every behavior change must include or update tests at the closest useful layer.
+Testing means covering every edge cases including "near impossible" cases.
+You should write at least 3 tests per function you want, more if it's complex and can benefit edge cases.
 
 ### TypeScript
 
