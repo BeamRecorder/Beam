@@ -351,52 +351,58 @@ const minimizeApp = () => {
         </Button>
       </ButtonGroup>
 
-      <!-- Window Selection (Only for Window mode) -->
-      <template v-if="activeTab === 'window'">
-        <div v-if="isBusy && previews.length === 0" class="selector-field">
-          <span class="field-label-text">Select Window</span>
-          <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
-        </div>
-        <div v-else class="selector-field">
-          <span class="field-label-text">Select Window</span>
-          <WindowSelect 
-            v-model="selectedSourceId"
-            :options="previews"
-            :disabled="isRecording || isBusy"
-            @toggle="handleDropdownToggle"
-          />
-        </div>
-      </template>
+      <div class="form-inputs-area">
+        <Transition name="fade-slide" mode="out-in">
+          <div :key="activeTab" class="tab-content-container">
+            <!-- Window Selection (Only for Window mode) -->
+            <template v-if="activeTab === 'window'">
+              <div v-if="isBusy && previews.length === 0" class="selector-field">
+                <span class="field-label-text">Select Window</span>
+                <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
+              </div>
+              <div v-else class="selector-field">
+                <span class="field-label-text">Select Window</span>
+                <WindowSelect 
+                  v-model="selectedSourceId"
+                  :options="previews"
+                  :disabled="isRecording || isBusy"
+                  @toggle="handleDropdownToggle"
+                />
+              </div>
+            </template>
 
-      <!-- Selectors: Camera & Mic stacked and centered -->
-      <div class="selectors-stack">
-        <div class="selector-field">
-          <span class="field-label-text">Camera</span>
-          <div v-if="isBusy && sources.length === 0">
-            <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
-          </div>
-          <Select 
-            v-else
-            v-model="selectedCameraId" 
-            :options="cameraOptions" 
-            :disabled="isRecording || isBusy"
-            @toggle="handleDropdownToggle"
-          />
-        </div>
+            <!-- Selectors: Camera & Mic stacked and centered -->
+            <div class="selectors-stack">
+              <div class="selector-field">
+                <span class="field-label-text">Camera</span>
+                <div v-if="isBusy && sources.length === 0">
+                  <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
+                </div>
+                <Select 
+                  v-else
+                  v-model="selectedCameraId" 
+                  :options="cameraOptions" 
+                  :disabled="isRecording || isBusy"
+                  @toggle="handleDropdownToggle"
+                />
+              </div>
 
-        <div class="selector-field">
-          <span class="field-label-text">Microphone</span>
-          <div v-if="isBusy && sources.length === 0">
-            <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
+              <div class="selector-field">
+                <span class="field-label-text">Microphone</span>
+                <div v-if="isBusy && sources.length === 0">
+                  <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
+                </div>
+                <Select 
+                  v-else
+                  v-model="selectedMicId" 
+                  :options="micOptions" 
+                  :disabled="isRecording || isBusy"
+                  @toggle="handleDropdownToggle"
+                />
+              </div>
+            </div>
           </div>
-          <Select 
-            v-else
-            v-model="selectedMicId" 
-            :options="micOptions" 
-            :disabled="isRecording || isBusy"
-            @toggle="handleDropdownToggle"
-          />
-        </div>
+        </Transition>
       </div>
 
       <p v-if="errorMessage" class="capture-error" role="alert">{{ errorMessage }}</p>
@@ -440,6 +446,7 @@ const minimizeApp = () => {
   display: flex;
   flex-direction: column;
   overflow: visible; /* Let popovers overflow the card! */
+  transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hud-wrapper.screen, .hud-wrapper.settings-open {
@@ -458,6 +465,7 @@ const minimizeApp = () => {
   justify-content: space-between;
   border-bottom: 1px solid var(--color-border);
   -webkit-app-region: drag;
+  flex-shrink: 0;
 }
 
 .logo-section {
@@ -584,6 +592,36 @@ const minimizeApp = () => {
 }
 
 /* Previews Grid */
+.form-inputs-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.tab-content-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Tab transition animation */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 .previews-container {
   flex: 1;
   min-height: 120px;

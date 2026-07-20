@@ -200,13 +200,7 @@ ipcMain.on('window:setSize', (event, width, height) => {
   const webContents = event.sender
   const win = BrowserWindow.fromWebContents(webContents)
   if (win) {
-    const [x, y] = win.getPosition()
-    win.setBounds({
-      x: x,
-      y: y,
-      width: Math.round(width),
-      height: Math.round(height)
-    })
+    win.setSize(Math.round(width), Math.round(height))
   }
 })
 
