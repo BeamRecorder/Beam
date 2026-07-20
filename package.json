@@ -2,11 +2,13 @@
   "name": "demo-recorder",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "main": "electron-main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "electron .",
+    "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
     "@lucide/vue": "^1.25.0",
@@ -22,5 +24,19 @@
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vue-tsc": "^3.3.5"
+  },
+  "build": {
+    "appId": "com.demorecorder.app",
+    "productName": "DemoRecorder",
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs"
+    ],
+    "directories": {
+      "output": "dist_electron"
+    },
+    "win": {
+      "target": "nsis"
+    }
   }
 }
