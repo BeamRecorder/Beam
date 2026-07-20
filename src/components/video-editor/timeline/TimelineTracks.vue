@@ -95,11 +95,11 @@ const { thumbnails, requestVisibleFrames } = useThumbnails(computed(() => props.
 
 const ticksAreaRef = ref<HTMLDivElement | null>(null);
 
-// Calculate tracks width based on zoom level
+// Calculate tracks width based on zoom level (including 230px of margin breathing room)
 const tracksWidthStyle = computed(() => {
   return {
-    width: `${props.zoomLevel}%`,
-    minWidth: '100%'
+    width: `calc(${props.zoomLevel}% + 230px)`,
+    minWidth: 'calc(100% + 230px)'
   };
 });
 
@@ -198,8 +198,19 @@ watch(() => props.currentTime, (time) => {
   }
 });
 
+const resetScrollPosition = () => {
+  if (tracksScrollRef.value) {
+    tracksScrollRef.value.scrollLeft = 80;
+  }
+};
+
 onMounted(() => {
   updateVisibleThumbnails();
+  setTimeout(resetScrollPosition, 50);
+});
+
+watch(() => props.videoSrc, () => {
+  setTimeout(resetScrollPosition, 50);
 });
 </script>
 
@@ -366,6 +377,8 @@ onMounted(() => {
   position: relative;
   height: 100%;
   cursor: ew-resize;
+  margin-left: 80px;
+  margin-right: 150px;
 }
 
 .ruler-marker {
@@ -483,6 +496,8 @@ onMounted(() => {
   height: 100%;
   position: relative;
   overflow: hidden;
+  margin-left: 80px;
+  margin-right: 150px;
 }
 
 /* Track Specific Stylings */
