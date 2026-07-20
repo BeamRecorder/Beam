@@ -5,6 +5,8 @@ import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
 import Badge from '~/ui/badge/Badge.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
+import WindowSelect from '~/ui/select/WindowSelect.vue'
+import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight } from '@lucide/vue'
 
 const emit = defineEmits(['start-recording', 'stop-recording'])
@@ -92,7 +94,7 @@ const activeDropdowns = ref(0)
 const updateWindowSize = () => {
   const isDropdownOpen = activeDropdowns.value > 0
   if (activeTab.value === 'window') {
-    window.capture.setSize(320, isDropdownOpen ? 600 : 480)
+    window.capture.setSize(320, isDropdownOpen ? 580 : 420)
   } else {
     window.capture.setSize(320, isDropdownOpen ? 520 : 360)
   }
@@ -300,33 +302,32 @@ const minimizeApp = () => {
         </Button>
       </ButtonGroup>
 
-      <!-- Preview Grid (Only for Window mode) -->
-      <div v-if="activeTab === 'window'" class="previews-container">
-        <div v-if="previews.length === 0" class="previews-empty">
-          Searching for sources...
+      <!-- Window Selection (Only for Window mode) -->
+      <template v-if="activeTab === 'window'">
+        <div v-if="isBusy && previews.length === 0" class="selector-field">
+          <span class="field-label-text">Select Window</span>
+          <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
         </div>
-        <div v-else class="previews-grid">
-          <div 
-            v-for="src in previews" 
-            :key="src.id"
-            class="preview-card"
-            :class="{ 'is-selected': selectedSourceId === src.id }"
-            @click="selectedSourceId = src.id"
-          >
-            <div class="thumbnail-wrapper">
-              <img :src="src.thumbnail" class="thumbnail-img" />
-              <img v-if="src.appIcon" :src="src.appIcon" class="app-icon" />
-            </div>
-            <span class="preview-name">{{ src.name }}</span>
-          </div>
+        <div v-else class="selector-field">
+          <span class="field-label-text">Select Window</span>
+          <WindowSelect 
+            v-model="selectedSourceId"
+            :options="previews"
+            :disabled="isRecording || isBusy"
+            @toggle="handleDropdownToggle"
+          />
         </div>
-      </div>
+      </template>
 
       <!-- Selectors: Camera & Mic stacked and centered -->
       <div class="selectors-stack">
         <div class="selector-field">
           <span class="field-label-text">Camera</span>
+          <div v-if="isBusy && sources.length === 0">
+            <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
+          </div>
           <Select 
+            v-else
             v-model="selectedCameraId" 
             :options="cameraOptions" 
             :disabled="isRecording || isBusy"
@@ -336,7 +337,11 @@ const minimizeApp = () => {
 
         <div class="selector-field">
           <span class="field-label-text">Microphone</span>
+          <div v-if="isBusy && sources.length === 0">
+            <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
+          </div>
           <Select 
+            v-else
             v-model="selectedMicId" 
             :options="micOptions" 
             :disabled="isRecording || isBusy"
@@ -393,7 +398,7 @@ const minimizeApp = () => {
 }
 
 .hud-wrapper.window {
-  height: 480px;
+  height: 420px;
 }
 
 .hud-header {
