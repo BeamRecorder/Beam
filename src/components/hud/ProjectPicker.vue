@@ -502,6 +502,12 @@ defineExpose({
   border-color: var(--color-primary-hover) !important;
 }
 
+.project-card.is-selected,
+.project-card.is-selected:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-light) !important;
+}
+
 .project-card-actions {
   flex-shrink: 0;
   opacity: 0;
@@ -617,10 +623,11 @@ defineExpose({
 .project-card-info {
   display: flex;
   flex-direction: column;
-  padding: 3px 7px 4px;
+  padding: 2px 7px 3px;
   min-width: 0;
   width: 100%;
-  gap: 1px;
+  gap: 0;
+  line-height: 1.1;
 }
 
 .project-title-row {
@@ -645,12 +652,14 @@ defineExpose({
   font-size: 11px;
   font-weight: 700;
   flex: 1;
+  line-height: 1.2;
 }
 
 .project-card-meta {
   padding-top: 0;
   color: var(--text-muted);
   font-size: 9px;
+  line-height: 1.1;
 }
 
 .project-skeleton-grid {

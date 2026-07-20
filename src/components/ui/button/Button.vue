@@ -1,63 +1,71 @@
 <script lang="ts">
 export default {
-  inheritAttrs: false
-}
+  inheritAttrs: false,
+};
 </script>
 
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
-import Tooltip from '../tooltip/Tooltip.vue'
-import { Loader } from '@lucide/vue'
+import { computed, type Component } from "vue";
+import Tooltip from "../tooltip/Tooltip.vue";
+import { Loader } from "@lucide/vue";
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card' | 'danger'
-    size?: 'sm' | 'md' | 'lg'
-    loading?: boolean
-    disabled?: boolean
-    block?: boolean
-    tooltip?: string
-    tooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
-    type?: 'button' | 'submit' | 'reset'
-    icon?: Component
-    iconOnly?: boolean
+    variant?:
+      | "primary"
+      | "secondary"
+      | "outline"
+      | "ghost"
+      | "link"
+      | "tab"
+      | "card"
+      | "danger";
+    size?: "sm" | "md" | "lg";
+    loading?: boolean;
+    disabled?: boolean;
+    block?: boolean;
+    tooltip?: string;
+    tooltipPosition?: "top" | "bottom" | "left" | "right";
+    type?: "button" | "submit" | "reset";
+    icon?: Component;
+    iconOnly?: boolean;
   }>(),
   {
-    variant: 'primary',
-    size: 'md',
+    variant: "primary",
+    size: "md",
     loading: false,
     disabled: false,
     block: false,
-    tooltip: '',
-    tooltipPosition: 'top',
-    type: 'button',
+    tooltip: "",
+    tooltipPosition: "top",
+    type: "button",
     iconOnly: false,
-  }
-)
+  },
+);
 
 const emit = defineEmits<{
-  (e: 'click', event: MouseEvent): void
-}>()
+  (e: "click", event: MouseEvent): void;
+}>();
 
 const buttonClasses = computed(() => {
   return [
-    'btn',
+    "btn",
     `btn-${props.variant}`,
     `btn-${props.size}`,
-    { 'btn-loading': props.loading },
-    { 'btn-block': props.block },
-    { 'btn-icon-only': props.iconOnly },
-  ]
-})
+    { "btn-loading": props.loading },
+    { "btn-block": props.block },
+    { "btn-icon-only": props.iconOnly },
+  ];
+});
 
 const handleClick = (event: MouseEvent) => {
   if (props.disabled || props.loading) {
-    event.preventDefault()
-    event.stopPropagation()
-    return
+    event.preventDefault();
+    event.stopPropagation();
+    return;
   }
-  emit('click', event)
-}
+  emit("click", event);
+};
 </script>
 
 <template>
@@ -149,7 +157,6 @@ const handleClick = (event: MouseEvent) => {
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 90, 31, 0.2);
 }
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
@@ -237,7 +244,6 @@ const handleClick = (event: MouseEvent) => {
 
 .btn-card.is-selected {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .btn-card .btn-content {

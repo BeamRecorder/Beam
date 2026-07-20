@@ -9,8 +9,11 @@ let pendingQueue: FrameRequest[] = [];
 let processing = false;
 const cachedFrames = new Map<number, string>();
 
+console.log('[Thumbnail Worker] Script loaded and running.');
+
 self.onmessage = (event: MessageEvent) => {
   const { type, time, visibleTimes, dataUrl } = event.data;
+  console.log(`[Thumbnail Worker] Message received: type=${type}, time=${time}, visibleTimesCount=${visibleTimes?.length || 0}`);
 
   if (type === 'request-frames') {
     // visibleTimes is an array of timestamps we want to prioritize
@@ -41,12 +44,16 @@ self.onmessage = (event: MessageEvent) => {
 };
 
 function triggerNext() {
-  if (processing || pendingQueue.length === 0) return;
+  if (processing || pendingQueue.length === 0) {
+    console.log('[Thumbnail Worker] triggerNext skipped:', { processing, queueLength: pendingQueue.length });
+    return;
+  }
 
   processing = true;
   // Get the next request
   const nextRequest = pendingQueue.shift();
   if (nextRequest) {
+    console.log('[Thumbnail Worker] Posting extract-frame request to main thread for time:', nextRequest.time);
     self.postMessage({ type: 'extract-frame', time: nextRequest.time });
   } else {
     processing = false;

@@ -1,4 +1,5 @@
 import { ref, onUnmounted, reactive, watch, type Ref } from 'vue';
+import ThumbnailWorker from './thumbnail.worker?worker&inline';
 
 export function useThumbnails(videoSrcRef: Ref<string | null>) {
   const thumbnails = reactive<Record<number, string>>({});
@@ -21,6 +22,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   const initVideoAndCanvas = () => {
     if (!hiddenVideo) {
       hiddenVideo = document.createElement('video');
+      console.log('[useThumbnails] Initializing hidden video element with src:', videoSrcRef.value);
       hiddenVideo.src = videoSrcRef.value || '';
       hiddenVideo.muted = true;
       hiddenVideo.playsInline = true;
@@ -28,10 +30,27 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
       
       // Wait for seek completes
       hiddenVideo.addEventListener('seeked', () => {
+        console.log('[useThumbnails] Hidden video seeked successfully');
         if (resolveSeek) {
           resolveSeek();
           resolveSeek = null;
         }
+      });
+
+      hiddenVideo.addEventListener('loadedmetadata', () => {
+        console.log('[useThumbnails] Hidden video loadedmetadata. duration:', hiddenVideo?.duration);
+      });
+
+      hiddenVideo.addEventListener('error', (e) => {
+        console.error('[useThumbnails] Hidden video error occurred:', hiddenVideo?.error);
+        if (resolveSeek) {
+          resolveSeek();
+          resolveSeek = null;
+        }
+      });
+
+      hiddenVideo.addEventListener('stalled', () => {
+        console.warn('[useThumbnails] Hidden video loading stalled');
       });
     }
 
@@ -45,13 +64,12 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
 
   const initWorker = () => {
     if (!worker) {
-      worker = new Worker(
-        new URL('./thumbnail.worker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      console.log('[useThumbnails] Instantiating inline thumbnail worker...');
+      worker = new ThumbnailWorker();
 
       worker.onmessage = async (event: MessageEvent) => {
         const { type, time, dataUrl } = event.data;
+        console.log('[useThumbnails] Received message from worker:', type, { time, hasDataUrl: !!dataUrl });
 
         if (type === 'extract-frame') {
           if (!hiddenVideo || !canvas || !canvasCtx) {
@@ -75,6 +93,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                 const dataUrlResult = canvas.toDataURL('image/jpeg', 0.6); // low quality for performance
                 
                 // Return to worker
+                console.log('[useThumbnails] Sending frame response to worker for time:', time);
                 worker?.postMessage({
                   type: 'frame-response',
                   time,
@@ -83,7 +102,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
               }
             }
           } catch (e) {
-            console.error('Failed to extract frame at time:', time, e);
+            console.error('[useThumbnails] Failed to extract frame at time:', time, e);
             worker?.postMessage({
               type: 'frame-response',
               time,
@@ -102,6 +121,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   // Request frames based on virtualized scroll viewport
   const requestVisibleFrames = (visibleTimestamps: number[]) => {
     initWorker();
+    console.log('[useThumbnails] Requesting visible frames from worker:', visibleTimestamps);
     worker?.postMessage({
       type: 'request-frames',
       visibleTimes: visibleTimestamps

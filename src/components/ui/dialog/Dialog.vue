@@ -38,6 +38,19 @@ watch(() => props.isOpen, (newVal) => {
   }
 })
 
+let mousedownTarget: EventTarget | null = null
+
+const handleOverlayMouseDown = (event: MouseEvent) => {
+  mousedownTarget = event.target
+}
+
+const handleOverlayMouseUp = (event: MouseEvent) => {
+  if (props.closeOnOverlayClick && mousedownTarget === event.currentTarget && event.target === event.currentTarget) {
+    close()
+  }
+  mousedownTarget = null
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
 })
@@ -54,13 +67,15 @@ onUnmounted(() => {
       <div 
         v-if="isOpen" 
         class="dialog-overlay" 
-        @click="closeOnOverlayClick ? close() : null"
+        @mousedown="handleOverlayMouseDown"
+        @mouseup="handleOverlayMouseUp"
       >
         <Transition name="scale-modal" appear>
           <div 
             class="dialog-content" 
             :class="size" 
-            @click.stop
+            @mousedown.stop
+            @mouseup.stop
             role="dialog"
             aria-modal="true"
           >
@@ -102,7 +117,7 @@ onUnmounted(() => {
 }
 
 .dialog-content {
-  background-color: white;
+  background-color: var(--color-bg-element);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-xl);

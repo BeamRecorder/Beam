@@ -73,8 +73,8 @@ watch(() => props.editorData, (data) => {
 const saveZoomState = async () => {
   if (!props.project) return
   const zoom = await capture.saveProjectZoomState(props.project.id, {
-    elements: zoomElements.value,
-    generatedSessions: generatedSessions.value,
+    elements: JSON.parse(JSON.stringify(zoomElements.value)),
+    generatedSessions: JSON.parse(JSON.stringify(generatedSessions.value)),
   })
   zoomElements.value = zoom.elements
   generatedSessions.value = zoom.generatedSessions
