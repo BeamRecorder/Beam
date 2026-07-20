@@ -11,7 +11,7 @@ import Switch from '~/ui/switch/Switch.vue'
 import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight, Sun, Moon } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 
-const emit = defineEmits(['start-recording', 'stop-recording'])
+const emit = defineEmits(['start-recording', 'stop-recording', 'open-project'])
 
 const themeStore = useThemeStore()
 
@@ -467,12 +467,12 @@ const minimizeApp = () => {
         </Button>
       </div>
 
-      <!-- Web Link (Subtle style) -->
+      <!-- Open existing project button (Subtle style) -->
       <div class="web-link-container">
-        <a href="#" class="web-link-text">
-          <span>Open DemoRecorder on Web</span>
+        <button type="button" class="web-link-text project-btn" @click="emit('open-project')">
+          <span>Open an existing project</span>
           <ArrowUpRight class="web-link-icon" />
-        </a>
+        </button>
       </div>
     </div>
   </div>
@@ -822,6 +822,10 @@ const minimizeApp = () => {
   align-items: center;
   gap: 3px;
   transition: color 0.15s ease;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
 }
 
 .web-link-text:hover {

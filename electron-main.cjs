@@ -191,13 +191,19 @@ ipcMain.on('window:minimize', (event) => {
 ipcMain.on('window:maximize', (event) => {
   const webContents = event.sender
   const win = BrowserWindow.fromWebContents(webContents)
-  if (win) win.maximize()
+  if (win) {
+    win.setAlwaysOnTop(false)
+    win.maximize()
+  }
 })
 
 ipcMain.on('window:unmaximize', (event) => {
   const webContents = event.sender
   const win = BrowserWindow.fromWebContents(webContents)
-  if (win) win.unmaximize()
+  if (win) {
+    win.setAlwaysOnTop(true)
+    win.unmaximize()
+  }
 })
 
 ipcMain.on('window:setPosition', (event, x, y) => {

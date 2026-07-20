@@ -29,6 +29,7 @@ const handleStopRecording = () => {
       v-show="currentView === 'hud'" 
       @start-recording="handleStartRecording"
       @stop-recording="handleStopRecording"
+      @open-project="setView('editor')"
     />
 
     <VideoEditor 
