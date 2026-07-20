@@ -10,7 +10,7 @@ import WindowSelect from '~/ui/select/WindowSelect.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import ProjectPicker from './ProjectPicker.vue'
-import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight, Sun, Moon } from '@lucide/vue'
+import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight, Sun, Moon, Volume2, Mic, Video } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 
 const emit = defineEmits(['start-recording', 'stop-recording', 'open-project'])
@@ -52,6 +52,15 @@ const micOptions = computed(() => [
   { value: 'no-audio', label: 'No Audio' },
 ])
 const selectedMicId = ref('no-audio')
+const selectedScreenId = ref<string | null>(null)
+const systemAudioMode = ref<'on' | 'off'>('on')
+const screenOptions = computed(() => sources.value
+  .filter((source) => source.kind === 'display')
+  .map((source, index) => ({ value: source.id, label: `Screen ${index + 1}` })))
+const systemAudioOptions = [
+  { value: 'on', label: 'System audio' },
+  { value: 'off', label: 'Off' },
+]
 
 // Timer / Duration simulation
 const recordingTime = ref('00:00')
@@ -98,19 +107,19 @@ const loadPreviews = async () => {
 }
 
 const activeDropdowns = ref(0)
-let lastHeight = 360
+let lastHeight = 480
 let lastWidth = 320
 
 const updateWindowSize = () => {
-  let targetHeight = 360
+  let targetHeight = 480
   if (showSettings.value || showProjectPicker.value) {
     targetHeight = 520
   } else {
     const isDropdownOpen = activeDropdowns.value > 0
     if (activeTab.value === 'window') {
-      targetHeight = isDropdownOpen ? 580 : 420
+      targetHeight = isDropdownOpen ? 660 : 500
     } else {
-      targetHeight = isDropdownOpen ? 520 : 360
+      targetHeight = isDropdownOpen ? 640 : 480
     }
   }
 
@@ -123,15 +132,15 @@ const updateWindowSize = () => {
   } else if (targetHeight < lastHeight || targetWidth < lastWidth) {
     // Wait for the card's CSS transition (200ms) to complete before shrinking
     setTimeout(() => {
-      let currentTargetHeight = 360
+      let currentTargetHeight = 480
       if (showSettings.value || showProjectPicker.value) {
         currentTargetHeight = 520
       } else {
         const isDropdownOpen = activeDropdowns.value > 0
         if (activeTab.value === 'window') {
-          currentTargetHeight = isDropdownOpen ? 580 : 420
+          currentTargetHeight = isDropdownOpen ? 660 : 500
         } else {
-          currentTargetHeight = isDropdownOpen ? 520 : 360
+          currentTargetHeight = isDropdownOpen ? 640 : 480
         }
       }
       const isDropdownCurrentlyOpen = activeDropdowns.value > 0
@@ -150,7 +159,7 @@ const hudHeight = computed(() => {
   if (showSettings.value || showProjectPicker.value) {
     return 520
   }
-  return activeTab.value === 'window' ? 420 : 360
+  return activeTab.value === 'window' ? 500 : 480
 })
 
 const handleDropdownToggle = (isOpen: boolean) => {
@@ -194,21 +203,17 @@ const toggleRecording = async () => {
           const hwndHex = hwndDec.toString(16).toLowerCase()
           const match = sources.value.find(s => s.kind === 'window' && s.id.toLowerCase().includes(hwndHex))
           rustScreenId = match ? match.id : undefined
-        } else {
-          // Electron screen ID: "screen:0:0"
-          const screenIndexStr = selectedSourceId.value.split(':')[1] || '0'
-          const screenIndex = parseInt(screenIndexStr, 10)
-          const rustScreens = sources.value.filter(s => s.kind === 'display')
-          rustScreenId = rustScreens[screenIndex]?.id ?? rustScreens[0]?.id ?? undefined
         }
       }
+
+      if (activeTab.value === 'screen') rustScreenId = selectedScreenId.value ?? undefined
 
       const session = await capture.startRecording({
         screenKind: activeTab.value === 'window' ? 'window' : 'display',
         screenId: rustScreenId,
         microphoneId: selectedMicId.value === 'no-audio' ? null : selectedMicId.value,
         cameraId: selectedCameraId.value === 'off' ? null : selectedCameraId.value,
-        systemAudio: true,
+        systemAudio: systemAudioMode.value === 'on',
         cursor: true,
         targetFps: recordHighQuality.value ? 60 : 30,
       })
@@ -241,6 +246,9 @@ const discoverSources = async () => {
       ?? sources.value.find((source) => source.kind === 'microphone')
     selectedCameraId.value = defaultCamera?.id ?? 'off'
     selectedMicId.value = defaultMic?.id ?? 'no-audio'
+    selectedScreenId.value = sources.value.find((source) => source.kind === 'display' && source.isDefault)?.id
+      ?? sources.value.find((source) => source.kind === 'display')?.id
+      ?? null
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
@@ -444,14 +452,14 @@ const openProject = (project: CaptureProject) => {
       <div class="form-inputs-area">
         <Transition name="fade-slide" mode="out-in">
           <div :key="activeTab" class="tab-content-container">
-            <!-- Window Selection (Only for Window mode) -->
+            <!-- Capture source -->
             <template v-if="activeTab === 'window'">
-              <div v-if="isBusy && previews.length === 0" class="selector-field">
-                <span class="field-label-text">Select Window</span>
+              <div v-if="isBusy && previews.length === 0" class="device-row">
+                <Layout class="device-icon" />
                 <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
               </div>
-              <div v-else class="selector-field">
-                <span class="field-label-text">Select Window</span>
+              <div v-else class="device-row">
+                <Layout class="device-icon" />
                 <WindowSelect 
                   v-model="selectedSourceId"
                   :options="previews"
@@ -461,31 +469,51 @@ const openProject = (project: CaptureProject) => {
               </div>
             </template>
 
-            <!-- Selectors: Camera & Mic stacked and centered -->
+            <div v-else class="device-row">
+              <Monitor class="device-icon" />
+              <Select
+                v-model="selectedScreenId"
+                :options="screenOptions"
+                :disabled="isRecording || isBusy || screenOptions.length === 0"
+                @toggle="handleDropdownToggle"
+              />
+            </div>
+
+            <!-- Audio and input devices -->
             <div class="selectors-stack">
-              <div class="selector-field">
-                <span class="field-label-text">Camera</span>
-                <div v-if="isBusy && sources.length === 0">
-                  <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
-                </div>
-                <Select 
-                  v-else
-                  v-model="selectedCameraId" 
-                  :options="cameraOptions" 
+              <div class="device-row">
+                <Volume2 class="device-icon" />
+                <Select
+                  v-model="systemAudioMode"
+                  :options="systemAudioOptions"
                   :disabled="isRecording || isBusy"
                   @toggle="handleDropdownToggle"
                 />
               </div>
 
-              <div class="selector-field">
-                <span class="field-label-text">Microphone</span>
+              <div class="device-row">
+                <Mic class="device-icon" />
                 <div v-if="isBusy && sources.length === 0">
-                  <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
+                  <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
                 </div>
                 <Select 
                   v-else
                   v-model="selectedMicId" 
                   :options="micOptions" 
+                  :disabled="isRecording || isBusy"
+                  @toggle="handleDropdownToggle"
+                />
+              </div>
+
+              <div class="device-row">
+                <Video class="device-icon" />
+                <div v-if="isBusy && sources.length === 0">
+                  <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
+                </div>
+                <Select 
+                  v-else
+                  v-model="selectedCameraId" 
+                  :options="cameraOptions" 
                   :disabled="isRecording || isBusy"
                   @toggle="handleDropdownToggle"
                 />
@@ -809,6 +837,25 @@ const openProject = (project: CaptureProject) => {
   flex-direction: column;
   gap: 12px;
   width: 100%;
+}
+
+.device-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.device-row > :last-child {
+  min-width: 0;
+}
+
+.device-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--text-secondary);
 }
 
 .selector-field {

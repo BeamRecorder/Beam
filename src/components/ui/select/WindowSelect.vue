@@ -57,6 +57,52 @@ const labelStyle = computed(() => {
   if (len > 20) return { fontSize: '0.85rem' }
   return {}
 })
+
+const marqueeRuns = new WeakMap<HTMLElement, { frame: number; timer: number }>()
+
+const stopMarqueeRun = (option: HTMLElement) => {
+  const run = marqueeRuns.get(option)
+  if (run) {
+    window.cancelAnimationFrame(run.frame)
+    window.clearTimeout(run.timer)
+    marqueeRuns.delete(option)
+  }
+  option.classList.remove('has-left-overflow', 'has-right-overflow')
+  const label = option.querySelector<HTMLElement>('.option-label')
+  if (label) label.style.transform = ''
+}
+
+const startMarquee = (event: PointerEvent) => {
+  const option = event.currentTarget as HTMLElement
+  const label = option.querySelector<HTMLElement>('.option-label')
+  if (!label) return
+  const distance = label.scrollWidth - label.clientWidth
+  if (distance <= 0) {
+    option.classList.remove('has-overflow')
+    return
+  }
+  stopMarqueeRun(option)
+  option.classList.add('has-overflow', 'has-right-overflow')
+  const timer = window.setTimeout(() => {
+    const startedAt = performance.now()
+    const tick = (now: number) => {
+      const phase = ((now - startedAt) % 6000) / 3000
+      const progress = phase <= 1 ? phase : 2 - phase
+      label.style.transform = `translateX(${-distance * progress}px)`
+      option.classList.toggle('has-left-overflow', progress > 0.015)
+      option.classList.toggle('has-right-overflow', progress < 0.985)
+      const run = marqueeRuns.get(option)
+      if (run) run.frame = window.requestAnimationFrame(tick)
+    }
+    marqueeRuns.set(option, { frame: window.requestAnimationFrame(tick), timer: 0 })
+  }, 300)
+  marqueeRuns.set(option, { frame: 0, timer })
+}
+
+const stopMarquee = (event: PointerEvent) => {
+  const option = event.currentTarget as HTMLElement
+  stopMarqueeRun(option)
+}
 </script>
 
 <template>
@@ -102,6 +148,8 @@ const labelStyle = computed(() => {
             class="select-option"
             :class="{ 'is-selected': item.data.id === modelValue }"
             @click="handleSelect(item.data, close)"
+            @pointerenter="startMarquee"
+            @pointerleave="stopMarquee"
             style="height: 52px;"
           >
             <div class="option-content">
@@ -222,6 +270,7 @@ const labelStyle = computed(() => {
   height: 200px;
   overflow-y: auto;
   width: 100%;
+  overflow-x: hidden;
 }
 
 .select-options {
@@ -239,6 +288,7 @@ const labelStyle = computed(() => {
   color: var(--text-secondary);
   cursor: pointer;
   transition: background-color 0.15s ease;
+  position: relative;
 }
 
 .select-option:hover {
@@ -258,6 +308,7 @@ const labelStyle = computed(() => {
   gap: 10px;
   overflow: hidden;
   flex: 1;
+  min-width: 0;
 }
 
 .thumbnail-wrapper {
@@ -293,9 +344,40 @@ const labelStyle = computed(() => {
 
 .option-label {
   font-size: 0.85rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
+  min-width: 0;
+}
+
+.select-option.has-right-overflow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--color-bg-element));
+  box-shadow: inset -10px 0 12px -11px rgba(0, 0, 0, 0.7);
+}
+
+.select-option.has-left-overflow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(to right, var(--color-bg-surface-hover), transparent);
+  box-shadow: inset 10px 0 12px -11px rgba(0, 0, 0, 0.7);
+}
+
+.select-option:hover::after {
+  background: linear-gradient(to right, transparent, var(--color-bg-surface-hover));
 }
 
 .option-check {
@@ -311,4 +393,5 @@ const labelStyle = computed(() => {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
 </style>

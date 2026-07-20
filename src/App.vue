@@ -22,7 +22,7 @@ const setView = (view: 'hud' | 'editor') => {
   if (view === 'editor') {
     capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
   } else {
-    capture.setSize(320, 360)
+    capture.setSize(320, 480)
   }
 }
 

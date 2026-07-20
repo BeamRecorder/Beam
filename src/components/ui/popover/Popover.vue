@@ -6,11 +6,13 @@ const props = withDefaults(
     align?: 'left' | 'right' | 'center'
     direction?: 'up' | 'down'
     block?: boolean
+    matchTriggerWidth?: boolean
   }>(),
   {
     align: 'left',
     direction: 'down',
     block: false,
+    matchTriggerWidth: true,
   }
 )
 
@@ -80,6 +82,10 @@ const adjustPosition = () => {
     top: `${top}px`,
     left: `${left}px`,
     zIndex: '1000',
+    ...(props.matchTriggerWidth ? {
+      width: `${Math.min(rect.width, window.innerWidth - 16)}px`,
+      maxWidth: 'calc(100vw - 16px)',
+    } : {}),
     ...(transforms.length > 0 ? { transform: transforms.join(' ') } : {})
   }
 }
@@ -164,12 +170,12 @@ defineExpose({
   box-shadow: var(--shadow-lg);
   padding: 4px 0;
   z-index: 50;
-  min-width: max-content;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .popover-content.popover-block {
-  width: 100%;
-  min-width: unset;
+  min-width: 0;
 }
 
 /* Animations */
