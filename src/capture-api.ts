@@ -97,6 +97,8 @@ export interface CaptureApi {
 export interface DesktopCaptureApi extends CaptureApi {
   close(): void
   minimize(): void
+  maximize(): void
+  unmaximize(): void
   setPosition(x: number, y: number): void
   setSize(width: number, height: number): void
   setSizeSmooth(width: number, height: number): void

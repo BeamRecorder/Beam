@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Video, Volume2, Mic, Play, Pause, Scissors } from '@lucide/vue'
-import Slider from '~/ui/slider/Slider.vue'
+
 import Switch from '~/ui/switch/Switch.vue'
 
 const props = defineProps<{

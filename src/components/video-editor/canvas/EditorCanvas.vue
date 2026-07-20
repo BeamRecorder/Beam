@@ -171,7 +171,6 @@ const draw = () => {
     const pos = getCursorPos(props.currentTime)
     
     // Add ripple automatically on pre-defined keyframe ticks to simulate clicking
-    const currentSecondFloor = Math.floor(props.currentTime)
     if (props.isPlaying && (props.currentTime * 10) % 30 === 0 && Math.random() > 0.7) {
       ripples.value.push({
         x: pos.x,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import SidebarPanel from './sidebar/SidebarPanel.vue'
 import PropertiesPanel from './properties/PropertiesPanel.vue'
 import EditorCanvas from './canvas/EditorCanvas.vue'

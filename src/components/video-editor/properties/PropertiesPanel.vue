@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+
 import Slider from '~/ui/slider/Slider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'

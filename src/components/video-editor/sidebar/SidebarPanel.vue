@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { MousePointer, Scissors, Volume2, Type, Sparkles } from '@lucide/vue'
+import { MousePointer, Scissors, Volume2, Sparkles } from '@lucide/vue'
 
 defineProps<{
   activeTab: string
