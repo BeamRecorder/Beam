@@ -1,42 +1,48 @@
 <script setup lang="ts">
-import { useVirtualList } from '@vueuse/core'
-import { WALLPAPERS } from '../composables/useVideoPlayer'
+import type { BackgroundMediaGroup } from '../composables/backgroundMedia'
 
-defineProps<{
-  selectedWallpaper: string
+const props = defineProps<{
+  selectedBackground: string | null
+  backgroundGroups: BackgroundMediaGroup[]
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:selectedWallpaper', value: string): void
+  (e: 'update:selectedBackground', value: string): void
 }>()
-
-const { list, containerProps, wrapperProps } = useVirtualList(
-  WALLPAPERS,
-  {
-    itemHeight: 56,
-  }
-)
 </script>
 
 <template>
   <div class="options-group">
-    <label class="prop-label">Desktop Wallpaper</label>
-    <div v-bind="containerProps" class="wallpaper-scroll-container">
-      <ul v-bind="wrapperProps" class="wallpaper-list">
-        <li 
-          v-for="item in list" 
-          :key="item.data.path" 
-          class="wallpaper-item"
-          :class="{ active: item.data.path === selectedWallpaper }"
-          @click="emit('update:selectedWallpaper', item.data.path)"
-        >
-          <div class="wallpaper-preview">
-            <img :src="item.data.path" class="preview-img" />
-          </div>
-          <span class="wallpaper-name">{{ item.data.name }}</span>
-        </li>
-      </ul>
+    <label class="prop-label">Background</label>
+    <div v-if="props.backgroundGroups.length" class="background-groups">
+      <section v-for="group in props.backgroundGroups" :key="group.kind" class="background-group">
+        <h4 class="group-label">{{ group.label }}</h4>
+        <ul class="background-list">
+          <li
+            v-for="item in group.items"
+            :key="item.id"
+            class="background-item"
+            :class="{ active: item.path === props.selectedBackground }"
+            @click="emit('update:selectedBackground', item.path)"
+          >
+            <div class="background-preview">
+              <video
+                v-if="item.kind === 'video'"
+                :src="item.path"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                class="preview-media"
+              />
+              <img v-else :src="item.path" :alt="item.name" class="preview-media" />
+            </div>
+            <span class="background-name">{{ item.name }}</span>
+          </li>
+        </ul>
+      </section>
     </div>
+    <p v-else class="empty-state">No background media found in public/.</p>
   </div>
 </template>
 
@@ -53,7 +59,7 @@ const { list, containerProps, wrapperProps } = useVirtualList(
   color: var(--text-secondary);
 }
 
-.wallpaper-scroll-container {
+.background-groups {
   height: 280px;
   overflow-y: auto;
   border: 1px solid var(--color-border);
@@ -62,13 +68,24 @@ const { list, containerProps, wrapperProps } = useVirtualList(
   width: 100%;
 }
 
-.wallpaper-list {
+.background-group {
+  padding: 8px 4px 0;
+}
+
+.group-label {
+  margin: 0 8px 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.background-list {
   list-style: none;
   padding: 4px;
   margin: 0;
 }
 
-.wallpaper-item {
+.background-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -79,16 +96,16 @@ const { list, containerProps, wrapperProps } = useVirtualList(
   transition: background-color 0.15s ease;
 }
 
-.wallpaper-item:hover {
+.background-item:hover {
   background-color: var(--color-light-blue-hover);
 }
 
-.wallpaper-item.active {
+.background-item.active {
   background-color: var(--color-orange-light);
   border: 1px solid var(--color-orange-border);
 }
 
-.wallpaper-preview {
+.background-preview {
   width: 64px;
   height: 40px;
   border-radius: 4px;
@@ -98,18 +115,23 @@ const { list, containerProps, wrapperProps } = useVirtualList(
   flex-shrink: 0;
 }
 
-.preview-img {
+.preview-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.wallpaper-name {
+.background-name {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.empty-state {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 </style>

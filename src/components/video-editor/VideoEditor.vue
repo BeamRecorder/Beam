@@ -39,7 +39,9 @@ const {
   duration,
   volume,
   videoSrc: playerVideoSrc,
-  selectedWallpaper,
+  selectedBackground,
+  selectedBackgroundMedia,
+  backgroundGroups,
   isVideoEnabled,
   isSystemAudioEnabled,
   isMicAudioEnabled,
@@ -129,7 +131,8 @@ watch(() => props.videoSrc, (videoSrc) => {
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
-          v-model:selectedWallpaper="selectedWallpaper"
+          v-model:selectedBackground="selectedBackground"
+          :background-groups="backgroundGroups"
         />
 
         <!-- Canvas/Player Island -->
@@ -145,7 +148,7 @@ watch(() => props.videoSrc, (videoSrc) => {
           :enable-ripple="enableRipple"
           
           :is-video-enabled="isVideoEnabled"
-          :selected-wallpaper="selectedWallpaper"
+          :selected-background="selectedBackgroundMedia"
           :video-src="playerVideoSrc"
           :editor-data="editorData"
           @duration-change="duration = $event"

@@ -21,14 +21,11 @@ export function useCursorReplacer() {
   const getCursorImage = async (type: CursorType, size: number, color: string): Promise<HTMLImageElement> => {
     const urlPath = cursorUrls[type]
     let svgContent = ''
-    try {
-      const response = await fetch(urlPath)
-      svgContent = await response.text()
-    } catch (e) {
-      console.error('Failed to fetch SVG cursor:', e)
-      // Fallback simple SVG
-      svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M4.5 3v15.2l3.8-3.8 2.9 6.8 2.4-1-2.9-6.8h5.3z" fill="black" stroke="white" stroke-width="1.5"/></svg>`
+    const response = await fetch(urlPath)
+    if (!response.ok) {
+      throw new Error(`Unable to load cursor asset: ${urlPath} (${response.status})`)
     }
+    svgContent = await response.text()
 
     // Replace width and height attributes in SVG
     svgContent = svgContent
@@ -49,6 +46,10 @@ export function useCursorReplacer() {
       img.onload = () => {
         URL.revokeObjectURL(url)
         resolve(img)
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error(`Unable to decode cursor asset: ${urlPath}`))
       }
       img.src = url
     })

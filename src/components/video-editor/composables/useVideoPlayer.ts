@@ -1,63 +1,47 @@
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import {
+  BACKGROUND_MEDIA,
+  groupBackgroundMedia,
+  type BackgroundMedia,
+  type BackgroundMediaGroup,
+} from './backgroundMedia'
 
-export interface WallpaperOption {
-  name: string
-  path: string
-}
-
-export const WALLPAPERS: WallpaperOption[] = [
-  { name: 'Sonoma Light', path: '/wallpapers/sonoma-light.jpg' },
-  { name: 'Sonoma Dark', path: '/wallpapers/sonoma-dark.jpg' },
-  { name: 'Sonoma Clouds', path: '/wallpapers/sonoma-clouds.jpg' },
-  { name: 'Sonoma Evening', path: '/wallpapers/sonoma-evening.jpg' },
-  { name: 'Sonoma Horizon', path: '/wallpapers/sonoma-horizon.jpg' },
-  { name: 'Ventura Dark', path: '/wallpapers/ventura-dark.jpg' },
-  { name: 'Ventura', path: '/wallpapers/ventura.jpg' },
-  { name: 'Tahoe Dark', path: '/wallpapers/tahoe-dark.jpg' },
-  { name: 'Tahoe Light', path: '/wallpapers/tahoe-light.jpg' },
-  { name: 'Sequoia Blue', path: '/wallpapers/sequoia-blue.jpg' },
-  { name: 'Sequoia Blue Orange', path: '/wallpapers/sequoia-blue-orange.jpg' },
-  { name: 'Blue Rays', path: '/wallpapers/bluerays.jpeg' },
-  { name: 'Cherry Pop', path: '/wallpapers/cherrypop.jpg' },
-  { name: 'Cityscape', path: '/wallpapers/cityscape.jpg' },
-  { name: 'Farm Valley', path: '/wallpapers/farmvalley.jpg' },
-  { name: 'Luis Del Rio', path: '/wallpapers/luisdelrio.jpg' },
-  { name: 'Mountain Trees', path: '/wallpapers/mountaintrees.jpg' },
-  { name: 'Wallpaper 1', path: '/wallpapers/wallpaper1.jpg' },
-  { name: 'Wallpaper 2', path: '/wallpapers/wallpaper2.jpg' },
-  { name: 'Wallpaper 3', path: '/wallpapers/wallpaper3.jpg' },
-  { name: 'Wallpaper 4', path: '/wallpapers/wallpaper4.jpg' },
-]
-
-export function useVideoPlayer() {
+export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] = BACKGROUND_MEDIA) {
   const isPlaying = ref(false)
   const currentTime = ref(0)
-  const duration = ref(30) // Default mock duration 30s
+  const duration = ref(0)
   const volume = ref(70)
-  const videoSrc = ref('/wallpapers/wispysky.mp4') // Default high-fidelity wallpaper video
-  const selectedWallpaper = ref('/wallpapers/sonoma-light.jpg') // Default wallpaper
-  
-  // Track states: Video, System Audio, Mic Audio
+  const videoSrc = ref<string | null>(null)
+  const selectedBackground = ref<string | null>(availableBackgrounds[0]?.path ?? null)
+
   const isVideoEnabled = ref(true)
   const isSystemAudioEnabled = ref(true)
   const isMicAudioEnabled = ref(true)
+
+  const backgroundGroups = computed<BackgroundMediaGroup[]>(() => groupBackgroundMedia(availableBackgrounds))
+  const selectedBackgroundMedia = computed(() =>
+    availableBackgrounds.find((background) => background.path === selectedBackground.value) ?? null,
+  )
 
   const togglePlay = () => {
     isPlaying.value = !isPlaying.value
   }
 
   const seek = (time: number) => {
+    if (!Number.isFinite(time)) {
+      throw new RangeError('Playback time must be finite.')
+    }
     currentTime.value = Math.max(0, Math.min(time, duration.value))
   }
 
   const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      throw new RangeError('Playback time must be a non-negative finite number.')
+    }
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0')
     const secs = Math.floor(seconds % 60).toString().padStart(2, '0')
     return `${mins}:${secs}`
   }
-
-  const formattedCurrentTime = computed(() => formatTime(currentTime.value))
-  const formattedDuration = computed(() => formatTime(duration.value))
 
   return {
     isPlaying,
@@ -65,14 +49,16 @@ export function useVideoPlayer() {
     duration,
     volume,
     videoSrc,
-    selectedWallpaper,
+    selectedBackground,
+    selectedBackgroundMedia,
+    backgroundGroups,
     isVideoEnabled,
     isSystemAudioEnabled,
     isMicAudioEnabled,
     togglePlay,
     seek,
-    formattedCurrentTime,
-    formattedDuration,
+    formattedCurrentTime: computed(() => formatTime(currentTime.value)),
+    formattedDuration: computed(() => formatTime(duration.value)),
     formatTime,
   }
 }

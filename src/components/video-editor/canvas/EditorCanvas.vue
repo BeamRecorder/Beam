@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { Play, Pause } from '@lucide/vue'
 import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { CursorType } from '../composables/useCursorReplacer'
+import type { BackgroundMedia } from '../composables/backgroundMedia'
 import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../composables/cursorPlayback'
 
 const props = defineProps<{
@@ -15,7 +16,7 @@ const props = defineProps<{
   enableShadow: boolean
   enableRipple: boolean
   isVideoEnabled: boolean
-  selectedWallpaper: string
+  selectedBackground: BackgroundMedia | null
   videoSrc: string
   editorData?: ProjectEditorData | null
 }>()
@@ -86,9 +87,53 @@ watch(() => props.currentTime, (time) => {
   if (Math.abs(videoEl.currentTime - time) > 0.15) videoEl.currentTime = time
 })
 
-const wallpaperImg = new Image()
-const loadWallpaper = () => { wallpaperImg.src = props.selectedWallpaper }
-watch(() => props.selectedWallpaper, loadWallpaper, { immediate: true })
+const backgroundImg = new Image()
+const backgroundVideo = document.createElement('video')
+backgroundVideo.muted = true
+backgroundVideo.loop = true
+backgroundVideo.preload = 'auto'
+backgroundVideo.playsInline = true
+
+const loadBackground = () => {
+  backgroundVideo.pause()
+  backgroundVideo.removeAttribute('src')
+  backgroundVideo.load()
+  backgroundImg.removeAttribute('src')
+
+  const background = props.selectedBackground
+  if (!background) return
+
+  if (background.kind === 'video') {
+    backgroundVideo.src = background.path
+    backgroundVideo.load()
+  } else {
+    backgroundImg.src = background.path
+  }
+}
+watch(() => props.selectedBackground, loadBackground, { immediate: true })
+
+const drawBackground = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const background = props.selectedBackground
+  if (background?.kind === 'video' && backgroundVideo.readyState >= 2) {
+    ctx.drawImage(backgroundVideo, 0, 0, width, height)
+    return
+  }
+  if (background?.kind !== 'video' && backgroundImg.complete && backgroundImg.naturalWidth > 0) {
+    ctx.drawImage(backgroundImg, 0, 0, width, height)
+    return
+  }
+
+  ctx.fillStyle = '#1e1e24'
+  ctx.fillRect(0, 0, width, height)
+}
+
+watch(() => props.isPlaying, (playing) => {
+  if (playing && props.selectedBackground?.kind === 'video') {
+    backgroundVideo.play().catch((error) => console.error('Failed to play background video:', error))
+  } else {
+    backgroundVideo.pause()
+  }
+})
 
 const loadCursorAssets = () => {
   cursorImages.clear()
@@ -202,12 +247,7 @@ const draw = () => {
   ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0)
   ctx.clearRect(0, 0, width, height)
 
-  if (wallpaperImg.complete && wallpaperImg.naturalWidth > 0) {
-    ctx.drawImage(wallpaperImg, 0, 0, width, height)
-  } else {
-    ctx.fillStyle = '#1e1e24'
-    ctx.fillRect(0, 0, width, height)
-  }
+  drawBackground(ctx, width, height)
 
   const videoWindow = drawVideoWindow(ctx, width, height)
   const cursorData = props.editorData?.cursor
@@ -289,10 +329,13 @@ onUnmounted(() => {
   resizeObserver?.disconnect()
   if (animationFrameId) cancelAnimationFrame(animationFrameId)
   videoEl.pause()
+  backgroundVideo.pause()
   videoEl.removeEventListener('loadedmetadata', handleVideoMetadata)
   videoEl.removeEventListener('error', handleVideoError)
   videoEl.src = ''
   videoEl.load()
+  backgroundVideo.removeAttribute('src')
+  backgroundVideo.load()
 })
 </script>
 

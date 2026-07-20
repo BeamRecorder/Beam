@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CursorType } from '../composables/useCursorReplacer'
+import type { BackgroundMediaGroup } from '../composables/backgroundMedia'
 import CursorPanel from './CursorPanel.vue'
 import CanvasPanel from './CanvasPanel.vue'
 import TrimPanel from './TrimPanel.vue'
@@ -21,8 +22,9 @@ defineProps<{
   isSystemAudioEnabled: boolean
   isMicAudioEnabled: boolean
 
-  // Wallpaper properties
-  selectedWallpaper: string
+  // Background properties
+  selectedBackground: string | null
+  backgroundGroups: BackgroundMediaGroup[]
 }>()
 
 const emit = defineEmits<{
@@ -35,7 +37,7 @@ const emit = defineEmits<{
   (e: 'update:isVideoEnabled', value: boolean): void
   (e: 'update:isSystemAudioEnabled', value: boolean): void
   (e: 'update:isMicAudioEnabled', value: boolean): void
-  (e: 'update:selectedWallpaper', value: string): void
+  (e: 'update:selectedBackground', value: string): void
 }>()
 </script>
 
@@ -63,8 +65,9 @@ const emit = defineEmits<{
 
       <CanvasPanel 
         v-else-if="activeTab === 'canvas'"
-        :selectedWallpaper="selectedWallpaper"
-        @update:selectedWallpaper="emit('update:selectedWallpaper', $event)"
+        :selected-background="selectedBackground"
+        :background-groups="backgroundGroups"
+        @update:selectedBackground="emit('update:selectedBackground', $event)"
       />
 
       <TrimPanel 
