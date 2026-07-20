@@ -19,6 +19,9 @@
   },
   "dependencies": {
     "@lucide/vue": "^1.25.0",
+    "@vueuse/core": "^14.3.0",
+    "@vueuse/electron": "^14.3.0",
+    "@vueuse/motion": "^3.0.3",
     "pinia": "^4.0.2",
     "vue": "^3.5.39"
   },
@@ -44,7 +47,10 @@
       {
         "from": "target/release",
         "to": "capture-engine",
-        "filter": ["capture-engine", "capture-engine.exe"]
+        "filter": [
+          "capture-engine",
+          "capture-engine.exe"
+        ]
       }
     ],
     "directories": {
