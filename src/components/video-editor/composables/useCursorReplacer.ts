@@ -39,7 +39,7 @@ export function useCursorReplacer() {
         .replace(/fill="#000"/gi, `fill="${color}"`)
     }
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image()
       const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(svgBlob)

@@ -7,6 +7,7 @@ import type {
   CaptureProject,
   CaptureSession,
   ProjectEditorData,
+  ProjectZoomState,
 } from './capture-session'
 
 export type * from './capture-config'

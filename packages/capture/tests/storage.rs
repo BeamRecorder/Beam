@@ -85,18 +85,33 @@ fn project_editor_state_survives_a_new_recording() {
     let project = ProjectId::new();
     let first_session = SessionId::new();
     let second_session = SessionId::new();
-    let mut manifest = create_or_update_project(temporary.path(), project, first_session, "2026-01-01T00:00:00Z")
-        .expect("project");
-    manifest.editor.zoom.generated_sessions.push(ZoomGenerationRecord {
-        session_id: first_session.to_string(),
-        algorithm_version: 1,
-        generated_at: "2026-01-01T00:00:00Z".into(),
-    });
+    let mut manifest = create_or_update_project(
+        temporary.path(),
+        project,
+        first_session,
+        "2026-01-01T00:00:00Z",
+    )
+    .expect("project");
+    manifest
+        .editor
+        .zoom
+        .generated_sessions
+        .push(ZoomGenerationRecord {
+            session_id: first_session.to_string(),
+            algorithm_version: 1,
+            generated_at: "2026-01-01T00:00:00Z".into(),
+        });
     let path = ProjectLayout::new(temporary.path(), project).project_manifest();
-    write_atomic(&path, &serde_json::to_vec_pretty(&manifest).expect("json")).expect("write project");
+    write_atomic(&path, &serde_json::to_vec_pretty(&manifest).expect("json"))
+        .expect("write project");
 
-    let updated = create_or_update_project(temporary.path(), project, second_session, "2026-01-02T00:00:00Z")
-        .expect("updated project");
+    let updated = create_or_update_project(
+        temporary.path(),
+        project,
+        second_session,
+        "2026-01-02T00:00:00Z",
+    )
+    .expect("updated project");
     assert_eq!(updated.editor.zoom.generated_sessions.len(), 1);
     assert_eq!(updated.sessions.len(), 2);
 }

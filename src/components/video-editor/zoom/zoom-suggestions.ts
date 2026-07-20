@@ -57,7 +57,7 @@ export function buildAutomaticZoomElements(params: {
   const { events, sessionId, durationMs } = params
   if (durationMs <= 0) return []
   return clusterClicks(leftClickPoints(events))
-    .map((cluster) => {
+    .map<ZoomElement | null>((cluster) => {
       const first = cluster[0]
       const last = cluster.at(-1) ?? first
       const startMs = clamp(first.timeMs - ZOOM_REGION_PADDING_MS, 0, durationMs)

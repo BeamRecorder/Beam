@@ -1,4 +1,6 @@
-use crate::model::{ProjectEditorState, ProjectId, ProjectManifest, ProjectSession, SCHEMA_VERSION, SessionId};
+use crate::model::{
+    ProjectEditorState, ProjectId, ProjectManifest, ProjectSession, SCHEMA_VERSION, SessionId,
+};
 
 use super::{ProjectLayout, write_atomic};
 
