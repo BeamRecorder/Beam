@@ -4,13 +4,13 @@ import { capture } from '../../api/capture'
 import type { CaptureCatalog, CapturePreview, CaptureProject, CaptureSource } from '../../api/types/capture-api'
 import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
-import Badge from '~/ui/badge/Badge.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import WindowSelect from '~/ui/select/WindowSelect.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import ProjectPicker from './ProjectPicker.vue'
-import { Monitor, Layout, X, Minus, Settings, ChevronLeft, ArrowUpRight, Sun, Moon, Volume2, Mic, Video } from '@lucide/vue'
+import TopbarHUD from './TopbarHUD.vue'
+import { Monitor, Layout, ArrowUpRight, Sun, Moon, Volume2, Mic, Video } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 
 const emit = defineEmits(['start-recording', 'stop-recording', 'open-project'])
@@ -290,6 +290,14 @@ const closeProjectPicker = () => {
   showProjectPicker.value = false
 }
 
+const handleTopbarBack = () => {
+  if (showProjectPicker.value) {
+    closeProjectPicker()
+    return
+  }
+  showSettings.value = false
+}
+
 const openProject = (project: CaptureProject) => {
   emit('open-project', project)
 }
@@ -297,49 +305,16 @@ const openProject = (project: CaptureProject) => {
 
 <template>
   <div class="hud-wrapper" :class="[activeTab, { 'settings-open': showSettings, 'dropdown-open': activeDropdowns > 0 }]" :style="{ height: `${hudHeight}px` }">
-    <!-- Header -->
-    <header class="hud-header">
-      <div class="logo-section">
-        <template v-if="showProjectPicker">
-          <div style="-webkit-app-region: no-drag; display: inline-flex; align-items: center;">
-            <Button variant="ghost" size="sm" class="back-btn" @click="closeProjectPicker">
-              <template #icon><ChevronLeft class="btn-icon" /></template>
-            </Button>
-          </div>
-          <span class="logo-text">Open a project</span>
-        </template>
-        <template v-else-if="showSettings">
-          <div style="-webkit-app-region: no-drag; display: inline-flex; align-items: center;">
-            <Button variant="ghost" size="sm" class="back-btn" @click="showSettings = false">
-              <template #icon><ChevronLeft class="btn-icon" /></template>
-            </Button>
-          </div>
-          <span class="logo-text">Preferences</span>
-        </template>
-        <template v-else>
-          <img src="/brand/DemoRecorderIcon.png" class="brand-logo" alt="DemoRecorder Logo" />
-          <span class="logo-text">DemoRecorder</span>
-          <Badge v-if="isRecording" variant="error" class="rec-badge">REC</Badge>
-        </template>
-      </div>
-
-      <div class="window-actions" @mousedown.stop>
-        <Button variant="ghost" size="sm" @click="minimizeApp">
-          <template #icon><Minus class="btn-icon" /></template>
-        </Button>
-        <Button 
-          v-if="!showSettings && !showProjectPicker"
-          variant="ghost" 
-          size="sm" 
-          @click="showSettings = true"
-        >
-          <template #icon><Settings class="btn-icon" /></template>
-        </Button>
-        <Button variant="ghost" size="sm" class="close-btn-override" @click="closeApp">
-          <template #icon><X class="btn-icon" /></template>
-        </Button>
-      </div>
-    </header>
+    <TopbarHUD
+      :title="showProjectPicker ? 'Open a project' : showSettings ? 'Preferences' : 'DemoRecorder'"
+      :show-back="showProjectPicker || showSettings"
+      :show-settings="!showSettings && !showProjectPicker"
+      :is-recording="isRecording"
+      @back="handleTopbarBack"
+      @minimize="minimizeApp"
+      @open-settings="showSettings = true"
+      @close="closeApp"
+    />
 
     <Transition name="hud-view" mode="out-in">
       <!-- Project Picker View -->

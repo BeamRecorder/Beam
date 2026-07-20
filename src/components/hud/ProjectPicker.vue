@@ -242,7 +242,7 @@ defineExpose({
   <section class="project-picker" :class="{ compact }" aria-labelledby="project-picker-title">
     <div class="project-picker-heading">
       <div>
-        <h1 id="project-picker-title">{{ compact ? 'Projects' : 'Open a project' }}</h1>
+        <h1 id="project-picker-title">Projects</h1>
         <p>{{ compact ? 'Switch project' : 'Choose a recording to continue editing.' }}</p>
       </div>
       <div class="heading-actions">
