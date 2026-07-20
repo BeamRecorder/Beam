@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('capture', Object.freeze({
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
   unmaximize: () => ipcRenderer.send('window:unmaximize'),
+  toggleMaximize: () => ipcRenderer.send('window:toggleMaximize'),
   setPosition: (x, y) => ipcRenderer.send('window:setPosition', x, y),
   setSize: (width, height) => ipcRenderer.send('window:setSize', width, height),
   setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),

@@ -517,6 +517,20 @@ ipcMain.on('window:unmaximize', (event) => {
   }
 })
 
+ipcMain.on('window:toggleMaximize', (event) => {
+  const webContents = event.sender
+  const win = BrowserWindow.fromWebContents(webContents)
+  if (win) {
+    if (win.isMaximized()) {
+      win.setAlwaysOnTop(true)
+      win.unmaximize()
+    } else {
+      win.setAlwaysOnTop(false)
+      win.maximize()
+    }
+  }
+})
+
 ipcMain.on('window:setPosition', (event, x, y) => {
   const webContents = event.sender
   const win = BrowserWindow.fromWebContents(webContents)
@@ -604,9 +618,11 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
+    icon: path.join(__dirname, 'public/brand/DemoRecorderIcon.png'),
     resizable: false,
     maximizable: false,
     hasShadow: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'electron-preload.cjs'),
       nodeIntegration: false,
@@ -614,6 +630,10 @@ function createWindow() {
       sandbox: false,
       webSecurity: false,
     },
+  })
+
+  win.once('ready-to-show', () => {
+    win.showInactive()
   })
 
   if (app.isPackaged) win.loadFile(path.join(__dirname, 'dist/index.html'))

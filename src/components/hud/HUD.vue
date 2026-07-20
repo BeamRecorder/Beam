@@ -103,7 +103,7 @@ let lastHeight = 360
 const updateWindowSize = () => {
   let targetHeight = 360
   if (showSettings.value || showProjectPicker.value) {
-    targetHeight = 480
+    targetHeight = 520
   } else {
     const isDropdownOpen = activeDropdowns.value > 0
     if (activeTab.value === 'window') {
@@ -120,8 +120,8 @@ const updateWindowSize = () => {
     // Wait for the card's CSS transition (200ms) to complete before shrinking the Electron window
     setTimeout(() => {
       let currentTarget = 360
-      if (showSettings.value) {
-        currentTarget = 480
+      if (showSettings.value || showProjectPicker.value) {
+        currentTarget = 520
       } else {
         const isDropdownOpen = activeDropdowns.value > 0
         if (activeTab.value === 'window') {
@@ -140,7 +140,7 @@ const updateWindowSize = () => {
 
 const hudHeight = computed(() => {
   if (showSettings.value || showProjectPicker.value) {
-    return 480
+    return 520
   }
   return activeTab.value === 'window' ? 420 : 360
 })
@@ -301,9 +301,7 @@ const openProject = (project: CaptureProject) => {
           <span class="logo-text">Preferences</span>
         </template>
         <template v-else>
-          <div class="logo-ring">
-            <div class="logo-core"></div>
-          </div>
+          <img src="/brand/DemoRecorderIcon.png" class="brand-logo" alt="DemoRecorder Logo" />
           <span class="logo-text">DemoRecorder</span>
           <Badge v-if="isRecording" variant="error" class="rec-badge">REC</Badge>
         </template>
@@ -564,21 +562,10 @@ const openProject = (project: CaptureProject) => {
   margin-right: 4px;
 }
 
-.logo-ring {
+.brand-logo {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  border: 3px solid var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-core {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-primary);
+  object-fit: contain;
 }
 
 .logo-text {

@@ -20,6 +20,9 @@ const emit = defineEmits<{
 
 const isOpen = ref(false)
 const popoverRef = ref<HTMLElement | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
+const directionClass = ref(props.direction)
+const floatingStyle = ref<Record<string, string>>({})
 
 const toggle = () => {
   isOpen.value = !isOpen.value
@@ -29,12 +32,73 @@ const close = () => {
   isOpen.value = false
 }
 
+const adjustPosition = () => {
+  if (!popoverRef.value) return
+  const triggerEl = popoverRef.value.querySelector('.popover-trigger') || popoverRef.value
+  const rect = triggerEl.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom
+  const spaceAbove = rect.top
+  
+  if (props.direction === 'down' && spaceBelow < 150 && spaceAbove > spaceBelow) {
+    directionClass.value = 'up'
+  } else if (props.direction === 'up' && spaceAbove < 150 && spaceBelow > spaceAbove) {
+    directionClass.value = 'down'
+  } else {
+    directionClass.value = props.direction
+  }
+  
+  let top = 0
+  let left = 0
+  
+  if (directionClass.value === 'down') {
+    top = rect.bottom + window.scrollY + 8
+  } else {
+    top = rect.top + window.scrollY - 8
+  }
+  
+  if (props.align === 'left') {
+    left = rect.left + window.scrollX
+  } else if (props.align === 'right') {
+    left = rect.right + window.scrollX
+  } else {
+    left = rect.left + window.scrollX + rect.width / 2
+  }
+  
+  const transforms: string[] = []
+  if (props.align === 'right') {
+    transforms.push('translateX(-100%)')
+  } else if (props.align === 'center') {
+    transforms.push('translateX(-50%)')
+  }
+  
+  if (directionClass.value === 'up') {
+    transforms.push('translateY(-100%)')
+  }
+  
+  floatingStyle.value = {
+    position: 'absolute',
+    top: `${top}px`,
+    left: `${left}px`,
+    zIndex: '1000',
+    ...(transforms.length > 0 ? { transform: transforms.join(' ') } : {})
+  }
+}
+
 watch(isOpen, (val) => {
+  if (val) {
+    setTimeout(adjustPosition, 0)
+  }
   emit('toggle', val)
 })
 
+watch(() => props.direction, (val) => {
+  directionClass.value = val
+})
+
 const handleClickOutside = (event: MouseEvent) => {
-  if (popoverRef.value && !popoverRef.value.contains(event.target as Node)) {
+  const isClickInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
+  const isClickInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
+  if (!isClickInsideTrigger && !isClickInsideContent) {
     close()
   }
 }
@@ -60,11 +124,13 @@ defineExpose({
       <slot name="trigger" :isOpen="isOpen" />
     </div>
 
-    <Transition name="pop">
-      <div v-if="isOpen" class="popover-content" :class="[align, direction, { 'popover-block': block }]">
-        <slot :close="close" />
-      </div>
-    </Transition>
+    <Teleport to="body">
+      <Transition name="pop">
+        <div v-if="isOpen" ref="contentRef" class="popover-content" :class="[align, directionClass, { 'popover-block': block }]" :style="floatingStyle">
+          <slot :close="close" />
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -93,7 +159,7 @@ defineExpose({
   position: absolute;
   background-color: var(--color-bg-element);
   color: var(--text-primary);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   padding: 4px 0;
@@ -101,32 +167,9 @@ defineExpose({
   min-width: 220px;
 }
 
-.popover-content.down {
-  top: 100%;
-  margin-top: 8px;
-}
-
-.popover-content.up {
-  bottom: 100%;
-  margin-bottom: 8px;
-}
-
 .popover-content.popover-block {
   width: 100%;
   min-width: unset;
-}
-
-.popover-content.left {
-  left: 0;
-}
-
-.popover-content.right {
-  right: 0;
-}
-
-.popover-content.center {
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 /* Animations */

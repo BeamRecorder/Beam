@@ -147,7 +147,7 @@ watch(() => props.videoSrc, (videoSrc) => {
 <template>
   <div class="editor-page">
     <!-- Window Titlebar / Header -->
-    <header class="editor-titlebar">
+    <header class="editor-titlebar" @dblclick="capture.toggleMaximize()">
       <div class="left-actions">
         <Button variant="ghost" size="sm" :icon="ArrowLeft" @click="handleExit" class="exit-btn">
           Exit to HUD
@@ -160,8 +160,8 @@ watch(() => props.videoSrc, (videoSrc) => {
           Export Video
         </Button>
         <div class="window-controls">
-          <Button variant="ghost" size="sm" icon-only :icon="Minus" tooltip="Minimize" aria-label="Minimize" @click="minimizeApp" />
-          <Button variant="ghost" size="sm" icon-only :icon="X" tooltip="Close" aria-label="Close" class="close-btn" @click="closeApp" />
+          <Button variant="ghost" size="sm" icon-only :icon="Minus" tooltip="Minimize" tooltip-position="bottom" aria-label="Minimize" @click="minimizeApp" />
+          <Button variant="ghost" size="sm" icon-only :icon="X" tooltip="Close" tooltip-position="bottom" aria-label="Close" class="close-btn" @click="closeApp" />
         </div>
       </div>
     </header>
@@ -255,7 +255,7 @@ watch(() => props.videoSrc, (videoSrc) => {
 }
 
 .editor-titlebar {
-  height: 52px;
+  height: 40px;
   background: var(--color-bg-element);
   border-bottom: 1px solid var(--color-border);
   padding: 0 16px;
@@ -276,6 +276,30 @@ watch(() => props.videoSrc, (videoSrc) => {
 .window-controls {
   display: flex;
   gap: 4px;
+}
+
+.window-controls :deep(.btn) {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.window-controls :deep(.btn:hover) {
+  background: var(--color-bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.window-controls :deep(.close-btn:hover) {
+  background: var(--color-error) !important;
+  color: white !important;
 }
 
 /* Islands Workspace Layout */

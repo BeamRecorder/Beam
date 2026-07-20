@@ -90,7 +90,7 @@ pub struct ProjectEditorState {
     pub zoom: ProjectZoomState,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectManifest {
     pub schema_version: u32,

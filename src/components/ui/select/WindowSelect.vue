@@ -133,7 +133,7 @@ const labelStyle = computed(() => {
   height: 2.75rem;
   padding: 0.4rem 0.8rem;
   background-color: var(--color-bg-element);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
   font-size: 1rem;

@@ -21,9 +21,7 @@ const menuItems = [
 <template>
   <aside class="sidebar-island">
     <div class="logo-area">
-      <div class="logo-ring">
-        <div class="logo-core"></div>
-      </div>
+      <img src="/brand/DemoRecorderIcon.png" class="brand-logo" alt="Logo" />
     </div>
 
     <nav class="nav-menu">
@@ -62,21 +60,10 @@ const menuItems = [
   align-items: center;
 }
 
-.logo-ring {
+.brand-logo {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  border: 3px solid var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo-core {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-primary);
+  object-fit: contain;
 }
 
 .nav-menu {

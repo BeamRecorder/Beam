@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useVirtualList } from '@vueuse/core'
-import { ArrowLeft, Check, Film, FolderOpen, RefreshCw } from '@lucide/vue'
+import { ArrowLeft, Check, Film, FolderOpen, RefreshCw, MoreVertical, Plus, Pencil, Trash2 } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
+import Dialog from '~/ui/dialog/Dialog.vue'
+import Popover from '~/ui/popover/Popover.vue'
+import Input from '~/ui/input/Input.vue'
 import { capture } from '../../api/capture'
 import type { CaptureProject } from '../../api/types/capture-api'
 
@@ -102,6 +105,105 @@ watch(() => props.currentProjectId, (projectId) => {
   }
 })
 
+// New project states
+const isNewProjectOpen = ref(false)
+const newProjectName = ref('')
+const newProjectError = ref('')
+const newProjectBusy = ref(false)
+
+// Rename project states
+const isRenameOpen = ref(false)
+const renameProjectId = ref('')
+const renameValue = ref('')
+const renameError = ref('')
+const renameBusy = ref(false)
+
+// Delete project states
+const isDeleteConfirmOpen = ref(false)
+const deleteProjectId = ref('')
+const deleteProjectName = ref('')
+const deleteError = ref('')
+const deleteBusy = ref(false)
+
+const openNewProjectDialog = () => {
+  newProjectName.value = ''
+  newProjectError.value = ''
+  isNewProjectOpen.value = true
+}
+
+const handleCreateProject = async () => {
+  newProjectBusy.value = true
+  newProjectError.value = ''
+  try {
+    const created = await capture.createProject({ name: newProjectName.value.trim() || undefined })
+    cachedProjects = null
+    await loadProjects()
+    isNewProjectOpen.value = false
+    emit('open-project', created)
+  } catch (error) {
+    newProjectError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    newProjectBusy.value = false
+  }
+}
+
+const openRenameDialog = (project: CaptureProject) => {
+  renameProjectId.value = project.id
+  renameValue.value = project.name
+  renameError.value = ''
+  isRenameOpen.value = true
+}
+
+const handleRenameProject = async () => {
+  if (!renameValue.value.trim()) return
+  renameBusy.value = true
+  renameError.value = ''
+  try {
+    await capture.renameProject(renameProjectId.value, renameValue.value)
+    cachedProjects = null
+    await loadProjects()
+    isRenameOpen.value = false
+  } catch (error) {
+    renameError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    renameBusy.value = false
+  }
+}
+
+const confirmDeleteProject = (project: CaptureProject) => {
+  deleteProjectId.value = project.id
+  deleteProjectName.value = project.name
+  deleteError.value = ''
+  isDeleteConfirmOpen.value = true
+}
+
+const handleDeleteProject = async () => {
+  deleteBusy.value = true
+  deleteError.value = ''
+  try {
+    await capture.deleteProject(deleteProjectId.value)
+    cachedProjects = null
+    await loadProjects()
+    isDeleteConfirmOpen.value = false
+    
+    // If the currently selected project was deleted, pick the first remaining one
+    if (selectedProjectId.value === deleteProjectId.value) {
+      const remaining = projects.value
+      const nextProject = remaining[0] ?? null
+      if (nextProject) {
+        selectedProjectId.value = nextProject.id
+        emit('select-project', nextProject)
+      } else {
+        selectedProjectId.value = null
+      }
+    }
+  } catch (error) {
+    deleteError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    deleteBusy.value = false
+  }
+}
+
 defineExpose({
   refresh: loadProjects,
   invalidate: () => {
@@ -117,17 +219,29 @@ defineExpose({
         <h1 id="project-picker-title">{{ compact ? 'Projects' : 'Open a project' }}</h1>
         <p>{{ compact ? 'Switch project' : 'Choose a recording to continue editing.' }}</p>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        class="refresh-button"
-        :icon="RefreshCw"
-        icon-only
-        :loading="isLoading"
-        aria-label="Refresh projects"
-        tooltip="Refresh projects"
-        @click="loadProjects"
-      />
+      <div class="heading-actions">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="new-project-button"
+          :icon="Plus"
+          icon-only
+          aria-label="New project"
+          tooltip="New project"
+          @click="openNewProjectDialog"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          class="refresh-button"
+          :icon="RefreshCw"
+          icon-only
+          :loading="isLoading"
+          aria-label="Refresh projects"
+          tooltip="Refresh projects"
+          @click="loadProjects"
+        />
+      </div>
     </div>
 
     <div v-if="isLoading" class="project-grid project-skeleton-grid" aria-label="Loading projects">
@@ -154,39 +268,71 @@ defineExpose({
     <div v-else v-bind="containerProps" class="projects-viewport">
       <div v-bind="wrapperProps" class="projects-list">
         <div v-for="row in list" :key="row.index" class="project-grid project-row">
-          <Button
+          <div
             v-for="project in row.data"
             :key="project.id"
-            variant="card"
-            size="sm"
-            block
-            class="project-card"
-            :class="{ 'is-selected': project.id === selectedProjectId }"
-            :aria-pressed="project.id === selectedProjectId"
-            @click="selectProject(project)"
-            @dblclick="selectProject(project); openSelectedProject()"
+            class="project-card-container"
           >
-            <template #default>
-              <div class="project-preview">
-                <video
-                  v-if="project.previewSrc"
-                  :src="project.previewSrc"
-                  muted
-                  playsinline
-                  preload="metadata"
-                  @loadedmetadata="setPreviewFrame"
-                />
-                <Film v-else class="preview-placeholder-icon" />
-                <span v-if="project.id === selectedProjectId" class="selected-indicator" aria-label="Selected">
-                  <Check />
-                </span>
-              </div>
-              <span class="project-card-name">{{ project.name }}</span>
-              <span class="project-card-meta">
-                {{ project.sessionCount }} {{ project.sessionCount === 1 ? 'session' : 'sessions' }} · {{ formatDate(project.updatedAt) }}
-              </span>
-            </template>
-          </Button>
+            <Button
+              variant="card"
+              size="sm"
+              block
+              class="project-card"
+              :class="{ 'is-selected': project.id === selectedProjectId }"
+              :aria-pressed="project.id === selectedProjectId"
+              @click="selectProject(project)"
+              @dblclick="selectProject(project); openSelectedProject()"
+            >
+              <template #default>
+                <div class="project-preview">
+                  <video
+                    v-if="project.previewSrc"
+                    :src="project.previewSrc"
+                    muted
+                    playsinline
+                    preload="metadata"
+                    @loadedmetadata="setPreviewFrame"
+                  />
+                  <Film v-else class="preview-placeholder-icon" />
+                  <span v-if="project.id === selectedProjectId" class="selected-indicator" aria-label="Selected">
+                    <Check />
+                  </span>
+                </div>
+                <div class="project-card-info">
+                  <div class="project-title-row">
+                    <span class="project-card-name" :title="project.name">{{ project.name }}</span>
+                    <div class="project-card-actions" @click.stop @mousedown.stop>
+                      <Popover align="right" direction="down">
+                        <template #trigger="{ isOpen }">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            icon-only
+                            :icon="MoreVertical"
+                            class="action-trigger-btn"
+                            :class="{ 'is-open': isOpen }"
+                          />
+                        </template>
+                        <template #default="{ close }">
+                          <div class="action-menu-content">
+                            <Button variant="ghost" size="sm" :icon="Pencil" class="menu-action-item" @click.stop="openRenameDialog(project); close()">
+                              Rename
+                            </Button>
+                            <Button variant="ghost" size="sm" :icon="Trash2" class="menu-action-item delete-item" @click.stop="confirmDeleteProject(project); close()">
+                              Delete
+                            </Button>
+                          </div>
+                        </template>
+                      </Popover>
+                    </div>
+                  </div>
+                  <span class="project-card-meta">
+                    {{ project.sessionCount }} {{ project.sessionCount === 1 ? 'session' : 'sessions' }} · {{ formatDate(project.updatedAt) }}
+                  </span>
+                </div>
+              </template>
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -201,6 +347,48 @@ defineExpose({
         </Button>
       </ButtonGroup>
     </footer>
+
+    <!-- New Project Dialog -->
+    <Dialog :is-open="isNewProjectOpen" title="New project" size="sm" @close="isNewProjectOpen = false">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
+        <Input v-model="newProjectName" placeholder="Project name" :disabled="newProjectBusy" autofocus @keyup.enter="handleCreateProject" />
+        <p v-if="newProjectError" style="color: var(--color-error); font-size: 11px; margin: 0;">{{ newProjectError }}</p>
+      </div>
+      <template #footer="{ close }">
+        <ButtonGroup>
+          <Button variant="ghost" size="sm" :disabled="newProjectBusy" @click="close">Cancel</Button>
+          <Button variant="primary" size="sm" :loading="newProjectBusy" @click="handleCreateProject">Create</Button>
+        </ButtonGroup>
+      </template>
+    </Dialog>
+
+    <!-- Rename Project Dialog -->
+    <Dialog :is-open="isRenameOpen" title="Rename project" size="sm" @close="isRenameOpen = false">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0;">
+        <Input v-model="renameValue" placeholder="Project name" :disabled="renameBusy" autofocus @keyup.enter="handleRenameProject" />
+        <p v-if="renameError" style="color: var(--color-error); font-size: 11px; margin: 0;">{{ renameError }}</p>
+      </div>
+      <template #footer="{ close }">
+        <ButtonGroup>
+          <Button variant="ghost" size="sm" :disabled="renameBusy" @click="close">Cancel</Button>
+          <Button variant="primary" size="sm" :loading="renameBusy" :disabled="!renameValue.trim()" @click="handleRenameProject">Rename</Button>
+        </ButtonGroup>
+      </template>
+    </Dialog>
+
+    <!-- Delete Project Confirmation Dialog -->
+    <Dialog :is-open="isDeleteConfirmOpen" :title="`Delete ${deleteProjectName}?`" size="sm" @close="isDeleteConfirmOpen = false">
+      <div style="padding: 4px 0;">
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Are you sure you want to delete this project? This action cannot be undone.</p>
+        <p v-if="deleteError" style="color: var(--color-error); font-size: 11px; margin: 8px 0 0 0;">{{ deleteError }}</p>
+      </div>
+      <template #footer="{ close }">
+        <ButtonGroup>
+          <Button variant="ghost" size="sm" :disabled="deleteBusy" @click="close">Cancel</Button>
+          <Button variant="danger" size="sm" :loading="deleteBusy" @click="handleDeleteProject">Delete</Button>
+        </ButtonGroup>
+      </template>
+    </Dialog>
   </section>
 </template>
 
@@ -236,6 +424,12 @@ defineExpose({
   justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .project-picker-heading h1 {
@@ -279,13 +473,82 @@ defineExpose({
   height: 112px;
 }
 
+.project-card-container {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .project-card,
 .project-card-skeleton {
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg-element);
+}
+
+.project-card-actions {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.project-card-container:hover .project-card-actions,
+.project-card-actions:focus-within,
+.project-card-actions.is-open {
+  opacity: 1;
+}
+
+.action-trigger-btn {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-muted) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.action-trigger-btn:hover,
+.action-trigger-btn.is-open {
+  background: var(--color-bg-surface-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.action-menu-content {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 2px;
+}
+
+.menu-action-item {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  padding: 0.4rem 0.8rem !important;
+  font-size: 0.8rem !important;
+  border-radius: 6px !important;
+  border: none !important;
+  font-weight: 500 !important;
+}
+
+.menu-action-item:hover {
+  background: var(--color-bg-surface-hover) !important;
+}
+
+.menu-action-item.delete-item {
+  color: var(--color-error) !important;
+}
+
+.menu-action-item.delete-item:hover {
+  background: var(--color-error-light) !important;
 }
 
 .project-preview {
@@ -328,21 +591,40 @@ defineExpose({
   height: 12px;
 }
 
+.project-card-info {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 7px 6px;
+  min-width: 0;
+  width: 100%;
+}
+
+.project-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  gap: 4px;
+}
+
 .project-card-name,
 .project-card-meta {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  width: 100%;
+  text-align: left;
 }
 
 .project-card-name {
-  padding: 6px 7px 0;
   font-size: 11px;
   font-weight: 700;
+  flex: 1;
 }
 
 .project-card-meta {
-  padding: 2px 7px 6px;
+  padding-top: 2px;
   color: var(--text-muted);
   font-size: 9px;
 }
