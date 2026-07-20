@@ -77,9 +77,9 @@ const updateNumber = (
         <Input
           type="number"
           :model-value="selectedZoom.scale"
-          min="1"
-          max="3"
-          step="0.05"
+          :min="1"
+          :max="3"
+          :step="0.05"
           size="sm"
           @update:model-value="updateNumber('scale', $event)"
         />
@@ -89,9 +89,9 @@ const updateNumber = (
         <Input
           type="number"
           :model-value="selectedZoom.speed"
-          min="0.5"
-          max="2"
-          step="0.1"
+          :min="0.5"
+          :max="2"
+          :step="0.1"
           size="sm"
           @update:model-value="updateNumber('speed', $event)"
         />
@@ -101,7 +101,7 @@ const updateNumber = (
         <Input
           type="number"
           :model-value="selectedZoom.startMs"
-          min="0"
+          :min="0"
           size="sm"
           @update:model-value="updateNumber('startMs', $event)"
         />
@@ -111,7 +111,7 @@ const updateNumber = (
         <Input
           type="number"
           :model-value="selectedZoom.endMs"
-          min="0"
+          :min="0"
           size="sm"
           @update:model-value="updateNumber('endMs', $event)"
         />
