@@ -25,12 +25,14 @@ impl Drop for RecordingSession {
     }
 }
 
+#[cfg(any(windows, target_os = "macos", feature = "microphone"))]
 pub(super) fn record_result(result: Result<(), CaptureError>, first: &mut Option<CaptureError>) {
     if let Err(error) = result {
         first.get_or_insert(error);
     }
 }
 
+#[cfg(any(feature = "microphone", feature = "system-audio", feature = "camera"))]
 pub(super) fn optional_failure(
     request: &CaptureRequest,
     tracks: &mut [TrackMetadata],
@@ -214,6 +216,7 @@ pub(super) fn update_video_metrics(
     }
 }
 
+#[cfg(any(feature = "microphone", feature = "system-audio"))]
 pub(super) fn update_audio_metrics(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,

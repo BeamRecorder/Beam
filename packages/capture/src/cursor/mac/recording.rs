@@ -3,6 +3,7 @@ use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, AtomicU64, Ordering},
+        mpsc,
     },
     thread::JoinHandle,
     time::{Duration, Instant},
@@ -17,6 +18,7 @@ use crate::{
     CaptureError,
     cursor::{CaptureRegion, CursorEvent, CursorEventWriter, map_coordinates},
     model::SourceId,
+    session::StartGate,
     storage::write_atomic,
 };
 
@@ -51,6 +53,7 @@ impl MacCursorRecording {
         region: CaptureRegion,
         capture_clicks: bool,
         segment_start_ns: u64,
+        start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         std::fs::create_dir_all(directory)
             .map_err(|error| CaptureError::storage(directory, error))?;
@@ -61,6 +64,7 @@ impl MacCursorRecording {
         let metrics = Arc::new(MacCursorMetrics::default());
         let thread_metrics = metrics.clone();
         let thread_path = partial.clone();
+        let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
         let thread = std::thread::Builder::new()
             .name("capture-macos-cursor".into())
             .spawn(move || {
@@ -71,9 +75,14 @@ impl MacCursorRecording {
                     segment_start_ns,
                     &thread_cancel,
                     &thread_metrics,
+                    &ready_sender,
+                    &start_gate,
                 )
             })
             .map_err(backend_error)?;
+        ready_receiver
+            .recv()
+            .map_err(|_| CaptureError::Backend("cursor startup channel closed".into()))??;
         Ok(Self {
             cancel,
             thread: Some(thread),
@@ -162,8 +171,14 @@ fn capture_loop(
     segment_start_ns: u64,
     cancel: &AtomicBool,
     metrics: &MacCursorMetrics,
+    ready: &mpsc::SyncSender<Result<(), CaptureError>>,
+    start_gate: &Arc<StartGate>,
 ) -> Result<(), CaptureError> {
     let mut writer = CursorEventWriter::open(path)?;
+    ready
+        .send(Ok(()))
+        .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
+    start_gate.wait()?;
     let started = Instant::now();
     let mut previous_position = None;
     let mut previous_buttons = [false; 3];

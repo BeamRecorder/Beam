@@ -35,7 +35,13 @@ pub struct SegmentMetadata {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct TrackMetrics {
+    /// Frames delivered by a native source before queueing or encoding.
+    pub frames_acquired: u64,
+    /// Frames successfully accepted by the encoder/writer.
+    pub frames_encoded: u64,
+    /// Generic produced-frame count kept for schema compatibility.
     pub frames_received: u64,
     pub frames_dropped: u64,
     pub samples_received: u64,

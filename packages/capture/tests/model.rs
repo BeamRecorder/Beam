@@ -80,3 +80,19 @@ fn manifest_schema_is_versioned_and_roundtrips() {
         manifest
     );
 }
+
+#[test]
+fn track_metrics_accept_manifests_created_before_camera_pipeline_metrics() {
+    let metrics: TrackMetrics = serde_json::from_value(serde_json::json!({
+        "framesReceived": 12,
+        "framesDropped": 2,
+        "samplesReceived": 0,
+        "samplesDropped": 0,
+        "interruptions": 1,
+        "configurationChanges": 0
+    }))
+    .expect("deserialize legacy metrics");
+    assert_eq!(metrics.frames_acquired, 0);
+    assert_eq!(metrics.frames_encoded, 0);
+    assert_eq!(metrics.frames_received, 12);
+}

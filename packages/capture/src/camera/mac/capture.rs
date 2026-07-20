@@ -17,7 +17,7 @@ use nokhwa::{
     utils::{CameraFormat, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType},
 };
 
-use crate::{CaptureError, model::CameraSelection};
+use crate::{CaptureError, model::CameraSelection, session::StartGate};
 
 #[derive(Debug, Default)]
 pub struct MacCameraMetrics {
@@ -49,7 +49,11 @@ pub struct MacCameraRecording {
 }
 
 impl MacCameraRecording {
-    pub fn start(selection: &CameraSelection, output: &Path) -> Result<Self, CaptureError> {
+    pub fn start(
+        selection: &CameraSelection,
+        output: &Path,
+        start_gate: Arc<StartGate>,
+    ) -> Result<Self, CaptureError> {
         let index = selection
             .source_id
             .as_str()
@@ -79,6 +83,7 @@ impl MacCameraRecording {
                     &thread_cancel,
                     &thread_metrics,
                     &ready_sender,
+                    &start_gate,
                 )
             })
             .map_err(backend_error)?;
@@ -129,6 +134,7 @@ fn camera_loop(
     cancel: &AtomicBool,
     metrics: &MacCameraMetrics,
     ready: &mpsc::SyncSender<Result<CameraFormat, CaptureError>>,
+    start_gate: &Arc<StartGate>,
 ) -> Result<u64, CaptureError> {
     let requested = RequestedFormat::new::<RgbAFormat>(RequestedFormatType::Closest(desired));
     let opened = Camera::new(CameraIndex::Index(index), requested)
@@ -150,9 +156,6 @@ fn camera_loop(
         }
     };
     let format = camera.camera_format();
-    ready
-        .send(Ok(format))
-        .map_err(|_| CaptureError::Backend("camera startup receiver closed".into()))?;
     let width = u16::try_from(format.width()).map_err(backend_error)?;
     let height = u16::try_from(format.height()).map_err(backend_error)?;
     let expected = usize::from(width)
@@ -161,6 +164,10 @@ fn camera_loop(
     let mut rgba = vec![0; expected];
     let file = File::create(output).map_err(|error| CaptureError::storage(output, error))?;
     let mut writer = BufWriter::new(file);
+    ready
+        .send(Ok(format))
+        .map_err(|_| CaptureError::Backend("camera startup receiver closed".into()))?;
+    start_gate.wait()?;
     while !cancel.load(Ordering::Acquire) {
         if let Err(error) = camera.write_frame_to_buffer::<RgbAFormat>(&mut rgba) {
             metrics.interruptions.fetch_add(1, Ordering::Relaxed);

@@ -85,3 +85,8 @@ path = "src/bin/capture-probe.rs"
 [[bin]]
 name = "capture-smoke"
 path = "src/bin/capture-smoke.rs"
+
+[[test]]
+name = "full_session_smoke"
+path = "tests/hardware/full_session_smoke.rs"
+required-features = ["hardware-tests", "recording"]

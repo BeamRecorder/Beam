@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from "node:url";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue({})],
   resolve: {
     alias: {
       "~/ui": fileURLToPath(new URL("./src/components/ui", import.meta.url)),

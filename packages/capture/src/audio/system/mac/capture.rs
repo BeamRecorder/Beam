@@ -14,7 +14,7 @@ use screencapturekit::{
     stream::{SCStream, configuration::SCStreamConfiguration, output_type::SCStreamOutputType},
 };
 
-use crate::{CaptureError, audio::WavSegmentWriter, model::SourceId};
+use crate::{CaptureError, audio::WavSegmentWriter, model::SourceId, session::StartGate};
 
 #[derive(Debug, Default)]
 pub struct MacSystemAudioMetrics {
@@ -51,6 +51,7 @@ impl MacSystemAudioRecording {
         source_id: &SourceId,
         output: &Path,
         queue_capacity: usize,
+        start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if queue_capacity == 0 {
             return Err(CaptureError::InvalidConfiguration(
@@ -65,11 +66,21 @@ impl MacSystemAudioRecording {
             .with_channel_count(2)
             .with_excludes_current_process_audio(true);
         let (sender, receiver) = sync_channel::<Vec<f32>>(queue_capacity);
+        let (writer_ready_sender, writer_ready_receiver) = sync_channel(1);
         let writer_path = output.to_owned();
         let writer = std::thread::Builder::new()
             .name("capture-macos-system-audio-writer".into())
             .spawn(move || {
-                let mut writer = WavSegmentWriter::create(&writer_path, 48_000, 2)?;
+                let mut writer = match WavSegmentWriter::create(&writer_path, 48_000, 2) {
+                    Ok(writer) => {
+                        let _sent = writer_ready_sender.send(Ok(()));
+                        writer
+                    }
+                    Err(error) => {
+                        let _sent = writer_ready_sender.send(Err(error.to_string()));
+                        return Err(error);
+                    }
+                };
                 while let Ok(samples) = receiver.recv() {
                     writer.write(&samples)?;
                 }
@@ -78,13 +89,24 @@ impl MacSystemAudioRecording {
                 Ok(samples)
             })
             .map_err(backend_error)?;
+        if let Err(message) = writer_ready_receiver.recv().map_err(|_| {
+            CaptureError::Backend("macOS audio writer startup channel closed".into())
+        })? {
+            drop(sender);
+            let _joined = writer.join();
+            return Err(CaptureError::Backend(message));
+        }
         let metrics = Arc::new(MacSystemAudioMetrics::default());
         let callback_metrics = metrics.clone();
         let callback_sender = sender.clone();
+        let callback_gate = start_gate;
         let mut stream = SCStream::new(&filter, &configuration);
         let handler_id = stream
             .add_output_handler(
                 move |sample: CMSampleBuffer, _| {
+                    if !callback_gate.is_released() {
+                        return;
+                    }
                     deliver_audio(&sample, &callback_sender, &callback_metrics);
                 },
                 SCStreamOutputType::Audio,

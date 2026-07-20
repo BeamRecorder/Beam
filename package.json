@@ -2,13 +2,15 @@
   "name": "demo-recorder",
   "private": true,
   "version": "0.0.0",
+  "type": "module",
   "main": "electron-main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "capture:build": "cargo build -p capture --bin capture-engine --release",
     "preview": "vite preview",
     "electron:dev": "electron .",
-    "electron:build": "npm run build && electron-builder"
+    "electron:build": "npm run build && npm run capture:build && electron-builder"
   },
   "dependencies": {
     "@lucide/vue": "^1.25.0",
@@ -30,7 +32,15 @@
     "productName": "DemoRecorder",
     "files": [
       "dist/**/*",
-      "electron-main.cjs"
+      "electron-main.cjs",
+      "electron-preload.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "target/release",
+        "to": "capture-engine",
+        "filter": ["capture-engine", "capture-engine.exe"]
+      }
     ],
     "directories": {
       "output": "dist_electron"

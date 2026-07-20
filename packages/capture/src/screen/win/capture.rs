@@ -23,7 +23,7 @@ use windows_capture::{
     window::Window,
 };
 
-use crate::{CaptureError, model::SourceId};
+use crate::{CaptureError, model::SourceId, session::StartGate};
 
 #[derive(Debug, Default)]
 pub struct WindowsCaptureMetrics {
@@ -50,11 +50,13 @@ struct HandlerFlags {
     bitrate: u32,
     fps: u32,
     metrics: Arc<WindowsCaptureMetrics>,
+    start_gate: Arc<StartGate>,
 }
 
 struct CaptureHandler {
     encoder: Option<VideoEncoder>,
     metrics: Arc<WindowsCaptureMetrics>,
+    start_gate: Arc<StartGate>,
 }
 
 impl CaptureHandler {
@@ -88,6 +90,7 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
         Ok(Self {
             encoder: Some(encoder),
             metrics: flags.metrics,
+            start_gate: flags.start_gate,
         })
     }
 
@@ -96,6 +99,9 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
         frame: &mut Frame,
         _capture_control: InternalCaptureControl,
     ) -> Result<(), Self::Error> {
+        if !self.start_gate.is_released() {
+            self.start_gate.wait().map_err(|error| error.to_string())?;
+        }
         self.encoder
             .as_mut()
             .ok_or_else(|| "video encoder was finalized".to_owned())?
@@ -128,6 +134,7 @@ impl WindowsRecording {
         bitrate: u32,
         fps: u32,
         exclude_cursor: bool,
+        start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if bitrate == 0 || fps == 0 {
             return Err(CaptureError::InvalidConfiguration(
@@ -144,7 +151,15 @@ impl WindowsRecording {
                 monitor.width().map_err(backend_error)?,
                 monitor.height().map_err(backend_error)?,
             );
-            return start_item(monitor, output, size, bitrate, fps, exclude_cursor);
+            return start_item(
+                monitor,
+                output,
+                size,
+                bitrate,
+                fps,
+                exclude_cursor,
+                start_gate,
+            );
         }
         if source_id.as_str().starts_with("wgc:window:") {
             let window = Window::enumerate()
@@ -163,6 +178,7 @@ impl WindowsRecording {
                 bitrate,
                 fps,
                 exclude_cursor,
+                start_gate,
             );
         }
         Err(CaptureError::InvalidConfiguration(format!(
@@ -199,6 +215,7 @@ fn start_item<T>(
     bitrate: u32,
     fps: u32,
     exclude_cursor: bool,
+    start_gate: Arc<StartGate>,
 ) -> Result<WindowsRecording, CaptureError>
 where
     T: TryInto<GraphicsCaptureItemType> + Send + 'static,
@@ -211,6 +228,7 @@ where
         bitrate,
         fps,
         metrics: metrics.clone(),
+        start_gate,
     };
     let settings = Settings::new(
         item,

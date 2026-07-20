@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     CaptureError,
@@ -102,8 +102,11 @@ impl RecordingSession {
         if self.state != super::SessionState::Armed {
             return Err(invalid_transition(self.state, "Recording"));
         }
-        self.manifest.session_start_monotonic_ns = self.clock.now_ns();
-        self.open_segment(0)?;
+        let start_gate = Arc::new(super::StartGate::new());
+        self.open_segment(0, &start_gate)?;
+        let t0 = self.clock.now_ns();
+        self.manifest.session_start_monotonic_ns = t0;
+        start_gate.release(t0)?;
         write_timing_anchors(&self.layout, &self.manifest.tracks, 0)?;
         self.state = super::SessionState::Recording;
         self.checkpoint()
@@ -124,7 +127,9 @@ impl RecordingSession {
             return Err(invalid_transition(self.state, "Recording"));
         }
         let now = self.session_ns();
-        self.open_segment(now)?;
+        let start_gate = Arc::new(super::StartGate::new());
+        self.open_segment(now, &start_gate)?;
+        start_gate.release(self.clock.now_ns())?;
         write_timing_anchors(&self.layout, &self.manifest.tracks, now)?;
         self.state = super::SessionState::Recording;
         self.checkpoint()
@@ -178,7 +183,11 @@ impl RecordingSession {
             .saturating_sub(self.manifest.session_start_monotonic_ns)
     }
 
-    fn open_segment(&mut self, start_ns: u64) -> Result<(), CaptureError> {
+    fn open_segment(
+        &mut self,
+        start_ns: u64,
+        start_gate: &Arc<super::StartGate>,
+    ) -> Result<(), CaptureError> {
         self.generation = self.generation.saturating_add(1);
         let generation = self.generation;
         let mut opened = ActiveRecordings::default();
@@ -189,8 +198,10 @@ impl RecordingSession {
             generation,
             start_ns,
             &mut self.manifest.tracks,
+            start_gate,
         );
         if let Err(error) = result {
+            start_gate.cancel();
             let _cleanup = opened.stop(&mut self.manifest.tracks, start_ns);
             self.state = super::SessionState::Failed;
             return Err(error);

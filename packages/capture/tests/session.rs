@@ -10,7 +10,7 @@ use capture::{
         CaptureCapabilities, CaptureRequest, CursorSelection, FailurePolicy, PermissionSnapshot,
         ProjectId, RecordingSettings, TrackId,
     },
-    session::{PreparedTrack, RecordingSession, SessionCoordinator, SessionState},
+    session::{PreparedTrack, RecordingSession, SessionCoordinator, SessionState, StartGate},
 };
 
 #[derive(Clone)]
@@ -151,4 +151,30 @@ fn native_session_finalizes_storage_and_supports_pause_segments() {
             .expect("parse final manifest");
     assert!(manifest.completed);
     assert!(manifest.tracks.is_empty());
+}
+
+#[test]
+fn shared_start_gate_releases_every_waiter_with_the_same_t0() {
+    let gate = Arc::new(StartGate::new());
+    let waiters = (0..3)
+        .map(|_| {
+            let gate = gate.clone();
+            std::thread::spawn(move || gate.wait())
+        })
+        .collect::<Vec<_>>();
+    assert!(!gate.is_released());
+    gate.release(42).expect("release start gate");
+    for waiter in waiters {
+        assert_eq!(waiter.join().expect("waiter thread").expect("wait"), 42);
+    }
+}
+
+#[test]
+fn cancelling_start_gate_wakes_prepared_backends() {
+    let gate = Arc::new(StartGate::new());
+    let waiter_gate = gate.clone();
+    let waiter = std::thread::spawn(move || waiter_gate.wait());
+    gate.cancel();
+    assert!(waiter.join().expect("waiter thread").is_err());
+    assert!(gate.release(1).is_err());
 }

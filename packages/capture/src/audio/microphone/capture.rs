@@ -13,7 +13,9 @@ use cpal::{
 };
 use crossbeam_channel::{Sender, TrySendError, bounded};
 
-use crate::{CaptureError, audio::WavSegmentWriter, model::MicrophoneSelection};
+use crate::{
+    CaptureError, audio::WavSegmentWriter, model::MicrophoneSelection, session::StartGate,
+};
 
 #[derive(Debug, Default)]
 pub struct MicrophoneMetrics {
@@ -52,6 +54,7 @@ impl MicrophoneRecording {
         selection: &MicrophoneSelection,
         output: &Path,
         queue_capacity: usize,
+        start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if queue_capacity == 0 {
             return Err(CaptureError::InvalidConfiguration(
@@ -72,11 +75,21 @@ impl MicrophoneRecording {
         let sample_rate = config.sample_rate();
         let channels = config.channels();
         let (sender, receiver) = bounded::<Vec<f32>>(queue_capacity);
+        let (writer_ready_sender, writer_ready_receiver) = std::sync::mpsc::sync_channel(1);
         let output = output.to_owned();
         let writer = std::thread::Builder::new()
             .name("capture-microphone-writer".into())
             .spawn(move || {
-                let mut writer = WavSegmentWriter::create(&output, sample_rate, channels)?;
+                let mut writer = match WavSegmentWriter::create(&output, sample_rate, channels) {
+                    Ok(writer) => {
+                        let _sent = writer_ready_sender.send(Ok(()));
+                        writer
+                    }
+                    Err(error) => {
+                        let _sent = writer_ready_sender.send(Err(error.to_string()));
+                        return Err(error);
+                    }
+                };
                 while let Ok(samples) = receiver.recv() {
                     writer.write(&samples)?;
                 }
@@ -85,6 +98,14 @@ impl MicrophoneRecording {
                 Ok(count)
             })
             .map_err(backend_error)?;
+        if let Err(message) = writer_ready_receiver
+            .recv()
+            .map_err(|_| CaptureError::Backend("microphone writer startup channel closed".into()))?
+        {
+            drop(sender);
+            let _joined = writer.join();
+            return Err(CaptureError::Backend(message));
+        }
         let metrics = Arc::new(MicrophoneMetrics::default());
         let error = Arc::new(Mutex::new(None));
         let stream = build_stream(
@@ -93,6 +114,7 @@ impl MicrophoneRecording {
             sender.clone(),
             metrics.clone(),
             error.clone(),
+            start_gate,
         )?;
         stream.play().map_err(backend_error)?;
         Ok(Self {
@@ -186,11 +208,12 @@ fn build_stream(
     sender: Sender<Vec<f32>>,
     metrics: Arc<MicrophoneMetrics>,
     error: Arc<Mutex<Option<String>>>,
+    start_gate: Arc<StartGate>,
 ) -> Result<Stream, CaptureError> {
     let config: StreamConfig = (*supported).into();
     macro_rules! stream {
         ($sample:ty) => {
-            build_typed_stream::<$sample>(device, &config, sender, metrics, error)
+            build_typed_stream::<$sample>(device, &config, sender, metrics, error, start_gate)
         };
     }
     match supported.sample_format() {
@@ -218,6 +241,7 @@ fn build_typed_stream<T>(
     sender: Sender<Vec<f32>>,
     metrics: Arc<MicrophoneMetrics>,
     error: Arc<Mutex<Option<String>>>,
+    start_gate: Arc<StartGate>,
 ) -> Result<Stream, CaptureError>
 where
     T: SizedSample + Sample,
@@ -229,6 +253,9 @@ where
         .build_input_stream::<T, _, _>(
             *config,
             move |input, _| {
+                if !start_gate.is_released() {
+                    return;
+                }
                 let count = input.len() as u64;
                 let samples = input.iter().copied().map(f32::from_sample).collect();
                 match sender.try_send(samples) {

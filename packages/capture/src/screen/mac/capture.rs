@@ -19,7 +19,7 @@ use screencapturekit::{
     },
 };
 
-use crate::{CaptureError, model::SourceId};
+use crate::{CaptureError, model::SourceId, session::StartGate};
 
 pub struct MacRecording {
     stream: Option<SCStream>,
@@ -51,6 +51,7 @@ impl MacRecording {
         output: &Path,
         fps: u32,
         exclude_cursor: bool,
+        start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if fps == 0 {
             return Err(CaptureError::InvalidConfiguration(
@@ -78,10 +79,17 @@ impl MacRecording {
         })?;
         let metrics = Arc::new(MacCaptureMetrics::default());
         let callback_metrics = metrics.clone();
+        let callback_gate = start_gate;
         let mut stream = SCStream::new(&filter, &configuration);
         let frame_handler = stream
             .add_output_handler(
                 move |_, _| {
+                    if !callback_gate.is_released() && callback_gate.wait().is_err() {
+                        callback_metrics
+                            .frames_dropped
+                            .fetch_add(1, Ordering::Relaxed);
+                        return;
+                    }
                     callback_metrics
                         .frames_received
                         .fetch_add(1, Ordering::Relaxed);

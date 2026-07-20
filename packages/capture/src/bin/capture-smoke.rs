@@ -83,8 +83,14 @@ fn record_windows_screen() -> Result<(), capture::CaptureError> {
         .unwrap_or(10);
     let output = argument("--output")
         .map_or_else(|| PathBuf::from("capture-smoke-screen.mp4"), PathBuf::from);
-    let recording =
-        capture::screen::win::WindowsRecording::start(&source.id, &output, 12_000_000, 60, true)?;
+    let recording = capture::screen::win::WindowsRecording::start(
+        &source.id,
+        &output,
+        12_000_000,
+        60,
+        true,
+        started_gate()?,
+    )?;
     let metrics = recording.metrics();
     std::thread::sleep(Duration::from_secs(duration));
     recording.stop()?;
@@ -110,6 +116,13 @@ fn argument(name: &str) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(any(windows, feature = "microphone"))]
+fn started_gate() -> Result<std::sync::Arc<capture::session::StartGate>, capture::CaptureError> {
+    let gate = std::sync::Arc::new(capture::session::StartGate::new());
+    gate.release(0)?;
+    Ok(gate)
 }
 
 #[cfg(windows)]
@@ -191,6 +204,7 @@ fn record_microphone() -> Result<(), capture::CaptureError> {
         },
         &output,
         32,
+        started_gate()?,
     )?;
     let metrics = recording.metrics();
     let sample_rate = recording.sample_rate();
@@ -334,7 +348,7 @@ fn record_windows_system_audio() -> Result<(), capture::CaptureError> {
         || PathBuf::from("capture-smoke-system-audio.wav"),
         PathBuf::from,
     );
-    let recording = WasapiLoopbackRecording::start(source.as_ref(), &output)?;
+    let recording = WasapiLoopbackRecording::start(source.as_ref(), &output, started_gate()?)?;
     let metrics = recording.metrics();
     let sample_rate = recording.sample_rate();
     let channels = recording.channels();
@@ -390,6 +404,12 @@ fn record_windows_camera() -> Result<(), capture::CaptureError> {
         },
         &output,
         6_000_000,
+        8,
+        {
+            let gate = std::sync::Arc::new(capture::session::StartGate::new());
+            gate.release(0)?;
+            gate
+        },
     )?;
     let metrics = recording.metrics();
     let format = recording.format();
@@ -407,6 +427,8 @@ fn record_windows_camera() -> Result<(), capture::CaptureError> {
             "fps": format.frame_rate(),
             "pixelFormat": format.format().to_string(),
             "framesReceived": metrics.frames_received(),
+            "framesAcquired": metrics.frames_acquired(),
+            "framesEncoded": metrics.frames_encoded(),
             "framesDropped": metrics.frames_dropped(),
             "interruptions": metrics.interruptions(),
         }),

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Button from '~/ui/button/Button.vue'
-import Tooltip from '~/ui/tooltip/Tooltip.vue'
 import Popover from '~/ui/popover/Popover.vue'
 import Select from '~/ui/select/Select.vue'
 import Dialog from '~/ui/dialog/Dialog.vue'
@@ -11,7 +10,7 @@ import Switch from '~/ui/switch/Switch.vue'
 import Slider from '~/ui/slider/Slider.vue'
 import Badge from '~/ui/badge/Badge.vue'
 import { useToastStore } from '~/ui/toast/toastStore'
-import { Video, Settings, Mic, Volume2, Shield } from '@lucide/vue'
+import { Video, Settings, Volume2, Shield } from '@lucide/vue'
 
 const toastStore = useToastStore()
 
@@ -165,7 +164,7 @@ const toggleRecording = () => {
             <p class="section-description">Click-triggered floating overlays and full-screen modals.</p>
             <div class="popover-row">
               <Popover align="center">
-                <template #trigger="{ isOpen }">
+                <template #trigger>
                   <Button variant="outline">
                     Toggle Popover Menu
                   </Button>

@@ -12,7 +12,7 @@ use std::{
 
 use wasapi::{DeviceEnumerator, Direction, SampleType, StreamMode, WaveFormat, initialize_mta};
 
-use crate::{CaptureError, audio::WavSegmentWriter, model::SourceId};
+use crate::{CaptureError, audio::WavSegmentWriter, model::SourceId, session::StartGate};
 
 #[derive(Debug, Default)]
 pub struct SystemAudioMetrics {
@@ -40,7 +40,11 @@ pub struct WasapiLoopbackRecording {
 }
 
 impl WasapiLoopbackRecording {
-    pub fn start(source_id: Option<&SourceId>, output: &Path) -> Result<Self, CaptureError> {
+    pub fn start(
+        source_id: Option<&SourceId>,
+        output: &Path,
+        start_gate: Arc<StartGate>,
+    ) -> Result<Self, CaptureError> {
         let selected = source_id.map(ToString::to_string);
         let output = output.to_owned();
         let cancel = Arc::new(AtomicBool::new(false));
@@ -57,6 +61,7 @@ impl WasapiLoopbackRecording {
                     &thread_cancel,
                     &thread_metrics,
                     &ready_sender,
+                    &start_gate,
                 )
             })
             .map_err(backend_error)?;
@@ -111,6 +116,7 @@ fn capture_loop(
     cancel: &AtomicBool,
     metrics: &SystemAudioMetrics,
     ready: &mpsc::SyncSender<Result<(u32, u16), CaptureError>>,
+    start_gate: &Arc<StartGate>,
 ) -> Result<u64, CaptureError> {
     let initialized = initialize_loopback(selected);
     let (client, format) = match initialized {
@@ -122,12 +128,13 @@ fn capture_loop(
     };
     let sample_rate = format.get_samplespersec();
     let channels = format.get_nchannels();
-    ready
-        .send(Ok((sample_rate, channels)))
-        .map_err(|_| CaptureError::Backend("WASAPI startup receiver closed".into()))?;
     let capture = client.get_audiocaptureclient().map_err(backend_error)?;
     let mut writer = WavSegmentWriter::create(output, sample_rate, channels)?;
     let mut bytes = VecDeque::new();
+    ready
+        .send(Ok((sample_rate, channels)))
+        .map_err(|_| CaptureError::Backend("WASAPI startup receiver closed".into()))?;
+    start_gate.wait()?;
     let started = Instant::now();
     client.start_stream().map_err(backend_error)?;
     while !cancel.load(Ordering::Acquire) {

@@ -3,6 +3,7 @@ use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, AtomicU64, Ordering},
+        mpsc,
     },
     thread::JoinHandle,
     time::{Duration, Instant},
@@ -11,6 +12,7 @@ use std::{
 use crate::{
     CaptureError,
     cursor::{CaptureRegion, CursorBitmap, CursorEvent, CursorEventWriter, ShapeStore},
+    session::StartGate,
     storage::write_atomic,
 };
 
@@ -50,6 +52,7 @@ impl WindowsCursorRecording {
         capture_clicks: bool,
         capture_shape: bool,
         segment_start_ns: u64,
+        start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         std::fs::create_dir_all(directory)
             .map_err(|error| CaptureError::storage(directory, error))?;
@@ -62,6 +65,7 @@ impl WindowsCursorRecording {
         let metrics = Arc::new(CursorCaptureMetrics::default());
         let thread_metrics = metrics.clone();
         let thread_partial = partial_path.clone();
+        let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
         let thread = std::thread::Builder::new()
             .name("capture-windows-cursor".into())
             .spawn(move || {
@@ -74,9 +78,14 @@ impl WindowsCursorRecording {
                     segment_start_ns,
                     &thread_cancel,
                     &thread_metrics,
+                    &ready_sender,
+                    &start_gate,
                 )
             })
             .map_err(backend_error)?;
+        ready_receiver
+            .recv()
+            .map_err(|_| CaptureError::Backend("cursor startup channel closed".into()))??;
         Ok(Self {
             cancel,
             thread: Some(thread),
@@ -133,10 +142,16 @@ fn capture_loop(
     segment_start_ns: u64,
     cancel: &AtomicBool,
     metrics: &CursorCaptureMetrics,
+    ready: &mpsc::SyncSender<Result<(), CaptureError>>,
+    start_gate: &Arc<StartGate>,
 ) -> Result<(), CaptureError> {
-    let started = Instant::now();
     let mut writer = CursorEventWriter::open(partial_path)?;
     let mut shapes = ShapeStore::new(shapes_directory)?;
+    ready
+        .send(Ok(()))
+        .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
+    start_gate.wait()?;
+    let started = Instant::now();
     let mut previous = Previous::default();
     while !cancel.load(Ordering::Acquire) {
         let session_ns = segment_start_ns
