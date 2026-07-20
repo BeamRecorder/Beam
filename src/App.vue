@@ -86,7 +86,7 @@ const handleOpenProject = (project: CaptureProject) => {
   height: 100vh;
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   overflow: hidden;
 }
 </style>

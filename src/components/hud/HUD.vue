@@ -99,6 +99,7 @@ const loadPreviews = async () => {
 
 const activeDropdowns = ref(0)
 let lastHeight = 360
+let lastWidth = 320
 
 const updateWindowSize = () => {
   let targetHeight = 360
@@ -113,29 +114,36 @@ const updateWindowSize = () => {
     }
   }
 
-  if (targetHeight > lastHeight) {
-    // Grow the Electron window instantly so the CSS height transition of the card is not clipped
-    capture.setSize(320, targetHeight)
-  } else if (targetHeight < lastHeight) {
-    // Wait for the card's CSS transition (200ms) to complete before shrinking the Electron window
+  const isDropdownOpen = activeDropdowns.value > 0
+  const targetWidth = isDropdownOpen ? 365 : 320
+
+  if (targetHeight > lastHeight || targetWidth > lastWidth) {
+    // Grow the Electron window instantly so transitions are not clipped
+    capture.setSize(targetWidth, targetHeight)
+  } else if (targetHeight < lastHeight || targetWidth < lastWidth) {
+    // Wait for the card's CSS transition (200ms) to complete before shrinking
     setTimeout(() => {
-      let currentTarget = 360
+      let currentTargetHeight = 360
       if (showSettings.value || showProjectPicker.value) {
-        currentTarget = 520
+        currentTargetHeight = 520
       } else {
         const isDropdownOpen = activeDropdowns.value > 0
         if (activeTab.value === 'window') {
-          currentTarget = isDropdownOpen ? 580 : 420
+          currentTargetHeight = isDropdownOpen ? 580 : 420
         } else {
-          currentTarget = isDropdownOpen ? 520 : 360
+          currentTargetHeight = isDropdownOpen ? 520 : 360
         }
       }
-      if (currentTarget === targetHeight) {
-        capture.setSize(320, targetHeight)
+      const isDropdownCurrentlyOpen = activeDropdowns.value > 0
+      const currentTargetWidth = isDropdownCurrentlyOpen ? 365 : 320
+      
+      if (currentTargetHeight === targetHeight && currentTargetWidth === targetWidth) {
+        capture.setSize(targetWidth, targetHeight)
       }
     }, 200)
   }
   lastHeight = targetHeight
+  lastWidth = targetWidth
 }
 
 const hudHeight = computed(() => {
@@ -332,6 +340,7 @@ const openProject = (project: CaptureProject) => {
         key="project-picker"
         @back="closeProjectPicker"
         @open-project="openProject"
+        @toggle-popover="handleDropdownToggle"
       />
 
       <!-- Settings Overlay View -->
@@ -525,7 +534,7 @@ const openProject = (project: CaptureProject) => {
 
 <style scoped>
 .hud-wrapper {
-  width: 100%;
+  width: 320px;
   background: var(--color-bg-surface); /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);

@@ -17,6 +17,7 @@ const emit = defineEmits<{
   (event: 'back'): void
   (event: 'open-project', project: CaptureProject): void
   (event: 'select-project', project: CaptureProject): void
+  (event: 'toggle-popover', isOpen: boolean): void
 }>()
 
 const props = withDefaults(
@@ -204,6 +205,10 @@ const handleDeleteProject = async () => {
   }
 }
 
+const handlePopoverToggle = (isOpen: boolean) => {
+  emit('toggle-popover', isOpen)
+}
+
 defineExpose({
   refresh: loadProjects,
   invalidate: () => {
@@ -302,7 +307,7 @@ defineExpose({
                   <div class="project-title-row">
                     <span class="project-card-name" :title="project.name">{{ project.name }}</span>
                     <div class="project-card-actions" @click.stop @mousedown.stop>
-                      <Popover align="right" direction="down">
+                      <Popover align="right" direction="down" @toggle="handlePopoverToggle">
                         <template #trigger="{ isOpen }">
                           <Button
                             variant="ghost"
@@ -489,6 +494,14 @@ defineExpose({
   background: var(--color-bg-element);
 }
 
+.project-card:hover {
+  transform: none !important;
+}
+
+.project-card:hover:not(.is-selected) {
+  border-color: var(--color-primary-hover) !important;
+}
+
 .project-card-actions {
   flex-shrink: 0;
   opacity: 0;
@@ -529,26 +542,36 @@ defineExpose({
   gap: 2px;
 }
 
-.menu-action-item {
+.action-menu-content :deep(.btn) {
   width: 100% !important;
   justify-content: flex-start !important;
   padding: 0.4rem 0.8rem !important;
   font-size: 0.8rem !important;
   border-radius: 6px !important;
   border: none !important;
+  border-color: transparent !important;
   font-weight: 500 !important;
+  box-shadow: none !important;
 }
 
-.menu-action-item:hover {
-  background: var(--color-bg-surface-hover) !important;
+.action-menu-content :deep(.btn:hover) {
+  background: var(--color-primary) !important;
+  color: white !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
-.menu-action-item.delete-item {
+.action-menu-content :deep(.delete-item) {
   color: var(--color-error) !important;
 }
 
-.menu-action-item.delete-item:hover {
-  background: var(--color-error-light) !important;
+.action-menu-content :deep(.delete-item:hover) {
+  background: var(--color-error) !important;
+  color: white !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .project-preview {
@@ -594,9 +617,10 @@ defineExpose({
 .project-card-info {
   display: flex;
   flex-direction: column;
-  padding: 6px 7px 6px;
+  padding: 3px 7px 4px;
   min-width: 0;
   width: 100%;
+  gap: 1px;
 }
 
 .project-title-row {
@@ -624,7 +648,7 @@ defineExpose({
 }
 
 .project-card-meta {
-  padding-top: 2px;
+  padding-top: 0;
   color: var(--text-muted);
   font-size: 9px;
 }

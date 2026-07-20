@@ -164,7 +164,7 @@ defineExpose({
   box-shadow: var(--shadow-lg);
   padding: 4px 0;
   z-index: 50;
-  min-width: 220px;
+  min-width: max-content;
 }
 
 .popover-content.popover-block {
