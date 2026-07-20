@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import TimelineToolbar from './TimelineToolbar.vue';
 import TimelineTracks from './TimelineTracks.vue';
+import type { ZoomElement } from '../zoom/zoom-types';
 
 const props = defineProps<{
   currentTime: number;
@@ -13,6 +14,8 @@ const props = defineProps<{
   isVideoEnabled: boolean;
   isSystemAudioEnabled: boolean;
   isMicAudioEnabled: boolean;
+  zoomElements: ZoomElement[];
+  selectedZoomId: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -21,6 +24,7 @@ const emit = defineEmits<{
   (e: 'update:isVideoEnabled', value: boolean): void;
   (e: 'update:isSystemAudioEnabled', value: boolean): void;
   (e: 'update:isMicAudioEnabled', value: boolean): void;
+  (e: 'select:zoom', zoomId: string): void;
 }>();
 
 const zoomLevel = ref<number>(100);
@@ -77,7 +81,13 @@ onUnmounted(() => {
       :is-video-enabled="isVideoEnabled"
       :is-system-audio-enabled="isSystemAudioEnabled"
       :is-mic-audio-enabled="isMicAudioEnabled"
+      :zoom-elements="zoomElements"
+      :selected-zoom-id="selectedZoomId"
       @update:currentTime="emit('update:currentTime', $event)"
+      @select:zoom="emit('select:zoom', $event)"
+      @toggle:video="emit('update:isVideoEnabled', !isVideoEnabled)"
+      @toggle:systemAudio="emit('update:isSystemAudioEnabled', !isSystemAudioEnabled)"
+      @toggle:micAudio="emit('update:isMicAudioEnabled', !isMicAudioEnabled)"
     />
   </div>
 </template>

@@ -227,6 +227,61 @@ function readCursorEvents(cursorPath) {
   }
 }
 
+function emptyZoomState() {
+  return { elements: [], generatedSessions: [] }
+}
+
+function isFiniteNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function validateZoomState(value) {
+  if (!value || !Array.isArray(value.elements) || !Array.isArray(value.generatedSessions)) {
+    throw new Error('État des zooms invalide')
+  }
+  const ids = new Set()
+  const elements = value.elements.map((element) => {
+    if (!element || typeof element.id !== 'string' || !element.id || ids.has(element.id)) {
+      throw new Error('Identifiant de zoom invalide')
+    }
+    ids.add(element.id)
+    if (
+      typeof element.sessionId !== 'string' ||
+      !isFiniteNumber(element.startMs) || !isFiniteNumber(element.endMs) ||
+      element.endMs <= element.startMs ||
+      !element.focus || !isFiniteNumber(element.focus.cx) || !isFiniteNumber(element.focus.cy) ||
+      element.focus.cx < 0 || element.focus.cx > 1 || element.focus.cy < 0 || element.focus.cy > 1 ||
+      !isFiniteNumber(element.scale) || element.scale < 1 || element.scale > 3 ||
+      !isFiniteNumber(element.speed) || element.speed < 0.5 || element.speed > 2 ||
+      !['automatic', 'manual'].includes(element.source)
+    ) throw new Error('Propriétés de zoom invalides')
+    return {
+      id: element.id,
+      sessionId: element.sessionId,
+      startMs: Math.round(element.startMs),
+      endMs: Math.round(element.endMs),
+      focus: { cx: element.focus.cx, cy: element.focus.cy },
+      scale: element.scale,
+      speed: element.speed,
+      source: element.source,
+    }
+  })
+  const generatedSessions = value.generatedSessions.map((record) => {
+    if (!record || typeof record.sessionId !== 'string' || !record.sessionId || !Number.isInteger(record.algorithmVersion) || typeof record.generatedAt !== 'string') {
+      throw new Error('Métadonnées de génération invalides')
+    }
+    return { sessionId: record.sessionId, algorithmVersion: record.algorithmVersion, generatedAt: record.generatedAt }
+  })
+  return { elements, generatedSessions }
+}
+
+function writeProjectManifest(projectDirectoryPath, manifest) {
+  const target = path.join(projectDirectoryPath, 'project.json')
+  const temporary = `${target}.tmp`
+  fs.writeFileSync(temporary, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  fs.renameSync(temporary, target)
+}
+
 function readProjectEditorData(projectId) {
   const directory = projectDirectory(projectId)
   const manifest = readProjectManifest(directory)
@@ -308,6 +363,7 @@ function readProjectEditorData(projectId) {
           ...Object.keys(shapeMetadata).filter((shapeId) => !shapes[shapeId]).map((shapeId) => `shapes/${shapeId}.png`),
         ],
       },
+      zoom: manifest.editor?.zoom ? validateZoomState(manifest.editor.zoom) : emptyZoomState(),
     }
   }
 
@@ -383,6 +439,16 @@ ipcMain.handle('projects:editor-data', (_event, payload = {}) => {
   return readProjectEditorData(payload.projectId)
 })
 
+ipcMain.handle('projects:save-zoom-state', (_event, payload = {}) => {
+  const directory = projectDirectory(payload.projectId)
+  const manifest = readProjectManifest(directory)
+  const zoom = validateZoomState(payload.zoom)
+  manifest.editor = { ...(manifest.editor || {}), zoom }
+  manifest.updatedAtUtc = new Date().toISOString()
+  writeProjectManifest(directory, manifest)
+  return zoom
+})
+
 ipcMain.handle('projects:create', (_event, options = {}) => {
   const id = randomUUID()
   const now = new Date().toISOString()
@@ -400,7 +466,7 @@ ipcMain.handle('projects:create', (_event, options = {}) => {
     updatedAtUtc: now,
     sessions: [],
   }
-  fs.writeFileSync(path.join(directory, 'project.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  writeProjectManifest(directory, manifest)
   return projectSummary(directory, manifest, id)
 })
 
@@ -411,7 +477,7 @@ ipcMain.handle('projects:rename', (_event, payload = {}) => {
   if (!name) throw new Error('Le nom du projet ne peut pas être vide')
   manifest.name = name
   manifest.updatedAtUtc = new Date().toISOString()
-  fs.writeFileSync(path.join(directory, 'project.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  writeProjectManifest(directory, manifest)
   return projectSummary(directory, manifest, payload.projectId)
 })
 

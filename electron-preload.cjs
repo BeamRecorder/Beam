@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('capture', Object.freeze({
   getSources: (types) => ipcRenderer.invoke('window:getSources', types),
   listProjects: () => ipcRenderer.invoke('projects:list'),
   getProjectEditorData: (projectId) => ipcRenderer.invoke('projects:editor-data', { projectId }),
+  saveProjectZoomState: (projectId, zoom) => ipcRenderer.invoke('projects:save-zoom-state', { projectId, zoom }),
   createProject: (options = {}) => ipcRenderer.invoke('projects:create', options),
   renameProject: (projectId, name) => ipcRenderer.invoke('projects:rename', { projectId, name }),
   deleteProject: (projectId) => ipcRenderer.invoke('projects:delete', { projectId }),

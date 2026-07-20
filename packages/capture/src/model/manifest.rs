@@ -46,6 +46,50 @@ pub struct ProjectSession {
     pub relative_path: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoomFocus {
+    pub cx: f64,
+    pub cy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoomElement {
+    pub id: String,
+    pub session_id: String,
+    pub start_ms: u64,
+    pub end_ms: u64,
+    pub focus: ZoomFocus,
+    pub scale: f64,
+    pub speed: f64,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoomGenerationRecord {
+    pub session_id: String,
+    pub algorithm_version: u32,
+    pub generated_at: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectZoomState {
+    #[serde(default)]
+    pub elements: Vec<ZoomElement>,
+    #[serde(default)]
+    pub generated_sessions: Vec<ZoomGenerationRecord>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectEditorState {
+    #[serde(default)]
+    pub zoom: ProjectZoomState,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectManifest {
@@ -56,4 +100,6 @@ pub struct ProjectManifest {
     pub created_at_utc: String,
     pub updated_at_utc: String,
     pub sessions: Vec<ProjectSession>,
+    #[serde(default)]
+    pub editor: ProjectEditorState,
 }

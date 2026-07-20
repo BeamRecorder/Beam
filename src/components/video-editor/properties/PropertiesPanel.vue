@@ -5,6 +5,8 @@ import CursorPanel from './CursorPanel.vue'
 import CanvasPanel from './CanvasPanel.vue'
 import TrimPanel from './TrimPanel.vue'
 import AudioPanel from './AudioPanel.vue'
+import ZoomPanel from './ZoomPanel.vue'
+import type { ZoomElement } from '../zoom/zoom-types'
 
 defineProps<{
   activeTab: string
@@ -25,6 +27,8 @@ defineProps<{
   // Background properties
   selectedBackground: string | null
   backgroundGroups: BackgroundMediaGroup[]
+  selectedZoom: ZoomElement | null
+  canGenerateZooms: boolean
 }>()
 
 const emit = defineEmits<{
@@ -38,6 +42,9 @@ const emit = defineEmits<{
   (e: 'update:isSystemAudioEnabled', value: boolean): void
   (e: 'update:isMicAudioEnabled', value: boolean): void
   (e: 'update:selectedBackground', value: string): void
+  (e: 'update:zoom', value: ZoomElement): void
+  (e: 'delete:zoom'): void
+  (e: 'generate:zooms'): void
 }>()
 </script>
 
@@ -82,6 +89,15 @@ const emit = defineEmits<{
         @update:volume="emit('update:volume', $event)"
         @update:isSystemAudioEnabled="emit('update:isSystemAudioEnabled', $event)"
         @update:isMicAudioEnabled="emit('update:isMicAudioEnabled', $event)"
+      />
+
+      <ZoomPanel
+        v-else-if="activeTab === 'zoom'"
+        :selected-zoom="selectedZoom"
+        :can-generate="canGenerateZooms"
+        @update="emit('update:zoom', $event)"
+        @delete="emit('delete:zoom')"
+        @generate="emit('generate:zooms')"
       />
     </div>
   </div>

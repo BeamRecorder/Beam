@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MousePointer, Scissors, Volume2, Monitor } from "@lucide/vue";
+import { MousePointer, Scissors, Volume2, Monitor, ZoomIn } from "@lucide/vue";
 
 defineProps<{
   activeTab: string;
@@ -12,6 +12,7 @@ const emit = defineEmits<{
 const menuItems = [
   { id: "cursor", label: "Cursor", icon: MousePointer },
   { id: "canvas", label: "Canvas", icon: Monitor },
+  { id: "zoom", label: "Zoom", icon: ZoomIn },
   { id: "trim", label: "Trim", icon: Scissors },
   { id: "audio", label: "Audio", icon: Volume2 },
 ];

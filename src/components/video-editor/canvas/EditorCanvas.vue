@@ -5,6 +5,8 @@ import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { CursorType } from '../composables/useCursorReplacer'
 import type { BackgroundMedia } from '../composables/backgroundMedia'
 import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../composables/cursorPlayback'
+import { zoomAtTime } from '../zoom/zoom-playback'
+import type { ZoomElement } from '../zoom/zoom-types'
 
 const props = defineProps<{
   isPlaying: boolean
@@ -19,12 +21,15 @@ const props = defineProps<{
   selectedBackground: BackgroundMedia | null
   videoSrc: string
   editorData?: ProjectEditorData | null
+  zoomElements: ZoomElement[]
+  selectedZoom: ZoomElement | null
 }>()
 
 const emit = defineEmits<{
   (e: 'update:isPlaying', value: boolean): void
   (e: 'update:currentTime', value: number): void
   (e: 'duration-change', value: number): void
+  (e: 'update:zoom', value: ZoomElement): void
 }>()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -37,6 +42,15 @@ const cursorImages = new Map<string, HTMLImageElement>()
 let resizeObserver: ResizeObserver | null = null
 let animationFrameId: number | null = null
 let lastDrawTime = 0
+const videoWindowBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null)
+const focusTargetStyle = computed(() => {
+  const bounds = videoWindowBounds.value
+  if (!props.selectedZoom || !bounds) return { display: 'none' }
+  return {
+    left: `${bounds.dx + props.selectedZoom.focus.cx * bounds.dw}px`,
+    top: `${bounds.dy + props.selectedZoom.focus.cy * bounds.dh}px`,
+  }
+})
 
 interface Ripple {
   x: number
@@ -84,7 +98,8 @@ watch(() => props.isPlaying, (playing) => {
 })
 
 watch(() => props.currentTime, (time) => {
-  if (Math.abs(videoEl.currentTime - time) > 0.15) videoEl.currentTime = time
+  const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, time))
+  if (Math.abs(videoEl.currentTime - clampedTime) > 0.15) videoEl.currentTime = clampedTime
 })
 
 const backgroundImg = new Image()
@@ -199,12 +214,20 @@ const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.fill()
   ctx.clip()
 
+  const zoom = zoomAtTime(props.zoomElements, props.currentTime * 1000)
+  const focusX = dx + (zoom?.focus.cx ?? 0.5) * dw
+  const focusY = dy + (zoom?.focus.cy ?? 0.5) * dh
+  const scale = zoom?.scale ?? 1
+  ctx.translate(dx + dw / 2, dy + dh / 2)
+  ctx.scale(scale, scale)
+  ctx.translate(-focusX, -focusY)
+
   if (videoError.value) {
     ctx.fillStyle = '#ef4444'
     ctx.font = '14px sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText(videoError.value, width / 2, height / 2)
-  } else if (videoEl.readyState >= 2) {
+    ctx.fillText(videoError.value, focusX, focusY)
+  } else if (videoEl.readyState >= 1) {
     // The canvas is DPR-scaled, so this draw remains sharp on HiDPI displays.
     ctx.drawImage(videoEl, dx, dy, dw, dh)
   } else {
@@ -216,7 +239,23 @@ const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: n
     ctx.fillText('Loading video recording...', width / 2, height / 2)
   }
   ctx.restore()
-  return { dx, dy, dw, dh }
+  videoWindowBounds.value = { dx, dy, dw, dh }
+  return { dx, dy, dw, dh, focusX, focusY, scale }
+}
+
+const transformedPoint = (point: { x: number; y: number }, videoWindow: { focusX: number; focusY: number; scale: number }) => ({
+  x: videoWindow.focusX + (point.x - videoWindow.focusX) * videoWindow.scale,
+  y: videoWindow.focusY + (point.y - videoWindow.focusY) * videoWindow.scale,
+})
+
+const updateSelectedFocus = (event: PointerEvent) => {
+  const canvas = canvasRef.value
+  const bounds = videoWindowBounds.value
+  if (!canvas || !bounds || !props.selectedZoom) return
+  const rect = canvas.getBoundingClientRect()
+  const cx = Math.min(1, Math.max(0, (event.clientX - rect.left - bounds.dx) / bounds.dw))
+  const cy = Math.min(1, Math.max(0, (event.clientY - rect.top - bounds.dy) / bounds.dh))
+  emit('update:zoom', { ...props.selectedZoom, focus: { cx, cy } })
 }
 
 const drawCursorWarning = (ctx: CanvasRenderingContext2D, message: string, width: number) => {
@@ -268,10 +307,11 @@ const draw = () => {
     lastDrawTime = time
 
     for (const ripple of ripples.value) {
+      const position = transformedPoint(ripple, videoWindow)
       ctx.strokeStyle = `rgba(255, 90, 31, ${ripple.alpha})`
       ctx.lineWidth = 3
       ctx.beginPath()
-      ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2)
+      ctx.arc(position.x, position.y, ripple.radius * videoWindow.scale, 0, Math.PI * 2)
       ctx.stroke()
       if (props.isPlaying) {
         ripple.radius += 1.5
@@ -287,8 +327,10 @@ const draw = () => {
       const scale = props.cursorSize / image.naturalWidth
       const drawWidth = image.naturalWidth * scale
       const drawHeight = image.naturalHeight * scale
-      const pointerX = videoWindow.dx + state.x * videoWindow.dw
-      const pointerY = videoWindow.dy + state.y * videoWindow.dh
+      const pointer = transformedPoint({
+        x: videoWindow.dx + state.x * videoWindow.dw,
+        y: videoWindow.dy + state.y * videoWindow.dh,
+      }, videoWindow)
       ctx.save()
       if (props.enableShadow) {
         ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
@@ -298,10 +340,10 @@ const draw = () => {
       }
       ctx.drawImage(
         image,
-        pointerX - asset.hotspot.x * scale,
-        pointerY - asset.hotspot.y * scale,
-        drawWidth,
-        drawHeight,
+        pointer.x - asset.hotspot.x * scale * videoWindow.scale,
+        pointer.y - asset.hotspot.y * scale * videoWindow.scale,
+        drawWidth * videoWindow.scale,
+        drawHeight * videoWindow.scale,
       )
       ctx.restore()
     } else if (state?.shapeId && !asset) {
@@ -341,7 +383,8 @@ onUnmounted(() => {
 
 <template>
   <div class="canvas-island" ref="containerRef">
-    <canvas ref="canvasRef" class="editor-canvas"></canvas>
+    <canvas ref="canvasRef" class="editor-canvas" @pointerdown="updateSelectedFocus"></canvas>
+    <div class="zoom-focus-target" :style="focusTargetStyle" aria-hidden="true"></div>
     <div class="canvas-play-controls">
       <button class="play-btn" @click="emit('update:isPlaying', !isPlaying)">
         <Play v-if="!isPlaying" class="ctrl-icon" />
@@ -373,6 +416,17 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.zoom-focus-target {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
 }
 
 .canvas-play-controls {

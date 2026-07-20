@@ -3,6 +3,7 @@ import { computed, ref, onMounted, watch } from 'vue';
 import { Video, Volume2, Mic, MousePointer, Paintbrush } from '@lucide/vue';
 import { useThumbnails } from './waveform/useThumbnails';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
+import type { ZoomElement } from '../zoom/zoom-types';
 
 const props = defineProps<{
   currentTime: number;
@@ -14,22 +15,45 @@ const props = defineProps<{
   isVideoEnabled: boolean;
   isSystemAudioEnabled: boolean;
   isMicAudioEnabled: boolean;
+  zoomElements: ZoomElement[];
+  selectedZoomId: string | null;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:currentTime', value: number): void;
   (e: 'update:zoomLevel', value: number): void;
+  (e: 'toggle:video'): void;
+  (e: 'toggle:systemAudio'): void;
+  (e: 'toggle:micAudio'): void;
+  (e: 'select:zoom', zoomId: string): void;
 }>();
+
+const zoomElementStyle = (element: ZoomElement) => ({
+  left: `${props.duration > 0 ? (element.startMs / 1000 / props.duration) * 100 : 0}%`,
+  width: `${props.duration > 0 ? ((element.endMs - element.startMs) / 1000 / props.duration) * 100 : 0}%`,
+});
 
 const tracksScrollRef = ref<HTMLDivElement | null>(null);
 const tracksViewportRef = ref<HTMLDivElement | null>(null);
 
-// Generate stable heights for simulated waveforms
+// Generate stable heights for simulated waveforms with realistic envelopes & pauses
 const systemAudioWaveBars = computed(() => {
-  const barCount = 120; // fixed count of bars to avoid overflow issues
+  const barCount = 120;
   const bars = [];
   for (let i = 0; i < barCount; i++) {
-    const height = 8 + Math.abs(Math.sin(i * 0.15)) * 18 + Math.abs(Math.cos(i * 0.4)) * 6;
+    const progress = i / barCount;
+    // Fade in at start, fade out at end
+    let envelope = 1;
+    if (progress < 0.08) {
+      envelope = progress / 0.08;
+    } else if (progress > 0.92) {
+      envelope = (1 - progress) / 0.08;
+    }
+    // Sentence word bursts (pauses every now and then)
+    const sentenceWave = Math.sin(progress * Math.PI * 6);
+    const wordGap = sentenceWave > -0.3 ? 1.0 : 0.15;
+    
+    const height = 4 + (Math.abs(Math.sin(i * 0.25)) * 16 + Math.abs(Math.cos(i * 0.5)) * 6) * envelope * wordGap;
     bars.push(height);
   }
   return bars;
@@ -39,7 +63,18 @@ const micAudioWaveBars = computed(() => {
   const barCount = 120;
   const bars = [];
   for (let i = 0; i < barCount; i++) {
-    const height = 4 + Math.abs(Math.sin(i * 0.3)) * 15 + Math.abs(Math.cos(i * 0.6)) * 5;
+    const progress = i / barCount;
+    // Different fade points and pauses to look unique
+    let envelope = 1;
+    if (progress < 0.12) {
+      envelope = progress / 0.12;
+    } else if (progress > 0.88) {
+      envelope = (1 - progress) / 0.12;
+    }
+    const sentenceWave = Math.sin(progress * Math.PI * 8 + 1);
+    const wordGap = sentenceWave > -0.15 ? 1.0 : 0.1;
+    
+    const height = 3 + (Math.abs(Math.sin(i * 0.4)) * 14 + Math.abs(Math.cos(i * 0.75)) * 5) * envelope * wordGap;
     bars.push(height);
   }
   return bars;
@@ -56,7 +91,9 @@ const handleWheel = (e: WheelEvent) => {
 };
 
 // Initialize thumbnail extraction composable
-const { thumbnails, requestVisibleFrames } = useThumbnails(props.videoSrc || '');
+const { thumbnails, requestVisibleFrames } = useThumbnails(computed(() => props.videoSrc));
+
+const ticksAreaRef = ref<HTMLDivElement | null>(null);
 
 // Calculate tracks width based on zoom level
 const tracksWidthStyle = computed(() => {
@@ -74,13 +111,15 @@ const playheadStyle = computed(() => {
   };
 });
 
-// Perform scrub calculation
+// Perform scrub calculation with 1s margins
 const handleScrub = (e: MouseEvent) => {
-  if (!tracksViewportRef.value) return;
-  const rect = tracksViewportRef.value.getBoundingClientRect();
+  if (!ticksAreaRef.value) return;
+  const rect = ticksAreaRef.value.getBoundingClientRect();
   const clickX = e.clientX - rect.left;
-  const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-  emit('update:currentTime', percentage * props.duration);
+  const percentage = clickX / rect.width;
+  const targetTime = percentage * props.duration;
+  const margin = 1; // 1 second margin allowance
+  emit('update:currentTime', Math.max(-margin, Math.min(props.duration + margin, targetTime)));
 };
 
 // Handle timeline scrubbing on drag
@@ -141,19 +180,22 @@ watch(() => [props.zoomLevel, props.videoSrc], () => {
 
 // Auto scroll timeline to follow playhead if zoomed in
 watch(() => props.currentTime, (time) => {
-  if (!tracksScrollRef.value || !tracksViewportRef.value || isDragging) return;
+  if (!tracksScrollRef.value || !ticksAreaRef.value || isDragging) return;
   
   const scrollContainer = tracksScrollRef.value;
-  const viewport = tracksViewportRef.value;
+  const ticksArea = ticksAreaRef.value;
   
   const percentage = time / props.duration;
-  const playheadX = percentage * viewport.scrollWidth;
+  const playheadX = 120 + percentage * ticksArea.clientWidth;
   
   const leftBound = scrollContainer.scrollLeft + 80;
   const rightBound = scrollContainer.scrollLeft + scrollContainer.clientWidth - 80;
   
   if (playheadX < leftBound || playheadX > rightBound) {
-    scrollContainer.scrollLeft = playheadX - scrollContainer.clientWidth / 2;
+    scrollContainer.scrollTo({
+      left: playheadX - scrollContainer.clientWidth / 2,
+      behavior: 'smooth'
+    });
   }
 });
 
@@ -168,20 +210,23 @@ onMounted(() => {
       
       <!-- Ruler/Header -->
       <div class="timeline-ruler" @mousedown="handleMouseDown">
-        <div 
-          v-for="sec in duration + 1" 
-          :key="sec" 
-          class="ruler-marker"
-          :class="{ 'is-major': (sec - 1) % 5 === 0 }"
-          :style="{ left: `${((sec - 1) / duration) * 100}%` }"
-        >
-          <span v-if="(sec - 1) % 5 === 0" class="marker-label">{{ sec - 1 }}s</span>
-          <div class="marker-tick"></div>
-        </div>
-        
-        <!-- Scrub Playhead vertical indicator line -->
-        <div class="timeline-playhead" :style="playheadStyle">
-          <div class="playhead-knob"></div>
+        <div class="ruler-info-spacer"></div>
+        <div class="ruler-ticks-area" ref="ticksAreaRef">
+          <div 
+            v-for="sec in duration + 1" 
+            :key="sec" 
+            class="ruler-marker"
+            :class="{ 'is-major': (sec - 1) % 5 === 0 }"
+            :style="{ left: `${((sec - 1) / duration) * 100}%` }"
+          >
+            <span v-if="(sec - 1) % 5 === 0" class="marker-label">{{ sec - 1 }}s</span>
+            <div class="marker-tick"></div>
+          </div>
+          
+          <!-- Scrub Playhead vertical indicator line -->
+          <div class="timeline-playhead" :style="playheadStyle">
+            <div class="playhead-knob"></div>
+          </div>
         </div>
       </div>
 
@@ -190,7 +235,7 @@ onMounted(() => {
         
         <!-- Video Track -->
         <div class="track-row video-track" :class="{ disabled: !isVideoEnabled }">
-          <div class="track-info">
+          <div class="track-info" @click="emit('toggle:video')" title="Click to toggle Video track">
             <Video class="track-icon" />
             <span class="track-title">Video</span>
           </div>
@@ -217,7 +262,7 @@ onMounted(() => {
 
         <!-- Audio System Track -->
         <div class="track-row audio-track" :class="{ disabled: !isSystemAudioEnabled }">
-          <div class="track-info">
+          <div class="track-info" @click="emit('toggle:systemAudio')" title="Click to toggle System Audio track">
             <Volume2 class="track-icon" />
             <span class="track-title">System</span>
           </div>
@@ -233,7 +278,7 @@ onMounted(() => {
 
         <!-- Audio Microphone Track -->
         <div class="track-row audio-track" :class="{ disabled: !isMicAudioEnabled }">
-          <div class="track-info">
+          <div class="track-info" @click="emit('toggle:micAudio')" title="Click to toggle Microphone track">
             <Mic class="track-icon" />
             <span class="track-title">Microphone</span>
           </div>
@@ -246,15 +291,25 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Cursor Zooms Track (Future placeholder) -->
+        <!-- Zoom elements -->
         <div class="track-row cursor-track">
           <div class="track-info">
             <MousePointer class="track-icon" />
-            <span class="track-title">Cursors</span>
+            <span class="track-title">Zooms</span>
           </div>
           <div class="track-content cursor-content">
-            <div class="cursor-zoom-indicator" :style="{ left: '25%', width: '15%' }">Cursor Zoom 1</div>
-            <div class="cursor-zoom-indicator" :style="{ left: '60%', width: '10%' }">Cursor Zoom 2</div>
+            <button
+              v-for="element in zoomElements"
+              :key="element.id"
+              type="button"
+              class="cursor-zoom-indicator"
+              :class="{ selected: element.id === selectedZoomId }"
+              :style="zoomElementStyle(element)"
+              :title="`Zoom ${element.scale.toFixed(2)}×`"
+              @click.stop="emit('select:zoom', element.id)"
+            >
+              {{ element.scale.toFixed(2) }}×
+            </button>
           </div>
         </div>
 
@@ -293,12 +348,25 @@ onMounted(() => {
 
 /* Ruler */
 .timeline-ruler {
-  height: 20px;
+  height: 28px;
   background: var(--color-bg-element);
   border-bottom: 1px solid var(--color-border);
-  position: relative;
-  cursor: ew-resize;
+  display: flex;
   user-select: none;
+}
+
+.ruler-info-spacer {
+  width: 120px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.ruler-ticks-area {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  cursor: ew-resize;
 }
 
 .ruler-marker {
@@ -317,18 +385,17 @@ onMounted(() => {
   color: var(--text-muted);
   font-family: monospace;
   position: absolute;
-  bottom: 8px;
-  transform: translateY(-50%);
+  top: 4px;
 }
 
 .marker-tick {
   width: 1px;
-  height: 4px;
+  height: 6px;
   background-color: var(--color-border-strong);
 }
 
 .is-major .marker-tick {
-  height: 8px;
+  height: 10px;
   background-color: var(--color-border-dark);
 }
 
@@ -339,7 +406,7 @@ onMounted(() => {
   bottom: 0;
   width: 2px;
   background: var(--color-primary);
-  z-index: 20;
+  z-index: 5;
   pointer-events: none;
   height: 200px; /* Stretch through all tracks */
 }
@@ -389,6 +456,13 @@ onMounted(() => {
   padding: 0 8px;
   gap: 6px;
   z-index: 10;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--fast) ease;
+}
+
+.track-info:hover {
+  background: var(--color-bg-surface-hover);
 }
 
 .track-icon {
@@ -489,6 +563,13 @@ onMounted(() => {
   justify-content: center;
   padding: 0 6px;
   box-shadow: var(--shadow-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.cursor-zoom-indicator.selected {
+  border-color: white;
+  outline: 2px solid var(--color-primary);
 }
 
 /* 4. Annotations Track */

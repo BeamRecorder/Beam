@@ -41,6 +41,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   getSources(types?: string[]): Promise<CapturePreview[]>
   listProjects(): Promise<CaptureProject[]>
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
+  saveProjectZoomState(projectId: string, zoom: ProjectZoomState): Promise<ProjectZoomState>
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
   deleteProject(projectId: string): Promise<void>

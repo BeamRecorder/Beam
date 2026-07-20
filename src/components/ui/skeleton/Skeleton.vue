@@ -39,10 +39,10 @@ const skeletonStyle = computed(() => ({
 /* Linear Shimmer (Left to Right) */
 @keyframes shimmer-linear {
   0% {
-    background-position: -200% 0;
+    background-position: 200% 0;
   }
   100% {
-    background-position: 200% 0;
+    background-position: -200% 0;
   }
 }
 

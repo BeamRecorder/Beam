@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import SidebarPanel from './sidebar/SidebarPanel.vue'
 import PropertiesPanel from './properties/PropertiesPanel.vue'
 import EditorCanvas from './canvas/EditorCanvas.vue'
@@ -26,6 +26,8 @@ const props = withDefaults(
 
 import { capture } from '../../api/capture'
 import type { CaptureProject, ProjectEditorData } from '../../api/types/capture-api'
+import type { ZoomElement } from './zoom/zoom-types'
+import { buildAutomaticZoomElements } from './zoom/zoom-suggestions'
 
 const emit = defineEmits<{
   (event: 'back-to-hud'): void
@@ -56,6 +58,63 @@ const {
 } = useCursorReplacer()
 
 const activeTab = ref('cursor')
+const zoomElements = ref<ZoomElement[]>([])
+const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([])
+const selectedZoomId = ref<string | null>(null)
+const selectedZoom = computed(() => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null)
+const canGenerateZooms = computed(() => Boolean(props.project && props.editorData?.cursor.available && props.editorData.sessionId))
+
+watch(() => props.editorData, (data) => {
+  zoomElements.value = data?.zoom.elements ?? []
+  generatedSessions.value = data?.zoom.generatedSessions ?? []
+  selectedZoomId.value = null
+}, { immediate: true })
+
+const saveZoomState = async () => {
+  if (!props.project) return
+  const zoom = await capture.saveProjectZoomState(props.project.id, {
+    elements: zoomElements.value,
+    generatedSessions: generatedSessions.value,
+  })
+  zoomElements.value = zoom.elements
+  generatedSessions.value = zoom.generatedSessions
+}
+
+const generateZooms = async (automatic = false) => {
+  const data = props.editorData
+  if (!data || !props.project || !data.cursor.available) return
+  const durationMs = data.manifest.durationNs / 1_000_000
+  const generated = buildAutomaticZoomElements({ events: data.cursor.events, sessionId: data.sessionId, durationMs })
+  zoomElements.value = [
+    ...zoomElements.value.filter((element) => element.sessionId !== data.sessionId || element.source !== 'automatic'),
+    ...generated,
+  ]
+  generatedSessions.value = [
+    ...generatedSessions.value.filter((record) => record.sessionId !== data.sessionId),
+    { sessionId: data.sessionId, algorithmVersion: 1, generatedAt: new Date().toISOString() },
+  ]
+  selectedZoomId.value = generated[0]?.id ?? null
+  await saveZoomState()
+  if (automatic) activeTab.value = 'zoom'
+}
+
+watch(() => props.editorData?.sessionId, (sessionId) => {
+  if (!sessionId || !props.editorData || generatedSessions.value.some((record) => record.sessionId === sessionId)) return
+  void generateZooms(true).catch((error) => console.error('Failed to generate zooms:', error))
+}, { immediate: true })
+
+const updateZoom = (next: ZoomElement) => {
+  if (next.startMs < 0 || next.endMs <= next.startMs || next.scale < 1 || next.scale > 3 || next.speed < 0.5 || next.speed > 2) return
+  zoomElements.value = zoomElements.value.map((element) => element.id === next.id ? next : element)
+  void saveZoomState().catch((error) => console.error('Failed to save zoom:', error))
+}
+
+const deleteSelectedZoom = () => {
+  if (!selectedZoomId.value) return
+  zoomElements.value = zoomElements.value.filter((element) => element.id !== selectedZoomId.value)
+  selectedZoomId.value = null
+  void saveZoomState().catch((error) => console.error('Failed to delete zoom:', error))
+}
 
 const handleSelectTab = (tab: string) => {
   activeTab.value = tab
@@ -133,6 +192,11 @@ watch(() => props.videoSrc, (videoSrc) => {
           v-model:isMicAudioEnabled="isMicAudioEnabled"
           v-model:selectedBackground="selectedBackground"
           :background-groups="backgroundGroups"
+          :selected-zoom="selectedZoom"
+          :can-generate-zooms="canGenerateZooms"
+          @update:zoom="updateZoom"
+          @delete:zoom="deleteSelectedZoom"
+          @generate:zooms="generateZooms()"
         />
 
         <!-- Canvas/Player Island -->
@@ -151,6 +215,9 @@ watch(() => props.videoSrc, (videoSrc) => {
           :selected-background="selectedBackgroundMedia"
           :video-src="playerVideoSrc || ''"
           :editor-data="editorData"
+          :zoom-elements="zoomElements"
+          :selected-zoom="selectedZoom"
+          @update:zoom="updateZoom"
           @duration-change="duration = $event"
         />
       </div>
@@ -166,6 +233,9 @@ watch(() => props.videoSrc, (videoSrc) => {
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
+          :zoom-elements="zoomElements"
+          :selected-zoom-id="selectedZoomId"
+          @select:zoom="selectedZoomId = $event; activeTab = 'zoom'"
         />
       </div>
     </div>

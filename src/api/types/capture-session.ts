@@ -65,6 +65,31 @@ export interface CursorShapeAsset {
   hotspot: { x: number; y: number }
 }
 
+export interface ZoomFocus {
+  cx: number
+  cy: number
+}
+
+export interface ZoomElement {
+  id: string
+  sessionId: string
+  startMs: number
+  endMs: number
+  focus: ZoomFocus
+  scale: number
+  speed: number
+  source: 'automatic' | 'manual'
+}
+
+export interface ProjectZoomState {
+  elements: ZoomElement[]
+  generatedSessions: Array<{
+    sessionId: string
+    algorithmVersion: number
+    generatedAt: string
+  }>
+}
+
 export interface SessionTrackAsset {
   path: string
   startNs: number
@@ -112,4 +137,5 @@ export interface ProjectEditorData {
     shapes: Record<string, CursorShapeAsset>
     missing: string[]
   }
+  zoom: ProjectZoomState
 }

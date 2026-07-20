@@ -1,6 +1,6 @@
-import { ref, onUnmounted, reactive } from 'vue';
+import { ref, onUnmounted, reactive, watch, type Ref } from 'vue';
 
-export function useThumbnails(videoSrc: string) {
+export function useThumbnails(videoSrcRef: Ref<string | null>) {
   const thumbnails = reactive<Record<number, string>>({});
   const isExtracting = ref(false);
   
@@ -10,10 +10,18 @@ export function useThumbnails(videoSrc: string) {
   let canvasCtx: CanvasRenderingContext2D | null = null;
   let resolveSeek: (() => void) | null = null;
 
+  // Watch videoSrcRef changes and update hiddenVideo src
+  watch(videoSrcRef, (newSrc) => {
+    if (hiddenVideo && newSrc) {
+      hiddenVideo.src = newSrc;
+      hiddenVideo.load();
+    }
+  });
+
   const initVideoAndCanvas = () => {
     if (!hiddenVideo) {
       hiddenVideo = document.createElement('video');
-      hiddenVideo.src = videoSrc;
+      hiddenVideo.src = videoSrcRef.value || '';
       hiddenVideo.muted = true;
       hiddenVideo.playsInline = true;
       hiddenVideo.preload = 'auto';
