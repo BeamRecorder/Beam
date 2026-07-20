@@ -94,18 +94,44 @@ const loadPreviews = async () => {
 }
 
 const activeDropdowns = ref(0)
+let lastHeight = 360
 
 const updateWindowSize = () => {
+  let targetHeight = 360
   if (showSettings.value) {
-    window.capture.setSizeSmooth(320, 480)
-    return
-  }
-  const isDropdownOpen = activeDropdowns.value > 0
-  if (activeTab.value === 'window') {
-    window.capture.setSizeSmooth(320, isDropdownOpen ? 580 : 420)
+    targetHeight = 480
   } else {
-    window.capture.setSizeSmooth(320, isDropdownOpen ? 520 : 360)
+    const isDropdownOpen = activeDropdowns.value > 0
+    if (activeTab.value === 'window') {
+      targetHeight = isDropdownOpen ? 580 : 420
+    } else {
+      targetHeight = isDropdownOpen ? 520 : 360
+    }
   }
+
+  if (targetHeight > lastHeight) {
+    // Grow the Electron window instantly so the CSS height transition of the card is not clipped
+    window.capture.setSize(320, targetHeight)
+  } else if (targetHeight < lastHeight) {
+    // Wait for the card's CSS transition (200ms) to complete before shrinking the Electron window
+    setTimeout(() => {
+      let currentTarget = 360
+      if (showSettings.value) {
+        currentTarget = 480
+      } else {
+        const isDropdownOpen = activeDropdowns.value > 0
+        if (activeTab.value === 'window') {
+          currentTarget = isDropdownOpen ? 580 : 420
+        } else {
+          currentTarget = isDropdownOpen ? 520 : 360
+        }
+      }
+      if (currentTarget === targetHeight) {
+        window.capture.setSize(320, targetHeight)
+      }
+    }, 200)
+  }
+  lastHeight = targetHeight
 }
 
 const hudHeight = computed(() => {
@@ -230,7 +256,7 @@ const minimizeApp = () => {
 </script>
 
 <template>
-  <div class="hud-wrapper" :class="[activeTab, { 'settings-open': showSettings }]" :style="{ height: `${hudHeight}px` }">
+  <div class="hud-wrapper" :class="[activeTab, { 'settings-open': showSettings, 'dropdown-open': activeDropdowns > 0 }]" :style="{ height: `${hudHeight}px` }">
     <!-- Header -->
     <header class="hud-header">
       <div class="logo-section">
@@ -461,6 +487,12 @@ const minimizeApp = () => {
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
+  transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden; /* Keep content clipped during transitions to avoid visual bugs */
+}
+
+.hud-wrapper.dropdown-open {
+  overflow: visible; /* Allow popovers to float when active */
 }
 
 .hud-header {

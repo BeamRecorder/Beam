@@ -74,9 +74,8 @@ fn engine_eof_finalizes_an_active_session() {
 
     let manifest = temporary
         .path()
-        .join(project_id.to_string())
-        .join("sessions")
-        .join(session_id)
+        .join(format!("project-{project_id}"))
+        .join(format!("session-{session_id}"))
         .join("manifest.json");
     assert!(
         manifest.exists(),

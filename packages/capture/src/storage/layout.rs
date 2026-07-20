@@ -17,7 +17,7 @@ impl ProjectLayout {
     }
     #[must_use]
     pub fn project_dir(&self) -> PathBuf {
-        self.root.join(self.project_id.to_string())
+        self.root.join(format!("project-{}", self.project_id))
     }
     #[must_use]
     pub fn project_manifest(&self) -> PathBuf {
@@ -26,7 +26,7 @@ impl ProjectLayout {
     #[must_use]
     pub fn session(&self, id: SessionId) -> SessionLayout {
         SessionLayout {
-            root: self.project_dir().join("sessions").join(id.to_string()),
+            root: self.project_dir().join(format!("session-{id}")),
         }
     }
 }

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 mod metrics;
+mod source_watches;
 
 use crate::{
     CaptureError,
@@ -14,8 +15,9 @@ use crate::model::CursorSelection;
 #[cfg(any(feature = "microphone", feature = "system-audio", feature = "camera"))]
 use crate::model::TrackFormat;
 
-use super::periodic_reporter::{PeriodicReporter, SourceWatch};
+use super::periodic_reporter::PeriodicReporter;
 use super::recording_support::*;
+use source_watches::source_watches;
 
 #[derive(Default)]
 pub(super) struct ActiveRecordings {
@@ -466,51 +468,4 @@ impl ActiveRecordings {
         }
         Ok(())
     }
-}
-
-fn source_watches(
-    request: &CaptureRequest,
-    snapshot: &CatalogSnapshot,
-    tracks: &[TrackMetadata],
-) -> Vec<SourceWatch> {
-    let mut selected = Vec::new();
-    if let Some(ScreenSelection::Source { source_id }) = &request.screen {
-        selected.push((TrackKind::Screen, source_id));
-    }
-    if let Some(selection) = &request.microphone {
-        selected.push((TrackKind::Microphone, &selection.source_id));
-    }
-    if let Some(selection) = &request.camera {
-        selected.push((TrackKind::Camera, &selection.source_id));
-    }
-    if let Some(crate::model::SystemAudioSelection::OutputDevice(source_id)) = &request.system_audio
-    {
-        selected.push((TrackKind::SystemAudio, source_id));
-    } else if request.system_audio.is_some()
-        && let Some(source) = snapshot
-            .sources
-            .iter()
-            .find(|source| {
-                source.kind == crate::model::SourceKind::SystemAudio && source.is_default
-            })
-            .or_else(|| {
-                snapshot
-                    .sources
-                    .iter()
-                    .find(|source| source.kind == crate::model::SourceKind::SystemAudio)
-            })
-    {
-        selected.push((TrackKind::SystemAudio, &source.id));
-    }
-    selected
-        .into_iter()
-        .filter_map(|(kind, source_id)| {
-            let track = track_for(tracks, kind)?;
-            let source = snapshot
-                .sources
-                .iter()
-                .find(|source| &source.id == source_id)?;
-            Some(SourceWatch::new(track.track_id, source.clone()))
-        })
-        .collect()
 }

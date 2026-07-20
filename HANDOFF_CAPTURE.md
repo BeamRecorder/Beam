@@ -46,7 +46,7 @@ Les anciens médias de smoke ne sont plus présents dans `packages/capture/full-
 - Validation d'une requête contre un snapshot de catalogue récent.
 - Protocole JSONL pour `capture-engine`; stdout est réservé aux réponses structurées.
 - `capture-probe` pour la découverte et `capture-smoke` pour les essais matériels.
-- Création du layout projet/session et des répertoires de pistes.
+- Création du layout explicite `project-<project-uuid>/session-<session-uuid>/` et des répertoires de pistes.
 - `manifest.partial.json`, finalisation atomique vers `manifest.json`, `track.json`, `timing.jsonl` et `health.jsonl`.
 - Suppression/récupération d'un fichier temporaire atomique obsolète.
 - Vérification de l'espace disque avant la préparation.

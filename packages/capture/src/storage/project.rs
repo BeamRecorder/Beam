@@ -37,7 +37,7 @@ pub fn create_or_update_project(
     {
         project.sessions.push(ProjectSession {
             session_id,
-            relative_path: format!("sessions/{session_id}"),
+            relative_path: format!("session-{session_id}"),
         });
     }
     project.updated_at_utc = now_utc.into();
