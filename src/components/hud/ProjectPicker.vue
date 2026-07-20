@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useVirtualList } from '@vueuse/core'
 import { ArrowLeft, Check, Film, RefreshCw } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
@@ -9,7 +9,19 @@ import { capture, type CaptureProject } from '../../capture-api'
 const emit = defineEmits<{
   (event: 'back'): void
   (event: 'open-project', project: CaptureProject): void
+  (event: 'select-project', project: CaptureProject): void
 }>()
+
+const props = withDefaults(
+  defineProps<{
+    compact?: boolean
+    currentProjectId?: string | null
+  }>(),
+  {
+    compact: false,
+    currentProjectId: null,
+  },
+)
 
 const projects = ref<CaptureProject[]>([])
 const selectedProjectId = ref<string | null>(null)
@@ -25,7 +37,7 @@ const projectRows = computed(() => {
 })
 
 const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
-  itemHeight: 132,
+  itemHeight: computed(() => props.compact ? 120 : 132),
   overscan: 3,
 })
 
@@ -38,9 +50,9 @@ const loadProjects = async () => {
   errorMessage.value = ''
   try {
     projects.value = await capture.listProjects()
-    if (!projects.value.some((project) => project.id === selectedProjectId.value)) {
-      selectedProjectId.value = projects.value[0]?.id ?? null
-    }
+    selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
+      ? props.currentProjectId
+      : projects.value[0]?.id ?? null
   } catch (error) {
     projects.value = []
     errorMessage.value = error instanceof Error ? error.message : String(error)
@@ -51,6 +63,7 @@ const loadProjects = async () => {
 
 const selectProject = (project: CaptureProject) => {
   selectedProjectId.value = project.id
+  if (props.compact) emit('select-project', project)
 }
 
 const openSelectedProject = () => {
@@ -71,14 +84,22 @@ const setPreviewFrame = (event: Event) => {
 onMounted(() => {
   void loadProjects()
 })
+
+watch(() => props.currentProjectId, (projectId) => {
+  if (projectId && projects.value.some((project) => project.id === projectId)) {
+    selectedProjectId.value = projectId
+  }
+})
+
+defineExpose({ refresh: loadProjects })
 </script>
 
 <template>
-  <section class="project-picker" aria-labelledby="project-picker-title">
+  <section class="project-picker" :class="{ compact }" aria-labelledby="project-picker-title">
     <div class="project-picker-heading">
       <div>
-        <h1 id="project-picker-title">Open a project</h1>
-        <p>Choose a recording to continue editing.</p>
+        <h1 id="project-picker-title">{{ compact ? 'Projects' : 'Open a project' }}</h1>
+        <p>{{ compact ? 'Switch project' : 'Choose a recording to continue editing.' }}</p>
       </div>
       <Button
         variant="ghost"
@@ -105,7 +126,7 @@ onMounted(() => {
 
     <div v-else-if="errorMessage" class="project-state project-error" role="alert">
       <p>{{ errorMessage }}</p>
-      <Button variant="link" size="sm" class="retry-button" @click="loadProjects">Try again</Button>
+      <Button variant="link" size="sm" @click="loadProjects">Try again</Button>
     </div>
 
     <div v-else-if="projects.length === 0" class="project-state">
@@ -154,7 +175,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <footer class="project-picker-footer">
+    <footer v-if="!compact" class="project-picker-footer">
       <Button variant="ghost" size="sm" class="back-project-button" :icon="ArrowLeft" @click="emit('back')">
         Back
       </Button>
@@ -174,6 +195,21 @@ onMounted(() => {
   gap: 12px;
   padding: 16px;
   overflow: hidden;
+}
+
+.project-picker.compact {
+  height: 336px;
+  flex: none;
+  padding: 12px;
+  gap: 8px;
+}
+
+.project-picker.compact .project-picker-heading h1 {
+  font-size: 15px;
+}
+
+.project-picker.compact .project-picker-heading p {
+  font-size: 10px;
 }
 
 .project-picker-heading {
@@ -219,6 +255,10 @@ onMounted(() => {
 .project-row {
   height: 124px;
   margin-bottom: 8px;
+}
+
+.compact .project-row {
+  height: 112px;
 }
 
 .project-card,
@@ -337,11 +377,6 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
-.retry-button :deep(.btn) {
-  margin-top: 4px;
-  font-size: 11px;
-}
-
 .project-picker-footer {
   display: flex;
   align-items: center;
@@ -352,11 +387,6 @@ onMounted(() => {
 
 .back-project-button {
   padding-left: 0;
-}
-
-.project-picker-footer :deep(svg) {
-  width: 14px;
-  height: 14px;
 }
 
 @media (prefers-reduced-motion: reduce) {

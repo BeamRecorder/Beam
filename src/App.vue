@@ -7,6 +7,7 @@ import { capture, type CaptureProject } from './capture-api'
 
 const currentView = ref<'hud' | 'editor'>('hud')
 const currentVideoSrc = ref<string | null>(null)
+const currentProject = ref<CaptureProject | null>(null)
 
 const setView = (view: 'hud' | 'editor') => {
   currentView.value = view
@@ -14,22 +15,32 @@ const setView = (view: 'hud' | 'editor') => {
   if (view === 'editor') {
     capture.setSize(760, 480)
   } else {
-    capture.setSize(320, 480)
+    capture.setSize(320, 360)
   }
 }
 
 const handleStartRecording = () => {
   currentVideoSrc.value = null
+  currentProject.value = null
 }
 
-const handleStopRecording = (session: any) => {
+const handleStopRecording = async (session: any) => {
   if (session && session.videoSrc) {
     currentVideoSrc.value = session.videoSrc
+  }
+  try {
+    const projects = await capture.listProjects()
+    currentProject.value = projects.find((project) => project.previewSrc === session?.videoSrc)
+      ?? projects[0]
+      ?? null
+  } catch {
+    currentProject.value = null
   }
   setView('editor')
 }
 
 const handleOpenProject = (project: CaptureProject) => {
+  currentProject.value = project
   currentVideoSrc.value = project.previewSrc
   setView('editor')
 }
@@ -48,7 +59,9 @@ const handleOpenProject = (project: CaptureProject) => {
     <VideoEditor 
       v-if="currentView === 'editor'"
       :video-src="currentVideoSrc"
+      :project="currentProject"
       @back-to-hud="setView('hud')"
+      @open-project="handleOpenProject"
     />
   </div>
 </template>

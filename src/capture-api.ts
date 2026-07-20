@@ -28,6 +28,10 @@ export interface CaptureProject {
   previewSrc: string | null
 }
 
+export interface CreateProjectOptions {
+  name?: string
+}
+
 export interface StartRecordingOptions {
   projectId?: string
   screenKind?: 'display' | 'window'
@@ -116,6 +120,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   drag(): void
   getSources(types?: string[]): Promise<any[]>
   listProjects(): Promise<CaptureProject[]>
+  createProject(options?: CreateProjectOptions): Promise<CaptureProject>
+  renameProject(projectId: string, name: string): Promise<CaptureProject>
+  deleteProject(projectId: string): Promise<void>
 }
 
 export interface CaptureSource {
@@ -169,7 +176,16 @@ const mockCapture: DesktopCaptureApi = {
   ],
   listProjects: async () => {
     throw new Error('La liste des projets est disponible uniquement dans Electron.')
-  }
+  },
+  createProject: async () => {
+    throw new Error('La gestion des projets est disponible uniquement dans Electron.')
+  },
+  renameProject: async () => {
+    throw new Error('La gestion des projets est disponible uniquement dans Electron.')
+  },
+  deleteProject: async () => {
+    throw new Error('La gestion des projets est disponible uniquement dans Electron.')
+  },
 }
 
 if (typeof window !== 'undefined' && !window.capture) {

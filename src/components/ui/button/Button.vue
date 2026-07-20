@@ -11,7 +11,7 @@ import { Loader } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card'
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card' | 'danger'
     size?: 'sm' | 'md' | 'lg'
     loading?: boolean
     disabled?: boolean
@@ -162,6 +162,17 @@ const handleClick = (event: MouseEvent) => {
   background-color: var(--color-blue-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.btn-danger {
+  background-color: var(--color-error);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 .btn-secondary:active:not(:disabled) {
   transform: translateY(0);

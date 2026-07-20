@@ -51,6 +51,8 @@ pub struct ProjectSession {
 pub struct ProjectManifest {
     pub schema_version: u32,
     pub project_id: ProjectId,
+    #[serde(default)]
+    pub name: String,
     pub created_at_utc: String,
     pub updated_at_utc: String,
     pub sessions: Vec<ProjectSession>,

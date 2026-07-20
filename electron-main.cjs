@@ -211,29 +211,61 @@ function findProjectPreview(projectDirectory, sessions) {
   return null
 }
 
+function projectsRoot() {
+  return path.join(app.getPath('videos'), 'DemoRecorder')
+}
+
+function assertProjectId(projectId) {
+  if (typeof projectId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
+    throw new Error('Identifiant de projet invalide')
+  }
+  return projectId
+}
+
+function projectDirectory(projectId) {
+  const validProjectId = assertProjectId(projectId)
+  return path.join(projectsRoot(), `project-${validProjectId}`)
+}
+
+function projectSummary(projectDirectoryPath, manifest, fallbackId) {
+  const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
+  const id = typeof manifest.projectId === 'string' ? manifest.projectId : fallbackId
+  return {
+    id,
+    name: typeof manifest.name === 'string' && manifest.name.trim()
+      ? manifest.name.trim()
+      : `Project ${id.slice(0, 8)}`,
+    createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '',
+    updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '',
+    sessionCount: sessions.length,
+    previewSrc: findProjectPreview(projectDirectoryPath, sessions),
+  }
+}
+
+function generatedProjectName(projectId) {
+  const adjectives = ['Bright', 'Calm', 'Clever', 'Golden', 'Quiet', 'Rapid', 'Soft', 'Vivid']
+  const nouns = ['Aurora', 'Canvas', 'Comet', 'Horizon', 'Orbit', 'Pixel', 'Signal', 'Studio']
+  const first = Number.parseInt(projectId.slice(0, 2), 16) % adjectives.length
+  const second = Number.parseInt(projectId.slice(2, 4), 16) % nouns.length
+  return `${adjectives[first]} ${nouns[second]}`
+}
+
+function readProjectManifest(projectDirectoryPath) {
+  const manifestPath = path.join(projectDirectoryPath, 'project.json')
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+}
+
 function listProjects() {
-  const outputRoot = path.join(app.getPath('videos'), 'DemoRecorder')
+  const outputRoot = projectsRoot()
   if (!fs.existsSync(outputRoot)) return []
 
   return fs.readdirSync(outputRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name.startsWith('project-'))
     .map((entry) => {
       const projectDirectory = path.join(outputRoot, entry.name)
-      const manifestPath = path.join(projectDirectory, 'project.json')
       try {
-        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-        const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
-        const id = typeof manifest.projectId === 'string' ? manifest.projectId : entry.name.slice('project-'.length)
-        return {
-          id,
-          name: typeof manifest.name === 'string' && manifest.name.trim()
-            ? manifest.name
-            : `Project ${id.slice(0, 8)}`,
-          createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '',
-          updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '',
-          sessionCount: sessions.length,
-          previewSrc: findProjectPreview(projectDirectory, sessions),
-        }
+        const manifest = readProjectManifest(projectDirectory)
+        return projectSummary(projectDirectory, manifest, entry.name.slice('project-'.length))
       } catch {
         return null
       }
@@ -243,6 +275,44 @@ function listProjects() {
 }
 
 ipcMain.handle('projects:list', () => listProjects())
+
+ipcMain.handle('projects:create', (_event, options = {}) => {
+  const id = randomUUID()
+  const now = new Date().toISOString()
+  const name = typeof options.name === 'string' && options.name.trim()
+    ? options.name.trim().slice(0, 80)
+    : generatedProjectName(id)
+  fs.mkdirSync(projectsRoot(), { recursive: true })
+  const directory = projectDirectory(id)
+  fs.mkdirSync(directory, { recursive: false })
+  const manifest = {
+    schemaVersion: 1,
+    projectId: id,
+    name,
+    createdAtUtc: now,
+    updatedAtUtc: now,
+    sessions: [],
+  }
+  fs.writeFileSync(path.join(directory, 'project.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  return projectSummary(directory, manifest, id)
+})
+
+ipcMain.handle('projects:rename', (_event, payload = {}) => {
+  const directory = projectDirectory(payload.projectId)
+  const manifest = readProjectManifest(directory)
+  const name = typeof payload.name === 'string' ? payload.name.trim().slice(0, 80) : ''
+  if (!name) throw new Error('Le nom du projet ne peut pas être vide')
+  manifest.name = name
+  manifest.updatedAtUtc = new Date().toISOString()
+  fs.writeFileSync(path.join(directory, 'project.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+  return projectSummary(directory, manifest, payload.projectId)
+})
+
+ipcMain.handle('projects:delete', (_event, payload = {}) => {
+  const directory = projectDirectory(payload.projectId)
+  if (!fs.existsSync(directory)) throw new Error('Projet introuvable')
+  fs.rmSync(directory, { recursive: true, force: false })
+})
 
 ipcMain.on('window:close', (event) => {
   const webContents = event.sender

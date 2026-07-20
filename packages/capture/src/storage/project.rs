@@ -2,6 +2,21 @@ use crate::model::{ProjectId, ProjectManifest, ProjectSession, SCHEMA_VERSION, S
 
 use super::{ProjectLayout, write_atomic};
 
+fn generated_project_name(project_id: ProjectId) -> String {
+    const ADJECTIVES: [&str; 8] = [
+        "Bright", "Calm", "Clever", "Golden", "Quiet", "Rapid", "Soft", "Vivid",
+    ];
+    const NOUNS: [&str; 8] = [
+        "Aurora", "Canvas", "Comet", "Horizon", "Orbit", "Pixel", "Signal", "Studio",
+    ];
+    let bytes = project_id.as_uuid().as_bytes();
+    format!(
+        "{} {}",
+        ADJECTIVES[usize::from(bytes[0]) % ADJECTIVES.len()],
+        NOUNS[usize::from(bytes[1]) % NOUNS.len()]
+    )
+}
+
 pub fn create_or_update_project(
     root: &std::path::Path,
     project_id: ProjectId,
@@ -20,6 +35,7 @@ pub fn create_or_update_project(
         ProjectManifest {
             schema_version: SCHEMA_VERSION,
             project_id,
+            name: generated_project_name(project_id),
             created_at_utc: now_utc.into(),
             updated_at_utc: now_utc.into(),
             sessions: Vec::new(),
