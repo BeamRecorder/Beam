@@ -148,9 +148,11 @@ Le correctif reste à valider matériellement en 720p30 et 1080p30 sur Windows. 
 Symptômes observés lors des précédents smokes matériels :
 
 - le catalogue annonce des formats jusqu'à 30 FPS;
-- `camera.camera_format()` retourne parfois 1 FPS;
-- une capture de deux secondes ne produit qu'environ une ou deux frames;
-- la boucle caméra effectue acquisition, conversion RGBA/BGRA et encodage de façon synchrone.
+- le probe Windows du 20 juillet 2026 a trouvé `nokhwa:0` en NV12 1280x720 et 1920x1080 à 30 FPS;
+- le mode `capture-smoke camera-raw` a mesuré 61 frames acquises, 61 encodées et 0 drop en cinq secondes, soit environ 12,2 FPS réels sur la caméra disponible;
+- le smoke multipiste complet a finalisé un manifeste d'environ 5,08 s; l'écran produit un MP4 H.264 de 5,12 s, tandis que la caméra produit bien un MP4 H.264 mais reste limitée par la cadence matérielle observée.
+
+La séparation acquisition/encodage est donc validée côté logiciel, mais l'objectif 30 FPS n'est pas encore démontré sur ce matériel.
 
 Le code concerné est `packages/capture/src/camera/win/capture.rs` :
 
@@ -160,16 +162,7 @@ Le code concerné est `packages/capture/src/camera/win/capture.rs` :
 
 Une anomalie a été identifiée dans `nokhwa-bindings-windows 0.4.6` : son rafraîchissement du format traite incorrectement la valeur Media Foundation packée de `MF_MT_FRAME_RATE`, ce qui peut exposer `1` au lieu du numérateur réel `30`.
 
-Plan de correction recommandé :
-
-1. Ajouter temporairement deux métriques distinctes : frames acquises et frames encodées.
-2. Tester l'acquisition brute sans encodeur pendant cinq secondes.
-3. Si l'acquisition est bien à 30 FPS, séparer producteur et encodeur par un channel borné; le callback/producteur ne doit plus encoder synchroniquement.
-4. Ne pas utiliser le FPS erroné retourné après `refresh_camera_format`; conserver le format exact choisi dans la liste des formats compatibles.
-5. Si Nokhwa configure réellement Media Foundation à 1 FPS, soit corriger proprement la dépendance via un fork/patch versionné, soit créer un backend Media Foundation direct sous `camera/win/`.
-6. Vérifier 720p30 et 1080p30, durée, drops, arrêt et format écrit dans le manifeste.
-
-Ne pas masquer le défaut en écrivant simplement `30` dans le manifeste : la cadence réelle doit être mesurée.
+Validation restante : vérifier 720p30 et 1080p30 sur plusieurs périphériques, avec durée, drops, arrêt et format écrit dans le manifeste. Ne pas masquer le défaut en écrivant simplement `30` dans le manifeste : la cadence réelle doit être mesurée.
 
 ### P0 — Absence de vraie barrière de démarrage multipiste
 
@@ -187,33 +180,7 @@ Ne pas masquer le défaut en écrivant simplement `30` dans le manifeste : la ca
 
 Le sous-ensemble écran/audio système/curseur compile pour `x86_64-pc-windows-msvc` et `aarch64-apple-darwin`. Il reste obligatoire de mesurer sur les OS réels le premier timestamp natif de chaque piste, les offsets à `t0` et l'absence de thread après les scénarios d'échec matériel.
 
-`RecordingSession::start` fixe actuellement `session_start_monotonic_ns`, puis `ActiveRecordings::open` démarre les backends l'un après l'autre. L'écran, le micro, l'audio système, la caméra et le curseur n'ont donc pas un armement commun avant `t0`.
-
-Conséquences observées :
-
-- une session demandée pour environ une seconde peut durer plusieurs secondes;
-- les pistes commencent à des instants natifs différents mais leurs segments déclarent le même début;
-- les coûts d'ouverture caméra/audio sont inclus dans la durée de session;
-- `StartBarrier` et `PreparedTrack` existent, mais ne pilotent pas les backends natifs de `RecordingSession`.
-
-Correction attendue :
-
-1. Séparer chaque backend en `prepare/arm`, `start(t0)` et `stop`.
-2. Créer les fichiers/writers avant `t0`.
-3. Attendre l'acquittement d'armement de toutes les pistes obligatoires.
-4. Annuler et joindre tous les threads si une piste obligatoire échoue avant `t0`.
-5. Fixer `t0` seulement quand tous les backends sont prêts.
-6. Déclencher les captures avec un signal/barrière partagé.
-7. Écrire pour chaque piste son premier timestamp natif et son offset réel par rapport à `t0`.
-8. Ajouter des fakes qui prouvent qu'aucun writer/backend ne démarre avant la barrière.
-
-Fichiers à refactorer en premier :
-
-- `packages/capture/src/session/recording.rs`
-- `packages/capture/src/session/recording_active.rs`
-- `packages/capture/src/session/preparation.rs`
-- `packages/capture/src/session/start_barrier.rs`
-- interfaces `start` des backends natifs.
+La validation native doit encore mesurer le premier timestamp de chaque piste, les offsets à `t0` et l'absence de thread après les scénarios d'échec matériel.
 
 ### P0 — Validation macOS réelle manquante
 
@@ -259,9 +226,7 @@ Restent obligatoires avant clôture :
 - un test accéléré vérifie plusieurs émissions, la monotonie de `sessionNs`, la progression de la position native et la cardinalité identique santé/timing;
 - la compilation croisée du reporter intégré passe pour les sous-ensembles natifs Windows et macOS.
 
-Les événements immédiats spécialisés de hot-unplug, changement du périphérique par défaut, changement de format, perte de source, erreur encodeur et disque plein doivent encore être reliés aux notifications natives; le snapshot périodique permet déjà d'observer drops, saturation et interruptions.
-
-Le reporter couvre désormais la périodicité. Le plan exige encore des événements natifs immédiats spécialisés pour :
+Le reporter interroge aussi le catalogue à chaque tick et émet déjà des événements de perte/reconnexion de source, changement du périphérique par défaut et changement de format. Cette surveillance est un fallback par polling; les notifications natives immédiates restent à brancher. Le plan exige encore des événements spécialisés pour :
 
 - drops/discontinuités;
 - dérive;
@@ -273,7 +238,7 @@ Le reporter couvre désormais la périodicité. Le plan exige encore des événe
 - saturation de queue;
 - erreur encodeur et disque plein.
 
-Ajouter un reporter périodique pendant `Recording`, puis tester la fréquence et la monotonie des événements.
+Compléter les notifications natives et tester la fréquence, la monotonie et la déduplication des événements.
 
 ### P1 — Tests obligatoires incomplets
 
@@ -308,17 +273,15 @@ Linux n'est pas la priorité demandée, mais le plan global contient encore un b
 
 ## 5. Ordre de reprise recommandé
 
-1. Reproduire et corriger les 1 FPS caméra Windows.
-2. Refactorer les backends vers `prepare/arm/start/stop` et brancher la vraie barrière.
-3. Ajouter les tests fake de barrière, rollback, policy, timestamps et fermeture.
-4. Refaire un smoke Windows complet avec pause/reprise et conserver les artefacts/mesures.
+1. Reproduire la cadence caméra Windows sur plusieurs périphériques et corriger le backend si nécessaire.
+2. Ajouter les tests fake de rollback, policy, timestamps et fermeture.
+3. Refaire un smoke Windows complet avec pause/reprise et conserver les artefacts/mesures.
 5. Compiler sur un vrai Mac et corriger toutes les erreurs natives.
 6. Tester chaque piste macOS isolément.
-7. Remplacer la caméra `.mjpeg` par un pipeline vidéo borné et timestampé.
-8. Ajouter le fallback écran macOS 13/14.
-9. Ajouter événements périodiques, hot-plug et discontinuités.
-10. Compléter l'arborescence et la matrice de tests de `plan.md.txt`.
-11. Exécuter les scénarios multipistes longs et les gates CI sur Windows/macOS/Linux.
+7. Ajouter le fallback écran macOS 13/14.
+8. Relier les événements de hot-plug aux notifications natives.
+9. Compléter l'arborescence et la matrice de tests de `plan.md.txt`.
+10. Exécuter les scénarios multipistes longs et les gates CI sur Windows/macOS/Linux.
 
 ## 6. Commandes utiles
 
