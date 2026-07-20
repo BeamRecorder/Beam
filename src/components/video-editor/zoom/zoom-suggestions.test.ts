@@ -10,13 +10,13 @@ const click = (ms: number, button = 1): CursorEvent => ({ event: 'button', sessi
 describe('buildAutomaticZoomElements', () => {
   it('creates a padded zoom from a left click with a cursor position', () => {
     const zooms = buildAutomaticZoomElements({ events: [move(1_000, 0.25, 0.75), click(1_100)], sessionId: 'session', durationMs: 5_000 })
-    expect(zooms).toMatchObject([{ startMs: 600, endMs: 1600, focus: { cx: 0.25, cy: 0.75 }, scale: 1.75 }])
+    expect(zooms).toMatchObject([{ startMs: 200, endMs: 2000, focus: { cx: 0.25, cy: 0.75 }, scale: 1.75 }])
   })
 
   it('merges nearby clicks at the same focus into one element', () => {
     const zooms = buildAutomaticZoomElements({ events: [move(1_000, 0.5, 0.5), click(1_000), click(2_000)], sessionId: 'session', durationMs: 5_000 })
     expect(zooms).toHaveLength(1)
-    expect(zooms[0]).toMatchObject({ startMs: 500, endMs: 2500 })
+    expect(zooms[0]).toMatchObject({ startMs: 100, endMs: 2900 })
   })
 
   it('ignores secondary clicks, invisible cursor data, and invalid durations', () => {

@@ -43,8 +43,8 @@ export function cursorStateAt(
 
   for (const event of events) {
     if (eventTime(event) > time) {
-      if (isMove(event)) nextMove = event
-      break
+      if (isMove(event) && !nextMove) nextMove = event
+      continue
     }
     if (isMove(event)) {
       previousMove = event

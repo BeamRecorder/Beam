@@ -1,24 +1,113 @@
 <script setup lang="ts">
-defineProps<{
-  modelValue: string | number
-  type?: string
-  placeholder?: string
-  disabled?: boolean
-  error?: boolean | string
-  id?: string
-  size?: 'sm' | 'md'
-  width?: string
+import { ref } from 'vue'
+
+const props = withDefaults(
+  defineProps<{
+    modelValue: string | number
+    type?: string
+    placeholder?: string
+    disabled?: boolean
+    error?: boolean | string
+    id?: string
+    size?: 'sm' | 'md'
+    width?: string
+    min?: number
+    max?: number
+    step?: number
+  }>(),
+  {
+    type: 'text',
+    step: 1,
+  }
+)
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string | number): void
 }>()
 
-defineEmits<{
-  (e: 'update:modelValue', value: string): void
-}>()
+const isDragging = ref(false)
+
+const handleMouseDown = (e: MouseEvent) => {
+  if (props.disabled || props.type !== 'number') return
+
+  // Only allow drag on left click
+  if (e.button !== 0) return
+
+  const startX = e.clientX
+  const startValue = parseFloat(String(props.modelValue)) || 0
+  let hasDragged = false
+
+  const handleMouseMove = (moveEvent: MouseEvent) => {
+    const deltaX = moveEvent.clientX - startX
+    if (!hasDragged && Math.abs(deltaX) > 4) {
+      hasDragged = true
+      isDragging.value = true
+      document.body.style.cursor = 'ew-resize'
+      document.body.classList.add('is-dragging-input')
+    }
+
+    if (hasDragged) {
+      moveEvent.preventDefault()
+      const multiplier = moveEvent.shiftKey ? 10 : 1
+      const stepVal = props.step ?? 1
+      
+      // Let's change the value by stepVal for every 4 pixels of horizontal drag
+      const deltaValue = (deltaX / 4) * stepVal * multiplier
+      let newValue = startValue + deltaValue
+
+      // Round value to avoid float precision issues
+      const decimals = (stepVal.toString().split('.')[1] || '').length
+      newValue = parseFloat(newValue.toFixed(decimals))
+
+      if (props.min !== undefined && newValue < props.min) {
+        newValue = props.min
+      }
+      if (props.max !== undefined && newValue > props.max) {
+        newValue = props.max
+      }
+
+      emit('update:modelValue', newValue)
+    }
+  }
+
+  const preventClick = (clickEvent: MouseEvent) => {
+    clickEvent.preventDefault()
+    clickEvent.stopPropagation()
+    window.removeEventListener('click', preventClick, true)
+  }
+
+  const handleMouseUp = (upEvent: MouseEvent) => {
+    window.removeEventListener('mousemove', handleMouseMove)
+    window.removeEventListener('mouseup', handleMouseUp)
+
+    if (hasDragged) {
+      isDragging.value = false
+      document.body.style.cursor = ''
+      document.body.classList.remove('is-dragging-input')
+      window.addEventListener('click', preventClick, true)
+      setTimeout(() => {
+        window.removeEventListener('click', preventClick, true)
+      }, 50)
+    }
+  }
+
+  window.addEventListener('mousemove', handleMouseMove)
+  window.addEventListener('mouseup', handleMouseUp)
+}
 </script>
 
 <template>
   <div
     class="input-wrapper"
-    :class="[{ 'is-disabled': disabled, 'is-error': !!error }, `input-${size || 'md'}`]"
+    :class="[
+      { 
+        'is-disabled': disabled, 
+        'is-error': !!error, 
+        'is-number': type === 'number',
+        'is-dragging': isDragging
+      }, 
+      `input-${size || 'md'}`
+    ]"
     :style="width ? { width } : undefined"
   >
     <div v-if="$slots.prefix" class="input-prefix">
@@ -30,8 +119,12 @@ defineEmits<{
       :value="modelValue"
       :placeholder="placeholder"
       :disabled="disabled"
+      :min="min"
+      :max="max"
+      :step="step"
       class="input-element"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      @mousedown="handleMouseDown"
     />
     <div v-if="$slots.suffix" class="input-suffix">
       <slot name="suffix" />
@@ -52,7 +145,20 @@ defineEmits<{
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0 0.75rem;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-wrapper.is-number:not(:focus-within) {
+  cursor: ew-resize;
+}
+
+.input-wrapper.is-number:not(:focus-within) .input-element {
+  cursor: ew-resize;
+}
+
+.input-wrapper.is-dragging {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .input-wrapper.input-sm {
@@ -86,6 +192,17 @@ defineEmits<{
   width: 100%;
 }
 
+/* Hide HTML5 Number Spinners (Arrows) */
+.input-element[type="number"]::-webkit-outer-spin-button,
+.input-element[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-element[type="number"] {
+  -moz-appearance: textfield;
+}
+
 .input-element:disabled {
   cursor: not-allowed;
 }
@@ -99,6 +216,7 @@ defineEmits<{
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
+  user-select: none;
 }
 
 .input-suffix {
@@ -106,6 +224,7 @@ defineEmits<{
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
+  user-select: none;
 }
 
 .input-wrapper.is-error {
@@ -124,3 +243,4 @@ defineEmits<{
   font-weight: 500;
 }
 </style>
+

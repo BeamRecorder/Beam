@@ -63,6 +63,7 @@ const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([]
 const selectedZoomId = ref<string | null>(null)
 const selectedZoom = computed(() => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null)
 const canGenerateZooms = computed(() => Boolean(props.project && props.editorData?.cursor.available && props.editorData.sessionId))
+const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.source === 'automatic'))
 
 watch(() => props.editorData, (data) => {
   zoomElements.value = data?.zoom.elements ?? []
@@ -196,6 +197,7 @@ watch(() => props.videoSrc, (videoSrc) => {
           :background-groups="backgroundGroups"
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
+          :has-automatic-zooms="hasAutomaticZooms"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"

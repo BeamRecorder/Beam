@@ -5,10 +5,11 @@ export interface AppliedZoom {
   focus: ZoomFocus
 }
 
-const ENTER_MS = 220
-const EXIT_MS = 280
+const ENTER_MS = 480
+const EXIT_MS = 550
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
-const easeInOut = (value: number) => value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2
+const easeOutCubic = (value: number) => 1 - (1 - value) ** 3
+const easeInCubic = (value: number) => value ** 3
 
 function phaseProgress(element: ZoomElement, timeMs: number) {
   const duration = element.endMs - element.startMs
@@ -16,8 +17,8 @@ function phaseProgress(element: ZoomElement, timeMs: number) {
   const speed = Math.min(2, Math.max(0.5, element.speed))
   const entrance = Math.min(ENTER_MS / speed, duration / 2)
   const exit = Math.min(EXIT_MS / speed, duration / 2)
-  if (timeMs < element.startMs + entrance) return easeInOut((timeMs - element.startMs) / entrance)
-  if (timeMs > element.endMs - exit) return easeInOut((element.endMs - timeMs) / exit)
+  if (timeMs < element.startMs + entrance) return easeOutCubic((timeMs - element.startMs) / entrance)
+  if (timeMs > element.endMs - exit) return easeInCubic((element.endMs - timeMs) / exit)
   return 1
 }
 

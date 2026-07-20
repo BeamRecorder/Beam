@@ -122,6 +122,20 @@
   padding: 0;
 }
 
+/* Custom selection styling */
+::selection {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+/* Disable selection during drag */
+body.is-dragging-input {
+  user-select: none !important;
+}
+body.is-dragging-input * {
+  user-select: none !important;
+}
+
 html, body {
   background: transparent !important;
   margin: 0;

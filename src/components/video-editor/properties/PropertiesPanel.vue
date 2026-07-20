@@ -29,6 +29,7 @@ defineProps<{
   backgroundGroups: BackgroundMediaGroup[]
   selectedZoom: ZoomElement | null
   canGenerateZooms: boolean
+  hasAutomaticZooms: boolean
 }>()
 
 const emit = defineEmits<{
@@ -95,6 +96,7 @@ const emit = defineEmits<{
         v-else-if="activeTab === 'zoom'"
         :selected-zoom="selectedZoom"
         :can-generate="canGenerateZooms"
+        :has-automatic-zooms="hasAutomaticZooms"
         @update="emit('update:zoom', $event)"
         @delete="emit('delete:zoom')"
         @generate="emit('generate:zooms')"

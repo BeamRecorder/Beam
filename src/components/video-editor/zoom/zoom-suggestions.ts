@@ -1,9 +1,10 @@
 import type { CursorEvent, CursorMoveEvent } from '../../../api/types/capture-session'
 import { DEFAULT_ZOOM_SCALE, DEFAULT_ZOOM_SPEED, type ZoomElement, type ZoomFocus } from './zoom-types'
 
-export const CLICK_CLUSTER_GAP_MS = 2500
-export const CLICK_CLUSTER_DISTANCE = 0.12
-export const ZOOM_REGION_PADDING_MS = 500
+export const CLICK_CLUSTER_GAP_MS = 650
+export const CLICK_CLUSTER_DISTANCE = 0.07
+export const DUPLICATE_CLICK_GAP_MS = 120
+export const ZOOM_REGION_PADDING_MS = 900
 export const ZOOM_ALGORITHM_VERSION = 2
 const LEFT_MOUSE_BUTTON = 1
 
@@ -47,6 +48,15 @@ function clusterClicks(clicks: ClickPoint[]): ClickPoint[][] {
   return clusters
 }
 
+function removeDuplicateClicks(clicks: ClickPoint[]): ClickPoint[] {
+  return clicks.filter((click, index) => {
+    const previous = clicks[index - 1]
+    return !previous ||
+      click.timeMs - previous.timeMs > DUPLICATE_CLICK_GAP_MS ||
+      Math.hypot(click.focus.cx - previous.focus.cx, click.focus.cy - previous.focus.cy) > CLICK_CLUSTER_DISTANCE
+  })
+}
+
 function focusForCluster(cluster: ClickPoint[]): ZoomFocus {
   const focus = cluster.reduce((total, click) => ({ cx: total.cx + click.focus.cx, cy: total.cy + click.focus.cy }), { cx: 0, cy: 0 })
   return { cx: focus.cx / cluster.length, cy: focus.cy / cluster.length }
@@ -59,7 +69,7 @@ export function buildAutomaticZoomElements(params: {
 }): ZoomElement[] {
   const { events, sessionId, durationMs } = params
   if (durationMs <= 0) return []
-  return clusterClicks(leftClickPoints(events))
+  return clusterClicks(removeDuplicateClicks(leftClickPoints(events)))
     .map<ZoomElement | null>((cluster) => {
       const first = cluster[0]
       const last = cluster.at(-1) ?? first

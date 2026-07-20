@@ -8,6 +8,9 @@ All contributors and coding agents must read the following documents before chan
 
 These documents are part of the repository's engineering contract. If an implementation conflicts with them, update the design or ask for clarification before adding the code.
 
+## Build :
+You are in a WSL envrionnement, if you use `npm` or `cargo`, prefix it via powershell.exe
+
 ## Non-negotiable defaults
 
 - Keep UI code consistent with `docs/UI.md`: use the existing `src/components/ui/` primitives, Lucide icons, theme tokens, and scoped styles without deep selectors whenever possible.
