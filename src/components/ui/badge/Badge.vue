@@ -38,8 +38,8 @@ withDefaults(
 }
 
 .badge-secondary {
-  background-color: var(--color-blue-light);
-  color: var(--color-blue);
+  background-color: var(--color-orange-light);
+  color: var(--color-orange);
 }
 
 .badge-success {

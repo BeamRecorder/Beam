@@ -31,7 +31,7 @@ const cursorOptions = [
 const colorOptions = [
   { value: '#000000', label: 'Classic Black' },
   { value: '#ff5a1f', label: 'Brand Orange' },
-  { value: '#2563eb', label: 'Electric Blue' },
+  { value: '#ff5a1f', label: 'Demo Orange' },
   { value: '#10b981', label: 'Emerald Green' },
   { value: '#ef4444', label: 'Warning Red' },
 ]

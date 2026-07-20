@@ -302,13 +302,13 @@ const playheadStyle = computed(() => {
 }
 
 .audio-content {
-  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.05), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 90, 31, 0.05), transparent);
 }
 
 .waveform-wave {
   height: 20px;
   margin: 14px 12px;
-  background: repeating-linear-gradient(90deg, var(--color-blue) 0px, var(--color-blue) 2px, transparent 2px, transparent 6px);
+  background: repeating-linear-gradient(90deg, var(--color-orange) 0px, var(--color-orange) 2px, transparent 2px, transparent 6px);
   opacity: 0.6;
   border-radius: 2px;
 }

@@ -31,10 +31,6 @@
   --color-orange-light: rgba(255, 90, 31, 0.1);
   --color-orange-border: rgba(255, 90, 31, 0.3);
 
-  --color-blue: #2563eb;
-  --color-blue-hover: #1d4ed8;
-  --color-blue-light: rgba(37, 99, 235, 0.1);
-  
   --color-dark-blue: #0f172a;
   --color-dark-blue-light: #1e293b;
   --color-dark-blue-lighter: #334155;
@@ -57,8 +53,8 @@
   --color-success-light: rgba(16, 185, 129, 0.1);
   --color-error: #ef4444;
   --color-error-light: rgba(239, 68, 68, 0.1);
-  --color-info: #3b82f6;
-  --color-info-light: rgba(59, 130, 246, 0.1);
+  --color-info: #ff8a5c;
+  --color-info-light: rgba(255, 90, 31, 0.1);
 
   /* Fonts */
   --font-sans: 'Stack Sans Text', system-ui, -apple-system, sans-serif;

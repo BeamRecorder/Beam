@@ -17,6 +17,19 @@
 .btn-group :deep(.btn-container) {
   flex: 1;
   display: flex;
+  min-width: 0;
+}
+
+.btn-group :deep(.btn) {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.btn-group :deep(.btn-content) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 :root.dark .btn-group {

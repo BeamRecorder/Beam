@@ -42,7 +42,7 @@ defineEmits<{
   align-items: center;
   width: 100%;
   height: 2.75rem;
-  background-color: white;
+  background-color: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0 0.75rem;
@@ -50,8 +50,8 @@ defineEmits<{
 }
 
 .input-wrapper:focus-within:not(.is-disabled):not(.is-error) {
-  border-color: var(--color-blue);
-  box-shadow: 0 0 0 2px var(--color-blue-light);
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 2px var(--color-orange-light);
 }
 
 .input-wrapper.is-disabled {

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useVirtualList } from '@vueuse/core'
-import { ArrowLeft, Check, Film, RefreshCw } from '@lucide/vue'
+import { ArrowLeft, Check, Film, FolderOpen, RefreshCw } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
+import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import { capture, type CaptureProject } from '../../capture-api'
+
+let cachedProjects: CaptureProject[] | null = null
 
 const emit = defineEmits<{
   (event: 'back'): void
@@ -37,7 +40,7 @@ const projectRows = computed(() => {
 })
 
 const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
-  itemHeight: computed(() => props.compact ? 120 : 132),
+  itemHeight: () => props.compact ? 120 : 132,
   overscan: 3,
 })
 
@@ -46,10 +49,17 @@ const selectedProject = computed(() =>
 )
 
 const loadProjects = async () => {
-  isLoading.value = true
+  if (cachedProjects) {
+    projects.value = [...cachedProjects]
+    isLoading.value = false
+  } else {
+    isLoading.value = true
+  }
   errorMessage.value = ''
   try {
-    projects.value = await capture.listProjects()
+    const nextProjects = await capture.listProjects()
+    cachedProjects = nextProjects
+    projects.value = [...nextProjects]
     selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
       ? props.currentProjectId
       : projects.value[0]?.id ?? null
@@ -91,7 +101,12 @@ watch(() => props.currentProjectId, (projectId) => {
   }
 })
 
-defineExpose({ refresh: loadProjects })
+defineExpose({
+  refresh: loadProjects,
+  invalidate: () => {
+    cachedProjects = null
+  },
+})
 </script>
 
 <template>
@@ -176,12 +191,14 @@ defineExpose({ refresh: loadProjects })
     </div>
 
     <footer v-if="!compact" class="project-picker-footer">
-      <Button variant="ghost" size="sm" class="back-project-button" :icon="ArrowLeft" @click="emit('back')">
-        Back
-      </Button>
-      <Button variant="primary" size="sm" :disabled="!selectedProject" @click="openSelectedProject">
-        Open project
-      </Button>
+      <ButtonGroup class="project-footer-actions">
+        <Button variant="ghost" size="sm" class="back-project-button" :icon="ArrowLeft" @click="emit('back')">
+          Back
+        </Button>
+        <Button variant="primary" size="sm" :icon="FolderOpen" :disabled="!selectedProject" @click="openSelectedProject">
+          Open project
+        </Button>
+      </ButtonGroup>
     </footer>
   </section>
 </template>
@@ -383,6 +400,10 @@ defineExpose({ refresh: loadProjects })
   justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.project-footer-actions {
+  width: 100%;
 }
 
 .back-project-button {
