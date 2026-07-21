@@ -19,7 +19,7 @@ function writeJsonAtomic(file, value, fsModule) {
   fsModule.renameSync(temporary, file)
 }
 
-function createMediaSegmentStorage({ kind, sourcePrefix, normalizeFormat, fsModule = fs, pathModule = path }) {
+function createMediaSegmentStorage({ kind, manifestKey = kind, sourcePrefix, normalizeFormat, fsModule = fs, pathModule = path }) {
   const sessions = new Map()
   const jobs = new Map()
   const trackName = `${kind[0].toUpperCase()}${kind.slice(1)}`
@@ -115,8 +115,8 @@ function createMediaSegmentStorage({ kind, sourcePrefix, normalizeFormat, fsModu
       }
       if (!pending.sourceId) { sessions.delete(session.sessionId); return session }
       const manifest = JSON.parse(fsModule.readFileSync(pending.manifestPath, 'utf8'))
-      manifest.selectedSources = { ...(manifest.selectedSources || {}), [kind]: pending.sourceId }
-      manifest.permissions = { ...(manifest.permissions || {}), [kind]: 'granted' }
+      manifest.selectedSources = { ...(manifest.selectedSources || {}), [manifestKey]: pending.sourceId }
+      manifest.permissions = { ...(manifest.permissions || {}), [manifestKey]: 'granted' }
       manifest.tracks = (manifest.tracks || []).filter((track) => track?.kind !== kind)
       manifest.tracks.push({ trackId: crypto.randomUUID(), kind, sourceId: pending.sourceId, format: pending.format, segments: pending.segments, metrics: pending.metrics, status: pending.failureReason ? 'failed' : 'completed', terminationReason: pending.failureReason })
       if (pending.failureReason) manifest.warnings = [...(manifest.warnings || []), `${trackName} recording failed: ${pending.failureReason}`]

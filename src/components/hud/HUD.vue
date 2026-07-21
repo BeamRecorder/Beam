@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch 
 import { capture } from '../../api/capture'
 import { BrowserCameraRecorder, listBrowserCameras } from '../../api/camera-recorder'
 import { BrowserMicrophoneRecorder, listBrowserMicrophones, recordMicrophoneFailure } from '../../api/microphone-recorder'
+import { BrowserSystemAudioRecorder, recordSystemAudioFailure, systemAudioSource } from '../../api/system-audio-recorder'
 import type { CaptureCatalog, CapturePreview, CaptureProject, CaptureSession, CaptureSource } from '../../api/types/capture-api'
 import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
@@ -69,6 +70,8 @@ let activeCamera: BrowserCameraRecorder | null = null
 let activeCameraSessionId: string | null = null
 let activeMicrophone: BrowserMicrophoneRecorder | null = null
 let activeMicrophoneSessionId: string | null = null
+let activeSystemAudio: BrowserSystemAudioRecorder | null = null
+let activeSystemAudioSessionId: string | null = null
 const secondsElapsed = ref(0)
 
 const startTimer = () => {
@@ -203,6 +206,16 @@ const toggleRecording = async () => {
   errorMessage.value = ''
   try {
     if (!isRecording.value) {
+      const systemAudioRequested = systemAudioMode.value === 'on'
+      let systemAudio: BrowserSystemAudioRecorder | null = null
+      let systemAudioError: Error | null = null
+      if (systemAudioRequested) {
+        try {
+          systemAudio = await BrowserSystemAudioRecorder.request()
+        } catch (error) {
+          systemAudioError = error instanceof Error ? error : new Error(String(error))
+        }
+      }
       const camera = selectedCameraId.value === 'off' ? null : await BrowserCameraRecorder.request(selectedCameraId.value)
       const microphoneId = selectedMicId.value === 'no-audio' ? null : selectedMicId.value
       let microphone: BrowserMicrophoneRecorder | null = null
@@ -235,7 +248,7 @@ const toggleRecording = async () => {
           screenId: rustScreenId,
           microphoneId: null,
           cameraId: camera ? selectedCameraId.value : null,
-          systemAudio: systemAudioMode.value === 'on',
+          systemAudio: false,
           cursor: true,
           targetFps: recordHighQuality.value ? 60 : 30,
         })
@@ -263,14 +276,31 @@ const toggleRecording = async () => {
           await recordMicrophoneFailure(session.sessionId, microphoneId, microphoneError.message)
           errorMessage.value = `Microphone recording is unavailable: ${microphoneError.message}`
         }
+        if (session.sessionId && systemAudio) {
+          const systemAudioSessionId = session.sessionId
+          activeSystemAudio = systemAudio
+          activeSystemAudioSessionId = systemAudioSessionId
+          systemAudio.onFatal((reason) => { void stopForSystemAudioFailure(systemAudio, systemAudioSessionId, reason) })
+          try {
+            await systemAudio.start(systemAudioSessionId)
+          } catch (error) {
+            await stopForSystemAudioFailure(systemAudio, systemAudioSessionId, error instanceof Error ? error : new Error(String(error)))
+          }
+        } else if (session.sessionId && systemAudioRequested && systemAudioError) {
+          await recordSystemAudioFailure(session.sessionId, systemAudioError.message)
+          errorMessage.value = `System audio recording is unavailable: ${systemAudioError.message}`
+        }
       } catch (error) {
         if (camera) await camera.stop().catch(() => undefined)
         if (microphone) await microphone.stop().catch(() => undefined)
+        if (systemAudio) await systemAudio.stop().catch(() => undefined)
         if (session?.sessionId) await capture.stop().catch(() => undefined)
         activeCamera = null
         activeCameraSessionId = null
         activeMicrophone = null
         activeMicrophoneSessionId = null
+        activeSystemAudio = null
+        activeSystemAudioSessionId = null
         isRecording.value = false
         throw error
       }
@@ -279,6 +309,14 @@ const toggleRecording = async () => {
       emit('start-recording', session)
     } else {
       let cameraStopError: Error | null = null
+      if (activeSystemAudio) {
+        try {
+          await activeSystemAudio.stop()
+        } catch (error) {
+          if (activeSystemAudioSessionId) await activeSystemAudio.fail(activeSystemAudioSessionId, error instanceof Error ? error.message : String(error))
+          errorMessage.value = `System audio recording failed: ${error instanceof Error ? error.message : String(error)}`
+        }
+      }
       if (activeMicrophone) {
         try {
           await activeMicrophone.stop()
@@ -300,6 +338,8 @@ const toggleRecording = async () => {
       activeCameraSessionId = null
       activeMicrophone = null
       activeMicrophoneSessionId = null
+      activeSystemAudio = null
+      activeSystemAudioSessionId = null
       stopTimer()
       isRecording.value = false
       emit('stop-recording', session)
@@ -322,6 +362,19 @@ const stopForMicrophoneFailure = async (microphone: BrowserMicrophoneRecorder, s
   } finally {
     activeMicrophone = null
     activeMicrophoneSessionId = null
+  }
+}
+
+const stopForSystemAudioFailure = async (systemAudio: BrowserSystemAudioRecorder, sessionId: string, reason: Error) => {
+  if (activeSystemAudio !== systemAudio) return
+  try {
+    await systemAudio.fail(sessionId, reason.message)
+    errorMessage.value = `System audio recording stopped: ${reason.message}`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    activeSystemAudio = null
+    activeSystemAudioSessionId = null
   }
 }
 
@@ -348,14 +401,14 @@ const discoverSources = async () => {
   errorMessage.value = ''
   try {
     const [catalog, cameras, microphones] = await Promise.all([capture.discover(), listBrowserCameras(), listBrowserMicrophones()]) as [CaptureCatalog, CaptureSource[], CaptureSource[]]
-    sources.value = [...(Array.isArray(catalog.sources) ? catalog.sources : []), ...cameras, ...microphones]
+    sources.value = [...(Array.isArray(catalog.sources) ? catalog.sources : []), ...cameras, ...microphones, systemAudioSource()]
     const defaultCamera = sources.value.find((source) => source.kind === 'camera' && source.isDefault)
       ?? sources.value.find((source) => source.kind === 'camera')
     const defaultMic = sources.value.find((source) => source.kind === 'microphone' && source.isDefault)
       ?? sources.value.find((source) => source.kind === 'microphone')
     selectedCameraId.value = defaultCamera?.id ?? 'off'
     selectedMicId.value = defaultMic?.id ?? 'no-audio'
-    systemAudioMode.value = catalog.capabilities.systemAudio === false ? 'off' : 'on'
+    systemAudioMode.value = 'on'
     selectedScreenId.value = sources.value.find((source) => source.kind === 'display' && source.isDefault)?.id
       ?? sources.value.find((source) => source.kind === 'display')?.id
       ?? null
@@ -382,8 +435,10 @@ onBeforeUnmount(() => {
   stopTimer()
   void activeCamera?.stop()
   void activeMicrophone?.stop()
+  void activeSystemAudio?.stop()
   activeCameraSessionId = null
   activeMicrophoneSessionId = null
+  activeSystemAudioSessionId = null
   if (previewsRefreshInterval) clearInterval(previewsRefreshInterval)
 })
 

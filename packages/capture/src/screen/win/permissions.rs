@@ -11,8 +11,6 @@ pub fn capabilities() -> CaptureCapabilities {
         separate_cursor: true,
         cursor_shapes: true,
         cursor_clicks: true,
-        system_audio: true,
-        selectable_system_output: true,
         hardware_h264: true,
         hardware_hevc: true,
     }
@@ -22,8 +20,6 @@ pub fn capabilities() -> CaptureCapabilities {
 pub fn permissions() -> PermissionSnapshot {
     PermissionSnapshot {
         screen: Some(PermissionState::Granted),
-        microphone: None,
-        camera: None,
         accessibility: Some(PermissionState::NotApplicable),
     }
 }

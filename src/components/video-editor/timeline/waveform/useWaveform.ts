@@ -160,6 +160,17 @@ export function useWaveform() {
     }
   };
 
+  const generateWaveformFromAudioBuffer = (audioBuffer: AudioBuffer, startTime: number, endTime: number, targetPoints: number = 1000) => {
+    const start = Math.max(0, Math.floor(startTime * audioBuffer.sampleRate));
+    const end = Math.min(audioBuffer.length, Math.ceil(endTime * audioBuffer.sampleRate));
+    const samples = new Float32Array(Math.max(0, end - start));
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
+      const source = audioBuffer.getChannelData(channel).subarray(start, end);
+      for (let index = 0; index < samples.length; index += 1) samples[index] += source[index] / audioBuffer.numberOfChannels;
+    }
+    generateWaveform(samples, targetPoints);
+  };
+
   onUnmounted(() => {
     terminateWorker();
   });
@@ -171,7 +182,7 @@ export function useWaveform() {
     error,
     generateWaveform,
     generateWaveformFromWav,
+    generateWaveformFromAudioBuffer,
     cancel: terminateWorker
   };
 }
-

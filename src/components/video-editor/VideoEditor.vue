@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted, toRef, watch } from "vue";
 import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
 import EditorCanvas from "./canvas/EditorCanvas.vue";
@@ -8,6 +8,7 @@ import { createCompositionSnapshot } from "../export/composition/snapshot";
 import Topbar from "./Topbar.vue";
 
 import { useVideoPlayer } from "./composables/useVideoPlayer";
+import { useEditorAudio } from "./composables/useEditorAudio";
 import { useCursorReplacer } from "./composables/useCursorReplacer";
 
 const props = withDefaults(
@@ -54,6 +55,15 @@ const {
   isSystemAudioEnabled,
   isMicAudioEnabled,
 } = useVideoPlayer();
+
+useEditorAudio({
+  editorData: toRef(props, "editorData"),
+  currentTime,
+  isPlaying,
+  volume,
+  systemAudioEnabled: isSystemAudioEnabled,
+  microphoneEnabled: isMicAudioEnabled,
+});
 
 const {
   selectedCursor,

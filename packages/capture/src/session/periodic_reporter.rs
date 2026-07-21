@@ -20,6 +20,7 @@ pub(super) struct MetricSampler {
 }
 
 impl MetricSampler {
+    #[allow(dead_code)] // Native Windows/macOS recorders instantiate samplers; Linux has no native recorder.
     pub(super) fn new(
         track_id: TrackId,
         format: TrackFormat,
@@ -425,9 +426,9 @@ mod tests {
 
         let track_id = TrackId::new();
         let source = SourceDescriptor {
-            id: SourceId::new("system-audio:test")?,
-            kind: SourceKind::SystemAudio,
-            label: "Test system audio".into(),
+            id: SourceId::new("display:test")?,
+            kind: SourceKind::Display,
+            label: "Test display".into(),
             is_default: true,
             selection_mode: SourceSelectionMode::Direct,
             capabilities: SourceCapabilities::default(),

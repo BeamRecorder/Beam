@@ -26,19 +26,6 @@ pub enum ScreenSelection {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "mode",
-    content = "sourceId",
-    rename_all = "kebab-case",
-    rename_all_fields = "camelCase"
-)]
-pub enum SystemAudioSelection {
-    DefaultMix,
-    OutputDevice(SourceId),
-    ScreenCaptureMix,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "mode",
@@ -99,7 +86,6 @@ impl Default for RecordingSettings {
 pub struct CaptureRequest {
     pub project_id: ProjectId,
     pub screen: Option<ScreenSelection>,
-    pub system_audio: Option<SystemAudioSelection>,
     #[serde(default)]
     pub cursor: CursorSelection,
     #[serde(default)]

@@ -22,7 +22,7 @@ fn main() {
 }
 fn run() -> Result<(), capture::CaptureError> {
     let mode = std::env::args().nth(1).ok_or_else(|| {
-        capture::CaptureError::Protocol("usage: capture-smoke <screen|system-audio|full>".into())
+        capture::CaptureError::Protocol("usage: capture-smoke <screen|cursor|full>".into())
     })?;
     #[cfg(windows)]
     if mode == "screen" {
@@ -31,10 +31,6 @@ fn run() -> Result<(), capture::CaptureError> {
     #[cfg(windows)]
     if mode == "cursor" {
         return probe_windows_cursor();
-    }
-    #[cfg(all(windows, feature = "system-audio"))]
-    if mode == "system-audio" {
-        return record_windows_system_audio();
     }
     if mode == "full" {
         return record_full_session();
@@ -169,7 +165,7 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
     use capture::{
         model::{
             CaptureRequest, CursorSelection, FailurePolicy, ProjectId, RecordingSettings,
-            ScreenSelection, SystemAudioSelection,
+            ScreenSelection,
         },
         session::RecordingSession,
     };
@@ -188,14 +184,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         .map(|source| ScreenSelection::Source {
             source_id: source.id.clone(),
         });
-    let system_audio = snapshot
-        .capabilities
-        .system_audio
-        .then_some(if cfg!(target_os = "macos") {
-            SystemAudioSelection::ScreenCaptureMix
-        } else {
-            SystemAudioSelection::DefaultMix
-        });
     let duration = argument_value("--duration")
         .map(|value| value.parse::<u64>())
         .transpose()
@@ -206,7 +194,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen,
-        system_audio,
         cursor: CursorSelection::Separate {
             capture_clicks: snapshot.capabilities.cursor_clicks,
             capture_shape: snapshot.capabilities.cursor_shapes,
@@ -229,42 +216,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
             "durationSeconds": duration,
             "manifestPath": manifest,
             "state": session.state(),
-        }),
-    )
-}
-
-#[cfg(all(windows, feature = "system-audio"))]
-fn record_windows_system_audio() -> Result<(), capture::CaptureError> {
-    use capture::{audio::system::win::WasapiLoopbackRecording, model::SourceId};
-
-    let source = argument_value("--source").map(SourceId::new).transpose()?;
-    let duration = argument_value("--duration")
-        .map(|value| value.parse::<u64>())
-        .transpose()
-        .map_err(|error| capture::CaptureError::Protocol(error.to_string()))?
-        .unwrap_or(10);
-    let output = argument_value("--output").map_or_else(
-        || PathBuf::from("capture-smoke-system-audio.wav"),
-        PathBuf::from,
-    );
-    let recording = WasapiLoopbackRecording::start(source.as_ref(), &output, started_gate()?)?;
-    let metrics = recording.metrics();
-    let sample_rate = recording.sample_rate();
-    let channels = recording.channels();
-    std::thread::sleep(Duration::from_secs(duration));
-    let samples = recording.stop()?;
-    write_json_line(
-        &mut io::stdout().lock(),
-        &serde_json::json!({
-            "mode": "system-audio",
-            "sourceId": source,
-            "path": output,
-            "durationSeconds": duration,
-            "sampleRate": sample_rate,
-            "channels": channels,
-            "samplesWritten": samples,
-            "samplesReceived": metrics.samples_received(),
-            "interruptions": metrics.interruptions(),
         }),
     )
 }

@@ -17,7 +17,6 @@ fn manifest(project_id: ProjectId, session_id: SessionId) -> SessionManifest {
         },
         selected_sources: SelectedSources {
             screen: None,
-            system_audio: None,
             microphone: None,
             camera: None,
         },

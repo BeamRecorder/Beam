@@ -5,11 +5,9 @@ edition = "2024"
 publish = false
 
 [features]
-default = ["screen", "system-audio", "cursor", "recording"]
+default = ["screen", "cursor"]
 screen = []
-system-audio = []
 cursor = []
-recording = ["dep:hound"]
 hardware-tests = []
 
 [dependencies]
@@ -20,14 +18,12 @@ thiserror = "2"
 tracing = "0.1"
 uuid = { version = "1", features = ["serde", "v7"] }
 time = { version = "0.3", features = ["formatting"] }
-hound = { version = "3", optional = true }
 png = "0.18"
 sha2 = "0.10"
 fs2 = "0.4"
 
 [target.'cfg(windows)'.dependencies]
 windows-capture = "2.0.0"
-wasapi = "0.23"
 parking_lot = "0.12"
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D11", "Win32_Graphics_Dxgi", "Win32_Graphics_Gdi", "Win32_Media_Audio", "Win32_System_Com", "Win32_System_Performance", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
 
@@ -84,4 +80,4 @@ path = "src/bin/capture-smoke.rs"
 [[test]]
 name = "full_session_smoke"
 path = "tests/hardware/full_session_smoke.rs"
-required-features = ["hardware-tests", "recording"]
+required-features = ["hardware-tests"]

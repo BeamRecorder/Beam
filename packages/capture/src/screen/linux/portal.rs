@@ -26,10 +26,6 @@ pub fn capabilities() -> CaptureCapabilities {
         separate_cursor: !portal,
         cursor_shapes: !portal,
         cursor_clicks: !portal,
-        // PipeWire/portal audio is not wired into a recording backend yet. Do
-        // not advertise a capture capability that would produce an empty track.
-        system_audio: false,
-        selectable_system_output: false,
         ..CaptureCapabilities::default()
     }
 }
@@ -41,8 +37,6 @@ pub fn permissions() -> PermissionSnapshot {
         } else {
             PermissionState::Granted
         }),
-        microphone: None,
-        camera: None,
         accessibility: Some(PermissionState::NotApplicable),
     }
 }

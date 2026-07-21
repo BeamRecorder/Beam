@@ -34,10 +34,6 @@ export interface CaptureConfig {
     kind: 'monitor' | 'window' | 'monitor-or-window'
     restoreToken: string | null
   }
-  systemAudio: null | { mode: 'default-mix' | 'screen-capture-mix' } | {
-    mode: 'output-device'
-    sourceId: string
-  }
   cursor: { mode: 'disabled' | 'embedded' } | {
     mode: 'separate'
     captureClicks: boolean

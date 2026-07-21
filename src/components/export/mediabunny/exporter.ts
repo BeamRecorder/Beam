@@ -1,15 +1,38 @@
-import { CanvasSource, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny'
+import { AudioBufferSource, CanvasSource, getFirstEncodableAudioCodec, getFirstEncodableVideoCodec, Mp4OutputFormat, Output, StreamTarget, WebMOutputFormat } from 'mediabunny'
 import { bitrateFor } from '../export-presets'
 import type { ExportProgress, ExportRequest, ExportResult } from '../export-types'
 import { renderCompositionFrame } from '../composition/render'
 
 const codecCandidates = { webm: ['vp9', 'vp8', 'av1'], mp4: ['avc'] } as const
+const audioCodecCandidates = { webm: ['opus'], mp4: ['aac'] } as const
 
 export async function supportedVideoCodec(request: ExportRequest) {
   const { video } = request.snapshot
   return getFirstEncodableVideoCodec([...codecCandidates[request.format]], {
     width: video.width, height: video.height, bitrate: bitrateFor(request.preset, video.width, video.height, video.fps),
   })
+}
+
+export async function supportedAudioCodec(request: ExportRequest) {
+  if (request.snapshot.audio.length === 0) return null
+  return getFirstEncodableAudioCodec([...audioCodecCandidates[request.format]], { sampleRate: 48_000, numberOfChannels: 2, bitrate: 128_000 })
+}
+
+export async function renderMixedAudio(request: ExportRequest): Promise<AudioBuffer | null> {
+  const layers = request.snapshot.audio.filter((layer) => layer.enabled)
+  if (layers.length === 0) return null
+  if (!window.OfflineAudioContext) throw new Error('Offline audio mixing is unavailable in this Chromium build.')
+  const context = new OfflineAudioContext(2, Math.max(1, Math.ceil(request.snapshot.duration * 48_000)), 48_000)
+  await Promise.all(layers.map(async (layer) => {
+    const response = await fetch(layer.src)
+    if (!response.ok) throw new Error(`Unable to read the audio sidecar: ${layer.src}`)
+    const buffer = await context.decodeAudioData(await response.arrayBuffer())
+    const source = context.createBufferSource()
+    source.buffer = buffer
+    source.connect(context.destination)
+    source.start(Math.max(0, layer.startSeconds))
+  }))
+  return context.startRendering()
 }
 
 const waitFor = (target: HTMLMediaElement, event: 'loadedmetadata' | 'seeked') => new Promise<void>((resolve, reject) => {
@@ -44,6 +67,8 @@ async function loadCursorImages(request: ExportRequest) {
 export async function exportWithMediabunny(request: ExportRequest, onProgress: (progress: ExportProgress) => void, signal: AbortSignal): Promise<ExportResult> {
   const codec = await supportedVideoCodec(request)
   if (!codec) throw new Error(`${request.format.toUpperCase()} n’est pas encodable par cette machine.`)
+  const audioCodec = await supportedAudioCodec(request)
+  if (request.snapshot.audio.length > 0 && !audioCodec) throw new Error(`${request.format.toUpperCase()} audio is not encodable by this machine.`)
   const opened = await window.capture?.beginExport({ projectName: request.projectName, format: request.format })
   if (!opened || opened.canceled) throw new DOMException('Export annulé.', 'AbortError')
   const video = document.createElement('video')
@@ -63,7 +88,11 @@ export async function exportWithMediabunny(request: ExportRequest, onProgress: (
     video.load(); await waitFor(video, 'loadedmetadata')
     const background = await loadBackground(request)
     const cursorImages = await loadCursorImages(request)
+    const mixedAudio = await renderMixedAudio(request)
+    const audioSource = mixedAudio && audioCodec ? new AudioBufferSource({ codec: audioCodec, bitrate: 128_000 }) : null
+    if (audioSource) output.addAudioTrack(audioSource)
     await output.start()
+    if (audioSource && mixedAudio) await audioSource.add(mixedAudio)
     const total = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.video.fps))
     for (let frame = 0; frame < total; frame += 1) {
       if (signal.aborted) throw new DOMException('Export annulé.', 'AbortError')

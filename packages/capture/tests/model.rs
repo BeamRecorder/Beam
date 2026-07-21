@@ -20,7 +20,6 @@ fn request_json_roundtrip_and_defaults_are_stable() {
             kind: PortalSourceKind::MonitorOrWindow,
             restore_token: None,
         }),
-        system_audio: Some(SystemAudioSelection::DefaultMix),
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
@@ -36,7 +35,6 @@ fn cursor_without_screen_is_rejected() {
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: None,
-        system_audio: None,
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
@@ -60,7 +58,6 @@ fn manifest_schema_is_versioned_and_roundtrips() {
         },
         selected_sources: SelectedSources {
             screen: None,
-            system_audio: None,
             microphone: None,
             camera: None,
         },

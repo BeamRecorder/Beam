@@ -8,7 +8,7 @@ OS APIs are confined to `win/`, `mac/` and `linux/` directories. The architectur
 
 ## macOS crate decision
 
-The selected crate is `screencapturekit 8.0.1`. Its cumulative `macos_15_0` feature includes the macOS 13 APIs while also exposing `SCRecordingOutput`, used for direct hardware H.264 MP4 recording on macOS 15 and newer. Screen, window, application and system-audio capture use ScreenCaptureKit directly; audio sample buffers are drained through a bounded queue into an independent WAV sidecar. The older `screen-capture-kit 0.7.1` lacks the direct recording surface and was therefore not selected. All native references remain under OS-specific `mac/` directories.
+The selected crate is `screencapturekit 8.0.1`. Its cumulative `macos_15_0` feature includes the macOS 13 APIs while also exposing `SCRecordingOutput`, used for direct hardware H.264 MP4 recording on macOS 15 and newer. Screen, window and application video use ScreenCaptureKit directly. Camera, microphone, and system audio are browser-owned Chromium sidecars persisted atomically by Electron; system audio uses Electron desktop loopback with `getDisplayMedia`. The older `screen-capture-kit 0.7.1` lacks the direct recording surface and was therefore not selected. All native references remain under OS-specific `mac/` directories.
 
 ## Persistence and time
 
@@ -20,4 +20,4 @@ Pause and resume close and create segments; they do not rewrite earlier media. C
 
 ## Current backend strategy
 
-Windows uses Windows Graphics Capture, the WGC hardware encoder, WASAPI loopback and Win32 cursor sampling. macOS uses ScreenCaptureKit, its VideoToolbox-backed recording output, a separate ScreenCaptureKit audio stream and CoreGraphics cursor events. Linux uses the XDG ScreenCast portal plus PipeWire, with X11/XFixes as an isolated fallback. Webcams and microphones are captured by Chromium with `getUserMedia`/`MediaRecorder`; Electron atomically persists their WebM segments beside native tracks. FFmpeg, when used for Linux H.264, is an optional child process and does not appear in public types.
+Windows uses Windows Graphics Capture, the WGC hardware encoder and Win32 cursor sampling. macOS uses ScreenCaptureKit and its VideoToolbox-backed recording output plus CoreGraphics cursor events. Linux uses the XDG ScreenCast portal plus PipeWire, with X11/XFixes as an isolated fallback. Webcams, microphones, and system audio are captured by Chromium with `getUserMedia`/`getDisplayMedia` and `MediaRecorder`; Electron atomically persists their WebM segments beside native tracks. FFmpeg, when used for Linux H.264, is an optional child process and does not appear in public types.

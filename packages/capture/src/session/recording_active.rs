@@ -10,10 +10,6 @@ use crate::{
     storage::finish_segment,
 };
 
-#[cfg(feature = "system-audio")]
-use crate::model::TrackFormat;
-#[cfg(all(not(any(windows, target_os = "macos")), feature = "system-audio"))]
-use crate::model::TrackKind;
 #[cfg(any(windows, target_os = "macos"))]
 use crate::model::{CursorSelection, TrackKind};
 
@@ -28,10 +24,6 @@ pub(super) struct ActiveRecordings {
     screen: Option<crate::screen::win::WindowsRecording>,
     #[cfg(target_os = "macos")]
     screen: Option<crate::screen::mac::MacRecording>,
-    #[cfg(all(windows, feature = "system-audio"))]
-    system_audio: Option<crate::audio::system::win::WasapiLoopbackRecording>,
-    #[cfg(all(target_os = "macos", feature = "system-audio"))]
-    system_audio: Option<crate::audio::system::mac::MacSystemAudioRecording>,
     #[cfg(all(windows, feature = "cursor"))]
     cursor: Option<crate::cursor::win::WindowsCursorRecording>,
     #[cfg(all(target_os = "macos", feature = "cursor"))]
@@ -59,73 +51,6 @@ impl ActiveRecordings {
             tracks,
             start_gate,
         } = context;
-        #[cfg(all(windows, feature = "system-audio"))]
-        if let Some(selection) = &request.system_audio {
-            let source = match selection {
-                crate::model::SystemAudioSelection::OutputDevice(source) => Some(source),
-                crate::model::SystemAudioSelection::DefaultMix
-                | crate::model::SystemAudioSelection::ScreenCaptureMix => None,
-            };
-            let path = segment_path(layout, TrackKind::SystemAudio, generation, "wav");
-            self.system_audio = match crate::audio::system::win::WasapiLoopbackRecording::start(
-                source,
-                &path,
-                start_gate.clone(),
-            ) {
-                Ok(recording) => Some(recording),
-                Err(error) => {
-                    optional_failure(request, tracks, TrackKind::SystemAudio, error)?;
-                    None
-                }
-            };
-            if let (Some(track), Some(recording)) = (
-                track_mut(tracks, TrackKind::SystemAudio),
-                &self.system_audio,
-            ) {
-                track.format = TrackFormat::Audio {
-                    sample_format: "f32".into(),
-                    sample_rate: recording.sample_rate(),
-                    channels: recording.channels(),
-                };
-            }
-            if self.system_audio.is_some() {
-                add_segment(tracks, TrackKind::SystemAudio, generation, "wav", start_ns)?;
-            }
-        }
-        #[cfg(all(target_os = "macos", feature = "system-audio"))]
-        if request.system_audio.is_some() {
-            let source_id = match &request.screen {
-                Some(ScreenSelection::Source { source_id }) => source_id,
-                _ => {
-                    return Err(CaptureError::InvalidConfiguration(
-                        "macOS system audio requires a direct captured source".into(),
-                    ));
-                }
-            };
-            let path = segment_path(layout, TrackKind::SystemAudio, generation, "wav");
-            self.system_audio = match crate::audio::system::mac::MacSystemAudioRecording::start(
-                source_id,
-                &path,
-                request.recording.queue_capacity,
-                start_gate.clone(),
-            ) {
-                Ok(recording) => Some(recording),
-                Err(error) => {
-                    optional_failure(request, tracks, TrackKind::SystemAudio, error)?;
-                    None
-                }
-            };
-            if let Some(track) = track_mut(tracks, TrackKind::SystemAudio) {
-                track.format = TrackFormat::Audio {
-                    sample_format: "f32".into(),
-                    sample_rate: 48_000,
-                    channels: 2,
-                };
-            }
-            if self.system_audio.is_some() {
-                add_segment(tracks, TrackKind::SystemAudio, generation, "wav", start_ns)?;
-            }
-        }
         #[cfg(all(windows, feature = "cursor"))]
         if let CursorSelection::Separate {
             capture_clicks,
@@ -281,30 +206,6 @@ impl ActiveRecordings {
                 TrackKind::Screen,
                 metrics.frames_received(),
                 metrics.frames_dropped(),
-            );
-        }
-        #[cfg(all(windows, feature = "system-audio"))]
-        if let Some(recording) = self.system_audio.take() {
-            let metrics = recording.metrics();
-            record_result(recording.stop().map(|_| ()), &mut first_error);
-            update_audio_metrics(
-                tracks,
-                TrackKind::SystemAudio,
-                metrics.samples_received(),
-                0,
-                metrics.interruptions(),
-            );
-        }
-        #[cfg(all(target_os = "macos", feature = "system-audio"))]
-        if let Some(recording) = self.system_audio.take() {
-            let metrics = recording.metrics();
-            record_result(recording.stop().map(|_| ()), &mut first_error);
-            update_audio_metrics(
-                tracks,
-                TrackKind::SystemAudio,
-                metrics.samples_received(),
-                metrics.samples_dropped(),
-                metrics.interruptions(),
             );
         }
         #[cfg(all(windows, feature = "cursor"))]

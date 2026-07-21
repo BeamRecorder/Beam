@@ -23,7 +23,6 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
   if (!screen) throw new Error('Aucun écran ou fenêtre capturable n’est disponible')
   return {
     projectId: options.projectId || randomUUID(), screen: { mode: 'source', sourceId: screen.id },
-    systemAudio: options.systemAudio && capabilities.systemAudio ? { mode: environment.platform === 'darwin' ? 'screen-capture-mix' : 'default-mix' } : null,
     cursor: options.cursor !== false && capabilities.separateCursor ? { mode: 'separate', captureClicks: Boolean(capabilities.cursorClicks), captureShape: Boolean(capabilities.cursorShapes) } : { mode: capabilities.embeddedCursor ? 'embedded' : 'disabled' },
     recording: { outputRoot: options.outputRoot || environment.defaultOutputRoot, videoBitrateBps: positiveInteger(options.videoBitrateBps, 12_000_000, 'videoBitrateBps'), targetFps: positiveInteger(options.targetFps, 60, 'targetFps'), keyframeIntervalSeconds: 2, queueCapacity: positiveInteger(options.queueCapacity, 8, 'queueCapacity'), minimumFreeBytes: options.minimumFreeBytes ?? 536_870_912 },
     failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',

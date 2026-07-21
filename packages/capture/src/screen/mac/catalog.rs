@@ -50,7 +50,6 @@ fn display_descriptor(
                 pixel_format: Some("bgra8".into()),
             }],
             supports_cursor_exclusion: true,
-            supports_system_audio: true,
         },
     })
 }
@@ -79,7 +78,6 @@ fn window_descriptor(
                 pixel_format: Some("bgra8".into()),
             }],
             supports_cursor_exclusion: true,
-            supports_system_audio: true,
         },
     })
 }
@@ -100,7 +98,6 @@ fn application_descriptor(
         selection_mode: SourceSelectionMode::Direct,
         capabilities: SourceCapabilities {
             supports_cursor_exclusion: true,
-            supports_system_audio: true,
             ..SourceCapabilities::default()
         },
     })

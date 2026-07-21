@@ -8,7 +8,6 @@ pub enum SourceKind {
     Display,
     Window,
     Application,
-    SystemAudio,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,7 +23,6 @@ pub enum SourceSelectionMode {
 pub struct SourceCapabilities {
     pub formats: Vec<MediaFormat>,
     pub supports_cursor_exclusion: bool,
-    pub supports_system_audio: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

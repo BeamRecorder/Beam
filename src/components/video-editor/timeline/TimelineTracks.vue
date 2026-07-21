@@ -64,13 +64,20 @@ const micAudioWaveBars = computed(() => {
 });
 
 // Real Waveform Logic
-const { peaks: systemPeaks, generateWaveformFromWav: genSystemWaveform } =
+const { peaks: systemPeaks, generateWaveformFromAudioBuffer: genSystemWaveform } =
   useWaveform();
-const { peaks: micPeaks, generateWaveformFromWav: genMicWaveform } =
+const { peaks: micPeaks, generateWaveformFromAudioBuffer: genMicWaveform } =
   useWaveform();
 
-const systemAudioBuffer = ref<ArrayBuffer | null>(null);
-const micAudioBuffer = ref<ArrayBuffer | null>(null);
+const systemAudioBuffer = ref<AudioBuffer | null>(null);
+const micAudioBuffer = ref<AudioBuffer | null>(null);
+
+const decodeAudio = async (source: string) => {
+  const response = await fetch(source);
+  if (!response.ok) throw new Error(`Unable to read audio asset: ${source}`);
+  const context = new OfflineAudioContext(1, 1, 44_100);
+  return context.decodeAudioData(await response.arrayBuffer());
+};
 
 const visibleStartSecond = ref(0);
 const visibleEndSecond = ref(0);
@@ -91,8 +98,7 @@ watch(
       return;
     }
     try {
-      const response = await fetch(src);
-      systemAudioBuffer.value = await response.arrayBuffer();
+      systemAudioBuffer.value = await decodeAudio(src);
     } catch (err) {
       console.error("Failed to load system audio track:", err);
     }
@@ -108,8 +114,7 @@ watch(
       return;
     }
     try {
-      const response = await fetch(src);
-      micAudioBuffer.value = await response.arrayBuffer();
+      micAudioBuffer.value = await decodeAudio(src);
     } catch (err) {
       console.error("Failed to load mic audio track:", err);
     }

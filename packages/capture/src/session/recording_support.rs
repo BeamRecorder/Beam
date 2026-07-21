@@ -1,19 +1,19 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(any(windows, target_os = "macos"))]
+use std::path::PathBuf;
 use std::{fs::OpenOptions, io::Write};
 
+#[cfg(any(windows, target_os = "macos"))]
+use crate::storage::segment;
 use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
     model::{
         CaptureRequest, CursorSelection, HealthEvent, MediaFormat, ScreenSelection,
-        SelectedSources, SourceDescriptor, SourceId, SystemAudioSelection, TimingAnchor,
-        TrackFormat, TrackId, TrackKind, TrackMetadata, TrackMetrics, TrackStatus,
+        SelectedSources, SourceDescriptor, SourceId, TimingAnchor, TrackFormat, TrackId, TrackKind,
+        TrackMetadata, TrackMetrics, TrackStatus,
     },
-    storage::segment,
 };
-
-#[cfg(feature = "system-audio")]
-use crate::model::FailurePolicy;
 
 use super::recording::RecordingSession;
 
@@ -37,24 +37,6 @@ pub(super) fn record_result(result: Result<(), CaptureError>, first: &mut Option
     }
 }
 
-#[cfg(all(feature = "system-audio", any(windows, target_os = "macos")))]
-pub(super) fn optional_failure(
-    request: &CaptureRequest,
-    tracks: &mut [TrackMetadata],
-    kind: TrackKind,
-    error: CaptureError,
-) -> Result<(), CaptureError> {
-    if request.failure_policy == FailurePolicy::FailFast {
-        return Err(error);
-    }
-    if let Some(track) = track_mut(tracks, kind) {
-        track.status = TrackStatus::Failed;
-        track.termination_reason = Some(error.to_string());
-        track.metrics.interruptions = track.metrics.interruptions.saturating_add(1);
-    }
-    Ok(())
-}
-
 pub(super) fn track_metadata(
     request: &CaptureRequest,
     snapshot: &CatalogSnapshot,
@@ -71,17 +53,6 @@ pub(super) fn track_metadata(
                 width,
                 height,
                 nominal_fps: fps,
-            },
-        ));
-    }
-    if request.system_audio.is_some() {
-        tracks.push(new_track(
-            TrackKind::SystemAudio,
-            system_audio_id(request, snapshot),
-            TrackFormat::Audio {
-                sample_format: "f32".into(),
-                sample_rate: 0,
-                channels: 0,
             },
         ));
     }
@@ -206,49 +177,20 @@ pub(super) fn update_video_metrics(
     }
 }
 
-#[cfg(all(feature = "system-audio", any(windows, target_os = "macos")))]
-pub(super) fn update_audio_metrics(
-    tracks: &mut [TrackMetadata],
-    kind: TrackKind,
-    received: u64,
-    dropped: u64,
-    interruptions: u64,
-) {
-    if let Some(track) = track_mut(tracks, kind) {
-        track.metrics.samples_received += received;
-        track.metrics.samples_dropped += dropped;
-        track.metrics.interruptions += interruptions;
-    }
-}
-
 pub(super) fn selected_sources(
     request: &CaptureRequest,
-    snapshot: &CatalogSnapshot,
+    _snapshot: &CatalogSnapshot,
 ) -> SelectedSources {
     SelectedSources {
         screen: match &request.screen {
             Some(ScreenSelection::Source { source_id }) => Some(source_id.clone()),
             _ => None,
         },
-        system_audio: system_audio_id(request, snapshot),
+        system_audio: None,
         microphone: None,
         // Browser-owned camera capture merges its selected source after the native session
         // has finalized. Rust never opens a camera device.
         camera: None,
-    }
-}
-
-fn system_audio_id(request: &CaptureRequest, snapshot: &CatalogSnapshot) -> Option<SourceId> {
-    match &request.system_audio {
-        Some(SystemAudioSelection::OutputDevice(id)) => Some(id.clone()),
-        Some(SystemAudioSelection::DefaultMix | SystemAudioSelection::ScreenCaptureMix) => snapshot
-            .sources
-            .iter()
-            .find(|source| {
-                source.kind == crate::model::SourceKind::SystemAudio && source.is_default
-            })
-            .map(|source| source.id.clone()),
-        None => None,
     }
 }
 

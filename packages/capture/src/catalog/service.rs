@@ -2,7 +2,6 @@ use crate::{
     CaptureError,
     model::{
         CaptureRequest, CursorSelection, PermissionState, ScreenSelection, SourceId, SourceKind,
-        SystemAudioSelection,
     },
 };
 
@@ -31,20 +30,10 @@ pub fn validate_request(
             SourceKind::Display => snapshot.capabilities.display_capture,
             SourceKind::Window => snapshot.capabilities.window_capture,
             SourceKind::Application => snapshot.capabilities.application_capture,
-            _ => false,
         };
         require_capability(supported, "selected screen source")?;
     } else if matches!(request.screen, Some(ScreenSelection::Portal { .. })) {
         require_capability(snapshot.capabilities.portal_selection, "portal selection")?;
-    }
-    if let Some(SystemAudioSelection::OutputDevice(source_id)) = &request.system_audio {
-        require_kind(snapshot, source_id, &[SourceKind::SystemAudio])?;
-        require_capability(
-            snapshot.capabilities.selectable_system_output,
-            "selectable system output",
-        )?;
-    } else if request.system_audio.is_some() {
-        require_capability(snapshot.capabilities.system_audio, "system audio")?;
     }
     match request.cursor {
         CursorSelection::Disabled => {}

@@ -18,24 +18,6 @@ impl SourceCatalog for NativeCatalog {
     fn snapshot(&self) -> Result<CatalogSnapshot, CaptureError> {
         #[allow(unused_mut)]
         let mut sources = platform_screen_sources()?;
-        #[cfg(all(feature = "system-audio", windows))]
-        sources.extend(crate::audio::system::win::discover_outputs()?);
-        #[cfg(all(feature = "system-audio", target_os = "macos"))]
-        sources.push(SourceDescriptor {
-            id: crate::model::SourceId::new("sck:system-audio:screen-capture-mix")?,
-            kind: crate::model::SourceKind::SystemAudio,
-            label: "ScreenCaptureKit system audio".into(),
-            is_default: true,
-            selection_mode: crate::model::SourceSelectionMode::Direct,
-            capabilities: crate::model::SourceCapabilities {
-                formats: vec![crate::model::MediaFormat::Audio {
-                    sample_rate: 48_000,
-                    channels: 2,
-                    sample_format: "f32".into(),
-                }],
-                ..crate::model::SourceCapabilities::default()
-            },
-        });
         let (capabilities, permissions, limitations) = platform_metadata();
         Ok(CatalogSnapshot {
             generation: self
@@ -63,7 +45,6 @@ fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
             selection_mode: SourceSelectionMode::Portal,
             capabilities: SourceCapabilities {
                 supports_cursor_exclusion: true,
-                supports_system_audio: true,
                 ..SourceCapabilities::default()
             },
         }]);
@@ -83,7 +64,6 @@ fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
                 pixel_format: None,
             }],
             supports_cursor_exclusion: true,
-            supports_system_audio: false,
         },
     }])
 }

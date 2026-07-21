@@ -43,7 +43,6 @@ pub fn discover_monitors() -> Result<Vec<SourceDescriptor>, CaptureError> {
                         pixel_format: Some("bgra8".into()),
                     }],
                     supports_cursor_exclusion: true,
-                    supports_system_audio: false,
                 },
             })
         })
@@ -85,7 +84,6 @@ fn window_descriptor(window: Window) -> Result<Option<SourceDescriptor>, Capture
                 pixel_format: Some("bgra8".into()),
             }],
             supports_cursor_exclusion: true,
-            supports_system_audio: false,
         },
     }))
 }

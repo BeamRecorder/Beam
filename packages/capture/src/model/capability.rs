@@ -11,8 +11,6 @@ pub struct CaptureCapabilities {
     pub separate_cursor: bool,
     pub cursor_shapes: bool,
     pub cursor_clicks: bool,
-    pub system_audio: bool,
-    pub selectable_system_output: bool,
     pub hardware_h264: bool,
     pub hardware_hevc: bool,
 }
@@ -31,7 +29,5 @@ pub enum PermissionState {
 #[serde(rename_all = "camelCase")]
 pub struct PermissionSnapshot {
     pub screen: Option<PermissionState>,
-    pub microphone: Option<PermissionState>,
-    pub camera: Option<PermissionState>,
     pub accessibility: Option<PermissionState>,
 }

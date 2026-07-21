@@ -62,6 +62,10 @@ export interface DesktopCaptureApi extends CaptureApi {
   writeMicrophoneSegment(payload: MediaSegmentChunk): Promise<void>
   finalizeMicrophoneSegment(payload: MicrophoneSegmentFinish): Promise<void>
   failMicrophone(payload: MicrophoneFailure): Promise<void>
+  beginSystemAudioSegment(payload: SystemAudioSegmentStart): Promise<{ jobId: string }>
+  writeSystemAudioSegment(payload: MediaSegmentChunk): Promise<void>
+  finalizeSystemAudioSegment(payload: SystemAudioSegmentFinish): Promise<void>
+  failSystemAudio(payload: SystemAudioFailure): Promise<void>
 }
 
 export interface CameraSegmentStart {
@@ -97,6 +101,26 @@ export interface MicrophoneSegmentFinish {
 }
 
 export interface MicrophoneFailure {
+  sessionId: string
+  sourceId: string
+  reason: string
+  format?: { codec: 'opus'; sampleRate: number; channels: number }
+}
+
+export interface SystemAudioSegmentStart {
+  sessionId: string
+  sourceId: string
+  format: { codec: 'opus'; sampleRate: number; channels: number }
+  startNs: number
+}
+
+export interface SystemAudioSegmentFinish {
+  jobId: string
+  endNs: number
+  metrics: Record<string, number>
+}
+
+export interface SystemAudioFailure {
   sessionId: string
   sourceId: string
   reason: string

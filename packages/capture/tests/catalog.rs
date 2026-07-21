@@ -18,22 +18,20 @@ fn source(id: &str, kind: SourceKind) -> SourceDescriptor {
 
 #[test]
 fn incompatible_source_kinds_are_rejected() {
-    let system_audio = source("system-audio:1", SourceKind::SystemAudio);
+    let window = source("window:1", SourceKind::Window);
     let snapshot = CatalogSnapshot {
         generation: 1,
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
         limitations: Vec::new(),
-        sources: vec![system_audio.clone()],
+        sources: vec![window.clone()],
     };
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: Some(ScreenSelection::Source {
-            source_id: system_audio.id,
+            source_id: window.id,
         }),
-        system_audio: None,
-        microphone: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
@@ -50,11 +48,11 @@ fn snapshot_filters_sources_by_kind() {
         permissions: PermissionSnapshot::default(),
         limitations: Vec::new(),
         sources: vec![
-            source("system-audio:1", SourceKind::SystemAudio),
+            source("window:1", SourceKind::Window),
             source("display:1", SourceKind::Display),
         ],
     };
-    assert_eq!(snapshot.by_kind(SourceKind::SystemAudio).count(), 1);
+    assert_eq!(snapshot.by_kind(SourceKind::Window).count(), 1);
 }
 
 #[test]
@@ -79,8 +77,6 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
         screen: Some(ScreenSelection::Source {
             source_id: display.id,
         }),
-        system_audio: None,
-        microphone: None,
         cursor: CursorSelection::Separate {
             capture_clicks: true,
             capture_shape: true,

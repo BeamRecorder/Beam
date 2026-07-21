@@ -9,6 +9,7 @@ const { registerWindowIpc } = require('./window-ipc.cjs')
 const { registerExportIpc } = require('./export-ipc.cjs')
 const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs')
 const { createMicrophoneStorage, registerMicrophoneIpc } = require('./microphone/ipc.cjs')
+const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-audio/ipc.cjs')
 
 const startupAt = process.hrtime.bigint()
 const logStartup = (step) => {
@@ -21,6 +22,7 @@ const applicationRoot = path.join(__dirname, '..')
 const captureEngine = new CaptureEngine(app, applicationRoot)
 const cameraStorage = createCameraStorage({})
 const microphoneStorage = createMicrophoneStorage({})
+const systemAudioStorage = createSystemAudioStorage({})
 const controllers = new WeakMap()
 
 function profileRendererRequests(webContents) {
@@ -50,9 +52,24 @@ function isTrustedRenderer(url) {
 }
 
 function configureMediaPermission() {
-  const trustedMedia = (webContents, permission) => permission === 'media' && isTrustedRenderer(webContents.getURL())
-  session.defaultSession.setPermissionCheckHandler((webContents, permission) => trustedMedia(webContents, permission))
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => callback(trustedMedia(webContents, permission) && Array.isArray(details.mediaTypes) && details.mediaTypes.some((mediaType) => mediaType === 'video' || mediaType === 'audio')))
+  const trusted = (webContents) => isTrustedRenderer(webContents.getURL())
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => trusted(webContents) && (permission === 'media' || permission === 'display-capture'))
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    if (!trusted(webContents)) return callback(false)
+    if (permission === 'display-capture') return callback(true)
+    callback(permission === 'media' && Array.isArray(details.mediaTypes) && details.mediaTypes.some((mediaType) => mediaType === 'video' || mediaType === 'audio'))
+  })
+}
+
+function configureDesktopLoopback() {
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
+      callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {})
+    } catch {
+      callback({})
+    }
+  })
 }
 
 function createWindow() {
@@ -90,12 +107,16 @@ app.whenReady().then(() => {
   logStartup('Electron app.whenReady resolved.')
   configureMediaPermission()
   logStartup('Media permission policy registered.')
-  registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, trackStorages: [cameraStorage, microphoneStorage] })
+  configureDesktopLoopback()
+  logStartup('Desktop loopback policy registered.')
+  registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage] })
   logStartup('Capture IPC registered.')
   registerCameraIpc({ ipcMain, storage: cameraStorage })
   logStartup('Camera IPC registered.')
   registerMicrophoneIpc({ ipcMain, storage: microphoneStorage })
   logStartup('Microphone IPC registered.')
+  registerSystemAudioIpc({ ipcMain, storage: systemAudioStorage })
+  logStartup('System audio IPC registered.')
   registerProjectIpc(ipcMain, createProjectStore(path.join(app.getPath('videos'), 'DemoRecorder')))
   logStartup('Project IPC registered.')
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
@@ -103,7 +124,7 @@ app.whenReady().then(() => {
   const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })
   logStartup('Export IPC registered.')
   const win = createWindow()
-  win.webContents.once('destroyed', () => { exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id); microphoneStorage.cleanupOwner(win.webContents.id) })
+  win.webContents.once('destroyed', () => { exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id); microphoneStorage.cleanupOwner(win.webContents.id); systemAudioStorage.cleanupOwner(win.webContents.id) })
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
 

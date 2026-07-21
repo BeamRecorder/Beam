@@ -48,7 +48,7 @@ Rust owns capture lifecycle, native permissions, source discovery, clocks, track
 - Composables coordinate reactive behavior and browser media primitives.
 - Typed API modules define renderer-facing contracts.
 - Electron code adapts files and IPC into safe API responses.
-- Rust code records and persists native screen/audio/cursor data; Electron persists browser-produced camera sidecars after native session finalization.
+- Rust code records and persists native screen/cursor data; Electron persists browser-produced camera, microphone, and system-audio sidecars after native session finalization.
 
 Do not move native capture logic into Vue, add filesystem reads to components, or make a UI component parse an unrelated protocol format when the main process can provide a typed representation.
 
