@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useVirtualList } from '@vueuse/core'
 import { Image, Upload, Video } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
@@ -14,7 +14,7 @@ const activeKind = ref<Extract<BackgroundMediaKind, 'image' | 'video'>>('image')
 const loadedCount = ref(24)
 const previewReady = ref(new Set<string>())
 const fileInput = ref<HTMLInputElement | null>(null)
-const loadMoreSentinel = ref<HTMLElement | null>(null)
+const isLoadingMore = ref(false)
 const pageSize = 24
 const columns = 3
 
@@ -29,7 +29,14 @@ const hasMore = computed(() => loadedCount.value < filteredItems.value.length)
 const rowStyle = (index: number) => ({ position: 'absolute' as const, top: `${index * 108}px`, left: '0' })
 
 const setKind = (kind: Extract<BackgroundMediaKind, 'image' | 'video'>) => { activeKind.value = kind; loadedCount.value = pageSize }
-const loadMore = () => { loadedCount.value = Math.min(filteredItems.value.length, loadedCount.value + pageSize) }
+const loadMore = () => {
+  if (isLoadingMore.value || !hasMore.value) return
+  isLoadingMore.value = true
+  requestAnimationFrame(() => {
+    loadedCount.value = Math.min(filteredItems.value.length, loadedCount.value + pageSize)
+    isLoadingMore.value = false
+  })
+}
 const markReady = (id: string) => { previewReady.value = new Set([...previewReady.value, id]) }
 const isReady = (id: string) => previewReady.value.has(id)
 const triggerImport = () => fileInput.value?.click()
@@ -44,20 +51,11 @@ const importBackground = (event: Event) => {
   ;(event.target as HTMLInputElement).value = ''
 }
 
-let loadMoreObserver: IntersectionObserver | null = null
-const observeLoadMore = async () => {
-  await nextTick()
-  loadMoreObserver?.disconnect()
-  if (!loadMoreSentinel.value || !hasMore.value) return
-  loadMoreObserver = new IntersectionObserver((entries) => {
-    if (entries.some((entry) => entry.isIntersecting)) loadMore()
-  }, { rootMargin: '160px 0px' })
-  loadMoreObserver.observe(loadMoreSentinel.value)
+const handleGridScroll = (event: Event) => {
+  containerProps.onScroll()
+  const container = event.currentTarget as HTMLElement
+  if (container.scrollHeight - container.scrollTop - container.clientHeight <= 160) loadMore()
 }
-
-onMounted(observeLoadMore)
-onBeforeUnmount(() => loadMoreObserver?.disconnect())
-watch([loadedCount, activeKind, hasMore], observeLoadMore)
 </script>
 
 <template>
@@ -69,7 +67,7 @@ watch([loadedCount, activeKind, hasMore], observeLoadMore)
     </ButtonGroup>
 
     <input ref="fileInput" class="file-input" type="file" accept="image/*,video/*" @change="importBackground" />
-    <div v-bind="containerProps" class="background-grid-scroll">
+    <div v-bind="containerProps" class="background-grid-scroll" @scroll="handleGridScroll">
       <div v-bind="wrapperProps" class="background-grid-wrapper">
         <div v-for="row in list" :key="row.index" class="background-grid-row" :style="rowStyle(row.index)">
           <template v-for="item in row.data" :key="item?.id ?? 'import'">
@@ -88,7 +86,7 @@ watch([loadedCount, activeKind, hasMore], observeLoadMore)
           </template>
         </div>
       </div>
-      <div v-if="hasMore" ref="loadMoreSentinel" class="load-more-sentinel" aria-label="Loading more backgrounds">
+      <div v-if="hasMore && isLoadingMore" class="load-more-sentinel" aria-label="Loading more backgrounds">
         <Skeleton width="100%" height="12px" radius="sm" />
       </div>
     </div>
