@@ -213,7 +213,7 @@ const toggleRecording = async () => {
         try {
           systemAudio = await BrowserSystemAudioRecorder.request()
         } catch (error) {
-          systemAudioError = error instanceof Error ? error : new Error(String(error))
+          systemAudioError = error instanceof Error ? new Error(`${error.name}: ${error.message}`) : new Error(String(error))
         }
       }
       const camera = selectedCameraId.value === 'off' ? null : await BrowserCameraRecorder.request(selectedCameraId.value)

@@ -73,8 +73,8 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                 });
               }
 
-              // Gotcha: if target time is already very close to current time, skip seek since 'seeked' might not fire
-              if (Math.abs(hiddenVideo.currentTime - time) < 0.05) {
+              // Gotcha: if target time is already very close to current time (and not 0), skip seek since 'seeked' might not fire
+              if (time > 0 && Math.abs(hiddenVideo.currentTime - time) < 0.05) {
               } else {
                 hiddenVideo.currentTime = time;
 

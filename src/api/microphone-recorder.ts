@@ -50,13 +50,19 @@ export class BrowserMicrophoneRecorder {
   readonly format: MicrophoneFormat
   private readonly stream: MediaStream
   private readonly track: MediaStreamTrack
+  private readonly audioContext: AudioContext
+  private readonly gain: GainNode
 
-  private constructor(stream: MediaStream, sourceId: string, track: MediaStreamTrack, format: MicrophoneFormat) {
+  private constructor(stream: MediaStream, sourceId: string, track: MediaStreamTrack, format: MicrophoneFormat, audioContext: AudioContext, gain: GainNode) {
     this.stream = stream
     this.sourceId = sourceId
     this.track = track
     this.format = format
+    this.audioContext = audioContext
+    this.gain = gain
     this.track.addEventListener('ended', () => this.reportFatal(new Error('The selected microphone was disconnected or stopped.')), { once: true })
+    this.track.addEventListener('mute', () => this.fadeTo(0), { passive: true })
+    this.track.addEventListener('unmute', () => this.fadeTo(1), { passive: true })
   }
 
   static async request(sourceId: string) {
@@ -66,7 +72,20 @@ export class BrowserMicrophoneRecorder {
     const track = stream.getAudioTracks()[0]
     if (!track) { stream.getTracks().forEach((entry) => entry.stop()); throw new Error('The selected microphone did not provide an audio track.') }
     const settings = track.getSettings()
-    return new BrowserMicrophoneRecorder(stream, sourceId, track, { codec: 'opus', sampleRate: normalizedMicrophoneSetting(settings.sampleRate), channels: normalizedMicrophoneSetting(settings.channelCount) })
+    const audioContext = new AudioContext()
+    try {
+      const source = audioContext.createMediaStreamSource(stream)
+      const gain = audioContext.createGain()
+      const destination = audioContext.createMediaStreamDestination()
+      gain.gain.value = track.muted ? 0 : 1
+      source.connect(gain).connect(destination)
+      await audioContext.resume()
+      return new BrowserMicrophoneRecorder(destination.stream, sourceId, track, { codec: 'opus', sampleRate: normalizedMicrophoneSetting(settings.sampleRate), channels: normalizedMicrophoneSetting(settings.channelCount) }, audioContext, gain)
+    } catch (error) {
+      stream.getTracks().forEach((entry) => entry.stop())
+      await audioContext.close().catch(() => undefined)
+      throw error
+    }
   }
 
   onFatal(handler: (error: Error) => void) { this.fatalHandler = handler }
@@ -134,6 +153,13 @@ export class BrowserMicrophoneRecorder {
 
   private nowNs() { return Math.max(0, Math.round((performance.now() - this.timelineStartedAt) * 1_000_000)) }
 
+  private fadeTo(value: number) {
+    const now = this.audioContext.currentTime
+    this.gain.gain.cancelScheduledValues(now)
+    this.gain.gain.setValueAtTime(this.gain.gain.value, now)
+    this.gain.gain.linearRampToValueAtTime(value, now + 0.015)
+  }
+
   private reportFatal(error: Error) {
     if (!this.stopped) this.fatalHandler?.(error)
   }
@@ -141,6 +167,8 @@ export class BrowserMicrophoneRecorder {
   private release() {
     this.stopped = true
     this.stream.getTracks().forEach((entry) => entry.stop())
+    this.track.stop()
+    void this.audioContext.close()
   }
 }
 

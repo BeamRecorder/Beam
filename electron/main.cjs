@@ -54,10 +54,9 @@ function isTrustedRenderer(url) {
 function configureMediaPermission() {
   const trusted = (webContents) => isTrustedRenderer(webContents.getURL())
   session.defaultSession.setPermissionCheckHandler((webContents, permission) => trusted(webContents) && (permission === 'media' || permission === 'display-capture'))
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     if (!trusted(webContents)) return callback(false)
-    if (permission === 'display-capture') return callback(true)
-    callback(permission === 'media' && Array.isArray(details.mediaTypes) && details.mediaTypes.some((mediaType) => mediaType === 'video' || mediaType === 'audio'))
+    callback(permission === 'media' || permission === 'display-capture')
   })
 }
 
@@ -65,8 +64,10 @@ function configureDesktopLoopback() {
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
       const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
+      if (!app.isPackaged) logStartup(`Desktop loopback request received (${sources.length} screen source${sources.length === 1 ? '' : 's'}).`)
       callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {})
     } catch {
+      if (!app.isPackaged) logStartup('Desktop loopback source discovery failed.')
       callback({})
     }
   })

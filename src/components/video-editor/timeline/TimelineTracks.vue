@@ -122,42 +122,39 @@ watch(
   { immediate: true },
 );
 
-const systemBars = computed(() => {
-  if (!systemPeaks.value) return [];
-  const bars = [];
-  const len = systemPeaks.value.length / 2;
-  for (let i = 0; i < len; i++) {
-    const min = systemPeaks.value[i * 2];
-    const max = systemPeaks.value[i * 2 + 1];
-    const amp = Math.max(0, max - min);
-    const height = Math.max(2, Math.round(amp * 18));
-    bars.push(height);
-  }
-  return bars;
-});
+const getNormalizedBars = (peaks: Float32Array | null, maxBarHeight = 22) => {
+  if (!peaks || peaks.length === 0) return [];
+  const len = peaks.length / 2;
+  const amps = new Float32Array(len);
+  let maxAmp = 0.0001; // Avoid divide-by-zero
 
-const micBars = computed(() => {
-  if (!micPeaks.value) return [];
-  const bars = [];
-  const len = micPeaks.value.length / 2;
   for (let i = 0; i < len; i++) {
-    const min = micPeaks.value[i * 2];
-    const max = micPeaks.value[i * 2 + 1];
+    const min = peaks[i * 2];
+    const max = peaks[i * 2 + 1];
     const amp = Math.max(0, max - min);
-    const height = Math.max(2, Math.round(amp * 18));
+    amps[i] = amp;
+    if (amp > maxAmp) maxAmp = amp;
+  }
+
+  // Scale bars relative to max amplitude in track so quiet mic signals are visible & dynamic
+  const bars: number[] = [];
+  const scale = maxAmp > 0.01 ? maxBarHeight / maxAmp : maxBarHeight * 5; // boost if very low signal
+
+  for (let i = 0; i < len; i++) {
+    const height = Math.max(2, Math.min(maxBarHeight, Math.round(amps[i] * scale)));
     bars.push(height);
   }
   return bars;
-});
+};
+
+const systemBars = computed(() => getNormalizedBars(systemPeaks.value));
+const micBars = computed(() => getNormalizedBars(micPeaks.value));
 
 const waveformStyle = computed(() => {
-  const start = visibleStartSecond.value;
-  const end = visibleEndSecond.value;
-  const dur = props.duration || 1;
   return {
     position: "absolute" as const,
-    left: `${(start / dur) * 100}%`,
-    width: `${((end - start) / dur) * 100}%`,
+    left: "0%",
+    width: "100%",
     height: "100%",
     display: "flex",
     alignItems: "center",
@@ -167,27 +164,26 @@ const waveformStyle = computed(() => {
 });
 
 const updateWaveforms = () => {
-  const start = visibleStartSecond.value;
-  const end = visibleEndSecond.value;
-  if (end <= start) return;
+  if (!props.duration || props.duration <= 0) return;
 
-  const width = tracksScrollRef.value?.clientWidth || 800;
-  const targetPoints = Math.max(50, Math.min(300, Math.floor(width / 4)));
+  // Set number of target points based on track scrollable width or default resolution
+  const width = tracksViewportRef.value?.clientWidth || 1000;
+  const targetPoints = Math.max(100, Math.min(1200, Math.floor(width / 3)));
 
   if (systemAudioBuffer.value) {
-    genSystemWaveform(systemAudioBuffer.value, start, end, targetPoints);
+    genSystemWaveform(systemAudioBuffer.value, 0, props.duration, targetPoints);
   }
   if (micAudioBuffer.value) {
-    genMicWaveform(micAudioBuffer.value, start, end, targetPoints);
+    genMicWaveform(micAudioBuffer.value, 0, props.duration, targetPoints);
   }
 };
 
 watch(
   () => [
-    visibleStartSecond.value,
-    visibleEndSecond.value,
     systemAudioBuffer.value,
     micAudioBuffer.value,
+    props.duration,
+    props.zoomLevel,
   ],
   () => {
     updateWaveforms();
@@ -272,14 +268,14 @@ const updateVisibleThumbnails = () => {
 
   const startSecond = Math.max(0, Math.floor(startPercent * props.duration));
   const endSecond = Math.min(
-    props.duration,
+    Math.max(0, props.duration - 1),
     Math.ceil(endPercent * props.duration),
   );
 
   visibleStartSecond.value = startSecond;
   visibleEndSecond.value = endSecond;
 
-  // Request visible frame timestamps (extract 1 frame per second for timeline view)
+  // Request visible frame timestamps (extract 1 frame per second for timeline view: 0, 1, ..., duration - 1)
   const visibleSeconds: number[] = [];
   for (let s = startSecond; s <= endSecond; s++) {
     visibleSeconds.push(s);
