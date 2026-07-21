@@ -79,13 +79,16 @@ const selectedProject = computed(
 
 import { useProjectThumbnailGenerator } from "./useProjectThumbnailGenerator";
 
-const loadedVideoSrcs = ref<Record<string, boolean>>({});
 const hoveredProjectId = ref<string | null>(null);
 const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator();
 
 const generateThumbnailsForProjects = async (projectList: CaptureProject[]) => {
   for (const project of projectList) {
-    if (project.previewSrc && !project.thumbnailSrc && !thumbnailCache[project.id]) {
+    if (
+      project.previewSrc &&
+      !project.thumbnailSrc &&
+      !thumbnailCache[project.id]
+    ) {
       void generateThumbnail(project.id, project.previewSrc);
     }
   }
@@ -468,7 +471,9 @@ defineExpose({
                     @timeupdate="handleVideoTimeUpdate(project.id, $event)"
                   />
                   <img
-                    v-else-if="thumbnailCache[project.id] || project.thumbnailSrc"
+                    v-else-if="
+                      thumbnailCache[project.id] || project.thumbnailSrc
+                    "
                     :src="thumbnailCache[project.id] || project.thumbnailSrc!"
                     class="project-preview-thumb"
                     alt="preview"
