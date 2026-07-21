@@ -9,7 +9,7 @@ Versions are locked in `Cargo.lock`; licenses below describe direct dependencies
 | uuid | UUID v7 identifiers | MIT OR Apache-2.0 |
 | crossbeam-channel | Bounded queues | MIT OR Apache-2.0 |
 | cpal | Microphone discovery/capture | Apache-2.0 |
-| nokhwa | Camera discovery/capture | Apache-2.0 |
+| cameras | Native camera discovery/capture | MIT OR Apache-2.0 |
 | hound | Float PCM WAV writing | Apache-2.0 |
 | png / sha2 | Cursor shape storage/deduplication | MIT OR Apache-2.0 |
 | windows-capture / windows / wasapi | Windows capture APIs | MIT or MIT OR Apache-2.0 |

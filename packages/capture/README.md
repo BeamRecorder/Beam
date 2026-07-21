@@ -14,6 +14,6 @@ cargo run -p capture --bin capture-smoke -- full
 
 `capture-engine` reads JSONL on stdin and reserves stdout for JSONL responses. Logs and fatal diagnostics go to stderr. Hardware tests are ignored unless `hardware-tests` is explicitly enabled.
 
-Windows recording uses WGC H.264, WASAPI loopback, CPAL, Media Foundation/Nokhwa and Win32 cursor sampling. macOS uses ScreenCaptureKit for display/window/application video and system audio, CoreGraphics for cursor events, CPAL for microphones and a Motion JPEG sidecar for camera frames. Direct ScreenCaptureKit MP4 recording requires macOS 15 or newer; source discovery and audio APIs remain based on the macOS 13 ScreenCaptureKit surface.
+Windows recording uses WGC H.264, WASAPI loopback, CPAL, `cameras`/Media Foundation and Win32 cursor sampling. macOS uses ScreenCaptureKit for display/window/application video and system audio, CoreGraphics for cursor events, CPAL for microphones and AVFoundation camera frames through `cameras`. Direct ScreenCaptureKit MP4 recording requires macOS 15 or newer; source discovery and audio APIs remain based on the macOS 13 ScreenCaptureKit surface.
 
 Linux builds with hardware features require ALSA, PipeWire, SPA and udev development packages. The CI workflow installs these packages.

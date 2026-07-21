@@ -10,7 +10,7 @@ screen = []
 microphone = ["dep:cpal"]
 system-audio = []
 cursor = []
-camera = ["dep:nokhwa"]
+camera = ["dep:cameras"]
 recording = ["dep:hound"]
 hardware-tests = []
 
@@ -23,7 +23,7 @@ tracing = "0.1"
 uuid = { version = "1", features = ["serde", "v7"] }
 time = { version = "0.3", features = ["formatting"] }
 cpal = { version = "0.18.1", optional = true }
-nokhwa = { version = "0.10.11", optional = true, default-features = false, features = ["input-native", "decoding"] }
+cameras = { version = "0.3.2", optional = true }
 hound = { version = "3", optional = true }
 png = "0.18"
 sha2 = "0.10"

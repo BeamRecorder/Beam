@@ -28,47 +28,19 @@ pub fn closest_video_format(
 
 #[cfg(feature = "camera")]
 pub fn discover_cameras() -> Result<Vec<SourceDescriptor>, crate::CaptureError> {
-    use nokhwa::{
-        Camera,
-        pixel_format::RgbAFormat,
-        utils::{RequestedFormat, RequestedFormatType},
-    };
-
-    let devices = nokhwa::query(nokhwa::utils::ApiBackend::Auto)
-        .map_err(|e| crate::CaptureError::Backend(e.to_string()))?;
+    let devices =
+        cameras::devices().map_err(|error| crate::CaptureError::Backend(error.to_string()))?;
     devices
         .into_iter()
         .enumerate()
         .map(|(position, device)| {
-            let formats = Camera::new(
-                device.index().clone(),
-                RequestedFormat::new::<RgbAFormat>(RequestedFormatType::None),
-            )
-            .and_then(|mut camera| camera.compatible_camera_formats())
-            .map(|formats| {
-                let mut formats = formats
-                    .into_iter()
-                    .map(|format| MediaFormat::Video {
-                        width: format.width(),
-                        height: format.height(),
-                        fps: format.frame_rate(),
-                        pixel_format: Some(format.format().to_string().to_ascii_lowercase()),
-                    })
-                    .collect::<Vec<_>>();
-                formats.sort_by_key(|format| match format {
-                    MediaFormat::Video {
-                        width, height, fps, ..
-                    } => (*width, *height, *fps),
-                    MediaFormat::Audio { .. } => (0, 0, 0),
-                });
-                formats.dedup();
-                formats
-            })
-            .unwrap_or_default();
+            let formats = camera_formats(cameras::probe(&device).map_err(|error| {
+                crate::CaptureError::Backend(format!("could not probe {}: {error}", device.name))
+            })?);
             Ok(SourceDescriptor {
-                id: SourceId::new(format!("nokhwa:{}", device.index()))?,
+                id: SourceId::new(format!("camera:{}", device.id.0))?,
                 kind: SourceKind::Camera,
-                label: device.human_name().to_owned(),
+                label: device.name,
                 is_default: position == 0,
                 selection_mode: SourceSelectionMode::Direct,
                 capabilities: SourceCapabilities {
@@ -78,6 +50,28 @@ pub fn discover_cameras() -> Result<Vec<SourceDescriptor>, crate::CaptureError> 
             })
         })
         .collect()
+}
+
+#[cfg(feature = "camera")]
+fn camera_formats(capabilities: cameras::Capabilities) -> Vec<MediaFormat> {
+    let mut formats = capabilities
+        .formats
+        .into_iter()
+        .map(|format| MediaFormat::Video {
+            width: format.resolution.width,
+            height: format.resolution.height,
+            fps: format.framerate_range.max.round().max(1.0) as u32,
+            pixel_format: Some(super::pixel_format_name(format.pixel_format).into()),
+        })
+        .collect::<Vec<_>>();
+    formats.sort_by_key(|format| match format {
+        MediaFormat::Video {
+            width, height, fps, ..
+        } => (*width, *height, *fps),
+        MediaFormat::Audio { .. } => (0, 0, 0),
+    });
+    formats.dedup();
+    formats
 }
 
 #[cfg(not(feature = "camera"))]

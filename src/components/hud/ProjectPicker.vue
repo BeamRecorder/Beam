@@ -167,6 +167,12 @@ const deleteProjectId = ref('')
 const deleteProjectName = ref('')
 const deleteError = ref('')
 const deleteBusy = ref(false)
+const deleteConfirmProjectId = ref<string | null>(null)
+
+const handleActionPopoverToggle = (isOpen: boolean) => {
+  if (!isOpen) { deleteConfirmProjectId.value = null; deleteError.value = '' }
+  emit('toggle-popover', isOpen)
+}
 
 const openNewProjectDialog = () => {
   newProjectName.value = ''
@@ -228,7 +234,7 @@ const confirmDeleteProject = (project: CaptureProject) => {
   deleteProjectId.value = project.id
   deleteProjectName.value = project.name
   deleteError.value = ''
-  isDeleteConfirmOpen.value = true
+  deleteConfirmProjectId.value = project.id
 }
 
 const handleDeleteProject = async () => {
@@ -238,7 +244,7 @@ const handleDeleteProject = async () => {
     await capture.deleteProject(deleteProjectId.value)
     cachedProjects = null
     await loadProjects()
-    isDeleteConfirmOpen.value = false
+    deleteConfirmProjectId.value = null
     
     // If the currently selected project was deleted, pick the first remaining one
     if (selectedProjectId.value === deleteProjectId.value) {
@@ -384,7 +390,7 @@ defineExpose({
                     />
                     <span v-else class="project-card-name" :title="project.name">{{ project.name }}</span>
                     <div class="project-card-actions" @click.stop @mousedown.stop>
-                      <Popover align="right" direction="down" :match-trigger-width="false" @toggle="handlePopoverToggle">
+                      <Popover align="right" direction="down" :match-trigger-width="false" @toggle="handleActionPopoverToggle">
                         <template #trigger="{ isOpen }">
                           <Button
                             variant="ghost"
@@ -397,12 +403,22 @@ defineExpose({
                         </template>
                         <template #default="{ close }">
                           <div class="action-menu-content">
-                            <Button variant="ghost" size="sm" :icon="Pencil" class="menu-action-item" @click.stop="startRename(project); close()">
-                              Rename
-                            </Button>
-                            <Button variant="ghost" size="sm" :icon="Trash2" class="menu-action-item delete-item" @click.stop="confirmDeleteProject(project); close()">
-                              Delete
-                            </Button>
+                            <template v-if="deleteConfirmProjectId === project.id">
+                              <p class="delete-confirm-text">Delete "{{ project.name }}"?</p>
+                              <p v-if="deleteError" class="delete-confirm-error">{{ deleteError }}</p>
+                              <div class="delete-confirm-actions">
+                                <Button variant="ghost" size="sm" :disabled="deleteBusy" @click.stop="deleteConfirmProjectId = null; deleteError = ''">Cancel</Button>
+                                <Button variant="danger" size="sm" :loading="deleteBusy" @click.stop="handleDeleteProject">Delete</Button>
+                              </div>
+                            </template>
+                            <template v-else>
+                              <Button variant="ghost" size="sm" :icon="Pencil" class="menu-action-item" @click.stop="startRename(project); close()">
+                                Rename
+                              </Button>
+                              <Button variant="ghost" size="sm" :icon="Trash2" class="menu-action-item delete-item" @click.stop="confirmDeleteProject(project)">
+                                Delete
+                              </Button>
+                            </template>
                           </div>
                         </template>
                       </Popover>
@@ -446,19 +462,6 @@ defineExpose({
 
 
 
-    <!-- Delete Project Confirmation Dialog -->
-    <Dialog :is-open="isDeleteConfirmOpen" :title="`Delete ${deleteProjectName}?`" size="sm" @close="isDeleteConfirmOpen = false">
-      <div style="padding: 4px 0;">
-        <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Are you sure you want to delete this project? This action cannot be undone.</p>
-        <p v-if="deleteError" style="color: var(--color-error); font-size: 11px; margin: 8px 0 0 0;">{{ deleteError }}</p>
-      </div>
-      <template #footer="{ close }">
-        <ButtonGroup>
-          <Button variant="ghost" size="sm" :disabled="deleteBusy" @click="close">Cancel</Button>
-          <Button variant="danger" size="sm" :loading="deleteBusy" @click="handleDeleteProject">Delete</Button>
-        </ButtonGroup>
-      </template>
-    </Dialog>
   </section>
 </template>
 
@@ -643,6 +646,27 @@ defineExpose({
   border: none !important;
   border-color: transparent !important;
   box-shadow: none !important;
+}
+
+.delete-confirm-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+  padding: 0 2px;
+}
+
+.delete-confirm-error {
+  font-size: 11px;
+  color: var(--color-error);
+  margin: 0 0 6px 0;
+  padding: 0 2px;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .project-preview {

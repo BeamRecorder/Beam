@@ -108,11 +108,13 @@ let lastHeight = 480
 let lastWidth = 320
 
 const updateWindowSize = () => {
+  const isDropdownOpen = activeDropdowns.value > 0
   let targetHeight = 480
-  if (showSettings.value || showProjectPicker.value) {
+  if (showSettings.value) {
+    targetHeight = 520
+  } else if (showProjectPicker.value) {
     targetHeight = 520
   } else {
-    const isDropdownOpen = activeDropdowns.value > 0
     if (activeTab.value === 'window') {
       targetHeight = isDropdownOpen ? 660 : 500
     } else {
@@ -120,7 +122,6 @@ const updateWindowSize = () => {
     }
   }
 
-  const isDropdownOpen = activeDropdowns.value > 0
   const targetWidth = isDropdownOpen ? 365 : 320
 
   if (targetHeight > lastHeight || targetWidth > lastWidth) {
@@ -128,23 +129,28 @@ const updateWindowSize = () => {
     capture.setSize(targetWidth, targetHeight)
   } else if (targetHeight < lastHeight || targetWidth < lastWidth) {
     // Wait for the card's CSS transition (200ms) to complete before shrinking
+    const snapshotDropdownOpen = activeDropdowns.value > 0
+    const snapshotHeight = targetHeight
+    const snapshotWidth = targetWidth
     setTimeout(() => {
+      const currentDropdownOpen = activeDropdowns.value > 0
       let currentTargetHeight = 480
-      if (showSettings.value || showProjectPicker.value) {
+      if (showSettings.value) {
+        currentTargetHeight = 520
+      } else if (showProjectPicker.value) {
         currentTargetHeight = 520
       } else {
-        const isDropdownOpen = activeDropdowns.value > 0
         if (activeTab.value === 'window') {
-          currentTargetHeight = isDropdownOpen ? 660 : 500
+          currentTargetHeight = currentDropdownOpen ? 660 : 500
         } else {
-          currentTargetHeight = isDropdownOpen ? 640 : 480
+          currentTargetHeight = currentDropdownOpen ? 640 : 480
         }
       }
-      const isDropdownCurrentlyOpen = activeDropdowns.value > 0
-      const currentTargetWidth = isDropdownCurrentlyOpen ? 365 : 320
-      
-      if (currentTargetHeight === targetHeight && currentTargetWidth === targetWidth) {
-        capture.setSize(targetWidth, targetHeight)
+      const currentTargetWidth = currentDropdownOpen ? 365 : 320
+
+      // Only apply if the situation hasn't changed (don't override a subsequent open)
+      if (currentDropdownOpen === snapshotDropdownOpen && currentTargetHeight === snapshotHeight && currentTargetWidth === snapshotWidth) {
+        capture.setSize(snapshotWidth, snapshotHeight)
       }
     }, 200)
   }

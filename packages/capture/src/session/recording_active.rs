@@ -180,9 +180,9 @@ impl ActiveRecordings {
                 let format = recording.format();
                 track.format = TrackFormat::Video {
                     codec: "h264".into(),
-                    width: format.width(),
-                    height: format.height(),
-                    nominal_fps: format.frame_rate(),
+                    width: format.resolution.width,
+                    height: format.resolution.height,
+                    nominal_fps: format.framerate,
                 };
             }
             if self.camera.is_some() {
@@ -210,9 +210,9 @@ impl ActiveRecordings {
                 let format = recording.format();
                 track.format = TrackFormat::Video {
                     codec: "h264".into(),
-                    width: format.width(),
-                    height: format.height(),
-                    nominal_fps: format.frame_rate(),
+                    width: format.resolution.width,
+                    height: format.resolution.height,
+                    nominal_fps: format.framerate,
                 };
             }
             if self.camera.is_some() {

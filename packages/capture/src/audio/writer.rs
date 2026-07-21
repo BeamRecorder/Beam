@@ -13,8 +13,11 @@ impl WavSegmentWriter {
         let spec = hound::WavSpec {
             channels,
             sample_rate,
-            bits_per_sample: 32,
-            sample_format: hound::SampleFormat::Float,
+            // PCM16 is understood by Windows media APIs, Chromium and common
+            // editors.  Float WAV is valid, but some consumers decode it as
+            // integer PCM and turn a microphone track into white noise.
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
         };
         let writer = hound::WavWriter::create(path, spec)
             .map_err(|e| crate::CaptureError::Backend(e.to_string()))?;
@@ -31,9 +34,9 @@ impl WavSegmentWriter {
         for sample in samples {
             writer
                 // Native APIs may report denormal, NaN or infinite samples while a
-                // device is being reconfigured.  A float WAV can represent them,
-                // but most players render them as loud corruption.
-                .write_sample(sanitize_sample(*sample))
+                // device is being reconfigured.  Persisting them would sound like
+                // loud corruption in an otherwise valid recording.
+                .write_sample(quantize_sample(*sample))
                 .map_err(|e| crate::CaptureError::Backend(e.to_string()))?;
         }
         self.samples = self.samples.saturating_add(samples.len() as u64);
@@ -53,32 +56,34 @@ impl WavSegmentWriter {
     }
 }
 
-fn sanitize_sample(sample: f32) -> f32 {
-    if sample.is_finite() {
+fn quantize_sample(sample: f32) -> i16 {
+    let sample = if sample.is_finite() {
         sample.clamp(-1.0, 1.0)
     } else {
         0.0
-    }
+    };
+    (sample * f32::from(i16::MAX)).round() as i16
 }
 
 #[cfg(test)]
 mod tests {
-    use super::sanitize_sample;
+    use super::quantize_sample;
 
     #[test]
     fn preserves_normal_samples() {
-        assert_eq!(sanitize_sample(0.25), 0.25);
+        assert_eq!(quantize_sample(0.0), 0);
+        assert_eq!(quantize_sample(1.0), i16::MAX);
     }
 
     #[test]
     fn clamps_out_of_range_samples() {
-        assert_eq!(sanitize_sample(2.0), 1.0);
-        assert_eq!(sanitize_sample(-2.0), -1.0);
+        assert_eq!(quantize_sample(2.0), i16::MAX);
+        assert_eq!(quantize_sample(-2.0), -i16::MAX);
     }
 
     #[test]
     fn replaces_non_finite_samples_with_silence() {
-        assert_eq!(sanitize_sample(f32::NAN), 0.0);
-        assert_eq!(sanitize_sample(f32::INFINITY), 0.0);
+        assert_eq!(quantize_sample(f32::NAN), 0);
+        assert_eq!(quantize_sample(f32::INFINITY), 0);
     }
 }
