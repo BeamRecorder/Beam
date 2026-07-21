@@ -130,15 +130,18 @@ const emit = defineEmits<{
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 20px;
+  padding: 20px 0 20px 20px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .panel-header {
   border-bottom: 1px solid var(--color-border);
   padding-bottom: 12px;
+  margin-right: 20px;
 }
 
 .panel-title {
@@ -158,5 +161,27 @@ const emit = defineEmits<{
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 20px;
+  box-sizing: border-box;
+}
+
+.panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 99px;
+  transition: background 0.2s ease-in-out;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary, #ff5a1f);
 }
 </style>
