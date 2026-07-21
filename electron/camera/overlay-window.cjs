@@ -21,7 +21,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
 
   const ensureShadowWindow = () => {
     if (shadowWindow && !shadowWindow.isDestroyed()) return shadowWindow
-    shadowWindow = new BrowserWindow({ frame: false, transparent: true, focusable: false, alwaysOnTop: true, skipTaskbar: true, resizable: false, hasShadow: false, show: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
+    shadowWindow = new BrowserWindow({ frame: false, transparent: true, backgroundColor: '#00000000', focusable: false, alwaysOnTop: true, skipTaskbar: true, resizable: false, hasShadow: false, show: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
     shadowWindow.setAlwaysOnTop(true, 'floating')
     shadowWindow.setIgnoreMouseEvents(true, { forward: false })
     shadowWindow.on('closed', () => { shadowWindow = null })
@@ -43,6 +43,9 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     if (lastShadowBounds && Object.entries(nextBounds).every(([key, value]) => lastShadowBounds[key] === value)) return
     lastShadowBounds = nextBounds
     shadowWindow.setBounds(nextBounds)
+    // setBounds can promote the shadow window in the always-on-top stack.
+    // Put the actual video back above it once per scheduled frame.
+    window.moveTop()
     if (!shadowWindow.isVisible()) {
       shadowWindow.showInactive()
       window.moveTop()
@@ -90,7 +93,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   const create = () => {
     if (window && !window.isDestroyed()) return window
     const area = screen.getPrimaryDisplay().workArea
-    window = new BrowserWindow({ width: DEFAULT_SIZE.width, height: DEFAULT_SIZE.height, minWidth: MIN_SIZE.width, minHeight: MIN_SIZE.height, x: area.x + area.width - DEFAULT_SIZE.width - 20, y: area.y + area.height - DEFAULT_SIZE.height - 20, frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
+    window = new BrowserWindow({ width: DEFAULT_SIZE.width, height: DEFAULT_SIZE.height, minWidth: MIN_SIZE.width, minHeight: MIN_SIZE.height, x: area.x + area.width - DEFAULT_SIZE.width - 20, y: area.y + area.height - DEFAULT_SIZE.height - 20, frame: false, transparent: true, backgroundColor: '#00000000', alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
     window.setAlwaysOnTop(true, 'floating')
     window.on('move', scheduleShadowSync)
     window.on('resize', scheduleShadowSync)
