@@ -39,31 +39,6 @@ const zoomElementStyle = (element: ZoomElement) => ({
 const tracksScrollRef = ref<HTMLDivElement | null>(null);
 const tracksViewportRef = ref<HTMLDivElement | null>(null);
 
-// Fallback simulated waveform bars
-const systemAudioWaveBars = computed(() => {
-  const barCount = 120;
-  const bars = [];
-  for (let i = 0; i < barCount; i++) {
-    const progress = i / barCount;
-    let envelope = 1;
-    if (progress < 0.08) {
-      envelope = progress / 0.08;
-    } else if (progress > 0.92) {
-      envelope = (1 - progress) / 0.08;
-    }
-    const sentenceWave = Math.sin(progress * Math.PI * 6);
-    const wordGap = sentenceWave > -0.3 ? 1.0 : 0.15;
-
-    const height =
-      4 +
-      (Math.abs(Math.sin(i * 0.25)) * 16 + Math.abs(Math.cos(i * 0.5)) * 6) *
-        envelope *
-        wordGap;
-    bars.push(height);
-  }
-  return bars;
-});
-
 const micAudioWaveBars = computed(() => {
   const barCount = 120;
   const bars = [];

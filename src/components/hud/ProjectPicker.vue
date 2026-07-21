@@ -123,7 +123,7 @@ const handleVideoTimeUpdate = (projectId: string, event: Event) => {
   }
 }
 
-const handleMouseEnterVideo = (projectId: string, event: MouseEvent) => {
+const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
   const video = event.currentTarget as HTMLVideoElement | null
   if (video) {
     video.play().catch(err => console.debug("Play interrupted:", err))

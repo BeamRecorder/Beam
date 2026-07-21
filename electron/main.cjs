@@ -6,6 +6,7 @@ const { registerProjectIpc } = require('./project-ipc.cjs')
 const { createProjectStore } = require('./project-store.cjs')
 const { WindowController } = require('./window-controller.cjs')
 const { registerWindowIpc } = require('./window-ipc.cjs')
+const { registerExportIpc } = require('./export-ipc.cjs')
 
 const applicationRoot = path.join(__dirname, '..')
 const captureEngine = new CaptureEngine(app, applicationRoot)
@@ -29,7 +30,9 @@ app.whenReady().then(() => {
   registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app })
   registerProjectIpc(ipcMain, createProjectStore(path.join(app.getPath('videos'), 'DemoRecorder')))
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
-  createWindow()
+  const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })
+  const win = createWindow()
+  win.webContents.once('destroyed', () => exportIpc.cleanupWindow(win.webContents))
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
 

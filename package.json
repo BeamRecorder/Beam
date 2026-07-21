@@ -6,6 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "test": "node --test test/*.test.cjs",
+    "test:coverage": "vitest run --coverage",
     "dev": "vite",
     "dev:all": "node start-dev.cjs",
     "capture:build-dev": "cargo build -p capture --bin capture-engine",
@@ -22,6 +23,7 @@
     "@vueuse/core": "^14.3.0",
     "@vueuse/electron": "^14.3.0",
     "@vueuse/motion": "^3.0.3",
+    "mediabunny": "^1.50.9",
     "pinia": "^4.0.2",
     "vitest": "^4.1.10",
     "vue": "^3.5.39"
@@ -29,6 +31,7 @@
   "devDependencies": {
     "@types/node": "^24.13.2",
     "@vitejs/plugin-vue": "^6.0.7",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vue/tsconfig": "^0.9.1",
     "electron": "^43.1.1",
     "electron-builder": "^26.15.3",

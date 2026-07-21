@@ -6,7 +6,9 @@ import EditorCanvas from './canvas/EditorCanvas.vue'
 import EditorTimeline from './timeline/EditorTimeline.vue'
 import Button from '~/ui/button/Button.vue'
 import VideoProjectEdition from './VideoProjectEdition.vue'
-import { ArrowLeft, Download, Minus, X } from '@lucide/vue'
+import ExportPopover from '../export/ExportPopover.vue'
+import { createCompositionSnapshot } from '../export/composition/snapshot'
+import { ArrowLeft, Minus, X } from '@lucide/vue'
 
 import { useVideoPlayer } from './composables/useVideoPlayer'
 import { useCursorReplacer } from './composables/useCursorReplacer'
@@ -69,6 +71,20 @@ const selectedZoomId = ref<string | null>(null)
 const selectedZoom = computed(() => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null)
 const canGenerateZooms = computed(() => Boolean(props.project && props.editorData?.cursor.available && props.editorData.sessionId))
 const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.mode === 'auto'))
+const sourceSize = ref({ width: 1920, height: 1080 })
+const sourceFps = computed(() => {
+  const screen = props.editorData?.tracks.find((track) => track.kind === 'screen')
+  const value = screen?.format.frameRate ?? screen?.format.fps
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 30
+})
+const exportRequest = computed(() => {
+  const source = props.editorData?.videoSrc || playerVideoSrc.value
+  if (!source) return null
+  return {
+    projectName: props.project?.name || 'DemoRecorder export',
+    snapshot: createCompositionSnapshot({ videoSrc: source, duration: duration.value, width: sourceSize.value.width, height: sourceSize.value.height, fps: sourceFps.value, videoEnabled: isVideoEnabled.value, background: selectedBackgroundMedia.value, editorData: props.editorData, zooms: zoomElements.value, systemAudioEnabled: isSystemAudioEnabled.value, micAudioEnabled: isMicAudioEnabled.value }),
+  }
+})
 
 watch(() => props.editorData, (data) => {
   zoomElements.value = data?.zoom.elements ?? []
@@ -151,6 +167,17 @@ watch(() => props.videoSrc, (videoSrc) => {
   playerVideoSrc.value = videoSrc ?? ''
 })
 
+watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
+  if (!source) return
+  const video = document.createElement('video')
+  video.preload = 'metadata'
+  video.onloadedmetadata = () => {
+    if (video.videoWidth > 0 && video.videoHeight > 0) sourceSize.value = { width: video.videoWidth, height: video.videoHeight }
+    video.removeAttribute('src'); video.load()
+  }
+  video.src = source
+}, { immediate: true })
+
 </script>
 
 <template>
@@ -165,9 +192,7 @@ watch(() => props.videoSrc, (videoSrc) => {
       </div>
 
       <div class="right-actions">
-        <Button variant="primary" size="sm" :icon="Download" class="export-btn">
-          Export Video
-        </Button>
+        <ExportPopover v-if="exportRequest" :request="exportRequest" />
         <div class="window-controls">
           <button aria-label="Minimize" class="titlebar-btn control-btn" @click="minimizeApp">
             <Minus class="btn-icon" />

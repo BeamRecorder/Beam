@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import Button from '~/ui/button/Button.vue'
 import ProjectPicker from '../hud/ProjectPicker.vue'
 import { ChevronDown } from '@lucide/vue'
 import type { CaptureProject } from '../../api/types/capture-api'

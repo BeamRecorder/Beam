@@ -31,3 +31,4 @@ target-windows/
 # Electron build artifacts
 dist_electron/
 
+coverage/*

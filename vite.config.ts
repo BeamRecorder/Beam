@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
 import fs from "node:fs";
@@ -65,5 +65,21 @@ export default defineConfig({
   },
   server: {
     port: 6500,
+  },
+  test: {
+    include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      all: true,
+      include: ['src/**/*.{ts,vue}'],
+      exclude: ['src/**/*.test.ts', 'src/vite-env.d.ts'],
+      thresholds: {
+        statements: 90,
+        branches: 90,
+        functions: 90,
+        lines: 90,
+      },
+    },
   },
 });
