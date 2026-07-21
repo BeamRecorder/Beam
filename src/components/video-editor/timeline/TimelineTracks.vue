@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
-import { Video, Volume2, Mic, MousePointer, Type } from "@lucide/vue";
+import { Video, Volume2, Mic, MousePointer, Type, Scissors, MoveLeft, MoveRight, Eye, EyeOff } from "@lucide/vue";
 import { useThumbnails } from "./waveform/useThumbnails";
 import { useWaveform } from "./waveform/useWaveform";
 import Skeleton from "~/ui/skeleton/Skeleton.vue";
@@ -19,10 +19,12 @@ const props = defineProps<{
   isVideoEnabled: boolean;
   isSystemAudioEnabled: boolean;
   isMicAudioEnabled: boolean;
+  isCameraEnabled: boolean;
   zoomElements: ZoomElement[];
   selectedZoomId: string | null;
   composition: ProjectComposition;
   selectedCompositionLayerId: string | null;
+  selectedCameraLayerId: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -33,9 +35,16 @@ const emit = defineEmits<{
   (e: "toggle:micAudio"): void;
   (e: "select:zoom", zoomId: string): void;
   (e: "select:composition-layer", layerId: string): void;
+  (e: "select:camera-layer", layerId: string): void;
+  (e: "toggle:camera"): void;
+  (e: "toggle:camera-layer"): void;
+  (e: "split:camera"): void;
+  (e: "trim:camera", edge: 'start' | 'end'): void;
 }>();
 
 const captionLayers = computed(() => props.composition.layers.filter((layer) => layer.kind === 'caption'))
+const cameraAssetIds = computed(() => new Set(props.composition.media.filter((asset) => asset.origin === 'session' && asset.kind === 'video').map((asset) => asset.id)))
+const cameraLayers = computed(() => props.composition.layers.filter((layer) => layer.kind === 'video' && cameraAssetIds.value.has(layer.assetId)))
 const layerStyle = (startMs: number, endMs: number) => ({ left: `${props.duration > 0 ? startMs / (props.duration * 10) : 0}%`, width: `${props.duration > 0 ? (endMs - startMs) / (props.duration * 10) : 0}%` })
 
 const zoomElementStyle = (element: ZoomElement) => ({
@@ -535,6 +544,25 @@ watch(
           </div>
         </div>
 
+        <!-- Webcam sidecar track: each clip can be selected, trimmed, split or hidden. -->
+        <div v-if="cameraLayers.length" class="track-row camera-track" :class="{ disabled: !isCameraEnabled }">
+          <div class="track-info" @click="emit('toggle:camera')" title="Show or hide webcam track">
+            <component :is="isCameraEnabled ? Eye : EyeOff" class="track-icon" />
+            <span class="track-title">Webcam</span>
+          </div>
+          <div class="track-content camera-content">
+            <button v-for="layer in cameraLayers" :key="layer.id" type="button" class="camera-clip" :class="{ selected: layer.id === selectedCameraLayerId, disabled: !layer.enabled }" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:camera-layer', layer.id)">
+              Webcam
+            </button>
+            <div v-if="selectedCameraLayerId" class="camera-actions" @click.stop>
+              <button type="button" title="Split webcam at playhead" @click="emit('split:camera')"><Scissors :size="13" /></button>
+              <button type="button" title="Show or hide selected webcam clip" @click="emit('toggle:camera-layer')"><EyeOff :size="13" /></button>
+              <button type="button" title="Trim webcam start to playhead" @click="emit('trim:camera', 'start')"><MoveLeft :size="13" /></button>
+              <button type="button" title="Trim webcam end to playhead" @click="emit('trim:camera', 'end')"><MoveRight :size="13" /></button>
+            </div>
+          </div>
+        </div>
+
         <!-- Zoom elements -->
         <div class="track-row cursor-track">
           <div class="track-info">
@@ -587,6 +615,13 @@ watch(
   display: flex;
   flex-direction: column;
 }
+.camera-content { position: relative; background: color-mix(in srgb, var(--color-primary-light) 36%, transparent); }
+.camera-clip { position: absolute; top: 7px; bottom: 7px; border: 1px solid var(--color-primary); border-radius: var(--radius-sm); background: var(--color-primary-light); color: var(--color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; font-size: 11px; cursor: pointer; }
+.camera-clip.selected { box-shadow: 0 0 0 2px var(--color-primary); }
+.camera-clip.disabled { opacity: .38; text-decoration: line-through; }
+.camera-actions { position: absolute; right: 8px; top: 4px; display: flex; gap: 4px; }
+.camera-actions button { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-element); color: var(--text-primary); cursor: pointer; }
+.camera-actions button:hover { color: var(--color-primary); border-color: var(--color-primary); }
 
 /* Ruler */
 .timeline-ruler {

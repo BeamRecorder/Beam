@@ -108,7 +108,12 @@ function createProjectStore(root) {
     }
     throw new Error('Impossible de générer un nom de projet unique')
   }
-  const composition = createCompositionStore({ directoryFor, readManifest, writeManifest })
+  const composition = createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor: (directory, sessionId, sessionPath) => {
+    const project = readManifest(directory)
+    const session = Array.isArray(project.sessions) ? project.sessions.find((entry) => entry?.sessionId === sessionId) : null
+    const sessionDirectory = session && safePath(directory, session.relativePath)
+    return sessionDirectory ? safePath(sessionDirectory, sessionPath) : null
+  } })
   return {
     list: () => !fs.existsSync(root) ? [] : fs.readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && entry.name.startsWith('project-')).map((entry) => { try { const directory = path.join(root, entry.name); return summary(directory, readManifest(directory), entry.name.slice(8)) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
     editorData,

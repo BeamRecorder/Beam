@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import {
+  computeWebcamLayout,
+  getWebcamZoomFactor,
+} from "../webcam/webcam-zoom";
+
+describe("webcam zoom layout", () => {
+  it("uses the inverse of the applied zoom scale", () => {
+    expect(getWebcamZoomFactor(1, true)).toBe(1);
+    expect(getWebcamZoomFactor(1.5, true)).toBeCloseTo(2 / 3);
+    expect(getWebcamZoomFactor(3.5, true)).toBeCloseTo(1 / 3.5);
+  });
+
+  it("does not react when the setting is disabled or the scale is invalid", () => {
+    expect(getWebcamZoomFactor(3, false)).toBe(1);
+    expect(getWebcamZoomFactor(0, true)).toBe(1);
+    expect(getWebcamZoomFactor(Number.NaN, true)).toBe(1);
+  });
+
+  it("keeps the webcam pinned to the bottom right as its size changes", () => {
+    const normal = computeWebcamLayout(1000, 800, 1);
+    const zoomed = computeWebcamLayout(1000, 800, 2);
+    expect(zoomed.width).toBeCloseTo(normal.width / 2);
+    expect(zoomed.height).toBeCloseTo(normal.height / 2);
+    expect(zoomed.x + zoomed.width).toBeCloseTo(normal.x + normal.width);
+    expect(zoomed.y + zoomed.height).toBeCloseTo(normal.y + normal.height);
+  });
+
+  it("enforces the minimum overlay size on a heavily zoomed small canvas", () => {
+    const layout = computeWebcamLayout(80, 80, 20);
+    expect(layout.width).toBe(56);
+    expect(layout.height).toBe(56);
+    expect(layout.x).toBeGreaterThanOrEqual(0);
+    expect(layout.y).toBeGreaterThanOrEqual(0);
+  });
+});

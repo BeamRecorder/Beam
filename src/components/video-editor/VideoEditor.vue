@@ -30,7 +30,18 @@ import type {
   ProjectEditorData,
 } from "../../api/types/capture-api";
 import type { ZoomElement } from "./zoom/zoom-types";
-import { emptyComposition, type CompositionLayer, type CompositionMedia, type ProjectComposition } from './composition/composition-types'
+import {
+  emptyComposition,
+  type CompositionLayer,
+  type CompositionMedia,
+  type ProjectComposition,
+} from "./composition/composition-types";
+import {
+  addCameraSegments,
+  cameraLayers,
+  splitCameraLayer,
+  trimCameraLayer,
+} from "./composition/webcam/camera-composition.ts";
 import {
   buildAutomaticZoomElements,
   ZOOM_ALGORITHM_VERSION,
@@ -79,10 +90,28 @@ const {
 } = useCursorReplacer();
 
 const activeTab = ref("cursor");
-const composition = ref<ProjectComposition>(emptyComposition())
-const selectedCompositionLayerId = ref<string | null>(null)
-const selectedCompositionLayer = computed(() => composition.value.layers.find((layer) => layer.id === selectedCompositionLayerId.value) ?? null)
-const selectedCaptionLayer = computed(() => selectedCompositionLayer.value?.kind === 'caption' ? selectedCompositionLayer.value : null)
+const composition = ref<ProjectComposition>(emptyComposition());
+const selectedCompositionLayerId = ref<string | null>(null);
+const selectedCompositionLayer = computed(
+  () =>
+    composition.value.layers.find(
+      (layer) => layer.id === selectedCompositionLayerId.value,
+    ) ?? null,
+);
+const selectedCaptionLayer = computed(() =>
+  selectedCompositionLayer.value?.kind === "caption"
+    ? selectedCompositionLayer.value
+    : null,
+);
+const selectedCameraLayer = computed(
+  () =>
+    cameraLayers(composition.value).find(
+      (layer) => layer.id === selectedCompositionLayerId.value,
+    ) ?? null,
+);
+const isCameraEnabled = computed(() =>
+  cameraLayers(composition.value).some((layer) => layer.enabled),
+);
 const zoomElements = ref<ZoomElement[]>([]);
 const generatedSessions = ref<ProjectEditorData["zoom"]["generatedSessions"]>(
   [],
@@ -132,8 +161,16 @@ const exportRequest = computed(() => {
         selectedCursor: selectedCursor.value,
         size: cursorSize.value,
         color: cursorColor.value,
-        shadow: { enabled: enableShadow.value, blur: shadowBlur.value, color: shadowColor.value },
-        ripple: { enabled: enableRipple.value, color: rippleColor.value, size: rippleSize.value },
+        shadow: {
+          enabled: enableShadow.value,
+          blur: shadowBlur.value,
+          color: shadowColor.value,
+        },
+        ripple: {
+          enabled: enableRipple.value,
+          color: rippleColor.value,
+          size: rippleSize.value,
+        },
       },
       systemAudioEnabled: isSystemAudioEnabled.value,
       micAudioEnabled: isMicAudioEnabled.value,
@@ -168,36 +205,154 @@ const saveZoomState = async () => {
 };
 
 const saveComposition = async () => {
-  if (!props.project) return
-  composition.value = await capture.saveProjectComposition(props.project.id, composition.value)
-}
+  if (!props.project) return;
+  composition.value = await capture.saveProjectComposition(
+    props.project.id,
+    composition.value,
+  );
+};
 
-const mediaDuration = (asset: CompositionMedia) => new Promise<number>((resolve) => {
-  if (asset.kind === 'image') return resolve(5000)
-  const media = document.createElement(asset.kind === 'audio' ? 'audio' : 'video')
-  media.preload = 'metadata'; media.onloadedmetadata = () => resolve(Math.round(media.duration * 1000)); media.onerror = () => resolve(0); media.src = asset.src
-})
+const loadComposition = async (projectId: string) => {
+  const stored = await capture.getProjectComposition(projectId);
+  const synchronized = addCameraSegments(stored, props.editorData);
+  if (
+    synchronized.media.length !== stored.media.length ||
+    synchronized.layers.length !== stored.layers.length
+  ) {
+    composition.value = await capture.saveProjectComposition(
+      projectId,
+      synchronized,
+    );
+  } else composition.value = stored;
+};
 
-const addCompositionElement = async (kind: 'video' | 'image' | 'sound' | 'caption') => {
-  if (!props.project) return
-  if (kind === 'caption') {
-    const startMs = Math.round(currentTime.value * 1000)
-    const layer: CompositionLayer = { id: crypto.randomUUID(), kind: 'caption', name: 'Caption', startMs, endMs: Math.min(Math.round(duration.value * 1000), startMs + 5000), enabled: true, order: composition.value.layers.length, caption: { sentences: [], style: { color: '#ffffff', fontSize: 42, shadowColor: '#000000', shadowBlur: 4, placement: 'bottom' } } }
-    composition.value.layers.push(layer); await saveComposition(); selectedCompositionLayerId.value = layer.id; activeTab.value = 'caption'; return
+const toggleCamera = async () => {
+  composition.value = {
+    ...composition.value,
+    layers: composition.value.layers.map((layer) =>
+      cameraLayers(composition.value).some((camera) => camera.id === layer.id)
+        ? { ...layer, enabled: !isCameraEnabled.value }
+        : layer,
+    ),
+  };
+  await saveComposition();
+};
+
+const splitSelectedCamera = async () => {
+  if (!selectedCameraLayer.value) return;
+  composition.value = splitCameraLayer(
+    composition.value,
+    selectedCameraLayer.value.id,
+    Math.round(currentTime.value * 1000),
+  );
+  await saveComposition();
+};
+
+const trimSelectedCamera = async (edge: "start" | "end") => {
+  if (!selectedCameraLayer.value) return;
+  composition.value = trimCameraLayer(
+    composition.value,
+    selectedCameraLayer.value.id,
+    edge,
+    Math.round(currentTime.value * 1000),
+  );
+  await saveComposition();
+};
+
+const toggleSelectedCamera = async () => {
+  if (!selectedCameraLayer.value) return;
+  composition.value = {
+    ...composition.value,
+    layers: composition.value.layers.map((layer) =>
+      layer.id === selectedCameraLayer.value?.id
+        ? { ...layer, enabled: !layer.enabled }
+        : layer,
+    ),
+  };
+  await saveComposition();
+};
+
+const mediaDuration = (asset: CompositionMedia) =>
+  new Promise<number>((resolve) => {
+    if (asset.kind === "image") return resolve(5000);
+    const media = document.createElement(
+      asset.kind === "audio" ? "audio" : "video",
+    );
+    media.preload = "metadata";
+    media.onloadedmetadata = () => resolve(Math.round(media.duration * 1000));
+    media.onerror = () => resolve(0);
+    media.src = asset.src;
+  });
+
+const addCompositionElement = async (
+  kind: "video" | "image" | "sound" | "caption",
+) => {
+  if (!props.project) return;
+  if (kind === "caption") {
+    const startMs = Math.round(currentTime.value * 1000);
+    const layer: CompositionLayer = {
+      id: crypto.randomUUID(),
+      kind: "caption",
+      name: "Caption",
+      startMs,
+      endMs: Math.min(Math.round(duration.value * 1000), startMs + 5000),
+      enabled: true,
+      order: composition.value.layers.length,
+      caption: {
+        sentences: [],
+        style: {
+          color: "#ffffff",
+          fontSize: 42,
+          shadowColor: "#000000",
+          shadowBlur: 4,
+          placement: "bottom",
+        },
+      },
+    };
+    composition.value.layers.push(layer);
+    await saveComposition();
+    selectedCompositionLayerId.value = layer.id;
+    activeTab.value = "caption";
+    return;
   }
-  const asset = await capture.pickProjectCompositionMedia(props.project.id, kind === 'sound' ? 'audio' : kind)
-  if (!asset) return
-  const nativeDuration = await mediaDuration(asset)
-  const startMs = Math.round(currentTime.value * 1000); const maxDuration = Math.max(0, Math.round(duration.value * 1000) - startMs)
-  const clipDuration = Math.min(maxDuration, asset.kind === 'image' ? 5000 : nativeDuration)
-  const layer: CompositionLayer = { id: crypto.randomUUID(), kind: asset.kind, name: asset.name, assetId: asset.id, startMs, endMs: startMs + clipDuration, enabled: true, order: composition.value.layers.length, ...(asset.kind === 'audio' ? {} : { transform: { x: 0, y: 0, width: 1, height: 1 } }) }
-  composition.value.layers.push(layer); await saveComposition(); selectedCompositionLayerId.value = layer.id
-}
+  const asset = await capture.pickProjectCompositionMedia(
+    props.project.id,
+    kind === "sound" ? "audio" : kind,
+  );
+  if (!asset) return;
+  const nativeDuration = await mediaDuration(asset);
+  const startMs = Math.round(currentTime.value * 1000);
+  const maxDuration = Math.max(0, Math.round(duration.value * 1000) - startMs);
+  const clipDuration = Math.min(
+    maxDuration,
+    asset.kind === "image" ? 5000 : nativeDuration,
+  );
+  const layer: CompositionLayer = {
+    id: crypto.randomUUID(),
+    kind: asset.kind,
+    name: asset.name,
+    assetId: asset.id,
+    startMs,
+    endMs: startMs + clipDuration,
+    enabled: true,
+    order: composition.value.layers.length,
+    ...(asset.kind === "audio"
+      ? {}
+      : { transform: { x: 0, y: 0, width: 1, height: 1 } }),
+  };
+  composition.value.layers.push(layer);
+  await saveComposition();
+  selectedCompositionLayerId.value = layer.id;
+};
 
-const updateCaption = async (layer: Extract<CompositionLayer, { kind: 'caption' }>) => {
-  composition.value.layers = composition.value.layers.map((item) => item.id === layer.id ? layer : item)
-  await saveComposition()
-}
+const updateCaption = async (
+  layer: Extract<CompositionLayer, { kind: "caption" }>,
+) => {
+  composition.value.layers = composition.value.layers.map((item) =>
+    item.id === layer.id ? layer : item,
+  );
+  await saveComposition();
+};
 
 const generateZooms = async (automatic = false) => {
   const data = props.editorData;
@@ -280,10 +435,15 @@ onMounted(() => {
   playerVideoSrc.value = props.videoSrc ?? "";
   capture.setWindowMode("editor");
   capture.maximize();
-  if (props.project) void capture.getProjectComposition(props.project.id).then((value) => { composition.value = value })
+  if (props.project) void loadComposition(props.project.id);
 });
 
-watch(() => props.project?.id, (projectId) => { if (projectId) void capture.getProjectComposition(projectId).then((value) => { composition.value = value }) })
+watch(
+  () => [props.project?.id, props.editorData?.sessionId],
+  ([projectId]) => {
+    if (projectId) void loadComposition(projectId);
+  },
+);
 
 watch(
   () => props.videoSrc,
@@ -401,12 +561,22 @@ watch(
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
           :selected-composition-layer-id="selectedCompositionLayerId"
+          :selected-camera-layer-id="selectedCameraLayer?.id ?? null"
+          :is-camera-enabled="isCameraEnabled"
           @select:zoom="
             selectedZoomId = $event;
             activeTab = 'zoom';
           "
           @add:element="addCompositionElement"
-          @select:composition-layer="selectedCompositionLayerId = $event; activeTab = 'caption'"
+          @select:composition-layer="
+            selectedCompositionLayerId = $event;
+            activeTab = 'caption';
+          "
+          @select:camera-layer="selectedCompositionLayerId = $event"
+          @toggle:camera="toggleCamera"
+          @toggle:camera-layer="toggleSelectedCamera"
+          @split:camera="splitSelectedCamera"
+          @trim:camera="trimSelectedCamera"
         />
       </div>
     </div>

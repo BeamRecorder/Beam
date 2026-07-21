@@ -17,10 +17,12 @@ const props = defineProps<{
   isVideoEnabled: boolean;
   isSystemAudioEnabled: boolean;
   isMicAudioEnabled: boolean;
+  isCameraEnabled: boolean;
   zoomElements: ZoomElement[];
   selectedZoomId: string | null;
   composition: ProjectComposition;
   selectedCompositionLayerId: string | null;
+  selectedCameraLayerId: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -32,6 +34,11 @@ const emit = defineEmits<{
   (e: 'select:zoom', zoomId: string): void;
   (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption'): void;
   (e: 'select:composition-layer', layerId: string): void;
+  (e: 'select:camera-layer', layerId: string): void;
+  (e: 'toggle:camera'): void;
+  (e: 'toggle:camera-layer'): void;
+  (e: 'split:camera'): void;
+  (e: 'trim:camera', edge: 'start' | 'end'): void;
 }>();
 
 const zoomLevel = ref<number>(100);
@@ -90,16 +97,23 @@ onUnmounted(() => {
       :is-video-enabled="isVideoEnabled"
       :is-system-audio-enabled="isSystemAudioEnabled"
       :is-mic-audio-enabled="isMicAudioEnabled"
+      :is-camera-enabled="isCameraEnabled"
       :zoom-elements="zoomElements"
       :selected-zoom-id="selectedZoomId"
       :composition="composition"
       :selected-composition-layer-id="selectedCompositionLayerId"
+      :selected-camera-layer-id="selectedCameraLayerId"
       @update:currentTime="emit('update:currentTime', $event)"
       @select:zoom="emit('select:zoom', $event)"
       @select:composition-layer="emit('select:composition-layer', $event)"
       @toggle:video="emit('update:isVideoEnabled', !isVideoEnabled)"
       @toggle:systemAudio="emit('update:isSystemAudioEnabled', !isSystemAudioEnabled)"
       @toggle:micAudio="emit('update:isMicAudioEnabled', !isMicAudioEnabled)"
+      @toggle:camera="emit('toggle:camera')"
+      @toggle:camera-layer="emit('toggle:camera-layer')"
+      @select:camera-layer="emit('select:camera-layer', $event)"
+      @split:camera="emit('split:camera')"
+      @trim:camera="emit('trim:camera', $event)"
     />
   </div>
 </template>

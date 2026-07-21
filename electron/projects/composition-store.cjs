@@ -31,22 +31,25 @@ function caption(value) {
 function normalizeComposition(value) {
   if (!value || !Array.isArray(value.media) || !Array.isArray(value.layers)) throw new Error('Composition invalide')
   const media = value.media.map((asset) => {
-    if (!asset || !validId(asset.id) || !mediaKinds.has(asset.kind) || typeof asset.name !== 'string' || typeof asset.fileName !== 'string' || path.basename(asset.fileName) !== asset.fileName || !finite(asset.durationMs)) throw new Error('Média invalide')
-    return { id: asset.id, kind: asset.kind, name: asset.name.slice(0, 160), fileName: asset.fileName, durationMs: Math.max(0, Math.round(asset.durationMs)), width: finite(asset.width) ? asset.width : null, height: finite(asset.height) ? asset.height : null }
+    if (!asset || !validId(asset.id) || !mediaKinds.has(asset.kind) || typeof asset.name !== 'string' || !finite(asset.durationMs)) throw new Error('Média invalide')
+    const origin = asset.origin === 'session' ? 'session' : 'project'
+    if (origin === 'project' && (typeof asset.fileName !== 'string' || path.basename(asset.fileName) !== asset.fileName)) throw new Error('Média invalide')
+    if (origin === 'session' && (!validId(asset.sessionId) || typeof asset.sessionPath !== 'string' || !asset.sessionPath || path.isAbsolute(asset.sessionPath) || asset.sessionPath.split(/[\\/]+/).includes('..'))) throw new Error('Média de session invalide')
+    return { id: asset.id, kind: asset.kind, name: asset.name.slice(0, 160), fileName: origin === 'project' ? asset.fileName : null, durationMs: Math.max(0, Math.round(asset.durationMs)), width: finite(asset.width) ? asset.width : null, height: finite(asset.height) ? asset.height : null, origin, ...(origin === 'session' ? { sessionId: asset.sessionId, sessionPath: asset.sessionPath } : {}) }
   })
   const ids = new Set(media.map((asset) => asset.id))
   const layers = value.layers.map((layer, order) => {
     if (!layer || !validId(layer.id) || !layerKinds.has(layer.kind) || typeof layer.name !== 'string' || !finite(layer.startMs) || !finite(layer.endMs) || layer.endMs < layer.startMs || typeof layer.enabled !== 'boolean') throw new Error('Calque invalide')
     if (layer.kind === 'caption') return { id: layer.id, kind: 'caption', name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, caption: caption(layer.caption) }
     if (!validId(layer.assetId) || !ids.has(layer.assetId)) throw new Error('Le média du calque est introuvable')
-    return { id: layer.id, kind: layer.kind, name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, assetId: layer.assetId, transform: layer.kind === 'audio' ? undefined : transform(layer.transform) }
+    return { id: layer.id, kind: layer.kind, name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, assetId: layer.assetId, transform: layer.kind === 'audio' ? undefined : transform(layer.transform), ...(layer.kind === 'video' && finite(layer.sourceOffsetMs) && layer.sourceOffsetMs >= 0 ? { sourceOffsetMs: Math.round(layer.sourceOffsetMs) } : {}), ...(layer.kind === 'video' && typeof layer.reactToZoom === 'boolean' ? { reactToZoom: layer.reactToZoom } : {}) }
   })
   return { media, layers }
 }
 
-function createCompositionStore({ directoryFor, readManifest, writeManifest }) {
+function createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor }) {
   const read = (id) => normalizeComposition(readManifest(directoryFor(id)).editor?.composition || emptyComposition())
-  const materialize = (directory, composition) => ({ ...composition, media: composition.media.map((asset) => ({ ...asset, src: pathToFileURL(path.join(directory, 'media', asset.fileName)).href })) })
+  const materialize = (directory, composition) => ({ ...composition, media: composition.media.map((asset) => { const target = asset.origin === 'session' ? sessionDirectoryFor?.(directory, asset.sessionId, asset.sessionPath) : path.join(directory, 'media', asset.fileName); return { ...asset, src: target && fs.existsSync(target) ? pathToFileURL(target).href : '' } }) })
   const save = (id, value) => { const directory = directoryFor(id); const manifest = readManifest(directory); const composition = normalizeComposition(value); manifest.editor = { ...(manifest.editor || {}), composition }; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return materialize(directory, composition) }
   const response = (id) => { const directory = directoryFor(id); return materialize(directory, read(id)) }
   const importMedia = (id, input) => {
@@ -60,7 +63,7 @@ function createCompositionStore({ directoryFor, readManifest, writeManifest }) {
     return { ...asset, src: pathToFileURL(path.join(targetDirectory, asset.fileName)).href }
   }
   const upsertLayer = (id, layer) => { const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layer.id); const next = normalizeComposition({ media: composition.media, layers: index < 0 ? [...composition.layers, layer] : composition.layers.map((item, i) => i === index ? layer : item) }); return save(id, next).layers.find((item) => item.id === layer.id) }
-  const removeLayer = (id, layerId) => { const composition = read(id); const layer = composition.layers.find((item) => item.id === layerId); if (!layer) throw new Error('Calque introuvable'); composition.layers = composition.layers.filter((item) => item.id !== layerId); if (layer.assetId && !composition.layers.some((item) => item.assetId === layer.assetId)) { const asset = composition.media.find((item) => item.id === layer.assetId); if (asset) { fs.rmSync(path.join(directoryFor(id), 'media', asset.fileName), { force: true }); composition.media = composition.media.filter((item) => item.id !== asset.id) } } return save(id, composition) }
+  const removeLayer = (id, layerId) => { const composition = read(id); const layer = composition.layers.find((item) => item.id === layerId); if (!layer) throw new Error('Calque introuvable'); composition.layers = composition.layers.filter((item) => item.id !== layerId); if (layer.assetId && !composition.layers.some((item) => item.assetId === layer.assetId)) { const asset = composition.media.find((item) => item.id === layer.assetId); if (asset?.origin === 'project') fs.rmSync(path.join(directoryFor(id), 'media', asset.fileName), { force: true }); if (asset) composition.media = composition.media.filter((item) => item.id !== asset.id) } return save(id, composition) }
   const moveLayer = (id, layerId, targetIndex) => { const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layerId); if (index < 0 || !Number.isInteger(targetIndex)) throw new Error('Déplacement de calque invalide'); const [layer] = composition.layers.splice(index, 1); const compatible = composition.layers.filter((item) => (item.kind === 'audio') === (layer.kind === 'audio')); const position = Math.max(0, Math.min(compatible.length, targetIndex)); const anchor = compatible[position]; composition.layers.splice(anchor ? composition.layers.indexOf(anchor) : composition.layers.length, 0, layer); return save(id, composition) }
   return { read: response, save, importMedia, upsertLayer, removeLayer, moveLayer }
 }

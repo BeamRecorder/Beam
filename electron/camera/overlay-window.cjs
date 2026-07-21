@@ -22,6 +22,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   const ensureShadowWindow = () => {
     if (shadowWindow && !shadowWindow.isDestroyed()) return shadowWindow
     shadowWindow = new BrowserWindow({ frame: false, transparent: true, backgroundColor: '#00000000', focusable: false, alwaysOnTop: true, skipTaskbar: true, resizable: false, hasShadow: false, show: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
+    shadowWindow.setContentProtection(true)
     shadowWindow.setAlwaysOnTop(true, 'floating')
     shadowWindow.setIgnoreMouseEvents(true, { forward: false })
     shadowWindow.on('closed', () => { shadowWindow = null })
@@ -94,6 +95,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     if (window && !window.isDestroyed()) return window
     const area = screen.getPrimaryDisplay().workArea
     window = new BrowserWindow({ width: DEFAULT_SIZE.width, height: DEFAULT_SIZE.height, minWidth: MIN_SIZE.width, minHeight: MIN_SIZE.height, x: area.x + area.width - DEFAULT_SIZE.width - 20, y: area.y + area.height - DEFAULT_SIZE.height - 20, frame: false, transparent: true, backgroundColor: '#00000000', alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
+    window.setContentProtection(true)
     window.setAlwaysOnTop(true, 'floating')
     window.on('move', scheduleShadowSync)
     window.on('resize', scheduleShadowSync)

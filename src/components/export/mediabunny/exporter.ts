@@ -68,7 +68,7 @@ async function visualsAtTime(request: ExportRequest, visuals: Awaited<ReturnType
   for (const layer of activeLayersAt(request.snapshot.composition, time * 1000)) {
     if (layer.kind !== 'video') continue
     const video = visuals.videos.get(layer.assetId)
-    const localTime = time - layer.startMs / 1000
+    const localTime = time - layer.startMs / 1000 + (layer.sourceOffsetMs ?? 0) / 1000
     if (!video || localTime < 0 || (Number.isFinite(video.duration) && localTime >= video.duration)) continue
     if (Math.abs(video.currentTime - localTime) > .001) { video.currentTime = localTime; await waitFor(video, 'seeked') }
     result.set(layer.assetId, video)
