@@ -45,6 +45,7 @@ const emit = defineEmits<{
     <div class="prop-item">
       <BigSlider 
         :model-value="cursorSize" 
+        :default-value="24"
         :min="16" 
         :max="64"
         label="Cursor Size"

@@ -20,6 +20,7 @@ const emit = defineEmits<{
     <div class="prop-item">
       <BigSlider 
         :model-value="volume" 
+        :default-value="100"
         :min="0" 
         :max="100"
         label="Global Volume"

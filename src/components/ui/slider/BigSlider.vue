@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, nextTick } from "vue";
+import { RotateCcw } from "@lucide/vue";
+import Input from "../input/Input.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -8,56 +10,143 @@ const props = withDefaults(
     max?: number;
     step?: number;
     label: string;
+    defaultValue?: number;
     formatValue?: (val: number) => string;
   }>(),
   { min: 0, max: 1, step: 0.01 },
 );
 
 const emit = defineEmits<{
-  "update:modelValue": [value: number];
-  "interaction-start": [];
-  "interaction-end": [];
+  (e: "update:modelValue", value: number): void;
+  (e: "interaction-start"): void;
+  (e: "interaction-end"): void;
+  (e: "reset"): void;
 }>();
+
+const isEditing = ref(false);
+const editValue = ref<number | string>(props.modelValue);
+const inputRef = ref<InstanceType<typeof Input> | null>(null);
 
 const percentage = computed(() => {
   const range = props.max - props.min;
   if (range === 0) return 0;
-  return ((props.modelValue - props.min) / range) * 100;
+  return Math.min(100, Math.max(0, ((props.modelValue - props.min) / range) * 100));
 });
 
 const displayValue = computed(() => {
   if (props.formatValue) return props.formatValue(props.modelValue);
   return props.modelValue.toString();
 });
+
+const isChanged = computed(() => {
+  if (props.defaultValue === undefined) return false;
+  return Math.abs(props.modelValue - props.defaultValue) > 0.0001;
+});
+
+const startEditing = () => {
+  editValue.value = props.modelValue;
+  isEditing.value = true;
+  void nextTick(() => {
+    const el = document.getElementById(`slider-input-${props.label.replace(/\s+/g, '-')}`);
+    if (el) {
+      el.focus();
+      if (el instanceof HTMLInputElement) el.select();
+    }
+  });
+};
+
+const finishEditing = () => {
+  if (!isEditing.value) return;
+  isEditing.value = false;
+  let parsed = typeof editValue.value === "number" ? editValue.value : parseFloat(String(editValue.value));
+  if (isNaN(parsed)) parsed = props.modelValue;
+  if (props.min !== undefined) parsed = Math.max(props.min, parsed);
+  if (props.max !== undefined) parsed = Math.min(props.max, parsed);
+  emit("update:modelValue", parsed);
+};
+
+const handleReset = (e: MouseEvent) => {
+  e.stopPropagation();
+  e.preventDefault();
+  if (props.defaultValue !== undefined) {
+    emit("update:modelValue", props.defaultValue);
+  }
+  emit("reset");
+};
 </script>
 
 <template>
   <div
     class="big-slider-container"
+    :class="{ 'is-editing': isEditing }"
     :style="{
-      background: `linear-gradient(to right, color-mix(in srgb, var(--accent) 20%, var(--surface)) ${percentage}%, var(--surface) ${percentage}%)`,
+      background: isEditing
+        ? 'var(--color-bg-surface)'
+        : `linear-gradient(to right, color-mix(in srgb, var(--accent) 20%, var(--surface)) ${percentage}%, var(--surface) ${percentage}%)`,
     }"
   >
-    <div class="big-slider-overlay">
-      <span class="big-slider-label">{{ label }}</span>
-      <span class="big-slider-value">{{ displayValue }}</span>
-    </div>
-    <input
-      type="range"
-      :min="min"
-      :max="max"
-      :step="step"
-      :value="modelValue"
-      class="big-slider-input"
-      @input="
-        emit(
-          'update:modelValue',
-          parseFloat(($event.target as HTMLInputElement).value),
-        )
-      "
-      @pointerdown="emit('interaction-start')"
-      @change="emit('interaction-end')"
-    />
+    <template v-if="isEditing">
+      <div class="big-slider-edit-wrapper">
+        <span class="big-slider-label edit-label">{{ label }}</span>
+        <Input
+          :id="`slider-input-${label.replace(/\s+/g, '-')}`"
+          ref="inputRef"
+          v-model="editValue"
+          type="number"
+          size="sm"
+          :min="min"
+          :max="max"
+          :step="step"
+          class="slider-inline-input"
+          @keydown.enter="finishEditing"
+          @keydown.esc="isEditing = false"
+          @blur="finishEditing"
+        />
+      </div>
+    </template>
+    <template v-else>
+      <div class="big-slider-overlay">
+        <span class="big-slider-label">{{ label }}</span>
+        <div class="big-slider-value-area">
+          <button
+            v-if="defaultValue !== undefined && isChanged"
+            type="button"
+            class="slider-reset-btn"
+            title="Reset to default"
+            @pointerdown.stop
+            @mousedown.stop
+            @click.stop.prevent="handleReset"
+          >
+            <RotateCcw class="reset-icon" />
+          </button>
+          <span
+            class="big-slider-value"
+            title="Click to edit value directly"
+            @pointerdown.stop
+            @mousedown.stop
+            @click.stop.prevent="startEditing"
+          >
+            {{ displayValue }}
+          </span>
+        </div>
+      </div>
+      <input
+        type="range"
+        :min="min"
+        :max="max"
+        :step="step"
+        :value="modelValue"
+        class="big-slider-input"
+        @input="
+          emit(
+            'update:modelValue',
+            parseFloat(($event.target as HTMLInputElement).value),
+          )
+        "
+        @pointerdown="emit('interaction-start')"
+        @change="emit('interaction-end')"
+      />
+    </template>
   </div>
 </template>
 
@@ -80,6 +169,11 @@ const displayValue = computed(() => {
   border-color: var(--color-primary);
 }
 
+.big-slider-container.is-editing {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
 .big-slider-overlay {
   position: absolute;
   inset: 0;
@@ -88,7 +182,7 @@ const displayValue = computed(() => {
   justify-content: space-between;
   padding: 0 14px;
   pointer-events: none;
-  z-index: 1;
+  z-index: 5;
 }
 
 .big-slider-label {
@@ -97,6 +191,46 @@ const displayValue = computed(() => {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+.big-slider-label.edit-label {
+  flex-shrink: 0;
+}
+
+.big-slider-value-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
+}
+
+.slider-reset-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color var(--fast) ease, background-color var(--fast) ease;
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
+}
+
+.slider-reset-btn:hover {
+  color: var(--color-primary);
+  background-color: var(--color-bg-surface-hover);
+}
+
+.reset-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .big-slider-value {
@@ -104,6 +238,46 @@ const displayValue = computed(() => {
   font-weight: 700;
   color: var(--text-primary);
   font-family: monospace;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color var(--fast) ease, color var(--fast) ease;
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
+}
+
+.big-slider-value:hover {
+  background: var(--color-bg-surface-hover);
+  color: var(--color-primary);
+}
+
+.big-slider-edit-wrapper {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 14px;
+  background: var(--color-bg-surface);
+  z-index: 10;
+  gap: 8px;
+}
+
+.slider-inline-input {
+  width: 80px !important;
+}
+
+:deep(.slider-inline-input .input-wrapper) {
+  height: 28px !important;
+  padding: 0 6px !important;
+}
+
+:deep(.slider-inline-input .input-element) {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  font-family: monospace !important;
+  text-align: right;
 }
 
 .big-slider-input {
