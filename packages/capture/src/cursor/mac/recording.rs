@@ -16,7 +16,10 @@ use core_graphics::{
 
 use crate::{
     CaptureError,
-    cursor::{CaptureRegion, CursorEvent, CursorEventWriter, map_coordinates},
+    cursor::{
+        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter, map_coordinates,
+        telemetry_from_events,
+    },
     model::SourceId,
     session::StartGate,
     storage::write_atomic,
@@ -45,6 +48,7 @@ pub struct MacCursorRecording {
     metrics: Arc<MacCursorMetrics>,
     partial: PathBuf,
     final_path: PathBuf,
+    telemetry_path: PathBuf,
 }
 
 impl MacCursorRecording {
@@ -59,6 +63,7 @@ impl MacCursorRecording {
             .map_err(|error| CaptureError::storage(directory, error))?;
         let partial = directory.join("cursor.partial.jsonl");
         let final_path = directory.join("cursor.json");
+        let telemetry_path = directory.join("telemetry.json");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
         let metrics = Arc::new(MacCursorMetrics::default());
@@ -89,6 +94,7 @@ impl MacCursorRecording {
             metrics,
             partial,
             final_path,
+            telemetry_path,
         })
     }
 
@@ -108,6 +114,7 @@ impl MacCursorRecording {
                 .join()
                 .map_err(|_| CaptureError::Backend("macOS cursor thread panicked".into()))??;
             finalize(&self.partial, &self.final_path)?;
+            finalize_telemetry(&self.final_path, &self.telemetry_path)?;
             write_atomic(&self.final_path.with_file_name("shapes.json"), b"{}")?;
         }
         Ok(())
@@ -181,6 +188,7 @@ fn capture_loop(
     start_gate.wait()?;
     let started = Instant::now();
     let mut previous_position = None;
+    let mut last_sample_ns = None;
     let mut previous_buttons = [false; 3];
     push(
         &mut writer,
@@ -200,7 +208,10 @@ fn capture_loop(
         let location = event.location();
         let x = coordinate(location.x);
         let y = coordinate(location.y);
-        if previous_position != Some((x, y)) {
+        if previous_position != Some((x, y))
+            || last_sample_ns
+                .is_none_or(|last| session_ns.saturating_sub(last) >= CURSOR_SAMPLE_INTERVAL_NS)
+        {
             let position = map_coordinates(x, y, region)?;
             push(
                 &mut writer,
@@ -215,6 +226,7 @@ fn capture_loop(
                 },
             )?;
             previous_position = Some((x, y));
+            last_sample_ns = Some(session_ns);
         }
         if capture_clicks {
             for (index, button) in [
@@ -264,6 +276,16 @@ fn finalize(partial: &Path, destination: &Path) -> Result<(), CaptureError> {
         .map(serde_json::from_str::<CursorEvent>)
         .collect::<Result<Vec<_>, _>>()?;
     write_atomic(destination, &serde_json::to_vec_pretty(&events)?)
+}
+
+fn finalize_telemetry(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {
+    let events: Vec<CursorEvent> = serde_json::from_slice(
+        &std::fs::read(cursor_path).map_err(|error| CaptureError::storage(cursor_path, error))?,
+    )?;
+    write_atomic(
+        destination,
+        &serde_json::to_vec_pretty(&telemetry_from_events(&events))?,
+    )
 }
 
 #[allow(clippy::cast_possible_truncation)]

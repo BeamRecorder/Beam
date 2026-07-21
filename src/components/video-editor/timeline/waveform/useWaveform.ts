@@ -1,5 +1,85 @@
 import { ref, onUnmounted } from 'vue';
 
+interface WavInfo {
+  sampleRate: number;
+  channels: number;
+  bitsPerSample: number;
+  audioFormat: number;
+  dataOffset: number;
+  dataLength: number;
+}
+
+function parseWav(buffer: ArrayBuffer): WavInfo {
+  const view = new DataView(buffer);
+  
+  // Find chunks
+  let pos = 12;
+  let sampleRate = 44100;
+  let channels = 2;
+  let bitsPerSample = 16;
+  let audioFormat = 1;
+  let dataOffset = 44;
+  let dataLength = buffer.byteLength - 44;
+  
+  while (pos < buffer.byteLength - 8) {
+    const chunkId = String.fromCharCode(
+      view.getUint8(pos),
+      view.getUint8(pos + 1),
+      view.getUint8(pos + 2),
+      view.getUint8(pos + 3)
+    );
+    const chunkSize = view.getUint32(pos + 4, true);
+    
+    if (chunkId === 'fmt ') {
+      audioFormat = view.getUint16(pos + 8, true);
+      channels = view.getUint16(pos + 10, true);
+      sampleRate = view.getUint32(pos + 12, true);
+      bitsPerSample = view.getUint16(pos + 20, true);
+    } else if (chunkId === 'data') {
+      dataOffset = pos + 8;
+      dataLength = chunkSize;
+      break;
+    }
+    pos += 8 + chunkSize;
+  }
+  
+  return { sampleRate, channels, bitsPerSample, audioFormat, dataOffset, dataLength };
+}
+
+function getAudioDataSlice(buffer: ArrayBuffer, info: WavInfo, startTime: number, endTime: number): Float32Array {
+  const bytesPerSample = info.bitsPerSample / 8;
+  const stride = info.channels;
+  
+  const startSample = Math.max(0, Math.floor(startTime * info.sampleRate));
+  const maxSamples = Math.floor(info.dataLength / (bytesPerSample * stride));
+  const endSample = Math.min(Math.ceil(endTime * info.sampleRate), maxSamples);
+  
+  const sampleCount = endSample - startSample;
+  if (sampleCount <= 0) return new Float32Array(0);
+  
+  const result = new Float32Array(sampleCount);
+  const dataView = new DataView(buffer, info.dataOffset);
+  
+  if (info.audioFormat === 3 && info.bitsPerSample === 32) {
+    // 32-bit float
+    for (let i = 0; i < sampleCount; i++) {
+      const sampleIdx = (startSample + i) * stride;
+      result[i] = dataView.getFloat32(sampleIdx * 4, true);
+    }
+  } else if (info.audioFormat === 1 && info.bitsPerSample === 16) {
+    // 16-bit PCM integer
+    for (let i = 0; i < sampleCount; i++) {
+      const sampleIdx = (startSample + i) * stride;
+      result[i] = dataView.getInt16(sampleIdx * 2, true) / 32768.0;
+    }
+  } else {
+    // Unsupported format, return silent data
+    return new Float32Array(sampleCount);
+  }
+  
+  return result;
+}
+
 export function useWaveform() {
   const peaks = ref<Float32Array | null>(null);
   const progress = ref<number>(0);
@@ -21,7 +101,12 @@ export function useWaveform() {
     progress.value = 0;
     isProcessing.value = true;
     error.value = null;
-    peaks.value = null;
+
+    if (audioData.length === 0) {
+      peaks.value = null;
+      isProcessing.value = false;
+      return;
+    }
 
     try {
       // Instantiate worker using standard Vite syntax
@@ -35,7 +120,6 @@ export function useWaveform() {
 
         if (type === 'progress') {
           progress.value = prog;
-          peaks.value = computedPeaks;
         } else if (type === 'done') {
           progress.value = 100;
           peaks.value = computedPeaks;
@@ -66,6 +150,16 @@ export function useWaveform() {
     }
   };
 
+  const generateWaveformFromWav = (wavBuffer: ArrayBuffer, startTime: number, endTime: number, targetPoints: number = 1000) => {
+    try {
+      const info = parseWav(wavBuffer);
+      const audioData = getAudioDataSlice(wavBuffer.slice(0), info, startTime, endTime);
+      generateWaveform(audioData, targetPoints);
+    } catch (err: any) {
+      error.value = err.message || 'Failed to parse WAV file';
+    }
+  };
+
   onUnmounted(() => {
     terminateWorker();
   });
@@ -76,6 +170,8 @@ export function useWaveform() {
     isProcessing,
     error,
     generateWaveform,
+    generateWaveformFromWav,
     cancel: terminateWorker
   };
 }
+

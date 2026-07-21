@@ -1,47 +1,75 @@
-import type { ZoomElement, ZoomFocus } from './zoom-types'
+import type { CursorTelemetryPoint } from '../../../api/types/capture-session'
+import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomFocus } from './zoom-types'
 
-export interface AppliedZoom {
-  scale: number
-  focus: ZoomFocus
+export interface AppliedZoom { scale: number; focus: ZoomFocus; strength: number; mode: ZoomElement['mode'] }
+export const ZOOM_IN_MS = 1522.575
+export const ZOOM_OUT_MS = 1015.05
+const LEAD_MS = 200
+const IN_OVERLAP_MS = 1000
+const OUT_EARLY_MS = 500
+const CONNECTED_GAP_MS = 1350
+const CONNECTED_PAN_MS = 1000
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value))
+const easeOut = (value: number) => 1 - (1 - clamp01(value)) ** 3
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+
+export function clampFocusToScale(focus: ZoomFocus, scale: number): ZoomFocus {
+  const margin = 1 / (2 * Math.max(1, scale))
+  return { cx: Math.min(1 - margin, Math.max(margin, focus.cx)), cy: Math.min(1 - margin, Math.max(margin, focus.cy)) }
 }
 
-const ENTER_MS = 480
-const EXIT_MS = 550
-const easeOutCubic = (value: number) => 1 - (1 - value) ** 3
-const easeInCubic = (value: number) => value ** 3
-
-function phaseProgress(element: ZoomElement, timeMs: number) {
-  const duration = element.endMs - element.startMs
-  if (duration <= 0 || timeMs < element.startMs || timeMs > element.endMs) return 0
-  const speed = Math.min(2, Math.max(0.5, element.speed))
-  const entrance = Math.min(ENTER_MS / speed, duration / 2)
-  const exit = Math.min(EXIT_MS / speed, duration / 2)
-  if (timeMs < element.startMs + entrance) return easeOutCubic((timeMs - element.startMs) / entrance)
-  if (timeMs > element.endMs - exit) return easeInCubic((element.endMs - timeMs) / exit)
-  return 1
+export function regionStrength(region: ZoomElement, timeMs: number): number {
+  const adjusted = timeMs - LEAD_MS
+  const inStart = region.startMs + IN_OVERLAP_MS - ZOOM_IN_MS
+  let inEnd = inStart + ZOOM_IN_MS
+  let outStart = region.endMs - OUT_EARLY_MS
+  if (inEnd > outStart) { const midpoint = (inEnd + outStart) / 2; inEnd = midpoint; outStart = midpoint }
+  if (adjusted < inStart || adjusted > outStart + ZOOM_OUT_MS) return 0
+  if (adjusted < inEnd) return easeOut((adjusted - inStart) / Math.max(1, inEnd - inStart))
+  if (adjusted <= outStart) return 1
+  return 1 - easeOut((adjusted - outStart) / ZOOM_OUT_MS)
 }
 
-function focusAtTime(element: ZoomElement, timeMs: number): ZoomFocus {
-  const keyframes = element.focusKeyframes
-  if (keyframes.length === 0 || timeMs <= keyframes[0].timeMs) return element.focus
-  const nextIndex = keyframes.findIndex((keyframe) => keyframe.timeMs > timeMs)
-  if (nextIndex === -1) return keyframes.at(-1) ?? element.focus
-  const previous = keyframes[nextIndex - 1]
-  const next = keyframes[nextIndex]
-  const ratio = (timeMs - previous.timeMs) / Math.max(1, next.timeMs - previous.timeMs)
-  return { cx: previous.cx + (next.cx - previous.cx) * ratio, cy: previous.cy + (next.cy - previous.cy) * ratio }
+export function cursorFocusAt(samples: CursorTelemetryPoint[], timeMs: number): ZoomFocus | null {
+  const next = samples.find((sample) => sample.timeMs > timeMs)
+  const previous = [...samples].reverse().find((sample) => sample.timeMs <= timeMs)
+  if (!previous) return next ? { cx: next.cx, cy: next.cy } : null
+  if (!next) return { cx: previous.cx, cy: previous.cy }
+  const t = (timeMs - previous.timeMs) / Math.max(1, next.timeMs - previous.timeMs)
+  return { cx: lerp(previous.cx, next.cx, t), cy: lerp(previous.cy, next.cy, t) }
 }
 
-export function zoomAtTime(elements: ZoomElement[], timeMs: number): AppliedZoom | null {
-  const active = elements.filter((element) => timeMs >= element.startMs && timeMs <= element.endMs)
+export function zoomAtTime(elements: ZoomElement[], timeMs: number, telemetry: CursorTelemetryPoint[] = []): AppliedZoom | null {
+  const pair = [...elements].sort((left, right) => left.startMs - right.startMs).find((current, index, sorted) => {
+    const next = sorted[index + 1]
+    return next && next.startMs - current.endMs <= CONNECTED_GAP_MS && timeMs >= current.endMs + LEAD_MS && timeMs <= current.endMs + LEAD_MS + CONNECTED_PAN_MS
+  })
+  if (pair) {
+    const next = [...elements].sort((left, right) => left.startMs - right.startMs).find((candidate) => candidate.startMs >= pair.endMs && candidate.startMs - pair.endMs <= CONNECTED_GAP_MS)
+    if (next) {
+      const t = easeOut((timeMs - pair.endMs - LEAD_MS) / CONNECTED_PAN_MS)
+      const startScale = ZOOM_DEPTH_SCALES[pair.depth]
+      const endScale = ZOOM_DEPTH_SCALES[next.depth]
+      const startFocus = clampFocusToScale(pair.focus, startScale)
+      const endFocus = clampFocusToScale(next.focus, endScale)
+      return { scale: lerp(startScale, endScale, t), focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) }, strength: 1, mode: 'auto' }
+    }
+  }
+  const active = elements.map((element) => ({ element, strength: regionStrength(element, timeMs) })).filter((entry) => entry.strength > 0).sort((a, b) => b.strength - a.strength || b.element.startMs - a.element.startMs)
   if (active.length === 0) return null
-  const weighted = active.map((element) => ({ element, progress: phaseProgress(element, timeMs) }))
-  const totalWeight = weighted.reduce((total, entry) => total + entry.progress, 0)
-  if (totalWeight <= 0) return { scale: 1, focus: focusAtTime(weighted[0].element, timeMs) }
-  const focus = weighted.reduce((total, entry) => {
-    const point = focusAtTime(entry.element, timeMs)
-    return { cx: total.cx + point.cx * entry.progress, cy: total.cy + point.cy * entry.progress }
-  }, { cx: 0, cy: 0 })
-  const scale = weighted.reduce((total, entry) => total + (entry.element.scale - 1) * entry.progress, 0) / totalWeight
-  return { scale: 1 + scale, focus: { cx: focus.cx / totalWeight, cy: focus.cy / totalWeight } }
+  const current = active[0]
+  const currentScale = ZOOM_DEPTH_SCALES[current.element.depth]
+  const next = elements.filter((candidate) => candidate.startMs >= current.element.endMs && candidate.startMs - current.element.endMs <= CONNECTED_GAP_MS).sort((a, b) => a.startMs - b.startMs)[0]
+  let focus = clampFocusToScale(current.element.focus, currentScale)
+  let scale = currentScale
+  if (next && timeMs >= current.element.endMs + LEAD_MS && timeMs <= current.element.endMs + LEAD_MS + CONNECTED_PAN_MS) {
+    const t = easeOut((timeMs - current.element.endMs - LEAD_MS) / CONNECTED_PAN_MS)
+    const nextScale = ZOOM_DEPTH_SCALES[next.depth]
+    focus = { cx: lerp(focus.cx, clampFocusToScale(next.focus, nextScale).cx, t), cy: lerp(focus.cy, clampFocusToScale(next.focus, nextScale).cy, t) }
+    scale = lerp(scale, nextScale, t)
+  } else if (current.element.mode === 'auto') {
+    const cursor = cursorFocusAt(telemetry, timeMs)
+    if (cursor) focus = clampFocusToScale(cursor, scale)
+  }
+  return { scale: 1 + (scale - 1) * current.strength, focus, strength: current.strength, mode: current.element.mode }
 }

@@ -3,12 +3,14 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import TimelineToolbar from './TimelineToolbar.vue';
 import TimelineTracks from './TimelineTracks.vue';
 import type { ZoomElement } from '../zoom/zoom-types';
+import type { ProjectEditorData } from '../../../api/types/capture-api';
 
 const props = defineProps<{
   currentTime: number;
   duration: number;
   isPlaying: boolean;
   videoSrc?: string | null;
+  editorData?: ProjectEditorData | null;
   
   // Track toggle states
   isVideoEnabled: boolean;
@@ -78,6 +80,7 @@ onUnmounted(() => {
       :duration="duration"
       v-model:zoom-level="zoomLevel"
       :video-src="videoSrc || null"
+      :editor-data="editorData"
       :is-video-enabled="isVideoEnabled"
       :is-system-audio-enabled="isSystemAudioEnabled"
       :is-mic-audio-enabled="isMicAudioEnabled"

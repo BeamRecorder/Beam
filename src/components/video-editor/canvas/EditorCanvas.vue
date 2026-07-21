@@ -6,6 +6,8 @@ import type { CursorType } from '../composables/useCursorReplacer'
 import type { BackgroundMedia } from '../composables/backgroundMedia'
 import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../composables/cursorPlayback'
 import { zoomAtTime } from '../zoom/zoom-playback'
+import { createCursorFollowCameraState, updateCursorFollowCamera } from '../zoom/zoom-camera'
+import { createCameraVelocity, stepCameraSpring } from '../zoom/zoom-spring'
 import type { ZoomElement } from '../zoom/zoom-types'
 
 const props = defineProps<{
@@ -45,11 +47,13 @@ let lastDrawTime = 0
 let previousCamera: { focusX: number; focusY: number; scale: number } | null = null
 let renderedCamera: { focusX: number; focusY: number; scale: number } | null = null
 let lastCameraUpdateMs = 0
+const cameraVelocity = createCameraVelocity()
+const cursorFollowCamera = createCursorFollowCameraState()
 const videoWindowBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null)
 const focusTargetStyle = computed(() => {
   const bounds = videoWindowBounds.value
-  if (!props.selectedZoom || props.selectedZoom.source !== 'manual' || props.isPlaying || !bounds) return { display: 'none' }
-  const selectionScale = Math.max(1, props.selectedZoom.scale)
+  if (!props.selectedZoom || props.selectedZoom.mode !== 'manual' || props.isPlaying || !bounds) return { display: 'none' }
+  const selectionScale = [1.25, 1.5, 1.8, 2.2, 3.5, 5][props.selectedZoom.depth - 1]
   return {
     left: `${bounds.dx + props.selectedZoom.focus.cx * bounds.dw - bounds.dw / selectionScale / 2}px`,
     top: `${bounds.dy + props.selectedZoom.focus.cy * bounds.dh - bounds.dh / selectionScale / 2}px`,
@@ -91,6 +95,7 @@ const loadVideo = () => {
   videoError.value = null
   previousCamera = null
   renderedCamera = null
+  Object.assign(cameraVelocity, createCameraVelocity())
   videoEl.pause()
   videoEl.currentTime = 0
   videoEl.src = effectiveVideoSrc.value
@@ -105,6 +110,7 @@ watch(() => props.isPlaying, (playing) => {
     videoEl.pause()
     previousCamera = null
     renderedCamera = null
+    Object.assign(cameraVelocity, createCameraVelocity())
   }
 })
 
@@ -225,9 +231,17 @@ const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.fill()
   ctx.clip()
 
-  const zoom = zoomAtTime(props.zoomElements, props.currentTime * 1000)
-  const focusX = dx + (zoom?.focus.cx ?? 0.5) * dw
-  const focusY = dy + (zoom?.focus.cy ?? 0.5) * dh
+  const zoom = zoomAtTime(props.zoomElements, props.currentTime * 1000, props.editorData?.cursor.telemetry ?? [])
+  const telemetry = props.editorData?.cursor.telemetry ?? []
+  // The camera follows the same interpolated event stream as the visible cursor.
+  // Telemetry is used for zoom suggestions, not presentation, so sparse samples
+  // cannot make the camera and the cursor disagree.
+  const renderedCursor = cursorStateAt(props.editorData?.cursor.events ?? [], props.currentTime)
+  const trackedFocus = zoom?.mode === 'auto'
+    ? updateCursorFollowCamera(cursorFollowCamera, renderedCursor ? { cx: renderedCursor.x, cy: renderedCursor.y } : null, zoom.focus, zoom.scale, zoom.strength, props.currentTime * 1000)
+    : zoom?.focus ?? { cx: 0.5, cy: 0.5 }
+  const focusX = dx + trackedFocus.cx * dw
+  const focusY = dy + trackedFocus.cy * dh
   const scale = zoom?.scale ?? 1
   const drawAtCamera = (camera: { focusX: number; focusY: number; scale: number }, alpha: number) => {
     ctx.save()
@@ -246,12 +260,7 @@ const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: n
   if (!props.isPlaying || !renderedCamera) {
     renderedCamera = targetCamera
   } else {
-    const smoothing = 1 - Math.exp(-deltaMs / 85)
-    renderedCamera = {
-      focusX: renderedCamera.focusX + (targetCamera.focusX - renderedCamera.focusX) * smoothing,
-      focusY: renderedCamera.focusY + (targetCamera.focusY - renderedCamera.focusY) * smoothing,
-      scale: renderedCamera.scale + (targetCamera.scale - renderedCamera.scale) * smoothing,
-    }
+    renderedCamera = stepCameraSpring(renderedCamera, targetCamera, cameraVelocity, deltaMs)
   }
   const camera = renderedCamera
   const previous = previousCamera
@@ -297,7 +306,9 @@ const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.restore()
   previousCamera = camera
   videoWindowBounds.value = { dx, dy, dw, dh }
-  return { dx, dy, dw, dh, focusX, focusY, scale }
+  // Cursor, ripples and video must share the rendered spring state. Returning
+  // the target camera here made overlays jump ahead of the eased video frame.
+  return { dx, dy, dw, dh, focusX: camera.focusX, focusY: camera.focusY, scale: camera.scale }
 }
 
 const drawInCameraSpace = (
@@ -319,7 +330,7 @@ const drawInCameraSpace = (
 const updateSelectedFocus = (event: PointerEvent) => {
   const canvas = canvasRef.value
   const bounds = videoWindowBounds.value
-  if (!canvas || !bounds || !props.selectedZoom || props.selectedZoom.source !== 'manual') return
+  if (!canvas || !bounds || !props.selectedZoom || props.selectedZoom.mode !== 'manual') return
   const rect = canvas.getBoundingClientRect()
   const cx = Math.min(1, Math.max(0, (event.clientX - rect.left - bounds.dx) / bounds.dw))
   const cy = Math.min(1, Math.max(0, (event.clientY - rect.top - bounds.dy) / bounds.dh))
@@ -327,7 +338,7 @@ const updateSelectedFocus = (event: PointerEvent) => {
 }
 
 const beginSelectionMove = (event: PointerEvent) => {
-  if (props.selectedZoom?.source !== 'manual') return
+  if (props.selectedZoom?.mode !== 'manual') return
   isMovingSelection.value = true
   canvasRef.value?.setPointerCapture(event.pointerId)
   updateSelectedFocus(event)
@@ -467,7 +478,7 @@ onUnmounted(() => {
     <canvas
       ref="canvasRef"
       class="editor-canvas"
-      :class="{ 'is-selection-editable': selectedZoom?.source === 'manual' }"
+      :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual' }"
       @pointerdown="beginSelectionMove"
       @pointermove="moveSelection"
       @pointerup="endSelectionMove"
@@ -475,7 +486,7 @@ onUnmounted(() => {
     ></canvas>
     <div
       class="zoom-selection-box"
-      :class="{ locked: selectedZoom?.source !== 'manual' }"
+      :class="{ locked: selectedZoom?.mode !== 'manual' }"
       :style="focusTargetStyle"
       aria-hidden="true"
     ></div>

@@ -3,11 +3,17 @@ export interface ZoomFocus {
   cy: number
 }
 
-export interface ZoomFocusKeyframe extends ZoomFocus {
-  timeMs: number
-}
+export type ZoomDepth = 1 | 2 | 3 | 4 | 5 | 6
+export type ZoomMode = 'auto' | 'manual'
 
-export type ZoomSource = 'automatic' | 'manual'
+export const ZOOM_DEPTH_SCALES: Record<ZoomDepth, number> = {
+  1: 1.25,
+  2: 1.5,
+  3: 1.8,
+  4: 2.2,
+  5: 3.5,
+  6: 5,
+}
 
 export interface ZoomElement {
   id: string
@@ -15,10 +21,8 @@ export interface ZoomElement {
   startMs: number
   endMs: number
   focus: ZoomFocus
-  focusKeyframes: ZoomFocusKeyframe[]
-  scale: number
-  speed: number
-  source: ZoomSource
+  depth: ZoomDepth
+  mode: ZoomMode
 }
 
 export interface ZoomGenerationRecord {
@@ -37,5 +41,4 @@ export const EMPTY_PROJECT_ZOOM_STATE: ProjectZoomState = {
   generatedSessions: [],
 }
 
-export const DEFAULT_ZOOM_SCALE = 1.75
-export const DEFAULT_ZOOM_SPEED = 1
+export const DEFAULT_ZOOM_DEPTH: ZoomDepth = 2

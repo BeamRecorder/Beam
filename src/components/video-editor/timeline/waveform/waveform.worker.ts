@@ -71,3 +71,4 @@ self.onmessage = (event: MessageEvent) => {
     }
   }
 };
+

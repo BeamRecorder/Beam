@@ -63,7 +63,7 @@ const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([]
 const selectedZoomId = ref<string | null>(null)
 const selectedZoom = computed(() => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null)
 const canGenerateZooms = computed(() => Boolean(props.project && props.editorData?.cursor.available && props.editorData.sessionId))
-const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.source === 'automatic'))
+const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.mode === 'auto'))
 
 watch(() => props.editorData, (data) => {
   zoomElements.value = data?.zoom.elements ?? []
@@ -85,9 +85,9 @@ const generateZooms = async (automatic = false) => {
   const data = props.editorData
   if (!data || !props.project || !data.cursor.available) return
   const durationMs = data.manifest.durationNs / 1_000_000
-  const generated = buildAutomaticZoomElements({ events: data.cursor.events, sessionId: data.sessionId, durationMs })
+  const generated = buildAutomaticZoomElements({ telemetry: data.cursor.telemetry, sessionId: data.sessionId, durationMs, reserved: zoomElements.value.filter((element) => element.mode === 'manual') })
   zoomElements.value = [
-    ...zoomElements.value.filter((element) => element.sessionId !== data.sessionId || element.source !== 'automatic'),
+    ...zoomElements.value.filter((element) => element.sessionId !== data.sessionId || element.mode !== 'auto'),
     ...generated,
   ]
   generatedSessions.value = [
@@ -107,7 +107,7 @@ watch(() => props.editorData?.sessionId, (sessionId) => {
 }, { immediate: true })
 
 const updateZoom = (next: ZoomElement) => {
-  if (next.startMs < 0 || next.endMs <= next.startMs || next.scale < 1 || next.scale > 3 || next.speed < 0.5 || next.speed > 2) return
+  if (next.startMs < 0 || next.endMs <= next.startMs) return
   zoomElements.value = zoomElements.value.map((element) => element.id === next.id ? next : element)
   void saveZoomState().catch((error) => console.error('Failed to save zoom:', error))
 }
@@ -155,7 +155,7 @@ watch(() => props.videoSrc, (videoSrc) => {
         <Button variant="ghost" size="sm" :icon="ArrowLeft" @click="handleExit" class="exit-btn">
           Exit to HUD
         </Button>
-        <VideoProjectEdition :project="project" @open-project="emit('open-project', $event)" />
+        <VideoProjectEdition :project="project" @open-project="emit('open-project', $event)" @dblclick.stop="capture.toggleMaximize()" />
       </div>
 
       <div class="right-actions">
@@ -233,6 +233,7 @@ watch(() => props.videoSrc, (videoSrc) => {
           v-model:isPlaying="isPlaying"
           :duration="duration"
           :video-src="playerVideoSrc"
+          :editor-data="editorData"
           
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
@@ -262,7 +263,7 @@ watch(() => props.videoSrc, (videoSrc) => {
   height: 40px;
   background: var(--color-bg-element);
   border-bottom: 1px solid var(--color-border);
-  padding: 0 16px;
+  padding: 0; /* No padding at all so left and right controls are completely flush */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -275,18 +276,61 @@ watch(() => props.videoSrc, (videoSrc) => {
   align-items: center;
   gap: 12px;
   -webkit-app-region: no-drag;
+  height: 100%;
+}
+
+.left-actions {
+  gap: 8px;
+}
+
+.exit-btn {
+  margin-right: 4px;
+}
+
+.left-actions :deep(.btn-container) {
+  height: 100%;
+  display: flex;
+}
+
+.left-actions :deep(.exit-btn.btn) {
+  height: 100%;
+  padding: 0 16px;
+  border-radius: 0; /* flush to the left corner */
+  border: none;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.left-actions :deep(.exit-btn.btn:hover) {
+  background: var(--color-bg-surface-hover, rgba(255, 255, 255, 0.05));
+  color: var(--text-primary);
+}
+
+.right-actions {
+  gap: 0; /* No gap so window-controls is flush */
+  height: 100%;
+}
+
+.export-btn {
+  margin-right: 12px; /* Add margin to keep gap from window controls */
 }
 
 .window-controls {
   display: flex;
-  gap: 4px;
+  height: 100%;
+  align-items: stretch;
+}
+
+.window-controls :deep(.btn-container) {
+  height: 100%;
+  display: flex;
 }
 
 .window-controls :deep(.btn) {
-  width: 28px;
-  height: 28px;
+  width: 46px; /* standard windows titlebar button width */
+  height: 100%;
   padding: 0;
-  border-radius: 6px;
+  border-radius: 0; /* corner to corner */
   display: flex;
   align-items: center;
   justify-content: center;

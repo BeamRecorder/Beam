@@ -8,6 +8,7 @@ import Dialog from '~/ui/dialog/Dialog.vue'
 import Popover from '~/ui/popover/Popover.vue'
 import Input from '~/ui/input/Input.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
+import ProgressBar from '../ui/progressbar/ProgressBar.vue'
 import { capture } from '../../api/capture'
 import type { CaptureProject } from '../../api/types/capture-api'
 
@@ -108,6 +109,34 @@ const formatDate = (date: string) => {
 const setPreviewFrame = (event: Event) => {
   const video = event.currentTarget as HTMLVideoElement | null
   if (video && video.duration > 0) video.currentTime = Math.min(0.1, video.duration)
+}
+
+const videoProgress = ref<Record<string, { current: number; total: number }>>({})
+
+const handleVideoTimeUpdate = (projectId: string, event: Event) => {
+  const video = event.currentTarget as HTMLVideoElement | null
+  if (video) {
+    videoProgress.value[projectId] = {
+      current: video.currentTime,
+      total: video.duration || 1
+    }
+  }
+}
+
+const handleMouseEnterVideo = (projectId: string, event: MouseEvent) => {
+  const video = event.currentTarget as HTMLVideoElement | null
+  if (video) {
+    video.play().catch(err => console.debug("Play interrupted:", err))
+  }
+}
+
+const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
+  const video = event.currentTarget as HTMLVideoElement | null
+  if (video) {
+    video.pause()
+    video.currentTime = Math.min(0.1, video.duration || 0)
+    videoProgress.value[projectId] = { current: 0, total: 1 }
+  }
 }
 
 onMounted(() => {
@@ -326,11 +355,17 @@ defineExpose({
                     playsinline
                     preload="metadata"
                     @loadedmetadata="setPreviewFrame"
+                    @timeupdate="handleVideoTimeUpdate(project.id, $event)"
+                    @mouseenter="handleMouseEnterVideo(project.id, $event)"
+                    @mouseleave="handleMouseLeaveVideo(project.id, $event)"
                   />
                   <Film v-else class="preview-placeholder-icon" />
                   <span v-if="project.id === selectedProjectId" class="selected-indicator" aria-label="Selected">
                     <Check />
                   </span>
+                  <div v-if="project.previewSrc && videoProgress[project.id]" class="preview-progress-overlay">
+                    <ProgressBar :value="videoProgress[project.id].current" :max="videoProgress[project.id].total" />
+                  </div>
                 </div>
                 <div class="project-card-info">
                   <div class="project-title-row">
@@ -616,7 +651,7 @@ defineExpose({
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: #10131b;
+  background: var(--color-bg-surface, #18181b); /* Neutral dark gray/black background instead of blue */
   flex-shrink: 0;
 }
 
@@ -629,7 +664,15 @@ defineExpose({
 .preview-placeholder-icon {
   width: 22px;
   height: 22px;
-  color: #71798a;
+  color: var(--text-muted, #71717a); /* Neutral text color */
+}
+
+.preview-progress-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
 }
 
 .selected-indicator {

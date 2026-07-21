@@ -227,6 +227,23 @@ function readCursorEvents(cursorPath) {
   }
 }
 
+function readCursorTelemetry(telemetryPath) {
+  if (!fs.existsSync(telemetryPath)) return []
+  try {
+    const payload = JSON.parse(fs.readFileSync(telemetryPath, 'utf8'))
+    const samples = Array.isArray(payload?.samples) ? payload.samples : []
+    return samples.filter((sample) => sample && isFiniteNumber(sample.timeMs) && isFiniteNumber(sample.cx) && isFiniteNumber(sample.cy))
+      .map((sample) => ({
+        timeMs: Math.max(0, sample.timeMs),
+        cx: Math.max(0, Math.min(1, sample.cx)),
+        cy: Math.max(0, Math.min(1, sample.cy)),
+        interactionType: ['move', 'click', 'double-click', 'right-click', 'middle-click', 'mouseup'].includes(sample.interactionType) ? sample.interactionType : undefined,
+        cursorType: typeof sample.cursorType === 'string' ? sample.cursorType : undefined,
+      }))
+      .sort((left, right) => left.timeMs - right.timeMs)
+  } catch { return [] }
+}
+
 function emptyZoomState() {
   return { elements: [], generatedSessions: [] }
 }
@@ -245,31 +262,25 @@ function validateZoomState(value) {
       throw new Error('Identifiant de zoom invalide')
     }
     ids.add(element.id)
+    const legacy = isFiniteNumber(element.scale) && ['automatic', 'manual'].includes(element.source)
+    const depthForLegacyScale = (scale) => [1.25, 1.5, 1.8, 2.2, 3.5, 5].reduce((best, candidate, index) =>
+      Math.abs(candidate - scale) < Math.abs([1.25, 1.5, 1.8, 2.2, 3.5, 5][best - 1] - scale) ? index + 1 : best, 1)
     if (
       typeof element.sessionId !== 'string' ||
       !isFiniteNumber(element.startMs) || !isFiniteNumber(element.endMs) ||
       element.endMs <= element.startMs ||
       !element.focus || !isFiniteNumber(element.focus.cx) || !isFiniteNumber(element.focus.cy) ||
       element.focus.cx < 0 || element.focus.cx > 1 || element.focus.cy < 0 || element.focus.cy > 1 ||
-      !isFiniteNumber(element.scale) || element.scale < 1 || element.scale > 3 ||
-      !isFiniteNumber(element.speed) || element.speed < 0.5 || element.speed > 2 ||
-      !['automatic', 'manual'].includes(element.source)
+      !(legacy || ([1, 2, 3, 4, 5, 6].includes(element.depth) && ['auto', 'manual'].includes(element.mode)))
     ) throw new Error('Propriétés de zoom invalides')
-    const focusKeyframes = element.focusKeyframes === undefined ? [] : element.focusKeyframes
-    if (!Array.isArray(focusKeyframes) || focusKeyframes.some((keyframe) =>
-      !keyframe || !isFiniteNumber(keyframe.timeMs) || keyframe.timeMs < element.startMs || keyframe.timeMs > element.endMs ||
-      !isFiniteNumber(keyframe.cx) || !isFiniteNumber(keyframe.cy) || keyframe.cx < 0 || keyframe.cx > 1 || keyframe.cy < 0 || keyframe.cy > 1,
-    )) throw new Error('Trajectoire de zoom invalide')
     return {
       id: element.id,
       sessionId: element.sessionId,
       startMs: Math.round(element.startMs),
       endMs: Math.round(element.endMs),
       focus: { cx: element.focus.cx, cy: element.focus.cy },
-      focusKeyframes: focusKeyframes.map((keyframe) => ({ timeMs: Math.round(keyframe.timeMs), cx: keyframe.cx, cy: keyframe.cy })),
-      scale: element.scale,
-      speed: element.speed,
-      source: element.source,
+      depth: legacy ? depthForLegacyScale(element.scale) : element.depth,
+      mode: legacy ? (element.source === 'automatic' ? 'auto' : 'manual') : element.mode,
     }
   })
   const generatedSessions = value.generatedSessions.map((record) => {
@@ -334,8 +345,10 @@ function readProjectEditorData(projectId) {
 
     const cursorDirectory = path.join(sessionDirectory, 'cursor')
     const cursorPath = path.join(cursorDirectory, 'cursor.json')
+    const telemetryPath = path.join(cursorDirectory, 'telemetry.json')
     const shapesPath = path.join(cursorDirectory, 'shapes.json')
     const events = readCursorEvents(cursorPath)
+    const telemetry = readCursorTelemetry(telemetryPath)
     let shapeMetadata = {}
     if (fs.existsSync(shapesPath)) {
       try {
@@ -363,6 +376,7 @@ function readProjectEditorData(projectId) {
       cursor: {
         available: Array.isArray(events),
         events: Array.isArray(events) ? events : [],
+        telemetry,
         shapes,
         missing: [
           ...(Array.isArray(events) ? [] : ['cursor.json']),

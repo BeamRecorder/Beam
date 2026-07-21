@@ -11,7 +11,10 @@ use std::{
 
 use crate::{
     CaptureError,
-    cursor::{CaptureRegion, CursorBitmap, CursorEvent, CursorEventWriter, ShapeStore},
+    cursor::{
+        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorBitmap, CursorEvent, CursorEventWriter,
+        ShapeStore, telemetry_from_events,
+    },
     session::StartGate,
     storage::write_atomic,
 };
@@ -43,6 +46,7 @@ pub struct WindowsCursorRecording {
     partial_path: PathBuf,
     final_path: PathBuf,
     shapes_path: PathBuf,
+    telemetry_path: PathBuf,
 }
 
 impl WindowsCursorRecording {
@@ -59,6 +63,7 @@ impl WindowsCursorRecording {
         let partial_path = directory.join("cursor.partial.jsonl");
         let final_path = directory.join("cursor.json");
         let shapes_path = directory.join("shapes.json");
+        let telemetry_path = directory.join("telemetry.json");
         let shapes_directory = directory.join("shapes");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
@@ -93,6 +98,7 @@ impl WindowsCursorRecording {
             partial_path,
             final_path,
             shapes_path,
+            telemetry_path,
         })
     }
 
@@ -112,6 +118,7 @@ impl WindowsCursorRecording {
                 .join()
                 .map_err(|_| CaptureError::Backend("cursor capture thread panicked".into()))??;
             finalize_events(&self.partial_path, &self.final_path)?;
+            finalize_telemetry(&self.final_path, &self.telemetry_path)?;
             finalize_shapes(&self.final_path, &self.shapes_path)?;
         }
         Ok(())
@@ -130,6 +137,7 @@ struct Previous {
     visible: Option<bool>,
     buttons: [bool; 3],
     shape: Option<usize>,
+    last_sample_ns: Option<u64>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -158,7 +166,11 @@ fn capture_loop(
             .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
         match sample_cursor(region, capture_shape) {
             Ok(sample) => {
-                if previous.position != Some((sample.position.pixel_x, sample.position.pixel_y)) {
+                if previous.position != Some((sample.position.pixel_x, sample.position.pixel_y))
+                    || previous.last_sample_ns.is_none_or(|last| {
+                        session_ns.saturating_sub(last) >= CURSOR_SAMPLE_INTERVAL_NS
+                    })
+                {
                     push(
                         &mut writer,
                         metrics,
@@ -172,6 +184,7 @@ fn capture_loop(
                         },
                     )?;
                     previous.position = Some((sample.position.pixel_x, sample.position.pixel_y));
+                    previous.last_sample_ns = Some(session_ns);
                 }
                 if previous.visible != Some(sample.visible) {
                     push(
@@ -257,6 +270,16 @@ fn finalize_events(partial: &Path, destination: &Path) -> Result<(), CaptureErro
         .map(serde_json::from_str::<CursorEvent>)
         .collect::<Result<Vec<_>, _>>()?;
     write_atomic(destination, &serde_json::to_vec_pretty(&events)?)
+}
+
+fn finalize_telemetry(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {
+    let events: Vec<CursorEvent> = serde_json::from_slice(
+        &std::fs::read(cursor_path).map_err(|error| CaptureError::storage(cursor_path, error))?,
+    )?;
+    write_atomic(
+        destination,
+        &serde_json::to_vec_pretty(&telemetry_from_events(&events))?,
+    )
 }
 
 fn finalize_shapes(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {

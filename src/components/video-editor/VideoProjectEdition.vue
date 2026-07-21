@@ -32,19 +32,16 @@ const handleProjectSelected = (project: CaptureProject) => {
 
 <template>
   <div class="project-switcher" @mousedown.stop>
-    <Button
-      variant="ghost"
-      size="sm"
-      :icon="ChevronDown"
+    <button
       class="project-name-button"
-      :tooltip="project?.name || 'Untitled project'"
-      tooltip-position="bottom"
+      :title="project?.name || 'Untitled project'"
       aria-haspopup="true"
       :aria-expanded="projectMenuOpen"
       @click="toggleProjectMenu"
     >
-      {{ project?.name || 'Untitled project' }}
-    </Button>
+      <span class="project-title">{{ project?.name || 'Untitled project' }}</span>
+      <ChevronDown class="chevron-icon" />
+    </button>
 
     <Transition name="project-menu">
       <div v-if="projectMenuOpen" class="project-menu-panel">
@@ -63,6 +60,42 @@ const handleProjectSelected = (project: CaptureProject) => {
 .project-switcher {
   position: relative;
   -webkit-app-region: no-drag;
+}
+
+.project-name-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--color-bg-surface, #1e1e24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  max-width: 200px;
+}
+
+.project-name-button:hover {
+  background: var(--color-bg-surface-hover, #2a2a32);
+  border-color: var(--color-border-dark, #3f3f46);
+}
+
+.project-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .project-menu-panel {

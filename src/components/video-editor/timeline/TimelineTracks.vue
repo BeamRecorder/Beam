@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
-import { Video, Volume2, Mic, MousePointer, Paintbrush } from '@lucide/vue';
-import { useThumbnails } from './waveform/useThumbnails';
-import Skeleton from '~/ui/skeleton/Skeleton.vue';
-import type { ZoomElement } from '../zoom/zoom-types';
+import { computed, ref, onMounted, watch } from "vue";
+import { Video, Volume2, Mic, MousePointer, Paintbrush } from "@lucide/vue";
+import { useThumbnails } from "./waveform/useThumbnails";
+import { useWaveform } from "./waveform/useWaveform";
+import Skeleton from "~/ui/skeleton/Skeleton.vue";
+import type { ZoomElement } from "../zoom/zoom-types";
+import type { ProjectEditorData } from "../../../api/types/capture-api";
 
 const props = defineProps<{
   currentTime: number;
   duration: number;
   zoomLevel: number;
   videoSrc: string | null;
-  
+  editorData?: ProjectEditorData | null;
+
   // Track toggle states
   isVideoEnabled: boolean;
   isSystemAudioEnabled: boolean;
@@ -20,12 +23,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:currentTime', value: number): void;
-  (e: 'update:zoomLevel', value: number): void;
-  (e: 'toggle:video'): void;
-  (e: 'toggle:systemAudio'): void;
-  (e: 'toggle:micAudio'): void;
-  (e: 'select:zoom', zoomId: string): void;
+  (e: "update:currentTime", value: number): void;
+  (e: "update:zoomLevel", value: number): void;
+  (e: "toggle:video"): void;
+  (e: "toggle:systemAudio"): void;
+  (e: "toggle:micAudio"): void;
+  (e: "select:zoom", zoomId: string): void;
 }>();
 
 const zoomElementStyle = (element: ZoomElement) => ({
@@ -36,24 +39,26 @@ const zoomElementStyle = (element: ZoomElement) => ({
 const tracksScrollRef = ref<HTMLDivElement | null>(null);
 const tracksViewportRef = ref<HTMLDivElement | null>(null);
 
-// Generate stable heights for simulated waveforms with realistic envelopes & pauses
+// Fallback simulated waveform bars
 const systemAudioWaveBars = computed(() => {
   const barCount = 120;
   const bars = [];
   for (let i = 0; i < barCount; i++) {
     const progress = i / barCount;
-    // Fade in at start, fade out at end
     let envelope = 1;
     if (progress < 0.08) {
       envelope = progress / 0.08;
     } else if (progress > 0.92) {
       envelope = (1 - progress) / 0.08;
     }
-    // Sentence word bursts (pauses every now and then)
     const sentenceWave = Math.sin(progress * Math.PI * 6);
     const wordGap = sentenceWave > -0.3 ? 1.0 : 0.15;
-    
-    const height = 4 + (Math.abs(Math.sin(i * 0.25)) * 16 + Math.abs(Math.cos(i * 0.5)) * 6) * envelope * wordGap;
+
+    const height =
+      4 +
+      (Math.abs(Math.sin(i * 0.25)) * 16 + Math.abs(Math.cos(i * 0.5)) * 6) *
+        envelope *
+        wordGap;
     bars.push(height);
   }
   return bars;
@@ -64,7 +69,6 @@ const micAudioWaveBars = computed(() => {
   const bars = [];
   for (let i = 0; i < barCount; i++) {
     const progress = i / barCount;
-    // Different fade points and pauses to look unique
     let envelope = 1;
     if (progress < 0.12) {
       envelope = progress / 0.12;
@@ -73,12 +77,142 @@ const micAudioWaveBars = computed(() => {
     }
     const sentenceWave = Math.sin(progress * Math.PI * 8 + 1);
     const wordGap = sentenceWave > -0.15 ? 1.0 : 0.1;
-    
-    const height = 3 + (Math.abs(Math.sin(i * 0.4)) * 14 + Math.abs(Math.cos(i * 0.75)) * 5) * envelope * wordGap;
+
+    const height =
+      3 +
+      (Math.abs(Math.sin(i * 0.4)) * 14 + Math.abs(Math.cos(i * 0.75)) * 5) *
+        envelope *
+        wordGap;
     bars.push(height);
   }
   return bars;
 });
+
+// Real Waveform Logic
+const { peaks: systemPeaks, generateWaveformFromWav: genSystemWaveform } =
+  useWaveform();
+const { peaks: micPeaks, generateWaveformFromWav: genMicWaveform } =
+  useWaveform();
+
+const systemAudioBuffer = ref<ArrayBuffer | null>(null);
+const micAudioBuffer = ref<ArrayBuffer | null>(null);
+
+const visibleStartSecond = ref(0);
+const visibleEndSecond = ref(0);
+
+const systemAudioTrack = computed(() =>
+  props.editorData?.tracks.find((t) => t.kind === "system-audio"),
+);
+const micAudioTrack = computed(() =>
+  props.editorData?.tracks.find((t) => t.kind === "microphone"),
+);
+
+// Fetch audio files once when tracks are loaded
+watch(
+  () => systemAudioTrack.value?.assets?.[0]?.src,
+  async (src) => {
+    if (!src) {
+      systemAudioBuffer.value = null;
+      return;
+    }
+    try {
+      const response = await fetch(src);
+      systemAudioBuffer.value = await response.arrayBuffer();
+    } catch (err) {
+      console.error("Failed to load system audio track:", err);
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => micAudioTrack.value?.assets?.[0]?.src,
+  async (src) => {
+    if (!src) {
+      micAudioBuffer.value = null;
+      return;
+    }
+    try {
+      const response = await fetch(src);
+      micAudioBuffer.value = await response.arrayBuffer();
+    } catch (err) {
+      console.error("Failed to load mic audio track:", err);
+    }
+  },
+  { immediate: true },
+);
+
+const systemBars = computed(() => {
+  if (!systemPeaks.value) return [];
+  const bars = [];
+  const len = systemPeaks.value.length / 2;
+  for (let i = 0; i < len; i++) {
+    const min = systemPeaks.value[i * 2];
+    const max = systemPeaks.value[i * 2 + 1];
+    const amp = Math.max(0, max - min);
+    const height = Math.max(2, Math.round(amp * 18));
+    bars.push(height);
+  }
+  return bars;
+});
+
+const micBars = computed(() => {
+  if (!micPeaks.value) return [];
+  const bars = [];
+  const len = micPeaks.value.length / 2;
+  for (let i = 0; i < len; i++) {
+    const min = micPeaks.value[i * 2];
+    const max = micPeaks.value[i * 2 + 1];
+    const amp = Math.max(0, max - min);
+    const height = Math.max(2, Math.round(amp * 18));
+    bars.push(height);
+  }
+  return bars;
+});
+
+const waveformStyle = computed(() => {
+  const start = visibleStartSecond.value;
+  const end = visibleEndSecond.value;
+  const dur = props.duration || 1;
+  return {
+    position: "absolute" as const,
+    left: `${(start / dur) * 100}%`,
+    width: `${((end - start) / dur) * 100}%`,
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "2px",
+  };
+});
+
+const updateWaveforms = () => {
+  const start = visibleStartSecond.value;
+  const end = visibleEndSecond.value;
+  if (end <= start) return;
+
+  const width = tracksScrollRef.value?.clientWidth || 800;
+  const targetPoints = Math.max(50, Math.min(300, Math.floor(width / 4)));
+
+  if (systemAudioBuffer.value) {
+    genSystemWaveform(systemAudioBuffer.value, start, end, targetPoints);
+  }
+  if (micAudioBuffer.value) {
+    genMicWaveform(micAudioBuffer.value, start, end, targetPoints);
+  }
+};
+
+watch(
+  () => [
+    visibleStartSecond.value,
+    visibleEndSecond.value,
+    systemAudioBuffer.value,
+    micAudioBuffer.value,
+  ],
+  () => {
+    updateWaveforms();
+  },
+);
 
 // Handle Ctrl + Wheel Zoom
 const handleWheel = (e: WheelEvent) => {
@@ -86,12 +220,14 @@ const handleWheel = (e: WheelEvent) => {
     e.preventDefault();
     const zoomDelta = e.deltaY < 0 ? 15 : -15;
     const newZoom = Math.max(100, Math.min(500, props.zoomLevel + zoomDelta));
-    emit('update:zoomLevel', newZoom);
+    emit("update:zoomLevel", newZoom);
   }
 };
 
 // Initialize thumbnail extraction composable
-const { thumbnails, requestVisibleFrames } = useThumbnails(computed(() => props.videoSrc));
+const { thumbnails, requestVisibleFrames } = useThumbnails(
+  computed(() => props.videoSrc),
+);
 
 const ticksAreaRef = ref<HTMLDivElement | null>(null);
 
@@ -99,7 +235,7 @@ const ticksAreaRef = ref<HTMLDivElement | null>(null);
 const tracksWidthStyle = computed(() => {
   return {
     width: `calc(${props.zoomLevel}% + 230px)`,
-    minWidth: 'calc(100% + 230px)'
+    minWidth: "calc(100% + 230px)",
   };
 });
 
@@ -107,7 +243,7 @@ const tracksWidthStyle = computed(() => {
 const playheadStyle = computed(() => {
   const percentage = (props.currentTime / props.duration) * 100;
   return {
-    left: `${percentage}%`
+    left: `${percentage}%`,
   };
 });
 
@@ -118,7 +254,7 @@ const handleScrub = (e: MouseEvent) => {
   const clickX = e.clientX - rect.left;
   const percentage = clickX / rect.width;
   const targetTime = percentage * props.duration;
-  emit('update:currentTime', Math.max(0, Math.min(props.duration, targetTime)));
+  emit("update:currentTime", Math.max(0, Math.min(props.duration, targetTime)));
 };
 
 // Handle timeline scrubbing on drag
@@ -126,8 +262,8 @@ let isDragging = false;
 const handleMouseDown = (e: MouseEvent) => {
   isDragging = true;
   handleScrub(e);
-  window.addEventListener('mousemove', handleMouseMove);
-  window.addEventListener('mouseup', handleMouseUp);
+  window.addEventListener("mousemove", handleMouseMove);
+  window.addEventListener("mouseup", handleMouseUp);
 };
 
 const handleMouseMove = (e: MouseEvent) => {
@@ -138,14 +274,15 @@ const handleMouseMove = (e: MouseEvent) => {
 
 const handleMouseUp = () => {
   isDragging = false;
-  window.removeEventListener('mousemove', handleMouseMove);
-  window.removeEventListener('mouseup', handleMouseUp);
+  window.removeEventListener("mousemove", handleMouseMove);
+  window.removeEventListener("mouseup", handleMouseUp);
 };
 
 // Virtualization: determine which frame seconds are visible and request them
 const updateVisibleThumbnails = () => {
-  if (!tracksScrollRef.value || !tracksViewportRef.value || !props.videoSrc) return;
-  
+  if (!tracksScrollRef.value || !tracksViewportRef.value || !props.videoSrc)
+    return;
+
   const scrollLeft = tracksScrollRef.value.scrollLeft;
   const clientWidth = tracksScrollRef.value.clientWidth;
   const scrollWidth = tracksViewportRef.value.scrollWidth;
@@ -154,14 +291,20 @@ const updateVisibleThumbnails = () => {
   const endPercent = (scrollLeft + clientWidth) / scrollWidth;
 
   const startSecond = Math.max(0, Math.floor(startPercent * props.duration));
-  const endSecond = Math.min(props.duration, Math.ceil(endPercent * props.duration));
+  const endSecond = Math.min(
+    props.duration,
+    Math.ceil(endPercent * props.duration),
+  );
+
+  visibleStartSecond.value = startSecond;
+  visibleEndSecond.value = endSecond;
 
   // Request visible frame timestamps (extract 1 frame per second for timeline view)
   const visibleSeconds: number[] = [];
   for (let s = startSecond; s <= endSecond; s++) {
     visibleSeconds.push(s);
   }
-  
+
   if (visibleSeconds.length > 0) {
     requestVisibleFrames(visibleSeconds);
   }
@@ -172,31 +315,39 @@ const onScroll = () => {
 };
 
 // React to zoom level / video source / duration changes
-watch(() => [props.zoomLevel, props.videoSrc, props.duration], () => {
-  // Let DOM update width first, then request visible frames
-  setTimeout(updateVisibleThumbnails, 50);
-}, { immediate: true });
+watch(
+  () => [props.zoomLevel, props.videoSrc, props.duration],
+  () => {
+    // Let DOM update width first, then request visible frames
+    setTimeout(updateVisibleThumbnails, 50);
+  },
+  { immediate: true },
+);
 
 // Auto scroll timeline to follow playhead if zoomed in
-watch(() => props.currentTime, (time) => {
-  if (!tracksScrollRef.value || !ticksAreaRef.value || isDragging) return;
-  
-  const scrollContainer = tracksScrollRef.value;
-  const ticksArea = ticksAreaRef.value;
-  
-  const percentage = time / props.duration;
-  const playheadX = 120 + percentage * ticksArea.clientWidth;
-  
-  const leftBound = scrollContainer.scrollLeft + 80;
-  const rightBound = scrollContainer.scrollLeft + scrollContainer.clientWidth - 80;
-  
-  if (playheadX < leftBound || playheadX > rightBound) {
-    scrollContainer.scrollTo({
-      left: playheadX - scrollContainer.clientWidth / 2,
-      behavior: 'smooth'
-    });
-  }
-});
+watch(
+  () => props.currentTime,
+  (time) => {
+    if (!tracksScrollRef.value || !ticksAreaRef.value || isDragging) return;
+
+    const scrollContainer = tracksScrollRef.value;
+    const ticksArea = ticksAreaRef.value;
+
+    const percentage = time / props.duration;
+    const playheadX = 120 + percentage * ticksArea.clientWidth;
+
+    const leftBound = scrollContainer.scrollLeft + 80;
+    const rightBound =
+      scrollContainer.scrollLeft + scrollContainer.clientWidth - 80;
+
+    if (playheadX < leftBound || playheadX > rightBound) {
+      scrollContainer.scrollTo({
+        left: playheadX - scrollContainer.clientWidth / 2,
+        behavior: "smooth",
+      });
+    }
+  },
+);
 
 const resetScrollPosition = () => {
   if (tracksScrollRef.value) {
@@ -209,30 +360,43 @@ onMounted(() => {
   setTimeout(resetScrollPosition, 50);
 });
 
-watch(() => props.videoSrc, () => {
-  setTimeout(resetScrollPosition, 50);
-});
+watch(
+  () => props.videoSrc,
+  () => {
+    setTimeout(resetScrollPosition, 50);
+  },
+);
 </script>
 
 <template>
-  <div class="timeline-tracks-container" ref="tracksScrollRef" @scroll="onScroll" @wheel="handleWheel">
-    <div class="timeline-viewport" ref="tracksViewportRef" :style="tracksWidthStyle">
-      
+  <div
+    class="timeline-tracks-container"
+    ref="tracksScrollRef"
+    @scroll="onScroll"
+    @wheel="handleWheel"
+  >
+    <div
+      class="timeline-viewport"
+      ref="tracksViewportRef"
+      :style="tracksWidthStyle"
+    >
       <!-- Ruler/Header -->
       <div class="timeline-ruler" @mousedown="handleMouseDown">
         <div class="ruler-info-spacer"></div>
         <div class="ruler-ticks-area" ref="ticksAreaRef">
-          <div 
-            v-for="sec in duration + 1" 
-            :key="sec" 
+          <div
+            v-for="sec in duration + 1"
+            :key="sec"
             class="ruler-marker"
             :class="{ 'is-major': (sec - 1) % 5 === 0 }"
             :style="{ left: `${((sec - 1) / duration) * 100}%` }"
           >
-            <span v-if="(sec - 1) % 5 === 0" class="marker-label">{{ sec - 1 }}s</span>
+            <span v-if="(sec - 1) % 5 === 0" class="marker-label"
+              >{{ sec - 1 }}s</span
+            >
             <div class="marker-tick"></div>
           </div>
-          
+
           <!-- Scrub Playhead vertical indicator line -->
           <div class="timeline-playhead" :style="playheadStyle">
             <div class="playhead-knob"></div>
@@ -242,26 +406,32 @@ watch(() => props.videoSrc, () => {
 
       <!-- Tracks Stack -->
       <div class="tracks-stack">
-        
         <!-- Video Track -->
-        <div class="track-row video-track" :class="{ disabled: !isVideoEnabled }">
-          <div class="track-info" @click="emit('toggle:video')" title="Click to toggle Video track">
+        <div
+          class="track-row video-track"
+          :class="{ disabled: !isVideoEnabled }"
+        >
+          <div
+            class="track-info"
+            @click="emit('toggle:video')"
+            title="Click to toggle Video track"
+          >
             <Video class="track-icon" />
             <span class="track-title">Video</span>
           </div>
           <div class="track-content video-content">
             <!-- Virtualized Thumbnails Container -->
             <div class="thumbnails-track">
-              <div 
-                v-for="sec in duration" 
-                :key="sec" 
+              <div
+                v-for="sec in duration"
+                :key="sec"
                 class="thumbnail-frame"
                 :style="{ width: `${100 / duration}%` }"
               >
-                <img 
-                  v-if="thumbnails[sec - 1]" 
-                  :src="thumbnails[sec - 1]" 
-                  class="thumbnail-img" 
+                <img
+                  v-if="thumbnails[sec - 1]"
+                  :src="thumbnails[sec - 1]"
+                  class="thumbnail-img"
                   alt="frame"
                 />
                 <Skeleton v-else width="100%" height="100%" radius="0" />
@@ -271,31 +441,73 @@ watch(() => props.videoSrc, () => {
         </div>
 
         <!-- Audio System Track -->
-        <div class="track-row audio-track" :class="{ disabled: !isSystemAudioEnabled }">
-          <div class="track-info" @click="emit('toggle:systemAudio')" title="Click to toggle System Audio track">
+        <div
+          class="track-row audio-track"
+          :class="{ disabled: !isSystemAudioEnabled }"
+        >
+          <div
+            class="track-info"
+            @click="emit('toggle:systemAudio')"
+            title="Click to toggle System Audio track"
+          >
             <Volume2 class="track-icon" />
             <span class="track-title">System</span>
           </div>
           <div class="track-content audio-content">
-            <div class="audio-block">
-              <!-- Waveform bars representation -->
-              <div class="audio-waveform-simulated">
-                <div v-for="(height, index) in systemAudioWaveBars" :key="index" class="wave-bar" :style="{ height: `${height}px` }"></div>
+            <div class="audio-block" style="position: relative; padding: 0">
+              <!-- Real Waveform -->
+              <div
+                v-if="systemAudioBuffer"
+                :style="waveformStyle"
+                class="audio-waveform-real"
+              >
+                <div
+                  v-for="(height, index) in systemBars"
+                  :key="index"
+                  class="wave-bar"
+                  :style="{ height: `${height}px` }"
+                ></div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Audio Microphone Track -->
-        <div class="track-row audio-track" :class="{ disabled: !isMicAudioEnabled }">
-          <div class="track-info" @click="emit('toggle:micAudio')" title="Click to toggle Microphone track">
+        <div
+          class="track-row audio-track"
+          :class="{ disabled: !isMicAudioEnabled }"
+        >
+          <div
+            class="track-info"
+            @click="emit('toggle:micAudio')"
+            title="Click to toggle Microphone track"
+          >
             <Mic class="track-icon" />
             <span class="track-title">Microphone</span>
           </div>
           <div class="track-content audio-content">
-            <div class="audio-block">
-              <div class="audio-waveform-simulated">
-                <div v-for="(height, index) in micAudioWaveBars" :key="index" class="wave-bar" :style="{ height: `${height}px` }"></div>
+            <div class="audio-block" style="position: relative; padding: 0">
+              <!-- Real Waveform -->
+              <div
+                v-if="micAudioBuffer"
+                :style="waveformStyle"
+                class="audio-waveform-real"
+              >
+                <div
+                  v-for="(height, index) in micBars"
+                  :key="index"
+                  class="wave-bar"
+                  :style="{ height: `${height}px` }"
+                ></div>
+              </div>
+              <!-- Fallback Simulated Waveform -->
+              <div v-else class="audio-waveform-simulated">
+                <div
+                  v-for="(height, index) in micAudioWaveBars"
+                  :key="index"
+                  class="wave-bar"
+                  :style="{ height: `${height}px` }"
+                ></div>
               </div>
             </div>
           </div>
@@ -315,10 +527,10 @@ watch(() => props.videoSrc, () => {
               class="cursor-zoom-indicator"
               :class="{ selected: element.id === selectedZoomId }"
               :style="zoomElementStyle(element)"
-              :title="`Zoom ${element.scale.toFixed(2)}×`"
+              :title="`Zoom ${[1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2)}×`"
               @click.stop="emit('select:zoom', element.id)"
             >
-              {{ element.scale.toFixed(2) }}×
+              {{ [1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2) }}×
             </button>
           </div>
         </div>
@@ -330,12 +542,15 @@ watch(() => props.videoSrc, () => {
             <span class="track-title">Draw</span>
           </div>
           <div class="track-content annotation-content">
-            <div class="annotation-indicator" :style="{ left: '40%', width: '20%' }">Arrow Pen Draw</div>
+            <div
+              class="annotation-indicator"
+              :style="{ left: '40%', width: '20%' }"
+            >
+              Arrow Pen Draw
+            </div>
           </div>
         </div>
-
       </div>
-
     </div>
   </div>
 </template>

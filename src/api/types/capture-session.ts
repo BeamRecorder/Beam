@@ -60,6 +60,21 @@ export interface CursorVisibilityEvent {
 
 export type CursorEvent = CursorMoveEvent | CursorShapeEvent | CursorButtonEvent | CursorVisibilityEvent
 
+export type CursorInteractionType = 'move' | 'click' | 'double-click' | 'right-click' | 'middle-click' | 'mouseup'
+
+export interface CursorTelemetryPoint {
+  timeMs: number
+  cx: number
+  cy: number
+  interactionType?: CursorInteractionType
+  cursorType?: string
+}
+
+export interface CursorTelemetrySidecar {
+  version: 2
+  samples: CursorTelemetryPoint[]
+}
+
 export interface CursorShapeAsset {
   src: string
   hotspot: { x: number; y: number }
@@ -70,20 +85,14 @@ export interface ZoomFocus {
   cy: number
 }
 
-export interface ZoomFocusKeyframe extends ZoomFocus {
-  timeMs: number
-}
-
 export interface ZoomElement {
   id: string
   sessionId: string
   startMs: number
   endMs: number
   focus: ZoomFocus
-  focusKeyframes: ZoomFocusKeyframe[]
-  scale: number
-  speed: number
-  source: 'automatic' | 'manual'
+  depth: 1 | 2 | 3 | 4 | 5 | 6
+  mode: 'auto' | 'manual'
 }
 
 export interface ProjectZoomState {
@@ -139,6 +148,7 @@ export interface ProjectEditorData {
   cursor: {
     available: boolean
     events: CursorEvent[]
+    telemetry: CursorTelemetryPoint[]
     shapes: Record<string, CursorShapeAsset>
     missing: string[]
   }

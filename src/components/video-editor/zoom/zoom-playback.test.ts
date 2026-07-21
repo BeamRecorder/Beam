@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { zoomAtTime } from './zoom-playback'
+import { clampFocusToScale, regionStrength, zoomAtTime } from './zoom-playback'
 import type { ZoomElement } from './zoom-types'
 
-const zoom: ZoomElement = { id: 'zoom', sessionId: 'session', startMs: 1_000, endMs: 2_000, focus: { cx: 0.3, cy: 0.7 }, focusKeyframes: [], scale: 2, speed: 1, source: 'automatic' }
+const zoom: ZoomElement = { id: 'zoom', sessionId: 'session', startMs: 2_000, endMs: 6_000, focus: { cx: 0.3, cy: 0.7 }, depth: 2, mode: 'auto' }
 
-describe('zoomAtTime', () => {
-  it('returns null outside an element', () => expect(zoomAtTime([zoom], 999)).toBeNull())
-  it('holds the configured scale between transition phases', () => expect(zoomAtTime([zoom], 1_500)).toEqual({ scale: 2, focus: zoom.focus }))
-  it('interpolates during entrance and exit', () => {
-    expect(zoomAtTime([zoom], 1_110)?.scale).toBeGreaterThan(1)
-    expect(zoomAtTime([zoom], 1_110)?.scale).toBeLessThan(2)
-    expect(zoomAtTime([zoom], 1_900)?.scale).toBeLessThan(2)
+describe('zoom playback', () => {
+  it('returns null outside the envelope', () => expect(zoomAtTime([zoom], 100)).toBeNull())
+  it('uses the Recordly depth scale at full strength', () => expect(zoomAtTime([zoom], 4_000)?.scale).toBe(1.5))
+  it('clamps camera focus to visible bounds', () => expect(clampFocusToScale({ cx: 0, cy: 1 }, 2)).toEqual({ cx: 0.25, cy: 0.75 }))
+  it('tracks the telemetry focus for automatic regions', () => expect(zoomAtTime([zoom], 4_000, [{ timeMs: 4_000, cx: 0.8, cy: 0.2 }])?.focus).toEqual({ cx: 0.6666666666666667, cy: 0.3333333333333333 }))
+  it('connects neighboring regions with an interpolated pan', () => {
+    const next: ZoomElement = { ...zoom, id: 'next', startMs: 6_800, endMs: 10_000, focus: { cx: 0.7, cy: 0.3 }, depth: 4 }
+    const result = zoomAtTime([zoom, next], 6_700)
+    expect(result?.scale).toBeGreaterThan(1.5)
+    expect(result?.scale).toBeLessThan(2.2)
   })
+  it('uses zero strength before an incoming region', () => expect(regionStrength(zoom, 0)).toBe(0))
 })

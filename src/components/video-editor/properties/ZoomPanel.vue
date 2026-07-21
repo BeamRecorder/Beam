@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>();
 
 const updateNumber = (
-  key: "scale" | "speed" | "startMs" | "endMs",
+  key: "depth" | "startMs" | "endMs",
   value: string | number,
 ) => {
   const numValue = Number(value);
@@ -27,12 +27,11 @@ const updateNumber = (
   emit("update", { ...props.selectedZoom, [key]: numValue });
 };
 
-const setMode = (source: ZoomElement["source"]) => {
-  if (!props.selectedZoom || props.selectedZoom.source === source) return;
+const setMode = (mode: ZoomElement["mode"]) => {
+  if (!props.selectedZoom || props.selectedZoom.mode === mode) return;
   emit("update", {
     ...props.selectedZoom,
-    source,
-    focusKeyframes: source === 'manual' ? [] : props.selectedZoom.focusKeyframes,
+    mode,
   });
 };
 </script>
@@ -81,45 +80,31 @@ const setMode = (source: ZoomElement["source"]) => {
       <ButtonGroup>
         <Button
           size="sm"
-          :variant="selectedZoom.source === 'automatic' ? 'primary' : 'ghost'"
-          @click="setMode('automatic')"
+          :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'"
+          @click="setMode('auto')"
         >Auto</Button>
         <Button
           size="sm"
-          :variant="selectedZoom.source === 'manual' ? 'primary' : 'ghost'"
+          :variant="selectedZoom.mode === 'manual' ? 'primary' : 'ghost'"
           @click="setMode('manual')"
         >Manual</Button>
       </ButtonGroup>
       <p class="hint">
         <MousePointer :size="14" />
-        {{ selectedZoom.source === 'manual'
+        {{ selectedZoom.mode === 'manual'
           ? 'Drag the selection box on the canvas to choose the framing.'
           : 'Auto zoom uses the recorded cursor path. Switch to Manual to adjust it.' }}
       </p>
       <label
-        >Scale
+        >Depth
         <Input
           type="number"
-          :model-value="selectedZoom.scale"
+          :model-value="selectedZoom.depth"
           :min="1"
-          :max="3"
-          :step="0.05"
+          :max="6"
+          :step="1"
           size="sm"
-          :disabled="selectedZoom.source === 'automatic'"
-          @update:model-value="updateNumber('scale', $event)"
-        />
-      </label>
-      <label
-        >Speed
-        <Input
-          type="number"
-          :model-value="selectedZoom.speed"
-          :min="0.5"
-          :max="2"
-          :step="0.1"
-          size="sm"
-          :disabled="selectedZoom.source === 'automatic'"
-          @update:model-value="updateNumber('speed', $event)"
+          @update:model-value="updateNumber('depth', $event)"
         />
       </label>
       <label
@@ -129,7 +114,7 @@ const setMode = (source: ZoomElement["source"]) => {
           :model-value="selectedZoom.startMs"
           :min="0"
           size="sm"
-          :disabled="selectedZoom.source === 'automatic'"
+          :disabled="selectedZoom.mode === 'auto'"
           @update:model-value="updateNumber('startMs', $event)"
         />
       </label>
@@ -140,7 +125,7 @@ const setMode = (source: ZoomElement["source"]) => {
           :model-value="selectedZoom.endMs"
           :min="0"
           size="sm"
-          :disabled="selectedZoom.source === 'automatic'"
+          :disabled="selectedZoom.mode === 'auto'"
           @update:model-value="updateNumber('endMs', $event)"
         />
       </label>
