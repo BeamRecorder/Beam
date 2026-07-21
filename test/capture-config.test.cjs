@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 
-const { buildDefaultCaptureConfig } = require('../capture-config.cjs')
+const { buildDefaultCaptureConfig } = require('../electron/capture-config.cjs')
 
 const catalog = {
   capabilities: {

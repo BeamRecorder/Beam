@@ -32,6 +32,7 @@ export interface CaptureApi {
 export interface DesktopCaptureApi extends CaptureApi {
   close(): void
   minimize(): void
+  setWindowMode(mode: 'hud' | 'editor'): void
   maximize(): void
   unmaximize(): void
   toggleMaximize(): void

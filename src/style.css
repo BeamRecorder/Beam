@@ -233,20 +233,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 9999px;
+  transition: background 0.2s ease-in-out;
 }
 
 :root.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: rgba(255, 255, 255, 0.16);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
+::-webkit-scrollbar-thumb:hover,
 :root.dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: var(--color-primary, #ff5a1f);
 }
 
 /* Default Input and Select background overrides */

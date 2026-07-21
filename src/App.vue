@@ -20,13 +20,16 @@ const setView = (view: 'hud' | 'editor') => {
   currentView.value = view
   
   if (view === 'editor') {
+    capture.setWindowMode('editor')
     capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
   } else {
+    capture.setWindowMode('hud')
     capture.setSize(320, 480)
   }
 }
 
 const revealEditor = async () => {
+  capture.setWindowMode('editor')
   capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
   await wait(180)
   currentView.value = 'editor'

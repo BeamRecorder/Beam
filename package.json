@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "electron-main.cjs",
+  "main": "electron/main.cjs",
   "scripts": {
     "test": "node --test test/*.test.cjs",
     "dev": "vite",
@@ -41,8 +41,7 @@
     "productName": "DemoRecorder",
     "files": [
       "dist/**/*",
-      "electron-main.cjs",
-      "electron-preload.cjs"
+      "electron/**/*"
     ],
     "extraResources": [
       {

@@ -117,6 +117,33 @@ fn project_editor_state_survives_a_new_recording() {
 }
 
 #[test]
+fn generated_project_names_receive_a_unique_positive_suffix_on_collision() {
+    let temporary = tempfile::tempdir().expect("temporary directory");
+    let first_project = ProjectId::from_uuid(uuid::Uuid::from_bytes([
+        1, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    ]));
+    let second_project = ProjectId::from_uuid(uuid::Uuid::from_bytes([
+        1, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    ]));
+    let first = create_or_update_project(
+        temporary.path(),
+        first_project,
+        SessionId::new(),
+        "2026-01-01T00:00:00Z",
+    )
+    .expect("first project");
+    let second = create_or_update_project(
+        temporary.path(),
+        second_project,
+        SessionId::new(),
+        "2026-01-01T00:00:00Z",
+    )
+    .expect("second project");
+    assert_eq!(first.name, "Calm Comet");
+    assert_eq!(second.name, "Calm Comet 3");
+}
+
+#[test]
 fn recovery_repairs_truncated_health_timing_and_cursor_jsonl() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let project = ProjectId::new();

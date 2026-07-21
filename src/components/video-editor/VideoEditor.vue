@@ -137,12 +137,13 @@ const minimizeApp = () => {
 }
 
 const handleExit = () => {
-  capture.unmaximize()
+  capture.setWindowMode('hud')
   emit('back-to-hud')
 }
 
 onMounted(() => {
   playerVideoSrc.value = props.videoSrc ?? ''
+  capture.setWindowMode('editor')
   capture.maximize()
 })
 

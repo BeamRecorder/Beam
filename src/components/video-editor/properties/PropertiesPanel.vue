@@ -166,22 +166,4 @@ const emit = defineEmits<{
   padding-right: 20px;
   box-sizing: border-box;
 }
-
-.panel-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.panel-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.panel-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 99px;
-  transition: background 0.2s ease-in-out;
-}
-
-.panel-content::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary, #ff5a1f);
-}
 </style>
