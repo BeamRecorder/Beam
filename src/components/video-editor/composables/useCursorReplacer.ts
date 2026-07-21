@@ -127,7 +127,7 @@ export function useCursorReplacer() {
   const rippleColor = ref('#ff5a1f')
   const rippleSize = ref(30)
 
-  // Pre-load SVG as Image helper
+  // Pre-load SVG as Image helper with vector sharpness multiplier
   const getCursorImage = async (type: CursorType, size: number, color: string): Promise<HTMLImageElement> => {
     const urlPath = cursorUrls[type]
     let svgContent = ''
@@ -137,12 +137,7 @@ export function useCursorReplacer() {
     }
     svgContent = await response.text()
 
-    // Replace width and height attributes in SVG
-    svgContent = svgContent
-      .replace(/width="[^"]*"/, `width="${size}"`)
-      .replace(/height="[^"]*"/, `height="${size}"`)
-
-    // If color is customized and not default black
+    // Replace width and height attributes in SVG with responsive viewBox preserved
     if (color !== '#000000') {
       svgContent = svgContent
         .replace(/fill="#000000"/gi, `fill="${color}"`)

@@ -484,6 +484,8 @@ const renderCanvas = () => {
     return
   }
   ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0)
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
   ctx.clearRect(0, 0, width, height)
 
   drawBackground(ctx, width, height)
@@ -521,40 +523,54 @@ const renderCanvas = () => {
           ripple.alpha -= 0.04
         }
       }
+    })
 
-      const activeImage = customCursorImage.value || image
-      if (!state?.visible || !asset || !activeImage || !activeImage.complete || activeImage.naturalWidth <= 0) return
+    const activeImage = customCursorImage.value || image
+    if (state?.visible && asset && activeImage && activeImage.complete && activeImage.naturalWidth > 0) {
       const pointerX = videoWindow.dx + state.x * videoWindow.dw
       const pointerY = videoWindow.dy + state.y * videoWindow.dh
 
-      let hx = 0
-      let hy = 0
+      // Draw cursor vector image in unscaled canvas coordinate space
+      const targetSize = props.cursorSize
+      const scale = videoWindow.scale
+      const screenX = videoWindow.dx + videoWindow.dw / 2 + (pointerX - videoWindow.focusX) * scale
+      const screenY = videoWindow.dy + videoWindow.dh / 2 + (pointerY - videoWindow.focusY) * scale
+      const renderSize = targetSize * scale
+
+      let hxScreen = 0
+      let hyScreen = 0
 
       if (customCursorImage.value) {
         const hotspot = cursorHotspots[props.selectedCursor] || { x: 0, y: 0 }
-        const cursorScale = props.cursorSize / 32
-        hx = hotspot.x * cursorScale
-        hy = hotspot.y * cursorScale
+        const cursorScale = renderSize / 32
+        hxScreen = hotspot.x * cursorScale
+        hyScreen = hotspot.y * cursorScale
       } else {
-        const cursorScale = props.cursorSize / activeImage.naturalWidth
-        hx = asset.hotspot.x * cursorScale
-        hy = asset.hotspot.y * cursorScale
+        const cursorScale = renderSize / activeImage.naturalWidth
+        hxScreen = asset.hotspot.x * cursorScale
+        hyScreen = asset.hotspot.y * cursorScale
       }
 
+      ctx.save()
       if (props.enableShadow) {
         ctx.shadowColor = props.shadowColor
-        ctx.shadowBlur = props.shadowBlur
-        ctx.shadowOffsetX = Math.round(props.shadowBlur * 0.33)
-        ctx.shadowOffsetY = Math.round(props.shadowBlur * 0.5)
+        ctx.shadowBlur = props.shadowBlur * scale
+        ctx.shadowOffsetX = Math.round(props.shadowBlur * 0.33 * scale)
+        ctx.shadowOffsetY = Math.round(props.shadowBlur * 0.5 * scale)
       }
+
+      const drawWidth = customCursorImage.value ? renderSize : (activeImage.naturalWidth * (renderSize / activeImage.naturalWidth))
+      const drawHeight = customCursorImage.value ? renderSize : (activeImage.naturalHeight * (renderSize / activeImage.naturalWidth))
+
       ctx.drawImage(
         activeImage,
-        pointerX - hx,
-        pointerY - hy,
-        customCursorImage.value ? props.cursorSize : (activeImage.naturalWidth * (props.cursorSize / activeImage.naturalWidth)),
-        customCursorImage.value ? props.cursorSize : (activeImage.naturalHeight * (props.cursorSize / activeImage.naturalWidth))
+        screenX - hxScreen,
+        screenY - hyScreen,
+        drawWidth,
+        drawHeight
       )
-    })
+      ctx.restore()
+    }
     ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0)
 
     if (state?.shapeId && !asset) {
