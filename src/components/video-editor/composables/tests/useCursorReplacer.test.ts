@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cursorOptions,
   cursorUrls,
+  svgAtRasterSize,
   useCursorReplacer,
 } from "../useCursorReplacer";
 
@@ -79,6 +80,22 @@ describe("useCursorReplacer", () => {
     expect(fetchMock).toHaveBeenCalledWith("/macOsSvgCursors/default.svg");
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:cursor");
+  });
+
+  it("sets SVG raster dimensions from its viewBox while preserving its aspect ratio", () => {
+    expect(
+      svgAtRasterSize('<svg width="32" height="16" viewBox="0 0 32 16"/>', 80),
+    ).toContain('width="80" height="40"');
+  });
+
+  it("replaces existing SVG dimensions instead of adding conflicting attributes", () => {
+    const resized = svgAtRasterSize('<svg width="32" height="32" viewBox="0 0 32 32"/>', 64);
+    expect(resized).toContain('width="64" height="64"');
+    expect(resized).not.toContain('width="32"');
+  });
+
+  it("keeps SVG dimensions valid when an invalid raster size is requested", () => {
+    expect(svgAtRasterSize('<svg viewBox="0 0 32 32"/>', 0)).toContain('width="1" height="1"');
   });
 
   it("fails on an unavailable asset and on an undecodable SVG", async () => {

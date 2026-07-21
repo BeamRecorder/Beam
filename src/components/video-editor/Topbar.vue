@@ -31,6 +31,7 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   if (
     target.closest('.left-actions') ||
     target.closest('.right-actions') ||
+    target.closest('.project-switcher') ||
     target.closest('button') ||
     target.closest('a')
   ) {

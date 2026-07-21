@@ -8,8 +8,8 @@ import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../comp
 import { zoomAtTime } from '../zoom/zoom-playback'
 import { createCursorFollowCameraState, updateCursorFollowCamera } from '../zoom/zoom-camera'
 import { createCameraVelocity, stepCameraSpring } from '../zoom/zoom-spring'
-import type { ZoomElement } from '../zoom/zoom-types'
-import { useCursorReplacer } from '../composables/useCursorReplacer'
+import { ZOOM_DEPTH_SCALES, type ZoomElement } from '../zoom/zoom-types'
+import { svgAtRasterSize, useCursorReplacer } from '../composables/useCursorReplacer'
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -95,6 +95,7 @@ const videoError = ref<string | null>(null)
 
 const logicalSize = ref({ width: 0, height: 0 })
 const deviceScale = ref(1)
+const maxZoomScale = Math.max(...Object.values(ZOOM_DEPTH_SCALES))
 const cursorImages = new Map<string, HTMLImageElement>()
 let resizeObserver: ResizeObserver | null = null
 let animationFrameId: number | null = null
@@ -130,14 +131,15 @@ const { getCursorImage } = useCursorReplacer()
 const customCursorImage = ref<HTMLImageElement | null>(null)
 
 watch(
-  () => [props.selectedCursor, props.cursorSize, props.cursorColor],
+  () => [props.selectedCursor, props.cursorSize, props.cursorColor, deviceScale.value],
   async () => {
     if (props.selectedCursor === 'automatic') {
       customCursorImage.value = null
       return
     }
     try {
-      const img = await getCursorImage(props.selectedCursor, props.cursorSize, props.cursorColor)
+      const rasterSize = props.cursorSize * maxZoomScale * deviceScale.value
+      const img = await getCursorImage(props.selectedCursor, rasterSize, props.cursorColor)
       customCursorImage.value = img
     } catch (err) {
       console.error('Failed to load custom cursor image:', err)
@@ -248,28 +250,25 @@ const loadCursorAssets = async () => {
   const shapes = props.editorData?.cursor.shapes ?? {}
   for (const [shapeId, shape] of Object.entries(shapes)) {
     try {
-      if (props.cursorColor === '#000000') {
-        const image = new Image()
-        image.onload = () => { cursorImages.set(shapeId, image) }
-        image.src = shape.src
-      } else {
-        const response = await fetch(shape.src)
-        if (response.ok) {
-          let svgContent = await response.text()
-          svgContent = svgContent
-            .replace(/fill="#000000"/gi, `fill="${props.cursorColor}"`)
-            .replace(/fill="#000"/gi, `fill="${props.cursorColor}"`)
-          const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
-          const url = URL.createObjectURL(svgBlob)
-          const image = new Image()
-          image.onload = () => { cursorImages.set(shapeId, image) }
-          image.src = url
-        } else {
-          const image = new Image()
-          image.onload = () => { cursorImages.set(shapeId, image) }
-          image.src = shape.src
-        }
+      const response = await fetch(shape.src)
+      if (!response.ok) throw new Error(`Unable to load cursor shape: ${shape.src}`)
+      let svgContent = await response.text()
+      if (props.cursorColor !== '#000000') {
+        svgContent = svgContent
+          .replace(/fill="#000000"/gi, `fill="${props.cursorColor}"`)
+          .replace(/fill="#000"/gi, `fill="${props.cursorColor}"`)
       }
+      const rasterSize = props.cursorSize * maxZoomScale * deviceScale.value
+      svgContent = svgAtRasterSize(svgContent, rasterSize)
+      const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+      const image = new Image()
+      image.onload = () => {
+        URL.revokeObjectURL(url)
+        cursorImages.set(shapeId, image)
+      }
+      image.onerror = () => URL.revokeObjectURL(url)
+      image.src = url
     } catch (err) {
       console.error('Failed to colorize shape SVG:', err)
       const image = new Image()
@@ -278,7 +277,7 @@ const loadCursorAssets = async () => {
     }
   }
 }
-watch(() => [props.editorData, props.cursorColor], loadCursorAssets, { immediate: true })
+watch(() => [props.editorData, props.cursorSize, props.cursorColor, deviceScale.value], loadCursorAssets, { immediate: true })
 
 const resizeCanvas = () => {
   const canvas = canvasRef.value

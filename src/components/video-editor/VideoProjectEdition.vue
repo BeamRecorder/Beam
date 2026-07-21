@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import ProjectPicker from '../hud/ProjectPicker.vue'
 import { ChevronDown } from '@lucide/vue'
 import type { CaptureProject } from '../../api/types/capture-api'
@@ -18,6 +18,7 @@ const emit = defineEmits<{
 }>()
 
 const projectMenuOpen = ref(false)
+const switcherRef = ref<HTMLDivElement | null>(null)
 
 const toggleProjectMenu = () => {
   projectMenuOpen.value = !projectMenuOpen.value
@@ -27,10 +28,35 @@ const handleProjectSelected = (project: CaptureProject) => {
   projectMenuOpen.value = false
   emit('open-project', project)
 }
+
+const handleWindowPointerDown = (event: MouseEvent | PointerEvent) => {
+  if (!projectMenuOpen.value) return
+  if (switcherRef.value && !switcherRef.value.contains(event.target as Node)) {
+    projectMenuOpen.value = false
+  }
+}
+
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && projectMenuOpen.value) {
+    projectMenuOpen.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('pointerdown', handleWindowPointerDown, { capture: true })
+  window.addEventListener('mousedown', handleWindowPointerDown, { capture: true })
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('pointerdown', handleWindowPointerDown, { capture: true })
+  window.removeEventListener('mousedown', handleWindowPointerDown, { capture: true })
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <template>
-  <div class="project-switcher" @mousedown.stop>
+  <div ref="switcherRef" class="project-switcher">
     <button
       class="project-name-button"
       :title="project?.name || 'Untitled project'"

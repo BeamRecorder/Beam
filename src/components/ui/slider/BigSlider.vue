@@ -25,7 +25,6 @@ const emit = defineEmits<{
 
 const isEditing = ref(false);
 const editValue = ref<number | string>(props.modelValue);
-const inputRef = ref<InstanceType<typeof Input> | null>(null);
 
 const percentage = computed(() => {
   const range = props.max - props.min;
@@ -90,7 +89,6 @@ const handleReset = (e: MouseEvent) => {
         <span class="big-slider-label edit-label">{{ label }}</span>
         <Input
           :id="`slider-input-${label.replace(/\s+/g, '-')}`"
-          ref="inputRef"
           v-model="editValue"
           type="number"
           size="sm"

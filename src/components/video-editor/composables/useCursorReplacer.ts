@@ -116,6 +116,19 @@ export const cursorOptions = [
   { value: 'zoomout', label: 'macOS Zoom Out', thumbnail: '/macOsSvgCursors/zoomout.svg' },
 ]
 
+export const svgAtRasterSize = (svgContent: string, rasterWidth: number) => {
+  const viewBox = svgContent.match(/\bviewBox=["']\s*[-.\d]+\s+[-.\d]+\s+([-.\d]+)\s+([-.\d]+)\s*["']/i)
+  const viewBoxWidth = Number(viewBox?.[1]) || 1
+  const viewBoxHeight = Number(viewBox?.[2]) || viewBoxWidth
+  const width = Math.max(1, Math.ceil(rasterWidth))
+  const height = Math.max(1, Math.ceil(width * viewBoxHeight / viewBoxWidth))
+
+  return svgContent.replace(/<svg\b([^>]*)>/i, (_tag, attributes: string) => {
+    const withoutDimensions = attributes.replace(/\s(?:width|height)=["'][^"']*["']/gi, '')
+    return `<svg${withoutDimensions} width="${width}" height="${height}">`
+  })
+}
+
 export function useCursorReplacer() {
   const selectedCursor = ref<CursorType>('automatic')
   const cursorSize = ref(24)
@@ -127,8 +140,9 @@ export function useCursorReplacer() {
   const rippleColor = ref('#ff5a1f')
   const rippleSize = ref(30)
 
-  // Pre-load SVG as Image helper with vector sharpness multiplier
-  const getCursorImage = async (type: CursorType, size: number, color: string): Promise<HTMLImageElement> => {
+  // Canvas rasterizes an SVG when drawing it. Decode it at the largest required
+  // pixel size so the cursor stays sharp while the camera zoom is applied.
+  const getCursorImage = async (type: CursorType, rasterSize: number, color: string): Promise<HTMLImageElement> => {
     const urlPath = cursorUrls[type]
     let svgContent = ''
     const response = await fetch(urlPath)
@@ -143,6 +157,7 @@ export function useCursorReplacer() {
         .replace(/fill="#000000"/gi, `fill="${color}"`)
         .replace(/fill="#000"/gi, `fill="${color}"`)
     }
+    svgContent = svgAtRasterSize(svgContent, rasterSize)
 
     return new Promise((resolve, reject) => {
       const img = new Image()
@@ -173,4 +188,3 @@ export function useCursorReplacer() {
     getCursorImage,
   }
 }
-

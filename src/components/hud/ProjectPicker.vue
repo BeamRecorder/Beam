@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useVirtualList } from "@vueuse/core";
 import {
   ArrowLeft,
@@ -83,9 +83,11 @@ const wait = (durationMs: number) =>
 
 const loadProjects = async () => {
   const startedAt = performance.now();
-  isLoading.value = true;
-  if (cachedProjects) {
+  if (cachedProjects && cachedProjects.length > 0) {
     projects.value = [...cachedProjects];
+    isLoading.value = false;
+  } else {
+    isLoading.value = true;
   }
   errorMessage.value = "";
   try {
@@ -98,13 +100,15 @@ const loadProjects = async () => {
       ? props.currentProjectId
       : (projects.value[0]?.id ?? null);
   } catch (error) {
-    projects.value = [];
+    if (!cachedProjects) projects.value = [];
     errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
-    await wait(
-      Math.max(0, MIN_SKELETON_DURATION_MS - (performance.now() - startedAt)),
-    );
-    isLoading.value = false;
+    if (isLoading.value) {
+      await wait(
+        Math.max(0, MIN_SKELETON_DURATION_MS - (performance.now() - startedAt)),
+      );
+      isLoading.value = false;
+    }
   }
 };
 
@@ -148,6 +152,9 @@ const handleVideoTimeUpdate = (projectId: string, event: Event) => {
 const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
   const video = event.currentTarget as HTMLVideoElement | null;
   if (video) {
+    if (video.readyState === 0) {
+      video.load();
+    }
     video.play().catch((err) => console.debug("Play interrupted:", err));
   }
 };
@@ -163,6 +170,19 @@ const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
 
 onMounted(() => {
   void loadProjects();
+});
+
+onUnmounted(() => {
+  // Stop all video elements to prevent holding media resources/decoders when closing
+  const container = document.querySelector(".projects-viewport");
+  if (container) {
+    const videos = container.querySelectorAll("video");
+    videos.forEach((v) => {
+      v.pause();
+      v.src = "";
+      v.load();
+    });
+  }
 });
 
 watch(
@@ -425,7 +445,7 @@ defineExpose({
                     :src="project.previewSrc"
                     muted
                     playsinline
-                    preload="metadata"
+                    preload="none"
                     @loadedmetadata="setPreviewFrame"
                     @timeupdate="handleVideoTimeUpdate(project.id, $event)"
                     @mouseenter="handleMouseEnterVideo(project.id, $event)"
