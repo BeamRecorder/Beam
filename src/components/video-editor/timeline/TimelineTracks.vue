@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { Video, Volume2, Mic, MousePointer, Type, Scissors, MoveLeft, MoveRight, Eye, EyeOff, Unlink } from "@lucide/vue";
-import { useThumbnails } from "./waveform/useThumbnails";
-import { useWaveform } from "./waveform/useWaveform";
 import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import Button from "~/ui/button/Button.vue";
 import type { ZoomElement } from "../zoom/zoom-types";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
-import type { ProjectComposition } from '../composition/composition-types'
+import type { ProjectComposition } from '../composition/composition-types';
+import { useTimelineTracks } from './composables/useTimelineTracks';
 
 const props = defineProps<{
   currentTime: number;
@@ -47,377 +45,30 @@ const emit = defineEmits<{
   (e: "trim:clip-edge", payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
 }>();
 
-const captionLayers = computed(() => props.composition.layers.filter((layer) => layer.kind === 'caption'))
-const imageLayers = computed(() => props.composition.layers.filter((layer) => layer.kind === 'image'))
-const cameraAssetIds = computed(() => new Set(props.composition.media.filter((asset) => asset.origin === 'session' && asset.kind === 'video').map((asset) => asset.id)))
-const cameraLayers = computed(() => props.composition.layers.filter((layer) => layer.kind === 'video' && cameraAssetIds.value.has(layer.assetId)))
-const mainVideoLayer = computed(() => props.composition.layers.find((layer) => layer.kind === 'video' && !cameraAssetIds.value.has(layer.assetId)) ?? props.composition.layers[0] ?? null)
-const layerStyle = (startMs: number, endMs: number) => ({ left: `${props.duration > 0 ? startMs / (props.duration * 10) : 0}%`, width: `${props.duration > 0 ? (endMs - startMs) / (props.duration * 10) : 0}%` })
-
-const zoomElementStyle = (element: ZoomElement) => ({
-  left: `${props.duration > 0 ? (element.startMs / 1000 / props.duration) * 100 : 0}%`,
-  width: `${props.duration > 0 ? ((element.endMs - element.startMs) / 1000 / props.duration) * 100 : 0}%`,
-});
-
-const tracksScrollRef = ref<HTMLDivElement | null>(null);
-const tracksViewportRef = ref<HTMLDivElement | null>(null);
-
-const micAudioWaveBars = computed(() => {
-  const barCount = 120;
-  const bars = [];
-  for (let i = 0; i < barCount; i++) {
-    const progress = i / barCount;
-    let envelope = 1;
-    if (progress < 0.12) {
-      envelope = progress / 0.12;
-    } else if (progress > 0.88) {
-      envelope = (1 - progress) / 0.12;
-    }
-    const sentenceWave = Math.sin(progress * Math.PI * 8 + 1);
-    const wordGap = sentenceWave > -0.15 ? 1.0 : 0.1;
-
-    const height =
-      3 +
-      (Math.abs(Math.sin(i * 0.4)) * 14 + Math.abs(Math.cos(i * 0.75)) * 5) *
-        envelope *
-        wordGap;
-    bars.push(height);
-  }
-  return bars;
-});
-
-// Real Waveform Logic
-const { peaks: systemPeaks, generateWaveformFromAudioBuffer: genSystemWaveform } =
-  useWaveform();
-const { peaks: micPeaks, generateWaveformFromAudioBuffer: genMicWaveform } =
-  useWaveform();
-
-const systemAudioBuffer = ref<AudioBuffer | null>(null);
-const micAudioBuffer = ref<AudioBuffer | null>(null);
-
-const decodeAudio = async (source: string) => {
-  const response = await fetch(source);
-  if (!response.ok) throw new Error(`Unable to read audio asset: ${source}`);
-  const context = new OfflineAudioContext(1, 1, 44_100);
-  return context.decodeAudioData(await response.arrayBuffer());
-};
-
-const visibleStartSecond = ref(0);
-const visibleEndSecond = ref(0);
-
-const systemAudioTrack = computed(() =>
-  props.editorData?.tracks.find((t) => t.kind === "system-audio"),
-);
-const micAudioTrack = computed(() =>
-  props.editorData?.tracks.find((t) => t.kind === "microphone"),
-);
-
-// Fetch audio files once when tracks are loaded
-watch(
-  () => systemAudioTrack.value?.assets?.[0]?.src,
-  async (src) => {
-    if (!src) {
-      systemAudioBuffer.value = null;
-      return;
-    }
-    try {
-      systemAudioBuffer.value = await decodeAudio(src);
-    } catch (err) {
-      console.error("Failed to load system audio track:", err);
-    }
-  },
-  { immediate: true },
-);
-
-watch(
-  () => micAudioTrack.value?.assets?.[0]?.src,
-  async (src) => {
-    if (!src) {
-      micAudioBuffer.value = null;
-      return;
-    }
-    try {
-      micAudioBuffer.value = await decodeAudio(src);
-    } catch (err) {
-      console.error("Failed to load mic audio track:", err);
-    }
-  },
-  { immediate: true },
-);
-
-const getNormalizedBars = (peaks: Float32Array | null, maxBarHeight = 22) => {
-  if (!peaks || peaks.length === 0) return [];
-  const len = peaks.length / 2;
-  const amps = new Float32Array(len);
-  let maxAmp = 0.0001; // Avoid divide-by-zero
-
-  for (let i = 0; i < len; i++) {
-    const min = peaks[i * 2];
-    const max = peaks[i * 2 + 1];
-    const amp = Math.max(0, max - min);
-    amps[i] = amp;
-    if (amp > maxAmp) maxAmp = amp;
-  }
-
-  // Scale bars relative to max amplitude in track so quiet mic signals are visible & dynamic
-  const bars: number[] = [];
-  const scale = maxAmp > 0.01 ? maxBarHeight / maxAmp : maxBarHeight * 5; // boost if very low signal
-
-  for (let i = 0; i < len; i++) {
-    const height = Math.max(2, Math.min(maxBarHeight, Math.round(amps[i] * scale)));
-    bars.push(height);
-  }
-  return bars;
-};
-
-const systemBars = computed(() => getNormalizedBars(systemPeaks.value));
-const micBars = computed(() => getNormalizedBars(micPeaks.value));
-
-const waveformStyle = computed(() => {
-  return {
-    position: "absolute" as const,
-    left: "0%",
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "2px",
-  };
-});
-
-const updateWaveforms = () => {
-  if (!props.duration || props.duration <= 0) return;
-
-  // Set number of target points based on track scrollable width or default resolution
-  const width = tracksViewportRef.value?.clientWidth || 1000;
-  const targetPoints = Math.max(100, Math.min(1200, Math.floor(width / 3)));
-
-  if (systemAudioBuffer.value) {
-    genSystemWaveform(systemAudioBuffer.value, 0, props.duration, targetPoints);
-  }
-  if (micAudioBuffer.value) {
-    genMicWaveform(micAudioBuffer.value, 0, props.duration, targetPoints);
-  }
-};
-
-watch(
-  () => [
-    systemAudioBuffer.value,
-    micAudioBuffer.value,
-    props.duration,
-    props.zoomLevel,
-  ],
-  () => {
-    updateWaveforms();
-  },
-);
-
-// Handle Ctrl + Wheel Zoom
-const handleWheel = (e: WheelEvent) => {
-  if (e.ctrlKey) {
-    e.preventDefault();
-    const zoomDelta = e.deltaY < 0 ? 15 : -15;
-    const newZoom = Math.max(100, Math.min(500, props.zoomLevel + zoomDelta));
-    emit("update:zoomLevel", newZoom);
-  }
-};
-
-const cameraMediaSrc = computed(() => {
-  const layer = cameraLayers.value[0];
-  if (!layer || !('assetId' in layer)) return null;
-  const asset = props.composition.media.find((m) => m.id === layer.assetId);
-  return asset?.src ?? null;
-});
-
-// Initialize thumbnail extraction composables
-const { thumbnails, requestVisibleFrames } = useThumbnails(
-  computed(() => props.videoSrc),
-);
-
-const { thumbnails: webcamThumbnails, requestVisibleFrames: requestWebcamFrames } = useThumbnails(
-  cameraMediaSrc,
-);
-
-const ticksAreaRef = ref<HTMLDivElement | null>(null);
-
-// Calculate tracks width based on zoom level (including 230px of margin breathing room)
-const tracksWidthStyle = computed(() => {
-  return {
-    width: `calc(${props.zoomLevel}% + 230px)`,
-    minWidth: "calc(100% + 230px)",
-  };
-});
-
-const ticksAreaWidth = ref(0);
-let ticksResizeObserver: ResizeObserver | null = null;
-
-const updateTicksWidth = () => {
-  if (ticksAreaRef.value) {
-    ticksAreaWidth.value = ticksAreaRef.value.clientWidth;
-  }
-};
-
-// Calculate playhead position using translate3d for GPU compositing
-const playheadStyle = computed(() => {
-  const percentage = props.duration > 0 ? props.currentTime / props.duration : 0;
-  const x = percentage * ticksAreaWidth.value;
-  return {
-    transform: `translate3d(${x}px, 0, 0)`,
-  };
-});
-
-// Perform scrub calculation clamped between 0 and duration
-let isDragging = false;
-let dragRect: { left: number; width: number } | null = null;
-let rafId: number | null = null;
-
-const handleScrub = (clientX: number) => {
-  if (!ticksAreaRef.value || !props.duration) return;
-  const rect = dragRect || ticksAreaRef.value.getBoundingClientRect();
-  if (rect.width <= 0) return;
-  const clickX = clientX - rect.left;
-  const percentage = clickX / rect.width;
-  const targetTime = percentage * props.duration;
-  emit("update:currentTime", Math.max(0, Math.min(props.duration, targetTime)));
-};
-
-// Handle timeline scrubbing on drag
-const handleMouseDown = (e: MouseEvent) => {
-  isDragging = true;
-  if (ticksAreaRef.value) {
-    const rect = ticksAreaRef.value.getBoundingClientRect();
-    dragRect = { left: rect.left, width: rect.width };
-  }
-  handleScrub(e.clientX);
-  window.addEventListener("mousemove", handleMouseMove);
-  window.addEventListener("mouseup", handleMouseUp);
-};
-
-const handleMouseMove = (e: MouseEvent) => {
-  if (!isDragging) return;
-  const clientX = e.clientX;
-  if (rafId !== null) return;
-  rafId = requestAnimationFrame(() => {
-    rafId = null;
-    if (isDragging) {
-      handleScrub(clientX);
-    }
-  });
-};
-
-const handleMouseUp = () => {
-  isDragging = false;
-  dragRect = null;
-  if (rafId !== null) {
-    cancelAnimationFrame(rafId);
-    rafId = null;
-  }
-  window.removeEventListener("mousemove", handleMouseMove);
-  window.removeEventListener("mouseup", handleMouseUp);
-};
-
-// Virtualization: determine which frame seconds are visible and request them
-const updateVisibleThumbnails = () => {
-  if (!tracksScrollRef.value || !tracksViewportRef.value || !props.videoSrc)
-    return;
-
-  const scrollLeft = tracksScrollRef.value.scrollLeft;
-  const clientWidth = tracksScrollRef.value.clientWidth;
-  const scrollWidth = tracksViewportRef.value.scrollWidth;
-
-  const startPercent = scrollLeft / scrollWidth;
-  const endPercent = (scrollLeft + clientWidth) / scrollWidth;
-
-  const startSecond = Math.max(0, Math.floor(startPercent * props.duration));
-  const endSecond = Math.min(
-    Math.max(0, props.duration - 1),
-    Math.ceil(endPercent * props.duration),
-  );
-
-  visibleStartSecond.value = startSecond;
-  visibleEndSecond.value = endSecond;
-
-  // Request visible frame timestamps (extract 1 frame per second for timeline view: 0, 1, ..., duration - 1)
-  const visibleSeconds: number[] = [];
-  for (let s = startSecond; s <= endSecond; s++) {
-    visibleSeconds.push(s);
-  }
-
-  if (visibleSeconds.length > 0) {
-    requestVisibleFrames(visibleSeconds);
-    if (cameraMediaSrc.value) {
-      requestWebcamFrames(visibleSeconds);
-    }
-  }
-};
-
-const onScroll = () => {
-  updateVisibleThumbnails();
-};
-
-// React to zoom level / video source / duration changes
-watch(
-  () => [props.zoomLevel, props.videoSrc, props.duration],
-  () => {
-    // Let DOM update width first, then request visible frames
-    setTimeout(updateVisibleThumbnails, 50);
-  },
-  { immediate: true },
-);
-
-// Auto scroll timeline to follow playhead if zoomed in
-watch(
-  () => props.currentTime,
-  (time) => {
-    if (!tracksScrollRef.value || !ticksAreaRef.value || isDragging) return;
-
-    const scrollContainer = tracksScrollRef.value;
-    const ticksArea = ticksAreaRef.value;
-
-    const percentage = time / props.duration;
-    const playheadX = 120 + percentage * ticksArea.clientWidth;
-
-    const leftBound = scrollContainer.scrollLeft + 80;
-    const rightBound =
-      scrollContainer.scrollLeft + scrollContainer.clientWidth - 80;
-
-    if (playheadX < leftBound || playheadX > rightBound) {
-      scrollContainer.scrollTo({
-        left: playheadX - scrollContainer.clientWidth / 2,
-        behavior: "smooth",
-      });
-    }
-  },
-);
-
-const resetScrollPosition = () => {
-  if (tracksScrollRef.value) {
-    tracksScrollRef.value.scrollLeft = 80;
-  }
-};
-
-onMounted(() => {
-  updateVisibleThumbnails();
-  updateTicksWidth();
-  if (ticksAreaRef.value) {
-    ticksResizeObserver = new ResizeObserver(updateTicksWidth);
-    ticksResizeObserver.observe(ticksAreaRef.value);
-  }
-  setTimeout(resetScrollPosition, 50);
-});
-
-onUnmounted(() => {
-  ticksResizeObserver?.disconnect();
-  handleMouseUp();
-});
-
-watch(
-  () => props.videoSrc,
-  () => {
-    setTimeout(resetScrollPosition, 50);
-  },
-);
+const {
+  captionLayers,
+  imageLayers,
+  cameraLayers,
+  mainVideoLayer,
+  layerStyle,
+  zoomElementStyle,
+  tracksScrollRef,
+  tracksViewportRef,
+  ticksAreaRef,
+  micAudioWaveBars,
+  systemAudioBuffer,
+  micAudioBuffer,
+  systemBars,
+  micBars,
+  waveformStyle,
+  handleWheel,
+  thumbnails,
+  webcamThumbnails,
+  tracksWidthStyle,
+  playheadStyle,
+  handleMouseDown,
+  onScroll,
+} = useTimelineTracks(props, emit);
 </script>
 
 <template>
@@ -753,10 +404,11 @@ watch(
   display: flex;
   flex-direction: column;
 }
-.camera-content { position: relative; background: color-mix(in srgb, var(--color-primary-light) 36%, transparent); }
-.camera-clip { position: absolute; top: 2px; bottom: 2px; border: 1px solid var(--color-primary); border-radius: var(--radius-sm); background: var(--color-primary-light); color: var(--color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; font-size: 11px; cursor: pointer; padding: 0; }
+.camera-content { position: relative; background: var(--color-bg-element); }
+.camera-clip { position: absolute; top: 2px; bottom: 2px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; font-size: 11px; cursor: pointer; padding: 0; transition: border-color 0.15s ease; }
+.camera-clip:hover { border-color: var(--color-primary); }
 .clip-label-overlay { position: absolute; left: 8px; top: 2px; font-size: 9px; font-weight: 800; background: rgba(0, 0, 0, 0.6); color: white; padding: 1px 5px; border-radius: var(--radius-sm); z-index: 5; pointer-events: none; }
-.camera-clip.selected { box-shadow: 0 0 0 2px var(--color-primary); }
+.camera-clip.selected { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
 .camera-clip.disabled { opacity: .38; text-decoration: line-through; }
 .camera-actions { position: absolute; right: 8px; top: 4px; display: flex; gap: 4px; }
 .camera-actions button { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-element); color: var(--text-primary); cursor: pointer; }

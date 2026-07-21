@@ -77,7 +77,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
               const targetWidth = Math.min(240, vWidth);
               const targetHeight = Math.round(targetWidth * (vHeight / vWidth));
 
-              if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+              if (canvas && (canvas.width !== targetWidth || canvas.height !== targetHeight)) {
                 canvas.width = targetWidth;
                 canvas.height = targetHeight;
               }

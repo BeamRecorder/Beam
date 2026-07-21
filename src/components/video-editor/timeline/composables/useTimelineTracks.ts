@@ -1,0 +1,459 @@
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { useThumbnails } from "../waveform/useThumbnails";
+import { useWaveform } from "../waveform/useWaveform";
+import type { ZoomElement } from "../../zoom/zoom-types";
+import type { ProjectEditorData } from "../../../../api/types/capture-api";
+import type { ProjectComposition } from "../../composition/composition-types";
+
+export interface TimelineTracksProps {
+  currentTime: number;
+  duration: number;
+  zoomLevel: number;
+  videoSrc: string | null;
+  editorData?: ProjectEditorData | null;
+  isVideoEnabled: boolean;
+  isSystemAudioEnabled: boolean;
+  isMicAudioEnabled: boolean;
+  isCameraEnabled: boolean;
+  zoomElements: ZoomElement[];
+  selectedZoomId: string | null;
+  composition: ProjectComposition;
+  selectedCompositionLayerId: string | null;
+  selectedCameraLayerId: string | null;
+}
+
+export type TimelineTracksEmit = {
+  (e: "update:currentTime", value: number): void;
+  (e: "update:zoomLevel", value: number): void;
+  (e: "toggle:video"): void;
+  (e: "toggle:systemAudio"): void;
+  (e: "toggle:micAudio"): void;
+  (e: "select:zoom", zoomId: string): void;
+  (e: "select:composition-layer", layerId: string): void;
+  (e: "select:camera-layer", layerId: string): void;
+  (e: "toggle:camera"): void;
+  (e: "toggle:camera-layer"): void;
+  (e: "split:camera"): void;
+  (e: "trim:camera", edge: 'start' | 'end'): void;
+  (e: "unlink"): void;
+  (e: "unlink-track", trackKind: string): void;
+  (e: "move:clip", payload: { id: string; deltaMs: number }): void;
+  (e: "trim:clip-edge", payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
+};
+
+export function useTimelineTracks(
+  props: TimelineTracksProps,
+  emit: TimelineTracksEmit,
+) {
+  // Layer computeds
+  const captionLayers = computed(() =>
+    props.composition.layers.filter((layer) => layer.kind === "caption"),
+  );
+  const imageLayers = computed(() =>
+    props.composition.layers.filter((layer) => layer.kind === "image"),
+  );
+  const cameraAssetIds = computed(
+    () =>
+      new Set(
+        props.composition.media
+          .filter((asset) => asset.origin === "session" && asset.kind === "video")
+          .map((asset) => asset.id),
+      ),
+  );
+  const cameraLayers = computed(() =>
+    props.composition.layers.filter(
+      (layer) => layer.kind === "video" && cameraAssetIds.value.has(layer.assetId),
+    ),
+  );
+  const mainVideoLayer = computed(
+    () =>
+      props.composition.layers.find(
+        (layer) => layer.kind === "video" && !cameraAssetIds.value.has(layer.assetId),
+      ) ?? props.composition.layers[0] ?? null,
+  );
+
+  const layerStyle = (startMs: number, endMs: number) => ({
+    left: `${props.duration > 0 ? startMs / (props.duration * 10) : 0}%`,
+    width: `${props.duration > 0 ? (endMs - startMs) / (props.duration * 10) : 0}%`,
+  });
+
+  const zoomElementStyle = (element: ZoomElement) => ({
+    left: `${props.duration > 0 ? (element.startMs / 1000 / props.duration) * 100 : 0}%`,
+    width: `${props.duration > 0 ? ((element.endMs - element.startMs) / 1000 / props.duration) * 100 : 0}%`,
+  });
+
+  // DOM Refs
+  const tracksScrollRef = ref<HTMLDivElement | null>(null);
+  const tracksViewportRef = ref<HTMLDivElement | null>(null);
+  const ticksAreaRef = ref<HTMLDivElement | null>(null);
+
+  // Simulated Mic Waveform Bars
+  const micAudioWaveBars = computed(() => {
+    const barCount = 120;
+    const bars = [];
+    for (let i = 0; i < barCount; i++) {
+      const progress = i / barCount;
+      let envelope = 1;
+      if (progress < 0.12) {
+        envelope = progress / 0.12;
+      } else if (progress > 0.88) {
+        envelope = (1 - progress) / 0.12;
+      }
+      const sentenceWave = Math.sin(progress * Math.PI * 8 + 1);
+      const wordGap = sentenceWave > -0.15 ? 1.0 : 0.1;
+
+      const height =
+        3 +
+        (Math.abs(Math.sin(i * 0.4)) * 14 + Math.abs(Math.cos(i * 0.75)) * 5) *
+          envelope *
+          wordGap;
+      bars.push(height);
+    }
+    return bars;
+  });
+
+  // Real Waveform Logic
+  const { peaks: systemPeaks, generateWaveformFromAudioBuffer: genSystemWaveform } =
+    useWaveform();
+  const { peaks: micPeaks, generateWaveformFromAudioBuffer: genMicWaveform } =
+    useWaveform();
+
+  const systemAudioBuffer = ref<AudioBuffer | null>(null);
+  const micAudioBuffer = ref<AudioBuffer | null>(null);
+
+  const decodeAudio = async (source: string) => {
+    const response = await fetch(source);
+    if (!response.ok) throw new Error(`Unable to read audio asset: ${source}`);
+    const context = new OfflineAudioContext(1, 1, 44_100);
+    return context.decodeAudioData(await response.arrayBuffer());
+  };
+
+  const visibleStartSecond = ref(0);
+  const visibleEndSecond = ref(0);
+
+  const systemAudioTrack = computed(() =>
+    props.editorData?.tracks.find((t) => t.kind === "system-audio"),
+  );
+  const micAudioTrack = computed(() =>
+    props.editorData?.tracks.find((t) => t.kind === "microphone"),
+  );
+
+  // Fetch audio files once when tracks are loaded
+  watch(
+    () => systemAudioTrack.value?.assets?.[0]?.src,
+    async (src) => {
+      if (!src) {
+        systemAudioBuffer.value = null;
+        return;
+      }
+      try {
+        systemAudioBuffer.value = await decodeAudio(src);
+      } catch (err) {
+        console.error("Failed to load system audio track:", err);
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () => micAudioTrack.value?.assets?.[0]?.src,
+    async (src) => {
+      if (!src) {
+        micAudioBuffer.value = null;
+        return;
+      }
+      try {
+        micAudioBuffer.value = await decodeAudio(src);
+      } catch (err) {
+        console.error("Failed to load mic audio track:", err);
+      }
+    },
+    { immediate: true },
+  );
+
+  const getNormalizedBars = (peaks: Float32Array | null, maxBarHeight = 22) => {
+    if (!peaks || peaks.length === 0) return [];
+    const len = peaks.length / 2;
+    const amps = new Float32Array(len);
+    let maxAmp = 0.0001;
+
+    for (let i = 0; i < len; i++) {
+      const min = peaks[i * 2];
+      const max = peaks[i * 2 + 1];
+      const amp = Math.max(0, max - min);
+      amps[i] = amp;
+      if (amp > maxAmp) maxAmp = amp;
+    }
+
+    const bars: number[] = [];
+    const scale = maxAmp > 0.01 ? maxBarHeight / maxAmp : maxBarHeight * 5;
+
+    for (let i = 0; i < len; i++) {
+      const height = Math.max(2, Math.min(maxBarHeight, Math.round(amps[i] * scale)));
+      bars.push(height);
+    }
+    return bars;
+  };
+
+  const systemBars = computed(() => getNormalizedBars(systemPeaks.value));
+  const micBars = computed(() => getNormalizedBars(micPeaks.value));
+
+  const waveformStyle = computed(() => {
+    return {
+      position: "absolute" as const,
+      left: "0%",
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "2px",
+    };
+  });
+
+  const updateWaveforms = () => {
+    if (!props.duration || props.duration <= 0) return;
+    const width = tracksViewportRef.value?.clientWidth || 1000;
+    const targetPoints = Math.max(100, Math.min(1200, Math.floor(width / 3)));
+
+    if (systemAudioBuffer.value) {
+      genSystemWaveform(systemAudioBuffer.value, 0, props.duration, targetPoints);
+    }
+    if (micAudioBuffer.value) {
+      genMicWaveform(micAudioBuffer.value, 0, props.duration, targetPoints);
+    }
+  };
+
+  watch(
+    () => [
+      systemAudioBuffer.value,
+      micAudioBuffer.value,
+      props.duration,
+      props.zoomLevel,
+    ],
+    () => {
+      updateWaveforms();
+    },
+  );
+
+  // Ctrl + Wheel Zoom
+  const handleWheel = (e: WheelEvent) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      const zoomDelta = e.deltaY < 0 ? 15 : -15;
+      const newZoom = Math.max(100, Math.min(500, props.zoomLevel + zoomDelta));
+      emit("update:zoomLevel", newZoom);
+    }
+  };
+
+  const cameraMediaSrc = computed(() => {
+    const layer = cameraLayers.value[0];
+    if (!layer || !("assetId" in layer)) return null;
+    const asset = props.composition.media.find((m) => m.id === layer.assetId);
+    return asset?.src ?? null;
+  });
+
+  // Thumbnail extraction composables
+  const { thumbnails, requestVisibleFrames } = useThumbnails(
+    computed(() => props.videoSrc),
+  );
+
+  const { thumbnails: webcamThumbnails, requestVisibleFrames: requestWebcamFrames } = useThumbnails(
+    cameraMediaSrc,
+  );
+
+  // Width & Scrubbing
+  const tracksWidthStyle = computed(() => {
+    return {
+      width: `calc(${props.zoomLevel}% + 230px)`,
+      minWidth: "calc(100% + 230px)",
+    };
+  });
+
+  const ticksAreaWidth = ref(0);
+  let ticksResizeObserver: ResizeObserver | null = null;
+
+  const updateTicksWidth = () => {
+    if (ticksAreaRef.value) {
+      ticksAreaWidth.value = ticksAreaRef.value.clientWidth;
+    }
+  };
+
+  const playheadStyle = computed(() => {
+    const percentage = props.duration > 0 ? props.currentTime / props.duration : 0;
+    const x = percentage * ticksAreaWidth.value;
+    return {
+      transform: `translate3d(${x}px, 0, 0)`,
+    };
+  });
+
+  let isDragging = false;
+  let dragRect: { left: number; width: number } | null = null;
+  let rafId: number | null = null;
+
+  const handleScrub = (clientX: number) => {
+    if (!ticksAreaRef.value || !props.duration) return;
+    const rect = dragRect || ticksAreaRef.value.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const clickX = clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const targetTime = percentage * props.duration;
+    emit("update:currentTime", Math.max(0, Math.min(props.duration, targetTime)));
+  };
+
+  const handleMouseDown = (e: MouseEvent) => {
+    isDragging = true;
+    if (ticksAreaRef.value) {
+      const rect = ticksAreaRef.value.getBoundingClientRect();
+      dragRect = { left: rect.left, width: rect.width };
+    }
+    handleScrub(e.clientX);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    const clientX = e.clientX;
+    if (rafId !== null) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      if (isDragging) {
+        handleScrub(clientX);
+      }
+    });
+  };
+
+  const handleMouseUp = () => {
+    isDragging = false;
+    dragRect = null;
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    window.removeEventListener("mousemove", handleMouseMove);
+    window.removeEventListener("mouseup", handleMouseUp);
+  };
+
+  const updateVisibleThumbnails = () => {
+    if (!tracksScrollRef.value || !tracksViewportRef.value || !props.videoSrc)
+      return;
+
+    const scrollLeft = tracksScrollRef.value.scrollLeft;
+    const clientWidth = tracksScrollRef.value.clientWidth;
+    const scrollWidth = tracksViewportRef.value.scrollWidth;
+
+    const startPercent = scrollLeft / scrollWidth;
+    const endPercent = (scrollLeft + clientWidth) / scrollWidth;
+
+    const startSecond = Math.max(0, Math.floor(startPercent * props.duration));
+    const endSecond = Math.min(
+      Math.max(0, props.duration - 1),
+      Math.ceil(endPercent * props.duration),
+    );
+
+    visibleStartSecond.value = startSecond;
+    visibleEndSecond.value = endSecond;
+
+    const visibleSeconds: number[] = [];
+    for (let s = startSecond; s <= endSecond; s++) {
+      visibleSeconds.push(s);
+    }
+
+    if (visibleSeconds.length > 0) {
+      requestVisibleFrames(visibleSeconds);
+      if (cameraMediaSrc.value) {
+        requestWebcamFrames(visibleSeconds);
+      }
+    }
+  };
+
+  const onScroll = () => {
+    updateVisibleThumbnails();
+  };
+
+  watch(
+    () => [props.zoomLevel, props.videoSrc, props.duration],
+    () => {
+      setTimeout(updateVisibleThumbnails, 50);
+    },
+    { immediate: true },
+  );
+
+  watch(
+    () => props.currentTime,
+    (time) => {
+      if (!tracksScrollRef.value || !ticksAreaRef.value || isDragging) return;
+
+      const scrollContainer = tracksScrollRef.value;
+      const ticksArea = ticksAreaRef.value;
+
+      const percentage = time / props.duration;
+      const playheadX = 120 + percentage * ticksArea.clientWidth;
+
+      const leftBound = scrollContainer.scrollLeft + 80;
+      const rightBound =
+        scrollContainer.scrollLeft + scrollContainer.clientWidth - 80;
+
+      if (playheadX < leftBound || playheadX > rightBound) {
+        scrollContainer.scrollTo({
+          left: playheadX - scrollContainer.clientWidth / 2,
+          behavior: "smooth",
+        });
+      }
+    },
+  );
+
+  const resetScrollPosition = () => {
+    if (tracksScrollRef.value) {
+      tracksScrollRef.value.scrollLeft = 80;
+    }
+  };
+
+  onMounted(() => {
+    updateVisibleThumbnails();
+    updateTicksWidth();
+    if (ticksAreaRef.value) {
+      ticksResizeObserver = new ResizeObserver(updateTicksWidth);
+      ticksResizeObserver.observe(ticksAreaRef.value);
+    }
+    setTimeout(resetScrollPosition, 50);
+  });
+
+  onUnmounted(() => {
+    ticksResizeObserver?.disconnect();
+    handleMouseUp();
+  });
+
+  watch(
+    () => props.videoSrc,
+    () => {
+      setTimeout(resetScrollPosition, 50);
+    },
+  );
+
+  return {
+    captionLayers,
+    imageLayers,
+    cameraLayers,
+    mainVideoLayer,
+    layerStyle,
+    zoomElementStyle,
+    tracksScrollRef,
+    tracksViewportRef,
+    ticksAreaRef,
+    micAudioWaveBars,
+    systemAudioBuffer,
+    micAudioBuffer,
+    systemBars,
+    micBars,
+    waveformStyle,
+    handleWheel,
+    thumbnails,
+    webcamThumbnails,
+    tracksWidthStyle,
+    playheadStyle,
+    handleMouseDown,
+    onScroll,
+  };
+}

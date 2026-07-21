@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Button from '~/ui/button/Button.vue'
+import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Switch from '~/ui/switch/Switch.vue'
-import { Unlink, Trash2, Gauge, Clock, Scissors } from '@lucide/vue'
+import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
+import { Unlink, Trash2, Gauge, Square, Sun, MoveDown, MoveDownRight, MoveUpLeft, CircleDot } from '@lucide/vue'
 
 const props = defineProps<{
   selectedClip: {
@@ -15,28 +17,71 @@ const props = defineProps<{
     playbackRate?: number
     enabled?: boolean
     isLinked?: boolean
+    shadowSize?: string
+    shadowColor?: string
+    shadowDirection?: string
+    cornerRadius?: string
   } | null
 }>()
 
 const emit = defineEmits<{
   (e: 'update:playbackRate', rate: number): void
   (e: 'update:enabled', enabled: boolean): void
+  (e: 'update:cornerRadius', radius: string): void
+  (e: 'update:shadow', shadow: { size: string; color?: string; direction?: string }): void
   (e: 'unlink'): void
   (e: 'delete'): void
-  (e: 'split'): void
 }>()
 
 const speedPresets = [0.5, 1.0, 1.5, 2.0, 3.0]
 
-const formattedStartTime = computed(() => {
-  if (!props.selectedClip) return '0.0s'
-  return `${(props.selectedClip.timelineStartMs / 1000).toFixed(2)}s`
-})
+const radiusPresets = [
+  { id: 'none', label: 'None' },
+  { id: 'sm', label: '8px' },
+  { id: 'md', label: '16px' },
+  { id: 'lg', label: '24px' },
+  { id: 'full', label: 'Full' },
+]
 
-const formattedDuration = computed(() => {
-  if (!props.selectedClip) return '0.0s'
-  return `${(props.selectedClip.timelineDurationMs / 1000).toFixed(2)}s`
-})
+const shadowPresets = [
+  { id: 'none', label: 'None' },
+  { id: 'sm', label: 'Soft' },
+  { id: 'md', label: 'Medium' },
+  { id: 'lg', label: 'Strong' },
+  { id: 'glow', label: 'Glow' },
+]
+
+const shadowDirections = [
+  { id: 'all', label: 'Around', icon: CircleDot },
+  { id: 'bottom', label: 'Bottom', icon: MoveDown },
+  { id: 'bottom-right', label: 'Bottom-Right', icon: MoveDownRight },
+  { id: 'top-left', label: 'Top-Left', icon: MoveUpLeft },
+]
+
+const selectedRadius = ref(props.selectedClip?.cornerRadius ?? 'md')
+const selectedShadowSize = ref(props.selectedClip?.shadowSize ?? 'md')
+const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? '#000000')
+const selectedShadowDirection = ref(props.selectedClip?.shadowDirection ?? 'all')
+
+const handleRadiusChange = (radiusId: string) => {
+  selectedRadius.value = radiusId
+  emit('update:cornerRadius', radiusId)
+}
+
+const handleShadowPresetChange = (sizeId: string) => {
+  selectedShadowSize.value = sizeId
+  emit('update:shadow', { size: sizeId, color: selectedShadowColor.value, direction: selectedShadowDirection.value })
+}
+
+const handleShadowDirectionChange = (directionId: string) => {
+  selectedShadowDirection.value = directionId
+  emit('update:shadow', { size: selectedShadowSize.value, color: selectedShadowColor.value, direction: directionId })
+}
+
+const handleShadowColorChange = (color: string) => {
+  selectedShadowColor.value = color
+  emit('update:shadow', { size: selectedShadowSize.value, color, direction: selectedShadowDirection.value })
+}
 
 const currentPlaybackRate = computed(() => {
   return Math.round((props.selectedClip?.playbackRate ?? 1.0) * 100) / 100
@@ -48,7 +93,7 @@ const currentPlaybackRate = computed(() => {
     <div v-if="!selectedClip" class="empty-state">
       <div class="empty-icon">🎬</div>
       <p class="empty-title">No clip selected</p>
-      <p class="empty-desc">Click a clip on the timeline to inspect and edit its speed, timing, or link settings.</p>
+      <p class="empty-desc">Click a clip on the timeline to inspect and edit its properties.</p>
     </div>
 
     <div v-else class="options-group">
@@ -87,32 +132,69 @@ const currentPlaybackRate = computed(() => {
         </div>
       </div>
 
-      <!-- Clip Timing & Split -->
-      <div class="property-card">
+      <!-- Corner Radius Presets for Video / Image / Webcam -->
+      <div v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
         <div class="card-header">
-          <Clock :size="14" class="card-icon" />
-          <span class="card-title">Timing & Actions</span>
+          <Square :size="14" class="card-icon" />
+          <span class="card-title">Corner Radius</span>
         </div>
-        <div class="timing-grid">
-          <div class="timing-box">
-            <span class="timing-label">Start Time</span>
-            <span class="timing-value">{{ formattedStartTime }}</span>
-          </div>
-          <div class="timing-box">
-            <span class="timing-label">Duration</span>
-            <span class="timing-value">{{ formattedDuration }}</span>
-          </div>
-        </div>
-        <div class="actions-row">
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            :icon="Scissors"
-            block
-            @click="emit('split')"
+        <ButtonGroup>
+          <Button
+            v-for="item in radiusPresets"
+            :key="item.id"
+            :variant="selectedRadius === item.id ? 'primary' : 'ghost'"
+            size="xs"
+            @click="handleRadiusChange(item.id)"
           >
-            Split at Playhead
+            {{ item.label }}
           </Button>
+        </ButtonGroup>
+      </div>
+
+      <!-- Shadow Settings & Directions for Video / Image / Webcam -->
+      <div v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
+        <div class="card-header">
+          <Sun :size="14" class="card-icon" />
+          <span class="card-title">Drop Shadow</span>
+        </div>
+
+        <div class="sub-group">
+          <span class="sub-label">Preset</span>
+          <ButtonGroup>
+            <Button
+              v-for="item in shadowPresets"
+              :key="item.id"
+              :variant="selectedShadowSize === item.id ? 'primary' : 'ghost'"
+              size="xs"
+              @click="handleShadowPresetChange(item.id)"
+            >
+              {{ item.label }}
+            </Button>
+          </ButtonGroup>
+        </div>
+
+        <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top">
+          <span class="sub-label">Direction</span>
+          <ButtonGroup>
+            <Button
+              v-for="dir in shadowDirections"
+              :key="dir.id"
+              :variant="selectedShadowDirection === dir.id ? 'primary' : 'ghost'"
+              size="xs"
+              :icon="dir.icon"
+              icon-only
+              :tooltip="dir.label"
+              @click="handleShadowDirectionChange(dir.id)"
+            />
+          </ButtonGroup>
+        </div>
+
+        <div v-if="selectedShadowSize !== 'none'" class="prop-row margin-top">
+          <span class="prop-label">Shadow Color</span>
+          <ColorPicker 
+            :model-value="selectedShadowColor" 
+            @update:modelValue="handleShadowColorChange" 
+          />
         </div>
       </div>
 
@@ -257,6 +339,22 @@ const currentPlaybackRate = computed(() => {
   letter-spacing: 0.05em;
 }
 
+.sub-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sub-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.margin-top {
+  margin-top: 6px;
+}
+
 .preset-pills {
   display: flex;
   gap: 6px;
@@ -284,39 +382,6 @@ const currentPlaybackRate = computed(() => {
   background: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
-}
-
-.timing-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.timing-box {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px;
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
-
-.timing-label {
-  font-size: 9px;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.timing-value {
-  font-size: 12px;
-  font-weight: 700;
-  font-family: monospace;
-  color: var(--text-primary);
-}
-
-.actions-row {
-  margin-top: 4px;
 }
 
 .prop-row {
