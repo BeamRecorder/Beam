@@ -974,15 +974,28 @@ watch(
 .video-track .track-content {
   background-color: var(--color-track-video-light);
   cursor: pointer;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
 }
 
-.video-track .track-content:hover {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
+.video-track .track-content::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.video-track .track-content.selected {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
+.video-track .track-content:hover::after {
+  border-color: var(--color-primary);
+  background-color: rgba(255, 90, 31, 0.08);
+}
+
+.video-track .track-content.selected::after {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 
 .image-clip {

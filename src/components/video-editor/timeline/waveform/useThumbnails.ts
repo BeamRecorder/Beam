@@ -71,10 +71,10 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                 });
               }
 
-              // Set canvas dimensions dynamically based on video aspect ratio
-              const vWidth = hiddenVideo.videoWidth || 640;
-              const vHeight = hiddenVideo.videoHeight || 360;
-              const targetWidth = Math.min(640, vWidth);
+              // Set canvas dimensions dynamically for crisp display without heavy startup lag
+              const vWidth = hiddenVideo.videoWidth || 320;
+              const vHeight = hiddenVideo.videoHeight || 180;
+              const targetWidth = Math.min(240, vWidth);
               const targetHeight = Math.round(targetWidth * (vHeight / vWidth));
 
               if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
@@ -87,7 +87,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
               } else {
                 hiddenVideo.currentTime = time;
 
-                // Promise to wait for seek complete with a fallback timeout
+                // Promise to wait for seek complete with a fast fallback timeout
                 await new Promise<void>((resolve) => {
                   let resolved = false;
 
@@ -103,13 +103,9 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                     if (!resolved) {
                       resolved = true;
                       hiddenVideo!.removeEventListener("seeked", onSeeked);
-                      console.warn(
-                        "[useThumbnails] Seek timed out for time:",
-                        time,
-                      );
                       resolve();
                     }
-                  }, 500);
+                  }, 200);
 
                   hiddenVideo!.addEventListener("seeked", onSeeked, {
                     once: true,
@@ -117,10 +113,9 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                 });
               }
 
-              // Draw frame to high-res canvas with high quality smoothing
+              // Draw frame to canvas with fast JPEG compression
               if (canvas && canvasCtx) {
                 canvasCtx.imageSmoothingEnabled = true;
-                canvasCtx.imageSmoothingQuality = "high";
                 canvasCtx.drawImage(
                   hiddenVideo,
                   0,
@@ -128,7 +123,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                   canvas.width,
                   canvas.height,
                 );
-                const dataUrlResult = canvas.toDataURL("image/webp", 0.92);
+                const dataUrlResult = canvas.toDataURL("image/jpeg", 0.8);
                 worker?.postMessage({
                   type: "frame-response",
                   time,
