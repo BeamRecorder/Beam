@@ -97,19 +97,19 @@
 
 :root.dark {
   /* Backgrounds & Surfaces */
-  --color-bg-surface: #1e1e1e;
-  --color-bg-surface-hover: #2c2c2c;
-  --color-bg-element: #2c2c2c;
+  --color-bg-surface: #18181a;      /* Moderated dark background */
+  --color-bg-surface-hover: #2e2e33; /* Softer hover state */
+  --color-bg-element: #232326;      /* Clean gray-dark panel surfaces */
 
   /* Borders */
-  --color-border: #333333;
-  --color-border-strong: #444444;
-  --color-border-dark: #444444;
+  --color-border: #2f2f34;          /* Soft border */
+  --color-border-strong: #3c3c43;   /* Noticeable borders for structure */
+  --color-border-dark: #3c3c43;
 
   /* Texts */
-  --text-primary: #ffffff;
-  --text-secondary: #b3b3b3;
-  --text-muted: #757575;
+  --text-primary: #f4f4f5;          /* Crisp off-white */
+  --text-secondary: #a1a1aa;        /* zinc-400 */
+  --text-muted: #71717a;            /* zinc-500 */
 
   /* Component Specific / Aliases */
   --surface: var(--color-bg-surface);

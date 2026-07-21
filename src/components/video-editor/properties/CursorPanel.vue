@@ -70,27 +70,29 @@ const emit = defineEmits<{
       />
     </div>
 
-    <div v-if="enableShadow" class="nested-options">
-      <div class="prop-item">
-        <BigSlider 
-          :model-value="shadowBlur" 
-          :min="1" 
-          :max="24"
-          label="Shadow Blur"
-          :format-value="(val) => `${val}px`"
-          @update:modelValue="emit('update:shadowBlur', $event)"
-        />
-      </div>
+    <Transition name="slide-fade">
+      <div v-if="enableShadow" class="nested-options">
+        <div class="prop-item">
+          <BigSlider 
+            :model-value="shadowBlur" 
+            :min="1" 
+            :max="24"
+            label="Shadow Blur"
+            :format-value="(val) => `${val}px`"
+            @update:modelValue="emit('update:shadowBlur', $event)"
+          />
+        </div>
 
-      <div class="prop-row">
-        <span class="prop-label sub-label">Shadow Color</span>
-        <ColorPicker 
-          :model-value="shadowColor"
-          :show-label="false"
-          @update:modelValue="emit('update:shadowColor', $event)"
-        />
+        <div class="prop-row">
+          <span class="prop-label sub-label">Shadow Color</span>
+          <ColorPicker 
+            :model-value="shadowColor"
+            :show-label="false"
+            @update:modelValue="emit('update:shadowColor', $event)"
+          />
+        </div>
       </div>
-    </div>
+    </Transition>
 
     <div class="prop-row">
       <span class="prop-label">Click Ripple Effect</span>
@@ -100,27 +102,29 @@ const emit = defineEmits<{
       />
     </div>
 
-    <div v-if="enableRipple" class="nested-options">
-      <div class="prop-item">
-        <BigSlider 
-          :model-value="rippleSize" 
-          :min="10" 
-          :max="80"
-          label="Ripple Size"
-          :format-value="(val) => `${val}px`"
-          @update:modelValue="emit('update:rippleSize', $event)"
-        />
-      </div>
+    <Transition name="slide-fade">
+      <div v-if="enableRipple" class="nested-options">
+        <div class="prop-item">
+          <BigSlider 
+            :model-value="rippleSize" 
+            :min="10" 
+            :max="80"
+            label="Ripple Size"
+            :format-value="(val) => `${val}px`"
+            @update:modelValue="emit('update:rippleSize', $event)"
+          />
+        </div>
 
-      <div class="prop-row">
-        <span class="prop-label sub-label">Ripple Color</span>
-        <ColorPicker 
-          :model-value="rippleColor"
-          :show-label="false"
-          @update:modelValue="emit('update:rippleColor', $event)"
-        />
+        <div class="prop-row">
+          <span class="prop-label sub-label">Ripple Color</span>
+          <ColorPicker 
+            :model-value="rippleColor"
+            :show-label="false"
+            @update:modelValue="emit('update:rippleColor', $event)"
+          />
+        </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -141,9 +145,11 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-left: 12px;
-  border-left: 2px solid var(--color-border);
-  margin-left: 4px;
+  padding: 12px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-top: -4px;
 }
 
 .prop-row {
@@ -162,6 +168,26 @@ const emit = defineEmits<{
 .sub-label {
   color: var(--text-muted);
   font-size: 11px;
+}
+
+/* Slide fade transition for switch toggling */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 250px;
+  overflow: hidden;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+  max-height: 0;
+  transform: translateY(-8px);
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  border-color: transparent;
 }
 </style>
 
