@@ -6,7 +6,7 @@ vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture
 import ProjectPicker from '../ProjectPicker.vue'
 
 const projects = [{ id: 'one', name: 'First', createdAt: '', updatedAt: '2025-01-01T00:00:00.000Z', sessionCount: 1, previewSrc: null }, { id: 'two', name: 'Second', createdAt: '', updatedAt: 'invalid', sessionCount: 2, previewSrc: null }]
-const stubs = { Dialog: { template: '<div><slot /><slot name="footer" :close="() => {}" /></div>' }, Popover: { template: '<div><slot name="trigger" :isOpen="false" /></div>' } }
+const stubs = { Dialog: { template: '<div><slot /><slot name="footer" :close="() => {}" /></div>' }, Popover: { template: '<div><slot name="trigger" :isOpen="false" /><slot :close="() => {}" /></div>' } }
 const settle = async () => { await flushPromises(); await vi.advanceTimersByTimeAsync(180); await flushPromises() }
 
 describe('ProjectPicker', () => {
@@ -21,5 +21,18 @@ describe('ProjectPicker', () => {
   })
   it('emits compact selection and creates a new project', async () => {
     capture.listProjects.mockResolvedValue(projects); capture.createProject.mockResolvedValue(projects[0]); const wrapper = mount(ProjectPicker, { props: { compact: true }, global: { stubs } }); await settle(); await wrapper.get('.project-card').trigger('click'); expect(wrapper.emitted('select-project')).toEqual([[projects[0]]]); await wrapper.get('[aria-label="New project"]').trigger('click'); const input = wrapper.find('input'); await input.setValue('  New  '); const create = wrapper.findAll('button').find((button) => button.text() === 'Create'); await create?.trigger('click'); await settle(); expect(capture.createProject).toHaveBeenCalledWith({ name: 'New' }); expect(wrapper.emitted('open-project')).toEqual([[projects[0]]])
+  })
+  it('renames a project, rejects unchanged names, and handles rename failure', async () => {
+    capture.listProjects.mockResolvedValue(projects); capture.renameProject.mockResolvedValue(projects[0]); const wrapper = mount(ProjectPicker, { global: { stubs } }); await settle()
+    const rename = wrapper.findAll('button').find((button) => button.text() === 'Rename'); await rename?.trigger('click'); const input = wrapper.get('.project-rename-input input'); await input.setValue(' Renamed '); await input.trigger('keydown.enter'); await settle(); expect(capture.renameProject).toHaveBeenCalledWith('one', 'Renamed')
+    await rename?.trigger('click'); await wrapper.get('.project-rename-input input').trigger('keydown.enter'); expect(capture.renameProject).toHaveBeenCalledTimes(1)
+    capture.renameProject.mockRejectedValueOnce(new Error('rename blocked')); await rename?.trigger('click'); await wrapper.get('.project-rename-input input').setValue('Blocked'); await wrapper.get('.project-rename-input input').trigger('keydown.enter'); await settle(); expect(wrapper.find('.project-rename-input').exists()).toBe(false)
+  })
+  it('deletes a selected project and selects the next remaining project', async () => {
+    capture.listProjects.mockResolvedValueOnce(projects).mockResolvedValueOnce([projects[1]]); capture.deleteProject.mockResolvedValue(undefined); const wrapper = mount(ProjectPicker, { props: { compact: true, currentProjectId: 'one' }, global: { stubs } }); await settle()
+    const remove = wrapper.findAll('button').find((button) => button.text() === 'Delete'); await remove?.trigger('click'); const deletes = wrapper.findAll('button').filter((button) => button.text() === 'Delete'); await deletes.at(-1)?.trigger('click'); await settle(); expect(capture.deleteProject).toHaveBeenCalledWith('one'); expect(wrapper.emitted('select-project')).toContainEqual([projects[1]])
+  })
+  it('keeps video preview progress and resets it after mouse leave', async () => {
+    const preview = { ...projects[0], previewSrc: 'file:///preview.mp4' }; capture.listProjects.mockResolvedValue([preview]); const wrapper = mount(ProjectPicker, { global: { stubs } }); await settle(); const video = wrapper.get('video').element as HTMLVideoElement; Object.defineProperty(video, 'duration', { value: 2 }); Object.defineProperty(video, 'currentTime', { value: 1, writable: true }); video.play = vi.fn().mockResolvedValue(); video.pause = vi.fn(); await wrapper.get('video').trigger('loadedmetadata'); await wrapper.get('video').trigger('timeupdate'); expect(wrapper.find('.preview-progress-overlay').exists()).toBe(true); await wrapper.get('video').trigger('mouseleave'); expect(video.pause).toHaveBeenCalledOnce(); expect(video.currentTime).toBe(.1)
   })
 })

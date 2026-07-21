@@ -41,7 +41,7 @@ const emit = defineEmits<{
       </div>
       <img
         v-else
-        src="/brand/DemoRecorderIcon.webp"
+        :src="'/brand/DemoRecorderIcon.webp'"
         class="brand-logo"
         alt="DemoRecorder"
       />

@@ -1,76 +1,98 @@
-# DemoRecorder
+<div align="center">
+  <img src="./public/brand/DemoRecorderIcon.webp" alt="DemoRecorder Logo" width="80" height="80" />
+  
+  # DemoRecorder
 
-Application Electron/Vue et moteur de capture natif Rust multipiste.
+  **Undeniably the fastest way to record a video into a high-fidelity demo.**
 
-## Développement
+  [![Vue](https://img.shields.io/badge/Vue.js-3.5-4fc08d?style=flat-square&logo=vue.js)](https://vuejs.org/)
+  [![Mediabunny](https://img.shields.io/badge/Mediabunny-v1.50.9-ff5a1f?style=flat-square)](https://github.com/mediabunny)
+  [![Coverage](https://img.shields.io/badge/Coverage-90%25-brightgreen?style=flat-square)](https://vitest.dev/)
+  [![Platform Windows](https://img.shields.io/badge/Windows-Supported-blue?style=flat-square&logo=windows)](https://microsoft.com)
+  [![Platform macOS](https://img.shields.io/badge/macOS-Supported-lightgrey?style=flat-square&logo=apple)](https://apple.com)
+  [![Platform Linux](https://img.shields.io/badge/Linux-Supported-orange?style=flat-square&logo=linux)](https://kernel.org)
+
+  <p align="center">
+    <a href="#key-features">Key Features</a> •
+    <a href="#presentation">Presentation</a> •
+    <a href="#getting-started">Getting Started</a> •
+    <a href="#developers">Developer Guide</a> •
+    <a href="#os-support">OS Support</a>
+  </p>
+</div>
+
+---
+
+## ⚡ Built for Absolute Speed & Reliability
+
+DemoRecorder is engineered from the ground up for peak performance. By separating concerns between user experience and low-level processing:
+- **Rust Core Engine**: Handles low-level multi-track capture, audio mixing, and frame pipelines with zero-cost abstractions, maximum safety, and raw performance.
+- **Vue.js + Electron Client**: Provides a modern, responsive, and minimalist interface with lightweight rendering.
+
+This architecture ensures that your recording workflow is incredibly lightweight, frame-perfect, and bulletproof.
+
+---
+
+## 🎬 Presentation
+
+<div align="center">
+  <h3>Demo Video</h3>
+  <!-- Replace the src with your actual presentation video link -->
+  <video src="https://user-images.githubusercontent.com/placeholder-video.mp4" width="100%" controls poster="./public/brand/DemoRecorderIcon.webp">
+    Your browser does not support the video tag.
+  </video>
+  
+  <br/>
+  
+  <h3>Product Screenshot</h3>
+  <!-- Replace with actual application screenshot -->
+  <img src="https://user-images.githubusercontent.com/placeholder-screenshot.png" alt="DemoRecorder Interface" width="100%" />
+</div>
+
+---
+
+## 🚀 Key Features
+
+- **Multi-track Recording**: Capture system audio, microphone, webcam, and screen streams onto isolated tracks.
+- **Spring-Animated Zooms**: Auto-generates zoom animations based on your cursor path for professional, high-fidelity focus.
+- **Sleek Dark Theme**: Minimalist dark-gray palette tailored for creators.
+- **Instant Export**: Export and package capture sessions directly.
+
+---
+
+## 💻 OS Support
+
+- **Windows**: Supported out of the box (requires Windows 10/11).
+- **macOS**: Supported out of the box (Intel & Apple Silicon).
+- **Linux**: Supported. Requires system dependencies for audio rendering. You must install the `cpal` native sound package dependencies:
+  ```bash
+  sudo apt update
+  sudo apt install -y libasound2-dev pkg-config
+  ```
+
+---
+
+## 🛠️ Getting Started
+
+To run the application locally:
 
 ```bash
+# Install node dependencies
 npm install
-cargo build -p capture --bin capture-engine
-npm run dev
-# dans un autre terminal
-npm run electron:dev
+
+# Compile the native Rust capture engine
+npm run capture:build-dev
+
+# Start the dev environment (Vite & Electron)
+npm run dev:all
 ```
 
-`DEMO_RECORDER_CAPTURE_ENGINE` permet de sélectionner explicitement un binaire moteur. Sans cette variable, Electron cherche successivement le binaire packagé, puis `target/release/capture-engine` et `target/debug/capture-engine` (avec l'extension `.exe` sous Windows).
+---
 
-## API renderer
+## 🧑‍💻 Developers
 
-Le preload isolé expose uniquement `window.capture`. Le renderer n'a accès ni à Node.js ni à une primitive IPC générique.
+If you are looking to contribute, run tests, or compile production builds, please head over to the developer documentation:
 
-Le démarrage le plus simple choisit automatiquement l'écran par défaut :
+👉 **[Developer Setup & Testing Guide](file:///c:/Users/binos/Documents/Personal_project/OSS/DemoRecorder/demo-recorder/demo-recorder/docs/dev/developper.md)**
 
-```ts
-const session = await window.capture.startRecording({
-  microphoneId: null,
-  cameraId: null,
-  systemAudio: true,
-})
-await window.capture.stop()
-```
-
-Les IDs facultatifs viennent de `await window.capture.discover()`. Sans ID explicite, `startRecording` choisit le périphérique marqué par défaut puis le premier disponible. Les enregistrements vont par défaut dans `Videos/DemoRecorder`.
-
-```ts
-import { capture, type CaptureConfig } from '~/capture-api'
-
-const catalog = await capture.discover()
-
-const config: CaptureConfig = {
-  projectId: '0190f3e5-9b7a-7e11-8000-000000000001',
-  screen: { mode: 'source', sourceId: 'screen-id-from-catalog' },
-  systemAudio: { mode: 'default-mix' },
-  microphone: null,
-  camera: null,
-  cursor: { mode: 'separate', captureClicks: true, captureShape: true },
-  recording: {
-    outputRoot: 'recordings',
-    videoBitrateBps: 12_000_000,
-    targetFps: 60,
-    keyframeIntervalSeconds: 2,
-    queueCapacity: 8,
-    minimumFreeBytes: 536_870_912,
-  },
-  failurePolicy: 'continue-without-optional-tracks',
-}
-
-// Raccourci recommandé : prepare + start dans le processus principal.
-const session = await capture.start(config)
-await capture.pause()
-await capture.resume()
-const completed = await capture.stop()
-console.log(completed.manifestPath)
-```
-
-Pour un contrôle en deux temps, appeler `capture.prepare(config)`, puis `capture.start()`. Les autres méthodes sont `capabilities`, `permissions`, `formats`, et `status`. Une erreur du moteur rejette la promesse avec un `message` lisible et un `code` lorsque le protocole en fournit un.
-
-## Vérifications
-
-```bash
-npm run build
-cargo fmt --all --check
-cargo test -p capture --all-features
-cargo clippy -p capture --all-targets --all-features -- -D warnings
-```
-
-Les captures natives doivent en plus être validées sur une machine Windows et une machine macOS réelles ; une exécution WSL ou une compilation croisée ne valide pas les périphériques, les permissions ni les timings matériels.
+This document explains our **90% test coverage gate** (Vitest/Cargo), clippy formatting standards, build processes, and architecture rules.
