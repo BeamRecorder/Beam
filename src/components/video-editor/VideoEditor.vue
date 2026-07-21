@@ -127,6 +127,14 @@ const exportRequest = computed(() => {
       background: selectedBackgroundMedia.value,
       editorData: props.editorData,
       zooms: zoomElements.value,
+      composition: composition.value,
+      cursorSettings: {
+        selectedCursor: selectedCursor.value,
+        size: cursorSize.value,
+        color: cursorColor.value,
+        shadow: { enabled: enableShadow.value, blur: shadowBlur.value, color: shadowColor.value },
+        ripple: { enabled: enableRipple.value, color: rippleColor.value, size: rippleSize.value },
+      },
       systemAudioEnabled: isSystemAudioEnabled.value,
       micAudioEnabled: isMicAudioEnabled.value,
     });

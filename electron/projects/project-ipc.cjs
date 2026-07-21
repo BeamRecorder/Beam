@@ -9,7 +9,7 @@ function registerProjectIpc(ipcMain, projectStore, dialog) {
   ipcMain.handle('projects:save-composition', (_event, payload = {}) => projectStore.saveComposition(payload.projectId, payload.composition))
   ipcMain.handle('projects:pick-composition-media', async (_event, payload = {}) => {
     const kind = payload.kind
-    const filters = kind === 'image' ? [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }] : kind === 'audio' ? [{ name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'webm'] }] : [{ name: 'Videos', extensions: ['mp4', 'webm', 'mov', 'mkv'] }]
+    const filters = kind === 'image' ? [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] : kind === 'audio' ? [{ name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'webm'] }] : [{ name: 'Videos', extensions: ['mp4', 'webm', 'mov', 'mkv'] }]
     const selected = await dialog.showOpenDialog({ properties: ['openFile'], filters })
     if (selected.canceled || !selected.filePaths[0]) return null
     return projectStore.importCompositionMedia(payload.projectId, { kind, source: selected.filePaths[0] })

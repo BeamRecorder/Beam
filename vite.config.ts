@@ -7,11 +7,11 @@ import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 const PUBLIC_BACKGROUND_MEDIA_MODULE = "virtual:public-background-media";
-const RESOLVED_PUBLIC_BACKGROUND_MEDIA_MODULE = "\0" + PUBLIC_BACKGROUND_MEDIA_MODULE;
+const RESOLVED_PUBLIC_BACKGROUND_MEDIA_MODULE =
+  "\0" + PUBLIC_BACKGROUND_MEDIA_MODULE;
 const PUBLIC_MEDIA_EXTENSIONS = new Set([
   ".avif",
   ".bmp",
-  ".gif",
   ".jpeg",
   ".jpg",
   ".m4v",
@@ -23,7 +23,10 @@ const PUBLIC_MEDIA_EXTENSIONS = new Set([
   ".webp",
 ]);
 
-const collectPublicBackgroundMedia = (directory: string, publicRoot: string): string[] => {
+const collectPublicBackgroundMedia = (
+  directory: string,
+  publicRoot: string,
+): string[] => {
   const entries = fs.readdirSync(directory, { withFileTypes: true });
   const paths: string[] = [];
 
@@ -33,9 +36,16 @@ const collectPublicBackgroundMedia = (directory: string, publicRoot: string): st
       paths.push(...collectPublicBackgroundMedia(absolutePath, publicRoot));
       continue;
     }
-    if (!entry.isFile() || !PUBLIC_MEDIA_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) continue;
+    if (
+      !entry.isFile() ||
+      !PUBLIC_MEDIA_EXTENSIONS.has(path.extname(entry.name).toLowerCase())
+    )
+      continue;
 
-    const publicPath = path.relative(publicRoot, absolutePath).split(path.sep).join('/');
+    const publicPath = path
+      .relative(publicRoot, absolutePath)
+      .split(path.sep)
+      .join("/");
     paths.push(`/${publicPath}`);
   }
 
@@ -45,7 +55,9 @@ const collectPublicBackgroundMedia = (directory: string, publicRoot: string): st
 const publicBackgroundMediaPlugin = (): Plugin => ({
   name: "public-background-media",
   resolveId(id) {
-    return id === PUBLIC_BACKGROUND_MEDIA_MODULE ? RESOLVED_PUBLIC_BACKGROUND_MEDIA_MODULE : undefined;
+    return id === PUBLIC_BACKGROUND_MEDIA_MODULE
+      ? RESOLVED_PUBLIC_BACKGROUND_MEDIA_MODULE
+      : undefined;
   },
   load(id) {
     if (id !== RESOLVED_PUBLIC_BACKGROUND_MEDIA_MODULE) return undefined;
@@ -57,7 +69,7 @@ const publicBackgroundMediaPlugin = (): Plugin => ({
 
 // https://vite.dev/config/
 export default defineConfig({
-  cacheDir: path.join(os.tmpdir(), "demo-recorder-vite-cache"),
+  cacheDir: "node_modules/.vite",
   plugins: [publicBackgroundMediaPlugin(), vue({})],
   resolve: {
     alias: {
@@ -69,13 +81,13 @@ export default defineConfig({
     port: 6500,
   },
   test: {
-    include: ['src/**/*.test.ts'],
-    environment: 'jsdom',
+    include: ["src/**/*.test.ts"],
+    environment: "jsdom",
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/**/*.test.ts', 'src/vite-env.d.ts'],
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["src/**/*.{ts,vue}"],
+      exclude: ["src/**/*.test.ts", "src/vite-env.d.ts"],
       thresholds: {
         statements: 90,
         branches: 90,

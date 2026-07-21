@@ -1,4 +1,4 @@
-const CAMERA_WINDOW_PADDING = 32
+const CAMERA_WINDOW_PADDING = 64
 
 function clampOverlayBounds(bounds, workArea) {
   const width = Math.min(bounds.width, workArea.width)

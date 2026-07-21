@@ -28,7 +28,25 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     if (window && !window.isDestroyed()) return window
     const [contentWidth, contentHeight] = SIZES.md; const width = contentWidth + PADDING * 2; const height = contentHeight + PADDING * 2
     const area = screen.getPrimaryDisplay().workArea
-    window = new BrowserWindow({ width, height, x: area.x + area.width - width - 20, y: area.y + area.height - height - 20, frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, resizable: false, hasShadow: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false } })
+    window = new BrowserWindow({
+      width,
+      height,
+      x: area.x + area.width - width - 20,
+      y: area.y + area.height - height - 20,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      hasShadow: false,
+      webPreferences: {
+        preload: path.join(applicationRoot, 'electron/preload.cjs'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false,
+        webSecurity: false,
+      },
+    })
     window.setAlwaysOnTop(true, 'floating'); window.setIgnoreMouseEvents(true, { forward: true }); window.on('closed', () => { window = null })
     window.webContents.once('did-finish-load', () => { if (currentState) window?.webContents.send('camera-overlay:state', currentState) })
     if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { cameraOverlay: '1' } })
@@ -39,10 +57,13 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     currentState = state
     if (!state?.cameraId || state.cameraId === 'off') { if (window && !window.isDestroyed()) window.hide(); return }
     const overlay = create(); const settings = ensureSettingsWindow(); const [contentWidth, contentHeight] = SIZES[state.size] || SIZES.md; const width = contentWidth + PADDING * 2; const height = contentHeight + PADDING * 2
-    const previousBounds = popoverRestoreBounds || overlay.getBounds()
+    const currentBounds = overlay.getBounds()
+    const previousBounds = popoverRestoreBounds || currentBounds
     const area = screen.getDisplayNearestPoint(previousBounds).workArea
-    popoverRestoreBounds = null
-    overlay.setBounds(clampOverlayBounds({ ...previousBounds, width, height }, area)); overlay.webContents.send('camera-overlay:state', state); settings.webContents.send('camera-overlay:state', state); overlay.showInactive()
+    if (!popoverRestoreBounds) {
+      overlay.setBounds(clampOverlayBounds({ x: previousBounds.x, y: previousBounds.y, width, height }, area))
+    }
+    overlay.webContents.send('camera-overlay:state', state); settings.webContents.send('camera-overlay:state', state); overlay.showInactive()
   }
   const resize = ({ width, height, popoverOpen }) => {
     if (!window || window.isDestroyed()) return { x: 0, y: 0 }
@@ -50,12 +71,13 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
       const compactBounds = popoverRestoreBounds || window.getBounds()
       const area = screen.getDisplayNearestPoint(compactBounds).workArea
       popoverRestoreBounds = null
-      window.setBounds(clampOverlayBounds({ ...compactBounds, width, height }, area))
+      const nextBounds = clampOverlayBounds({ x: compactBounds.x, y: compactBounds.y, width, height }, area)
+      window.setBounds(nextBounds)
       return { x: 0, y: 0 }
     }
     popoverRestoreBounds ||= window.getBounds()
     const area = screen.getDisplayNearestPoint(popoverRestoreBounds).workArea
-    const expandedBounds = clampOverlayBounds({ ...popoverRestoreBounds, width, height }, area)
+    const expandedBounds = clampOverlayBounds({ x: popoverRestoreBounds.x, y: popoverRestoreBounds.y, width, height }, area)
     window.setBounds(expandedBounds)
     return previewOffset(popoverRestoreBounds, expandedBounds)
   }

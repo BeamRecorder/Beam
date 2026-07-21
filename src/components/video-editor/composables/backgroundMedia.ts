@@ -1,6 +1,6 @@
 import publicBackgroundPaths from 'virtual:public-background-media'
 
-export type BackgroundMediaKind = 'image' | 'gif' | 'video'
+export type BackgroundMediaKind = 'image' | 'video'
 
 export interface BackgroundMedia {
   id: string
@@ -23,7 +23,6 @@ const MEDIA_KIND_BY_EXTENSION: Record<string, BackgroundMediaKind> = {
   jpg: 'image',
   png: 'image',
   webp: 'image',
-  gif: 'gif',
   m4v: 'video',
   mov: 'video',
   mp4: 'video',
@@ -33,7 +32,6 @@ const MEDIA_KIND_BY_EXTENSION: Record<string, BackgroundMediaKind> = {
 
 const GROUP_LABELS: Record<BackgroundMediaKind, string> = {
   image: 'Images',
-  gif: 'GIFs',
   video: 'Vidéos',
 }
 

@@ -20,12 +20,7 @@ const disableMousePassThrough = () => { if (lastInteractive !== false) { lastInt
 const SIZES: Record<string, [number, number]> = { sm: [120, 90], md: [160, 120], lg: [220, 165], xl: [300, 225] }
 const syncPreviewWindow = async () => {
   await nextTick()
-  const [w, h] = SIZES[state.value.size] || SIZES.md
-  await window.capture?.resizeCameraOverlay({
-    width: w + 64,
-    height: h + 64,
-    popoverOpen: Boolean(preview.value?.isPopoverOpen),
-  })
+  await preview.value?.syncNativeWindowSize()
 }
 onMounted(async () => { window.addEventListener('mousemove', updateMousePassThrough, { passive: true }); window.addEventListener('mouseleave', disableMousePassThrough); disableMousePassThrough(); unsubscribe = capture.onCameraOverlayState((next) => { state.value = next; void syncPreviewWindow() }); const saved = await capture.getCameraOverlayState(); if (saved) { state.value = saved; void syncPreviewWindow() } })
 onBeforeUnmount(() => { window.removeEventListener('mousemove', updateMousePassThrough); window.removeEventListener('mouseleave', disableMousePassThrough); unsubscribe?.() })

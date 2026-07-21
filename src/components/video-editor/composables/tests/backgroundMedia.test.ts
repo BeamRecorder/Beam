@@ -12,7 +12,7 @@ describe("background media", () => {
         backgroundKindFor(`/media/file.${extension.toUpperCase()}`),
       ),
     ).toEqual(["image", "image", "image", "image", "image", "image"]);
-    expect(backgroundKindFor("/media/animation.gif")).toBe("gif");
+    expect(backgroundKindFor("/media/animation.gif")).toBeNull();
     expect(
       ["m4v", "mov", "mp4", "ogv", "webm"].map((extension) =>
         backgroundKindFor(`/media/file.${extension}`),
@@ -68,14 +68,12 @@ describe("background media", () => {
   it("groups media in display order and excludes empty groups", () => {
     const media = createBackgroundMedia([
       "/z.mp4",
-      "/a.gif",
       "/b.png",
       "/c.jpg",
     ]);
     expect(groupBackgroundMedia(media)).toEqual([
-      { kind: "image", label: "Images", items: [media[1], media[2]] },
-      { kind: "gif", label: "GIFs", items: [media[0]] },
-      { kind: "video", label: "Vidéos", items: [media[3]] },
+      { kind: "image", label: "Images", items: [media[0], media[1]] },
+      { kind: "video", label: "Vidéos", items: [media[2]] },
     ]);
     expect(groupBackgroundMedia([])).toEqual([]);
   });

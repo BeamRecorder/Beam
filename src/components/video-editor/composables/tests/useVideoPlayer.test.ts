@@ -28,12 +28,12 @@ describe("useVideoPlayer", () => {
 
   it("imports backgrounds once, selects them, and puts them before built-ins", () => {
     const player = useVideoPlayer(backgrounds);
-    const imported = createBackgroundMedia(["/imported.gif"])[0];
+    const imported = createBackgroundMedia(["/imported.png"])[0];
     player.addBackground(imported);
     player.addBackground(imported);
-    expect(player.selectedBackground.value).toBe("/imported.gif");
+    expect(player.selectedBackground.value).toBe("/imported.png");
     expect(player.selectedBackgroundMedia.value).toEqual(imported);
-    expect(player.backgroundGroups.value[1].items).toEqual([imported]);
+    expect(player.backgroundGroups.value[0].items).toEqual([imported, backgrounds[0]]);
   });
 
   it("toggles playing state and clamps finite seeks to the timeline", () => {

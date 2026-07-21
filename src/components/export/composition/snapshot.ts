@@ -1,6 +1,8 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { BackgroundMedia } from '../../video-editor/composables/backgroundMedia'
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types'
+import type { ProjectComposition } from '../../video-editor/composition/composition-types'
+import type { CursorRenderSettings } from '../export-types'
 import type { CompositionSnapshot } from '../export-types'
 
 const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({
@@ -29,6 +31,8 @@ export function createCompositionSnapshot(input: {
   background: BackgroundMedia | null
   editorData: ProjectEditorData | null | undefined
   zooms: ZoomElement[]
+  composition: ProjectComposition
+  cursorSettings: CursorRenderSettings
   systemAudioEnabled: boolean
   micAudioEnabled: boolean
 }): CompositionSnapshot {
@@ -39,6 +43,8 @@ export function createCompositionSnapshot(input: {
     background: input.background ? { kind: input.background.kind, src: input.background.path } : null,
     zooms: copyZooms(input.zooms),
     cursor: copyCursor(input.editorData?.cursor),
+    cursorSettings: structuredClone(input.cursorSettings),
+    composition: structuredClone(input.composition),
     audio: (input.editorData?.tracks ?? []).flatMap((track) => {
       const enabled = track.kind === 'system-audio' ? input.systemAudioEnabled : track.kind === 'microphone' ? input.micAudioEnabled : false
       if (!enabled || !['system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') return []

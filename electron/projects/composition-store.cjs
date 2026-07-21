@@ -5,7 +5,7 @@ const { pathToFileURL } = require('url')
 
 const mediaKinds = new Set(['video', 'image', 'audio'])
 const layerKinds = new Set(['video', 'image', 'audio', 'caption'])
-const extensions = { video: new Set(['.mp4', '.webm', '.mov', '.mkv']), image: new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']), audio: new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.webm']) }
+const extensions = { video: new Set(['.mp4', '.webm', '.mov', '.mkv']), image: new Set(['.png', '.jpg', '.jpeg', '.webp']), audio: new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.webm']) }
 const finite = (value) => typeof value === 'number' && Number.isFinite(value)
 const validId = (value) => typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value)
 

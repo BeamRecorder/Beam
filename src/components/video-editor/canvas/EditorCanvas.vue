@@ -15,6 +15,7 @@ import {
 import { createCameraVelocity, stepCameraSpring } from "../zoom/zoom-spring";
 import { ZOOM_DEPTH_SCALES, type ZoomElement } from "../zoom/zoom-types";
 import { useCursorReplacer } from "../composables/useCursorReplacer";
+import { activeLayersAt, type ProjectComposition } from "../composition/composition-types";
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -74,6 +75,7 @@ const props = defineProps<{
   editorData?: ProjectEditorData | null;
   zoomElements: ZoomElement[];
   selectedZoom: ZoomElement | null;
+  composition: ProjectComposition;
   loopProgress?: number;
 }>();
 
@@ -148,6 +150,25 @@ const ripples = ref<Ripple[]>([]);
 
 const { getCursorImage } = useCursorReplacer();
 const customCursorImage = ref<HTMLImageElement | null>(null);
+const compositionImages = new Map<string, HTMLImageElement>();
+const compositionVideos = new Map<string, HTMLVideoElement>();
+
+const disposeCompositionMedia = () => {
+  compositionVideos.forEach((media) => { media.pause(); media.removeAttribute("src"); media.load(); });
+  compositionImages.clear(); compositionVideos.clear();
+};
+
+watch(() => props.composition, (composition) => {
+  disposeCompositionMedia();
+  for (const asset of composition.media) {
+    if (asset.kind === "audio") continue;
+    if (asset.kind === "image") {
+      const image = new Image(); image.src = asset.src; compositionImages.set(asset.id, image);
+    } else {
+      const media = document.createElement("video"); media.muted = true; media.preload = "auto"; media.src = asset.src; media.load(); compositionVideos.set(asset.id, media);
+    }
+  }
+}, { immediate: true, deep: true });
 
 watch(
   () => [
@@ -577,6 +598,34 @@ const drawCursorWarning = (
   ctx.restore();
 };
 
+const drawComposition = (ctx: CanvasRenderingContext2D, videoWindow: NonNullable<ReturnType<typeof drawVideoWindow>>) => {
+  const timeMs = props.currentTime * 1000;
+  for (const layer of activeLayersAt(props.composition, timeMs)) {
+    if (layer.kind === "audio") continue;
+    if (layer.kind === "caption") {
+      const sentence = layer.caption.sentences.find((item) => item.startMs <= timeMs && timeMs <= item.endMs);
+      if (!sentence?.text) continue;
+      const style = layer.caption.style;
+      ctx.save(); ctx.font = `${Math.max(12, style.fontSize * videoWindow.dw / Math.max(1, videoEl.videoWidth || 1920))}px sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = style.color; ctx.shadowColor = style.shadowColor; ctx.shadowBlur = style.shadowBlur;
+      const y = style.placement === "top" ? .12 : style.placement === "center" ? .5 : .88;
+      ctx.fillText(sentence.text, videoWindow.dx + videoWindow.dw / 2, videoWindow.dy + videoWindow.dh * y, videoWindow.dw * .9); ctx.restore();
+      continue;
+    }
+    const asset = layer.kind === "image" ? compositionImages.get(layer.assetId) : compositionVideos.get(layer.assetId);
+    if (!asset) continue;
+    if (asset instanceof HTMLVideoElement) {
+      const localTime = props.currentTime - layer.startMs / 1000;
+      if (localTime < 0 || (Number.isFinite(asset.duration) && localTime >= asset.duration)) continue;
+      if (Math.abs(asset.currentTime - localTime) > .15) asset.currentTime = localTime;
+    }
+    const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+    if (asset instanceof HTMLVideoElement && asset.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) continue;
+    if (asset instanceof HTMLImageElement && (!asset.complete || !asset.naturalWidth)) continue;
+    ctx.drawImage(asset, videoWindow.dx + transform.x * videoWindow.dw, videoWindow.dy + transform.y * videoWindow.dh, transform.width * videoWindow.dw, transform.height * videoWindow.dh);
+  }
+};
+
 const renderCanvas = () => {
   const canvas = canvasRef.value;
   if (!canvas) return;
@@ -691,6 +740,7 @@ const renderCanvas = () => {
   } else if (props.isVideoEnabled && cursorData && !cursorData.available) {
     drawCursorWarning(ctx, "Cursor data missing", width);
   }
+  if (videoWindow) drawComposition(ctx, videoWindow);
 
   if (props.isPlaying && videoEl.readyState >= 1) {
     emit("update:currentTime", videoEl.ended ? 0 : videoEl.currentTime);
@@ -720,6 +770,7 @@ onUnmounted(() => {
   videoEl.load();
   backgroundVideo.removeAttribute("src");
   backgroundVideo.load();
+  disposeCompositionMedia();
 });
 </script>
 

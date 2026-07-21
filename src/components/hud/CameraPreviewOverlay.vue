@@ -38,16 +38,17 @@ const overlayOffset = ref({ x: 0, y: 0 })
 const syncNativeWindowSize = async () => {
   if (!props.windowOverlay) return
   await nextTick()
-  const bounds = previewRef.value?.getBoundingClientRect()
-  if (!bounds) return
-  await window.capture?.resizeCameraOverlay({
-    width: Math.ceil(bounds.width) + 64,
-    height: Math.ceil(bounds.height) + 64,
-    popoverOpen: false,
+  const contentWidth = ({ sm: 120, md: 160, lg: 220, xl: 300 }[props.size] || 160)
+  const contentHeight = ({ sm: 90, md: 120, lg: 165, xl: 225 }[props.size] || 120)
+  const offset = await window.capture?.resizeCameraOverlay({
+    width: isPopoverOpen.value ? 300 : contentWidth + 128,
+    height: isPopoverOpen.value ? 260 : contentHeight + 128,
+    popoverOpen: isPopoverOpen.value,
   })
+  if (offset) overlayOffset.value = offset
 }
 
-defineExpose({ syncNativeWindowSize, isPopoverOpen })
+defineExpose({ syncNativeWindowSize })
 
 const handlePopoverToggle = async (isOpen: boolean) => {
   if (!isOpen) isPopoverOpen.value = false
@@ -55,8 +56,8 @@ const handlePopoverToggle = async (isOpen: boolean) => {
     const contentWidth = ({ sm: 120, md: 160, lg: 220, xl: 300 }[props.size] || 160)
     const contentHeight = ({ sm: 90, md: 120, lg: 165, xl: 225 }[props.size] || 120)
     const offset = await window.capture?.resizeCameraOverlay({
-      width: isOpen ? 390 : contentWidth + 64,
-      height: isOpen ? Math.max(contentHeight + 64, 300) : contentHeight + 64,
+      width: isOpen ? 300 : contentWidth + 128,
+      height: isOpen ? 260 : contentHeight + 128,
       popoverOpen: isOpen,
     })
     overlayOffset.value = offset || { x: 0, y: 0 }
@@ -387,7 +388,7 @@ function closeInlineSettings() {
   --camera-radius: 20px;
 }
 
-.camera-overlay-container.window-overlay { top: 32px; left: 32px; }
+.camera-overlay-container.window-overlay { top: 64px; left: 64px; }
 
 .camera-overlay-container.size-sm {
   width: 120px;
