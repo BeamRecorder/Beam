@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { capture } from '../../api/capture'
 import { BrowserCameraRecorder, listBrowserCameras } from '../../api/camera-recorder'
+import { BrowserMicrophoneRecorder, listBrowserMicrophones, recordMicrophoneFailure } from '../../api/microphone-recorder'
 import type { CaptureCatalog, CapturePreview, CaptureProject, CaptureSession, CaptureSource } from '../../api/types/capture-api'
 import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
@@ -66,6 +67,8 @@ let timerInterval: ReturnType<typeof setInterval> | null = null
 let previewsRefreshInterval: ReturnType<typeof setInterval> | null = null
 let activeCamera: BrowserCameraRecorder | null = null
 let activeCameraSessionId: string | null = null
+let activeMicrophone: BrowserMicrophoneRecorder | null = null
+let activeMicrophoneSessionId: string | null = null
 const secondsElapsed = ref(0)
 
 const startTimer = () => {
@@ -201,6 +204,16 @@ const toggleRecording = async () => {
   try {
     if (!isRecording.value) {
       const camera = selectedCameraId.value === 'off' ? null : await BrowserCameraRecorder.request(selectedCameraId.value)
+      const microphoneId = selectedMicId.value === 'no-audio' ? null : selectedMicId.value
+      let microphone: BrowserMicrophoneRecorder | null = null
+      let microphoneError: Error | null = null
+      if (microphoneId) {
+        try {
+          microphone = await BrowserMicrophoneRecorder.request(microphoneId)
+        } catch (error) {
+          microphoneError = error instanceof Error ? error : new Error(String(error))
+        }
+      }
       // Find matching Rust catalog ID for the selected preview source
       let rustScreenId: string | undefined = undefined
       if (selectedSourceId.value) {
@@ -220,7 +233,7 @@ const toggleRecording = async () => {
         session = await capture.startRecording({
           screenKind: activeTab.value === 'window' ? 'window' : 'display',
           screenId: rustScreenId,
-          microphoneId: selectedMicId.value === 'no-audio' ? null : selectedMicId.value,
+          microphoneId: null,
           cameraId: camera ? selectedCameraId.value : null,
           systemAudio: systemAudioMode.value === 'on',
           cursor: true,
@@ -236,11 +249,28 @@ const toggleRecording = async () => {
           camera.onFatal((reason) => { void stopForCameraFailure(camera, cameraSessionId, reason) })
           await camera.start(cameraSessionId)
         }
+        if (session.sessionId && microphone) {
+          const microphoneSessionId = session.sessionId
+          activeMicrophone = microphone
+          activeMicrophoneSessionId = microphoneSessionId
+          microphone.onFatal((reason) => { void stopForMicrophoneFailure(microphone, microphoneSessionId, reason) })
+          try {
+            await microphone.start(microphoneSessionId)
+          } catch (error) {
+            await stopForMicrophoneFailure(microphone, microphoneSessionId, error instanceof Error ? error : new Error(String(error)))
+          }
+        } else if (session.sessionId && microphoneId && microphoneError) {
+          await recordMicrophoneFailure(session.sessionId, microphoneId, microphoneError.message)
+          errorMessage.value = `Microphone recording is unavailable: ${microphoneError.message}`
+        }
       } catch (error) {
         if (camera) await camera.stop().catch(() => undefined)
+        if (microphone) await microphone.stop().catch(() => undefined)
         if (session?.sessionId) await capture.stop().catch(() => undefined)
         activeCamera = null
         activeCameraSessionId = null
+        activeMicrophone = null
+        activeMicrophoneSessionId = null
         isRecording.value = false
         throw error
       }
@@ -249,6 +279,14 @@ const toggleRecording = async () => {
       emit('start-recording', session)
     } else {
       let cameraStopError: Error | null = null
+      if (activeMicrophone) {
+        try {
+          await activeMicrophone.stop()
+        } catch (error) {
+          if (activeMicrophoneSessionId) await activeMicrophone.fail(activeMicrophoneSessionId, error instanceof Error ? error.message : String(error))
+          errorMessage.value = `Microphone recording failed: ${error instanceof Error ? error.message : String(error)}`
+        }
+      }
       if (activeCamera) {
         try {
           await activeCamera.stop()
@@ -260,6 +298,8 @@ const toggleRecording = async () => {
       const session = await capture.stop()
       activeCamera = null
       activeCameraSessionId = null
+      activeMicrophone = null
+      activeMicrophoneSessionId = null
       stopTimer()
       isRecording.value = false
       emit('stop-recording', session)
@@ -269,6 +309,19 @@ const toggleRecording = async () => {
     errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
     isBusy.value = false
+  }
+}
+
+const stopForMicrophoneFailure = async (microphone: BrowserMicrophoneRecorder, sessionId: string, reason: Error) => {
+  if (activeMicrophone !== microphone) return
+  try {
+    await microphone.fail(sessionId, reason.message)
+    errorMessage.value = `Microphone recording stopped: ${reason.message}`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    activeMicrophone = null
+    activeMicrophoneSessionId = null
   }
 }
 
@@ -294,8 +347,8 @@ const discoverSources = async () => {
   isBusy.value = true
   errorMessage.value = ''
   try {
-    const [catalog, cameras] = await Promise.all([capture.discover(), listBrowserCameras()]) as [CaptureCatalog, CaptureSource[]]
-    sources.value = [...(Array.isArray(catalog.sources) ? catalog.sources : []), ...cameras]
+    const [catalog, cameras, microphones] = await Promise.all([capture.discover(), listBrowserCameras(), listBrowserMicrophones()]) as [CaptureCatalog, CaptureSource[], CaptureSource[]]
+    sources.value = [...(Array.isArray(catalog.sources) ? catalog.sources : []), ...cameras, ...microphones]
     const defaultCamera = sources.value.find((source) => source.kind === 'camera' && source.isDefault)
       ?? sources.value.find((source) => source.kind === 'camera')
     const defaultMic = sources.value.find((source) => source.kind === 'microphone' && source.isDefault)
@@ -328,7 +381,9 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopTimer()
   void activeCamera?.stop()
+  void activeMicrophone?.stop()
   activeCameraSessionId = null
+  activeMicrophoneSessionId = null
   if (previewsRefreshInterval) clearInterval(previewsRefreshInterval)
 })
 

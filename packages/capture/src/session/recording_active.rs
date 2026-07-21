@@ -6,14 +6,16 @@ mod source_watches;
 use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
-    model::{CaptureRequest, ScreenSelection, TrackKind, TrackMetadata, TrackStatus},
+    model::{CaptureRequest, ScreenSelection, TrackMetadata, TrackStatus},
     storage::finish_segment,
 };
 
-#[cfg(any(windows, target_os = "macos"))]
-use crate::model::CursorSelection;
-#[cfg(any(feature = "microphone", feature = "system-audio"))]
+#[cfg(feature = "system-audio")]
 use crate::model::TrackFormat;
+#[cfg(all(not(any(windows, target_os = "macos")), feature = "system-audio"))]
+use crate::model::TrackKind;
+#[cfg(any(windows, target_os = "macos"))]
+use crate::model::{CursorSelection, TrackKind};
 
 use super::periodic_reporter::PeriodicReporter;
 use super::recording_support::*;
@@ -26,8 +28,6 @@ pub(super) struct ActiveRecordings {
     screen: Option<crate::screen::win::WindowsRecording>,
     #[cfg(target_os = "macos")]
     screen: Option<crate::screen::mac::MacRecording>,
-    #[cfg(feature = "microphone")]
-    microphone: Option<crate::audio::microphone::MicrophoneRecording>,
     #[cfg(all(windows, feature = "system-audio"))]
     system_audio: Option<crate::audio::system::win::WasapiLoopbackRecording>,
     #[cfg(all(target_os = "macos", feature = "system-audio"))]
@@ -59,34 +59,6 @@ impl ActiveRecordings {
             tracks,
             start_gate,
         } = context;
-        #[cfg(feature = "microphone")]
-        if let Some(selection) = &request.microphone {
-            let path = segment_path(layout, TrackKind::Microphone, generation, "wav");
-            self.microphone = match crate::audio::microphone::MicrophoneRecording::start(
-                selection,
-                &path,
-                request.recording.queue_capacity,
-                start_gate.clone(),
-            ) {
-                Ok(recording) => Some(recording),
-                Err(error) => {
-                    optional_failure(request, tracks, TrackKind::Microphone, error)?;
-                    None
-                }
-            };
-            if let Some(track) = track_mut(tracks, TrackKind::Microphone)
-                && let Some(recording) = &self.microphone
-            {
-                track.format = TrackFormat::Audio {
-                    sample_format: "f32".into(),
-                    sample_rate: recording.sample_rate(),
-                    channels: recording.channels(),
-                };
-            }
-            if self.microphone.is_some() {
-                add_segment(tracks, TrackKind::Microphone, generation, "wav", start_ns)?;
-            }
-        }
         #[cfg(all(windows, feature = "system-audio"))]
         if let Some(selection) = &request.system_audio {
             let source = match selection {
@@ -309,18 +281,6 @@ impl ActiveRecordings {
                 TrackKind::Screen,
                 metrics.frames_received(),
                 metrics.frames_dropped(),
-            );
-        }
-        #[cfg(feature = "microphone")]
-        if let Some(recording) = self.microphone.take() {
-            let metrics = recording.metrics();
-            record_result(recording.stop().map(|_| ()), &mut first_error);
-            update_audio_metrics(
-                tracks,
-                TrackKind::Microphone,
-                metrics.samples_received(),
-                metrics.samples_dropped(),
-                metrics.interruptions(),
             );
         }
         #[cfg(all(windows, feature = "system-audio"))]

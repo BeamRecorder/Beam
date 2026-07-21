@@ -1,12 +1,17 @@
-use crate::model::{TrackKind, TrackMetadata, TrackMetrics};
+use crate::model::TrackMetadata;
+#[cfg(any(windows, target_os = "macos"))]
+use crate::model::{TrackKind, TrackMetrics};
 
 use super::ActiveRecordings;
-use crate::session::{periodic_reporter::MetricSampler, recording_support::track_for};
+use crate::session::periodic_reporter::MetricSampler;
+#[cfg(any(windows, target_os = "macos"))]
+use crate::session::recording_support::track_for;
 
 pub(super) fn samplers(
     recordings: &ActiveRecordings,
     tracks: &[TrackMetadata],
 ) -> Vec<MetricSampler> {
+    #[allow(unused_mut)]
     let mut samplers = Vec::new();
     #[cfg(windows)]
     if let Some(recording) = &recordings.screen
@@ -40,23 +45,6 @@ pub(super) fn samplers(
                 frames_encoded: metrics.frames_received(),
                 frames_received: metrics.frames_received(),
                 frames_dropped: metrics.frames_dropped(),
-                ..TrackMetrics::default()
-            },
-        ));
-    }
-    #[cfg(feature = "microphone")]
-    if let Some(recording) = &recordings.microphone
-        && let Some(track) = track_for(tracks, TrackKind::Microphone)
-    {
-        let metrics = recording.metrics();
-        samplers.push(MetricSampler::new(
-            track.track_id,
-            track.format.clone(),
-            track.metrics.clone(),
-            move || TrackMetrics {
-                samples_received: metrics.samples_received(),
-                samples_dropped: metrics.samples_dropped(),
-                interruptions: metrics.interruptions(),
                 ..TrackMetrics::default()
             },
         ));

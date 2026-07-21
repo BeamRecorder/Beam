@@ -22,7 +22,7 @@ fn main() {
 }
 fn run() -> Result<(), capture::CaptureError> {
     let mode = std::env::args().nth(1).ok_or_else(|| {
-        capture::CaptureError::Protocol("usage: capture-smoke <screen|mic|full>".into())
+        capture::CaptureError::Protocol("usage: capture-smoke <screen|system-audio|full>".into())
     })?;
     #[cfg(windows)]
     if mode == "screen" {
@@ -31,10 +31,6 @@ fn run() -> Result<(), capture::CaptureError> {
     #[cfg(windows)]
     if mode == "cursor" {
         return probe_windows_cursor();
-    }
-    #[cfg(feature = "microphone")]
-    if mode == "mic" {
-        return record_microphone();
     }
     #[cfg(all(windows, feature = "system-audio"))]
     if mode == "system-audio" {
@@ -114,7 +110,7 @@ fn argument(name: &str) -> Option<String> {
     None
 }
 
-#[cfg(any(windows, feature = "microphone"))]
+#[cfg(windows)]
 fn started_gate() -> Result<std::sync::Arc<capture::session::StartGate>, capture::CaptureError> {
     let gate = std::sync::Arc::new(capture::session::StartGate::new());
     gate.release(0)?;
@@ -159,71 +155,6 @@ fn probe_windows_cursor() -> Result<(), capture::CaptureError> {
     )
 }
 
-#[cfg(feature = "microphone")]
-fn record_microphone() -> Result<(), capture::CaptureError> {
-    use capture::{
-        audio::microphone::MicrophoneRecording,
-        model::{MicrophoneSelection, SourceId},
-    };
-
-    let snapshot = NativeCatalog::default().snapshot()?;
-    let requested = argument_value("--source");
-    let source_id = match requested {
-        Some(id) => SourceId::new(id)?,
-        None => snapshot
-            .sources
-            .iter()
-            .find(|source| source.kind == SourceKind::Microphone && source.is_default)
-            .or_else(|| {
-                snapshot
-                    .sources
-                    .iter()
-                    .find(|source| source.kind == SourceKind::Microphone)
-            })
-            .map(|source| source.id.clone())
-            .ok_or_else(|| capture::CaptureError::SourceNotFound("default microphone".into()))?,
-    };
-    let duration = argument_value("--duration")
-        .map(|value| value.parse::<u64>())
-        .transpose()
-        .map_err(|error| capture::CaptureError::Protocol(error.to_string()))?
-        .unwrap_or(10);
-    let output = argument_value("--output").map_or_else(
-        || PathBuf::from("capture-smoke-microphone.wav"),
-        PathBuf::from,
-    );
-    let recording = MicrophoneRecording::start(
-        &MicrophoneSelection {
-            source_id: source_id.clone(),
-            preferred_sample_rate: None,
-            preferred_channels: None,
-        },
-        &output,
-        32,
-        started_gate()?,
-    )?;
-    let metrics = recording.metrics();
-    let sample_rate = recording.sample_rate();
-    let channels = recording.channels();
-    std::thread::sleep(Duration::from_secs(duration));
-    let samples = recording.stop()?;
-    write_json_line(
-        &mut io::stdout().lock(),
-        &serde_json::json!({
-            "mode": "mic",
-            "sourceId": source_id,
-            "path": output,
-            "durationSeconds": duration,
-            "sampleRate": sample_rate,
-            "channels": channels,
-            "samplesWritten": samples,
-            "samplesReceived": metrics.samples_received(),
-            "samplesDropped": metrics.samples_dropped(),
-            "interruptions": metrics.interruptions(),
-        }),
-    )
-}
-
 fn argument_value(name: &str) -> Option<String> {
     let mut arguments = std::env::args();
     while let Some(value) = arguments.next() {
@@ -237,8 +168,8 @@ fn argument_value(name: &str) -> Option<String> {
 fn record_full_session() -> Result<(), capture::CaptureError> {
     use capture::{
         model::{
-            CaptureRequest, CursorSelection, FailurePolicy, MicrophoneSelection, ProjectId,
-            RecordingSettings, ScreenSelection, SystemAudioSelection,
+            CaptureRequest, CursorSelection, FailurePolicy, ProjectId, RecordingSettings,
+            ScreenSelection, SystemAudioSelection,
         },
         session::RecordingSession,
     };
@@ -256,21 +187,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         })
         .map(|source| ScreenSelection::Source {
             source_id: source.id.clone(),
-        });
-    let microphone = snapshot
-        .sources
-        .iter()
-        .find(|source| source.kind == SourceKind::Microphone && source.is_default)
-        .or_else(|| {
-            snapshot
-                .sources
-                .iter()
-                .find(|source| source.kind == SourceKind::Microphone)
-        })
-        .map(|source| MicrophoneSelection {
-            source_id: source.id.clone(),
-            preferred_sample_rate: None,
-            preferred_channels: None,
         });
     let system_audio = snapshot
         .capabilities
@@ -291,7 +207,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         project_id: ProjectId::new(),
         screen,
         system_audio,
-        microphone,
         cursor: CursorSelection::Separate {
             capture_clicks: snapshot.capabilities.cursor_clicks,
             capture_shape: snapshot.capabilities.cursor_shapes,

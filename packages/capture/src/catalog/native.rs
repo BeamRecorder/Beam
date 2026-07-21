@@ -18,8 +18,6 @@ impl SourceCatalog for NativeCatalog {
     fn snapshot(&self) -> Result<CatalogSnapshot, CaptureError> {
         #[allow(unused_mut)]
         let mut sources = platform_screen_sources()?;
-        #[cfg(feature = "microphone")]
-        sources.extend(crate::audio::microphone::discover_microphones()?);
         #[cfg(all(feature = "system-audio", windows))]
         sources.extend(crate::audio::system::win::discover_outputs()?);
         #[cfg(all(feature = "system-audio", target_os = "macos"))]

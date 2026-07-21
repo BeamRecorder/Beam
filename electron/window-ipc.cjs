@@ -19,6 +19,8 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   ipcMain.on('window:present', (event) => controllerForWindow(windowForEvent(event))?.present())
   ipcMain.on('window:setPosition', (event, x, y) => windowForEvent(event)?.setPosition(Math.round(x), Math.round(y)))
   ipcMain.on('window:setSize', (event, width, height) => windowForEvent(event)?.setSize(Math.round(width), Math.round(height)))
+  ipcMain.on('window:setInteractive', (event, overInteractive) => controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive))
+
   ipcMain.on('window:setSizeSmooth', (event, width, height) => {
     const win = windowForEvent(event)
     if (!win) return

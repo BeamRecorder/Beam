@@ -8,6 +8,7 @@ const { WindowController } = require('./window-controller.cjs')
 const { registerWindowIpc } = require('./window-ipc.cjs')
 const { registerExportIpc } = require('./export-ipc.cjs')
 const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs')
+const { createMicrophoneStorage, registerMicrophoneIpc } = require('./microphone/ipc.cjs')
 
 const startupAt = process.hrtime.bigint()
 const logStartup = (step) => {
@@ -19,6 +20,7 @@ const logStartup = (step) => {
 const applicationRoot = path.join(__dirname, '..')
 const captureEngine = new CaptureEngine(app, applicationRoot)
 const cameraStorage = createCameraStorage({})
+const microphoneStorage = createMicrophoneStorage({})
 const controllers = new WeakMap()
 
 function profileRendererRequests(webContents) {
@@ -47,10 +49,10 @@ function isTrustedRenderer(url) {
   return url === 'http://localhost:6500/' || url.startsWith('http://localhost:6500/?') || url.startsWith('file://')
 }
 
-function configureCameraPermission() {
+function configureMediaPermission() {
   const trustedMedia = (webContents, permission) => permission === 'media' && isTrustedRenderer(webContents.getURL())
   session.defaultSession.setPermissionCheckHandler((webContents, permission) => trustedMedia(webContents, permission))
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => callback(trustedMedia(webContents, permission) && Array.isArray(details.mediaTypes) && details.mediaTypes.includes('video')))
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => callback(trustedMedia(webContents, permission) && Array.isArray(details.mediaTypes) && details.mediaTypes.some((mediaType) => mediaType === 'video' || mediaType === 'audio')))
 }
 
 function createWindow() {
@@ -86,12 +88,14 @@ function createWindow() {
 
 app.whenReady().then(() => {
   logStartup('Electron app.whenReady resolved.')
-  configureCameraPermission()
-  logStartup('Camera permission policy registered.')
-  registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, cameraStorage })
+  configureMediaPermission()
+  logStartup('Media permission policy registered.')
+  registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, trackStorages: [cameraStorage, microphoneStorage] })
   logStartup('Capture IPC registered.')
   registerCameraIpc({ ipcMain, storage: cameraStorage })
   logStartup('Camera IPC registered.')
+  registerMicrophoneIpc({ ipcMain, storage: microphoneStorage })
+  logStartup('Microphone IPC registered.')
   registerProjectIpc(ipcMain, createProjectStore(path.join(app.getPath('videos'), 'DemoRecorder')))
   logStartup('Project IPC registered.')
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
@@ -99,7 +103,7 @@ app.whenReady().then(() => {
   const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })
   logStartup('Export IPC registered.')
   const win = createWindow()
-  win.webContents.once('destroyed', () => { exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id) })
+  win.webContents.once('destroyed', () => { exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id); microphoneStorage.cleanupOwner(win.webContents.id) })
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
 

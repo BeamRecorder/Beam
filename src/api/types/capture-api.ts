@@ -40,6 +40,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   setPosition(x: number, y: number): void
   setSize(width: number, height: number): void
   setSizeSmooth(width: number, height: number): void
+  setInteractive(overInteractive: boolean): void
   dragStart(): void
   drag(): void
   getSources(types?: string[]): Promise<CapturePreview[]>
@@ -54,9 +55,13 @@ export interface DesktopCaptureApi extends CaptureApi {
   finalizeExport(jobId: string): Promise<{ path: string }>
   abortExport(jobId: string): Promise<void>
   beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>
-  writeCameraSegment(payload: CameraSegmentChunk): Promise<void>
+  writeCameraSegment(payload: MediaSegmentChunk): Promise<void>
   finalizeCameraSegment(payload: CameraSegmentFinish): Promise<void>
   failCamera(payload: { sessionId: string; reason: string }): Promise<void>
+  beginMicrophoneSegment(payload: MicrophoneSegmentStart): Promise<{ jobId: string }>
+  writeMicrophoneSegment(payload: MediaSegmentChunk): Promise<void>
+  finalizeMicrophoneSegment(payload: MicrophoneSegmentFinish): Promise<void>
+  failMicrophone(payload: MicrophoneFailure): Promise<void>
 }
 
 export interface CameraSegmentStart {
@@ -66,7 +71,7 @@ export interface CameraSegmentStart {
   startNs: number
 }
 
-export interface CameraSegmentChunk {
+export interface MediaSegmentChunk {
   jobId: string
   sequence: number
   data: Uint8Array
@@ -76,6 +81,26 @@ export interface CameraSegmentFinish {
   jobId: string
   endNs: number
   metrics: Record<string, number>
+}
+
+export interface MicrophoneSegmentStart {
+  sessionId: string
+  sourceId: string
+  format: { codec: 'opus'; sampleRate: number; channels: number }
+  startNs: number
+}
+
+export interface MicrophoneSegmentFinish {
+  jobId: string
+  endNs: number
+  metrics: Record<string, number>
+}
+
+export interface MicrophoneFailure {
+  sessionId: string
+  sourceId: string
+  reason: string
+  format?: { codec: 'opus'; sampleRate: number; channels: number }
 }
 
 export interface CapturePreview {

@@ -116,7 +116,6 @@ fn native_session_finalizes_storage_and_supports_pause_segments() {
         project_id: ProjectId::new(),
         screen: None,
         system_audio: None,
-        microphone: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings {
             output_root: temporary.path().into(),

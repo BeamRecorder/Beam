@@ -6,6 +6,7 @@ class WindowController {
     this.mode = 'hud'
     this.ready = false
     this.interactive = false
+    this.hudOverInteractive = false
     this.window.setIgnoreMouseEvents(true)
     this.window.on('show', () => this.applyInteractionPolicy())
     this.window.on('hide', () => this.applyInteractionPolicy())
@@ -61,14 +62,39 @@ class WindowController {
     this.applyInteractionPolicy()
   }
 
+  // Called by the renderer (via IPC) on every mousemove to say whether the
+  // cursor is currently over an interactive DOM element.  In HUD mode we keep
+  // forward:true so the renderer keeps receiving mousemove; we only block the
+  // OS from receiving the event when the cursor is on a real widget.
+  setHudInteractive(overInteractive) {
+    if (this.mode !== 'hud' || this.window.isDestroyed()) return
+    this.hudOverInteractive = overInteractive
+    if (overInteractive) {
+      this.window.setIgnoreMouseEvents(false)
+    } else {
+      this.window.setIgnoreMouseEvents(true, { forward: true })
+    }
+  }
+
   applyInteractionPolicy() {
     if (this.window.isDestroyed()) return
-    const interactive = this.ready && this.window.isVisible() && !this.window.isMinimized()
-    if (interactive !== this.interactive) {
-      this.window.setIgnoreMouseEvents(!interactive)
-      this.interactive = interactive
+    const shouldBeActive = this.ready && this.window.isVisible() && !this.window.isMinimized()
+    if (!shouldBeActive) {
+      this.window.setIgnoreMouseEvents(true)
+      this.interactive = false
+      this.window.setAlwaysOnTop(false)
+      return
     }
-    this.window.setAlwaysOnTop(this.mode === 'hud' && interactive)
+    if (this.mode === 'hud') {
+      // In HUD mode use forward:true so the renderer still gets mousemove
+      // events even over transparent areas.
+      this.window.setIgnoreMouseEvents(true, { forward: true })
+    } else {
+      // Editor: full opaque window, capture everything.
+      this.window.setIgnoreMouseEvents(false)
+    }
+    this.interactive = true
+    this.window.setAlwaysOnTop(this.mode === 'hud')
   }
 
   showHud() {

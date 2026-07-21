@@ -5,12 +5,15 @@ use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
     model::{
-        CaptureRequest, CursorSelection, FailurePolicy, HealthEvent, MediaFormat, ScreenSelection,
+        CaptureRequest, CursorSelection, HealthEvent, MediaFormat, ScreenSelection,
         SelectedSources, SourceDescriptor, SourceId, SystemAudioSelection, TimingAnchor,
         TrackFormat, TrackId, TrackKind, TrackMetadata, TrackMetrics, TrackStatus,
     },
     storage::segment,
 };
+
+#[cfg(feature = "system-audio")]
+use crate::model::FailurePolicy;
 
 use super::recording::RecordingSession;
 
@@ -34,7 +37,7 @@ pub(super) fn record_result(result: Result<(), CaptureError>, first: &mut Option
     }
 }
 
-#[cfg(any(feature = "microphone", feature = "system-audio"))]
+#[cfg(all(feature = "system-audio", any(windows, target_os = "macos")))]
 pub(super) fn optional_failure(
     request: &CaptureRequest,
     tracks: &mut [TrackMetadata],
@@ -75,17 +78,6 @@ pub(super) fn track_metadata(
         tracks.push(new_track(
             TrackKind::SystemAudio,
             system_audio_id(request, snapshot),
-            TrackFormat::Audio {
-                sample_format: "f32".into(),
-                sample_rate: 0,
-                channels: 0,
-            },
-        ));
-    }
-    if let Some(selection) = &request.microphone {
-        tracks.push(new_track(
-            TrackKind::Microphone,
-            Some(selection.source_id.clone()),
             TrackFormat::Audio {
                 sample_format: "f32".into(),
                 sample_rate: 0,
@@ -143,6 +135,7 @@ pub(super) fn video_format(source: &SourceDescriptor, fallback_fps: u32) -> (u32
         .unwrap_or((0, 0, fallback_fps))
 }
 
+#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn add_segment(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -163,6 +156,7 @@ pub(super) fn add_segment(
     Ok(())
 }
 
+#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn track_mut(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -174,6 +168,7 @@ pub(super) fn track_for(tracks: &[TrackMetadata], kind: TrackKind) -> Option<&Tr
     tracks.iter().find(|track| track.kind == kind)
 }
 
+#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn segment_path(
     layout: &crate::storage::SessionLayout,
     kind: TrackKind,
@@ -185,6 +180,7 @@ pub(super) fn segment_path(
         .join(format!("segment-{generation:04}.{extension}"))
 }
 
+#[cfg(any(windows, target_os = "macos"))]
 fn track_directory(kind: TrackKind) -> &'static str {
     match kind {
         TrackKind::Screen => "screen",
@@ -210,7 +206,7 @@ pub(super) fn update_video_metrics(
     }
 }
 
-#[cfg(any(feature = "microphone", feature = "system-audio"))]
+#[cfg(all(feature = "system-audio", any(windows, target_os = "macos")))]
 pub(super) fn update_audio_metrics(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -235,10 +231,7 @@ pub(super) fn selected_sources(
             _ => None,
         },
         system_audio: system_audio_id(request, snapshot),
-        microphone: request
-            .microphone
-            .as_ref()
-            .map(|selection| selection.source_id.clone()),
+        microphone: None,
         // Browser-owned camera capture merges its selected source after the native session
         // has finalized. Rust never opens a camera device.
         camera: None,

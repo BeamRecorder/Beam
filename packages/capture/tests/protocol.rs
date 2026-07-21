@@ -34,7 +34,6 @@ fn engine_eof_finalizes_an_active_session() {
         project_id,
         screen: None,
         system_audio: None,
-        microphone: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings {
             output_root: temporary.path().to_owned(),

@@ -30,8 +30,6 @@ pub fn capabilities() -> CaptureCapabilities {
         // not advertise a capture capability that would produce an empty track.
         system_audio: false,
         selectable_system_output: false,
-        microphone: cfg!(feature = "microphone"),
-        selectable_microphone: cfg!(feature = "microphone"),
         ..CaptureCapabilities::default()
     }
 }
@@ -43,7 +41,7 @@ pub fn permissions() -> PermissionSnapshot {
         } else {
             PermissionState::Granted
         }),
-        microphone: Some(PermissionState::Unknown),
+        microphone: None,
         camera: None,
         accessibility: Some(PermissionState::NotApplicable),
     }

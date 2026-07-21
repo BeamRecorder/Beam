@@ -9,7 +9,6 @@ pub enum SourceKind {
     Window,
     Application,
     SystemAudio,
-    Microphone,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

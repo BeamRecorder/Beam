@@ -46,10 +46,6 @@ pub fn validate_request(
     } else if request.system_audio.is_some() {
         require_capability(snapshot.capabilities.system_audio, "system audio")?;
     }
-    if let Some(selection) = &request.microphone {
-        require_kind(snapshot, &selection.source_id, &[SourceKind::Microphone])?;
-        require_capability(snapshot.capabilities.microphone, "microphone")?;
-    }
     match request.cursor {
         CursorSelection::Disabled => {}
         CursorSelection::Embedded => {
@@ -72,11 +68,6 @@ pub fn validate_request(
     }
     if request.screen.is_some() && snapshot.permissions.screen == Some(PermissionState::Denied) {
         return Err(CaptureError::PermissionDenied("screen recording".into()));
-    }
-    if request.microphone.is_some()
-        && snapshot.permissions.microphone == Some(PermissionState::Denied)
-    {
-        return Err(CaptureError::PermissionDenied("microphone".into()));
     }
     Ok(())
 }

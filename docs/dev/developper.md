@@ -8,7 +8,7 @@ Welcome to the DemoRecorder developer guide. This document outlines how to set u
 Out of the box, no special system dependencies are required for building and running the project.
 
 ### Linux
-To compile the native Rust multi-track capture engine (specifically for audio handling with `cpal`), you must install the ALSA development headers and `pkg-config`:
+To compile the native Rust multi-track capture engine (specifically for system-audio handling), you must install the ALSA development headers and `pkg-config`:
 ```bash
 sudo apt update
 sudo apt install -y libasound2-dev pkg-config

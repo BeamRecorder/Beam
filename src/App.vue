@@ -1,11 +1,52 @@
 <script setup lang="ts">
-import { defineAsyncComponent, nextTick, ref } from 'vue'
+import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
 import Button from './components/ui/button/Button.vue'
 
 import { capture } from './api/capture'
 import type { CaptureProject, ProjectEditorData } from './api/types/capture-api'
+
+// ─── HUD transparent-window mouse pass-through ────────────────────────────────
+// In HUD mode the window is transparent. Electron's setIgnoreMouseEvents(true, {forward:true})
+// lets mousemove events reach the renderer even over transparent pixels.
+// We inspect the element under the cursor and tell the main process whether it
+// is interactive, so it can toggle setIgnoreMouseEvents accordingly.
+// Only runs when window.capture is available (i.e. inside Electron).
+const INTERACTIVE_SELECTORS = '.hud-wrapper, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content'
+let lastInteractive: boolean | null = null
+
+const handleMouseMove = (e: MouseEvent) => {
+  if (currentView.value !== 'hud') return
+  const el = document.elementFromPoint(e.clientX, e.clientY)
+  const isInteractive = el != null &&
+    el !== document.documentElement &&
+    el !== document.body &&
+    el.closest(INTERACTIVE_SELECTORS) != null
+  if (isInteractive !== lastInteractive) {
+    lastInteractive = isInteractive
+    capture.setInteractive(isInteractive)
+  }
+}
+
+const handleMouseLeave = () => {
+  if (lastInteractive !== false) {
+    lastInteractive = false
+    capture.setInteractive(false)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('mousemove', handleMouseMove, { passive: true })
+  window.addEventListener('mouseleave', handleMouseLeave, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', handleMouseMove)
+  window.removeEventListener('mouseleave', handleMouseLeave)
+})
+// ──────────────────────────────────────────────────────────────────────────────
+
 
 const currentView = ref<'hud' | 'editor'>('hud')
 const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))

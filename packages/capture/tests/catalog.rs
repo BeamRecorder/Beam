@@ -18,19 +18,19 @@ fn source(id: &str, kind: SourceKind) -> SourceDescriptor {
 
 #[test]
 fn incompatible_source_kinds_are_rejected() {
-    let microphone = source("microphone:1", SourceKind::Microphone);
+    let system_audio = source("system-audio:1", SourceKind::SystemAudio);
     let snapshot = CatalogSnapshot {
         generation: 1,
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
         limitations: Vec::new(),
-        sources: vec![microphone.clone()],
+        sources: vec![system_audio.clone()],
     };
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: Some(ScreenSelection::Source {
-            source_id: microphone.id,
+            source_id: system_audio.id,
         }),
         system_audio: None,
         microphone: None,
@@ -50,11 +50,11 @@ fn snapshot_filters_sources_by_kind() {
         permissions: PermissionSnapshot::default(),
         limitations: Vec::new(),
         sources: vec![
-            source("mic:1", SourceKind::Microphone),
+            source("system-audio:1", SourceKind::SystemAudio),
             source("display:1", SourceKind::Display),
         ],
     };
-    assert_eq!(snapshot.by_kind(SourceKind::Microphone).count(), 1);
+    assert_eq!(snapshot.by_kind(SourceKind::SystemAudio).count(), 1);
 }
 
 #[test]
@@ -91,41 +91,5 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
     assert!(matches!(
         validate_request(&request, &snapshot),
         Err(capture::CaptureError::Unsupported(_))
-    ));
-}
-
-#[test]
-fn denied_permission_is_reported_before_capture() {
-    let microphone = source("mic:1", SourceKind::Microphone);
-    let snapshot = CatalogSnapshot {
-        generation: 1,
-        created_at_utc: "2026-01-01T00:00:00Z".into(),
-        capabilities: CaptureCapabilities {
-            microphone: true,
-            ..CaptureCapabilities::default()
-        },
-        permissions: PermissionSnapshot {
-            microphone: Some(PermissionState::Denied),
-            ..PermissionSnapshot::default()
-        },
-        limitations: Vec::new(),
-        sources: vec![microphone.clone()],
-    };
-    let request = CaptureRequest {
-        project_id: ProjectId::new(),
-        screen: None,
-        system_audio: None,
-        microphone: Some(MicrophoneSelection {
-            source_id: microphone.id,
-            preferred_sample_rate: None,
-            preferred_channels: None,
-        }),
-        cursor: CursorSelection::Disabled,
-        recording: RecordingSettings::default(),
-        failure_policy: FailurePolicy::FailFast,
-    };
-    assert!(matches!(
-        validate_request(&request, &snapshot),
-        Err(capture::CaptureError::PermissionDenied(_))
     ));
 }

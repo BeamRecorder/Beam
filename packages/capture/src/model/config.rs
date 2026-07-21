@@ -39,14 +39,6 @@ pub enum SystemAudioSelection {
     ScreenCaptureMix,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MicrophoneSelection {
-    pub source_id: SourceId,
-    pub preferred_sample_rate: Option<u32>,
-    pub preferred_channels: Option<u16>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "mode",
@@ -108,7 +100,6 @@ pub struct CaptureRequest {
     pub project_id: ProjectId,
     pub screen: Option<ScreenSelection>,
     pub system_audio: Option<SystemAudioSelection>,
-    pub microphone: Option<MicrophoneSelection>,
     #[serde(default)]
     pub cursor: CursorSelection,
     #[serde(default)]

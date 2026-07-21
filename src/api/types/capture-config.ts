@@ -38,11 +38,6 @@ export interface CaptureConfig {
     mode: 'output-device'
     sourceId: string
   }
-  microphone: null | {
-    sourceId: string
-    preferredSampleRate: number | null
-    preferredChannels: number | null
-  }
   cursor: { mode: 'disabled' | 'embedded' } | {
     mode: 'separate'
     captureClicks: boolean

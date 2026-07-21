@@ -15,7 +15,7 @@ impl WavSegmentWriter {
             sample_rate,
             // PCM16 is understood by Windows media APIs, Chromium and common
             // editors.  Float WAV is valid, but some consumers decode it as
-            // integer PCM and turn a microphone track into white noise.
+            // integer PCM and turn an audio track into white noise.
             bits_per_sample: 16,
             sample_format: hound::SampleFormat::Int,
         };

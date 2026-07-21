@@ -10,10 +10,10 @@ cargo run -p capture --bin capture-engine
 cargo run -p capture --bin capture-smoke -- full
 ```
 
-`capture-smoke full --duration 10 --output recordings-smoke` opens every available native track and produces a complete project containing independent screen, system-audio, microphone and cursor sidecars. Individual modes (`screen`, `system-audio`, `mic`, `cursor`) remain available for hardware diagnosis.
+`capture-smoke full --duration 10 --output recordings-smoke` opens every available native track and produces a complete project containing independent screen, system-audio and cursor sidecars. Individual modes (`screen`, `system-audio`, `cursor`) remain available for hardware diagnosis.
 
 `capture-engine` reads JSONL on stdin and reserves stdout for JSONL responses. Logs and fatal diagnostics go to stderr. Hardware tests are ignored unless `hardware-tests` is explicitly enabled.
 
-Windows recording uses WGC H.264, WASAPI loopback, CPAL and Win32 cursor sampling. macOS uses ScreenCaptureKit for display/window/application video and system audio, CoreGraphics for cursor events, and CPAL for microphones. Webcams are captured by Chromium and stored by Electron as WebM sidecars. Direct ScreenCaptureKit MP4 recording requires macOS 15 or newer; source discovery and audio APIs remain based on the macOS 13 ScreenCaptureKit surface.
+Windows recording uses WGC H.264, WASAPI loopback and Win32 cursor sampling. macOS uses ScreenCaptureKit for display/window/application video and system audio, plus CoreGraphics for cursor events. Webcams and microphones are captured by Chromium and stored by Electron as WebM sidecars. Direct ScreenCaptureKit MP4 recording requires macOS 15 or newer; source discovery and audio APIs remain based on the macOS 13 ScreenCaptureKit surface.
 
 Linux builds with hardware features require ALSA, PipeWire, SPA and udev development packages. The CI workflow installs these packages.

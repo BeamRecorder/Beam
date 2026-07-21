@@ -13,8 +13,6 @@ pub struct CaptureCapabilities {
     pub cursor_clicks: bool,
     pub system_audio: bool,
     pub selectable_system_output: bool,
-    pub microphone: bool,
-    pub selectable_microphone: bool,
     pub hardware_h264: bool,
     pub hardware_hevc: bool,
 }

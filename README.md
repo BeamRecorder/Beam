@@ -64,7 +64,7 @@ This architecture ensures that your recording workflow is incredibly lightweight
 
 - **Windows**: Supported out of the box (requires Windows 10/11).
 - **macOS**: Supported out of the box (Intel & Apple Silicon).
-- **Linux**: Supported. Requires system dependencies for audio rendering. You must install the `cpal` native sound package dependencies:
+- **Linux**: Supported. System-audio rendering requires the native ALSA development headers and `pkg-config`:
   ```bash
   sudo apt update
   sudo apt install -y libasound2-dev pkg-config
