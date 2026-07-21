@@ -81,7 +81,7 @@ export default defineConfig({
     port: 6500,
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     environment: "jsdom",
     coverage: {
       provider: "v8",
