@@ -77,15 +77,25 @@ const selectedProject = computed(
     null,
 );
 
-const MIN_SKELETON_DURATION_MS = 180;
-const wait = (durationMs: number) =>
-  new Promise<void>((resolve) => window.setTimeout(resolve, durationMs));
+import { useProjectThumbnailGenerator } from "./useProjectThumbnailGenerator";
+
+const loadedVideoSrcs = ref<Record<string, boolean>>({});
+const hoveredProjectId = ref<string | null>(null);
+const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator();
+
+const generateThumbnailsForProjects = async (projectList: CaptureProject[]) => {
+  for (const project of projectList) {
+    if (project.previewSrc && !project.thumbnailSrc && !thumbnailCache[project.id]) {
+      void generateThumbnail(project.id, project.previewSrc);
+    }
+  }
+};
 
 const loadProjects = async () => {
-  const startedAt = performance.now();
   if (cachedProjects && cachedProjects.length > 0) {
     projects.value = [...cachedProjects];
     isLoading.value = false;
+    void generateThumbnailsForProjects(projects.value);
   } else {
     isLoading.value = true;
   }
@@ -99,16 +109,12 @@ const loadProjects = async () => {
     )
       ? props.currentProjectId
       : (projects.value[0]?.id ?? null);
+    void generateThumbnailsForProjects(projects.value);
   } catch (error) {
     if (!cachedProjects) projects.value = [];
     errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
-    if (isLoading.value) {
-      await wait(
-        Math.max(0, MIN_SKELETON_DURATION_MS - (performance.now() - startedAt)),
-      );
-      isLoading.value = false;
-    }
+    isLoading.value = false;
   }
 };
 
@@ -439,17 +445,34 @@ defineExpose({
               "
             >
               <template #default>
-                <div class="project-preview">
+                <div
+                  class="project-preview"
+                  @mouseenter="
+                    hoveredProjectId = project.id;
+                    handleMouseEnterVideo(project.id, $event);
+                  "
+                  @mouseleave="
+                    hoveredProjectId = null;
+                    handleMouseLeaveVideo(project.id, $event);
+                  "
+                >
                   <video
-                    v-if="project.previewSrc"
-                    :src="project.previewSrc"
+                    v-if="project.previewSrc && hoveredProjectId === project.id"
+                    :src="`${project.previewSrc}#t=0.1`"
+                    autoplay
                     muted
+                    loop
                     playsinline
-                    preload="none"
-                    @loadedmetadata="setPreviewFrame"
+                    preload="auto"
+                    class="project-preview-video is-loaded"
                     @timeupdate="handleVideoTimeUpdate(project.id, $event)"
-                    @mouseenter="handleMouseEnterVideo(project.id, $event)"
-                    @mouseleave="handleMouseLeaveVideo(project.id, $event)"
+                  />
+                  <img
+                    v-else-if="thumbnailCache[project.id] || project.thumbnailSrc"
+                    :src="thumbnailCache[project.id] || project.thumbnailSrc!"
+                    class="project-preview-thumb"
+                    alt="preview"
+                    loading="lazy"
                   />
                   <Film v-else class="preview-placeholder-icon" />
                   <span
@@ -863,15 +886,35 @@ defineExpose({
 
 .project-preview {
   position: relative;
+  width: 100%;
   height: 72px;
-  display: grid;
-  place-items: center;
+  background: var(--color-bg-surface);
   overflow: hidden;
-  background: var(
-    --color-bg-surface,
-    #18181b
-  ); /* Neutral dark gray/black background instead of blue */
-  flex-shrink: 0;
+}
+
+.project-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.project-preview-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.project-preview-video.is-loaded {
+  opacity: 1;
+}
+
+.project-preview-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
 }
 
 .project-preview video {

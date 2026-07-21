@@ -26,6 +26,7 @@ export interface CaptureProject {
   updatedAt: string
   sessionCount: number
   previewSrc: string | null
+  thumbnailSrc?: string | null
 }
 
 export interface CursorMoveEvent {

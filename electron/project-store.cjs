@@ -21,6 +21,14 @@ function createProjectStore(root) {
     fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
     fs.renameSync(`${target}.tmp`, target)
   }
+  const thumbnailFor = (directory) => {
+    const candidates = ['thumbnail.webp', 'thumbnail.png', 'thumbnail.jpg', 'thumbnail.jpeg']
+    for (const file of candidates) {
+      const target = path.join(directory, file)
+      if (fs.existsSync(target)) return pathToFileURL(target).href
+    }
+    return null
+  }
   const previewFor = (directory, sessions) => {
     for (const session of [...sessions].reverse()) {
       const sessionDirectory = safePath(directory, session.relativePath)
@@ -33,7 +41,15 @@ function createProjectStore(root) {
   const summary = (directory, manifest, fallbackId) => {
     const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
     const id = typeof manifest.projectId === 'string' ? manifest.projectId : fallbackId
-    return { id, name: typeof manifest.name === 'string' && manifest.name.trim() ? manifest.name.trim() : `Project ${id.slice(0, 8)}`, createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '', updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '', sessionCount: sessions.length, previewSrc: previewFor(directory, sessions) }
+    return {
+      id,
+      name: typeof manifest.name === 'string' && manifest.name.trim() ? manifest.name.trim() : `Project ${id.slice(0, 8)}`,
+      createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '',
+      updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '',
+      sessionCount: sessions.length,
+      previewSrc: previewFor(directory, sessions),
+      thumbnailSrc: thumbnailFor(directory),
+    }
   }
   const zoomState = (value) => {
     if (!value || !Array.isArray(value.elements) || !Array.isArray(value.generatedSessions)) throw new Error('État des zooms invalide')
@@ -97,6 +113,16 @@ function createProjectStore(root) {
     saveZoom: (id, zoom) => { const directory = directoryFor(id); const manifest = readManifest(directory); const state = zoomState(zoom); manifest.editor = { ...(manifest.editor || {}), zoom: state }; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return state },
     create: (options = {}) => { const id = randomUUID(); const now = new Date().toISOString(); const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id); fs.mkdirSync(root, { recursive: true }); const directory = directoryFor(id); fs.mkdirSync(directory); const manifest = { schemaVersion: 1, projectId: id, name, createdAtUtc: now, updatedAtUtc: now, sessions: [] }; writeManifest(directory, manifest); return summary(directory, manifest, id) },
     rename: (id, name) => { const directory = directoryFor(id); const manifest = readManifest(directory); const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''; if (!nextName) throw new Error('Le nom du projet ne peut pas être vide'); manifest.name = nextName; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return summary(directory, manifest, id) },
+    saveThumbnail: (id, dataUrl) => {
+      const directory = directoryFor(id);
+      if (!fs.existsSync(directory)) return null;
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null;
+      const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const targetPath = path.join(directory, 'thumbnail.webp');
+      fs.writeFileSync(targetPath, buffer);
+      return pathToFileURL(targetPath).href;
+    },
     delete: (id) => { const directory = directoryFor(id); if (!fs.existsSync(directory)) throw new Error('Projet introuvable'); fs.rmSync(directory, { recursive: true, force: false }) },
   }
 }

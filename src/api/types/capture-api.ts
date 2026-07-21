@@ -50,6 +50,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
   deleteProject(projectId: string): Promise<void>
+  saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>
   beginExport(options: { projectName: string; format: 'webm' | 'mp4' }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>
   finalizeExport(jobId: string): Promise<{ path: string }>

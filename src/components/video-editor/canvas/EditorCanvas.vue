@@ -9,7 +9,7 @@ import { zoomAtTime } from '../zoom/zoom-playback'
 import { createCursorFollowCameraState, updateCursorFollowCamera } from '../zoom/zoom-camera'
 import { createCameraVelocity, stepCameraSpring } from '../zoom/zoom-spring'
 import { ZOOM_DEPTH_SCALES, type ZoomElement } from '../zoom/zoom-types'
-import { svgAtRasterSize, useCursorReplacer } from '../composables/useCursorReplacer'
+import { useCursorReplacer } from '../composables/useCursorReplacer'
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -250,25 +250,9 @@ const loadCursorAssets = async () => {
   const shapes = props.editorData?.cursor.shapes ?? {}
   for (const [shapeId, shape] of Object.entries(shapes)) {
     try {
-      const response = await fetch(shape.src)
-      if (!response.ok) throw new Error(`Unable to load cursor shape: ${shape.src}`)
-      let svgContent = await response.text()
-      if (props.cursorColor !== '#000000') {
-        svgContent = svgContent
-          .replace(/fill="#000000"/gi, `fill="${props.cursorColor}"`)
-          .replace(/fill="#000"/gi, `fill="${props.cursorColor}"`)
-      }
-      const rasterSize = props.cursorSize * maxZoomScale * deviceScale.value
-      svgContent = svgAtRasterSize(svgContent, rasterSize)
-      const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
-      const url = URL.createObjectURL(svgBlob)
       const image = new Image()
-      image.onload = () => {
-        URL.revokeObjectURL(url)
-        cursorImages.set(shapeId, image)
-      }
-      image.onerror = () => URL.revokeObjectURL(url)
-      image.src = url
+      image.onload = () => { cursorImages.set(shapeId, image) }
+      image.src = shape.src
     } catch (err) {
       console.error('Failed to colorize shape SVG:', err)
       const image = new Image()
