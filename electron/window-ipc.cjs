@@ -15,6 +15,7 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   ipcMain.on('window:maximize', (event) => controllerForWindow(windowForEvent(event))?.maximize())
   ipcMain.on('window:unmaximize', (event) => controllerForWindow(windowForEvent(event))?.restore())
   ipcMain.on('window:toggleMaximize', (event) => controllerForWindow(windowForEvent(event))?.toggleMaximize())
+  ipcMain.on('window:present', (event) => controllerForWindow(windowForEvent(event))?.present())
   ipcMain.on('window:setPosition', (event, x, y) => windowForEvent(event)?.setPosition(Math.round(x), Math.round(y)))
   ipcMain.on('window:setSize', (event, width, height) => windowForEvent(event)?.setSize(Math.round(width), Math.round(height)))
   ipcMain.on('window:setSizeSmooth', (event, width, height) => {

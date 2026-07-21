@@ -3,6 +3,22 @@ import type { BackgroundMedia } from '../../video-editor/composables/backgroundM
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types'
 import type { CompositionSnapshot } from '../export-types'
 
+const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({
+  ...zoom,
+  focus: { ...zoom.focus },
+}))
+
+const copyCursor = (cursor: ProjectEditorData['cursor'] | undefined): CompositionSnapshot['cursor'] => {
+  if (!cursor) return { available: false, events: [], telemetry: [], shapes: {}, missing: [] }
+  return {
+    available: cursor.available,
+    events: cursor.events.map((event) => event.event === 'shape' ? { ...event, hotspot: { ...event.hotspot } } : { ...event }),
+    telemetry: cursor.telemetry.map((sample) => ({ ...sample })),
+    shapes: Object.fromEntries(Object.entries(cursor.shapes).map(([shapeId, asset]) => [shapeId, { ...asset, hotspot: { ...asset.hotspot } }])),
+    missing: [...cursor.missing],
+  }
+}
+
 export function createCompositionSnapshot(input: {
   videoSrc: string | null
   duration: number
@@ -21,8 +37,8 @@ export function createCompositionSnapshot(input: {
     duration: Math.max(0, input.duration),
     video: { src: input.videoSrc, width: Math.max(1, input.width), height: Math.max(1, input.height), fps: Math.max(1, input.fps), enabled: input.videoEnabled },
     background: input.background ? { kind: input.background.kind, src: input.background.path } : null,
-    zooms: structuredClone(input.zooms),
-    cursor: structuredClone(input.editorData?.cursor ?? { available: false, events: [], telemetry: [], shapes: {}, missing: [] }),
+    zooms: copyZooms(input.zooms),
+    cursor: copyCursor(input.editorData?.cursor),
     audio: (input.editorData?.tracks ?? []).flatMap((track) => {
       const enabled = track.kind === 'system-audio' ? input.systemAudioEnabled : track.kind === 'microphone' ? input.micAudioEnabled : false
       if (!enabled || !['system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') return []

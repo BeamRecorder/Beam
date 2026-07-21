@@ -3,6 +3,7 @@ import { nextTick, ref } from 'vue'
 import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
 import VideoEditor from './components/video-editor/VideoEditor.vue'
+import Button from './components/ui/button/Button.vue'
 
 import { capture } from './api/capture'
 import type { CaptureProject, ProjectEditorData } from './api/types/capture-api'
@@ -12,6 +13,7 @@ const currentVideoSrc = ref<string | null>(null)
 const currentProject = ref<CaptureProject | null>(null)
 const currentEditorData = ref<ProjectEditorData | null>(null)
 const isPreparingEditor = ref(false)
+const editorLoadError = ref('')
 const EDITOR_WINDOW_SIZE = { width: 1280, height: 800 }
 
 const wait = (durationMs: number) => new Promise<void>((resolve) => window.setTimeout(resolve, durationMs))
@@ -31,6 +33,7 @@ const setView = (view: 'hud' | 'editor') => {
 const revealEditor = async () => {
   capture.setWindowMode('editor')
   capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
+  capture.present()
   await wait(180)
   currentView.value = 'editor'
   await nextTick()
@@ -38,12 +41,14 @@ const revealEditor = async () => {
 }
 
 const handleStartRecording = () => {
+  editorLoadError.value = ''
   currentVideoSrc.value = null
   currentProject.value = null
   currentEditorData.value = null
 }
 
 const handleStopRecording = async (session: any) => {
+  editorLoadError.value = ''
   isPreparingEditor.value = true
   if (session && session.videoSrc) {
     currentVideoSrc.value = session.videoSrc
@@ -65,6 +70,7 @@ const handleStopRecording = async (session: any) => {
 
 const handleOpenProject = (project: CaptureProject) => {
   isPreparingEditor.value = true
+  editorLoadError.value = ''
   currentProject.value = project
   currentVideoSrc.value = project.previewSrc
   currentEditorData.value = null
@@ -76,8 +82,13 @@ const handleOpenProject = (project: CaptureProject) => {
     })
     .catch((error) => {
       isPreparingEditor.value = false
+      editorLoadError.value = error instanceof Error ? error.message : String(error)
       console.error('Failed to load project editor data:', error)
     })
+}
+
+const dismissEditorLoadError = () => {
+  editorLoadError.value = ''
 }
 </script>
 
@@ -85,7 +96,7 @@ const handleOpenProject = (project: CaptureProject) => {
   <div class="app-container">
     <!-- View Switcher -->
     <HUD 
-      v-show="currentView === 'hud' && !isPreparingEditor" 
+      v-show="currentView === 'hud' && !isPreparingEditor && !editorLoadError" 
       @start-recording="handleStartRecording"
       @stop-recording="handleStopRecording"
       @open-project="handleOpenProject"
@@ -97,6 +108,12 @@ const handleOpenProject = (project: CaptureProject) => {
         <p class="preparing-title">Preparing your editor</p>
         <p class="preparing-copy">Finalizing recording and loading your timeline…</p>
       </div>
+    </section>
+
+    <section v-else-if="editorLoadError" class="editor-load-error" role="alert">
+      <p class="editor-load-error-title">Unable to open this project</p>
+      <p>{{ editorLoadError }}</p>
+      <Button variant="secondary" size="sm" @click="dismissEditorLoadError">Back to projects</Button>
     </section>
 
     <Transition name="editor-reveal">
@@ -131,6 +148,24 @@ const handleOpenProject = (project: CaptureProject) => {
   gap: 14px;
   background: var(--color-bg-surface);
   color: var(--text-primary);
+}
+
+.editor-load-error {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: var(--color-bg-surface);
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.editor-load-error-title {
+  font-weight: 700;
 }
 
 .preparing-spinner {

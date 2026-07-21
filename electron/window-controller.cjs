@@ -41,6 +41,16 @@ class WindowController {
     else this.window.maximize()
   }
 
+  present() {
+    if (this.window.isDestroyed()) return
+    if (this.window.isMinimized()) this.window.restore()
+    if (this.mode === 'editor' && !this.window.isMaximized()) this.window.maximize()
+    this.window.show()
+    this.window.moveTop()
+    this.window.focus()
+    this.applyInteractionPolicy()
+  }
+
   applyModePolicy() {
     if (this.window.isDestroyed()) return
     const isHud = this.mode === 'hud'

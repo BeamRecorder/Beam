@@ -1,3 +1,4 @@
+import { reactive } from 'vue'
 import { describe, expect, it } from 'vitest'
 import { createCompositionSnapshot } from './snapshot'
 
@@ -13,6 +14,22 @@ describe('createCompositionSnapshot', () => {
     const zooms = [{ id: 'z', sessionId: 's', startMs: 0, endMs: 10, focus: { cx: .5, cy: .5 }, depth: 1 as const, mode: 'manual' as const }]
     const snapshot = createCompositionSnapshot({ ...base(), zooms }); zooms[0].focus.cx = .1
     expect(snapshot.zooms[0].focus.cx).toBe(.5)
+  })
+  it('copies reactive editor data without passing Vue proxies to structured clone', () => {
+    const editorData = reactive({
+      tracks: [],
+      cursor: {
+        available: true,
+        events: [{ event: 'shape' as const, sessionNs: 1, shapeId: 'arrow', hotspot: { x: 2, y: 3 } }],
+        telemetry: [{ timeMs: 1, cx: .2, cy: .3 }],
+        shapes: { arrow: { src: 'file:///arrow.png', hotspot: { x: 2, y: 3 } } },
+        missing: ['cursor.json'],
+      },
+    })
+    const snapshot = createCompositionSnapshot({ ...base(), editorData: editorData as never, zooms: reactive([{ id: 'z', sessionId: 's', startMs: 0, endMs: 10, focus: { cx: .5, cy: .5 }, depth: 1 as const, mode: 'manual' as const }]) })
+    editorData.cursor.events[0].hotspot.x = 9
+    expect(snapshot.cursor.events[0]).toMatchObject({ hotspot: { x: 2, y: 3 } })
+    expect(snapshot.zooms[0].focus).toEqual({ cx: .5, cy: .5 })
   })
   it('adds only complete and enabled audio assets', () => {
     const tracks = [

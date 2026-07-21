@@ -32,13 +32,13 @@
   --color-primary-border: rgba(255, 90, 31, 0.3);
 
   /* Backgrounds & Surfaces */
-  --color-bg-surface: #f5f5f7;
-  --color-bg-surface-hover: #e8e8ed;
+  --color-bg-surface: #f7f5f0;
+  --color-bg-surface-hover: #ebe8e0;
   --color-bg-element: #ffffff;
   
   /* Borders */
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  --color-border: #e6e3dc;
+  --color-border-strong: #d3cfc5;
   --color-border-dark: #334155;
 
   /* Track Colors */
@@ -55,7 +55,7 @@
   --text-primary: #1e1e1e;
   --text-secondary: #555555;
   --text-muted: #888888;
-  --text-light: #f5f5f7;
+  --text-light: #f7f5f0;
 
   /* Component Specific / Aliases */
   --accent: var(--color-primary);
@@ -74,11 +74,11 @@
   --font-sans: 'Stack Sans Text', system-ui, -apple-system, sans-serif;
   --font-headline: 'Stack Sans Headline', system-ui, -apple-system, sans-serif;
   
-  /* Shadow & Blur */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  /* Shadow & Blur (Claude-inspired soft ambient shadows) */
+  --shadow-sm: 0 1px 2px 0 rgba(22, 21, 18, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(22, 21, 18, 0.05), 0 2px 6px -1px rgba(22, 21, 18, 0.03);
+  --shadow-lg: 0 16px 32px -4px rgba(22, 21, 18, 0.08), 0 4px 16px -2px rgba(22, 21, 18, 0.04);
+  --shadow-xl: 0 24px 48px -6px rgba(22, 21, 18, 0.12), 0 8px 24px -4px rgba(22, 21, 18, 0.06);
   
   /* Radials */
   --radius-sm: 6px;
@@ -97,19 +97,25 @@
 
 :root.dark {
   /* Backgrounds & Surfaces */
-  --color-bg-surface: #18181a;      /* Moderated dark background */
-  --color-bg-surface-hover: #2e2e33; /* Softer hover state */
-  --color-bg-element: #232326;      /* Clean gray-dark panel surfaces */
+  --color-bg-surface: #161512;
+  --color-bg-surface-hover: #262420;
+  --color-bg-element: #201f1c;
 
   /* Borders */
-  --color-border: #2f2f34;          /* Soft border */
-  --color-border-strong: #3c3c43;   /* Noticeable borders for structure */
-  --color-border-dark: #3c3c43;
+  --color-border: #2e2c28;
+  --color-border-strong: #3d3a34;
+  --color-border-dark: #3d3a34;
 
   /* Texts */
-  --text-primary: #f4f4f5;          /* Crisp off-white */
-  --text-secondary: #a1a1aa;        /* zinc-400 */
-  --text-muted: #71717a;            /* zinc-500 */
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+
+  /* Shadows (Claude-inspired warm dark shadows) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.3), 0 2px 6px -1px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 16px 32px -4px rgba(0, 0, 0, 0.42), 0 4px 16px -2px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0 24px 48px -6px rgba(0, 0, 0, 0.52), 0 8px 24px -4px rgba(0, 0, 0, 0.35);
 
   /* Component Specific / Aliases */
   --surface: var(--color-bg-surface);

@@ -21,6 +21,9 @@ function createWindow() {
   const controller = new WindowController(win)
   controllers.set(win, controller)
   win.once('ready-to-show', () => controller.markReadyToShow())
+  if (!app.isPackaged) {
+    win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }))
+  }
   if (app.isPackaged) win.loadFile(path.join(applicationRoot, 'dist/index.html'))
   else win.loadURL('http://localhost:6500')
   return win

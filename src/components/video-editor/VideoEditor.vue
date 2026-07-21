@@ -1,40 +1,46 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
-import SidebarPanel from './sidebar/SidebarPanel.vue'
-import PropertiesPanel from './properties/PropertiesPanel.vue'
-import EditorCanvas from './canvas/EditorCanvas.vue'
-import EditorTimeline from './timeline/EditorTimeline.vue'
-import Button from '~/ui/button/Button.vue'
-import VideoProjectEdition from './VideoProjectEdition.vue'
-import ExportPopover from '../export/ExportPopover.vue'
-import { createCompositionSnapshot } from '../export/composition/snapshot'
-import { ArrowLeft, Minus, X } from '@lucide/vue'
+import { computed, ref, onMounted, watch } from "vue";
+import SidebarPanel from "./sidebar/SidebarPanel.vue";
+import PropertiesPanel from "./properties/PropertiesPanel.vue";
+import EditorCanvas from "./canvas/EditorCanvas.vue";
+import EditorTimeline from "./timeline/EditorTimeline.vue";
+import Button from "~/ui/button/Button.vue";
+import VideoProjectEdition from "./VideoProjectEdition.vue";
+import ExportPopover from "../export/ExportPopover.vue";
+import { createCompositionSnapshot } from "../export/composition/snapshot";
+import { ArrowLeft, Minus, X } from "@lucide/vue";
 
-import { useVideoPlayer } from './composables/useVideoPlayer'
-import { useCursorReplacer } from './composables/useCursorReplacer'
+import { useVideoPlayer } from "./composables/useVideoPlayer";
+import { useCursorReplacer } from "./composables/useCursorReplacer";
 
 const props = withDefaults(
   defineProps<{
-    videoSrc?: string | null
-    project?: CaptureProject | null
-    editorData?: ProjectEditorData | null
+    videoSrc?: string | null;
+    project?: CaptureProject | null;
+    editorData?: ProjectEditorData | null;
   }>(),
   {
     videoSrc: null,
     project: null,
     editorData: null,
-  }
-)
+  },
+);
 
-import { capture } from '../../api/capture'
-import type { CaptureProject, ProjectEditorData } from '../../api/types/capture-api'
-import type { ZoomElement } from './zoom/zoom-types'
-import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from './zoom/zoom-suggestions'
+import { capture } from "../../api/capture";
+import type {
+  CaptureProject,
+  ProjectEditorData,
+} from "../../api/types/capture-api";
+import type { ZoomElement } from "./zoom/zoom-types";
+import {
+  buildAutomaticZoomElements,
+  ZOOM_ALGORITHM_VERSION,
+} from "./zoom/zoom-suggestions";
 
 const emit = defineEmits<{
-  (event: 'back-to-hud'): void
-  (event: 'open-project', project: CaptureProject): void
-}>()
+  (event: "back-to-hud"): void;
+  (event: "open-project", project: CaptureProject): void;
+}>();
 
 // Load composables
 const {
@@ -50,7 +56,7 @@ const {
   isVideoEnabled,
   isSystemAudioEnabled,
   isMicAudioEnabled,
-} = useVideoPlayer()
+} = useVideoPlayer();
 
 const {
   selectedCursor,
@@ -62,122 +68,202 @@ const {
   shadowColor,
   rippleColor,
   rippleSize,
-} = useCursorReplacer()
+} = useCursorReplacer();
 
-const activeTab = ref('cursor')
-const zoomElements = ref<ZoomElement[]>([])
-const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([])
-const selectedZoomId = ref<string | null>(null)
-const selectedZoom = computed(() => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null)
-const canGenerateZooms = computed(() => Boolean(props.project && props.editorData?.cursor.available && props.editorData.sessionId))
-const hasAutomaticZooms = computed(() => zoomElements.value.some((element) => element.mode === 'auto'))
-const sourceSize = ref({ width: 1920, height: 1080 })
+const activeTab = ref("cursor");
+const zoomElements = ref<ZoomElement[]>([]);
+const generatedSessions = ref<ProjectEditorData["zoom"]["generatedSessions"]>(
+  [],
+);
+const selectedZoomId = ref<string | null>(null);
+const selectedZoom = computed(
+  () =>
+    zoomElements.value.find((element) => element.id === selectedZoomId.value) ??
+    null,
+);
+const canGenerateZooms = computed(() =>
+  Boolean(
+    props.project &&
+    props.editorData?.cursor.available &&
+    props.editorData.sessionId,
+  ),
+);
+const hasAutomaticZooms = computed(() =>
+  zoomElements.value.some((element) => element.mode === "auto"),
+);
+const sourceSize = ref({ width: 1920, height: 1080 });
 const sourceFps = computed(() => {
-  const screen = props.editorData?.tracks.find((track) => track.kind === 'screen')
-  const value = screen?.format.frameRate ?? screen?.format.fps
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 30
-})
+  const screen = props.editorData?.tracks.find(
+    (track) => track.kind === "screen",
+  );
+  const value = screen?.format.frameRate ?? screen?.format.fps;
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : 30;
+});
 const exportRequest = computed(() => {
-  const source = props.editorData?.videoSrc || playerVideoSrc.value
-  if (!source) return null
+  const source = props.editorData?.videoSrc || playerVideoSrc.value;
+  if (!source) return null;
   return {
-    projectName: props.project?.name || 'DemoRecorder export',
-    snapshot: createCompositionSnapshot({ videoSrc: source, duration: duration.value, width: sourceSize.value.width, height: sourceSize.value.height, fps: sourceFps.value, videoEnabled: isVideoEnabled.value, background: selectedBackgroundMedia.value, editorData: props.editorData, zooms: zoomElements.value, systemAudioEnabled: isSystemAudioEnabled.value, micAudioEnabled: isMicAudioEnabled.value }),
-  }
-})
+    projectName: props.project?.name || "DemoRecorder export",
+    snapshot: createCompositionSnapshot({
+      videoSrc: source,
+      duration: duration.value,
+      width: sourceSize.value.width,
+      height: sourceSize.value.height,
+      fps: sourceFps.value,
+      videoEnabled: isVideoEnabled.value,
+      background: selectedBackgroundMedia.value,
+      editorData: props.editorData,
+      zooms: zoomElements.value,
+      systemAudioEnabled: isSystemAudioEnabled.value,
+      micAudioEnabled: isMicAudioEnabled.value,
+    }),
+  };
+});
 
-watch(() => props.editorData, (data) => {
-  zoomElements.value = data?.zoom.elements ?? []
-  generatedSessions.value = data?.zoom.generatedSessions ?? []
-  selectedZoomId.value = null
-}, { immediate: true })
+watch(
+  () => props.editorData,
+  (data) => {
+    zoomElements.value = data?.zoom.elements ?? [];
+    generatedSessions.value = data?.zoom.generatedSessions ?? [];
+    selectedZoomId.value = null;
+  },
+  { immediate: true },
+);
 
 const saveZoomState = async () => {
-  if (!props.project) return
+  if (!props.project) return;
   const zoom = await capture.saveProjectZoomState(props.project.id, {
     elements: JSON.parse(JSON.stringify(zoomElements.value)),
     generatedSessions: JSON.parse(JSON.stringify(generatedSessions.value)),
-  })
-  zoomElements.value = zoom.elements
-  generatedSessions.value = zoom.generatedSessions
-}
+  });
+  zoomElements.value = zoom.elements;
+  generatedSessions.value = zoom.generatedSessions;
+};
 
 const generateZooms = async (automatic = false) => {
-  const data = props.editorData
-  if (!data || !props.project || !data.cursor.available) return
-  const durationMs = data.manifest.durationNs / 1_000_000
-  const generated = buildAutomaticZoomElements({ telemetry: data.cursor.telemetry, sessionId: data.sessionId, durationMs, reserved: zoomElements.value.filter((element) => element.mode === 'manual') })
+  const data = props.editorData;
+  if (!data || !props.project || !data.cursor.available) return;
+  const durationMs = data.manifest.durationNs / 1_000_000;
+  const generated = buildAutomaticZoomElements({
+    telemetry: data.cursor.telemetry,
+    sessionId: data.sessionId,
+    durationMs,
+    reserved: zoomElements.value.filter((element) => element.mode === "manual"),
+  });
   zoomElements.value = [
-    ...zoomElements.value.filter((element) => element.sessionId !== data.sessionId || element.mode !== 'auto'),
+    ...zoomElements.value.filter(
+      (element) =>
+        element.sessionId !== data.sessionId || element.mode !== "auto",
+    ),
     ...generated,
-  ]
+  ];
   generatedSessions.value = [
-    ...generatedSessions.value.filter((record) => record.sessionId !== data.sessionId),
-    { sessionId: data.sessionId, algorithmVersion: ZOOM_ALGORITHM_VERSION, generatedAt: new Date().toISOString() },
-  ]
-  selectedZoomId.value = generated[0]?.id ?? null
-  await saveZoomState()
-  if (automatic) activeTab.value = 'zoom'
-}
+    ...generatedSessions.value.filter(
+      (record) => record.sessionId !== data.sessionId,
+    ),
+    {
+      sessionId: data.sessionId,
+      algorithmVersion: ZOOM_ALGORITHM_VERSION,
+      generatedAt: new Date().toISOString(),
+    },
+  ];
+  selectedZoomId.value = generated[0]?.id ?? null;
+  await saveZoomState();
+  if (automatic) activeTab.value = "zoom";
+};
 
-watch(() => props.editorData?.sessionId, (sessionId) => {
-  if (!sessionId || !props.editorData || generatedSessions.value.some(
-    (record) => record.sessionId === sessionId && record.algorithmVersion >= ZOOM_ALGORITHM_VERSION,
-  )) return
-  void generateZooms(true).catch((error) => console.error('Failed to generate zooms:', error))
-}, { immediate: true })
+watch(
+  () => props.editorData?.sessionId,
+  (sessionId) => {
+    if (
+      !sessionId ||
+      !props.editorData ||
+      generatedSessions.value.some(
+        (record) =>
+          record.sessionId === sessionId &&
+          record.algorithmVersion >= ZOOM_ALGORITHM_VERSION,
+      )
+    )
+      return;
+    void generateZooms(true).catch((error) =>
+      console.error("Failed to generate zooms:", error),
+    );
+  },
+  { immediate: true },
+);
 
 const updateZoom = (next: ZoomElement) => {
-  if (next.startMs < 0 || next.endMs <= next.startMs) return
-  zoomElements.value = zoomElements.value.map((element) => element.id === next.id ? next : element)
-  void saveZoomState().catch((error) => console.error('Failed to save zoom:', error))
-}
+  if (next.startMs < 0 || next.endMs <= next.startMs) return;
+  zoomElements.value = zoomElements.value.map((element) =>
+    element.id === next.id ? next : element,
+  );
+  void saveZoomState().catch((error) =>
+    console.error("Failed to save zoom:", error),
+  );
+};
 
 const deleteSelectedZoom = () => {
-  if (!selectedZoomId.value) return
-  zoomElements.value = zoomElements.value.filter((element) => element.id !== selectedZoomId.value)
-  selectedZoomId.value = null
-  void saveZoomState().catch((error) => console.error('Failed to delete zoom:', error))
-}
+  if (!selectedZoomId.value) return;
+  zoomElements.value = zoomElements.value.filter(
+    (element) => element.id !== selectedZoomId.value,
+  );
+  selectedZoomId.value = null;
+  void saveZoomState().catch((error) =>
+    console.error("Failed to delete zoom:", error),
+  );
+};
 
 const handleSelectTab = (tab: string) => {
-  activeTab.value = tab
-}
+  activeTab.value = tab;
+};
 
 const closeApp = () => {
-  capture.close()
-}
+  capture.close();
+};
 
 const minimizeApp = () => {
-  capture.minimize()
-}
+  capture.minimize();
+};
 
 const handleExit = () => {
-  capture.setWindowMode('hud')
-  emit('back-to-hud')
-}
+  capture.setWindowMode("hud");
+  emit("back-to-hud");
+};
 
 onMounted(() => {
-  playerVideoSrc.value = props.videoSrc ?? ''
-  capture.setWindowMode('editor')
-  capture.maximize()
-})
+  playerVideoSrc.value = props.videoSrc ?? "";
+  capture.setWindowMode("editor");
+  capture.maximize();
+});
 
-watch(() => props.videoSrc, (videoSrc) => {
-  playerVideoSrc.value = videoSrc ?? ''
-})
+watch(
+  () => props.videoSrc,
+  (videoSrc) => {
+    playerVideoSrc.value = videoSrc ?? "";
+  },
+);
 
-watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
-  if (!source) return
-  const video = document.createElement('video')
-  video.preload = 'metadata'
-  video.onloadedmetadata = () => {
-    if (video.videoWidth > 0 && video.videoHeight > 0) sourceSize.value = { width: video.videoWidth, height: video.videoHeight }
-    video.removeAttribute('src'); video.load()
-  }
-  video.src = source
-}, { immediate: true })
-
+watch(
+  () => props.editorData?.videoSrc || playerVideoSrc.value,
+  (source) => {
+    if (!source) return;
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0)
+        sourceSize.value = {
+          width: video.videoWidth,
+          height: video.videoHeight,
+        };
+      video.removeAttribute("src");
+      video.load();
+    };
+    video.src = source;
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -185,19 +271,37 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
     <!-- Window Titlebar / Header -->
     <header class="editor-titlebar" @dblclick="capture.toggleMaximize()">
       <div class="left-actions">
-        <Button variant="ghost" size="sm" :icon="ArrowLeft" @click="handleExit" class="exit-btn titlebar-btn">
+        <Button
+          variant="ghost"
+          size="sm"
+          :icon="ArrowLeft"
+          @click="handleExit"
+          class="exit-btn titlebar-btn"
+        >
           Exit to HUD
         </Button>
-        <VideoProjectEdition :project="project" @open-project="emit('open-project', $event)" @dblclick.stop="capture.toggleMaximize()" />
+        <VideoProjectEdition
+          :project="project"
+          @open-project="emit('open-project', $event)"
+          @dblclick.stop="capture.toggleMaximize()"
+        />
       </div>
 
       <div class="right-actions">
         <ExportPopover v-if="exportRequest" :request="exportRequest" />
         <div class="window-controls">
-          <button aria-label="Minimize" class="titlebar-btn control-btn" @click="minimizeApp">
+          <button
+            aria-label="Minimize"
+            class="titlebar-btn control-btn"
+            @click="minimizeApp"
+          >
             <Minus class="btn-icon" />
           </button>
-          <button aria-label="Close" class="titlebar-btn control-btn close-btn" @click="closeApp">
+          <button
+            aria-label="Close"
+            class="titlebar-btn control-btn close-btn"
+            @click="closeApp"
+          >
             <X class="btn-icon" />
           </button>
         </div>
@@ -209,15 +313,11 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
       <!-- Upper Section: Sidebar, Properties, Canvas -->
       <div class="workspace-upper">
         <!-- Sidebar Island -->
-        <SidebarPanel 
-          :active-tab="activeTab" 
-          @select-tab="handleSelectTab" 
-        />
+        <SidebarPanel :active-tab="activeTab" @select-tab="handleSelectTab" />
 
         <!-- Properties Island -->
-        <PropertiesPanel 
+        <PropertiesPanel
           :active-tab="activeTab"
-          
           v-model:selectedCursor="selectedCursor"
           v-model:cursorSize="cursorSize"
           v-model:cursorColor="cursorColor"
@@ -227,7 +327,6 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
           v-model:shadowColor="shadowColor"
           v-model:rippleColor="rippleColor"
           v-model:rippleSize="rippleSize"
-          
           v-model:volume="volume"
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
@@ -244,11 +343,10 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
         />
 
         <!-- Canvas/Player Island -->
-        <EditorCanvas 
+        <EditorCanvas
           v-model:isPlaying="isPlaying"
           v-model:currentTime="currentTime"
           :duration="duration"
-          
           :selected-cursor="selectedCursor"
           :cursor-size="cursorSize"
           :cursor-color="cursorColor"
@@ -258,7 +356,6 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
           :shadow-color="shadowColor"
           :ripple-color="rippleColor"
           :ripple-size="rippleSize"
-          
           :is-video-enabled="isVideoEnabled"
           :selected-background="selectedBackgroundMedia"
           :video-src="playerVideoSrc || ''"
@@ -272,23 +369,24 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
 
       <!-- Lower Section: Timeline (Full width) -->
       <div class="workspace-lower">
-        <EditorTimeline 
+        <EditorTimeline
           v-model:currentTime="currentTime"
           v-model:isPlaying="isPlaying"
           :duration="duration"
           :video-src="playerVideoSrc"
           :editor-data="editorData"
-          
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
           :zoom-elements="zoomElements"
           :selected-zoom-id="selectedZoomId"
-          @select:zoom="selectedZoomId = $event; activeTab = 'zoom'"
+          @select:zoom="
+            selectedZoomId = $event;
+            activeTab = 'zoom';
+          "
         />
       </div>
     </div>
-
   </div>
 </template>
 
@@ -296,11 +394,31 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
 .editor-page {
   width: 100vw;
   height: 100vh;
-  background: #09090b; /* Deep dark background */
+  /* Claude-inspired warm cream light theme background with a subtle grid pattern and soft warm gradient */
+  background-color: var(--color-bg-surface);
+  background-image: 
+    /* Dotted grid pattern */
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    /* Soft warm ambient amber glow at the top center/left */
+    radial-gradient(circle at 30% 0%, rgba(255, 90, 31, 0.06) 0%, rgba(255, 90, 31, 0) 50%);
+  background-size: 24px 24px, 100% 100%;
   display: flex;
   flex-direction: column;
   color: var(--text-primary);
   overflow: hidden;
+  transition: background-color 0.3s ease;
+}
+
+:global(.dark) .editor-page {
+  /* Claude-inspired warm dark theme background */
+  background-color: var(--color-bg-surface);
+  background-image: 
+    /* Dotted grid pattern */
+    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    /* Soft warm ambient amber glow */
+    radial-gradient(circle at 30% 0%, rgba(255, 90, 31, 0.07) 0%, rgba(255, 90, 31, 0) 50%),
+    /* Soft dark vignette */
+    radial-gradient(circle at 50% 50%, rgba(22, 21, 18, 0) 50%, rgba(13, 12, 10, 0.6) 100%);
 }
 
 .editor-titlebar {
@@ -315,7 +433,8 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
   flex-shrink: 0;
 }
 
-.left-actions, .right-actions {
+.left-actions,
+.right-actions {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -330,8 +449,6 @@ watch(() => props.editorData?.videoSrc || playerVideoSrc.value, (source) => {
 .exit-btn {
   margin-right: 4px;
 }
-
-
 
 .right-actions {
   gap: 0; /* No gap so window-controls is flush */
