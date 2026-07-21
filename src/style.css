@@ -242,9 +242,8 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(255, 255, 255, 0.16);
 }
 
-::-webkit-scrollbar-thumb:hover,
-:root.dark ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary, #ff5a1f);
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary, #ff5a1f) !important;
 }
 
 /* Default Input and Select background overrides */
