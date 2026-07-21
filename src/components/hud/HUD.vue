@@ -7,15 +7,12 @@ import Select from '~/ui/select/Select.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import WindowSelect from '~/ui/select/WindowSelect.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
-import Switch from '~/ui/switch/Switch.vue'
 import ProjectPicker from './ProjectPicker.vue'
 import TopbarHUD from './TopbarHUD.vue'
-import { Monitor, Layout, ArrowUpRight, Sun, Moon, Volume2, VolumeX, Mic, MicOff, Video, VideoOff } from '@lucide/vue'
-import { useThemeStore } from '~/stores/theme'
+import HudPreferences from './HudPreferences.vue'
+import { Monitor, Layout, ArrowUpRight, Volume2, VolumeX, Mic, MicOff, Video, VideoOff } from '@lucide/vue'
 
 const emit = defineEmits(['start-recording', 'stop-recording', 'open-project'])
-
-const themeStore = useThemeStore()
 
 // Window state
 const activeTab = ref<'screen' | 'window'>('screen')
@@ -327,81 +324,15 @@ const openProject = (project: CaptureProject) => {
         @toggle-popover="handleDropdownToggle"
       />
 
-      <!-- Settings Overlay View -->
-      <div v-else-if="showSettings" key="settings" class="settings-body">
-      <div class="settings-list">
-        <div class="settings-item">
-          <div class="item-label-group">
-            <span class="item-title">Shortcuts</span>
-            <span class="item-desc">Alt + Shift + R to record</span>
-          </div>
-        </div>
-        <div class="settings-item">
-          <div class="item-label-group">
-            <span class="item-title">High Quality</span>
-            <span class="item-desc">Record in 60fps HD</span>
-          </div>
-          <div style="-webkit-app-region: no-drag;">
-            <Switch v-model="recordHighQuality" />
-          </div>
-        </div>
-        <div class="settings-item">
-          <div class="item-label-group">
-            <span class="item-title">Countdown</span>
-            <span class="item-desc">Select delay before start</span>
-          </div>
-          <div style="width: 80px; -webkit-app-region: no-drag;">
-            <Select 
-              v-model="countdownSeconds"
-              :options="[
-                { value: 0, label: 'Off' },
-                { value: 3, label: '3s' },
-                { value: 5, label: '5s' },
-                { value: 10, label: '10s' }
-              ]"
-              direction="up"
-            />
-          </div>
-        </div>
-        <div class="settings-item">
-          <div class="item-label-group">
-            <span class="item-title">Theme</span>
-            <span class="item-desc">Choose color mode</span>
-          </div>
-          <ButtonGroup style="width: auto; max-width: 140px; -webkit-app-region: no-drag;">
-            <Button 
-              :class="{ active: themeStore.theme === 'light' }"
-              variant="tab"
-              size="sm"
-              @click="themeStore.theme = 'light'"
-            >
-              <template #icon><Sun class="btn-icon" /></template>
-            </Button>
-            <Button 
-              :class="{ active: themeStore.theme === 'dark' }"
-              variant="tab"
-              size="sm"
-              @click="themeStore.theme = 'dark'"
-            >
-              <template #icon><Moon class="btn-icon" /></template>
-            </Button>
-            <Button 
-              :class="{ active: themeStore.theme === 'system' }"
-              variant="tab"
-              size="sm"
-              @click="themeStore.theme = 'system'"
-            >
-              <template #icon><Monitor class="btn-icon" /></template>
-            </Button>
-          </ButtonGroup>
-        </div>
-      </div>
-      <div class="settings-footer">
-        <Button variant="primary" size="md" class="return-btn" @click="showSettings = false">
-          Return to HUD
-        </Button>
-      </div>
-      </div>
+      <HudPreferences
+        v-else-if="showSettings"
+        key="settings"
+        :record-high-quality="recordHighQuality"
+        :countdown-seconds="countdownSeconds"
+        @update:record-high-quality="recordHighQuality = $event"
+        @update:countdown-seconds="countdownSeconds = $event"
+        @close="showSettings = false"
+      />
 
       <!-- Main HUD Form -->
       <div v-else key="hud" class="hud-body">

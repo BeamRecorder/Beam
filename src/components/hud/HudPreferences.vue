@@ -1,0 +1,98 @@
+<script setup lang="ts">
+import { Monitor, Moon, Sun } from '@lucide/vue'
+import { useThemeStore } from '~/stores/theme'
+import Button from '~/ui/button/Button.vue'
+import ButtonGroup from '~/ui/button/ButtonGroup.vue'
+import Select from '~/ui/select/Select.vue'
+import Switch from '~/ui/switch/Switch.vue'
+
+defineProps<{
+  recordHighQuality: boolean
+  countdownSeconds: number
+}>()
+
+const emit = defineEmits<{
+  (event: 'update:recordHighQuality', value: boolean): void
+  (event: 'update:countdownSeconds', value: number): void
+  (event: 'close'): void
+}>()
+
+const themeStore = useThemeStore()
+const countdownOptions = [
+  { value: 0, label: 'Off' },
+  { value: 3, label: '3s' },
+  { value: 5, label: '5s' },
+  { value: 10, label: '10s' },
+]
+</script>
+
+<template>
+  <section class="preferences" aria-label="Preferences">
+    <div class="preferences-list">
+      <div class="preference-item">
+        <div>
+          <p class="preference-title">Shortcuts</p>
+          <p class="preference-description">Alt + Shift + R to record</p>
+        </div>
+      </div>
+
+      <div class="preference-item">
+        <div>
+          <p class="preference-title">High Quality</p>
+          <p class="preference-description">Record in 60fps HD</p>
+        </div>
+        <Switch
+          :model-value="recordHighQuality"
+          @update:model-value="emit('update:recordHighQuality', $event)"
+        />
+      </div>
+
+      <div class="preference-item">
+        <div>
+          <p class="preference-title">Countdown</p>
+          <p class="preference-description">Select delay before start</p>
+        </div>
+        <div class="countdown-select">
+          <Select
+            :model-value="countdownSeconds"
+            :options="countdownOptions"
+            direction="up"
+            @update:model-value="emit('update:countdownSeconds', $event)"
+          />
+        </div>
+      </div>
+
+      <div class="preference-item">
+        <div>
+          <p class="preference-title">Theme</p>
+          <p class="preference-description">Choose color mode</p>
+        </div>
+        <ButtonGroup class="theme-controls">
+          <Button :class="{ active: themeStore.theme === 'light' }" variant="tab" size="sm" @click="themeStore.theme = 'light'">
+            <template #icon><Sun class="button-icon" /></template>
+          </Button>
+          <Button :class="{ active: themeStore.theme === 'dark' }" variant="tab" size="sm" @click="themeStore.theme = 'dark'">
+            <template #icon><Moon class="button-icon" /></template>
+          </Button>
+          <Button :class="{ active: themeStore.theme === 'system' }" variant="tab" size="sm" @click="themeStore.theme = 'system'">
+            <template #icon><Monitor class="button-icon" /></template>
+          </Button>
+        </ButtonGroup>
+      </div>
+    </div>
+
+    <Button variant="primary" size="md" block @click="emit('close')">Return to HUD</Button>
+  </section>
+</template>
+
+<style scoped>
+.preferences { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+.preferences-list { display: flex; flex: 1; flex-direction: column; gap: 10px; }
+.preference-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--color-bg-element); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.preference-title, .preference-description { margin: 0; }
+.preference-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.preference-description { margin-top: 2px; font-size: 11px; color: var(--text-muted); }
+.countdown-select { width: 80px; }
+.theme-controls { width: auto; max-width: 140px; }
+.button-icon { width: 16px; height: 16px; }
+</style>
