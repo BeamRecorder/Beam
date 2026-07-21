@@ -2,7 +2,6 @@
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
-import CameraOverlayApp from './components/hud/CameraOverlayApp.vue'
 import CameraShadowApp from './components/hud/CameraShadowApp.vue'
 import Button from './components/ui/button/Button.vue'
 import RecorderBar from './components/hud/recorder/RecorderBar.vue'
@@ -41,6 +40,7 @@ const currentView = ref<'hud' | 'recorder' | 'editor'>('hud')
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay')
 const isCameraShadow = new URLSearchParams(window.location.search).has('cameraShadow')
 const isCountdownOverlay = new URLSearchParams(window.location.search).has('countdown')
+const CameraOverlayApp = defineAsyncComponent(() => import('./components/hud/CameraOverlayApp.vue'))
 const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))
 const currentVideoSrc = ref<string | null>(null)
 const currentProject = ref<CaptureProject | null>(null)

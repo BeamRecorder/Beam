@@ -37,6 +37,15 @@ export const useThemeStore = defineStore('theme', () => {
     }
   })
 
+  // The camera overlay is a separate Electron renderer. Sync a preference
+  // changed in the main window immediately instead of waiting for reload.
+  window.addEventListener('storage', (event) => {
+    if (event.key !== 'theme') return
+    if (event.newValue === 'light' || event.newValue === 'dark' || event.newValue === 'system') {
+      theme.value = event.newValue
+    }
+  })
+
   return {
     theme,
     applyTheme,
