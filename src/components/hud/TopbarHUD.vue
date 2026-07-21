@@ -29,16 +29,16 @@ const emit = defineEmits<{
 <template>
   <header class="hud-topbar">
     <div class="topbar-identity">
-      <Button
-        v-if="showBack"
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="ChevronLeft"
-        aria-label="Back"
-        class="topbar-back"
-        @click="emit('back')"
-      />
+      <div v-if="showBack" class="topbar-back-action">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="ChevronLeft"
+          aria-label="Back"
+          @click="emit('back')"
+        />
+      </div>
       <img
         v-else
         src="/brand/DemoRecorderIcon.webp"
@@ -49,15 +49,15 @@ const emit = defineEmits<{
       <Badge v-if="isRecording" variant="error" class="rec-badge">REC</Badge>
     </div>
 
-    <div class="window-actions" @mousedown.stop>
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="Minus"
+    <div class="window-actions">
+      <button
+        type="button"
+        class="window-action"
         aria-label="Minimize"
         @click="emit('minimize')"
-      />
+      >
+        <Minus :size="16" />
+      </button>
       <Button
         v-if="showSettings"
         variant="ghost"
@@ -67,15 +67,14 @@ const emit = defineEmits<{
         aria-label="Preferences"
         @click="emit('open-settings')"
       />
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="X"
+      <button
+        type="button"
+        class="window-action close-button"
         aria-label="Close"
-        class="close-button"
         @click="emit('close')"
-      />
+      >
+        <X :size="16" />
+      </button>
     </div>
   </header>
 </template>
@@ -105,7 +104,7 @@ const emit = defineEmits<{
   gap: 4px;
   -webkit-app-region: no-drag;
 }
-.topbar-back {
+.topbar-back-action {
   -webkit-app-region: no-drag;
 }
 .brand-logo {
@@ -126,16 +125,38 @@ const emit = defineEmits<{
   padding: 1px 5px;
   user-select: none;
 }
-.window-actions :deep(.btn) {
-  padding: 0;
+.window-action {
   width: 32px;
   height: 32px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.window-action:hover {
+  background: var(--color-bg-surface-hover);
+}
+.window-action:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 .close-button:hover {
-  color: var(--color-error) !important;
+  background: var(--color-error) !important;
+  color: white !important;
+}
+.topbar-back-action :deep(.btn) {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+.topbar-back-action :deep(.btn:hover) {
+  background: var(--color-bg-surface-hover);
 }
 </style>

@@ -57,7 +57,8 @@
       "output": "dist_electron"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "public/brand/DemoRecorderIcon.ico"
     }
   }
 }
