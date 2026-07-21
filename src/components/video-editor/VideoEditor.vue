@@ -4,11 +4,8 @@ import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
 import EditorCanvas from "./canvas/EditorCanvas.vue";
 import EditorTimeline from "./timeline/EditorTimeline.vue";
-import Button from "~/ui/button/Button.vue";
-import VideoProjectEdition from "./VideoProjectEdition.vue";
-import ExportPopover from "../export/ExportPopover.vue";
 import { createCompositionSnapshot } from "../export/composition/snapshot";
-import { ArrowLeft, Minus, X } from "@lucide/vue";
+import Topbar from "./Topbar.vue";
 
 import { useVideoPlayer } from "./composables/useVideoPlayer";
 import { useCursorReplacer } from "./composables/useCursorReplacer";
@@ -101,13 +98,12 @@ const sourceFps = computed(() => {
     ? value
     : 30;
 });
+
 const exportRequest = computed(() => {
-  const source = props.editorData?.videoSrc || playerVideoSrc.value;
-  if (!source) return null;
-  return {
-    projectName: props.project?.name || "DemoRecorder export",
-    snapshot: createCompositionSnapshot({
-      videoSrc: source,
+  if (!props.project || !playerVideoSrc.value) return null;
+  try {
+    const snapshot = createCompositionSnapshot({
+      videoSrc: playerVideoSrc.value,
       duration: duration.value,
       width: sourceSize.value.width,
       height: sourceSize.value.height,
@@ -118,8 +114,14 @@ const exportRequest = computed(() => {
       zooms: zoomElements.value,
       systemAudioEnabled: isSystemAudioEnabled.value,
       micAudioEnabled: isMicAudioEnabled.value,
-    }),
-  };
+    });
+    return {
+      projectName: props.project.name,
+      snapshot,
+    };
+  } catch (e) {
+    return null;
+  }
 });
 
 watch(
@@ -219,19 +221,6 @@ const handleSelectTab = (tab: string) => {
   activeTab.value = tab;
 };
 
-const closeApp = () => {
-  capture.close();
-};
-
-const minimizeApp = () => {
-  capture.minimize();
-};
-
-const handleExit = () => {
-  capture.setWindowMode("hud");
-  emit("back-to-hud");
-};
-
 onMounted(() => {
   playerVideoSrc.value = props.videoSrc ?? "";
   capture.setWindowMode("editor");
@@ -269,44 +258,11 @@ watch(
 <template>
   <div class="editor-page">
     <!-- Window Titlebar / Header -->
-    <header class="editor-titlebar" @dblclick="capture.toggleMaximize()">
-      <div class="left-actions">
-        <Button
-          variant="ghost"
-          size="sm"
-          :icon="ArrowLeft"
-          @click="handleExit"
-          class="exit-btn titlebar-btn"
-        >
-          Exit to HUD
-        </Button>
-        <VideoProjectEdition
-          :project="project"
-          @open-project="emit('open-project', $event)"
-          @dblclick.stop="capture.toggleMaximize()"
-        />
-      </div>
-
-      <div class="right-actions">
-        <ExportPopover v-if="exportRequest" :request="exportRequest" />
-        <div class="window-controls">
-          <button
-            aria-label="Minimize"
-            class="titlebar-btn control-btn"
-            @click="minimizeApp"
-          >
-            <Minus class="btn-icon" />
-          </button>
-          <button
-            aria-label="Close"
-            class="titlebar-btn control-btn close-btn"
-            @click="closeApp"
-          >
-            <X class="btn-icon" />
-          </button>
-        </div>
-      </div>
-    </header>
+    <Topbar
+      :export-request="exportRequest"
+      @back-to-hud="emit('back-to-hud')"
+      @open-project="emit('open-project', $event)"
+    />
 
     <!-- Main Workspace (Islands Layout) -->
     <div class="editor-workspace">
@@ -400,8 +356,14 @@ watch(
     /* Dotted grid pattern */
     radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     /* Soft warm ambient amber glow at the top center/left */
-    radial-gradient(circle at 30% 0%, rgba(255, 90, 31, 0.06) 0%, rgba(255, 90, 31, 0) 50%);
-  background-size: 24px 24px, 100% 100%;
+    radial-gradient(
+        circle at 30% 0%,
+        rgba(255, 90, 31, 0.06) 0%,
+        rgba(255, 90, 31, 0) 50%
+      );
+  background-size:
+    24px 24px,
+    100% 100%;
   display: flex;
   flex-direction: column;
   color: var(--text-primary);
@@ -416,9 +378,17 @@ watch(
     /* Dotted grid pattern */
     radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     /* Soft warm ambient amber glow */
-    radial-gradient(circle at 30% 0%, rgba(255, 90, 31, 0.07) 0%, rgba(255, 90, 31, 0) 50%),
+    radial-gradient(
+        circle at 30% 0%,
+        rgba(255, 90, 31, 0.07) 0%,
+        rgba(255, 90, 31, 0) 50%
+      ),
     /* Soft dark vignette */
-    radial-gradient(circle at 50% 50%, rgba(22, 21, 18, 0) 50%, rgba(13, 12, 10, 0.6) 100%);
+    radial-gradient(
+        circle at 50% 50%,
+        rgba(22, 21, 18, 0) 50%,
+        rgba(13, 12, 10, 0.6) 100%
+      );
 }
 
 .editor-titlebar {
