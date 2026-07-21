@@ -38,9 +38,9 @@ const GROUP_LABELS: Record<BackgroundMediaKind, string> = {
 }
 
 const extensionFor = (path: string): string => {
-  const filename = path.split('/').pop() ?? path
-  const extension = filename.split('.').pop()
-  return extension?.toLowerCase() ?? ''
+  const filename = path.slice(path.lastIndexOf('/') + 1)
+  const dotIndex = filename.lastIndexOf('.')
+  return dotIndex >= 0 ? filename.slice(dotIndex + 1).toLowerCase() : ''
 }
 
 export const backgroundKindFor = (path: string): BackgroundMediaKind | null => {
@@ -48,7 +48,7 @@ export const backgroundKindFor = (path: string): BackgroundMediaKind | null => {
 }
 
 const nameFor = (path: string): string => {
-  const filename = path.split('/').pop() ?? path
+  const filename = path.slice(path.lastIndexOf('/') + 1)
   const withoutExtension = filename.replace(/\.[^.]+$/, '')
   return withoutExtension
     .replace(/[-_]+/g, ' ')

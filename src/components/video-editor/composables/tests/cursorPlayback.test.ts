@@ -1,0 +1,129 @@
+import { describe, expect, it } from "vitest";
+import {
+  buttonEventsBetween,
+  cursorAssetForState,
+  cursorStateAt,
+} from "../cursorPlayback";
+import type {
+  CursorEvent,
+  CursorShapeAsset,
+} from "../../../../api/types/capture-api";
+
+const second = (value: number) => value * 1_000_000_000;
+const move = (
+  time: number,
+  x: number,
+  y: number,
+  visible = true,
+): CursorEvent => ({
+  event: "move",
+  sessionNs: second(time),
+  pixelX: 0,
+  pixelY: 0,
+  normalizedX: x,
+  normalizedY: y,
+  visible,
+});
+
+describe("cursor playback", () => {
+  it("returns no cursor before the first move, including negative playback time", () => {
+    expect(cursorStateAt([move(1, 0.1, 0.2)], 0.5)).toBeNull();
+    expect(cursorStateAt([move(1, 0.1, 0.2)], -4)).toBeNull();
+  });
+
+  it("interpolates the next move and applies shape and visibility events", () => {
+    const events: CursorEvent[] = [
+      {
+        event: "shape",
+        sessionNs: second(0),
+        shapeId: "arrow",
+        hotspot: { x: 3, y: 4 },
+      },
+      move(1, 0.2, 0.4),
+      { event: "button", sessionNs: second(1.1), button: 0, pressed: true },
+      { event: "visibility", sessionNs: second(1.2), visible: false },
+      move(3, 0.8, 0.6),
+    ];
+    expect(cursorStateAt(events, 2)).toEqual({
+      x: 0.5,
+      y: 0.5,
+      visible: false,
+      shapeId: "arrow",
+      hotspot: { x: 3, y: 4 },
+    });
+  });
+
+  it("uses initial shape data and keeps the latest move state after the final move", () => {
+    expect(
+      cursorStateAt([move(2, 0.7, 0.8, false)], 4, "initial", { x: 1, y: 2 }),
+    ).toEqual({
+      x: 0.7,
+      y: 0.8,
+      visible: false,
+      shapeId: "initial",
+      hotspot: { x: 1, y: 2 },
+    });
+  });
+
+  it("uses the first future move and ignores future non-move state changes", () => {
+    const events: CursorEvent[] = [
+      move(1, 0, 0),
+      {
+        event: "shape",
+        sessionNs: second(2.5),
+        shapeId: "future",
+        hotspot: { x: 9, y: 9 },
+      },
+      move(3, 0.5, 0.5),
+      move(4, 1, 1),
+      { event: "button", sessionNs: second(5), button: 0, pressed: true },
+    ];
+    expect(cursorStateAt(events, 2, "initial")).toMatchObject({
+      x: 0.25,
+      y: 0.25,
+      shapeId: "initial",
+    });
+  });
+
+  it("returns only pressed button events in the half-open playback interval", () => {
+    const events: CursorEvent[] = [
+      { event: "button", sessionNs: second(1), button: 0, pressed: true },
+      { event: "button", sessionNs: second(2), button: 0, pressed: false },
+      { event: "button", sessionNs: second(3), button: 2, pressed: true },
+    ];
+    expect(buttonEventsBetween(events, 1, 3)).toEqual([events[2]]);
+    expect(buttonEventsBetween(events, 3, 1)).toEqual([]);
+  });
+
+  it("resolves shape assets only for known shape ids", () => {
+    const asset: CursorShapeAsset = {
+      src: "cursor.png",
+      hotspot: { x: 2, y: 5 },
+    };
+    expect(
+      cursorAssetForState(
+        {
+          x: 0,
+          y: 0,
+          visible: true,
+          shapeId: "arrow",
+          hotspot: { x: 0, y: 0 },
+        },
+        { arrow: asset },
+      ),
+    ).toBe(asset);
+    expect(
+      cursorAssetForState(
+        {
+          x: 0,
+          y: 0,
+          visible: true,
+          shapeId: "missing",
+          hotspot: { x: 0, y: 0 },
+        },
+        {},
+      ),
+    ).toBeNull();
+    expect(cursorAssetForState(null, { arrow: asset })).toBeNull();
+  });
+});
