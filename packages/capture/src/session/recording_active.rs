@@ -12,7 +12,7 @@ use crate::{
 
 #[cfg(any(windows, target_os = "macos"))]
 use crate::model::CursorSelection;
-#[cfg(any(feature = "microphone", feature = "system-audio", feature = "camera"))]
+#[cfg(any(feature = "microphone", feature = "system-audio"))]
 use crate::model::TrackFormat;
 
 use super::periodic_reporter::PeriodicReporter;
@@ -32,10 +32,6 @@ pub(super) struct ActiveRecordings {
     system_audio: Option<crate::audio::system::win::WasapiLoopbackRecording>,
     #[cfg(all(target_os = "macos", feature = "system-audio"))]
     system_audio: Option<crate::audio::system::mac::MacSystemAudioRecording>,
-    #[cfg(all(windows, feature = "camera"))]
-    camera: Option<crate::camera::win::WindowsCameraRecording>,
-    #[cfg(all(target_os = "macos", feature = "camera"))]
-    camera: Option<crate::camera::mac::MacCameraRecording>,
     #[cfg(all(windows, feature = "cursor"))]
     cursor: Option<crate::cursor::win::WindowsCursorRecording>,
     #[cfg(all(target_os = "macos", feature = "cursor"))]
@@ -156,67 +152,6 @@ impl ActiveRecordings {
             }
             if self.system_audio.is_some() {
                 add_segment(tracks, TrackKind::SystemAudio, generation, "wav", start_ns)?;
-            }
-        }
-        #[cfg(all(windows, feature = "camera"))]
-        if let Some(selection) = &request.camera {
-            let path = segment_path(layout, TrackKind::Camera, generation, "mp4");
-            self.camera = match crate::camera::win::WindowsCameraRecording::start(
-                selection,
-                &path,
-                u32::try_from(request.recording.video_bitrate_bps / 2).unwrap_or(u32::MAX),
-                request.recording.queue_capacity,
-                start_gate.clone(),
-            ) {
-                Ok(recording) => Some(recording),
-                Err(error) => {
-                    optional_failure(request, tracks, TrackKind::Camera, error)?;
-                    None
-                }
-            };
-            if let (Some(track), Some(recording)) =
-                (track_mut(tracks, TrackKind::Camera), &self.camera)
-            {
-                let format = recording.format();
-                track.format = TrackFormat::Video {
-                    codec: "h264".into(),
-                    width: format.resolution.width,
-                    height: format.resolution.height,
-                    nominal_fps: format.framerate,
-                };
-            }
-            if self.camera.is_some() {
-                add_segment(tracks, TrackKind::Camera, generation, "mp4", start_ns)?;
-            }
-        }
-        #[cfg(all(target_os = "macos", feature = "camera"))]
-        if let Some(selection) = &request.camera {
-            let path = segment_path(layout, TrackKind::Camera, generation, "mp4");
-            self.camera = match crate::camera::mac::MacCameraRecording::start(
-                selection,
-                &path,
-                start_gate.clone(),
-                request.recording.queue_capacity,
-            ) {
-                Ok(recording) => Some(recording),
-                Err(error) => {
-                    optional_failure(request, tracks, TrackKind::Camera, error)?;
-                    None
-                }
-            };
-            if let (Some(track), Some(recording)) =
-                (track_mut(tracks, TrackKind::Camera), &self.camera)
-            {
-                let format = recording.format();
-                track.format = TrackFormat::Video {
-                    codec: "h264".into(),
-                    width: format.resolution.width,
-                    height: format.resolution.height,
-                    nominal_fps: format.framerate,
-                };
-            }
-            if self.camera.is_some() {
-                add_segment(tracks, TrackKind::Camera, generation, "mp4", start_ns)?;
             }
         }
         #[cfg(all(windows, feature = "cursor"))]
@@ -411,30 +346,6 @@ impl ActiveRecordings {
                 metrics.samples_dropped(),
                 metrics.interruptions(),
             );
-        }
-        #[cfg(all(windows, feature = "camera"))]
-        if let Some(recording) = self.camera.take() {
-            let metrics = recording.metrics();
-            record_result(recording.stop().map(|_| ()), &mut first_error);
-            if let Some(track) = track_mut(tracks, TrackKind::Camera) {
-                track.metrics.frames_acquired += metrics.frames_acquired();
-                track.metrics.frames_encoded += metrics.frames_encoded();
-                track.metrics.frames_received += metrics.frames_encoded();
-                track.metrics.frames_dropped += metrics.frames_dropped();
-                track.metrics.interruptions += metrics.interruptions();
-            }
-        }
-        #[cfg(all(target_os = "macos", feature = "camera"))]
-        if let Some(recording) = self.camera.take() {
-            let metrics = recording.metrics();
-            record_result(recording.stop().map(|_| ()), &mut first_error);
-            if let Some(track) = track_mut(tracks, TrackKind::Camera) {
-                track.metrics.frames_acquired += metrics.frames_acquired();
-                track.metrics.frames_encoded += metrics.frames_encoded();
-                track.metrics.frames_received += metrics.frames_encoded();
-                track.metrics.frames_dropped += metrics.frames_dropped();
-                track.metrics.interruptions += metrics.interruptions();
-            }
         }
         #[cfg(all(windows, feature = "cursor"))]
         if let Some(recording) = self.cursor.take() {

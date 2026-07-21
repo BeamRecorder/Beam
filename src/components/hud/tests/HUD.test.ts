@@ -1,21 +1,26 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { captureMock as capture } from './capture.mock'
+import { browserCameraMock } from './camera-recorder.mock'
 
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }))
+vi.mock('../../../api/camera-recorder', async () => {
+  const camera = await import('./camera-recorder.mock')
+  return { BrowserCameraRecorder: camera.BrowserCameraRecorder, listBrowserCameras: camera.listBrowserCameras }
+})
 vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Close" @click="$emit(\'close\')"/></header>' } }))
 import HUD from '../HUD.vue'
 
-const catalog = { sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }, { id: 'microphone:1', kind: 'microphone', label: 'Mic', isDefault: true }, { id: 'camera:1', kind: 'camera', label: 'Cam', isDefault: true }], capabilities: { systemAudio: true } }
+const catalog = { sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }, { id: 'microphone:1', kind: 'microphone', label: 'Mic', isDefault: true }], capabilities: { systemAudio: true } }
 const stubs = { Select: { props: ['modelValue'], template: '<button class="select">{{ modelValue }}</button>' }, WindowSelect: { template: '<button class="window-select" />' }, ProjectPicker: { template: '<div class="project-picker-stub" />' }, HudPreferences: { template: '<div class="preferences-stub"><button @click="$emit(\'close\')">Return</button></div>' } }
 const ready = async () => { await flushPromises(); await Promise.resolve() }
 
 describe('HUD', () => {
-  beforeEach(() => { vi.useFakeTimers(); Object.values(capture).forEach((mock) => mock.mockReset()); capture.discover.mockResolvedValue(catalog); capture.getSources.mockResolvedValue([{ id: 'screen:1', name: 'Display', thumbnail: '', appIcon: null }]) })
+  beforeEach(() => { vi.useFakeTimers(); Object.values(capture).forEach((mock) => mock.mockReset()); Object.values(browserCameraMock).forEach((mock) => mock.mockReset()); browserCameraMock.listBrowserCameras.mockResolvedValue([{ id: 'camera:chromium:device-1', kind: 'camera', label: 'Cam', isDefault: true }]); browserCameraMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); capture.discover.mockResolvedValue(catalog); capture.getSources.mockResolvedValue([{ id: 'screen:1', name: 'Display', thumbnail: '', appIcon: null }]) })
   afterEach(() => vi.useRealTimers())
   it('discovers defaults and starts a screen recording with selected sources', async () => {
-    capture.startRecording.mockResolvedValue({ state: 'recording' }); const wrapper = mount(HUD, { global: { stubs } }); await ready(); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready()
-    expect(capture.startRecording).toHaveBeenCalledWith(expect.objectContaining({ screenKind: 'display', screenId: 'display:1', microphoneId: 'microphone:1', cameraId: 'camera:1', systemAudio: true, targetFps: 60 })); expect(wrapper.emitted('start-recording')).toEqual([[{ state: 'recording' }]])
+    capture.startRecording.mockResolvedValue({ state: 'recording', sessionId: '019f84dd-4d9d-7f61-ac30-5da50169ecbc' }); const wrapper = mount(HUD, { global: { stubs } }); await ready(); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready()
+    expect(capture.startRecording).toHaveBeenCalledWith(expect.objectContaining({ screenKind: 'display', screenId: 'display:1', microphoneId: 'microphone:1', cameraId: 'camera:chromium:device-1', systemAudio: true, targetFps: 60 })); expect(browserCameraMock.request).toHaveBeenCalledWith('camera:chromium:device-1'); expect(wrapper.emitted('start-recording')).toEqual([[{ state: 'recording', sessionId: '019f84dd-4d9d-7f61-ac30-5da50169ecbc' }]])
   })
   it('shows actionable errors when discovery or recording fails', async () => {
     capture.discover.mockRejectedValueOnce(new Error('permission denied')); const wrapper = mount(HUD, { global: { stubs } }); await ready(); expect(wrapper.get('[role=alert]').text()).toContain('permission denied'); capture.startRecording.mockRejectedValueOnce(new Error('disk full')); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready(); expect(wrapper.get('[role=alert]').text()).toContain('disk full')

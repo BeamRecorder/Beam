@@ -53,6 +53,29 @@ export interface DesktopCaptureApi extends CaptureApi {
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>
   finalizeExport(jobId: string): Promise<{ path: string }>
   abortExport(jobId: string): Promise<void>
+  beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>
+  writeCameraSegment(payload: CameraSegmentChunk): Promise<void>
+  finalizeCameraSegment(payload: CameraSegmentFinish): Promise<void>
+  failCamera(payload: { sessionId: string; reason: string }): Promise<void>
+}
+
+export interface CameraSegmentStart {
+  sessionId: string
+  sourceId: string
+  format: { codec: 'vp8'; width: number; height: number; nominalFps: number }
+  startNs: number
+}
+
+export interface CameraSegmentChunk {
+  jobId: string
+  sequence: number
+  data: Uint8Array
+}
+
+export interface CameraSegmentFinish {
+  jobId: string
+  endNs: number
+  metrics: Record<string, number>
 }
 
 export interface CapturePreview {

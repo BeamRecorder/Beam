@@ -18,23 +18,22 @@ fn source(id: &str, kind: SourceKind) -> SourceDescriptor {
 
 #[test]
 fn incompatible_source_kinds_are_rejected() {
-    let camera = source("camera:1", SourceKind::Camera);
+    let microphone = source("microphone:1", SourceKind::Microphone);
     let snapshot = CatalogSnapshot {
         generation: 1,
         created_at_utc: "2026-01-01T00:00:00Z".into(),
         capabilities: CaptureCapabilities::default(),
         permissions: PermissionSnapshot::default(),
         limitations: Vec::new(),
-        sources: vec![camera.clone()],
+        sources: vec![microphone.clone()],
     };
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: Some(ScreenSelection::Source {
-            source_id: camera.id,
+            source_id: microphone.id,
         }),
         system_audio: None,
         microphone: None,
-        camera: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
@@ -52,7 +51,7 @@ fn snapshot_filters_sources_by_kind() {
         limitations: Vec::new(),
         sources: vec![
             source("mic:1", SourceKind::Microphone),
-            source("camera:1", SourceKind::Camera),
+            source("display:1", SourceKind::Display),
         ],
     };
     assert_eq!(snapshot.by_kind(SourceKind::Microphone).count(), 1);
@@ -82,7 +81,6 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
         }),
         system_audio: None,
         microphone: None,
-        camera: None,
         cursor: CursorSelection::Separate {
             capture_clicks: true,
             capture_shape: true,
@@ -122,7 +120,6 @@ fn denied_permission_is_reported_before_capture() {
             preferred_sample_rate: None,
             preferred_channels: None,
         }),
-        camera: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,

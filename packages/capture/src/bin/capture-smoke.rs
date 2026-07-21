@@ -10,10 +10,6 @@ use capture::{
     protocol::write_json_line,
 };
 
-#[cfg(all(windows, feature = "camera"))]
-#[path = "capture_smoke/camera.rs"]
-mod camera_smoke;
-
 fn main() {
     let code = match run() {
         Ok(()) => 0,
@@ -43,14 +39,6 @@ fn run() -> Result<(), capture::CaptureError> {
     #[cfg(all(windows, feature = "system-audio"))]
     if mode == "system-audio" {
         return record_windows_system_audio();
-    }
-    #[cfg(all(windows, feature = "camera"))]
-    if mode == "camera" {
-        return camera_smoke::record_windows_camera();
-    }
-    #[cfg(all(windows, feature = "camera"))]
-    if mode == "camera-raw" {
-        return camera_smoke::probe_windows_camera_raw();
     }
     if mode == "full" {
         return record_full_session();
@@ -249,8 +237,8 @@ fn argument_value(name: &str) -> Option<String> {
 fn record_full_session() -> Result<(), capture::CaptureError> {
     use capture::{
         model::{
-            CameraSelection, CaptureRequest, CursorSelection, FailurePolicy, MicrophoneSelection,
-            ProjectId, RecordingSettings, ScreenSelection, SystemAudioSelection,
+            CaptureRequest, CursorSelection, FailurePolicy, MicrophoneSelection, ProjectId,
+            RecordingSettings, ScreenSelection, SystemAudioSelection,
         },
         session::RecordingSession,
     };
@@ -284,17 +272,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
             preferred_sample_rate: None,
             preferred_channels: None,
         });
-    let camera = snapshot
-        .sources
-        .iter()
-        .find(|source| source.kind == SourceKind::Camera)
-        .map(|source| CameraSelection {
-            source_id: source.id.clone(),
-            preferred_width: Some(1280),
-            preferred_height: Some(720),
-            preferred_fps: Some(30),
-            preferred_pixel_format: None,
-        });
     let system_audio = snapshot
         .capabilities
         .system_audio
@@ -315,7 +292,6 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
         screen,
         system_audio,
         microphone,
-        camera,
         cursor: CursorSelection::Separate {
             capture_clicks: snapshot.capabilities.cursor_clicks,
             capture_shape: snapshot.capabilities.cursor_shapes,

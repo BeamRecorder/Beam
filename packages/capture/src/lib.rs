@@ -1,7 +1,6 @@
 #![doc = "Native, sidecar-oriented capture engine."]
 
 pub mod audio;
-pub mod camera;
 pub mod catalog;
 pub mod clock;
 pub mod cursor;

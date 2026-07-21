@@ -15,7 +15,6 @@ const catalog = {
     { id: 'display:1', kind: 'display', isDefault: true },
     { id: 'window:1', kind: 'window', isDefault: false },
     { id: 'mic:1', kind: 'microphone', isDefault: true },
-    { id: 'camera:1', kind: 'camera', isDefault: true },
   ],
 }
 
@@ -25,7 +24,6 @@ test('builds a one-call recording config from defaults', () => {
   const config = buildDefaultCaptureConfig(catalog, { systemAudio: true }, environment)
   assert.equal(config.screen.sourceId, 'display:1')
   assert.equal(config.microphone.sourceId, 'mic:1')
-  assert.equal(config.camera.sourceId, 'camera:1')
   assert.deepEqual(config.systemAudio, { mode: 'default-mix' })
   assert.deepEqual(config.cursor, {
     mode: 'separate',
@@ -40,11 +38,9 @@ test('supports explicit source selection and disabling optional devices', () => 
     screenKind: 'window',
     screenId: 'window:1',
     microphoneId: null,
-    cameraId: null,
   }, environment)
   assert.equal(config.screen.sourceId, 'window:1')
   assert.equal(config.microphone, null)
-  assert.equal(config.camera, null)
 })
 
 test('rejects missing explicit sources and invalid queue capacity', () => {

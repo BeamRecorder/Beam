@@ -15,8 +15,6 @@ pub fn capabilities() -> CaptureCapabilities {
         selectable_system_output: false,
         microphone: cfg!(feature = "microphone"),
         selectable_microphone: cfg!(feature = "microphone"),
-        camera: cfg!(feature = "camera"),
-        selectable_camera: cfg!(feature = "camera"),
         hardware_h264: true,
         hardware_hevc: true,
     }
@@ -32,25 +30,17 @@ pub fn permissions() -> PermissionSnapshot {
                 PermissionState::PromptRequired
             },
         ),
-        microphone: Some(media_permission(false)),
-        camera: Some(media_permission(true)),
+        microphone: Some(microphone_permission()),
+        camera: None,
         accessibility: Some(PermissionState::NotApplicable),
     }
 }
 
-fn media_permission(video: bool) -> PermissionState {
-    use objc2_av_foundation::{
-        AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeAudio, AVMediaTypeVideo,
-    };
+fn microphone_permission() -> PermissionState {
+    use objc2_av_foundation::{AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeAudio};
 
-    // SAFETY: AVFoundation exposes both constants for the entire process lifetime.
-    let media_type = unsafe {
-        if video {
-            AVMediaTypeVideo
-        } else {
-            AVMediaTypeAudio
-        }
-    };
+    // SAFETY: AVFoundation exposes this constant for the entire process lifetime.
+    let media_type = unsafe { AVMediaTypeAudio };
     let Some(media_type) = media_type else {
         return PermissionState::Unknown;
     };

@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { defineAsyncComponent, nextTick, ref } from 'vue'
 import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
-import VideoEditor from './components/video-editor/VideoEditor.vue'
 import Button from './components/ui/button/Button.vue'
 
 import { capture } from './api/capture'
 import type { CaptureProject, ProjectEditorData } from './api/types/capture-api'
 
 const currentView = ref<'hud' | 'editor'>('hud')
+const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))
 const currentVideoSrc = ref<string | null>(null)
 const currentProject = ref<CaptureProject | null>(null)
 const currentEditorData = ref<ProjectEditorData | null>(null)

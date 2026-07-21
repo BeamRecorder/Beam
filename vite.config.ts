@@ -2,6 +2,7 @@ import { defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
@@ -56,6 +57,7 @@ const publicBackgroundMediaPlugin = (): Plugin => ({
 
 // https://vite.dev/config/
 export default defineConfig({
+  cacheDir: path.join(os.tmpdir(), "demo-recorder-vite-cache"),
   plugins: [publicBackgroundMediaPlugin(), vue({})],
   resolve: {
     alias: {

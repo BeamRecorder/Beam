@@ -32,8 +32,6 @@ pub fn capabilities() -> CaptureCapabilities {
         selectable_system_output: false,
         microphone: cfg!(feature = "microphone"),
         selectable_microphone: cfg!(feature = "microphone"),
-        camera: cfg!(feature = "camera"),
-        selectable_camera: cfg!(feature = "camera"),
         ..CaptureCapabilities::default()
     }
 }
@@ -46,7 +44,7 @@ pub fn permissions() -> PermissionSnapshot {
             PermissionState::Granted
         }),
         microphone: Some(PermissionState::Unknown),
-        camera: Some(PermissionState::Unknown),
+        camera: None,
         accessibility: Some(PermissionState::NotApplicable),
     }
 }

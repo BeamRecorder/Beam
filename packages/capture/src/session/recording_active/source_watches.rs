@@ -19,9 +19,6 @@ pub(super) fn source_watches(
     if let Some(selection) = &request.microphone {
         selected.push((TrackKind::Microphone, &selection.source_id));
     }
-    if let Some(selection) = &request.camera {
-        selected.push((TrackKind::Camera, &selection.source_id));
-    }
     if let Some(SystemAudioSelection::OutputDevice(source_id)) = &request.system_audio {
         selected.push((TrackKind::SystemAudio, source_id));
     } else if request.system_audio.is_some()

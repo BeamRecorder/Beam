@@ -38,8 +38,6 @@ impl SourceCatalog for NativeCatalog {
                 ..crate::model::SourceCapabilities::default()
             },
         });
-        #[cfg(feature = "camera")]
-        sources.extend(crate::camera::discover_cameras()?);
         let (capabilities, permissions, limitations) = platform_metadata();
         Ok(CatalogSnapshot {
             generation: self

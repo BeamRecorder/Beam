@@ -9,6 +9,7 @@
     "test:coverage": "vitest run --coverage",
     "dev": "vite",
     "dev:all": "node start-dev.cjs",
+    "dev:all:devtools": "node start-dev.cjs --devtools",
     "capture:build-dev": "cargo build -p capture --bin capture-engine",
     "capture:build-release": "cargo build -p capture --bin capture-engine --release",
     "build:dev": "npm run capture:build-dev && vue-tsc -b && vite build --mode development",

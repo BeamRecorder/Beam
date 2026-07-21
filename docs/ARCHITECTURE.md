@@ -12,7 +12,7 @@ Electron preload
 Electron main process
   -> capture-engine JSON-lines protocol
 Rust capture engine
-  -> native screen, cursor, camera, audio, timing, and storage backends
+  -> native screen, cursor, audio, timing, and storage backends
 Session files on disk
 ```
 
@@ -20,7 +20,7 @@ Session files on disk
 
 The renderer owns presentation, editor state, playback state, and user interaction. It must not access Node.js, arbitrary IPC, native APIs, or unrestricted filesystem paths.
 
-Use feature folders under `src/components/` for feature composition. Put reusable controls under `src/components/ui/`. Keep domain types in `src/types/` or a feature type file such as `{feature}-types.ts`.
+Use feature folders under `src/components/` for feature composition. Put reusable controls under `src/components/ui/`. Keep domain types in `src/types/` or a feature type file such as `{feature}-types.ts`. Browser webcam capture is the deliberate exception to native capture: a renderer media coordinator owns `getUserMedia` and `MediaRecorder`, while the preload exposes only bounded, session-owned write operations.
 
 ### Preload
 
@@ -48,7 +48,7 @@ Rust owns capture lifecycle, native permissions, source discovery, clocks, track
 - Composables coordinate reactive behavior and browser media primitives.
 - Typed API modules define renderer-facing contracts.
 - Electron code adapts files and IPC into safe API responses.
-- Rust code records and persists capture data.
+- Rust code records and persists native screen/audio/cursor data; Electron persists browser-produced camera sidecars after native session finalization.
 
 Do not move native capture logic into Vue, add filesystem reads to components, or make a UI component parse an unrelated protocol format when the main process can provide a typed representation.
 

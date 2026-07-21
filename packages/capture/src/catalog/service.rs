@@ -50,10 +50,6 @@ pub fn validate_request(
         require_kind(snapshot, &selection.source_id, &[SourceKind::Microphone])?;
         require_capability(snapshot.capabilities.microphone, "microphone")?;
     }
-    if let Some(selection) = &request.camera {
-        require_kind(snapshot, &selection.source_id, &[SourceKind::Camera])?;
-        require_capability(snapshot.capabilities.camera, "camera")?;
-    }
     match request.cursor {
         CursorSelection::Disabled => {}
         CursorSelection::Embedded => {
@@ -81,9 +77,6 @@ pub fn validate_request(
         && snapshot.permissions.microphone == Some(PermissionState::Denied)
     {
         return Err(CaptureError::PermissionDenied("microphone".into()));
-    }
-    if request.camera.is_some() && snapshot.permissions.camera == Some(PermissionState::Denied) {
-        return Err(CaptureError::PermissionDenied("camera".into()));
     }
     Ok(())
 }

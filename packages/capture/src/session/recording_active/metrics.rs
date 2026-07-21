@@ -94,44 +94,6 @@ pub(super) fn samplers(
             },
         ));
     }
-    #[cfg(all(windows, feature = "camera"))]
-    if let Some(recording) = &recordings.camera
-        && let Some(track) = track_for(tracks, TrackKind::Camera)
-    {
-        let metrics = recording.metrics();
-        samplers.push(MetricSampler::new(
-            track.track_id,
-            track.format.clone(),
-            track.metrics.clone(),
-            move || TrackMetrics {
-                frames_acquired: metrics.frames_acquired(),
-                frames_encoded: metrics.frames_encoded(),
-                frames_received: metrics.frames_encoded(),
-                frames_dropped: metrics.frames_dropped(),
-                interruptions: metrics.interruptions(),
-                ..TrackMetrics::default()
-            },
-        ));
-    }
-    #[cfg(all(target_os = "macos", feature = "camera"))]
-    if let Some(recording) = &recordings.camera
-        && let Some(track) = track_for(tracks, TrackKind::Camera)
-    {
-        let metrics = recording.metrics();
-        samplers.push(MetricSampler::new(
-            track.track_id,
-            track.format.clone(),
-            track.metrics.clone(),
-            move || TrackMetrics {
-                frames_acquired: metrics.frames_acquired(),
-                frames_encoded: metrics.frames_encoded(),
-                frames_received: metrics.frames_encoded(),
-                frames_dropped: metrics.frames_dropped(),
-                interruptions: metrics.interruptions(),
-                ..TrackMetrics::default()
-            },
-        ));
-    }
     #[cfg(all(windows, feature = "cursor"))]
     if let Some(recording) = &recordings.cursor
         && let Some(track) = track_for(tracks, TrackKind::Cursor)

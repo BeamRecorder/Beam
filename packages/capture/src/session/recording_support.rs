@@ -34,7 +34,7 @@ pub(super) fn record_result(result: Result<(), CaptureError>, first: &mut Option
     }
 }
 
-#[cfg(any(feature = "microphone", feature = "system-audio", feature = "camera"))]
+#[cfg(any(feature = "microphone", feature = "system-audio"))]
 pub(super) fn optional_failure(
     request: &CaptureRequest,
     tracks: &mut [TrackMetadata],
@@ -90,20 +90,6 @@ pub(super) fn track_metadata(
                 sample_format: "f32".into(),
                 sample_rate: 0,
                 channels: 0,
-            },
-        ));
-    }
-    if let Some(selection) = &request.camera {
-        let source = source(snapshot, &selection.source_id)?;
-        let (width, height, fps) = video_format(source, selection.preferred_fps.unwrap_or(30));
-        tracks.push(new_track(
-            TrackKind::Camera,
-            Some(selection.source_id.clone()),
-            TrackFormat::Video {
-                codec: "h264".into(),
-                width,
-                height,
-                nominal_fps: fps,
             },
         ));
     }
@@ -253,10 +239,9 @@ pub(super) fn selected_sources(
             .microphone
             .as_ref()
             .map(|selection| selection.source_id.clone()),
-        camera: request
-            .camera
-            .as_ref()
-            .map(|selection| selection.source_id.clone()),
+        // Browser-owned camera capture merges its selected source after the native session
+        // has finalized. Rust never opens a camera device.
+        camera: None,
     }
 }
 

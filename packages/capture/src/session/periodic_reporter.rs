@@ -425,9 +425,9 @@ mod tests {
 
         let track_id = TrackId::new();
         let source = SourceDescriptor {
-            id: SourceId::new("camera:test")?,
-            kind: SourceKind::Camera,
-            label: "Test camera".into(),
+            id: SourceId::new("microphone:test")?,
+            kind: SourceKind::Microphone,
+            label: "Test microphone".into(),
             is_default: true,
             selection_mode: SourceSelectionMode::Direct,
             capabilities: SourceCapabilities::default(),

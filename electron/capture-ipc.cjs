@@ -13,19 +13,23 @@ function completedVideoSource(session) {
   return video ? { ...session, videoSrc: pathToFileURL(path.join(screenDirectory, video)).href } : session
 }
 
-function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app }) {
+function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, cameraStorage }) {
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
       const catalog = await captureEngine.request('discover')
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, { platform: process.platform, defaultOutputRoot: path.join(app.getPath('videos'), 'DemoRecorder') })
       await captureEngine.request('prepare', { config })
-      return captureEngine.request('start')
+      const session = await captureEngine.request('start')
+      cameraStorage.registerSession(session)
+      return session
     }
     if (command === 'start-recording') {
       await captureEngine.request('prepare', { config: payload.config })
-      return captureEngine.request('start')
+      const session = await captureEngine.request('start')
+      cameraStorage.registerSession(session)
+      return session
     }
-    if (command === 'stop') return completedVideoSource(await captureEngine.request('stop'))
+    if (command === 'stop') return completedVideoSource(cameraStorage.complete(await captureEngine.request('stop')))
     if (!ALLOWED_COMMANDS.has(command)) throw new Error(`Commande de capture interdite: ${command}`)
     return captureEngine.request(command, payload)
   })

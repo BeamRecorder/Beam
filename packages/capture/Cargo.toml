@@ -5,12 +5,11 @@ edition = "2024"
 publish = false
 
 [features]
-default = ["screen", "microphone", "system-audio", "cursor", "camera", "recording"]
+default = ["screen", "microphone", "system-audio", "cursor", "recording"]
 screen = []
 microphone = ["dep:cpal"]
 system-audio = []
 cursor = []
-camera = ["dep:cameras"]
 recording = ["dep:hound"]
 hardware-tests = []
 
@@ -23,7 +22,6 @@ tracing = "0.1"
 uuid = { version = "1", features = ["serde", "v7"] }
 time = { version = "0.3", features = ["formatting"] }
 cpal = { version = "0.18.1", optional = true }
-cameras = { version = "0.3.2", optional = true }
 hound = { version = "3", optional = true }
 png = "0.18"
 sha2 = "0.10"

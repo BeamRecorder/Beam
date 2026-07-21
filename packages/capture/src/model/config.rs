@@ -48,26 +48,6 @@ pub struct MicrophoneSelection {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum CameraPixelFormat {
-    Mjpeg,
-    Yuyv,
-    Nv12,
-    Bgra,
-    Rgba,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CameraSelection {
-    pub source_id: SourceId,
-    pub preferred_width: Option<u32>,
-    pub preferred_height: Option<u32>,
-    pub preferred_fps: Option<u32>,
-    pub preferred_pixel_format: Option<CameraPixelFormat>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(
     tag = "mode",
     rename_all = "kebab-case",
@@ -129,7 +109,6 @@ pub struct CaptureRequest {
     pub screen: Option<ScreenSelection>,
     pub system_audio: Option<SystemAudioSelection>,
     pub microphone: Option<MicrophoneSelection>,
-    pub camera: Option<CameraSelection>,
     #[serde(default)]
     pub cursor: CursorSelection,
     #[serde(default)]
