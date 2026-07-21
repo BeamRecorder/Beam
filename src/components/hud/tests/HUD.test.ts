@@ -22,11 +22,22 @@ vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-
 import HUD from '../HUD.vue'
 
 const catalog = { sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }], capabilities: { systemAudio: true } }
-const stubs = { Select: { props: ['modelValue'], template: '<button class="select">{{ modelValue }}</button>' }, WindowSelect: { template: '<button class="window-select" />' }, ProjectPicker: { template: '<div class="project-picker-stub" />' }, HudPreferences: { template: '<div class="preferences-stub"><button @click="$emit(\'close\')">Return</button></div>' } }
+const stubs = { Select: { props: ['modelValue'], template: '<button class="select">{{ modelValue }}</button>' }, WindowSelect: { template: '<button class="window-select" />' }, ProjectPicker: { template: '<div class="project-picker-stub" />' }, HudPreferences: { template: '<div class="preferences-stub"><button @click="$emit(\'close\')">Return</button></div>' }, CameraPreviewOverlay: { template: '<div class="camera-preview-stub" />' } }
 const ready = async () => { await flushPromises(); await Promise.resolve() }
 
 describe('HUD', () => {
-  beforeEach(() => { vi.useFakeTimers(); Object.values(capture).forEach((mock) => mock.mockReset()); Object.values(browserCameraMock).forEach((mock) => mock.mockReset()); Object.values(browserMicrophoneMock).forEach((mock) => mock.mockReset()); Object.values(browserSystemAudioMock).forEach((mock) => mock.mockReset()); browserSystemAudioMock.systemAudioSource.mockReturnValue({ id: 'system-audio:chromium:desktop-loopback', kind: 'system-audio', label: 'System audio', isDefault: true }); browserCameraMock.listBrowserCameras.mockResolvedValue([{ id: 'camera:chromium:device-1', kind: 'camera', label: 'Cam', isDefault: true }]); browserMicrophoneMock.listBrowserMicrophones.mockResolvedValue([{ id: 'microphone:chromium:device-1', kind: 'microphone', label: 'Mic', isDefault: true }]); browserCameraMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); browserMicrophoneMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); browserSystemAudioMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); capture.discover.mockResolvedValue(catalog); capture.getSources.mockResolvedValue([{ id: 'screen:1', name: 'Display', thumbnail: '', appIcon: null }]) })
+  beforeEach(() => {
+    vi.useFakeTimers()
+    if (!navigator.mediaDevices) {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
+        configurable: true,
+      })
+    } else {
+      vi.spyOn(navigator.mediaDevices, 'getUserMedia').mockResolvedValue({ getTracks: () => [] } as any)
+    }
+    Object.values(capture).forEach((mock) => mock.mockReset()); Object.values(browserCameraMock).forEach((mock) => mock.mockReset()); Object.values(browserMicrophoneMock).forEach((mock) => mock.mockReset()); Object.values(browserSystemAudioMock).forEach((mock) => mock.mockReset()); browserSystemAudioMock.systemAudioSource.mockReturnValue({ id: 'system-audio:chromium:desktop-loopback', kind: 'system-audio', label: 'System audio', isDefault: true }); browserCameraMock.listBrowserCameras.mockResolvedValue([{ id: 'camera:chromium:device-1', kind: 'camera', label: 'Cam', isDefault: true }]); browserMicrophoneMock.listBrowserMicrophones.mockResolvedValue([{ id: 'microphone:chromium:device-1', kind: 'microphone', label: 'Mic', isDefault: true }]); browserCameraMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); browserMicrophoneMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); browserSystemAudioMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); capture.discover.mockResolvedValue(catalog); capture.getSources.mockResolvedValue([{ id: 'screen:1', name: 'Display', thumbnail: '', appIcon: null }])
+  })
   afterEach(() => vi.useRealTimers())
   it('discovers defaults and starts a screen recording with selected sources', async () => {
     capture.startRecording.mockResolvedValue({ state: 'recording', sessionId: '019f84dd-4d9d-7f61-ac30-5da50169ecbc' }); const wrapper = mount(HUD, { global: { stubs } }); await ready(); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready()

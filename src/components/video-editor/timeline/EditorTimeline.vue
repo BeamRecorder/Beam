@@ -4,6 +4,7 @@ import TimelineToolbar from './TimelineToolbar.vue';
 import TimelineTracks from './TimelineTracks.vue';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
+import type { ProjectComposition } from '../composition/composition-types';
 
 const props = defineProps<{
   currentTime: number;
@@ -18,6 +19,8 @@ const props = defineProps<{
   isMicAudioEnabled: boolean;
   zoomElements: ZoomElement[];
   selectedZoomId: string | null;
+  composition: ProjectComposition;
+  selectedCompositionLayerId: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -27,6 +30,8 @@ const emit = defineEmits<{
   (e: 'update:isSystemAudioEnabled', value: boolean): void;
   (e: 'update:isMicAudioEnabled', value: boolean): void;
   (e: 'select:zoom', zoomId: string): void;
+  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption'): void;
+  (e: 'select:composition-layer', layerId: string): void;
 }>();
 
 const zoomLevel = ref<number>(100);
@@ -72,6 +77,7 @@ onUnmounted(() => {
       v-model:zoom-level="zoomLevel"
       @update:isPlaying="emit('update:isPlaying', $event)"
       @update:currentTime="emit('update:currentTime', $event)"
+      @add:element="emit('add:element', $event)"
     />
 
     <!-- Tracks Viewport Component -->
@@ -86,8 +92,11 @@ onUnmounted(() => {
       :is-mic-audio-enabled="isMicAudioEnabled"
       :zoom-elements="zoomElements"
       :selected-zoom-id="selectedZoomId"
+      :composition="composition"
+      :selected-composition-layer-id="selectedCompositionLayerId"
       @update:currentTime="emit('update:currentTime', $event)"
       @select:zoom="emit('select:zoom', $event)"
+      @select:composition-layer="emit('select:composition-layer', $event)"
       @toggle:video="emit('update:isVideoEnabled', !isVideoEnabled)"
       @toggle:systemAudio="emit('update:isSystemAudioEnabled', !isSystemAudioEnabled)"
       @toggle:micAudio="emit('update:isMicAudioEnabled', !isMicAudioEnabled)"

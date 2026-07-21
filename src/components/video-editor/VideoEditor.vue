@@ -30,6 +30,7 @@ import type {
   ProjectEditorData,
 } from "../../api/types/capture-api";
 import type { ZoomElement } from "./zoom/zoom-types";
+import { emptyComposition, type CompositionLayer, type CompositionMedia, type ProjectComposition } from './composition/composition-types'
 import {
   buildAutomaticZoomElements,
   ZOOM_ALGORITHM_VERSION,
@@ -78,6 +79,9 @@ const {
 } = useCursorReplacer();
 
 const activeTab = ref("cursor");
+const composition = ref<ProjectComposition>(emptyComposition())
+const selectedCompositionLayerId = ref<string | null>(null)
+const selectedCompositionLayer = computed(() => composition.value.layers.find((layer) => layer.id === selectedCompositionLayerId.value) ?? null)
 const zoomElements = ref<ZoomElement[]>([]);
 const generatedSessions = ref<ProjectEditorData["zoom"]["generatedSessions"]>(
   [],
@@ -153,6 +157,33 @@ const saveZoomState = async () => {
   zoomElements.value = zoom.elements;
   generatedSessions.value = zoom.generatedSessions;
 };
+
+const saveComposition = async () => {
+  if (!props.project) return
+  composition.value = await capture.saveProjectComposition(props.project.id, composition.value)
+}
+
+const mediaDuration = (asset: CompositionMedia) => new Promise<number>((resolve) => {
+  if (asset.kind === 'image') return resolve(5000)
+  const media = document.createElement(asset.kind === 'audio' ? 'audio' : 'video')
+  media.preload = 'metadata'; media.onloadedmetadata = () => resolve(Math.round(media.duration * 1000)); media.onerror = () => resolve(0); media.src = asset.src
+})
+
+const addCompositionElement = async (kind: 'video' | 'image' | 'sound' | 'caption') => {
+  if (!props.project) return
+  if (kind === 'caption') {
+    const startMs = Math.round(currentTime.value * 1000)
+    const layer: CompositionLayer = { id: crypto.randomUUID(), kind: 'caption', name: 'Caption', startMs, endMs: Math.min(Math.round(duration.value * 1000), startMs + 5000), enabled: true, order: composition.value.layers.length, caption: { sentences: [], style: { color: '#ffffff', fontSize: 42, shadowColor: '#000000', shadowBlur: 4, placement: 'bottom' } } }
+    composition.value.layers.push(layer); await saveComposition(); selectedCompositionLayerId.value = layer.id; activeTab.value = 'caption'; return
+  }
+  const asset = await capture.pickProjectCompositionMedia(props.project.id, kind === 'sound' ? 'audio' : kind)
+  if (!asset) return
+  const nativeDuration = await mediaDuration(asset)
+  const startMs = Math.round(currentTime.value * 1000); const maxDuration = Math.max(0, Math.round(duration.value * 1000) - startMs)
+  const clipDuration = Math.min(maxDuration, asset.kind === 'image' ? 5000 : nativeDuration)
+  const layer: CompositionLayer = { id: crypto.randomUUID(), kind: asset.kind, name: asset.name, assetId: asset.id, startMs, endMs: startMs + clipDuration, enabled: true, order: composition.value.layers.length, ...(asset.kind === 'audio' ? {} : { transform: { x: 0, y: 0, width: 1, height: 1 } }) }
+  composition.value.layers.push(layer); await saveComposition(); selectedCompositionLayerId.value = layer.id
+}
 
 const generateZooms = async (automatic = false) => {
   const data = props.editorData;
@@ -235,7 +266,10 @@ onMounted(() => {
   playerVideoSrc.value = props.videoSrc ?? "";
   capture.setWindowMode("editor");
   capture.maximize();
+  if (props.project) void capture.getProjectComposition(props.project.id).then((value) => { composition.value = value })
 });
+
+watch(() => props.project?.id, (projectId) => { if (projectId) void capture.getProjectComposition(projectId).then((value) => { composition.value = value }) })
 
 watch(
   () => props.videoSrc,
@@ -302,6 +336,7 @@ watch(
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
+          :selected-composition-layer="selectedCompositionLayer"
           @import:background="addBackground($event)"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
@@ -328,6 +363,7 @@ watch(
           :editor-data="editorData"
           :zoom-elements="zoomElements"
           :selected-zoom="selectedZoom"
+          :composition="composition"
           @update:zoom="updateZoom"
           @duration-change="duration = $event"
         />
@@ -346,10 +382,14 @@ watch(
           v-model:isMicAudioEnabled="isMicAudioEnabled"
           :zoom-elements="zoomElements"
           :selected-zoom-id="selectedZoomId"
+          :composition="composition"
+          :selected-composition-layer-id="selectedCompositionLayerId"
           @select:zoom="
             selectedZoomId = $event;
             activeTab = 'zoom';
           "
+          @add:element="addCompositionElement"
+          @select:composition-layer="selectedCompositionLayerId = $event; activeTab = 'caption'"
         />
       </div>
     </div>

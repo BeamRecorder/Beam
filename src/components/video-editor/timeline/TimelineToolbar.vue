@@ -12,7 +12,7 @@ import {
   Video,
   Image,
   Volume2,
-  Paintbrush,
+  Type,
 } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
 import Popover from "~/ui/popover/Popover.vue";
@@ -31,10 +31,10 @@ const emit = defineEmits<{
   (e: "update:isPlaying", value: boolean): void;
   (e: "update:currentTime", value: number): void;
   (e: "update:zoomLevel", value: number): void;
-  (e: "add:element", type: "video" | "image" | "sound" | "annotation"): void;
+  (e: "add:element", type: "video" | "image" | "sound" | "caption"): void;
 }>();
 
-const handleAdd = (type: "video" | "image" | "sound" | "annotation") => {
+const handleAdd = (type: "video" | "image" | "sound" | "caption") => {
   emit("add:element", type);
 };
 
@@ -116,12 +116,12 @@ const handleZoomOut = () => {
             <button
               class="add-menu-item"
               @click="
-                handleAdd('annotation');
+                handleAdd('caption');
                 close();
               "
             >
-              <Paintbrush class="menu-icon" />
-              <span>Annotation</span>
+              <Type class="menu-icon" />
+              <span>Text</span>
             </button>
           </div>
         </template>

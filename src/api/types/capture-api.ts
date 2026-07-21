@@ -9,6 +9,7 @@ import type {
   ProjectEditorData,
   ProjectZoomState,
 } from './capture-session'
+import type { CompositionLayer, CompositionMedia, ProjectComposition } from '../../components/video-editor/composition/composition-types'
 
 export type * from './capture-config'
 export type * from './capture-session'
@@ -51,6 +52,12 @@ export interface DesktopCaptureApi extends CaptureApi {
   renameProject(projectId: string, name: string): Promise<CaptureProject>
   deleteProject(projectId: string): Promise<void>
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>
+  getProjectComposition(projectId: string): Promise<ProjectComposition>
+  saveProjectComposition(projectId: string, composition: ProjectComposition): Promise<ProjectComposition>
+  pickProjectCompositionMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<CompositionMedia | null>
+  saveProjectCompositionLayer(projectId: string, layer: CompositionLayer): Promise<CompositionLayer>
+  deleteProjectCompositionLayer(projectId: string, layerId: string): Promise<ProjectComposition>
+  moveProjectCompositionLayer(projectId: string, layerId: string, targetIndex: number): Promise<ProjectComposition>
   beginExport(options: { projectName: string; format: 'webm' | 'mp4' }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>
   finalizeExport(jobId: string): Promise<{ path: string }>

@@ -118,7 +118,7 @@ app.whenReady().then(() => {
   logStartup('Microphone IPC registered.')
   registerSystemAudioIpc({ ipcMain, storage: systemAudioStorage })
   logStartup('System audio IPC registered.')
-  registerProjectIpc(ipcMain, createProjectStore(path.join(app.getPath('videos'), 'DemoRecorder')))
+  registerProjectIpc(ipcMain, createProjectStore(path.join(app.getPath('videos'), 'DemoRecorder')), require('electron').dialog)
   logStartup('Project IPC registered.')
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
   logStartup('Window IPC registered.')

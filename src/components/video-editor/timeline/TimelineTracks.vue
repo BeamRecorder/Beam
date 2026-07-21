@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
-import { Video, Volume2, Mic, MousePointer, Paintbrush } from "@lucide/vue";
+import { Video, Volume2, Mic, MousePointer, Type } from "@lucide/vue";
 import { useThumbnails } from "./waveform/useThumbnails";
 import { useWaveform } from "./waveform/useWaveform";
 import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import type { ZoomElement } from "../zoom/zoom-types";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
+import type { ProjectComposition } from '../composition/composition-types'
 
 const props = defineProps<{
   currentTime: number;
@@ -20,6 +21,8 @@ const props = defineProps<{
   isMicAudioEnabled: boolean;
   zoomElements: ZoomElement[];
   selectedZoomId: string | null;
+  composition: ProjectComposition;
+  selectedCompositionLayerId: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -29,7 +32,11 @@ const emit = defineEmits<{
   (e: "toggle:systemAudio"): void;
   (e: "toggle:micAudio"): void;
   (e: "select:zoom", zoomId: string): void;
+  (e: "select:composition-layer", layerId: string): void;
 }>();
+
+const captionLayers = computed(() => props.composition.layers.filter((layer) => layer.kind === 'caption'))
+const layerStyle = (startMs: number, endMs: number) => ({ left: `${props.duration > 0 ? startMs / (props.duration * 10) : 0}%`, width: `${props.duration > 0 ? (endMs - startMs) / (props.duration * 10) : 0}%` })
 
 const zoomElementStyle = (element: ZoomElement) => ({
   left: `${props.duration > 0 ? (element.startMs / 1000 / props.duration) * 100 : 0}%`,
@@ -550,19 +557,14 @@ watch(
           </div>
         </div>
 
-        <!-- Annotations Track (Future placeholder) -->
+        <!-- Captions Track -->
         <div class="track-row annotation-track">
           <div class="track-info">
-            <Paintbrush class="track-icon" />
-            <span class="track-title">Draw</span>
+            <Type class="track-icon" />
+            <span class="track-title">Captions</span>
           </div>
           <div class="track-content annotation-content">
-            <div
-              class="annotation-indicator"
-              :style="{ left: '40%', width: '20%' }"
-            >
-              Arrow Pen Draw
-            </div>
+            <button v-for="layer in captionLayers" :key="layer.id" type="button" class="annotation-indicator" :class="{ selected: layer.id === selectedCompositionLayerId }" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:composition-layer', layer.id)">{{ layer.name }}</button>
           </div>
         </div>
       </div>

@@ -13,6 +13,29 @@ import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import TopbarHUD from './TopbarHUD.vue'
 import { Monitor, Layout, ArrowUpRight, Volume2, VolumeX, Mic, MicOff, Video, VideoOff, Copy, Check } from '@lucide/vue'
 
+import CameraPreviewOverlay from './CameraPreviewOverlay.vue'
+
+const STORAGE_KEY_DEVICES = 'demorecorder_hud_devices'
+const STORAGE_KEY_CAM_STYLE = 'demorecorder_hud_camera_style'
+
+const savedDevices = (() => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DEVICES)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+})()
+
+const savedCamStyle = (() => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CAM_STYLE)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+})()
+
 const emit = defineEmits(['start-recording', 'stop-recording', 'open-project'])
 const ProjectPicker = defineAsyncComponent(() => import('./ProjectPicker.vue'))
 const HudPreferences = defineAsyncComponent(() => import('./HudPreferences.vue'))
@@ -34,6 +57,26 @@ const showProjectPicker = ref(false)
 const recordHighQuality = ref(true)
 const countdownSeconds = ref(3) // 0 for Off, 3, 5, 10
 
+// Camera Overlay styling options
+const cameraShadowSize = ref<string>(savedCamStyle?.shadowSize ?? 'lg')
+const cameraCornerRadius = ref<string>(savedCamStyle?.cornerRadius ?? 'lg')
+const cameraSize = ref<string>(savedCamStyle?.size ?? 'md')
+
+watch([cameraShadowSize, cameraCornerRadius, cameraSize], () => {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY_CAM_STYLE,
+      JSON.stringify({
+        shadowSize: cameraShadowSize.value,
+        cornerRadius: cameraCornerRadius.value,
+        size: cameraSize.value,
+      })
+    )
+  } catch (err) {
+    console.error('Failed to save camera styling preferences:', err)
+  }
+})
+
 // Previews
 const previews = ref<CapturePreview[]>([])
 const selectedSourceId = ref<string | null>(null)
@@ -45,7 +88,7 @@ const cameraOptions = computed(() => [
     .map((source) => ({ value: source.id, label: source.label })),
   { value: 'off', label: 'Camera Off' },
 ])
-const selectedCameraId = ref('off')
+const selectedCameraId = ref(savedDevices?.cameraId ?? 'off')
 
 const micOptions = computed(() => [
   ...sources.value
@@ -53,9 +96,24 @@ const micOptions = computed(() => [
     .map((source) => ({ value: source.id, label: source.label })),
   { value: 'no-audio', label: 'No Audio' },
 ])
-const selectedMicId = ref('no-audio')
+const selectedMicId = ref(savedDevices?.micId ?? 'no-audio')
 const selectedScreenId = ref<string | null>(null)
-const systemAudioMode = ref<'on' | 'off'>('on')
+const systemAudioMode = ref<'on' | 'off'>(savedDevices?.systemAudioMode ?? 'off')
+
+watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY_DEVICES,
+      JSON.stringify({
+        cameraId: selectedCameraId.value,
+        micId: selectedMicId.value,
+        systemAudioMode: systemAudioMode.value,
+      })
+    )
+  } catch (err) {
+    console.error('Failed to save HUD device preferences:', err)
+  }
+})
 const screenOptions = computed(() => sources.value
   .filter((source) => source.kind === 'display')
   .map((source, index) => ({ value: source.id, label: `Screen ${index + 1}` })))
@@ -441,9 +499,25 @@ const discoverSources = async () => {
       ?? sources.value.find((source) => source.kind === 'camera')
     const defaultMic = sources.value.find((source) => source.kind === 'microphone' && source.isDefault)
       ?? sources.value.find((source) => source.kind === 'microphone')
-    selectedCameraId.value = defaultCamera?.id ?? 'off'
-    selectedMicId.value = defaultMic?.id ?? 'no-audio'
-    systemAudioMode.value = 'on'
+
+    if (savedDevices?.cameraId && (savedDevices.cameraId === 'off' || sources.value.some((s) => s.id === savedDevices.cameraId))) {
+      selectedCameraId.value = savedDevices.cameraId
+    } else {
+      selectedCameraId.value = 'off'
+    }
+
+    if (savedDevices?.micId && (savedDevices.micId === 'no-audio' || sources.value.some((s) => s.id === savedDevices.micId))) {
+      selectedMicId.value = savedDevices.micId
+    } else {
+      selectedMicId.value = 'no-audio'
+    }
+
+    if (savedDevices?.systemAudioMode && (savedDevices.systemAudioMode === 'on' || savedDevices.systemAudioMode === 'off')) {
+      systemAudioMode.value = savedDevices.systemAudioMode
+    } else {
+      systemAudioMode.value = 'off'
+    }
+
     selectedScreenId.value = sources.value.find((source) => source.kind === 'display' && source.isDefault)?.id
       ?? sources.value.find((source) => source.kind === 'display')?.id
       ?? null
@@ -520,6 +594,18 @@ const openProject = (project: CaptureProject) => {
       @open-settings="showSettings = true"
       @close="closeApp"
     />
+
+    <!-- Live Camera Overlay Preview -->
+    <Teleport to="body">
+      <CameraPreviewOverlay
+        v-if="!showSettings && !showProjectPicker"
+        v-model:shadow-size="cameraShadowSize"
+        v-model:corner-radius="cameraCornerRadius"
+        v-model:size="cameraSize"
+        :camera-id="selectedCameraId"
+        @toggle-popover="handleDropdownToggle"
+      />
+    </Teleport>
 
     <Transition name="hud-view" mode="out-in">
       <!-- Project Picker View -->

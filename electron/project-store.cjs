@@ -2,6 +2,7 @@ const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { pathToFileURL } = require('url')
+const { createCompositionStore } = require('./composition-store.cjs')
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
@@ -107,6 +108,7 @@ function createProjectStore(root) {
     }
     throw new Error('Impossible de générer un nom de projet unique')
   }
+  const composition = createCompositionStore({ directoryFor, readManifest, writeManifest })
   return {
     list: () => !fs.existsSync(root) ? [] : fs.readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && entry.name.startsWith('project-')).map((entry) => { try { const directory = path.join(root, entry.name); return summary(directory, readManifest(directory), entry.name.slice(8)) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
     editorData,
@@ -123,6 +125,12 @@ function createProjectStore(root) {
       fs.writeFileSync(targetPath, buffer);
       return pathToFileURL(targetPath).href;
     },
+    composition: (id) => composition.read(id),
+    saveComposition: (id, value) => composition.save(id, value),
+    importCompositionMedia: (id, input) => composition.importMedia(id, input),
+    saveCompositionLayer: (id, layer) => composition.upsertLayer(id, layer),
+    deleteCompositionLayer: (id, layerId) => composition.removeLayer(id, layerId),
+    moveCompositionLayer: (id, layerId, targetIndex) => composition.moveLayer(id, layerId, targetIndex),
     delete: (id) => { const directory = directoryFor(id); if (!fs.existsSync(directory)) throw new Error('Projet introuvable'); fs.rmSync(directory, { recursive: true, force: false }) },
   }
 }

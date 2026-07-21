@@ -13,7 +13,7 @@ import type { CaptureProject, ProjectEditorData } from './api/types/capture-api'
 // We inspect the element under the cursor and tell the main process whether it
 // is interactive, so it can toggle setIgnoreMouseEvents accordingly.
 // Only runs when window.capture is available (i.e. inside Electron).
-const INTERACTIVE_SELECTORS = '.hud-wrapper, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content'
+const INTERACTIVE_SELECTORS = '.hud-wrapper, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content'
 let lastInteractive: boolean | null = null
 
 const handleMouseMove = (e: MouseEvent) => {
@@ -137,7 +137,7 @@ const dismissEditorLoadError = () => {
   <div class="app-container">
     <!-- View Switcher -->
     <HUD 
-      v-show="currentView === 'hud' && !isPreparingEditor && !editorLoadError" 
+      v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError" 
       @start-recording="handleStartRecording"
       @stop-recording="handleStopRecording"
       @open-project="handleOpenProject"
