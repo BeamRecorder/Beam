@@ -182,6 +182,9 @@ fn choose_config(
 ) -> Result<SupportedStreamConfig, CaptureError> {
     let preferred_rate = selection.preferred_sample_rate;
     let preferred_channels = selection.preferred_channels;
+    if preferred_rate.is_none() && preferred_channels.is_none() {
+        return device.default_input_config().map_err(backend_error);
+    }
     device
         .supported_input_configs()
         .map_err(backend_error)?

@@ -26,8 +26,10 @@ pub fn capabilities() -> CaptureCapabilities {
         separate_cursor: !portal,
         cursor_shapes: !portal,
         cursor_clicks: !portal,
-        system_audio: true,
-        selectable_system_output: true,
+        // PipeWire/portal audio is not wired into a recording backend yet. Do
+        // not advertise a capture capability that would produce an empty track.
+        system_audio: false,
+        selectable_system_output: false,
         microphone: cfg!(feature = "microphone"),
         selectable_microphone: cfg!(feature = "microphone"),
         camera: cfg!(feature = "camera"),

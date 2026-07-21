@@ -30,7 +30,10 @@ impl WavSegmentWriter {
             .ok_or_else(|| crate::CaptureError::Backend("WAV writer already finalized".into()))?;
         for sample in samples {
             writer
-                .write_sample(*sample)
+                // Native APIs may report denormal, NaN or infinite samples while a
+                // device is being reconfigured.  A float WAV can represent them,
+                // but most players render them as loud corruption.
+                .write_sample(sanitize_sample(*sample))
                 .map_err(|e| crate::CaptureError::Backend(e.to_string()))?;
         }
         self.samples = self.samples.saturating_add(samples.len() as u64);
@@ -47,5 +50,35 @@ impl WavSegmentWriter {
     #[must_use]
     pub const fn samples_written(&self) -> u64 {
         self.samples
+    }
+}
+
+fn sanitize_sample(sample: f32) -> f32 {
+    if sample.is_finite() {
+        sample.clamp(-1.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_sample;
+
+    #[test]
+    fn preserves_normal_samples() {
+        assert_eq!(sanitize_sample(0.25), 0.25);
+    }
+
+    #[test]
+    fn clamps_out_of_range_samples() {
+        assert_eq!(sanitize_sample(2.0), 1.0);
+        assert_eq!(sanitize_sample(-2.0), -1.0);
+    }
+
+    #[test]
+    fn replaces_non_finite_samples_with_silence() {
+        assert_eq!(sanitize_sample(f32::NAN), 0.0);
+        assert_eq!(sanitize_sample(f32::INFINITY), 0.0);
     }
 }

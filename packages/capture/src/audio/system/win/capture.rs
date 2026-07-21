@@ -1,5 +1,5 @@
 use std::{
-    collections::VecDeque,
+    mem::size_of,
     path::Path,
     sync::{
         Arc,
@@ -7,7 +7,7 @@ use std::{
         mpsc,
     },
     thread::JoinHandle,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use wasapi::{DeviceEnumerator, Direction, SampleType, StreamMode, WaveFormat, initialize_mta};
@@ -130,73 +130,74 @@ fn capture_loop(
     let channels = format.get_nchannels();
     let capture = client.get_audiocaptureclient().map_err(backend_error)?;
     let mut writer = WavSegmentWriter::create(output, sample_rate, channels)?;
-    let mut bytes = VecDeque::new();
     ready
         .send(Ok((sample_rate, channels)))
         .map_err(|_| CaptureError::Backend("WASAPI startup receiver closed".into()))?;
     start_gate.wait()?;
-    let started = Instant::now();
     client.start_stream().map_err(backend_error)?;
     while !cancel.load(Ordering::Acquire) {
-        if capture
+        let packet_frames = capture
             .get_next_packet_size()
             .map_err(backend_error)?
-            .unwrap_or(0)
-            == 0
-        {
-            write_silence_to_clock(&mut writer, started, sample_rate, channels)?;
+            .unwrap_or(0);
+        if packet_frames == 0 {
             std::thread::sleep(Duration::from_millis(3));
             continue;
         }
-        capture
-            .read_from_device_to_deque(&mut bytes)
-            .map_err(|error| {
-                metrics.interruptions.fetch_add(1, Ordering::Relaxed);
-                backend_error(error)
-            })?;
-        let complete_bytes = bytes.len() - bytes.len() % 4;
-        let mut samples = Vec::with_capacity(complete_bytes / 4);
-        for _ in 0..complete_bytes / 4 {
-            let chunk = [
-                bytes.pop_front().unwrap_or_default(),
-                bytes.pop_front().unwrap_or_default(),
-                bytes.pop_front().unwrap_or_default(),
-                bytes.pop_front().unwrap_or_default(),
-            ];
-            samples.push(f32::from_le_bytes(chunk));
-        }
+        let byte_count = usize::try_from(packet_frames)
+            .unwrap_or(usize::MAX)
+            .saturating_mul(usize::from(channels))
+            .saturating_mul(size_of::<f32>());
+        let mut bytes = vec![0_u8; byte_count];
+        let (frames, info) = capture.read_from_device(&mut bytes).map_err(|error| {
+            metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+            backend_error(error)
+        })?;
+        let samples = decode_packet(&bytes, frames, channels, info.flags.silent);
         writer.write(&samples)?;
         metrics
             .samples_received
             .fetch_add(samples.len() as u64, Ordering::Relaxed);
     }
-    write_silence_to_clock(&mut writer, started, sample_rate, channels)?;
     client.stop_stream().map_err(backend_error)?;
     let samples = writer.samples_written();
     writer.finalize()?;
     Ok(samples)
 }
 
-fn write_silence_to_clock(
-    writer: &mut WavSegmentWriter,
-    started: Instant,
-    sample_rate: u32,
-    channels: u16,
-) -> Result<(), CaptureError> {
-    let expected = started
-        .elapsed()
-        .as_nanos()
-        .saturating_mul(u128::from(sample_rate))
-        .saturating_mul(u128::from(channels))
-        / 1_000_000_000;
-    let channel_count = u64::from(channels);
-    let expected = u64::try_from(expected).unwrap_or(u64::MAX) / channel_count * channel_count;
-    let missing = expected.saturating_sub(writer.samples_written());
-    if missing > 0 {
-        let count = usize::try_from(missing.min(usize::MAX as u64)).unwrap_or(usize::MAX);
-        writer.write(&vec![0.0; count])?;
+fn decode_packet(bytes: &[u8], frames: u32, channels: u16, silent: bool) -> Vec<f32> {
+    let samples = usize::try_from(frames)
+        .unwrap_or(usize::MAX)
+        .saturating_mul(usize::from(channels));
+    if silent {
+        return vec![0.0; samples];
     }
-    Ok(())
+    bytes
+        .chunks_exact(size_of::<f32>())
+        .take(samples)
+        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decode_packet;
+
+    #[test]
+    fn decodes_interleaved_f32_packet() {
+        let bytes = [0.0_f32.to_le_bytes(), 0.5_f32.to_le_bytes()].concat();
+        assert_eq!(decode_packet(&bytes, 1, 2, false), vec![0.0, 0.5]);
+    }
+
+    #[test]
+    fn silent_packet_does_not_read_the_native_buffer() {
+        assert_eq!(decode_packet(&[], 2, 2, true), vec![0.0; 4]);
+    }
+
+    #[test]
+    fn ignores_trailing_incomplete_bytes() {
+        assert_eq!(decode_packet(&[0, 0, 0], 1, 1, false), Vec::<f32>::new());
+    }
 }
 
 fn initialize_loopback(
