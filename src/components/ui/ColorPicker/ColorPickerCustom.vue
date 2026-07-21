@@ -522,14 +522,14 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
                     </template>
                     <template v-else>
                         <div class="channel-input-wrapper hex-wrapper">
-                            <Input type="text" :model-value="hex.toUpperCase()" @update:model-value="
+                            <Input type="text" size="sm" :model-value="hex.toUpperCase()" @update:model-value="
                                 emit('update:modelValue', $event as string)
                                 " />
                             <span class="channel-label">{{ uiText.hex }}</span>
                         </div>
                     </template>
                 </div>
-                <Button variant="ghost" @click="inputMode = (inputMode + 1) % 2" class="mode-switch-btn">
+                <Button variant="ghost" size="sm" icon-only @click="inputMode = (inputMode + 1) % 2" class="mode-switch-btn">
                     <ArrowUpDown :size="14" />
                 </Button>
             </div>
@@ -543,6 +543,8 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
     display: flex;
     flex-direction: column;
     user-select: none;
+    padding: 12px;
+    box-sizing: border-box;
 }
 
 .custom-color-picker--dragging .controls-container {
@@ -551,7 +553,7 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
 }
 
 .picker-main-area {
-    padding: 2px;
+    padding: 0;
     display: flex;
     justify-content: stretch;
     gap: 10px;
@@ -784,7 +786,7 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
 }
 
 .controls-container {
-    padding: 10px 2px 0;
+    padding: 12px 0 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -811,7 +813,7 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
 
 .inputs-row {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 8px;
 }
 
@@ -822,7 +824,6 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
 }
 
 .mode-switch-btn {
-    margin-bottom: 16px;
     opacity: 0.6;
 }
 

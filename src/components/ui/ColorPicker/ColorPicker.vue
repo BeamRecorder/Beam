@@ -196,9 +196,9 @@ function handleDragEnd() {
     .color-picker-trigger-container {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         background: rgba(0, 0, 0, 0.2);
-        padding: 4px;
+        padding: 4px 6px;
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         transition: all 0.2s;
@@ -229,6 +229,7 @@ function handleDragEnd() {
         overflow: hidden;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         cursor: pointer;
+        flex-shrink: 0;
     }
 
     .bubble-inner {
@@ -237,7 +238,17 @@ function handleDragEnd() {
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
     }
 
-    .color-hex-input :deep(.spidd-input) {
+    .color-hex-input.input-wrapper {
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        height: auto !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+    }
+
+    .color-hex-input :deep(.input-element) {
         font-family: var(--font-mono, monospace);
         font-size: 0.85rem;
         font-weight: 600;
