@@ -11,6 +11,7 @@ const props = withDefaults(
     shadowSize?: string
     cornerRadius?: string
     size?: string
+    windowOverlay?: boolean
   }>(),
   {
     shadowSize: 'lg',
@@ -194,6 +195,7 @@ watch(
 const handleMouseDown = (e: MouseEvent) => {
   if ((e.target as HTMLElement).closest('.popover-container')) return
 
+  if (props.windowOverlay) { window.capture?.dragStart(); window.addEventListener('mousemove', handleWindowDrag); window.addEventListener('mouseup', handleWindowDragEnd); return }
   isDragging.value = true
   dragStart.x = e.clientX
   dragStart.y = e.clientY
@@ -203,6 +205,9 @@ const handleMouseDown = (e: MouseEvent) => {
   window.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('mouseup', handleMouseUp)
 }
+
+const handleWindowDrag = () => window.capture?.drag()
+const handleWindowDragEnd = () => { window.removeEventListener('mousemove', handleWindowDrag); window.removeEventListener('mouseup', handleWindowDragEnd) }
 
 const handleMouseMove = (e: MouseEvent) => {
   if (!isDragging.value) return
@@ -216,6 +221,7 @@ const handleMouseUp = () => {
   isDragging.value = false
   window.removeEventListener('mousemove', handleMouseMove)
   window.removeEventListener('mouseup', handleMouseUp)
+  handleWindowDragEnd()
 }
 
 onMounted(() => {
@@ -235,8 +241,8 @@ onBeforeUnmount(() => {
   <div
     v-show="cameraId !== 'off'"
     class="camera-overlay-container"
-    :class="previewClasses"
-    :style="{ top: `${posY}px`, left: `${posX}px` }"
+    :class="[previewClasses, { 'window-overlay': windowOverlay }]"
+    :style="windowOverlay ? undefined : { top: `${posY}px`, left: `${posX}px` }"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
     @mousedown="handleMouseDown"
@@ -325,6 +331,8 @@ onBeforeUnmount(() => {
   transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease, border-radius 0.2s ease;
   isolation: isolate;
 }
+
+.camera-overlay-container.window-overlay { inset: 0; }
 
 .camera-overlay-container.size-sm {
   width: 120px;

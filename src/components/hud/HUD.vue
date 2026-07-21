@@ -49,7 +49,6 @@ import {
   Check,
 } from "@lucide/vue";
 
-import CameraPreviewOverlay from "./CameraPreviewOverlay.vue";
 
 const STORAGE_KEY_DEVICES = "demorecorder_hud_devices";
 const STORAGE_KEY_CAM_STYLE = "demorecorder_hud_camera_style";
@@ -154,6 +153,9 @@ watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
     console.error("Failed to save HUD device preferences:", err);
   }
 });
+watch([selectedCameraId, cameraSize, cameraShadowSize, cameraCornerRadius], () => {
+  capture.configureCameraOverlay({ cameraId: selectedCameraId.value, size: cameraSize.value, shadowSize: cameraShadowSize.value, cornerRadius: cameraCornerRadius.value });
+}, { immediate: true });
 const screenOptions = computed(() =>
   sources.value
     .filter((source) => source.kind === "display")
@@ -779,18 +781,6 @@ const openProject = (project: CaptureProject) => {
       @open-settings="showSettings = true"
       @close="closeApp"
     />
-
-    <!-- Live Camera Overlay Preview -->
-    <Teleport to="body">
-      <CameraPreviewOverlay
-        v-if="!showSettings && !showProjectPicker"
-        v-model:shadow-size="cameraShadowSize"
-        v-model:corner-radius="cameraCornerRadius"
-        v-model:size="cameraSize"
-        :camera-id="selectedCameraId"
-        @toggle-popover="handleDropdownToggle"
-      />
-    </Teleport>
 
     <Transition name="hud-view" mode="out-in">
       <!-- Project Picker View -->

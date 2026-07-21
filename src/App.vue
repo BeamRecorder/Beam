@@ -2,6 +2,7 @@
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
+import CameraOverlayApp from './components/hud/CameraOverlayApp.vue'
 import Button from './components/ui/button/Button.vue'
 
 import { capture } from './api/capture'
@@ -49,6 +50,7 @@ onBeforeUnmount(() => {
 
 
 const currentView = ref<'hud' | 'editor'>('hud')
+const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay')
 const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))
 const currentVideoSrc = ref<string | null>(null)
 const currentProject = ref<CaptureProject | null>(null)
@@ -134,7 +136,8 @@ const dismissEditorLoadError = () => {
 </script>
 
 <template>
-  <div class="app-container">
+  <CameraOverlayApp v-if="isCameraOverlay" />
+  <div v-else class="app-container">
     <!-- View Switcher -->
     <HUD 
       v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError" 

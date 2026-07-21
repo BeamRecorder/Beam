@@ -61,6 +61,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   whisperModels(): Promise<Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>
   downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
+  configureCameraOverlay(state: { cameraId: string; size: string; shadowSize: string; cornerRadius: string }): void
+  getCameraOverlayState(): Promise<{ cameraId: string; size: string; shadowSize: string; cornerRadius: string } | null>
+  onCameraOverlayState(listener: (state: { cameraId: string; size: string; shadowSize: string; cornerRadius: string }) => void): () => void
   beginExport(options: { projectName: string; format: 'webm' | 'mp4' }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>
   finalizeExport(jobId: string): Promise<{ path: string }>
