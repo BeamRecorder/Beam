@@ -10,7 +10,9 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   let shadowWindow = null
   let currentState = null
   let hoverTimer = null
+  let shadowSyncFrame = null
   let isHovered = false
+  let lastShadowBounds = null
 
   const load = (target, query) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/index.html'), { query })
@@ -31,12 +33,30 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   const syncShadowBounds = () => {
     if (!window || window.isDestroyed() || !shadowWindow || shadowWindow.isDestroyed() || !currentState) return
     const padding = SHADOW_PADDING[currentState.shadowSize]
-    if (padding === 0) { shadowWindow.hide(); return }
+    if (padding === 0) {
+      lastShadowBounds = null
+      if (shadowWindow.isVisible()) shadowWindow.hide()
+      return
+    }
     const bounds = window.getBounds()
-    shadowWindow.setBounds({ x: bounds.x - padding, y: bounds.y - padding, width: bounds.width + padding * 2, height: bounds.height + padding * 2 })
-    shadowWindow.webContents.send('camera-shadow:state', currentState)
-    shadowWindow.showInactive()
-    window.moveTop()
+    const nextBounds = { x: bounds.x - padding, y: bounds.y - padding, width: bounds.width + padding * 2, height: bounds.height + padding * 2 }
+    if (lastShadowBounds && Object.entries(nextBounds).every(([key, value]) => lastShadowBounds[key] === value)) return
+    lastShadowBounds = nextBounds
+    shadowWindow.setBounds(nextBounds)
+    if (!shadowWindow.isVisible()) {
+      shadowWindow.showInactive()
+      window.moveTop()
+    }
+  }
+
+  const scheduleShadowSync = () => {
+    if (shadowSyncFrame) return
+    // BrowserWindow lives in Electron's main process, where requestAnimationFrame
+    // is unavailable. A 16 ms frame budget provides the same coalescing behavior.
+    shadowSyncFrame = setTimeout(() => {
+      shadowSyncFrame = null
+      syncShadowBounds()
+    }, 16)
   }
 
   const syncHoverState = () => {
@@ -61,14 +81,20 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     isHovered = false
   }
 
+  const cancelShadowSync = () => {
+    if (!shadowSyncFrame) return
+    clearTimeout(shadowSyncFrame)
+    shadowSyncFrame = null
+  }
+
   const create = () => {
     if (window && !window.isDestroyed()) return window
     const area = screen.getPrimaryDisplay().workArea
     window = new BrowserWindow({ width: DEFAULT_SIZE.width, height: DEFAULT_SIZE.height, minWidth: MIN_SIZE.width, minHeight: MIN_SIZE.height, x: area.x + area.width - DEFAULT_SIZE.width - 20, y: area.y + area.height - DEFAULT_SIZE.height - 20, frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
     window.setAlwaysOnTop(true, 'floating')
-    window.on('move', syncShadowBounds)
-    window.on('resize', syncShadowBounds)
-    window.on('closed', () => { window = null; shadowWindow?.hide(); stopHoverTracking() })
+    window.on('move', scheduleShadowSync)
+    window.on('resize', scheduleShadowSync)
+    window.on('closed', () => { window = null; shadowWindow?.hide(); stopHoverTracking(); cancelShadowSync() })
     window.webContents.once('did-finish-load', () => { if (currentState) window?.webContents.send('camera-overlay:state', currentState) })
     load(window, { cameraOverlay: '1' })
     return window
@@ -87,7 +113,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     startHoverTracking()
   }
 
-  return { configure, state: () => currentState, destroy: () => { stopHoverTracking(); if (window && !window.isDestroyed()) window.destroy(); if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.destroy() } }
+  return { configure, state: () => currentState, destroy: () => { stopHoverTracking(); cancelShadowSync(); if (window && !window.isDestroyed()) window.destroy(); if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.destroy() } }
 }
 
 module.exports = { createCameraOverlayWindow }
