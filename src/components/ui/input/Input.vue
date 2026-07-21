@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, useAttrs } from "vue";
+
+defineOptions({ inheritAttrs: false })
+
+const attrs = useAttrs()
 
 const props = withDefaults(
   defineProps<{
@@ -114,6 +118,7 @@ const handleMouseDown = (e: MouseEvent) => {
       <slot name="prefix" />
     </div>
     <input
+      v-bind="attrs"
       :id="id"
       :type="type || 'text'"
       :value="modelValue"
