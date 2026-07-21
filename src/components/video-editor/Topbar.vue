@@ -23,10 +23,56 @@ const minimizeApp = () => {
 const closeApp = () => {
   capture.close()
 }
+
+const onMouseDown = (mouseDownEvent: MouseEvent) => {
+  if (mouseDownEvent.button !== 0) return
+
+  const target = mouseDownEvent.target as HTMLElement
+  if (
+    target.closest('.left-actions') ||
+    target.closest('.right-actions') ||
+    target.closest('button') ||
+    target.closest('a')
+  ) {
+    return
+  }
+
+  const startX = mouseDownEvent.screenX
+  const startY = mouseDownEvent.screenY
+  let isDragging = false
+
+  const handleMouseMove = (mouseMoveEvent: MouseEvent) => {
+    if (!isDragging) {
+      const deltaX = mouseMoveEvent.screenX - startX
+      const deltaY = mouseMoveEvent.screenY - startY
+      // 3px drag threshold/hysteresis to ensure double click doesn't trigger dragStart
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        isDragging = true
+        capture.dragStart()
+      }
+    }
+
+    if (isDragging) {
+      capture.drag()
+    }
+  }
+
+  const handleMouseUp = () => {
+    window.removeEventListener('mousemove', handleMouseMove)
+    window.removeEventListener('mouseup', handleMouseUp)
+  }
+
+  window.addEventListener('mousemove', handleMouseMove)
+  window.addEventListener('mouseup', handleMouseUp)
+}
 </script>
 
 <template>
-  <header class="editor-titlebar" @dblclick="capture.toggleMaximize()">
+  <header
+    class="editor-titlebar"
+    @mousedown="onMouseDown"
+    @dblclick="capture.toggleMaximize()"
+  >
     <div class="left-actions" @dblclick.stop>
       <Button
         variant="ghost"
@@ -73,7 +119,7 @@ const closeApp = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  -webkit-app-region: drag;
+  user-select: none;
   flex-shrink: 0;
 }
 
@@ -82,7 +128,6 @@ const closeApp = () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  -webkit-app-region: no-drag;
   height: 100%;
 }
 

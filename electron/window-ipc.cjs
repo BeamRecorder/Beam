@@ -8,6 +8,7 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   let resizeTimer = null
   let dragStartMouse = null
   let dragStartWindow = null
+  let dragStartSize = null
 
   ipcMain.on('window:close', (event) => windowForEvent(event)?.close())
   ipcMain.on('window:minimize', (event) => windowForEvent(event)?.minimize())
@@ -43,12 +44,18 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     if (!win) return
     dragStartMouse = screen.getCursorScreenPoint()
     dragStartWindow = win.getPosition()
+    dragStartSize = win.getSize()
   })
   ipcMain.on('window:drag', (event) => {
     const win = windowForEvent(event)
-    if (!win || !dragStartMouse || !dragStartWindow) return
+    if (!win || !dragStartMouse || !dragStartWindow || !dragStartSize) return
     const point = screen.getCursorScreenPoint()
-    win.setPosition(Math.round(dragStartWindow[0] + point.x - dragStartMouse.x), Math.round(dragStartWindow[1] + point.y - dragStartMouse.y))
+    win.setBounds({
+      x: Math.round(dragStartWindow[0] + point.x - dragStartMouse.x),
+      y: Math.round(dragStartWindow[1] + point.y - dragStartMouse.y),
+      width: dragStartSize[0],
+      height: dragStartSize[1]
+    })
   })
 }
 

@@ -295,6 +295,9 @@ const resizeCanvas = () => {
   const backingHeight = Math.max(1, Math.round(height * dpr))
   if (canvas.width !== backingWidth) canvas.width = backingWidth
   if (canvas.height !== backingHeight) canvas.height = backingHeight
+
+  // Redraw synchronously to prevent blinking/flashing on resize
+  renderCanvas()
 }
 
 const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -470,7 +473,7 @@ const drawCursorWarning = (ctx: CanvasRenderingContext2D, message: string, width
   ctx.restore()
 }
 
-const draw = () => {
+const renderCanvas = () => {
   const canvas = canvasRef.value
   if (!canvas) return
   const ctx = canvas.getContext('2d')
@@ -478,7 +481,6 @@ const draw = () => {
 
   const { width, height } = logicalSize.value
   if (!width || !height) {
-    animationFrameId = requestAnimationFrame(draw)
     return
   }
   ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0)
@@ -565,6 +567,10 @@ const draw = () => {
   if (props.isPlaying && videoEl.readyState >= 1) {
     emit('update:currentTime', videoEl.ended ? 0 : videoEl.currentTime)
   }
+}
+
+const draw = () => {
+  renderCanvas()
   animationFrameId = requestAnimationFrame(draw)
 }
 

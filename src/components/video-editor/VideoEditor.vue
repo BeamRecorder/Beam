@@ -399,7 +399,6 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  -webkit-app-region: drag;
   flex-shrink: 0;
 }
 
@@ -408,7 +407,6 @@ watch(
   display: flex;
   align-items: center;
   gap: 12px;
-  -webkit-app-region: no-drag;
   height: 100%;
 }
 
