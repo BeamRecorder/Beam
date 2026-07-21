@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CursorType } from '../composables/useCursorReplacer'
-import type { BackgroundMediaGroup } from '../composables/backgroundMedia'
+import type { BackgroundMedia, BackgroundMediaGroup } from '../composables/backgroundMedia'
 import CursorPanel from './CursorPanel.vue'
 import CanvasPanel from './CanvasPanel.vue'
 import TrimPanel from './TrimPanel.vue'
@@ -43,6 +43,7 @@ const emit = defineEmits<{
   (e: 'update:isSystemAudioEnabled', value: boolean): void
   (e: 'update:isMicAudioEnabled', value: boolean): void
   (e: 'update:selectedBackground', value: string): void
+  (e: 'import:background', value: BackgroundMedia): void
   (e: 'update:zoom', value: ZoomElement): void
   (e: 'delete:zoom'): void
   (e: 'generate:zooms'): void
@@ -76,6 +77,7 @@ const emit = defineEmits<{
         :selected-background="selectedBackground"
         :background-groups="backgroundGroups"
         @update:selectedBackground="emit('update:selectedBackground', $event)"
+        @import:background="emit('import:background', $event)"
       />
 
       <TrimPanel 

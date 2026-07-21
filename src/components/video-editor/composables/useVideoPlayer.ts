@@ -13,15 +13,22 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const volume = ref(70)
   const videoSrc = ref<string | null>(null)
   const selectedBackground = ref<string | null>(availableBackgrounds[0]?.path ?? null)
+  const importedBackgrounds = ref<BackgroundMedia[]>([])
 
   const isVideoEnabled = ref(true)
   const isSystemAudioEnabled = ref(true)
   const isMicAudioEnabled = ref(true)
 
-  const backgroundGroups = computed<BackgroundMediaGroup[]>(() => groupBackgroundMedia(availableBackgrounds))
+  const allBackgrounds = computed(() => [...importedBackgrounds.value, ...availableBackgrounds])
+  const backgroundGroups = computed<BackgroundMediaGroup[]>(() => groupBackgroundMedia(allBackgrounds.value))
   const selectedBackgroundMedia = computed(() =>
-    availableBackgrounds.find((background) => background.path === selectedBackground.value) ?? null,
+    allBackgrounds.value.find((background) => background.path === selectedBackground.value) ?? null,
   )
+
+  const addBackground = (background: BackgroundMedia) => {
+    importedBackgrounds.value = [background, ...importedBackgrounds.value.filter((item) => item.path !== background.path)]
+    selectedBackground.value = background.path
+  }
 
   const togglePlay = () => {
     isPlaying.value = !isPlaying.value
@@ -52,6 +59,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     selectedBackground,
     selectedBackgroundMedia,
     backgroundGroups,
+    addBackground,
     isVideoEnabled,
     isSystemAudioEnabled,
     isMicAudioEnabled,

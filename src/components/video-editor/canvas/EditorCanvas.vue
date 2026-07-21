@@ -9,6 +9,45 @@ import { zoomAtTime } from '../zoom/zoom-playback'
 import { createCursorFollowCameraState, updateCursorFollowCamera } from '../zoom/zoom-camera'
 import { createCameraVelocity, stepCameraSpring } from '../zoom/zoom-spring'
 import type { ZoomElement } from '../zoom/zoom-types'
+import { useCursorReplacer } from '../composables/useCursorReplacer'
+
+const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
+  default: { x: 0, y: 0 },
+  beachball: { x: 16, y: 16 },
+  busy: { x: 16, y: 16 },
+  cell: { x: 16, y: 16 },
+  contextualmenu: { x: 0, y: 0 },
+  copy: { x: 0, y: 0 },
+  cross: { x: 16, y: 16 },
+  handgrabbing: { x: 16, y: 16 },
+  handopen: { x: 16, y: 16 },
+  handpointing: { x: 12, y: 2 },
+  help: { x: 0, y: 0 },
+  makealias: { x: 0, y: 0 },
+  move: { x: 16, y: 16 },
+  notallowed: { x: 16, y: 16 },
+  poof: { x: 16, y: 16 },
+  resizenorth: { x: 16, y: 16 },
+  resizenortheast: { x: 16, y: 16 },
+  resizenortheastsouthwest: { x: 16, y: 16 },
+  resizenorthsouth: { x: 16, y: 16 },
+  resizenorthwest: { x: 16, y: 16 },
+  resizenorthwestsoutheast: { x: 16, y: 16 },
+  resizeright: { x: 16, y: 16 },
+  resizesouth: { x: 16, y: 16 },
+  resizesoutheast: { x: 16, y: 16 },
+  resizesouthwest: { x: 16, y: 16 },
+  resizeup: { x: 16, y: 16 },
+  resizeupdown: { x: 16, y: 16 },
+  resizewest: { x: 16, y: 16 },
+  resizewesteast: { x: 16, y: 16 },
+  screenshotselection: { x: 16, y: 16 },
+  screenshotwindow: { x: 16, y: 16 },
+  textcursor: { x: 16, y: 16 },
+  textcursorvertical: { x: 16, y: 16 },
+  zoomin: { x: 16, y: 16 },
+  zoomout: { x: 16, y: 16 },
+}
 
 const props = defineProps<{
   isPlaying: boolean
@@ -70,6 +109,23 @@ interface Ripple {
   alpha: number
 }
 const ripples = ref<Ripple[]>([])
+
+const { getCursorImage } = useCursorReplacer()
+const customCursorImage = ref<HTMLImageElement | null>(null)
+
+watch(
+  () => [props.selectedCursor, props.cursorSize, props.cursorColor],
+  async () => {
+    try {
+      const img = await getCursorImage(props.selectedCursor, props.cursorSize, props.cursorColor)
+      customCursorImage.value = img
+    } catch (err) {
+      console.error('Failed to load custom cursor image:', err)
+      customCursorImage.value = null
+    }
+  },
+  { immediate: true }
+)
 
 const videoEl = document.createElement('video')
 videoEl.muted = true
@@ -232,7 +288,6 @@ const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: n
   ctx.clip()
 
   const zoom = zoomAtTime(props.zoomElements, props.currentTime * 1000, props.editorData?.cursor.telemetry ?? [])
-  const telemetry = props.editorData?.cursor.telemetry ?? []
   // The camera follows the same interpolated event stream as the visible cursor.
   // Telemetry is used for zoom suggestions, not presentation, so sparse samples
   // cannot make the camera and the cursor disagree.
@@ -419,10 +474,25 @@ const draw = () => {
         }
       }
 
-      if (!state?.visible || !asset || !image || !image.complete || image.naturalWidth <= 0) return
-      const cursorScale = props.cursorSize / image.naturalWidth
+      const activeImage = customCursorImage.value || image
+      if (!state?.visible || !asset || !activeImage || !activeImage.complete || activeImage.naturalWidth <= 0) return
       const pointerX = videoWindow.dx + state.x * videoWindow.dw
       const pointerY = videoWindow.dy + state.y * videoWindow.dh
+
+      let hx = 0
+      let hy = 0
+
+      if (customCursorImage.value) {
+        const hotspot = cursorHotspots[props.selectedCursor] || { x: 0, y: 0 }
+        const cursorScale = props.cursorSize / 32
+        hx = hotspot.x * cursorScale
+        hy = hotspot.y * cursorScale
+      } else {
+        const cursorScale = props.cursorSize / activeImage.naturalWidth
+        hx = asset.hotspot.x * cursorScale
+        hy = asset.hotspot.y * cursorScale
+      }
+
       if (props.enableShadow) {
         ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
         ctx.shadowBlur = 6
@@ -430,11 +500,11 @@ const draw = () => {
         ctx.shadowOffsetY = 3
       }
       ctx.drawImage(
-        image,
-        pointerX - asset.hotspot.x * cursorScale,
-        pointerY - asset.hotspot.y * cursorScale,
-        image.naturalWidth * cursorScale,
-        image.naturalHeight * cursorScale,
+        activeImage,
+        pointerX - hx,
+        pointerY - hy,
+        customCursorImage.value ? props.cursorSize : (activeImage.naturalWidth * (props.cursorSize / activeImage.naturalWidth)),
+        customCursorImage.value ? props.cursorSize : (activeImage.naturalHeight * (props.cursorSize / activeImage.naturalWidth))
       )
     })
     ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0)

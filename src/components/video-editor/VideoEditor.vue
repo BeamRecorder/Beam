@@ -44,6 +44,7 @@ const {
   selectedBackground,
   selectedBackgroundMedia,
   backgroundGroups,
+  addBackground,
   isVideoEnabled,
   isSystemAudioEnabled,
   isMicAudioEnabled,
@@ -202,6 +203,7 @@ watch(() => props.videoSrc, (videoSrc) => {
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
+          @import:background="addBackground($event)"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
