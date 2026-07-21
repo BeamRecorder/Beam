@@ -34,38 +34,47 @@ const skeletonStyle = computed(() => ({
 <style scoped>
 .skeleton {
   display: block;
-  background-color: var(--color-bg-surface-hover);
+  background-color: var(--color-bg-element);
   position: relative;
   overflow: hidden;
+  border-radius: var(--radius-sm);
 }
 
 /* Hardware accelerated sliding shimmer */
 .skeleton::after {
   content: '';
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   transform: translateX(-100%);
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.06) 20%,
-    rgba(255, 255, 255, 0.12) 60%,
-    rgba(255, 255, 255, 0) 100%
+    transparent 0%,
+    rgba(255, 255, 255, 0.12) 35%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.12) 65%,
+    transparent 100%
   );
-  animation: shimmer-slide 1.6s infinite ease-in-out;
+  animation: shimmer-slide 1.4s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 :root:not(.dark) .skeleton::after {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(0, 0, 0, 0.03) 20%,
-    rgba(0, 0, 0, 0.06) 60%,
-    rgba(255, 255, 255, 0) 100%
+    transparent 0%,
+    rgba(0, 0, 0, 0.04) 35%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.04) 65%,
+    transparent 100%
   );
 }
 
 @keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
   100% {
     transform: translateX(100%);
   }
