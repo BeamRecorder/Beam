@@ -14,6 +14,8 @@ const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-a
 const { createWhisperModelStore } = require('./captions/whisper-model-store.cjs')
 const { registerWhisperIpc } = require('./captions/whisper-ipc.cjs')
 
+protocol.registerSchemesAsPrivileged([{ scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }])
+
 const startupAt = process.hrtime.bigint()
 const logStartup = (step) => {
   if (app.isPackaged) return

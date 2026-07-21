@@ -2,7 +2,7 @@ import { onBeforeUnmount, ref } from 'vue'
 import type { CaptionSentence, CaptionWord } from '../composition/composition-types'
 import type { WhisperModelId, WhisperProgress, WhisperResult } from './whisper-types'
 
-const sentencesFromWords = (words: CaptionWord[]): CaptionSentence[] => {
+export const sentencesFromWords = (words: CaptionWord[]): CaptionSentence[] => {
   const groups: CaptionWord[][] = []; let group: CaptionWord[] = []
   for (const word of words) { group.push(word); if (/[.!?]$/.test(word.text) || group.length >= 12) { groups.push(group); group = [] } }
   if (group.length) groups.push(group)

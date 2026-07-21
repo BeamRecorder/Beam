@@ -138,12 +138,6 @@ const formatDate = (date: string) => {
   );
 };
 
-const setPreviewFrame = (event: Event) => {
-  const video = event.currentTarget as HTMLVideoElement | null;
-  if (video && video.duration > 0)
-    video.currentTime = Math.min(0.1, video.duration);
-};
-
 const videoProgress = ref<Record<string, { current: number; total: number }>>(
   {},
 );

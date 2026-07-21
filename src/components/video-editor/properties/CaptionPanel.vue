@@ -15,10 +15,10 @@ import { capture } from '../../../api/capture'
 const props = defineProps<{ layer: CaptionCompositionLayer | null; composition: ProjectComposition; editorData?: ProjectEditorData | null }>()
 const emit = defineEmits<{ (event: 'update', layer: CaptionCompositionLayer): void }>()
 const source = ref<TranscriptionSource>('system'); const model = ref<WhisperModelId>('Xenova/whisper-tiny'); const { progress, transcribe } = useWhisperTranscription()
-const modelStates = ref<Record<string, { status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>({}); const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null)
+const modelStates = ref<Record<string, { status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>({}); const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null); const downloadError = ref<string | null>(null)
 const selectedModelState = computed(() => modelStates.value[model.value]); const modelReady = computed(() => selectedModelState.value?.status === 'ready'); const progressPercent = computed(() => downloadProgress.value?.totalBytes ? downloadProgress.value.downloadedBytes / downloadProgress.value.totalBytes * 100 : 0)
 const loadModels = async () => { modelStates.value = Object.fromEntries((await capture.whisperModels()).map((item) => [item.id, item])) }
-const downloadModel = async () => { await capture.downloadWhisperModel(model.value); await loadModels() }
+const downloadModel = async () => { downloadError.value = null; try { await capture.downloadWhisperModel(model.value); await loadModels() } catch (error) { downloadError.value = error instanceof Error ? error.message : 'Model download failed.' } }
 let unsubscribe: (() => void) | null = null
 onMounted(async () => { await loadModels(); unsubscribe = capture.onWhisperProgress((event) => { if (event.id === model.value) downloadProgress.value = event }) })
 onBeforeUnmount(() => unsubscribe?.())
@@ -43,6 +43,7 @@ const run = async () => { if (!props.layer || !selectedSource.value) return; con
       <Button v-if="!modelReady" variant="primary" size="sm" :icon="Download" @click="downloadModel">Download model</Button>
       <ProgressBar v-if="downloadProgress?.id === model" :value="progressPercent" />
       <p v-if="selectedModelState" class="hint">{{ selectedModelState.status === 'ready' ? 'Ready' : 'Not downloaded' }} · {{ Math.round(selectedModelState.downloadedBytes / 1024 / 1024) }} MB</p>
+      <p v-if="downloadError" class="error">{{ downloadError }}</p>
       <Button variant="primary" size="sm" :icon="Sparkles" :disabled="!modelReady || !selectedSource || progress.status === 'loading' || progress.status === 'running'" @click="run">{{ progress.status === 'idle' ? 'Transcribe' : progress.message }}</Button>
       <p v-if="progress.status === 'error'" class="error">{{ progress.message }}</p>
       <label>Text color <ColorPicker :model-value="layer.caption.style.color" @update:model-value="updateStyle('color', $event)" /></label>

@@ -13,10 +13,10 @@ env.localModelPath = 'whisper-model://models/'
 self.onmessage = async ({ data }: MessageEvent<Request>) => {
   if (data.type !== 'transcribe') return
   try {
-    const device = 'gpu' in navigator ? 'webgpu' : 'wasm'
+    const device = navigator.gpu ? 'webgpu' : 'wasm'
     if (!transcriber || loadedModel !== data.model) {
       self.postMessage({ type: 'progress', id: data.id, status: 'loading', message: `Loading ${data.model} (${device})…` })
-      transcriber = await pipeline('automatic-speech-recognition', data.model, { device, progress_callback: (event: { progress?: number; status?: string }) => self.postMessage({ type: 'progress', id: data.id, status: 'loading', message: event.status || 'Loading model…', progress: event.progress }) }) as unknown as Transcriber
+      transcriber = await pipeline('automatic-speech-recognition', data.model, { device, dtype: 'q8', progress_callback: (event: { progress?: number; status?: string }) => self.postMessage({ type: 'progress', id: data.id, status: 'loading', message: event.status || 'Loading model…', progress: event.progress }) }) as unknown as Transcriber
       loadedModel = data.model
     }
     self.postMessage({ type: 'progress', id: data.id, status: 'running', message: 'Transcribing…' })
