@@ -101,19 +101,31 @@ watch(() => props.direction, (val) => {
   directionClass.value = val
 })
 
+let mousedownWasOutside = false
+
+const handleMouseDownOutside = (event: MouseEvent) => {
+  const isInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
+  const isInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
+  mousedownWasOutside = !isInsideTrigger && !isInsideContent
+}
+
 const handleClickOutside = (event: MouseEvent) => {
-  const isClickInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
-  const isClickInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
-  if (!isClickInsideTrigger && !isClickInsideContent) {
-    close()
+  if (mousedownWasOutside) {
+    const isClickInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
+    const isClickInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
+    if (!isClickInsideTrigger && !isClickInsideContent) {
+      close()
+    }
   }
 }
 
 onMounted(() => {
+  document.addEventListener('mousedown', handleMouseDownOutside)
   document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
+  document.removeEventListener('mousedown', handleMouseDownOutside)
   document.removeEventListener('click', handleClickOutside)
 })
 

@@ -300,7 +300,7 @@ const stopMarquee = (event: PointerEvent) => {
 
 .selected-thumbnail-wrapper {
   position: relative;
-  width: 38px;
+  width: 24px;
   height: 24px;
   border-radius: 4px;
   overflow: hidden;
@@ -316,7 +316,7 @@ const stopMarquee = (event: PointerEvent) => {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 2px;
+  padding: 1px;
 }
 
 .selected-color-badge {
@@ -396,7 +396,7 @@ const stopMarquee = (event: PointerEvent) => {
 
 .thumbnail-wrapper {
   position: relative;
-  width: 44px;
+  width: 28px;
   height: 28px;
   background: #0f172a;
   border-radius: 4px;
