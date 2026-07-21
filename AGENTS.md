@@ -5,8 +5,11 @@ All contributors and coding agents must read the following documents before chan
 - [UI guidelines](docs/UI.md)
 - [Architecture guidelines](docs/ARCHITECTURE.md)
 - [Code quality guidelines](docs/CODE_QUALITY.md)
+- [Electron window guidance](docs/electron_window.md) — mandatory before changing Electron windows, window IPC, transparent-window layout, popovers, shadows, sizing, or mouse/focus behavior.
 
 These documents are part of the repository's engineering contract. If an implementation conflicts with them, update the design or ask for clarification before adding the code.
+
+When a task affects Electron windows, read `docs/electron_window.md` first and follow its checklist. It documents the native-window pitfalls that CSS alone cannot fix.
 
 ## Build :
 You are in a WSL envrionnement, if you use `npm` or `cargo`, prefix it via powershell.exe

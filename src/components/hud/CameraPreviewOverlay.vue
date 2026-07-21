@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import Popover from '~/ui/popover/Popover.vue'
 import Button from '~/ui/button/Button.vue'
 import Select from '~/ui/select/Select.vue'
@@ -28,20 +28,44 @@ const emit = defineEmits<{
 }>()
 
 const videoRef = ref<HTMLVideoElement | null>(null)
+const previewRef = ref<HTMLElement | null>(null)
 const cameraStream = ref<MediaStream | null>(null)
 const isHovered = ref(false)
 const isPopoverOpen = ref(false)
 const streamError = ref<string | null>(null)
+const overlayOffset = ref({ x: 0, y: 0 })
 
-const handlePopoverToggle = (isOpen: boolean) => {
-  isPopoverOpen.value = isOpen
+const syncNativeWindowSize = async () => {
+  if (!props.windowOverlay) return
+  await nextTick()
+  const bounds = previewRef.value?.getBoundingClientRect()
+  if (!bounds) return
+  await window.capture?.resizeCameraOverlay({
+    width: Math.ceil(bounds.width) + 64,
+    height: Math.ceil(bounds.height) + 64,
+    popoverOpen: false,
+  })
+}
+
+defineExpose({ syncNativeWindowSize, isPopoverOpen })
+
+const handlePopoverToggle = async (isOpen: boolean) => {
+  if (!isOpen) isPopoverOpen.value = false
   if (props.windowOverlay) {
     const contentWidth = ({ sm: 120, md: 160, lg: 220, xl: 300 }[props.size] || 160)
     const contentHeight = ({ sm: 90, md: 120, lg: 165, xl: 225 }[props.size] || 120)
-    // The settings menu needs a real Electron surface, but it is collapsed as
-    // soon as its own popover closes. Transparent pixels pass mouse events through.
-    window.capture?.setSize(isOpen ? 390 : contentWidth + 48, isOpen ? Math.max(contentHeight + 48, 300) : contentHeight + 48)
-    if (isOpen) window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
+    const offset = await window.capture?.resizeCameraOverlay({
+      width: isOpen ? 390 : contentWidth + 64,
+      height: isOpen ? Math.max(contentHeight + 64, 300) : contentHeight + 64,
+      popoverOpen: isOpen,
+    })
+    overlayOffset.value = offset || { x: 0, y: 0 }
+    if (isOpen) {
+      isPopoverOpen.value = true
+      window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
+    }
+  } else {
+    isPopoverOpen.value = isOpen
   }
   emit('toggle-popover', isOpen)
 }
@@ -94,6 +118,11 @@ const cornerOptions = [
   { value: 'lg', label: 'Large (24px)' },
   { value: 'full', label: 'Circular' },
 ]
+
+const updateCameraSize = async (value: string) => {
+  await handlePopoverToggle(false)
+  emit('update:size', value)
+}
 
 const sizeClassMap: Record<string, string> = {
   sm: 'size-sm',
@@ -199,6 +228,13 @@ watch(
 )
 
 const handleMouseDown = (e: MouseEvent) => {
+  if (props.windowOverlay && isPopoverOpen.value) {
+    const target = e.target as HTMLElement
+    if (!target.closest('.camera-inline-settings, .native-settings')) {
+      void handlePopoverToggle(false)
+      return
+    }
+  }
   if ((e.target as HTMLElement).closest('.popover-container')) return
 
   if (props.windowOverlay) { window.capture?.dragStart(); window.addEventListener('mousemove', handleWindowDrag); window.addEventListener('mouseup', handleWindowDragEnd); return }
@@ -231,6 +267,7 @@ const handleMouseUp = () => {
 }
 
 onMounted(() => {
+  window.addEventListener('blur', closeInlineSettings)
   if (props.cameraId && props.cameraId !== 'off') {
     void setupCameraStream(props.cameraId)
   }
@@ -240,35 +277,45 @@ onBeforeUnmount(() => {
   stopCameraStream()
   window.removeEventListener('mousemove', handleMouseMove)
   window.removeEventListener('mouseup', handleMouseUp)
+  window.removeEventListener('blur', closeInlineSettings)
 })
+
+function closeInlineSettings() {
+  if (isPopoverOpen.value) void handlePopoverToggle(false)
+}
 </script>
 
 <template>
   <div
     v-show="cameraId !== 'off'"
+    ref="previewRef"
     class="camera-overlay-container"
     :class="[previewClasses, { 'window-overlay': windowOverlay }]"
-    :style="windowOverlay ? undefined : { top: `${posY}px`, left: `${posX}px` }"
+    :style="windowOverlay ? { transform: `translate(${overlayOffset.x}px, ${overlayOffset.y}px)` } : { top: `${posY}px`, left: `${posX}px` }"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
     @mousedown="handleMouseDown"
   >
-    <video
-      ref="videoRef"
-      autoplay
-      muted
-      playsinline
-      class="camera-overlay-video"
-    />
+    <div class="camera-overlay-frame">
+      <video
+        ref="videoRef"
+        autoplay
+        muted
+        playsinline
+        class="camera-overlay-video"
+      />
 
-    <div v-if="streamError" class="camera-overlay-error">
-      <Video class="error-icon" />
+      <div v-if="streamError" class="camera-overlay-error">
+        <Video class="error-icon" />
+      </div>
     </div>
 
     <!-- Hover 'More' Button triggering settings popover -->
     <Transition name="fade">
       <div v-if="isHovered || isDragging || isPopoverOpen" class="camera-overlay-more">
+        <button v-if="windowOverlay" class="more-btn native-settings" aria-label="Camera options" @mousedown.stop @click.stop="handlePopoverToggle(!isPopoverOpen)"><MoreVertical /></button>
         <Popover
+          v-else
           align="right"
           direction="down"
           :match-trigger-width="false"
@@ -319,6 +366,11 @@ onBeforeUnmount(() => {
         </Popover>
       </div>
     </Transition>
+    <section v-if="windowOverlay && isPopoverOpen" class="camera-inline-settings" @mousedown.stop>
+      <label>Size<Select :model-value="size" :options="sizeOptions" @update:model-value="updateCameraSize" /></label>
+      <label>Shadow<Select :model-value="shadowSize" :options="shadowOptions" @update:model-value="emit('update:shadowSize', $event)" /></label>
+      <label>Corner<Select :model-value="cornerRadius" :options="cornerOptions" @update:model-value="emit('update:cornerRadius', $event)" /></label>
+    </section>
   </div>
 </template>
 
@@ -328,14 +380,14 @@ onBeforeUnmount(() => {
   z-index: 9999;
   cursor: grab;
   user-select: none;
-  overflow: hidden !important;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: var(--color-bg-dark, #000);
-  transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease, border-radius 0.2s ease;
+  overflow: visible;
+  border-radius: var(--camera-radius);
+  transition: box-shadow 0.2s ease, border-radius 0.2s ease;
   isolation: isolate;
+  --camera-radius: 20px;
 }
 
-.camera-overlay-container.window-overlay { top: 24px; left: 24px; }
+.camera-overlay-container.window-overlay { top: 32px; left: 32px; }
 
 .camera-overlay-container.size-sm {
   width: 120px;
@@ -358,13 +410,27 @@ onBeforeUnmount(() => {
   cursor: grabbing;
 }
 
+.camera-inline-settings { position: absolute; inset: 4px; z-index: 3; display: grid; align-content: start; gap: 4px; padding: 25px 5px 5px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: inherit; background: var(--color-bg-surface); }
+.camera-inline-settings label { display: grid; gap: 1px; font-size: 9px; font-weight: 700; line-height: 1; color: var(--text-secondary); }
+.camera-inline-settings :deep(.select-trigger) { min-height: 28px; padding: 4px 7px; font-size: 10px; }
+.camera-inline-settings :deep(.select-label) { font-size: 10px !important; }
+
+.camera-overlay-frame {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--camera-radius);
+  clip-path: inset(0 round var(--camera-radius));
+  background: var(--color-bg-dark, #000);
+}
+
 .camera-overlay-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: inherit;
-  overflow: hidden;
 }
 
 .camera-overlay-error {
@@ -424,18 +490,23 @@ onBeforeUnmount(() => {
 
 /* Corner radius variants */
 .radius-none {
+  --camera-radius: 0px;
   border-radius: 0px;
 }
 .radius-sm {
+  --camera-radius: 8px;
   border-radius: 8px;
 }
 .radius-md {
+  --camera-radius: 14px;
   border-radius: 14px;
 }
 .radius-lg {
+  --camera-radius: 20px;
   border-radius: 20px;
 }
 .radius-full {
+  --camera-radius: 50%;
   border-radius: 50%;
   aspect-ratio: 1 / 1;
 }

@@ -1,5 +1,6 @@
 const HUD_SIZE = { width: 352, height: 512 }
 const RECORDER_SIZE = { width: 72, height: 296 }
+const RECORDER_TOOLTIP_WIDTH = 260
 
 class WindowController {
   constructor(window) {
@@ -10,6 +11,7 @@ class WindowController {
     this.hudOverInteractive = false
     this.recorderPositions = new Map()
     this.hudPosition = null
+    this.recorderBoundsBeforeTooltip = null
     this.window.setIgnoreMouseEvents(true)
     this.window.on('show', () => this.applyInteractionPolicy())
     this.window.on('hide', () => this.applyInteractionPolicy())
@@ -48,6 +50,21 @@ class WindowController {
     const { screen } = require('electron')
     const [x, y] = this.window.getPosition()
     this.recorderPositions.set(screen.getDisplayNearestPoint({ x, y }).id, { x, y })
+  }
+
+  setRecorderTooltip(visible) {
+    if (this.mode !== 'recorder' || this.window.isDestroyed()) return
+    if (visible && !this.recorderBoundsBeforeTooltip) {
+      const [x, y] = this.window.getPosition()
+      this.recorderBoundsBeforeTooltip = { x, y }
+      this.window.setBounds({ x: x - (RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width), y, width: RECORDER_TOOLTIP_WIDTH, height: RECORDER_SIZE.height })
+      return
+    }
+    if (!visible && this.recorderBoundsBeforeTooltip) {
+      const { x, y } = this.recorderBoundsBeforeTooltip
+      this.recorderBoundsBeforeTooltip = null
+      this.window.setBounds({ x, y, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })
+    }
   }
 
   maximize() {
@@ -122,9 +139,14 @@ class WindowController {
   }
 
   showHud() {
+    if (this.window.isDestroyed()) return
+    const applyHudBounds = () => this.window.setSize(HUD_SIZE.width, HUD_SIZE.height)
+    // Native unmaximizing is asynchronous on Windows. Applying HUD bounds in
+    // the same tick can be ignored and leaves an editor-sized HUD.
+    if (this.window.isMaximized()) this.window.once('unmaximize', applyHudBounds)
     this.setMode('hud')
     this.restore()
-    this.window.setSize(HUD_SIZE.width, HUD_SIZE.height)
+    if (!this.window.isMaximized()) setTimeout(applyHudBounds, 0)
   }
 }
 

@@ -6,6 +6,7 @@ import CameraOverlayApp from './components/hud/CameraOverlayApp.vue'
 import Button from './components/ui/button/Button.vue'
 import RecorderBar from './components/hud/recorder/RecorderBar.vue'
 import CountdownOverlay from './components/hud/recorder/CountdownOverlay.vue'
+import CameraSettingsApp from './components/hud/CameraSettingsApp.vue'
 import { useRecordingController } from './components/hud/recorder/useRecordingController'
 import type { RecordingConfiguration, RecordingSessionResult } from './components/hud/recorder/recording-types'
 
@@ -56,6 +57,7 @@ onBeforeUnmount(() => {
 const currentView = ref<'hud' | 'recorder' | 'editor'>('hud')
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay')
 const isCountdownOverlay = new URLSearchParams(window.location.search).has('countdown')
+const isCameraSettings = new URLSearchParams(window.location.search).has('cameraSettings')
 const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))
 const currentVideoSrc = ref<string | null>(null)
 const currentProject = ref<CaptureProject | null>(null)
@@ -71,8 +73,7 @@ const setView = (view: 'hud' | 'editor') => {
     capture.setWindowMode('editor')
     capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
   } else {
-    capture.setWindowMode('hud')
-    capture.setSize(352, 512)
+    capture.showHud()
   }
 }
 
@@ -161,6 +162,7 @@ const dismissEditorLoadError = () => {
 <template>
   <CameraOverlayApp v-if="isCameraOverlay" />
   <CountdownOverlay v-else-if="isCountdownOverlay" />
+  <CameraSettingsApp v-else-if="isCameraSettings" />
   <div v-else class="app-container">
     <!-- View Switcher -->
     <HUD 

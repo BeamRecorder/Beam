@@ -252,7 +252,9 @@ const updateWindowSize = () => {
   }
 
   targetHeight += errorHeight;
-  const targetWidth = isDropdownOpen ? 365 : 320;
+  // Popovers are teleported and viewport-bounded; resizing the HUD horizontally
+  // makes the card jump to the right without creating usable space.
+  const targetWidth = 320;
 
   if (targetHeight > lastHeight || targetWidth > lastWidth) {
     // Grow the Electron window instantly so transitions are not clipped
@@ -281,7 +283,7 @@ const updateWindowSize = () => {
         }
       }
       currentTargetHeight += errorHeight;
-      const currentTargetWidth = currentDropdownOpen ? 365 : 320;
+      const currentTargetWidth = 320;
 
       // Only apply if the situation hasn't changed (don't override a subsequent open)
       if (

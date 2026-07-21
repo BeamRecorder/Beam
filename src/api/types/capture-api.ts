@@ -34,6 +34,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   close(): void
   minimize(): void
   setWindowMode(mode: 'hud' | 'recorder' | 'editor'): void
+  showHud(): void
   present(): void
   maximize(): void
   unmaximize(): void
@@ -42,12 +43,14 @@ export interface DesktopCaptureApi extends CaptureApi {
   setSize(width: number, height: number): void
   setSizeSmooth(width: number, height: number): void
   setInteractive(overInteractive: boolean): void
+  setRecorderTooltip(visible: boolean): void
   setCameraOverlayInteractive(overInteractive: boolean): void
   setCountdown(seconds: number | null): void
   onCountdown(listener: (seconds: number | null) => void): () => void
   dragStart(): void
   drag(): void
   getSources(types?: string[]): Promise<CapturePreview[]>
+  getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>
   listProjects(): Promise<CaptureProject[]>
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
   saveProjectZoomState(projectId: string, zoom: ProjectZoomState): Promise<ProjectZoomState>
@@ -65,6 +68,8 @@ export interface DesktopCaptureApi extends CaptureApi {
   downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
   configureCameraOverlay(state: { cameraId: string; size: string; shadowSize: string; cornerRadius: string }): void
+  resizeCameraOverlay(options: { width: number; height: number; popoverOpen: boolean }): Promise<{ x: number; y: number }>
+  toggleCameraSettings(): void
   getCameraOverlayState(): Promise<{ cameraId: string; size: string; shadowSize: string; cornerRadius: string } | null>
   onCameraOverlayState(listener: (state: { cameraId: string; size: string; shadowSize: string; cornerRadius: string }) => void): () => void
   beginExport(options: { projectName: string; format: 'webm' | 'mp4' }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
