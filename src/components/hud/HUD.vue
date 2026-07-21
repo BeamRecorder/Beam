@@ -227,8 +227,10 @@ const loadPreviews = async () => {
 };
 
 const activeDropdowns = ref(0);
-let lastHeight = 480;
-let lastWidth = 320;
+// Start without an assumed size so the first HUD render also reserves the
+// outer margin required for its border and shadow.
+let lastHeight = 0;
+let lastWidth = 0;
 
 const updateWindowSize = () => {
   const isDropdownOpen = activeDropdowns.value > 0;
@@ -254,7 +256,7 @@ const updateWindowSize = () => {
 
   if (targetHeight > lastHeight || targetWidth > lastWidth) {
     // Grow the Electron window instantly so transitions are not clipped
-    capture.setSize(targetWidth, targetHeight);
+    capture.setSize(targetWidth + 32, targetHeight + 32);
   } else if (targetHeight < lastHeight || targetWidth < lastWidth) {
     // Wait for the card's CSS transition (200ms) to complete before shrinking
     const snapshotDropdownOpen = activeDropdowns.value > 0;
@@ -287,7 +289,7 @@ const updateWindowSize = () => {
         currentTargetHeight === snapshotHeight &&
         currentTargetWidth === snapshotWidth
       ) {
-        capture.setSize(snapshotWidth, snapshotHeight);
+        capture.setSize(snapshotWidth + 32, snapshotHeight + 32);
       }
     }, 200);
   }
@@ -996,14 +998,13 @@ const openProject = (project: CaptureProject) => {
 
 <style scoped>
 .hud-wrapper {
-  width: 320px;
+  width: calc(100% - 32px);
+  margin: 16px;
   background: var(
     --color-bg-surface
   ); /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  /* The HUD is a compact floating card: the large ambient shadow reads as a
-     square translucent window, especially in Electron dark mode. */
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;

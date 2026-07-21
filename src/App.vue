@@ -5,6 +5,7 @@ import HUD from './components/hud/HUD.vue'
 import CameraOverlayApp from './components/hud/CameraOverlayApp.vue'
 import Button from './components/ui/button/Button.vue'
 import RecorderBar from './components/hud/recorder/RecorderBar.vue'
+import CountdownOverlay from './components/hud/recorder/CountdownOverlay.vue'
 import { useRecordingController } from './components/hud/recorder/useRecordingController'
 import type { RecordingConfiguration, RecordingSessionResult } from './components/hud/recorder/recording-types'
 
@@ -54,6 +55,7 @@ onBeforeUnmount(() => {
 
 const currentView = ref<'hud' | 'recorder' | 'editor'>('hud')
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay')
+const isCountdownOverlay = new URLSearchParams(window.location.search).has('countdown')
 const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))
 const currentVideoSrc = ref<string | null>(null)
 const currentProject = ref<CaptureProject | null>(null)
@@ -61,8 +63,6 @@ const currentEditorData = ref<ProjectEditorData | null>(null)
 const isPreparingEditor = ref(false)
 const editorLoadError = ref('')
 const EDITOR_WINDOW_SIZE = { width: 1280, height: 800 }
-
-const wait = (durationMs: number) => new Promise<void>((resolve) => window.setTimeout(resolve, durationMs))
 
 const setView = (view: 'hud' | 'editor') => {
   currentView.value = view
@@ -72,7 +72,7 @@ const setView = (view: 'hud' | 'editor') => {
     capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
   } else {
     capture.setWindowMode('hud')
-    capture.setSize(320, 480)
+    capture.setSize(352, 512)
   }
 }
 
@@ -96,7 +96,7 @@ const cancelOrStopRecording = async () => {
   await recording.stop()
   if (wasCountdown) {
     capture.setWindowMode('hud')
-    capture.setSize(320, 480)
+    capture.setSize(352, 512)
     currentView.value = 'hud'
   }
 }
@@ -104,11 +104,13 @@ const cancelOrStopRecording = async () => {
 const revealEditor = async () => {
   capture.setWindowMode('editor')
   capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
-  capture.present()
-  await wait(180)
   currentView.value = 'editor'
-  await nextTick()
   isPreparingEditor.value = false
+  await nextTick()
+  // The current window is already visible. Presenting only after the editor is
+  // mounted avoids exposing a full-size "Finalizing" screen between the bar
+  // and the editor.
+  capture.present()
 }
 
 const handleStopRecording = async (session: RecordingSessionResult) => {
@@ -158,6 +160,7 @@ const dismissEditorLoadError = () => {
 
 <template>
   <CameraOverlayApp v-if="isCameraOverlay" />
+  <CountdownOverlay v-else-if="isCountdownOverlay" />
   <div v-else class="app-container">
     <!-- View Switcher -->
     <HUD 
@@ -171,6 +174,7 @@ const dismissEditorLoadError = () => {
         v-if="currentView === 'recorder'"
         :phase="recording.phase.value"
         :seconds-remaining="recording.secondsRemaining.value"
+        :recording-time="recording.recordingTime.value"
         :camera-enabled="recording.cameraEnabled.value"
         :microphone-enabled="recording.microphoneEnabled.value"
         :system-audio-enabled="recording.systemAudioEnabled.value"
@@ -182,6 +186,7 @@ const dismissEditorLoadError = () => {
         @system-audio="recording.toggleSystemAudio"
       />
     </Transition>
+
 
     <section v-if="isPreparingEditor" class="editor-preparing" aria-live="polite">
       <LoaderCircle class="preparing-spinner" :size="28" />
@@ -275,6 +280,7 @@ const dismissEditorLoadError = () => {
 
 .recorder-return-enter-active, .recorder-return-leave-active { transition: opacity .18s ease, transform .18s ease; }
 .recorder-return-enter-from, .recorder-return-leave-to { opacity: 0; transform: translateX(8px); }
+
 
 @keyframes spin {
   to { transform: rotate(360deg); }

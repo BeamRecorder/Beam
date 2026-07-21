@@ -1,5 +1,5 @@
-const HUD_SIZE = { width: 320, height: 480 }
-const RECORDER_SIZE = { width: 72, height: 316 }
+const HUD_SIZE = { width: 352, height: 512 }
+const RECORDER_SIZE = { width: 72, height: 296 }
 
 class WindowController {
   constructor(window) {
@@ -9,6 +9,7 @@ class WindowController {
     this.interactive = false
     this.hudOverInteractive = false
     this.recorderPositions = new Map()
+    this.hudPosition = null
     this.window.setIgnoreMouseEvents(true)
     this.window.on('show', () => this.applyInteractionPolicy())
     this.window.on('hide', () => this.applyInteractionPolicy())
@@ -26,8 +27,10 @@ class WindowController {
 
   setMode(mode) {
     if (!['hud', 'recorder', 'editor'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`)
+    if (this.mode === 'hud' && mode === 'recorder') this.hudPosition = this.window.getPosition()
     this.mode = mode
     if (mode === 'recorder') this.placeRecorder()
+    if (mode === 'hud' && this.hudPosition) this.window.setPosition(...this.hudPosition)
     this.applyModePolicy()
   }
 

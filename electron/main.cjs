@@ -10,6 +10,7 @@ const { WindowController } = require('./window/window-controller.cjs')
 const { registerWindowIpc } = require('./window/window-ipc.cjs')
 const { registerExportIpc } = require('./export/export-ipc.cjs')
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs')
+const { createCountdownWindow } = require('./countdown-window.cjs')
 const { createCameraStorage, registerCameraIpc } = require('./camera-ipc.cjs')
 const { createMicrophoneStorage, registerMicrophoneIpc } = require('./microphone/ipc.cjs')
 const { createSystemAudioStorage, registerSystemAudioIpc } = require('./system-audio/ipc.cjs')
@@ -83,7 +84,7 @@ function configureDesktopLoopback() {
 function createWindow() {
   logStartup('Creating BrowserWindow.')
   const win = new BrowserWindow({
-    width: 320, height: 480, frame: false, transparent: true, alwaysOnTop: false,
+    width: 352, height: 512, frame: false, transparent: true, alwaysOnTop: false,
     icon: path.join(applicationRoot, 'public/brand/DemoRecorderIcon.ico'), resizable: true, maximizable: true, hasShadow: true, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false },
   })
@@ -133,8 +134,10 @@ app.whenReady().then(() => {
   logStartup('Whisper model IPC registered.')
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
   const cameraOverlay = createCameraOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
+  const countdownOverlay = createCountdownWindow({ applicationRoot, isPackaged: app.isPackaged })
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state))
   ipcMain.on('camera-overlay:set-interactive', (_event, interactive) => cameraOverlay.setInteractive(interactive))
+  ipcMain.on('countdown:set', (_event, seconds) => countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null))
   ipcMain.handle('camera-overlay:state', () => cameraOverlay.state())
   logStartup('Window IPC registered.')
   const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })

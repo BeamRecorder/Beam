@@ -1,17 +1,27 @@
 <script setup lang="ts">
 import { Camera, CameraOff, Mic, MicOff, Pause, Play, Square, Volume2, VolumeX } from '@lucide/vue'
+import { onBeforeUnmount } from 'vue'
 import Tooltip from '~/ui/tooltip/Tooltip.vue'
 import type { RecordingPhase } from './recording-types'
 
-defineProps<{ phase: RecordingPhase; secondsRemaining: number; cameraEnabled: boolean; microphoneEnabled: boolean; systemAudioEnabled: boolean; visibility: 'always' | 'auto-fade' }>()
+defineProps<{ phase: RecordingPhase; secondsRemaining: number; recordingTime: string; cameraEnabled: boolean; microphoneEnabled: boolean; systemAudioEnabled: boolean; visibility: 'always' | 'auto-fade' }>()
 const emit = defineEmits<{ stop: []; pause: []; camera: []; microphone: []; systemAudio: [] }>()
-const startDrag = () => window.capture?.dragStart()
 const drag = () => window.capture?.drag()
+const stopDrag = () => {
+  window.removeEventListener('mousemove', drag)
+  window.removeEventListener('mouseup', stopDrag)
+}
+const startDrag = () => {
+  window.capture?.dragStart()
+  window.addEventListener('mousemove', drag)
+  window.addEventListener('mouseup', stopDrag, { once: true })
+}
+onBeforeUnmount(stopDrag)
 </script>
 
 <template>
-  <aside class="recorder-bar" :class="{ 'auto-fade': visibility === 'auto-fade' }" aria-label="Recording controls" @mousedown="startDrag" @mousemove="drag">
-    <p v-if="phase === 'countdown'" class="countdown" aria-live="polite">{{ secondsRemaining }}</p>
+  <aside class="recorder-bar" :class="{ 'auto-fade': visibility === 'auto-fade' }" aria-label="Recording controls" @mousedown="startDrag">
+    <p class="recording-time" :class="{ countdown: phase === 'countdown' }" aria-live="polite">{{ phase === 'countdown' ? 'Ready' : recordingTime }}</p>
     <Tooltip :content="phase === 'paused' ? 'Resume recording' : 'Pause recording'" position="left"><button class="control" :aria-label="phase === 'paused' ? 'Resume recording' : 'Pause recording'" :disabled="phase === 'countdown'" @mousedown.stop @click="emit('pause')"><Play v-if="phase === 'paused'" /><Pause v-else /></button></Tooltip>
     <Tooltip content="Stop recording" position="left"><button class="control stop" aria-label="Stop recording" @mousedown.stop @click="emit('stop')"><Square /></button></Tooltip>
     <Tooltip :content="microphoneEnabled ? 'Turn microphone off' : 'Turn microphone on'" position="left"><button class="control" :aria-label="microphoneEnabled ? 'Turn microphone off' : 'Turn microphone on'" :disabled="phase === 'countdown'" @mousedown.stop @click="emit('microphone')"><Mic v-if="microphoneEnabled" /><MicOff v-else /></button></Tooltip>
@@ -21,7 +31,7 @@ const drag = () => window.capture?.drag()
 </template>
 
 <style scoped>
-.recorder-bar { width: 56px; min-height: 296px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 8px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-surface); box-shadow: var(--shadow-xl); -webkit-app-region: drag; transition: opacity .18s ease; }
+.recorder-bar { width: 56px; min-height: 296px; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-surface); -webkit-app-region: drag; transition: opacity .18s ease; }
 .recorder-bar.auto-fade { opacity: .15; }.recorder-bar.auto-fade:hover, .recorder-bar.auto-fade:focus-within { opacity: 1; }
-.control { width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-primary); cursor: pointer; -webkit-app-region: no-drag; }.control:hover:not(:disabled) { background: var(--color-bg-element); }.control:disabled { opacity: .45; cursor: not-allowed; }.control.stop { color: var(--color-error); }.control :deep(svg) { width: 18px; height: 18px; }.countdown { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; }
+.control { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-primary); cursor: pointer; -webkit-app-region: no-drag; }.control:hover:not(:disabled) { background: var(--color-bg-element); }.control:disabled { opacity: .45; cursor: not-allowed; }.control.stop { color: var(--color-error); }.control :deep(svg) { width: 20px; height: 20px; }.recording-time { margin: 0; font-size: 11px; line-height: 24px; font-variant-numeric: tabular-nums; font-weight: 700; }.countdown { color: var(--text-muted); }
 </style>

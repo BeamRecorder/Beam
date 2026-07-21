@@ -43,6 +43,8 @@ export interface DesktopCaptureApi extends CaptureApi {
   setSizeSmooth(width: number, height: number): void
   setInteractive(overInteractive: boolean): void
   setCameraOverlayInteractive(overInteractive: boolean): void
+  setCountdown(seconds: number | null): void
+  onCountdown(listener: (seconds: number | null) => void): () => void
   dragStart(): void
   drag(): void
   getSources(types?: string[]): Promise<CapturePreview[]>
