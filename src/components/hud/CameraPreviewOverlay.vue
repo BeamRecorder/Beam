@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Settings, Video } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 
@@ -32,7 +32,20 @@ const loadCamera = async (cameraId: string) => {
 }
 
 watch(() => props.cameraId, (cameraId) => { void loadCamera(cameraId) }, { immediate: true })
-onBeforeUnmount(stopCameraStream)
+const closeSettingsOnOutsidePointer = (event: PointerEvent) => {
+  if (!settingsOpen.value || !(event.target instanceof Element)) return
+  if (!event.target.closest('.camera-settings, .settings-button')) settingsOpen.value = false
+}
+const closeSettingsOnBlur = () => { settingsOpen.value = false }
+onMounted(() => {
+  window.addEventListener('pointerdown', closeSettingsOnOutsidePointer, { capture: true })
+  window.addEventListener('blur', closeSettingsOnBlur)
+})
+onBeforeUnmount(() => {
+  stopCameraStream()
+  window.removeEventListener('pointerdown', closeSettingsOnOutsidePointer, { capture: true })
+  window.removeEventListener('blur', closeSettingsOnBlur)
+})
 
 
 </script>
@@ -43,19 +56,20 @@ onBeforeUnmount(stopCameraStream)
     <div v-if="streamError" class="camera-overlay-error"><Video :size="24" /></div>
     <button type="button" class="settings-button" aria-label="Camera appearance" @pointerdown.stop @click.stop="settingsOpen = !settingsOpen"><Settings :size="17" /></button>
     <section v-if="settingsOpen" class="camera-settings" @pointerdown.stop>
-      <span>Shadow</span><div><Button v-for="value in ['none', 'sm', 'md', 'lg']" :key="value" variant="tab" size="sm" :class="{ active: shadowSize === value }" @click="emit('update:shadowSize', value)">{{ value }}</Button></div>
-      <span>Corner</span><div><Button v-for="value in ['none', 'sm', 'md', 'lg', 'full']" :key="value" variant="tab" size="sm" :class="{ active: cornerRadius === value }" @click="emit('update:cornerRadius', value)">{{ value }}</Button></div>
+      <span>Shadow</span><div class="shadow-options"><Button v-for="value in ['none', 'sm', 'md', 'lg']" :key="value" variant="tab" size="sm" :class="{ active: shadowSize === value }" @click="emit('update:shadowSize', value)">{{ value }}</Button></div>
+      <span>Corner</span><div class="corner-options"><Button v-for="value in ['none', 'sm', 'md', 'lg', 'full']" :key="value" variant="tab" size="sm" :class="{ active: cornerRadius === value }" @click="emit('update:cornerRadius', value)">{{ value }}</Button></div>
     </section>
   </main>
 </template>
 
 <style scoped>
-.camera-overlay-container { position: fixed; inset: 0; overflow: hidden; background: #000; cursor: grab; --radius: 12px; border-radius: var(--radius); clip-path: inset(0 round var(--radius)); isolation: isolate; -webkit-app-region: drag; }
+.camera-overlay-container { position: fixed; inset: 0; overflow: hidden; background: #000; cursor: grab; --radius: 12px; border-radius: var(--radius); isolation: isolate; -webkit-app-region: drag; }
 .camera-overlay-video { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; display: block; object-fit: cover; border-radius: var(--radius); }
 .camera-overlay-error { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: var(--text-muted); background: rgba(0, 0, 0, .7); }
-.settings-button { position: absolute; top: 8px; right: 8px; z-index: 10; display: grid; width: 32px; height: 32px; place-items: center; padding: 0; color: white; border: 1px solid rgba(255, 255, 255, .5); border-radius: 50%; background: rgba(0, 0, 0, .75); cursor: pointer; -webkit-app-region: no-drag; }
-.camera-settings { position: absolute; top: 42px; right: 8px; z-index: 11; display: grid; gap: 4px; width: max-content; padding: 8px; border-radius: var(--radius-sm); background: rgba(20, 20, 24, .96); color: white; box-shadow: var(--shadow-lg); cursor: default; -webkit-app-region: no-drag; }
-.camera-settings span { font-size: 10px; font-weight: 700; color: var(--text-muted); }.camera-settings div { display: flex; gap: 3px; }
-.shadow-none { box-shadow: none; }.shadow-sm { box-shadow: inset 0 0 8px rgba(0, 0, 0, .25); }.shadow-md { box-shadow: inset 0 0 16px rgba(0, 0, 0, .4); }.shadow-lg { box-shadow: inset 0 0 28px rgba(0, 0, 0, .6); }
+.settings-button { position: absolute; top: 8px; right: 8px; z-index: 10; display: grid; width: 32px; height: 32px; place-items: center; padding: 0; color: white; border: 1px solid rgba(255, 255, 255, .5); border-radius: 50%; background: rgba(0, 0, 0, .75); cursor: pointer; opacity: 0; transition: opacity .15s ease; -webkit-app-region: no-drag; }
+.camera-overlay-container:hover .settings-button, .settings-button:focus-visible { opacity: 1; }
+.camera-settings { position: absolute; top: 44px; right: 8px; z-index: 11; display: grid; gap: 5px; width: 132px; padding: 9px; border-radius: var(--radius-sm); background: rgba(20, 20, 24, .96); color: white; box-shadow: var(--shadow-lg); cursor: default; -webkit-app-region: no-drag; }
+.camera-settings span { font-size: 9px; font-weight: 700; color: var(--text-muted); }.camera-settings div { display: grid; gap: 2px; }.shadow-options { grid-template-columns: repeat(4, 1fr); }.corner-options { grid-template-columns: repeat(5, 1fr); }
+.camera-settings :deep(.btn-sm) { width: 100%; height: 24px; min-height: 24px; padding: 0; font-size: 9px; }
 .radius-none { --radius: 0; }.radius-sm { --radius: 8px; }.radius-md { --radius: 14px; }.radius-lg { --radius: 22px; }.radius-full { --radius: 50%; }
 </style>
