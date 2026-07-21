@@ -153,8 +153,11 @@ const handleVideoTimeUpdate = (projectId: string, event: Event) => {
 };
 
 const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
-  const video = event.currentTarget as HTMLVideoElement | null;
-  if (video) {
+  const target = event.currentTarget as HTMLElement | null;
+  const video = (target?.tagName === "VIDEO"
+    ? target
+    : target?.querySelector("video")) as HTMLVideoElement | null;
+  if (video && typeof video.play === "function") {
     if (video.readyState === 0) {
       video.load();
     }
@@ -163,8 +166,11 @@ const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
 };
 
 const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
-  const video = event.currentTarget as HTMLVideoElement | null;
-  if (video) {
+  const target = event.currentTarget as HTMLElement | null;
+  const video = (target?.tagName === "VIDEO"
+    ? target
+    : target?.querySelector("video")) as HTMLVideoElement | null;
+  if (video && typeof video.pause === "function") {
     video.pause();
     video.currentTime = Math.min(0.1, video.duration || 0);
     videoProgress.value[projectId] = { current: 0, total: 1 };

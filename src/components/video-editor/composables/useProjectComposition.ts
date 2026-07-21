@@ -3,6 +3,7 @@ import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorData } from "../../../api/types/capture-api";
 import {
   emptyComposition,
+  type ClipAppearance,
   type CompositionLayer,
   type CompositionMedia,
   type ProjectComposition,
@@ -21,6 +22,13 @@ export function useProjectComposition(options: {
   currentTimeSec: Ref<number>;
   activeTab: Ref<string>;
 }) {
+  const BASE_VIDEO_CLIP_ID = "base-video";
+  const DEFAULT_APPEARANCE: ClipAppearance = {
+    cornerRadius: "sm",
+    shadowSize: "md",
+    shadowColor: "#000000",
+    shadowDirection: "bottom",
+  };
   const { project, editorData, durationMs, currentTimeSec, activeTab } = options;
 
   const composition = ref<ProjectComposition>(emptyComposition());
@@ -34,8 +42,24 @@ export function useProjectComposition(options: {
   );
 
   const selectedClipInfo = computed(() => {
+    if (selectedCompositionLayerId.value === BASE_VIDEO_CLIP_ID) {
+      return {
+        id: BASE_VIDEO_CLIP_ID,
+        kind: "video",
+        name: "Screen recording",
+        timelineStartMs: 0,
+        timelineDurationMs: durationMs.value,
+        playbackRate: 1.0,
+        enabled: true,
+        isLinked: false,
+        ...(composition.value.baseVideoAppearance ?? DEFAULT_APPEARANCE),
+      };
+    }
     if (!selectedCompositionLayer.value) return null;
     const layer = selectedCompositionLayer.value;
+    const appearance = layer.kind === "audio" || layer.kind === "caption"
+      ? undefined
+      : layer.appearance ?? (layer.kind === "video" ? layer.webcamAppearance : undefined) ?? DEFAULT_APPEARANCE;
     return {
       id: layer.id,
       kind: layer.kind,
@@ -45,6 +69,7 @@ export function useProjectComposition(options: {
       playbackRate: 1.0,
       enabled: layer.enabled,
       isLinked: false,
+      ...(appearance ?? {}),
     };
   });
 
@@ -242,6 +267,34 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const selectBaseVideo = () => {
+    selectedCompositionLayerId.value = BASE_VIDEO_CLIP_ID;
+    activeTab.value = "clip";
+  };
+
+  const updateSelectedClipAppearance = async (
+    patch: Partial<ClipAppearance>,
+  ) => {
+    const selectedId = selectedCompositionLayerId.value;
+    if (!selectedId) return;
+    if (selectedId === BASE_VIDEO_CLIP_ID) {
+      composition.value = {
+        ...composition.value,
+        baseVideoAppearance: { ...DEFAULT_APPEARANCE, ...composition.value.baseVideoAppearance, ...patch },
+      };
+    } else {
+      composition.value = {
+        ...composition.value,
+        layers: composition.value.layers.map((layer) => {
+          if (layer.id !== selectedId || layer.kind === "audio" || layer.kind === "caption") return layer;
+          const fallback = layer.kind === "video" ? layer.webcamAppearance : undefined;
+          return { ...layer, appearance: { ...DEFAULT_APPEARANCE, ...fallback, ...layer.appearance, ...patch } };
+        }),
+      };
+    }
+    await saveComposition();
+  };
+
   const handleUnlinkClips = async () => {
     if (selectedCompositionLayerId.value) {
       await saveComposition();
@@ -270,6 +323,8 @@ export function useProjectComposition(options: {
     addCompositionElement,
     addCaptionAtTime,
     updateCaption,
+    selectBaseVideo,
+    updateSelectedClipAppearance,
     handleUnlinkClips,
     handleUnlinkTrack,
   };

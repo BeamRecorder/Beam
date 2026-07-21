@@ -88,6 +88,8 @@ const {
   addCompositionElement,
   addCaptionAtTime,
   updateCaption,
+  selectBaseVideo,
+  updateSelectedClipAppearance,
   handleUnlinkClips,
   handleUnlinkTrack,
 } = compositionState;
@@ -188,6 +190,8 @@ watch(
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
           @unlink-clip="handleUnlinkClips"
+          @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: $event as 'none' | 'sm' | 'md' | 'lg' | 'full' })"
+          @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
         />
 
         <!-- Canvas/Player Island -->
@@ -242,6 +246,7 @@ watch(
             selectedCompositionLayerId = $event;
             activeTab = 'clip';
           "
+          @select:base-video="selectBaseVideo"
           @select:camera-layer="
             selectedCompositionLayerId = $event;
             activeTab = 'clip';

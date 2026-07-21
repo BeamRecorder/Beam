@@ -39,7 +39,7 @@
     "electron": "^43.1.1",
     "electron-builder": "^26.15.3",
     "jsdom": "^26.1.0",
-    "typescript": "~6.0.2",
+    "typescript": "~7.0.2",
     "vite": "^8.1.1",
     "vue-tsc": "^3.3.5"
   },

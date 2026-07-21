@@ -46,6 +46,7 @@ const emit = defineEmits<{
   (e: "toggle:micAudio"): void;
   (e: "select:zoom", zoomId: string): void;
   (e: "select:composition-layer", layerId: string): void;
+  (e: "select:base-video"): void;
   (e: "select:camera-layer", layerId: string): void;
   (e: "toggle:camera"): void;
   (e: "toggle:camera-layer"): void;
@@ -91,9 +92,8 @@ const {
 } = useTimelineTracks(props, emit);
 
 const selectMainVideoLayer = () => {
-  if (mainVideoLayer.value) {
-    emit("select:composition-layer", mainVideoLayer.value.id);
-  }
+  if (mainVideoLayer.value) emit("select:composition-layer", mainVideoLayer.value.id);
+  else emit("select:base-video");
 };
 
 (void tracksScrollRef, tracksViewportRef, ticksAreaRef);
@@ -164,8 +164,8 @@ const selectMainVideoLayer = () => {
             class="track-content video-content"
             :class="{
               selected:
-                mainVideoLayer &&
-                selectedCompositionLayerId === mainVideoLayer.id,
+                selectedCompositionLayerId === 'base-video' ||
+                (mainVideoLayer && selectedCompositionLayerId === mainVideoLayer.id),
             }"
             @click.stop="selectMainVideoLayer"
           >

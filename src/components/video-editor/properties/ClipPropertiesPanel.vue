@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
@@ -62,6 +62,17 @@ const selectedRadius = ref(props.selectedClip?.cornerRadius ?? 'md')
 const selectedShadowSize = ref(props.selectedClip?.shadowSize ?? 'md')
 const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? '#000000')
 const selectedShadowDirection = ref(props.selectedClip?.shadowDirection ?? 'all')
+
+watch(
+  () => props.selectedClip,
+  (clip) => {
+    selectedRadius.value = clip?.cornerRadius ?? 'sm'
+    selectedShadowSize.value = clip?.shadowSize ?? 'md'
+    selectedShadowColor.value = clip?.shadowColor ?? '#000000'
+    selectedShadowDirection.value = clip?.shadowDirection ?? 'bottom'
+  },
+  { immediate: true },
+)
 
 const handleRadiusChange = (radiusId: string) => {
   selectedRadius.value = radiusId

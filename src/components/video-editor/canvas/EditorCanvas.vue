@@ -17,6 +17,7 @@ import { ZOOM_DEPTH_SCALES, type ZoomElement } from "../zoom/zoom-types";
 import { useCursorReplacer } from "../composables/useCursorReplacer";
 import {
   activeLayersAt,
+  type ClipAppearance,
   type ProjectComposition,
 } from "../composition/composition-types";
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../composition/webcam/webcam-zoom";
@@ -157,6 +158,32 @@ const customCursorImage = ref<HTMLImageElement | null>(null);
 const compositionImages = new Map<string, HTMLImageElement>();
 const compositionVideos = new Map<string, HTMLVideoElement>();
 
+const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
+  cornerRadius: "sm",
+  shadowSize: "md",
+  shadowColor: "#000000",
+  shadowDirection: "bottom",
+};
+
+const radiusForAppearance = (appearance: ClipAppearance | undefined) =>
+  ({ none: 0, sm: 8, md: 16, lg: 24, full: Number.MAX_SAFE_INTEGER })[
+    (appearance ?? DEFAULT_CLIP_APPEARANCE).cornerRadius
+  ];
+
+const applyClipShadow = (
+  ctx: CanvasRenderingContext2D,
+  appearance: ClipAppearance | undefined,
+  width: number,
+) => {
+  const style = appearance ?? DEFAULT_CLIP_APPEARANCE;
+  const blur = { none: 0, sm: 10, md: 20, lg: 32 }[style.shadowSize];
+  const direction = style.shadowDirection;
+  ctx.shadowColor = style.shadowColor;
+  ctx.shadowBlur = blur;
+  ctx.shadowOffsetX = direction === "top-left" ? -width * 0.018 : direction === "bottom-right" ? width * 0.018 : 0;
+  ctx.shadowOffsetY = direction === "top-left" ? -width * 0.018 : direction === "all" ? 0 : width * 0.018;
+};
+
 const disposeCompositionMedia = () => {
   compositionVideos.forEach((media) => {
     media.pause();
@@ -187,7 +214,36 @@ watch(
       }
     }
   },
-  { immediate: true, deep: true },
+  { immediate: true },
+);
+
+const syncCompositionVideos = () => {
+  const timeMs = props.currentTime * 1000;
+  const active = new Set(
+    activeLayersAt(props.composition, timeMs)
+      .filter((layer) => layer.kind === "video")
+      .map((layer) => layer.id),
+  );
+  for (const layer of props.composition.layers) {
+    if (layer.kind !== "video") continue;
+    const media = compositionVideos.get(layer.assetId);
+    if (!media) continue;
+    if (!active.has(layer.id)) {
+      media.pause();
+      continue;
+    }
+    const localTime = props.currentTime - layer.startMs / 1000 + (layer.sourceOffsetMs ?? 0) / 1000;
+    if (localTime < 0 || (Number.isFinite(media.duration) && localTime >= media.duration)) continue;
+    const drift = Math.abs(media.currentTime - localTime);
+    if (!props.isPlaying || drift > 0.4) media.currentTime = localTime;
+    if (props.isPlaying && media.paused) void media.play().catch(() => undefined);
+  }
+};
+
+watch(
+  () => [props.currentTime, props.isPlaying, props.composition] as const,
+  syncCompositionVideos,
+  { flush: "post" },
 );
 
 watch(
@@ -391,12 +447,11 @@ const drawVideoWindow = (
   const dy = (height - dh) / 2;
 
   ctx.save();
-  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
-  ctx.shadowBlur = 24;
-  ctx.shadowOffsetY = 12;
+  const baseAppearance = props.composition.baseVideoAppearance ?? DEFAULT_CLIP_APPEARANCE;
+  applyClipShadow(ctx, baseAppearance, dw);
   ctx.fillStyle = "#1e1e1e";
   ctx.beginPath();
-  ctx.roundRect(dx, dy, dw, dh, 10);
+  ctx.roundRect(dx, dy, dw, dh, Math.min(radiusForAppearance(baseAppearance), dw / 2, dh / 2));
   ctx.fill();
   ctx.clip();
 
@@ -541,7 +596,7 @@ const drawInCameraSpace = (
     videoWindow.dy,
     videoWindow.dw,
     videoWindow.dh,
-    10,
+    Math.min(radiusForAppearance(props.composition.baseVideoAppearance), videoWindow.dw / 2, videoWindow.dh / 2),
   );
   ctx.clip();
   ctx.translate(
@@ -661,19 +716,6 @@ const drawComposition = (
         ? compositionImages.get(layer.assetId)
         : compositionVideos.get(layer.assetId);
     if (!asset) continue;
-    if (asset instanceof HTMLVideoElement) {
-      const localTime =
-        props.currentTime -
-        layer.startMs / 1000 +
-        (layer.sourceOffsetMs ?? 0) / 1000;
-      if (
-        localTime < 0 ||
-        (Number.isFinite(asset.duration) && localTime >= asset.duration)
-      )
-        continue;
-      if (Math.abs(asset.currentTime - localTime) > 0.15)
-        asset.currentTime = localTime;
-    }
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
     if (
       asset instanceof HTMLVideoElement &&
@@ -685,13 +727,20 @@ const drawComposition = (
       (!asset.complete || !asset.naturalWidth)
     )
       continue;
-    ctx.drawImage(
-      asset,
-      videoWindow.dx + transform.x * videoWindow.dw,
-      videoWindow.dy + transform.y * videoWindow.dh,
-      transform.width * videoWindow.dw,
-      transform.height * videoWindow.dh,
-    );
+    const dx = videoWindow.dx + transform.x * videoWindow.dw;
+    const dy = videoWindow.dy + transform.y * videoWindow.dh;
+    const dw = transform.width * videoWindow.dw;
+    const dh = transform.height * videoWindow.dh;
+    const appearance = layer.appearance;
+    ctx.save();
+    applyClipShadow(ctx, appearance, dw);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
+    ctx.beginPath();
+    ctx.roundRect(dx, dy, dw, dh, Math.min(radiusForAppearance(appearance), dw / 2, dh / 2));
+    ctx.fill();
+    ctx.clip();
+    ctx.drawImage(asset, dx, dy, dw, dh);
+    ctx.restore();
   }
 };
 
@@ -714,8 +763,6 @@ const drawWebcamLayers = (
       asset.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
     )
       continue;
-    if (Math.abs(asset.currentTime - localTime) > 0.15)
-      asset.currentTime = localTime;
     ctx.save();
     ctx.translate(videoWindow.dx, videoWindow.dy);
     drawWebcamOverlay(
@@ -724,7 +771,7 @@ const drawWebcamLayers = (
       videoWindow.dw,
       videoWindow.dh,
       videoWindow.scale,
-      webcamSettingsForAppearance(layer.webcamAppearance),
+      webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance),
     );
     ctx.restore();
   }

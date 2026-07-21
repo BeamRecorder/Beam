@@ -32,6 +32,11 @@ function webcamAppearance(value) {
   if (!value || !['none', 'sm', 'md', 'lg'].includes(value.shadowSize) || !['none', 'sm', 'md', 'lg', 'full'].includes(value.cornerRadius)) return undefined
   return { shadowSize: value.shadowSize, cornerRadius: value.cornerRadius }
 }
+function clipAppearance(value) {
+  const base = webcamAppearance(value)
+  if (!base) return undefined
+  return { ...base, shadowColor: typeof value.shadowColor === 'string' ? value.shadowColor.slice(0, 32) : '#000000', shadowDirection: ['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadowDirection) ? value.shadowDirection : 'all' }
+}
 function normalizeComposition(value) {
   if (!value || !Array.isArray(value.media) || !Array.isArray(value.layers)) throw new Error('Composition invalide')
   const media = value.media.map((asset) => {
@@ -46,10 +51,12 @@ function normalizeComposition(value) {
     if (!layer || !validId(layer.id) || !layerKinds.has(layer.kind) || typeof layer.name !== 'string' || !finite(layer.startMs) || !finite(layer.endMs) || layer.endMs < layer.startMs || typeof layer.enabled !== 'boolean') throw new Error('Calque invalide')
     if (layer.kind === 'caption') return { id: layer.id, kind: 'caption', name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, caption: caption(layer.caption) }
     if (!validId(layer.assetId) || !ids.has(layer.assetId)) throw new Error('Le média du calque est introuvable')
-    const appearance = layer.kind === 'video' ? webcamAppearance(layer.webcamAppearance) : undefined
-    return { id: layer.id, kind: layer.kind, name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, assetId: layer.assetId, transform: layer.kind === 'audio' ? undefined : transform(layer.transform), ...(layer.kind === 'video' && finite(layer.sourceOffsetMs) && layer.sourceOffsetMs >= 0 ? { sourceOffsetMs: Math.round(layer.sourceOffsetMs) } : {}), ...(layer.kind === 'video' && typeof layer.reactToZoom === 'boolean' ? { reactToZoom: layer.reactToZoom } : {}), ...(appearance ? { webcamAppearance: appearance } : {}) }
+    const webcam = layer.kind === 'video' ? webcamAppearance(layer.webcamAppearance) : undefined
+    const appearance = layer.kind !== 'audio' ? clipAppearance(layer.appearance) : undefined
+    return { id: layer.id, kind: layer.kind, name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, assetId: layer.assetId, transform: layer.kind === 'audio' ? undefined : transform(layer.transform), ...(layer.kind === 'video' && finite(layer.sourceOffsetMs) && layer.sourceOffsetMs >= 0 ? { sourceOffsetMs: Math.round(layer.sourceOffsetMs) } : {}), ...(layer.kind === 'video' && typeof layer.reactToZoom === 'boolean' ? { reactToZoom: layer.reactToZoom } : {}), ...(webcam ? { webcamAppearance: webcam } : {}), ...(appearance ? { appearance } : {}) }
   })
-  return { media, layers }
+  const baseVideoAppearance = clipAppearance(value.baseVideoAppearance)
+  return { media, layers, ...(baseVideoAppearance ? { baseVideoAppearance } : {}) }
 }
 
 function createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor }) {

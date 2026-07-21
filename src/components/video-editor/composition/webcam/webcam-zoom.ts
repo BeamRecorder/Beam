@@ -1,15 +1,17 @@
-import type { WebcamAppearance } from '../composition-types'
+import type { ClipAppearance, WebcamAppearance } from '../composition-types'
 
-export interface WebcamOverlaySettings { widthPercent: number; heightPercent: number; margin: number; reactToZoom: boolean; mirror: boolean; cornerRadius: number; shadowOpacity: number }
+export interface WebcamOverlaySettings { widthPercent: number; heightPercent: number; margin: number; reactToZoom: boolean; mirror: boolean; cornerRadius: number; shadowOpacity: number; shadowColor: string; shadowOffsetX: number; shadowOffsetY: number }
 export interface WebcamLayout { x: number; y: number; width: number; height: number }
 
-export const DEFAULT_WEBCAM_SETTINGS: WebcamOverlaySettings = { widthPercent: 40, heightPercent: 40, margin: 24, reactToZoom: true, mirror: true, cornerRadius: 14, shadowOpacity: .42 }
+export const DEFAULT_WEBCAM_SETTINGS: WebcamOverlaySettings = { widthPercent: 40, heightPercent: 40, margin: 24, reactToZoom: true, mirror: true, cornerRadius: 14, shadowOpacity: .42, shadowColor: '#000000', shadowOffsetX: 0, shadowOffsetY: 1 }
 
 const cornerRadii = { none: 0, sm: 8, md: 14, lg: 22, full: Number.MAX_SAFE_INTEGER }
 const shadowOpacities = { none: 0, sm: .28, md: .42, lg: .58 }
-export function webcamSettingsForAppearance(appearance: WebcamAppearance | undefined): WebcamOverlaySettings {
+export function webcamSettingsForAppearance(appearance: WebcamAppearance | ClipAppearance | undefined): WebcamOverlaySettings {
   if (!appearance) return DEFAULT_WEBCAM_SETTINGS
-  return { ...DEFAULT_WEBCAM_SETTINGS, cornerRadius: cornerRadii[appearance.cornerRadius], shadowOpacity: shadowOpacities[appearance.shadowSize] }
+  const direction = 'shadowDirection' in appearance ? appearance.shadowDirection : 'bottom'
+  const offsets = direction === 'top-left' ? [-.7, -.7] : direction === 'bottom-right' ? [.7, .7] : direction === 'all' ? [0, 0] : [0, 1]
+  return { ...DEFAULT_WEBCAM_SETTINGS, cornerRadius: cornerRadii[appearance.cornerRadius], shadowOpacity: shadowOpacities[appearance.shadowSize], shadowColor: 'shadowColor' in appearance ? appearance.shadowColor : '#000000', shadowOffsetX: offsets[0], shadowOffsetY: offsets[1] }
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -34,9 +36,11 @@ export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasI
     ctx.save()
     ctx.globalAlpha = .01
     ctx.fillStyle = '#000000'
-    ctx.shadowColor = `rgba(0, 0, 0, ${settings.shadowOpacity})`
+    ctx.shadowColor = settings.shadowColor
+    ctx.globalAlpha = settings.shadowOpacity
     ctx.shadowBlur = shadowSize * .22
-    ctx.shadowOffsetY = shadowSize * .06
+    ctx.shadowOffsetX = shadowSize * .06 * settings.shadowOffsetX
+    ctx.shadowOffsetY = shadowSize * .06 * settings.shadowOffsetY
     ctx.beginPath(); ctx.roundRect(layout.x, layout.y, layout.width, layout.height, radius); ctx.fill()
     ctx.restore()
   }
