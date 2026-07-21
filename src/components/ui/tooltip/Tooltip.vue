@@ -1,35 +1,74 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, onBeforeUnmount, ref } from 'vue'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   content: string
   position?: 'top' | 'bottom' | 'left' | 'right'
-}>()
+}>(), {
+  position: 'top',
+})
 
 const visible = ref(false)
+const wrapperRef = ref<HTMLElement | null>(null)
+const tooltipStyle = ref<Record<string, string>>({})
+
+const updatePosition = () => {
+  const wrapper = wrapperRef.value
+  if (!wrapper) return
+  const rect = wrapper.getBoundingClientRect()
+  const offset = 8
+  if (props.position === 'bottom') {
+    tooltipStyle.value = { top: `${rect.bottom + offset}px`, left: `${rect.left + rect.width / 2}px`, transform: 'translateX(-50%)' }
+  } else if (props.position === 'left') {
+    tooltipStyle.value = { top: `${rect.top + rect.height / 2}px`, left: `${rect.left - offset}px`, transform: 'translate(-100%, -50%)' }
+  } else if (props.position === 'right') {
+    tooltipStyle.value = { top: `${rect.top + rect.height / 2}px`, left: `${rect.right + offset}px`, transform: 'translateY(-50%)' }
+  } else {
+    tooltipStyle.value = { top: `${rect.top - offset}px`, left: `${rect.left + rect.width / 2}px`, transform: 'translate(-50%, -100%)' }
+  }
+}
+
+const show = async () => {
+  visible.value = true
+  await nextTick()
+  updatePosition()
+}
+
+const hide = () => { visible.value = false }
+
+window.addEventListener('resize', updatePosition)
+window.addEventListener('scroll', updatePosition, true)
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updatePosition)
+  window.removeEventListener('scroll', updatePosition, true)
+})
 </script>
 
 <template>
   <div 
+    ref="wrapperRef"
     class="tooltip-wrapper" 
-    @mouseenter="visible = true" 
-    @mouseleave="visible = false"
-    @focusin="visible = true"
-    @focusout="visible = false"
+    @mouseenter="show" 
+    @mouseleave="hide"
+    @focusin="show"
+    @focusout="hide"
   >
     <slot />
+  </div>
+  <Teleport to="body">
     <Transition name="fade">
       <div 
         v-if="visible && content" 
         class="tooltip-content" 
         :class="position || 'top'"
+        :style="tooltipStyle"
         role="tooltip"
       >
         {{ content }}
         <div class="tooltip-arrow" />
       </div>
     </Transition>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -39,7 +78,7 @@ const visible = ref(false)
 }
 
 .tooltip-content {
-  position: absolute;
+  position: fixed;
   background-color: var(--color-bg-element);
   color: var(--text-primary);
   border: 1px solid var(--color-border);
@@ -48,7 +87,7 @@ const visible = ref(false)
   font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
-  z-index: 100;
+  z-index: 3000;
   box-shadow: var(--shadow-md);
   pointer-events: none;
 }
@@ -62,11 +101,6 @@ const visible = ref(false)
 }
 
 /* Top positioning */
-.tooltip-content.top {
-  bottom: 100%;
-  left: 50%;
-  transform: translate(-50%, -8px);
-}
 .tooltip-content.top .tooltip-arrow {
   top: 100%;
   left: 50%;
@@ -76,11 +110,6 @@ const visible = ref(false)
 }
 
 /* Bottom positioning */
-.tooltip-content.bottom {
-  top: 100%;
-  left: 50%;
-  transform: translate(-50%, 8px);
-}
 .tooltip-content.bottom .tooltip-arrow {
   bottom: 100%;
   left: 50%;
@@ -90,11 +119,6 @@ const visible = ref(false)
 }
 
 /* Left positioning */
-.tooltip-content.left {
-  right: 100%;
-  top: 50%;
-  transform: translate(-8px, -50%);
-}
 .tooltip-content.left .tooltip-arrow {
   left: 100%;
   top: 50%;
@@ -104,11 +128,6 @@ const visible = ref(false)
 }
 
 /* Right positioning */
-.tooltip-content.right {
-  left: 100%;
-  top: 50%;
-  transform: translate(8px, -50%);
-}
 .tooltip-content.right .tooltip-arrow {
   right: 100%;
   top: 50%;
@@ -118,18 +137,11 @@ const visible = ref(false)
 }
 
 /* Transitions */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
 
-.fade-enter-from.top, .fade-leave-to.top { transform: translate(-50%, -4px); }
-.fade-enter-from.bottom, .fade-leave-to.bottom { transform: translate(-50%, 4px); }
-.fade-enter-from.left, .fade-leave-to.left { transform: translate(-4px, -50%); }
-.fade-enter-from.right, .fade-leave-to.right { transform: translate(4px, -50%); }
 </style>
