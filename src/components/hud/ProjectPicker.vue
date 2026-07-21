@@ -4,10 +4,10 @@ import { useVirtualList } from '@vueuse/core'
 import { ArrowLeft, Check, Film, FolderOpen, RefreshCw, MoreVertical, Plus, Pencil, Trash2 } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import Dialog from '~/ui/dialog/Dialog.vue'
 import Popover from '~/ui/popover/Popover.vue'
 import Input from '~/ui/input/Input.vue'
+import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import { capture } from '../../api/capture'
 import type { CaptureProject } from '../../api/types/capture-api'
 
@@ -64,12 +64,14 @@ const selectedProject = computed(() =>
   projects.value.find((project) => project.id === selectedProjectId.value) ?? null
 )
 
+const MIN_SKELETON_DURATION_MS = 180
+const wait = (durationMs: number) => new Promise<void>((resolve) => window.setTimeout(resolve, durationMs))
+
 const loadProjects = async () => {
+  const startedAt = performance.now()
+  isLoading.value = true
   if (cachedProjects) {
     projects.value = [...cachedProjects]
-    isLoading.value = false
-  } else {
-    isLoading.value = true
   }
   errorMessage.value = ''
   try {
@@ -83,6 +85,7 @@ const loadProjects = async () => {
     projects.value = []
     errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
+    await wait(Math.max(0, MIN_SKELETON_DURATION_MS - (performance.now() - startedAt)))
     isLoading.value = false
   }
 }
@@ -272,10 +275,15 @@ defineExpose({
 
     <div v-if="isLoading" class="project-grid project-skeleton-grid" aria-label="Loading projects">
       <div v-for="index in 6" :key="index" class="project-card-skeleton">
-        <Skeleton variant="linear" width="100%" height="72px" radius="var(--radius-md) var(--radius-md) 0 0" />
+        <Skeleton
+          class="project-skeleton-preview"
+          variant="linear"
+          height="72px"
+          radius="var(--radius-md) var(--radius-md) 0 0"
+        />
         <div class="project-card-skeleton-content">
-          <Skeleton variant="linear" width="72%" height="11px" />
-          <Skeleton variant="linear" width="46%" height="9px" />
+          <Skeleton class="project-skeleton-line title" variant="linear" width="72%" height="10px" />
+          <Skeleton class="project-skeleton-line meta" variant="linear" width="46%" height="8px" />
         </div>
       </div>
     </div>
@@ -714,6 +722,14 @@ defineExpose({
   flex-direction: column;
   gap: 7px;
   padding: 8px;
+}
+
+.project-skeleton-preview {
+  display: block;
+}
+
+.project-skeleton-line {
+  display: block;
 }
 
 .project-state {

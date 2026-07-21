@@ -58,13 +58,14 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.hud-topbar { height: 60px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); -webkit-app-region: drag; flex-shrink: 0; }
+.hud-topbar { height: 60px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); -webkit-app-region: drag; flex-shrink: 0; cursor: grab; }
+.hud-topbar:active { cursor: grabbing; }
 .topbar-identity, .window-actions { display: flex; align-items: center; gap: 8px; }
 .topbar-identity { -webkit-app-region: no-drag; }
 .window-actions { gap: 4px; -webkit-app-region: no-drag; }
 .topbar-back { -webkit-app-region: no-drag; }
 .brand-logo { width: 24px; height: 24px; object-fit: contain; }
-.topbar-title { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+.topbar-title { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; user-select: text; cursor: text; }
 .rec-badge { font-size: 0.6rem; padding: 1px 5px; }
 .window-actions :deep(.btn) { padding: 0; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
 .close-button:hover { color: var(--color-error) !important; }
