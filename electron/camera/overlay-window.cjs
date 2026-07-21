@@ -9,6 +9,8 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   let window = null
   let shadowWindow = null
   let currentState = null
+  let hoverTimer = null
+  let isHovered = false
 
   const load = (target, query) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/index.html'), { query })
@@ -37,6 +39,28 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     window.moveTop()
   }
 
+  const syncHoverState = () => {
+    if (!window || window.isDestroyed()) return
+    const bounds = window.getBounds()
+    const point = screen.getCursorScreenPoint()
+    const next = point.x >= bounds.x && point.x < bounds.x + bounds.width && point.y >= bounds.y && point.y < bounds.y + bounds.height
+    if (next === isHovered) return
+    isHovered = next
+    window.webContents.send('camera-overlay:hover', next)
+  }
+
+  const startHoverTracking = () => {
+    if (hoverTimer) return
+    hoverTimer = setInterval(syncHoverState, 80)
+  }
+
+  const stopHoverTracking = () => {
+    if (!hoverTimer) return
+    clearInterval(hoverTimer)
+    hoverTimer = null
+    isHovered = false
+  }
+
   const create = () => {
     if (window && !window.isDestroyed()) return window
     const area = screen.getPrimaryDisplay().workArea
@@ -44,7 +68,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     window.setAlwaysOnTop(true, 'floating')
     window.on('move', syncShadowBounds)
     window.on('resize', syncShadowBounds)
-    window.on('closed', () => { window = null; shadowWindow?.hide() })
+    window.on('closed', () => { window = null; shadowWindow?.hide(); stopHoverTracking() })
     window.webContents.once('did-finish-load', () => { if (currentState) window?.webContents.send('camera-overlay:state', currentState) })
     load(window, { cameraOverlay: '1' })
     return window
@@ -60,9 +84,10 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     syncShadowBounds()
     overlay.showInactive()
     overlay.moveTop()
+    startHoverTracking()
   }
 
-  return { configure, state: () => currentState, destroy: () => { if (window && !window.isDestroyed()) window.destroy(); if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.destroy() } }
+  return { configure, state: () => currentState, destroy: () => { stopHoverTracking(); if (window && !window.isDestroyed()) window.destroy(); if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.destroy() } }
 }
 
 module.exports = { createCameraOverlayWindow }

@@ -69,6 +69,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   configureCameraOverlay(state: { cameraId: string; shadowSize?: string; cornerRadius?: string }): void
   getCameraOverlayState(): Promise<{ cameraId: string; shadowSize: string; cornerRadius: string } | null>
   onCameraOverlayState(listener: (state: { cameraId: string; shadowSize: string; cornerRadius: string }) => void): () => void
+  onCameraOverlayHover(listener: (hovered: boolean) => void): () => void
   onCameraShadow(listener: (state: { shadowSize: string; cornerRadius: string }) => void): () => void
   beginExport(options: { projectName: string; format: 'webm' | 'mp4' }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>
