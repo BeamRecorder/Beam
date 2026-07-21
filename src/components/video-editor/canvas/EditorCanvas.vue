@@ -12,6 +12,7 @@ import type { ZoomElement } from '../zoom/zoom-types'
 import { useCursorReplacer } from '../composables/useCursorReplacer'
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
+  automatic: { x: 0, y: 0 },
   default: { x: 10, y: 7 },
   beachball: { x: 16, y: 16 },
   busy: { x: 7, y: 0 },
@@ -58,13 +59,28 @@ const props = defineProps<{
   cursorColor: string
   enableShadow: boolean
   enableRipple: boolean
+  shadowBlur: number
+  shadowColor: string
+  rippleColor: string
+  rippleSize: number
   isVideoEnabled: boolean
   selectedBackground: BackgroundMedia | null
   videoSrc: string
   editorData?: ProjectEditorData | null
   zoomElements: ZoomElement[]
   selectedZoom: ZoomElement | null
+loopProgress?: number
 }>()
+
+const getRippleStyleColor = (hex: string, alpha: number) => {
+  if (hex.startsWith('#')) {
+    const r = parseInt(hex.slice(1, 3), 16) || 0
+    const g = parseInt(hex.slice(3, 5), 16) || 0
+    const b = parseInt(hex.slice(5, 7), 16) || 0
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+  return hex
+}
 
 const emit = defineEmits<{
   (e: 'update:isPlaying', value: boolean): void
@@ -116,6 +132,10 @@ const customCursorImage = ref<HTMLImageElement | null>(null)
 watch(
   () => [props.selectedCursor, props.cursorSize, props.cursorColor],
   async () => {
+    if (props.selectedCursor === 'automatic') {
+      customCursorImage.value = null
+      return
+    }
     try {
       const img = await getCursorImage(props.selectedCursor, props.cursorSize, props.cursorColor)
       customCursorImage.value = img
@@ -223,16 +243,42 @@ watch(() => props.isPlaying, (playing) => {
   }
 })
 
-const loadCursorAssets = () => {
+const loadCursorAssets = async () => {
   cursorImages.clear()
   const shapes = props.editorData?.cursor.shapes ?? {}
   for (const [shapeId, shape] of Object.entries(shapes)) {
-    const image = new Image()
-    image.onload = () => { cursorImages.set(shapeId, image) }
-    image.src = shape.src
+    try {
+      if (props.cursorColor === '#000000') {
+        const image = new Image()
+        image.onload = () => { cursorImages.set(shapeId, image) }
+        image.src = shape.src
+      } else {
+        const response = await fetch(shape.src)
+        if (response.ok) {
+          let svgContent = await response.text()
+          svgContent = svgContent
+            .replace(/fill="#000000"/gi, `fill="${props.cursorColor}"`)
+            .replace(/fill="#000"/gi, `fill="${props.cursorColor}"`)
+          const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
+          const url = URL.createObjectURL(svgBlob)
+          const image = new Image()
+          image.onload = () => { cursorImages.set(shapeId, image) }
+          image.src = url
+        } else {
+          const image = new Image()
+          image.onload = () => { cursorImages.set(shapeId, image) }
+          image.src = shape.src
+        }
+      }
+    } catch (err) {
+      console.error('Failed to colorize shape SVG:', err)
+      const image = new Image()
+      image.onload = () => { cursorImages.set(shapeId, image) }
+      image.src = shape.src
+    }
   }
 }
-watch(() => props.editorData, loadCursorAssets, { immediate: true })
+watch(() => [props.editorData, props.cursorColor], loadCursorAssets, { immediate: true })
 
 const resizeCanvas = () => {
   const canvas = canvasRef.value
@@ -463,13 +509,13 @@ const draw = () => {
     const image = state?.shapeId ? cursorImages.get(state.shapeId) : null
     drawInCameraSpace(ctx, videoWindow, () => {
       for (const ripple of ripples.value) {
-        ctx.strokeStyle = `rgba(255, 90, 31, ${ripple.alpha})`
+        ctx.strokeStyle = getRippleStyleColor(props.rippleColor, ripple.alpha)
         ctx.lineWidth = 3
         ctx.beginPath()
         ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2)
         ctx.stroke()
         if (props.isPlaying) {
-          ripple.radius += 1.5
+          ripple.radius += props.rippleSize / 25
           ripple.alpha -= 0.04
         }
       }
@@ -494,10 +540,10 @@ const draw = () => {
       }
 
       if (props.enableShadow) {
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)'
-        ctx.shadowBlur = 6
-        ctx.shadowOffsetX = 2
-        ctx.shadowOffsetY = 3
+        ctx.shadowColor = props.shadowColor
+        ctx.shadowBlur = props.shadowBlur
+        ctx.shadowOffsetX = Math.round(props.shadowBlur * 0.33)
+        ctx.shadowOffsetY = Math.round(props.shadowBlur * 0.5)
       }
       ctx.drawImage(
         activeImage,

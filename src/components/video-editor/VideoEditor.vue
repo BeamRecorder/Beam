@@ -56,6 +56,10 @@ const {
   cursorColor,
   enableShadow,
   enableRipple,
+  shadowBlur,
+  shadowColor,
+  rippleColor,
+  rippleSize,
 } = useCursorReplacer()
 
 const activeTab = ref('cursor')
@@ -193,6 +197,10 @@ watch(() => props.videoSrc, (videoSrc) => {
           v-model:cursorColor="cursorColor"
           v-model:enableShadow="enableShadow"
           v-model:enableRipple="enableRipple"
+          v-model:shadowBlur="shadowBlur"
+          v-model:shadowColor="shadowColor"
+          v-model:rippleColor="rippleColor"
+          v-model:rippleSize="rippleSize"
           
           v-model:volume="volume"
           v-model:isVideoEnabled="isVideoEnabled"
@@ -220,6 +228,10 @@ watch(() => props.videoSrc, (videoSrc) => {
           :cursor-color="cursorColor"
           :enable-shadow="enableShadow"
           :enable-ripple="enableRipple"
+          :shadow-blur="shadowBlur"
+          :shadow-color="shadowColor"
+          :ripple-color="rippleColor"
+          :ripple-size="rippleSize"
           
           :is-video-enabled="isVideoEnabled"
           :selected-background="selectedBackgroundMedia"

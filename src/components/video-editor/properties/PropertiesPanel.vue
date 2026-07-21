@@ -17,6 +17,10 @@ defineProps<{
   cursorColor: string
   enableShadow: boolean
   enableRipple: boolean
+  shadowBlur: number
+  shadowColor: string
+  rippleColor: string
+  rippleSize: number
 
   // Audio properties
   volume: number
@@ -38,6 +42,10 @@ const emit = defineEmits<{
   (e: 'update:cursorColor', value: string): void
   (e: 'update:enableShadow', value: boolean): void
   (e: 'update:enableRipple', value: boolean): void
+  (e: 'update:shadowBlur', value: number): void
+  (e: 'update:shadowColor', value: string): void
+  (e: 'update:rippleColor', value: string): void
+  (e: 'update:rippleSize', value: number): void
   (e: 'update:volume', value: number): void
   (e: 'update:isVideoEnabled', value: boolean): void
   (e: 'update:isSystemAudioEnabled', value: boolean): void
@@ -65,11 +73,19 @@ const emit = defineEmits<{
         :cursorColor="cursorColor"
         :enableShadow="enableShadow"
         :enableRipple="enableRipple"
+        :shadowBlur="shadowBlur"
+        :shadowColor="shadowColor"
+        :rippleColor="rippleColor"
+        :rippleSize="rippleSize"
         @update:selectedCursor="emit('update:selectedCursor', $event)"
         @update:cursorSize="emit('update:cursorSize', $event)"
         @update:cursorColor="emit('update:cursorColor', $event)"
         @update:enableShadow="emit('update:enableShadow', $event)"
         @update:enableRipple="emit('update:enableRipple', $event)"
+        @update:shadowBlur="emit('update:shadowBlur', $event)"
+        @update:shadowColor="emit('update:shadowColor', $event)"
+        @update:rippleColor="emit('update:rippleColor', $event)"
+        @update:rippleSize="emit('update:rippleSize', $event)"
       />
 
       <CanvasPanel 

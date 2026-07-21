@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
 export type CursorType =
+  | 'automatic'
   | 'default'
   | 'beachball'
   | 'busy'
@@ -38,6 +39,7 @@ export type CursorType =
   | 'zoomout'
 
 export const cursorUrls: Record<CursorType, string> = {
+  automatic: '',
   default: '/macOsSvgCursors/default.svg',
   beachball: '/macOsSvgCursors/beachball.svg',
   busy: '/macOsSvgCursors/busy.svg',
@@ -76,7 +78,8 @@ export const cursorUrls: Record<CursorType, string> = {
 }
 
 export const cursorOptions = [
-  { value: 'default', label: 'macOS Pointer (Default)', thumbnail: '/macOsSvgCursors/default.svg' },
+  { value: 'automatic', label: 'Automatic (Recommended)', thumbnail: '/macOsSvgCursors/default.svg' },
+  { value: 'default', label: 'macOS Pointer', thumbnail: '/macOsSvgCursors/default.svg' },
   { value: 'beachball', label: 'macOS Beachball (Busy)', thumbnail: '/macOsSvgCursors/beachball.svg' },
   { value: 'busy', label: 'macOS Busy Loader', thumbnail: '/macOsSvgCursors/busy.svg' },
   { value: 'cell', label: 'macOS Cell Selection', thumbnail: '/macOsSvgCursors/cell.svg' },
@@ -114,11 +117,15 @@ export const cursorOptions = [
 ]
 
 export function useCursorReplacer() {
-  const selectedCursor = ref<CursorType>('default')
+  const selectedCursor = ref<CursorType>('automatic')
   const cursorSize = ref(24)
   const cursorColor = ref('#000000')
   const enableShadow = ref(true)
   const enableRipple = ref(true)
+  const shadowBlur = ref(6)
+  const shadowColor = ref('#000000')
+  const rippleColor = ref('#ff5a1f')
+  const rippleSize = ref(30)
 
   // Pre-load SVG as Image helper
   const getCursorImage = async (type: CursorType, size: number, color: string): Promise<HTMLImageElement> => {
@@ -164,6 +171,10 @@ export function useCursorReplacer() {
     cursorColor,
     enableShadow,
     enableRipple,
+    shadowBlur,
+    shadowColor,
+    rippleColor,
+    rippleSize,
     getCursorImage,
   }
 }

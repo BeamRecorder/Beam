@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
 import { cursorOptions, type CursorType } from '../composables/useCursorReplacer'
 
-const props = defineProps<{
+defineProps<{
   selectedCursor: CursorType
   cursorSize: number
   cursorColor: string
   enableShadow: boolean
   enableRipple: boolean
+  shadowBlur: number
+  shadowColor: string
+  rippleColor: string
+  rippleSize: number
 }>()
 
 const emit = defineEmits<{
@@ -20,49 +23,11 @@ const emit = defineEmits<{
   (e: 'update:cursorColor', value: string): void
   (e: 'update:enableShadow', value: boolean): void
   (e: 'update:enableRipple', value: boolean): void
+  (e: 'update:shadowBlur', value: number): void
+  (e: 'update:shadowColor', value: string): void
+  (e: 'update:rippleColor', value: string): void
+  (e: 'update:rippleSize', value: number): void
 }>()
-
-const colorOptions = [
-  { value: '#000000', label: 'Classic Black', color: '#000000' },
-  { value: '#ff5a1f', label: 'Brand Orange', color: '#ff5a1f' },
-  { value: '#10b981', label: 'Emerald Green', color: '#10b981' },
-  { value: '#ef4444', label: 'Warning Red', color: '#ef4444' },
-  { value: 'custom', label: 'Custom Color...', color: 'transparent' },
-]
-
-const presetColors = ['#000000', '#ff5a1f', '#10b981', '#ef4444']
-const isCustomActive = ref(false)
-
-watch(
-  () => props.cursorColor,
-  (newVal) => {
-    if (presetColors.includes(newVal)) {
-      isCustomActive.value = false
-    } else {
-      isCustomActive.value = true
-    }
-  },
-  { immediate: true }
-)
-
-const displayedColorValue = computed(() => {
-  if (isCustomActive.value) {
-    return 'custom'
-  }
-  return props.cursorColor
-})
-
-const handleColorSelect = (value: string) => {
-  if (value === 'custom') {
-    isCustomActive.value = true
-    if (presetColors.includes(props.cursorColor)) {
-      emit('update:cursorColor', '#ff5a1e') // Use custom color close to brand orange
-    }
-  } else {
-    isCustomActive.value = false
-    emit('update:cursorColor', value)
-  }
-}
 </script>
 
 <template>
@@ -88,17 +53,8 @@ const handleColorSelect = (value: string) => {
       />
     </div>
 
-    <div class="prop-item">
-      <label class="prop-label">Cursor Color</label>
-      <Select 
-        :model-value="displayedColorValue" 
-        :options="colorOptions" 
-        :preview-on-hover="true"
-        @update:modelValue="handleColorSelect"
-      />
-    </div>
-
-    <div v-if="displayedColorValue === 'custom'" class="prop-item custom-picker-wrapper">
+    <div class="prop-row">
+      <span class="prop-label">Cursor Color</span>
       <ColorPicker 
         :model-value="cursorColor"
         :show-label="false"
@@ -114,12 +70,56 @@ const handleColorSelect = (value: string) => {
       />
     </div>
 
+    <div v-if="enableShadow" class="nested-options">
+      <div class="prop-item">
+        <BigSlider 
+          :model-value="shadowBlur" 
+          :min="1" 
+          :max="24"
+          label="Shadow Blur"
+          :format-value="(val) => `${val}px`"
+          @update:modelValue="emit('update:shadowBlur', $event)"
+        />
+      </div>
+
+      <div class="prop-row">
+        <span class="prop-label sub-label">Shadow Color</span>
+        <ColorPicker 
+          :model-value="shadowColor"
+          :show-label="false"
+          @update:modelValue="emit('update:shadowColor', $event)"
+        />
+      </div>
+    </div>
+
     <div class="prop-row">
       <span class="prop-label">Click Ripple Effect</span>
       <Switch 
         :model-value="enableRipple" 
         @update:modelValue="emit('update:enableRipple', $event)"
       />
+    </div>
+
+    <div v-if="enableRipple" class="nested-options">
+      <div class="prop-item">
+        <BigSlider 
+          :model-value="rippleSize" 
+          :min="10" 
+          :max="80"
+          label="Ripple Size"
+          :format-value="(val) => `${val}px`"
+          @update:modelValue="emit('update:rippleSize', $event)"
+        />
+      </div>
+
+      <div class="prop-row">
+        <span class="prop-label sub-label">Ripple Color</span>
+        <ColorPicker 
+          :model-value="rippleColor"
+          :show-label="false"
+          @update:modelValue="emit('update:rippleColor', $event)"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -137,9 +137,13 @@ const handleColorSelect = (value: string) => {
   gap: 6px;
 }
 
-.custom-picker-wrapper {
-  margin-top: -8px;
-  padding-left: 4px;
+.nested-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--color-border);
+  margin-left: 4px;
 }
 
 .prop-row {
@@ -153,6 +157,11 @@ const handleColorSelect = (value: string) => {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.sub-label {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 </style>
 
