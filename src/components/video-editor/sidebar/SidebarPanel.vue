@@ -21,7 +21,7 @@ const menuItems = [
 <template>
   <aside class="sidebar-island">
     <div class="logo-area">
-      <img src="/brand/DemoRecorderIcon.png" class="brand-logo" alt="Logo" />
+      <img src="/brand/DemoRecorderIcon.webp" class="brand-logo" alt="Logo" />
     </div>
 
     <nav class="nav-menu">

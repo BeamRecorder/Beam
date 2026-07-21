@@ -638,7 +638,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    icon: path.join(__dirname, 'public/brand/DemoRecorderIcon.png'),
+    icon: path.join(__dirname, 'public/brand/DemoRecorderIcon.webp'),
     resizable: false,
     maximizable: false,
     hasShadow: true,

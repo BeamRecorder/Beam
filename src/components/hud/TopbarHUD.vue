@@ -1,26 +1,29 @@
 <script setup lang="ts">
-import { ChevronLeft, Minus, Settings, X } from '@lucide/vue'
-import Badge from '~/ui/badge/Badge.vue'
-import Button from '~/ui/button/Button.vue'
+import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
+import Badge from "~/ui/badge/Badge.vue";
+import Button from "~/ui/button/Button.vue";
 
-withDefaults(defineProps<{
-  title?: string
-  showBack?: boolean
-  showSettings?: boolean
-  isRecording?: boolean
-}>(), {
-  title: 'DemoRecorder',
-  showBack: false,
-  showSettings: false,
-  isRecording: false,
-})
+withDefaults(
+  defineProps<{
+    title?: string;
+    showBack?: boolean;
+    showSettings?: boolean;
+    isRecording?: boolean;
+  }>(),
+  {
+    title: "DemoRecorder",
+    showBack: false,
+    showSettings: false,
+    isRecording: false,
+  },
+);
 
 const emit = defineEmits<{
-  (event: 'back'): void
-  (event: 'minimize'): void
-  (event: 'open-settings'): void
-  (event: 'close'): void
-}>()
+  (event: "back"): void;
+  (event: "minimize"): void;
+  (event: "open-settings"): void;
+  (event: "close"): void;
+}>();
 </script>
 
 <template>
@@ -36,13 +39,25 @@ const emit = defineEmits<{
         class="topbar-back"
         @click="emit('back')"
       />
-      <img v-else src="/brand/DemoRecorderIcon.png" class="brand-logo" alt="DemoRecorder" />
+      <img
+        v-else
+        src="/brand/DemoRecorderIcon.webp"
+        class="brand-logo"
+        alt="DemoRecorder"
+      />
       <span class="topbar-title">{{ title }}</span>
       <Badge v-if="isRecording" variant="error" class="rec-badge">REC</Badge>
     </div>
 
     <div class="window-actions" @mousedown.stop>
-      <Button variant="ghost" size="sm" icon-only :icon="Minus" aria-label="Minimize" @click="emit('minimize')" />
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="Minus"
+        aria-label="Minimize"
+        @click="emit('minimize')"
+      />
       <Button
         v-if="showSettings"
         variant="ghost"
@@ -52,21 +67,77 @@ const emit = defineEmits<{
         aria-label="Preferences"
         @click="emit('open-settings')"
       />
-      <Button variant="ghost" size="sm" icon-only :icon="X" aria-label="Close" class="close-button" @click="emit('close')" />
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="X"
+        aria-label="Close"
+        class="close-button"
+        @click="emit('close')"
+      />
     </div>
   </header>
 </template>
 
 <style scoped>
-.hud-topbar { height: 60px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); -webkit-app-region: drag; flex-shrink: 0; cursor: grab; }
-.hud-topbar:active { cursor: grabbing; }
-.topbar-identity, .window-actions { display: flex; align-items: center; gap: 8px; }
-.topbar-identity { -webkit-app-region: no-drag; }
-.window-actions { gap: 4px; -webkit-app-region: no-drag; }
-.topbar-back { -webkit-app-region: no-drag; }
-.brand-logo { width: 24px; height: 24px; object-fit: contain; }
-.topbar-title { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; user-select: text; cursor: text; }
-.rec-badge { font-size: 0.6rem; padding: 1px 5px; }
-.window-actions :deep(.btn) { padding: 0; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
-.close-button:hover { color: var(--color-error) !important; }
+.hud-topbar {
+  height: 60px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+  cursor: grab;
+}
+.hud-topbar:active {
+  cursor: grabbing;
+}
+.topbar-identity,
+.window-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-identity {
+  -webkit-app-region: no-drag;
+}
+.window-actions {
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+.topbar-back {
+  -webkit-app-region: no-drag;
+}
+.brand-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.topbar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  user-select: text;
+  cursor: text;
+}
+.rec-badge {
+  font-size: 0.6rem;
+  padding: 1px 5px;
+}
+.window-actions :deep(.btn) {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.close-button:hover {
+  color: var(--color-error) !important;
+}
 </style>

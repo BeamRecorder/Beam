@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useVirtualList } from '@vueuse/core'
 import Popover from '../popover/Popover.vue'
-import { ChevronDown, Check } from '@lucide/vue'
+import Skeleton from '../skeleton/Skeleton.vue'
+import { ChevronDown, Check, Eye } from '@lucide/vue'
 
 interface Option {
   value: string | number
   label: string
+  thumbnail?: string
+  color?: string
+  loading?: boolean
 }
 
 const props = withDefaults(
@@ -15,11 +20,15 @@ const props = withDefaults(
     placeholder?: string
     disabled?: boolean
     direction?: 'up' | 'down'
+    previewOnHover?: boolean
+    loading?: boolean
   }>(),
   {
     placeholder: 'Select an option',
     disabled: false,
     direction: 'down',
+    previewOnHover: false,
+    loading: false,
   }
 )
 
@@ -28,15 +37,76 @@ const emit = defineEmits<{
   (e: 'toggle', isOpen: boolean): void
 }>()
 
+const actualValue = ref(props.modelValue)
+const hoveredValue = ref<string | number | null>(null)
+
+// Sync actualValue with modelValue when modelValue updates externally (not during preview)
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (hoveredValue.value === null) {
+      actualValue.value = newVal
+    }
+  }
+)
+
 const selectedOption = computed(() => {
   return props.options.find(opt => opt.value === props.modelValue) || null
 })
 
+const handleToggle = (isOpen: boolean) => {
+  emit('toggle', isOpen)
+  if (isOpen) {
+    actualValue.value = props.modelValue
+  } else {
+    // If popover is closed and we are still previewing, reset
+    if (props.previewOnHover && props.modelValue !== actualValue.value) {
+      emit('update:modelValue', actualValue.value)
+    }
+    hoveredValue.value = null
+  }
+}
+
 const handleSelect = (option: Option, close: () => void) => {
   if (props.disabled) return
+  actualValue.value = option.value
   emit('update:modelValue', option.value)
   close()
 }
+
+const handleMouseEnterOption = (option: Option, event: PointerEvent) => {
+  hoveredValue.value = option.value
+  if (props.previewOnHover && props.modelValue !== option.value) {
+    emit('update:modelValue', option.value)
+  }
+  startMarquee(event)
+}
+
+const handleMouseLeaveOption = (event: PointerEvent) => {
+  stopMarquee(event)
+}
+
+const handleMouseLeaveList = () => {
+  hoveredValue.value = null
+  if (props.previewOnHover && props.modelValue !== actualValue.value) {
+    emit('update:modelValue', actualValue.value)
+  }
+}
+
+const itemHeight = computed(() => {
+  if (props.options.some(opt => opt.thumbnail || opt.loading)) {
+    return 52
+  }
+  return 38
+})
+
+const { list, containerProps, wrapperProps } = useVirtualList(
+  computed(() => props.options),
+  {
+    itemHeight: () => itemHeight.value,
+  }
+)
+
 const labelStyle = computed(() => {
   const text = selectedOption.value ? selectedOption.value.label : props.placeholder
   const len = text.length
@@ -93,7 +163,7 @@ const stopMarquee = (event: PointerEvent) => {
 </script>
 
 <template>
-  <Popover align="left" :direction="direction" :block="true" class="select-popover" @toggle="$emit('toggle', $event)">
+  <Popover align="left" :direction="direction" :block="true" class="select-popover" @toggle="handleToggle">
     <template #trigger="{ isOpen }">
       <button 
         type="button" 
@@ -101,32 +171,82 @@ const stopMarquee = (event: PointerEvent) => {
         :class="{ 'is-open': isOpen, 'is-disabled': disabled }" 
         :disabled="disabled"
       >
-        <span 
-          class="select-label" 
-          :class="{ 'is-placeholder': !selectedOption }"
-          :style="labelStyle"
-        >
-          {{ selectedOption ? selectedOption.label : placeholder }}
-        </span>
+        <div class="trigger-content-wrapper">
+          <!-- Thumbnail preview -->
+          <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
+            <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" />
+          </div>
+          
+          <!-- Color preview -->
+          <div 
+            v-else-if="selectedOption?.color" 
+            class="selected-color-badge" 
+            :style="{ backgroundColor: selectedOption.color }"
+          ></div>
+
+          <!-- Skeleton preview -->
+          <div v-else-if="loading || selectedOption?.loading" class="selected-thumbnail-wrapper">
+            <Skeleton variant="linear" width="100%" height="100%" />
+          </div>
+
+          <span 
+            class="select-label" 
+            :class="{ 'is-placeholder': !selectedOption }"
+            :style="labelStyle"
+          >
+            {{ selectedOption ? selectedOption.label : placeholder }}
+          </span>
+        </div>
         <ChevronDown class="select-chevron" :class="{ 'rotate': isOpen }" />
       </button>
     </template>
     
     <template #default="{ close }">
-      <ul class="select-options">
-        <li 
-          v-for="option in options" 
-          :key="option.value" 
-          class="select-option"
-          :class="{ 'is-selected': option.value === modelValue }"
-          @click="handleSelect(option, close)"
-          @pointerenter="startMarquee"
-          @pointerleave="stopMarquee"
-        >
-          <span class="option-label">{{ option.label }}</span>
-          <Check v-if="option.value === modelValue" class="option-check" />
-        </li>
-      </ul>
+      <div v-bind="containerProps" class="virtual-scroll-container" @pointerleave="handleMouseLeaveList">
+        <ul v-bind="wrapperProps" class="select-options">
+          <li 
+            v-for="item in list" 
+            :key="item.data.value" 
+            class="select-option"
+            :class="{ 
+              'is-selected': item.data.value === modelValue,
+              'is-hovered': item.data.value === hoveredValue 
+            }"
+            @click="handleSelect(item.data, close)"
+            @pointerenter="handleMouseEnterOption(item.data, $event)"
+            @pointerleave="handleMouseLeaveOption"
+            :style="{ height: `${itemHeight}px` }"
+          >
+            <div class="option-content">
+              <!-- Thumbnail preview -->
+              <div v-if="item.data.thumbnail" class="thumbnail-wrapper">
+                <img :src="item.data.thumbnail" class="thumbnail-img" />
+              </div>
+              
+              <!-- Color preview -->
+              <div 
+                v-else-if="item.data.color" 
+                class="color-badge" 
+                :style="{ backgroundColor: item.data.color }"
+              ></div>
+
+              <!-- Skeleton loader -->
+              <div v-else-if="item.data.loading" class="thumbnail-wrapper">
+                <Skeleton variant="linear" width="100%" height="100%" />
+              </div>
+
+              <span class="option-label">{{ item.data.label }}</span>
+            </div>
+            
+            <template v-if="previewOnHover && item.data.value === hoveredValue">
+              <Eye class="option-check option-eye" />
+            </template>
+            <template v-else-if="item.data.value === modelValue">
+              <Check class="option-check" />
+            </template>
+          </li>
+        </ul>
+      </div>
     </template>
   </Popover>
 </template>
@@ -143,7 +263,7 @@ const stopMarquee = (event: PointerEvent) => {
   width: 100%;
   min-width: 80px;
   height: 2.75rem;
-  padding: 0.6rem 1rem;
+  padding: 0.4rem 0.8rem;
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
@@ -170,6 +290,43 @@ const stopMarquee = (event: PointerEvent) => {
   cursor: not-allowed;
 }
 
+.trigger-content-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.selected-thumbnail-wrapper {
+  position: relative;
+  width: 38px;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.trigger-thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+}
+
+.selected-color-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
+  flex-shrink: 0;
+}
+
 .select-label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -185,33 +342,35 @@ const stopMarquee = (event: PointerEvent) => {
   height: 1.1rem;
   color: var(--text-secondary);
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .select-chevron.rotate {
   transform: rotate(180deg);
 }
 
+.virtual-scroll-container {
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+  overflow-x: hidden;
+}
+
 .select-options {
   list-style: none;
   padding: 0 4px;
   margin: 0;
-  max-height: 140px;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 .select-option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
-  font-size: 0.95rem;
   color: var(--text-secondary);
   cursor: pointer;
   transition: background-color 0.15s ease;
-  min-width: 0;
-  overflow: hidden;
   position: relative;
 }
 
@@ -226,18 +385,51 @@ const stopMarquee = (event: PointerEvent) => {
   font-weight: 600;
 }
 
-.option-check {
-  width: 1rem;
-  height: 1rem;
-  color: var(--color-primary);
+.option-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.thumbnail-wrapper {
+  position: relative;
+  width: 44px;
+  height: 28px;
+  background: #0f172a;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.thumbnail-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 2px;
+}
+
+.color-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
+  flex-shrink: 0;
 }
 
 .option-label {
+  font-size: 0.85rem;
   flex: 1;
-  min-width: 0;
   overflow: visible;
   text-overflow: clip;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .select-option.has-right-overflow::after {
@@ -269,4 +461,15 @@ const stopMarquee = (event: PointerEvent) => {
   background: linear-gradient(to right, transparent, var(--color-bg-surface-hover));
 }
 
+.option-check {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.option-eye {
+  color: var(--text-primary);
+}
 </style>
+
