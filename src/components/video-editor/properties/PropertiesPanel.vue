@@ -8,6 +8,9 @@ import AudioPanel from './AudioPanel.vue'
 import ZoomPanel from './ZoomPanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
 import type { ZoomElement } from '../zoom/zoom-types'
+import CaptionPanel from './CaptionPanel.vue'
+import type { CaptionCompositionLayer, ProjectComposition } from '../composition/composition-types'
+import type { ProjectEditorData } from '../../../api/types/capture-api'
 
 defineProps<{
   activeTab: string
@@ -35,6 +38,9 @@ defineProps<{
   selectedZoom: ZoomElement | null
   canGenerateZooms: boolean
   hasAutomaticZooms: boolean
+  selectedCompositionLayer: CaptionCompositionLayer | null
+  composition: ProjectComposition
+  editorData?: ProjectEditorData | null
 }>()
 
 const emit = defineEmits<{
@@ -56,6 +62,7 @@ const emit = defineEmits<{
   (e: 'update:zoom', value: ZoomElement): void
   (e: 'delete:zoom'): void
   (e: 'generate:zooms'): void
+  (e: 'update:caption', value: CaptionCompositionLayer): void
 }>()
 </script>
 
@@ -119,6 +126,14 @@ const emit = defineEmits<{
         @update="emit('update:zoom', $event)"
         @delete="emit('delete:zoom')"
         @generate="emit('generate:zooms')"
+      />
+
+      <CaptionPanel
+        v-else-if="activeTab === 'caption'"
+        :layer="selectedCompositionLayer"
+        :composition="composition"
+        :editor-data="editorData"
+        @update="emit('update:caption', $event)"
       />
 
       <SettingsPanel

@@ -58,6 +58,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   saveProjectCompositionLayer(projectId: string, layer: CompositionLayer): Promise<CompositionLayer>
   deleteProjectCompositionLayer(projectId: string, layerId: string): Promise<ProjectComposition>
   moveProjectCompositionLayer(projectId: string, layerId: string, targetIndex: number): Promise<ProjectComposition>
+  whisperModels(): Promise<Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>
+  downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
+  onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
   beginExport(options: { projectName: string; format: 'webm' | 'mp4' }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>
   finalizeExport(jobId: string): Promise<{ path: string }>

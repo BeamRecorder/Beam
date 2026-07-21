@@ -3,7 +3,7 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 const test = require('node:test')
-const { createCompositionStore } = require('../electron/composition-store.cjs')
+const { createCompositionStore } = require('../electron/projects/composition-store.cjs')
 
 function setup() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-composition-')); const id = '11111111-1111-4111-8111-111111111111'; const directory = path.join(root, id)

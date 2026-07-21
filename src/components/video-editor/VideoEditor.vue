@@ -82,6 +82,7 @@ const activeTab = ref("cursor");
 const composition = ref<ProjectComposition>(emptyComposition())
 const selectedCompositionLayerId = ref<string | null>(null)
 const selectedCompositionLayer = computed(() => composition.value.layers.find((layer) => layer.id === selectedCompositionLayerId.value) ?? null)
+const selectedCaptionLayer = computed(() => selectedCompositionLayer.value?.kind === 'caption' ? selectedCompositionLayer.value : null)
 const zoomElements = ref<ZoomElement[]>([]);
 const generatedSessions = ref<ProjectEditorData["zoom"]["generatedSessions"]>(
   [],
@@ -183,6 +184,11 @@ const addCompositionElement = async (kind: 'video' | 'image' | 'sound' | 'captio
   const clipDuration = Math.min(maxDuration, asset.kind === 'image' ? 5000 : nativeDuration)
   const layer: CompositionLayer = { id: crypto.randomUUID(), kind: asset.kind, name: asset.name, assetId: asset.id, startMs, endMs: startMs + clipDuration, enabled: true, order: composition.value.layers.length, ...(asset.kind === 'audio' ? {} : { transform: { x: 0, y: 0, width: 1, height: 1 } }) }
   composition.value.layers.push(layer); await saveComposition(); selectedCompositionLayerId.value = layer.id
+}
+
+const updateCaption = async (layer: Extract<CompositionLayer, { kind: 'caption' }>) => {
+  composition.value.layers = composition.value.layers.map((item) => item.id === layer.id ? layer : item)
+  await saveComposition()
 }
 
 const generateZooms = async (automatic = false) => {
@@ -336,11 +342,14 @@ watch(
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
-          :selected-composition-layer="selectedCompositionLayer"
+          :selected-composition-layer="selectedCaptionLayer"
+          :composition="composition"
+          :editor-data="editorData"
           @import:background="addBackground($event)"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
+          @update:caption="updateCaption"
         />
 
         <!-- Canvas/Player Island -->
