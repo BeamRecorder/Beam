@@ -38,6 +38,8 @@ const handlePopoverToggle = (isOpen: boolean) => {
   if (props.windowOverlay) {
     const contentWidth = ({ sm: 120, md: 160, lg: 220, xl: 300 }[props.size] || 160)
     const contentHeight = ({ sm: 90, md: 120, lg: 165, xl: 225 }[props.size] || 120)
+    // The settings menu needs a real Electron surface, but it is collapsed as
+    // soon as its own popover closes. Transparent pixels pass mouse events through.
     window.capture?.setSize(isOpen ? 390 : contentWidth + 48, isOpen ? Math.max(contentHeight + 48, 300) : contentHeight + 48)
     if (isOpen) window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
   }
@@ -292,7 +294,6 @@ onBeforeUnmount(() => {
                   :model-value="size"
                   :options="sizeOptions"
                   @update:model-value="emit('update:size', $event)"
-                  @toggle="handlePopoverToggle"
                 />
               </div>
 
@@ -302,7 +303,6 @@ onBeforeUnmount(() => {
                   :model-value="shadowSize"
                   :options="shadowOptions"
                   @update:model-value="emit('update:shadowSize', $event)"
-                  @toggle="handlePopoverToggle"
                 />
               </div>
 
@@ -312,7 +312,6 @@ onBeforeUnmount(() => {
                   :model-value="cornerRadius"
                   :options="cornerOptions"
                   @update:model-value="emit('update:cornerRadius', $event)"
-                  @toggle="handlePopoverToggle"
                 />
               </div>
             </div>

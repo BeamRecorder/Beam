@@ -134,6 +134,7 @@ app.whenReady().then(() => {
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
   const cameraOverlay = createCameraOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state))
+  ipcMain.on('camera-overlay:set-interactive', (_event, interactive) => cameraOverlay.setInteractive(interactive))
   ipcMain.handle('camera-overlay:state', () => cameraOverlay.state())
   logStartup('Window IPC registered.')
   const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })

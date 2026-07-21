@@ -6,8 +6,18 @@ import CameraPreviewOverlay from './CameraPreviewOverlay.vue'
 type OverlayState = { cameraId: string; size: string; shadowSize: string; cornerRadius: string }
 const state = ref<OverlayState>({ cameraId: 'off', size: 'md', shadowSize: 'lg', cornerRadius: 'lg' })
 let unsubscribe: (() => void) | null = null
-onMounted(async () => { unsubscribe = capture.onCameraOverlayState((next) => { state.value = next }); const saved = await capture.getCameraOverlayState(); if (saved) state.value = saved })
-onBeforeUnmount(() => unsubscribe?.())
+let lastInteractive: boolean | null = null
+const INTERACTIVE_SELECTOR = '.camera-overlay-container, .popover-content, button, input, [role="button"]'
+const updateMousePassThrough = (event: MouseEvent) => {
+  const element = document.elementFromPoint(event.clientX, event.clientY)
+  const interactive = Boolean(element?.closest(INTERACTIVE_SELECTOR))
+  if (interactive === lastInteractive) return
+  lastInteractive = interactive
+  capture.setCameraOverlayInteractive(interactive)
+}
+const disableMousePassThrough = () => { if (lastInteractive !== false) { lastInteractive = false; capture.setCameraOverlayInteractive(false) } }
+onMounted(async () => { window.addEventListener('mousemove', updateMousePassThrough, { passive: true }); window.addEventListener('mouseleave', disableMousePassThrough); disableMousePassThrough(); unsubscribe = capture.onCameraOverlayState((next) => { state.value = next }); const saved = await capture.getCameraOverlayState(); if (saved) state.value = saved })
+onBeforeUnmount(() => { window.removeEventListener('mousemove', updateMousePassThrough); window.removeEventListener('mouseleave', disableMousePassThrough); unsubscribe?.() })
 const update = (key: 'size' | 'shadowSize' | 'cornerRadius', value: string) => { state.value = { ...state.value, [key]: value }; capture.configureCameraOverlay(state.value) }
 </script>
 

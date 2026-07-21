@@ -122,6 +122,7 @@ fn native_session_finalizes_storage_and_supports_pause_segments() {
             ..RecordingSettings::default()
         },
         failure_policy: FailurePolicy::FailFast,
+        excluded_process_id: None,
     };
     let snapshot = CatalogSnapshot {
         generation: 1,

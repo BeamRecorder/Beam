@@ -2,12 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
 export const useThemeStore = defineStore('theme', () => {
-  const theme = ref<'light' | 'dark' | 'system'>('system')
+  // A deterministic light default prevents the HUD from following an OS dark
+  // scheme before the user has explicitly chosen a preference.
+  const theme = ref<'light' | 'dark' | 'system'>('light')
 
   // Initialize theme from localStorage
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
-    theme.value = savedTheme as any
+    theme.value = savedTheme
   }
 
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')

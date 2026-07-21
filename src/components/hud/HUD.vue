@@ -72,7 +72,7 @@ const savedCamStyle = (() => {
 })();
 
 const emit = defineEmits(["start-recording", "stop-recording", "open-project"]);
-const ProjectPicker = defineAsyncComponent(() => import("./ProjectPicker.vue"));
+const ProjectPicker = defineAsyncComponent(() => import("../projects/ProjectPicker.vue"));
 const HudPreferences = defineAsyncComponent(
   () => import("./HudPreferences.vue"),
 );
@@ -93,6 +93,8 @@ const showProjectPicker = ref(false);
 // Preference settings
 const recordHighQuality = ref(true);
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
+const recordingBarVisibility = ref<'always' | 'auto-fade'>(localStorage.getItem('demorecorder_recording_bar_visibility') === 'auto-fade' ? 'auto-fade' : 'always');
+watch(recordingBarVisibility, (value) => localStorage.setItem('demorecorder_recording_bar_visibility', value));
 
 // Camera Overlay styling options
 const cameraShadowSize = ref<string>(savedCamStyle?.shadowSize ?? "lg");
@@ -363,6 +365,26 @@ const copyError = async () => {
 // Control functions
 const toggleRecording = async () => {
   if (isBusy.value) return;
+  // Recording ownership lives in App.vue.  The HUD only collects configuration.
+  if (!isRecording.value) {
+    let screenId: string | undefined;
+    if (activeTab.value === 'screen') screenId = selectedScreenId.value ?? undefined;
+    else if (selectedSourceId.value) {
+      const hwndHex = Number(selectedSourceId.value.replace('window:', '')).toString(16).toLowerCase();
+      screenId = sources.value.find((source) => source.kind === 'window' && source.id.toLowerCase().includes(hwndHex))?.id;
+    }
+    emit('start-recording', {
+      screenKind: activeTab.value === 'window' ? 'window' : 'display',
+      screenId,
+      cameraId: selectedCameraId.value,
+      microphoneId: selectedMicId.value,
+      systemAudio: systemAudioMode.value === 'on',
+      targetFps: recordHighQuality.value ? 60 : 30,
+      countdownSeconds: countdownSeconds.value,
+      recordingBarVisibility: recordingBarVisibility.value,
+    });
+    return;
+  }
   isBusy.value = true;
   errorMessage.value = "";
   try {
@@ -646,15 +668,6 @@ const discoverSources = async () => {
       ...microphones,
       systemAudioSource(),
     ];
-    const defaultCamera =
-      sources.value.find(
-        (source) => source.kind === "camera" && source.isDefault,
-      ) ?? sources.value.find((source) => source.kind === "camera");
-    const defaultMic =
-      sources.value.find(
-        (source) => source.kind === "microphone" && source.isDefault,
-      ) ?? sources.value.find((source) => source.kind === "microphone");
-
     if (
       savedDevices?.cameraId &&
       (savedDevices.cameraId === "off" ||
@@ -798,8 +811,10 @@ const openProject = (project: CaptureProject) => {
         key="settings"
         :record-high-quality="recordHighQuality"
         :countdown-seconds="countdownSeconds"
+        :recording-bar-visibility="recordingBarVisibility"
         @update:record-high-quality="recordHighQuality = $event"
         @update:countdown-seconds="countdownSeconds = $event"
+        @update:recording-bar-visibility="recordingBarVisibility = $event"
         @close="showSettings = false"
       />
 
@@ -987,7 +1002,9 @@ const openProject = (project: CaptureProject) => {
   ); /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  /* The HUD is a compact floating card: the large ambient shadow reads as a
+     square translucent window, especially in Electron dark mode. */
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
   transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);

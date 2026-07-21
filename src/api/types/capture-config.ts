@@ -41,4 +41,6 @@ export interface CaptureConfig {
   }
   recording: RecordingSettings
   failurePolicy: 'fail-fast' | 'continue-without-optional-tracks'
+  /** Electron process whose windows must be excluded by native capturers when supported. */
+  excludedProcessId?: number
 }

@@ -4,6 +4,9 @@ import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
 import CameraOverlayApp from './components/hud/CameraOverlayApp.vue'
 import Button from './components/ui/button/Button.vue'
+import RecorderBar from './components/hud/recorder/RecorderBar.vue'
+import { useRecordingController } from './components/hud/recorder/useRecordingController'
+import type { RecordingConfiguration, RecordingSessionResult } from './components/hud/recorder/recording-types'
 
 import { capture } from './api/capture'
 import type { CaptureProject, ProjectEditorData } from './api/types/capture-api'
@@ -49,7 +52,7 @@ onBeforeUnmount(() => {
 // ──────────────────────────────────────────────────────────────────────────────
 
 
-const currentView = ref<'hud' | 'editor'>('hud')
+const currentView = ref<'hud' | 'recorder' | 'editor'>('hud')
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay')
 const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))
 const currentVideoSrc = ref<string | null>(null)
@@ -73,6 +76,31 @@ const setView = (view: 'hud' | 'editor') => {
   }
 }
 
+const recordingBarVisibility = ref<'always' | 'auto-fade'>(localStorage.getItem('demorecorder_recording_bar_visibility') === 'auto-fade' ? 'auto-fade' : 'always')
+const recording = useRecordingController((session) => { void handleStopRecording(session) })
+
+const startRecording = async (configuration: RecordingConfiguration) => {
+  editorLoadError.value = ''
+  currentVideoSrc.value = null
+  currentProject.value = null
+  currentEditorData.value = null
+  recordingBarVisibility.value = configuration.recordingBarVisibility
+  currentView.value = 'recorder'
+  capture.setWindowMode('recorder')
+  await recording.start(configuration)
+  if (recording.phase.value === 'idle') currentView.value = 'hud'
+}
+
+const cancelOrStopRecording = async () => {
+  const wasCountdown = recording.phase.value === 'countdown'
+  await recording.stop()
+  if (wasCountdown) {
+    capture.setWindowMode('hud')
+    capture.setSize(320, 480)
+    currentView.value = 'hud'
+  }
+}
+
 const revealEditor = async () => {
   capture.setWindowMode('editor')
   capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
@@ -83,14 +111,7 @@ const revealEditor = async () => {
   isPreparingEditor.value = false
 }
 
-const handleStartRecording = () => {
-  editorLoadError.value = ''
-  currentVideoSrc.value = null
-  currentProject.value = null
-  currentEditorData.value = null
-}
-
-const handleStopRecording = async (session: any) => {
+const handleStopRecording = async (session: RecordingSessionResult) => {
   editorLoadError.value = ''
   isPreparingEditor.value = true
   if (session && session.videoSrc) {
@@ -141,10 +162,26 @@ const dismissEditorLoadError = () => {
     <!-- View Switcher -->
     <HUD 
       v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError" 
-      @start-recording="handleStartRecording"
-      @stop-recording="handleStopRecording"
+      @start-recording="startRecording"
       @open-project="handleOpenProject"
     />
+
+    <Transition name="recorder-return">
+      <RecorderBar
+        v-if="currentView === 'recorder'"
+        :phase="recording.phase.value"
+        :seconds-remaining="recording.secondsRemaining.value"
+        :camera-enabled="recording.cameraEnabled.value"
+        :microphone-enabled="recording.microphoneEnabled.value"
+        :system-audio-enabled="recording.systemAudioEnabled.value"
+        :visibility="recordingBarVisibility"
+        @stop="cancelOrStopRecording"
+        @pause="recording.togglePause"
+        @camera="recording.toggleCamera"
+        @microphone="recording.toggleMicrophone"
+        @system-audio="recording.toggleSystemAudio"
+      />
+    </Transition>
 
     <section v-if="isPreparingEditor" class="editor-preparing" aria-live="polite">
       <LoaderCircle class="preparing-spinner" :size="28" />
@@ -235,6 +272,9 @@ const dismissEditorLoadError = () => {
   opacity: 0;
   transform: translateY(8px);
 }
+
+.recorder-return-enter-active, .recorder-return-leave-active { transition: opacity .18s ease, transform .18s ease; }
+.recorder-return-enter-from, .recorder-return-leave-to { opacity: 0; transform: translateX(8px); }
 
 @keyframes spin {
   to { transform: rotate(360deg); }

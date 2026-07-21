@@ -203,6 +203,7 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
             ..RecordingSettings::default()
         },
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
+        excluded_process_id: None,
     };
     let mut session = RecordingSession::prepare(request, snapshot)?;
     session.start()?;

@@ -33,7 +33,7 @@ export interface CaptureApi {
 export interface DesktopCaptureApi extends CaptureApi {
   close(): void
   minimize(): void
-  setWindowMode(mode: 'hud' | 'editor'): void
+  setWindowMode(mode: 'hud' | 'recorder' | 'editor'): void
   present(): void
   maximize(): void
   unmaximize(): void
@@ -42,6 +42,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   setSize(width: number, height: number): void
   setSizeSmooth(width: number, height: number): void
   setInteractive(overInteractive: boolean): void
+  setCameraOverlayInteractive(overInteractive: boolean): void
   dragStart(): void
   drag(): void
   getSources(types?: string[]): Promise<CapturePreview[]>

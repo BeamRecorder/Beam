@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
+import { inject, nextTick, provide, ref, onMounted, onUnmounted, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -26,6 +26,9 @@ const contentRef = ref<HTMLElement | null>(null)
 const directionClass = ref(props.direction)
 const floatingStyle = ref<Record<string, string>>({})
 const VIEWPORT_MARGIN = 8
+const parentPopoverId = inject<string | null>('popover-owner-id', null)
+const popoverId = `popover-${Math.random().toString(36).slice(2)}`
+provide('popover-owner-id', popoverId)
 
 const toggle = () => {
   isOpen.value = !isOpen.value
@@ -70,6 +73,8 @@ const adjustPosition = async () => {
     top: `${clampedTop}px`,
     left: `${clampedLeft}px`,
     zIndex: '10000',
+    maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+    overflowY: 'auto',
     ...(props.matchTriggerWidth ? {
       width: `${Math.min(rect.width, window.innerWidth - 16)}px`,
       maxWidth: 'calc(100vw - 16px)',
@@ -95,14 +100,16 @@ const closeOnWindowBlur = () => close()
 const handleMouseDownOutside = (event: MouseEvent) => {
   const isInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
   const isInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
-  mousedownWasOutside = !isInsideTrigger && !isInsideContent
+  const belongsToNestedPopover = parentPopoverId !== null && (event.target as Element | null)?.closest(`[data-popover-owner="${parentPopoverId}"]`)
+  mousedownWasOutside = !isInsideTrigger && !isInsideContent && !belongsToNestedPopover
 }
 
 const handleClickOutside = (event: MouseEvent) => {
   if (mousedownWasOutside) {
     const isClickInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
     const isClickInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
-    if (!isClickInsideTrigger && !isClickInsideContent) {
+    const belongsToNestedPopover = parentPopoverId !== null && (event.target as Element | null)?.closest(`[data-popover-owner="${parentPopoverId}"]`)
+    if (!isClickInsideTrigger && !isClickInsideContent && !belongsToNestedPopover) {
       close()
     }
   }
@@ -139,7 +146,7 @@ defineExpose({
 
     <Teleport to="body">
       <Transition name="pop">
-        <div v-if="isOpen" ref="contentRef" class="popover-content" :class="[align, directionClass, { 'popover-block': block }]" :style="floatingStyle">
+        <div v-if="isOpen" ref="contentRef" class="popover-content" :data-popover-owner="parentPopoverId" :class="[align, directionClass, { 'popover-block': block }]" :style="floatingStyle">
           <slot :close="close" />
         </div>
       </Transition>

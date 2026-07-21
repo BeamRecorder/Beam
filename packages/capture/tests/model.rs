@@ -23,6 +23,7 @@ fn request_json_roundtrip_and_defaults_are_stable() {
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
+        excluded_process_id: None,
     };
     let json = serde_json::to_string(&request).expect("serialize request");
     let decoded: CaptureRequest = serde_json::from_str(&json).expect("deserialize request");
@@ -38,8 +39,24 @@ fn cursor_without_screen_is_rejected() {
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
+        excluded_process_id: None,
     };
     assert!(request.validate_basic().is_err());
+}
+
+#[test]
+fn excluded_process_id_roundtrips_when_present() {
+    let request: CaptureRequest = serde_json::from_value(serde_json::json!({
+        "projectId": ProjectId::new(),
+        "screen": null,
+        "cursor": { "mode": "disabled" },
+        "recording": RecordingSettings::default(),
+        "failurePolicy": "fail-fast",
+        "excludedProcessId": 4242
+    }))
+    .expect("deserialize excluded process id");
+    assert_eq!(request.excluded_process_id, Some(4242));
+    assert_eq!(serde_json::to_value(request).expect("serialize request")["excludedProcessId"], 4242);
 }
 
 #[test]
@@ -60,6 +77,7 @@ fn manifest_schema_is_versioned_and_roundtrips() {
             screen: None,
             microphone: None,
             camera: None,
+            system_audio: None,
         },
         tracks: Vec::new(),
         permissions: PermissionSnapshot::default(),

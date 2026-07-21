@@ -9,11 +9,13 @@ import Switch from '~/ui/switch/Switch.vue'
 defineProps<{
   recordHighQuality: boolean
   countdownSeconds: number
+  recordingBarVisibility?: 'always' | 'auto-fade'
 }>()
 
 const emit = defineEmits<{
   (event: 'update:recordHighQuality', value: boolean): void
   (event: 'update:countdownSeconds', value: number): void
+  (event: 'update:recordingBarVisibility', value: 'always' | 'auto-fade'): void
   (event: 'close'): void
 }>()
 
@@ -24,6 +26,7 @@ const countdownOptions = [
   { value: 5, label: '5s' },
   { value: 10, label: '10s' },
 ]
+const recordingBarOptions = [{ value: 'always', label: 'Always visible' }, { value: 'auto-fade', label: 'Auto-fade' }]
 </script>
 
 <template>
@@ -34,6 +37,10 @@ const countdownOptions = [
           <p class="preference-title">Shortcuts</p>
           <p class="preference-description">Alt + Shift + R to record</p>
         </div>
+      </div>
+      <div class="preference-item">
+        <div><p class="preference-title">Recorder bar</p><p class="preference-description">Visibility while recording</p></div>
+        <div class="countdown-select"><Select :model-value="recordingBarVisibility ?? 'always'" :options="recordingBarOptions" direction="up" @update:model-value="emit('update:recordingBarVisibility', $event)" /></div>
       </div>
 
       <div class="preference-item">

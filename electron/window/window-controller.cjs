@@ -1,4 +1,5 @@
 const HUD_SIZE = { width: 320, height: 480 }
+const RECORDER_SIZE = { width: 72, height: 316 }
 
 class WindowController {
   constructor(window) {
@@ -7,6 +8,7 @@ class WindowController {
     this.ready = false
     this.interactive = false
     this.hudOverInteractive = false
+    this.recorderPositions = new Map()
     this.window.setIgnoreMouseEvents(true)
     this.window.on('show', () => this.applyInteractionPolicy())
     this.window.on('hide', () => this.applyInteractionPolicy())
@@ -23,9 +25,26 @@ class WindowController {
   }
 
   setMode(mode) {
-    if (mode !== 'hud' && mode !== 'editor') throw new Error(`Mode de fenêtre invalide: ${mode}`)
+    if (!['hud', 'recorder', 'editor'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`)
     this.mode = mode
+    if (mode === 'recorder') this.placeRecorder()
     this.applyModePolicy()
+  }
+
+  placeRecorder() {
+    const { screen } = require('electron')
+    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+    const saved = this.recorderPositions.get(display.id)
+    const x = saved?.x ?? display.workArea.x + display.workArea.width - RECORDER_SIZE.width - 20
+    const y = saved?.y ?? display.workArea.y + Math.round((display.workArea.height - RECORDER_SIZE.height) / 2)
+    this.window.setBounds({ x, y, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })
+  }
+
+  rememberRecorderPosition() {
+    if (this.mode !== 'recorder') return
+    const { screen } = require('electron')
+    const [x, y] = this.window.getPosition()
+    this.recorderPositions.set(screen.getDisplayNearestPoint({ x, y }).id, { x, y })
   }
 
   maximize() {
@@ -55,10 +74,12 @@ class WindowController {
   applyModePolicy() {
     if (this.window.isDestroyed()) return
     const isHud = this.mode === 'hud'
-    this.window.setAlwaysOnTop(isHud && this.window.isVisible() && !this.window.isMinimized())
-    this.window.setResizable(!isHud)
-    this.window.setMaximizable(!isHud)
-    if (isHud && this.window.isMaximized()) this.window.unmaximize()
+    const isRecorder = this.mode === 'recorder'
+    this.window.setAlwaysOnTop((isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized())
+    this.window.setResizable(!isHud && !isRecorder)
+    this.window.setMaximizable(!isHud && !isRecorder)
+    this.window.setContentProtection(isRecorder)
+    if ((isHud || isRecorder) && this.window.isMaximized()) this.window.unmaximize()
     this.applyInteractionPolicy()
   }
 
@@ -94,7 +115,7 @@ class WindowController {
       this.window.setIgnoreMouseEvents(false)
     }
     this.interactive = true
-    this.window.setAlwaysOnTop(this.mode === 'hud')
+    this.window.setAlwaysOnTop(this.mode === 'hud' || this.mode === 'recorder')
   }
 
   showHud() {

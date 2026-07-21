@@ -91,6 +91,8 @@ pub struct CaptureRequest {
     #[serde(default)]
     pub recording: RecordingSettings,
     pub failure_policy: FailurePolicy,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub excluded_process_id: Option<u32>,
 }
 
 impl CaptureRequest {

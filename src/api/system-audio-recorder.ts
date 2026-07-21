@@ -37,11 +37,9 @@ export class BrowserSystemAudioRecorder {
   readonly sourceId = SOURCE_ID
   readonly format: SystemAudioFormat
   private readonly stream: MediaStream
-  private readonly track: MediaStreamTrack
 
   private constructor(stream: MediaStream, track: MediaStreamTrack, format: SystemAudioFormat) {
     this.stream = stream
-    this.track = track
     this.format = format
     track.addEventListener('ended', () => this.reportFatal(new Error('System audio sharing was stopped.')), { once: true })
   }

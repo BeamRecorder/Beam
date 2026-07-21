@@ -19,6 +19,7 @@ fn manifest(project_id: ProjectId, session_id: SessionId) -> SessionManifest {
             screen: None,
             microphone: None,
             camera: None,
+            system_audio: None,
         },
         tracks: Vec::new(),
         permissions: PermissionSnapshot::default(),

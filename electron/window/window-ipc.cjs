@@ -17,8 +17,22 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   ipcMain.on('window:unmaximize', (event) => controllerForWindow(windowForEvent(event))?.restore())
   ipcMain.on('window:toggleMaximize', (event) => controllerForWindow(windowForEvent(event))?.toggleMaximize())
   ipcMain.on('window:present', (event) => controllerForWindow(windowForEvent(event))?.present())
-  ipcMain.on('window:setPosition', (event, x, y) => windowForEvent(event)?.setPosition(Math.round(x), Math.round(y)))
-  ipcMain.on('window:setSize', (event, width, height) => windowForEvent(event)?.setSize(Math.round(width), Math.round(height)))
+  ipcMain.on('window:setPosition', (event, x, y) => { const win = windowForEvent(event); win?.setPosition(Math.round(x), Math.round(y)); controllerForWindow(win)?.rememberRecorderPosition() })
+  ipcMain.on('window:setSize', (event, width, height) => {
+    const win = windowForEvent(event)
+    if (!win) return
+    const targetWidth = Math.round(width)
+    const targetHeight = Math.round(height)
+    if (!win.webContents.getURL().includes('cameraOverlay')) return win.setSize(targetWidth, targetHeight)
+    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+    const [x, y] = win.getPosition()
+    win.setBounds({
+      x: Math.max(display.workArea.x, Math.min(x, display.workArea.x + display.workArea.width - targetWidth)),
+      y: Math.max(display.workArea.y, Math.min(y, display.workArea.y + display.workArea.height - targetHeight)),
+      width: targetWidth,
+      height: targetHeight,
+    })
+  })
   ipcMain.on('window:setInteractive', (event, overInteractive) => controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive))
 
   ipcMain.on('window:setSizeSmooth', (event, width, height) => {
@@ -58,6 +72,7 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
       width: dragStartSize[0],
       height: dragStartSize[1]
     })
+    controllerForWindow(win)?.rememberRecorderPosition()
   })
 }
 

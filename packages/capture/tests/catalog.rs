@@ -35,6 +35,7 @@ fn incompatible_source_kinds_are_rejected() {
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
+        excluded_process_id: None,
     };
     assert!(validate_request(&request, &snapshot).is_err());
 }
@@ -83,6 +84,7 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
         },
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
+        excluded_process_id: None,
     };
     assert!(matches!(
         validate_request(&request, &snapshot),

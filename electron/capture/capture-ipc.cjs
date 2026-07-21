@@ -19,7 +19,7 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, trac
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
       const catalog = await captureEngine.request('discover')
-      const config = buildDefaultCaptureConfig(catalog, payload.options || {}, { platform: process.platform, defaultOutputRoot: path.join(app.getPath('videos'), 'DemoRecorder') })
+      const config = buildDefaultCaptureConfig(catalog, payload.options || {}, { platform: process.platform, defaultOutputRoot: path.join(app.getPath('videos'), 'DemoRecorder'), excludedProcessId: process.pid })
       await captureEngine.request('prepare', { config })
       const session = await captureEngine.request('start')
       return registerSession(session)
