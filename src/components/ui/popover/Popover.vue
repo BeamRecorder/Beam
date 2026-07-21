@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -25,6 +25,7 @@ const popoverRef = ref<HTMLElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
 const directionClass = ref(props.direction)
 const floatingStyle = ref<Record<string, string>>({})
+const VIEWPORT_MARGIN = 8
 
 const toggle = () => {
   isOpen.value = !isOpen.value
@@ -34,65 +35,51 @@ const close = () => {
   isOpen.value = false
 }
 
-const adjustPosition = () => {
-  if (!popoverRef.value) return
+const adjustPosition = async () => {
+  if (!popoverRef.value || !contentRef.value) return
   const triggerEl = popoverRef.value.querySelector('.popover-trigger') || popoverRef.value
   const rect = triggerEl.getBoundingClientRect()
-  const spaceBelow = window.innerHeight - rect.bottom
-  const spaceAbove = rect.top
+  await nextTick()
+  const content = contentRef.value.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN
+  const spaceAbove = rect.top - VIEWPORT_MARGIN
   
-  if (props.direction === 'down' && spaceBelow < 150 && spaceAbove > spaceBelow) {
+  const requiredHeight = Math.max(content.height, 150)
+  if (props.direction === 'down' && spaceBelow < requiredHeight && spaceAbove > spaceBelow) {
     directionClass.value = 'up'
-  } else if (props.direction === 'up' && spaceAbove < 150 && spaceBelow > spaceAbove) {
+  } else if (props.direction === 'up' && spaceAbove < requiredHeight && spaceBelow > spaceAbove) {
     directionClass.value = 'down'
   } else {
     directionClass.value = props.direction
   }
   
-  let top = 0
-  let left = 0
-  
-  if (directionClass.value === 'down') {
-    top = rect.bottom + window.scrollY + 8
-  } else {
-    top = rect.top + window.scrollY - 8
-  }
+  const top = directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - content.height - VIEWPORT_MARGIN
+  let left = rect.left
   
   if (props.align === 'left') {
-    left = rect.left + window.scrollX
+    left = rect.left
   } else if (props.align === 'right') {
-    left = rect.right + window.scrollX
+    left = rect.right - content.width
   } else {
-    left = rect.left + window.scrollX + rect.width / 2
+    left = rect.left + rect.width / 2 - content.width / 2
   }
-  
-  const transforms: string[] = []
-  if (props.align === 'right') {
-    transforms.push('translateX(-100%)')
-  } else if (props.align === 'center') {
-    transforms.push('translateX(-50%)')
-  }
-  
-  if (directionClass.value === 'up') {
-    transforms.push('translateY(-100%)')
-  }
-  
+  const clampedLeft = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - content.width - VIEWPORT_MARGIN))
+  const clampedTop = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - content.height - VIEWPORT_MARGIN))
   floatingStyle.value = {
-    position: 'absolute',
-    top: `${top}px`,
-    left: `${left}px`,
-    zIndex: '1000',
+    position: 'fixed',
+    top: `${clampedTop}px`,
+    left: `${clampedLeft}px`,
+    zIndex: '10000',
     ...(props.matchTriggerWidth ? {
       width: `${Math.min(rect.width, window.innerWidth - 16)}px`,
       maxWidth: 'calc(100vw - 16px)',
     } : {}),
-    ...(transforms.length > 0 ? { transform: transforms.join(' ') } : {})
   }
 }
 
 watch(isOpen, (val) => {
   if (val) {
-    setTimeout(adjustPosition, 0)
+    window.requestAnimationFrame(() => void adjustPosition())
   }
   emit('toggle', val)
 })
@@ -102,6 +89,8 @@ watch(() => props.direction, (val) => {
 })
 
 let mousedownWasOutside = false
+const repositionOpenPopover = () => { if (isOpen.value) void adjustPosition() }
+const closeOnWindowBlur = () => close()
 
 const handleMouseDownOutside = (event: MouseEvent) => {
   const isInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
@@ -122,11 +111,17 @@ const handleClickOutside = (event: MouseEvent) => {
 onMounted(() => {
   document.addEventListener('mousedown', handleMouseDownOutside)
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', repositionOpenPopover)
+  window.addEventListener('scroll', repositionOpenPopover, true)
+  window.addEventListener('blur', closeOnWindowBlur)
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleMouseDownOutside)
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', repositionOpenPopover)
+  window.removeEventListener('scroll', repositionOpenPopover, true)
+  window.removeEventListener('blur', closeOnWindowBlur)
 })
 
 defineExpose({

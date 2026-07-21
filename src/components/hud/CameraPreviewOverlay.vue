@@ -35,6 +35,12 @@ const streamError = ref<string | null>(null)
 
 const handlePopoverToggle = (isOpen: boolean) => {
   isPopoverOpen.value = isOpen
+  if (props.windowOverlay) {
+    const contentWidth = ({ sm: 120, md: 160, lg: 220, xl: 300 }[props.size] || 160)
+    const contentHeight = ({ sm: 90, md: 120, lg: 165, xl: 225 }[props.size] || 120)
+    window.capture?.setSize(isOpen ? 390 : contentWidth + 48, isOpen ? Math.max(contentHeight + 48, 300) : contentHeight + 48)
+    if (isOpen) window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
+  }
   emit('toggle-popover', isOpen)
 }
 
@@ -77,7 +83,6 @@ const shadowOptions = [
   { value: 'sm', label: 'Small' },
   { value: 'md', label: 'Medium' },
   { value: 'lg', label: 'Large' },
-  { value: 'xl', label: 'Extra Large' },
 ]
 
 const cornerOptions = [
@@ -100,7 +105,6 @@ const shadowClassMap: Record<string, string> = {
   sm: 'shadow-sm',
   md: 'shadow-md',
   lg: 'shadow-lg',
-  xl: 'shadow-xl',
 }
 
 const cornerClassMap: Record<string, string> = {
@@ -332,7 +336,7 @@ onBeforeUnmount(() => {
   isolation: isolate;
 }
 
-.camera-overlay-container.window-overlay { inset: 0; }
+.camera-overlay-container.window-overlay { top: 24px; left: 24px; }
 
 .camera-overlay-container.size-sm {
   width: 120px;
@@ -417,9 +421,6 @@ onBeforeUnmount(() => {
 }
 .shadow-lg {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-.shadow-xl {
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
 }
 
 /* Corner radius variants */
