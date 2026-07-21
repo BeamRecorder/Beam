@@ -142,8 +142,11 @@ const startMarquee = (event: PointerEvent) => {
   option.classList.add('has-overflow', 'has-right-overflow')
   const timer = window.setTimeout(() => {
     const startedAt = performance.now()
+    // Keep long labels readable: duration grows with distance instead of
+    // making their marquee move faster.
+    const travelMs = Math.max(3000, (distance / 36) * 1000)
     const tick = (now: number) => {
-      const phase = ((now - startedAt) % 6000) / 3000
+      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs
       const progress = phase <= 1 ? phase : 2 - phase
       label.style.transform = `translateX(${-distance * progress}px)`
       option.classList.toggle('has-left-overflow', progress > 0.015)

@@ -85,8 +85,10 @@ const startMarquee = (event: PointerEvent) => {
   option.classList.add('has-overflow', 'has-right-overflow')
   const timer = window.setTimeout(() => {
     const startedAt = performance.now()
+    // Keep long window names readable: never exceed 36 pixels per second.
+    const travelMs = Math.max(3000, (distance / 36) * 1000)
     const tick = (now: number) => {
-      const phase = ((now - startedAt) % 6000) / 3000
+      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs
       const progress = phase <= 1 ? phase : 2 - phase
       label.style.transform = `translateX(${-distance * progress}px)`
       option.classList.toggle('has-left-overflow', progress > 0.015)
@@ -218,9 +220,9 @@ const stopMarquee = (event: PointerEvent) => {
   position: relative;
   width: 38px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  background: #000;
+  background: var(--color-bg-surface-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,6 +234,7 @@ const stopMarquee = (event: PointerEvent) => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: inherit;
 }
 
 .trigger-app-icon {
@@ -240,8 +243,8 @@ const stopMarquee = (event: PointerEvent) => {
   right: 1px;
   width: 8px;
   height: 8px;
-  background: white;
-  border-radius: 1px;
+  background: var(--color-bg-element);
+  border-radius: 3px;
 }
 
 .select-label {
@@ -309,26 +312,29 @@ const stopMarquee = (event: PointerEvent) => {
   overflow: hidden;
   flex: 1;
   min-width: 0;
+  isolation: isolate;
 }
 
 .thumbnail-wrapper {
   position: relative;
   width: 60px;
   height: 38px;
-  background: #0f172a;
-  border-radius: 4px;
+  background: var(--color-bg-surface-hover);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
+  z-index: 2;
 }
 
 .thumbnail-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: inherit;
 }
 
 .app-icon {
@@ -337,12 +343,14 @@ const stopMarquee = (event: PointerEvent) => {
   right: 2px;
   width: 12px;
   height: 12px;
-  background: white;
-  border-radius: 2px;
+  background: var(--color-bg-element);
+  border-radius: 3px;
   padding: 1px;
 }
 
 .option-label {
+  position: relative;
+  z-index: 1;
   font-size: 0.85rem;
   flex: 1;
   overflow: visible;
