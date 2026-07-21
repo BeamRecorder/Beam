@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'
@@ -31,21 +31,35 @@ const colorOptions = [
 ]
 
 const presetColors = ['#000000', '#ff5a1f', '#10b981', '#ef4444']
+const isCustomActive = ref(false)
+
+watch(
+  () => props.cursorColor,
+  (newVal) => {
+    if (presetColors.includes(newVal)) {
+      isCustomActive.value = false
+    } else {
+      isCustomActive.value = true
+    }
+  },
+  { immediate: true }
+)
 
 const displayedColorValue = computed(() => {
-  if (presetColors.includes(props.cursorColor)) {
-    return props.cursorColor
+  if (isCustomActive.value) {
+    return 'custom'
   }
-  return 'custom'
+  return props.cursorColor
 })
 
 const handleColorSelect = (value: string) => {
   if (value === 'custom') {
-    // If selecting custom, default to the orange brand color if color was not custom already
+    isCustomActive.value = true
     if (presetColors.includes(props.cursorColor)) {
-      emit('update:cursorColor', '#ff5a1f')
+      emit('update:cursorColor', '#ff5a1e') // Use custom color close to brand orange
     }
   } else {
+    isCustomActive.value = false
     emit('update:cursorColor', value)
   }
 }
