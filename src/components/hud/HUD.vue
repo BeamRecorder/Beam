@@ -83,7 +83,6 @@ const showSettings = ref(false);
 const showProjectPicker = ref(false);
 
 // Preference settings
-const recordHighQuality = ref(true);
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
 const recordingBarVisibility = ref<"always" | "auto-fade">(
   localStorage.getItem("demorecorder_recording_bar_visibility") === "auto-fade"
@@ -373,7 +372,7 @@ const toggleRecording = async () => {
       cameraId: selectedCameraId.value,
       microphoneId: selectedMicId.value,
       systemAudio: systemAudioMode.value === "on",
-      targetFps: recordHighQuality.value ? 60 : 30,
+      targetFps: 60,
       countdownSeconds: countdownSeconds.value,
       recordingBarVisibility: recordingBarVisibility.value,
     });
@@ -438,7 +437,7 @@ const toggleRecording = async () => {
           cameraId: camera ? selectedCameraId.value : null,
           systemAudio: false,
           cursor: true,
-          targetFps: recordHighQuality.value ? 60 : 30,
+          targetFps: 60,
         });
         isRecording.value =
           session.state === "recording" || session.state === "degraded";
@@ -805,10 +804,8 @@ const openProject = (project: CaptureProject) => {
       <HudPreferences
         v-else-if="showSettings"
         key="settings"
-        :record-high-quality="recordHighQuality"
         :countdown-seconds="countdownSeconds"
         :recording-bar-visibility="recordingBarVisibility"
-        @update:record-high-quality="recordHighQuality = $event"
         @update:countdown-seconds="countdownSeconds = $event"
         @update:recording-bar-visibility="recordingBarVisibility = $event"
         @close="showSettings = false"

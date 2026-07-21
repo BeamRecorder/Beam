@@ -441,7 +441,7 @@ const stopMarquee = (event: PointerEvent) => {
   width: 24px;
   pointer-events: none;
   background: linear-gradient(to right, transparent, var(--color-bg-element));
-  box-shadow: inset -10px 0 12px -11px rgba(0, 0, 0, 0.7);
+  box-shadow: inset -10px 0 12px -11px var(--marquee-fade-shadow);
 }
 
 .select-option.has-left-overflow::before {
@@ -454,7 +454,7 @@ const stopMarquee = (event: PointerEvent) => {
   pointer-events: none;
   z-index: 1;
   background: linear-gradient(to right, var(--color-bg-surface-hover), transparent);
-  box-shadow: inset 10px 0 12px -11px rgba(0, 0, 0, 0.7);
+  box-shadow: inset 10px 0 12px -11px var(--marquee-fade-shadow);
 }
 
 .select-option:hover::after {
@@ -472,4 +472,3 @@ const stopMarquee = (event: PointerEvent) => {
   color: var(--text-primary);
 }
 </style>
-

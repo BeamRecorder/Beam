@@ -4,16 +4,13 @@ import { useThemeStore } from '~/stores/theme'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Select from '~/ui/select/Select.vue'
-import Switch from '~/ui/switch/Switch.vue'
 
 defineProps<{
-  recordHighQuality: boolean
   countdownSeconds: number
   recordingBarVisibility?: 'always' | 'auto-fade'
 }>()
 
 const emit = defineEmits<{
-  (event: 'update:recordHighQuality', value: boolean): void
   (event: 'update:countdownSeconds', value: number): void
   (event: 'update:recordingBarVisibility', value: 'always' | 'auto-fade'): void
   (event: 'close'): void
@@ -40,18 +37,7 @@ const recordingBarOptions = [{ value: 'always', label: 'Always visible' }, { val
       </div>
       <div class="preference-item">
         <div><p class="preference-title">Recorder bar</p><p class="preference-description">Visibility while recording</p></div>
-        <div class="countdown-select"><Select :model-value="recordingBarVisibility ?? 'always'" :options="recordingBarOptions" direction="up" @update:model-value="emit('update:recordingBarVisibility', $event)" /></div>
-      </div>
-
-      <div class="preference-item">
-        <div>
-          <p class="preference-title">High Quality</p>
-          <p class="preference-description">Record in 60fps HD</p>
-        </div>
-        <Switch
-          :model-value="recordHighQuality"
-          @update:model-value="emit('update:recordHighQuality', $event)"
-        />
+        <div class="recorder-bar-select"><Select :model-value="recordingBarVisibility ?? 'always'" :options="recordingBarOptions" direction="up" @update:model-value="emit('update:recordingBarVisibility', $event)" /></div>
       </div>
 
       <div class="preference-item">
@@ -100,6 +86,7 @@ const recordingBarOptions = [{ value: 'always', label: 'Always visible' }, { val
 .preference-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .preference-description { margin-top: 2px; font-size: 11px; color: var(--text-muted); }
 .countdown-select { width: 80px; }
+.recorder-bar-select { width: 148px; }
 .theme-controls { width: auto; max-width: 140px; }
 .button-icon { width: 16px; height: 16px; }
 </style>
