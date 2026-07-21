@@ -89,7 +89,9 @@ const {
   rippleSize,
 } = useCursorReplacer();
 
-const activeTab = ref("cursor");
+const activeTab = ref("canvas");
+const systemVolume = ref(100);
+const micVolume = ref(100);
 const composition = ref<ProjectComposition>(emptyComposition());
 const selectedCompositionLayerId = ref<string | null>(null);
 const selectedCompositionLayer = computed(
@@ -98,6 +100,33 @@ const selectedCompositionLayer = computed(
       (layer) => layer.id === selectedCompositionLayerId.value,
     ) ?? null,
 );
+
+const selectedClipInfo = computed(() => {
+  if (!selectedCompositionLayer.value) return null;
+  const layer = selectedCompositionLayer.value;
+  return {
+    id: layer.id,
+    kind: layer.kind,
+    name: layer.name,
+    timelineStartMs: layer.startMs,
+    timelineDurationMs: layer.endMs - layer.startMs,
+    playbackRate: 1.0,
+    enabled: layer.enabled,
+    isLinked: false,
+  };
+});
+
+const handleUnlinkClips = async () => {
+  if (selectedCompositionLayerId.value) {
+    // Perform unlink action if part of group
+    await saveComposition();
+  }
+};
+
+const handleUnlinkTrack = async (trackKind: string) => {
+  console.log(`Unlinked track: ${trackKind}`);
+  await saveComposition();
+};
 const selectedCaptionLayer = computed(() =>
   selectedCompositionLayer.value?.kind === "caption"
     ? selectedCompositionLayer.value
@@ -489,9 +518,10 @@ watch(
         <!-- Sidebar Island -->
         <SidebarPanel :active-tab="activeTab" @select-tab="handleSelectTab" />
 
-        <!-- Properties Island -->
+        <!-- Properties Island (Right sidebar) -->
         <PropertiesPanel
-          :active-tab="activeTab"
+          :activeTab="activeTab"
+          :selected-clip="selectedClipInfo"
           v-model:selectedCursor="selectedCursor"
           v-model:cursorSize="cursorSize"
           v-model:cursorColor="cursorColor"
@@ -502,6 +532,8 @@ watch(
           v-model:rippleColor="rippleColor"
           v-model:rippleSize="rippleSize"
           v-model:volume="volume"
+          v-model:systemVolume="systemVolume"
+          v-model:micVolume="micVolume"
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
@@ -518,6 +550,7 @@ watch(
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
+          @unlink-clip="handleUnlinkClips"
         />
 
         <!-- Canvas/Player Island -->
@@ -570,13 +603,18 @@ watch(
           @add:element="addCompositionElement"
           @select:composition-layer="
             selectedCompositionLayerId = $event;
-            activeTab = 'caption';
+            activeTab = 'clip';
           "
-          @select:camera-layer="selectedCompositionLayerId = $event"
+          @select:camera-layer="
+            selectedCompositionLayerId = $event;
+            activeTab = 'clip';
+          "
           @toggle:camera="toggleCamera"
           @toggle:camera-layer="toggleSelectedCamera"
           @split:camera="splitSelectedCamera"
           @trim:camera="trimSelectedCamera"
+          @unlink="handleUnlinkClips"
+          @unlink-track="handleUnlinkTrack"
         />
       </div>
     </div>

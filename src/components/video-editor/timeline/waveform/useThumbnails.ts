@@ -41,8 +41,6 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
 
     if (!canvas) {
       canvas = document.createElement("canvas");
-      canvas.width = 120; // low resolution thumbnails for fast performance
-      canvas.height = 68; // 16:9 aspect ratio roughly
       canvasCtx = canvas.getContext("2d");
     }
   };
@@ -71,6 +69,17 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                     { once: true },
                   );
                 });
+              }
+
+              // Set canvas dimensions dynamically based on video aspect ratio
+              const vWidth = hiddenVideo.videoWidth || 640;
+              const vHeight = hiddenVideo.videoHeight || 360;
+              const targetWidth = Math.min(640, vWidth);
+              const targetHeight = Math.round(targetWidth * (vHeight / vWidth));
+
+              if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
               }
 
               // Gotcha: if target time is already very close to current time (and not 0), skip seek since 'seeked' might not fire
@@ -108,16 +117,18 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
                 });
               }
 
-              // Draw frame to low-res canvas
-              if (canvas) {
-                canvasCtx?.drawImage(
+              // Draw frame to high-res canvas with high quality smoothing
+              if (canvas && canvasCtx) {
+                canvasCtx.imageSmoothingEnabled = true;
+                canvasCtx.imageSmoothingQuality = "high";
+                canvasCtx.drawImage(
                   hiddenVideo,
                   0,
                   0,
                   canvas.width,
                   canvas.height,
                 );
-                const dataUrlResult = canvas.toDataURL("image/jpeg", 0.6); // low quality for performance
+                const dataUrlResult = canvas.toDataURL("image/webp", 0.92);
                 worker?.postMessage({
                   type: "frame-response",
                   time,

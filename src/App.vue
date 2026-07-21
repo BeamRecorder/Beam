@@ -51,7 +51,7 @@ const EDITOR_WINDOW_SIZE = { width: 1280, height: 800 }
 
 const setView = (view: 'hud' | 'editor') => {
   currentView.value = view
-  if (view === 'editor') { capture.setWindowMode('editor'); capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height) } else capture.showHud()
+  if (view === 'editor') { capture.setCameraOverlayActive(false); capture.setWindowMode('editor'); capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height) } else { capture.setCameraOverlayActive(true); capture.showHud() }
 }
 
 const recordingBarVisibility = ref<'always' | 'auto-fade'>(localStorage.getItem('demorecorder_recording_bar_visibility') === 'auto-fade' ? 'auto-fade' : 'always')
@@ -70,6 +70,7 @@ const cancelOrStopRecording = async () => {
 }
 
 const revealEditor = async () => {
+  capture.setCameraOverlayActive(false)
   capture.setWindowMode('editor'); capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
   currentView.value = 'editor'; isPreparingEditor.value = false; await nextTick(); capture.present()
 }

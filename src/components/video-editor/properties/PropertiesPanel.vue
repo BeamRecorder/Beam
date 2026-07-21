@@ -7,6 +7,7 @@ import TrimPanel from './TrimPanel.vue'
 import AudioPanel from './AudioPanel.vue'
 import ZoomPanel from './ZoomPanel.vue'
 import SettingsPanel from './SettingsPanel.vue'
+import ClipPropertiesPanel from './ClipPropertiesPanel.vue'
 import type { ZoomElement } from '../zoom/zoom-types'
 import CaptionPanel from './CaptionPanel.vue'
 import type { CaptionCompositionLayer, ProjectComposition } from '../composition/composition-types'
@@ -15,6 +16,18 @@ import type { ProjectEditorData } from '../../../api/types/capture-api'
 defineProps<{
   activeTab: string
   
+  // Selected clip for clip tab
+  selectedClip?: {
+    id: string
+    kind: string
+    name?: string
+    timelineStartMs: number
+    timelineDurationMs: number
+    playbackRate?: number
+    enabled?: boolean
+    isLinked?: boolean
+  } | null
+
   // Cursor properties
   selectedCursor: CursorType
   cursorSize: number
@@ -31,6 +44,8 @@ defineProps<{
   isVideoEnabled: boolean
   isSystemAudioEnabled: boolean
   isMicAudioEnabled: boolean
+  systemVolume?: number
+  micVolume?: number
 
   // Background properties
   selectedBackground: string | null
@@ -54,15 +69,21 @@ const emit = defineEmits<{
   (e: 'update:rippleColor', value: string): void
   (e: 'update:rippleSize', value: number): void
   (e: 'update:volume', value: number): void
-  (e: 'update:isVideoEnabled', value: boolean): void
   (e: 'update:isSystemAudioEnabled', value: boolean): void
   (e: 'update:isMicAudioEnabled', value: boolean): void
+  (e: 'update:systemVolume', value: number): void
+  (e: 'update:micVolume', value: number): void
   (e: 'update:selectedBackground', value: string): void
   (e: 'import:background', value: BackgroundMedia): void
   (e: 'update:zoom', value: ZoomElement): void
   (e: 'delete:zoom'): void
   (e: 'generate:zooms'): void
   (e: 'update:caption', value: CaptionCompositionLayer): void
+  (e: 'update:clip-rate', rate: number): void
+  (e: 'update:clip-enabled', enabled: boolean): void
+  (e: 'unlink-clip'): void
+  (e: 'delete-clip'): void
+  (e: 'split-clip'): void
 }>()
 </script>
 
@@ -74,8 +95,26 @@ const emit = defineEmits<{
     </div>
 
     <div class="panel-content">
+      <CanvasPanel 
+        v-if="activeTab === 'canvas'"
+        :selected-background="selectedBackground"
+        :background-groups="backgroundGroups"
+        @update:selectedBackground="emit('update:selectedBackground', $event)"
+        @import:background="emit('import:background', $event)"
+      />
+
+      <ClipPropertiesPanel 
+        v-else-if="activeTab === 'clip'"
+        :selected-clip="selectedClip || null"
+        @update:playback-rate="emit('update:clip-rate', $event)"
+        @update:enabled="emit('update:clip-enabled', $event)"
+        @unlink="emit('unlink-clip')"
+        @delete="emit('delete-clip')"
+        @split="emit('split-clip')"
+      />
+
       <CursorPanel 
-        v-if="activeTab === 'cursor'"
+        v-else-if="activeTab === 'cursor'"
         :selectedCursor="selectedCursor"
         :cursorSize="cursorSize"
         :cursorColor="cursorColor"
@@ -96,14 +135,6 @@ const emit = defineEmits<{
         @update:rippleSize="emit('update:rippleSize', $event)"
       />
 
-      <CanvasPanel 
-        v-else-if="activeTab === 'canvas'"
-        :selected-background="selectedBackground"
-        :background-groups="backgroundGroups"
-        @update:selectedBackground="emit('update:selectedBackground', $event)"
-        @import:background="emit('import:background', $event)"
-      />
-
       <TrimPanel 
         v-else-if="activeTab === 'trim'"
       />
@@ -113,9 +144,13 @@ const emit = defineEmits<{
         :volume="volume"
         :isSystemAudioEnabled="isSystemAudioEnabled"
         :isMicAudioEnabled="isMicAudioEnabled"
+        :systemVolume="systemVolume"
+        :micVolume="micVolume"
         @update:volume="emit('update:volume', $event)"
         @update:isSystemAudioEnabled="emit('update:isSystemAudioEnabled', $event)"
         @update:isMicAudioEnabled="emit('update:isMicAudioEnabled', $event)"
+        @update:systemVolume="emit('update:systemVolume', $event)"
+        @update:micVolume="emit('update:micVolume', $event)"
       />
 
       <ZoomPanel

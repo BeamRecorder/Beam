@@ -13,6 +13,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   let shadowSyncFrame = null
   let isHovered = false
   let lastShadowBounds = null
+  let active = true
 
   const load = (target, query) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/index.html'), { query })
@@ -107,7 +108,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
 
   const configure = (state) => {
     currentState = { cameraId: state?.cameraId || 'off', shadowSize: ['none', 'sm', 'md', 'lg'].includes(state?.shadowSize) ? state.shadowSize : currentState?.shadowSize || 'md', cornerRadius: ['none', 'sm', 'md', 'lg', 'full'].includes(state?.cornerRadius) ? state.cornerRadius : currentState?.cornerRadius || 'md' }
-    if (currentState.cameraId === 'off') { if (window && !window.isDestroyed()) window.hide(); if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.hide(); return }
+    if (!active || currentState.cameraId === 'off') { if (window && !window.isDestroyed()) { window.webContents.send('camera-overlay:state', { ...currentState, cameraId: 'off' }); window.hide() } if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.hide(); return }
     const shadow = ensureShadowWindow()
     const overlay = create()
     overlay.webContents.send('camera-overlay:state', currentState)
@@ -118,7 +119,12 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     startHoverTracking()
   }
 
-  return { configure, state: () => currentState, destroy: () => { stopHoverTracking(); cancelShadowSync(); if (window && !window.isDestroyed()) window.destroy(); if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.destroy() } }
+  const setActive = (next) => {
+    active = Boolean(next)
+    configure(currentState || { cameraId: 'off' })
+  }
+
+  return { configure, setActive, state: () => currentState, destroy: () => { stopHoverTracking(); cancelShadowSync(); if (window && !window.isDestroyed()) window.destroy(); if (shadowWindow && !shadowWindow.isDestroyed()) shadowWindow.destroy() } }
 }
 
 module.exports = { createCameraOverlayWindow }

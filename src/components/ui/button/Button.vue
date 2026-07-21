@@ -20,7 +20,7 @@ const props = withDefaults(
       | "tab"
       | "card"
       | "danger";
-    size?: "sm" | "md" | "lg";
+    size?: "xs" | "sm" | "md" | "lg";
     loading?: boolean;
     disabled?: boolean;
     block?: boolean;
@@ -131,6 +131,12 @@ const handleClick = (event: MouseEvent) => {
 }
 
 /* Sizes */
+.btn-xs {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.75rem;
+  height: 1.5rem;
+}
+
 .btn-sm {
   padding: 0.4rem 0.8rem;
   font-size: 0.875rem;
@@ -260,6 +266,12 @@ const handleClick = (event: MouseEvent) => {
 .btn-icon-only {
   width: 32px;
   height: 32px;
+  padding: 0;
+}
+
+.btn-icon-only.btn-xs {
+  width: 20px;
+  height: 20px;
   padding: 0;
 }
 

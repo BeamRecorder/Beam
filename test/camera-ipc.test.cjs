@@ -57,3 +57,15 @@ test('persists an explicit camera failure without fabricating a media segment', 
   assert.deepEqual(manifest.tracks[0].segments, [])
   assert.match(manifest.warnings[0], /Camera recording failed/)
 })
+
+test('persists validated camera appearance with the recorded sidecar', () => {
+  const storage = createCameraStorage({})
+  const session = sessionFixture()
+  storage.registerSession(session)
+  const opened = storage.begin(14, { sessionId, sourceId, format: { ...format, appearance: { shadowSize: 'lg', cornerRadius: 'full' } }, startNs: 0 })
+  storage.write(14, { jobId: opened.jobId, sequence: 0, data: new Uint8Array([1]) })
+  storage.finalize(14, { jobId: opened.jobId, endNs: 1, metrics: {} })
+  storage.complete(session)
+  const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
+  assert.deepEqual(manifest.tracks[0].format.appearance, { shadowSize: 'lg', cornerRadius: 'full' })
+})

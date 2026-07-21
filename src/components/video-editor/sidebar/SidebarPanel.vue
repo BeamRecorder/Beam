@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-  MousePointer,
-  Scissors,
-  Volume2,
   Monitor,
+  Film,
   ZoomIn,
+  MousePointer,
+  Volume2,
   Settings,
 } from "@lucide/vue";
 
@@ -17,10 +17,10 @@ const emit = defineEmits<{
 }>();
 
 const menuItems = [
-  { id: "cursor", label: "Cursor", icon: MousePointer },
   { id: "canvas", label: "Canvas", icon: Monitor },
+  { id: "clip", label: "Clip", icon: Film },
   { id: "zoom", label: "Zoom", icon: ZoomIn },
-  { id: "trim", label: "Trim", icon: Scissors },
+  { id: "cursor", label: "Cursor", icon: MousePointer },
   { id: "audio", label: "Audio", icon: Volume2 },
 ];
 </script>

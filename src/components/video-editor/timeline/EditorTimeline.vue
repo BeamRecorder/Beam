@@ -39,6 +39,8 @@ const emit = defineEmits<{
   (e: 'toggle:camera-layer'): void;
   (e: 'split:camera'): void;
   (e: 'trim:camera', edge: 'start' | 'end'): void;
+  (e: 'unlink'): void;
+  (e: 'unlink-track', trackKind: string): void;
 }>();
 
 const zoomLevel = ref<number>(100);
@@ -114,6 +116,8 @@ onUnmounted(() => {
       @select:camera-layer="emit('select:camera-layer', $event)"
       @split:camera="emit('split:camera')"
       @trim:camera="emit('trim:camera', $event)"
+      @unlink="emit('unlink')"
+      @unlink-track="emit('unlink-track', $event)"
     />
   </div>
 </template>

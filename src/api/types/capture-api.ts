@@ -67,6 +67,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
   configureCameraOverlay(state: { cameraId: string; shadowSize?: string; cornerRadius?: string }): void
+  setCameraOverlayActive(active: boolean): void
   getCameraOverlayState(): Promise<{ cameraId: string; shadowSize: string; cornerRadius: string } | null>
   onCameraOverlayState(listener: (state: { cameraId: string; shadowSize: string; cornerRadius: string }) => void): () => void
   onCameraOverlayHover(listener: (hovered: boolean) => void): () => void
@@ -92,7 +93,7 @@ export interface DesktopCaptureApi extends CaptureApi {
 export interface CameraSegmentStart {
   sessionId: string
   sourceId: string
-  format: { codec: 'vp8'; width: number; height: number; nominalFps: number }
+  format: { codec: 'vp8'; width: number; height: number; nominalFps: number; appearance?: { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' } }
   startNs: number
 }
 

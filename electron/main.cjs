@@ -99,7 +99,7 @@ function createWindow() {
   win.webContents.once('dom-ready', () => logStartup('Renderer DOM is ready.'))
   win.webContents.once('did-finish-load', () => logStartup('Renderer loading finished.'))
   win.webContents.on('render-process-gone', (_event, details) => logStartup(`Renderer process exited (${details.reason}).`))
-  if (!app.isPackaged && process.env.DEMO_RECORDER_DEVTOOLS === '1') {
+  if (!app.isPackaged) {
     win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }))
   }
   if (app.isPackaged) {
@@ -136,6 +136,7 @@ app.whenReady().then(() => {
   const cameraOverlay = createCameraOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
   const countdownOverlay = createCountdownWindow({ applicationRoot, isPackaged: app.isPackaged })
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state))
+  ipcMain.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active))
   ipcMain.on('countdown:set', (_event, seconds) => countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null))
   ipcMain.handle('camera-overlay:state', () => cameraOverlay.state())
   logStartup('Window IPC registered.')
