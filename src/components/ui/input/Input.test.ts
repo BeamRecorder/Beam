@@ -15,7 +15,7 @@ describe('Input', () => {
   })
   it('does not start numeric drag when disabled, text, or non-primary click', async () => {
     for (const props of [{ modelValue: 1, disabled: true }, { modelValue: 'x', type: 'text' }, { modelValue: 1, type: 'number' }]) {
-      const wrapper = mount(Input, { props }); await wrapper.get('input').trigger('mousedown', { button: props.type === 'number' ? 2 : 0, clientX: 0 }); window.dispatchEvent(new MouseEvent('mousemove', { clientX: 30 })); expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+      const wrapper = mount(Input, { props: props as never }); await wrapper.get('input').trigger('mousedown', { button: props.type === 'number' ? 2 : 0, clientX: 0 }); window.dispatchEvent(new MouseEvent('mousemove', { clientX: 30 })); expect(wrapper.emitted('update:modelValue')).toBeUndefined()
     }
   })
 })

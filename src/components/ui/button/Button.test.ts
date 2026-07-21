@@ -12,7 +12,7 @@ describe('Button', () => {
   })
   it('does not emit clicks while disabled or loading', async () => {
     for (const props of [{ disabled: true }, { loading: true }]) {
-      const wrapper = mount(Button, { props }); await wrapper.get('button').trigger('click'); expect(wrapper.emitted('click')).toBeUndefined(); expect(wrapper.get('button').attributes('disabled')).toBeDefined()
+      const wrapper = mount(Button, { props: props as never }); await wrapper.get('button').trigger('click'); expect(wrapper.emitted('click')).toBeUndefined(); expect(wrapper.get('button').attributes('disabled')).toBeDefined()
     }
   })
 })
