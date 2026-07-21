@@ -736,10 +736,12 @@ defineExpose({
   transform: none !important;
 }
 
-.project-card:hover:not(.is-selected) {
+:deep(.btn-card):hover:not(.is-selected) {
   border-color: var(--color-primary-hover) !important;
 }
 
+:deep(.btn-card.is-selected),
+:deep(.btn-card.is-selected):hover,
 .project-card.is-selected,
 .project-card.is-selected:hover {
   border-color: var(--color-primary) !important;
