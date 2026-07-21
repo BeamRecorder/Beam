@@ -829,9 +829,9 @@ const openProject = (project: CaptureProject) => {
 
 .device-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   -webkit-app-region: no-drag;
 }
