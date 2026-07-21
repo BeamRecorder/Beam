@@ -101,9 +101,6 @@ const emit = defineEmits<{
   align-items: center;
   gap: 8px;
 }
-.topbar-identity {
-  -webkit-app-region: no-drag;
-}
 .window-actions {
   gap: 4px;
   -webkit-app-region: no-drag;
@@ -121,12 +118,13 @@ const emit = defineEmits<{
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5px;
-  user-select: text;
-  cursor: text;
+  user-select: none;
+  cursor: grab;
 }
 .rec-badge {
   font-size: 0.6rem;
   padding: 1px 5px;
+  user-select: none;
 }
 .window-actions :deep(.btn) {
   padding: 0;
