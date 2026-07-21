@@ -384,7 +384,7 @@ defineExpose({
                     />
                     <span v-else class="project-card-name" :title="project.name">{{ project.name }}</span>
                     <div class="project-card-actions" @click.stop @mousedown.stop>
-                      <Popover align="right" direction="down" @toggle="handlePopoverToggle">
+                      <Popover align="right" direction="down" :match-trigger-width="false" @toggle="handlePopoverToggle">
                         <template #trigger="{ isOpen }">
                           <Button
                             variant="ghost"

@@ -152,7 +152,7 @@ watch(() => props.videoSrc, (videoSrc) => {
     <!-- Window Titlebar / Header -->
     <header class="editor-titlebar" @dblclick="capture.toggleMaximize()">
       <div class="left-actions">
-        <Button variant="ghost" size="sm" :icon="ArrowLeft" @click="handleExit" class="exit-btn">
+        <Button variant="ghost" size="sm" :icon="ArrowLeft" @click="handleExit" class="exit-btn titlebar-btn">
           Exit to HUD
         </Button>
         <VideoProjectEdition :project="project" @open-project="emit('open-project', $event)" @dblclick.stop="capture.toggleMaximize()" />
@@ -163,8 +163,12 @@ watch(() => props.videoSrc, (videoSrc) => {
           Export Video
         </Button>
         <div class="window-controls">
-          <Button variant="ghost" size="sm" icon-only :icon="Minus" tooltip="Minimize" tooltip-position="bottom" aria-label="Minimize" @click="minimizeApp" />
-          <Button variant="ghost" size="sm" icon-only :icon="X" tooltip="Close" tooltip-position="bottom" aria-label="Close" class="close-btn" @click="closeApp" />
+          <button aria-label="Minimize" class="titlebar-btn control-btn" @click="minimizeApp">
+            <Minus class="btn-icon" />
+          </button>
+          <button aria-label="Close" class="titlebar-btn control-btn close-btn" @click="closeApp">
+            <X class="btn-icon" />
+          </button>
         </div>
       </div>
     </header>
@@ -287,24 +291,7 @@ watch(() => props.videoSrc, (videoSrc) => {
   margin-right: 4px;
 }
 
-.left-actions :deep(.btn-container) {
-  height: 100%;
-  display: flex;
-}
 
-.left-actions :deep(.exit-btn.btn) {
-  height: 100%;
-  padding: 0 16px;
-  border-radius: 0; /* flush to the left corner */
-  border: none;
-  background: transparent;
-  transition: all 0.2s ease;
-}
-
-.left-actions :deep(.exit-btn.btn:hover) {
-  background: var(--color-bg-surface-hover, rgba(255, 255, 255, 0.05));
-  color: var(--text-primary);
-}
 
 .right-actions {
   gap: 0; /* No gap so window-controls is flush */
@@ -320,33 +307,68 @@ watch(() => props.videoSrc, (videoSrc) => {
   height: 100%;
   align-items: stretch;
 }
+</style>
 
-.window-controls :deep(.btn-container) {
+<!-- Unscoped global styles for Titlebar Button overrides to avoid using :deep() -->
+<style>
+.editor-titlebar .titlebar-btn.btn-container {
   height: 100%;
-  display: flex;
+  display: inline-flex;
 }
 
-.window-controls :deep(.btn) {
+.editor-titlebar .titlebar-btn .btn {
+  height: 100%;
+  border-radius: 0; /* corner to corner */
+  border: none;
+  background: transparent;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.editor-titlebar .exit-btn .btn {
+  padding: 0 16px;
+  gap: 8px;
+}
+
+.editor-titlebar .exit-btn .btn .btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.editor-titlebar .window-controls .control-btn {
   width: 46px; /* standard windows titlebar button width */
   height: 100%;
   padding: 0;
   border-radius: 0; /* corner to corner */
+  border: none;
+  background: transparent;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
+  cursor: pointer;
   color: var(--text-muted);
-  transition: all 0.2s ease;
 }
 
-.window-controls :deep(.btn:hover) {
-  background: var(--color-bg-surface-hover);
-  color: var(--text-primary);
+.editor-titlebar .window-controls .control-btn .btn-icon {
+  width: 14px;
+  height: 14px;
 }
 
-.window-controls :deep(.close-btn:hover) {
-  background: var(--color-error) !important;
+.editor-titlebar .window-controls .control-btn:hover {
+  background: var(--color-bg-surface, #1e1e1e) !important;
+  color: var(--text-primary) !important;
+}
+
+.editor-titlebar .window-controls .close-btn:hover {
+  background: var(--color-error, #ef4444) !important;
   color: white !important;
 }
 

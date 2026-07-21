@@ -198,10 +198,11 @@ const handleClick = (event: MouseEvent) => {
 .btn-ghost {
   background-color: transparent;
   color: var(--text-primary);
+  border-color: transparent;
 }
 .btn-ghost:hover:not(:disabled) {
-  background-color: var(--color-bg-surface-hover);
-  border-color: var(--color-border);
+  background-color: var(--color-bg-surface, #1e1e1e);
+  border-color: transparent;
 }
 
 .btn-link {
