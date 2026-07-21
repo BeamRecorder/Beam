@@ -14,7 +14,7 @@ const controllers = new WeakMap()
 function createWindow() {
   const win = new BrowserWindow({
     width: 320, height: 480, frame: false, transparent: true, alwaysOnTop: false,
-    icon: path.join(applicationRoot, 'public/brand/DemoRecorderIcon.webp'), resizable: false, maximizable: false, hasShadow: true, show: false,
+    icon: path.join(applicationRoot, 'public/brand/DemoRecorderIcon.ico'), resizable: false, maximizable: false, hasShadow: true, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false },
   })
   const controller = new WindowController(win)

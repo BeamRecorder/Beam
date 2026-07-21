@@ -34,53 +34,40 @@ const skeletonStyle = computed(() => ({
 <style scoped>
 .skeleton {
   display: block;
+  background-color: var(--color-bg-surface-hover);
+  position: relative;
+  overflow: hidden;
 }
 
-/* Linear Shimmer (Left to Right) */
-@keyframes shimmer-linear {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-.shimmer-linear {
+/* Hardware accelerated sliding shimmer */
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
   background: linear-gradient(
     90deg,
-    var(--color-bg-surface) 25%,
-    var(--color-bg-surface-hover) 37%,
-    var(--color-bg-surface) 63%
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.06) 20%,
+    rgba(255, 255, 255, 0.12) 60%,
+    rgba(255, 255, 255, 0) 100%
   );
-  background-size: 200% 100%;
-  animation: shimmer-linear 1.5s infinite linear;
+  animation: shimmer-slide 1.6s infinite ease-in-out;
 }
 
-/* Radial Shimmer (Expanding) */
-@keyframes shimmer-radial {
-  0% {
-    background-size: 100% 100%;
-    opacity: 0.6;
-  }
-  50% {
-    background-size: 150% 150%;
-    opacity: 1;
-  }
+:root:not(.dark) .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(0, 0, 0, 0.03) 20%,
+    rgba(0, 0, 0, 0.06) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+@keyframes shimmer-slide {
   100% {
-    background-size: 100% 100%;
-    opacity: 0.6;
+    transform: translateX(100%);
   }
-}
-
-.shimmer-radial {
-  background: radial-gradient(
-    circle,
-    var(--color-bg-surface) 10%,
-    var(--color-bg-surface-hover) 60%,
-    var(--color-bg-surface) 90%
-  );
-  background-position: center;
-  animation: shimmer-radial 2s infinite ease-in-out;
 }
 </style>

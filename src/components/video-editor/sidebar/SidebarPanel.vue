@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { MousePointer, Scissors, Volume2, Monitor, ZoomIn } from "@lucide/vue";
+import {
+  MousePointer,
+  Scissors,
+  Volume2,
+  Monitor,
+  ZoomIn,
+  Settings,
+} from "@lucide/vue";
 
 defineProps<{
   activeTab: string;
@@ -37,6 +44,18 @@ const menuItems = [
         <span class="nav-label">{{ item.label }}</span>
       </button>
     </nav>
+
+    <div class="sidebar-footer">
+      <button
+        class="nav-btn footer-btn"
+        :class="{ active: activeTab === 'settings' }"
+        @click="emit('select-tab', 'settings')"
+        title="Settings"
+      >
+        <Settings class="nav-icon animate-cog" />
+        <span class="nav-label">Settings</span>
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -73,6 +92,11 @@ const menuItems = [
   width: 100%;
 }
 
+.sidebar-footer {
+  margin-top: auto;
+  width: 100%;
+}
+
 .nav-btn {
   width: 100%;
   height: 52px;
@@ -99,9 +123,14 @@ const menuItems = [
   color: var(--color-primary);
 }
 
+.nav-btn:hover .animate-cog {
+  transform: rotate(45deg);
+}
+
 .nav-icon {
   width: 18px;
   height: 18px;
+  transition: transform 0.3s ease;
 }
 
 .nav-label {

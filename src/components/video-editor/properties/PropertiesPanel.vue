@@ -6,6 +6,7 @@ import CanvasPanel from './CanvasPanel.vue'
 import TrimPanel from './TrimPanel.vue'
 import AudioPanel from './AudioPanel.vue'
 import ZoomPanel from './ZoomPanel.vue'
+import SettingsPanel from './SettingsPanel.vue'
 import type { ZoomElement } from '../zoom/zoom-types'
 
 defineProps<{
@@ -118,6 +119,10 @@ const emit = defineEmits<{
         @update="emit('update:zoom', $event)"
         @delete="emit('delete:zoom')"
         @generate="emit('generate:zooms')"
+      />
+
+      <SettingsPanel
+        v-else-if="activeTab === 'settings'"
       />
     </div>
   </div>
