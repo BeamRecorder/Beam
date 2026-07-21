@@ -1,8 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Plus, ChevronUp, Video, Image, Volume2, Paintbrush } from '@lucide/vue';
-import Button from '~/ui/button/Button.vue';
-import Popover from '~/ui/popover/Popover.vue';
+import { computed } from "vue";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  ZoomIn,
+  ZoomOut,
+  Plus,
+  ChevronUp,
+  Video,
+  Image,
+  Volume2,
+  Paintbrush,
+} from "@lucide/vue";
+import Button from "~/ui/button/Button.vue";
+import Popover from "~/ui/popover/Popover.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -11,18 +24,18 @@ const props = withDefaults(
     isPlaying: boolean;
     zoomLevel: number; // 100 to 500
   }>(),
-  { zoomLevel: 100 }
+  { zoomLevel: 100 },
 );
 
 const emit = defineEmits<{
-  (e: 'update:isPlaying', value: boolean): void;
-  (e: 'update:currentTime', value: number): void;
-  (e: 'update:zoomLevel', value: number): void;
-  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'annotation'): void;
+  (e: "update:isPlaying", value: boolean): void;
+  (e: "update:currentTime", value: number): void;
+  (e: "update:zoomLevel", value: number): void;
+  (e: "add:element", type: "video" | "image" | "sound" | "annotation"): void;
 }>();
 
-const handleAdd = (type: 'video' | 'image' | 'sound' | 'annotation') => {
-  emit('add:element', type);
+const handleAdd = (type: "video" | "image" | "sound" | "annotation") => {
+  emit("add:element", type);
 };
 
 const zoomPercentageText = computed(() => {
@@ -33,19 +46,19 @@ const formatTime = (time: number) => {
   const mins = Math.floor(time / 60);
   const secs = Math.floor(time % 60);
   const ms = Math.floor((time % 1) * 100);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
 };
 
 const handleZoomReset = () => {
-  emit('update:zoomLevel', 100);
+  emit("update:zoomLevel", 100);
 };
 
 const handleZoomIn = () => {
-  emit('update:zoomLevel', Math.min(500, props.zoomLevel + 50));
+  emit("update:zoomLevel", Math.min(500, props.zoomLevel + 50));
 };
 
 const handleZoomOut = () => {
-  emit('update:zoomLevel', Math.max(100, props.zoomLevel - 50));
+  emit("update:zoomLevel", Math.max(100, props.zoomLevel - 50));
 };
 </script>
 
@@ -62,26 +75,53 @@ const handleZoomOut = () => {
           >
             <Plus class="add-icon" />
             <span>Add</span>
-            <ChevronUp class="chevron-icon" :class="{ 'is-flipped': !isOpen }" />
+            <ChevronUp
+              class="chevron-icon"
+              :class="{ 'is-flipped': !isOpen }"
+            />
           </button>
         </template>
         <template #default="{ close }">
           <div class="add-menu-content">
-            <button class="add-menu-item" @click="handleAdd('video'); close()">
+            <button
+              class="add-menu-item"
+              @click="
+                handleAdd('video');
+                close();
+              "
+            >
               <Video class="menu-icon" />
-              <span>Add Video</span>
+              <span>Video</span>
             </button>
-            <button class="add-menu-item" @click="handleAdd('image'); close()">
+            <button
+              class="add-menu-item"
+              @click="
+                handleAdd('image');
+                close();
+              "
+            >
               <Image class="menu-icon" />
-              <span>Add Image</span>
+              <span>Image</span>
             </button>
-            <button class="add-menu-item" @click="handleAdd('sound'); close()">
+            <button
+              class="add-menu-item"
+              @click="
+                handleAdd('sound');
+                close();
+              "
+            >
               <Volume2 class="menu-icon" />
-              <span>Add Sound</span>
+              <span>Sound</span>
             </button>
-            <button class="add-menu-item" @click="handleAdd('annotation'); close()">
+            <button
+              class="add-menu-item"
+              @click="
+                handleAdd('annotation');
+                close();
+              "
+            >
               <Paintbrush class="menu-icon" />
-              <span>Add Annotation</span>
+              <span>Annotation</span>
             </button>
           </div>
         </template>
@@ -127,7 +167,12 @@ const handleZoomOut = () => {
 
     <!-- Right Zoom Controls -->
     <div class="zoom-controls">
-      <span class="zoom-percent-text" @click="handleZoomReset" title="Double click to reset zoom">{{ zoomPercentageText }}</span>
+      <span
+        class="zoom-percent-text"
+        @click="handleZoomReset"
+        title="Double click to reset zoom"
+        >{{ zoomPercentageText }}</span
+      >
       <Button
         variant="ghost"
         size="sm"
@@ -144,7 +189,12 @@ const handleZoomOut = () => {
         step="10"
         :value="zoomLevel"
         class="zoom-slider"
-        @input="emit('update:zoomLevel', parseFloat(($event.target as HTMLInputElement).value))"
+        @input="
+          emit(
+            'update:zoomLevel',
+            parseFloat(($event.target as HTMLInputElement).value),
+          )
+        "
       />
       <Button
         variant="ghost"
