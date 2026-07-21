@@ -49,9 +49,7 @@ import {
   Check,
 } from "@lucide/vue";
 
-
 const STORAGE_KEY_DEVICES = "demorecorder_hud_devices";
-const STORAGE_KEY_CAM_STYLE = "demorecorder_hud_camera_style";
 
 const savedDevices = (() => {
   try {
@@ -62,17 +60,11 @@ const savedDevices = (() => {
   }
 })();
 
-const savedCamStyle = (() => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_CAM_STYLE);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-})();
 
 const emit = defineEmits(["start-recording", "stop-recording", "open-project"]);
-const ProjectPicker = defineAsyncComponent(() => import("../projects/ProjectPicker.vue"));
+const ProjectPicker = defineAsyncComponent(
+  () => import("../projects/ProjectPicker.vue"),
+);
 const HudPreferences = defineAsyncComponent(
   () => import("./HudPreferences.vue"),
 );
@@ -93,28 +85,14 @@ const showProjectPicker = ref(false);
 // Preference settings
 const recordHighQuality = ref(true);
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
-const recordingBarVisibility = ref<'always' | 'auto-fade'>(localStorage.getItem('demorecorder_recording_bar_visibility') === 'auto-fade' ? 'auto-fade' : 'always');
-watch(recordingBarVisibility, (value) => localStorage.setItem('demorecorder_recording_bar_visibility', value));
-
-// Camera Overlay styling options
-const cameraShadowSize = ref<string>(savedCamStyle?.shadowSize ?? "lg");
-const cameraCornerRadius = ref<string>(savedCamStyle?.cornerRadius ?? "lg");
-const cameraSize = ref<string>(savedCamStyle?.size ?? "md");
-
-watch([cameraShadowSize, cameraCornerRadius, cameraSize], () => {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY_CAM_STYLE,
-      JSON.stringify({
-        shadowSize: cameraShadowSize.value,
-        cornerRadius: cameraCornerRadius.value,
-        size: cameraSize.value,
-      }),
-    );
-  } catch (err) {
-    console.error("Failed to save camera styling preferences:", err);
-  }
-});
+const recordingBarVisibility = ref<"always" | "auto-fade">(
+  localStorage.getItem("demorecorder_recording_bar_visibility") === "auto-fade"
+    ? "auto-fade"
+    : "always",
+);
+watch(recordingBarVisibility, (value) =>
+  localStorage.setItem("demorecorder_recording_bar_visibility", value),
+);
 
 // Previews
 const previews = ref<CapturePreview[]>([]);
@@ -155,9 +133,15 @@ watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
     console.error("Failed to save HUD device preferences:", err);
   }
 });
-watch([selectedCameraId, cameraSize, cameraShadowSize, cameraCornerRadius], () => {
-  capture.configureCameraOverlay({ cameraId: selectedCameraId.value, size: cameraSize.value, shadowSize: cameraShadowSize.value, cornerRadius: cameraCornerRadius.value });
-}, { immediate: true });
+watch(
+  [selectedCameraId],
+  () => {
+    capture.configureCameraOverlay({
+      cameraId: selectedCameraId.value,
+    });
+  },
+  { immediate: true },
+);
 const screenOptions = computed(() =>
   sources.value
     .filter((source) => source.kind === "display")
@@ -372,17 +356,23 @@ const toggleRecording = async () => {
   // Recording ownership lives in App.vue.  The HUD only collects configuration.
   if (!isRecording.value) {
     let screenId: string | undefined;
-    if (activeTab.value === 'screen') screenId = selectedScreenId.value ?? undefined;
+    if (activeTab.value === "screen")
+      screenId = selectedScreenId.value ?? undefined;
     else if (selectedSourceId.value) {
-      const hwndHex = Number(selectedSourceId.value.replace('window:', '')).toString(16).toLowerCase();
-      screenId = sources.value.find((source) => source.kind === 'window' && source.id.toLowerCase().includes(hwndHex))?.id;
+      const hwndHex = Number(selectedSourceId.value.replace("window:", ""))
+        .toString(16)
+        .toLowerCase();
+      screenId = sources.value.find(
+        (source) =>
+          source.kind === "window" && source.id.toLowerCase().includes(hwndHex),
+      )?.id;
     }
-    emit('start-recording', {
-      screenKind: activeTab.value === 'window' ? 'window' : 'display',
+    emit("start-recording", {
+      screenKind: activeTab.value === "window" ? "window" : "display",
       screenId,
       cameraId: selectedCameraId.value,
       microphoneId: selectedMicId.value,
-      systemAudio: systemAudioMode.value === 'on',
+      systemAudio: systemAudioMode.value === "on",
       targetFps: recordHighQuality.value ? 60 : 30,
       countdownSeconds: countdownSeconds.value,
       recordingBarVisibility: recordingBarVisibility.value,
@@ -732,7 +722,9 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  capture.configureCameraOverlay({ cameraId: 'off', size: cameraSize.value, shadowSize: cameraShadowSize.value, cornerRadius: cameraCornerRadius.value });
+  capture.configureCameraOverlay({
+    cameraId: "off",
+  });
   stopTimer();
   void activeCamera?.stop();
   void activeMicrophone?.stop();

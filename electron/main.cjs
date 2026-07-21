@@ -136,12 +136,6 @@ app.whenReady().then(() => {
   const cameraOverlay = createCameraOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
   const countdownOverlay = createCountdownWindow({ applicationRoot, isPackaged: app.isPackaged })
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state))
-  ipcMain.handle('camera-overlay:resize', (_event, options) => {
-    if (!options || !Number.isFinite(options.width) || !Number.isFinite(options.height) || typeof options.popoverOpen !== 'boolean') return { x: 0, y: 0 }
-    return cameraOverlay.resize({ width: Math.round(options.width), height: Math.round(options.height), popoverOpen: options.popoverOpen })
-  })
-  ipcMain.on('camera-overlay:set-interactive', (_event, interactive) => cameraOverlay.setInteractive(interactive))
-  ipcMain.on('camera-overlay:toggle-settings', () => cameraOverlay.toggleSettings())
   ipcMain.on('countdown:set', (_event, seconds) => countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null))
   ipcMain.handle('camera-overlay:state', () => cameraOverlay.state())
   logStartup('Window IPC registered.')
