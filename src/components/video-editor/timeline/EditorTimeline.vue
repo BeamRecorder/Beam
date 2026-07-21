@@ -41,6 +41,8 @@ const emit = defineEmits<{
   (e: 'trim:camera', edge: 'start' | 'end'): void;
   (e: 'unlink'): void;
   (e: 'unlink-track', trackKind: string): void;
+  (e: 'add:zoom', timeMs: number): void;
+  (e: 'add:caption', timeMs: number): void;
 }>();
 
 const zoomLevel = ref<number>(100);
@@ -118,6 +120,8 @@ onUnmounted(() => {
       @trim:camera="emit('trim:camera', $event)"
       @unlink="emit('unlink')"
       @unlink-track="emit('unlink-track', $event)"
+      @add:zoom="emit('add:zoom', $event)"
+      @add:caption="emit('add:caption', $event)"
     />
   </div>
 </template>

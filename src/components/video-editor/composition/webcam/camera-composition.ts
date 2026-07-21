@@ -2,6 +2,7 @@ import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type {
   MediaCompositionLayer,
   ProjectComposition,
+  WebcamAppearance,
 } from "../composition-types";
 
 const CAMERA_TRANSFORM = { x: 0.72, y: 0.72, width: 0.24, height: 0.24 };
@@ -9,6 +10,12 @@ const CAMERA_TRANSFORM = { x: 0.72, y: 0.72, width: 0.24, height: 0.24 };
 const id = () => crypto.randomUUID();
 const milliseconds = (nanoseconds: number | null | undefined) =>
   Math.max(0, Math.round((nanoseconds ?? 0) / 1_000_000));
+const appearanceFor = (format: Record<string, unknown>): WebcamAppearance | undefined => {
+  const appearance = format.appearance
+  if (!appearance || typeof appearance !== 'object') return undefined
+  const value = appearance as { shadowSize?: unknown; cornerRadius?: unknown }
+  return ['none', 'sm', 'md', 'lg'].includes(String(value.shadowSize)) && ['none', 'sm', 'md', 'lg', 'full'].includes(String(value.cornerRadius)) ? { shadowSize: value.shadowSize as WebcamAppearance['shadowSize'], cornerRadius: value.cornerRadius as WebcamAppearance['cornerRadius'] } : undefined
+}
 
 export function addCameraSegments(
   composition: ProjectComposition,
@@ -69,6 +76,7 @@ export function addCameraSegments(
       transform: { ...CAMERA_TRANSFORM },
       sourceOffsetMs: 0,
       reactToZoom: true,
+      ...(appearanceFor(camera.format) ? { webcamAppearance: appearanceFor(camera.format) } : {}),
     });
   }
   return next;
@@ -78,9 +86,13 @@ export const cameraLayers = (composition: ProjectComposition) =>
   composition.layers.filter(
     (layer): layer is MediaCompositionLayer =>
       layer.kind === "video" &&
-      composition.media.some(
-        (asset) => asset.id === layer.assetId && asset.origin === "session",
-      ),
+      (layer.name === "Webcam" ||
+        composition.media.some(
+          (asset) =>
+            asset.id === layer.assetId &&
+            asset.origin === "session" &&
+            asset.name === "Webcam",
+        )),
   );
 
 export function splitCameraLayer(

@@ -46,6 +46,7 @@ export class BrowserMicrophoneRecorder {
   private writeTail: Promise<void> = Promise.resolve()
   private fatalHandler: ((error: Error) => void) | null = null
   private stopped = false
+  private released = false
   readonly sourceId: string
   readonly format: MicrophoneFormat
   private readonly stream: MediaStream
@@ -165,10 +166,11 @@ export class BrowserMicrophoneRecorder {
   }
 
   private release() {
+    if (this.released) return
+    this.released = true
     this.stopped = true
     this.stream.getTracks().forEach((entry) => entry.stop())
-    this.track.stop()
-    void this.audioContext.close()
+    if (this.audioContext.state !== 'closed') void this.audioContext.close().catch(() => undefined)
   }
 }
 

@@ -721,9 +721,6 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  capture.configureCameraOverlay({
-    cameraId: "off",
-  });
   stopTimer();
   void activeCamera?.stop();
   void activeMicrophone?.stop();

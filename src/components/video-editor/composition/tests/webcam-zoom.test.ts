@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeWebcamLayout,
   getWebcamZoomFactor,
+  webcamSettingsForAppearance,
 } from "../webcam/webcam-zoom";
 
 describe("webcam zoom layout", () => {
@@ -32,5 +33,13 @@ describe("webcam zoom layout", () => {
     expect(layout.height).toBe(56);
     expect(layout.x).toBeGreaterThanOrEqual(0);
     expect(layout.y).toBeGreaterThanOrEqual(0);
+  });
+
+  it("maps every recorded visual preset to deterministic canvas settings", () => {
+    expect(webcamSettingsForAppearance({ shadowSize: "none", cornerRadius: "none" })).toMatchObject({ shadowOpacity: 0, cornerRadius: 0 });
+    expect(webcamSettingsForAppearance({ shadowSize: "md", cornerRadius: "md" })).toMatchObject({ shadowOpacity: .42, cornerRadius: 14 });
+    const full = webcamSettingsForAppearance({ shadowSize: "lg", cornerRadius: "full" });
+    expect(full.shadowOpacity).toBe(.58);
+    expect(full.cornerRadius).toBeGreaterThan(1_000_000);
   });
 });

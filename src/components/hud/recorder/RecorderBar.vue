@@ -33,7 +33,7 @@ onBeforeUnmount(stopDrag)
 </template>
 
 <style scoped>
-.recorder-bar { width: 56px; margin-left: auto; min-height: 296px; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-surface); -webkit-app-region: drag; transition: opacity .18s ease; }
+.recorder-bar { width: 72px; box-sizing: border-box; margin-left: auto; min-height: 296px; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg-surface); -webkit-app-region: drag; transition: opacity .18s ease; }
 .recorder-bar.auto-fade { opacity: .15; }.recorder-bar.auto-fade:hover, .recorder-bar.auto-fade:focus-within { opacity: 1; }
 .control { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-primary); cursor: pointer; -webkit-app-region: no-drag; }.control:hover:not(:disabled) { background: var(--color-bg-element); }.control:disabled { opacity: .45; cursor: not-allowed; }.control.stop { color: var(--color-error); }.control :deep(svg) { width: 20px; height: 20px; }.recording-time { margin: 0; font-size: 11px; line-height: 24px; font-variant-numeric: tabular-nums; font-weight: 700; }.countdown { color: var(--text-muted); }
 </style>

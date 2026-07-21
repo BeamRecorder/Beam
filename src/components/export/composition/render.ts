@@ -8,7 +8,7 @@ import type {
   CursorRenderSettings,
 } from "../export-types";
 import { activeLayersAt } from "../../video-editor/composition/composition-types";
-import { drawWebcamOverlay } from "../../video-editor/composition/webcam/webcam-zoom";
+import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-editor/composition/webcam/webcam-zoom";
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
 
@@ -96,11 +96,6 @@ export function renderCompositionFrame(
   ctx.scale(scale, scale);
   ctx.translate(-focus.cx * width, -focus.cy * height);
   ctx.drawImage(video, 0, 0, width, height);
-  for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
-    if (layer.kind !== "video" || !layer.reactToZoom) continue;
-    const source = visuals?.get(layer.assetId);
-    if (source) drawWebcamOverlay(ctx, source, width, height, scale);
-  }
   const cursor = cursorStateAt(snapshot.cursor.events, time);
   const settings: CursorRenderSettings = snapshot.cursorSettings;
   if (settings.ripple.enabled) {
@@ -157,5 +152,10 @@ export function renderCompositionFrame(
     ctx.restore();
   }
   ctx.restore();
+  for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
+    if (layer.kind !== "video" || !layer.reactToZoom) continue;
+    const source = visuals?.get(layer.assetId);
+    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.webcamAppearance));
+  }
   drawCompositionLayers(ctx, snapshot, time, visuals);
 }

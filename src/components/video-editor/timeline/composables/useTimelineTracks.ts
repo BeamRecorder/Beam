@@ -4,6 +4,7 @@ import { useWaveform } from "../waveform/useWaveform";
 import type { ZoomElement } from "../../zoom/zoom-types";
 import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
+import { cameraLayers } from "../../composition/webcam/camera-composition";
 
 export interface TimelineTracksProps {
   currentTime: number;
@@ -22,29 +23,15 @@ export interface TimelineTracksProps {
   selectedCameraLayerId: string | null;
 }
 
-export type TimelineTracksEmit = {
-  (e: "update:currentTime", value: number): void;
-  (e: "update:zoomLevel", value: number): void;
-  (e: "toggle:video"): void;
-  (e: "toggle:systemAudio"): void;
-  (e: "toggle:micAudio"): void;
-  (e: "select:zoom", zoomId: string): void;
-  (e: "select:composition-layer", layerId: string): void;
-  (e: "select:camera-layer", layerId: string): void;
-  (e: "toggle:camera"): void;
-  (e: "toggle:camera-layer"): void;
-  (e: "split:camera"): void;
-  (e: "trim:camera", edge: 'start' | 'end'): void;
-  (e: "unlink"): void;
-  (e: "unlink-track", trackKind: string): void;
-  (e: "move:clip", payload: { id: string; deltaMs: number }): void;
-  (e: "trim:clip-edge", payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
-};
+export type TimelineTracksEmit = (event: any, ...args: any[]) => void;
 
 export function useTimelineTracks(
   props: TimelineTracksProps,
   emit: TimelineTracksEmit,
 ) {
+  const DEFAULT_ZOOM_DURATION_MS = 1200;
+  const DEFAULT_CAPTION_DURATION_MS = 1200;
+
   // Layer computeds
   const captionLayers = computed(() =>
     props.composition.layers.filter((layer) => layer.kind === "caption"),
@@ -52,24 +39,17 @@ export function useTimelineTracks(
   const imageLayers = computed(() =>
     props.composition.layers.filter((layer) => layer.kind === "image"),
   );
+  const cameraLayersList = computed(() => cameraLayers(props.composition));
   const cameraAssetIds = computed(
-    () =>
-      new Set(
-        props.composition.media
-          .filter((asset) => asset.origin === "session" && asset.kind === "video")
-          .map((asset) => asset.id),
-      ),
+    () => new Set(cameraLayersList.value.map((layer) => layer.assetId)),
   );
-  const cameraLayers = computed(() =>
-    props.composition.layers.filter(
-      (layer) => layer.kind === "video" && cameraAssetIds.value.has(layer.assetId),
-    ),
-  );
+  const cameraLayersResult = computed(() => cameraLayersList.value);
   const mainVideoLayer = computed(
     () =>
       props.composition.layers.find(
-        (layer) => layer.kind === "video" && !cameraAssetIds.value.has(layer.assetId),
-      ) ?? props.composition.layers[0] ?? null,
+        (layer) =>
+          layer.kind === "video" && !cameraAssetIds.value.has(layer.assetId),
+      ) ?? null,
   );
 
   const layerStyle = (startMs: number, endMs: number) => ({
@@ -113,8 +93,10 @@ export function useTimelineTracks(
   });
 
   // Real Waveform Logic
-  const { peaks: systemPeaks, generateWaveformFromAudioBuffer: genSystemWaveform } =
-    useWaveform();
+  const {
+    peaks: systemPeaks,
+    generateWaveformFromAudioBuffer: genSystemWaveform,
+  } = useWaveform();
   const { peaks: micPeaks, generateWaveformFromAudioBuffer: genMicWaveform } =
     useWaveform();
 
@@ -189,7 +171,10 @@ export function useTimelineTracks(
     const scale = maxAmp > 0.01 ? maxBarHeight / maxAmp : maxBarHeight * 5;
 
     for (let i = 0; i < len; i++) {
-      const height = Math.max(2, Math.min(maxBarHeight, Math.round(amps[i] * scale)));
+      const height = Math.max(
+        2,
+        Math.min(maxBarHeight, Math.round(amps[i] * scale)),
+      );
       bars.push(height);
     }
     return bars;
@@ -217,7 +202,12 @@ export function useTimelineTracks(
     const targetPoints = Math.max(100, Math.min(1200, Math.floor(width / 3)));
 
     if (systemAudioBuffer.value) {
-      genSystemWaveform(systemAudioBuffer.value, 0, props.duration, targetPoints);
+      genSystemWaveform(
+        systemAudioBuffer.value,
+        0,
+        props.duration,
+        targetPoints,
+      );
     }
     if (micAudioBuffer.value) {
       genMicWaveform(micAudioBuffer.value, 0, props.duration, targetPoints);
@@ -247,7 +237,7 @@ export function useTimelineTracks(
   };
 
   const cameraMediaSrc = computed(() => {
-    const layer = cameraLayers.value[0];
+    const layer = cameraLayersResult.value[0];
     if (!layer || !("assetId" in layer)) return null;
     const asset = props.composition.media.find((m) => m.id === layer.assetId);
     return asset?.src ?? null;
@@ -258,9 +248,10 @@ export function useTimelineTracks(
     computed(() => props.videoSrc),
   );
 
-  const { thumbnails: webcamThumbnails, requestVisibleFrames: requestWebcamFrames } = useThumbnails(
-    cameraMediaSrc,
-  );
+  const {
+    thumbnails: webcamThumbnails,
+    requestVisibleFrames: requestWebcamFrames,
+  } = useThumbnails(cameraMediaSrc);
 
   // Width & Scrubbing
   const tracksWidthStyle = computed(() => {
@@ -280,7 +271,8 @@ export function useTimelineTracks(
   };
 
   const playheadStyle = computed(() => {
-    const percentage = props.duration > 0 ? props.currentTime / props.duration : 0;
+    const percentage =
+      props.duration > 0 ? props.currentTime / props.duration : 0;
     const x = percentage * ticksAreaWidth.value;
     return {
       transform: `translate3d(${x}px, 0, 0)`,
@@ -298,7 +290,10 @@ export function useTimelineTracks(
     const clickX = clientX - rect.left;
     const percentage = clickX / rect.width;
     const targetTime = percentage * props.duration;
-    emit("update:currentTime", Math.max(0, Math.min(props.duration, targetTime)));
+    emit(
+      "update:currentTime",
+      Math.max(0, Math.min(props.duration, targetTime)),
+    );
   };
 
   const handleMouseDown = (e: MouseEvent) => {
@@ -432,10 +427,70 @@ export function useTimelineTracks(
     },
   );
 
+  const isZoomOccupied = (startMs: number, endMs: number) => {
+    return props.zoomElements.some(
+      (item) => item.startMs < endMs && item.endMs > startMs,
+    );
+  };
+
+  const isCaptionOccupied = (startMs: number, endMs: number) => {
+    return captionLayers.value.some(
+      (layer) => layer.startMs < endMs && layer.endMs > startMs,
+    );
+  };
+
+  const hoverZoomTimeMs = ref<number | null>(null);
+  const hoverCaptionTimeMs = ref<number | null>(null);
+
+  const handleTrackClick = (e: MouseEvent, action: "zoom" | "caption") => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (rect.width <= 0 || !props.duration) return;
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const timeMs = Math.round(percentage * props.duration * 1000);
+    if (action === "zoom") {
+      if (isZoomOccupied(timeMs, timeMs + DEFAULT_ZOOM_DURATION_MS)) return;
+      emit("add:zoom", timeMs);
+    } else if (action === "caption") {
+      if (isCaptionOccupied(timeMs, timeMs + DEFAULT_CAPTION_DURATION_MS))
+        return;
+      emit("add:caption", timeMs);
+    }
+  };
+
+  const onTrackMouseMove = (e: MouseEvent, action: "zoom" | "caption") => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (rect.width <= 0 || !props.duration) return;
+    const mouseX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+    const timeMs = Math.round(percentage * props.duration * 1000);
+    if (action === "zoom") {
+      if (isZoomOccupied(timeMs, timeMs + DEFAULT_ZOOM_DURATION_MS)) {
+        hoverZoomTimeMs.value = null;
+      } else {
+        hoverZoomTimeMs.value = timeMs;
+      }
+    } else {
+      if (isCaptionOccupied(timeMs, timeMs + DEFAULT_CAPTION_DURATION_MS)) {
+        hoverCaptionTimeMs.value = null;
+      } else {
+        hoverCaptionTimeMs.value = timeMs;
+      }
+    }
+  };
+
+  const onTrackMouseLeave = (action: "zoom" | "caption") => {
+    if (action === "zoom") {
+      hoverZoomTimeMs.value = null;
+    } else {
+      hoverCaptionTimeMs.value = null;
+    }
+  };
+
   return {
     captionLayers,
     imageLayers,
-    cameraLayers,
+    cameraLayers: cameraLayersResult,
     mainVideoLayer,
     layerStyle,
     zoomElementStyle,
@@ -454,6 +509,11 @@ export function useTimelineTracks(
     tracksWidthStyle,
     playheadStyle,
     handleMouseDown,
+    handleTrackClick,
+    hoverZoomTimeMs,
+    hoverCaptionTimeMs,
+    onTrackMouseMove,
+    onTrackMouseLeave,
     onScroll,
   };
 }

@@ -19,7 +19,7 @@ import {
   activeLayersAt,
   type ProjectComposition,
 } from "../composition/composition-types";
-import { drawWebcamOverlay } from "../composition/webcam/webcam-zoom";
+import { drawWebcamOverlay, webcamSettingsForAppearance } from "../composition/webcam/webcam-zoom";
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -724,6 +724,7 @@ const drawWebcamLayers = (
       videoWindow.dw,
       videoWindow.dh,
       videoWindow.scale,
+      webcamSettingsForAppearance(layer.webcamAppearance),
     );
     ctx.restore();
   }

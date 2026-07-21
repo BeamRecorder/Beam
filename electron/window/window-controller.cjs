@@ -61,6 +61,10 @@ class WindowController {
       return
     }
     if (!visible && this.recorderBoundsBeforeTooltip) {
+      const pointer = require('electron').screen.getCursorScreenPoint()
+      const bounds = this.window.getBounds()
+      const compactLeft = bounds.x + bounds.width - RECORDER_SIZE.width
+      if (pointer.x >= compactLeft && pointer.x < bounds.x + bounds.width && pointer.y >= bounds.y && pointer.y < bounds.y + RECORDER_SIZE.height) return
       const { x, y } = this.recorderBoundsBeforeTooltip
       this.recorderBoundsBeforeTooltip = null
       this.window.setBounds({ x, y, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })

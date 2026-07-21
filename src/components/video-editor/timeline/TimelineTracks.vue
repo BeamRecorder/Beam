@@ -1,11 +1,23 @@
 <script setup lang="ts">
-import { Video, Volume2, Mic, MousePointer, Type, Scissors, MoveLeft, MoveRight, Eye, EyeOff, Unlink } from "@lucide/vue";
+import {
+  Video,
+  Volume2,
+  Mic,
+  MousePointer,
+  Type,
+  Scissors,
+  MoveLeft,
+  MoveRight,
+  Eye,
+  EyeOff,
+  Unlink,
+} from "@lucide/vue";
 import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import Button from "~/ui/button/Button.vue";
 import type { ZoomElement } from "../zoom/zoom-types";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
-import type { ProjectComposition } from '../composition/composition-types';
-import { useTimelineTracks } from './composables/useTimelineTracks';
+import type { ProjectComposition } from "../composition/composition-types";
+import { useTimelineTracks } from "./composables/useTimelineTracks";
 
 const props = defineProps<{
   currentTime: number;
@@ -38,11 +50,14 @@ const emit = defineEmits<{
   (e: "toggle:camera"): void;
   (e: "toggle:camera-layer"): void;
   (e: "split:camera"): void;
-  (e: "trim:camera", edge: 'start' | 'end'): void;
+  (e: "trim:camera", edge: "start" | "end"): void;
   (e: "unlink"): void;
   (e: "unlink-track", trackKind: string): void;
   (e: "move:clip", payload: { id: string; deltaMs: number }): void;
-  (e: "trim:clip-edge", payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
+  (
+    e: "trim:clip-edge",
+    payload: { id: string; edge: "start" | "end"; timeMs: number },
+  ): void;
 }>();
 
 const {
@@ -67,8 +82,21 @@ const {
   tracksWidthStyle,
   playheadStyle,
   handleMouseDown,
+  handleTrackClick,
+  hoverZoomTimeMs,
+  hoverCaptionTimeMs,
+  onTrackMouseMove,
+  onTrackMouseLeave,
   onScroll,
 } = useTimelineTracks(props, emit);
+
+const selectMainVideoLayer = () => {
+  if (mainVideoLayer.value) {
+    emit("select:composition-layer", mainVideoLayer.value.id);
+  }
+};
+
+(void tracksScrollRef, tracksViewportRef, ticksAreaRef);
 </script>
 
 <template>
@@ -134,8 +162,12 @@ const {
           </div>
           <div
             class="track-content video-content"
-            :class="{ selected: mainVideoLayer && selectedCompositionLayerId === mainVideoLayer.id }"
-            @click.stop="mainVideoLayer && emit('select:composition-layer', mainVideoLayer.id)"
+            :class="{
+              selected:
+                mainVideoLayer &&
+                selectedCompositionLayerId === mainVideoLayer.id,
+            }"
+            @click.stop="selectMainVideoLayer"
           >
             <!-- Virtualized Thumbnails Container -->
             <div class="thumbnails-track">
@@ -165,19 +197,30 @@ const {
               @click.stop="emit('select:composition-layer', layer.id)"
             >
               <span class="clip-label-overlay">🖼️ {{ layer.name }}</span>
-              <span class="trim-handle start" />
-              <span class="trim-handle end" />
+              <span class="trim-handle start"></span>
+              <span class="trim-handle end"></span>
             </button>
             <!-- Clip Trim Handles -->
-            <div class="trim-handle start" title="Trim start (drag)" />
-            <div class="trim-handle end" title="Trim end (drag)" />
+            <div class="trim-handle start" title="Trim start (drag)"></div>
+            <div class="trim-handle end" title="Trim end (drag)"></div>
           </div>
         </div>
 
         <!-- 1b. Webcam sidecar track -->
-        <div v-if="cameraLayers.length" class="track-row camera-track" :class="{ disabled: !isCameraEnabled }">
-          <div class="track-info" @click="emit('toggle:camera')" title="Show or hide webcam track">
-            <component :is="isCameraEnabled ? Eye : EyeOff" class="track-icon" />
+        <div
+          v-if="cameraLayers.length"
+          class="track-row camera-track"
+          :class="{ disabled: !isCameraEnabled }"
+        >
+          <div
+            class="track-info"
+            @click="emit('toggle:camera')"
+            title="Show or hide webcam track"
+          >
+            <component
+              :is="isCameraEnabled ? Eye : EyeOff"
+              class="track-icon"
+            />
             <span class="track-title">Webcam</span>
             <Button
               variant="ghost"
@@ -191,7 +234,18 @@ const {
             />
           </div>
           <div class="track-content camera-content">
-            <button v-for="layer in cameraLayers" :key="layer.id" type="button" class="camera-clip" :class="{ selected: layer.id === selectedCameraLayerId, disabled: !layer.enabled }" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:camera-layer', layer.id)">
+            <button
+              v-for="layer in cameraLayers"
+              :key="layer.id"
+              type="button"
+              class="camera-clip"
+              :class="{
+                selected: layer.id === selectedCameraLayerId,
+                disabled: !layer.enabled,
+              }"
+              :style="layerStyle(layer.startMs, layer.endMs)"
+              @click.stop="emit('select:camera-layer', layer.id)"
+            >
               <div class="thumbnails-track">
                 <div
                   v-for="sec in duration"
@@ -209,14 +263,42 @@ const {
                 </div>
               </div>
               <span class="clip-label-overlay">Webcam</span>
-              <span class="trim-handle start" title="Trim start" />
-              <span class="trim-handle end" title="Trim end" />
+              <span class="trim-handle start" title="Trim start"></span>
+              <span class="trim-handle end" title="Trim end"></span>
             </button>
-            <div v-if="selectedCameraLayerId" class="camera-actions" @click.stop>
-              <button type="button" title="Split webcam at playhead" @click="emit('split:camera')"><Scissors :size="13" /></button>
-              <button type="button" title="Show or hide selected webcam clip" @click="emit('toggle:camera-layer')"><EyeOff :size="13" /></button>
-              <button type="button" title="Trim webcam start to playhead" @click="emit('trim:camera', 'start')"><MoveLeft :size="13" /></button>
-              <button type="button" title="Trim webcam end to playhead" @click="emit('trim:camera', 'end')"><MoveRight :size="13" /></button>
+            <div
+              v-if="selectedCameraLayerId"
+              class="camera-actions"
+              @click.stop
+            >
+              <button
+                type="button"
+                title="Split webcam at playhead"
+                @click="emit('split:camera')"
+              >
+                <Scissors :size="13" />
+              </button>
+              <button
+                type="button"
+                title="Show or hide selected webcam clip"
+                @click="emit('toggle:camera-layer')"
+              >
+                <EyeOff :size="13" />
+              </button>
+              <button
+                type="button"
+                title="Trim webcam start to playhead"
+                @click="emit('trim:camera', 'start')"
+              >
+                <MoveLeft :size="13" />
+              </button>
+              <button
+                type="button"
+                title="Trim webcam end to playhead"
+                @click="emit('trim:camera', 'end')"
+              >
+                <MoveRight :size="13" />
+              </button>
             </div>
           </div>
         </div>
@@ -237,7 +319,22 @@ const {
               @click.stop="emit('unlink-track', 'zooms')"
             />
           </div>
-          <div class="track-content cursor-content">
+          <div
+            class="track-content cursor-content"
+            title="Click to add zoom at position"
+            @mousemove="onTrackMouseMove($event, 'zoom')"
+            @mouseleave="onTrackMouseLeave('zoom')"
+            @click="handleTrackClick($event, 'zoom')"
+          >
+            <!-- Hover Preview Ghost Bar -->
+            <div
+              v-if="hoverZoomTimeMs !== null"
+              class="cursor-zoom-indicator preview-ghost"
+              :style="layerStyle(hoverZoomTimeMs, hoverZoomTimeMs + 1200)"
+            >
+              + Add 1.5× Zoom
+            </div>
+
             <button
               v-for="element in zoomElements"
               :key="element.id"
@@ -248,9 +345,9 @@ const {
               :title="`Zoom ${[1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2)}×`"
               @click.stop="emit('select:zoom', element.id)"
             >
-              <span class="trim-handle start" />
+              <span class="trim-handle start"></span>
               {{ [1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2) }}×
-              <span class="trim-handle end" />
+              <span class="trim-handle end"></span>
             </button>
           </div>
         </div>
@@ -271,11 +368,34 @@ const {
               @click.stop="emit('unlink-track', 'captions')"
             />
           </div>
-          <div class="track-content annotation-content">
-            <button v-for="layer in captionLayers" :key="layer.id" type="button" class="annotation-indicator" :class="{ selected: layer.id === selectedCompositionLayerId }" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:composition-layer', layer.id)">
-              <span class="trim-handle start" />
+          <div
+            class="track-content annotation-content"
+            title="Click to add caption at position"
+            @mousemove="onTrackMouseMove($event, 'caption')"
+            @mouseleave="onTrackMouseLeave('caption')"
+            @click="handleTrackClick($event, 'caption')"
+          >
+            <!-- Hover Preview Ghost Bar -->
+            <div
+              v-if="hoverCaptionTimeMs !== null"
+              class="annotation-indicator preview-ghost"
+              :style="layerStyle(hoverCaptionTimeMs, hoverCaptionTimeMs + 2000)"
+            >
+              + Add Caption
+            </div>
+
+            <button
+              v-for="layer in captionLayers"
+              :key="layer.id"
+              type="button"
+              class="annotation-indicator"
+              :class="{ selected: layer.id === selectedCompositionLayerId }"
+              :style="layerStyle(layer.startMs, layer.endMs)"
+              @click.stop="emit('select:composition-layer', layer.id)"
+            >
+              <span class="trim-handle start"></span>
               {{ layer.name }}
-              <span class="trim-handle end" />
+              <span class="trim-handle end"></span>
             </button>
           </div>
         </div>
@@ -323,8 +443,8 @@ const {
                 ></div>
               </div>
             </div>
-            <div class="trim-handle start" />
-            <div class="trim-handle end" />
+            <div class="trim-handle start"></div>
+            <div class="trim-handle end"></div>
           </div>
         </div>
 
@@ -380,8 +500,8 @@ const {
                 ></div>
               </div>
             </div>
-            <div class="trim-handle start" />
-            <div class="trim-handle end" />
+            <div class="trim-handle start"></div>
+            <div class="trim-handle end"></div>
           </div>
         </div>
       </div>
@@ -404,15 +524,108 @@ const {
   display: flex;
   flex-direction: column;
 }
-.camera-content { position: relative; background: var(--color-bg-element); }
-.camera-clip { position: absolute; top: 2px; bottom: 2px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: inherit; font-size: 11px; cursor: pointer; padding: 0; transition: border-color 0.15s ease; }
-.camera-clip:hover { border-color: var(--color-primary); }
-.clip-label-overlay { position: absolute; left: 8px; top: 2px; font-size: 9px; font-weight: 800; background: rgba(0, 0, 0, 0.6); color: white; padding: 1px 5px; border-radius: var(--radius-sm); z-index: 5; pointer-events: none; }
-.camera-clip.selected { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
-.camera-clip.disabled { opacity: .38; text-decoration: line-through; }
-.camera-actions { position: absolute; right: 8px; top: 4px; display: flex; gap: 4px; }
-.camera-actions button { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-element); color: var(--text-primary); cursor: pointer; }
-.camera-actions button:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.camera-content {
+  position: relative;
+  height: 100%;
+  background: var(--color-bg-element);
+}
+.camera-clip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  background: var(--color-bg-surface);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+.clip-label-overlay {
+  position: absolute;
+  left: 8px;
+  top: 2px;
+  font-size: 9px;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  z-index: 5;
+  pointer-events: none;
+}
+.camera-clip.disabled {
+  opacity: 0.38;
+  text-decoration: line-through;
+}
+.camera-actions {
+  position: absolute;
+  right: 8px;
+  top: 4px;
+  display: flex;
+  gap: 4px;
+}
+.camera-actions button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-element);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.camera-actions button:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Track Specific Stylings */
+/* 1. Video, Webcam, and Audio Track Overlays */
+.video-track .track-content,
+.camera-clip,
+.audio-track .track-content {
+  cursor: pointer;
+  position: relative;
+}
+
+.video-track .track-content::after,
+.camera-clip::after,
+.audio-track .track-content::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition:
+    border-color 0.15s ease,
+    border-style 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.video-track .track-content:hover::after,
+.camera-clip:hover::after,
+.audio-track .track-content:hover::after {
+  border: 1px dashed var(--color-primary);
+  background-color: rgba(255, 90, 31, 0.04);
+}
+
+.video-track .track-content.selected::after,
+.camera-clip.selected::after,
+.audio-track .track-content.selected::after {
+  border: 1px solid var(--color-primary);
+  background-color: rgba(255, 90, 31, 0.06);
+}
 
 /* Ruler */
 .timeline-ruler {
@@ -625,29 +838,6 @@ const {
 /* 1. Video Track */
 .video-track .track-content {
   background-color: var(--color-track-video-light);
-  cursor: pointer;
-  position: relative;
-}
-
-.video-track .track-content::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10;
-  border-radius: var(--radius-sm);
-  border: 2px solid transparent;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.video-track .track-content:hover::after {
-  border-color: var(--color-primary);
-  background-color: rgba(255, 90, 31, 0.08);
-}
-
-.video-track .track-content.selected::after {
-  border-color: var(--color-primary);
-  box-shadow: inset 0 0 0 1px var(--color-primary);
 }
 
 .image-clip {
@@ -695,16 +885,6 @@ const {
 /* 2. Audio Tracks */
 .audio-track .track-content {
   background-color: var(--color-track-audio-light);
-  cursor: pointer;
-  transition: box-shadow 0.15s ease;
-}
-
-.audio-track .track-content:hover {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
-}
-
-.audio-track .track-content.selected {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
 }
 
 .audio-block {
@@ -751,7 +931,9 @@ const {
   box-shadow: var(--shadow-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .cursor-zoom-indicator:hover {
@@ -762,6 +944,25 @@ const {
 .cursor-zoom-indicator.selected {
   border-color: white;
   outline: 2px solid var(--color-primary);
+}
+
+.cursor-zoom-indicator.preview-ghost,
+.annotation-indicator.preview-ghost {
+  opacity: 0.65;
+  border: 1.5px dashed var(--color-primary) !important;
+  pointer-events: none;
+  z-index: 8;
+  box-shadow: 0 0 8px rgba(255, 90, 31, 0.3);
+  animation: pulse-ghost 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-ghost {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.85;
+  }
 }
 
 /* 4. Annotations Track */
@@ -784,7 +985,9 @@ const {
   padding: 0 6px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .annotation-indicator:hover {
