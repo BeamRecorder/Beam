@@ -20,6 +20,7 @@
     "electron:build": "npm run build:release && electron-builder"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "@lucide/vue": "^1.25.0",
     "@vueuse/core": "^14.3.0",
     "@vueuse/electron": "^14.3.0",
