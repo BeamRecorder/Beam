@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { Video, Volume2, Mic, MousePointer, Paintbrush } from "@lucide/vue";
 import { useThumbnails } from "./waveform/useThumbnails";
 import { useWaveform } from "./waveform/useWaveform";
@@ -215,41 +215,70 @@ const tracksWidthStyle = computed(() => {
   };
 });
 
-// Calculate playhead position
+const ticksAreaWidth = ref(0);
+let ticksResizeObserver: ResizeObserver | null = null;
+
+const updateTicksWidth = () => {
+  if (ticksAreaRef.value) {
+    ticksAreaWidth.value = ticksAreaRef.value.clientWidth;
+  }
+};
+
+// Calculate playhead position using translate3d for GPU compositing
 const playheadStyle = computed(() => {
-  const percentage = (props.currentTime / props.duration) * 100;
+  const percentage = props.duration > 0 ? props.currentTime / props.duration : 0;
+  const x = percentage * ticksAreaWidth.value;
   return {
-    left: `${percentage}%`,
+    transform: `translate3d(${x}px, 0, 0)`,
   };
 });
 
 // Perform scrub calculation clamped between 0 and duration
-const handleScrub = (e: MouseEvent) => {
-  if (!ticksAreaRef.value) return;
-  const rect = ticksAreaRef.value.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
+let isDragging = false;
+let dragRect: { left: number; width: number } | null = null;
+let rafId: number | null = null;
+
+const handleScrub = (clientX: number) => {
+  if (!ticksAreaRef.value || !props.duration) return;
+  const rect = dragRect || ticksAreaRef.value.getBoundingClientRect();
+  if (rect.width <= 0) return;
+  const clickX = clientX - rect.left;
   const percentage = clickX / rect.width;
   const targetTime = percentage * props.duration;
   emit("update:currentTime", Math.max(0, Math.min(props.duration, targetTime)));
 };
 
 // Handle timeline scrubbing on drag
-let isDragging = false;
 const handleMouseDown = (e: MouseEvent) => {
   isDragging = true;
-  handleScrub(e);
+  if (ticksAreaRef.value) {
+    const rect = ticksAreaRef.value.getBoundingClientRect();
+    dragRect = { left: rect.left, width: rect.width };
+  }
+  handleScrub(e.clientX);
   window.addEventListener("mousemove", handleMouseMove);
   window.addEventListener("mouseup", handleMouseUp);
 };
 
 const handleMouseMove = (e: MouseEvent) => {
-  if (isDragging) {
-    handleScrub(e);
-  }
+  if (!isDragging) return;
+  const clientX = e.clientX;
+  if (rafId !== null) return;
+  rafId = requestAnimationFrame(() => {
+    rafId = null;
+    if (isDragging) {
+      handleScrub(clientX);
+    }
+  });
 };
 
 const handleMouseUp = () => {
   isDragging = false;
+  dragRect = null;
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
   window.removeEventListener("mousemove", handleMouseMove);
   window.removeEventListener("mouseup", handleMouseUp);
 };
@@ -333,7 +362,17 @@ const resetScrollPosition = () => {
 
 onMounted(() => {
   updateVisibleThumbnails();
+  updateTicksWidth();
+  if (ticksAreaRef.value) {
+    ticksResizeObserver = new ResizeObserver(updateTicksWidth);
+    ticksResizeObserver.observe(ticksAreaRef.value);
+  }
   setTimeout(resetScrollPosition, 50);
+});
+
+onUnmounted(() => {
+  ticksResizeObserver?.disconnect();
+  handleMouseUp();
 });
 
 watch(
@@ -607,11 +646,14 @@ watch(
   position: absolute;
   top: 0;
   bottom: 0;
+  left: 0;
   width: 2px;
   background: var(--color-primary);
   z-index: 5;
   pointer-events: none;
   height: 200px; /* Stretch through all tracks */
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
 
 .playhead-knob {

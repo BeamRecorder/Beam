@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut } from '@lucide/vue';
+import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Plus, ChevronUp, Video, Image, Volume2, Paintbrush } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import Popover from '~/ui/popover/Popover.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -17,7 +18,12 @@ const emit = defineEmits<{
   (e: 'update:isPlaying', value: boolean): void;
   (e: 'update:currentTime', value: number): void;
   (e: 'update:zoomLevel', value: number): void;
+  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'annotation'): void;
 }>();
+
+const handleAdd = (type: 'video' | 'image' | 'sound' | 'annotation') => {
+  emit('add:element', type);
+};
 
 const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
@@ -45,9 +51,41 @@ const handleZoomOut = () => {
 
 <template>
   <div class="timeline-toolbar">
-    <!-- Left Section -->
+    <!-- Left Section with Add Popover -->
     <div class="left-section">
-      <span class="section-title">Timeline</span>
+      <Popover align="left" direction="down" :match-trigger-width="false">
+        <template #trigger="{ isOpen }">
+          <button
+            class="add-track-button"
+            :class="{ 'is-open': isOpen }"
+            type="button"
+          >
+            <Plus class="add-icon" />
+            <span>Add</span>
+            <ChevronUp class="chevron-icon" :class="{ 'is-flipped': !isOpen }" />
+          </button>
+        </template>
+        <template #default="{ close }">
+          <div class="add-menu-content">
+            <button class="add-menu-item" @click="handleAdd('video'); close()">
+              <Video class="menu-icon" />
+              <span>Add Video</span>
+            </button>
+            <button class="add-menu-item" @click="handleAdd('image'); close()">
+              <Image class="menu-icon" />
+              <span>Add Image</span>
+            </button>
+            <button class="add-menu-item" @click="handleAdd('sound'); close()">
+              <Volume2 class="menu-icon" />
+              <span>Add Sound</span>
+            </button>
+            <button class="add-menu-item" @click="handleAdd('annotation'); close()">
+              <Paintbrush class="menu-icon" />
+              <span>Add Annotation</span>
+            </button>
+          </div>
+        </template>
+      </Popover>
     </div>
 
     <!-- Centered Controls -->
@@ -138,12 +176,82 @@ const handleZoomOut = () => {
   align-items: center;
 }
 
-.section-title {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.add-track-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--fast) ease;
+}
+
+.add-track-button:hover,
+.add-track-button.is-open {
+  background: var(--color-bg-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.add-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--color-primary);
+}
+
+.chevron-icon {
+  width: 12px;
+  height: 12px;
   color: var(--text-muted);
+  transition: transform var(--fast) ease;
+}
+
+.chevron-icon.is-flipped {
+  transform: rotate(180deg);
+}
+
+.add-menu-content {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  min-width: 160px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+}
+
+.add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--fast) ease;
+}
+
+.add-menu-item:hover {
+  background: var(--color-bg-surface-hover);
+}
+
+.menu-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
 }
 
 .center-controls {
