@@ -1,9 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { captureMock as capture } from './capture.mock'
 
-const { capture } = vi.hoisted(() => ({ capture: { listProjects: vi.fn(), createProject: vi.fn(), renameProject: vi.fn(), deleteProject: vi.fn() } }))
-vi.mock('../../api/capture', () => ({ capture }))
-import ProjectPicker from './ProjectPicker.vue'
+vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }))
+import ProjectPicker from '../ProjectPicker.vue'
 
 const projects = [{ id: 'one', name: 'First', createdAt: '', updatedAt: '2025-01-01T00:00:00.000Z', sessionCount: 1, previewSrc: null }, { id: 'two', name: 'Second', createdAt: '', updatedAt: 'invalid', sessionCount: 2, previewSrc: null }]
 const stubs = { Dialog: { template: '<div><slot /><slot name="footer" :close="() => {}" /></div>' }, Popover: { template: '<div><slot name="trigger" :isOpen="false" /></div>' } }
