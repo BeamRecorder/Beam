@@ -2,7 +2,7 @@ const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { pathToFileURL } = require('url')
-const { createCompositionStore } = require('./composition-store.cjs')
+const { createCompositionStore, normalizeComposition } = require('./composition-store.cjs')
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
@@ -66,6 +66,20 @@ function createProjectStore(root) {
     })
     return { elements, generatedSessions }
   }
+  const presentationState = (value) => {
+    const next = value || {}
+    const importedBackgrounds = Array.isArray(next.importedBackgrounds) ? next.importedBackgrounds.map((background) => {
+      if (!background || typeof background.id !== 'string' || typeof background.name !== 'string' || typeof background.fileName !== 'string' || path.basename(background.fileName) !== background.fileName || !['image', 'video'].includes(background.kind)) throw new Error('Fond importé invalide')
+      return { id: background.id, name: background.name.slice(0, 160), fileName: background.fileName, kind: background.kind }
+    }) : []
+    return {
+      selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
+      importedBackgrounds,
+      videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,
+      systemAudioEnabled: typeof next.systemAudioEnabled === 'boolean' ? next.systemAudioEnabled : true,
+      micAudioEnabled: typeof next.micAudioEnabled === 'boolean' ? next.micAudioEnabled : true,
+    }
+  }
   const readJsonArray = (file) => {
     if (!fs.existsSync(file)) return null
     try { const parsed = JSON.parse(fs.readFileSync(file, 'utf8')); return Array.isArray(parsed) ? parsed : null } catch { return fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean).flatMap((line) => { try { return [JSON.parse(line)] } catch { return [] } }) }
@@ -114,10 +128,37 @@ function createProjectStore(root) {
     const sessionDirectory = session && safePath(directory, session.relativePath)
     return sessionDirectory ? safePath(sessionDirectory, sessionPath) : null
   } })
+  const editorState = (id) => {
+    const directory = directoryFor(id); const manifest = readManifest(directory); const editor = manifest.editor || {}
+    const presentation = presentationState(editor.presentation)
+    return { schemaVersion: 1, composition: composition.read(id), zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] }, presentation: { ...presentation, importedBackgrounds: presentation.importedBackgrounds.map((background) => ({ ...background, extension: path.extname(background.fileName).slice(1).toLowerCase(), path: pathToFileURL(path.join(directory, 'media', 'backgrounds', background.fileName)).href })) } }
+  }
+  const saveEditorState = (id, value) => {
+    if (!value || value.schemaVersion !== 1) throw new Error('État éditeur invalide')
+    const directory = directoryFor(id); const manifest = readManifest(directory)
+    const nextComposition = normalizeComposition(value.composition)
+    const nextZoom = zoomState(value.zoom)
+    const nextPresentation = presentationState(value.presentation)
+    manifest.editor = { ...(manifest.editor || {}), composition: nextComposition, zoom: nextZoom, presentation: nextPresentation }
+    manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest)
+    return editorState(id)
+  }
+  const importBackground = (id, input) => {
+    if (!input || typeof input.source !== 'string') throw new Error('Fond importé invalide')
+    const extension = path.extname(input.source).toLowerCase(); const kind = ['.mp4', '.webm', '.mov', '.m4v', '.ogv'].includes(extension) ? 'video' : ['.png', '.jpg', '.jpeg', '.webp', '.avif', '.bmp'].includes(extension) ? 'image' : null
+    if (!kind) throw new Error('Type de fond non autorisé')
+    const directory = directoryFor(id); const targetDirectory = path.join(directory, 'media', 'backgrounds'); fs.mkdirSync(targetDirectory, { recursive: true })
+    const background = { id: randomUUID(), name: path.basename(input.source, extension).slice(0, 160), fileName: `${randomUUID()}${extension}`, kind }
+    fs.copyFileSync(input.source, path.join(targetDirectory, background.fileName))
+    return { ...background, extension: extension.slice(1), path: pathToFileURL(path.join(targetDirectory, background.fileName)).href }
+  }
   return {
     list: () => !fs.existsSync(root) ? [] : fs.readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && entry.name.startsWith('project-')).map((entry) => { try { const directory = path.join(root, entry.name); return summary(directory, readManifest(directory), entry.name.slice(8)) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
     editorData,
     saveZoom: (id, zoom) => { const directory = directoryFor(id); const manifest = readManifest(directory); const state = zoomState(zoom); manifest.editor = { ...(manifest.editor || {}), zoom: state }; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return state },
+    editorState,
+    saveEditorState,
+    importBackground,
     create: (options = {}) => { const id = randomUUID(); const now = new Date().toISOString(); const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id); fs.mkdirSync(root, { recursive: true }); const directory = directoryFor(id); fs.mkdirSync(directory); const manifest = { schemaVersion: 1, projectId: id, name, createdAtUtc: now, updatedAtUtc: now, sessions: [] }; writeManifest(directory, manifest); return summary(directory, manifest, id) },
     rename: (id, name) => { const directory = directoryFor(id); const manifest = readManifest(directory); const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''; if (!nextName) throw new Error('Le nom du projet ne peut pas être vide'); manifest.name = nextName; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return summary(directory, manifest, id) },
     saveThumbnail: (id, dataUrl) => {

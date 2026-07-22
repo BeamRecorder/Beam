@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from "vue";
+import { ref, computed, toRaw, type Ref } from "vue";
 import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorData } from "../../../api/types/capture-api";
 import {
@@ -92,10 +92,9 @@ export function useProjectComposition(options: {
 
   const saveComposition = async () => {
     if (!project.value) return;
-    composition.value = await capture.saveProjectComposition(
-      project.value.id,
-      composition.value,
-    );
+    // Electron IPC cannot structured-clone Vue proxies.
+    const payload = structuredClone(toRaw(composition.value));
+    await capture.saveProjectComposition(project.value.id, payload);
   };
 
   const loadComposition = async (projectId: string) => {

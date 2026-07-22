@@ -1,6 +1,8 @@
 function registerProjectIpc(ipcMain, projectStore, dialog) {
   ipcMain.handle('projects:list', () => projectStore.list())
   ipcMain.handle('projects:editor-data', (_event, payload = {}) => projectStore.editorData(payload.projectId))
+  ipcMain.handle('projects:editor-state', (_event, payload = {}) => projectStore.editorState(payload.projectId))
+  ipcMain.handle('projects:save-editor-state', (_event, payload = {}) => projectStore.saveEditorState(payload.projectId, payload.state))
   ipcMain.handle('projects:save-zoom-state', (_event, payload = {}) => projectStore.saveZoom(payload.projectId, payload.zoom))
   ipcMain.handle('projects:create', (_event, options = {}) => projectStore.create(options))
   ipcMain.handle('projects:rename', (_event, payload = {}) => projectStore.rename(payload.projectId, payload.name))
@@ -13,6 +15,11 @@ function registerProjectIpc(ipcMain, projectStore, dialog) {
     const selected = await dialog.showOpenDialog({ properties: ['openFile'], filters })
     if (selected.canceled || !selected.filePaths[0]) return null
     return projectStore.importCompositionMedia(payload.projectId, { kind, source: selected.filePaths[0] })
+  })
+  ipcMain.handle('projects:pick-background-media', async (_event, payload = {}) => {
+    const selected = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'Background media', extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp', 'mp4', 'webm', 'mov', 'm4v', 'ogv'] }] })
+    if (selected.canceled || !selected.filePaths[0]) return null
+    return projectStore.importBackground(payload.projectId, { source: selected.filePaths[0] })
   })
   ipcMain.handle('projects:save-composition-layer', (_event, payload = {}) => projectStore.saveCompositionLayer(payload.projectId, payload.layer))
   ipcMain.handle('projects:delete-composition-layer', (_event, payload = {}) => projectStore.deleteCompositionLayer(payload.projectId, payload.layerId))

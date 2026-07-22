@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { capture } from '../../../api/capture'
 import { Image, Upload, Video } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
-import { backgroundKindFor, type BackgroundMedia, type BackgroundMediaGroup, type BackgroundMediaKind } from '../composables/backgroundMedia'
+import { type BackgroundMedia, type BackgroundMediaGroup, type BackgroundMediaKind } from '../composables/backgroundMedia'
 
-const props = defineProps<{ selectedBackground: string | null; backgroundGroups: BackgroundMediaGroup[] }>()
+const props = defineProps<{ selectedBackground: string | null; backgroundGroups: BackgroundMediaGroup[]; projectId?: string | null }>()
 const emit = defineEmits<{ (e: 'update:selectedBackground', value: string): void; (e: 'import:background', value: BackgroundMedia): void }>()
 
 const activeKind = ref<Extract<BackgroundMediaKind, 'image' | 'video'>>('image')
 const loadedCount = ref(24)
 const previewReady = ref(new Set<string>())
-const fileInput = ref<HTMLInputElement | null>(null)
 const isLoadingMore = ref(false)
 const pageSize = 24
 
@@ -40,16 +40,10 @@ const loadMore = () => {
 }
 const markReady = (id: string) => { previewReady.value = new Set([...previewReady.value, id]) }
 const isReady = (id: string) => previewReady.value.has(id)
-const triggerImport = () => fileInput.value?.click()
-
-const importBackground = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  const kind = backgroundKindFor(file.name)
-  if (!kind) return
-  const path = URL.createObjectURL(file)
-  emit('import:background', { id: `import:${path}`, name: file.name.replace(/\.[^.]+$/, ''), path, extension: file.name.split('.').pop()?.toLowerCase() ?? '', kind })
-  ;(event.target as HTMLInputElement).value = ''
+const triggerImport = async () => {
+  if (!props.projectId) return
+  const background = await capture.pickProjectBackgroundMedia(props.projectId)
+  if (background) emit('import:background', background)
 }
 
 onMounted(() => {
@@ -84,8 +78,6 @@ onUnmounted(() => {
       <Button size="sm" :variant="activeKind === 'image' ? 'primary' : 'ghost'" :icon="Image" @click="setKind('image')">Image</Button>
     </ButtonGroup>
 
-    <input ref="fileInput" class="file-input" type="file" accept="image/*,video/*" @change="importBackground" />
-    
     <div class="background-grid-scroll">
       <div class="background-grid">
         <!-- Import Card -->

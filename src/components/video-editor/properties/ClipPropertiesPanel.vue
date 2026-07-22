@@ -144,7 +144,7 @@ const currentPlaybackRate = computed(() => {
       </div>
 
       <!-- Corner Radius Presets for Video / Image / Webcam -->
-      <div v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
+      <div v-if="selectedClip.id !== 'base-video' && ['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
         <div class="card-header">
           <Square :size="14" class="card-icon" />
           <span class="card-title">Corner Radius</span>
@@ -163,7 +163,7 @@ const currentPlaybackRate = computed(() => {
       </div>
 
       <!-- Shadow Settings & Directions for Video / Image / Webcam -->
-      <div v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
+      <div v-if="selectedClip.id !== 'base-video' && ['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
         <div class="card-header">
           <Sun :size="14" class="card-icon" />
           <span class="card-title">Drop Shadow</span>

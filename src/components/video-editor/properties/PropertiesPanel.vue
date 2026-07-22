@@ -60,6 +60,7 @@ defineProps<{
   selectedCompositionLayer: CaptionCompositionLayer | null
   composition: ProjectComposition
   editorData?: ProjectEditorData | null
+  projectId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -105,6 +106,7 @@ const emit = defineEmits<{
         v-if="activeTab === 'canvas'"
         :selected-background="selectedBackground"
         :background-groups="backgroundGroups"
+        :project-id="projectId"
         @update:selectedBackground="emit('update:selectedBackground', $event)"
         @import:background="emit('import:background', $event)"
       />

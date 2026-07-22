@@ -184,6 +184,7 @@ watch(
           :selected-composition-layer="selectedCaptionLayer"
           :composition="composition"
           :editor-data="editorData"
+          :project-id="project?.id"
           @import:background="addBackground($event)"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"

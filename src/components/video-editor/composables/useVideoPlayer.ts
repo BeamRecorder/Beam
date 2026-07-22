@@ -30,6 +30,12 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     selectedBackground.value = background.path
   }
 
+  const restoreBackgrounds = (backgrounds: BackgroundMedia[], selectedId: string | null) => {
+    importedBackgrounds.value = backgrounds
+    const selected = [...backgrounds, ...availableBackgrounds].find((background) => background.id === selectedId)
+    selectedBackground.value = selected?.path ?? availableBackgrounds[0]?.path ?? null
+  }
+
   const togglePlay = () => {
     isPlaying.value = !isPlaying.value
   }
@@ -59,7 +65,9 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     selectedBackground,
     selectedBackgroundMedia,
     backgroundGroups,
+    importedBackgrounds,
     addBackground,
+    restoreBackgrounds,
     isVideoEnabled,
     isSystemAudioEnabled,
     isMicAudioEnabled,

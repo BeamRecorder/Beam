@@ -8,6 +8,7 @@ export interface BackgroundMedia {
   path: string
   extension: string
   kind: BackgroundMediaKind
+  fileName?: string
 }
 
 export interface BackgroundMediaGroup {

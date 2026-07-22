@@ -10,6 +10,7 @@ import type {
   ProjectZoomState,
 } from './capture-session'
 import type { CompositionLayer, CompositionMedia, ProjectComposition } from '../../components/video-editor/composition/composition-types'
+import type { BackgroundMedia } from '../../components/video-editor/composables/backgroundMedia'
 
 export type * from './capture-config'
 export type * from './capture-session'
@@ -52,6 +53,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>
   listProjects(): Promise<CaptureProject[]>
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
+  getProjectEditorState(projectId: string): Promise<ProjectEditorState>
+  saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>
+  pickProjectBackgroundMedia(projectId: string): Promise<BackgroundMedia | null>
   saveProjectZoomState(projectId: string, zoom: ProjectZoomState): Promise<ProjectZoomState>
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
@@ -88,6 +92,21 @@ export interface DesktopCaptureApi extends CaptureApi {
   writeSystemAudioSegment(payload: MediaSegmentChunk): Promise<void>
   finalizeSystemAudioSegment(payload: SystemAudioSegmentFinish): Promise<void>
   failSystemAudio(payload: SystemAudioFailure): Promise<void>
+}
+
+export interface ProjectEditorPresentation {
+  selectedBackgroundId: string | null
+  importedBackgrounds: Array<BackgroundMedia & { fileName: string }>
+  videoEnabled: boolean
+  systemAudioEnabled: boolean
+  micAudioEnabled: boolean
+}
+
+export interface ProjectEditorState {
+  schemaVersion: 1
+  composition: ProjectComposition
+  zoom: ProjectZoomState
+  presentation: ProjectEditorPresentation
 }
 
 export interface CameraSegmentStart {

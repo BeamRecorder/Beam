@@ -194,26 +194,34 @@ const disposeCompositionMedia = () => {
   compositionVideos.clear();
 };
 
-watch(
-  () => props.composition,
-  (composition) => {
-    disposeCompositionMedia();
-    for (const asset of composition.media) {
-      if (asset.kind === "audio" || !asset.src) continue;
-      if (asset.kind === "image") {
-        const image = new Image();
-        image.src = asset.src;
-        compositionImages.set(asset.id, image);
-      } else {
-        const media = document.createElement("video");
-        media.muted = true;
-        media.preload = "auto";
-        media.src = asset.src;
-        media.load();
-        compositionVideos.set(asset.id, media);
-      }
+const reconcileCompositionMedia = () => {
+  const mediaById = new Map(props.composition.media.map((asset) => [asset.id, asset]));
+  for (const [id, media] of compositionVideos) {
+    const asset = mediaById.get(id);
+    if (asset?.kind === "video" && asset.src === media.dataset.source) continue;
+    media.pause(); media.removeAttribute("src"); media.load(); compositionVideos.delete(id);
+  }
+  for (const [id] of compositionImages) {
+    const asset = mediaById.get(id);
+    if (asset?.kind === "image") continue;
+    compositionImages.delete(id);
+  }
+  for (const asset of props.composition.media) {
+    if (asset.kind === "audio" || !asset.src) continue;
+    if (asset.kind === "image") {
+      if (!compositionImages.has(asset.id)) { const image = new Image(); image.src = asset.src; compositionImages.set(asset.id, image); }
+      continue;
     }
-  },
+    if (!compositionVideos.has(asset.id)) {
+      const media = document.createElement("video");
+      media.muted = true; media.playsInline = true; media.preload = "auto"; media.dataset.source = asset.src; media.src = asset.src; media.load(); compositionVideos.set(asset.id, media);
+    }
+  }
+};
+
+watch(
+  () => props.composition.media.map((asset) => `${asset.id}:${asset.kind}:${asset.src}`).join("|"),
+  reconcileCompositionMedia,
   { immediate: true },
 );
 
@@ -447,11 +455,11 @@ const drawVideoWindow = (
   const dy = (height - dh) / 2;
 
   ctx.save();
-  const baseAppearance = props.composition.baseVideoAppearance ?? DEFAULT_CLIP_APPEARANCE;
-  applyClipShadow(ctx, baseAppearance, dw);
+  // The recorded screen is the global canvas content, not an overlay clip.
+  // It must not acquire a second frame/shadow while zooming.
   ctx.fillStyle = "#1e1e1e";
   ctx.beginPath();
-  ctx.roundRect(dx, dy, dw, dh, Math.min(radiusForAppearance(baseAppearance), dw / 2, dh / 2));
+  ctx.rect(dx, dy, dw, dh);
   ctx.fill();
   ctx.clip();
 
@@ -596,7 +604,7 @@ const drawInCameraSpace = (
     videoWindow.dy,
     videoWindow.dw,
     videoWindow.dh,
-    Math.min(radiusForAppearance(props.composition.baseVideoAppearance), videoWindow.dw / 2, videoWindow.dh / 2),
+    0,
   );
   ctx.clip();
   ctx.translate(

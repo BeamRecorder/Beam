@@ -5,6 +5,7 @@ import { useEditorAudio } from "./useEditorAudio";
 import { useCursorReplacer } from "./useCursorReplacer";
 import { useProjectComposition } from "./useProjectComposition";
 import { useProjectZoom } from "./useProjectZoom";
+import { useProjectEditorState } from "./useProjectEditorState";
 import { createCompositionSnapshot } from "../../export/composition/snapshot";
 
 export function useVideoEditor(options: {
@@ -52,6 +53,18 @@ export function useVideoEditor(options: {
     editorData,
     durationMs,
     activeTab,
+  });
+
+  const editorState = useProjectEditorState({
+    project,
+    composition: compositionState.composition,
+    zoomElements: zoomState.zoomElements,
+    generatedSessions: zoomState.generatedSessions,
+    importedBackgrounds: player.importedBackgrounds,
+    selectedBackground: player.selectedBackground,
+    videoEnabled: player.isVideoEnabled,
+    systemAudioEnabled: player.isSystemAudioEnabled,
+    micAudioEnabled: player.isMicAudioEnabled,
   });
 
   // Calculate source FPS
@@ -111,12 +124,14 @@ export function useVideoEditor(options: {
     activeTab.value = tab;
   };
 
-  // Watch project ID change to load composition
+  // Load all persisted editor domains as one coherent snapshot.
   watch(
     () => project.value?.id,
     (id) => {
       if (id) {
-        void compositionState.loadComposition(id);
+        void editorState.load(id).catch((error) =>
+          console.error("Failed to load editor state:", error),
+        );
       }
     },
     { immediate: true },
@@ -130,6 +145,7 @@ export function useVideoEditor(options: {
     player,
     cursor,
     compositionState,
+    editorState,
     zoomState,
     exportRequest,
     handleSelectTab,

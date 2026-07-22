@@ -4,6 +4,7 @@ const os = require('node:os')
 const path = require('node:path')
 const test = require('node:test')
 const { createCompositionStore } = require('../electron/projects/composition-store.cjs')
+const { createProjectStore } = require('../electron/projects/project-store.cjs')
 
 function setup() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-composition-')); const id = '11111111-1111-4111-8111-111111111111'; const directory = path.join(root, id)
@@ -22,4 +23,19 @@ test('rejects unsupported media extensions before copying', () => {
 test('deleting the final media layer removes its unreferenced asset', () => {
   const ctx = setup(); const source = path.join(ctx.root, 'clip.mp4'); fs.writeFileSync(source, 'video'); const asset = ctx.store.importMedia(ctx.id, { kind: 'video', source }); const layer = { id: '22222222-2222-4222-8222-222222222222', kind: 'video', name: 'clip', assetId: asset.id, startMs: 0, endMs: 1000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 } }
   ctx.store.upsertLayer(ctx.id, layer); const composition = ctx.store.removeLayer(ctx.id, layer.id); assert.equal(composition.media.length, 0); assert.equal(fs.existsSync(path.join(ctx.directory, 'media', asset.fileName)), false)
+})
+test('persists an editor state and materializes imported project backgrounds', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-state-'))
+  const store = createProjectStore(root); const project = store.create({ name: 'State' })
+  const source = path.join(root, 'background.png'); fs.writeFileSync(source, 'image')
+  const background = store.importBackground(project.id, { source })
+  const saved = store.saveEditorState(project.id, {
+    schemaVersion: 1,
+    composition: { media: [], layers: [] },
+    zoom: { elements: [], generatedSessions: [] },
+    presentation: { selectedBackgroundId: background.id, importedBackgrounds: [background], videoEnabled: true, systemAudioEnabled: false, micAudioEnabled: true },
+  })
+  assert.equal(saved.presentation.selectedBackgroundId, background.id)
+  assert.equal(saved.presentation.importedBackgrounds[0].extension, 'png')
+  assert.match(saved.presentation.importedBackgrounds[0].path, /^file:/)
 })
