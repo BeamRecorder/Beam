@@ -1,4 +1,4 @@
-export type OutputCanvasPreset = '16:9' | '9:16' | '1:1' | '4:5' | 'custom'
+export type OutputCanvasPreset = '16:9' | '9:16' | '1:1' | '4:5' | '3:4' | '4:3' | '21:9' | 'custom'
 export interface OutputCanvasSettings {
   preset: OutputCanvasPreset
   width: number
@@ -9,20 +9,23 @@ export interface OutputCanvasSettings {
 export interface CanvasRect { x: number; y: number; width: number; height: number }
 
 export const DEFAULT_OUTPUT_CANVAS: OutputCanvasSettings = {
-  preset: '16:9', width: 1920, height: 1080, showBackground: true,
+  preset: '16:9', width: 1920, height: 1080, showBackground: false,
 }
 
 export const OUTPUT_CANVAS_PRESETS: Record<Exclude<OutputCanvasPreset, 'custom'>, OutputCanvasSettings> = {
-  '16:9': { preset: '16:9', width: 1920, height: 1080, showBackground: true },
-  '9:16': { preset: '9:16', width: 1080, height: 1920, showBackground: true },
-  '1:1': { preset: '1:1', width: 1080, height: 1080, showBackground: true },
-  '4:5': { preset: '4:5', width: 1080, height: 1350, showBackground: true },
+  '16:9': { preset: '16:9', width: 1920, height: 1080, showBackground: false },
+  '9:16': { preset: '9:16', width: 1080, height: 1920, showBackground: false },
+  '1:1': { preset: '1:1', width: 1080, height: 1080, showBackground: false },
+  '4:5': { preset: '4:5', width: 1080, height: 1350, showBackground: false },
+  '3:4': { preset: '3:4', width: 1080, height: 1440, showBackground: false },
+  '4:3': { preset: '4:3', width: 1440, height: 1080, showBackground: false },
+  '21:9': { preset: '21:9', width: 2520, height: 1080, showBackground: false },
 }
 
 export function normalizeOutputCanvas(value: (Partial<OutputCanvasSettings> & { fit?: 'cover' | 'contain' }) | null | undefined): OutputCanvasSettings {
   const width = Number.isFinite(value?.width) ? Math.round(value!.width!) : DEFAULT_OUTPUT_CANVAS.width
   const height = Number.isFinite(value?.height) ? Math.round(value!.height!) : DEFAULT_OUTPUT_CANVAS.height
-  const preset = value?.preset && ['16:9', '9:16', '1:1', '4:5', 'custom'].includes(value.preset) ? value.preset : DEFAULT_OUTPUT_CANVAS.preset
+  const preset = value?.preset && ['16:9', '9:16', '1:1', '4:5', '3:4', '4:3', '21:9', 'custom'].includes(value.preset) ? value.preset : DEFAULT_OUTPUT_CANVAS.preset
   const showBackground = typeof value?.showBackground === 'boolean' ? value.showBackground : value?.fit === 'cover' ? false : true
   if (preset !== 'custom') return { ...OUTPUT_CANVAS_PRESETS[preset], showBackground }
   return { preset, width: Math.max(1, width), height: Math.max(1, height), showBackground }

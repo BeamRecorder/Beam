@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, toRef, watch } from "vue";
+import { computed, onMounted, ref, toRef, watch } from "vue";
 import type { MediaCompositionLayer } from './composition/composition-types';
 import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
 import EditorCanvas from "./canvas/EditorCanvas.vue";
+import CanvasToolbar from "./canvas/CanvasToolbar.vue";
 import EditorTimeline from "./timeline/EditorTimeline.vue";
+import TimelineToolbar from "./timeline/TimelineToolbar.vue";
 import Topbar from "./Topbar.vue";
 import { useVideoEditor } from "./composables/useVideoEditor";
 import { capture } from "../../api/capture";
 import type { CaptureProject, ProjectEditorData } from "../../api/types/capture-api";
+import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from './canvas/output-canvas';
 
 const props = withDefaults(
   defineProps<{
@@ -95,12 +98,13 @@ const {
   selectBaseVideo,
   updateSelectedClipAppearance,
   updateSelectedWebcamTransform,
+  updateSelectedMediaCrop,
   handleUnlinkClips,
   handleUnlinkTrack,
 } = compositionState;
 const selectedTransformLayer = computed<MediaCompositionLayer | null>(() => {
   const layer = selectedCompositionLayer.value;
-  return layer && layer.kind !== 'audio' && layer.kind !== 'caption' && layer.transform ? layer : null;
+  return layer && layer.kind !== 'audio' && layer.kind !== 'caption' ? layer : null;
 });
 
 const {
@@ -157,6 +161,14 @@ const updateSelectedBackground = (background: string) => {
   requestAnimationFrame(() => {
     void editorState.saveNow().catch((error: unknown) => console.error('Failed to save selected background:', error));
   });
+};
+const isCropping = ref(false);
+const timelineZoomLevel = ref(100);
+const toggleCrop = () => {
+  if (selectedTransformLayer.value) isCropping.value = !isCropping.value;
+};
+const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
+  outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false };
 };
 </script>
 
@@ -217,10 +229,11 @@ const updateSelectedBackground = (background: string) => {
           @unlink-clip="handleUnlinkClips"
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: $event as 'none' | 'sm' | 'md' | 'lg' | 'full' })"
           @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
-          @update:webcam-transform="updateSelectedWebcamTransform"
+          @update:clip-transform="updateSelectedWebcamTransform"
         />
 
-        <!-- Canvas/Player Island -->
+        <div class="canvas-column">
+        <CanvasToolbar :preset="outputCanvas.preset" :can-crop="Boolean(selectedTransformLayer)" :is-cropping="isCropping" @select:preset="selectCanvasPreset" @toggle:crop="toggleCrop" />
         <EditorCanvas
           v-model:isPlaying="isPlaying"
           v-model:currentTime="currentTime"
@@ -244,13 +257,17 @@ const updateSelectedBackground = (background: string) => {
           :output-canvas="outputCanvas"
           :active-tab="activeTab"
           :selected-transform-layer="selectedTransformLayer"
+          :is-cropping="isCropping"
           @update:zoom="updateZoom"
           @select:transform-layer="selectedCompositionLayerId = $event; activeTab = 'clip'"
           @deselect:transform-layer="selectedCompositionLayerId = null"
           @deselect:zoom="selectedZoomId = null"
           @update:layer-transform="updateSelectedWebcamTransform($event)"
+          @update:layer-crop="updateSelectedMediaCrop($event)"
           @duration-change="duration = $event"
         />
+        <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addCompositionElement" />
+        </div>
       </div>
 
       <!-- Lower Section: Timeline (Full width) -->
@@ -259,6 +276,7 @@ const updateSelectedBackground = (background: string) => {
           v-model:currentTime="currentTime"
           v-model:isPlaying="isPlaying"
           :duration="duration"
+          v-model:zoom-level="timelineZoomLevel"
           :video-src="playerVideoSrc"
           :editor-data="editorData"
           v-model:isVideoEnabled="isVideoEnabled"
@@ -449,7 +467,7 @@ const updateSelectedBackground = (background: string) => {
   color: white !important;
 }
 
-/* Islands Workspace Layout */
+/* Workspace Flush Dock Layout */
 .editor-workspace {
   flex: 1;
   padding: 12px;
@@ -462,9 +480,11 @@ const updateSelectedBackground = (background: string) => {
 .workspace-upper {
   flex: 1;
   display: flex;
-  gap: 8px; /* 8px gap between Sidebar, Properties & Canvas as requested */
+  gap: 12px;
   overflow: hidden;
 }
+
+.canvas-column { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 
 .workspace-lower {
   height: auto;

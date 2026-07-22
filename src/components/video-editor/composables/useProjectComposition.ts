@@ -6,6 +6,7 @@ import {
   type ClipAppearance,
   type CompositionLayer,
   type CompositionMedia,
+  type NormalizedCrop,
   type NormalizedTransform,
   type ProjectComposition,
 } from "../composition/composition-types";
@@ -70,7 +71,7 @@ export function useProjectComposition(options: {
       playbackRate: 1.0,
       enabled: layer.enabled,
       isLinked: false,
-      ...(selectedCameraLayer.value?.id === layer.id ? { webcamTransform: layer.transform } : {}),
+      ...(layer.kind !== 'audio' && layer.kind !== 'caption' ? { clipTransform: layer.transform ?? { x: 0, y: 0, width: 1, height: 1 } } : {}),
       ...(appearance ?? {}),
     };
   });
@@ -310,6 +311,20 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const updateSelectedMediaCrop = async (crop: NormalizedCrop) => {
+    const selectedId = selectedCompositionLayer.value?.kind !== 'audio' && selectedCompositionLayer.value?.kind !== 'caption'
+      ? selectedCompositionLayer.value.id
+      : null;
+    if (!selectedId) return;
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.map((layer) =>
+        layer.id === selectedId && layer.kind !== 'audio' && layer.kind !== 'caption' ? { ...layer, crop } : layer,
+      ),
+    };
+    await saveComposition();
+  };
+
   const handleUnlinkClips = async () => {
     if (selectedCompositionLayerId.value) {
       await saveComposition();
@@ -341,6 +356,7 @@ export function useProjectComposition(options: {
     selectBaseVideo,
     updateSelectedClipAppearance,
     updateSelectedWebcamTransform,
+    updateSelectedMediaCrop,
     handleUnlinkClips,
     handleUnlinkTrack,
   };

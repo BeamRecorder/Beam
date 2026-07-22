@@ -32,7 +32,7 @@ defineProps<{
     shadowColor?: string
     shadowDirection?: string
     cornerRadius?: string
-    webcamTransform?: NormalizedTransform
+    clipTransform?: NormalizedTransform
   } | null
 
   // Cursor properties
@@ -93,7 +93,7 @@ const emit = defineEmits<{
   (e: 'update:clip-enabled', enabled: boolean): void
   (e: 'update:clip-corner-radius', radius: string): void
   (e: 'update:clip-shadow', shadow: { size: string; color?: string; direction?: string }): void
-  (e: 'update:webcam-transform', transform: NormalizedTransform): void
+  (e: 'update:clip-transform', transform: NormalizedTransform): void
   (e: 'unlink-clip'): void
   (e: 'delete-clip'): void
   (e: 'split-clip'): void
@@ -126,7 +126,7 @@ const emit = defineEmits<{
         @update:enabled="emit('update:clip-enabled', $event)"
         @update:corner-radius="emit('update:clip-corner-radius', $event)"
         @update:shadow="emit('update:clip-shadow', $event)"
-        @update:webcam-transform="emit('update:webcam-transform', $event)"
+        @update:clip-transform="emit('update:clip-transform', $event)"
         @unlink="emit('unlink-clip')"
         @delete="emit('delete-clip')"
         @split="emit('split-clip')"
@@ -203,8 +203,8 @@ const emit = defineEmits<{
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: 20px 0 20px 20px;
+  padding: 20px 20px;
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -213,9 +213,7 @@ const emit = defineEmits<{
 }
 
 .panel-header {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 12px;
-  margin-right: 20px;
+  padding-bottom: 4px;
 }
 
 .panel-title {
@@ -237,7 +235,7 @@ const emit = defineEmits<{
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 20px;
+  padding-right: 0;
   box-sizing: border-box;
 }
 </style>

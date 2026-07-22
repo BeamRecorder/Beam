@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { capture } from '../../../api/capture'
-import { Image, Upload, Video } from '@lucide/vue'
+import { Image, Upload, Video, Sparkles } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Switch from '~/ui/switch/Switch.vue'
@@ -108,6 +108,20 @@ onUnmounted(() => {
         <button type="button" class="background-card import-card" @click="triggerImport">
           <Upload class="import-icon" :size="22" />
           <span class="background-name">Import</span>
+        </button>
+
+        <!-- Blur Card -->
+        <button 
+          type="button" 
+          class="background-card blur-card" 
+          :class="{ active: selectedBackground === 'blur' }"
+          @click="emit('update:selectedBackground', 'blur')"
+          title="Flou d'arrière-plan"
+        >
+          <div class="background-preview blur-preview">
+            <Sparkles class="blur-icon" :size="22" />
+          </div>
+          <span class="background-name">Flou</span>
         </button>
 
         <!-- Background Cards -->
@@ -220,6 +234,13 @@ onUnmounted(() => {
 }
 .import-icon { 
   color: var(--text-secondary); 
+}
+.blur-preview {
+  background: linear-gradient(135deg, rgba(255, 90, 31, 0.4) 0%, rgba(99, 102, 241, 0.4) 100%);
+  backdrop-filter: blur(8px);
+}
+.blur-icon {
+  color: #fff;
 }
 .background-card:hover { 
   background: var(--color-bg-surface-hover); 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { containedMediaRect, coverPoint, coverSourceRect, DEFAULT_OUTPUT_CANVAS, framedMediaRect, outputPreviewRect } from './output-canvas'
+import { containedMediaRect, coverPoint, coverSourceRect, DEFAULT_OUTPUT_CANVAS, framedMediaRect, normalizeOutputCanvas, outputPreviewRect } from './output-canvas'
 
 describe('output canvas geometry', () => {
   it('centers a 16:9 preview in a wide editor', () => {
@@ -11,4 +11,5 @@ describe('output canvas geometry', () => {
   it('maps source points into the covered output coordinates', () => expect(coverPoint(.5, .5, 1920, 1080, 1080, 1920)).toEqual({ cx: .5, cy: .5 }))
   it('centers contained media so the background remains visible', () => expect(containedMediaRect(1920, 1080, 1080, 1920)).toEqual({ x: 0, y: 656.25, width: 1080, height: 607.5 }))
   it('adds a visible background frame around contained media', () => expect(framedMediaRect(1920, 1080, 1080, 1920)).toEqual({ x: 75.60000000000002, y: 698.775, width: 928.8, height: 522.45 }))
+  it('normalizes the extended output presets', () => expect(normalizeOutputCanvas({ preset: '21:9', width: 1, height: 1, showBackground: true })).toMatchObject({ preset: '21:9', width: 2520, height: 1080, showBackground: true }))
 })

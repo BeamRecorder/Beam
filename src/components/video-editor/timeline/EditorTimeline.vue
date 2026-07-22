@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import TimelineToolbar from './TimelineToolbar.vue';
+import { onMounted, onUnmounted } from 'vue';
 import TimelineTracks from './TimelineTracks.vue';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
@@ -23,11 +22,13 @@ const props = defineProps<{
   composition: ProjectComposition;
   selectedCompositionLayerId: string | null;
   selectedCameraLayerId: string | null;
+  zoomLevel: number;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:currentTime', value: number): void;
   (e: 'update:isPlaying', value: boolean): void;
+  (e: 'update:zoomLevel', value: number): void;
   (e: 'update:isVideoEnabled', value: boolean): void;
   (e: 'update:isSystemAudioEnabled', value: boolean): void;
   (e: 'update:isMicAudioEnabled', value: boolean): void;
@@ -45,8 +46,6 @@ const emit = defineEmits<{
   (e: 'add:zoom', timeMs: number): void;
   (e: 'add:caption', timeMs: number): void;
 }>();
-
-const zoomLevel = ref<number>(100);
 
 // Global Spacebar shortcut listener to play/pause
 const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,22 +80,12 @@ onUnmounted(() => {
 
 <template>
   <div class="timeline-island-container">
-    <!-- Toolbar Component -->
-    <TimelineToolbar
-      :current-time="currentTime"
-      :duration="duration"
-      :is-playing="isPlaying"
-      v-model:zoom-level="zoomLevel"
-      @update:isPlaying="emit('update:isPlaying', $event)"
-      @update:currentTime="emit('update:currentTime', $event)"
-      @add:element="emit('add:element', $event)"
-    />
-
     <!-- Tracks Viewport Component -->
     <TimelineTracks
       :current-time="currentTime"
       :duration="duration"
-      v-model:zoom-level="zoomLevel"
+      :zoom-level="zoomLevel"
+      @update:zoom-level="emit('update:zoomLevel', $event)"
       :video-src="videoSrc || null"
       :editor-data="editorData"
       :is-video-enabled="isVideoEnabled"
@@ -132,9 +121,7 @@ onUnmounted(() => {
 .timeline-island-container {
   width: 100%;
   background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  border-top: 1px solid var(--color-border);
   overflow: hidden;
   display: flex;
   flex-direction: column;

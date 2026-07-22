@@ -1,4 +1,4 @@
-import type { ClipAppearance, NormalizedTransform, WebcamAppearance } from '../composition-types'
+import type { ClipAppearance, NormalizedCrop, NormalizedTransform, WebcamAppearance } from '../composition-types'
 
 export interface WebcamOverlaySettings { widthPercent: number; heightPercent: number; margin: number; reactToZoom: boolean; mirror: boolean; cornerRadius: number; shadowOpacity: number; shadowColor: string; shadowOffsetX: number; shadowOffsetY: number }
 export interface WebcamLayout { x: number; y: number; width: number; height: number }
@@ -33,7 +33,7 @@ export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, a
   return { width, height, x: Math.max(margin, canvasWidth - width - margin), y: Math.max(margin, canvasHeight - height - margin) }
 }
 
-export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform) {
+export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform, crop?: NormalizedCrop) {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform)
   const radius = Math.min(settings.cornerRadius, layout.width / 2, layout.height / 2)
   const shadowSize = Math.min(layout.width, layout.height)
@@ -54,6 +54,9 @@ export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasI
   ctx.save()
   ctx.beginPath(); ctx.roundRect(layout.x, layout.y, layout.width, layout.height, radius); ctx.clip()
   if (settings.mirror) { ctx.translate(layout.x * 2 + layout.width, 0); ctx.scale(-1, 1) }
-  ctx.drawImage(source, layout.x, layout.y, layout.width, layout.height)
+  const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source instanceof HTMLImageElement ? source.naturalWidth : 0
+  const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source instanceof HTMLImageElement ? source.naturalHeight : 0
+  if (crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(source, crop.x * sourceWidth, crop.y * sourceHeight, crop.width * sourceWidth, crop.height * sourceHeight, layout.x, layout.y, layout.width, layout.height)
+  else ctx.drawImage(source, layout.x, layout.y, layout.width, layout.height)
   ctx.restore()
 }

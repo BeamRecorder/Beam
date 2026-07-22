@@ -22,7 +22,7 @@ const props = defineProps<{
     shadowColor?: string
     shadowDirection?: string
     cornerRadius?: string
-    webcamTransform?: NormalizedTransform
+    clipTransform?: NormalizedTransform
   } | null
 }>()
 
@@ -31,7 +31,7 @@ const emit = defineEmits<{
   (e: 'update:enabled', enabled: boolean): void
   (e: 'update:cornerRadius', radius: string): void
   (e: 'update:shadow', shadow: { size: string; color?: string; direction?: string }): void
-  (e: 'update:webcamTransform', transform: NormalizedTransform): void
+  (e: 'update:clipTransform', transform: NormalizedTransform): void
   (e: 'unlink'): void
   (e: 'delete'): void
 }>()
@@ -100,13 +100,13 @@ const handleShadowColorChange = (color: string) => {
 const currentPlaybackRate = computed(() => {
   return Math.round((props.selectedClip?.playbackRate ?? 1.0) * 100) / 100
 })
-const webcamTransform = computed(() => props.selectedClip?.webcamTransform)
-const updateWebcam = (patch: Partial<NormalizedTransform>) => {
-  const current = webcamTransform.value
+const clipTransform = computed(() => props.selectedClip?.clipTransform)
+const updatePlacement = (patch: Partial<NormalizedTransform>) => {
+  const current = clipTransform.value
   if (!current) return
   const width = Math.min(.9, Math.max(.08, patch.width ?? current.width))
   const height = Math.min(.9, Math.max(.08, patch.height ?? current.height))
-  emit('update:webcamTransform', { x: Math.min(1 - width, Math.max(0, patch.x ?? current.x)), y: Math.min(1 - height, Math.max(0, patch.y ?? current.y)), width, height })
+  emit('update:clipTransform', { x: Math.min(1 - width, Math.max(0, patch.x ?? current.x)), y: Math.min(1 - height, Math.max(0, patch.y ?? current.y)), width, height })
 }
 </script>
 
@@ -124,11 +124,11 @@ const updateWebcam = (patch: Partial<NormalizedTransform>) => {
         <h4 class="clip-name">{{ selectedClip.name || selectedClip.id }}</h4>
       </div>
 
-      <div v-if="webcamTransform" class="property-card">
-        <div class="card-header"><Square :size="14" class="card-icon" /><span class="card-title">Webcam placement</span></div>
-        <BigSlider :model-value="webcamTransform.x * 100" :min="0" :max="100" :step="1" label="Horizontal" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updateWebcam({ x: $event / 100 })" />
-        <BigSlider :model-value="webcamTransform.y * 100" :min="0" :max="100" :step="1" label="Vertical" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updateWebcam({ y: $event / 100 })" />
-        <BigSlider :model-value="webcamTransform.width * 100" :min="8" :max="90" :step="1" label="Size" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updateWebcam({ width: $event / 100, height: webcamTransform.height * ($event / 100) / webcamTransform.width })" />
+      <div v-if="clipTransform" class="property-card">
+        <div class="card-header"><Square :size="14" class="card-icon" /><span class="card-title">Clip placement</span></div>
+        <BigSlider :model-value="clipTransform.x * 100" :min="0" :max="100" :step="1" label="Horizontal" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updatePlacement({ x: $event / 100 })" />
+        <BigSlider :model-value="clipTransform.y * 100" :min="0" :max="100" :step="1" label="Vertical" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updatePlacement({ y: $event / 100 })" />
+        <BigSlider :model-value="clipTransform.width * 100" :min="8" :max="90" :step="1" label="Size" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updatePlacement({ width: $event / 100, height: clipTransform.height * ($event / 100) / clipTransform.width })" />
       </div>
 
       <!-- Speed Boost / Rate Controls -->

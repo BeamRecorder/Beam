@@ -65,6 +65,7 @@ const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   zoomout: { x: 16, y: 16 },
 };
 
+
 const props = defineProps<{
   isPlaying: boolean;
   currentTime: number;
@@ -89,6 +90,7 @@ const props = defineProps<{
   activeTab: string;
   selectedTransformLayer: MediaCompositionLayer | null;
   loopProgress?: number;
+  isCropping?: boolean;
 }>();
 
 const getRippleStyleColor = (hex: string, alpha: number) => {
@@ -110,6 +112,7 @@ const emit = defineEmits<{
   (e: 'deselect:transform-layer'): void;
   (e: 'deselect:zoom'): void;
   (e: 'update:layer-transform', transform: NormalizedTransform): void;
+  (e: 'update:layer-crop', crop: import('../composition/composition-types').NormalizedCrop): void;
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -140,14 +143,42 @@ const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
 const webcamHandleStyle = computed(() => {
   const bounds = videoWindowBounds.value; const layer = props.selectedTransformLayer;
-  if (!bounds || !layer?.transform) return { display: 'none' };
-  const transform = webcamDraft.value ?? layer.transform;
+  if (!bounds || !layer) return { display: 'none' };
+  const transform = webcamDraft.value ?? layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
   if (layer.reactToZoom) {
     const layout = computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance), transform);
     return { left: `${bounds.dx + layout.x}px`, top: `${bounds.dy + layout.y}px`, width: `${layout.width}px`, height: `${layout.height}px` };
   }
   return { left: `${bounds.dx + transform.x * bounds.dw}px`, top: `${bounds.dy + transform.y * bounds.dh}px`, width: `${transform.width * bounds.dw}px`, height: `${transform.height * bounds.dh}px` };
 });
+const cropDraft = ref<import('../composition/composition-types').NormalizedCrop | null>(null);
+const cropValue = computed(() => cropDraft.value ?? props.selectedTransformLayer?.crop ?? { x: 0, y: 0, width: 1, height: 1 });
+const cropOverlayStyle = computed(() => {
+  if (!props.isCropping || !props.selectedTransformLayer || !videoWindowBounds.value) return { display: 'none' };
+  const bounds = videoWindowBounds.value;
+  const transform = props.selectedTransformLayer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+  const layout = props.selectedTransformLayer.reactToZoom
+    ? computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(props.selectedTransformLayer.appearance ?? props.selectedTransformLayer.webcamAppearance), transform)
+    : { x: transform.x * bounds.dw, y: transform.y * bounds.dh, width: transform.width * bounds.dw, height: transform.height * bounds.dh };
+  const crop = cropValue.value;
+  return { left: `${bounds.dx + layout.x + crop.x * layout.width}px`, top: `${bounds.dy + layout.y + crop.y * layout.height}px`, width: `${crop.width * layout.width}px`, height: `${crop.height * layout.height}px` };
+});
+let cropDrag: { kind: 'move' | 'resize'; corner?: ResizeCorner; startX: number; startY: number; value: import('../composition/composition-types').NormalizedCrop } | null = null;
+const cropBounds = () => {
+  const style = cropOverlayStyle.value;
+  return { width: Number.parseFloat(String(style.width)) || 1, height: Number.parseFloat(String(style.height)) || 1 };
+};
+const clampCrop = (value: import('../composition/composition-types').NormalizedCrop) => {
+  const width = Math.min(1, Math.max(.05, value.width)); const height = Math.min(1, Math.max(.05, value.height));
+  return { x: Math.min(1 - width, Math.max(0, value.x)), y: Math.min(1 - height, Math.max(0, value.y)), width, height };
+};
+const beginCropDrag = (event: PointerEvent, kind: 'move' | 'resize', corner?: ResizeCorner) => { cropDrag = { kind, corner, startX: event.clientX, startY: event.clientY, value: { ...cropValue.value } }; (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); };
+const moveCropDrag = (event: PointerEvent) => {
+  if (!cropDrag) return; const bounds = cropBounds(); const dx = (event.clientX - cropDrag.startX) / bounds.width * cropDrag.value.width; const dy = (event.clientY - cropDrag.startY) / bounds.height * cropDrag.value.height;
+  if (cropDrag.kind === 'move') cropDraft.value = clampCrop({ ...cropDrag.value, x: cropDrag.value.x + dx, y: cropDrag.value.y + dy });
+  else { const left = cropDrag.corner?.includes('left'); const top = cropDrag.corner?.includes('top'); const width = cropDrag.value.width + (left ? -dx : dx); const height = cropDrag.value.height + (top ? -dy : dy); cropDraft.value = clampCrop({ x: left ? cropDrag.value.x + cropDrag.value.width - width : cropDrag.value.x, y: top ? cropDrag.value.y + cropDrag.value.height - height : cropDrag.value.y, width, height }); }
+};
+const endCropDrag = (event: PointerEvent) => { if (cropDraft.value) emit('update:layer-crop', cropDraft.value); cropDraft.value = null; cropDrag = null; if ((event.currentTarget as HTMLElement).hasPointerCapture(event.pointerId)) (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId); };
 const webcamDraft = ref<NormalizedTransform | null>(null);
 let webcamDrag: { kind: 'move' | 'resize'; corner?: ResizeCorner; startX: number; startY: number; lastX: number; lastY: number; transform: NormalizedTransform } | null = null;
 const focusTargetStyle = computed(() => {
@@ -410,6 +441,24 @@ const drawBackground = (
   rect: { x: number; y: number; width: number; height: number },
 ) => {
   const background = props.selectedBackground;
+
+  if (background?.kind === 'blur') {
+    if (videoEl.readyState >= 1) {
+      ctx.save();
+      ctx.filter = 'blur(30px) brightness(0.85)';
+      // Draw scaled video covering rect
+      const videoWidth = videoEl.videoWidth || 1920;
+      const videoHeight = videoEl.videoHeight || 1080;
+      const srcRect = coverSourceRect(videoWidth, videoHeight, rect.width, rect.height);
+      ctx.drawImage(videoEl, srcRect.x, srcRect.y, srcRect.width, srcRect.height, rect.x - 20, rect.y - 20, rect.width + 40, rect.height + 40);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-surface').trim() || '#f7f5f0';
+      ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+    }
+    return;
+  }
+
   if (background?.kind === "video" && backgroundVideo.readyState >= 2) {
     ctx.drawImage(backgroundVideo, rect.x, rect.y, rect.width, rect.height);
     return;
@@ -423,7 +472,7 @@ const drawBackground = (
     return;
   }
 
-  ctx.fillStyle = "#1e1e24";
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-surface').trim() || '#f7f5f0';
   ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
 };
 
@@ -615,7 +664,13 @@ const drawVideoWindow = (
   }
   ctx.restore();
   previousCamera = camera;
-  videoWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale };
+  videoWindowBounds.value = {
+    dx: props.outputCanvas.showBackground ? dx + media.x : dx,
+    dy: props.outputCanvas.showBackground ? dy + media.y : dy,
+    dw: props.outputCanvas.showBackground ? media.width : dw,
+    dh: props.outputCanvas.showBackground ? media.height : dh,
+    scale: camera.scale,
+  };
   // Cursor, ripples and video must share the rendered spring state. Returning
   // the target camera here made overlays jump ahead of the eased video frame.
   return {
@@ -853,7 +908,10 @@ const drawComposition = (
     ctx.roundRect(dx, dy, dw, dh, Math.min(radiusForAppearance(appearance), dw / 2, dh / 2));
     ctx.fill();
     ctx.clip();
-    ctx.drawImage(asset, dx, dy, dw, dh);
+    const sourceWidth = asset instanceof HTMLVideoElement ? asset.videoWidth : asset.naturalWidth;
+    const sourceHeight = asset instanceof HTMLVideoElement ? asset.videoHeight : asset.naturalHeight;
+    if (layer.crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(asset, layer.crop.x * sourceWidth, layer.crop.y * sourceHeight, layer.crop.width * sourceWidth, layer.crop.height * sourceHeight, dx, dy, dw, dh);
+    else ctx.drawImage(asset, dx, dy, dw, dh);
     ctx.restore();
   }
 };
@@ -889,6 +947,7 @@ const drawWebcamLayers = (
       layer.id === props.selectedTransformLayer?.id && webcamDraft.value
         ? webcamDraft.value
         : layer.transform,
+      layer.crop,
     );
     ctx.restore();
   }
@@ -908,8 +967,6 @@ const renderCanvas = () => {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#121318";
-  ctx.fillRect(0, 0, width, height);
 
   const videoWindow = drawVideoWindow(ctx, width, height);
   if (videoWindow) drawInCameraSpace(ctx, videoWindow, () => drawComposition(ctx, videoWindow, true));
@@ -1071,16 +1128,23 @@ onUnmounted(() => {
       :style="focusTargetStyle"
       aria-hidden="true"
     ></div>
+
+    <div v-if="isCropping && selectedTransformLayer" class="crop-overlay-box" :style="cropOverlayStyle" @pointerdown="beginCropDrag($event, 'move')" @pointermove="moveCropDrag" @pointerup="endCropDrag" @pointercancel="endCropDrag">
+      <div class="crop-grid">
+        <div class="grid-line vertical line-1"></div>
+        <div class="grid-line vertical line-2"></div>
+        <div class="grid-line horizontal line-1"></div>
+        <div class="grid-line horizontal line-2"></div>
+      </div>
+      <ResizeHandle @resize-start="(corner, event) => beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => moveCropDrag(event)" @resize-end="(_corner, event) => endCropDrag(event)" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .canvas-island {
   flex: 1;
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  background: var(--color-bg-surface);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -1115,5 +1179,176 @@ onUnmounted(() => {
 .zoom-selection-box.locked {
   border-style: dashed;
   opacity: 0.7;
+}
+
+.crop-overlay-box {
+  position: absolute;
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.crop-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.grid-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.grid-line.vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.grid-line.vertical.line-1 {
+  left: 33.333%;
+}
+
+.grid-line.vertical.line-2 {
+  left: 66.666%;
+}
+
+.grid-line.horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.grid-line.horizontal.line-1 {
+  top: 33.333%;
+}
+
+.grid-line.horizontal.line-2 {
+  top: 66.666%;
+}
+
+/* Floating Toolbars inside Canvas */
+.canvas-top-toolbar {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 15;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-element);
+  border: 1px solid var(--color-border);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.canvas-bottom-toolbar {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 15;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg-element);
+  border: 1px solid var(--color-border);
+  padding: 4px 8px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.canvas-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--fast) ease;
+}
+
+.canvas-tool-btn:hover,
+.canvas-tool-btn.is-open,
+.canvas-tool-btn.active {
+  background: var(--color-bg-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.canvas-tool-btn.active {
+  background: var(--color-primary-light, rgba(255, 90, 31, 0.15));
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-chevron {
+  width: 12px;
+  height: 12px;
+  color: var(--text-muted);
+  transition: transform var(--fast) ease;
+}
+
+.btn-chevron.is-flipped {
+  transform: rotate(180deg);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--color-border);
+}
+
+.preset-menu-content,
+.add-menu-content {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  min-width: 120px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+}
+
+.preset-menu-item,
+.add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--fast) ease;
+}
+
+.preset-menu-item:hover,
+.add-menu-item:hover {
+  background: var(--color-bg-surface-hover);
+}
+
+.preset-menu-item.active {
+  background: var(--color-primary-light, rgba(255, 90, 31, 0.15));
+  color: var(--color-primary);
+  font-weight: 700;
 }
 </style>

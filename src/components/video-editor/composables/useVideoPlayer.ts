@@ -19,11 +19,20 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const isSystemAudioEnabled = ref(true)
   const isMicAudioEnabled = ref(true)
 
+  const BLUR_BACKGROUND: BackgroundMedia = {
+    id: 'blur',
+    name: 'Flou d\'arrière-plan',
+    path: 'blur',
+    extension: '',
+    kind: 'blur',
+  }
+
   const allBackgrounds = computed(() => [...importedBackgrounds.value, ...availableBackgrounds])
   const backgroundGroups = computed<BackgroundMediaGroup[]>(() => groupBackgroundMedia(allBackgrounds.value))
-  const selectedBackgroundMedia = computed(() =>
-    allBackgrounds.value.find((background) => background.path === selectedBackground.value) ?? null,
-  )
+  const selectedBackgroundMedia = computed(() => {
+    if (selectedBackground.value === 'blur') return BLUR_BACKGROUND
+    return allBackgrounds.value.find((background) => background.path === selectedBackground.value) ?? null
+  })
 
   const addBackground = (background: BackgroundMedia) => {
     importedBackgrounds.value = [background, ...importedBackgrounds.value.filter((item) => item.path !== background.path)]

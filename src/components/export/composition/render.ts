@@ -54,13 +54,10 @@ export function drawCompositionLayers(
     const asset = visuals.get(layer.assetId);
     if (!asset) continue;
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
-    ctx.drawImage(
-      asset,
-      transform.x * width,
-      transform.y * height,
-      transform.width * width,
-      transform.height * height,
-    );
+    const sourceWidth = asset instanceof HTMLVideoElement ? asset.videoWidth : asset instanceof HTMLImageElement ? asset.naturalWidth : 0;
+    const sourceHeight = asset instanceof HTMLVideoElement ? asset.videoHeight : asset instanceof HTMLImageElement ? asset.naturalHeight : 0;
+    if (layer.crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(asset, layer.crop.x * sourceWidth, layer.crop.y * sourceHeight, layer.crop.width * sourceWidth, layer.crop.height * sourceHeight, transform.x * width, transform.y * height, transform.width * width, transform.height * height);
+    else ctx.drawImage(asset, transform.x * width, transform.y * height, transform.width * width, transform.height * height);
   }
 }
 
@@ -165,7 +162,7 @@ export function renderCompositionFrame(
   for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
     if (layer.kind !== "video" || !layer.reactToZoom) continue;
     const source = visuals?.get(layer.assetId);
-    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.webcamAppearance), layer.transform);
+    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.webcamAppearance), layer.transform, layer.crop);
   }
   drawCompositionLayers(ctx, snapshot, time, visuals);
 }

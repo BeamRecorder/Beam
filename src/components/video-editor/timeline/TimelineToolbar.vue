@@ -8,14 +8,13 @@ import {
   ZoomIn,
   ZoomOut,
   Plus,
-  ChevronUp,
   Video,
-  Image,
+  Image as ImageIcon,
   Volume2,
   Type,
 } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
-import Popover from "~/ui/popover/Popover.vue";
+import PopoverMenuButton from "~/ui/popover/PopoverMenuButton.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -37,6 +36,10 @@ const emit = defineEmits<{
 const handleAdd = (type: "video" | "image" | "sound" | "caption") => {
   emit("add:element", type);
 };
+const addItems = [
+  { id: 'video', label: 'Video', icon: Video }, { id: 'image', label: 'Image', icon: ImageIcon },
+  { id: 'sound', label: 'Sound', icon: Volume2 }, { id: 'caption', label: 'Text', icon: Type },
+] as const;
 
 const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
@@ -66,66 +69,7 @@ const handleZoomOut = () => {
   <div class="timeline-toolbar">
     <!-- Left Section with Add Popover -->
     <div class="left-section">
-      <Popover align="left" direction="down" :match-trigger-width="false">
-        <template #trigger="{ isOpen }">
-          <button
-            class="add-track-button"
-            :class="{ 'is-open': isOpen }"
-            type="button"
-          >
-            <Plus class="add-icon" />
-            <span>Add</span>
-            <ChevronUp
-              class="chevron-icon"
-              :class="{ 'is-flipped': !isOpen }"
-            />
-          </button>
-        </template>
-        <template #default="{ close }">
-          <div class="add-menu-content">
-            <button
-              class="add-menu-item"
-              @click="
-                handleAdd('video');
-                close();
-              "
-            >
-              <Video class="menu-icon" />
-              <span>Video</span>
-            </button>
-            <button
-              class="add-menu-item"
-              @click="
-                handleAdd('image');
-                close();
-              "
-            >
-              <Image class="menu-icon" />
-              <span>Image</span>
-            </button>
-            <button
-              class="add-menu-item"
-              @click="
-                handleAdd('sound');
-                close();
-              "
-            >
-              <Volume2 class="menu-icon" />
-              <span>Sound</span>
-            </button>
-            <button
-              class="add-menu-item"
-              @click="
-                handleAdd('caption');
-                close();
-              "
-            >
-              <Type class="menu-icon" />
-              <span>Text</span>
-            </button>
-          </div>
-        </template>
-      </Popover>
+      <PopoverMenuButton label="Add" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
     </div>
 
     <!-- Centered Controls -->

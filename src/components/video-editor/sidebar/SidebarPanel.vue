@@ -65,7 +65,7 @@ const menuItems = [
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sm);
   padding: 16px 8px;
   display: flex;
   flex-direction: column;
