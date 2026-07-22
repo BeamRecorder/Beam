@@ -4,6 +4,7 @@ import { capture } from '../../../api/capture'
 import { Image, Upload, Video } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
+import Switch from '~/ui/switch/Switch.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import { type BackgroundMedia, type BackgroundMediaGroup, type BackgroundMediaKind } from '../composables/backgroundMedia'
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset, type OutputCanvasSettings } from '../canvas/output-canvas'
@@ -48,7 +49,7 @@ const triggerImport = async () => {
 }
 const setCanvasPreset = (preset: OutputCanvasPreset) => {
   if (preset === 'custom') return emit('update:canvas', { ...props.canvas, preset })
-  emit('update:canvas', { ...OUTPUT_CANVAS_PRESETS[preset], fit: props.canvas.fit })
+  emit('update:canvas', { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: props.canvas.showBackground })
 }
 const updateCustomDimension = (key: 'width' | 'height', value: string) => {
   const dimension = Math.round(Number(value))
@@ -56,7 +57,7 @@ const updateCustomDimension = (key: 'width' | 'height', value: string) => {
   emit('update:canvas', { ...props.canvas, preset: 'custom', [key]: dimension })
 }
 const ratioLabel = computed(() => `${props.canvas.width} × ${props.canvas.height} (${(props.canvas.width / props.canvas.height).toFixed(2)}:1)`)
-const setFit = (fit: OutputCanvasSettings['fit']) => emit('update:canvas', { ...props.canvas, fit })
+const setShowBackground = (showBackground: boolean) => emit('update:canvas', { ...props.canvas, showBackground })
 
 onMounted(() => {
   observer = new IntersectionObserver((entries) => {
@@ -93,11 +94,8 @@ onUnmounted(() => {
       <label>Width <input :value="canvas.width" type="number" min="1" @change="updateCustomDimension('width', ($event.target as HTMLInputElement).value)"></label>
       <label>Height <input :value="canvas.height" type="number" min="1" @change="updateCustomDimension('height', ($event.target as HTMLInputElement).value)"></label>
     </div>
-    <p class="canvas-ratio">{{ ratioLabel }} · Cover</p>
-    <ButtonGroup aria-label="Screen fit">
-      <Button size="sm" :variant="canvas.fit === 'cover' ? 'primary' : 'ghost'" @click="setFit('cover')">Fill</Button>
-      <Button size="sm" :variant="canvas.fit === 'contain' ? 'primary' : 'ghost'" @click="setFit('contain')">Show background</Button>
-    </ButtonGroup>
+    <p class="canvas-ratio">{{ ratioLabel }}</p>
+    <div class="prop-row"><span class="prop-label">Show background</span><Switch :model-value="canvas.showBackground" @update:model-value="setShowBackground" /></div>
     <label class="prop-label">Background</label>
     <ButtonGroup aria-label="Background type">
       <Button size="sm" :variant="activeKind === 'video' ? 'primary' : 'ghost'" :icon="Video" @click="setKind('video')">Video</Button>
@@ -182,6 +180,7 @@ onUnmounted(() => {
 .canvas-dimensions label { display: grid; gap: 4px; font-size: 11px; color: var(--text-secondary); }
 .canvas-dimensions input { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--text-primary); padding: 6px; }
 .canvas-ratio { margin: -4px 0 2px; color: var(--text-muted); font-size: 11px; }
+.prop-row { display: flex; align-items: center; justify-content: space-between; }
 .file-input { 
   display: none; 
 }

@@ -1,32 +1,31 @@
 export type OutputCanvasPreset = '16:9' | '9:16' | '1:1' | '4:5' | 'custom'
-export type OutputCanvasFit = 'cover' | 'contain'
-
 export interface OutputCanvasSettings {
   preset: OutputCanvasPreset
   width: number
   height: number
-  fit: OutputCanvasFit
+  showBackground: boolean
 }
 
 export interface CanvasRect { x: number; y: number; width: number; height: number }
 
 export const DEFAULT_OUTPUT_CANVAS: OutputCanvasSettings = {
-  preset: '16:9', width: 1920, height: 1080, fit: 'cover',
+  preset: '16:9', width: 1920, height: 1080, showBackground: true,
 }
 
 export const OUTPUT_CANVAS_PRESETS: Record<Exclude<OutputCanvasPreset, 'custom'>, OutputCanvasSettings> = {
-  '16:9': { preset: '16:9', width: 1920, height: 1080, fit: 'cover' },
-  '9:16': { preset: '9:16', width: 1080, height: 1920, fit: 'cover' },
-  '1:1': { preset: '1:1', width: 1080, height: 1080, fit: 'cover' },
-  '4:5': { preset: '4:5', width: 1080, height: 1350, fit: 'cover' },
+  '16:9': { preset: '16:9', width: 1920, height: 1080, showBackground: true },
+  '9:16': { preset: '9:16', width: 1080, height: 1920, showBackground: true },
+  '1:1': { preset: '1:1', width: 1080, height: 1080, showBackground: true },
+  '4:5': { preset: '4:5', width: 1080, height: 1350, showBackground: true },
 }
 
-export function normalizeOutputCanvas(value: Partial<OutputCanvasSettings> | null | undefined): OutputCanvasSettings {
+export function normalizeOutputCanvas(value: (Partial<OutputCanvasSettings> & { fit?: 'cover' | 'contain' }) | null | undefined): OutputCanvasSettings {
   const width = Number.isFinite(value?.width) ? Math.round(value!.width!) : DEFAULT_OUTPUT_CANVAS.width
   const height = Number.isFinite(value?.height) ? Math.round(value!.height!) : DEFAULT_OUTPUT_CANVAS.height
   const preset = value?.preset && ['16:9', '9:16', '1:1', '4:5', 'custom'].includes(value.preset) ? value.preset : DEFAULT_OUTPUT_CANVAS.preset
-  if (preset !== 'custom') return { ...OUTPUT_CANVAS_PRESETS[preset], fit: value?.fit === 'contain' ? 'contain' : 'cover' }
-  return { preset, width: Math.max(1, width), height: Math.max(1, height), fit: value?.fit === 'contain' ? 'contain' : 'cover' }
+  const showBackground = typeof value?.showBackground === 'boolean' ? value.showBackground : value?.fit === 'cover' ? false : true
+  if (preset !== 'custom') return { ...OUTPUT_CANVAS_PRESETS[preset], showBackground }
+  return { preset, width: Math.max(1, width), height: Math.max(1, height), showBackground }
 }
 
 export function outputPreviewRect(availableWidth: number, availableHeight: number, output: OutputCanvasSettings): CanvasRect {
@@ -69,8 +68,8 @@ export function coverPoint(cx: number, cy: number, sourceWidth: number, sourceHe
   return { cx: (cx * sourceWidth - source.x) / source.width, cy: (cy * sourceHeight - source.y) / source.height }
 }
 
-export function outputPoint(cx: number, cy: number, sourceWidth: number, sourceHeight: number, destinationWidth: number, destinationHeight: number, fit: OutputCanvasFit) {
-  if (fit === 'cover') return coverPoint(cx, cy, sourceWidth, sourceHeight, destinationWidth, destinationHeight)
+export function outputPoint(cx: number, cy: number, sourceWidth: number, sourceHeight: number, destinationWidth: number, destinationHeight: number, showBackground: boolean) {
+  if (!showBackground) return coverPoint(cx, cy, sourceWidth, sourceHeight, destinationWidth, destinationHeight)
   const media = framedMediaRect(sourceWidth, sourceHeight, destinationWidth, destinationHeight)
   return { cx: (media.x + cx * media.width) / destinationWidth, cy: (media.y + cy * media.height) / destinationHeight }
 }

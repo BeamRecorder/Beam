@@ -1,4 +1,4 @@
-import { zoomAtTime } from "../../video-editor/zoom/zoom-playback";
+import { clampFocusToScale, zoomAtTime } from "../../video-editor/zoom/zoom-playback";
 import {
   buttonEventsBetween,
   cursorStateAt,
@@ -12,6 +12,7 @@ import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-edit
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
+export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
 
 export function drawCompositionLayers(
   ctx: CanvasRenderingContext2D,
@@ -74,7 +75,7 @@ export function renderCompositionFrame(
   replacementCursor?: HTMLImageElement | null,
 ) {
   const { width, height } = snapshot.canvas;
-  ctx.fillStyle = "#1e1e24";
+  ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
   ctx.fillRect(0, 0, width, height);
   if (
     !snapshot.video.enabled ||
@@ -94,13 +95,14 @@ export function renderCompositionFrame(
   const focus = zoom?.focus ?? { cx: 0.5, cy: 0.5 };
   const sourceWidth = video.videoWidth || snapshot.video.width;
   const sourceHeight = video.videoHeight || snapshot.video.height;
-  const source = snapshot.canvas.fit === 'cover' ? coverSourceRect(sourceWidth, sourceHeight, width, height) : { x: 0, y: 0, width: sourceWidth, height: sourceHeight };
-  const media = snapshot.canvas.fit === 'contain' ? framedMediaRect(sourceWidth, sourceHeight, width, height) : { x: 0, y: 0, width, height };
-  const outputFocus = zoom?.mode === 'auto' ? outputPoint(focus.cx, focus.cy, sourceWidth, sourceHeight, width, height, snapshot.canvas.fit) : focus;
+  const source = snapshot.canvas.showBackground ? { x: 0, y: 0, width: sourceWidth, height: sourceHeight } : coverSourceRect(sourceWidth, sourceHeight, width, height);
+  const media = snapshot.canvas.showBackground ? framedMediaRect(sourceWidth, sourceHeight, width, height) : { x: 0, y: 0, width, height };
+  const outputFocus = zoom?.mode === 'auto' ? outputPoint(focus.cx, focus.cy, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground) : focus;
+  const cameraFocus = clampFocusToScale(outputFocus, scale);
   ctx.save();
   ctx.translate(width / 2, height / 2);
   ctx.scale(scale, scale);
-  ctx.translate(-outputFocus.cx * width, -outputFocus.cy * height);
+  ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   if (background) ctx.drawImage(background, 0, 0, width, height);
   ctx.drawImage(video, source.x, source.y, source.width, source.height, media.x, media.y, media.width, media.height);
   const cursor = cursorStateAt(snapshot.cursor.events, time);
@@ -123,8 +125,8 @@ export function renderCompositionFrame(
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(
-        outputPoint(state.x, state.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.fit).cx * width,
-        outputPoint(state.x, state.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.fit).cy * height,
+        outputPoint(state.x, state.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cx * width,
+        outputPoint(state.x, state.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cy * height,
         2 + age * settings.ripple.size * 2,
         0,
         Math.PI * 2,
@@ -151,8 +153,8 @@ export function renderCompositionFrame(
     }
     ctx.drawImage(
       image,
-      outputPoint(cursor.x, cursor.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.fit).cx * width - hotspot.x * scale,
-      outputPoint(cursor.x, cursor.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.fit).cy * height - hotspot.y * scale,
+      outputPoint(cursor.x, cursor.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cx * width - hotspot.x * scale,
+      outputPoint(cursor.x, cursor.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cy * height - hotspot.y * scale,
       image.naturalWidth * scale,
       image.naturalHeight * scale,
     );
@@ -163,7 +165,7 @@ export function renderCompositionFrame(
   for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
     if (layer.kind !== "video" || !layer.reactToZoom) continue;
     const source = visuals?.get(layer.assetId);
-    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.webcamAppearance));
+    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.webcamAppearance), layer.transform);
   }
   drawCompositionLayers(ctx, snapshot, time, visuals);
 }

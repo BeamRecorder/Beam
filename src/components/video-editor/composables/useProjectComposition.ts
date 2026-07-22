@@ -6,6 +6,7 @@ import {
   type ClipAppearance,
   type CompositionLayer,
   type CompositionMedia,
+  type NormalizedTransform,
   type ProjectComposition,
 } from "../composition/composition-types";
 import {
@@ -69,6 +70,7 @@ export function useProjectComposition(options: {
       playbackRate: 1.0,
       enabled: layer.enabled,
       isLinked: false,
+      ...(selectedCameraLayer.value?.id === layer.id ? { webcamTransform: layer.transform } : {}),
       ...(appearance ?? {}),
     };
   });
@@ -294,6 +296,20 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const updateSelectedWebcamTransform = async (transform: NormalizedTransform) => {
+    const selectedId = selectedCompositionLayer.value?.kind !== 'audio' && selectedCompositionLayer.value?.kind !== 'caption'
+      ? selectedCompositionLayer.value.id
+      : null;
+    if (!selectedId) return;
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.map((layer) =>
+        layer.id === selectedId && layer.kind !== 'audio' && layer.kind !== 'caption' ? { ...layer, transform } : layer,
+      ),
+    };
+    await saveComposition();
+  };
+
   const handleUnlinkClips = async () => {
     if (selectedCompositionLayerId.value) {
       await saveComposition();
@@ -324,6 +340,7 @@ export function useProjectComposition(options: {
     updateCaption,
     selectBaseVideo,
     updateSelectedClipAppearance,
+    updateSelectedWebcamTransform,
     handleUnlinkClips,
     handleUnlinkTrack,
   };

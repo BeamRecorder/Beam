@@ -80,7 +80,7 @@ function createProjectStore(root) {
       return { id: background.id, name: background.name.slice(0, 160), fileName: background.fileName, kind: background.kind }
     }) : []
     return {
-      canvas: { preset, width, height, fit: canvasInput.fit === 'contain' ? 'contain' : 'cover' },
+      canvas: { preset, width, height, showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : canvasInput.fit === 'cover' ? false : true },
       selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
       importedBackgrounds,
       videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,

@@ -12,8 +12,8 @@ describe('createCompositionSnapshot', () => {
     expect(snapshot.video).toMatchObject({ width: 1, height: 1, fps: 1 }); expect(snapshot.duration).toBe(0); expect(snapshot.cursor.available).toBe(false)
   })
   it('uses saved output dimensions independently from the capture dimensions', () => {
-    const snapshot = createCompositionSnapshot({ ...base(), canvas: { preset: '4:5', width: 1, height: 1, fit: 'cover' } })
-    expect(snapshot.video).toMatchObject({ width: 1920, height: 1080 }); expect(snapshot.canvas).toMatchObject({ width: 1080, height: 1350 })
+    const snapshot = createCompositionSnapshot({ ...base(), canvas: { preset: '4:5', width: 1, height: 1, showBackground: false } })
+    expect(snapshot.video).toMatchObject({ width: 1920, height: 1080 }); expect(snapshot.canvas).toMatchObject({ width: 1080, height: 1350, showBackground: false })
   })
   it('keeps an immutable copy of the editing scene', () => {
     const zooms = [{ id: 'z', sessionId: 's', startMs: 0, endMs: 10, focus: { cx: .5, cy: .5 }, depth: 1 as const, mode: 'manual' as const }]

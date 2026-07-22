@@ -35,6 +35,11 @@ describe("webcam zoom layout", () => {
     expect(layout.y).toBeGreaterThanOrEqual(0);
   });
 
+  it("uses the persisted normalized position and size for a webcam", () => {
+    const layout = computeWebcamLayout(1000, 800, 1, undefined, { x: .12, y: .34, width: .28, height: .21 });
+    expect(layout).toEqual({ x: 120, y: 272, width: 280, height: 168 });
+  });
+
   it("maps every recorded visual preset to deterministic canvas settings", () => {
     expect(webcamSettingsForAppearance({ shadowSize: "none", cornerRadius: "none" })).toMatchObject({ shadowOpacity: 0, cornerRadius: 0 });
     expect(webcamSettingsForAppearance({ shadowSize: "md", cornerRadius: "md" })).toMatchObject({ shadowOpacity: .42, cornerRadius: 14 });

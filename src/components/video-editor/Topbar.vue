@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { exportRequest } = defineProps<{ exportRequest?: any }>();
+const { exportRequest, project, isSaving } = defineProps<{ exportRequest?: any; project?: any; isSaving?: boolean }>();
 import { capture } from '../../api/capture'
 
 import VideoProjectEdition from './VideoProjectEdition.vue'
@@ -85,6 +85,8 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
         Exit to HUD
       </Button>
       <VideoProjectEdition
+        :project="project"
+        :is-saving="isSaving"
         @open-project="emit('open-project', $event)"
       />
     </div>

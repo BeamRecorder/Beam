@@ -1,4 +1,4 @@
-import type { ClipAppearance, WebcamAppearance } from '../composition-types'
+import type { ClipAppearance, NormalizedTransform, WebcamAppearance } from '../composition-types'
 
 export interface WebcamOverlaySettings { widthPercent: number; heightPercent: number; margin: number; reactToZoom: boolean; mirror: boolean; cornerRadius: number; shadowOpacity: number; shadowColor: string; shadowOffsetX: number; shadowOffsetY: number }
 export interface WebcamLayout { x: number; y: number; width: number; height: number }
@@ -17,7 +17,13 @@ export function webcamSettingsForAppearance(appearance: WebcamAppearance | ClipA
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 export const getWebcamZoomFactor = (appliedZoomScale: number, reactToZoom: boolean) => reactToZoom ? 1 / (Number.isFinite(appliedZoomScale) && appliedZoomScale > 0 ? appliedZoomScale : 1) : 1
 
-export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS): WebcamLayout {
+export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform): WebcamLayout {
+  if (transform) {
+    const factor = getWebcamZoomFactor(appliedZoomScale, settings.reactToZoom)
+    const width = clamp(canvasWidth * transform.width * factor, 56, canvasWidth)
+    const height = clamp(canvasHeight * transform.height * factor, 56, canvasHeight)
+    return { width, height, x: clamp(canvasWidth * transform.x, 0, Math.max(0, canvasWidth - width)), y: clamp(canvasHeight * transform.y, 0, Math.max(0, canvasHeight - height)) }
+  }
   const margin = Math.max(0, settings.margin)
   const maximum = Math.max(56, Math.min(canvasWidth, canvasHeight) - margin * 2)
   const factor = getWebcamZoomFactor(appliedZoomScale, settings.reactToZoom)
@@ -27,8 +33,8 @@ export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, a
   return { width, height, x: Math.max(margin, canvasWidth - width - margin), y: Math.max(margin, canvasHeight - height - margin) }
 }
 
-export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS) {
-  const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings)
+export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform) {
+  const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform)
   const radius = Math.min(settings.cornerRadius, layout.width / 2, layout.height / 2)
   const shadowSize = Math.min(layout.width, layout.height)
 

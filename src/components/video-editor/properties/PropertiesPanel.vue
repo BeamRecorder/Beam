@@ -13,6 +13,7 @@ import CaptionPanel from './CaptionPanel.vue'
 import type { CaptionCompositionLayer, ProjectComposition } from '../composition/composition-types'
 import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { OutputCanvasSettings } from '../canvas/output-canvas'
+import type { NormalizedTransform } from '../composition/composition-types'
 
 defineProps<{
   activeTab: string
@@ -31,6 +32,7 @@ defineProps<{
     shadowColor?: string
     shadowDirection?: string
     cornerRadius?: string
+    webcamTransform?: NormalizedTransform
   } | null
 
   // Cursor properties
@@ -91,6 +93,7 @@ const emit = defineEmits<{
   (e: 'update:clip-enabled', enabled: boolean): void
   (e: 'update:clip-corner-radius', radius: string): void
   (e: 'update:clip-shadow', shadow: { size: string; color?: string; direction?: string }): void
+  (e: 'update:webcam-transform', transform: NormalizedTransform): void
   (e: 'unlink-clip'): void
   (e: 'delete-clip'): void
   (e: 'split-clip'): void
@@ -123,6 +126,7 @@ const emit = defineEmits<{
         @update:enabled="emit('update:clip-enabled', $event)"
         @update:corner-radius="emit('update:clip-corner-radius', $event)"
         @update:shadow="emit('update:clip-shadow', $event)"
+        @update:webcam-transform="emit('update:webcam-transform', $event)"
         @unlink="emit('unlink-clip')"
         @delete="emit('delete-clip')"
         @split="emit('split-clip')"

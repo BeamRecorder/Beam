@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, toRef, watch } from "vue";
+import { computed, onMounted, toRef, watch } from "vue";
+import type { MediaCompositionLayer } from './composition/composition-types';
 import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
 import EditorCanvas from "./canvas/EditorCanvas.vue";
@@ -36,6 +37,7 @@ const {
   player,
   cursor,
   compositionState,
+  editorState,
   zoomState,
   exportRequest,
   outputCanvas,
@@ -77,6 +79,7 @@ const {
 const {
   composition,
   selectedCompositionLayerId,
+  selectedCompositionLayer,
   selectedClipInfo,
   selectedCaptionLayer,
   selectedCameraLayer,
@@ -91,9 +94,14 @@ const {
   updateCaption,
   selectBaseVideo,
   updateSelectedClipAppearance,
+  updateSelectedWebcamTransform,
   handleUnlinkClips,
   handleUnlinkTrack,
 } = compositionState;
+const selectedTransformLayer = computed<MediaCompositionLayer | null>(() => {
+  const layer = selectedCompositionLayer.value;
+  return layer && layer.kind !== 'audio' && layer.kind !== 'caption' && layer.transform ? layer : null;
+});
 
 const {
   zoomElements,
@@ -140,6 +148,16 @@ watch(
   },
   { immediate: true },
 );
+
+const updateOutputCanvas = (canvas: typeof outputCanvas.value) => {
+  outputCanvas.value = canvas;
+};
+const updateSelectedBackground = (background: string) => {
+  selectedBackground.value = background;
+  requestAnimationFrame(() => {
+    void editorState.saveNow().catch((error: unknown) => console.error('Failed to save selected background:', error));
+  });
+};
 </script>
 
 <template>
@@ -147,6 +165,8 @@ watch(
     <!-- Window Titlebar / Header -->
     <Topbar
       :export-request="exportRequest"
+      :project="project"
+      :is-saving="editorState.isSaving.value"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
     />
@@ -177,7 +197,7 @@ watch(
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
-          v-model:selectedBackground="selectedBackground"
+          :selected-background="selectedBackground"
           :background-groups="backgroundGroups"
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
@@ -188,7 +208,8 @@ watch(
           :project-id="project?.id"
           :canvas="outputCanvas"
           @import:background="addBackground($event)"
-          @update:canvas="outputCanvas = $event"
+          @update:selected-background="updateSelectedBackground($event)"
+          @update:canvas="updateOutputCanvas($event)"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
@@ -196,6 +217,7 @@ watch(
           @unlink-clip="handleUnlinkClips"
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: $event as 'none' | 'sm' | 'md' | 'lg' | 'full' })"
           @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
+          @update:webcam-transform="updateSelectedWebcamTransform"
         />
 
         <!-- Canvas/Player Island -->
@@ -220,7 +242,13 @@ watch(
           :selected-zoom="selectedZoom"
           :composition="composition"
           :output-canvas="outputCanvas"
+          :active-tab="activeTab"
+          :selected-transform-layer="selectedTransformLayer"
           @update:zoom="updateZoom"
+          @select:transform-layer="selectedCompositionLayerId = $event; activeTab = 'clip'"
+          @deselect:transform-layer="selectedCompositionLayerId = null"
+          @deselect:zoom="selectedZoomId = null"
+          @update:layer-transform="updateSelectedWebcamTransform($event)"
           @duration-change="duration = $event"
         />
       </div>

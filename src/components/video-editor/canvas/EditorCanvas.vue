@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import ResizeHandle, { type ResizeCorner } from '../../ui/ResizeHandle.vue';
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../composables/useCursorReplacer";
 import type { BackgroundMedia } from "../composables/backgroundMedia";
@@ -7,7 +8,7 @@ import {
   buttonEventsBetween,
   cursorStateAt,
 } from "../composables/cursorPlayback";
-import { zoomAtTime } from "../zoom/zoom-playback";
+import { clampFocusToScale, zoomAtTime } from "../zoom/zoom-playback";
 import {
   createCursorFollowCameraState,
   updateCursorFollowCamera,
@@ -22,6 +23,8 @@ import {
 } from "../composition/composition-types";
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../composition/webcam/webcam-zoom";
 import { framedMediaRect, outputPoint, coverSourceRect, outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
+import type { MediaCompositionLayer, NormalizedTransform } from '../composition/composition-types';
+import { computeWebcamLayout } from '../composition/webcam/webcam-zoom';
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -83,6 +86,8 @@ const props = defineProps<{
   selectedZoom: ZoomElement | null;
   composition: ProjectComposition;
   outputCanvas: OutputCanvasSettings;
+  activeTab: string;
+  selectedTransformLayer: MediaCompositionLayer | null;
   loopProgress?: number;
 }>();
 
@@ -101,6 +106,10 @@ const emit = defineEmits<{
   (e: "update:currentTime", value: number): void;
   (e: "duration-change", value: number): void;
   (e: "update:zoom", value: ZoomElement): void;
+  (e: 'select:transform-layer', layerId: string): void;
+  (e: 'deselect:transform-layer'): void;
+  (e: 'deselect:zoom'): void;
+  (e: 'update:layer-transform', transform: NormalizedTransform): void;
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -125,7 +134,22 @@ const videoWindowBounds = ref<{
   dy: number;
   dw: number;
   dh: number;
+  scale: number;
 } | null>(null);
+const isFormatTransitioning = ref(false);
+let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
+const webcamHandleStyle = computed(() => {
+  const bounds = videoWindowBounds.value; const layer = props.selectedTransformLayer;
+  if (!bounds || !layer?.transform) return { display: 'none' };
+  const transform = webcamDraft.value ?? layer.transform;
+  if (layer.reactToZoom) {
+    const layout = computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance), transform);
+    return { left: `${bounds.dx + layout.x}px`, top: `${bounds.dy + layout.y}px`, width: `${layout.width}px`, height: `${layout.height}px` };
+  }
+  return { left: `${bounds.dx + transform.x * bounds.dw}px`, top: `${bounds.dy + transform.y * bounds.dh}px`, width: `${transform.width * bounds.dw}px`, height: `${transform.height * bounds.dh}px` };
+});
+const webcamDraft = ref<NormalizedTransform | null>(null);
+let webcamDrag: { kind: 'move' | 'resize'; corner?: ResizeCorner; startX: number; startY: number; lastX: number; lastY: number; transform: NormalizedTransform } | null = null;
 const focusTargetStyle = computed(() => {
   const bounds = videoWindowBounds.value;
   if (
@@ -320,6 +344,14 @@ const loadVideo = () => {
   videoEl.load();
 };
 watch(effectiveVideoSrc, loadVideo, { immediate: true });
+watch(() => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.outputCanvas.showBackground}`, () => {
+  isFormatTransitioning.value = true;
+  if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
+  formatTransitionTimer = setTimeout(() => { isFormatTransitioning.value = false; }, 260);
+});
+watch(() => props.selectedTransformLayer?.transform, () => {
+  if (!webcamDrag) webcamDraft.value = null;
+}, { deep: true });
 
 watch(
   () => props.isPlaying,
@@ -449,16 +481,14 @@ const drawVideoWindow = (
   const videoWidth = videoEl.videoWidth || 1920;
   const videoHeight = videoEl.videoHeight || 1080;
   const { x: dx, y: dy, width: dw, height: dh } = preview;
-  const source = props.outputCanvas.fit === 'cover' ? coverSourceRect(videoWidth, videoHeight, dw, dh) : { x: 0, y: 0, width: videoWidth, height: videoHeight };
-  const media = props.outputCanvas.fit === 'contain' ? framedMediaRect(videoWidth, videoHeight, dw, dh) : { x: 0, y: 0, width: dw, height: dh };
+  const source = props.outputCanvas.showBackground ? { x: 0, y: 0, width: videoWidth, height: videoHeight } : coverSourceRect(videoWidth, videoHeight, dw, dh);
+  const media = props.outputCanvas.showBackground ? framedMediaRect(videoWidth, videoHeight, dw, dh) : { x: 0, y: 0, width: dw, height: dh };
 
   ctx.save();
   // The recorded screen is the global canvas content, not an overlay clip.
   // It must not acquire a second frame/shadow while zooming.
-  ctx.fillStyle = "#1e1e1e";
   ctx.beginPath();
   ctx.rect(dx, dy, dw, dh);
-  ctx.fill();
   ctx.clip();
 
   const zoom = zoomAtTime(
@@ -486,10 +516,11 @@ const drawVideoWindow = (
           props.currentTime * 1000,
         )
       : (zoom?.focus ?? { cx: 0.5, cy: 0.5 });
-  const trackedFocus = zoom?.mode === "auto" ? outputPoint(sourceFocus.cx, sourceFocus.cy, videoWidth, videoHeight, dw, dh, props.outputCanvas.fit) : sourceFocus;
-  const focusX = dx + trackedFocus.cx * dw;
-  const focusY = dy + trackedFocus.cy * dh;
   const scale = zoom?.scale ?? 1;
+  const trackedFocus = zoom?.mode === "auto" ? outputPoint(sourceFocus.cx, sourceFocus.cy, videoWidth, videoHeight, dw, dh, props.outputCanvas.showBackground) : sourceFocus;
+  const cameraFocus = clampFocusToScale(trackedFocus, scale);
+  const focusX = dx + cameraFocus.cx * dw;
+  const focusY = dy + cameraFocus.cy * dh;
   const drawAtCamera = (
     camera: { focusX: number; focusY: number; scale: number },
     alpha: number,
@@ -500,7 +531,7 @@ const drawVideoWindow = (
     ctx.scale(camera.scale, camera.scale);
     ctx.translate(-camera.focusX, -camera.focusY);
     if (videoEl.readyState >= 1) {
-      if (props.outputCanvas.fit === 'contain') {
+      if (props.outputCanvas.showBackground) {
         ctx.save();
         ctx.shadowColor = 'rgba(0, 0, 0, .35)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
         ctx.beginPath(); ctx.roundRect(dx + media.x, dy + media.y, media.width, media.height, 16); ctx.fillStyle = 'rgba(0, 0, 0, .01)'; ctx.fill();
@@ -584,7 +615,7 @@ const drawVideoWindow = (
   }
   ctx.restore();
   previousCamera = camera;
-  videoWindowBounds.value = { dx, dy, dw, dh };
+  videoWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale };
   // Cursor, ripples and video must share the rendered spring state. Returning
   // the target camera here made overlays jump ahead of the eased video frame.
   return {
@@ -654,10 +685,29 @@ const updateSelectedFocus = (event: PointerEvent) => {
 };
 
 const beginSelectionMove = (event: PointerEvent) => {
+  if (selectWebcamAt(event)) return;
+  if (props.selectedTransformLayer) emit('deselect:transform-layer');
+  if (props.selectedZoom && props.activeTab !== 'zoom') emit('deselect:zoom');
   if (props.selectedZoom?.mode !== "manual") return;
   isMovingSelection.value = true;
   canvasRef.value?.setPointerCapture(event.pointerId);
   updateSelectedFocus(event);
+};
+
+const selectWebcamAt = (event: PointerEvent) => {
+  const canvas = canvasRef.value; const bounds = videoWindowBounds.value;
+  if (!canvas || !bounds) return false;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left - bounds.dx; const y = event.clientY - rect.top - bounds.dy;
+  const layers = activeLayersAt(props.composition, props.currentTime * 1000).filter((layer): layer is MediaCompositionLayer => layer.kind !== 'audio' && layer.kind !== 'caption' && Boolean(layer.transform));
+  for (const layer of [...layers].reverse()) {
+    const layout = layer.reactToZoom
+      ? computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance), layer.transform)
+      : { x: layer.transform!.x * bounds.dw, y: layer.transform!.y * bounds.dh, width: layer.transform!.width * bounds.dw, height: layer.transform!.height * bounds.dh };
+    
+    if (x >= layout.x && x <= layout.x + layout.width && y >= layout.y && y <= layout.y + layout.height) { emit('select:transform-layer', layer.id); return true; }
+  }
+  return false;
 };
 
 const moveSelection = (event: PointerEvent) => {
@@ -669,6 +719,44 @@ const endSelectionMove = (event: PointerEvent) => {
   if (canvasRef.value?.hasPointerCapture(event.pointerId)) {
     canvasRef.value.releasePointerCapture(event.pointerId);
   }
+};
+
+const beginWebcamDrag = (event: PointerEvent, kind: 'move' | 'resize', corner?: ResizeCorner) => {
+  const layer = props.selectedTransformLayer;
+  if (!layer?.transform) return;
+  event.stopPropagation();
+  webcamDraft.value = { ...layer.transform };
+  webcamDrag = { kind, corner, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastY: event.clientY, transform: { ...layer.transform } };
+  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+};
+const applyWebcamDrag = (clientX: number, clientY: number, shiftKey: boolean) => {
+  const bounds = videoWindowBounds.value;
+  if (!webcamDrag || !bounds) return;
+  webcamDrag.lastX = clientX; webcamDrag.lastY = clientY;
+  const dx = (clientX - webcamDrag.startX) / bounds.dw;
+  const dy = (clientY - webcamDrag.startY) / bounds.dh;
+  const initial = webcamDrag.transform;
+  if (webcamDrag.kind === 'move') {
+    webcamDraft.value = { ...initial, x: Math.min(1 - initial.width, Math.max(0, initial.x + dx)), y: Math.min(1 - initial.height, Math.max(0, initial.y + dy)) };
+    return;
+  }
+  const left = webcamDrag.corner?.includes('left'); const top = webcamDrag.corner?.includes('top');
+  const rawWidth = initial.width + (left ? -dx : dx);
+  const rawHeight = initial.height + (top ? -dy : dy);
+  const ratio = initial.height / initial.width;
+  const width = Math.min(.9, Math.max(.08, rawWidth));
+  const height = Math.min(.9, Math.max(.08, shiftKey ? rawHeight : width * ratio));
+  webcamDraft.value = { x: Math.min(1 - width, Math.max(0, left ? initial.x + initial.width - width : initial.x)), y: Math.min(1 - height, Math.max(0, top ? initial.y + initial.height - height : initial.y)), width, height };
+};
+const moveWebcamDrag = (event: PointerEvent) => applyWebcamDrag(event.clientX, event.clientY, event.shiftKey);
+const updateWebcamAspectMode = (event: KeyboardEvent) => {
+  if (event.key === 'Shift' && webcamDrag) applyWebcamDrag(webcamDrag.lastX, webcamDrag.lastY, event.type === 'keydown');
+};
+const endWebcamDrag = (event: PointerEvent) => {
+  if (!webcamDrag) return;
+  if (webcamDraft.value) emit('update:layer-transform', webcamDraft.value);
+  webcamDrag = null;
+  if ((event.currentTarget as HTMLElement).hasPointerCapture(event.pointerId)) (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
 };
 
 const drawCursorWarning = (
@@ -740,7 +828,9 @@ const drawComposition = (
         ? compositionImages.get(layer.assetId)
         : compositionVideos.get(layer.assetId);
     if (!asset) continue;
-    const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+    const transform = layer.id === props.selectedTransformLayer?.id && webcamDraft.value
+      ? webcamDraft.value
+      : layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
     if (
       asset instanceof HTMLVideoElement &&
       asset.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
@@ -796,6 +886,9 @@ const drawWebcamLayers = (
       videoWindow.dh,
       videoWindow.scale,
       webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance),
+      layer.id === props.selectedTransformLayer?.id && webcamDraft.value
+        ? webcamDraft.value
+        : layer.transform,
     );
     ctx.restore();
   }
@@ -834,7 +927,7 @@ const renderCanvas = () => {
           button.sessionNs / 1_000_000_000,
         );
         if (!state) continue;
-        const point = outputPoint(state.x, state.y, videoEl.videoWidth || 1920, videoEl.videoHeight || 1080, videoWindow.dw, videoWindow.dh, props.outputCanvas.fit);
+        const point = outputPoint(state.x, state.y, videoEl.videoWidth || 1920, videoEl.videoHeight || 1080, videoWindow.dw, videoWindow.dh, props.outputCanvas.showBackground);
         ripples.value.push({
           x: videoWindow.dx + point.cx * videoWindow.dw,
           y: videoWindow.dy + point.cy * videoWindow.dh,
@@ -867,7 +960,7 @@ const renderCanvas = () => {
       activeImage.complete &&
       activeImage.naturalWidth > 0
     ) {
-      const point = outputPoint(state.x, state.y, videoEl.videoWidth || 1920, videoEl.videoHeight || 1080, videoWindow.dw, videoWindow.dh, props.outputCanvas.fit);
+      const point = outputPoint(state.x, state.y, videoEl.videoWidth || 1920, videoEl.videoHeight || 1080, videoWindow.dw, videoWindow.dh, props.outputCanvas.showBackground);
       const pointerX = videoWindow.dx + point.cx * videoWindow.dw;
       const pointerY = videoWindow.dy + point.cy * videoWindow.dh;
 
@@ -935,6 +1028,8 @@ onMounted(() => {
   resizeCanvas();
   resizeObserver = new ResizeObserver(resizeCanvas);
   if (containerRef.value) resizeObserver.observe(containerRef.value);
+  window.addEventListener('keydown', updateWebcamAspectMode);
+  window.addEventListener('keyup', updateWebcamAspectMode);
   draw();
 });
 
@@ -950,6 +1045,9 @@ onUnmounted(() => {
   backgroundVideo.removeAttribute("src");
   backgroundVideo.load();
   disposeCompositionMedia();
+  window.removeEventListener('keydown', updateWebcamAspectMode);
+  window.removeEventListener('keyup', updateWebcamAspectMode);
+  if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
 </script>
 
@@ -958,12 +1056,15 @@ onUnmounted(() => {
     <canvas
       ref="canvasRef"
       class="editor-canvas"
-      :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual' }"
+      :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual', 'is-format-transitioning': isFormatTransitioning }"
       @pointerdown="beginSelectionMove"
       @pointermove="moveSelection"
       @pointerup="endSelectionMove"
       @pointercancel="endSelectionMove"
     ></canvas>
+    <div v-if="selectedTransformLayer" class="webcam-selection" :style="webcamHandleStyle" @pointerdown="beginWebcamDrag($event, 'move')" @pointermove="moveWebcamDrag" @pointerup="endWebcamDrag" @pointercancel="endWebcamDrag">
+      <ResizeHandle @resize-start="(corner, event) => beginWebcamDrag(event, 'resize', corner)" @resize-move="(_corner, event) => moveWebcamDrag(event)" @resize-end="(_corner, event) => endWebcamDrag(event)" />
+    </div>
     <div
       class="zoom-selection-box"
       :class="{ locked: selectedZoom?.mode !== 'manual' }"
@@ -997,6 +1098,9 @@ onUnmounted(() => {
 .editor-canvas.is-selection-editable {
   cursor: move;
 }
+.editor-canvas.is-format-transitioning { animation: output-reframe 180ms ease-out; }
+@keyframes output-reframe { from { opacity: .88; transform: scale(.995); } to { opacity: 1; transform: scale(1); } }
+.webcam-selection { position: absolute; border: 2px solid var(--color-primary); box-sizing: border-box; cursor: move; z-index: 2; }
 
 .zoom-selection-box {
   position: absolute;

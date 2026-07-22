@@ -1,4 +1,4 @@
-import { ref, toRaw, watch, type Ref } from "vue";
+import { computed, ref, toRaw, watch, type Ref } from "vue";
 import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorState } from "../../../api/types/capture-api";
 import type { ProjectComposition } from "../composition/composition-types";
@@ -6,7 +6,7 @@ import type { ZoomElement } from "../zoom/zoom-types";
 import type { BackgroundMedia } from "./backgroundMedia";
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 
-const plain = <T>(value: T): T => structuredClone(toRaw(value));
+const cloneComposition = (value: ProjectComposition): ProjectComposition => structuredClone(toRaw(value));
 
 export function useProjectEditorState(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -21,40 +21,54 @@ export function useProjectEditorState(options: {
   canvas: Ref<OutputCanvasSettings>;
 }) {
   const loading = ref(false);
+  const scheduledSave = ref(false);
+  const pendingSaves = ref(0);
+  const isSaving = computed(() => scheduledSave.value || pendingSaves.value > 0);
   let timer: ReturnType<typeof setTimeout> | null = null;
   let writeChain = Promise.resolve();
 
   const snapshot = (): ProjectEditorState => {
     const selected = [...options.importedBackgrounds.value].find((item) => item.path === options.selectedBackground.value);
-    return plain({
+    const canvas = options.canvas.value;
+    return {
       schemaVersion: 1,
-      composition: options.composition.value,
-      zoom: { elements: options.zoomElements.value, generatedSessions: options.generatedSessions.value },
+      composition: cloneComposition(options.composition.value),
+      zoom: {
+        elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
+        generatedSessions: options.generatedSessions.value.map((session) => ({ ...toRaw(session) })),
+      },
       presentation: {
-        canvas: options.canvas.value,
+        canvas: { preset: canvas.preset, width: canvas.width, height: canvas.height, showBackground: canvas.showBackground },
         selectedBackgroundId: selected?.id ?? options.selectedBackground.value,
-        importedBackgrounds: options.importedBackgrounds.value,
+        importedBackgrounds: options.importedBackgrounds.value.map((background) => ({ id: background.id, name: background.name, path: background.path, extension: background.extension, kind: background.kind, ...(background.fileName ? { fileName: background.fileName } : {}) })),
         videoEnabled: options.videoEnabled.value,
         systemAudioEnabled: options.systemAudioEnabled.value,
         micAudioEnabled: options.micAudioEnabled.value,
       },
-    });
+    };
   };
 
   const saveNow = () => {
     if (timer) { clearTimeout(timer); timer = null; }
+    scheduledSave.value = false;
     if (loading.value || !options.project.value) return Promise.resolve();
     const projectId = options.project.value.id;
-    const state = snapshot();
+    let state: ProjectEditorState;
+    try { state = snapshot(); } catch (error) {
+      return Promise.reject(new Error(`Impossible de sérialiser l'état éditeur: ${error instanceof Error ? error.message : String(error)}`));
+    }
+    pendingSaves.value += 1;
     writeChain = writeChain
       .catch(() => undefined)
       .then(() => capture.saveProjectEditorState(projectId, state))
-      .then(() => undefined);
+      .then(() => undefined)
+      .finally(() => { pendingSaves.value = Math.max(0, pendingSaves.value - 1); });
     return writeChain;
   };
   const scheduleSave = () => {
     if (loading.value || !options.project.value) return;
     if (timer) clearTimeout(timer);
+    scheduledSave.value = true;
     timer = setTimeout(() => { void saveNow().catch((error) => console.error("Failed to save editor state:", error)); }, 250);
   };
   const load = async (projectId: string) => {
@@ -89,5 +103,5 @@ export function useProjectEditorState(options: {
     scheduleSave,
     { deep: true },
   );
-  return { load, saveNow, scheduleSave };
+  return { load, saveNow, scheduleSave, isSaving };
 }

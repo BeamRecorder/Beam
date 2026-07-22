@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import ProjectPicker from '../hud/ProjectPicker.vue'
-import { ChevronDown } from '@lucide/vue'
+import { ChevronDown, LoaderCircle } from '@lucide/vue'
 import type { CaptureProject } from '../../api/types/capture-api'
 
 const props = withDefaults(
   defineProps<{
     project?: CaptureProject | null
+    isSaving?: boolean
   }>(),
   {
     project: null,
+    isSaving: false,
   },
 )
 
@@ -65,6 +67,7 @@ onUnmounted(() => {
       @click="toggleProjectMenu"
     >
       <span class="project-title">{{ project?.name || 'Untitled project' }}</span>
+      <LoaderCircle v-if="isSaving" class="save-spinner" aria-label="Saving project" />
       <ChevronDown class="chevron-icon" />
     </button>
 
@@ -122,6 +125,8 @@ onUnmounted(() => {
   color: var(--text-muted);
   flex-shrink: 0;
 }
+.save-spinner { width: 14px; height: 14px; color: var(--text-muted); animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .project-menu-panel {
   position: absolute;
