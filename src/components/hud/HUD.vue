@@ -49,7 +49,12 @@ import {
   Check,
 } from "@lucide/vue";
 
-let savedDevices: { cameraId?: string; micId?: string; systemAudioMode?: "on" | "off" } | null = null;
+interface SavedDevices {
+  cameraId?: string;
+  micId?: string;
+  systemAudioMode?: "on" | "off";
+}
+let savedDevices: SavedDevices | null = null;
 
 
 const emit = defineEmits(["start-recording", "stop-recording", "open-project"]);
@@ -93,7 +98,7 @@ const cameraOptions = computed(() => [
     .map((source) => ({ value: source.id, label: source.label })),
   { value: "off", label: "Camera Off" },
 ]);
-const selectedCameraId = ref(savedDevices?.cameraId ?? "off");
+const selectedCameraId = ref("off");
 
 const micOptions = computed(() => [
   ...sources.value
@@ -101,11 +106,9 @@ const micOptions = computed(() => [
     .map((source) => ({ value: source.id, label: source.label })),
   { value: "no-audio", label: "No Audio" },
 ]);
-const selectedMicId = ref(savedDevices?.micId ?? "no-audio");
+const selectedMicId = ref("no-audio");
 const selectedScreenId = ref<string | null>(null);
-const systemAudioMode = ref<"on" | "off">(
-  savedDevices?.systemAudioMode ?? "off",
-);
+const systemAudioMode = ref<"on" | "off">("off");
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
   void capture.updatePreferences({ devices: { cameraId: selectedCameraId.value, micId: selectedMicId.value, systemAudioMode: systemAudioMode.value } });
@@ -642,7 +645,7 @@ const discoverSources = async () => {
     if (
       savedDevices?.cameraId &&
       (savedDevices.cameraId === "off" ||
-        sources.value.some((s) => s.id === savedDevices.cameraId))
+        sources.value.some((s) => s.id === savedDevices?.cameraId))
     ) {
       selectedCameraId.value = savedDevices.cameraId;
     } else {
@@ -652,7 +655,7 @@ const discoverSources = async () => {
     if (
       savedDevices?.micId &&
       (savedDevices.micId === "no-audio" ||
-        sources.value.some((s) => s.id === savedDevices.micId))
+        sources.value.some((s) => s.id === savedDevices?.micId))
     ) {
       selectedMicId.value = savedDevices.micId;
     } else {
@@ -682,13 +685,22 @@ const discoverSources = async () => {
   }
 };
 
+let unsubscribeShortcut: (() => void) | null = null;
+
 onMounted(async () => {
   const preferences = await capture.getPreferences();
-  savedDevices = preferences.devices as typeof savedDevices;
+  savedDevices = (preferences.devices as unknown) as SavedDevices;
   recordingBarVisibility.value = preferences.recordingBar.visibility;
   updateWindowSize();
   await discoverSources();
   await loadPreviews();
+
+  unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
+    if (actionId === "hud.startStopRecording") {
+      void toggleRecording();
+    }
+  });
+
   // Periodically refresh window previews when settings is not open and not recording
   previewsRefreshInterval = setInterval(() => {
     if (
@@ -702,6 +714,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  unsubscribeShortcut?.();
   stopTimer();
   void activeCamera?.stop();
   void activeMicrophone?.stop();

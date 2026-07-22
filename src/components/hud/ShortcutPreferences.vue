@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { usePreferencesStore } from '~/stores/preferences'
 import ShortcutInput from '~/ui/input/ShortcutInput.vue'
-import KeyboardChip from '~/ui/KeyboardChip.vue'
 
 const preferencesStore = usePreferencesStore()
 const shortcutErrors = ref<Record<string, string>>({})
