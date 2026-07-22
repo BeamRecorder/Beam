@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Crop } from '@lucide/vue'
 import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue'
+import Button from '../../ui/button/Button.vue'
 import type { OutputCanvasPreset } from './output-canvas'
 
 const props = defineProps<{ preset: OutputCanvasPreset; canCrop: boolean; isCropping: boolean }>()
@@ -13,10 +14,10 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 <template>
   <div class="canvas-toolbar">
     <PopoverMenuButton transparent :label="preset" :aria-label="`Format ${preset}`" :items="items" @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)" />
-    <button class="crop-button" :class="{ active: isCropping }" :disabled="!canCrop" type="button" title="Recadrer l’élément sélectionné" @click="emit('toggle:crop')"><Crop /><span>Recadrer</span></button>
+    <Button class="crop-button" variant="outline" size="xs" :icon="Crop" :disabled="!canCrop" :tooltip="canCrop ? 'Crop selected clip' : 'Select a clip to crop it'" @click="emit('toggle:crop')">Recadrer</Button>
   </div>
 </template>
 
 <style scoped>
-.canvas-toolbar { position:relative; z-index:3; height:44px; flex:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:6px 12px; background:transparent; }.crop-button { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px; border:1px solid var(--color-border); border-radius:var(--radius-md); background:transparent; box-shadow:var(--shadow-sm); color:var(--text-primary); font:600 12px var(--font-sans); cursor:pointer; }.crop-button svg { width:14px; height:14px; }.crop-button:hover:not(:disabled),.crop-button.active { background:var(--color-primary-light); border-color:var(--color-primary); color:var(--color-primary); }.crop-button:disabled { opacity:.5; cursor:not-allowed; }
+.canvas-toolbar { position:relative; z-index:3; height:44px; flex:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:6px 12px; background:transparent; }.crop-button { height:28px; padding:0 10px; background:transparent; box-shadow:var(--shadow-sm); }.crop-button:hover:not(:disabled) { background:var(--color-primary-light); border-color:var(--color-primary); color:var(--color-primary); }
 </style>

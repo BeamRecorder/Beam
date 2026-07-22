@@ -1,113 +1,145 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import Switch from '~/ui/switch/Switch.vue'
-import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
-import { Unlink, Trash2, Gauge, Square, Sun, MoveDown, MoveDownRight, MoveUpLeft, CircleDot } from '@lucide/vue'
-import type { NormalizedTransform } from '../composition/composition-types'
+import { computed, ref, watch } from "vue";
+import BigSlider from "~/ui/slider/BigSlider.vue";
+import Button from "~/ui/button/Button.vue";
+import ButtonGroup from "~/ui/button/ButtonGroup.vue";
+import Switch from "~/ui/switch/Switch.vue";
+import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
+import {
+  Unlink,
+  Trash2,
+  Gauge,
+  Square,
+  Sun,
+  MoveDown,
+  MoveDownRight,
+  MoveUpLeft,
+  CircleDot,
+} from "@lucide/vue";
+import type { NormalizedTransform } from "../../composition/composition-types";
 
 const props = defineProps<{
   selectedClip: {
-    id: string
-    kind: string
-    name?: string
-    timelineStartMs: number
-    timelineDurationMs: number
-    playbackRate?: number
-    enabled?: boolean
-    isLinked?: boolean
-    shadowSize?: string
-    shadowColor?: string
-    shadowDirection?: string
-    cornerRadius?: string
-    clipTransform?: NormalizedTransform
-  } | null
-}>()
+    id: string;
+    kind: string;
+    name?: string;
+    timelineStartMs: number;
+    timelineDurationMs: number;
+    playbackRate?: number;
+    enabled?: boolean;
+    isLinked?: boolean;
+    shadowSize?: string;
+    shadowColor?: string;
+    shadowDirection?: string;
+    cornerRadius?: string;
+    clipTransform?: NormalizedTransform;
+  } | null;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:playbackRate', rate: number): void
-  (e: 'update:enabled', enabled: boolean): void
-  (e: 'update:cornerRadius', radius: string): void
-  (e: 'update:shadow', shadow: { size: string; color?: string; direction?: string }): void
-  (e: 'update:clipTransform', transform: NormalizedTransform): void
-  (e: 'unlink'): void
-  (e: 'delete'): void
-}>()
+  (e: "update:playbackRate", rate: number): void;
+  (e: "update:enabled", enabled: boolean): void;
+  (e: "update:cornerRadius", radius: string): void;
+  (
+    e: "update:shadow",
+    shadow: { size: string; color?: string; direction?: string },
+  ): void;
+  (e: "update:clipTransform", transform: NormalizedTransform): void;
+  (e: "unlink"): void;
+  (e: "delete"): void;
+}>();
 
-const speedPresets = [0.5, 1.0, 1.5, 2.0, 3.0]
+const speedPresets = [0.5, 1.0, 1.5, 2.0, 3.0];
 
 const radiusPresets = [
-  { id: 'none', label: 'None' },
-  { id: 'sm', label: '8px' },
-  { id: 'md', label: '16px' },
-  { id: 'lg', label: '24px' },
-  { id: 'full', label: 'Full' },
-]
+  { id: "none", label: "None" },
+  { id: "sm", label: "8px" },
+  { id: "md", label: "16px" },
+  { id: "lg", label: "24px" },
+  { id: "full", label: "Full" },
+];
 
 const shadowPresets = [
-  { id: 'none', label: 'None' },
-  { id: 'sm', label: 'Soft' },
-  { id: 'md', label: 'Medium' },
-  { id: 'lg', label: 'Strong' },
-  { id: 'glow', label: 'Glow' },
-]
+  { id: "none", label: "None" },
+  { id: "sm", label: "Soft" },
+  { id: "md", label: "Medium" },
+  { id: "lg", label: "Strong" },
+  { id: "glow", label: "Glow" },
+];
 
 const shadowDirections = [
-  { id: 'all', label: 'Around', icon: CircleDot },
-  { id: 'bottom', label: 'Bottom', icon: MoveDown },
-  { id: 'bottom-right', label: 'Bottom-Right', icon: MoveDownRight },
-  { id: 'top-left', label: 'Top-Left', icon: MoveUpLeft },
-]
+  { id: "all", label: "Around", icon: CircleDot },
+  { id: "bottom", label: "Bottom", icon: MoveDown },
+  { id: "bottom-right", label: "Bottom-Right", icon: MoveDownRight },
+  { id: "top-left", label: "Top-Left", icon: MoveUpLeft },
+];
 
-const selectedRadius = ref(props.selectedClip?.cornerRadius ?? 'md')
-const selectedShadowSize = ref(props.selectedClip?.shadowSize ?? 'md')
-const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? '#000000')
-const selectedShadowDirection = ref(props.selectedClip?.shadowDirection ?? 'all')
+const selectedRadius = ref(props.selectedClip?.cornerRadius ?? "md");
+const selectedShadowSize = ref(props.selectedClip?.shadowSize ?? "md");
+const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? "#000000");
+const selectedShadowDirection = ref(
+  props.selectedClip?.shadowDirection ?? "all",
+);
 
 watch(
   () => props.selectedClip,
   (clip) => {
-    selectedRadius.value = clip?.cornerRadius ?? 'sm'
-    selectedShadowSize.value = clip?.shadowSize ?? 'md'
-    selectedShadowColor.value = clip?.shadowColor ?? '#000000'
-    selectedShadowDirection.value = clip?.shadowDirection ?? 'bottom'
+    selectedRadius.value = clip?.cornerRadius ?? "sm";
+    selectedShadowSize.value = clip?.shadowSize ?? "md";
+    selectedShadowColor.value = clip?.shadowColor ?? "#000000";
+    selectedShadowDirection.value = clip?.shadowDirection ?? "bottom";
   },
   { immediate: true },
-)
+);
 
 const handleRadiusChange = (radiusId: string) => {
-  selectedRadius.value = radiusId
-  emit('update:cornerRadius', radiusId)
-}
+  selectedRadius.value = radiusId;
+  emit("update:cornerRadius", radiusId);
+};
 
 const handleShadowPresetChange = (sizeId: string) => {
-  selectedShadowSize.value = sizeId
-  emit('update:shadow', { size: sizeId, color: selectedShadowColor.value, direction: selectedShadowDirection.value })
-}
+  selectedShadowSize.value = sizeId;
+  emit("update:shadow", {
+    size: sizeId,
+    color: selectedShadowColor.value,
+    direction: selectedShadowDirection.value,
+  });
+};
 
 const handleShadowDirectionChange = (directionId: string) => {
-  selectedShadowDirection.value = directionId
-  emit('update:shadow', { size: selectedShadowSize.value, color: selectedShadowColor.value, direction: directionId })
-}
+  selectedShadowDirection.value = directionId;
+  emit("update:shadow", {
+    size: selectedShadowSize.value,
+    color: selectedShadowColor.value,
+    direction: directionId,
+  });
+};
 
 const handleShadowColorChange = (color: string) => {
-  selectedShadowColor.value = color
-  emit('update:shadow', { size: selectedShadowSize.value, color, direction: selectedShadowDirection.value })
-}
+  selectedShadowColor.value = color;
+  emit("update:shadow", {
+    size: selectedShadowSize.value,
+    color,
+    direction: selectedShadowDirection.value,
+  });
+};
 
 const currentPlaybackRate = computed(() => {
-  return Math.round((props.selectedClip?.playbackRate ?? 1.0) * 100) / 100
-})
-const clipTransform = computed(() => props.selectedClip?.clipTransform)
+  return Math.round((props.selectedClip?.playbackRate ?? 1.0) * 100) / 100;
+});
+const clipTransform = computed(() => props.selectedClip?.clipTransform);
 const updatePlacement = (patch: Partial<NormalizedTransform>) => {
-  const current = clipTransform.value
-  if (!current) return
-  const width = Math.min(.9, Math.max(.08, patch.width ?? current.width))
-  const height = Math.min(.9, Math.max(.08, patch.height ?? current.height))
-  emit('update:clipTransform', { x: Math.min(1 - width, Math.max(0, patch.x ?? current.x)), y: Math.min(1 - height, Math.max(0, patch.y ?? current.y)), width, height })
-}
+  const current = clipTransform.value;
+  if (!current) return;
+  const width = Math.min(0.9, Math.max(0.08, patch.width ?? current.width));
+  const height = Math.min(0.9, Math.max(0.08, patch.height ?? current.height));
+  emit("update:clipTransform", {
+    x: Math.min(1 - width, Math.max(0, patch.x ?? current.x)),
+    y: Math.min(1 - height, Math.max(0, patch.y ?? current.y)),
+    width,
+    height,
+  });
+};
 </script>
 
 <template>
@@ -115,20 +147,58 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
     <div v-if="!selectedClip" class="empty-state">
       <div class="empty-icon">🎬</div>
       <p class="empty-title">No clip selected</p>
-      <p class="empty-desc">Click a clip on the timeline to inspect and edit its properties.</p>
+      <p class="empty-desc">
+        Click a clip on the timeline to inspect and edit its properties.
+      </p>
     </div>
 
     <div v-else class="options-group">
       <div class="clip-header">
-        <span class="clip-type-badge">{{ selectedClip.kind.toUpperCase() }}</span>
+        <span class="clip-type-badge">{{
+          selectedClip.kind.toUpperCase()
+        }}</span>
         <h4 class="clip-name">{{ selectedClip.name || selectedClip.id }}</h4>
       </div>
 
       <div v-if="clipTransform" class="property-card">
-        <div class="card-header"><Square :size="14" class="card-icon" /><span class="card-title">Clip placement</span></div>
-        <BigSlider :model-value="clipTransform.x * 100" :min="0" :max="100" :step="1" label="Horizontal" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updatePlacement({ x: $event / 100 })" />
-        <BigSlider :model-value="clipTransform.y * 100" :min="0" :max="100" :step="1" label="Vertical" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updatePlacement({ y: $event / 100 })" />
-        <BigSlider :model-value="clipTransform.width * 100" :min="8" :max="90" :step="1" label="Size" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="updatePlacement({ width: $event / 100, height: clipTransform.height * ($event / 100) / clipTransform.width })" />
+        <div class="card-header">
+          <Square :size="14" class="card-icon" /><span class="card-title"
+            >Clip placement</span
+          >
+        </div>
+        <BigSlider
+          :model-value="clipTransform.x * 100"
+          :min="0"
+          :max="100"
+          :step="1"
+          label="Horizontal"
+          :format-value="(value) => `${Math.round(value)}%`"
+          @update:modelValue="updatePlacement({ x: $event / 100 })"
+        />
+        <BigSlider
+          :model-value="clipTransform.y * 100"
+          :min="0"
+          :max="100"
+          :step="1"
+          label="Vertical"
+          :format-value="(value) => `${Math.round(value)}%`"
+          @update:modelValue="updatePlacement({ y: $event / 100 })"
+        />
+        <BigSlider
+          :model-value="clipTransform.width * 100"
+          :min="8"
+          :max="90"
+          :step="1"
+          label="Size"
+          :format-value="(value) => `${Math.round(value)}%`"
+          @update:modelValue="
+            updatePlacement({
+              width: $event / 100,
+              height:
+                (clipTransform.height * ($event / 100)) / clipTransform.width,
+            })
+          "
+        />
       </div>
 
       <!-- Speed Boost / Rate Controls -->
@@ -137,10 +207,10 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           <Gauge :size="14" class="card-icon" />
           <span class="card-title">Speed Boost</span>
         </div>
-        <BigSlider 
-          :model-value="currentPlaybackRate" 
+        <BigSlider
+          :model-value="currentPlaybackRate"
           :default-value="1.0"
-          :min="0.25" 
+          :min="0.25"
           :max="4.0"
           :step="0.05"
           label="Playback Speed"
@@ -162,7 +232,13 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Corner Radius Presets for Video / Image / Webcam -->
-      <div v-if="selectedClip.id !== 'base-video' && ['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
+      <div
+        v-if="
+          selectedClip.id !== 'base-video' &&
+          ['video', 'image', 'webcam'].includes(selectedClip.kind)
+        "
+        class="property-card"
+      >
         <div class="card-header">
           <Square :size="14" class="card-icon" />
           <span class="card-title">Corner Radius</span>
@@ -181,7 +257,13 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Shadow Settings & Directions for Video / Image / Webcam -->
-      <div v-if="selectedClip.id !== 'base-video' && ['video', 'image', 'webcam'].includes(selectedClip.kind)" class="property-card">
+      <div
+        v-if="
+          selectedClip.id !== 'base-video' &&
+          ['video', 'image', 'webcam'].includes(selectedClip.kind)
+        "
+        class="property-card"
+      >
         <div class="card-header">
           <Sun :size="14" class="card-icon" />
           <span class="card-title">Drop Shadow</span>
@@ -208,7 +290,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
             <Button
               v-for="dir in shadowDirections"
               :key="dir.id"
-              :variant="selectedShadowDirection === dir.id ? 'primary' : 'ghost'"
+              :variant="
+                selectedShadowDirection === dir.id ? 'primary' : 'ghost'
+              "
               size="xs"
               :icon="dir.icon"
               icon-only
@@ -220,9 +304,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
         <div v-if="selectedShadowSize !== 'none'" class="prop-row margin-top">
           <span class="prop-label">Shadow Color</span>
-          <ColorPicker 
-            :model-value="selectedShadowColor" 
-            @update:modelValue="handleShadowColorChange" 
+          <ColorPicker
+            :model-value="selectedShadowColor"
+            @update:modelValue="handleShadowColorChange"
           />
         </div>
       </div>
@@ -231,8 +315,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       <div class="property-card">
         <div class="prop-row">
           <span class="prop-label">Enabled</span>
-          <Switch 
-            :model-value="selectedClip.enabled ?? true" 
+          <Switch
+            :model-value="selectedClip.enabled ?? true"
             @update:modelValue="emit('update:enabled', $event)"
           />
         </div>
@@ -242,11 +326,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
             <Unlink :size="14" />
             <span>Sidecar Link</span>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            @click="emit('unlink')"
-          >
+          <Button variant="outline" size="sm" @click="emit('unlink')">
             Unlink
           </Button>
         </div>
@@ -254,9 +334,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
       <!-- Danger Delete Button -->
       <div class="danger-zone">
-        <Button 
-          variant="danger" 
-          size="sm" 
+        <Button
+          variant="danger"
+          size="sm"
           :icon="Trash2"
           block
           @click="emit('delete')"
@@ -419,7 +499,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   justify-content: space-between;
 }
 
-.prop-label, .link-label {
+.prop-label,
+.link-label {
   display: flex;
   align-items: center;
   gap: 6px;

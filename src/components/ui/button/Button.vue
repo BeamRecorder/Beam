@@ -26,6 +26,7 @@ const props = withDefaults(
     block?: boolean;
     tooltip?: string;
     tooltipPosition?: "top" | "bottom" | "left" | "right";
+    tooltipVariant?: "default" | "error";
     type?: "button" | "submit" | "reset";
     icon?: Component;
     iconOnly?: boolean;
@@ -38,6 +39,7 @@ const props = withDefaults(
     block: false,
     tooltip: "",
     tooltipPosition: "top",
+    tooltipVariant: "default",
     type: "button",
     iconOnly: false,
   },
@@ -71,7 +73,7 @@ const handleClick = (event: MouseEvent) => {
 <template>
   <component
     :is="tooltip ? Tooltip : 'div'"
-    v-bind="tooltip ? { content: tooltip, position: tooltipPosition } : {}"
+    v-bind="tooltip ? { content: tooltip, position: tooltipPosition, variant: disabled ? 'error' : tooltipVariant } : {}"
     :class="['btn-container', { 'btn-block': block }]"
   >
     <button

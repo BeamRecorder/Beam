@@ -4,8 +4,10 @@ import { nextTick, onBeforeUnmount, ref } from 'vue'
 const props = withDefaults(defineProps<{
   content?: string
   position?: 'top' | 'bottom' | 'left' | 'right'
+  variant?: 'default' | 'error'
 }>(), {
   position: 'top',
+  variant: 'default',
 })
 
 const visible = ref(false)
@@ -60,7 +62,7 @@ onBeforeUnmount(() => {
       <div 
         v-if="visible && (content || $slots.content)" 
         class="tooltip-content" 
-        :class="position || 'top'"
+        :class="[position || 'top', `tooltip-${variant}`]"
         :style="tooltipStyle"
         role="tooltip"
       >
@@ -91,6 +93,12 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-md);
   pointer-events: none;
 }
+
+.tooltip-content.tooltip-error { background-color: var(--color-error); border-color: var(--color-error); color: #ffffff; }
+.tooltip-content.tooltip-error.top .tooltip-arrow { border-color: var(--color-error) transparent transparent transparent; }
+.tooltip-content.tooltip-error.bottom .tooltip-arrow { border-color: transparent transparent var(--color-error) transparent; }
+.tooltip-content.tooltip-error.left .tooltip-arrow { border-color: transparent transparent transparent var(--color-error); }
+.tooltip-content.tooltip-error.right .tooltip-arrow { border-color: transparent var(--color-error) transparent transparent; }
 
 /* Arrow placement & styles */
 .tooltip-arrow {
