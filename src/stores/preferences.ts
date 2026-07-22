@@ -11,6 +11,10 @@ export const usePreferencesStore = defineStore('preferences', () => {
     unsubscribe ??= capture.onPreferencesChanged((next) => { settings.value = next })
     return settings.value
   }
-  const update = async (patch: Partial<PreferenceSettings>) => { settings.value = await capture.updatePreferences(patch); return settings.value }
+  const update = async (patch: Partial<PreferenceSettings>) => {
+    const plainPatch = JSON.parse(JSON.stringify(patch))
+    settings.value = await capture.updatePreferences(plainPatch)
+    return settings.value
+  }
   return { settings, load, update }
 })

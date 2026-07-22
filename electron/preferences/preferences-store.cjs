@@ -1,7 +1,21 @@
 const fs = require('fs')
 const path = require('path')
 
-const defaults = () => ({ schemaVersion: 1, theme: 'light', recordingBar: { visibility: 'always' }, devices: {}, shortcuts: { 'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global', category: 'hud' }, 'editor.playPause': { keys: 'Space', scope: 'application', category: 'video-editor' } }, extras: {} })
+const defaults = () => ({
+  schemaVersion: 1,
+  theme: 'light',
+  recordingBar: { visibility: 'always' },
+  devices: {},
+  shortcuts: {
+    'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global', category: 'hud' },
+    'hud.playPause': { keys: 'Alt+Shift+P', scope: 'global', category: 'hud' },
+    'hud.toggleMic': { keys: 'Alt+Shift+M', scope: 'global', category: 'hud' },
+    'hud.toggleCamera': { keys: 'Alt+Shift+C', scope: 'global', category: 'hud' },
+    'hud.toggleSystemAudio': { keys: 'Alt+Shift+A', scope: 'global', category: 'hud' },
+    'editor.playPause': { keys: 'Space', scope: 'application', category: 'video-editor' }
+  },
+  extras: {}
+})
 const themes = new Set(['light', 'dark', 'system'])
 const scopes = new Set(['global', 'application'])
 const shortcut = (value) => value && typeof value.keys === 'string' && value.keys.length > 0 && value.keys.length <= 80 && scopes.has(value.scope) && typeof value.category === 'string' && value.category.length > 0

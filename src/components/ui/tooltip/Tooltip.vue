@@ -2,7 +2,7 @@
 import { nextTick, onBeforeUnmount, ref } from 'vue'
 
 const props = withDefaults(defineProps<{
-  content: string
+  content?: string
   position?: 'top' | 'bottom' | 'left' | 'right'
 }>(), {
   position: 'top',
@@ -58,13 +58,13 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <Transition name="fade">
       <div 
-        v-if="visible && content" 
+        v-if="visible && (content || $slots.content)" 
         class="tooltip-content" 
         :class="position || 'top'"
         :style="tooltipStyle"
         role="tooltip"
       >
-        {{ content }}
+        <slot name="content">{{ content }}</slot>
         <div class="tooltip-arrow" />
       </div>
     </Transition>
