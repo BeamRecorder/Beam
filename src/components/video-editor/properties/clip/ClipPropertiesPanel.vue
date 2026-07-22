@@ -202,7 +202,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Speed Boost / Rate Controls -->
-      <div class="property-card">
+      <div v-if="selectedClip.kind === 'video' || selectedClip.kind === 'webcam'" class="property-card">
         <div class="card-header">
           <Gauge :size="14" class="card-icon" />
           <span class="card-title">Speed Boost</span>
@@ -233,10 +233,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
       <!-- Corner Radius Presets for Video / Image / Webcam -->
       <div
-        v-if="
-          selectedClip.id !== 'base-video' &&
-          ['video', 'image', 'webcam'].includes(selectedClip.kind)
-        "
+        v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)"
         class="property-card"
       >
         <div class="card-header">
@@ -258,10 +255,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
       <!-- Shadow Settings & Directions for Video / Image / Webcam -->
       <div
-        v-if="
-          selectedClip.id !== 'base-video' &&
-          ['video', 'image', 'webcam'].includes(selectedClip.kind)
-        "
+        v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)"
         class="property-card"
       >
         <div class="card-header">

@@ -60,6 +60,7 @@ const {
   videoSrc: playerVideoSrc,
   selectedBackground,
   selectedBackgroundMedia,
+  backgroundBlurPercent,
   backgroundGroups,
   addBackground,
   isVideoEnabled,
@@ -156,11 +157,9 @@ watch(
 const updateOutputCanvas = (canvas: typeof outputCanvas.value) => {
   outputCanvas.value = canvas;
 };
-const updateSelectedBackground = (background: string) => {
+const updateSelectedBackground = (background: import('./composables/backgroundCatalog').BackgroundValue) => {
   selectedBackground.value = background;
-  requestAnimationFrame(() => {
-    void editorState.saveNow().catch((error: unknown) => console.error('Failed to save selected background:', error));
-  });
+  editorState.scheduleSave();
 };
 const isCropping = ref(false);
 const timelineZoomLevel = ref(100);
@@ -210,6 +209,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
           :selected-background="selectedBackground"
+          :blur-percent="backgroundBlurPercent"
           :background-groups="backgroundGroups"
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
@@ -221,6 +221,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
           :canvas="outputCanvas"
           @import:background="addBackground($event)"
           @update:selected-background="updateSelectedBackground($event)"
+          @update:blur-percent="backgroundBlurPercent = $event"
           @update:canvas="updateOutputCanvas($event)"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
@@ -249,6 +250,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
           :ripple-size="rippleSize"
           :is-video-enabled="isVideoEnabled"
           :selected-background="selectedBackgroundMedia"
+          :background-blur-percent="backgroundBlurPercent"
           :video-src="playerVideoSrc || ''"
           :editor-data="editorData"
           :zoom-elements="zoomElements"

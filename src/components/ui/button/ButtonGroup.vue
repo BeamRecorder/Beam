@@ -11,7 +11,8 @@
   border-radius: var(--radius-md);
   padding: 4px;
   border: 1px solid var(--color-border);
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .btn-group :deep(.btn-container) {

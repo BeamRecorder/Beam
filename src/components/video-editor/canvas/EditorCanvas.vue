@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import ResizeHandle, { type ResizeCorner } from '../../ui/ResizeHandle.vue';
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../composables/useCursorReplacer";
-import type { BackgroundMedia } from "../composables/backgroundMedia";
+import type { BackgroundValue } from "../composables/backgroundCatalog";
 import {
   buttonEventsBetween,
   cursorStateAt,
@@ -80,7 +80,8 @@ const props = defineProps<{
   rippleColor: string;
   rippleSize: number;
   isVideoEnabled: boolean;
-  selectedBackground: BackgroundMedia | null;
+  selectedBackground: BackgroundValue | null;
+  backgroundBlurPercent?: number;
   videoSrc: string;
   editorData?: ProjectEditorData | null;
   zoomElements: ZoomElement[];
@@ -393,6 +394,7 @@ watch(() => props.selectedTransformLayer?.transform, () => {
 watch(
   () => props.isPlaying,
   (playing) => {
+    renderOnce();
     if (playing) {
       videoEl
         .play()
@@ -425,22 +427,25 @@ backgroundVideo.preload = "auto";
 backgroundVideo.playsInline = true;
 
 const loadBackground = () => {
-  backgroundVideo.pause();
-  backgroundVideo.removeAttribute("src");
-  backgroundVideo.load();
-  backgroundImg.removeAttribute("src");
-
   const background = props.selectedBackground;
-  if (!background) return;
+  if (background?.kind !== "video") {
+    backgroundVideo.pause();
+    backgroundVideo.removeAttribute("src");
+  }
+  if (background?.kind !== "image") backgroundImg.removeAttribute("src");
+  if (!background) { renderOnce(); return; }
 
   if (background.kind === "video") {
     backgroundVideo.src = background.path;
     backgroundVideo.load();
-  } else {
+  } else if (background.kind === "image") {
     backgroundImg.src = background.path;
+    backgroundImg.onload = renderOnce;
   }
+  renderOnce();
 };
-watch(() => props.selectedBackground, loadBackground, { immediate: true });
+watch(() => props.selectedBackground, loadBackground, { immediate: true, deep: true });
+watch(() => props.backgroundBlurPercent, renderOnce);
 
 const drawBackground = (
   ctx: CanvasRenderingContext2D,
@@ -448,34 +453,22 @@ const drawBackground = (
 ) => {
   const background = props.selectedBackground;
 
-  if (background?.kind === 'blur') {
-    if (videoEl.readyState >= 1) {
-      ctx.save();
-      ctx.filter = 'blur(30px) brightness(0.85)';
-      // Draw scaled video covering rect
-      const videoWidth = videoEl.videoWidth || 1920;
-      const videoHeight = videoEl.videoHeight || 1080;
-      const srcRect = coverSourceRect(videoWidth, videoHeight, rect.width, rect.height);
-      ctx.drawImage(videoEl, srcRect.x, srcRect.y, srcRect.width, srcRect.height, rect.x - 20, rect.y - 20, rect.width + 40, rect.height + 40);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-surface').trim() || '#f7f5f0';
-      ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-    }
-    return;
+  if (background?.kind === "color") { ctx.fillStyle = background.color; ctx.fillRect(rect.x, rect.y, rect.width, rect.height); return; }
+  if (background?.kind === "gradient") {
+    const gradient = background.gradient.type === 'radial' ? ctx.createRadialGradient(rect.x + rect.width / 2, rect.y + rect.height / 2, 0, rect.x + rect.width / 2, rect.y + rect.height / 2, Math.max(rect.width, rect.height) / 2) : (() => { const radians = (background.gradient.angle - 90) * Math.PI / 180; const dx = Math.cos(radians) * rect.width / 2; const dy = Math.sin(radians) * rect.height / 2; return ctx.createLinearGradient(rect.x + rect.width / 2 - dx, rect.y + rect.height / 2 - dy, rect.x + rect.width / 2 + dx, rect.y + rect.height / 2 + dy); })();
+    for (const stop of background.gradient.stops) gradient.addColorStop(stop.position, `${stop.color}${Math.round(stop.alpha * 255).toString(16).padStart(2, '0')}`);
+    ctx.fillStyle = gradient; ctx.fillRect(rect.x, rect.y, rect.width, rect.height); return;
   }
-
-  if (background?.kind === "video" && backgroundVideo.readyState >= 2) {
-    ctx.drawImage(backgroundVideo, rect.x, rect.y, rect.width, rect.height);
-    return;
-  }
-  if (
-    background?.kind !== "video" &&
-    backgroundImg.complete &&
-    backgroundImg.naturalWidth > 0
-  ) {
-    ctx.drawImage(backgroundImg, rect.x, rect.y, rect.width, rect.height);
-    return;
+  const source = background?.kind === "video" && backgroundVideo.readyState >= 2 ? backgroundVideo : background?.kind === "image" && backgroundImg.complete && backgroundImg.naturalWidth > 0 ? backgroundImg : null;
+  if (source) {
+    const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
+    const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
+    const crop = coverSourceRect(sourceWidth, sourceHeight, rect.width, rect.height);
+    const blur = Math.min(48, Math.max(0, (props.backgroundBlurPercent ?? 0) * 0.48));
+    ctx.save();
+    if (blur > 0) { const overscan = blur * 2; ctx.filter = `blur(${blur}px)`; ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, rect.x - overscan, rect.y - overscan, rect.width + overscan * 2, rect.height + overscan * 2); }
+    else ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, rect.x, rect.y, rect.width, rect.height);
+    ctx.restore(); return;
   }
 
   ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-surface').trim() || '#f7f5f0';
@@ -1095,10 +1088,12 @@ const renderCanvas = () => {
   }
 };
 
-const draw = () => {
+function draw() {
   renderCanvas();
-  animationFrameId = requestAnimationFrame(draw);
-};
+  animationFrameId = null;
+  if (props.isPlaying || props.selectedBackground?.kind === "video") animationFrameId = requestAnimationFrame(draw);
+}
+function renderOnce() { if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw); }
 
 onMounted(() => {
   resizeCanvas();
@@ -1106,7 +1101,7 @@ onMounted(() => {
   if (containerRef.value) resizeObserver.observe(containerRef.value);
   window.addEventListener('keydown', updateWebcamAspectMode);
   window.addEventListener('keyup', updateWebcamAspectMode);
-  draw();
+  renderOnce();
 });
 
 onUnmounted(() => {

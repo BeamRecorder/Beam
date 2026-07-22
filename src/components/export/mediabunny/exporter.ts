@@ -85,7 +85,7 @@ const waitFor = (target: HTMLMediaElement, event: 'loadedmetadata' | 'seeked') =
 
 async function loadBackground(request: ExportRequest): Promise<HTMLImageElement | HTMLVideoElement | null> {
   const background = request.snapshot.background
-  if (!background?.src) return null
+  if (!background || (background.kind !== 'image' && background.kind !== 'video')) return null
   if (background.kind === 'image') {
     const image = new Image(); image.src = background.src
     await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error('Impossible de charger le fond.')) })

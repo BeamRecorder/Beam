@@ -1,299 +1,541 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { capture } from '../../../api/capture'
-import { Image, Upload, Video, Sparkles } from '@lucide/vue'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import Switch from '~/ui/switch/Switch.vue'
-import Skeleton from '~/ui/skeleton/Skeleton.vue'
-import { type BackgroundMedia, type BackgroundMediaGroup, type BackgroundMediaKind } from '../composables/backgroundMedia'
-import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset, type OutputCanvasSettings } from '../canvas/output-canvas'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { Image, Plus, Upload, Video } from "@lucide/vue";
+import Button from "~/ui/button/Button.vue";
+import ButtonGroup from "~/ui/button/ButtonGroup.vue";
+import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
+import BigSlider from "~/ui/slider/BigSlider.vue";
+import Gradient from "~/ui/Gradient/Gradient.vue";
+import Skeleton from "~/ui/skeleton/Skeleton.vue";
+import { capture } from "../../../api/capture";
+import {
+  BACKGROUND_COLORS,
+  BACKGROUND_GRADIENTS,
+  customColor,
+  customGradient,
+  type BackgroundMedia,
+  type BackgroundMediaGroup,
+  type BackgroundValue,
+  type GradientBackground,
+} from "../composables/backgroundCatalog";
 
-const props = defineProps<{ selectedBackground: string | null; backgroundGroups: BackgroundMediaGroup[]; projectId?: string | null; canvas: OutputCanvasSettings }>()
-const emit = defineEmits<{ (e: 'update:selectedBackground', value: string): void; (e: 'import:background', value: BackgroundMedia): void; (e: 'update:canvas', value: OutputCanvasSettings): void }>()
+const props = defineProps<{
+  selectedBackground: BackgroundValue | null;
+  backgroundGroups: BackgroundMediaGroup[];
+  projectId?: string | null;
+  blurPercent: number;
+}>();
 
-const activeKind = ref<Extract<BackgroundMediaKind, 'image' | 'video'>>('image')
-const loadedCount = ref(24)
-const previewReady = ref(new Set<string>())
-const isLoadingMore = ref(false)
-const pageSize = 24
+const emit = defineEmits<{
+  (e: "update:selectedBackground", value: BackgroundValue): void;
+  (e: "update:blurPercent", value: number): void;
+  (e: "import:background", value: BackgroundMedia): void;
+}>();
 
-// Hovered background item ID to defer video load
-const hoveredId = ref<string | null>(null)
+const activeKind = ref<"image" | "video" | "color" | "gradient">("image");
+const showCustomEditor = ref(false);
+const hoveredId = ref<string | null>(null);
+const visibleCount = ref(32);
+const loadedImages = ref<Record<string, boolean>>({});
+const blurDraft = ref(props.blurPercent);
 
-// Intersection observer for lazy infinite scroll loading
-const sentinelRef = ref<HTMLElement | null>(null)
-let observer: IntersectionObserver | null = null
+const gridRef = ref<HTMLElement | null>(null);
+const sentinelRef = ref<HTMLElement | null>(null);
+let observer: IntersectionObserver | null = null;
 
-const filteredItems = computed(() => props.backgroundGroups
-  .filter((group) => activeKind.value === 'image' ? group.kind !== 'video' : group.kind === 'video')
-  .flatMap((group) => group.items))
-const loadedItems = computed(() => filteredItems.value.slice(0, loadedCount.value))
-const hasMore = computed(() => loadedCount.value < filteredItems.value.length)
+const customColorValue = ref("#4f46e5");
+const customGradientValue = ref<GradientBackground>({
+  type: "linear",
+  angle: 135,
+  stops: [
+    { id: "start", position: 0, color: "#4f46e5", alpha: 1 },
+    { id: "end", position: 1, color: "#ec4899", alpha: 1 },
+  ],
+});
 
-const setKind = (kind: Extract<BackgroundMediaKind, 'image' | 'video'>) => { activeKind.value = kind; loadedCount.value = pageSize }
-const loadMore = () => {
-  if (isLoadingMore.value || !hasMore.value) return
-  isLoadingMore.value = true
-  requestAnimationFrame(() => {
-    loadedCount.value = Math.min(filteredItems.value.length, loadedCount.value + pageSize)
-    isLoadingMore.value = false
-  })
-}
-const markReady = (id: string) => { previewReady.value = new Set([...previewReady.value, id]) }
-const isReady = (id: string) => previewReady.value.has(id)
-const triggerImport = async () => {
-  if (!props.projectId) return
-  const background = await capture.pickProjectBackgroundMedia(props.projectId)
-  if (background) emit('import:background', background)
-}
-const setCanvasPreset = (preset: OutputCanvasPreset) => {
-  if (preset === 'custom') return emit('update:canvas', { ...props.canvas, preset })
-  emit('update:canvas', { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: props.canvas.showBackground })
-}
-const updateCustomDimension = (key: 'width' | 'height', value: string) => {
-  const dimension = Math.round(Number(value))
-  if (!Number.isFinite(dimension) || dimension < 1) return
-  emit('update:canvas', { ...props.canvas, preset: 'custom', [key]: dimension })
-}
-const ratioLabel = computed(() => `${props.canvas.width} × ${props.canvas.height} (${(props.canvas.width / props.canvas.height).toFixed(2)}:1)`)
-const setShowBackground = (showBackground: boolean) => emit('update:canvas', { ...props.canvas, showBackground })
+const items = computed(
+  () =>
+    props.backgroundGroups.find((group) => group.kind === activeKind.value)
+      ?.items ?? [],
+);
+
+const visibleItems = computed(() =>
+  items.value.slice(0, visibleCount.value),
+);
+
+const hasMore = computed(() => visibleCount.value < items.value.length);
+
+const setupObserver = () => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+
+  if (!sentinelRef.value || !hasMore.value) return;
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0];
+      if (entry?.isIntersecting && hasMore.value) {
+        requestAnimationFrame(() => {
+          visibleCount.value = Math.min(
+            items.value.length,
+            visibleCount.value + 16,
+          );
+        });
+      }
+    },
+    {
+      root: gridRef.value,
+      rootMargin: "120px",
+      threshold: 0.01,
+    },
+  );
+
+  observer.observe(sentinelRef.value);
+};
 
 onMounted(() => {
-  observer = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
-      loadMore()
-    }
-  }, {
-    root: document.querySelector('.background-grid-scroll'),
-    rootMargin: '120px', // Pre-load items 120px before they enter view
-  })
-
-  watch(sentinelRef, (newEl) => {
-    if (newEl) {
-      observer?.observe(newEl)
-    } else {
-      observer?.disconnect()
-    }
-  })
-})
+  setupObserver();
+});
 
 onUnmounted(() => {
-  observer?.disconnect()
-})
+  if (observer) observer.disconnect();
+});
+
+// Watch tab or items count to reset scroll & re-attach observer
+watch([activeKind, () => items.value.length], () => {
+  visibleCount.value = 32;
+  showCustomEditor.value = false;
+  if (gridRef.value) {
+    gridRef.value.scrollTop = 0;
+  }
+  nextTick(() => {
+    setupObserver();
+  });
+});
+
+// Re-observe when visibleItems expand until scrollbar is created or all items loaded
+watch(visibleItems, () => {
+  nextTick(() => {
+    setupObserver();
+  });
+});
+
+const markImageLoaded = (id: string) => {
+  loadedImages.value[id] = true;
+};
+
+const isSelected = (entry: BackgroundValue) =>
+  props.selectedBackground?.id === entry.id;
+
+const selectColor = (color: string) => {
+  customColorValue.value = color;
+  emit("update:selectedBackground", customColor(color));
+};
+
+const selectGradient = (gradient: GradientBackground) => {
+  emit("update:selectedBackground", customGradient(gradient));
+};
+
+const triggerImport = async () => {
+  if (!props.projectId) return;
+  const background = await capture.pickProjectBackgroundMedia(props.projectId);
+  if (background) {
+    emit("import:background", background);
+  }
+};
 </script>
 
 <template>
-  <div class="options-group">
-    <label class="prop-label">Output format</label>
-    <ButtonGroup aria-label="Output format">
-      <Button v-for="preset in ['16:9', '9:16', '1:1', '4:5'] as const" :key="preset" size="sm" :variant="canvas.preset === preset ? 'primary' : 'ghost'" @click="setCanvasPreset(preset)">{{ preset }}</Button>
+  <div class="canvas-panel-container">
+    <!-- ButtonGroup Tabs Navigation -->
+    <ButtonGroup aria-label="Background type" class="kind-group">
+      <Button
+        size="xs"
+        :variant="activeKind === 'image' ? 'primary' : 'ghost'"
+        :icon="Image"
+        @click="activeKind = 'image'"
+      >
+        Image
+      </Button>
+      <Button
+        size="xs"
+        :variant="activeKind === 'video' ? 'primary' : 'ghost'"
+        :icon="Video"
+        @click="activeKind = 'video'"
+      >
+        Video
+      </Button>
+      <Button
+        size="xs"
+        :variant="activeKind === 'color' ? 'primary' : 'ghost'"
+        @click="activeKind = 'color'"
+      >
+        Couleur
+      </Button>
+      <Button
+        size="xs"
+        :variant="activeKind === 'gradient' ? 'primary' : 'ghost'"
+        @click="activeKind = 'gradient'"
+      >
+        Dégradé
+      </Button>
     </ButtonGroup>
-    <Button size="sm" :variant="canvas.preset === 'custom' ? 'primary' : 'ghost'" @click="setCanvasPreset('custom')">Custom</Button>
-    <div v-if="canvas.preset === 'custom'" class="canvas-dimensions">
-      <label>Width <input :value="canvas.width" type="number" min="1" @change="updateCustomDimension('width', ($event.target as HTMLInputElement).value)"></label>
-      <label>Height <input :value="canvas.height" type="number" min="1" @change="updateCustomDimension('height', ($event.target as HTMLInputElement).value)"></label>
-    </div>
-    <p class="canvas-ratio">{{ ratioLabel }}</p>
-    <div class="prop-row"><span class="prop-label">Show background</span><Switch :model-value="canvas.showBackground" @update:model-value="setShowBackground" /></div>
-    <label class="prop-label">Background</label>
-    <ButtonGroup aria-label="Background type">
-      <Button size="sm" :variant="activeKind === 'video' ? 'primary' : 'ghost'" :icon="Video" @click="setKind('video')">Video</Button>
-      <Button size="sm" :variant="activeKind === 'image' ? 'primary' : 'ghost'" :icon="Image" @click="setKind('image')">Image</Button>
-    </ButtonGroup>
 
-    <div class="background-grid-scroll">
-      <div class="background-grid">
-        <!-- Import Card -->
-        <button type="button" class="background-card import-card" @click="triggerImport">
-          <Upload class="import-icon" :size="22" />
-          <span class="background-name">Import</span>
-        </button>
+    <!-- Custom Background Import Button -->
+    <Button
+      variant="secondary"
+      size="sm"
+      block
+      :icon="Upload"
+      class="import-btn"
+      @click="triggerImport"
+    >
+      Importer un fond personnalisé
+    </Button>
 
-        <!-- Blur Card -->
-        <button 
-          type="button" 
-          class="background-card blur-card" 
-          :class="{ active: selectedBackground === 'blur' }"
-          @click="emit('update:selectedBackground', 'blur')"
-          title="Flou d'arrière-plan"
-        >
-          <div class="background-preview blur-preview">
-            <Sparkles class="blur-icon" :size="22" />
-          </div>
-          <span class="background-name">Flou</span>
-        </button>
-
-        <!-- Background Cards -->
-        <button 
-          v-for="item in loadedItems" 
-          :key="item.id" 
-          class="background-card" 
-          :class="{ active: item.path === selectedBackground }" 
-          type="button" 
-          :title="item.name" 
-          @click="emit('update:selectedBackground', item.path)"
+    <!-- Animated Tab Content Panel -->
+    <div
+      :key="activeKind"
+      v-motion
+      :initial="{ opacity: 0, y: 4 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 120, ease: 'easeOut' } }"
+      class="tab-content-panel"
+    >
+      <!-- Image & Video Media Grid -->
+      <div
+        v-if="activeKind === 'image' || activeKind === 'video'"
+        ref="gridRef"
+        class="media-scroll-grid"
+      >
+        <button
+          v-for="item in visibleItems"
+          :key="item.id"
+          type="button"
+          class="media-tile"
+          :class="{ active: isSelected(item) }"
+          @click="emit('update:selectedBackground', item)"
           @mouseenter="hoveredId = item.id"
           @mouseleave="hoveredId = null"
         >
-          <div class="background-preview">
-            <Skeleton v-if="!isReady(item.id) && item.kind !== 'video'" width="100%" height="100%" radius="sm" />
-            
-            <!-- Render video only if hovered or selected -->
-            <template v-if="item.kind === 'video'">
-              <video 
-                v-if="hoveredId === item.id || item.path === selectedBackground"
-                :src="item.path" 
-                muted 
-                playsinline 
-                autoplay
-                loop
-                preload="auto" 
-                class="preview-media ready" 
-              />
-              <div v-else class="video-placeholder">
-                <Video class="placeholder-icon" :size="20" />
-              </div>
-            </template>
-            
-            <!-- Standard Image load with native lazy loading -->
-            <img 
-              v-else 
-              :src="item.path" 
-              :alt="item.name" 
-              loading="lazy" 
-              decoding="async" 
-              class="preview-media" 
-              :class="{ ready: isReady(item.id) }" 
-              @load="markReady(item.id)" 
+          <video
+            v-if="item.kind === 'video' && (hoveredId === item.id || isSelected(item))"
+            :src="item.path"
+            muted
+            autoplay
+            loop
+            preload="none"
+            class="media-content"
+          />
+          <span v-else-if="item.kind === 'video'" class="video-placeholder">
+            <Video :size="16" />
+          </span>
+          <template v-else>
+            <Skeleton
+              v-if="!loadedImages[item.id]"
+              class="media-content media-skeleton"
+              width="100%"
+              height="100%"
             />
-          </div>
-          <span class="background-name">{{ item.name }}</span>
+            <img
+              :src="item.path"
+              :alt="item.name"
+              class="media-content"
+              :class="{ loaded: loadedImages[item.id] }"
+              loading="lazy"
+              decoding="async"
+              @load="markImageLoaded(item.id)"
+            />
+          </template>
         </button>
+
+        <!-- Sentinel element for IntersectionObserver infinite loading -->
+        <div
+          v-if="hasMore"
+          ref="sentinelRef"
+          class="scroll-sentinel"
+        />
       </div>
 
-      <div v-if="hasMore" ref="sentinelRef" class="load-more-sentinel" aria-label="Loading more backgrounds">
-        <Skeleton width="100%" height="12px" radius="sm" />
+      <!-- Color Swatches Grid -->
+      <div v-else-if="activeKind === 'color'" class="swatches-section">
+        <div class="swatches-grid">
+          <button
+            type="button"
+            class="swatch-tile custom-add-tile"
+            :class="{ active: isSelected(customColor(customColorValue)) }"
+            aria-label="Couleur personnalisée"
+            @click="showCustomEditor = !showCustomEditor"
+          >
+            <Plus :size="16" />
+          </button>
+          <button
+            v-for="item in BACKGROUND_COLORS"
+            :key="item.id"
+            type="button"
+            class="swatch-tile"
+            :class="{ active: isSelected(item) }"
+            :style="{ background: item.color }"
+            :aria-label="item.name"
+            @click="emit('update:selectedBackground', item)"
+          />
+        </div>
+        <div v-if="showCustomEditor" class="custom-editor-row">
+          <span>Couleur personnalisée</span>
+          <ColorPicker
+            :model-value="customColorValue"
+            @update:model-value="selectColor"
+          />
+        </div>
       </div>
+
+      <!-- Gradient Presets Grid -->
+      <div v-else class="gradients-section">
+        <div class="gradients-grid">
+          <button
+            type="button"
+            class="swatch-tile custom-add-tile"
+            :class="{ active: isSelected(customGradient(customGradientValue)) }"
+            aria-label="Dégradé personnalisé"
+            @click="showCustomEditor = !showCustomEditor"
+          >
+            <Plus :size="16" />
+          </button>
+          <button
+            v-for="item in BACKGROUND_GRADIENTS"
+            :key="item.id"
+            type="button"
+            class="swatch-tile"
+            :class="{ active: isSelected(item) }"
+            :style="{
+              background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map(s => `${s.color} ${s.position * 100}%`).join(', ')})`
+            }"
+            :aria-label="item.name"
+            @click="emit('update:selectedBackground', item)"
+          />
+        </div>
+        <div v-if="showCustomEditor" class="custom-editor-box">
+          <Gradient v-model="customGradientValue" :show-angle="true" />
+          <Button
+            size="sm"
+            class="apply-btn"
+            @click="selectGradient(customGradientValue)"
+          >
+            Utiliser ce dégradé
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blur Slider -->
+    <div class="slider-row">
+      <BigSlider
+        :model-value="blurDraft"
+        :min="0"
+        :max="100"
+        :step="1"
+        label="Blur"
+        :format-value="(value) => `${Math.round(value)}%`"
+        @update:model-value="blurDraft = $event"
+        @interaction-end="emit('update:blurPercent', blurDraft)"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
-.options-group { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 12px; 
-}
-.prop-label { 
-  font-size: 12px; 
-  font-weight: 600; 
-  color: var(--text-secondary); 
-}
-.canvas-dimensions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.canvas-dimensions label { display: grid; gap: 4px; font-size: 11px; color: var(--text-secondary); }
-.canvas-dimensions input { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--text-primary); padding: 6px; }
-.canvas-ratio { margin: -4px 0 2px; color: var(--text-muted); font-size: 11px; }
-.prop-row { display: flex; align-items: center; justify-content: space-between; }
-.file-input { 
-  display: none; 
-}
-.background-grid-scroll { 
-  height: 292px; 
-  overflow-y: auto; 
-  border: 1px solid var(--color-border); 
-  border-radius: var(--radius-md); 
-  background: var(--color-bg-surface); 
-  padding: 6px; 
-}
-.background-grid { 
-  display: grid; 
-  grid-template-columns: repeat(3, minmax(0, 1fr)); 
-  gap: 6px; 
-  width: 100%; 
-}
-.background-card { 
-  min-width: 0; 
-  padding: 4px; 
-  border: 1px solid transparent; 
-  border-radius: var(--radius-sm); 
-  background: transparent; 
-  color: var(--text-primary); 
-  cursor: pointer; 
-  text-align: left; 
-}
-.import-card { 
-  display: flex; 
-  height: 76px; 
-  align-items: center; 
-  justify-content: center; 
-  gap: 5px; 
-  flex-direction: column; 
-  border-style: dashed; 
-  color: var(--text-muted); 
-}
-.import-icon { 
-  color: var(--text-secondary); 
-}
-.blur-preview {
-  background: linear-gradient(135deg, rgba(255, 90, 31, 0.4) 0%, rgba(99, 102, 241, 0.4) 100%);
-  backdrop-filter: blur(8px);
-}
-.blur-icon {
-  color: #fff;
-}
-.background-card:hover { 
-  background: var(--color-bg-surface-hover); 
-}
-.background-card.active { 
-  border-color: var(--color-primary-border); 
-  background: var(--color-primary-light); 
-}
-.background-preview { 
-  position: relative; 
-  aspect-ratio: 4 / 3; 
-  overflow: hidden; 
-  border-radius: 4px; 
-  background: #000; 
+.canvas-panel-container {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
-.preview-media { 
-  position: absolute; 
-  inset: 0; 
-  width: 100%; 
-  height: 100%; 
-  object-fit: cover; 
-  opacity: 0; 
-  transition: opacity 120ms ease; 
-}
-.preview-media.ready { 
-  opacity: 1; 
-}
-.video-placeholder {
+
+.kind-group {
+  width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.kind-group :deep(.btn-container) {
+  flex: 1;
+}
+
+.import-btn {
+  width: 100%;
+}
+
+/* Content Panel */
+.tab-content-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 8-Column Media Grid & Internal Custom Scrollbar */
+.media-scroll-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 6px;
+  box-sizing: border-box;
+  background: var(--color-bg-surface, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius-md, 8px);
+}
+
+.media-scroll-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.media-scroll-grid::-webkit-scrollbar-track {
+  background: var(--color-bg-element, rgba(0, 0, 0, 0.2));
+  border-radius: 4px;
+}
+.media-scroll-grid::-webkit-scrollbar-thumb {
+  background: var(--color-border, rgba(255, 255, 255, 0.18));
+  border-radius: 4px;
+}
+.media-scroll-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted, rgba(255, 255, 255, 0.35));
+}
+
+/* Media Tile Element */
+.media-tile {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.media-tile:hover {
+  transform: scale(1.04);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.media-tile.active {
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 2px var(--color-primary-light, rgba(59, 130, 246, 0.4));
+  transform: scale(1.02);
+}
+
+.media-content {
   width: 100%;
   height: 100%;
-  background: #141416;
-  color: var(--text-muted);
+  object-fit: cover;
+  display: block;
+  border-radius: 6px;
+  transition: opacity 0.15s ease;
 }
-.placeholder-icon {
-  opacity: 0.6;
+
+img.media-content {
+  opacity: 0;
 }
-.background-name { 
-  display: block; 
-  margin-top: 4px; 
-  overflow: hidden; 
-  color: var(--text-secondary); 
-  font-size: 10px; 
-  text-overflow: ellipsis; 
-  white-space: nowrap; 
+
+img.media-content.loaded {
+  opacity: 1;
 }
-.load-more-sentinel { 
-  height: 32px; 
-  padding: 10px 4px; 
+
+.media-skeleton {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+}
+
+.video-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #9ca3af);
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+.scroll-sentinel {
+  grid-column: 1 / -1;
+  height: 10px;
+  width: 100%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Color & Gradient Swatches Grid */
+.swatches-section,
+.gradients-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.swatches-grid,
+.gradients-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.swatch-tile {
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.swatch-tile:hover {
+  transform: scale(1.04);
+}
+
+.swatch-tile.active {
+  border-color: var(--color-primary, #3b82f6);
+  outline: 2px solid var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 2px var(--color-primary-light, rgba(59, 130, 246, 0.4));
+}
+
+.custom-add-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #9ca3af);
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.1) 0 25%, rgba(0, 0, 0, 0.3) 0 50%) 50% / 10px 10px;
+  border-style: dashed;
+}
+
+.custom-editor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-secondary, #9ca3af);
+  font-size: 12px;
+  padding-top: 4px;
+}
+
+.custom-editor-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.apply-btn {
+  align-self: flex-end;
+}
+
+.slider-row {
+  width: 100%;
 }
 </style>

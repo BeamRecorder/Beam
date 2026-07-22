@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createBackgroundMedia } from "../backgroundMedia";
+import { createBackgroundMedia } from "../backgroundCatalog";
 import { useVideoPlayer } from "../useVideoPlayer";
 
 const backgrounds = createBackgroundMedia(["/built-in.png", "/clip.mp4"]);
@@ -7,8 +7,8 @@ const backgrounds = createBackgroundMedia(["/built-in.png", "/clip.mp4"]);
 describe("useVideoPlayer", () => {
   it("initializes playback, selection, and track controls from available media", () => {
     const player = useVideoPlayer(backgrounds);
-    expect(player.selectedBackground.value).toBe("/built-in.png");
-    expect(player.selectedBackgroundMedia.value).toBe(backgrounds[0]);
+    expect(player.selectedBackground.value).toEqual(backgrounds[0]);
+    expect(player.selectedBackgroundMedia.value).toEqual(backgrounds[0]);
     expect(player.backgroundGroups.value.map((group) => group.kind)).toEqual([
       "image",
       "video",
@@ -31,7 +31,7 @@ describe("useVideoPlayer", () => {
     const imported = createBackgroundMedia(["/imported.png"])[0];
     player.addBackground(imported);
     player.addBackground(imported);
-    expect(player.selectedBackground.value).toBe("/imported.png");
+    expect(player.selectedBackground.value).toEqual(imported);
     expect(player.selectedBackgroundMedia.value).toEqual(imported);
     expect(player.backgroundGroups.value[0].items).toEqual([imported, backgrounds[0]]);
   });

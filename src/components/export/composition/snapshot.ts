@@ -1,5 +1,5 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api'
-import type { BackgroundMedia } from '../../video-editor/composables/backgroundMedia'
+import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog'
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types'
 import type { ProjectComposition } from '../../video-editor/composition/composition-types'
 import type { CursorRenderSettings } from '../export-types'
@@ -31,7 +31,8 @@ export function createCompositionSnapshot(input: {
   fps: number
   canvas: OutputCanvasSettings
   videoEnabled: boolean
-  background: BackgroundMedia | null
+  background: BackgroundValue | null
+  blurPercent: number
   editorData: ProjectEditorData | null | undefined
   zooms: ZoomElement[]
   composition: ProjectComposition
@@ -44,7 +45,10 @@ export function createCompositionSnapshot(input: {
     duration: Math.max(0, input.duration),
     video: { src: input.videoSrc, width: Math.max(1, input.width), height: Math.max(1, input.height), fps: Math.max(1, input.fps), enabled: input.videoEnabled },
     canvas: normalizeOutputCanvas(input.canvas),
-    background: input.background ? { kind: input.background.kind, src: input.background.path } : null,
+    background: input.background?.kind === 'color' ? { kind: 'color', color: input.background.color }
+      : input.background?.kind === 'gradient' ? { kind: 'gradient', gradient: structuredClone(input.background.gradient) }
+      : input.background ? { kind: input.background.kind, src: input.background.path } : null,
+    blurPercent: Math.max(0, Math.min(100, Math.round(input.blurPercent))),
     zooms: copyZooms(input.zooms),
     cursor: copyCursor(input.editorData?.cursor),
     cursorSettings: structuredClone(input.cursorSettings),

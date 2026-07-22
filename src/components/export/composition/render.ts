@@ -14,6 +14,21 @@ import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-edito
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
 export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
 
+function drawSnapshotBackground(ctx: CanvasRenderingContext2D, snapshot: CompositionSnapshot, background: CanvasImageSource | null | undefined) {
+  const { width, height } = snapshot.canvas; const value = snapshot.background;
+  if (!value) return;
+  if (value.kind === 'color') { ctx.fillStyle = value.color; ctx.fillRect(0, 0, width, height); return; }
+  if (value.kind === 'gradient') {
+    const gradient = value.gradient.type === 'radial' ? ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) / 2) : (() => { const radians = (value.gradient.angle - 90) * Math.PI / 180; const dx = Math.cos(radians) * width / 2; const dy = Math.sin(radians) * height / 2; return ctx.createLinearGradient(width / 2 - dx, height / 2 - dy, width / 2 + dx, height / 2 + dy); })();
+    value.gradient.stops.forEach((stop) => gradient.addColorStop(stop.position, `${stop.color}${Math.round(stop.alpha * 255).toString(16).padStart(2, '0')}`)); ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height); return;
+  }
+  if (!background) return;
+  const blur = Math.min(48, snapshot.blurPercent * .48); ctx.save();
+  if (blur > 0) { const overscan = blur * 2; ctx.filter = `blur(${blur}px)`; ctx.drawImage(background, -overscan, -overscan, width + overscan * 2, height + overscan * 2); }
+  else ctx.drawImage(background, 0, 0, width, height);
+  ctx.restore();
+}
+
 export function drawCompositionLayers(
   ctx: CanvasRenderingContext2D,
   snapshot: CompositionSnapshot,
@@ -78,7 +93,7 @@ export function renderCompositionFrame(
     !snapshot.video.enabled ||
     video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
   ) {
-    if (background) ctx.drawImage(background, 0, 0, width, height);
+    drawSnapshotBackground(ctx, snapshot, background);
     drawCompositionLayers(ctx, snapshot, time, visuals, true);
     drawCompositionLayers(ctx, snapshot, time, visuals);
     return;
@@ -100,7 +115,7 @@ export function renderCompositionFrame(
   ctx.translate(width / 2, height / 2);
   ctx.scale(scale, scale);
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  if (background) ctx.drawImage(background, 0, 0, width, height);
+  drawSnapshotBackground(ctx, snapshot, background);
   ctx.drawImage(video, source.x, source.y, source.width, source.height, media.x, media.y, media.width, media.height);
   const cursor = cursorStateAt(snapshot.cursor.events, time);
   const settings: CursorRenderSettings = snapshot.cursorSettings;

@@ -3,7 +3,7 @@ import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorState } from "../../../api/types/capture-api";
 import type { ProjectComposition } from "../composition/composition-types";
 import type { ZoomElement } from "../zoom/zoom-types";
-import type { BackgroundMedia } from "./backgroundMedia";
+import { BACKGROUND_MEDIA, normalizeBackgroundValue, type BackgroundMedia, type BackgroundValue } from "./backgroundCatalog";
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 
 const cloneComposition = (value: ProjectComposition): ProjectComposition => structuredClone(toRaw(value));
@@ -14,7 +14,8 @@ export function useProjectEditorState(options: {
   zoomElements: Ref<ZoomElement[]>;
   generatedSessions: Ref<ProjectEditorState["zoom"]["generatedSessions"]>;
   importedBackgrounds: Ref<BackgroundMedia[]>;
-  selectedBackground: Ref<string | null>;
+  selectedBackground: Ref<BackgroundValue | null>;
+  backgroundBlurPercent: Ref<number>;
   videoEnabled: Ref<boolean>;
   systemAudioEnabled: Ref<boolean>;
   micAudioEnabled: Ref<boolean>;
@@ -28,7 +29,6 @@ export function useProjectEditorState(options: {
   let writeChain = Promise.resolve();
 
   const snapshot = (): ProjectEditorState => {
-    const selected = [...options.importedBackgrounds.value].find((item) => item.path === options.selectedBackground.value);
     const canvas = options.canvas.value;
     return {
       schemaVersion: 1,
@@ -39,7 +39,9 @@ export function useProjectEditorState(options: {
       },
       presentation: {
         canvas: { preset: canvas.preset, width: canvas.width, height: canvas.height, showBackground: canvas.showBackground },
-        selectedBackgroundId: selected?.id ?? options.selectedBackground.value,
+        selectedBackgroundId: options.selectedBackground.value?.id ?? null,
+        background: options.selectedBackground.value ? structuredClone(toRaw(options.selectedBackground.value)) : null,
+        blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
         importedBackgrounds: options.importedBackgrounds.value.map((background) => ({ id: background.id, name: background.name, path: background.path, extension: background.extension, kind: background.kind, ...(background.fileName ? { fileName: background.fileName } : {}) })),
         videoEnabled: options.videoEnabled.value,
         systemAudioEnabled: options.systemAudioEnabled.value,
@@ -79,8 +81,12 @@ export function useProjectEditorState(options: {
       options.zoomElements.value = state.zoom.elements;
       options.generatedSessions.value = state.zoom.generatedSessions;
       options.importedBackgrounds.value = state.presentation.importedBackgrounds;
-      const selected = [...state.presentation.importedBackgrounds].find((item) => item.id === state.presentation.selectedBackgroundId);
-      options.selectedBackground.value = selected?.path ?? state.presentation.selectedBackgroundId;
+      const selected = normalizeBackgroundValue(state.presentation.background)
+        ?? [...state.presentation.importedBackgrounds].find((item) => item.id === state.presentation.selectedBackgroundId)
+        ?? BACKGROUND_MEDIA.find((item) => item.id === state.presentation.selectedBackgroundId || item.path === state.presentation.selectedBackgroundId)
+        ?? null;
+      options.selectedBackground.value = selected;
+      options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
       options.videoEnabled.value = state.presentation.videoEnabled;
       options.systemAudioEnabled.value = state.presentation.systemAudioEnabled;
       options.micAudioEnabled.value = state.presentation.micAudioEnabled;
@@ -95,6 +101,7 @@ export function useProjectEditorState(options: {
       options.generatedSessions,
       options.importedBackgrounds,
       options.selectedBackground,
+      options.backgroundBlurPercent,
       options.videoEnabled,
       options.systemAudioEnabled,
       options.micAudioEnabled,

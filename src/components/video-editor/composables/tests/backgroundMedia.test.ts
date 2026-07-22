@@ -3,7 +3,10 @@ import {
   backgroundKindFor,
   createBackgroundMedia,
   groupBackgroundMedia,
-} from "../backgroundMedia";
+  customColor,
+  customGradient,
+  normalizeBackgroundValue,
+} from "../backgroundCatalog";
 
 describe("background media", () => {
   it("classifies every supported extension case-insensitively", () => {
@@ -73,8 +76,20 @@ describe("background media", () => {
     ]);
     expect(groupBackgroundMedia(media)).toEqual([
       { kind: "image", label: "Images", items: [media[0], media[1]] },
-      { kind: "video", label: "Vidéos", items: [media[2]] },
+      { kind: "video", label: "Videos", items: [media[2]] },
     ]);
     expect(groupBackgroundMedia([])).toEqual([]);
+  });
+
+  it("normalizes custom color and gradients into typed background values", () => {
+    expect(customColor("#123456")).toMatchObject({ kind: "color", color: "#123456" });
+    expect(customGradient({ type: "linear", angle: 450, stops: [{ id: "a", position: 0, color: "#000000", alpha: 1 }, { id: "b", position: 1, color: "#ffffff", alpha: 1 }] }).gradient.angle).toBe(90);
+    expect(normalizeBackgroundValue({ kind: "gradient", gradient: { stops: [] } })).toMatchObject({ kind: "gradient", gradient: { stops: [{ position: 0 }, { position: 1 }] } });
+  });
+
+  it("rejects malformed persisted background values", () => {
+    expect(normalizeBackgroundValue({ kind: "color", color: "red" })).toBeNull();
+    expect(normalizeBackgroundValue({ kind: "video", path: "/wrong.png" })).toBeNull();
+    expect(normalizeBackgroundValue(null)).toBeNull();
   });
 });

@@ -4,7 +4,8 @@ import {
   groupBackgroundMedia,
   type BackgroundMedia,
   type BackgroundMediaGroup,
-} from './backgroundMedia'
+  type BackgroundValue,
+} from './backgroundCatalog'
 
 export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] = BACKGROUND_MEDIA) {
   const isPlaying = ref(false)
@@ -12,37 +13,28 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const duration = ref(0)
   const volume = ref(70)
   const videoSrc = ref<string | null>(null)
-  const selectedBackground = ref<string | null>(availableBackgrounds[0]?.path ?? null)
+  const selectedBackground = ref<BackgroundValue | null>(availableBackgrounds[0] ?? null)
+  const backgroundBlurPercent = ref(0)
   const importedBackgrounds = ref<BackgroundMedia[]>([])
 
   const isVideoEnabled = ref(true)
   const isSystemAudioEnabled = ref(true)
   const isMicAudioEnabled = ref(true)
 
-  const BLUR_BACKGROUND: BackgroundMedia = {
-    id: 'blur',
-    name: 'Flou d\'arrière-plan',
-    path: 'blur',
-    extension: '',
-    kind: 'blur',
-  }
-
   const allBackgrounds = computed(() => [...importedBackgrounds.value, ...availableBackgrounds])
   const backgroundGroups = computed<BackgroundMediaGroup[]>(() => groupBackgroundMedia(allBackgrounds.value))
-  const selectedBackgroundMedia = computed(() => {
-    if (selectedBackground.value === 'blur') return BLUR_BACKGROUND
-    return allBackgrounds.value.find((background) => background.path === selectedBackground.value) ?? null
-  })
+  const selectedBackgroundMedia = computed(() => selectedBackground.value)
 
   const addBackground = (background: BackgroundMedia) => {
     importedBackgrounds.value = [background, ...importedBackgrounds.value.filter((item) => item.path !== background.path)]
-    selectedBackground.value = background.path
+    selectedBackground.value = background
   }
 
-  const restoreBackgrounds = (backgrounds: BackgroundMedia[], selectedId: string | null) => {
+  const restoreBackgrounds = (backgrounds: BackgroundMedia[], selected: BackgroundValue | string | null) => {
     importedBackgrounds.value = backgrounds
-    const selected = [...backgrounds, ...availableBackgrounds].find((background) => background.id === selectedId)
-    selectedBackground.value = selected?.path ?? availableBackgrounds[0]?.path ?? null
+    selectedBackground.value = typeof selected === 'string'
+      ? [...backgrounds, ...availableBackgrounds].find((background) => background.id === selected || background.path === selected) ?? availableBackgrounds[0] ?? null
+      : selected ?? availableBackgrounds[0] ?? null
   }
 
   const togglePlay = () => {
@@ -72,6 +64,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     volume,
     videoSrc,
     selectedBackground,
+    backgroundBlurPercent,
     selectedBackgroundMedia,
     backgroundGroups,
     importedBackgrounds,

@@ -82,6 +82,8 @@ function createProjectStore(root) {
     return {
       canvas: { preset, width, height, showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : canvasInput.fit === 'cover' ? false : true },
       selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
+      background: next.background && typeof next.background === 'object' ? next.background : null,
+      blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
       importedBackgrounds,
       videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,
       systemAudioEnabled: typeof next.systemAudioEnabled === 'boolean' ? next.systemAudioEnabled : true,

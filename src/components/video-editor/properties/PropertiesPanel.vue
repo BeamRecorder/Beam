@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import type { CursorType } from "../composables/useCursorReplacer";
 import type {
-  BackgroundMedia,
+  BackgroundMedia, BackgroundValue,
   BackgroundMediaGroup,
-} from "../composables/backgroundMedia";
+} from "../composables/backgroundCatalog";
 import CursorPanel from "./CursorPanel.vue";
 import CanvasPanel from "./CanvasPanel.vue";
 import TrimPanel from "./TrimPanel.vue";
 import AudioPanel from "./AudioPanel.vue";
 import ZoomPanel from "./ZoomPanel.vue";
 import SettingsPanel from "./SettingsPanel.vue";
-import ClipPropertiesPanel from "./clip/ClipPropertiesPanel.vue/index.js";
+import ClipPropertiesPanel from "./clip/ClipPropertiesPanel.vue";
 import type { ZoomElement } from "../zoom/zoom-types";
 import CaptionPanel from "./CaptionPanel.vue";
 import type {
@@ -61,7 +61,8 @@ defineProps<{
   micVolume?: number;
 
   // Background properties
-  selectedBackground: string | null;
+  selectedBackground: BackgroundValue | null;
+  blurPercent: number;
   backgroundGroups: BackgroundMediaGroup[];
   selectedZoom: ZoomElement | null;
   canGenerateZooms: boolean;
@@ -88,7 +89,8 @@ const emit = defineEmits<{
   (e: "update:isMicAudioEnabled", value: boolean): void;
   (e: "update:systemVolume", value: number): void;
   (e: "update:micVolume", value: number): void;
-  (e: "update:selectedBackground", value: string): void;
+  (e: "update:selectedBackground", value: BackgroundValue): void;
+  (e: "update:blurPercent", value: number): void;
   (e: "import:background", value: BackgroundMedia): void;
   (e: "update:canvas", value: OutputCanvasSettings): void;
   (e: "update:zoom", value: ZoomElement): void;
@@ -112,7 +114,7 @@ const emit = defineEmits<{
 <template>
   <div class="properties-island">
     <div class="panel-header">
-      <h3 class="panel-title">Properties</h3>
+      <h3 class="panel-title">{{ activeTab === 'canvas' ? 'Background' : 'Properties' }}</h3>
       <span class="panel-subtitle">{{ activeTab.toUpperCase() }} OPTIONS</span>
     </div>
 
@@ -120,12 +122,12 @@ const emit = defineEmits<{
       <CanvasPanel
         v-if="activeTab === 'canvas'"
         :selected-background="selectedBackground"
+        :blur-percent="blurPercent"
         :background-groups="backgroundGroups"
         :project-id="projectId"
-        :canvas="canvas"
         @update:selectedBackground="emit('update:selectedBackground', $event)"
+        @update:blurPercent="emit('update:blurPercent', $event)"
         @import:background="emit('import:background', $event)"
-        @update:canvas="emit('update:canvas', $event)"
       />
 
       <ClipPropertiesPanel
@@ -206,7 +208,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .properties-island {
-  width: 320px;
+  width: 400px;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);

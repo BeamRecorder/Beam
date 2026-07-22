@@ -10,7 +10,7 @@ import type {
   ProjectZoomState,
 } from './capture-session'
 import type { CompositionLayer, CompositionMedia, ProjectComposition } from '../../components/video-editor/composition/composition-types'
-import type { BackgroundMedia } from '../../components/video-editor/composables/backgroundMedia'
+import type { BackgroundMedia, BackgroundValue } from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
 
 export type * from './capture-config'
@@ -113,6 +113,8 @@ export interface PreferenceSettings {
 export interface ProjectEditorPresentation {
   canvas: OutputCanvasSettings
   selectedBackgroundId: string | null
+  background?: BackgroundValue | null
+  blurPercent?: number
   importedBackgrounds: Array<BackgroundMedia & { fileName: string }>
   videoEnabled: boolean
   systemAudioEnabled: boolean

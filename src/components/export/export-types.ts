@@ -24,7 +24,8 @@ export interface CompositionSnapshot {
   duration: number
   video: VideoLayer
   canvas: OutputCanvasSettings
-  background: { kind: 'color' | 'image' | 'video'; src?: string } | null
+  background: { kind: 'color'; color: string } | { kind: 'gradient'; gradient: import('../video-editor/composables/backgroundCatalog').GradientBackground } | { kind: 'image' | 'video'; src: string } | null
+  blurPercent: number
   zooms: ZoomElement[]
   cursor: ProjectEditorData['cursor']
   cursorSettings: CursorRenderSettings
