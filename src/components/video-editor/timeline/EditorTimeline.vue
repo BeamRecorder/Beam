@@ -121,7 +121,9 @@ onUnmounted(() => {
 .timeline-island-container {
   width: 100%;
   background: var(--color-bg-element);
-  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
   display: flex;
   flex-direction: column;

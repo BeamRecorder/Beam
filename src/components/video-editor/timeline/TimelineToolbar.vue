@@ -159,8 +159,8 @@ const handleZoomOut = () => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  background: var(--color-bg-element);
-  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  border-bottom: none;
   height: 48px;
   user-select: none;
 }

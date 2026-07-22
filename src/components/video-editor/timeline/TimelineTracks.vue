@@ -514,8 +514,8 @@ const selectMainVideoLayer = () => {
   width: 100%;
   overflow-x: auto;
   background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border-radius: inherit;
+  border: none;
   position: relative;
 }
 
@@ -523,6 +523,7 @@ const selectMainVideoLayer = () => {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-height: 100%;
 }
 .camera-content {
   position: relative;

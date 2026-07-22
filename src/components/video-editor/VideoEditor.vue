@@ -260,6 +260,8 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
           :is-cropping="isCropping"
           @update:zoom="updateZoom"
           @select:transform-layer="selectedCompositionLayerId = $event; activeTab = 'clip'"
+          @select:base-video="selectBaseVideo()"
+          @select:canvas="selectedCompositionLayerId = null; activeTab = 'canvas'"
           @deselect:transform-layer="selectedCompositionLayerId = null"
           @deselect:zoom="selectedZoomId = null"
           @update:layer-transform="updateSelectedWebcamTransform($event)"
@@ -484,10 +486,12 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   overflow: hidden;
 }
 
-.canvas-column { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.canvas-column { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
 
 .workspace-lower {
   height: auto;
   flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 </style>

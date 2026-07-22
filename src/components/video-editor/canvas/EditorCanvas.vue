@@ -113,6 +113,8 @@ const emit = defineEmits<{
   (e: 'deselect:zoom'): void;
   (e: 'update:layer-transform', transform: NormalizedTransform): void;
   (e: 'update:layer-crop', crop: import('../composition/composition-types').NormalizedCrop): void;
+  (e: 'select:base-video'): void;
+  (e: 'select:canvas'): void;
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -120,6 +122,10 @@ const containerRef = ref<HTMLDivElement | null>(null);
 const videoError = ref<string | null>(null);
 
 const logicalSize = ref({ width: 0, height: 0 });
+const previewFrameStyle = computed(() => {
+  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+  return { left: `${preview.x}px`, top: `${preview.y}px`, width: `${preview.width}px`, height: `${preview.height}px` };
+});
 const deviceScale = ref(1);
 const maxZoomScale = Math.max(...Object.values(ZOOM_DEPTH_SCALES));
 let resizeObserver: ResizeObserver | null = null;
@@ -537,7 +543,7 @@ const drawVideoWindow = (
   // The recorded screen is the global canvas content, not an overlay clip.
   // It must not acquire a second frame/shadow while zooming.
   ctx.beginPath();
-  ctx.rect(dx, dy, dw, dh);
+  ctx.roundRect(dx, dy, dw, dh, 16);
   ctx.clip();
 
   const zoom = zoomAtTime(
@@ -741,6 +747,19 @@ const updateSelectedFocus = (event: PointerEvent) => {
 
 const beginSelectionMove = (event: PointerEvent) => {
   if (selectWebcamAt(event)) return;
+  const canvas = canvasRef.value;
+  const bounds = videoWindowBounds.value;
+  if (canvas && bounds) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    if (x >= bounds.dx && x <= bounds.dx + bounds.dw && y >= bounds.dy && y <= bounds.dy + bounds.dh) {
+      emit('select:base-video');
+      return;
+    }
+    emit('select:canvas');
+    return;
+  }
   if (props.selectedTransformLayer) emit('deselect:transform-layer');
   if (props.selectedZoom && props.activeTab !== 'zoom') emit('deselect:zoom');
   if (props.selectedZoom?.mode !== "manual") return;
@@ -1110,6 +1129,7 @@ onUnmounted(() => {
 
 <template>
   <div class="canvas-island" ref="containerRef">
+    <div class="preview-frame" :style="previewFrameStyle" aria-hidden="true"></div>
     <canvas
       ref="canvasRef"
       class="editor-canvas"
@@ -1144,20 +1164,25 @@ onUnmounted(() => {
 <style scoped>
 .canvas-island {
   flex: 1;
-  background: var(--color-bg-surface);
+  margin: 0 12px;
+  background: transparent;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
+  min-height: 0;
 }
 
 .editor-canvas {
   width: 100%;
   height: 100%;
   display: block;
+  position: relative;
+  z-index: 1;
 }
+
+.preview-frame { position: absolute; z-index: 0; border-radius: var(--radius-lg); background: var(--color-bg-element); box-shadow: var(--shadow-lg); pointer-events: none; }
 
 .editor-canvas.is-selection-editable {
   cursor: move;
