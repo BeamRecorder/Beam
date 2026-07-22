@@ -7,6 +7,7 @@ import { useProjectComposition } from "./useProjectComposition";
 import { useProjectZoom } from "./useProjectZoom";
 import { useProjectEditorState } from "./useProjectEditorState";
 import { createCompositionSnapshot } from "../../export/composition/snapshot";
+import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
 
 export function useVideoEditor(options: {
   videoSrc: Ref<string | null | undefined>;
@@ -19,6 +20,7 @@ export function useVideoEditor(options: {
   const systemVolume = ref(100);
   const micVolume = ref(100);
   const sourceSize = ref({ width: 1920, height: 1080 });
+  const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
 
   // 1. Video Player composable
   const player = useVideoPlayer();
@@ -65,6 +67,7 @@ export function useVideoEditor(options: {
     videoEnabled: player.isVideoEnabled,
     systemAudioEnabled: player.isSystemAudioEnabled,
     micAudioEnabled: player.isMicAudioEnabled,
+    canvas: outputCanvas,
   });
 
   // Calculate source FPS
@@ -87,6 +90,7 @@ export function useVideoEditor(options: {
         duration: player.duration.value,
         width: sourceSize.value.width,
         height: sourceSize.value.height,
+        canvas: outputCanvas.value,
         fps: sourceFps.value,
         videoEnabled: player.isVideoEnabled.value,
         background: player.selectedBackgroundMedia.value,
@@ -142,6 +146,7 @@ export function useVideoEditor(options: {
     systemVolume,
     micVolume,
     sourceSize,
+    outputCanvas,
     player,
     cursor,
     compositionState,

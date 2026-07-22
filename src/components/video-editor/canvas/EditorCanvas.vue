@@ -21,6 +21,7 @@ import {
   type ProjectComposition,
 } from "../composition/composition-types";
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../composition/webcam/webcam-zoom";
+import { framedMediaRect, outputPoint, coverSourceRect, outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -81,6 +82,7 @@ const props = defineProps<{
   zoomElements: ZoomElement[];
   selectedZoom: ZoomElement | null;
   composition: ProjectComposition;
+  outputCanvas: OutputCanvasSettings;
   loopProgress?: number;
 }>();
 
@@ -243,8 +245,13 @@ const syncCompositionVideos = () => {
     const localTime = props.currentTime - layer.startMs / 1000 + (layer.sourceOffsetMs ?? 0) / 1000;
     if (localTime < 0 || (Number.isFinite(media.duration) && localTime >= media.duration)) continue;
     const drift = Math.abs(media.currentTime - localTime);
-    if (!props.isPlaying || drift > 0.4) media.currentTime = localTime;
-    if (props.isPlaying && media.paused) void media.play().catch(() => undefined);
+    if (!props.isPlaying) {
+      media.pause();
+      if (drift > 0.01) media.currentTime = localTime;
+      continue;
+    }
+    if (drift > 0.04) media.currentTime = localTime;
+    if (media.paused) void media.play().catch(() => undefined);
   }
 };
 
@@ -368,12 +375,11 @@ watch(() => props.selectedBackground, loadBackground, { immediate: true });
 
 const drawBackground = (
   ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
+  rect: { x: number; y: number; width: number; height: number },
 ) => {
   const background = props.selectedBackground;
   if (background?.kind === "video" && backgroundVideo.readyState >= 2) {
-    ctx.drawImage(backgroundVideo, 0, 0, width, height);
+    ctx.drawImage(backgroundVideo, rect.x, rect.y, rect.width, rect.height);
     return;
   }
   if (
@@ -381,12 +387,12 @@ const drawBackground = (
     backgroundImg.complete &&
     backgroundImg.naturalWidth > 0
   ) {
-    ctx.drawImage(backgroundImg, 0, 0, width, height);
+    ctx.drawImage(backgroundImg, rect.x, rect.y, rect.width, rect.height);
     return;
   }
 
   ctx.fillStyle = "#1e1e24";
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
 };
 
 watch(
@@ -429,30 +435,22 @@ const drawVideoWindow = (
   width: number,
   height: number,
 ) => {
+  const preview = outputPreviewRect(width, height, props.outputCanvas);
   if (!props.isVideoEnabled) {
     ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
     ctx.fillStyle = "#ffffff";
     ctx.font = "16px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("Video track disabled", width / 2, height / 2);
+    ctx.fillText("Video track disabled", preview.x + preview.width / 2, preview.y + preview.height / 2);
     return null;
   }
 
-  const margin = 50;
-  const availWidth = Math.max(1, width - margin * 2);
-  const availHeight = Math.max(1, height - margin * 2);
   const videoWidth = videoEl.videoWidth || 1920;
   const videoHeight = videoEl.videoHeight || 1080;
-  const aspect = videoWidth / videoHeight;
-  let dw = availWidth;
-  let dh = availWidth / aspect;
-  if (dh > availHeight) {
-    dh = availHeight;
-    dw = availHeight * aspect;
-  }
-  const dx = (width - dw) / 2;
-  const dy = (height - dh) / 2;
+  const { x: dx, y: dy, width: dw, height: dh } = preview;
+  const source = props.outputCanvas.fit === 'cover' ? coverSourceRect(videoWidth, videoHeight, dw, dh) : { x: 0, y: 0, width: videoWidth, height: videoHeight };
+  const media = props.outputCanvas.fit === 'contain' ? framedMediaRect(videoWidth, videoHeight, dw, dh) : { x: 0, y: 0, width: dw, height: dh };
 
   ctx.save();
   // The recorded screen is the global canvas content, not an overlay clip.
@@ -475,7 +473,7 @@ const drawVideoWindow = (
     props.editorData?.cursor.events ?? [],
     props.currentTime,
   );
-  const trackedFocus =
+  const sourceFocus =
     zoom?.mode === "auto"
       ? updateCursorFollowCamera(
           cursorFollowCamera,
@@ -488,6 +486,7 @@ const drawVideoWindow = (
           props.currentTime * 1000,
         )
       : (zoom?.focus ?? { cx: 0.5, cy: 0.5 });
+  const trackedFocus = zoom?.mode === "auto" ? outputPoint(sourceFocus.cx, sourceFocus.cy, videoWidth, videoHeight, dw, dh, props.outputCanvas.fit) : sourceFocus;
   const focusX = dx + trackedFocus.cx * dw;
   const focusY = dy + trackedFocus.cy * dh;
   const scale = zoom?.scale ?? 1;
@@ -500,7 +499,16 @@ const drawVideoWindow = (
     ctx.translate(dx + dw / 2, dy + dh / 2);
     ctx.scale(camera.scale, camera.scale);
     ctx.translate(-camera.focusX, -camera.focusY);
-    if (videoEl.readyState >= 1) ctx.drawImage(videoEl, dx, dy, dw, dh);
+    if (videoEl.readyState >= 1) {
+      if (props.outputCanvas.fit === 'contain') {
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, .35)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 10;
+        ctx.beginPath(); ctx.roundRect(dx + media.x, dy + media.y, media.width, media.height, 16); ctx.fillStyle = 'rgba(0, 0, 0, .01)'; ctx.fill();
+        ctx.clip();
+        ctx.drawImage(videoEl, source.x, source.y, source.width, source.height, dx + media.x, dy + media.y, media.width, media.height);
+        ctx.restore();
+      } else ctx.drawImage(videoEl, source.x, source.y, source.width, source.height, dx + media.x, dy + media.y, media.width, media.height);
+    }
     ctx.restore();
   };
 
@@ -519,6 +527,12 @@ const drawVideoWindow = (
     );
   }
   const camera = renderedCamera;
+  ctx.save();
+  ctx.translate(dx + dw / 2, dy + dh / 2);
+  ctx.scale(camera.scale, camera.scale);
+  ctx.translate(-camera.focusX, -camera.focusY);
+  drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
+  ctx.restore();
   const previous = previousCamera;
   const cameraDistance = previous
     ? Math.hypot(focusX - previous.focusX, focusY - previous.focusY) +
@@ -688,9 +702,11 @@ const drawComposition = (
 ) => {
   const timeMs = props.currentTime * 1000;
   for (const layer of activeLayersAt(props.composition, timeMs)) {
-    if (Boolean(layer.kind === "video" && layer.reactToZoom) !== followsZoom)
-      continue;
-    if (layer.kind === "audio") continue;
+    if (
+      layer.kind === "audio" ||
+      (layer.kind === 'video' && layer.reactToZoom) ||
+      (followsZoom ? layer.kind === 'video' : layer.kind !== 'video')
+    ) continue;
     if (layer.kind === "caption") {
       const sentence = layer.caption.sentences.find(
         (item) => item.startMs <= timeMs && timeMs <= item.endMs,
@@ -799,11 +815,11 @@ const renderCanvas = () => {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.clearRect(0, 0, width, height);
-
-  drawBackground(ctx, width, height);
+  ctx.fillStyle = "#121318";
+  ctx.fillRect(0, 0, width, height);
 
   const videoWindow = drawVideoWindow(ctx, width, height);
-  if (videoWindow) drawWebcamLayers(ctx, videoWindow);
+  if (videoWindow) drawInCameraSpace(ctx, videoWindow, () => drawComposition(ctx, videoWindow, true));
   const cursorData = props.editorData?.cursor;
   if (videoWindow && cursorData?.available) {
     const time = props.currentTime;
@@ -818,9 +834,10 @@ const renderCanvas = () => {
           button.sessionNs / 1_000_000_000,
         );
         if (!state) continue;
+        const point = outputPoint(state.x, state.y, videoEl.videoWidth || 1920, videoEl.videoHeight || 1080, videoWindow.dw, videoWindow.dh, props.outputCanvas.fit);
         ripples.value.push({
-          x: videoWindow.dx + state.x * videoWindow.dw,
-          y: videoWindow.dy + state.y * videoWindow.dh,
+          x: videoWindow.dx + point.cx * videoWindow.dw,
+          y: videoWindow.dy + point.cy * videoWindow.dh,
           radius: 2,
           alpha: 1,
         });
@@ -850,8 +867,9 @@ const renderCanvas = () => {
       activeImage.complete &&
       activeImage.naturalWidth > 0
     ) {
-      const pointerX = videoWindow.dx + state.x * videoWindow.dw;
-      const pointerY = videoWindow.dy + state.y * videoWindow.dh;
+      const point = outputPoint(state.x, state.y, videoEl.videoWidth || 1920, videoEl.videoHeight || 1080, videoWindow.dw, videoWindow.dh, props.outputCanvas.fit);
+      const pointerX = videoWindow.dx + point.cx * videoWindow.dw;
+      const pointerY = videoWindow.dy + point.cy * videoWindow.dh;
 
       // Draw cursor vector image in unscaled canvas coordinate space
       const targetSize = props.cursorSize;
@@ -900,6 +918,7 @@ const renderCanvas = () => {
   } else if (props.isVideoEnabled && cursorData && !cursorData.available) {
     drawCursorWarning(ctx, "Cursor data missing", width);
   }
+  if (videoWindow) drawWebcamLayers(ctx, videoWindow);
   if (videoWindow) drawComposition(ctx, videoWindow, false);
 
   if (props.isPlaying && videoEl.readyState >= 1) {

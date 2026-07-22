@@ -1,14 +1,19 @@
 import { reactive } from 'vue'
 import { describe, expect, it } from 'vitest'
 import { createCompositionSnapshot } from './snapshot'
+import { DEFAULT_OUTPUT_CANVAS } from '../../video-editor/canvas/output-canvas'
 
-const base = () => ({ videoSrc: 'file:///screen.mp4', duration: 4, width: 1920, height: 1080, fps: 30, videoEnabled: true, background: null, editorData: null, zooms: [], composition: { media: [], layers: [] }, cursorSettings: { selectedCursor: 'automatic' as const, size: 24, color: '#000000', shadow: { enabled: true, blur: 6, color: '#000000' }, ripple: { enabled: true, color: '#ff5a1f', size: 30 } }, systemAudioEnabled: true, micAudioEnabled: true })
+const base = () => ({ videoSrc: 'file:///screen.mp4', duration: 4, width: 1920, height: 1080, fps: 30, canvas: DEFAULT_OUTPUT_CANVAS, videoEnabled: true, background: null, editorData: null, zooms: [], composition: { media: [], layers: [] }, cursorSettings: { selectedCursor: 'automatic' as const, size: 24, color: '#000000', shadow: { enabled: true, blur: 6, color: '#000000' }, ripple: { enabled: true, color: '#ff5a1f', size: 30 } }, systemAudioEnabled: true, micAudioEnabled: true })
 
 describe('createCompositionSnapshot', () => {
   it('rejects an unavailable source video', () => expect(() => createCompositionSnapshot({ ...base(), videoSrc: null })).toThrow('indisponible'))
   it('clamps invalid geometry and duration without inventing cursor data', () => {
     const snapshot = createCompositionSnapshot({ ...base(), duration: -1, width: 0, height: -8, fps: 0 })
     expect(snapshot.video).toMatchObject({ width: 1, height: 1, fps: 1 }); expect(snapshot.duration).toBe(0); expect(snapshot.cursor.available).toBe(false)
+  })
+  it('uses saved output dimensions independently from the capture dimensions', () => {
+    const snapshot = createCompositionSnapshot({ ...base(), canvas: { preset: '4:5', width: 1, height: 1, fit: 'cover' } })
+    expect(snapshot.video).toMatchObject({ width: 1920, height: 1080 }); expect(snapshot.canvas).toMatchObject({ width: 1080, height: 1350 })
   })
   it('keeps an immutable copy of the editing scene', () => {
     const zooms = [{ id: 'z', sessionId: 's', startMs: 0, endMs: 10, focus: { cx: .5, cy: .5 }, depth: 1 as const, mode: 'manual' as const }]

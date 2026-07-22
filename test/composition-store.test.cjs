@@ -33,9 +33,15 @@ test('persists an editor state and materializes imported project backgrounds', (
     schemaVersion: 1,
     composition: { media: [], layers: [] },
     zoom: { elements: [], generatedSessions: [] },
-    presentation: { selectedBackgroundId: background.id, importedBackgrounds: [background], videoEnabled: true, systemAudioEnabled: false, micAudioEnabled: true },
+    presentation: { canvas: { preset: '16:9', width: 1920, height: 1080, fit: 'cover' }, selectedBackgroundId: background.id, importedBackgrounds: [background], videoEnabled: true, systemAudioEnabled: false, micAudioEnabled: true },
   })
   assert.equal(saved.presentation.selectedBackgroundId, background.id)
   assert.equal(saved.presentation.importedBackgrounds[0].extension, 'png')
   assert.match(saved.presentation.importedBackgrounds[0].path, /^file:/)
+})
+test('migrates a project without canvas presentation settings to 16:9', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-canvas-'))
+  const store = createProjectStore(root); const project = store.create({ name: 'Legacy' })
+  const state = store.editorState(project.id)
+  assert.deepEqual(state.presentation.canvas, { preset: '16:9', width: 1920, height: 1080, fit: 'cover' })
 })

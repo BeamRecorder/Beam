@@ -38,6 +38,7 @@ const {
   compositionState,
   zoomState,
   exportRequest,
+  outputCanvas,
   handleSelectTab,
 } = useVideoEditor({
   videoSrc: toRef(props, "videoSrc"),
@@ -185,7 +186,9 @@ watch(
           :composition="composition"
           :editor-data="editorData"
           :project-id="project?.id"
+          :canvas="outputCanvas"
           @import:background="addBackground($event)"
+          @update:canvas="outputCanvas = $event"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
@@ -216,6 +219,7 @@ watch(
           :zoom-elements="zoomElements"
           :selected-zoom="selectedZoom"
           :composition="composition"
+          :output-canvas="outputCanvas"
           @update:zoom="updateZoom"
           @duration-change="duration = $event"
         />

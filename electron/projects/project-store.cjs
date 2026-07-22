@@ -68,11 +68,19 @@ function createProjectStore(root) {
   }
   const presentationState = (value) => {
     const next = value || {}
+    const canvasInput = next.canvas || {}
+    const preset = ['16:9', '9:16', '1:1', '4:5', 'custom'].includes(canvasInput.preset) ? canvasInput.preset : '16:9'
+    const presets = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] }
+    const [presetWidth, presetHeight] = presets[preset] || []
+    const width = preset === 'custom' ? Math.max(1, Math.round(canvasInput.width)) : presetWidth
+    const height = preset === 'custom' ? Math.max(1, Math.round(canvasInput.height)) : presetHeight
+    if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('Dimensions du canvas invalides')
     const importedBackgrounds = Array.isArray(next.importedBackgrounds) ? next.importedBackgrounds.map((background) => {
       if (!background || typeof background.id !== 'string' || typeof background.name !== 'string' || typeof background.fileName !== 'string' || path.basename(background.fileName) !== background.fileName || !['image', 'video'].includes(background.kind)) throw new Error('Fond importé invalide')
       return { id: background.id, name: background.name.slice(0, 160), fileName: background.fileName, kind: background.kind }
     }) : []
     return {
+      canvas: { preset, width, height, fit: canvasInput.fit === 'contain' ? 'contain' : 'cover' },
       selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
       importedBackgrounds,
       videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,

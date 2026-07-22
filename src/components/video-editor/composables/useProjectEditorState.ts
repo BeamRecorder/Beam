@@ -4,6 +4,7 @@ import type { CaptureProject, ProjectEditorState } from "../../../api/types/capt
 import type { ProjectComposition } from "../composition/composition-types";
 import type { ZoomElement } from "../zoom/zoom-types";
 import type { BackgroundMedia } from "./backgroundMedia";
+import type { OutputCanvasSettings } from '../canvas/output-canvas';
 
 const plain = <T>(value: T): T => structuredClone(toRaw(value));
 
@@ -17,6 +18,7 @@ export function useProjectEditorState(options: {
   videoEnabled: Ref<boolean>;
   systemAudioEnabled: Ref<boolean>;
   micAudioEnabled: Ref<boolean>;
+  canvas: Ref<OutputCanvasSettings>;
 }) {
   const loading = ref(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -29,6 +31,7 @@ export function useProjectEditorState(options: {
       composition: options.composition.value,
       zoom: { elements: options.zoomElements.value, generatedSessions: options.generatedSessions.value },
       presentation: {
+        canvas: options.canvas.value,
         selectedBackgroundId: selected?.id ?? options.selectedBackground.value,
         importedBackgrounds: options.importedBackgrounds.value,
         videoEnabled: options.videoEnabled.value,
@@ -67,6 +70,7 @@ export function useProjectEditorState(options: {
       options.videoEnabled.value = state.presentation.videoEnabled;
       options.systemAudioEnabled.value = state.presentation.systemAudioEnabled;
       options.micAudioEnabled.value = state.presentation.micAudioEnabled;
+      options.canvas.value = state.presentation.canvas;
     } finally { loading.value = false; }
   };
 
@@ -80,6 +84,7 @@ export function useProjectEditorState(options: {
       options.videoEnabled,
       options.systemAudioEnabled,
       options.micAudioEnabled,
+      options.canvas,
     ],
     scheduleSave,
     { deep: true },

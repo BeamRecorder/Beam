@@ -121,7 +121,7 @@ export async function exportWithMediabunny(request: ExportRequest, onProgress: (
   const video = document.createElement('video')
   video.muted = true; video.preload = 'auto'; video.src = request.snapshot.video.src
   const canvas = document.createElement('canvas')
-  canvas.width = request.snapshot.video.width; canvas.height = request.snapshot.video.height
+  canvas.width = request.snapshot.canvas.width; canvas.height = request.snapshot.canvas.height
   const context = canvas.getContext('2d')
   if (!context) throw new Error('Canvas 2D indisponible.')
   let sequence = 0

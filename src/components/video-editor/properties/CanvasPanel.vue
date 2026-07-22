@@ -6,9 +6,10 @@ import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import { type BackgroundMedia, type BackgroundMediaGroup, type BackgroundMediaKind } from '../composables/backgroundMedia'
+import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset, type OutputCanvasSettings } from '../canvas/output-canvas'
 
-const props = defineProps<{ selectedBackground: string | null; backgroundGroups: BackgroundMediaGroup[]; projectId?: string | null }>()
-const emit = defineEmits<{ (e: 'update:selectedBackground', value: string): void; (e: 'import:background', value: BackgroundMedia): void }>()
+const props = defineProps<{ selectedBackground: string | null; backgroundGroups: BackgroundMediaGroup[]; projectId?: string | null; canvas: OutputCanvasSettings }>()
+const emit = defineEmits<{ (e: 'update:selectedBackground', value: string): void; (e: 'import:background', value: BackgroundMedia): void; (e: 'update:canvas', value: OutputCanvasSettings): void }>()
 
 const activeKind = ref<Extract<BackgroundMediaKind, 'image' | 'video'>>('image')
 const loadedCount = ref(24)
@@ -45,6 +46,17 @@ const triggerImport = async () => {
   const background = await capture.pickProjectBackgroundMedia(props.projectId)
   if (background) emit('import:background', background)
 }
+const setCanvasPreset = (preset: OutputCanvasPreset) => {
+  if (preset === 'custom') return emit('update:canvas', { ...props.canvas, preset })
+  emit('update:canvas', { ...OUTPUT_CANVAS_PRESETS[preset], fit: props.canvas.fit })
+}
+const updateCustomDimension = (key: 'width' | 'height', value: string) => {
+  const dimension = Math.round(Number(value))
+  if (!Number.isFinite(dimension) || dimension < 1) return
+  emit('update:canvas', { ...props.canvas, preset: 'custom', [key]: dimension })
+}
+const ratioLabel = computed(() => `${props.canvas.width} × ${props.canvas.height} (${(props.canvas.width / props.canvas.height).toFixed(2)}:1)`)
+const setFit = (fit: OutputCanvasSettings['fit']) => emit('update:canvas', { ...props.canvas, fit })
 
 onMounted(() => {
   observer = new IntersectionObserver((entries) => {
@@ -72,6 +84,20 @@ onUnmounted(() => {
 
 <template>
   <div class="options-group">
+    <label class="prop-label">Output format</label>
+    <ButtonGroup aria-label="Output format">
+      <Button v-for="preset in ['16:9', '9:16', '1:1', '4:5'] as const" :key="preset" size="sm" :variant="canvas.preset === preset ? 'primary' : 'ghost'" @click="setCanvasPreset(preset)">{{ preset }}</Button>
+    </ButtonGroup>
+    <Button size="sm" :variant="canvas.preset === 'custom' ? 'primary' : 'ghost'" @click="setCanvasPreset('custom')">Custom</Button>
+    <div v-if="canvas.preset === 'custom'" class="canvas-dimensions">
+      <label>Width <input :value="canvas.width" type="number" min="1" @change="updateCustomDimension('width', ($event.target as HTMLInputElement).value)"></label>
+      <label>Height <input :value="canvas.height" type="number" min="1" @change="updateCustomDimension('height', ($event.target as HTMLInputElement).value)"></label>
+    </div>
+    <p class="canvas-ratio">{{ ratioLabel }} · Cover</p>
+    <ButtonGroup aria-label="Screen fit">
+      <Button size="sm" :variant="canvas.fit === 'cover' ? 'primary' : 'ghost'" @click="setFit('cover')">Fill</Button>
+      <Button size="sm" :variant="canvas.fit === 'contain' ? 'primary' : 'ghost'" @click="setFit('contain')">Show background</Button>
+    </ButtonGroup>
     <label class="prop-label">Background</label>
     <ButtonGroup aria-label="Background type">
       <Button size="sm" :variant="activeKind === 'video' ? 'primary' : 'ghost'" :icon="Video" @click="setKind('video')">Video</Button>
@@ -152,6 +178,10 @@ onUnmounted(() => {
   font-weight: 600; 
   color: var(--text-secondary); 
 }
+.canvas-dimensions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.canvas-dimensions label { display: grid; gap: 4px; font-size: 11px; color: var(--text-secondary); }
+.canvas-dimensions input { min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--text-primary); padding: 6px; }
+.canvas-ratio { margin: -4px 0 2px; color: var(--text-muted); font-size: 11px; }
 .file-input { 
   display: none; 
 }

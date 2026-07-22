@@ -4,6 +4,8 @@ import type { ZoomElement } from '../../video-editor/zoom/zoom-types'
 import type { ProjectComposition } from '../../video-editor/composition/composition-types'
 import type { CursorRenderSettings } from '../export-types'
 import type { CompositionSnapshot } from '../export-types'
+import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas'
+import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas'
 
 const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({
   ...zoom,
@@ -27,6 +29,7 @@ export function createCompositionSnapshot(input: {
   width: number
   height: number
   fps: number
+  canvas: OutputCanvasSettings
   videoEnabled: boolean
   background: BackgroundMedia | null
   editorData: ProjectEditorData | null | undefined
@@ -40,6 +43,7 @@ export function createCompositionSnapshot(input: {
   return {
     duration: Math.max(0, input.duration),
     video: { src: input.videoSrc, width: Math.max(1, input.width), height: Math.max(1, input.height), fps: Math.max(1, input.fps), enabled: input.videoEnabled },
+    canvas: normalizeOutputCanvas(input.canvas),
     background: input.background ? { kind: input.background.kind, src: input.background.path } : null,
     zooms: copyZooms(input.zooms),
     cursor: copyCursor(input.editorData?.cursor),

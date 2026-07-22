@@ -12,6 +12,7 @@ import type { ZoomElement } from '../zoom/zoom-types'
 import CaptionPanel from './CaptionPanel.vue'
 import type { CaptionCompositionLayer, ProjectComposition } from '../composition/composition-types'
 import type { ProjectEditorData } from '../../../api/types/capture-api'
+import type { OutputCanvasSettings } from '../canvas/output-canvas'
 
 defineProps<{
   activeTab: string
@@ -61,6 +62,7 @@ defineProps<{
   composition: ProjectComposition
   editorData?: ProjectEditorData | null
   projectId?: string | null
+  canvas: OutputCanvasSettings
 }>()
 
 const emit = defineEmits<{
@@ -80,6 +82,7 @@ const emit = defineEmits<{
   (e: 'update:micVolume', value: number): void
   (e: 'update:selectedBackground', value: string): void
   (e: 'import:background', value: BackgroundMedia): void
+  (e: 'update:canvas', value: OutputCanvasSettings): void
   (e: 'update:zoom', value: ZoomElement): void
   (e: 'delete:zoom'): void
   (e: 'generate:zooms'): void
@@ -107,8 +110,10 @@ const emit = defineEmits<{
         :selected-background="selectedBackground"
         :background-groups="backgroundGroups"
         :project-id="projectId"
+        :canvas="canvas"
         @update:selectedBackground="emit('update:selectedBackground', $event)"
         @import:background="emit('import:background', $event)"
+        @update:canvas="emit('update:canvas', $event)"
       />
 
       <ClipPropertiesPanel 
