@@ -1,16 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { capture } from '../api/capture'
 
 export const useThemeStore = defineStore('theme', () => {
   // A deterministic light default prevents the HUD from following an OS dark
   // scheme before the user has explicitly chosen a preference.
   const theme = ref<'light' | 'dark' | 'system'>('light')
+  const hydrated = ref(false)
 
-  // Initialize theme from localStorage
-  const savedTheme = localStorage.getItem('theme')
-  if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
-    theme.value = savedTheme
-  }
+  void capture.getPreferences().then((preferences) => { theme.value = preferences.theme; hydrated.value = true }).catch(() => { hydrated.value = true })
 
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
@@ -26,7 +24,8 @@ export const useThemeStore = defineStore('theme', () => {
 
   // Watch for changes in select choice
   watch(theme, () => {
-    localStorage.setItem('theme', theme.value)
+    if (!hydrated.value) return
+    void capture.updatePreferences({ theme: theme.value }).catch(() => undefined)
     applyTheme()
   }, { immediate: true })
 
@@ -39,12 +38,7 @@ export const useThemeStore = defineStore('theme', () => {
 
   // The camera overlay is a separate Electron renderer. Sync a preference
   // changed in the main window immediately instead of waiting for reload.
-  window.addEventListener('storage', (event) => {
-    if (event.key !== 'theme') return
-    if (event.newValue === 'light' || event.newValue === 'dark' || event.newValue === 'system') {
-      theme.value = event.newValue
-    }
-  })
+  capture.onPreferencesChanged((preferences) => { if (preferences.theme !== theme.value) theme.value = preferences.theme })
 
   return {
     theme,

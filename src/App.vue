@@ -29,6 +29,7 @@ const handleMouseLeave = () => {
 onMounted(() => {
   window.addEventListener('mousemove', handleMouseMove, { passive: true })
   window.addEventListener('mouseleave', handleMouseLeave, { passive: true })
+  void capture.getPreferences().then((preferences) => { recordingBarVisibility.value = preferences.recordingBar.visibility })
 })
 
 onBeforeUnmount(() => {
@@ -54,7 +55,7 @@ const setView = (view: 'hud' | 'editor') => {
   if (view === 'editor') { capture.setCameraOverlayActive(false); capture.setWindowMode('editor'); capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height) } else { capture.setCameraOverlayActive(true); capture.showHud() }
 }
 
-const recordingBarVisibility = ref<'always' | 'auto-fade'>(localStorage.getItem('demorecorder_recording_bar_visibility') === 'auto-fade' ? 'auto-fade' : 'always')
+const recordingBarVisibility = ref<'always' | 'auto-fade'>('always')
 const recording = useRecordingController((session) => { void handleStopRecording(session) })
 
 const startRecording = async (configuration: RecordingConfiguration) => {

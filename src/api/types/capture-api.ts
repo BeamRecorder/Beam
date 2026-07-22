@@ -51,6 +51,11 @@ export interface DesktopCaptureApi extends CaptureApi {
   drag(): void
   getSources(types?: string[]): Promise<CapturePreview[]>
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>
+  getPreferences(): Promise<PreferenceSettings>
+  updatePreferences(patch: Partial<PreferenceSettings>): Promise<PreferenceSettings>
+  resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>
+  onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void
+  onPreferenceShortcut(listener: (id: string) => void): () => void
   listProjects(): Promise<CaptureProject[]>
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>
@@ -92,6 +97,16 @@ export interface DesktopCaptureApi extends CaptureApi {
   writeSystemAudioSegment(payload: MediaSegmentChunk): Promise<void>
   finalizeSystemAudioSegment(payload: SystemAudioSegmentFinish): Promise<void>
   failSystemAudio(payload: SystemAudioFailure): Promise<void>
+}
+
+export interface PreferenceShortcut { keys: string; scope: 'global' | 'application'; category: string }
+export interface PreferenceSettings {
+  schemaVersion: 1
+  theme: 'light' | 'dark' | 'system'
+  recordingBar: { visibility: 'always' | 'auto-fade' }
+  devices: Record<string, unknown>
+  shortcuts: Record<string, PreferenceShortcut>
+  extras: Record<string, unknown>
 }
 
 export interface ProjectEditorPresentation {

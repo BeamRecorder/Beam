@@ -49,16 +49,7 @@ import {
   Check,
 } from "@lucide/vue";
 
-const STORAGE_KEY_DEVICES = "demorecorder_hud_devices";
-
-const savedDevices = (() => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_DEVICES);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-})();
+let savedDevices: { cameraId?: string; micId?: string; systemAudioMode?: "on" | "off" } | null = null;
 
 
 const emit = defineEmits(["start-recording", "stop-recording", "open-project"]);
@@ -85,12 +76,10 @@ const showProjectPicker = ref(false);
 // Preference settings
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
 const recordingBarVisibility = ref<"always" | "auto-fade">(
-  localStorage.getItem("demorecorder_recording_bar_visibility") === "auto-fade"
-    ? "auto-fade"
-    : "always",
+  "always",
 );
 watch(recordingBarVisibility, (value) =>
-  localStorage.setItem("demorecorder_recording_bar_visibility", value),
+  void capture.updatePreferences({ recordingBar: { visibility: value } }),
 );
 
 // Previews
@@ -119,18 +108,7 @@ const systemAudioMode = ref<"on" | "off">(
 );
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
-  try {
-    localStorage.setItem(
-      STORAGE_KEY_DEVICES,
-      JSON.stringify({
-        cameraId: selectedCameraId.value,
-        micId: selectedMicId.value,
-        systemAudioMode: systemAudioMode.value,
-      }),
-    );
-  } catch (err) {
-    console.error("Failed to save HUD device preferences:", err);
-  }
+  void capture.updatePreferences({ devices: { cameraId: selectedCameraId.value, micId: selectedMicId.value, systemAudioMode: systemAudioMode.value } });
 });
 watch(
   [selectedCameraId],
@@ -705,6 +683,9 @@ const discoverSources = async () => {
 };
 
 onMounted(async () => {
+  const preferences = await capture.getPreferences();
+  savedDevices = preferences.devices as typeof savedDevices;
+  recordingBarVisibility.value = preferences.recordingBar.visibility;
   updateWindowSize();
   await discoverSources();
   await loadPreviews();
