@@ -436,28 +436,45 @@ backgroundVideo.loop = true;
 backgroundVideo.preload = "auto";
 backgroundVideo.playsInline = true;
 
+const MAX_BACKGROUND_CACHE = 6;
 const bgImageCache = new Map<string, HTMLImageElement>();
 const activeBgState = ref<BackgroundValue | null>(props.selectedBackground);
 const prevBgState = ref<BackgroundValue | null>(null);
 const activeBgImg = ref<HTMLImageElement | null>(null);
 const prevBgImg = ref<HTMLImageElement | null>(null);
 
-let transitionStartTime = 0;
-const TRANSITION_DURATION = 180; // 180ms smooth canvas cross-fade
+let transitionStartTime: number | null = null;
+const TRANSITION_DURATION = 160;
 const isTransitioningBackground = ref(false);
+let backgroundLoadVersion = 0;
+
+const cacheBackgroundImage = (path: string, image: HTMLImageElement) => {
+  bgImageCache.delete(path);
+  bgImageCache.set(path, image);
+  while (bgImageCache.size > MAX_BACKGROUND_CACHE) {
+    const oldestPath = bgImageCache.keys().next().value as string | undefined;
+    if (!oldestPath) break;
+    const oldest = bgImageCache.get(oldestPath);
+    bgImageCache.delete(oldestPath);
+    if (oldest && oldest !== activeBgImg.value && oldest !== prevBgImg.value) {
+      oldest.src = "";
+    }
+  }
+};
 
 const triggerBgTransition = () => {
-  transitionStartTime = performance.now();
+  // Anchor the animation to the first paint, not to a potentially busy input
+  // handler. Otherwise a delayed first RAF can consume the whole duration.
+  transitionStartTime = null;
   isTransitioningBackground.value = true;
   renderOnce();
 };
 
 const loadBackground = () => {
   const nextBg = props.selectedBackground;
-  const t0 = performance.now();
+  const loadVersion = ++backgroundLoadVersion;
 
   if (!nextBg) {
-    console.log(`[EditorCanvas] 🎯 Background reset to NULL at ${t0.toFixed(1)}ms`);
     prevBgState.value = activeBgState.value;
     prevBgImg.value = activeBgImg.value;
     activeBgState.value = null;
@@ -466,39 +483,46 @@ const loadBackground = () => {
     return;
   }
 
-  if (activeBgState.value?.id === nextBg.id) return;
-
-  console.log(`[EditorCanvas] 🎯 Background selection received: ${nextBg.kind} (${nextBg.name || nextBg.id}) at ${t0.toFixed(1)}ms`);
-
-  prevBgState.value = activeBgState.value;
-  prevBgImg.value = activeBgImg.value;
-  activeBgState.value = nextBg;
+  if (
+    activeBgState.value?.id === nextBg.id &&
+    (nextBg.kind !== "image" || activeBgImg.value !== null)
+  ) return;
 
   if (nextBg.kind === "image") {
     let cached = bgImageCache.get(nextBg.path);
     if (!cached) {
       cached = new Image();
       cached.decoding = "async";
-      cached.onload = () => {
-        console.log(`[EditorCanvas] 🖼️ Image loaded & cached: ${nextBg.name || nextBg.id} in ${(performance.now() - t0).toFixed(1)}ms`);
-        renderOnce();
-      };
       cached.src = nextBg.path;
-      bgImageCache.set(nextBg.path, cached);
     }
-    activeBgImg.value = cached;
-    triggerBgTransition();
+    const image = cached;
+    void image.decode().catch(() => undefined).finally(() => {
+      if (loadVersion !== backgroundLoadVersion || !image.naturalWidth) return;
+      cacheBackgroundImage(nextBg.path, image);
+      prevBgState.value = activeBgState.value;
+      prevBgImg.value = activeBgImg.value;
+      activeBgState.value = nextBg;
+      activeBgImg.value = image;
+      triggerBgTransition();
+    });
   } else if (nextBg.kind === "video") {
+    prevBgState.value = activeBgState.value;
+    prevBgImg.value = activeBgImg.value;
+    activeBgState.value = nextBg;
     backgroundVideo.src = nextBg.path;
     backgroundVideo.load();
     activeBgImg.value = null;
     triggerBgTransition();
   } else {
+    prevBgState.value = activeBgState.value;
+    prevBgImg.value = activeBgImg.value;
+    activeBgState.value = nextBg;
     activeBgImg.value = null;
     triggerBgTransition();
   }
 };
-watch(() => props.selectedBackground, loadBackground, { immediate: true, deep: true });
+backgroundVideo.addEventListener("loadeddata", renderOnce);
+watch(() => props.selectedBackground, loadBackground, { immediate: true });
 watch(() => props.backgroundBlurPercent, renderOnce);
 
 const drawSingleBackground = (
@@ -563,10 +587,13 @@ const drawBackground = (
 ) => {
   let progress = 1;
   if (isTransitioningBackground.value) {
+    if (transitionStartTime === null) transitionStartTime = performance.now();
     const elapsed = performance.now() - transitionStartTime;
-    progress = Math.min(1, elapsed / TRANSITION_DURATION);
+    const linear = Math.min(1, elapsed / TRANSITION_DURATION);
+    progress = 1 - (1 - linear) * (1 - linear);
     if (progress >= 1) {
       isTransitioningBackground.value = false;
+      transitionStartTime = null;
       prevBgState.value = null;
       prevBgImg.value = null;
     }
@@ -1221,6 +1248,7 @@ onUnmounted(() => {
   videoEl.src = "";
   videoEl.load();
   backgroundVideo.removeAttribute("src");
+  backgroundVideo.removeEventListener("loadeddata", renderOnce);
   backgroundVideo.load();
   disposeCompositionMedia();
   window.removeEventListener('keydown', updateWebcamAspectMode);

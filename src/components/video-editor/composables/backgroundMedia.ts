@@ -1,4 +1,4 @@
-import publicBackgroundPaths from "virtual:public-background-media";
+import wallpapers from "virtual:public-background-media";
 
 export type BackgroundMediaKind = "image" | "video" | "blur";
 
@@ -98,4 +98,7 @@ export const groupBackgroundMedia = (
     .filter((group) => group.items.length > 0);
 };
 
-export const BACKGROUND_MEDIA = createBackgroundMedia(publicBackgroundPaths);
+export const BACKGROUND_MEDIA = createBackgroundMedia([
+  ...wallpapers.images,
+  ...wallpapers.videos,
+]);

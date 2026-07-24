@@ -10,7 +10,7 @@ import type {
   ProjectZoomState,
 } from './capture-session'
 import type { CompositionLayer, CompositionMedia, ProjectComposition } from '../../components/video-editor/composition/composition-types'
-import type { BackgroundMedia, BackgroundValue } from '../../components/video-editor/composables/backgroundCatalog'
+import type { BackgroundMedia, BackgroundValue, GradientBackground } from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
 
 export type * from './capture-config'
@@ -61,7 +61,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>
-  pickProjectBackgroundMedia(projectId: string): Promise<BackgroundMedia | null>
+  pickProjectBackgroundMedia(projectId: string, kind: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>
   saveProjectZoomState(projectId: string, zoom: ProjectZoomState): Promise<ProjectZoomState>
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
@@ -102,11 +102,12 @@ export interface DesktopCaptureApi extends CaptureApi {
 
 export interface PreferenceShortcut { keys: string; scope: 'global' | 'application'; category: string }
 export interface PreferenceSettings {
-  schemaVersion: 1
+  schemaVersion: 2
   theme: 'light' | 'dark' | 'system'
   recordingBar: { visibility: 'always' | 'auto-fade' }
   devices: Record<string, unknown>
   shortcuts: Record<string, PreferenceShortcut>
+  backgroundPresets: { colors: string[]; gradients: GradientBackground[] }
   extras: Record<string, unknown>
 }
 

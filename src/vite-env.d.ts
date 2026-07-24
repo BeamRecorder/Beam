@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 declare module 'virtual:public-background-media' {
-  const paths: string[]
-  export default paths
+  export const images: string[]
+  export const videos: string[]
+  const wallpapers: { images: string[]; videos: string[] }
+  export default wallpapers
 }

@@ -3,9 +3,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { Image, Plus, Upload, Video } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
-import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
-import Gradient from "~/ui/Gradient/Gradient.vue";
+import BackgroundPresetComposer from "./BackgroundPresetComposer.vue";
 import { capture } from "../../../api/capture";
 import {
   BACKGROUND_COLORS,
@@ -54,6 +53,18 @@ const customGradientValue = ref<GradientBackground>({
     { id: "end", position: 1, color: "#ec4899", alpha: 1 },
   ],
 });
+const savedColors = ref<string[]>([]);
+const savedGradients = ref<GradientBackground[]>([]);
+let unsubscribePreferences: (() => void) | null = null;
+
+const colorPresets = computed(() => [
+  ...BACKGROUND_COLORS,
+  ...savedColors.value.map((color) => customColor(color)),
+]);
+const gradientPresets = computed(() => [
+  ...BACKGROUND_GRADIENTS,
+  ...savedGradients.value.map((gradient, index) => ({ ...customGradient(gradient), id: `gradient:custom:${index}` })),
+]);
 
 const items = computed(
   () =>
@@ -98,11 +109,20 @@ onMounted(() => {
     }
   }, { root: null, rootMargin: "120px", threshold: 0.01 });
   scheduleVisibleTileObservation();
+  void capture.getPreferences().then((preferences) => {
+    savedColors.value = preferences.backgroundPresets.colors;
+    savedGradients.value = preferences.backgroundPresets.gradients;
+  }).catch(() => undefined);
+  unsubscribePreferences = capture.onPreferencesChanged((preferences) => {
+    savedColors.value = preferences.backgroundPresets.colors;
+    savedGradients.value = preferences.backgroundPresets.gradients;
+  });
 });
 
 onUnmounted(() => {
   previewObserver?.disconnect();
   tileElements.clear();
+  unsubscribePreferences?.();
 });
 
 // Instant tab switch
@@ -133,22 +153,38 @@ const loadMore = () => {
 const isSelected = (entry: BackgroundValue) =>
   props.selectedBackground?.id === entry.id;
 
-const selectColor = (color: string) => {
-  customColorValue.value = color;
-  emit("update:selectedBackground", customColor(color));
+const addColorPreset = async (color: string) => {
+  const normalized = color.toLowerCase();
+  customColorValue.value = normalized;
+  const colors = [...new Set([...savedColors.value, normalized])];
+  const preferences = await capture.updatePreferences({ backgroundPresets: { colors, gradients: savedGradients.value } });
+  savedColors.value = preferences.backgroundPresets.colors;
+  emit("update:selectedBackground", customColor(normalized));
+  showCustomEditor.value = false;
 };
 
-const selectGradient = (gradient: GradientBackground) => {
+const addGradientPreset = async (gradient: GradientBackground) => {
+  const gradients = [...savedGradients.value, gradient];
+  const preferences = await capture.updatePreferences({ backgroundPresets: { colors: savedColors.value, gradients } });
+  savedGradients.value = preferences.backgroundPresets.gradients;
   emit("update:selectedBackground", customGradient(gradient));
+  showCustomEditor.value = false;
 };
 
 const triggerImport = async () => {
   if (!props.projectId) return;
-  const background = await capture.pickProjectBackgroundMedia(props.projectId);
+  const kind = activeKind.value === "image" || activeKind.value === "video" ? activeKind.value : "media";
+  const background = await capture.pickProjectBackgroundMedia(props.projectId, kind);
   if (background) {
     emit("import:background", background);
   }
 };
+
+const importLabel = computed(() => activeKind.value === "image"
+  ? "Importer une image personnalisée"
+  : activeKind.value === "video"
+    ? "Importer une vidéo personnalisée"
+    : "Importer un fond personnalisé");
 </script>
 
 <template>
@@ -196,7 +232,7 @@ const triggerImport = async () => {
       class="import-btn"
       @click="triggerImport"
     >
-      Importer un fond personnalisé
+      {{ importLabel }}
     </Button>
 
     <!-- Hardware-Accelerated Tab Content Container -->
@@ -207,6 +243,18 @@ const triggerImport = async () => {
         ref="gridRef"
         class="media-scroll-grid"
       >
+        <div v-if="!items.length" class="empty-backgrounds">
+          <span>No Background found</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            block
+            :icon="Upload"
+            @click="triggerImport"
+          >
+            {{ importLabel }}
+          </Button>
+        </div>
         <button
           v-for="item in visibleItems"
           :key="item.id"
@@ -265,7 +313,7 @@ const triggerImport = async () => {
             <Plus :size="16" />
           </button>
           <button
-            v-for="item in BACKGROUND_COLORS"
+            v-for="item in colorPresets"
             :key="item.id"
             type="button"
             class="swatch-tile"
@@ -275,13 +323,14 @@ const triggerImport = async () => {
             @click="emit('update:selectedBackground', item)"
           />
         </div>
-        <div v-if="showCustomEditor" class="custom-editor-row">
-          <span>Couleur personnalisée</span>
-          <ColorPicker
-            :model-value="customColorValue"
-            @update:model-value="selectColor"
-          />
-        </div>
+        <BackgroundPresetComposer
+          v-if="showCustomEditor"
+          kind="color"
+          :color="customColorValue"
+          :gradient="customGradientValue"
+          @add-color="addColorPreset"
+          @close="showCustomEditor = false"
+        />
       </div>
 
       <!-- Gradient Presets Grid -->
@@ -297,7 +346,7 @@ const triggerImport = async () => {
             <Plus :size="16" />
           </button>
           <button
-            v-for="item in BACKGROUND_GRADIENTS"
+            v-for="item in gradientPresets"
             :key="item.id"
             type="button"
             class="swatch-tile"
@@ -309,16 +358,14 @@ const triggerImport = async () => {
             @click="emit('update:selectedBackground', item)"
           />
         </div>
-        <div v-if="showCustomEditor" class="custom-editor-box">
-          <Gradient v-model="customGradientValue" :show-angle="true" />
-          <Button
-            size="sm"
-            class="apply-btn"
-            @click="selectGradient(customGradientValue)"
-          >
-            Utiliser ce dégradé
-          </Button>
-        </div>
+        <BackgroundPresetComposer
+          v-if="showCustomEditor"
+          kind="gradient"
+          :color="customColorValue"
+          :gradient="customGradientValue"
+          @add-gradient="addGradientPreset"
+          @close="showCustomEditor = false"
+        />
       </div>
     </div>
 
@@ -447,6 +494,18 @@ img.media-content.loaded {
 }
 
 .load-more { grid-column: 1 / -1; justify-self: stretch; width: 100%; }
+
+.empty-backgrounds {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 12px;
+  color: var(--text-secondary, #9ca3af);
+  font-size: 12px;
+  text-align: center;
+}
 
 /* Color & Gradient Swatches Grid */
 .swatches-section,

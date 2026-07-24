@@ -1,4 +1,4 @@
-import publicBackgroundPaths from "virtual:public-background-media";
+import wallpapers from "virtual:public-background-media";
 
 export type BackgroundKind = "image" | "video" | "color" | "gradient";
 export type BackgroundMediaKind = Extract<BackgroundKind, "image" | "video">;
@@ -26,6 +26,20 @@ export const createBackgroundMedia = (paths: readonly string[]): BackgroundMedia
   const kind = backgroundKindFor(path); if (!kind) return [];
   return [{ id: path, name: nameFor(path), path, extension: extensionFor(path), kind }];
 }).sort((left, right) => left.name.localeCompare(right.name));
+
+const mediaForKind = (paths: readonly string[], kind: BackgroundMediaKind) => {
+  const root = `/wallpapers/${kind}/`;
+  return createBackgroundMedia(paths).filter((item) => item.kind === kind && item.path.startsWith(root));
+};
+
+/** Built-in wallpapers are deliberately sourced from their matching folder only. */
+export const createWallpaperMedia = (
+  imagePaths: readonly string[],
+  videoPaths: readonly string[],
+): BackgroundMedia[] => [
+  ...mediaForKind(imagePaths, "image"),
+  ...mediaForKind(videoPaths, "video"),
+].sort((left, right) => left.name.localeCompare(right.name));
 export const groupBackgroundMedia = (media: readonly BackgroundMedia[]): BackgroundMediaGroup[] => (Object.keys(labels) as BackgroundMediaKind[]).map((kind) => ({ kind, label: labels[kind], items: media.filter((item) => item.kind === kind) })).filter((group) => group.items.length > 0);
 
 export const normalizeGradient = (value: unknown): GradientBackground => {
@@ -45,7 +59,7 @@ export const normalizeBackgroundValue = (value: unknown): BackgroundValue | null
   if (entry.kind === "gradient") return { id: typeof entry.id === "string" ? entry.id : "gradient:custom", name: typeof entry.name === "string" ? entry.name : "Custom gradient", kind: "gradient", gradient: normalizeGradient(entry.gradient) };
   return null;
 };
-export const BACKGROUND_MEDIA = createBackgroundMedia(publicBackgroundPaths);
+export const BACKGROUND_MEDIA = createWallpaperMedia(wallpapers.images, wallpapers.videos);
 export const BACKGROUND_COLORS: ColorBackground[] = ["#111827", "#ffffff", "#0f766e", "#1d4ed8", "#7c3aed", "#be123c"].map((color) => ({ id: `color:${color}`, name: color, kind: "color", color }));
 export const BACKGROUND_GRADIENTS: GradientCatalogBackground[] = [
   { id: "gradient:violet", name: "Violet", kind: "gradient", gradient: defaultGradient },

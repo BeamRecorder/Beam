@@ -17,7 +17,14 @@ function registerProjectIpc(ipcMain, projectStore, dialog) {
     return projectStore.importCompositionMedia(payload.projectId, { kind, source: selected.filePaths[0] })
   })
   ipcMain.handle('projects:pick-background-media', async (_event, payload = {}) => {
-    const selected = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'Background media', extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp', 'mp4', 'webm', 'mov', 'm4v', 'ogv'] }] })
+    const kind = ['image', 'video', 'media'].includes(payload.kind) ? payload.kind : 'media'
+    const extensions = kind === 'image'
+      ? ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp']
+      : kind === 'video'
+        ? ['mp4', 'webm', 'mov', 'm4v', 'ogv']
+        : ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp', 'mp4', 'webm', 'mov', 'm4v', 'ogv']
+    const label = kind === 'image' ? 'Images' : kind === 'video' ? 'Vidéos' : 'Fonds personnalisés'
+    const selected = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: label, extensions }] })
     if (selected.canceled || !selected.filePaths[0]) return null
     return projectStore.importBackground(payload.projectId, { source: selected.filePaths[0] })
   })

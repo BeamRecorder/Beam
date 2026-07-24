@@ -9,36 +9,40 @@ import { fileURLToPath, URL } from "node:url";
 const PUBLIC_BACKGROUND_MEDIA_MODULE = "virtual:public-background-media";
 const RESOLVED_PUBLIC_BACKGROUND_MEDIA_MODULE =
   "\0" + PUBLIC_BACKGROUND_MEDIA_MODULE;
-const PUBLIC_MEDIA_EXTENSIONS = new Set([
+const WALLPAPER_IMAGE_EXTENSIONS = new Set([
   ".avif",
   ".bmp",
   ".jpeg",
   ".jpg",
+  ".png",
+  ".webp",
+]);
+const WALLPAPER_VIDEO_EXTENSIONS = new Set([
   ".m4v",
   ".mov",
   ".mp4",
   ".ogv",
-  ".png",
   ".webm",
-  ".webp",
 ]);
 
 const collectPublicBackgroundMedia = (
   directory: string,
   publicRoot: string,
+  extensions: ReadonlySet<string>,
 ): string[] => {
+  if (!fs.existsSync(directory)) return [];
   const entries = fs.readdirSync(directory, { withFileTypes: true });
   const paths: string[] = [];
 
   for (const entry of entries) {
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
-      paths.push(...collectPublicBackgroundMedia(absolutePath, publicRoot));
+      paths.push(...collectPublicBackgroundMedia(absolutePath, publicRoot, extensions));
       continue;
     }
     if (
       !entry.isFile() ||
-      !PUBLIC_MEDIA_EXTENSIONS.has(path.extname(entry.name).toLowerCase())
+      !extensions.has(path.extname(entry.name).toLowerCase())
     )
       continue;
 
@@ -62,8 +66,9 @@ const publicBackgroundMediaPlugin = (): Plugin => ({
   load(id) {
     if (id !== RESOLVED_PUBLIC_BACKGROUND_MEDIA_MODULE) return undefined;
     const publicRoot = fileURLToPath(new URL("./public", import.meta.url));
-    const paths = collectPublicBackgroundMedia(publicRoot, publicRoot);
-    return `export default ${JSON.stringify(paths)};`;
+    const imagePaths = collectPublicBackgroundMedia(path.join(publicRoot, "wallpapers", "image"), publicRoot, WALLPAPER_IMAGE_EXTENSIONS);
+    const videoPaths = collectPublicBackgroundMedia(path.join(publicRoot, "wallpapers", "video"), publicRoot, WALLPAPER_VIDEO_EXTENSIONS);
+    return `export const images = ${JSON.stringify(imagePaths)}; export const videos = ${JSON.stringify(videoPaths)}; export default { images, videos };`;
   },
 });
 
