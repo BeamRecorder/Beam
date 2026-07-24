@@ -70,9 +70,13 @@ fn engine_eof_finalizes_an_active_session() {
     drop(stdin);
     assert!(child.wait().expect("wait for engine").success());
 
-    let manifest = temporary
-        .path()
-        .join(format!("project-{project_id}"))
+    let project = std::fs::read_dir(temporary.path())
+        .expect("read projects")
+        .flatten()
+        .find(|entry| entry.file_name().to_string_lossy().starts_with("project-"))
+        .expect("project directory")
+        .path();
+    let manifest = project
         .join(format!("session-{session_id}"))
         .join("manifest.json");
     assert!(

@@ -7,10 +7,12 @@ const { registerProjectIpc } = require('../electron/projects/project-ipc.cjs') a
 const setup = () => {
   const handlers = new Map<string, Function>()
   const ipcMain = { handle: (channel: string, handler: Function) => handlers.set(channel, handler) }
-  const importBackground = vi.fn((projectId, input) => ({ projectId, ...input }))
+  const importFile = vi.fn((source) => ({ source }))
   const dialog = { showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['C:/wallpaper.png'] }) }
-  registerProjectIpc(ipcMain, { importBackground }, dialog)
-  return { handler: handlers.get('projects:pick-background-media')!, dialog, importBackground }
+  const window = { webContents: { send: vi.fn() } }
+  const windows = { getAllWindows: () => [window] }
+  registerProjectIpc(ipcMain, {}, { importFile, list: vi.fn() }, dialog, windows)
+  return { handler: handlers.get('background-library:pick-import')!, dialog, importFile, window }
 }
 
 describe('background import IPC', () => {
@@ -33,9 +35,15 @@ describe('background import IPC', () => {
   })
 
   it('does not import when the file picker is cancelled', async () => {
-    const { handler, dialog, importBackground } = setup()
+    const { handler, dialog, importFile } = setup()
     dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] })
     await expect(handler({}, { projectId: 'project', kind: 'media' })).resolves.toBeNull()
-    expect(importBackground).not.toHaveBeenCalled()
+    expect(importFile).not.toHaveBeenCalled()
+  })
+
+  it('notifies every renderer after a global import', async () => {
+    const { handler, window } = setup()
+    await handler({}, { kind: 'image' })
+    expect(window.webContents.send).toHaveBeenCalledWith('background-library:changed')
   })
 })

@@ -1,4 +1,5 @@
-import { ref, computed, watch, type Ref } from "vue";
+import { ref, computed, watch, onScopeDispose, type Ref } from "vue";
+import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorData } from "../../../api/types/capture-api";
 import { useVideoPlayer } from "./useVideoPlayer";
 import { useEditorAudio } from "./useEditorAudio";
@@ -69,7 +70,13 @@ export function useVideoEditor(options: {
     systemAudioEnabled: player.isSystemAudioEnabled,
     micAudioEnabled: player.isMicAudioEnabled,
     canvas: outputCanvas,
+    availableBackgrounds: player.backgroundGroups,
   });
+
+  const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
+  void refreshBackgroundLibrary().catch((error) => console.error("Failed to load background library:", error));
+  const stopBackgroundSubscription = capture.onBackgroundLibraryChanged(() => { void refreshBackgroundLibrary().catch((error) => console.error("Failed to refresh background library:", error)); });
+  onScopeDispose(stopBackgroundSubscription);
 
   // Calculate source FPS
   const sourceFps = computed(() => {

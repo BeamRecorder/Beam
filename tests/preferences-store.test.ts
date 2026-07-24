@@ -45,7 +45,7 @@ describe('preferences background presets', () => {
   })
 
   it('rejects malformed presets without discarding valid existing preferences', () => {
-    const store = createPreferencesStore(directory())
+    const root = directory(); const store = createPreferencesStore(path.join(root, 'preferences.json'))
     store.patch({ theme: 'dark', backgroundPresets: { colors: ['#111111'], gradients: [] } })
     const result = store.patch({ backgroundPresets: { colors: ['invalid'], gradients: [{ stops: [] }] } })
     expect(result).toMatchObject({ theme: 'dark', backgroundPresets: { colors: [], gradients: [] } })
@@ -53,9 +53,9 @@ describe('preferences background presets', () => {
 
   it('returns defaults when the on-disk preference file is corrupt or missing', () => {
     const root = directory()
-    const store = createPreferencesStore(root)
+    const store = createPreferencesStore(path.join(root, 'preferences.json'))
     expect(store.read()).toMatchObject({ schemaVersion: 2, backgroundPresets: { colors: [], gradients: [] } })
-    fs.writeFileSync(path.join(root, 'preferencesSettings.json'), '{broken')
+    fs.writeFileSync(path.join(root, 'preferences.json'), '{broken')
     expect(store.read()).toMatchObject({ schemaVersion: 2, backgroundPresets: { colors: [], gradients: [] } })
   })
 })

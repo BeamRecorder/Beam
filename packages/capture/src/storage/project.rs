@@ -6,6 +6,45 @@ use super::{ProjectLayout, write_atomic};
 
 const MAX_PROJECT_NAME_SUFFIX: u32 = i32::MAX as u32;
 
+fn slugify(value: &str) -> String {
+    let slug = value
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    let slug = slug.trim_matches('-');
+    if slug.is_empty() {
+        "untitled-project".into()
+    } else {
+        slug.into()
+    }
+}
+
+fn project_directory(
+    root: &std::path::Path,
+    name: &str,
+) -> Result<std::path::PathBuf, crate::CaptureError> {
+    let base = format!("project-{}", slugify(name));
+    for suffix in 1..=MAX_PROJECT_NAME_SUFFIX {
+        let candidate = root.join(if suffix == 1 {
+            base.clone()
+        } else {
+            format!("{base}-{suffix}")
+        });
+        if !candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    Err(crate::CaptureError::InvalidConfiguration(
+        "unable to create a unique project directory".into(),
+    ))
+}
+
 fn generated_project_base_name(project_id: ProjectId) -> String {
     const ADJECTIVES: [&str; 8] = [
         "Bright", "Calm", "Clever", "Golden", "Quiet", "Rapid", "Soft", "Vivid",
@@ -83,12 +122,11 @@ pub fn create_or_update_project(
     now_utc: &str,
 ) -> Result<ProjectManifest, crate::CaptureError> {
     let layout = ProjectLayout::new(root, project_id);
-    std::fs::create_dir_all(layout.project_dir())
-        .map_err(|e| crate::CaptureError::storage(&layout.project_dir(), e))?;
-    let path = layout.project_manifest();
-    let mut project = if path.exists() {
+    let existing_path = layout.project_manifest();
+    let mut project = if existing_path.exists() {
         serde_json::from_slice(
-            &std::fs::read(&path).map_err(|e| crate::CaptureError::storage(&path, e))?,
+            &std::fs::read(&existing_path)
+                .map_err(|e| crate::CaptureError::storage(&existing_path, e))?,
         )?
     } else {
         ProjectManifest {
@@ -106,6 +144,13 @@ pub fn create_or_update_project(
             "project id collision".into(),
         ));
     }
+    let directory = if existing_path.exists() {
+        layout.project_dir()
+    } else {
+        project_directory(root, &project.name)?
+    };
+    std::fs::create_dir_all(&directory).map_err(|e| crate::CaptureError::storage(&directory, e))?;
+    let path = directory.join("project.json");
     if !project
         .sessions
         .iter()

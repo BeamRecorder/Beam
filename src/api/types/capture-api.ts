@@ -61,7 +61,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>
-  pickProjectBackgroundMedia(projectId: string, kind: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>
+  listBackgroundLibrary(): Promise<BackgroundMedia[]>
+  pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>
+  onBackgroundLibraryChanged(listener: () => void): () => void
   saveProjectZoomState(projectId: string, zoom: ProjectZoomState): Promise<ProjectZoomState>
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
@@ -116,7 +118,7 @@ export interface ProjectEditorPresentation {
   selectedBackgroundId: string | null
   background?: BackgroundValue | null
   blurPercent?: number
-  importedBackgrounds: Array<BackgroundMedia & { fileName: string }>
+  importedBackgrounds: BackgroundMedia[]
   videoEnabled: boolean
   systemAudioEnabled: boolean
   micAudioEnabled: boolean

@@ -20,6 +20,7 @@ export function useProjectEditorState(options: {
   systemAudioEnabled: Ref<boolean>;
   micAudioEnabled: Ref<boolean>;
   canvas: Ref<OutputCanvasSettings>;
+  availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
   const loading = ref(false);
   const scheduledSave = ref(false);
@@ -27,6 +28,7 @@ export function useProjectEditorState(options: {
   const isSaving = computed(() => scheduledSave.value || pendingSaves.value > 0);
   let timer: ReturnType<typeof setTimeout> | null = null;
   let writeChain = Promise.resolve();
+  let savedBackgroundId: string | null = null;
 
   const snapshot = (): ProjectEditorState => {
     const canvas = options.canvas.value;
@@ -39,10 +41,10 @@ export function useProjectEditorState(options: {
       },
       presentation: {
         canvas: { preset: canvas.preset, width: canvas.width, height: canvas.height, showBackground: canvas.showBackground },
-        selectedBackgroundId: options.selectedBackground.value?.id ?? null,
-        background: options.selectedBackground.value ? structuredClone(toRaw(options.selectedBackground.value)) : null,
+        selectedBackgroundId: options.selectedBackground.value?.id ?? savedBackgroundId,
+        background: options.selectedBackground.value && !['image', 'video'].includes(options.selectedBackground.value.kind) ? structuredClone(toRaw(options.selectedBackground.value)) : null,
         blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
-        importedBackgrounds: options.importedBackgrounds.value.map((background) => ({ id: background.id, name: background.name, path: background.path, extension: background.extension, kind: background.kind, ...(background.fileName ? { fileName: background.fileName } : {}) })),
+        importedBackgrounds: [],
         videoEnabled: options.videoEnabled.value,
         systemAudioEnabled: options.systemAudioEnabled.value,
         micAudioEnabled: options.micAudioEnabled.value,
@@ -81,8 +83,10 @@ export function useProjectEditorState(options: {
       options.zoomElements.value = state.zoom.elements;
       options.generatedSessions.value = state.zoom.generatedSessions;
       options.importedBackgrounds.value = state.presentation.importedBackgrounds;
+      const globalBackgrounds = options.availableBackgrounds.value.flatMap((group) => group.items);
+      savedBackgroundId = state.presentation.selectedBackgroundId;
       const selected = normalizeBackgroundValue(state.presentation.background)
-        ?? [...state.presentation.importedBackgrounds].find((item) => item.id === state.presentation.selectedBackgroundId)
+        ?? globalBackgrounds.find((item) => item.id === state.presentation.selectedBackgroundId || item.path === state.presentation.selectedBackgroundId)
         ?? BACKGROUND_MEDIA.find((item) => item.id === state.presentation.selectedBackgroundId || item.path === state.presentation.selectedBackgroundId)
         ?? null;
       options.selectedBackground.value = selected;
@@ -110,5 +114,10 @@ export function useProjectEditorState(options: {
     scheduleSave,
     { deep: true },
   );
+  watch(options.availableBackgrounds, (groups) => {
+    if (!savedBackgroundId || options.selectedBackground.value) return;
+    const selected = groups.flatMap((group) => group.items).find((item) => item.id === savedBackgroundId || item.path === savedBackgroundId);
+    if (selected) options.selectedBackground.value = selected;
+  }, { deep: true });
   return { load, saveNow, scheduleSave, isSaving };
 }

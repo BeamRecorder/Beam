@@ -15,8 +15,32 @@ function createProjectStore(root) {
     if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('Identifiant de projet invalide')
     return id
   }
-  const directoryFor = (id) => path.join(root, `project-${assertId(id)}`)
+  const slugify = (value) => {
+    const normalized = String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    const slug = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    return slug || 'untitled-project'
+  }
   const readManifest = (directory) => JSON.parse(fs.readFileSync(path.join(directory, 'project.json'), 'utf8'))
+  const projectDirectories = () => !fs.existsSync(root) ? [] : fs.readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(root, entry.name))
+    .filter((directory) => fs.existsSync(path.join(directory, 'project.json')))
+  const directoryFor = (id) => {
+    const projectId = assertId(id)
+    const directory = projectDirectories().find((candidate) => {
+      try { return readManifest(candidate).projectId === projectId } catch { return false }
+    })
+    if (!directory) throw new Error('Projet introuvable')
+    return directory
+  }
+  const availableDirectory = (name, currentDirectory = null) => {
+    const base = `project-${slugify(name)}`
+    for (let suffix = 1; suffix <= 2_147_483_647; suffix += 1) {
+      const candidate = path.join(root, suffix === 1 ? base : `${base}-${suffix}`)
+      if (candidate === currentDirectory || !fs.existsSync(candidate)) return candidate
+    }
+    throw new Error('Impossible de créer un dossier de projet unique')
+  }
   const writeManifest = (directory, manifest) => {
     const target = path.join(directory, 'project.json')
     fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
@@ -75,16 +99,12 @@ function createProjectStore(root) {
     const width = preset === 'custom' ? Math.max(1, Math.round(canvasInput.width)) : presetWidth
     const height = preset === 'custom' ? Math.max(1, Math.round(canvasInput.height)) : presetHeight
     if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('Dimensions du canvas invalides')
-    const importedBackgrounds = Array.isArray(next.importedBackgrounds) ? next.importedBackgrounds.map((background) => {
-      if (!background || typeof background.id !== 'string' || typeof background.name !== 'string' || typeof background.fileName !== 'string' || path.basename(background.fileName) !== background.fileName || !['image', 'video'].includes(background.kind)) throw new Error('Fond importé invalide')
-      return { id: background.id, name: background.name.slice(0, 160), fileName: background.fileName, kind: background.kind }
-    }) : []
     return {
       canvas: { preset, width, height, showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : canvasInput.fit === 'cover' ? false : true },
       selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
       background: next.background && typeof next.background === 'object' ? next.background : null,
       blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
-      importedBackgrounds,
+      importedBackgrounds: [],
       videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,
       systemAudioEnabled: typeof next.systemAudioEnabled === 'boolean' ? next.systemAudioEnabled : true,
       micAudioEnabled: typeof next.micAudioEnabled === 'boolean' ? next.micAudioEnabled : true,
@@ -141,7 +161,7 @@ function createProjectStore(root) {
   const editorState = (id) => {
     const directory = directoryFor(id); const manifest = readManifest(directory); const editor = manifest.editor || {}
     const presentation = presentationState(editor.presentation)
-    return { schemaVersion: 1, composition: composition.read(id), zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] }, presentation: { ...presentation, importedBackgrounds: presentation.importedBackgrounds.map((background) => ({ ...background, extension: path.extname(background.fileName).slice(1).toLowerCase(), path: pathToFileURL(path.join(directory, 'media', 'backgrounds', background.fileName)).href })) } }
+    return { schemaVersion: 1, composition: composition.read(id), zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] }, presentation }
   }
   const saveEditorState = (id, value) => {
     if (!value || value.schemaVersion !== 1) throw new Error('État éditeur invalide')
@@ -153,24 +173,24 @@ function createProjectStore(root) {
     manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest)
     return editorState(id)
   }
-  const importBackground = (id, input) => {
-    if (!input || typeof input.source !== 'string') throw new Error('Fond importé invalide')
-    const extension = path.extname(input.source).toLowerCase(); const kind = ['.mp4', '.webm', '.mov', '.m4v', '.ogv'].includes(extension) ? 'video' : ['.png', '.jpg', '.jpeg', '.webp', '.avif', '.bmp'].includes(extension) ? 'image' : null
-    if (!kind) throw new Error('Type de fond non autorisé')
-    const directory = directoryFor(id); const targetDirectory = path.join(directory, 'media', 'backgrounds'); fs.mkdirSync(targetDirectory, { recursive: true })
-    const background = { id: randomUUID(), name: path.basename(input.source, extension).slice(0, 160), fileName: `${randomUUID()}${extension}`, kind }
-    fs.copyFileSync(input.source, path.join(targetDirectory, background.fileName))
-    return { ...background, extension: extension.slice(1), path: pathToFileURL(path.join(targetDirectory, background.fileName)).href }
+  const applyPendingRenames = () => {
+    for (const directory of projectDirectories()) {
+      let manifest; try { manifest = readManifest(directory) } catch { continue }
+      const targetSlug = manifest.pendingDirectorySlug
+      if (typeof targetSlug !== 'string' || !targetSlug) continue
+      const target = availableDirectory(targetSlug, directory)
+      try { fs.renameSync(directory, target); delete manifest.pendingDirectorySlug; writeManifest(target, manifest) } catch {}
+    }
   }
+  applyPendingRenames()
   return {
-    list: () => !fs.existsSync(root) ? [] : fs.readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && entry.name.startsWith('project-')).map((entry) => { try { const directory = path.join(root, entry.name); return summary(directory, readManifest(directory), entry.name.slice(8)) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
+    list: () => projectDirectories().map((directory) => { try { const manifest = readManifest(directory); return summary(directory, manifest, manifest.projectId) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
     editorData,
     saveZoom: (id, zoom) => { const directory = directoryFor(id); const manifest = readManifest(directory); const state = zoomState(zoom); manifest.editor = { ...(manifest.editor || {}), zoom: state }; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return state },
     editorState,
     saveEditorState,
-    importBackground,
-    create: (options = {}) => { const id = randomUUID(); const now = new Date().toISOString(); const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id); fs.mkdirSync(root, { recursive: true }); const directory = directoryFor(id); fs.mkdirSync(directory); const manifest = { schemaVersion: 1, projectId: id, name, createdAtUtc: now, updatedAtUtc: now, sessions: [] }; writeManifest(directory, manifest); return summary(directory, manifest, id) },
-    rename: (id, name) => { const directory = directoryFor(id); const manifest = readManifest(directory); const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''; if (!nextName) throw new Error('Le nom du projet ne peut pas être vide'); manifest.name = nextName; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return summary(directory, manifest, id) },
+    create: (options = {}) => { const id = randomUUID(); const now = new Date().toISOString(); const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id); fs.mkdirSync(root, { recursive: true }); const directory = availableDirectory(name); fs.mkdirSync(directory); const manifest = { schemaVersion: 1, projectId: id, name, createdAtUtc: now, updatedAtUtc: now, sessions: [] }; writeManifest(directory, manifest); return summary(directory, manifest, id) },
+    rename: (id, name) => { const directory = directoryFor(id); const manifest = readManifest(directory); const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''; if (!nextName) throw new Error('Le nom du projet ne peut pas être vide'); const target = availableDirectory(nextName, directory); manifest.name = nextName; manifest.updatedAtUtc = new Date().toISOString(); try { fs.renameSync(directory, target); delete manifest.pendingDirectorySlug; writeManifest(target, manifest); return summary(target, manifest, id) } catch { manifest.pendingDirectorySlug = slugify(nextName); writeManifest(directory, manifest); return summary(directory, manifest, id) } },
     saveThumbnail: (id, dataUrl) => {
       const directory = directoryFor(id);
       if (!fs.existsSync(directory)) return null;

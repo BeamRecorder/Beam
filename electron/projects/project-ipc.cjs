@@ -1,4 +1,4 @@
-function registerProjectIpc(ipcMain, projectStore, dialog) {
+function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, BrowserWindow) {
   ipcMain.handle('projects:list', () => projectStore.list())
   ipcMain.handle('projects:editor-data', (_event, payload = {}) => projectStore.editorData(payload.projectId))
   ipcMain.handle('projects:editor-state', (_event, payload = {}) => projectStore.editorState(payload.projectId))
@@ -16,7 +16,11 @@ function registerProjectIpc(ipcMain, projectStore, dialog) {
     if (selected.canceled || !selected.filePaths[0]) return null
     return projectStore.importCompositionMedia(payload.projectId, { kind, source: selected.filePaths[0] })
   })
-  ipcMain.handle('projects:pick-background-media', async (_event, payload = {}) => {
+  const notifyBackgroundLibraryChanged = () => {
+    for (const window of BrowserWindow.getAllWindows()) window.webContents.send('background-library:changed')
+  }
+  ipcMain.handle('background-library:list', () => backgroundLibrary.list())
+  ipcMain.handle('background-library:pick-import', async (_event, payload = {}) => {
     const kind = ['image', 'video', 'media'].includes(payload.kind) ? payload.kind : 'media'
     const extensions = kind === 'image'
       ? ['png', 'jpg', 'jpeg', 'webp', 'avif', 'bmp']
@@ -26,7 +30,9 @@ function registerProjectIpc(ipcMain, projectStore, dialog) {
     const label = kind === 'image' ? 'Images' : kind === 'video' ? 'Vidéos' : 'Fonds personnalisés'
     const selected = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: label, extensions }] })
     if (selected.canceled || !selected.filePaths[0]) return null
-    return projectStore.importBackground(payload.projectId, { source: selected.filePaths[0] })
+    const background = backgroundLibrary.importFile(selected.filePaths[0])
+    notifyBackgroundLibraryChanged()
+    return background
   })
   ipcMain.handle('projects:save-composition-layer', (_event, payload = {}) => projectStore.saveCompositionLayer(payload.projectId, payload.layer))
   ipcMain.handle('projects:delete-composition-layer', (_event, payload = {}) => projectStore.deleteCompositionLayer(payload.projectId, payload.layerId))

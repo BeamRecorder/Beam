@@ -13,13 +13,13 @@ function completedVideoSource(session) {
   return video ? { ...session, videoSrc: pathToFileURL(path.join(screenDirectory, video)).href } : session
 }
 
-function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, trackStorages }) {
+function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, userPaths, trackStorages }) {
   const registerSession = (session) => { for (const storage of trackStorages) storage.registerSession(session); return session }
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session)
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
       const catalog = await captureEngine.request('discover')
-      const config = buildDefaultCaptureConfig(catalog, payload.options || {}, { platform: process.platform, defaultOutputRoot: path.join(app.getPath('videos'), 'DemoRecorder'), excludedProcessId: process.pid })
+      const config = buildDefaultCaptureConfig(catalog, payload.options || {}, { platform: process.platform, defaultOutputRoot: userPaths.projects, excludedProcessId: process.pid })
       await captureEngine.request('prepare', { config })
       const session = await captureEngine.request('start')
       return registerSession(session)

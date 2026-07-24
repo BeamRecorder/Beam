@@ -88,8 +88,14 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke("projects:editor-state", { projectId }),
     saveProjectEditorState: (projectId, state) =>
       ipcRenderer.invoke("projects:save-editor-state", { projectId, state }),
-    pickProjectBackgroundMedia: (projectId, kind = "media") =>
-      ipcRenderer.invoke("projects:pick-background-media", { projectId, kind }),
+    listBackgroundLibrary: () => ipcRenderer.invoke("background-library:list"),
+    pickBackgroundLibraryMedia: (kind = "media") =>
+      ipcRenderer.invoke("background-library:pick-import", { kind }),
+    onBackgroundLibraryChanged: (listener) => {
+      const callback = () => listener();
+      ipcRenderer.on("background-library:changed", callback);
+      return () => ipcRenderer.removeListener("background-library:changed", callback);
+    },
     saveProjectZoomState: (projectId, zoom) =>
       ipcRenderer.invoke("projects:save-zoom-state", { projectId, zoom }),
     createProject: (options = {}) =>

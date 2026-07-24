@@ -172,9 +172,8 @@ const addGradientPreset = async (gradient: GradientBackground) => {
 };
 
 const triggerImport = async () => {
-  if (!props.projectId) return;
   const kind = activeKind.value === "image" || activeKind.value === "video" ? activeKind.value : "media";
-  const background = await capture.pickProjectBackgroundMedia(props.projectId, kind);
+  const background = await capture.pickBackgroundLibraryMedia(kind);
   if (background) {
     emit("import:background", background);
   }

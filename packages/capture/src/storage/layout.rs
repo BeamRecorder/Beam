@@ -17,6 +17,22 @@ impl ProjectLayout {
     }
     #[must_use]
     pub fn project_dir(&self) -> PathBuf {
+        if let Ok(entries) = std::fs::read_dir(&self.root) {
+            for entry in entries.flatten() {
+                let candidate = entry.path();
+                let manifest = candidate.join("project.json");
+                let Ok(contents) = std::fs::read(&manifest) else {
+                    continue;
+                };
+                let Ok(value) = serde_json::from_slice::<crate::model::ProjectManifest>(&contents)
+                else {
+                    continue;
+                };
+                if value.project_id == self.project_id {
+                    return candidate;
+                }
+            }
+        }
         self.root.join(format!("project-{}", self.project_id))
     }
     #[must_use]

@@ -42,15 +42,15 @@ impl RecordingSession {
         )?;
         let session_id = SessionId::new();
         let created_at_utc = now_utc()?;
-        let project_layout = ProjectLayout::new(&request.recording.output_root, request.project_id);
-        let layout = project_layout.session(session_id);
-        layout.create()?;
         create_or_update_project(
             &request.recording.output_root,
             request.project_id,
             session_id,
             &created_at_utc,
         )?;
+        let project_layout = ProjectLayout::new(&request.recording.output_root, request.project_id);
+        let layout = project_layout.session(session_id);
+        layout.create()?;
         let manifest = SessionManifest {
             schema_version: SCHEMA_VERSION,
             project_id: request.project_id,

@@ -30,6 +30,13 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     selectedBackground.value = background
   }
 
+  const setUserBackgrounds = (backgrounds: BackgroundMedia[]) => {
+    importedBackgrounds.value = backgrounds
+    if (selectedBackground.value && (selectedBackground.value.kind === 'image' || selectedBackground.value.kind === 'video')) {
+      selectedBackground.value = allBackgrounds.value.find((item) => item.id === selectedBackground.value?.id) ?? availableBackgrounds[0] ?? null
+    }
+  }
+
   const restoreBackgrounds = (backgrounds: BackgroundMedia[], selected: BackgroundValue | string | null) => {
     importedBackgrounds.value = backgrounds
     selectedBackground.value = typeof selected === 'string'
@@ -69,6 +76,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     backgroundGroups,
     importedBackgrounds,
     addBackground,
+    setUserBackgrounds,
     restoreBackgrounds,
     isVideoEnabled,
     isSystemAudioEnabled,

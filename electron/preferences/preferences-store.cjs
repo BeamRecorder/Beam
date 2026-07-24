@@ -46,10 +46,9 @@ const normalize = (value) => {
   const globalKeys = new Set(); for (const entry of Object.values(shortcuts)) { if (entry.scope === 'global') { const key = entry.keys.toLowerCase(); if (globalKeys.has(key)) throw new Error('Raccourci global dupliqué'); globalKeys.add(key) } }
   return { schemaVersion: 2, theme: themes.has(next.theme) ? next.theme : base.theme, recordingBar: { visibility: next.recordingBar?.visibility === 'auto-fade' ? 'auto-fade' : 'always' }, devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {}, shortcuts, backgroundPresets: presets(next.backgroundPresets), extras: next.extras && typeof next.extras === 'object' && !Array.isArray(next.extras) ? next.extras : {} }
 }
-function createPreferencesStore(directory) {
-  const file = path.join(directory, 'preferencesSettings.json')
+function createPreferencesStore(file) {
   const read = () => { try { return normalize(JSON.parse(fs.readFileSync(file, 'utf8'))) } catch { return defaults() } }
-  const write = (value) => { const next = normalize(value); fs.mkdirSync(directory, { recursive: true }); const temp = `${file}.tmp`; fs.writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`); fs.renameSync(temp, file); return next }
+  const write = (value) => { const next = normalize(value); fs.mkdirSync(path.dirname(file), { recursive: true }); const temp = `${file}.tmp`; fs.writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`); fs.renameSync(temp, file); return next }
   const patch = (value) => { const current = read(); return write({ ...current, ...(value || {}), recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) }, devices: { ...current.devices, ...(value?.devices || {}) }, shortcuts: { ...current.shortcuts, ...(value?.shortcuts || {}) }, backgroundPresets: { ...current.backgroundPresets, ...(value?.backgroundPresets || {}) }, extras: { ...current.extras, ...(value?.extras || {}) } }) }
   return { read, write, patch, file }
 }
