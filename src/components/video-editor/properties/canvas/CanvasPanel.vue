@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from "vue";
-import { Image, Plus, Settings, Upload, Video } from "@lucide/vue";
+import { Image, Plus, SlidersHorizontal, Upload, Video } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
+import Popover from "~/ui/popover/Popover.vue";
 import BackgroundPresetComposer from "./BackgroundPresetComposer.vue";
 import { capture } from "../../../../api/capture";
 import {
@@ -47,8 +48,9 @@ const {
   customColorValue,
   customGradientValue,
   showCustomEditor,
-  editColor,
-  editGradient,
+  toggleColor,
+  toggleGradient,
+  isEditing,
   close: closeCustomEditor,
   saveColor: addColorPreset,
   saveGradient: addGradientPreset,
@@ -132,6 +134,8 @@ const loadMore = () => {
 
 const isSelected = (entry: BackgroundValue) =>
   props.selectedBackground?.id === entry.id;
+const selectedColorPreset = computed(() => colorPresets.value.find((item) => isSelected(item)) ?? null);
+const selectedGradientPreset = computed(() => gradientPresets.value.find((item) => isSelected(item)) ?? null);
 
 const triggerImport = async () => {
   const kind = activeKind.value === "image" || activeKind.value === "video" ? activeKind.value : "media";
@@ -279,32 +283,31 @@ const importLabel = computed(() => activeKind.value === "image"
           >
             <Plus :size="16" />
           </button>
-          <div
+          <button
             v-for="item in colorPresets"
             :key="item.id"
-            class="swatch-wrap"
-          >
-            <button
-              type="button"
-              class="swatch-tile"
-              :class="{ active: isSelected(item) }"
-              :style="{ background: item.color }"
-              :aria-label="item.name"
-              @click="emit('update:selectedBackground', item)"
-            />
-            <button type="button" class="swatch-edit" :aria-label="`Modifier ${item.name}`" @click.stop="editColor(item)">
-              <Settings :size="13" />
-            </button>
-          </div>
+            type="button"
+            class="swatch-tile"
+            :class="{ active: isSelected(item) }"
+            :style="{ background: item.color }"
+            :aria-label="item.name"
+            @click="emit('update:selectedBackground', item)"
+          />
         </div>
-        <BackgroundPresetComposer
-          v-if="showCustomEditor"
-          kind="color"
-          :color="customColorValue"
-          :gradient="customGradientValue"
-          @add-color="addColorPreset"
-          @close="closeCustomEditor"
-        />
+        <Popover v-if="selectedColorPreset" block flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+          <template #trigger>
+            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedColorPreset.id)" class="edit-selected-preset" @click="toggleColor(selectedColorPreset)">{{ isEditing(selectedColorPreset.id) ? "Fermer l’édition" : "Modifier" }}</Button>
+          </template>
+          <template #default="{ close }">
+            <BackgroundPresetComposer
+              kind="color"
+              :color="customColorValue"
+              :gradient="customGradientValue"
+              @add-color="addColorPreset"
+              @close="() => { closeCustomEditor(); close(); }"
+            />
+          </template>
+        </Popover>
       </div>
 
       <!-- Gradient Presets Grid -->
@@ -319,34 +322,33 @@ const importLabel = computed(() => activeKind.value === "image"
           >
             <Plus :size="16" />
           </button>
-          <div
+          <button
             v-for="item in gradientPresets"
             :key="item.id"
-            class="swatch-wrap"
-          >
-            <button
-              type="button"
-              class="swatch-tile"
-              :class="{ active: isSelected(item) }"
-              :style="{
-                background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`
-              }"
-              :aria-label="item.name"
-              @click="emit('update:selectedBackground', item)"
-            />
-            <button type="button" class="swatch-edit" :aria-label="`Modifier ${item.name}`" @click.stop="editGradient(item)">
-              <Settings :size="13" />
-            </button>
-          </div>
+            type="button"
+            class="swatch-tile"
+            :class="{ active: isSelected(item) }"
+            :style="{
+              background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`
+            }"
+            :aria-label="item.name"
+            @click="emit('update:selectedBackground', item)"
+          />
         </div>
-        <BackgroundPresetComposer
-          v-if="showCustomEditor"
-          kind="gradient"
-          :color="customColorValue"
-          :gradient="customGradientValue"
-          @add-gradient="addGradientPreset"
-          @close="closeCustomEditor"
-        />
+        <Popover v-if="selectedGradientPreset" block flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+          <template #trigger>
+            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedGradientPreset.id)" class="edit-selected-preset" @click="toggleGradient(selectedGradientPreset)">{{ isEditing(selectedGradientPreset.id) ? "Fermer l’édition" : "Modifier" }}</Button>
+          </template>
+          <template #default="{ close }">
+            <BackgroundPresetComposer
+              kind="gradient"
+              :color="customColorValue"
+              :gradient="customGradientValue"
+              @add-gradient="addGradientPreset"
+              @close="() => { closeCustomEditor(); close(); }"
+            />
+          </template>
+        </Popover>
       </div>
     </div>
 
@@ -503,11 +505,6 @@ img.media-content.loaded {
   gap: 7px;
 }
 
-.swatch-wrap {
-  position: relative;
-  aspect-ratio: 1;
-}
-
 .swatch-tile {
   width: 100%;
   aspect-ratio: 1;
@@ -519,40 +516,9 @@ img.media-content.loaded {
   transition: transform 0.12s ease, border 0.15s ease, box-shadow 0.15s ease;
 }
 
-.swatch-edit {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  width: 26px;
-  height: 26px;
-  place-items: center;
-  padding: 0;
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 80%, white 20%);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 5px 16px rgb(0 0 0 / 0.28);
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, -35%) scale(0.76);
-  transition: opacity 150ms ease, transform 190ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease;
-}
-
-.swatch-wrap:hover .swatch-edit,
-.swatch-wrap:focus-within .swatch-edit {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.swatch-edit:hover {
-  background: var(--color-bg-surface-hover);
-}
-
-.swatch-edit:active {
-  transform: translate(-50%, -50%) scale(0.92);
+.edit-selected-preset {
+  align-self: stretch;
+  animation: edit-action-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .swatch-tile:hover:not(.active) {
@@ -597,9 +563,15 @@ img.media-content.loaded {
   width: 100%;
 }
 
+@keyframes edit-action-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .swatch-edit,
+  .edit-selected-preset,
   .swatch-tile {
+    animation: none;
     transition: none;
   }
 }

@@ -7,12 +7,14 @@ const props = withDefaults(
     direction?: 'up' | 'down'
     block?: boolean
     matchTriggerWidth?: boolean
+    flush?: boolean
   }>(),
   {
     align: 'left',
     direction: 'down',
     block: false,
     matchTriggerWidth: true,
+    flush: false,
   }
 )
 
@@ -146,7 +148,7 @@ defineExpose({
 
     <Teleport to="body">
       <Transition name="pop">
-        <div v-if="isOpen" ref="contentRef" class="popover-content" :data-popover-owner="parentPopoverId" :class="[align, directionClass, { 'popover-block': block }]" :style="floatingStyle">
+        <div v-if="isOpen" ref="contentRef" class="popover-content" :data-popover-owner="parentPopoverId" :class="[align, directionClass, { 'popover-block': block, 'popover-flush': flush }]" :style="floatingStyle">
           <slot :close="close" />
         </div>
       </Transition>
@@ -190,6 +192,11 @@ defineExpose({
 
 .popover-content.popover-block {
   min-width: 0;
+}
+
+.popover-content.popover-flush {
+  padding: 0;
+  background: #ffffff;
 }
 
 /* Animations */

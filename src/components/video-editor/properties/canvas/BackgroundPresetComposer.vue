@@ -58,7 +58,8 @@ const add = () => {
   padding: 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
+  color: #18181b;
+  background: #ffffff;
   animation: composer-in 140ms ease-out both;
 }
 

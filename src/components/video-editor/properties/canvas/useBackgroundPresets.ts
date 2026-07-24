@@ -47,6 +47,9 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
   const editColor = (item: { id: string; color: string }) => { editingPresetId.value = item.id; customColorValue.value = item.color; showCustomEditor.value = true; };
   const editGradient = (item: { id: string; gradient: GradientBackground }) => { editingPresetId.value = item.id; customGradientValue.value = cloneGradient(item.gradient); showCustomEditor.value = true; };
   const close = () => { editingPresetId.value = null; showCustomEditor.value = false; };
+  const isEditing = (id: string) => showCustomEditor.value && editingPresetId.value === id;
+  const toggleColor = (item: { id: string; color: string }) => isEditing(item.id) ? close() : editColor(item);
+  const toggleGradient = (item: { id: string; gradient: GradientBackground }) => isEditing(item.id) ? close() : editGradient(item);
   const saveColor = async (color: string) => {
     const normalized = color.toLowerCase(); const editing = editingPresetId.value; const builtIn = BACKGROUND_COLORS.find((item) => item.id === editing);
     const colors = builtIn ? [...savedColors.value] : editing?.startsWith("color:custom:") ? savedColors.value.map((item) => item === editing.slice(13) ? normalized : item) : [...new Set([...savedColors.value, normalized])];
@@ -62,5 +65,5 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
 
   onMounted(() => { void capture.getPreferences().then(sync).catch(() => undefined); unsubscribe = capture.onPreferencesChanged(sync); });
   onUnmounted(() => unsubscribe?.());
-  return { colorPresets, gradientPresets, customColorValue, customGradientValue, showCustomEditor, editColor, editGradient, close, saveColor, saveGradient };
+  return { colorPresets, gradientPresets, customColorValue, customGradientValue, showCustomEditor, editColor, editGradient, toggleColor, toggleGradient, isEditing, close, saveColor, saveGradient };
 }
