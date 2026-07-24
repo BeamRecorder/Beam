@@ -1101,6 +1101,10 @@ const openProject = (project: CaptureProject) => {
 }
 
 /* Tabs */
+.mode-tabs {
+  width: 100%;
+}
+
 .tabs-container {
   background: var(--color-bg-surface-hover);
   border-radius: var(--radius-md);

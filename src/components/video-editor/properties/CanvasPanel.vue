@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, toRaw, watch, type ComponentPublicInstance } from "vue";
 import { Image, Plus, Upload, Video } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
@@ -78,15 +78,16 @@ const visibleItems = computed(() =>
 
 const hasMore = computed(() => visibleCount.value < items.value.length);
 
-const observeMediaTile = (element: Element | null, item: BackgroundMedia) => {
+const observeMediaTile = (element: Element | ComponentPublicInstance | null, item: BackgroundMedia) => {
+  const domElement = element && "$el" in element ? (element.$el as Element | null) : (element as Element | null);
   const previous = tileElements.get(item.id);
   if (previous) previewObserver?.unobserve(previous);
-  if (!element) {
+  if (!domElement) {
     tileElements.delete(item.id);
     return;
   }
-  tileElements.set(item.id, element);
-  previewObserver?.observe(element);
+  tileElements.set(item.id, domElement);
+  previewObserver?.observe(domElement);
 };
 
 const observeVisibleTiles = () => {
@@ -153,19 +154,21 @@ const loadMore = () => {
 const isSelected = (entry: BackgroundValue) =>
   props.selectedBackground?.id === entry.id;
 
+const persistedGradients = () => structuredClone(toRaw(savedGradients.value));
+
 const addColorPreset = async (color: string) => {
   const normalized = color.toLowerCase();
   customColorValue.value = normalized;
   const colors = [...new Set([...savedColors.value, normalized])];
-  const preferences = await capture.updatePreferences({ backgroundPresets: { colors, gradients: savedGradients.value } });
+  const preferences = await capture.updatePreferences({ backgroundPresets: { colors, gradients: persistedGradients() } });
   savedColors.value = preferences.backgroundPresets.colors;
   emit("update:selectedBackground", customColor(normalized));
   showCustomEditor.value = false;
 };
 
 const addGradientPreset = async (gradient: GradientBackground) => {
-  const gradients = [...savedGradients.value, gradient];
-  const preferences = await capture.updatePreferences({ backgroundPresets: { colors: savedColors.value, gradients } });
+  const gradients = [...persistedGradients(), structuredClone(toRaw(gradient))];
+  const preferences = await capture.updatePreferences({ backgroundPresets: { colors: [...savedColors.value], gradients } });
   savedGradients.value = preferences.backgroundPresets.gradients;
   emit("update:selectedBackground", customGradient(gradient));
   showCustomEditor.value = false;
