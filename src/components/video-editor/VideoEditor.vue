@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, toRef, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
 import type { MediaCompositionLayer } from './composition/composition-types';
 import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
@@ -163,12 +163,33 @@ const updateSelectedBackground = (background: import('./composables/backgroundCa
 };
 const isCropping = ref(false);
 const timelineZoomLevel = ref(100);
+// The canvas is the first useful part of the editor. Mounting the timeline starts
+// media decoding, so deliberately let the browser paint and accept input first.
+const isTimelineReady = ref(false);
+let timelineStartupTimer: ReturnType<typeof setTimeout> | null = null;
+let timelineStartupFrame: number | null = null;
 const toggleCrop = () => {
   if (selectedTransformLayer.value) isCropping.value = !isCropping.value;
 };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false };
 };
+
+onMounted(() => {
+  timelineStartupFrame = requestAnimationFrame(() => {
+    timelineStartupFrame = requestAnimationFrame(() => {
+      timelineStartupTimer = setTimeout(() => {
+        isTimelineReady.value = true;
+        timelineStartupTimer = null;
+      }, 120);
+    });
+  });
+});
+
+onBeforeUnmount(() => {
+  if (timelineStartupFrame !== null) cancelAnimationFrame(timelineStartupFrame);
+  if (timelineStartupTimer) clearTimeout(timelineStartupTimer);
+});
 </script>
 
 <template>
@@ -277,6 +298,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
       <!-- Lower Section: Timeline (Full width) -->
       <div class="workspace-lower">
         <EditorTimeline
+          v-if="isTimelineReady"
           v-model:currentTime="currentTime"
           v-model:isPlaying="isPlaying"
           :duration="duration"

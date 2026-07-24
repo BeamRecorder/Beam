@@ -5,6 +5,11 @@ import type { ZoomElement } from "../../zoom/zoom-types";
 import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
 import { cameraLayers } from "../../composition/webcam/camera-composition";
+import {
+  timelinePercentStyle,
+  timelineRulerSecondsInView,
+  timelineSecondsInView,
+} from "./timeline-viewport";
 
 export interface TimelineTracksProps {
   currentTime: number;
@@ -112,6 +117,16 @@ export function useTimelineTracks(
 
   const visibleStartSecond = ref(0);
   const visibleEndSecond = ref(0);
+  const TIMELINE_BUFFER_SECONDS = 3;
+  const visibleTimelineSeconds = computed(() => timelineSecondsInView(
+    props.duration,
+    visibleStartSecond.value,
+    visibleEndSecond.value,
+    TIMELINE_BUFFER_SECONDS,
+  ));
+  const visibleRulerSeconds = computed(() =>
+    timelineRulerSecondsInView(props.duration, visibleTimelineSeconds.value),
+  );
 
   const systemAudioTrack = computed(() =>
     props.editorData?.tracks.find((t) => t.kind === "system-audio"),
@@ -261,6 +276,20 @@ export function useTimelineTracks(
     };
   });
 
+  const thumbnailStyle = (second: number) => timelinePercentStyle(props.duration, second);
+  const rulerMarkerStyle = (second: number) => ({ left: timelinePercentStyle(props.duration, second).left });
+  const cameraThumbnailSeconds = (layer: { startMs: number; endMs: number }) =>
+    visibleTimelineSeconds.value.filter((second) =>
+      second >= Math.floor(layer.startMs / 1000) && second < Math.ceil(layer.endMs / 1000),
+    );
+  const cameraThumbnailStyle = (second: number, layer: { startMs: number; endMs: number }) => {
+    const durationMs = Math.max(1, layer.endMs - layer.startMs);
+    return {
+      left: `${((second * 1000 - layer.startMs) / durationMs) * 100}%`,
+      width: `${(1000 / durationMs) * 100}%`,
+    };
+  };
+
   const ticksAreaWidth = ref(0);
   let ticksResizeObserver: ResizeObserver | null = null;
 
@@ -363,8 +392,13 @@ export function useTimelineTracks(
     }
   };
 
+  let scrollFrame: number | null = null;
   const onScroll = () => {
-    updateVisibleThumbnails();
+    if (scrollFrame !== null) return;
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = null;
+      updateVisibleThumbnails();
+    });
   };
 
   watch(
@@ -417,6 +451,7 @@ export function useTimelineTracks(
 
   onUnmounted(() => {
     ticksResizeObserver?.disconnect();
+    if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
     handleMouseUp();
   });
 
@@ -503,6 +538,12 @@ export function useTimelineTracks(
     systemBars,
     micBars,
     waveformStyle,
+    visibleTimelineSeconds,
+    visibleRulerSeconds,
+    thumbnailStyle,
+    rulerMarkerStyle,
+    cameraThumbnailSeconds,
+    cameraThumbnailStyle,
     handleWheel,
     thumbnails,
     webcamThumbnails,

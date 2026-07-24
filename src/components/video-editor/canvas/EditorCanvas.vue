@@ -25,6 +25,7 @@ import { drawWebcamOverlay, webcamSettingsForAppearance } from "../composition/w
 import { framedMediaRect, outputPoint, coverSourceRect, outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
 import type { MediaCompositionLayer, NormalizedTransform } from '../composition/composition-types';
 import { computeWebcamLayout } from '../composition/webcam/webcam-zoom';
+import Skeleton from "../../ui/skeleton/Skeleton.vue";
 
 const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -121,6 +122,7 @@ const emit = defineEmits<{
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const videoError = ref<string | null>(null);
+const isVideoFrameReady = ref(false);
 
 const logicalSize = ref({ width: 0, height: 0 });
 const previewFrameStyle = computed(() => {
@@ -364,21 +366,30 @@ const handleVideoMetadata = () => {
   }
 };
 
+const handleVideoFrameReady = () => {
+  isVideoFrameReady.value = true;
+  renderOnce();
+};
+
 const handleVideoError = () => {
+  isVideoFrameReady.value = false;
   videoError.value = "Unable to load this video file.";
 };
 
 videoEl.addEventListener("loadedmetadata", handleVideoMetadata);
+videoEl.addEventListener("loadeddata", handleVideoFrameReady);
+videoEl.addEventListener("canplay", handleVideoFrameReady);
 videoEl.addEventListener("error", handleVideoError);
 
 const loadVideo = () => {
   videoError.value = null;
+  isVideoFrameReady.value = false;
   previousCamera = null;
   renderedCamera = null;
   Object.assign(cameraVelocity, createCameraVelocity());
   videoEl.pause();
   videoEl.currentTime = 0;
-  videoEl.src = effectiveVideoSrc.value;
+  videoEl.src = effectiveVideoSrc.value ?? "";
   videoEl.load();
 };
 watch(effectiveVideoSrc, loadVideo, { immediate: true });
@@ -419,60 +430,154 @@ watch(
   },
 );
 
-const backgroundImg = new Image();
 const backgroundVideo = document.createElement("video");
 backgroundVideo.muted = true;
 backgroundVideo.loop = true;
 backgroundVideo.preload = "auto";
 backgroundVideo.playsInline = true;
 
-const loadBackground = () => {
-  const background = props.selectedBackground;
-  if (background?.kind !== "video") {
-    backgroundVideo.pause();
-    backgroundVideo.removeAttribute("src");
-  }
-  if (background?.kind !== "image") backgroundImg.removeAttribute("src");
-  if (!background) { renderOnce(); return; }
+const bgImageCache = new Map<string, HTMLImageElement>();
+const activeBgState = ref<BackgroundValue | null>(props.selectedBackground);
+const prevBgState = ref<BackgroundValue | null>(null);
+const activeBgImg = ref<HTMLImageElement | null>(null);
+const prevBgImg = ref<HTMLImageElement | null>(null);
 
-  if (background.kind === "video") {
-    backgroundVideo.src = background.path;
-    backgroundVideo.load();
-  } else if (background.kind === "image") {
-    backgroundImg.src = background.path;
-    backgroundImg.onload = renderOnce;
-  }
+let transitionStartTime = 0;
+const TRANSITION_DURATION = 180; // 180ms smooth canvas cross-fade
+const isTransitioningBackground = ref(false);
+
+const triggerBgTransition = () => {
+  transitionStartTime = performance.now();
+  isTransitioningBackground.value = true;
   renderOnce();
+};
+
+const loadBackground = () => {
+  const nextBg = props.selectedBackground;
+  const t0 = performance.now();
+
+  if (!nextBg) {
+    console.log(`[EditorCanvas] 🎯 Background reset to NULL at ${t0.toFixed(1)}ms`);
+    prevBgState.value = activeBgState.value;
+    prevBgImg.value = activeBgImg.value;
+    activeBgState.value = null;
+    activeBgImg.value = null;
+    triggerBgTransition();
+    return;
+  }
+
+  if (activeBgState.value?.id === nextBg.id) return;
+
+  console.log(`[EditorCanvas] 🎯 Background selection received: ${nextBg.kind} (${nextBg.name || nextBg.id}) at ${t0.toFixed(1)}ms`);
+
+  prevBgState.value = activeBgState.value;
+  prevBgImg.value = activeBgImg.value;
+  activeBgState.value = nextBg;
+
+  if (nextBg.kind === "image") {
+    let cached = bgImageCache.get(nextBg.path);
+    if (!cached) {
+      cached = new Image();
+      cached.decoding = "async";
+      cached.onload = () => {
+        console.log(`[EditorCanvas] 🖼️ Image loaded & cached: ${nextBg.name || nextBg.id} in ${(performance.now() - t0).toFixed(1)}ms`);
+        renderOnce();
+      };
+      cached.src = nextBg.path;
+      bgImageCache.set(nextBg.path, cached);
+    }
+    activeBgImg.value = cached;
+    triggerBgTransition();
+  } else if (nextBg.kind === "video") {
+    backgroundVideo.src = nextBg.path;
+    backgroundVideo.load();
+    activeBgImg.value = null;
+    triggerBgTransition();
+  } else {
+    activeBgImg.value = null;
+    triggerBgTransition();
+  }
 };
 watch(() => props.selectedBackground, loadBackground, { immediate: true, deep: true });
 watch(() => props.backgroundBlurPercent, renderOnce);
+
+const drawSingleBackground = (
+  ctx: CanvasRenderingContext2D,
+  bg: BackgroundValue | null,
+  imgSource: HTMLImageElement | null,
+  rect: { x: number; y: number; width: number; height: number },
+  alpha: number
+) => {
+  if (!bg || alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= Math.max(0, Math.min(1, alpha));
+
+  if (bg.kind === "color") {
+    ctx.fillStyle = bg.color;
+    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+  } else if (bg.kind === "gradient") {
+    const gradient = bg.gradient.type === 'radial'
+      ? ctx.createRadialGradient(rect.x + rect.width / 2, rect.y + rect.height / 2, 0, rect.x + rect.width / 2, rect.y + rect.height / 2, Math.max(rect.width, rect.height) / 2)
+      : (() => {
+          const radians = (bg.gradient.angle - 90) * Math.PI / 180;
+          const dx = Math.cos(radians) * rect.width / 2;
+          const dy = Math.sin(radians) * rect.height / 2;
+          return ctx.createLinearGradient(rect.x + rect.width / 2 - dx, rect.y + rect.height / 2 - dy, rect.x + rect.width / 2 + dx, rect.y + rect.height / 2 + dy);
+        })();
+    for (const stop of bg.gradient.stops) {
+      gradient.addColorStop(stop.position, `${stop.color}${Math.round(stop.alpha * 255).toString(16).padStart(2, '0')}`);
+    }
+    ctx.fillStyle = gradient;
+    ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+  } else {
+    const source = bg.kind === "video" && backgroundVideo.readyState >= 2
+      ? backgroundVideo
+      : bg.kind === "image" && imgSource && imgSource.naturalWidth > 0
+      ? imgSource
+      : null;
+
+    if (source) {
+      const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
+      const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
+      const crop = coverSourceRect(sourceWidth, sourceHeight, rect.width, rect.height);
+      const blur = Math.min(48, Math.max(0, (props.backgroundBlurPercent ?? 0) * 0.48));
+      if (blur > 0) {
+        const overscan = blur * 2;
+        ctx.filter = `blur(${blur}px)`;
+        ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, rect.x - overscan, rect.y - overscan, rect.width + overscan * 2, rect.height + overscan * 2);
+      } else {
+        ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, rect.x, rect.y, rect.width, rect.height);
+      }
+    } else {
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-surface').trim() || '#f7f5f0';
+      ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+    }
+  }
+
+  ctx.restore();
+};
 
 const drawBackground = (
   ctx: CanvasRenderingContext2D,
   rect: { x: number; y: number; width: number; height: number },
 ) => {
-  const background = props.selectedBackground;
-
-  if (background?.kind === "color") { ctx.fillStyle = background.color; ctx.fillRect(rect.x, rect.y, rect.width, rect.height); return; }
-  if (background?.kind === "gradient") {
-    const gradient = background.gradient.type === 'radial' ? ctx.createRadialGradient(rect.x + rect.width / 2, rect.y + rect.height / 2, 0, rect.x + rect.width / 2, rect.y + rect.height / 2, Math.max(rect.width, rect.height) / 2) : (() => { const radians = (background.gradient.angle - 90) * Math.PI / 180; const dx = Math.cos(radians) * rect.width / 2; const dy = Math.sin(radians) * rect.height / 2; return ctx.createLinearGradient(rect.x + rect.width / 2 - dx, rect.y + rect.height / 2 - dy, rect.x + rect.width / 2 + dx, rect.y + rect.height / 2 + dy); })();
-    for (const stop of background.gradient.stops) gradient.addColorStop(stop.position, `${stop.color}${Math.round(stop.alpha * 255).toString(16).padStart(2, '0')}`);
-    ctx.fillStyle = gradient; ctx.fillRect(rect.x, rect.y, rect.width, rect.height); return;
-  }
-  const source = background?.kind === "video" && backgroundVideo.readyState >= 2 ? backgroundVideo : background?.kind === "image" && backgroundImg.complete && backgroundImg.naturalWidth > 0 ? backgroundImg : null;
-  if (source) {
-    const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
-    const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
-    const crop = coverSourceRect(sourceWidth, sourceHeight, rect.width, rect.height);
-    const blur = Math.min(48, Math.max(0, (props.backgroundBlurPercent ?? 0) * 0.48));
-    ctx.save();
-    if (blur > 0) { const overscan = blur * 2; ctx.filter = `blur(${blur}px)`; ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, rect.x - overscan, rect.y - overscan, rect.width + overscan * 2, rect.height + overscan * 2); }
-    else ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, rect.x, rect.y, rect.width, rect.height);
-    ctx.restore(); return;
+  let progress = 1;
+  if (isTransitioningBackground.value) {
+    const elapsed = performance.now() - transitionStartTime;
+    progress = Math.min(1, elapsed / TRANSITION_DURATION);
+    if (progress >= 1) {
+      isTransitioningBackground.value = false;
+      prevBgState.value = null;
+      prevBgImg.value = null;
+    }
   }
 
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-surface').trim() || '#f7f5f0';
-  ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+  if (progress < 1 && prevBgState.value) {
+    drawSingleBackground(ctx, prevBgState.value, prevBgImg.value, rect, 1.0);
+    drawSingleBackground(ctx, activeBgState.value, activeBgImg.value, rect, progress);
+  } else {
+    drawSingleBackground(ctx, activeBgState.value, activeBgImg.value, rect, 1.0);
+  }
 };
 
 watch(
@@ -1091,7 +1196,7 @@ const renderCanvas = () => {
 function draw() {
   renderCanvas();
   animationFrameId = null;
-  if (props.isPlaying || props.selectedBackground?.kind === "video") animationFrameId = requestAnimationFrame(draw);
+  if (props.isPlaying || props.selectedBackground?.kind === "video" || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
 }
 function renderOnce() { if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw); }
 
@@ -1110,6 +1215,8 @@ onUnmounted(() => {
   videoEl.pause();
   backgroundVideo.pause();
   videoEl.removeEventListener("loadedmetadata", handleVideoMetadata);
+  videoEl.removeEventListener("loadeddata", handleVideoFrameReady);
+  videoEl.removeEventListener("canplay", handleVideoFrameReady);
   videoEl.removeEventListener("error", handleVideoError);
   videoEl.src = "";
   videoEl.load();
@@ -1134,6 +1241,14 @@ onUnmounted(() => {
       @pointerup="endSelectionMove"
       @pointercancel="endSelectionMove"
     ></canvas>
+    <Skeleton
+      v-if="!isVideoFrameReady && !videoError"
+      class="canvas-loading-skeleton"
+      width="100%"
+      height="100%"
+      radius="var(--radius-lg)"
+      aria-label="Video preview loading"
+    />
     <div v-if="selectedTransformLayer" class="webcam-selection" :style="webcamHandleStyle" @pointerdown="beginWebcamDrag($event, 'move')" @pointermove="moveWebcamDrag" @pointerup="endWebcamDrag" @pointercancel="endWebcamDrag">
       <ResizeHandle @resize-start="(corner, event) => beginWebcamDrag(event, 'resize', corner)" @resize-move="(_corner, event) => moveWebcamDrag(event)" @resize-end="(_corner, event) => endWebcamDrag(event)" />
     </div>
@@ -1175,6 +1290,13 @@ onUnmounted(() => {
   display: block;
   position: relative;
   z-index: 1;
+}
+
+.canvas-loading-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
 }
 
 .preview-frame { position: absolute; z-index: 0; border-radius: var(--radius-lg); background: var(--color-bg-element); box-shadow: var(--shadow-lg); pointer-events: none; }

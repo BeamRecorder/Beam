@@ -1,186 +1,122 @@
-import { ref, onUnmounted, reactive, watch, type Ref } from "vue";
+import { onUnmounted, reactive, ref, watch, type Ref } from "vue";
 import ThumbnailWorker from "./thumbnail.worker?worker&inline";
+
+const CACHE_LIMIT = 180;
+const THUMBNAIL_WIDTH = 240;
 
 export function useThumbnails(videoSrcRef: Ref<string | null>) {
   const thumbnails = reactive<Record<number, string>>({});
   const isExtracting = ref(false);
-
+  const cacheOrder: number[] = [];
   let worker: Worker | null = null;
   let hiddenVideo: HTMLVideoElement | null = null;
   let canvas: HTMLCanvasElement | null = null;
-  let canvasCtx: CanvasRenderingContext2D | null = null;
-  // Watch videoSrcRef changes and update hiddenVideo src
-  watch(videoSrcRef, (newSrc) => {
-    if (hiddenVideo && newSrc) {
-      hiddenVideo.src = newSrc;
-      hiddenVideo.load();
-    }
-  });
+  let context: CanvasRenderingContext2D | null = null;
 
-  const initVideoAndCanvas = () => {
+  const clearCache = () => {
+    worker?.postMessage({ type: "clear" });
+    for (const [time, url] of Object.entries(thumbnails)) {
+      URL.revokeObjectURL(url);
+      delete thumbnails[Number(time)];
+    }
+    cacheOrder.length = 0;
+  };
+
+  const cacheThumbnail = (time: number, blob: Blob) => {
+    const existing = thumbnails[time];
+    if (existing) URL.revokeObjectURL(existing);
+    thumbnails[time] = URL.createObjectURL(blob);
+    cacheOrder.push(time);
+    while (cacheOrder.length > CACHE_LIMIT) {
+      const expired = cacheOrder.shift();
+      if (expired === undefined) break;
+      URL.revokeObjectURL(thumbnails[expired]);
+      delete thumbnails[expired];
+    }
+  };
+
+  const initMedia = () => {
     if (!hiddenVideo) {
       hiddenVideo = document.createElement("video");
-      hiddenVideo.src = videoSrcRef.value || "";
       hiddenVideo.muted = true;
       hiddenVideo.playsInline = true;
       hiddenVideo.preload = "auto";
-
-      hiddenVideo.addEventListener("loadedmetadata", () => {});
-
-      hiddenVideo.addEventListener("error", (_e) => {
-        console.error(
-          "[useThumbnails] Hidden video error occurred:",
-          hiddenVideo?.error,
-        );
-      });
-
-      hiddenVideo.addEventListener("stalled", () => {
-        console.warn("[useThumbnails] Hidden video loading stalled");
-      });
+      hiddenVideo.src = videoSrcRef.value ?? "";
     }
-
     if (!canvas) {
       canvas = document.createElement("canvas");
-      canvasCtx = canvas.getContext("2d");
+      context = canvas.getContext("2d", { alpha: false });
+    }
+  };
+
+  const waitFor = (video: HTMLVideoElement, event: "loadedmetadata" | "seeked") =>
+    new Promise<void>((resolve) => {
+      if (event === "loadedmetadata" && video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        resolve();
+        return;
+      }
+      let timeout = 0;
+      const done = () => {
+        clearTimeout(timeout);
+        video.removeEventListener(event, done);
+        resolve();
+      };
+      timeout = window.setTimeout(done, event === "seeked" ? 700 : 2_500);
+      video.addEventListener(event, done, { once: true });
+    });
+
+  const extractFrame = async (time: number) => {
+    initMedia();
+    if (!hiddenVideo || !canvas || !context) return;
+    try {
+      isExtracting.value = true;
+      await waitFor(hiddenVideo, "loadedmetadata");
+      if (Math.abs(hiddenVideo.currentTime - time) >= 0.05 || time === 0) {
+        hiddenVideo.currentTime = Math.min(time, Math.max(0, hiddenVideo.duration - 0.01));
+        await waitFor(hiddenVideo, "seeked");
+      }
+      const width = Math.min(THUMBNAIL_WIDTH, hiddenVideo.videoWidth || THUMBNAIL_WIDTH);
+      const height = Math.max(1, Math.round(width * ((hiddenVideo.videoHeight || 180) / (hiddenVideo.videoWidth || 320))));
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(hiddenVideo, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas?.toBlob(resolve, "image/jpeg", 0.72));
+      worker?.postMessage({ type: "frame-response", time, blob });
+    } catch {
+      worker?.postMessage({ type: "frame-response", time, blob: null });
+    } finally {
+      isExtracting.value = false;
     }
   };
 
   const initWorker = () => {
-    if (!worker) {
-      worker = new ThumbnailWorker();
-
-      worker.onmessage = async (event: MessageEvent) => {
-        const { type, time, dataUrl } = event.data;
-
-        if (type === "extract-frame") {
-          if (!hiddenVideo || !canvas || !canvasCtx) {
-            initVideoAndCanvas();
-          }
-
-          try {
-            isExtracting.value = true;
-            if (hiddenVideo) {
-              // Ensure metadata is loaded before any seek attempt
-              if (hiddenVideo.readyState < 1) {
-                await new Promise<void>((resolve) => {
-                  hiddenVideo!.addEventListener(
-                    "loadedmetadata",
-                    () => resolve(),
-                    { once: true },
-                  );
-                });
-              }
-
-              // Set canvas dimensions dynamically for crisp display without heavy startup lag
-              const vWidth = hiddenVideo.videoWidth || 320;
-              const vHeight = hiddenVideo.videoHeight || 180;
-              const targetWidth = Math.min(240, vWidth);
-              const targetHeight = Math.round(targetWidth * (vHeight / vWidth));
-
-              if (canvas && (canvas.width !== targetWidth || canvas.height !== targetHeight)) {
-                canvas.width = targetWidth;
-                canvas.height = targetHeight;
-              }
-
-              // Gotcha: if target time is already very close to current time (and not 0), skip seek since 'seeked' might not fire
-              if (time > 0 && Math.abs(hiddenVideo.currentTime - time) < 0.05) {
-              } else {
-                hiddenVideo.currentTime = time;
-
-                // Promise to wait for seek complete with a fast fallback timeout
-                await new Promise<void>((resolve) => {
-                  let resolved = false;
-
-                  const onSeeked = () => {
-                    if (!resolved) {
-                      resolved = true;
-                      clearTimeout(timeout);
-                      resolve();
-                    }
-                  };
-
-                  const timeout = setTimeout(() => {
-                    if (!resolved) {
-                      resolved = true;
-                      hiddenVideo!.removeEventListener("seeked", onSeeked);
-                      resolve();
-                    }
-                  }, 200);
-
-                  hiddenVideo!.addEventListener("seeked", onSeeked, {
-                    once: true,
-                  });
-                });
-              }
-
-              // Draw frame to canvas with fast JPEG compression
-              if (canvas && canvasCtx) {
-                canvasCtx.imageSmoothingEnabled = true;
-                canvasCtx.drawImage(
-                  hiddenVideo,
-                  0,
-                  0,
-                  canvas.width,
-                  canvas.height,
-                );
-                const dataUrlResult = canvas.toDataURL("image/jpeg", 0.8);
-                worker?.postMessage({
-                  type: "frame-response",
-                  time,
-                  dataUrl: dataUrlResult,
-                });
-              }
-            }
-          } catch (e) {
-            console.error(
-              "[useThumbnails] Failed to extract frame at time:",
-              time,
-              e,
-            );
-            worker?.postMessage({
-              type: "frame-response",
-              time,
-              dataUrl: null,
-            });
-          } finally {
-            isExtracting.value = false;
-          }
-        } else if (type === "frame-ready") {
-          thumbnails[time] = dataUrl;
-        }
-      };
-    }
+    if (worker) return;
+    worker = new ThumbnailWorker();
+    worker.onmessage = (event: MessageEvent) => {
+      const { type, time, blob } = event.data;
+      if (type === "extract-frame") void extractFrame(time);
+      if (type === "frame-ready" && blob) cacheThumbnail(time, blob as Blob);
+    };
   };
 
-  // Request frames based on virtualized scroll viewport
-  const requestVisibleFrames = (visibleTimestamps: number[]) => {
+  const requestVisibleFrames = (visibleTimes: number[]) => {
+    if (!videoSrcRef.value || visibleTimes.length === 0) return;
     initWorker();
-    worker?.postMessage({
-      type: "request-frames",
-      visibleTimes: visibleTimestamps,
-    });
+    worker?.postMessage({ type: "request-frames", visibleTimes });
   };
 
-  const clearCache = () => {
-    worker?.postMessage({ type: "clear" });
-    Object.keys(thumbnails).forEach((key) => {
-      delete thumbnails[Number(key)];
-    });
-  };
-
-  onUnmounted(() => {
-    if (worker) {
-      worker.terminate();
-    }
-    if (hiddenVideo) {
-      hiddenVideo.remove();
-    }
+  watch(videoSrcRef, (source) => {
+    clearCache();
+    if (!hiddenVideo) return;
+    hiddenVideo.src = source ?? "";
+    hiddenVideo.load();
   });
 
-  return {
-    thumbnails,
-    isExtracting,
-    requestVisibleFrames,
-    clearCache,
-  };
+  onUnmounted(() => {
+    clearCache();
+    worker?.terminate();
+    hiddenVideo?.remove();
+  });
+
+  return { thumbnails, isExtracting, requestVisibleFrames, clearCache };
 }

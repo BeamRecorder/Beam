@@ -77,6 +77,12 @@ const {
   systemBars,
   micBars,
   waveformStyle,
+  visibleTimelineSeconds,
+  visibleRulerSeconds,
+  thumbnailStyle,
+  rulerMarkerStyle,
+  cameraThumbnailSeconds,
+  cameraThumbnailStyle,
   handleWheel,
   thumbnails,
   webcamThumbnails,
@@ -116,14 +122,14 @@ const selectMainVideoLayer = () => {
         <div class="ruler-info-spacer"></div>
         <div class="ruler-ticks-area" ref="ticksAreaRef">
           <div
-            v-for="sec in duration + 1"
-            :key="sec"
+            v-for="second in visibleRulerSeconds"
+            :key="second"
             class="ruler-marker"
-            :class="{ 'is-major': (sec - 1) % 5 === 0 }"
-            :style="{ left: `${((sec - 1) / duration) * 100}%` }"
+            :class="{ 'is-major': second % 5 === 0 }"
+            :style="rulerMarkerStyle(second)"
           >
-            <span v-if="(sec - 1) % 5 === 0" class="marker-label"
-              >{{ sec - 1 }}s</span
+            <span v-if="second % 5 === 0" class="marker-label"
+              >{{ second }}s</span
             >
             <div class="marker-tick"></div>
           </div>
@@ -172,14 +178,14 @@ const selectMainVideoLayer = () => {
             <!-- Virtualized Thumbnails Container -->
             <div class="thumbnails-track">
               <div
-                v-for="sec in duration"
-                :key="sec"
+                v-for="second in visibleTimelineSeconds"
+                :key="second"
                 class="thumbnail-frame"
-                :style="{ width: `${100 / duration}%` }"
+                :style="thumbnailStyle(second)"
               >
                 <img
-                  v-if="thumbnails[sec - 1]"
-                  :src="thumbnails[sec - 1]"
+                  v-if="thumbnails[second]"
+                  :src="thumbnails[second]"
                   class="thumbnail-img"
                   alt="frame"
                 />
@@ -248,14 +254,14 @@ const selectMainVideoLayer = () => {
             >
               <div class="thumbnails-track">
                 <div
-                  v-for="sec in duration"
-                  :key="sec"
+                  v-for="second in cameraThumbnailSeconds(layer)"
+                  :key="second"
                   class="thumbnail-frame"
-                  :style="{ width: `${100 / duration}%` }"
+                  :style="cameraThumbnailStyle(second, layer)"
                 >
                   <img
-                    v-if="webcamThumbnails[sec - 1]"
-                    :src="webcamThumbnails[sec - 1]"
+                    v-if="webcamThumbnails[second]"
+                    :src="webcamThumbnails[second]"
                     class="thumbnail-img"
                     alt="webcam frame"
                   />
@@ -513,7 +519,6 @@ const selectMainVideoLayer = () => {
 .timeline-tracks-container {
   width: 100%;
   overflow-x: auto;
-  background: var(--color-bg-surface);
   border-radius: inherit;
   border: none;
   position: relative;
@@ -860,21 +865,26 @@ const selectMainVideoLayer = () => {
 }
 
 .thumbnails-track {
-  display: flex;
+  position: relative;
   width: 100%;
   height: 100%;
 }
 
 .thumbnail-frame {
+  position: absolute;
+  top: 0;
   height: 100%;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
-  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-surface);
 }
 
 .thumbnail-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
+  display: block;
 }
 
 .thumbnail-placeholder {

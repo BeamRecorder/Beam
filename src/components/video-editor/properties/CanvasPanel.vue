@@ -6,7 +6,6 @@ import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
 import Gradient from "~/ui/Gradient/Gradient.vue";
-import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import { capture } from "../../../api/capture";
 import {
   BACKGROUND_COLORS,
@@ -18,6 +17,7 @@ import {
   type BackgroundValue,
   type GradientBackground,
 } from "../composables/backgroundCatalog";
+import { useBackgroundPreviews } from "../composables/useBackgroundPreviews";
 
 const props = defineProps<{
   selectedBackground: BackgroundValue | null;
@@ -35,13 +35,15 @@ const emit = defineEmits<{
 const activeKind = ref<"image" | "video" | "color" | "gradient">("image");
 const showCustomEditor = ref(false);
 const hoveredId = ref<string | null>(null);
-const visibleCount = ref(32);
-const loadedImages = ref<Record<string, boolean>>({});
+const INITIAL_MEDIA_COUNT = 15;
+const visibleCount = ref(INITIAL_MEDIA_COUNT);
+
 const blurDraft = ref(props.blurPercent);
 
 const gridRef = ref<HTMLElement | null>(null);
-const sentinelRef = ref<HTMLElement | null>(null);
-let observer: IntersectionObserver | null = null;
+const tileElements = new Map<string, Element>();
+let previewObserver: IntersectionObserver | null = null;
+const { previews, failed, request: requestPreview } = useBackgroundPreviews();
 
 const customColorValue = ref("#4f46e5");
 const customGradientValue = ref<GradientBackground>({
@@ -65,65 +67,67 @@ const visibleItems = computed(() =>
 
 const hasMore = computed(() => visibleCount.value < items.value.length);
 
-const setupObserver = () => {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
+const observeMediaTile = (element: Element | null, item: BackgroundMedia) => {
+  const previous = tileElements.get(item.id);
+  if (previous) previewObserver?.unobserve(previous);
+  if (!element) {
+    tileElements.delete(item.id);
+    return;
   }
+  tileElements.set(item.id, element);
+  previewObserver?.observe(element);
+};
 
-  if (!sentinelRef.value || !hasMore.value) return;
+const observeVisibleTiles = () => {
+  for (const item of visibleItems.value) {
+    const element = tileElements.get(item.id);
+    if (element) previewObserver?.observe(element);
+  }
+};
 
-  observer = new IntersectionObserver(
-    (entries) => {
-      const entry = entries[0];
-      if (entry?.isIntersecting && hasMore.value) {
-        requestAnimationFrame(() => {
-          visibleCount.value = Math.min(
-            items.value.length,
-            visibleCount.value + 16,
-          );
-        });
-      }
-    },
-    {
-      root: gridRef.value,
-      rootMargin: "120px",
-      threshold: 0.01,
-    },
-  );
-
-  observer.observe(sentinelRef.value);
+const scheduleVisibleTileObservation = () => {
+  requestAnimationFrame(() => nextTick(observeVisibleTiles));
 };
 
 onMounted(() => {
-  setupObserver();
+  previewObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const item = visibleItems.value.find((candidate) => tileElements.get(candidate.id) === entry.target);
+      if (item?.kind === "image") requestPreview(item);
+    }
+  }, { root: null, rootMargin: "120px", threshold: 0.01 });
+  scheduleVisibleTileObservation();
 });
 
 onUnmounted(() => {
-  if (observer) observer.disconnect();
+  previewObserver?.disconnect();
+  tileElements.clear();
 });
 
-// Watch tab or items count to reset scroll & re-attach observer
-watch([activeKind, () => items.value.length], () => {
-  visibleCount.value = 32;
+// Instant tab switch
+const switchKind = (kind: "image" | "video" | "color" | "gradient") => {
+  if (activeKind.value === kind) return;
+
+  activeKind.value = kind;
+  visibleCount.value = INITIAL_MEDIA_COUNT;
   showCustomEditor.value = false;
+
   if (gridRef.value) {
     gridRef.value.scrollTop = 0;
   }
-  nextTick(() => {
-    setupObserver();
-  });
-});
 
-// Re-observe when visibleItems expand until scrollbar is created or all items loaded
-watch(visibleItems, () => {
-  nextTick(() => {
-    setupObserver();
-  });
-});
+  scheduleVisibleTileObservation();
 
-const markImageLoaded = (id: string) => {
-  loadedImages.value[id] = true;
+};
+
+watch(visibleItems, (newItems) => {
+  void newItems;
+  scheduleVisibleTileObservation();
+}, { flush: "post" });
+
+const loadMore = () => {
+  visibleCount.value = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT);
 };
 
 const isSelected = (entry: BackgroundValue) =>
@@ -155,7 +159,7 @@ const triggerImport = async () => {
         size="xs"
         :variant="activeKind === 'image' ? 'primary' : 'ghost'"
         :icon="Image"
-        @click="activeKind = 'image'"
+        @click="switchKind('image')"
       >
         Image
       </Button>
@@ -163,21 +167,21 @@ const triggerImport = async () => {
         size="xs"
         :variant="activeKind === 'video' ? 'primary' : 'ghost'"
         :icon="Video"
-        @click="activeKind = 'video'"
+        @click="switchKind('video')"
       >
         Video
       </Button>
       <Button
         size="xs"
         :variant="activeKind === 'color' ? 'primary' : 'ghost'"
-        @click="activeKind = 'color'"
+        @click="switchKind('color')"
       >
         Couleur
       </Button>
       <Button
         size="xs"
         :variant="activeKind === 'gradient' ? 'primary' : 'ghost'"
-        @click="activeKind = 'gradient'"
+        @click="switchKind('gradient')"
       >
         Dégradé
       </Button>
@@ -195,14 +199,8 @@ const triggerImport = async () => {
       Importer un fond personnalisé
     </Button>
 
-    <!-- Animated Tab Content Panel -->
-    <div
-      :key="activeKind"
-      v-motion
-      :initial="{ opacity: 0, y: 4 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 120, ease: 'easeOut' } }"
-      class="tab-content-panel"
-    >
+    <!-- Hardware-Accelerated Tab Content Container -->
+    <div :key="activeKind" class="tab-content-panel">
       <!-- Image & Video Media Grid -->
       <div
         v-if="activeKind === 'image' || activeKind === 'video'"
@@ -214,7 +212,8 @@ const triggerImport = async () => {
           :key="item.id"
           type="button"
           class="media-tile"
-          :class="{ active: isSelected(item) }"
+          :ref="(element) => observeMediaTile(element, item)"
+          :class="{ active: isSelected(item), loaded: Boolean(previews[item.id] || failed[item.id]) }"
           @click="emit('update:selectedBackground', item)"
           @mouseenter="hoveredId = item.id"
           @mouseleave="hoveredId = null"
@@ -231,31 +230,26 @@ const triggerImport = async () => {
           <span v-else-if="item.kind === 'video'" class="video-placeholder">
             <Video :size="16" />
           </span>
-          <template v-else>
-            <Skeleton
-              v-if="!loadedImages[item.id]"
-              class="media-content media-skeleton"
-              width="100%"
-              height="100%"
-            />
-            <img
-              :src="item.path"
-              :alt="item.name"
-              class="media-content"
-              :class="{ loaded: loadedImages[item.id] }"
-              loading="lazy"
-              decoding="async"
-              @load="markImageLoaded(item.id)"
-            />
-          </template>
+          <img
+            v-else-if="previews[item.id] || failed[item.id]"
+            :src="previews[item.id] || item.path"
+            :alt="item.name"
+            class="media-content loaded"
+          />
         </button>
-
-        <!-- Sentinel element for IntersectionObserver infinite loading -->
         <div
           v-if="hasMore"
-          ref="sentinelRef"
-          class="scroll-sentinel"
-        />
+          class="load-more"
+        >
+          <Button
+            variant="secondary"
+            size="sm"
+            block
+            @click="loadMore"
+          >
+            Afficher plus
+          </Button>
+        </div>
       </div>
 
       <!-- Color Swatches Grid -->
@@ -373,60 +367,55 @@ const triggerImport = async () => {
   width: 100%;
 }
 
-/* 8-Column Media Grid & Internal Custom Scrollbar */
+/* Three compact rows are enough for quick selection. More media is explicit. */
 .media-scroll-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 6px;
-  max-height: 180px;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
-  padding: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
   box-sizing: border-box;
   background: var(--color-bg-surface, rgba(0, 0, 0, 0.2));
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md);
+  contain: layout style paint;
 }
 
-.media-scroll-grid::-webkit-scrollbar {
-  width: 6px;
-}
-.media-scroll-grid::-webkit-scrollbar-track {
-  background: var(--color-bg-element, rgba(0, 0, 0, 0.2));
-  border-radius: 4px;
-}
-.media-scroll-grid::-webkit-scrollbar-thumb {
-  background: var(--color-border, rgba(255, 255, 255, 0.18));
-  border-radius: 4px;
-}
-.media-scroll-grid::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted, rgba(255, 255, 255, 0.35));
-}
-
-/* Media Tile Element */
+/* Media Tile Element with Dashed Hover Border */
 .media-tile {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--color-bg-element, rgba(255, 255, 255, 0.06));
   cursor: pointer;
   overflow: hidden;
   box-sizing: border-box;
-  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--fast) ease, box-shadow var(--fast) ease;
+  contain: strict;
 }
 
-.media-tile:hover {
-  transform: scale(1.04);
-  border-color: rgba(255, 255, 255, 0.3);
+.media-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg-surface-hover);
+  pointer-events: none;
+}
+
+.media-tile.loaded::before {
+  display: none;
+}
+
+.media-tile:hover:not(.active) {
+  border: 1px dashed var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary-light);
 }
 
 .media-tile.active {
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 2px var(--color-primary-light, rgba(59, 130, 246, 0.4));
-  transform: scale(1.02);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
 .media-content {
@@ -434,7 +423,7 @@ const triggerImport = async () => {
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: opacity 0.15s ease;
 }
 
@@ -446,12 +435,6 @@ img.media-content.loaded {
   opacity: 1;
 }
 
-.media-skeleton {
-  position: absolute;
-  inset: 0;
-  border-radius: 6px;
-}
-
 .video-placeholder {
   width: 100%;
   height: 100%;
@@ -460,16 +443,10 @@ img.media-content.loaded {
   justify-content: center;
   color: var(--text-muted, #9ca3af);
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
-.scroll-sentinel {
-  grid-column: 1 / -1;
-  height: 10px;
-  width: 100%;
-  pointer-events: none;
-  opacity: 0;
-}
+.load-more { grid-column: 1 / -1; justify-self: stretch; width: 100%; }
 
 /* Color & Gradient Swatches Grid */
 .swatches-section,
@@ -483,27 +460,27 @@ img.media-content.loaded {
 .gradients-grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 6px;
+  gap: 7px;
 }
 
 .swatch-tile {
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
-  border-radius: 8px;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border, rgba(255, 255, 255, 0.15));
   cursor: pointer;
   box-sizing: border-box;
-  transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.12s ease, border 0.15s ease, box-shadow 0.15s ease;
 }
 
-.swatch-tile:hover {
+.swatch-tile:hover:not(.active) {
+  border: 2px dashed rgba(255, 255, 255, 0.5);
   transform: scale(1.04);
 }
 
 .swatch-tile.active {
-  border-color: var(--color-primary, #3b82f6);
-  outline: 2px solid var(--color-primary, #3b82f6);
+  border: 2px solid var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 2px var(--color-primary-light, rgba(59, 130, 246, 0.4));
 }
 
