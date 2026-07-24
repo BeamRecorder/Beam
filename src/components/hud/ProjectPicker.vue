@@ -141,6 +141,7 @@ const formatDate = (date: string) => {
 const videoProgress = ref<Record<string, { current: number; total: number }>>(
   {},
 );
+const isVideoLoaded = ref<Record<string, boolean>>({});
 
 const handleVideoTimeUpdate = (projectId: string, event: Event) => {
   const video = event.currentTarget as HTMLVideoElement | null;
@@ -166,6 +167,7 @@ const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
 };
 
 const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
+  isVideoLoaded.value[projectId] = false;
   const target = event.currentTarget as HTMLElement | null;
   const video = (target?.tagName === "VIDEO"
     ? target
@@ -459,19 +461,8 @@ defineExpose({
                     handleMouseLeaveVideo(project.id, $event);
                   "
                 >
-                  <video
-                    v-if="project.previewSrc && hoveredProjectId === project.id"
-                    :src="`${project.previewSrc}#t=0.1`"
-                    autoplay
-                    muted
-                    loop
-                    playsinline
-                    preload="auto"
-                    class="project-preview-video is-loaded"
-                    @timeupdate="handleVideoTimeUpdate(project.id, $event)"
-                  />
                   <img
-                    v-else-if="
+                    v-if="
                       thumbnailCache[project.id] || project.thumbnailSrc
                     "
                     :src="thumbnailCache[project.id] || project.thumbnailSrc!"
@@ -480,6 +471,20 @@ defineExpose({
                     loading="lazy"
                   />
                   <Film v-else class="preview-placeholder-icon" />
+                  <video
+                    v-if="project.previewSrc && hoveredProjectId === project.id"
+                    :src="`${project.previewSrc}#t=0.1`"
+                    autoplay
+                    muted
+                    loop
+                    playsinline
+                    preload="auto"
+                    class="project-preview-video"
+                    :class="{ 'is-loaded': isVideoLoaded[project.id] }"
+                    @loadeddata="isVideoLoaded[project.id] = true"
+                    @playing="isVideoLoaded[project.id] = true"
+                    @timeupdate="handleVideoTimeUpdate(project.id, $event)"
+                  />
                   <span
                     v-if="project.id === selectedProjectId"
                     class="selected-indicator"
@@ -898,11 +903,15 @@ defineExpose({
 }
 
 .project-preview-video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  background-color: transparent;
+  transition: opacity 0.2s ease;
+  z-index: 1;
 }
 
 .project-preview-thumb {
