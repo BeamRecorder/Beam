@@ -3,7 +3,7 @@ import { bitrateFor } from '../export-presets'
 import type { ExportProgress, ExportRequest, ExportResult } from '../export-types'
 import { renderCompositionFrame } from '../composition/render'
 import { activeLayersAt } from '../../video-editor/composition/composition-types'
-import { useCursorReplacer } from '../../video-editor/composables/useCursorReplacer'
+import { useCursorReplacer } from '../../video-editor/properties/cursor/useCursorReplacer'
 
 const codecCandidates = { webm: ['vp9', 'vp8', 'av1'], mp4: ['avc'] } as const
 const audioCodecCandidates = { webm: ['opus'], mp4: ['aac'] } as const

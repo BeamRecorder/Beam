@@ -1,22 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, toRaw, watch, type ComponentPublicInstance } from "vue";
-import { Image, Plus, Upload, Video } from "@lucide/vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from "vue";
+import { Image, Plus, Settings, Upload, Video } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
 import BackgroundPresetComposer from "./BackgroundPresetComposer.vue";
-import { capture } from "../../../api/capture";
+import { capture } from "../../../../api/capture";
 import {
-  BACKGROUND_COLORS,
-  BACKGROUND_GRADIENTS,
   customColor,
   customGradient,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
-  type GradientBackground,
-} from "../composables/backgroundCatalog";
-import { useBackgroundPreviews } from "../composables/useBackgroundPreviews";
+} from "../../composables/backgroundCatalog";
+import { useBackgroundPreviews } from "./useBackgroundPreviews";
+import { useBackgroundPresets } from "./useBackgroundPresets";
 
 const props = defineProps<{
   selectedBackground: BackgroundValue | null;
@@ -32,7 +30,6 @@ const emit = defineEmits<{
 }>();
 
 const activeKind = ref<"image" | "video" | "color" | "gradient">("image");
-const showCustomEditor = ref(false);
 const hoveredId = ref<string | null>(null);
 const INITIAL_MEDIA_COUNT = 15;
 const visibleCount = ref(INITIAL_MEDIA_COUNT);
@@ -44,27 +41,18 @@ const tileElements = new Map<string, Element>();
 let previewObserver: IntersectionObserver | null = null;
 const { previews, failed, request: requestPreview } = useBackgroundPreviews();
 
-const customColorValue = ref("#4f46e5");
-const customGradientValue = ref<GradientBackground>({
-  type: "linear",
-  angle: 135,
-  stops: [
-    { id: "start", position: 0, color: "#4f46e5", alpha: 1 },
-    { id: "end", position: 1, color: "#ec4899", alpha: 1 },
-  ],
-});
-const savedColors = ref<string[]>([]);
-const savedGradients = ref<GradientBackground[]>([]);
-let unsubscribePreferences: (() => void) | null = null;
-
-const colorPresets = computed(() => [
-  ...BACKGROUND_COLORS,
-  ...savedColors.value.map((color) => customColor(color)),
-]);
-const gradientPresets = computed(() => [
-  ...BACKGROUND_GRADIENTS,
-  ...savedGradients.value.map((gradient, index) => ({ ...customGradient(gradient), id: `gradient:custom:${index}` })),
-]);
+const {
+  colorPresets,
+  gradientPresets,
+  customColorValue,
+  customGradientValue,
+  showCustomEditor,
+  editColor,
+  editGradient,
+  close: closeCustomEditor,
+  saveColor: addColorPreset,
+  saveGradient: addGradientPreset,
+} = useBackgroundPresets((value) => emit("update:selectedBackground", value));
 
 const items = computed(
   () =>
@@ -110,20 +98,11 @@ onMounted(() => {
     }
   }, { root: null, rootMargin: "120px", threshold: 0.01 });
   scheduleVisibleTileObservation();
-  void capture.getPreferences().then((preferences) => {
-    savedColors.value = preferences.backgroundPresets.colors;
-    savedGradients.value = preferences.backgroundPresets.gradients;
-  }).catch(() => undefined);
-  unsubscribePreferences = capture.onPreferencesChanged((preferences) => {
-    savedColors.value = preferences.backgroundPresets.colors;
-    savedGradients.value = preferences.backgroundPresets.gradients;
-  });
 });
 
 onUnmounted(() => {
   previewObserver?.disconnect();
   tileElements.clear();
-  unsubscribePreferences?.();
 });
 
 // Instant tab switch
@@ -132,7 +111,7 @@ const switchKind = (kind: "image" | "video" | "color" | "gradient") => {
 
   activeKind.value = kind;
   visibleCount.value = INITIAL_MEDIA_COUNT;
-  showCustomEditor.value = false;
+  closeCustomEditor();
 
   if (gridRef.value) {
     gridRef.value.scrollTop = 0;
@@ -153,26 +132,6 @@ const loadMore = () => {
 
 const isSelected = (entry: BackgroundValue) =>
   props.selectedBackground?.id === entry.id;
-
-const persistedGradients = () => structuredClone(toRaw(savedGradients.value));
-
-const addColorPreset = async (color: string) => {
-  const normalized = color.toLowerCase();
-  customColorValue.value = normalized;
-  const colors = [...new Set([...savedColors.value, normalized])];
-  const preferences = await capture.updatePreferences({ backgroundPresets: { colors, gradients: persistedGradients() } });
-  savedColors.value = preferences.backgroundPresets.colors;
-  emit("update:selectedBackground", customColor(normalized));
-  showCustomEditor.value = false;
-};
-
-const addGradientPreset = async (gradient: GradientBackground) => {
-  const gradients = [...persistedGradients(), structuredClone(toRaw(gradient))];
-  const preferences = await capture.updatePreferences({ backgroundPresets: { colors: [...savedColors.value], gradients } });
-  savedGradients.value = preferences.backgroundPresets.gradients;
-  emit("update:selectedBackground", customGradient(gradient));
-  showCustomEditor.value = false;
-};
 
 const triggerImport = async () => {
   const kind = activeKind.value === "image" || activeKind.value === "video" ? activeKind.value : "media";
@@ -320,16 +279,23 @@ const importLabel = computed(() => activeKind.value === "image"
           >
             <Plus :size="16" />
           </button>
-          <button
+          <div
             v-for="item in colorPresets"
             :key="item.id"
-            type="button"
-            class="swatch-tile"
-            :class="{ active: isSelected(item) }"
-            :style="{ background: item.color }"
-            :aria-label="item.name"
-            @click="emit('update:selectedBackground', item)"
-          />
+            class="swatch-wrap"
+          >
+            <button
+              type="button"
+              class="swatch-tile"
+              :class="{ active: isSelected(item) }"
+              :style="{ background: item.color }"
+              :aria-label="item.name"
+              @click="emit('update:selectedBackground', item)"
+            />
+            <button type="button" class="swatch-edit" :aria-label="`Modifier ${item.name}`" @click.stop="editColor(item)">
+              <Settings :size="13" />
+            </button>
+          </div>
         </div>
         <BackgroundPresetComposer
           v-if="showCustomEditor"
@@ -337,7 +303,7 @@ const importLabel = computed(() => activeKind.value === "image"
           :color="customColorValue"
           :gradient="customGradientValue"
           @add-color="addColorPreset"
-          @close="showCustomEditor = false"
+          @close="closeCustomEditor"
         />
       </div>
 
@@ -353,18 +319,25 @@ const importLabel = computed(() => activeKind.value === "image"
           >
             <Plus :size="16" />
           </button>
-          <button
+          <div
             v-for="item in gradientPresets"
             :key="item.id"
-            type="button"
-            class="swatch-tile"
-            :class="{ active: isSelected(item) }"
-            :style="{
-              background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map(s => `${s.color} ${s.position * 100}%`).join(', ')})`
-            }"
-            :aria-label="item.name"
-            @click="emit('update:selectedBackground', item)"
-          />
+            class="swatch-wrap"
+          >
+            <button
+              type="button"
+              class="swatch-tile"
+              :class="{ active: isSelected(item) }"
+              :style="{
+                background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`
+              }"
+              :aria-label="item.name"
+              @click="emit('update:selectedBackground', item)"
+            />
+            <button type="button" class="swatch-edit" :aria-label="`Modifier ${item.name}`" @click.stop="editGradient(item)">
+              <Settings :size="13" />
+            </button>
+          </div>
         </div>
         <BackgroundPresetComposer
           v-if="showCustomEditor"
@@ -372,7 +345,7 @@ const importLabel = computed(() => activeKind.value === "image"
           :color="customColorValue"
           :gradient="customGradientValue"
           @add-gradient="addGradientPreset"
-          @close="showCustomEditor = false"
+          @close="closeCustomEditor"
         />
       </div>
     </div>
@@ -385,7 +358,7 @@ const importLabel = computed(() => activeKind.value === "image"
         :max="100"
         :step="1"
         label="Blur"
-        :format-value="(value) => `${Math.round(value)}%`"
+        :format-value="(value: number) => `${Math.round(value)}%`"
         @update:model-value="blurDraft = $event"
         @interaction-end="emit('update:blurPercent', blurDraft)"
       />
@@ -530,6 +503,11 @@ img.media-content.loaded {
   gap: 7px;
 }
 
+.swatch-wrap {
+  position: relative;
+  aspect-ratio: 1;
+}
+
 .swatch-tile {
   width: 100%;
   aspect-ratio: 1;
@@ -539,6 +517,42 @@ img.media-content.loaded {
   cursor: pointer;
   box-sizing: border-box;
   transition: transform 0.12s ease, border 0.15s ease, box-shadow 0.15s ease;
+}
+
+.swatch-edit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  padding: 0;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, white 20%);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 5px 16px rgb(0 0 0 / 0.28);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -35%) scale(0.76);
+  transition: opacity 150ms ease, transform 190ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease;
+}
+
+.swatch-wrap:hover .swatch-edit,
+.swatch-wrap:focus-within .swatch-edit {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.swatch-edit:hover {
+  background: var(--color-bg-surface-hover);
+}
+
+.swatch-edit:active {
+  transform: translate(-50%, -50%) scale(0.92);
 }
 
 .swatch-tile:hover:not(.active) {
@@ -581,5 +595,12 @@ img.media-content.loaded {
 
 .slider-row {
   width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch-edit,
+  .swatch-tile {
+    transition: none;
+  }
 }
 </style>

@@ -4,7 +4,7 @@ import {
   cursorUrls,
   svgAtRasterSize,
   useCursorReplacer,
-} from "../useCursorReplacer";
+} from "./useCursorReplacer";
 
 class LoadingImage {
   onload: (() => void) | null = null;

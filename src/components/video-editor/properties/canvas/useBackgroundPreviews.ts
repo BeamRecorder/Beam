@@ -1,6 +1,6 @@
 import { onUnmounted, reactive } from "vue";
 import BackgroundPreviewWorker from "./background-preview.worker?worker&inline";
-import type { BackgroundMedia } from "./backgroundCatalog";
+import type { BackgroundMedia } from "../../composables/backgroundCatalog";
 
 const CACHE_LIMIT = 180;
 

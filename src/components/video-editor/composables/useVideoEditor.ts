@@ -3,7 +3,7 @@ import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorData } from "../../../api/types/capture-api";
 import { useVideoPlayer } from "./useVideoPlayer";
 import { useEditorAudio } from "./useEditorAudio";
-import { useCursorReplacer } from "./useCursorReplacer";
+import { useCursorReplacer } from "../properties/cursor/useCursorReplacer";
 import { useProjectComposition } from "./useProjectComposition";
 import { useProjectZoom } from "./useProjectZoom";
 import { useProjectEditorState } from "./useProjectEditorState";

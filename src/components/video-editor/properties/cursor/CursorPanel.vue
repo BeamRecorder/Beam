@@ -3,7 +3,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
-import { cursorOptions, type CursorType } from '../composables/useCursorReplacer'
+import { cursorOptions, type CursorType } from './useCursorReplacer'
 
 defineProps<{
   selectedCursor: CursorType
@@ -191,4 +191,3 @@ const emit = defineEmits<{
   border-color: transparent;
 }
 </style>
-

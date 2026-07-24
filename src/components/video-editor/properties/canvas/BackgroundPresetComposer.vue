@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 import Button from '~/ui/button/Button.vue'
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
 import Gradient from '~/ui/Gradient/Gradient.vue'
-import type { GradientBackground } from '../composables/backgroundCatalog'
+import type { GradientBackground } from '../../composables/backgroundCatalog'
 
 const props = defineProps<{
   kind: 'color' | 'gradient'

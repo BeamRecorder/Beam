@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { videoPreviewTime } from '../useBackgroundPreviews'
+import { videoPreviewTime } from './useBackgroundPreviews'
 
 describe('videoPreviewTime', () => {
   it('uses the middle of a finite video', () => expect(videoPreviewTime(12)).toBe(6))

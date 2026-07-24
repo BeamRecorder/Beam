@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { CursorType } from "../composables/useCursorReplacer";
+import type { CursorType } from "./cursor/useCursorReplacer";
 import type {
   BackgroundMedia, BackgroundValue,
   BackgroundMediaGroup,
 } from "../composables/backgroundCatalog";
-import CursorPanel from "./CursorPanel.vue";
-import CanvasPanel from "./CanvasPanel.vue";
+import CursorPanel from "./cursor/CursorPanel.vue";
+import CanvasPanel from "./canvas/CanvasPanel.vue";
 import TrimPanel from "./TrimPanel.vue";
 import AudioPanel from "./AudioPanel.vue";
 import ZoomPanel from "./ZoomPanel.vue";

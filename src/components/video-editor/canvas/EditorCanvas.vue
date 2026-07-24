@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import ResizeHandle, { type ResizeCorner } from '../../ui/ResizeHandle.vue';
 import type { ProjectEditorData } from "../../../api/types/capture-api";
-import type { CursorType } from "../composables/useCursorReplacer";
+import type { CursorType } from "../properties/cursor/useCursorReplacer";
 import type { BackgroundValue } from "../composables/backgroundCatalog";
 import {
   buttonEventsBetween,
@@ -15,7 +15,7 @@ import {
 } from "../zoom/zoom-camera";
 import { createCameraVelocity, stepCameraSpring } from "../zoom/zoom-spring";
 import { ZOOM_DEPTH_SCALES, type ZoomElement } from "../zoom/zoom-types";
-import { useCursorReplacer } from "../composables/useCursorReplacer";
+import { useCursorReplacer } from "../properties/cursor/useCursorReplacer";
 import {
   activeLayersAt,
   type ClipAppearance,
