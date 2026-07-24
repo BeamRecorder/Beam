@@ -105,7 +105,7 @@ onMounted(() => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
       const item = visibleItems.value.find((candidate) => tileElements.get(candidate.id) === entry.target);
-      if (item?.kind === "image") requestPreview(item);
+      if (item) requestPreview(item);
     }
   }, { root: null, rootMargin: "120px", threshold: 0.01 });
   scheduleVisibleTileObservation();
@@ -273,6 +273,12 @@ const importLabel = computed(() => activeKind.value === "image"
             loop
             preload="none"
             class="media-content"
+          />
+          <img
+            v-else-if="previews[item.id]"
+            :src="previews[item.id]"
+            :alt="item.name"
+            class="media-content loaded"
           />
           <span v-else-if="item.kind === 'video'" class="video-placeholder">
             <Video :size="16" />
