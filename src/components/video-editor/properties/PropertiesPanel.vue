@@ -117,7 +117,6 @@ const emit = defineEmits<{
   <div class="properties-island">
     <div class="panel-header">
       <h3 class="panel-title">{{ activeTab === 'canvas' ? 'Background' : 'Properties' }}</h3>
-      <span class="panel-subtitle">{{ activeTab.toUpperCase() }} OPTIONS</span>
     </div>
 
     <div class="panel-content">
@@ -216,7 +215,7 @@ const emit = defineEmits<{
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 20px 20px;
+  padding: 20px 0 20px 20px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -227,6 +226,7 @@ const emit = defineEmits<{
 
 .panel-header {
   padding-bottom: 4px;
+  padding-right: 20px;
 }
 
 .panel-title {
@@ -235,20 +235,30 @@ const emit = defineEmits<{
   color: var(--text-primary);
 }
 
-.panel-subtitle {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
-}
-
 .panel-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 0;
+  padding-right: 14px;
   box-sizing: border-box;
+}
+
+.panel-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 3px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 </style>
