@@ -116,29 +116,46 @@ export function useCanvasBackground(
     ctx.save();
     ctx.globalAlpha *= Math.max(0, Math.min(1, alpha));
 
+    const blur = Math.min(
+      48,
+      Math.max(0, (backgroundBlurPercent() ?? 0) * 0.48),
+    );
+    const overscan = blur > 0 ? blur * 2 : 0;
+
+    if (blur > 0) {
+      ctx.filter = `blur(${blur}px)`;
+    }
+
+    const targetRect = {
+      x: rect.x - overscan,
+      y: rect.y - overscan,
+      width: rect.width + overscan * 2,
+      height: rect.height + overscan * 2,
+    };
+
     if (bg.kind === "color") {
       ctx.fillStyle = bg.color;
-      ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+      ctx.fillRect(targetRect.x, targetRect.y, targetRect.width, targetRect.height);
     } else if (bg.kind === "gradient") {
       const gradient =
         bg.gradient.type === "radial"
           ? ctx.createRadialGradient(
-              rect.x + rect.width / 2,
-              rect.y + rect.height / 2,
+              targetRect.x + targetRect.width / 2,
+              targetRect.y + targetRect.height / 2,
               0,
-              rect.x + rect.width / 2,
-              rect.y + rect.height / 2,
-              Math.max(rect.width, rect.height) / 2,
+              targetRect.x + targetRect.width / 2,
+              targetRect.y + targetRect.height / 2,
+              Math.max(targetRect.width, targetRect.height) / 2,
             )
           : (() => {
               const radians = ((bg.gradient.angle - 90) * Math.PI) / 180;
-              const dx = (Math.cos(radians) * rect.width) / 2;
-              const dy = (Math.sin(radians) * rect.height) / 2;
+              const dx = (Math.cos(radians) * targetRect.width) / 2;
+              const dy = (Math.sin(radians) * targetRect.height) / 2;
               return ctx.createLinearGradient(
-                rect.x + rect.width / 2 - dx,
-                rect.y + rect.height / 2 - dy,
-                rect.x + rect.width / 2 + dx,
-                rect.y + rect.height / 2 + dy,
+                targetRect.x + targetRect.width / 2 - dx,
+                targetRect.y + targetRect.height / 2 - dy,
+                targetRect.x + targetRect.width / 2 + dx,
+                targetRect.y + targetRect.height / 2 + dy,
               );
             })();
       for (const stop of bg.gradient.stops) {
@@ -150,7 +167,7 @@ export function useCanvasBackground(
         );
       }
       ctx.fillStyle = gradient;
-      ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+      ctx.fillRect(targetRect.x, targetRect.y, targetRect.width, targetRect.height);
     } else {
       const source =
         bg.kind === "video" && backgroundVideo.readyState >= 2
@@ -168,43 +185,23 @@ export function useCanvasBackground(
           source instanceof HTMLVideoElement
             ? source.videoHeight
             : source.naturalHeight;
-        const blur = Math.min(
-          48,
-          Math.max(0, (backgroundBlurPercent() ?? 0) * 0.48),
+        ctx.drawImage(
+          source,
+          0,
+          0,
+          sourceWidth,
+          sourceHeight,
+          targetRect.x,
+          targetRect.y,
+          targetRect.width,
+          targetRect.height,
         );
-        if (blur > 0) {
-          const overscan = blur * 2;
-          ctx.filter = `blur(${blur}px)`;
-          ctx.drawImage(
-            source,
-            0,
-            0,
-            sourceWidth,
-            sourceHeight,
-            rect.x - overscan,
-            rect.y - overscan,
-            rect.width + overscan * 2,
-            rect.height + overscan * 2,
-          );
-        } else {
-          ctx.drawImage(
-            source,
-            0,
-            0,
-            sourceWidth,
-            sourceHeight,
-            rect.x,
-            rect.y,
-            rect.width,
-            rect.height,
-          );
-        }
       } else {
         ctx.fillStyle =
           getComputedStyle(document.documentElement)
             .getPropertyValue("--color-bg-surface")
             .trim() || "#f7f5f0";
-        ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+        ctx.fillRect(targetRect.x, targetRect.y, targetRect.width, targetRect.height);
       }
     }
 
