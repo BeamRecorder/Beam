@@ -29,5 +29,44 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 </template>
 
 <style scoped>
-.canvas-toolbar { position:relative; z-index:3; height:44px; flex:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:6px 12px; background:transparent; }.crop-button { height:28px; padding:0 10px; background:transparent; box-shadow:var(--shadow-sm); }.crop-button:hover:not(:disabled) { background:var(--color-primary-light); border-color:var(--color-primary); color:var(--color-primary); }
+.canvas-toolbar {
+  position: relative;
+  z-index: 3;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+}
+
+.canvas-toolbar :deep(.btn-container) {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+}
+
+.canvas-toolbar :deep(.crop-button),
+.canvas-toolbar :deep(.btn) {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 10px !important;
+  font: 600 12px var(--font-sans) !important;
+  border-radius: var(--radius-md) !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: transparent;
+  box-shadow: var(--shadow-sm);
+}
+
+.canvas-toolbar :deep(.crop-button:hover:not(:disabled)) {
+  background: var(--color-primary-light) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
 </style>
