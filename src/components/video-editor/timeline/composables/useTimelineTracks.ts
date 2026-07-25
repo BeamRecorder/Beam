@@ -533,11 +533,27 @@ export function useTimelineTracks(
   };
 
   const isTrimming = ref(false);
+  const activeTrimState = ref<{
+    id: string;
+    edge: "start" | "end";
+    timeMs: number;
+    durationMs?: number;
+  } | null>(null);
+
+  const formatTrimTime = (ms: number) => {
+    const totalSeconds = Math.max(0, ms / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = Math.floor(totalSeconds % 60);
+    const millis = Math.floor((totalSeconds % 1) * 10);
+    return `${mins > 0 ? `${mins}:` : ""}${secs.toString().padStart(2, "0")}.${millis}s`;
+  };
 
   const beginTrimDrag = (
     e: PointerEvent,
     id: string,
     edge: "start" | "end",
+    clipStartMs?: number,
+    clipEndMs?: number,
   ) => {
     e.stopPropagation();
     e.preventDefault();
@@ -557,9 +573,21 @@ export function useTimelineTracks(
       return Math.round(percentage * props.duration * 1000);
     };
 
+    const updateTrimState = (timeMs: number) => {
+      let durationMs: number | undefined;
+      if (clipStartMs !== undefined && clipEndMs !== undefined) {
+        durationMs = edge === "start" ? Math.max(0, clipEndMs - timeMs) : Math.max(0, timeMs - clipStartMs);
+      }
+      activeTrimState.value = { id, edge, timeMs, durationMs };
+    };
+
+    const initialTimeMs = getTimeMsFromEvent(e);
+    updateTrimState(initialTimeMs);
+
     const onPointerMove = (moveEv: PointerEvent) => {
       const timeMs = getTimeMsFromEvent(moveEv);
       lastTimeMs = timeMs;
+      updateTrimState(timeMs);
       if (pendingRaf !== null) return;
       pendingRaf = requestAnimationFrame(() => {
         pendingRaf = null;
@@ -571,6 +599,7 @@ export function useTimelineTracks(
 
     const onPointerUp = (upEv: PointerEvent) => {
       isTrimming.value = false;
+      activeTrimState.value = null;
       if (pendingRaf !== null) {
         cancelAnimationFrame(pendingRaf);
         pendingRaf = null;
@@ -626,5 +655,7 @@ export function useTimelineTracks(
     onTrackMouseLeave,
     onScroll,
     beginTrimDrag,
+    activeTrimState,
+    formatTrimTime,
   };
 }

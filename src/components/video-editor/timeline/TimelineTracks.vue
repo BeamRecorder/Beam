@@ -94,6 +94,8 @@ const {
   onTrackMouseLeave,
   onScroll,
   beginTrimDrag,
+  activeTrimState,
+  formatTrimTime,
 } = useTimelineTracks(props, emit);
 
 const selectMainVideoLayer = () => {
@@ -208,14 +210,22 @@ const selectMainVideoLayer = () => {
               :style="layerStyle(layer.startMs, layer.endMs)"
               @click.stop="emit('select:composition-layer', layer.id)"
             >
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
+                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'start'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
               <span class="clip-label-overlay">
                 🖼️ {{ layer.name }}
                 <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1.0) > 0.01" class="speed-badge">
                   {{ layer.playbackRate.toFixed(2) }}×
                 </span>
               </span>
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start')"></span>
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end')"></span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
+                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'end'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
             </button>
           </div>
         </div>
@@ -276,14 +286,22 @@ const selectMainVideoLayer = () => {
                   <Skeleton v-else width="100%" height="100%" radius="0" />
                 </div>
               </div>
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
+                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'start'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
               <span class="clip-label-overlay">
                 Webcam
                 <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1.0) > 0.01" class="speed-badge">
                   {{ layer.playbackRate.toFixed(2) }}×
                 </span>
               </span>
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start')"></span>
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end')"></span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
+                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'end'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
             </button>
             <div
               v-if="selectedCameraLayerId"
@@ -364,9 +382,19 @@ const selectMainVideoLayer = () => {
               :title="`Zoom ${[1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2)}×`"
               @click.stop="emit('select:zoom', element.id)"
             >
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, element.id, 'start')"></span>
-              {{ [1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2) }}×
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, element.id, 'end')"></span>
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, element.id, 'start', element.startMs, element.endMs)">
+                <span v-if="activeTrimState?.id === element.id && activeTrimState.edge === 'start'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
+              <span class="clip-center-title">
+                {{ [1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2) }}×
+              </span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, element.id, 'end', element.startMs, element.endMs)">
+                <span v-if="activeTrimState?.id === element.id && activeTrimState.edge === 'end'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
             </button>
           </div>
         </div>
@@ -412,9 +440,19 @@ const selectMainVideoLayer = () => {
               :style="layerStyle(layer.startMs, layer.endMs)"
               @click.stop="emit('select:composition-layer', layer.id)"
             >
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start')"></span>
-              {{ layer.name }}
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end')"></span>
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
+                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'start'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
+              <span class="clip-center-title">
+                {{ layer.name }}
+              </span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
+                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'end'" class="trim-side-badge">
+                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
+                </span>
+              </span>
             </button>
           </div>
         </div>
@@ -712,6 +750,41 @@ const selectMainVideoLayer = () => {
   right: 0;
   border-top-right-radius: var(--radius-sm);
   border-bottom-right-radius: var(--radius-sm);
+}
+
+.trim-side-badge {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--color-primary);
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  font-weight: 800;
+  font-family: monospace;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  z-index: 20;
+}
+
+.trim-handle.start .trim-side-badge {
+  left: 8px;
+}
+
+.trim-handle.end .trim-side-badge {
+  right: 8px;
+}
+
+.clip-center-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+  font-weight: 700;
 }
 
 .ruler-ticks-area {
