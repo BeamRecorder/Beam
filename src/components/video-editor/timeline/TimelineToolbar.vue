@@ -155,6 +155,9 @@ const handleZoomOut = () => {
 
 <style scoped>
 .timeline-toolbar {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: center;

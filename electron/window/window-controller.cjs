@@ -145,16 +145,24 @@ class WindowController {
   showHud() {
     if (this.window.isDestroyed()) return
     const applyHudBounds = () => {
-      if (this.window.isDestroyed() || this.mode !== 'hud' || this.window.isMaximized()) return
-      this.window.setSize(HUD_SIZE.width, HUD_SIZE.height)
+      if (this.window.isDestroyed()) return
+      this.window.setResizable?.(false)
+      this.window.setMaximizable?.(false)
+      this.window.setMinimumSize?.(HUD_SIZE.width, HUD_SIZE.height)
+      this.window.setMaximumSize?.(HUD_SIZE.width,HUD_SIZE.height)
+      this.window.setSize?.(HUD_SIZE.width, HUD_SIZE.height)
+      if (this.hudPosition && Array.isArray(this.hudPosition)) {
+        this.window.setPosition?.(this.hudPosition[0], this.hudPosition[1])
+      } else {
+        this.window.center?.()
+      }
     }
 
-    // Windows applies unmaximization asynchronously. Keep the mode change and
-    // its bounds transition in this controller so a renderer resize cannot run
-    // while the native window still owns editor-sized maximized bounds.
     this.setMode('hud', { restoreMaximized: false })
     if (this.window.isMaximized()) {
-      this.window.once('unmaximize', applyHudBounds)
+      this.window.once('unmaximize', () => {
+        setTimeout(applyHudBounds, 20)
+      })
       this.window.unmaximize()
       return
     }
