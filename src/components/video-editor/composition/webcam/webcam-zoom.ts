@@ -5,14 +5,28 @@ export interface WebcamLayout { x: number; y: number; width: number; height: num
 
 export const DEFAULT_WEBCAM_SETTINGS: WebcamOverlaySettings = { widthPercent: 40, heightPercent: 40, margin: 24, reactToZoom: true, mirror: true, cornerRadius: 14, shadowOpacity: .42, shadowColor: '#000000', shadowOffsetX: 0, shadowOffsetY: 1 }
 
-const cornerRadii = { none: 0, sm: 8, md: 14, lg: 22, full: Number.MAX_SAFE_INTEGER }
-const shadowOpacities = { none: 0, sm: .28, md: .42, lg: .58 }
+const cornerRadii: Record<string, number> = { none: 0, sm: 8, md: 16, lg: 24, full: Number.MAX_SAFE_INTEGER }
+const shadowOpacities: Record<string, number> = { none: 0, sm: .28, md: .42, lg: .58 }
 export function webcamSettingsForAppearance(appearance: WebcamAppearance | ClipAppearance | undefined, isMirrored?: boolean): WebcamOverlaySettings {
   const mirror = isMirrored ?? DEFAULT_WEBCAM_SETTINGS.mirror
   if (!appearance) return { ...DEFAULT_WEBCAM_SETTINGS, mirror }
   const direction = 'shadowDirection' in appearance ? appearance.shadowDirection : 'bottom'
   const offsets = direction === 'top-left' ? [-.7, -.7] : direction === 'bottom-right' ? [.7, .7] : direction === 'all' ? [0, 0] : [0, 1]
-  return { ...DEFAULT_WEBCAM_SETTINGS, mirror, cornerRadius: cornerRadii[appearance.cornerRadius], shadowOpacity: shadowOpacities[appearance.shadowSize], shadowColor: 'shadowColor' in appearance ? appearance.shadowColor : '#000000', shadowOffsetX: offsets[0], shadowOffsetY: offsets[1] }
+  const cornerRadius = typeof appearance.cornerRadius === 'number'
+    ? appearance.cornerRadius
+    : (cornerRadii[appearance.cornerRadius] ?? DEFAULT_WEBCAM_SETTINGS.cornerRadius)
+  const shadowOpacity = typeof appearance.shadowSize === 'number'
+    ? appearance.shadowSize
+    : (shadowOpacities[appearance.shadowSize] ?? DEFAULT_WEBCAM_SETTINGS.shadowOpacity)
+  return {
+    ...DEFAULT_WEBCAM_SETTINGS,
+    mirror,
+    cornerRadius,
+    shadowOpacity,
+    shadowColor: 'shadowColor' in appearance ? appearance.shadowColor : '#000000',
+    shadowOffsetX: offsets[0],
+    shadowOffsetY: offsets[1]
+  }
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))

@@ -23,6 +23,8 @@ export interface VideoWindowBounds {
   dw: number;
   dh: number;
   scale: number;
+  focusX?: number;
+  focusY?: number;
 }
 
 export interface RenderedVideoWindow extends VideoWindowBounds {
@@ -90,11 +92,30 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const selectionScale = [1.25, 1.5, 1.8, 2.2, 3.5, 5][
       selectedZoom.depth - 1
     ];
+
+    const scale = bounds.scale ?? 1;
+    const centerX = bounds.dx + bounds.dw / 2;
+    const centerY = bounds.dy + bounds.dh / 2;
+    const focusX = bounds.focusX ?? centerX;
+    const focusY = bounds.focusY ?? centerY;
+
+    const unzoomedTargetWidth = bounds.dw / selectionScale;
+    const unzoomedTargetHeight = bounds.dh / selectionScale;
+    const unzoomedTargetLeft =
+      bounds.dx + selectedZoom.focus.cx * bounds.dw - unzoomedTargetWidth / 2;
+    const unzoomedTargetTop =
+      bounds.dy + selectedZoom.focus.cy * bounds.dh - unzoomedTargetHeight / 2;
+
+    const zoomedLeft = centerX + (unzoomedTargetLeft - focusX) * scale;
+    const zoomedTop = centerY + (unzoomedTargetTop - focusY) * scale;
+    const zoomedWidth = unzoomedTargetWidth * scale;
+    const zoomedHeight = unzoomedTargetHeight * scale;
+
     return {
-      left: `${bounds.dx + selectedZoom.focus.cx * bounds.dw - bounds.dw / selectionScale / 2}px`,
-      top: `${bounds.dy + selectedZoom.focus.cy * bounds.dh - bounds.dh / selectionScale / 2}px`,
-      width: `${bounds.dw / selectionScale}px`,
-      height: `${bounds.dh / selectionScale}px`,
+      left: `${zoomedLeft}px`,
+      top: `${zoomedTop}px`,
+      width: `${zoomedWidth}px`,
+      height: `${zoomedHeight}px`,
     };
   });
 
@@ -105,13 +126,25 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (!canvas || !bounds || !selectedZoom || selectedZoom.mode !== "manual")
       return;
     const rect = canvas.getBoundingClientRect();
+    const clientX = event.clientX - rect.left;
+    const clientY = event.clientY - rect.top;
+
+    const scale = bounds.scale ?? 1;
+    const centerX = bounds.dx + bounds.dw / 2;
+    const centerY = bounds.dy + bounds.dh / 2;
+    const focusX = bounds.focusX ?? centerX;
+    const focusY = bounds.focusY ?? centerY;
+
+    const unzoomedX = (clientX - centerX) / scale + focusX;
+    const unzoomedY = (clientY - centerY) / scale + focusY;
+
     const cx = Math.min(
       1,
-      Math.max(0, (event.clientX - rect.left - bounds.dx) / bounds.dw),
+      Math.max(0, (unzoomedX - bounds.dx) / bounds.dw),
     );
     const cy = Math.min(
       1,
-      Math.max(0, (event.clientY - rect.top - bounds.dy) / bounds.dh),
+      Math.max(0, (unzoomedY - bounds.dy) / bounds.dh),
     );
     options.onUpdateZoom({ ...selectedZoom, focus: { cx, cy } });
   };
@@ -273,58 +306,58 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.scale(camera.scale, camera.scale);
       ctx.translate(-camera.focusX, -camera.focusY);
       const isBaseVideoMirrored = options.composition?.().baseVideoIsMirrored ?? false;
+      const baseAppearance = options.composition?.().baseVideoAppearance;
+      const baseCornerRadius = (() => {
+        if (!baseAppearance) return outputCanvas.showBackground ? 16 : 0;
+        const r = baseAppearance.cornerRadius;
+        if (r === "none") return 0;
+        if (r === "sm") return 8;
+        if (r === "md") return 16;
+        if (r === "lg") return 24;
+        if (r === "full") return Math.min(positionedMedia.width, positionedMedia.height) / 2;
+        if (typeof r === "number") return r;
+        return outputCanvas.showBackground ? 16 : 0;
+      })();
+
       if (videoEl.readyState >= 1) {
-        if (outputCanvas.showBackground) {
-          ctx.save();
-          ctx.shadowColor = "rgba(0, 0, 0, .35)";
-          ctx.shadowBlur = 24;
-          ctx.shadowOffsetY = 10;
+        ctx.save();
+        if (outputCanvas.showBackground && baseAppearance?.shadowSize !== 'none') {
+          const shadowSize = { none: 0, sm: 12, md: 24, lg: 36 }[baseAppearance?.shadowSize ?? 'md'] ?? 24;
+          ctx.shadowColor = baseAppearance?.shadowColor ?? "rgba(0, 0, 0, .35)";
+          ctx.shadowBlur = shadowSize;
+          ctx.shadowOffsetY = shadowSize * 0.4;
+        }
+        if (baseCornerRadius > 0 || outputCanvas.showBackground) {
           ctx.beginPath();
           ctx.roundRect(
             dx + positionedMedia.x,
             dy + positionedMedia.y,
             positionedMedia.width,
             positionedMedia.height,
-            16,
+            baseCornerRadius,
           );
-          ctx.fillStyle = "rgba(0, 0, 0, .01)";
-          ctx.fill();
+          if (outputCanvas.showBackground) {
+            ctx.fillStyle = "rgba(0, 0, 0, .01)";
+            ctx.fill();
+          }
           ctx.clip();
-          if (isBaseVideoMirrored) {
-            ctx.translate((dx + positionedMedia.x) * 2 + positionedMedia.width, 0);
-            ctx.scale(-1, 1);
-          }
-          ctx.drawImage(
-            videoEl,
-            source.x,
-            source.y,
-            source.width,
-            source.height,
-            dx + positionedMedia.x,
-            dy + positionedMedia.y,
-            positionedMedia.width,
-            positionedMedia.height,
-          );
-          ctx.restore();
-        } else {
-          ctx.save();
-          if (isBaseVideoMirrored) {
-            ctx.translate((dx + positionedMedia.x) * 2 + positionedMedia.width, 0);
-            ctx.scale(-1, 1);
-          }
-          ctx.drawImage(
-            videoEl,
-            source.x,
-            source.y,
-            source.width,
-            source.height,
-            dx + positionedMedia.x,
-            dy + positionedMedia.y,
-            positionedMedia.width,
-            positionedMedia.height,
-          );
-          ctx.restore();
         }
+        if (isBaseVideoMirrored) {
+          ctx.translate((dx + positionedMedia.x) * 2 + positionedMedia.width, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(
+          videoEl,
+          source.x,
+          source.y,
+          source.width,
+          source.height,
+          dx + positionedMedia.x,
+          dy + positionedMedia.y,
+          positionedMedia.width,
+          positionedMedia.height,
+        );
+        ctx.restore();
       }
       ctx.restore();
     };
@@ -391,8 +424,18 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       dw: media.width,
       dh: media.height,
       scale: camera.scale,
+      focusX: camera.focusX,
+      focusY: camera.focusY,
     };
-    overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale };
+    overlayWindowBounds.value = {
+      dx,
+      dy,
+      dw,
+      dh,
+      scale: camera.scale,
+      focusX: camera.focusX,
+      focusY: camera.focusY,
+    };
 
     return {
       dx,

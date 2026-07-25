@@ -1,5 +1,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import type { ResizeCorner } from "~/ui/ResizeHandle.vue";
+import type { VideoWindowBounds } from "./useCameraZoom";
 import {
   type ProjectComposition,
   type MediaCompositionLayer,
@@ -21,20 +22,8 @@ export interface UseLayerTransformAndCropOptions {
   composition: () => ProjectComposition;
   currentTime: () => number;
   selectedTransformLayer: () => MediaCompositionLayer | null;
-  videoWindowBounds: () => {
-    dx: number;
-    dy: number;
-    dw: number;
-    dh: number;
-    scale: number;
-  } | null;
-  overlayWindowBounds: () => {
-    dx: number;
-    dy: number;
-    dw: number;
-    dh: number;
-    scale: number;
-  } | null;
+  videoWindowBounds: () => VideoWindowBounds | null;
+  overlayWindowBounds: () => VideoWindowBounds | null;
   isCropping: () => boolean | undefined;
   onUpdateLayerTransform: (transform: NormalizedTransform) => void;
   onPreviewLayerTransform: (transform: NormalizedTransform) => void;
@@ -103,11 +92,28 @@ export function useLayerTransformAndCrop(
         height: `${layout.height}px`,
       };
     }
+
+    const scale = bounds.scale ?? 1;
+    const centerX = bounds.dx + bounds.dw / 2;
+    const centerY = bounds.dy + bounds.dh / 2;
+    const focusX = bounds.focusX ?? centerX;
+    const focusY = bounds.focusY ?? centerY;
+
+    const unzoomedLeft = bounds.dx + transform.x * bounds.dw;
+    const unzoomedTop = bounds.dy + transform.y * bounds.dh;
+    const unzoomedWidth = transform.width * bounds.dw;
+    const unzoomedHeight = transform.height * bounds.dh;
+
+    const zoomedLeft = centerX + (unzoomedLeft - focusX) * scale;
+    const zoomedTop = centerY + (unzoomedTop - focusY) * scale;
+    const zoomedWidth = unzoomedWidth * scale;
+    const zoomedHeight = unzoomedHeight * scale;
+
     return {
-      left: `${bounds.dx + transform.x * bounds.dw}px`,
-      top: `${bounds.dy + transform.y * bounds.dh}px`,
-      width: `${transform.width * bounds.dw}px`,
-      height: `${transform.height * bounds.dh}px`,
+      left: `${zoomedLeft}px`,
+      top: `${zoomedTop}px`,
+      width: `${zoomedWidth}px`,
+      height: `${zoomedHeight}px`,
     };
   });
 
@@ -141,29 +147,52 @@ export function useLayerTransformAndCrop(
     if (!options.isCropping() || !layer || !bounds) return { display: "none" };
 
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
-    const layout = layer.reactToZoom
-      ? computeWebcamLayout(
-          bounds.dw,
-          bounds.dh,
-          bounds.scale,
-          webcamSettingsForAppearance(
-            layer.appearance ?? layer.webcamAppearance,
-          ),
-          transform,
-        )
-      : {
-          x: transform.x * bounds.dw,
-          y: transform.y * bounds.dh,
-          width: transform.width * bounds.dw,
-          height: transform.height * bounds.dh,
-        };
+    if (layer.reactToZoom) {
+      const layout = computeWebcamLayout(
+        bounds.dw,
+        bounds.dh,
+        bounds.scale,
+        webcamSettingsForAppearance(
+          layer.appearance ?? layer.webcamAppearance,
+        ),
+        transform,
+      );
+      const crop = cropInDisplaySpace(cropValue.value);
+      return {
+        left: `${bounds.dx + layout.x + crop.x * layout.width}px`,
+        top: `${bounds.dy + layout.y + crop.y * layout.height}px`,
+        width: `${crop.width * layout.width}px`,
+        height: `${crop.height * layout.height}px`,
+      };
+    }
+
+    const scale = bounds.scale ?? 1;
+    const centerX = bounds.dx + bounds.dw / 2;
+    const centerY = bounds.dy + bounds.dh / 2;
+    const focusX = bounds.focusX ?? centerX;
+    const focusY = bounds.focusY ?? centerY;
 
     const crop = cropInDisplaySpace(cropValue.value);
+    const unzoomedLayerLeft = bounds.dx + transform.x * bounds.dw;
+    const unzoomedLayerTop = bounds.dy + transform.y * bounds.dh;
+    const unzoomedLayerWidth = transform.width * bounds.dw;
+    const unzoomedLayerHeight = transform.height * bounds.dh;
+
+    const unzoomedCropLeft = unzoomedLayerLeft + crop.x * unzoomedLayerWidth;
+    const unzoomedCropTop = unzoomedLayerTop + crop.y * unzoomedLayerHeight;
+    const unzoomedCropWidth = crop.width * unzoomedLayerWidth;
+    const unzoomedCropHeight = crop.height * unzoomedLayerHeight;
+
+    const zoomedLeft = centerX + (unzoomedCropLeft - focusX) * scale;
+    const zoomedTop = centerY + (unzoomedCropTop - focusY) * scale;
+    const zoomedWidth = unzoomedCropWidth * scale;
+    const zoomedHeight = unzoomedCropHeight * scale;
+
     return {
-      left: `${bounds.dx + layout.x + crop.x * layout.width}px`,
-      top: `${bounds.dy + layout.y + crop.y * layout.height}px`,
-      width: `${crop.width * layout.width}px`,
-      height: `${crop.height * layout.height}px`,
+      left: `${zoomedLeft}px`,
+      top: `${zoomedTop}px`,
+      width: `${zoomedWidth}px`,
+      height: `${zoomedHeight}px`,
     };
   });
 
@@ -290,12 +319,14 @@ export function useLayerTransformAndCrop(
     clientY: number,
     shiftKey: boolean,
   ) => {
-    const bounds = boundsForLayer(options.selectedTransformLayer());
+    const layer = options.selectedTransformLayer();
+    const bounds = boundsForLayer(layer);
     if (!webcamDrag || !bounds) return;
     webcamDrag.lastX = clientX;
     webcamDrag.lastY = clientY;
-    const pointerDx = (clientX - webcamDrag.startX) / bounds.dw;
-    const pointerDy = (clientY - webcamDrag.startY) / bounds.dh;
+    const scale = layer?.reactToZoom ? 1 : (bounds.scale ?? 1);
+    const pointerDx = (clientX - webcamDrag.startX) / (bounds.dw * scale);
+    const pointerDy = (clientY - webcamDrag.startY) / (bounds.dh * scale);
     const initial = webcamDrag.transform;
 
     if (webcamDrag.kind === "move") {

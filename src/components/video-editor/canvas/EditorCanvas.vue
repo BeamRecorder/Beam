@@ -149,16 +149,24 @@ const cameraZoom = useCameraZoom({
   selectedTransformLayerExists: () => Boolean(props.selectedTransformLayer),
 });
 
+const isMasterPlaying = () => {
+  if (!props.isPlaying) return false;
+  if (!props.isVideoEnabled || !videoEl.src) return true;
+  return !videoEl.seeking && !videoEl.paused && videoEl.readyState >= 2;
+};
+
 // 5. Secondary Media & Composition Rendering
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
   currentTime: () => props.currentTime,
-  isPlaying: () => props.isPlaying,
+  isPlaying: isMasterPlaying,
   selectedTransformLayer: () => props.selectedTransformLayer,
   webcamDraft: () => transformAndCrop.webcamDraft.value,
   isCropping: () => props.isCropping,
   onRenderOnce: () => renderOnce(),
 });
+
+watch(isMasterPlaying, () => renderOnce());
 
 // 6. Custom Cursor & Ripples Rendering
 const cursorOverlay = useCursorOverlay({
@@ -261,8 +269,11 @@ const commitCrop = () => {
 };
 
 function draw() {
+  animationFrameId = null;
   renderCanvas();
-  animationFrameId = requestAnimationFrame(draw);
+  if (props.isPlaying || isTransitioningBackground.value) {
+    animationFrameId = requestAnimationFrame(draw);
+  }
 }
 
 onMounted(() => {

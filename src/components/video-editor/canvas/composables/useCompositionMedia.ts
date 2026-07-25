@@ -28,10 +28,12 @@ const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   shadowDirection: "bottom",
 };
 
-export const radiusForAppearance = (appearance: ClipAppearance | undefined) =>
-  ({ none: 0, sm: 8, md: 16, lg: 24, full: Number.MAX_SAFE_INTEGER })[
-    (appearance ?? DEFAULT_CLIP_APPEARANCE).cornerRadius
-  ];
+export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
+  if (!appearance) return 16;
+  const radiusMap: Record<string, number> = { none: 0, sm: 8, md: 16, lg: 24, full: Number.MAX_SAFE_INTEGER };
+  if (typeof appearance.cornerRadius === "number") return appearance.cornerRadius;
+  return radiusMap[appearance.cornerRadius] ?? 16;
+};
 
 export const applyClipShadow = (
   ctx: CanvasRenderingContext2D,
@@ -61,9 +63,23 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const compositionImages = new Map<string, HTMLImageElement>();
   const compositionVideos = new Map<string, HTMLVideoElement>();
   const videoListeners = new Map<HTMLVideoElement, () => void>();
+  const pendingSeekTimes = new Map<HTMLVideoElement, number>();
+
+  const performMediaSeek = (media: HTMLVideoElement, targetTime: number) => {
+    if (media.seeking) {
+      pendingSeekTimes.set(media, targetTime);
+      return;
+    }
+    if (Math.abs(media.currentTime - targetTime) <= 0.005) return;
+
+    // Do NOT use fastSeek! fastSeek seeks to nearest keyframe (I-frame),
+    // causing imprecise seeking and jumping to wrong frames.
+    media.currentTime = targetTime;
+  };
 
   const disposeCompositionMedia = () => {
     compositionVideos.forEach((media) => {
+      pendingSeekTimes.delete(media);
       const listener = videoListeners.get(media);
       if (listener) {
         media.removeEventListener("seeked", listener);
@@ -77,6 +93,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     });
     compositionImages.clear();
     compositionVideos.clear();
+    pendingSeekTimes.clear();
   };
 
   const reconcileCompositionMedia = () => {
@@ -87,6 +104,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       const asset = mediaById.get(id);
       if (asset?.kind === "video" && asset.src === media.dataset.source)
         continue;
+      pendingSeekTimes.delete(media);
       const listener = videoListeners.get(media);
       if (listener) {
         media.removeEventListener("seeked", listener);
@@ -125,7 +143,11 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         media.src = asset.src;
 
         const handleFrameReady = () => {
-          if (options.isPlaying() && media.paused) {
+          const pending = pendingSeekTimes.get(media);
+          if (pending !== undefined) {
+            pendingSeekTimes.delete(media);
+            performMediaSeek(media, pending);
+          } else if (options.isPlaying() && media.paused) {
             void media.play().catch(() => undefined);
           }
           options.onRenderOnce?.();
@@ -181,11 +203,11 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       const drift = Math.abs(media.currentTime - localTime);
       if (!isPlaying) {
         media.pause();
-        if (drift > 0.01) media.currentTime = localTime;
+        performMediaSeek(media, localTime);
         continue;
       }
       if (drift > 0.08) {
-        media.currentTime = localTime;
+        performMediaSeek(media, localTime);
       }
       if (media.paused && !media.seeking) {
         void media.play().catch(() => undefined);

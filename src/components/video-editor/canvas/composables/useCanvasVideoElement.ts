@@ -39,10 +39,32 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     videoError.value = "Unable to load this video file.";
   };
 
+  let pendingSeekTime: number | null = null;
+
+  const performVideoSeek = (targetTime: number) => {
+    if (videoEl.seeking) {
+      pendingSeekTime = targetTime;
+      return;
+    }
+    if (Math.abs(videoEl.currentTime - targetTime) <= 0.005) return;
+
+    // Do NOT use fastSeek! fastSeek seeks to nearest keyframe (I-frame),
+    // causing imprecise seeking and jumping to wrong frames.
+    videoEl.currentTime = targetTime;
+  };
+
   const handleVideoSeeked = () => {
-    if (options.isPlaying() && videoEl.paused) {
+    if (pendingSeekTime !== null) {
+      const nextTime = pendingSeekTime;
+      pendingSeekTime = null;
+      performVideoSeek(nextTime);
+    } else if (options.isPlaying() && videoEl.paused) {
       videoEl.play().catch(() => undefined);
     }
+    options.onRenderOnce();
+  };
+
+  const handlePlaybackStateChange = () => {
     options.onRenderOnce();
   };
 
@@ -50,6 +72,10 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
   videoEl.addEventListener("loadeddata", handleVideoFrameReady);
   videoEl.addEventListener("canplay", handleVideoFrameReady);
   videoEl.addEventListener("seeked", handleVideoSeeked);
+  videoEl.addEventListener("playing", handlePlaybackStateChange);
+  videoEl.addEventListener("pause", handlePlaybackStateChange);
+  videoEl.addEventListener("seeking", handlePlaybackStateChange);
+  videoEl.addEventListener("waiting", handlePlaybackStateChange);
   videoEl.addEventListener("error", handleVideoError);
 
   const loadVideo = () => {
@@ -68,6 +94,11 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     (playing) => {
       options.onRenderOnce();
       if (playing) {
+        // Ensure video is synchronized with target time before playing
+        const targetTime = options.currentTime();
+        if (Math.abs(videoEl.currentTime - targetTime) > 0.05) {
+          videoEl.currentTime = targetTime;
+        }
         videoEl
           .play()
           .catch((error) =>
@@ -83,8 +114,17 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     () => options.currentTime(),
     (time) => {
       const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, time));
-      if (Math.abs(videoEl.currentTime - clampedTime) > 0.05) {
-        videoEl.currentTime = clampedTime;
+      const drift = Math.abs(videoEl.currentTime - clampedTime);
+      const isPlaying = options.isPlaying();
+
+      // During active playback, videoEl naturally advances its own currentTime.
+      // Emitting update:currentTime triggers this watcher every frame.
+      // Calling videoEl.currentTime = x while playing forces decoder flush & causes lag.
+      // Only seek if drift > 150ms (e.g. user clicked timeline or looped), or when paused.
+      const maxAllowedDrift = isPlaying ? 0.15 : 0.005;
+
+      if (drift > maxAllowedDrift) {
+        performVideoSeek(clampedTime);
       }
       options.onRenderOnce();
     },
@@ -96,6 +136,10 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     videoEl.removeEventListener("loadeddata", handleVideoFrameReady);
     videoEl.removeEventListener("canplay", handleVideoFrameReady);
     videoEl.removeEventListener("seeked", handleVideoSeeked);
+    videoEl.removeEventListener("playing", handlePlaybackStateChange);
+    videoEl.removeEventListener("pause", handlePlaybackStateChange);
+    videoEl.removeEventListener("seeking", handlePlaybackStateChange);
+    videoEl.removeEventListener("waiting", handlePlaybackStateChange);
     videoEl.removeEventListener("error", handleVideoError);
     videoEl.src = "";
     videoEl.load();

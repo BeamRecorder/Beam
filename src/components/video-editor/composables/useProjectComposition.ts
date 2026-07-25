@@ -69,12 +69,37 @@ export function useProjectComposition(options: {
     }
     if (!selectedCompositionLayer.value) return null;
     const layer = selectedCompositionLayer.value;
-    const appearance =
+    const rawAppearance =
       layer.kind === "audio" || layer.kind === "caption"
         ? undefined
         : (layer.appearance ??
           (layer.kind === "video" ? layer.webcamAppearance : undefined) ??
           DEFAULT_APPEARANCE);
+    const appearance = rawAppearance
+      ? {
+          ...rawAppearance,
+          cornerRadius: typeof rawAppearance.cornerRadius === "number"
+            ? (rawAppearance.cornerRadius === 0
+                ? "none"
+                : rawAppearance.cornerRadius <= 10
+                  ? "sm"
+                  : rawAppearance.cornerRadius <= 18
+                    ? "md"
+                    : rawAppearance.cornerRadius <= 30
+                      ? "lg"
+                      : "full")
+            : rawAppearance.cornerRadius ?? "md",
+          shadowSize: typeof rawAppearance.shadowSize === "number"
+            ? (rawAppearance.shadowSize === 0
+                ? "none"
+                : rawAppearance.shadowSize <= 0.3
+                  ? "sm"
+                  : rawAppearance.shadowSize <= 0.5
+                    ? "md"
+                    : "lg")
+            : rawAppearance.shadowSize ?? "md",
+        }
+      : undefined;
     return {
       id: layer.id,
       kind: layer.kind,
