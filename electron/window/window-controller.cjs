@@ -27,13 +27,13 @@ class WindowController {
     this.applyInteractionPolicy()
   }
 
-  setMode(mode) {
+  setMode(mode, { restoreMaximized = true } = {}) {
     if (!['hud', 'recorder', 'editor'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`)
     if (this.mode === 'hud' && mode === 'recorder') this.hudPosition = this.window.getPosition()
     this.mode = mode
     if (mode === 'recorder') this.placeRecorder()
     if (mode === 'hud' && this.hudPosition) this.window.setPosition(...this.hudPosition)
-    this.applyModePolicy()
+    this.applyModePolicy({ restoreMaximized })
   }
 
   placeRecorder() {
@@ -95,7 +95,7 @@ class WindowController {
     this.applyInteractionPolicy()
   }
 
-  applyModePolicy() {
+  applyModePolicy({ restoreMaximized = true } = {}) {
     if (this.window.isDestroyed()) return
     const isHud = this.mode === 'hud'
     const isRecorder = this.mode === 'recorder'
@@ -103,7 +103,7 @@ class WindowController {
     this.window.setResizable(!isHud && !isRecorder)
     this.window.setMaximizable(!isHud && !isRecorder)
     this.window.setContentProtection(isRecorder)
-    if ((isHud || isRecorder) && this.window.isMaximized()) this.window.unmaximize()
+    if (restoreMaximized && (isHud || isRecorder) && this.window.isMaximized()) this.window.unmaximize()
     this.applyInteractionPolicy()
   }
 
@@ -144,13 +144,21 @@ class WindowController {
 
   showHud() {
     if (this.window.isDestroyed()) return
-    const applyHudBounds = () => this.window.setSize(HUD_SIZE.width, HUD_SIZE.height)
-    // Native unmaximizing is asynchronous on Windows. Applying HUD bounds in
-    // the same tick can be ignored and leaves an editor-sized HUD.
-    if (this.window.isMaximized()) this.window.once('unmaximize', applyHudBounds)
-    this.setMode('hud')
-    this.restore()
-    if (!this.window.isMaximized()) setTimeout(applyHudBounds, 0)
+    const applyHudBounds = () => {
+      if (this.window.isDestroyed() || this.mode !== 'hud' || this.window.isMaximized()) return
+      this.window.setSize(HUD_SIZE.width, HUD_SIZE.height)
+    }
+
+    // Windows applies unmaximization asynchronously. Keep the mode change and
+    // its bounds transition in this controller so a renderer resize cannot run
+    // while the native window still owns editor-sized maximized bounds.
+    this.setMode('hud', { restoreMaximized: false })
+    if (this.window.isMaximized()) {
+      this.window.once('unmaximize', applyHudBounds)
+      this.window.unmaximize()
+      return
+    }
+    applyHudBounds()
   }
 }
 

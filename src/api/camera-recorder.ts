@@ -3,10 +3,11 @@ import type { CaptureSource } from './types/capture-api'
 const MIME_TYPE = 'video/webm;codecs=vp8'
 const CAMERA_PREFIX = 'camera:chromium:'
 
+export type CameraPlacement = { x: number; y: number; width: number; height: number }
 type CameraFormat = { codec: 'vp8'; width: number; height: number; nominalFps: number }
 export type CameraAppearance = { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' }
 type CameraSegmentApi = {
-  beginCameraSegment(payload: { sessionId: string; sourceId: string; format: CameraFormat & { appearance?: CameraAppearance }; startNs: number }): Promise<{ jobId: string }>
+  beginCameraSegment(payload: { sessionId: string; sourceId: string; format: CameraFormat & { appearance?: CameraAppearance; placement?: CameraPlacement }; startNs: number }): Promise<{ jobId: string }>
   writeCameraSegment(payload: { jobId: string; sequence: number; data: Uint8Array }): Promise<void>
   finalizeCameraSegment(payload: { jobId: string; endNs: number; metrics: Record<string, number> }): Promise<void>
   failCamera(payload: { sessionId: string; reason: string }): Promise<void>
@@ -50,6 +51,7 @@ export class BrowserCameraRecorder {
   private fatalHandler: ((error: Error) => void) | null = null
   private stopped = false
   private appearance: CameraAppearance | undefined
+  private placement: CameraPlacement | undefined
   readonly sourceId: string
   readonly format: CameraFormat
   private readonly stream: MediaStream
@@ -75,9 +77,10 @@ export class BrowserCameraRecorder {
 
   onFatal(handler: (error: Error) => void) { this.fatalHandler = handler }
 
-  async start(sessionId: string, appearance?: CameraAppearance) {
+  async start(sessionId: string, appearance?: CameraAppearance, placement?: CameraPlacement, timelineStartedAt = performance.now()) {
     this.appearance = appearance
-    this.timelineStartedAt = performance.now()
+    this.placement = placement
+    this.timelineStartedAt = timelineStartedAt
     this.startFrameCounter()
     await this.startSegment(sessionId, 0)
   }
@@ -100,7 +103,7 @@ export class BrowserCameraRecorder {
   private async startSegment(sessionId: string, startNs: number) {
     if (this.stopped) throw new Error('Camera recording has already stopped.')
     if (this.recorder) throw new Error('Camera segment is already recording.')
-    const opened = await api().beginCameraSegment({ sessionId, sourceId: this.sourceId, format: { ...this.format, ...(this.appearance ? { appearance: this.appearance } : {}) }, startNs })
+    const opened = await api().beginCameraSegment({ sessionId, sourceId: this.sourceId, format: { ...this.format, ...(this.appearance ? { appearance: this.appearance } : {}), ...(this.placement ? { placement: this.placement } : {}) }, startNs })
     this.jobId = opened.jobId
     this.sequence = 0
     this.segmentStartNs = startNs

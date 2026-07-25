@@ -105,7 +105,21 @@ const {
 } = compositionState;
 const selectedTransformLayer = computed<MediaCompositionLayer | null>(() => {
   const layer = selectedCompositionLayer.value;
-  return layer && layer.kind !== 'audio' && layer.kind !== 'caption' ? layer : null;
+  if (layer && layer.kind !== 'audio' && layer.kind !== 'caption') return layer;
+  if (selectedCompositionLayerId.value === 'base-video') {
+    return {
+      id: 'base-video',
+      kind: 'video',
+      assetId: 'base-video',
+      name: 'Screen recording',
+      startMs: 0,
+      endMs: duration.value * 1000,
+      enabled: true,
+      order: 0,
+      crop: composition.value.baseVideoCrop ?? { x: 0, y: 0, width: 1, height: 1 },
+    };
+  }
+  return null;
 });
 
 const {
@@ -175,7 +189,14 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false };
 };
 
+const handleCropKeyDown = (e: KeyboardEvent) => {
+  if ((e.key === 'Enter' || e.key === 'Escape') && isCropping.value) {
+    isCropping.value = false;
+  }
+};
+
 onMounted(() => {
+  window.addEventListener('keydown', handleCropKeyDown);
   timelineStartupFrame = requestAnimationFrame(() => {
     timelineStartupFrame = requestAnimationFrame(() => {
       timelineStartupTimer = setTimeout(() => {
@@ -187,6 +208,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleCropKeyDown);
   if (timelineStartupFrame !== null) cancelAnimationFrame(timelineStartupFrame);
   if (timelineStartupTimer) clearTimeout(timelineStartupTimer);
 });
@@ -284,8 +306,9 @@ onBeforeUnmount(() => {
           @update:zoom="updateZoom"
           @select:transform-layer="selectedCompositionLayerId = $event; activeTab = 'clip'"
           @select:base-video="selectBaseVideo()"
-          @select:canvas="selectedCompositionLayerId = null; activeTab = 'canvas'"
-          @deselect:transform-layer="selectedCompositionLayerId = null"
+          @select:canvas="selectedCompositionLayerId = null; activeTab = 'canvas'; isCropping = false"
+          @deselect:transform-layer="selectedCompositionLayerId = null; isCropping = false"
+          @done:crop="isCropping = false"
           @deselect:zoom="selectedZoomId = null"
           @update:layer-transform="updateSelectedWebcamTransform($event)"
           @update:layer-crop="updateSelectedMediaCrop($event)"

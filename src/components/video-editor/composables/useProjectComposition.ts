@@ -95,8 +95,7 @@ export function useProjectComposition(options: {
 
   const saveComposition = async () => {
     if (!project.value) return;
-    // Electron IPC cannot structured-clone Vue proxies.
-    const payload = structuredClone(toRaw(composition.value));
+    const payload = JSON.parse(JSON.stringify(composition.value));
     await capture.saveProjectComposition(project.value.id, payload);
   };
 
@@ -298,9 +297,8 @@ export function useProjectComposition(options: {
   };
 
   const updateSelectedWebcamTransform = async (transform: NormalizedTransform) => {
-    const selectedId = selectedCompositionLayer.value?.kind !== 'audio' && selectedCompositionLayer.value?.kind !== 'caption'
-      ? selectedCompositionLayer.value.id
-      : null;
+    const layer = selectedCompositionLayer.value;
+    const selectedId = layer && layer.kind !== 'audio' && layer.kind !== 'caption' ? layer.id : null;
     if (!selectedId) return;
     composition.value = {
       ...composition.value,
@@ -312,16 +310,21 @@ export function useProjectComposition(options: {
   };
 
   const updateSelectedMediaCrop = async (crop: NormalizedCrop) => {
-    const selectedId = selectedCompositionLayer.value?.kind !== 'audio' && selectedCompositionLayer.value?.kind !== 'caption'
-      ? selectedCompositionLayer.value.id
-      : null;
+    const selectedId = selectedCompositionLayerId.value;
     if (!selectedId) return;
-    composition.value = {
-      ...composition.value,
-      layers: composition.value.layers.map((layer) =>
-        layer.id === selectedId && layer.kind !== 'audio' && layer.kind !== 'caption' ? { ...layer, crop } : layer,
-      ),
-    };
+    if (selectedId === BASE_VIDEO_CLIP_ID) {
+      composition.value = {
+        ...composition.value,
+        baseVideoCrop: crop,
+      };
+    } else {
+      composition.value = {
+        ...composition.value,
+        layers: composition.value.layers.map((layer) =>
+          layer.id === selectedId && layer.kind !== 'audio' && layer.kind !== 'caption' ? { ...layer, crop } : layer,
+        ),
+      };
+    }
     await saveComposition();
   };
 

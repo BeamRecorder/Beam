@@ -22,7 +22,14 @@ export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, a
     const factor = getWebcamZoomFactor(appliedZoomScale, settings.reactToZoom)
     const width = clamp(canvasWidth * transform.width * factor, 56, canvasWidth)
     const height = clamp(canvasHeight * transform.height * factor, 56, canvasHeight)
-    return { width, height, x: clamp(canvasWidth * transform.x, 0, Math.max(0, canvasWidth - width)), y: clamp(canvasHeight * transform.y, 0, Math.max(0, canvasHeight - height)) }
+    // A stored transform records the overlay's edges. When zoom shrinks the
+    // webcam, preserve its right and bottom offsets instead of moving it inward.
+    return {
+      width,
+      height,
+      x: clamp(canvasWidth * (transform.x + transform.width) - width, 0, Math.max(0, canvasWidth - width)),
+      y: clamp(canvasHeight * (transform.y + transform.height) - height, 0, Math.max(0, canvasHeight - height)),
+    }
   }
   const margin = Math.max(0, settings.margin)
   const maximum = Math.max(56, Math.min(canvasWidth, canvasHeight) - margin * 2)

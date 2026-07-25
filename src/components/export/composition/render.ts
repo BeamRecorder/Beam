@@ -107,8 +107,19 @@ export function renderCompositionFrame(
   const focus = zoom?.focus ?? { cx: 0.5, cy: 0.5 };
   const sourceWidth = video.videoWidth || snapshot.video.width;
   const sourceHeight = video.videoHeight || snapshot.video.height;
-  const source = snapshot.canvas.showBackground ? { x: 0, y: 0, width: sourceWidth, height: sourceHeight } : coverSourceRect(sourceWidth, sourceHeight, width, height);
-  const media = snapshot.canvas.showBackground ? framedMediaRect(sourceWidth, sourceHeight, width, height) : { x: 0, y: 0, width, height };
+  const crop = snapshot.composition.baseVideoCrop;
+  const cropX = crop ? crop.x * sourceWidth : 0;
+  const cropY = crop ? crop.y * sourceHeight : 0;
+  const cropWidth = crop ? crop.width * sourceWidth : sourceWidth;
+  const cropHeight = crop ? crop.height * sourceHeight : sourceHeight;
+  const source = snapshot.canvas.showBackground
+    ? { x: cropX, y: cropY, width: cropWidth, height: cropHeight }
+    : coverSourceRect(cropWidth, cropHeight, width, height);
+  if (!snapshot.canvas.showBackground) {
+    source.x += cropX;
+    source.y += cropY;
+  }
+  const media = snapshot.canvas.showBackground ? framedMediaRect(cropWidth, cropHeight, width, height) : { x: 0, y: 0, width, height };
   const outputFocus = zoom?.mode === 'auto' ? outputPoint(focus.cx, focus.cy, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground) : focus;
   const cameraFocus = clampFocusToScale(outputFocus, scale);
   ctx.save();
@@ -177,7 +188,7 @@ export function renderCompositionFrame(
   for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
     if (layer.kind !== "video" || !layer.reactToZoom) continue;
     const source = visuals?.get(layer.assetId);
-    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.webcamAppearance), layer.transform, layer.crop);
+    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance), layer.transform, layer.crop);
   }
   drawCompositionLayers(ctx, snapshot, time, visuals);
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Crop } from '@lucide/vue'
+import { Crop, Check } from '@lucide/vue'
 import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue'
 import Button from '../../ui/button/Button.vue'
 import type { OutputCanvasPreset } from './output-canvas'
@@ -14,7 +14,17 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 <template>
   <div class="canvas-toolbar">
     <PopoverMenuButton transparent :label="preset" :aria-label="`Format ${preset}`" :items="items" @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)" />
-    <Button class="crop-button" variant="outline" size="xs" :icon="Crop" :disabled="!canCrop" :tooltip="canCrop ? 'Crop selected clip' : 'Select a clip to crop it'" @click="emit('toggle:crop')">Recadrer</Button>
+    <Button
+      class="crop-button"
+      :variant="isCropping ? 'primary' : 'outline'"
+      size="xs"
+      :icon="isCropping ? Check : Crop"
+      :disabled="!canCrop"
+      :tooltip="canCrop ? (isCropping ? 'Valider le recadrage' : 'Recadrer l\'élément sélectionné') : 'Sélectionnez un élément pour le recadrer'"
+      @click="emit('toggle:crop')"
+    >
+      {{ isCropping ? 'OK' : 'Recadrer' }}
+    </Button>
   </div>
 </template>
 

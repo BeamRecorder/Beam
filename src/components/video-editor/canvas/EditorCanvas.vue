@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { Check } from "@lucide/vue";
+import Button from "../../ui/button/Button.vue";
+import Skeleton from "../../ui/skeleton/Skeleton.vue";
 import ResizeHandle from '../../ui/ResizeHandle.vue';
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../properties/cursor/useCursorReplacer";
@@ -55,6 +58,7 @@ const emit = defineEmits<{
   (e: 'update:layer-crop', crop: NormalizedCrop): void;
   (e: 'select:base-video'): void;
   (e: 'select:canvas'): void;
+  (e: 'done:crop'): void;
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -112,6 +116,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   currentTime: () => props.currentTime,
   selectedTransformLayer: () => props.selectedTransformLayer,
   videoWindowBounds: () => cameraZoom.videoWindowBounds.value,
+  overlayWindowBounds: () => cameraZoom.overlayWindowBounds.value,
   isCropping: () => props.isCropping,
   onUpdateLayerTransform: (transform) => emit('update:layer-transform', transform),
   onUpdateLayerCrop: (crop) => emit('update:layer-crop', crop),
@@ -129,6 +134,8 @@ const cameraZoom = useCameraZoom({
   isPlaying: () => props.isPlaying,
   editorData: () => props.editorData,
   activeTab: () => props.activeTab,
+  composition: () => props.composition,
+  isCropping: () => props.isCropping,
   drawBackground,
   videoError: () => videoError.value,
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
@@ -147,6 +154,7 @@ const compositionMedia = useCompositionMedia({
   isPlaying: () => props.isPlaying,
   selectedTransformLayer: () => props.selectedTransformLayer,
   webcamDraft: () => transformAndCrop.webcamDraft.value,
+  isCropping: () => props.isCropping,
 });
 
 // 6. Custom Cursor & Ripples Rendering
@@ -177,6 +185,12 @@ watch(
       isFormatTransitioning.value = false;
     }, 260);
   },
+);
+
+watch(
+  () => [props.composition, props.currentTime, props.isCropping] as const,
+  () => renderOnce(),
+  { deep: true },
 );
 
 const resizeCanvas = () => {
@@ -238,6 +252,11 @@ const renderCanvas = () => {
   }
 };
 
+const commitCrop = () => {
+  transformAndCrop.commitCrop();
+  emit('done:crop');
+};
+
 function draw() {
   renderCanvas();
   animationFrameId = null;
@@ -284,7 +303,7 @@ onUnmounted(() => {
       radius="var(--radius-lg)"
       aria-label="Video preview loading"
     />
-    <div v-if="selectedTransformLayer" class="webcam-selection" :style="transformAndCrop.webcamHandleStyle.value" @pointerdown="transformAndCrop.beginWebcamDrag($event, 'move')" @pointermove="transformAndCrop.moveWebcamDrag" @pointerup="transformAndCrop.endWebcamDrag" @pointercancel="transformAndCrop.endWebcamDrag">
+    <div v-if="selectedTransformLayer && !isCropping" class="webcam-selection" :style="transformAndCrop.webcamHandleStyle.value" @pointerdown="transformAndCrop.beginWebcamDrag($event, 'move')" @pointermove="transformAndCrop.moveWebcamDrag" @pointerup="transformAndCrop.endWebcamDrag" @pointercancel="transformAndCrop.endWebcamDrag">
       <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginWebcamDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveWebcamDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endWebcamDrag(event)" />
     </div>
     <div
@@ -300,6 +319,16 @@ onUnmounted(() => {
         <div class="grid-line vertical line-2"></div>
         <div class="grid-line horizontal line-1"></div>
         <div class="grid-line horizontal line-2"></div>
+      </div>
+      <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
+        <Button
+          variant="primary"
+          size="xs"
+          :icon="Check"
+          @click.stop="commitCrop"
+        >
+          OK
+        </Button>
       </div>
       <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
     </div>
@@ -343,7 +372,7 @@ onUnmounted(() => {
 .webcam-selection {
   position: absolute;
   z-index: 2;
-  border: 2px solid var(--color-accent);
+  border: 2px solid var(--color-primary);
   box-sizing: border-box;
   cursor: move;
 }
@@ -368,10 +397,19 @@ onUnmounted(() => {
 .crop-overlay-box {
   position: absolute;
   z-index: 4;
-  border: 2px solid #3b82f6;
+  border: 2px solid var(--color-primary, #ff5a1f);
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
   cursor: move;
   box-sizing: border-box;
+}
+
+.crop-done-wrapper {
+  position: absolute;
+  top: calc(100% - 24px);
+  left: calc(100% + 8px);
+  z-index: 10;
+  white-space: nowrap;
+  pointer-events: auto;
 }
 
 .crop-grid {

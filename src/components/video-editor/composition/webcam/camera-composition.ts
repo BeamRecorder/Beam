@@ -1,6 +1,7 @@
 import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type {
   MediaCompositionLayer,
+  NormalizedTransform,
   ProjectComposition,
   WebcamAppearance,
 } from "../composition-types";
@@ -15,6 +16,21 @@ const appearanceFor = (format: Record<string, unknown>): WebcamAppearance | unde
   if (!appearance || typeof appearance !== 'object') return undefined
   const value = appearance as { shadowSize?: unknown; cornerRadius?: unknown }
   return ['none', 'sm', 'md', 'lg'].includes(String(value.shadowSize)) && ['none', 'sm', 'md', 'lg', 'full'].includes(String(value.cornerRadius)) ? { shadowSize: value.shadowSize as WebcamAppearance['shadowSize'], cornerRadius: value.cornerRadius as WebcamAppearance['cornerRadius'] } : undefined
+}
+
+const placementFor = (format: Record<string, unknown>): NormalizedTransform | undefined => {
+  const placement = format.placement
+  if (!placement || typeof placement !== 'object') return undefined
+  const value = placement as Record<string, unknown>
+  if (!['x', 'y', 'width', 'height'].every((key) => typeof value[key] === 'number' && Number.isFinite(value[key])) || Number(value.width) <= 0 || Number(value.height) <= 0) return undefined
+  const width = Math.min(1, Math.max(.001, Number(value.width)))
+  const height = Math.min(1, Math.max(.001, Number(value.height)))
+  return {
+    x: Math.min(1 - width, Math.max(0, Number(value.x))),
+    y: Math.min(1 - height, Math.max(0, Number(value.y))),
+    width,
+    height,
+  }
 }
 
 export function addCameraSegments(
@@ -73,7 +89,7 @@ export function addCameraSegments(
       endMs: milliseconds(segment.endNs),
       enabled: true,
       order: next.layers.length,
-      transform: { ...CAMERA_TRANSFORM },
+      transform: placementFor(camera.format) ?? { ...CAMERA_TRANSFORM },
       sourceOffsetMs: 0,
       reactToZoom: true,
       ...(appearanceFor(camera.format) ? { webcamAppearance: appearanceFor(camera.format) } : {}),

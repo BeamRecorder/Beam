@@ -23,6 +23,13 @@ export interface UseLayerTransformAndCropOptions {
     dh: number;
     scale: number;
   } | null;
+  overlayWindowBounds: () => {
+    dx: number;
+    dy: number;
+    dw: number;
+    dh: number;
+    scale: number;
+  } | null;
   isCropping: () => boolean | undefined;
   onUpdateLayerTransform: (transform: NormalizedTransform) => void;
   onUpdateLayerCrop: (crop: NormalizedCrop) => void;
@@ -60,9 +67,14 @@ export function useLayerTransformAndCrop(
     { deep: true },
   );
 
+  const boundsForLayer = (layer: MediaCompositionLayer | null) =>
+    layer?.id === "base-video"
+      ? options.videoWindowBounds()
+      : options.overlayWindowBounds() ?? options.videoWindowBounds();
+
   const webcamHandleStyle = computed(() => {
-    const bounds = options.videoWindowBounds();
     const layer = options.selectedTransformLayer();
+    const bounds = boundsForLayer(layer);
     if (!bounds || !layer) return { display: "none" };
 
     const transform = webcamDraft.value ??
@@ -102,9 +114,17 @@ export function useLayerTransformAndCrop(
       },
   );
 
+  const cropIsMirrored = () => Boolean(options.selectedTransformLayer()?.reactToZoom);
+
+  const cropInDisplaySpace = (crop: NormalizedCrop): NormalizedCrop =>
+    cropIsMirrored() ? { ...crop, x: 1 - crop.x - crop.width } : crop;
+
+  const cropInSourceSpace = (crop: NormalizedCrop): NormalizedCrop =>
+    cropIsMirrored() ? { ...crop, x: 1 - crop.x - crop.width } : crop;
+
   const cropOverlayStyle = computed(() => {
     const layer = options.selectedTransformLayer();
-    const bounds = options.videoWindowBounds();
+    const bounds = boundsForLayer(layer);
     if (!options.isCropping() || !layer || !bounds) return { display: "none" };
 
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
@@ -125,7 +145,7 @@ export function useLayerTransformAndCrop(
           height: transform.height * bounds.dh,
         };
 
-    const crop = cropValue.value;
+    const crop = cropInDisplaySpace(cropValue.value);
     return {
       left: `${bounds.dx + layout.x + crop.x * layout.width}px`,
       top: `${bounds.dy + layout.y + crop.y * layout.height}px`,
@@ -134,11 +154,24 @@ export function useLayerTransformAndCrop(
     };
   });
 
-  const cropBounds = () => {
-    const style = cropOverlayStyle.value;
+  const getUncroppedLayout = () => {
+    const layer = options.selectedTransformLayer();
+    const bounds = boundsForLayer(layer);
+    if (!layer || !bounds) return { width: 1, height: 1 };
+    const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+    if (layer.reactToZoom) {
+      const layout = computeWebcamLayout(
+        bounds.dw,
+        bounds.dh,
+        bounds.scale,
+        webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance),
+        transform,
+      );
+      return { width: Math.max(1, layout.width), height: Math.max(1, layout.height) };
+    }
     return {
-      width: Number.parseFloat(String(style.width)) || 1,
-      height: Number.parseFloat(String(style.height)) || 1,
+      width: Math.max(1, transform.width * bounds.dw),
+      height: Math.max(1, transform.height * bounds.dh),
     };
   };
 
@@ -163,32 +196,31 @@ export function useLayerTransformAndCrop(
       corner,
       startX: event.clientX,
       startY: event.clientY,
-      value: { ...cropValue.value },
+      value: cropInDisplaySpace(cropValue.value),
     };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
 
   const moveCropDrag = (event: PointerEvent) => {
     if (!cropDrag) return;
-    const bounds = cropBounds();
-    const dx =
-      ((event.clientX - cropDrag.startX) / bounds.width) * cropDrag.value.width;
-    const dy =
-      ((event.clientY - cropDrag.startY) / bounds.height) *
-      cropDrag.value.height;
+    const uncropped = getUncroppedLayout();
+    const dx = (event.clientX - cropDrag.startX) / uncropped.width;
+    const dy = (event.clientY - cropDrag.startY) / uncropped.height;
 
     if (cropDrag.kind === "move") {
-      cropDraft.value = clampCrop({
+      cropDraft.value = cropInSourceSpace(clampCrop({
         ...cropDrag.value,
         x: cropDrag.value.x + dx,
         y: cropDrag.value.y + dy,
-      });
+      }));
     } else {
       const left = cropDrag.corner?.includes("left");
       const top = cropDrag.corner?.includes("top");
-      const width = cropDrag.value.width + (left ? -dx : dx);
-      const height = cropDrag.value.height + (top ? -dy : dy);
-      cropDraft.value = clampCrop({
+      const horizontal = Boolean(left || cropDrag.corner?.includes("right"));
+      const vertical = Boolean(top || cropDrag.corner?.includes("bottom"));
+      const width = cropDrag.value.width + (horizontal ? (left ? -dx : dx) : 0);
+      const height = cropDrag.value.height + (vertical ? (top ? -dy : dy) : 0);
+      cropDraft.value = cropInSourceSpace(clampCrop({
         x: left
           ? cropDrag.value.x + cropDrag.value.width - width
           : cropDrag.value.x,
@@ -197,13 +229,12 @@ export function useLayerTransformAndCrop(
           : cropDrag.value.y,
         width,
         height,
-      });
+      }));
     }
   };
 
   const endCropDrag = (event: PointerEvent) => {
     if (cropDraft.value) options.onUpdateLayerCrop(cropDraft.value);
-    cropDraft.value = null;
     cropDrag = null;
     if (
       (event.currentTarget as HTMLElement).hasPointerCapture(event.pointerId)
@@ -212,6 +243,12 @@ export function useLayerTransformAndCrop(
         event.pointerId,
       );
     }
+  };
+
+  const commitCrop = () => {
+    const crop = cropDraft.value ?? cropValue.value;
+    options.onUpdateLayerCrop(clampCrop(crop));
+    cropDraft.value = null;
   };
 
   const beginWebcamDrag = (
@@ -240,7 +277,7 @@ export function useLayerTransformAndCrop(
     clientY: number,
     shiftKey: boolean,
   ) => {
-    const bounds = options.videoWindowBounds();
+    const bounds = boundsForLayer(options.selectedTransformLayer());
     if (!webcamDrag || !bounds) return;
     webcamDrag.lastX = clientX;
     webcamDrag.lastY = clientY;
@@ -259,14 +296,14 @@ export function useLayerTransformAndCrop(
 
     const left = webcamDrag.corner?.includes("left");
     const top = webcamDrag.corner?.includes("top");
-    const rawWidth = initial.width + (left ? -dx : dx);
-    const rawHeight = initial.height + (top ? -dy : dy);
+    const horizontal = Boolean(left || webcamDrag.corner?.includes("right"));
+    const vertical = Boolean(top || webcamDrag.corner?.includes("bottom"));
+    const rawWidth = initial.width + (horizontal ? (left ? -dx : dx) : 0);
+    const rawHeight = initial.height + (vertical ? (top ? -dy : dy) : 0);
     const ratio = initial.height / initial.width;
-    const width = Math.min(0.9, Math.max(0.08, rawWidth));
-    const height = Math.min(
-      0.9,
-      Math.max(0.08, shiftKey ? rawHeight : width * ratio),
-    );
+    const corner = horizontal && vertical;
+    const width = Math.min(0.9, Math.max(0.08, corner && !shiftKey ? rawWidth : horizontal ? rawWidth : initial.width));
+    const height = Math.min(0.9, Math.max(0.08, corner && !shiftKey ? width * ratio : vertical ? rawHeight : initial.height));
 
     webcamDraft.value = {
       x: Math.min(
@@ -312,7 +349,7 @@ export function useLayerTransformAndCrop(
     event: PointerEvent,
     canvas: HTMLCanvasElement | null,
   ) => {
-    const bounds = options.videoWindowBounds();
+    const bounds = options.overlayWindowBounds() ?? options.videoWindowBounds();
     if (!canvas || !bounds) return false;
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left - bounds.dx;
@@ -379,6 +416,7 @@ export function useLayerTransformAndCrop(
     beginCropDrag,
     moveCropDrag,
     endCropDrag,
+    commitCrop,
     selectWebcamAt,
   };
 }

@@ -69,3 +69,15 @@ test('persists validated camera appearance with the recorded sidecar', () => {
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
   assert.deepEqual(manifest.tracks[0].format.appearance, { shadowSize: 'lg', cornerRadius: 'full' })
 })
+
+test('persists the normalized camera placement used by the editor', () => {
+  const storage = createCameraStorage({})
+  const session = sessionFixture()
+  storage.registerSession(session)
+  const opened = storage.begin(15, { sessionId, sourceId, format: { ...format, placement: { x: .72, y: .68, width: .2, height: .2 } }, startNs: 0 })
+  storage.write(15, { jobId: opened.jobId, sequence: 0, data: new Uint8Array([1]) })
+  storage.finalize(15, { jobId: opened.jobId, endNs: 1, metrics: {} })
+  storage.complete(session)
+  const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
+  assert.deepEqual(manifest.tracks[0].format.placement, { x: .72, y: .68, width: .2, height: .2 })
+})

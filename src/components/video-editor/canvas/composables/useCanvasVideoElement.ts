@@ -75,9 +75,10 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     () => options.currentTime(),
     (time) => {
       const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, time));
-      if (Math.abs(videoEl.currentTime - clampedTime) > 0.15) {
+      if (Math.abs(videoEl.currentTime - clampedTime) > 0.001) {
         videoEl.currentTime = clampedTime;
       }
+      options.onRenderOnce();
     },
   );
 

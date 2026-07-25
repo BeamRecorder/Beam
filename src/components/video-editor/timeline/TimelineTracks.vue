@@ -188,6 +188,7 @@ const selectMainVideoLayer = () => {
                   :src="thumbnails[second]"
                   class="thumbnail-img"
                   alt="frame"
+                  draggable="false"
                 />
                 <Skeleton v-else width="100%" height="100%" radius="0" />
               </div>
@@ -522,6 +523,8 @@ const selectMainVideoLayer = () => {
   border-radius: inherit;
   border: none;
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .timeline-viewport {

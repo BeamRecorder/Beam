@@ -40,6 +40,14 @@ describe("webcam zoom layout", () => {
     expect(layout).toEqual({ x: 120, y: 272, width: 280, height: 168 });
   });
 
+  it("preserves a persisted webcam's right and bottom offsets while zooming", () => {
+    const transform = { x: .56, y: .62, width: .28, height: .21 };
+    const normal = computeWebcamLayout(1000, 800, 1, undefined, transform);
+    const zoomed = computeWebcamLayout(1000, 800, 2, undefined, transform);
+    expect(zoomed.x + zoomed.width).toBeCloseTo(normal.x + normal.width);
+    expect(zoomed.y + zoomed.height).toBeCloseTo(normal.y + normal.height);
+  });
+
   it("maps every recorded visual preset to deterministic canvas settings", () => {
     expect(webcamSettingsForAppearance({ shadowSize: "none", cornerRadius: "none" })).toMatchObject({ shadowOpacity: 0, cornerRadius: 0 });
     expect(webcamSettingsForAppearance({ shadowSize: "md", cornerRadius: "md" })).toMatchObject({ shadowOpacity: .42, cornerRadius: 14 });

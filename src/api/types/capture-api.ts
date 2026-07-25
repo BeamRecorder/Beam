@@ -80,7 +80,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
   configureCameraOverlay(state: { cameraId: string; shadowSize?: string; cornerRadius?: string }): void
   setCameraOverlayActive(active: boolean): void
-  getCameraOverlayState(): Promise<{ cameraId: string; shadowSize: string; cornerRadius: string } | null>
+  getCameraOverlayState(): Promise<{ cameraId: string; shadowSize: string; cornerRadius: string; placement?: { x: number; y: number; width: number; height: number } } | null>
   onCameraOverlayState(listener: (state: { cameraId: string; shadowSize: string; cornerRadius: string }) => void): () => void
   onCameraOverlayHover(listener: (hovered: boolean) => void): () => void
   onCameraShadow(listener: (state: { shadowSize: string; cornerRadius: string }) => void): () => void
@@ -134,7 +134,7 @@ export interface ProjectEditorState {
 export interface CameraSegmentStart {
   sessionId: string
   sourceId: string
-  format: { codec: 'vp8'; width: number; height: number; nominalFps: number; appearance?: { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' } }
+  format: { codec: 'vp8'; width: number; height: number; nominalFps: number; appearance?: { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' }; placement?: { x: number; y: number; width: number; height: number } }
   startNs: number
 }
 

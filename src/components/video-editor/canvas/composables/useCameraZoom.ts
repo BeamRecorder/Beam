@@ -15,6 +15,7 @@ import {
   type OutputCanvasSettings,
 } from "../output-canvas";
 import type { ProjectEditorData } from "~/api/types/capture-api";
+import type { ProjectComposition } from "../../composition/composition-types";
 
 export interface VideoWindowBounds {
   dx: number;
@@ -39,6 +40,8 @@ export interface UseCameraZoomOptions {
   isPlaying: () => boolean;
   editorData: () => ProjectEditorData | null | undefined;
   activeTab: () => string;
+  composition?: () => ProjectComposition;
+  isCropping?: () => boolean | undefined;
   drawBackground: (
     ctx: CanvasRenderingContext2D,
     bounds: { x: number; y: number; width: number; height: number },
@@ -64,6 +67,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   let lastCameraUpdateMs = 0;
 
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
+  const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
   const isMovingSelection = ref(false);
 
   const resetCamera = () => {
@@ -179,11 +183,24 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const videoWidth = videoEl.videoWidth || 1920;
     const videoHeight = videoEl.videoHeight || 1080;
     const { x: dx, y: dy, width: dw, height: dh } = preview;
+
+    const isCropping = options.isCropping?.();
+    const baseCrop = !isCropping ? options.composition?.().baseVideoCrop : undefined;
+    const cropX = baseCrop ? baseCrop.x * videoWidth : 0;
+    const cropY = baseCrop ? baseCrop.y * videoHeight : 0;
+    const cropW = baseCrop ? baseCrop.width * videoWidth : videoWidth;
+    const cropH = baseCrop ? baseCrop.height * videoHeight : videoHeight;
+
     const source = outputCanvas.showBackground
-      ? { x: 0, y: 0, width: videoWidth, height: videoHeight }
-      : coverSourceRect(videoWidth, videoHeight, dw, dh);
+      ? { x: cropX, y: cropY, width: cropW, height: cropH }
+      : coverSourceRect(cropW, cropH, dw, dh);
+    if (!outputCanvas.showBackground) {
+      source.x += cropX;
+      source.y += cropY;
+    }
+
     const media = outputCanvas.showBackground
-      ? framedMediaRect(videoWidth, videoHeight, dw, dh)
+      ? framedMediaRect(cropW, cropH, dw, dh)
       : { x: 0, y: 0, width: dw, height: dh };
 
     ctx.save();
@@ -378,6 +395,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       dh: outputCanvas.showBackground ? media.height : dh,
       scale: camera.scale,
     };
+    overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale };
 
     return {
       dx,
@@ -417,6 +435,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
   return {
     videoWindowBounds,
+    overlayWindowBounds,
     focusTargetStyle,
     resetCamera,
     beginSelectionMove,

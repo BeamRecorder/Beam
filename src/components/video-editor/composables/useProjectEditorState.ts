@@ -6,7 +6,7 @@ import type { ZoomElement } from "../zoom/zoom-types";
 import { BACKGROUND_MEDIA, normalizeBackgroundValue, type BackgroundMedia, type BackgroundValue } from "./backgroundCatalog";
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 
-const cloneComposition = (value: ProjectComposition): ProjectComposition => structuredClone(toRaw(value));
+const cloneComposition = (value: ProjectComposition): ProjectComposition => JSON.parse(JSON.stringify(value)) as ProjectComposition;
 
 export function useProjectEditorState(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -42,7 +42,7 @@ export function useProjectEditorState(options: {
       presentation: {
         canvas: { preset: canvas.preset, width: canvas.width, height: canvas.height, showBackground: canvas.showBackground },
         selectedBackgroundId: options.selectedBackground.value?.id ?? savedBackgroundId,
-        background: options.selectedBackground.value && !['image', 'video'].includes(options.selectedBackground.value.kind) ? structuredClone(toRaw(options.selectedBackground.value)) : null,
+        background: options.selectedBackground.value && !['image', 'video'].includes(options.selectedBackground.value.kind) ? JSON.parse(JSON.stringify(options.selectedBackground.value)) : null,
         blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
         importedBackgrounds: [],
         videoEnabled: options.videoEnabled.value,

@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { capture } from '../../../api/capture'
-import { BrowserCameraRecorder, type CameraAppearance } from '../../../api/camera-recorder'
+import { BrowserCameraRecorder, type CameraAppearance, type CameraPlacement } from '../../../api/camera-recorder'
 import { BrowserMicrophoneRecorder } from '../../../api/microphone-recorder'
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder'
 import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types'
@@ -25,6 +25,17 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   let camera: BrowserCameraRecorder | null = null
   let microphone: BrowserMicrophoneRecorder | null = null
   let systemAudio: BrowserSystemAudioRecorder | null = null
+  let sessionTimelineStartedAt = 0
+
+  const cameraMetadata = async (): Promise<{ appearance?: CameraAppearance; placement?: CameraPlacement }> => {
+    const overlay = await capture.getCameraOverlayState()
+    const appearance: CameraAppearance | undefined = overlay && ['none', 'sm', 'md', 'lg'].includes(overlay.shadowSize) && ['none', 'sm', 'md', 'lg', 'full'].includes(overlay.cornerRadius)
+      ? { shadowSize: overlay.shadowSize as CameraAppearance['shadowSize'], cornerRadius: overlay.cornerRadius as CameraAppearance['cornerRadius'] }
+      : undefined
+    const placement = overlay?.placement
+    const hasValidPlacement = placement && [placement.x, placement.y, placement.width, placement.height].every(Number.isFinite) && placement.width > 0 && placement.height > 0
+    return { appearance, ...(hasValidPlacement ? { placement } : {}) }
+  }
 
   const isActive = computed(() => phase.value === 'countdown' || phase.value === 'recording' || phase.value === 'paused')
   const clearCountdown = () => { if (countdown !== null) window.clearInterval(countdown); countdown = null }
@@ -43,14 +54,14 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
 
   const startSidecars = async () => {
     if (!sessionId) return
-    const overlay = await capture.getCameraOverlayState()
-    const appearance: CameraAppearance | undefined = overlay && ['none', 'sm', 'md', 'lg'].includes(overlay.shadowSize) && ['none', 'sm', 'md', 'lg', 'full'].includes(overlay.cornerRadius) ? { shadowSize: overlay.shadowSize as CameraAppearance['shadowSize'], cornerRadius: overlay.cornerRadius as CameraAppearance['cornerRadius'] } : undefined
-    await Promise.all([camera?.start(sessionId, appearance), microphone?.start(sessionId), systemAudio?.start(sessionId)])
+    const { appearance, placement } = await cameraMetadata()
+    await Promise.all([camera?.start(sessionId, appearance, placement, sessionTimelineStartedAt), microphone?.start(sessionId), systemAudio?.start(sessionId)])
   }
 
   const beginNativeRecording = async () => {
     if (!configuration) return
     capture.setCountdown(null)
+    sessionTimelineStartedAt = performance.now()
     const session = await capture.startRecording({ screenKind: configuration.screenKind, screenId: configuration.screenId, cameraId: null, microphoneId: null, systemAudio: false, cursor: true, targetFps: configuration.targetFps })
     if (!session.sessionId) throw new Error('The capture session did not provide an identifier.')
     sessionId = session.sessionId
@@ -88,7 +99,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     capture.setCountdown(null)
     clearTimer()
     await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
-    camera = null; microphone = null; systemAudio = null; sessionId = null
+    camera = null; microphone = null; systemAudio = null; sessionId = null; sessionTimelineStartedAt = 0
     cameraEnabled.value = false; microphoneEnabled.value = false; systemAudioEnabled.value = false
     elapsedTenths.value = 0
     phase.value = 'idle'
@@ -111,7 +122,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     if (phase.value === 'recording') { await Promise.all([capture.pause(), camera?.pause(), microphone?.pause()]); clearTimer(); phase.value = 'paused' }
     else if (phase.value === 'paused') { await Promise.all([capture.resume(), camera?.resume(sessionId), microphone?.resume(sessionId)]); timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100); phase.value = 'recording' }
   }
-  const toggleCamera = async () => { if (!configuration || !sessionId) return; if (camera) { await stopRecorder(camera); camera = null; cameraEnabled.value = false } else { const overlay = await capture.getCameraOverlayState(); const appearance: CameraAppearance | undefined = overlay && ['none', 'sm', 'md', 'lg'].includes(overlay.shadowSize) && ['none', 'sm', 'md', 'lg', 'full'].includes(overlay.cornerRadius) ? { shadowSize: overlay.shadowSize as CameraAppearance['shadowSize'], cornerRadius: overlay.cornerRadius as CameraAppearance['cornerRadius'] } : undefined; camera = await BrowserCameraRecorder.request(configuration.cameraId); await camera.start(sessionId, appearance); cameraEnabled.value = true } }
+  const toggleCamera = async () => { if (!configuration || !sessionId) return; if (camera) { await stopRecorder(camera); camera = null; cameraEnabled.value = false } else { const { appearance, placement } = await cameraMetadata(); camera = await BrowserCameraRecorder.request(configuration.cameraId); await camera.start(sessionId, appearance, placement, sessionTimelineStartedAt); cameraEnabled.value = true } }
   const toggleMicrophone = async () => { if (!configuration || !sessionId) return; if (microphone) { await stopRecorder(microphone); microphone = null; microphoneEnabled.value = false } else { microphone = await BrowserMicrophoneRecorder.request(configuration.microphoneId); await microphone.start(sessionId); microphoneEnabled.value = true } }
   const toggleSystemAudio = async () => { if (!sessionId) return; if (systemAudio) { await stopRecorder(systemAudio); systemAudio = null; systemAudioEnabled.value = false } else { systemAudio = await BrowserSystemAudioRecorder.request(); await systemAudio.start(sessionId); systemAudioEnabled.value = true } }
   const recordingTime = computed(() => {

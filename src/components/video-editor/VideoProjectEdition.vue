@@ -67,7 +67,7 @@ onUnmounted(() => {
       @click="toggleProjectMenu"
     >
       <span class="project-title">{{ project?.name || 'Untitled project' }}</span>
-      <LoaderCircle v-if="isSaving" class="save-spinner" aria-label="Saving project" />
+      <LoaderCircle class="save-spinner" :class="{ 'is-visible': isSaving }" aria-label="Saving project" />
       <ChevronDown class="chevron-icon" />
     </button>
 
@@ -125,7 +125,20 @@ onUnmounted(() => {
   color: var(--text-muted);
   flex-shrink: 0;
 }
-.save-spinner { width: 14px; height: 14px; color: var(--text-muted); animation: spin 700ms linear infinite; }
+.save-spinner {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.save-spinner.is-visible {
+  visibility: visible;
+  opacity: 1;
+  animation: spin 700ms linear infinite;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .project-menu-panel {

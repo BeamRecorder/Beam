@@ -17,6 +17,7 @@ export interface UseCompositionMediaOptions {
   isPlaying: () => boolean;
   selectedTransformLayer: () => MediaCompositionLayer | null;
   webcamDraft: () => NormalizedTransform | null;
+  isCropping?: () => boolean | undefined;
 }
 
 const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
@@ -275,13 +276,17 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
           ? asset.videoHeight
           : asset.naturalHeight;
 
-      if (layer.crop && sourceWidth > 0 && sourceHeight > 0) {
+      const isThisLayerCropping =
+        options.isCropping?.() && layer.id === selectedTransformLayer?.id;
+      const crop = isThisLayerCropping ? undefined : layer.crop;
+
+      if (crop && sourceWidth > 0 && sourceHeight > 0) {
         ctx.drawImage(
           asset,
-          layer.crop.x * sourceWidth,
-          layer.crop.y * sourceHeight,
-          layer.crop.width * sourceWidth,
-          layer.crop.height * sourceHeight,
+          crop.x * sourceWidth,
+          crop.y * sourceHeight,
+          crop.width * sourceWidth,
+          crop.height * sourceHeight,
           dx,
           dy,
           dw,
@@ -326,6 +331,8 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
 
       ctx.save();
       ctx.translate(videoWindow.dx, videoWindow.dy);
+      const isThisLayerCropping =
+        options.isCropping?.() && layer.id === selectedTransformLayer?.id;
       drawWebcamOverlay(
         ctx,
         asset,
@@ -336,7 +343,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         layer.id === selectedTransformLayer?.id && webcamDraft
           ? webcamDraft
           : layer.transform,
-        layer.crop,
+        isThisLayerCropping ? undefined : layer.crop,
       );
       ctx.restore();
     }

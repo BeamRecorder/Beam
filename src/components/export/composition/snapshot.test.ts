@@ -53,4 +53,10 @@ describe('createCompositionSnapshot', () => {
     const snapshot = createCompositionSnapshot(input); input.cursorSettings.size = 99
     expect(snapshot.composition.layers).toHaveLength(1); expect(snapshot.cursorSettings.size).toBe(24)
   })
+  it('serializes a reactive composition without passing Vue proxies to structured clone', () => {
+    const composition = reactive({ media: [], layers: [], baseVideoCrop: { x: .1, y: .2, width: .6, height: .5 } })
+    const snapshot = createCompositionSnapshot({ ...base(), composition: composition as never })
+    composition.baseVideoCrop.width = .2
+    expect(snapshot.composition.baseVideoCrop).toEqual({ x: .1, y: .2, width: .6, height: .5 })
+  })
 })

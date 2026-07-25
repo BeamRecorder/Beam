@@ -7,6 +7,8 @@ import type { CompositionSnapshot } from '../export-types'
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas'
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas'
 
+const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+
 const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({
   ...zoom,
   focus: { ...zoom.focus },
@@ -46,13 +48,13 @@ export function createCompositionSnapshot(input: {
     video: { src: input.videoSrc, width: Math.max(1, input.width), height: Math.max(1, input.height), fps: Math.max(1, input.fps), enabled: input.videoEnabled },
     canvas: normalizeOutputCanvas(input.canvas),
     background: input.background?.kind === 'color' ? { kind: 'color', color: input.background.color }
-      : input.background?.kind === 'gradient' ? { kind: 'gradient', gradient: structuredClone(input.background.gradient) }
+      : input.background?.kind === 'gradient' ? { kind: 'gradient', gradient: cloneJson(input.background.gradient) }
       : input.background ? { kind: input.background.kind, src: input.background.path } : null,
     blurPercent: Math.max(0, Math.min(100, Math.round(input.blurPercent))),
     zooms: copyZooms(input.zooms),
     cursor: copyCursor(input.editorData?.cursor),
-    cursorSettings: structuredClone(input.cursorSettings),
-    composition: structuredClone(input.composition),
+    cursorSettings: cloneJson(input.cursorSettings),
+    composition: cloneJson(input.composition),
     audio: (input.editorData?.tracks ?? []).flatMap((track) => {
       const enabled = track.kind === 'system-audio' ? input.systemAudioEnabled : track.kind === 'microphone' ? input.micAudioEnabled : false
       if (!enabled || !['system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') return []
