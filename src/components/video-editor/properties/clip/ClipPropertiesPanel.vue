@@ -8,15 +8,11 @@ import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import {
   Unlink,
   Trash2,
-  Gauge,
-  Square,
-  Sun,
   MoveDown,
   MoveDownRight,
   MoveUpLeft,
   CircleDot,
   RotateCcw,
-  FlipHorizontal,
 } from "@lucide/vue";
 import type { NormalizedTransform } from "../../composition/composition-types";
 
@@ -188,59 +184,114 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
     </div>
 
     <div v-else class="options-group">
-      <div class="clip-header">
-        <span class="clip-type-badge">{{
-          selectedClip.kind.toUpperCase()
-        }}</span>
-        <h4 class="clip-name">{{ selectedClip.name || selectedClip.id }}</h4>
-      </div>
-
-      <div v-if="clipTransform" class="property-card">
-        <div class="card-header">
-          <Square :size="14" class="card-icon" /><span class="card-title"
-            >Clip placement</span
-          >
+      <!-- Placement Section -->
+      <div v-if="clipTransform" class="section-block">
+        <div class="section-header">
+          <span class="section-title">Placement</span>
           <Button variant="ghost" size="xs" :icon="RotateCcw" aria-label="Reset clip placement" @click="emit('reset:clipTransform')">Reset</Button>
         </div>
-        <BigSlider
-          :model-value="clipTransform.x * 100"
-          :min="-300"
-          :max="300"
-          :step="1"
-          label="Horizontal"
-          :format-value="(value) => `${Math.round(value)}%`"
-          @update:modelValue="updatePlacement({ x: $event / 100 })"
-        />
-        <BigSlider
-          :model-value="clipTransform.y * 100"
-          :min="-300"
-          :max="300"
-          :step="1"
-          label="Vertical"
-          :format-value="(value) => `${Math.round(value)}%`"
-          @update:modelValue="updatePlacement({ y: $event / 100 })"
-        />
-        <BigSlider
-          :model-value="clipTransform.width * 100"
-          :min="2"
-          :max="400"
-          :step="1"
-          label="Size"
-          :format-value="(value) => `${Math.round(value)}%`"
-          @update:modelValue="updatePlacement({ width: $event / 100 })"
-        />
+        <div class="sliders-stack">
+          <BigSlider
+            :model-value="clipTransform.x * 100"
+            :min="-300"
+            :max="300"
+            :step="1"
+            label="Horizontal"
+            :format-value="(value) => `${Math.round(value)}%`"
+            @update:modelValue="updatePlacement({ x: $event / 100 })"
+          />
+          <BigSlider
+            :model-value="clipTransform.y * 100"
+            :min="-300"
+            :max="300"
+            :step="1"
+            label="Vertical"
+            :format-value="(value) => `${Math.round(value)}%`"
+            @update:modelValue="updatePlacement({ y: $event / 100 })"
+          />
+          <BigSlider
+            :model-value="clipTransform.width * 100"
+            :min="2"
+            :max="400"
+            :step="1"
+            label="Size"
+            :format-value="(value) => `${Math.round(value)}%`"
+            @update:modelValue="updatePlacement({ width: $event / 100 })"
+          />
+        </div>
       </div>
 
-      <!-- Mirror / Flip Horizontally for Video / Image / Webcam -->
-      <div
-        v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)"
-        class="property-card"
-      >
-        <div class="prop-row">
-          <div class="prop-label">
-            <FlipHorizontal :size="14" class="card-icon" />
-            <span>Mirror horizontally</span>
+      <!-- Appearance Section (Corner Radius, Shadow & Mirror) -->
+      <div v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)" class="section-block">
+        <div class="section-header">
+          <span class="section-title">Corner Radius</span>
+        </div>
+        <ButtonGroup full>
+          <Button
+            v-for="item in radiusPresets"
+            :key="item.id"
+            :variant="selectedRadius === item.id ? 'primary' : 'ghost'"
+            size="xs"
+            @click="handleRadiusChange(item.id)"
+          >
+            {{ item.label }}
+          </Button>
+        </ButtonGroup>
+        <BigSlider
+          v-if="selectedRadius === 'custom'"
+          :model-value="customRadiusValue"
+          :min="0"
+          :max="200"
+          :step="1"
+          label="Radius"
+          :default-value="32"
+          :format-value="(v) => `${Math.round(v)}px`"
+          @update:modelValue="handleCustomRadiusChange"
+        />
+
+        <div class="section-header margin-top-md">
+          <span class="section-title">Drop Shadow</span>
+        </div>
+        <ButtonGroup full>
+          <Button
+            v-for="item in shadowPresets"
+            :key="item.id"
+            :variant="selectedShadowSize === item.id ? 'primary' : 'ghost'"
+            size="xs"
+            @click="handleShadowPresetChange(item.id)"
+          >
+            {{ item.label }}
+          </Button>
+        </ButtonGroup>
+
+        <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top-sm">
+          <span class="sub-label">Direction</span>
+          <div class="direction-group">
+            <button
+              v-for="dir in shadowDirections"
+              :key="dir.id"
+              type="button"
+              class="direction-btn"
+              :class="{ active: selectedShadowDirection === dir.id }"
+              :title="dir.label"
+              @click="handleShadowDirectionChange(dir.id)"
+            >
+              <component :is="dir.icon" :size="15" />
+            </button>
           </div>
+        </div>
+
+        <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top-sm">
+          <span class="sub-label">Shadow Color</span>
+          <ColorPicker
+            :model-value="selectedShadowColor"
+            :show-label="false"
+            @update:modelValue="handleShadowColorChange"
+          />
+        </div>
+
+        <div class="prop-row margin-top-md">
+          <span class="prop-label">Mirror horizontally</span>
           <Switch
             :model-value="selectedClip.isMirrored ?? false"
             @update:modelValue="emit('update:isMirrored', $event)"
@@ -249,10 +300,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Speed Boost / Rate Controls -->
-      <div v-if="selectedClip.kind === 'video' || selectedClip.kind === 'webcam'" class="property-card">
-        <div class="card-header">
-          <Gauge :size="14" class="card-icon" />
-          <span class="card-title">Speed Boost</span>
+      <div v-if="selectedClip.kind === 'video' || selectedClip.kind === 'webcam'" class="section-block">
+        <div class="section-header">
+          <span class="section-title">Speed Boost</span>
         </div>
         <BigSlider
           :model-value="currentPlaybackRate"
@@ -278,92 +328,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         </div>
       </div>
 
-      <!-- Corner Radius Presets for Video / Image / Webcam -->
-      <div
-        v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)"
-        class="property-card"
-      >
-        <div class="card-header">
-          <Square :size="14" class="card-icon" />
-          <span class="card-title">Corner Radius</span>
-        </div>
-        <ButtonGroup full>
-          <Button
-            v-for="item in radiusPresets"
-            :key="item.id"
-            :variant="selectedRadius === item.id ? 'primary' : 'ghost'"
-            size="xs"
-            @click="handleRadiusChange(item.id)"
-          >
-            {{ item.label }}
-          </Button>
-        </ButtonGroup>
-        <BigSlider
-          v-if="selectedRadius === 'custom'"
-          :model-value="customRadiusValue"
-          :min="0"
-          :max="200"
-          :step="1"
-          label="Radius"
-          :default-value="32"
-          :format-value="(v) => `${Math.round(v)}px`"
-          @update:modelValue="handleCustomRadiusChange"
-        />
-      </div>
-
-      <!-- Shadow Settings & Directions for Video / Image / Webcam -->
-      <div
-        v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)"
-        class="property-card"
-      >
-        <div class="card-header">
-          <Sun :size="14" class="card-icon" />
-          <span class="card-title">Drop Shadow</span>
-        </div>
-
-        <div class="sub-group">
-          <span class="sub-label">Preset</span>
-          <ButtonGroup full>
-            <Button
-              v-for="item in shadowPresets"
-              :key="item.id"
-              :variant="selectedShadowSize === item.id ? 'primary' : 'ghost'"
-              size="xs"
-              @click="handleShadowPresetChange(item.id)"
-            >
-              {{ item.label }}
-            </Button>
-          </ButtonGroup>
-        </div>
-
-        <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top">
-          <span class="sub-label">Direction</span>
-          <div class="direction-group">
-            <button
-              v-for="dir in shadowDirections"
-              :key="dir.id"
-              type="button"
-              class="direction-btn"
-              :class="{ active: selectedShadowDirection === dir.id }"
-              :title="dir.label"
-              @click="handleShadowDirectionChange(dir.id)"
-            >
-              <component :is="dir.icon" :size="15" />
-            </button>
-          </div>
-        </div>
-
-        <div v-if="selectedShadowSize !== 'none'" class="prop-row margin-top">
-          <span class="prop-label">Shadow Color</span>
-          <ColorPicker
-            :model-value="selectedShadowColor"
-            @update:modelValue="handleShadowColorChange"
-          />
-        </div>
-      </div>
-
-      <!-- Link & Visibility Controls -->
-      <div class="property-card">
+      <!-- Controls & Link -->
+      <div class="section-block">
         <div class="prop-row">
           <span class="prop-label">Enabled</span>
           <Switch
@@ -440,63 +406,26 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 .options-group {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
-.clip-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.clip-type-badge {
-  font-size: 9px;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  letter-spacing: 0.05em;
-}
-
-.clip-name {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.property-card {
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 12px;
+.section-block {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.card-header {
+.section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
+  justify-content: space-between;
+  min-height: 20px;
 }
 
-.card-icon {
-  color: var(--color-primary);
-}
-
-.card-title {
+.section-title {
   font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .sub-group {
@@ -507,12 +436,22 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
 .sub-label {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
-.margin-top {
-  margin-top: 6px;
+.margin-top-sm {
+  margin-top: 4px;
+}
+
+.margin-top-md {
+  margin-top: 8px;
+}
+
+.sliders-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .preset-pills {
@@ -556,7 +495,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-primary);
 }
 
@@ -598,7 +537,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   color: white;
 }
 
-:root.dark .direction-group {
-  background: #181818;
+.sub-group :deep(.color-picker-trigger-container) {
+  width: 100%;
 }
 </style>
