@@ -21,7 +21,11 @@ const handleExit = () => {
 }
 
 const minimizeApp = () => {
-  capture.minimize()
+  document.body.classList.add('app-minimizing');
+  setTimeout(() => {
+    capture.minimize();
+    document.body.classList.remove('app-minimizing');
+  }, 160);
 }
 
 const closeApp = () => {

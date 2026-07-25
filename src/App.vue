@@ -50,9 +50,25 @@ const isPreparingEditor = ref(false)
 const editorLoadError = ref('')
 const EDITOR_WINDOW_SIZE = { width: 1280, height: 800 }
 
+const isExitingEditor = ref(false)
+
 const setView = (view: 'hud' | 'editor') => {
-  currentView.value = view
-  if (view === 'editor') { capture.setCameraOverlayActive(false); capture.setWindowMode('editor'); capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height) } else { capture.setCameraOverlayActive(true); capture.showHud() }
+  if (view === 'hud' && currentView.value === 'editor') {
+    isExitingEditor.value = true
+    setTimeout(() => {
+      currentView.value = 'hud'
+      isExitingEditor.value = false
+      capture.setCameraOverlayActive(true)
+      capture.showHud()
+    }, 180)
+  } else {
+    currentView.value = view
+    if (view === 'editor') {
+      capture.setCameraOverlayActive(false)
+      capture.setWindowMode('editor')
+      capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
+    }
+  }
 }
 
 const recordingBarVisibility = ref<'always' | 'auto-fade'>('always')
@@ -112,7 +128,17 @@ const dismissEditorLoadError = () => { editorLoadError.value = '' }
     </Transition>
     <section v-if="isPreparingEditor" class="editor-preparing" aria-live="polite"><LoaderCircle class="preparing-spinner" :size="28" /><div><p class="preparing-title">Preparing your editor</p><p class="preparing-copy">Finalizing recording and loading your timeline…</p></div></section>
     <section v-else-if="editorLoadError" class="editor-load-error" role="alert"><p class="editor-load-error-title">Unable to open this project</p><p>{{ editorLoadError }}</p><Button variant="secondary" size="sm" @click="dismissEditorLoadError">Back to projects</Button></section>
-    <Transition name="editor-reveal"><VideoEditor v-if="currentView === 'editor' && !isPreparingEditor" :video-src="currentVideoSrc" :editor-data="currentEditorData" :project="currentProject" @back-to-hud="setView('hud')" @open-project="handleOpenProject" /></Transition>
+    <Transition name="editor-reveal">
+      <VideoEditor
+        v-if="currentView === 'editor' && !isPreparingEditor"
+        :class="{ 'exiting-editor': isExitingEditor }"
+        :video-src="currentVideoSrc"
+        :editor-data="currentEditorData"
+        :project="currentProject"
+        @back-to-hud="setView('hud')"
+        @open-project="handleOpenProject"
+      />
+    </Transition>
   </div>
 </template>
 
@@ -123,9 +149,27 @@ const dismissEditorLoadError = () => { editorLoadError.value = '' }
 .editor-load-error-title, .preparing-title { font-weight: 700; }
 .preparing-spinner { color: var(--color-primary); animation: spin .85s linear infinite; }
 .preparing-copy { margin-top: 2px; color: var(--text-muted); font-size: 13px; }
-.editor-reveal-enter-active { transition: opacity .22s ease, transform .22s ease; }
-.editor-reveal-enter-from { opacity: 0; transform: translateY(8px); }
+.editor-reveal-enter-active, .editor-reveal-leave-active { transition: opacity .22s cubic-bezier(0.16, 1, 0.3, 1), transform .22s cubic-bezier(0.16, 1, 0.3, 1); }
+.editor-reveal-enter-from, .editor-reveal-leave-to { opacity: 0; transform: scale(0.98) translateY(6px); }
+.exiting-editor { opacity: 0; transform: scale(0.96) translateY(12px); transition: opacity 0.18s ease-out, transform 0.18s ease-out; }
 .recorder-return-enter-active, .recorder-return-leave-active { transition: opacity .18s ease, transform .18s ease; }
 .recorder-return-enter-from, .recorder-return-leave-to { opacity: 0; transform: translateX(8px); }
 @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<style>
+body.app-minimizing {
+  animation: minimizeShrink 0.16s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes minimizeShrink {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0.15;
+    transform: scale(0.93) translateY(24px);
+  }
+}
 </style>
