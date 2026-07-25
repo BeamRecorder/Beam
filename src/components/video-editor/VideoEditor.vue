@@ -144,12 +144,51 @@ const {
   deleteSelectedZoom,
 } = zoomState;
 
+import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
+
+const createEditorSnapshot = (): EditorStateSnapshot => ({
+  composition: JSON.parse(JSON.stringify(composition.value)),
+  zoomElements: JSON.parse(JSON.stringify(zoomElements.value)),
+  outputCanvas: JSON.parse(JSON.stringify(outputCanvas.value)),
+  selectedBackground: selectedBackground.value,
+  backgroundBlurPercent: backgroundBlurPercent.value,
+});
+
+const { recordSnapshot, undo, redo, canUndo, canRedo } = useEditorUndoRedo({
+  onRestoreSnapshot: async (snapshot) => {
+    composition.value = snapshot.composition;
+    zoomElements.value = snapshot.zoomElements;
+    outputCanvas.value = snapshot.outputCanvas;
+    selectedBackground.value = snapshot.selectedBackground;
+    backgroundBlurPercent.value = snapshot.backgroundBlurPercent;
+
+    if (props.project) {
+      await saveComposition();
+    }
+    editorState.scheduleSave();
+  },
+});
+
 onMounted(() => {
   playerVideoSrc.value = props.videoSrc ?? "";
   capture.setWindowMode("editor");
   capture.maximize();
-  if (props.project) void loadComposition(props.project.id);
+  if (props.project) {
+    void loadComposition(props.project.id).then(() => {
+      recordSnapshot(createEditorSnapshot());
+    });
+  } else {
+    recordSnapshot(createEditorSnapshot());
+  }
 });
+
+watch(
+  [composition, zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
+  () => {
+    recordSnapshot(createEditorSnapshot(), 300);
+  },
+  { deep: true },
+);
 
 watch(
   () => props.videoSrc,
@@ -273,8 +312,12 @@ onBeforeUnmount(() => {
       :export-request="exportRequest"
       :project="project"
       :is-saving="editorState.isSaving.value"
+      :can-undo="canUndo"
+      :can-redo="canRedo"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
+      @undo="undo"
+      @redo="redo"
     />
 
     <!-- Main Workspace (Islands Layout) -->

@@ -3,17 +3,32 @@ import { capture } from '../../api/capture'
 import VideoProjectEdition from './VideoProjectEdition.vue'
 import ExportPopover from '../export/ExportPopover.vue'
 import Button from '~/ui/button/Button.vue'
-import { ArrowLeft, Minus, X } from '@lucide/vue'
+import { ArrowLeft, Minus, X, Undo2, Redo2 } from '@lucide/vue'
 
-defineProps<{
-  exportRequest?: any;
-  project?: any;
-  isSaving?: boolean;
-}>();
+withDefaults(
+  defineProps<{
+    exportRequest?: any;
+    project?: any;
+    isSaving?: boolean;
+    canUndo?: boolean;
+    canRedo?: boolean;
+    historyTooltipPosition?: "top" | "bottom" | "left" | "right";
+  }>(),
+  {
+    exportRequest: null,
+    project: null,
+    isSaving: false,
+    canUndo: false,
+    canRedo: false,
+    historyTooltipPosition: "bottom",
+  },
+);
 
 const emit = defineEmits<{
   (e: 'back-to-hud'): void;
   (e: 'open-project', project: any): void;
+  (e: 'undo'): void;
+  (e: 'redo'): void;
 }>();
 
 const handleExit = () => {
@@ -98,6 +113,26 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
         :is-saving="isSaving"
         @open-project="emit('open-project', $event)"
       />
+      <div class="history-actions" @dblclick.stop>
+        <Button
+          variant="ghost"
+          size="xs"
+          :icon="Undo2"
+          :disabled="!canUndo"
+          tooltip="Undo (Ctrl+Z)"
+          :tooltip-position="historyTooltipPosition || 'bottom'"
+          @click.stop="emit('undo')"
+        />
+        <Button
+          variant="ghost"
+          size="xs"
+          :icon="Redo2"
+          :disabled="!canRedo"
+          tooltip="Redo (Ctrl+Y)"
+          :tooltip-position="historyTooltipPosition || 'bottom'"
+          @click.stop="emit('redo')"
+        />
+      </div>
     </div>
 
     <div class="right-actions" @dblclick.stop>
@@ -141,6 +176,13 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   align-items: center;
   gap: 12px;
   height: 100%;
+}
+
+.history-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
 }
 
 .center-actions {
