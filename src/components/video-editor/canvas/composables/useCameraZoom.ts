@@ -62,18 +62,16 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const cameraVelocity = createCameraVelocity();
   const cursorFollowCamera = createCursorFollowCameraState();
 
-  let previousCamera: { focusX: number; focusY: number; scale: number } | null =
-    null;
   let renderedCamera: { focusX: number; focusY: number; scale: number } | null =
     null;
   let lastCameraUpdateMs = 0;
 
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
+  const baseVideoHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
   const isMovingSelection = ref(false);
 
   const resetCamera = () => {
-    previousCamera = null;
     renderedCamera = null;
     lastCameraUpdateMs = 0;
     Object.assign(cameraVelocity, createCameraVelocity());
@@ -152,23 +150,26 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const beginSelectionMove = (event: PointerEvent) => {
     if (options.selectWebcamAt(event)) return;
     const canvas = options.canvasRef();
-    const bounds = videoWindowBounds.value;
-    if (canvas && bounds) {
+    const hitBounds = baseVideoHitBounds.value ?? videoWindowBounds.value;
+    if (canvas && hitBounds) {
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
-      if (
-        x >= bounds.dx &&
-        x <= bounds.dx + bounds.dw &&
-        y >= bounds.dy &&
-        y <= bounds.dy + bounds.dh
-      ) {
+
+      const inVideo =
+        x >= hitBounds.dx &&
+        x <= hitBounds.dx + hitBounds.dw &&
+        y >= hitBounds.dy &&
+        y <= hitBounds.dy + hitBounds.dh;
+
+      if (inVideo) {
         options.onSelectBaseVideo();
         return;
       }
-      options.onSelectCanvas();
-      return;
     }
+
+    options.onSelectCanvas();
+
     if (options.selectedTransformLayerExists())
       options.onDeselectTransformLayer();
     const selectedZoom = options.selectedZoom();
@@ -435,11 +436,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     }
     ctx.restore();
 
-    previousCamera = camera;
     videoWindowBounds.value = {
-      // Transform handles must use the untransformed media frame as their
-      // coordinate system, just like webcam handles. Using the already scaled
-      // rectangle feeds the resize back into its own delta and makes it race.
       dx: dx + media.x,
       dy: dy + media.y,
       dw: media.width,
@@ -447,6 +444,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       scale: camera.scale,
       focusX: camera.focusX,
       focusY: camera.focusY,
+    };
+    baseVideoHitBounds.value = {
+      dx: dx + positionedMedia.x,
+      dy: dy + positionedMedia.y,
+      dw: positionedMedia.width,
+      dh: positionedMedia.height,
     };
     overlayWindowBounds.value = {
       dx,
