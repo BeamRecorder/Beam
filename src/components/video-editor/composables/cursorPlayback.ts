@@ -57,7 +57,15 @@ export function cursorStateAt(
     }
   }
 
-  if (!previousMove) return null
+  if (!previousMove) {
+    if (nextMove) {
+      previousMove = nextMove
+    } else {
+      const firstMove = events.find(isMove)
+      if (firstMove) previousMove = firstMove
+      else return null
+    }
+  }
 
   const state = moveState(previousMove)
   state.visible = visible
