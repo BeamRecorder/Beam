@@ -16,7 +16,8 @@ interface Option {
 const props = withDefaults(
   defineProps<{
     modelValue: string | number | null
-    options: Option[]
+    options?: Option[]
+    items?: Option[]
     placeholder?: string
     disabled?: boolean
     direction?: 'up' | 'down'
@@ -50,8 +51,12 @@ watch(
   }
 )
 
+const normalizedOptions = computed<Option[]>(() => {
+  return props.options ?? props.items ?? []
+})
+
 const selectedOption = computed(() => {
-  return props.options.find(opt => opt.value === props.modelValue) || null
+  return normalizedOptions.value.find(opt => opt.value === props.modelValue) || null
 })
 
 const handleToggle = (isOpen: boolean) => {
@@ -94,14 +99,14 @@ const handleMouseLeaveList = () => {
 }
 
 const itemHeight = computed(() => {
-  if (props.options.some(opt => opt.thumbnail || opt.loading)) {
+  if (normalizedOptions.value.some(opt => opt.thumbnail || opt.loading)) {
     return 52
   }
   return 38
 })
 
 const { list, containerProps, wrapperProps } = useVirtualList(
-  computed(() => props.options),
+  normalizedOptions,
   {
     itemHeight: () => itemHeight.value,
   }

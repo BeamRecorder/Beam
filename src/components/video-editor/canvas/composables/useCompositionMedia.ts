@@ -256,31 +256,70 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         const sentence = layer.caption.sentences.find(
           (item) => item.startMs <= timeMs && timeMs <= item.endMs,
         );
-        if (!sentence?.text) continue;
+        const textToDisplay = layer.caption.style.customText || sentence?.text;
+        if (!textToDisplay) continue;
+
         const style = layer.caption.style;
-        ctx.save();
-        ctx.font = `${Math.max(
+        const fontSizePx = Math.max(
           12,
-          (style.fontSize * videoWindow.dw) /
-            Math.max(1, mainVideoWidth || 1920),
-        )}px sans-serif`;
+          (style.fontSize * videoWindow.dw) / Math.max(1, mainVideoWidth || 1920),
+        );
+
+        ctx.save();
+        ctx.font = `600 ${fontSizePx}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillStyle = style.color;
-        ctx.shadowColor = style.shadowColor;
-        ctx.shadowBlur = style.shadowBlur;
-        const y =
+
+        const yRatio =
           style.placement === "top"
             ? 0.12
             : style.placement === "center"
               ? 0.5
               : 0.88;
-        ctx.fillText(
-          sentence.text,
-          videoWindow.dx + videoWindow.dw / 2,
-          videoWindow.dy + videoWindow.dh * y,
-          videoWindow.dw * 0.9,
-        );
+        const centerX = videoWindow.dx + videoWindow.dw / 2;
+        const centerY = videoWindow.dy + videoWindow.dh * yRatio;
+        const maxWidth = videoWindow.dw * 0.88;
+
+        // Backdrop Blur / Box Background if configured
+        if (style.backdropBlur && style.backdropBlur > 0) {
+          const metrics = ctx.measureText(textToDisplay);
+          const boxWidth = Math.min(maxWidth, metrics.width + fontSizePx * 1.2);
+          const boxHeight = fontSizePx * 1.6;
+          const boxX = centerX - boxWidth / 2;
+          const boxY = centerY - boxHeight / 2;
+
+          ctx.save();
+          ctx.fillStyle = "rgba(15, 23, 42, 0.65)";
+          ctx.beginPath();
+          ctx.roundRect(boxX, boxY, boxWidth, boxHeight, fontSizePx * 0.3);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Shadow configuration (Blur, direction, offsets)
+        if (style.shadowBlur && style.shadowBlur > 0) {
+          const blur = style.shadowBlur;
+          const dir = style.shadowDirection ?? "bottom-right";
+          ctx.shadowColor = style.shadowColor || "rgba(0, 0, 0, 0.75)";
+          ctx.shadowBlur = blur;
+          ctx.shadowOffsetX =
+            style.shadowOffsetX ??
+            (dir === "top-left"
+              ? -blur * 0.5
+              : dir === "bottom-right"
+                ? blur * 0.5
+                : 0);
+          ctx.shadowOffsetY =
+            style.shadowOffsetY ??
+            (dir === "top-left"
+              ? -blur * 0.5
+              : dir === "bottom" || dir === "bottom-right"
+                ? blur * 0.5
+                : 0);
+        }
+
+        ctx.fillStyle = style.color || "#ffffff";
+        ctx.fillText(textToDisplay, centerX, centerY, maxWidth);
         ctx.restore();
         continue;
       }

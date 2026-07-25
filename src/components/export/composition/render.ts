@@ -47,22 +47,65 @@ export function drawCompositionLayers(
       const sentence = layer.caption.sentences.find(
         (item) => item.startMs <= time * 1000 && time * 1000 <= item.endMs,
       );
-      if (!sentence?.text) continue;
+      const textToDisplay = layer.caption.style.customText || sentence?.text;
+      if (!textToDisplay) continue;
+
       const style = layer.caption.style;
+      const fontSizePx = Math.max(12, style.fontSize);
+
       ctx.save();
-      ctx.font = `${Math.max(12, style.fontSize)}px sans-serif`;
+      ctx.font = `600 ${fontSizePx}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = style.color;
-      ctx.shadowColor = style.shadowColor;
-      ctx.shadowBlur = Math.max(0, style.shadowBlur);
-      const y =
+
+      const yRatio =
         style.placement === "top"
-          ? height * 0.12
+          ? 0.12
           : style.placement === "center"
-            ? height / 2
-            : height * 0.88;
-      ctx.fillText(sentence.text, width / 2, y, width * 0.9);
+            ? 0.5
+            : 0.88;
+      const centerX = width / 2;
+      const centerY = height * yRatio;
+      const maxWidth = width * 0.88;
+
+      if (style.backdropBlur && style.backdropBlur > 0) {
+        const metrics = ctx.measureText(textToDisplay);
+        const boxWidth = Math.min(maxWidth, metrics.width + fontSizePx * 1.2);
+        const boxHeight = fontSizePx * 1.6;
+        const boxX = centerX - boxWidth / 2;
+        const boxY = centerY - boxHeight / 2;
+
+        ctx.save();
+        ctx.fillStyle = "rgba(15, 23, 42, 0.65)";
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxWidth, boxHeight, fontSizePx * 0.3);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (style.shadowBlur && style.shadowBlur > 0) {
+        const blur = style.shadowBlur;
+        const dir = style.shadowDirection ?? "bottom-right";
+        ctx.shadowColor = style.shadowColor || "rgba(0, 0, 0, 0.75)";
+        ctx.shadowBlur = blur;
+        ctx.shadowOffsetX =
+          style.shadowOffsetX ??
+          (dir === "top-left"
+            ? -blur * 0.5
+            : dir === "bottom-right"
+              ? blur * 0.5
+              : 0);
+        ctx.shadowOffsetY =
+          style.shadowOffsetY ??
+          (dir === "top-left"
+            ? -blur * 0.5
+            : dir === "bottom" || dir === "bottom-right"
+              ? blur * 0.5
+              : 0);
+      }
+
+      ctx.fillStyle = style.color || "#ffffff";
+      ctx.fillText(textToDisplay, centerX, centerY, maxWidth);
       ctx.restore();
       continue;
     }

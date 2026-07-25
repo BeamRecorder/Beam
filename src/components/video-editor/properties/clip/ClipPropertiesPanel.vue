@@ -48,6 +48,7 @@ const emit = defineEmits<{
   (e: "reset:clipTransform"): void;
   (e: "unlink"): void;
   (e: "delete"): void;
+  (e: "split"): void;
 }>();
 
 const speedPresets = [0.5, 1.0, 1.5, 2.0, 3.0];

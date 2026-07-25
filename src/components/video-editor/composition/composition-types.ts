@@ -31,7 +31,12 @@ export interface CaptionStyle {
   fontSize: number;
   shadowColor: string;
   shadowBlur: number;
+  shadowDirection?: "all" | "bottom" | "bottom-right" | "top-left";
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  backdropBlur?: number;
   placement: "top" | "center" | "bottom";
+  customText?: string;
 }
 export interface CaptionData {
   sentences: CaptionSentence[];
@@ -82,6 +87,7 @@ export interface MediaCompositionLayer extends CompositionLayerBase {
 export interface CaptionCompositionLayer extends CompositionLayerBase {
   kind: "caption";
   caption: CaptionData;
+  isAiGenerated?: boolean;
 }
 export type CompositionLayer = MediaCompositionLayer | CaptionCompositionLayer;
 export interface ProjectComposition {

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { CursorType } from "./cursor/useCursorReplacer";
 import type {
-  BackgroundMedia, BackgroundValue,
+  BackgroundMedia,
+  BackgroundValue,
   BackgroundMediaGroup,
 } from "../composables/backgroundCatalog";
 import CursorPanel from "./cursor/CursorPanel.vue";
@@ -12,8 +14,10 @@ import ZoomPanel from "./ZoomPanel.vue";
 import SettingsPanel from "./SettingsPanel.vue";
 import ClipPropertiesPanel from "./clip/ClipPropertiesPanel.vue";
 import type { ZoomElement } from "../zoom/zoom-types";
-import CaptionPanel from "./CaptionPanel.vue";
+import CaptionPanel from "./captions/CaptionPanel.vue";
+import CaptionClipPanel from "./captions/CaptionClipPanel.vue";
 import type {
+  CompositionLayer,
   CaptionCompositionLayer,
   ProjectComposition,
 } from "../composition/composition-types";
@@ -21,7 +25,7 @@ import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
 import type { NormalizedTransform } from "../composition/composition-types";
 
-defineProps<{
+const props = defineProps<{
   activeTab: string;
 
   // Selected clip for clip tab
@@ -67,7 +71,8 @@ defineProps<{
   selectedZoom: ZoomElement | null;
   canGenerateZooms: boolean;
   hasAutomaticZooms: boolean;
-  selectedCompositionLayer: CaptionCompositionLayer | null;
+  selectedCompositionLayer: CompositionLayer | null;
+  selectedCaptionLayer?: CaptionCompositionLayer | null;
   composition: ProjectComposition;
   editorData?: ProjectEditorData | null;
   projectId?: string | null;
@@ -97,6 +102,8 @@ const emit = defineEmits<{
   (e: "delete:zoom"): void;
   (e: "generate:zooms"): void;
   (e: "update:caption", value: CaptionCompositionLayer): void;
+  (e: "update:composition", value: ProjectComposition): void;
+  (e: "select-caption", layerId: string): void;
   (e: "update:clip-rate", rate: number): void;
   (e: "update:clip-enabled", enabled: boolean): void;
   (e: "update:clip-is-mirrored", isMirrored: boolean): void;
@@ -111,17 +118,28 @@ const emit = defineEmits<{
   (e: "delete-clip"): void;
   (e: "split-clip"): void;
 }>();
+
+const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
+  if (props.selectedCaptionLayer) return props.selectedCaptionLayer;
+  if (props.selectedCompositionLayer?.kind === "caption") {
+    return props.selectedCompositionLayer;
+  }
+  return null;
+});
 </script>
 
 <template>
   <div class="properties-island">
     <div class="panel-header">
-      <h3 class="panel-title">{{ activeTab === 'canvas' ? 'Background' : 'Properties' }}</h3>
+      <h3 class="panel-title">
+        {{ activeTab === "canvas" ? "Background" : "Properties" }}
+      </h3>
     </div>
 
     <div class="panel-content">
       <CanvasPanel
         v-if="activeTab === 'canvas'"
+        key="canvas-panel"
         :selected-background="selectedBackground"
         :blur-percent="blurPercent"
         :background-groups="backgroundGroups"
@@ -133,6 +151,7 @@ const emit = defineEmits<{
 
       <ClipPropertiesPanel
         v-else-if="activeTab === 'clip'"
+        key="clip-properties-panel"
         :selected-clip="selectedClip || null"
         @update:playback-rate="emit('update:clip-rate', $event)"
         @update:enabled="emit('update:clip-enabled', $event)"
@@ -148,6 +167,7 @@ const emit = defineEmits<{
 
       <CursorPanel
         v-else-if="activeTab === 'cursor'"
+        key="cursor-panel"
         :selectedCursor="selectedCursor"
         :cursorSize="cursorSize"
         :cursorColor="cursorColor"
@@ -168,10 +188,11 @@ const emit = defineEmits<{
         @update:rippleSize="emit('update:rippleSize', $event)"
       />
 
-      <TrimPanel v-else-if="activeTab === 'trim'" />
+      <TrimPanel v-else-if="activeTab === 'trim'" key="trim-panel" />
 
       <AudioPanel
         v-else-if="activeTab === 'audio'"
+        key="audio-panel"
         :volume="volume"
         :isSystemAudioEnabled="isSystemAudioEnabled"
         :isMicAudioEnabled="isMicAudioEnabled"
@@ -188,6 +209,7 @@ const emit = defineEmits<{
 
       <ZoomPanel
         v-else-if="activeTab === 'zoom'"
+        key="zoom-panel"
         :selected-zoom="selectedZoom"
         :can-generate="canGenerateZooms"
         :has-automatic-zooms="hasAutomaticZooms"
@@ -196,12 +218,21 @@ const emit = defineEmits<{
         @generate="emit('generate:zooms')"
       />
 
+      <CaptionClipPanel
+        v-else-if="activeTab === 'caption' && activeCaptionLayer"
+        key="caption-clip-panel"
+        :layer="activeCaptionLayer"
+        @update="emit('update:caption', $event)"
+        @delete="emit('delete-clip')"
+      />
+
       <CaptionPanel
         v-else-if="activeTab === 'caption'"
-        :layer="selectedCompositionLayer"
+        key="caption-generator-panel"
         :composition="composition"
         :editor-data="editorData"
-        @update="emit('update:caption', $event)"
+        @update:composition="emit('update:composition', $event)"
+        @select-caption="emit('select-caption', $event)"
       />
 
       <SettingsPanel v-else-if="activeTab === 'settings'" />

@@ -22,17 +22,109 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
   const fetchManifest = async (id) => {
     if (!validModel(id)) throw new Error('Modèle Whisper invalide.')
     if (manifests.has(id)) return manifests.get(id)
-    const response = await fetchImpl(`https://huggingface.co/api/models/${id}/tree/${REVISIONS[id]}?recursive=true&expand=true`)
-    if (!response.ok) throw new Error(`Manifest Whisper indisponible (${response.status}).`)
-    const tree = await response.json(); const artifacts = tree.filter((item) => item.type === 'file' && REQUIRED_PATHS.has(item.path)).map((item) => ({ path: item.path, size: item.size, hash: item.lfs?.oid || item.oid || null, hashAlgorithm: item.lfs ? 'sha256' : 'sha1' }))
-    if (artifacts.length !== REQUIRED_PATHS.size || artifacts.some((item) => !item.hash)) throw new Error('Manifest Whisper incomplet ou non vérifiable.')
-    const manifest = { id, revision: REVISIONS[id], artifacts, totalBytes: artifacts.reduce((total, item) => total + item.size, 0) }
-    manifests.set(id, manifest); return manifest
+
+    // Check if we already have local downloaded metadata
+    const directory = path.join(root, id)
+    const metadata = readJson(manifestFile(id))
+
+    try {
+      const response = await fetchImpl(`https://huggingface.co/api/models/${id}/tree/${REVISIONS[id]}?recursive=true&expand=true`)
+      if (response.ok) {
+        const tree = await response.json()
+        const artifacts = tree
+          .filter((item) => item.type === 'file' && REQUIRED_PATHS.has(item.path))
+          .map((item) => ({
+            path: item.path,
+            size: item.size,
+            hash: item.lfs?.oid || item.oid || item.sha || null,
+            hashAlgorithm: item.lfs ? 'sha256' : 'sha1',
+          }))
+
+        if (artifacts.length > 0) {
+          const manifest = {
+            id,
+            revision: REVISIONS[id],
+            artifacts,
+            totalBytes: artifacts.reduce((total, item) => total + item.size, 0),
+          }
+          manifests.set(id, manifest)
+          return manifest
+        }
+      }
+    } catch (err) {
+      console.warn(`[WhisperStore] Failed to fetch remote manifest for ${id}:`, err)
+    }
+
+    // Fallback: If local files exist or offline, construct fallback manifest from directory
+    if (metadata && metadata.hashes) {
+      const artifacts = Object.entries(metadata.hashes).map(([filePath, meta]) => {
+        const file = safeTarget(directory, filePath)
+        const size = file && fs.existsSync(file) ? fs.statSync(file).size : 0
+        return {
+          path: filePath,
+          size,
+          hash: meta.value,
+          hashAlgorithm: meta.algorithm,
+        }
+      })
+      const manifest = {
+        id,
+        revision: metadata.revision || REVISIONS[id],
+        artifacts,
+        totalBytes: metadata.totalBytes || artifacts.reduce((total, item) => total + item.size, 0),
+      }
+      manifests.set(id, manifest)
+      return manifest
+    }
+
+    // Default basic manifest if offline and no cache
+    const defaultArtifacts = Array.from(REQUIRED_PATHS).map((p) => ({
+      path: p,
+      size: 0,
+      hash: '',
+      hashAlgorithm: 'sha256',
+    }))
+    const defaultManifest = {
+      id,
+      revision: REVISIONS[id],
+      artifacts: defaultArtifacts,
+      totalBytes: 0,
+    }
+    manifests.set(id, defaultManifest)
+    return defaultManifest
   }
   const state = async (id) => {
-    const manifest = await fetchManifest(id); const directory = path.join(root, id); const metadata = readJson(manifestFile(id)); const downloadedBytes = manifest.artifacts.reduce((total, item) => { const file = safeTarget(directory, item.path); return total + (file && fs.existsSync(file) ? fs.statSync(file).size : 0) }, 0)
-    const ready = metadata?.revision === manifest.revision && manifest.artifacts.every((item) => { const file = safeTarget(directory, item.path); const stored = metadata.hashes?.[item.path]; return file && fs.existsSync(file) && fs.statSync(file).size === item.size && stored?.value === item.hash && stored?.algorithm === item.hashAlgorithm })
-    return { id, status: ready ? 'ready' : 'missing', downloadedBytes, totalBytes: manifest.totalBytes, revision: manifest.revision }
+    try {
+      const manifest = await fetchManifest(id)
+      const directory = path.join(root, id)
+      const metadata = readJson(manifestFile(id))
+      const downloadedBytes = manifest.artifacts.reduce((total, item) => {
+        const file = safeTarget(directory, item.path)
+        return total + (file && fs.existsSync(file) ? fs.statSync(file).size : 0)
+      }, 0)
+      const ready =
+        metadata?.revision === manifest.revision &&
+        manifest.artifacts.length > 0 &&
+        manifest.artifacts.every((item) => {
+          const file = safeTarget(directory, item.path)
+          const stored = metadata.hashes?.[item.path]
+          return (
+            file &&
+            fs.existsSync(file) &&
+            fs.statSync(file).size > 0 &&
+            (!stored || stored.value === item.hash || !item.hash)
+          );
+        });
+      return {
+        id,
+        status: ready ? 'ready' : 'missing',
+        downloadedBytes,
+        totalBytes: manifest.totalBytes || downloadedBytes,
+        revision: manifest.revision,
+      }
+    } catch {
+      return { id, status: 'missing', downloadedBytes: 0, totalBytes: 0, revision: REVISIONS[id] }
+    }
   }
   const downloadArtifact = async (id, manifest, artifact, completed, notify) => {
     const directory = path.join(root, id); const target = safeTarget(directory, artifact.path); if (!target) throw new Error('Chemin de modèle invalide.'); fs.mkdirSync(path.dirname(target), { recursive: true })

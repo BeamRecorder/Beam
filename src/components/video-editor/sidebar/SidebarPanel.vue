@@ -4,6 +4,7 @@ import {
   Film,
   ZoomIn,
   MousePointer,
+  Type,
   Volume2,
   Settings,
 } from "@lucide/vue";
@@ -21,6 +22,7 @@ const menuItems = [
   { id: "clip", label: "Clip", icon: Film },
   { id: "zoom", label: "Zoom", icon: ZoomIn },
   { id: "cursor", label: "Cursor", icon: MousePointer },
+  { id: "caption", label: "Caption", icon: Type },
   { id: "audio", label: "Audio", icon: Volume2 },
 ];
 </script>

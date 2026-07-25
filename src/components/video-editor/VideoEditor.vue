@@ -281,7 +281,8 @@ onBeforeUnmount(() => {
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
-          :selected-composition-layer="selectedCaptionLayer"
+          :selected-composition-layer="selectedCompositionLayer"
+          :selected-caption-layer="selectedCaptionLayer"
           :composition="composition"
           :editor-data="editorData"
           :project-id="project?.id"
@@ -294,6 +295,9 @@ onBeforeUnmount(() => {
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
+          @update:composition="composition = $event; editorState.scheduleSave()"
+          @select-caption="selectedCompositionLayerId = $event; activeTab = 'caption'"
+          @delete-clip="compositionState.deleteSelectedCompositionLayer()"
           @update:clip-rate="updateSelectedClipPlaybackRate"
           @unlink-clip="handleUnlinkClips"
           @update:clip-is-mirrored="updateSelectedClipIsMirrored"
@@ -370,12 +374,12 @@ onBeforeUnmount(() => {
           @add:element="addCompositionElement"
           @select:composition-layer="
             selectedCompositionLayerId = $event;
-            activeTab = 'clip';
+            activeTab = composition.layers.find(l => l.id === $event)?.kind === 'caption' ? 'caption' : 'clip';
           "
           @select:base-video="selectBaseVideo"
           @select:camera-layer="
             selectedCompositionLayerId = $event;
-            activeTab = 'clip';
+            activeTab = composition.layers.find(l => l.id === $event)?.kind === 'caption' ? 'caption' : 'clip';
           "
           @toggle:camera="toggleCamera"
           @toggle:camera-layer="toggleSelectedCamera"
