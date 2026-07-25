@@ -71,6 +71,7 @@ export interface UseCursorOverlayOptions {
   currentTime: () => number;
   isPlaying: () => boolean;
   editorData: () => ProjectEditorData | null | undefined;
+  composition: () => any;
   isVideoEnabled: () => boolean;
   showBackground: () => boolean;
 }
@@ -185,18 +186,25 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           button.sessionNs / 1_000_000_000,
         );
         if (!state) continue;
+        const clampedX = Math.max(0, Math.min(1, state.x));
+        const clampedY = Math.max(0, Math.min(1, state.y));
         const point = outputPoint(
-          state.x,
-          state.y,
+          clampedX,
+          clampedY,
           videoWidth || 1920,
           videoHeight || 1080,
           videoWindow.dw,
           videoWindow.dh,
           options.showBackground(),
         );
+        const comp = options.composition?.();
+        const isMirrored = comp?.baseVideoIsMirrored ?? false;
+        const baseTransform = comp?.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
+        const finalPointX = isMirrored ? (1 - point.cx) : point.cx;
+
         ripples.value.push({
-          x: videoWindow.dx + point.cx * videoWindow.dw,
-          y: videoWindow.dy + point.cy * videoWindow.dh,
+          x: videoWindow.dx + (finalPointX * baseTransform.width + baseTransform.x) * videoWindow.dw,
+          y: videoWindow.dy + (point.cy * baseTransform.height + baseTransform.y) * videoWindow.dh,
           radius: 2,
           alpha: 1,
         });
@@ -207,6 +215,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const state = cursorStateAt(cursorData.events, time);
 
     drawInCameraSpace(() => {
+      // 1. Draw ripples in camera space
       for (const ripple of ripples.value) {
         ctx.strokeStyle = getRippleStyleColor(
           options.rippleColor(),
@@ -221,65 +230,64 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           ripple.alpha -= 0.04;
         }
       }
+
+      // 2. Draw custom cursor in camera space confined strictly within video bounds
+      const activeImage = customCursorImage.value;
+      if (
+        state?.visible &&
+        activeImage &&
+        activeImage.complete &&
+        activeImage.naturalWidth > 0
+      ) {
+        const clampedX = Math.max(0, Math.min(1, state.x));
+        const clampedY = Math.max(0, Math.min(1, state.y));
+
+        const point = outputPoint(
+          clampedX,
+          clampedY,
+          videoWidth || 1920,
+          videoHeight || 1080,
+          videoWindow.dw,
+          videoWindow.dh,
+          options.showBackground(),
+        );
+        const comp = options.composition?.();
+        const isMirrored = comp?.baseVideoIsMirrored ?? false;
+        const baseTransform = comp?.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
+        const finalPointX = isMirrored ? (1 - point.cx) : point.cx;
+
+        const pointerX = videoWindow.dx + (finalPointX * baseTransform.width + baseTransform.x) * videoWindow.dw;
+        const pointerY = videoWindow.dy + (point.cy * baseTransform.height + baseTransform.y) * videoWindow.dh;
+
+        const targetSize = options.cursorSize();
+        const cursorType =
+          options.selectedCursor() === "automatic"
+            ? "default"
+            : options.selectedCursor();
+        const hotspot = cursorHotspots[cursorType];
+        const cursorScale = targetSize / 32;
+        const hx = hotspot.x * cursorScale;
+        const hy = hotspot.y * cursorScale;
+
+        ctx.save();
+        if (options.enableShadow()) {
+          ctx.shadowColor = options.shadowColor();
+          ctx.shadowBlur = options.shadowBlur();
+          ctx.shadowOffsetX = Math.round(options.shadowBlur() * 0.33);
+          ctx.shadowOffsetY = Math.round(options.shadowBlur() * 0.5);
+        }
+
+        ctx.drawImage(
+          activeImage,
+          pointerX - hx,
+          pointerY - hy,
+          targetSize,
+          targetSize,
+        );
+        ctx.restore();
+      }
     });
 
-    const activeImage = customCursorImage.value;
-    if (
-      state?.visible &&
-      activeImage &&
-      activeImage.complete &&
-      activeImage.naturalWidth > 0
-    ) {
-      const point = outputPoint(
-        state.x,
-        state.y,
-        videoWidth || 1920,
-        videoHeight || 1080,
-        videoWindow.dw,
-        videoWindow.dh,
-        options.showBackground(),
-      );
-      const pointerX = videoWindow.dx + point.cx * videoWindow.dw;
-      const pointerY = videoWindow.dy + point.cy * videoWindow.dh;
-
-      const targetSize = options.cursorSize();
-      const scale = videoWindow.scale;
-      const screenX =
-        videoWindow.dx +
-        videoWindow.dw / 2 +
-        (pointerX - videoWindow.focusX) * scale;
-      const screenY =
-        videoWindow.dy +
-        videoWindow.dh / 2 +
-        (pointerY - videoWindow.focusY) * scale;
-      const renderSize = targetSize * scale;
-
-      const cursorType =
-        options.selectedCursor() === "automatic"
-          ? "default"
-          : options.selectedCursor();
-      const hotspot = cursorHotspots[cursorType];
-      const cursorScale = renderSize / 32;
-      const hxScreen = hotspot.x * cursorScale;
-      const hyScreen = hotspot.y * cursorScale;
-
-      ctx.save();
-      if (options.enableShadow()) {
-        ctx.shadowColor = options.shadowColor();
-        ctx.shadowBlur = options.shadowBlur() * scale;
-        ctx.shadowOffsetX = Math.round(options.shadowBlur() * 0.33 * scale);
-        ctx.shadowOffsetY = Math.round(options.shadowBlur() * 0.5 * scale);
-      }
-
-      ctx.drawImage(
-        activeImage,
-        screenX - hxScreen,
-        screenY - hyScreen,
-        renderSize,
-        renderSize,
-      );
-      ctx.restore();
-    }
     ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0);
   };
 
