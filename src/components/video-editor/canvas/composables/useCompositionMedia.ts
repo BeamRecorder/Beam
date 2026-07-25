@@ -280,6 +280,11 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         options.isCropping?.() && layer.id === selectedTransformLayer?.id;
       const crop = isThisLayerCropping ? undefined : layer.crop;
 
+      if (layer.isMirrored) {
+        ctx.translate(dx * 2 + dw, 0);
+        ctx.scale(-1, 1);
+      }
+
       if (crop && sourceWidth > 0 && sourceHeight > 0) {
         ctx.drawImage(
           asset,
@@ -339,7 +344,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         videoWindow.dw,
         videoWindow.dh,
         videoWindow.scale,
-        webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance),
+        webcamSettingsForAppearance(
+          layer.appearance ?? layer.webcamAppearance,
+          layer.isMirrored,
+        ),
         layer.id === selectedTransformLayer?.id && webcamDraft
           ? webcamDraft
           : layer.transform,

@@ -71,8 +71,16 @@ export function drawCompositionLayers(
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
     const sourceWidth = asset instanceof HTMLVideoElement ? asset.videoWidth : asset instanceof HTMLImageElement ? asset.naturalWidth : 0;
     const sourceHeight = asset instanceof HTMLVideoElement ? asset.videoHeight : asset instanceof HTMLImageElement ? asset.naturalHeight : 0;
+    ctx.save();
+    if (layer.isMirrored) {
+      const dx = transform.x * width;
+      const dw = transform.width * width;
+      ctx.translate(dx * 2 + dw, 0);
+      ctx.scale(-1, 1);
+    }
     if (layer.crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(asset, layer.crop.x * sourceWidth, layer.crop.y * sourceHeight, layer.crop.width * sourceWidth, layer.crop.height * sourceHeight, transform.x * width, transform.y * height, transform.width * width, transform.height * height);
     else ctx.drawImage(asset, transform.x * width, transform.y * height, transform.width * width, transform.height * height);
+    ctx.restore();
   }
 }
 
@@ -129,12 +137,34 @@ export function renderCompositionFrame(
   };
   const outputFocus = zoom?.mode === 'auto' ? outputPoint(focus.cx, focus.cy, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground) : focus;
   const cameraFocus = clampFocusToScale(outputFocus, scale);
+  const isBaseVideoMirrored = snapshot.composition.baseVideoIsMirrored ?? false;
   ctx.save();
   ctx.translate(width / 2, height / 2);
   ctx.scale(scale, scale);
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   drawSnapshotBackground(ctx, snapshot, background);
-  ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
+  if (isBaseVideoMirrored) {
+    ctx.save();
+    ctx.translate(positionedMedia.x * 2 + positionedMedia.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
+    ctx.restore();
+  } else {
+    ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
+  }
+  drawCompositionLayers(ctx, snapshot, time, visuals, true);
+  ctx.restore();
+  for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
+    if (layer.kind !== "video" || !layer.reactToZoom) continue;
+    const source = visuals?.get(layer.assetId);
+    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance, layer.isMirrored), layer.transform, layer.crop);
+  }
+  drawCompositionLayers(ctx, snapshot, time, visuals);
+
+  ctx.save();
+  ctx.translate(width / 2, height / 2);
+  ctx.scale(scale, scale);
+  ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   const cursor = cursorStateAt(snapshot.cursor.events, time);
   const settings: CursorRenderSettings = snapshot.cursorSettings;
   if (settings.ripple.enabled) {
@@ -190,12 +220,5 @@ export function renderCompositionFrame(
     );
     ctx.restore();
   }
-  drawCompositionLayers(ctx, snapshot, time, visuals, true);
   ctx.restore();
-  for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
-    if (layer.kind !== "video" || !layer.reactToZoom) continue;
-    const source = visuals?.get(layer.assetId);
-    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance), layer.transform, layer.crop);
-  }
-  drawCompositionLayers(ctx, snapshot, time, visuals);
 }

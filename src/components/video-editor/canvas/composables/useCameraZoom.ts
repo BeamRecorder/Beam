@@ -271,6 +271,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.translate(dx + dw / 2, dy + dh / 2);
       ctx.scale(camera.scale, camera.scale);
       ctx.translate(-camera.focusX, -camera.focusY);
+      const isBaseVideoMirrored = options.composition?.().baseVideoIsMirrored ?? false;
       if (videoEl.readyState >= 1) {
         if (outputCanvas.showBackground) {
           ctx.save();
@@ -288,6 +289,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           ctx.fillStyle = "rgba(0, 0, 0, .01)";
           ctx.fill();
           ctx.clip();
+          if (isBaseVideoMirrored) {
+            ctx.translate((dx + positionedMedia.x) * 2 + positionedMedia.width, 0);
+            ctx.scale(-1, 1);
+          }
           ctx.drawImage(
             videoEl,
             source.x,
@@ -301,6 +306,11 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           );
           ctx.restore();
         } else {
+          ctx.save();
+          if (isBaseVideoMirrored) {
+            ctx.translate((dx + positionedMedia.x) * 2 + positionedMedia.width, 0);
+            ctx.scale(-1, 1);
+          }
           ctx.drawImage(
             videoEl,
             source.x,
@@ -312,6 +322,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             positionedMedia.width,
             positionedMedia.height,
           );
+          ctx.restore();
         }
       }
       ctx.restore();

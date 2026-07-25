@@ -57,7 +57,7 @@ export function useProjectComposition(options: {
         timelineDurationMs: durationMs.value,
         playbackRate: 1.0,
         enabled: true,
-        isLinked: false,
+        isMirrored: composition.value.baseVideoIsMirrored ?? false,
         clipTransform: composition.value.baseVideoTransform ?? {
           x: 0,
           y: 0,
@@ -84,6 +84,11 @@ export function useProjectComposition(options: {
       playbackRate: 1.0,
       enabled: layer.enabled,
       isLinked: false,
+      isMirrored:
+        layer.kind === "audio" || layer.kind === "caption"
+          ? undefined
+          : (layer.isMirrored ??
+            (layer.kind === "video" && layer.reactToZoom ? true : false)),
       ...(layer.kind !== "audio" && layer.kind !== "caption"
         ? {
             clipTransform: layer.transform ?? {
@@ -415,6 +420,34 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const updateSelectedClipIsMirrored = async (isMirrored: boolean) => {
+    const selectedId = selectedCompositionLayerId.value;
+    if (!selectedId) return;
+    if (selectedId === BASE_VIDEO_CLIP_ID) {
+      composition.value = {
+        ...composition.value,
+        baseVideoIsMirrored: isMirrored,
+      };
+    } else {
+      composition.value = {
+        ...composition.value,
+        layers: composition.value.layers.map((layer) => {
+          if (
+            layer.id !== selectedId ||
+            layer.kind === "audio" ||
+            layer.kind === "caption"
+          )
+            return layer;
+          return {
+            ...layer,
+            isMirrored,
+          };
+        }),
+      };
+    }
+    await saveComposition();
+  };
+
   const handleUnlinkClips = async () => {
     if (selectedCompositionLayerId.value) {
       await saveComposition();
@@ -445,6 +478,7 @@ export function useProjectComposition(options: {
     updateCaption,
     selectBaseVideo,
     updateSelectedClipAppearance,
+    updateSelectedClipIsMirrored,
     updateSelectedWebcamTransform,
     previewSelectedWebcamTransform,
     updateSelectedMediaCrop,

@@ -7,11 +7,12 @@ export const DEFAULT_WEBCAM_SETTINGS: WebcamOverlaySettings = { widthPercent: 40
 
 const cornerRadii = { none: 0, sm: 8, md: 14, lg: 22, full: Number.MAX_SAFE_INTEGER }
 const shadowOpacities = { none: 0, sm: .28, md: .42, lg: .58 }
-export function webcamSettingsForAppearance(appearance: WebcamAppearance | ClipAppearance | undefined): WebcamOverlaySettings {
-  if (!appearance) return DEFAULT_WEBCAM_SETTINGS
+export function webcamSettingsForAppearance(appearance: WebcamAppearance | ClipAppearance | undefined, isMirrored?: boolean): WebcamOverlaySettings {
+  const mirror = isMirrored ?? DEFAULT_WEBCAM_SETTINGS.mirror
+  if (!appearance) return { ...DEFAULT_WEBCAM_SETTINGS, mirror }
   const direction = 'shadowDirection' in appearance ? appearance.shadowDirection : 'bottom'
   const offsets = direction === 'top-left' ? [-.7, -.7] : direction === 'bottom-right' ? [.7, .7] : direction === 'all' ? [0, 0] : [0, 1]
-  return { ...DEFAULT_WEBCAM_SETTINGS, cornerRadius: cornerRadii[appearance.cornerRadius], shadowOpacity: shadowOpacities[appearance.shadowSize], shadowColor: 'shadowColor' in appearance ? appearance.shadowColor : '#000000', shadowOffsetX: offsets[0], shadowOffsetY: offsets[1] }
+  return { ...DEFAULT_WEBCAM_SETTINGS, mirror, cornerRadius: cornerRadii[appearance.cornerRadius], shadowOpacity: shadowOpacities[appearance.shadowSize], shadowColor: 'shadowColor' in appearance ? appearance.shadowColor : '#000000', shadowOffsetX: offsets[0], shadowOffsetY: offsets[1] }
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))

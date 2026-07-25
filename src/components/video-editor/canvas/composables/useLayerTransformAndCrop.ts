@@ -122,7 +122,12 @@ export function useLayerTransformAndCrop(
       },
   );
 
-  const cropIsMirrored = () => Boolean(options.selectedTransformLayer()?.reactToZoom);
+  const cropIsMirrored = () => {
+    const layer = options.selectedTransformLayer();
+    if (!layer) return false;
+    if (layer.isMirrored !== undefined) return layer.isMirrored;
+    return Boolean(layer.reactToZoom);
+  };
 
   const cropInDisplaySpace = (crop: NormalizedCrop): NormalizedCrop =>
     cropIsMirrored() ? { ...crop, x: 1 - crop.x - crop.width } : crop;

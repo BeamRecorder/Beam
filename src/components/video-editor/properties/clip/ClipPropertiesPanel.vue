@@ -16,6 +16,7 @@ import {
   MoveUpLeft,
   CircleDot,
   RotateCcw,
+  FlipHorizontal,
 } from "@lucide/vue";
 import type { NormalizedTransform } from "../../composition/composition-types";
 
@@ -34,12 +35,14 @@ const props = defineProps<{
     shadowDirection?: string;
     cornerRadius?: string;
     clipTransform?: NormalizedTransform;
+    isMirrored?: boolean;
   } | null;
 }>();
 
 const emit = defineEmits<{
   (e: "update:playbackRate", rate: number): void;
   (e: "update:enabled", enabled: boolean): void;
+  (e: "update:isMirrored", isMirrored: boolean): void;
   (e: "update:cornerRadius", radius: string): void;
   (
     e: "update:shadow",
@@ -134,7 +137,10 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   const current = clipTransform.value;
   if (!current) return;
   const width = Math.min(4, Math.max(0.02, patch.width ?? current.width));
-  const height = Math.min(4, Math.max(0.02, patch.height ?? current.height));
+  let height = Math.min(4, Math.max(0.02, patch.height ?? current.height));
+  if (patch.width !== undefined && patch.height === undefined && current.width > 0) {
+    height = Math.min(4, Math.max(0.02, (current.height * width) / current.width));
+  }
   emit("update:clipTransform", {
     x: Math.min(3, Math.max(-3, patch.x ?? current.x)),
     y: Math.min(3, Math.max(-3, patch.y ?? current.y)),
@@ -194,14 +200,25 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           :step="1"
           label="Size"
           :format-value="(value) => `${Math.round(value)}%`"
-          @update:modelValue="
-            updatePlacement({
-              width: $event / 100,
-              height:
-                (clipTransform.height * ($event / 100)) / clipTransform.width,
-            })
-          "
+          @update:modelValue="updatePlacement({ width: $event / 100 })"
         />
+      </div>
+
+      <!-- Mirror / Flip Horizontally for Video / Image / Webcam -->
+      <div
+        v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)"
+        class="property-card"
+      >
+        <div class="prop-row">
+          <div class="prop-label">
+            <FlipHorizontal :size="14" class="card-icon" />
+            <span>Mirror horizontally</span>
+          </div>
+          <Switch
+            :model-value="selectedClip.isMirrored ?? false"
+            @update:modelValue="emit('update:isMirrored', $event)"
+          />
+        </div>
       </div>
 
       <!-- Speed Boost / Rate Controls -->

@@ -99,6 +99,7 @@ const emit = defineEmits<{
   (e: "update:caption", value: CaptionCompositionLayer): void;
   (e: "update:clip-rate", rate: number): void;
   (e: "update:clip-enabled", enabled: boolean): void;
+  (e: "update:clip-is-mirrored", isMirrored: boolean): void;
   (e: "update:clip-corner-radius", radius: string): void;
   (
     e: "update:clip-shadow",
@@ -136,6 +137,7 @@ const emit = defineEmits<{
         :selected-clip="selectedClip || null"
         @update:playback-rate="emit('update:clip-rate', $event)"
         @update:enabled="emit('update:clip-enabled', $event)"
+        @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
         @update:corner-radius="emit('update:clip-corner-radius', $event)"
         @update:shadow="emit('update:clip-shadow', $event)"
         @update:clip-transform="emit('update:clip-transform', $event)"

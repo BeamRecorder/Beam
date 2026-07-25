@@ -98,6 +98,7 @@ const {
   updateCaption,
   selectBaseVideo,
   updateSelectedClipAppearance,
+  updateSelectedClipIsMirrored,
   updateSelectedWebcamTransform,
   previewSelectedWebcamTransform,
   updateSelectedMediaCrop,
@@ -273,6 +274,7 @@ onBeforeUnmount(() => {
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
           @unlink-clip="handleUnlinkClips"
+          @update:clip-is-mirrored="updateSelectedClipIsMirrored"
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: $event as 'none' | 'sm' | 'md' | 'lg' | 'full' })"
           @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
           @update:clip-transform="updateSelectedWebcamTransform"

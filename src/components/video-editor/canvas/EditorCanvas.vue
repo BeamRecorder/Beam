@@ -237,9 +237,8 @@ const renderCanvas = () => {
     cameraZoom.drawInCameraSpace(ctx, videoWindow, () =>
       compositionMedia.drawComposition(ctx, videoWindow, videoEl.videoWidth || 1920, true),
     );
-  }
-
-  if (videoWindow) {
+    compositionMedia.drawWebcamLayers(ctx, videoWindow);
+    compositionMedia.drawComposition(ctx, videoWindow, videoEl.videoWidth || 1920, false);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
       videoWindow,
@@ -248,8 +247,6 @@ const renderCanvas = () => {
       width,
       (drawContent) => cameraZoom.drawInCameraSpace(ctx, videoWindow, drawContent),
     );
-    compositionMedia.drawWebcamLayers(ctx, videoWindow);
-    compositionMedia.drawComposition(ctx, videoWindow, videoEl.videoWidth || 1920, false);
   }
 
   if (props.isPlaying && videoEl.readyState >= 1) {
