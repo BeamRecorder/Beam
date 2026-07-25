@@ -67,7 +67,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   let lastCameraUpdateMs = 0;
 
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
-  const baseVideoHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
+  const baseVideoHitBounds = ref<{
+    dx: number;
+    dy: number;
+    dw: number;
+    dh: number;
+  } | null>(null);
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
   const isMovingSelection = ref(false);
 
@@ -136,14 +141,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const unzoomedX = (clientX - centerX) / scale + focusX;
     const unzoomedY = (clientY - centerY) / scale + focusY;
 
-    const cx = Math.min(
-      1,
-      Math.max(0, (unzoomedX - bounds.dx) / bounds.dw),
-    );
-    const cy = Math.min(
-      1,
-      Math.max(0, (unzoomedY - bounds.dy) / bounds.dh),
-    );
+    const cx = Math.min(1, Math.max(0, (unzoomedX - bounds.dx) / bounds.dw));
+    const cy = Math.min(1, Math.max(0, (unzoomedY - bounds.dy) / bounds.dh));
     options.onUpdateZoom({ ...selectedZoom, focus: { cx, cy } });
   };
 
@@ -220,7 +219,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const { x: dx, y: dy, width: dw, height: dh } = preview;
 
     const isCropping = options.isCropping?.();
-    const baseCrop = !isCropping ? options.composition?.().baseVideoCrop : undefined;
+    const baseCrop = !isCropping
+      ? options.composition?.().baseVideoCrop
+      : undefined;
     const cropX = baseCrop ? baseCrop.x * videoWidth : 0;
     const cropY = baseCrop ? baseCrop.y * videoHeight : 0;
     const cropW = baseCrop ? baseCrop.width * videoWidth : videoWidth;
@@ -237,7 +238,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const media = outputCanvas.showBackground
       ? framedMediaRect(cropW, cropH, dw, dh)
       : { x: 0, y: 0, width: dw, height: dh };
-    const baseTransform = options.composition?.().baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
+    const baseTransform = options.composition?.().baseVideoTransform ?? {
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+    };
     const positionedMedia = {
       x: media.x + baseTransform.x * media.width,
       y: media.y + baseTransform.y * media.height,
@@ -306,7 +312,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.translate(dx + dw / 2, dy + dh / 2);
       ctx.scale(camera.scale, camera.scale);
       ctx.translate(-camera.focusX, -camera.focusY);
-      const isBaseVideoMirrored = options.composition?.().baseVideoIsMirrored ?? false;
+      const isBaseVideoMirrored =
+        options.composition?.().baseVideoIsMirrored ?? false;
       const baseAppearance = options.composition?.().baseVideoAppearance;
       const baseCornerRadius = (() => {
         if (!baseAppearance) return outputCanvas.showBackground ? 16 : 0;
@@ -315,7 +322,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         if (r === "sm") return 8;
         if (r === "md") return 16;
         if (r === "lg") return 24;
-        if (r === "full") return Math.min(positionedMedia.width, positionedMedia.height) / 2;
+        if (r === "full")
+          return Math.min(positionedMedia.width, positionedMedia.height) / 2;
         if (typeof r === "number") return r;
         return outputCanvas.showBackground ? 16 : 0;
       })();
@@ -323,8 +331,13 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       if (videoEl.readyState >= 1) {
         ctx.save();
 
-        const shadowSize = baseAppearance?.shadowSize ?? 'md';
-        const blur = shadowSize !== 'none' ? ({ sm: 12, md: 24, lg: 36 } as Record<string, number>)[shadowSize] ?? 24 : 0;
+        const shadowSize = baseAppearance?.shadowSize ?? "md";
+        const blur =
+          shadowSize !== "none"
+            ? (({ sm: 12, md: 24, lg: 36 } as Record<string, number>)[
+                shadowSize
+              ] ?? 24)
+            : 0;
         const vx = dx + positionedMedia.x;
         const vy = dy + positionedMedia.y;
         const vw = positionedMedia.width;
@@ -338,17 +351,21 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           // Canvas shadows only render on fill/stroke, not on drawImage.
           // Strategy: fill the shape solid (triggers shadow around it),
           // then clear shadow and draw the video clipped over it.
-          const direction = baseAppearance?.shadowDirection ?? 'bottom';
+          const direction = baseAppearance?.shadowDirection ?? "bottom";
           ctx.shadowColor = baseAppearance?.shadowColor ?? "rgba(0, 0, 0, 0.5)";
           ctx.shadowBlur = blur;
           ctx.shadowOffsetX =
-            direction === 'top-left' ? -blur * 0.4
-            : direction === 'bottom-right' ? blur * 0.4
-            : 0;
+            direction === "top-left"
+              ? -blur * 0.4
+              : direction === "bottom-right"
+                ? blur * 0.4
+                : 0;
           ctx.shadowOffsetY =
-            direction === 'top-left' ? -blur * 0.4
-            : direction === 'all' ? 0
-            : blur * 0.4;
+            direction === "top-left"
+              ? -blur * 0.4
+              : direction === "all"
+                ? 0
+                : blur * 0.4;
           // Opaque fill → shadow is rendered at full opacity around the shape
           ctx.fillStyle = "rgb(0, 0, 0)";
           ctx.fill();
@@ -386,7 +403,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
     const targetCamera = { focusX, focusY, scale };
     const now = performance.now();
-    const deltaMs = lastCameraUpdateMs > 0 ? Math.min(64, Math.max(1, now - lastCameraUpdateMs)) : 16;
+    const deltaMs =
+      lastCameraUpdateMs > 0
+        ? Math.min(64, Math.max(1, now - lastCameraUpdateMs))
+        : 16;
     lastCameraUpdateMs = now;
 
     if (!isPlaying || !renderedCamera) {
