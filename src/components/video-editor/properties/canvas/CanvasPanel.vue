@@ -54,6 +54,8 @@ const {
   close: closeCustomEditor,
   saveColor: addColorPreset,
   saveGradient: addGradientPreset,
+  updateLiveColor,
+  updateLiveGradient,
 } = useBackgroundPresets((value) => emit("update:selectedBackground", value));
 
 const items = computed(
@@ -289,9 +291,10 @@ const importLabel = computed(() => activeKind.value === "image"
             <template #default="{ close }">
               <BackgroundPresetComposer
                 kind="color"
-                :color="customColorValue"
-                :gradient="customGradientValue"
+                :color="selectedColorPreset?.color ?? customColorValue"
+                :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
                 @add-color="(val) => { addColorPreset(val); close(); }"
+                @update-color="updateLiveColor"
                 @close="() => { closeCustomEditor(); close(); }"
               />
             </template>
@@ -301,7 +304,7 @@ const importLabel = computed(() => activeKind.value === "image"
             :key="item.id"
             type="button"
             class="swatch-tile"
-            :class="{ active: isSelected(item) }"
+            :class="{ active: isSelected(item), editing: isEditing(item.id) }"
             :style="{ background: item.color }"
             :aria-label="item.name"
             @click="emit('update:selectedBackground', item)"
@@ -314,9 +317,10 @@ const importLabel = computed(() => activeKind.value === "image"
           <template #default="{ close }">
             <BackgroundPresetComposer
               kind="color"
-              :color="customColorValue"
-              :gradient="customGradientValue"
+              :color="selectedColorPreset?.color ?? customColorValue"
+              :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
               @add-color="(val) => { addColorPreset(val); close(); }"
+              @update-color="updateLiveColor"
               @close="() => { closeCustomEditor(); close(); }"
             />
           </template>
@@ -341,9 +345,10 @@ const importLabel = computed(() => activeKind.value === "image"
             <template #default="{ close }">
               <BackgroundPresetComposer
                 kind="gradient"
-                :color="customColorValue"
-                :gradient="customGradientValue"
+                :color="selectedColorPreset?.color ?? customColorValue"
+                :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
                 @add-gradient="(val) => { addGradientPreset(val); close(); }"
+                @update-gradient="updateLiveGradient"
                 @close="() => { closeCustomEditor(); close(); }"
               />
             </template>
@@ -353,7 +358,7 @@ const importLabel = computed(() => activeKind.value === "image"
             :key="item.id"
             type="button"
             class="swatch-tile"
-            :class="{ active: isSelected(item) }"
+            :class="{ active: isSelected(item), editing: isEditing(item.id) }"
             :style="{
               background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`
             }"
@@ -368,9 +373,10 @@ const importLabel = computed(() => activeKind.value === "image"
           <template #default="{ close }">
             <BackgroundPresetComposer
               kind="gradient"
-              :color="customColorValue"
-              :gradient="customGradientValue"
+              :color="selectedColorPreset?.color ?? customColorValue"
+              :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
               @add-gradient="(val) => { addGradientPreset(val); close(); }"
+              @update-gradient="updateLiveGradient"
               @close="() => { closeCustomEditor(); close(); }"
             />
           </template>
@@ -561,6 +567,21 @@ img.media-content.loaded {
 .swatch-tile.active {
   border: 2px solid var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 2px var(--color-primary-light, rgba(59, 130, 246, 0.4));
+}
+
+.swatch-tile.editing {
+  animation: swatch-pulse 2s infinite ease-in-out alternate;
+}
+
+@keyframes swatch-pulse {
+  from {
+    box-shadow: 0 0 0 2px var(--color-primary, #3b82f6);
+    transform: scale(1);
+  }
+  to {
+    box-shadow: 0 0 0 3px var(--color-primary-light, rgba(59, 130, 246, 0.4));
+    transform: scale(1.02);
+  }
 }
 
 .custom-add-tile {

@@ -66,7 +66,55 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
     select(builtIn ? { ...builtIn, gradient: cloneGradient(gradient) } : customGradient(gradient)); close();
   };
 
+  const updateLiveColor = (color: string) => {
+    const normalized = color.toLowerCase();
+    customColorValue.value = normalized;
+    const editing = editingPresetId.value;
+    if (editing) {
+      const builtIn = BACKGROUND_COLORS.find((item) => item.id === editing);
+      if (builtIn) {
+        savedExtras.value = {
+          ...savedExtras.value,
+          backgroundPresetOverrides: { ...overrides.value, [editing]: normalized },
+        };
+        select({ ...builtIn, color: normalized });
+        return;
+      }
+      if (editing.startsWith("color:custom:")) {
+        const targetColor = editing.slice(13);
+        savedColors.value = savedColors.value.map((item) => item === targetColor ? normalized : item);
+        editingPresetId.value = `color:custom:${normalized}`;
+        select(customColor(normalized));
+        return;
+      }
+    }
+    select(customColor(normalized));
+  };
+  const updateLiveGradient = (gradient: GradientBackground) => {
+    const cloned = cloneGradient(gradient);
+    customGradientValue.value = cloned;
+    const editing = editingPresetId.value;
+    if (editing) {
+      const builtIn = BACKGROUND_GRADIENTS.find((item) => item.id === editing);
+      if (builtIn) {
+        savedExtras.value = {
+          ...savedExtras.value,
+          backgroundPresetOverrides: { ...overrides.value, [editing]: cloned },
+        };
+        select({ ...builtIn, gradient: cloned });
+        return;
+      }
+      const index = editing.startsWith("gradient:custom:") ? Number(editing.slice(16)) : -1;
+      if (Number.isInteger(index) && index >= 0) {
+        savedGradients.value = savedGradients.value.map((item, pos) => pos === index ? cloned : item);
+        select({ ...customGradient(cloned), id: editing });
+        return;
+      }
+    }
+    select(customGradient(cloned));
+  };
+
   onMounted(() => { void capture.getPreferences().then(sync).catch(() => undefined); unsubscribe = capture.onPreferencesChanged(sync); });
   onUnmounted(() => unsubscribe?.());
-  return { colorPresets, gradientPresets, customColorValue, customGradientValue, showCustomEditor, editingPresetId, editColor, editGradient, toggleColor, toggleGradient, isEditing, close, saveColor, saveGradient };
+  return { colorPresets, gradientPresets, customColorValue, customGradientValue, showCustomEditor, editingPresetId, editColor, editGradient, toggleColor, toggleGradient, isEditing, close, saveColor, saveGradient, updateLiveColor, updateLiveGradient };
 }

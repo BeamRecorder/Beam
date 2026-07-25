@@ -14,6 +14,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'add-color', value: string): void
   (event: 'add-gradient', value: GradientBackground): void
+  (event: 'update-color', value: string): void
+  (event: 'update-gradient', value: GradientBackground): void
   (event: 'close'): void
 }>()
 
@@ -27,6 +29,29 @@ const gradientDraft = ref<GradientBackground>(cloneGradient(props.gradient))
 
 watch(() => props.color, (value) => { colorDraft.value = value })
 watch(() => props.gradient, (value) => { gradientDraft.value = cloneGradient(value) }, { deep: true })
+
+let colorRaf: number | null = null
+let gradientRaf: number | null = null
+
+watch(colorDraft, (val) => {
+  if (props.kind === 'color') {
+    if (colorRaf !== null) cancelAnimationFrame(colorRaf)
+    colorRaf = requestAnimationFrame(() => {
+      emit('update-color', val)
+      colorRaf = null
+    })
+  }
+})
+
+watch(gradientDraft, (val) => {
+  if (props.kind === 'gradient') {
+    if (gradientRaf !== null) cancelAnimationFrame(gradientRaf)
+    gradientRaf = requestAnimationFrame(() => {
+      emit('update-gradient', cloneGradient(val))
+      gradientRaf = null
+    })
+  }
+}, { deep: true })
 
 const add = () => {
   if (props.kind === 'color') emit('add-color', colorDraft.value)
