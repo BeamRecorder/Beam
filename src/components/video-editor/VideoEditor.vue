@@ -108,9 +108,9 @@ const {
   handleUnlinkClips,
   handleUnlinkTrack,
 } = compositionState;
-const selectedTransformLayer = computed<MediaCompositionLayer | null>(() => {
+const selectedTransformLayer = computed<CompositionLayer | null>(() => {
   const layer = selectedCompositionLayer.value;
-  if (layer && layer.kind !== 'audio' && layer.kind !== 'caption') return layer;
+  if (layer && layer.kind !== 'audio') return layer;
   if (selectedCompositionLayerId.value === 'base-video') {
     return {
       id: 'base-video',

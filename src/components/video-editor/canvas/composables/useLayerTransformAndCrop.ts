@@ -1,9 +1,9 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import type { ResizeCorner } from "~/ui/ResizeHandle.vue";
+import type { ResizeCorner } from "~/ui/ResizeHandle/types";
 import type { VideoWindowBounds } from "./useCameraZoom";
 import {
   type ProjectComposition,
-  type MediaCompositionLayer,
+  type CompositionLayer,
   type NormalizedTransform,
   type NormalizedCrop,
   activeLayersAt,
@@ -21,7 +21,7 @@ const TRANSFORM_SIZE_MAX = 4;
 export interface UseLayerTransformAndCropOptions {
   composition: () => ProjectComposition;
   currentTime: () => number;
-  selectedTransformLayer: () => MediaCompositionLayer | null;
+  selectedTransformLayer: () => CompositionLayer | null;
   videoWindowBounds: () => VideoWindowBounds | null;
   overlayWindowBounds: () => VideoWindowBounds | null;
   isCropping: () => boolean | undefined;
@@ -64,20 +64,32 @@ export function useLayerTransformAndCrop(
     { deep: true },
   );
 
-  const boundsForLayer = (layer: MediaCompositionLayer | null) =>
+  const boundsForLayer = (layer: CompositionLayer | null) =>
     layer?.id === "base-video"
       ? options.videoWindowBounds()
-      : options.overlayWindowBounds() ?? options.videoWindowBounds();
+      : (options.overlayWindowBounds() ?? options.videoWindowBounds());
 
   const webcamHandleStyle = computed(() => {
     const layer = options.selectedTransformLayer();
     const bounds = boundsForLayer(layer);
     if (!bounds || !layer) return { display: "none" };
 
-    const transform = webcamDraft.value ??
-      layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
+    let defaultTransform: NormalizedTransform = {
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+    };
+    if (layer.kind === "caption") {
+      const placement = layer.caption.style.placement;
+      const y =
+        placement === "top" ? 0.05 : placement === "center" ? 0.44 : 0.8;
+      defaultTransform = { x: 0.1, y, width: 0.8, height: 0.15 };
+    }
 
-    if (layer.reactToZoom) {
+    const transform = webcamDraft.value ?? layer.transform ?? defaultTransform;
+
+    if (layer.kind !== "caption" && layer.reactToZoom) {
       const layout = computeWebcamLayout(
         bounds.dw,
         bounds.dh,
@@ -117,20 +129,17 @@ export function useLayerTransformAndCrop(
     };
   });
 
-  const cropValue = computed(
-    () =>
-      cropDraft.value ??
-      options.selectedTransformLayer()?.crop ?? {
-        x: 0,
-        y: 0,
-        width: 1,
-        height: 1,
-      },
-  );
+  const cropValue = computed(() => {
+    const layer = options.selectedTransformLayer();
+    if (layer && "crop" in layer && layer.crop) {
+      return cropDraft.value ?? layer.crop;
+    }
+    return cropDraft.value ?? { x: 0, y: 0, width: 1, height: 1 };
+  });
 
   const cropIsMirrored = () => {
     const layer = options.selectedTransformLayer();
-    if (!layer) return false;
+    if (!layer || layer.kind === "caption") return false;
     if (layer.isMirrored !== undefined) return layer.isMirrored;
     return Boolean(layer.reactToZoom);
   };
@@ -147,14 +156,12 @@ export function useLayerTransformAndCrop(
     if (!options.isCropping() || !layer || !bounds) return { display: "none" };
 
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
-    if (layer.reactToZoom) {
+    if (layer.kind !== "caption" && layer.reactToZoom) {
       const layout = computeWebcamLayout(
         bounds.dw,
         bounds.dh,
         bounds.scale,
-        webcamSettingsForAppearance(
-          layer.appearance ?? layer.webcamAppearance,
-        ),
+        webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance),
         transform,
       );
       const crop = cropInDisplaySpace(cropValue.value);
@@ -201,7 +208,7 @@ export function useLayerTransformAndCrop(
     const bounds = boundsForLayer(layer);
     if (!layer || !bounds) return { width: 1, height: 1 };
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
-    if (layer.reactToZoom) {
+    if (layer.kind !== "caption" && layer.reactToZoom) {
       const layout = computeWebcamLayout(
         bounds.dw,
         bounds.dh,
@@ -209,7 +216,10 @@ export function useLayerTransformAndCrop(
         webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance),
         transform,
       );
-      return { width: Math.max(1, layout.width), height: Math.max(1, layout.height) };
+      return {
+        width: Math.max(1, layout.width),
+        height: Math.max(1, layout.height),
+      };
     }
     return {
       width: Math.max(1, transform.width * bounds.dw),
@@ -250,11 +260,13 @@ export function useLayerTransformAndCrop(
     const dy = (event.clientY - cropDrag.startY) / uncropped.height;
 
     if (cropDrag.kind === "move") {
-      cropDraft.value = cropInSourceSpace(clampCrop({
-        ...cropDrag.value,
-        x: cropDrag.value.x + dx,
-        y: cropDrag.value.y + dy,
-      }));
+      cropDraft.value = cropInSourceSpace(
+        clampCrop({
+          ...cropDrag.value,
+          x: cropDrag.value.x + dx,
+          y: cropDrag.value.y + dy,
+        }),
+      );
     } else {
       const left = cropDrag.corner?.includes("left");
       const top = cropDrag.corner?.includes("top");
@@ -262,16 +274,18 @@ export function useLayerTransformAndCrop(
       const vertical = Boolean(top || cropDrag.corner?.includes("bottom"));
       const width = cropDrag.value.width + (horizontal ? (left ? -dx : dx) : 0);
       const height = cropDrag.value.height + (vertical ? (top ? -dy : dy) : 0);
-      cropDraft.value = cropInSourceSpace(clampCrop({
-        x: left
-          ? cropDrag.value.x + cropDrag.value.width - width
-          : cropDrag.value.x,
-        y: top
-          ? cropDrag.value.y + cropDrag.value.height - height
-          : cropDrag.value.y,
-        width,
-        height,
-      }));
+      cropDraft.value = cropInSourceSpace(
+        clampCrop({
+          x: left
+            ? cropDrag.value.x + cropDrag.value.width - width
+            : cropDrag.value.x,
+          y: top
+            ? cropDrag.value.y + cropDrag.value.height - height
+            : cropDrag.value.y,
+          width,
+          height,
+        }),
+      );
     }
   };
 
@@ -324,7 +338,8 @@ export function useLayerTransformAndCrop(
     if (!webcamDrag || !bounds) return;
     webcamDrag.lastX = clientX;
     webcamDrag.lastY = clientY;
-    const scale = layer?.reactToZoom ? 1 : (bounds.scale ?? 1);
+    const scale =
+      layer?.kind !== "caption" && layer?.reactToZoom ? 1 : (bounds.scale ?? 1);
     const pointerDx = (clientX - webcamDrag.startX) / (bounds.dw * scale);
     const pointerDy = (clientY - webcamDrag.startY) / (bounds.dh * scale);
     const initial = webcamDrag.transform;
@@ -332,8 +347,14 @@ export function useLayerTransformAndCrop(
     if (webcamDrag.kind === "move") {
       webcamDraft.value = {
         ...initial,
-        x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.x + pointerDx)),
-        y: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.y + pointerDy)),
+        x: Math.min(
+          TRANSFORM_MAX,
+          Math.max(TRANSFORM_MIN, initial.x + pointerDx),
+        ),
+        y: Math.min(
+          TRANSFORM_MAX,
+          Math.max(TRANSFORM_MIN, initial.y + pointerDy),
+        ),
       };
       return;
     }
@@ -349,12 +370,40 @@ export function useLayerTransformAndCrop(
     const rawHeight = initial.height + (vertical ? (top ? -dy : dy) : 0);
     const ratio = initial.height / initial.width;
     const corner = horizontal && vertical;
-    const width = Math.min(TRANSFORM_SIZE_MAX, Math.max(0.02, corner && !shiftKey ? rawWidth : horizontal ? rawWidth : initial.width));
-    const height = Math.min(TRANSFORM_SIZE_MAX, Math.max(0.02, corner && !shiftKey ? width * ratio : vertical ? rawHeight : initial.height));
+    const width = Math.min(
+      TRANSFORM_SIZE_MAX,
+      Math.max(
+        0.02,
+        corner && !shiftKey ? rawWidth : horizontal ? rawWidth : initial.width,
+      ),
+    );
+    const height = Math.min(
+      TRANSFORM_SIZE_MAX,
+      Math.max(
+        0.02,
+        corner && !shiftKey
+          ? width * ratio
+          : vertical
+            ? rawHeight
+            : initial.height,
+      ),
+    );
 
     webcamDraft.value = {
-      x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, left ? initial.x + initial.width - width : initial.x)),
-      y: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, top ? initial.y + initial.height - height : initial.y)),
+      x: Math.min(
+        TRANSFORM_MAX,
+        Math.max(
+          TRANSFORM_MIN,
+          left ? initial.x + initial.width - width : initial.x,
+        ),
+      ),
+      y: Math.min(
+        TRANSFORM_MAX,
+        Math.max(
+          TRANSFORM_MIN,
+          top ? initial.y + initial.height - height : initial.y,
+        ),
+      ),
       width,
       height,
     };
@@ -416,30 +465,35 @@ export function useLayerTransformAndCrop(
     const layers = activeLayersAt(
       options.composition(),
       options.currentTime() * 1000,
-    ).filter(
-      (layer): layer is MediaCompositionLayer =>
-        layer.kind !== "audio" &&
-        layer.kind !== "caption" &&
-        Boolean(layer.transform),
-    );
+    ).filter((layer) => layer.kind !== "audio");
 
     for (const layer of [...layers].reverse()) {
-      const layout = layer.reactToZoom
-        ? computeWebcamLayout(
-            bounds.dw,
-            bounds.dh,
-            bounds.scale,
-            webcamSettingsForAppearance(
-              layer.appearance ?? layer.webcamAppearance,
-            ),
-            layer.transform!,
-          )
-        : {
-            x: layer.transform!.x * bounds.dw,
-            y: layer.transform!.y * bounds.dh,
-            width: layer.transform!.width * bounds.dw,
-            height: layer.transform!.height * bounds.dh,
-          };
+      let transform = layer.transform;
+      if (!transform && layer.kind === "caption") {
+        const placement = layer.caption.style.placement;
+        const defaultY =
+          placement === "top" ? 0.05 : placement === "center" ? 0.44 : 0.8;
+        transform = { x: 0.1, y: defaultY, width: 0.8, height: 0.15 };
+      }
+      if (!transform) continue;
+
+      const layout =
+        layer.kind !== "caption" && layer.reactToZoom
+          ? computeWebcamLayout(
+              bounds.dw,
+              bounds.dh,
+              bounds.scale,
+              webcamSettingsForAppearance(
+                layer.appearance ?? layer.webcamAppearance,
+              ),
+              transform,
+            )
+          : {
+              x: transform.x * bounds.dw,
+              y: transform.y * bounds.dh,
+              width: transform.width * bounds.dw,
+              height: transform.height * bounds.dh,
+            };
 
       if (
         x >= layout.x &&

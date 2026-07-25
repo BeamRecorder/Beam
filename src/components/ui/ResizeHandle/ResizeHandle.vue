@@ -1,5 +1,6 @@
 <script setup lang="ts">
-export type ResizeCorner = 'top-left' | 'top' | 'top-right' | 'right' | 'bottom-right' | 'bottom' | 'bottom-left' | 'left'
+import type { ResizeCorner } from './types'
+export type { ResizeCorner }
 
 withDefaults(defineProps<{ corners?: ResizeCorner[]; disabled?: boolean }>(), {
   corners: () => ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],

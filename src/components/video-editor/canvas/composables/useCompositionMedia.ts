@@ -2,7 +2,7 @@ import { watch, onUnmounted } from "vue";
 import {
   activeLayersAt,
   type ClipAppearance,
-  type MediaCompositionLayer,
+  type CompositionLayer,
   type NormalizedTransform,
   type ProjectComposition,
 } from "../../composition/composition-types";
@@ -15,10 +15,10 @@ export interface UseCompositionMediaOptions {
   composition: () => ProjectComposition;
   currentTime: () => number;
   isPlaying: () => boolean;
-  selectedTransformLayer: () => MediaCompositionLayer | null;
+  selectedTransformLayer: () => CompositionLayer | null;
   webcamDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
-  onRenderOnce?: () => void;
+  onRenderOnce: () => void;
 }
 
 const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
@@ -270,28 +270,62 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        const yRatio =
-          style.placement === "top"
-            ? 0.12
-            : style.placement === "center"
-              ? 0.5
-              : 0.88;
-        const centerX = videoWindow.dx + videoWindow.dw / 2;
-        const centerY = videoWindow.dy + videoWindow.dh * yRatio;
-        const maxWidth = videoWindow.dw * 0.88;
+        const liveTransform =
+          layer.id === selectedTransformLayer?.id && webcamDraft
+            ? webcamDraft
+            : layer.transform;
 
-        // Backdrop Blur / Box Background if configured
-        if (style.backdropBlur && style.backdropBlur > 0) {
-          const metrics = ctx.measureText(textToDisplay);
-          const boxWidth = Math.min(maxWidth, metrics.width + fontSizePx * 1.2);
-          const boxHeight = fontSizePx * 1.6;
-          const boxX = centerX - boxWidth / 2;
-          const boxY = centerY - boxHeight / 2;
+        let boxX: number;
+        let boxY: number;
+        let boxW: number;
+        let boxH: number;
+        let centerX: number;
+        let centerY: number;
 
+        if (liveTransform) {
+          boxX = videoWindow.dx + liveTransform.x * videoWindow.dw;
+          boxY = videoWindow.dy + liveTransform.y * videoWindow.dh;
+          boxW = liveTransform.width * videoWindow.dw;
+          boxH = liveTransform.height * videoWindow.dh;
+          centerX = boxX + boxW / 2;
+          centerY = boxY + boxH / 2;
+        } else {
+          const yRatio =
+            style.placement === "top"
+              ? 0.12
+              : style.placement === "center"
+                ? 0.5
+                : 0.88;
+          centerX = videoWindow.dx + videoWindow.dw / 2;
+          centerY = videoWindow.dy + videoWindow.dh * yRatio;
+          const textWidth = ctx.measureText(textToDisplay).width;
+          const paddingPx =
+            (style.boxPadding ?? 16) *
+            (videoWindow.dw / Math.max(1, mainVideoWidth || 1920));
+          boxW = Math.min(videoWindow.dw * 0.9, textWidth + paddingPx * 2);
+          boxH = fontSizePx + paddingPx * 1.5;
+          boxX = centerX - boxW / 2;
+          boxY = centerY - boxH / 2;
+        }
+
+        // Draw Background Box if boxColor is set or backdropBlur was requested
+        const boxColor =
+          style.boxColor ??
+          (style.backdropBlur ? "rgba(15, 23, 42, 0.75)" : "transparent");
+        if (boxColor && boxColor !== "transparent") {
+          const boxRadiusPx = Math.max(
+            0,
+            ((style.boxRadius ?? 10) * videoWindow.dw) /
+              Math.max(1, mainVideoWidth || 1920),
+          );
           ctx.save();
-          ctx.fillStyle = "rgba(15, 23, 42, 0.65)";
+          ctx.fillStyle = boxColor;
           ctx.beginPath();
-          ctx.roundRect(boxX, boxY, boxWidth, boxHeight, fontSizePx * 0.3);
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(boxX, boxY, boxW, boxH, boxRadiusPx);
+          } else {
+            ctx.rect(boxX, boxY, boxW, boxH);
+          }
           ctx.fill();
           ctx.restore();
         }
@@ -319,7 +353,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         }
 
         ctx.fillStyle = style.color || "#ffffff";
-        ctx.fillText(textToDisplay, centerX, centerY, maxWidth);
+        ctx.fillText(textToDisplay, centerX, centerY, Math.max(10, boxW - 8));
         ctx.restore();
         continue;
       }

@@ -428,7 +428,7 @@ export function useProjectComposition(options: {
     }
     const layer = selectedCompositionLayer.value;
     const selectedId =
-      layer && layer.kind !== "audio" && layer.kind !== "caption"
+      layer && layer.kind !== "audio"
         ? layer.id
         : null;
     if (!selectedId) return;
@@ -436,8 +436,7 @@ export function useProjectComposition(options: {
       ...composition.value,
       layers: composition.value.layers.map((layer) =>
         layer.id === selectedId &&
-        layer.kind !== "audio" &&
-        layer.kind !== "caption"
+        layer.kind !== "audio"
           ? { ...layer, transform }
           : layer,
       ),
@@ -455,7 +454,7 @@ export function useProjectComposition(options: {
     }
     const layer = selectedCompositionLayer.value;
     const selectedId =
-      layer && layer.kind !== "audio" && layer.kind !== "caption"
+      layer && layer.kind !== "audio"
         ? layer.id
         : null;
     if (!selectedId) return;
@@ -463,8 +462,7 @@ export function useProjectComposition(options: {
       ...composition.value,
       layers: composition.value.layers.map((entry) =>
         entry.id === selectedId &&
-        entry.kind !== "audio" &&
-        entry.kind !== "caption"
+        entry.kind !== "audio"
           ? { ...entry, transform }
           : entry,
       ),

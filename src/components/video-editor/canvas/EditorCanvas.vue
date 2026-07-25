@@ -3,12 +3,12 @@ import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import { Check } from "@lucide/vue";
 import Button from "../../ui/button/Button.vue";
 import Skeleton from "../../ui/skeleton/Skeleton.vue";
-import ResizeHandle from '../../ui/ResizeHandle.vue';
+import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../properties/cursor/useCursorReplacer";
 import type { BackgroundValue } from "../composables/backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
-import type { MediaCompositionLayer, NormalizedTransform, ProjectComposition, NormalizedCrop } from '../composition/composition-types';
+import type { CompositionLayer, MediaCompositionLayer, NormalizedTransform, ProjectComposition, NormalizedCrop } from '../composition/composition-types';
 import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
 
 import { useCanvasBackground } from './composables/useCanvasBackground';
@@ -41,7 +41,7 @@ const props = defineProps<{
   composition: ProjectComposition;
   outputCanvas: OutputCanvasSettings;
   activeTab: string;
-  selectedTransformLayer: MediaCompositionLayer | null;
+  selectedTransformLayer: CompositionLayer | null;
   loopProgress?: number;
   isCropping?: boolean;
 }>();
