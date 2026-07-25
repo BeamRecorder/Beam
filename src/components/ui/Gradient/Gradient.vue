@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Trash2, X, Library } from "@lucide/vue"
 import Button from '~/ui/button/Button.vue';
-import Slider from '~/ui/slider/Slider.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
 import Popover from '~/ui/popover/Popover.vue';
-import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
+import ColorInput from '~/ui/input/ColorInput.vue';
 import Select from '~/ui/select/Select.vue';
 import {
     useGradient,
@@ -49,8 +49,6 @@ const {
     showDragLabels,
     dragDeleteDirection,
     isOverTrash,
-    popoverAnchor,
-    isStopPopoverVisible,
     isPopoverOpen,
     isPresetsPopoverOpen,
     presetsPopoverAnchor,
@@ -140,36 +138,43 @@ const gradientTypeOptions = [
             </div>
         </div>
 
-        <!-- Stop Editor Popover -->
-        <Popover :model-value="isStopPopoverVisible" @update:model-value="isStopPopoverVisible = $event"
-            :anchor-point="popoverAnchor" placement="top" align="center" :offset="20" z-index="9000"
-            class="stop-popover">
-            <div v-if="selectedStop" class="stop-edit-form">
+        <!-- Stop Editor Inline Panel -->
+        <Transition name="slide-fade">
+            <div v-if="selectedStop && isPopoverOpen" class="stop-edit-form">
                 <div class="form-header">
                     <span class="form-title">{{ uiText.editStop }}</span>
-                    <Button variant="icon" tooltip="Close" @click="isPopoverOpen = false">
+                    <Button variant="secondary" size="xs" tooltip="Close" @click="isPopoverOpen = false">
                         <X :size="14" />
                     </Button>
                 </div>
 
-                <div class="form-row">
-                    <label>{{ uiText.color }}</label>
-                    <ColorPicker :model-value="selectedStop.color" :show-label="false" @update:model-value="
-                        updateStop(selectedStop.id, { color: $event })
-                        " />
-                </div>
+                <ColorInput
+                    :label="uiText.color"
+                    :model-value="selectedStop.color"
+                    @update:model-value="updateStop(selectedStop.id, { color: $event })"
+                />
 
-                <div class="form-row">
-                    <label>{{ uiText.opacity }}</label>
-                    <Slider label="" suffix="%" :model-value="Math.round((selectedStop.alpha ?? 1) * 100)" :min="0" :max="100" :step="1"
-                        @update:model-value="updateSelectedStopAlpha($event / 100)" />
-                </div>
+                <BigSlider
+                    label="Opacity"
+                    suffix="%"
+                    :model-value="Math.round((selectedStop.alpha ?? 1) * 100)"
+                    :min="0"
+                    :max="100"
+                    :step="1"
+                    :format-value="(val: number) => `${val}%`"
+                    @update:model-value="updateSelectedStopAlpha($event / 100)"
+                />
 
-                <div class="form-row">
-                    <label>{{ uiText.position }}</label>
-                    <Slider label="" suffix="%" :model-value="Math.round(selectedStop.position * 100)" :min="0" :max="100" :step="1"
-                        @update:model-value="updateSelectedStopPosition($event / 100)" />
-                </div>
+                <BigSlider
+                    label="Position"
+                    suffix="%"
+                    :model-value="Math.round(selectedStop.position * 100)"
+                    :min="0"
+                    :max="100"
+                    :step="1"
+                    :format-value="(val: number) => `${val}%`"
+                    @update:model-value="updateSelectedStopPosition($event / 100)"
+                />
 
                 <div class="form-actions merged-actions">
                     <Button variant="secondary" class="preset-toggle-btn" tooltip="Presets" :active="isPresetsPopoverOpen" @click="togglePresets">
@@ -182,15 +187,14 @@ const gradientTypeOptions = [
                     </Button>
                 </div>
             </div>
-        </Popover>
+        </Transition>
 
         <!-- Presets Library Popover -->
-        <Popover v-model="isPresetsPopoverOpen" :anchor-point="presetsPopoverAnchor" placement="right" align="start"
-            :offset="10" z-index="10050" class="presets-library-popover">
+        <Popover align="left" :match-trigger-width="false" class="presets-library-popover">
             <div class="presets-library compact">
                 <div class="presets-header">
                     <span class="presets-title">{{ uiText.presets }}</span>
-                    <Button variant="icon" tooltip="Close" @click="isPresetsPopoverOpen = false">
+                    <Button variant="ghost" size="xs" tooltip="Close" @click="isPresetsPopoverOpen = false">
                         <X :size="14" />
                     </Button>
                 </div>
@@ -729,5 +733,25 @@ const gradientTypeOptions = [
         width: min(300px, calc(100vw - 32px));
         max-height: min(340px, calc(100vh - 160px));
     }
+}
+
+/* Slide fade transition for stop editor inline panel */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 300px;
+    overflow: hidden;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-8px);
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-color: transparent;
 }
 </style>

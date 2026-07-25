@@ -47,7 +47,7 @@ const {
   gradientPresets,
   customColorValue,
   customGradientValue,
-  showCustomEditor,
+  editingPresetId,
   toggleColor,
   toggleGradient,
   isEditing,
@@ -274,15 +274,28 @@ const importLabel = computed(() => activeKind.value === "image"
       <!-- Color Swatches Grid -->
       <div v-else-if="activeKind === 'color'" class="swatches-section">
         <div class="swatches-grid">
-          <button
-            type="button"
-            class="swatch-tile custom-add-tile"
-            :class="{ active: isSelected(customColor(customColorValue)) }"
-            aria-label="Couleur personnalisée"
-            @click="showCustomEditor = !showCustomEditor"
-          >
-            <Plus :size="16" />
-          </button>
+          <Popover block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+            <template #trigger>
+              <button
+                type="button"
+                class="swatch-tile custom-add-tile"
+                :class="{ active: isSelected(customColor(customColorValue)) }"
+                aria-label="Couleur personnalisée"
+                @click="editingPresetId = null"
+              >
+                <Plus :size="16" />
+              </button>
+            </template>
+            <template #default="{ close }">
+              <BackgroundPresetComposer
+                kind="color"
+                :color="customColorValue"
+                :gradient="customGradientValue"
+                @add-color="(val) => { addColorPreset(val); close(); }"
+                @close="() => { closeCustomEditor(); close(); }"
+              />
+            </template>
+          </Popover>
           <button
             v-for="item in colorPresets"
             :key="item.id"
@@ -303,7 +316,7 @@ const importLabel = computed(() => activeKind.value === "image"
               kind="color"
               :color="customColorValue"
               :gradient="customGradientValue"
-              @add-color="addColorPreset"
+              @add-color="(val) => { addColorPreset(val); close(); }"
               @close="() => { closeCustomEditor(); close(); }"
             />
           </template>
@@ -313,15 +326,28 @@ const importLabel = computed(() => activeKind.value === "image"
       <!-- Gradient Presets Grid -->
       <div v-else class="gradients-section">
         <div class="gradients-grid">
-          <button
-            type="button"
-            class="swatch-tile custom-add-tile"
-            :class="{ active: isSelected(customGradient(customGradientValue)) }"
-            aria-label="Dégradé personnalisé"
-            @click="showCustomEditor = !showCustomEditor"
-          >
-            <Plus :size="16" />
-          </button>
+          <Popover block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+            <template #trigger>
+              <button
+                type="button"
+                class="swatch-tile custom-add-tile"
+                :class="{ active: isSelected(customGradient(customGradientValue)) }"
+                aria-label="Dégradé personnalisé"
+                @click="editingPresetId = null"
+              >
+                <Plus :size="16" />
+              </button>
+            </template>
+            <template #default="{ close }">
+              <BackgroundPresetComposer
+                kind="gradient"
+                :color="customColorValue"
+                :gradient="customGradientValue"
+                @add-gradient="(val) => { addGradientPreset(val); close(); }"
+                @close="() => { closeCustomEditor(); close(); }"
+              />
+            </template>
+          </Popover>
           <button
             v-for="item in gradientPresets"
             :key="item.id"
@@ -344,7 +370,7 @@ const importLabel = computed(() => activeKind.value === "image"
               kind="gradient"
               :color="customColorValue"
               :gradient="customGradientValue"
-              @add-gradient="addGradientPreset"
+              @add-gradient="(val) => { addGradientPreset(val); close(); }"
               @close="() => { closeCustomEditor(); close(); }"
             />
           </template>

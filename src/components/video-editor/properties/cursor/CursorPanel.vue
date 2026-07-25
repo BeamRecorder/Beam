@@ -2,7 +2,7 @@
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'
-import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
+import ColorInput from '~/ui/input/ColorInput.vue'
 import { cursorOptions, type CursorType } from './useCursorReplacer'
 
 defineProps<{
@@ -54,14 +54,11 @@ const emit = defineEmits<{
       />
     </div>
 
-    <div class="prop-row">
-      <span class="prop-label">Cursor Color</span>
-      <ColorPicker 
-        :model-value="cursorColor"
-        :show-label="false"
-        @update:modelValue="emit('update:cursorColor', $event)"
-      />
-    </div>
+    <ColorInput 
+      label="Cursor Color"
+      :model-value="cursorColor"
+      @update:modelValue="emit('update:cursorColor', $event)"
+    />
 
     <div class="prop-row">
       <span class="prop-label">Drop Shadow</span>
@@ -84,14 +81,11 @@ const emit = defineEmits<{
           />
         </div>
 
-        <div class="prop-row">
-          <span class="prop-label sub-label">Shadow Color</span>
-          <ColorPicker 
-            :model-value="shadowColor"
-            :show-label="false"
-            @update:modelValue="emit('update:shadowColor', $event)"
-          />
-        </div>
+        <ColorInput 
+          label="Shadow Color"
+          :model-value="shadowColor"
+          @update:modelValue="emit('update:shadowColor', $event)"
+        />
       </div>
     </Transition>
 
@@ -116,14 +110,11 @@ const emit = defineEmits<{
           />
         </div>
 
-        <div class="prop-row">
-          <span class="prop-label sub-label">Ripple Color</span>
-          <ColorPicker 
-            :model-value="rippleColor"
-            :show-label="false"
-            @update:modelValue="emit('update:rippleColor', $event)"
-          />
-        </div>
+        <ColorInput 
+          label="Ripple Color"
+          :model-value="rippleColor"
+          @update:modelValue="emit('update:rippleColor', $event)"
+        />
       </div>
     </Transition>
   </div>

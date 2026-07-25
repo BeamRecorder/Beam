@@ -44,7 +44,7 @@ const add = () => {
     />
     <Gradient v-else v-model="gradientDraft" :show-angle="true" />
     <div class="composer-actions">
-      <Button size="sm" variant="ghost" @click="emit('close')">Close</Button>
+      <Button size="sm" variant="secondary" @click="emit('close')">Close</Button>
       <Button size="sm" @click="add">Add</Button>
     </div>
   </section>
@@ -58,8 +58,8 @@ const add = () => {
   padding: 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: #18181b;
-  background: #ffffff;
+  color: var(--text-primary);
+  background: var(--color-bg-surface);
   animation: composer-in 140ms ease-out both;
 }
 

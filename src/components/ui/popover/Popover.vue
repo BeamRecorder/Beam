@@ -196,7 +196,7 @@ defineExpose({
 
 .popover-content.popover-flush {
   padding: 0;
-  background: #ffffff;
+  background: var(--color-bg-surface);
 }
 
 /* Animations */

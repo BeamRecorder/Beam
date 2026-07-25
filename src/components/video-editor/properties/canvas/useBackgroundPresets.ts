@@ -33,7 +33,10 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
     ...savedColors.value.map(customColor),
   ]);
   const gradientPresets = computed(() => [
-    ...BACKGROUND_GRADIENTS.map((item) => ({ ...item, gradient: isGradient(overrides.value[item.id]) ? cloneGradient(overrides.value[item.id]) : item.gradient })),
+    ...BACKGROUND_GRADIENTS.map((item) => {
+      const override = overrides.value[item.id];
+      return { ...item, gradient: isGradient(override) ? cloneGradient(override) : item.gradient };
+    }),
     ...savedGradients.value.map((gradient, index) => ({ ...customGradient(gradient), id: `gradient:custom:${index}` })),
   ]);
   const sync = (preferences: Awaited<ReturnType<typeof capture.getPreferences>>) => {
@@ -65,5 +68,5 @@ export function useBackgroundPresets(select: (value: BackgroundValue) => void) {
 
   onMounted(() => { void capture.getPreferences().then(sync).catch(() => undefined); unsubscribe = capture.onPreferencesChanged(sync); });
   onUnmounted(() => unsubscribe?.());
-  return { colorPresets, gradientPresets, customColorValue, customGradientValue, showCustomEditor, editColor, editGradient, toggleColor, toggleGradient, isEditing, close, saveColor, saveGradient };
+  return { colorPresets, gradientPresets, customColorValue, customGradientValue, showCustomEditor, editingPresetId, editColor, editGradient, toggleColor, toggleGradient, isEditing, close, saveColor, saveGradient };
 }
