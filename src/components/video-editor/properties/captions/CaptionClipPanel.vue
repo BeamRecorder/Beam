@@ -19,14 +19,14 @@ const emit = defineEmits<{
 
 const captionStyle = computed(() => ({
   color: '#ffffff',
-  fontSize: 32,
-  shadowColor: 'rgba(0, 0, 0, 0.75)',
+  fontSize: 36,
+  shadowColor: 'rgba(0, 0, 0, 0.85)',
   shadowBlur: 0,
   shadowDirection: 'bottom-right',
   placement: 'bottom',
-  boxColor: 'rgba(15, 23, 42, 0.75)',
-  boxPadding: 16,
-  boxRadius: 10,
+  boxColor: '#ffffff',
+  boxPadding: 6,
+  boxRadius: 4,
   ...props.layer?.caption?.style,
 }))
 
@@ -125,11 +125,11 @@ const shadowDirectionOptions = [
 
         <BigSlider
           label="Font Size"
-          :model-value="captionStyle.fontSize || 32"
+          :model-value="captionStyle.fontSize || 36"
           :min="12"
           :max="120"
           :step="1"
-          :default-value="32"
+          :default-value="36"
           :format-value="(val) => `${val}px`"
           @update:model-value="updateStyle('fontSize', $event)"
         />
@@ -137,37 +137,37 @@ const shadowDirectionOptions = [
 
       <div class="divider"></div>
 
-      <!-- 3. Background Box Section -->
+      <!-- 3. Text Outline & 3D Extrusion Section -->
       <div class="panel-group">
-        <h4 class="group-title"><Box :size="14" /> Background Box</h4>
+        <h4 class="group-title"><Box :size="14" /> Text Outline & 3D Extrusion</h4>
         <div class="field-grid-2">
           <div class="field-group">
-            <label class="field-label">Box Color</label>
+            <label class="field-label">Outline Color</label>
             <ColorPicker
-              :model-value="captionStyle.boxColor || 'rgba(15, 23, 42, 0.75)'"
+              :model-value="captionStyle.boxColor || '#ffffff'"
               @update:model-value="updateStyle('boxColor', $event)"
             />
           </div>
         </div>
 
         <BigSlider
-          label="Box Padding"
-          :model-value="captionStyle.boxPadding ?? 16"
+          label="Outline Thickness"
+          :model-value="captionStyle.boxPadding ?? 6"
           :min="0"
-          :max="60"
+          :max="30"
           :step="1"
-          :default-value="16"
+          :default-value="6"
           :format-value="(val) => `${val}px`"
           @update:model-value="updateStyle('boxPadding', $event)"
         />
 
         <BigSlider
-          label="Corner Radius"
-          :model-value="captionStyle.boxRadius ?? 10"
+          label="3D Extrusion Depth"
+          :model-value="captionStyle.boxRadius ?? 4"
           :min="0"
-          :max="40"
+          :max="20"
           :step="1"
-          :default-value="10"
+          :default-value="4"
           :format-value="(val) => `${val}px`"
           @update:model-value="updateStyle('boxRadius', $event)"
         />
@@ -251,8 +251,9 @@ const shadowDirectionOptions = [
         <Button
           variant="danger"
           size="sm"
+          block
           :icon="Trash2"
-          class="w-full"
+          class="delete-btn"
           @click="emit('delete', layer.id)"
         >
           Delete Caption Clip
@@ -267,7 +268,8 @@ const shadowDirectionOptions = [
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 24px;
+  flex: 1;
+  min-height: 100%;
 }
 
 .ai-badge-header {
@@ -355,11 +357,17 @@ const shadowDirectionOptions = [
   bottom: 0;
   margin-top: auto;
   padding-top: 12px;
+  padding-bottom: 8px;
   background: var(--color-bg-element);
   z-index: 10;
+  box-shadow: 0 -10px 15px var(--color-bg-element);
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.w-full {
-  width: 100%;
+.delete-btn {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
 }
 </style>

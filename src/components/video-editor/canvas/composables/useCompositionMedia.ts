@@ -267,9 +267,11 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         );
 
         ctx.save();
-        ctx.font = `600 ${fontSizePx}px sans-serif`;
+        ctx.font = `800 ${fontSizePx}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        ctx.lineJoin = "round";
+        ctx.miterLimit = 2;
 
         const liveTransform =
           layer.id === selectedTransformLayer?.id && webcamDraft
@@ -283,33 +285,25 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         const centerX = boxX + boxW / 2;
         const centerY = boxY + boxH / 2;
 
-        // Draw Background Box if boxColor is set or backdropBlur was requested
-        const boxColor =
-          style.boxColor ??
-          (style.backdropBlur ? "rgba(15, 23, 42, 0.75)" : "transparent");
-        if (boxColor && boxColor !== "transparent") {
-          const boxRadiusPx = Math.max(
-            0,
-            ((style.boxRadius ?? 10) * videoWindow.dw) /
-              Math.max(1, mainVideoWidth || 1920),
-          );
-          ctx.save();
-          ctx.fillStyle = boxColor;
-          ctx.beginPath();
-          if (typeof ctx.roundRect === "function") {
-            ctx.roundRect(boxX, boxY, boxW, boxH, boxRadiusPx);
-          } else {
-            ctx.rect(boxX, boxY, boxW, boxH);
-          }
-          ctx.fill();
-          ctx.restore();
-        }
+        const strokeWidthPx = Math.max(
+          1,
+          ((style.boxPadding ?? 6) * videoWindow.dw) /
+            Math.max(1, mainVideoWidth || 1920),
+        );
+        const extrusionPx = Math.max(
+          0,
+          ((style.boxRadius ?? 4) * videoWindow.dw) /
+            Math.max(1, mainVideoWidth || 1920),
+        );
 
-        // Shadow configuration (Blur, direction, offsets)
-        if (style.shadowBlur && style.shadowBlur > 0) {
-          const blur = style.shadowBlur;
+        const outlineColor = style.boxColor ?? "#ffffff";
+
+        // 1. Configure Drop Shadow if enabled
+        const hasShadow = Boolean(style.shadowBlur && style.shadowBlur > 0);
+        if (hasShadow) {
+          const blur = style.shadowBlur!;
           const dir = style.shadowDirection ?? "bottom-right";
-          ctx.shadowColor = style.shadowColor || "rgba(0, 0, 0, 0.75)";
+          ctx.shadowColor = style.shadowColor || "rgba(0, 0, 0, 0.85)";
           ctx.shadowBlur = blur;
           ctx.shadowOffsetX =
             style.shadowOffsetX ??
@@ -327,6 +321,64 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
                 : 0);
         }
 
+        // 2. Draw 3D Extruded Shadow / Depth Layer (behind stroke)
+        if (extrusionPx > 0) {
+          ctx.save();
+          const shadowCol = style.shadowColor || "rgba(0, 0, 0, 0.85)";
+          ctx.strokeStyle = shadowCol;
+          ctx.fillStyle = shadowCol;
+          ctx.lineWidth = strokeWidthPx * 2;
+
+          const totalSteps = Math.round(extrusionPx);
+          for (let i = totalSteps; i >= 1; i--) {
+            const stepOffset = i * (videoWindow.dw / Math.max(1, mainVideoWidth || 1920));
+            // Only project canvas shadow on the deepest step
+            if (i !== totalSteps) {
+              ctx.shadowColor = "transparent";
+            }
+            ctx.strokeText(
+              textToDisplay,
+              centerX + stepOffset,
+              centerY + stepOffset,
+              Math.max(10, boxW - 8),
+            );
+            ctx.fillText(
+              textToDisplay,
+              centerX + stepOffset,
+              centerY + stepOffset,
+              Math.max(10, boxW - 8),
+            );
+          }
+          ctx.restore();
+          ctx.shadowColor = "transparent";
+        }
+
+        // 3. Draw Thick Outline Stroke around text glyphs
+        if (outlineColor && outlineColor !== "transparent" && strokeWidthPx > 0) {
+          ctx.save();
+          if (!extrusionPx) {
+            // Keep drop shadow on outline stroke if no 3D extrusion is active
+          } else {
+            ctx.shadowColor = "transparent";
+          }
+          ctx.strokeStyle = outlineColor;
+          ctx.lineWidth = strokeWidthPx * 2;
+          ctx.strokeText(
+            textToDisplay,
+            centerX,
+            centerY,
+            Math.max(10, boxW - 8),
+          );
+          ctx.restore();
+          ctx.shadowColor = "transparent";
+        }
+
+        // 4. Draw Main Inner Text Fill Color on top
+        if (!extrusionPx && (!outlineColor || outlineColor === "transparent" || strokeWidthPx <= 0)) {
+          // Keep drop shadow on plain text fill if no outline or 3D extrusion
+        } else {
+          ctx.shadowColor = "transparent";
+        }
         ctx.fillStyle = style.color || "#ffffff";
         ctx.fillText(textToDisplay, centerX, centerY, Math.max(10, boxW - 8));
         ctx.restore();

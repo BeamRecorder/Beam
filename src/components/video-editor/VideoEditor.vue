@@ -199,6 +199,16 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false };
 };
 
+const handleSelectTransformLayer = (layerId: string) => {
+  selectedCompositionLayerId.value = layerId;
+  const layer = composition.value.layers.find((l) => l.id === layerId);
+  if (layer?.kind === 'caption') {
+    activeTab.value = 'caption';
+  } else {
+    activeTab.value = 'clip';
+  }
+};
+
 const handleCropKeyDown = (e: KeyboardEvent) => {
   if ((e.key === 'Enter' || e.key === 'Escape') && isCropping.value) {
     isCropping.value = false;
@@ -354,10 +364,12 @@ onBeforeUnmount(() => {
           :is-cropping="isCropping"
           @update:zoom="updateZoom"
           @preview:zoom="previewZoom"
-          @select:transform-layer="selectedCompositionLayerId = $event; activeTab = 'clip'"
+          @select:transform-layer="handleSelectTransformLayer($event)"
           @select:base-video="selectBaseVideo()"
           @select:canvas="selectedCompositionLayerId = null; activeTab = 'canvas'; isCropping = false"
           @deselect:transform-layer="selectedCompositionLayerId = null; isCropping = false"
+          @update:layer-transform="updateSelectedWebcamTransform"
+          @preview:layer-transform="previewSelectedWebcamTransform"
           @done:crop="isCropping = false"
           @deselect:zoom="selectedZoomId = null"
           @duration-change="handleDurationChange"
