@@ -26,7 +26,24 @@ function caption(value) {
     return { id: sentence.id, text: typeof sentence.text === 'string' ? sentence.text : words.map((word) => word.text).join(' '), startMs: words[0]?.startMs ?? 0, endMs: words.at(-1)?.endMs ?? 0, words }
   })
   const style = value.style || {}
-  return { sentences, style: { color: typeof style.color === 'string' ? style.color : '#ffffff', fontSize: finite(style.fontSize) ? style.fontSize : 42, shadowColor: typeof style.shadowColor === 'string' ? style.shadowColor : '#000000', shadowBlur: finite(style.shadowBlur) ? style.shadowBlur : 4, placement: ['top', 'center', 'bottom'].includes(style.placement) ? style.placement : 'bottom' } }
+  return {
+    sentences,
+    style: {
+      color: typeof style.color === 'string' ? style.color : '#ffffff',
+      fontSize: finite(style.fontSize) ? style.fontSize : 36,
+      boxColor: typeof style.boxColor === 'string' ? style.boxColor : '#ffffff',
+      boxPadding: finite(style.boxPadding) ? style.boxPadding : 6,
+      boxRadius: finite(style.boxRadius) ? style.boxRadius : 4,
+      shadowColor: typeof style.shadowColor === 'string' ? style.shadowColor : 'rgba(0, 0, 0, 0.85)',
+      shadowBlur: finite(style.shadowBlur) ? style.shadowBlur : 0,
+      shadowDirection: typeof style.shadowDirection === 'string' ? style.shadowDirection : 'bottom-right',
+      placement: ['top', 'center', 'bottom'].includes(style.placement) ? style.placement : 'bottom',
+      ...(typeof style.customText === 'string' ? { customText: style.customText } : {}),
+      ...(typeof style.backdropBlur === 'number' ? { backdropBlur: style.backdropBlur } : {}),
+      ...(finite(style.shadowOffsetX) ? { shadowOffsetX: style.shadowOffsetX } : {}),
+      ...(finite(style.shadowOffsetY) ? { shadowOffsetY: style.shadowOffsetY } : {}),
+    }
+  }
 }
 function webcamAppearance(value) {
   if (!value || !['none', 'sm', 'md', 'lg'].includes(value.shadowSize) || !['none', 'sm', 'md', 'lg', 'full'].includes(value.cornerRadius)) return undefined
@@ -49,7 +66,21 @@ function normalizeComposition(value) {
   const ids = new Set(media.map((asset) => asset.id))
   const layers = value.layers.map((layer, order) => {
     if (!layer || !validId(layer.id) || !layerKinds.has(layer.kind) || typeof layer.name !== 'string' || !finite(layer.startMs) || !finite(layer.endMs) || layer.endMs < layer.startMs || typeof layer.enabled !== 'boolean') throw new Error('Calque invalide')
-    if (layer.kind === 'caption') return { id: layer.id, kind: 'caption', name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, caption: caption(layer.caption) }
+    if (layer.kind === 'caption') {
+      const tr = layer.transform ? transform(layer.transform) : undefined
+      return {
+        id: layer.id,
+        kind: 'caption',
+        name: layer.name.slice(0, 160),
+        startMs: Math.round(layer.startMs),
+        endMs: Math.round(layer.endMs),
+        enabled: layer.enabled,
+        order,
+        caption: caption(layer.caption),
+        ...(tr ? { transform: tr } : {}),
+        ...(typeof layer.isAiGenerated === 'boolean' ? { isAiGenerated: layer.isAiGenerated } : {})
+      }
+    }
     if (!validId(layer.assetId) || !ids.has(layer.assetId)) throw new Error('Le média du calque est introuvable')
     const webcam = layer.kind === 'video' ? webcamAppearance(layer.webcamAppearance) : undefined
     const appearance = layer.kind !== 'audio' ? clipAppearance(layer.appearance) : undefined
