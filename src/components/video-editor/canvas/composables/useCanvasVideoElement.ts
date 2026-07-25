@@ -6,6 +6,7 @@ export interface UseCanvasVideoElementOptions {
   editorData: () => ProjectEditorData | null | undefined;
   isPlaying: () => boolean;
   currentTime: () => number;
+  playbackRate?: () => number;
   onDurationChange: (duration: number) => void;
   onRenderOnce: () => void;
 }
@@ -90,6 +91,14 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
   watch(effectiveVideoSrc, loadVideo, { immediate: true });
 
   watch(
+    () => options.playbackRate?.() ?? 1.0,
+    (rate) => {
+      videoEl.playbackRate = rate;
+    },
+    { immediate: true },
+  );
+
+  watch(
     () => options.isPlaying(),
     (playing) => {
       options.onRenderOnce();
@@ -113,15 +122,17 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
   watch(
     () => options.currentTime(),
     (time) => {
-      const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, time));
+      const rate = options.playbackRate?.() ?? 1.0;
+      const targetSourceTime = time * rate;
+      const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, targetSourceTime));
       const drift = Math.abs(videoEl.currentTime - clampedTime);
       const isPlaying = options.isPlaying();
 
       // During active playback, videoEl naturally advances its own currentTime.
       // Emitting update:currentTime triggers this watcher every frame.
       // Calling videoEl.currentTime = x while playing forces decoder flush & causes lag.
-      // Only seek if drift > 150ms (e.g. user clicked timeline or looped), or when paused.
-      const maxAllowedDrift = isPlaying ? 0.15 : 0.005;
+      // Only seek if drift > 1.5s during playback (e.g. user clicked timeline or looped), or when paused.
+      const maxAllowedDrift = isPlaying ? 1.5 : 0.005;
 
       if (drift > maxAllowedDrift) {
         performVideoSeek(clampedTime);

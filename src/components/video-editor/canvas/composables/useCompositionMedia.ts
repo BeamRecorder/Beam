@@ -193,8 +193,12 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         media.pause();
         continue;
       }
+      const rate = layer.playbackRate ?? 1.0;
+      if (media.playbackRate !== rate) {
+        media.playbackRate = rate;
+      }
       const localTime =
-        currentTime - layer.startMs / 1000 + (layer.sourceOffsetMs ?? 0) / 1000;
+        (currentTime - layer.startMs / 1000) * rate + (layer.sourceOffsetMs ?? 0) / 1000;
       if (
         localTime < 0 ||
         (Number.isFinite(media.duration) && localTime >= media.duration)
@@ -206,7 +210,9 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         performMediaSeek(media, localTime);
         continue;
       }
-      if (drift > 0.08) {
+      // When playing, NEVER performMediaSeek if the video is already actively playing and decoding.
+      // Seeking on dropped frames causes catastrophic decoder stutters. Only resync if drift exceeds 1.5s or if media is paused.
+      if (drift > 1.5) {
         performMediaSeek(media, localTime);
       }
       if (media.paused && !media.seeking) {

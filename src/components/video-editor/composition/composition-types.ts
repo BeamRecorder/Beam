@@ -76,6 +76,7 @@ export interface MediaCompositionLayer extends CompositionLayerBase {
   reactToZoom?: boolean;
   webcamAppearance?: WebcamAppearance;
   appearance?: ClipAppearance;
+  playbackRate?: number;
   isMirrored?: boolean;
 }
 export interface CaptionCompositionLayer extends CompositionLayerBase {
@@ -90,6 +91,8 @@ export interface ProjectComposition {
   baseVideoCrop?: NormalizedCrop;
   baseVideoTransform?: NormalizedTransform;
   baseVideoIsMirrored?: boolean;
+  baseVideoPlaybackRate?: number;
+  areClipsLinked?: boolean;
 }
 
 export const emptyComposition = (): ProjectComposition => ({

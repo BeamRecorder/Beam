@@ -99,6 +99,7 @@ const {
   selectBaseVideo,
   updateSelectedClipAppearance,
   updateSelectedClipIsMirrored,
+  updateSelectedClipPlaybackRate,
   updateSelectedWebcamTransform,
   previewSelectedWebcamTransform,
   updateSelectedMediaCrop,
@@ -210,6 +211,21 @@ onMounted(() => {
   });
 });
 
+const rawNativeDuration = ref(0);
+const handleDurationChange = (nativeDuration: number) => {
+  rawNativeDuration.value = nativeDuration;
+  duration.value = nativeDuration / (composition.value.baseVideoPlaybackRate ?? 1.0);
+};
+
+watch(
+  () => composition.value.baseVideoPlaybackRate ?? 1.0,
+  (rate) => {
+    if (rawNativeDuration.value > 0) {
+      duration.value = rawNativeDuration.value / rate;
+    }
+  },
+);
+
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleCropKeyDown);
   if (timelineStartupFrame !== null) cancelAnimationFrame(timelineStartupFrame);
@@ -273,6 +289,7 @@ onBeforeUnmount(() => {
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
+          @update:clip-rate="updateSelectedClipPlaybackRate"
           @unlink-clip="handleUnlinkClips"
           @update:clip-is-mirrored="updateSelectedClipIsMirrored"
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: (['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : parseFloat($event)) })"
@@ -315,10 +332,7 @@ onBeforeUnmount(() => {
           @deselect:transform-layer="selectedCompositionLayerId = null; isCropping = false"
           @done:crop="isCropping = false"
           @deselect:zoom="selectedZoomId = null"
-          @update:layer-transform="updateSelectedWebcamTransform($event)"
-          @preview:layer-transform="previewSelectedWebcamTransform($event)"
-          @update:layer-crop="updateSelectedMediaCrop($event)"
-          @duration-change="duration = $event"
+          @duration-change="handleDurationChange"
         />
         <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addCompositionElement" />
         </div>

@@ -9,6 +9,7 @@ import {
   type ClipAppearance,
   type CompositionLayer,
   type CompositionMedia,
+  type MediaCompositionLayer,
   type NormalizedCrop,
   type NormalizedTransform,
   type ProjectComposition,
@@ -48,6 +49,7 @@ export function useProjectComposition(options: {
   );
 
   const selectedClipInfo = computed(() => {
+    const isLinked = composition.value.areClipsLinked ?? true;
     if (selectedCompositionLayerId.value === BASE_VIDEO_CLIP_ID) {
       return {
         id: BASE_VIDEO_CLIP_ID,
@@ -55,8 +57,9 @@ export function useProjectComposition(options: {
         name: "Screen recording",
         timelineStartMs: 0,
         timelineDurationMs: durationMs.value,
-        playbackRate: 1.0,
+        playbackRate: composition.value.baseVideoPlaybackRate ?? 1.0,
         enabled: true,
+        isLinked,
         isMirrored: composition.value.baseVideoIsMirrored ?? false,
         clipTransform: composition.value.baseVideoTransform ?? {
           x: 0,
@@ -78,8 +81,9 @@ export function useProjectComposition(options: {
     const appearance = rawAppearance
       ? {
           ...rawAppearance,
-          cornerRadius: typeof rawAppearance.cornerRadius === "number"
-            ? (rawAppearance.cornerRadius === 0
+          cornerRadius:
+            typeof rawAppearance.cornerRadius === "number"
+              ? rawAppearance.cornerRadius === 0
                 ? "none"
                 : rawAppearance.cornerRadius <= 10
                   ? "sm"
@@ -87,17 +91,18 @@ export function useProjectComposition(options: {
                     ? "md"
                     : rawAppearance.cornerRadius <= 30
                       ? "lg"
-                      : "full")
-            : rawAppearance.cornerRadius ?? "md",
-          shadowSize: typeof rawAppearance.shadowSize === "number"
-            ? (rawAppearance.shadowSize === 0
+                      : "full"
+              : (rawAppearance.cornerRadius ?? "md"),
+          shadowSize:
+            typeof rawAppearance.shadowSize === "number"
+              ? rawAppearance.shadowSize === 0
                 ? "none"
                 : rawAppearance.shadowSize <= 0.3
                   ? "sm"
                   : rawAppearance.shadowSize <= 0.5
                     ? "md"
-                    : "lg")
-            : rawAppearance.shadowSize ?? "md",
+                    : "lg"
+              : (rawAppearance.shadowSize ?? "md"),
         }
       : undefined;
     return {
@@ -106,9 +111,12 @@ export function useProjectComposition(options: {
       name: layer.name,
       timelineStartMs: layer.startMs,
       timelineDurationMs: layer.endMs - layer.startMs,
-      playbackRate: 1.0,
+      playbackRate:
+        layer.kind !== "caption"
+          ? ((layer as MediaCompositionLayer).playbackRate ?? 1.0)
+          : 1.0,
       enabled: layer.enabled,
-      isLinked: false,
+      isLinked,
       isMirrored:
         layer.kind === "audio" || layer.kind === "caption"
           ? undefined
@@ -473,10 +481,44 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
-  const handleUnlinkClips = async () => {
-    if (selectedCompositionLayerId.value) {
-      await saveComposition();
+  const updateSelectedClipPlaybackRate = async (rate: number) => {
+    const selectedId = selectedCompositionLayerId.value;
+    if (!selectedId) return;
+    const isLinked = composition.value.areClipsLinked ?? true;
+
+    if (isLinked) {
+      // Apply speedup to base video AND all media layers (webcam, video, audio)
+      composition.value = {
+        ...composition.value,
+        baseVideoPlaybackRate: rate,
+        layers: composition.value.layers.map((layer) =>
+          layer.kind === "caption" ? layer : { ...layer, playbackRate: rate },
+        ),
+      };
+    } else if (selectedId === BASE_VIDEO_CLIP_ID) {
+      composition.value = {
+        ...composition.value,
+        baseVideoPlaybackRate: rate,
+      };
+    } else {
+      composition.value = {
+        ...composition.value,
+        layers: composition.value.layers.map((layer) =>
+          layer.id === selectedId && layer.kind !== "caption"
+            ? { ...layer, playbackRate: rate }
+            : layer,
+        ),
+      };
     }
+    await saveComposition();
+  };
+
+  const handleUnlinkClips = async () => {
+    composition.value = {
+      ...composition.value,
+      areClipsLinked: !(composition.value.areClipsLinked ?? true),
+    };
+    await saveComposition();
   };
 
   const handleUnlinkTrack = async (trackKind: string) => {
@@ -504,6 +546,7 @@ export function useProjectComposition(options: {
     selectBaseVideo,
     updateSelectedClipAppearance,
     updateSelectedClipIsMirrored,
+    updateSelectedClipPlaybackRate,
     updateSelectedWebcamTransform,
     previewSelectedWebcamTransform,
     updateSelectedMediaCrop,

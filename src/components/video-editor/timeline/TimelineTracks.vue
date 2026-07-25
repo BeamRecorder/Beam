@@ -193,6 +193,12 @@ const selectMainVideoLayer = () => {
                 <Skeleton v-else width="100%" height="100%" radius="0" />
               </div>
             </div>
+            <span
+              v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
+              class="speed-badge main-video-speed-badge"
+            >
+              {{ composition.baseVideoPlaybackRate.toFixed(2) }}×
+            </span>
             <!-- Render Image / Media Overlay Clips -->
             <button
               v-for="layer in imageLayers"
@@ -203,7 +209,12 @@ const selectMainVideoLayer = () => {
               :style="layerStyle(layer.startMs, layer.endMs)"
               @click.stop="emit('select:composition-layer', layer.id)"
             >
-              <span class="clip-label-overlay">🖼️ {{ layer.name }}</span>
+              <span class="clip-label-overlay">
+                🖼️ {{ layer.name }}
+                <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1.0) > 0.01" class="speed-badge">
+                  {{ layer.playbackRate.toFixed(2) }}×
+                </span>
+              </span>
               <span class="trim-handle start"></span>
               <span class="trim-handle end"></span>
             </button>
@@ -269,7 +280,12 @@ const selectMainVideoLayer = () => {
                   <Skeleton v-else width="100%" height="100%" radius="0" />
                 </div>
               </div>
-              <span class="clip-label-overlay">Webcam</span>
+              <span class="clip-label-overlay">
+                Webcam
+                <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1.0) > 0.01" class="speed-badge">
+                  {{ layer.playbackRate.toFixed(2) }}×
+                </span>
+              </span>
               <span class="trim-handle start" title="Trim start"></span>
               <span class="trim-handle end" title="Trim end"></span>
             </button>
@@ -436,6 +452,12 @@ const selectMainVideoLayer = () => {
             @click.stop="emit('select:composition-layer', 'system-audio')"
           >
             <div class="audio-block" style="position: relative; padding: 0">
+              <span
+                v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
+                class="speed-badge audio-speed-badge"
+              >
+                {{ composition.baseVideoPlaybackRate.toFixed(2) }}×
+              </span>
               <!-- Real Waveform -->
               <div
                 v-if="systemAudioBuffer"
@@ -484,6 +506,12 @@ const selectMainVideoLayer = () => {
             @click.stop="emit('select:composition-layer', 'microphone')"
           >
             <div class="audio-block" style="position: relative; padding: 0">
+              <span
+                v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
+                class="speed-badge audio-speed-badge"
+              >
+                {{ composition.baseVideoPlaybackRate.toFixed(2) }}×
+              </span>
               <!-- Real Waveform -->
               <div
                 v-if="micAudioBuffer"
@@ -1010,5 +1038,32 @@ const selectMainVideoLayer = () => {
 
 .annotation-indicator.selected {
   outline: 2px solid var(--color-primary);
+}
+
+.speed-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 4px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: var(--radius-xs);
+  background: var(--color-primary);
+  color: white;
+  z-index: 10;
+}
+
+.main-video-speed-badge {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.audio-speed-badge {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  z-index: 5;
 }
 </style>

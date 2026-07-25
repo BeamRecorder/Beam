@@ -90,6 +90,7 @@ const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
   editorData: () => props.editorData,
   isPlaying: () => props.isPlaying,
   currentTime: () => props.currentTime,
+  playbackRate: () => props.composition.baseVideoPlaybackRate ?? 1.0,
   onDurationChange: (duration) => emit('duration-change', duration),
   onRenderOnce: renderOnce,
 });
@@ -259,7 +260,8 @@ const renderCanvas = () => {
   }
 
   if (props.isPlaying && videoEl.readyState >= 1) {
-    emit("update:currentTime", videoEl.ended ? 0 : videoEl.currentTime);
+    const rate = props.composition.baseVideoPlaybackRate ?? 1.0;
+    emit("update:currentTime", videoEl.ended ? 0 : videoEl.currentTime / rate);
   }
 };
 

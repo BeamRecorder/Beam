@@ -147,33 +147,39 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   };
 
   const beginSelectionMove = (event: PointerEvent) => {
-    if (options.selectWebcamAt(event)) return;
-    const canvas = options.canvasRef();
-    const hitBounds = baseVideoHitBounds.value ?? videoWindowBounds.value;
-    if (canvas && hitBounds) {
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+    const selectedZoom = options.selectedZoom();
+    const isManualZoomActive = selectedZoom?.mode === "manual" && options.activeTab() === "zoom";
 
-      const inVideo =
-        x >= hitBounds.dx &&
-        x <= hitBounds.dx + hitBounds.dw &&
-        y >= hitBounds.dy &&
-        y <= hitBounds.dy + hitBounds.dh;
+    // When configuring a manual zoom, skip raycasting/hit-testing for webcam and base video
+    if (!isManualZoomActive) {
+      if (options.selectWebcamAt(event)) return;
+      const canvas = options.canvasRef();
+      const hitBounds = baseVideoHitBounds.value ?? videoWindowBounds.value;
+      if (canvas && hitBounds) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
 
-      if (inVideo) {
-        options.onSelectBaseVideo();
-        return;
+        const inVideo =
+          x >= hitBounds.dx &&
+          x <= hitBounds.dx + hitBounds.dw &&
+          y >= hitBounds.dy &&
+          y <= hitBounds.dy + hitBounds.dh;
+
+        if (inVideo) {
+          options.onSelectBaseVideo();
+          return;
+        }
       }
+
+      options.onSelectCanvas();
+
+      if (options.selectedTransformLayerExists())
+        options.onDeselectTransformLayer();
+      if (selectedZoom && options.activeTab() !== "zoom")
+        options.onDeselectZoom();
     }
 
-    options.onSelectCanvas();
-
-    if (options.selectedTransformLayerExists())
-      options.onDeselectTransformLayer();
-    const selectedZoom = options.selectedZoom();
-    if (selectedZoom && options.activeTab() !== "zoom")
-      options.onDeselectZoom();
     if (selectedZoom?.mode !== "manual") return;
     isMovingSelection.value = true;
     options.canvasRef()?.setPointerCapture(event.pointerId);
