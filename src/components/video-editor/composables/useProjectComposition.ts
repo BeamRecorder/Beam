@@ -565,6 +565,17 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const deleteSelectedCompositionLayer = async () => {
+    const selectedId = selectedCompositionLayerId.value;
+    if (!selectedId || selectedId === BASE_VIDEO_CLIP_ID) return;
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.filter((l) => l.id !== selectedId),
+    };
+    selectedCompositionLayerId.value = null;
+    await saveComposition();
+  };
+
   return {
     composition,
     selectedCompositionLayerId,
@@ -582,6 +593,7 @@ export function useProjectComposition(options: {
     addCompositionElement,
     addCaptionAtTime,
     updateCaption,
+    deleteSelectedCompositionLayer,
     previewLayerEdge,
     trimLayerEdge,
     selectBaseVideo,

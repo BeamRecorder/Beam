@@ -1,6 +1,7 @@
 import { watch, onUnmounted } from "vue";
 import {
   activeLayersAt,
+  getCaptionTransform,
   type ClipAppearance,
   type CompositionLayer,
   type NormalizedTransform,
@@ -247,12 +248,12 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     for (const layer of activeLayersAt(comp, timeMs)) {
       if (
         layer.kind === "audio" ||
-        (layer.kind === "video" && layer.reactToZoom) ||
-        (followsZoom ? layer.kind === "video" : layer.kind !== "video")
+        (layer.kind === "video" && layer.reactToZoom)
       )
         continue;
 
       if (layer.kind === "caption") {
+        if (followsZoom) continue;
         const sentence = layer.caption.sentences.find(
           (item) => item.startMs <= timeMs && timeMs <= item.endMs,
         );
@@ -273,40 +274,14 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         const liveTransform =
           layer.id === selectedTransformLayer?.id && webcamDraft
             ? webcamDraft
-            : layer.transform;
+            : getCaptionTransform(layer);
 
-        let boxX: number;
-        let boxY: number;
-        let boxW: number;
-        let boxH: number;
-        let centerX: number;
-        let centerY: number;
-
-        if (liveTransform) {
-          boxX = videoWindow.dx + liveTransform.x * videoWindow.dw;
-          boxY = videoWindow.dy + liveTransform.y * videoWindow.dh;
-          boxW = liveTransform.width * videoWindow.dw;
-          boxH = liveTransform.height * videoWindow.dh;
-          centerX = boxX + boxW / 2;
-          centerY = boxY + boxH / 2;
-        } else {
-          const yRatio =
-            style.placement === "top"
-              ? 0.12
-              : style.placement === "center"
-                ? 0.5
-                : 0.88;
-          centerX = videoWindow.dx + videoWindow.dw / 2;
-          centerY = videoWindow.dy + videoWindow.dh * yRatio;
-          const textWidth = ctx.measureText(textToDisplay).width;
-          const paddingPx =
-            (style.boxPadding ?? 16) *
-            (videoWindow.dw / Math.max(1, mainVideoWidth || 1920));
-          boxW = Math.min(videoWindow.dw * 0.9, textWidth + paddingPx * 2);
-          boxH = fontSizePx + paddingPx * 1.5;
-          boxX = centerX - boxW / 2;
-          boxY = centerY - boxH / 2;
-        }
+        const boxX = videoWindow.dx + liveTransform.x * videoWindow.dw;
+        const boxY = videoWindow.dy + liveTransform.y * videoWindow.dh;
+        const boxW = liveTransform.width * videoWindow.dw;
+        const boxH = liveTransform.height * videoWindow.dh;
+        const centerX = boxX + boxW / 2;
+        const centerY = boxY + boxH / 2;
 
         // Draw Background Box if boxColor is set or backdropBlur was requested
         const boxColor =
@@ -357,6 +332,9 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         ctx.restore();
         continue;
       }
+
+      const layerReactsToZoom = Boolean(layer.reactToZoom);
+      if (followsZoom !== layerReactsToZoom) continue;
 
       const asset =
         layer.kind === "image"

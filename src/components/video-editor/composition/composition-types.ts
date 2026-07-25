@@ -93,6 +93,13 @@ export interface CaptionCompositionLayer extends CompositionLayerBase {
   transform?: NormalizedTransform;
   isAiGenerated?: boolean;
 }
+
+export function getCaptionTransform(layer: CaptionCompositionLayer): NormalizedTransform {
+  if (layer.transform) return layer.transform;
+  const placement = layer.caption?.style?.placement ?? "bottom";
+  const y = placement === "top" ? 0.06 : placement === "center" ? 0.43 : 0.8;
+  return { x: 0.1, y, width: 0.8, height: 0.14 };
+}
 export type CompositionLayer = MediaCompositionLayer | CaptionCompositionLayer;
 export interface ProjectComposition {
   media: CompositionMedia[];

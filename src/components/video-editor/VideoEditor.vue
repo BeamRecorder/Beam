@@ -96,6 +96,7 @@ const {
   addCompositionElement,
   addCaptionAtTime,
   updateCaption,
+  deleteSelectedCompositionLayer,
   previewLayerEdge,
   trimLayerEdge,
   selectBaseVideo,
@@ -202,6 +203,23 @@ const handleCropKeyDown = (e: KeyboardEvent) => {
   if ((e.key === 'Enter' || e.key === 'Escape') && isCropping.value) {
     isCropping.value = false;
   }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    const active = document.activeElement;
+    if (active) {
+      const tagName = active.tagName.toLowerCase();
+      const isEditable = active.getAttribute('contenteditable') === 'true';
+      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || isEditable) {
+        return; // Ignore if typing inside input fields
+      }
+    }
+    if (selectedCompositionLayerId.value && selectedCompositionLayerId.value !== 'base-video') {
+      e.preventDefault();
+      void deleteSelectedCompositionLayer();
+    } else if (selectedZoom.value && activeTab.value === 'zoom') {
+      e.preventDefault();
+      deleteSelectedZoom();
+    }
+  }
 };
 
 onMounted(() => {
@@ -297,7 +315,7 @@ onBeforeUnmount(() => {
           @update:caption="updateCaption"
           @update:composition="composition = $event; editorState.scheduleSave()"
           @select-caption="selectedCompositionLayerId = $event; activeTab = 'caption'"
-          @delete-clip="compositionState.deleteSelectedCompositionLayer()"
+          @delete-clip="deleteSelectedCompositionLayer()"
           @update:clip-rate="updateSelectedClipPlaybackRate"
           @unlink-clip="handleUnlinkClips"
           @update:clip-is-mirrored="updateSelectedClipIsMirrored"

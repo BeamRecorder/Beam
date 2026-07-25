@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
 import Input from '~/ui/input/Input.vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
@@ -16,14 +17,30 @@ const emit = defineEmits<{
   (event: 'delete', layerId: string): void;
 }>()
 
-const updateStyle = (key: keyof CaptionCompositionLayer['caption']['style'], value: any) => {
+const captionStyle = computed(() => ({
+  color: '#ffffff',
+  fontSize: 32,
+  shadowColor: 'rgba(0, 0, 0, 0.75)',
+  shadowBlur: 0,
+  shadowDirection: 'bottom-right',
+  placement: 'bottom',
+  boxColor: 'rgba(15, 23, 42, 0.75)',
+  boxPadding: 16,
+  boxRadius: 10,
+  ...props.layer?.caption?.style,
+}))
+
+const sentences = computed(() => props.layer?.caption?.sentences ?? [])
+
+const updateStyle = (key: string, value: any) => {
   if (!props.layer) return
+  const currentCaption = props.layer.caption ?? { sentences: [], style: {} as any }
   emit('update', {
     ...props.layer,
     caption: {
-      ...props.layer.caption,
+      ...currentCaption,
       style: {
-        ...props.layer.caption.style,
+        ...currentCaption.style,
         [key]: value,
       },
     },
@@ -35,8 +52,8 @@ const handleCustomTextUpdate = (value: string) => {
 }
 
 const updateWord = (sentenceId: string, index: number, key: 'text' | 'startMs' | 'endMs', value: string) => {
-  if (!props.layer) return
-  const sentences = props.layer.caption.sentences.map((sentence) =>
+  if (!props.layer || !props.layer.caption?.sentences) return
+  const updatedSentences = props.layer.caption.sentences.map((sentence) =>
     sentence.id !== sentenceId
       ? sentence
       : (() => {
@@ -54,9 +71,9 @@ const updateWord = (sentenceId: string, index: number, key: 'text' | 'startMs' |
   )
   emit('update', {
     ...props.layer,
-    startMs: sentences[0]?.startMs || props.layer.startMs,
-    endMs: sentences.at(-1)?.endMs || props.layer.endMs,
-    caption: { ...props.layer.caption, sentences },
+    startMs: updatedSentences[0]?.startMs || props.layer.startMs,
+    endMs: updatedSentences.at(-1)?.endMs || props.layer.endMs,
+    caption: { ...props.layer.caption, sentences: updatedSentences },
   })
 }
 
@@ -83,7 +100,7 @@ const shadowDirectionOptions = [
         <div class="field-group">
           <label class="field-label">Custom Override Text</label>
           <Input
-            :model-value="layer.caption.style.customText ?? ''"
+            :model-value="captionStyle.customText ?? ''"
             placeholder="Type custom text..."
             size="md"
             @update:model-value="handleCustomTextUpdate(String($event))"
@@ -100,7 +117,7 @@ const shadowDirectionOptions = [
           <div class="field-group">
             <label class="field-label">Text Color</label>
             <ColorPicker
-              :model-value="layer.caption.style.color || '#ffffff'"
+              :model-value="captionStyle.color || '#ffffff'"
               @update:model-value="updateStyle('color', $event)"
             />
           </div>
@@ -108,7 +125,7 @@ const shadowDirectionOptions = [
 
         <BigSlider
           label="Font Size"
-          :model-value="layer.caption.style.fontSize || 32"
+          :model-value="captionStyle.fontSize || 32"
           :min="12"
           :max="120"
           :step="1"
@@ -127,7 +144,7 @@ const shadowDirectionOptions = [
           <div class="field-group">
             <label class="field-label">Box Color</label>
             <ColorPicker
-              :model-value="layer.caption.style.boxColor || 'rgba(15, 23, 42, 0.75)'"
+              :model-value="captionStyle.boxColor || 'rgba(15, 23, 42, 0.75)'"
               @update:model-value="updateStyle('boxColor', $event)"
             />
           </div>
@@ -135,7 +152,7 @@ const shadowDirectionOptions = [
 
         <BigSlider
           label="Box Padding"
-          :model-value="layer.caption.style.boxPadding ?? 16"
+          :model-value="captionStyle.boxPadding ?? 16"
           :min="0"
           :max="60"
           :step="1"
@@ -146,7 +163,7 @@ const shadowDirectionOptions = [
 
         <BigSlider
           label="Corner Radius"
-          :model-value="layer.caption.style.boxRadius ?? 10"
+          :model-value="captionStyle.boxRadius ?? 10"
           :min="0"
           :max="40"
           :step="1"
@@ -165,7 +182,7 @@ const shadowDirectionOptions = [
           <div class="field-group">
             <label class="field-label">Shadow Color</label>
             <ColorPicker
-              :model-value="layer.caption.style.shadowColor || 'rgba(0, 0, 0, 0.75)'"
+              :model-value="captionStyle.shadowColor || 'rgba(0, 0, 0, 0.75)'"
               @update:model-value="updateStyle('shadowColor', $event)"
             />
           </div>
@@ -173,7 +190,7 @@ const shadowDirectionOptions = [
             <label class="field-label">Direction</label>
             <Select
               :items="shadowDirectionOptions"
-              :model-value="layer.caption.style.shadowDirection || 'bottom-right'"
+              :model-value="captionStyle.shadowDirection || 'bottom-right'"
               size="sm"
               @update:model-value="updateStyle('shadowDirection', $event)"
             />
@@ -182,7 +199,7 @@ const shadowDirectionOptions = [
 
         <BigSlider
           label="Shadow Blur"
-          :model-value="layer.caption.style.shadowBlur || 0"
+          :model-value="captionStyle.shadowBlur || 0"
           :min="0"
           :max="50"
           :step="1"
@@ -192,13 +209,13 @@ const shadowDirectionOptions = [
         />
       </div>
 
-      <div class="divider" v-if="layer.caption.sentences.length"></div>
+      <div class="divider" v-if="sentences.length"></div>
 
       <!-- 5. Word-by-Word Editor -->
-      <div v-if="layer.caption.sentences.length" class="panel-group">
+      <div v-if="sentences.length" class="panel-group">
         <h4 class="group-title">Word Timings & Editing</h4>
         <div
-          v-for="sentence in layer.caption.sentences"
+          v-for="sentence in sentences"
           :key="sentence.id"
           class="sentence-box"
         >

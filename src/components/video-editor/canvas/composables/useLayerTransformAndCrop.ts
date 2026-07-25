@@ -7,6 +7,7 @@ import {
   type NormalizedTransform,
   type NormalizedCrop,
   activeLayersAt,
+  getCaptionTransform,
 } from "../../composition/composition-types";
 import {
   computeWebcamLayout,
@@ -74,22 +75,25 @@ export function useLayerTransformAndCrop(
     const bounds = boundsForLayer(layer);
     if (!bounds || !layer) return { display: "none" };
 
-    let defaultTransform: NormalizedTransform = {
-      x: 0,
-      y: 0,
-      width: 1,
-      height: 1,
-    };
+    const transform =
+      webcamDraft.value ??
+      (layer.kind === "caption" ? getCaptionTransform(layer) : layer.transform) ??
+      { x: 0, y: 0, width: 1, height: 1 };
+
     if (layer.kind === "caption") {
-      const placement = layer.caption.style.placement;
-      const y =
-        placement === "top" ? 0.05 : placement === "center" ? 0.44 : 0.8;
-      defaultTransform = { x: 0.1, y, width: 0.8, height: 0.15 };
+      const unzoomedLeft = bounds.dx + transform.x * bounds.dw;
+      const unzoomedTop = bounds.dy + transform.y * bounds.dh;
+      const unzoomedWidth = transform.width * bounds.dw;
+      const unzoomedHeight = transform.height * bounds.dh;
+      return {
+        left: `${unzoomedLeft}px`,
+        top: `${unzoomedTop}px`,
+        width: `${unzoomedWidth}px`,
+        height: `${unzoomedHeight}px`,
+      };
     }
 
-    const transform = webcamDraft.value ?? layer.transform ?? defaultTransform;
-
-    if (layer.kind !== "caption" && layer.reactToZoom) {
+    if (layer.reactToZoom) {
       const layout = computeWebcamLayout(
         bounds.dw,
         bounds.dh,
@@ -313,9 +317,14 @@ export function useLayerTransformAndCrop(
     corner?: ResizeCorner,
   ) => {
     const layer = options.selectedTransformLayer();
-    if (!layer?.transform) return;
+    if (!layer) return;
+    const transform =
+      webcamDraft.value ??
+      (layer.kind === "caption"
+        ? getCaptionTransform(layer)
+        : layer.transform ?? { x: 0, y: 0, width: 1, height: 1 });
     event.stopPropagation();
-    webcamDraft.value = { ...layer.transform };
+    webcamDraft.value = { ...transform };
     webcamDrag = {
       kind,
       corner,
@@ -323,7 +332,7 @@ export function useLayerTransformAndCrop(
       startY: event.clientY,
       lastX: event.clientX,
       lastY: event.clientY,
-      transform: { ...layer.transform },
+      transform: { ...transform },
     };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
@@ -468,13 +477,10 @@ export function useLayerTransformAndCrop(
     ).filter((layer) => layer.kind !== "audio");
 
     for (const layer of [...layers].reverse()) {
-      let transform = layer.transform;
-      if (!transform && layer.kind === "caption") {
-        const placement = layer.caption.style.placement;
-        const defaultY =
-          placement === "top" ? 0.05 : placement === "center" ? 0.44 : 0.8;
-        transform = { x: 0.1, y: defaultY, width: 0.8, height: 0.15 };
-      }
+      const transform =
+        layer.kind === "caption"
+          ? getCaptionTransform(layer)
+          : layer.transform;
       if (!transform) continue;
 
       const layout =
