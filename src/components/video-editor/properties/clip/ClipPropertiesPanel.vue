@@ -369,7 +369,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 .clip-properties {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  flex: 1;
+  min-height: 100%;
 }
 
 .empty-state {
@@ -407,6 +408,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
 }
 
 .section-block {
@@ -500,7 +502,12 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 }
 
 .danger-zone {
-  margin-top: 4px;
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  padding-top: 12px;
+  background: var(--color-bg-element);
+  z-index: 10;
 }
 
 .direction-group {

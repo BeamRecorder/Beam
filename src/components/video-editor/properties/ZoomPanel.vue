@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
-import Input from "~/ui/input/Input.vue";
+import BigSlider from "~/ui/slider/BigSlider.vue";
 import Popover from "~/ui/popover/Popover.vue";
-import { MousePointer, Sparkles, Trash2 } from "@lucide/vue";
+import { MousePointer, Sparkles, Trash2, ZoomIn } from "@lucide/vue";
 import type { ZoomElement } from "../zoom/zoom-types";
 
 const props = defineProps<{
@@ -18,13 +18,12 @@ const emit = defineEmits<{
   (event: "generate"): void;
 }>();
 
-const updateNumber = (
-  key: "depth" | "startMs" | "endMs",
-  value: string | number,
-) => {
-  const numValue = Number(value);
-  if (!props.selectedZoom || !Number.isFinite(numValue)) return;
-  emit("update", { ...props.selectedZoom, [key]: numValue });
+const magnificationValues = [1.25, 1.5, 1.8, 2.2, 3.5, 5.0];
+
+const updateDepth = (depth: number) => {
+  if (!props.selectedZoom) return;
+  const clamped = Math.max(1, Math.min(6, Math.round(depth)));
+  emit("update", { ...props.selectedZoom, depth: clamped });
 };
 
 const setMode = (mode: ZoomElement["mode"]) => {
@@ -38,102 +37,139 @@ const setMode = (mode: ZoomElement["mode"]) => {
 
 <template>
   <div class="zoom-panel">
-    <Button
-      v-if="!hasAutomaticZooms"
-      variant="primary"
-      size="sm"
-      :icon="Sparkles"
-      :disabled="!canGenerate"
-      @click="emit('generate')"
-    >
-      Generate zooms
-    </Button>
-    <Popover v-else block>
-      <template #trigger>
-        <Button
-          variant="primary"
-          size="sm"
-          :icon="Sparkles"
-          :disabled="!canGenerate"
-          >Refresh zooms</Button
-        >
-      </template>
-      <template #default="{ close }">
-        <div class="refresh-confirmation">
-          <p>Are you sure? This will reset all zooms to their default value.</p>
-          <div class="refresh-actions">
-            <Button variant="ghost" size="sm" @click="close">Cancel</Button>
-            <Button
-              variant="danger"
-              size="sm"
-              @click="
-                emit('generate');
-                close();
-              "
-              >Refresh</Button
-            >
+    <!-- Top Action Header -->
+    <div class="header-action">
+      <Button
+        v-if="!hasAutomaticZooms"
+        variant="primary"
+        size="sm"
+        :icon="Sparkles"
+        :disabled="!canGenerate"
+        block
+        @click="emit('generate')"
+      >
+        Generate Auto Zooms
+      </Button>
+      <Popover v-else block>
+        <template #trigger>
+          <Button
+            variant="outline"
+            size="sm"
+            :icon="Sparkles"
+            :disabled="!canGenerate"
+            block
+          >
+            Regenerate Auto Zooms
+          </Button>
+        </template>
+        <template #default="{ close }">
+          <div class="refresh-confirmation">
+            <p>Regenerate automatic zooms? This will replace all auto-detected zoom points.</p>
+            <div class="refresh-actions">
+              <Button variant="ghost" size="xs" @click="close">Cancel</Button>
+              <Button
+                variant="danger"
+                size="xs"
+                @click="
+                  emit('generate');
+                  close();
+                "
+              >
+                Regenerate
+              </Button>
+            </div>
           </div>
+        </template>
+      </Popover>
+    </div>
+
+    <!-- Active Zoom Block Inspector -->
+    <div v-if="selectedZoom" class="options-group">
+      <!-- Mode Toggle -->
+      <div class="section-block">
+        <span class="section-title">Mode</span>
+        <ButtonGroup full>
+          <Button
+            size="xs"
+            :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'"
+            @click="setMode('auto')"
+          >
+            Auto (Cursor)
+          </Button>
+          <Button
+            size="xs"
+            :variant="selectedZoom.mode === 'manual' ? 'primary' : 'ghost'"
+            @click="setMode('manual')"
+          >
+            Manual Focus
+          </Button>
+        </ButtonGroup>
+        <div class="hint-card">
+          <MousePointer :size="13" class="hint-icon" />
+          <span>
+            {{
+              selectedZoom.mode === "manual"
+                ? "Drag the dashed selection target on the canvas to set the zoom framing."
+                : "Auto mode continuously follows the recorded cursor movement."
+            }}
+          </span>
         </div>
-      </template>
-    </Popover>
-    <template v-if="selectedZoom">
-      <ButtonGroup full>
-        <Button
-          size="sm"
-          :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'"
-          @click="setMode('auto')"
-        >Auto</Button>
-        <Button
-          size="sm"
-          :variant="selectedZoom.mode === 'manual' ? 'primary' : 'ghost'"
-          @click="setMode('manual')"
-        >Manual</Button>
-      </ButtonGroup>
-      <p class="hint">
-        <MousePointer :size="14" />
-        {{ selectedZoom.mode === 'manual'
-          ? 'Drag the selection box on the canvas to choose the framing.'
-          : 'Auto zoom uses the recorded cursor path. Switch to Manual to adjust it.' }}
-      </p>
-      <label
-        >Depth
-        <Input
-          type="number"
+      </div>
+
+      <!-- Zoom Level / Depth -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Magnification</span>
+          <span class="depth-badge">{{ magnificationValues[selectedZoom.depth - 1]?.toFixed(2) }}×</span>
+        </div>
+
+        <BigSlider
           :model-value="selectedZoom.depth"
           :min="1"
           :max="6"
           :step="1"
-          size="sm"
-          @update:model-value="updateNumber('depth', $event)"
+          :default-value="2"
+          label="Zoom Level"
+          :format-value="(val) => `${magnificationValues[Math.round(val) - 1]?.toFixed(2)}×`"
+          @update:model-value="updateDepth"
         />
-      </label>
-      <label
-        >Start (ms)
-        <Input
-          type="number"
-          :model-value="selectedZoom.startMs"
-          :min="0"
+
+        <div class="depth-presets">
+          <button
+            v-for="(val, idx) in magnificationValues"
+            :key="idx"
+            type="button"
+            class="preset-pill"
+            :class="{ active: selectedZoom.depth === idx + 1 }"
+            @click="updateDepth(idx + 1)"
+          >
+            {{ val }}×
+          </button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="danger-zone">
+        <Button
+          variant="danger"
           size="sm"
-          :disabled="selectedZoom.mode === 'auto'"
-          @update:model-value="updateNumber('startMs', $event)"
-        />
-      </label>
-      <label
-        >End (ms)
-        <Input
-          type="number"
-          :model-value="selectedZoom.endMs"
-          :min="0"
-          size="sm"
-          :disabled="selectedZoom.mode === 'auto'"
-          @update:model-value="updateNumber('endMs', $event)"
-        />
-      </label>
-      <Button variant="danger" size="sm" :icon="Trash2" @click="emit('delete')"
-        >Delete zoom</Button
-      >
-    </template>
-    <p v-else class="hint">Select a zoom block in the timeline to edit it.</p>
+          :icon="Trash2"
+          block
+          @click="emit('delete')"
+        >
+          Delete Zoom
+        </Button>
+      </div>
+    </div>
+
+    <!-- Empty Selection State -->
+    <div v-else class="empty-state">
+      <div class="empty-icon"><ZoomIn :size="24" /></div>
+      <p class="empty-title">No Zoom Selected</p>
+      <p class="empty-desc">
+        Click a zoom block on the timeline track to adjust its depth, mode, or position.
+      </p>
+    </div>
   </div>
 </template>
 
@@ -141,36 +177,146 @@ const setMode = (mode: ZoomElement["mode"]) => {
 .zoom-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  flex: 1;
+  min-height: 100%;
 }
-label {
-  display: grid;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--text-secondary);
+
+.options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
 }
-.hint {
-  margin: 0;
+
+.section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  justify-content: space-between;
+  min-height: 20px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.depth-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.hint-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-bg-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 11px;
   line-height: 1.4;
   color: var(--text-muted);
 }
-.refresh-confirmation {
-  width: 250px;
-  padding: 10px;
+
+.hint-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-primary);
 }
-.refresh-confirmation p {
-  margin: 0 0 12px;
+
+.depth-presets {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.preset-pill {
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--fast) ease;
+}
+
+.preset-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.preset-pill.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.danger-zone {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  padding-top: 12px;
+  background: var(--color-bg-element);
+  z-index: 10;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  text-align: center;
+  background: var(--color-bg-element);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border-strong);
+}
+
+.empty-icon {
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.empty-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.empty-desc {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
   line-height: 1.4;
 }
+
+.refresh-confirmation {
+  width: 240px;
+  padding: 10px;
+}
+
+.refresh-confirmation p {
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .refresh-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
 }
 </style>
