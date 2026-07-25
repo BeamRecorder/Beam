@@ -61,11 +61,14 @@ export function useProjectZoom(options: {
 
   const addZoomAtTime = async (startMs: number) => {
     if (!project.value) return;
+    if (!Number.isFinite(startMs)) return;
+    const clampedStartMs = Math.max(0, Math.min(durationMs.value, Math.round(startMs)));
+    if (clampedStartMs >= durationMs.value) return;
     const newZoom: ZoomElement = {
       id: crypto.randomUUID(),
       sessionId: editorData.value?.sessionId ?? "manual",
-      startMs,
-      endMs: Math.min(durationMs.value, startMs + 1200),
+      startMs: clampedStartMs,
+      endMs: Math.min(durationMs.value, clampedStartMs + 1200),
       depth: 2,
       mode: "manual",
       focus: { cx: 0.5, cy: 0.5 },

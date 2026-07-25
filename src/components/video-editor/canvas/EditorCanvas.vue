@@ -157,6 +157,7 @@ const compositionMedia = useCompositionMedia({
   selectedTransformLayer: () => props.selectedTransformLayer,
   webcamDraft: () => transformAndCrop.webcamDraft.value,
   isCropping: () => props.isCropping,
+  onRenderOnce: () => renderOnce(),
 });
 
 // 6. Custom Cursor & Ripples Rendering
@@ -261,14 +262,7 @@ const commitCrop = () => {
 
 function draw() {
   renderCanvas();
-  animationFrameId = null;
-  if (
-    props.isPlaying ||
-    props.selectedBackground?.kind === "video" ||
-    isTransitioningBackground.value
-  ) {
-    animationFrameId = requestAnimationFrame(draw);
-  }
+  animationFrameId = requestAnimationFrame(draw);
 }
 
 onMounted(() => {
@@ -280,7 +274,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect();
-  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
 </script>

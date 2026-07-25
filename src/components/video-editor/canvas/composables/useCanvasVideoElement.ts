@@ -39,9 +39,17 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     videoError.value = "Unable to load this video file.";
   };
 
+  const handleVideoSeeked = () => {
+    if (options.isPlaying() && videoEl.paused) {
+      videoEl.play().catch(() => undefined);
+    }
+    options.onRenderOnce();
+  };
+
   videoEl.addEventListener("loadedmetadata", handleVideoMetadata);
   videoEl.addEventListener("loadeddata", handleVideoFrameReady);
   videoEl.addEventListener("canplay", handleVideoFrameReady);
+  videoEl.addEventListener("seeked", handleVideoSeeked);
   videoEl.addEventListener("error", handleVideoError);
 
   const loadVideo = () => {
@@ -75,7 +83,7 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     () => options.currentTime(),
     (time) => {
       const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, time));
-      if (Math.abs(videoEl.currentTime - clampedTime) > 0.001) {
+      if (Math.abs(videoEl.currentTime - clampedTime) > 0.05) {
         videoEl.currentTime = clampedTime;
       }
       options.onRenderOnce();
@@ -87,6 +95,7 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     videoEl.removeEventListener("loadedmetadata", handleVideoMetadata);
     videoEl.removeEventListener("loadeddata", handleVideoFrameReady);
     videoEl.removeEventListener("canplay", handleVideoFrameReady);
+    videoEl.removeEventListener("seeked", handleVideoSeeked);
     videoEl.removeEventListener("error", handleVideoError);
     videoEl.src = "";
     videoEl.load();

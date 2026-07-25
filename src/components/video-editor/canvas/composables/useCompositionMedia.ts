@@ -18,6 +18,7 @@ export interface UseCompositionMediaOptions {
   selectedTransformLayer: () => MediaCompositionLayer | null;
   webcamDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
+  onRenderOnce?: () => void;
 }
 
 const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
@@ -59,9 +60,17 @@ export const applyClipShadow = (
 export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const compositionImages = new Map<string, HTMLImageElement>();
   const compositionVideos = new Map<string, HTMLVideoElement>();
+  const videoListeners = new Map<HTMLVideoElement, () => void>();
 
   const disposeCompositionMedia = () => {
     compositionVideos.forEach((media) => {
+      const listener = videoListeners.get(media);
+      if (listener) {
+        media.removeEventListener("seeked", listener);
+        media.removeEventListener("canplay", listener);
+        media.removeEventListener("loadeddata", listener);
+        videoListeners.delete(media);
+      }
       media.pause();
       media.removeAttribute("src");
       media.load();
@@ -78,6 +87,13 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       const asset = mediaById.get(id);
       if (asset?.kind === "video" && asset.src === media.dataset.source)
         continue;
+      const listener = videoListeners.get(media);
+      if (listener) {
+        media.removeEventListener("seeked", listener);
+        media.removeEventListener("canplay", listener);
+        media.removeEventListener("loadeddata", listener);
+        videoListeners.delete(media);
+      }
       media.pause();
       media.removeAttribute("src");
       media.load();
@@ -107,6 +123,18 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         media.preload = "auto";
         media.dataset.source = asset.src;
         media.src = asset.src;
+
+        const handleFrameReady = () => {
+          if (options.isPlaying() && media.paused) {
+            void media.play().catch(() => undefined);
+          }
+          options.onRenderOnce?.();
+        };
+        videoListeners.set(media, handleFrameReady);
+        media.addEventListener("seeked", handleFrameReady);
+        media.addEventListener("canplay", handleFrameReady);
+        media.addEventListener("loadeddata", handleFrameReady);
+
         media.load();
         compositionVideos.set(asset.id, media);
       }
@@ -156,8 +184,12 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         if (drift > 0.01) media.currentTime = localTime;
         continue;
       }
-      if (drift > 0.04) media.currentTime = localTime;
-      if (media.paused) void media.play().catch(() => undefined);
+      if (drift > 0.08) {
+        media.currentTime = localTime;
+      }
+      if (media.paused && !media.seeking) {
+        void media.play().catch(() => undefined);
+      }
     }
   };
 
@@ -238,7 +270,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
 
       if (
         asset instanceof HTMLVideoElement &&
-        asset.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+        asset.readyState < HTMLMediaElement.HAVE_METADATA
       )
         continue;
       if (
@@ -330,7 +362,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         !asset ||
         localTime < 0 ||
         (Number.isFinite(asset.duration) && localTime >= asset.duration) ||
-        asset.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+        asset.readyState < HTMLMediaElement.HAVE_METADATA
       )
         continue;
 

@@ -73,6 +73,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const resetCamera = () => {
     previousCamera = null;
     renderedCamera = null;
+    lastCameraUpdateMs = 0;
     Object.assign(cameraVelocity, createCameraVelocity());
   };
 
@@ -330,7 +331,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
     const targetCamera = { focusX, focusY, scale };
     const now = performance.now();
-    const deltaMs = Math.min(80, Math.max(1, now - lastCameraUpdateMs));
+    const deltaMs = lastCameraUpdateMs > 0 ? Math.min(64, Math.max(1, now - lastCameraUpdateMs)) : 16;
     lastCameraUpdateMs = now;
 
     if (!isPlaying || !renderedCamera) {
@@ -351,31 +352,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx.translate(-camera.focusX, -camera.focusY);
     options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
     ctx.restore();
-
-    const previous = previousCamera;
-    const cameraDistance = previous
-      ? Math.hypot(focusX - previous.focusX, focusY - previous.focusY) +
-        Math.abs(scale - previous.scale) * Math.max(dw, dh)
-      : 0;
-
-    if (
-      isPlaying &&
-      previous &&
-      cameraDistance > 0.5 &&
-      videoEl.readyState >= 1
-    ) {
-      for (let sample = 1; sample <= 3; sample += 1) {
-        const progress = sample / 4;
-        drawAtCamera(
-          {
-            focusX: previous.focusX + (focusX - previous.focusX) * progress,
-            focusY: previous.focusY + (focusY - previous.focusY) * progress,
-            scale: previous.scale + (scale - previous.scale) * progress,
-          },
-          0.09,
-        );
-      }
-    }
 
     const videoError = options.videoError();
     if (videoError) {
