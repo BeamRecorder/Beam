@@ -55,10 +55,8 @@ const emit = defineEmits<{
   (e: "unlink"): void;
   (e: "unlink-track", trackKind: string): void;
   (e: "move:clip", payload: { id: string; deltaMs: number }): void;
-  (
-    e: "trim:clip-edge",
-    payload: { id: string; edge: "start" | "end"; timeMs: number },
-  ): void;
+  (e: "trim:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
+  (e: "preview:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
 }>();
 
 const {
@@ -95,6 +93,7 @@ const {
   onTrackMouseMove,
   onTrackMouseLeave,
   onScroll,
+  beginTrimDrag,
 } = useTimelineTracks(props, emit);
 
 const selectMainVideoLayer = () => {
@@ -215,12 +214,9 @@ const selectMainVideoLayer = () => {
                   {{ layer.playbackRate.toFixed(2) }}×
                 </span>
               </span>
-              <span class="trim-handle start"></span>
-              <span class="trim-handle end"></span>
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start')"></span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end')"></span>
             </button>
-            <!-- Clip Trim Handles -->
-            <div class="trim-handle start" title="Trim start (drag)"></div>
-            <div class="trim-handle end" title="Trim end (drag)"></div>
           </div>
         </div>
 
@@ -286,8 +282,8 @@ const selectMainVideoLayer = () => {
                   {{ layer.playbackRate.toFixed(2) }}×
                 </span>
               </span>
-              <span class="trim-handle start" title="Trim start"></span>
-              <span class="trim-handle end" title="Trim end"></span>
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start')"></span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end')"></span>
             </button>
             <div
               v-if="selectedCameraLayerId"
@@ -368,9 +364,9 @@ const selectMainVideoLayer = () => {
               :title="`Zoom ${[1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2)}×`"
               @click.stop="emit('select:zoom', element.id)"
             >
-              <span class="trim-handle start"></span>
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, element.id, 'start')"></span>
               {{ [1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2) }}×
-              <span class="trim-handle end"></span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, element.id, 'end')"></span>
             </button>
           </div>
         </div>
@@ -416,9 +412,9 @@ const selectMainVideoLayer = () => {
               :style="layerStyle(layer.startMs, layer.endMs)"
               @click.stop="emit('select:composition-layer', layer.id)"
             >
-              <span class="trim-handle start"></span>
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start')"></span>
               {{ layer.name }}
-              <span class="trim-handle end"></span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end')"></span>
             </button>
           </div>
         </div>

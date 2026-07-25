@@ -328,6 +328,47 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const previewLayerEdge = (
+    layerId: string,
+    edge: "start" | "end",
+    timeMs: number,
+  ) => {
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.map((layer) => {
+        if (layer.id !== layerId) return layer;
+        if (edge === "start") {
+          const clamped = Math.max(0, Math.min(layer.endMs - 200, Math.round(timeMs)));
+          const delta = clamped - layer.startMs;
+          const sourceOffsetMs =
+            layer.kind === "video" || layer.kind === "audio"
+              ? (layer.sourceOffsetMs ?? 0) + delta
+              : undefined;
+          return {
+            ...layer,
+            startMs: clamped,
+            ...(sourceOffsetMs !== undefined ? { sourceOffsetMs } : {}),
+          };
+        } else {
+          const clamped = Math.max(layer.startMs + 200, Math.round(timeMs));
+          return {
+            ...layer,
+            endMs: clamped,
+          };
+        }
+      }),
+    };
+  };
+
+  const trimLayerEdge = async (
+    layerId: string,
+    edge: "start" | "end",
+    timeMs: number,
+  ) => {
+    previewLayerEdge(layerId, edge, timeMs);
+    await saveComposition();
+  };
+
   const selectBaseVideo = () => {
     selectedCompositionLayerId.value = BASE_VIDEO_CLIP_ID;
     activeTab.value = "clip";
@@ -543,6 +584,8 @@ export function useProjectComposition(options: {
     addCompositionElement,
     addCaptionAtTime,
     updateCaption,
+    previewLayerEdge,
+    trimLayerEdge,
     selectBaseVideo,
     updateSelectedClipAppearance,
     updateSelectedClipIsMirrored,

@@ -96,6 +96,8 @@ const {
   addCompositionElement,
   addCaptionAtTime,
   updateCaption,
+  previewLayerEdge,
+  trimLayerEdge,
   selectBaseVideo,
   updateSelectedClipAppearance,
   updateSelectedClipIsMirrored,
@@ -135,6 +137,8 @@ const {
   addZoomAtTime,
   generateZooms,
   updateZoom,
+  previewZoomEdge,
+  trimZoomEdge,
   previewZoom,
   deleteSelectedZoom,
 } = zoomState;
@@ -379,6 +383,20 @@ onBeforeUnmount(() => {
           @trim:camera="trimSelectedCamera"
           @unlink="handleUnlinkClips"
           @unlink-track="handleUnlinkTrack"
+          @trim:clip-edge="({ id, edge, timeMs }) => {
+            if (zoomElements.some(z => z.id === id)) {
+              trimZoomEdge(id, edge, timeMs);
+            } else {
+              trimLayerEdge(id, edge, timeMs);
+            }
+          }"
+          @preview:clip-edge="({ id, edge, timeMs }) => {
+            if (zoomElements.some(z => z.id === id)) {
+              previewZoomEdge(id, edge, timeMs);
+            } else {
+              previewLayerEdge(id, edge, timeMs);
+            }
+          }"
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
         />

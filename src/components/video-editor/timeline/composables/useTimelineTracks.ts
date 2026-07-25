@@ -118,12 +118,14 @@ export function useTimelineTracks(
   const visibleStartSecond = ref(0);
   const visibleEndSecond = ref(0);
   const TIMELINE_BUFFER_SECONDS = 3;
-  const visibleTimelineSeconds = computed(() => timelineSecondsInView(
-    props.duration,
-    visibleStartSecond.value,
-    visibleEndSecond.value,
-    TIMELINE_BUFFER_SECONDS,
-  ));
+  const visibleTimelineSeconds = computed(() =>
+    timelineSecondsInView(
+      props.duration,
+      visibleStartSecond.value,
+      visibleEndSecond.value,
+      TIMELINE_BUFFER_SECONDS,
+    ),
+  );
   const visibleRulerSeconds = computed(() =>
     timelineRulerSecondsInView(props.duration, visibleTimelineSeconds.value),
   );
@@ -276,13 +278,21 @@ export function useTimelineTracks(
     };
   });
 
-  const thumbnailStyle = (second: number) => timelinePercentStyle(props.duration, second);
-  const rulerMarkerStyle = (second: number) => ({ left: timelinePercentStyle(props.duration, second).left });
+  const thumbnailStyle = (second: number) =>
+    timelinePercentStyle(props.duration, second);
+  const rulerMarkerStyle = (second: number) => ({
+    left: timelinePercentStyle(props.duration, second).left,
+  });
   const cameraThumbnailSeconds = (layer: { startMs: number; endMs: number }) =>
-    visibleTimelineSeconds.value.filter((second) =>
-      second >= Math.floor(layer.startMs / 1000) && second < Math.ceil(layer.endMs / 1000),
+    visibleTimelineSeconds.value.filter(
+      (second) =>
+        second >= Math.floor(layer.startMs / 1000) &&
+        second < Math.ceil(layer.endMs / 1000),
     );
-  const cameraThumbnailStyle = (second: number, layer: { startMs: number; endMs: number }) => {
+  const cameraThumbnailStyle = (
+    second: number,
+    layer: { startMs: number; endMs: number },
+  ) => {
     const durationMs = Math.max(1, layer.endMs - layer.startMs);
     return {
       left: `${((second * 1000 - layer.startMs) / durationMs) * 100}%`,
@@ -522,6 +532,65 @@ export function useTimelineTracks(
     }
   };
 
+  const isTrimming = ref(false);
+
+  const beginTrimDrag = (
+    e: PointerEvent,
+    id: string,
+    edge: "start" | "end",
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    isTrimming.value = true;
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+
+    let lastTimeMs: number | null = null;
+    let pendingRaf: number | null = null;
+
+    const getTimeMsFromEvent = (moveEv: PointerEvent) => {
+      if (!ticksAreaRef.value || !props.duration) return 0;
+      const rect = ticksAreaRef.value.getBoundingClientRect();
+      if (rect.width <= 0) return 0;
+      const mouseX = moveEv.clientX - rect.left;
+      const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+      return Math.round(percentage * props.duration * 1000);
+    };
+
+    const onPointerMove = (moveEv: PointerEvent) => {
+      const timeMs = getTimeMsFromEvent(moveEv);
+      lastTimeMs = timeMs;
+      if (pendingRaf !== null) return;
+      pendingRaf = requestAnimationFrame(() => {
+        pendingRaf = null;
+        if (lastTimeMs !== null) {
+          emit("preview:clip-edge", { id, edge, timeMs: lastTimeMs });
+        }
+      });
+    };
+
+    const onPointerUp = (upEv: PointerEvent) => {
+      isTrimming.value = false;
+      if (pendingRaf !== null) {
+        cancelAnimationFrame(pendingRaf);
+        pendingRaf = null;
+      }
+      const finalTimeMs = lastTimeMs ?? getTimeMsFromEvent(upEv);
+      emit("trim:clip-edge", { id, edge, timeMs: finalTimeMs });
+
+      if (target.hasPointerCapture(upEv.pointerId)) {
+        target.releasePointerCapture(upEv.pointerId);
+      }
+      target.removeEventListener("pointermove", onPointerMove as EventListener);
+      target.removeEventListener("pointerup", onPointerUp as EventListener);
+      target.removeEventListener("pointercancel", onPointerUp as EventListener);
+    };
+
+    target.addEventListener("pointermove", onPointerMove as EventListener);
+    target.addEventListener("pointerup", onPointerUp as EventListener);
+    target.addEventListener("pointercancel", onPointerUp as EventListener);
+  };
+
   return {
     captionLayers,
     imageLayers,
@@ -556,5 +625,6 @@ export function useTimelineTracks(
     onTrackMouseMove,
     onTrackMouseLeave,
     onScroll,
+    beginTrimDrag,
   };
 }

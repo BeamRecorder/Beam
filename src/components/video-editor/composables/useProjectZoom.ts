@@ -141,6 +141,32 @@ export function useProjectZoom(options: {
     );
   };
 
+  const previewZoomEdge = (
+    id: string,
+    edge: "start" | "end",
+    timeMs: number,
+  ) => {
+    zoomElements.value = zoomElements.value.map((element) => {
+      if (element.id !== id) return element;
+      if (edge === "start") {
+        const clamped = Math.max(0, Math.min(element.endMs - 200, Math.round(timeMs)));
+        return { ...element, startMs: clamped };
+      } else {
+        const clamped = Math.max(element.startMs + 200, Math.round(timeMs));
+        return { ...element, endMs: clamped };
+      }
+    });
+  };
+
+  const trimZoomEdge = async (
+    id: string,
+    edge: "start" | "end",
+    timeMs: number,
+  ) => {
+    previewZoomEdge(id, edge, timeMs);
+    await saveZoomState();
+  };
+
   const previewZoom = (next: ZoomElement) => {
     if (next.startMs < 0 || next.endMs <= next.startMs) return;
     zoomElements.value = zoomElements.value.map((element) =>
@@ -170,6 +196,8 @@ export function useProjectZoom(options: {
     addZoomAtTime,
     generateZooms,
     updateZoom,
+    previewZoomEdge,
+    trimZoomEdge,
     previewZoom,
     deleteSelectedZoom,
   };
