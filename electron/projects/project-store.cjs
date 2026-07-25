@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const { pathToFileURL } = require('url')
 const { createCompositionStore, normalizeComposition } = require('./composition-store.cjs')
+const { kindFor } = require('../backgrounds/background-library.cjs')
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
@@ -104,7 +105,9 @@ function createProjectStore(root) {
       selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
       background: next.background && typeof next.background === 'object' ? next.background : null,
       blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
-      importedBackgrounds: [],
+      importedBackgrounds: Array.isArray(next.importedBackgrounds)
+        ? next.importedBackgrounds.filter((item) => item && typeof item === 'object' && typeof item.id === 'string' && typeof item.path === 'string')
+        : [],
       videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,
       systemAudioEnabled: typeof next.systemAudioEnabled === 'boolean' ? next.systemAudioEnabled : true,
       micAudioEnabled: typeof next.micAudioEnabled === 'boolean' ? next.micAudioEnabled : true,
@@ -182,6 +185,30 @@ function createProjectStore(root) {
       try { fs.renameSync(directory, target); delete manifest.pendingDirectorySlug; writeManifest(target, manifest) } catch {}
     }
   }
+  const importBackground = (id, input = {}) => {
+    const directory = directoryFor(id)
+    const source = input?.source
+    if (typeof source !== 'string' || !source) throw new Error('Fond importé invalide')
+    let sourceStats
+    try { sourceStats = fs.statSync(source) } catch { throw new Error('Fond importé invalide') }
+    if (!sourceStats.isFile()) throw new Error('Fond importé invalide')
+    const extension = path.extname(source).toLowerCase()
+    const kind = kindFor(source)
+    if (!kind) throw new Error('Type de fond non autorisé')
+    const targetDirectory = path.join(directory, 'backgrounds')
+    fs.mkdirSync(targetDirectory, { recursive: true })
+    const fileName = `${randomUUID()}${extension}`
+    const targetPath = path.join(targetDirectory, fileName)
+    fs.copyFileSync(source, targetPath)
+    return {
+      id: `project-bg:${fileName}`,
+      name: path.basename(source, extension).slice(0, 160),
+      fileName,
+      extension: extension.slice(1),
+      kind,
+      path: pathToFileURL(targetPath).href,
+    }
+  }
   applyPendingRenames()
   return {
     list: () => projectDirectories().map((directory) => { try { const manifest = readManifest(directory); return summary(directory, manifest, manifest.projectId) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
@@ -189,6 +216,7 @@ function createProjectStore(root) {
     saveZoom: (id, zoom) => { const directory = directoryFor(id); const manifest = readManifest(directory); const state = zoomState(zoom); manifest.editor = { ...(manifest.editor || {}), zoom: state }; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return state },
     editorState,
     saveEditorState,
+    importBackground,
     create: (options = {}) => { const id = randomUUID(); const now = new Date().toISOString(); const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id); fs.mkdirSync(root, { recursive: true }); const directory = availableDirectory(name); fs.mkdirSync(directory); const manifest = { schemaVersion: 1, projectId: id, name, createdAtUtc: now, updatedAtUtc: now, sessions: [] }; writeManifest(directory, manifest); return summary(directory, manifest, id) },
     rename: (id, name) => { const directory = directoryFor(id); const manifest = readManifest(directory); const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''; if (!nextName) throw new Error('Le nom du projet ne peut pas être vide'); const target = availableDirectory(nextName, directory); manifest.name = nextName; manifest.updatedAtUtc = new Date().toISOString(); try { fs.renameSync(directory, target); delete manifest.pendingDirectorySlug; writeManifest(target, manifest); return summary(target, manifest, id) } catch { manifest.pendingDirectorySlug = slugify(nextName); writeManifest(directory, manifest); return summary(directory, manifest, id) } },
     saveThumbnail: (id, dataUrl) => {
