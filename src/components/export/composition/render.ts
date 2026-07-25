@@ -16,9 +16,9 @@ export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
 
 function drawSnapshotBackground(ctx: CanvasRenderingContext2D, snapshot: CompositionSnapshot, background: CanvasImageSource | null | undefined) {
   const { width, height } = snapshot.canvas; const value = snapshot.background;
-  if (!value) return;
-  if (value.kind === 'color') { ctx.fillStyle = value.color; ctx.fillRect(0, 0, width, height); return; }
-  if (value.kind === 'gradient') {
+  if (!value && !background) return;
+  if (value?.kind === 'color') { ctx.fillStyle = value.color; ctx.fillRect(0, 0, width, height); return; }
+  if (value?.kind === 'gradient') {
     const gradient = value.gradient.type === 'radial' ? ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) / 2) : (() => { const radians = (value.gradient.angle - 90) * Math.PI / 180; const dx = Math.cos(radians) * width / 2; const dy = Math.sin(radians) * height / 2; return ctx.createLinearGradient(width / 2 - dx, height / 2 - dy, width / 2 + dx, height / 2 + dy); })();
     value.gradient.stops.forEach((stop) => gradient.addColorStop(stop.position, `${stop.color}${Math.round(stop.alpha * 255).toString(16).padStart(2, '0')}`)); ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height); return;
   }

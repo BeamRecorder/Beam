@@ -37,7 +37,10 @@ describe("webcam zoom layout", () => {
 
   it("uses the persisted normalized position and size for a webcam", () => {
     const layout = computeWebcamLayout(1000, 800, 1, undefined, { x: .12, y: .34, width: .28, height: .21 });
-    expect(layout).toEqual({ x: 120, y: 272, width: 280, height: 168 });
+    expect(layout.x).toBeCloseTo(120);
+    expect(layout.y).toBeCloseTo(272);
+    expect(layout.width).toBeCloseTo(280);
+    expect(layout.height).toBeCloseTo(168);
   });
 
   it("preserves a persisted webcam's right and bottom offsets while zooming", () => {

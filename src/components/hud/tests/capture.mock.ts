@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi } from "vitest";
 
 export const captureMock = {
   discover: vi.fn(),
@@ -12,4 +12,31 @@ export const captureMock = {
   createProject: vi.fn(),
   renameProject: vi.fn(),
   deleteProject: vi.fn(),
-}
+  configureCameraOverlay: vi.fn(),
+  setCameraOverlayActive: vi.fn(),
+  getCameraOverlayState: vi.fn().mockResolvedValue(null),
+  onCameraOverlayState: vi.fn().mockReturnValue(() => undefined),
+  onCameraOverlayHover: vi.fn().mockReturnValue(() => undefined),
+  onCameraShadow: vi.fn().mockReturnValue(() => undefined),
+  getPreferences: vi.fn().mockResolvedValue({
+    schemaVersion: 2,
+    theme: "system",
+    recordingBar: { visibility: "always" },
+    devices: {},
+    shortcuts: {},
+    backgroundPresets: { colors: [], gradients: [] },
+    extras: {},
+  }),
+  updatePreferences: vi.fn().mockImplementation(async (patch) => ({
+    schemaVersion: 2,
+    theme: patch.theme || "system",
+    recordingBar: { visibility: "always" },
+    devices: {},
+    shortcuts: {},
+    backgroundPresets: { colors: [], gradients: [] },
+    extras: {},
+  })),
+  resetPreferences: vi.fn(),
+  onPreferencesChanged: vi.fn().mockReturnValue(() => undefined),
+  onPreferenceShortcut: vi.fn().mockReturnValue(() => undefined),
+};

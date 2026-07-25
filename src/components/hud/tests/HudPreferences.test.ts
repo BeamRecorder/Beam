@@ -1,7 +1,9 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import HudPreferences from '../HudPreferences.vue'
+
+vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }))
 
 const Switch = { template: '<button class="quality" @click="$emit(\'update:modelValue\', false)" />' }
 const Select = { template: '<button class="countdown" @click="$emit(\'update:modelValue\', 10)" />' }

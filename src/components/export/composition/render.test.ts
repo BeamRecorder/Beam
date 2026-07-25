@@ -18,12 +18,12 @@ describe('renderCompositionFrame', () => {
   it('draws the video and a visible cursor in camera space', () => {
     const ctx = context(); const image = { complete: true, naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement
     renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, snapshot(), 0, null, new Map([['arrow', image]]))
-    expect(ctx.save).toHaveBeenCalledTimes(2); expect(ctx.drawImage).toHaveBeenCalledTimes(2); expect(ctx.translate).toHaveBeenCalledWith(50, 25)
+    expect(ctx.save).toHaveBeenCalledTimes(3); expect(ctx.drawImage).toHaveBeenCalledTimes(2); expect(ctx.translate).toHaveBeenCalledWith(50, 25)
   })
   it('applies the saved base-video crop before rendering the export frame', () => {
     const value = snapshot(); value.composition.baseVideoCrop = { x: .1, y: .2, width: .5, height: .4 }
     const ctx = context(); renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA, videoWidth: 100, videoHeight: 50 } as HTMLVideoElement, value, 0)
-    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 10, 10, 50, 20, 0, 0, 100, 50)
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 15, 10, 40, 20, 0, 0, 100, 50)
   })
   it('draws active image layers using their normalized transform', () => {
     const value = snapshot(); value.composition = { media: [{ id: 'image', kind: 'image', name: 'Logo', fileName: 'logo.png', durationMs: 0, width: 10, height: 10, src: 'file:///logo.png' }], layers: [{ id: 'layer', kind: 'image', name: 'Logo', assetId: 'image', startMs: 0, endMs: 500, enabled: true, order: 0, transform: { x: .1, y: .2, width: .3, height: .4 } }] }

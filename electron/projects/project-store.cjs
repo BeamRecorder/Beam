@@ -106,7 +106,7 @@ function createProjectStore(root) {
       background: next.background && typeof next.background === 'object' ? next.background : null,
       blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
       importedBackgrounds: Array.isArray(next.importedBackgrounds)
-        ? next.importedBackgrounds.filter((item) => item && typeof item === 'object' && typeof item.id === 'string' && typeof item.path === 'string')
+        ? next.importedBackgrounds.filter((item) => item && typeof item === 'object' && typeof item.id === 'string' && item.id.startsWith('project-bg:') && typeof item.path === 'string')
         : [],
       videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,
       systemAudioEnabled: typeof next.systemAudioEnabled === 'boolean' ? next.systemAudioEnabled : true,
