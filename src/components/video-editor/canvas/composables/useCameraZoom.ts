@@ -321,29 +321,50 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
       if (videoEl.readyState >= 1) {
         ctx.save();
-        if (outputCanvas.showBackground && baseAppearance?.shadowSize !== 'none') {
-          const shadowSize = { none: 0, sm: 12, md: 24, lg: 36 }[baseAppearance?.shadowSize ?? 'md'] ?? 24;
-          ctx.shadowColor = baseAppearance?.shadowColor ?? "rgba(0, 0, 0, .35)";
-          ctx.shadowBlur = shadowSize;
-          ctx.shadowOffsetY = shadowSize * 0.4;
-        }
-        if (baseCornerRadius > 0 || outputCanvas.showBackground) {
+
+        const shadowSize = baseAppearance?.shadowSize ?? 'md';
+        const blur = shadowSize !== 'none' ? ({ sm: 12, md: 24, lg: 36 } as Record<string, number>)[shadowSize] ?? 24 : 0;
+        const vx = dx + positionedMedia.x;
+        const vy = dy + positionedMedia.y;
+        const vw = positionedMedia.width;
+        const vh = positionedMedia.height;
+
+        // Build the clip path
+        ctx.beginPath();
+        ctx.roundRect(vx, vy, vw, vh, baseCornerRadius);
+
+        if (blur > 0) {
+          // Canvas shadows only render on fill/stroke, not on drawImage.
+          // Strategy: fill the shape solid (triggers shadow around it),
+          // then clear shadow and draw the video clipped over it.
+          const direction = baseAppearance?.shadowDirection ?? 'bottom';
+          ctx.shadowColor = baseAppearance?.shadowColor ?? "rgba(0, 0, 0, 0.5)";
+          ctx.shadowBlur = blur;
+          ctx.shadowOffsetX =
+            direction === 'top-left' ? -blur * 0.4
+            : direction === 'bottom-right' ? blur * 0.4
+            : 0;
+          ctx.shadowOffsetY =
+            direction === 'top-left' ? -blur * 0.4
+            : direction === 'all' ? 0
+            : blur * 0.4;
+          // Opaque fill → shadow is rendered at full opacity around the shape
+          ctx.fillStyle = "rgb(0, 0, 0)";
+          ctx.fill();
+          // Clear shadow so video draw isn't also shadowed
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+          // Re-establish the clip path (fill() consumed the current path)
           ctx.beginPath();
-          ctx.roundRect(
-            dx + positionedMedia.x,
-            dy + positionedMedia.y,
-            positionedMedia.width,
-            positionedMedia.height,
-            baseCornerRadius,
-          );
-          if (outputCanvas.showBackground) {
-            ctx.fillStyle = "rgba(0, 0, 0, .01)";
-            ctx.fill();
-          }
-          ctx.clip();
+          ctx.roundRect(vx, vy, vw, vh, baseCornerRadius);
         }
+
+        ctx.clip();
+
         if (isBaseVideoMirrored) {
-          ctx.translate((dx + positionedMedia.x) * 2 + positionedMedia.width, 0);
+          ctx.translate(vx * 2 + vw, 0);
           ctx.scale(-1, 1);
         }
         ctx.drawImage(
@@ -352,10 +373,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           source.y,
           source.width,
           source.height,
-          dx + positionedMedia.x,
-          dy + positionedMedia.y,
-          positionedMedia.width,
-          positionedMedia.height,
+          vx,
+          vy,
+          vw,
+          vh,
         );
         ctx.restore();
       }
