@@ -185,6 +185,17 @@ export function useProjectZoom(options: {
     );
   };
 
+  const previewMoveZoom = (id: string, startMs: number, endMs: number) => {
+    zoomElements.value = zoomElements.value.map((element) =>
+      element.id === id ? { ...element, startMs, endMs } : element,
+    );
+  };
+
+  const moveZoom = async (id: string, startMs: number, endMs: number) => {
+    previewMoveZoom(id, startMs, endMs);
+    await saveZoomState();
+  };
+
   return {
     zoomElements,
     generatedSessions,
@@ -198,6 +209,8 @@ export function useProjectZoom(options: {
     updateZoom,
     previewZoomEdge,
     trimZoomEdge,
+    previewMoveZoom,
+    moveZoom,
     previewZoom,
     deleteSelectedZoom,
   };

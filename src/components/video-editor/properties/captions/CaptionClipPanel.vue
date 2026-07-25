@@ -24,7 +24,7 @@ const captionStyle = computed(() => ({
   shadowBlur: 0,
   shadowDirection: 'bottom-right',
   placement: 'bottom',
-  boxColor: '#ffffff',
+  boxColor: '#000000',
   boxPadding: 6,
   boxRadius: 4,
   ...props.layer?.caption?.style,
@@ -144,7 +144,7 @@ const shadowDirectionOptions = [
           <div class="field-group">
             <label class="field-label">Outline Color</label>
             <ColorPicker
-              :model-value="captionStyle.boxColor || '#ffffff'"
+              :model-value="captionStyle.boxColor || '#000000'"
               @update:model-value="updateStyle('boxColor', $event)"
             />
           </div>

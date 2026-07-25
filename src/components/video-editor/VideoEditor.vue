@@ -99,6 +99,8 @@ const {
   deleteSelectedCompositionLayer,
   previewLayerEdge,
   trimLayerEdge,
+  previewMoveLayer,
+  moveLayer,
   selectBaseVideo,
   updateSelectedClipAppearance,
   updateSelectedClipIsMirrored,
@@ -140,6 +142,8 @@ const {
   updateZoom,
   previewZoomEdge,
   trimZoomEdge,
+  previewMoveZoom,
+  moveZoom,
   previewZoom,
   deleteSelectedZoom,
 } = zoomState;
@@ -472,6 +476,20 @@ onBeforeUnmount(() => {
               previewZoomEdge(id, edge, timeMs);
             } else {
               previewLayerEdge(id, edge, timeMs);
+            }
+          }"
+          @preview:move-clip="({ id, startMs, endMs }) => {
+            if (zoomElements.some(z => z.id === id)) {
+              previewMoveZoom(id, startMs, endMs);
+            } else {
+              previewMoveLayer(id, startMs, endMs);
+            }
+          }"
+          @move:clip-position="({ id, startMs, endMs }) => {
+            if (zoomElements.some(z => z.id === id)) {
+              moveZoom(id, startMs, endMs);
+            } else {
+              moveLayer(id, startMs, endMs);
             }
           }"
           @add:zoom="addZoomAtTime"

@@ -31,7 +31,7 @@ function caption(value) {
     style: {
       color: typeof style.color === 'string' ? style.color : '#ffffff',
       fontSize: finite(style.fontSize) ? style.fontSize : 36,
-      boxColor: typeof style.boxColor === 'string' ? style.boxColor : '#ffffff',
+      boxColor: typeof style.boxColor === 'string' ? style.boxColor : '#000000',
       boxPadding: finite(style.boxPadding) ? style.boxPadding : 6,
       boxRadius: finite(style.boxRadius) ? style.boxRadius : 4,
       shadowColor: typeof style.shadowColor === 'string' ? style.shadowColor : 'rgba(0, 0, 0, 0.85)',

@@ -45,6 +45,8 @@ const emit = defineEmits<{
   (e: 'unlink-track', trackKind: string): void;
   (e: 'trim:clip-edge', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (e: 'preview:clip-edge', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
+  (e: 'preview:move-clip', payload: { id: string; startMs: number; endMs: number }): void;
+  (e: 'move:clip-position', payload: { id: string; startMs: number; endMs: number }): void;
   (e: 'add:zoom', timeMs: number): void;
   (e: 'add:caption', timeMs: number): void;
 }>();
@@ -115,6 +117,8 @@ onUnmounted(() => {
       @unlink-track="emit('unlink-track', $event)"
       @trim:clip-edge="emit('trim:clip-edge', $event)"
       @preview:clip-edge="emit('preview:clip-edge', $event)"
+      @preview:move-clip="emit('preview:move-clip', $event)"
+      @move:clip-position="emit('move:clip-position', $event)"
       @add:zoom="emit('add:zoom', $event)"
       @add:caption="emit('add:caption', $event)"
     />

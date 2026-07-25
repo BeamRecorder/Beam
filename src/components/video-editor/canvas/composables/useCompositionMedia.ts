@@ -296,7 +296,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
             Math.max(1, mainVideoWidth || 1920),
         );
 
-        const outlineColor = style.boxColor ?? "#ffffff";
+        const outlineColor = style.boxColor ?? "#000000";
 
         // 1. Configure Drop Shadow if enabled
         const hasShadow = Boolean(style.shadowBlur && style.shadowBlur > 0);

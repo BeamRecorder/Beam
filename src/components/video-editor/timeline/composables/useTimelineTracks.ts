@@ -620,6 +620,80 @@ export function useTimelineTracks(
     target.addEventListener("pointercancel", onPointerUp as EventListener);
   };
 
+  const beginMoveDrag = (
+    e: PointerEvent,
+    id: string,
+    clipStartMs: number,
+    clipEndMs: number,
+  ) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.closest(".trim-handle") ||
+      target.closest(".camera-actions")
+    ) {
+      return;
+    }
+
+    e.stopPropagation();
+    e.preventDefault();
+
+    const clipDuration = clipEndMs - clipStartMs;
+    const pointerTarget = e.currentTarget as HTMLElement;
+    pointerTarget.setPointerCapture(e.pointerId);
+
+    const getTimeMsFromEvent = (moveEv: PointerEvent) => {
+      if (!ticksAreaRef.value || !props.duration) return 0;
+      const rect = ticksAreaRef.value.getBoundingClientRect();
+      if (rect.width <= 0) return 0;
+      const mouseX = moveEv.clientX - rect.left;
+      const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+      return Math.round(percentage * props.duration * 1000);
+    };
+
+    const initialMouseTimeMs = getTimeMsFromEvent(e);
+    const mouseOffsetMs = initialMouseTimeMs - clipStartMs;
+
+    let lastStartMs = clipStartMs;
+    let pendingRaf: number | null = null;
+
+    const onPointerMove = (moveEv: PointerEvent) => {
+      const currentMouseTimeMs = getTimeMsFromEvent(moveEv);
+      let newStartMs = currentMouseTimeMs - mouseOffsetMs;
+      const maxStartMs = Math.max(0, Math.round(props.duration * 1000) - clipDuration);
+      newStartMs = Math.max(0, Math.min(maxStartMs, newStartMs));
+      const newEndMs = newStartMs + clipDuration;
+
+      lastStartMs = newStartMs;
+
+      if (pendingRaf !== null) return;
+      pendingRaf = requestAnimationFrame(() => {
+        pendingRaf = null;
+        emit("preview:move-clip", { id, startMs: newStartMs, endMs: newEndMs });
+      });
+    };
+
+    const onPointerUp = (upEv: PointerEvent) => {
+      if (pendingRaf !== null) {
+        cancelAnimationFrame(pendingRaf);
+        pendingRaf = null;
+      }
+      const finalStartMs = lastStartMs;
+      const finalEndMs = finalStartMs + clipDuration;
+      emit("move:clip-position", { id, startMs: finalStartMs, endMs: finalEndMs });
+
+      if (pointerTarget.hasPointerCapture(upEv.pointerId)) {
+        pointerTarget.releasePointerCapture(upEv.pointerId);
+      }
+      pointerTarget.removeEventListener("pointermove", onPointerMove as EventListener);
+      pointerTarget.removeEventListener("pointerup", onPointerUp as EventListener);
+      pointerTarget.removeEventListener("pointercancel", onPointerUp as EventListener);
+    };
+
+    pointerTarget.addEventListener("pointermove", onPointerMove as EventListener);
+    pointerTarget.addEventListener("pointerup", onPointerUp as EventListener);
+    pointerTarget.addEventListener("pointercancel", onPointerUp as EventListener);
+  };
+
   return {
     captionLayers,
     imageLayers,
@@ -655,6 +729,7 @@ export function useTimelineTracks(
     onTrackMouseLeave,
     onScroll,
     beginTrimDrag,
+    beginMoveDrag,
     activeTrimState,
     formatTrimTime,
   };

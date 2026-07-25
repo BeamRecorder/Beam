@@ -576,6 +576,20 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const previewMoveLayer = (id: string, startMs: number, endMs: number) => {
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.map((layer) =>
+        layer.id === id ? { ...layer, startMs, endMs } : layer,
+      ),
+    };
+  };
+
+  const moveLayer = async (id: string, startMs: number, endMs: number) => {
+    previewMoveLayer(id, startMs, endMs);
+    await saveComposition();
+  };
+
   return {
     composition,
     selectedCompositionLayerId,
@@ -596,6 +610,8 @@ export function useProjectComposition(options: {
     deleteSelectedCompositionLayer,
     previewLayerEdge,
     trimLayerEdge,
+    previewMoveLayer,
+    moveLayer,
     selectBaseVideo,
     updateSelectedClipAppearance,
     updateSelectedClipIsMirrored,

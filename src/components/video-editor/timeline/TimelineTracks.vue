@@ -56,6 +56,8 @@ const emit = defineEmits<{
   (e: "unlink"): void;
   (e: "unlink-track", trackKind: string): void;
   (e: "move:clip", payload: { id: string; deltaMs: number }): void;
+  (e: "preview:move-clip", payload: { id: string; startMs: number; endMs: number }): void;
+  (e: "move:clip-position", payload: { id: string; startMs: number; endMs: number }): void;
   (e: "trim:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
   (e: "preview:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
 }>();
@@ -95,6 +97,7 @@ const {
   onTrackMouseLeave,
   onScroll,
   beginTrimDrag,
+  beginMoveDrag,
   activeTrimState,
   formatTrimTime,
 } = useTimelineTracks(props, emit);
@@ -270,6 +273,7 @@ const selectMainVideoLayer = () => {
               }"
               :style="layerStyle(layer.startMs, layer.endMs)"
               @click.stop="emit('select:camera-layer', layer.id)"
+              @pointerdown="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)"
             >
               <div class="thumbnails-track">
                 <div
@@ -382,6 +386,7 @@ const selectMainVideoLayer = () => {
               :style="zoomElementStyle(element)"
               :title="`Zoom ${[1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2)}×`"
               @click.stop="emit('select:zoom', element.id)"
+              @pointerdown="beginMoveDrag($event, element.id, element.startMs, element.endMs)"
             >
               <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, element.id, 'start', element.startMs, element.endMs)">
                 <span v-if="activeTrimState?.id === element.id && activeTrimState.edge === 'start'" class="trim-side-badge">
@@ -440,6 +445,7 @@ const selectMainVideoLayer = () => {
               :class="{ selected: layer.id === selectedCompositionLayerId }"
               :style="layerStyle(layer.startMs, layer.endMs)"
               @click.stop="emit('select:composition-layer', layer.id)"
+              @pointerdown="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)"
             >
               <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
                 <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'start'" class="trim-side-badge">
