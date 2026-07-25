@@ -135,6 +135,7 @@ const {
   addZoomAtTime,
   generateZooms,
   updateZoom,
+  previewZoom,
   deleteSelectedZoom,
 } = zoomState;
 
@@ -326,6 +327,7 @@ onBeforeUnmount(() => {
           :selected-transform-layer="selectedTransformLayer"
           :is-cropping="isCropping"
           @update:zoom="updateZoom"
+          @preview:zoom="previewZoom"
           @select:transform-layer="selectedCompositionLayerId = $event; activeTab = 'clip'"
           @select:base-video="selectBaseVideo()"
           @select:canvas="selectedCompositionLayerId = null; activeTab = 'canvas'; isCropping = false"

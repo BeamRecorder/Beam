@@ -51,6 +51,7 @@ const emit = defineEmits<{
   (e: "update:currentTime", value: number): void;
   (e: "duration-change", value: number): void;
   (e: "update:zoom", value: ZoomElement): void;
+  (e: "preview:zoom", value: ZoomElement): void;
   (e: 'select:transform-layer', layerId: string): void;
   (e: 'deselect:transform-layer'): void;
   (e: 'deselect:zoom'): void;
@@ -142,6 +143,7 @@ const cameraZoom = useCameraZoom({
   drawBackground,
   videoError: () => videoError.value,
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
+  onPreviewZoom: (zoom) => emit('preview:zoom', zoom),
   onSelectBaseVideo: () => emit('select:base-video'),
   onSelectCanvas: () => emit('select:canvas'),
   onDeselectTransformLayer: () => emit('deselect:transform-layer'),
@@ -391,13 +393,16 @@ onUnmounted(() => {
 
 .zoom-selection-box {
   position: absolute;
+  top: 0;
+  left: 0;
   z-index: 2;
   border: 2px dashed rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
   pointer-events: none;
   border-radius: var(--radius-md);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  box-sizing: border-box;
+  contain: layout style;
 }
 
 .zoom-selection-box.locked {

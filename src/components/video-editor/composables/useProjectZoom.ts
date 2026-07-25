@@ -141,6 +141,13 @@ export function useProjectZoom(options: {
     );
   };
 
+  const previewZoom = (next: ZoomElement) => {
+    if (next.startMs < 0 || next.endMs <= next.startMs) return;
+    zoomElements.value = zoomElements.value.map((element) =>
+      element.id === next.id ? next : element,
+    );
+  };
+
   const deleteSelectedZoom = () => {
     if (!selectedZoomId.value) return;
     zoomElements.value = zoomElements.value.filter(
@@ -163,6 +170,7 @@ export function useProjectZoom(options: {
     addZoomAtTime,
     generateZooms,
     updateZoom,
+    previewZoom,
     deleteSelectedZoom,
   };
 }

@@ -50,6 +50,7 @@ export interface UseCameraZoomOptions {
   ) => void;
   videoError: () => string | null;
   onUpdateZoom: (zoom: ZoomElement) => void;
+  onPreviewZoom?: (zoom: ZoomElement) => void;
   onSelectBaseVideo: () => void;
   onSelectCanvas: () => void;
   onDeselectTransformLayer: () => void;
@@ -115,14 +116,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const zoomedHeight = unzoomedTargetHeight * scale;
 
     return {
-      left: `${zoomedLeft}px`,
-      top: `${zoomedTop}px`,
       width: `${zoomedWidth}px`,
       height: `${zoomedHeight}px`,
+      transform: `translate3d(${zoomedLeft}px, ${zoomedTop}px, 0)`,
+      willChange: isMovingSelection.value ? "transform" : "auto",
     };
   });
 
-  const updateSelectedFocus = (event: PointerEvent) => {
+  const updateSelectedFocus = (event: PointerEvent, isFinal = false) => {
     const canvas = options.canvasRef();
     const bounds = videoWindowBounds.value;
     const selectedZoom = options.selectedZoom();
@@ -143,7 +144,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
     const cx = Math.min(1, Math.max(0, (unzoomedX - bounds.dx) / bounds.dw));
     const cy = Math.min(1, Math.max(0, (unzoomedY - bounds.dy) / bounds.dh));
-    options.onUpdateZoom({ ...selectedZoom, focus: { cx, cy } });
+    const updatedZoom = { ...selectedZoom, focus: { cx, cy } };
+    if (isFinal) {
+      options.onUpdateZoom(updatedZoom);
+    } else {
+      (options.onPreviewZoom ?? options.onUpdateZoom)(updatedZoom);
+    }
   };
 
   const beginSelectionMove = (event: PointerEvent) => {
@@ -183,14 +189,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (selectedZoom?.mode !== "manual") return;
     isMovingSelection.value = true;
     options.canvasRef()?.setPointerCapture(event.pointerId);
-    updateSelectedFocus(event);
+    updateSelectedFocus(event, false);
   };
 
   const moveSelection = (event: PointerEvent) => {
-    if (isMovingSelection.value) updateSelectedFocus(event);
+    if (isMovingSelection.value) updateSelectedFocus(event, false);
   };
 
   const endSelectionMove = (event: PointerEvent) => {
+    if (isMovingSelection.value) {
+      updateSelectedFocus(event, true);
+    }
     isMovingSelection.value = false;
     const canvas = options.canvasRef();
     if (canvas?.hasPointerCapture(event.pointerId)) {
