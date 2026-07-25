@@ -99,6 +99,7 @@ const {
   selectBaseVideo,
   updateSelectedClipAppearance,
   updateSelectedWebcamTransform,
+  previewSelectedWebcamTransform,
   updateSelectedMediaCrop,
   handleUnlinkClips,
   handleUnlinkTrack,
@@ -116,6 +117,7 @@ const selectedTransformLayer = computed<MediaCompositionLayer | null>(() => {
       endMs: duration.value * 1000,
       enabled: true,
       order: 0,
+      transform: composition.value.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 },
       crop: composition.value.baseVideoCrop ?? { x: 0, y: 0, width: 1, height: 1 },
     };
   }
@@ -274,6 +276,7 @@ onBeforeUnmount(() => {
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: $event as 'none' | 'sm' | 'md' | 'lg' | 'full' })"
           @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
           @update:clip-transform="updateSelectedWebcamTransform"
+          @reset:clip-transform="updateSelectedWebcamTransform({ x: 0, y: 0, width: 1, height: 1 })"
         />
 
         <div class="canvas-column">
@@ -311,6 +314,7 @@ onBeforeUnmount(() => {
           @done:crop="isCropping = false"
           @deselect:zoom="selectedZoomId = null"
           @update:layer-transform="updateSelectedWebcamTransform($event)"
+          @preview:layer-transform="previewSelectedWebcamTransform($event)"
           @update:layer-crop="updateSelectedMediaCrop($event)"
           @duration-change="duration = $event"
         />

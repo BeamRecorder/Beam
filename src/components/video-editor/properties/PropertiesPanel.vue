@@ -105,6 +105,7 @@ const emit = defineEmits<{
     shadow: { size: string; color?: string; direction?: string },
   ): void;
   (e: "update:clip-transform", transform: NormalizedTransform): void;
+  (e: "reset:clip-transform"): void;
   (e: "unlink-clip"): void;
   (e: "delete-clip"): void;
   (e: "split-clip"): void;
@@ -138,6 +139,7 @@ const emit = defineEmits<{
         @update:corner-radius="emit('update:clip-corner-radius', $event)"
         @update:shadow="emit('update:clip-shadow', $event)"
         @update:clip-transform="emit('update:clip-transform', $event)"
+        @reset:clip-transform="emit('reset:clip-transform')"
         @unlink="emit('unlink-clip')"
         @delete="emit('delete-clip')"
         @split="emit('split-clip')"

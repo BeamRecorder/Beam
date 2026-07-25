@@ -15,6 +15,7 @@ import {
   MoveDownRight,
   MoveUpLeft,
   CircleDot,
+  RotateCcw,
 } from "@lucide/vue";
 import type { NormalizedTransform } from "../../composition/composition-types";
 
@@ -45,6 +46,7 @@ const emit = defineEmits<{
     shadow: { size: string; color?: string; direction?: string },
   ): void;
   (e: "update:clipTransform", transform: NormalizedTransform): void;
+  (e: "reset:clipTransform"): void;
   (e: "unlink"): void;
   (e: "delete"): void;
 }>();
@@ -131,11 +133,11 @@ const clipTransform = computed(() => props.selectedClip?.clipTransform);
 const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   const current = clipTransform.value;
   if (!current) return;
-  const width = Math.min(0.9, Math.max(0.08, patch.width ?? current.width));
-  const height = Math.min(0.9, Math.max(0.08, patch.height ?? current.height));
+  const width = Math.min(4, Math.max(0.02, patch.width ?? current.width));
+  const height = Math.min(4, Math.max(0.02, patch.height ?? current.height));
   emit("update:clipTransform", {
-    x: Math.min(1 - width, Math.max(0, patch.x ?? current.x)),
-    y: Math.min(1 - height, Math.max(0, patch.y ?? current.y)),
+    x: Math.min(3, Math.max(-3, patch.x ?? current.x)),
+    y: Math.min(3, Math.max(-3, patch.y ?? current.y)),
     width,
     height,
   });
@@ -165,11 +167,12 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           <Square :size="14" class="card-icon" /><span class="card-title"
             >Clip placement</span
           >
+          <Button variant="ghost" size="xs" :icon="RotateCcw" aria-label="Reset clip placement" @click="emit('reset:clipTransform')">Reset</Button>
         </div>
         <BigSlider
           :model-value="clipTransform.x * 100"
-          :min="0"
-          :max="100"
+          :min="-300"
+          :max="300"
           :step="1"
           label="Horizontal"
           :format-value="(value) => `${Math.round(value)}%`"
@@ -177,8 +180,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         />
         <BigSlider
           :model-value="clipTransform.y * 100"
-          :min="0"
-          :max="100"
+          :min="-300"
+          :max="300"
           :step="1"
           label="Vertical"
           :format-value="(value) => `${Math.round(value)}%`"
@@ -186,8 +189,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         />
         <BigSlider
           :model-value="clipTransform.width * 100"
-          :min="8"
-          :max="90"
+          :min="2"
+          :max="400"
           :step="1"
           label="Size"
           :format-value="(value) => `${Math.round(value)}%`"

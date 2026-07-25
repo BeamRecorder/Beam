@@ -12,6 +12,11 @@ import {
   webcamSettingsForAppearance,
 } from "../../composition/webcam/webcam-zoom";
 
+const RESIZE_SENSITIVITY = 1;
+const TRANSFORM_MIN = -3;
+const TRANSFORM_MAX = 3;
+const TRANSFORM_SIZE_MAX = 4;
+
 export interface UseLayerTransformAndCropOptions {
   composition: () => ProjectComposition;
   currentTime: () => number;
@@ -32,6 +37,7 @@ export interface UseLayerTransformAndCropOptions {
   } | null;
   isCropping: () => boolean | undefined;
   onUpdateLayerTransform: (transform: NormalizedTransform) => void;
+  onPreviewLayerTransform: (transform: NormalizedTransform) => void;
   onUpdateLayerCrop: (crop: NormalizedCrop) => void;
   onSelectTransformLayer: (layerId: string) => void;
 }
@@ -40,6 +46,8 @@ export function useLayerTransformAndCrop(
   options: UseLayerTransformAndCropOptions,
 ) {
   const webcamDraft = ref<NormalizedTransform | null>(null);
+  let previewFrame: number | null = null;
+  let pendingPreview: NormalizedTransform | null = null;
   let webcamDrag: {
     kind: "move" | "resize";
     corner?: ResizeCorner;
@@ -281,18 +289,21 @@ export function useLayerTransformAndCrop(
     if (!webcamDrag || !bounds) return;
     webcamDrag.lastX = clientX;
     webcamDrag.lastY = clientY;
-    const dx = (clientX - webcamDrag.startX) / bounds.dw;
-    const dy = (clientY - webcamDrag.startY) / bounds.dh;
+    const pointerDx = (clientX - webcamDrag.startX) / bounds.dw;
+    const pointerDy = (clientY - webcamDrag.startY) / bounds.dh;
     const initial = webcamDrag.transform;
 
     if (webcamDrag.kind === "move") {
       webcamDraft.value = {
         ...initial,
-        x: Math.min(1 - initial.width, Math.max(0, initial.x + dx)),
-        y: Math.min(1 - initial.height, Math.max(0, initial.y + dy)),
+        x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.x + pointerDx)),
+        y: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.y + pointerDy)),
       };
       return;
     }
+
+    const dx = pointerDx * RESIZE_SENSITIVITY;
+    const dy = pointerDy * RESIZE_SENSITIVITY;
 
     const left = webcamDrag.corner?.includes("left");
     const top = webcamDrag.corner?.includes("top");
@@ -302,25 +313,31 @@ export function useLayerTransformAndCrop(
     const rawHeight = initial.height + (vertical ? (top ? -dy : dy) : 0);
     const ratio = initial.height / initial.width;
     const corner = horizontal && vertical;
-    const width = Math.min(0.9, Math.max(0.08, corner && !shiftKey ? rawWidth : horizontal ? rawWidth : initial.width));
-    const height = Math.min(0.9, Math.max(0.08, corner && !shiftKey ? width * ratio : vertical ? rawHeight : initial.height));
+    const width = Math.min(TRANSFORM_SIZE_MAX, Math.max(0.02, corner && !shiftKey ? rawWidth : horizontal ? rawWidth : initial.width));
+    const height = Math.min(TRANSFORM_SIZE_MAX, Math.max(0.02, corner && !shiftKey ? width * ratio : vertical ? rawHeight : initial.height));
 
     webcamDraft.value = {
-      x: Math.min(
-        1 - width,
-        Math.max(0, left ? initial.x + initial.width - width : initial.x),
-      ),
-      y: Math.min(
-        1 - height,
-        Math.max(0, top ? initial.y + initial.height - height : initial.y),
-      ),
+      x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, left ? initial.x + initial.width - width : initial.x)),
+      y: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, top ? initial.y + initial.height - height : initial.y)),
       width,
       height,
     };
   };
 
-  const moveWebcamDrag = (event: PointerEvent) =>
+  const scheduleTransformPreview = (transform: NormalizedTransform) => {
+    pendingPreview = transform;
+    if (previewFrame !== null) return;
+    previewFrame = requestAnimationFrame(() => {
+      previewFrame = null;
+      if (pendingPreview) options.onPreviewLayerTransform(pendingPreview);
+      pendingPreview = null;
+    });
+  };
+
+  const moveWebcamDrag = (event: PointerEvent) => {
     applyWebcamDrag(event.clientX, event.clientY, event.shiftKey);
+    if (webcamDraft.value) scheduleTransformPreview(webcamDraft.value);
+  };
 
   const updateWebcamAspectMode = (event: KeyboardEvent) => {
     if (event.key === "Shift" && webcamDrag) {
@@ -334,6 +351,12 @@ export function useLayerTransformAndCrop(
 
   const endWebcamDrag = (event: PointerEvent) => {
     if (!webcamDrag) return;
+    if (previewFrame !== null) {
+      cancelAnimationFrame(previewFrame);
+      previewFrame = null;
+    }
+    if (pendingPreview) options.onPreviewLayerTransform(pendingPreview);
+    pendingPreview = null;
     if (webcamDraft.value) options.onUpdateLayerTransform(webcamDraft.value);
     webcamDrag = null;
     if (
@@ -401,6 +424,7 @@ export function useLayerTransformAndCrop(
   });
 
   onUnmounted(() => {
+    if (previewFrame !== null) cancelAnimationFrame(previewFrame);
     window.removeEventListener("keydown", updateWebcamAspectMode);
     window.removeEventListener("keyup", updateWebcamAspectMode);
   });

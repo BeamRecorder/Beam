@@ -13,7 +13,7 @@ function emptyComposition() { return { media: [], layers: [] } }
 function transform(value) {
   const next = value || {}
   if (![next.x, next.y, next.width, next.height].every(finite) || next.width <= 0 || next.height <= 0) throw new Error('Transformation de calque invalide')
-  return { x: Math.max(0, Math.min(1, next.x)), y: Math.max(0, Math.min(1, next.y)), width: Math.max(.001, Math.min(1, next.width)), height: Math.max(.001, Math.min(1, next.height)) }
+  return { x: Math.max(-3, Math.min(3, next.x)), y: Math.max(-3, Math.min(3, next.y)), width: Math.max(.001, Math.min(4, next.width)), height: Math.max(.001, Math.min(4, next.height)) }
 }
 function caption(value) {
   if (!value || !Array.isArray(value.sentences)) throw new Error('Captions invalides')
@@ -56,7 +56,9 @@ function normalizeComposition(value) {
     return { id: layer.id, kind: layer.kind, name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, assetId: layer.assetId, transform: layer.kind === 'audio' ? undefined : transform(layer.transform), ...(layer.kind === 'video' && finite(layer.sourceOffsetMs) && layer.sourceOffsetMs >= 0 ? { sourceOffsetMs: Math.round(layer.sourceOffsetMs) } : {}), ...(layer.kind === 'video' && typeof layer.reactToZoom === 'boolean' ? { reactToZoom: layer.reactToZoom } : {}), ...(webcam ? { webcamAppearance: webcam } : {}), ...(appearance ? { appearance } : {}) }
   })
   const baseVideoAppearance = clipAppearance(value.baseVideoAppearance)
-  return { media, layers, ...(baseVideoAppearance ? { baseVideoAppearance } : {}) }
+  const baseVideoCrop = value.baseVideoCrop ? transform(value.baseVideoCrop) : undefined
+  const baseVideoTransform = value.baseVideoTransform ? transform(value.baseVideoTransform) : undefined
+  return { media, layers, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}) }
 }
 
 function createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor }) {

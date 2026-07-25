@@ -120,6 +120,13 @@ export function renderCompositionFrame(
     source.y += cropY;
   }
   const media = snapshot.canvas.showBackground ? framedMediaRect(cropWidth, cropHeight, width, height) : { x: 0, y: 0, width, height };
+  const baseTransform = snapshot.composition.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
+  const positionedMedia = {
+    x: media.x + baseTransform.x * media.width,
+    y: media.y + baseTransform.y * media.height,
+    width: media.width * baseTransform.width,
+    height: media.height * baseTransform.height,
+  };
   const outputFocus = zoom?.mode === 'auto' ? outputPoint(focus.cx, focus.cy, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground) : focus;
   const cameraFocus = clampFocusToScale(outputFocus, scale);
   ctx.save();
@@ -127,7 +134,7 @@ export function renderCompositionFrame(
   ctx.scale(scale, scale);
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   drawSnapshotBackground(ctx, snapshot, background);
-  ctx.drawImage(video, source.x, source.y, source.width, source.height, media.x, media.y, media.width, media.height);
+  ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
   const cursor = cursorStateAt(snapshot.cursor.events, time);
   const settings: CursorRenderSettings = snapshot.cursorSettings;
   if (settings.ripple.enabled) {

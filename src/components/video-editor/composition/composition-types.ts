@@ -87,6 +87,7 @@ export interface ProjectComposition {
   layers: CompositionLayer[];
   baseVideoAppearance?: ClipAppearance;
   baseVideoCrop?: NormalizedCrop;
+  baseVideoTransform?: NormalizedTransform;
 }
 
 export const emptyComposition = (): ProjectComposition => ({

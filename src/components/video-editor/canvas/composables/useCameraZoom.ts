@@ -202,6 +202,13 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const media = outputCanvas.showBackground
       ? framedMediaRect(cropW, cropH, dw, dh)
       : { x: 0, y: 0, width: dw, height: dh };
+    const baseTransform = options.composition?.().baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
+    const positionedMedia = {
+      x: media.x + baseTransform.x * media.width,
+      y: media.y + baseTransform.y * media.height,
+      width: media.width * baseTransform.width,
+      height: media.height * baseTransform.height,
+    };
 
     ctx.save();
     ctx.beginPath();
@@ -272,10 +279,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           ctx.shadowOffsetY = 10;
           ctx.beginPath();
           ctx.roundRect(
-            dx + media.x,
-            dy + media.y,
-            media.width,
-            media.height,
+            dx + positionedMedia.x,
+            dy + positionedMedia.y,
+            positionedMedia.width,
+            positionedMedia.height,
             16,
           );
           ctx.fillStyle = "rgba(0, 0, 0, .01)";
@@ -287,10 +294,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             source.y,
             source.width,
             source.height,
-            dx + media.x,
-            dy + media.y,
-            media.width,
-            media.height,
+            dx + positionedMedia.x,
+            dy + positionedMedia.y,
+            positionedMedia.width,
+            positionedMedia.height,
           );
           ctx.restore();
         } else {
@@ -300,10 +307,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             source.y,
             source.width,
             source.height,
-            dx + media.x,
-            dy + media.y,
-            media.width,
-            media.height,
+            dx + positionedMedia.x,
+            dy + positionedMedia.y,
+            positionedMedia.width,
+            positionedMedia.height,
           );
         }
       }
@@ -389,10 +396,13 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
     previousCamera = camera;
     videoWindowBounds.value = {
-      dx: outputCanvas.showBackground ? dx + media.x : dx,
-      dy: outputCanvas.showBackground ? dy + media.y : dy,
-      dw: outputCanvas.showBackground ? media.width : dw,
-      dh: outputCanvas.showBackground ? media.height : dh,
+      // Transform handles must use the untransformed media frame as their
+      // coordinate system, just like webcam handles. Using the already scaled
+      // rectangle feeds the resize back into its own delta and makes it race.
+      dx: dx + media.x,
+      dy: dy + media.y,
+      dw: media.width,
+      dh: media.height,
       scale: camera.scale,
     };
     overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale };

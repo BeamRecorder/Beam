@@ -55,6 +55,7 @@ const emit = defineEmits<{
   (e: 'deselect:transform-layer'): void;
   (e: 'deselect:zoom'): void;
   (e: 'update:layer-transform', transform: NormalizedTransform): void;
+  (e: 'preview:layer-transform', transform: NormalizedTransform): void;
   (e: 'update:layer-crop', crop: NormalizedCrop): void;
   (e: 'select:base-video'): void;
   (e: 'select:canvas'): void;
@@ -119,6 +120,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   overlayWindowBounds: () => cameraZoom.overlayWindowBounds.value,
   isCropping: () => props.isCropping,
   onUpdateLayerTransform: (transform) => emit('update:layer-transform', transform),
+  onPreviewLayerTransform: (transform) => emit('preview:layer-transform', transform),
   onUpdateLayerCrop: (crop) => emit('update:layer-crop', crop),
   onSelectTransformLayer: (layerId) => emit('select:transform-layer', layerId),
 });
@@ -184,6 +186,7 @@ watch(
     formatTransitionTimer = setTimeout(() => {
       isFormatTransitioning.value = false;
     }, 260);
+    renderOnce();
   },
 );
 
@@ -192,6 +195,8 @@ watch(
   () => renderOnce(),
   { deep: true },
 );
+
+watch(transformAndCrop.webcamDraft, () => renderOnce(), { deep: true });
 
 const resizeCanvas = () => {
   const canvas = canvasRef.value;

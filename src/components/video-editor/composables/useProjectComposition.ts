@@ -1,6 +1,9 @@
-import { ref, computed, toRaw, type Ref } from "vue";
+import { ref, computed, type Ref } from "vue";
 import { capture } from "../../../api/capture";
-import type { CaptureProject, ProjectEditorData } from "../../../api/types/capture-api";
+import type {
+  CaptureProject,
+  ProjectEditorData,
+} from "../../../api/types/capture-api";
 import {
   emptyComposition,
   type ClipAppearance,
@@ -31,7 +34,8 @@ export function useProjectComposition(options: {
     shadowColor: "#000000",
     shadowDirection: "bottom",
   };
-  const { project, editorData, durationMs, currentTimeSec, activeTab } = options;
+  const { project, editorData, durationMs, currentTimeSec, activeTab } =
+    options;
 
   const composition = ref<ProjectComposition>(emptyComposition());
   const selectedCompositionLayerId = ref<string | null>(null);
@@ -54,14 +58,23 @@ export function useProjectComposition(options: {
         playbackRate: 1.0,
         enabled: true,
         isLinked: false,
+        clipTransform: composition.value.baseVideoTransform ?? {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1,
+        },
         ...(composition.value.baseVideoAppearance ?? DEFAULT_APPEARANCE),
       };
     }
     if (!selectedCompositionLayer.value) return null;
     const layer = selectedCompositionLayer.value;
-    const appearance = layer.kind === "audio" || layer.kind === "caption"
-      ? undefined
-      : layer.appearance ?? (layer.kind === "video" ? layer.webcamAppearance : undefined) ?? DEFAULT_APPEARANCE;
+    const appearance =
+      layer.kind === "audio" || layer.kind === "caption"
+        ? undefined
+        : (layer.appearance ??
+          (layer.kind === "video" ? layer.webcamAppearance : undefined) ??
+          DEFAULT_APPEARANCE);
     return {
       id: layer.id,
       kind: layer.kind,
@@ -71,7 +84,16 @@ export function useProjectComposition(options: {
       playbackRate: 1.0,
       enabled: layer.enabled,
       isLinked: false,
-      ...(layer.kind !== 'audio' && layer.kind !== 'caption' ? { clipTransform: layer.transform ?? { x: 0, y: 0, width: 1, height: 1 } } : {}),
+      ...(layer.kind !== "audio" && layer.kind !== "caption"
+        ? {
+            clipTransform: layer.transform ?? {
+              x: 0,
+              y: 0,
+              width: 1,
+              height: 1,
+            },
+          }
+        : {}),
       ...(appearance ?? {}),
     };
   });
@@ -281,32 +303,93 @@ export function useProjectComposition(options: {
     if (selectedId === BASE_VIDEO_CLIP_ID) {
       composition.value = {
         ...composition.value,
-        baseVideoAppearance: { ...DEFAULT_APPEARANCE, ...composition.value.baseVideoAppearance, ...patch },
+        baseVideoAppearance: {
+          ...DEFAULT_APPEARANCE,
+          ...composition.value.baseVideoAppearance,
+          ...patch,
+        },
       };
     } else {
       composition.value = {
         ...composition.value,
         layers: composition.value.layers.map((layer) => {
-          if (layer.id !== selectedId || layer.kind === "audio" || layer.kind === "caption") return layer;
-          const fallback = layer.kind === "video" ? layer.webcamAppearance : undefined;
-          return { ...layer, appearance: { ...DEFAULT_APPEARANCE, ...fallback, ...layer.appearance, ...patch } };
+          if (
+            layer.id !== selectedId ||
+            layer.kind === "audio" ||
+            layer.kind === "caption"
+          )
+            return layer;
+          const fallback =
+            layer.kind === "video" ? layer.webcamAppearance : undefined;
+          return {
+            ...layer,
+            appearance: {
+              ...DEFAULT_APPEARANCE,
+              ...fallback,
+              ...layer.appearance,
+              ...patch,
+            },
+          };
         }),
       };
     }
     await saveComposition();
   };
 
-  const updateSelectedWebcamTransform = async (transform: NormalizedTransform) => {
+  const updateSelectedWebcamTransform = async (
+    transform: NormalizedTransform,
+  ) => {
+    if (selectedCompositionLayerId.value === BASE_VIDEO_CLIP_ID) {
+      composition.value = {
+        ...composition.value,
+        baseVideoTransform: transform,
+      };
+      await saveComposition();
+      return;
+    }
     const layer = selectedCompositionLayer.value;
-    const selectedId = layer && layer.kind !== 'audio' && layer.kind !== 'caption' ? layer.id : null;
+    const selectedId =
+      layer && layer.kind !== "audio" && layer.kind !== "caption"
+        ? layer.id
+        : null;
     if (!selectedId) return;
     composition.value = {
       ...composition.value,
       layers: composition.value.layers.map((layer) =>
-        layer.id === selectedId && layer.kind !== 'audio' && layer.kind !== 'caption' ? { ...layer, transform } : layer,
+        layer.id === selectedId &&
+        layer.kind !== "audio" &&
+        layer.kind !== "caption"
+          ? { ...layer, transform }
+          : layer,
       ),
     };
     await saveComposition();
+  };
+
+  const previewSelectedWebcamTransform = (transform: NormalizedTransform) => {
+    if (selectedCompositionLayerId.value === BASE_VIDEO_CLIP_ID) {
+      composition.value = {
+        ...composition.value,
+        baseVideoTransform: transform,
+      };
+      return;
+    }
+    const layer = selectedCompositionLayer.value;
+    const selectedId =
+      layer && layer.kind !== "audio" && layer.kind !== "caption"
+        ? layer.id
+        : null;
+    if (!selectedId) return;
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.map((entry) =>
+        entry.id === selectedId &&
+        entry.kind !== "audio" &&
+        entry.kind !== "caption"
+          ? { ...entry, transform }
+          : entry,
+      ),
+    };
   };
 
   const updateSelectedMediaCrop = async (crop: NormalizedCrop) => {
@@ -321,7 +404,11 @@ export function useProjectComposition(options: {
       composition.value = {
         ...composition.value,
         layers: composition.value.layers.map((layer) =>
-          layer.id === selectedId && layer.kind !== 'audio' && layer.kind !== 'caption' ? { ...layer, crop } : layer,
+          layer.id === selectedId &&
+          layer.kind !== "audio" &&
+          layer.kind !== "caption"
+            ? { ...layer, crop }
+            : layer,
         ),
       };
     }
@@ -359,6 +446,7 @@ export function useProjectComposition(options: {
     selectBaseVideo,
     updateSelectedClipAppearance,
     updateSelectedWebcamTransform,
+    previewSelectedWebcamTransform,
     updateSelectedMediaCrop,
     handleUnlinkClips,
     handleUnlinkTrack,
