@@ -90,7 +90,7 @@ const gradientTypeOptions = [
                 <Select :model-value="gradientType" :options="gradientTypeOptions" variant="subtle"
                     @update:model-value="updateGradientType" />
             </div>
-            <div v-if="gradientType === 'linear'" class="option-row">
+            <div v-if="gradientType === 'linear'" class="angle-row">
                 <BigSlider label="Angle" :model-value="gradientAngle" :min="0" :max="360" :step="1"
                     :format-value="(val: number) => `${val}°`"
                     @update:model-value="updateGradientAngle" />
@@ -98,9 +98,8 @@ const gradientTypeOptions = [
         </div>
         <div class="gradient-visual-container">
             <div class="delete-zone delete-zone--top" :class="{
-                'is-visible': showDragLabels,
-                'is-active':
-                    showDragLabels && dragDeleteDirection === 'top',
+                'is-visible': isOverTrash && dragDeleteDirection === 'top',
+                'is-active': isOverTrash && dragDeleteDirection === 'top',
             }">
                 <Trash2 :size="12" />
                 <span>{{ uiText.dragUpToDelete }}</span>
@@ -128,9 +127,8 @@ const gradientTypeOptions = [
                 </div>
             </div>
             <div class="delete-zone delete-zone--bottom" :class="{
-                'is-visible': showDragLabels,
-                'is-active':
-                    showDragLabels && dragDeleteDirection === 'bottom',
+                'is-visible': isOverTrash && dragDeleteDirection === 'bottom',
+                'is-active': isOverTrash && dragDeleteDirection === 'bottom',
             }">
                 <Trash2 :size="12" />
                 <span>{{ uiText.dragDownToDelete }}</span>
@@ -143,8 +141,9 @@ const gradientTypeOptions = [
                 <div class="form-header">
                     <span class="form-title">{{ uiText.editStop }}</span>
                     <Button
-                        variant="ghost"
-                        size="xs"
+                        variant="danger"
+                        size="sm"
+                        icon-only
                         tooltip="Remove Stop"
                         :disabled="stops.length <= effectiveMinStops"
                         @click="removeStop(selectedStop!.id)"
@@ -226,10 +225,10 @@ const gradientTypeOptions = [
 }
 
 .gradient-visual-container {
-    padding: 8px 0 22px 0;
+    padding: 4px 0 12px 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
 .delete-zone {
@@ -328,6 +327,10 @@ const gradientTypeOptions = [
     /* Disable transition while dragging for responsiveness */
 }
 
+.angle-row {
+    width: 100%;
+}
+
 .stop-handle::before {
     content: '';
     position: absolute;
@@ -338,27 +341,27 @@ const gradientTypeOptions = [
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-bottom: 6px solid var(--surface-color-light, #374151);
+    border-bottom: 6px solid var(--color-border-dark);
 }
 
 .stop-handle.active::before {
-    border-bottom-color: var(--primary-color, #55b2e2);
+    border-bottom-color: var(--color-primary);
 }
 
 .stop-marker {
     width: 100%;
     height: 100%;
     border-radius: 2px;
-    border: 2px solid var(--surface-color-light, #374151);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
     position: relative;
     overflow: hidden;
-    background-color: #fff;
+    background-color: var(--color-bg-surface);
 }
 
 .stop-handle.active .stop-marker {
-    border-color: var(--primary-color, #55b2e2);
-    box-shadow: 0 0 0 2px rgba(85, 178, 226, 0.2);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .trash-indicator {
@@ -441,34 +444,6 @@ const gradientTypeOptions = [
     border-radius: var(--radius-md);
 }
 
-.stop-edit-form :deep(.mobile-slider) {
-    height: 24px !important;
-    min-height: 24px !important;
-    padding: 0 var(--space-2) !important;
-    border-radius: var(--radius-2xs) !important;
-    flex: 1;
-    grid-template-columns: 1fr !important;
-    justify-items: center !important;
-}
-
-.stop-edit-form :deep(.mobile-slider__label) {
-    display: none !important;
-}
-
-.stop-edit-form :deep(.mobile-slider__value) {
-    width: 100% !important;
-    text-align: center !important;
-    min-width: unset !important;
-}
-
-.stop-edit-form :deep(.mobile-slider__input) {
-    width: 100% !important;
-}
-
-.stop-edit-form :deep(.mobile-slider__input .spidd-input) {
-    text-align: center !important;
-}
-
 .stop-edit-form :deep(.color-picker-wrapper) {
     width: 100% !important;
     gap: 0;
@@ -487,22 +462,6 @@ const gradientTypeOptions = [
     color: var(--text-color-secondary, #9ca3af);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    color: var(--text-color-secondary, #9ca3af);
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    display: flex;
-    transition: all 0.2s;
-}
-
-.close-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-color, #fff);
 }
 
 .form-row {
@@ -685,20 +644,12 @@ const gradientTypeOptions = [
 /* Slide fade transition for stop editor inline panel */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    max-height: 300px;
-    overflow: hidden;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-fade-enter-from,
 .slide-fade-leave-to {
     opacity: 0;
-    max-height: 0;
-    transform: translateY(-8px);
-    padding-top: 0;
-    padding-bottom: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    border-color: transparent;
+    transform: translateY(-6px);
 }
 </style>

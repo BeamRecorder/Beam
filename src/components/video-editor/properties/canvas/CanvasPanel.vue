@@ -307,7 +307,7 @@ const importLabel = computed(() => activeKind.value === "image"
             @click="emit('update:selectedBackground', item)"
           />
         </div>
-        <Popover v-if="selectedColorPreset" block flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+        <Popover v-if="selectedColorPreset" block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
           <template #trigger>
             <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedColorPreset.id)" class="edit-selected-preset" @click="toggleColor(selectedColorPreset)">{{ isEditing(selectedColorPreset.id) ? "Fermer l’édition" : "Modifier" }}</Button>
           </template>
@@ -361,7 +361,7 @@ const importLabel = computed(() => activeKind.value === "image"
             @click="emit('update:selectedBackground', item)"
           />
         </div>
-        <Popover v-if="selectedGradientPreset" block flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+        <Popover v-if="selectedGradientPreset" block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
           <template #trigger>
             <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedGradientPreset.id)" class="edit-selected-preset" @click="toggleGradient(selectedGradientPreset)">{{ isEditing(selectedGradientPreset.id) ? "Fermer l’édition" : "Modifier" }}</Button>
           </template>
@@ -409,6 +409,12 @@ const importLabel = computed(() => activeKind.value === "image"
 
 .kind-group :deep(.btn-container) {
   flex: 1;
+  min-width: 0;
+}
+
+.kind-group :deep(.btn) {
+  padding-left: 2px;
+  padding-right: 2px;
 }
 
 .import-btn {

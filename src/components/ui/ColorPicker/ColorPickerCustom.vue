@@ -7,7 +7,7 @@ import {
     onUnmounted,
     nextTick,
 } from 'vue';
-import { Pipette, ArrowUpDown } from '@lucide/vue';
+import { Pipette, ArrowUpDown, X } from '@lucide/vue';
 import {
     useColorPicker,
     type RGB,
@@ -453,6 +453,12 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
         [`custom-color-picker--dragging-${activeDragTarget}`]:
             activeDragTarget,
     }">
+        <div class="picker-top-bar">
+            <span class="picker-top-title">Color</span>
+            <Button variant="ghost" size="xs" icon-only tooltip="Close" @click="emit('close')">
+                <X :size="14" />
+            </Button>
+        </div>
         <div class="picker-main-area">
             <template v-if="type === 'triangle'">
                 <div class="triangle-picker-container" @mousedown.prevent="onMouseDownTri"
@@ -543,8 +549,23 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
     display: flex;
     flex-direction: column;
     user-select: none;
-    padding: 12px;
+    padding: 8px 12px 12px 12px;
     box-sizing: border-box;
+}
+
+.picker-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.picker-top-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-color-secondary, #9ca3af);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .custom-color-picker--dragging .controls-container {

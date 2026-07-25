@@ -89,7 +89,7 @@ onBeforeUnmount(() => {
   font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
-  z-index: 3000;
+  z-index: 20000;
   box-shadow: var(--shadow-md);
   pointer-events: none;
 }

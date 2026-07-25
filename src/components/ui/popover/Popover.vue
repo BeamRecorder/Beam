@@ -99,21 +99,24 @@ let mousedownWasOutside = false
 const repositionOpenPopover = () => { if (isOpen.value) void adjustPosition() }
 const closeOnWindowBlur = () => close()
 
+const isClickInsideThisOrChildPopover = (target: Element | null) => {
+  if (!target) return false
+  if (popoverRef.value && popoverRef.value.contains(target)) return true
+  if (contentRef.value && contentRef.value.contains(target)) return true
+  const targetOwnerId = target.closest('[data-popover-owner]')?.getAttribute('data-popover-owner')
+  if (targetOwnerId === popoverId) return true
+  return false
+}
+
 const handleMouseDownOutside = (event: MouseEvent) => {
   const target = event.target as Element | null
-  const isInsideTrigger = popoverRef.value && popoverRef.value.contains(target)
-  const isInsideContent = contentRef.value && contentRef.value.contains(target)
-  const belongsToNestedPopover = target?.closest('.popover-content') !== null
-  mousedownWasOutside = !isInsideTrigger && !isInsideContent && !belongsToNestedPopover
+  mousedownWasOutside = !isClickInsideThisOrChildPopover(target)
 }
 
 const handleClickOutside = (event: MouseEvent) => {
   if (mousedownWasOutside) {
     const target = event.target as Element | null
-    const isClickInsideTrigger = popoverRef.value && popoverRef.value.contains(target)
-    const isClickInsideContent = contentRef.value && contentRef.value.contains(target)
-    const belongsToNestedPopover = target?.closest('.popover-content') !== null
-    if (!isClickInsideTrigger && !isClickInsideContent && !belongsToNestedPopover) {
+    if (!isClickInsideThisOrChildPopover(target)) {
       close()
     }
   }
@@ -150,7 +153,7 @@ defineExpose({
 
     <Teleport to="body">
       <Transition name="pop">
-        <div v-if="isOpen" ref="contentRef" class="popover-content" :data-popover-owner="parentPopoverId" :class="[align, directionClass, { 'popover-block': block, 'popover-flush': flush }]" :style="floatingStyle">
+        <div v-if="isOpen" ref="contentRef" class="popover-content" :data-popover-id="popoverId" :data-popover-owner="parentPopoverId" :class="[align, directionClass, { 'popover-block': block, 'popover-flush': flush }]" :style="floatingStyle">
           <slot :close="close" />
         </div>
       </Transition>
