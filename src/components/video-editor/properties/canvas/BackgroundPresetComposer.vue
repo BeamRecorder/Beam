@@ -56,6 +56,8 @@ const add = () => {
   flex-direction: column;
   gap: 10px;
   padding: 10px;
+  width: 280px;
+  box-sizing: border-box;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);

@@ -197,18 +197,18 @@ function handleDragEnd() {
         display: flex;
         align-items: center;
         gap: 8px;
-        background: rgba(0, 0, 0, 0.2);
-        padding: 4px 6px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.2s;
+        background: var(--color-bg-element);
+        padding: 4px 8px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        transition: border-color var(--fast) ease, background-color var(--fast) ease;
         width: fit-content;
         min-width: 120px;
     }
 
     .color-picker-trigger-container:hover {
-        background: rgba(255, 255, 255, 0.05);
-        border-color: var(--primary-color, #55b2e2);
+        background: var(--color-bg-surface-hover);
+        border-color: var(--color-border-dark);
     }
 
     .color-picker-trigger-container.is-disabled {
@@ -217,7 +217,7 @@ function handleDragEnd() {
     }
 
     .color-picker-trigger-container.is-standard:hover {
-        border-color: rgba(255, 255, 255, 0.1);
+        border-color: var(--color-border-dark);
     }
 
     .color-picker-bubble {

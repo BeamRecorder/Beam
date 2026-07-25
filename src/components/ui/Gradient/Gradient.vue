@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Trash2, X, Library } from "@lucide/vue"
+import { Trash2 } from "@lucide/vue"
 import Button from '~/ui/button/Button.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
-import Popover from '~/ui/popover/Popover.vue';
 import ColorInput from '~/ui/input/ColorInput.vue';
 import Select from '~/ui/select/Select.vue';
 import {
@@ -92,8 +91,8 @@ const gradientTypeOptions = [
                     @update:model-value="updateGradientType" />
             </div>
             <div v-if="gradientType === 'linear'" class="option-row">
-                <label>{{ uiText.angle }}</label>
-                <Slider label="" suffix="deg" :model-value="gradientAngle" :min="0" :max="360" :step="1"
+                <BigSlider label="Angle" :model-value="gradientAngle" :min="0" :max="360" :step="1"
+                    :format-value="(val: number) => `${val}°`"
                     @update:model-value="updateGradientAngle" />
             </div>
         </div>
@@ -143,8 +142,14 @@ const gradientTypeOptions = [
             <div v-if="selectedStop && isPopoverOpen" class="stop-edit-form">
                 <div class="form-header">
                     <span class="form-title">{{ uiText.editStop }}</span>
-                    <Button variant="secondary" size="xs" tooltip="Close" @click="isPopoverOpen = false">
-                        <X :size="14" />
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        tooltip="Remove Stop"
+                        :disabled="stops.length <= effectiveMinStops"
+                        @click="removeStop(selectedStop!.id)"
+                    >
+                        <Trash2 :size="14" />
                     </Button>
                 </div>
 
@@ -175,45 +180,8 @@ const gradientTypeOptions = [
                     :format-value="(val: number) => `${val}%`"
                     @update:model-value="updateSelectedStopPosition($event / 100)"
                 />
-
-                <div class="form-actions merged-actions">
-                    <Button variant="secondary" class="preset-toggle-btn" tooltip="Presets" :active="isPresetsPopoverOpen" @click="togglePresets">
-                        <Library :size="14" />
-                    </Button>
-                    <div class="flex-spacer"></div>
-                    <Button variant="danger" tooltip="Remove Stop" :disabled="stops.length <= effectiveMinStops"
-                        @click="removeStop(selectedStop!.id)">
-                        <Trash2 :size="14" />
-                    </Button>
-                </div>
             </div>
         </Transition>
-
-        <!-- Presets Library Popover -->
-        <Popover align="left" :match-trigger-width="false" class="presets-library-popover">
-            <div class="presets-library compact">
-                <div class="presets-header">
-                    <span class="presets-title">{{ uiText.presets }}</span>
-                    <Button variant="ghost" size="xs" tooltip="Close" @click="isPresetsPopoverOpen = false">
-                        <X :size="14" />
-                    </Button>
-                </div>
-                <div class="presets-grid">
-                    <div v-for="preset in allPresets" :key="preset.id" class="preset-card" @click="applyPreset(preset)">
-                        <div class="preset-preview-large" :style="{
-                            background: `linear-gradient(90deg, ${normalizeStops(
-                                { stops: preset.stops }
-                            )
-                                .map(
-                                    (s) => `${s.color} ${s.position * 100}%`
-                                )
-                                .join(', ')})`,
-                        }"></div>
-                        <span class="preset-name">{{ preset.id }}</span>
-                    </div>
-                </div>
-            </div>
-        </Popover>
     </div>
 </template>
 
@@ -462,11 +430,15 @@ const gradientTypeOptions = [
 
 /* Popover Styles */
 .stop-edit-form {
-    width: 200px;
-    max-width: calc(100vw - 32px);
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    padding: 10px;
+    background: var(--color-bg-element);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
 }
 
 .stop-edit-form :deep(.mobile-slider) {
@@ -500,31 +472,6 @@ const gradientTypeOptions = [
 .stop-edit-form :deep(.color-picker-wrapper) {
     width: 100% !important;
     gap: 0;
-}
-
-.stop-edit-form :deep(.color-picker-trigger-container) {
-    height: 26px !important;
-    border-radius: var(--radius-xs) !important;
-    padding: 2px 4px !important;
-    background: var(--color-surface) !important;
-    border: 1px solid var(--color-border) !important;
-    min-width: unset !important;
-    width: 100% !important;
-    box-sizing: border-box;
-}
-
-.stop-edit-form :deep(.color-picker-bubble) {
-    width: 18px !important;
-    height: 18px !important;
-    border-radius: var(--radius-2xs) !important;
-    flex-shrink: 0;
-}
-
-.stop-edit-form :deep(.color-hex-label),
-.stop-edit-form :deep(.color-hex-input .spidd-input) {
-    font-size: 11px !important;
-    font-weight: 500 !important;
-    color: var(--color-text) !important;
 }
 
 .form-header {

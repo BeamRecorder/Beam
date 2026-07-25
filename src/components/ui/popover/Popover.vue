@@ -100,17 +100,19 @@ const repositionOpenPopover = () => { if (isOpen.value) void adjustPosition() }
 const closeOnWindowBlur = () => close()
 
 const handleMouseDownOutside = (event: MouseEvent) => {
-  const isInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
-  const isInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
-  const belongsToNestedPopover = parentPopoverId !== null && (event.target as Element | null)?.closest(`[data-popover-owner="${parentPopoverId}"]`)
+  const target = event.target as Element | null
+  const isInsideTrigger = popoverRef.value && popoverRef.value.contains(target)
+  const isInsideContent = contentRef.value && contentRef.value.contains(target)
+  const belongsToNestedPopover = target?.closest('.popover-content') !== null
   mousedownWasOutside = !isInsideTrigger && !isInsideContent && !belongsToNestedPopover
 }
 
 const handleClickOutside = (event: MouseEvent) => {
   if (mousedownWasOutside) {
-    const isClickInsideTrigger = popoverRef.value && popoverRef.value.contains(event.target as Node)
-    const isClickInsideContent = contentRef.value && contentRef.value.contains(event.target as Node)
-    const belongsToNestedPopover = parentPopoverId !== null && (event.target as Element | null)?.closest(`[data-popover-owner="${parentPopoverId}"]`)
+    const target = event.target as Element | null
+    const isClickInsideTrigger = popoverRef.value && popoverRef.value.contains(target)
+    const isClickInsideContent = contentRef.value && contentRef.value.contains(target)
+    const belongsToNestedPopover = target?.closest('.popover-content') !== null
     if (!isClickInsideTrigger && !isClickInsideContent && !belongsToNestedPopover) {
       close()
     }
