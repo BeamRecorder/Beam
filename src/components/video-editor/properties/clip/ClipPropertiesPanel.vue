@@ -33,7 +33,7 @@ const props = defineProps<{
     shadowSize?: string;
     shadowColor?: string;
     shadowDirection?: string;
-    cornerRadius?: string;
+    cornerRadius?: string | number;
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
   } | null;
@@ -61,7 +61,7 @@ const radiusPresets = [
   { id: "sm", label: "8px" },
   { id: "md", label: "16px" },
   { id: "lg", label: "24px" },
-  { id: "full", label: "Full" },
+  { id: "custom", label: "Custom" },
 ];
 
 const shadowPresets = [
@@ -69,7 +69,6 @@ const shadowPresets = [
   { id: "sm", label: "Soft" },
   { id: "md", label: "Medium" },
   { id: "lg", label: "Strong" },
-  { id: "glow", label: "Glow" },
 ];
 
 const shadowDirections = [
@@ -79,7 +78,10 @@ const shadowDirections = [
   { id: "top-left", label: "Top-Left", icon: MoveUpLeft },
 ];
 
-const selectedRadius = ref(props.selectedClip?.cornerRadius ?? "md");
+const NAMED_RADII = ["none", "sm", "md", "lg", "full"];
+
+const selectedRadius = ref<string>("md");
+const customRadiusValue = ref<number>(32);
 const selectedShadowSize = ref(props.selectedClip?.shadowSize ?? "md");
 const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? "#000000");
 const selectedShadowDirection = ref(
@@ -89,7 +91,22 @@ const selectedShadowDirection = ref(
 watch(
   () => props.selectedClip,
   (clip) => {
-    selectedRadius.value = clip?.cornerRadius ?? "sm";
+    const r = clip?.cornerRadius ?? "sm";
+    if (typeof r === "number") {
+      selectedRadius.value = "custom";
+      customRadiusValue.value = r;
+    } else if (NAMED_RADII.includes(String(r))) {
+      // map "full" (old data) -> "custom" at 9999
+      if (r === "full") {
+        selectedRadius.value = "custom";
+        customRadiusValue.value = 9999;
+      } else {
+        selectedRadius.value = String(r);
+      }
+    } else {
+      selectedRadius.value = "custom";
+      customRadiusValue.value = parseFloat(String(r)) || 32;
+    }
     selectedShadowSize.value = clip?.shadowSize ?? "md";
     selectedShadowColor.value = clip?.shadowColor ?? "#000000";
     selectedShadowDirection.value = clip?.shadowDirection ?? "bottom";
@@ -99,7 +116,17 @@ watch(
 
 const handleRadiusChange = (radiusId: string) => {
   selectedRadius.value = radiusId;
-  emit("update:cornerRadius", radiusId);
+  if (radiusId === "custom") {
+    // emit the numeric value in px when switching to custom
+    emit("update:cornerRadius", String(customRadiusValue.value));
+  } else {
+    emit("update:cornerRadius", radiusId);
+  }
+};
+
+const handleCustomRadiusChange = (value: number) => {
+  customRadiusValue.value = value;
+  emit("update:cornerRadius", String(value));
 };
 
 const handleShadowPresetChange = (sizeId: string) => {
@@ -260,7 +287,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           <Square :size="14" class="card-icon" />
           <span class="card-title">Corner Radius</span>
         </div>
-        <ButtonGroup>
+        <ButtonGroup full>
           <Button
             v-for="item in radiusPresets"
             :key="item.id"
@@ -271,6 +298,17 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
             {{ item.label }}
           </Button>
         </ButtonGroup>
+        <BigSlider
+          v-if="selectedRadius === 'custom'"
+          :model-value="customRadiusValue"
+          :min="0"
+          :max="200"
+          :step="1"
+          label="Radius"
+          :default-value="32"
+          :format-value="(v) => `${Math.round(v)}px`"
+          @update:modelValue="handleCustomRadiusChange"
+        />
       </div>
 
       <!-- Shadow Settings & Directions for Video / Image / Webcam -->
@@ -285,7 +323,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
         <div class="sub-group">
           <span class="sub-label">Preset</span>
-          <ButtonGroup>
+          <ButtonGroup full>
             <Button
               v-for="item in shadowPresets"
               :key="item.id"
@@ -300,20 +338,19 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
         <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top">
           <span class="sub-label">Direction</span>
-          <ButtonGroup>
-            <Button
+          <div class="direction-group">
+            <button
               v-for="dir in shadowDirections"
               :key="dir.id"
-              :variant="
-                selectedShadowDirection === dir.id ? 'primary' : 'ghost'
-              "
-              size="xs"
-              :icon="dir.icon"
-              icon-only
-              :tooltip="dir.label"
+              type="button"
+              class="direction-btn"
+              :class="{ active: selectedShadowDirection === dir.id }"
+              :title="dir.label"
               @click="handleShadowDirectionChange(dir.id)"
-            />
-          </ButtonGroup>
+            >
+              <component :is="dir.icon" :size="15" />
+            </button>
+          </div>
         </div>
 
         <div v-if="selectedShadowSize !== 'none'" class="prop-row margin-top">
@@ -525,5 +562,43 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
 .danger-zone {
   margin-top: 4px;
+}
+
+.direction-group {
+  display: flex;
+  gap: 4px;
+  background: var(--color-bg-surface-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.direction-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  height: 26px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background var(--fast) ease, color var(--fast) ease;
+}
+
+.direction-btn:hover {
+  background: var(--color-bg-surface);
+  color: var(--text-primary);
+}
+
+.direction-btn.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+:root.dark .direction-group {
+  background: #181818;
 }
 </style>

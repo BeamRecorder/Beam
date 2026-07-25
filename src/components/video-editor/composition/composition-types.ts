@@ -39,7 +39,7 @@ export interface CaptionData {
 }
 export interface WebcamAppearance {
   shadowSize: "none" | "sm" | "md" | "lg";
-  cornerRadius: "none" | "sm" | "md" | "lg" | "full";
+  cornerRadius: "none" | "sm" | "md" | "lg" | "full" | number;
 }
 export interface ClipAppearance extends WebcamAppearance {
   shadowColor: string;

@@ -77,7 +77,7 @@ const setMode = (mode: ZoomElement["mode"]) => {
       </template>
     </Popover>
     <template v-if="selectedZoom">
-      <ButtonGroup>
+      <ButtonGroup full>
         <Button
           size="sm"
           :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'"

@@ -37,7 +37,7 @@ defineProps<{
     shadowSize?: string;
     shadowColor?: string;
     shadowDirection?: string;
-    cornerRadius?: string;
+    cornerRadius?: string | number;
     clipTransform?: NormalizedTransform;
   } | null;
 
