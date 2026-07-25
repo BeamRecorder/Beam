@@ -16,6 +16,7 @@ import {
 import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import Button from "~/ui/button/Button.vue";
 import type { ZoomElement } from "../zoom/zoom-types";
+import type { ExportProgress } from "../../export/export-types";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { ProjectComposition } from "../composition/composition-types";
 import { useTimelineTracks } from "./composables/useTimelineTracks";
@@ -26,6 +27,7 @@ const props = defineProps<{
   zoomLevel: number;
   videoSrc: string | null;
   editorData?: ProjectEditorData | null;
+  exportProgress?: ExportProgress | null;
 
   // Track toggle states
   isVideoEnabled: boolean;
@@ -126,6 +128,12 @@ const selectMainVideoLayer = () => {
       <div class="timeline-ruler" @mousedown="handleMouseDown">
         <div class="ruler-info-spacer"></div>
         <div class="ruler-ticks-area" ref="ticksAreaRef">
+          <!-- Real-Time Export Progress Bar Overlay -->
+          <div
+            v-if="exportProgress && exportProgress.totalTimeMs > 0"
+            class="ruler-export-progress-bar"
+            :style="{ width: `${Math.min(100, Math.max(0, (exportProgress.currentTimeMs / exportProgress.totalTimeMs) * 100))}%` }"
+          ></div>
           <div
             v-for="second in visibleRulerSeconds"
             :key="second"
@@ -595,6 +603,18 @@ const selectMainVideoLayer = () => {
   position: relative;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.ruler-export-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 90, 31, 0.25);
+  border-right: 2px solid var(--color-primary);
+  pointer-events: none;
+  z-index: 4;
+  transition: width 0.08s linear;
 }
 
 .timeline-viewport {

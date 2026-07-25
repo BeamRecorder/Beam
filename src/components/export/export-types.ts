@@ -6,9 +6,16 @@ import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas'
 
 export type ExportFormat = 'webm' | 'mp4'
 export type ExportPreset = 'low' | 'medium' | 'high'
-export type ExportStage = 'preparing' | 'rendering' | 'encoding' | 'finalizing'
+export type ExportStage = 'preparing' | 'audio_mixing' | 'loading_assets' | 'encoding' | 'finalizing'
 
-export interface ExportProgress { stage: ExportStage; completed: number; total: number }
+export interface ExportProgress {
+  stage: ExportStage
+  stageLabel?: string
+  completed: number
+  total: number
+  currentTimeMs?: number
+  totalTimeMs?: number
+}
 export interface ExportResult { path: string; format: ExportFormat }
 export interface VideoLayer { src: string; width: number; height: number; fps: number; enabled: boolean }
 export interface AudioLayer { id: string; src: string; startSeconds: number; enabled: boolean }

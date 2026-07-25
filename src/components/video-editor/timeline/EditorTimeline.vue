@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
 import TimelineTracks from './TimelineTracks.vue';
+import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { ProjectComposition } from '../composition/composition-types';
@@ -11,7 +12,8 @@ const props = defineProps<{
   isPlaying: boolean;
   videoSrc?: string | null;
   editorData?: ProjectEditorData | null;
-  
+  exportProgress?: ExportProgress | null;
+
   // Track toggle states
   isVideoEnabled: boolean;
   isSystemAudioEnabled: boolean;
@@ -92,6 +94,7 @@ onUnmounted(() => {
       @update:zoom-level="emit('update:zoomLevel', $event)"
       :video-src="videoSrc || null"
       :editor-data="editorData"
+      :export-progress="exportProgress"
       :is-video-enabled="isVideoEnabled"
       :is-system-audio-enabled="isSystemAudioEnabled"
       :is-mic-audio-enabled="isMicAudioEnabled"

@@ -10,9 +10,9 @@ const request = { projectName: 'Demo', format: 'webm' as const, preset: 'medium'
 describe('useExportJob', () => {
   beforeEach(() => exportWithMediabunny.mockReset())
   it('publishes preparation, progress and a result', async () => {
-    exportWithMediabunny.mockImplementation(async (...args: unknown[]) => { const progress = args[1]; if (typeof progress === 'function') progress({ stage: 'encoding', completed: 1, total: 2 }); return { path: '/tmp/demo.webm', format: 'webm' } })
+    exportWithMediabunny.mockImplementation(async (...args: unknown[]) => { const progress = args[1]; if (typeof progress === 'function') progress({ stage: 'encoding', stageLabel: 'Encoding frame 1 of 2', completed: 1, total: 2, currentTimeMs: 1000, totalTimeMs: 2000 }); return { path: '/tmp/demo.webm', format: 'webm' } })
     const job = useExportJob(); await job.start(request)
-    expect(job.progress.value).toEqual({ stage: 'encoding', completed: 1, total: 2 }); expect(job.result.value?.path).toBe('/tmp/demo.webm'); expect(job.isExporting.value).toBe(false)
+    expect(job.progress.value).toEqual({ stage: 'encoding', stageLabel: 'Encoding frame 1 of 2', completed: 1, total: 2, currentTimeMs: 1000, totalTimeMs: 2000 }); expect(job.result.value?.path).toBe('/tmp/demo.webm'); expect(job.isExporting.value).toBe(false)
   })
   it('prevents concurrent submissions', async () => {
     let release!: () => void; exportWithMediabunny.mockReturnValue(new Promise<void>((resolve) => { release = resolve }))

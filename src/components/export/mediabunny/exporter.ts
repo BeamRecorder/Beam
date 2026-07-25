@@ -307,12 +307,37 @@ export async function exportWithMediabunny(
   output.addVideoTrack(source, { frameRate: request.snapshot.video.fps });
   let compositionVisuals: Awaited<ReturnType<typeof loadVisuals>> | null = null;
   try {
+    const totalTimeMs = Math.round(request.snapshot.duration * 1000);
+    const total = Math.max(
+      1,
+      Math.ceil(request.snapshot.duration * request.snapshot.video.fps),
+    );
+
+    onProgress({
+      stage: "loading_assets",
+      stageLabel: "Loading media assets...",
+      completed: 0,
+      total,
+      currentTimeMs: 0,
+      totalTimeMs,
+    });
+
     video.load();
     await waitFor(video, "loadedmetadata");
     const background = await loadBackground(request);
     const cursorImages = await loadCursorImages(request);
     const replacementCursor = await loadReplacementCursor(request);
     compositionVisuals = await loadVisuals(request);
+
+    onProgress({
+      stage: "audio_mixing",
+      stageLabel: "Mixing audio tracks...",
+      completed: 0,
+      total,
+      currentTimeMs: 0,
+      totalTimeMs,
+    });
+
     const mixedAudio = await renderMixedAudio(request);
     const audioSource =
       mixedAudio && audioCodec
@@ -321,10 +346,7 @@ export async function exportWithMediabunny(
     if (audioSource) output.addAudioTrack(audioSource);
     await output.start();
     if (audioSource && mixedAudio) await audioSource.add(mixedAudio);
-    const total = Math.max(
-      1,
-      Math.ceil(request.snapshot.duration * request.snapshot.video.fps),
-    );
+
     for (let frame = 0; frame < total; frame += 1) {
       if (signal.aborted)
         throw new DOMException("Export annulé.", "AbortError");
@@ -332,6 +354,17 @@ export async function exportWithMediabunny(
         request.snapshot.duration,
         frame / request.snapshot.video.fps,
       );
+      const currentTimeMs = Math.round(time * 1000);
+
+      onProgress({
+        stage: "encoding",
+        stageLabel: `Encoding frame ${frame + 1} of ${total}`,
+        completed: frame + 1,
+        total,
+        currentTimeMs,
+        totalTimeMs,
+      });
+
       if (Math.abs(video.currentTime - time) > 0.001) {
         video.currentTime = time;
         await waitFor(video, "seeked");
@@ -354,9 +387,17 @@ export async function exportWithMediabunny(
         replacementCursor,
       );
       await source.add(time, 1 / request.snapshot.video.fps);
-      onProgress({ stage: "encoding", completed: frame + 1, total });
     }
-    onProgress({ stage: "finalizing", completed: total, total });
+
+    onProgress({
+      stage: "finalizing",
+      stageLabel: "Finalizing media file...",
+      completed: total,
+      total,
+      currentTimeMs: totalTimeMs,
+      totalTimeMs,
+    });
+
     await output.finalize();
     const result = await window.capture!.finalizeExport(opened.jobId);
     return { path: result.path, format: request.format };

@@ -10,7 +10,8 @@ import TimelineToolbar from "./timeline/TimelineToolbar.vue";
 import Topbar from "./Topbar.vue";
 import { useVideoEditor } from "./composables/useVideoEditor";
 import { capture } from "../../api/capture";
-import type { CaptureProject, ProjectEditorData } from "../../api/types/capture-api";
+import { Sparkles, AlertCircle } from "@lucide/vue";
+import { useExportJob } from "../export/useExportJob";
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from './canvas/output-canvas';
 
 const props = withDefaults(
@@ -148,6 +149,7 @@ const {
   deleteSelectedZoom,
 } = zoomState;
 
+const { isExporting, progress: exportProgress } = useExportJob();
 import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
 
 const createEditorSnapshot = (): EditorStateSnapshot => ({
@@ -324,6 +326,14 @@ onBeforeUnmount(() => {
       @redo="redo"
     />
 
+    <!-- Export Active Warning Lock Banner -->
+    <div v-if="isExporting" class="export-notice-banner">
+      <Sparkles :size="14" class="banner-icon" />
+      <span>
+        Exportation en cours. Les modifications effectuées en direct n'auront pas d'effet sur le fichier actuellement en cours d'exportation.
+      </span>
+    </div>
+
     <!-- Main Workspace (Islands Layout) -->
     <div class="editor-workspace">
       <!-- Upper Section: Sidebar, Properties, Canvas -->
@@ -435,6 +445,7 @@ onBeforeUnmount(() => {
           v-model:zoom-level="timelineZoomLevel"
           :video-src="playerVideoSrc"
           :editor-data="editorData"
+          :export-progress="exportProgress"
           v-model:isVideoEnabled="isVideoEnabled"
           v-model:isSystemAudioEnabled="isSystemAudioEnabled"
           v-model:isMicAudioEnabled="isMicAudioEnabled"
@@ -501,6 +512,26 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.export-notice-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-primary-light, rgba(255, 90, 31, 0.12));
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 8px 20px -4px 20px;
+  user-select: none;
+  z-index: 10;
+}
+
+.banner-icon {
+  flex-shrink: 0;
+}
+
 .editor-page {
   width: 100vw;
   height: 100vh;
