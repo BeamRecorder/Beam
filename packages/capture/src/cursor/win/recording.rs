@@ -12,8 +12,8 @@ use std::{
 use crate::{
     CaptureError,
     cursor::{
-        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorBitmap, CursorEvent, CursorEventWriter,
-        ShapeStore, telemetry_from_events,
+        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter,
+        CursorShapeCatalogEntry, telemetry_from_events,
     },
     session::StartGate,
     storage::write_atomic,
@@ -64,7 +64,6 @@ impl WindowsCursorRecording {
         let final_path = directory.join("cursor.json");
         let shapes_path = directory.join("shapes.json");
         let telemetry_path = directory.join("telemetry.json");
-        let shapes_directory = directory.join("shapes");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
         let metrics = Arc::new(CursorCaptureMetrics::default());
@@ -76,7 +75,6 @@ impl WindowsCursorRecording {
             .spawn(move || {
                 capture_loop(
                     &thread_partial,
-                    &shapes_directory,
                     region,
                     capture_clicks,
                     capture_shape,
@@ -143,7 +141,6 @@ struct Previous {
 #[allow(clippy::too_many_arguments)]
 fn capture_loop(
     partial_path: &Path,
-    shapes_directory: &Path,
     region: CaptureRegion,
     capture_clicks: bool,
     capture_shape: bool,
@@ -154,7 +151,6 @@ fn capture_loop(
     start_gate: &Arc<StartGate>,
 ) -> Result<(), CaptureError> {
     let mut writer = CursorEventWriter::open(partial_path)?;
-    let mut shapes = ShapeStore::new(shapes_directory)?;
     ready
         .send(Ok(()))
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
@@ -224,18 +220,15 @@ fn capture_loop(
                     && previous.shape != Some(shape.native_id)
                 {
                     let hotspot = shape.hotspot;
-                    let shape_id = shapes.store(CursorBitmap {
-                        width: shape.width,
-                        height: shape.height,
-                        rgba: &shape.rgba,
-                        hotspot,
-                    })?;
+                    let native_cursor_id = format!("win:{:x}", shape.native_id);
                     push(
                         &mut writer,
                         metrics,
                         CursorEvent::Shape {
                             session_ns,
-                            shape_id,
+                            cursor_id: native_cursor_id.clone(),
+                            cursor_kind: shape.cursor_kind,
+                            native_cursor_id,
                             hotspot,
                         },
                     )?;
@@ -290,8 +283,19 @@ fn finalize_shapes(cursor_path: &Path, destination: &Path) -> Result<(), Capture
         .into_iter()
         .filter_map(|event| match event {
             CursorEvent::Shape {
-                shape_id, hotspot, ..
-            } => Some((shape_id, hotspot)),
+                cursor_id,
+                cursor_kind,
+                native_cursor_id,
+                hotspot,
+                ..
+            } => Some((
+                cursor_id,
+                CursorShapeCatalogEntry {
+                    cursor_kind,
+                    native_cursor_id,
+                    hotspot,
+                },
+            )),
             _ => None,
         })
         .collect::<std::collections::BTreeMap<_, _>>();

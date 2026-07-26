@@ -341,7 +341,7 @@ export function renderCompositionFrame(
   }
   const image =
     replacementCursor ??
-    (cursor?.shapeId ? cursorImages?.get(cursor.shapeId) : undefined);
+    (cursor?.cursorId ? cursorImages?.get(cursor.cursorId) : undefined);
   if (cursor?.visible && image?.complete && image.naturalWidth > 0) {
     const clampedX = Math.max(0, Math.min(1, cursor.x));
     const clampedY = Math.max(0, Math.min(1, cursor.y));
@@ -360,7 +360,7 @@ export function renderCompositionFrame(
 
     const hotspot = replacementCursor
       ? (replacementCursorHotspot ?? { x: 0, y: 0 })
-      : (snapshot.cursor.shapes[cursor.shapeId!]?.hotspot ?? { x: 0, y: 0 });
+      : (snapshot.cursor.shapes[cursor.cursorId!]?.hotspot ?? snapshot.cursor.catalog[cursor.cursorId!]?.hotspot ?? { x: 0, y: 0 });
     const size = settings.size;
     const cursorScale = size / image.naturalWidth;
 

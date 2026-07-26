@@ -36,6 +36,33 @@ pub struct Hotspot {
     pub x: u32,
     pub y: u32,
 }
+
+/// Portable cursor vocabulary. Values map directly to the editor's SVG assets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CursorKind {
+    Default,
+    Textcursor,
+    Handpointing,
+    Busy,
+    Help,
+    Cross,
+    Move,
+    Notallowed,
+    Resizenorthsouth,
+    Resizewesteast,
+    Resizenortheastsouthwest,
+    Resizenorthwestsoutheast,
+    Custom,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CursorShapeCatalogEntry {
+    pub cursor_kind: CursorKind,
+    pub native_cursor_id: String,
+    pub hotspot: Hotspot,
+}
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(
     tag = "event",
@@ -53,7 +80,9 @@ pub enum CursorEvent {
     },
     Shape {
         session_ns: u64,
-        shape_id: String,
+        cursor_id: String,
+        cursor_kind: CursorKind,
+        native_cursor_id: String,
         hotspot: Hotspot,
     },
     Button {

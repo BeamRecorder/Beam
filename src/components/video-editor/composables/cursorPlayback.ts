@@ -4,13 +4,17 @@ import type {
   CursorMoveEvent,
   CursorShapeEvent,
   CursorShapeAsset,
+  CursorKind,
 } from '../../../api/types/capture-api'
 
 export interface CursorPlaybackState {
   x: number
   y: number
   visible: boolean
+  cursorId: string | null
+  /** Legacy alias retained for bitmap-session rendering. */
   shapeId: string | null
+  cursorKind: CursorKind | null
   hotspot: { x: number; y: number }
 }
 
@@ -24,21 +28,24 @@ const moveState = (event: CursorMoveEvent): CursorPlaybackState => ({
   x: event.normalizedX,
   y: event.normalizedY,
   visible: event.visible,
+  cursorId: null,
   shapeId: null,
+  cursorKind: null,
   hotspot: { x: 0, y: 0 },
 })
 
 export function cursorStateAt(
   events: CursorEvent[],
   timeSeconds: number,
-  initialShapeId: string | null = null,
+  initialCursorId: string | null = null,
   initialHotspot = { x: 0, y: 0 },
 ): CursorPlaybackState | null {
   const time = Math.max(0, timeSeconds)
   let previousMove: CursorMoveEvent | null = null
   let nextMove: CursorMoveEvent | null = null
   let visible = true
-  let shapeId = initialShapeId
+  let cursorId = initialCursorId
+  let cursorKind: CursorKind | null = null
   let hotspot = initialHotspot
 
   for (const event of events) {
@@ -50,7 +57,8 @@ export function cursorStateAt(
       previousMove = event
       visible = event.visible
     } else if (isShape(event)) {
-      shapeId = event.shapeId
+      cursorId = event.cursorId ?? event.shapeId ?? null
+      cursorKind = event.cursorKind ?? null
       hotspot = event.hotspot
     } else if (event.event === 'visibility') {
       visible = event.visible
@@ -58,18 +66,14 @@ export function cursorStateAt(
   }
 
   if (!previousMove) {
-    if (nextMove) {
-      previousMove = nextMove
-    } else {
-      const firstMove = events.find(isMove)
-      if (firstMove) previousMove = firstMove
-      else return null
-    }
+    return null
   }
 
   const state = moveState(previousMove)
   state.visible = visible
-  state.shapeId = shapeId
+  state.cursorId = cursorId
+  state.shapeId = cursorId
+  state.cursorKind = cursorKind
   state.hotspot = hotspot
   if (nextMove && eventTime(nextMove) > eventTime(previousMove)) {
     const ratio = Math.min(1, Math.max(0, (time - eventTime(previousMove)) / (eventTime(nextMove) - eventTime(previousMove))))
@@ -94,5 +98,6 @@ export function cursorAssetForState(
   state: CursorPlaybackState | null,
   shapes: Record<string, CursorShapeAsset>,
 ) {
-  return state?.shapeId ? shapes[state.shapeId] ?? null : null
+  const cursorId = state?.cursorId ?? state?.shapeId
+  return cursorId ? shapes[cursorId] ?? null : null
 }

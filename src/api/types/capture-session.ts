@@ -42,9 +42,18 @@ export interface CursorMoveEvent {
 export interface CursorShapeEvent {
   event: 'shape'
   sessionNs: number
-  shapeId: string
+  /** Present only in schema-v1 bitmap sessions. */
+  shapeId?: string
+  cursorId?: string
+  cursorKind?: CursorKind
+  nativeCursorId?: string
   hotspot: { x: number; y: number }
 }
+
+export type CursorKind =
+  | 'default' | 'textcursor' | 'handpointing' | 'busy' | 'help' | 'cross'
+  | 'move' | 'notallowed' | 'resizenorthsouth' | 'resizewesteast'
+  | 'resizenortheastsouthwest' | 'resizenorthwestsoutheast' | 'custom'
 
 export interface CursorButtonEvent {
   event: 'button'
@@ -78,6 +87,12 @@ export interface CursorTelemetrySidecar {
 
 export interface CursorShapeAsset {
   src: string
+  hotspot: { x: number; y: number }
+}
+
+export interface CursorShapeCatalogEntry {
+  cursorKind: CursorKind
+  nativeCursorId: string
   hotspot: { x: number; y: number }
 }
 
@@ -151,6 +166,7 @@ export interface ProjectEditorData {
     events: CursorEvent[]
     telemetry: CursorTelemetryPoint[]
     shapes: Record<string, CursorShapeAsset>
+    catalog: Record<string, CursorShapeCatalogEntry>
     missing: string[]
   }
   zoom: ProjectZoomState

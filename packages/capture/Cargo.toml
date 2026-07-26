@@ -18,8 +18,6 @@ thiserror = "2"
 tracing = "0.1"
 uuid = { version = "1", features = ["serde", "v7"] }
 time = { version = "0.3", features = ["formatting"] }
-png = "0.18"
-sha2 = "0.10"
 fs2 = "0.4"
 
 [target.'cfg(windows)'.dependencies]

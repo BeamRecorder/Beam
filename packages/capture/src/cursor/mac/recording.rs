@@ -17,8 +17,8 @@ use core_graphics::{
 use crate::{
     CaptureError,
     cursor::{
-        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter, map_coordinates,
-        telemetry_from_events,
+        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter, CursorKind,
+        CursorShapeCatalogEntry, map_coordinates, telemetry_from_events,
     },
     model::SourceId,
     session::StartGate,
@@ -115,7 +115,10 @@ impl MacCursorRecording {
                 .map_err(|_| CaptureError::Backend("macOS cursor thread panicked".into()))??;
             finalize(&self.partial, &self.final_path)?;
             finalize_telemetry(&self.final_path, &self.telemetry_path)?;
-            write_atomic(&self.final_path.with_file_name("shapes.json"), b"{}")?;
+            finalize_shapes(
+                &self.final_path,
+                &self.final_path.with_file_name("shapes.json"),
+            )?;
         }
         Ok(())
     }
@@ -196,6 +199,20 @@ fn capture_loop(
         CursorEvent::Visibility {
             session_ns: segment_start_ns,
             visible: true,
+        },
+    )?;
+    push(
+        &mut writer,
+        metrics,
+        CursorEvent::Shape {
+            session_ns: segment_start_ns,
+            cursor_id: "macos:current-system".into(),
+            // AppKit cursor interrogation is intentionally isolated from this
+            // CoreGraphics sampling loop. Until a system cursor is classified,
+            // preserve the traceable native identity as a safe custom cursor.
+            cursor_kind: CursorKind::Custom,
+            native_cursor_id: "macos:current-system".into(),
+            hotspot: crate::cursor::Hotspot { x: 0, y: 0 },
         },
     )?;
     while !cancel.load(Ordering::Acquire) {
@@ -286,6 +303,33 @@ fn finalize_telemetry(cursor_path: &Path, destination: &Path) -> Result<(), Capt
         destination,
         &serde_json::to_vec_pretty(&telemetry_from_events(&events))?,
     )
+}
+
+fn finalize_shapes(cursor_path: &Path, destination: &Path) -> Result<(), CaptureError> {
+    let events: Vec<CursorEvent> = serde_json::from_slice(
+        &std::fs::read(cursor_path).map_err(|error| CaptureError::storage(cursor_path, error))?,
+    )?;
+    let shapes = events
+        .into_iter()
+        .filter_map(|event| match event {
+            CursorEvent::Shape {
+                cursor_id,
+                cursor_kind,
+                native_cursor_id,
+                hotspot,
+                ..
+            } => Some((
+                cursor_id,
+                CursorShapeCatalogEntry {
+                    cursor_kind,
+                    native_cursor_id,
+                    hotspot,
+                },
+            )),
+            _ => None,
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
+    write_atomic(destination, &serde_json::to_vec_pretty(&shapes)?)
 }
 
 #[allow(clippy::cast_possible_truncation)]

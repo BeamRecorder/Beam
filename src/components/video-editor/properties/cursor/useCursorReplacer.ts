@@ -116,6 +116,14 @@ export const cursorOptions = [
   { value: 'zoomout', label: 'macOS Zoom Out', thumbnail: '/macOsSvgCursors/zoomout.svg' },
 ]
 
+/** `custom` is intentionally rendered as the default pointer, never guessed. */
+export const cursorTypeForKind = (kind: string | null | undefined): CursorType => {
+  const candidate = kind === 'custom' ? 'default' : kind
+  return candidate && candidate in cursorUrls && candidate !== 'automatic'
+    ? candidate as CursorType
+    : 'default'
+}
+
 export const svgAtRasterSize = (svgContent: string, rasterWidth: number) => {
   const viewBox = svgContent.match(/\bviewBox=["']\s*[-.\d]+\s+[-.\d]+\s+([-.\d]+)\s+([-.\d]+)\s*["']/i)
   const viewBoxWidth = Number(viewBox?.[1]) || 1

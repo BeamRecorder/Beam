@@ -4,6 +4,7 @@ import {
   cursorUrls,
   svgAtRasterSize,
   useCursorReplacer,
+  cursorTypeForKind,
 } from "./useCursorReplacer";
 
 class LoadingImage {
@@ -129,5 +130,11 @@ describe("useCursorReplacer", () => {
       "Unable to decode cursor asset: /macOsSvgCursors/busy.svg",
     );
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:bad");
+  });
+
+  it("maps semantic cursor kinds and never guesses custom cursors", () => {
+    expect(cursorTypeForKind('handpointing')).toBe('handpointing');
+    expect(cursorTypeForKind('custom')).toBe('default');
+    expect(cursorTypeForKind('unknown')).toBe('default');
   });
 });

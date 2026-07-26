@@ -15,12 +15,13 @@ const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({
 }))
 
 const copyCursor = (cursor: ProjectEditorData['cursor'] | undefined): CompositionSnapshot['cursor'] => {
-  if (!cursor) return { available: false, events: [], telemetry: [], shapes: {}, missing: [] }
+  if (!cursor) return { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] }
   return {
     available: cursor.available,
     events: cursor.events.map((event) => event.event === 'shape' ? { ...event, hotspot: { ...event.hotspot } } : { ...event }),
     telemetry: cursor.telemetry.map((sample) => ({ ...sample })),
     shapes: Object.fromEntries(Object.entries(cursor.shapes).map(([shapeId, asset]) => [shapeId, { ...asset, hotspot: { ...asset.hotspot } }])),
+    catalog: Object.fromEntries(Object.entries(cursor.catalog ?? {}).map(([cursorId, entry]) => [cursorId, { ...entry, hotspot: { ...entry.hotspot } }])),
     missing: [...cursor.missing],
   }
 }

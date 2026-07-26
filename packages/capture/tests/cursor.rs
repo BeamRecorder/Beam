@@ -21,28 +21,19 @@ fn coordinates_support_negative_origins_and_crop() {
 }
 
 #[test]
-fn shapes_are_deduplicated_with_hotspot_in_hash() {
-    let temp = tempfile::tempdir().expect("tempdir");
-    let mut store = ShapeStore::new(temp.path()).expect("store");
-    let rgba = [255_u8, 0, 0, 255];
-    let first = store
-        .store(CursorBitmap {
-            width: 1,
-            height: 1,
-            rgba: &rgba,
-            hotspot: Hotspot { x: 0, y: 0 },
-        })
-        .expect("shape");
-    let second = store
-        .store(CursorBitmap {
-            width: 1,
-            height: 1,
-            rgba: &rgba,
-            hotspot: Hotspot { x: 0, y: 0 },
-        })
-        .expect("shape");
-    assert_eq!(first, second);
-    assert_eq!(store.len(), 1);
+fn semantic_shape_serializes_without_bitmap_fields() {
+    let event = CursorEvent::Shape {
+        session_ns: 42,
+        cursor_id: "win:123".into(),
+        cursor_kind: CursorKind::Custom,
+        native_cursor_id: "win:123".into(),
+        hotspot: Hotspot { x: 0, y: 0 },
+    };
+    let value = serde_json::to_value(event).expect("shape json");
+    assert_eq!(value["cursorId"], "win:123");
+    assert_eq!(value["cursorKind"], "custom");
+    assert!(value.get("shapeId").is_none());
+    assert!(value.get("png").is_none());
 }
 
 #[test]
@@ -79,7 +70,8 @@ fn telemetry_marks_two_near_left_clicks_as_double_click() {
 fn telemetry_keeps_the_latest_hour_of_samples() {
     let events = (0..=MAX_CURSOR_TELEMETRY_SAMPLES)
         .map(|index| CursorEvent::Move {
-            session_ns: u64::try_from(index).unwrap() * CURSOR_SAMPLE_INTERVAL_NS,
+            session_ns: u64::try_from(index).expect("sample index fits u64")
+                * CURSOR_SAMPLE_INTERVAL_NS,
             pixel_x: 0,
             pixel_y: 0,
             normalized_x: 0.5,

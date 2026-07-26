@@ -49,6 +49,8 @@ describe("cursor playback", () => {
       y: 0.5,
       visible: false,
       shapeId: "arrow",
+      cursorId: "arrow",
+      cursorKind: null,
       hotspot: { x: 3, y: 4 },
     });
   });
@@ -61,6 +63,8 @@ describe("cursor playback", () => {
       y: 0.8,
       visible: false,
       shapeId: "initial",
+      cursorId: "initial",
+      cursorKind: null,
       hotspot: { x: 1, y: 2 },
     });
   });
@@ -125,5 +129,21 @@ describe("cursor playback", () => {
       ),
     ).toBeNull();
     expect(cursorAssetForState(null, { arrow: asset })).toBeNull();
+  });
+
+  it("keeps a semantic cursor kind without requiring a bitmap shape", () => {
+    const events: CursorEvent[] = [
+      { event: 'shape', sessionNs: 0, cursorId: 'win:arrow', cursorKind: 'default', nativeCursorId: 'win:arrow', hotspot: { x: 1, y: 2 } },
+      move(1, .2, .3),
+    ];
+    expect(cursorStateAt(events, 1)).toMatchObject({ cursorId: 'win:arrow', cursorKind: 'default', hotspot: { x: 1, y: 2 } });
+  });
+
+  it("exposes custom cursors so the renderer can show an explicit fallback", () => {
+    const events: CursorEvent[] = [
+      { event: 'shape', sessionNs: 0, cursorId: 'x11:42', cursorKind: 'custom', nativeCursorId: 'x11:42', hotspot: { x: 0, y: 0 } },
+      move(1, .5, .5),
+    ];
+    expect(cursorStateAt(events, 1)?.cursorKind).toBe('custom');
   });
 });

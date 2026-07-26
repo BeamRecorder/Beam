@@ -115,7 +115,7 @@ fn started_gate() -> Result<std::sync::Arc<capture::session::StartGate>, capture
 
 #[cfg(windows)]
 fn probe_windows_cursor() -> Result<(), capture::CaptureError> {
-    use capture::cursor::{CaptureRegion, CursorBitmap, ShapeStore, win::sample_cursor};
+    use capture::cursor::{CaptureRegion, win::sample_cursor};
 
     let sample = sample_cursor(
         CaptureRegion {
@@ -126,17 +126,10 @@ fn probe_windows_cursor() -> Result<(), capture::CaptureError> {
         },
         true,
     )?;
-    let shape = if let Some(shape) = sample.shape.as_ref() {
-        let mut store = ShapeStore::new("capture-smoke-cursor-shapes")?;
-        Some(store.store(CursorBitmap {
-            width: shape.width,
-            height: shape.height,
-            rgba: &shape.rgba,
-            hotspot: shape.hotspot,
-        })?)
-    } else {
-        None
-    };
+    let shape = sample
+        .shape
+        .as_ref()
+        .map(|shape| format!("win:{:x}", shape.native_id));
     write_json_line(
         &mut io::stdout().lock(),
         &serde_json::json!({

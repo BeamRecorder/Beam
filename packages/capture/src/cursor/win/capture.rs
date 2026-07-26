@@ -20,17 +20,15 @@ use windows::Win32::{
 
 use crate::{
     CaptureError,
-    cursor::{CaptureRegion, CursorCoordinates, Hotspot, map_coordinates},
+    cursor::{CaptureRegion, CursorCoordinates, CursorKind, Hotspot, map_coordinates},
     model::SourceId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WindowsCursorShape {
     pub native_id: usize,
-    pub width: u32,
-    pub height: u32,
+    pub cursor_kind: CursorKind,
     pub hotspot: Hotspot,
-    pub rgba: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -124,7 +122,6 @@ fn cursor_shape(native_id: usize) -> Result<WindowsCursorShape, CaptureError> {
     let mut info = ICONINFO::default();
     // SAFETY: the icon came from GetCursorInfo and `info` is valid writable storage.
     unsafe { GetIconInfo(icon, &mut info) }.map_err(backend_error)?;
-    let result = render_icon(icon, &info);
     // SAFETY: GetIconInfo transfers ownership of both returned bitmap handles.
     unsafe {
         if !info.hbmColor.is_invalid() {
@@ -134,19 +131,19 @@ fn cursor_shape(native_id: usize) -> Result<WindowsCursorShape, CaptureError> {
             let _deleted = DeleteObject(HGDIOBJ(info.hbmMask.0));
         }
     }
-    let (width, height, rgba) = result?;
     Ok(WindowsCursorShape {
         native_id,
-        width,
-        height,
+        // A handle not recognized as a standard Windows cursor is intentionally
+        // never guessed or rasterized. The editor renders `custom` as default.
+        cursor_kind: CursorKind::Custom,
         hotspot: Hotspot {
             x: info.xHotspot,
             y: info.yHotspot,
         },
-        rgba,
     })
 }
 
+#[allow(dead_code)]
 fn render_icon(icon: HICON, info: &ICONINFO) -> Result<(u32, u32, Vec<u8>), CaptureError> {
     let (width, height) = bitmap_dimensions(info)?;
     let width_i32 = i32::try_from(width).map_err(backend_error)?;

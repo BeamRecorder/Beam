@@ -6,6 +6,7 @@ import {
 } from "../../composables/cursorPlayback";
 import {
   type CursorType,
+  cursorTypeForKind,
   useCursorReplacer,
 } from "../../properties/cursor/useCursorReplacer";
 import { ZOOM_DEPTH_SCALES } from "../../zoom/zoom-types";
@@ -100,6 +101,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     () =>
       [
         options.selectedCursor(),
+        options.currentTime(),
         options.cursorSize(),
         options.cursorColor(),
         options.deviceScale(),
@@ -108,10 +110,10 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       try {
         const rasterSize =
           options.cursorSize() * maxZoomScale * options.deviceScale();
-        const cursorType =
-          options.selectedCursor() === "automatic"
-            ? "default"
-            : options.selectedCursor();
+        const state = cursorStateAt(options.editorData()?.cursor.events ?? [], options.currentTime());
+        const cursorType = options.selectedCursor() === "automatic"
+          ? cursorTypeForKind(state?.cursorKind)
+          : options.selectedCursor();
         const img = await getCursorImage(
           cursorType,
           rasterSize,
@@ -216,6 +218,9 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     lastDrawTime = time;
 
     const state = cursorStateAt(cursorData.events, time);
+    if (options.selectedCursor() === "automatic" && state?.cursorKind === "custom") {
+      drawCursorWarning(ctx, "System cursor not translated", logicalWidth);
+    }
 
     drawInCameraSpace(() => {
       // 1. Draw ripples in camera space
@@ -263,10 +268,9 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         const pointerY = videoWindow.dy + (point.cy * baseTransform.height + baseTransform.y) * videoWindow.dh;
 
         const targetSize = options.cursorSize();
-        const cursorType =
-          options.selectedCursor() === "automatic"
-            ? "default"
-            : options.selectedCursor();
+        const cursorType = options.selectedCursor() === "automatic"
+          ? cursorTypeForKind(state.cursorKind)
+          : options.selectedCursor();
         const hotspot = cursorHotspots[cursorType];
         const cursorScale = targetSize / 32;
         const hx = hotspot.x * cursorScale;

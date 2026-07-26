@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use super::{PermissionSnapshot, ProjectId, SessionId, SourceId, TrackMetadata};
 
-pub const SCHEMA_VERSION: u32 = 1;
+/// Schema v2 stores cursor events as portable semantic identifiers. Schema v1
+/// sessions remain readable by the Electron-side bitmap compatibility reader.
+pub const SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
