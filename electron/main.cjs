@@ -21,7 +21,10 @@ const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs')
 const { createUserPaths } = require('./storage/user-paths.cjs')
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs')
 
-protocol.registerSchemesAsPrivileged([{ scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }])
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+  { scheme: 'project-media', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+])
 
 const startupAt = process.hrtime.bigint()
 const logStartup = (step) => {
@@ -133,7 +136,14 @@ app.whenReady().then(() => {
   logStartup('Microphone IPC registered.')
   registerSystemAudioIpc({ ipcMain, storage: systemAudioStorage })
   logStartup('System audio IPC registered.')
-  registerProjectIpc(ipcMain, createProjectStore(userPaths.projects), createBackgroundLibrary(userPaths), require('electron').dialog, BrowserWindow)
+  const projectStore = createProjectStore(userPaths.projects)
+  registerProjectIpc(ipcMain, projectStore, createBackgroundLibrary(userPaths), require('electron').dialog, BrowserWindow)
+  protocol.handle('project-media', (request) => {
+    const file = projectStore.mediaFileForUrl(request.url)
+    return file
+      ? new Response(Readable.toWeb(fs.createReadStream(file)))
+      : new Response('Not found', { status: 404 })
+  })
   logStartup('Project IPC registered.')
   const whisperStore = createWhisperModelStore(userPaths.whisperModels)
   protocol.handle('whisper-model', (request) => { const file = whisperStore.fileForUrl(request.url); return file ? new Response(Readable.toWeb(fs.createReadStream(file))) : new Response('Not found', { status: 404 }) })

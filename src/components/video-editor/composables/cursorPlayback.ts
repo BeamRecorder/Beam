@@ -40,6 +40,7 @@ export function cursorStateAt(
   initialCursorId: string | null = null,
   initialHotspot = { x: 0, y: 0 },
 ): CursorPlaybackState | null {
+  const isTimelineStart = timeSeconds === 0
   const time = Math.max(0, timeSeconds)
   let previousMove: CursorMoveEvent | null = null
   let nextMove: CursorMoveEvent | null = null
@@ -66,6 +67,15 @@ export function cursorStateAt(
   }
 
   if (!previousMove) {
+    if (isTimelineStart && nextMove) {
+      const state = moveState(nextMove)
+      state.visible = visible
+      state.cursorId = cursorId
+      state.shapeId = cursorId
+      state.cursorKind = cursorKind
+      state.hotspot = hotspot
+      return state
+    }
     return null
   }
 

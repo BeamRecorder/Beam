@@ -1,7 +1,7 @@
 const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
-const { pathToFileURL } = require('url')
+const { fileURLToPath, pathToFileURL } = require('url')
 const { createCompositionStore, normalizeComposition } = require('./composition-store.cjs')
 const { kindFor } = require('../backgrounds/background-library.cjs')
 
@@ -33,6 +33,24 @@ function createProjectStore(root) {
     })
     if (!directory) throw new Error('Projet introuvable')
     return directory
+  }
+  const mediaUrlFor = (fileUrl) => {
+    if (typeof fileUrl !== 'string') return null
+    let file
+    try { file = fileURLToPath(fileUrl) } catch { return null }
+    const relativePath = path.relative(root, file)
+    const safeFile = safePath(root, relativePath)
+    if (!safeFile || safeFile !== path.resolve(file) || !fs.existsSync(safeFile) || !fs.statSync(safeFile).isFile()) return null
+    return `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
+  }
+  const mediaFileForUrl = (mediaUrl) => {
+    let parsed
+    try { parsed = new URL(mediaUrl) } catch { return null }
+    if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'asset') return null
+    let relativePath
+    try { relativePath = decodeURIComponent(parsed.pathname.slice(1)) } catch { return null }
+    const file = safePath(root, relativePath)
+    return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null
   }
   const availableDirectory = (name, currentDirectory = null) => {
     const base = `project-${slugify(name)}`
@@ -214,6 +232,8 @@ function createProjectStore(root) {
   applyPendingRenames()
   return {
     list: () => projectDirectories().map((directory) => { try { const manifest = readManifest(directory); return summary(directory, manifest, manifest.projectId) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
+    mediaUrlFor,
+    mediaFileForUrl,
     editorData,
     saveZoom: (id, zoom) => { const directory = directoryFor(id); const manifest = readManifest(directory); const state = zoomState(zoom); manifest.editor = { ...(manifest.editor || {}), zoom: state }; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return state },
     editorState,

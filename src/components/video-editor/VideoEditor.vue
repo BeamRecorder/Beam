@@ -161,7 +161,7 @@ const createEditorSnapshot = (): EditorStateSnapshot => ({
   backgroundBlurPercent: backgroundBlurPercent.value,
 });
 
-const { recordSnapshot, undo, redo, canUndo, canRedo } = useEditorUndoRedo({
+const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction } = useEditorUndoRedo({
   onRestoreSnapshot: async (snapshot) => {
     composition.value = snapshot.composition;
     zoomElements.value = snapshot.zoomElements;
@@ -422,6 +422,7 @@ onBeforeUnmount(() => {
           :active-tab="activeTab"
           :selected-transform-layer="selectedTransformLayer"
           :is-cropping="isCropping"
+          :history-action="historyAction"
           @update:zoom="updateZoom"
           @preview:zoom="previewZoom"
           @select:transform-layer="handleSelectTransformLayer($event)"

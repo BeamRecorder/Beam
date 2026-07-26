@@ -31,6 +31,14 @@ describe("cursor playback", () => {
     expect(cursorStateAt([move(1, 0.1, 0.2)], -4)).toBeNull();
   });
 
+  it("uses the first recorded position at the exact start of the timeline", () => {
+    expect(cursorStateAt([move(0.02, 0.1, 0.2)], 0)).toMatchObject({
+      x: 0.1,
+      y: 0.2,
+      visible: true,
+    });
+  });
+
   it("interpolates the next move and applies shape and visibility events", () => {
     const events: CursorEvent[] = [
       {

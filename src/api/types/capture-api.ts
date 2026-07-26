@@ -63,6 +63,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void
   onPreferenceShortcut(listener: (id: string) => void): () => void
   listProjects(): Promise<CaptureProject[]>
+  projectMediaUrl(source: string): Promise<string | null>
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>

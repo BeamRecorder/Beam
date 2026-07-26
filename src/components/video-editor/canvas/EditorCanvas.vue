@@ -4,6 +4,8 @@ import { Check } from "@lucide/vue";
 import Button from "../../ui/button/Button.vue";
 import Skeleton from "../../ui/skeleton/Skeleton.vue";
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
+import UndoRedoToast from './UndoRedoToast.vue';
+import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../properties/cursor/useCursorReplacer";
 import type { BackgroundValue } from "../composables/backgroundCatalog";
@@ -45,6 +47,7 @@ const props = defineProps<{
   selectedTransformLayer: CompositionLayer | null;
   loopProgress?: number;
   isCropping?: boolean;
+  historyAction?: HistoryAction | null;
 }>();
 
 const emit = defineEmits<{
@@ -350,6 +353,9 @@ onUnmounted(() => {
       </div>
       <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
     </div>
+
+    <!-- Undo / Redo Overlay Toast -->
+    <UndoRedoToast :action="historyAction ?? null" />
   </div>
 </template>
 

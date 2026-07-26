@@ -4,6 +4,13 @@ import type { ZoomElement } from '../zoom/zoom-types'
 import type { OutputCanvasSettings } from '../canvas/output-canvas'
 import type { BackgroundValue } from './backgroundCatalog'
 
+export type HistoryActionType = 'undo' | 'redo'
+
+export interface HistoryAction {
+  type: HistoryActionType
+  timestamp: number
+}
+
 export interface EditorStateSnapshot {
   composition: ProjectComposition
   zoomElements: ZoomElement[]
@@ -19,6 +26,7 @@ export function useEditorUndoRedo(options: {
 }) {
   const undoStack = ref<EditorStateSnapshot[]>([])
   const redoStack = ref<EditorStateSnapshot[]>([])
+  const lastAction = ref<HistoryAction | null>(null)
   let isRestoring = false
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -80,6 +88,7 @@ export function useEditorUndoRedo(options: {
       options.onRestoreSnapshot(cloneSnapshot(previous))
     }
     isRestoring = false
+    lastAction.value = { type: 'undo', timestamp: Date.now() }
   }
 
   const redo = () => {
@@ -97,6 +106,7 @@ export function useEditorUndoRedo(options: {
       options.onRestoreSnapshot(cloned)
     }
     isRestoring = false
+    lastAction.value = { type: 'redo', timestamp: Date.now() }
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -139,6 +149,7 @@ export function useEditorUndoRedo(options: {
     redoStack,
     canUndo,
     canRedo,
+    lastAction,
     recordSnapshot,
     undo,
     redo,
