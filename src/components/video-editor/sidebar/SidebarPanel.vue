@@ -54,7 +54,7 @@ const menuItems = [
         @click="emit('select-tab', 'settings')"
         title="Settings"
       >
-        <Settings class="nav-icon animate-cog" />
+        <Settings class="nav-icon" />
         <span class="nav-label">Settings</span>
       </button>
     </div>
@@ -125,14 +125,10 @@ const menuItems = [
   color: var(--color-primary);
 }
 
-.nav-btn:hover .animate-cog {
-  transform: rotate(45deg);
-}
-
 .nav-icon {
   width: 18px;
   height: 18px;
-  transition: transform 0.3s ease;
+  display: block;
 }
 
 .nav-label {
