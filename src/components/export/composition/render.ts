@@ -7,7 +7,7 @@ import type {
   CompositionSnapshot,
   CursorRenderSettings,
 } from "../export-types";
-import { activeLayersAt } from "../../video-editor/composition/composition-types";
+import { activeLayersAt, getCaptionTransform } from "../../video-editor/composition/composition-types";
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-editor/composition/webcam/webcam-zoom";
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 
@@ -35,15 +35,23 @@ export function drawCompositionLayers(
   time: number,
   visuals: CompositionVisuals = new Map(),
   followsZoom = false,
+  positionedMedia?: { x: number; y: number; width: number; height: number },
+  mainVideoWidth?: number,
 ) {
   const { width, height } = snapshot.canvas;
+  const pm = positionedMedia ?? { x: 0, y: 0, width, height };
+  const refWidth = mainVideoWidth || snapshot.video.width || 1920;
+
   for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
     if (
       layer.kind === "audio" ||
       (layer.kind === 'video' && layer.reactToZoom) ||
-      (followsZoom ? layer.kind === 'video' : layer.kind !== 'video')
+      (followsZoom ? layer.kind !== 'video' : layer.kind === 'video')
     ) continue;
+
     if (layer.kind === "caption") {
+      if (followsZoom) continue; // Captions DO NOT follow camera zoom; they render in unzoomed screen space overlay
+
       const sentence = layer.caption.sentences.find(
         (item) => item.startMs <= time * 1000 && time * 1000 <= item.endMs,
       );
@@ -51,42 +59,43 @@ export function drawCompositionLayers(
       if (!textToDisplay) continue;
 
       const style = layer.caption.style;
-      const fontSizePx = Math.max(12, style.fontSize);
+      const fontSizePx = Math.max(
+        12,
+        (style.fontSize * pm.width) / Math.max(1, refWidth),
+      );
 
       ctx.save();
-      ctx.font = `600 ${fontSizePx}px sans-serif`;
+      ctx.font = `800 ${fontSizePx}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.miterLimit = 2;
 
-      const yRatio =
-        style.placement === "top"
-          ? 0.12
-          : style.placement === "center"
-            ? 0.5
-            : 0.88;
-      const centerX = width / 2;
-      const centerY = height * yRatio;
-      const maxWidth = width * 0.88;
+      const liveTransform = getCaptionTransform(layer);
+      const boxX = pm.x + liveTransform.x * pm.width;
+      const boxY = pm.y + liveTransform.y * pm.height;
+      const boxW = liveTransform.width * pm.width;
+      const boxH = liveTransform.height * pm.height;
+      const centerX = boxX + boxW / 2;
+      const centerY = boxY + boxH / 2;
 
-      if (style.backdropBlur && style.backdropBlur > 0) {
-        const metrics = ctx.measureText(textToDisplay);
-        const boxWidth = Math.min(maxWidth, metrics.width + fontSizePx * 1.2);
-        const boxHeight = fontSizePx * 1.6;
-        const boxX = centerX - boxWidth / 2;
-        const boxY = centerY - boxHeight / 2;
+      const strokeWidthPx = Math.max(
+        1,
+        ((style.boxPadding ?? 6) * pm.width) / Math.max(1, refWidth),
+      );
+      const extrusionPx = Math.max(
+        0,
+        ((style.boxRadius ?? 4) * pm.width) / Math.max(1, refWidth),
+      );
 
-        ctx.save();
-        ctx.fillStyle = "rgba(15, 23, 42, 0.65)";
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxWidth, boxHeight, fontSizePx * 0.3);
-        ctx.fill();
-        ctx.restore();
-      }
+      const outlineColor = style.boxColor ?? "#000000";
 
-      if (style.shadowBlur && style.shadowBlur > 0) {
-        const blur = style.shadowBlur;
+      // 1. Drop Shadow
+      const hasShadow = Boolean(style.shadowBlur && style.shadowBlur > 0);
+      if (hasShadow) {
+        const blur = style.shadowBlur!;
         const dir = style.shadowDirection ?? "bottom-right";
-        ctx.shadowColor = style.shadowColor || "rgba(0, 0, 0, 0.75)";
+        ctx.shadowColor = style.shadowColor || "rgba(0, 0, 0, 0.85)";
         ctx.shadowBlur = blur;
         ctx.shadowOffsetX =
           style.shadowOffsetX ??
@@ -104,11 +113,65 @@ export function drawCompositionLayers(
               : 0);
       }
 
+      // 2. 3D Extrusion Shadow
+      if (extrusionPx > 0) {
+        ctx.save();
+        const shadowCol = style.shadowColor || "rgba(0, 0, 0, 0.85)";
+        ctx.strokeStyle = shadowCol;
+        ctx.fillStyle = shadowCol;
+        ctx.lineWidth = strokeWidthPx * 2;
+
+        const totalSteps = Math.round(extrusionPx);
+        for (let i = totalSteps; i >= 1; i--) {
+          const stepOffset = i * (pm.width / Math.max(1, refWidth));
+          if (i !== totalSteps) {
+            ctx.shadowColor = "transparent";
+          }
+          ctx.strokeText(
+            textToDisplay,
+            centerX + stepOffset,
+            centerY + stepOffset,
+            Math.max(10, boxW - 8),
+          );
+          ctx.fillText(
+            textToDisplay,
+            centerX + stepOffset,
+            centerY + stepOffset,
+            Math.max(10, boxW - 8),
+          );
+        }
+        ctx.restore();
+        ctx.shadowColor = "transparent";
+      }
+
+      // 3. Thick Outline Stroke
+      if (outlineColor && outlineColor !== "transparent" && strokeWidthPx > 0) {
+        ctx.save();
+        if (extrusionPx > 0) {
+          ctx.shadowColor = "transparent";
+        }
+        ctx.strokeStyle = outlineColor;
+        ctx.lineWidth = strokeWidthPx * 2;
+        ctx.strokeText(
+          textToDisplay,
+          centerX,
+          centerY,
+          Math.max(10, boxW - 8),
+        );
+        ctx.restore();
+        ctx.shadowColor = "transparent";
+      }
+
+      // 4. Main Text Fill
+      if (extrusionPx > 0 || (outlineColor && outlineColor !== "transparent" && strokeWidthPx > 0)) {
+        ctx.shadowColor = "transparent";
+      }
       ctx.fillStyle = style.color || "#ffffff";
-      ctx.fillText(textToDisplay, centerX, centerY, maxWidth);
+      ctx.fillText(textToDisplay, centerX, centerY, Math.max(10, boxW - 8));
       ctx.restore();
       continue;
     }
+
     const asset = visuals.get(layer.assetId);
     if (!asset) continue;
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
@@ -195,14 +258,15 @@ export function renderCompositionFrame(
   } else {
     ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
   }
-  drawCompositionLayers(ctx, snapshot, time, visuals, true);
+  drawCompositionLayers(ctx, snapshot, time, visuals, true, positionedMedia, sourceWidth);
   ctx.restore();
+
   for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
     if (layer.kind !== "video" || !layer.reactToZoom) continue;
     const source = visuals?.get(layer.assetId);
     if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance, layer.isMirrored), layer.transform, layer.crop);
   }
-  drawCompositionLayers(ctx, snapshot, time, visuals);
+  drawCompositionLayers(ctx, snapshot, time, visuals, false, positionedMedia, sourceWidth);
 
   ctx.save();
   ctx.translate(width / 2, height / 2);
@@ -221,6 +285,21 @@ export function renderCompositionFrame(
         click.sessionNs / 1_000_000_000,
       );
       if (!state) continue;
+      const clampedX = Math.max(0, Math.min(1, state.x));
+      const clampedY = Math.max(0, Math.min(1, state.y));
+      const point = outputPoint(
+        clampedX,
+        clampedY,
+        sourceWidth,
+        sourceHeight,
+        positionedMedia.width,
+        positionedMedia.height,
+        snapshot.canvas.showBackground,
+      );
+      const finalPointX = isBaseVideoMirrored ? (1 - point.cx) : point.cx;
+      const rippleX = positionedMedia.x + (finalPointX * baseTransform.width + baseTransform.x) * positionedMedia.width;
+      const rippleY = positionedMedia.y + (point.cy * baseTransform.height + baseTransform.y) * positionedMedia.height;
+
       const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - age / 0.5);
@@ -228,8 +307,8 @@ export function renderCompositionFrame(
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(
-        outputPoint(state.x, state.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cx * width,
-        outputPoint(state.x, state.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cy * height,
+        rippleX,
+        rippleY,
         2 + age * settings.ripple.size * 2,
         0,
         Math.PI * 2,
@@ -242,24 +321,40 @@ export function renderCompositionFrame(
     replacementCursor ??
     (cursor?.shapeId ? cursorImages?.get(cursor.shapeId) : undefined);
   if (cursor?.visible && image?.complete && image.naturalWidth > 0) {
+    const clampedX = Math.max(0, Math.min(1, cursor.x));
+    const clampedY = Math.max(0, Math.min(1, cursor.y));
+    const point = outputPoint(
+      clampedX,
+      clampedY,
+      sourceWidth,
+      sourceHeight,
+      positionedMedia.width,
+      positionedMedia.height,
+      snapshot.canvas.showBackground,
+    );
+    const finalPointX = isBaseVideoMirrored ? (1 - point.cx) : point.cx;
+    const pointerX = positionedMedia.x + (finalPointX * baseTransform.width + baseTransform.x) * positionedMedia.width;
+    const pointerY = positionedMedia.y + (point.cy * baseTransform.height + baseTransform.y) * positionedMedia.height;
+
     const hotspot = replacementCursor
       ? { x: 0, y: 0 }
       : (snapshot.cursor.shapes[cursor.shapeId!]?.hotspot ?? { x: 0, y: 0 });
     const size = replacementCursor ? settings.size : 32;
-    const scale = size / image.naturalWidth;
+    const cursorScale = size / image.naturalWidth;
+
     ctx.save();
     if (settings.shadow.enabled) {
       ctx.shadowColor = settings.shadow.color;
       ctx.shadowBlur = settings.shadow.blur;
-      ctx.shadowOffsetX = settings.shadow.blur * 0.33;
-      ctx.shadowOffsetY = settings.shadow.blur * 0.5;
+      ctx.shadowOffsetX = Math.round(settings.shadow.blur * 0.33);
+      ctx.shadowOffsetY = Math.round(settings.shadow.blur * 0.5);
     }
     ctx.drawImage(
       image,
-      outputPoint(cursor.x, cursor.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cx * width - hotspot.x * scale,
-      outputPoint(cursor.x, cursor.y, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground).cy * height - hotspot.y * scale,
-      image.naturalWidth * scale,
-      image.naturalHeight * scale,
+      pointerX - hotspot.x * cursorScale,
+      pointerY - hotspot.y * cursorScale,
+      image.naturalWidth * cursorScale,
+      image.naturalHeight * cursorScale,
     );
     ctx.restore();
   }
