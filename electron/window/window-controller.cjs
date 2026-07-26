@@ -1,6 +1,8 @@
 const HUD_SIZE = { width: 352, height: 512 }
 const RECORDER_SIZE = { width: 72, height: 296 }
-const RECORDER_TOOLTIP_WIDTH = 260
+// This is total native-window width, not only tooltip width. Keep a generous
+// left gutter for the widest localized tooltip plus its arrow and shadow.
+const RECORDER_TOOLTIP_WIDTH = 300
 
 class WindowController {
   constructor(window) {
@@ -30,8 +32,12 @@ class WindowController {
   setMode(mode, { restoreMaximized = true } = {}) {
     if (!['hud', 'recorder', 'editor'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`)
     if (this.mode === 'hud' && mode === 'recorder') this.hudPosition = this.window.getPosition()
+    if (mode !== 'recorder') this.recorderBoundsBeforeTooltip = null
     this.mode = mode
-    if (mode === 'recorder') this.placeRecorder()
+    if (mode === 'recorder') {
+      this.recorderBoundsBeforeTooltip = null
+      this.placeRecorder()
+    }
     if (mode === 'hud' && this.hudPosition) this.window.setPosition(...this.hudPosition)
     this.applyModePolicy({ restoreMaximized })
   }

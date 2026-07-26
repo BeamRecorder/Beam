@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const props = withDefaults(defineProps<{
   content?: string
   position?: 'top' | 'bottom' | 'left' | 'right'
   variant?: 'default' | 'error'
+  disabled?: boolean
 }>(), {
   position: 'top',
   variant: 'default',
@@ -31,12 +32,18 @@ const updatePosition = () => {
 }
 
 const show = async () => {
+  if (props.disabled) return
   visible.value = true
   await nextTick()
   updatePosition()
 }
 
 const hide = () => { visible.value = false }
+
+watch(() => props.disabled, (disabled) => {
+  if (disabled) return hide()
+  if (wrapperRef.value?.matches(':hover')) void show()
+})
 
 window.addEventListener('resize', updatePosition)
 window.addEventListener('scroll', updatePosition, true)

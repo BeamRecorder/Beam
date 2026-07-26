@@ -26,6 +26,10 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   let microphone: BrowserMicrophoneRecorder | null = null
   let systemAudio: BrowserSystemAudioRecorder | null = null
   let sessionTimelineStartedAt = 0
+  let recordingGeneration = 0
+  let pendingNativeStart: Promise<void> | null = null
+  let prewarm: Promise<boolean> | null = null
+  let preparedGeneration: number | null = null
 
   const cameraMetadata = async (): Promise<{ appearance?: CameraAppearance; placement?: CameraPlacement }> => {
     const overlay = await capture.getCameraOverlayState()
@@ -58,35 +62,70 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     await Promise.all([camera?.start(sessionId, appearance, placement, sessionTimelineStartedAt), microphone?.start(sessionId), systemAudio?.start(sessionId)])
   }
 
-  const beginNativeRecording = async () => {
-    if (!configuration) return
+  const prewarmNativeRecording = async (generation: number) => {
+    if (!configuration) return false
+    await capture.prepareRecording({ screenKind: configuration.screenKind, screenId: configuration.screenId, cameraId: null, microphoneId: null, systemAudio: false, cursor: true, targetFps: configuration.targetFps })
+    if (generation !== recordingGeneration) {
+      await capture.stop().catch(() => undefined)
+      return false
+    }
+    preparedGeneration = generation
+    return true
+  }
+
+  const beginNativeRecording = async (generation: number) => {
+    if (!configuration || generation !== recordingGeneration) return
+    if (!prewarm || !await prewarm || generation !== recordingGeneration) return
     capture.setCountdown(null)
     sessionTimelineStartedAt = performance.now()
-    const session = await capture.startRecording({ screenKind: configuration.screenKind, screenId: configuration.screenId, cameraId: null, microphoneId: null, systemAudio: false, cursor: true, targetFps: configuration.targetFps })
+    const session = await capture.startPreparedRecording()
+    preparedGeneration = null
+    if (generation !== recordingGeneration) {
+      await capture.stop().catch(() => undefined)
+      return
+    }
     if (!session.sessionId) throw new Error('The capture session did not provide an identifier.')
     sessionId = session.sessionId
     await startSidecars()
+    if (generation !== recordingGeneration) {
+      await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
+      await capture.stop().catch(() => undefined)
+      return
+    }
     elapsedTenths.value = 0
     timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100)
     phase.value = 'recording'
   }
 
+  const launchNativeRecording = (generation: number) => {
+    const operation = beginNativeRecording(generation)
+    pendingNativeStart = operation
+    void operation.finally(() => {
+      if (pendingNativeStart === operation) pendingNativeStart = null
+    })
+    return operation
+  }
+
   const start = async (next: RecordingConfiguration) => {
-    if (isActive.value) return
+    if (isActive.value || pendingNativeStart) return
     error.value = ''
+    const generation = ++recordingGeneration
     configuration = next
     try {
       await prepareSources()
       secondsRemaining.value = Math.max(0, next.countdownSeconds)
-    phase.value = 'countdown'
-    capture.setCountdown(secondsRemaining.value)
-      if (secondsRemaining.value === 0) return await beginNativeRecording()
+      phase.value = 'countdown'
+      capture.setCountdown(secondsRemaining.value)
+      prewarm = prewarmNativeRecording(generation)
+      void prewarm.catch((reason: unknown) => { error.value = reason instanceof Error ? reason.message : String(reason); void cancel() })
+      if (secondsRemaining.value === 0) return await launchNativeRecording(generation)
       countdown = window.setInterval(() => {
         secondsRemaining.value -= 1
         capture.setCountdown(secondsRemaining.value)
         if (secondsRemaining.value > 0) return
         clearCountdown()
-        void beginNativeRecording().catch((reason: unknown) => { error.value = reason instanceof Error ? reason.message : String(reason); void cancel() })
+        const operation = launchNativeRecording(generation)
+        void operation.catch((reason: unknown) => { error.value = reason instanceof Error ? reason.message : String(reason); void cancel() })
       }, 1000)
     } catch (reason) {
       error.value = reason instanceof Error ? reason.message : String(reason)
@@ -95,6 +134,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   }
 
   const cancel = async () => {
+    recordingGeneration += 1
     clearCountdown()
     capture.setCountdown(null)
     clearTimer()
@@ -103,6 +143,15 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     cameraEnabled.value = false; microphoneEnabled.value = false; systemAudioEnabled.value = false
     elapsedTenths.value = 0
     phase.value = 'idle'
+    const pending = pendingNativeStart
+    const armed = prewarm
+    if (pending) await pending.catch(() => undefined)
+    if (armed) await armed.catch(() => undefined)
+    if (preparedGeneration !== null) {
+      preparedGeneration = null
+      await capture.stop().catch(() => undefined)
+    }
+    prewarm = null
   }
 
   const stop = async () => {

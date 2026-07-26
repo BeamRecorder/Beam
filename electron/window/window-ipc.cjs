@@ -31,7 +31,9 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     win.setSize(targetWidth, targetHeight)
   })
   ipcMain.on('window:setInteractive', (event, overInteractive) => controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive))
-  ipcMain.on('window:set-recorder-tooltip', (event, visible) => controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible)))
+  ipcMain.handle('window:set-recorder-tooltip', (event, visible) => {
+    controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible))
+  })
   ipcMain.handle('window:bounds', (event) => windowForEvent(event)?.getBounds() ?? null)
 
   ipcMain.on('window:setSizeSmooth', (event, width, height) => {

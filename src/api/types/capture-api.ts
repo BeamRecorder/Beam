@@ -22,6 +22,10 @@ export interface CaptureApi {
   permissions(): Promise<Record<string, unknown>>
   formats(sourceId: string): Promise<unknown>
   prepare(config: CaptureConfig): Promise<CaptureSession>
+  /** Arme une session à partir des réglages HUD sans encore commencer à enregistrer. */
+  prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>
+  /** Démarre la session armée par `prepareRecording`. */
+  startPreparedRecording(): Promise<CaptureSession>
   /** Découvre les sources, choisit l'écran par défaut et applique les réglages recommandés. */
   startRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   /** Avec une config, prépare et démarre en un seul appel. Sans config, démarre la session préparée. */
@@ -45,7 +49,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   setSize(width: number, height: number): void
   setSizeSmooth(width: number, height: number): void
   setInteractive(overInteractive: boolean): void
-  setRecorderTooltip(visible: boolean): void
+  setRecorderTooltip(visible: boolean): Promise<void>
   setCountdown(seconds: number | null): void
   onCountdown(listener: (seconds: number | null) => void): () => void
   dragStart(): void

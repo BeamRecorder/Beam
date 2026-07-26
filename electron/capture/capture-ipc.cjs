@@ -24,6 +24,12 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, user
       const session = await captureEngine.request('start')
       return registerSession(session)
     }
+    if (command === 'prepare-default-recording') {
+      const catalog = await captureEngine.request('discover')
+      const config = buildDefaultCaptureConfig(catalog, payload.options || {}, { platform: process.platform, defaultOutputRoot: userPaths.projects, excludedProcessId: process.pid })
+      return captureEngine.request('prepare', { config })
+    }
+    if (command === 'start-prepared-recording') return registerSession(await captureEngine.request('start'))
     if (command === 'start-recording') {
       await captureEngine.request('prepare', { config: payload.config })
       const session = await captureEngine.request('start')

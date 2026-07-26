@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld(
     permissions: () => invoke("permissions"),
     formats: (sourceId) => invoke("formats", { source: sourceId }),
     prepare: (config) => invoke("prepare", { config }),
+    prepareRecording: (options = {}) =>
+      invoke("prepare-default-recording", { options }),
+    startPreparedRecording: () => invoke("start-prepared-recording"),
     startRecording: (options = {}) =>
       invoke("start-default-recording", { options }),
     start: (config) =>
@@ -56,7 +59,7 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.send("window:setSizeSmooth", width, height),
     setInteractive: (v) => ipcRenderer.send("window:setInteractive", v),
     setRecorderTooltip: (visible) =>
-      ipcRenderer.send("window:set-recorder-tooltip", Boolean(visible)),
+      ipcRenderer.invoke("window:set-recorder-tooltip", Boolean(visible)),
     dragStart: () => ipcRenderer.send("window:dragStart"),
     drag: () => ipcRenderer.send("window:drag"),
     getSources: (types) => ipcRenderer.invoke("window:getSources", types),

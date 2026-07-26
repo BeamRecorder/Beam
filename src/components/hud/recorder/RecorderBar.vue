@@ -10,7 +10,7 @@ import {
   Volume2,
   VolumeX,
 } from "@lucide/vue";
-import { onBeforeUnmount, onMounted } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import Tooltip from "~/ui/tooltip/Tooltip.vue";
 import KeyboardChip from "~/ui/KeyboardChip.vue";
 import { usePreferencesStore } from "~/stores/preferences";
@@ -54,9 +54,23 @@ const startDrag = () => {
   window.addEventListener("mousemove", drag);
   window.addEventListener("mouseup", stopDrag, { once: true });
 };
-const showTooltips = () => window.capture?.setRecorderTooltip(true);
-const hideTooltips = () => window.capture?.setRecorderTooltip(false);
-onBeforeUnmount(stopDrag);
+const tooltipsReady = ref(false);
+let tooltipRequest = 0;
+const showTooltips = async () => {
+  const request = ++tooltipRequest;
+  tooltipsReady.value = false;
+  await window.capture?.setRecorderTooltip(true);
+  if (request === tooltipRequest) tooltipsReady.value = true;
+};
+const hideTooltips = () => {
+  tooltipRequest += 1;
+  tooltipsReady.value = false;
+  void window.capture?.setRecorderTooltip(false);
+};
+onBeforeUnmount(() => {
+  stopDrag();
+  hideTooltips();
+});
 </script>
 
 <template>
@@ -77,7 +91,7 @@ onBeforeUnmount(stopDrag);
     </p>
 
     <!-- Play/Pause -->
-    <Tooltip position="left">
+    <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ phase === 'paused' ? 'Resume recording' : 'Pause recording' }}</span>
@@ -98,7 +112,7 @@ onBeforeUnmount(stopDrag);
     </Tooltip>
 
     <!-- Stop -->
-    <Tooltip position="left">
+    <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>Stop recording</span>
@@ -116,7 +130,7 @@ onBeforeUnmount(stopDrag);
     </Tooltip>
 
     <!-- Mic -->
-    <Tooltip position="left">
+    <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ microphoneEnabled ? 'Turn microphone off' : 'Turn microphone on' }}</span>
@@ -137,7 +151,7 @@ onBeforeUnmount(stopDrag);
     </Tooltip>
 
     <!-- Camera -->
-    <Tooltip position="left">
+    <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ cameraEnabled ? 'Turn camera off' : 'Turn camera on' }}</span>
@@ -156,7 +170,7 @@ onBeforeUnmount(stopDrag);
     </Tooltip>
 
     <!-- System Audio -->
-    <Tooltip position="left">
+    <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ systemAudioEnabled ? 'Turn system audio off' : 'Turn system audio on' }}</span>
@@ -180,9 +194,11 @@ onBeforeUnmount(stopDrag);
 
 <style scoped>
 .recorder-bar {
+  position: fixed;
+  top: 0;
+  right: 0;
   width: 72px;
   box-sizing: border-box;
-  margin-left: auto;
   min-height: 296px;
   display: flex;
   flex-direction: column;
