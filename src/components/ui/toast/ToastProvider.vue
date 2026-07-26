@@ -26,7 +26,7 @@ const toastStore = useToastStore()
         <Button
           v-if="toast.action"
           variant="secondary"
-          size="xs"
+          size="sm"
           class="toast-action-btn"
           @click="toast.action.onClick(); toastStore.remove(toast.id)"
         >

@@ -11,6 +11,7 @@ import { activeLayersAt, getCaptionTransform } from "../../video-editor/composit
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-editor/composition/webcam/webcam-zoom";
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { applyClipShadow, radiusForAppearance } from '../../video-editor/canvas/composables/useCompositionMedia';
+import { cursorClickSpringScale } from '../../video-editor/composables/cursor-click-spring';
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
 export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
@@ -318,8 +319,8 @@ export function renderCompositionFrame(
         snapshot.canvas.showBackground,
       );
       const finalPointX = isBaseVideoMirrored ? (1 - point.cx) : point.cx;
-      const rippleX = positionedMedia.x + (finalPointX * baseTransform.width + baseTransform.x) * positionedMedia.width;
-      const rippleY = positionedMedia.y + (point.cy * baseTransform.height + baseTransform.y) * positionedMedia.height;
+      const rippleX = positionedMedia.x + finalPointX * positionedMedia.width;
+      const rippleY = positionedMedia.y + point.cy * positionedMedia.height;
 
       const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
       ctx.save();
@@ -354,13 +355,13 @@ export function renderCompositionFrame(
       snapshot.canvas.showBackground,
     );
     const finalPointX = isBaseVideoMirrored ? (1 - point.cx) : point.cx;
-    const pointerX = positionedMedia.x + (finalPointX * baseTransform.width + baseTransform.x) * positionedMedia.width;
-    const pointerY = positionedMedia.y + (point.cy * baseTransform.height + baseTransform.y) * positionedMedia.height;
+    const pointerX = positionedMedia.x + finalPointX * positionedMedia.width;
+    const pointerY = positionedMedia.y + point.cy * positionedMedia.height;
 
     const hotspot = replacementCursor
       ? (replacementCursorHotspot ?? { x: 0, y: 0 })
       : (snapshot.cursor.shapes[cursor.shapeId!]?.hotspot ?? { x: 0, y: 0 });
-    const size = replacementCursor ? settings.size : 32;
+    const size = settings.size;
     const cursorScale = size / image.naturalWidth;
 
     ctx.save();
@@ -370,10 +371,15 @@ export function renderCompositionFrame(
       ctx.shadowOffsetX = Math.round(settings.shadow.blur * 0.33);
       ctx.shadowOffsetY = Math.round(settings.shadow.blur * 0.5);
     }
+    const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .28), time).at(-1);
+    const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
+    const clickScale = cursorClickSpringScale(age, settings.ripple.enabled);
+    ctx.translate(pointerX, pointerY);
+    ctx.scale(clickScale, clickScale);
     ctx.drawImage(
       image,
-      pointerX - hotspot.x * cursorScale,
-      pointerY - hotspot.y * cursorScale,
+      -hotspot.x * cursorScale,
+      -hotspot.y * cursorScale,
       image.naturalWidth * cursorScale,
       image.naturalHeight * cursorScale,
     );

@@ -148,7 +148,7 @@ const formatMs = (ms: number) => {
           <p v-if="availability || error" class="error" role="alert">{{ availability || error }}</p>
           <div v-if="result" class="result-box">
             <p class="success" role="status">Saved to {{ result.path }}</p>
-            <Button variant="secondary" size="xs" block :icon="FolderOpen" @click="openFile(result.path)">Open File</Button>
+            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">Open File</Button>
           </div>
           <div class="actions">
             <Button variant="primary" size="sm" block :icon="Download" @click="run">Export Video</Button>

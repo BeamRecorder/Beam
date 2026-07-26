@@ -189,6 +189,7 @@ const cursorOverlay = useCursorOverlay({
   composition: () => props.composition,
   isVideoEnabled: () => props.isVideoEnabled,
   showBackground: () => props.outputCanvas.showBackground,
+  onRenderOnce: renderOnce,
 });
 
 watch(

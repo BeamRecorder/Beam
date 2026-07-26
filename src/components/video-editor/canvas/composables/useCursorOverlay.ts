@@ -10,6 +10,7 @@ import {
 } from "../../properties/cursor/useCursorReplacer";
 import { ZOOM_DEPTH_SCALES } from "../../zoom/zoom-types";
 import { outputPoint } from "../output-canvas";
+import { cursorClickSpringScale } from "../../composables/cursor-click-spring";
 
 export const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -74,6 +75,7 @@ export interface UseCursorOverlayOptions {
   composition: () => any;
   isVideoEnabled: () => boolean;
   showBackground: () => boolean;
+  onRenderOnce?: () => void;
 }
 
 export const getRippleStyleColor = (hex: string, alpha: number) => {
@@ -116,6 +118,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           options.cursorColor(),
         );
         customCursorImage.value = img;
+        options.onRenderOnce?.();
       } catch (err) {
         console.error("Failed to load custom cursor image:", err);
         customCursorImage.value = null;
@@ -277,10 +280,15 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           ctx.shadowOffsetY = Math.round(options.shadowBlur() * 0.5);
         }
 
+        const click = buttonEventsBetween(cursorData.events, Math.max(0, time - .28), time).at(-1);
+        const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
+        const clickScale = cursorClickSpringScale(age, options.enableRipple());
+        ctx.translate(pointerX, pointerY);
+        ctx.scale(clickScale, clickScale);
         ctx.drawImage(
           activeImage,
-          pointerX - hx,
-          pointerY - hy,
+          -hx,
+          -hy,
           targetSize,
           targetSize,
         );
