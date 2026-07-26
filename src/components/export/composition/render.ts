@@ -10,9 +10,18 @@ import type {
 import { activeLayersAt, getCaptionTransform } from "../../video-editor/composition/composition-types";
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-editor/composition/webcam/webcam-zoom";
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
+import { applyClipShadow, radiusForAppearance } from '../../video-editor/canvas/composables/useCompositionMedia';
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
 export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
+
+type RenderableVideo = CanvasImageSource & { videoWidth?: number; videoHeight?: number; displayWidth?: number; displayHeight?: number };
+const sourceDimensions = (source: CanvasImageSource) => {
+  if (source instanceof HTMLVideoElement) return { width: source.videoWidth, height: source.videoHeight };
+  if (source instanceof HTMLImageElement) return { width: source.naturalWidth, height: source.naturalHeight };
+  if (typeof VideoFrame !== "undefined" && source instanceof VideoFrame) return { width: source.displayWidth, height: source.displayHeight };
+  return { width: 0, height: 0 };
+};
 
 function drawSnapshotBackground(ctx: CanvasRenderingContext2D, snapshot: CompositionSnapshot, background: CanvasImageSource | null | undefined) {
   const { width, height } = snapshot.canvas; const value = snapshot.background;
@@ -175,37 +184,45 @@ export function drawCompositionLayers(
     const asset = visuals.get(layer.assetId);
     if (!asset) continue;
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
-    const sourceWidth = asset instanceof HTMLVideoElement ? asset.videoWidth : asset instanceof HTMLImageElement ? asset.naturalWidth : 0;
-    const sourceHeight = asset instanceof HTMLVideoElement ? asset.videoHeight : asset instanceof HTMLImageElement ? asset.naturalHeight : 0;
+    const { width: sourceWidth, height: sourceHeight } = sourceDimensions(asset);
+    const dx = transform.x * width;
+    const dy = transform.y * height;
+    const dw = transform.width * width;
+    const dh = transform.height * height;
     ctx.save();
+    applyClipShadow(ctx, layer.appearance, dw);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
+    ctx.beginPath();
+    ctx.roundRect(dx, dy, dw, dh, Math.min(radiusForAppearance(layer.appearance), dw / 2, dh / 2));
+    ctx.fill();
+    ctx.clip();
     if (layer.isMirrored) {
-      const dx = transform.x * width;
-      const dw = transform.width * width;
       ctx.translate(dx * 2 + dw, 0);
       ctx.scale(-1, 1);
     }
-    if (layer.crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(asset, layer.crop.x * sourceWidth, layer.crop.y * sourceHeight, layer.crop.width * sourceWidth, layer.crop.height * sourceHeight, transform.x * width, transform.y * height, transform.width * width, transform.height * height);
-    else ctx.drawImage(asset, transform.x * width, transform.y * height, transform.width * width, transform.height * height);
+    if (layer.crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(asset, layer.crop.x * sourceWidth, layer.crop.y * sourceHeight, layer.crop.width * sourceWidth, layer.crop.height * sourceHeight, dx, dy, dw, dh);
+    else ctx.drawImage(asset, dx, dy, dw, dh);
     ctx.restore();
   }
 }
 
 export function renderCompositionFrame(
   ctx: CanvasRenderingContext2D,
-  video: HTMLVideoElement,
+  video: RenderableVideo | null,
   snapshot: CompositionSnapshot,
   time: number,
   background?: CanvasImageSource | null,
   cursorImages?: ReadonlyMap<string, HTMLImageElement>,
   visuals?: CompositionVisuals,
   replacementCursor?: HTMLImageElement | null,
+  replacementCursorHotspot?: { x: number; y: number },
 ) {
   const { width, height } = snapshot.canvas;
   ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
   ctx.fillRect(0, 0, width, height);
   if (
-    !snapshot.video.enabled ||
-    video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+    !snapshot.video.enabled || !video ||
+    (video instanceof HTMLVideoElement && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
   ) {
     drawSnapshotBackground(ctx, snapshot, background);
     drawCompositionLayers(ctx, snapshot, time, visuals, true);
@@ -219,8 +236,8 @@ export function renderCompositionFrame(
   );
   const scale = zoom?.scale ?? 1;
   const focus = zoom?.focus ?? { cx: 0.5, cy: 0.5 };
-  const sourceWidth = video.videoWidth || snapshot.video.width;
-  const sourceHeight = video.videoHeight || snapshot.video.height;
+  const sourceWidth = video.videoWidth || video.displayWidth || snapshot.video.width;
+  const sourceHeight = video.videoHeight || video.displayHeight || snapshot.video.height;
   const crop = snapshot.composition.baseVideoCrop;
   const cropX = crop ? crop.x * sourceWidth : 0;
   const cropY = crop ? crop.y * sourceHeight : 0;
@@ -249,6 +266,10 @@ export function renderCompositionFrame(
   ctx.scale(scale, scale);
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   drawSnapshotBackground(ctx, snapshot, background);
+  applyClipShadow(ctx, snapshot.composition.baseVideoAppearance, positionedMedia.width);
+  ctx.beginPath();
+  ctx.roundRect(positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height, Math.min(radiusForAppearance(snapshot.composition.baseVideoAppearance), positionedMedia.width / 2, positionedMedia.height / 2));
+  ctx.clip();
   if (isBaseVideoMirrored) {
     ctx.save();
     ctx.translate(positionedMedia.x * 2 + positionedMedia.width, 0);
@@ -337,7 +358,7 @@ export function renderCompositionFrame(
     const pointerY = positionedMedia.y + (point.cy * baseTransform.height + baseTransform.y) * positionedMedia.height;
 
     const hotspot = replacementCursor
-      ? { x: 0, y: 0 }
+      ? (replacementCursorHotspot ?? { x: 0, y: 0 })
       : (snapshot.cursor.shapes[cursor.shapeId!]?.hotspot ?? { x: 0, y: 0 });
     const size = replacementCursor ? settings.size : 32;
     const cursorScale = size / image.naturalWidth;

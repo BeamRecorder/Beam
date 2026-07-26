@@ -63,6 +63,18 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
     return { path: job.targetPath }
   })
   ipcMain.handle('export:abort', (event, payload = {}) => cleanup(requireJob(event, payload.jobId)))
+  ipcMain.handle('export:open-file', (_event, payload = {}) => {
+    if (payload.path && typeof payload.path === 'string') {
+      const { shell } = require('electron')
+      void shell.openPath(payload.path)
+    }
+  })
+  ipcMain.handle('export:show-in-folder', (_event, payload = {}) => {
+    if (payload.path && typeof payload.path === 'string') {
+      const { shell } = require('electron')
+      shell.showItemInFolder(payload.path)
+    }
+  })
   return { cleanupWindow: (webContents) => {
     for (const job of jobs.values()) if (job.ownerId === webContents.id) cleanup(job)
   } }

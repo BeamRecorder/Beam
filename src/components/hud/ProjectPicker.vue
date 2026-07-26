@@ -746,8 +746,8 @@ defineExpose({
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  margin: 0 -4px;
-  padding: 0 4px;
+  margin: -4px;
+  padding: 4px;
 }
 
 .projects-list {

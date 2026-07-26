@@ -15,8 +15,10 @@ import type {
   ExportResult,
 } from "../export-types";
 import { renderCompositionFrame } from "../composition/render";
-import { activeLayersAt } from "../../video-editor/composition/composition-types";
+import { activeLayersAt, type MediaCompositionLayer } from "../../video-editor/composition/composition-types";
 import { useCursorReplacer } from "../../video-editor/properties/cursor/useCursorReplacer";
+import { cursorHotspots } from "../../video-editor/canvas/composables/useCursorOverlay";
+import { VideoFrameProvider } from "./video-frame-provider";
 
 const codecCandidates = { webm: ["vp9", "vp8", "av1"], mp4: ["avc"] } as const;
 const audioCodecCandidates = { webm: ["opus"], mp4: ["aac"] } as const;
@@ -146,22 +148,14 @@ async function visualsAtTime(
   request: ExportRequest,
   visuals: Awaited<ReturnType<typeof loadVisuals>>,
   time: number,
+  decodedAssets: ReadonlyMap<string, VideoFrameProvider>,
 ) {
   const result = new Map<string, CanvasImageSource>(visuals.images);
-  for (const layer of activeLayersAt(
-    request.snapshot.composition,
-    time * 1000,
-  )) {
-    if (layer.kind !== "video") continue;
+  for (const layer of activeLayersAt(request.snapshot.composition, time * 1000)) {
+    if (layer.kind !== "video" || decodedAssets.has(layer.assetId)) continue;
     const video = visuals.videos.get(layer.assetId);
-    const localTime =
-      time - layer.startMs / 1000 + (layer.sourceOffsetMs ?? 0) / 1000;
-    if (
-      !video ||
-      localTime < 0 ||
-      (Number.isFinite(video.duration) && localTime >= video.duration)
-    )
-      continue;
+    const localTime = (time - layer.startMs / 1000) * (layer.playbackRate ?? 1) + (layer.sourceOffsetMs ?? 0) / 1000;
+    if (!video || localTime < 0 || (Number.isFinite(video.duration) && localTime >= video.duration)) continue;
     if (Math.abs(video.currentTime - localTime) > 0.001) {
       video.currentTime = localTime;
       await waitFor(video, "seeked");
@@ -235,14 +229,14 @@ async function loadCursorImages(request: ExportRequest) {
 }
 
 async function loadReplacementCursor(request: ExportRequest) {
-  if (request.snapshot.cursorSettings.selectedCursor === "automatic")
-    return null;
+  const type = request.snapshot.cursorSettings.selectedCursor === "automatic"
+    ? "default"
+    : request.snapshot.cursorSettings.selectedCursor;
   const { getCursorImage } = useCursorReplacer();
-  return getCursorImage(
-    request.snapshot.cursorSettings.selectedCursor,
-    request.snapshot.cursorSettings.size * 6,
-    request.snapshot.cursorSettings.color,
-  );
+  return {
+    image: await getCursorImage(type, request.snapshot.cursorSettings.size * 6, request.snapshot.cursorSettings.color),
+    hotspot: cursorHotspots[type],
+  };
 }
 
 export async function exportWithMediabunny(
@@ -266,10 +260,10 @@ export async function exportWithMediabunny(
   });
   if (!opened || opened.canceled)
     throw new DOMException("Export annulé.", "AbortError");
-  const video = document.createElement("video");
-  video.muted = true;
-  video.preload = "auto";
-  video.src = request.snapshot.video.src;
+  const fallbackVideo = document.createElement("video");
+  fallbackVideo.muted = true;
+  fallbackVideo.preload = "auto";
+  fallbackVideo.src = request.snapshot.video.src;
   const canvas = document.createElement("canvas");
   canvas.width = request.snapshot.canvas.width;
   canvas.height = request.snapshot.canvas.height;
@@ -306,6 +300,8 @@ export async function exportWithMediabunny(
   });
   output.addVideoTrack(source, { frameRate: request.snapshot.video.fps });
   let compositionVisuals: Awaited<ReturnType<typeof loadVisuals>> | null = null;
+  let baseFrames: VideoFrameProvider | null = null;
+  const compositionFrames = new Map<string, VideoFrameProvider>();
   try {
     const totalTimeMs = Math.round(request.snapshot.duration * 1000);
     const total = Math.max(
@@ -322,12 +318,37 @@ export async function exportWithMediabunny(
       totalTimeMs,
     });
 
-    video.load();
-    await waitFor(video, "loadedmetadata");
     const background = await loadBackground(request);
     const cursorImages = await loadCursorImages(request);
     const replacementCursor = await loadReplacementCursor(request);
     compositionVisuals = await loadVisuals(request);
+    baseFrames = await VideoFrameProvider.create(
+      request.snapshot.video.src,
+      Array.from({ length: total }, (_, frame) =>
+        Math.min(request.snapshot.duration, frame / request.snapshot.video.fps) *
+        (request.snapshot.composition.baseVideoPlaybackRate ?? 1),
+      ),
+    );
+    if (!baseFrames) {
+      fallbackVideo.load();
+      await waitFor(fallbackVideo, "loadedmetadata");
+    }
+    await Promise.all(
+      request.snapshot.composition.media
+        .filter((asset) => asset.kind === "video")
+        .map(async (asset) => {
+          const timestamps = Array.from({ length: total }, (_, frame) => {
+            const timeMs = (frame / request.snapshot.video.fps) * 1000;
+            const layer = activeLayersAt(request.snapshot.composition, timeMs)
+              .find((item): item is MediaCompositionLayer => item.kind === "video" && item.assetId === asset.id);
+            return layer
+              ? Math.max(0, ((timeMs - layer.startMs) * (layer.playbackRate ?? 1) + (layer.sourceOffsetMs ?? 0)) / 1000)
+              : 0;
+          });
+          const provider = await VideoFrameProvider.create(asset.src, timestamps);
+          if (provider) compositionFrames.set(asset.id, provider);
+        }),
+    );
 
     onProgress({
       stage: "audio_mixing",
@@ -365,10 +386,6 @@ export async function exportWithMediabunny(
         totalTimeMs,
       });
 
-      if (Math.abs(video.currentTime - time) > 0.001) {
-        video.currentTime = time;
-        await waitFor(video, "seeked");
-      }
       if (
         background instanceof HTMLVideoElement &&
         Math.abs(background.currentTime - time) > 0.001
@@ -376,16 +393,32 @@ export async function exportWithMediabunny(
         background.currentTime = time % Math.max(0.001, background.duration);
         await waitFor(background, "seeked");
       }
-      renderCompositionFrame(
-        context,
-        video,
-        request.snapshot,
-        time,
-        background,
-        cursorImages,
-        await visualsAtTime(request, compositionVisuals, time),
-        replacementCursor,
+      if (!baseFrames && Math.abs(fallbackVideo.currentTime - time) > 0.001) {
+        fallbackVideo.currentTime = time * (request.snapshot.composition.baseVideoPlaybackRate ?? 1);
+        await waitFor(fallbackVideo, "seeked");
+      }
+      const baseFrame = baseFrames ? await baseFrames.frameAt(frame) : null;
+      const visualFrames = await Promise.all(
+        [...compositionFrames].map(async ([assetId, provider]) => [assetId, await provider.frameAt(frame)] as const),
       );
+      const visuals = await visualsAtTime(request, compositionVisuals, time, compositionFrames);
+      for (const [assetId, visualFrame] of visualFrames) if (visualFrame) visuals.set(assetId, visualFrame);
+      try {
+        renderCompositionFrame(
+          context,
+          baseFrame ?? fallbackVideo,
+          request.snapshot,
+          time,
+          background,
+          cursorImages,
+          visuals,
+          replacementCursor?.image,
+          replacementCursor?.hotspot,
+        );
+      } finally {
+        baseFrame?.close();
+        visualFrames.forEach(([, visualFrame]) => visualFrame?.close());
+      }
       await source.add(time, 1 / request.snapshot.video.fps);
     }
 
@@ -407,7 +440,9 @@ export async function exportWithMediabunny(
     throw error;
   } finally {
     compositionVisuals?.dispose();
-    video.removeAttribute("src");
-    video.load();
+    baseFrames?.dispose();
+    compositionFrames.forEach((provider) => provider.dispose());
+    fallbackVideo.removeAttribute("src");
+    fallbackVideo.load();
   }
 }

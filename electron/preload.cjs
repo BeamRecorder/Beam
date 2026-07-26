@@ -166,5 +166,7 @@ contextBridge.exposeInMainWorld(
     writeExportChunk: (payload) => ipcRenderer.invoke("export:write", payload),
     finalizeExport: (jobId) => ipcRenderer.invoke("export:finalize", { jobId }),
     abortExport: (jobId) => ipcRenderer.invoke("export:abort", { jobId }),
+    openFile: (path) => ipcRenderer.invoke("export:open-file", { path }),
+    showItemInFolder: (path) => ipcRenderer.invoke("export:show-in-folder", { path }),
   }),
 );

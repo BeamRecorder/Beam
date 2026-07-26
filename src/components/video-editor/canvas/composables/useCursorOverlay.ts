@@ -11,7 +11,7 @@ import {
 import { ZOOM_DEPTH_SCALES } from "../../zoom/zoom-types";
 import { outputPoint } from "../output-canvas";
 
-const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
+export const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
   default: { x: 10, y: 7 },
   beachball: { x: 16, y: 16 },

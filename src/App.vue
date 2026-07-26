@@ -3,6 +3,7 @@ import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 
 import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
 import CameraShadowApp from './components/hud/CameraShadowApp.vue'
+import ToastProvider from './components/ui/toast/ToastProvider.vue'
 import Button from './components/ui/button/Button.vue'
 import RecorderBar from './components/hud/recorder/RecorderBar.vue'
 import CountdownOverlay from './components/hud/recorder/CountdownOverlay.vue'
@@ -118,6 +119,7 @@ const dismissEditorLoadError = () => { editorLoadError.value = '' }
 </script>
 
 <template>
+  <ToastProvider />
   <CameraOverlayApp v-if="isCameraOverlay" />
   <CameraShadowApp v-else-if="isCameraShadow" />
   <CountdownOverlay v-else-if="isCountdownOverlay" />

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useToastStore } from './toastStore'
 import { X, CheckCircle, AlertCircle, Info } from '@lucide/vue'
+import Button from '../button/Button.vue'
 
 const toastStore = useToastStore()
 </script>
@@ -21,6 +22,16 @@ const toastStore = useToastStore()
         </span>
         
         <span class="toast-message">{{ toast.message }}</span>
+
+        <Button
+          v-if="toast.action"
+          variant="secondary"
+          size="xs"
+          class="toast-action-btn"
+          @click="toast.action.onClick(); toastStore.remove(toast.id)"
+        >
+          {{ toast.action.label }}
+        </Button>
         
         <button 
           type="button" 

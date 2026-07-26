@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Download, X } from '@lucide/vue'
+import { Download, FolderOpen, X } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Popover from '~/ui/popover/Popover.vue'
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue'
+import { useToastStore } from '~/ui/toast/toastStore'
 import { supportedVideoCodec } from './mediabunny/exporter'
 import { useExportJob } from './useExportJob'
 import { bitrateFor } from './export-presets'
@@ -34,12 +35,32 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
 
 const availability = ref<string | null>(null)
 const { progress, error, result, isExporting, start, cancel } = useExportJob()
+const toastStore = useToastStore()
 const percentage = computed(() => progress.value ? (progress.value.completed / Math.max(1, progress.value.total)) * 100 : 0)
+
+const openFile = (path: string) => {
+  if (path && window.capture?.openFile) {
+    void window.capture.openFile(path)
+  }
+}
+
 const run = async () => {
   availability.value = null
   const request = { ...props.request, format: format.value, preset: preset.value }
   if (!await supportedVideoCodec(request)) { availability.value = `${format.value.toUpperCase()} n’est pas pris en charge par l’encodeur de cette machine.`; return }
   await start(request)
+  if (result.value?.path) {
+    const exportedPath = result.value.path
+    const filename = exportedPath.split(/[/\\]/).pop() || 'video'
+    toastStore.success(
+      `Saved to ${filename}`,
+      6000,
+      {
+        label: 'Open File',
+        onClick: () => openFile(exportedPath),
+      }
+    )
+  }
 }
 
 const formatMs = (ms: number) => {
@@ -125,7 +146,10 @@ const formatMs = (ms: number) => {
           </div>
 
           <p v-if="availability || error" class="error" role="alert">{{ availability || error }}</p>
-          <p v-if="result" class="success" role="status">Saved to {{ result.path }}</p>
+          <div v-if="result" class="result-box">
+            <p class="success" role="status">Saved to {{ result.path }}</p>
+            <Button variant="secondary" size="xs" block :icon="FolderOpen" @click="openFile(result.path)">Open File</Button>
+          </div>
           <div class="actions">
             <Button variant="primary" size="sm" block :icon="Download" @click="run">Export Video</Button>
           </div>
@@ -146,6 +170,15 @@ const formatMs = (ms: number) => {
 .job-status { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: .75rem; color: var(--text-muted); text-transform: capitalize; }
 .error { color: var(--color-danger, #ef4444); font-size: .75rem; margin: 0; }
 .success { color: var(--color-success, #22c55e); font-size: .75rem; margin: 0; overflow-wrap: anywhere; }
+.result-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-bg-element);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
 .actions { display: flex; width: 100%; margin-top: 4px; }
 .export-progress-card {
   display: flex;
