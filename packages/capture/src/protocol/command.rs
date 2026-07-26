@@ -21,6 +21,7 @@ pub enum Command {
     Start,
     Pause,
     Resume,
+    Cancel,
     Stop,
     Status,
 }

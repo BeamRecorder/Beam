@@ -11,9 +11,11 @@ class WindowController {
     this.ready = false
     this.interactive = false
     this.hudOverInteractive = false
+    this.recorderOverInteractive = false
     this.recorderPositions = new Map()
     this.hudPosition = null
     this.recorderBoundsBeforeTooltip = null
+    this.recorderPointerPoll = null
     this.window.setIgnoreMouseEvents(true)
     this.window.on('show', () => this.applyInteractionPolicy())
     this.window.on('hide', () => this.applyInteractionPolicy())
@@ -32,7 +34,10 @@ class WindowController {
   setMode(mode, { restoreMaximized = true } = {}) {
     if (!['hud', 'recorder', 'editor'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`)
     if (this.mode === 'hud' && mode === 'recorder') this.hudPosition = this.window.getPosition()
-    if (mode !== 'recorder') this.recorderBoundsBeforeTooltip = null
+    if (mode !== 'recorder') {
+      this.recorderBoundsBeforeTooltip = null
+      this.stopRecorderPointerTracking()
+    }
     this.mode = mode
     if (mode === 'recorder') {
       this.recorderBoundsBeforeTooltip = null
@@ -64,6 +69,7 @@ class WindowController {
       const [x, y] = this.window.getPosition()
       this.recorderBoundsBeforeTooltip = { x, y }
       this.window.setBounds({ x: x - (RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width), y, width: RECORDER_TOOLTIP_WIDTH, height: RECORDER_SIZE.height })
+      this.startRecorderPointerTracking()
       return
     }
     if (!visible && this.recorderBoundsBeforeTooltip) {
@@ -74,7 +80,30 @@ class WindowController {
       const { x, y } = this.recorderBoundsBeforeTooltip
       this.recorderBoundsBeforeTooltip = null
       this.window.setBounds({ x, y, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })
+      this.stopRecorderPointerTracking()
     }
+  }
+
+  startRecorderPointerTracking() {
+    if (this.recorderPointerPoll) return
+    const update = () => {
+      if (this.mode !== 'recorder' || this.window.isDestroyed() || !this.recorderBoundsBeforeTooltip) return
+      const point = require('electron').screen.getCursorScreenPoint()
+      const bounds = this.window.getBounds()
+      const overBar = point.x >= bounds.x + bounds.width - RECORDER_SIZE.width && point.x < bounds.x + bounds.width && point.y >= bounds.y && point.y < bounds.y + RECORDER_SIZE.height
+      if (overBar === this.recorderOverInteractive) return
+      this.recorderOverInteractive = overBar
+      if (overBar) this.window.setIgnoreMouseEvents(false)
+      else this.window.setIgnoreMouseEvents(true, { forward: true })
+    }
+    this.recorderPointerPoll = setInterval(update, 16)
+    update()
+  }
+
+  stopRecorderPointerTracking() {
+    if (this.recorderPointerPoll) clearInterval(this.recorderPointerPoll)
+    this.recorderPointerPoll = null
+    this.recorderOverInteractive = false
   }
 
   maximize() {
@@ -122,6 +151,8 @@ class WindowController {
     this.hudOverInteractive = overInteractive
     if (overInteractive) {
       this.window.setIgnoreMouseEvents(false)
+    } else if (this.mode === 'recorder') {
+      this.window.setIgnoreMouseEvents(this.recorderOverInteractive ? false : true, this.recorderOverInteractive ? undefined : { forward: true })
     } else {
       this.window.setIgnoreMouseEvents(true, { forward: true })
     }

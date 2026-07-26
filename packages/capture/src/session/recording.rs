@@ -8,7 +8,7 @@ use crate::{
         CaptureRequest, PlatformMetadata, SCHEMA_VERSION, SessionId, SessionManifest, TrackKind,
         TrackStatus,
     },
-    storage::{ManifestWriter, ProjectLayout, create_or_update_project},
+    storage::{ManifestWriter, ProjectLayout, create_or_update_project, write_atomic},
 };
 
 use super::{
@@ -28,6 +28,8 @@ pub struct RecordingSession {
     state: super::SessionState,
     generation: u32,
     active: ActiveRecordings,
+    project_layout: ProjectLayout,
+    project_existed: bool,
 }
 
 impl RecordingSession {
@@ -42,13 +44,14 @@ impl RecordingSession {
         )?;
         let session_id = SessionId::new();
         let created_at_utc = now_utc()?;
+        let project_layout = ProjectLayout::new(&request.recording.output_root, request.project_id);
+        let project_existed = project_layout.project_manifest().exists();
         create_or_update_project(
             &request.recording.output_root,
             request.project_id,
             session_id,
             &created_at_utc,
         )?;
-        let project_layout = ProjectLayout::new(&request.recording.output_root, request.project_id);
         let layout = project_layout.session(session_id);
         layout.create()?;
         let manifest = SessionManifest {
@@ -83,6 +86,8 @@ impl RecordingSession {
             state: super::SessionState::Armed,
             generation: 0,
             active: ActiveRecordings::default(),
+            project_layout,
+            project_existed,
         })
     }
 
@@ -113,6 +118,31 @@ impl RecordingSession {
         write_timing_anchors(&self.layout, &self.manifest.tracks, 0)?;
         self.state = super::SessionState::Recording;
         self.checkpoint()
+    }
+
+    pub fn cancel(self) -> Result<(), CaptureError> {
+        if self.state != super::SessionState::Armed {
+            return Err(invalid_transition(self.state, "Cancelled"));
+        }
+        if self.layout.root().exists() {
+            std::fs::remove_dir_all(self.layout.root())
+                .map_err(|error| CaptureError::storage(self.layout.root(), error))?;
+        }
+        let manifest_path = self.project_layout.project_manifest();
+        if self.project_existed {
+            let mut project: crate::model::ProjectManifest = serde_json::from_slice(
+                &std::fs::read(&manifest_path)
+                    .map_err(|error| CaptureError::storage(&manifest_path, error))?,
+            )?;
+            project
+                .sessions
+                .retain(|entry| entry.session_id != self.session_id);
+            write_atomic(&manifest_path, &serde_json::to_vec_pretty(&project)?)?;
+        } else if self.project_layout.project_dir().exists() {
+            std::fs::remove_dir_all(self.project_layout.project_dir())
+                .map_err(|error| CaptureError::storage(&self.project_layout.project_dir(), error))?;
+        }
+        Ok(())
     }
 
     pub fn pause(&mut self) -> Result<(), CaptureError> {

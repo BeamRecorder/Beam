@@ -115,6 +115,18 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             session.resume()?;
             session_value(session)
         }
+        Command::Cancel => {
+            let session =
+                engine
+                    .session
+                    .take()
+                    .ok_or(capture::CaptureError::InvalidTransition {
+                        from: "Idle".into(),
+                        to: "Cancelled".into(),
+                    })?;
+            session.cancel()?;
+            Ok(serde_json::json!({ "state": "idle" }))
+        }
         Command::Stop => {
             let session = required_session(engine)?;
             let manifest_path = session.stop()?;

@@ -26,6 +26,7 @@ export interface CaptureApi {
   prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   /** Démarre la session armée par `prepareRecording`. */
   startPreparedRecording(): Promise<CaptureSession>
+  cancelPreparedRecording(): Promise<void>
   /** Découvre les sources, choisit l'écran par défaut et applique les réglages recommandés. */
   startRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   /** Avec une config, prépare et démarre en un seul appel. Sans config, démarre la session préparée. */

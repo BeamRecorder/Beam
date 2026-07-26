@@ -66,7 +66,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     if (!configuration) return false
     await capture.prepareRecording({ screenKind: configuration.screenKind, screenId: configuration.screenId, cameraId: null, microphoneId: null, systemAudio: false, cursor: true, targetFps: configuration.targetFps })
     if (generation !== recordingGeneration) {
-      await capture.stop().catch(() => undefined)
+      await capture.cancelPreparedRecording().catch(() => undefined)
       return false
     }
     preparedGeneration = generation
@@ -149,7 +149,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     if (armed) await armed.catch(() => undefined)
     if (preparedGeneration !== null) {
       preparedGeneration = null
-      await capture.stop().catch(() => undefined)
+      await capture.cancelPreparedRecording().catch(() => undefined)
     }
     prewarm = null
   }

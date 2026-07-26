@@ -56,7 +56,10 @@ fn excluded_process_id_roundtrips_when_present() {
     }))
     .expect("deserialize excluded process id");
     assert_eq!(request.excluded_process_id, Some(4242));
-    assert_eq!(serde_json::to_value(request).expect("serialize request")["excludedProcessId"], 4242);
+    assert_eq!(
+        serde_json::to_value(request).expect("serialize request")["excludedProcessId"],
+        4242
+    );
 }
 
 #[test]

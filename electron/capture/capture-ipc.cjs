@@ -30,6 +30,10 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, user
       return captureEngine.request('prepare', { config })
     }
     if (command === 'start-prepared-recording') return registerSession(await captureEngine.request('start'))
+    if (command === 'cancel-prepared-recording') {
+      await captureEngine.request('cancel')
+      return undefined
+    }
     if (command === 'start-recording') {
       await captureEngine.request('prepare', { config: payload.config })
       const session = await captureEngine.request('start')

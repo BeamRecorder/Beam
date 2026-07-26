@@ -35,9 +35,13 @@ const emit = defineEmits<{
 }>();
 
 const preferencesStore = usePreferencesStore();
+let tooltipSpaceReady: Promise<void> = Promise.resolve();
 
 onMounted(() => {
   preferencesStore.load();
+  // Reserve native space before the user reaches a control. Resizing only on
+  // first button hover made the bar visibly jump once per recording.
+  tooltipSpaceReady = window.capture?.setRecorderTooltip(true) ?? Promise.resolve();
 });
 
 const getShortcut = (id: string, fallback: string): string => {
@@ -55,21 +59,17 @@ const startDrag = () => {
   window.addEventListener("mouseup", stopDrag, { once: true });
 };
 const tooltipsReady = ref(false);
-let tooltipRequest = 0;
 const showTooltips = async () => {
-  const request = ++tooltipRequest;
   tooltipsReady.value = false;
-  await window.capture?.setRecorderTooltip(true);
-  if (request === tooltipRequest) tooltipsReady.value = true;
+  await tooltipSpaceReady;
+  tooltipsReady.value = true;
 };
 const hideTooltips = () => {
-  tooltipRequest += 1;
   tooltipsReady.value = false;
-  void window.capture?.setRecorderTooltip(false);
 };
 onBeforeUnmount(() => {
   stopDrag();
-  hideTooltips();
+  void window.capture?.setRecorderTooltip(false);
 });
 </script>
 

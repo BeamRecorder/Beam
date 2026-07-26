@@ -5,6 +5,7 @@ const capture = vi.hoisted(() => ({
   setCountdown: vi.fn(),
   prepareRecording: vi.fn().mockResolvedValue({ state: 'armed' }),
   startPreparedRecording: vi.fn(),
+  cancelPreparedRecording: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn().mockResolvedValue({ state: 'completed' }),
   pause: vi.fn(),
   resume: vi.fn(),

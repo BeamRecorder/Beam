@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { LoaderCircle } from '@lucide/vue'
 import HUD from './components/hud/HUD.vue'
 import CameraShadowApp from './components/hud/CameraShadowApp.vue'
@@ -74,6 +74,12 @@ const setView = (view: 'hud' | 'editor') => {
 
 const recordingBarVisibility = ref<'always' | 'auto-fade'>('always')
 const recording = useRecordingController((session) => { void handleStopRecording(session) })
+
+watch(currentView, (view) => {
+  if (view !== 'hud') return
+  lastInteractive = null
+  capture.setInteractive(false)
+})
 
 const startRecording = async (configuration: RecordingConfiguration) => {
   editorLoadError.value = ''; currentVideoSrc.value = null; currentProject.value = null; currentEditorData.value = null
