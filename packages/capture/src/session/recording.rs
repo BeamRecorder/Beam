@@ -139,8 +139,9 @@ impl RecordingSession {
                 .retain(|entry| entry.session_id != self.session_id);
             write_atomic(&manifest_path, &serde_json::to_vec_pretty(&project)?)?;
         } else if self.project_layout.project_dir().exists() {
-            std::fs::remove_dir_all(self.project_layout.project_dir())
-                .map_err(|error| CaptureError::storage(&self.project_layout.project_dir(), error))?;
+            std::fs::remove_dir_all(self.project_layout.project_dir()).map_err(|error| {
+                CaptureError::storage(&self.project_layout.project_dir(), error)
+            })?;
         }
         Ok(())
     }

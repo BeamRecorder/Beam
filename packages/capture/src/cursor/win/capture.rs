@@ -13,9 +13,8 @@ use windows::Win32::{
         Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
         WindowsAndMessaging::{
             CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo, HICON,
-            ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND, IDC_HELP, IDC_IBEAM,
-            IDC_NO, IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, IDC_WAIT,
-            LoadCursorW,
+            ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND, IDC_HELP, IDC_IBEAM, IDC_NO,
+            IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, IDC_WAIT, LoadCursorW,
         },
     },
 };
@@ -176,33 +175,6 @@ fn classify_system_cursor(native_id: usize) -> CursorKind {
         .unwrap_or(CursorKind::Custom)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn recognizes_standard_handles() {
-        assert_eq!(classify_handle(3, &[(3, CursorKind::Handpointing)]), CursorKind::Handpointing);
-    }
-
-    #[test]
-    fn keeps_unknown_handles_custom() {
-        assert_eq!(classify_handle(9, &[(3, CursorKind::Handpointing)]), CursorKind::Custom);
-    }
-
-    #[test]
-    fn does_not_treat_a_zero_handle_as_default() {
-        assert_eq!(classify_handle(0, &[]), CursorKind::Custom);
-    }
-
-    fn classify_handle(native_id: usize, cursors: &[(usize, CursorKind)]) -> CursorKind {
-        cursors
-            .iter()
-            .find_map(|(handle, kind)| (*handle == native_id).then_some(*kind))
-            .unwrap_or(CursorKind::Custom)
-    }
-}
-
 #[allow(dead_code)]
 fn render_icon(icon: HICON, info: &ICONINFO) -> Result<(u32, u32, Vec<u8>), CaptureError> {
     let (width, height) = bitmap_dimensions(info)?;
@@ -303,4 +275,37 @@ fn bgra_to_rgba(pixels: &mut [u8]) {
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(format!("Windows cursor capture failed: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognizes_standard_handles() {
+        assert_eq!(
+            classify_handle(3, &[(3, CursorKind::Handpointing)]),
+            CursorKind::Handpointing
+        );
+    }
+
+    #[test]
+    fn keeps_unknown_handles_custom() {
+        assert_eq!(
+            classify_handle(9, &[(3, CursorKind::Handpointing)]),
+            CursorKind::Custom
+        );
+    }
+
+    #[test]
+    fn does_not_treat_a_zero_handle_as_default() {
+        assert_eq!(classify_handle(0, &[]), CursorKind::Custom);
+    }
+
+    fn classify_handle(native_id: usize, cursors: &[(usize, CursorKind)]) -> CursorKind {
+        cursors
+            .iter()
+            .find_map(|(handle, kind)| (*handle == native_id).then_some(*kind))
+            .unwrap_or(CursorKind::Custom)
+    }
 }

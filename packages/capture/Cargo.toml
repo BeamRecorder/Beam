@@ -27,6 +27,7 @@ windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Di
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.4"
+objc2-app-kit = { version = "0.3.2", features = ["NSCursor"] }
 screencapturekit = { version = "8.0.1", features = ["macos_15_0"] }
 core-graphics = "0.25"
 

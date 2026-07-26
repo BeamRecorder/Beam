@@ -16,8 +16,9 @@ use core_graphics::{
 
 use crate::{
     CaptureError,
+    cursor::mac::appkit::current_system_shape,
     cursor::{
-        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter, CursorKind,
+        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter,
         CursorShapeCatalogEntry, map_coordinates, telemetry_from_events,
     },
     model::SourceId,
@@ -201,20 +202,7 @@ fn capture_loop(
             visible: true,
         },
     )?;
-    push(
-        &mut writer,
-        metrics,
-        CursorEvent::Shape {
-            session_ns: segment_start_ns,
-            cursor_id: "macos:current-system".into(),
-            // AppKit cursor interrogation is intentionally isolated from this
-            // CoreGraphics sampling loop. Until a system cursor is classified,
-            // preserve the traceable native identity as a safe custom cursor.
-            cursor_kind: CursorKind::Custom,
-            native_cursor_id: "macos:current-system".into(),
-            hotspot: crate::cursor::Hotspot { x: 0, y: 0 },
-        },
-    )?;
+    let mut previous_shape = None;
     while !cancel.load(Ordering::Acquire) {
         let session_ns = segment_start_ns
             .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
@@ -222,6 +210,21 @@ fn capture_loop(
             .map_err(|_| CaptureError::Backend("CGEventSourceCreate failed".into()))?;
         let event = CGEvent::new(source)
             .map_err(|_| CaptureError::Backend("CGEventCreate failed".into()))?;
+        let shape = current_system_shape();
+        if previous_shape.as_ref() != Some(&shape.cursor_id) {
+            push(
+                &mut writer,
+                metrics,
+                CursorEvent::Shape {
+                    session_ns,
+                    cursor_id: shape.cursor_id.clone(),
+                    cursor_kind: shape.cursor_kind,
+                    native_cursor_id: shape.native_cursor_id,
+                    hotspot: shape.hotspot,
+                },
+            )?;
+            previous_shape = Some(shape.cursor_id);
+        }
         let location = event.location();
         let x = coordinate(location.x);
         let y = coordinate(location.y);
