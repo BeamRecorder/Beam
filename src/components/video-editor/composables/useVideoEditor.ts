@@ -114,6 +114,7 @@ export function useVideoEditor(options: {
             enabled: cursor.enableShadow.value,
             blur: cursor.shadowBlur.value,
             color: cursor.shadowColor.value,
+            direction: cursor.shadowDirection.value,
           },
           clickSpring: { enabled: cursor.enableClickSpring.value },
           ripple: {

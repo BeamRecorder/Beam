@@ -3,6 +3,7 @@ import type { ZoomElement } from '../video-editor/zoom/zoom-types'
 import type { ProjectComposition } from '../video-editor/composition/composition-types'
 import type { CursorType } from '../video-editor/properties/cursor/useCursorReplacer'
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas'
+import type { ShadowDirection } from '../video-editor/properties/shadow-types'
 
 export type ExportFormat = 'webm' | 'mp4'
 export type ExportPreset = 'low' | 'medium' | 'high'
@@ -24,7 +25,7 @@ export interface CursorRenderSettings {
   selectedCursor: CursorType
   size: number
   color: string
-  shadow: { enabled: boolean; blur: number; color: string }
+  shadow: { enabled: boolean; blur: number; color: string; direction: ShadowDirection }
   clickSpring: { enabled: boolean }
   ripple: { enabled: boolean; color: string; size: number }
 }

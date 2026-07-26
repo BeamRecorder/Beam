@@ -6,51 +6,13 @@ import {
 } from "../../composables/cursorPlayback";
 import {
   type CursorType,
-  cursorTypeForKind,
   useCursorReplacer,
 } from "../../properties/cursor/useCursorReplacer";
 import { ZOOM_DEPTH_SCALES } from "../../zoom/zoom-types";
-import { outputPoint } from "../output-canvas";
 import { cursorClickSpringScale } from "../../composables/cursor-click-spring";
-
-export const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
-  automatic: { x: 0, y: 0 },
-  default: { x: 10, y: 7 },
-  beachball: { x: 16, y: 16 },
-  busy: { x: 7, y: 0 },
-  cell: { x: 16, y: 16 },
-  contextualmenu: { x: 8, y: 7 },
-  copy: { x: 7, y: 0 },
-  cross: { x: 16, y: 16 },
-  handgrabbing: { x: 16, y: 16 },
-  handopen: { x: 16, y: 16 },
-  handpointing: { x: 12, y: 10 },
-  help: { x: 7, y: 0 },
-  makealias: { x: 7, y: 0 },
-  move: { x: 16, y: 16 },
-  notallowed: { x: 7, y: 0 },
-  poof: { x: 7, y: 0 },
-  resizenorth: { x: 16, y: 16 },
-  resizenortheast: { x: 16, y: 16 },
-  resizenortheastsouthwest: { x: 16, y: 16 },
-  resizenorthsouth: { x: 16, y: 16 },
-  resizenorthwest: { x: 16, y: 16 },
-  resizenorthwestsoutheast: { x: 16, y: 16 },
-  resizeright: { x: 16, y: 16 },
-  resizesouth: { x: 16, y: 16 },
-  resizesoutheast: { x: 16, y: 16 },
-  resizesouthwest: { x: 16, y: 16 },
-  resizeup: { x: 16, y: 16 },
-  resizeupdown: { x: 16, y: 16 },
-  resizewest: { x: 16, y: 16 },
-  resizewesteast: { x: 16, y: 16 },
-  screenshotselection: { x: 16, y: 16 },
-  screenshotwindow: { x: 16, y: 16 },
-  textcursor: { x: 16, y: 16 },
-  textcursorvertical: { x: 16, y: 16 },
-  zoomin: { x: 16, y: 16 },
-  zoomout: { x: 16, y: 16 },
-};
+import { cursorShadowOffset } from '../../properties/cursor/cursor-shadow';
+import type { ShadowDirection } from '../../properties/shadow-types';
+import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../../properties/cursor/cursor-rendering';
 
 export interface Ripple {
   x: number;
@@ -68,6 +30,7 @@ export interface UseCursorOverlayOptions {
   enableRipple: () => boolean;
   shadowBlur: () => number;
   shadowColor: () => string;
+  shadowDirection: () => ShadowDirection;
   rippleColor: () => string;
   rippleSize: () => number;
   deviceScale: () => number;
@@ -112,9 +75,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         const rasterSize =
           options.cursorSize() * maxZoomScale * options.deviceScale();
         const state = cursorStateAt(options.editorData()?.cursor.events ?? [], options.currentTime());
-        const cursorType = options.selectedCursor() === "automatic"
-          ? cursorTypeForKind(state?.cursorKind)
-          : options.selectedCursor();
+        const cursorType = cursorTypeAt(options.selectedCursor(), state);
         const img = await getCursorImage(
           cursorType,
           rasterSize,
@@ -192,25 +153,13 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           button.sessionNs / 1_000_000_000,
         );
         if (!state) continue;
-        const clampedX = Math.max(0, Math.min(1, state.x));
-        const clampedY = Math.max(0, Math.min(1, state.y));
-        const point = outputPoint(
-          clampedX,
-          clampedY,
-          videoWidth || 1920,
-          videoHeight || 1080,
-          videoWindow.dw,
-          videoWindow.dh,
-          options.showBackground(),
-        );
         const comp = options.composition?.();
-        const isMirrored = comp?.baseVideoIsMirrored ?? false;
         const baseTransform = comp?.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
-        const finalPointX = isMirrored ? (1 - point.cx) : point.cx;
+        const position = cursorPositionAt(state, { width: videoWidth || 1920, height: videoHeight || 1080 }, { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh }, options.showBackground(), baseTransform, comp?.baseVideoIsMirrored ?? false);
 
         ripples.value.push({
-          x: videoWindow.dx + (finalPointX * baseTransform.width + baseTransform.x) * videoWindow.dw,
-          y: videoWindow.dy + (point.cy * baseTransform.height + baseTransform.y) * videoWindow.dh,
+          x: position.x,
+          y: position.y,
           radius: 2,
           alpha: 1,
         });
@@ -248,52 +197,31 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         activeImage.complete &&
         activeImage.naturalWidth > 0
       ) {
-        const clampedX = Math.max(0, Math.min(1, state.x));
-        const clampedY = Math.max(0, Math.min(1, state.y));
-
-        const point = outputPoint(
-          clampedX,
-          clampedY,
-          videoWidth || 1920,
-          videoHeight || 1080,
-          videoWindow.dw,
-          videoWindow.dh,
-          options.showBackground(),
-        );
         const comp = options.composition?.();
-        const isMirrored = comp?.baseVideoIsMirrored ?? false;
         const baseTransform = comp?.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
-        const finalPointX = isMirrored ? (1 - point.cx) : point.cx;
-
-        const pointerX = videoWindow.dx + (finalPointX * baseTransform.width + baseTransform.x) * videoWindow.dw;
-        const pointerY = videoWindow.dy + (point.cy * baseTransform.height + baseTransform.y) * videoWindow.dh;
+        const position = cursorPositionAt(state, { width: videoWidth || 1920, height: videoHeight || 1080 }, { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh }, options.showBackground(), baseTransform, comp?.baseVideoIsMirrored ?? false);
 
         const targetSize = options.cursorSize();
-        const cursorType = options.selectedCursor() === "automatic"
-          ? cursorTypeForKind(state.cursorKind)
-          : options.selectedCursor();
-        const hotspot = cursorHotspots[cursorType];
-        const cursorScale = targetSize / 32;
-        const hx = hotspot.x * cursorScale;
-        const hy = hotspot.y * cursorScale;
+        const hotspot = cursorHotspotAtSize(cursorTypeAt(options.selectedCursor(), state), targetSize);
 
         ctx.save();
         if (options.enableShadow()) {
           ctx.shadowColor = options.shadowColor();
           ctx.shadowBlur = options.shadowBlur();
-          ctx.shadowOffsetX = Math.round(options.shadowBlur() * 0.33);
-          ctx.shadowOffsetY = Math.round(options.shadowBlur() * 0.5);
+          const offset = cursorShadowOffset(options.shadowBlur(), options.shadowDirection());
+          ctx.shadowOffsetX = offset.x;
+          ctx.shadowOffsetY = offset.y;
         }
 
         const click = buttonEventsBetween(cursorData.events, Math.max(0, time - .28), time).at(-1);
         const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
         const clickScale = cursorClickSpringScale(age, options.enableClickSpring());
-        ctx.translate(pointerX, pointerY);
+        ctx.translate(position.x, position.y);
         ctx.scale(clickScale, clickScale);
         ctx.drawImage(
           activeImage,
-          -hx,
-          -hy,
+          -hotspot.x,
+          -hotspot.y,
           targetSize,
           targetSize,
         );

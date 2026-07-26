@@ -8,6 +8,7 @@ import UndoRedoToast from './UndoRedoToast.vue';
 import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../properties/cursor/useCursorReplacer";
+import type { ShadowDirection } from '../properties/shadow-types';
 import type { BackgroundValue } from "../composables/backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
 import type { CompositionLayer, MediaCompositionLayer, NormalizedTransform, ProjectComposition, NormalizedCrop } from '../composition/composition-types';
@@ -32,6 +33,7 @@ const props = defineProps<{
   enableRipple: boolean;
   shadowBlur: number;
   shadowColor: string;
+  shadowDirection: ShadowDirection;
   rippleColor: string;
   rippleSize: number;
   isVideoEnabled: boolean;
@@ -185,6 +187,7 @@ const cursorOverlay = useCursorOverlay({
   enableRipple: () => props.enableRipple,
   shadowBlur: () => props.shadowBlur,
   shadowColor: () => props.shadowColor,
+  shadowDirection: () => props.shadowDirection,
   rippleColor: () => props.rippleColor,
   rippleSize: () => props.rippleSize,
   deviceScale: () => deviceScale.value,
@@ -213,6 +216,23 @@ watch(
   () => [props.composition, props.currentTime, props.isCropping] as const,
   () => renderOnce(),
   { deep: true },
+);
+
+watch(
+  () => [
+    props.selectedCursor,
+    props.cursorSize,
+    props.cursorColor,
+    props.enableShadow,
+    props.shadowBlur,
+    props.shadowColor,
+    props.shadowDirection,
+    props.enableClickSpring,
+    props.enableRipple,
+    props.rippleColor,
+    props.rippleSize,
+  ] as const,
+  () => renderOnce(),
 );
 
 watch(transformAndCrop.webcamDraft, () => renderOnce(), { deep: true });

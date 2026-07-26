@@ -16,8 +16,7 @@ import type {
 } from "../export-types";
 import { renderCompositionFrame } from "../composition/render";
 import { activeLayersAt, type MediaCompositionLayer } from "../../video-editor/composition/composition-types";
-import { useCursorReplacer } from "../../video-editor/properties/cursor/useCursorReplacer";
-import { cursorHotspots } from "../../video-editor/canvas/composables/useCursorOverlay";
+import { cursorTypeForKind, useCursorReplacer } from "../../video-editor/properties/cursor/useCursorReplacer";
 import { VideoFrameProvider } from "./video-frame-provider";
 
 const codecCandidates = { webm: ["vp9", "vp8", "av1"], mp4: ["avc"] } as const;
@@ -214,29 +213,20 @@ async function loadBackground(
 }
 
 async function loadCursorImages(request: ExportRequest) {
-  const entries = await Promise.all(
-    Object.entries(request.snapshot.cursor.shapes).map(async ([id, shape]) => {
-      const image = new Image();
-      image.src = shape.src;
-      await new Promise<void>((resolve) => {
-        image.onload = () => resolve();
-        image.onerror = () => resolve();
-      });
-      return [id, image] as const;
-    }),
+  const types = new Set(
+    request.snapshot.cursorSettings.selectedCursor === "automatic"
+      ? request.snapshot.cursor.events
+        .filter((event) => event.event === "shape")
+        .map((event) => cursorTypeForKind(event.cursorKind))
+      : [request.snapshot.cursorSettings.selectedCursor],
   );
-  return new Map(entries);
-}
-
-async function loadReplacementCursor(request: ExportRequest) {
-  const type = request.snapshot.cursorSettings.selectedCursor === "automatic"
-    ? "default"
-    : request.snapshot.cursorSettings.selectedCursor;
+  if (types.size === 0) types.add("default");
   const { getCursorImage } = useCursorReplacer();
-  return {
-    image: await getCursorImage(type, request.snapshot.cursorSettings.size * 6, request.snapshot.cursorSettings.color),
-    hotspot: cursorHotspots[type],
-  };
+  const images = await Promise.all([...types].map(async (type) => [
+    type,
+    await getCursorImage(type, request.snapshot.cursorSettings.size * 6, request.snapshot.cursorSettings.color),
+  ] as const));
+  return new Map(images);
 }
 
 export async function exportWithMediabunny(
@@ -320,7 +310,6 @@ export async function exportWithMediabunny(
 
     const background = await loadBackground(request);
     const cursorImages = await loadCursorImages(request);
-    const replacementCursor = await loadReplacementCursor(request);
     compositionVisuals = await loadVisuals(request);
     baseFrames = await VideoFrameProvider.create(
       request.snapshot.video.src,
@@ -412,8 +401,6 @@ export async function exportWithMediabunny(
           background,
           cursorImages,
           visuals,
-          replacementCursor?.image,
-          replacementCursor?.hotspot,
         );
       } finally {
         baseFrame?.close();

@@ -24,6 +24,7 @@ import type {
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
 import type { NormalizedTransform } from "../composition/composition-types";
+import type { ShadowDirection } from './shadow-types';
 
 const props = defineProps<{
   activeTab: string;
@@ -54,6 +55,7 @@ const props = defineProps<{
   enableRipple: boolean;
   shadowBlur: number;
   shadowColor: string;
+  shadowDirection: ShadowDirection;
   rippleColor: string;
   rippleSize: number;
 
@@ -89,6 +91,7 @@ const emit = defineEmits<{
   (e: "update:enableRipple", value: boolean): void;
   (e: "update:shadowBlur", value: number): void;
   (e: "update:shadowColor", value: string): void;
+  (e: "update:shadowDirection", value: ShadowDirection): void;
   (e: "update:rippleColor", value: string): void;
   (e: "update:rippleSize", value: number): void;
   (e: "update:volume", value: number): void;
@@ -178,6 +181,7 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         :enableRipple="enableRipple"
         :shadowBlur="shadowBlur"
         :shadowColor="shadowColor"
+        :shadowDirection="shadowDirection"
         :rippleColor="rippleColor"
         :rippleSize="rippleSize"
         @update:selectedCursor="emit('update:selectedCursor', $event)"
@@ -188,6 +192,7 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:enableRipple="emit('update:enableRipple', $event)"
         @update:shadowBlur="emit('update:shadowBlur', $event)"
         @update:shadowColor="emit('update:shadowColor', $event)"
+        @update:shadowDirection="emit('update:shadowDirection', $event)"
         @update:rippleColor="emit('update:rippleColor', $event)"
         @update:rippleSize="emit('update:rippleSize', $event)"
       />

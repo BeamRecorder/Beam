@@ -5,13 +5,11 @@ import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import Switch from "~/ui/switch/Switch.vue";
 import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
+import ShadowDirectionGroup from "../ShadowDirectionGroup.vue";
+import type { ShadowDirection } from "../shadow-types";
 import {
   Unlink,
   Trash2,
-  MoveDown,
-  MoveDownRight,
-  MoveUpLeft,
-  CircleDot,
   RotateCcw,
 } from "@lucide/vue";
 import type { NormalizedTransform } from "../../composition/composition-types";
@@ -68,21 +66,14 @@ const shadowPresets = [
   { id: "lg", label: "Strong" },
 ];
 
-const shadowDirections = [
-  { id: "all", label: "Around", icon: CircleDot },
-  { id: "bottom", label: "Bottom", icon: MoveDown },
-  { id: "bottom-right", label: "Bottom-Right", icon: MoveDownRight },
-  { id: "top-left", label: "Top-Left", icon: MoveUpLeft },
-];
-
 const NAMED_RADII = ["none", "sm", "md", "lg", "full"];
 
 const selectedRadius = ref<string>("md");
 const customRadiusValue = ref<number>(32);
 const selectedShadowSize = ref(props.selectedClip?.shadowSize ?? "md");
 const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? "#000000");
-const selectedShadowDirection = ref(
-  props.selectedClip?.shadowDirection ?? "all",
+const selectedShadowDirection = ref<ShadowDirection>(
+  (props.selectedClip?.shadowDirection as ShadowDirection | undefined) ?? "all",
 );
 
 watch(
@@ -106,7 +97,7 @@ watch(
     }
     selectedShadowSize.value = clip?.shadowSize ?? "md";
     selectedShadowColor.value = clip?.shadowColor ?? "#000000";
-    selectedShadowDirection.value = clip?.shadowDirection ?? "bottom";
+    selectedShadowDirection.value = (clip?.shadowDirection as ShadowDirection | undefined) ?? "bottom";
   },
   { immediate: true },
 );
@@ -135,7 +126,7 @@ const handleShadowPresetChange = (sizeId: string) => {
   });
 };
 
-const handleShadowDirectionChange = (directionId: string) => {
+const handleShadowDirectionChange = (directionId: ShadowDirection) => {
   selectedShadowDirection.value = directionId;
   emit("update:shadow", {
     size: selectedShadowSize.value,
@@ -267,19 +258,10 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
         <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top-sm">
           <span class="sub-label">Direction</span>
-          <div class="direction-group">
-            <button
-              v-for="dir in shadowDirections"
-              :key="dir.id"
-              type="button"
-              class="direction-btn"
-              :class="{ active: selectedShadowDirection === dir.id }"
-              :title="dir.label"
-              @click="handleShadowDirectionChange(dir.id)"
-            >
-              <component :is="dir.icon" :size="15" />
-            </button>
-          </div>
+          <ShadowDirectionGroup
+            :model-value="selectedShadowDirection"
+            @update:model-value="handleShadowDirectionChange"
+          />
         </div>
 
         <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top-sm">
@@ -509,40 +491,6 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   padding-top: 12px;
   background: var(--color-bg-element);
   z-index: 10;
-}
-
-.direction-group {
-  display: flex;
-  gap: 4px;
-  background: var(--color-bg-surface-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 4px;
-  box-sizing: border-box;
-}
-
-.direction-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  height: 26px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: background var(--fast) ease, color var(--fast) ease;
-}
-
-.direction-btn:hover {
-  background: var(--color-bg-surface);
-  color: var(--text-primary);
-}
-
-.direction-btn.active {
-  background: var(--color-primary);
-  color: white;
 }
 
 .sub-group :deep(.color-picker-trigger-container) {

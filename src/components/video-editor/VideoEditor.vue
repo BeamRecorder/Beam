@@ -78,6 +78,7 @@ const {
   enableRipple,
   shadowBlur,
   shadowColor,
+  shadowDirection,
   rippleColor,
   rippleSize,
 } = cursor;
@@ -354,6 +355,7 @@ onBeforeUnmount(() => {
           v-model:enableRipple="enableRipple"
           v-model:shadowBlur="shadowBlur"
           v-model:shadowColor="shadowColor"
+          v-model:shadowDirection="shadowDirection"
           v-model:rippleColor="rippleColor"
           v-model:rippleSize="rippleSize"
           v-model:volume="volume"
@@ -408,6 +410,7 @@ onBeforeUnmount(() => {
           :enable-ripple="enableRipple"
           :shadow-blur="shadowBlur"
           :shadow-color="shadowColor"
+          :shadow-direction="shadowDirection"
           :ripple-color="rippleColor"
           :ripple-size="rippleSize"
           :is-video-enabled="isVideoEnabled"

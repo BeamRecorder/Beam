@@ -12,6 +12,8 @@ import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-edit
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { applyClipShadow, radiusForAppearance } from '../../video-editor/canvas/composables/useCompositionMedia';
 import { cursorClickSpringScale } from '../../video-editor/composables/cursor-click-spring';
+import { cursorShadowOffset } from '../../video-editor/properties/cursor/cursor-shadow';
+import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../../video-editor/properties/cursor/cursor-rendering';
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
 export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
@@ -215,8 +217,6 @@ export function renderCompositionFrame(
   background?: CanvasImageSource | null,
   cursorImages?: ReadonlyMap<string, HTMLImageElement>,
   visuals?: CompositionVisuals,
-  replacementCursor?: HTMLImageElement | null,
-  replacementCursorHotspot?: { x: number; y: number },
 ) {
   const { width, height } = snapshot.canvas;
   ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
@@ -307,20 +307,14 @@ export function renderCompositionFrame(
         click.sessionNs / 1_000_000_000,
       );
       if (!state) continue;
-      const clampedX = Math.max(0, Math.min(1, state.x));
-      const clampedY = Math.max(0, Math.min(1, state.y));
-      const point = outputPoint(
-        clampedX,
-        clampedY,
-        sourceWidth,
-        sourceHeight,
-        positionedMedia.width,
-        positionedMedia.height,
+      const position = cursorPositionAt(
+        state,
+        { width: sourceWidth, height: sourceHeight },
+        { x: 0, y: 0, width, height },
         snapshot.canvas.showBackground,
+        baseTransform,
+        isBaseVideoMirrored,
       );
-      const finalPointX = isBaseVideoMirrored ? (1 - point.cx) : point.cx;
-      const rippleX = positionedMedia.x + finalPointX * positionedMedia.width;
-      const rippleY = positionedMedia.y + point.cy * positionedMedia.height;
 
       const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
       ctx.save();
@@ -329,8 +323,8 @@ export function renderCompositionFrame(
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(
-        rippleX,
-        rippleY,
+        position.x,
+        position.y,
         2 + age * settings.ripple.size * 2,
         0,
         Math.PI * 2,
@@ -339,49 +333,39 @@ export function renderCompositionFrame(
       ctx.restore();
     }
   }
-  const image =
-    replacementCursor ??
-    (cursor?.cursorId ? cursorImages?.get(cursor.cursorId) : undefined);
+  const cursorType = cursorTypeAt(settings.selectedCursor, cursor);
+  const image = cursorImages?.get(cursorType);
   if (cursor?.visible && image?.complete && image.naturalWidth > 0) {
-    const clampedX = Math.max(0, Math.min(1, cursor.x));
-    const clampedY = Math.max(0, Math.min(1, cursor.y));
-    const point = outputPoint(
-      clampedX,
-      clampedY,
-      sourceWidth,
-      sourceHeight,
-      positionedMedia.width,
-      positionedMedia.height,
+    const position = cursorPositionAt(
+      cursor,
+      { width: sourceWidth, height: sourceHeight },
+      { x: 0, y: 0, width, height },
       snapshot.canvas.showBackground,
+      baseTransform,
+      isBaseVideoMirrored,
     );
-    const finalPointX = isBaseVideoMirrored ? (1 - point.cx) : point.cx;
-    const pointerX = positionedMedia.x + finalPointX * positionedMedia.width;
-    const pointerY = positionedMedia.y + point.cy * positionedMedia.height;
-
-    const hotspot = replacementCursor
-      ? (replacementCursorHotspot ?? { x: 0, y: 0 })
-      : (snapshot.cursor.shapes[cursor.cursorId!]?.hotspot ?? snapshot.cursor.catalog[cursor.cursorId!]?.hotspot ?? { x: 0, y: 0 });
     const size = settings.size;
-    const cursorScale = size / image.naturalWidth;
+    const hotspot = cursorHotspotAtSize(cursorType, size);
 
     ctx.save();
     if (settings.shadow.enabled) {
       ctx.shadowColor = settings.shadow.color;
       ctx.shadowBlur = settings.shadow.blur;
-      ctx.shadowOffsetX = Math.round(settings.shadow.blur * 0.33);
-      ctx.shadowOffsetY = Math.round(settings.shadow.blur * 0.5);
+      const offset = cursorShadowOffset(settings.shadow.blur, settings.shadow.direction);
+      ctx.shadowOffsetX = offset.x;
+      ctx.shadowOffsetY = offset.y;
     }
     const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .28), time).at(-1);
     const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
     const clickScale = cursorClickSpringScale(age, settings.clickSpring.enabled);
-    ctx.translate(pointerX, pointerY);
+    ctx.translate(position.x, position.y);
     ctx.scale(clickScale, clickScale);
     ctx.drawImage(
       image,
-      -hotspot.x * cursorScale,
-      -hotspot.y * cursorScale,
-      image.naturalWidth * cursorScale,
-      image.naturalHeight * cursorScale,
+      -hotspot.x,
+      -hotspot.y,
+      size,
+      size,
     );
     ctx.restore();
   }

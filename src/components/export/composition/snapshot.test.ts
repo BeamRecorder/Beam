@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createCompositionSnapshot } from './snapshot'
 import { DEFAULT_OUTPUT_CANVAS } from '../../video-editor/canvas/output-canvas'
 
-const base = () => ({ videoSrc: 'file:///screen.mp4', duration: 4, width: 1920, height: 1080, fps: 30, canvas: DEFAULT_OUTPUT_CANVAS, videoEnabled: true, background: null, blurPercent: 0, editorData: null, zooms: [], composition: { media: [], layers: [] }, cursorSettings: { selectedCursor: 'automatic' as const, size: 24, color: '#000000', shadow: { enabled: true, blur: 6, color: '#000000' }, clickSpring: { enabled: true }, ripple: { enabled: true, color: '#ff5a1f', size: 30 } }, systemAudioEnabled: true, micAudioEnabled: true })
+const base = () => ({ videoSrc: 'file:///screen.mp4', duration: 4, width: 1920, height: 1080, fps: 30, canvas: DEFAULT_OUTPUT_CANVAS, videoEnabled: true, background: null, blurPercent: 0, editorData: null, zooms: [], composition: { media: [], layers: [] }, cursorSettings: { selectedCursor: 'automatic' as const, size: 24, color: '#000000', shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' as const }, clickSpring: { enabled: true }, ripple: { enabled: true, color: '#ff5a1f', size: 30 } }, systemAudioEnabled: true, micAudioEnabled: true })
 
 describe('createCompositionSnapshot', () => {
   it('rejects an unavailable source video', () => expect(() => createCompositionSnapshot({ ...base(), videoSrc: null })).toThrow('indisponible'))

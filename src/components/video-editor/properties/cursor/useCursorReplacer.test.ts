@@ -37,6 +37,7 @@ describe("useCursorReplacer", () => {
       cursor.enableRipple.value,
       cursor.shadowBlur.value,
       cursor.shadowColor.value,
+      cursor.shadowDirection.value,
       cursor.rippleColor.value,
       cursor.rippleSize.value,
     ]).toEqual([
@@ -48,6 +49,7 @@ describe("useCursorReplacer", () => {
       true,
       6,
       "#000000",
+      "bottom",
       "#ff5a1f",
       30,
     ]);

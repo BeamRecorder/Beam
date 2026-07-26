@@ -3,7 +3,7 @@ import { drawCompositionLayers, renderCompositionFrame } from './render'
 import type { CompositionSnapshot } from '../export-types'
 import { DEFAULT_OUTPUT_CANVAS } from '../../video-editor/canvas/output-canvas'
 
-const snapshot = (enabled = true): CompositionSnapshot => ({ duration: 1, video: { src: 'x', width: 100, height: 50, fps: 30, enabled }, canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 100, height: 50 }, background: null, blurPercent: 0, zooms: [], cursor: { available: true, telemetry: [], missing: [], shapes: { arrow: { src: 'x', hotspot: { x: 2, y: 3 } } }, events: [{ event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: .5, normalizedY: .5, visible: true }, { event: 'shape', sessionNs: 0, shapeId: 'arrow', hotspot: { x: 2, y: 3 } }] }, cursorSettings: { selectedCursor: 'automatic', size: 24, color: '#000', shadow: { enabled: false, blur: 0, color: '#000' }, clickSpring: { enabled: true }, ripple: { enabled: false, color: '#f00', size: 30 } }, audio: [], composition: { media: [], layers: [] }, layers: [] })
+const snapshot = (enabled = true): CompositionSnapshot => ({ duration: 1, video: { src: 'x', width: 100, height: 50, fps: 30, enabled }, canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 100, height: 50 }, background: null, blurPercent: 0, zooms: [], cursor: { available: true, telemetry: [], missing: [], shapes: { arrow: { src: 'x', hotspot: { x: 2, y: 3 } } }, events: [{ event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: .5, normalizedY: .5, visible: true }, { event: 'shape', sessionNs: 0, shapeId: 'arrow', hotspot: { x: 2, y: 3 } }] }, cursorSettings: { selectedCursor: 'automatic', size: 24, color: '#000', shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' }, clickSpring: { enabled: true }, ripple: { enabled: false, color: '#f00', size: 30 } }, audio: [], composition: { media: [], layers: [] }, layers: [] })
 const context = () => ({ fillStyle: '', fillRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(), strokeText: vi.fn(), drawImage: vi.fn(), save: vi.fn(), translate: vi.fn(), scale: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), clip: vi.fn(), arc: vi.fn(), stroke: vi.fn(), font: '', textAlign: '', textBaseline: '', shadowColor: '', shadowBlur: 0, globalAlpha: 1, lineWidth: 0, strokeStyle: '' }) as unknown as CanvasRenderingContext2D
 
 describe('renderCompositionFrame', () => {
@@ -17,8 +17,17 @@ describe('renderCompositionFrame', () => {
   })
   it('draws the video and a visible cursor in camera space', () => {
     const ctx = context(); const image = { complete: true, naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement
-    renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, snapshot(), 0, null, new Map([['arrow', image]]))
+    renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, snapshot(), 0, null, new Map([['default', image]]))
     expect(ctx.save).toHaveBeenCalledTimes(3); expect(ctx.drawImage).toHaveBeenCalledTimes(2); expect(ctx.translate).toHaveBeenCalledWith(50, 25)
+  })
+  it('uses the semantic cursor selected by an automatic cursor event', () => {
+    const value = snapshot()
+    value.cursor.events[1] = { event: 'shape', sessionNs: 0, cursorId: 'text', cursorKind: 'textcursor', nativeCursorId: 'system:text', hotspot: { x: 0, y: 0 } }
+    const defaultImage = { complete: true, naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement
+    const textImage = { complete: true, naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement
+    const ctx = context()
+    renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, value, 0, null, new Map([['default', defaultImage], ['textcursor', textImage]]))
+    expect(ctx.drawImage).toHaveBeenLastCalledWith(textImage, -12, -12, 24, 24)
   })
   it('applies the saved base-video crop before rendering the export frame', () => {
     const value = snapshot(); value.composition.baseVideoCrop = { x: .1, y: .2, width: .5, height: .4 }

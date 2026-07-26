@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import type { ShadowDirection } from '../shadow-types'
 
 export type CursorType =
   | 'automatic'
@@ -146,6 +147,7 @@ export function useCursorReplacer() {
   const enableRipple = ref(true)
   const shadowBlur = ref(6)
   const shadowColor = ref('#000000')
+  const shadowDirection = ref<ShadowDirection>('bottom')
   const rippleColor = ref('#ff5a1f')
   const rippleSize = ref(30)
 
@@ -193,6 +195,7 @@ export function useCursorReplacer() {
     enableRipple,
     shadowBlur,
     shadowColor,
+    shadowDirection,
     rippleColor,
     rippleSize,
     getCursorImage,

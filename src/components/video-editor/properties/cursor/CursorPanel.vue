@@ -3,6 +3,8 @@ import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'
 import ColorInput from '~/ui/input/ColorInput.vue'
+import ShadowDirectionGroup from '../ShadowDirectionGroup.vue'
+import type { ShadowDirection } from '../shadow-types'
 import { cursorOptions, type CursorType } from './useCursorReplacer'
 
 defineProps<{
@@ -14,6 +16,7 @@ defineProps<{
   enableRipple: boolean
   shadowBlur: number
   shadowColor: string
+  shadowDirection: ShadowDirection
   rippleColor: string
   rippleSize: number
 }>()
@@ -27,6 +30,7 @@ const emit = defineEmits<{
   (e: 'update:enableRipple', value: boolean): void
   (e: 'update:shadowBlur', value: number): void
   (e: 'update:shadowColor', value: string): void
+  (e: 'update:shadowDirection', value: ShadowDirection): void
   (e: 'update:rippleColor', value: string): void
   (e: 'update:rippleSize', value: number): void
 }>()
@@ -88,6 +92,14 @@ const emit = defineEmits<{
           :model-value="shadowColor"
           @update:modelValue="emit('update:shadowColor', $event)"
         />
+
+        <div class="prop-item">
+          <span class="sub-label">Direction</span>
+          <ShadowDirectionGroup
+            :model-value="shadowDirection"
+            @update:model-value="emit('update:shadowDirection', $event)"
+          />
+        </div>
       </div>
     </Transition>
 
