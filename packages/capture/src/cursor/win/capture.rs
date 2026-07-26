@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::size_of, ptr};
+use std::{ffi::c_void, mem::size_of, ptr, sync::OnceLock};
 
 use windows_capture::{monitor::Monitor, window::Window};
 
@@ -13,7 +13,9 @@ use windows::Win32::{
         Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
         WindowsAndMessaging::{
             CURSOR_SHOWING, CURSORINFO, DI_NORMAL, DrawIconEx, GetCursorInfo, GetIconInfo, HICON,
-            ICONINFO,
+            ICONINFO, IDC_APPSTARTING, IDC_ARROW, IDC_CROSS, IDC_HAND, IDC_HELP, IDC_IBEAM,
+            IDC_NO, IDC_SIZEALL, IDC_SIZENESW, IDC_SIZENS, IDC_SIZENWSE, IDC_SIZEWE, IDC_WAIT,
+            LoadCursorW,
         },
     },
 };
@@ -133,14 +135,72 @@ fn cursor_shape(native_id: usize) -> Result<WindowsCursorShape, CaptureError> {
     }
     Ok(WindowsCursorShape {
         native_id,
-        // A handle not recognized as a standard Windows cursor is intentionally
-        // never guessed or rasterized. The editor renders `custom` as default.
-        cursor_kind: CursorKind::Custom,
+        cursor_kind: classify_system_cursor(native_id),
         hotspot: Hotspot {
             x: info.xHotspot,
             y: info.yHotspot,
         },
     })
+}
+
+fn classify_system_cursor(native_id: usize) -> CursorKind {
+    static SYSTEM_CURSORS: OnceLock<Vec<(usize, CursorKind)>> = OnceLock::new();
+    let cursors = SYSTEM_CURSORS.get_or_init(|| {
+        [
+            (IDC_ARROW, CursorKind::Default),
+            (IDC_IBEAM, CursorKind::Textcursor),
+            (IDC_HAND, CursorKind::Handpointing),
+            (IDC_WAIT, CursorKind::Busy),
+            (IDC_APPSTARTING, CursorKind::Busy),
+            (IDC_HELP, CursorKind::Help),
+            (IDC_CROSS, CursorKind::Cross),
+            (IDC_SIZEALL, CursorKind::Move),
+            (IDC_NO, CursorKind::Notallowed),
+            (IDC_SIZENS, CursorKind::Resizenorthsouth),
+            (IDC_SIZEWE, CursorKind::Resizewesteast),
+            (IDC_SIZENESW, CursorKind::Resizenortheastsouthwest),
+            (IDC_SIZENWSE, CursorKind::Resizenorthwestsoutheast),
+        ]
+        .into_iter()
+        .filter_map(|(resource, kind)| {
+            // SAFETY: predefined cursor resource IDs are static Win32 values.
+            unsafe { LoadCursorW(None, resource) }
+                .ok()
+                .map(|cursor| (cursor.0 as usize, kind))
+        })
+        .collect()
+    });
+    cursors
+        .iter()
+        .find_map(|(handle, kind)| (*handle == native_id).then_some(*kind))
+        .unwrap_or(CursorKind::Custom)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recognizes_standard_handles() {
+        assert_eq!(classify_handle(3, &[(3, CursorKind::Handpointing)]), CursorKind::Handpointing);
+    }
+
+    #[test]
+    fn keeps_unknown_handles_custom() {
+        assert_eq!(classify_handle(9, &[(3, CursorKind::Handpointing)]), CursorKind::Custom);
+    }
+
+    #[test]
+    fn does_not_treat_a_zero_handle_as_default() {
+        assert_eq!(classify_handle(0, &[]), CursorKind::Custom);
+    }
+
+    fn classify_handle(native_id: usize, cursors: &[(usize, CursorKind)]) -> CursorKind {
+        cursors
+            .iter()
+            .find_map(|(handle, kind)| (*handle == native_id).then_some(*kind))
+            .unwrap_or(CursorKind::Custom)
+    }
 }
 
 #[allow(dead_code)]
