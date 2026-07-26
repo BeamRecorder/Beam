@@ -64,6 +64,7 @@ export interface UseCursorOverlayOptions {
   cursorSize: () => number;
   cursorColor: () => string;
   enableShadow: () => boolean;
+  enableClickSpring: () => boolean;
   enableRipple: () => boolean;
   shadowBlur: () => number;
   shadowColor: () => string;
@@ -286,7 +287,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
 
         const click = buttonEventsBetween(cursorData.events, Math.max(0, time - .28), time).at(-1);
         const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
-        const clickScale = cursorClickSpringScale(age, options.enableRipple());
+        const clickScale = cursorClickSpringScale(age, options.enableClickSpring());
         ctx.translate(pointerX, pointerY);
         ctx.scale(clickScale, clickScale);
         ctx.drawImage(

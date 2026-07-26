@@ -9,6 +9,8 @@ const IN_OVERLAP_MS = 1000
 const OUT_EARLY_MS = 500
 const CONNECTED_GAP_MS = 1350
 const CONNECTED_PAN_MS = 1000
+const CURSOR_SMOOTHING_MS = 180
+const CURSOR_HISTORY_MS = 600
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value))
 const easeOut = (value: number) => 1 - (1 - clamp01(value)) ** 3
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
@@ -37,6 +39,26 @@ export function cursorFocusAt(samples: CursorTelemetryPoint[], timeMs: number): 
   if (!next) return { cx: previous.cx, cy: previous.cy }
   const t = (timeMs - previous.timeMs) / Math.max(1, next.timeMs - previous.timeMs)
   return { cx: lerp(previous.cx, next.cx, t), cy: lerp(previous.cy, next.cy, t) }
+}
+
+/** Smooths recorded cursor samples so a fast cross-screen movement pans the camera instead of snapping it. */
+export function smoothedCursorFocusAt(samples: CursorTelemetryPoint[], timeMs: number): ZoomFocus | null {
+  const current = cursorFocusAt(samples, timeMs)
+  if (!current) return null
+  let totalWeight = 1
+  let weightedX = current.cx
+  let weightedY = current.cy
+  for (let index = samples.length - 1; index >= 0; index -= 1) {
+    const sample = samples[index]
+    if (sample.timeMs >= timeMs) continue
+    const ageMs = timeMs - sample.timeMs
+    if (ageMs > CURSOR_HISTORY_MS) break
+    const weight = Math.exp(-ageMs / CURSOR_SMOOTHING_MS)
+    totalWeight += weight
+    weightedX += sample.cx * weight
+    weightedY += sample.cy * weight
+  }
+  return { cx: weightedX / totalWeight, cy: weightedY / totalWeight }
 }
 
 export function zoomAtTime(elements: ZoomElement[], timeMs: number, telemetry: CursorTelemetryPoint[] = []): AppliedZoom | null {
@@ -68,7 +90,7 @@ export function zoomAtTime(elements: ZoomElement[], timeMs: number, telemetry: C
     focus = { cx: lerp(focus.cx, clampFocusToScale(next.focus, nextScale).cx, t), cy: lerp(focus.cy, clampFocusToScale(next.focus, nextScale).cy, t) }
     scale = lerp(scale, nextScale, t)
   } else if (current.element.mode === 'auto') {
-    const cursor = cursorFocusAt(telemetry, timeMs)
+    const cursor = smoothedCursorFocusAt(telemetry, timeMs)
     if (cursor) focus = clampFocusToScale(cursor, scale)
   }
   return { scale: 1 + (scale - 1) * current.strength, focus, strength: current.strength, mode: current.element.mode }

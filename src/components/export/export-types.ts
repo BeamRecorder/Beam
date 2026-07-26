@@ -25,6 +25,7 @@ export interface CursorRenderSettings {
   size: number
   color: string
   shadow: { enabled: boolean; blur: number; color: string }
+  clickSpring: { enabled: boolean }
   ripple: { enabled: boolean; color: string; size: number }
 }
 export interface CompositionSnapshot {

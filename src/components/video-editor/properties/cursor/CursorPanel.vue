@@ -10,6 +10,7 @@ defineProps<{
   cursorSize: number
   cursorColor: string
   enableShadow: boolean
+  enableClickSpring: boolean
   enableRipple: boolean
   shadowBlur: number
   shadowColor: string
@@ -22,6 +23,7 @@ const emit = defineEmits<{
   (e: 'update:cursorSize', value: number): void
   (e: 'update:cursorColor', value: string): void
   (e: 'update:enableShadow', value: boolean): void
+  (e: 'update:enableClickSpring', value: boolean): void
   (e: 'update:enableRipple', value: boolean): void
   (e: 'update:shadowBlur', value: number): void
   (e: 'update:shadowColor', value: string): void
@@ -88,6 +90,14 @@ const emit = defineEmits<{
         />
       </div>
     </Transition>
+
+    <div class="prop-row">
+      <span class="prop-label">Click Spring</span>
+      <Switch
+        :model-value="enableClickSpring"
+        @update:modelValue="emit('update:enableClickSpring', $event)"
+      />
+    </div>
 
     <div class="prop-row">
       <span class="prop-label">Click Ripple Effect</span>

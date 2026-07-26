@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampFocusToScale, regionStrength, zoomAtTime } from "./zoom-playback";
+import { clampFocusToScale, regionStrength, smoothedCursorFocusAt, zoomAtTime } from "./zoom-playback";
 import type { ZoomElement } from "./zoom-types";
 
 const zoom: ZoomElement = {
@@ -26,6 +26,15 @@ describe("zoom playback", () => {
     expect(
       zoomAtTime([zoom], 4_000, [{ timeMs: 4_000, cx: 0.8, cy: 0.2 }])?.focus,
     ).toEqual({ cx: 0.6666666666666667, cy: 0.3333333333333333 }));
+  it("smooths an abrupt cursor jump using recent telemetry", () => {
+    const focus = smoothedCursorFocusAt([
+      { timeMs: 0, cx: 0.2, cy: 0.5 },
+      { timeMs: 100, cx: 0.8, cy: 0.5 },
+    ], 100);
+    expect(focus?.cx).toBeGreaterThan(0.2);
+    expect(focus?.cx).toBeLessThan(0.8);
+    expect(focus?.cy).toBe(0.5);
+  });
   it("connects neighboring regions with an interpolated pan", () => {
     const next: ZoomElement = {
       ...zoom,

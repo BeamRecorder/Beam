@@ -142,6 +142,7 @@ export function useCursorReplacer() {
   const cursorSize = ref(24)
   const cursorColor = ref('#000000')
   const enableShadow = ref(true)
+  const enableClickSpring = ref(true)
   const enableRipple = ref(true)
   const shadowBlur = ref(6)
   const shadowColor = ref('#000000')
@@ -188,6 +189,7 @@ export function useCursorReplacer() {
     cursorSize,
     cursorColor,
     enableShadow,
+    enableClickSpring,
     enableRipple,
     shadowBlur,
     shadowColor,

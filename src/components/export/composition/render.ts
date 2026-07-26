@@ -373,7 +373,7 @@ export function renderCompositionFrame(
     }
     const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .28), time).at(-1);
     const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
-    const clickScale = cursorClickSpringScale(age, settings.ripple.enabled);
+    const clickScale = cursorClickSpringScale(age, settings.clickSpring.enabled);
     ctx.translate(pointerX, pointerY);
     ctx.scale(clickScale, clickScale);
     ctx.drawImage(

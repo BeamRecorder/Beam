@@ -50,6 +50,7 @@ const props = defineProps<{
   cursorSize: number;
   cursorColor: string;
   enableShadow: boolean;
+  enableClickSpring: boolean;
   enableRipple: boolean;
   shadowBlur: number;
   shadowColor: string;
@@ -84,6 +85,7 @@ const emit = defineEmits<{
   (e: "update:cursorSize", value: number): void;
   (e: "update:cursorColor", value: string): void;
   (e: "update:enableShadow", value: boolean): void;
+  (e: "update:enableClickSpring", value: boolean): void;
   (e: "update:enableRipple", value: boolean): void;
   (e: "update:shadowBlur", value: number): void;
   (e: "update:shadowColor", value: string): void;
@@ -172,6 +174,7 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         :cursorSize="cursorSize"
         :cursorColor="cursorColor"
         :enableShadow="enableShadow"
+        :enableClickSpring="enableClickSpring"
         :enableRipple="enableRipple"
         :shadowBlur="shadowBlur"
         :shadowColor="shadowColor"
@@ -181,6 +184,7 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:cursorSize="emit('update:cursorSize', $event)"
         @update:cursorColor="emit('update:cursorColor', $event)"
         @update:enableShadow="emit('update:enableShadow', $event)"
+        @update:enableClickSpring="emit('update:enableClickSpring', $event)"
         @update:enableRipple="emit('update:enableRipple', $event)"
         @update:shadowBlur="emit('update:shadowBlur', $event)"
         @update:shadowColor="emit('update:shadowColor', $event)"

@@ -26,6 +26,7 @@ const props = defineProps<{
   cursorSize: number;
   cursorColor: string;
   enableShadow: boolean;
+  enableClickSpring: boolean;
   enableRipple: boolean;
   shadowBlur: number;
   shadowColor: string;
@@ -177,6 +178,7 @@ const cursorOverlay = useCursorOverlay({
   cursorSize: () => props.cursorSize,
   cursorColor: () => props.cursorColor,
   enableShadow: () => props.enableShadow,
+  enableClickSpring: () => props.enableClickSpring,
   enableRipple: () => props.enableRipple,
   shadowBlur: () => props.shadowBlur,
   shadowColor: () => props.shadowColor,

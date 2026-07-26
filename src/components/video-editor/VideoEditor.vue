@@ -74,6 +74,7 @@ const {
   cursorSize,
   cursorColor,
   enableShadow,
+  enableClickSpring,
   enableRipple,
   shadowBlur,
   shadowColor,
@@ -349,6 +350,7 @@ onBeforeUnmount(() => {
           v-model:cursorSize="cursorSize"
           v-model:cursorColor="cursorColor"
           v-model:enableShadow="enableShadow"
+          v-model:enableClickSpring="enableClickSpring"
           v-model:enableRipple="enableRipple"
           v-model:shadowBlur="shadowBlur"
           v-model:shadowColor="shadowColor"
@@ -402,6 +404,7 @@ onBeforeUnmount(() => {
           :cursor-size="cursorSize"
           :cursor-color="cursorColor"
           :enable-shadow="enableShadow"
+          :enable-click-spring="enableClickSpring"
           :enable-ripple="enableRipple"
           :shadow-blur="shadowBlur"
           :shadow-color="shadowColor"
