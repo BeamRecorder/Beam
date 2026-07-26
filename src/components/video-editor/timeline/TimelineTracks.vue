@@ -598,6 +598,7 @@ const selectMainVideoLayer = () => {
 .timeline-tracks-container {
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   border-radius: inherit;
   border: none;
   position: relative;
@@ -866,13 +867,12 @@ const selectMainVideoLayer = () => {
 .timeline-playhead {
   position: absolute;
   top: 0;
-  bottom: 0;
   left: 0;
   width: 2px;
   background: var(--color-primary);
-  z-index: 5;
+  z-index: 10;
   pointer-events: none;
-  height: 200px; /* Stretch through all tracks */
+  height: 500px;
   will-change: transform;
   transform: translate3d(0, 0, 0);
 }
