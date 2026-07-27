@@ -90,6 +90,7 @@ function normalizeComposition(value) {
       ...(layer.kind === 'audio' ? {} : { transform: transform(layer.transform) }),
       ...(['video', 'audio'].includes(layer.kind) && finite(layer.sourceOffsetMs) && layer.sourceOffsetMs >= 0 ? { sourceOffsetMs: Math.round(layer.sourceOffsetMs) } : {}),
       ...(['video', 'audio'].includes(layer.kind) && finite(layer.playbackRate) && layer.playbackRate >= .25 && layer.playbackRate <= 4 ? { playbackRate: layer.playbackRate } : {}),
+      ...(layer.kind === 'audio' && finite(layer.volume) ? { volume: Math.max(0, Math.min(200, layer.volume)) } : {}),
       ...(layer.kind !== 'audio' && layer.crop ? { crop: transform(layer.crop) } : {}),
       ...(layer.kind !== 'audio' && typeof layer.isMirrored === 'boolean' ? { isMirrored: layer.isMirrored } : {}),
       ...(layer.kind === 'video' && typeof layer.reactToZoom === 'boolean' ? { reactToZoom: layer.reactToZoom } : {}), ...(webcam ? { webcamAppearance: webcam } : {}), ...(appearance ? { appearance } : {})

@@ -37,6 +37,7 @@ const emit = defineEmits<{
   (e: 'select:zoom', zoomId: string): void;
   (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption'): void;
   (e: 'select:composition-layer', layerId: string): void;
+  (e: 'toggle:composition-layer', layerId: string): void;
   (e: 'select:base-video'): void;
   (e: 'select:camera-layer', layerId: string): void;
   (e: 'toggle:camera'): void;
@@ -109,6 +110,7 @@ onUnmounted(() => {
       @update:currentTime="emit('update:currentTime', $event)"
       @select:zoom="emit('select:zoom', $event)"
       @select:composition-layer="emit('select:composition-layer', $event)"
+      @toggle:composition-layer="emit('toggle:composition-layer', $event)"
       @select:base-video="emit('select:base-video')"
       @toggle:video="emit('update:isVideoEnabled', !isVideoEnabled)"
       @toggle:systemAudio="emit('update:isSystemAudioEnabled', !isSystemAudioEnabled)"

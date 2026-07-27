@@ -53,6 +53,7 @@ const emit = defineEmits<{
   (e: "toggle:micAudio"): void;
   (e: "select:zoom", zoomId: string): void;
   (e: "select:composition-layer", layerId: string): void;
+  (e: "toggle:composition-layer", layerId: string): void;
   (e: "select:base-video"): void;
   (e: "select:camera-layer", layerId: string): void;
   (e: "toggle:camera"): void;
@@ -90,6 +91,7 @@ const {
   systemBars,
   micBars,
   waveformStyle,
+  compositionAudioBarHeight,
   visibleTimelineSeconds,
   visibleRulerSeconds,
   thumbnailStyle,
@@ -303,8 +305,8 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           @dragover.prevent="previewLayerReorder($event, layer.id)"
           @drop.prevent="finishLayerReorder($event, layer.id)"
         >
-          <div class="track-info composition-track-info" @pointerenter="startHeaderMarquee" @pointerleave="stopHeaderMarquee($event.currentTarget)">
-            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @dragstart.stop="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null">
+          <div class="track-info composition-track-info" @pointerenter="startHeaderMarquee" @pointerleave="stopHeaderMarquee($event.currentTarget)" @click="emit('toggle:composition-layer', layer.id)">
+            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @click.stop @dragstart.stop="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null">
               <GripVertical class="track-grip" aria-hidden="true" />
             </span>
             <Video v-if="layer.kind === 'video'" class="track-icon" />
@@ -451,7 +453,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
 
         <!-- 2. Cursor / Zooms Track (Must be placed strictly below all video/image/webcam tracks) -->
         <div class="track-row cursor-track">
-          <div class="track-info">
+          <div class="track-info" @click="emit('toggle:composition-layer', layer.id)">
             <MousePointer class="track-icon" />
             <span class="track-title">Zooms</span>
             <Button
@@ -687,14 +689,14 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
         </div>
 
         <div v-for="layer in compositionAudioLayers" :key="layer.id" class="track-row audio-track" :class="{ disabled: !layer.enabled }">
-          <div class="track-info" @click="emit('select:composition-layer', layer.id)">
+          <div class="track-info" @click="emit('toggle:composition-layer', layer.id)">
             <Volume2 class="track-icon" />
             <span class="track-title">{{ layer.name }}</span>
           </div>
           <div class="track-content audio-content" :class="{ selected: layer.id === selectedCompositionLayerId }" @click.stop="emit('select:composition-layer', layer.id)">
             <div class="audio-block composition-audio-block" :style="layerStyle(layer.startMs, layer.endMs)">
               <div v-if="compositionAudioBars[layer.id]?.length" :style="waveformStyle" class="audio-waveform-real">
-                <div v-for="(height, barIndex) in compositionAudioBars[layer.id]" :key="barIndex" class="wave-bar" :style="{ height: `${height}px` }" />
+                <div v-for="(height, barIndex) in compositionAudioBars[layer.id]" :key="barIndex" class="wave-bar" :style="{ height: `${compositionAudioBarHeight(height, layer.volume ?? 100)}px` }" />
               </div>
               <span v-else class="audio-unavailable">Waveform unavailable</span>
             </div>

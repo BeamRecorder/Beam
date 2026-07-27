@@ -117,6 +117,7 @@ export function useProjectComposition(options: {
         layer.kind !== "caption"
           ? ((layer as MediaCompositionLayer).playbackRate ?? 1.0)
           : 1.0,
+      volume: layer.kind === "audio" ? (layer.volume ?? 100) : undefined,
       enabled: layer.enabled,
       isLinked,
       isMirrored:
@@ -305,13 +306,13 @@ export function useProjectComposition(options: {
       order: composition.value.layers.length,
       ...(groupId ? { groupId } : {}),
       ...(asset.kind === "audio"
-        ? {}
+        ? { volume: 100 }
         : { transform: { x: 0, y: 0, width: 1, height: 1 } }),
     };
     const linkedAudio: CompositionLayer | null = groupId
       ? {
           id: crypto.randomUUID(), kind: "audio", name: `${asset.name} audio`, assetId: asset.id,
-          startMs, endMs: startMs + clipDuration, enabled: true,
+          startMs, endMs: startMs + clipDuration, enabled: true, volume: 100,
           order: composition.value.layers.length + 1, groupId,
         }
       : null;
@@ -591,6 +592,39 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
+  const updateSelectedAudioVolume = async (volume: number) => {
+    const selectedId = selectedCompositionLayerId.value;
+    if (!selectedId) return;
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.map((layer) =>
+        layer.id === selectedId && layer.kind === "audio"
+          ? { ...layer, volume: Math.max(0, Math.min(200, volume)) }
+          : layer,
+      ),
+    };
+    await saveComposition();
+  };
+
+  const updateSelectedClipEnabled = async (enabled: boolean) => {
+    const selectedId = selectedCompositionLayerId.value;
+    if (!selectedId || selectedId === BASE_VIDEO_CLIP_ID) return;
+    composition.value = {
+      ...composition.value,
+      layers: composition.value.layers.map((layer) =>
+        layer.id === selectedId ? { ...layer, enabled } : layer,
+      ),
+    };
+    await saveComposition();
+  };
+
+  const toggleCompositionLayer = async (layerId: string) => {
+    const layer = composition.value.layers.find((item) => item.id === layerId);
+    if (!layer) return;
+    selectedCompositionLayerId.value = layerId;
+    await updateSelectedClipEnabled(!layer.enabled);
+  };
+
   const handleUnlinkClips = async () => {
     composition.value = {
       ...composition.value,
@@ -690,6 +724,9 @@ export function useProjectComposition(options: {
     updateSelectedClipAppearance,
     updateSelectedClipIsMirrored,
     updateSelectedClipPlaybackRate,
+    updateSelectedAudioVolume,
+    updateSelectedClipEnabled,
+    toggleCompositionLayer,
     updateSelectedWebcamTransform,
     previewSelectedWebcamTransform,
     updateSelectedMediaCrop,

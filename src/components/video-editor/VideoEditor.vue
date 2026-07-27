@@ -110,6 +110,9 @@ const {
   updateSelectedClipAppearance,
   updateSelectedClipIsMirrored,
   updateSelectedClipPlaybackRate,
+  updateSelectedAudioVolume,
+  updateSelectedClipEnabled,
+  toggleCompositionLayer,
   updateSelectedWebcamTransform,
   previewSelectedWebcamTransform,
   updateSelectedMediaCrop,
@@ -393,6 +396,8 @@ onBeforeUnmount(() => {
           @select-caption="selectedCompositionLayerId = $event; activeTab = 'caption'"
           @delete-clip="deleteSelectedCompositionLayer()"
           @update:clip-rate="updateSelectedClipPlaybackRate"
+          @update:clip-volume="updateSelectedAudioVolume"
+          @update:clip-enabled="updateSelectedClipEnabled"
           @unlink-clip="handleUnlinkClips"
           @update:clip-is-mirrored="updateSelectedClipIsMirrored"
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: (['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : parseFloat($event)) })"
@@ -474,8 +479,11 @@ onBeforeUnmount(() => {
           @add:element="addTimelineElement"
           @select:composition-layer="
             selectedCompositionLayerId = $event;
-            activeTab = composition.layers.find(l => l.id === $event)?.kind === 'caption' ? 'caption' : 'clip';
+            activeTab = $event === 'system-audio' || $event === 'microphone'
+              ? 'audio'
+              : composition.layers.find(l => l.id === $event)?.kind === 'caption' ? 'caption' : 'clip';
           "
+          @toggle:composition-layer="toggleCompositionLayer"
           @select:base-video="selectBaseVideo"
           @select:camera-layer="
             selectedCompositionLayerId = $event;

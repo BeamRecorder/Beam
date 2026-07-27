@@ -87,6 +87,8 @@ export interface MediaCompositionLayer extends CompositionLayerBase {
   webcamAppearance?: WebcamAppearance;
   appearance?: ClipAppearance;
   playbackRate?: number;
+  /** Per-clip gain for imported audio, expressed as a percentage. */
+  volume?: number;
   isMirrored?: boolean;
 }
 export interface CaptionCompositionLayer extends CompositionLayerBase {

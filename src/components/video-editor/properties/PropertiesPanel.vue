@@ -13,6 +13,7 @@ import AudioPanel from "./AudioPanel.vue";
 import ZoomPanel from "./ZoomPanel.vue";
 import SettingsPanel from "./SettingsPanel.vue";
 import ClipPropertiesPanel from "./clip/ClipPropertiesPanel.vue";
+import AudioClipPropertiesPanel from "./clip/AudioClipPropertiesPanel.vue";
 import type { ZoomElement } from "../zoom/zoom-types";
 import CaptionPanel from "./captions/CaptionPanel.vue";
 import CaptionClipPanel from "./captions/CaptionClipPanel.vue";
@@ -44,6 +45,7 @@ const props = defineProps<{
     shadowDirection?: string;
     cornerRadius?: string | number;
     clipTransform?: NormalizedTransform;
+    volume?: number;
   } | null;
 
   // Cursor properties
@@ -111,6 +113,7 @@ const emit = defineEmits<{
   (e: "select-caption", layerId: string): void;
   (e: "update:clip-rate", rate: number): void;
   (e: "update:clip-enabled", enabled: boolean): void;
+  (e: "update:clip-volume", volume: number): void;
   (e: "update:clip-is-mirrored", isMirrored: boolean): void;
   (e: "update:clip-corner-radius", radius: string): void;
   (
@@ -152,6 +155,15 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:selectedBackground="emit('update:selectedBackground', $event)"
         @update:blurPercent="emit('update:blurPercent', $event)"
         @import:background="emit('import:background', $event)"
+      />
+
+      <AudioClipPropertiesPanel
+        v-else-if="activeTab === 'clip' && selectedClip?.kind === 'audio'"
+        key="audio-clip-properties-panel"
+        :clip="selectedClip || null"
+        @update:volume="emit('update:clip-volume', $event)"
+        @update:enabled="emit('update:clip-enabled', $event)"
+        @delete="emit('delete-clip')"
       />
 
       <ClipPropertiesPanel

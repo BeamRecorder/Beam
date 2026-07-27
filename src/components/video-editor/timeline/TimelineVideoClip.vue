@@ -80,15 +80,16 @@ const frameStyle = (frame: { timelineSecond: number }) => ({
 </template>
 
 <style scoped>
-.timeline-video-clip { position: absolute; inset-block: 0; min-width: 14px; padding: 0; border: 0; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-bg-surface); cursor: grab; }
+.timeline-video-clip { position: absolute; inset-block: 0; min-width: 14px; padding: 0; border: 0; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-bg-surface); cursor: grab; isolation: isolate; }
 .timeline-video-clip:active { cursor: grabbing; }
-.timeline-video-clip.selected { outline: 1px solid var(--color-primary); }
-.thumbnails-track { position: relative; width: 100%; height: 100%; }
+.timeline-video-clip::after { content: ''; position: absolute; inset: 0; z-index: 30; box-sizing: border-box; border: 1px solid rgba(255, 255, 255, .14); border-radius: inherit; pointer-events: none; }
+.timeline-video-clip.selected::after { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
+.thumbnails-track { position: relative; z-index: 1; width: 100%; height: 100%; }
 .thumbnail-frame { position: absolute; top: 0; height: 100%; overflow: hidden; background: var(--color-bg-surface); border-right: 1px solid rgba(0, 0, 0, .08); }
 .thumbnail-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-.trim-handle { position: absolute; top: 0; bottom: 0; z-index: 10; width: 6px; background: rgba(255, 255, 255, .25); cursor: col-resize; }
+.trim-handle { position: absolute; top: 0; bottom: 0; z-index: 40; width: 6px; background: rgba(255, 255, 255, .25); cursor: col-resize; }
 .trim-handle.start { left: 0; }
 .trim-handle.end { right: 0; }
-.clip-label-overlay { display: block; max-width: calc(100% - 16px); overflow: hidden; white-space: nowrap; }
+.clip-label-overlay { position: absolute; z-index: 35; left: 8px; top: 3px; display: block; max-width: calc(100% - 16px); overflow: hidden; white-space: nowrap; padding: 2px 5px; border: 1px solid rgba(255, 255, 255, .16); border-radius: var(--radius-sm); background: rgba(12, 14, 20, .72); backdrop-filter: blur(6px); color: #fff; font-size: 9px; font-weight: 800; line-height: 1.1; text-shadow: 0 1px 2px rgba(0, 0, 0, .9); }
 .clip-label-text { display: inline-block; white-space: nowrap; transition: transform .05s linear; }
 </style>

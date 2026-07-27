@@ -222,6 +222,8 @@ export function useTimelineTracks(
       gap: "2px",
     };
   });
+  const compositionAudioBarHeight = (height: number, volume = 100) =>
+    Math.max(1, Math.round(height * Math.max(0, Math.min(200, volume)) / 100));
 
   const updateWaveforms = () => {
     if (!props.duration || props.duration <= 0) return;
@@ -725,6 +727,7 @@ export function useTimelineTracks(
     systemBars,
     micBars,
     waveformStyle,
+    compositionAudioBarHeight,
     visibleTimelineSeconds,
     visibleRulerSeconds,
     thumbnailStyle,

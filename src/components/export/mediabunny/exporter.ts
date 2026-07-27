@@ -67,6 +67,7 @@ export async function renderMixedAudio(
         sourceOffsetSeconds: Math.max(0, (layer.sourceOffsetMs ?? 0) / 1000),
         timelineDurationSeconds: Math.max(0, (layer.endMs - layer.startMs) / 1000),
         playbackRate: layer.playbackRate ?? 1,
+        volume: layer.volume ?? 100,
       });
   }
   if (layers.length === 0) return null;
@@ -89,7 +90,10 @@ export async function renderMixedAudio(
       );
       const source = context.createBufferSource();
       source.buffer = buffer;
-      source.connect(context.destination);
+      const gain = context.createGain();
+      gain.gain.value = Math.max(0, Math.min(2, (layer.volume ?? 100) / 100));
+      source.connect(gain);
+      gain.connect(context.destination);
       const available = Math.max(0, buffer.duration);
       const offset = Math.min(available, Math.max(0, layer.sourceOffsetSeconds ?? 0));
       const rate = Math.max(.25, Math.min(4, layer.playbackRate ?? 1));

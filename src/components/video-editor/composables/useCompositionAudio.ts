@@ -38,7 +38,7 @@ export function useCompositionAudio(input: {
       if (sourceTime < 0 || (Number.isFinite(element.duration) && sourceTime >= element.duration)) { element.pause(); continue }
       // Keep headroom when several imported tracks play together, otherwise the
       // browser mixer can clip and crackle before the export mix is applied.
-      element.volume = Math.max(0, Math.min(1, input.volume.value / 100 / Math.sqrt(activeCount)))
+      element.volume = Math.max(0, Math.min(1, input.volume.value / 100 * (layer.volume ?? 100) / 100 / Math.sqrt(activeCount)))
       element.playbackRate = rate
       const drift = Math.abs(element.currentTime - sourceTime)
       // Continuous timeline updates are expected during playback. Seeking each

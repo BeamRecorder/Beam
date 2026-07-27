@@ -27,6 +27,7 @@ export interface AudioLayer {
   sourceOffsetSeconds?: number
   timelineDurationSeconds?: number
   playbackRate?: number
+  volume?: number
 }
 export interface RenderLayer { kind: 'background' | 'video' | 'cursor'; enabled: boolean }
 export interface CursorRenderSettings {
