@@ -18,7 +18,7 @@ describe('renderCompositionFrame', () => {
   it('draws the video and a visible cursor in camera space', () => {
     const ctx = context(); const image = { complete: true, naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement
     renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, snapshot(), 0, null, new Map([['default', image]]))
-    expect(ctx.save).toHaveBeenCalledTimes(3); expect(ctx.drawImage).toHaveBeenCalledTimes(2); expect(ctx.translate).toHaveBeenCalledWith(50, 25)
+    expect(ctx.save).toHaveBeenCalledTimes(4); expect(ctx.drawImage).toHaveBeenCalledTimes(2); expect(ctx.translate).toHaveBeenCalledWith(50, 25)
   })
   it('uses the semantic cursor selected by an automatic cursor event', () => {
     const value = snapshot()
@@ -38,6 +38,18 @@ describe('renderCompositionFrame', () => {
     const value = snapshot(); value.composition = { media: [{ id: 'image', kind: 'image', name: 'Logo', fileName: 'logo.png', durationMs: 0, width: 10, height: 10, src: 'file:///logo.png' }], layers: [{ id: 'layer', kind: 'image', name: 'Logo', assetId: 'image', startMs: 0, endMs: 500, enabled: true, order: 0, transform: { x: .1, y: .2, width: .3, height: .4 } }] }
     const ctx = context(); drawCompositionLayers(ctx, value, .2, new Map([['image', {} as CanvasImageSource]]), false)
     expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 10, 10, 30, 20)
+  })
+  it('draws an active imported video when the visual stack addresses it directly', () => {
+    const value = snapshot()
+    value.composition = {
+      media: [{ id: 'video-overlay', kind: 'video', name: 'Overlay', fileName: 'overlay.mp4', durationMs: 1000, width: 100, height: 50, src: 'file:///overlay.mp4' }],
+      layers: [{ id: 'overlay-layer', kind: 'video', name: 'Overlay', assetId: 'video-overlay', startMs: 0, endMs: 1000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 } }],
+      visualTrackOrder: ['overlay-layer', 'base-video'],
+    }
+    const overlay = {} as CanvasImageSource
+    const ctx = context()
+    renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, value, .2, null, undefined, new Map([['video-overlay', overlay]]))
+    expect(ctx.drawImage).toHaveBeenCalledWith(overlay, 0, 0, 100, 50)
   })
   it('draws only a caption sentence active at the current time', () => {
     const value = snapshot(); value.composition = { media: [], layers: [{ id: 'caption', kind: 'caption', name: 'Caption', startMs: 0, endMs: 1000, enabled: true, order: 0, caption: { sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }], style: { color: '#fff', fontSize: 20, shadowColor: '#000', shadowBlur: 2, placement: 'bottom' } } }] }

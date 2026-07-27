@@ -61,7 +61,7 @@ export function drawCompositionLayers(
     if (
       layer.kind === "audio" ||
       (layer.kind === 'video' && layer.reactToZoom) ||
-      (followsZoom ? layer.kind !== 'video' : layer.kind === 'video')
+      (!onlyLayerId && (followsZoom ? layer.kind !== 'video' : layer.kind === 'video'))
     ) continue;
 
     if (layer.kind === "caption") {

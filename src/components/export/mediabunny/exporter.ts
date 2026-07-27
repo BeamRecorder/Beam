@@ -153,11 +153,11 @@ async function visualsAtTime(
   request: ExportRequest,
   visuals: Awaited<ReturnType<typeof loadVisuals>>,
   time: number,
-  decodedAssets: ReadonlyMap<string, VideoFrameProvider>,
+  decodedAssetIds: ReadonlySet<string>,
 ) {
   const result = new Map<string, CanvasImageSource>(visuals.images);
   for (const layer of activeLayersAt(request.snapshot.composition, time * 1000)) {
-    if (layer.kind !== "video" || decodedAssets.has(layer.assetId)) continue;
+    if (layer.kind !== "video" || decodedAssetIds.has(layer.assetId)) continue;
     const video = visuals.videos.get(layer.assetId);
     const localTime = (time - layer.startMs / 1000) * (layer.playbackRate ?? 1) + (layer.sourceOffsetMs ?? 0) / 1000;
     if (!video || localTime < 0 || (Number.isFinite(video.duration) && localTime >= video.duration)) continue;
@@ -396,7 +396,12 @@ export async function exportWithMediabunny(
       const visualFrames = await Promise.all(
         [...compositionFrames].map(async ([assetId, provider]) => [assetId, await provider.frameAt(frame)] as const),
       );
-      const visuals = await visualsAtTime(request, compositionVisuals, time, compositionFrames);
+      const decodedAssetIds = new Set(
+        visualFrames
+          .filter(([, visualFrame]) => Boolean(visualFrame))
+          .map(([assetId]) => assetId),
+      );
+      const visuals = await visualsAtTime(request, compositionVisuals, time, decodedAssetIds);
       for (const [assetId, visualFrame] of visualFrames) if (visualFrame) visuals.set(assetId, visualFrame);
       try {
         renderCompositionFrame(

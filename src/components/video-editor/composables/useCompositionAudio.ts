@@ -28,6 +28,7 @@ export function useCompositionAudio(input: {
     reconcile()
     const timeMs = input.currentTime.value * 1000
     const active = new Set(activeLayersAt(input.composition.value, timeMs).filter((layer) => layer.kind === 'audio').map((layer) => layer.id))
+    const activeCount = Math.max(1, active.size)
     for (const layer of audioLayers.value) {
       const element = elements.get(layer.id)
       if (!element) continue
@@ -35,9 +36,15 @@ export function useCompositionAudio(input: {
       const rate = layer.playbackRate ?? 1
       const sourceTime = ((timeMs - layer.startMs) * rate + (layer.sourceOffsetMs ?? 0)) / 1000
       if (sourceTime < 0 || (Number.isFinite(element.duration) && sourceTime >= element.duration)) { element.pause(); continue }
-      element.volume = Math.max(0, Math.min(1, input.volume.value / 100))
+      // Keep headroom when several imported tracks play together, otherwise the
+      // browser mixer can clip and crackle before the export mix is applied.
+      element.volume = Math.max(0, Math.min(1, input.volume.value / 100 / Math.sqrt(activeCount)))
       element.playbackRate = rate
-      if (Math.abs(element.currentTime - sourceTime) > .12) element.currentTime = sourceTime
+      const drift = Math.abs(element.currentTime - sourceTime)
+      // Continuous timeline updates are expected during playback. Seeking each
+      // small correction is audible with several HTMLAudioElements, so only
+      // resync on a real discontinuity or when starting a paused element.
+      if (element.paused || drift > .5) element.currentTime = sourceTime
       void element.play().catch(() => undefined)
     }
   }
