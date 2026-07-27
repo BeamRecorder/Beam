@@ -74,6 +74,8 @@ export interface CompositionLayerBase {
   endMs: number;
   enabled: boolean;
   order: number;
+  /** Clips sharing this id keep their timeline edits in sync until detached. */
+  groupId?: string;
 }
 export interface MediaCompositionLayer extends CompositionLayerBase {
   kind: CompositionMediaKind;
@@ -125,4 +127,6 @@ export const activeLayersAt = (
       (layer) =>
         layer.enabled && layer.startMs <= timeMs && timeMs <= layer.endMs,
     )
-    .sort((a, b) => a.order - b.order);
+    // A smaller order is a lane nearer the top of the timeline. Draw it last
+    // so that the top lane is also the foreground layer in preview/export.
+    .sort((a, b) => b.order - a.order);

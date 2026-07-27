@@ -30,6 +30,27 @@ test('persists normalized webcam placement in the project manifest', () => {
   ctx.store.upsertLayer(ctx.id, layer)
   assert.deepEqual(ctx.store.read(ctx.id).layers[0].transform, layer.transform)
 })
+test('keeps linked audio timing fields when a video asset is shared by video and audio clips', () => {
+  const ctx = setup(); const source = path.join(ctx.root, 'linked.mp4'); fs.writeFileSync(source, 'video'); const asset = ctx.store.importMedia(ctx.id, { kind: 'video', source })
+  const groupId = '44444444-4444-4444-8444-444444444444'
+  const video = { id: '55555555-5555-4555-8555-555555555555', kind: 'video', name: 'Video', assetId: asset.id, startMs: 10, endMs: 1_000, enabled: true, order: 0, groupId, transform: { x: 0, y: 0, width: 1, height: 1 }, sourceOffsetMs: 20, playbackRate: 1.25 }
+  const audio = { id: '66666666-6666-4666-8666-666666666666', kind: 'audio', name: 'Audio', assetId: asset.id, startMs: 10, endMs: 1_000, enabled: true, order: 1, groupId, sourceOffsetMs: 20, playbackRate: 1.25 }
+  ctx.store.upsertLayer(ctx.id, video); ctx.store.upsertLayer(ctx.id, audio)
+  const saved = ctx.store.read(ctx.id).layers
+  assert.deepEqual(saved.map((layer) => [layer.kind, layer.groupId, layer.sourceOffsetMs, layer.playbackRate]), [['video', groupId, 20, 1.25], ['audio', groupId, 20, 1.25]])
+})
+test('moves media layers across visual lanes and renormalizes their order', () => {
+  const ctx = setup(); const source = path.join(ctx.root, 'layer.png'); fs.writeFileSync(source, 'image'); const asset = ctx.store.importMedia(ctx.id, { kind: 'image', source })
+  const layer = (id, name) => ({ id, kind: 'image', name, assetId: asset.id, startMs: 0, endMs: 1_000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 } })
+  ctx.store.upsertLayer(ctx.id, layer('77777777-7777-4777-8777-777777777777', 'Back')); ctx.store.upsertLayer(ctx.id, layer('88888888-8888-4888-8888-888888888888', 'Front'))
+  const moved = ctx.store.moveLayer(ctx.id, '88888888-8888-4888-8888-888888888888', 0)
+  assert.deepEqual(moved.layers.map((item) => [item.name, item.order]), [['Front', 0], ['Back', 1]])
+})
+test('does not allow audio tracks to be reordered with visual tracks', () => {
+  const ctx = setup(); const source = path.join(ctx.root, 'sound.wav'); fs.writeFileSync(source, 'sound'); const asset = ctx.store.importMedia(ctx.id, { kind: 'audio', source })
+  ctx.store.upsertLayer(ctx.id, { id: '99999999-9999-4999-8999-999999999999', kind: 'audio', name: 'Sound', assetId: asset.id, startMs: 0, endMs: 1_000, enabled: true, order: 0 })
+  assert.throws(() => ctx.store.moveLayer(ctx.id, '99999999-9999-4999-8999-999999999999', 0), /vidéo et image/)
+})
 test('persists an editor state and materializes imported project backgrounds', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-state-'))
   const store = createProjectStore(root); const project = store.create({ name: 'State' })

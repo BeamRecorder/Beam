@@ -19,7 +19,15 @@ export interface ExportProgress {
 }
 export interface ExportResult { path: string; format: ExportFormat }
 export interface VideoLayer { src: string; width: number; height: number; fps: number; enabled: boolean }
-export interface AudioLayer { id: string; src: string; startSeconds: number; enabled: boolean }
+export interface AudioLayer {
+  id: string
+  src: string
+  startSeconds: number
+  enabled: boolean
+  sourceOffsetSeconds?: number
+  timelineDurationSeconds?: number
+  playbackRate?: number
+}
 export interface RenderLayer { kind: 'background' | 'video' | 'cursor'; enabled: boolean }
 export interface CursorRenderSettings {
   selectedCursor: CursorType

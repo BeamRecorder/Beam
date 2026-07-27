@@ -64,6 +64,9 @@ export async function renderMixedAudio(
         startSeconds: Math.max(0, layer.startMs / 1000),
         endSeconds: Math.max(0, layer.endMs / 1000),
         enabled: true,
+        sourceOffsetSeconds: Math.max(0, (layer.sourceOffsetMs ?? 0) / 1000),
+        timelineDurationSeconds: Math.max(0, (layer.endMs - layer.startMs) / 1000),
+        playbackRate: layer.playbackRate ?? 1,
       });
   }
   if (layers.length === 0) return null;
@@ -88,11 +91,14 @@ export async function renderMixedAudio(
       source.buffer = buffer;
       source.connect(context.destination);
       const available = Math.max(0, buffer.duration);
-      const requested = Math.max(0, layer.endSeconds - layer.startSeconds);
+      const offset = Math.min(available, Math.max(0, layer.sourceOffsetSeconds ?? 0));
+      const rate = Math.max(.25, Math.min(4, layer.playbackRate ?? 1));
+      const requested = Math.max(0, layer.timelineDurationSeconds ?? layer.endSeconds - layer.startSeconds);
+      source.playbackRate.value = rate;
       source.start(
         Math.max(0, layer.startSeconds),
-        0,
-        Math.min(available, requested),
+        offset,
+        Math.min(Math.max(0, available - offset), requested * rate),
       );
     }),
   );
@@ -240,7 +246,7 @@ export async function exportWithMediabunny(
       `${request.format.toUpperCase()} n’est pas encodable par cette machine.`,
     );
   const audioCodec = await supportedAudioCodec(request);
-  if (request.snapshot.audio.length > 0 && !audioCodec)
+  if ((request.snapshot.audio.length > 0 || request.snapshot.composition.layers.some((layer) => layer.kind === 'audio' && layer.enabled)) && !audioCodec)
     throw new Error(
       `${request.format.toUpperCase()} audio is not encodable by this machine.`,
     );

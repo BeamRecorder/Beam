@@ -5,6 +5,7 @@ import type { ZoomElement } from "../../zoom/zoom-types";
 import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
 import { cameraLayers } from "../../composition/webcam/camera-composition";
+import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import {
   timelinePercentStyle,
   timelineRulerSecondsInView,
@@ -41,20 +42,22 @@ export function useTimelineTracks(
   const captionLayers = computed(() =>
     props.composition.layers.filter((layer) => layer.kind === "caption"),
   );
-  const imageLayers = computed(() =>
-    props.composition.layers.filter((layer) => layer.kind === "image"),
-  );
   const cameraLayersList = computed(() => cameraLayers(props.composition));
   const cameraAssetIds = computed(
     () => new Set(cameraLayersList.value.map((layer) => layer.assetId)),
   );
   const cameraLayersResult = computed(() => cameraLayersList.value);
+  const compositionVisualLayers = computed(() =>
+    props.composition.layers
+      .filter((layer) => (layer.kind === "video" || layer.kind === "image") && !cameraAssetIds.value.has(layer.assetId))
+      .sort((left, right) => left.order - right.order),
+  );
+  const compositionAudioLayers = computed(() =>
+    props.composition.layers.filter((layer) => layer.kind === 'audio'),
+  );
+  const { bars: compositionAudioBars } = useCompositionAudioWaveforms(() => props.composition, () => props.duration);
   const mainVideoLayer = computed(
-    () =>
-      props.composition.layers.find(
-        (layer) =>
-          layer.kind === "video" && !cameraAssetIds.value.has(layer.assetId),
-      ) ?? null,
+    () => null,
   );
 
   const layerStyle = (startMs: number, endMs: number) => ({
@@ -696,7 +699,9 @@ export function useTimelineTracks(
 
   return {
     captionLayers,
-    imageLayers,
+    compositionVisualLayers,
+    compositionAudioLayers,
+    compositionAudioBars,
     cameraLayers: cameraLayersResult,
     mainVideoLayer,
     layerStyle,

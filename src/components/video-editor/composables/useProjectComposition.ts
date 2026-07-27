@@ -1,4 +1,5 @@
 import { ref, computed, type Ref } from "vue";
+import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 import { capture } from "../../../api/capture";
 import type {
   CaptureProject,
@@ -156,7 +157,7 @@ export function useProjectComposition(options: {
   const saveComposition = async () => {
     if (!project.value) return;
     const payload = JSON.parse(JSON.stringify(composition.value));
-    await capture.saveProjectComposition(project.value.id, payload);
+    composition.value = await capture.saveProjectComposition(project.value.id, payload);
   };
 
   const loadComposition = async (projectId: string) => {
@@ -231,6 +232,18 @@ export function useProjectComposition(options: {
       media.src = asset.src;
     });
 
+  const videoHasAudio = async (asset: CompositionMedia) => {
+    if (asset.kind !== "video") return false;
+    try {
+      const response = await fetch(asset.src);
+      if (!response.ok) return false;
+      const input = new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS });
+      return (await input.getAudioTracks()).length > 0;
+    } catch {
+      return false;
+    }
+  };
+
   const addCompositionElement = async (
     kind: "video" | "image" | "sound" | "caption",
   ) => {
@@ -268,12 +281,18 @@ export function useProjectComposition(options: {
     );
     if (!asset) return;
     const nativeDuration = await mediaDuration(asset);
+    if (asset.kind !== "image" && nativeDuration <= 0) {
+      throw new Error("Impossible de lire la durée du média importé.");
+    }
     const startMs = Math.round(currentTimeSec.value * 1000);
     const maxDuration = Math.max(0, durationMs.value - startMs);
     const clipDuration = Math.min(
       maxDuration,
       asset.kind === "image" ? 5000 : nativeDuration,
     );
+    const groupId = asset.kind === "video" && await videoHasAudio(asset)
+      ? crypto.randomUUID()
+      : undefined;
     const layer: CompositionLayer = {
       id: crypto.randomUUID(),
       kind: asset.kind,
@@ -283,11 +302,25 @@ export function useProjectComposition(options: {
       endMs: startMs + clipDuration,
       enabled: true,
       order: composition.value.layers.length,
+      ...(groupId ? { groupId } : {}),
       ...(asset.kind === "audio"
         ? {}
         : { transform: { x: 0, y: 0, width: 1, height: 1 } }),
     };
-    composition.value.layers.push(layer);
+    const linkedAudio: CompositionLayer | null = groupId
+      ? {
+          id: crypto.randomUUID(), kind: "audio", name: `${asset.name} audio`, assetId: asset.id,
+          startMs, endMs: startMs + clipDuration, enabled: true,
+          order: composition.value.layers.length + 1, groupId,
+        }
+      : null;
+    // The picker persists the asset in Electron. Keep the exact returned asset
+    // in renderer state before saving a layer that references it.
+    composition.value = {
+      ...composition.value,
+      media: [...composition.value.media.filter((item) => item.id !== asset.id), asset],
+      layers: [...composition.value.layers, layer, ...(linkedAudio ? [linkedAudio] : [])],
+    };
     await saveComposition();
     selectedCompositionLayerId.value = layer.id;
   };
@@ -336,7 +369,8 @@ export function useProjectComposition(options: {
     composition.value = {
       ...composition.value,
       layers: composition.value.layers.map((layer) => {
-        if (layer.id !== layerId) return layer;
+        const source = composition.value.layers.find((item) => item.id === layerId);
+        if (!source || (layer.id !== layerId && (!source.groupId || layer.groupId !== source.groupId))) return layer;
         if (edge === "start") {
           const clamped = Math.max(0, Math.min(layer.endMs - 200, Math.round(timeMs)));
           const delta = clamped - layer.startMs;
@@ -577,12 +611,20 @@ export function useProjectComposition(options: {
   };
 
   const previewMoveLayer = (id: string, startMs: number, endMs: number) => {
+    const source = composition.value.layers.find((layer) => layer.id === id);
     composition.value = {
       ...composition.value,
       layers: composition.value.layers.map((layer) =>
-        layer.id === id ? { ...layer, startMs, endMs } : layer,
+        layer.id === id || (source?.groupId && layer.groupId === source.groupId)
+          ? { ...layer, startMs, endMs }
+          : layer,
       ),
     };
+  };
+
+  const reorderLayer = async (id: string, targetIndex: number) => {
+    if (!project.value) return;
+    composition.value = await capture.moveProjectCompositionLayer(project.value.id, id, targetIndex);
   };
 
   const moveLayer = async (id: string, startMs: number, endMs: number) => {
@@ -612,6 +654,7 @@ export function useProjectComposition(options: {
     trimLayerEdge,
     previewMoveLayer,
     moveLayer,
+    reorderLayer,
     selectBaseVideo,
     updateSelectedClipAppearance,
     updateSelectedClipIsMirrored,

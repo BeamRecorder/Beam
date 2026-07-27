@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import {
   Video,
   Volume2,
@@ -12,6 +13,8 @@ import {
   EyeOff,
   Unlink,
   Sparkles,
+  GripVertical,
+  Image as ImageIcon,
 } from "@lucide/vue";
 import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import Button from "~/ui/button/Button.vue";
@@ -20,6 +23,7 @@ import type { ExportProgress } from "../../export/export-types";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { ProjectComposition } from "../composition/composition-types";
 import { useTimelineTracks } from "./composables/useTimelineTracks";
+import TimelineVideoClip from './TimelineVideoClip.vue';
 
 const props = defineProps<{
   currentTime: number;
@@ -62,11 +66,14 @@ const emit = defineEmits<{
   (e: "move:clip-position", payload: { id: string; startMs: number; endMs: number }): void;
   (e: "trim:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
   (e: "preview:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
+  (e: "reorder:composition-layer", payload: { id: string; targetIndex: number }): void;
 }>();
 
 const {
   captionLayers,
-  imageLayers,
+  compositionVisualLayers,
+  compositionAudioLayers,
+  compositionAudioBars,
   cameraLayers,
   mainVideoLayer,
   layerStyle,
@@ -103,6 +110,45 @@ const {
   activeTrimState,
   formatTrimTime,
 } = useTimelineTracks(props, emit);
+
+const draggedLayerId = ref<string | null>(null);
+const beginLayerReorder = (event: DragEvent, id: string) => {
+  draggedLayerId.value = id;
+  event.dataTransfer?.setData("text/plain", id);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+};
+const finishLayerReorder = (targetIndex: number) => {
+  if (draggedLayerId.value) emit("reorder:composition-layer", { id: draggedLayerId.value, targetIndex });
+  draggedLayerId.value = null;
+};
+let headerMarqueeFrame = 0;
+let headerMarqueeTimer = 0;
+const stopHeaderMarquee = (target?: HTMLElement) => {
+  window.cancelAnimationFrame(headerMarqueeFrame);
+  window.clearTimeout(headerMarqueeTimer);
+  headerMarqueeFrame = 0;
+  headerMarqueeTimer = 0;
+  const label = target?.querySelector<HTMLElement>(".track-title-text");
+  if (label) label.style.transform = "";
+};
+const startHeaderMarquee = (event: PointerEvent) => {
+  const target = event.currentTarget as HTMLElement;
+  const label = target.querySelector<HTMLElement>(".track-title-text");
+  if (!label) return;
+  const distance = label.scrollWidth - label.clientWidth;
+  if (distance <= 0) return;
+  stopHeaderMarquee(target);
+  headerMarqueeTimer = window.setTimeout(() => {
+    const startedAt = performance.now();
+    const travelMs = Math.max(3000, (distance / 36) * 1000);
+    const tick = (now: number) => {
+      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs;
+      label.style.transform = `translateX(${-distance * (phase <= 1 ? phase : 2 - phase)}px)`;
+      headerMarqueeFrame = window.requestAnimationFrame(tick);
+    };
+    headerMarqueeFrame = window.requestAnimationFrame(tick);
+  }, 300);
+};
 
 const selectMainVideoLayer = () => {
   if (mainVideoLayer.value) emit("select:composition-layer", mainVideoLayer.value.id);
@@ -212,32 +258,39 @@ const selectMainVideoLayer = () => {
             >
               {{ composition.baseVideoPlaybackRate.toFixed(2) }}×
             </span>
-            <!-- Render Image / Media Overlay Clips -->
-            <button
-              v-for="layer in imageLayers"
-              :key="layer.id"
-              type="button"
-              class="image-clip"
-              :class="{ selected: layer.id === selectedCompositionLayerId }"
-              :style="layerStyle(layer.startMs, layer.endMs)"
-              @click.stop="emit('select:composition-layer', layer.id)"
-            >
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
-                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'start'" class="trim-side-badge">
-                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
-                </span>
-              </span>
-              <span class="clip-label-overlay">
-                🖼️ {{ layer.name }}
-                <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1.0) > 0.01" class="speed-badge">
-                  {{ layer.playbackRate.toFixed(2) }}×
-                </span>
-              </span>
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
-                <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'end'" class="trim-side-badge">
-                  {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
-                </span>
-              </span>
+          </div>
+        </div>
+
+        <div
+          v-for="(layer, index) in compositionVisualLayers"
+          :key="layer.id"
+          class="track-row composition-media-track"
+          :class="{ disabled: !layer.enabled, dragging: draggedLayerId === layer.id }"
+          @dragover.prevent
+          @drop.prevent="finishLayerReorder(index)"
+        >
+          <div class="track-info composition-track-info" draggable="true" @dragstart="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null" @pointerenter="startHeaderMarquee" @pointerleave="stopHeaderMarquee($event.currentTarget)">
+            <GripVertical class="track-grip" aria-hidden="true" />
+            <Video v-if="layer.kind === 'video'" class="track-icon" />
+            <ImageIcon v-else class="track-icon" />
+            <span class="track-title"><span class="track-title-text">{{ layer.name }}</span></span>
+          </div>
+          <div class="track-content composition-media-content" :class="{ selected: layer.id === selectedCompositionLayerId }">
+            <TimelineVideoClip
+              v-if="layer.kind === 'video' && composition.media.find((asset) => asset.id === layer.assetId)?.src"
+              :layer="layer"
+              :source="composition.media.find((asset) => asset.id === layer.assetId)!.src"
+              :duration="duration"
+              :visible-seconds="visibleTimelineSeconds"
+              :selected="layer.id === selectedCompositionLayerId"
+              @select="emit('select:composition-layer', layer.id)"
+              @move="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)"
+              @trim="beginTrimDrag($event.event, layer.id, $event.edge, layer.startMs, layer.endMs)"
+            />
+            <button v-else type="button" class="composition-media-clip" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:composition-layer', layer.id)" @pointerdown="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)">
+              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)" />
+              <span class="clip-label-overlay">{{ layer.name }}</span>
+              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)" />
             </button>
           </div>
         </div>
@@ -589,6 +642,21 @@ const selectMainVideoLayer = () => {
             <div class="trim-handle end"></div>
           </div>
         </div>
+
+        <div v-for="layer in compositionAudioLayers" :key="layer.id" class="track-row audio-track" :class="{ disabled: !layer.enabled }">
+          <div class="track-info" @click="emit('select:composition-layer', layer.id)">
+            <Volume2 class="track-icon" />
+            <span class="track-title">{{ layer.name }}</span>
+          </div>
+          <div class="track-content audio-content" :class="{ selected: layer.id === selectedCompositionLayerId }" @click.stop="emit('select:composition-layer', layer.id)">
+            <div class="audio-block composition-audio-block" :style="layerStyle(layer.startMs, layer.endMs)">
+              <div v-if="compositionAudioBars[layer.id]?.length" :style="waveformStyle" class="audio-waveform-real">
+                <div v-for="(height, barIndex) in compositionAudioBars[layer.id]" :key="barIndex" class="wave-bar" :style="{ height: `${height}px` }" />
+              </div>
+              <span v-else class="audio-unavailable">Waveform unavailable</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -629,6 +697,19 @@ const selectMainVideoLayer = () => {
   height: 100%;
   background: var(--color-bg-element);
 }
+.composition-media-track.dragging { opacity: .55; }
+.composition-track-info { cursor: grab; }
+.composition-track-info:active { cursor: grabbing; }
+.track-grip { width: 14px; color: var(--text-muted); flex: 0 0 auto; }
+.composition-media-content { position: relative; height: 100%; background: var(--color-bg-element); }
+.composition-media-clip {
+  position: absolute; top: 0; bottom: 0; min-width: 14px; padding: 0; border: 0;
+  border-radius: var(--radius-sm); background: var(--color-bg-surface); color: var(--text-primary);
+  cursor: grab; overflow: hidden;
+}
+.composition-media-clip:active { cursor: grabbing; }
+.composition-audio-block { position: absolute; top: 0; bottom: 0; height: auto; padding: 0; }
+.audio-unavailable { display: grid; height: 100%; place-items: center; color: var(--text-muted); font-size: 11px; }
 .camera-clip {
   position: absolute;
   top: 0;
@@ -944,7 +1025,13 @@ const selectMainVideoLayer = () => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: transform 0.05s linear;
 }
+.track-title-text { display: inline-block; white-space: nowrap; transition: transform 0.05s linear; }
 
 .track-unlink-btn {
   display: flex;

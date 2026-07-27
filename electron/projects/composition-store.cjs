@@ -84,7 +84,16 @@ function normalizeComposition(value) {
     if (!validId(layer.assetId) || !ids.has(layer.assetId)) throw new Error('Le média du calque est introuvable')
     const webcam = layer.kind === 'video' ? webcamAppearance(layer.webcamAppearance) : undefined
     const appearance = layer.kind !== 'audio' ? clipAppearance(layer.appearance) : undefined
-    return { id: layer.id, kind: layer.kind, name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, assetId: layer.assetId, transform: layer.kind === 'audio' ? undefined : transform(layer.transform), ...(layer.kind === 'video' && finite(layer.sourceOffsetMs) && layer.sourceOffsetMs >= 0 ? { sourceOffsetMs: Math.round(layer.sourceOffsetMs) } : {}), ...(layer.kind === 'video' && typeof layer.reactToZoom === 'boolean' ? { reactToZoom: layer.reactToZoom } : {}), ...(webcam ? { webcamAppearance: webcam } : {}), ...(appearance ? { appearance } : {}) }
+    return {
+      id: layer.id, kind: layer.kind, name: layer.name.slice(0, 160), startMs: Math.round(layer.startMs), endMs: Math.round(layer.endMs), enabled: layer.enabled, order, assetId: layer.assetId,
+      ...(typeof layer.groupId === 'string' && validId(layer.groupId) ? { groupId: layer.groupId } : {}),
+      ...(layer.kind === 'audio' ? {} : { transform: transform(layer.transform) }),
+      ...(['video', 'audio'].includes(layer.kind) && finite(layer.sourceOffsetMs) && layer.sourceOffsetMs >= 0 ? { sourceOffsetMs: Math.round(layer.sourceOffsetMs) } : {}),
+      ...(['video', 'audio'].includes(layer.kind) && finite(layer.playbackRate) && layer.playbackRate >= .25 && layer.playbackRate <= 4 ? { playbackRate: layer.playbackRate } : {}),
+      ...(layer.kind !== 'audio' && layer.crop ? { crop: transform(layer.crop) } : {}),
+      ...(layer.kind !== 'audio' && typeof layer.isMirrored === 'boolean' ? { isMirrored: layer.isMirrored } : {}),
+      ...(layer.kind === 'video' && typeof layer.reactToZoom === 'boolean' ? { reactToZoom: layer.reactToZoom } : {}), ...(webcam ? { webcamAppearance: webcam } : {}), ...(appearance ? { appearance } : {})
+    }
   })
   const baseVideoAppearance = clipAppearance(value.baseVideoAppearance)
   const baseVideoCrop = value.baseVideoCrop ? transform(value.baseVideoCrop) : undefined
@@ -109,7 +118,19 @@ function createCompositionStore({ directoryFor, readManifest, writeManifest, ses
   }
   const upsertLayer = (id, layer) => { const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layer.id); const next = normalizeComposition({ media: composition.media, layers: index < 0 ? [...composition.layers, layer] : composition.layers.map((item, i) => i === index ? layer : item) }); return save(id, next).layers.find((item) => item.id === layer.id) }
   const removeLayer = (id, layerId) => { const composition = read(id); const layer = composition.layers.find((item) => item.id === layerId); if (!layer) throw new Error('Calque introuvable'); composition.layers = composition.layers.filter((item) => item.id !== layerId); if (layer.assetId && !composition.layers.some((item) => item.assetId === layer.assetId)) { const asset = composition.media.find((item) => item.id === layer.assetId); if (asset?.origin === 'project') fs.rmSync(path.join(directoryFor(id), 'media', asset.fileName), { force: true }); if (asset) composition.media = composition.media.filter((item) => item.id !== asset.id) } return save(id, composition) }
-  const moveLayer = (id, layerId, targetIndex) => { const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layerId); if (index < 0 || !Number.isInteger(targetIndex)) throw new Error('Déplacement de calque invalide'); const [layer] = composition.layers.splice(index, 1); const compatible = composition.layers.filter((item) => (item.kind === 'audio') === (layer.kind === 'audio')); const position = Math.max(0, Math.min(compatible.length, targetIndex)); const anchor = compatible[position]; composition.layers.splice(anchor ? composition.layers.indexOf(anchor) : composition.layers.length, 0, layer); return save(id, composition) }
+  const moveLayer = (id, layerId, targetIndex) => {
+    const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layerId)
+    if (index < 0 || !Number.isInteger(targetIndex)) throw new Error('Déplacement de calque invalide')
+    const layer = composition.layers[index]
+    if (!['video', 'image'].includes(layer.kind) || layer.reactToZoom) throw new Error('Seules les pistes vidéo et image sont réorganisables')
+    const visualIndexes = composition.layers.flatMap((item, itemIndex) => ['video', 'image'].includes(item.kind) && !item.reactToZoom ? [itemIndex] : [])
+    const visuals = visualIndexes.map((itemIndex) => composition.layers[itemIndex])
+    const visualIndex = visuals.findIndex((item) => item.id === layerId)
+    const [moved] = visuals.splice(visualIndex, 1)
+    visuals.splice(Math.max(0, Math.min(visuals.length, targetIndex)), 0, moved)
+    visualIndexes.forEach((itemIndex, position) => { composition.layers[itemIndex] = visuals[position] })
+    return save(id, composition)
+  }
   return { read: response, save, importMedia, upsertLayer, removeLayer, moveLayer }
 }
 

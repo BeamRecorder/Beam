@@ -2,7 +2,7 @@ const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { fileURLToPath, pathToFileURL } = require('url')
-const { createCompositionStore, normalizeComposition } = require('./composition-store.cjs')
+const { createCompositionStore } = require('./composition-store.cjs')
 const { kindFor } = require('../backgrounds/background-library.cjs')
 
 function createProjectStore(root) {
@@ -189,7 +189,9 @@ function createProjectStore(root) {
   const saveEditorState = (id, value) => {
     if (!value || value.schemaVersion !== 1) throw new Error('État éditeur invalide')
     const directory = directoryFor(id); const manifest = readManifest(directory)
-    const nextComposition = normalizeComposition(value.composition)
+    // Composition has its own serialized IPC write. Reusing a renderer
+    // snapshot here can overwrite a newer import/layer write in flight.
+    const nextComposition = composition.read(id)
     const nextZoom = zoomState(value.zoom)
     const nextPresentation = presentationState(value.presentation)
     manifest.editor = { ...(manifest.editor || {}), composition: nextComposition, zoom: nextZoom, presentation: nextPresentation }

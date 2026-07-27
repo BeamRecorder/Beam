@@ -8,8 +8,10 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   const thumbnails = reactive<Record<number, string>>({})
   const isExtracting = ref(false)
   const cacheOrder: number[] = []
+  const pendingTimes = new Set<number>()
   let worker: Worker | null = null
   let generation = 0
+  let requestQueued = false
 
   const clearCache = () => {
     generation += 1
@@ -19,6 +21,8 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
       delete thumbnails[Number(time)]
     }
     cacheOrder.length = 0
+    pendingTimes.clear()
+    requestQueued = false
     isExtracting.value = false
   }
 
@@ -64,7 +68,15 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   }
 
   const requestVisibleFrames = (visibleTimes: number[]) => {
-    void requestMissingFrames(visibleTimes)
+    visibleTimes.forEach((time) => pendingTimes.add(time))
+    if (requestQueued) return
+    requestQueued = true
+    queueMicrotask(() => {
+      requestQueued = false
+      const times = [...pendingTimes]
+      pendingTimes.clear()
+      void requestMissingFrames(times)
+    })
   }
 
   const requestMissingFrames = async (visibleTimes: number[]) => {

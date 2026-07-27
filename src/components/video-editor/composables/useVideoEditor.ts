@@ -3,6 +3,7 @@ import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorData } from "../../../api/types/capture-api";
 import { useVideoPlayer } from "./useVideoPlayer";
 import { useEditorAudio } from "./useEditorAudio";
+import { useCompositionAudio } from "./useCompositionAudio";
 import { useCursorReplacer } from "../properties/cursor/useCursorReplacer";
 import { useProjectComposition } from "./useProjectComposition";
 import { useProjectZoom } from "./useProjectZoom";
@@ -48,6 +49,13 @@ export function useVideoEditor(options: {
     durationMs,
     currentTimeSec: player.currentTime,
     activeTab,
+  });
+
+  useCompositionAudio({
+    composition: compositionState.composition,
+    currentTime: player.currentTime,
+    isPlaying: player.isPlaying,
+    volume: player.volume,
   });
 
   // 5. Zoom composable

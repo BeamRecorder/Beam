@@ -104,6 +104,7 @@ const {
   trimLayerEdge,
   previewMoveLayer,
   moveLayer,
+  reorderLayer,
   selectBaseVideo,
   updateSelectedClipAppearance,
   updateSelectedClipIsMirrored,
@@ -152,6 +153,9 @@ const {
 } = zoomState;
 
 const { isExporting, progress: exportProgress } = useExportJob();
+const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption') => {
+  void addCompositionElement(type).catch((error) => console.error('Unable to add composition media:', error));
+};
 import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
 
 const createEditorSnapshot = (): EditorStateSnapshot => ({
@@ -438,7 +442,7 @@ onBeforeUnmount(() => {
           @deselect:zoom="selectedZoomId = null"
           @duration-change="handleDurationChange"
         />
-        <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addCompositionElement" />
+        <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" />
         </div>
       </div>
 
@@ -466,7 +470,7 @@ onBeforeUnmount(() => {
             selectedZoomId = $event;
             activeTab = 'zoom';
           "
-          @add:element="addCompositionElement"
+          @add:element="addTimelineElement"
           @select:composition-layer="
             selectedCompositionLayerId = $event;
             activeTab = composition.layers.find(l => l.id === $event)?.kind === 'caption' ? 'caption' : 'clip';
@@ -512,6 +516,7 @@ onBeforeUnmount(() => {
           }"
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
+          @reorder:composition-layer="({ id, targetIndex }) => reorderLayer(id, targetIndex)"
         />
       </div>
     </div>
