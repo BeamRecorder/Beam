@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   Monitor,
   Film,
@@ -8,6 +9,9 @@ import {
   Volume2,
   Settings,
 } from "@lucide/vue";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("SidebarPanel");
 
 defineProps<{
   activeTab: string;
@@ -17,20 +21,20 @@ const emit = defineEmits<{
   (e: "select-tab", tab: string): void;
 }>();
 
-const menuItems = [
-  { id: "canvas", label: "Canvas", icon: Monitor },
-  { id: "clip", label: "Clip", icon: Film },
-  { id: "zoom", label: "Zoom", icon: ZoomIn },
-  { id: "cursor", label: "Cursor", icon: MousePointer },
-  { id: "caption", label: "AI Captions", icon: Type },
-  { id: "audio", label: "Audio", icon: Volume2 },
-];
+const menuItems = computed(() => [
+  { id: "canvas", label: t("canvas"), icon: Monitor },
+  { id: "clip", label: t("clip"), icon: Film },
+  { id: "zoom", label: t("zoom"), icon: ZoomIn },
+  { id: "cursor", label: t("cursor"), icon: MousePointer },
+  { id: "caption", label: t("captions"), icon: Type },
+  { id: "audio", label: t("audio"), icon: Volume2 },
+]);
 </script>
 
 <template>
   <aside class="sidebar-island">
     <div class="logo-area">
-      <img src="/brand/DemoRecorderIcon.webp" class="brand-logo" alt="Logo" />
+      <img src="/brand/DemoRecorderIcon.webp" class="brand-logo" :alt="t('logo')" />
     </div>
 
     <nav class="nav-menu">
@@ -52,10 +56,10 @@ const menuItems = [
         class="nav-btn footer-btn"
         :class="{ active: activeTab === 'settings' }"
         @click="emit('select-tab', 'settings')"
-        title="Settings"
+        :title="t('settings')"
       >
         <Settings class="nav-icon" />
-        <span class="nav-label">Settings</span>
+        <span class="nav-label">{{ t('settings') }}</span>
       </button>
     </div>
   </aside>

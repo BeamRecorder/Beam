@@ -12,6 +12,7 @@ import enExportPopover from './en/ExportPopover.json'
 import enTimelineToolbar from './en/TimelineToolbar.json'
 import enTimelineTracks from './en/TimelineTracks.json'
 import enTimelineVideoClip from './en/TimelineVideoClip.json'
+import enSidebarPanel from './en/SidebarPanel.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
@@ -25,6 +26,7 @@ import frExportPopover from './fr/ExportPopover.json'
 import frTimelineToolbar from './fr/TimelineToolbar.json'
 import frTimelineTracks from './fr/TimelineTracks.json'
 import frTimelineVideoClip from './fr/TimelineVideoClip.json'
+import frSidebarPanel from './fr/SidebarPanel.json'
 
 const messages = {
   en: {
@@ -41,6 +43,7 @@ const messages = {
     TimelineToolbar: enTimelineToolbar,
     TimelineTracks: enTimelineTracks,
     TimelineVideoClip: enTimelineVideoClip,
+    SidebarPanel: enSidebarPanel,
   },
   fr: {
     HUD: frHUD,
@@ -56,6 +59,7 @@ const messages = {
     TimelineToolbar: frTimelineToolbar,
     TimelineTracks: frTimelineTracks,
     TimelineVideoClip: frTimelineVideoClip,
+    SidebarPanel: frSidebarPanel,
   },
 }
 
