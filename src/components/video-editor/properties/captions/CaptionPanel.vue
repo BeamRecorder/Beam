@@ -53,7 +53,7 @@ const downloadModel = async () => {
     await capture.downloadWhisperModel(model.value)
     await loadModels()
   } catch (error) {
-    downloadError.value = error instanceof Error ? error.message : 'Model download failed.'
+    downloadError.value = error instanceof Error ? error.message : t('modelDownloadFailed')
   }
 }
 
@@ -133,15 +133,15 @@ const runTranscription = async () => {
         <Sparkles :size="20" class="sparkles-icon" />
       </div>
       <div>
-        <h3 class="header-title">AI Auto-Captioning</h3>
-        <p class="header-desc">Generate automatic speech-to-text subtitles powered by Whisper AI.</p>
+        <h3 class="header-title">{{ t('aiAutoCaptioning') }}</h3>
+        <p class="header-desc">{{ t('headerDesc') }}</p>
       </div>
     </div>
 
     <!-- Configuration Box -->
     <div class="config-card">
       <div class="field-group" v-if="sources.length">
-        <label class="field-label">Audio Source</label>
+        <label class="field-label">{{ t('audioSource') }}</label>
         <Select
           :items="sourceSelectItems"
           :model-value="source"
@@ -151,14 +151,14 @@ const runTranscription = async () => {
       </div>
 
       <div class="field-group">
-        <label class="field-label">Whisper Model</label>
+        <label class="field-label">{{ t('whisperModel') }}</label>
         <Select
           :items="modelSelectItems"
           :model-value="model"
           size="sm"
           @update:model-value="model = $event as WhisperModelId"
         />
-        <p v-if="modelReady" class="model-ready"><CheckCircle :size="13" /> Model downloaded and verified</p>
+        <p v-if="modelReady" class="model-ready"><CheckCircle :size="13" /> {{ t('modelReady') }}</p>
       </div>
 
       <Button
@@ -191,7 +191,7 @@ const runTranscription = async () => {
         block
         class="generate-btn"
       >
-        {{ progress.status === 'idle' ? (hasAiCaptions ? 'Regenerate AI Captions' : 'Generate Captions') : 'Processing…' }}
+        {{ progress.status === 'idle' ? (hasAiCaptions ? t('regenerateAICaptions') : t('generateCaptions')) : t('processing') }}
       </Button>
     </div>
 
@@ -199,8 +199,8 @@ const runTranscription = async () => {
     <div v-if="hasAiCaptions" class="active-status-card">
       <CheckCircle :size="16" class="status-icon" />
       <div class="status-content">
-        <p class="status-title">AI Captions Active</p>
-        <p class="status-sub">{{ aiCaptionLayers.length }} subtitle track(s) generated.</p>
+        <p class="status-title">{{ t('aiCaptionsActive') }}</p>
+        <p class="status-sub">{{ t('subtitlesGenerated', { count: aiCaptionLayers.length }) }}</p>
       </div>
       <Button
         variant="ghost"

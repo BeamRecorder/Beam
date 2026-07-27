@@ -1,6 +1,9 @@
 import type { ProjectEditorData } from '../../../../api/types/capture-api'
 import type { ProjectComposition } from '../../composition/composition-types'
 import type { TranscriptionSource } from '../../captions/whisper-types'
+import { tNamespace } from '~/i18n'
+
+const $t = tNamespace('CaptionPanel')
 
 export interface CaptionSource {
   id: TranscriptionSource
@@ -16,7 +19,7 @@ export const captionSources = (
     track.kind === 'system-audio' || track.kind === 'microphone'
       ? track.assets.filter((asset) => asset.src).map((asset) => ({
           id: track.kind as TranscriptionSource,
-          label: track.kind === 'system-audio' ? 'System Audio' : 'Microphone',
+          label: track.kind === 'system-audio' ? $t('systemAudio') : $t('microphone'),
           src: asset.src!,
         }))
       : [],

@@ -1,0 +1,17 @@
+{
+  "aiAutoCaptioning": "AI Auto-Captioning",
+  "headerDesc": "Generate automatic speech-to-text subtitles powered by Whisper AI.",
+  "audioSource": "Audio Source",
+  "whisperModel": "Whisper Model",
+  "modelReady": "Model downloaded and verified",
+  "downloadModel": "Download Model",
+  "generateCaptions": "Generate Captions",
+  "regenerateAICaptions": "Regenerate AI Captions",
+  "processing": "Processing…",
+  "aiCaptionsActive": "AI Captions Active",
+  "subtitlesGenerated": "{count} subtitle track(s) generated.",
+  "edit": "Edit",
+  "modelDownloadFailed": "Model download failed.",
+  "systemAudio": "System Audio",
+  "microphone": "Microphone"
+}

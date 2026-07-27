@@ -13,6 +13,10 @@ import enTimelineToolbar from './en/TimelineToolbar.json'
 import enTimelineTracks from './en/TimelineTracks.json'
 import enTimelineVideoClip from './en/TimelineVideoClip.json'
 import enSidebarPanel from './en/SidebarPanel.json'
+import enCanvasPanel from './en/CanvasPanel.json'
+import enBackgroundPresetComposer from './en/BackgroundPresetComposer.json'
+import enCaptionClipPanel from './en/CaptionClipPanel.json'
+import enCaptionPanel from './en/CaptionPanel.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
@@ -27,6 +31,10 @@ import frTimelineToolbar from './fr/TimelineToolbar.json'
 import frTimelineTracks from './fr/TimelineTracks.json'
 import frTimelineVideoClip from './fr/TimelineVideoClip.json'
 import frSidebarPanel from './fr/SidebarPanel.json'
+import frCanvasPanel from './fr/CanvasPanel.json'
+import frBackgroundPresetComposer from './fr/BackgroundPresetComposer.json'
+import frCaptionClipPanel from './fr/CaptionClipPanel.json'
+import frCaptionPanel from './fr/CaptionPanel.json'
 
 const messages = {
   en: {
@@ -44,6 +52,10 @@ const messages = {
     TimelineTracks: enTimelineTracks,
     TimelineVideoClip: enTimelineVideoClip,
     SidebarPanel: enSidebarPanel,
+    CanvasPanel: enCanvasPanel,
+    BackgroundPresetComposer: enBackgroundPresetComposer,
+    CaptionClipPanel: enCaptionClipPanel,
+    CaptionPanel: enCaptionPanel,
   },
   fr: {
     HUD: frHUD,
@@ -60,6 +72,10 @@ const messages = {
     TimelineTracks: frTimelineTracks,
     TimelineVideoClip: frTimelineVideoClip,
     SidebarPanel: frSidebarPanel,
+    CanvasPanel: frCanvasPanel,
+    BackgroundPresetComposer: frBackgroundPresetComposer,
+    CaptionClipPanel: frCaptionClipPanel,
+    CaptionPanel: frCaptionPanel,
   },
 }
 

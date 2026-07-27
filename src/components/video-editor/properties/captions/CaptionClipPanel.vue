@@ -129,7 +129,7 @@ const shadowDirectionOptions = computed(() => [
     </section>
 
     <section class="panel-group">
-      <h4 class="group-title"><Box :size="14" /> Outline & extrusion</h4>
+      <h4 class="group-title"><Box :size="14" /> {{ t('outlineExtrusion') }}</h4>
       <div class="field-grid-2">
         <div class="field-group">
           <label class="field-label">{{ t('outlineColor') }}</label>
