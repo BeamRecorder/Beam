@@ -9,6 +9,9 @@ import enShortcutPreferences from './en/ShortcutPreferences.json'
 import enRecorderBar from './en/RecorderBar.json'
 import enExporter from './en/exporter.json'
 import enExportPopover from './en/ExportPopover.json'
+import enTimelineToolbar from './en/TimelineToolbar.json'
+import enTimelineTracks from './en/TimelineTracks.json'
+import enTimelineVideoClip from './en/TimelineVideoClip.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
@@ -19,6 +22,9 @@ import frShortcutPreferences from './fr/ShortcutPreferences.json'
 import frRecorderBar from './fr/RecorderBar.json'
 import frExporter from './fr/exporter.json'
 import frExportPopover from './fr/ExportPopover.json'
+import frTimelineToolbar from './fr/TimelineToolbar.json'
+import frTimelineTracks from './fr/TimelineTracks.json'
+import frTimelineVideoClip from './fr/TimelineVideoClip.json'
 
 const messages = {
   en: {
@@ -32,6 +38,9 @@ const messages = {
     RecorderBar: enRecorderBar,
     exporter: enExporter,
     ExportPopover: enExportPopover,
+    TimelineToolbar: enTimelineToolbar,
+    TimelineTracks: enTimelineTracks,
+    TimelineVideoClip: enTimelineVideoClip,
   },
   fr: {
     HUD: frHUD,
@@ -44,6 +53,9 @@ const messages = {
     RecorderBar: frRecorderBar,
     exporter: frExporter,
     ExportPopover: frExportPopover,
+    TimelineToolbar: frTimelineToolbar,
+    TimelineTracks: frTimelineTracks,
+    TimelineVideoClip: frTimelineVideoClip,
   },
 }
 

@@ -9,6 +9,6 @@
   "play": "Lire",
   "pause": "Pause",
   "doubleClickResetZoom": "Double-clic pour réinitialiser le zoom",
-  "zoomOut": "Zoom avant",
-  "zoomIn": "Zoom arrière"
+  "zoomOut": "Dézoomer",
+  "zoomIn": "Zoomer"
 }

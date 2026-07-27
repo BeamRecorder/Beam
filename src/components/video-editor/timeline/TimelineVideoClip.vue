@@ -3,6 +3,9 @@ import { computed, onUnmounted, watch } from 'vue'
 import Skeleton from '~/ui/skeleton/Skeleton.vue'
 import type { MediaCompositionLayer } from '../composition/composition-types'
 import { useThumbnails } from './waveform/useThumbnails'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('TimelineVideoClip')
 
 const props = defineProps<{
   layer: MediaCompositionLayer & { kind: 'video' }

@@ -24,6 +24,9 @@ import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { ProjectComposition } from "../composition/composition-types";
 import { useTimelineTracks } from "./composables/useTimelineTracks";
 import TimelineVideoClip from './TimelineVideoClip.vue';
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("TimelineTracks");
 
 const props = defineProps<{
   currentTime: number;
@@ -241,19 +244,19 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           <div
             class="track-info composition-track-info"
             @click="emit('toggle:video')"
-            title="Click to toggle Video track"
+            :title="t('clickToToggleVideo')"
           >
-            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @dragstart.stop="beginLayerReorder($event, 'base-video')" @dragend="draggedLayerId = null">
+            <span class="track-drag-handle" draggable="true" :title="t('reorderVisualTrack')" @dragstart.stop="beginLayerReorder($event, 'base-video')" @dragend="draggedLayerId = null">
               <GripVertical class="track-grip" aria-hidden="true" />
             </span>
             <Video class="track-icon" />
-            <span class="track-title">Video</span>
+            <span class="track-title">{{ t('video') }}</span>
             <Button
               variant="ghost"
               size="xs"
               icon-only
               :icon="Unlink"
-              tooltip="Unlink Video track"
+              :tooltip="t('unlinkVideoTrack')"
               tooltip-position="right"
               class="track-unlink-btn"
               @click.stop="emit('unlink-track', 'video')"
@@ -280,7 +283,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                   v-if="thumbnails[second]"
                   :src="thumbnails[second]"
                   class="thumbnail-img"
-                  alt="frame"
+                  :alt="t('frame')"
                   draggable="false"
                 />
                 <Skeleton v-else width="100%" height="100%" radius="0" />
@@ -306,7 +309,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           @drop.prevent="finishLayerReorder($event, layer.id)"
         >
           <div class="track-info composition-track-info" @pointerenter="startHeaderMarquee" @pointerleave="stopHeaderMarquee($event.currentTarget)" @click="emit('toggle:composition-layer', layer.id)">
-            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @click.stop @dragstart.stop="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null">
+            <span class="track-drag-handle" draggable="true" :title="t('reorderVisualTrack')" @click.stop @dragstart.stop="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null">
               <GripVertical class="track-grip" aria-hidden="true" />
             </span>
             <Video v-if="layer.kind === 'video'" class="track-icon" />
@@ -326,9 +329,9 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               @trim="beginTrimDrag($event.event, layer.id, $event.edge, layer.startMs, layer.endMs)"
             />
             <button v-else type="button" class="composition-media-clip" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:composition-layer', layer.id)" @pointerdown="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)">
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)" />
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)" />
               <span class="clip-label-overlay">{{ layer.name }}</span>
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)" />
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)" />
             </button>
           </div>
         </div>
@@ -346,22 +349,22 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           <div
             class="track-info composition-track-info"
             @click="emit('toggle:camera')"
-            title="Show or hide webcam track"
+            :title="t('showOrHideWebcam')"
           >
-            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @dragstart.stop="beginLayerReorder($event, 'webcam')" @dragend="draggedLayerId = null">
+            <span class="track-drag-handle" draggable="true" :title="t('reorderVisualTrack')" @dragstart.stop="beginLayerReorder($event, 'webcam')" @dragend="draggedLayerId = null">
               <GripVertical class="track-grip" aria-hidden="true" />
             </span>
             <component
               :is="isCameraEnabled ? Eye : EyeOff"
               class="track-icon"
             />
-            <span class="track-title">Webcam</span>
+            <span class="track-title">{{ t('webcam') }}</span>
             <Button
               variant="ghost"
               size="xs"
               icon-only
               :icon="Unlink"
-              tooltip="Unlink Webcam track"
+              :tooltip="t('unlinkWebcamTrack')"
               tooltip-position="right"
               class="track-unlink-btn"
               @click.stop="emit('unlink-track', 'webcam')"
@@ -397,18 +400,18 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                   <Skeleton v-else width="100%" height="100%" radius="0" />
                 </div>
               </div>
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
                 <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'start'" class="trim-side-badge">
                   {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
                 </span>
               </span>
               <span class="clip-label-overlay">
-                Webcam
+                {{ t('webcam') }}
                 <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1.0) > 0.01" class="speed-badge">
                   {{ layer.playbackRate.toFixed(2) }}×
                 </span>
               </span>
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
                 <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'end'" class="trim-side-badge">
                   {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
                 </span>
@@ -421,28 +424,28 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             >
               <button
                 type="button"
-                title="Split webcam at playhead"
+                :title="t('splitWebcamAtPlayhead')"
                 @click="emit('split:camera')"
               >
                 <Scissors :size="13" />
               </button>
               <button
                 type="button"
-                title="Show or hide selected webcam clip"
+                :title="t('showOrHideSelectedWebcam')"
                 @click="emit('toggle:camera-layer')"
               >
                 <EyeOff :size="13" />
               </button>
               <button
                 type="button"
-                title="Trim webcam start to playhead"
+                :title="t('trimWebcamStart')"
                 @click="emit('trim:camera', 'start')"
               >
                 <MoveLeft :size="13" />
               </button>
               <button
                 type="button"
-                title="Trim webcam end to playhead"
+                :title="t('trimWebcamEnd')"
                 @click="emit('trim:camera', 'end')"
               >
                 <MoveRight :size="13" />
@@ -455,13 +458,13 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
         <div class="track-row cursor-track">
           <div class="track-info" @click="emit('toggle:composition-layer', layer.id)">
             <MousePointer class="track-icon" />
-            <span class="track-title">Zooms</span>
+            <span class="track-title">{{ t('zooms') }}</span>
             <Button
               variant="ghost"
               size="xs"
               icon-only
               :icon="Unlink"
-              tooltip="Unlink Zooms track"
+              :tooltip="t('unlinkZoomsTrack')"
               tooltip-position="right"
               class="track-unlink-btn"
               @click.stop="emit('unlink-track', 'zooms')"
@@ -469,7 +472,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           </div>
           <div
             class="track-content cursor-content"
-            title="Click to add zoom at position"
+            :title="t('clickToAddZoom')"
             @mousemove="onTrackMouseMove($event, 'zoom')"
             @mouseleave="onTrackMouseLeave('zoom')"
             @click="handleTrackClick($event, 'zoom')"
@@ -480,7 +483,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               class="cursor-zoom-indicator preview-ghost"
               :style="layerStyle(hoverZoomTimeMs, hoverZoomTimeMs + 1200)"
             >
-              + Add 1.5× Zoom
+              {{ t('addZoom') }}
             </div>
 
             <button
@@ -490,11 +493,11 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               class="cursor-zoom-indicator"
               :class="{ selected: element.id === selectedZoomId }"
               :style="zoomElementStyle(element)"
-              :title="`Zoom ${[1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2)}×`"
+              :title="t('zoomTitle', { level: [1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2) })"
               @click.stop="emit('select:zoom', element.id)"
               @pointerdown="beginMoveDrag($event, element.id, element.startMs, element.endMs)"
             >
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, element.id, 'start', element.startMs, element.endMs)">
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown="beginTrimDrag($event, element.id, 'start', element.startMs, element.endMs)">
                 <span v-if="activeTrimState?.id === element.id && activeTrimState.edge === 'start'" class="trim-side-badge">
                   {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
                 </span>
@@ -502,7 +505,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               <span class="clip-center-title">
                 {{ [1.25, 1.5, 1.8, 2.2, 3.5, 5][element.depth - 1].toFixed(2) }}×
               </span>
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, element.id, 'end', element.startMs, element.endMs)">
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown="beginTrimDrag($event, element.id, 'end', element.startMs, element.endMs)">
                 <span v-if="activeTrimState?.id === element.id && activeTrimState.edge === 'end'" class="trim-side-badge">
                   {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
                 </span>
@@ -515,13 +518,13 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
         <div class="track-row annotation-track">
           <div class="track-info">
             <Type class="track-icon" />
-            <span class="track-title">Captions</span>
+            <span class="track-title">{{ t('captions') }}</span>
             <Button
               variant="ghost"
               size="xs"
               icon-only
               :icon="Unlink"
-              tooltip="Unlink Captions track"
+              :tooltip="t('unlinkCaptionsTrack')"
               tooltip-position="right"
               class="track-unlink-btn"
               @click.stop="emit('unlink-track', 'captions')"
@@ -529,7 +532,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           </div>
           <div
             class="track-content annotation-content"
-            title="Click to add caption at position"
+            :title="t('clickToAddCaption')"
             @mousemove="onTrackMouseMove($event, 'caption')"
             @mouseleave="onTrackMouseLeave('caption')"
             @click="handleTrackClick($event, 'caption')"
@@ -540,7 +543,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               class="annotation-indicator preview-ghost"
               :style="layerStyle(hoverCaptionTimeMs, hoverCaptionTimeMs + 2000)"
             >
-              + Add Caption
+              {{ t('addCaption') }}
             </div>
 
             <button
@@ -553,16 +556,16 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               @click.stop="emit('select:composition-layer', layer.id)"
               @pointerdown="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)"
             >
-              <span class="trim-handle start" title="Trim start" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)">
                 <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'start'" class="trim-side-badge">
                   {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
                 </span>
               </span>
               <span class="clip-center-title">
-                <Sparkles v-if="layer.isAiGenerated" :size="11" class="ai-clip-icon" title="Generated by AI (Whisper)" />
+                <Sparkles v-if="layer.isAiGenerated" :size="11" class="ai-clip-icon" :title="t('generatedByAI')" />
                 {{ layer.name }}
               </span>
-              <span class="trim-handle end" title="Trim end" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)">
                 <span v-if="activeTrimState?.id === layer.id && activeTrimState.edge === 'end'" class="trim-side-badge">
                   {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
                 </span>
@@ -579,16 +582,16 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           <div
             class="track-info"
             @click="emit('toggle:systemAudio')"
-            title="Click to toggle System Audio track"
+            :title="t('clickToToggleSystemAudio')"
           >
             <Volume2 class="track-icon" />
-            <span class="track-title">System</span>
+            <span class="track-title">{{ t('system') }}</span>
             <Button
               variant="ghost"
               size="xs"
               icon-only
               :icon="Unlink"
-              tooltip="Unlink System Audio track"
+              :tooltip="t('unlinkSystemAudioTrack')"
               tooltip-position="right"
               class="track-unlink-btn"
               @click.stop="emit('unlink-track', 'systemAudio')"
@@ -633,16 +636,16 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           <div
             class="track-info"
             @click="emit('toggle:micAudio')"
-            title="Click to toggle Microphone track"
+            :title="t('clickToToggleMicrophone')"
           >
             <Mic class="track-icon" />
-            <span class="track-title">Mic</span>
+            <span class="track-title">{{ t('mic') }}</span>
             <Button
               variant="ghost"
               size="xs"
               icon-only
               :icon="Unlink"
-              tooltip="Unlink Microphone track"
+              :tooltip="t('unlinkMicrophoneTrack')"
               tooltip-position="right"
               class="track-unlink-btn"
               @click.stop="emit('unlink-track', 'micAudio')"
@@ -698,7 +701,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               <div v-if="compositionAudioBars[layer.id]?.length" :style="waveformStyle" class="audio-waveform-real">
                 <div v-for="(height, barIndex) in compositionAudioBars[layer.id]" :key="barIndex" class="wave-bar" :style="{ height: `${compositionAudioBarHeight(height, layer.volume ?? 100)}px` }" />
               </div>
-              <span v-else class="audio-unavailable">Waveform unavailable</span>
+              <span v-else class="audio-unavailable">{{ t('waveformUnavailable') }}</span>
             </div>
           </div>
         </div>

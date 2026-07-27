@@ -15,6 +15,9 @@ import {
 } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
 import PopoverMenuButton from "~/ui/popover/PopoverMenuButton.vue";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("TimelineToolbar");
 
 const props = withDefaults(
   defineProps<{
@@ -36,10 +39,10 @@ const emit = defineEmits<{
 const handleAdd = (type: "video" | "image" | "sound" | "caption") => {
   emit("add:element", type);
 };
-const addItems = [
-  { id: 'video', label: 'Video', icon: Video }, { id: 'image', label: 'Image', icon: ImageIcon },
-  { id: 'sound', label: 'Sound', icon: Volume2 }, { id: 'caption', label: 'Text', icon: Type },
-] as const;
+const addItems = computed(() => [
+  { id: 'video', label: t('video'), icon: Video }, { id: 'image', label: t('image'), icon: ImageIcon },
+  { id: 'sound', label: t('sound'), icon: Volume2 }, { id: 'caption', label: t('text'), icon: Type },
+] as const);
 
 const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
@@ -69,7 +72,7 @@ const handleZoomOut = () => {
   <div class="timeline-toolbar">
     <!-- Left Section with Add Popover -->
     <div class="left-section">
-      <PopoverMenuButton label="Add" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
+      <PopoverMenuButton :label="t('add')" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
     </div>
 
     <!-- Centered Controls -->
@@ -80,7 +83,7 @@ const handleZoomOut = () => {
           size="sm"
           icon-only
           :icon="SkipBack"
-          tooltip="Go to Start"
+          :tooltip="t('goToStart')"
           @click="emit('update:currentTime', 0)"
         />
         <Button
@@ -88,7 +91,7 @@ const handleZoomOut = () => {
           size="sm"
           icon-only
           :icon="isPlaying ? Pause : Play"
-          :tooltip="isPlaying ? 'Pause' : 'Play'"
+          :tooltip="isPlaying ? t('pause') : t('play')"
           class="play-pause-btn"
           @click="emit('update:isPlaying', !isPlaying)"
         />
@@ -97,7 +100,7 @@ const handleZoomOut = () => {
           size="sm"
           icon-only
           :icon="SkipForward"
-          tooltip="Go to End"
+          :tooltip="t('goToEnd')"
           @click="emit('update:currentTime', duration)"
         />
       </div>
@@ -114,7 +117,7 @@ const handleZoomOut = () => {
       <span
         class="zoom-percent-text"
         @click="handleZoomReset"
-        title="Double click to reset zoom"
+        :title="t('doubleClickResetZoom')"
         >{{ zoomPercentageText }}</span
       >
       <Button
@@ -122,7 +125,7 @@ const handleZoomOut = () => {
         size="sm"
         icon-only
         :icon="ZoomOut"
-        tooltip="Zoom Out"
+        :tooltip="t('zoomOut')"
         :disabled="zoomLevel <= 100"
         @click="handleZoomOut"
       />
@@ -145,7 +148,7 @@ const handleZoomOut = () => {
         size="sm"
         icon-only
         :icon="ZoomIn"
-        tooltip="Zoom In"
+        :tooltip="t('zoomIn')"
         :disabled="zoomLevel >= 500"
         @click="handleZoomIn"
       />
