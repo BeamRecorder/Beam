@@ -1,0 +1,13 @@
+{
+  "recordingControls": "Recording controls",
+  "ready": "Ready",
+  "resumeRecording": "Resume recording",
+  "pauseRecording": "Pause recording",
+  "stopRecording": "Stop recording",
+  "turnMicOff": "Turn microphone off",
+  "turnMicOn": "Turn microphone on",
+  "turnCameraOff": "Turn camera off",
+  "turnCameraOn": "Turn camera on",
+  "turnSystemAudioOff": "Turn system audio off",
+  "turnSystemAudioOn": "Turn system audio on"
+}

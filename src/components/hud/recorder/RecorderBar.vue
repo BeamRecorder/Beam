@@ -15,6 +15,9 @@ import Tooltip from "~/ui/tooltip/Tooltip.vue";
 import KeyboardChip from "~/ui/KeyboardChip.vue";
 import { usePreferencesStore } from "~/stores/preferences";
 import type { RecordingPhase } from "./recording-types";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("RecorderBar");
 
 defineProps<{
   phase: RecordingPhase;
@@ -77,7 +80,7 @@ onBeforeUnmount(() => {
   <aside
     class="recorder-bar"
     :class="{ 'auto-fade': visibility === 'auto-fade' }"
-    aria-label="Recording controls"
+    :aria-label="t('recordingControls')"
     @mousedown="startDrag"
     @mouseenter="showTooltips"
     @mouseleave="hideTooltips"
@@ -87,21 +90,21 @@ onBeforeUnmount(() => {
       :class="{ countdown: phase === 'countdown' }"
       aria-live="polite"
     >
-      {{ phase === "countdown" ? "Ready" : recordingTime }}
+      {{ phase === "countdown" ? t('ready') : recordingTime }}
     </p>
 
     <!-- Play/Pause -->
     <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ phase === 'paused' ? 'Resume recording' : 'Pause recording' }}</span>
+          <span>{{ phase === 'paused' ? t('resumeRecording') : t('pauseRecording') }}</span>
           <KeyboardChip :shortcut="getShortcut('hud.playPause', 'Alt+Shift+P')" size="sm" />
         </div>
       </template>
       <button
         class="control"
         :aria-label="
-          phase === 'paused' ? 'Resume recording' : 'Pause recording'
+          phase === 'paused' ? t('resumeRecording') : t('pauseRecording')
         "
         :disabled="phase === 'countdown'"
         @mousedown.stop
@@ -115,13 +118,13 @@ onBeforeUnmount(() => {
     <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>Stop recording</span>
+          <span>{{ t('stopRecording') }}</span>
           <KeyboardChip :shortcut="getShortcut('hud.startStopRecording', 'Alt+Shift+R')" size="sm" />
         </div>
       </template>
       <button
         class="control stop"
-        aria-label="Stop recording"
+        :aria-label="t('stopRecording')"
         @mousedown.stop
         @click="emit('stop')"
       >
@@ -133,14 +136,14 @@ onBeforeUnmount(() => {
     <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ microphoneEnabled ? 'Turn microphone off' : 'Turn microphone on' }}</span>
+          <span>{{ microphoneEnabled ? t('turnMicOff') : t('turnMicOn') }}</span>
           <KeyboardChip :shortcut="getShortcut('hud.toggleMic', 'Alt+Shift+M')" size="sm" />
         </div>
       </template>
       <button
         class="control"
         :aria-label="
-          microphoneEnabled ? 'Turn microphone off' : 'Turn microphone on'
+          microphoneEnabled ? t('turnMicOff') : t('turnMicOn')
         "
         :disabled="phase === 'countdown'"
         @mousedown.stop
@@ -154,13 +157,13 @@ onBeforeUnmount(() => {
     <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ cameraEnabled ? 'Turn camera off' : 'Turn camera on' }}</span>
+          <span>{{ cameraEnabled ? t('turnCameraOff') : t('turnCameraOn') }}</span>
           <KeyboardChip :shortcut="getShortcut('hud.toggleCamera', 'Alt+Shift+C')" size="sm" />
         </div>
       </template>
       <button
         class="control"
-        :aria-label="cameraEnabled ? 'Turn camera off' : 'Turn camera on'"
+        :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
         :disabled="phase === 'countdown'"
         @mousedown.stop
         @click="emit('camera')"
@@ -173,14 +176,14 @@ onBeforeUnmount(() => {
     <Tooltip position="left" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ systemAudioEnabled ? 'Turn system audio off' : 'Turn system audio on' }}</span>
+          <span>{{ systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn') }}</span>
           <KeyboardChip :shortcut="getShortcut('hud.toggleSystemAudio', 'Alt+Shift+A')" size="sm" />
         </div>
       </template>
       <button
         class="control"
         :aria-label="
-          systemAudioEnabled ? 'Turn system audio off' : 'Turn system audio on'
+          systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')
         "
         :disabled="phase === 'countdown'"
         @mousedown.stop

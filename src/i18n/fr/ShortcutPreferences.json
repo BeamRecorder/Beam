@@ -1,0 +1,14 @@
+{
+  "startStopRecording": "Démarrer / Arrêter l'enregistrement",
+  "startStopRecordingDesc": "Raccourci global pour basculer l'enregistrement",
+  "pauseResume": "Pause / Reprendre",
+  "pauseResumeDesc": "Raccourci global pour mettre en pause ou reprendre",
+  "micOnOff": "Micro On / Off",
+  "micOnOffDesc": "Activer/couper le microphone",
+  "cameraOnOff": "Caméra On / Off",
+  "cameraOnOffDesc": "Activer/couper la caméra",
+  "systemAudioOnOff": "Audio système On / Off",
+  "systemAudioOnOffDesc": "Activer/couper l'audio système",
+  "conflictWith": "Conflit avec \"{name}\"",
+  "failedToUpdate": "Échec de la mise à jour du raccourci"
+}

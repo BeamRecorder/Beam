@@ -3,10 +3,18 @@ import enHUD from './en/HUD.json'
 import enTopbarHUD from './en/TopbarHUD.json'
 import enHudPreferences from './en/HudPreferences.json'
 import enSettingsPanel from './en/SettingsPanel.json'
+import enProjectPicker from './en/ProjectPicker.json'
+import enCameraPreviewOverlay from './en/CameraPreviewOverlay.json'
+import enShortcutPreferences from './en/ShortcutPreferences.json'
+import enRecorderBar from './en/RecorderBar.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
 import frSettingsPanel from './fr/SettingsPanel.json'
+import frProjectPicker from './fr/ProjectPicker.json'
+import frCameraPreviewOverlay from './fr/CameraPreviewOverlay.json'
+import frShortcutPreferences from './fr/ShortcutPreferences.json'
+import frRecorderBar from './fr/RecorderBar.json'
 
 const messages = {
   en: {
@@ -14,12 +22,20 @@ const messages = {
     TopbarHUD: enTopbarHUD,
     HudPreferences: enHudPreferences,
     SettingsPanel: enSettingsPanel,
+    ProjectPicker: enProjectPicker,
+    CameraPreviewOverlay: enCameraPreviewOverlay,
+    ShortcutPreferences: enShortcutPreferences,
+    RecorderBar: enRecorderBar,
   },
   fr: {
     HUD: frHUD,
     TopbarHUD: frTopbarHUD,
     HudPreferences: frHudPreferences,
     SettingsPanel: frSettingsPanel,
+    ProjectPicker: frProjectPicker,
+    CameraPreviewOverlay: frCameraPreviewOverlay,
+    ShortcutPreferences: frShortcutPreferences,
+    RecorderBar: frRecorderBar,
   },
 }
 

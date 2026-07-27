@@ -2,16 +2,18 @@
 import { ref, onMounted } from 'vue'
 import { usePreferencesStore } from '~/stores/preferences'
 import ShortcutInput from '~/ui/input/ShortcutInput.vue'
+import { useTranslate } from '~/i18n/useTranslate'
 
+const { t } = useTranslate('ShortcutPreferences')
 const preferencesStore = usePreferencesStore()
 const shortcutErrors = ref<Record<string, string>>({})
 
 const shortcutDefinitions = [
-  { id: 'hud.startStopRecording', label: 'Start / Stop Recording', description: 'Global shortcut to toggle recording' },
-  { id: 'hud.playPause', label: 'Pause / Resume', description: 'Global shortcut to pause or resume recording' },
-  { id: 'hud.toggleMic', label: 'Microphone On / Off', description: 'Toggle microphone audio' },
-  { id: 'hud.toggleCamera', label: 'Camera On / Off', description: 'Toggle camera overlay' },
-  { id: 'hud.toggleSystemAudio', label: 'System Audio On / Off', description: 'Toggle internal system audio' },
+  { id: 'hud.startStopRecording', label: () => t('startStopRecording'), description: () => t('startStopRecordingDesc') },
+  { id: 'hud.playPause', label: () => t('pauseResume'), description: () => t('pauseResumeDesc') },
+  { id: 'hud.toggleMic', label: () => t('micOnOff'), description: () => t('micOnOffDesc') },
+  { id: 'hud.toggleCamera', label: () => t('cameraOnOff'), description: () => t('cameraOnOffDesc') },
+  { id: 'hud.toggleSystemAudio', label: () => t('systemAudioOnOff'), description: () => t('systemAudioOnOffDesc') },
 ]
 
 const defaultShortcuts: Record<string, string> = {
@@ -45,8 +47,8 @@ const checkDuplicates = (targetId: string, value: string) => {
   for (const [id, s] of Object.entries(shortcuts)) {
     if (id !== targetId && s.keys && s.keys.toLowerCase() === normalizedVal) {
       const match = shortcutDefinitions.find((def) => def.id === id)
-      const name = match?.label || id
-      errors[targetId] = `Conflict with "${name}"`
+      const name = match ? match.label() : id
+      errors[targetId] = t('conflictWith', { name })
       shortcutErrors.value = errors
       return true
     }
@@ -85,7 +87,7 @@ const updateShortcut = async (id: string, keys: string) => {
   } catch (err: any) {
     shortcutErrors.value = {
       ...shortcutErrors.value,
-      [id]: err?.message || 'Failed to update shortcut',
+      [id]: err?.message || t('failedToUpdate'),
     }
   }
 }
@@ -104,8 +106,8 @@ const resetShortcut = async (id: string) => {
       class="shortcut-row"
     >
       <div class="shortcut-info">
-        <span class="shortcut-label">{{ item.label }}</span>
-        <span class="shortcut-desc">{{ item.description }}</span>
+        <span class="shortcut-label">{{ item.label() }}</span>
+        <span class="shortcut-desc">{{ item.description() }}</span>
       </div>
       <div class="shortcut-input-container">
         <ShortcutInput

@@ -2,6 +2,9 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Settings, Video } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('CameraPreviewOverlay')
 
 const props = withDefaults(defineProps<{ cameraId: string; shadowSize?: string; cornerRadius?: string; isRecording?: boolean; isHovered?: boolean; theme?: 'light' | 'dark' | 'system'; windowOverlay?: boolean }>(), { shadowSize: 'md', cornerRadius: 'md', isRecording: false, isHovered: false, theme: 'light' })
 const emit = defineEmits<{ (event: 'update:shadowSize', value: string): void; (event: 'update:cornerRadius', value: string): void }>()
@@ -33,7 +36,7 @@ const loadCamera = async (cameraId: string) => {
     cameraStream.value = stream
     if (videoRef.value) { videoRef.value.srcObject = stream; await videoRef.value.play() }
   } catch (error) {
-    if (request === cameraRequest) streamError.value = error instanceof Error ? error.message : 'Unable to start the camera.'
+    if (request === cameraRequest) streamError.value = error instanceof Error ? error.message : t('unableToStartCamera')
   } finally {
     if (request === cameraRequest) isLoading.value = false
   }
@@ -66,13 +69,13 @@ onBeforeUnmount(() => {
 <template>
   <main v-show="cameraId !== 'off'" class="camera-overlay-container" :data-theme="theme" :class="[`shadow-${shadowSize}`, `radius-${cornerRadius}`, { 'is-recording': isRecording, 'is-hovered': isHovered }]">
     <video ref="videoRef" autoplay muted playsinline class="camera-overlay-video" />
-    <div v-if="isLoading" class="camera-overlay-skeleton" aria-label="Loading camera preview"><div /></div>
+    <div v-if="isLoading" class="camera-overlay-skeleton" :aria-label="t('loadingCameraPreview')"><div /></div>
     <div v-else-if="streamError" class="camera-overlay-error"><Video :size="24" /></div>
-    <button v-if="settingsOpen" type="button" class="settings-dismiss-layer" aria-label="Close camera appearance settings" @pointerdown.stop="settingsOpen = false" />
-    <button type="button" class="settings-button" aria-label="Camera appearance" @pointerdown.stop @click.stop="settingsOpen = !settingsOpen"><Settings :size="17" /></button>
+    <button v-if="settingsOpen" type="button" class="settings-dismiss-layer" :aria-label="t('closeCameraSettings')" @pointerdown.stop="settingsOpen = false" />
+    <button type="button" class="settings-button" :aria-label="t('cameraAppearance')" @pointerdown.stop @click.stop="settingsOpen = !settingsOpen"><Settings :size="17" /></button>
     <section v-if="settingsOpen" class="camera-settings" @pointerdown.stop>
-      <span>Shadow</span><div class="shadow-options"><Button v-for="value in ['none', 'sm', 'md', 'lg']" :key="value" variant="tab" size="sm" :class="{ active: shadowSize === value }" @click="emit('update:shadowSize', value)">{{ value }}</Button></div>
-      <span>Corner</span><div class="corner-options"><Button v-for="value in ['none', 'sm', 'md', 'lg', 'full']" :key="value" variant="tab" size="sm" :class="{ active: cornerRadius === value }" @click="emit('update:cornerRadius', value)">{{ value }}</Button></div>
+      <span>{{ t('shadow') }}</span><div class="shadow-options"><Button v-for="value in ['none', 'sm', 'md', 'lg']" :key="value" variant="tab" size="sm" :class="{ active: shadowSize === value }" @click="emit('update:shadowSize', value)">{{ t(value) }}</Button></div>
+      <span>{{ t('corner') }}</span><div class="corner-options"><Button v-for="value in ['none', 'sm', 'md', 'lg', 'full']" :key="value" variant="tab" size="sm" :class="{ active: cornerRadius === value }" @click="emit('update:cornerRadius', value)">{{ t(value) }}</Button></div>
     </section>
   </main>
 </template>

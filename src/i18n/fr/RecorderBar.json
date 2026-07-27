@@ -1,0 +1,13 @@
+{
+  "recordingControls": "Contrôles d'enregistrement",
+  "ready": "Prêt",
+  "resumeRecording": "Reprendre l'enregistrement",
+  "pauseRecording": "Mettre en pause",
+  "stopRecording": "Arrêter l'enregistrement",
+  "turnMicOff": "Couper le micro",
+  "turnMicOn": "Activer le micro",
+  "turnCameraOff": "Désactiver la caméra",
+  "turnCameraOn": "Activer la caméra",
+  "turnSystemAudioOff": "Couper l'audio système",
+  "turnSystemAudioOn": "Activer l'audio système"
+}

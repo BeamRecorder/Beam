@@ -21,6 +21,9 @@ import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import ProgressBar from "../ui/progressbar/ProgressBar.vue";
 import { capture } from "../../api/capture";
 import type { CaptureProject } from "../../api/types/capture-api";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("ProjectPicker");
 
 const vFocus = {
   mounted: (el: HTMLElement) => {
@@ -132,7 +135,7 @@ const openSelectedProject = () => {
 
 const formatDate = (date: string) => {
   const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) return "Date inconnue";
+  if (Number.isNaN(parsedDate.getTime())) return t("dateUnknown");
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
     parsedDate,
   );
@@ -346,12 +349,12 @@ defineExpose({
   >
     <div class="project-picker-heading">
       <div>
-        <h1 id="project-picker-title">Projects</h1>
+        <h1 id="project-picker-title">{{ t('projects') }}</h1>
         <p>
           {{
             compact
-              ? "Switch project"
-              : "Choose a recording to continue editing."
+              ? t('switchProject')
+              : t('chooseRecording')
           }}
         </p>
       </div>
@@ -362,8 +365,8 @@ defineExpose({
           class="new-project-button"
           :icon="Plus"
           icon-only
-          aria-label="New project"
-          tooltip="New project"
+          :aria-label="t('newProject')"
+          :tooltip="t('newProject')"
           @click="openNewProjectDialog"
         />
         <Button
@@ -373,8 +376,8 @@ defineExpose({
           :icon="RefreshCw"
           icon-only
           :loading="isLoading"
-          aria-label="Refresh projects"
-          tooltip="Refresh projects"
+          :aria-label="t('refreshProjects')"
+          :tooltip="t('refreshProjects')"
           @click="loadProjects"
         />
       </div>
@@ -383,7 +386,7 @@ defineExpose({
     <div
       v-if="isLoading"
       class="project-grid project-skeleton-grid"
-      aria-label="Loading projects"
+      :aria-label="t('loadingProjects')"
     >
       <div v-for="index in 6" :key="index" class="project-card-skeleton">
         <Skeleton
@@ -415,13 +418,13 @@ defineExpose({
       role="alert"
     >
       <p>{{ errorMessage }}</p>
-      <Button variant="link" size="sm" @click="loadProjects">Try again</Button>
+      <Button variant="link" size="sm" @click="loadProjects">{{ t('tryAgain') }}</Button>
     </div>
 
     <div v-else-if="projects.length === 0" class="project-state">
       <Film class="empty-icon" />
-      <p>No projects yet.</p>
-      <span>Record a demo first and it will appear here.</span>
+      <p>{{ t('noProjects') }}</p>
+      <span>{{ t('recordDemoFirst') }}</span>
     </div>
 
     <div v-else v-bind="containerProps" class="projects-viewport">
@@ -467,7 +470,7 @@ defineExpose({
                     "
                     :src="thumbnailCache[project.id] || project.thumbnailSrc!"
                     class="project-preview-thumb"
-                    alt="preview"
+                    :alt="t('preview')"
                     loading="lazy"
                   />
                   <Film v-else class="preview-placeholder-icon" />
@@ -488,7 +491,7 @@ defineExpose({
                   <span
                     v-if="project.id === selectedProjectId"
                     class="selected-indicator"
-                    aria-label="Selected"
+                    :aria-label="t('selected')"
                   >
                     <Check />
                   </span>
@@ -550,7 +553,7 @@ defineExpose({
                               v-if="deleteConfirmProjectId === project.id"
                             >
                               <p class="delete-confirm-text">
-                                Delete "{{ project.name }}"?
+                                {{ t('deleteConfirm', { name: project.name }) }}
                               </p>
                               <p
                                 v-if="deleteError"
@@ -567,14 +570,14 @@ defineExpose({
                                     deleteConfirmProjectId = null;
                                     deleteError = '';
                                   "
-                                  >Cancel</Button
+                                  >{{ t('cancel') }}</Button
                                 >
                                 <Button
                                   variant="danger"
                                   size="sm"
                                   :loading="deleteBusy"
                                   @click.stop="handleDeleteProject"
-                                  >Delete</Button
+                                  >{{ t('delete') }}</Button
                                 >
                               </div>
                             </template>
@@ -589,7 +592,7 @@ defineExpose({
                                   close();
                                 "
                               >
-                                Rename
+                                {{ t('rename') }}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -598,7 +601,7 @@ defineExpose({
                                 class="menu-action-item delete-item"
                                 @click.stop="confirmDeleteProject(project)"
                               >
-                                Delete
+                                {{ t('delete') }}
                               </Button>
                             </template>
                           </div>
@@ -608,7 +611,7 @@ defineExpose({
                   </div>
                   <span class="project-card-meta">
                     {{ project.sessionCount }}
-                    {{ project.sessionCount === 1 ? "session" : "sessions" }} ·
+                    {{ project.sessionCount === 1 ? t('session') : t('sessions') }} ·
                     {{ formatDate(project.updatedAt) }}
                   </span>
                 </div>
@@ -628,7 +631,7 @@ defineExpose({
           :icon="ArrowLeft"
           @click="emit('back')"
         >
-          Back
+          {{ t('back') }}
         </Button>
         <Button
           variant="primary"
@@ -637,7 +640,7 @@ defineExpose({
           :disabled="!selectedProject"
           @click="openSelectedProject"
         >
-          Open project
+          {{ t('openProject') }}
         </Button>
       </ButtonGroup>
     </footer>
@@ -645,7 +648,7 @@ defineExpose({
     <!-- New Project Dialog -->
     <Dialog
       :is-open="isNewProjectOpen"
-      title="New project"
+      :title="t('newProject')"
       size="sm"
       @close="isNewProjectOpen = false"
     >
@@ -654,7 +657,7 @@ defineExpose({
       >
         <Input
           v-model="newProjectName"
-          placeholder="Project name"
+          :placeholder="t('projectName')"
           :disabled="newProjectBusy"
           autofocus
           @keyup.enter="handleCreateProject"
@@ -673,14 +676,14 @@ defineExpose({
             size="sm"
             :disabled="newProjectBusy"
             @click="close"
-            >Cancel</Button
+            >{{ t('cancel') }}</Button
           >
           <Button
             variant="primary"
             size="sm"
             :loading="newProjectBusy"
             @click="handleCreateProject"
-            >Create</Button
+            >{{ t('create') }}</Button
           >
         </ButtonGroup>
       </template>
