@@ -1,0 +1,14 @@
+{
+  "add": "Add",
+  "video": "Video",
+  "image": "Image",
+  "sound": "Sound",
+  "text": "Text",
+  "goToStart": "Go to Start",
+  "goToEnd": "Go to End",
+  "play": "Play",
+  "pause": "Pause",
+  "doubleClickResetZoom": "Double click to reset zoom",
+  "zoomOut": "Zoom Out",
+  "zoomIn": "Zoom In"
+}
