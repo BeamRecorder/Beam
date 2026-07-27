@@ -4,6 +4,9 @@ import { Crop, Check } from '@lucide/vue'
 import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue'
 import Button from '../../ui/button/Button.vue'
 import type { OutputCanvasPreset } from './output-canvas'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('CanvasToolbar')
 
 const props = defineProps<{ preset: OutputCanvasPreset; canCrop: boolean; isCropping: boolean }>()
 const emit = defineEmits<{ (event: 'select:preset', preset: Exclude<OutputCanvasPreset, 'custom'>): void; (event: 'toggle:crop'): void }>()
@@ -13,17 +16,17 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 
 <template>
   <div class="canvas-toolbar">
-    <PopoverMenuButton transparent :label="preset" :aria-label="`Format ${preset}`" :items="items" @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)" />
+    <PopoverMenuButton transparent :label="preset" :aria-label="t('formatPreset', { preset })" :items="items" @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)" />
     <Button
       class="crop-button"
       :variant="isCropping ? 'primary' : 'outline'"
       size="xs"
       :icon="isCropping ? Check : Crop"
       :disabled="!canCrop"
-      :tooltip="canCrop ? (isCropping ? 'Valider le recadrage' : 'Recadrer l\'élément sélectionné') : 'Sélectionnez un élément pour le recadrer'"
+      :tooltip="canCrop ? (isCropping ? t('confirmCrop') : t('cropSelected')) : t('selectElementToCrop')"
       @click="emit('toggle:crop')"
     >
-      {{ isCropping ? 'OK' : 'Recadrer' }}
+      {{ isCropping ? t('ok') : t('crop') }}
     </Button>
   </div>
 </template>

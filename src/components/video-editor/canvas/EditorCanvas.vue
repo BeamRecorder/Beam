@@ -21,6 +21,9 @@ import { useCompositionMedia } from './composables/useCompositionMedia';
 import { useCursorOverlay } from './composables/useCursorOverlay';
 import { useCameraZoom } from './composables/useCameraZoom';
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
+import { useTranslate } from '~/i18n/useTranslate';
+
+const { t } = useTranslate('EditorCanvas');
 
 const props = defineProps<{
   isPlaying: boolean;
@@ -372,7 +375,7 @@ onUnmounted(() => {
       width="100%"
       height="100%"
       radius="var(--radius-lg)"
-      aria-label="Video preview loading"
+      :aria-label="t('videoPreviewLoading')"
     />
     <div v-if="selectedTransformLayer && !isCropping" class="webcam-selection" :style="transformAndCrop.webcamHandleStyle.value" @pointerdown="transformAndCrop.beginWebcamDrag($event, 'move')" @pointermove="transformAndCrop.moveWebcamDrag" @pointerup="transformAndCrop.endWebcamDrag" @pointercancel="transformAndCrop.endWebcamDrag">
       <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginWebcamDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveWebcamDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endWebcamDrag(event)" />
@@ -398,7 +401,7 @@ onUnmounted(() => {
           :icon="Check"
           @click.stop="commitCrop"
         >
-          OK
+          {{ t('ok') }}
         </Button>
       </div>
       <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />

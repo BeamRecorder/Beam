@@ -4,6 +4,9 @@ import VideoProjectEdition from './VideoProjectEdition.vue'
 import ExportPopover from '../export/ExportPopover.vue'
 import Button from '~/ui/button/Button.vue'
 import { ArrowLeft, Minus, X, Undo2, Redo2 } from '@lucide/vue'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('Topbar')
 
 withDefaults(
   defineProps<{
@@ -106,7 +109,7 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
         @click.stop="handleExit"
         class="exit-btn titlebar-btn"
       >
-        Exit to HUD
+        {{ t('exitToHUD') }}
       </Button>
       <VideoProjectEdition
         :project="project"
@@ -119,7 +122,7 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
           size="xs"
           :icon="Undo2"
           :disabled="!canUndo"
-          tooltip="Undo (Ctrl+Z)"
+          :tooltip="t('undoTooltip')"
           :tooltip-position="historyTooltipPosition || 'bottom'"
           @click.stop="emit('undo')"
         />
@@ -128,7 +131,7 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
           size="xs"
           :icon="Redo2"
           :disabled="!canRedo"
-          tooltip="Redo (Ctrl+Y)"
+          :tooltip="t('redoTooltip')"
           :tooltip-position="historyTooltipPosition || 'bottom'"
           @click.stop="emit('redo')"
         />
@@ -139,14 +142,14 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
       <ExportPopover v-if="exportRequest" :request="exportRequest" />
       <div class="window-controls">
         <button
-          aria-label="Minimize"
+          :aria-label="t('minimize')"
           class="titlebar-btn control-btn"
           @click.stop="minimizeApp"
         >
           <Minus class="btn-icon" />
         </button>
         <button
-          aria-label="Close"
+          :aria-label="t('close')"
           class="titlebar-btn control-btn close-btn"
           @click.stop="closeApp"
         >

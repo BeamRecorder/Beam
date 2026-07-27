@@ -23,6 +23,14 @@ import enAudioClipPropertiesPanel from './en/AudioClipPropertiesPanel.json'
 import enZoomPanel from './en/ZoomPanel.json'
 import enAudioPanel from './en/AudioPanel.json'
 import enShadowDirectionGroup from './en/ShadowDirectionGroup.json'
+import enTopbar from './en/Topbar.json'
+import enCursorPanel from './en/CursorPanel.json'
+import enVideoProjectEdition from './en/VideoProjectEdition.json'
+import enVideoEditor from './en/VideoEditor.json'
+import enPropertiesPanel from './en/PropertiesPanel.json'
+import enEditorCanvas from './en/EditorCanvas.json'
+import enCanvasToolbar from './en/CanvasToolbar.json'
+import enUndoRedoToast from './en/UndoRedoToast.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
@@ -47,6 +55,14 @@ import frAudioClipPropertiesPanel from './fr/AudioClipPropertiesPanel.json'
 import frZoomPanel from './fr/ZoomPanel.json'
 import frAudioPanel from './fr/AudioPanel.json'
 import frShadowDirectionGroup from './fr/ShadowDirectionGroup.json'
+import frTopbar from './fr/Topbar.json'
+import frCursorPanel from './fr/CursorPanel.json'
+import frVideoProjectEdition from './fr/VideoProjectEdition.json'
+import frVideoEditor from './fr/VideoEditor.json'
+import frPropertiesPanel from './fr/PropertiesPanel.json'
+import frEditorCanvas from './fr/EditorCanvas.json'
+import frCanvasToolbar from './fr/CanvasToolbar.json'
+import frUndoRedoToast from './fr/UndoRedoToast.json'
 
 const messages = {
   en: {
@@ -74,6 +90,14 @@ const messages = {
     ZoomPanel: enZoomPanel,
     AudioPanel: enAudioPanel,
     ShadowDirectionGroup: enShadowDirectionGroup,
+    Topbar: enTopbar,
+    CursorPanel: enCursorPanel,
+    VideoProjectEdition: enVideoProjectEdition,
+    VideoEditor: enVideoEditor,
+    PropertiesPanel: enPropertiesPanel,
+    EditorCanvas: enEditorCanvas,
+    CanvasToolbar: enCanvasToolbar,
+    UndoRedoToast: enUndoRedoToast,
   },
   fr: {
     HUD: frHUD,
@@ -100,6 +124,14 @@ const messages = {
     ZoomPanel: frZoomPanel,
     AudioPanel: frAudioPanel,
     ShadowDirectionGroup: frShadowDirectionGroup,
+    Topbar: frTopbar,
+    CursorPanel: frCursorPanel,
+    VideoProjectEdition: frVideoProjectEdition,
+    VideoEditor: frVideoEditor,
+    PropertiesPanel: frPropertiesPanel,
+    EditorCanvas: frEditorCanvas,
+    CanvasToolbar: frCanvasToolbar,
+    UndoRedoToast: frUndoRedoToast,
   },
 }
 

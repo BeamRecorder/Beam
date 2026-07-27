@@ -2,6 +2,9 @@
 import { ref, watch } from 'vue'
 import { Undo2, Redo2 } from '@lucide/vue'
 import type { HistoryAction } from '../composables/useEditorUndoRedo'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('UndoRedoToast')
 
 const props = defineProps<{
   action: HistoryAction | null
@@ -41,7 +44,7 @@ watch(
       <Undo2 v-if="currentAction.type === 'undo'" class="toast-icon" :size="15" />
       <Redo2 v-else class="toast-icon" :size="15" />
       <span class="toast-text">
-        {{ currentAction.type === 'undo' ? 'Undo' : 'Redo' }}
+        {{ currentAction.type === 'undo' ? t('undo') : t('redo') }}
       </span>
     </div>
   </Transition>
@@ -58,13 +61,13 @@ watch(
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: rgba(18, 18, 22, 0.85);
+  background: var(--color-bg-element);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border-dark, rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full, 9999px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), var(--shadow-md);
-  color: var(--text-primary, #ffffff);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2px;

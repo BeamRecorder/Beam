@@ -6,6 +6,9 @@ import ColorInput from '~/ui/input/ColorInput.vue'
 import ShadowDirectionGroup from '../ShadowDirectionGroup.vue'
 import type { ShadowDirection } from '../shadow-types'
 import { cursorOptions, type CursorType } from './useCursorReplacer'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('CursorPanel')
 
 defineProps<{
   selectedCursor: CursorType
@@ -39,7 +42,7 @@ const emit = defineEmits<{
 <template>
   <div class="options-group">
     <div class="prop-item">
-      <label class="prop-label">Cursor Style</label>
+      <label class="prop-label">{{ t('cursorStyle') }}</label>
       <Select 
         :model-value="selectedCursor" 
         :options="cursorOptions" 
@@ -54,20 +57,20 @@ const emit = defineEmits<{
         :default-value="24"
         :min="16" 
         :max="64"
-        label="Cursor Size"
+        :label="t('cursorSize')"
         :format-value="(val) => `${val}px`"
         @update:modelValue="emit('update:cursorSize', $event)"
       />
     </div>
 
     <ColorInput 
-      label="Cursor Color"
+      :label="t('cursorColor')"
       :model-value="cursorColor"
       @update:modelValue="emit('update:cursorColor', $event)"
     />
 
     <div class="prop-row">
-      <span class="prop-label">Drop Shadow</span>
+      <span class="prop-label">{{ t('dropShadow') }}</span>
       <Switch 
         :model-value="enableShadow" 
         @update:modelValue="emit('update:enableShadow', $event)"
@@ -81,20 +84,20 @@ const emit = defineEmits<{
             :model-value="shadowBlur" 
             :min="1" 
             :max="24"
-            label="Shadow Blur"
+            :label="t('shadowBlur')"
             :format-value="(val) => `${val}px`"
             @update:modelValue="emit('update:shadowBlur', $event)"
           />
         </div>
 
         <ColorInput 
-          label="Shadow Color"
+          :label="t('shadowColor')"
           :model-value="shadowColor"
           @update:modelValue="emit('update:shadowColor', $event)"
         />
 
         <div class="prop-item">
-          <span class="sub-label">Direction</span>
+          <span class="sub-label">{{ t('direction') }}</span>
           <ShadowDirectionGroup
             :model-value="shadowDirection"
             @update:model-value="emit('update:shadowDirection', $event)"
@@ -104,7 +107,7 @@ const emit = defineEmits<{
     </Transition>
 
     <div class="prop-row">
-      <span class="prop-label">Click Spring</span>
+      <span class="prop-label">{{ t('clickSpring') }}</span>
       <Switch
         :model-value="enableClickSpring"
         @update:modelValue="emit('update:enableClickSpring', $event)"
@@ -112,7 +115,7 @@ const emit = defineEmits<{
     </div>
 
     <div class="prop-row">
-      <span class="prop-label">Click Ripple Effect</span>
+      <span class="prop-label">{{ t('clickRippleEffect') }}</span>
       <Switch 
         :model-value="enableRipple" 
         @update:modelValue="emit('update:enableRipple', $event)"
@@ -126,14 +129,14 @@ const emit = defineEmits<{
             :model-value="rippleSize" 
             :min="10" 
             :max="80"
-            label="Ripple Size"
+            :label="t('rippleSize')"
             :format-value="(val) => `${val}px`"
             @update:modelValue="emit('update:rippleSize', $event)"
           />
         </div>
 
         <ColorInput 
-          label="Ripple Color"
+          :label="t('rippleColor')"
           :model-value="rippleColor"
           @update:modelValue="emit('update:rippleColor', $event)"
         />

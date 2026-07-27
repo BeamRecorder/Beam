@@ -3,6 +3,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import ProjectPicker from '../hud/ProjectPicker.vue'
 import { ChevronDown, LoaderCircle } from '@lucide/vue'
 import type { CaptureProject } from '../../api/types/capture-api'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('VideoProjectEdition')
 
 const props = withDefaults(
   defineProps<{
@@ -61,13 +64,13 @@ onUnmounted(() => {
   <div ref="switcherRef" class="project-switcher">
     <button
       class="project-name-button"
-      :title="project?.name || 'Untitled project'"
+      :title="project?.name || t('untitledProject')"
       aria-haspopup="true"
       :aria-expanded="projectMenuOpen"
       @click="toggleProjectMenu"
     >
-      <span class="project-title">{{ project?.name || 'Untitled project' }}</span>
-      <LoaderCircle class="save-spinner" :class="{ 'is-visible': isSaving }" aria-label="Saving project" />
+      <span class="project-title">{{ project?.name || t('untitledProject') }}</span>
+      <LoaderCircle class="save-spinner" :class="{ 'is-visible': isSaving }" :aria-label="t('savingProject')" />
       <ChevronDown class="chevron-icon" />
     </button>
 

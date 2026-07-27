@@ -1,0 +1,13 @@
+{
+  "cursorStyle": "Style du curseur",
+  "cursorSize": "Taille du curseur",
+  "cursorColor": "Couleur du curseur",
+  "dropShadow": "Ombre portée",
+  "shadowBlur": "Flou d'ombre",
+  "shadowColor": "Couleur de l'ombre",
+  "direction": "Direction",
+  "clickSpring": "Effet de clic",
+  "clickRippleEffect": "Effet de vague",
+  "rippleSize": "Taille de vague",
+  "rippleColor": "Couleur de vague"
+}

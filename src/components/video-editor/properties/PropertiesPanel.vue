@@ -25,6 +25,9 @@ import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
 import type { NormalizedTransform } from "../composition/composition-types";
 import type { ShadowDirection } from "./shadow-types";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("PropertiesPanel");
 
 const props = defineProps<{
   activeTab: string;
@@ -161,7 +164,7 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
   <div class="properties-island">
     <div class="panel-header">
       <h3 class="panel-title">
-        {{ activeTab === "canvas" ? "Background" : "Properties" }}
+        {{ activeTab === 'canvas' ? t('background') : t('properties') }}
       </h3>
     </div>
 

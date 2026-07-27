@@ -11,6 +11,9 @@ import Topbar from "./Topbar.vue";
 import { useVideoEditor } from "./composables/useVideoEditor";
 import { capture } from "../../api/capture";
 import { Sparkles, AlertCircle } from "@lucide/vue";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("VideoEditor");
 import { useExportJob } from "../export/useExportJob";
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from './canvas/output-canvas';
 
@@ -335,7 +338,7 @@ onBeforeUnmount(() => {
     <div v-if="isExporting" class="export-notice-banner">
       <Sparkles :size="14" class="banner-icon" />
       <span>
-        Exportation en cours. Les modifications effectuées en direct n'auront pas d'effet sur le fichier actuellement en cours d'exportation.
+        {{ t('exportBanner') }}
       </span>
     </div>
 

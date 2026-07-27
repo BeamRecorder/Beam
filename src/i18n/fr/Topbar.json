@@ -1,0 +1,7 @@
+{
+  "exitToHUD": "Quitter vers le HUD",
+  "undoTooltip": "Annuler (Ctrl+Z)",
+  "redoTooltip": "Rétablir (Ctrl+Y)",
+  "minimize": "Réduire",
+  "close": "Fermer"
+}
