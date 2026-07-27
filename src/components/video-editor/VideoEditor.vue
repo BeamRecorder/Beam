@@ -256,12 +256,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
 
 const handleSelectTransformLayer = (layerId: string) => {
   selectedCompositionLayerId.value = layerId;
-  const layer = composition.value.layers.find((l) => l.id === layerId);
-  if (layer?.kind === 'caption') {
-    activeTab.value = 'caption';
-  } else {
-    activeTab.value = 'clip';
-  }
+  activeTab.value = 'clip';
 };
 
 const handleCropKeyDown = (e: KeyboardEvent) => {
@@ -393,7 +388,7 @@ onBeforeUnmount(() => {
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
           @update:composition="composition = $event; editorState.scheduleSave()"
-          @select-caption="selectedCompositionLayerId = $event; activeTab = 'caption'"
+          @select-caption="selectedCompositionLayerId = $event; activeTab = 'clip'"
           @delete-clip="deleteSelectedCompositionLayer()"
           @update:clip-rate="updateSelectedClipPlaybackRate"
           @update:clip-volume="updateSelectedAudioVolume"
@@ -482,13 +477,13 @@ onBeforeUnmount(() => {
             selectedCompositionLayerId = $event;
             activeTab = $event === 'system-audio' || $event === 'microphone'
               ? 'audio'
-              : composition.layers.find(l => l.id === $event)?.kind === 'caption' ? 'caption' : 'clip';
+              : 'clip';
           "
           @toggle:composition-layer="toggleCompositionLayer"
           @select:base-video="selectBaseVideo"
           @select:camera-layer="
             selectedCompositionLayerId = $event;
-            activeTab = composition.layers.find(l => l.id === $event)?.kind === 'caption' ? 'caption' : 'clip';
+            activeTab = 'clip';
           "
           @toggle:camera="toggleCamera"
           @toggle:camera-layer="toggleSelectedCamera"

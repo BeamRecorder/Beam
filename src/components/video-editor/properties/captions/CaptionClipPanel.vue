@@ -1,373 +1,189 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
-import Input from '~/ui/input/Input.vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Select from '~/ui/select/Select.vue'
-import Button from '~/ui/button/Button.vue'
-import { Type, Sparkles, Trash2, Box, Moon } from '@lucide/vue'
-import type { CaptionCompositionLayer } from '../../composition/composition-types'
+import { computed, toRef } from "vue";
+import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
+import Input from "~/ui/input/Input.vue";
+import BigSlider from "~/ui/slider/BigSlider.vue";
+import Select from "~/ui/select/Select.vue";
+import Button from "~/ui/button/Button.vue";
+import { Box, Moon, Sparkles, Trash2, Type } from "@lucide/vue";
+import type {
+  CaptionCompositionLayer,
+  CaptionStyle,
+  CaptionWord,
+} from "../../composition/composition-types";
+import { useCaptionDraft } from "./useCaptionDraft";
 
-const props = defineProps<{
-  layer: CaptionCompositionLayer | null;
-}>()
-
+const props = defineProps<{ layer: CaptionCompositionLayer | null }>();
 const emit = defineEmits<{
-  (event: 'update', layer: CaptionCompositionLayer): void;
-  (event: 'delete', layerId: string): void;
-}>()
+  (event: "update", layer: CaptionCompositionLayer): void;
+  (event: "delete", layerId: string): void;
+}>();
 
-const captionStyle = computed(() => ({
-  color: '#ffffff',
+const { draft, flush, update } = useCaptionDraft(
+  toRef(props, "layer"),
+  (layer) => emit("update", layer),
+);
+
+const captionStyle = computed<CaptionStyle>(() => ({
+  color: "#ffffff",
   fontSize: 36,
-  shadowColor: 'rgba(0, 0, 0, 0.85)',
+  shadowColor: "rgba(0, 0, 0, 0.85)",
   shadowBlur: 0,
-  shadowDirection: 'bottom-right',
-  placement: 'bottom',
-  boxColor: '#000000',
+  shadowDirection: "bottom-right",
+  placement: "bottom",
+  boxColor: "#000000",
   boxPadding: 6,
   boxRadius: 4,
-  ...props.layer?.caption?.style,
-}))
+  ...draft.value?.caption.style,
+}));
+const sentences = computed(() => draft.value?.caption.sentences ?? []);
 
-const sentences = computed(() => props.layer?.caption?.sentences ?? [])
+const updateStyle = (
+  key: keyof CaptionStyle,
+  value: CaptionStyle[keyof CaptionStyle],
+) => update((layer) => ({
+  ...layer,
+  caption: {
+    ...layer.caption,
+    style: { ...layer.caption.style, [key]: value },
+  },
+}));
 
-const updateStyle = (key: string, value: any) => {
-  if (!props.layer) return
-  const currentCaption = props.layer.caption ?? { sentences: [], style: {} as any }
-  emit('update', {
-    ...props.layer,
-    caption: {
-      ...currentCaption,
-      style: {
-        ...currentCaption.style,
-        [key]: value,
-      },
-    },
-  })
-}
+const updateWord = (
+  sentenceId: string,
+  index: number,
+  key: keyof CaptionWord,
+  value: string,
+) => {
+  const parsedValue = key === "text" ? value : Number(value);
+  if (key !== "text" && (!Number.isFinite(parsedValue) || parsedValue < 0)) return;
 
-const handleCustomTextUpdate = (value: string) => {
-  updateStyle('customText', value)
-}
-
-const updateWord = (sentenceId: string, index: number, key: 'text' | 'startMs' | 'endMs', value: string) => {
-  if (!props.layer || !props.layer.caption?.sentences) return
-  const updatedSentences = props.layer.caption.sentences.map((sentence) =>
-    sentence.id !== sentenceId
-      ? sentence
-      : (() => {
-          const words = sentence.words.map((word, wordIndex) =>
-            wordIndex === index ? { ...word, [key]: key === 'text' ? value : Number(value) } : word
-          )
-          return {
-            ...sentence,
-            words,
-            text: words.map((w) => w.text).join(' '),
-            startMs: words[0]?.startMs || 0,
-            endMs: words.at(-1)?.endMs || 0,
-          }
-        })()
-  )
-  emit('update', {
-    ...props.layer,
-    startMs: updatedSentences[0]?.startMs || props.layer.startMs,
-    endMs: updatedSentences.at(-1)?.endMs || props.layer.endMs,
-    caption: { ...props.layer.caption, sentences: updatedSentences },
-  })
-}
+  update((layer) => {
+    const sentences = layer.caption.sentences.map((sentence) => {
+      if (sentence.id !== sentenceId) return sentence;
+      const words = sentence.words.map((word, wordIndex) =>
+        wordIndex === index ? { ...word, [key]: parsedValue } : word,
+      );
+      return {
+        ...sentence,
+        words,
+        text: words.map((word) => word.text).join(" "),
+        startMs: words[0]?.startMs ?? sentence.startMs,
+        endMs: words.at(-1)?.endMs ?? sentence.endMs,
+      };
+    });
+    return {
+      ...layer,
+      startMs: sentences[0]?.startMs ?? layer.startMs,
+      endMs: sentences.at(-1)?.endMs ?? layer.endMs,
+      caption: { ...layer.caption, sentences },
+    };
+  });
+};
 
 const shadowDirectionOptions = [
-  { value: 'all', label: 'All around' },
-  { value: 'bottom', label: 'Bottom' },
-  { value: 'bottom-right', label: 'Bottom Right' },
-  { value: 'top-left', label: 'Top Left' },
-]
+  { value: "all", label: "All around" },
+  { value: "bottom", label: "Bottom" },
+  { value: "bottom-right", label: "Bottom right" },
+  { value: "top-left", label: "Top left" },
+];
 </script>
 
 <template>
-  <div class="caption-clip-panel">
-    <template v-if="layer">
-      <!-- AI Badge Header -->
-      <div v-if="layer.isAiGenerated" class="ai-badge-header">
-        <Sparkles :size="14" class="ai-badge-icon" />
-        <span>Generated by AI (Whisper)</span>
-      </div>
+  <div v-if="draft" class="caption-clip-panel">
+    <div v-if="draft.isAiGenerated" class="ai-badge-header">
+      <Sparkles :size="14" class="ai-badge-icon" />
+      <span>Generated by AI (Whisper)</span>
+    </div>
 
-      <!-- 1. Display Text Section -->
-      <div class="panel-group">
-        <h4 class="group-title"><Type :size="14" /> Display Text</h4>
+    <section class="panel-group">
+      <h4 class="group-title"><Type :size="14" /> Display text</h4>
+      <div class="field-group">
+        <label class="field-label">Custom override</label>
+        <Input
+          :model-value="captionStyle.customText ?? ''"
+          placeholder="Type custom text..."
+          size="md"
+          @update:model-value="updateStyle('customText', String($event))"
+          @blur="flush"
+        />
+      </div>
+    </section>
+
+    <section class="panel-group">
+      <h4 class="group-title"><Type :size="14" /> Typography</h4>
+      <div class="field-grid-2">
         <div class="field-group">
-          <label class="field-label">Custom Override Text</label>
-          <Input
-            :model-value="captionStyle.customText ?? ''"
-            placeholder="Type custom text..."
-            size="md"
-            @update:model-value="handleCustomTextUpdate(String($event))"
-          />
+          <label class="field-label">Text color</label>
+          <ColorPicker :model-value="captionStyle.color" @update:model-value="updateStyle('color', $event)" />
         </div>
       </div>
+      <BigSlider label="Font size" :model-value="captionStyle.fontSize" :min="12" :max="120" :step="1" :default-value="36" :format-value="(value) => `${value}px`" @update:model-value="updateStyle('fontSize', $event)" />
+    </section>
 
-      <div class="divider"></div>
-
-      <!-- 2. Typography Section -->
-      <div class="panel-group">
-        <h4 class="group-title"><Type :size="14" /> Typography</h4>
-        <div class="field-grid-2">
-          <div class="field-group">
-            <label class="field-label">Text Color</label>
-            <ColorPicker
-              :model-value="captionStyle.color || '#ffffff'"
-              @update:model-value="updateStyle('color', $event)"
-            />
-          </div>
-        </div>
-
-        <BigSlider
-          label="Font Size"
-          :model-value="captionStyle.fontSize || 36"
-          :min="12"
-          :max="120"
-          :step="1"
-          :default-value="36"
-          :format-value="(val) => `${val}px`"
-          @update:model-value="updateStyle('fontSize', $event)"
-        />
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- 3. Text Outline & 3D Extrusion Section -->
-      <div class="panel-group">
-        <h4 class="group-title"><Box :size="14" /> Text Outline & 3D Extrusion</h4>
-        <div class="field-grid-2">
-          <div class="field-group">
-            <label class="field-label">Outline Color</label>
-            <ColorPicker
-              :model-value="captionStyle.boxColor || '#000000'"
-              @update:model-value="updateStyle('boxColor', $event)"
-            />
-          </div>
-        </div>
-
-        <BigSlider
-          label="Outline Thickness"
-          :model-value="captionStyle.boxPadding ?? 6"
-          :min="0"
-          :max="30"
-          :step="1"
-          :default-value="6"
-          :format-value="(val) => `${val}px`"
-          @update:model-value="updateStyle('boxPadding', $event)"
-        />
-
-        <BigSlider
-          label="3D Extrusion Depth"
-          :model-value="captionStyle.boxRadius ?? 4"
-          :min="0"
-          :max="20"
-          :step="1"
-          :default-value="4"
-          :format-value="(val) => `${val}px`"
-          @update:model-value="updateStyle('boxRadius', $event)"
-        />
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- 4. Text Shadow Section -->
-      <div class="panel-group">
-        <h4 class="group-title"><Moon :size="14" /> Text Shadow</h4>
-        <div class="field-grid-2">
-          <div class="field-group">
-            <label class="field-label">Shadow Color</label>
-            <ColorPicker
-              :model-value="captionStyle.shadowColor || 'rgba(0, 0, 0, 0.75)'"
-              @update:model-value="updateStyle('shadowColor', $event)"
-            />
-          </div>
-          <div class="field-group">
-            <label class="field-label">Direction</label>
-            <Select
-              :items="shadowDirectionOptions"
-              :model-value="captionStyle.shadowDirection || 'bottom-right'"
-              size="sm"
-              @update:model-value="updateStyle('shadowDirection', $event)"
-            />
-          </div>
-        </div>
-
-        <BigSlider
-          label="Shadow Blur"
-          :model-value="captionStyle.shadowBlur || 0"
-          :min="0"
-          :max="50"
-          :step="1"
-          :default-value="0"
-          :format-value="(val) => `${val}px`"
-          @update:model-value="updateStyle('shadowBlur', $event)"
-        />
-      </div>
-
-      <div class="divider" v-if="sentences.length"></div>
-
-      <!-- 5. Word-by-Word Editor -->
-      <div v-if="sentences.length" class="panel-group">
-        <h4 class="group-title">Word Timings & Editing</h4>
-        <div
-          v-for="sentence in sentences"
-          :key="sentence.id"
-          class="sentence-box"
-        >
-          <p class="sentence-text">{{ sentence.text }}</p>
-          <div
-            v-for="(word, index) in sentence.words"
-            :key="`${sentence.id}-${index}`"
-            class="word-row"
-          >
-            <Input
-              :model-value="word.text"
-              size="sm"
-              @update:model-value="updateWord(sentence.id, index, 'text', String($event))"
-            />
-            <Input
-              :model-value="word.startMs"
-              type="number"
-              size="sm"
-              @update:model-value="updateWord(sentence.id, index, 'startMs', String($event))"
-            />
-            <Input
-              :model-value="word.endMs"
-              type="number"
-              size="sm"
-              @update:model-value="updateWord(sentence.id, index, 'endMs', String($event))"
-            />
-          </div>
+    <section class="panel-group">
+      <h4 class="group-title"><Box :size="14" /> Outline & extrusion</h4>
+      <div class="field-grid-2">
+        <div class="field-group">
+          <label class="field-label">Outline color</label>
+          <ColorPicker :model-value="captionStyle.boxColor ?? '#000000'" @update:model-value="updateStyle('boxColor', $event)" />
         </div>
       </div>
+      <BigSlider label="Outline thickness" :model-value="captionStyle.boxPadding ?? 6" :min="0" :max="30" :step="1" :default-value="6" :format-value="(value) => `${value}px`" @update:model-value="updateStyle('boxPadding', $event)" />
+      <BigSlider label="3D extrusion depth" :model-value="captionStyle.boxRadius ?? 4" :min="0" :max="20" :step="1" :default-value="4" :format-value="(value) => `${value}px`" @update:model-value="updateStyle('boxRadius', $event)" />
+    </section>
 
-      <!-- Sticky Danger Delete Action -->
-      <div class="danger-zone">
-        <Button
-          variant="danger"
-          size="sm"
-          block
-          :icon="Trash2"
-          class="delete-btn"
-          @click="emit('delete', layer.id)"
-        >
-          Delete Caption Clip
-        </Button>
+    <section class="panel-group">
+      <h4 class="group-title"><Moon :size="14" /> Text shadow</h4>
+      <div class="field-grid-2">
+        <div class="field-group">
+          <label class="field-label">Shadow color</label>
+          <ColorPicker :model-value="captionStyle.shadowColor" @update:model-value="updateStyle('shadowColor', $event)" />
+        </div>
+        <div class="field-group">
+          <label class="field-label">Direction</label>
+          <Select :items="shadowDirectionOptions" :model-value="captionStyle.shadowDirection ?? 'bottom-right'" size="sm" @update:model-value="updateStyle('shadowDirection', $event as CaptionStyle['shadowDirection'])" />
+        </div>
       </div>
-    </template>
+      <BigSlider label="Shadow blur" :model-value="captionStyle.shadowBlur" :min="0" :max="50" :step="1" :default-value="0" :format-value="(value) => `${value}px`" @update:model-value="updateStyle('shadowBlur', $event)" />
+    </section>
+
+    <section v-if="sentences.length" class="panel-group timing-group">
+      <div>
+        <h4 class="group-title">Word timings</h4>
+        <p class="group-description">Edit each word and its start/end time in milliseconds.</p>
+      </div>
+      <div class="word-labels" aria-hidden="true"><span>Word</span><span>In</span><span>Out</span></div>
+      <div v-for="sentence in sentences" :key="sentence.id" class="sentence-box">
+        <p class="sentence-text">{{ sentence.text }}</p>
+        <div v-for="(word, index) in sentence.words" :key="`${sentence.id}-${index}`" class="word-row">
+          <Input :model-value="word.text" size="sm" aria-label="Caption word" @update:model-value="updateWord(sentence.id, index, 'text', String($event))" @blur="flush" />
+          <Input :model-value="word.startMs" type="number" size="sm" min="0" aria-label="Word start time" @update:model-value="updateWord(sentence.id, index, 'startMs', String($event))" @blur="flush" />
+          <Input :model-value="word.endMs" type="number" size="sm" min="0" aria-label="Word end time" @update:model-value="updateWord(sentence.id, index, 'endMs', String($event))" @blur="flush" />
+        </div>
+      </div>
+    </section>
+
+    <div class="danger-zone">
+      <Button variant="danger" size="sm" block :icon="Trash2" @click="emit('delete', draft.id)">Delete caption clip</Button>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.caption-clip-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-  min-height: 100%;
-}
-
-.ai-badge-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  color: var(--color-primary);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.ai-badge-icon {
-  color: var(--color-primary);
-}
-
-.panel-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.divider {
-  height: 1px;
-  background-color: var(--color-border);
-  margin: 4px 0;
-}
-
-.group-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.field-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: end;
-}
-
-.field-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.sentence-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 8px;
-}
-
-.sentence-text {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.word-row {
-  display: grid;
-  grid-template-columns: 1fr 58px 58px;
-  gap: 4px;
-}
-
-.danger-zone {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
-  padding-top: 12px;
-  padding-bottom: 8px;
-  background: var(--color-bg-element);
-  z-index: 10;
-  box-shadow: 0 -10px 15px var(--color-bg-element);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.delete-btn {
-  width: 100% !important;
-  display: flex !important;
-  justify-content: center !important;
-}
+.caption-clip-panel { display: flex; flex: 1; min-height: 100%; flex-direction: column; gap: 14px; padding-bottom: 8px; }
+.ai-badge-header { display: flex; align-items: center; gap: 6px; border: 1px solid rgba(99, 102, 241, .25); border-radius: var(--radius-sm); background: rgba(99, 102, 241, .12); color: var(--color-primary); padding: 7px 10px; font-size: 11px; font-weight: 700; }
+.ai-badge-icon { color: var(--color-primary); }
+.panel-group { display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--color-border); padding-bottom: 14px; }
+.group-title { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text-primary); font-size: 12px; font-weight: 700; }
+.group-description { margin: 3px 0 0; color: var(--text-muted); font-size: 11px; line-height: 1.35; }
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: end; }
+.field-label, .word-labels { color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.timing-group { gap: 8px; }
+.word-labels, .word-row { display: grid; grid-template-columns: minmax(0, 1fr) 62px 62px; gap: 6px; }
+.word-labels span:not(:first-child) { text-align: center; }
+.sentence-box { display: flex; flex-direction: column; gap: 5px; }
+.sentence-text { margin: 0; color: var(--text-primary); font-size: 11px; font-weight: 700; }
+.danger-zone { position: sticky; bottom: 0; z-index: 1; margin-top: auto; padding-top: 6px; background: var(--color-bg-element); }
 </style>

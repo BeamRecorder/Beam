@@ -177,7 +177,7 @@ const runTranscription = async () => {
         size="sm"
         :icon="Download"
         @click="downloadModel"
-        class="w-full"
+        block
       >
         Download Model
       </Button>
@@ -191,7 +191,8 @@ const runTranscription = async () => {
         :icon="hasAiCaptions ? RefreshCw : Sparkles"
         :disabled="!modelReady || !selectedSource || progress.status === 'loading' || progress.status === 'running'"
         @click="runTranscription"
-        class="w-full generate-btn"
+        block
+        class="generate-btn"
       >
         {{ progress.status === 'idle' ? (hasAiCaptions ? 'Regenerate AI Captions' : 'Generate Captions') : progress.message }}
       </Button>
@@ -284,10 +285,6 @@ const runTranscription = async () => {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.03em;
-}
-
-.w-full {
-  width: 100%;
 }
 
 .generate-btn {

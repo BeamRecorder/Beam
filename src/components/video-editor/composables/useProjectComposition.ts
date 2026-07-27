@@ -305,7 +305,7 @@ export function useProjectComposition(options: {
       composition.value.layers.push(layer);
       await saveComposition();
       selectedCompositionLayerId.value = layer.id;
-      activeTab.value = "caption";
+      activeTab.value = "clip";
       return;
     }
     const asset = await capture.pickProjectCompositionMedia(
@@ -386,7 +386,7 @@ export function useProjectComposition(options: {
     composition.value.layers.push(layer);
     await saveComposition();
     selectedCompositionLayerId.value = layer.id;
-    activeTab.value = "caption";
+    activeTab.value = "clip";
   };
 
   const updateCaption = async (

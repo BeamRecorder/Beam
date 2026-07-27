@@ -175,6 +175,14 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @delete="emit('delete-clip')"
       />
 
+      <CaptionClipPanel
+        v-else-if="activeTab === 'clip' && activeCaptionLayer"
+        key="caption-clip-panel"
+        :layer="activeCaptionLayer"
+        @update="emit('update:caption', $event)"
+        @delete="emit('delete-clip')"
+      />
+
       <ClipPropertiesPanel
         v-else-if="activeTab === 'clip'"
         key="clip-properties-panel"
@@ -247,14 +255,6 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update="emit('update:zoom', $event)"
         @delete="emit('delete:zoom')"
         @generate="emit('generate:zooms')"
-      />
-
-      <CaptionClipPanel
-        v-else-if="activeTab === 'caption' && activeCaptionLayer"
-        key="caption-clip-panel"
-        :layer="activeCaptionLayer"
-        @update="emit('update:caption', $event)"
-        @delete="emit('delete-clip')"
       />
 
       <CaptionPanel
