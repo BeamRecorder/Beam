@@ -6,6 +6,7 @@ import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import Switch from "~/ui/switch/Switch.vue";
 import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import ShadowDirectionGroup from "../ShadowDirectionGroup.vue";
+import BorderAndFrameControls from "./BorderAndFrameControls.vue";
 import type { ShadowDirection } from "../shadow-types";
 import {
   Unlink,
@@ -13,6 +14,7 @@ import {
   RotateCcw,
 } from "@lucide/vue";
 import type { NormalizedTransform } from "../../composition/composition-types";
+import type { ClipFrame } from "../../composition/composition-types";
 
 const props = defineProps<{
   selectedClip: {
@@ -28,6 +30,14 @@ const props = defineProps<{
     shadowColor?: string;
     shadowDirection?: string;
     cornerRadius?: string | number;
+    borderEnabled?: boolean;
+    borderColor?: string;
+    borderWidth?: number;
+    frame?: ClipFrame;
+    frameTitle?: string;
+    frameColor?: string;
+    frameShowMenu?: boolean;
+    frameShowScrollbars?: boolean;
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
   } | null;
@@ -42,6 +52,7 @@ const emit = defineEmits<{
     e: "update:shadow",
     shadow: { size: string; color?: string; direction?: string },
   ): void;
+  (e: "update:appearance", appearance: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void;
   (e: "update:clipTransform", transform: NormalizedTransform): void;
   (e: "reset:clipTransform"): void;
   (e: "unlink"): void;
@@ -280,6 +291,17 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
             @update:modelValue="emit('update:isMirrored', $event)"
           />
         </div>
+        <BorderAndFrameControls
+          :border-enabled="selectedClip.borderEnabled"
+          :border-color="selectedClip.borderColor"
+          :border-width="selectedClip.borderWidth"
+          :frame="selectedClip.frame"
+          :frame-title="selectedClip.frameTitle"
+          :frame-color="selectedClip.frameColor"
+          :frame-show-menu="selectedClip.frameShowMenu"
+          :frame-show-scrollbars="selectedClip.frameShowScrollbars"
+          @update="emit('update:appearance', $event)"
+        />
       </div>
 
       <!-- Speed Boost / Rate Controls -->

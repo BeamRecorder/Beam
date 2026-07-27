@@ -2,7 +2,6 @@ import { watch, onUnmounted } from "vue";
 import {
   activeLayersAt,
   getCaptionTransform,
-  type ClipAppearance,
   type CompositionLayer,
   type NormalizedTransform,
   type ProjectComposition,
@@ -11,6 +10,7 @@ import {
   drawWebcamOverlay,
   webcamSettingsForAppearance,
 } from "../../composition/webcam/webcam-zoom";
+import { drawDecoratedMedia } from "../../composition/appearance/render-decorated-media";
 
 export interface UseCompositionMediaOptions {
   composition: () => ProjectComposition;
@@ -21,44 +21,6 @@ export interface UseCompositionMediaOptions {
   isCropping?: () => boolean | undefined;
   onRenderOnce: () => void;
 }
-
-const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
-  cornerRadius: "sm",
-  shadowSize: "md",
-  shadowColor: "#000000",
-  shadowDirection: "bottom",
-};
-
-export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
-  if (!appearance) return 16;
-  const radiusMap: Record<string, number> = { none: 0, sm: 8, md: 16, lg: 24, full: Number.MAX_SAFE_INTEGER };
-  if (typeof appearance.cornerRadius === "number") return appearance.cornerRadius;
-  return radiusMap[appearance.cornerRadius] ?? 16;
-};
-
-export const applyClipShadow = (
-  ctx: CanvasRenderingContext2D,
-  appearance: ClipAppearance | undefined,
-  width: number,
-) => {
-  const style = appearance ?? DEFAULT_CLIP_APPEARANCE;
-  const blur = { none: 0, sm: 10, md: 20, lg: 32 }[style.shadowSize];
-  const direction = style.shadowDirection;
-  ctx.shadowColor = style.shadowColor;
-  ctx.shadowBlur = blur;
-  ctx.shadowOffsetX =
-    direction === "top-left"
-      ? -width * 0.018
-      : direction === "bottom-right"
-        ? width * 0.018
-        : 0;
-  ctx.shadowOffsetY =
-    direction === "top-left"
-      ? -width * 0.018
-      : direction === "all"
-        ? 0
-        : width * 0.018;
-};
 
 export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const compositionImages = new Map<string, HTMLImageElement>();
@@ -418,20 +380,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       const dh = transform.height * videoWindow.dh;
       const appearance = layer.appearance;
 
-      ctx.save();
-      applyClipShadow(ctx, appearance, dw);
-      ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
-      ctx.beginPath();
-      ctx.roundRect(
-        dx,
-        dy,
-        dw,
-        dh,
-        Math.min(radiusForAppearance(appearance), dw / 2, dh / 2),
-      );
-      ctx.fill();
-      ctx.clip();
-
       const sourceWidth =
         asset instanceof HTMLVideoElement
           ? asset.videoWidth
@@ -445,27 +393,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         options.isCropping?.() && layer.id === selectedTransformLayer?.id;
       const crop = isThisLayerCropping ? undefined : layer.crop;
 
-      if (layer.isMirrored) {
-        ctx.translate(dx * 2 + dw, 0);
-        ctx.scale(-1, 1);
-      }
-
-      if (crop && sourceWidth > 0 && sourceHeight > 0) {
-        ctx.drawImage(
-          asset,
-          crop.x * sourceWidth,
-          crop.y * sourceHeight,
-          crop.width * sourceWidth,
-          crop.height * sourceHeight,
-          dx,
-          dy,
-          dw,
-          dh,
-        );
-      } else {
-        ctx.drawImage(asset, dx, dy, dw, dh);
-      }
-      ctx.restore();
+      drawDecoratedMedia(ctx, { source: asset, sourceRect: crop && sourceWidth > 0 && sourceHeight > 0 ? { x: crop.x * sourceWidth, y: crop.y * sourceHeight, width: crop.width * sourceWidth, height: crop.height * sourceHeight } : undefined, rect: { x: dx, y: dy, width: dw, height: dh }, appearance, title: layer.name, mirrored: layer.isMirrored });
     }
   };
 
@@ -519,6 +447,8 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
           ? webcamDraft
           : layer.transform,
         isThisLayerCropping ? undefined : layer.crop,
+        layer.appearance,
+        layer.name,
       );
       ctx.restore();
     }

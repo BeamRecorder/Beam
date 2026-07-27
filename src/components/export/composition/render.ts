@@ -1,4 +1,7 @@
-import { clampFocusToScale, zoomAtTime } from "../../video-editor/zoom/zoom-playback";
+import {
+  clampFocusToScale,
+  zoomAtTime,
+} from "../../video-editor/zoom/zoom-playback";
 import {
   buttonEventsBetween,
   cursorStateAt,
@@ -7,38 +10,109 @@ import type {
   CompositionSnapshot,
   CursorRenderSettings,
 } from "../export-types";
-import { activeLayersAt, getCaptionTransform } from "../../video-editor/composition/composition-types";
+import {
+  activeLayersAt,
+  getCaptionTransform,
+} from "../../video-editor/composition/composition-types";
 import { activeVisualTracksAt } from "../../video-editor/composition/visual-stack";
-import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-editor/composition/webcam/webcam-zoom";
-import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
-import { applyClipShadow, radiusForAppearance } from '../../video-editor/canvas/composables/useCompositionMedia';
-import { cursorClickSpringScale } from '../../video-editor/composables/cursor-click-spring';
-import { cursorShadowOffset } from '../../video-editor/properties/cursor/cursor-shadow';
-import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../../video-editor/properties/cursor/cursor-rendering';
+import {
+  drawWebcamOverlay,
+  webcamSettingsForAppearance,
+} from "../../video-editor/composition/webcam/webcam-zoom";
+import {
+  coverSourceRect,
+  framedMediaRect,
+  outputPoint,
+} from "../../video-editor/canvas/output-canvas";
+import { drawDecoratedMedia } from "../../video-editor/composition/appearance/render-decorated-media";
+import { cursorClickSpringScale } from "../../video-editor/composables/cursor-click-spring";
+import { cursorShadowOffset } from "../../video-editor/properties/cursor/cursor-shadow";
+import {
+  cursorHotspotAtSize,
+  cursorPositionAt,
+  cursorTypeAt,
+} from "../../video-editor/properties/cursor/cursor-rendering";
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
-export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
+export const OUTPUT_FALLBACK_COLOR = "#1e1e24";
 
-type RenderableVideo = CanvasImageSource & { videoWidth?: number; videoHeight?: number; displayWidth?: number; displayHeight?: number };
+type RenderableVideo = CanvasImageSource & {
+  videoWidth?: number;
+  videoHeight?: number;
+  displayWidth?: number;
+  displayHeight?: number;
+};
 const sourceDimensions = (source: CanvasImageSource) => {
-  if (source instanceof HTMLVideoElement) return { width: source.videoWidth, height: source.videoHeight };
-  if (source instanceof HTMLImageElement) return { width: source.naturalWidth, height: source.naturalHeight };
-  if (typeof VideoFrame !== "undefined" && source instanceof VideoFrame) return { width: source.displayWidth, height: source.displayHeight };
+  if (source instanceof HTMLVideoElement)
+    return { width: source.videoWidth, height: source.videoHeight };
+  if (source instanceof HTMLImageElement)
+    return { width: source.naturalWidth, height: source.naturalHeight };
+  if (typeof VideoFrame !== "undefined" && source instanceof VideoFrame)
+    return { width: source.displayWidth, height: source.displayHeight };
   return { width: 0, height: 0 };
 };
 
-function drawSnapshotBackground(ctx: CanvasRenderingContext2D, snapshot: CompositionSnapshot, background: CanvasImageSource | null | undefined) {
-  const { width, height } = snapshot.canvas; const value = snapshot.background;
+function drawSnapshotBackground(
+  ctx: CanvasRenderingContext2D,
+  snapshot: CompositionSnapshot,
+  background: CanvasImageSource | null | undefined,
+) {
+  const { width, height } = snapshot.canvas;
+  const value = snapshot.background;
   if (!value && !background) return;
-  if (value?.kind === 'color') { ctx.fillStyle = value.color; ctx.fillRect(0, 0, width, height); return; }
-  if (value?.kind === 'gradient') {
-    const gradient = value.gradient.type === 'radial' ? ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) / 2) : (() => { const radians = (value.gradient.angle - 90) * Math.PI / 180; const dx = Math.cos(radians) * width / 2; const dy = Math.sin(radians) * height / 2; return ctx.createLinearGradient(width / 2 - dx, height / 2 - dy, width / 2 + dx, height / 2 + dy); })();
-    value.gradient.stops.forEach((stop) => gradient.addColorStop(stop.position, `${stop.color}${Math.round(stop.alpha * 255).toString(16).padStart(2, '0')}`)); ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height); return;
+  if (value?.kind === "color") {
+    ctx.fillStyle = value.color;
+    ctx.fillRect(0, 0, width, height);
+    return;
+  }
+  if (value?.kind === "gradient") {
+    const gradient =
+      value.gradient.type === "radial"
+        ? ctx.createRadialGradient(
+            width / 2,
+            height / 2,
+            0,
+            width / 2,
+            height / 2,
+            Math.max(width, height) / 2,
+          )
+        : (() => {
+            const radians = ((value.gradient.angle - 90) * Math.PI) / 180;
+            const dx = (Math.cos(radians) * width) / 2;
+            const dy = (Math.sin(radians) * height) / 2;
+            return ctx.createLinearGradient(
+              width / 2 - dx,
+              height / 2 - dy,
+              width / 2 + dx,
+              height / 2 + dy,
+            );
+          })();
+    value.gradient.stops.forEach((stop) =>
+      gradient.addColorStop(
+        stop.position,
+        `${stop.color}${Math.round(stop.alpha * 255)
+          .toString(16)
+          .padStart(2, "0")}`,
+      ),
+    );
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    return;
   }
   if (!background) return;
-  const blur = Math.min(48, snapshot.blurPercent * .48); ctx.save();
-  if (blur > 0) { const overscan = blur * 2; ctx.filter = `blur(${blur}px)`; ctx.drawImage(background, -overscan, -overscan, width + overscan * 2, height + overscan * 2); }
-  else ctx.drawImage(background, 0, 0, width, height);
+  const blur = Math.min(48, snapshot.blurPercent * 0.48);
+  ctx.save();
+  if (blur > 0) {
+    const overscan = blur * 2;
+    ctx.filter = `blur(${blur}px)`;
+    ctx.drawImage(
+      background,
+      -overscan,
+      -overscan,
+      width + overscan * 2,
+      height + overscan * 2,
+    );
+  } else ctx.drawImage(background, 0, 0, width, height);
   ctx.restore();
 }
 
@@ -60,9 +134,11 @@ export function drawCompositionLayers(
     if (onlyLayerId && layer.id !== onlyLayerId) continue;
     if (
       layer.kind === "audio" ||
-      (layer.kind === 'video' && layer.reactToZoom) ||
-      (!onlyLayerId && (followsZoom ? layer.kind !== 'video' : layer.kind === 'video'))
-    ) continue;
+      (layer.kind === "video" && layer.reactToZoom) ||
+      (!onlyLayerId &&
+        (followsZoom ? layer.kind !== "video" : layer.kind === "video"))
+    )
+      continue;
 
     if (layer.kind === "caption") {
       if (followsZoom) continue; // Captions DO NOT follow camera zoom; they render in unzoomed screen space overlay
@@ -167,18 +243,16 @@ export function drawCompositionLayers(
         }
         ctx.strokeStyle = outlineColor;
         ctx.lineWidth = strokeWidthPx * 2;
-        ctx.strokeText(
-          textToDisplay,
-          centerX,
-          centerY,
-          Math.max(10, boxW - 8),
-        );
+        ctx.strokeText(textToDisplay, centerX, centerY, Math.max(10, boxW - 8));
         ctx.restore();
         ctx.shadowColor = "transparent";
       }
 
       // 4. Main Text Fill
-      if (extrusionPx > 0 || (outlineColor && outlineColor !== "transparent" && strokeWidthPx > 0)) {
+      if (
+        extrusionPx > 0 ||
+        (outlineColor && outlineColor !== "transparent" && strokeWidthPx > 0)
+      ) {
         ctx.shadowColor = "transparent";
       }
       ctx.fillStyle = style.color || "#ffffff";
@@ -190,25 +264,28 @@ export function drawCompositionLayers(
     const asset = visuals.get(layer.assetId);
     if (!asset) continue;
     const transform = layer.transform ?? { x: 0, y: 0, width: 1, height: 1 };
-    const { width: sourceWidth, height: sourceHeight } = sourceDimensions(asset);
+    const { width: sourceWidth, height: sourceHeight } =
+      sourceDimensions(asset);
     const dx = transform.x * width;
     const dy = transform.y * height;
     const dw = transform.width * width;
     const dh = transform.height * height;
-    ctx.save();
-    applyClipShadow(ctx, layer.appearance, dw);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.01)";
-    ctx.beginPath();
-    ctx.roundRect(dx, dy, dw, dh, Math.min(radiusForAppearance(layer.appearance), dw / 2, dh / 2));
-    ctx.fill();
-    ctx.clip();
-    if (layer.isMirrored) {
-      ctx.translate(dx * 2 + dw, 0);
-      ctx.scale(-1, 1);
-    }
-    if (layer.crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(asset, layer.crop.x * sourceWidth, layer.crop.y * sourceHeight, layer.crop.width * sourceWidth, layer.crop.height * sourceHeight, dx, dy, dw, dh);
-    else ctx.drawImage(asset, dx, dy, dw, dh);
-    ctx.restore();
+    drawDecoratedMedia(ctx, {
+      source: asset,
+      sourceRect:
+        layer.crop && sourceWidth > 0 && sourceHeight > 0
+          ? {
+              x: layer.crop.x * sourceWidth,
+              y: layer.crop.y * sourceHeight,
+              width: layer.crop.width * sourceWidth,
+              height: layer.crop.height * sourceHeight,
+            }
+          : undefined,
+      rect: { x: dx, y: dy, width: dw, height: dh },
+      appearance: layer.appearance,
+      title: layer.name,
+      mirrored: layer.isMirrored,
+    });
   }
 }
 
@@ -225,8 +302,10 @@ export function renderCompositionFrame(
   ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
   ctx.fillRect(0, 0, width, height);
   if (
-    !snapshot.video.enabled || !video ||
-    (video instanceof HTMLVideoElement && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
+    !snapshot.video.enabled ||
+    !video ||
+    (video instanceof HTMLVideoElement &&
+      video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
   ) {
     drawSnapshotBackground(ctx, snapshot, background);
     drawCompositionLayers(ctx, snapshot, time, visuals, true);
@@ -240,8 +319,10 @@ export function renderCompositionFrame(
   );
   const scale = zoom?.scale ?? 1;
   const focus = zoom?.focus ?? { cx: 0.5, cy: 0.5 };
-  const sourceWidth = video.videoWidth || video.displayWidth || snapshot.video.width;
-  const sourceHeight = video.videoHeight || video.displayHeight || snapshot.video.height;
+  const sourceWidth =
+    video.videoWidth || video.displayWidth || snapshot.video.width;
+  const sourceHeight =
+    video.videoHeight || video.displayHeight || snapshot.video.height;
   const crop = snapshot.composition.baseVideoCrop;
   const cropX = crop ? crop.x * sourceWidth : 0;
   const cropY = crop ? crop.y * sourceHeight : 0;
@@ -254,15 +335,33 @@ export function renderCompositionFrame(
     source.x += cropX;
     source.y += cropY;
   }
-  const media = snapshot.canvas.showBackground ? framedMediaRect(cropWidth, cropHeight, width, height) : { x: 0, y: 0, width, height };
-  const baseTransform = snapshot.composition.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 };
+  const media = snapshot.canvas.showBackground
+    ? framedMediaRect(cropWidth, cropHeight, width, height)
+    : { x: 0, y: 0, width, height };
+  const baseTransform = snapshot.composition.baseVideoTransform ?? {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1,
+  };
   const positionedMedia = {
     x: media.x + baseTransform.x * media.width,
     y: media.y + baseTransform.y * media.height,
     width: media.width * baseTransform.width,
     height: media.height * baseTransform.height,
   };
-  const outputFocus = zoom?.mode === 'auto' ? outputPoint(focus.cx, focus.cy, sourceWidth, sourceHeight, width, height, snapshot.canvas.showBackground) : focus;
+  const outputFocus =
+    zoom?.mode === "auto"
+      ? outputPoint(
+          focus.cx,
+          focus.cy,
+          sourceWidth,
+          sourceHeight,
+          width,
+          height,
+          snapshot.canvas.showBackground,
+        )
+      : focus;
   const cameraFocus = clampFocusToScale(outputFocus, scale);
   const isBaseVideoMirrored = snapshot.composition.baseVideoIsMirrored ?? false;
   ctx.save();
@@ -277,15 +376,14 @@ export function renderCompositionFrame(
     ctx.translate(width / 2, height / 2);
     ctx.scale(scale, scale);
     ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-    applyClipShadow(ctx, snapshot.composition.baseVideoAppearance, positionedMedia.width);
-    ctx.beginPath();
-    ctx.roundRect(positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height, Math.min(radiusForAppearance(snapshot.composition.baseVideoAppearance), positionedMedia.width / 2, positionedMedia.height / 2));
-    ctx.clip();
-    if (isBaseVideoMirrored) {
-      ctx.translate(positionedMedia.x * 2 + positionedMedia.width, 0);
-      ctx.scale(-1, 1);
-    }
-    ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
+    drawDecoratedMedia(ctx, {
+      source: video,
+      sourceRect: source,
+      rect: positionedMedia,
+      appearance: snapshot.composition.baseVideoAppearance,
+      title: "Screen recording",
+      mirrored: isBaseVideoMirrored,
+    });
     ctx.restore();
   };
 
@@ -296,15 +394,48 @@ export function renderCompositionFrame(
       for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
         if (layer.kind !== "video" || !layer.reactToZoom) continue;
         const webcam = visuals?.get(layer.assetId);
-        if (webcam) drawWebcamOverlay(ctx, webcam, width, height, scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance, layer.isMirrored), layer.transform, layer.crop);
+        if (webcam)
+          drawWebcamOverlay(
+            ctx,
+            webcam,
+            width,
+            height,
+            scale,
+            webcamSettingsForAppearance(
+              layer.appearance ?? layer.webcamAppearance,
+              layer.isMirrored,
+            ),
+            layer.transform,
+            layer.crop,
+            layer.appearance,
+            layer.name,
+          );
       }
     } else if (track.layer) {
-      drawCompositionLayers(ctx, snapshot, time, visuals, false, positionedMedia, sourceWidth, track.layer.id);
+      drawCompositionLayers(
+        ctx,
+        snapshot,
+        time,
+        visuals,
+        false,
+        positionedMedia,
+        sourceWidth,
+        track.layer.id,
+      );
     }
   }
   for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
     if (layer.kind === "caption") {
-      drawCompositionLayers(ctx, snapshot, time, visuals, false, positionedMedia, sourceWidth, layer.id);
+      drawCompositionLayers(
+        ctx,
+        snapshot,
+        time,
+        visuals,
+        false,
+        positionedMedia,
+        sourceWidth,
+        layer.id,
+      );
     }
   }
 
@@ -369,22 +500,28 @@ export function renderCompositionFrame(
     if (settings.shadow.enabled) {
       ctx.shadowColor = settings.shadow.color;
       ctx.shadowBlur = settings.shadow.blur;
-      const offset = cursorShadowOffset(settings.shadow.blur, settings.shadow.direction);
+      const offset = cursorShadowOffset(
+        settings.shadow.blur,
+        settings.shadow.direction,
+      );
       ctx.shadowOffsetX = offset.x;
       ctx.shadowOffsetY = offset.y;
     }
-    const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .28), time).at(-1);
-    const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
-    const clickScale = cursorClickSpringScale(age, settings.clickSpring.enabled);
+    const click = buttonEventsBetween(
+      snapshot.cursor.events,
+      Math.max(0, time - 0.28),
+      time,
+    ).at(-1);
+    const age = click
+      ? Math.max(0, time - click.sessionNs / 1_000_000_000)
+      : Infinity;
+    const clickScale = cursorClickSpringScale(
+      age,
+      settings.clickSpring.enabled,
+    );
     ctx.translate(position.x, position.y);
     ctx.scale(clickScale, clickScale);
-    ctx.drawImage(
-      image,
-      -hotspot.x,
-      -hotspot.y,
-      size,
-      size,
-    );
+    ctx.drawImage(image, -hotspot.x, -hotspot.y, size, size);
     ctx.restore();
   }
   ctx.restore();

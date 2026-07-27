@@ -1,0 +1,56 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import Button from "~/ui/button/Button.vue";
+import ButtonGroup from "~/ui/button/ButtonGroup.vue";
+import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
+import BigSlider from "~/ui/slider/BigSlider.vue";
+import Switch from "~/ui/switch/Switch.vue";
+import Input from "~/ui/input/Input.vue";
+import type { ClipFrame } from "../../composition/composition-types";
+
+const props = defineProps<{ borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }>();
+const emit = defineEmits<{ (event: "update", value: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void }>();
+const activeFrame = computed(() => props.frame ?? "none");
+const frames: { id: ClipFrame; label: string }[] = [{ id: "none", label: "None" }, { id: "safari", label: "Safari" }, { id: "windows-95", label: "Windows 95" }];
+</script>
+
+<template>
+  <div class="appearance-controls">
+    <div class="section-header"><span class="section-title">Border</span></div>
+    <div class="prop-row">
+      <span class="prop-label">Show border</span>
+      <Switch :model-value="borderEnabled ?? false" @update:modelValue="emit('update', { borderEnabled: $event })" />
+    </div>
+    <div v-if="borderEnabled" class="sub-group margin-top-sm">
+      <span class="sub-label">Border color</span>
+      <ColorPicker :model-value="borderColor ?? '#000000'" :show-label="false" @update:modelValue="emit('update', { borderColor: $event })" />
+      <BigSlider :model-value="borderWidth ?? 1" :min="1" :max="32" :step="1" label="Width" :format-value="(value) => `${Math.round(value)}px`" @update:modelValue="emit('update', { borderWidth: $event })" />
+    </div>
+    <div class="section-header margin-top-md"><span class="section-title">Frame</span></div>
+    <ButtonGroup full>
+      <Button v-for="item in frames" :key="item.id" :variant="activeFrame === item.id ? 'primary' : 'ghost'" size="xs" @click="emit('update', { frame: item.id })">{{ item.label }}</Button>
+    </ButtonGroup>
+    <div v-if="activeFrame !== 'none'" class="sub-group margin-top-sm">
+      <label class="sub-label" for="frame-title">Window title</label>
+      <Input id="frame-title" :model-value="frameTitle ?? ''" placeholder="Screen recording" @update:modelValue="emit('update', { frameTitle: $event })" />
+      <template v-if="activeFrame === 'windows-95'">
+        <span class="sub-label">Window color</span>
+        <ColorPicker :model-value="frameColor ?? '#c0c0c0'" :show-label="false" @update:modelValue="emit('update', { frameColor: $event })" />
+        <div class="prop-row"><span class="prop-label">Menu bar</span><Switch :model-value="frameShowMenu ?? true" @update:modelValue="emit('update', { frameShowMenu: $event })" /></div>
+        <div class="prop-row"><span class="prop-label">Scrollbars</span><Switch :model-value="frameShowScrollbars ?? true" @update:modelValue="emit('update', { frameShowScrollbars: $event })" /></div>
+      </template>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.appearance-controls { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.section-header { display: flex; align-items: center; min-height: 20px; }
+.section-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+.prop-row { display: flex; align-items: center; justify-content: space-between; }
+.prop-label { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.sub-group { display: flex; flex-direction: column; gap: 6px; }
+.sub-label { font-size: 10px; font-weight: 500; color: var(--text-muted); }
+.margin-top-sm { margin-top: 4px; }
+.margin-top-md { margin-top: 8px; }
+</style>

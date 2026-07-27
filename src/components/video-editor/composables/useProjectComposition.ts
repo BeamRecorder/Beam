@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from "vue";
+import { ref, computed, onUnmounted, type Ref } from "vue";
 import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 import { capture } from "../../../api/capture";
 import type {
@@ -36,6 +36,14 @@ export function useProjectComposition(options: {
     shadowSize: "md",
     shadowColor: "#000000",
     shadowDirection: "bottom",
+    borderEnabled: false,
+    borderColor: "#000000",
+    borderWidth: 1,
+    frame: "none",
+    frameTitle: "",
+    frameColor: "#c0c0c0",
+    frameShowMenu: true,
+    frameShowScrollbars: true,
   };
   const { project, editorData, durationMs, currentTimeSec, activeTab } =
     options;
@@ -161,6 +169,29 @@ export function useProjectComposition(options: {
     const payload = JSON.parse(JSON.stringify(composition.value));
     composition.value = await capture.saveProjectComposition(project.value.id, payload);
   };
+
+  let appearanceSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  let appearanceSaveChain = Promise.resolve();
+  const saveAppearance = () => {
+    appearanceSaveTimer = null;
+    if (!project.value) return;
+    const projectId = project.value.id;
+    const payload = JSON.parse(JSON.stringify(composition.value));
+    appearanceSaveChain = appearanceSaveChain
+      .catch(() => undefined)
+      .then(() => capture.saveProjectComposition(projectId, payload))
+      .then(() => undefined)
+      .catch((error) => console.error("Failed to save clip appearance:", error));
+  };
+  const scheduleAppearanceSave = () => {
+    if (appearanceSaveTimer) clearTimeout(appearanceSaveTimer);
+    appearanceSaveTimer = setTimeout(saveAppearance, 200);
+  };
+  onUnmounted(() => {
+    if (!appearanceSaveTimer) return;
+    clearTimeout(appearanceSaveTimer);
+    saveAppearance();
+  });
 
   const loadComposition = async (projectId: string) => {
     const stored = await capture.getProjectComposition(projectId);
@@ -414,7 +445,7 @@ export function useProjectComposition(options: {
     activeTab.value = "clip";
   };
 
-  const updateSelectedClipAppearance = async (
+  const updateSelectedClipAppearance = (
     patch: Partial<ClipAppearance>,
   ) => {
     const selectedId = selectedCompositionLayerId.value;
@@ -452,7 +483,19 @@ export function useProjectComposition(options: {
         }),
       };
     }
-    await saveComposition();
+    const continuousKeys: Array<keyof ClipAppearance> = [
+      "borderColor",
+      "borderWidth",
+      "frameColor",
+      "frameTitle",
+    ];
+    const changedKeys = Object.keys(patch) as Array<keyof ClipAppearance>;
+    if (changedKeys.every((key) => continuousKeys.includes(key))) {
+      scheduleAppearanceSave();
+    } else {
+      if (appearanceSaveTimer) clearTimeout(appearanceSaveTimer);
+      saveAppearance();
+    }
   };
 
   const updateSelectedWebcamTransform = async (

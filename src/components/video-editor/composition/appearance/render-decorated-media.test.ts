@@ -1,0 +1,25 @@
+import { describe, expect, it, vi } from "vitest";
+import { frameContentRect } from "./frames";
+import { drawDecoratedMedia } from "./render-decorated-media";
+import type { ClipAppearance } from "../composition-types";
+
+const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({ cornerRadius: "sm", shadowSize: "none", shadowColor: "#000000", shadowDirection: "all", borderEnabled: false, borderColor: "#ff0000", borderWidth: 2, frame: "none", frameTitle: "", frameColor: "#c0c0c0", frameShowMenu: true, frameShowScrollbars: true, ...patch });
+const context = () => ({ fillStyle: "", strokeStyle: "", lineWidth: 0, shadowColor: "", shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0, font: "", textAlign: "", textBaseline: "", save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), stroke: vi.fn(), clip: vi.fn(), drawImage: vi.fn(), fillRect: vi.fn(), fillText: vi.fn(), arc: vi.fn(), translate: vi.fn(), scale: vi.fn(), strokeRect: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })) }) as unknown as CanvasRenderingContext2D;
+const source = {} as CanvasImageSource;
+
+describe("decorated media rendering", () => {
+  it("draws a border independently from a shadow", () => {
+    const ctx = context(); drawDecoratedMedia(ctx, { source, rect: { x: 2, y: 3, width: 100, height: 60 }, appearance: appearance({ borderEnabled: true }), title: "Image" });
+    expect(ctx.stroke).toHaveBeenCalledOnce(); expect(ctx.drawImage).toHaveBeenCalledWith(source, 2, 3, 100, 60);
+  });
+  it("draws Safari media inside its chrome and uses the supplied title", () => {
+    const ctx = context(); drawDecoratedMedia(ctx, { source, rect: { x: 0, y: 0, width: 160, height: 100 }, appearance: appearance({ frame: "safari" }), title: "Screen recording" });
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 1, 18, 158, 81); expect(ctx.fillText).toHaveBeenCalledWith("Screen recording", expect.any(Number), 9);
+  });
+  it("draws Windows 95 chrome and keeps its content rect proportional", () => {
+    const rect = frameContentRect({ x: 10, y: 20, width: 120, height: 80 }, "windows-95");
+    expect(rect).toEqual({ x: 13, y: 52, width: 111, height: 44.61538461538461 });
+    const ctx = context(); drawDecoratedMedia(ctx, { source, rect: { x: 10, y: 20, width: 120, height: 80 }, appearance: appearance({ frame: "windows-95", borderEnabled: true }), title: "Clip" });
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 13, 52, 111, 44.61538461538461); expect(ctx.strokeRect).toHaveBeenCalled(); expect(ctx.stroke).toHaveBeenCalled();
+  });
+});

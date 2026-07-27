@@ -1,18 +1,29 @@
-import type { CompositionLayer, ProjectComposition, VisualTrackId } from "./composition-types";
+import type {
+  MediaCompositionLayer,
+  ProjectComposition,
+  VisualTrackId,
+} from "./composition-types";
 import { BASE_VIDEO_TRACK_ID, WEBCAM_TRACK_ID } from "./composition-types";
 import { cameraLayers } from "./webcam/camera-composition";
 
-export interface VisualTrack {
-  id: VisualTrackId;
-  kind: "base-video" | "webcam" | "media";
-  layer?: Extract<CompositionLayer, { kind: "video" | "image" }>;
-}
+export type VisualMediaLayer = MediaCompositionLayer & {
+  kind: "video" | "image";
+};
+
+export type VisualTrack =
+  | { id: typeof BASE_VIDEO_TRACK_ID; kind: "base-video" }
+  | { id: typeof WEBCAM_TRACK_ID; kind: "webcam" }
+  | {
+      id: string;
+      kind: "media";
+      layer: VisualMediaLayer;
+    };
 
 const mediaVisualLayers = (composition: ProjectComposition) => {
   const cameraIds = new Set(cameraLayers(composition).map((layer) => layer.id));
   return composition.layers
     .filter(
-      (layer): layer is Extract<CompositionLayer, { kind: "video" | "image" }> =>
+      (layer): layer is VisualMediaLayer =>
         (layer.kind === "video" || layer.kind === "image") && !cameraIds.has(layer.id),
     )
     .sort((left, right) => left.order - right.order);

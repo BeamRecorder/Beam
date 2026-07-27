@@ -4,7 +4,7 @@ import type { CompositionSnapshot } from '../export-types'
 import { DEFAULT_OUTPUT_CANVAS } from '../../video-editor/canvas/output-canvas'
 
 const snapshot = (enabled = true): CompositionSnapshot => ({ duration: 1, video: { src: 'x', width: 100, height: 50, fps: 30, enabled }, canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 100, height: 50 }, background: null, blurPercent: 0, zooms: [], cursor: { available: true, telemetry: [], missing: [], shapes: { arrow: { src: 'x', hotspot: { x: 2, y: 3 } } }, events: [{ event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: .5, normalizedY: .5, visible: true }, { event: 'shape', sessionNs: 0, shapeId: 'arrow', hotspot: { x: 2, y: 3 } }] }, cursorSettings: { selectedCursor: 'automatic', size: 24, color: '#000', shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' }, clickSpring: { enabled: true }, ripple: { enabled: false, color: '#f00', size: 30 } }, audio: [], composition: { media: [], layers: [] }, layers: [] })
-const context = () => ({ fillStyle: '', fillRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(), strokeText: vi.fn(), drawImage: vi.fn(), save: vi.fn(), translate: vi.fn(), scale: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), clip: vi.fn(), arc: vi.fn(), stroke: vi.fn(), font: '', textAlign: '', textBaseline: '', shadowColor: '', shadowBlur: 0, globalAlpha: 1, lineWidth: 0, strokeStyle: '' }) as unknown as CanvasRenderingContext2D
+const context = () => ({ fillStyle: '', fillRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(), strokeText: vi.fn(), drawImage: vi.fn(), save: vi.fn(), translate: vi.fn(), scale: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), clip: vi.fn(), arc: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })), font: '', textAlign: '', textBaseline: '', shadowColor: '', shadowBlur: 0, globalAlpha: 1, lineWidth: 0, strokeStyle: '' }) as unknown as CanvasRenderingContext2D
 
 describe('renderCompositionFrame', () => {
   it('always paints the base and optional background', () => {
@@ -18,7 +18,7 @@ describe('renderCompositionFrame', () => {
   it('draws the video and a visible cursor in camera space', () => {
     const ctx = context(); const image = { complete: true, naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement
     renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, snapshot(), 0, null, new Map([['default', image]]))
-    expect(ctx.save).toHaveBeenCalledTimes(4); expect(ctx.drawImage).toHaveBeenCalledTimes(2); expect(ctx.translate).toHaveBeenCalledWith(50, 25)
+    expect(ctx.save).toHaveBeenCalledTimes(6); expect(ctx.drawImage).toHaveBeenCalledTimes(2); expect(ctx.translate).toHaveBeenCalledWith(50, 25)
   })
   it('uses the semantic cursor selected by an automatic cursor event', () => {
     const value = snapshot()
@@ -50,6 +50,11 @@ describe('renderCompositionFrame', () => {
     const ctx = context()
     renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA } as HTMLVideoElement, value, .2, null, undefined, new Map([['video-overlay', overlay]]))
     expect(ctx.drawImage).toHaveBeenCalledWith(overlay, 0, 0, 100, 50)
+  })
+  it('uses the same Safari content bounds for an imported visual in the export', () => {
+    const value = snapshot(); value.composition = { media: [{ id: 'image', kind: 'image', name: 'Image', fileName: 'image.png', durationMs: 0, width: 10, height: 10, src: 'file:///image.png' }], layers: [{ id: 'image-layer', kind: 'image', name: 'Image', assetId: 'image', startMs: 0, endMs: 1000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 }, appearance: { cornerRadius: 'none', shadowSize: 'none', shadowColor: '#000000', shadowDirection: 'all', borderEnabled: true, borderColor: '#ff0000', borderWidth: 2, frame: 'safari', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true } }] }
+    const ctx = context(); drawCompositionLayers(ctx, value, .2, new Map([['image', {} as CanvasImageSource]]), false)
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 1, 18, 98, 31); expect(ctx.stroke).toHaveBeenCalled()
   })
   it('draws only a caption sentence active at the current time', () => {
     const value = snapshot(); value.composition = { media: [], layers: [{ id: 'caption', kind: 'caption', name: 'Caption', startMs: 0, endMs: 1000, enabled: true, order: 0, caption: { sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }], style: { color: '#fff', fontSize: 20, shadowColor: '#000', shadowBlur: 2, placement: 'bottom' } } }] }

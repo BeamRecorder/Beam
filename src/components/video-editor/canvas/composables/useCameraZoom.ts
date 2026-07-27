@@ -16,6 +16,7 @@ import {
 } from "../output-canvas";
 import type { ProjectEditorData } from "~/api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
+import { drawDecoratedMedia } from "../../composition/appearance/render-decorated-media";
 
 export interface VideoWindowBounds {
   dx: number;
@@ -332,91 +333,34 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.translate(dx + dw / 2, dy + dh / 2);
       ctx.scale(camera.scale, camera.scale);
       ctx.translate(-camera.focusX, -camera.focusY);
-      const isBaseVideoMirrored =
-        options.composition?.().baseVideoIsMirrored ?? false;
       const baseAppearance = options.composition?.().baseVideoAppearance;
-      const baseCornerRadius = (() => {
-        if (!baseAppearance) return outputCanvas.showBackground ? 16 : 0;
-        const r = baseAppearance.cornerRadius;
-        if (r === "none") return 0;
-        if (r === "sm") return 8;
-        if (r === "md") return 16;
-        if (r === "lg") return 24;
-        if (r === "full")
-          return Math.min(positionedMedia.width, positionedMedia.height) / 2;
-        if (typeof r === "number") return r;
-        return outputCanvas.showBackground ? 16 : 0;
-      })();
 
       if (videoEl.readyState >= 1) {
-        ctx.save();
-
-        const shadowSize = baseAppearance?.shadowSize ?? "md";
-        const blur =
-          shadowSize !== "none"
-            ? (({ sm: 12, md: 24, lg: 36 } as Record<string, number>)[
-                shadowSize
-              ] ?? 24)
-            : 0;
         const vx = dx + positionedMedia.x;
         const vy = dy + positionedMedia.y;
         const vw = positionedMedia.width;
         const vh = positionedMedia.height;
-
-        // Build the clip path
-        ctx.beginPath();
-        ctx.roundRect(vx, vy, vw, vh, baseCornerRadius);
-
-        if (blur > 0) {
-          // Canvas shadows only render on fill/stroke, not on drawImage.
-          // Strategy: fill the shape solid (triggers shadow around it),
-          // then clear shadow and draw the video clipped over it.
-          const direction = baseAppearance?.shadowDirection ?? "bottom";
-          ctx.shadowColor = baseAppearance?.shadowColor ?? "rgba(0, 0, 0, 0.5)";
-          ctx.shadowBlur = blur;
-          ctx.shadowOffsetX =
-            direction === "top-left"
-              ? -blur * 0.4
-              : direction === "bottom-right"
-                ? blur * 0.4
-                : 0;
-          ctx.shadowOffsetY =
-            direction === "top-left"
-              ? -blur * 0.4
-              : direction === "all"
-                ? 0
-                : blur * 0.4;
-          // Opaque fill → shadow is rendered at full opacity around the shape
-          ctx.fillStyle = "rgb(0, 0, 0)";
-          ctx.fill();
-          // Clear shadow so video draw isn't also shadowed
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
-          // Re-establish the clip path (fill() consumed the current path)
-          ctx.beginPath();
-          ctx.roundRect(vx, vy, vw, vh, baseCornerRadius);
-        }
-
-        ctx.clip();
-
-        if (isBaseVideoMirrored) {
-          ctx.translate(vx * 2 + vw, 0);
-          ctx.scale(-1, 1);
-        }
-        ctx.drawImage(
-          videoEl,
-          source.x,
-          source.y,
-          source.width,
-          source.height,
-          vx,
-          vy,
-          vw,
-          vh,
-        );
-        ctx.restore();
+        drawDecoratedMedia(ctx, {
+          source: videoEl,
+          sourceRect: source,
+          rect: { x: vx, y: vy, width: vw, height: vh },
+          appearance: baseAppearance ?? {
+            cornerRadius: outputCanvas.showBackground ? "md" : "none",
+            shadowSize: "md",
+            shadowColor: "#000000",
+            shadowDirection: "bottom",
+            borderEnabled: false,
+            borderColor: "#000000",
+            borderWidth: 1,
+            frame: "none",
+            frameTitle: "",
+            frameColor: "#c0c0c0",
+            frameShowMenu: true,
+            frameShowScrollbars: true,
+          },
+          title: "Screen recording",
+          mirrored: options.composition?.().baseVideoIsMirrored ?? false,
+        });
       }
       ctx.restore();
     };

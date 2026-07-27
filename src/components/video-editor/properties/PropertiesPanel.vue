@@ -44,6 +44,14 @@ const props = defineProps<{
     shadowColor?: string;
     shadowDirection?: string;
     cornerRadius?: string | number;
+    borderEnabled?: boolean;
+    borderColor?: string;
+    borderWidth?: number;
+    frame?: import("../composition/composition-types").ClipFrame;
+    frameTitle?: string;
+    frameColor?: string;
+    frameShowMenu?: boolean;
+    frameShowScrollbars?: boolean;
     clipTransform?: NormalizedTransform;
     volume?: number;
   } | null;
@@ -120,6 +128,7 @@ const emit = defineEmits<{
     e: "update:clip-shadow",
     shadow: { size: string; color?: string; direction?: string },
   ): void;
+  (e: "update:clip-appearance", appearance: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: import("../composition/composition-types").ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void;
   (e: "update:clip-transform", transform: NormalizedTransform): void;
   (e: "reset:clip-transform"): void;
   (e: "unlink-clip"): void;
@@ -175,6 +184,7 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
         @update:corner-radius="emit('update:clip-corner-radius', $event)"
         @update:shadow="emit('update:clip-shadow', $event)"
+        @update:appearance="emit('update:clip-appearance', $event)"
         @update:clip-transform="emit('update:clip-transform', $event)"
         @reset:clip-transform="emit('reset:clip-transform')"
         @unlink="emit('unlink-clip')"

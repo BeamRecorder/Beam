@@ -8,6 +8,7 @@ const layerKinds = new Set(['video', 'image', 'audio', 'caption'])
 const extensions = { video: new Set(['.mp4', '.webm', '.mov', '.mkv']), image: new Set(['.png', '.jpg', '.jpeg', '.webp']), audio: new Set(['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.webm']) }
 const finite = (value) => typeof value === 'number' && Number.isFinite(value)
 const validId = (value) => typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value)
+const validColor = (value) => typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value)
 
 function emptyComposition() { return { media: [], layers: [] } }
 function transform(value) {
@@ -46,13 +47,19 @@ function caption(value) {
   }
 }
 function webcamAppearance(value) {
-  if (!value || !['none', 'sm', 'md', 'lg'].includes(value.shadowSize) || !['none', 'sm', 'md', 'lg', 'full'].includes(value.cornerRadius)) return undefined
-  return { shadowSize: value.shadowSize, cornerRadius: value.cornerRadius }
+  if (!value || !['none', 'sm', 'md', 'lg'].includes(value.shadowSize)) return undefined
+  const cornerRadius = finite(value.cornerRadius)
+    ? Math.max(0, Math.min(9_999, Math.round(value.cornerRadius)))
+    : ['none', 'sm', 'md', 'lg', 'full'].includes(value.cornerRadius)
+      ? value.cornerRadius
+      : undefined
+  if (cornerRadius === undefined) return undefined
+  return { shadowSize: value.shadowSize, cornerRadius }
 }
 function clipAppearance(value) {
   const base = webcamAppearance(value)
   if (!base) return undefined
-  return { ...base, shadowColor: typeof value.shadowColor === 'string' ? value.shadowColor.slice(0, 32) : '#000000', shadowDirection: ['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadowDirection) ? value.shadowDirection : 'all' }
+  return { ...base, shadowColor: validColor(value.shadowColor) ? value.shadowColor : '#000000', shadowDirection: ['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadowDirection) ? value.shadowDirection : 'all', borderEnabled: value.borderEnabled === true, borderColor: validColor(value.borderColor) ? value.borderColor : '#000000', borderWidth: finite(value.borderWidth) ? Math.max(1, Math.min(32, Math.round(value.borderWidth))) : 1, frame: ['none', 'safari', 'windows-95'].includes(value.frame) ? value.frame : 'none', frameTitle: typeof value.frameTitle === 'string' ? value.frameTitle.slice(0, 120) : '', frameColor: validColor(value.frameColor) ? value.frameColor : '#c0c0c0', frameShowMenu: value.frameShowMenu !== false, frameShowScrollbars: value.frameShowScrollbars !== false }
 }
 function normalizeComposition(value) {
   if (!value || !Array.isArray(value.media) || !Array.isArray(value.layers)) throw new Error('Composition invalide')

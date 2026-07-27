@@ -1,11 +1,13 @@
 import type { ClipAppearance, NormalizedCrop, NormalizedTransform, WebcamAppearance } from '../composition-types'
+import { drawDecoratedMedia } from '../appearance/render-decorated-media'
+import type { MediaRect } from '../appearance/appearance-types'
 
 export interface WebcamOverlaySettings { widthPercent: number; heightPercent: number; margin: number; reactToZoom: boolean; mirror: boolean; cornerRadius: number; shadowOpacity: number; shadowColor: string; shadowOffsetX: number; shadowOffsetY: number }
 export interface WebcamLayout { x: number; y: number; width: number; height: number }
 
 export const DEFAULT_WEBCAM_SETTINGS: WebcamOverlaySettings = { widthPercent: 40, heightPercent: 40, margin: 24, reactToZoom: true, mirror: true, cornerRadius: 14, shadowOpacity: .42, shadowColor: '#000000', shadowOffsetX: 0, shadowOffsetY: 1 }
 
-const cornerRadii: Record<string, number> = { none: 0, sm: 8, md: 16, lg: 24, full: Number.MAX_SAFE_INTEGER }
+const cornerRadii: Record<string, number> = { none: 0, sm: 8, md: 14, lg: 24, full: Number.MAX_SAFE_INTEGER }
 const shadowOpacities: Record<string, number> = { none: 0, sm: .28, md: .42, lg: .58 }
 export function webcamSettingsForAppearance(appearance: WebcamAppearance | ClipAppearance | undefined, isMirrored?: boolean): WebcamOverlaySettings {
   const mirror = isMirrored ?? DEFAULT_WEBCAM_SETTINGS.mirror
@@ -55,30 +57,11 @@ export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, a
   return { width, height, x: Math.max(margin, canvasWidth - width - margin), y: Math.max(margin, canvasHeight - height - margin) }
 }
 
-export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform, crop?: NormalizedCrop) {
+export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform, crop?: NormalizedCrop, appearance?: ClipAppearance, title = 'Camera') {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform)
-  const radius = Math.min(settings.cornerRadius, layout.width / 2, layout.height / 2)
-  const shadowSize = Math.min(layout.width, layout.height)
-
-  if (settings.shadowOpacity > 0) {
-    ctx.save()
-    ctx.globalAlpha = .01
-    ctx.fillStyle = '#000000'
-    ctx.shadowColor = settings.shadowColor
-    ctx.globalAlpha = settings.shadowOpacity
-    ctx.shadowBlur = shadowSize * .22
-    ctx.shadowOffsetX = shadowSize * .06 * settings.shadowOffsetX
-    ctx.shadowOffsetY = shadowSize * .06 * settings.shadowOffsetY
-    ctx.beginPath(); ctx.roundRect(layout.x, layout.y, layout.width, layout.height, radius); ctx.fill()
-    ctx.restore()
-  }
-
-  ctx.save()
-  ctx.beginPath(); ctx.roundRect(layout.x, layout.y, layout.width, layout.height, radius); ctx.clip()
-  if (settings.mirror) { ctx.translate(layout.x * 2 + layout.width, 0); ctx.scale(-1, 1) }
   const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source instanceof HTMLImageElement ? source.naturalWidth : 0
   const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source instanceof HTMLImageElement ? source.naturalHeight : 0
-  if (crop && sourceWidth > 0 && sourceHeight > 0) ctx.drawImage(source, crop.x * sourceWidth, crop.y * sourceHeight, crop.width * sourceWidth, crop.height * sourceHeight, layout.x, layout.y, layout.width, layout.height)
-  else ctx.drawImage(source, layout.x, layout.y, layout.width, layout.height)
-  ctx.restore()
+  const legacyAppearance: ClipAppearance = { cornerRadius: settings.cornerRadius, shadowSize: settings.shadowOpacity === 0 ? 'none' : settings.shadowOpacity <= .3 ? 'sm' : settings.shadowOpacity <= .5 ? 'md' : 'lg', shadowColor: settings.shadowColor, shadowDirection: settings.shadowOffsetY < 0 ? 'top-left' : settings.shadowOffsetX > 0 ? 'bottom-right' : settings.shadowOffsetY === 0 ? 'all' : 'bottom', borderEnabled: false, borderColor: '#000000', borderWidth: 1, frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true }
+  const sourceRect: MediaRect | undefined = crop && sourceWidth > 0 && sourceHeight > 0 ? { x: crop.x * sourceWidth, y: crop.y * sourceHeight, width: crop.width * sourceWidth, height: crop.height * sourceHeight } : undefined
+  drawDecoratedMedia(ctx, { source, sourceRect, rect: layout, appearance: appearance ?? legacyAppearance, title, mirrored: settings.mirror })
 }

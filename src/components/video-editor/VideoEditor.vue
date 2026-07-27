@@ -402,6 +402,7 @@ onBeforeUnmount(() => {
           @update:clip-is-mirrored="updateSelectedClipIsMirrored"
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: (['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : parseFloat($event)) })"
           @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
+          @update:clip-appearance="updateSelectedClipAppearance($event)"
           @update:clip-transform="updateSelectedWebcamTransform"
           @reset:clip-transform="updateSelectedWebcamTransform({ x: 0, y: 0, width: 1, height: 1 })"
         />

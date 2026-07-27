@@ -30,6 +30,21 @@ test('persists normalized webcam placement in the project manifest', () => {
   ctx.store.upsertLayer(ctx.id, layer)
   assert.deepEqual(ctx.store.read(ctx.id).layers[0].transform, layer.transform)
 })
+test('migrates missing border and frame appearance values without changing their visual default', () => {
+  const ctx = setup(); const source = path.join(ctx.root, 'appearance.png'); fs.writeFileSync(source, 'image'); const asset = ctx.store.importMedia(ctx.id, { kind: 'image', source })
+  const layer = { id: '12121212-1212-4121-8121-121212121212', kind: 'image', name: 'Image', assetId: asset.id, startMs: 0, endMs: 1000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 }, appearance: { shadowSize: 'sm', cornerRadius: 'sm', shadowColor: '#112233', shadowDirection: 'bottom' } }
+  ctx.store.upsertLayer(ctx.id, layer); assert.deepEqual(ctx.store.read(ctx.id).layers[0].appearance, { ...layer.appearance, borderEnabled: false, borderColor: '#000000', borderWidth: 1, frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true })
+})
+test('bounds persisted border values and rejects unknown frame and color values', () => {
+  const ctx = setup(); const source = path.join(ctx.root, 'frame.png'); fs.writeFileSync(source, 'image'); const asset = ctx.store.importMedia(ctx.id, { kind: 'image', source })
+  const layer = { id: '13131313-1313-4131-8131-131313131313', kind: 'image', name: 'Image', assetId: asset.id, startMs: 0, endMs: 1000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 }, appearance: { shadowSize: 'none', cornerRadius: 'none', shadowColor: 'bad', shadowDirection: 'bad', borderEnabled: true, borderColor: 'bad', borderWidth: 999, frame: 'other' } }
+  ctx.store.upsertLayer(ctx.id, layer); assert.deepEqual(ctx.store.read(ctx.id).layers[0].appearance, { shadowSize: 'none', cornerRadius: 'none', shadowColor: '#000000', shadowDirection: 'all', borderEnabled: true, borderColor: '#000000', borderWidth: 32, frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true })
+})
+test('keeps a legacy custom corner radius while adding a frame appearance', () => {
+  const ctx = setup(); const source = path.join(ctx.root, 'legacy-frame.png'); fs.writeFileSync(source, 'image'); const asset = ctx.store.importMedia(ctx.id, { kind: 'image', source })
+  const layer = { id: '14141414-1414-4141-8141-141414141414', kind: 'image', name: 'Image', assetId: asset.id, startMs: 0, endMs: 1000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 }, appearance: { shadowSize: 'sm', cornerRadius: 37, shadowColor: '#112233', shadowDirection: 'bottom', borderEnabled: true, borderColor: '#abcdef', borderWidth: 4, frame: 'safari' } }
+  ctx.store.upsertLayer(ctx.id, layer); assert.deepEqual(ctx.store.read(ctx.id).layers[0].appearance, { ...layer.appearance, frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true })
+})
 test('keeps linked audio timing fields when a video asset is shared by video and audio clips', () => {
   const ctx = setup(); const source = path.join(ctx.root, 'linked.mp4'); fs.writeFileSync(source, 'video'); const asset = ctx.store.importMedia(ctx.id, { kind: 'video', source })
   const groupId = '44444444-4444-4444-8444-444444444444'

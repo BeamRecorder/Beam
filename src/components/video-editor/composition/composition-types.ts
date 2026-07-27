@@ -52,7 +52,16 @@ export interface WebcamAppearance {
 export interface ClipAppearance extends WebcamAppearance {
   shadowColor: string;
   shadowDirection: "all" | "bottom" | "bottom-right" | "top-left";
+  borderEnabled: boolean;
+  borderColor: string;
+  borderWidth: number;
+  frame: ClipFrame;
+  frameTitle: string;
+  frameColor: string;
+  frameShowMenu: boolean;
+  frameShowScrollbars: boolean;
 }
+export type ClipFrame = "none" | "safari" | "windows-95";
 export interface CompositionMedia {
   id: string;
   kind: CompositionMediaKind;
