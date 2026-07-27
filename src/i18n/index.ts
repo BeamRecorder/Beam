@@ -7,6 +7,8 @@ import enProjectPicker from './en/ProjectPicker.json'
 import enCameraPreviewOverlay from './en/CameraPreviewOverlay.json'
 import enShortcutPreferences from './en/ShortcutPreferences.json'
 import enRecorderBar from './en/RecorderBar.json'
+import enExporter from './en/exporter.json'
+import enExportPopover from './en/ExportPopover.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
@@ -15,6 +17,8 @@ import frProjectPicker from './fr/ProjectPicker.json'
 import frCameraPreviewOverlay from './fr/CameraPreviewOverlay.json'
 import frShortcutPreferences from './fr/ShortcutPreferences.json'
 import frRecorderBar from './fr/RecorderBar.json'
+import frExporter from './fr/exporter.json'
+import frExportPopover from './fr/ExportPopover.json'
 
 const messages = {
   en: {
@@ -26,6 +30,8 @@ const messages = {
     CameraPreviewOverlay: enCameraPreviewOverlay,
     ShortcutPreferences: enShortcutPreferences,
     RecorderBar: enRecorderBar,
+    exporter: enExporter,
+    ExportPopover: enExportPopover,
   },
   fr: {
     HUD: frHUD,
@@ -36,6 +42,8 @@ const messages = {
     CameraPreviewOverlay: frCameraPreviewOverlay,
     ShortcutPreferences: frShortcutPreferences,
     RecorderBar: frRecorderBar,
+    exporter: frExporter,
+    ExportPopover: frExportPopover,
   },
 }
 
@@ -71,4 +79,11 @@ export function setCurrentLocale(locale: 'en' | 'fr') {
     localStorage.setItem('locale', locale)
   } catch {
   }
+}
+
+export function tNamespace(ns: string) {
+  return (key: string, params?: Record<string, unknown>) =>
+    params
+      ? i18n.global.t(`${ns}.${key}`, params as Record<string, any>)
+      : i18n.global.t(`${ns}.${key}`)
 }

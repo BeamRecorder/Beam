@@ -1,4 +1,13 @@
-import { ALL_FORMATS, BlobSource, Input, VideoSampleSink, type VideoSample } from "mediabunny";
+import {
+  ALL_FORMATS,
+  BlobSource,
+  Input,
+  VideoSampleSink,
+  type VideoSample,
+} from "mediabunny";
+import { tNamespace } from "../../../i18n";
+
+const $t = tNamespace("exporter");
 
 /**
  * Reads source frames in presentation order. Keeping one decoder alive avoids a
@@ -11,29 +20,47 @@ export class VideoFrameProvider {
   private iterator: AsyncIterator<VideoSample | null> | null = null;
   private index = 0;
 
-  private constructor(input: Input, sink: VideoSampleSink, timestamps: number[]) {
+  private constructor(
+    input: Input,
+    sink: VideoSampleSink,
+    timestamps: number[],
+  ) {
     this.input = input;
     this.sink = sink;
     this.timestamps = timestamps;
   }
 
-  static async create(src: string, timestamps: number[]): Promise<VideoFrameProvider | null> {
+  static async create(
+    src: string,
+    timestamps: number[],
+  ): Promise<VideoFrameProvider | null> {
     const response = await fetch(src);
-    if (!response.ok) throw new Error(`Impossible de lire la vidéo source : ${src}`);
-    const input = new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS });
+    if (!response.ok) throw new Error($t("unableToReadVideoSource", { src }));
+    const input = new Input({
+      source: new BlobSource(await response.blob()),
+      formats: ALL_FORMATS,
+    });
     const track = await input.getPrimaryVideoTrack();
     if (!track || !(await track.canDecode())) {
       input.dispose();
       return null;
     }
     const decoderConfig = await track.getDecoderConfig();
-    if (typeof VideoDecoder === "undefined" || !decoderConfig || !(await VideoDecoder.isConfigSupported(decoderConfig)).supported) {
+    if (
+      typeof VideoDecoder === "undefined" ||
+      !decoderConfig ||
+      !(await VideoDecoder.isConfigSupported(decoderConfig)).supported
+    ) {
       input.dispose();
       return null;
     }
     // Let Chromium choose a supported decoder configuration. Forcing a hardware
     // preference can make otherwise playable recordings fail VideoDecoder.configure.
-    return new VideoFrameProvider(input, new VideoSampleSink(track), timestamps);
+    return new VideoFrameProvider(
+      input,
+      new VideoSampleSink(track),
+      timestamps,
+    );
   }
 
   async frameAt(index: number): Promise<VideoFrame | null> {
@@ -54,10 +81,15 @@ export class VideoFrameProvider {
   }
 
   private async next() {
-    if (!this.iterator) this.iterator = this.sink.samplesAtTimestamps(this.timestamps)[Symbol.asyncIterator]();
+    if (!this.iterator)
+      this.iterator = this.sink
+        .samplesAtTimestamps(this.timestamps)
+        [Symbol.asyncIterator]();
     const result = await this.iterator.next();
     return result.done ? null : result.value;
   }
 
-  dispose() { this.input.dispose(); }
+  dispose() {
+    this.input.dispose();
+  }
 }

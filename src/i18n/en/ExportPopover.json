@@ -1,0 +1,23 @@
+{
+  "exportVideo": "Export Video",
+  "format": "Format",
+  "webm": "WebM",
+  "mp4": "MP4",
+  "qualityAndBitrate": "Quality & Bitrate",
+  "low": "low",
+  "medium": "medium",
+  "high": "high",
+  "webmDesc": "Fast export, optimal size and transparency support.",
+  "mp4Desc": "Universal compatibility for sharing across platforms.",
+  "lowDesc": "~{mbps} Mbps · Lower size & clarity.",
+  "mediumDesc": "~{mbps} Mbps · Balanced quality (Recommended).",
+  "highDesc": "~{mbps} Mbps · Maximum visual fidelity.",
+  "formatNotSupported": "{format} is not supported by this machine's encoder.",
+  "cancelExport": "Cancel Export",
+  "exporting": "Exporting Video...",
+  "savedTo": "Saved to {path}",
+  "openFile": "Open File",
+  "frameCount": "Frame {completed} / {total}",
+  "exportVideoAria": "Export video",
+  "video": "video"
+}

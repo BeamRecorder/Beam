@@ -18,6 +18,9 @@ import { renderCompositionFrame } from "../composition/render";
 import { activeLayersAt, type MediaCompositionLayer } from "../../video-editor/composition/composition-types";
 import { cursorTypeForKind, useCursorReplacer } from "../../video-editor/properties/cursor/useCursorReplacer";
 import { VideoFrameProvider } from "./video-frame-provider";
+import { tNamespace } from "../../../i18n";
+
+const $t = tNamespace("exporter");
 
 const codecCandidates = { webm: ["vp9", "vp8", "av1"], mp4: ["avc"] } as const;
 const audioCodecCandidates = { webm: ["opus"], mp4: ["aac"] } as const;
@@ -72,9 +75,7 @@ export async function renderMixedAudio(
   }
   if (layers.length === 0) return null;
   if (!window.OfflineAudioContext)
-    throw new Error(
-      "Offline audio mixing is unavailable in this Chromium build.",
-    );
+    throw new Error($t("offlineAudioUnavailable"));
   const context = new OfflineAudioContext(
     2,
     Math.max(1, Math.ceil(request.snapshot.duration * 48_000)),
@@ -84,7 +85,7 @@ export async function renderMixedAudio(
     layers.map(async (layer) => {
       const response = await fetch(layer.src);
       if (!response.ok)
-        throw new Error(`Unable to read the audio sidecar: ${layer.src}`);
+        throw new Error($t("unableToReadAudioSidecar", { src: layer.src }));
       const buffer = await context.decodeAudioData(
         await response.arrayBuffer(),
       );
@@ -118,16 +119,14 @@ async function loadVisuals(request: ExportRequest) {
       .map(async (asset) => {
         if (asset.kind === "image") {
           if (/\.gif(?:$|[?#])/i.test(asset.src))
-            throw new Error(
-              "Les GIF animés ne sont pas encore exportables de manière déterministe.",
-            );
+            throw new Error($t("gifNotExportable"));
           const image = new Image();
           image.src = asset.src;
           await new Promise<void>((resolve, reject) => {
             image.onload = () => resolve();
             image.onerror = () =>
               reject(
-                new Error(`Impossible de charger l’image : ${asset.name}`),
+                new Error($t("unableToLoadImage", { name: asset.name })),
               );
           });
           images.set(asset.id, image);
@@ -185,7 +184,7 @@ const waitFor = (
     };
     const failed = () => {
       cleanup();
-      reject(new Error("Impossible de lire la vidéo source."));
+      reject(new Error($t("unableToLoadVideo")));
     };
     const cleanup = () => {
       target.removeEventListener(event, done);
@@ -209,7 +208,7 @@ async function loadBackground(
     image.src = background.src;
     await new Promise<void>((resolve, reject) => {
       image.onload = () => resolve();
-      image.onerror = () => reject(new Error("Impossible de charger le fond."));
+      image.onerror = () => reject(new Error($t("unableToLoadBackground")));
     });
     return image;
   }
@@ -246,20 +245,16 @@ export async function exportWithMediabunny(
 ): Promise<ExportResult> {
   const codec = await supportedVideoCodec(request);
   if (!codec)
-    throw new Error(
-      `${request.format.toUpperCase()} n’est pas encodable par cette machine.`,
-    );
+    throw new Error($t("formatNotEncodable", { format: request.format.toUpperCase() }));
   const audioCodec = await supportedAudioCodec(request);
   if ((request.snapshot.audio.length > 0 || request.snapshot.composition.layers.some((layer) => layer.kind === 'audio' && layer.enabled)) && !audioCodec)
-    throw new Error(
-      `${request.format.toUpperCase()} audio is not encodable by this machine.`,
-    );
+    throw new Error($t("formatAudioNotEncodable", { format: request.format.toUpperCase() }));
   const opened = await window.capture?.beginExport({
     projectName: request.projectName,
     format: request.format,
   });
   if (!opened || opened.canceled)
-    throw new DOMException("Export annulé.", "AbortError");
+    throw new DOMException($t("exportCancelled"), "AbortError");
   const fallbackVideo = document.createElement("video");
   fallbackVideo.muted = true;
   fallbackVideo.preload = "auto";
@@ -268,7 +263,7 @@ export async function exportWithMediabunny(
   canvas.width = request.snapshot.canvas.width;
   canvas.height = request.snapshot.canvas.height;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas 2D indisponible.");
+  if (!context) throw new Error($t("canvas2DUnavailable"));
   let sequence = 0;
   const writable = new WritableStream({
     write: (chunk: { data: Uint8Array; position: number }) =>
@@ -311,7 +306,7 @@ export async function exportWithMediabunny(
 
     onProgress({
       stage: "loading_assets",
-      stageLabel: "Loading media assets...",
+      stageLabel: $t("loadingMediaAssets"),
       completed: 0,
       total,
       currentTimeMs: 0,
@@ -351,7 +346,7 @@ export async function exportWithMediabunny(
 
     onProgress({
       stage: "audio_mixing",
-      stageLabel: "Mixing audio tracks...",
+      stageLabel: $t("mixingAudioTracks"),
       completed: 0,
       total,
       currentTimeMs: 0,
@@ -369,7 +364,7 @@ export async function exportWithMediabunny(
 
     for (let frame = 0; frame < total; frame += 1) {
       if (signal.aborted)
-        throw new DOMException("Export annulé.", "AbortError");
+throw new DOMException($t("exportCancelled"), "AbortError");
       const time = Math.min(
         request.snapshot.duration,
         frame / request.snapshot.video.fps,
@@ -378,7 +373,7 @@ export async function exportWithMediabunny(
 
       onProgress({
         stage: "encoding",
-        stageLabel: `Encoding frame ${frame + 1} of ${total}`,
+        stageLabel: $t("encodingFrame", { frame: frame + 1, total }),
         completed: frame + 1,
         total,
         currentTimeMs,
@@ -426,7 +421,7 @@ export async function exportWithMediabunny(
 
     onProgress({
       stage: "finalizing",
-      stageLabel: "Finalizing media file...",
+      stageLabel: $t("finalizingMediaFile"),
       completed: total,
       total,
       currentTimeMs: totalTimeMs,

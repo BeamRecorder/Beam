@@ -10,6 +10,9 @@ import { supportedVideoCodec } from './mediabunny/exporter'
 import { useExportJob } from './useExportJob'
 import { bitrateFor } from './export-presets'
 import type { ExportFormat, ExportPreset, ExportRequest } from './export-types'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('ExportPopover')
 
 const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>()
 const format = ref<ExportFormat>('webm')
@@ -17,8 +20,8 @@ const preset = ref<ExportPreset>('medium')
 const presets: ExportPreset[] = ['low', 'medium', 'high']
 
 const formatDescriptions: Record<ExportFormat, string> = {
-  webm: 'Fast export, optimal size and transparency support.',
-  mp4: 'Universal compatibility for sharing across platforms.',
+  webm: t('webmDesc'),
+  mp4: t('mp4Desc'),
 }
 
 const getMb = (p: ExportPreset) => {
@@ -28,9 +31,9 @@ const getMb = (p: ExportPreset) => {
 }
 
 const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
-  low: `~${getMb('low')} Mbps · Lower size & clarity.`,
-  medium: `~${getMb('medium')} Mbps · Balanced quality (Recommended).`,
-  high: `~${getMb('high')} Mbps · Maximum visual fidelity.`,
+  low: t('lowDesc', { mbps: getMb('low') }),
+  medium: t('mediumDesc', { mbps: getMb('medium') }),
+  high: t('highDesc', { mbps: getMb('high') }),
 }))
 
 const availability = ref<string | null>(null)
@@ -47,16 +50,16 @@ const openFile = (path: string) => {
 const run = async () => {
   availability.value = null
   const request = { ...props.request, format: format.value, preset: preset.value }
-  if (!await supportedVideoCodec(request)) { availability.value = `${format.value.toUpperCase()} n’est pas pris en charge par l’encodeur de cette machine.`; return }
+  if (!await supportedVideoCodec(request)) { availability.value = t('formatNotSupported', { format: format.value.toUpperCase() }); return }
   await start(request)
   if (result.value?.path) {
     const exportedPath = result.value.path
-    const filename = exportedPath.split(/[/\\]/).pop() || 'video'
+    const filename = exportedPath.split(/[/\\]/).pop() || t('video')
     toastStore.success(
-      `Saved to ${filename}`,
+      t('savedTo', { path: filename }),
       6000,
       {
-        label: 'Open File',
+        label: t('openFile'),
         onClick: () => openFile(exportedPath),
       }
     )
@@ -76,34 +79,34 @@ const formatMs = (ms: number) => {
   <Popover align="right" :match-trigger-width="false">
     <template #trigger>
       <Button variant="primary" size="xs" :icon="Download" class="export-trigger">
-        {{ isExporting ? `${Math.round(percentage)}%` : 'Export Video' }}
+        {{ isExporting ? `${Math.round(percentage)}%` : t('exportVideo') }}
       </Button>
     </template>
     <template #default>
-      <section class="export-popover" aria-label="Export video" @click.stop>
+      <section class="export-popover" :aria-label="t('exportVideoAria')" @click.stop>
         <!-- Active Exporting Progress Card -->
         <div v-if="isExporting" class="export-progress-card">
           <div class="progress-header">
-            <span class="stage-title">{{ progress?.stageLabel || 'Exporting Video...' }}</span>
+            <span class="stage-title">{{ progress?.stageLabel || t('exporting') }}</span>
             <span class="percentage-badge">{{ Math.round(percentage) }}%</span>
           </div>
 
           <ProgressBar :value="percentage" class="main-progress-bar" />
 
           <div class="progress-details">
-            <span class="detail-item">Frame {{ progress?.completed ?? 0 }} / {{ progress?.total ?? 0 }}</span>
+            <span class="detail-item">{{ t('frameCount', { completed: progress?.completed ?? 0, total: progress?.total ?? 0 }) }}</span>
             <span class="detail-item time-item">{{ formatMs(progress?.currentTimeMs ?? 0) }} / {{ formatMs(progress?.totalTimeMs ?? 0) }}</span>
           </div>
 
           <div class="actions">
-            <Button variant="ghost" size="sm" block :icon="X" @click="cancel">Cancel Export</Button>
+            <Button variant="ghost" size="sm" block :icon="X" @click="cancel">{{ t('cancelExport') }}</Button>
           </div>
         </div>
 
         <!-- Configuration Form (When not exporting) -->
         <template v-else>
           <div class="field">
-            <span class="field-label">Format</span>
+            <span class="field-label">{{ t('format') }}</span>
             <ButtonGroup full>
               <Button
                 variant="tab"
@@ -112,7 +115,7 @@ const formatMs = (ms: number) => {
                 :class="{ active: format === 'webm' }"
                 @click="format = 'webm'"
               >
-                WebM
+                {{ t('webm') }}
               </Button>
               <Button
                 variant="tab"
@@ -121,14 +124,14 @@ const formatMs = (ms: number) => {
                 :class="{ active: format === 'mp4' }"
                 @click="format = 'mp4'"
               >
-                MP4
+                {{ t('mp4') }}
               </Button>
             </ButtonGroup>
             <span class="option-hint">{{ formatDescriptions[format] }}</span>
           </div>
 
           <div class="field">
-            <span class="field-label">Quality & Bitrate</span>
+            <span class="field-label">{{ t('qualityAndBitrate') }}</span>
             <ButtonGroup full>
               <Button
                 v-for="value in presets"
@@ -147,11 +150,11 @@ const formatMs = (ms: number) => {
 
           <p v-if="availability || error" class="error" role="alert">{{ availability || error }}</p>
           <div v-if="result" class="result-box">
-            <p class="success" role="status">Saved to {{ result.path }}</p>
-            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">Open File</Button>
+            <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
+            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">{{ t('openFile') }}</Button>
           </div>
           <div class="actions">
-            <Button variant="primary" size="sm" block :icon="Download" @click="run">Export Video</Button>
+            <Button variant="primary" size="sm" block :icon="Download" @click="run">{{ t('exportVideo') }}</Button>
           </div>
         </template>
       </section>

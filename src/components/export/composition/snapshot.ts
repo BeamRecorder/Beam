@@ -6,6 +6,9 @@ import type { CursorRenderSettings } from '../export-types'
 import type { CompositionSnapshot } from '../export-types'
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas'
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas'
+import { tNamespace } from '../../../i18n'
+
+const $t = tNamespace('exporter')
 
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
@@ -43,7 +46,7 @@ export function createCompositionSnapshot(input: {
   systemAudioEnabled: boolean
   micAudioEnabled: boolean
 }): CompositionSnapshot {
-  if (!input.videoSrc) throw new Error('La vidéo de la session est indisponible.')
+  if (!input.videoSrc) throw new Error($t('sessionVideoUnavailable'))
   return {
     duration: Math.max(0, input.duration),
     video: { src: input.videoSrc, width: Math.max(1, input.width), height: Math.max(1, input.height), fps: Math.max(1, input.fps), enabled: input.videoEnabled },
