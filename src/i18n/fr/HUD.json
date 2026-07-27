@@ -1,0 +1,18 @@
+{
+  "title": "DemoRecorder",
+  "openProject": "Ouvrir un projet",
+  "preferences": "Préférences",
+  "screen": "Écran",
+  "window": "Fenêtre",
+  "cameraOff": "Caméra désactivée",
+  "noAudio": "Aucun audio",
+  "systemAudio": "Audio système",
+  "off": "Désactivé",
+  "copied": "Copié",
+  "copyError": "Copier l'erreur",
+  "pleaseWait": "Veuillez patienter…",
+  "startRecording": "Démarrer l'enregistrement",
+  "stopRecording": "Arrêt ({time})",
+  "openExistingProject": "Ouvrir un projet existant",
+  "screenOption": "Écran {index}"
+}

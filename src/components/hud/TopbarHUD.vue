@@ -2,6 +2,9 @@
 import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
 import Badge from "~/ui/badge/Badge.vue";
 import Button from "~/ui/button/Button.vue";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("TopbarHUD");
 
 withDefaults(
   defineProps<{
@@ -11,7 +14,7 @@ withDefaults(
     isRecording?: boolean;
   }>(),
   {
-    title: "DemoRecorder",
+    title: "",
     showBack: false,
     showSettings: false,
     isRecording: false,
@@ -35,7 +38,7 @@ const emit = defineEmits<{
           size="sm"
           icon-only
           :icon="ChevronLeft"
-          aria-label="Back"
+          :aria-label="t('back')"
           @click="emit('back')"
         />
       </div>
@@ -43,17 +46,17 @@ const emit = defineEmits<{
         v-else
         :src="'/brand/DemoRecorderIcon.webp'"
         class="brand-logo"
-        alt="DemoRecorder"
+        :alt="t('title')"
       />
-      <span class="topbar-title">{{ title }}</span>
-      <Badge v-if="isRecording" variant="error" class="rec-badge">REC</Badge>
+      <span class="topbar-title">{{ title || t('title') }}</span>
+      <Badge v-if="isRecording" variant="error" class="rec-badge">{{ t('rec') }}</Badge>
     </div>
 
     <div class="window-actions">
       <button
         type="button"
         class="window-action"
-        aria-label="Minimize"
+        :aria-label="t('minimize')"
         @click="emit('minimize')"
       >
         <Minus :size="16" />
@@ -64,13 +67,13 @@ const emit = defineEmits<{
         size="sm"
         icon-only
         :icon="Settings"
-        aria-label="Preferences"
+        :aria-label="t('preferences')"
         @click="emit('open-settings')"
       />
       <button
         type="button"
         class="window-action close-button"
-        aria-label="Close"
+        :aria-label="t('close')"
         @click="emit('close')"
       >
         <X :size="16" />

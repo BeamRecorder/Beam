@@ -2,12 +2,16 @@
 import { ref } from 'vue'
 import { Monitor, Moon, Sun, Keyboard, ArrowLeft } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
+import { useLocaleStore } from '~/stores/locale'
+import { useTranslate } from '~/i18n/useTranslate'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Select from '~/ui/select/Select.vue'
 import ShortcutPreferences from './ShortcutPreferences.vue'
 
-defineProps<{
+const { t } = useTranslate('HudPreferences')
+
+const props = defineProps<{
   countdownSeconds: number
   recordingBarVisibility?: 'always' | 'auto-fade'
 }>()
@@ -19,31 +23,36 @@ const emit = defineEmits<{
 }>()
 
 const themeStore = useThemeStore()
+const localeStore = useLocaleStore()
 const currentView = ref<'general' | 'shortcuts'>('general')
 
 const countdownOptions = [
-  { value: 0, label: 'Off' },
-  { value: 3, label: '3s' },
-  { value: 5, label: '5s' },
-  { value: 10, label: '10s' },
+  { value: 0, label: t('off') },
+  { value: 3, label: t('option3s') },
+  { value: 5, label: t('option5s') },
+  { value: 10, label: t('option10s') },
 ]
 const recordingBarOptions = [
-  { value: 'always', label: 'Always visible' },
-  { value: 'auto-fade', label: 'Auto-fade' },
+  { value: 'always', label: t('alwaysVisible') },
+  { value: 'auto-fade', label: t('autoFade') },
+]
+const localeOptions = [
+  { value: 'en', label: 'EN - English - Anglais' },
+  { value: 'fr', label: 'FR - French - Français' },
 ]
 </script>
 
 <template>
-  <section class="preferences" aria-label="Preferences">
+  <section class="preferences" :aria-label="t('preferences')">
     <Transition name="slide-view" mode="out-in">
       <!-- Sub-page: Edit Shortcuts -->
       <div v-if="currentView === 'shortcuts'" key="shortcuts" class="view-container">
         <div class="view-header">
           <Button variant="outline" size="sm" @click="currentView = 'general'">
             <template #icon><ArrowLeft class="button-icon" /></template>
-            Back
+            {{ t('back') }}
           </Button>
-          <span class="view-title">Keyboard Shortcuts</span>
+          <span class="view-title">{{ t('keyboardShortcuts') }}</span>
         </div>
 
         <div class="preferences-list">
@@ -51,7 +60,7 @@ const recordingBarOptions = [
         </div>
 
         <Button variant="primary" size="md" block @click="currentView = 'general'">
-          Done
+          {{ t('done') }}
         </Button>
       </div>
 
@@ -60,19 +69,19 @@ const recordingBarOptions = [
         <div class="preferences-list">
           <div class="preference-item clickable" @click="currentView = 'shortcuts'">
             <div>
-              <p class="preference-title">Shortcuts</p>
-              <p class="preference-description">Configure hotkeys & actions</p>
+              <p class="preference-title">{{ t('shortcuts') }}</p>
+              <p class="preference-description">{{ t('configureHotkeys') }}</p>
             </div>
             <Button variant="secondary" size="sm">
               <template #icon><Keyboard class="button-icon" /></template>
-              Edit
+              {{ t('edit') }}
             </Button>
           </div>
 
           <div class="preference-item">
             <div>
-              <p class="preference-title">Recorder bar</p>
-              <p class="preference-description">Visibility while recording</p>
+              <p class="preference-title">{{ t('recorderBar') }}</p>
+              <p class="preference-description">{{ t('visibilityWhileRecording') }}</p>
             </div>
             <div class="recorder-bar-select">
               <Select
@@ -86,8 +95,8 @@ const recordingBarOptions = [
 
           <div class="preference-item">
             <div>
-              <p class="preference-title">Countdown</p>
-              <p class="preference-description">Select delay before start</p>
+              <p class="preference-title">{{ t('countdown') }}</p>
+              <p class="preference-description">{{ t('selectDelay') }}</p>
             </div>
             <div class="countdown-select">
               <Select
@@ -101,8 +110,23 @@ const recordingBarOptions = [
 
           <div class="preference-item">
             <div>
-              <p class="preference-title">Theme</p>
-              <p class="preference-description">Choose color mode</p>
+              <p class="preference-title">{{ t('language') }}</p>
+              <p class="preference-description">{{ t('chooseLanguage') }}</p>
+            </div>
+            <div class="countdown-select">
+              <Select
+                :model-value="localeStore.locale"
+                :options="localeOptions"
+                direction="up"
+                @update:model-value="localeStore.setLocale($event)"
+              />
+            </div>
+          </div>
+
+          <div class="preference-item">
+            <div>
+              <p class="preference-title">{{ t('theme') }}</p>
+              <p class="preference-description">{{ t('chooseColorMode') }}</p>
             </div>
             <ButtonGroup class="theme-controls">
               <Button
@@ -134,7 +158,7 @@ const recordingBarOptions = [
         </div>
 
         <Button variant="primary" size="md" block @click="emit('close')">
-          Return to HUD
+          {{ t('returnToHud') }}
         </Button>
       </div>
     </Transition>

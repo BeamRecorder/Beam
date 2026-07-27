@@ -48,6 +48,9 @@ import {
   Copy,
   Check,
 } from "@lucide/vue";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("HUD");
 
 interface SavedDevices {
   cameraId?: string;
@@ -96,7 +99,7 @@ const cameraOptions = computed(() => [
   ...sources.value
     .filter((source) => source.kind === "camera")
     .map((source) => ({ value: source.id, label: source.label })),
-  { value: "off", label: "Camera Off" },
+  { value: "off", label: t("cameraOff") },
 ]);
 const selectedCameraId = ref("off");
 
@@ -104,7 +107,7 @@ const micOptions = computed(() => [
   ...sources.value
     .filter((source) => source.kind === "microphone")
     .map((source) => ({ value: source.id, label: source.label })),
-  { value: "no-audio", label: "No Audio" },
+  { value: "no-audio", label: t("noAudio") },
 ]);
 const selectedMicId = ref("no-audio");
 const selectedScreenId = ref<string | null>(null);
@@ -127,13 +130,13 @@ const screenOptions = computed(() =>
     .filter((source) => source.kind === "display")
     .map((source, index) => ({
       value: source.id,
-      label: `Screen ${index + 1}`,
+      label: t("screenOption", { index: index + 1 }),
     })),
 );
-const systemAudioOptions = [
-  { value: "on", label: "System audio" },
-  { value: "off", label: "Off" },
-];
+const systemAudioOptions = computed(() => [
+  { value: "on", label: t("systemAudio") },
+  { value: "off", label: t("off") },
+]);
 
 // Timer / Duration simulation
 const recordingTime = ref("00:00");
@@ -772,10 +775,10 @@ const openProject = (project: CaptureProject) => {
     <TopbarHUD
       :title="
         showProjectPicker
-          ? 'Open a project'
+          ? t('openProject')
           : showSettings
-            ? 'Preferences'
-            : 'DemoRecorder'
+            ? t('preferences')
+            : t('title')
       "
       :show-back="showProjectPicker || showSettings"
       :show-settings="!showSettings && !showProjectPicker"
@@ -816,7 +819,7 @@ const openProject = (project: CaptureProject) => {
             @click="activeTab = 'screen'"
           >
             <template #icon><Monitor class="btn-icon" /></template>
-            Screen
+            {{ t('screen') }}
           </Button>
           <Button
             :class="{ active: activeTab === 'window' }"
@@ -824,7 +827,7 @@ const openProject = (project: CaptureProject) => {
             @click="activeTab = 'window'"
           >
             <template #icon><Layout class="btn-icon" /></template>
-            Window
+            {{ t('window') }}
           </Button>
         </ButtonGroup>
 
@@ -937,7 +940,7 @@ const openProject = (project: CaptureProject) => {
             :icon="copiedError ? Check : Copy"
             @click="copyError"
           >
-            {{ copiedError ? "Copied" : "Copy error" }}
+            {{ copiedError ? t('copied') : t('copyError') }}
           </Button>
         </div>
 
@@ -957,10 +960,10 @@ const openProject = (project: CaptureProject) => {
             </template>
             {{
               isBusy
-                ? "Please wait…"
+                ? t('pleaseWait')
                 : isRecording
-                  ? `Stop (${recordingTime})`
-                  : "Start Recording"
+                  ? t('stopRecording', { time: recordingTime })
+                  : t('startRecording')
             }}
           </Button>
         </div>
@@ -974,7 +977,7 @@ const openProject = (project: CaptureProject) => {
             :icon="ArrowUpRight"
             @click="openProjectPicker"
           >
-            Open an existing project
+            {{ t('openExistingProject') }}
           </Button>
         </div>
       </div>
