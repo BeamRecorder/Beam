@@ -8,6 +8,7 @@ import type {
   CursorRenderSettings,
 } from "../export-types";
 import { activeLayersAt, getCaptionTransform } from "../../video-editor/composition/composition-types";
+import { activeVisualTracksAt } from "../../video-editor/composition/visual-stack";
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../video-editor/composition/webcam/webcam-zoom";
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { applyClipShadow, radiusForAppearance } from '../../video-editor/canvas/composables/useCompositionMedia';
@@ -49,12 +50,14 @@ export function drawCompositionLayers(
   followsZoom = false,
   positionedMedia?: { x: number; y: number; width: number; height: number },
   mainVideoWidth?: number,
+  onlyLayerId?: string,
 ) {
   const { width, height } = snapshot.canvas;
   const pm = positionedMedia ?? { x: 0, y: 0, width, height };
   const refWidth = mainVideoWidth || snapshot.video.width || 1920;
 
   for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
+    if (onlyLayerId && layer.id !== onlyLayerId) continue;
     if (
       layer.kind === "audio" ||
       (layer.kind === 'video' && layer.reactToZoom) ||
@@ -267,28 +270,43 @@ export function renderCompositionFrame(
   ctx.scale(scale, scale);
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   drawSnapshotBackground(ctx, snapshot, background);
-  applyClipShadow(ctx, snapshot.composition.baseVideoAppearance, positionedMedia.width);
-  ctx.beginPath();
-  ctx.roundRect(positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height, Math.min(radiusForAppearance(snapshot.composition.baseVideoAppearance), positionedMedia.width / 2, positionedMedia.height / 2));
-  ctx.clip();
-  if (isBaseVideoMirrored) {
-    ctx.save();
-    ctx.translate(positionedMedia.x * 2 + positionedMedia.width, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
-    ctx.restore();
-  } else {
-    ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
-  }
-  drawCompositionLayers(ctx, snapshot, time, visuals, true, positionedMedia, sourceWidth);
   ctx.restore();
 
-  for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
-    if (layer.kind !== "video" || !layer.reactToZoom) continue;
-    const source = visuals?.get(layer.assetId);
-    if (source) drawWebcamOverlay(ctx, source, width, height, scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance, layer.isMirrored), layer.transform, layer.crop);
+  const drawBaseVideo = () => {
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.scale(scale, scale);
+    ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
+    applyClipShadow(ctx, snapshot.composition.baseVideoAppearance, positionedMedia.width);
+    ctx.beginPath();
+    ctx.roundRect(positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height, Math.min(radiusForAppearance(snapshot.composition.baseVideoAppearance), positionedMedia.width / 2, positionedMedia.height / 2));
+    ctx.clip();
+    if (isBaseVideoMirrored) {
+      ctx.translate(positionedMedia.x * 2 + positionedMedia.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, source.x, source.y, source.width, source.height, positionedMedia.x, positionedMedia.y, positionedMedia.width, positionedMedia.height);
+    ctx.restore();
+  };
+
+  for (const track of activeVisualTracksAt(snapshot.composition, time * 1000)) {
+    if (track.kind === "base-video") {
+      drawBaseVideo();
+    } else if (track.kind === "webcam") {
+      for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
+        if (layer.kind !== "video" || !layer.reactToZoom) continue;
+        const webcam = visuals?.get(layer.assetId);
+        if (webcam) drawWebcamOverlay(ctx, webcam, width, height, scale, webcamSettingsForAppearance(layer.appearance ?? layer.webcamAppearance, layer.isMirrored), layer.transform, layer.crop);
+      }
+    } else if (track.layer) {
+      drawCompositionLayers(ctx, snapshot, time, visuals, false, positionedMedia, sourceWidth, track.layer.id);
+    }
   }
-  drawCompositionLayers(ctx, snapshot, time, visuals, false, positionedMedia, sourceWidth);
+  for (const layer of activeLayersAt(snapshot.composition, time * 1000)) {
+    if (layer.kind === "caption") {
+      drawCompositionLayers(ctx, snapshot, time, visuals, false, positionedMedia, sourceWidth, layer.id);
+    }
+  }
 
   ctx.save();
   ctx.translate(width / 2, height / 2);

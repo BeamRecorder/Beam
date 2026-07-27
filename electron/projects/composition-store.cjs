@@ -98,7 +98,17 @@ function normalizeComposition(value) {
   const baseVideoAppearance = clipAppearance(value.baseVideoAppearance)
   const baseVideoCrop = value.baseVideoCrop ? transform(value.baseVideoCrop) : undefined
   const baseVideoTransform = value.baseVideoTransform ? transform(value.baseVideoTransform) : undefined
-  return { media, layers, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}) }
+  const cameraLayerIds = new Set(layers.filter((layer) => layer.kind === 'video' && layer.reactToZoom).map((layer) => layer.id))
+  const visualLayerIds = layers.filter((layer) => (layer.kind === 'video' || layer.kind === 'image') && !cameraLayerIds.has(layer.id)).sort((a, b) => a.order - b.order).map((layer) => layer.id)
+  const validVisualIds = new Set(['base-video', ...visualLayerIds, ...(cameraLayerIds.size ? ['webcam'] : [])])
+  const fallbackVisualOrder = [...visualLayerIds, ...(cameraLayerIds.size ? ['webcam'] : []), 'base-video']
+  const requestedVisualOrder = Array.isArray(value.visualTrackOrder) ? value.visualTrackOrder : fallbackVisualOrder
+  const visualTrackOrder = []
+  for (const trackId of requestedVisualOrder) {
+    if (typeof trackId === 'string' && validVisualIds.has(trackId) && !visualTrackOrder.includes(trackId)) visualTrackOrder.push(trackId)
+  }
+  for (const trackId of fallbackVisualOrder) if (!visualTrackOrder.includes(trackId)) visualTrackOrder.push(trackId)
+  return { media, layers, visualTrackOrder, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}), ...(typeof value.baseVideoIsMirrored === 'boolean' ? { baseVideoIsMirrored: value.baseVideoIsMirrored } : {}), ...(finite(value.baseVideoPlaybackRate) && value.baseVideoPlaybackRate >= .25 && value.baseVideoPlaybackRate <= 4 ? { baseVideoPlaybackRate: value.baseVideoPlaybackRate } : {}), ...(typeof value.areClipsLinked === 'boolean' ? { areClipsLinked: value.areClipsLinked } : {}) }
 }
 
 function createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor }) {
@@ -116,7 +126,7 @@ function createCompositionStore({ directoryFor, readManifest, writeManifest, ses
     const composition = read(id); composition.media.push(asset); save(id, composition)
     return { ...asset, src: pathToFileURL(path.join(targetDirectory, asset.fileName)).href }
   }
-  const upsertLayer = (id, layer) => { const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layer.id); const next = normalizeComposition({ media: composition.media, layers: index < 0 ? [...composition.layers, layer] : composition.layers.map((item, i) => i === index ? layer : item) }); return save(id, next).layers.find((item) => item.id === layer.id) }
+  const upsertLayer = (id, layer) => { const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layer.id); const next = normalizeComposition({ ...composition, layers: index < 0 ? [...composition.layers, layer] : composition.layers.map((item, i) => i === index ? layer : item) }); return save(id, next).layers.find((item) => item.id === layer.id) }
   const removeLayer = (id, layerId) => { const composition = read(id); const layer = composition.layers.find((item) => item.id === layerId); if (!layer) throw new Error('Calque introuvable'); composition.layers = composition.layers.filter((item) => item.id !== layerId); if (layer.assetId && !composition.layers.some((item) => item.assetId === layer.assetId)) { const asset = composition.media.find((item) => item.id === layer.assetId); if (asset?.origin === 'project') fs.rmSync(path.join(directoryFor(id), 'media', asset.fileName), { force: true }); if (asset) composition.media = composition.media.filter((item) => item.id !== asset.id) } return save(id, composition) }
   const moveLayer = (id, layerId, targetIndex) => {
     const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layerId)

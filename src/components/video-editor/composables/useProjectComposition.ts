@@ -21,6 +21,7 @@ import {
   splitCameraLayer,
   trimCameraLayer,
 } from "../composition/webcam/camera-composition";
+import { normalizedVisualTrackOrder } from "../composition/visual-stack";
 
 export function useProjectComposition(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -320,6 +321,10 @@ export function useProjectComposition(options: {
       ...composition.value,
       media: [...composition.value.media.filter((item) => item.id !== asset.id), asset],
       layers: [...composition.value.layers, layer, ...(linkedAudio ? [linkedAudio] : [])],
+      visualTrackOrder:
+        asset.kind === "video" || asset.kind === "image"
+          ? [layer.id, ...normalizedVisualTrackOrder(composition.value)]
+          : composition.value.visualTrackOrder,
     };
     await saveComposition();
     selectedCompositionLayerId.value = layer.id;
@@ -622,9 +627,15 @@ export function useProjectComposition(options: {
     };
   };
 
-  const reorderLayer = async (id: string, targetIndex: number) => {
-    if (!project.value) return;
-    composition.value = await capture.moveProjectCompositionLayer(project.value.id, id, targetIndex);
+  const reorderVisualTrack = async (id: string, targetIndex: number) => {
+    const tracks = normalizedVisualTrackOrder(composition.value);
+    const currentIndex = tracks.indexOf(id);
+    if (currentIndex < 0) return;
+    const next = [...tracks];
+    next.splice(currentIndex, 1);
+    next.splice(Math.max(0, Math.min(next.length, targetIndex)), 0, id);
+    composition.value = { ...composition.value, visualTrackOrder: next };
+    await saveComposition();
   };
 
   const moveLayer = async (id: string, startMs: number, endMs: number) => {
@@ -654,7 +665,7 @@ export function useProjectComposition(options: {
     trimLayerEdge,
     previewMoveLayer,
     moveLayer,
-    reorderLayer,
+    reorderVisualTrack,
     selectBaseVideo,
     updateSelectedClipAppearance,
     updateSelectedClipIsMirrored,

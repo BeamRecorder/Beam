@@ -75,6 +75,8 @@ const {
   compositionAudioLayers,
   compositionAudioBars,
   cameraLayers,
+  visualTrackIndex,
+  visualTrackStyle,
   mainVideoLayer,
   layerStyle,
   zoomElementStyle,
@@ -117,8 +119,9 @@ const beginLayerReorder = (event: DragEvent, id: string) => {
   event.dataTransfer?.setData("text/plain", id);
   if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 };
-const finishLayerReorder = (targetIndex: number) => {
-  if (draggedLayerId.value) emit("reorder:composition-layer", { id: draggedLayerId.value, targetIndex });
+const finishLayerReorder = (event: DragEvent, targetIndex: number) => {
+  const id = event.dataTransfer?.getData("text/plain") || draggedLayerId.value;
+  if (id) emit("reorder:composition-layer", { id, targetIndex });
   draggedLayerId.value = null;
 };
 let headerMarqueeFrame = 0;
@@ -206,12 +209,18 @@ const selectMainVideoLayer = () => {
         <div
           class="track-row video-track"
           :class="{ disabled: !isVideoEnabled }"
+          :style="visualTrackStyle('base-video')"
+          @dragover.prevent
+          @drop.prevent="finishLayerReorder($event, visualTrackIndex('base-video'))"
         >
           <div
-            class="track-info"
+            class="track-info composition-track-info"
             @click="emit('toggle:video')"
             title="Click to toggle Video track"
           >
+            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @dragstart.stop="beginLayerReorder($event, 'base-video')" @dragend="draggedLayerId = null">
+              <GripVertical class="track-grip" aria-hidden="true" />
+            </span>
             <Video class="track-icon" />
             <span class="track-title">Video</span>
             <Button
@@ -262,15 +271,18 @@ const selectMainVideoLayer = () => {
         </div>
 
         <div
-          v-for="(layer, index) in compositionVisualLayers"
+          v-for="layer in compositionVisualLayers"
           :key="layer.id"
           class="track-row composition-media-track"
           :class="{ disabled: !layer.enabled, dragging: draggedLayerId === layer.id }"
+          :style="visualTrackStyle(layer.id)"
           @dragover.prevent
-          @drop.prevent="finishLayerReorder(index)"
+          @drop.prevent="finishLayerReorder($event, visualTrackIndex(layer.id))"
         >
-          <div class="track-info composition-track-info" draggable="true" @dragstart="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null" @pointerenter="startHeaderMarquee" @pointerleave="stopHeaderMarquee($event.currentTarget)">
-            <GripVertical class="track-grip" aria-hidden="true" />
+          <div class="track-info composition-track-info" @pointerenter="startHeaderMarquee" @pointerleave="stopHeaderMarquee($event.currentTarget)">
+            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @dragstart.stop="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null">
+              <GripVertical class="track-grip" aria-hidden="true" />
+            </span>
             <Video v-if="layer.kind === 'video'" class="track-icon" />
             <ImageIcon v-else class="track-icon" />
             <span class="track-title"><span class="track-title-text">{{ layer.name }}</span></span>
@@ -300,12 +312,18 @@ const selectMainVideoLayer = () => {
           v-if="cameraLayers.length"
           class="track-row camera-track"
           :class="{ disabled: !isCameraEnabled }"
+          :style="visualTrackStyle('webcam')"
+          @dragover.prevent
+          @drop.prevent="finishLayerReorder($event, visualTrackIndex('webcam'))"
         >
           <div
-            class="track-info"
+            class="track-info composition-track-info"
             @click="emit('toggle:camera')"
             title="Show or hide webcam track"
           >
+            <span class="track-drag-handle" draggable="true" title="Reorder visual track" @dragstart.stop="beginLayerReorder($event, 'webcam')" @dragend="draggedLayerId = null">
+              <GripVertical class="track-grip" aria-hidden="true" />
+            </span>
             <component
               :is="isCameraEnabled ? Eye : EyeOff"
               class="track-icon"
@@ -701,6 +719,8 @@ const selectMainVideoLayer = () => {
 .composition-track-info { cursor: grab; }
 .composition-track-info:active { cursor: grabbing; }
 .track-grip { width: 14px; color: var(--text-muted); flex: 0 0 auto; }
+.track-drag-handle { display: inline-flex; align-items: center; cursor: grab; }
+.track-drag-handle:active { cursor: grabbing; }
 .composition-media-content { position: relative; height: 100%; background: var(--color-bg-element); }
 .composition-media-clip {
   position: absolute; top: 0; bottom: 0; min-width: 14px; padding: 0; border: 0;
@@ -975,6 +995,12 @@ const selectMainVideoLayer = () => {
   flex-direction: column;
   gap: 4px;
   padding: 6px 0;
+}
+
+.cursor-track,
+.annotation-track,
+.audio-track {
+  order: 10000;
 }
 
 /* Slim Track Row */

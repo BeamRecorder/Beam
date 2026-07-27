@@ -103,9 +103,17 @@ export function getCaptionTransform(layer: CaptionCompositionLayer): NormalizedT
   return { x: 0.1, y, width: 0.8, height: 0.14 };
 }
 export type CompositionLayer = MediaCompositionLayer | CaptionCompositionLayer;
+
+/** Identifiers used by the single visual compositing stack (front to back). */
+export const BASE_VIDEO_TRACK_ID = "base-video";
+export const WEBCAM_TRACK_ID = "webcam";
+export type VisualTrackId = typeof BASE_VIDEO_TRACK_ID | typeof WEBCAM_TRACK_ID | string;
+
 export interface ProjectComposition {
   media: CompositionMedia[];
   layers: CompositionLayer[];
+  /** Visual tracks ordered from foreground (timeline top) to background. */
+  visualTrackOrder?: VisualTrackId[];
   baseVideoAppearance?: ClipAppearance;
   baseVideoCrop?: NormalizedCrop;
   baseVideoTransform?: NormalizedTransform;

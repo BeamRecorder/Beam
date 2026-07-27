@@ -11,7 +11,8 @@ import type { CursorType } from "../properties/cursor/useCursorReplacer";
 import type { ShadowDirection } from '../properties/shadow-types';
 import type { BackgroundValue } from "../composables/backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
-import type { CompositionLayer, MediaCompositionLayer, NormalizedTransform, ProjectComposition, NormalizedCrop } from '../composition/composition-types';
+import { activeLayersAt, type CompositionLayer, type MediaCompositionLayer, type NormalizedTransform, type ProjectComposition, type NormalizedCrop } from '../composition/composition-types';
+import { activeVisualTracksAt } from '../composition/visual-stack';
 import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
 
 import { useCanvasBackground } from './composables/useCanvasBackground';
@@ -84,6 +85,11 @@ const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
+let drawVisualStack: ((
+  ctx: CanvasRenderingContext2D,
+  videoWindow: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
+  drawBaseVideo: () => void,
+) => void) | null = null;
 
 function renderOnce() {
   if (animationFrameId === null) {
@@ -148,6 +154,7 @@ const cameraZoom = useCameraZoom({
   isCropping: () => props.isCropping,
   drawBackground,
   videoError: () => videoError.value,
+  renderVisualStack: (ctx, videoWindow, drawBaseVideo) => drawVisualStack?.(ctx, videoWindow, drawBaseVideo),
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
   onPreviewZoom: (zoom) => emit('preview:zoom', zoom),
   onSelectBaseVideo: () => emit('select:base-video'),
@@ -174,6 +181,24 @@ const compositionMedia = useCompositionMedia({
   isCropping: () => props.isCropping,
   onRenderOnce: () => renderOnce(),
 });
+
+drawVisualStack = (ctx, videoWindow, drawBaseVideo) => {
+  for (const track of activeVisualTracksAt(props.composition, props.currentTime * 1000)) {
+    if (track.kind === "base-video") {
+      drawBaseVideo();
+    } else if (track.kind === "webcam") {
+      compositionMedia.drawWebcamLayers(ctx, videoWindow);
+    } else if (track.layer) {
+      compositionMedia.drawComposition(
+        ctx,
+        videoWindow,
+        videoEl.videoWidth || 1920,
+        false,
+        track.layer.id,
+      );
+    }
+  }
+};
 
 watch(isMasterPlaying, () => renderOnce());
 
@@ -273,11 +298,16 @@ const renderCanvas = () => {
   const videoWindow = cameraZoom.drawVideoWindow(ctx, width, height, videoEl);
 
   if (videoWindow) {
-    cameraZoom.drawInCameraSpace(ctx, videoWindow, () =>
-      compositionMedia.drawComposition(ctx, videoWindow, videoEl.videoWidth || 1920, true),
-    );
-    compositionMedia.drawWebcamLayers(ctx, videoWindow);
-    compositionMedia.drawComposition(ctx, videoWindow, videoEl.videoWidth || 1920, false);
+    for (const layer of activeLayersAt(props.composition, props.currentTime * 1000)) {
+      if (layer.kind !== "caption") continue;
+      compositionMedia.drawComposition(
+        ctx,
+        videoWindow,
+        videoEl.videoWidth || 1920,
+        false,
+        layer.id,
+      );
+    }
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
       videoWindow,

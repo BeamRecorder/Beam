@@ -104,7 +104,7 @@ const {
   trimLayerEdge,
   previewMoveLayer,
   moveLayer,
-  reorderLayer,
+  reorderVisualTrack,
   selectBaseVideo,
   updateSelectedClipAppearance,
   updateSelectedClipIsMirrored,
@@ -516,7 +516,7 @@ onBeforeUnmount(() => {
           }"
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
-          @reorder:composition-layer="({ id, targetIndex }) => reorderLayer(id, targetIndex)"
+          @reorder:composition-layer="({ id, targetIndex }) => reorderVisualTrack(id, targetIndex)"
         />
       </div>
     </div>

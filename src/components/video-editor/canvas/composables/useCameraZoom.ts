@@ -49,6 +49,11 @@ export interface UseCameraZoomOptions {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void;
   videoError: () => string | null;
+  renderVisualStack?: (
+    ctx: CanvasRenderingContext2D,
+    videoWindow: RenderedVideoWindow,
+    drawBaseVideo: () => void,
+  ) => void;
   onUpdateZoom: (zoom: ZoomElement) => void;
   onPreviewZoom?: (zoom: ZoomElement) => void;
   onSelectBaseVideo: () => void;
@@ -444,7 +449,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx.restore();
 
     const videoError = options.videoError();
-    if (videoError) {
+    const renderedWindow = {
+      dx,
+      dy,
+      dw,
+      dh,
+      focusX: camera.focusX,
+      focusY: camera.focusY,
+      scale: camera.scale,
+    };
+    const drawBaseVideo = () => {
+      if (videoError) {
       ctx.save();
       ctx.translate(dx + dw / 2, dy + dh / 2);
       ctx.scale(scale, scale);
@@ -468,7 +483,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.textAlign = "center";
       ctx.fillText("Loading video recording...", width / 2, height / 2);
       ctx.restore();
-    }
+      }
+    };
+    if (options.renderVisualStack) options.renderVisualStack(ctx, renderedWindow, drawBaseVideo);
+    else drawBaseVideo();
     ctx.restore();
 
     videoWindowBounds.value = {
@@ -496,15 +514,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusY: camera.focusY,
     };
 
-    return {
-      dx,
-      dy,
-      dw,
-      dh,
-      focusX: camera.focusX,
-      focusY: camera.focusY,
-      scale: camera.scale,
-    };
+    return renderedWindow;
   };
 
   const drawInCameraSpace = (

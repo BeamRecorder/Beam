@@ -5,6 +5,7 @@ import type { ZoomElement } from "../../zoom/zoom-types";
 import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
 import { cameraLayers } from "../../composition/webcam/camera-composition";
+import { visualTracks } from "../../composition/visual-stack";
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import {
   timelinePercentStyle,
@@ -55,6 +56,12 @@ export function useTimelineTracks(
   const compositionAudioLayers = computed(() =>
     props.composition.layers.filter((layer) => layer.kind === 'audio'),
   );
+  const visualTrackOrder = computed(() => visualTracks(props.composition));
+  const visualTrackIndex = (id: string) =>
+    visualTrackOrder.value.findIndex((track) => track.id === id);
+  const visualTrackStyle = (id: string) => ({
+    order: visualTrackIndex(id),
+  });
   const { bars: compositionAudioBars } = useCompositionAudioWaveforms(() => props.composition, () => props.duration);
   const mainVideoLayer = computed(
     () => null,
@@ -701,6 +708,9 @@ export function useTimelineTracks(
     captionLayers,
     compositionVisualLayers,
     compositionAudioLayers,
+    visualTrackOrder,
+    visualTrackIndex,
+    visualTrackStyle,
     compositionAudioBars,
     cameraLayers: cameraLayersResult,
     mainVideoLayer,

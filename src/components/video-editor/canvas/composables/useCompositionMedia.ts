@@ -238,6 +238,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     videoWindow: { dx: number; dy: number; dw: number; dh: number },
     mainVideoWidth: number,
     followsZoom: boolean,
+    onlyLayerId?: string,
   ) => {
     const comp = options.composition();
     const currentTime = options.currentTime();
@@ -246,6 +247,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const webcamDraft = options.webcamDraft();
 
     for (const layer of activeLayersAt(comp, timeMs)) {
+      if (onlyLayerId && layer.id !== onlyLayerId) continue;
       if (
         layer.kind === "audio" ||
         (layer.kind === "video" && layer.reactToZoom)
@@ -476,6 +478,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       dh: number;
       scale: number;
     },
+    onlyLayerId?: string,
   ) => {
     const comp = options.composition();
     const currentTime = options.currentTime();
@@ -484,6 +487,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const webcamDraft = options.webcamDraft();
 
     for (const layer of activeLayersAt(comp, timeMs)) {
+      if (onlyLayerId && layer.id !== onlyLayerId) continue;
       if (layer.kind !== "video" || !layer.reactToZoom) continue;
       const asset = compositionVideos.get(layer.assetId);
       const localTime =
