@@ -1,23 +1,83 @@
-name: capture
+name: release
+
 on:
   push:
-  pull_request:
+
+permissions:
+  contents: write
 
 jobs:
-  rust:
+  prepare:
+    # GitHub Actions cannot filter a push trigger by commit message, so ordinary
+    # pushes create a skipped workflow run but never provision a build runner.
+    if: >-
+      github.actor == 'ExtraBinoss' &&
+      contains(github.event.head_commit.message, '[RELEASE]')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        shell: bash
+        run: echo "tag=v$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: prepare
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            electron-target: --win nsis
+            artifact-name: demorecorder-windows-x64
+          - os: macos-13
+            electron-target: --mac dmg
+            artifact-name: demorecorder-macos-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
-      - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libpipewire-0.3-dev libspa-0.2-dev libasound2-dev libudev-dev
-      - run: cargo fmt --all --check
-      - run: cargo check -p capture --all-targets --all-features
-      - run: cargo test -p capture --all-features
-      - run: cargo clippy -p capture --all-targets --all-features -- -D warnings
-      - run: cargo doc -p capture --all-features --no-deps
+          targets: ${{ runner.os == 'Windows' && 'x86_64-pc-windows-msvc' || 'x86_64-apple-darwin' }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ runner.os }}
+          cache-on-failure: true
+      - run: npm ci
+      # Release-only pipeline: keep the path short. The Rust binary is compiled
+      # before Electron Builder so package.json extraResources bundles it.
+      - run: npm run capture:build-release
+      - run: npx vite build
+      - run: npx electron-builder ${{ matrix.electron-target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: dist_electron/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: [prepare, package]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "La release $TAG existe déjà. Augmente package.json avant un nouveau [RELEASE]."
+            exit 1
+          fi
+          gh release create "$TAG" release-assets/* --title "$TAG" --generate-notes
