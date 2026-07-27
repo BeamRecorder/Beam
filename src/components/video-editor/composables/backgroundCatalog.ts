@@ -1,4 +1,7 @@
 import wallpapers from "virtual:public-background-media";
+import { tNamespace } from '~/i18n'
+
+const $t = tNamespace('backgroundCatalog')
 
 export type BackgroundKind = "image" | "video" | "color" | "gradient";
 export type BackgroundMediaKind = Extract<BackgroundKind, "image" | "video">;
@@ -13,7 +16,7 @@ export type BackgroundValue = BackgroundMedia | ColorBackground | GradientCatalo
 export interface BackgroundMediaGroup { kind: BackgroundMediaKind; label: string; items: BackgroundMedia[] }
 
 const mediaKinds: Record<string, BackgroundMediaKind> = { avif: "image", bmp: "image", jpeg: "image", jpg: "image", png: "image", webp: "image", m4v: "video", mov: "video", mp4: "video", ogv: "video", webm: "video" };
-const labels: Record<BackgroundMediaKind, string> = { image: "Images", video: "Videos" };
+const labels: Record<BackgroundMediaKind, string> = { image: $t("images"), video: $t("videos") };
 const defaultGradient: GradientBackground = { type: "linear", angle: 135, stops: [{ id: "start", position: 0, color: "#4f46e5", alpha: 1 }, { id: "end", position: 1, color: "#ec4899", alpha: 1 }] };
 
 const extensionFor = (path: string) => path.slice(path.lastIndexOf(".") + 1).toLowerCase();
@@ -56,22 +59,22 @@ export const normalizeBackgroundValue = (value: unknown): BackgroundValue | null
   const entry = value as Partial<BackgroundEntry>;
   if ((entry.kind === "image" || entry.kind === "video") && typeof entry.path === "string" && backgroundKindFor(entry.path) === entry.kind) return { id: typeof entry.id === "string" ? entry.id : entry.path, name: typeof entry.name === "string" ? entry.name : nameFor(entry.path), path: entry.path, extension: extensionFor(entry.path), kind: entry.kind, ...(typeof entry.fileName === "string" ? { fileName: entry.fileName } : {}) };
   if (entry.kind === "color" && hex(entry.color)) return { id: typeof entry.id === "string" ? entry.id : `color:${entry.color.toLowerCase()}`, name: typeof entry.name === "string" ? entry.name : entry.color, kind: "color", color: entry.color };
-  if (entry.kind === "gradient") return { id: typeof entry.id === "string" ? entry.id : "gradient:custom", name: typeof entry.name === "string" ? entry.name : "Custom gradient", kind: "gradient", gradient: normalizeGradient(entry.gradient) };
+  if (entry.kind === "gradient") return { id: typeof entry.id === "string" ? entry.id : "gradient:custom", name: typeof entry.name === "string" ? entry.name : $t("customGradient"), kind: "gradient", gradient: normalizeGradient(entry.gradient) };
   return null;
 };
 export const BACKGROUND_MEDIA = createWallpaperMedia(wallpapers.images, wallpapers.videos);
 export const BACKGROUND_COLORS: ColorBackground[] = ["#111827", "#ffffff", "#0f766e", "#1d4ed8", "#7c3aed", "#be123c"].map((color) => ({ id: `color:${color}`, name: color, kind: "color", color }));
 export const BACKGROUND_GRADIENTS: GradientCatalogBackground[] = [
-  { id: "gradient:violet", name: "Violet", kind: "gradient", gradient: defaultGradient },
-  { id: "gradient:fire", name: "Fire", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "f1", position: 0, color: "#000000", alpha: 1 }, { id: "f2", position: 0.2, color: "#ff4500", alpha: 1 }, { id: "f3", position: 0.5, color: "#ff8c00", alpha: 1 }, { id: "f4", position: 1, color: "#ffff00", alpha: 1 }] } },
-  { id: "gradient:ocean", name: "Ocean", kind: "gradient", gradient: { type: "linear", angle: 120, stops: [{ id: "o1", position: 0, color: "#001219", alpha: 1 }, { id: "o2", position: 0.4, color: "#005f73", alpha: 1 }, { id: "o3", position: 0.7, color: "#0a9396", alpha: 1 }, { id: "o4", position: 1, color: "#94d2bd", alpha: 1 }] } },
-  { id: "gradient:sunset", name: "Sunset", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "s1", position: 0, color: "#312244", alpha: 1 }, { id: "s2", position: 0.3, color: "#d90429", alpha: 1 }, { id: "s3", position: 0.6, color: "#f72585", alpha: 1 }, { id: "s4", position: 1, color: "#ffb703", alpha: 1 }] } },
-  { id: "gradient:neon", name: "Neon", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "n1", position: 0, color: "#7209b7", alpha: 1 }, { id: "n2", position: 0.5, color: "#b5179e", alpha: 1 }, { id: "n3", position: 1, color: "#4cc9f0", alpha: 1 }] } },
-  { id: "gradient:forest", name: "Forest", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "fo1", position: 0, color: "#004b23", alpha: 1 }, { id: "fo2", position: 0.3, color: "#007200", alpha: 1 }, { id: "fo3", position: 0.6, color: "#38b000", alpha: 1 }, { id: "fo4", position: 1, color: "#ccff33", alpha: 1 }] } },
-  { id: "gradient:gold", name: "Gold", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "g1", position: 0, color: "#582f0e", alpha: 1 }, { id: "g2", position: 0.4, color: "#7f4f24", alpha: 1 }, { id: "g3", position: 0.7, color: "#b08968", alpha: 1 }, { id: "g4", position: 1, color: "#ede0d4", alpha: 1 }] } },
-  { id: "gradient:ice", name: "Ice", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "i1", position: 0, color: "#caf0f8", alpha: 1 }, { id: "i2", position: 0.5, color: "#ade8f4", alpha: 1 }, { id: "i3", position: 1, color: "#0077b6", alpha: 1 }] } },
-  { id: "gradient:vaporwave", name: "Vaporwave", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "v1", position: 0, color: "#ff71ce", alpha: 1 }, { id: "v2", position: 0.25, color: "#01cdfe", alpha: 1 }, { id: "v3", position: 0.5, color: "#05ffa1", alpha: 1 }, { id: "v4", position: 0.75, color: "#b967ff", alpha: 1 }, { id: "v5", position: 1, color: "#fffb96", alpha: 1 }] } },
-  { id: "gradient:aurora", name: "Aurora", kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "a1", position: 0, color: "#011627", alpha: 1 }, { id: "a2", position: 0.4, color: "#2ec4b6", alpha: 1 }, { id: "a3", position: 0.7, color: "#e71d36", alpha: 1 }, { id: "a4", position: 1, color: "#ff9f1c", alpha: 1 }] } },
+  { id: "gradient:violet", name: $t("violet"), kind: "gradient", gradient: defaultGradient },
+  { id: "gradient:fire", name: $t("fire"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "f1", position: 0, color: "#000000", alpha: 1 }, { id: "f2", position: 0.2, color: "#ff4500", alpha: 1 }, { id: "f3", position: 0.5, color: "#ff8c00", alpha: 1 }, { id: "f4", position: 1, color: "#ffff00", alpha: 1 }] } },
+  { id: "gradient:ocean", name: $t("ocean"), kind: "gradient", gradient: { type: "linear", angle: 120, stops: [{ id: "o1", position: 0, color: "#001219", alpha: 1 }, { id: "o2", position: 0.4, color: "#005f73", alpha: 1 }, { id: "o3", position: 0.7, color: "#0a9396", alpha: 1 }, { id: "o4", position: 1, color: "#94d2bd", alpha: 1 }] } },
+  { id: "gradient:sunset", name: $t("sunset"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "s1", position: 0, color: "#312244", alpha: 1 }, { id: "s2", position: 0.3, color: "#d90429", alpha: 1 }, { id: "s3", position: 0.6, color: "#f72585", alpha: 1 }, { id: "s4", position: 1, color: "#ffb703", alpha: 1 }] } },
+  { id: "gradient:neon", name: $t("neon"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "n1", position: 0, color: "#7209b7", alpha: 1 }, { id: "n2", position: 0.5, color: "#b5179e", alpha: 1 }, { id: "n3", position: 1, color: "#4cc9f0", alpha: 1 }] } },
+  { id: "gradient:forest", name: $t("forest"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "fo1", position: 0, color: "#004b23", alpha: 1 }, { id: "fo2", position: 0.3, color: "#007200", alpha: 1 }, { id: "fo3", position: 0.6, color: "#38b000", alpha: 1 }, { id: "fo4", position: 1, color: "#ccff33", alpha: 1 }] } },
+  { id: "gradient:gold", name: $t("gold"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "g1", position: 0, color: "#582f0e", alpha: 1 }, { id: "g2", position: 0.4, color: "#7f4f24", alpha: 1 }, { id: "g3", position: 0.7, color: "#b08968", alpha: 1 }, { id: "g4", position: 1, color: "#ede0d4", alpha: 1 }] } },
+  { id: "gradient:ice", name: $t("ice"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "i1", position: 0, color: "#caf0f8", alpha: 1 }, { id: "i2", position: 0.5, color: "#ade8f4", alpha: 1 }, { id: "i3", position: 1, color: "#0077b6", alpha: 1 }] } },
+  { id: "gradient:vaporwave", name: $t("vaporwave"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "v1", position: 0, color: "#ff71ce", alpha: 1 }, { id: "v2", position: 0.25, color: "#01cdfe", alpha: 1 }, { id: "v3", position: 0.5, color: "#05ffa1", alpha: 1 }, { id: "v4", position: 0.75, color: "#b967ff", alpha: 1 }, { id: "v5", position: 1, color: "#fffb96", alpha: 1 }] } },
+  { id: "gradient:aurora", name: $t("aurora"), kind: "gradient", gradient: { type: "linear", angle: 135, stops: [{ id: "a1", position: 0, color: "#011627", alpha: 1 }, { id: "a2", position: 0.4, color: "#2ec4b6", alpha: 1 }, { id: "a3", position: 0.7, color: "#e71d36", alpha: 1 }, { id: "a4", position: 1, color: "#ff9f1c", alpha: 1 }] } },
 ];
-export const customColor = (color: string): ColorBackground => ({ id: `color:custom:${color.toLowerCase()}`, name: "Custom color", kind: "color", color });
-export const customGradient = (gradient: GradientBackground): GradientCatalogBackground => ({ id: "gradient:custom", name: "Custom gradient", kind: "gradient", gradient: normalizeGradient(gradient) });
+export const customColor = (color: string): ColorBackground => ({ id: `color:custom:${color.toLowerCase()}`, name: $t("customColor"), kind: "color", color });
+export const customGradient = (gradient: GradientBackground): GradientCatalogBackground => ({ id: "gradient:custom", name: $t("customGradient"), kind: "gradient", gradient: normalizeGradient(gradient) });

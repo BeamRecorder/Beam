@@ -63,6 +63,10 @@ import frPropertiesPanel from './fr/PropertiesPanel.json'
 import frEditorCanvas from './fr/EditorCanvas.json'
 import frCanvasToolbar from './fr/CanvasToolbar.json'
 import frUndoRedoToast from './fr/UndoRedoToast.json'
+import enBackgroundCatalog from './en/backgroundCatalog.json'
+import enWhisperTypes from './en/whisperTypes.json'
+import frBackgroundCatalog from './fr/backgroundCatalog.json'
+import frWhisperTypes from './fr/whisperTypes.json'
 
 const messages = {
   en: {
@@ -98,6 +102,8 @@ const messages = {
     EditorCanvas: enEditorCanvas,
     CanvasToolbar: enCanvasToolbar,
     UndoRedoToast: enUndoRedoToast,
+    backgroundCatalog: enBackgroundCatalog,
+    whisperTypes: enWhisperTypes,
   },
   fr: {
     HUD: frHUD,
@@ -132,6 +138,8 @@ const messages = {
     EditorCanvas: frEditorCanvas,
     CanvasToolbar: frCanvasToolbar,
     UndoRedoToast: frUndoRedoToast,
+    backgroundCatalog: frBackgroundCatalog,
+    whisperTypes: frWhisperTypes,
   },
 }
 

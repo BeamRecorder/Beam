@@ -1,0 +1,22 @@
+{
+  "models": {
+    "tiny": "Tiny",
+    "tinyEn": "Tiny .en",
+    "base": "Base",
+    "baseEn": "Base .en",
+    "small": "Small",
+    "smallEn": "Small .en",
+    "medium": "Medium",
+    "mediumEn": "Medium .en",
+    "largeV3": "Large v3"
+  },
+  "languages": {
+    "multilingual": "Multilingue",
+    "english": "Anglais"
+  },
+  "warnings": {
+    "slow": "Peut être lent sans WebGPU.",
+    "large": "Téléchargement volumineux ; WebGPU recommandé.",
+    "veryLarge": "Très volumineux et lent sans WebGPU."
+  }
+}
