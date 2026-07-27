@@ -76,9 +76,9 @@ const frameStyle = (frame: { timelineSecond: number }) => ({
         <Skeleton v-else width="100%" height="100%" radius="0" />
       </div>
     </div>
-    <span class="trim-handle start" title="Trim start" @pointerdown="emit('trim', { event: $event, edge: 'start' })" />
+    <span class="trim-handle start" :title="t('trimStart')" @pointerdown="emit('trim', { event: $event, edge: 'start' })" />
     <span class="clip-label-overlay"><span class="clip-label-text">{{ layer.name }}</span></span>
-    <span class="trim-handle end" title="Trim end" @pointerdown="emit('trim', { event: $event, edge: 'end' })" />
+    <span class="trim-handle end" :title="t('trimEnd')" @pointerdown="emit('trim', { event: $event, edge: 'end' })" />
   </button>
 </template>
 
