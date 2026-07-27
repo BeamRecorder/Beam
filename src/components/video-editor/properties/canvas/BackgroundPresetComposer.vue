@@ -4,6 +4,9 @@ import Button from '~/ui/button/Button.vue'
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
 import Gradient from '~/ui/Gradient/Gradient.vue'
 import type { GradientBackground } from '../../composables/backgroundCatalog'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('BackgroundPresetComposer')
 
 const props = defineProps<{
   kind: 'color' | 'gradient'
@@ -60,7 +63,7 @@ const add = () => {
 </script>
 
 <template>
-  <section class="composer" :aria-label="kind === 'color' ? 'Ajouter une couleur personnalisée' : 'Ajouter un dégradé personnalisé'">
+  <section class="composer" :aria-label="kind === 'color' ? t('addCustomColor') : t('addCustomGradient')">
     <ColorPicker
       v-if="kind === 'color'"
       v-model="colorDraft"
@@ -69,8 +72,8 @@ const add = () => {
     />
     <Gradient v-else v-model="gradientDraft" :show-angle="true" />
     <div class="composer-actions">
-      <Button size="sm" variant="secondary" @click="emit('close')">Close</Button>
-      <Button size="sm" @click="add">Add</Button>
+      <Button size="sm" variant="secondary" @click="emit('close')">{{ t('close') }}</Button>
+      <Button size="sm" @click="add">{{ t('add') }}</Button>
     </div>
   </section>
 </template>

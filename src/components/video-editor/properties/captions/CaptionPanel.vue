@@ -10,6 +10,9 @@ import { whisperModels, type TranscriptionSource, type WhisperModelId } from '..
 import type { ProjectEditorData } from '../../../../api/types/capture-api'
 import { capture } from '../../../../api/capture'
 import { captionSources } from './caption-sources'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('CaptionPanel')
 
 const props = defineProps<{
   composition: ProjectComposition;

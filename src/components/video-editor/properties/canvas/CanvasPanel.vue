@@ -16,6 +16,9 @@ import {
 } from "../../composables/backgroundCatalog";
 import { useBackgroundPreviews } from "./useBackgroundPreviews";
 import { useBackgroundPresets } from "./useBackgroundPresets";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("CanvasPanel");
 
 const props = defineProps<{
   selectedBackground: BackgroundValue | null;
@@ -148,23 +151,23 @@ const triggerImport = async () => {
 };
 
 const importLabel = computed(() => activeKind.value === "image"
-  ? "Importer une image personnalisée"
+  ? t("importCustomImage")
   : activeKind.value === "video"
-    ? "Importer une vidéo personnalisée"
-    : "Importer un fond personnalisé");
+    ? t("importCustomVideo")
+    : t("importCustomBackground"));
 </script>
 
 <template>
   <div class="canvas-panel-container">
     <!-- ButtonGroup Tabs Navigation -->
-    <ButtonGroup aria-label="Background type" class="kind-group">
+    <ButtonGroup :aria-label="t('backgroundType')" class="kind-group">
       <Button
         size="xs"
         :variant="activeKind === 'image' ? 'primary' : 'ghost'"
         :icon="Image"
         @click="switchKind('image')"
       >
-        Image
+        {{ t('image') }}
       </Button>
       <Button
         size="xs"
@@ -172,21 +175,21 @@ const importLabel = computed(() => activeKind.value === "image"
         :icon="Video"
         @click="switchKind('video')"
       >
-        Video
+        {{ t('video') }}
       </Button>
       <Button
         size="xs"
         :variant="activeKind === 'color' ? 'primary' : 'ghost'"
         @click="switchKind('color')"
       >
-        Couleur
+        {{ t('color') }}
       </Button>
       <Button
         size="xs"
         :variant="activeKind === 'gradient' ? 'primary' : 'ghost'"
         @click="switchKind('gradient')"
       >
-        Dégradé
+        {{ t('gradient') }}
       </Button>
     </ButtonGroup>
 
@@ -211,7 +214,7 @@ const importLabel = computed(() => activeKind.value === "image"
         class="media-scroll-grid"
       >
         <div v-if="!items.length" class="empty-backgrounds">
-          <span>No Background found</span>
+          <span>{{ t('noBackgroundFound') }}</span>
           <Button
             variant="secondary"
             size="sm"
@@ -268,7 +271,7 @@ const importLabel = computed(() => activeKind.value === "image"
             block
             @click="loadMore"
           >
-            Afficher plus
+            {{ t('showMore') }}
           </Button>
         </div>
       </div>
@@ -282,7 +285,7 @@ const importLabel = computed(() => activeKind.value === "image"
                 type="button"
                 class="swatch-tile custom-add-tile"
                 :class="{ active: isSelected(customColor(customColorValue)) }"
-                aria-label="Couleur personnalisée"
+                :aria-label="t('customColor')"
                 @click="editingPresetId = null"
               >
                 <Plus :size="16" />
@@ -312,7 +315,7 @@ const importLabel = computed(() => activeKind.value === "image"
         </div>
         <Popover v-if="selectedColorPreset" block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
           <template #trigger>
-            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedColorPreset.id)" class="edit-selected-preset" @click="toggleColor(selectedColorPreset)">{{ isEditing(selectedColorPreset.id) ? "Fermer l’édition" : "Modifier" }}</Button>
+            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedColorPreset.id)" class="edit-selected-preset" @click="toggleColor(selectedColorPreset)">{{ isEditing(selectedColorPreset.id) ? t('closeEditing') : t('edit') }}</Button>
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
@@ -336,7 +339,7 @@ const importLabel = computed(() => activeKind.value === "image"
                 type="button"
                 class="swatch-tile custom-add-tile"
                 :class="{ active: isSelected(customGradient(customGradientValue)) }"
-                aria-label="Dégradé personnalisé"
+                :aria-label="t('customGradient')"
                 @click="editingPresetId = null"
               >
                 <Plus :size="16" />
@@ -368,7 +371,7 @@ const importLabel = computed(() => activeKind.value === "image"
         </div>
         <Popover v-if="selectedGradientPreset" block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
           <template #trigger>
-            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedGradientPreset.id)" class="edit-selected-preset" @click="toggleGradient(selectedGradientPreset)">{{ isEditing(selectedGradientPreset.id) ? "Fermer l’édition" : "Modifier" }}</Button>
+            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedGradientPreset.id)" class="edit-selected-preset" @click="toggleGradient(selectedGradientPreset)">{{ isEditing(selectedGradientPreset.id) ? t('closeEditing') : t('edit') }}</Button>
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
@@ -391,7 +394,7 @@ const importLabel = computed(() => activeKind.value === "image"
         :min="0"
         :max="100"
         :step="1"
-        label="Blur"
+        :label="t('blur')"
         :format-value="(value: number) => `${Math.round(value)}%`"
         @update:model-value="blurDraft = $event"
         @interaction-end="emit('update:blurPercent', blurDraft)"
