@@ -1,21 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { CircleDot, MoveDown, MoveDownRight, MoveUpLeft } from '@lucide/vue'
 import type { ShadowDirection } from './shadow-types'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('ShadowDirectionGroup')
 
 defineProps<{ modelValue: ShadowDirection }>()
 
 const emit = defineEmits<{ (event: 'update:modelValue', value: ShadowDirection): void }>()
 
-const directions = [
-  { id: 'all', label: 'Around', icon: CircleDot },
-  { id: 'bottom', label: 'Bottom', icon: MoveDown },
-  { id: 'bottom-right', label: 'Bottom-Right', icon: MoveDownRight },
-  { id: 'top-left', label: 'Top-Left', icon: MoveUpLeft },
-] as const
+const directions = computed(() => [
+  { id: 'all' as const, label: t('around'), icon: CircleDot },
+  { id: 'bottom' as const, label: t('bottom'), icon: MoveDown },
+  { id: 'bottom-right' as const, label: t('bottomRight'), icon: MoveDownRight },
+  { id: 'top-left' as const, label: t('topLeft'), icon: MoveUpLeft },
+])
 </script>
 
 <template>
-  <div class="direction-group" aria-label="Shadow direction">
+  <div class="direction-group" :aria-label="t('shadowDirection')">
     <button
       v-for="direction in directions"
       :key="direction.id"

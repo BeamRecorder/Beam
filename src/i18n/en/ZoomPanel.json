@@ -1,0 +1,17 @@
+{
+  "generateAutoZooms": "Generate Auto Zooms",
+  "regenerateAutoZooms": "Regenerate Auto Zooms",
+  "regenerateConfirm": "Regenerate automatic zooms? This will replace all auto-detected zoom points.",
+  "cancel": "Cancel",
+  "regenerate": "Regenerate",
+  "mode": "Mode",
+  "autoCursor": "Auto (Cursor)",
+  "manualFocus": "Manual Focus",
+  "manualHint": "Drag the dashed selection target on the canvas to set the zoom framing.",
+  "autoHint": "Auto mode continuously follows the recorded cursor movement.",
+  "magnification": "Magnification",
+  "zoomLevel": "Zoom Level",
+  "deleteZoom": "Delete Zoom",
+  "noZoomSelected": "No Zoom Selected",
+  "noZoomSelectedDesc": "Click a zoom block on the timeline track to adjust its depth, mode, or position."
+}

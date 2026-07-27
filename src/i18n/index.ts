@@ -20,6 +20,9 @@ import enCaptionPanel from './en/CaptionPanel.json'
 import enClipPropertiesPanel from './en/ClipPropertiesPanel.json'
 import enBorderAndFrameControls from './en/BorderAndFrameControls.json'
 import enAudioClipPropertiesPanel from './en/AudioClipPropertiesPanel.json'
+import enZoomPanel from './en/ZoomPanel.json'
+import enAudioPanel from './en/AudioPanel.json'
+import enShadowDirectionGroup from './en/ShadowDirectionGroup.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
@@ -41,6 +44,9 @@ import frCaptionPanel from './fr/CaptionPanel.json'
 import frClipPropertiesPanel from './fr/ClipPropertiesPanel.json'
 import frBorderAndFrameControls from './fr/BorderAndFrameControls.json'
 import frAudioClipPropertiesPanel from './fr/AudioClipPropertiesPanel.json'
+import frZoomPanel from './fr/ZoomPanel.json'
+import frAudioPanel from './fr/AudioPanel.json'
+import frShadowDirectionGroup from './fr/ShadowDirectionGroup.json'
 
 const messages = {
   en: {
@@ -65,6 +71,9 @@ const messages = {
     ClipPropertiesPanel: enClipPropertiesPanel,
     BorderAndFrameControls: enBorderAndFrameControls,
     AudioClipPropertiesPanel: enAudioClipPropertiesPanel,
+    ZoomPanel: enZoomPanel,
+    AudioPanel: enAudioPanel,
+    ShadowDirectionGroup: enShadowDirectionGroup,
   },
   fr: {
     HUD: frHUD,
@@ -88,6 +97,9 @@ const messages = {
     ClipPropertiesPanel: frClipPropertiesPanel,
     BorderAndFrameControls: frBorderAndFrameControls,
     AudioClipPropertiesPanel: frAudioClipPropertiesPanel,
+    ZoomPanel: frZoomPanel,
+    AudioPanel: frAudioPanel,
+    ShadowDirectionGroup: frShadowDirectionGroup,
   },
 }
 

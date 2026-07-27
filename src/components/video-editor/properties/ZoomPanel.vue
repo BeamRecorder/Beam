@@ -5,6 +5,9 @@ import BigSlider from "~/ui/slider/BigSlider.vue";
 import Popover from "~/ui/popover/Popover.vue";
 import { MousePointer, Sparkles, Trash2, ZoomIn } from "@lucide/vue";
 import type { ZoomElement } from "../zoom/zoom-types";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("ZoomPanel");
 
 const props = defineProps<{
   selectedZoom: ZoomElement | null;
@@ -64,9 +67,9 @@ const setMode = (mode: ZoomElement["mode"]) => {
         </template>
         <template #default="{ close }">
           <div class="refresh-confirmation">
-            <p>Regenerate automatic zooms? This will replace all auto-detected zoom points.</p>
+            <p>{{ t('regenerateConfirm') }}</p>
             <div class="refresh-actions">
-              <Button variant="ghost" size="xs" @click="close">Cancel</Button>
+              <Button variant="ghost" size="xs" @click="close">{{ t('cancel') }}</Button>
               <Button
                 variant="danger"
                 size="xs"
@@ -87,7 +90,7 @@ const setMode = (mode: ZoomElement["mode"]) => {
     <div v-if="selectedZoom" class="options-group">
       <!-- Mode Toggle -->
       <div class="section-block">
-        <span class="section-title">Mode</span>
+        <span class="section-title">{{ t('mode') }}</span>
         <ButtonGroup full>
           <Button
             size="xs"
@@ -107,11 +110,7 @@ const setMode = (mode: ZoomElement["mode"]) => {
         <div class="hint-card">
           <MousePointer :size="13" class="hint-icon" />
           <span>
-            {{
-              selectedZoom.mode === "manual"
-                ? "Drag the dashed selection target on the canvas to set the zoom framing."
-                : "Auto mode continuously follows the recorded cursor movement."
-            }}
+            {{ selectedZoom.mode === "manual" ? t('manualHint') : t('autoHint') }}
           </span>
         </div>
       </div>
@@ -119,7 +118,7 @@ const setMode = (mode: ZoomElement["mode"]) => {
       <!-- Zoom Level / Depth -->
       <div class="section-block">
         <div class="section-header">
-          <span class="section-title">Magnification</span>
+          <span class="section-title">{{ t('magnification') }}</span>
           <span class="depth-badge">{{ magnificationValues[selectedZoom.depth - 1]?.toFixed(2) }}×</span>
         </div>
 
@@ -129,7 +128,7 @@ const setMode = (mode: ZoomElement["mode"]) => {
           :max="6"
           :step="1"
           :default-value="2"
-          label="Zoom Level"
+          :label="t('zoomLevel')"
           :format-value="(val) => `${magnificationValues[Math.round(val) - 1]?.toFixed(2)}×`"
           @update:model-value="updateDepth"
         />
@@ -165,10 +164,8 @@ const setMode = (mode: ZoomElement["mode"]) => {
     <!-- Empty Selection State -->
     <div v-else class="empty-state">
       <div class="empty-icon"><ZoomIn :size="24" /></div>
-      <p class="empty-title">No Zoom Selected</p>
-      <p class="empty-desc">
-        Click a zoom block on the timeline track to adjust its depth, mode, or position.
-      </p>
+      <p class="empty-title">{{ t('noZoomSelected') }}</p>
+      <p class="empty-desc">{{ t('noZoomSelectedDesc') }}</p>
     </div>
   </div>
 </template>

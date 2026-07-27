@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('AudioPanel')
 
 const props = withDefaults(
   defineProps<{
@@ -47,7 +50,7 @@ const handleMicVolChange = (val: number) => {
         :default-value="100"
         :min="0" 
         :max="100"
-        label="Global Volume"
+        :label="t('globalVolume')"
         :format-value="(val) => `${val}%`"
         @update:modelValue="emit('update:volume', $event)"
       />
@@ -55,7 +58,7 @@ const handleMicVolChange = (val: number) => {
 
     <div class="audio-section">
       <div class="prop-row">
-        <span class="prop-label">System Sound Track</span>
+        <span class="prop-label">{{ t('systemSoundTrack') }}</span>
         <Switch 
           :model-value="isSystemAudioEnabled" 
           @update:modelValue="emit('update:isSystemAudioEnabled', $event)"
@@ -67,7 +70,7 @@ const handleMicVolChange = (val: number) => {
           :default-value="100"
           :min="0" 
           :max="100"
-          label="System Volume"
+          :label="t('systemVolume')"
           :format-value="(val) => `${val}%`"
           @update:modelValue="handleSystemVolChange"
         />
@@ -76,7 +79,7 @@ const handleMicVolChange = (val: number) => {
 
     <div class="audio-section">
       <div class="prop-row">
-        <span class="prop-label">Microphone Track</span>
+        <span class="prop-label">{{ t('microphoneTrack') }}</span>
         <Switch 
           :model-value="isMicAudioEnabled" 
           @update:modelValue="emit('update:isMicAudioEnabled', $event)"
@@ -88,7 +91,7 @@ const handleMicVolChange = (val: number) => {
           :default-value="100"
           :min="0" 
           :max="100"
-          label="Microphone Volume"
+          :label="t('microphoneVolume')"
           :format-value="(val) => `${val}%`"
           @update:modelValue="handleMicVolChange"
         />
