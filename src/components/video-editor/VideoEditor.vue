@@ -377,6 +377,7 @@ onBeforeUnmount(() => {
           :selected-caption-layer="selectedCaptionLayer"
           :composition="composition"
           :editor-data="editorData"
+          :timeline-duration-ms="Math.round(duration * 1000)"
           :project-id="project?.id"
           :canvas="outputCanvas"
           @import:background="addBackground($event)"

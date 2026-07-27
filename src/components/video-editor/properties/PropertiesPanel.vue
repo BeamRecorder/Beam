@@ -88,6 +88,7 @@ const props = defineProps<{
   selectedCaptionLayer?: CaptionCompositionLayer | null;
   composition: ProjectComposition;
   editorData?: ProjectEditorData | null;
+  timelineDurationMs: number;
   projectId?: string | null;
   canvas: OutputCanvasSettings;
 }>();
@@ -262,6 +263,7 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         key="caption-generator-panel"
         :composition="composition"
         :editor-data="editorData"
+        :timeline-duration-ms="timelineDurationMs"
         @update:composition="emit('update:composition', $event)"
         @select-caption="emit('select-caption', $event)"
       />

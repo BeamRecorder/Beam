@@ -4,15 +4,17 @@ import Button from '~/ui/button/Button.vue'
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue'
 import Select from '~/ui/select/Select.vue'
 import { Sparkles, Download, RefreshCw, CheckCircle } from '@lucide/vue'
-import type { CaptionCompositionLayer, CompositionMedia, ProjectComposition } from '../../composition/composition-types'
+import type { CaptionCompositionLayer, ProjectComposition } from '../../composition/composition-types'
 import { useWhisperTranscription } from '../../captions/useWhisperTranscription'
 import { whisperModels, type TranscriptionSource, type WhisperModelId } from '../../captions/whisper-types'
 import type { ProjectEditorData } from '../../../../api/types/capture-api'
 import { capture } from '../../../../api/capture'
+import { captionSources } from './caption-sources'
 
 const props = defineProps<{
   composition: ProjectComposition;
   editorData?: ProjectEditorData | null;
+  timelineDurationMs: number;
 }>()
 
 const emit = defineEmits<{
@@ -30,6 +32,7 @@ const downloadError = ref<string | null>(null)
 const selectedModelState = computed(() => modelStates.value[model.value])
 const modelReady = computed(() => selectedModelState.value?.status === 'ready')
 const progressPercent = computed(() => downloadProgress.value?.totalBytes ? (downloadProgress.value.downloadedBytes / downloadProgress.value.totalBytes) * 100 : 0)
+const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`
 
 const aiCaptionLayers = computed(() =>
   props.composition.layers.filter((l): l is CaptionCompositionLayer => l.kind === 'caption' && !!l.isAiGenerated)
@@ -42,6 +45,7 @@ const loadModels = async () => {
 
 const downloadModel = async () => {
   downloadError.value = null
+  downloadProgress.value = null
   try {
     await capture.downloadWhisperModel(model.value)
     await loadModels()
@@ -59,32 +63,14 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => unsubscribe?.())
 
-const sources = computed(() => {
-  const captureSources = props.editorData?.tracks.flatMap((track) =>
-    track.kind === 'system-audio' || track.kind === 'microphone'
-      ? track.assets.filter((asset) => asset.src).map((asset) => ({
-          id: track.kind as TranscriptionSource,
-          label: track.kind === 'system-audio' ? 'System Audio' : 'Microphone',
-          src: asset.src!
-        }))
-      : []
-  ) || []
-  const importedSources = props.composition.media
-    .filter((asset) => asset.kind === 'audio')
-    .map((asset: CompositionMedia) => ({
-      id: `media:${asset.id}` as TranscriptionSource,
-      label: asset.name,
-      src: asset.src
-    }))
-  return [...captureSources, ...importedSources]
-})
+const sources = computed(() => captionSources(props.composition, props.editorData))
 
 const selectedSource = computed(() => sources.value.find((item) => item.id === source.value) || null)
 
 const modelSelectItems = computed(() =>
   whisperModels.map((m) => ({
     value: m.id,
-    label: `${m.label} (${m.languages})`,
+    label: `${modelStates.value[m.id]?.status === 'ready' ? '✓ ' : ''}${m.label} (${m.languages})`,
   }))
 )
 
@@ -97,7 +83,7 @@ const sourceSelectItems = computed(() =>
 
 const runTranscription = async () => {
   if (!selectedSource.value) return
-  const result = await transcribe(selectedSource.value.src, model.value)
+  const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs)
   if (!result.sentences.length) return
 
   // Remove previous AI-generated caption layers
@@ -105,17 +91,17 @@ const runTranscription = async () => {
     (l) => l.kind !== 'caption' || !l.isAiGenerated
   )
 
-  const newLayer: CaptionCompositionLayer = {
+  const newLayers: CaptionCompositionLayer[] = result.sentences.map((sentence, index) => ({
     id: crypto.randomUUID(),
     kind: 'caption',
-    name: 'AI Captions',
-    startMs: result.sentences[0]?.startMs || 0,
-    endMs: result.sentences.at(-1)?.endMs || 5000,
+    name: `AI Caption ${index + 1}`,
+    startMs: sentence.startMs,
+    endMs: sentence.endMs,
     enabled: true,
-    order: existingNonAiLayers.length,
+    order: existingNonAiLayers.length + index,
     isAiGenerated: true,
     caption: {
-      sentences: result.sentences,
+      sentences: [sentence],
       style: {
         color: '#ffffff',
         fontSize: 36,
@@ -125,15 +111,15 @@ const runTranscription = async () => {
         placement: 'bottom',
       },
     },
-  }
+  }))
 
   const updatedComp: ProjectComposition = {
     ...props.composition,
-    layers: [...existingNonAiLayers, newLayer],
+    layers: [...existingNonAiLayers, ...newLayers],
   }
 
   emit('update:composition', updatedComp)
-  emit('select-caption', newLayer.id)
+  emit('select-caption', newLayers[0].id)
 }
 </script>
 
@@ -169,6 +155,7 @@ const runTranscription = async () => {
           size="sm"
           @update:model-value="model = $event as WhisperModelId"
         />
+        <p v-if="modelReady" class="model-ready"><CheckCircle :size="13" /> Model downloaded and verified</p>
       </div>
 
       <Button
@@ -182,8 +169,15 @@ const runTranscription = async () => {
         Download Model
       </Button>
 
-      <ProgressBar v-if="downloadProgress?.id === model" :value="progressPercent" />
-      <p v-if="downloadError" class="error-text">{{ downloadError }}</p>
+      <div v-if="downloadProgress?.id === model" class="download-progress">
+        <ProgressBar :value="progressPercent" />
+        <p>{{ formatMegabytes(downloadProgress.downloadedBytes) }} / {{ downloadProgress.totalBytes ? formatMegabytes(downloadProgress.totalBytes) : '…' }}</p>
+      </div>
+      <div v-if="progress.status === 'loading' || progress.status === 'running'" class="transcription-progress">
+        <ProgressBar :value="progress.progress ?? 0" />
+        <p>{{ progress.message }}</p>
+      </div>
+      <p v-if="downloadError || progress.status === 'error'" class="error-text">{{ downloadError || progress.message }}</p>
 
       <Button
         variant="primary"
@@ -194,7 +188,7 @@ const runTranscription = async () => {
         block
         class="generate-btn"
       >
-        {{ progress.status === 'idle' ? (hasAiCaptions ? 'Regenerate AI Captions' : 'Generate Captions') : progress.message }}
+        {{ progress.status === 'idle' ? (hasAiCaptions ? 'Regenerate AI Captions' : 'Generate Captions') : 'Processing…' }}
       </Button>
     </div>
 
@@ -295,6 +289,25 @@ const runTranscription = async () => {
   color: var(--color-error, #ef4444);
   font-size: 11px;
   margin: 0;
+}
+
+.model-ready, .download-progress p, .transcription-progress p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  margin: 0;
+}
+
+.model-ready {
+  color: #10b981;
+}
+
+.download-progress, .transcription-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .active-status-card {

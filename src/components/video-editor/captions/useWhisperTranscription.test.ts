@@ -10,5 +10,12 @@ describe('sentencesFromWords', () => {
     const words = Array.from({ length: 13 }, (_, index) => ({ text: `w${index}`, startMs: index * 100, endMs: index * 100 + 50 }))
     expect(sentencesFromWords(words).map((sentence) => sentence.words.length)).toEqual([12, 1])
   })
+  it('prevents an imprecise word timestamp from overlapping the next caption', () => {
+    const sentences = sentencesFromWords([
+      { text: 'First.', startMs: 0, endMs: 600 },
+      { text: 'Next.', startMs: 500, endMs: 900 },
+    ])
+    expect(sentences.map((sentence) => [sentence.startMs, sentence.endMs])).toEqual([[0, 500], [500, 900]])
+  })
   it('returns no phrases when Whisper returns no words', () => expect(sentencesFromWords([])).toEqual([]))
 })

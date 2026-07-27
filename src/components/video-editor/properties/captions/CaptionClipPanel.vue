@@ -37,6 +37,9 @@ const captionStyle = computed<CaptionStyle>(() => ({
   ...draft.value?.caption.style,
 }));
 const sentences = computed(() => draft.value?.caption.sentences ?? []);
+const displayText = computed(() =>
+  captionStyle.value.customText || sentences.value.map((sentence) => sentence.text).join(" "),
+);
 
 const updateStyle = (
   key: keyof CaptionStyle,
@@ -99,14 +102,15 @@ const shadowDirectionOptions = [
     <section class="panel-group">
       <h4 class="group-title"><Type :size="14" /> Display text</h4>
       <div class="field-group">
-        <label class="field-label">Custom override</label>
+        <label class="field-label">Caption text</label>
         <Input
-          :model-value="captionStyle.customText ?? ''"
+          :model-value="displayText"
           placeholder="Type custom text..."
           size="md"
           @update:model-value="updateStyle('customText', String($event))"
           @blur="flush"
         />
+        <p class="field-description">Editing this replaces the timed transcription with your custom text.</p>
       </div>
     </section>
 
@@ -180,6 +184,7 @@ const shadowDirectionOptions = [
 .field-group { display: flex; flex-direction: column; gap: 5px; }
 .field-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: end; }
 .field-label, .word-labels { color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.field-description { margin: 0; color: var(--text-muted); font-size: 10px; line-height: 1.35; }
 .timing-group { gap: 8px; }
 .word-labels, .word-row { display: grid; grid-template-columns: minmax(0, 1fr) 62px 62px; gap: 6px; }
 .word-labels span:not(:first-child) { text-align: center; }

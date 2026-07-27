@@ -14,6 +14,11 @@ const REVISIONS = {
 const REQUIRED_PATHS = new Set(['added_tokens.json', 'config.json', 'generation_config.json', 'merges.txt', 'normalizer.json', 'preprocessor_config.json', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json', 'onnx/encoder_model_quantized.onnx', 'onnx/decoder_model_merged_quantized.onnx'])
 const safeTarget = (root, relative) => { const target = path.resolve(root, relative); return target.startsWith(`${path.resolve(root)}${path.sep}`) ? target : null }
 const readJson = (file) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')) } catch { return null } }
+const createArtifactHash = (artifact) => {
+  const hash = crypto.createHash(artifact.hashAlgorithm === 'git-sha1' ? 'sha1' : artifact.hashAlgorithm)
+  if (artifact.hashAlgorithm === 'git-sha1') hash.update(`blob ${artifact.size}\0`)
+  return hash
+}
 
 function createWhisperModelStore(root, fetchImpl = fetch) {
   const manifests = new Map()
@@ -37,7 +42,9 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
             path: item.path,
             size: item.size,
             hash: item.lfs?.oid || item.oid || item.sha || null,
-            hashAlgorithm: item.lfs ? 'sha256' : 'sha1',
+            // Hugging Face exposes regular files as Git blob object ids. Their
+            // SHA-1 includes the Git `blob <size>\0` header, unlike LFS oids.
+            hashAlgorithm: item.lfs ? 'sha256' : 'git-sha1',
           }))
 
         if (artifacts.length > 0) {
@@ -94,6 +101,7 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
     return defaultManifest
   }
   const state = async (id) => {
+    if (!validModel(id)) throw new Error('Modèle Whisper invalide.')
     try {
       const manifest = await fetchManifest(id)
       const directory = path.join(root, id)
@@ -133,7 +141,7 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
     const response = await fetchImpl(`https://huggingface.co/${id}/resolve/${manifest.revision}/${artifact.path}`, { headers: offset ? { Range: `bytes=${offset}-` } : {} })
     if (!response.ok || !response.body) throw new Error(`Téléchargement Whisper impossible : ${artifact.path}`)
     if (offset && response.status !== 206) { fs.rmSync(partial, { force: true }); return downloadArtifact(id, manifest, artifact, completed, notify) }
-    const hash = crypto.createHash(artifact.hashAlgorithm); if (offset) hash.update(fs.readFileSync(partial)); let received = offset
+    const hash = createArtifactHash(artifact); if (offset) hash.update(fs.readFileSync(partial)); let received = offset
     const source = Readable.fromWeb(response.body); source.on('data', (chunk) => { received += chunk.length; hash.update(chunk); notify({ id, status: 'downloading', artifact: artifact.path, downloadedBytes: completed.value + received, totalBytes: manifest.totalBytes }) })
     await pipeline(source, fs.createWriteStream(partial, { flags: offset ? 'a' : 'w' }))
     if (received !== artifact.size || hash.digest('hex') !== artifact.hash) { fs.rmSync(partial, { force: true }); throw new Error(`Intégrité Whisper invalide : ${artifact.path}`) }
@@ -141,7 +149,7 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
   }
   const download = async (id, notify = () => {}) => {
     const manifest = await fetchManifest(id); const directory = path.join(root, id); fs.mkdirSync(directory, { recursive: true }); const completed = { value: 0 }; const hashes = {}
-    for (const artifact of manifest.artifacts) { const target = safeTarget(directory, artifact.path); if (target && fs.existsSync(target) && fs.statSync(target).size === artifact.size) { const digest = crypto.createHash(artifact.hashAlgorithm).update(fs.readFileSync(target)).digest('hex'); if (digest === artifact.hash) { completed.value += artifact.size; hashes[artifact.path] = { algorithm: artifact.hashAlgorithm, value: digest }; continue } fs.rmSync(target) } await downloadArtifact(id, manifest, artifact, completed, notify); hashes[artifact.path] = { algorithm: artifact.hashAlgorithm, value: artifact.hash } }
+    for (const artifact of manifest.artifacts) { const target = safeTarget(directory, artifact.path); if (target && fs.existsSync(target) && fs.statSync(target).size === artifact.size) { const digest = createArtifactHash(artifact).update(fs.readFileSync(target)).digest('hex'); if (digest === artifact.hash) { completed.value += artifact.size; hashes[artifact.path] = { algorithm: artifact.hashAlgorithm, value: digest }; continue } fs.rmSync(target) } await downloadArtifact(id, manifest, artifact, completed, notify); hashes[artifact.path] = { algorithm: artifact.hashAlgorithm, value: artifact.hash } }
     const metadata = { revision: manifest.revision, hashes, totalBytes: manifest.totalBytes }; const temporary = `${manifestFile(id)}.tmp`; fs.writeFileSync(temporary, `${JSON.stringify(metadata, null, 2)}\n`); fs.renameSync(temporary, manifestFile(id)); return state(id)
   }
   const fileForUrl = (url) => { const parsed = new URL(url); if (parsed.protocol !== 'whisper-model:' || parsed.hostname !== 'models') return null; const target = safeTarget(root, decodeURIComponent(parsed.pathname).replace(/^\//, '')); return target && fs.existsSync(target) ? target : null }

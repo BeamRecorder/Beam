@@ -67,7 +67,7 @@ function isTrustedRenderer(url) {
 }
 
 function configureMediaPermission() {
-  const trusted = (webContents) => isTrustedRenderer(webContents.getURL())
+  const trusted = (webContents) => Boolean(webContents) && isTrustedRenderer(webContents.getURL())
   session.defaultSession.setPermissionCheckHandler((webContents, permission) => trusted(webContents) && (permission === 'media' || permission === 'display-capture'))
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     if (!trusted(webContents)) return callback(false)
@@ -146,7 +146,12 @@ app.whenReady().then(() => {
   })
   logStartup('Project IPC registered.')
   const whisperStore = createWhisperModelStore(userPaths.whisperModels)
-  protocol.handle('whisper-model', (request) => { const file = whisperStore.fileForUrl(request.url); return file ? new Response(Readable.toWeb(fs.createReadStream(file))) : new Response('Not found', { status: 404 }) })
+  protocol.handle('whisper-model', (request) => {
+    const file = whisperStore.fileForUrl(request.url)
+    return file
+      ? new Response(Readable.toWeb(fs.createReadStream(file)), { headers: { 'Content-Length': String(fs.statSync(file).size) } })
+      : new Response('Not found', { status: 404 })
+  })
   registerWhisperIpc({ ipcMain, store: whisperStore })
   logStartup('Whisper model IPC registered.')
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
