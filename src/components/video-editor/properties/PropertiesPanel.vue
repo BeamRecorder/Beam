@@ -8,7 +8,6 @@ import type {
 } from "../composables/backgroundCatalog";
 import CursorPanel from "./cursor/CursorPanel.vue";
 import CanvasPanel from "./canvas/CanvasPanel.vue";
-import TrimPanel from "./TrimPanel.vue";
 import AudioPanel from "./AudioPanel.vue";
 import ZoomPanel from "./ZoomPanel.vue";
 import SettingsPanel from "./SettingsPanel.vue";
@@ -25,7 +24,7 @@ import type {
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
 import type { NormalizedTransform } from "../composition/composition-types";
-import type { ShadowDirection } from './shadow-types';
+import type { ShadowDirection } from "./shadow-types";
 
 const props = defineProps<{
   activeTab: string;
@@ -129,7 +128,19 @@ const emit = defineEmits<{
     e: "update:clip-shadow",
     shadow: { size: string; color?: string; direction?: string },
   ): void;
-  (e: "update:clip-appearance", appearance: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: import("../composition/composition-types").ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void;
+  (
+    e: "update:clip-appearance",
+    appearance: {
+      borderEnabled?: boolean;
+      borderColor?: string;
+      borderWidth?: number;
+      frame?: import("../composition/composition-types").ClipFrame;
+      frameTitle?: string;
+      frameColor?: string;
+      frameShowMenu?: boolean;
+      frameShowScrollbars?: boolean;
+    },
+  ): void;
   (e: "update:clip-transform", transform: NormalizedTransform): void;
   (e: "reset:clip-transform"): void;
   (e: "unlink-clip"): void;
@@ -227,8 +238,6 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:rippleColor="emit('update:rippleColor', $event)"
         @update:rippleSize="emit('update:rippleSize', $event)"
       />
-
-      <TrimPanel v-else-if="activeTab === 'trim'" key="trim-panel" />
 
       <AudioPanel
         v-else-if="activeTab === 'audio'"

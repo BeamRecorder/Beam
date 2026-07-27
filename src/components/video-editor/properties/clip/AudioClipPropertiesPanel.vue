@@ -4,6 +4,9 @@ import { Trash2 } from "@lucide/vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
 import Button from "~/ui/button/Button.vue";
 import Switch from "~/ui/switch/Switch.vue";
+import { useTranslate } from "~/i18n/useTranslate";
+
+const { t } = useTranslate("AudioClipPropertiesPanel");
 
 const props = defineProps<{
   clip: { name?: string; enabled?: boolean; volume?: number } | null;
@@ -21,26 +24,26 @@ const volume = computed(() => props.clip?.volume ?? 100);
 <template>
   <div class="audio-clip-properties">
     <div v-if="!clip" class="empty-state">
-      <p class="empty-title">No audio clip selected</p>
-      <p class="empty-desc">Select an imported audio clip in the timeline.</p>
+      <p class="empty-title">{{ t('noAudioClipSelected') }}</p>
+      <p class="empty-desc">{{ t('selectAudioClip') }}</p>
     </div>
     <div v-else class="options-group">
       <div class="section-block">
-        <span class="section-title">{{ clip.name || "Audio clip" }}</span>
+        <span class="section-title">{{ clip.name || t('audioClip') }}</span>
         <BigSlider
           :model-value="volume"
           :default-value="100"
           :min="0"
           :max="200"
           :step="1"
-          label="Volume"
+          :label="t('volume')"
           :format-value="(value) => `${Math.round(value)}%`"
           @update:model-value="emit('update:volume', $event)"
         />
       </div>
       <div class="section-block">
         <div class="prop-row">
-          <span class="prop-label">Enabled</span>
+          <span class="prop-label">{{ t('enabled') }}</span>
           <Switch
             :model-value="clip.enabled ?? true"
             @update:model-value="emit('update:enabled', $event)"

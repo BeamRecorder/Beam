@@ -17,6 +17,9 @@ import enCanvasPanel from './en/CanvasPanel.json'
 import enBackgroundPresetComposer from './en/BackgroundPresetComposer.json'
 import enCaptionClipPanel from './en/CaptionClipPanel.json'
 import enCaptionPanel from './en/CaptionPanel.json'
+import enClipPropertiesPanel from './en/ClipPropertiesPanel.json'
+import enBorderAndFrameControls from './en/BorderAndFrameControls.json'
+import enAudioClipPropertiesPanel from './en/AudioClipPropertiesPanel.json'
 import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
@@ -35,6 +38,9 @@ import frCanvasPanel from './fr/CanvasPanel.json'
 import frBackgroundPresetComposer from './fr/BackgroundPresetComposer.json'
 import frCaptionClipPanel from './fr/CaptionClipPanel.json'
 import frCaptionPanel from './fr/CaptionPanel.json'
+import frClipPropertiesPanel from './fr/ClipPropertiesPanel.json'
+import frBorderAndFrameControls from './fr/BorderAndFrameControls.json'
+import frAudioClipPropertiesPanel from './fr/AudioClipPropertiesPanel.json'
 
 const messages = {
   en: {
@@ -56,6 +62,9 @@ const messages = {
     BackgroundPresetComposer: enBackgroundPresetComposer,
     CaptionClipPanel: enCaptionClipPanel,
     CaptionPanel: enCaptionPanel,
+    ClipPropertiesPanel: enClipPropertiesPanel,
+    BorderAndFrameControls: enBorderAndFrameControls,
+    AudioClipPropertiesPanel: enAudioClipPropertiesPanel,
   },
   fr: {
     HUD: frHUD,
@@ -76,6 +85,9 @@ const messages = {
     BackgroundPresetComposer: frBackgroundPresetComposer,
     CaptionClipPanel: frCaptionClipPanel,
     CaptionPanel: frCaptionPanel,
+    ClipPropertiesPanel: frClipPropertiesPanel,
+    BorderAndFrameControls: frBorderAndFrameControls,
+    AudioClipPropertiesPanel: frAudioClipPropertiesPanel,
   },
 }
 
