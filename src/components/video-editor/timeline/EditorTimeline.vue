@@ -52,6 +52,7 @@ const emit = defineEmits<{
   (e: 'add:zoom', timeMs: number): void;
   (e: 'add:caption', timeMs: number): void;
   (e: 'reorder:composition-layer', payload: { id: string; targetIndex: number }): void;
+  (e: 'preview:reorder-composition-layer', payload: { id: string; targetIndex: number }): void;
 }>();
 
 // Global Spacebar shortcut listener to play/pause
@@ -126,6 +127,7 @@ onUnmounted(() => {
       @add:zoom="emit('add:zoom', $event)"
       @add:caption="emit('add:caption', $event)"
       @reorder:composition-layer="emit('reorder:composition-layer', $event)"
+      @preview:reorder-composition-layer="emit('preview:reorder-composition-layer', $event)"
     />
   </div>
 </template>

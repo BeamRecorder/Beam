@@ -628,14 +628,33 @@ export function useProjectComposition(options: {
   };
 
   const reorderVisualTrack = async (id: string, targetIndex: number) => {
+    previewVisualTrack(id, targetIndex);
+    if (visualOrderSaveTimer) {
+      window.clearTimeout(visualOrderSaveTimer);
+      visualOrderSaveTimer = null;
+    }
+    await saveComposition();
+  };
+
+  let visualOrderSaveTimer: number | null = null;
+  const applyVisualTrackOrder = (id: string, targetIndex: number) => {
     const tracks = normalizedVisualTrackOrder(composition.value);
     const currentIndex = tracks.indexOf(id);
-    if (currentIndex < 0) return;
+    if (currentIndex < 0 || currentIndex === targetIndex) return false;
     const next = [...tracks];
     next.splice(currentIndex, 1);
     next.splice(Math.max(0, Math.min(next.length, targetIndex)), 0, id);
     composition.value = { ...composition.value, visualTrackOrder: next };
-    await saveComposition();
+    return true;
+  };
+
+  const previewVisualTrack = (id: string, targetIndex: number) => {
+    if (!applyVisualTrackOrder(id, targetIndex) || !project.value) return;
+    if (visualOrderSaveTimer) window.clearTimeout(visualOrderSaveTimer);
+    visualOrderSaveTimer = window.setTimeout(() => {
+      visualOrderSaveTimer = null;
+      void saveComposition();
+    }, 350);
   };
 
   const moveLayer = async (id: string, startMs: number, endMs: number) => {
@@ -665,6 +684,7 @@ export function useProjectComposition(options: {
     trimLayerEdge,
     previewMoveLayer,
     moveLayer,
+    previewVisualTrack,
     reorderVisualTrack,
     selectBaseVideo,
     updateSelectedClipAppearance,

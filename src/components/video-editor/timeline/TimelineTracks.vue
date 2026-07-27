@@ -67,6 +67,7 @@ const emit = defineEmits<{
   (e: "trim:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
   (e: "preview:clip-edge", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
   (e: "reorder:composition-layer", payload: { id: string; targetIndex: number }): void;
+  (e: "preview:reorder-composition-layer", payload: { id: string; targetIndex: number }): void;
 }>();
 
 const {
@@ -119,9 +120,17 @@ const beginLayerReorder = (event: DragEvent, id: string) => {
   event.dataTransfer?.setData("text/plain", id);
   if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
 };
-const finishLayerReorder = (event: DragEvent, targetIndex: number) => {
+const finishLayerReorder = (event: DragEvent, targetId: string) => {
   const id = event.dataTransfer?.getData("text/plain") || draggedLayerId.value;
-  if (id) emit("reorder:composition-layer", { id, targetIndex });
+  if (id) {
+    const targetIndex = visualTrackIndex(targetId);
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const insertionIndex = targetId === id
+      ? targetIndex
+      : targetIndex + (event.clientY > rect.top + rect.height / 2 ? 1 : 0);
+    emit("reorder:composition-layer", { id, targetIndex: insertionIndex });
+  }
   draggedLayerId.value = null;
 };
 let headerMarqueeFrame = 0;
@@ -159,6 +168,19 @@ const selectMainVideoLayer = () => {
 };
 
 (void tracksScrollRef, tracksViewportRef, ticksAreaRef);
+
+const previewLayerReorder = (event: DragEvent, targetId: string) => {
+  const id = event.dataTransfer?.getData("text/plain") || draggedLayerId.value;
+  if (!id || id === targetId) return;
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  const targetIndex = visualTrackIndex(targetId);
+  if (targetIndex < 0) return;
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  const insertionIndex = targetIndex + (event.clientY > rect.top + rect.height / 2 ? 1 : 0);
+  if (visualTrackIndex(id) === insertionIndex) return;
+  emit("preview:reorder-composition-layer", { id, targetIndex: insertionIndex });
+};
 </script>
 
 <template>
@@ -208,10 +230,11 @@ const selectMainVideoLayer = () => {
         <!-- 1. Video Track -->
         <div
           class="track-row video-track"
+          data-visual-track-id="base-video"
           :class="{ disabled: !isVideoEnabled }"
           :style="visualTrackStyle('base-video')"
-          @dragover.prevent
-          @drop.prevent="finishLayerReorder($event, visualTrackIndex('base-video'))"
+          @dragover.prevent="previewLayerReorder($event, 'base-video')"
+          @drop.prevent="finishLayerReorder($event, 'base-video')"
         >
           <div
             class="track-info composition-track-info"
@@ -274,10 +297,11 @@ const selectMainVideoLayer = () => {
           v-for="layer in compositionVisualLayers"
           :key="layer.id"
           class="track-row composition-media-track"
+          :data-visual-track-id="layer.id"
           :class="{ disabled: !layer.enabled, dragging: draggedLayerId === layer.id }"
           :style="visualTrackStyle(layer.id)"
-          @dragover.prevent
-          @drop.prevent="finishLayerReorder($event, visualTrackIndex(layer.id))"
+          @dragover.prevent="previewLayerReorder($event, layer.id)"
+          @drop.prevent="finishLayerReorder($event, layer.id)"
         >
           <div class="track-info composition-track-info" @pointerenter="startHeaderMarquee" @pointerleave="stopHeaderMarquee($event.currentTarget)">
             <span class="track-drag-handle" draggable="true" title="Reorder visual track" @dragstart.stop="beginLayerReorder($event, layer.id)" @dragend="draggedLayerId = null">
@@ -311,10 +335,11 @@ const selectMainVideoLayer = () => {
         <div
           v-if="cameraLayers.length"
           class="track-row camera-track"
+          data-visual-track-id="webcam"
           :class="{ disabled: !isCameraEnabled }"
           :style="visualTrackStyle('webcam')"
-          @dragover.prevent
-          @drop.prevent="finishLayerReorder($event, visualTrackIndex('webcam'))"
+          @dragover.prevent="previewLayerReorder($event, 'webcam')"
+          @drop.prevent="finishLayerReorder($event, 'webcam')"
         >
           <div
             class="track-info composition-track-info"
@@ -974,7 +999,7 @@ const selectMainVideoLayer = () => {
   z-index: 10;
   pointer-events: none;
   height: 500px;
-  will-change: transform;
+  transition: background-color 140ms ease, opacity 140ms ease, border-color 140ms ease;
   transform: translate3d(0, 0, 0);
 }
 
@@ -1012,6 +1037,7 @@ const selectMainVideoLayer = () => {
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   position: relative;
+  will-change: transform;
 }
 
 .track-row.disabled {
