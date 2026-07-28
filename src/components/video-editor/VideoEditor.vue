@@ -345,18 +345,27 @@ const rawNativeDuration = ref(0);
 const sourceDurationMs = computed(() => rawNativeDuration.value > 0
   ? Math.round(rawNativeDuration.value * 1000)
   : Math.max(0, Math.round((props.editorData?.manifest.durationNs ?? 0) / 1_000_000)));
+const compositionLayerEndMs = computed(() => Math.max(
+  0,
+  ...composition.value.layers.map((layer) => layer.endMs),
+));
+const updateTimelineDuration = () => {
+  const recordedMs = sourceDurationMs.value > 0
+    ? sessionTimelineDuration(composition.value, sourceDurationMs.value)
+    : 0;
+  duration.value = Math.max(recordedMs, compositionLayerEndMs.value) / 1000;
+};
 const handleDurationChange = (nativeDuration: number) => {
   rawNativeDuration.value = nativeDuration;
-  duration.value = sessionTimelineDuration(composition.value, nativeDuration * 1000) / 1000;
+  updateTimelineDuration();
 };
 
 watch(
-  () => composition.value.sessionSegments,
+  () => [composition.value.sessionSegments, composition.value.layers, sourceDurationMs.value],
   () => {
-    if (rawNativeDuration.value > 0) {
-      duration.value = sessionTimelineDuration(composition.value, rawNativeDuration.value * 1000) / 1000;
-    }
+    updateTimelineDuration();
   },
+  { deep: true },
 );
 
 watch(

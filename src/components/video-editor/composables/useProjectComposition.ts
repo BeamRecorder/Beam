@@ -389,11 +389,9 @@ export function useProjectComposition(options: {
       throw new Error("Impossible de lire la durée du média importé.");
     }
     const startMs = Math.round(currentTimeSec.value * 1000);
-    const maxDuration = Math.max(0, durationMs.value - startMs);
-    const clipDuration = Math.min(
-      maxDuration,
-      asset.kind === "image" ? 5000 : nativeDuration,
-    );
+    // Imported media extends the composition. It is never truncated to the
+    // duration of the captured screen recording.
+    const clipDuration = asset.kind === "image" ? 5000 : nativeDuration;
     const groupId = asset.kind === "video" && await videoHasAudio(asset)
       ? crypto.randomUUID()
       : undefined;
@@ -440,7 +438,7 @@ export function useProjectComposition(options: {
       kind: "caption",
       name: "Caption",
       startMs,
-      endMs: Math.min(durationMs.value, startMs + 2000),
+      endMs: startMs + 2000,
       enabled: true,
       order: composition.value.layers.length,
       caption: {
@@ -492,7 +490,13 @@ export function useProjectComposition(options: {
             ...(sourceOffsetMs !== undefined ? { sourceOffsetMs } : {}),
           };
         } else {
-          const clamped = Math.max(layer.startMs + 200, Math.round(timeMs));
+          const asset = layer.kind === "caption" ? null : composition.value.media.find((item) => item.id === layer.assetId);
+          const sourceOffsetMs = layer.kind === "video" || layer.kind === "audio" ? (layer.sourceOffsetMs ?? 0) : 0;
+          const playbackRate = layer.kind === "video" || layer.kind === "audio" ? (layer.playbackRate ?? 1) : 1;
+          const sourceEndMs = asset && asset.kind !== "image"
+            ? layer.startMs + Math.max(0, asset.durationMs - sourceOffsetMs) / playbackRate
+            : Number.POSITIVE_INFINITY;
+          const clamped = Math.max(layer.startMs + 200, Math.min(Math.round(timeMs), sourceEndMs));
           return {
             ...layer,
             endMs: clamped,
