@@ -23,24 +23,23 @@ export function useVideoEditor(options: {
   const sourceSize = ref({ width: 1920, height: 1080 });
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
   const player = useVideoPlayer();
-  const durationMs = computed(() => Math.round(player.duration.value * 1000));
+  const durationMs = computed(() => Math.round(player.duration.value * 1_000));
   const cursor = useCursorReplacer();
 
+  watch(options.videoSrc, (source) => { player.videoSrc.value = source ?? null; }, { immediate: true });
   const compositionState = useClipComposition({
     project,
     editorData,
     currentTimeSec: player.currentTime,
     activeTab,
   });
-
   useCompositionAudio({
     composition: compositionState.composition,
     currentTime: player.currentTime,
     isPlaying: player.isPlaying,
     volume: player.volume,
   });
-
-  const zoomState = useProjectZoom({ project, editorData, durationMs, activeTab });
+  const zoomState = useProjectZoom({ editorData, durationMs, activeTab });
   const editorState = useProjectEditorState({
     project,
     composition: compositionState.composition,
@@ -65,7 +64,6 @@ export function useVideoEditor(options: {
     const value = screen?.format.frameRate ?? screen?.format.fps;
     return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 30;
   });
-
   const exportRequest = computed(() => {
     if (!project.value) return null;
     try {
@@ -106,25 +104,25 @@ export function useVideoEditor(options: {
     }
   });
 
-  watch(
-    () => project.value?.id,
-    async (id) => {
-      if (!id) return;
-      try {
-        await editorState.load(id);
-        compositionState.synchronizeRecording();
-        player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
-        editorState.scheduleSave();
-      } catch (error) {
-        console.error("Failed to load editor state:", error);
-      }
-    },
-    { immediate: true },
-  );
-
+  watch(() => project.value?.id, async (id) => {
+    if (!id) return;
+    try {
+      await editorState.load(id);
+      compositionState.synchronizeRecording();
+      player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
+      zoomState.ensureAutomaticZooms();
+      editorState.scheduleSave();
+    } catch (error) {
+      console.error("Failed to load editor state:", error);
+    }
+  }, { immediate: true });
   watch(editorData, () => {
     compositionState.synchronizeRecording();
     player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
+  }, { deep: true });
+  watch(compositionState.composition, (composition) => {
+    player.duration.value = compositionDurationMs(composition) / 1_000;
+    if (player.currentTime.value > player.duration.value) player.currentTime.value = player.duration.value;
   }, { deep: true });
 
   return {
