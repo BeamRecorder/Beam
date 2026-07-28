@@ -1,6 +1,6 @@
 import type { ProjectEditorData } from '../../api/types/capture-api'
 import type { ZoomElement } from '../video-editor/zoom/zoom-types'
-import type { ProjectComposition } from '../video-editor/composition/composition-types'
+import type { ClipComposition } from '../video-editor/composition/composition-types'
 import type { CursorType } from '../video-editor/properties/cursor/useCursorReplacer'
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas'
 import type { ShadowDirection } from '../video-editor/properties/shadow-types'
@@ -18,17 +18,7 @@ export interface ExportProgress {
   totalTimeMs?: number
 }
 export interface ExportResult { path: string; format: ExportFormat }
-export interface VideoLayer { src: string; width: number; height: number; fps: number; enabled: boolean }
-export interface AudioLayer {
-  id: string
-  src: string
-  startSeconds: number
-  enabled: boolean
-  sourceOffsetSeconds?: number
-  timelineDurationSeconds?: number
-  playbackRate?: number
-  volume?: number
-}
+export interface VideoLayer { clipId: string; assetId: string; src: string; width: number; height: number; fps: number; enabled: boolean }
 export interface RenderLayer { kind: 'background' | 'video' | 'cursor'; enabled: boolean }
 export interface CursorRenderSettings {
   selectedCursor: CursorType
@@ -47,8 +37,7 @@ export interface CompositionSnapshot {
   zooms: ZoomElement[]
   cursor: ProjectEditorData['cursor']
   cursorSettings: CursorRenderSettings
-  audio: AudioLayer[]
-  composition: ProjectComposition
+  composition: ClipComposition
   layers: RenderLayer[]
 }
 export interface ExportRequest {
