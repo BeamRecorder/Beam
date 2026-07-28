@@ -1,149 +1,78 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
-import TimelineTracks from './TimelineTracks.vue';
-import type { ExportProgress } from '../../export/export-types';
-import type { ZoomElement } from '../zoom/zoom-types';
-import type { ProjectEditorData } from '../../../api/types/capture-api';
-import type { ProjectComposition } from '../composition/composition-types';
+import { onMounted, onUnmounted } from "vue";
+import TimelineTracks from "./TimelineTracks.vue";
+import type { ExportProgress } from "../../export/export-types";
+import type { ZoomElement } from "../zoom/zoom-types";
+import type { ClipComposition } from "../composition/composition-types";
 
 const props = defineProps<{
   currentTime: number;
   duration: number;
   isPlaying: boolean;
-  videoSrc?: string | null;
-  editorData?: ProjectEditorData | null;
   exportProgress?: ExportProgress | null;
-
-  // Track toggle states
-  isVideoEnabled: boolean;
-  isSystemAudioEnabled: boolean;
-  isMicAudioEnabled: boolean;
-  isCameraEnabled: boolean;
   zoomElements: ZoomElement[];
   selectedZoomId: string | null;
-  composition: ProjectComposition;
-  selectedCompositionLayerId: string | null;
-  selectedCameraLayerId: string | null;
+  composition: ClipComposition;
+  selectedClipId: string | null;
   zoomLevel: number;
 }>();
-
 const emit = defineEmits<{
-  (e: 'update:currentTime', value: number): void;
-  (e: 'update:isPlaying', value: boolean): void;
-  (e: 'update:zoomLevel', value: number): void;
-  (e: 'update:isVideoEnabled', value: boolean): void;
-  (e: 'update:isSystemAudioEnabled', value: boolean): void;
-  (e: 'update:isMicAudioEnabled', value: boolean): void;
-  (e: 'select:zoom', zoomId: string): void;
-  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption'): void;
-  (e: 'select:composition-layer', layerId: string): void;
-  (e: 'toggle:composition-layer', layerId: string): void;
-  (e: 'select:base-video'): void;
-  (e: 'select:camera-layer', layerId: string): void;
-  (e: 'toggle:camera'): void;
-  (e: 'toggle:camera-layer'): void;
-  (e: 'split:camera'): void;
-  (e: 'trim:camera', edge: 'start' | 'end'): void;
-  (e: 'unlink'): void;
-  (e: 'unlink-track', trackKind: string): void;
-  (e: 'trim:clip-edge', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
-  (e: 'preview:clip-edge', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
-  (e: 'preview:move-clip', payload: { id: string; startMs: number; endMs: number }): void;
-  (e: 'move:clip-position', payload: { id: string; startMs: number; endMs: number }): void;
-  (e: 'add:zoom', timeMs: number): void;
-  (e: 'add:caption', timeMs: number): void;
-  (e: 'reorder:composition-layer', payload: { id: string; targetIndex: number }): void;
-  (e: 'preview:reorder-composition-layer', payload: { id: string; targetIndex: number }): void;
+  (event: "update:currentTime", value: number): void;
+  (event: "update:isPlaying", value: boolean): void;
+  (event: "update:zoomLevel", value: number): void;
+  (event: "select:zoom", zoomId: string): void;
+  (event: "select:clip", clipId: string): void;
+  (event: "toggle:clip", clipId: string): void;
+  (event: "trim:clip", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
+  (event: "move:clip", payload: { id: string; startMs: number }): void;
+  (event: "trim:zoom", payload: { id: string; edge: "start" | "end"; timeMs: number }): void;
+  (event: "move:zoom", payload: { id: string; startMs: number; endMs: number }): void;
+  (event: "add:zoom", timeMs: number): void;
+  (event: "add:caption", timeMs: number): void;
+  (event: "reorder:clip", payload: { id: string; targetIndex: number }): void;
 }>();
 
-// Global Spacebar shortcut listener to play/pause
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.code === 'Space') {
-    const active = document.activeElement;
-    if (active) {
-      const tagName = active.tagName.toLowerCase();
-      const isEditable = active.getAttribute('contenteditable') === 'true';
-      if (
-        tagName === 'input' || 
-        tagName === 'textarea' || 
-        tagName === 'select' || 
-        isEditable
-      ) {
-        return; // ignore spacebar if typing
-      }
-    }
-    
-    e.preventDefault();
-    emit('update:isPlaying', !props.isPlaying);
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.code !== "Space") return;
+  const active = document.activeElement;
+  if (active) {
+    const tag = active.tagName.toLowerCase();
+    if (["input", "textarea", "select"].includes(tag) || active.getAttribute("contenteditable") === "true") return;
   }
+  event.preventDefault();
+  emit("update:isPlaying", !props.isPlaying);
 };
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown);
-});
+onMounted(() => window.addEventListener("keydown", handleKeyDown));
+onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
 </script>
 
 <template>
   <div class="timeline-island-container">
-    <!-- Tracks Viewport Component -->
     <TimelineTracks
       :current-time="currentTime"
       :duration="duration"
       :zoom-level="zoomLevel"
-      @update:zoom-level="emit('update:zoomLevel', $event)"
-      :video-src="videoSrc || null"
-      :editor-data="editorData"
       :export-progress="exportProgress"
-      :is-video-enabled="isVideoEnabled"
-      :is-system-audio-enabled="isSystemAudioEnabled"
-      :is-mic-audio-enabled="isMicAudioEnabled"
-      :is-camera-enabled="isCameraEnabled"
       :zoom-elements="zoomElements"
       :selected-zoom-id="selectedZoomId"
       :composition="composition"
-      :selected-composition-layer-id="selectedCompositionLayerId"
-      :selected-camera-layer-id="selectedCameraLayerId"
-      @update:currentTime="emit('update:currentTime', $event)"
+      :selected-clip-id="selectedClipId"
+      @update:current-time="emit('update:currentTime', $event)"
+      @update:zoom-level="emit('update:zoomLevel', $event)"
       @select:zoom="emit('select:zoom', $event)"
-      @select:composition-layer="emit('select:composition-layer', $event)"
-      @toggle:composition-layer="emit('toggle:composition-layer', $event)"
-      @select:base-video="emit('select:base-video')"
-      @toggle:video="emit('update:isVideoEnabled', !isVideoEnabled)"
-      @toggle:systemAudio="emit('update:isSystemAudioEnabled', !isSystemAudioEnabled)"
-      @toggle:micAudio="emit('update:isMicAudioEnabled', !isMicAudioEnabled)"
-      @toggle:camera="emit('toggle:camera')"
-      @toggle:camera-layer="emit('toggle:camera-layer')"
-      @select:camera-layer="emit('select:camera-layer', $event)"
-      @split:camera="emit('split:camera')"
-      @trim:camera="emit('trim:camera', $event)"
-      @unlink="emit('unlink')"
-      @unlink-track="emit('unlink-track', $event)"
-      @trim:clip-edge="emit('trim:clip-edge', $event)"
-      @preview:clip-edge="emit('preview:clip-edge', $event)"
-      @preview:move-clip="emit('preview:move-clip', $event)"
-      @move:clip-position="emit('move:clip-position', $event)"
+      @select:clip="emit('select:clip', $event)"
+      @toggle:clip="emit('toggle:clip', $event)"
+      @trim:clip="emit('trim:clip', $event)"
+      @move:clip="emit('move:clip', $event)"
+      @trim:zoom="emit('trim:zoom', $event)"
+      @move:zoom="emit('move:zoom', $event)"
       @add:zoom="emit('add:zoom', $event)"
       @add:caption="emit('add:caption', $event)"
-      @reorder:composition-layer="emit('reorder:composition-layer', $event)"
-      @preview:reorder-composition-layer="emit('preview:reorder-composition-layer', $event)"
+      @reorder:clip="emit('reorder:clip', $event)"
     />
   </div>
 </template>
 
 <style scoped>
-.timeline-island-container {
-  width: 100%;
-  background: var(--color-bg-element);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+.timeline-island-container { width: 100%; background: var(--color-bg-element); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; }
 </style>
