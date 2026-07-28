@@ -190,13 +190,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       : sourceFocus;
     const cameraFocus = clampFocusToScale(trackedFocus, targetScale);
     const target = { focusX: dx + cameraFocus.cx * dw, focusY: dy + cameraFocus.cy * dh, scale: targetScale };
-    if (!renderedCamera || !options.isPlaying()) renderedCamera = target;
-    else {
-      const now = performance.now();
-      const dt = Math.min(.05, Math.max(.001, (now - lastUpdateMs) / 1_000));
-      lastUpdateMs = now;
-      renderedCamera = stepCameraSpring(renderedCamera, velocity, target, dt);
+    const now = performance.now();
+    if (!renderedCamera || !options.isPlaying()) {
+      renderedCamera = target;
+      Object.assign(velocity, createCameraVelocity());
+    } else {
+      renderedCamera = stepCameraSpring(renderedCamera, target, velocity, Math.min(50, Math.max(1, now - lastUpdateMs)));
     }
+    lastUpdateMs = now;
     const camera = renderedCamera;
     const renderedWindow: RenderedVideoWindow = { dx, dy, dw, dh, scale: camera.scale, focusX: camera.focusX, focusY: camera.focusY };
     const drawScreen = () => {
