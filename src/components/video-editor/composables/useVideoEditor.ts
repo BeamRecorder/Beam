@@ -1,15 +1,15 @@
-import { ref, computed, watch, onScopeDispose, type Ref } from "vue";
+import { computed, onScopeDispose, ref, watch, type Ref } from "vue";
 import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorData } from "../../../api/types/capture-api";
 import { useVideoPlayer } from "./useVideoPlayer";
-import { useEditorAudio } from "./useEditorAudio";
 import { useCompositionAudio } from "./useCompositionAudio";
 import { useCursorReplacer } from "../properties/cursor/useCursorReplacer";
-import { useProjectComposition } from "./useProjectComposition";
+import { useClipComposition } from "./useClipComposition";
 import { useProjectZoom } from "./useProjectZoom";
 import { useProjectEditorState } from "./useProjectEditorState";
 import { createCompositionSnapshot } from "../../export/composition/snapshot";
-import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
+import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from "../canvas/output-canvas";
+import { compositionDurationMs } from "../composition/engine/clip-engine";
 
 export function useVideoEditor(options: {
   videoSrc: Ref<string | null | undefined>;
@@ -17,36 +17,18 @@ export function useVideoEditor(options: {
   editorData: Ref<ProjectEditorData | null | undefined>;
 }) {
   const { project, editorData } = options;
-
   const activeTab = ref("canvas");
   const systemVolume = ref(100);
   const micVolume = ref(100);
   const sourceSize = ref({ width: 1920, height: 1080 });
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
-
-  // 1. Video Player composable
   const player = useVideoPlayer();
-
   const durationMs = computed(() => Math.round(player.duration.value * 1000));
-
-  // 2. Audio composable
-  useEditorAudio({
-    editorData,
-    currentTime: player.currentTime,
-    isPlaying: player.isPlaying,
-    volume: player.volume,
-    systemAudioEnabled: player.isSystemAudioEnabled,
-    microphoneEnabled: player.isMicAudioEnabled,
-  });
-
-  // 3. Cursor Replacer composable
   const cursor = useCursorReplacer();
 
-  // 4. Composition composable
-  const compositionState = useProjectComposition({
+  const compositionState = useClipComposition({
     project,
     editorData,
-    durationMs,
     currentTimeSec: player.currentTime,
     activeTab,
   });
@@ -58,14 +40,7 @@ export function useVideoEditor(options: {
     volume: player.volume,
   });
 
-  // 5. Zoom composable
-  const zoomState = useProjectZoom({
-    project,
-    editorData,
-    durationMs,
-    activeTab,
-  });
-
+  const zoomState = useProjectZoom({ project, editorData, durationMs, activeTab });
   const editorState = useProjectEditorState({
     project,
     composition: compositionState.composition,
@@ -74,91 +49,83 @@ export function useVideoEditor(options: {
     importedBackgrounds: player.importedBackgrounds,
     selectedBackground: player.selectedBackground,
     backgroundBlurPercent: player.backgroundBlurPercent,
-    videoEnabled: player.isVideoEnabled,
-    systemAudioEnabled: player.isSystemAudioEnabled,
-    micAudioEnabled: player.isMicAudioEnabled,
     canvas: outputCanvas,
     availableBackgrounds: player.backgroundGroups,
   });
 
   const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
   void refreshBackgroundLibrary().catch((error) => console.error("Failed to load background library:", error));
-  const stopBackgroundSubscription = capture.onBackgroundLibraryChanged(() => { void refreshBackgroundLibrary().catch((error) => console.error("Failed to refresh background library:", error)); });
+  const stopBackgroundSubscription = capture.onBackgroundLibraryChanged(() => {
+    void refreshBackgroundLibrary().catch((error) => console.error("Failed to refresh background library:", error));
+  });
   onScopeDispose(stopBackgroundSubscription);
 
-  // Calculate source FPS
   const sourceFps = computed(() => {
-    const screen = editorData.value?.tracks.find(
-      (track) => track.kind === "screen",
-    );
+    const screen = editorData.value?.tracks.find((track) => track.kind === "screen");
     const value = screen?.format.frameRate ?? screen?.format.fps;
-    return typeof value === "number" && Number.isFinite(value) && value > 0
-      ? value
-      : 30;
+    return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 30;
   });
 
-  // Export Request snapshot calculation
   const exportRequest = computed(() => {
-    if (!project.value || !player.videoSrc.value) return null;
+    if (!project.value) return null;
     try {
-      const snapshot = createCompositionSnapshot({
-        videoSrc: player.videoSrc.value,
-        duration: player.duration.value,
-        width: sourceSize.value.width,
-        height: sourceSize.value.height,
-        canvas: outputCanvas.value,
-        fps: sourceFps.value,
-        videoEnabled: player.isVideoEnabled.value,
-        background: player.selectedBackgroundMedia.value,
-        blurPercent: player.backgroundBlurPercent.value,
-        editorData: editorData.value,
-        zooms: zoomState.zoomElements.value,
-        composition: compositionState.composition.value,
-        cursorSettings: {
-          selectedCursor: cursor.selectedCursor.value,
-          size: cursor.cursorSize.value,
-          color: cursor.cursorColor.value,
-          shadow: {
-            enabled: cursor.enableShadow.value,
-            blur: cursor.shadowBlur.value,
-            color: cursor.shadowColor.value,
-            direction: cursor.shadowDirection.value,
-          },
-          clickSpring: { enabled: cursor.enableClickSpring.value },
-          ripple: {
-            enabled: cursor.enableRipple.value,
-            color: cursor.rippleColor.value,
-            size: cursor.rippleSize.value,
-          },
-        },
-        systemAudioEnabled: player.isSystemAudioEnabled.value,
-        micAudioEnabled: player.isMicAudioEnabled.value,
-      });
       return {
         projectName: project.value.name,
-        snapshot,
+        snapshot: createCompositionSnapshot({
+          duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+          width: sourceSize.value.width,
+          height: sourceSize.value.height,
+          canvas: outputCanvas.value,
+          fps: sourceFps.value,
+          background: player.selectedBackgroundMedia.value,
+          blurPercent: player.backgroundBlurPercent.value,
+          editorData: editorData.value,
+          zooms: zoomState.zoomElements.value,
+          composition: compositionState.composition.value,
+          cursorSettings: {
+            selectedCursor: cursor.selectedCursor.value,
+            size: cursor.cursorSize.value,
+            color: cursor.cursorColor.value,
+            shadow: {
+              enabled: cursor.enableShadow.value,
+              blur: cursor.shadowBlur.value,
+              color: cursor.shadowColor.value,
+              direction: cursor.shadowDirection.value,
+            },
+            clickSpring: { enabled: cursor.enableClickSpring.value },
+            ripple: {
+              enabled: cursor.enableRipple.value,
+              color: cursor.rippleColor.value,
+              size: cursor.rippleSize.value,
+            },
+          },
+        }),
       };
-    } catch (e) {
+    } catch {
       return null;
     }
   });
 
-  const handleSelectTab = (tab: string) => {
-    activeTab.value = tab;
-  };
-
-  // Load all persisted editor domains as one coherent snapshot.
   watch(
     () => project.value?.id,
-    (id) => {
-      if (id) {
-        void editorState.load(id).catch((error) =>
-          console.error("Failed to load editor state:", error),
-        );
+    async (id) => {
+      if (!id) return;
+      try {
+        await editorState.load(id);
+        compositionState.synchronizeRecording();
+        player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
+        editorState.scheduleSave();
+      } catch (error) {
+        console.error("Failed to load editor state:", error);
       }
     },
     { immediate: true },
   );
+
+  watch(editorData, () => {
+    compositionState.synchronizeRecording();
+    player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
+  }, { deep: true });
 
   return {
     activeTab,
@@ -172,6 +139,6 @@ export function useVideoEditor(options: {
     editorState,
     zoomState,
     exportRequest,
-    handleSelectTab,
+    handleSelectTab: (tab: string) => { activeTab.value = tab; },
   };
 }
