@@ -4,7 +4,6 @@ import {
   getCaptionTransform,
   isVisualClip,
   type CaptionClip,
-  type Clip,
   type ClipComposition,
   type NormalizedTransform,
   type VisualClip,
@@ -26,7 +25,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const images = new Map<string, HTMLImageElement>();
   const videos = new Map<string, HTMLVideoElement>();
   const pendingSeeks = new Map<HTMLVideoElement, number>();
-
   const seek = (media: HTMLVideoElement, targetTime: number) => {
     if (media.seeking) { pendingSeeks.set(media, targetTime); return; }
     if (Math.abs(media.currentTime - targetTime) > .005) media.currentTime = targetTime;
@@ -43,7 +41,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     videos.clear();
     pendingSeeks.clear();
   };
-
   const reconcile = () => {
     const assets = new Map(options.composition().assets.map((asset) => [asset.id, asset]));
     for (const [id, media] of videos) {
@@ -79,7 +76,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       videos.set(asset.id, media);
     }
   };
-
   watch(() => options.composition().assets.map((asset) => `${asset.id}:${asset.kind}:${asset.src}`).join("|"), reconcile, { immediate: true });
 
   const syncVideos = () => {
@@ -130,10 +126,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
-    if (style.shadowBlur > 0) {
-      ctx.shadowColor = style.shadowColor;
-      ctx.shadowBlur = style.shadowBlur;
-    }
+    if (style.shadowBlur > 0) { ctx.shadowColor = style.shadowColor; ctx.shadowBlur = style.shadowBlur; }
     if ((style.boxColor ?? "#000000") !== "transparent") {
       ctx.strokeStyle = style.boxColor ?? "#000000";
       ctx.lineWidth = strokeWidth * 2;
@@ -144,11 +137,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     ctx.restore();
   };
 
-  const drawVisual = (
-    ctx: CanvasRenderingContext2D,
-    clip: VisualClip,
-    window: { dx: number; dy: number; dw: number; dh: number },
-  ) => {
+  const drawVisual = (ctx: CanvasRenderingContext2D, clip: VisualClip, window: { dx: number; dy: number; dw: number; dh: number }) => {
     const source = clip.kind === "image" ? images.get(clip.assetId) : videos.get(clip.assetId);
     if (!source) return;
     if (source instanceof HTMLVideoElement && source.readyState < HTMLMediaElement.HAVE_METADATA) return;
@@ -160,18 +149,8 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const crop = options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop;
     drawDecoratedMedia(ctx, {
       source,
-      sourceRect: crop && sourceWidth > 0 && sourceHeight > 0 ? {
-        x: crop.x * sourceWidth,
-        y: crop.y * sourceHeight,
-        width: crop.width * sourceWidth,
-        height: crop.height * sourceHeight,
-      } : undefined,
-      rect: {
-        x: window.dx + transform.x * window.dw,
-        y: window.dy + transform.y * window.dh,
-        width: transform.width * window.dw,
-        height: transform.height * window.dh,
-      },
+      sourceRect: crop && sourceWidth > 0 && sourceHeight > 0 ? { x: crop.x * sourceWidth, y: crop.y * sourceHeight, width: crop.width * sourceWidth, height: crop.height * sourceHeight } : undefined,
+      rect: { x: window.dx + transform.x * window.dw, y: window.dy + transform.y * window.dh, width: transform.width * window.dw, height: transform.height * window.dh },
       appearance: clip.appearance,
       title: clip.name,
       mirrored: clip.isMirrored,
@@ -185,9 +164,11 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     onlyClipId?: string,
   ) => {
     const timeMs = options.currentTime() * 1_000;
-    const clips = activeClipsAt(options.composition(), timeMs).filter((clip) => clip.kind !== "screen" && clip.kind !== "webcam").sort((a, b) => b.order - a.order);
+    const clips = activeClipsAt(options.composition(), timeMs)
+      .filter((clip) => clip.kind !== "screen" && clip.kind !== "webcam")
+      .filter((clip) => onlyClipId ? clip.id === onlyClipId : clip.kind === "caption")
+      .sort((left, right) => right.order - left.order);
     for (const clip of clips) {
-      if (onlyClipId && clip.id !== onlyClipId) continue;
       if (clip.kind === "caption") drawCaption(ctx, clip, timeMs, window, referenceWidth);
       else if (isVisualClip(clip)) drawVisual(ctx, clip, window);
     }
@@ -221,9 +202,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     }
   };
 
-  const visualAt = (predicate: (clip: Clip) => boolean) =>
-    activeClipsAt(options.composition(), options.currentTime() * 1_000).find((clip): clip is VisualClip => isVisualClip(clip) && predicate(clip)) ?? null;
-
   onUnmounted(dispose);
-  return { images, videos, drawComposition, drawWebcamClips, visualAt };
+  return { images, videos, drawComposition, drawWebcamClips };
 }
