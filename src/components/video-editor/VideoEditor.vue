@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
-import type { MediaCompositionLayer } from './composition/composition-types';
+import type { CaptureProject, ProjectEditorData } from "../../api/types/capture-api";
 import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
 import EditorCanvas from "./canvas/EditorCanvas.vue";
@@ -9,33 +9,26 @@ import EditorTimeline from "./timeline/EditorTimeline.vue";
 import TimelineToolbar from "./timeline/TimelineToolbar.vue";
 import Topbar from "./Topbar.vue";
 import { useVideoEditor } from "./composables/useVideoEditor";
+import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
 import { capture } from "../../api/capture";
-import { Sparkles, AlertCircle } from "@lucide/vue";
+import { Sparkles } from "@lucide/vue";
 import { useTranslate } from "~/i18n/useTranslate";
+import { useExportJob } from "../export/useExportJob";
+import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from "./canvas/output-canvas";
+import { compositionDurationMs, setVolume } from "./composition/engine/clip-engine";
+import { isAudioClip, isCaptionClip, isVisualClip } from "./composition/composition-types";
 
 const { t } = useTranslate("VideoEditor");
-import { useExportJob } from "../export/useExportJob";
-import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from './canvas/output-canvas';
-
-const props = withDefaults(
-  defineProps<{
-    videoSrc?: string | null;
-    project?: CaptureProject | null;
-    editorData?: ProjectEditorData | null;
-  }>(),
-  {
-    videoSrc: null,
-    project: null,
-    editorData: null,
-  },
-);
-
+const props = withDefaults(defineProps<{
+  videoSrc?: string | null;
+  project?: CaptureProject | null;
+  editorData?: ProjectEditorData | null;
+}>(), { videoSrc: null, project: null, editorData: null });
 const emit = defineEmits<{
   (event: "back-to-hud"): void;
   (event: "open-project", project: CaptureProject): void;
 }>();
 
-// Master Video Editor Composable
 const {
   activeTab,
   systemVolume,
@@ -54,8 +47,6 @@ const {
   project: toRef(props, "project"),
   editorData: toRef(props, "editorData"),
 });
-
-// Destructure Sub-Composables for Template Bindings
 const {
   isPlaying,
   currentTime,
@@ -67,11 +58,7 @@ const {
   backgroundBlurPercent,
   backgroundGroups,
   addBackground,
-  isVideoEnabled,
-  isSystemAudioEnabled,
-  isMicAudioEnabled,
 } = player;
-
 const {
   selectedCursor,
   cursorSize,
@@ -85,63 +72,36 @@ const {
   rippleColor,
   rippleSize,
 } = cursor;
-
 const {
   composition,
-  selectedCompositionLayerId,
-  selectedCompositionLayer,
+  selectedClipId,
+  selectedClip,
   selectedClipInfo,
-  selectedCaptionLayer,
-  selectedCameraLayer,
-  isCameraEnabled,
-  loadComposition,
-  toggleCamera,
-  splitSelectedCamera,
-  trimSelectedCamera,
-  toggleSelectedCamera,
-  addCompositionElement,
+  selectedCaptionClip,
+  isVideoEnabled,
+  isWebcamEnabled,
+  isSystemAudioEnabled,
+  isMicAudioEnabled,
+  selectClip,
+  addElement,
   addCaptionAtTime,
   updateCaption,
-  deleteSelectedCompositionLayer,
-  previewLayerEdge,
-  trimLayerEdge,
-  previewMoveLayer,
-  moveLayer,
-  previewVisualTrack,
-  reorderVisualTrack,
-  selectBaseVideo,
-  updateSelectedClipAppearance,
-  updateSelectedClipIsMirrored,
-  updateSelectedClipPlaybackRate,
-  updateSelectedAudioVolume,
-  updateSelectedClipEnabled,
-  toggleCompositionLayer,
-  updateSelectedWebcamTransform,
-  previewSelectedWebcamTransform,
-  updateSelectedMediaCrop,
-  handleUnlinkClips,
-  handleUnlinkTrack,
+  trimClipEdge,
+  moveClipTo,
+  splitSelectedClip,
+  deleteSelectedClip,
+  reorderVisualClip,
+  updateSelectedAppearance,
+  updateSelectedTransform,
+  previewSelectedTransform,
+  updateSelectedCrop,
+  updateSelectedMirrored,
+  updateSelectedRate,
+  updateSelectedVolume,
+  updateSelectedEnabled,
+  toggleClip,
+  detachSelectedClip,
 } = compositionState;
-const selectedTransformLayer = computed<CompositionLayer | null>(() => {
-  const layer = selectedCompositionLayer.value;
-  if (layer && layer.kind !== 'audio') return layer;
-  if (selectedCompositionLayerId.value === 'base-video') {
-    return {
-      id: 'base-video',
-      kind: 'video',
-      assetId: 'base-video',
-      name: 'Screen recording',
-      startMs: 0,
-      endMs: duration.value * 1000,
-      enabled: true,
-      order: 0,
-      transform: composition.value.baseVideoTransform ?? { x: 0, y: 0, width: 1, height: 1 },
-      crop: composition.value.baseVideoCrop ?? { x: 0, y: 0, width: 1, height: 1 },
-    };
-  }
-  return null;
-});
-
 const {
   zoomElements,
   selectedZoomId,
@@ -151,28 +111,47 @@ const {
   addZoomAtTime,
   generateZooms,
   updateZoom,
-  previewZoomEdge,
   trimZoomEdge,
-  previewMoveZoom,
   moveZoom,
   previewZoom,
   deleteSelectedZoom,
 } = zoomState;
-
 const { isExporting, progress: exportProgress } = useExportJob();
-const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption') => {
-  void addCompositionElement(type).catch((error) => console.error('Unable to add composition media:', error));
-};
-import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
-
-const createEditorSnapshot = (): EditorStateSnapshot => ({
-  composition: JSON.parse(JSON.stringify(composition.value)),
-  zoomElements: JSON.parse(JSON.stringify(zoomElements.value)),
-  outputCanvas: JSON.parse(JSON.stringify(outputCanvas.value)),
-  selectedBackground: selectedBackground.value,
-  backgroundBlurPercent: backgroundBlurPercent.value,
+const selectedTransformClip = computed(() => {
+  const clip = selectedClip.value;
+  return clip && (isVisualClip(clip) || isCaptionClip(clip)) ? clip : null;
 });
 
+const addTimelineElement = (kind: "video" | "image" | "sound" | "caption") => {
+  void addElement(kind).catch((error) => console.error("Unable to add media:", error));
+};
+const selectEditorClip = (clipId: string) => {
+  selectClip(clipId);
+  activeTab.value = isAudioClip(composition.value.clips.find((clip) => clip.id === clipId)!) ? "audio" : "clip";
+};
+const replaceComposition = (value: typeof composition.value) => {
+  composition.value = value;
+  editorState.scheduleSave();
+};
+const updateRoleVolume = (role: "system" | "microphone", value: number) => {
+  let next = composition.value;
+  for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
+  composition.value = next;
+};
+watch(systemVolume, (value) => updateRoleVolume("system", value));
+watch(micVolume, (value) => updateRoleVolume("microphone", value));
+watch(composition, (value) => {
+  duration.value = compositionDurationMs(value) / 1_000;
+  if (currentTime.value > duration.value) currentTime.value = duration.value;
+}, { deep: true, immediate: true });
+
+const createEditorSnapshot = (): EditorStateSnapshot => ({
+  composition: structuredClone(composition.value),
+  zoomElements: structuredClone(zoomElements.value),
+  outputCanvas: structuredClone(outputCanvas.value),
+  selectedBackground: selectedBackground.value ? structuredClone(selectedBackground.value) : null,
+  backgroundBlurPercent: backgroundBlurPercent.value,
+});
 const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction } = useEditorUndoRedo({
   onRestoreSnapshot: async (snapshot) => {
     composition.value = snapshot.composition;
@@ -180,353 +159,201 @@ const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction 
     outputCanvas.value = snapshot.outputCanvas;
     selectedBackground.value = snapshot.selectedBackground;
     backgroundBlurPercent.value = snapshot.backgroundBlurPercent;
-
-    if (props.project) {
-      await saveComposition();
-    }
-    editorState.scheduleSave();
+    await editorState.saveNow();
   },
 });
+let historyInitialized = false;
+watch(editorState.loading, (loading) => {
+  if (loading || historyInitialized) return;
+  historyInitialized = true;
+  recordSnapshot(createEditorSnapshot());
+}, { immediate: true });
+watch([composition, zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent], () => {
+  if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot(), 300);
+}, { deep: true });
 
 onMounted(() => {
   playerVideoSrc.value = props.videoSrc ?? "";
   capture.setWindowMode("editor");
   capture.maximize();
-  if (props.project) {
-    void loadComposition(props.project.id).then(() => {
-      recordSnapshot(createEditorSnapshot());
-    });
-  } else {
-    recordSnapshot(createEditorSnapshot());
-  }
 });
+watch(() => props.videoSrc, (src) => { playerVideoSrc.value = src ?? ""; });
+const screenSource = computed(() => {
+  const screen = composition.value.clips.find((clip) => clip.kind === "screen");
+  return screen ? composition.value.assets.find((asset) => asset.id === screen.assetId)?.src ?? null : props.editorData?.videoSrc ?? props.videoSrc;
+});
+watch(screenSource, (source) => {
+  if (!source) return;
+  const video = document.createElement("video");
+  video.preload = "metadata";
+  video.onloadedmetadata = () => {
+    if (video.videoWidth > 0 && video.videoHeight > 0) sourceSize.value = { width: video.videoWidth, height: video.videoHeight };
+    video.removeAttribute("src");
+    video.load();
+  };
+  video.src = source;
+}, { immediate: true });
 
-watch(
-  [composition, zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
-  () => {
-    recordSnapshot(createEditorSnapshot(), 300);
-  },
-  { deep: true },
-);
-
-watch(
-  () => props.videoSrc,
-  (src) => {
-    playerVideoSrc.value = src ?? "";
-  },
-);
-
-watch(
-  () => props.editorData?.videoSrc || playerVideoSrc.value,
-  (source) => {
-    if (!source) return;
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.onloadedmetadata = () => {
-      if (video.videoWidth > 0 && video.videoHeight > 0)
-        sourceSize.value = {
-          width: video.videoWidth,
-          height: video.videoHeight,
-        };
-      video.removeAttribute("src");
-      video.load();
-    };
-    video.src = source;
-  },
-  { immediate: true },
-);
-
-const updateOutputCanvas = (canvas: typeof outputCanvas.value) => {
-  outputCanvas.value = canvas;
-};
-const updateSelectedBackground = (background: import('./composables/backgroundCatalog').BackgroundValue) => {
-  selectedBackground.value = background;
-  editorState.scheduleSave();
-};
 const isCropping = ref(false);
 const timelineZoomLevel = ref(100);
-// The canvas is the first useful part of the editor. Mounting the timeline starts
-// media decoding, so deliberately let the browser paint and accept input first.
 const isTimelineReady = ref(false);
-let timelineStartupTimer: ReturnType<typeof setTimeout> | null = null;
-let timelineStartupFrame: number | null = null;
-const toggleCrop = () => {
-  if (selectedTransformLayer.value) isCropping.value = !isCropping.value;
-};
-const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
-  outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false };
-};
-
-const handleSelectTransformLayer = (layerId: string) => {
-  selectedCompositionLayerId.value = layerId;
-  activeTab.value = 'clip';
-};
-
-const handleCropKeyDown = (e: KeyboardEvent) => {
-  if ((e.key === 'Enter' || e.key === 'Escape') && isCropping.value) {
-    isCropping.value = false;
+let timelineTimer: ReturnType<typeof setTimeout> | null = null;
+let timelineFrame: number | null = null;
+const toggleCrop = () => { if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value; };
+const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, "custom">) => { outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false }; };
+const handleKeyDown = (event: KeyboardEvent) => {
+  if ((event.key === "Enter" || event.key === "Escape") && isCropping.value) isCropping.value = false;
+  if (event.key !== "Delete" && event.key !== "Backspace") return;
+  const active = document.activeElement;
+  if (active) {
+    const tag = active.tagName.toLowerCase();
+    if (["input", "textarea", "select"].includes(tag) || active.getAttribute("contenteditable") === "true") return;
   }
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    const active = document.activeElement;
-    if (active) {
-      const tagName = active.tagName.toLowerCase();
-      const isEditable = active.getAttribute('contenteditable') === 'true';
-      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || isEditable) {
-        return; // Ignore if typing inside input fields
-      }
-    }
-    if (selectedCompositionLayerId.value && selectedCompositionLayerId.value !== 'base-video') {
-      e.preventDefault();
-      void deleteSelectedCompositionLayer();
-    } else if (selectedZoom.value && activeTab.value === 'zoom') {
-      e.preventDefault();
-      deleteSelectedZoom();
-    }
-  }
+  if (selectedClipId.value) { event.preventDefault(); deleteSelectedClip(); }
+  else if (selectedZoom.value && activeTab.value === "zoom") { event.preventDefault(); deleteSelectedZoom(); }
 };
-
 onMounted(() => {
-  window.addEventListener('keydown', handleCropKeyDown);
-  timelineStartupFrame = requestAnimationFrame(() => {
-    timelineStartupFrame = requestAnimationFrame(() => {
-      timelineStartupTimer = setTimeout(() => {
-        isTimelineReady.value = true;
-        timelineStartupTimer = null;
-      }, 120);
+  window.addEventListener("keydown", handleKeyDown);
+  timelineFrame = requestAnimationFrame(() => {
+    timelineFrame = requestAnimationFrame(() => {
+      timelineTimer = setTimeout(() => { isTimelineReady.value = true; timelineTimer = null; }, 120);
     });
   });
 });
-
-const rawNativeDuration = ref(0);
-const handleDurationChange = (nativeDuration: number) => {
-  rawNativeDuration.value = nativeDuration;
-  duration.value = nativeDuration / (composition.value.baseVideoPlaybackRate ?? 1.0);
-};
-
-watch(
-  () => composition.value.baseVideoPlaybackRate ?? 1.0,
-  (rate) => {
-    if (rawNativeDuration.value > 0) {
-      duration.value = rawNativeDuration.value / rate;
-    }
-  },
-);
-
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleCropKeyDown);
-  if (timelineStartupFrame !== null) cancelAnimationFrame(timelineStartupFrame);
-  if (timelineStartupTimer) clearTimeout(timelineStartupTimer);
+  window.removeEventListener("keydown", handleKeyDown);
+  if (timelineFrame !== null) cancelAnimationFrame(timelineFrame);
+  if (timelineTimer) clearTimeout(timelineTimer);
 });
 </script>
 
 <template>
   <div class="editor-page">
-    <!-- Window Titlebar / Header -->
-    <Topbar
-      :export-request="exportRequest"
-      :project="project"
-      :is-saving="editorState.isSaving.value"
-      :can-undo="canUndo"
-      :can-redo="canRedo"
-      @back-to-hud="emit('back-to-hud')"
-      @open-project="emit('open-project', $event)"
-      @undo="undo"
-      @redo="redo"
-    />
-
-    <!-- Export Active Warning Lock Banner -->
-    <div v-if="isExporting" class="export-notice-banner">
-      <Sparkles :size="14" class="banner-icon" />
-      <span>
-        {{ t('exportBanner') }}
-      </span>
-    </div>
-
-    <!-- Main Workspace (Islands Layout) -->
+    <Topbar :export-request="exportRequest" :project="project" :is-saving="editorState.isSaving.value" :can-undo="canUndo" :can-redo="canRedo" @back-to-hud="emit('back-to-hud')" @open-project="emit('open-project', $event)" @undo="undo" @redo="redo" />
+    <div v-if="isExporting" class="export-notice-banner"><Sparkles :size="14" class="banner-icon" /><span>{{ t('exportBanner') }}</span></div>
     <div class="editor-workspace">
-      <!-- Upper Section: Sidebar, Properties, Canvas -->
       <div class="workspace-upper">
-        <!-- Sidebar Island -->
         <SidebarPanel :active-tab="activeTab" @select-tab="handleSelectTab" />
-
-        <!-- Properties Island (Right sidebar) -->
         <PropertiesPanel
-          :activeTab="activeTab"
+          :active-tab="activeTab"
           :selected-clip="selectedClipInfo"
-          v-model:selectedCursor="selectedCursor"
-          v-model:cursorSize="cursorSize"
-          v-model:cursorColor="cursorColor"
-          v-model:enableShadow="enableShadow"
-          v-model:enableClickSpring="enableClickSpring"
-          v-model:enableRipple="enableRipple"
-          v-model:shadowBlur="shadowBlur"
-          v-model:shadowColor="shadowColor"
-          v-model:shadowDirection="shadowDirection"
-          v-model:rippleColor="rippleColor"
-          v-model:rippleSize="rippleSize"
+          :selected-caption-clip="selectedCaptionClip"
+          v-model:selected-cursor="selectedCursor"
+          v-model:cursor-size="cursorSize"
+          v-model:cursor-color="cursorColor"
+          v-model:enable-shadow="enableShadow"
+          v-model:enable-click-spring="enableClickSpring"
+          v-model:enable-ripple="enableRipple"
+          v-model:shadow-blur="shadowBlur"
+          v-model:shadow-color="shadowColor"
+          v-model:shadow-direction="shadowDirection"
+          v-model:ripple-color="rippleColor"
+          v-model:ripple-size="rippleSize"
           v-model:volume="volume"
-          v-model:systemVolume="systemVolume"
-          v-model:micVolume="micVolume"
-          v-model:isVideoEnabled="isVideoEnabled"
-          v-model:isSystemAudioEnabled="isSystemAudioEnabled"
-          v-model:isMicAudioEnabled="isMicAudioEnabled"
+          v-model:system-volume="systemVolume"
+          v-model:mic-volume="micVolume"
+          v-model:is-system-audio-enabled="isSystemAudioEnabled"
+          v-model:is-mic-audio-enabled="isMicAudioEnabled"
           :selected-background="selectedBackground"
           :blur-percent="backgroundBlurPercent"
           :background-groups="backgroundGroups"
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
-          :selected-composition-layer="selectedCompositionLayer"
-          :selected-caption-layer="selectedCaptionLayer"
           :composition="composition"
           :editor-data="editorData"
           :timeline-duration-ms="Math.round(duration * 1000)"
           :project-id="project?.id"
           :canvas="outputCanvas"
           @import:background="addBackground($event)"
-          @update:selected-background="updateSelectedBackground($event)"
+          @update:selected-background="selectedBackground = $event"
           @update:blur-percent="backgroundBlurPercent = $event"
-          @update:canvas="updateOutputCanvas($event)"
+          @update:canvas="outputCanvas = $event"
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
-          @update:composition="composition = $event; editorState.scheduleSave()"
-          @select-caption="selectedCompositionLayerId = $event; activeTab = 'clip'"
-          @delete-clip="deleteSelectedCompositionLayer()"
-          @update:clip-rate="updateSelectedClipPlaybackRate"
-          @update:clip-volume="updateSelectedAudioVolume"
-          @update:clip-enabled="updateSelectedClipEnabled"
-          @unlink-clip="handleUnlinkClips"
-          @update:clip-is-mirrored="updateSelectedClipIsMirrored"
-          @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: (['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : parseFloat($event)) })"
-          @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
-          @update:clip-appearance="updateSelectedClipAppearance($event)"
-          @update:clip-transform="updateSelectedWebcamTransform"
-          @reset:clip-transform="updateSelectedWebcamTransform({ x: 0, y: 0, width: 1, height: 1 })"
+          @update:composition="replaceComposition"
+          @select-caption="selectEditorClip"
+          @delete-clip="deleteSelectedClip"
+          @split-clip="splitSelectedClip"
+          @update:clip-rate="updateSelectedRate"
+          @update:clip-volume="updateSelectedVolume"
+          @update:clip-enabled="updateSelectedEnabled"
+          @unlink-clip="detachSelectedClip"
+          @update:clip-is-mirrored="updateSelectedMirrored"
+          @update:clip-corner-radius="updateSelectedAppearance({ cornerRadius: ['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : Number($event) })"
+          @update:clip-shadow="updateSelectedAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color ?? '#000000', shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
+          @update:clip-appearance="updateSelectedAppearance($event)"
+          @update:clip-transform="updateSelectedTransform"
+          @reset:clip-transform="updateSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
         />
 
         <div class="canvas-column">
-        <CanvasToolbar :preset="outputCanvas.preset" :can-crop="Boolean(selectedTransformLayer)" :is-cropping="isCropping" @select:preset="selectCanvasPreset" @toggle:crop="toggleCrop" />
-        <EditorCanvas
-          v-model:isPlaying="isPlaying"
-          v-model:currentTime="currentTime"
-          :duration="duration"
-          :selected-cursor="selectedCursor"
-          :cursor-size="cursorSize"
-          :cursor-color="cursorColor"
-          :enable-shadow="enableShadow"
-          :enable-click-spring="enableClickSpring"
-          :enable-ripple="enableRipple"
-          :shadow-blur="shadowBlur"
-          :shadow-color="shadowColor"
-          :shadow-direction="shadowDirection"
-          :ripple-color="rippleColor"
-          :ripple-size="rippleSize"
-          :is-video-enabled="isVideoEnabled"
-          :selected-background="selectedBackgroundMedia"
-          :background-blur-percent="backgroundBlurPercent"
-          :video-src="playerVideoSrc || ''"
-          :editor-data="editorData"
-          :zoom-elements="zoomElements"
-          :selected-zoom="selectedZoom"
-          :composition="composition"
-          :output-canvas="outputCanvas"
-          :active-tab="activeTab"
-          :selected-transform-layer="selectedTransformLayer"
-          :is-cropping="isCropping"
-          :history-action="historyAction"
-          @update:zoom="updateZoom"
-          @preview:zoom="previewZoom"
-          @select:transform-layer="handleSelectTransformLayer($event)"
-          @select:base-video="selectBaseVideo()"
-          @select:canvas="selectedCompositionLayerId = null; activeTab = 'canvas'; isCropping = false"
-          @deselect:transform-layer="selectedCompositionLayerId = null; isCropping = false"
-          @update:layer-transform="updateSelectedWebcamTransform"
-          @preview:layer-transform="previewSelectedWebcamTransform"
-          @done:crop="isCropping = false"
-          @deselect:zoom="selectedZoomId = null"
-          @duration-change="handleDurationChange"
-        />
-        <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" />
+          <CanvasToolbar :preset="outputCanvas.preset" :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))" :is-cropping="isCropping" @select:preset="selectCanvasPreset" @toggle:crop="toggleCrop" />
+          <EditorCanvas
+            v-model:is-playing="isPlaying"
+            v-model:current-time="currentTime"
+            :duration="duration"
+            :selected-cursor="selectedCursor"
+            :cursor-size="cursorSize"
+            :cursor-color="cursorColor"
+            :enable-shadow="enableShadow"
+            :enable-click-spring="enableClickSpring"
+            :enable-ripple="enableRipple"
+            :shadow-blur="shadowBlur"
+            :shadow-color="shadowColor"
+            :shadow-direction="shadowDirection"
+            :ripple-color="rippleColor"
+            :ripple-size="rippleSize"
+            :selected-background="selectedBackgroundMedia"
+            :background-blur-percent="backgroundBlurPercent"
+            :video-src="playerVideoSrc || ''"
+            :editor-data="editorData"
+            :zoom-elements="zoomElements"
+            :selected-zoom="selectedZoom"
+            :composition="composition"
+            :output-canvas="outputCanvas"
+            :active-tab="activeTab"
+            :selected-transform-clip="selectedTransformClip"
+            :is-cropping="isCropping"
+            :history-action="historyAction"
+            @update:zoom="updateZoom"
+            @preview:zoom="previewZoom"
+            @select:clip="selectEditorClip"
+            @select:canvas="selectedClipId = null; activeTab = 'canvas'; isCropping = false"
+            @deselect:transform-clip="selectedClipId = null; isCropping = false"
+            @update:clip-transform="updateSelectedTransform"
+            @preview:clip-transform="previewSelectedTransform"
+            @update:clip-crop="updateSelectedCrop"
+            @done:crop="isCropping = false"
+            @deselect:zoom="selectedZoomId = null"
+          />
+          <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" />
         </div>
       </div>
-
-      <!-- Lower Section: Timeline (Full width) -->
       <div class="workspace-lower">
         <EditorTimeline
           v-if="isTimelineReady"
-          v-model:currentTime="currentTime"
-          v-model:isPlaying="isPlaying"
-          :duration="duration"
+          v-model:current-time="currentTime"
+          v-model:is-playing="isPlaying"
           v-model:zoom-level="timelineZoomLevel"
-          :video-src="playerVideoSrc"
-          :editor-data="editorData"
+          :duration="duration"
           :export-progress="exportProgress"
-          v-model:isVideoEnabled="isVideoEnabled"
-          v-model:isSystemAudioEnabled="isSystemAudioEnabled"
-          v-model:isMicAudioEnabled="isMicAudioEnabled"
           :zoom-elements="zoomElements"
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
-          :selected-composition-layer-id="selectedCompositionLayerId"
-          :selected-camera-layer-id="selectedCameraLayer?.id ?? null"
-          :is-camera-enabled="isCameraEnabled"
-          @select:zoom="
-            selectedZoomId = $event;
-            activeTab = 'zoom';
-          "
-          @add:element="addTimelineElement"
-          @select:composition-layer="
-            selectedCompositionLayerId = $event;
-            activeTab = $event === 'system-audio' || $event === 'microphone'
-              ? 'audio'
-              : 'clip';
-          "
-          @toggle:composition-layer="toggleCompositionLayer"
-          @select:base-video="selectBaseVideo"
-          @select:camera-layer="
-            selectedCompositionLayerId = $event;
-            activeTab = 'clip';
-          "
-          @toggle:camera="toggleCamera"
-          @toggle:camera-layer="toggleSelectedCamera"
-          @split:camera="splitSelectedCamera"
-          @trim:camera="trimSelectedCamera"
-          @unlink="handleUnlinkClips"
-          @unlink-track="handleUnlinkTrack"
-          @trim:clip-edge="({ id, edge, timeMs }) => {
-            if (zoomElements.some(z => z.id === id)) {
-              trimZoomEdge(id, edge, timeMs);
-            } else {
-              trimLayerEdge(id, edge, timeMs);
-            }
-          }"
-          @preview:clip-edge="({ id, edge, timeMs }) => {
-            if (zoomElements.some(z => z.id === id)) {
-              previewZoomEdge(id, edge, timeMs);
-            } else {
-              previewLayerEdge(id, edge, timeMs);
-            }
-          }"
-          @preview:move-clip="({ id, startMs, endMs }) => {
-            if (zoomElements.some(z => z.id === id)) {
-              previewMoveZoom(id, startMs, endMs);
-            } else {
-              previewMoveLayer(id, startMs, endMs);
-            }
-          }"
-          @move:clip-position="({ id, startMs, endMs }) => {
-            if (zoomElements.some(z => z.id === id)) {
-              moveZoom(id, startMs, endMs);
-            } else {
-              moveLayer(id, startMs, endMs);
-            }
-          }"
+          :selected-clip-id="selectedClipId"
+          @select:zoom="selectedZoomId = $event; activeTab = 'zoom'"
+          @select:clip="selectEditorClip"
+          @toggle:clip="toggleClip"
+          @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
+          @move:clip="moveClipTo($event.id, $event.startMs)"
+          @trim:zoom="trimZoomEdge($event.id, $event.edge, $event.timeMs)"
+          @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
-          @reorder:composition-layer="({ id, targetIndex }) => reorderVisualTrack(id, targetIndex)"
-          @preview:reorder-composition-layer="({ id, targetIndex }) => previewVisualTrack(id, targetIndex)"
+          @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
         />
       </div>
     </div>
@@ -534,199 +361,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.export-notice-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--color-primary-light, rgba(255, 90, 31, 0.12));
-  border: 1px solid var(--color-primary);
-  color: var(--color-primary);
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 600;
-  margin: 8px 20px -4px 20px;
-  user-select: none;
-  z-index: 10;
-}
-
-.banner-icon {
-  flex-shrink: 0;
-}
-
-.editor-page {
-  width: 100vw;
-  height: 100vh;
-  /* Claude-inspired warm cream light theme background with a subtle grid pattern and soft warm gradient */
-  background-color: var(--color-bg-surface);
-  background-image: 
-    /* Dotted grid pattern */
-    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    /* Soft warm ambient amber glow at the top center/left */
-    radial-gradient(
-        circle at 30% 0%,
-        rgba(255, 90, 31, 0.06) 0%,
-        rgba(255, 90, 31, 0) 50%
-      );
-  background-size:
-    24px 24px,
-    100% 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--text-primary);
-  overflow: hidden;
-  transition: background-color 0.3s ease;
-}
-
-:global(.dark) .editor-page {
-  /* Claude-inspired warm dark theme background */
-  background-color: var(--color-bg-surface);
-  background-image: 
-    /* Dotted grid pattern */
-    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    /* Soft warm ambient amber glow */
-    radial-gradient(
-        circle at 30% 0%,
-        rgba(255, 90, 31, 0.07) 0%,
-        rgba(255, 90, 31, 0) 50%
-      ),
-    /* Soft dark vignette */
-    radial-gradient(
-        circle at 50% 50%,
-        rgba(22, 21, 18, 0) 50%,
-        rgba(13, 12, 10, 0.6) 100%
-      );
-}
-
-.editor-titlebar {
-  height: 40px;
-  background: var(--color-bg-element);
-  border-bottom: 1px solid var(--color-border);
-  padding: 0; /* No padding at all so left and right controls are completely flush */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-
-.left-actions,
-.right-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 100%;
-}
-
-.left-actions {
-  gap: 8px;
-}
-
-.exit-btn {
-  margin-right: 4px;
-}
-
-.right-actions {
-  gap: 0; /* No gap so window-controls is flush */
-  height: 100%;
-}
-
-.export-btn {
-  margin-right: 12px; /* Add margin to keep gap from window controls */
-}
-
-.window-controls {
-  display: flex;
-  height: 100%;
-  align-items: stretch;
-}
-</style>
-
-<!-- Unscoped global styles for Titlebar Button overrides to avoid using :deep() -->
-<style>
-.editor-titlebar .titlebar-btn.btn-container {
-  height: 100%;
-  display: inline-flex;
-}
-
-.editor-titlebar .titlebar-btn .btn {
-  height: 100%;
-  border-radius: 0; /* corner to corner */
-  border: none;
-  background: transparent;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.editor-titlebar .exit-btn .btn {
-  padding: 0 16px;
-  gap: 8px;
-}
-
-.editor-titlebar .exit-btn .btn .btn-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.editor-titlebar .window-controls .control-btn {
-  width: 46px; /* standard windows titlebar button width */
-  height: 100%;
-  padding: 0;
-  border-radius: 0; /* corner to corner */
-  border: none;
-  background: transparent;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-muted);
-}
-
-.editor-titlebar .window-controls .control-btn .btn-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.editor-titlebar .window-controls .control-btn:hover {
-  background: var(--color-bg-surface, #1e1e1e) !important;
-  color: var(--text-primary) !important;
-}
-
-.editor-titlebar .window-controls .close-btn:hover {
-  background: var(--color-error, #ef4444) !important;
-  color: white !important;
-}
-
-/* Workspace Flush Dock Layout */
-.editor-workspace {
-  flex: 1;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: hidden;
-}
-
-.workspace-upper {
-  flex: 1;
-  display: flex;
-  gap: 12px;
-  overflow: hidden;
-}
-
-.canvas-column { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
-
-.workspace-lower {
-  height: auto;
-  flex-shrink: 0;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
+.export-notice-banner { display: flex; align-items: center; gap: 8px; background: var(--color-primary-light, rgba(255,90,31,.12)); border: 1px solid var(--color-primary); color: var(--color-primary); padding: 8px 16px; border-radius: var(--radius-md); font-size: 12px; font-weight: 600; margin: 8px 20px -4px; user-select: none; z-index: 10; }.banner-icon { flex-shrink: 0; }
+.editor-page { width: 100vw; height: 100vh; background-color: var(--color-bg-surface); background-image: radial-gradient(rgba(0,0,0,.05) 1px, transparent 1px), radial-gradient(circle at 30% 0%, rgba(255,90,31,.06), rgba(255,90,31,0) 50%); background-size: 24px 24px, 100% 100%; display: flex; flex-direction: column; color: var(--text-primary); overflow: hidden; transition: background-color .3s ease; }
+:global(.dark) .editor-page { background-image: radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px), radial-gradient(circle at 30% 0%, rgba(255,90,31,.07), rgba(255,90,31,0) 50%), radial-gradient(circle at 50% 50%, rgba(22,21,18,0) 50%, rgba(13,12,10,.6) 100%); }
+.editor-workspace { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }.workspace-upper { flex: 1; display: flex; gap: 12px; overflow: hidden; }.canvas-column { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }.workspace-lower { height: auto; flex-shrink: 0; border-radius: var(--radius-lg); overflow: hidden; }
 </style>
