@@ -4,7 +4,6 @@ function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, Br
   ipcMain.handle('projects:editor-data', (_event, payload = {}) => projectStore.editorData(payload.projectId))
   ipcMain.handle('projects:editor-state', (_event, payload = {}) => projectStore.editorState(payload.projectId))
   ipcMain.handle('projects:save-editor-state', (_event, payload = {}) => projectStore.saveEditorState(payload.projectId, payload.state))
-  ipcMain.handle('projects:save-zoom-state', (_event, payload = {}) => projectStore.saveZoom(payload.projectId, payload.zoom))
   ipcMain.handle('projects:create', (_event, options = {}) => projectStore.create(options))
   ipcMain.handle('projects:rename', (_event, payload = {}) => projectStore.rename(payload.projectId, payload.name))
   ipcMain.handle('projects:save-thumbnail', (_event, payload = {}) => projectStore.saveThumbnail(payload.projectId, payload.dataUrl))
