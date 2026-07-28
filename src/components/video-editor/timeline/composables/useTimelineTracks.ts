@@ -96,31 +96,6 @@ export function useTimelineTracks(
   const tracksViewportRef = ref<HTMLDivElement | null>(null);
   const ticksAreaRef = ref<HTMLDivElement | null>(null);
 
-  // Simulated Mic Waveform Bars
-  const micAudioWaveBars = computed(() => {
-    const barCount = 120;
-    const bars = [];
-    for (let i = 0; i < barCount; i++) {
-      const progress = i / barCount;
-      let envelope = 1;
-      if (progress < 0.12) {
-        envelope = progress / 0.12;
-      } else if (progress > 0.88) {
-        envelope = (1 - progress) / 0.12;
-      }
-      const sentenceWave = Math.sin(progress * Math.PI * 8 + 1);
-      const wordGap = sentenceWave > -0.15 ? 1.0 : 0.1;
-
-      const height =
-        3 +
-        (Math.abs(Math.sin(i * 0.4)) * 14 + Math.abs(Math.cos(i * 0.75)) * 5) *
-          envelope *
-          wordGap;
-      bars.push(height);
-    }
-    return bars;
-  });
-
   // Real Waveform Logic
   const {
     peaks: systemPeaks,
@@ -160,6 +135,14 @@ export function useTimelineTracks(
   const micAudioTrack = computed(() =>
     props.editorData?.tracks.find((t) => t.kind === "microphone"),
   );
+  const hasPlayableAudio = (track: typeof systemAudioTrack.value) =>
+    Boolean(
+      track &&
+        track.status !== "failed" &&
+        track.assets.some((asset) => asset.exists && Boolean(asset.src)),
+    );
+  const hasSystemAudioTrack = computed(() => hasPlayableAudio(systemAudioTrack.value));
+  const hasMicrophoneTrack = computed(() => hasPlayableAudio(micAudioTrack.value));
 
   // Fetch audio files once when tracks are loaded
   watch(
@@ -749,9 +732,10 @@ export function useTimelineTracks(
     tracksScrollRef,
     tracksViewportRef,
     ticksAreaRef,
-    micAudioWaveBars,
     systemAudioBuffer,
     micAudioBuffer,
+    hasSystemAudioTrack,
+    hasMicrophoneTrack,
     systemBars,
     micBars,
     waveformStyle,

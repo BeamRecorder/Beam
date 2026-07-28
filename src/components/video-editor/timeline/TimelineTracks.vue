@@ -88,9 +88,10 @@ const {
   tracksScrollRef,
   tracksViewportRef,
   ticksAreaRef,
-  micAudioWaveBars,
   systemAudioBuffer,
   micAudioBuffer,
+  hasSystemAudioTrack,
+  hasMicrophoneTrack,
   systemBars,
   micBars,
   waveformStyle,
@@ -549,6 +550,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
 
         <!-- 4. Audio System Track (Bottom) -->
         <div
+          v-if="hasSystemAudioTrack"
           class="track-row audio-track"
           :class="{ disabled: !isSystemAudioEnabled }"
         >
@@ -590,6 +592,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
 
         <!-- 4b. Audio Microphone Track (Bottom) -->
         <div
+          v-if="hasMicrophoneTrack"
           class="track-row audio-track"
           :class="{ disabled: !isMicAudioEnabled }"
         >
@@ -615,15 +618,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               >
                 <div
                   v-for="(height, index) in micBars"
-                  :key="index"
-                  class="wave-bar"
-                  :style="{ height: `${height}px` }"
-                ></div>
-              </div>
-              <!-- Fallback Simulated Waveform -->
-              <div v-else class="audio-waveform-simulated">
-                <div
-                  v-for="(height, index) in micAudioWaveBars"
                   :key="index"
                   class="wave-bar"
                   :style="{ height: `${height}px` }"
@@ -1102,13 +1096,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
   display: flex;
   align-items: center;
   padding: 0 10px;
-}
-
-.audio-waveform-simulated {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  width: 100%;
 }
 
 .wave-bar {
