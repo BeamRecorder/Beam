@@ -5,7 +5,7 @@ import type { Clip, MediaAsset } from "../composition/composition-types";
 import { useThumbnails } from "./waveform/useThumbnails";
 import { useTranslate } from "~/i18n/useTranslate";
 
-const { t } = useTranslate("TimelineVideoClip");
+const { t } = useTranslate("TimelineTracks");
 const props = defineProps<{
   clip: Clip;
   asset?: MediaAsset | null;
@@ -50,7 +50,7 @@ const formatTrimTime = (milliseconds: number) => {
 
 let marqueeFrame = 0;
 let marqueeTimer = 0;
-const stopMarquee = (target?: HTMLElement) => {
+const stopMarquee = (target?: HTMLElement | null) => {
   window.cancelAnimationFrame(marqueeFrame);
   window.clearTimeout(marqueeTimer);
   marqueeFrame = 0;
@@ -58,6 +58,7 @@ const stopMarquee = (target?: HTMLElement) => {
   const label = target?.querySelector<HTMLElement>(".clip-label-text");
   if (label) label.style.transform = "";
 };
+const stopMarqueeForEvent = (event: PointerEvent) => stopMarquee(event.currentTarget as HTMLElement | null);
 const startMarquee = (event: PointerEvent) => {
   const target = event.currentTarget as HTMLElement;
   const label = target.querySelector<HTMLElement>(".clip-label-text");
@@ -88,7 +89,7 @@ onUnmounted(() => stopMarquee());
     @click.stop="emit('select')"
     @pointerdown="emit('move', $event)"
     @pointerenter="startMarquee"
-    @pointerleave="stopMarquee($event.currentTarget)"
+    @pointerleave="stopMarqueeForEvent"
   >
     <div v-if="asset?.kind === 'video'" class="thumbnails-track">
       <div v-for="frame in frames" :key="`${frame.timelineSecond}:${frame.mediaSecond}`" class="thumbnail-frame" :style="frameStyle(frame)">
