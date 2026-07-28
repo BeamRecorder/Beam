@@ -1,50 +1,341 @@
-import { COMPOSITION_SCHEMA_VERSION, MAX_PLAYBACK_RATE, MIN_PLAYBACK_RATE, type Clip, type ClipAppearance, type ClipComposition, type ClipCrop, type ClipGroup, type ClipTransform, type IdFactory, type TrimEdge } from './clip-types'
+import {
+  COMPOSITION_SCHEMA_VERSION,
+  clipEndMs,
+  clipSourceEndMs,
+  emptyComposition,
+  isAudioClip,
+  isVisualClip,
+  type Clip,
+  type ClipAppearance,
+  type ClipComposition,
+  type MediaAsset,
+  type NormalizedCrop,
+  type NormalizedTransform,
+} from "../composition-types";
+
+export const MIN_PLAYBACK_RATE = 0.25;
+export const MAX_PLAYBACK_RATE = 4;
+export const MIN_CLIP_DURATION_MS = 40;
 
 export class CompositionEngineError extends Error {}
-const createId: IdFactory = () => crypto.randomUUID()
-const finite = (value: number) => Number.isFinite(value)
-const rounded = (value: number) => Math.round(value)
-const clone = (value: ClipComposition): ClipComposition => structuredClone(value)
-const clipEnd = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs
-const isVisual = (clip: Clip) => !['audio', 'system-audio', 'microphone'].includes(clip.kind)
-const isRateAdjustable = (clip: Clip) => clip.kind !== 'image' && clip.kind !== 'caption'
-function requireClip(composition: ClipComposition, clipId: string): Clip { const clip = composition.clips.find((entry) => entry.id === clipId); if (!clip) throw new CompositionEngineError(`Unknown clip: ${clipId}`); return clip }
-function groupFor(composition: ClipComposition, clipId: string): ClipGroup | undefined { return composition.groups.find((group) => group.clipIds.includes(clipId)) }
-function targetIds(composition: ClipComposition, clipId: string): string[] { return groupFor(composition, clipId)?.clipIds ?? [clipId] }
-function ordered(clips: Clip[]): Clip[] { return [...clips].sort((a, b) => a.trackOrder - b.trackOrder || a.id.localeCompare(b.id)) }
-function nextWith(composition: ClipComposition, mutate: (next: ClipComposition) => void): ClipComposition { const next = clone(composition); mutate(next); validateComposition(next); return next }
-function clampRect(rect: ClipTransform | ClipCrop): ClipTransform { if (![rect.x, rect.y, rect.width, rect.height].every(finite) || rect.width <= 0 || rect.height <= 0) throw new CompositionEngineError('Invalid rectangle.'); return { x: Math.max(0, Math.min(1, rect.x)), y: Math.max(0, Math.min(1, rect.y)), width: Math.max(.001, Math.min(1, rect.width)), height: Math.max(.001, Math.min(1, rect.height)) } }
 
-export function createComposition(assets: ClipComposition['assets'] = [], clips: Clip[] = [], groups: ClipGroup[] = []): ClipComposition { const composition: ClipComposition = { schemaVersion: COMPOSITION_SCHEMA_VERSION, assets: structuredClone(assets), clips: structuredClone(clips), groups: structuredClone(groups) }; validateComposition(composition); return composition }
+const finite = (value: number) => Number.isFinite(value);
+const integer = (value: number) => Math.round(value);
+const clone = (composition: ClipComposition): ClipComposition => structuredClone(composition);
+const createId = () => crypto.randomUUID();
+const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
+
+const byId = (composition: ClipComposition, clipId: string) => {
+  const clip = composition.clips.find((entry) => entry.id === clipId);
+  if (!clip) throw new CompositionEngineError(`Unknown clip: ${clipId}`);
+  return clip;
+};
+
+const targetIds = (composition: ClipComposition, clipId: string) => {
+  const clip = byId(composition, clipId);
+  if (!clip.groupId) return [clip.id];
+  return composition.clips.filter((entry) => entry.groupId === clip.groupId).map((entry) => entry.id);
+};
+
+const normalizeGroups = (clips: Clip[]) => {
+  const counts = new Map<string, number>();
+  for (const clip of clips) if (clip.groupId) counts.set(clip.groupId, (counts.get(clip.groupId) ?? 0) + 1);
+  return clips.map((clip) => clip.groupId && counts.get(clip.groupId) === 1 ? ({ ...clip, groupId: undefined }) : clip);
+};
+
+const normalizeOrders = (clips: Clip[]) =>
+  [...clips]
+    .sort((left, right) => left.order - right.order || left.timelineStartMs - right.timelineStartMs || left.id.localeCompare(right.id))
+    .map((clip, order) => ({ ...clip, order }));
+
+export const createComposition = (assets: MediaAsset[] = [], clips: Clip[] = []): ClipComposition => {
+  const composition: ClipComposition = {
+    schemaVersion: COMPOSITION_SCHEMA_VERSION,
+    assets: structuredClone(assets),
+    clips: normalizeOrders(normalizeGroups(structuredClone(clips))),
+  };
+  validateComposition(composition);
+  return composition;
+};
+
 export function validateComposition(composition: ClipComposition): void {
-  if (!composition || composition.schemaVersion !== COMPOSITION_SCHEMA_VERSION || !Array.isArray(composition.assets) || !Array.isArray(composition.clips) || !Array.isArray(composition.groups)) throw new CompositionEngineError('Invalid composition schema.')
-  const assetIds = new Set<string>(); for (const asset of composition.assets) { if (!asset || !asset.id || assetIds.has(asset.id) || !['video', 'audio', 'image'].includes(asset.kind) || !finite(asset.durationMs) || asset.durationMs < 0) throw new CompositionEngineError('Invalid asset.'); assetIds.add(asset.id) }
-  const ids = new Set<string>(); for (const clip of composition.clips) { if (!clip || !clip.id || ids.has(clip.id) || !['screen', 'webcam', 'system-audio', 'microphone', 'video', 'audio', 'image', 'caption'].includes(clip.kind)) throw new CompositionEngineError('Invalid clip identity.'); ids.add(clip.id); if (![clip.timelineStartMs, clip.timelineDurationMs, clip.sourceInMs, clip.sourceDurationMs, clip.playbackRate, clip.trackOrder].every(finite) || clip.timelineStartMs < 0 || clip.timelineDurationMs <= 0 || clip.sourceInMs < 0 || clip.sourceDurationMs <= 0) throw new CompositionEngineError('Invalid clip timing.'); if (clip.kind === 'caption' ? clip.assetId !== null || !clip.caption : clip.assetId === null || !assetIds.has(clip.assetId) || clip.caption !== null) throw new CompositionEngineError('Invalid clip content.'); if (!isRateAdjustable(clip) && clip.playbackRate !== 1) throw new CompositionEngineError('Images and captions cannot change speed.'); if (clip.playbackRate < MIN_PLAYBACK_RATE || clip.playbackRate > MAX_PLAYBACK_RATE) throw new CompositionEngineError('Playback rate must be between 0.25x and 4x.'); const asset = clip.assetId ? composition.assets.find((entry) => entry.id === clip.assetId) : undefined; if (asset && clip.sourceInMs + clip.sourceDurationMs > asset.durationMs) throw new CompositionEngineError('Clip exceeds its source asset.') }
-  const grouped = new Set<string>(); for (const group of composition.groups) { if (!group.id || group.clipIds.length < 2 || group.clipIds.some((id) => !ids.has(id) || grouped.has(id))) throw new CompositionEngineError('Invalid clip group.'); group.clipIds.forEach((id) => grouped.add(id)) }
+  if (!composition || composition.schemaVersion !== COMPOSITION_SCHEMA_VERSION || !Array.isArray(composition.assets) || !Array.isArray(composition.clips)) {
+    throw new CompositionEngineError("Invalid composition schema.");
+  }
+  const assetIds = new Set<string>();
+  const assets = new Map<string, MediaAsset>();
+  for (const asset of composition.assets) {
+    if (!asset?.id || assetIds.has(asset.id) || !["video", "image", "audio"].includes(asset.kind) || !finite(asset.durationMs) || asset.durationMs < 0) {
+      throw new CompositionEngineError("Invalid media asset.");
+    }
+    assetIds.add(asset.id);
+    assets.set(asset.id, asset);
+  }
+  const clipIds = new Set<string>();
+  const groupTiming = new Map<string, string>();
+  for (const clip of composition.clips) {
+    if (!clip?.id || clipIds.has(clip.id) || !["screen", "video", "image", "webcam", "audio", "caption"].includes(clip.kind)) {
+      throw new CompositionEngineError("Invalid clip identity.");
+    }
+    clipIds.add(clip.id);
+    if (![clip.timelineStartMs, clip.timelineDurationMs, clip.sourceInMs, clip.sourceDurationMs, clip.sourceRangeStartMs, clip.sourceRangeEndMs, clip.playbackRate, clip.order].every(finite)
+      || clip.timelineStartMs < 0 || clip.timelineDurationMs < MIN_CLIP_DURATION_MS
+      || clip.sourceRangeStartMs < 0 || clip.sourceRangeEndMs <= clip.sourceRangeStartMs
+      || clip.sourceInMs < clip.sourceRangeStartMs || clipSourceEndMs(clip) > clip.sourceRangeEndMs
+      || clip.sourceDurationMs <= 0 || clip.playbackRate < MIN_PLAYBACK_RATE || clip.playbackRate > MAX_PLAYBACK_RATE) {
+      throw new CompositionEngineError("Invalid clip timing.");
+    }
+    const expectedTimelineDuration = clip.sourceDurationMs / clip.playbackRate;
+    if (Math.abs(expectedTimelineDuration - clip.timelineDurationMs) > 2) {
+      throw new CompositionEngineError("Clip source and timeline durations disagree.");
+    }
+    if (clip.kind !== "caption") {
+      const asset = assets.get(clip.assetId);
+      if (!asset) throw new CompositionEngineError(`Missing asset for clip: ${clip.id}`);
+      if (clip.sourceRangeEndMs > asset.durationMs + 2) throw new CompositionEngineError(`Clip exceeds asset: ${clip.id}`);
+    }
+    if (clip.kind === "caption" && (!clip.caption || !Array.isArray(clip.caption.sentences))) throw new CompositionEngineError("Invalid caption clip.");
+    if (isVisualClip(clip) && (![clip.transform.x, clip.transform.y, clip.transform.width, clip.transform.height].every(finite) || clip.transform.width <= 0 || clip.transform.height <= 0)) {
+      throw new CompositionEngineError("Invalid visual transform.");
+    }
+    if (isAudioClip(clip) && (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200)) throw new CompositionEngineError("Invalid clip volume.");
+    if (clip.groupId) {
+      const timing = `${clip.timelineStartMs}:${clip.timelineDurationMs}:${clip.playbackRate}`;
+      const known = groupTiming.get(clip.groupId);
+      if (known && known !== timing) throw new CompositionEngineError("Grouped clips must share timeline timing.");
+      groupTiming.set(clip.groupId, timing);
+    }
+  }
 }
-export function compositionDuration(composition: ClipComposition): number { return Math.max(0, ...composition.clips.filter((clip) => clip.enabled).map(clipEnd)) }
-export function sourceTimeAt(clip: Clip, timelineMs: number): number | null { if (!finite(timelineMs) || timelineMs < clip.timelineStartMs || timelineMs > clipEnd(clip)) return null; return rounded(clip.sourceInMs + (timelineMs - clip.timelineStartMs) * clip.playbackRate) }
-export function timelineTimeAt(clip: Clip, sourceMs: number): number | null { if (!finite(sourceMs) || sourceMs < clip.sourceInMs || sourceMs > clip.sourceInMs + clip.sourceDurationMs) return null; return rounded(clip.timelineStartMs + (sourceMs - clip.sourceInMs) / clip.playbackRate) }
-export function activeClipsAt(composition: ClipComposition, timelineMs: number): Clip[] { return ordered(composition.clips.filter((clip) => clip.enabled && sourceTimeAt(clip, timelineMs) !== null)) }
-export function visibleClipsForTrack(composition: ClipComposition, trackOrder: number): Clip[] { return ordered(composition.clips.filter((clip) => clip.trackOrder === trackOrder)) }
-export function nextActiveClip(composition: ClipComposition, timelineMs: number): Clip | null { return ordered(composition.clips.filter((clip) => clip.enabled && clip.timelineStartMs >= timelineMs))[0] ?? null }
-export function moveClip(composition: ClipComposition, clipId: string, timelineStartMs: number): ClipComposition { if (!finite(timelineStartMs) || timelineStartMs < 0) throw new CompositionEngineError('Invalid timeline position.'); return nextWith(composition, (next) => { const delta = rounded(timelineStartMs) - requireClip(next, clipId).timelineStartMs; targetIds(next, clipId).forEach((id) => { requireClip(next, id).timelineStartMs += delta }) }) }
-export function setPlaybackRate(composition: ClipComposition, clipId: string, playbackRate: number): ClipComposition { if (!finite(playbackRate) || playbackRate < MIN_PLAYBACK_RATE || playbackRate > MAX_PLAYBACK_RATE) throw new CompositionEngineError('Playback rate must be between 0.25x and 4x.'); return nextWith(composition, (next) => targetIds(next, clipId).forEach((id) => { const clip = requireClip(next, id); if (!isRateAdjustable(clip)) throw new CompositionEngineError('This clip has no speed control.'); clip.playbackRate = playbackRate; clip.timelineDurationMs = rounded(clip.sourceDurationMs / playbackRate) })) }
-export function trimClip(composition: ClipComposition, clipId: string, edge: TrimEdge, timelineMs: number): ClipComposition { const source = requireClip(composition, clipId); if (!finite(timelineMs)) throw new CompositionEngineError('Invalid trim position.'); return nextWith(composition, (next) => targetIds(next, clipId).forEach((id) => { const clip = requireClip(next, id); const requested = rounded(timelineMs - source.timelineStartMs); if (edge === 'start') { const change = Math.max(-(clip.sourceInMs / clip.playbackRate), Math.min(requested, clip.timelineDurationMs - 1)); clip.timelineStartMs += change; clip.timelineDurationMs -= change; clip.sourceInMs += rounded(change * clip.playbackRate); clip.sourceDurationMs -= rounded(change * clip.playbackRate) } else { const asset = clip.assetId ? next.assets.find((entry) => entry.id === clip.assetId) : undefined; const available = asset ? (asset.durationMs - clip.sourceInMs) / clip.playbackRate : clip.sourceDurationMs / clip.playbackRate; const duration = Math.max(1, Math.min(requested, available)); clip.timelineDurationMs = duration; clip.sourceDurationMs = rounded(duration * clip.playbackRate) } })) }
-export function splitClip(composition: ClipComposition, clipId: string, timelineMs: number, idFactory: IdFactory = createId): ClipComposition { const source = requireClip(composition, clipId); if (!finite(timelineMs) || timelineMs <= source.timelineStartMs || timelineMs >= clipEnd(source)) throw new CompositionEngineError('Split must be inside the clip.'); return nextWith(composition, (next) => { const group = groupFor(next, clipId); const ids = targetIds(next, clipId); const offset = rounded(timelineMs - source.timelineStartMs); const rightIds: string[] = []; for (const id of ids) { const clip = requireClip(next, id); const sourceOffset = rounded(offset * clip.playbackRate); const right: Clip = { ...clip, id: idFactory(), timelineStartMs: clip.timelineStartMs + offset, timelineDurationMs: clip.timelineDurationMs - offset, sourceInMs: clip.sourceInMs + sourceOffset, sourceDurationMs: clip.sourceDurationMs - sourceOffset }; clip.timelineDurationMs = offset; clip.sourceDurationMs = sourceOffset; next.clips.push(right); rightIds.push(right.id) }; if (group) next.groups.push({ id: idFactory(), clipIds: rightIds }) }) }
-export function deleteClip(composition: ClipComposition, clipId: string): ClipComposition { return nextWith(composition, (next) => { const ids = targetIds(next, clipId); const source = requireClip(next, clipId); next.clips = next.clips.filter((clip) => !ids.includes(clip.id)).map((clip) => clip.timelineStartMs >= source.timelineStartMs ? { ...clip, timelineStartMs: Math.max(0, clip.timelineStartMs - source.timelineDurationMs) } : clip); next.groups = next.groups.filter((group) => !ids.some((id) => group.clipIds.includes(id))) }) }
-export function setEnabled(composition: ClipComposition, clipId: string, enabled: boolean): ClipComposition { return nextWith(composition, (next) => { requireClip(next, clipId).enabled = Boolean(enabled) }) }
-export function setAppearance(composition: ClipComposition, clipId: string, patch: Partial<ClipAppearance>): ClipComposition { return nextWith(composition, (next) => { const clip = requireClip(next, clipId); if (!isVisual(clip)) throw new CompositionEngineError('Audio clips have no appearance.'); clip.appearance = { ...clip.appearance, ...patch } }) }
-export function setTransform(composition: ClipComposition, clipId: string, transform: ClipTransform): ClipComposition { return nextWith(composition, (next) => { const clip = requireClip(next, clipId); if (!isVisual(clip)) throw new CompositionEngineError('Audio clips have no visual transform.'); clip.transform = clampRect(transform) }) }
-export function setCrop(composition: ClipComposition, clipId: string, crop: ClipCrop): ClipComposition { return nextWith(composition, (next) => { const clip = requireClip(next, clipId); if (!isVisual(clip)) throw new CompositionEngineError('Audio clips have no crop.'); clip.crop = clampRect(crop) }) }
-export function detachClip(composition: ClipComposition, clipId: string): ClipComposition { return nextWith(composition, (next) => { const group = groupFor(next, clipId); if (!group) return; group.clipIds = group.clipIds.filter((id) => id !== clipId); next.groups = next.groups.filter((entry) => entry.clipIds.length >= 2) }) }
-export function reorderTrack(composition: ClipComposition, clipId: string, trackOrder: number): ClipComposition { if (!Number.isInteger(trackOrder) || trackOrder < 0) throw new CompositionEngineError('Invalid track order.'); return nextWith(composition, (next) => { requireClip(next, clipId).trackOrder = trackOrder }) }
-export function setVolume(composition: ClipComposition, clipId: string, volume: number): ClipComposition { if (!finite(volume)) throw new CompositionEngineError('Invalid clip volume.'); return nextWith(composition, (next) => { const clip = requireClip(next, clipId); if (!['audio', 'system-audio', 'microphone'].includes(clip.kind)) throw new CompositionEngineError('Only audio clips have volume.'); clip.volume = Math.max(0, Math.min(200, volume)) }) }
-export function setMirrored(composition: ClipComposition, clipId: string, isMirrored: boolean): ClipComposition { return nextWith(composition, (next) => { const clip = requireClip(next, clipId); if (!isVisual(clip)) throw new CompositionEngineError('Audio clips cannot be mirrored.'); clip.isMirrored = Boolean(isMirrored) }) }
-export const setClipEnabled = setEnabled
-export const transformClip = setTransform
-export const clipsActiveAt = activeClipsAt
-export const clipsVisibleForTrack = visibleClipsForTrack
-export const resolveNextActiveClip = nextActiveClip
-export const timelineToSourceMs = sourceTimeAt
-export const sourceToTimelineMs = timelineTimeAt
+
+export const compositionDurationMs = (composition: ClipComposition) =>
+  composition.clips.reduce((duration, clip) => Math.max(duration, clipEndMs(clip)), 0);
+
+export const assetForClip = (composition: ClipComposition, clip: Clip) =>
+  clip.kind === "caption" ? null : composition.assets.find((asset) => asset.id === clip.assetId) ?? null;
+
+export function sourceTimeAt(clip: Clip, timelineTimeMs: number): number | null {
+  if (!finite(timelineTimeMs) || timelineTimeMs < clip.timelineStartMs || timelineTimeMs >= clipEndMs(clip)) return null;
+  return integer(clip.sourceInMs + (timelineTimeMs - clip.timelineStartMs) * clip.playbackRate);
+}
+
+export const activeClipsAt = (composition: ClipComposition, timelineTimeMs: number) =>
+  composition.clips
+    .filter((clip) => clip.enabled && sourceTimeAt(clip, timelineTimeMs) !== null)
+    .sort((left, right) => left.order - right.order);
+
+export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipComposition {
+  const next = clone(composition);
+  const index = next.assets.findIndex((entry) => entry.id === asset.id);
+  if (index < 0) next.assets.push(structuredClone(asset));
+  else next.assets[index] = structuredClone(asset);
+  validateComposition({ ...next, clips: next.clips.filter((clip) => clip.kind === "caption" || next.assets.some((entry) => entry.id === clip.assetId)) });
+  return next;
+}
+
+export function addClip(composition: ClipComposition, clip: Clip, asset?: MediaAsset): ClipComposition {
+  const next = asset ? addAsset(composition, asset) : clone(composition);
+  if (next.clips.some((entry) => entry.id === clip.id)) throw new CompositionEngineError(`Duplicate clip: ${clip.id}`);
+  next.clips = normalizeOrders([...next.clips, structuredClone(clip)]);
+  validateComposition(next);
+  return next;
+}
+
+export function updateClip(composition: ClipComposition, clipId: string, update: (clip: Clip) => Clip): ClipComposition {
+  const next = clone(composition);
+  next.clips = next.clips.map((clip) => clip.id === clipId ? update(clip) : clip);
+  byId(next, clipId);
+  next.clips = normalizeOrders(normalizeGroups(next.clips));
+  validateComposition(next);
+  return next;
+}
+
+export function moveClip(composition: ClipComposition, clipId: string, timelineStartMs: number): ClipComposition {
+  if (!finite(timelineStartMs)) throw new CompositionEngineError("Invalid timeline position.");
+  const next = clone(composition);
+  const source = byId(next, clipId);
+  const delta = integer(timelineStartMs) - source.timelineStartMs;
+  const ids = new Set(targetIds(next, clipId));
+  const minimum = Math.min(...next.clips.filter((clip) => ids.has(clip.id)).map((clip) => clip.timelineStartMs + delta));
+  const adjustedDelta = delta - Math.min(0, minimum);
+  next.clips = next.clips.map((clip) => ids.has(clip.id) ? { ...clip, timelineStartMs: clip.timelineStartMs + adjustedDelta } : clip);
+  validateComposition(next);
+  return next;
+}
+
+export function setPlaybackRate(composition: ClipComposition, clipId: string, playbackRate: number): ClipComposition {
+  if (!finite(playbackRate) || playbackRate < MIN_PLAYBACK_RATE || playbackRate > MAX_PLAYBACK_RATE) {
+    throw new CompositionEngineError(`Playback rate must be between ${MIN_PLAYBACK_RATE}x and ${MAX_PLAYBACK_RATE}x.`);
+  }
+  const next = clone(composition);
+  const ids = new Set(targetIds(next, clipId));
+  next.clips = next.clips.map((clip) => ids.has(clip.id) ? {
+    ...clip,
+    playbackRate,
+    timelineDurationMs: Math.max(MIN_CLIP_DURATION_MS, integer(clip.sourceDurationMs / playbackRate)),
+  } : clip);
+  validateComposition(next);
+  return next;
+}
+
+export function trimClip(composition: ClipComposition, clipId: string, edge: "start" | "end", timelineTimeMs: number): ClipComposition {
+  if (!finite(timelineTimeMs)) throw new CompositionEngineError("Invalid trim position.");
+  const next = clone(composition);
+  const source = byId(next, clipId);
+  const clips = targetIds(next, clipId).map((id) => byId(next, id));
+
+  if (edge === "start") {
+    const requestedDelta = integer(timelineTimeMs) - source.timelineStartMs;
+    const minimumDelta = Math.max(...clips.map((clip) => Math.max(
+      -clip.timelineStartMs,
+      -(clip.sourceInMs - clip.sourceRangeStartMs) / clip.playbackRate,
+    )));
+    const maximumDelta = Math.min(...clips.map((clip) => clip.timelineDurationMs - MIN_CLIP_DURATION_MS));
+    const delta = integer(clamp(requestedDelta, minimumDelta, maximumDelta));
+    next.clips = next.clips.map((clip) => {
+      if (!clips.some((entry) => entry.id === clip.id)) return clip;
+      const sourceDelta = integer(delta * clip.playbackRate);
+      return {
+        ...clip,
+        timelineStartMs: clip.timelineStartMs + delta,
+        timelineDurationMs: clip.timelineDurationMs - delta,
+        sourceInMs: clip.sourceInMs + sourceDelta,
+        sourceDurationMs: clip.sourceDurationMs - sourceDelta,
+      };
+    });
+  } else {
+    const requestedDuration = integer(timelineTimeMs) - source.timelineStartMs;
+    const maximumDuration = Math.min(...clips.map((clip) => (clip.sourceRangeEndMs - clip.sourceInMs) / clip.playbackRate));
+    const duration = integer(clamp(requestedDuration, MIN_CLIP_DURATION_MS, maximumDuration));
+    next.clips = next.clips.map((clip) => clips.some((entry) => entry.id === clip.id) ? {
+      ...clip,
+      timelineDurationMs: duration,
+      sourceDurationMs: integer(duration * clip.playbackRate),
+    } : clip);
+  }
+
+  validateComposition(next);
+  return next;
+}
+
+export function splitClip(composition: ClipComposition, clipId: string, timelineTimeMs: number, idFactory: () => string = createId): ClipComposition {
+  const next = clone(composition);
+  const source = byId(next, clipId);
+  const target = integer(timelineTimeMs);
+  if (!finite(target) || target <= source.timelineStartMs || target >= clipEndMs(source)) throw new CompositionEngineError("Split must be inside the clip.");
+  const offset = target - source.timelineStartMs;
+  const ids = new Set(targetIds(next, clipId));
+  const rightGroupId = source.groupId ? idFactory() : undefined;
+  const additions: Clip[] = [];
+  next.clips = next.clips.map((clip) => {
+    if (!ids.has(clip.id)) return clip;
+    const leftSourceDuration = integer(offset * clip.playbackRate);
+    const splitSourceMs = clip.sourceInMs + leftSourceDuration;
+    const right: Clip = {
+      ...clip,
+      id: idFactory(),
+      groupId: rightGroupId,
+      timelineStartMs: target,
+      timelineDurationMs: clip.timelineDurationMs - offset,
+      sourceInMs: splitSourceMs,
+      sourceDurationMs: clip.sourceDurationMs - leftSourceDuration,
+      sourceRangeStartMs: splitSourceMs,
+    };
+    additions.push(right);
+    return {
+      ...clip,
+      timelineDurationMs: offset,
+      sourceDurationMs: leftSourceDuration,
+      sourceRangeEndMs: splitSourceMs,
+    };
+  });
+  next.clips = normalizeOrders([...next.clips, ...additions]);
+  validateComposition(next);
+  return next;
+}
+
+export function setClipEnabled(composition: ClipComposition, clipId: string, enabled: boolean, grouped = false): ClipComposition {
+  const next = clone(composition);
+  const ids = new Set(grouped ? targetIds(next, clipId) : [clipId]);
+  next.clips = next.clips.map((clip) => ids.has(clip.id) ? { ...clip, enabled: Boolean(enabled) } : clip);
+  byId(next, clipId);
+  return next;
+}
+
+export function deleteClip(composition: ClipComposition, clipId: string, grouped = false): ClipComposition {
+  const next = clone(composition);
+  const ids = new Set(grouped ? targetIds(next, clipId) : [clipId]);
+  byId(next, clipId);
+  next.clips = normalizeOrders(normalizeGroups(next.clips.filter((clip) => !ids.has(clip.id))));
+  const usedAssets = new Set(next.clips.flatMap((clip) => clip.kind === "caption" ? [] : [clip.assetId]));
+  next.assets = next.assets.filter((asset) => usedAssets.has(asset.id));
+  validateComposition(next);
+  return next;
+}
+
+export function setTransform(composition: ClipComposition, clipId: string, transform: NormalizedTransform): ClipComposition {
+  if (![transform.x, transform.y, transform.width, transform.height].every(finite) || transform.width <= 0 || transform.height <= 0) {
+    throw new CompositionEngineError("Invalid clip transform.");
+  }
+  return updateClip(composition, clipId, (clip) => {
+    if (clip.kind === "audio") throw new CompositionEngineError("Audio clips do not have a transform.");
+    return { ...clip, transform: { ...transform } };
+  });
+}
+
+export function setCrop(composition: ClipComposition, clipId: string, crop: NormalizedCrop | undefined): ClipComposition {
+  if (crop && (![crop.x, crop.y, crop.width, crop.height].every(finite) || crop.width <= 0 || crop.height <= 0)) throw new CompositionEngineError("Invalid clip crop.");
+  return updateClip(composition, clipId, (clip) => {
+    if (!isVisualClip(clip)) throw new CompositionEngineError("Only visual clips can be cropped.");
+    return { ...clip, crop: crop ? { ...crop } : undefined };
+  });
+}
+
+export const setAppearance = (composition: ClipComposition, clipId: string, appearance: ClipAppearance) =>
+  updateClip(composition, clipId, (clip) => {
+    if (!isVisualClip(clip)) throw new CompositionEngineError("Only visual clips have an appearance.");
+    return { ...clip, appearance: structuredClone(appearance) };
+  });
+
+export const setMirrored = (composition: ClipComposition, clipId: string, isMirrored: boolean) =>
+  updateClip(composition, clipId, (clip) => {
+    if (!isVisualClip(clip)) throw new CompositionEngineError("Only visual clips can be mirrored.");
+    return { ...clip, isMirrored };
+  });
+
+export const setVolume = (composition: ClipComposition, clipId: string, volume: number) =>
+  updateClip(composition, clipId, (clip) => {
+    if (!isAudioClip(clip)) throw new CompositionEngineError("Only audio clips have a volume.");
+    return { ...clip, volume: Math.max(0, Math.min(200, volume)) };
+  });
+
+export function reorderClip(composition: ClipComposition, clipId: string, targetIndex: number): ClipComposition {
+  const next = clone(composition);
+  const ordered = normalizeOrders(next.clips);
+  const index = ordered.findIndex((clip) => clip.id === clipId);
+  if (index < 0 || !Number.isInteger(targetIndex)) throw new CompositionEngineError("Invalid clip reorder.");
+  const [clip] = ordered.splice(index, 1);
+  ordered.splice(Math.max(0, Math.min(ordered.length, targetIndex)), 0, clip);
+  next.clips = ordered.map((entry, order) => ({ ...entry, order }));
+  return next;
+}
+
+export function detachClip(composition: ClipComposition, clipId: string): ClipComposition {
+  return updateClip(composition, clipId, (clip) => ({ ...clip, groupId: undefined }));
+}
+
+export function linkClips(composition: ClipComposition, clipIds: string[], groupId = createId()): ClipComposition {
+  const next = clone(composition);
+  const unique = [...new Set(clipIds)];
+  if (unique.length < 2) throw new CompositionEngineError("At least two clips are required for a group.");
+  const clips = unique.map((id) => byId(next, id));
+  const anchor = clips[0];
+  if (clips.some((clip) => clip.timelineStartMs !== anchor.timelineStartMs || clip.timelineDurationMs !== anchor.timelineDurationMs || clip.playbackRate !== anchor.playbackRate)) {
+    throw new CompositionEngineError("Grouped clips must share timeline timing.");
+  }
+  next.clips = next.clips.map((clip) => unique.includes(clip.id) ? { ...clip, groupId } : clip);
+  validateComposition(next);
+  return next;
+}
+
+export const resetComposition = () => emptyComposition();
