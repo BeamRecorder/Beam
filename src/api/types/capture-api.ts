@@ -58,7 +58,6 @@ export interface DesktopCaptureApi extends CaptureApi {
   listBackgroundLibrary(): Promise<BackgroundMedia[]>
   pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>
   onBackgroundLibraryChanged(listener: () => void): () => void
-  saveProjectZoomState(projectId: string, zoom: ProjectZoomState): Promise<ProjectZoomState>
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
   deleteProject(projectId: string): Promise<void>
