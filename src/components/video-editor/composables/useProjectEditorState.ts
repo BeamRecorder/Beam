@@ -1,24 +1,21 @@
 import { computed, ref, toRaw, watch, type Ref } from "vue";
 import { capture } from "../../../api/capture";
 import type { CaptureProject, ProjectEditorHistory, ProjectEditorState } from "../../../api/types/capture-api";
-import type { ProjectComposition } from "../composition/composition-types";
+import type { ClipComposition } from "../composition/composition-types";
 import type { ZoomElement } from "../zoom/zoom-types";
 import { BACKGROUND_MEDIA, normalizeBackgroundValue, type BackgroundMedia, type BackgroundValue } from "./backgroundCatalog";
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import type { OutputCanvasSettings } from "../canvas/output-canvas";
 
-const cloneComposition = (value: ProjectComposition): ProjectComposition => JSON.parse(JSON.stringify(value)) as ProjectComposition;
+const clone = <T>(value: T): T => structuredClone(toRaw(value));
 
 export function useProjectEditorState(options: {
   project: Ref<CaptureProject | null | undefined>;
-  composition: Ref<ProjectComposition>;
+  composition: Ref<ClipComposition>;
   zoomElements: Ref<ZoomElement[]>;
   generatedSessions: Ref<ProjectEditorState["zoom"]["generatedSessions"]>;
   importedBackgrounds: Ref<BackgroundMedia[]>;
   selectedBackground: Ref<BackgroundValue | null>;
   backgroundBlurPercent: Ref<number>;
-  videoEnabled: Ref<boolean>;
-  systemAudioEnabled: Ref<boolean>;
-  micAudioEnabled: Ref<boolean>;
   canvas: Ref<OutputCanvasSettings>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
@@ -34,23 +31,20 @@ export function useProjectEditorState(options: {
   const snapshot = (): ProjectEditorState => {
     const canvas = options.canvas.value;
     return {
-      schemaVersion: 1,
-      composition: cloneComposition(options.composition.value),
+      schemaVersion: 2,
+      composition: clone(options.composition.value),
       zoom: {
-        elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
-        generatedSessions: options.generatedSessions.value.map((session) => ({ ...toRaw(session) })),
+        elements: options.zoomElements.value.map((zoom) => clone(zoom)),
+        generatedSessions: options.generatedSessions.value.map((session) => clone(session)),
       },
       presentation: {
         canvas: { preset: canvas.preset, width: canvas.width, height: canvas.height, showBackground: canvas.showBackground },
         selectedBackgroundId: options.selectedBackground.value?.id ?? savedBackgroundId,
-        background: options.selectedBackground.value && !['image', 'video'].includes(options.selectedBackground.value.kind) ? JSON.parse(JSON.stringify(options.selectedBackground.value)) : null,
+        background: options.selectedBackground.value && !["image", "video"].includes(options.selectedBackground.value.kind) ? clone(options.selectedBackground.value) : null,
         blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
         importedBackgrounds: [],
-        videoEnabled: options.videoEnabled.value,
-        systemAudioEnabled: options.systemAudioEnabled.value,
-        micAudioEnabled: options.micAudioEnabled.value,
       },
-      history: JSON.parse(JSON.stringify(history.value)),
+      history: clone(history.value),
     };
   };
 
@@ -71,12 +65,14 @@ export function useProjectEditorState(options: {
       .finally(() => { pendingSaves.value = Math.max(0, pendingSaves.value - 1); });
     return writeChain;
   };
+
   const scheduleSave = () => {
     if (loading.value || !options.project.value) return;
     if (timer) clearTimeout(timer);
     scheduledSave.value = true;
     timer = setTimeout(() => { void saveNow().catch((error) => console.error("Failed to save editor state:", error)); }, 250);
   };
+
   const load = async (projectId: string) => {
     loading.value = true;
     try {
@@ -93,12 +89,11 @@ export function useProjectEditorState(options: {
         ?? null;
       options.selectedBackground.value = selected;
       options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
-      options.videoEnabled.value = state.presentation.videoEnabled;
-      options.systemAudioEnabled.value = state.presentation.systemAudioEnabled;
-      options.micAudioEnabled.value = state.presentation.micAudioEnabled;
       options.canvas.value = state.presentation.canvas;
-      history.value = state.history ?? { undo: [], redo: [] };
-    } finally { loading.value = false; }
+      history.value = state.history;
+    } finally {
+      loading.value = false;
+    }
   };
 
   watch(
@@ -109,9 +104,6 @@ export function useProjectEditorState(options: {
       options.importedBackgrounds,
       options.selectedBackground,
       options.backgroundBlurPercent,
-      options.videoEnabled,
-      options.systemAudioEnabled,
-      options.micAudioEnabled,
       options.canvas,
     ],
     scheduleSave,
@@ -122,5 +114,6 @@ export function useProjectEditorState(options: {
     const selected = groups.flatMap((group) => group.items).find((item) => item.id === savedBackgroundId || item.path === savedBackgroundId);
     if (selected) options.selectedBackground.value = selected;
   }, { deep: true });
-  return { load, saveNow, scheduleSave, isSaving, history };
+
+  return { load, saveNow, scheduleSave, isSaving, history, loading };
 }
