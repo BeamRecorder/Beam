@@ -1,20 +1,110 @@
 import { describe, expect, it } from 'vitest'
-import { activeClipsAt, attachClip, CompositionEngineError, createComposition, deleteClip, detachClip, migrateLegacyComposition, moveClip, setClipEnabled, setPlaybackRate, sourceTimeAt, splitClip, transformClip, trimClip } from '../../src/components/video-editor/composition/engine/clip-engine'
-import { MAX_PLAYBACK_RATE, MIN_PLAYBACK_RATE, type Clip, type ClipComposition } from '../../src/components/video-editor/composition/engine/clip-types'
+import {
+  MAX_PLAYBACK_RATE,
+  MIN_PLAYBACK_RATE,
+  CompositionEngineError,
+  activeClipsAt,
+  createComposition,
+  deleteClip,
+  detachClip,
+  linkClips,
+  moveClip,
+  setClipEnabled,
+  setPlaybackRate,
+  setTransform,
+  sourceTimeAt,
+  splitClip,
+  trimClip,
+} from '../../src/components/video-editor/composition/engine/clip-engine'
+import type {
+  AudioClip,
+  Clip,
+  ClipComposition,
+  MediaAsset,
+  VisualClip,
+} from '../../src/components/video-editor/composition/composition-types'
 
-const clip = (id: string, kind: Clip['kind'] = 'video', overrides: Partial<Clip> = {}): Clip => ({ id, kind, mediaId: kind === 'annotation' ? null : `media-${id}`, annotationId: kind === 'annotation' ? `annotation-${id}` : null, timelineStartMs: 1_000, timelineDurationMs: 4_000, sourceInMs: 200, sourceDurationMs: 4_000, playbackRate: 1, enabled: true, order: 0, transform: kind === 'audio' ? null : { x: 0, y: 0, width: 1, height: 1 }, ...overrides })
-const linked = (): ClipComposition => createComposition([clip('screen'), clip('camera', 'webcam'), clip('audio', 'audio')], [{ id: 'recording', clipIds: ['screen', 'camera', 'audio'] }])
+const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
+  id,
+  kind,
+  name: id,
+  fileName: `${id}.${kind === 'image' ? 'png' : kind === 'audio' ? 'wav' : 'mp4'}`,
+  durationMs: 4_200,
+  width: kind === 'audio' ? null : 1920,
+  height: kind === 'audio' ? null : 1080,
+  src: `file:///${id}`,
+  origin: 'project',
+})
+
+const visualClip = (
+  id: string,
+  kind: VisualClip['kind'] = 'video',
+  overrides: Partial<VisualClip> = {},
+): VisualClip => ({
+  id,
+  kind,
+  name: id,
+  assetId: `asset-${id}`,
+  timelineStartMs: 1_000,
+  timelineDurationMs: 4_000,
+  sourceInMs: 200,
+  sourceDurationMs: 4_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  ...overrides,
+})
+
+const audioClip = (id: string, overrides: Partial<AudioClip> = {}): AudioClip => ({
+  id,
+  kind: 'audio',
+  name: id,
+  assetId: `asset-${id}`,
+  role: 'system',
+  volume: 100,
+  timelineStartMs: 1_000,
+  timelineDurationMs: 4_000,
+  sourceInMs: 200,
+  sourceDurationMs: 4_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  ...overrides,
+})
+
+const compositionFor = (clips: Clip[]): ClipComposition => createComposition(
+  clips.flatMap((clip) => clip.kind === 'caption' ? [] : [asset(clip.assetId, clip.kind === 'audio' ? 'audio' : clip.kind === 'image' ? 'image' : 'video')]),
+  clips,
+)
+
+const linked = (): ClipComposition => {
+  const groupId = 'recording'
+  return compositionFor([
+    visualClip('screen', 'screen', { groupId }),
+    visualClip('camera', 'webcam', { groupId }),
+    audioClip('audio', { groupId }),
+  ])
+}
 
 describe('clip composition engine', () => {
   it('maps timeline times to source times and excludes times outside a clip', () => {
-    const value = clip('a', 'video', { playbackRate: 2 })
+    const value = visualClip('a', 'video', {
+      playbackRate: 2,
+      timelineDurationMs: 2_000,
+      sourceDurationMs: 4_000,
+    })
     expect(sourceTimeAt(value, 1_000)).toBe(200)
     expect(sourceTimeAt(value, 1_500)).toBe(1_200)
-    expect(sourceTimeAt(value, 5_001)).toBeNull()
+    expect(sourceTimeAt(value, 3_001)).toBeNull()
   })
 
   it('returns only enabled active clips in render order', () => {
-    const composition = createComposition([clip('back', 'image', { order: 2 }), clip('front', 'video', { order: 1 }), clip('hidden', 'audio', { enabled: false })])
+    const composition = compositionFor([
+      visualClip('back', 'image', { order: 2 }),
+      visualClip('front', 'video', { order: 1 }),
+      audioClip('hidden', { enabled: false, order: 3 }),
+    ])
     expect(activeClipsAt(composition, 1_100).map((entry) => entry.id)).toEqual(['front', 'back'])
     expect(activeClipsAt(composition, 500)).toEqual([])
   })
@@ -36,9 +126,13 @@ describe('clip composition engine', () => {
     expect(() => setPlaybackRate(linked(), 'screen', MAX_PLAYBACK_RATE + .01)).toThrow(/4x/)
   })
 
-  it('trims a linked group from its start while advancing each source', () => {
+  it('trims a linked group from its start while advancing every source', () => {
     const trimmed = trimClip(linked(), 'screen', 'start', 2_000)
-    expect(trimmed.clips.map((entry) => [entry.timelineStartMs, entry.timelineDurationMs, entry.sourceInMs, entry.sourceDurationMs])).toEqual([[2_000, 3_000, 1_200, 3_000], [2_000, 3_000, 1_200, 3_000], [2_000, 3_000, 1_200, 3_000]])
+    expect(trimmed.clips.map((entry) => [entry.timelineStartMs, entry.timelineDurationMs, entry.sourceInMs, entry.sourceDurationMs])).toEqual([
+      [2_000, 3_000, 1_200, 3_000],
+      [2_000, 3_000, 1_200, 3_000],
+      [2_000, 3_000, 1_200, 3_000],
+    ])
   })
 
   it('trims a linked group from its end without changing source in', () => {
@@ -46,41 +140,39 @@ describe('clip composition engine', () => {
     expect(trimmed.clips.every((entry) => entry.timelineDurationMs === 2_000 && entry.sourceDurationMs === 2_000 && entry.sourceInMs === 200)).toBe(true)
   })
 
-  it('splits each linked clip and creates two independently addressable groups', () => {
-    const ids = ['screen-right', 'camera-right', 'audio-right']; let cursor = 0
+  it('splits every linked clip and gives the right side an independent group', () => {
+    const ids = ['screen-right', 'camera-right', 'audio-right', 'right-group']
+    let cursor = 0
     const split = splitClip(linked(), 'screen', 3_000, () => ids[cursor++]!)
     expect(split.clips).toHaveLength(6)
-    expect(split.groups.map((group) => group.clipIds)).toEqual([['screen', 'camera', 'audio'], ids])
-    expect(split.clips.find((entry) => entry.id === 'camera-right')).toMatchObject({ timelineStartMs: 3_000, sourceInMs: 2_200, timelineDurationMs: 2_000 })
+    expect(new Set(split.clips.slice(0, 3).map((entry) => entry.groupId))).toEqual(new Set(['recording']))
+    expect(new Set(split.clips.slice(3).map((entry) => entry.groupId))).toEqual(new Set(['screen-right']))
+    expect(split.clips.find((entry) => entry.id === 'audio-right')).toMatchObject({ timelineStartMs: 3_000, sourceInMs: 2_200, timelineDurationMs: 2_000 })
   })
 
-  it('allows a detached sidecar to move and change speed alone', () => {
+  it('lets a detached sidecar move and change speed alone', () => {
     const detached = detachClip(linked(), 'camera')
     const edited = setPlaybackRate(moveClip(detached, 'camera', 5_000), 'camera', 2)
     expect(edited.clips.find((entry) => entry.id === 'camera')).toMatchObject({ timelineStartMs: 5_000, playbackRate: 2, timelineDurationMs: 2_000 })
     expect(edited.clips.find((entry) => entry.id === 'screen')).toMatchObject({ timelineStartMs: 1_000, playbackRate: 1 })
   })
 
-  it('reattaches only clips with timing compatible with their group', () => {
+  it('links only timing-compatible clips', () => {
     const detached = detachClip(linked(), 'camera')
-    expect(attachClip(detached, 'camera', 'recording').groups[0].clipIds).toContain('camera')
+    const relinked = linkClips(detached, ['screen', 'camera'], 'new-recording')
+    expect(relinked.clips.filter((entry) => entry.groupId === 'new-recording').map((entry) => entry.id)).toEqual(['screen', 'camera'])
     const incompatible = moveClip(detached, 'camera', 2_000)
-    expect(() => attachClip(incompatible, 'camera', 'recording')).toThrow(/incompatible/)
+    expect(() => linkClips(incompatible, ['screen', 'camera'])).toThrow(/share timeline timing/)
   })
 
-  it('supports enable, delete and visual transforms without deleting media', () => {
+  it('supports enable, delete and visual transforms while pruning unused media', () => {
     const disabled = setClipEnabled(linked(), 'camera', false)
     expect(disabled.clips.find((entry) => entry.id === 'camera')?.enabled).toBe(false)
-    const transformed = transformClip(disabled, 'camera', { x: -.2, y: .2, width: 2, height: .4 })
-    expect(transformed.clips.find((entry) => entry.id === 'camera')?.transform).toEqual({ x: 0, y: .2, width: 1, height: .4 })
-    expect(deleteClip(transformed, 'camera').clips.map((entry) => entry.mediaId)).toContain('media-screen')
-    expect(() => transformClip(linked(), 'audio', { x: 0, y: 0, width: 1, height: 1 })).toThrow(/Audio/)
-  })
-
-  it('migrates video, audio, image and annotation layers into v2 clips', () => {
-    const migrated = migrateLegacyComposition({ media: [{ id: 'v', kind: 'video', durationMs: 2_000 }, { id: 'a', kind: 'audio', durationMs: 2_000 }, { id: 'i', kind: 'image', durationMs: 0 }], layers: [{ id: 'video', kind: 'video', assetId: 'v', startMs: 0, endMs: 1_000, enabled: true, order: 0 }, { id: 'audio', kind: 'audio', assetId: 'a', startMs: 100, endMs: 900, enabled: true, order: 1 }, { id: 'image', kind: 'image', assetId: 'i', startMs: 0, endMs: 500, enabled: true, order: 2 }, { id: 'caption', kind: 'caption', startMs: 300, endMs: 700, enabled: true, order: 3 }] })
-    expect(migrated.schemaVersion).toBe(2)
-    expect(migrated.clips.map((entry) => entry.kind)).toEqual(['video', 'audio', 'image', 'annotation'])
-    expect(migrated.clips.every((entry) => entry.playbackRate === 1 && entry.sourceInMs === 0)).toBe(true)
+    const transformed = setTransform(disabled, 'camera', { x: -.2, y: .2, width: 2, height: .4 })
+    expect(transformed.clips.find((entry) => entry.id === 'camera')).toMatchObject({ transform: { x: -.2, y: .2, width: 2, height: .4 } })
+    const deleted = deleteClip(transformed, 'camera')
+    expect(deleted.clips.map((entry) => entry.id)).not.toContain('camera')
+    expect(deleted.assets.map((entry) => entry.id)).not.toContain('asset-camera')
+    expect(() => setTransform(linked(), 'audio', { x: 0, y: 0, width: 1, height: 1 })).toThrow(/Audio/)
   })
 })
