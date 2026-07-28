@@ -1,5 +1,9 @@
-export type CompositionMediaKind = "video" | "image" | "audio";
-export type CompositionLayerKind = CompositionMediaKind | "caption";
+export const COMPOSITION_SCHEMA_VERSION = 1 as const;
+export const SCREEN_CLIP_ID = "screen";
+
+export type MediaKind = "video" | "image" | "audio";
+export type ClipKind = "screen" | "video" | "image" | "webcam" | "audio" | "caption";
+export type AudioRole = "system" | "microphone" | "imported";
 
 export interface NormalizedTransform {
   x: number;
@@ -7,6 +11,7 @@ export interface NormalizedTransform {
   width: number;
   height: number;
 }
+
 /** A rectangle in the source media, expressed as fractions of its dimensions. */
 export interface NormalizedCrop {
   x: number;
@@ -14,11 +19,13 @@ export interface NormalizedCrop {
   width: number;
   height: number;
 }
+
 export interface CaptionWord {
   text: string;
   startMs: number;
   endMs: number;
 }
+
 export interface CaptionSentence {
   id: string;
   text: string;
@@ -26,6 +33,7 @@ export interface CaptionSentence {
   endMs: number;
   words: CaptionWord[];
 }
+
 export interface CaptionStyle {
   color: string;
   fontSize: number;
@@ -41,14 +49,17 @@ export interface CaptionStyle {
   placement: "top" | "center" | "bottom";
   customText?: string;
 }
+
 export interface CaptionData {
   sentences: CaptionSentence[];
   style: CaptionStyle;
 }
+
 export interface WebcamAppearance {
   shadowSize: "none" | "sm" | "md" | "lg";
   cornerRadius: "none" | "sm" | "md" | "lg" | "full" | number;
 }
+
 export interface ClipAppearance extends WebcamAppearance {
   shadowColor: string;
   shadowDirection: "all" | "bottom" | "bottom-right" | "top-left";
@@ -61,113 +72,88 @@ export interface ClipAppearance extends WebcamAppearance {
   frameShowMenu: boolean;
   frameShowScrollbars: boolean;
 }
+
 export type ClipFrame = "none" | "safari" | "windows-95";
-export interface CompositionMedia {
+
+export interface MediaAsset {
   id: string;
-  kind: CompositionMediaKind;
+  kind: MediaKind;
   name: string;
   fileName: string | null;
   durationMs: number;
   width: number | null;
   height: number | null;
   src: string;
-  origin?: "project" | "session";
+  origin: "project" | "session";
   sessionId?: string;
   sessionPath?: string;
 }
-export interface CompositionLayerBase {
+
+export interface ClipBase {
   id: string;
-  kind: CompositionLayerKind;
+  kind: ClipKind;
   name: string;
-  startMs: number;
-  endMs: number;
+  timelineStartMs: number;
+  timelineDurationMs: number;
+  sourceInMs: number;
+  sourceDurationMs: number;
+  playbackRate: number;
   enabled: boolean;
+  /** Lower values are nearer the foreground. */
   order: number;
-  /** Clips sharing this id keep their timeline edits in sync until detached. */
+  /** Clips sharing a group are edited by the same engine operation until detached. */
   groupId?: string;
 }
-export interface MediaCompositionLayer extends CompositionLayerBase {
-  kind: CompositionMediaKind;
+
+export interface VisualClip extends ClipBase {
+  kind: "screen" | "video" | "image" | "webcam";
   assetId: string;
-  transform?: NormalizedTransform;
+  transform: NormalizedTransform;
   crop?: NormalizedCrop;
-  sourceOffsetMs?: number;
-  reactToZoom?: boolean;
-  webcamAppearance?: WebcamAppearance;
   appearance?: ClipAppearance;
-  playbackRate?: number;
-  /** Per-clip gain for imported audio, expressed as a percentage. */
-  volume?: number;
   isMirrored?: boolean;
 }
-export interface CaptionCompositionLayer extends CompositionLayerBase {
+
+export interface AudioClip extends ClipBase {
+  kind: "audio";
+  assetId: string;
+  role: AudioRole;
+  volume: number;
+}
+
+export interface CaptionClip extends ClipBase {
   kind: "caption";
   caption: CaptionData;
   transform?: NormalizedTransform;
   isAiGenerated?: boolean;
 }
 
-export function getCaptionTransform(layer: CaptionCompositionLayer): NormalizedTransform {
-  if (layer.transform) return layer.transform;
-  const placement = layer.caption?.style?.placement ?? "bottom";
+export type Clip = VisualClip | AudioClip | CaptionClip;
+
+export interface ClipComposition {
+  schemaVersion: typeof COMPOSITION_SCHEMA_VERSION;
+  assets: MediaAsset[];
+  clips: Clip[];
+}
+
+export const emptyComposition = (): ClipComposition => ({
+  schemaVersion: COMPOSITION_SCHEMA_VERSION,
+  assets: [],
+  clips: [],
+});
+
+export const clipEndMs = (clip: Pick<ClipBase, "timelineStartMs" | "timelineDurationMs">) =>
+  clip.timelineStartMs + clip.timelineDurationMs;
+
+export const isVisualClip = (clip: Clip): clip is VisualClip =>
+  clip.kind === "screen" || clip.kind === "video" || clip.kind === "image" || clip.kind === "webcam";
+
+export const isAudioClip = (clip: Clip): clip is AudioClip => clip.kind === "audio";
+export const isCaptionClip = (clip: Clip): clip is CaptionClip => clip.kind === "caption";
+
+export const getCaptionTransform = (clip: CaptionClip): NormalizedTransform => {
+  if (clip.transform) return clip.transform;
+  const placement = clip.caption.style.placement;
   const y = placement === "top" ? 0.06 : placement === "center" ? 0.43 : 0.8;
   return { x: 0.1, y, width: 0.8, height: 0.14 };
-}
-export type CompositionLayer = MediaCompositionLayer | CaptionCompositionLayer;
-
-/** Identifiers used by the single visual compositing stack (front to back). */
-export const BASE_VIDEO_TRACK_ID = "base-video";
-export const WEBCAM_TRACK_ID = "webcam";
-export type VisualTrackId = typeof BASE_VIDEO_TRACK_ID | typeof WEBCAM_TRACK_ID | string;
-export type SessionSidecarKey = "camera" | "system-audio" | "microphone";
-export interface TimelineRange { startMs: number; endMs: number; }
-/** A non-destructive portion of the captured session. Timeline positions are derived
- * from the active segments, never stored, so deleting one naturally ripples later
- * session media to the left. */
-export interface SessionSegment {
-  id: string;
-  /** Immutable bounds of this segment in the captured source. */
-  sourceStartMs: number;
-  sourceEndMs: number;
-  /** Editable bounds rendered on the compacted timeline. Older projects omit
-   * these fields; they are normalized to the immutable source bounds. */
-  activeStartMs?: number;
-  activeEndMs?: number;
-  /** Clip-local presentation and speed. These must not leak to sibling cuts. */
-  playbackRate?: number;
-  appearance?: ClipAppearance;
-  active: boolean;
-}
-
-export interface ProjectComposition {
-  media: CompositionMedia[];
-  layers: CompositionLayer[];
-  /** Visual tracks ordered from foreground (timeline top) to background. */
-  visualTrackOrder?: VisualTrackId[];
-  baseVideoAppearance?: ClipAppearance;
-  baseVideoCrop?: NormalizedCrop;
-  baseVideoTransform?: NormalizedTransform;
-  baseVideoIsMirrored?: boolean;
-  baseVideoPlaybackRate?: number;
-  /** Non-destructive edit points shared by the recorded video and audio tracks. */
-  sessionSegments?: SessionSegment[];
-  /** Session tracks deliberately detached from the primary screen recording. */
-  detachedSessionSidecars?: SessionSidecarKey[];
-}
-
-export const emptyComposition = (): ProjectComposition => ({
-  media: [],
-  layers: [],
-});
-export const activeLayersAt = (
-  composition: ProjectComposition,
-  timeMs: number,
-) =>
-  composition.layers
-    .filter(
-      (layer) =>
-        layer.enabled && layer.startMs <= timeMs && timeMs <= layer.endMs,
-    )
-    // A smaller order is a lane nearer the top of the timeline. Draw it last
-    // so that the top lane is also the foreground layer in preview/export.
-    .sort((a, b) => b.order - a.order);
+};
