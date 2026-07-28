@@ -2,8 +2,14 @@ const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { fileURLToPath, pathToFileURL } = require('url')
-const { createCompositionStore } = require('./composition-store.cjs')
 const { kindFor } = require('../backgrounds/background-library.cjs')
+const {
+  emptyComposition,
+  normalizeComposition,
+  materializeComposition,
+  importMedia,
+  pruneProjectMedia,
+} = require('./clip-composition.cjs')
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
@@ -18,10 +24,14 @@ function createProjectStore(root) {
   }
   const slugify = (value) => {
     const normalized = String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    const slug = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-    return slug || 'untitled-project'
+    return normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'untitled-project'
   }
   const readManifest = (directory) => JSON.parse(fs.readFileSync(path.join(directory, 'project.json'), 'utf8'))
+  const writeManifest = (directory, manifest) => {
+    const target = path.join(directory, 'project.json')
+    fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
+    fs.renameSync(`${target}.tmp`, target)
+  }
   const projectDirectories = () => !fs.existsSync(root) ? [] : fs.readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => path.join(root, entry.name))
@@ -34,14 +44,21 @@ function createProjectStore(root) {
     if (!directory) throw new Error('Projet introuvable')
     return directory
   }
+  const sessionFileFor = (directory, sessionId, sessionPath) => {
+    const project = readManifest(directory)
+    const session = Array.isArray(project.sessions) ? project.sessions.find((entry) => entry?.sessionId === sessionId) : null
+    const sessionDirectory = session && safePath(directory, session.relativePath)
+    return sessionDirectory ? safePath(sessionDirectory, sessionPath) : null
+  }
   const mediaUrlFor = (fileUrl) => {
     if (typeof fileUrl !== 'string') return null
     let file
     try { file = fileURLToPath(fileUrl) } catch { return null }
     const relativePath = path.relative(root, file)
     const safeFile = safePath(root, relativePath)
-    if (!safeFile || safeFile !== path.resolve(file) || !fs.existsSync(safeFile) || !fs.statSync(safeFile).isFile()) return null
-    return `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
+    return safeFile && safeFile === path.resolve(file) && fs.existsSync(safeFile) && fs.statSync(safeFile).isFile()
+      ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
+      : null
   }
   const mediaFileForUrl = (mediaUrl) => {
     let parsed
@@ -60,14 +77,8 @@ function createProjectStore(root) {
     }
     throw new Error('Impossible de créer un dossier de projet unique')
   }
-  const writeManifest = (directory, manifest) => {
-    const target = path.join(directory, 'project.json')
-    fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
-    fs.renameSync(`${target}.tmp`, target)
-  }
   const thumbnailFor = (directory) => {
-    const candidates = ['thumbnail.webp', 'thumbnail.png', 'thumbnail.jpg', 'thumbnail.jpeg']
-    for (const file of candidates) {
+    for (const file of ['thumbnail.webp', 'thumbnail.png', 'thumbnail.jpg', 'thumbnail.jpeg']) {
       const target = path.join(directory, file)
       if (fs.existsSync(target)) return pathToFileURL(target).href
     }
@@ -96,7 +107,7 @@ function createProjectStore(root) {
     }
   }
   const zoomState = (value) => {
-    if (!value || !Array.isArray(value.elements) || !Array.isArray(value.generatedSessions)) throw new Error('État des zooms invalide')
+    if (!value || !Array.isArray(value.elements) || !Array.isArray(value.generatedSessions)) return { elements: [], generatedSessions: [] }
     const ids = new Set()
     const elements = value.elements.map((element) => {
       if (!element || typeof element.id !== 'string' || !element.id || ids.has(element.id) || typeof element.sessionId !== 'string' || !Number.isFinite(element.startMs) || !Number.isFinite(element.endMs) || element.endMs <= element.startMs || !element.focus || !Number.isFinite(element.focus.cx) || !Number.isFinite(element.focus.cy) || element.focus.cx < 0 || element.focus.cx > 1 || element.focus.cy < 0 || element.focus.cy > 1 || ![1, 2, 3, 4, 5, 6].includes(element.depth) || !['auto', 'manual'].includes(element.mode)) throw new Error('Propriétés de zoom invalides')
@@ -126,9 +137,6 @@ function createProjectStore(root) {
       importedBackgrounds: Array.isArray(next.importedBackgrounds)
         ? next.importedBackgrounds.filter((item) => item && typeof item === 'object' && typeof item.id === 'string' && item.id.startsWith('project-bg:') && typeof item.path === 'string')
         : [],
-      videoEnabled: typeof next.videoEnabled === 'boolean' ? next.videoEnabled : true,
-      systemAudioEnabled: typeof next.systemAudioEnabled === 'boolean' ? next.systemAudioEnabled : true,
-      micAudioEnabled: typeof next.micAudioEnabled === 'boolean' ? next.micAudioEnabled : true,
     }
   }
   const readJsonArray = (file) => {
@@ -140,82 +148,106 @@ function createProjectStore(root) {
     try { return (JSON.parse(fs.readFileSync(file, 'utf8'))?.samples || []).filter((sample) => sample && Number.isFinite(sample.timeMs) && Number.isFinite(sample.cx) && Number.isFinite(sample.cy)).map((sample) => ({ timeMs: Math.max(0, sample.timeMs), cx: Math.max(0, Math.min(1, sample.cx)), cy: Math.max(0, Math.min(1, sample.cy)), interactionType: ['move', 'click', 'double-click', 'right-click', 'middle-click', 'mouseup'].includes(sample.interactionType) ? sample.interactionType : undefined, cursorType: typeof sample.cursorType === 'string' ? sample.cursorType : undefined })).sort((a, b) => a.timeMs - b.timeMs) } catch { return [] }
   }
   const editorData = (id) => {
-    const directory = directoryFor(id); const manifest = readManifest(directory); const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
+    const directory = directoryFor(id)
+    const manifest = readManifest(directory)
+    const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
     for (const session of [...sessions].reverse()) {
       const sessionDirectory = safePath(directory, session.relativePath)
       if (!sessionDirectory || !fs.existsSync(sessionDirectory)) continue
       const manifestPath = [path.join(sessionDirectory, 'manifest.json'), path.join(sessionDirectory, 'manifest.partial.json')].find(fs.existsSync)
       if (!manifestPath) continue
-      let sessionManifest; try { sessionManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) } catch { continue }
+      let sessionManifest
+      try { sessionManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) } catch { continue }
       const screenDirectory = path.join(sessionDirectory, 'screen')
       const video = fs.existsSync(screenDirectory) && fs.readdirSync(screenDirectory).filter((name) => /\.mp4$/i.test(name)).sort()[0]
-      const tracks = Array.isArray(sessionManifest.tracks) ? sessionManifest.tracks.map((track) => ({ ...track, assets: Array.isArray(track.segments) ? track.segments.map((segment) => { const assetPath = safePath(sessionDirectory, segment.path); return { ...segment, src: assetPath && fs.existsSync(assetPath) ? pathToFileURL(assetPath).href : null, exists: Boolean(assetPath && fs.existsSync(assetPath)) } }) : [] })) : []
-      const cursorDirectory = path.join(sessionDirectory, 'cursor'); const events = readJsonArray(path.join(cursorDirectory, 'cursor.json')); let metadata = {}
+      const tracks = Array.isArray(sessionManifest.tracks) ? sessionManifest.tracks.map((track) => ({
+        ...track,
+        assets: Array.isArray(track.segments) ? track.segments.map((segment) => {
+          const assetPath = safePath(sessionDirectory, segment.path)
+          return { ...segment, src: assetPath && fs.existsSync(assetPath) ? pathToFileURL(assetPath).href : null, exists: Boolean(assetPath && fs.existsSync(assetPath)) }
+        }) : [],
+      })) : []
+      const cursorDirectory = path.join(sessionDirectory, 'cursor')
+      const events = readJsonArray(path.join(cursorDirectory, 'cursor.json'))
+      let metadata = {}
       try { metadata = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'shapes.json'), 'utf8')) || {} } catch {}
       const catalog = Object.fromEntries(Object.entries(metadata).filter(([, value]) => value && typeof value === 'object' && typeof value.cursorKind === 'string' && typeof value.nativeCursorId === 'string').map(([cursorId, value]) => [cursorId, { cursorKind: value.cursorKind, nativeCursorId: value.nativeCursorId, hotspot: value.hotspot || { x: 0, y: 0 } }]))
       const shapes = Object.fromEntries(Object.entries(metadata).flatMap(([shapeId, value]) => { const shapePath = path.join(cursorDirectory, 'shapes', `${shapeId}.png`); return fs.existsSync(shapePath) ? [[shapeId, { src: pathToFileURL(shapePath).href, hotspot: value?.hotspot || value || { x: 0, y: 0 } }]] : [] }))
-      const legacyMissing = Object.keys(metadata).filter((shapeId) => !catalog[shapeId] && !shapes[shapeId]).map((shapeId) => `shapes/${shapeId}.png`)
-      return { sessionId: session.sessionId, manifest: sessionManifest, videoSrc: video ? pathToFileURL(path.join(screenDirectory, video)).href : null, tracks, cursor: { available: Array.isArray(events), events: events || [], telemetry: telemetryFor(path.join(cursorDirectory, 'telemetry.json')), shapes, catalog, missing: [...(Array.isArray(events) ? [] : ['cursor.json']), ...legacyMissing] }, zoom: manifest.editor?.zoom ? zoomState(manifest.editor.zoom) : { elements: [], generatedSessions: [] } }
+      const missing = Object.keys(metadata).filter((shapeId) => !catalog[shapeId] && !shapes[shapeId]).map((shapeId) => `shapes/${shapeId}.png`)
+      return { sessionId: session.sessionId, manifest: sessionManifest, videoSrc: video ? pathToFileURL(path.join(screenDirectory, video)).href : null, tracks, cursor: { available: Array.isArray(events), events: events || [], telemetry: telemetryFor(path.join(cursorDirectory, 'telemetry.json')), shapes, catalog, missing: [...(Array.isArray(events) ? [] : ['cursor.json']), ...missing] }, zoom: manifest.editor?.zoom ? zoomState(manifest.editor.zoom) : { elements: [], generatedSessions: [] } }
     }
     return null
   }
-  const generatedBaseName = (id) => { const adjectives = ['Bright', 'Calm', 'Clever', 'Golden', 'Quiet', 'Rapid', 'Soft', 'Vivid']; const nouns = ['Aurora', 'Canvas', 'Comet', 'Horizon', 'Orbit', 'Pixel', 'Signal', 'Studio']; return `${adjectives[Number.parseInt(id.slice(0, 2), 16) % adjectives.length]} ${nouns[Number.parseInt(id.slice(2, 4), 16) % nouns.length]}` }
+  const generatedBaseName = (id) => {
+    const adjectives = ['Bright', 'Calm', 'Clever', 'Golden', 'Quiet', 'Rapid', 'Soft', 'Vivid']
+    const nouns = ['Aurora', 'Canvas', 'Comet', 'Horizon', 'Orbit', 'Pixel', 'Signal', 'Studio']
+    return `${adjectives[Number.parseInt(id.slice(0, 2), 16) % adjectives.length]} ${nouns[Number.parseInt(id.slice(2, 4), 16) % nouns.length]}`
+  }
   const generatedName = (id) => {
     const baseName = generatedBaseName(id)
-    const names = new Set(!fs.existsSync(root) ? [] : fs.readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory() && entry.name.startsWith('project-')).flatMap((entry) => { try { return [readManifest(path.join(root, entry.name)).name] } catch { return [] } }))
+    const names = new Set(projectDirectories().flatMap((directory) => { try { return [readManifest(directory).name] } catch { return [] } }))
     if (!names.has(baseName)) return baseName
-    for (let attempts = 0; attempts < 100; attempts += 1) {
-      const suffix = Math.floor(Math.random() * 2_147_483_647) + 1
-      const candidate = `${baseName} ${suffix}`
-      if (!names.has(candidate)) return candidate
-    }
-    for (let suffix = 1; suffix <= 2_147_483_647; suffix += 1) {
-      const candidate = `${baseName} ${suffix}`
-      if (!names.has(candidate)) return candidate
-    }
+    for (let suffix = 2; suffix <= 2_147_483_647; suffix += 1) if (!names.has(`${baseName} ${suffix}`)) return `${baseName} ${suffix}`
     throw new Error('Impossible de générer un nom de projet unique')
   }
-  const composition = createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor: (directory, sessionId, sessionPath) => {
-    const project = readManifest(directory)
-    const session = Array.isArray(project.sessions) ? project.sessions.find((entry) => entry?.sessionId === sessionId) : null
-    const sessionDirectory = session && safePath(directory, session.relativePath)
-    return sessionDirectory ? safePath(sessionDirectory, sessionPath) : null
-  } })
-  const validHistorySnapshot = (value) => value && typeof value === 'object' && value.composition && typeof value.composition === 'object' && Array.isArray(value.zoomElements) && value.outputCanvas && typeof value.outputCanvas === 'object' && typeof value.backgroundBlurPercent === 'number'
-  const editorHistory = (value) => value && Array.isArray(value.undo) && Array.isArray(value.redo)
-    ? { undo: value.undo.filter(validHistorySnapshot).slice(-20), redo: value.redo.filter(validHistorySnapshot).slice(-20) }
-    : { undo: [], redo: [] }
+  const historySnapshot = (directory, value, materialize) => {
+    if (!value || typeof value !== 'object' || !Array.isArray(value.zoomElements) || !value.outputCanvas || typeof value.outputCanvas !== 'object' || !Number.isFinite(value.backgroundBlurPercent)) return null
+    const composition = normalizeComposition(value.composition)
+    return {
+      composition: materialize ? materializeComposition(directory, composition, sessionFileFor) : composition,
+      zoomElements: zoomState({ elements: value.zoomElements, generatedSessions: [] }).elements,
+      outputCanvas: presentationState({ canvas: value.outputCanvas }).canvas,
+      selectedBackground: value.selectedBackground && typeof value.selectedBackground === 'object' ? value.selectedBackground : null,
+      backgroundBlurPercent: Math.max(0, Math.min(100, Math.round(value.backgroundBlurPercent))),
+    }
+  }
+  const editorHistory = (directory, value, materialize = false) => {
+    if (!value || !Array.isArray(value.undo) || !Array.isArray(value.redo)) return { undo: [], redo: [] }
+    const list = (items) => items.slice(-20).flatMap((item) => {
+      try { const snapshot = historySnapshot(directory, item, materialize); return snapshot ? [snapshot] : [] } catch { return [] }
+    })
+    return { undo: list(value.undo), redo: list(value.redo) }
+  }
   const editorState = (id) => {
-    const directory = directoryFor(id); const manifest = readManifest(directory); const editor = manifest.editor || {}
-    const presentation = presentationState(editor.presentation)
-    const history = editorHistory(editor.history)
-    return { schemaVersion: 1, composition: composition.read(id), zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] }, presentation, history }
+    const directory = directoryFor(id)
+    const manifest = readManifest(directory)
+    const editor = manifest.editor || {}
+    const composition = normalizeComposition(editor.composition || emptyComposition())
+    return {
+      schemaVersion: 2,
+      composition: materializeComposition(directory, composition, sessionFileFor),
+      zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] },
+      presentation: presentationState(editor.presentation),
+      history: editorHistory(directory, editor.history, true),
+    }
   }
   const saveEditorState = (id, value) => {
-    if (!value || value.schemaVersion !== 1) throw new Error('État éditeur invalide')
-    const directory = directoryFor(id); const manifest = readManifest(directory)
-    // Composition has its own serialized IPC write. Reusing a renderer
-    // snapshot here can overwrite a newer import/layer write in flight.
-    const nextComposition = composition.read(id)
-    const nextZoom = zoomState(value.zoom)
-    const nextPresentation = presentationState(value.presentation)
-    const history = editorHistory(value.history)
-    manifest.editor = { ...(manifest.editor || {}), composition: nextComposition, zoom: nextZoom, presentation: nextPresentation, history }
-    manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest)
+    if (!value || value.schemaVersion !== 2) throw new Error('État éditeur invalide')
+    const directory = directoryFor(id)
+    const manifest = readManifest(directory)
+    const previous = normalizeComposition(manifest.editor?.composition || emptyComposition())
+    const composition = normalizeComposition(value.composition)
+    const zoom = zoomState(value.zoom)
+    const presentation = presentationState(value.presentation)
+    const history = editorHistory(directory, value.history)
+    pruneProjectMedia(directory, previous, composition)
+    manifest.editor = { composition, zoom, presentation, history }
+    manifest.updatedAtUtc = new Date().toISOString()
+    writeManifest(directory, manifest)
     return editorState(id)
   }
   const applyPendingRenames = () => {
     for (const directory of projectDirectories()) {
-      let manifest; try { manifest = readManifest(directory) } catch { continue }
-      const targetSlug = manifest.pendingDirectorySlug
-      if (typeof targetSlug !== 'string' || !targetSlug) continue
-      const target = availableDirectory(targetSlug, directory)
+      let manifest
+      try { manifest = readManifest(directory) } catch { continue }
+      if (typeof manifest.pendingDirectorySlug !== 'string' || !manifest.pendingDirectorySlug) continue
+      const target = availableDirectory(manifest.pendingDirectorySlug, directory)
       try { fs.renameSync(directory, target); delete manifest.pendingDirectorySlug; writeManifest(target, manifest) } catch {}
     }
   }
   const importBackground = (id, input = {}) => {
     const directory = directoryFor(id)
-    const source = input?.source
+    const source = input.source
     if (typeof source !== 'string' || !source) throw new Error('Fond importé invalide')
     let sourceStats
     try { sourceStats = fs.statSync(source) } catch { throw new Error('Fond importé invalide') }
@@ -228,41 +260,48 @@ function createProjectStore(root) {
     const fileName = `${randomUUID()}${extension}`
     const targetPath = path.join(targetDirectory, fileName)
     fs.copyFileSync(source, targetPath)
-    return {
-      id: `project-bg:${fileName}`,
-      name: path.basename(source, extension).slice(0, 160),
-      fileName,
-      extension: extension.slice(1),
-      kind,
-      path: pathToFileURL(targetPath).href,
-    }
+    return { id: `project-bg:${fileName}`, name: path.basename(source, extension).slice(0, 160), fileName, extension: extension.slice(1), kind, path: pathToFileURL(targetPath).href }
   }
+
   applyPendingRenames()
   return {
     list: () => projectDirectories().map((directory) => { try { const manifest = readManifest(directory); return summary(directory, manifest, manifest.projectId) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
     mediaUrlFor,
     mediaFileForUrl,
     editorData,
-    saveZoom: (id, zoom) => { const directory = directoryFor(id); const manifest = readManifest(directory); const state = zoomState(zoom); manifest.editor = { ...(manifest.editor || {}), zoom: state }; manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest); return state },
     editorState,
     saveEditorState,
+    importEditorMedia: (id, input) => importMedia(directoryFor(id), input),
     importBackground,
-    create: (options = {}) => { const id = randomUUID(); const now = new Date().toISOString(); const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id); fs.mkdirSync(root, { recursive: true }); const directory = availableDirectory(name); fs.mkdirSync(directory); const manifest = { schemaVersion: 1, projectId: id, name, createdAtUtc: now, updatedAtUtc: now, sessions: [] }; writeManifest(directory, manifest); return summary(directory, manifest, id) },
-    rename: (id, name) => { const directory = directoryFor(id); const manifest = readManifest(directory); const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''; if (!nextName) throw new Error('Le nom du projet ne peut pas être vide'); const target = availableDirectory(nextName, directory); manifest.name = nextName; manifest.updatedAtUtc = new Date().toISOString(); try { fs.renameSync(directory, target); delete manifest.pendingDirectorySlug; writeManifest(target, manifest); return summary(target, manifest, id) } catch { manifest.pendingDirectorySlug = slugify(nextName); writeManifest(directory, manifest); return summary(directory, manifest, id) } },
-    saveThumbnail: (id, dataUrl) => {
-      const directory = directoryFor(id);
-      if (!fs.existsSync(directory)) return null;
-      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null;
-      const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-      const targetPath = path.join(directory, 'thumbnail.webp');
-      fs.writeFileSync(targetPath, buffer);
-      return pathToFileURL(targetPath).href;
+    create: (options = {}) => {
+      const id = randomUUID()
+      const now = new Date().toISOString()
+      const name = typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id)
+      fs.mkdirSync(root, { recursive: true })
+      const directory = availableDirectory(name)
+      fs.mkdirSync(directory)
+      const manifest = { schemaVersion: 1, projectId: id, name, createdAtUtc: now, updatedAtUtc: now, sessions: [], editor: { composition: emptyComposition(), zoom: { elements: [], generatedSessions: [] }, presentation: presentationState(), history: { undo: [], redo: [] } } }
+      writeManifest(directory, manifest)
+      return summary(directory, manifest, id)
     },
-    composition: (id) => composition.read(id),
-    saveComposition: (id, value) => composition.save(id, value),
-    importCompositionMedia: (id, input) => composition.importMedia(id, input),
-    delete: (id) => { const directory = directoryFor(id); if (!fs.existsSync(directory)) throw new Error('Projet introuvable'); fs.rmSync(directory, { recursive: true, force: false }) },
+    rename: (id, name) => {
+      const directory = directoryFor(id)
+      const manifest = readManifest(directory)
+      const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''
+      if (!nextName) throw new Error('Le nom du projet ne peut pas être vide')
+      const target = availableDirectory(nextName, directory)
+      manifest.name = nextName
+      manifest.updatedAtUtc = new Date().toISOString()
+      try { fs.renameSync(directory, target); delete manifest.pendingDirectorySlug; writeManifest(target, manifest); return summary(target, manifest, id) } catch { manifest.pendingDirectorySlug = slugify(nextName); writeManifest(directory, manifest); return summary(directory, manifest, id) }
+    },
+    saveThumbnail: (id, dataUrl) => {
+      const directory = directoryFor(id)
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null
+      const targetPath = path.join(directory, 'thumbnail.webp')
+      fs.writeFileSync(targetPath, Buffer.from(dataUrl.replace(/^data:image\/\w+;base64,/, ''), 'base64'))
+      return pathToFileURL(targetPath).href
+    },
+    delete: (id) => fs.rmSync(directoryFor(id), { recursive: true, force: false }),
   }
 }
 
