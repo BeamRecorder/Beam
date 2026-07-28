@@ -141,12 +141,12 @@ describe('clip composition engine', () => {
   })
 
   it('splits every linked clip and gives the right side an independent group', () => {
-    const ids = ['screen-right', 'camera-right', 'audio-right', 'right-group']
+    const ids = ['right-group', 'screen-right', 'camera-right', 'audio-right']
     let cursor = 0
     const split = splitClip(linked(), 'screen', 3_000, () => ids[cursor++]!)
     expect(split.clips).toHaveLength(6)
     expect(new Set(split.clips.slice(0, 3).map((entry) => entry.groupId))).toEqual(new Set(['recording']))
-    expect(new Set(split.clips.slice(3).map((entry) => entry.groupId))).toEqual(new Set(['screen-right']))
+    expect(new Set(split.clips.slice(3).map((entry) => entry.groupId))).toEqual(new Set(['right-group']))
     expect(split.clips.find((entry) => entry.id === 'audio-right')).toMatchObject({ timelineStartMs: 3_000, sourceInMs: 2_200, timelineDurationMs: 2_000 })
   })
 
