@@ -247,15 +247,6 @@ function createProjectStore(root) {
     saveEditorState,
     importEditorMedia: (id, input) => importMedia(directoryFor(id), input),
     importBackground,
-    saveZoom: (id, zoom) => {
-      const directory = directoryFor(id)
-      const manifest = readManifest(directory)
-      const state = zoomState(zoom)
-      manifest.editor = { ...(manifest.editor || {}), zoom: state }
-      manifest.updatedAtUtc = new Date().toISOString()
-      writeManifest(directory, manifest)
-      return state
-    },
     create: (options = {}) => {
       const id = randomUUID()
       const now = new Date().toISOString()
