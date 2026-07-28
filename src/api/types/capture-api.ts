@@ -1,15 +1,6 @@
-import type {
-  CaptureConfig,
-  CreateProjectOptions,
-  StartRecordingOptions,
-} from './capture-config'
-import type {
-  CaptureProject,
-  CaptureSession,
-  ProjectEditorData,
-  ProjectZoomState,
-} from './capture-session'
-import type { CompositionMedia, ProjectComposition } from '../../components/video-editor/composition/composition-types'
+import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config'
+import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomState } from './capture-session'
+import type { ClipComposition, MediaAsset } from '../../components/video-editor/composition/composition-types'
 import type { BackgroundMedia, BackgroundValue, GradientBackground } from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
 
@@ -22,14 +13,10 @@ export interface CaptureApi {
   permissions(): Promise<Record<string, unknown>>
   formats(sourceId: string): Promise<unknown>
   prepare(config: CaptureConfig): Promise<CaptureSession>
-  /** Arme une session à partir des réglages HUD sans encore commencer à enregistrer. */
   prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>
-  /** Démarre la session armée par `prepareRecording`. */
   startPreparedRecording(): Promise<CaptureSession>
   cancelPreparedRecording(): Promise<void>
-  /** Découvre les sources, choisit l'écran par défaut et applique les réglages recommandés. */
   startRecording(options?: StartRecordingOptions): Promise<CaptureSession>
-  /** Avec une config, prépare et démarre en un seul appel. Sans config, démarre la session préparée. */
   start(config?: CaptureConfig): Promise<CaptureSession>
   pause(): Promise<CaptureSession>
   resume(): Promise<CaptureSession>
@@ -68,17 +55,14 @@ export interface DesktopCaptureApi extends CaptureApi {
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>
+  pickProjectMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset | null>
   listBackgroundLibrary(): Promise<BackgroundMedia[]>
   pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>
   onBackgroundLibraryChanged(listener: () => void): () => void
-  saveProjectZoomState(projectId: string, zoom: ProjectZoomState): Promise<ProjectZoomState>
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
   deleteProject(projectId: string): Promise<void>
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>
-  getProjectComposition(projectId: string): Promise<ProjectComposition>
-  saveProjectComposition(projectId: string, composition: ProjectComposition): Promise<ProjectComposition>
-  pickProjectCompositionMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<CompositionMedia | null>
   whisperModels(): Promise<Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>
   downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
@@ -125,30 +109,13 @@ export interface ProjectEditorPresentation {
   background?: BackgroundValue | null
   blurPercent?: number
   importedBackgrounds: BackgroundMedia[]
-  videoEnabled: boolean
-  systemAudioEnabled: boolean
-  micAudioEnabled: boolean
 }
 
 export interface ProjectEditorState {
-  schemaVersion: 1
-  composition: ProjectComposition
+  schemaVersion: 2
+  composition: ClipComposition
   zoom: ProjectZoomState
   presentation: ProjectEditorPresentation
-  history?: ProjectEditorHistory
-}
-
-export interface ProjectEditorHistorySnapshot {
-  composition: ProjectComposition
-  zoomElements: ProjectZoomState['elements']
-  outputCanvas: OutputCanvasSettings
-  selectedBackground: BackgroundValue | null
-  backgroundBlurPercent: number
-}
-
-export interface ProjectEditorHistory {
-  undo: ProjectEditorHistorySnapshot[]
-  redo: ProjectEditorHistorySnapshot[]
 }
 
 export interface CameraSegmentStart {
@@ -157,74 +124,14 @@ export interface CameraSegmentStart {
   format: { codec: 'vp8'; width: number; height: number; nominalFps: number; appearance?: { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' }; placement?: { x: number; y: number; width: number; height: number } }
   startNs: number
 }
-
-export interface MediaSegmentChunk {
-  jobId: string
-  sequence: number
-  data: Uint8Array
-}
-
-export interface CameraSegmentFinish {
-  jobId: string
-  endNs: number
-  metrics: Record<string, number>
-}
-
-export interface MicrophoneSegmentStart {
-  sessionId: string
-  sourceId: string
-  format: { codec: 'opus'; sampleRate: number; channels: number }
-  startNs: number
-}
-
-export interface MicrophoneSegmentFinish {
-  jobId: string
-  endNs: number
-  metrics: Record<string, number>
-}
-
-export interface MicrophoneFailure {
-  sessionId: string
-  sourceId: string
-  reason: string
-  format?: { codec: 'opus'; sampleRate: number; channels: number }
-}
-
-export interface SystemAudioSegmentStart {
-  sessionId: string
-  sourceId: string
-  format: { codec: 'opus'; sampleRate: number; channels: number }
-  startNs: number
-}
-
-export interface SystemAudioSegmentFinish {
-  jobId: string
-  endNs: number
-  metrics: Record<string, number>
-}
-
-export interface SystemAudioFailure {
-  sessionId: string
-  sourceId: string
-  reason: string
-  format?: { codec: 'opus'; sampleRate: number; channels: number }
-}
-
-export interface CapturePreview {
-  id: string
-  name: string
-  thumbnail: string
-  appIcon: string | null
-}
-
-export interface CaptureSource {
-  id: string
-  kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'
-  label: string
-  isDefault: boolean
-}
-
-export interface CaptureCatalog {
-  sources: CaptureSource[]
-  capabilities: Record<string, boolean>
-}
+export interface MediaSegmentChunk { jobId: string; sequence: number; data: Uint8Array }
+export interface CameraSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
+export interface MicrophoneSegmentStart { sessionId: string; sourceId: string; format: { codec: 'opus'; sampleRate: number; channels: number }; startNs: number }
+export interface MicrophoneSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
+export interface MicrophoneFailure { sessionId: string; sourceId: string; reason: string; format?: { codec: 'opus'; sampleRate: number; channels: number } }
+export interface SystemAudioSegmentStart { sessionId: string; sourceId: string; format: { codec: 'opus'; sampleRate: number; channels: number }; startNs: number }
+export interface SystemAudioSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
+export interface SystemAudioFailure { sessionId: string; sourceId: string; reason: string; format?: { codec: 'opus'; sampleRate: number; channels: number } }
+export interface CapturePreview { id: string; name: string; thumbnail: string; appIcon: string | null }
+export interface CaptureSource { id: string; kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'; label: string; isDefault: boolean }
+export interface CaptureCatalog { sources: CaptureSource[]; capabilities: Record<string, boolean> }
