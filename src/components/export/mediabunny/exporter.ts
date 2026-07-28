@@ -18,6 +18,7 @@ import { renderCompositionFrame } from "../composition/render";
 import { activeLayersAt, type MediaCompositionLayer } from "../../video-editor/composition/composition-types";
 import { cursorTypeForKind, useCursorReplacer } from "../../video-editor/properties/cursor/useCursorReplacer";
 import { VideoFrameProvider } from "./video-frame-provider";
+import { sessionSegments, timelineToSourceMs } from "../../video-editor/composition/base-video-ranges";
 import { tNamespace } from "../../../i18n";
 
 const $t = tNamespace("exporter");
@@ -51,9 +52,21 @@ export async function supportedAudioCodec(request: ExportRequest) {
 export async function renderMixedAudio(
   request: ExportRequest,
 ): Promise<AudioBuffer | null> {
+  const sessionSourceDurationMs = request.snapshot.composition.sessionSegments?.length
+    ? Math.max(...request.snapshot.composition.sessionSegments.map((segment) => segment.sourceEndMs))
+    : Math.round(request.snapshot.duration * 1000);
   const layers = request.snapshot.audio
     .filter((layer) => layer.enabled)
-    .map((layer) => ({ ...layer, endSeconds: request.snapshot.duration }));
+    .flatMap((layer) => sessionSegments(request.snapshot.composition, sessionSourceDurationMs)
+      .filter((segment) => segment.active)
+      .map((segment) => ({
+        ...layer,
+        startSeconds: segment.timelineStartMs / 1000,
+        endSeconds: segment.timelineEndMs / 1000,
+        sourceOffsetSeconds: segment.sourceStartMs / 1000,
+        timelineDurationSeconds: (segment.sourceEndMs - segment.sourceStartMs) / 1000,
+        sessionSidecar: true,
+      })));
   const assets = new Map(
     request.snapshot.composition.media.map((asset) => [asset.id, asset]),
   );
@@ -318,10 +331,14 @@ export async function exportWithMediabunny(
     compositionVisuals = await loadVisuals(request);
     baseFrames = await VideoFrameProvider.create(
       request.snapshot.video.src,
-      Array.from({ length: total }, (_, frame) =>
-        Math.min(request.snapshot.duration, frame / request.snapshot.video.fps) *
-        (request.snapshot.composition.baseVideoPlaybackRate ?? 1),
-      ),
+      Array.from({ length: total }, (_, frame) => {
+        const timelineMs = Math.min(request.snapshot.duration, frame / request.snapshot.video.fps) * 1000;
+        const sourceDurationMs = request.snapshot.composition.sessionSegments?.length
+          ? Math.max(...request.snapshot.composition.sessionSegments.map((segment) => segment.sourceEndMs))
+          : Math.round(request.snapshot.duration * 1000);
+        const sourceMs = timelineToSourceMs(request.snapshot.composition, timelineMs, sourceDurationMs);
+        return (sourceMs ?? 0) / 1000 * (request.snapshot.composition.baseVideoPlaybackRate ?? 1);
+      }),
     );
     if (!baseFrames) {
       fallbackVideo.load();
@@ -387,8 +404,9 @@ throw new DOMException($t("exportCancelled"), "AbortError");
         background.currentTime = time % Math.max(0.001, background.duration);
         await waitFor(background, "seeked");
       }
-      if (!baseFrames && Math.abs(fallbackVideo.currentTime - time) > 0.001) {
-        fallbackVideo.currentTime = time * (request.snapshot.composition.baseVideoPlaybackRate ?? 1);
+      const sourceMs = timelineToSourceMs(request.snapshot.composition, time * 1000, fallbackVideo.duration * 1000);
+      if (!baseFrames && sourceMs !== null && Math.abs(fallbackVideo.currentTime - sourceMs / 1000) > 0.001) {
+        fallbackVideo.currentTime = sourceMs / 1000 * (request.snapshot.composition.baseVideoPlaybackRate ?? 1);
         await waitFor(fallbackVideo, "seeked");
       }
       const baseFrame = baseFrames ? await baseFrames.frameAt(frame) : null;

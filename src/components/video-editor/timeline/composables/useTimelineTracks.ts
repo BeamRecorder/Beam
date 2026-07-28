@@ -6,6 +6,7 @@ import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
 import { cameraLayers } from "../../composition/webcam/camera-composition";
 import { visualTracks } from "../../composition/visual-stack";
+import { sessionSegments } from "../../composition/base-video-ranges";
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import {
   timelinePercentStyle,
@@ -66,15 +67,14 @@ export function useTimelineTracks(
   const mainVideoLayer = computed(
     () => null,
   );
-  const baseVideoCuts = computed(() => props.composition.baseVideoCuts ?? []);
   const baseVideoSegments = computed(() => {
     const durationMs = Math.round(props.duration * 1000);
-    const boundaries = [0, ...baseVideoCuts.value.filter((cut) => cut > 0 && cut < durationMs), durationMs];
-    return boundaries.slice(0, -1).map((startMs, index) => ({
-      id: `base-video:${startMs}-${boundaries[index + 1]}`,
-      startMs,
-      endMs: boundaries[index + 1],
-    }));
+    return sessionSegments(props.composition, durationMs).map((segment) => ({
+      id: `base-video:${segment.id}`,
+      startMs: segment.timelineStartMs,
+      endMs: segment.timelineEndMs,
+      deleted: !segment.active,
+    })).filter((segment) => !segment.deleted);
   });
 
   const layerStyle = (startMs: number, endMs: number) => ({
@@ -407,7 +407,7 @@ export function useTimelineTracks(
 
     const startSecond = Math.max(0, Math.floor(startPercent * props.duration));
     const endSecond = Math.min(
-      Math.max(0, props.duration - 1),
+      Math.max(0, Math.ceil(props.duration) - 1),
       Math.ceil(endPercent * props.duration),
     );
 
@@ -729,7 +729,6 @@ export function useTimelineTracks(
     compositionAudioBars,
     cameraLayers: cameraLayersResult,
     mainVideoLayer,
-    baseVideoCuts,
     baseVideoSegments,
     layerStyle,
     cutStyle,

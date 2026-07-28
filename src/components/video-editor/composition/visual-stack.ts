@@ -5,6 +5,7 @@ import type {
 } from "./composition-types";
 import { BASE_VIDEO_TRACK_ID, WEBCAM_TRACK_ID } from "./composition-types";
 import { cameraLayers } from "./webcam/camera-composition";
+import { sessionSegmentAtTimeline } from "./base-video-ranges";
 
 export type VisualMediaLayer = MediaCompositionLayer & {
   kind: "video" | "image";
@@ -63,11 +64,15 @@ export const normalizedVisualTrackOrder = (composition: ProjectComposition) =>
 /** Active visual tracks in drawing order: background first, foreground last. */
 export const activeVisualTracksAt = (composition: ProjectComposition, timeMs: number) => {
   const activeCamera = cameraLayers(composition).filter(
-    (layer) => layer.enabled && layer.startMs <= timeMs && timeMs <= layer.endMs,
+    (layer) =>
+      Boolean(sessionSegmentAtTimeline(composition, timeMs, Number.MAX_SAFE_INTEGER)) &&
+      layer.enabled &&
+      layer.startMs <= timeMs &&
+      timeMs <= layer.endMs,
   );
   return visualTracks(composition)
     .filter((track) =>
-      track.kind === "base-video" ||
+      (track.kind === "base-video" && Boolean(sessionSegmentAtTimeline(composition, timeMs, Number.MAX_SAFE_INTEGER))) ||
       track.kind === "webcam"
         ? activeCamera.length > 0 || track.kind === "base-video"
         : Boolean(track.layer?.enabled && track.layer.startMs <= timeMs && timeMs <= track.layer.endMs),

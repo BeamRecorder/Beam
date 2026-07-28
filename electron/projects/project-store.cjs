@@ -181,10 +181,15 @@ function createProjectStore(root) {
     const sessionDirectory = session && safePath(directory, session.relativePath)
     return sessionDirectory ? safePath(sessionDirectory, sessionPath) : null
   } })
+  const validHistorySnapshot = (value) => value && typeof value === 'object' && value.composition && typeof value.composition === 'object' && Array.isArray(value.zoomElements) && value.outputCanvas && typeof value.outputCanvas === 'object' && typeof value.backgroundBlurPercent === 'number'
+  const editorHistory = (value) => value && Array.isArray(value.undo) && Array.isArray(value.redo)
+    ? { undo: value.undo.filter(validHistorySnapshot).slice(-20), redo: value.redo.filter(validHistorySnapshot).slice(-20) }
+    : { undo: [], redo: [] }
   const editorState = (id) => {
     const directory = directoryFor(id); const manifest = readManifest(directory); const editor = manifest.editor || {}
     const presentation = presentationState(editor.presentation)
-    return { schemaVersion: 1, composition: composition.read(id), zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] }, presentation }
+    const history = editorHistory(editor.history)
+    return { schemaVersion: 1, composition: composition.read(id), zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] }, presentation, history }
   }
   const saveEditorState = (id, value) => {
     if (!value || value.schemaVersion !== 1) throw new Error('État éditeur invalide')
@@ -194,7 +199,8 @@ function createProjectStore(root) {
     const nextComposition = composition.read(id)
     const nextZoom = zoomState(value.zoom)
     const nextPresentation = presentationState(value.presentation)
-    manifest.editor = { ...(manifest.editor || {}), composition: nextComposition, zoom: nextZoom, presentation: nextPresentation }
+    const history = editorHistory(value.history)
+    manifest.editor = { ...(manifest.editor || {}), composition: nextComposition, zoom: nextZoom, presentation: nextPresentation, history }
     manifest.updatedAtUtc = new Date().toISOString(); writeManifest(directory, manifest)
     return editorState(id)
   }

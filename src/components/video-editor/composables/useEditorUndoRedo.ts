@@ -19,13 +19,15 @@ export interface EditorStateSnapshot {
   backgroundBlurPercent: number
 }
 
-const MAX_HISTORY_DEPTH = 50
+export const MAX_HISTORY_DEPTH = 20
 
 export function useEditorUndoRedo(options: {
   onRestoreSnapshot: (snapshot: EditorStateSnapshot) => void
+  initialHistory?: { undo: EditorStateSnapshot[]; redo: EditorStateSnapshot[] }
+  onHistoryChange?: (history: { undo: EditorStateSnapshot[]; redo: EditorStateSnapshot[] }) => void
 }) {
-  const undoStack = ref<EditorStateSnapshot[]>([])
-  const redoStack = ref<EditorStateSnapshot[]>([])
+  const undoStack = ref<EditorStateSnapshot[]>((options.initialHistory?.undo ?? []).slice(-MAX_HISTORY_DEPTH).map((item) => JSON.parse(JSON.stringify(item))))
+  const redoStack = ref<EditorStateSnapshot[]>((options.initialHistory?.redo ?? []).slice(-MAX_HISTORY_DEPTH).map((item) => JSON.parse(JSON.stringify(item))))
   const lastAction = ref<HistoryAction | null>(null)
   let isRestoring = false
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -36,6 +38,7 @@ export function useEditorUndoRedo(options: {
   const cloneSnapshot = (snapshot: EditorStateSnapshot): EditorStateSnapshot => {
     return JSON.parse(JSON.stringify(snapshot))
   }
+  const notifyHistoryChange = () => options.onHistoryChange?.({ undo: undoStack.value.map(cloneSnapshot), redo: redoStack.value.map(cloneSnapshot) })
 
   const recordSnapshot = (snapshot: EditorStateSnapshot, debounceMs = 0) => {
     if (isRestoring) return
@@ -53,6 +56,7 @@ export function useEditorUndoRedo(options: {
         undoStack.value.shift()
       }
       redoStack.value = []
+      notifyHistoryChange()
     }
 
     if (debounceTimer) {
@@ -81,6 +85,7 @@ export function useEditorUndoRedo(options: {
     const current = undoStack.value.pop()
     if (current) {
       redoStack.value.push(current)
+      if (redoStack.value.length > MAX_HISTORY_DEPTH) redoStack.value.shift()
     }
 
     const previous = undoStack.value.at(-1)
@@ -88,6 +93,7 @@ export function useEditorUndoRedo(options: {
       options.onRestoreSnapshot(cloneSnapshot(previous))
     }
     isRestoring = false
+    notifyHistoryChange()
     lastAction.value = { type: 'undo', timestamp: Date.now() }
   }
 
@@ -103,9 +109,11 @@ export function useEditorUndoRedo(options: {
     if (next) {
       const cloned = cloneSnapshot(next)
       undoStack.value.push(cloned)
+      if (undoStack.value.length > MAX_HISTORY_DEPTH) undoStack.value.shift()
       options.onRestoreSnapshot(cloned)
     }
     isRestoring = false
+    notifyHistoryChange()
     lastAction.value = { type: 'redo', timestamp: Date.now() }
   }
 
@@ -134,6 +142,10 @@ export function useEditorUndoRedo(options: {
       redo()
     }
   }
+  const replaceHistory = (history: { undo: EditorStateSnapshot[]; redo: EditorStateSnapshot[] }) => {
+    undoStack.value = history.undo.slice(-MAX_HISTORY_DEPTH).map(cloneSnapshot)
+    redoStack.value = history.redo.slice(-MAX_HISTORY_DEPTH).map(cloneSnapshot)
+  }
 
   onMounted(() => {
     window.addEventListener('keydown', handleKeyDown)
@@ -153,5 +165,6 @@ export function useEditorUndoRedo(options: {
     recordSnapshot,
     undo,
     redo,
+    replaceHistory,
   }
 }

@@ -37,6 +37,7 @@ export interface UseCameraZoomOptions {
   canvasRef: () => HTMLCanvasElement | null;
   outputCanvas: () => OutputCanvasSettings;
   isVideoEnabled: () => boolean;
+  videoDisabledLabel?: () => string;
   zoomElements: () => ZoomElement[];
   selectedZoom: () => ZoomElement | null;
   currentTime: () => number;
@@ -237,13 +238,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const outputCanvas = options.outputCanvas();
     const preview = outputPreviewRect(width, height, outputCanvas);
     if (!options.isVideoEnabled()) {
-      ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+      const theme = getComputedStyle(document.documentElement);
+      ctx.fillStyle = theme.getPropertyValue("--color-bg-surface").trim() || "#1b1d25";
       ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "16px sans-serif";
+      ctx.strokeStyle = theme.getPropertyValue("--color-border").trim() || "#3b3d49";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(preview.x + .5, preview.y + .5, preview.width - 1, preview.height - 1);
+      ctx.fillStyle = theme.getPropertyValue("--text-muted").trim() || "#a0a4b8";
+      ctx.font = "600 13px var(--font-sans, sans-serif)";
       ctx.textAlign = "center";
       ctx.fillText(
-        "Video track disabled",
+        options.videoDisabledLabel?.() ?? "Video track hidden",
         preview.x + preview.width / 2,
         preview.y + preview.height / 2,
       );

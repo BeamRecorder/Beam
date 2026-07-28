@@ -13,6 +13,7 @@ import type { BackgroundValue } from "../composables/backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
 import { activeLayersAt, type CompositionLayer, type MediaCompositionLayer, type NormalizedTransform, type ProjectComposition, type NormalizedCrop } from '../composition/composition-types';
 import { activeVisualTracksAt } from '../composition/visual-stack';
+import { sessionSegments, sourceToTimelineMs, timelineToSourceMs } from '../composition/base-video-ranges';
 import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
 
 import { useCanvasBackground } from './composables/useCanvasBackground';
@@ -107,6 +108,10 @@ const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
   isPlaying: () => props.isPlaying,
   currentTime: () => props.currentTime,
   playbackRate: () => props.composition.baseVideoPlaybackRate ?? 1.0,
+  sourceTimeAt: (timelineTime, sourceDuration) => {
+    const sourceMs = timelineToSourceMs(props.composition, timelineTime * 1000, sourceDuration * 1000);
+    return sourceMs === null ? null : sourceMs / 1000;
+  },
   onDurationChange: (duration) => emit('duration-change', duration),
   onRenderOnce: renderOnce,
 });
@@ -147,6 +152,7 @@ const cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
   outputCanvas: () => props.outputCanvas,
   isVideoEnabled: () => props.isVideoEnabled,
+  videoDisabledLabel: () => t('videoTrackHidden'),
   zoomElements: () => props.zoomElements,
   selectedZoom: () => props.selectedZoom,
   currentTime: () => props.currentTime,
@@ -323,7 +329,14 @@ const renderCanvas = () => {
 
   if (props.isPlaying && videoEl.readyState >= 1) {
     const rate = props.composition.baseVideoPlaybackRate ?? 1.0;
-    emit("update:currentTime", videoEl.ended ? 0 : videoEl.currentTime / rate);
+    const sourceTime = videoEl.currentTime / rate;
+    const timelineMs = sourceToTimelineMs(props.composition, sourceTime * 1000, videoEl.duration * 1000);
+    if (timelineMs === null && !videoEl.ended) {
+      const next = sessionSegments(props.composition, videoEl.duration * 1000)
+        .find((segment) => segment.active && segment.sourceStartMs > sourceTime * 1000);
+      if (next) videoEl.currentTime = next.sourceStartMs / 1000 * rate;
+    }
+    emit("update:currentTime", videoEl.ended ? 0 : (timelineMs ?? 0) / 1000);
   }
 };
 

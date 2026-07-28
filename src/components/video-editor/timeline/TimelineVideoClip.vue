@@ -69,7 +69,7 @@ const frameStyle = (frame: { timelineSecond: number }) => ({
 </script>
 
 <template>
-  <button type="button" class="timeline-video-clip" :class="{ selected }" :style="clipStyle" @click.stop="emit('select')" @pointerdown="emit('move', $event)" @pointerenter="startMarquee" @pointerleave="stopMarquee($event.currentTarget)">
+  <button type="button" class="timeline-video-clip" :class="{ selected }" :style="clipStyle" @click.stop="emit('select')" @pointerdown="emit('select'); emit('move', $event)" @pointerenter="startMarquee" @pointerleave="stopMarquee($event.currentTarget)">
     <div class="thumbnails-track">
       <div v-for="frame in frames" :key="`${frame.timelineSecond}:${frame.mediaSecond}`" class="thumbnail-frame" :style="frameStyle(frame)">
         <img v-if="thumbnails[frame.mediaSecond]" :src="thumbnails[frame.mediaSecond]" class="thumbnail-img" alt="" draggable="false" />

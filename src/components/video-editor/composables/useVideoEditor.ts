@@ -29,17 +29,7 @@ export function useVideoEditor(options: {
 
   const durationMs = computed(() => Math.round(player.duration.value * 1000));
 
-  // 2. Audio composable
-  useEditorAudio({
-    editorData,
-    currentTime: player.currentTime,
-    isPlaying: player.isPlaying,
-    volume: player.volume,
-    systemAudioEnabled: player.isSystemAudioEnabled,
-    microphoneEnabled: player.isMicAudioEnabled,
-  });
-
-  // 3. Cursor Replacer composable
+  // 2. Cursor Replacer composable
   const cursor = useCursorReplacer();
 
   // 4. Composition composable
@@ -49,6 +39,16 @@ export function useVideoEditor(options: {
     durationMs,
     currentTimeSec: player.currentTime,
     activeTab,
+  });
+
+  useEditorAudio({
+    editorData,
+    currentTime: player.currentTime,
+    isPlaying: player.isPlaying,
+    volume: player.volume,
+    systemAudioEnabled: player.isSystemAudioEnabled,
+    microphoneEnabled: player.isMicAudioEnabled,
+    composition: compositionState.composition,
   });
 
   useCompositionAudio({

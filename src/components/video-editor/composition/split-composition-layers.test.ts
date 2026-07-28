@@ -23,7 +23,10 @@ describe('splitCompositionLayersAt', () => {
     expect(result.layers[1]).toMatchObject({ groupId: 'new-2', sourceOffsetMs: 3_400 })
     expect(result.layers[3]).toMatchObject({ groupId: 'new-2', sourceOffsetMs: 3_400 })
     expect(result.visualTrackOrder).toEqual(['video', 'new-1', 'base-video'])
-    expect(result.baseVideoCuts).toEqual([3_000])
+    expect(result.sessionSegments).toMatchObject([
+      { sourceStartMs: 0, sourceEndMs: 3_000, active: true },
+      { sourceStartMs: 3_000, sourceEndMs: 10_000, active: true },
+    ])
   })
 
   it('does not change clips when the playhead is at the timeline edge', () => {
@@ -32,6 +35,9 @@ describe('splitCompositionLayersAt', () => {
   })
 
   it('records a cut for the main video when no imported layer crosses the playhead', () => {
-    expect(splitCompositionLayersAt({ media: [], layers: [] }, 2_000, 5_000).baseVideoCuts).toEqual([2_000])
+    expect(splitCompositionLayersAt({ media: [], layers: [] }, 2_000, 5_000).sessionSegments).toMatchObject([
+      { sourceStartMs: 0, sourceEndMs: 2_000 },
+      { sourceStartMs: 2_000, sourceEndMs: 5_000 },
+    ])
   })
 })

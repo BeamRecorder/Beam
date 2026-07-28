@@ -23,6 +23,8 @@ import {
 } from "../composition/webcam/camera-composition";
 import { normalizedVisualTrackOrder } from "../composition/visual-stack";
 import { splitCompositionLayersAt } from "../composition/split-composition-layers";
+import { deleteCompositionLayer } from "../composition/delete-composition-layer";
+import { baseVideoSegmentAtTime, baseVideoSegmentFromId, deleteBaseVideoSegment, trimSessionSegment } from "../composition/base-video-ranges";
 import {
   detachSidecarLink,
   resolveSidecarLinks,
@@ -57,6 +59,15 @@ export function useProjectComposition(options: {
     options;
 
   const composition = ref<ProjectComposition>(emptyComposition());
+  // `durationMs` is the compacted timeline duration after a ripple edit. Segment
+  // operations must instead use the original source extent, otherwise a second
+  // trim clamps every later segment to the shortened timeline.
+  const sessionSourceDurationMs = () => Math.max(
+    durationMs.value,
+    0,
+    Math.round((editorData.value?.manifest.durationNs ?? 0) / 1_000_000),
+    ...(composition.value.sessionSegments?.map((segment) => segment.sourceEndMs) ?? []),
+  );
   const selectedCompositionLayerId = ref<string | null>(null);
 
   const selectedCompositionLayer = computed(
@@ -175,12 +186,7 @@ export function useProjectComposition(options: {
     if (!project.value) return;
     const payload = JSON.parse(JSON.stringify(composition.value));
     const saved = await capture.saveProjectComposition(project.value.id, payload);
-    // An already-running Electron main process can be one version behind the
-    // renderer during development. Keep newly introduced edit points visible
-    // until that process has been restarted and can persist them itself.
-    composition.value = payload.baseVideoCuts?.length && !saved.baseVideoCuts?.length
-      ? { ...saved, baseVideoCuts: payload.baseVideoCuts }
-      : saved;
+    composition.value = saved;
   };
 
   let appearanceSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -246,7 +252,7 @@ export function useProjectComposition(options: {
     const next = splitCompositionLayersAt(
       composition.value,
       Math.round(currentTimeSec.value * 1000),
-      durationMs.value,
+      sessionSourceDurationMs(),
     );
     if (next === composition.value) return;
     composition.value = next;
@@ -460,6 +466,12 @@ export function useProjectComposition(options: {
     edge: "start" | "end",
     timeMs: number,
   ) => {
+    const sessionSegmentId = baseVideoSegmentFromId(layerId);
+    if (sessionSegmentId) {
+      composition.value = trimSessionSegment(composition.value, sessionSegmentId, edge, timeMs, sessionSourceDurationMs());
+      await saveComposition();
+      return;
+    }
     previewLayerEdge(layerId, edge, timeMs);
     await saveComposition();
   };
@@ -670,7 +682,23 @@ export function useProjectComposition(options: {
 
   const updateSelectedClipEnabled = async (enabled: boolean) => {
     const selectedId = selectedCompositionLayerId.value;
-    if (!selectedId || isBaseVideoSelection(selectedId)) return;
+    if (!selectedId) return;
+    const baseSegmentId = baseVideoSegmentFromId(selectedId);
+    if (baseSegmentId) {
+      composition.value = deleteBaseVideoSegment(composition.value, baseSegmentId, sessionSourceDurationMs());
+      selectedCompositionLayerId.value = null;
+      await saveComposition();
+      return;
+    }
+    if (selectedId === "system-audio" || selectedId === "microphone") {
+      const range = baseVideoSegmentAtTime(composition.value, Math.round(currentTimeSec.value * 1000), sessionSourceDurationMs());
+      if (!range) return;
+      composition.value = deleteBaseVideoSegment(composition.value, range.id, sessionSourceDurationMs());
+      selectedCompositionLayerId.value = null;
+      await saveComposition();
+      return;
+    }
+    if (isBaseVideoSelection(selectedId)) return;
     composition.value = {
       ...composition.value,
       layers: composition.value.layers.map((layer) =>
@@ -700,13 +728,64 @@ export function useProjectComposition(options: {
 
   const deleteSelectedCompositionLayer = async () => {
     const selectedId = selectedCompositionLayerId.value;
-    if (!selectedId || isBaseVideoSelection(selectedId)) return;
-    composition.value = {
-      ...composition.value,
-      layers: composition.value.layers.filter((l) => l.id !== selectedId),
-    };
+    console.info("[timeline:delete] requested", {
+      selectedId,
+      currentTimeMs: Math.round(currentTimeSec.value * 1000),
+      layerCount: composition.value.layers.length,
+      sessionSegments: composition.value.sessionSegments ?? [],
+    });
+    if (!selectedId) {
+      console.warn("[timeline:delete] skipped: no selected element");
+      return;
+    }
+    const baseSegmentId = baseVideoSegmentFromId(selectedId);
+    if (baseSegmentId) {
+      console.info("[timeline:delete] deleting base-video segment", baseSegmentId);
+      composition.value = deleteBaseVideoSegment(composition.value, baseSegmentId, sessionSourceDurationMs());
+      selectedCompositionLayerId.value = null;
+      await saveComposition();
+      console.info("[timeline:delete] saved base-video segment", {
+        sessionSegments: composition.value.sessionSegments ?? [],
+      });
+      return;
+    }
+    if (selectedId === "system-audio" || selectedId === "microphone") {
+      const range = baseVideoSegmentAtTime(
+        composition.value,
+        Math.round(currentTimeSec.value * 1000),
+        sessionSourceDurationMs(),
+      );
+      if (!range) {
+        console.warn("[timeline:delete] skipped: unable to resolve session segment", { selectedId, durationMs: durationMs.value });
+        return;
+      }
+      console.info("[timeline:delete] deleting synchronized session segment", { selectedId, range });
+      composition.value = deleteBaseVideoSegment(composition.value, range.id, sessionSourceDurationMs());
+      selectedCompositionLayerId.value = null;
+      await saveComposition();
+      console.info("[timeline:delete] saved synchronized session segment", {
+        sessionSegments: composition.value.sessionSegments ?? [],
+      });
+      return;
+    }
+    if (isBaseVideoSelection(selectedId)) {
+      console.warn("[timeline:delete] skipped: base-video selections are not composition layers", { selectedId });
+      return;
+    }
+    const selectedLayer = composition.value.layers.find((layer) => layer.id === selectedId);
+    if (!selectedLayer) {
+      console.warn("[timeline:delete] skipped: selected layer is absent", { selectedId });
+      return;
+    }
+    console.info("[timeline:delete] deleting composition layer", {
+      id: selectedLayer.id,
+      kind: selectedLayer.kind,
+      groupId: selectedLayer.groupId ?? null,
+    });
+    composition.value = deleteCompositionLayer(composition.value, selectedId);
     selectedCompositionLayerId.value = null;
     await saveComposition();
+    console.info("[timeline:delete] saved", { remainingLayerCount: composition.value.layers.length });
   };
 
   const previewMoveLayer = (id: string, startMs: number, endMs: number) => {

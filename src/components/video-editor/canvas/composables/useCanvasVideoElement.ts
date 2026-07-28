@@ -7,6 +7,7 @@ export interface UseCanvasVideoElementOptions {
   isPlaying: () => boolean;
   currentTime: () => number;
   playbackRate?: () => number;
+  sourceTimeAt?: (timelineTime: number, sourceDuration: number) => number | null;
   onDurationChange: (duration: number) => void;
   onRenderOnce: () => void;
 }
@@ -104,7 +105,7 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
       options.onRenderOnce();
       if (playing) {
         // Ensure video is synchronized with target time before playing
-        const targetTime = options.currentTime();
+        const targetTime = options.sourceTimeAt?.(options.currentTime(), videoEl.duration) ?? options.currentTime();
         if (Math.abs(videoEl.currentTime - targetTime) > 0.05) {
           videoEl.currentTime = targetTime;
         }
@@ -123,7 +124,7 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
     () => options.currentTime(),
     (time) => {
       const rate = options.playbackRate?.() ?? 1.0;
-      const targetSourceTime = time * rate;
+      const targetSourceTime = (options.sourceTimeAt?.(time, videoEl.duration) ?? time) * rate;
       const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, targetSourceTime));
       const drift = Math.abs(videoEl.currentTime - clampedTime);
       const isPlaying = options.isPlaying();

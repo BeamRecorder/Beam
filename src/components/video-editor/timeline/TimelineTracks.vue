@@ -80,7 +80,6 @@ const {
   visualTrackIndex,
   visualTrackStyle,
   mainVideoLayer,
-  baseVideoCuts,
   baseVideoSegments,
   layerStyle,
   cutStyle,
@@ -283,11 +282,14 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               :key="segment.id"
               type="button"
               class="base-video-segment"
-              :class="{ selected: selectedCompositionLayerId === segment.id }"
+              :class="{ selected: selectedCompositionLayerId === segment.id, deleted: segment.deleted }"
               :style="layerStyle(segment.startMs, segment.endMs)"
               @click.stop="selectMainVideoLayer(segment.id)"
-            />
-            <span v-for="cut in baseVideoCuts" :key="cut" class="timeline-cut" :style="cutStyle(cut)" />
+              @pointerdown="selectMainVideoLayer(segment.id)"
+            >
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
+            </button>
             <span
               v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
               class="speed-badge main-video-speed-badge"
@@ -327,7 +329,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               @move="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)"
               @trim="beginTrimDrag($event.event, layer.id, $event.edge, layer.startMs, layer.endMs)"
             />
-            <button v-else type="button" class="composition-media-clip" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:composition-layer', layer.id)" @pointerdown="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)">
+            <button v-else type="button" class="composition-media-clip" :style="layerStyle(layer.startMs, layer.endMs)" @click.stop="emit('select:composition-layer', layer.id)" @pointerdown="emit('select:composition-layer', layer.id); beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)">
               <span class="trim-handle start" :title="t('trimStart')" @pointerdown="beginTrimDrag($event, layer.id, 'start', layer.startMs, layer.endMs)" />
               <span class="clip-label-overlay">{{ layer.name }}</span>
               <span class="trim-handle end" :title="t('trimEnd')" @pointerdown="beginTrimDrag($event, layer.id, 'end', layer.startMs, layer.endMs)" />
@@ -371,7 +373,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               }"
               :style="layerStyle(layer.startMs, layer.endMs)"
               @click.stop="emit('select:camera-layer', layer.id)"
-              @pointerdown="beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)"
+              @pointerdown="emit('select:camera-layer', layer.id); beginMoveDrag($event, layer.id, layer.startMs, layer.endMs)"
             >
               <div class="thumbnails-track">
                 <div
@@ -405,6 +407,10 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                   {{ formatTrimTime(activeTrimState.durationMs ?? 0) }}
                 </span>
               </span>
+            </button>
+            <button v-for="segment in baseVideoSegments" :key="`camera:${segment.id}`" type="button" class="sidecar-session-segment" :class="{ selected: selectedCompositionLayerId === segment.id }" :style="layerStyle(segment.startMs, segment.endMs)" @click.stop="selectMainVideoLayer(segment.id)">
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
             </button>
             <div
               v-if="selectedCameraLayerId"
@@ -581,10 +587,11 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                   :style="{ height: `${height}px` }"
                 ></div>
               </div>
-              <span v-for="cut in baseVideoCuts" :key="cut" class="timeline-cut" :style="cutStyle(cut)" />
             </div>
-            <div class="trim-handle start"></div>
-            <div class="trim-handle end"></div>
+            <button v-for="segment in baseVideoSegments" :key="`system:${segment.id}`" type="button" class="sidecar-session-segment" :class="{ selected: selectedCompositionLayerId === segment.id }" :style="layerStyle(segment.startMs, segment.endMs)" @click.stop="selectMainVideoLayer(segment.id)">
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
+            </button>
           </div>
         </div>
 
@@ -635,10 +642,11 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                   :style="{ height: `${height}px` }"
                 ></div>
               </div>
-              <span v-for="cut in baseVideoCuts" :key="cut" class="timeline-cut" :style="cutStyle(cut)" />
             </div>
-            <div class="trim-handle start"></div>
-            <div class="trim-handle end"></div>
+            <button v-for="segment in baseVideoSegments" :key="`mic:${segment.id}`" type="button" class="sidecar-session-segment" :class="{ selected: selectedCompositionLayerId === segment.id }" :style="layerStyle(segment.startMs, segment.endMs)" @click.stop="selectMainVideoLayer(segment.id)">
+              <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
+              <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
+            </button>
           </div>
         </div>
 
@@ -1263,4 +1271,17 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
 
 .base-video-segment:hover { border: 1px dashed var(--color-primary); background: rgba(255, 90, 31, .04); }
 .base-video-segment.selected { border-color: var(--color-primary); background: rgba(255, 90, 31, .08); }
+.base-video-segment.deleted { background: repeating-linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-surface) 6px, var(--color-bg-element) 6px, var(--color-bg-element) 12px); border-color: var(--color-border-strong); opacity: .9; }
+.sidecar-session-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 12;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(255, 90, 31, .07);
+  cursor: pointer;
+}
+.sidecar-session-segment.selected { border-color: var(--color-primary); box-shadow: inset 0 0 0 1px var(--color-primary); }
 </style>

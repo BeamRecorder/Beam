@@ -1,6 +1,6 @@
 import { computed, ref, toRaw, watch, type Ref } from "vue";
 import { capture } from "../../../api/capture";
-import type { CaptureProject, ProjectEditorState } from "../../../api/types/capture-api";
+import type { CaptureProject, ProjectEditorHistory, ProjectEditorState } from "../../../api/types/capture-api";
 import type { ProjectComposition } from "../composition/composition-types";
 import type { ZoomElement } from "../zoom/zoom-types";
 import { BACKGROUND_MEDIA, normalizeBackgroundValue, type BackgroundMedia, type BackgroundValue } from "./backgroundCatalog";
@@ -23,6 +23,7 @@ export function useProjectEditorState(options: {
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
   const loading = ref(false);
+  const history = ref<ProjectEditorHistory>({ undo: [], redo: [] });
   const scheduledSave = ref(false);
   const pendingSaves = ref(0);
   const isSaving = computed(() => scheduledSave.value || pendingSaves.value > 0);
@@ -49,6 +50,7 @@ export function useProjectEditorState(options: {
         systemAudioEnabled: options.systemAudioEnabled.value,
         micAudioEnabled: options.micAudioEnabled.value,
       },
+      history: JSON.parse(JSON.stringify(history.value)),
     };
   };
 
@@ -95,6 +97,7 @@ export function useProjectEditorState(options: {
       options.systemAudioEnabled.value = state.presentation.systemAudioEnabled;
       options.micAudioEnabled.value = state.presentation.micAudioEnabled;
       options.canvas.value = state.presentation.canvas;
+      history.value = state.history ?? { undo: [], redo: [] };
     } finally { loading.value = false; }
   };
 
@@ -119,5 +122,5 @@ export function useProjectEditorState(options: {
     const selected = groups.flatMap((group) => group.items).find((item) => item.id === savedBackgroundId || item.path === savedBackgroundId);
     if (selected) options.selectedBackground.value = selected;
   }, { deep: true });
-  return { load, saveNow, scheduleSave, isSaving };
+  return { load, saveNow, scheduleSave, isSaving, history };
 }

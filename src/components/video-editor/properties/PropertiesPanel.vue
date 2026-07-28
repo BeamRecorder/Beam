@@ -94,8 +94,6 @@ const props = defineProps<{
   timelineDurationMs: number;
   projectId?: string | null;
   canvas: OutputCanvasSettings;
-  activeAudioSidecar?: "system-audio" | "microphone" | null;
-  audioSidecarLinks?: Partial<Record<"system-audio" | "microphone", SidecarLinkDescriptor[]>>;
 }>();
 
 const emit = defineEmits<{
@@ -257,8 +255,6 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         :isMicAudioEnabled="isMicAudioEnabled"
         :systemVolume="systemVolume"
         :micVolume="micVolume"
-        :active-sidecar="activeAudioSidecar"
-        :sidecar-links="audioSidecarLinks"
         @update:volume="emit('update:volume', $event)"
         @update:isSystemAudioEnabled="
           emit('update:isSystemAudioEnabled', $event)
@@ -266,8 +262,6 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:isMicAudioEnabled="emit('update:isMicAudioEnabled', $event)"
         @update:systemVolume="emit('update:systemVolume', $event)"
         @update:micVolume="emit('update:micVolume', $event)"
-        @select:sidecar="emit('select:sidecar', $event)"
-        @unlink:sidecar="emit('unlink:sidecar', $event)"
       />
 
       <ZoomPanel

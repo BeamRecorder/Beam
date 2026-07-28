@@ -138,6 +138,20 @@ export interface ProjectEditorState {
   composition: ProjectComposition
   zoom: ProjectZoomState
   presentation: ProjectEditorPresentation
+  history?: ProjectEditorHistory
+}
+
+export interface ProjectEditorHistorySnapshot {
+  composition: ProjectComposition
+  zoomElements: ProjectZoomState['elements']
+  outputCanvas: OutputCanvasSettings
+  selectedBackground: BackgroundValue | null
+  backgroundBlurPercent: number
+}
+
+export interface ProjectEditorHistory {
+  undo: ProjectEditorHistorySnapshot[]
+  redo: ProjectEditorHistorySnapshot[]
 }
 
 export interface CameraSegmentStart {

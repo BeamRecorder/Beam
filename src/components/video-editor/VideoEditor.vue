@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
 import type { MediaCompositionLayer } from './composition/composition-types';
-import { resolveSidecarLinks, type SidecarLinkDescriptor } from './composition/sidecar-links';
+import type { SidecarLinkDescriptor } from './composition/sidecar-links';
 import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
 import EditorCanvas from "./canvas/EditorCanvas.vue";
@@ -105,6 +105,7 @@ const {
   selectedCaptionLayer,
   selectedCameraLayer,
   isCameraEnabled,
+  saveComposition,
   loadComposition,
   toggleCamera,
   splitSelectedCamera,
@@ -133,14 +134,8 @@ const {
   updateSelectedMediaCrop,
   detachSelectedSidecar,
 } = compositionState;
-const activeAudioSidecar = computed<'system-audio' | 'microphone' | null>(() =>
-  selectedCompositionLayerId.value === 'system-audio' || selectedCompositionLayerId.value === 'microphone'
-    ? selectedCompositionLayerId.value
-    : null,
-);
-const audioSidecarLinks = computed(() => {
-  const active = activeAudioSidecar.value;
-  return active ? { [active]: resolveSidecarLinks(composition.value, props.editorData, active) } : {};
+watch(selectedCompositionLayerId, (layerId) => {
+  console.info('[timeline:select] selection changed', { layerId, activeTab: activeTab.value });
 });
 const selectSidecar = (sidecar: SidecarLinkDescriptor) => {
   if (sidecar.id === 'base-video') {
@@ -192,6 +187,7 @@ const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption') => {
   void addCompositionElement(type).catch((error) => console.error('Unable to add composition media:', error));
 };
 import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
+import { sessionTimelineDuration } from "./composition/base-video-ranges";
 
 const createEditorSnapshot = (): EditorStateSnapshot => ({
   composition: JSON.parse(JSON.stringify(composition.value)),
@@ -201,7 +197,7 @@ const createEditorSnapshot = (): EditorStateSnapshot => ({
   backgroundBlurPercent: backgroundBlurPercent.value,
 });
 
-const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction } = useEditorUndoRedo({
+const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction, replaceHistory } = useEditorUndoRedo({
   onRestoreSnapshot: async (snapshot) => {
     composition.value = snapshot.composition;
     zoomElements.value = snapshot.zoomElements;
@@ -214,7 +210,17 @@ const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction 
     }
     editorState.scheduleSave();
   },
+  onHistoryChange: (history) => {
+    editorState.history.value = history;
+    editorState.scheduleSave();
+  },
 });
+let restoredPersistedHistory = false;
+watch(editorState.history, (history) => {
+  if (restoredPersistedHistory || (history.undo.length === 0 && history.redo.length === 0)) return;
+  replaceHistory(history);
+  restoredPersistedHistory = true;
+}, { deep: true });
 
 const cutAtPlayhead = async () => {
   await splitCompositionAtPlayhead();
@@ -227,6 +233,10 @@ onMounted(() => {
   capture.maximize();
   if (props.project) {
     void loadComposition(props.project.id).then(() => {
+      if (editorState.history.value.undo.length || editorState.history.value.redo.length) {
+        replaceHistory(editorState.history.value);
+        restoredPersistedHistory = true;
+      }
       recordSnapshot(createEditorSnapshot());
     });
   } else {
@@ -291,6 +301,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
 };
 
 const handleSelectTransformLayer = (layerId: string) => {
+  console.info('[timeline:select] transform layer', { layerId });
   selectedCompositionLayerId.value = layerId;
   activeTab.value = 'clip';
 };
@@ -308,7 +319,7 @@ const handleCropKeyDown = (e: KeyboardEvent) => {
         return; // Ignore if typing inside input fields
       }
     }
-    if (selectedCompositionLayerId.value && !selectedCompositionLayerId.value.startsWith('base-video')) {
+    if (selectedCompositionLayerId.value) {
       e.preventDefault();
       void deleteSelectedCompositionLayer();
     } else if (selectedZoom.value && activeTab.value === 'zoom') {
@@ -333,14 +344,14 @@ onMounted(() => {
 const rawNativeDuration = ref(0);
 const handleDurationChange = (nativeDuration: number) => {
   rawNativeDuration.value = nativeDuration;
-  duration.value = nativeDuration / (composition.value.baseVideoPlaybackRate ?? 1.0);
+  duration.value = sessionTimelineDuration(composition.value, nativeDuration * 1000) / 1000 / (composition.value.baseVideoPlaybackRate ?? 1.0);
 };
 
 watch(
-  () => composition.value.baseVideoPlaybackRate ?? 1.0,
-  (rate) => {
+  () => [composition.value.baseVideoPlaybackRate ?? 1.0, composition.value.sessionSegments],
+  ([rate]) => {
     if (rawNativeDuration.value > 0) {
-      duration.value = rawNativeDuration.value / rate;
+      duration.value = sessionTimelineDuration(composition.value, rawNativeDuration.value * 1000) / 1000 / rate;
     }
   },
 );
@@ -421,8 +432,6 @@ onBeforeUnmount(() => {
           :timeline-duration-ms="Math.round(duration * 1000)"
           :project-id="project?.id"
           :canvas="outputCanvas"
-          :active-audio-sidecar="activeAudioSidecar"
-          :audio-sidecar-links="audioSidecarLinks"
           @import:background="addBackground($event)"
           @update:selected-background="updateSelectedBackground($event)"
           @update:blur-percent="backgroundBlurPercent = $event"

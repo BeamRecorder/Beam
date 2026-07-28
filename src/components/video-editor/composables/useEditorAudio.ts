@@ -1,5 +1,7 @@
 import { computed, onBeforeUnmount, watch, type Ref } from 'vue'
 import type { ProjectEditorData, SessionTrackAsset } from '../../../api/types/capture-api'
+import { timelineToSourceMs } from '../composition/base-video-ranges'
+import type { ProjectComposition } from '../composition/composition-types'
 
 type AudioLayer = { id: string; src: string; startSeconds: number; asset: SessionTrackAsset }
 
@@ -18,6 +20,7 @@ export function useEditorAudio(input: {
   volume: Ref<number>
   systemAudioEnabled: Ref<boolean>
   microphoneEnabled: Ref<boolean>
+  composition?: Ref<ProjectComposition>
 }) {
   const media = new Map<string, HTMLAudioElement>()
   const layers = computed(() => editorAudioLayers(input.editorData.value, input.systemAudioEnabled.value, input.microphoneEnabled.value))
@@ -39,7 +42,8 @@ export function useEditorAudio(input: {
       const element = media.get(layer.id)
       if (!element) continue
       element.volume = Math.max(0, Math.min(1, input.volume.value / 100))
-      const localTime = input.currentTime.value - layer.startSeconds
+      const sourceMs = timelineToSourceMs(input.composition?.value ?? { media: [], layers: [] }, input.currentTime.value * 1000, Number.MAX_SAFE_INTEGER)
+      const localTime = sourceMs === null ? -1 : sourceMs / 1000 - layer.startSeconds
       const active = input.isPlaying.value && localTime >= 0 && (!Number.isFinite(element.duration) || localTime < element.duration)
       if (!active) { element.pause(); continue }
       if (Math.abs(element.currentTime - localTime) > 0.12) element.currentTime = localTime

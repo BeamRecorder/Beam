@@ -106,8 +106,8 @@ function normalizeComposition(value) {
   const baseVideoAppearance = clipAppearance(value.baseVideoAppearance)
   const baseVideoCrop = value.baseVideoCrop ? transform(value.baseVideoCrop) : undefined
   const baseVideoTransform = value.baseVideoTransform ? transform(value.baseVideoTransform) : undefined
-  const baseVideoCuts = Array.isArray(value.baseVideoCuts)
-    ? [...new Set(value.baseVideoCuts.filter((cut) => finite(cut) && cut > 0).map((cut) => Math.round(cut)))].sort((left, right) => left - right)
+  const sessionSegments = Array.isArray(value.sessionSegments)
+    ? value.sessionSegments.filter((segment) => segment && typeof segment.id === 'string' && segment.id.length > 0 && segment.id.length <= 160 && finite(segment.sourceStartMs) && finite(segment.sourceEndMs) && segment.sourceStartMs >= 0 && segment.sourceEndMs > segment.sourceStartMs && typeof segment.active === 'boolean').map((segment) => ({ id: segment.id, sourceStartMs: Math.round(segment.sourceStartMs), sourceEndMs: Math.round(segment.sourceEndMs), active: segment.active }))
     : []
   const cameraLayerIds = new Set(layers.filter((layer) => layer.kind === 'video' && layer.reactToZoom).map((layer) => layer.id))
   const visualLayerIds = layers.filter((layer) => (layer.kind === 'video' || layer.kind === 'image') && !cameraLayerIds.has(layer.id)).sort((a, b) => a.order - b.order).map((layer) => layer.id)
@@ -122,7 +122,7 @@ function normalizeComposition(value) {
   const detachedSessionSidecars = Array.isArray(value.detachedSessionSidecars)
     ? [...new Set(value.detachedSessionSidecars.filter((sidecar) => ['camera', 'system-audio', 'microphone'].includes(sidecar)))]
     : []
-  return { media, layers, visualTrackOrder, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}), ...(typeof value.baseVideoIsMirrored === 'boolean' ? { baseVideoIsMirrored: value.baseVideoIsMirrored } : {}), ...(finite(value.baseVideoPlaybackRate) && value.baseVideoPlaybackRate >= .25 && value.baseVideoPlaybackRate <= 4 ? { baseVideoPlaybackRate: value.baseVideoPlaybackRate } : {}), ...(baseVideoCuts.length ? { baseVideoCuts } : {}), ...(detachedSessionSidecars.length ? { detachedSessionSidecars } : {}) }
+  return { media, layers, visualTrackOrder, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}), ...(typeof value.baseVideoIsMirrored === 'boolean' ? { baseVideoIsMirrored: value.baseVideoIsMirrored } : {}), ...(finite(value.baseVideoPlaybackRate) && value.baseVideoPlaybackRate >= .25 && value.baseVideoPlaybackRate <= 4 ? { baseVideoPlaybackRate: value.baseVideoPlaybackRate } : {}), ...(sessionSegments.length ? { sessionSegments } : {}), ...(detachedSessionSidecars.length ? { detachedSessionSidecars } : {}) }
 }
 
 function createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor }) {

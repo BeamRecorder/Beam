@@ -3,8 +3,6 @@ import { ref } from 'vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import { useTranslate } from '~/i18n/useTranslate'
-import SidecarLink from './SidecarLink.vue'
-import type { SidecarLinkDescriptor } from '../composition/sidecar-links'
 
 const { t } = useTranslate('AudioPanel')
 
@@ -15,8 +13,6 @@ const props = withDefaults(
     isMicAudioEnabled: boolean
     systemVolume?: number
     micVolume?: number
-    activeSidecar?: 'system-audio' | 'microphone' | null
-    sidecarLinks?: Partial<Record<'system-audio' | 'microphone', SidecarLinkDescriptor[]>>
   }>(),
   {
     systemVolume: 100,
@@ -30,8 +26,6 @@ const emit = defineEmits<{
   (e: 'update:isMicAudioEnabled', value: boolean): void
   (e: 'update:systemVolume', value: number): void
   (e: 'update:micVolume', value: number): void
-  (e: 'select:sidecar', link: SidecarLinkDescriptor): void
-  (e: 'unlink:sidecar', link: SidecarLinkDescriptor): void
 }>()
 
 const localSystemVolume = ref(props.systemVolume)
@@ -70,12 +64,6 @@ const handleMicVolChange = (val: number) => {
           @update:modelValue="emit('update:isSystemAudioEnabled', $event)"
         />
       </div>
-      <SidecarLink
-        v-if="activeSidecar === 'system-audio' && sidecarLinks?.['system-audio']?.length"
-        :links="sidecarLinks['system-audio']"
-        @select="emit('select:sidecar', $event)"
-        @unlink="emit('unlink:sidecar', $event)"
-      />
       <div v-if="isSystemAudioEnabled" class="prop-item sub-slider">
         <BigSlider 
           :model-value="localSystemVolume" 
@@ -97,12 +85,6 @@ const handleMicVolChange = (val: number) => {
           @update:modelValue="emit('update:isMicAudioEnabled', $event)"
         />
       </div>
-      <SidecarLink
-        v-if="activeSidecar === 'microphone' && sidecarLinks?.microphone?.length"
-        :links="sidecarLinks.microphone"
-        @select="emit('select:sidecar', $event)"
-        @unlink="emit('unlink:sidecar', $event)"
-      />
       <div v-if="isMicAudioEnabled" class="prop-item sub-slider">
         <BigSlider 
           :model-value="localMicVolume" 

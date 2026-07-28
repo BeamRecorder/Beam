@@ -24,7 +24,7 @@ const hasSessionTrack = (
   editorData: ProjectEditorData | null | undefined,
   kind: SessionSidecarKey,
 ) => editorData?.tracks.some((track) =>
-  track.kind === kind && track.status !== "failed" && track.assets.some((asset) => asset.exists),
+  track.kind === kind && track.status !== "failed" && track.assets.some((asset) => asset.exists || Boolean(asset.src)),
 ) ?? false;
 
 const sessionLinks = (
@@ -53,16 +53,6 @@ export function resolveSidecarLinks(
   selectedId: string | null,
 ): SidecarLinkDescriptor[] {
   if (isBaseVideo(selectedId)) return sessionLinks(composition, editorData);
-  const detached = new Set(composition.detachedSessionSidecars ?? []);
-  const camera = cameraLayers(composition).find((layer) => layer.id === selectedId);
-  const nativeKey: SessionSidecarKey | undefined = camera
-    ? "camera"
-    : selectedId === "system-audio" ? "system-audio" : selectedId === "microphone" ? "microphone" : undefined;
-  if (nativeKey) {
-    return detached.has(nativeKey)
-      ? []
-      : [{ id: BASE_VIDEO_ID, key: nativeKey, kind: "clip", name: "Screen recording", enabled: true }];
-  }
   const selected = composition.layers.find((layer) => layer.id === selectedId);
   if (!selected?.groupId) return [];
   return composition.layers
@@ -77,13 +67,9 @@ export function detachSidecarLink(
   ownerId: string | null,
   sidecar: SidecarLinkDescriptor,
 ): ProjectComposition {
-  const ownerIsCamera = cameraLayers(composition).some((layer) => layer.id === ownerId);
-  const ownerKey: SessionSidecarKey | undefined = ownerIsCamera
-    ? "camera"
-    : ownerId === "system-audio" ? "system-audio" : ownerId === "microphone" ? "microphone" : undefined;
-  if ((isBaseVideo(ownerId) || ownerKey) && (sidecar.key ?? ownerKey)) {
+  if (isBaseVideo(ownerId) && sidecar.key) {
     const detached = new Set(composition.detachedSessionSidecars ?? []);
-    detached.add(sidecar.key ?? ownerKey!);
+    detached.add(sidecar.key);
     return { ...composition, detachedSessionSidecars: [...detached] };
   }
   const owner = composition.layers.find((layer) => layer.id === ownerId);

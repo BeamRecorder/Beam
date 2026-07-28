@@ -1,4 +1,5 @@
 import type { CompositionLayer, ProjectComposition } from './composition-types'
+import { splitSessionAtTimeline } from './base-video-ranges'
 
 type IdFactory = () => string
 
@@ -17,17 +18,14 @@ export function splitCompositionLayersAt(
   const cutMs = Math.round(atMs)
   if (!Number.isFinite(cutMs)) return composition
 
-  const baseVideoCuts = [...new Set(composition.baseVideoCuts ?? [])]
-  const canSplitBaseVideo = cutMs > 0 && cutMs < Math.round(baseDurationMs) && !baseVideoCuts.includes(cutMs)
-  if (canSplitBaseVideo) baseVideoCuts.push(cutMs)
-  baseVideoCuts.sort((left, right) => left - right)
+  const nextComposition = splitSessionAtTimeline(composition, cutMs, baseDurationMs)
 
   const targetIds = new Set(
     composition.layers
       .filter((layer) => layer.startMs < cutMs && cutMs < layer.endMs)
       .map((layer) => layer.id),
   )
-  if (targetIds.size === 0) return canSplitBaseVideo ? { ...composition, baseVideoCuts } : composition
+  if (targetIds.size === 0) return nextComposition
 
   const rightGroupIds = new Map<string, string>()
   const rightLayerIds = new Map<string, string>()
@@ -59,9 +57,8 @@ export function splitCompositionLayersAt(
   })
 
   return {
-    ...composition,
+    ...nextComposition,
     layers,
-    ...(canSplitBaseVideo || composition.baseVideoCuts ? { baseVideoCuts } : {}),
     ...(visualTrackOrder ? { visualTrackOrder } : {}),
   }
 }

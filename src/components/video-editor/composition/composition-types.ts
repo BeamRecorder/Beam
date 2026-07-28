@@ -120,6 +120,16 @@ export const BASE_VIDEO_TRACK_ID = "base-video";
 export const WEBCAM_TRACK_ID = "webcam";
 export type VisualTrackId = typeof BASE_VIDEO_TRACK_ID | typeof WEBCAM_TRACK_ID | string;
 export type SessionSidecarKey = "camera" | "system-audio" | "microphone";
+export interface TimelineRange { startMs: number; endMs: number; }
+/** A non-destructive portion of the captured session. Timeline positions are derived
+ * from the active segments, never stored, so deleting one naturally ripples later
+ * session media to the left. */
+export interface SessionSegment {
+  id: string;
+  sourceStartMs: number;
+  sourceEndMs: number;
+  active: boolean;
+}
 
 export interface ProjectComposition {
   media: CompositionMedia[];
@@ -132,7 +142,7 @@ export interface ProjectComposition {
   baseVideoIsMirrored?: boolean;
   baseVideoPlaybackRate?: number;
   /** Non-destructive edit points shared by the recorded video and audio tracks. */
-  baseVideoCuts?: number[];
+  sessionSegments?: SessionSegment[];
   /** Session tracks deliberately detached from the primary screen recording. */
   detachedSessionSidecars?: SessionSidecarKey[];
 }
