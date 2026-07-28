@@ -111,11 +111,25 @@ export interface ProjectEditorPresentation {
   importedBackgrounds: BackgroundMedia[]
 }
 
+export interface ProjectEditorHistorySnapshot {
+  composition: ClipComposition
+  zoomElements: ProjectZoomState['elements']
+  outputCanvas: OutputCanvasSettings
+  selectedBackground: BackgroundValue | null
+  backgroundBlurPercent: number
+}
+
+export interface ProjectEditorHistory {
+  undo: ProjectEditorHistorySnapshot[]
+  redo: ProjectEditorHistorySnapshot[]
+}
+
 export interface ProjectEditorState {
   schemaVersion: 2
   composition: ClipComposition
   zoom: ProjectZoomState
   presentation: ProjectEditorPresentation
+  history: ProjectEditorHistory
 }
 
 export interface CameraSegmentStart {
