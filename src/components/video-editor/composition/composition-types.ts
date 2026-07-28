@@ -1,4 +1,4 @@
-export const COMPOSITION_SCHEMA_VERSION = 1 as const;
+export const COMPOSITION_SCHEMA_VERSION = 2 as const;
 export const SCREEN_CLIP_ID = "screen";
 
 export type MediaKind = "video" | "image" | "audio";
@@ -95,8 +95,12 @@ export interface ClipBase {
   name: string;
   timelineStartMs: number;
   timelineDurationMs: number;
+  /** Current active range in source time. */
   sourceInMs: number;
   sourceDurationMs: number;
+  /** Immutable edit range. A trim may be extended back to these limits. */
+  sourceRangeStartMs: number;
+  sourceRangeEndMs: number;
   playbackRate: number;
   enabled: boolean;
   /** Lower values are nearer the foreground. */
@@ -144,6 +148,8 @@ export const emptyComposition = (): ClipComposition => ({
 
 export const clipEndMs = (clip: Pick<ClipBase, "timelineStartMs" | "timelineDurationMs">) =>
   clip.timelineStartMs + clip.timelineDurationMs;
+export const clipSourceEndMs = (clip: Pick<ClipBase, "sourceInMs" | "sourceDurationMs">) =>
+  clip.sourceInMs + clip.sourceDurationMs;
 
 export const isVisualClip = (clip: Clip): clip is VisualClip =>
   clip.kind === "screen" || clip.kind === "video" || clip.kind === "image" || clip.kind === "webcam";
