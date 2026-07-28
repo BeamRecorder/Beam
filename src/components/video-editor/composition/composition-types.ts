@@ -119,6 +119,7 @@ export type CompositionLayer = MediaCompositionLayer | CaptionCompositionLayer;
 export const BASE_VIDEO_TRACK_ID = "base-video";
 export const WEBCAM_TRACK_ID = "webcam";
 export type VisualTrackId = typeof BASE_VIDEO_TRACK_ID | typeof WEBCAM_TRACK_ID | string;
+export type SessionSidecarKey = "camera" | "system-audio" | "microphone";
 
 export interface ProjectComposition {
   media: CompositionMedia[];
@@ -132,7 +133,8 @@ export interface ProjectComposition {
   baseVideoPlaybackRate?: number;
   /** Non-destructive edit points shared by the recorded video and audio tracks. */
   baseVideoCuts?: number[];
-  areClipsLinked?: boolean;
+  /** Session tracks deliberately detached from the primary screen recording. */
+  detachedSessionSidecars?: SessionSidecarKey[];
 }
 
 export const emptyComposition = (): ProjectComposition => ({

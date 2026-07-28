@@ -1,0 +1,8 @@
+{
+  "sidecarLink": "Liens sidecar",
+  "linkedTracks": "Pistes liées",
+  "noLinkedTracks": "Aucune piste liée",
+  "unlink": "Dissocier {name}",
+  "enabled": "Activée",
+  "disabled": "Désactivée"
+}

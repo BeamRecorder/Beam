@@ -119,7 +119,10 @@ function normalizeComposition(value) {
     if (typeof trackId === 'string' && validVisualIds.has(trackId) && !visualTrackOrder.includes(trackId)) visualTrackOrder.push(trackId)
   }
   for (const trackId of fallbackVisualOrder) if (!visualTrackOrder.includes(trackId)) visualTrackOrder.push(trackId)
-  return { media, layers, visualTrackOrder, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}), ...(typeof value.baseVideoIsMirrored === 'boolean' ? { baseVideoIsMirrored: value.baseVideoIsMirrored } : {}), ...(finite(value.baseVideoPlaybackRate) && value.baseVideoPlaybackRate >= .25 && value.baseVideoPlaybackRate <= 4 ? { baseVideoPlaybackRate: value.baseVideoPlaybackRate } : {}), ...(baseVideoCuts.length ? { baseVideoCuts } : {}), ...(typeof value.areClipsLinked === 'boolean' ? { areClipsLinked: value.areClipsLinked } : {}) }
+  const detachedSessionSidecars = Array.isArray(value.detachedSessionSidecars)
+    ? [...new Set(value.detachedSessionSidecars.filter((sidecar) => ['camera', 'system-audio', 'microphone'].includes(sidecar)))]
+    : []
+  return { media, layers, visualTrackOrder, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}), ...(typeof value.baseVideoIsMirrored === 'boolean' ? { baseVideoIsMirrored: value.baseVideoIsMirrored } : {}), ...(finite(value.baseVideoPlaybackRate) && value.baseVideoPlaybackRate >= .25 && value.baseVideoPlaybackRate <= 4 ? { baseVideoPlaybackRate: value.baseVideoPlaybackRate } : {}), ...(baseVideoCuts.length ? { baseVideoCuts } : {}), ...(detachedSessionSidecars.length ? { detachedSessionSidecars } : {}) }
 }
 
 function createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor }) {

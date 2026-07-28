@@ -23,6 +23,11 @@ import {
 } from "../composition/webcam/camera-composition";
 import { normalizedVisualTrackOrder } from "../composition/visual-stack";
 import { splitCompositionLayersAt } from "../composition/split-composition-layers";
+import {
+  detachSidecarLink,
+  resolveSidecarLinks,
+  type SidecarLinkDescriptor,
+} from "../composition/sidecar-links";
 
 export function useProjectComposition(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -62,7 +67,6 @@ export function useProjectComposition(options: {
   );
 
   const selectedClipInfo = computed(() => {
-    const isLinked = composition.value.areClipsLinked ?? true;
     if (isBaseVideoSelection(selectedCompositionLayerId.value)) {
       return {
         id: BASE_VIDEO_CLIP_ID,
@@ -72,7 +76,7 @@ export function useProjectComposition(options: {
         timelineDurationMs: durationMs.value,
         playbackRate: composition.value.baseVideoPlaybackRate ?? 1.0,
         enabled: true,
-        isLinked,
+        sidecarLinks: resolveSidecarLinks(composition.value, editorData.value, selectedCompositionLayerId.value),
         isMirrored: composition.value.baseVideoIsMirrored ?? false,
         clipTransform: composition.value.baseVideoTransform ?? {
           x: 0,
@@ -130,7 +134,7 @@ export function useProjectComposition(options: {
           : 1.0,
       volume: layer.kind === "audio" ? (layer.volume ?? 100) : undefined,
       enabled: layer.enabled,
-      isLinked,
+      sidecarLinks: resolveSidecarLinks(composition.value, editorData.value, selectedCompositionLayerId.value),
       isMirrored:
         layer.kind === "audio" || layer.kind === "caption"
           ? undefined
@@ -626,27 +630,22 @@ export function useProjectComposition(options: {
   const updateSelectedClipPlaybackRate = async (rate: number) => {
     const selectedId = selectedCompositionLayerId.value;
     if (!selectedId) return;
-    const isLinked = composition.value.areClipsLinked ?? true;
-
-    if (isLinked) {
-      // Apply speedup to base video AND all media layers (webcam, video, audio)
+    if (isBaseVideoSelection(selectedId)) {
       composition.value = {
         ...composition.value,
         baseVideoPlaybackRate: rate,
         layers: composition.value.layers.map((layer) =>
-          layer.kind === "caption" ? layer : { ...layer, playbackRate: rate },
+          composition.value.detachedSessionSidecars?.includes("camera") || !cameraLayers(composition.value).some((camera) => camera.id === layer.id)
+            ? layer
+            : { ...layer, playbackRate: rate },
         ),
       };
-    } else if (isBaseVideoSelection(selectedId)) {
-      composition.value = {
-        ...composition.value,
-        baseVideoPlaybackRate: rate,
-      };
     } else {
+      const selected = composition.value.layers.find((layer) => layer.id === selectedId);
       composition.value = {
         ...composition.value,
         layers: composition.value.layers.map((layer) =>
-          layer.id === selectedId && layer.kind !== "caption"
+          layer.kind !== "caption" && (layer.id === selectedId || Boolean(selected?.groupId && layer.groupId === selected.groupId))
             ? { ...layer, playbackRate: rate }
             : layer,
         ),
@@ -688,16 +687,14 @@ export function useProjectComposition(options: {
     await updateSelectedClipEnabled(!layer.enabled);
   };
 
-  const handleUnlinkClips = async () => {
-    composition.value = {
-      ...composition.value,
-      areClipsLinked: !(composition.value.areClipsLinked ?? true),
-    };
-    await saveComposition();
-  };
-
-  const handleUnlinkTrack = async (trackKind: string) => {
-    console.log(`Unlinked track: ${trackKind}`);
+  const detachSelectedSidecar = async (sidecar: SidecarLinkDescriptor) => {
+    const next = detachSidecarLink(
+      composition.value,
+      selectedCompositionLayerId.value,
+      sidecar,
+    );
+    if (next === composition.value) return;
+    composition.value = next;
     await saveComposition();
   };
 
@@ -794,7 +791,6 @@ export function useProjectComposition(options: {
     updateSelectedWebcamTransform,
     previewSelectedWebcamTransform,
     updateSelectedMediaCrop,
-    handleUnlinkClips,
-    handleUnlinkTrack,
+    detachSelectedSidecar,
   };
 }

@@ -11,7 +11,6 @@ import {
   MoveRight,
   Eye,
   EyeOff,
-  Unlink,
   Sparkles,
   GripVertical,
   Image as ImageIcon,
@@ -63,8 +62,6 @@ const emit = defineEmits<{
   (e: "toggle:camera-layer"): void;
   (e: "split:camera"): void;
   (e: "trim:camera", edge: "start" | "end"): void;
-  (e: "unlink"): void;
-  (e: "unlink-track", trackKind: string): void;
   (e: "move:clip", payload: { id: string; deltaMs: number }): void;
   (e: "preview:move-clip", payload: { id: string; startMs: number; endMs: number }): void;
   (e: "move:clip-position", payload: { id: string; startMs: number; endMs: number }): void;
@@ -254,16 +251,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             </span>
             <Video class="track-icon" />
             <span class="track-title">{{ t('video') }}</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              icon-only
-              :icon="Unlink"
-              :tooltip="t('unlinkVideoTrack')"
-              tooltip-position="right"
-              class="track-unlink-btn"
-              @click.stop="emit('unlink-track', 'video')"
-            />
           </div>
           <div
             class="track-content video-content"
@@ -371,16 +358,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
               class="track-icon"
             />
             <span class="track-title">{{ t('webcam') }}</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              icon-only
-              :icon="Unlink"
-              :tooltip="t('unlinkWebcamTrack')"
-              tooltip-position="right"
-              class="track-unlink-btn"
-              @click.stop="emit('unlink-track', 'webcam')"
-            />
           </div>
           <div class="track-content camera-content">
             <button
@@ -471,16 +448,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           <div class="track-info" @click="emit('toggle:composition-layer', layer.id)">
             <MousePointer class="track-icon" />
             <span class="track-title">{{ t('zooms') }}</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              icon-only
-              :icon="Unlink"
-              :tooltip="t('unlinkZoomsTrack')"
-              tooltip-position="right"
-              class="track-unlink-btn"
-              @click.stop="emit('unlink-track', 'zooms')"
-            />
           </div>
           <div
             class="track-content cursor-content"
@@ -531,16 +498,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           <div class="track-info">
             <Type class="track-icon" />
             <span class="track-title">{{ t('captions') }}</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              icon-only
-              :icon="Unlink"
-              :tooltip="t('unlinkCaptionsTrack')"
-              tooltip-position="right"
-              class="track-unlink-btn"
-              @click.stop="emit('unlink-track', 'captions')"
-            />
           </div>
           <div
             class="track-content annotation-content"
@@ -598,16 +555,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           >
             <Volume2 class="track-icon" />
             <span class="track-title">{{ t('system') }}</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              icon-only
-              :icon="Unlink"
-              :tooltip="t('unlinkSystemAudioTrack')"
-              tooltip-position="right"
-              class="track-unlink-btn"
-              @click.stop="emit('unlink-track', 'systemAudio')"
-            />
           </div>
           <div
             class="track-content audio-content"
@@ -653,16 +600,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
           >
             <Mic class="track-icon" />
             <span class="track-title">{{ t('mic') }}</span>
-            <Button
-              variant="ghost"
-              size="xs"
-              icon-only
-              :icon="Unlink"
-              :tooltip="t('unlinkMicrophoneTrack')"
-              tooltip-position="right"
-              class="track-unlink-btn"
-              @click.stop="emit('unlink-track', 'micAudio')"
-            />
           </div>
           <div
             class="track-content audio-content"
@@ -890,13 +827,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
   padding: 0 4px;
 }
 
-.unlink-header-btn {
-  height: 20px !important;
-  font-size: 10px !important;
-  padding: 0 6px !important;
-  gap: 4px !important;
-}
-
 .trim-handle {
   position: absolute;
   top: 0;
@@ -1101,27 +1031,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
   transition: transform 0.05s linear;
 }
 .track-title-text { display: inline-block; white-space: nowrap; transition: transform 0.05s linear; }
-
-.track-unlink-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-element);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  transition: all var(--fast) ease;
-}
-
-.track-unlink-btn:hover {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-}
 
 .track-content {
   flex: 1;

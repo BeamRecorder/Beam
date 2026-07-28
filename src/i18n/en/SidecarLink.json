@@ -1,0 +1,8 @@
+{
+  "sidecarLink": "Sidecar Link",
+  "linkedTracks": "Linked tracks",
+  "noLinkedTracks": "No linked tracks",
+  "unlink": "Unlink {name}",
+  "enabled": "Enabled",
+  "disabled": "Disabled"
+}

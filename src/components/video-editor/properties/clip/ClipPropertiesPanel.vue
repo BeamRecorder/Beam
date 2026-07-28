@@ -8,11 +8,9 @@ import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import ShadowDirectionGroup from "../ShadowDirectionGroup.vue";
 import BorderAndFrameControls from "./BorderAndFrameControls.vue";
 import type { ShadowDirection } from "../shadow-types";
-import {
-  Unlink,
-  Trash2,
-  RotateCcw,
-} from "@lucide/vue";
+import { Trash2, RotateCcw } from "@lucide/vue";
+import SidecarLink from "../SidecarLink.vue";
+import type { SidecarLinkDescriptor } from "../../composition/sidecar-links";
 import type { NormalizedTransform } from "../../composition/composition-types";
 import type { ClipFrame } from "../../composition/composition-types";
 import { useTranslate } from "~/i18n/useTranslate";
@@ -28,7 +26,6 @@ const props = defineProps<{
     timelineDurationMs: number;
     playbackRate?: number;
     enabled?: boolean;
-    isLinked?: boolean;
     shadowSize?: string;
     shadowColor?: string;
     shadowDirection?: string;
@@ -43,6 +40,7 @@ const props = defineProps<{
     frameShowScrollbars?: boolean;
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
+    sidecarLinks?: SidecarLinkDescriptor[];
   } | null;
 }>();
 
@@ -58,7 +56,8 @@ const emit = defineEmits<{
   (e: "update:appearance", appearance: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void;
   (e: "update:clipTransform", transform: NormalizedTransform): void;
   (e: "reset:clipTransform"): void;
-  (e: "unlink"): void;
+  (e: "select:sidecar", link: SidecarLinkDescriptor): void;
+  (e: "unlink:sidecar", link: SidecarLinkDescriptor): void;
   (e: "delete"): void;
   (e: "split"): void;
 }>();
@@ -344,15 +343,12 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           />
         </div>
 
-        <div v-if="selectedClip.isLinked" class="prop-row">
-          <div class="link-label">
-            <Unlink :size="14" />
-            <span>{{ t('sidecarLink') }}</span>
-          </div>
-          <Button variant="outline" size="sm" @click="emit('unlink')">
-            Unlink
-          </Button>
-        </div>
+        <SidecarLink
+          v-if="selectedClip.sidecarLinks?.length"
+          :links="selectedClip.sidecarLinks"
+          @select="emit('select:sidecar', $event)"
+          @unlink="emit('unlink:sidecar', $event)"
+        />
       </div>
 
       <!-- Danger Delete Button -->

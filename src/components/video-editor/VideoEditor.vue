@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
 import type { MediaCompositionLayer } from './composition/composition-types';
+import { resolveSidecarLinks, type SidecarLinkDescriptor } from './composition/sidecar-links';
 import SidebarPanel from "./sidebar/SidebarPanel.vue";
 import PropertiesPanel from "./properties/PropertiesPanel.vue";
 import EditorCanvas from "./canvas/EditorCanvas.vue";
@@ -130,9 +131,25 @@ const {
   updateSelectedWebcamTransform,
   previewSelectedWebcamTransform,
   updateSelectedMediaCrop,
-  handleUnlinkClips,
-  handleUnlinkTrack,
+  detachSelectedSidecar,
 } = compositionState;
+const activeAudioSidecar = computed<'system-audio' | 'microphone' | null>(() =>
+  selectedCompositionLayerId.value === 'system-audio' || selectedCompositionLayerId.value === 'microphone'
+    ? selectedCompositionLayerId.value
+    : null,
+);
+const audioSidecarLinks = computed(() => {
+  const active = activeAudioSidecar.value;
+  return active ? { [active]: resolveSidecarLinks(composition.value, props.editorData, active) } : {};
+});
+const selectSidecar = (sidecar: SidecarLinkDescriptor) => {
+  if (sidecar.id === 'base-video') {
+    selectBaseVideo();
+    return;
+  }
+  selectedCompositionLayerId.value = sidecar.id;
+  activeTab.value = sidecar.kind === 'system-audio' || sidecar.kind === 'microphone' ? 'audio' : 'clip';
+};
 const selectedTransformLayer = computed<CompositionLayer | null>(() => {
   const layer = selectedCompositionLayer.value;
   if (layer && layer.kind !== 'audio') return layer;
@@ -404,6 +421,8 @@ onBeforeUnmount(() => {
           :timeline-duration-ms="Math.round(duration * 1000)"
           :project-id="project?.id"
           :canvas="outputCanvas"
+          :active-audio-sidecar="activeAudioSidecar"
+          :audio-sidecar-links="audioSidecarLinks"
           @import:background="addBackground($event)"
           @update:selected-background="updateSelectedBackground($event)"
           @update:blur-percent="backgroundBlurPercent = $event"
@@ -418,7 +437,8 @@ onBeforeUnmount(() => {
           @update:clip-rate="updateSelectedClipPlaybackRate"
           @update:clip-volume="updateSelectedAudioVolume"
           @update:clip-enabled="updateSelectedClipEnabled"
-          @unlink-clip="handleUnlinkClips"
+          @select:sidecar="selectSidecar"
+          @unlink:sidecar="detachSelectedSidecar"
           @update:clip-is-mirrored="updateSelectedClipIsMirrored"
           @update:clip-corner-radius="updateSelectedClipAppearance({ cornerRadius: (['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : parseFloat($event)) })"
           @update:clip-shadow="updateSelectedClipAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color, shadowDirection: $event.direction as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
@@ -514,8 +534,6 @@ onBeforeUnmount(() => {
           @toggle:camera-layer="toggleSelectedCamera"
           @split:camera="splitSelectedCamera"
           @trim:camera="trimSelectedCamera"
-          @unlink="handleUnlinkClips"
-          @unlink-track="handleUnlinkTrack"
           @trim:clip-edge="({ id, edge, timeMs }) => {
             if (zoomElements.some(z => z.id === id)) {
               trimZoomEdge(id, edge, timeMs);

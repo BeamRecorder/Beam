@@ -26,6 +26,7 @@ import type { OutputCanvasSettings } from "../canvas/output-canvas";
 import type { NormalizedTransform } from "../composition/composition-types";
 import type { ShadowDirection } from "./shadow-types";
 import { useTranslate } from "~/i18n/useTranslate";
+import type { SidecarLinkDescriptor } from "../composition/sidecar-links";
 
 const { t } = useTranslate("PropertiesPanel");
 
@@ -41,7 +42,6 @@ const props = defineProps<{
     timelineDurationMs: number;
     playbackRate?: number;
     enabled?: boolean;
-    isLinked?: boolean;
     shadowSize?: string;
     shadowColor?: string;
     shadowDirection?: string;
@@ -56,6 +56,7 @@ const props = defineProps<{
     frameShowScrollbars?: boolean;
     clipTransform?: NormalizedTransform;
     volume?: number;
+    sidecarLinks?: SidecarLinkDescriptor[];
   } | null;
 
   // Cursor properties
@@ -93,6 +94,8 @@ const props = defineProps<{
   timelineDurationMs: number;
   projectId?: string | null;
   canvas: OutputCanvasSettings;
+  activeAudioSidecar?: "system-audio" | "microphone" | null;
+  audioSidecarLinks?: Partial<Record<"system-audio" | "microphone", SidecarLinkDescriptor[]>>;
 }>();
 
 const emit = defineEmits<{
@@ -146,7 +149,8 @@ const emit = defineEmits<{
   ): void;
   (e: "update:clip-transform", transform: NormalizedTransform): void;
   (e: "reset:clip-transform"): void;
-  (e: "unlink-clip"): void;
+  (e: "select:sidecar", link: SidecarLinkDescriptor): void;
+  (e: "unlink:sidecar", link: SidecarLinkDescriptor): void;
   (e: "delete-clip"): void;
   (e: "split-clip"): void;
 }>();
@@ -187,6 +191,8 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         :clip="selectedClip || null"
         @update:volume="emit('update:clip-volume', $event)"
         @update:enabled="emit('update:clip-enabled', $event)"
+        @select:sidecar="emit('select:sidecar', $event)"
+        @unlink:sidecar="emit('unlink:sidecar', $event)"
         @delete="emit('delete-clip')"
       />
 
@@ -210,7 +216,8 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:appearance="emit('update:clip-appearance', $event)"
         @update:clip-transform="emit('update:clip-transform', $event)"
         @reset:clip-transform="emit('reset:clip-transform')"
-        @unlink="emit('unlink-clip')"
+        @select:sidecar="emit('select:sidecar', $event)"
+        @unlink:sidecar="emit('unlink:sidecar', $event)"
         @delete="emit('delete-clip')"
         @split="emit('split-clip')"
       />
@@ -250,6 +257,8 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         :isMicAudioEnabled="isMicAudioEnabled"
         :systemVolume="systemVolume"
         :micVolume="micVolume"
+        :active-sidecar="activeAudioSidecar"
+        :sidecar-links="audioSidecarLinks"
         @update:volume="emit('update:volume', $event)"
         @update:isSystemAudioEnabled="
           emit('update:isSystemAudioEnabled', $event)
@@ -257,6 +266,8 @@ const activeCaptionLayer = computed<CaptionCompositionLayer | null>(() => {
         @update:isMicAudioEnabled="emit('update:isMicAudioEnabled', $event)"
         @update:systemVolume="emit('update:systemVolume', $event)"
         @update:micVolume="emit('update:micVolume', $event)"
+        @select:sidecar="emit('select:sidecar', $event)"
+        @unlink:sidecar="emit('unlink:sidecar', $event)"
       />
 
       <ZoomPanel

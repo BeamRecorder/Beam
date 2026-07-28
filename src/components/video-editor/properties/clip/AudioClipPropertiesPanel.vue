@@ -5,17 +5,21 @@ import BigSlider from "~/ui/slider/BigSlider.vue";
 import Button from "~/ui/button/Button.vue";
 import Switch from "~/ui/switch/Switch.vue";
 import { useTranslate } from "~/i18n/useTranslate";
+import SidecarLink from "../SidecarLink.vue";
+import type { SidecarLinkDescriptor } from "../../composition/sidecar-links";
 
 const { t } = useTranslate("AudioClipPropertiesPanel");
 
 const props = defineProps<{
-  clip: { name?: string; enabled?: boolean; volume?: number } | null;
+  clip: { name?: string; enabled?: boolean; volume?: number; sidecarLinks?: SidecarLinkDescriptor[] } | null;
 }>();
 
 const emit = defineEmits<{
   (e: "update:volume", value: number): void;
   (e: "update:enabled", value: boolean): void;
   (e: "delete"): void;
+  (e: "select:sidecar", link: SidecarLinkDescriptor): void;
+  (e: "unlink:sidecar", link: SidecarLinkDescriptor): void;
 }>();
 
 const volume = computed(() => props.clip?.volume ?? 100);
@@ -41,6 +45,12 @@ const volume = computed(() => props.clip?.volume ?? 100);
           @update:model-value="emit('update:volume', $event)"
         />
       </div>
+      <SidecarLink
+        v-if="clip.sidecarLinks?.length"
+        :links="clip.sidecarLinks"
+        @select="emit('select:sidecar', $event)"
+        @unlink="emit('unlink:sidecar', $event)"
+      />
       <div class="section-block">
         <div class="prop-row">
           <span class="prop-label">{{ t('enabled') }}</span>
