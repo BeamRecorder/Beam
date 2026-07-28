@@ -54,6 +54,11 @@ test('keeps linked audio timing fields when a video asset is shared by video and
   const saved = ctx.store.read(ctx.id).layers
   assert.deepEqual(saved.map((layer) => [layer.kind, layer.groupId, layer.sourceOffsetMs, layer.playbackRate]), [['video', groupId, 20, 1.25], ['audio', groupId, 20, 1.25]])
 })
+test('persists base video cut points in the project composition', () => {
+  const ctx = setup()
+  ctx.store.save(ctx.id, { media: [], layers: [], baseVideoCuts: [4_000, 1_500, 4_000] })
+  assert.deepEqual(ctx.store.read(ctx.id).baseVideoCuts, [1_500, 4_000])
+})
 test('moves media layers across visual lanes and renormalizes their order', () => {
   const ctx = setup(); const source = path.join(ctx.root, 'layer.png'); fs.writeFileSync(source, 'image'); const asset = ctx.store.importMedia(ctx.id, { kind: 'image', source })
   const layer = (id, name) => ({ id, kind: 'image', name, assetId: asset.id, startMs: 0, endMs: 1_000, enabled: true, order: 0, transform: { x: 0, y: 0, width: 1, height: 1 } })

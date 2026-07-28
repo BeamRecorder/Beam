@@ -57,7 +57,7 @@ const emit = defineEmits<{
   (e: "select:zoom", zoomId: string): void;
   (e: "select:composition-layer", layerId: string): void;
   (e: "toggle:composition-layer", layerId: string): void;
-  (e: "select:base-video"): void;
+  (e: "select:base-video", segmentId?: string): void;
   (e: "select:camera-layer", layerId: string): void;
   (e: "toggle:camera"): void;
   (e: "toggle:camera-layer"): void;
@@ -83,7 +83,10 @@ const {
   visualTrackIndex,
   visualTrackStyle,
   mainVideoLayer,
+  baseVideoCuts,
+  baseVideoSegments,
   layerStyle,
+  cutStyle,
   zoomElementStyle,
   tracksScrollRef,
   tracksViewportRef,
@@ -167,9 +170,9 @@ const startHeaderMarquee = (event: PointerEvent) => {
   }, 300);
 };
 
-const selectMainVideoLayer = () => {
+const selectMainVideoLayer = (segmentId?: string) => {
   if (mainVideoLayer.value) emit("select:composition-layer", mainVideoLayer.value.id);
-  else emit("select:base-video");
+  else emit("select:base-video", segmentId);
 };
 
 (void tracksScrollRef, tracksViewportRef, ticksAreaRef);
@@ -266,8 +269,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             class="track-content video-content"
             :class="{
               selected:
-                selectedCompositionLayerId === 'base-video' ||
-                (mainVideoLayer && selectedCompositionLayerId === mainVideoLayer.id),
+                mainVideoLayer && selectedCompositionLayerId === mainVideoLayer.id,
             }"
             @click.stop="selectMainVideoLayer"
           >
@@ -289,6 +291,16 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                 <Skeleton v-else width="100%" height="100%" radius="0" />
               </div>
             </div>
+            <button
+              v-for="segment in baseVideoSegments"
+              :key="segment.id"
+              type="button"
+              class="base-video-segment"
+              :class="{ selected: selectedCompositionLayerId === segment.id }"
+              :style="layerStyle(segment.startMs, segment.endMs)"
+              @click.stop="selectMainVideoLayer(segment.id)"
+            />
+            <span v-for="cut in baseVideoCuts" :key="cut" class="timeline-cut" :style="cutStyle(cut)" />
             <span
               v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
               class="speed-badge main-video-speed-badge"
@@ -622,6 +634,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                   :style="{ height: `${height}px` }"
                 ></div>
               </div>
+              <span v-for="cut in baseVideoCuts" :key="cut" class="timeline-cut" :style="cutStyle(cut)" />
             </div>
             <div class="trim-handle start"></div>
             <div class="trim-handle end"></div>
@@ -685,6 +698,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                   :style="{ height: `${height}px` }"
                 ></div>
               </div>
+              <span v-for="cut in baseVideoCuts" :key="cut" class="timeline-cut" :style="cutStyle(cut)" />
             </div>
             <div class="trim-handle start"></div>
             <div class="trim-handle end"></div>
@@ -844,14 +858,12 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
     background-color 0.15s ease;
 }
 
-.video-track .track-content:hover::after,
 .camera-clip:hover::after,
 .audio-track .track-content:hover::after {
   border: 1px dashed var(--color-primary);
   background-color: rgba(255, 90, 31, 0.04);
 }
 
-.video-track .track-content.selected::after,
 .camera-clip.selected::after,
 .audio-track .track-content.selected::after {
   border: 1px solid var(--color-primary);
@@ -1315,4 +1327,31 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   z-index: 5;
 }
+
+.timeline-cut {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  width: 2px;
+  margin-left: -1px;
+  pointer-events: none;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .3);
+}
+
+.base-video-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 15;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+
+.base-video-segment:hover { border: 1px dashed var(--color-primary); background: rgba(255, 90, 31, .04); }
+.base-video-segment.selected { border-color: var(--color-primary); background: rgba(255, 90, 31, .08); }
 </style>

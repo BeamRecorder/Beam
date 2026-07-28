@@ -130,6 +130,8 @@ export interface ProjectComposition {
   baseVideoTransform?: NormalizedTransform;
   baseVideoIsMirrored?: boolean;
   baseVideoPlaybackRate?: number;
+  /** Non-destructive edit points shared by the recorded video and audio tracks. */
+  baseVideoCuts?: number[];
   areClipsLinked?: boolean;
 }
 

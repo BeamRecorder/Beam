@@ -106,6 +106,9 @@ function normalizeComposition(value) {
   const baseVideoAppearance = clipAppearance(value.baseVideoAppearance)
   const baseVideoCrop = value.baseVideoCrop ? transform(value.baseVideoCrop) : undefined
   const baseVideoTransform = value.baseVideoTransform ? transform(value.baseVideoTransform) : undefined
+  const baseVideoCuts = Array.isArray(value.baseVideoCuts)
+    ? [...new Set(value.baseVideoCuts.filter((cut) => finite(cut) && cut > 0).map((cut) => Math.round(cut)))].sort((left, right) => left - right)
+    : []
   const cameraLayerIds = new Set(layers.filter((layer) => layer.kind === 'video' && layer.reactToZoom).map((layer) => layer.id))
   const visualLayerIds = layers.filter((layer) => (layer.kind === 'video' || layer.kind === 'image') && !cameraLayerIds.has(layer.id)).sort((a, b) => a.order - b.order).map((layer) => layer.id)
   const validVisualIds = new Set(['base-video', ...visualLayerIds, ...(cameraLayerIds.size ? ['webcam'] : [])])
@@ -116,7 +119,7 @@ function normalizeComposition(value) {
     if (typeof trackId === 'string' && validVisualIds.has(trackId) && !visualTrackOrder.includes(trackId)) visualTrackOrder.push(trackId)
   }
   for (const trackId of fallbackVisualOrder) if (!visualTrackOrder.includes(trackId)) visualTrackOrder.push(trackId)
-  return { media, layers, visualTrackOrder, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}), ...(typeof value.baseVideoIsMirrored === 'boolean' ? { baseVideoIsMirrored: value.baseVideoIsMirrored } : {}), ...(finite(value.baseVideoPlaybackRate) && value.baseVideoPlaybackRate >= .25 && value.baseVideoPlaybackRate <= 4 ? { baseVideoPlaybackRate: value.baseVideoPlaybackRate } : {}), ...(typeof value.areClipsLinked === 'boolean' ? { areClipsLinked: value.areClipsLinked } : {}) }
+  return { media, layers, visualTrackOrder, ...(baseVideoAppearance ? { baseVideoAppearance } : {}), ...(baseVideoCrop ? { baseVideoCrop } : {}), ...(baseVideoTransform ? { baseVideoTransform } : {}), ...(typeof value.baseVideoIsMirrored === 'boolean' ? { baseVideoIsMirrored: value.baseVideoIsMirrored } : {}), ...(finite(value.baseVideoPlaybackRate) && value.baseVideoPlaybackRate >= .25 && value.baseVideoPlaybackRate <= 4 ? { baseVideoPlaybackRate: value.baseVideoPlaybackRate } : {}), ...(baseVideoCuts.length ? { baseVideoCuts } : {}), ...(typeof value.areClipsLinked === 'boolean' ? { areClipsLinked: value.areClipsLinked } : {}) }
 }
 
 function createCompositionStore({ directoryFor, readManifest, writeManifest, sessionDirectoryFor }) {

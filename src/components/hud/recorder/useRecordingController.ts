@@ -26,6 +26,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   let microphone: BrowserMicrophoneRecorder | null = null
   let systemAudio: BrowserSystemAudioRecorder | null = null
   let sessionTimelineStartedAt = 0
+  let timerStartedAt = 0
   let recordingGeneration = 0
   let pendingNativeStart: Promise<void> | null = null
   let prewarm: Promise<boolean> | null = null
@@ -44,6 +45,13 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   const isActive = computed(() => phase.value === 'countdown' || phase.value === 'recording' || phase.value === 'paused')
   const clearCountdown = () => { if (countdown !== null) window.clearInterval(countdown); countdown = null }
   const clearTimer = () => { if (timer !== null) window.clearInterval(timer); timer = null }
+  const updateElapsedTime = () => {
+    elapsedTenths.value = Math.max(elapsedTenths.value, Math.floor((performance.now() - timerStartedAt) / 100))
+  }
+  const startTimer = () => {
+    timerStartedAt = performance.now() - elapsedTenths.value * 100
+    timer = window.setInterval(updateElapsedTime, 50)
+  }
   const stopRecorder = async (recorder: Recorder | null) => { await recorder?.stop().catch(() => undefined) }
 
   const prepareSources = async () => {
@@ -86,15 +94,17 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     }
     if (!session.sessionId) throw new Error('The capture session did not provide an identifier.')
     sessionId = session.sessionId
+    // The screen recorder has acknowledged its start at this point. Do not
+    // make the visible recording state wait for optional sidecar tracks.
+    elapsedTenths.value = 0
+    startTimer()
+    phase.value = 'recording'
     await startSidecars()
     if (generation !== recordingGeneration) {
       await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
       await capture.stop().catch(() => undefined)
       return
     }
-    elapsedTenths.value = 0
-    timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100)
-    phase.value = 'recording'
   }
 
   const launchNativeRecording = (generation: number) => {
@@ -113,11 +123,11 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     configuration = next
     try {
       await prepareSources()
+      prewarm = prewarmNativeRecording(generation)
+      if (!await prewarm || generation !== recordingGeneration) return
       secondsRemaining.value = Math.max(0, next.countdownSeconds)
       phase.value = 'countdown'
       capture.setCountdown(secondsRemaining.value)
-      prewarm = prewarmNativeRecording(generation)
-      void prewarm.catch((reason: unknown) => { error.value = reason instanceof Error ? reason.message : String(reason); void cancel() })
       if (secondsRemaining.value === 0) return await launchNativeRecording(generation)
       countdown = window.setInterval(() => {
         secondsRemaining.value -= 1
@@ -139,7 +149,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     capture.setCountdown(null)
     clearTimer()
     await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
-    camera = null; microphone = null; systemAudio = null; sessionId = null; sessionTimelineStartedAt = 0
+    camera = null; microphone = null; systemAudio = null; sessionId = null; sessionTimelineStartedAt = 0; timerStartedAt = 0
     cameraEnabled.value = false; microphoneEnabled.value = false; systemAudioEnabled.value = false
     elapsedTenths.value = 0
     phase.value = 'idle'
@@ -168,8 +178,8 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
 
   const togglePause = async () => {
     if (!sessionId) return
-    if (phase.value === 'recording') { await Promise.all([capture.pause(), camera?.pause(), microphone?.pause()]); clearTimer(); phase.value = 'paused' }
-    else if (phase.value === 'paused') { await Promise.all([capture.resume(), camera?.resume(sessionId), microphone?.resume(sessionId)]); timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100); phase.value = 'recording' }
+    if (phase.value === 'recording') { updateElapsedTime(); await Promise.all([capture.pause(), camera?.pause(), microphone?.pause()]); clearTimer(); phase.value = 'paused' }
+    else if (phase.value === 'paused') { await Promise.all([capture.resume(), camera?.resume(sessionId), microphone?.resume(sessionId)]); startTimer(); phase.value = 'recording' }
   }
   const toggleCamera = async () => { if (!configuration || !sessionId) return; if (camera) { await stopRecorder(camera); camera = null; cameraEnabled.value = false } else { const { appearance, placement } = await cameraMetadata(); camera = await BrowserCameraRecorder.request(configuration.cameraId); await camera.start(sessionId, appearance, placement, sessionTimelineStartedAt); cameraEnabled.value = true } }
   const toggleMicrophone = async () => { if (!configuration || !sessionId) return; if (microphone) { await stopRecorder(microphone); microphone = null; microphoneEnabled.value = false } else { microphone = await BrowserMicrophoneRecorder.request(configuration.microphoneId); await microphone.start(sessionId); microphoneEnabled.value = true } }

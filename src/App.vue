@@ -168,6 +168,8 @@ const dismissEditorLoadError = () => { editorLoadError.value = '' }
         :editor-data="currentEditorData"
         :project="currentProject"
         :debug-recording-active="debugRecordingRestore !== null"
+        :debug-recording-phase="recording.phase.value"
+        :debug-recording-time="recording.recordingTime.value"
         @back-to-hud="setView('hud')"
         @open-project="handleOpenProject"
         @debug-start-recording="startDebugRecording"

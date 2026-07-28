@@ -66,10 +66,23 @@ export function useTimelineTracks(
   const mainVideoLayer = computed(
     () => null,
   );
+  const baseVideoCuts = computed(() => props.composition.baseVideoCuts ?? []);
+  const baseVideoSegments = computed(() => {
+    const durationMs = Math.round(props.duration * 1000);
+    const boundaries = [0, ...baseVideoCuts.value.filter((cut) => cut > 0 && cut < durationMs), durationMs];
+    return boundaries.slice(0, -1).map((startMs, index) => ({
+      id: `base-video:${startMs}-${boundaries[index + 1]}`,
+      startMs,
+      endMs: boundaries[index + 1],
+    }));
+  });
 
   const layerStyle = (startMs: number, endMs: number) => ({
     left: `${props.duration > 0 ? startMs / (props.duration * 10) : 0}%`,
     width: `${props.duration > 0 ? (endMs - startMs) / (props.duration * 10) : 0}%`,
+  });
+  const cutStyle = (timeMs: number) => ({
+    left: `${props.duration > 0 ? (timeMs / (props.duration * 1000)) * 100 : 0}%`,
   });
 
   const zoomElementStyle = (element: ZoomElement) => ({
@@ -716,7 +729,10 @@ export function useTimelineTracks(
     compositionAudioBars,
     cameraLayers: cameraLayersResult,
     mainVideoLayer,
+    baseVideoCuts,
+    baseVideoSegments,
     layerStyle,
+    cutStyle,
     zoomElementStyle,
     tracksScrollRef,
     tracksViewportRef,

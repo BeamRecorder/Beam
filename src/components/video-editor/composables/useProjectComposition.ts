@@ -32,6 +32,8 @@ export function useProjectComposition(options: {
   activeTab: Ref<string>;
 }) {
   const BASE_VIDEO_CLIP_ID = "base-video";
+  const isBaseVideoSelection = (id: string | null) =>
+    id === BASE_VIDEO_CLIP_ID || id?.startsWith(`${BASE_VIDEO_CLIP_ID}:`) === true;
   const DEFAULT_APPEARANCE: ClipAppearance = {
     cornerRadius: "sm",
     shadowSize: "md",
@@ -61,7 +63,7 @@ export function useProjectComposition(options: {
 
   const selectedClipInfo = computed(() => {
     const isLinked = composition.value.areClipsLinked ?? true;
-    if (selectedCompositionLayerId.value === BASE_VIDEO_CLIP_ID) {
+    if (isBaseVideoSelection(selectedCompositionLayerId.value)) {
       return {
         id: BASE_VIDEO_CLIP_ID,
         kind: "video",
@@ -168,7 +170,13 @@ export function useProjectComposition(options: {
   const saveComposition = async () => {
     if (!project.value) return;
     const payload = JSON.parse(JSON.stringify(composition.value));
-    composition.value = await capture.saveProjectComposition(project.value.id, payload);
+    const saved = await capture.saveProjectComposition(project.value.id, payload);
+    // An already-running Electron main process can be one version behind the
+    // renderer during development. Keep newly introduced edit points visible
+    // until that process has been restarted and can persist them itself.
+    composition.value = payload.baseVideoCuts?.length && !saved.baseVideoCuts?.length
+      ? { ...saved, baseVideoCuts: payload.baseVideoCuts }
+      : saved;
   };
 
   let appearanceSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -234,6 +242,7 @@ export function useProjectComposition(options: {
     const next = splitCompositionLayersAt(
       composition.value,
       Math.round(currentTimeSec.value * 1000),
+      durationMs.value,
     );
     if (next === composition.value) return;
     composition.value = next;
@@ -451,8 +460,8 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
-  const selectBaseVideo = () => {
-    selectedCompositionLayerId.value = BASE_VIDEO_CLIP_ID;
+  const selectBaseVideo = (segmentId = BASE_VIDEO_CLIP_ID) => {
+    selectedCompositionLayerId.value = segmentId;
     activeTab.value = "clip";
   };
 
@@ -461,7 +470,7 @@ export function useProjectComposition(options: {
   ) => {
     const selectedId = selectedCompositionLayerId.value;
     if (!selectedId) return;
-    if (selectedId === BASE_VIDEO_CLIP_ID) {
+    if (isBaseVideoSelection(selectedId)) {
       composition.value = {
         ...composition.value,
         baseVideoAppearance: {
@@ -512,7 +521,7 @@ export function useProjectComposition(options: {
   const updateSelectedWebcamTransform = async (
     transform: NormalizedTransform,
   ) => {
-    if (selectedCompositionLayerId.value === BASE_VIDEO_CLIP_ID) {
+    if (isBaseVideoSelection(selectedCompositionLayerId.value)) {
       composition.value = {
         ...composition.value,
         baseVideoTransform: transform,
@@ -539,7 +548,7 @@ export function useProjectComposition(options: {
   };
 
   const previewSelectedWebcamTransform = (transform: NormalizedTransform) => {
-    if (selectedCompositionLayerId.value === BASE_VIDEO_CLIP_ID) {
+    if (isBaseVideoSelection(selectedCompositionLayerId.value)) {
       composition.value = {
         ...composition.value,
         baseVideoTransform: transform,
@@ -566,7 +575,7 @@ export function useProjectComposition(options: {
   const updateSelectedMediaCrop = async (crop: NormalizedCrop) => {
     const selectedId = selectedCompositionLayerId.value;
     if (!selectedId) return;
-    if (selectedId === BASE_VIDEO_CLIP_ID) {
+    if (isBaseVideoSelection(selectedId)) {
       composition.value = {
         ...composition.value,
         baseVideoCrop: crop,
@@ -589,7 +598,7 @@ export function useProjectComposition(options: {
   const updateSelectedClipIsMirrored = async (isMirrored: boolean) => {
     const selectedId = selectedCompositionLayerId.value;
     if (!selectedId) return;
-    if (selectedId === BASE_VIDEO_CLIP_ID) {
+    if (isBaseVideoSelection(selectedId)) {
       composition.value = {
         ...composition.value,
         baseVideoIsMirrored: isMirrored,
@@ -628,7 +637,7 @@ export function useProjectComposition(options: {
           layer.kind === "caption" ? layer : { ...layer, playbackRate: rate },
         ),
       };
-    } else if (selectedId === BASE_VIDEO_CLIP_ID) {
+    } else if (isBaseVideoSelection(selectedId)) {
       composition.value = {
         ...composition.value,
         baseVideoPlaybackRate: rate,
@@ -662,7 +671,7 @@ export function useProjectComposition(options: {
 
   const updateSelectedClipEnabled = async (enabled: boolean) => {
     const selectedId = selectedCompositionLayerId.value;
-    if (!selectedId || selectedId === BASE_VIDEO_CLIP_ID) return;
+    if (!selectedId || isBaseVideoSelection(selectedId)) return;
     composition.value = {
       ...composition.value,
       layers: composition.value.layers.map((layer) =>
@@ -694,7 +703,7 @@ export function useProjectComposition(options: {
 
   const deleteSelectedCompositionLayer = async () => {
     const selectedId = selectedCompositionLayerId.value;
-    if (!selectedId || selectedId === BASE_VIDEO_CLIP_ID) return;
+    if (!selectedId || isBaseVideoSelection(selectedId)) return;
     composition.value = {
       ...composition.value,
       layers: composition.value.layers.filter((l) => l.id !== selectedId),

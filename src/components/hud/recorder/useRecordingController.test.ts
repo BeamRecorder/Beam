@@ -59,16 +59,14 @@ describe('useRecordingController cancellation', () => {
     expect(controller.phase.value).toBe('idle')
   })
 
-  it('also cancels an immediate native start before it can become recording', async () => {
-    const started = deferred<{ state: string; sessionId: string }>()
-    capture.startPreparedRecording.mockReturnValue(started.promise)
+  it('does not start native capture when cancelled before prewarming completes', async () => {
     const controller = useRecordingController(vi.fn())
     const starting = controller.start(configuration(0))
     await Promise.resolve()
     const cancellation = controller.cancel()
-    started.resolve({ state: 'recording', sessionId: 'session-2' })
     await Promise.all([starting, cancellation])
-    expect(capture.stop).toHaveBeenCalledOnce()
+    expect(capture.startPreparedRecording).not.toHaveBeenCalled()
+    expect(capture.stop).not.toHaveBeenCalled()
     expect(controller.phase.value).toBe('idle')
   })
 

@@ -8,6 +8,7 @@ import Popover from '~/ui/popover/Popover.vue'
 import { ArrowLeft, Minus, X, Undo2, Redo2, Circle, Square } from '@lucide/vue'
 import { useTranslate } from '~/i18n/useTranslate'
 import type { RecordingConfiguration } from '../hud/recorder/recording-types'
+import type { RecordingPhase } from '../hud/recorder/recording-types'
 
 const { t } = useTranslate('Topbar')
 const isDevelopment = import.meta.env.DEV
@@ -20,6 +21,8 @@ withDefaults(
     canUndo?: boolean;
     canRedo?: boolean;
     debugRecordingActive?: boolean;
+    debugRecordingPhase?: RecordingPhase;
+    debugRecordingTime?: string;
     historyTooltipPosition?: "top" | "bottom" | "left" | "right";
   }>(),
   {
@@ -29,6 +32,8 @@ withDefaults(
     canUndo: false,
     canRedo: false,
     debugRecordingActive: false,
+    debugRecordingPhase: 'idle',
+    debugRecordingTime: '00:00.0',
     historyTooltipPosition: "bottom",
   },
 );
@@ -143,7 +148,9 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
           :tooltip-position="historyTooltipPosition || 'bottom'"
           @click.stop="emit('redo')"
         />
-        <Button v-if="isDevelopment && debugRecordingActive" variant="danger" size="xs" :icon="Square" tooltip="Stop debug recording" :tooltip-position="historyTooltipPosition || 'bottom'" @click.stop="emit('debug-stop-recording')" />
+        <Button v-if="isDevelopment && debugRecordingActive" variant="danger" size="xs" :icon="Square" tooltip="Stop debug recording" :tooltip-position="historyTooltipPosition || 'bottom'" @click.stop="emit('debug-stop-recording')">
+          {{ debugRecordingPhase === 'countdown' ? 'Ready' : debugRecordingTime }}
+        </Button>
         <Popover v-else-if="isDevelopment" align="left" direction="down" :match-trigger-width="false" flush>
           <template #trigger>
             <Button variant="ghost" size="xs" :icon="Circle" tooltip="Record a debug capture" :tooltip-position="historyTooltipPosition || 'bottom'" />

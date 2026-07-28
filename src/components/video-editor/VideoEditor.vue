@@ -17,6 +17,7 @@ const { t } = useTranslate("VideoEditor");
 import { useExportJob } from "../export/useExportJob";
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from './canvas/output-canvas';
 import type { RecordingConfiguration } from '../hud/recorder/recording-types';
+import type { RecordingPhase } from '../hud/recorder/recording-types';
 
 const props = withDefaults(
   defineProps<{
@@ -24,12 +25,16 @@ const props = withDefaults(
     project?: CaptureProject | null;
     editorData?: ProjectEditorData | null;
     debugRecordingActive?: boolean;
+    debugRecordingPhase?: RecordingPhase;
+    debugRecordingTime?: string;
   }>(),
   {
     videoSrc: null,
     project: null,
     editorData: null,
     debugRecordingActive: false,
+    debugRecordingPhase: 'idle',
+    debugRecordingTime: '00:00.0',
   },
 );
 
@@ -131,7 +136,7 @@ const {
 const selectedTransformLayer = computed<CompositionLayer | null>(() => {
   const layer = selectedCompositionLayer.value;
   if (layer && layer.kind !== 'audio') return layer;
-  if (selectedCompositionLayerId.value === 'base-video') {
+  if (selectedCompositionLayerId.value?.startsWith('base-video')) {
     return {
       id: 'base-video',
       kind: 'video',
@@ -286,7 +291,7 @@ const handleCropKeyDown = (e: KeyboardEvent) => {
         return; // Ignore if typing inside input fields
       }
     }
-    if (selectedCompositionLayerId.value && selectedCompositionLayerId.value !== 'base-video') {
+    if (selectedCompositionLayerId.value && !selectedCompositionLayerId.value.startsWith('base-video')) {
       e.preventDefault();
       void deleteSelectedCompositionLayer();
     } else if (selectedZoom.value && activeTab.value === 'zoom') {
@@ -340,6 +345,8 @@ onBeforeUnmount(() => {
       :can-undo="canUndo"
       :can-redo="canRedo"
       :debug-recording-active="debugRecordingActive"
+      :debug-recording-phase="debugRecordingPhase"
+      :debug-recording-time="debugRecordingTime"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
       @undo="undo"
@@ -453,7 +460,7 @@ onBeforeUnmount(() => {
           @update:zoom="updateZoom"
           @preview:zoom="previewZoom"
           @select:transform-layer="handleSelectTransformLayer($event)"
-          @select:base-video="selectBaseVideo()"
+          @select:base-video="selectBaseVideo($event)"
           @select:canvas="selectedCompositionLayerId = null; activeTab = 'canvas'; isCropping = false"
           @deselect:transform-layer="selectedCompositionLayerId = null; isCropping = false"
           @update:layer-transform="updateSelectedWebcamTransform"
@@ -498,7 +505,7 @@ onBeforeUnmount(() => {
               : 'clip';
           "
           @toggle:composition-layer="toggleCompositionLayer"
-          @select:base-video="selectBaseVideo"
+          @select:base-video="selectBaseVideo($event)"
           @select:camera-layer="
             selectedCompositionLayerId = $event;
             activeTab = 'clip';
