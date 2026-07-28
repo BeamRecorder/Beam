@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const { pathToFileURL } = require('url')
 
-const schemaVersion = 1
+const schemaVersion = 2
 const mediaKinds = new Set(['video', 'image', 'audio'])
 const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'audio', 'caption'])
 const extensions = {
@@ -80,11 +80,10 @@ const caption = (value) => {
 }
 
 function normalizeComposition(value) {
-  if (!value) return emptyComposition()
-  if (value.schemaVersion !== schemaVersion || !Array.isArray(value.assets) || !Array.isArray(value.clips)) return emptyComposition()
+  if (!value || value.schemaVersion !== schemaVersion || !Array.isArray(value.assets) || !Array.isArray(value.clips)) return emptyComposition()
   const assetIds = new Set()
   const assets = value.assets.map((asset) => {
-    if (!asset || !id(asset.id) || assetIds.has(asset.id) || !mediaKinds.has(asset.kind) || !finite(asset.durationMs)) throw new Error('Média de composition invalide')
+    if (!asset || !id(asset.id) || assetIds.has(asset.id) || !mediaKinds.has(asset.kind) || !finite(asset.durationMs) || asset.durationMs < 0) throw new Error('Média de composition invalide')
     assetIds.add(asset.id)
     const origin = asset.origin === 'session' ? 'session' : 'project'
     if (origin === 'project' && (typeof asset.fileName !== 'string' || path.basename(asset.fileName) !== asset.fileName)) throw new Error('Fichier média invalide')
@@ -101,13 +100,19 @@ function normalizeComposition(value) {
       ...(origin === 'session' ? { sessionId: asset.sessionId, sessionPath: asset.sessionPath } : {}),
     }
   })
+  const assetsById = new Map(assets.map((asset) => [asset.id, asset]))
   const clipIds = new Set()
   const groups = new Map()
   const clips = value.clips.map((clip, order) => {
     if (!clip || !id(clip.id) || clipIds.has(clip.id) || !clipKinds.has(clip.kind) || typeof clip.enabled !== 'boolean') throw new Error('Clip invalide')
     clipIds.add(clip.id)
-    const numbers = [clip.timelineStartMs, clip.timelineDurationMs, clip.sourceInMs, clip.sourceDurationMs, clip.playbackRate]
-    if (!numbers.every(finite) || clip.timelineStartMs < 0 || clip.timelineDurationMs < 40 || clip.sourceInMs < 0 || clip.sourceDurationMs <= 0 || clip.playbackRate < .25 || clip.playbackRate > 4 || Math.abs(clip.timelineDurationMs - clip.sourceDurationMs / clip.playbackRate) > 2) throw new Error('Timing de clip invalide')
+    const numbers = [clip.timelineStartMs, clip.timelineDurationMs, clip.sourceInMs, clip.sourceDurationMs, clip.sourceRangeStartMs, clip.sourceRangeEndMs, clip.playbackRate]
+    if (!numbers.every(finite)
+      || clip.timelineStartMs < 0 || clip.timelineDurationMs < 40
+      || clip.sourceRangeStartMs < 0 || clip.sourceRangeEndMs <= clip.sourceRangeStartMs
+      || clip.sourceInMs < clip.sourceRangeStartMs || clip.sourceInMs + clip.sourceDurationMs > clip.sourceRangeEndMs
+      || clip.sourceDurationMs <= 0 || clip.playbackRate < .25 || clip.playbackRate > 4
+      || Math.abs(clip.timelineDurationMs - clip.sourceDurationMs / clip.playbackRate) > 2) throw new Error('Timing de clip invalide')
     const common = {
       id: clip.id,
       kind: clip.kind,
@@ -116,6 +121,8 @@ function normalizeComposition(value) {
       timelineDurationMs: Math.round(clip.timelineDurationMs),
       sourceInMs: Math.round(clip.sourceInMs),
       sourceDurationMs: Math.round(clip.sourceDurationMs),
+      sourceRangeStartMs: Math.round(clip.sourceRangeStartMs),
+      sourceRangeEndMs: Math.round(clip.sourceRangeEndMs),
       playbackRate: clip.playbackRate,
       enabled: clip.enabled,
       order,
@@ -128,6 +135,7 @@ function normalizeComposition(value) {
     }
     if (clip.kind === 'caption') return { ...common, caption: caption(clip.caption), ...(clip.transform ? { transform: rectangle(clip.transform, 'Transformation') } : {}), ...(typeof clip.isAiGenerated === 'boolean' ? { isAiGenerated: clip.isAiGenerated } : {}) }
     if (!id(clip.assetId) || !assetIds.has(clip.assetId)) throw new Error('Média du clip introuvable')
+    if (common.sourceRangeEndMs > assetsById.get(clip.assetId).durationMs + 2) throw new Error('Bornes du clip hors média')
     if (clip.kind === 'audio') return { ...common, assetId: clip.assetId, role: ['system', 'microphone', 'imported'].includes(clip.role) ? clip.role : 'imported', volume: finite(clip.volume) ? Math.max(0, Math.min(200, clip.volume)) : 100 }
     return {
       ...common,
