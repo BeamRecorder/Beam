@@ -19,10 +19,10 @@ import {
 } from "../composition/composition-types";
 import {
   addClip,
+  createComposition,
   deleteClip,
   detachClip,
   moveClip,
-  reorderClip,
   setAppearance,
   setClipEnabled,
   setCrop,
@@ -226,10 +226,11 @@ export function useClipComposition(options: {
 
   const previewClipEdge = (clipId: string, edge: "start" | "end", timeMs: number) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip) return;
-    const clamped = edge === "start"
-      ? Math.max(clip.timelineStartMs + 40, Math.min(endMs(clip) - 40, Math.round(timeMs)))
-      : Math.max(clip.timelineStartMs + 40, Math.min(endMs(clip) - 1, Math.round(timeMs)));
+    if (!clip || clip.timelineDurationMs <= 80) return;
+    const clamped = Math.max(
+      clip.timelineStartMs + 40,
+      Math.min(endMs(clip) - 40, Math.round(timeMs)),
+    );
     composition.value = trimClip(composition.value, clipId, edge, clamped);
   };
 
@@ -237,15 +238,30 @@ export function useClipComposition(options: {
   const previewMoveClip = (clipId: string, startMs: number) => { composition.value = moveClip(composition.value, clipId, startMs); };
   const moveClipTo = (clipId: string, startMs: number) => previewMoveClip(clipId, startMs);
   const splitSelectedClip = () => {
-    if (!selectedClipId.value) return;
-    composition.value = splitClip(composition.value, selectedClipId.value, Math.round(options.currentTimeSec.value * 1_000));
+    const clip = selectedClip.value;
+    const timeMs = Math.round(options.currentTimeSec.value * 1_000);
+    if (!clip || timeMs <= clip.timelineStartMs || timeMs >= endMs(clip)) return;
+    composition.value = splitClip(composition.value, clip.id, timeMs);
   };
   const deleteSelectedClip = () => {
     if (!selectedClipId.value) return;
     composition.value = deleteClip(composition.value, selectedClipId.value);
     selectedClipId.value = null;
   };
-  const reorderVisualClip = (clipId: string, targetIndex: number) => { composition.value = reorderClip(composition.value, clipId, targetIndex); };
+  const reorderVisualClip = (clipId: string, targetIndex: number) => {
+    const ordered = [...composition.value.clips].sort((left, right) => left.order - right.order);
+    const visuals = ordered.filter(isVisualClip);
+    const sourceIndex = visuals.findIndex((clip) => clip.id === clipId);
+    if (sourceIndex < 0 || !Number.isInteger(targetIndex)) return;
+    const [moved] = visuals.splice(sourceIndex, 1);
+    visuals.splice(Math.max(0, Math.min(visuals.length, targetIndex)), 0, moved);
+    let visualIndex = 0;
+    const clips = ordered.map((clip, order) => ({
+      ...(isVisualClip(clip) ? visuals[visualIndex++] : clip),
+      order,
+    }));
+    composition.value = createComposition(composition.value.assets, clips);
+  };
 
   const updateSelectedAppearance = (patch: Partial<ClipAppearance>) => {
     const clip = selectedClip.value;
