@@ -60,6 +60,7 @@ interface SavedDevices {
 let savedDevices: SavedDevices | null = null;
 
 
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), { embedded: false });
 const emit = defineEmits(["start-recording", "stop-recording", "open-project"]);
 const ProjectPicker = defineAsyncComponent(
   () => import("../projects/ProjectPicker.vue"),
@@ -200,6 +201,7 @@ let lastHeight = 0;
 let lastWidth = 0;
 
 const updateWindowSize = () => {
+  if (props.embedded) return;
   const isDropdownOpen = activeDropdowns.value > 0;
   let targetHeight = 480;
   const errorHeight =
@@ -768,11 +770,12 @@ const openProject = (project: CaptureProject) => {
     class="hud-wrapper"
     :class="[
       activeTab,
-      { 'settings-open': showSettings, 'dropdown-open': activeDropdowns > 0 },
+      { 'settings-open': showSettings, 'dropdown-open': activeDropdowns > 0, embedded: props.embedded },
     ]"
     :style="{ height: `${hudHeight}px` }"
   >
     <TopbarHUD
+      v-if="!props.embedded"
       :title="
         showProjectPicker
           ? t('openProject')
@@ -969,7 +972,7 @@ const openProject = (project: CaptureProject) => {
         </div>
 
         <!-- Open existing project button (Subtle style) -->
-        <div class="web-link-container">
+        <div v-if="!props.embedded" class="web-link-container">
           <Button
             variant="link"
             size="sm"
@@ -999,6 +1002,14 @@ const openProject = (project: CaptureProject) => {
   flex-direction: column;
   transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden; /* Keep content clipped during transitions to avoid visual bugs */
+}
+
+.hud-wrapper.embedded {
+  width: 320px;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .hud-wrapper.dropdown-open {

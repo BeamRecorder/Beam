@@ -12,6 +12,7 @@ import {
   Image as ImageIcon,
   Volume2,
   Type,
+  Scissors,
 } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
 import PopoverMenuButton from "~/ui/popover/PopoverMenuButton.vue";
@@ -34,6 +35,7 @@ const emit = defineEmits<{
   (e: "update:currentTime", value: number): void;
   (e: "update:zoomLevel", value: number): void;
   (e: "add:element", type: "video" | "image" | "sound" | "caption"): void;
+  (e: "split:at-playhead"): void;
 }>();
 
 const handleAdd = (type: "video" | "image" | "sound" | "caption") => {
@@ -73,6 +75,14 @@ const handleZoomOut = () => {
     <!-- Left Section with Add Popover -->
     <div class="left-section">
       <PopoverMenuButton :label="t('add')" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="Scissors"
+        :tooltip="t('splitAtPlayhead')"
+        @click="emit('split:at-playhead')"
+      />
     </div>
 
     <!-- Centered Controls -->

@@ -57,6 +57,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   drag(): void
   getSources(types?: string[]): Promise<CapturePreview[]>
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>
+  openDebugEditor(projectId: string): Promise<void>
   getPreferences(): Promise<PreferenceSettings>
   updatePreferences(patch: Partial<PreferenceSettings>): Promise<PreferenceSettings>
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>

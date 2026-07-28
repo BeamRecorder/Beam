@@ -6,6 +6,7 @@
   "text": "Text",
   "goToStart": "Go to Start",
   "goToEnd": "Go to End",
+  "splitAtPlayhead": "Split at playhead",
   "play": "Play",
   "pause": "Pause",
   "doubleClickResetZoom": "Double click to reset zoom",

@@ -12,6 +12,9 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   let worker: Worker | null = null
   let generation = 0
   let requestQueued = false
+  let retryTimer: number | null = null
+  let retryCount = 0
+  let lastVisibleTimes: number[] = []
 
   const clearCache = () => {
     generation += 1
@@ -23,6 +26,9 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
     cacheOrder.length = 0
     pendingTimes.clear()
     requestQueued = false
+    retryCount = 0
+    if (retryTimer !== null) window.clearTimeout(retryTimer)
+    retryTimer = null
     isExtracting.value = false
   }
 
@@ -49,8 +55,14 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
       isExtracting.value = true
       return
     }
-    if (message.type === 'batch-finished' || message.type === 'error') {
+    if (message.type === 'batch-finished') {
       isExtracting.value = false
+      retryCount = 0
+      return
+    }
+    if (message.type === 'error') {
+      isExtracting.value = false
+      retryMissingFrames(message.message)
       return
     }
     cacheThumbnail(message.time, message.blob)
@@ -64,7 +76,23 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
     }
     worker.onerror = () => {
       isExtracting.value = false
+      retryMissingFrames('Thumbnail worker crashed.')
     }
+  }
+
+  const retryMissingFrames = (reason: string) => {
+    if (retryCount >= 2 || lastVisibleTimes.length === 0) {
+      console.error('Unable to extract timeline thumbnails.', reason)
+      return
+    }
+    retryCount += 1
+    worker?.terminate()
+    worker = null
+    if (retryTimer !== null) window.clearTimeout(retryTimer)
+    retryTimer = window.setTimeout(() => {
+      retryTimer = null
+      requestVisibleFrames(lastVisibleTimes)
+    }, 200 * retryCount)
   }
 
   const requestVisibleFrames = (visibleTimes: number[]) => {
@@ -80,6 +108,7 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
   }
 
   const requestMissingFrames = async (visibleTimes: number[]) => {
+    lastVisibleTimes = visibleTimes
     const source = videoSrcRef.value
     if (!source || visibleTimes.length === 0) return
     const missingTimes = visibleTimes.filter((time) => !thumbnails[time])
@@ -94,14 +123,14 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
     } catch (error) {
       if (requestGeneration === generation) {
         isExtracting.value = false
-        console.error('Unable to create a safe media URL for timeline thumbnails.', error)
+        retryMissingFrames(error instanceof Error ? error.message : 'Unable to create a safe media URL for timeline thumbnails.')
       }
       return
     }
     if (requestGeneration !== generation) return
     if (!workerSource) {
       isExtracting.value = false
-      console.error('Unable to create a safe media URL for timeline thumbnails.')
+      retryMissingFrames('Unable to create a safe media URL for timeline thumbnails.')
       return
     }
     worker?.postMessage({

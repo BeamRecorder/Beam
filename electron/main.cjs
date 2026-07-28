@@ -40,6 +40,13 @@ const microphoneStorage = createMicrophoneStorage({})
 const systemAudioStorage = createSystemAudioStorage({})
 const controllers = new WeakMap()
 
+const mediaContentType = (file) => ({
+  '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+  '.mkv': 'video/x-matroska', '.m4v': 'video/x-m4v', '.avi': 'video/x-msvideo',
+  '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac', '.ogg': 'audio/ogg', '.flac': 'audio/flac',
+}[path.extname(file).toLowerCase()] || 'application/octet-stream')
+
 function profileRendererRequests(webContents) {
   if (app.isPackaged) return
   const requests = new Map()
@@ -88,7 +95,7 @@ function configureDesktopLoopback() {
   })
 }
 
-function createWindow() {
+function createWindow({ debugProjectId = null } = {}) {
   logStartup('Creating BrowserWindow.')
   const win = new BrowserWindow({
     width: 352, height: 512, frame: false, transparent: true, alwaysOnTop: false,
@@ -111,10 +118,10 @@ function createWindow() {
   }
   if (app.isPackaged) {
     logStartup('Loading dist/index.html.')
-    win.loadFile(path.join(applicationRoot, 'dist/index.html'))
+    win.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: debugProjectId ? { debugProject: debugProjectId } : {} })
   } else {
     logStartup('Loading http://localhost:6500.')
-    win.loadURL('http://localhost:6500')
+    win.loadURL(debugProjectId ? `http://localhost:6500/?debugProject=${encodeURIComponent(debugProjectId)}` : 'http://localhost:6500')
   }
   return win
 }
@@ -141,7 +148,12 @@ app.whenReady().then(() => {
   protocol.handle('project-media', (request) => {
     const file = projectStore.mediaFileForUrl(request.url)
     return file
-      ? new Response(Readable.toWeb(fs.createReadStream(file)))
+      ? new Response(Readable.toWeb(fs.createReadStream(file)), {
+        headers: {
+          'Content-Length': String(fs.statSync(file).size),
+          'Content-Type': mediaContentType(file),
+        },
+      })
       : new Response('Not found', { status: 404 })
   })
   logStartup('Project IPC registered.')
@@ -154,7 +166,14 @@ app.whenReady().then(() => {
   })
   registerWhisperIpc({ ipcMain, store: whisperStore })
   logStartup('Whisper model IPC registered.')
-  registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
+  registerWindowIpc(
+    ipcMain,
+    (win) => win && controllers.get(win),
+    async (projectId) => {
+      projectStore.editorData(projectId)
+      createWindow({ debugProjectId: projectId })
+    },
+  )
   const cameraOverlay = createCameraOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
   const countdownOverlay = createCountdownWindow({ applicationRoot, isPackaged: app.isPackaged })
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state))

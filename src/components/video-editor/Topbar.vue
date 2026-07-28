@@ -2,11 +2,15 @@
 import { capture } from '../../api/capture'
 import VideoProjectEdition from './VideoProjectEdition.vue'
 import ExportPopover from '../export/ExportPopover.vue'
+import HUD from '../hud/HUD.vue'
 import Button from '~/ui/button/Button.vue'
-import { ArrowLeft, Minus, X, Undo2, Redo2 } from '@lucide/vue'
+import Popover from '~/ui/popover/Popover.vue'
+import { ArrowLeft, Minus, X, Undo2, Redo2, Circle, Square } from '@lucide/vue'
 import { useTranslate } from '~/i18n/useTranslate'
+import type { RecordingConfiguration } from '../hud/recorder/recording-types'
 
 const { t } = useTranslate('Topbar')
+const isDevelopment = import.meta.env.DEV
 
 withDefaults(
   defineProps<{
@@ -15,6 +19,7 @@ withDefaults(
     isSaving?: boolean;
     canUndo?: boolean;
     canRedo?: boolean;
+    debugRecordingActive?: boolean;
     historyTooltipPosition?: "top" | "bottom" | "left" | "right";
   }>(),
   {
@@ -23,6 +28,7 @@ withDefaults(
     isSaving: false,
     canUndo: false,
     canRedo: false,
+    debugRecordingActive: false,
     historyTooltipPosition: "bottom",
   },
 );
@@ -32,6 +38,8 @@ const emit = defineEmits<{
   (e: 'open-project', project: any): void;
   (e: 'undo'): void;
   (e: 'redo'): void;
+  (e: 'debug-start-recording', configuration: RecordingConfiguration): void;
+  (e: 'debug-stop-recording'): void;
 }>();
 
 const handleExit = () => {
@@ -135,6 +143,15 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
           :tooltip-position="historyTooltipPosition || 'bottom'"
           @click.stop="emit('redo')"
         />
+        <Button v-if="isDevelopment && debugRecordingActive" variant="danger" size="xs" :icon="Square" tooltip="Stop debug recording" :tooltip-position="historyTooltipPosition || 'bottom'" @click.stop="emit('debug-stop-recording')" />
+        <Popover v-else-if="isDevelopment" align="left" direction="down" :match-trigger-width="false" flush>
+          <template #trigger>
+            <Button variant="ghost" size="xs" :icon="Circle" tooltip="Record a debug capture" :tooltip-position="historyTooltipPosition || 'bottom'" />
+          </template>
+          <template #default="{ close }">
+            <HUD embedded @start-recording="(configuration: RecordingConfiguration) => { emit('debug-start-recording', configuration); close() }" />
+          </template>
+        </Popover>
       </div>
     </div>
 

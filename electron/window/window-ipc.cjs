@@ -4,7 +4,7 @@ function windowForEvent(event) {
   return BrowserWindow.fromWebContents(event.sender)
 }
 
-function registerWindowIpc(ipcMain, controllerForWindow) {
+function registerWindowIpc(ipcMain, controllerForWindow, openDebugEditor) {
   let resizeTimer = null
   let dragStartMouse = null
   let dragStartWindow = null
@@ -35,6 +35,10 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible))
   })
   ipcMain.handle('window:bounds', (event) => windowForEvent(event)?.getBounds() ?? null)
+  ipcMain.handle('window:open-debug-editor', (_event, payload = {}) => {
+    if (typeof payload.projectId !== 'string') throw new Error('Projet debug invalide')
+    return openDebugEditor(payload.projectId)
+  })
 
   ipcMain.on('window:setSizeSmooth', (event, width, height) => {
     const win = windowForEvent(event)

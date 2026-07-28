@@ -16,23 +16,28 @@ import { useTranslate } from "~/i18n/useTranslate";
 const { t } = useTranslate("VideoEditor");
 import { useExportJob } from "../export/useExportJob";
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from './canvas/output-canvas';
+import type { RecordingConfiguration } from '../hud/recorder/recording-types';
 
 const props = withDefaults(
   defineProps<{
     videoSrc?: string | null;
     project?: CaptureProject | null;
     editorData?: ProjectEditorData | null;
+    debugRecordingActive?: boolean;
   }>(),
   {
     videoSrc: null,
     project: null,
     editorData: null,
+    debugRecordingActive: false,
   },
 );
 
 const emit = defineEmits<{
   (event: "back-to-hud"): void;
   (event: "open-project", project: CaptureProject): void;
+  (event: "debug-start-recording", configuration: RecordingConfiguration): void;
+  (event: "debug-stop-recording"): void;
 }>();
 
 // Master Video Editor Composable
@@ -97,6 +102,7 @@ const {
   loadComposition,
   toggleCamera,
   splitSelectedCamera,
+  splitCompositionAtPlayhead,
   trimSelectedCamera,
   toggleSelectedCamera,
   addCompositionElement,
@@ -187,6 +193,11 @@ const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction 
     editorState.scheduleSave();
   },
 });
+
+const cutAtPlayhead = async () => {
+  await splitCompositionAtPlayhead();
+  recordSnapshot(createEditorSnapshot());
+};
 
 onMounted(() => {
   playerVideoSrc.value = props.videoSrc ?? "";
@@ -328,10 +339,13 @@ onBeforeUnmount(() => {
       :is-saving="editorState.isSaving.value"
       :can-undo="canUndo"
       :can-redo="canRedo"
+      :debug-recording-active="debugRecordingActive"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
       @undo="undo"
       @redo="redo"
+      @debug-start-recording="emit('debug-start-recording', $event)"
+      @debug-stop-recording="emit('debug-stop-recording')"
     />
 
     <!-- Export Active Warning Lock Banner -->
@@ -448,7 +462,7 @@ onBeforeUnmount(() => {
           @deselect:zoom="selectedZoomId = null"
           @duration-change="handleDurationChange"
         />
-        <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" />
+        <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" @split:at-playhead="cutAtPlayhead" />
         </div>
       </div>
 

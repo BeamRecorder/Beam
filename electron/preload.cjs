@@ -65,6 +65,7 @@ contextBridge.exposeInMainWorld(
     drag: () => ipcRenderer.send("window:drag"),
     getSources: (types) => ipcRenderer.invoke("window:getSources", types),
     getWindowBounds: () => ipcRenderer.invoke("window:bounds"),
+    openDebugEditor: (projectId) => ipcRenderer.invoke("window:open-debug-editor", { projectId }),
     getPreferences: () => ipcRenderer.invoke("preferences:get"),
     updatePreferences: (patch) =>
       ipcRenderer.invoke("preferences:update", patch),

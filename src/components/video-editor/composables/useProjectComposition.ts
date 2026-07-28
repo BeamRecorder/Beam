@@ -22,6 +22,7 @@ import {
   trimCameraLayer,
 } from "../composition/webcam/camera-composition";
 import { normalizedVisualTrackOrder } from "../composition/visual-stack";
+import { splitCompositionLayersAt } from "../composition/split-composition-layers";
 
 export function useProjectComposition(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -226,6 +227,16 @@ export function useProjectComposition(options: {
       selectedCameraLayer.value.id,
       Math.round(currentTimeSec.value * 1000),
     );
+    await saveComposition();
+  };
+
+  const splitCompositionAtPlayhead = async () => {
+    const next = splitCompositionLayersAt(
+      composition.value,
+      Math.round(currentTimeSec.value * 1000),
+    );
+    if (next === composition.value) return;
+    composition.value = next;
     await saveComposition();
   };
 
@@ -751,6 +762,7 @@ export function useProjectComposition(options: {
     loadComposition,
     toggleCamera,
     splitSelectedCamera,
+    splitCompositionAtPlayhead,
     trimSelectedCamera,
     toggleSelectedCamera,
     addCompositionElement,

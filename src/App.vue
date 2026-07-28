@@ -31,6 +31,8 @@ onMounted(() => {
   window.addEventListener('mousemove', handleMouseMove, { passive: true })
   window.addEventListener('mouseleave', handleMouseLeave, { passive: true })
   void capture.getPreferences().then((preferences) => { recordingBarVisibility.value = preferences.recordingBar.visibility })
+  const debugProjectId = new URLSearchParams(window.location.search).get('debugProject')
+  if (debugProjectId) handleOpenProject({ id: debugProjectId, name: '', createdAt: '', updatedAt: '', previewSrc: null })
 })
 
 onBeforeUnmount(() => {
@@ -50,6 +52,7 @@ const currentEditorData = ref<ProjectEditorData | null>(null)
 const isPreparingEditor = ref(false)
 const editorLoadError = ref('')
 const EDITOR_WINDOW_SIZE = { width: 1280, height: 800 }
+const debugRecordingRestore = ref<{ videoSrc: string | null; project: CaptureProject | null; editorData: ProjectEditorData | null } | null>(null)
 
 const isExitingEditor = ref(false)
 
@@ -88,6 +91,18 @@ const startRecording = async (configuration: RecordingConfiguration) => {
   if (recording.phase.value === 'idle') currentView.value = 'hud'
 }
 
+const startDebugRecording = async (configuration: RecordingConfiguration) => {
+  debugRecordingRestore.value = { videoSrc: currentVideoSrc.value, project: currentProject.value, editorData: currentEditorData.value }
+  await recording.start(configuration)
+  if (recording.phase.value === 'idle') debugRecordingRestore.value = null
+}
+
+const stopDebugRecording = async () => {
+  const wasCountingDown = recording.phase.value === 'countdown'
+  await recording.stop()
+  if (wasCountingDown) debugRecordingRestore.value = null
+}
+
 const cancelOrStopRecording = async () => {
   const wasCountdown = recording.phase.value === 'countdown'; await recording.stop()
   if (wasCountdown) { capture.setWindowMode('hud'); capture.setSize(352, 512); currentView.value = 'hud' }
@@ -107,7 +122,16 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
     currentProject.value = projects.find((project) => project.previewSrc === session?.videoSrc) ?? projects[0] ?? null
     currentEditorData.value = currentProject.value ? await capture.getProjectEditorData(currentProject.value.id) : null
   } catch { currentProject.value = null; currentEditorData.value = null }
+  if (!debugRecordingRestore.value) return revealEditor()
+  const restore = debugRecordingRestore.value
+  debugRecordingRestore.value = null
+  if (!currentProject.value) return revealEditor()
+  const debugProject = await capture.renameProject(currentProject.value.id, `DEBUG_${currentProject.value.name}`)
+  currentVideoSrc.value = restore.videoSrc
+  currentProject.value = restore.project
+  currentEditorData.value = restore.editorData
   await revealEditor()
+  await capture.openDebugEditor(debugProject.id)
 }
 
 const handleOpenProject = (project: CaptureProject) => {
@@ -143,8 +167,11 @@ const dismissEditorLoadError = () => { editorLoadError.value = '' }
         :video-src="currentVideoSrc"
         :editor-data="currentEditorData"
         :project="currentProject"
+        :debug-recording-active="debugRecordingRestore !== null"
         @back-to-hud="setView('hud')"
         @open-project="handleOpenProject"
+        @debug-start-recording="startDebugRecording"
+        @debug-stop-recording="stopDebugRecording"
       />
     </Transition>
   </div>

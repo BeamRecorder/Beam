@@ -89,42 +89,41 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     Object.assign(cameraVelocity, createCameraVelocity());
   };
 
-  const focusTargetStyle = computed(() => {
+  const manualSelectionBounds = () => {
     const bounds = videoWindowBounds.value;
     const selectedZoom = options.selectedZoom();
-    if (
-      !selectedZoom ||
-      selectedZoom.mode !== "manual" ||
-      options.isPlaying() ||
-      !bounds
-    )
-      return { display: "none" };
-    const selectionScale = [1.25, 1.5, 1.8, 2.2, 3.5, 5][
-      selectedZoom.depth - 1
-    ];
-
+    if (!selectedZoom || selectedZoom.mode !== "manual" || !bounds) return null;
+    const selectionScale = [1.25, 1.5, 1.8, 2.2, 3.5, 5][selectedZoom.depth - 1];
     const scale = bounds.scale ?? 1;
     const centerX = bounds.dx + bounds.dw / 2;
     const centerY = bounds.dy + bounds.dh / 2;
     const focusX = bounds.focusX ?? centerX;
     const focusY = bounds.focusY ?? centerY;
+    const width = (bounds.dw / selectionScale) * scale;
+    const height = (bounds.dh / selectionScale) * scale;
+    const unzoomedLeft = bounds.dx + selectedZoom.focus.cx * bounds.dw - bounds.dw / selectionScale / 2;
+    const unzoomedTop = bounds.dy + selectedZoom.focus.cy * bounds.dh - bounds.dh / selectionScale / 2;
+    return {
+      left: centerX + (unzoomedLeft - focusX) * scale,
+      top: centerY + (unzoomedTop - focusY) * scale,
+      width,
+      height,
+    };
+  };
 
-    const unzoomedTargetWidth = bounds.dw / selectionScale;
-    const unzoomedTargetHeight = bounds.dh / selectionScale;
-    const unzoomedTargetLeft =
-      bounds.dx + selectedZoom.focus.cx * bounds.dw - unzoomedTargetWidth / 2;
-    const unzoomedTargetTop =
-      bounds.dy + selectedZoom.focus.cy * bounds.dh - unzoomedTargetHeight / 2;
-
-    const zoomedLeft = centerX + (unzoomedTargetLeft - focusX) * scale;
-    const zoomedTop = centerY + (unzoomedTargetTop - focusY) * scale;
-    const zoomedWidth = unzoomedTargetWidth * scale;
-    const zoomedHeight = unzoomedTargetHeight * scale;
+  const focusTargetStyle = computed(() => {
+    const bounds = manualSelectionBounds();
+    if (
+      !bounds ||
+      options.activeTab() !== "zoom" ||
+      options.isPlaying()
+    )
+      return { display: "none" };
 
     return {
-      width: `${zoomedWidth}px`,
-      height: `${zoomedHeight}px`,
-      transform: `translate3d(${zoomedLeft}px, ${zoomedTop}px, 0)`,
+      width: `${bounds.width}px`,
+      height: `${bounds.height}px`,
+      transform: `translate3d(${bounds.left}px, ${bounds.top}px, 0)`,
       willChange: isMovingSelection.value ? "transform" : "auto",
     };
   });
@@ -161,6 +160,22 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const beginSelectionMove = (event: PointerEvent) => {
     const selectedZoom = options.selectedZoom();
     const isManualZoomActive = selectedZoom?.mode === "manual" && options.activeTab() === "zoom";
+
+    if (isManualZoomActive) {
+      const canvas = options.canvasRef();
+      const bounds = manualSelectionBounds();
+      if (canvas && bounds) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const isInsideSelection = x >= bounds.left && x <= bounds.left + bounds.width && y >= bounds.top && y <= bounds.top + bounds.height;
+        if (!isInsideSelection) {
+          options.onDeselectZoom();
+          options.onSelectCanvas();
+          return;
+        }
+      }
+    }
 
     // When configuring a manual zoom, skip raycasting/hit-testing for webcam and base video
     if (!isManualZoomActive) {

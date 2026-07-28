@@ -6,6 +6,7 @@
   "text": "Texte",
   "goToStart": "Aller au début",
   "goToEnd": "Aller à la fin",
+  "splitAtPlayhead": "Découper à la tête de lecture",
   "play": "Lire",
   "pause": "Pause",
   "doubleClickResetZoom": "Double-clic pour réinitialiser le zoom",
