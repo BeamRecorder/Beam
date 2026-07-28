@@ -1,12 +1,10 @@
-import { ref, computed, watch, onUnmounted } from "vue";
-import type { ProjectEditorData } from "~/api/types/capture-session";
+import { onUnmounted, ref, watch } from "vue";
 
 export interface UseCanvasVideoElementOptions {
   videoSrc: () => string;
-  editorData: () => ProjectEditorData | null | undefined;
   isPlaying: () => boolean;
-  currentTime: () => number;
-  playbackRate?: () => number;
+  sourceTime: () => number;
+  playbackRate: () => number;
   onDurationChange: (duration: number) => void;
   onRenderOnce: () => void;
 }
@@ -16,150 +14,73 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
   videoEl.muted = true;
   videoEl.preload = "auto";
   videoEl.playsInline = true;
-
   const videoError = ref<string | null>(null);
   const isVideoFrameReady = ref(false);
-
-  const effectiveVideoSrc = computed(
-    () => options.editorData()?.videoSrc || options.videoSrc(),
-  );
-
-  const handleVideoMetadata = () => {
-    if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
-      options.onDurationChange(Math.ceil(videoEl.duration));
-    }
-  };
-
-  const handleVideoFrameReady = () => {
-    isVideoFrameReady.value = true;
-    options.onRenderOnce();
-  };
-
-  const handleVideoError = () => {
-    isVideoFrameReady.value = false;
-    videoError.value = "Unable to load this video file.";
-  };
-
   let pendingSeekTime: number | null = null;
 
-  const performVideoSeek = (targetTime: number) => {
-    if (videoEl.seeking) {
-      pendingSeekTime = targetTime;
-      return;
-    }
-    if (Math.abs(videoEl.currentTime - targetTime) <= 0.005) return;
-
-    // Do NOT use fastSeek! fastSeek seeks to nearest keyframe (I-frame),
-    // causing imprecise seeking and jumping to wrong frames.
-    videoEl.currentTime = targetTime;
+  const seek = (targetTime: number) => {
+    if (!Number.isFinite(targetTime)) return;
+    if (videoEl.seeking) { pendingSeekTime = targetTime; return; }
+    if (Math.abs(videoEl.currentTime - targetTime) > .005) videoEl.currentTime = targetTime;
   };
-
-  const handleVideoSeeked = () => {
-    if (pendingSeekTime !== null) {
-      const nextTime = pendingSeekTime;
-      pendingSeekTime = null;
-      performVideoSeek(nextTime);
-    } else if (options.isPlaying() && videoEl.paused) {
-      videoEl.play().catch(() => undefined);
-    }
+  const onMetadata = () => {
+    if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) options.onDurationChange(Math.ceil(videoEl.duration));
+  };
+  const onReady = () => { isVideoFrameReady.value = true; options.onRenderOnce(); };
+  const onError = () => { isVideoFrameReady.value = false; videoError.value = "Unable to load this video file."; };
+  const onSeeked = () => {
+    if (pendingSeekTime !== null) { const next = pendingSeekTime; pendingSeekTime = null; seek(next); }
+    else if (options.isPlaying() && videoEl.paused) void videoEl.play().catch(() => undefined);
     options.onRenderOnce();
   };
+  const render = () => options.onRenderOnce();
 
-  const handlePlaybackStateChange = () => {
-    options.onRenderOnce();
-  };
+  videoEl.addEventListener("loadedmetadata", onMetadata);
+  videoEl.addEventListener("loadeddata", onReady);
+  videoEl.addEventListener("canplay", onReady);
+  videoEl.addEventListener("seeked", onSeeked);
+  videoEl.addEventListener("playing", render);
+  videoEl.addEventListener("pause", render);
+  videoEl.addEventListener("seeking", render);
+  videoEl.addEventListener("waiting", render);
+  videoEl.addEventListener("error", onError);
 
-  videoEl.addEventListener("loadedmetadata", handleVideoMetadata);
-  videoEl.addEventListener("loadeddata", handleVideoFrameReady);
-  videoEl.addEventListener("canplay", handleVideoFrameReady);
-  videoEl.addEventListener("seeked", handleVideoSeeked);
-  videoEl.addEventListener("playing", handlePlaybackStateChange);
-  videoEl.addEventListener("pause", handlePlaybackStateChange);
-  videoEl.addEventListener("seeking", handlePlaybackStateChange);
-  videoEl.addEventListener("waiting", handlePlaybackStateChange);
-  videoEl.addEventListener("error", handleVideoError);
-
-  const loadVideo = () => {
+  const load = () => {
     videoError.value = null;
     isVideoFrameReady.value = false;
     videoEl.pause();
-    videoEl.currentTime = 0;
-    videoEl.src = effectiveVideoSrc.value ?? "";
+    videoEl.src = options.videoSrc() || "";
     videoEl.load();
   };
-
-  watch(effectiveVideoSrc, loadVideo, { immediate: true });
-
-  watch(
-    () => options.playbackRate?.() ?? 1.0,
-    (rate) => {
-      videoEl.playbackRate = rate;
-    },
-    { immediate: true },
-  );
-
-  watch(
-    () => options.isPlaying(),
-    (playing) => {
-      options.onRenderOnce();
-      if (playing) {
-        // Ensure video is synchronized with target time before playing
-        const targetTime = options.currentTime();
-        if (Math.abs(videoEl.currentTime - targetTime) > 0.05) {
-          videoEl.currentTime = targetTime;
-        }
-        videoEl
-          .play()
-          .catch((error) =>
-            console.error("Failed to play video element:", error),
-          );
-      } else {
-        videoEl.pause();
-      }
-    },
-  );
-
-  watch(
-    () => options.currentTime(),
-    (time) => {
-      const rate = options.playbackRate?.() ?? 1.0;
-      const targetSourceTime = time * rate;
-      const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, targetSourceTime));
-      const drift = Math.abs(videoEl.currentTime - clampedTime);
-      const isPlaying = options.isPlaying();
-
-      // During active playback, videoEl naturally advances its own currentTime.
-      // Emitting update:currentTime triggers this watcher every frame.
-      // Calling videoEl.currentTime = x while playing forces decoder flush & causes lag.
-      // Only seek if drift > 1.5s during playback (e.g. user clicked timeline or looped), or when paused.
-      const maxAllowedDrift = isPlaying ? 1.5 : 0.005;
-
-      if (drift > maxAllowedDrift) {
-        performVideoSeek(clampedTime);
-      }
-      options.onRenderOnce();
-    },
-  );
+  watch(() => options.videoSrc(), load, { immediate: true });
+  watch(() => options.playbackRate(), (rate) => { videoEl.playbackRate = rate; }, { immediate: true });
+  watch(() => options.isPlaying(), (playing) => {
+    options.onRenderOnce();
+    if (!playing) { videoEl.pause(); return; }
+    seek(options.sourceTime());
+    void videoEl.play().catch((error) => console.error("Failed to play video element:", error));
+  });
+  watch(() => options.sourceTime(), (target) => {
+    const clamped = Math.max(0, Math.min(videoEl.duration || target, target));
+    const drift = Math.abs(videoEl.currentTime - clamped);
+    if (drift > (options.isPlaying() ? 1.5 : .005)) seek(clamped);
+    options.onRenderOnce();
+  });
 
   onUnmounted(() => {
     videoEl.pause();
-    videoEl.removeEventListener("loadedmetadata", handleVideoMetadata);
-    videoEl.removeEventListener("loadeddata", handleVideoFrameReady);
-    videoEl.removeEventListener("canplay", handleVideoFrameReady);
-    videoEl.removeEventListener("seeked", handleVideoSeeked);
-    videoEl.removeEventListener("playing", handlePlaybackStateChange);
-    videoEl.removeEventListener("pause", handlePlaybackStateChange);
-    videoEl.removeEventListener("seeking", handlePlaybackStateChange);
-    videoEl.removeEventListener("waiting", handlePlaybackStateChange);
-    videoEl.removeEventListener("error", handleVideoError);
-    videoEl.src = "";
+    videoEl.removeEventListener("loadedmetadata", onMetadata);
+    videoEl.removeEventListener("loadeddata", onReady);
+    videoEl.removeEventListener("canplay", onReady);
+    videoEl.removeEventListener("seeked", onSeeked);
+    videoEl.removeEventListener("playing", render);
+    videoEl.removeEventListener("pause", render);
+    videoEl.removeEventListener("seeking", render);
+    videoEl.removeEventListener("waiting", render);
+    videoEl.removeEventListener("error", onError);
+    videoEl.removeAttribute("src");
     videoEl.load();
   });
 
-  return {
-    videoEl,
-    videoError,
-    isVideoFrameReady,
-    resetVideoState: loadVideo,
-  };
+  return { videoEl, videoError, isVideoFrameReady, resetVideoState: load };
 }
