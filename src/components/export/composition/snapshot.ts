@@ -1,22 +1,15 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog'
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types'
-import type { ProjectComposition } from '../../video-editor/composition/composition-types'
-import type { CursorRenderSettings } from '../export-types'
-import type { CompositionSnapshot } from '../export-types'
+import { isVisualClip, type ClipComposition } from '../../video-editor/composition/composition-types'
+import type { CursorRenderSettings, CompositionSnapshot } from '../export-types'
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas'
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas'
 import { tNamespace } from '../../../i18n'
 
 const $t = tNamespace('exporter')
-
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
-
-const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({
-  ...zoom,
-  focus: { ...zoom.focus },
-}))
-
+const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({ ...zoom, focus: { ...zoom.focus } }))
 const copyCursor = (cursor: ProjectEditorData['cursor'] | undefined): CompositionSnapshot['cursor'] => {
   if (!cursor) return { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] }
   return {
@@ -30,26 +23,32 @@ const copyCursor = (cursor: ProjectEditorData['cursor'] | undefined): Compositio
 }
 
 export function createCompositionSnapshot(input: {
-  videoSrc: string | null
   duration: number
   width: number
   height: number
   fps: number
   canvas: OutputCanvasSettings
-  videoEnabled: boolean
   background: BackgroundValue | null
   blurPercent: number
   editorData: ProjectEditorData | null | undefined
   zooms: ZoomElement[]
-  composition: ProjectComposition
+  composition: ClipComposition
   cursorSettings: CursorRenderSettings
-  systemAudioEnabled: boolean
-  micAudioEnabled: boolean
 }): CompositionSnapshot {
-  if (!input.videoSrc) throw new Error($t('sessionVideoUnavailable'))
+  const screen = input.composition.clips.find((clip) => clip.kind === 'screen' && clip.enabled && isVisualClip(clip))
+  const asset = screen && input.composition.assets.find((entry) => entry.id === screen.assetId)
+  if (!screen || !asset?.src) throw new Error($t('sessionVideoUnavailable'))
   return {
     duration: Math.max(0, input.duration),
-    video: { src: input.videoSrc, width: Math.max(1, input.width), height: Math.max(1, input.height), fps: Math.max(1, input.fps), enabled: input.videoEnabled },
+    video: {
+      clipId: screen.id,
+      assetId: asset.id,
+      src: asset.src,
+      width: Math.max(1, asset.width ?? input.width),
+      height: Math.max(1, asset.height ?? input.height),
+      fps: Math.max(1, input.fps),
+      enabled: screen.enabled,
+    },
     canvas: normalizeOutputCanvas(input.canvas),
     background: input.background?.kind === 'color' ? { kind: 'color', color: input.background.color }
       : input.background?.kind === 'gradient' ? { kind: 'gradient', gradient: cloneJson(input.background.gradient) }
@@ -59,14 +58,9 @@ export function createCompositionSnapshot(input: {
     cursor: copyCursor(input.editorData?.cursor),
     cursorSettings: cloneJson(input.cursorSettings),
     composition: cloneJson(input.composition),
-    audio: (input.editorData?.tracks ?? []).flatMap((track) => {
-      const enabled = track.kind === 'system-audio' ? input.systemAudioEnabled : track.kind === 'microphone' ? input.micAudioEnabled : false
-      if (!enabled || !['system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') return []
-      return track.assets.filter((asset) => asset.exists && asset.src && asset.complete).map((asset) => ({ id: `${track.trackId}:${asset.path}`, src: asset.src!, startSeconds: Math.max(0, asset.startNs / 1_000_000_000), enabled: true }))
-    }),
     layers: [
       { kind: 'background', enabled: Boolean(input.background) },
-      { kind: 'video', enabled: input.videoEnabled },
+      { kind: 'video', enabled: screen.enabled },
       { kind: 'cursor', enabled: Boolean(input.editorData?.cursor.available) },
     ],
   }
