@@ -262,9 +262,6 @@ function createProjectStore(root) {
     composition: (id) => composition.read(id),
     saveComposition: (id, value) => composition.save(id, value),
     importCompositionMedia: (id, input) => composition.importMedia(id, input),
-    saveCompositionLayer: (id, layer) => composition.upsertLayer(id, layer),
-    deleteCompositionLayer: (id, layerId) => composition.removeLayer(id, layerId),
-    moveCompositionLayer: (id, layerId, targetIndex) => composition.moveLayer(id, layerId, targetIndex),
     delete: (id) => { const directory = directoryFor(id); if (!fs.existsSync(directory)) throw new Error('Projet introuvable'); fs.rmSync(directory, { recursive: true, force: false }) },
   }
 }

@@ -35,9 +35,6 @@ function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, Br
     notifyBackgroundLibraryChanged()
     return background
   })
-  ipcMain.handle('projects:save-composition-layer', (_event, payload = {}) => projectStore.saveCompositionLayer(payload.projectId, payload.layer))
-  ipcMain.handle('projects:delete-composition-layer', (_event, payload = {}) => projectStore.deleteCompositionLayer(payload.projectId, payload.layerId))
-  ipcMain.handle('projects:move-composition-layer', (_event, payload = {}) => projectStore.moveCompositionLayer(payload.projectId, payload.layerId, payload.targetIndex))
   ipcMain.handle('projects:delete', (_event, payload = {}) => projectStore.delete(payload.projectId))
 }
 

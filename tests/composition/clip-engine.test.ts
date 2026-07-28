@@ -1,86 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { activeClipsAt, attachClip, CompositionEngineError, createComposition, deleteClip, detachClip, migrateLegacyComposition, moveClip, setClipEnabled, setPlaybackRate, sourceTimeAt, splitClip, transformClip, trimClip } from '../../src/components/video-editor/composition/engine/clip-engine'
-import { MAX_PLAYBACK_RATE, MIN_PLAYBACK_RATE, type Clip, type ClipComposition } from '../../src/components/video-editor/composition/engine/clip-types'
+import { activeClipsAt, compositionDuration, createComposition, deleteClip, detachClip, moveClip, nextActiveClip, reorderTrack, setAppearance, setCrop, setEnabled, setPlaybackRate, setTransform, sourceTimeAt, splitClip, timelineTimeAt, trimClip } from '../../src/components/video-editor/composition/engine/clip-engine'
+import { type Clip, type ClipComposition } from '../../src/components/video-editor/composition/engine/clip-types'
 
-const clip = (id: string, kind: Clip['kind'] = 'video', overrides: Partial<Clip> = {}): Clip => ({ id, kind, mediaId: kind === 'annotation' ? null : `media-${id}`, annotationId: kind === 'annotation' ? `annotation-${id}` : null, timelineStartMs: 1_000, timelineDurationMs: 4_000, sourceInMs: 200, sourceDurationMs: 4_000, playbackRate: 1, enabled: true, order: 0, transform: kind === 'audio' ? null : { x: 0, y: 0, width: 1, height: 1 }, ...overrides })
-const linked = (): ClipComposition => createComposition([clip('screen'), clip('camera', 'webcam'), clip('audio', 'audio')], [{ id: 'recording', clipIds: ['screen', 'camera', 'audio'] }])
+const asset = { id: 'recording', kind: 'video' as const, name: 'Recording', durationMs: 10_000, width: 1920, height: 1080, src: 'recording.mp4', origin: 'session' as const }
+const clip = (id: string, kind: Clip['kind'] = 'screen', overrides: Partial<Clip> = {}): Clip => ({ id, kind, assetId: kind === 'caption' ? null : 'recording', caption: kind === 'caption' ? { text: 'Hello', style: {} } : null, timelineStartMs: 1_000, timelineDurationMs: 4_000, sourceInMs: 200, sourceDurationMs: 4_000, playbackRate: 1, enabled: true, trackOrder: 0, ...overrides })
+const linked = (): ClipComposition => createComposition([asset], [clip('screen'), clip('camera', 'webcam'), clip('audio', 'system-audio')], [{ id: 'recording-group', clipIds: ['screen', 'camera', 'audio'] }])
 
 describe('clip composition engine', () => {
-  it('maps timeline times to source times and excludes times outside a clip', () => {
-    const value = clip('a', 'video', { playbackRate: 2 })
-    expect(sourceTimeAt(value, 1_000)).toBe(200)
-    expect(sourceTimeAt(value, 1_500)).toBe(1_200)
-    expect(sourceTimeAt(value, 5_001)).toBeNull()
-  })
-
-  it('returns only enabled active clips in render order', () => {
-    const composition = createComposition([clip('back', 'image', { order: 2 }), clip('front', 'video', { order: 1 }), clip('hidden', 'audio', { enabled: false })])
-    expect(activeClipsAt(composition, 1_100).map((entry) => entry.id)).toEqual(['front', 'back'])
-    expect(activeClipsAt(composition, 500)).toEqual([])
-  })
-
-  it('moves every linked sidecar by the same delta', () => {
-    const moved = moveClip(linked(), 'screen', 2_500)
-    expect(moved.clips.map((entry) => entry.timelineStartMs)).toEqual([2_500, 2_500, 2_500])
-  })
-
-  it('changes speed for every linked sidecar and accepts a custom value', () => {
-    const accelerated = setPlaybackRate(linked(), 'camera', 1.25)
-    expect(accelerated.clips.every((entry) => entry.playbackRate === 1.25)).toBe(true)
-    expect(accelerated.clips.every((entry) => entry.timelineDurationMs === 3_200)).toBe(true)
-  })
-
-  it('rejects non-finite and out-of-range custom speeds', () => {
-    expect(() => setPlaybackRate(linked(), 'screen', Number.NaN)).toThrow(CompositionEngineError)
-    expect(() => setPlaybackRate(linked(), 'screen', MIN_PLAYBACK_RATE - .01)).toThrow(/0.25x/)
-    expect(() => setPlaybackRate(linked(), 'screen', MAX_PLAYBACK_RATE + .01)).toThrow(/4x/)
-  })
-
-  it('trims a linked group from its start while advancing each source', () => {
-    const trimmed = trimClip(linked(), 'screen', 'start', 2_000)
-    expect(trimmed.clips.map((entry) => [entry.timelineStartMs, entry.timelineDurationMs, entry.sourceInMs, entry.sourceDurationMs])).toEqual([[2_000, 3_000, 1_200, 3_000], [2_000, 3_000, 1_200, 3_000], [2_000, 3_000, 1_200, 3_000]])
-  })
-
-  it('trims a linked group from its end without changing source in', () => {
-    const trimmed = trimClip(linked(), 'screen', 'end', 3_000)
-    expect(trimmed.clips.every((entry) => entry.timelineDurationMs === 2_000 && entry.sourceDurationMs === 2_000 && entry.sourceInMs === 200)).toBe(true)
-  })
-
-  it('splits each linked clip and creates two independently addressable groups', () => {
-    const ids = ['screen-right', 'camera-right', 'audio-right']; let cursor = 0
-    const split = splitClip(linked(), 'screen', 3_000, () => ids[cursor++]!)
-    expect(split.clips).toHaveLength(6)
-    expect(split.groups.map((group) => group.clipIds)).toEqual([['screen', 'camera', 'audio'], ids])
-    expect(split.clips.find((entry) => entry.id === 'camera-right')).toMatchObject({ timelineStartMs: 3_000, sourceInMs: 2_200, timelineDurationMs: 2_000 })
-  })
-
-  it('allows a detached sidecar to move and change speed alone', () => {
-    const detached = detachClip(linked(), 'camera')
-    const edited = setPlaybackRate(moveClip(detached, 'camera', 5_000), 'camera', 2)
-    expect(edited.clips.find((entry) => entry.id === 'camera')).toMatchObject({ timelineStartMs: 5_000, playbackRate: 2, timelineDurationMs: 2_000 })
-    expect(edited.clips.find((entry) => entry.id === 'screen')).toMatchObject({ timelineStartMs: 1_000, playbackRate: 1 })
-  })
-
-  it('reattaches only clips with timing compatible with their group', () => {
-    const detached = detachClip(linked(), 'camera')
-    expect(attachClip(detached, 'camera', 'recording').groups[0].clipIds).toContain('camera')
-    const incompatible = moveClip(detached, 'camera', 2_000)
-    expect(() => attachClip(incompatible, 'camera', 'recording')).toThrow(/incompatible/)
-  })
-
-  it('supports enable, delete and visual transforms without deleting media', () => {
-    const disabled = setClipEnabled(linked(), 'camera', false)
-    expect(disabled.clips.find((entry) => entry.id === 'camera')?.enabled).toBe(false)
-    const transformed = transformClip(disabled, 'camera', { x: -.2, y: .2, width: 2, height: .4 })
-    expect(transformed.clips.find((entry) => entry.id === 'camera')?.transform).toEqual({ x: 0, y: .2, width: 1, height: .4 })
-    expect(deleteClip(transformed, 'camera').clips.map((entry) => entry.mediaId)).toContain('media-screen')
-    expect(() => transformClip(linked(), 'audio', { x: 0, y: 0, width: 1, height: 1 })).toThrow(/Audio/)
-  })
-
-  it('migrates video, audio, image and annotation layers into v2 clips', () => {
-    const migrated = migrateLegacyComposition({ media: [{ id: 'v', kind: 'video', durationMs: 2_000 }, { id: 'a', kind: 'audio', durationMs: 2_000 }, { id: 'i', kind: 'image', durationMs: 0 }], layers: [{ id: 'video', kind: 'video', assetId: 'v', startMs: 0, endMs: 1_000, enabled: true, order: 0 }, { id: 'audio', kind: 'audio', assetId: 'a', startMs: 100, endMs: 900, enabled: true, order: 1 }, { id: 'image', kind: 'image', assetId: 'i', startMs: 0, endMs: 500, enabled: true, order: 2 }, { id: 'caption', kind: 'caption', startMs: 300, endMs: 700, enabled: true, order: 3 }] })
-    expect(migrated.schemaVersion).toBe(2)
-    expect(migrated.clips.map((entry) => entry.kind)).toEqual(['video', 'audio', 'image', 'annotation'])
-    expect(migrated.clips.every((entry) => entry.playbackRate === 1 && entry.sourceInMs === 0)).toBe(true)
-  })
+  it('uses clips and assets as the only schema', () => expect(createComposition()).toEqual({ schemaVersion: 3, assets: [], clips: [], groups: [] }))
+  it('maps timeline and source times using the clip rate', () => { const value = clip('a', 'screen', { playbackRate: 2 }); expect(sourceTimeAt(value, 1_500)).toBe(1_200); expect(timelineTimeAt(value, 1_200)).toBe(1_500); expect(sourceTimeAt(value, 5_001)).toBeNull() })
+  it('returns enabled active clips in track order and calculates duration', () => { const value = createComposition([asset], [clip('back', 'image', { trackOrder: 2, playbackRate: 1 }), clip('front', 'screen', { trackOrder: 1 }), clip('hidden', 'audio', { enabled: false, timelineStartMs: 9_000 })]); expect(activeClipsAt(value, 1_100).map((entry) => entry.id)).toEqual(['front', 'back']); expect(compositionDuration(value)).toBe(5_000) })
+  it('moves and changes rate for the current linked group only', () => { const changed = setPlaybackRate(moveClip(linked(), 'screen', 2_500), 'camera', 1.25); expect(changed.clips.every((entry) => entry.timelineStartMs === 2_500 && entry.timelineDurationMs === 3_200)).toBe(true) })
+  it('trims non-destructively within source bounds and restores on reverse trim', () => { const trimmed = trimClip(linked(), 'screen', 'start', 2_000); expect(trimmed.clips[0]).toMatchObject({ timelineStartMs: 2_000, sourceInMs: 1_200, sourceDurationMs: 3_000 }); const restored = trimClip(trimmed, 'screen', 'start', 1_000); expect(restored.clips[0]).toMatchObject({ timelineStartMs: 1_000, sourceInMs: 200, sourceDurationMs: 4_000 }) })
+  it('extends an end trim again without fabricating a new source range', () => { const shortened = trimClip(linked(), 'screen', 'end', 3_000); const restored = trimClip(shortened, 'screen', 'end', 12_000); expect(restored.clips[0]).toMatchObject({ timelineDurationMs: 9_800, sourceDurationMs: 9_800 }); expect(restored.clips[0]?.sourceInMs).toBe(200) })
+  it('splits a group into independent left and right groups', () => { const ids = ['screen-right', 'camera-right', 'audio-right', 'right-group']; let index = 0; const split = splitClip(linked(), 'screen', 3_000, () => ids[index++]!); expect(split.groups).toEqual([{ id: 'recording-group', clipIds: ['screen', 'camera', 'audio'] }, { id: 'right-group', clipIds: ['screen-right', 'camera-right', 'audio-right'] }]); expect(setPlaybackRate(split, 'screen-right', 2).clips.find((entry) => entry.id === 'screen')).toMatchObject({ playbackRate: 1 }) })
+  it('detaches a track permanently from group timing', () => { const edited = setPlaybackRate(moveClip(detachClip(linked(), 'camera'), 'camera', 5_000), 'camera', 2); expect(edited.clips.find((entry) => entry.id === 'camera')).toMatchObject({ timelineStartMs: 5_000, playbackRate: 2 }); expect(edited.clips.find((entry) => entry.id === 'screen')).toMatchObject({ timelineStartMs: 1_000, playbackRate: 1 }) })
+  it('ripples a deleted group and resolves the next active clip', () => { const composition = createComposition([asset], [...linked().clips, clip('later', 'video', { timelineStartMs: 6_000 })], linked().groups); const deleted = deleteClip(composition, 'screen'); expect(deleted.clips.map((entry) => entry.id)).toEqual(['later']); expect(deleted.clips[0]?.timelineStartMs).toBe(2_000); expect(nextActiveClip(deleted, 0)?.id).toBe('later') })
+  it('keeps appearance, crop and transform local to a split clip', () => { const split = splitClip(linked(), 'screen', 3_000, (() => { let n = 0; return () => `id-${n++}` })()); const changed = setCrop(setTransform(setAppearance(split, 'screen', { frame: 'safari' }), 'screen', { x: .1, y: .2, width: .6, height: .7 }), 'screen', { x: .2, y: .2, width: .5, height: .5 }); expect(changed.clips.find((entry) => entry.id === 'id-0')).not.toHaveProperty('appearance'); expect(changed.clips.find((entry) => entry.id === 'screen')).toMatchObject({ appearance: { frame: 'safari' }, crop: { x: .2, y: .2, width: .5, height: .5 } }) })
+  it('rejects speed for images and enables captions through the common operation', () => { const composition = createComposition([asset], [clip('image', 'image'), clip('caption', 'caption')]); expect(() => setPlaybackRate(composition, 'image', 2)).toThrow(/speed/); expect(setEnabled(composition, 'caption', false).clips[1]?.enabled).toBe(false) })
+  it('reorders tracks without changing timeline data', () => { const changed = reorderTrack(linked(), 'camera', 4); expect(changed.clips.find((entry) => entry.id === 'camera')).toMatchObject({ trackOrder: 4, timelineStartMs: 1_000 }) })
 })

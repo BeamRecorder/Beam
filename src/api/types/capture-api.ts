@@ -9,7 +9,7 @@ import type {
   ProjectEditorData,
   ProjectZoomState,
 } from './capture-session'
-import type { CompositionLayer, CompositionMedia, ProjectComposition } from '../../components/video-editor/composition/composition-types'
+import type { CompositionMedia, ProjectComposition } from '../../components/video-editor/composition/composition-types'
 import type { BackgroundMedia, BackgroundValue, GradientBackground } from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
 
@@ -79,9 +79,6 @@ export interface DesktopCaptureApi extends CaptureApi {
   getProjectComposition(projectId: string): Promise<ProjectComposition>
   saveProjectComposition(projectId: string, composition: ProjectComposition): Promise<ProjectComposition>
   pickProjectCompositionMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<CompositionMedia | null>
-  saveProjectCompositionLayer(projectId: string, layer: CompositionLayer): Promise<CompositionLayer>
-  deleteProjectCompositionLayer(projectId: string, layerId: string): Promise<ProjectComposition>
-  moveProjectCompositionLayer(projectId: string, layerId: string, targetIndex: number): Promise<ProjectComposition>
   whisperModels(): Promise<Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>
   downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void

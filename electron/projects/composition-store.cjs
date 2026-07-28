@@ -107,7 +107,19 @@ function normalizeComposition(value) {
   const baseVideoCrop = value.baseVideoCrop ? transform(value.baseVideoCrop) : undefined
   const baseVideoTransform = value.baseVideoTransform ? transform(value.baseVideoTransform) : undefined
   const sessionSegments = Array.isArray(value.sessionSegments)
-    ? value.sessionSegments.filter((segment) => segment && typeof segment.id === 'string' && segment.id.length > 0 && segment.id.length <= 160 && finite(segment.sourceStartMs) && finite(segment.sourceEndMs) && segment.sourceStartMs >= 0 && segment.sourceEndMs > segment.sourceStartMs && typeof segment.active === 'boolean').map((segment) => ({ id: segment.id, sourceStartMs: Math.round(segment.sourceStartMs), sourceEndMs: Math.round(segment.sourceEndMs), active: segment.active }))
+    ? value.sessionSegments.filter((segment) => segment && typeof segment.id === 'string' && segment.id.length > 0 && segment.id.length <= 160 && finite(segment.sourceStartMs) && finite(segment.sourceEndMs) && segment.sourceStartMs >= 0 && segment.sourceEndMs > segment.sourceStartMs && typeof segment.active === 'boolean').map((segment) => {
+      const sourceStartMs = Math.round(segment.sourceStartMs)
+      const sourceEndMs = Math.round(segment.sourceEndMs)
+      const activeStartMs = finite(segment.activeStartMs) ? Math.max(sourceStartMs, Math.min(sourceEndMs - 1, Math.round(segment.activeStartMs))) : undefined
+      const activeEndMs = finite(segment.activeEndMs) ? Math.max((activeStartMs ?? sourceStartMs) + 1, Math.min(sourceEndMs, Math.round(segment.activeEndMs))) : undefined
+      return {
+        id: segment.id, sourceStartMs, sourceEndMs, active: segment.active,
+        ...(activeStartMs !== undefined ? { activeStartMs } : {}),
+        ...(activeEndMs !== undefined ? { activeEndMs } : {}),
+        ...(finite(segment.playbackRate) && segment.playbackRate >= .25 && segment.playbackRate <= 4 ? { playbackRate: segment.playbackRate } : {}),
+        ...(clipAppearance(segment.appearance) ? { appearance: clipAppearance(segment.appearance) } : {}),
+      }
+    })
     : []
   const cameraLayerIds = new Set(layers.filter((layer) => layer.kind === 'video' && layer.reactToZoom).map((layer) => layer.id))
   const visualLayerIds = layers.filter((layer) => (layer.kind === 'video' || layer.kind === 'image') && !cameraLayerIds.has(layer.id)).sort((a, b) => a.order - b.order).map((layer) => layer.id)
@@ -140,22 +152,7 @@ function createCompositionStore({ directoryFor, readManifest, writeManifest, ses
     const composition = read(id); composition.media.push(asset); save(id, composition)
     return { ...asset, src: pathToFileURL(path.join(targetDirectory, asset.fileName)).href }
   }
-  const upsertLayer = (id, layer) => { const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layer.id); const next = normalizeComposition({ ...composition, layers: index < 0 ? [...composition.layers, layer] : composition.layers.map((item, i) => i === index ? layer : item) }); return save(id, next).layers.find((item) => item.id === layer.id) }
-  const removeLayer = (id, layerId) => { const composition = read(id); const layer = composition.layers.find((item) => item.id === layerId); if (!layer) throw new Error('Calque introuvable'); composition.layers = composition.layers.filter((item) => item.id !== layerId); if (layer.assetId && !composition.layers.some((item) => item.assetId === layer.assetId)) { const asset = composition.media.find((item) => item.id === layer.assetId); if (asset?.origin === 'project') fs.rmSync(path.join(directoryFor(id), 'media', asset.fileName), { force: true }); if (asset) composition.media = composition.media.filter((item) => item.id !== asset.id) } return save(id, composition) }
-  const moveLayer = (id, layerId, targetIndex) => {
-    const composition = read(id); const index = composition.layers.findIndex((item) => item.id === layerId)
-    if (index < 0 || !Number.isInteger(targetIndex)) throw new Error('Déplacement de calque invalide')
-    const layer = composition.layers[index]
-    if (!['video', 'image'].includes(layer.kind) || layer.reactToZoom) throw new Error('Seules les pistes vidéo et image sont réorganisables')
-    const visualIndexes = composition.layers.flatMap((item, itemIndex) => ['video', 'image'].includes(item.kind) && !item.reactToZoom ? [itemIndex] : [])
-    const visuals = visualIndexes.map((itemIndex) => composition.layers[itemIndex])
-    const visualIndex = visuals.findIndex((item) => item.id === layerId)
-    const [moved] = visuals.splice(visualIndex, 1)
-    visuals.splice(Math.max(0, Math.min(visuals.length, targetIndex)), 0, moved)
-    visualIndexes.forEach((itemIndex, position) => { composition.layers[itemIndex] = visuals[position] })
-    return save(id, composition)
-  }
-  return { read: response, save, importMedia, upsertLayer, removeLayer, moveLayer }
+  return { read: response, save, importMedia }
 }
 
 module.exports = { createCompositionStore, emptyComposition, normalizeComposition }

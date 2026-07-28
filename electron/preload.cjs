@@ -124,22 +124,6 @@ contextBridge.exposeInMainWorld(
         projectId,
         kind,
       }),
-    saveProjectCompositionLayer: (projectId, layer) =>
-      ipcRenderer.invoke("projects:save-composition-layer", {
-        projectId,
-        layer,
-      }),
-    deleteProjectCompositionLayer: (projectId, layerId) =>
-      ipcRenderer.invoke("projects:delete-composition-layer", {
-        projectId,
-        layerId,
-      }),
-    moveProjectCompositionLayer: (projectId, layerId, targetIndex) =>
-      ipcRenderer.invoke("projects:move-composition-layer", {
-        projectId,
-        layerId,
-        targetIndex,
-      }),
     whisperModels: () => ipcRenderer.invoke("whisper:models"),
     downloadWhisperModel: (modelId) =>
       ipcRenderer.invoke("whisper:download", { modelId }),
