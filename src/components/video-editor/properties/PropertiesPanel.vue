@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { CursorType } from "./cursor/useCursorReplacer";
 import type { BackgroundMedia, BackgroundValue, BackgroundMediaGroup } from "../composables/backgroundCatalog";
 import CursorPanel from "./cursor/CursorPanel.vue";
@@ -74,6 +75,9 @@ const props = defineProps<{
   projectId?: string | null;
   canvas: OutputCanvasSettings;
 }>();
+const normalizedSelectedClip = computed(() => props.selectedClip
+  ? { ...props.selectedClip, kind: props.selectedClip.kind === "screen" ? "video" : props.selectedClip.kind }
+  : null);
 const emit = defineEmits<{
   (event: "update:selectedCursor", value: CursorType): void;
   (event: "update:cursorSize", value: number): void;
@@ -121,9 +125,9 @@ const emit = defineEmits<{
     <div class="panel-header"><h3 class="panel-title">{{ activeTab === 'canvas' ? t('background') : t('properties') }}</h3></div>
     <div class="panel-content">
       <CanvasPanel v-if="activeTab === 'canvas'" :selected-background="selectedBackground" :blur-percent="blurPercent" :background-groups="backgroundGroups" :project-id="projectId" @update:selected-background="emit('update:selectedBackground', $event)" @update:blur-percent="emit('update:blurPercent', $event)" @import:background="emit('import:background', $event)" />
-      <AudioClipPropertiesPanel v-else-if="activeTab === 'clip' && selectedClip?.kind === 'audio'" :clip="selectedClip || null" @update:volume="emit('update:clip-volume', $event)" @update:enabled="emit('update:clip-enabled', $event)" @delete="emit('delete-clip')" />
+      <AudioClipPropertiesPanel v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'" :clip="normalizedSelectedClip" @update:volume="emit('update:clip-volume', $event)" @update:enabled="emit('update:clip-enabled', $event)" @delete="emit('delete-clip')" />
       <CaptionClipPanel v-else-if="activeTab === 'clip' && selectedCaptionClip" :clip="selectedCaptionClip" @update="emit('update:caption', $event)" @delete="emit('delete-clip')" />
-      <ClipPropertiesPanel v-else-if="activeTab === 'clip'" :selected-clip="selectedClip || null" @update:playback-rate="emit('update:clip-rate', $event)" @update:enabled="emit('update:clip-enabled', $event)" @update:is-mirrored="emit('update:clip-is-mirrored', $event)" @update:corner-radius="emit('update:clip-corner-radius', $event)" @update:shadow="emit('update:clip-shadow', $event)" @update:appearance="emit('update:clip-appearance', $event)" @update:clip-transform="emit('update:clip-transform', $event)" @reset:clip-transform="emit('reset:clip-transform')" @unlink="emit('unlink-clip')" @delete="emit('delete-clip')" @split="emit('split-clip')" />
+      <ClipPropertiesPanel v-else-if="activeTab === 'clip'" :selected-clip="normalizedSelectedClip" @update:playback-rate="emit('update:clip-rate', $event)" @update:enabled="emit('update:clip-enabled', $event)" @update:is-mirrored="emit('update:clip-is-mirrored', $event)" @update:corner-radius="emit('update:clip-corner-radius', $event)" @update:shadow="emit('update:clip-shadow', $event)" @update:appearance="emit('update:clip-appearance', $event)" @update:clip-transform="emit('update:clip-transform', $event)" @reset:clip-transform="emit('reset:clip-transform')" @unlink="emit('unlink-clip')" @delete="emit('delete-clip')" @split="emit('split-clip')" />
       <CursorPanel v-else-if="activeTab === 'cursor'" :selected-cursor="selectedCursor" :cursor-size="cursorSize" :cursor-color="cursorColor" :enable-shadow="enableShadow" :enable-click-spring="enableClickSpring" :enable-ripple="enableRipple" :shadow-blur="shadowBlur" :shadow-color="shadowColor" :shadow-direction="shadowDirection" :ripple-color="rippleColor" :ripple-size="rippleSize" @update:selected-cursor="emit('update:selectedCursor', $event)" @update:cursor-size="emit('update:cursorSize', $event)" @update:cursor-color="emit('update:cursorColor', $event)" @update:enable-shadow="emit('update:enableShadow', $event)" @update:enable-click-spring="emit('update:enableClickSpring', $event)" @update:enable-ripple="emit('update:enableRipple', $event)" @update:shadow-blur="emit('update:shadowBlur', $event)" @update:shadow-color="emit('update:shadowColor', $event)" @update:shadow-direction="emit('update:shadowDirection', $event)" @update:ripple-color="emit('update:rippleColor', $event)" @update:ripple-size="emit('update:rippleSize', $event)" />
       <AudioPanel v-else-if="activeTab === 'audio'" :volume="volume" :is-system-audio-enabled="isSystemAudioEnabled" :is-mic-audio-enabled="isMicAudioEnabled" :system-volume="systemVolume" :mic-volume="micVolume" @update:volume="emit('update:volume', $event)" @update:is-system-audio-enabled="emit('update:isSystemAudioEnabled', $event)" @update:is-mic-audio-enabled="emit('update:isMicAudioEnabled', $event)" @update:system-volume="emit('update:systemVolume', $event)" @update:mic-volume="emit('update:micVolume', $event)" />
       <ZoomPanel v-else-if="activeTab === 'zoom'" :selected-zoom="selectedZoom" :can-generate="canGenerateZooms" :has-automatic-zooms="hasAutomaticZooms" @update="emit('update:zoom', $event)" @delete="emit('delete:zoom')" @generate="emit('generate:zooms')" />
