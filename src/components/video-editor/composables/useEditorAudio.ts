@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, watch, type Ref } from 'vue'
 import type { ProjectEditorData, SessionTrackAsset } from '../../../api/types/capture-api'
-import { timelineToSourceMs } from '../composition/base-video-ranges'
+import { sessionSegmentAtTimeline, timelineToSourceMs } from '../composition/base-video-ranges'
 import type { ProjectComposition } from '../composition/composition-types'
 
 type AudioLayer = { id: string; src: string; startSeconds: number; asset: SessionTrackAsset }
@@ -42,7 +42,10 @@ export function useEditorAudio(input: {
       const element = media.get(layer.id)
       if (!element) continue
       element.volume = Math.max(0, Math.min(1, input.volume.value / 100))
-      const sourceMs = timelineToSourceMs(input.composition?.value ?? { media: [], layers: [] }, input.currentTime.value * 1000, Number.MAX_SAFE_INTEGER)
+      const sourceDurationMs = Math.max(0, Math.round((input.editorData.value?.manifest.durationNs ?? 0) / 1_000_000))
+      const currentComposition = input.composition?.value ?? { media: [], layers: [] }
+      element.playbackRate = sessionSegmentAtTimeline(currentComposition, input.currentTime.value * 1000, sourceDurationMs)?.playbackRate ?? 1
+      const sourceMs = timelineToSourceMs(currentComposition, input.currentTime.value * 1000, sourceDurationMs)
       const localTime = sourceMs === null ? -1 : sourceMs / 1000 - layer.startSeconds
       const active = input.isPlaying.value && localTime >= 0 && (!Number.isFinite(element.duration) || localTime < element.duration)
       if (!active) { element.pause(); continue }
@@ -51,7 +54,7 @@ export function useEditorAudio(input: {
     }
   }
 
-  watch([layers, input.currentTime, input.isPlaying, input.volume], synchronize, { immediate: true })
+  watch([layers, input.currentTime, input.isPlaying, input.volume, input.composition ?? computed(() => undefined)], synchronize, { immediate: true, deep: true })
   onBeforeUnmount(() => { for (const element of media.values()) stop(element); media.clear() })
   return { layers }
 }

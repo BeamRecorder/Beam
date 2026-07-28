@@ -16,6 +16,7 @@ import {
 } from "../output-canvas";
 import type { ProjectEditorData } from "~/api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
+import { sessionSegmentAtTimeline } from "../../composition/base-video-ranges";
 import { drawDecoratedMedia } from "../../composition/appearance/render-decorated-media";
 
 export interface VideoWindowBounds {
@@ -353,7 +354,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.translate(dx + dw / 2, dy + dh / 2);
       ctx.scale(camera.scale, camera.scale);
       ctx.translate(-camera.focusX, -camera.focusY);
-      const baseAppearance = options.composition?.().baseVideoAppearance;
+      const composition = options.composition?.();
+      const baseAppearance = composition
+        ? sessionSegmentAtTimeline(composition, currentTime * 1000, videoEl.duration * 1000)?.appearance ?? composition.baseVideoAppearance
+        : undefined;
 
       if (videoEl.readyState >= 1) {
         const vx = dx + positionedMedia.x;

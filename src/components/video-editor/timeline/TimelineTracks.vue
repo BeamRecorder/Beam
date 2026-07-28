@@ -30,6 +30,7 @@ const { t } = useTranslate("TimelineTracks");
 const props = defineProps<{
   currentTime: number;
   duration: number;
+  sourceDurationMs: number;
   zoomLevel: number;
   videoSrc: string | null;
   editorData?: ProjectEditorData | null;
@@ -97,6 +98,7 @@ const {
   visibleTimelineSeconds,
   visibleRulerSeconds,
   thumbnailStyle,
+  thumbnailAtTimelineSecond,
   rulerMarkerStyle,
   cameraThumbnailSeconds,
   cameraThumbnailStyle,
@@ -268,8 +270,8 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                 :style="thumbnailStyle(second)"
               >
                 <img
-                  v-if="thumbnails[second]"
-                  :src="thumbnails[second]"
+                  v-if="thumbnailAtTimelineSecond(second)"
+                  :src="thumbnailAtTimelineSecond(second)"
                   class="thumbnail-img"
                   :alt="t('frame')"
                   draggable="false"
@@ -289,13 +291,8 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             >
               <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
               <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
+              <span v-if="Math.abs(segment.playbackRate - 1) > .01" class="speed-badge segment-speed-badge">{{ segment.playbackRate.toFixed(2) }}×</span>
             </button>
-            <span
-              v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
-              class="speed-badge main-video-speed-badge"
-            >
-              {{ composition.baseVideoPlaybackRate.toFixed(2) }}×
-            </span>
           </div>
         </div>
 
@@ -411,6 +408,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             <button v-for="segment in baseVideoSegments" :key="`camera:${segment.id}`" type="button" class="sidecar-session-segment" :class="{ selected: selectedCompositionLayerId === segment.id }" :style="layerStyle(segment.startMs, segment.endMs)" @click.stop="selectMainVideoLayer(segment.id)">
               <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
               <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
+              <span v-if="Math.abs(segment.playbackRate - 1) > .01" class="speed-badge segment-speed-badge">{{ segment.playbackRate.toFixed(2) }}×</span>
             </button>
             <div
               v-if="selectedCameraLayerId"
@@ -568,12 +566,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             @click.stop="emit('select:composition-layer', 'system-audio')"
           >
             <div class="audio-block" style="position: relative; padding: 0">
-              <span
-                v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
-                class="speed-badge audio-speed-badge"
-              >
-                {{ composition.baseVideoPlaybackRate.toFixed(2) }}×
-              </span>
               <!-- Real Waveform -->
               <div
                 v-if="systemAudioBuffer"
@@ -591,6 +583,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             <button v-for="segment in baseVideoSegments" :key="`system:${segment.id}`" type="button" class="sidecar-session-segment" :class="{ selected: selectedCompositionLayerId === segment.id }" :style="layerStyle(segment.startMs, segment.endMs)" @click.stop="selectMainVideoLayer(segment.id)">
               <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
               <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
+              <span v-if="Math.abs(segment.playbackRate - 1) > .01" class="speed-badge segment-speed-badge">{{ segment.playbackRate.toFixed(2) }}×</span>
             </button>
           </div>
         </div>
@@ -614,12 +607,6 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             @click.stop="emit('select:composition-layer', 'microphone')"
           >
             <div class="audio-block" style="position: relative; padding: 0">
-              <span
-                v-if="composition.baseVideoPlaybackRate && Math.abs(composition.baseVideoPlaybackRate - 1.0) > 0.01"
-                class="speed-badge audio-speed-badge"
-              >
-                {{ composition.baseVideoPlaybackRate.toFixed(2) }}×
-              </span>
               <!-- Real Waveform -->
               <div
                 v-if="micAudioBuffer"
@@ -646,6 +633,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
             <button v-for="segment in baseVideoSegments" :key="`mic:${segment.id}`" type="button" class="sidecar-session-segment" :class="{ selected: selectedCompositionLayerId === segment.id }" :style="layerStyle(segment.startMs, segment.endMs)" @click.stop="selectMainVideoLayer(segment.id)">
               <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'start', segment.startMs, segment.endMs)" />
               <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginTrimDrag($event, segment.id, 'end', segment.startMs, segment.endMs)" />
+              <span v-if="Math.abs(segment.playbackRate - 1) > .01" class="speed-badge segment-speed-badge">{{ segment.playbackRate.toFixed(2) }}×</span>
             </button>
           </div>
         </div>
@@ -661,6 +649,7 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
                 <div v-for="(height, barIndex) in compositionAudioBars[layer.id]" :key="barIndex" class="wave-bar" :style="{ height: `${compositionAudioBarHeight(height, layer.volume ?? 100)}px` }" />
               </div>
               <span v-else class="audio-unavailable">{{ t('waveformUnavailable') }}</span>
+              <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1) > .01" class="speed-badge segment-speed-badge">{{ layer.playbackRate.toFixed(2) }}×</span>
             </div>
           </div>
         </div>
@@ -1230,19 +1219,11 @@ const previewLayerReorder = (event: DragEvent, targetId: string) => {
   z-index: 10;
 }
 
-.main-video-speed-badge {
+.segment-speed-badge {
   position: absolute;
-  top: 6px;
-  left: 8px;
+  top: 4px;
+  right: 5px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
-
-.audio-speed-badge {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  z-index: 5;
 }
 
 .timeline-cut {

@@ -63,8 +63,9 @@ export async function renderMixedAudio(
         ...layer,
         startSeconds: segment.timelineStartMs / 1000,
         endSeconds: segment.timelineEndMs / 1000,
-        sourceOffsetSeconds: segment.sourceStartMs / 1000,
-        timelineDurationSeconds: (segment.sourceEndMs - segment.sourceStartMs) / 1000,
+        sourceOffsetSeconds: segment.activeStartMs / 1000,
+        timelineDurationSeconds: (segment.activeEndMs - segment.activeStartMs) / 1000,
+        playbackRate: segment.playbackRate,
         sessionSidecar: true,
       })));
   const assets = new Map(
@@ -84,6 +85,7 @@ export async function renderMixedAudio(
         timelineDurationSeconds: Math.max(0, (layer.endMs - layer.startMs) / 1000),
         playbackRate: layer.playbackRate ?? 1,
         volume: layer.volume ?? 100,
+        sessionSidecar: false,
       });
   }
   if (layers.length === 0) return null;
@@ -337,7 +339,8 @@ export async function exportWithMediabunny(
           ? Math.max(...request.snapshot.composition.sessionSegments.map((segment) => segment.sourceEndMs))
           : Math.round(request.snapshot.duration * 1000);
         const sourceMs = timelineToSourceMs(request.snapshot.composition, timelineMs, sourceDurationMs);
-        return (sourceMs ?? 0) / 1000 * (request.snapshot.composition.baseVideoPlaybackRate ?? 1);
+        if (sourceMs === null) throw new RangeError("Export frame does not resolve to an active session segment.");
+        return sourceMs / 1000;
       }),
     );
     if (!baseFrames) {
@@ -406,7 +409,7 @@ throw new DOMException($t("exportCancelled"), "AbortError");
       }
       const sourceMs = timelineToSourceMs(request.snapshot.composition, time * 1000, fallbackVideo.duration * 1000);
       if (!baseFrames && sourceMs !== null && Math.abs(fallbackVideo.currentTime - sourceMs / 1000) > 0.001) {
-        fallbackVideo.currentTime = sourceMs / 1000 * (request.snapshot.composition.baseVideoPlaybackRate ?? 1);
+        fallbackVideo.currentTime = sourceMs / 1000;
         await waitFor(fallbackVideo, "seeked");
       }
       const baseFrame = baseFrames ? await baseFrames.frameAt(frame) : null;

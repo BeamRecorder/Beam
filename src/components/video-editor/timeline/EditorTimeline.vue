@@ -9,6 +9,7 @@ import type { ProjectComposition } from '../composition/composition-types';
 const props = defineProps<{
   currentTime: number;
   duration: number;
+  sourceDurationMs: number;
   isPlaying: boolean;
   videoSrc?: string | null;
   editorData?: ProjectEditorData | null;
@@ -91,6 +92,7 @@ onUnmounted(() => {
     <TimelineTracks
       :current-time="currentTime"
       :duration="duration"
+      :source-duration-ms="sourceDurationMs"
       :zoom-level="zoomLevel"
       @update:zoom-level="emit('update:zoomLevel', $event)"
       :video-src="videoSrc || null"

@@ -342,18 +342,33 @@ onMounted(() => {
 });
 
 const rawNativeDuration = ref(0);
+const sourceDurationMs = computed(() => rawNativeDuration.value > 0
+  ? Math.round(rawNativeDuration.value * 1000)
+  : Math.max(0, Math.round((props.editorData?.manifest.durationNs ?? 0) / 1_000_000)));
 const handleDurationChange = (nativeDuration: number) => {
   rawNativeDuration.value = nativeDuration;
-  duration.value = sessionTimelineDuration(composition.value, nativeDuration * 1000) / 1000 / (composition.value.baseVideoPlaybackRate ?? 1.0);
+  duration.value = sessionTimelineDuration(composition.value, nativeDuration * 1000) / 1000;
 };
 
 watch(
-  () => [composition.value.baseVideoPlaybackRate ?? 1.0, composition.value.sessionSegments],
-  ([rate]) => {
+  () => composition.value.sessionSegments,
+  () => {
     if (rawNativeDuration.value > 0) {
-      duration.value = sessionTimelineDuration(composition.value, rawNativeDuration.value * 1000) / 1000 / rate;
+      duration.value = sessionTimelineDuration(composition.value, rawNativeDuration.value * 1000) / 1000;
     }
   },
+);
+
+watch(
+  () => [composition.value.sessionSegments, sourceDurationMs.value],
+  () => {
+    if (sourceDurationMs.value <= 0) return;
+    if (sessionTimelineDuration(composition.value, sourceDurationMs.value) === 0) {
+      isPlaying.value = false;
+      currentTime.value = duration.value;
+    }
+  },
+  { deep: true },
 );
 
 onBeforeUnmount(() => {
@@ -509,6 +524,7 @@ onBeforeUnmount(() => {
           v-model:currentTime="currentTime"
           v-model:isPlaying="isPlaying"
           :duration="duration"
+          :source-duration-ms="sourceDurationMs"
           v-model:zoom-level="timelineZoomLevel"
           :video-src="playerVideoSrc"
           :editor-data="editorData"

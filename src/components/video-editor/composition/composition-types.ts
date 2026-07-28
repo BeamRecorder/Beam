@@ -126,8 +126,16 @@ export interface TimelineRange { startMs: number; endMs: number; }
  * session media to the left. */
 export interface SessionSegment {
   id: string;
+  /** Immutable bounds of this segment in the captured source. */
   sourceStartMs: number;
   sourceEndMs: number;
+  /** Editable bounds rendered on the compacted timeline. Older projects omit
+   * these fields; they are normalized to the immutable source bounds. */
+  activeStartMs?: number;
+  activeEndMs?: number;
+  /** Clip-local presentation and speed. These must not leak to sibling cuts. */
+  playbackRate?: number;
+  appearance?: ClipAppearance;
   active: boolean;
 }
 

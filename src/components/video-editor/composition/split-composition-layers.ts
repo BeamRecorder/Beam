@@ -14,11 +14,12 @@ export function splitCompositionLayersAt(
   atMs: number,
   baseDurationMs: number,
   idFactory: IdFactory = () => crypto.randomUUID(),
+  sessionAtMs = atMs,
 ): ProjectComposition {
   const cutMs = Math.round(atMs)
   if (!Number.isFinite(cutMs)) return composition
 
-  const nextComposition = splitSessionAtTimeline(composition, cutMs, baseDurationMs)
+  const nextComposition = splitSessionAtTimeline(composition, Math.round(sessionAtMs), baseDurationMs)
 
   const targetIds = new Set(
     composition.layers

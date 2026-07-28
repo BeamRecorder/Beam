@@ -6,7 +6,7 @@ import type { ProjectEditorData } from "../../../../api/types/capture-api";
 import type { ProjectComposition } from "../../composition/composition-types";
 import { cameraLayers } from "../../composition/webcam/camera-composition";
 import { visualTracks } from "../../composition/visual-stack";
-import { sessionSegments } from "../../composition/base-video-ranges";
+import { sessionSegments, timelineToSourceMs } from "../../composition/base-video-ranges";
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import {
   timelinePercentStyle,
@@ -17,6 +17,7 @@ import {
 export interface TimelineTracksProps {
   currentTime: number;
   duration: number;
+  sourceDurationMs: number;
   zoomLevel: number;
   videoSrc: string | null;
   editorData?: ProjectEditorData | null;
@@ -68,11 +69,11 @@ export function useTimelineTracks(
     () => null,
   );
   const baseVideoSegments = computed(() => {
-    const durationMs = Math.round(props.duration * 1000);
-    return sessionSegments(props.composition, durationMs).map((segment) => ({
+    return sessionSegments(props.composition, props.sourceDurationMs).map((segment) => ({
       id: `base-video:${segment.id}`,
       startMs: segment.timelineStartMs,
       endMs: segment.timelineEndMs,
+      playbackRate: segment.playbackRate,
       deleted: !segment.active,
     })).filter((segment) => !segment.deleted);
   });
@@ -305,6 +306,18 @@ export function useTimelineTracks(
 
   const thumbnailStyle = (second: number) =>
     timelinePercentStyle(props.duration, second);
+  const sourceSecondAtTimelineSecond = (second: number) => {
+    const sourceMs = timelineToSourceMs(
+      props.composition,
+      second * 1000,
+      props.sourceDurationMs,
+    );
+    return sourceMs === null ? null : Math.floor(sourceMs / 1000);
+  };
+  const thumbnailAtTimelineSecond = (second: number) => {
+    const sourceSecond = sourceSecondAtTimelineSecond(second);
+    return sourceSecond === null ? undefined : thumbnails[sourceSecond];
+  };
   const rulerMarkerStyle = (second: number) => ({
     left: timelinePercentStyle(props.duration, second).left,
   });
@@ -420,7 +433,7 @@ export function useTimelineTracks(
     }
 
     if (visibleSeconds.length > 0) {
-      requestVisibleFrames(visibleSeconds);
+      requestVisibleFrames([...new Set(visibleSeconds.map(sourceSecondAtTimelineSecond).filter((second): second is number => second !== null))]);
       if (cameraMediaSrc.value) {
         requestWebcamFrames(visibleSeconds);
       }
@@ -746,6 +759,7 @@ export function useTimelineTracks(
     visibleTimelineSeconds,
     visibleRulerSeconds,
     thumbnailStyle,
+    thumbnailAtTimelineSecond,
     rulerMarkerStyle,
     cameraThumbnailSeconds,
     cameraThumbnailStyle,

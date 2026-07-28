@@ -111,9 +111,13 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
         }
         videoEl
           .play()
-          .catch((error) =>
-            console.error("Failed to play video element:", error),
-          );
+          .catch((error: unknown) => {
+            // A seek or a user pause may legitimately supersede play() before
+            // the browser has resolved it. It is not a playback failure.
+            if (!(error instanceof DOMException && error.name === "AbortError")) {
+              console.error("Failed to play video element:", error);
+            }
+          });
       } else {
         videoEl.pause();
       }
@@ -123,8 +127,7 @@ export function useCanvasVideoElement(options: UseCanvasVideoElementOptions) {
   watch(
     () => options.currentTime(),
     (time) => {
-      const rate = options.playbackRate?.() ?? 1.0;
-      const targetSourceTime = (options.sourceTimeAt?.(time, videoEl.duration) ?? time) * rate;
+      const targetSourceTime = options.sourceTimeAt?.(time, videoEl.duration) ?? time;
       const clampedTime = Math.max(0, Math.min(videoEl.duration || 0, targetSourceTime));
       const drift = Math.abs(videoEl.currentTime - clampedTime);
       const isPlaying = options.isPlaying();

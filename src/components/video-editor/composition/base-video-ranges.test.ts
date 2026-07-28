@@ -40,7 +40,7 @@ describe("session segments", () => {
     const id = cut.sessionSegments![1].id;
     const shortened = trimSessionSegment(cut, id, "start", 1_500, 3_000);
     const restored = trimSessionSegment(shortened, id, "start", 500, 3_000);
-    expect(restored.sessionSegments![1].sourceStartMs).toBe(1_000);
+    expect(restored.sessionSegments![1]).toMatchObject({ sourceStartMs: 1_000, activeStartMs: 1_000 });
   });
 
   it("trims the end and can extend it again", () => {
@@ -48,7 +48,23 @@ describe("session segments", () => {
     const id = cut.sessionSegments![1].id;
     const shortened = trimSessionSegment(cut, id, "end", 2_000, 3_000);
     const restored = trimSessionSegment(shortened, id, "end", 3_000, 3_000);
-    expect(restored.sessionSegments![1].sourceEndMs).toBe(3_000);
+    expect(restored.sessionSegments![1]).toMatchObject({ sourceEndMs: 3_000, activeEndMs: 3_000 });
+  });
+
+  it("maps both ends of an active segment without falling back to zero", () => {
+    const cut = splitSessionAtTimeline(empty(), 1_000, 3_000);
+    expect(timelineToSourceMs(cut, 0, 3_000)).toBe(0);
+    expect(timelineToSourceMs(cut, 3_000, 3_000)).toBe(3_000);
+    expect(sourceToTimelineMs(cut, 1_000, 3_000)).toBe(1_000);
+    expect(sourceToTimelineMs(cut, 3_000, 3_000)).toBe(3_000);
+  });
+
+  it("keeps immutable source bounds while a trim changes only active bounds", () => {
+    const cut = splitSessionAtTimeline(empty(), 1_000, 3_000);
+    const id = cut.sessionSegments![1].id;
+    const trimmed = trimSessionSegment(cut, id, "start", 1_500, 3_000);
+    expect(trimmed.sessionSegments![1]).toMatchObject({ sourceStartMs: 1_000, sourceEndMs: 3_000, activeStartMs: 1_500, activeEndMs: 3_000 });
+    expect(sessionTimelineDuration(trimmed, 3_000)).toBe(2_500);
   });
 
   it("maps source to compacted timeline only when its segment is active", () => {

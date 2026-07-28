@@ -78,6 +78,7 @@ const frameStyle = (frame: { timelineSecond: number }) => ({
     </div>
     <span class="trim-handle start" :title="t('trimStart')" @pointerdown="emit('trim', { event: $event, edge: 'start' })" />
     <span class="clip-label-overlay"><span class="clip-label-text">{{ layer.name }}</span></span>
+    <span v-if="layer.playbackRate && Math.abs(layer.playbackRate - 1) > .01" class="speed-badge">{{ layer.playbackRate.toFixed(2) }}×</span>
     <span class="trim-handle end" :title="t('trimEnd')" @pointerdown="emit('trim', { event: $event, edge: 'end' })" />
   </button>
 </template>
@@ -95,4 +96,5 @@ const frameStyle = (frame: { timelineSecond: number }) => ({
 .trim-handle.end { right: 0; }
 .clip-label-overlay { position: absolute; z-index: 35; left: 8px; top: 3px; display: block; max-width: calc(100% - 16px); overflow: hidden; white-space: nowrap; padding: 2px 5px; border: 1px solid rgba(255, 255, 255, .16); border-radius: var(--radius-sm); background: rgba(12, 14, 20, .72); backdrop-filter: blur(6px); color: #fff; font-size: 9px; font-weight: 800; line-height: 1.1; text-shadow: 0 1px 2px rgba(0, 0, 0, .9); }
 .clip-label-text { display: inline-block; white-space: nowrap; transition: transform .05s linear; }
+.speed-badge { position: absolute; z-index: 35; top: 4px; right: 5px; padding: 1px 4px; border-radius: var(--radius-xs); background: var(--color-primary); color: white; font-size: 9px; font-weight: 700; }
 </style>

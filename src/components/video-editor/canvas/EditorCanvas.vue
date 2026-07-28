@@ -101,13 +101,21 @@ function renderOnce() {
   }
 }
 
+const sessionSourceDurationMs = () => Math.max(
+  0,
+  Math.round((props.editorData?.manifest.durationNs ?? 0) / 1_000_000),
+  ...(props.composition.sessionSegments?.map((segment) => segment.sourceEndMs) ?? []),
+);
+
 // 1. HTMLVideoElement management & playback sync
 const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
   videoSrc: () => props.videoSrc,
   editorData: () => props.editorData,
   isPlaying: () => props.isPlaying,
   currentTime: () => props.currentTime,
-  playbackRate: () => props.composition.baseVideoPlaybackRate ?? 1.0,
+  playbackRate: () => sessionSegments(props.composition, sessionSourceDurationMs())
+    .find((segment) => props.currentTime * 1000 >= segment.timelineStartMs && props.currentTime * 1000 <= segment.timelineEndMs)
+    ?.playbackRate ?? 1,
   sourceTimeAt: (timelineTime, sourceDuration) => {
     const sourceMs = timelineToSourceMs(props.composition, timelineTime * 1000, sourceDuration * 1000);
     return sourceMs === null ? null : sourceMs / 1000;
@@ -328,15 +336,19 @@ const renderCanvas = () => {
   }
 
   if (props.isPlaying && videoEl.readyState >= 1) {
-    const rate = props.composition.baseVideoPlaybackRate ?? 1.0;
-    const sourceTime = videoEl.currentTime / rate;
+    const sourceTime = videoEl.currentTime;
     const timelineMs = sourceToTimelineMs(props.composition, sourceTime * 1000, videoEl.duration * 1000);
     if (timelineMs === null && !videoEl.ended) {
       const next = sessionSegments(props.composition, videoEl.duration * 1000)
-        .find((segment) => segment.active && segment.sourceStartMs > sourceTime * 1000);
-      if (next) videoEl.currentTime = next.sourceStartMs / 1000 * rate;
+        .find((segment) => segment.active && segment.activeStartMs >= sourceTime * 1000);
+      if (next) {
+        videoEl.currentTime = next.activeStartMs / 1000;
+        return;
+      }
+      emit("update:isPlaying", false);
+      return;
     }
-    emit("update:currentTime", videoEl.ended ? 0 : (timelineMs ?? 0) / 1000);
+    emit("update:currentTime", videoEl.ended ? props.duration : timelineMs / 1000);
   }
 };
 

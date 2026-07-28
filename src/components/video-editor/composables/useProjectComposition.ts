@@ -24,7 +24,7 @@ import {
 import { normalizedVisualTrackOrder } from "../composition/visual-stack";
 import { splitCompositionLayersAt } from "../composition/split-composition-layers";
 import { deleteCompositionLayer } from "../composition/delete-composition-layer";
-import { baseVideoSegmentAtTime, baseVideoSegmentFromId, deleteBaseVideoSegment, trimSessionSegment } from "../composition/base-video-ranges";
+import { baseVideoSegmentAtTime, baseVideoSegmentFromId, deleteBaseVideoSegment, sessionSegmentAtTimeline, sessionSegments, sessionTimelineDuration, trimSessionSegment } from "../composition/base-video-ranges";
 import {
   detachSidecarLink,
   resolveSidecarLinks,
@@ -69,6 +69,18 @@ export function useProjectComposition(options: {
     ...(composition.value.sessionSegments?.map((segment) => segment.sourceEndMs) ?? []),
   );
   const selectedCompositionLayerId = ref<string | null>(null);
+  const selectedBaseSegment = computed(() => {
+    const id = selectedCompositionLayerId.value ? baseVideoSegmentFromId(selectedCompositionLayerId.value) : null;
+    return id ? sessionSegments(composition.value, sessionSourceDurationMs()).find((segment) => segment.id === id) ?? null : null;
+  });
+
+  const deleteSessionAndPositionPlayhead = (segmentId: string) => {
+    const sourceDuration = sessionSourceDurationMs();
+    const deletedTimelineMs = Math.round(currentTimeSec.value * 1000);
+    composition.value = deleteBaseVideoSegment(composition.value, segmentId, sourceDuration);
+    const next = sessionSegmentAtTimeline(composition.value, deletedTimelineMs, sourceDuration);
+    currentTimeSec.value = (next?.timelineStartMs ?? sessionTimelineDuration(composition.value, sourceDuration)) / 1000;
+  };
 
   const selectedCompositionLayer = computed(
     () =>
@@ -85,7 +97,7 @@ export function useProjectComposition(options: {
         name: "Screen recording",
         timelineStartMs: 0,
         timelineDurationMs: durationMs.value,
-        playbackRate: composition.value.baseVideoPlaybackRate ?? 1.0,
+        playbackRate: selectedBaseSegment.value?.playbackRate ?? composition.value.baseVideoPlaybackRate ?? 1.0,
         enabled: true,
         sidecarLinks: resolveSidecarLinks(composition.value, editorData.value, selectedCompositionLayerId.value),
         isMirrored: composition.value.baseVideoIsMirrored ?? false,
@@ -95,7 +107,7 @@ export function useProjectComposition(options: {
           width: 1,
           height: 1,
         },
-        ...(composition.value.baseVideoAppearance ?? DEFAULT_APPEARANCE),
+        ...(selectedBaseSegment.value?.appearance ?? composition.value.baseVideoAppearance ?? DEFAULT_APPEARANCE),
       };
     }
     if (!selectedCompositionLayer.value) return null;
@@ -189,6 +201,28 @@ export function useProjectComposition(options: {
     composition.value = saved;
   };
 
+  let playbackRateSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  let playbackRateRevision = 0;
+  const schedulePlaybackRateSave = () => {
+    playbackRateRevision += 1;
+    const revision = playbackRateRevision;
+    if (playbackRateSaveTimer) clearTimeout(playbackRateSaveTimer);
+    playbackRateSaveTimer = setTimeout(async () => {
+      playbackRateSaveTimer = null;
+      if (!project.value) return;
+      try {
+        const saved = await capture.saveProjectComposition(
+          project.value.id,
+          JSON.parse(JSON.stringify(composition.value)),
+        );
+        // A response from an earlier slider position must never overwrite a newer preview.
+        if (revision === playbackRateRevision) composition.value = saved;
+      } catch (error) {
+        console.error("Failed to save clip playback rate:", error);
+      }
+    }, 180);
+  };
+
   let appearanceSaveTimer: ReturnType<typeof setTimeout> | null = null;
   let appearanceSaveChain = Promise.resolve();
   const saveAppearance = () => {
@@ -207,6 +241,11 @@ export function useProjectComposition(options: {
     appearanceSaveTimer = setTimeout(saveAppearance, 200);
   };
   onUnmounted(() => {
+    if (playbackRateSaveTimer) {
+      clearTimeout(playbackRateSaveTimer);
+      playbackRateSaveTimer = null;
+      if (project.value) void capture.saveProjectComposition(project.value.id, JSON.parse(JSON.stringify(composition.value)));
+    }
     if (!appearanceSaveTimer) return;
     clearTimeout(appearanceSaveTimer);
     saveAppearance();
@@ -253,6 +292,8 @@ export function useProjectComposition(options: {
       composition.value,
       Math.round(currentTimeSec.value * 1000),
       sessionSourceDurationMs(),
+      undefined,
+      Math.round(currentTimeSec.value * 1000),
     );
     if (next === composition.value) return;
     composition.value = next;
@@ -477,7 +518,10 @@ export function useProjectComposition(options: {
   };
 
   const selectBaseVideo = (segmentId = BASE_VIDEO_CLIP_ID) => {
-    selectedCompositionLayerId.value = segmentId;
+    const resolvedId = segmentId === BASE_VIDEO_CLIP_ID
+      ? sessionSegmentAtTimeline(composition.value, Math.round(currentTimeSec.value * 1000), sessionSourceDurationMs())?.id
+      : baseVideoSegmentFromId(segmentId);
+    selectedCompositionLayerId.value = resolvedId ? `base-video:${resolvedId}` : BASE_VIDEO_CLIP_ID;
     activeTab.value = "clip";
   };
 
@@ -487,6 +531,15 @@ export function useProjectComposition(options: {
     const selectedId = selectedCompositionLayerId.value;
     if (!selectedId) return;
     if (isBaseVideoSelection(selectedId)) {
+      const segmentId = baseVideoSegmentFromId(selectedId);
+      if (segmentId) {
+        composition.value = {
+          ...composition.value,
+          sessionSegments: sessionSegments(composition.value, sessionSourceDurationMs()).map(({ timelineStartMs: _start, timelineEndMs: _end, ...segment }) => segment.id === segmentId
+            ? { ...segment, appearance: { ...DEFAULT_APPEARANCE, ...segment.appearance, ...patch } }
+            : segment),
+        };
+      } else {
       composition.value = {
         ...composition.value,
         baseVideoAppearance: {
@@ -495,6 +548,7 @@ export function useProjectComposition(options: {
           ...patch,
         },
       };
+      }
     } else {
       composition.value = {
         ...composition.value,
@@ -639,18 +693,23 @@ export function useProjectComposition(options: {
     await saveComposition();
   };
 
-  const updateSelectedClipPlaybackRate = async (rate: number) => {
+  const updateSelectedClipPlaybackRate = (rate: number) => {
+    if (!Number.isFinite(rate) || rate < .25 || rate > 4) return;
     const selectedId = selectedCompositionLayerId.value;
     if (!selectedId) return;
     if (isBaseVideoSelection(selectedId)) {
+      const segmentId = baseVideoSegmentFromId(selectedId);
+      if (segmentId) {
+        composition.value = {
+          ...composition.value,
+          sessionSegments: sessionSegments(composition.value, sessionSourceDurationMs()).map(({ timelineStartMs: _start, timelineEndMs: _end, ...segment }) => segment.id === segmentId ? { ...segment, playbackRate: rate } : segment),
+        };
+        schedulePlaybackRateSave();
+        return;
+      }
       composition.value = {
         ...composition.value,
         baseVideoPlaybackRate: rate,
-        layers: composition.value.layers.map((layer) =>
-          composition.value.detachedSessionSidecars?.includes("camera") || !cameraLayers(composition.value).some((camera) => camera.id === layer.id)
-            ? layer
-            : { ...layer, playbackRate: rate },
-        ),
       };
     } else {
       const selected = composition.value.layers.find((layer) => layer.id === selectedId);
@@ -663,7 +722,7 @@ export function useProjectComposition(options: {
         ),
       };
     }
-    await saveComposition();
+    schedulePlaybackRateSave();
   };
 
   const updateSelectedAudioVolume = async (volume: number) => {
@@ -685,7 +744,7 @@ export function useProjectComposition(options: {
     if (!selectedId) return;
     const baseSegmentId = baseVideoSegmentFromId(selectedId);
     if (baseSegmentId) {
-      composition.value = deleteBaseVideoSegment(composition.value, baseSegmentId, sessionSourceDurationMs());
+      deleteSessionAndPositionPlayhead(baseSegmentId);
       selectedCompositionLayerId.value = null;
       await saveComposition();
       return;
@@ -693,7 +752,7 @@ export function useProjectComposition(options: {
     if (selectedId === "system-audio" || selectedId === "microphone") {
       const range = baseVideoSegmentAtTime(composition.value, Math.round(currentTimeSec.value * 1000), sessionSourceDurationMs());
       if (!range) return;
-      composition.value = deleteBaseVideoSegment(composition.value, range.id, sessionSourceDurationMs());
+      deleteSessionAndPositionPlayhead(range.id);
       selectedCompositionLayerId.value = null;
       await saveComposition();
       return;
@@ -741,7 +800,7 @@ export function useProjectComposition(options: {
     const baseSegmentId = baseVideoSegmentFromId(selectedId);
     if (baseSegmentId) {
       console.info("[timeline:delete] deleting base-video segment", baseSegmentId);
-      composition.value = deleteBaseVideoSegment(composition.value, baseSegmentId, sessionSourceDurationMs());
+      deleteSessionAndPositionPlayhead(baseSegmentId);
       selectedCompositionLayerId.value = null;
       await saveComposition();
       console.info("[timeline:delete] saved base-video segment", {
@@ -760,7 +819,7 @@ export function useProjectComposition(options: {
         return;
       }
       console.info("[timeline:delete] deleting synchronized session segment", { selectedId, range });
-      composition.value = deleteBaseVideoSegment(composition.value, range.id, sessionSourceDurationMs());
+      deleteSessionAndPositionPlayhead(range.id);
       selectedCompositionLayerId.value = null;
       await saveComposition();
       console.info("[timeline:delete] saved synchronized session segment", {
