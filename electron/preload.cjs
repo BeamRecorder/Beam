@@ -80,7 +80,6 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on("background-library:changed", callback);
       return () => ipcRenderer.removeListener("background-library:changed", callback);
     },
-    saveProjectZoomState: (projectId, zoom) => ipcRenderer.invoke("projects:save-zoom-state", { projectId, zoom }),
     createProject: (options = {}) => ipcRenderer.invoke("projects:create", options),
     renameProject: (projectId, name) => ipcRenderer.invoke("projects:rename", { projectId, name }),
     saveProjectThumbnail: (projectId, dataUrl) => ipcRenderer.invoke("projects:save-thumbnail", { projectId, dataUrl }),
