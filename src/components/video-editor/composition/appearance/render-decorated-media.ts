@@ -9,9 +9,10 @@ export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
   return typeof value === "number" ? value : (radii[value] ?? 16);
 };
 export function applyClipShadow(ctx: CanvasRenderingContext2D, appearance: ClipAppearance | undefined, width: number) {
-  const style = appearance ?? DEFAULT_CLIP_APPEARANCE;
+  const style = { ...DEFAULT_CLIP_APPEARANCE, ...appearance };
   const blur = { none: 0, sm: 10, md: 20, lg: 32 }[style.shadowSize];
-  ctx.shadowColor = style.shadowColor; ctx.shadowBlur = blur;
+  ctx.shadowColor = blur > 0 ? style.shadowColor : "transparent";
+  ctx.shadowBlur = blur;
   ctx.shadowOffsetX = style.shadowDirection === "top-left" ? -width * .018 : style.shadowDirection === "bottom-right" ? width * .018 : 0;
   ctx.shadowOffsetY = style.shadowDirection === "top-left" ? -width * .018 : style.shadowDirection === "all" ? 0 : width * .018;
 }
@@ -21,7 +22,15 @@ export function drawDecoratedMedia(ctx: CanvasRenderingContext2D, options: Decor
   const windowsOptions = { showMenu: appearance.frameShowMenu, showScrollbars: appearance.frameShowScrollbars };
   const content = frameContentRect(options.rect, appearance.frame, windowsOptions);
   const outerRadius = frameRadius(appearance.frame, radiusForAppearance(appearance), options.rect);
-  ctx.save(); applyClipShadow(ctx, appearance, options.rect.width); ctx.fillStyle = "rgba(0, 0, 0, 0.01)"; ctx.beginPath(); ctx.roundRect(options.rect.x, options.rect.y, options.rect.width, options.rect.height, outerRadius); ctx.fill(); ctx.restore();
+  if (appearance.shadowSize !== "none") {
+    ctx.save();
+    applyClipShadow(ctx, appearance, options.rect.width);
+    ctx.fillStyle = appearance.frame !== "none" ? appearance.frameColor : "#000000";
+    ctx.beginPath();
+    ctx.roundRect(options.rect.x, options.rect.y, options.rect.width, options.rect.height, outerRadius);
+    ctx.fill();
+    ctx.restore();
+  }
   const title = appearance.frameTitle.trim() || options.title;
   drawFrameChrome(ctx, options.rect, appearance.frame, title, true, appearance.frameColor, windowsOptions);
   ctx.save(); clipRect(ctx, content, appearance.frame === "none" ? radiusForAppearance(appearance) : 0);
