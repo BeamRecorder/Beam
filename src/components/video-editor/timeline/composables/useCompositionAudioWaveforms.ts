@@ -104,9 +104,29 @@ export function useCompositionAudioWaveforms(
   composition: () => ClipComposition,
   timelineDurationSeconds: () => number,
 ) {
-  const bars = ref<Record<string, number[]>>({});
+  const rawBars = ref<Record<string, number[]>>({});
   const workers = new Set<Worker>();
   let generation = 0;
+
+  const bars = computed<Record<string, number[]>>(() => {
+    const volumes = new Map(
+      composition().clips
+        .filter(isAudioClip)
+        .map((clip) => [clip.id, Math.max(0, Math.min(2, clip.volume / 100))]),
+    );
+    return Object.fromEntries(
+      Object.entries(rawBars.value).map(([clipId, heights]) => {
+        const gain = volumes.get(clipId) ?? 1;
+        return [
+          clipId,
+          heights.map((height) => gain <= 0
+            ? 0
+            : Math.max(1, Math.min(MAX_BAR_HEIGHT, Math.round(height * gain))),
+          ),
+        ];
+      }),
+    );
+  });
 
   const stopWorkers = () => {
     for (const worker of workers) worker.terminate();
@@ -174,7 +194,7 @@ export function useCompositionAudioWaveforms(
         next[clip.id] = [];
       }
     }));
-    if (currentGeneration === generation) bars.value = next;
+    if (currentGeneration === generation) rawBars.value = next;
   }, { immediate: true });
 
   onUnmounted(() => {
