@@ -83,18 +83,27 @@ const { bars: audioBars } = useCompositionAudioWaveforms(() => props.composition
 const tracksScrollRef = ref<HTMLDivElement | null>(null);
 const tracksViewportRef = ref<HTMLDivElement | null>(null);
 const ticksAreaRef = ref<HTMLDivElement | null>(null);
+const rulerWidth = ref(0);
 const tracksWidthStyle = computed(() => ({
   width: `calc(${props.zoomLevel}% + 230px)`,
   minWidth: "calc(100% + 230px)",
 }));
 const playheadStyle = computed(() => ({ left: `${props.duration > 0 ? props.currentTime / props.duration * 100 : 0}%` }));
-const rulerStep = computed(() => props.duration > 900 ? 10 : props.duration > 300 ? 5 : 1);
+const rulerLabelStep = computed(() => {
+  const pixelsPerSecond = rulerWidth.value / Math.max(1, props.duration);
+  return [1, 2, 5, 10, 15, 30, 60, 120, 300, 600].find((step) => step * pixelsPerSecond >= 68) ?? 600;
+});
+const rulerTickStep = computed(() => rulerLabelStep.value <= 5 ? 1 : rulerLabelStep.value / 5);
 const rulerSeconds = computed(() => {
   const result: number[] = [];
-  for (let second = 0; second <= Math.ceil(props.duration); second += rulerStep.value) result.push(second);
+  for (let second = 0; second <= Math.ceil(props.duration); second += rulerTickStep.value) result.push(second);
   return result;
 });
 const rulerMarkerStyle = (second: number) => ({ left: `${second / Math.max(1, props.duration) * 100}%` });
+const isRulerLabel = (second: number) => second % rulerLabelStep.value === 0;
+const formatRulerLabel = (second: number) => second < 60
+  ? `${second}s`
+  : `${Math.floor(second / 60)}:${(second % 60).toString().padStart(2, "0")}`;
 
 const visibleStartSecond = ref(0);
 const visibleEndSecond = ref(60);
@@ -110,7 +119,9 @@ let resizeObserver: ResizeObserver | null = null;
 const updateVisibleRange = () => {
   const scroll = tracksScrollRef.value;
   const ticks = ticksAreaRef.value;
-  if (!scroll || !ticks || props.duration <= 0) return;
+  if (!scroll || !ticks) return;
+  rulerWidth.value = ticks.clientWidth;
+  if (props.duration <= 0) return;
   const timelineLeft = 120 + 80;
   const startPixel = Math.max(0, scroll.scrollLeft - timelineLeft);
   const endPixel = Math.max(0, scroll.scrollLeft + scroll.clientWidth - timelineLeft);
@@ -129,6 +140,7 @@ onMounted(() => {
   if (tracksScrollRef.value) {
     resizeObserver = new ResizeObserver(updateVisibleRange);
     resizeObserver.observe(tracksScrollRef.value);
+    if (tracksViewportRef.value) resizeObserver.observe(tracksViewportRef.value);
   }
 });
 onUnmounted(() => {
@@ -419,10 +431,10 @@ const beginReorder = (event: PointerEvent, clipId: string) => {
             v-for="second in rulerSeconds"
             :key="second"
             class="ruler-marker"
-            :class="{ 'is-major': second % 5 === 0 }"
+            :class="{ 'is-major': isRulerLabel(second) }"
             :style="rulerMarkerStyle(second)"
           >
-            <span v-if="second % 5 === 0" class="marker-label">{{ second }}s</span>
+            <span v-if="isRulerLabel(second)" class="marker-label">{{ formatRulerLabel(second) }}</span>
             <span class="marker-tick" />
           </div>
           <div class="timeline-playhead" :style="playheadStyle"><span class="playhead-knob" /></div>
