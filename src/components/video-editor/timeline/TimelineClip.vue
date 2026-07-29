@@ -21,12 +21,12 @@ const emit = defineEmits<{
   (event: "trim", value: { event: PointerEvent; edge: "start" | "end" }): void;
 }>();
 
-const source = computed(() => props.asset?.kind === "video" ? props.asset.src : null);
+const source = computed(() => props.clip.kind !== "audio" && props.asset?.kind === "video" ? props.asset.src : null);
 const { thumbnails, requestVisibleFrames } = useThumbnails(source);
 const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs);
 const frames = computed(() => props.visibleSeconds.flatMap((timelineSecond) => {
   const timelineMs = timelineSecond * 1_000;
-  if (timelineMs < props.clip.timelineStartMs || timelineMs >= clipEndMs.value || props.asset?.kind !== "video") return [];
+  if (props.clip.kind === "audio" || timelineMs < props.clip.timelineStartMs || timelineMs >= clipEndMs.value || props.asset?.kind !== "video") return [];
   const sourceMs = props.clip.sourceInMs + (timelineMs - props.clip.timelineStartMs) * props.clip.playbackRate;
   return [{ timelineSecond, mediaSecond: Math.max(0, Math.floor(sourceMs / 1_000)) }];
 }));
@@ -91,17 +91,17 @@ onUnmounted(() => stopMarquee());
     @pointerenter="startMarquee"
     @pointerleave="stopMarqueeForEvent"
   >
-    <div v-if="asset?.kind === 'video'" class="thumbnails-track">
+    <div v-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
+      <span v-for="(height, index) in waveformBars" :key="index" :style="{ height: `${height}px` }" />
+      <span v-if="!waveformBars?.length" class="waveform-unavailable">{{ t('waveformUnavailable') }}</span>
+    </div>
+    <div v-else-if="asset?.kind === 'video'" class="thumbnails-track">
       <div v-for="frame in frames" :key="`${frame.timelineSecond}:${frame.mediaSecond}`" class="thumbnail-frame" :style="frameStyle(frame)">
         <img v-if="thumbnails[frame.mediaSecond]" :src="thumbnails[frame.mediaSecond]" class="thumbnail-img" alt="" draggable="false" />
         <Skeleton v-else width="100%" height="100%" radius="0" />
       </div>
     </div>
     <img v-else-if="asset?.kind === 'image' && asset.src" :src="asset.src" class="image-preview" alt="" draggable="false" />
-    <div v-else-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
-      <span v-for="(height, index) in waveformBars" :key="index" :style="{ height: `${height}px` }" />
-      <span v-if="!waveformBars?.length" class="waveform-unavailable">{{ t('waveformUnavailable') }}</span>
-    </div>
     <span class="trim-handle start" :title="t('trimStart')" @pointerdown.stop="emit('trim', { event: $event, edge: 'start' })">
       <span v-if="trimState?.edge === 'start'" class="trim-side-badge">{{ formatTrimTime(trimState.durationMs) }}</span>
     </span>
