@@ -17,7 +17,7 @@ const cloneCaption = (clip: CaptionClip): CaptionClip => ({
 export const useCaptionDraft = (
   clip: Ref<CaptionClip | null>,
   emitUpdate: (clip: CaptionClip) => void,
-  delayMs = 500,
+  delayMs = 16,
 ) => {
   const draft = ref<CaptionClip | null>(null);
   let timer: ReturnType<typeof setTimeout> | null = null;
