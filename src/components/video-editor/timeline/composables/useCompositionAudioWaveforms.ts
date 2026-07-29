@@ -175,8 +175,12 @@ export function useCompositionAudioWaveforms(
       }];
     });
   });
+  const sourceSignature = computed(() => sources.value
+    .map((clip) => `${clip.id}:${clip.src}:${clip.sourceInMs}:${clip.sourceDurationMs}:${clip.timelineDurationMs}`)
+    .join("|"));
 
-  watch(sources, async (clips) => {
+  watch(sourceSignature, async () => {
+    const clips = sources.value;
     const currentGeneration = ++generation;
     stopWorkers();
     const next: Record<string, number[]> = {};
