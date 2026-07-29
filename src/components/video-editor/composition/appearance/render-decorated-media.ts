@@ -1,6 +1,6 @@
 import type { ClipAppearance } from "../composition-types";
 import type { DecoratedMediaOptions, MediaRect } from "./appearance-types";
-import { drawFrameChrome, frameContentRect, frameRadius } from "./frames";
+import { drawFrameChrome, frameContentRect } from "./frames";
 
 export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = { cornerRadius: "sm", shadowSize: "md", shadowColor: "#000000", shadowDirection: "bottom", borderEnabled: false, borderColor: "#000000", borderWidth: 1, frame: "none", frameTitle: "", frameColor: "#c0c0c0", frameShowMenu: true, frameShowScrollbars: true };
 export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
@@ -21,7 +21,7 @@ export function drawDecoratedMedia(ctx: CanvasRenderingContext2D, options: Decor
   const appearance = { ...DEFAULT_CLIP_APPEARANCE, ...options.appearance };
   const windowsOptions = { showMenu: appearance.frameShowMenu, showScrollbars: appearance.frameShowScrollbars };
   const content = frameContentRect(options.rect, appearance.frame, windowsOptions);
-  const outerRadius = frameRadius(appearance.frame, radiusForAppearance(appearance), options.rect);
+  const outerRadius = Math.min(radiusForAppearance(appearance), options.rect.width / 2, options.rect.height / 2);
   if (appearance.shadowSize !== "none") {
     ctx.save();
     applyClipShadow(ctx, appearance, options.rect.width);
@@ -36,7 +36,7 @@ export function drawDecoratedMedia(ctx: CanvasRenderingContext2D, options: Decor
   clipRect(ctx, options.rect, outerRadius);
   drawFrameChrome(ctx, options.rect, appearance.frame, title, true, appearance.frameColor, windowsOptions);
   ctx.save();
-  clipRect(ctx, content, appearance.frame === "none" ? radiusForAppearance(appearance) : 0);
+  clipRect(ctx, content, appearance.frame === "none" ? outerRadius : 0);
   if (options.mirrored) { ctx.translate(content.x * 2 + content.width, 0); ctx.scale(-1, 1); }
   const source = options.sourceRect;
   if (source) ctx.drawImage(options.source, source.x, source.y, source.width, source.height, content.x, content.y, content.width, content.height);
