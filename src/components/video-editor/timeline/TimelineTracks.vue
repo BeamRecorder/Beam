@@ -18,7 +18,6 @@ import {
   isCaptionClip,
   isVisualClip,
   type AudioClip,
-  type CaptionClip,
   type Clip,
   type ClipComposition,
   type VisualClip,
@@ -134,6 +133,10 @@ const timeAt = (clientX: number) => {
   const rect = target.getBoundingClientRect();
   const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
   return Math.round(fraction * durationMs.value);
+};
+const centeredStartAt = (clientX: number, lengthMs: number) => {
+  const maximumStart = Math.max(0, durationMs.value - lengthMs);
+  return Math.round(Math.max(0, Math.min(maximumStart, timeAt(clientX) - lengthMs / 2)));
 };
 const scrubAt = (clientX: number) => emit("update:currentTime", timeAt(clientX) / 1_000);
 const beginScrub = (event: PointerEvent) => {
@@ -277,26 +280,30 @@ const hoverCaptionTimeMs = ref<number | null>(null);
 const occupied = (startMs: number, endMs: number, intervals: Array<{ startMs: number; endMs: number }>) =>
   intervals.some((interval) => interval.startMs < endMs && interval.endMs > startMs);
 const hoverAt = (event: MouseEvent, kind: "zoom" | "caption") => {
-  const timeMs = timeAt(event.clientX);
   if (kind === "zoom") {
-    hoverZoomTimeMs.value = occupied(timeMs, timeMs + DEFAULT_ZOOM_DURATION_MS, props.zoomElements) ? null : timeMs;
+    const startMs = centeredStartAt(event.clientX, DEFAULT_ZOOM_DURATION_MS);
+    hoverZoomTimeMs.value = occupied(startMs, startMs + DEFAULT_ZOOM_DURATION_MS, props.zoomElements) ? null : startMs;
     return;
   }
+  const startMs = centeredStartAt(event.clientX, DEFAULT_CAPTION_DURATION_MS);
   const captions = captionClips.value.map((clip) => ({ startMs: clip.timelineStartMs, endMs: clip.timelineStartMs + clip.timelineDurationMs }));
-  hoverCaptionTimeMs.value = occupied(timeMs, timeMs + DEFAULT_CAPTION_DURATION_MS, captions) ? null : timeMs;
+  hoverCaptionTimeMs.value = occupied(startMs, startMs + DEFAULT_CAPTION_DURATION_MS, captions) ? null : startMs;
 };
 const leaveTrack = (kind: "zoom" | "caption") => {
   if (kind === "zoom") hoverZoomTimeMs.value = null;
   else hoverCaptionTimeMs.value = null;
 };
 const addAt = (event: MouseEvent, kind: "zoom" | "caption") => {
-  const timeMs = timeAt(event.clientX);
+  event.preventDefault();
+  event.stopPropagation();
   if (kind === "zoom") {
-    if (!occupied(timeMs, timeMs + DEFAULT_ZOOM_DURATION_MS, props.zoomElements)) emit("add:zoom", timeMs);
+    const startMs = centeredStartAt(event.clientX, DEFAULT_ZOOM_DURATION_MS);
+    if (!occupied(startMs, startMs + DEFAULT_ZOOM_DURATION_MS, props.zoomElements)) emit("add:zoom", startMs);
     return;
   }
+  const startMs = centeredStartAt(event.clientX, DEFAULT_CAPTION_DURATION_MS);
   const captions = captionClips.value.map((clip) => ({ startMs: clip.timelineStartMs, endMs: clip.timelineStartMs + clip.timelineDurationMs }));
-  if (!occupied(timeMs, timeMs + DEFAULT_CAPTION_DURATION_MS, captions)) emit("add:caption", timeMs);
+  if (!occupied(startMs, startMs + DEFAULT_CAPTION_DURATION_MS, captions)) emit("add:caption", startMs);
 };
 
 const toggleGroup = (clips: Clip[]) => {
@@ -379,7 +386,7 @@ const finishReorder = (event: DragEvent, targetId: string) => {
 
         <div class="track-row cursor-track">
           <div class="track-info static-info"><MousePointer class="track-icon" /><span class="track-title">{{ t('zooms') }}</span></div>
-          <div class="track-content cursor-content" :title="t('clickToAddZoom')" @mousemove="hoverAt($event, 'zoom')" @mouseleave="leaveTrack('zoom')" @click="addAt($event, 'zoom')">
+          <div class="track-content cursor-content" :title="t('clickToAddZoom')" @pointerdown.stop @mousemove="hoverAt($event, 'zoom')" @mouseleave="leaveTrack('zoom')" @click.stop="addAt($event, 'zoom')">
             <div v-if="hoverZoomTimeMs !== null" class="cursor-zoom-indicator preview-ghost" :style="percentageStyle(hoverZoomTimeMs, DEFAULT_ZOOM_DURATION_MS)">{{ t('addZoom') }}</div>
             <button
               v-for="zoom in zoomElements"
@@ -404,7 +411,7 @@ const finishReorder = (event: DragEvent, targetId: string) => {
 
         <div class="track-row annotation-track">
           <div class="track-info static-info"><Type class="track-icon" /><span class="track-title">{{ t('captions') }}</span></div>
-          <div class="track-content annotation-content" :title="t('clickToAddCaption')" @mousemove="hoverAt($event, 'caption')" @mouseleave="leaveTrack('caption')" @click="addAt($event, 'caption')">
+          <div class="track-content annotation-content" :title="t('clickToAddCaption')" @pointerdown.stop @mousemove="hoverAt($event, 'caption')" @mouseleave="leaveTrack('caption')" @click.stop="addAt($event, 'caption')">
             <div v-if="hoverCaptionTimeMs !== null" class="annotation-indicator preview-ghost" :style="percentageStyle(hoverCaptionTimeMs, DEFAULT_CAPTION_DURATION_MS)">{{ t('addCaption') }}</div>
             <button
               v-for="clip in captionClips"
