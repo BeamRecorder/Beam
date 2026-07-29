@@ -86,20 +86,29 @@ const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
+let playbackAnchorSeconds = 0;
+let playbackAnchorTime = performance.now();
 let drawVisualStack: ((ctx: CanvasRenderingContext2D, videoWindow: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number }, drawScreen: () => void) => void) | null = null;
 
-const activeScreenClip = computed<VisualClip | null>(() =>
-  activeClipsAt(props.composition, props.currentTime * 1_000).find((clip): clip is VisualClip => clip.kind === "screen")
-  ?? props.composition.clips.find((clip): clip is VisualClip => clip.kind === "screen" && clip.enabled)
-  ?? null,
+const resetPlaybackClock = (seconds = props.currentTime) => {
+  playbackAnchorSeconds = Math.max(0, Math.min(props.duration, seconds));
+  playbackAnchorTime = performance.now();
+};
+const playbackClockSeconds = () => playbackAnchorSeconds + (performance.now() - playbackAnchorTime) / 1_000;
+
+const primaryScreenClip = computed<VisualClip | null>(() =>
+  props.composition.clips.find((clip): clip is VisualClip => clip.kind === "screen" && clip.enabled) ?? null,
 );
-const activeScreenAsset = computed(() => {
-  const clip = activeScreenClip.value;
+const activeScreenClip = computed<VisualClip | null>(() =>
+  activeClipsAt(props.composition, props.currentTime * 1_000).find((clip): clip is VisualClip => clip.kind === "screen") ?? null,
+);
+const screenAsset = computed(() => {
+  const clip = primaryScreenClip.value;
   return clip ? props.composition.assets.find((asset) => asset.id === clip.assetId) ?? null : null;
 });
 const activeScreenSourceTime = computed(() => {
   const clip = activeScreenClip.value;
-  if (!clip) return 0;
+  if (!clip) return primaryScreenClip.value?.sourceInMs ? primaryScreenClip.value.sourceInMs / 1_000 : 0;
   return (sourceTimeAt(clip, props.currentTime * 1_000) ?? clip.sourceInMs) / 1_000;
 });
 const previewFrameStyle = computed(() => {
@@ -112,11 +121,11 @@ function renderOnce() {
 }
 
 const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
-  videoSrc: () => activeScreenAsset.value?.src ?? props.videoSrc ?? "",
+  videoSrc: () => screenAsset.value?.src ?? props.videoSrc ?? "",
   isPlaying: () => props.isPlaying && Boolean(activeScreenClip.value),
   sourceTime: () => activeScreenSourceTime.value,
   playbackRate: () => activeScreenClip.value?.playbackRate ?? 1,
-  onDurationChange: (duration) => emit("duration-change", duration),
+  onDurationChange: () => undefined,
   onRenderOnce: renderOnce,
 });
 const { drawBackground, syncVideoPlayback, isTransitioningBackground } = useCanvasBackground(
@@ -164,13 +173,20 @@ cameraZoom = useCameraZoom({
 });
 
 watch(() => props.isPlaying, (playing) => {
+  resetPlaybackClock();
   syncVideoPlayback(playing);
   if (!playing) cameraZoom.resetCamera();
 });
+watch(() => props.currentTime, (time) => {
+  if (!props.isPlaying) {
+    resetPlaybackClock(time);
+    return;
+  }
+  if (Math.abs(time - playbackClockSeconds()) > .25) resetPlaybackClock(time);
+});
+watch(() => props.duration, () => resetPlaybackClock());
 
-const isMasterPlaying = () => !props.isPlaying || !activeScreenClip.value
-  ? props.isPlaying
-  : !videoEl.seeking && !videoEl.paused && videoEl.readyState >= 2;
+const isMasterPlaying = () => props.isPlaying;
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
   currentTime: () => props.currentTime,
@@ -180,6 +196,19 @@ const compositionMedia = useCompositionMedia({
   isCropping: () => props.isCropping,
   onRenderOnce: renderOnce,
 });
+
+const drawNonScreenVisuals = (
+  ctx: CanvasRenderingContext2D,
+  window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
+) => {
+  const clips = activeClipsAt(props.composition, props.currentTime * 1_000)
+    .filter((clip) => isVisualClip(clip) && clip.kind !== "screen")
+    .sort((left, right) => right.order - left.order);
+  for (const clip of clips) {
+    if (clip.kind === "webcam") compositionMedia.drawWebcamClips(ctx, window, clip.id);
+    else compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920, clip.id);
+  }
+};
 
 drawVisualStack = (ctx, window, drawScreen) => {
   const clips = activeClipsAt(props.composition, props.currentTime * 1_000)
@@ -258,11 +287,28 @@ const renderCanvas = () => {
       logicalSize.value.width,
       (drawContent) => cameraZoom.drawInCameraSpace(ctx, window, drawContent),
     );
+  } else {
+    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+    drawBackground(ctx, preview);
+    const fallbackWindow = {
+      dx: preview.x,
+      dy: preview.y,
+      dw: preview.width,
+      dh: preview.height,
+      scale: 1,
+      focusX: preview.x + preview.width / 2,
+      focusY: preview.y + preview.height / 2,
+    };
+    drawNonScreenVisuals(ctx, fallbackWindow);
+    compositionMedia.drawComposition(ctx, fallbackWindow, videoEl.videoWidth || 1920);
   }
-  if (props.isPlaying && activeScreenClip.value && videoEl.readyState >= 1) {
-    const clip = activeScreenClip.value;
-    const timelineMs = clip.timelineStartMs + (videoEl.currentTime * 1_000 - clip.sourceInMs) / clip.playbackRate;
-    emit("update:currentTime", videoEl.ended ? 0 : Math.max(0, timelineMs / 1_000));
+  if (props.isPlaying) {
+    const nextTime = Math.min(props.duration, playbackClockSeconds());
+    emit("update:currentTime", nextTime);
+    if (nextTime >= props.duration) {
+      resetPlaybackClock(props.duration);
+      emit("update:isPlaying", false);
+    }
   }
 };
 const commitCrop = () => { transformAndCrop.commitCrop(); emit("done:crop"); };
@@ -273,6 +319,7 @@ function draw() {
 }
 
 onMounted(() => {
+  resetPlaybackClock();
   resizeCanvas();
   resizeObserver = new ResizeObserver(resizeCanvas);
   if (containerRef.value) resizeObserver.observe(containerRef.value);
