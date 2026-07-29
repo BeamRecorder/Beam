@@ -145,11 +145,14 @@ watch(composition, (value) => {
   if (currentTime.value > duration.value) currentTime.value = duration.value;
 }, { deep: true, immediate: true });
 
+// Editor state only contains JSON data. Serializing first unwraps Vue proxies, so
+// history snapshots stay cloneable after any reactive edit.
+const cloneSerializable = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const createEditorSnapshot = (): EditorStateSnapshot => ({
-  composition: structuredClone(composition.value),
-  zoomElements: structuredClone(zoomElements.value),
-  outputCanvas: structuredClone(outputCanvas.value),
-  selectedBackground: selectedBackground.value ? structuredClone(selectedBackground.value) : null,
+  composition: cloneSerializable(composition.value),
+  zoomElements: cloneSerializable(zoomElements.value),
+  outputCanvas: cloneSerializable(outputCanvas.value),
+  selectedBackground: selectedBackground.value ? cloneSerializable(selectedBackground.value) : null,
   backgroundBlurPercent: backgroundBlurPercent.value,
 });
 const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction } = useEditorUndoRedo({
