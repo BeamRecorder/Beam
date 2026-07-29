@@ -58,6 +58,43 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     ? options.videoWindowBounds()
     : options.overlayWindowBounds() ?? options.videoWindowBounds();
 
+  // Keep selection, crop and hit-testing in the same coordinate system as the
+  // rendered canvas. A camera zoom is a projection around its focus point, not
+  // just a larger width and height at the original top-left corner.
+  const projectCameraRect = (bounds: VideoWindowBounds, rect: { left: number; top: number; width: number; height: number }) => {
+    const scale = bounds.scale || 1;
+    const centerX = bounds.dx + bounds.dw / 2;
+    const centerY = bounds.dy + bounds.dh / 2;
+    const focusX = bounds.focusX ?? centerX;
+    const focusY = bounds.focusY ?? centerY;
+    return {
+      left: centerX + (rect.left - focusX) * scale,
+      top: centerY + (rect.top - focusY) * scale,
+      width: rect.width * scale,
+      height: rect.height * scale,
+    };
+  };
+
+  const displayLayoutFor = (clip: TransformClip, transform = transformFor(clip)) => {
+    const bounds = boundsFor(clip);
+    if (!bounds) return null;
+    if (clip.kind === "webcam") {
+      const layout = computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(clip.appearance, clip.isMirrored), transform);
+      return { left: bounds.dx + layout.x, top: bounds.dy + layout.y, width: layout.width, height: layout.height };
+    }
+    const rect = {
+      left: bounds.dx + transform.x * bounds.dw,
+      top: bounds.dy + transform.y * bounds.dh,
+      width: transform.width * bounds.dw,
+      height: transform.height * bounds.dh,
+    };
+    // The canvas renderer applies the camera transform only while drawing the
+    // screen track. Composition videos/images and captions are drawn afterward
+    // in output space, so projecting their handles would move them away from
+    // the pixels the user is seeing.
+    return clip.kind === "screen" ? projectCameraRect(bounds, rect) : rect;
+  };
+
   watch(() => options.selectedTransformClip()?.id, () => {
     if (!transformDrag) transformDraft.value = null;
     cropDraft.value = null;
@@ -65,39 +102,15 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
 
   const transformHandleStyle = computed(() => {
     const clip = options.selectedTransformClip();
-    const bounds = boundsFor(clip);
-    if (!clip || !bounds) return { display: "none" };
+    if (!clip) return { display: "none" };
     const transform = transformDraft.value ?? transformFor(clip);
-    if (clip.kind === "webcam") {
-      const layout = computeWebcamLayout(
-        bounds.dw,
-        bounds.dh,
-        bounds.scale,
-        webcamSettingsForAppearance(clip.appearance, clip.isMirrored),
-        transform,
-      );
-      return { left: `${bounds.dx + layout.x}px`, top: `${bounds.dy + layout.y}px`, width: `${layout.width}px`, height: `${layout.height}px` };
-    }
-    if (clip.kind === "caption") {
-      return {
-        left: `${bounds.dx + transform.x * bounds.dw}px`,
-        top: `${bounds.dy + transform.y * bounds.dh}px`,
-        width: `${transform.width * bounds.dw}px`,
-        height: `${transform.height * bounds.dh}px`,
-      };
-    }
-    const scale = bounds.scale || 1;
-    const centerX = bounds.dx + bounds.dw / 2;
-    const centerY = bounds.dy + bounds.dh / 2;
-    const focusX = bounds.focusX ?? centerX;
-    const focusY = bounds.focusY ?? centerY;
-    const left = bounds.dx + transform.x * bounds.dw;
-    const top = bounds.dy + transform.y * bounds.dh;
+    const layout = displayLayoutFor(clip, transform);
+    if (!layout) return { display: "none" };
     return {
-      left: `${centerX + (left - focusX) * scale}px`,
-      top: `${centerY + (top - focusY) * scale}px`,
-      width: `${transform.width * bounds.dw * scale}px`,
-      height: `${transform.height * bounds.dh * scale}px`,
+      left: `${layout.left}px`,
+      top: `${layout.top}px`,
+      width: `${layout.width}px`,
+      height: `${layout.height}px`,
     };
   });
 
@@ -114,26 +127,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
 
   const visualLayout = () => {
     const clip = options.selectedTransformClip();
-    const bounds = boundsFor(clip);
-    if (!clip || !bounds || clip.kind === "caption") return null;
-    const transform = transformFor(clip);
-    if (clip.kind === "webcam") {
-      const layout = computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(clip.appearance, clip.isMirrored), transform);
-      return { left: bounds.dx + layout.x, top: bounds.dy + layout.y, width: layout.width, height: layout.height };
-    }
-    const scale = bounds.scale || 1;
-    const centerX = bounds.dx + bounds.dw / 2;
-    const centerY = bounds.dy + bounds.dh / 2;
-    const focusX = bounds.focusX ?? centerX;
-    const focusY = bounds.focusY ?? centerY;
-    const left = bounds.dx + transform.x * bounds.dw;
-    const top = bounds.dy + transform.y * bounds.dh;
-    return {
-      left: centerX + (left - focusX) * scale,
-      top: centerY + (top - focusY) * scale,
-      width: transform.width * bounds.dw * scale,
-      height: transform.height * bounds.dh * scale,
-    };
+    if (!clip || clip.kind === "caption") return null;
+    return displayLayoutFor(clip);
   };
 
   const cropOverlayStyle = computed(() => {
@@ -222,7 +217,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (!clip || !bounds || !transformDrag) return;
     transformDrag.lastX = clientX;
     transformDrag.lastY = clientY;
-    const scale = clip.kind === "webcam" || clip.kind === "caption" ? 1 : bounds.scale || 1;
+    const scale = clip.kind === "screen" ? bounds.scale || 1 : 1;
     const dx = (clientX - transformDrag.startX) / Math.max(1, bounds.dw * scale);
     const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale);
     const initial = transformDrag.transform;
@@ -281,8 +276,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   };
 
   const selectVisualAt = (event: PointerEvent, canvas: HTMLCanvasElement | null) => {
-    const bounds = options.overlayWindowBounds() ?? options.videoWindowBounds();
-    if (!canvas || !bounds) return false;
+    if (!canvas) return false;
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -291,13 +285,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       .sort((a, b) => a.order - b.order);
     for (const clip of clips) {
       if (clip.kind === "screen") continue;
-      const transform = transformFor(clip);
-      const layout = clip.kind === "webcam"
-        ? computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(clip.appearance, clip.isMirrored), transform)
-        : { x: transform.x * bounds.dw, y: transform.y * bounds.dh, width: transform.width * bounds.dw, height: transform.height * bounds.dh };
-      const left = bounds.dx + layout.x;
-      const top = bounds.dy + layout.y;
-      if (x >= left && x <= left + layout.width && y >= top && y <= top + layout.height) {
+      const layout = displayLayoutFor(clip);
+      if (!layout) continue;
+      if (x >= layout.left && x <= layout.left + layout.width && y >= layout.top && y <= layout.top + layout.height) {
         options.onSelectTransformClip(clip.id);
         return true;
       }
