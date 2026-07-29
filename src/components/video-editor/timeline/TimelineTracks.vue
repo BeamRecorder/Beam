@@ -88,7 +88,9 @@ const tracksWidthStyle = computed(() => ({
   width: `calc(${props.zoomLevel}% + 230px)`,
   minWidth: "calc(100% + 230px)",
 }));
-const playheadStyle = computed(() => ({ left: `${props.duration > 0 ? props.currentTime / props.duration * 100 : 0}%` }));
+const scrubPreviewTime = ref<number | null>(null);
+const displayedPlayheadTime = computed(() => scrubPreviewTime.value ?? props.currentTime);
+const playheadStyle = computed(() => ({ left: `${props.duration > 0 ? displayedPlayheadTime.value / props.duration * 100 : 0}%` }));
 const rulerLabelStep = computed(() => {
   const pixelsPerSecond = rulerWidth.value / Math.max(1, props.duration);
   return [1, 2, 5, 10, 15, 30, 60, 120, 300, 600].find((step) => step * pixelsPerSecond >= 68) ?? 600;
@@ -167,6 +169,9 @@ const centeredStartAt = (clientX: number, lengthMs: number) => {
 const emitScrub = (timeMs: number) => emit("update:currentTime", timeMs / 1_000);
 const scheduleScrubAt = (clientX: number) => {
   pendingScrubTime = timeAt(clientX);
+  // The playhead is cheap to move, unlike decoding a video frame. Keep it under
+  // the pointer immediately while the media seek is coalesced to the next frame.
+  scrubPreviewTime.value = pendingScrubTime / 1_000;
   if (scrubFrame !== null) return;
   scrubFrame = requestAnimationFrame(() => {
     scrubFrame = null;
@@ -176,10 +181,12 @@ const scheduleScrubAt = (clientX: number) => {
 };
 const flushScrubAt = (clientX: number) => {
   pendingScrubTime = timeAt(clientX);
+  scrubPreviewTime.value = pendingScrubTime / 1_000;
   if (scrubFrame !== null) cancelAnimationFrame(scrubFrame);
   scrubFrame = null;
   if (pendingScrubTime !== null) emitScrub(pendingScrubTime);
   pendingScrubTime = null;
+  scrubPreviewTime.value = null;
 };
 const beginScrub = (event: PointerEvent) => {
   scheduleScrubAt(event.clientX);
@@ -203,6 +210,7 @@ const handleWheel = (event: WheelEvent) => {
 const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>({});
 const zoomPreview = ref<Record<string, { startMs: number; endMs: number }>>({});
 const activeTrimState = ref<{ ids: string[]; edge: "start" | "end"; durationMs: number } | null>(null);
+const movingClipIds = ref<string[]>([]);
 const displayedClip = (clip: Clip): Clip => {
   const preview = clipPreview.value[clip.id];
   return preview ? { ...clip, timelineStartMs: preview.startMs, timelineDurationMs: preview.durationMs } : clip;
@@ -234,6 +242,7 @@ const beginClipMove = (event: PointerEvent, clip: Clip) => {
   event.preventDefault();
   event.stopPropagation();
   const ids = linkedIdsFor(clip);
+  movingClipIds.value = ids;
   const pointerStartMs = timeAt(event.clientX);
   const originalStartMs = clip.timelineStartMs;
   const maxStartMs = Math.max(0, durationMs.value - clip.timelineDurationMs);
@@ -247,6 +256,7 @@ const beginClipMove = (event: PointerEvent, clip: Clip) => {
     window.removeEventListener("pointerup", end);
     window.removeEventListener("pointercancel", end);
     clearLinkedPreview(ids);
+    movingClipIds.value = [];
     if (finalStartMs !== originalStartMs) emit("move:clip", { id: clip.id, startMs: finalStartMs });
   };
   window.addEventListener("pointermove", move);
@@ -464,6 +474,7 @@ const beginReorder = (event: PointerEvent, clipId: string) => {
               :visible-seconds="visibleSeconds"
               :selected="selectedClipId === clip.id"
               :trim-state="trimStateFor(clip.id)"
+              :defer-thumbnail-requests="movingClipIds.includes(clip.id)"
               @select="emit('select:clip', clip.id)"
               @move="beginClipMove($event, clip)"
               @trim="beginClipTrim($event.event, clip, $event.edge)"

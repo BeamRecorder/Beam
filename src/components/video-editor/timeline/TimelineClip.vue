@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import Skeleton from "~/ui/skeleton/Skeleton.vue";
 import type { Clip, MediaAsset } from "../composition/composition-types";
 import { useThumbnails } from "./waveform/useThumbnails";
@@ -14,6 +14,7 @@ const props = defineProps<{
   selected: boolean;
   waveformBars?: number[];
   trimState?: { edge: "start" | "end"; durationMs: number } | null;
+  deferThumbnailRequests?: boolean;
 }>();
 const emit = defineEmits<{
   (event: "select"): void;
@@ -24,20 +25,38 @@ const emit = defineEmits<{
 const source = computed(() => props.clip.kind !== "audio" && props.asset?.kind === "video" ? props.asset.src : null);
 const { thumbnails, requestVisibleFrames } = useThumbnails(source);
 const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs);
-const frames = computed(() => props.visibleSeconds.flatMap((timelineSecond) => {
+type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number };
+const frames = computed<TimelineFrame[]>(() => props.visibleSeconds.flatMap((timelineSecond) => {
   const timelineMs = timelineSecond * 1_000;
   if (props.clip.kind === "audio" || timelineMs < props.clip.timelineStartMs || timelineMs >= clipEndMs.value || props.asset?.kind !== "video") return [];
   const sourceMs = props.clip.sourceInMs + (timelineMs - props.clip.timelineStartMs) * props.clip.playbackRate;
-  return [{ timelineSecond, mediaSecond: Math.max(0, Math.floor(sourceMs / 1_000)) }];
+  return [{ timelineSecond, mediaSecond: Math.max(0, Math.floor(sourceMs / 1_000)), relativeMs: timelineMs - props.clip.timelineStartMs }];
 }));
-watch(frames, (value) => requestVisibleFrames([...new Set(value.map((frame) => frame.mediaSecond))]), { immediate: true });
+const frozenFrames = ref<TimelineFrame[]>([]);
+const displayedFrames = computed(() => frozenFrames.value.length ? frozenFrames.value : frames.value);
+// Moving a clip changes only its timeline placement. The thumbnail content is
+// still the same source segment, so do not replace it (or show skeletons) on a
+// move commit. Refresh only when the viewport or source timing actually changes.
+const thumbnailRefreshKey = computed(() => [
+  props.visibleSeconds.join(","),
+  props.asset?.src ?? "",
+  props.clip.sourceInMs,
+  props.clip.sourceDurationMs,
+  props.clip.playbackRate,
+].join("|"));
+watch(thumbnailRefreshKey, () => {
+  if (props.deferThumbnailRequests) return;
+  const value = frames.value;
+  frozenFrames.value = value;
+  requestVisibleFrames([...new Set(value.map((frame) => frame.mediaSecond))]);
+}, { immediate: true });
 
 const clipStyle = computed(() => ({
   left: `${props.duration > 0 ? props.clip.timelineStartMs / (props.duration * 1_000) * 100 : 0}%`,
   width: `${props.duration > 0 ? props.clip.timelineDurationMs / (props.duration * 1_000) * 100 : 0}%`,
 }));
-const frameStyle = (frame: { timelineSecond: number }) => ({
-  left: `${((frame.timelineSecond * 1_000 - props.clip.timelineStartMs) / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
+const frameStyle = (frame: TimelineFrame) => ({
+  left: `${frame.relativeMs / Math.max(1, props.clip.timelineDurationMs) * 100}%`,
   width: `${(1_000 / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
 });
 const formatTrimTime = (milliseconds: number) => {
@@ -96,7 +115,7 @@ onUnmounted(() => stopMarquee());
       <span v-if="!waveformBars?.length" class="waveform-unavailable">{{ t('waveformUnavailable') }}</span>
     </div>
     <div v-else-if="asset?.kind === 'video'" class="thumbnails-track">
-      <div v-for="frame in frames" :key="`${frame.timelineSecond}:${frame.mediaSecond}`" class="thumbnail-frame" :style="frameStyle(frame)">
+      <div v-for="frame in displayedFrames" :key="`${frame.timelineSecond}:${frame.mediaSecond}`" class="thumbnail-frame" :style="frameStyle(frame)">
         <img v-if="thumbnails[frame.mediaSecond]" :src="thumbnails[frame.mediaSecond]" class="thumbnail-img" alt="" draggable="false" />
         <Skeleton v-else width="100%" height="100%" radius="0" />
       </div>
