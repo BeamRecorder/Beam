@@ -104,6 +104,8 @@ const visibleSeconds = computed(() => {
   return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
 });
 let scrollFrame: number | null = null;
+let scrubFrame: number | null = null;
+let pendingScrubTime: number | null = null;
 let resizeObserver: ResizeObserver | null = null;
 const updateVisibleRange = () => {
   const scroll = tracksScrollRef.value;
@@ -132,6 +134,7 @@ onMounted(() => {
 onUnmounted(() => {
   resizeObserver?.disconnect();
   if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
+  if (scrubFrame !== null) cancelAnimationFrame(scrubFrame);
 });
 
 const percentageStyle = (startMs: number, lengthMs: number) => ({
@@ -149,16 +152,35 @@ const centeredStartAt = (clientX: number, lengthMs: number) => {
   const maximumStart = Math.max(0, durationMs.value - lengthMs);
   return Math.round(Math.max(0, Math.min(maximumStart, timeAt(clientX) - lengthMs / 2)));
 };
-const scrubAt = (clientX: number) => emit("update:currentTime", timeAt(clientX) / 1_000);
+const emitScrub = (timeMs: number) => emit("update:currentTime", timeMs / 1_000);
+const scheduleScrubAt = (clientX: number) => {
+  pendingScrubTime = timeAt(clientX);
+  if (scrubFrame !== null) return;
+  scrubFrame = requestAnimationFrame(() => {
+    scrubFrame = null;
+    if (pendingScrubTime !== null) emitScrub(pendingScrubTime);
+    pendingScrubTime = null;
+  });
+};
+const flushScrubAt = (clientX: number) => {
+  pendingScrubTime = timeAt(clientX);
+  if (scrubFrame !== null) cancelAnimationFrame(scrubFrame);
+  scrubFrame = null;
+  if (pendingScrubTime !== null) emitScrub(pendingScrubTime);
+  pendingScrubTime = null;
+};
 const beginScrub = (event: PointerEvent) => {
-  scrubAt(event.clientX);
-  const move = (next: PointerEvent) => scrubAt(next.clientX);
-  const end = () => {
+  scheduleScrubAt(event.clientX);
+  const move = (next: PointerEvent) => scheduleScrubAt(next.clientX);
+  const end = (next: PointerEvent) => {
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", end);
+    window.removeEventListener("pointercancel", end);
+    flushScrubAt(next.clientX);
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", end, { once: true });
+  window.addEventListener("pointercancel", end, { once: true });
 };
 const handleWheel = (event: WheelEvent) => {
   if (!event.ctrlKey) return;
