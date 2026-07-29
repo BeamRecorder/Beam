@@ -57,7 +57,21 @@ const DEFAULT_CAPTION_DURATION_MS = 2_000;
 const MIN_DURATION_MS = 40;
 const durationMs = computed(() => Math.max(1, Math.round(props.duration * 1_000)));
 const orderedClips = computed(() => [...props.composition.clips].sort((left, right) => left.order - right.order));
-const visualClips = computed(() => orderedClips.value.filter(isVisualClip));
+const baseVisualClips = computed(() => orderedClips.value.filter(isVisualClip));
+const visualOrderPreview = ref<string[] | null>(null);
+const visualClips = computed(() => {
+  const clips = baseVisualClips.value;
+  const preview = visualOrderPreview.value;
+  if (!preview) return clips;
+  const byId = new Map(clips.map((clip) => [clip.id, clip]));
+  return [
+    ...preview.flatMap((id) => {
+      const clip = byId.get(id);
+      return clip ? [clip] : [];
+    }),
+    ...clips.filter((clip) => !preview.includes(clip.id)),
+  ];
+});
 const captionClips = computed(() => orderedClips.value.filter(isCaptionClip));
 const systemAudioClips = computed(() => orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === "system"));
 const microphoneClips = computed(() => orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === "microphone"));
@@ -154,7 +168,7 @@ const handleWheel = (event: WheelEvent) => {
 
 const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>({});
 const zoomPreview = ref<Record<string, { startMs: number; endMs: number }>>({});
-const activeTrimState = ref<{ id: string; edge: "start" | "end"; durationMs: number } | null>(null);
+const activeTrimState = ref<{ ids: string[]; edge: "start" | "end"; durationMs: number } | null>(null);
 const displayedClip = (clip: Clip): Clip => {
   const preview = clipPreview.value[clip.id];
   return preview ? { ...clip, timelineStartMs: preview.startMs, timelineDurationMs: preview.durationMs } : clip;
@@ -163,34 +177,52 @@ const displayedZoom = (zoom: ZoomElement): ZoomElement => {
   const preview = zoomPreview.value[zoom.id];
   return preview ? { ...zoom, startMs: preview.startMs, endMs: preview.endMs } : zoom;
 };
-const trimStateFor = (id: string) => activeTrimState.value?.id === id ? activeTrimState.value : null;
+const trimStateFor = (id: string) => {
+  const state = activeTrimState.value;
+  return state?.ids.includes(id) ? { edge: state.edge, durationMs: state.durationMs } : null;
+};
+const linkedIdsFor = (clip: Clip) => clip.groupId
+  ? props.composition.clips.filter((entry) => entry.groupId === clip.groupId).map((entry) => entry.id)
+  : [clip.id];
+const previewLinked = (ids: string[], startMs: number, duration: number) => {
+  const next = { ...clipPreview.value };
+  for (const id of ids) next[id] = { startMs, durationMs: duration };
+  clipPreview.value = next;
+};
+const clearLinkedPreview = (ids: string[]) => {
+  const next = { ...clipPreview.value };
+  for (const id of ids) delete next[id];
+  clipPreview.value = next;
+};
 
 const beginClipMove = (event: PointerEvent, clip: Clip) => {
   if ((event.target as HTMLElement).closest(".trim-handle")) return;
   event.preventDefault();
   event.stopPropagation();
+  const ids = linkedIdsFor(clip);
   const pointerStartMs = timeAt(event.clientX);
   const originalStartMs = clip.timelineStartMs;
   const maxStartMs = Math.max(0, durationMs.value - clip.timelineDurationMs);
   let finalStartMs = originalStartMs;
   const move = (next: PointerEvent) => {
     finalStartMs = Math.max(0, Math.min(maxStartMs, originalStartMs + timeAt(next.clientX) - pointerStartMs));
-    clipPreview.value = { ...clipPreview.value, [clip.id]: { startMs: finalStartMs, durationMs: clip.timelineDurationMs } };
+    previewLinked(ids, finalStartMs, clip.timelineDurationMs);
   };
   const end = () => {
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", end);
-    const next = { ...clipPreview.value };
-    delete next[clip.id];
-    clipPreview.value = next;
+    window.removeEventListener("pointercancel", end);
+    clearLinkedPreview(ids);
     if (finalStartMs !== originalStartMs) emit("move:clip", { id: clip.id, startMs: finalStartMs });
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", end, { once: true });
+  window.addEventListener("pointercancel", end, { once: true });
 };
 const beginClipTrim = (event: PointerEvent, clip: Clip, edge: "start" | "end") => {
   event.preventDefault();
   event.stopPropagation();
+  const ids = linkedIdsFor(clip);
   const originalStartMs = clip.timelineStartMs;
   const originalEndMs = clip.timelineStartMs + clip.timelineDurationMs;
   let finalTimeMs = edge === "start" ? originalStartMs : originalEndMs;
@@ -201,21 +233,21 @@ const beginClipTrim = (event: PointerEvent, clip: Clip, edge: "start" | "end") =
       : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(durationMs.value, raw));
     const startMs = edge === "start" ? finalTimeMs : originalStartMs;
     const endMs = edge === "end" ? finalTimeMs : originalEndMs;
-    clipPreview.value = { ...clipPreview.value, [clip.id]: { startMs, durationMs: endMs - startMs } };
-    activeTrimState.value = { id: clip.id, edge, durationMs: endMs - startMs };
+    previewLinked(ids, startMs, endMs - startMs);
+    activeTrimState.value = { ids, edge, durationMs: endMs - startMs };
   };
   const end = () => {
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", end);
-    const next = { ...clipPreview.value };
-    delete next[clip.id];
-    clipPreview.value = next;
+    window.removeEventListener("pointercancel", end);
+    clearLinkedPreview(ids);
     activeTrimState.value = null;
     const original = edge === "start" ? originalStartMs : originalEndMs;
     if (finalTimeMs !== original) emit("trim:clip", { id: clip.id, edge, timeMs: finalTimeMs });
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", end, { once: true });
+  window.addEventListener("pointercancel", end, { once: true });
 };
 
 const beginZoomMove = (event: PointerEvent, zoom: ZoomElement) => {
@@ -256,7 +288,7 @@ const beginZoomTrim = (event: PointerEvent, zoom: ZoomElement, edge: "start" | "
         endMs: edge === "end" ? finalTimeMs : zoom.endMs,
       },
     };
-    activeTrimState.value = { id: zoom.id, edge, durationMs: (edge === "end" ? finalTimeMs : zoom.endMs) - (edge === "start" ? finalTimeMs : zoom.startMs) };
+    activeTrimState.value = { ids: [zoom.id], edge, durationMs: (edge === "end" ? finalTimeMs : zoom.endMs) - (edge === "start" ? finalTimeMs : zoom.startMs) };
   };
   const end = () => {
     window.removeEventListener("pointermove", move);
@@ -312,16 +344,41 @@ const labelForVisual = (clip: VisualClip) => clip.kind === "screen" ? t("video")
 const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
 const draggedClipId = ref<string | null>(null);
-const beginReorder = (event: DragEvent, clipId: string) => {
+const beginReorder = (event: PointerEvent, clipId: string) => {
+  event.preventDefault();
+  event.stopPropagation();
+  const initialOrder = baseVisualClips.value.map((clip) => clip.id);
+  const initialIndex = initialOrder.indexOf(clipId);
+  if (initialIndex < 0) return;
   draggedClipId.value = clipId;
-  event.dataTransfer?.setData("text/plain", clipId);
-  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-};
-const finishReorder = (event: DragEvent, targetId: string) => {
-  const id = event.dataTransfer?.getData("text/plain") || draggedClipId.value;
-  const targetIndex = visualClips.value.findIndex((clip) => clip.id === targetId);
-  if (id && targetIndex >= 0) emit("reorder:clip", { id, targetIndex });
-  draggedClipId.value = null;
+  visualOrderPreview.value = [...initialOrder];
+
+  const move = (next: PointerEvent) => {
+    const row = document.elementFromPoint(next.clientX, next.clientY)?.closest<HTMLElement>(".visual-track");
+    const targetId = row?.dataset.clipId;
+    if (!targetId || targetId === clipId) return;
+    const order = [...(visualOrderPreview.value ?? initialOrder)];
+    const from = order.indexOf(clipId);
+    const to = order.indexOf(targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    order.splice(from, 1);
+    order.splice(to, 0, clipId);
+    visualOrderPreview.value = order;
+  };
+  const end = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", end);
+    window.removeEventListener("pointercancel", end);
+    const finalIndex = visualOrderPreview.value?.indexOf(clipId) ?? initialIndex;
+    if (finalIndex !== initialIndex) emit("reorder:clip", { id: clipId, targetIndex: finalIndex });
+    requestAnimationFrame(() => {
+      visualOrderPreview.value = null;
+      draggedClipId.value = null;
+    });
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", end, { once: true });
+  window.addEventListener("pointercancel", end, { once: true });
 };
 </script>
 
@@ -355,12 +412,11 @@ const finishReorder = (event: DragEvent, targetId: string) => {
           v-for="clip in visualClips"
           :key="clip.id"
           class="track-row visual-track"
+          :data-clip-id="clip.id"
           :class="{ disabled: !clip.enabled, dragging: draggedClipId === clip.id }"
-          @dragover.prevent
-          @drop.prevent="finishReorder($event, clip.id)"
         >
           <button type="button" class="track-info" :title="clip.name" @click="emit('toggle:clip', clip.id)">
-            <span class="track-drag-handle" draggable="true" @click.stop @dragstart.stop="beginReorder($event, clip.id)" @dragend="draggedClipId = null">
+            <span class="track-drag-handle" @click.stop @pointerdown.stop="beginReorder($event, clip.id)">
               <GripVertical class="track-grip" />
             </span>
             <component :is="iconForVisual(clip)" class="track-icon" />
@@ -510,7 +566,9 @@ const finishReorder = (event: DragEvent, targetId: string) => {
 .track-row.disabled { opacity: .35; }.track-row.dragging { opacity: .55; }
 .track-info { width: 120px; height: 100%; flex: 0 0 120px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 0; border-right: 1px solid var(--color-border); background: var(--color-bg-surface); color: var(--text-secondary); cursor: pointer; text-align: left; }
 .track-info:hover { background: var(--color-bg-surface-hover); }.static-info { cursor: default; }
-.track-icon { width: 13px; height: 13px; flex: 0 0 auto; }.track-grip { width: 13px; height: 13px; color: var(--text-muted); }.track-drag-handle { display: inline-flex; cursor: grab; }
+.track-icon { width: 13px; height: 13px; flex: 0 0 auto; }.track-grip { width: 13px; height: 13px; color: var(--text-muted); }
+.track-drag-handle { display: inline-flex; width: 24px; height: 100%; margin-left: -5px; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
+.track-drag-handle:active { cursor: grabbing; }
 .track-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .track-content { flex: 1; height: 100%; position: relative; overflow: hidden; margin-left: 80px; margin-right: 150px; }
 .visual-content { background: var(--color-track-video-light); }.cursor-content { background: var(--color-track-cursor-light); }.annotation-content { background: var(--color-track-annotation-light); }.audio-content { background: var(--color-track-audio-light); }
