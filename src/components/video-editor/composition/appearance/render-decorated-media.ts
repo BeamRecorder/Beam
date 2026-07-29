@@ -32,13 +32,17 @@ export function drawDecoratedMedia(ctx: CanvasRenderingContext2D, options: Decor
     ctx.restore();
   }
   const title = appearance.frameTitle.trim() || options.title;
+  ctx.save();
+  clipRect(ctx, options.rect, outerRadius);
   drawFrameChrome(ctx, options.rect, appearance.frame, title, true, appearance.frameColor, windowsOptions);
-  ctx.save(); clipRect(ctx, content, appearance.frame === "none" ? radiusForAppearance(appearance) : 0);
+  ctx.save();
+  clipRect(ctx, content, appearance.frame === "none" ? radiusForAppearance(appearance) : 0);
   if (options.mirrored) { ctx.translate(content.x * 2 + content.width, 0); ctx.scale(-1, 1); }
   const source = options.sourceRect;
   if (source) ctx.drawImage(options.source, source.x, source.y, source.width, source.height, content.x, content.y, content.width, content.height);
   else ctx.drawImage(options.source, content.x, content.y, content.width, content.height);
   ctx.restore();
   if (appearance.frame !== "none") drawFrameChrome(ctx, options.rect, appearance.frame, title, false, appearance.frameColor, windowsOptions);
+  ctx.restore();
   if (appearance.borderEnabled && appearance.borderWidth > 0) { ctx.save(); ctx.strokeStyle = appearance.borderColor; ctx.lineWidth = appearance.borderWidth; ctx.beginPath(); ctx.roundRect(options.rect.x + appearance.borderWidth / 2, options.rect.y + appearance.borderWidth / 2, Math.max(0, options.rect.width - appearance.borderWidth), Math.max(0, options.rect.height - appearance.borderWidth), Math.max(0, outerRadius - appearance.borderWidth / 2)); ctx.stroke(); ctx.restore(); }
 }
