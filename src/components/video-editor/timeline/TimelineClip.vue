@@ -126,8 +126,10 @@ onUnmounted(() => stopMarquee());
 .thumbnails-track { position: relative; z-index: 1; width: 100%; height: 100%; }
 .thumbnail-frame { position: absolute; top: 0; height: 100%; overflow: hidden; background: var(--color-bg-surface); border-right: 1px solid rgba(0,0,0,.08); }
 .thumbnail-img, .image-preview { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-.waveform { position: absolute; inset: 0 7px; display: flex; align-items: center; justify-content: space-between; gap: 2px; overflow: hidden; opacity: .78; }
-.waveform > span:not(.waveform-unavailable) { flex: 1 1 auto; max-width: 4px; min-width: 1px; border-radius: 2px; background: var(--color-track-audio); }
+.waveform { position: absolute; inset: 4px 8px; display: flex; align-items: center; justify-content: space-between; gap: 1px; overflow: hidden; }
+.waveform::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: 50%; height: 1px; background: rgba(5, 150, 105, .32); }
+.waveform > span:not(.waveform-unavailable) { flex: 1 1 auto; max-width: 2px; min-width: 1px; border-radius: 1px; background: #07865f; opacity: .9; }
+.timeline-clip.selected .waveform > span:not(.waveform-unavailable) { background: #056247; opacity: 1; }
 .waveform-unavailable { width: 100%; color: var(--text-muted); font-size: 9px; text-align: center; }
 .trim-handle { position: absolute; top: 0; bottom: 0; z-index: 40; width: 6px; background: rgba(255,255,255,.25); cursor: col-resize; transition: background var(--fast) ease; }
 .trim-handle:hover { background: var(--color-primary); }

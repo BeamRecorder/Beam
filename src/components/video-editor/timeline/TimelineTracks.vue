@@ -563,6 +563,7 @@ const beginReorder = (event: PointerEvent, clipId: string) => {
 .playhead-knob { position: absolute; top: 0; left: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--color-primary); box-shadow: var(--shadow-sm); }
 .tracks-stack { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
 .track-row { display: flex; align-items: center; height: 32px; position: relative; background: var(--color-bg-element); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+.track-row.audio-track { height: 48px; }
 .track-row.disabled { opacity: .35; }.track-row.dragging { opacity: .55; }
 .track-info { width: 120px; height: 100%; flex: 0 0 120px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 0; border-right: 1px solid var(--color-border); background: var(--color-bg-surface); color: var(--text-secondary); cursor: pointer; text-align: left; }
 .track-info:hover { background: var(--color-bg-surface-hover); }.static-info { cursor: default; }

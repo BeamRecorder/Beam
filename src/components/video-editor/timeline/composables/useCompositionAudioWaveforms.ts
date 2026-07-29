@@ -2,7 +2,9 @@ import { computed, onUnmounted, ref, watch } from "vue";
 import { ALL_FORMATS, AudioBufferSink, BlobSource, Input } from "mediabunny";
 import { isAudioClip, type ClipComposition } from "../../composition/composition-types";
 
-const MAX_BAR_HEIGHT = 22;
+// Audio rows are deliberately taller than the other tracks. Leave headroom so
+// real peaks read as a centred waveform instead of a row of tiny top-aligned bars.
+const MAX_BAR_HEIGHT = 38;
 
 const pointCountFor = (timelineDurationMs: number, totalDurationSeconds: number) =>
   Math.max(24, Math.min(1_200, Math.round(900 * (timelineDurationMs / 1_000) / Math.max(1, totalDurationSeconds))));
@@ -96,7 +98,7 @@ const barsFromPeaks = (peaks: Float32Array) => {
   }
   const scale = maximum > 0.01 ? MAX_BAR_HEIGHT / maximum : MAX_BAR_HEIGHT * 5;
   return Array.from(amplitudes, (amplitude) =>
-    Math.max(2, Math.min(MAX_BAR_HEIGHT, Math.round(amplitude * scale))),
+    Math.max(3, Math.min(MAX_BAR_HEIGHT, Math.round(amplitude * scale))),
   );
 };
 
