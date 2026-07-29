@@ -57,10 +57,7 @@ const DEFAULT_CAPTION_DURATION_MS = 2_000;
 const MIN_DURATION_MS = 40;
 const durationMs = computed(() => Math.max(1, Math.round(props.duration * 1_000)));
 const orderedClips = computed(() => [...props.composition.clips].sort((left, right) => left.order - right.order));
-const visualClips = computed(() => orderedClips.value.filter(isVisualClip).sort((left, right) => {
-  const rank = (clip: VisualClip) => clip.kind === "screen" ? 0 : clip.kind === "webcam" ? 2 : 1;
-  return rank(left) - rank(right) || left.order - right.order;
-}));
+const visualClips = computed(() => orderedClips.value.filter(isVisualClip));
 const captionClips = computed(() => orderedClips.value.filter(isCaptionClip));
 const systemAudioClips = computed(() => orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === "system"));
 const microphoneClips = computed(() => orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === "microphone"));
