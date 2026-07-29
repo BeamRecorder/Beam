@@ -1,0 +1,11 @@
+{
+  "title": "Application update",
+  "checkForUpdates": "Check for updates",
+  "checking": "Checking for updates…",
+  "downloading": "Downloading update: {percent}%",
+  "readyToRestart": "Version {version} is ready to install.",
+  "restart": "Restart now",
+  "upToDate": "You are up to date (version {version}).",
+  "availableInInstalledApp": "Updates are available in the installed application.",
+  "currentVersion": "Current version: {version}"
+}

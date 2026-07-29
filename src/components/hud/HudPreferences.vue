@@ -8,6 +8,7 @@ import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Select from '~/ui/select/Select.vue'
 import ShortcutPreferences from './ShortcutPreferences.vue'
+import UpdateControls from '~/components/updates/UpdateControls.vue'
 
 const { t } = useTranslate('HudPreferences')
 
@@ -154,6 +155,10 @@ const localeOptions = [
                 <template #icon><Monitor class="button-icon" /></template>
               </Button>
             </ButtonGroup>
+          </div>
+
+          <div class="preference-item">
+            <UpdateControls />
           </div>
         </div>
 

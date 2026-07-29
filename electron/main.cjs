@@ -1,4 +1,5 @@
 const { app, BrowserWindow, desktopCapturer, ipcMain, session, protocol, globalShortcut } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const fs = require('fs')
 const path = require('path')
 const { Readable } = require('stream')
@@ -20,6 +21,7 @@ const { createPreferencesStore } = require('./preferences/preferences-store.cjs'
 const { registerPreferencesIpc } = require('./preferences/preferences-ipc.cjs')
 const { createUserPaths } = require('./storage/user-paths.cjs')
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs')
+const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs')
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -164,7 +166,10 @@ app.whenReady().then(() => {
   logStartup('Window IPC registered.')
   const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })
   logStartup('Export IPC registered.')
+  const updater = createAutoUpdater({ app, BrowserWindow, autoUpdater })
+  registerUpdateIpc(ipcMain, updater)
   const win = createWindow()
+  void updater.checkForUpdates()
   win.webContents.once('destroyed', () => { cameraOverlay.destroy(); exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id); microphoneStorage.cleanupOwner(win.webContents.id); systemAudioStorage.cleanupOwner(win.webContents.id) })
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })

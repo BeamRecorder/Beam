@@ -6,6 +6,7 @@ import { Sun, Moon, Monitor } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 import { useLocaleStore } from '~/stores/locale'
 import { useTranslate } from '~/i18n/useTranslate'
+import UpdateControls from '~/components/updates/UpdateControls.vue'
 
 const { t } = useTranslate('SettingsPanel')
 const themeStore = useThemeStore()
@@ -60,6 +61,10 @@ const localeOptions = [
         direction="up"
         @update:model-value="localeStore.setLocale($event)"
       />
+    </div>
+
+    <div class="prop-item">
+      <UpdateControls />
     </div>
   </div>
 </template>

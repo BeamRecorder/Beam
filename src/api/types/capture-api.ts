@@ -77,6 +77,10 @@ export interface DesktopCaptureApi extends CaptureApi {
   abortExport(jobId: string): Promise<void>
   openFile(path: string): Promise<void>
   showItemInFolder(path: string): Promise<void>
+  getUpdateState(): Promise<AppUpdateState>
+  checkForUpdates(): Promise<AppUpdateState>
+  quitAndInstallUpdate(): Promise<boolean>
+  onUpdateState(listener: (state: AppUpdateState) => void): () => void
   beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>
   writeCameraSegment(payload: MediaSegmentChunk): Promise<void>
   finalizeCameraSegment(payload: CameraSegmentFinish): Promise<void>
@@ -89,6 +93,14 @@ export interface DesktopCaptureApi extends CaptureApi {
   writeSystemAudioSegment(payload: MediaSegmentChunk): Promise<void>
   finalizeSystemAudioSegment(payload: SystemAudioSegmentFinish): Promise<void>
   failSystemAudio(payload: SystemAudioFailure): Promise<void>
+}
+
+export interface AppUpdateState {
+  status: 'idle' | 'checking' | 'downloading' | 'downloaded' | 'not-available' | 'error' | 'unsupported'
+  currentVersion: string
+  availableVersion: string | null
+  percent: number | null
+  message: string | null
 }
 
 export interface PreferenceShortcut { keys: string; scope: 'global' | 'application'; category: string }

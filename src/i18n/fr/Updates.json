@@ -1,0 +1,11 @@
+{
+  "title": "Mise à jour de l’application",
+  "checkForUpdates": "Rechercher une mise à jour",
+  "checking": "Recherche de mise à jour…",
+  "downloading": "Téléchargement de la mise à jour : {percent}%",
+  "readyToRestart": "La version {version} est prête à être installée.",
+  "restart": "Redémarrer maintenant",
+  "upToDate": "L’application est à jour (version {version}).",
+  "availableInInstalledApp": "Les mises à jour sont disponibles dans l’application installée.",
+  "currentVersion": "Version actuelle : {version}"
+}

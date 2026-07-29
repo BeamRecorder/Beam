@@ -115,5 +115,13 @@ contextBridge.exposeInMainWorld(
     abortExport: (jobId) => ipcRenderer.invoke("export:abort", { jobId }),
     openFile: (path) => ipcRenderer.invoke("export:open-file", { path }),
     showItemInFolder: (path) => ipcRenderer.invoke("export:show-in-folder", { path }),
+    getUpdateState: () => ipcRenderer.invoke("app-update:get-state"),
+    checkForUpdates: () => ipcRenderer.invoke("app-update:check"),
+    quitAndInstallUpdate: () => ipcRenderer.invoke("app-update:quit-and-install"),
+    onUpdateState: (listener) => {
+      const callback = (_event, state) => listener(state);
+      ipcRenderer.on("app-update:state", callback);
+      return () => ipcRenderer.removeListener("app-update:state", callback);
+    },
   }),
 );

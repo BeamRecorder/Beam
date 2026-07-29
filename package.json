@@ -1,7 +1,7 @@
 {
   "name": "demo-recorder",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -25,6 +25,7 @@
     "@vueuse/core": "^14.3.0",
     "@vueuse/electron": "^14.3.0",
     "@vueuse/motion": "^3.0.3",
+    "electron-updater": "^6.6.2",
     "mediabunny": "^1.50.9",
     "pinia": "^4.0.2",
     "vitest": "^4.1.10",
@@ -64,6 +65,13 @@
     "directories": {
       "output": "dist_electron"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ExtraBinoss",
+        "repo": "demo-recorder"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "public/brand/DemoRecorderIcon.ico"
