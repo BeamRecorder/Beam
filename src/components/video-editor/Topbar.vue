@@ -73,16 +73,13 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
     if (!isDragging) {
       const deltaX = mouseMoveEvent.screenX - startX
       const deltaY = mouseMoveEvent.screenY - startY
-      // 3px drag threshold/hysteresis to ensure double click doesn't trigger dragStart
       if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
         isDragging = true
         capture.dragStart()
       }
     }
 
-    if (isDragging) {
-      capture.drag()
-    }
+    if (isDragging) capture.drag()
   }
 
   const handleMouseUp = () => {
@@ -142,15 +139,17 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
       <ExportPopover v-if="exportRequest" :request="exportRequest" />
       <div class="window-controls">
         <button
+          type="button"
           :aria-label="t('minimize')"
-          class="titlebar-btn control-btn"
+          class="control-btn"
           @click.stop="minimizeApp"
         >
           <Minus class="btn-icon" />
         </button>
         <button
+          type="button"
           :aria-label="t('close')"
-          class="titlebar-btn control-btn close-btn"
+          class="control-btn close-btn"
           @click.stop="closeApp"
         >
           <X class="btn-icon" />
@@ -181,122 +180,15 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   height: 100%;
 }
 
+.left-actions {
+  gap: 8px;
+}
+
 .history-actions {
   display: flex;
   align-items: center;
   gap: 2px;
   margin-left: 8px;
-}
-
-.center-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 100%;
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 18px;
-  background-color: var(--color-border);
-  margin: 0 4px;
-}
-
-.preset-dropdown-btn,
-.crop-btn,
-.add-track-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--fast) ease;
-}
-
-.preset-dropdown-btn:hover,
-.crop-btn:hover,
-.add-track-button:hover,
-.preset-dropdown-btn.is-open,
-.crop-btn.active,
-.add-track-button.is-open {
-  background: var(--color-bg-surface-hover);
-  border-color: var(--color-border-strong);
-}
-
-.crop-btn.active {
-  background: var(--color-primary-light, rgba(255, 90, 31, 0.15));
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.btn-icon,
-.add-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.chevron-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--text-muted);
-  transition: transform var(--fast) ease;
-}
-
-.chevron-icon.is-flipped {
-  transform: rotate(180deg);
-}
-
-.preset-menu-content,
-.add-menu-content {
-  display: flex;
-  flex-direction: column;
-  padding: 4px;
-  min-width: 120px;
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
-}
-
-.preset-menu-item,
-.add-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 10px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color var(--fast) ease;
-}
-
-.preset-menu-item:hover,
-.add-menu-item:hover {
-  background: var(--color-bg-surface-hover);
-}
-
-.preset-menu-item.active {
-  background: var(--color-primary-light, rgba(255, 90, 31, 0.15));
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
-.left-actions {
-  gap: 8px;
 }
 
 .exit-btn {
@@ -307,5 +199,43 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   display: flex;
   height: 100%;
   align-items: stretch;
+  margin-left: 4px;
+}
+
+.control-btn {
+  appearance: none;
+  width: 46px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: background-color var(--fast) ease, color var(--fast) ease;
+}
+
+.control-btn:hover {
+  background: var(--color-bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.control-btn:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.close-btn:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+.btn-icon {
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
 }
 </style>
