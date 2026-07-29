@@ -18,8 +18,11 @@ export interface ExportProgress {
   totalTimeMs?: number
 }
 export interface ExportResult { path: string; format: ExportFormat }
-export interface VideoLayer { clipId: string; assetId: string; src: string; width: number; height: number; fps: number; enabled: boolean }
-export interface RenderLayer { kind: 'background' | 'video' | 'cursor'; enabled: boolean }
+export interface ExportRenderSettings {
+  fps: number
+  sourceWidth: number
+  sourceHeight: number
+}
 export interface CursorRenderSettings {
   selectedCursor: CursorType
   size: number
@@ -30,7 +33,7 @@ export interface CursorRenderSettings {
 }
 export interface CompositionSnapshot {
   duration: number
-  video: VideoLayer
+  render: ExportRenderSettings
   canvas: OutputCanvasSettings
   background: { kind: 'color'; color: string } | { kind: 'gradient'; gradient: import('../video-editor/composables/backgroundCatalog').GradientBackground } | { kind: 'image' | 'video'; src: string } | null
   blurPercent: number
@@ -38,7 +41,6 @@ export interface CompositionSnapshot {
   cursor: ProjectEditorData['cursor']
   cursorSettings: CursorRenderSettings
   composition: ClipComposition
-  layers: RenderLayer[]
 }
 export interface ExportRequest {
   projectName: string
