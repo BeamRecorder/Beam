@@ -33,10 +33,6 @@ const menuItems = computed(() => [
 
 <template>
   <aside class="sidebar-island">
-    <div class="logo-area">
-      <img src="/brand/DemoRecorderIcon.webp" class="brand-logo" :alt="t('logo')" />
-    </div>
-
     <nav class="nav-menu">
       <button
         v-for="item in menuItems"
@@ -67,7 +63,7 @@ const menuItems = computed(() => [
 
 <style scoped>
 .sidebar-island {
-  width: 72px;
+  width: 92px;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -76,19 +72,7 @@ const menuItems = computed(() => [
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-}
-
-.logo-area {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.brand-logo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
+  gap: 16px;
 }
 
 .nav-menu {
@@ -109,11 +93,11 @@ const menuItems = computed(() => [
   border: none;
   background: transparent;
   border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
+  display: grid;
+  grid-template-rows: 18px 11px;
+  place-content: center;
+  justify-items: center;
+  row-gap: 4px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -136,6 +120,13 @@ const menuItems = computed(() => [
 }
 
 .nav-label {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 11px;
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;

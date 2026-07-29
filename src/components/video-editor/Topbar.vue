@@ -99,6 +99,7 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
     @dblclick="capture.toggleMaximize()"
   >
     <div class="left-actions" @dblclick.stop>
+      <img src="/brand/DemoRecorderIcon.webp" class="brand-logo" alt="DemoRecorder" />
       <Button
         variant="ghost"
         size="sm"
@@ -182,6 +183,14 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
 
 .left-actions {
   gap: 8px;
+}
+
+.brand-logo {
+  width: 24px;
+  height: 24px;
+  margin-left: 10px;
+  object-fit: contain;
+  flex: 0 0 auto;
 }
 
 .history-actions {
