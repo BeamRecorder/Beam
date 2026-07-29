@@ -1,0 +1,103 @@
+name: Release Windows
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+# Serializing releases closes the race between the version check and publication.
+concurrency:
+  group: windows-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    # GitHub Actions does not support filtering push events by commit message.
+    # The condition prevents a runner from being provisioned for regular pushes.
+    if: >-
+      github.actor == 'ExtraBinoss' &&
+      startsWith(github.event.head_commit.message, '[RELEASE]')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          LATEST_TAG="$(gh release list --limit 100 --json tagName,isLatest --jq '.[] | select(.isLatest) | .tagName' | head -n 1)"
+          node --input-type=module - "$VERSION" "$LATEST_TAG" <<'NODE'
+          const [version, latestTag] = process.argv.slice(2)
+          const parse = (value) => {
+            const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value.replace(/^v/, ''))
+            if (!match) throw new Error(`Expected a stable semantic version, received "${value}".`)
+            return match.slice(1).map(Number)
+          }
+          const compare = (left, right) => {
+            for (let index = 0; index < left.length; index += 1) {
+              if (left[index] !== right[index]) return left[index] - right[index]
+            }
+            return 0
+          }
+          const current = parse(version)
+          if (latestTag) {
+            const latest = parse(latestTag)
+            const comparison = compare(current, latest)
+            if (comparison <= 0) throw new Error(`package.json is ${version}; it must be greater than the latest release (${latestTag}).`)
+          }
+          NODE
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  package-windows:
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-windows
+          cache-on-failure: true
+      - run: npm ci
+      - run: npm run capture:build-release
+      - run: npx vite build
+      - run: npx electron-builder --win nsis --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-assets
+          path: |
+            dist_electron/*.exe
+            dist_electron/*.blockmap
+            dist_electron/latest.yml
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: [prepare, package-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-assets
+          path: release-assets
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.version }}
+        shell: bash
+        run: |
+          gh release create "$TAG" release-assets/* --title "$TAG" --generate-notes
