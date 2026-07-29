@@ -25,7 +25,8 @@ const formatDescriptions: Record<ExportFormat, string> = {
 }
 
 const getMb = (p: ExportPreset) => {
-  const { width, height, fps } = props.request.snapshot.video
+  const { width, height } = props.request.snapshot.canvas
+  const { fps } = props.request.snapshot.render
   const bps = bitrateFor(p, width, height, fps)
   return (bps / 1_000_000).toFixed(1)
 }
@@ -84,7 +85,6 @@ const formatMs = (ms: number) => {
     </template>
     <template #default>
       <section class="export-popover" :aria-label="t('exportVideoAria')" @click.stop>
-        <!-- Active Exporting Progress Card -->
         <div v-if="isExporting" class="export-progress-card">
           <div class="progress-header">
             <span class="stage-title">{{ progress?.stageLabel || t('exporting') }}</span>
@@ -103,7 +103,6 @@ const formatMs = (ms: number) => {
           </div>
         </div>
 
-        <!-- Configuration Form (When not exporting) -->
         <template v-else>
           <div class="field">
             <span class="field-label">{{ t('format') }}</span>
