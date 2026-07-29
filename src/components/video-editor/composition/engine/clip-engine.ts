@@ -20,7 +20,10 @@ export class CompositionEngineError extends Error {}
 
 const finite = (value: number) => Number.isFinite(value);
 const integer = (value: number) => Math.round(value);
-const clone = (composition: ClipComposition): ClipComposition => structuredClone(composition);
+// Composition state is deliberately JSON-serializable. JSON cloning unwraps Vue
+// proxies before copying, unlike structuredClone which throws on reactive state.
+const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const clone = (composition: ClipComposition): ClipComposition => cloneValue(composition);
 const createId = () => crypto.randomUUID();
 
 const byId = (composition: ClipComposition, clipId: string) => {
@@ -49,8 +52,8 @@ const normalizeOrders = (clips: Clip[]) =>
 export const createComposition = (assets: MediaAsset[] = [], clips: Clip[] = []): ClipComposition => {
   const composition: ClipComposition = {
     schemaVersion: COMPOSITION_SCHEMA_VERSION,
-    assets: structuredClone(assets),
-    clips: normalizeOrders(normalizeGroups(structuredClone(clips))),
+    assets: cloneValue(assets),
+    clips: normalizeOrders(normalizeGroups(cloneValue(clips))),
   };
   validateComposition(composition);
   return composition;
@@ -117,8 +120,8 @@ export const activeClipsAt = (composition: ClipComposition, timelineTimeMs: numb
 export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipComposition {
   const next = clone(composition);
   const index = next.assets.findIndex((entry) => entry.id === asset.id);
-  if (index < 0) next.assets.push(structuredClone(asset));
-  else next.assets[index] = structuredClone(asset);
+  if (index < 0) next.assets.push(cloneValue(asset));
+  else next.assets[index] = cloneValue(asset);
   validateComposition({ ...next, clips: next.clips.filter((clip) => clip.kind === "caption" || next.assets.some((entry) => entry.id === clip.assetId)) });
   return next;
 }
@@ -126,7 +129,7 @@ export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipC
 export function addClip(composition: ClipComposition, clip: Clip, asset?: MediaAsset): ClipComposition {
   const next = asset ? addAsset(composition, asset) : clone(composition);
   if (next.clips.some((entry) => entry.id === clip.id)) throw new CompositionEngineError(`Duplicate clip: ${clip.id}`);
-  next.clips = normalizeOrders([...next.clips, structuredClone(clip)]);
+  next.clips = normalizeOrders([...next.clips, cloneValue(clip)]);
   validateComposition(next);
   return next;
 }
@@ -267,7 +270,7 @@ export function setCrop(composition: ClipComposition, clipId: string, crop: Norm
 export const setAppearance = (composition: ClipComposition, clipId: string, appearance: ClipAppearance) =>
   updateClip(composition, clipId, (clip) => {
     if (!isVisualClip(clip)) throw new CompositionEngineError("Only visual clips have an appearance.");
-    return { ...clip, appearance: structuredClone(appearance) };
+    return { ...clip, appearance: cloneValue(appearance) };
   });
 
 export const setMirrored = (composition: ClipComposition, clipId: string, isMirrored: boolean) =>
