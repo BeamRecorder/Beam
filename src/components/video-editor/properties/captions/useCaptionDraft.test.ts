@@ -43,13 +43,13 @@ const mountDraft = (clip = captionClip()) => {
 describe("useCaptionDraft", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("waits 500 ms before persisting a local edit", () => {
+  it("persists a local edit on the next UI frame", () => {
     vi.useFakeTimers();
     const harness = mountDraft();
     harness.draft.update((clip) => ({ ...clip, name: "Edited caption" }));
     expect(harness.draft.draft.value?.name).toBe("Edited caption");
     expect(harness.emitUpdate).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(499);
+    vi.advanceTimersByTime(15);
     expect(harness.emitUpdate).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(harness.emitUpdate).toHaveBeenCalledWith(expect.objectContaining({ name: "Edited caption" }));
@@ -61,7 +61,7 @@ describe("useCaptionDraft", () => {
     harness.draft.update((clip) => ({ ...clip, name: "Blurred caption" }));
     harness.draft.flush();
     expect(harness.emitUpdate).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(16);
     expect(harness.emitUpdate).toHaveBeenCalledTimes(1);
   });
 
