@@ -142,7 +142,7 @@ export function drawCompositionLayers(
   time: number,
   visuals: CompositionVisuals = new Map(),
   positionedMedia?: { x: number; y: number; width: number; height: number },
-  mainVideoWidth = snapshot.video.width,
+  mainVideoWidth = snapshot.render.sourceWidth,
 ) {
   const timeMs = time * 1_000;
   const clips = activeClipsAt(snapshot.composition, timeMs).filter((clip) => clip.kind !== "screen").sort((a, b) => b.order - a.order);
@@ -172,14 +172,14 @@ export function renderCompositionFrame(
   const timeMs = time * 1_000;
   const active = activeClipsAt(snapshot.composition, timeMs);
   const screen = active.find((clip): clip is VisualClip => clip.kind === "screen");
-  if (!screen || !snapshot.video.enabled || !video || (video instanceof HTMLVideoElement && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)) {
+  if (!screen || !video || (video instanceof HTMLVideoElement && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)) {
     drawSnapshotBackground(ctx, snapshot, background);
     drawCompositionLayers(ctx, snapshot, time, visuals);
     return;
   }
 
-  const sourceWidth = video.videoWidth || video.displayWidth || snapshot.video.width;
-  const sourceHeight = video.videoHeight || video.displayHeight || snapshot.video.height;
+  const sourceWidth = video.videoWidth || video.displayWidth || snapshot.render.sourceWidth;
+  const sourceHeight = video.videoHeight || video.displayHeight || snapshot.render.sourceHeight;
   const crop = screen.crop;
   const cropX = crop ? crop.x * sourceWidth : 0;
   const cropY = crop ? crop.y * sourceHeight : 0;
