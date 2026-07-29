@@ -51,7 +51,7 @@ const DEFAULT_APPEARANCE: ClipAppearance = {
   frameShowScrollbars: true,
 };
 
-const clone = <T>(value: T): T => structuredClone(value);
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
 
 export function useClipComposition(options: {
@@ -144,8 +144,8 @@ export function useClipComposition(options: {
     }
   };
 
-  const addElement = async (kind: "video" | "image" | "sound" | "caption") => {
-    const startMs = Math.round(options.currentTimeSec.value * 1_000);
+  const addElement = async (kind: "video" | "image" | "sound" | "caption", requestedStartMs?: number) => {
+    const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
     if (kind === "caption") {
       const clip: CaptionClip = {
         id: crypto.randomUUID(),
@@ -215,10 +215,7 @@ export function useClipComposition(options: {
     selectClip(visual.id);
   };
 
-  const addCaptionAtTime = (startMs: number) => {
-    options.currentTimeSec.value = Math.max(0, startMs / 1_000);
-    return addElement("caption");
-  };
+  const addCaptionAtTime = (startMs: number) => addElement("caption", startMs);
 
   const updateCaption = (caption: CaptionClip) => {
     composition.value = updateClip(composition.value, caption.id, () => clone(caption));
