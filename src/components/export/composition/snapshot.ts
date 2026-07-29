@@ -1,7 +1,7 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog'
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types'
-import { isVisualClip, type ClipComposition } from '../../video-editor/composition/composition-types'
+import type { ClipComposition } from '../../video-editor/composition/composition-types'
 import type { CursorRenderSettings, CompositionSnapshot } from '../export-types'
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas'
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas'
@@ -35,19 +35,15 @@ export function createCompositionSnapshot(input: {
   composition: ClipComposition
   cursorSettings: CursorRenderSettings
 }): CompositionSnapshot {
-  const screen = input.composition.clips.find((clip) => clip.kind === 'screen' && clip.enabled && isVisualClip(clip))
+  const screen = input.composition.clips.find((clip) => clip.kind === 'screen' && clip.enabled)
   const asset = screen && input.composition.assets.find((entry) => entry.id === screen.assetId)
   if (!screen || !asset?.src) throw new Error($t('sessionVideoUnavailable'))
   return {
     duration: Math.max(0, input.duration),
-    video: {
-      clipId: screen.id,
-      assetId: asset.id,
-      src: asset.src,
-      width: Math.max(1, asset.width ?? input.width),
-      height: Math.max(1, asset.height ?? input.height),
+    render: {
       fps: Math.max(1, input.fps),
-      enabled: screen.enabled,
+      sourceWidth: Math.max(1, asset.width ?? input.width),
+      sourceHeight: Math.max(1, asset.height ?? input.height),
     },
     canvas: normalizeOutputCanvas(input.canvas),
     background: input.background?.kind === 'color' ? { kind: 'color', color: input.background.color }
@@ -58,10 +54,5 @@ export function createCompositionSnapshot(input: {
     cursor: copyCursor(input.editorData?.cursor),
     cursorSettings: cloneJson(input.cursorSettings),
     composition: cloneJson(input.composition),
-    layers: [
-      { kind: 'background', enabled: Boolean(input.background) },
-      { kind: 'video', enabled: screen.enabled },
-      { kind: 'cursor', enabled: Boolean(input.editorData?.cursor.available) },
-    ],
   }
 }
