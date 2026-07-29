@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { Download, RefreshCw, RotateCcw } from '@lucide/vue'
+import { Download, ExternalLink, RefreshCw, RotateCcw } from '@lucide/vue'
 import { capture } from '~/api/capture'
 import type { AppUpdateState } from '~/api/types/capture-api'
 import { useTranslate } from '~/i18n/useTranslate'
@@ -11,7 +11,9 @@ const state = ref<AppUpdateState | null>(null)
 let stopListening: (() => void) | undefined
 
 const refresh = async () => { state.value = await capture.checkForUpdates() }
+const download = async () => { await capture.downloadUpdate() }
 const restart = async () => { await capture.quitAndInstallUpdate() }
+const openChangelog = async () => { await capture.openUpdateChangelog() }
 
 onMounted(async () => {
   stopListening = capture.onUpdateState((nextState) => { state.value = nextState })
@@ -34,14 +36,24 @@ onBeforeUnmount(() => stopListening?.())
         <template v-else>{{ t('currentVersion', { version: state?.currentVersion ?? '…' }) }}</template>
       </p>
     </div>
-    <Button v-if="state?.status === 'downloaded'" variant="primary" size="sm" @click="restart">
-      <template #icon><RotateCcw class="button-icon" /></template>
-      {{ t('restart') }}
-    </Button>
-    <Button v-else variant="secondary" size="sm" :disabled="!state || state.status === 'checking' || state.status === 'downloading' || state.status === 'unsupported'" @click="refresh">
-      <template #icon><Download v-if="state?.status === 'downloading'" class="button-icon" /><RefreshCw v-else class="button-icon" /></template>
-      {{ state?.status === 'checking' ? t('checking') : t('checkForUpdates') }}
-    </Button>
+    <div class="update-actions">
+      <Button variant="secondary" size="sm" :disabled="!state" @click="openChangelog">
+        <template #icon><ExternalLink class="button-icon" /></template>
+        {{ t('viewChangelog') }}
+      </Button>
+      <Button v-if="state?.status === 'downloaded'" variant="primary" size="sm" @click="restart">
+        <template #icon><RotateCcw class="button-icon" /></template>
+        {{ t('restart') }}
+      </Button>
+      <Button v-else-if="state?.status === 'available'" variant="primary" size="sm" @click="download">
+        <template #icon><Download class="button-icon" /></template>
+        {{ t('download') }}
+      </Button>
+      <Button v-else variant="secondary" size="sm" :disabled="!state || state.status === 'checking' || state.status === 'downloading' || state.status === 'unsupported'" @click="refresh">
+        <template #icon><Download v-if="state?.status === 'downloading'" class="button-icon" /><RefreshCw v-else class="button-icon" /></template>
+        {{ state?.status === 'checking' ? t('checking') : t('checkForUpdates') }}
+      </Button>
+    </div>
   </div>
 </template>
 
@@ -51,4 +63,5 @@ onBeforeUnmount(() => stopListening?.())
 .update-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .update-description { margin-top: 2px; font-size: 11px; color: var(--text-muted); }
 .button-icon { width: 16px; height: 16px; }
+.update-actions { display: flex; gap: 8px; }
 </style>

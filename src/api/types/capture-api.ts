@@ -79,7 +79,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   showItemInFolder(path: string): Promise<void>
   getUpdateState(): Promise<AppUpdateState>
   checkForUpdates(): Promise<AppUpdateState>
+  downloadUpdate(): Promise<boolean>
   quitAndInstallUpdate(): Promise<boolean>
+  openUpdateChangelog(): Promise<void>
   onUpdateState(listener: (state: AppUpdateState) => void): () => void
   beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>
   writeCameraSegment(payload: MediaSegmentChunk): Promise<void>
@@ -96,7 +98,7 @@ export interface DesktopCaptureApi extends CaptureApi {
 }
 
 export interface AppUpdateState {
-  status: 'idle' | 'checking' | 'downloading' | 'downloaded' | 'not-available' | 'error' | 'unsupported'
+  status: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'not-available' | 'error' | 'unsupported'
   currentVersion: string
   availableVersion: string | null
   percent: number | null

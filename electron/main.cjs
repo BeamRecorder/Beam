@@ -166,7 +166,7 @@ app.whenReady().then(() => {
   logStartup('Window IPC registered.')
   const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })
   logStartup('Export IPC registered.')
-  const updater = createAutoUpdater({ app, BrowserWindow, autoUpdater })
+  const updater = createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal: require('electron').shell.openExternal })
   registerUpdateIpc(ipcMain, updater)
   const win = createWindow()
   void updater.checkForUpdates()

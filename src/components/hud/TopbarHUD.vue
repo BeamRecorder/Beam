@@ -3,6 +3,7 @@ import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
 import Badge from "~/ui/badge/Badge.vue";
 import Button from "~/ui/button/Button.vue";
 import { useTranslate } from "~/i18n/useTranslate";
+import UpdateAvailableBadge from "~/components/updates/UpdateAvailableBadge.vue";
 
 const { t } = useTranslate("TopbarHUD");
 
@@ -61,15 +62,10 @@ const emit = defineEmits<{
       >
         <Minus :size="16" />
       </button>
-      <Button
-        v-if="showSettings"
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="Settings"
-        :aria-label="t('preferences')"
-        @click="emit('open-settings')"
-      />
+      <span v-if="showSettings" class="settings-action">
+        <Button variant="ghost" size="sm" icon-only :icon="Settings" :aria-label="t('preferences')" @click="emit('open-settings')" />
+        <UpdateAvailableBadge />
+      </span>
       <button
         type="button"
         class="window-action close-button"
@@ -103,6 +99,7 @@ const emit = defineEmits<{
   align-items: center;
   gap: 8px;
 }
+.settings-action { position: relative; display: inline-flex; }
 .window-actions {
   gap: 4px;
   -webkit-app-region: no-drag;

@@ -39,4 +39,10 @@ export const captureMock = {
   resetPreferences: vi.fn(),
   onPreferencesChanged: vi.fn().mockReturnValue(() => undefined),
   onPreferenceShortcut: vi.fn().mockReturnValue(() => undefined),
+  getUpdateState: vi.fn().mockResolvedValue({ status: 'unsupported', currentVersion: '0.1.0', availableVersion: null, percent: null, message: null }),
+  checkForUpdates: vi.fn(),
+  downloadUpdate: vi.fn(),
+  quitAndInstallUpdate: vi.fn(),
+  openUpdateChangelog: vi.fn(),
+  onUpdateState: vi.fn().mockReturnValue(() => undefined),
 };

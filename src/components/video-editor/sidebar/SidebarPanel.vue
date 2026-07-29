@@ -10,6 +10,7 @@ import {
   Settings,
 } from "@lucide/vue";
 import { useTranslate } from "~/i18n/useTranslate";
+import UpdateAvailableBadge from "~/components/updates/UpdateAvailableBadge.vue";
 
 const { t } = useTranslate("SidebarPanel");
 
@@ -56,6 +57,7 @@ const menuItems = computed(() => [
       >
         <Settings class="nav-icon" />
         <span class="nav-label">{{ t('settings') }}</span>
+        <UpdateAvailableBadge />
       </button>
     </div>
   </aside>
@@ -88,6 +90,7 @@ const menuItems = computed(() => [
 }
 
 .nav-btn {
+  position: relative;
   width: 100%;
   height: 52px;
   border: none;

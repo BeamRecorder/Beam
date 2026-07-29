@@ -117,7 +117,9 @@ contextBridge.exposeInMainWorld(
     showItemInFolder: (path) => ipcRenderer.invoke("export:show-in-folder", { path }),
     getUpdateState: () => ipcRenderer.invoke("app-update:get-state"),
     checkForUpdates: () => ipcRenderer.invoke("app-update:check"),
+    downloadUpdate: () => ipcRenderer.invoke("app-update:download"),
     quitAndInstallUpdate: () => ipcRenderer.invoke("app-update:quit-and-install"),
+    openUpdateChangelog: () => ipcRenderer.invoke("app-update:open-changelog"),
     onUpdateState: (listener) => {
       const callback = (_event, state) => listener(state);
       ipcRenderer.on("app-update:state", callback);

@@ -1,6 +1,8 @@
 {
   "title": "Application update",
   "checkForUpdates": "Check for updates",
+  "download": "Download",
+  "viewChangelog": "View changelog",
   "checking": "Checking for updates…",
   "downloading": "Downloading update: {percent}%",
   "readyToRestart": "Version {version} is ready to install.",
