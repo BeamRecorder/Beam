@@ -45,6 +45,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   onCountdown(listener: (seconds: number | null) => void): () => void
   dragStart(): void
   drag(): void
+  dragEnd(): void
   getSources(types?: string[]): Promise<CapturePreview[]>
   selectScreenRegion(options: ScreenRegionOverlayOptions): Promise<ScreenRegion | null>
   showScreenRegionOverlay(options: ScreenRegionOverlayOptions): void

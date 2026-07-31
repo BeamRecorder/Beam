@@ -76,6 +76,13 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     })
     controllerForWindow(win)?.rememberRecorderPosition()
   })
+  ipcMain.on('window:dragEnd', (event) => {
+    const win = windowForEvent(event)
+    controllerForWindow(win)?.flushRecorderPosition()
+    dragStartMouse = null
+    dragStartWindow = null
+    dragStartSize = null
+  })
 }
 
 module.exports = { registerWindowIpc }

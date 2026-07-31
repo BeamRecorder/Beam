@@ -91,14 +91,14 @@ function configureDesktopLoopback() {
   })
 }
 
-function createWindow() {
+function createWindow(preferencesStore) {
   logStartup('Creating BrowserWindow.')
   const win = new BrowserWindow({
     width: 352, height: 512, frame: false, transparent: true, alwaysOnTop: false,
     icon: path.join(applicationRoot, 'public/brand/DemoRecorderIcon.ico'), resizable: true, maximizable: true, hasShadow: true, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false },
   })
-  const controller = new WindowController(win)
+  const controller = new WindowController(win, { preferencesStore })
   controllers.set(win, controller)
   profileRendererRequests(win.webContents)
   win.once('ready-to-show', () => {
@@ -128,7 +128,8 @@ app.whenReady().then(() => {
   logStartup('Media permission policy registered.')
   configureDesktopLoopback()
   const userPaths = createUserPaths(app.getPath('videos'))
-  const preferencesCleanup = registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store: createPreferencesStore(userPaths.preferences) })
+  const preferencesStore = createPreferencesStore(userPaths.preferences)
+  const preferencesCleanup = registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store: preferencesStore })
   app.once('will-quit', preferencesCleanup)
   logStartup('Desktop loopback policy registered.')
   registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage] })
@@ -175,10 +176,10 @@ app.whenReady().then(() => {
   logStartup('Export IPC registered.')
   const updater = createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal: require('electron').shell.openExternal })
   registerUpdateIpc(ipcMain, updater)
-  const win = createWindow()
+  const win = createWindow(preferencesStore)
   void updater.checkForUpdates()
   win.webContents.once('destroyed', () => { cameraOverlay.destroy(); screenRegionOverlay.destroy(); exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id); microphoneStorage.cleanupOwner(win.webContents.id); systemAudioStorage.cleanupOwner(win.webContents.id) })
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(preferencesStore) })
 })
 
 let quitting = false

@@ -6,6 +6,7 @@ const props = withDefaults(defineProps<{
   position?: 'top' | 'bottom' | 'left' | 'right'
   variant?: 'default' | 'error'
   disabled?: boolean
+  maxWidth?: number
 }>(), {
   position: 'top',
   variant: 'default',
@@ -70,7 +71,7 @@ onBeforeUnmount(() => {
         v-if="visible && (content || $slots.content)" 
         class="tooltip-content" 
         :class="[position || 'top', `tooltip-${variant}`]"
-        :style="tooltipStyle"
+        :style="{ ...tooltipStyle, ...(maxWidth ? { maxWidth: `${maxWidth}px` } : {}) }"
         role="tooltip"
       >
         <slot name="content">{{ content }}</slot>
@@ -88,6 +89,7 @@ onBeforeUnmount(() => {
 
 .tooltip-content {
   position: fixed;
+  box-sizing: border-box;
   background-color: var(--color-bg-element);
   color: var(--text-primary);
   border: 1px solid var(--color-border);
@@ -95,7 +97,10 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 500;
-  white-space: nowrap;
+  max-width: min(260px, calc(100vw - 24px));
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
   z-index: 20000;
   box-shadow: var(--shadow-md);
   pointer-events: none;

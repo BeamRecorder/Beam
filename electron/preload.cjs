@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld(
     setRecorderTooltip: (visible) => ipcRenderer.invoke("window:set-recorder-tooltip", Boolean(visible)),
     dragStart: () => ipcRenderer.send("window:dragStart"),
     drag: () => ipcRenderer.send("window:drag"),
+    dragEnd: () => ipcRenderer.send("window:dragEnd"),
     getSources: (types) => ipcRenderer.invoke("window:getSources", types),
     selectScreenRegion: (options) => ipcRenderer.invoke("screen-region:select", options),
     showScreenRegionOverlay: (options) => ipcRenderer.send("screen-region:show", options),

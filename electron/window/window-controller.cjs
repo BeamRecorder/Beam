@@ -5,8 +5,9 @@ const RECORDER_SIZE = { width: 72, height: 296 }
 const RECORDER_TOOLTIP_WIDTH = 300
 
 class WindowController {
-  constructor(window) {
+  constructor(window, { preferencesStore = null } = {}) {
     this.window = window
+    this.preferencesStore = preferencesStore
     this.mode = 'hud'
     this.ready = false
     this.interactive = false
@@ -15,7 +16,8 @@ class WindowController {
     // (especially when the cursor is already over it during startup).
     this.hudOverInteractive = true
     this.recorderOverInteractive = false
-    this.recorderPositions = new Map()
+    this.recorderPositions = this.readRecorderPositions()
+    this.recorderPositionSaveTimer = null
     this.hudPosition = null
     this.recorderBoundsBeforeTooltip = null
     this.recorderPointerPoll = null
@@ -24,6 +26,40 @@ class WindowController {
     this.window.on('hide', () => this.applyInteractionPolicy())
     this.window.on('minimize', () => this.applyInteractionPolicy())
     this.window.on('restore', () => this.applyInteractionPolicy())
+    this.window.on('closed', () => this.flushRecorderPosition())
+  }
+
+  readRecorderPositions() {
+    const positions = new Map()
+    const stored = this.preferencesStore?.read()?.extras?.recorderPositions
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return positions
+    for (const [displayId, value] of Object.entries(stored)) {
+      if (!value || typeof value !== 'object') continue
+      const x = Number(value.x)
+      const y = Number(value.y)
+      if (Number.isFinite(x) && Number.isFinite(y)) positions.set(displayId, { x: Math.round(x), y: Math.round(y) })
+    }
+    return positions
+  }
+
+  persistRecorderPositions() {
+    if (!this.preferencesStore) return
+    this.preferencesStore.patch({ extras: { recorderPositions: Object.fromEntries(this.recorderPositions) } })
+  }
+
+  flushRecorderPosition() {
+    if (this.recorderPositionSaveTimer) clearTimeout(this.recorderPositionSaveTimer)
+    this.recorderPositionSaveTimer = null
+    this.persistRecorderPositions()
+  }
+
+  scheduleRecorderPositionSave() {
+    if (!this.preferencesStore) return
+    if (this.recorderPositionSaveTimer) clearTimeout(this.recorderPositionSaveTimer)
+    this.recorderPositionSaveTimer = setTimeout(() => {
+      this.recorderPositionSaveTimer = null
+      this.persistRecorderPositions()
+    }, 150)
   }
 
   markReadyToShow() {
@@ -55,7 +91,7 @@ class WindowController {
   placeRecorder() {
     const { screen } = require('electron')
     const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-    const saved = this.recorderPositions.get(display.id)
+    const saved = this.recorderPositions.get(String(display.id))
     const x = saved?.x ?? display.workArea.x + display.workArea.width - RECORDER_SIZE.width - 20
     const y = saved?.y ?? display.workArea.y + Math.round((display.workArea.height - RECORDER_SIZE.height) / 2)
     this.window.setBounds({ x, y, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })
@@ -65,7 +101,8 @@ class WindowController {
     if (this.mode !== 'recorder') return
     const { screen } = require('electron')
     const [x, y] = this.window.getPosition()
-    this.recorderPositions.set(screen.getDisplayNearestPoint({ x, y }).id, { x, y })
+    this.recorderPositions.set(String(screen.getDisplayNearestPoint({ x, y }).id), { x, y })
+    this.scheduleRecorderPositionSave()
   }
 
   setRecorderTooltip(visible) {

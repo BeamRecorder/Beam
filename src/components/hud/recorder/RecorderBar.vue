@@ -2,6 +2,7 @@
 import {
   Camera,
   CameraOff,
+  GripVertical,
   Mic,
   MicOff,
   Pause,
@@ -39,6 +40,7 @@ const emit = defineEmits<{
 
 const preferencesStore = usePreferencesStore();
 let tooltipSpaceReady: Promise<void> = Promise.resolve();
+const isDragging = ref(false);
 
 onMounted(() => {
   preferencesStore.load();
@@ -53,10 +55,15 @@ const getShortcut = (id: string, fallback: string): string => {
 
 const drag = () => window.capture?.drag();
 const stopDrag = () => {
+  if (!isDragging.value) return;
+  isDragging.value = false;
   window.removeEventListener("mousemove", drag);
   window.removeEventListener("mouseup", stopDrag);
+  window.capture?.dragEnd();
 };
 const startDrag = () => {
+  if (isDragging.value) return;
+  isDragging.value = true;
   window.capture?.dragStart();
   window.addEventListener("mousemove", drag);
   window.addEventListener("mouseup", stopDrag, { once: true });
@@ -79,12 +86,23 @@ onBeforeUnmount(() => {
 <template>
   <aside
     class="recorder-bar"
-    :class="{ 'auto-fade': visibility === 'auto-fade' }"
+    :class="{ 'auto-fade': visibility === 'auto-fade', dragging: isDragging }"
     :aria-label="t('recordingControls')"
     @mousedown="startDrag"
     @mouseenter="showTooltips"
     @mouseleave="hideTooltips"
   >
+    <button
+      class="drag-handle"
+      type="button"
+      :aria-label="t('moveRecorderBar')"
+      :title="t('moveRecorderBar')"
+      @mousedown.stop="startDrag"
+      @click.prevent
+    >
+      <GripVertical aria-hidden="true" />
+    </button>
+
     <p
       class="recording-time"
       :class="{ countdown: phase === 'countdown' }"
@@ -94,7 +112,7 @@ onBeforeUnmount(() => {
     </p>
 
     <!-- Play/Pause -->
-    <Tooltip position="left" :disabled="!tooltipsReady">
+    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ phase === 'paused' ? t('resumeRecording') : t('pauseRecording') }}</span>
@@ -115,7 +133,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Stop -->
-    <Tooltip position="left" :disabled="!tooltipsReady">
+    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ t('stopRecording') }}</span>
@@ -133,7 +151,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Mic -->
-    <Tooltip position="left" :disabled="!tooltipsReady">
+    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ microphoneEnabled ? t('turnMicOff') : t('turnMicOn') }}</span>
@@ -154,7 +172,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Camera -->
-    <Tooltip position="left" :disabled="!tooltipsReady">
+    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ cameraEnabled ? t('turnCameraOff') : t('turnCameraOn') }}</span>
@@ -173,7 +191,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- System Audio -->
-    <Tooltip position="left" :disabled="!tooltipsReady">
+    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn') }}</span>
@@ -212,7 +230,37 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-lg);
   background: var(--color-bg-surface);
   -webkit-app-region: drag;
+  cursor: grab;
   transition: opacity 0.18s ease;
+}
+.recorder-bar.dragging {
+  cursor: grabbing;
+}
+.drag-handle {
+  width: 40px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: grab;
+  -webkit-app-region: no-drag;
+}
+.drag-handle:hover,
+.drag-handle:focus-visible {
+  background: var(--color-bg-element);
+  color: var(--text-primary);
+  outline: none;
+}
+.recorder-bar.dragging .drag-handle {
+  cursor: grabbing;
+}
+.drag-handle :deep(svg) {
+  width: 18px;
+  height: 18px;
 }
 .recorder-bar.auto-fade {
   opacity: 0.15;
@@ -260,6 +308,10 @@ onBeforeUnmount(() => {
 .tooltip-shortcut-content {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  max-width: 198px;
+  min-width: 0;
+  line-height: 1.35;
 }
 </style>
