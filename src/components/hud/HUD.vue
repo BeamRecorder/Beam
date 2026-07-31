@@ -119,7 +119,9 @@ const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
 const savedScreenRegion = ref<ScreenRegion | null>(null);
 const isRegionSelectionLeaving = ref(false);
 const isRegionSelectionEntering = ref(false);
+const isRegionConfirmationAnimating = ref(false);
 let regionSelectionEnterTimeout: ReturnType<typeof setTimeout> | null = null;
+let regionConfirmationTimeout: ReturnType<typeof setTimeout> | null = null;
 const systemAudioMode = ref<"on" | "off">("off");
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
@@ -242,6 +244,12 @@ const selectScreenRegion = async () => {
     selectedScreenOverlay.value = { bounds, region: plainRegion };
     savedScreenRegion.value = plainRegion;
     void capture.updatePreferences({ extras: { screenRegion: plainRegion } });
+    isRegionConfirmationAnimating.value = true;
+    if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
+    regionConfirmationTimeout = setTimeout(() => {
+      isRegionConfirmationAnimating.value = false;
+      regionConfirmationTimeout = null;
+    }, 700);
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
@@ -807,6 +815,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   capture.hideScreenRegionOverlay();
   if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
+  if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
   unsubscribeShortcut?.();
   stopTimer();
   void activeCamera?.stop();
@@ -965,11 +974,14 @@ const openProject = (project: CaptureProject) => {
                     :variant="selectedScreenRegion ? 'primary' : 'secondary'"
                     size="sm"
                     icon-only
-                    :icon="selectedScreenRegion ? Check : Crop"
+                    :icon="isRegionConfirmationAnimating ? Check : Crop"
                     :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
                     :title="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
                     :disabled="isRecording || isBusy || !selectedScreenPreview?.displayBounds"
-                    :class="{ 'screen-region-confirmed': Boolean(selectedScreenRegion) }"
+                    :class="{
+                      'screen-region-confirmed': Boolean(selectedScreenRegion),
+                      'screen-region-checkmark': isRegionConfirmationAnimating,
+                    }"
                     @click="selectScreenRegion"
                   />
                 </div>
@@ -1122,6 +1134,10 @@ const openProject = (project: CaptureProject) => {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
+.screen-select-controls :deep(.screen-region-checkmark .btn-icon) {
+  animation: screen-region-checkmark 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @keyframes hud-region-out {
   from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
   to { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
@@ -1130,6 +1146,13 @@ const openProject = (project: CaptureProject) => {
 @keyframes hud-region-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
   to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes screen-region-checkmark {
+  0% { opacity: 0; transform: scale(0.45) rotate(-18deg); }
+  45% { opacity: 1; transform: scale(1.2) rotate(0deg); }
+  70% { transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .screen-select-controls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
