@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {
-  Camera,
-  CameraOff,
+  Video,
+  VideoOff,
   GripVertical,
   Mic,
   MicOff,
@@ -12,7 +12,7 @@ import {
   Volume2,
   VolumeX,
 } from "@lucide/vue";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import Tooltip from "~/ui/tooltip/Tooltip.vue";
 import KeyboardChip from "~/ui/KeyboardChip.vue";
 import { usePreferencesStore } from "~/stores/preferences";
@@ -43,6 +43,8 @@ const emit = defineEmits<{
 const preferencesStore = usePreferencesStore();
 let tooltipSpaceReady: Promise<void> = Promise.resolve();
 const isDragging = ref(false);
+const tooltipSide = ref<'left' | 'right'>('left');
+const tooltipPosition = computed(() => tooltipSide.value);
 let dragElement: HTMLElement | null = null;
 let dragPointerId: number | null = null;
 
@@ -50,7 +52,10 @@ onMounted(() => {
   preferencesStore.load();
   // Reserve native space before the user reaches a control. Resizing only on
   // first button hover made the bar visibly jump once per recording.
-  tooltipSpaceReady = window.capture?.setRecorderTooltip(true) ?? Promise.resolve();
+  tooltipSpaceReady = (async () => {
+    const side = await window.capture?.setRecorderTooltip(true);
+    if (side === 'left' || side === 'right') tooltipSide.value = side;
+  })();
 });
 
 const getShortcut = (id: string, fallback: string): string => {
@@ -63,6 +68,7 @@ const stopDrag = () => {
   isDragging.value = false;
   window.removeEventListener("pointermove", drag);
   window.removeEventListener("pointerup", stopDrag);
+  window.removeEventListener("pointercancel", stopDrag);
   if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
   dragElement = null;
   dragPointerId = null;
@@ -71,7 +77,7 @@ const stopDrag = () => {
 const startDrag = (event: PointerEvent) => {
   if (event.button !== 0) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
-  if (target?.closest(".control")) return;
+  if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest(".drag-handle")) return;
   if (isDragging.value) return;
   isDragging.value = true;
   dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
@@ -80,6 +86,7 @@ const startDrag = (event: PointerEvent) => {
   window.capture?.dragStart();
   window.addEventListener("pointermove", drag);
   window.addEventListener("pointerup", stopDrag, { once: true });
+  window.addEventListener("pointercancel", stopDrag, { once: true });
 };
 const tooltipsReady = ref(false);
 const showTooltips = async () => {
@@ -99,7 +106,7 @@ onBeforeUnmount(() => {
 <template>
   <aside
     class="recorder-bar"
-    :class="{ 'auto-fade': visibility === 'auto-fade', dragging: isDragging }"
+    :class="{ 'auto-fade': visibility === 'auto-fade', dragging: isDragging, 'tooltip-right': tooltipSide === 'right' }"
     :aria-label="t('recordingControls')"
     @pointerdown="startDrag"
     @mouseenter="showTooltips"
@@ -124,7 +131,7 @@ onBeforeUnmount(() => {
     </p>
 
     <!-- Play/Pause -->
-    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ phase === 'paused' ? t('resumeRecording') : t('pauseRecording') }}</span>
@@ -137,7 +144,7 @@ onBeforeUnmount(() => {
           phase === 'paused' ? t('resumeRecording') : t('pauseRecording')
         "
         :disabled="phase === 'countdown'"
-        @mousedown.stop
+        @pointerdown.stop
         @click="emit('pause')"
       >
         <Play v-if="phase === 'paused'" /><Pause v-else />
@@ -145,7 +152,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Stop -->
-    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ t('stopRecording') }}</span>
@@ -155,7 +162,7 @@ onBeforeUnmount(() => {
       <button
         class="control stop"
         :aria-label="t('stopRecording')"
-        @mousedown.stop
+        @pointerdown.stop
         @click="emit('stop')"
       >
         <Square />
@@ -163,7 +170,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Mic -->
-    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ microphoneEnabled ? t('turnMicOff') : t('turnMicOn') }}</span>
@@ -176,7 +183,7 @@ onBeforeUnmount(() => {
           microphoneEnabled ? t('turnMicOff') : t('turnMicOn')
         "
         :disabled="phase === 'countdown'"
-        @mousedown.stop
+        @pointerdown.stop
         @click="emit('microphone')"
       >
         <Mic v-if="microphoneEnabled" /><MicOff v-else />
@@ -184,7 +191,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Camera -->
-    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ cameraEnabled ? t('turnCameraOff') : t('turnCameraOn') }}</span>
@@ -195,15 +202,15 @@ onBeforeUnmount(() => {
         class="control"
         :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
         :disabled="phase === 'countdown'"
-        @mousedown.stop
+        @pointerdown.stop
         @click="emit('camera')"
       >
-        <Camera v-if="cameraEnabled" /><CameraOff v-else />
+        <Video v-if="cameraEnabled" /><VideoOff v-else />
       </button>
     </Tooltip>
 
     <!-- System Audio -->
-    <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
         <div class="tooltip-shortcut-content">
           <span>{{ systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn') }}</span>
@@ -216,7 +223,7 @@ onBeforeUnmount(() => {
           systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')
         "
         :disabled="phase === 'countdown'"
-        @mousedown.stop
+        @pointerdown.stop
         @click="emit('systemAudio')"
       >
         <Volume2 v-if="systemAudioEnabled" /><VolumeX v-else />
@@ -224,7 +231,7 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <div class="cancel-slot">
-      <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+      <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
         <template #content>
           <span>{{ t('cancelRecording') }}</span>
         </template>
@@ -232,7 +239,7 @@ onBeforeUnmount(() => {
           class="control cancel"
           :aria-label="t('cancelRecording')"
           :disabled="phase === 'finalizing'"
-          @mousedown.stop
+          @pointerdown.stop
           @click="emit('cancel')"
         >
           <Trash2 />
@@ -265,6 +272,10 @@ onBeforeUnmount(() => {
 }
 .recorder-bar.dragging {
   cursor: grabbing;
+}
+.recorder-bar.tooltip-right {
+  left: 0;
+  right: auto;
 }
 .drag-handle {
   width: 40px;

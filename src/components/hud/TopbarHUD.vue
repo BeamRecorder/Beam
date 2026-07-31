@@ -39,6 +39,7 @@ const stopDrag = () => {
   isDragging.value = false;
   window.removeEventListener("pointermove", drag);
   window.removeEventListener("pointerup", stopDrag);
+  window.removeEventListener("pointercancel", stopDrag);
   if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
   dragElement = null;
   dragPointerId = null;
@@ -56,6 +57,7 @@ const startDrag = (event: PointerEvent) => {
   window.capture?.dragStart();
   window.addEventListener("pointermove", drag);
   window.addEventListener("pointerup", stopDrag, { once: true });
+  window.addEventListener("pointercancel", stopDrag, { once: true });
 };
 
 onBeforeUnmount(stopDrag);

@@ -35,7 +35,11 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   }
 
   const updateDragPosition = (win) => {
-    if (!win || win.isDestroyed() || !dragStartMouse || !dragStartWindow || !dragStartSize) return
+    if (!win || win.isDestroyed()) {
+      clearDragState()
+      return
+    }
+    if (!dragStartMouse || !dragStartWindow || !dragStartSize) return
     const point = screen.getCursorScreenPoint()
     const geometry = dragStartGeometry || { width: dragStartSize[0], leftOffset: 0 }
     const position = clampToDisplayBounds(
@@ -73,7 +77,7 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   ipcMain.on('window:setInteractive', (event, overInteractive) => controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive))
   ipcMain.on('window:set-visible', (event, visible) => controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible)))
   ipcMain.handle('window:set-recorder-tooltip', (event, visible) => {
-    controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible))
+    return controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible)) ?? null
   })
   ipcMain.handle('window:bounds', (event) => windowForEvent(event)?.getBounds() ?? null)
 
