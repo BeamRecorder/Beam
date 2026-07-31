@@ -4,14 +4,15 @@ function windowForEvent(event) {
   return BrowserWindow.fromWebContents(event.sender)
 }
 
-function clampToDisplayBounds(x, y, width, height, point) {
+function clampToDisplayBounds(x, y, width, height, point, geometry = { width, leftOffset: 0 }) {
   // Use physical display bounds instead of workArea so the Windows taskbar
   // does not become an artificial wall while dragging.
   const displayBounds = screen.getDisplayNearestPoint(point).bounds
-  const maxX = displayBounds.x + Math.max(0, displayBounds.width - width)
+  const minX = displayBounds.x - geometry.leftOffset
+  const maxX = displayBounds.x + Math.max(0, displayBounds.width - geometry.width) - geometry.leftOffset
   const maxY = displayBounds.y + Math.max(0, displayBounds.height - height)
   return {
-    x: Math.min(Math.max(Math.round(x), displayBounds.x), maxX),
+    x: Math.min(Math.max(Math.round(x), minX), Math.max(minX, maxX)),
     y: Math.min(Math.max(Math.round(y), displayBounds.y), maxY),
   }
 }
@@ -21,6 +22,33 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   let dragStartMouse = null
   let dragStartWindow = null
   let dragStartSize = null
+  let dragStartGeometry = null
+  let dragTimer = null
+
+  const clearDragState = () => {
+    if (dragTimer) clearInterval(dragTimer)
+    dragTimer = null
+    dragStartMouse = null
+    dragStartWindow = null
+    dragStartSize = null
+    dragStartGeometry = null
+  }
+
+  const updateDragPosition = (win) => {
+    if (!win || win.isDestroyed() || !dragStartMouse || !dragStartWindow || !dragStartSize) return
+    const point = screen.getCursorScreenPoint()
+    const geometry = dragStartGeometry || { width: dragStartSize[0], leftOffset: 0 }
+    const position = clampToDisplayBounds(
+      dragStartWindow[0] + point.x - dragStartMouse.x,
+      dragStartWindow[1] + point.y - dragStartMouse.y,
+      dragStartSize[0],
+      dragStartSize[1],
+      point,
+      geometry,
+    )
+    win.setBounds({ x: position.x, y: position.y, width: dragStartSize[0], height: dragStartSize[1] })
+    controllerForWindow(win)?.rememberRecorderPosition()
+  }
 
   ipcMain.on('window:close', (event) => windowForEvent(event)?.close())
   ipcMain.on('window:minimize', (event) => windowForEvent(event)?.minimize())
@@ -72,35 +100,21 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   ipcMain.on('window:dragStart', (event) => {
     const win = windowForEvent(event)
     if (!win) return
+    clearDragState()
     dragStartMouse = screen.getCursorScreenPoint()
     dragStartWindow = win.getPosition()
     dragStartSize = win.getSize()
+    dragStartGeometry = controllerForWindow(win)?.dragGeometry?.(dragStartSize) || { width: dragStartSize[0], leftOffset: 0 }
+    dragTimer = setInterval(() => updateDragPosition(win), 16)
   })
   ipcMain.on('window:drag', (event) => {
     const win = windowForEvent(event)
-    if (!win || !dragStartMouse || !dragStartWindow || !dragStartSize) return
-    const point = screen.getCursorScreenPoint()
-    const position = clampToDisplayBounds(
-      dragStartWindow[0] + point.x - dragStartMouse.x,
-      dragStartWindow[1] + point.y - dragStartMouse.y,
-      dragStartSize[0],
-      dragStartSize[1],
-      point,
-    )
-    win.setBounds({
-      x: position.x,
-      y: position.y,
-      width: dragStartSize[0],
-      height: dragStartSize[1]
-    })
-    controllerForWindow(win)?.rememberRecorderPosition()
+    updateDragPosition(win)
   })
   ipcMain.on('window:dragEnd', (event) => {
     const win = windowForEvent(event)
     controllerForWindow(win)?.flushRecorderPosition()
-    dragStartMouse = null
-    dragStartWindow = null
-    dragStartSize = null
+    clearDragState()
   })
 }
 

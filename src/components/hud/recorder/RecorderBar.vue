@@ -43,6 +43,8 @@ const emit = defineEmits<{
 const preferencesStore = usePreferencesStore();
 let tooltipSpaceReady: Promise<void> = Promise.resolve();
 const isDragging = ref(false);
+let dragElement: HTMLElement | null = null;
+let dragPointerId: number | null = null;
 
 onMounted(() => {
   preferencesStore.load();
@@ -59,17 +61,25 @@ const drag = () => window.capture?.drag();
 const stopDrag = () => {
   if (!isDragging.value) return;
   isDragging.value = false;
-  window.removeEventListener("mousemove", drag);
-  window.removeEventListener("mouseup", stopDrag);
+  window.removeEventListener("pointermove", drag);
+  window.removeEventListener("pointerup", stopDrag);
+  if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
+  dragElement = null;
+  dragPointerId = null;
   window.capture?.dragEnd();
 };
-const startDrag = (event?: MouseEvent) => {
-  if (event && event.button !== 0) return;
+const startDrag = (event: PointerEvent) => {
+  if (event.button !== 0) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (target?.closest(".control")) return;
   if (isDragging.value) return;
   isDragging.value = true;
+  dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  dragPointerId = event.pointerId;
+  dragElement?.setPointerCapture(event.pointerId);
   window.capture?.dragStart();
-  window.addEventListener("mousemove", drag);
-  window.addEventListener("mouseup", stopDrag, { once: true });
+  window.addEventListener("pointermove", drag);
+  window.addEventListener("pointerup", stopDrag, { once: true });
 };
 const tooltipsReady = ref(false);
 const showTooltips = async () => {
@@ -91,7 +101,7 @@ onBeforeUnmount(() => {
     class="recorder-bar"
     :class="{ 'auto-fade': visibility === 'auto-fade', dragging: isDragging }"
     :aria-label="t('recordingControls')"
-    @mousedown="startDrag"
+    @pointerdown="startDrag"
     @mouseenter="showTooltips"
     @mouseleave="hideTooltips"
   >
@@ -100,7 +110,7 @@ onBeforeUnmount(() => {
       type="button"
       :aria-label="t('moveRecorderBar')"
       :title="t('moveRecorderBar')"
-      @mousedown.stop="startDrag"
+      @pointerdown.stop="startDrag"
     >
       <GripVertical aria-hidden="true" />
     </button>

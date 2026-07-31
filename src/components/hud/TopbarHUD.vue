@@ -31,30 +31,38 @@ const emit = defineEmits<{
 }>();
 
 const isDragging = ref(false);
+let dragElement: HTMLElement | null = null;
+let dragPointerId: number | null = null;
 const drag = () => window.capture?.drag();
 const stopDrag = () => {
   if (!isDragging.value) return;
   isDragging.value = false;
-  window.removeEventListener("mousemove", drag);
-  window.removeEventListener("mouseup", stopDrag);
+  window.removeEventListener("pointermove", drag);
+  window.removeEventListener("pointerup", stopDrag);
+  if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
+  dragElement = null;
+  dragPointerId = null;
   window.capture?.dragEnd();
 };
-const startDrag = (event: MouseEvent) => {
+const startDrag = (event: PointerEvent) => {
   if (event.button !== 0) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (target?.closest("button, a, input, select, textarea, [role='button']")) return;
   if (isDragging.value) return;
   isDragging.value = true;
+  dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  dragPointerId = event.pointerId;
+  dragElement?.setPointerCapture(event.pointerId);
   window.capture?.dragStart();
-  window.addEventListener("mousemove", drag);
-  window.addEventListener("mouseup", stopDrag, { once: true });
+  window.addEventListener("pointermove", drag);
+  window.addEventListener("pointerup", stopDrag, { once: true });
 };
 
 onBeforeUnmount(stopDrag);
 </script>
 
 <template>
-  <header class="hud-topbar" :class="{ dragging: isDragging }" @mousedown="startDrag">
+  <header class="hud-topbar" :class="{ dragging: isDragging }" @pointerdown="startDrag">
     <div class="topbar-identity">
       <div v-if="showBack" class="topbar-back-action">
         <Button

@@ -119,9 +119,18 @@ class WindowController {
   rememberRecorderPosition() {
     if (this.mode !== 'recorder') return
     const { screen } = require('electron')
-    const [x, y] = this.window.getPosition()
+    const [windowX, y] = this.window.getPosition()
+    const tooltipOffset = this.recorderBoundsBeforeTooltip ? RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width : 0
+    const x = windowX + tooltipOffset
     this.recorderPositions.set(String(screen.getDisplayNearestPoint({ x, y }).id), { x, y })
     this.scheduleRecorderPositionSave()
+  }
+
+  dragGeometry(size) {
+    if (this.mode === 'recorder' && this.recorderBoundsBeforeTooltip) {
+      return { width: RECORDER_SIZE.width, leftOffset: RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width }
+    }
+    return { width: size[0], leftOffset: 0 }
   }
 
   setRecorderTooltip(visible) {
@@ -138,7 +147,9 @@ class WindowController {
       const bounds = this.window.getBounds()
       const compactLeft = bounds.x + bounds.width - RECORDER_SIZE.width
       if (pointer.x >= compactLeft && pointer.x < bounds.x + bounds.width && pointer.y >= bounds.y && pointer.y < bounds.y + RECORDER_SIZE.height) return
-      const { x, y } = this.recorderBoundsBeforeTooltip
+      const tooltipOffset = RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width
+      const x = bounds.x + tooltipOffset
+      const y = bounds.y
       this.recorderBoundsBeforeTooltip = null
       this.window.setBounds({ x, y, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })
       this.stopRecorderPointerTracking()
