@@ -1,8 +1,8 @@
 use std::{
     path::{Path, PathBuf},
     sync::{
-        Arc,
         atomic::{AtomicU64, Ordering},
+        Arc,
     },
 };
 
@@ -23,7 +23,11 @@ use windows_capture::{
     window::Window,
 };
 
-use crate::{CaptureError, model::{ScreenRegion, SourceId}, session::StartGate};
+use crate::{
+    model::{ScreenRegion, SourceId},
+    session::StartGate,
+    CaptureError,
+};
 
 #[derive(Debug, Default)]
 pub struct WindowsCaptureMetrics {
@@ -105,14 +109,31 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
         if !self.start_gate.is_released() {
             self.start_gate.wait().map_err(|error| error.to_string())?;
         }
-        let encoder = self.encoder.as_mut().ok_or_else(|| "video encoder was finalized".to_owned())?;
+        let encoder = self
+            .encoder
+            .as_mut()
+            .ok_or_else(|| "video encoder was finalized".to_owned())?;
         let result = if let Some(region) = self.region {
-            let (start_x, start_y, end_x, end_y) = region.pixel_rect(frame.width(), frame.height()).map_err(|error| error.to_string())?;
-            let timestamp = frame.timestamp().map_err(|error| error.to_string())?.Duration;
-            let cropped = frame.buffer_crop(start_x, start_y, end_x, end_y).map_err(|error| error.to_string())?;
+            let (start_x, start_y, end_x, end_y) = region
+                .pixel_rect(frame.width(), frame.height())
+                .map_err(|error| error.to_string())?;
+            let crop_width = end_x - start_x;
+            let crop_height = end_y - start_y;
+            let timestamp = frame
+                .timestamp()
+                .map_err(|error| error.to_string())?
+                .Duration;
+            let cropped = frame
+                .buffer_crop(start_x, start_y, end_x, end_y)
+                .map_err(|error| error.to_string())?;
             let mut compact = Vec::new();
             let bytes = cropped.as_nopadding_buffer(&mut compact);
-            encoder.send_frame_buffer(bytes, timestamp)
+            // The raw-buffer encoder expects BGRA rows bottom-to-top, while
+            // Graphics Capture gives us the crop in the normal top-to-bottom
+            // screen order. The direct-frame path performs this conversion
+            // internally; do it explicitly for cropped frames as well.
+            let bottom_up = flip_bgra_rows(bytes, crop_width, crop_height);
+            encoder.send_frame_buffer(&bottom_up, timestamp)
         } else {
             encoder.send_frame(frame)
         };
@@ -126,6 +147,31 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
 
     fn on_closed(&mut self) -> Result<(), Self::Error> {
         self.finish().map_err(|error| error.to_string())
+    }
+}
+
+fn flip_bgra_rows(bytes: &[u8], width: u32, height: u32) -> Vec<u8> {
+    let row_bytes = width as usize * 4;
+    let row_count = height as usize;
+    let mut flipped = Vec::with_capacity(bytes.len());
+    for row in (0..row_count).rev() {
+        let start = row * row_bytes;
+        flipped.extend_from_slice(&bytes[start..start + row_bytes]);
+    }
+    flipped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::flip_bgra_rows;
+
+    #[test]
+    fn flips_bgra_rows_from_top_to_bottom() {
+        let source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        assert_eq!(
+            flip_bgra_rows(&source, 2, 2),
+            [9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8]
+        );
     }
 }
 
@@ -241,7 +287,9 @@ where
             .unwrap_or((0, 0))
     });
     if width == 0 || height == 0 {
-        return Err(CaptureError::InvalidConfiguration("screen crop is empty".into()));
+        return Err(CaptureError::InvalidConfiguration(
+            "screen crop is empty".into(),
+        ));
     }
     let flags = HandlerFlags {
         output: output.to_owned(),
