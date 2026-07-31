@@ -40,6 +40,7 @@ fn engine_eof_finalizes_an_active_session() {
             ..RecordingSettings::default()
         },
         failure_policy: capture::model::FailurePolicy::FailFast,
+        region: None,
         excluded_process_id: None,
     };
     let mut child = Command::new(env!("CARGO_BIN_EXE_capture-engine"))

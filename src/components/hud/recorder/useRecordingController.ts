@@ -64,7 +64,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
 
   const prewarmNativeRecording = async (generation: number) => {
     if (!configuration) return false
-    await capture.prepareRecording({ screenKind: configuration.screenKind, screenId: configuration.screenId, cameraId: null, microphoneId: null, systemAudio: false, cursor: true, targetFps: configuration.targetFps })
+    await capture.prepareRecording({ screenKind: configuration.screenKind, screenId: configuration.screenId, cameraId: null, microphoneId: null, systemAudio: false, cursor: true, targetFps: configuration.targetFps, region: configuration.region })
     if (generation !== recordingGeneration) {
       await capture.cancelPreparedRecording().catch(() => undefined)
       return false
@@ -113,6 +113,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     configuration = next
     try {
       await prepareSources()
+      if (next.region && next.regionOverlay) capture.showScreenRegionOverlay({ ...next.regionOverlay, region: next.region })
       secondsRemaining.value = Math.max(0, next.countdownSeconds)
       phase.value = 'countdown'
       capture.setCountdown(secondsRemaining.value)
@@ -137,6 +138,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     recordingGeneration += 1
     clearCountdown()
     capture.setCountdown(null)
+    capture.hideScreenRegionOverlay()
     clearTimer()
     await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
     camera = null; microphone = null; systemAudio = null; sessionId = null; sessionTimelineStartedAt = 0
@@ -161,6 +163,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     try {
       await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
       const session = await capture.stop()
+      capture.hideScreenRegionOverlay()
       await cancel()
       onComplete(session)
     } catch (reason) { error.value = reason instanceof Error ? reason.message : String(reason); phase.value = 'recording' }

@@ -1,10 +1,12 @@
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config'
+import type { ScreenRegion, ScreenRegionOverlayOptions } from './screen-region'
 import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomState } from './capture-session'
 import type { ClipComposition, MediaAsset } from '../../components/video-editor/composition/composition-types'
 import type { BackgroundMedia, BackgroundValue, GradientBackground } from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
 
 export type * from './capture-config'
+export type * from './screen-region'
 export type * from './capture-session'
 
 export interface CaptureApi {
@@ -43,6 +45,12 @@ export interface DesktopCaptureApi extends CaptureApi {
   dragStart(): void
   drag(): void
   getSources(types?: string[]): Promise<CapturePreview[]>
+  selectScreenRegion(options: ScreenRegionOverlayOptions): Promise<ScreenRegion | null>
+  showScreenRegionOverlay(options: ScreenRegionOverlayOptions): void
+  hideScreenRegionOverlay(): void
+  onScreenRegionConfigure(listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void): () => void
+  confirmScreenRegion(region: ScreenRegion): void
+  cancelScreenRegion(): void
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>
   getPreferences(): Promise<PreferenceSettings>
   updatePreferences(patch: Partial<PreferenceSettings>): Promise<PreferenceSettings>
@@ -145,6 +153,6 @@ export interface MicrophoneFailure { sessionId: string; sourceId: string; reason
 export interface SystemAudioSegmentStart { sessionId: string; sourceId: string; format: { codec: 'opus'; sampleRate: number; channels: number }; startNs: number }
 export interface SystemAudioSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
 export interface SystemAudioFailure { sessionId: string; sourceId: string; reason: string; format?: { codec: 'opus'; sampleRate: number; channels: number } }
-export interface CapturePreview { id: string; name: string; thumbnail: string; appIcon: string | null }
-export interface CaptureSource { id: string; kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'; label: string; isDefault: boolean }
+export interface CapturePreview { id: string; name: string; thumbnail: string; appIcon: string | null; displayId?: string; displayBounds?: { x: number; y: number; width: number; height: number } }
+export interface CaptureSource { id: string; kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'; label: string; isDefault: boolean; displayId?: string }
 export interface CaptureCatalog { sources: CaptureSource[]; capabilities: Record<string, boolean> }

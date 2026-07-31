@@ -15,6 +15,16 @@ function positiveInteger(value, fallback, name) {
   return selected
 }
 
+function screenRegion(value, screenKind) {
+  if (value == null) return null
+  if (screenKind !== 'display' || typeof value !== 'object') throw new Error('La sélection de zone est disponible uniquement pour un écran')
+  const values = ['x', 'y', 'width', 'height'].map((key) => value[key])
+  if (!values.every((entry) => Number.isFinite(entry)) || value.x < 0 || value.y < 0 || value.width <= 0 || value.height <= 0 || value.x + value.width > 1 || value.y + value.height > 1) {
+    throw new Error('La zone de capture est invalide')
+  }
+  return { x: value.x, y: value.y, width: value.width, height: value.height }
+}
+
 function buildDefaultCaptureConfig(catalog, options, environment) {
   const sources = Array.isArray(catalog?.sources) ? catalog.sources : []
   const capabilities = catalog?.capabilities || {}
@@ -26,8 +36,9 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
     cursor: options.cursor !== false && capabilities.separateCursor ? { mode: 'separate', captureClicks: Boolean(capabilities.cursorClicks), captureShape: Boolean(capabilities.cursorShapes) } : { mode: capabilities.embeddedCursor ? 'embedded' : 'disabled' },
     recording: { outputRoot: options.outputRoot || environment.defaultOutputRoot, videoBitrateBps: positiveInteger(options.videoBitrateBps, 12_000_000, 'videoBitrateBps'), targetFps: positiveInteger(options.targetFps, 60, 'targetFps'), keyframeIntervalSeconds: 2, queueCapacity: positiveInteger(options.queueCapacity, 8, 'queueCapacity'), minimumFreeBytes: options.minimumFreeBytes ?? 536_870_912 },
     failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',
+    region: screenRegion(options.region, screenKind),
     excludedProcessId: environment.excludedProcessId,
   }
 }
 
-module.exports = { buildDefaultCaptureConfig, selectSource }
+module.exports = { buildDefaultCaptureConfig, selectSource, screenRegion }

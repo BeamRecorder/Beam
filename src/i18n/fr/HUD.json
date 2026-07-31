@@ -14,5 +14,7 @@
   "startRecording": "Démarrer l'enregistrement",
   "stopRecording": "Arrêt ({time})",
   "openExistingProject": "Ouvrir un projet existant",
-  "screenOption": "Écran {index}"
+  "screenOption": "Écran {index}",
+  "selectScreenRegion": "Sélectionner une zone de l’écran",
+  "editScreenRegion": "Modifier la zone de l’écran"
 }

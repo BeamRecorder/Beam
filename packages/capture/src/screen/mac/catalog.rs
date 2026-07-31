@@ -42,6 +42,7 @@ fn display_descriptor(
         label: format!("Display {}", display.display_id()),
         is_default: display.display_id() == core_graphics::display::CGDisplay::main().id,
         selection_mode: SourceSelectionMode::Direct,
+        display_id: Some(display.display_id().to_string()),
         capabilities: SourceCapabilities {
             formats: vec![MediaFormat::Video {
                 width: display.width(),
@@ -70,6 +71,7 @@ fn window_descriptor(
         label: title,
         is_default: false,
         selection_mode: SourceSelectionMode::Direct,
+        display_id: None,
         capabilities: SourceCapabilities {
             formats: vec![MediaFormat::Video {
                 width,
@@ -96,6 +98,7 @@ fn application_descriptor(
         label: application.application_name(),
         is_default: false,
         selection_mode: SourceSelectionMode::Direct,
+        display_id: None,
         capabilities: SourceCapabilities {
             supports_cursor_exclusion: true,
             ..SourceCapabilities::default()

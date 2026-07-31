@@ -7,6 +7,7 @@ import ToastProvider from './components/ui/toast/ToastProvider.vue'
 import Button from './components/ui/button/Button.vue'
 import RecorderBar from './components/hud/recorder/RecorderBar.vue'
 import CountdownOverlay from './components/hud/recorder/CountdownOverlay.vue'
+import ScreenRegionOverlayApp from './components/hud/region/ScreenRegionOverlayApp.vue'
 import { useRecordingController } from './components/hud/recorder/useRecordingController'
 import type { RecordingConfiguration, RecordingSessionResult } from './components/hud/recorder/recording-types'
 
@@ -42,6 +43,7 @@ const currentView = ref<'hud' | 'recorder' | 'editor'>('hud')
 const isCameraOverlay = new URLSearchParams(window.location.search).has('cameraOverlay')
 const isCameraShadow = new URLSearchParams(window.location.search).has('cameraShadow')
 const isCountdownOverlay = new URLSearchParams(window.location.search).has('countdown')
+const isScreenRegionOverlay = new URLSearchParams(window.location.search).has('screenRegion')
 const CameraOverlayApp = defineAsyncComponent(() => import('./components/hud/CameraOverlayApp.vue'))
 const VideoEditor = defineAsyncComponent(() => import('./components/video-editor/VideoEditor.vue'))
 const currentVideoSrc = ref<string | null>(null)
@@ -129,6 +131,7 @@ const dismissEditorLoadError = () => { editorLoadError.value = '' }
   <CameraOverlayApp v-if="isCameraOverlay" />
   <CameraShadowApp v-else-if="isCameraShadow" />
   <CountdownOverlay v-else-if="isCountdownOverlay" />
+  <ScreenRegionOverlayApp v-else-if="isScreenRegionOverlay" />
   <div v-else class="app-container">
     <HUD v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError" @start-recording="startRecording" @open-project="handleOpenProject" />
     <Transition name="recorder-return">

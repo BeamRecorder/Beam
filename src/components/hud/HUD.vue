@@ -29,6 +29,7 @@ import type {
   CaptureSession,
   CaptureSource,
 } from "../../api/types/capture-api";
+import type { ScreenRegion, ScreenRegionOverlayOptions } from "../../api/types/screen-region";
 import Button from "~/ui/button/Button.vue";
 import Select from "~/ui/select/Select.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
@@ -45,6 +46,7 @@ import {
   MicOff,
   Video,
   VideoOff,
+  Crop,
   Copy,
   Check,
 } from "@lucide/vue";
@@ -92,6 +94,7 @@ watch(recordingBarVisibility, (value) =>
 
 // Previews
 const previews = ref<CapturePreview[]>([]);
+const screenPreviews = ref<CapturePreview[]>([]);
 const selectedSourceId = ref<string | null>(null);
 
 // Sources lists (Camera / Microphone)
@@ -111,6 +114,8 @@ const micOptions = computed(() => [
 ]);
 const selectedMicId = ref("no-audio");
 const selectedScreenId = ref<string | null>(null);
+const selectedScreenRegion = ref<ScreenRegion | null>(null);
+const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
 const systemAudioMode = ref<"on" | "off">("off");
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
@@ -133,6 +138,14 @@ const screenOptions = computed(() =>
       label: t("screenOption", { index: index + 1 }),
     })),
 );
+const selectedScreen = computed(() => sources.value.find((source) => source.id === selectedScreenId.value) ?? null);
+const selectedScreenPreview = computed(() => {
+  const source = selectedScreen.value;
+  if (!source) return null;
+  return screenPreviews.value.find((preview) => source.displayId && preview.displayId === source.displayId)
+    ?? screenPreviews.value.find((preview) => preview.displayBounds)
+    ?? null;
+});
 const systemAudioOptions = computed(() => [
   { value: "on", label: t("systemAudio") },
   { value: "off", label: t("off") },
@@ -176,6 +189,7 @@ const loadPreviews = async () => {
     const type = activeTab.value === "screen" ? "screen" : "window";
     const results = await capture.getSources([type]);
     previews.value = results;
+    if (activeTab.value === "screen") screenPreviews.value = results;
 
     // Auto-select first source if none or invalid is selected
     if (results.length > 0) {
@@ -190,6 +204,27 @@ const loadPreviews = async () => {
     }
   } catch (err) {
     console.error("Failed to load window/screen previews:", err);
+  }
+};
+
+const selectScreenRegion = async () => {
+  const preview = selectedScreenPreview.value;
+  if (isBusy.value || isRecording.value || !preview?.displayBounds) return;
+  errorMessage.value = "";
+  try {
+    const sourceBounds = preview.displayBounds;
+    const bounds = { x: sourceBounds.x, y: sourceBounds.y, width: sourceBounds.width, height: sourceBounds.height };
+    const currentRegion = selectedScreenRegion.value;
+    const region = await capture.selectScreenRegion({
+      bounds,
+      region: currentRegion ? { ...currentRegion } : null,
+    });
+    if (!region) return;
+    const plainRegion = { ...region };
+    selectedScreenRegion.value = plainRegion;
+    selectedScreenOverlay.value = { bounds, region: plainRegion };
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : String(error);
   }
 };
 
@@ -288,9 +323,20 @@ const handleDropdownToggle = (isOpen: boolean) => {
 
 // Watch tab change to reload previews and resize window
 watch(activeTab, () => {
+  capture.hideScreenRegionOverlay();
+  if (activeTab.value !== "screen") {
+    selectedScreenRegion.value = null;
+    selectedScreenOverlay.value = null;
+  }
   previews.value = [];
   updateWindowSize();
   void loadPreviews();
+});
+
+watch(selectedScreenId, () => {
+  selectedScreenRegion.value = null;
+  selectedScreenOverlay.value = null;
+  capture.hideScreenRegionOverlay();
 });
 
 // Watch settings view toggle to update window size
@@ -359,6 +405,13 @@ const toggleRecording = async () => {
       targetFps: 60,
       countdownSeconds: countdownSeconds.value,
       recordingBarVisibility: recordingBarVisibility.value,
+      region: activeTab.value === "screen" && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
+      regionOverlay: activeTab.value === "screen" && selectedScreenOverlay.value
+        ? {
+            bounds: { ...selectedScreenOverlay.value.bounds },
+            region: selectedScreenOverlay.value.region ? { ...selectedScreenOverlay.value.region } : null,
+          }
+        : null,
     });
     return;
   }
@@ -717,6 +770,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  capture.hideScreenRegionOverlay();
   unsubscribeShortcut?.();
   stopTimer();
   void activeCamera?.stop();
@@ -857,14 +911,26 @@ const openProject = (project: CaptureProject) => {
 
               <div v-else class="device-row">
                 <Monitor class="device-icon" />
-                <Select
-                  v-model="selectedScreenId"
-                  :options="screenOptions"
-                  :disabled="
-                    isRecording || isBusy || screenOptions.length === 0
-                  "
-                  @toggle="handleDropdownToggle"
-                />
+                <div class="screen-select-controls">
+                  <Select
+                    v-model="selectedScreenId"
+                    :options="screenOptions"
+                    :disabled="
+                      isRecording || isBusy || screenOptions.length === 0
+                    "
+                    @toggle="handleDropdownToggle"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon-only
+                    :icon="Crop"
+                    :aria-label="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
+                    :title="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
+                    :disabled="isRecording || isBusy || !selectedScreenPreview?.displayBounds"
+                    @click="selectScreenRegion"
+                  />
+                </div>
               </div>
 
               <!-- Audio and input devices -->
@@ -1000,6 +1066,9 @@ const openProject = (project: CaptureProject) => {
   transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden; /* Keep content clipped during transitions to avoid visual bugs */
 }
+
+.screen-select-controls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.screen-select-controls > :first-child { flex: 1; min-width: 0; }
 
 .hud-wrapper.dropdown-open {
   overflow: visible; /* Allow popovers to float when active */

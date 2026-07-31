@@ -12,6 +12,7 @@ fn source(id: &str, kind: SourceKind) -> SourceDescriptor {
         label: id.into(),
         is_default: false,
         selection_mode: SourceSelectionMode::Direct,
+        display_id: None,
         capabilities: SourceCapabilities::default(),
     }
 }
@@ -35,6 +36,7 @@ fn incompatible_source_kinds_are_rejected() {
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
+        region: None,
         excluded_process_id: None,
     };
     assert!(validate_request(&request, &snapshot).is_err());
@@ -84,6 +86,7 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
         },
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
+        region: None,
         excluded_process_id: None,
     };
     assert!(matches!(

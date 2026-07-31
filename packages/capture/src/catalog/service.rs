@@ -26,6 +26,11 @@ pub fn validate_request(
                 SourceKind::Application,
             ],
         )?;
+        if request.region.is_some() && kind != SourceKind::Display {
+            return Err(CaptureError::InvalidConfiguration(
+                "screen region requires a display source".into(),
+            ));
+        }
         let supported = match kind {
             SourceKind::Display => snapshot.capabilities.display_capture,
             SourceKind::Window => snapshot.capabilities.window_capture,

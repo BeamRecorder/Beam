@@ -77,6 +77,7 @@ fn record_windows_screen() -> Result<(), capture::CaptureError> {
         12_000_000,
         60,
         true,
+        None,
         started_gate()?,
     )?;
     let metrics = recording.metrics();
@@ -196,6 +197,7 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
             ..RecordingSettings::default()
         },
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
+        region: None,
         excluded_process_id: None,
     };
     let mut session = RecordingSession::prepare(request, snapshot)?;

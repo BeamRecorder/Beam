@@ -431,6 +431,7 @@ mod tests {
             label: "Test display".into(),
             is_default: true,
             selection_mode: SourceSelectionMode::Direct,
+            display_id: None,
             capabilities: SourceCapabilities::default(),
         };
         let watch = SourceWatch::new(track_id, source.clone());

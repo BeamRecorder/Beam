@@ -1,3 +1,5 @@
+import type { ScreenRegion } from './screen-region'
+
 export interface CreateProjectOptions {
   name?: string
 }
@@ -16,6 +18,7 @@ export interface StartRecordingOptions {
   queueCapacity?: number
   minimumFreeBytes?: number
   failurePolicy?: 'fail-fast' | 'continue-without-optional-tracks'
+  region?: ScreenRegion | null
 }
 
 export interface RecordingSettings {
@@ -43,4 +46,5 @@ export interface CaptureConfig {
   failurePolicy: 'fail-fast' | 'continue-without-optional-tracks'
   /** Electron process whose windows must be excluded by native capturers when supported. */
   excludedProcessId?: number
+  region?: ScreenRegion | null
 }

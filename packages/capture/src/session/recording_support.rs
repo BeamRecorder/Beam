@@ -44,7 +44,13 @@ pub(super) fn track_metadata(
     let mut tracks = Vec::new();
     if let Some(ScreenSelection::Source { source_id }) = &request.screen {
         let source = source(snapshot, source_id)?;
-        let (width, height, fps) = video_format(source, request.recording.target_fps);
+        let (mut width, mut height, fps) = video_format(source, request.recording.target_fps);
+        if let Some(region) = request.region {
+            let (_, _, right, bottom) = region.pixel_rect(width, height)?;
+            let (left, top, _, _) = region.pixel_rect(width, height)?;
+            width = right.saturating_sub(left);
+            height = bottom.saturating_sub(top);
+        }
         tracks.push(new_track(
             TrackKind::Screen,
             Some(source_id.clone()),

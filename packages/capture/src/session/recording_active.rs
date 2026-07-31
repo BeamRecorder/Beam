@@ -59,7 +59,10 @@ impl ActiveRecordings {
         {
             let region = match &request.screen {
                 Some(ScreenSelection::Source { source_id }) => {
-                    crate::cursor::win::source_region(source_id)?
+                    crate::cursor::crop_region(
+                        crate::cursor::win::source_region(source_id)?,
+                        request.region.unwrap_or(crate::model::ScreenRegion { x: 0.0, y: 0.0, width: 1.0, height: 1.0 }),
+                    )?
                 }
                 _ => crate::cursor::CaptureRegion {
                     x: 0,
@@ -88,7 +91,10 @@ impl ActiveRecordings {
         if let CursorSelection::Separate { capture_clicks, .. } = request.cursor {
             let region = match &request.screen {
                 Some(ScreenSelection::Source { source_id }) => {
-                    crate::cursor::mac::source_region(source_id)?
+                    crate::cursor::crop_region(
+                        crate::cursor::mac::source_region(source_id)?,
+                        request.region.unwrap_or(crate::model::ScreenRegion { x: 0.0, y: 0.0, width: 1.0, height: 1.0 }),
+                    )?
                 }
                 _ => crate::cursor::CaptureRegion {
                     x: 0,
@@ -151,6 +157,7 @@ impl ActiveRecordings {
                     u32::try_from(request.recording.video_bitrate_bps).unwrap_or(u32::MAX),
                     request.recording.target_fps,
                     matches!(request.cursor, CursorSelection::Separate { .. }),
+                    request.region,
                     start_gate.clone(),
                 )?);
             }
@@ -161,6 +168,7 @@ impl ActiveRecordings {
                     &path,
                     request.recording.target_fps,
                     matches!(request.cursor, CursorSelection::Separate { .. }),
+                    request.region,
                     start_gate.clone(),
                 )?);
             }

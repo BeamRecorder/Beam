@@ -35,6 +35,7 @@ pub fn discover_monitors() -> Result<Vec<SourceDescriptor>, CaptureError> {
                 label,
                 is_default: primary == Some(monitor),
                 selection_mode: SourceSelectionMode::Direct,
+                display_id: Some(device_name.clone()),
                 capabilities: SourceCapabilities {
                     formats: vec![MediaFormat::Video {
                         width,
@@ -76,6 +77,7 @@ fn window_descriptor(window: Window) -> Result<Option<SourceDescriptor>, Capture
         label: format!("{title} — {process}"),
         is_default: false,
         selection_mode: SourceSelectionMode::Direct,
+        display_id: None,
         capabilities: SourceCapabilities {
             formats: vec![MediaFormat::Video {
                 width,

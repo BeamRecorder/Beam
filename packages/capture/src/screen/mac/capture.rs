@@ -19,7 +19,7 @@ use screencapturekit::{
     },
 };
 
-use crate::{CaptureError, model::SourceId, session::StartGate};
+use crate::{CaptureError, model::{ScreenRegion, SourceId}, session::StartGate};
 
 pub struct MacRecording {
     stream: Option<SCStream>,
@@ -51,6 +51,7 @@ impl MacRecording {
         output: &Path,
         fps: u32,
         exclude_cursor: bool,
+        region: Option<ScreenRegion>,
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if fps == 0 {
@@ -59,15 +60,18 @@ impl MacRecording {
             ));
         }
         let content = SCShareableContent::get().map_err(backend_error)?;
-        let (filter, width, height) = resolve_filter(&content, source_id)?;
+        let (filter, width, height, source_rect) = resolve_filter(&content, source_id, region)?;
         let timescale = i32::try_from(fps).map_err(backend_error)?;
-        let configuration = SCStreamConfiguration::new()
+        let mut configuration = SCStreamConfiguration::new()
             .with_width(width)
             .with_height(height)
             .with_minimum_frame_interval(&CMTime::new(1, timescale))
             .with_queue_depth(8)
             .with_shows_cursor(!exclude_cursor)
             .with_captures_audio(false);
+        if let Some(source_rect) = source_rect {
+            configuration = configuration.with_source_rect(source_rect);
+        }
         let output_configuration = SCRecordingOutputConfiguration::new()
             .with_output_url(output)
             .with_video_codec(SCRecordingOutputCodec::H264)
@@ -147,7 +151,8 @@ impl Drop for MacRecording {
 pub(crate) fn resolve_filter(
     content: &SCShareableContent,
     source_id: &SourceId,
-) -> Result<(SCContentFilter, u32, u32), CaptureError> {
+    region: Option<ScreenRegion>,
+) -> Result<(SCContentFilter, u32, u32, Option<screencapturekit::cg::CGRect>), CaptureError> {
     if let Some(id) = source_id.as_str().strip_prefix("sck:display:") {
         let display_id = id
             .parse::<u32>()
@@ -163,7 +168,21 @@ pub(crate) fn resolve_filter(
             .with_display(&display)
             .with_excluding_windows(&[])
             .build();
-        return Ok((filter, width, height));
+        let Some(region) = region else { return Ok((filter, width, height, None)); };
+        let (left, top, right, bottom) = region.pixel_rect(width, height)?;
+        let frame = display.frame();
+        let source_rect = screencapturekit::cg::CGRect::new(
+            frame.size.width * region.x,
+            frame.size.height * region.y,
+            frame.size.width * region.width,
+            frame.size.height * region.height,
+        );
+        return Ok((
+            filter,
+            right.saturating_sub(left),
+            bottom.saturating_sub(top),
+            Some(source_rect),
+        ));
     }
     if let Some(id) = source_id.as_str().strip_prefix("sck:window:") {
         let window_id = id
@@ -175,10 +194,16 @@ pub(crate) fn resolve_filter(
             .find(|window| window.window_id() == window_id)
             .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
         let frame = window.frame();
+        if region.is_some() {
+            return Err(CaptureError::InvalidConfiguration(
+                "screen region requires a display source".into(),
+            ));
+        }
         return Ok((
             SCContentFilter::create().with_window(&window).build(),
             dimension(frame.size.width),
             dimension(frame.size.height),
+            None,
         ));
     }
     if source_id.as_str().starts_with("sck:application:") {
@@ -198,7 +223,12 @@ pub(crate) fn resolve_filter(
             .with_display(&display)
             .with_including_applications(&[&application], &[])
             .build();
-        return Ok((filter, width, height));
+        if region.is_some() {
+            return Err(CaptureError::InvalidConfiguration(
+                "screen region requires a display source".into(),
+            ));
+        }
+        return Ok((filter, width, height, None));
     }
     Err(CaptureError::InvalidConfiguration(format!(
         "{source_id} is not a ScreenCaptureKit source"

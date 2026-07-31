@@ -23,6 +23,7 @@ fn request_json_roundtrip_and_defaults_are_stable() {
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
+        region: None,
         excluded_process_id: None,
     };
     let json = serde_json::to_string(&request).expect("serialize request");
@@ -39,6 +40,7 @@ fn cursor_without_screen_is_rejected() {
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
+        region: None,
         excluded_process_id: None,
     };
     assert!(request.validate_basic().is_err());
@@ -52,6 +54,7 @@ fn excluded_process_id_roundtrips_when_present() {
         "cursor": { "mode": "disabled" },
         "recording": RecordingSettings::default(),
         "failurePolicy": "fail-fast",
+        "region": null,
         "excludedProcessId": 4242
     }))
     .expect("deserialize excluded process id");

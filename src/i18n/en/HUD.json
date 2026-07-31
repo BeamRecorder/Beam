@@ -14,5 +14,7 @@
   "startRecording": "Start Recording",
   "stopRecording": "Stop ({time})",
   "openExistingProject": "Open an existing project",
-  "screenOption": "Screen {index}"
+  "screenOption": "Screen {index}",
+  "selectScreenRegion": "Select an area of the screen",
+  "editScreenRegion": "Edit the screen area"
 }

@@ -47,6 +47,26 @@ contextBridge.exposeInMainWorld(
     dragStart: () => ipcRenderer.send("window:dragStart"),
     drag: () => ipcRenderer.send("window:drag"),
     getSources: (types) => ipcRenderer.invoke("window:getSources", types),
+    selectScreenRegion: (options) => ipcRenderer.invoke("screen-region:select", options),
+    showScreenRegionOverlay: (options) => ipcRenderer.send("screen-region:show", options),
+    hideScreenRegionOverlay: () => ipcRenderer.send("screen-region:hide"),
+    onScreenRegionConfigure: (listener) => {
+      const callback = (_event, options) => listener(options);
+      ipcRenderer.on("screen-region:configure", callback);
+      return () => ipcRenderer.removeListener("screen-region:configure", callback);
+    },
+    confirmScreenRegion: (region) => ipcRenderer.send("screen-region:confirm", region),
+    cancelScreenRegion: () => ipcRenderer.send("screen-region:cancel"),
+    selectScreenRegion: (options) => ipcRenderer.invoke("screen-region:select", options),
+    showScreenRegionOverlay: (options) => ipcRenderer.send("screen-region:show", options),
+    hideScreenRegionOverlay: () => ipcRenderer.send("screen-region:hide"),
+    onScreenRegionConfigure: (listener) => {
+      const callback = (_event, options) => listener(options);
+      ipcRenderer.on("screen-region:configure", callback);
+      return () => ipcRenderer.removeListener("screen-region:configure", callback);
+    },
+    confirmScreenRegion: (region) => ipcRenderer.send("screen-region:confirm", region),
+    cancelScreenRegion: () => ipcRenderer.send("screen-region:cancel"),
     getWindowBounds: () => ipcRenderer.invoke("window:bounds"),
     getPreferences: () => ipcRenderer.invoke("preferences:get"),
     updatePreferences: (patch) => ipcRenderer.invoke("preferences:update", patch),

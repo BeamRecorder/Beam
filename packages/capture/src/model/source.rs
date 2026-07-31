@@ -53,5 +53,7 @@ pub struct SourceDescriptor {
     pub label: String,
     pub is_default: bool,
     pub selection_mode: SourceSelectionMode,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub display_id: Option<String>,
     pub capabilities: SourceCapabilities,
 }

@@ -13,6 +13,19 @@ pub struct CursorCoordinates {
     pub normalized_y: f64,
     pub inside: bool,
 }
+
+pub fn crop_region(
+    source: CaptureRegion,
+    crop: crate::model::ScreenRegion,
+) -> Result<CaptureRegion, crate::CaptureError> {
+    let (x, y, right, bottom) = crop.pixel_rect(source.width, source.height)?;
+    Ok(CaptureRegion {
+        x: source.x.saturating_add(i32::try_from(x).map_err(|_| crate::CaptureError::InvalidConfiguration("cursor crop x is too large".into()))?),
+        y: source.y.saturating_add(i32::try_from(y).map_err(|_| crate::CaptureError::InvalidConfiguration("cursor crop y is too large".into()))?),
+        width: right.saturating_sub(x),
+        height: bottom.saturating_sub(y),
+    })
+}
 pub fn map_coordinates(
     global_x: i32,
     global_y: i32,

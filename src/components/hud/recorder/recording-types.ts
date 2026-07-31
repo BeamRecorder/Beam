@@ -1,3 +1,5 @@
+import type { ScreenRegion, ScreenRegionOverlayOptions } from '../../../api/types/screen-region'
+
 export type RecordingPhase = 'idle' | 'countdown' | 'recording' | 'paused' | 'finalizing'
 
 export interface RecordingConfiguration {
@@ -9,6 +11,8 @@ export interface RecordingConfiguration {
   targetFps: number
   countdownSeconds: number
   recordingBarVisibility: 'always' | 'auto-fade'
+  region?: ScreenRegion | null
+  regionOverlay?: ScreenRegionOverlayOptions | null
 }
 
 export interface RecordingSessionResult {

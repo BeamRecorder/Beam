@@ -23,7 +23,7 @@ use windows_capture::{
     window::Window,
 };
 
-use crate::{CaptureError, model::SourceId, session::StartGate};
+use crate::{CaptureError, model::{ScreenRegion, SourceId}, session::StartGate};
 
 #[derive(Debug, Default)]
 pub struct WindowsCaptureMetrics {
@@ -51,12 +51,14 @@ struct HandlerFlags {
     fps: u32,
     metrics: Arc<WindowsCaptureMetrics>,
     start_gate: Arc<StartGate>,
+    region: Option<ScreenRegion>,
 }
 
 struct CaptureHandler {
     encoder: Option<VideoEncoder>,
     metrics: Arc<WindowsCaptureMetrics>,
     start_gate: Arc<StartGate>,
+    region: Option<ScreenRegion>,
 }
 
 impl CaptureHandler {
@@ -91,6 +93,7 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             encoder: Some(encoder),
             metrics: flags.metrics,
             start_gate: flags.start_gate,
+            region: flags.region,
         })
     }
 
@@ -102,14 +105,21 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
         if !self.start_gate.is_released() {
             self.start_gate.wait().map_err(|error| error.to_string())?;
         }
-        self.encoder
-            .as_mut()
-            .ok_or_else(|| "video encoder was finalized".to_owned())?
-            .send_frame(frame)
-            .map_err(|error| {
-                self.metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
-                error.to_string()
-            })?;
+        let encoder = self.encoder.as_mut().ok_or_else(|| "video encoder was finalized".to_owned())?;
+        let result = if let Some(region) = self.region {
+            let (start_x, start_y, end_x, end_y) = region.pixel_rect(frame.width(), frame.height()).map_err(|error| error.to_string())?;
+            let timestamp = frame.timestamp().map_err(|error| error.to_string())?.Duration;
+            let cropped = frame.buffer_crop(start_x, start_y, end_x, end_y).map_err(|error| error.to_string())?;
+            let mut compact = Vec::new();
+            let bytes = cropped.as_nopadding_buffer(&mut compact);
+            encoder.send_frame_buffer(bytes, timestamp)
+        } else {
+            encoder.send_frame(frame)
+        };
+        result.map_err(|error| {
+            self.metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
+            error.to_string()
+        })?;
         self.metrics.frames_received.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
@@ -134,6 +144,7 @@ impl WindowsRecording {
         bitrate: u32,
         fps: u32,
         exclude_cursor: bool,
+        region: Option<ScreenRegion>,
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
         if bitrate == 0 || fps == 0 {
@@ -158,6 +169,7 @@ impl WindowsRecording {
                 bitrate,
                 fps,
                 exclude_cursor,
+                region,
                 start_gate,
             );
         }
@@ -178,6 +190,7 @@ impl WindowsRecording {
                 bitrate,
                 fps,
                 exclude_cursor,
+                None,
                 start_gate,
             );
         }
@@ -215,20 +228,30 @@ fn start_item<T>(
     bitrate: u32,
     fps: u32,
     exclude_cursor: bool,
+    region: Option<ScreenRegion>,
     start_gate: Arc<StartGate>,
 ) -> Result<WindowsRecording, CaptureError>
 where
     T: TryInto<GraphicsCaptureItemType> + Send + 'static,
 {
     let metrics = Arc::new(WindowsCaptureMetrics::default());
+    let (width, height) = region.map_or(size, |crop| {
+        crop.pixel_rect(size.0, size.1)
+            .map(|(left, top, right, bottom)| (right - left, bottom - top))
+            .unwrap_or((0, 0))
+    });
+    if width == 0 || height == 0 {
+        return Err(CaptureError::InvalidConfiguration("screen crop is empty".into()));
+    }
     let flags = HandlerFlags {
         output: output.to_owned(),
-        width: size.0,
-        height: size.1,
+        width,
+        height,
         bitrate,
         fps,
         metrics: metrics.clone(),
         start_gate,
+        region,
     };
     let settings = Settings::new(
         item,

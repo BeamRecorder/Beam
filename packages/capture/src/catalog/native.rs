@@ -43,6 +43,7 @@ fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
             label: "System screen/window picker".into(),
             is_default: true,
             selection_mode: SourceSelectionMode::Portal,
+            display_id: None,
             capabilities: SourceCapabilities {
                 supports_cursor_exclusion: true,
                 ..SourceCapabilities::default()
@@ -56,6 +57,7 @@ fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
         label: format!("X11 display {display}"),
         is_default: true,
         selection_mode: SourceSelectionMode::Direct,
+        display_id: None,
         capabilities: SourceCapabilities {
             formats: vec![MediaFormat::Video {
                 width: 0,

@@ -13,7 +13,7 @@ function completedVideoSource(session) {
   return video ? { ...session, videoSrc: pathToFileURL(path.join(screenDirectory, video)).href } : session
 }
 
-function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, userPaths, trackStorages }) {
+function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages }) {
   const registerSession = (session) => { for (const storage of trackStorages) storage.registerSession(session); return session }
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session)
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
@@ -45,7 +45,10 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, captureEngine, app, user
   })
   ipcMain.handle('window:getSources', async (_event, types) => {
     const sources = await desktopCapturer.getSources({ types: types || ['window', 'screen'], thumbnailSize: { width: 300, height: 200 }, fetchWindowIcons: true })
-    return sources.map((source) => ({ id: source.id, name: source.name, thumbnail: source.thumbnail.toDataURL(), appIcon: source.appIcon ? source.appIcon.toDataURL() : null }))
+    return sources.map((source) => {
+      const display = source.display_id ? screen.getAllDisplays().find((item) => String(item.id) === String(source.display_id)) : null
+      return { id: source.id, name: source.name, thumbnail: source.thumbnail.toDataURL(), appIcon: source.appIcon ? source.appIcon.toDataURL() : null, displayId: source.display_id || undefined, displayBounds: display?.bounds }
+    })
   })
 }
 
