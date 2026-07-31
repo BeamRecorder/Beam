@@ -1,74 +1,60 @@
 import { reactive } from "vue";
+import { ALL_FORMATS, BlobSource, CanvasSink, Input } from "mediabunny";
 
 const thumbnailCache = reactive<Record<string, string>>({});
 
 export function useProjectThumbnailGenerator() {
   const generateThumbnail = async (projectId: string, videoSrc: string): Promise<string | null> => {
-    if (thumbnailCache[projectId]) {
-      return thumbnailCache[projectId];
+    if (!videoSrc || thumbnailCache[projectId]) {
+      return thumbnailCache[projectId] ?? null;
     }
 
-    const tempVideo = document.createElement("video");
-    tempVideo.muted = true;
-    tempVideo.playsInline = true;
-    tempVideo.preload = "metadata";
-
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = 240;
-    tempCanvas.height = 135;
-    const ctx = tempCanvas.getContext("2d");
-
-    if (!ctx) return null;
-
+    let input: Input | null = null;
     try {
-      tempVideo.src = videoSrc;
-      tempVideo.load();
+      const response = await fetch(videoSrc);
+      if (!response.ok) return null;
 
-      await new Promise<void>((resolve) => {
-        const timeout = window.setTimeout(resolve, 600);
-        const onLoaded = () => {
-          window.clearTimeout(timeout);
-          resolve();
-        };
-        tempVideo.addEventListener("loadedmetadata", onLoaded, { once: true });
-        tempVideo.addEventListener("error", onLoaded, { once: true });
+      const blob = await response.blob();
+      input = new Input({
+        source: new BlobSource(blob),
+        formats: ALL_FORMATS,
       });
 
-      if (tempVideo.readyState >= 1) {
-        const midTime = Number.isFinite(tempVideo.duration) && tempVideo.duration > 0 ? tempVideo.duration / 2 : 0.1;
-        tempVideo.currentTime = midTime;
+      const track = await input.getPrimaryVideoTrack();
+      if (!track) return null;
 
-        await new Promise<void>((resolve) => {
-          const timeout = window.setTimeout(resolve, 500);
-          const onSeeked = () => {
-            window.clearTimeout(timeout);
-            resolve();
-          };
-          tempVideo.addEventListener("seeked", onSeeked, { once: true });
-        });
-      }
+      const duration = (await track.getDurationFromMetadata()) ?? (await track.computeDuration()) ?? 0;
+      const sink = new CanvasSink(track, { width: 240 });
+      const targetTime = Number.isFinite(duration) && duration > 0 ? duration / 2 : 0.1;
 
-      if (tempVideo.readyState >= 1) {
-        ctx.drawImage(tempVideo, 0, 0, tempCanvas.width, tempCanvas.height);
-        const dataUrl = tempCanvas.toDataURL("image/webp", 0.75);
+      for await (const wrappedCanvas of sink.canvasesAtTimestamps([targetTime])) {
+        if (!wrappedCanvas?.canvas) continue;
+        const canvas = wrappedCanvas.canvas;
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = 240;
+        tempCanvas.height = Math.round((240 * (canvas.height || 135)) / (canvas.width || 240));
+        const ctx = tempCanvas.getContext("2d");
+
+        if (!ctx) continue;
+        ctx.drawImage(canvas as CanvasImageSource, 0, 0, tempCanvas.width, tempCanvas.height);
+        const dataUrl = tempCanvas.toDataURL("image/webp", 0.8);
         thumbnailCache[projectId] = dataUrl;
 
         if (typeof window !== "undefined" && window.capture?.saveProjectThumbnail) {
           try {
             const savedUrl = await window.capture.saveProjectThumbnail(projectId, dataUrl);
             if (savedUrl) thumbnailCache[projectId] = savedUrl;
-          } catch (e) {
-            console.debug("Failed to persist thumbnail to disk:", e);
+          } catch {
+            // Ignored
           }
         }
         return dataUrl;
       }
-    } catch (err) {
-      console.debug("Failed to extract thumbnail for project", projectId, err);
+    } catch {
+      // Ignored
     } finally {
-      tempVideo.pause();
-      tempVideo.src = "";
-      tempVideo.remove();
+      input?.dispose();
     }
 
     return null;

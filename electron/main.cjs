@@ -146,11 +146,35 @@ app.whenReady().then(() => {
   logStartup('System audio IPC registered.')
   const projectStore = createProjectStore(userPaths.projects)
   registerProjectIpc(ipcMain, projectStore, createBackgroundLibrary(userPaths), require('electron').dialog, BrowserWindow)
-  protocol.handle('project-media', (request) => {
-    const file = projectStore.mediaFileForUrl(request.url)
-    return file
-      ? new Response(Readable.toWeb(fs.createReadStream(file)))
-      : new Response('Not found', { status: 404 })
+  protocol.handle('project-media', async (request) => {
+    try {
+      const file = projectStore.mediaFileForUrl(request.url)
+      if (!file || !fs.existsSync(file)) return new Response('Not found', { status: 404 })
+      const response = await net.fetch(pathToFileURL(file).href)
+      const ext = path.extname(file).toLowerCase()
+      const mimeTypes = {
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mov': 'video/quicktime',
+        '.mkv': 'video/x-matroska',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
+      }
+      const contentType = mimeTypes[ext] || 'application/octet-stream'
+      const headers = new Headers(response.headers)
+      headers.set('content-type', contentType)
+      headers.set('access-control-allow-origin', '*')
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      })
+    } catch (e) {
+      console.error('[project-media] Error serving media:', e)
+      return new Response('Internal error', { status: 500 })
+    }
   })
   logStartup('Project IPC registered.')
   const whisperStore = createWhisperModelStore(userPaths.whisperModels)
