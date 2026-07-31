@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useVirtualList } from "@vueuse/core";
 import {
   ArrowLeft,
@@ -148,15 +148,17 @@ const handleVideoTimeUpdate = (projectId: string, event: Event) => {
 
 const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
   const target = event.currentTarget as HTMLElement | null;
-  const video = (
-    target?.tagName === "VIDEO" ? target : target?.querySelector("video")
-  ) as HTMLVideoElement | null;
-  if (video && typeof video.play === "function") {
-    if (video.readyState === 0) {
-      video.load();
+  void nextTick(() => {
+    const video = (
+      target?.tagName === "VIDEO" ? target : target?.querySelector("video")
+    ) as HTMLVideoElement | null;
+    if (video && typeof video.play === "function") {
+      if (video.readyState === 0) {
+        video.load();
+      }
+      video.play().catch((err) => console.debug("Play interrupted:", err));
     }
-    video.play().catch((err) => console.debug("Play interrupted:", err));
-  }
+  });
 };
 
 const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
@@ -452,6 +454,17 @@ defineExpose({
               :aria-pressed="project.id === selectedProjectId"
               role="button"
               tabindex="0"
+              @mouseenter="
+                hoveredProjectId = project.id;
+                if (project.previewSrc) {
+                  videoProgress[project.id] = { current: 0, total: 1 };
+                }
+                handleMouseEnterVideo(project.id, $event);
+              "
+              @mouseleave="
+                hoveredProjectId = null;
+                handleMouseLeaveVideo(project.id, $event);
+              "
               @click="selectProject(project)"
               @dblclick="
                 selectProject(project);
@@ -465,14 +478,6 @@ defineExpose({
             >
               <div
                 class="project-preview project-card-media"
-                @mouseenter="
-                  hoveredProjectId = project.id;
-                  handleMouseEnterVideo(project.id, $event);
-                "
-                @mouseleave="
-                  hoveredProjectId = null;
-                  handleMouseLeaveVideo(project.id, $event);
-                "
               >
                 <img
                   v-if="thumbnailCache[project.id] || project.thumbnailSrc"
@@ -721,14 +726,14 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
+  padding: 16px 0 16px 16px;
   overflow: hidden;
 }
 
 .project-picker.compact {
   height: 336px;
   flex: none;
-  padding: 12px;
+  padding: 12px 0 12px 12px;
   gap: 8px;
 }
 
@@ -746,6 +751,11 @@ defineExpose({
   justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
+  padding-right: 16px;
+}
+
+.project-picker.compact .project-picker-heading {
+  padding-right: 12px;
 }
 
 .heading-actions {
@@ -772,8 +782,11 @@ defineExpose({
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  margin: -4px;
-  padding: 4px;
+  padding: 4px 12px 4px 4px;
+}
+
+.project-picker.compact .projects-viewport {
+  padding: 4px 8px 4px 4px;
 }
 
 .projects-list {

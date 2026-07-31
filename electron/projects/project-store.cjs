@@ -87,10 +87,7 @@ function createProjectStore(root) {
       const sessionDirectory = safePath(directory, session.relativePath)
       const screenDirectory = sessionDirectory && path.join(sessionDirectory, 'screen')
       const video = screenDirectory && fs.existsSync(screenDirectory) && fs.readdirSync(screenDirectory).filter((name) => /\.mp4$/i.test(name)).sort()[0]
-      if (video) {
-        const fileUrl = pathToFileURL(path.join(screenDirectory, video)).href
-        return mediaUrlFor(fileUrl) || fileUrl
-      }
+      if (video) return pathToFileURL(path.join(screenDirectory, video)).href
     }
     return null
   }
