@@ -99,7 +99,8 @@ onBeforeUnmount(() => {
   font-weight: 500;
   max-width: min(260px, calc(100vw - 24px));
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
   line-height: 1.35;
   z-index: 20000;
   box-shadow: var(--shadow-md);

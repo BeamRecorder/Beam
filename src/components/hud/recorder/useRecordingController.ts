@@ -30,6 +30,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   let pendingNativeStart: Promise<void> | null = null
   let prewarm: Promise<boolean> | null = null
   let preparedGeneration: number | null = null
+  let cancelling = false
 
   const cameraMetadata = async (): Promise<{ appearance?: CameraAppearance; placement?: CameraPlacement }> => {
     const overlay = await capture.getCameraOverlayState()
@@ -134,13 +135,13 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     }
   }
 
-  const cancel = async () => {
+  const resetState = async (sidecarsAlreadyStopped = false) => {
     recordingGeneration += 1
     clearCountdown()
     capture.setCountdown(null)
     capture.hideScreenRegionOverlay()
     clearTimer()
-    await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
+    if (!sidecarsAlreadyStopped) await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
     camera = null; microphone = null; systemAudio = null; sessionId = null; sessionTimelineStartedAt = 0
     cameraEnabled.value = false; microphoneEnabled.value = false; systemAudioEnabled.value = false
     elapsedTenths.value = 0
@@ -156,6 +157,24 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     prewarm = null
   }
 
+  const cancel = async () => {
+    if (cancelling) return
+    cancelling = true
+    const nativeRecording = sessionId !== null
+    const nativeSessionId = sessionId
+    try {
+      if (nativeRecording) phase.value = 'finalizing'
+      await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
+      if (nativeRecording) await capture.discardRecording(nativeSessionId ?? undefined)
+      await resetState(true)
+    } catch (reason) {
+      error.value = reason instanceof Error ? reason.message : String(reason)
+      if (nativeRecording) phase.value = 'recording'
+    } finally {
+      cancelling = false
+    }
+  }
+
   const stop = async () => {
     if (phase.value === 'countdown') return cancel()
     if (phase.value !== 'recording' && phase.value !== 'paused') return
@@ -164,7 +183,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
       const session = await capture.stop()
       capture.hideScreenRegionOverlay()
-      await cancel()
+      await resetState(true)
       onComplete(session)
     } catch (reason) { error.value = reason instanceof Error ? reason.message : String(reason); phase.value = 'recording' }
   }

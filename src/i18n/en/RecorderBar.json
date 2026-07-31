@@ -5,6 +5,7 @@
   "resumeRecording": "Resume recording",
   "pauseRecording": "Pause recording",
   "stopRecording": "Stop recording",
+  "cancelRecording": "Cancel and delete recording",
   "turnMicOff": "Turn microphone off",
   "turnMicOn": "Turn microphone on",
   "turnCameraOff": "Turn camera off",

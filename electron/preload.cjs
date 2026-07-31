@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld(
     prepareRecording: (options = {}) => invoke("prepare-default-recording", { options }),
     startPreparedRecording: () => invoke("start-prepared-recording"),
     cancelPreparedRecording: () => invoke("cancel-prepared-recording"),
+    discardRecording: (sessionId) => invoke("discard-recording", { sessionId }),
     startRecording: (options = {}) => invoke("start-default-recording", { options }),
     start: (config) => config ? invoke("start-recording", { config }) : invoke("start"),
     pause: () => invoke("pause"),

@@ -124,6 +124,17 @@ impl RecordingSession {
         if self.state != super::SessionState::Armed {
             return Err(invalid_transition(self.state, "Cancelled"));
         }
+        self.remove_artifacts()
+    }
+
+    pub fn discard(mut self) -> Result<(), CaptureError> {
+        if self.state == super::SessionState::Recording {
+            let _ = self.close_segment(self.session_ns());
+        }
+        self.remove_artifacts()
+    }
+
+    fn remove_artifacts(self) -> Result<(), CaptureError> {
         if self.layout.root().exists() {
             std::fs::remove_dir_all(self.layout.root())
                 .map_err(|error| CaptureError::storage(self.layout.root(), error))?;

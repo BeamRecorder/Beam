@@ -94,6 +94,15 @@ const cancelOrStopRecording = async () => {
   if (wasCountdown) { capture.setWindowMode('hud'); capture.setSize(352, 512); currentView.value = 'hud' }
 }
 
+const cancelRecording = async () => {
+  await recording.cancel()
+  if (recording.phase.value !== 'idle') return
+  capture.setWindowMode('hud')
+  capture.setSize(352, 512)
+  currentView.value = 'hud'
+  capture.showHud()
+}
+
 const revealEditor = async () => {
   capture.setCameraOverlayActive(false)
   capture.setWindowMode('editor'); capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height)
@@ -134,7 +143,7 @@ const dismissEditorLoadError = () => { editorLoadError.value = '' }
   <div v-else class="app-container">
     <HUD v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError" @start-recording="startRecording" @open-project="handleOpenProject" />
     <Transition name="recorder-return">
-      <RecorderBar v-if="currentView === 'recorder'" :phase="recording.phase.value" :seconds-remaining="recording.secondsRemaining.value" :recording-time="recording.recordingTime.value" :camera-enabled="recording.cameraEnabled.value" :microphone-enabled="recording.microphoneEnabled.value" :system-audio-enabled="recording.systemAudioEnabled.value" :visibility="recordingBarVisibility" @stop="cancelOrStopRecording" @pause="recording.togglePause" @camera="recording.toggleCamera" @microphone="recording.toggleMicrophone" @system-audio="recording.toggleSystemAudio" />
+      <RecorderBar v-if="currentView === 'recorder'" :phase="recording.phase.value" :seconds-remaining="recording.secondsRemaining.value" :recording-time="recording.recordingTime.value" :camera-enabled="recording.cameraEnabled.value" :microphone-enabled="recording.microphoneEnabled.value" :system-audio-enabled="recording.systemAudioEnabled.value" :visibility="recordingBarVisibility" @stop="cancelOrStopRecording" @cancel="cancelRecording" @pause="recording.togglePause" @camera="recording.toggleCamera" @microphone="recording.toggleMicrophone" @system-audio="recording.toggleSystemAudio" />
     </Transition>
     <section v-if="isPreparingEditor" class="editor-preparing" aria-live="polite"><LoaderCircle class="preparing-spinner" :size="28" /><div><p class="preparing-title">Preparing your editor</p><p class="preparing-copy">Finalizing recording and loading your timeline…</p></div></section>
     <section v-else-if="editorLoadError" class="editor-load-error" role="alert"><p class="editor-load-error-title">Unable to open this project</p><p>{{ editorLoadError }}</p><Button variant="secondary" size="sm" @click="dismissEditorLoadError">Back to projects</Button></section>

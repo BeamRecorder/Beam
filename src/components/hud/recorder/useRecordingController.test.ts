@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const capture = vi.hoisted(() => ({
   getCameraOverlayState: vi.fn().mockResolvedValue(null),
   setCountdown: vi.fn(),
+  hideScreenRegionOverlay: vi.fn(),
   prepareRecording: vi.fn().mockResolvedValue({ state: 'armed' }),
   startPreparedRecording: vi.fn(),
   cancelPreparedRecording: vi.fn().mockResolvedValue(undefined),
+  discardRecording: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn().mockResolvedValue({ state: 'completed' }),
   pause: vi.fn(),
   resume: vi.fn(),
@@ -82,5 +84,16 @@ describe('useRecordingController cancellation', () => {
     started.resolve({ state: 'recording', sessionId: 'session-3' })
     await starting
     expect(controller.phase.value).toBe('recording')
+  })
+
+  it('discards the native session when cancelling an active recording', async () => {
+    capture.startPreparedRecording.mockResolvedValue({ state: 'recording', sessionId: 'session-4' })
+    const controller = useRecordingController(vi.fn())
+    await controller.start(configuration(0))
+
+    await controller.cancel()
+
+    expect(capture.discardRecording).toHaveBeenCalledWith('session-4')
+    expect(controller.phase.value).toBe('idle')
   })
 })

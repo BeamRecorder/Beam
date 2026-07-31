@@ -24,6 +24,9 @@ const { createUserPaths } = require('./storage/user-paths.cjs')
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs')
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs')
 
+// Set to true only while diagnosing Electron startup or renderer requests.
+const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = false
+
 protocol.registerSchemesAsPrivileged([
   { scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
   { scheme: 'project-media', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -31,7 +34,7 @@ protocol.registerSchemesAsPrivileged([
 
 const startupAt = process.hrtime.bigint()
 const logStartup = (step) => {
-  if (app.isPackaged) return
+  if (!ENABLE_ELECTRON_DIAGNOSTIC_LOGS || app.isPackaged) return
   const elapsedMs = Number(process.hrtime.bigint() - startupAt) / 1_000_000
   console.log(`[electron +${elapsedMs.toFixed(0)} ms] ${step}`)
 }

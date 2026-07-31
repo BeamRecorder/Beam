@@ -22,6 +22,7 @@ pub enum Command {
     Pause,
     Resume,
     Cancel,
+    Discard,
     Stop,
     Status,
 }

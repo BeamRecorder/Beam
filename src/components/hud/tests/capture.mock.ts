@@ -5,6 +5,7 @@ export const captureMock = {
   getSources: vi.fn(),
   startRecording: vi.fn(),
   stop: vi.fn(),
+  discardRecording: vi.fn(),
   setSize: vi.fn(),
   close: vi.fn(),
   minimize: vi.fn(),

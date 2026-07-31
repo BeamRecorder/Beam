@@ -1,5 +1,5 @@
 const HUD_SIZE = { width: 352, height: 512 }
-const RECORDER_SIZE = { width: 72, height: 296 }
+const RECORDER_SIZE = { width: 72, height: 344 }
 // This is total native-window width, not only tooltip width. Keep a generous
 // left gutter for the widest localized tooltip plus its arrow and shadow.
 const RECORDER_TOOLTIP_WIDTH = 300

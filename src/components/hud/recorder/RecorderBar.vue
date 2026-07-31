@@ -8,6 +8,7 @@ import {
   Pause,
   Play,
   Square,
+  Trash2,
   Volume2,
   VolumeX,
 } from "@lucide/vue";
@@ -32,6 +33,7 @@ defineProps<{
 
 const emit = defineEmits<{
   stop: [];
+  cancel: [];
   pause: [];
   camera: [];
   microphone: [];
@@ -98,7 +100,6 @@ onBeforeUnmount(() => {
       :aria-label="t('moveRecorderBar')"
       :title="t('moveRecorderBar')"
       @mousedown.stop="startDrag"
-      @click.prevent
     >
       <GripVertical aria-hidden="true" />
     </button>
@@ -149,6 +150,23 @@ onBeforeUnmount(() => {
         <Square />
       </button>
     </Tooltip>
+
+    <div class="cancel-slot">
+      <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+        <template #content>
+          <span>{{ t('cancelRecording') }}</span>
+        </template>
+        <button
+          class="control cancel"
+          :aria-label="t('cancelRecording')"
+          :disabled="phase === 'finalizing'"
+          @mousedown.stop
+          @click="emit('cancel')"
+        >
+          <Trash2 />
+        </button>
+      </Tooltip>
+    </div>
 
     <!-- Mic -->
     <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
@@ -210,6 +228,7 @@ onBeforeUnmount(() => {
         <Volume2 v-if="systemAudioEnabled" /><VolumeX v-else />
       </button>
     </Tooltip>
+
   </aside>
 </template>
 
@@ -220,7 +239,7 @@ onBeforeUnmount(() => {
   right: 0;
   width: 72px;
   box-sizing: border-box;
-  min-height: 296px;
+  min-height: 344px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -291,6 +310,12 @@ onBeforeUnmount(() => {
 .control.stop {
   color: var(--color-error);
 }
+.cancel-slot {
+  margin-top: -4px;
+}
+.control.cancel {
+  color: var(--color-error);
+}
 .control :deep(svg) {
   width: 20px;
   height: 20px;
@@ -307,11 +332,16 @@ onBeforeUnmount(() => {
 }
 .tooltip-shortcut-content {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   max-width: 198px;
   min-width: 0;
   line-height: 1.35;
+}
+.tooltip-shortcut-content > span {
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 </style>

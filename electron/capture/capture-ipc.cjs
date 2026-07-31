@@ -34,6 +34,12 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
       await captureEngine.request('cancel')
       return undefined
     }
+    if (command === 'discard-recording') {
+      for (const storage of trackStorages) storage.forgetSession(payload.sessionId)
+      const session = await captureEngine.request('discard')
+      for (const storage of trackStorages) storage.forgetSession(session?.sessionId)
+      return undefined
+    }
     if (command === 'start-recording') {
       await captureEngine.request('prepare', { config: payload.config })
       const session = await captureEngine.request('start')

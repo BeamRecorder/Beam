@@ -18,6 +18,7 @@ export interface CaptureApi {
   prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   startPreparedRecording(): Promise<CaptureSession>
   cancelPreparedRecording(): Promise<void>
+  discardRecording(sessionId?: string): Promise<void>
   startRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   start(config?: CaptureConfig): Promise<CaptureSession>
   pause(): Promise<CaptureSession>

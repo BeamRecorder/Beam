@@ -153,6 +153,37 @@ fn native_session_finalizes_storage_and_supports_pause_segments() {
 }
 
 #[test]
+fn native_session_discard_removes_the_project_and_session() {
+    let temporary = tempfile::tempdir().expect("temporary directory");
+    let request = CaptureRequest {
+        project_id: ProjectId::new(),
+        screen: None,
+        cursor: CursorSelection::Disabled,
+        recording: RecordingSettings {
+            output_root: temporary.path().into(),
+            minimum_free_bytes: 0,
+            ..RecordingSettings::default()
+        },
+        failure_policy: FailurePolicy::FailFast,
+        region: None,
+        excluded_process_id: None,
+    };
+    let snapshot = CatalogSnapshot {
+        generation: 1,
+        created_at_utc: "2026-01-01T00:00:00Z".into(),
+        capabilities: CaptureCapabilities::default(),
+        permissions: PermissionSnapshot::default(),
+        limitations: Vec::new(),
+        sources: Vec::new(),
+    };
+    let mut session = RecordingSession::prepare(request, snapshot).expect("prepare native session");
+    session.start().expect("start native session");
+    session.discard().expect("discard native session");
+
+    assert!(temporary.path().read_dir().expect("read projects").next().is_none());
+}
+
+#[test]
 fn shared_start_gate_releases_every_waiter_with_the_same_t0() {
     let gate = Arc::new(StartGate::new());
     let waiters = (0..3)
