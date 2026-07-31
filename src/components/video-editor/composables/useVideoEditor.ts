@@ -49,6 +49,7 @@ export function useVideoEditor(options: {
     selectedBackground: player.selectedBackground,
     backgroundBlurPercent: player.backgroundBlurPercent,
     canvas: outputCanvas,
+    cursorEffects: cursor.clickEffects,
     availableBackgrounds: player.backgroundGroups,
   });
 
@@ -90,12 +91,7 @@ export function useVideoEditor(options: {
               color: cursor.shadowColor.value,
               direction: cursor.shadowDirection.value,
             },
-            clickSpring: { enabled: cursor.enableClickSpring.value },
-            ripple: {
-              enabled: cursor.enableRipple.value,
-              color: cursor.rippleColor.value,
-              size: cursor.rippleSize.value,
-            },
+            clickEffects: cursor.clickEffects.value,
           },
         }),
       };

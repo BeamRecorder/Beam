@@ -104,6 +104,8 @@ describe("cursor playback", () => {
       { event: "button", sessionNs: second(3), button: 2, pressed: true },
     ];
     expect(buttonEventsBetween(events, 1, 3)).toEqual([events[2]]);
+    expect(buttonEventsBetween(events, 0, 3, "right")).toEqual([events[2]]);
+    expect(buttonEventsBetween(events, 0, 3, "left")).toEqual([events[0]]);
     expect(buttonEventsBetween(events, 3, 1)).toEqual([]);
   });
 

@@ -4,8 +4,10 @@ import Switch from '~/ui/switch/Switch.vue'
 import Select from '~/ui/select/Select.vue'
 import ColorInput from '~/ui/input/ColorInput.vue'
 import ShadowDirectionGroup from '../ShadowDirectionGroup.vue'
+import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue'
 import type { ShadowDirection } from '../shadow-types'
 import { cursorOptions, type CursorType } from './useCursorReplacer'
+import type { CursorClickEffects } from '../../../../api/types/cursor-settings'
 import { useTranslate } from '~/i18n/useTranslate'
 
 const { t } = useTranslate('CursorPanel')
@@ -15,13 +17,10 @@ defineProps<{
   cursorSize: number
   cursorColor: string
   enableShadow: boolean
-  enableClickSpring: boolean
-  enableRipple: boolean
   shadowBlur: number
   shadowColor: string
   shadowDirection: ShadowDirection
-  rippleColor: string
-  rippleSize: number
+  clickEffects: CursorClickEffects
 }>()
 
 const emit = defineEmits<{
@@ -29,13 +28,10 @@ const emit = defineEmits<{
   (e: 'update:cursorSize', value: number): void
   (e: 'update:cursorColor', value: string): void
   (e: 'update:enableShadow', value: boolean): void
-  (e: 'update:enableClickSpring', value: boolean): void
-  (e: 'update:enableRipple', value: boolean): void
   (e: 'update:shadowBlur', value: number): void
   (e: 'update:shadowColor', value: string): void
   (e: 'update:shadowDirection', value: ShadowDirection): void
-  (e: 'update:rippleColor', value: string): void
-  (e: 'update:rippleSize', value: number): void
+  (e: 'update:clickEffects', value: CursorClickEffects): void
 }>()
 </script>
 
@@ -106,42 +102,11 @@ const emit = defineEmits<{
       </div>
     </Transition>
 
-    <div class="prop-row">
-      <span class="prop-label">{{ t('clickSpring') }}</span>
-      <Switch
-        :model-value="enableClickSpring"
-        @update:modelValue="emit('update:enableClickSpring', $event)"
-      />
-    </div>
+    <CursorClickEffectsPanel
+      :model-value="clickEffects"
+      @update:model-value="emit('update:clickEffects', $event)"
+    />
 
-    <div class="prop-row">
-      <span class="prop-label">{{ t('clickRippleEffect') }}</span>
-      <Switch 
-        :model-value="enableRipple" 
-        @update:modelValue="emit('update:enableRipple', $event)"
-      />
-    </div>
-
-    <Transition name="slide-fade">
-      <div v-if="enableRipple" class="nested-options">
-        <div class="prop-item">
-          <BigSlider 
-            :model-value="rippleSize" 
-            :min="10" 
-            :max="80"
-            :label="t('rippleSize')"
-            :format-value="(val) => `${val}px`"
-            @update:modelValue="emit('update:rippleSize', $event)"
-          />
-        </div>
-
-        <ColorInput 
-          :label="t('rippleColor')"
-          :model-value="rippleColor"
-          @update:modelValue="emit('update:rippleColor', $event)"
-        />
-      </div>
-    </Transition>
   </div>
 </template>
 

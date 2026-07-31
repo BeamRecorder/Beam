@@ -67,6 +67,30 @@ fn telemetry_marks_two_near_left_clicks_as_double_click() {
 }
 
 #[test]
+fn telemetry_distinguishes_a_right_click() {
+    let events = vec![
+        CursorEvent::Move {
+            session_ns: 0,
+            pixel_x: 0,
+            pixel_y: 0,
+            normalized_x: 0.4,
+            normalized_y: 0.5,
+            visible: true,
+        },
+        CursorEvent::Button {
+            session_ns: 100_000_000,
+            button: 2,
+            pressed: true,
+        },
+    ];
+    let telemetry = telemetry_from_events(&events);
+    assert_eq!(
+        telemetry.samples[1].interaction_type,
+        Some(CursorInteractionType::RightClick)
+    );
+}
+
+#[test]
 fn telemetry_keeps_the_latest_hour_of_samples() {
     let events = (0..=MAX_CURSOR_TELEMETRY_SAMPLES)
         .map(|index| CursorEvent::Move {

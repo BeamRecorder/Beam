@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { ShadowDirection } from '../shadow-types'
+import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../../../api/types/cursor-settings'
 
 export type CursorType =
   | 'automatic'
@@ -143,13 +144,10 @@ export function useCursorReplacer() {
   const cursorSize = ref(24)
   const cursorColor = ref('#000000')
   const enableShadow = ref(true)
-  const enableClickSpring = ref(true)
-  const enableRipple = ref(true)
   const shadowBlur = ref(6)
   const shadowColor = ref('#000000')
   const shadowDirection = ref<ShadowDirection>('bottom')
-  const rippleColor = ref('#ff5a1f')
-  const rippleSize = ref(30)
+  const clickEffects = ref<CursorClickEffects>(createDefaultCursorClickEffects())
 
   // Canvas rasterizes an SVG when drawing it. Decode it at the largest required
   // pixel size so the cursor stays sharp while the camera zoom is applied.
@@ -191,13 +189,10 @@ export function useCursorReplacer() {
     cursorSize,
     cursorColor,
     enableShadow,
-    enableClickSpring,
-    enableRipple,
     shadowBlur,
     shadowColor,
     shadowDirection,
-    rippleColor,
-    rippleSize,
+    clickEffects,
     getCursorImage,
   }
 }

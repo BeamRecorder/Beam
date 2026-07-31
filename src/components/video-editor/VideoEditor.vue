@@ -64,13 +64,10 @@ const {
   cursorSize,
   cursorColor,
   enableShadow,
-  enableClickSpring,
-  enableRipple,
   shadowBlur,
   shadowColor,
   shadowDirection,
-  rippleColor,
-  rippleSize,
+  clickEffects,
 } = cursor;
 const {
   composition,
@@ -245,13 +242,10 @@ onBeforeUnmount(() => {
           v-model:cursor-size="cursorSize"
           v-model:cursor-color="cursorColor"
           v-model:enable-shadow="enableShadow"
-          v-model:enable-click-spring="enableClickSpring"
-          v-model:enable-ripple="enableRipple"
           v-model:shadow-blur="shadowBlur"
           v-model:shadow-color="shadowColor"
           v-model:shadow-direction="shadowDirection"
-          v-model:ripple-color="rippleColor"
-          v-model:ripple-size="rippleSize"
+          v-model:click-effects="clickEffects"
           v-model:volume="volume"
           v-model:system-volume="systemVolume"
           v-model:mic-volume="micVolume"
@@ -302,13 +296,10 @@ onBeforeUnmount(() => {
             :cursor-size="cursorSize"
             :cursor-color="cursorColor"
             :enable-shadow="enableShadow"
-            :enable-click-spring="enableClickSpring"
-            :enable-ripple="enableRipple"
             :shadow-blur="shadowBlur"
             :shadow-color="shadowColor"
             :shadow-direction="shadowDirection"
-            :ripple-color="rippleColor"
-            :ripple-size="rippleSize"
+            :click-effects="clickEffects"
             :selected-background="selectedBackgroundMedia"
             :background-blur-percent="backgroundBlurPercent"
             :video-src="playerVideoSrc || ''"

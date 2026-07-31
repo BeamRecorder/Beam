@@ -22,7 +22,16 @@ const snapshot = (): CompositionSnapshot => ({
   blurPercent: 0,
   zooms: [],
   cursor: { available: false, telemetry: [], missing: [], shapes: {}, catalog: {}, events: [] },
-  cursorSettings: { selectedCursor: 'automatic', size: 24, color: '#000', shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' }, clickSpring: { enabled: true }, ripple: { enabled: false, color: '#f00', size: 30 } },
+  cursorSettings: {
+    selectedCursor: 'automatic',
+    size: 24,
+    color: '#000',
+    shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
+    clickEffects: {
+      left: { springEnabled: true, springIntensity: 100, rippleEnabled: false, rippleSize: 30, rippleColor: '#f00' },
+      right: { springEnabled: true, springIntensity: 100, rippleEnabled: false, rippleSize: 30, rippleColor: '#00f' },
+    },
+  },
   composition: composition(),
 })
 const context = () => ({

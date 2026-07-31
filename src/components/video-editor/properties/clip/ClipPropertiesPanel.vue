@@ -226,7 +226,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Appearance Section (Corner Radius, Shadow & Mirror) -->
-      <div v-if="['video', 'image', 'webcam'].includes(selectedClip.kind)" class="section-block">
+      <div v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" class="section-block">
         <div class="section-header">
           <span class="section-title">{{ t('cornerRadius') }}</span>
         </div>
@@ -306,7 +306,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Speed Boost / Rate Controls -->
-      <div v-if="selectedClip.kind === 'video' || selectedClip.kind === 'webcam'" class="section-block">
+      <div v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" class="section-block">
         <div class="section-header">
           <span class="section-title">{{ t('speedBoost') }}</span>
         </div>

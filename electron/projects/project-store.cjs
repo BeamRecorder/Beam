@@ -101,6 +101,31 @@ function createProjectStore(root) {
     })
     return { elements, generatedSessions }
   }
+  const defaultCursorEffects = () => ({
+    left: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
+    right: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
+  })
+  const cursorEffectState = (value, fallback) => {
+    const input = value && typeof value === 'object' ? value : {}
+    const number = (candidate, defaultValue, min, max) => Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue
+    const boolean = (candidate, defaultValue) => typeof candidate === 'boolean' ? candidate : defaultValue
+    const color = (candidate, defaultValue) => typeof candidate === 'string' && candidate ? candidate : defaultValue
+    return {
+      springEnabled: boolean(input.springEnabled, fallback.springEnabled),
+      springIntensity: number(input.springIntensity, fallback.springIntensity, 0, 100),
+      rippleEnabled: boolean(input.rippleEnabled, fallback.rippleEnabled),
+      rippleSize: number(input.rippleSize, fallback.rippleSize, 10, 80),
+      rippleColor: color(input.rippleColor, fallback.rippleColor),
+    }
+  }
+  const cursorEffectsState = (value) => {
+    const defaults = defaultCursorEffects()
+    const input = value && typeof value === 'object' ? value : {}
+    return {
+      left: cursorEffectState(input.left, defaults.left),
+      right: cursorEffectState(input.right, defaults.right),
+    }
+  }
   const presentationState = (value) => {
     const next = value || {}
     const canvasInput = next.canvas || {}
@@ -116,6 +141,7 @@ function createProjectStore(root) {
       background: next.background && typeof next.background === 'object' ? next.background : null,
       blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
       importedBackgrounds: Array.isArray(next.importedBackgrounds) ? next.importedBackgrounds.filter((item) => item && typeof item.id === 'string' && typeof item.path === 'string') : [],
+      cursorEffects: cursorEffectsState(next.cursorEffects),
     }
   }
   const readJsonArray = (file) => {

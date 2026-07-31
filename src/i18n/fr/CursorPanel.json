@@ -6,7 +6,12 @@
   "shadowBlur": "Flou d'ombre",
   "shadowColor": "Couleur de l'ombre",
   "direction": "Direction",
-  "clickSpring": "Effet de clic",
+  "clickSpring": "Rebond au clic",
+  "clicks": "Cliques",
+  "clicksDescription": "Réglez séparément les effets du clic gauche et du clic droit.",
+  "leftClick": "Clic gauche",
+  "rightClick": "Clic droit",
+  "springIntensity": "Intensité du rebond",
   "clickRippleEffect": "Effet de vague",
   "rippleSize": "Taille de vague",
   "rippleColor": "Couleur de vague"

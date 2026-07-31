@@ -8,21 +8,19 @@ import { cursorShadowOffset } from "../../properties/cursor/cursor-shadow";
 import type { ShadowDirection } from "../../properties/shadow-types";
 import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from "../../properties/cursor/cursor-rendering";
 import type { VisualClip } from "../../composition/composition-types";
+import { effectButtonForRecordedButton, type CursorClickEffectSettings, type CursorClickEffects } from "../../../../api/types/cursor-settings";
 
-export interface Ripple { x: number; y: number; radius: number; alpha: number }
+export interface Ripple { x: number; y: number; radius: number; alpha: number; color: string; size: number }
 
 export interface UseCursorOverlayOptions {
   selectedCursor: () => CursorType;
   cursorSize: () => number;
   cursorColor: () => string;
   enableShadow: () => boolean;
-  enableClickSpring: () => boolean;
-  enableRipple: () => boolean;
+  clickEffects: () => CursorClickEffects;
   shadowBlur: () => number;
   shadowColor: () => string;
   shadowDirection: () => ShadowDirection;
-  rippleColor: () => string;
-  rippleSize: () => number;
   deviceScale: () => number;
   currentTime: () => number;
   isPlaying: () => boolean;
@@ -98,6 +96,11 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     );
   };
 
+  const settingsForButton = (button: number): CursorClickEffectSettings | null => {
+    const effectButton = effectButtonForRecordedButton(button);
+    return effectButton ? options.clickEffects()[effectButton] : null;
+  };
+
   const updateAndDrawRipplesAndCursor = (
     ctx: CanvasRenderingContext2D,
     videoWindow: { dx: number; dy: number; dw: number; dh: number; focusX: number; focusY: number; scale: number },
@@ -113,12 +116,14 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     }
     const time = options.currentTime();
     const playing = options.isPlaying();
-    if (options.enableRipple() && playing && time >= lastDrawTime) {
+    if (playing && time >= lastDrawTime) {
       for (const button of buttonEventsBetween(cursorData.events, lastDrawTime, time)) {
+        const effect = settingsForButton(button.button);
+        if (!effect?.rippleEnabled) continue;
         const state = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000);
         if (!state) continue;
         const position = positionAt(state, videoWindow, videoWidth, videoHeight);
-        ripples.value.push({ x: position.x, y: position.y, radius: 2, alpha: 1 });
+        ripples.value.push({ x: position.x, y: position.y, radius: 2, alpha: 1, color: effect.rippleColor, size: effect.rippleSize });
       }
     }
     lastDrawTime = time;
@@ -127,12 +132,12 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
 
     drawInCameraSpace(() => {
       for (const ripple of ripples.value) {
-        ctx.strokeStyle = getRippleStyleColor(options.rippleColor(), ripple.alpha);
+        ctx.strokeStyle = getRippleStyleColor(ripple.color, ripple.alpha);
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
         ctx.stroke();
-        if (playing) { ripple.radius += options.rippleSize() / 25; ripple.alpha -= .04; }
+        if (playing) { ripple.radius += ripple.size / 25; ripple.alpha -= .04; }
       }
       const image = customCursorImage.value;
       if (!state?.visible || !image?.complete || image.naturalWidth <= 0) return;
@@ -147,9 +152,12 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         ctx.shadowOffsetX = offset.x;
         ctx.shadowOffsetY = offset.y;
       }
-      const click = buttonEventsBetween(cursorData.events, Math.max(0, time - .28), time).at(-1);
+      const click = buttonEventsBetween(cursorData.events, Math.max(0, time - .28), time)
+        .reverse()
+        .find((event) => settingsForButton(event.button)?.springEnabled);
       const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
-      const scale = cursorClickSpringScale(age, options.enableClickSpring());
+      const spring = click ? settingsForButton(click.button) : null;
+      const scale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
       ctx.translate(position.x, position.y);
       ctx.scale(scale, scale);
       ctx.drawImage(image, -hotspot.x, -hotspot.y, size, size);

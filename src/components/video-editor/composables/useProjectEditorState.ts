@@ -5,6 +5,7 @@ import type { ClipComposition } from "../composition/composition-types";
 import type { ZoomElement } from "../zoom/zoom-types";
 import { BACKGROUND_MEDIA, normalizeBackgroundValue, type BackgroundMedia, type BackgroundValue } from "./backgroundCatalog";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
+import { normalizeCursorClickEffects, type CursorClickEffects } from "../../../api/types/cursor-settings";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -17,6 +18,7 @@ export function useProjectEditorState(options: {
   selectedBackground: Ref<BackgroundValue | null>;
   backgroundBlurPercent: Ref<number>;
   canvas: Ref<OutputCanvasSettings>;
+  cursorEffects: Ref<CursorClickEffects>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
   const loading = ref(false);
@@ -42,6 +44,7 @@ export function useProjectEditorState(options: {
         : null,
       blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
       importedBackgrounds: [],
+      cursorEffects: clone(options.cursorEffects.value),
     },
   });
 
@@ -86,6 +89,7 @@ export function useProjectEditorState(options: {
         ?? null;
       options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
       options.canvas.value = state.presentation.canvas;
+      options.cursorEffects.value = normalizeCursorClickEffects(state.presentation.cursorEffects);
     } finally {
       loading.value = false;
     }
@@ -99,6 +103,7 @@ export function useProjectEditorState(options: {
     options.selectedBackground,
     options.backgroundBlurPercent,
     options.canvas,
+    options.cursorEffects,
   ], scheduleSave, { deep: true });
 
   watch(options.availableBackgrounds, (groups) => {

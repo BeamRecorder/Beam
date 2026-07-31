@@ -158,9 +158,9 @@ const handleVideoTimeUpdate = (projectId: string, event: Event) => {
 
 const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
   const target = event.currentTarget as HTMLElement | null;
-  const video = (target?.tagName === "VIDEO"
-    ? target
-    : target?.querySelector("video")) as HTMLVideoElement | null;
+  const video = (
+    target?.tagName === "VIDEO" ? target : target?.querySelector("video")
+  ) as HTMLVideoElement | null;
   if (video && typeof video.play === "function") {
     if (video.readyState === 0) {
       video.load();
@@ -172,9 +172,9 @@ const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
 const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
   isVideoLoaded.value[projectId] = false;
   const target = event.currentTarget as HTMLElement | null;
-  const video = (target?.tagName === "VIDEO"
-    ? target
-    : target?.querySelector("video")) as HTMLVideoElement | null;
+  const video = (
+    target?.tagName === "VIDEO" ? target : target?.querySelector("video")
+  ) as HTMLVideoElement | null;
   if (video && typeof video.pause === "function") {
     video.pause();
     video.currentTime = Math.min(0.1, video.duration || 0);
@@ -349,13 +349,9 @@ defineExpose({
   >
     <div class="project-picker-heading">
       <div>
-        <h1 id="project-picker-title">{{ t('projects') }}</h1>
+        <h1 id="project-picker-title">{{ t("projects") }}</h1>
         <p>
-          {{
-            compact
-              ? t('switchProject')
-              : t('chooseRecording')
-          }}
+          {{ compact ? t("switchProject") : t("chooseRecording") }}
         </p>
       </div>
       <div class="heading-actions">
@@ -418,13 +414,15 @@ defineExpose({
       role="alert"
     >
       <p>{{ errorMessage }}</p>
-      <Button variant="link" size="sm" @click="loadProjects">{{ t('tryAgain') }}</Button>
+      <Button variant="link" size="sm" @click="loadProjects">{{
+        t("tryAgain")
+      }}</Button>
     </div>
 
     <div v-else-if="projects.length === 0" class="project-state">
       <Film class="empty-icon" />
-      <p>{{ t('noProjects') }}</p>
-      <span>{{ t('recordDemoFirst') }}</span>
+      <p>{{ t("noProjects") }}</p>
+      <span>{{ t("recordDemoFirst") }}</span>
     </div>
 
     <div v-else v-bind="containerProps" class="projects-viewport">
@@ -465,9 +463,7 @@ defineExpose({
                   "
                 >
                   <img
-                    v-if="
-                      thumbnailCache[project.id] || project.thumbnailSrc
-                    "
+                    v-if="thumbnailCache[project.id] || project.thumbnailSrc"
                     :src="thumbnailCache[project.id] || project.thumbnailSrc!"
                     class="project-preview-thumb"
                     :alt="t('preview')"
@@ -553,7 +549,7 @@ defineExpose({
                               v-if="deleteConfirmProjectId === project.id"
                             >
                               <p class="delete-confirm-text">
-                                {{ t('deleteConfirm', { name: project.name }) }}
+                                {{ t("deleteConfirm", { name: project.name }) }}
                               </p>
                               <p
                                 v-if="deleteError"
@@ -570,14 +566,14 @@ defineExpose({
                                     deleteConfirmProjectId = null;
                                     deleteError = '';
                                   "
-                                  >{{ t('cancel') }}</Button
+                                  >{{ t("cancel") }}</Button
                                 >
                                 <Button
                                   variant="danger"
                                   size="sm"
                                   :loading="deleteBusy"
-                                  @click.stop="handleDeleteProject"
-                                  >{{ t('delete') }}</Button
+                                  @click.stop="handleDeleteProject().then(() => close())"
+                                  >{{ t("delete") }}</Button
                                 >
                               </div>
                             </template>
@@ -587,12 +583,9 @@ defineExpose({
                                 size="sm"
                                 :icon="Pencil"
                                 class="menu-action-item"
-                                @click.stop="
-                                  startRename(project);
-                                  close();
-                                "
+                                @click.stop="startRename(project)"
                               >
-                                {{ t('rename') }}
+                                {{ t("rename") }}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -601,7 +594,7 @@ defineExpose({
                                 class="menu-action-item delete-item"
                                 @click.stop="confirmDeleteProject(project)"
                               >
-                                {{ t('delete') }}
+                                {{ t("delete") }}
                               </Button>
                             </template>
                           </div>
@@ -611,7 +604,10 @@ defineExpose({
                   </div>
                   <span class="project-card-meta">
                     {{ project.sessionCount }}
-                    {{ project.sessionCount === 1 ? t('session') : t('sessions') }} ·
+                    {{
+                      project.sessionCount === 1 ? t("session") : t("sessions")
+                    }}
+                    ·
                     {{ formatDate(project.updatedAt) }}
                   </span>
                 </div>
@@ -631,7 +627,7 @@ defineExpose({
           :icon="ArrowLeft"
           @click="emit('back')"
         >
-          {{ t('back') }}
+          {{ t("back") }}
         </Button>
         <Button
           variant="primary"
@@ -640,7 +636,7 @@ defineExpose({
           :disabled="!selectedProject"
           @click="openSelectedProject"
         >
-          {{ t('openProject') }}
+          {{ t("openProject") }}
         </Button>
       </ButtonGroup>
     </footer>
@@ -676,14 +672,14 @@ defineExpose({
             size="sm"
             :disabled="newProjectBusy"
             @click="close"
-            >{{ t('cancel') }}</Button
+            >{{ t("cancel") }}</Button
           >
           <Button
             variant="primary"
             size="sm"
             :loading="newProjectBusy"
             @click="handleCreateProject"
-            >{{ t('create') }}</Button
+            >{{ t("create") }}</Button
           >
         </ButtonGroup>
       </template>

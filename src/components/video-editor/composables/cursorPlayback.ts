@@ -6,6 +6,7 @@ import type {
   CursorShapeAsset,
   CursorKind,
 } from '../../../api/types/capture-api'
+import { clickButtonForRecordedButton, type CursorClickButton } from '../../../api/types/cursor-settings'
 
 export interface CursorPlaybackState {
   x: number
@@ -97,10 +98,15 @@ export function buttonEventsBetween(
   events: CursorEvent[],
   startSeconds: number,
   endSeconds: number,
+  button?: CursorClickButton,
 ): CursorButtonEvent[] {
   if (endSeconds < startSeconds) return []
   return events.filter((event): event is CursorButtonEvent =>
-    isButton(event) && event.pressed && eventTime(event) > startSeconds && eventTime(event) <= endSeconds,
+    isButton(event)
+      && event.pressed
+      && eventTime(event) > startSeconds
+      && eventTime(event) <= endSeconds
+      && (button === undefined || clickButtonForRecordedButton(event.button) === button),
   )
 }
 

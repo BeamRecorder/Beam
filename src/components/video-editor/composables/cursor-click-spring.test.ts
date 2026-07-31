@@ -11,4 +11,8 @@ describe('cursorClickSpringScale', () => {
     expect(cursorClickSpringScale(.18, true)).toBeGreaterThan(1)
   })
   it('does nothing when disabled', () => expect(cursorClickSpringScale(.14, false)).toBe(1))
+  it('scales the rebound intensity independently', () => {
+    expect(cursorClickSpringScale(.07, true, 0)).toBe(1)
+    expect(cursorClickSpringScale(.07, true, 50)).toBeCloseTo(.925)
+  })
 })

@@ -147,7 +147,7 @@ defineExpose({
 
 <template>
   <div :class="['popover-container', { 'popover-block': block }]" ref="popoverRef">
-    <div :class="['popover-trigger', { 'popover-block': block }]" @click="toggle">
+    <div :class="['popover-trigger', { 'popover-block': block }]" @click.stop="toggle">
       <slot name="trigger" :isOpen="isOpen" />
     </div>
 

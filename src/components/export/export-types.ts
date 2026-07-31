@@ -4,6 +4,7 @@ import type { ClipComposition } from '../video-editor/composition/composition-ty
 import type { CursorType } from '../video-editor/properties/cursor/useCursorReplacer'
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas'
 import type { ShadowDirection } from '../video-editor/properties/shadow-types'
+import type { CursorClickEffects } from '../../api/types/cursor-settings'
 
 export type ExportFormat = 'webm' | 'mp4'
 export type ExportPreset = 'low' | 'medium' | 'high'
@@ -28,8 +29,7 @@ export interface CursorRenderSettings {
   size: number
   color: string
   shadow: { enabled: boolean; blur: number; color: string; direction: ShadowDirection }
-  clickSpring: { enabled: boolean }
-  ripple: { enabled: boolean; color: string; size: number }
+  clickEffects: CursorClickEffects
 }
 export interface CompositionSnapshot {
   duration: number

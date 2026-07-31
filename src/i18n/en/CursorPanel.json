@@ -6,7 +6,12 @@
   "shadowBlur": "Shadow Blur",
   "shadowColor": "Shadow Color",
   "direction": "Direction",
-  "clickSpring": "Click Spring",
+  "clickSpring": "Click bounce",
+  "clicks": "Clicks",
+  "clicksDescription": "Configure left-click and right-click effects independently.",
+  "leftClick": "Left click",
+  "rightClick": "Right click",
+  "springIntensity": "Bounce intensity",
   "clickRippleEffect": "Click Ripple Effect",
   "rippleSize": "Ripple Size",
   "rippleColor": "Ripple Color"

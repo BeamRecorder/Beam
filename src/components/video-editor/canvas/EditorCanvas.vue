@@ -9,6 +9,7 @@ import type { HistoryAction } from "../composables/useEditorUndoRedo";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../properties/cursor/useCursorReplacer";
 import type { ShadowDirection } from "../properties/shadow-types";
+import type { CursorClickEffects } from "../../../api/types/cursor-settings";
 import type { BackgroundValue } from "../composables/backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
 import { activeClipsAt, sourceTimeAt } from "../composition/engine/clip-engine";
@@ -40,13 +41,10 @@ const props = defineProps<{
   cursorSize: number;
   cursorColor: string;
   enableShadow: boolean;
-  enableClickSpring: boolean;
-  enableRipple: boolean;
   shadowBlur: number;
   shadowColor: string;
   shadowDirection: ShadowDirection;
-  rippleColor: string;
-  rippleSize: number;
+  clickEffects: CursorClickEffects;
   selectedBackground: BackgroundValue | null;
   backgroundBlurPercent?: number;
   videoSrc?: string | null;
@@ -226,13 +224,10 @@ const cursorOverlay = useCursorOverlay({
   cursorSize: () => props.cursorSize,
   cursorColor: () => props.cursorColor,
   enableShadow: () => props.enableShadow,
-  enableClickSpring: () => props.enableClickSpring,
-  enableRipple: () => props.enableRipple,
+  clickEffects: () => props.clickEffects,
   shadowBlur: () => props.shadowBlur,
   shadowColor: () => props.shadowColor,
   shadowDirection: () => props.shadowDirection,
-  rippleColor: () => props.rippleColor,
-  rippleSize: () => props.rippleSize,
   deviceScale: () => deviceScale.value,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
@@ -250,7 +245,7 @@ watch(() => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.ou
   renderOnce();
 });
 watch(() => [props.composition, props.currentTime, props.isCropping] as const, renderOnce, { deep: true });
-watch(() => [props.selectedCursor, props.cursorSize, props.cursorColor, props.enableShadow, props.shadowBlur, props.shadowColor, props.shadowDirection, props.enableClickSpring, props.enableRipple, props.rippleColor, props.rippleSize] as const, renderOnce);
+watch(() => [props.selectedCursor, props.cursorSize, props.cursorColor, props.enableShadow, props.shadowBlur, props.shadowColor, props.shadowDirection, props.clickEffects] as const, renderOnce, { deep: true });
 watch(transformAndCrop.transformDraft, renderOnce, { deep: true });
 watch(isMasterPlaying, renderOnce);
 

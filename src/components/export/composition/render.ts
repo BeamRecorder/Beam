@@ -9,6 +9,7 @@ import { drawDecoratedMedia } from "../../video-editor/composition/appearance/re
 import { cursorClickSpringScale } from "../../video-editor/composables/cursor-click-spring";
 import { cursorShadowOffset } from "../../video-editor/properties/cursor/cursor-shadow";
 import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from "../../video-editor/properties/cursor/cursor-rendering";
+import { effectButtonForRecordedButton, type CursorClickEffectSettings } from "../../../api/types/cursor-settings";
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
 export const OUTPUT_FALLBACK_COLOR = "#1e1e24";
@@ -242,21 +243,25 @@ export function renderCompositionFrame(
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   const cursor = cursorStateAt(snapshot.cursor.events, time);
   const settings: CursorRenderSettings = snapshot.cursorSettings;
-  if (settings.ripple.enabled) {
-    for (const click of buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .5), time)) {
+  const settingsForButton = (button: number): CursorClickEffectSettings | null => {
+    const effectButton = effectButtonForRecordedButton(button);
+    return effectButton ? settings.clickEffects[effectButton] : null;
+  };
+  for (const click of buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .5), time)) {
+    const effect = settingsForButton(click.button);
+    if (!effect?.rippleEnabled) continue;
       const state = cursorStateAt(snapshot.cursor.events, click.sessionNs / 1_000_000_000);
       if (!state) continue;
       const position = cursorPositionAt(state, { width: sourceWidth, height: sourceHeight }, { x: 0, y: 0, width, height }, snapshot.canvas.showBackground, screen.transform, screen.isMirrored ?? false);
       const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - age / .5);
-      ctx.strokeStyle = settings.ripple.color;
+      ctx.strokeStyle = effect.rippleColor;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(position.x, position.y, 2 + age * settings.ripple.size * 2, 0, Math.PI * 2);
+      ctx.arc(position.x, position.y, 2 + age * effect.rippleSize * 2, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
-    }
   }
   const cursorType = cursorTypeAt(settings.selectedCursor, cursor);
   const image = cursorImages?.get(cursorType);
@@ -271,9 +276,12 @@ export function renderCompositionFrame(
       ctx.shadowOffsetX = offset.x;
       ctx.shadowOffsetY = offset.y;
     }
-    const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .28), time).at(-1);
+    const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .28), time)
+      .reverse()
+      .find((event) => settingsForButton(event.button)?.springEnabled);
     const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
-    const clickScale = cursorClickSpringScale(age, settings.clickSpring.enabled);
+    const spring = click ? settingsForButton(click.button) : null;
+    const clickScale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
     ctx.translate(position.x, position.y);
     ctx.scale(clickScale, clickScale);
     ctx.drawImage(image, -hotspot.x, -hotspot.y, settings.size, settings.size);

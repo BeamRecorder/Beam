@@ -33,25 +33,22 @@ describe("useCursorReplacer", () => {
       cursor.cursorSize.value,
       cursor.cursorColor.value,
       cursor.enableShadow.value,
-      cursor.enableClickSpring.value,
-      cursor.enableRipple.value,
       cursor.shadowBlur.value,
       cursor.shadowColor.value,
       cursor.shadowDirection.value,
-      cursor.rippleColor.value,
-      cursor.rippleSize.value,
+      cursor.clickEffects.value,
     ]).toEqual([
       "automatic",
       24,
       "#000000",
       true,
-      true,
-      true,
       6,
       "#000000",
       "bottom",
-      "#ff5a1f",
-      30,
+      {
+        left: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 30, rippleColor: "#ff5a1f" },
+        right: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 30, rippleColor: "#6366f1" },
+      },
     ]);
     expect(cursorOptions).toHaveLength(Object.keys(cursorUrls).length);
     expect(
