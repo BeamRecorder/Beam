@@ -10,7 +10,10 @@ class WindowController {
     this.mode = 'hud'
     this.ready = false
     this.interactive = false
-    this.hudOverInteractive = false
+    // Start optimistically interactive.  A transparent HUD can otherwise be
+    // click-through until the first forwarded mousemove reaches the renderer
+    // (especially when the cursor is already over it during startup).
+    this.hudOverInteractive = true
     this.recorderOverInteractive = false
     this.recorderPositions = new Map()
     this.hudPosition = null
@@ -26,6 +29,7 @@ class WindowController {
   markReadyToShow() {
     if (this.window.isDestroyed()) return
     this.ready = true
+    if (this.mode === 'hud') this.hudOverInteractive = true
     this.applyModePolicy()
     this.window.showInactive()
     this.applyInteractionPolicy()
@@ -39,6 +43,7 @@ class WindowController {
       this.stopRecorderPointerTracking()
     }
     this.mode = mode
+    if (mode === 'hud') this.hudOverInteractive = true
     if (mode === 'recorder') {
       this.recorderBoundsBeforeTooltip = null
       this.placeRecorder()
@@ -161,6 +166,7 @@ class WindowController {
   setVisible(visible) {
     if (this.window.isDestroyed()) return
     if (visible) {
+      if (this.mode === 'hud') this.hudOverInteractive = true
       this.window.showInactive()
       this.applyModePolicy()
       return
@@ -180,7 +186,8 @@ class WindowController {
     if (this.mode === 'hud') {
       // In HUD mode use forward:true so the renderer still gets mousemove
       // events even over transparent areas.
-      this.window.setIgnoreMouseEvents(true, { forward: true })
+      if (this.hudOverInteractive) this.window.setIgnoreMouseEvents(false)
+      else this.window.setIgnoreMouseEvents(true, { forward: true })
     } else {
       // Editor: full opaque window, capture everything.
       this.window.setIgnoreMouseEvents(false)

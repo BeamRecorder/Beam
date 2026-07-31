@@ -80,7 +80,6 @@ const recording = useRecordingController((session) => { void handleStopRecording
 watch(currentView, (view) => {
   if (view !== 'hud') return
   lastInteractive = null
-  capture.setInteractive(false)
 })
 
 const startRecording = async (configuration: RecordingConfiguration) => {
