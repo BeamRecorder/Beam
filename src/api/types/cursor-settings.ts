@@ -15,7 +15,7 @@ export interface CursorClickEffects {
 
 const DEFAULT_LEFT: CursorClickEffectSettings = {
   springEnabled: true,
-  springIntensity: 100,
+  springIntensity: 50,
   rippleEnabled: true,
   rippleSize: 30,
   rippleColor: "#ff5a1f",
@@ -23,7 +23,7 @@ const DEFAULT_LEFT: CursorClickEffectSettings = {
 
 const DEFAULT_RIGHT: CursorClickEffectSettings = {
   springEnabled: true,
-  springIntensity: 100,
+  springIntensity: 50,
   rippleEnabled: true,
   rippleSize: 30,
   rippleColor: "#6366f1",

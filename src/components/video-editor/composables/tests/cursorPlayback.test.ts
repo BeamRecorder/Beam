@@ -99,8 +99,8 @@ describe("cursor playback", () => {
 
   it("returns only pressed button events in the half-open playback interval", () => {
     const events: CursorEvent[] = [
-      { event: "button", sessionNs: second(1), button: 0, pressed: true },
-      { event: "button", sessionNs: second(2), button: 0, pressed: false },
+      { event: "button", sessionNs: second(1), button: 1, pressed: true },
+      { event: "button", sessionNs: second(2), button: 1, pressed: false },
       { event: "button", sessionNs: second(3), button: 2, pressed: true },
     ];
     expect(buttonEventsBetween(events, 1, 3)).toEqual([events[2]]);

@@ -19,7 +19,7 @@ describe("cursor click settings", () => {
       right: { springEnabled: false, rippleColor: "#00ff00" },
     })).toEqual({
       left: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 10, rippleColor: "#ff5a1f" },
-      right: { springEnabled: false, springIntensity: 100, rippleEnabled: true, rippleSize: 30, rippleColor: "#00ff00" },
+      right: { springEnabled: false, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: "#00ff00" },
     });
   });
 

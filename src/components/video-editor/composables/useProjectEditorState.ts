@@ -19,6 +19,7 @@ export function useProjectEditorState(options: {
   backgroundBlurPercent: Ref<number>;
   canvas: Ref<OutputCanvasSettings>;
   cursorEffects: Ref<CursorClickEffects>;
+  cursorEffectsEditing: Ref<boolean>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
   const loading = ref(false);
@@ -49,6 +50,7 @@ export function useProjectEditorState(options: {
   });
 
   const saveNow = () => {
+    if (options.cursorEffectsEditing.value) return Promise.resolve();
     if (timer) { clearTimeout(timer); timer = null; }
     scheduledSave.value = false;
     if (loading.value || !options.project.value) return Promise.resolve();
@@ -67,7 +69,7 @@ export function useProjectEditorState(options: {
   };
 
   const scheduleSave = () => {
-    if (loading.value || !options.project.value) return;
+    if (loading.value || !options.project.value || options.cursorEffectsEditing.value) return;
     if (timer) clearTimeout(timer);
     scheduledSave.value = true;
     timer = setTimeout(() => void saveNow().catch((error) => console.error("Failed to save editor state:", error)), 250);
@@ -105,6 +107,16 @@ export function useProjectEditorState(options: {
     options.canvas,
     options.cursorEffects,
   ], scheduleSave, { deep: true });
+
+  watch(options.cursorEffectsEditing, (editing, wasEditing) => {
+    if (editing) {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      scheduledSave.value = false;
+      return;
+    }
+    if (wasEditing) scheduleSave();
+  });
 
   watch(options.availableBackgrounds, (groups) => {
     if (!savedBackgroundId || options.selectedBackground.value) return;

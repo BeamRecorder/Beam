@@ -28,8 +28,8 @@ const snapshot = (): CompositionSnapshot => ({
     color: '#000',
     shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
     clickEffects: {
-      left: { springEnabled: true, springIntensity: 100, rippleEnabled: false, rippleSize: 30, rippleColor: '#f00' },
-      right: { springEnabled: true, springIntensity: 100, rippleEnabled: false, rippleSize: 30, rippleColor: '#00f' },
+      left: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#f00' },
+      right: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#00f' },
     },
   },
   composition: composition(),
@@ -78,5 +78,38 @@ describe('canonical composition rendering', () => {
     const ctx = context()
     drawCompositionLayers(ctx, value, .2)
     expect(ctx.fillText).toHaveBeenCalledWith('Visible', expect.any(Number), expect.any(Number), expect.any(Number))
+  })
+
+  it('exports a right click with its own ripple and rebound settings', () => {
+    const value = snapshot()
+    value.cursor = {
+      available: true,
+      telemetry: [],
+      missing: [],
+      shapes: {},
+      catalog: {},
+      events: [
+        { event: 'move', sessionNs: 0, pixelX: 25, pixelY: 25, normalizedX: .25, normalizedY: .5, visible: true },
+        { event: 'button', sessionNs: 100_000_000, button: 2, pressed: true },
+      ],
+    }
+    value.cursorSettings.clickEffects = {
+      left: { springEnabled: false, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#f00' },
+      right: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 60, rippleColor: '#00f' },
+    }
+    const ctx = context()
+    const image = { complete: true, naturalWidth: 24 } as HTMLImageElement
+    renderCompositionFrame(
+      ctx,
+      { readyState: HTMLMediaElement.HAVE_CURRENT_DATA, videoWidth: 100, videoHeight: 50 } as HTMLVideoElement,
+      value,
+      .15,
+      null,
+      new Map([['default', image]]),
+    )
+    expect(ctx.strokeStyle).toBe('#00f')
+    expect(ctx.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), expect.closeTo(8, 5), 0, Math.PI * 2)
+    expect(ctx.scale).toHaveBeenCalledWith(expect.closeTo(.707, 3), expect.closeTo(.707, 3))
+    expect(ctx.drawImage).toHaveBeenCalled()
   })
 })

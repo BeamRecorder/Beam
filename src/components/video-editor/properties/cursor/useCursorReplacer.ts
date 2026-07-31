@@ -148,6 +148,7 @@ export function useCursorReplacer() {
   const shadowColor = ref('#000000')
   const shadowDirection = ref<ShadowDirection>('bottom')
   const clickEffects = ref<CursorClickEffects>(createDefaultCursorClickEffects())
+  const clickEffectsEditing = ref(false)
 
   // Canvas rasterizes an SVG when drawing it. Decode it at the largest required
   // pixel size so the cursor stays sharp while the camera zoom is applied.
@@ -193,6 +194,7 @@ export function useCursorReplacer() {
     shadowColor,
     shadowDirection,
     clickEffects,
+    clickEffectsEditing,
     getCursorImage,
   }
 }

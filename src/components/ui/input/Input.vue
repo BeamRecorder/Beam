@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useAttrs } from "vue";
+import { ref, useAttrs, onMounted } from "vue";
 
 defineOptions({ inheritAttrs: false })
 
@@ -18,16 +18,43 @@ const props = withDefaults(
     min?: number;
     max?: number;
     step?: number;
+    autofocus?: boolean;
+    selectOnFocus?: boolean;
   }>(),
   {
     type: "text",
     step: 1,
+    autofocus: false,
+    selectOnFocus: false,
   },
 );
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: string | number): void;
 }>();
+
+const inputRef = ref<HTMLInputElement | null>(null);
+
+const focusInput = () => {
+  if (!inputRef.value) return;
+  inputRef.value.focus();
+  if (props.selectOnFocus || props.autofocus) {
+    inputRef.value.select();
+  }
+};
+
+onMounted(() => {
+  if (props.autofocus) {
+    focusInput();
+    setTimeout(focusInput, 60);
+  }
+});
+
+defineExpose({
+  focus: focusInput,
+  select: () => inputRef.value?.select(),
+  inputRef,
+});
 
 const isDragging = ref(false);
 
@@ -118,6 +145,7 @@ const handleMouseDown = (e: MouseEvent) => {
       <slot name="prefix" />
     </div>
     <input
+      ref="inputRef"
       v-bind="attrs"
       :id="id"
       :type="type || 'text'"

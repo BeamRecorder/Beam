@@ -25,17 +25,6 @@ import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("ProjectPicker");
 
-const vFocus = {
-  mounted: (el: HTMLElement) => {
-    if (el instanceof HTMLInputElement) {
-      el.focus();
-    } else {
-      const input = el.querySelector("input");
-      if (input) input.focus();
-    }
-  },
-};
-
 let cachedProjects: CaptureProject[] | null = null;
 
 const emit = defineEmits<{
@@ -263,10 +252,21 @@ const handleCreateProject = async () => {
   }
 };
 
+let renameOpenedAt = 0;
+
 const startRename = (project: CaptureProject) => {
+  renameOpenedAt = Date.now();
   renameProjectId.value = project.id;
   renameValue.value = project.name;
   renameError.value = "";
+  void nextTick(() => {
+    const cardEl = document.querySelector<HTMLElement>(`.project-card-container[data-project-id="${project.id}"]`);
+    const inputEl = cardEl?.querySelector<HTMLInputElement>("input");
+    if (inputEl) {
+      inputEl.focus();
+      inputEl.select();
+    }
+  });
 };
 
 const cancelRename = () => {
@@ -275,6 +275,9 @@ const cancelRename = () => {
 };
 
 const handleRenameProject = async () => {
+  if (Date.now() - renameOpenedAt < 250) {
+    return;
+  }
   const trimmed = renameValue.value.trim();
   const originalProject = projects.value.find(
     (p) => p.id === renameProjectId.value,
@@ -436,183 +439,193 @@ defineExpose({
             v-for="project in row.data"
             :key="project.id"
             class="project-card-container"
+            :data-project-id="project.id"
           >
-            <Button
-              variant="card"
-              size="sm"
-              block
-              class="project-card"
+            <div
+              class="btn btn-card project-card"
               :class="{ 'is-selected': project.id === selectedProjectId }"
               :aria-pressed="project.id === selectedProjectId"
+              role="button"
+              tabindex="0"
               @click="selectProject(project)"
               @dblclick="
                 selectProject(project);
                 openSelectedProject();
               "
+              @keydown.enter.self="
+                selectProject(project);
+                openSelectedProject();
+              "
+              @keydown.space.self="selectProject(project)"
             >
-              <template #default>
-                <div
-                  class="project-preview"
-                  @mouseenter="
-                    hoveredProjectId = project.id;
-                    handleMouseEnterVideo(project.id, $event);
-                  "
-                  @mouseleave="
-                    hoveredProjectId = null;
-                    handleMouseLeaveVideo(project.id, $event);
-                  "
+              <div
+                class="project-preview project-card-media"
+                @mouseenter="
+                  hoveredProjectId = project.id;
+                  handleMouseEnterVideo(project.id, $event);
+                "
+                @mouseleave="
+                  hoveredProjectId = null;
+                  handleMouseLeaveVideo(project.id, $event);
+                "
+              >
+                <img
+                  v-if="thumbnailCache[project.id] || project.thumbnailSrc"
+                  :src="thumbnailCache[project.id] || project.thumbnailSrc!"
+                  class="project-preview-thumb"
+                  :alt="t('preview')"
+                />
+                <Skeleton
+                  v-else
+                  class="project-preview-skeleton"
+                  variant="linear"
+                  height="100%"
+                  width="100%"
+                />
+                <video
+                  v-if="project.previewSrc && hoveredProjectId === project.id"
+                  :src="`${project.previewSrc}#t=0.1`"
+                  autoplay
+                  muted
+                  loop
+                  playsinline
+                  preload="auto"
+                  class="project-preview-video"
+                  :class="{ 'is-loaded': isVideoLoaded[project.id] }"
+                  @loadeddata="isVideoLoaded[project.id] = true"
+                  @playing="isVideoLoaded[project.id] = true"
+                  @timeupdate="handleVideoTimeUpdate(project.id, $event)"
+                />
+                <span
+                  v-if="project.id === selectedProjectId"
+                  class="selected-indicator"
+                  :aria-label="t('selected')"
                 >
-                  <img
-                    v-if="thumbnailCache[project.id] || project.thumbnailSrc"
-                    :src="thumbnailCache[project.id] || project.thumbnailSrc!"
-                    class="project-preview-thumb"
-                    :alt="t('preview')"
-                    loading="lazy"
+                  <Check />
+                </span>
+                <div
+                  v-if="project.previewSrc && videoProgress[project.id]"
+                  class="preview-progress-overlay"
+                >
+                  <ProgressBar
+                    :value="videoProgress[project.id].current"
+                    :max="videoProgress[project.id].total"
                   />
-                  <Film v-else class="preview-placeholder-icon" />
-                  <video
-                    v-if="project.previewSrc && hoveredProjectId === project.id"
-                    :src="`${project.previewSrc}#t=0.1`"
-                    autoplay
-                    muted
-                    loop
-                    playsinline
-                    preload="auto"
-                    class="project-preview-video"
-                    :class="{ 'is-loaded': isVideoLoaded[project.id] }"
-                    @loadeddata="isVideoLoaded[project.id] = true"
-                    @playing="isVideoLoaded[project.id] = true"
-                    @timeupdate="handleVideoTimeUpdate(project.id, $event)"
+                </div>
+              </div>
+              <div class="project-card-info">
+                <div class="project-title-row">
+                  <Input
+                    v-if="renameProjectId === project.id"
+                    autofocus
+                    select-on-focus
+                    v-model="renameValue"
+                    size="sm"
+                    class="project-rename-input"
+                    :disabled="renameBusy"
+                    @click.stop
+                    @mousedown.stop
+                    @keydown.enter.stop="handleRenameProject"
+                    @keydown.esc.stop="cancelRename"
+                    @blur="handleRenameProject"
                   />
                   <span
-                    v-if="project.id === selectedProjectId"
-                    class="selected-indicator"
-                    :aria-label="t('selected')"
+                    v-else
+                    class="project-card-name"
+                    :title="project.name"
+                    >{{ project.name }}</span
                   >
-                    <Check />
-                  </span>
                   <div
-                    v-if="project.previewSrc && videoProgress[project.id]"
-                    class="preview-progress-overlay"
+                    v-if="renameProjectId !== project.id"
+                    class="project-card-actions"
+                    @click.stop
+                    @mousedown.stop
                   >
-                    <ProgressBar
-                      :value="videoProgress[project.id].current"
-                      :max="videoProgress[project.id].total"
-                    />
-                  </div>
-                </div>
-                <div class="project-card-info">
-                  <div class="project-title-row">
-                    <Input
-                      v-if="renameProjectId === project.id"
-                      v-focus
-                      v-model="renameValue"
-                      size="sm"
-                      class="project-rename-input"
-                      :disabled="renameBusy"
-                      @click.stop
-                      @mousedown.stop
-                      @keydown.enter.stop="handleRenameProject"
-                      @keydown.esc.stop="cancelRename"
-                      @blur="handleRenameProject"
-                    />
-                    <span
-                      v-else
-                      class="project-card-name"
-                      :title="project.name"
-                      >{{ project.name }}</span
+                    <Popover
+                      align="right"
+                      direction="down"
+                      :match-trigger-width="false"
+                      @toggle="handleActionPopoverToggle"
                     >
-                    <div
-                      class="project-card-actions"
-                      @click.stop
-                      @mousedown.stop
-                    >
-                      <Popover
-                        align="right"
-                        direction="down"
-                        :match-trigger-width="false"
-                        @toggle="handleActionPopoverToggle"
-                      >
-                        <template #trigger="{ isOpen }">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon-only
-                            :icon="MoreVertical"
-                            class="action-trigger-btn"
-                            :class="{ 'is-open': isOpen }"
-                          />
-                        </template>
-                        <template #default="{ close }">
-                          <div class="action-menu-content">
-                            <template
-                              v-if="deleteConfirmProjectId === project.id"
+                      <template #trigger="{ isOpen }">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          icon-only
+                          :icon="MoreVertical"
+                          class="action-trigger-btn"
+                          :class="{ 'is-open': isOpen }"
+                        />
+                      </template>
+                      <template #default="{ close }">
+                        <div class="action-menu-content">
+                          <template
+                            v-if="deleteConfirmProjectId === project.id"
+                          >
+                            <p class="delete-confirm-text">
+                              {{ t("deleteConfirm", { name: project.name }) }}
+                            </p>
+                            <p
+                              v-if="deleteError"
+                              class="delete-confirm-error"
                             >
-                              <p class="delete-confirm-text">
-                                {{ t("deleteConfirm", { name: project.name }) }}
-                              </p>
-                              <p
-                                v-if="deleteError"
-                                class="delete-confirm-error"
-                              >
-                                {{ deleteError }}
-                              </p>
-                              <div class="delete-confirm-actions">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  :disabled="deleteBusy"
-                                  @click.stop="
-                                    deleteConfirmProjectId = null;
-                                    deleteError = '';
-                                  "
-                                  >{{ t("cancel") }}</Button
-                                >
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  :loading="deleteBusy"
-                                  @click.stop="handleDeleteProject().then(() => close())"
-                                  >{{ t("delete") }}</Button
-                                >
-                              </div>
-                            </template>
-                            <template v-else>
+                              {{ deleteError }}
+                            </p>
+                            <div class="delete-confirm-actions">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                :icon="Pencil"
-                                class="menu-action-item"
-                                @click.stop="startRename(project)"
+                                :disabled="deleteBusy"
+                                @click.stop="
+                                  deleteConfirmProjectId = null;
+                                  deleteError = '';
+                                "
+                                >{{ t("cancel") }}</Button
                               >
-                                {{ t("rename") }}
-                              </Button>
                               <Button
-                                variant="ghost"
+                                variant="danger"
                                 size="sm"
-                                :icon="Trash2"
-                                class="menu-action-item delete-item"
-                                @click.stop="confirmDeleteProject(project)"
+                                :loading="deleteBusy"
+                                @click.stop="handleDeleteProject().then(() => close())"
+                                >{{ t("delete") }}</Button
                               >
-                                {{ t("delete") }}
-                              </Button>
-                            </template>
-                          </div>
-                        </template>
-                      </Popover>
-                    </div>
+                            </div>
+                          </template>
+                          <template v-else>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              :icon="Pencil"
+                              class="menu-action-item"
+                              @click.stop="startRename(project); close()"
+                            >
+                              {{ t("rename") }}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              :icon="Trash2"
+                              class="menu-action-item delete-item"
+                              @click.stop="confirmDeleteProject(project)"
+                            >
+                              {{ t("delete") }}
+                            </Button>
+                          </template>
+                        </div>
+                      </template>
+                    </Popover>
                   </div>
-                  <span class="project-card-meta">
-                    {{ project.sessionCount }}
-                    {{
-                      project.sessionCount === 1 ? t("session") : t("sessions")
-                    }}
-                    ·
-                    {{ formatDate(project.updatedAt) }}
-                  </span>
                 </div>
-              </template>
-            </Button>
+                <span class="project-card-meta">
+                  {{ project.sessionCount }}
+                  {{
+                    project.sessionCount === 1 ? t("session") : t("sessions")
+                  }}
+                  ·
+                  {{ formatDate(project.updatedAt) }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -840,7 +853,7 @@ defineExpose({
   gap: 2px;
 }
 
-.action-menu-content :deep(.btn) {
+.action-menu-content :deep(.menu-action-item) {
   width: 100% !important;
   justify-content: flex-start !important;
   padding: 0.4rem 0.8rem !important;
@@ -852,24 +865,18 @@ defineExpose({
   box-shadow: none !important;
 }
 
-.action-menu-content :deep(.btn:hover) {
-  background: var(--color-primary) !important;
-  color: white !important;
-  border: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
+.action-menu-content :deep(.menu-action-item:hover) {
+  background: var(--color-bg-surface-hover) !important;
+  color: var(--text-primary) !important;
 }
 
-.action-menu-content :deep(.delete-item) {
+.action-menu-content :deep(.menu-action-item.delete-item) {
   color: var(--color-error) !important;
 }
 
-.action-menu-content :deep(.delete-item:hover) {
-  background: var(--color-error) !important;
-  color: white !important;
-  border: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
+.action-menu-content :deep(.menu-action-item.delete-item:hover) {
+  background: var(--color-error-light, rgba(239, 68, 68, 0.15)) !important;
+  color: var(--color-error) !important;
 }
 
 .delete-confirm-text {

@@ -50,8 +50,8 @@ const base = () => ({
     color: '#000000',
     shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' as const },
     clickEffects: {
-      left: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
-      right: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
+      left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
+      right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
     },
   },
 })

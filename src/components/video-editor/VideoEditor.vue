@@ -68,7 +68,11 @@ const {
   shadowColor,
   shadowDirection,
   clickEffects,
+  clickEffectsEditing,
 } = cursor;
+
+const startClickEffectsEditing = () => { clickEffectsEditing.value = true; };
+const endClickEffectsEditing = () => { clickEffectsEditing.value = false; };
 const {
   composition,
   selectedClipId,
@@ -246,6 +250,8 @@ onBeforeUnmount(() => {
           v-model:shadow-color="shadowColor"
           v-model:shadow-direction="shadowDirection"
           v-model:click-effects="clickEffects"
+          @click-effects-interaction-start="startClickEffectsEditing"
+          @click-effects-interaction-end="endClickEffectsEditing"
           v-model:volume="volume"
           v-model:system-volume="systemVolume"
           v-model:mic-volume="micVolume"

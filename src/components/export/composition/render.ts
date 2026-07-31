@@ -250,18 +250,18 @@ export function renderCompositionFrame(
   for (const click of buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - .5), time)) {
     const effect = settingsForButton(click.button);
     if (!effect?.rippleEnabled) continue;
-      const state = cursorStateAt(snapshot.cursor.events, click.sessionNs / 1_000_000_000);
-      if (!state) continue;
-      const position = cursorPositionAt(state, { width: sourceWidth, height: sourceHeight }, { x: 0, y: 0, width, height }, snapshot.canvas.showBackground, screen.transform, screen.isMirrored ?? false);
-      const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, 1 - age / .5);
-      ctx.strokeStyle = effect.rippleColor;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(position.x, position.y, 2 + age * effect.rippleSize * 2, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+    const state = cursorStateAt(snapshot.cursor.events, click.sessionNs / 1_000_000_000);
+    if (!state) continue;
+    const position = cursorPositionAt(state, { width: sourceWidth, height: sourceHeight }, { x: 0, y: 0, width, height }, snapshot.canvas.showBackground, screen.transform, screen.isMirrored ?? false);
+    const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - age / .5);
+    ctx.strokeStyle = effect.rippleColor;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, 2 + age * effect.rippleSize * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
   const cursorType = cursorTypeAt(settings.selectedCursor, cursor);
   const image = cursorImages?.get(cursorType);

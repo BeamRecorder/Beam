@@ -36,7 +36,11 @@ const handleProjectSelected = (project: CaptureProject) => {
 
 const handleWindowPointerDown = (event: MouseEvent | PointerEvent) => {
   if (!projectMenuOpen.value) return
-  if (switcherRef.value && !switcherRef.value.contains(event.target as Node)) {
+  const target = event.target as Element | null
+  if (target?.closest('.popover-content') || target?.closest('.dialog-overlay') || target?.closest('.dialog-container')) {
+    return
+  }
+  if (switcherRef.value && !switcherRef.value.contains(target as Node)) {
     projectMenuOpen.value = false
   }
 }
