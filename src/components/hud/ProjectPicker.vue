@@ -489,7 +489,7 @@ defineExpose({
                 />
                 <video
                   v-if="project.previewSrc && hoveredProjectId === project.id"
-                  :src="`${project.previewSrc}#t=0.1`"
+                  :src="project.previewSrc"
                   autoplay
                   muted
                   loop

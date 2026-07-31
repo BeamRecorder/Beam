@@ -65,12 +65,32 @@ function createProjectStore(root) {
     }
     return null
   }
+  const mediaUrlFor = (fileUrl) => {
+    if (typeof fileUrl !== 'string') return null
+    let file
+    try { file = fileURLToPath(fileUrl) } catch { return null }
+    const relativePath = path.relative(root, file)
+    const safeFile = safePath(root, relativePath)
+    return safeFile && safeFile === path.resolve(file) && fs.existsSync(safeFile) && fs.statSync(safeFile).isFile() ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}` : null
+  }
+  const mediaFileForUrl = (mediaUrl) => {
+    let parsed
+    try { parsed = new URL(mediaUrl) } catch { return null }
+    if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'asset') return null
+    let relativePath
+    try { relativePath = decodeURIComponent(parsed.pathname.slice(1)) } catch { return null }
+    const file = safePath(root, relativePath)
+    return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null
+  }
   const previewFor = (directory, sessions) => {
     for (const session of [...sessions].reverse()) {
       const sessionDirectory = safePath(directory, session.relativePath)
       const screenDirectory = sessionDirectory && path.join(sessionDirectory, 'screen')
       const video = screenDirectory && fs.existsSync(screenDirectory) && fs.readdirSync(screenDirectory).filter((name) => /\.mp4$/i.test(name)).sort()[0]
-      if (video) return pathToFileURL(path.join(screenDirectory, video)).href
+      if (video) {
+        const fileUrl = pathToFileURL(path.join(screenDirectory, video)).href
+        return mediaUrlFor(fileUrl) || fileUrl
+      }
     }
     return null
   }
@@ -251,23 +271,9 @@ function createProjectStore(root) {
   applyPendingRenames()
   return {
     list: () => projectDirectories().map((directory) => { try { const manifest = readManifest(directory); return summary(directory, manifest, manifest.projectId) } catch { return null } }).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))),
-    mediaUrlFor: (fileUrl) => {
-      if (typeof fileUrl !== 'string') return null
-      let file
-      try { file = fileURLToPath(fileUrl) } catch { return null }
-      const relativePath = path.relative(root, file)
-      const safeFile = safePath(root, relativePath)
-      return safeFile && safeFile === path.resolve(file) && fs.existsSync(safeFile) && fs.statSync(safeFile).isFile() ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}` : null
-    },
-    mediaFileForUrl: (mediaUrl) => {
-      let parsed
-      try { parsed = new URL(mediaUrl) } catch { return null }
-      if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'asset') return null
-      let relativePath
-      try { relativePath = decodeURIComponent(parsed.pathname.slice(1)) } catch { return null }
-      const file = safePath(root, relativePath)
-      return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null
-    },
+    mediaUrlFor,
+    mediaFileForUrl,
+    directoryFor,
     editorData,
     editorState,
     saveEditorState,

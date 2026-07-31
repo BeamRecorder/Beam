@@ -1,3 +1,5 @@
+const fs = require('fs')
+
 function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, BrowserWindow) {
   ipcMain.handle('projects:list', () => projectStore.list())
   ipcMain.handle('projects:media-url', (_event, payload = {}) => projectStore.mediaUrlFor(payload.source))

@@ -21,20 +21,34 @@ export function useProjectThumbnailGenerator() {
     if (!ctx) return null;
 
     try {
-      tempVideo.src = `${videoSrc}#t=0.1`;
+      tempVideo.src = videoSrc;
       tempVideo.load();
 
       await new Promise<void>((resolve) => {
-        const timeout = window.setTimeout(resolve, 400);
+        const timeout = window.setTimeout(resolve, 600);
         const onLoaded = () => {
           window.clearTimeout(timeout);
           resolve();
         };
-        tempVideo.addEventListener("loadeddata", onLoaded, { once: true });
+        tempVideo.addEventListener("loadedmetadata", onLoaded, { once: true });
         tempVideo.addEventListener("error", onLoaded, { once: true });
       });
 
-      if (tempVideo.readyState >= 2) {
+      if (tempVideo.readyState >= 1) {
+        const midTime = Number.isFinite(tempVideo.duration) && tempVideo.duration > 0 ? tempVideo.duration / 2 : 0.1;
+        tempVideo.currentTime = midTime;
+
+        await new Promise<void>((resolve) => {
+          const timeout = window.setTimeout(resolve, 500);
+          const onSeeked = () => {
+            window.clearTimeout(timeout);
+            resolve();
+          };
+          tempVideo.addEventListener("seeked", onSeeked, { once: true });
+        });
+      }
+
+      if (tempVideo.readyState >= 1) {
         ctx.drawImage(tempVideo, 0, 0, tempCanvas.width, tempCanvas.height);
         const dataUrl = tempCanvas.toDataURL("image/webp", 0.75);
         thumbnailCache[projectId] = dataUrl;
