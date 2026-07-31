@@ -6,6 +6,7 @@ import { createDefaultCursorClickEffects } from "../../../api/types/cursor-setti
 import type { ProjectEditorState } from "../../../api/types/capture-api";
 import type { BackgroundMedia, BackgroundValue } from "./backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
+import { beginPropertyInteraction, endPropertyInteraction, resetPropertyInteractions } from "../../../composables/property-interaction";
 
 const mocks = vi.hoisted(() => ({ saveProjectEditorState: vi.fn() }));
 vi.mock("../../../api/capture", () => ({ capture: mocks }));
@@ -13,7 +14,6 @@ vi.mock("../../../api/capture", () => ({ capture: mocks }));
 import { useProjectEditorState } from "./useProjectEditorState";
 
 const createState = () => {
-  const cursorEffectsEditing = ref(false);
   return {
     project: ref({ id: "project", name: "Project", createdAt: "", updatedAt: "", sessionCount: 0, previewSrc: null }),
     composition: ref(emptyComposition()),
@@ -24,29 +24,29 @@ const createState = () => {
     backgroundBlurPercent: ref(0),
     canvas: ref({ ...DEFAULT_OUTPUT_CANVAS }),
     cursorEffects: ref(createDefaultCursorClickEffects()),
-    cursorEffectsEditing,
     availableBackgrounds: ref<Array<{ items: BackgroundMedia[] }>>([]),
   };
 };
 
-describe("useProjectEditorState cursor effect persistence", () => {
+describe("useProjectEditorState property persistence", () => {
   afterEach(() => {
+    resetPropertyInteractions();
     vi.useRealTimers();
     mocks.saveProjectEditorState.mockReset();
   });
 
-  it("waits for the click-effect slider to end before saving", async () => {
+  it("waits for a property interaction to end before saving", async () => {
     vi.useFakeTimers();
     const state = createState();
     const editor = useProjectEditorState(state);
 
-    state.cursorEffectsEditing.value = true;
+    beginPropertyInteraction();
     state.cursorEffects.value.left.springIntensity = 80;
     await nextTick();
     await vi.advanceTimersByTimeAsync(500);
     expect(mocks.saveProjectEditorState).not.toHaveBeenCalled();
 
-    state.cursorEffectsEditing.value = false;
+    endPropertyInteraction();
     await nextTick();
     await vi.advanceTimersByTimeAsync(250);
     expect(mocks.saveProjectEditorState).toHaveBeenCalledOnce();

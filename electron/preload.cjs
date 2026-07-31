@@ -97,6 +97,7 @@ contextBridge.exposeInMainWorld(
     renameProject: (projectId, name) => ipcRenderer.invoke("projects:rename", { projectId, name }),
     saveProjectThumbnail: (projectId, dataUrl) => ipcRenderer.invoke("projects:save-thumbnail", { projectId, dataUrl }),
     deleteProject: (projectId) => ipcRenderer.invoke("projects:delete", { projectId }),
+    revealProject: (projectId) => ipcRenderer.invoke("projects:reveal", { projectId }),
     whisperModels: () => ipcRenderer.invoke("whisper:models"),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke("whisper:download", { modelId }),
     onWhisperProgress: (listener) => {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, nextTick } from "vue";
+import { computed, ref, nextTick, onBeforeUnmount } from "vue";
 import { RotateCcw } from "@lucide/vue";
 import Input from "../input/Input.vue";
+import { beginPropertyInteraction, endPropertyInteraction } from "~/composables/property-interaction";
 
 const props = withDefaults(
   defineProps<{
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const isEditing = ref(false);
+const isInteracting = ref(false);
 const editValue = ref<number | string>(props.modelValue);
 
 const percentage = computed(() => {
@@ -72,6 +74,22 @@ const handleReset = (e: MouseEvent) => {
   }
   emit("reset");
 };
+
+const startInteraction = () => {
+  if (isInteracting.value) return;
+  isInteracting.value = true;
+  beginPropertyInteraction();
+  emit("interaction-start");
+};
+
+const endInteraction = () => {
+  if (!isInteracting.value) return;
+  isInteracting.value = false;
+  endPropertyInteraction();
+  emit("interaction-end");
+};
+
+onBeforeUnmount(endInteraction);
 </script>
 
 <template>
@@ -141,8 +159,9 @@ const handleReset = (e: MouseEvent) => {
             parseFloat(($event.target as HTMLInputElement).value),
           )
         "
-        @pointerdown="emit('interaction-start')"
-        @change="emit('interaction-end')"
+        @pointerdown="startInteraction"
+        @pointercancel="endInteraction"
+        @change="endInteraction"
       />
     </template>
   </div>

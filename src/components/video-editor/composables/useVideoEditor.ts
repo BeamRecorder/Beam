@@ -50,7 +50,6 @@ export function useVideoEditor(options: {
     backgroundBlurPercent: player.backgroundBlurPercent,
     canvas: outputCanvas,
     cursorEffects: cursor.clickEffects,
-    cursorEffectsEditing: cursor.clickEffectsEditing,
     availableBackgrounds: player.backgroundGroups,
   });
 

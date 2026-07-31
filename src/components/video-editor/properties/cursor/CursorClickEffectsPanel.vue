@@ -11,8 +11,6 @@ const { t } = useTranslate("CursorPanel");
 const props = defineProps<{ modelValue: CursorClickEffects }>();
 const emit = defineEmits<{
   (event: "update:modelValue", value: CursorClickEffects): void;
-  (event: "interaction-start"): void;
-  (event: "interaction-end"): void;
 }>();
 
 const buttons = computed<Array<{ id: CursorClickButton; label: string }>>(() => [
@@ -56,8 +54,6 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
         :step="1"
         :label="t('springIntensity')"
         :format-value="(value) => `${Math.round(value)}%`"
-        @interaction-start="emit('interaction-start')"
-        @interaction-end="emit('interaction-end')"
         @update:modelValue="updateEffect(button.id, { springIntensity: $event })"
       />
 
@@ -76,8 +72,6 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
           :step="1"
           :label="t('rippleSize')"
           :format-value="(value) => `${Math.round(value)}px`"
-          @interaction-start="emit('interaction-start')"
-          @interaction-end="emit('interaction-end')"
           @update:modelValue="updateEffect(button.id, { rippleSize: $event })"
         />
         <ColorInput

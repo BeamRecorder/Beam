@@ -14,6 +14,7 @@ import {
 } from './composables/useColorPicker';
 import Input from '../input/Input.vue';
 import Button from '../button/Button.vue';
+import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 
 const uiText = {
     red: 'R',
@@ -234,6 +235,11 @@ function handleStandardAlphaUpdate(e: MouseEvent | TouchEvent) {
 }
 
 // Event Handlers
+function startInteraction() {
+    beginPropertyInteraction();
+    emit('drag-start');
+}
+
 function onMouseDownTri(e: MouseEvent) {
     if (!interactionLayer.value) return;
     const rect = interactionLayer.value.getBoundingClientRect();
@@ -247,7 +253,7 @@ function onMouseDownTri(e: MouseEvent) {
         setDragTarget('triangle');
     }
 
-    emit('drag-start');
+    startInteraction();
     handleTriangleRingUpdate(e);
     window.addEventListener('mousemove', onGlobalMouseMove);
     window.addEventListener('mouseup', onGlobalMouseUp);
@@ -268,7 +274,7 @@ function onTouchStartTri(e: TouchEvent) {
         setDragTarget('triangle');
     }
 
-    emit('drag-start');
+    startInteraction();
     handleTriangleRingUpdate(e);
     window.addEventListener('touchmove', onGlobalTouchMove, {
         passive: false,
@@ -279,7 +285,7 @@ function onTouchStartTri(e: TouchEvent) {
 
 function onMouseDownSV(e: MouseEvent) {
     setDragTarget('standard-sv');
-    emit('drag-start');
+    startInteraction();
     handleStandardSVUpdate(e);
     window.addEventListener('mousemove', onGlobalMouseMove);
     window.addEventListener('mouseup', onGlobalMouseUp);
@@ -287,7 +293,7 @@ function onMouseDownSV(e: MouseEvent) {
 
 function onTouchStartSV(e: TouchEvent) {
     setDragTarget('standard-sv');
-    emit('drag-start');
+    startInteraction();
     handleStandardSVUpdate(e);
     window.addEventListener('touchmove', onGlobalTouchMove, {
         passive: false,
@@ -298,7 +304,7 @@ function onTouchStartSV(e: TouchEvent) {
 
 function onMouseDownHue(e: MouseEvent) {
     setDragTarget('standard-hue');
-    emit('drag-start');
+    startInteraction();
     handleStandardHueUpdate(e);
     window.addEventListener('mousemove', onGlobalMouseMove);
     window.addEventListener('mouseup', onGlobalMouseUp);
@@ -306,7 +312,7 @@ function onMouseDownHue(e: MouseEvent) {
 
 function onTouchStartHue(e: TouchEvent) {
     setDragTarget('standard-hue');
-    emit('drag-start');
+    startInteraction();
     handleStandardHueUpdate(e);
     window.addEventListener('touchmove', onGlobalTouchMove, {
         passive: false,
@@ -317,7 +323,7 @@ function onTouchStartHue(e: TouchEvent) {
 
 function onMouseDownAlpha(e: MouseEvent) {
     setDragTarget('standard-alpha');
-    emit('drag-start');
+    startInteraction();
     handleStandardAlphaUpdate(e);
     window.addEventListener('mousemove', onGlobalMouseMove);
     window.addEventListener('mouseup', onGlobalMouseUp);
@@ -325,7 +331,7 @@ function onMouseDownAlpha(e: MouseEvent) {
 
 function onTouchStartAlpha(e: TouchEvent) {
     setDragTarget('standard-alpha');
-    emit('drag-start');
+    startInteraction();
     handleStandardAlphaUpdate(e);
     window.addEventListener('touchmove', onGlobalTouchMove, {
         passive: false,
@@ -351,7 +357,10 @@ function onGlobalMouseUp() {
     setDragTarget(null);
     window.removeEventListener('mousemove', onGlobalMouseMove);
     window.removeEventListener('mouseup', onGlobalMouseUp);
-    if (wasDragging) emit('drag-end');
+    if (wasDragging) {
+        endPropertyInteraction();
+        emit('drag-end');
+    }
 }
 
 function onGlobalTouchMove(e: TouchEvent) {
@@ -373,7 +382,10 @@ function onGlobalTouchEnd() {
     window.removeEventListener('touchmove', onGlobalTouchMove);
     window.removeEventListener('touchend', onGlobalTouchEnd);
     window.removeEventListener('touchcancel', onGlobalTouchEnd);
-    if (wasDragging) emit('drag-end');
+    if (wasDragging) {
+        endPropertyInteraction();
+        emit('drag-end');
+    }
 }
 
 const isMobileViewport = ref(false);

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, useAttrs, onMounted } from "vue";
+import { beginPropertyInteraction, endPropertyInteraction } from "~/composables/property-interaction";
 
 defineOptions({ inheritAttrs: false })
 
@@ -73,6 +74,7 @@ const handleMouseDown = (e: MouseEvent) => {
     if (!hasDragged && Math.abs(deltaX) > 4) {
       hasDragged = true;
       isDragging.value = true;
+      beginPropertyInteraction();
       document.body.style.cursor = "ew-resize";
       document.body.classList.add("is-dragging-input");
     }
@@ -113,6 +115,7 @@ const handleMouseDown = (e: MouseEvent) => {
 
     if (hasDragged) {
       isDragging.value = false;
+      endPropertyInteraction();
       document.body.style.cursor = "";
       document.body.classList.remove("is-dragging-input");
       window.addEventListener("click", preventClick, true);

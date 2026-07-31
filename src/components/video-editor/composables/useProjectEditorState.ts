@@ -6,6 +6,7 @@ import type { ZoomElement } from "../zoom/zoom-types";
 import { BACKGROUND_MEDIA, normalizeBackgroundValue, type BackgroundMedia, type BackgroundValue } from "./backgroundCatalog";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
 import { normalizeCursorClickEffects, type CursorClickEffects } from "../../../api/types/cursor-settings";
+import { propertyInteractionActive } from "../../../composables/property-interaction";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -19,7 +20,6 @@ export function useProjectEditorState(options: {
   backgroundBlurPercent: Ref<number>;
   canvas: Ref<OutputCanvasSettings>;
   cursorEffects: Ref<CursorClickEffects>;
-  cursorEffectsEditing: Ref<boolean>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
   const loading = ref(false);
@@ -50,7 +50,7 @@ export function useProjectEditorState(options: {
   });
 
   const saveNow = () => {
-    if (options.cursorEffectsEditing.value) return Promise.resolve();
+    if (propertyInteractionActive.value) return Promise.resolve();
     if (timer) { clearTimeout(timer); timer = null; }
     scheduledSave.value = false;
     if (loading.value || !options.project.value) return Promise.resolve();
@@ -69,7 +69,7 @@ export function useProjectEditorState(options: {
   };
 
   const scheduleSave = () => {
-    if (loading.value || !options.project.value || options.cursorEffectsEditing.value) return;
+    if (loading.value || !options.project.value || propertyInteractionActive.value) return;
     if (timer) clearTimeout(timer);
     scheduledSave.value = true;
     timer = setTimeout(() => void saveNow().catch((error) => console.error("Failed to save editor state:", error)), 250);
@@ -108,15 +108,15 @@ export function useProjectEditorState(options: {
     options.cursorEffects,
   ], scheduleSave, { deep: true });
 
-  watch(options.cursorEffectsEditing, (editing, wasEditing) => {
-    if (editing) {
+  watch(propertyInteractionActive, (active, wasActive) => {
+    if (active) {
       if (timer) clearTimeout(timer);
       timer = null;
       scheduledSave.value = false;
       return;
     }
-    if (wasEditing) scheduleSave();
-  });
+    if (wasActive) scheduleSave();
+  }, { flush: "sync" });
 
   watch(options.availableBackgrounds, (groups) => {
     if (!savedBackgroundId || options.selectedBackground.value) return;

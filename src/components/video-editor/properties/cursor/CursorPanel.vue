@@ -32,8 +32,6 @@ const emit = defineEmits<{
   (e: 'update:shadowColor', value: string): void
   (e: 'update:shadowDirection', value: ShadowDirection): void
   (e: 'update:clickEffects', value: CursorClickEffects): void
-  (e: 'click-effects-interaction-start'): void
-  (e: 'click-effects-interaction-end'): void
 }>()
 </script>
 
@@ -107,8 +105,6 @@ const emit = defineEmits<{
     <CursorClickEffectsPanel
       :model-value="clickEffects"
       @update:model-value="emit('update:clickEffects', $event)"
-      @interaction-start="emit('click-effects-interaction-start')"
-      @interaction-end="emit('click-effects-interaction-end')"
     />
 
   </div>

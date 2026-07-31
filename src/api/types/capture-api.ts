@@ -73,6 +73,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>
   renameProject(projectId: string, name: string): Promise<CaptureProject>
   deleteProject(projectId: string): Promise<void>
+  revealProject(projectId: string): Promise<boolean>
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>
   whisperModels(): Promise<Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>
   downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>

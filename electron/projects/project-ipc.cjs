@@ -37,6 +37,19 @@ function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, Br
     return background
   })
   ipcMain.handle('projects:delete', (_event, payload = {}) => projectStore.delete(payload.projectId))
+  ipcMain.handle('projects:reveal', (_event, payload = {}) => {
+    const { shell } = require('electron')
+    try {
+      const directory = projectStore.directoryFor(payload.projectId)
+      if (directory && fs.existsSync(directory)) {
+        shell.openPath(directory)
+        return true
+      }
+    } catch (e) {
+      console.error('Failed to reveal project:', e)
+    }
+    return false
+  })
 }
 
 module.exports = { registerProjectIpc }

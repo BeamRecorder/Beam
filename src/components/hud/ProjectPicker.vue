@@ -10,6 +10,7 @@ import {
   MoreVertical,
   Plus,
   Pencil,
+  ExternalLink,
   Trash2,
 } from "@lucide/vue";
 import Button from "~/ui/button/Button.vue";
@@ -336,6 +337,10 @@ const handleDeleteProject = async () => {
   }
 };
 
+const revealProjectFolder = (project: CaptureProject) => {
+  void capture.revealProject(project.id);
+};
+
 defineExpose({
   refresh: loadProjects,
   invalidate: () => {
@@ -600,6 +605,15 @@ defineExpose({
                               @click.stop="startRename(project); close()"
                             >
                               {{ t("rename") }}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              :icon="ExternalLink"
+                              class="menu-action-item"
+                              @click.stop="revealProjectFolder(project); close()"
+                            >
+                              {{ t("explore") }}
                             </Button>
                             <Button
                               variant="ghost"
@@ -917,7 +931,7 @@ defineExpose({
   opacity: 0;
   background-color: transparent;
   transition: opacity 0.2s ease;
-  z-index: 1;
+  z-index: 3;
 }
 
 .project-preview-thumb {
