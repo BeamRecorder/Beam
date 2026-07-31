@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { capture } from '../../../api/capture'
-import { BrowserCameraRecorder, listBrowserCameras, type CameraAppearance, type CameraPlacement } from '../../../api/camera-recorder'
+import { BrowserCameraRecorder, isCameraUnavailableError, listBrowserCameras, type CameraAppearance, type CameraPlacement } from '../../../api/camera-recorder'
 import { BrowserMicrophoneRecorder, listBrowserMicrophones } from '../../../api/microphone-recorder'
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder'
 import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types'
@@ -49,7 +49,14 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
 
   const prepareSources = async () => {
     if (!configuration) return
-    if (configuration.cameraId !== inactiveCamera) camera = await BrowserCameraRecorder.request(configuration.cameraId)
+    if (configuration.cameraId !== inactiveCamera) {
+      try { camera = await BrowserCameraRecorder.request(configuration.cameraId) }
+      catch (reason) {
+        if (!isCameraUnavailableError(reason)) throw reason
+        configuration.cameraId = inactiveCamera
+        error.value = 'Camera is unavailable. Recording will continue without camera.'
+      }
+    }
     if (configuration.microphoneId !== inactiveMicrophone) microphone = await BrowserMicrophoneRecorder.request(configuration.microphoneId)
     if (configuration.systemAudio) systemAudio = await BrowserSystemAudioRecorder.request()
     cameraEnabled.value = Boolean(camera)
@@ -226,7 +233,12 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       camera = nextCamera
       configuration.cameraId = sourceId
       cameraEnabled.value = true
-    } catch (reason) { setToggleError(reason) }
+    } catch (reason) {
+      if (isCameraUnavailableError(reason)) {
+        configuration.cameraId = inactiveCamera
+        error.value = 'Camera is unavailable.'
+      } else setToggleError(reason)
+    }
   }
   const toggleMicrophone = async () => {
     if (!configuration || !sessionId) return

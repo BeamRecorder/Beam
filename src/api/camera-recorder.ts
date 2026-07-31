@@ -23,6 +23,14 @@ function deviceId(sourceId: string) {
   return sourceId.slice(CAMERA_PREFIX.length)
 }
 
+export function isCameraUnavailableError(error: unknown) {
+  const name = typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : ''
+  const message = error instanceof Error ? error.message.toLowerCase() : ''
+  return ['NotFoundError', 'NotReadableError', 'OverconstrainedError'].includes(name)
+    || message.includes('could not start video source')
+    || message.includes('hardware resources')
+}
+
 function positive(value: number | undefined, fallback: number) {
   return Number.isFinite(value) && value! > 0 ? Math.round(value!) : fallback
 }
@@ -68,7 +76,10 @@ export class BrowserCameraRecorder {
   static async request(sourceId: string) {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable in this Chromium build.')
     if (!MediaRecorder.isTypeSupported(MIME_TYPE)) throw new Error('This Chromium build cannot record VP8 WebM camera video.')
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { deviceId: { exact: deviceId(sourceId) }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 30 } } })
+    // Keep the request permissive. Windows Media Foundation can reject an
+    // otherwise valid camera when a preferred resolution/fps combination
+    // cannot be allocated, especially after another camera stream was closed.
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { deviceId: { ideal: deviceId(sourceId) } } })
     const track = stream.getVideoTracks()[0]
     if (!track) { stream.getTracks().forEach((entry) => entry.stop()); throw new Error('The selected camera did not provide a video track.') }
     const settings = track.getSettings()
@@ -90,14 +101,15 @@ export class BrowserCameraRecorder {
   async resume(sessionId: string) { await this.startSegment(sessionId, this.nowNs()) }
 
   async stop() {
-    if (this.recorder) await this.finishSegment(this.nowNs())
-    this.release()
+    try { if (this.recorder) await this.finishSegment(this.nowNs()) }
+    finally { this.release() }
   }
 
   async fail(sessionId: string, reason: string) {
-    try { if (this.recorder) await this.finishSegment(this.nowNs()) } catch { /* The explicit failure reason is persisted below. */ }
-    await api().failCamera({ sessionId, reason })
-    this.release()
+    try {
+      try { if (this.recorder) await this.finishSegment(this.nowNs()) } catch { /* The explicit failure reason is persisted below. */ }
+      await api().failCamera({ sessionId, reason })
+    } finally { this.release() }
   }
 
   private async startSegment(sessionId: string, startNs: number) {

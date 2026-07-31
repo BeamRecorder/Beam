@@ -14,7 +14,7 @@ const capture = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../api/capture', () => ({ capture }))
-vi.mock('../../../api/camera-recorder', () => ({ BrowserCameraRecorder: { request: vi.fn() }, listBrowserCameras: vi.fn().mockResolvedValue([]) }))
+vi.mock('../../../api/camera-recorder', () => ({ BrowserCameraRecorder: { request: vi.fn() }, isCameraUnavailableError: vi.fn().mockReturnValue(false), listBrowserCameras: vi.fn().mockResolvedValue([]) }))
 vi.mock('../../../api/microphone-recorder', () => ({ BrowserMicrophoneRecorder: { request: vi.fn() }, listBrowserMicrophones: vi.fn().mockResolvedValue([]) }))
 vi.mock('../../../api/system-audio-recorder', () => ({ BrowserSystemAudioRecorder: { request: vi.fn() } }))
 

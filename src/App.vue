@@ -84,9 +84,9 @@ watch(currentView, (view) => {
 
 const startRecording = async (configuration: RecordingConfiguration) => {
   editorLoadError.value = ''; currentVideoSrc.value = null; currentProject.value = null; currentEditorData.value = null
-  recordingBarVisibility.value = configuration.recordingBarVisibility; currentView.value = 'recorder'; capture.setWindowMode('recorder')
+  recordingBarVisibility.value = configuration.recordingBarVisibility; currentView.value = 'recorder'; capture.setWindowMode('recorder'); capture.setCameraOverlayActive(false)
   await recording.start(configuration)
-  if (recording.phase.value === 'idle') currentView.value = 'hud'
+  if (recording.phase.value === 'idle') { currentView.value = 'hud'; capture.setCameraOverlayActive(true); capture.showHud() }
 }
 
 const cancelOrStopRecording = async () => {
@@ -100,6 +100,7 @@ const cancelRecording = async () => {
   capture.setWindowMode('hud')
   capture.setSize(352, 512)
   currentView.value = 'hud'
+  capture.setCameraOverlayActive(true)
   capture.showHud()
 }
 

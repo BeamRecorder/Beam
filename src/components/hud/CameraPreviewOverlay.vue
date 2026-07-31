@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Settings, Video } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
+import { isCameraUnavailableError } from '../../api/camera-recorder'
 import { useTranslate } from '~/i18n/useTranslate'
 
 const { t } = useTranslate('CameraPreviewOverlay')
@@ -36,7 +37,10 @@ const loadCamera = async (cameraId: string) => {
     cameraStream.value = stream
     if (videoRef.value) { videoRef.value.srcObject = stream; await videoRef.value.play() }
   } catch (error) {
-    if (request === cameraRequest) streamError.value = error instanceof Error ? error.message : t('unableToStartCamera')
+    if (request === cameraRequest) {
+      streamError.value = error instanceof Error ? error.message : t('unableToStartCamera')
+      if (isCameraUnavailableError(error)) capture.configureCameraOverlay({ cameraId: 'off' })
+    }
   } finally {
     if (request === cameraRequest) isLoading.value = false
   }
