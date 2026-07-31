@@ -152,14 +152,6 @@ const selectedScreenPreview = computed(() => {
     ?? screenPreviews.value.find((preview) => preview.displayBounds)
     ?? null;
 });
-const restoreSavedScreenRegion = () => {
-  const saved = savedScreenRegion.value;
-  selectedScreenRegion.value = saved ? { ...saved } : null;
-  const bounds = selectedScreenPreview.value?.displayBounds;
-  selectedScreenOverlay.value = saved && bounds
-    ? { bounds: { ...bounds }, region: { ...saved } }
-    : null;
-};
 const systemAudioOptions = computed(() => [
   { value: "on", label: t("systemAudio") },
   { value: "off", label: t("off") },
@@ -233,7 +225,9 @@ const selectScreenRegion = async () => {
   try {
     const sourceBounds = preview.displayBounds;
     const bounds = { x: sourceBounds.x, y: sourceBounds.y, width: sourceBounds.width, height: sourceBounds.height };
-    const currentRegion = selectedScreenRegion.value;
+    // The saved region is only a starting point for the next selection. It
+    // must not activate crop mode just because the HUD was opened.
+    const currentRegion = selectedScreenRegion.value ?? savedScreenRegion.value;
     const region = await capture.selectScreenRegion({
       bounds,
       region: currentRegion ? { ...currentRegion } : null,
@@ -370,7 +364,8 @@ watch(activeTab, () => {
 });
 
 watch(selectedScreenId, () => {
-  restoreSavedScreenRegion();
+  selectedScreenRegion.value = null;
+  selectedScreenOverlay.value = null;
   capture.hideScreenRegionOverlay();
 });
 
@@ -792,7 +787,6 @@ onMounted(async () => {
   updateWindowSize();
   await discoverSources();
   await loadPreviews();
-  restoreSavedScreenRegion();
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
     if (actionId === "hud.startStopRecording") {
