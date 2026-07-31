@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { capture } from '../../../api/capture'
-import { BrowserCameraRecorder, type CameraAppearance, type CameraPlacement } from '../../../api/camera-recorder'
-import { BrowserMicrophoneRecorder } from '../../../api/microphone-recorder'
+import { BrowserCameraRecorder, listBrowserCameras, type CameraAppearance, type CameraPlacement } from '../../../api/camera-recorder'
+import { BrowserMicrophoneRecorder, listBrowserMicrophones } from '../../../api/microphone-recorder'
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder'
 import type { RecordingConfiguration, RecordingPhase, RecordingSessionResult } from './recording-types'
 
@@ -193,9 +193,72 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     if (phase.value === 'recording') { await Promise.all([capture.pause(), camera?.pause(), microphone?.pause()]); clearTimer(); phase.value = 'paused' }
     else if (phase.value === 'paused') { await Promise.all([capture.resume(), camera?.resume(sessionId), microphone?.resume(sessionId)]); timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100); phase.value = 'recording' }
   }
-  const toggleCamera = async () => { if (!configuration || !sessionId) return; if (camera) { await stopRecorder(camera); camera = null; cameraEnabled.value = false } else { const { appearance, placement } = await cameraMetadata(); camera = await BrowserCameraRecorder.request(configuration.cameraId); await camera.start(sessionId, appearance, placement, sessionTimelineStartedAt); cameraEnabled.value = true } }
-  const toggleMicrophone = async () => { if (!configuration || !sessionId) return; if (microphone) { await stopRecorder(microphone); microphone = null; microphoneEnabled.value = false } else { microphone = await BrowserMicrophoneRecorder.request(configuration.microphoneId); await microphone.start(sessionId); microphoneEnabled.value = true } }
-  const toggleSystemAudio = async () => { if (!sessionId) return; if (systemAudio) { await stopRecorder(systemAudio); systemAudio = null; systemAudioEnabled.value = false } else { systemAudio = await BrowserSystemAudioRecorder.request(); await systemAudio.start(sessionId); systemAudioEnabled.value = true } }
+  const resolveCameraSourceId = async () => {
+    if (!configuration) return null
+    if (configuration.cameraId !== inactiveCamera) return configuration.cameraId
+    const sources = await listBrowserCameras()
+    return sources.find((source) => source.isDefault && source.id !== 'camera:chromium:')?.id
+      ?? sources.find((source) => source.id !== 'camera:chromium:')?.id
+      ?? null
+  }
+  const resolveMicrophoneSourceId = async () => {
+    if (!configuration) return null
+    if (configuration.microphoneId !== inactiveMicrophone) return configuration.microphoneId
+    const sources = await listBrowserMicrophones()
+    return sources.find((source) => source.isDefault && source.id !== 'microphone:chromium:')?.id
+      ?? sources.find((source) => source.id !== 'microphone:chromium:')?.id
+      ?? null
+  }
+  const setToggleError = (reason: unknown) => { error.value = reason instanceof Error ? reason.message : String(reason) }
+  const toggleCamera = async () => {
+    if (!configuration || !sessionId) return
+    if (camera) {
+      await stopRecorder(camera); camera = null; cameraEnabled.value = false
+      return
+    }
+    try {
+      const sourceId = await resolveCameraSourceId()
+      if (!sourceId) throw new Error('No camera is available.')
+      const { appearance, placement } = await cameraMetadata()
+      const nextCamera = await BrowserCameraRecorder.request(sourceId)
+      try { await nextCamera.start(sessionId, appearance, placement, sessionTimelineStartedAt) }
+      catch (reason) { await stopRecorder(nextCamera); throw reason }
+      camera = nextCamera
+      configuration.cameraId = sourceId
+      cameraEnabled.value = true
+    } catch (reason) { setToggleError(reason) }
+  }
+  const toggleMicrophone = async () => {
+    if (!configuration || !sessionId) return
+    if (microphone) {
+      await stopRecorder(microphone); microphone = null; microphoneEnabled.value = false
+      return
+    }
+    try {
+      const sourceId = await resolveMicrophoneSourceId()
+      if (!sourceId) throw new Error('No microphone is available.')
+      const nextMicrophone = await BrowserMicrophoneRecorder.request(sourceId)
+      try { await nextMicrophone.start(sessionId) }
+      catch (reason) { await stopRecorder(nextMicrophone); throw reason }
+      microphone = nextMicrophone
+      configuration.microphoneId = sourceId
+      microphoneEnabled.value = true
+    } catch (reason) { setToggleError(reason) }
+  }
+  const toggleSystemAudio = async () => {
+    if (!sessionId) return
+    if (systemAudio) {
+      await stopRecorder(systemAudio); systemAudio = null; systemAudioEnabled.value = false
+      return
+    }
+    try {
+      const nextSystemAudio = await BrowserSystemAudioRecorder.request()
+      try { await nextSystemAudio.start(sessionId) }
+      catch (reason) { await stopRecorder(nextSystemAudio); throw reason }
+      systemAudio = nextSystemAudio
+      systemAudioEnabled.value = true
+    } catch (reason) { setToggleError(reason) }
+  }
   const recordingTime = computed(() => {
     const wholeSeconds = Math.floor(elapsedTenths.value / 10)
     return `${Math.floor(wholeSeconds / 60).toString().padStart(2, '0')}:${(wholeSeconds % 60).toString().padStart(2, '0')}.${elapsedTenths.value % 10}`

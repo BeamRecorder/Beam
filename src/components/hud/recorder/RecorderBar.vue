@@ -179,6 +179,7 @@ onBeforeUnmount(() => {
       </template>
       <button
         class="control"
+        :class="{ inactive: !microphoneEnabled }"
         :aria-label="
           microphoneEnabled ? t('turnMicOff') : t('turnMicOn')
         "
@@ -200,6 +201,7 @@ onBeforeUnmount(() => {
       </template>
       <button
         class="control"
+        :class="{ inactive: !cameraEnabled }"
         :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
         :disabled="phase === 'countdown'"
         @pointerdown.stop
@@ -219,6 +221,7 @@ onBeforeUnmount(() => {
       </template>
       <button
         class="control"
+        :class="{ inactive: !systemAudioEnabled }"
         :aria-label="
           systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')
         "
@@ -330,6 +333,9 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 .control.stop {
+  color: var(--color-error);
+}
+.control.inactive {
   color: var(--color-error);
 }
 .cancel-slot {
