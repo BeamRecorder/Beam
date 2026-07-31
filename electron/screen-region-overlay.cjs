@@ -50,16 +50,22 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
     current = { ...options, bounds: finiteBounds(options.bounds), mode: interactive ? 'select' : 'record' }
     target.setBounds(current.bounds)
     target.setIgnoreMouseEvents(!interactive)
-    target.showInactive()
-    target.moveTop()
     send(current)
+    if (interactive) {
+      target.show()
+      target.focus()
+    } else {
+      target.showInactive()
+    }
+    target.moveTop()
   }
 
   return {
     select(options) {
       if (pending) { pending.resolve(null); pending = null }
+      const result = new Promise((resolve) => { pending = { resolve } })
       configure(options, true)
-      return new Promise((resolve) => { pending = { resolve } })
+      return result
     },
     show(options) { configure(options, false) },
     hide() {
@@ -70,6 +76,7 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
       if (!pending) return
       const resolve = pending.resolve
       pending = null
+      current = null
       window?.hide()
       resolve(region)
     },
@@ -77,6 +84,7 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
       if (!pending) return
       const resolve = pending.resolve
       pending = null
+      current = null
       window?.hide()
       resolve(null)
     },

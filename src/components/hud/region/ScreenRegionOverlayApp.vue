@@ -97,6 +97,7 @@ onBeforeUnmount(() => unsubscribe?.())
 
 <template>
   <main class="region-overlay" @pointerdown.prevent="begin" @pointermove="move" @pointerup="end" @pointercancel="end">
+    <div v-if="isSelecting && !region" class="region-empty-backdrop" />
     <div v-if="region" class="region-frame" :style="regionStyle" :class="{ selecting: isSelecting }">
       <span v-if="isSelecting" class="resize-handle nw" data-handle="nw" />
       <span v-if="isSelecting" class="resize-handle ne" data-handle="ne" />
@@ -117,11 +118,12 @@ onBeforeUnmount(() => unsubscribe?.())
 
 <style scoped>
 .region-overlay { position: fixed; inset: 0; overflow: hidden; cursor: crosshair; background: transparent; user-select: none; touch-action: none; }
-.region-frame { position: absolute; border: 2px solid var(--color-primary); box-shadow: 0 0 0 9999px rgb(8 12 20 / 42%); cursor: move; }
-.region-frame.selecting { background: rgb(255 255 255 / 3%); }
+.region-empty-backdrop { position: absolute; inset: 0; pointer-events: none; background: rgb(8 12 20 / 42%); }
+.region-frame { position: absolute; z-index: 1; border: 2px solid var(--color-primary); cursor: move; }
+.region-frame.selecting { box-shadow: 0 0 0 9999px rgb(8 12 20 / 42%); }
 .resize-handle { position: absolute; width: 12px; height: 12px; border: 2px solid white; border-radius: 50%; background: var(--color-primary); box-shadow: 0 1px 4px rgb(0 0 0 / 45%); }
 .nw { top: -7px; left: -7px; cursor: nwse-resize; }.ne { top: -7px; right: -7px; cursor: nesw-resize; }.sw { bottom: -7px; left: -7px; cursor: nesw-resize; }.se { right: -7px; bottom: -7px; cursor: nwse-resize; }
 .region-size { position: absolute; top: 8px; left: 50%; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--color-primary); color: var(--text-on-primary); font: 600 12px var(--font-sans); transform: translateX(-50%); white-space: nowrap; }
-.region-toolbar { position: fixed; left: 50%; bottom: 24px; display: flex; align-items: center; gap: 20px; padding: 10px 12px 10px 16px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-lg); background: var(--color-bg-surface); box-shadow: var(--shadow-lg); color: var(--text-primary); transform: translateX(-50%); }
+.region-toolbar { position: fixed; z-index: 20; left: 50%; bottom: 24px; display: flex; align-items: center; gap: 20px; padding: 10px 12px 10px 16px; border: 1px solid color-mix(in srgb, var(--color-border-strong) 76%, transparent); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--color-bg-surface) 82%, transparent); box-shadow: var(--shadow-lg); backdrop-filter: blur(18px) saturate(1.15); -webkit-backdrop-filter: blur(18px) saturate(1.15); color: var(--text-primary); transform: translateX(-50%); }
 .region-instruction { display: inline-flex; align-items: center; gap: 8px; font: 600 13px var(--font-sans); white-space: nowrap; }.region-actions { display: flex; align-items: center; gap: 4px; }
 </style>

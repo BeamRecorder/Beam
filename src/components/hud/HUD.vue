@@ -116,6 +116,7 @@ const selectedMicId = ref("no-audio");
 const selectedScreenId = ref<string | null>(null);
 const selectedScreenRegion = ref<ScreenRegion | null>(null);
 const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
+const savedScreenRegion = ref<ScreenRegion | null>(null);
 const systemAudioMode = ref<"on" | "off">("off");
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
@@ -146,6 +147,14 @@ const selectedScreenPreview = computed(() => {
     ?? screenPreviews.value.find((preview) => preview.displayBounds)
     ?? null;
 });
+const restoreSavedScreenRegion = () => {
+  const saved = savedScreenRegion.value;
+  selectedScreenRegion.value = saved ? { ...saved } : null;
+  const bounds = selectedScreenPreview.value?.displayBounds;
+  selectedScreenOverlay.value = saved && bounds
+    ? { bounds: { ...bounds }, region: { ...saved } }
+    : null;
+};
 const systemAudioOptions = computed(() => [
   { value: "on", label: t("systemAudio") },
   { value: "off", label: t("off") },
@@ -223,6 +232,8 @@ const selectScreenRegion = async () => {
     const plainRegion = { ...region };
     selectedScreenRegion.value = plainRegion;
     selectedScreenOverlay.value = { bounds, region: plainRegion };
+    savedScreenRegion.value = plainRegion;
+    void capture.updatePreferences({ extras: { screenRegion: plainRegion } });
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error);
   }
@@ -334,8 +345,7 @@ watch(activeTab, () => {
 });
 
 watch(selectedScreenId, () => {
-  selectedScreenRegion.value = null;
-  selectedScreenOverlay.value = null;
+  restoreSavedScreenRegion();
   capture.hideScreenRegionOverlay();
 });
 
@@ -746,10 +756,18 @@ let unsubscribeShortcut: (() => void) | null = null;
 onMounted(async () => {
   const preferences = await capture.getPreferences();
   savedDevices = (preferences.devices as unknown) as SavedDevices;
+  const savedRegion = preferences.extras?.screenRegion;
+  if (savedRegion && typeof savedRegion === "object") {
+    const candidate = savedRegion as Partial<ScreenRegion>;
+    if ([candidate.x, candidate.y, candidate.width, candidate.height].every((value) => typeof value === "number" && Number.isFinite(value)) && candidate.x! >= 0 && candidate.y! >= 0 && candidate.width! > 0 && candidate.height! > 0 && candidate.x! + candidate.width! <= 1 && candidate.y! + candidate.height! <= 1) {
+      savedScreenRegion.value = { x: candidate.x!, y: candidate.y!, width: candidate.width!, height: candidate.height! };
+    }
+  }
   recordingBarVisibility.value = preferences.recordingBar.visibility;
   updateWindowSize();
   await discoverSources();
   await loadPreviews();
+  restoreSavedScreenRegion();
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
     if (actionId === "hud.startStopRecording") {
