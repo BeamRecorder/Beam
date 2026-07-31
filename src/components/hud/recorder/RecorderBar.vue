@@ -151,23 +151,6 @@ onBeforeUnmount(() => {
       </button>
     </Tooltip>
 
-    <div class="cancel-slot">
-      <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
-        <template #content>
-          <span>{{ t('cancelRecording') }}</span>
-        </template>
-        <button
-          class="control cancel"
-          :aria-label="t('cancelRecording')"
-          :disabled="phase === 'finalizing'"
-          @mousedown.stop
-          @click="emit('cancel')"
-        >
-          <Trash2 />
-        </button>
-      </Tooltip>
-    </div>
-
     <!-- Mic -->
     <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
       <template #content>
@@ -228,6 +211,23 @@ onBeforeUnmount(() => {
         <Volume2 v-if="systemAudioEnabled" /><VolumeX v-else />
       </button>
     </Tooltip>
+
+    <div class="cancel-slot">
+      <Tooltip position="left" :max-width="220" :disabled="!tooltipsReady">
+        <template #content>
+          <span>{{ t('cancelRecording') }}</span>
+        </template>
+        <button
+          class="control cancel"
+          :aria-label="t('cancelRecording')"
+          :disabled="phase === 'finalizing'"
+          @mousedown.stop
+          @click="emit('cancel')"
+        >
+          <Trash2 />
+        </button>
+      </Tooltip>
+    </div>
 
   </aside>
 </template>
