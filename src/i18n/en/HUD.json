@@ -16,5 +16,6 @@
   "openExistingProject": "Open an existing project",
   "screenOption": "Screen {index}",
   "selectScreenRegion": "Select an area of the screen",
-  "editScreenRegion": "Edit the screen area"
+  "editScreenRegion": "Edit the screen area",
+  "screenRegionSelected": "Screen area selected"
 }

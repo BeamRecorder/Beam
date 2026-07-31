@@ -16,5 +16,6 @@
   "openExistingProject": "Ouvrir un projet existant",
   "screenOption": "Écran {index}",
   "selectScreenRegion": "Sélectionner une zone de l’écran",
-  "editScreenRegion": "Modifier la zone de l’écran"
+  "editScreenRegion": "Modifier la zone de l’écran",
+  "screenRegionSelected": "Zone de l’écran validée"
 }

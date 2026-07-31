@@ -117,6 +117,9 @@ const selectedScreenId = ref<string | null>(null);
 const selectedScreenRegion = ref<ScreenRegion | null>(null);
 const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
 const savedScreenRegion = ref<ScreenRegion | null>(null);
+const isRegionSelectionLeaving = ref(false);
+const isRegionSelectionEntering = ref(false);
+let regionSelectionEnterTimeout: ReturnType<typeof setTimeout> | null = null;
 const systemAudioMode = ref<"on" | "off">("off");
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
@@ -216,10 +219,15 @@ const loadPreviews = async () => {
   }
 };
 
+const wait = (duration: number) => new Promise((resolve) => window.setTimeout(resolve, duration));
+
 const selectScreenRegion = async () => {
   const preview = selectedScreenPreview.value;
-  if (isBusy.value || isRecording.value || !preview?.displayBounds) return;
+  if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value || !preview?.displayBounds) return;
   errorMessage.value = "";
+  isRegionSelectionLeaving.value = true;
+  await wait(180);
+  capture.setWindowVisible(false);
   try {
     const sourceBounds = preview.displayBounds;
     const bounds = { x: sourceBounds.x, y: sourceBounds.y, width: sourceBounds.width, height: sourceBounds.height };
@@ -236,6 +244,15 @@ const selectScreenRegion = async () => {
     void capture.updatePreferences({ extras: { screenRegion: plainRegion } });
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    isRegionSelectionLeaving.value = false;
+    isRegionSelectionEntering.value = true;
+    capture.setWindowVisible(true);
+    if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
+    regionSelectionEnterTimeout = setTimeout(() => {
+      isRegionSelectionEntering.value = false;
+      regionSelectionEnterTimeout = null;
+    }, 280);
   }
 };
 
@@ -789,6 +806,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   capture.hideScreenRegionOverlay();
+  if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
   unsubscribeShortcut?.();
   stopTimer();
   void activeCamera?.stop();
@@ -840,7 +858,12 @@ const openProject = (project: CaptureProject) => {
     class="hud-wrapper"
     :class="[
       activeTab,
-      { 'settings-open': showSettings, 'dropdown-open': activeDropdowns > 0 },
+      {
+        'settings-open': showSettings,
+        'dropdown-open': activeDropdowns > 0,
+        'region-selection-leaving': isRegionSelectionLeaving,
+        'region-selection-entering': isRegionSelectionEntering,
+      },
     ]"
     :style="{ height: `${hudHeight}px` }"
   >
@@ -939,13 +962,14 @@ const openProject = (project: CaptureProject) => {
                     @toggle="handleDropdownToggle"
                   />
                   <Button
-                    variant="secondary"
+                    :variant="selectedScreenRegion ? 'primary' : 'secondary'"
                     size="sm"
                     icon-only
-                    :icon="Crop"
-                    :aria-label="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
+                    :icon="selectedScreenRegion ? Check : Crop"
+                    :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
                     :title="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
                     :disabled="isRecording || isBusy || !selectedScreenPreview?.displayBounds"
+                    :class="{ 'screen-region-confirmed': Boolean(selectedScreenRegion) }"
                     @click="selectScreenRegion"
                   />
                 </div>
@@ -1083,6 +1107,29 @@ const openProject = (project: CaptureProject) => {
   flex-direction: column;
   transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden; /* Keep content clipped during transitions to avoid visual bugs */
+}
+
+.hud-wrapper.region-selection-leaving {
+  animation: hud-region-out 180ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}
+
+.hud-wrapper.region-selection-entering {
+  animation: hud-region-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.screen-select-controls :deep(.screen-region-confirmed) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+@keyframes hud-region-out {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
+}
+
+@keyframes hud-region-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
 .screen-select-controls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }

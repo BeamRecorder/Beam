@@ -42,21 +42,12 @@ contextBridge.exposeInMainWorld(
     setPosition: (x, y) => ipcRenderer.send("window:setPosition", x, y),
     setSize: (width, height) => ipcRenderer.send("window:setSize", width, height),
     setSizeSmooth: (width, height) => ipcRenderer.send("window:setSizeSmooth", width, height),
+    setWindowVisible: (visible) => ipcRenderer.send("window:set-visible", Boolean(visible)),
     setInteractive: (value) => ipcRenderer.send("window:setInteractive", value),
     setRecorderTooltip: (visible) => ipcRenderer.invoke("window:set-recorder-tooltip", Boolean(visible)),
     dragStart: () => ipcRenderer.send("window:dragStart"),
     drag: () => ipcRenderer.send("window:drag"),
     getSources: (types) => ipcRenderer.invoke("window:getSources", types),
-    selectScreenRegion: (options) => ipcRenderer.invoke("screen-region:select", options),
-    showScreenRegionOverlay: (options) => ipcRenderer.send("screen-region:show", options),
-    hideScreenRegionOverlay: () => ipcRenderer.send("screen-region:hide"),
-    onScreenRegionConfigure: (listener) => {
-      const callback = (_event, options) => listener(options);
-      ipcRenderer.on("screen-region:configure", callback);
-      return () => ipcRenderer.removeListener("screen-region:configure", callback);
-    },
-    confirmScreenRegion: (region) => ipcRenderer.send("screen-region:confirm", region),
-    cancelScreenRegion: () => ipcRenderer.send("screen-region:cancel"),
     selectScreenRegion: (options) => ipcRenderer.invoke("screen-region:select", options),
     showScreenRegionOverlay: (options) => ipcRenderer.send("screen-region:show", options),
     hideScreenRegionOverlay: () => ipcRenderer.send("screen-region:hide"),

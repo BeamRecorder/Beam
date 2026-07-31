@@ -158,6 +158,16 @@ class WindowController {
     }
   }
 
+  setVisible(visible) {
+    if (this.window.isDestroyed()) return
+    if (visible) {
+      this.window.showInactive()
+      this.applyModePolicy()
+      return
+    }
+    this.window.hide()
+  }
+
   applyInteractionPolicy() {
     if (this.window.isDestroyed()) return
     const shouldBeActive = this.ready && this.window.isVisible() && !this.window.isMinimized()
