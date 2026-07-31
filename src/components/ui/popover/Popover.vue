@@ -84,9 +84,21 @@ const adjustPosition = async () => {
   }
 }
 
+let resizeObserver: ResizeObserver | null = null
+
 watch(isOpen, (val) => {
   if (val) {
     window.requestAnimationFrame(() => void adjustPosition())
+    void nextTick(() => {
+      if (contentRef.value && typeof ResizeObserver !== 'undefined') {
+        resizeObserver?.disconnect()
+        resizeObserver = new ResizeObserver(() => void adjustPosition())
+        resizeObserver.observe(contentRef.value)
+      }
+    })
+  } else {
+    resizeObserver?.disconnect()
+    resizeObserver = null
   }
   emit('toggle', val)
 })
@@ -131,6 +143,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
   document.removeEventListener('mousedown', handleMouseDownOutside)
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('resize', repositionOpenPopover)
@@ -193,6 +207,7 @@ defineExpose({
   z-index: 50;
   box-sizing: border-box;
   overflow: hidden;
+  max-width: calc(100vw - 16px);
 }
 
 .popover-content.popover-block {
