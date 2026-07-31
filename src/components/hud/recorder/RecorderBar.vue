@@ -63,7 +63,8 @@ const stopDrag = () => {
   window.removeEventListener("mouseup", stopDrag);
   window.capture?.dragEnd();
 };
-const startDrag = () => {
+const startDrag = (event?: MouseEvent) => {
+  if (event && event.button !== 0) return;
   if (isDragging.value) return;
   isDragging.value = true;
   window.capture?.dragStart();
@@ -248,7 +249,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-surface);
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
   cursor: grab;
   transition: opacity 0.18s ease;
 }

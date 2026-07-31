@@ -1163,7 +1163,7 @@ const openProject = (project: CaptureProject) => {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--color-border);
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
   flex-shrink: 0;
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, ref } from "vue";
 import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
 import Badge from "~/ui/badge/Badge.vue";
 import Button from "~/ui/button/Button.vue";
@@ -28,10 +29,32 @@ const emit = defineEmits<{
   (event: "open-settings"): void;
   (event: "close"): void;
 }>();
+
+const isDragging = ref(false);
+const drag = () => window.capture?.drag();
+const stopDrag = () => {
+  if (!isDragging.value) return;
+  isDragging.value = false;
+  window.removeEventListener("mousemove", drag);
+  window.removeEventListener("mouseup", stopDrag);
+  window.capture?.dragEnd();
+};
+const startDrag = (event: MouseEvent) => {
+  if (event.button !== 0) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (target?.closest("button, a, input, select, textarea, [role='button']")) return;
+  if (isDragging.value) return;
+  isDragging.value = true;
+  window.capture?.dragStart();
+  window.addEventListener("mousemove", drag);
+  window.addEventListener("mouseup", stopDrag, { once: true });
+};
+
+onBeforeUnmount(stopDrag);
 </script>
 
 <template>
-  <header class="hud-topbar">
+  <header class="hud-topbar" :class="{ dragging: isDragging }" @mousedown="startDrag">
     <div class="topbar-identity">
       <div v-if="showBack" class="topbar-back-action">
         <Button
@@ -86,11 +109,14 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--color-border);
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
   flex-shrink: 0;
   cursor: grab;
 }
 .hud-topbar:active {
+  cursor: grabbing;
+}
+.hud-topbar.dragging {
   cursor: grabbing;
 }
 .topbar-identity,

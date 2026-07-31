@@ -4,6 +4,15 @@ const RECORDER_SIZE = { width: 72, height: 344 }
 // left gutter for the widest localized tooltip plus its arrow and shadow.
 const RECORDER_TOOLTIP_WIDTH = 300
 
+function clampToDisplayBounds(x, y, width, height, displayBounds) {
+  const maxX = displayBounds.x + Math.max(0, displayBounds.width - width)
+  const maxY = displayBounds.y + Math.max(0, displayBounds.height - height)
+  return {
+    x: Math.min(Math.max(Math.round(x), displayBounds.x), maxX),
+    y: Math.min(Math.max(Math.round(y), displayBounds.y), maxY),
+  }
+}
+
 class WindowController {
   constructor(window, { preferencesStore = null } = {}) {
     this.window = window
@@ -84,7 +93,12 @@ class WindowController {
       this.recorderBoundsBeforeTooltip = null
       this.placeRecorder()
     }
-    if (mode === 'hud' && this.hudPosition) this.window.setPosition(...this.hudPosition)
+    if (mode === 'hud' && this.hudPosition) {
+      const { screen } = require('electron')
+      const display = screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] })
+      const position = clampToDisplayBounds(this.hudPosition[0], this.hudPosition[1], HUD_SIZE.width, HUD_SIZE.height, display.bounds)
+      this.window.setPosition(position.x, position.y)
+    }
     this.applyModePolicy({ restoreMaximized })
   }
 
@@ -92,9 +106,14 @@ class WindowController {
     const { screen } = require('electron')
     const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
     const saved = this.recorderPositions.get(String(display.id))
-    const x = saved?.x ?? display.workArea.x + display.workArea.width - RECORDER_SIZE.width - 20
-    const y = saved?.y ?? display.workArea.y + Math.round((display.workArea.height - RECORDER_SIZE.height) / 2)
-    this.window.setBounds({ x, y, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })
+    const position = clampToDisplayBounds(
+      saved?.x ?? display.workArea.x + display.workArea.width - RECORDER_SIZE.width - 20,
+      saved?.y ?? display.workArea.y + Math.round((display.workArea.height - RECORDER_SIZE.height) / 2),
+      RECORDER_SIZE.width,
+      RECORDER_SIZE.height,
+      display.bounds,
+    )
+    this.window.setBounds({ ...position, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height })
   }
 
   rememberRecorderPosition() {
@@ -162,6 +181,16 @@ class WindowController {
     else this.window.maximize()
   }
 
+  setOverlayAlwaysOnTop(value) {
+    if (value && process.platform === 'win32') {
+      // The Windows taskbar is itself topmost. Use the screen-saver level so
+      // the HUD and recorder remain visible when moved over the taskbar.
+      this.window.setAlwaysOnTop(true, 'screen-saver')
+      return
+    }
+    this.window.setAlwaysOnTop(value)
+  }
+
   present() {
     if (this.window.isDestroyed()) return
     if (this.window.isMinimized()) this.window.restore()
@@ -176,7 +205,7 @@ class WindowController {
     if (this.window.isDestroyed()) return
     const isHud = this.mode === 'hud'
     const isRecorder = this.mode === 'recorder'
-    this.window.setAlwaysOnTop((isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized())
+    this.setOverlayAlwaysOnTop((isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized())
     this.window.setResizable(!isHud && !isRecorder)
     this.window.setMaximizable(!isHud && !isRecorder)
     this.window.setContentProtection(isRecorder)
@@ -217,7 +246,7 @@ class WindowController {
     if (!shouldBeActive) {
       this.window.setIgnoreMouseEvents(true)
       this.interactive = false
-      this.window.setAlwaysOnTop(false)
+      this.setOverlayAlwaysOnTop(false)
       return
     }
     if (this.mode === 'hud') {
@@ -230,7 +259,7 @@ class WindowController {
       this.window.setIgnoreMouseEvents(false)
     }
     this.interactive = true
-    this.window.setAlwaysOnTop(this.mode === 'hud' || this.mode === 'recorder')
+    this.setOverlayAlwaysOnTop(this.mode === 'hud' || this.mode === 'recorder')
   }
 
   showHud() {
@@ -243,7 +272,10 @@ class WindowController {
       this.window.setMaximumSize?.(HUD_SIZE.width,HUD_SIZE.height)
       this.window.setSize?.(HUD_SIZE.width, HUD_SIZE.height)
       if (this.hudPosition && Array.isArray(this.hudPosition)) {
-        this.window.setPosition?.(this.hudPosition[0], this.hudPosition[1])
+        const { screen } = require('electron')
+        const display = screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] })
+        const position = clampToDisplayBounds(this.hudPosition[0], this.hudPosition[1], HUD_SIZE.width, HUD_SIZE.height, display.bounds)
+        this.window.setPosition?.(position.x, position.y)
       } else {
         this.window.center?.()
       }

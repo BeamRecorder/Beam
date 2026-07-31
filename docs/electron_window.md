@@ -8,8 +8,8 @@ The main window is controlled by `electron/window/window-controller.cjs` and has
 
 | Mode | Bounds / behavior | Interaction |
 | --- | --- | --- |
-| `hud` | `352 × 512`: a `320 × 480` HUD card plus 16 px of room on every edge for its border and shadow. It returns to its prior HUD position after Recorder mode. | Transparent pixels pass through; renderer enables mouse handling only over interactive HUD elements. |
-| `recorder` | `72 × 296`, positioned at the right-middle of the active display. It is draggable and remembers a position per display for the process lifetime. | Always on top, fixed size, content protected. Drag starts only on mousedown, never on hover. |
+| `hud` | `352 × 512`: a `320 × 480` HUD card plus 16 px of room on every edge for its border and shadow. It returns to its prior HUD position after Recorder mode. Dragging is bounded by the physical display bounds, not the taskbar-excluded work area. | Transparent pixels pass through; renderer enables mouse handling only over interactive HUD elements. |
+| `recorder` | `72 × 344`, positioned at the right-middle of the active display. It is draggable and remembers a position per display in preferences. | Always on top, fixed size, content protected. Drag starts only on mousedown, never on hover. |
 | `editor` | `1280 × 800` before presentation/maximization. | Normal opaque editor interaction. |
 
 Use `window:show-hud` / `capture.showHud()` to return from the editor. Do not reproduce it by separately changing mode, maximize state, size, and position: ordering matters.

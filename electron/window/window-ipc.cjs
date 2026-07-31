@@ -4,6 +4,18 @@ function windowForEvent(event) {
   return BrowserWindow.fromWebContents(event.sender)
 }
 
+function clampToDisplayBounds(x, y, width, height, point) {
+  // Use physical display bounds instead of workArea so the Windows taskbar
+  // does not become an artificial wall while dragging.
+  const displayBounds = screen.getDisplayNearestPoint(point).bounds
+  const maxX = displayBounds.x + Math.max(0, displayBounds.width - width)
+  const maxY = displayBounds.y + Math.max(0, displayBounds.height - height)
+  return {
+    x: Math.min(Math.max(Math.round(x), displayBounds.x), maxX),
+    y: Math.min(Math.max(Math.round(y), displayBounds.y), maxY),
+  }
+}
+
 function registerWindowIpc(ipcMain, controllerForWindow) {
   let resizeTimer = null
   let dragStartMouse = null
@@ -68,9 +80,16 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     const win = windowForEvent(event)
     if (!win || !dragStartMouse || !dragStartWindow || !dragStartSize) return
     const point = screen.getCursorScreenPoint()
+    const position = clampToDisplayBounds(
+      dragStartWindow[0] + point.x - dragStartMouse.x,
+      dragStartWindow[1] + point.y - dragStartMouse.y,
+      dragStartSize[0],
+      dragStartSize[1],
+      point,
+    )
     win.setBounds({
-      x: Math.round(dragStartWindow[0] + point.x - dragStartMouse.x),
-      y: Math.round(dragStartWindow[1] + point.y - dragStartMouse.y),
+      x: position.x,
+      y: position.y,
       width: dragStartSize[0],
       height: dragStartSize[1]
     })
