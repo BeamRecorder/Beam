@@ -5,7 +5,7 @@ This guide covers the basic local development and verification workflow for Beam
 ## Prerequisites
 
 - Node.js 22 or newer with npm
-- Rust stable with the MSVC toolchain
+- [Rust stable with the MSVC toolchain](./INSTALL_RUST.md)
 - Git
 
 Install the project dependencies once after cloning or when the lockfile changes:

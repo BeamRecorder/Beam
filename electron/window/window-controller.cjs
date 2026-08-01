@@ -282,7 +282,6 @@ class WindowController {
         if (current.x !== layout.x || current.y !== layout.base.y || Math.abs(current.width - layout.width) > 1) {
           this.window.setBounds({ x: layout.x, y: layout.base.y, width: layout.width, height: RECORDER_SIZE.height })
         }
-        console.info('[RecorderTooltip] applied', { bounds: this.window.getBounds(), side: this.recorderTooltipSide })
       }
 
       const current = this.window.getBounds()

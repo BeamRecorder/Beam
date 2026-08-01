@@ -6,7 +6,7 @@ This guide covers the basic local development and verification workflow for Beam
 
 - macOS 13 or newer
 - Node.js 22 or newer with npm
-- Rust stable
+- [Rust stable](./INSTALL_RUST.md)
 - Xcode Command Line Tools
 - Git
 
