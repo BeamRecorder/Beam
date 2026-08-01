@@ -34,9 +34,9 @@ describe('WindowSelect', () => {
 
   it('sizes long labels and scrolls overflowing options in both directions', async () => {
     vi.useFakeTimers()
-    let raf!: ReturnType<typeof vi.spyOn>
-    raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-      if (raf.mock.calls.length === 1) callback(100)
+    let invokeCallback = true
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      if (invokeCallback) { invokeCallback = false; callback(100) }
       return 1
     })
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
@@ -51,6 +51,7 @@ describe('WindowSelect', () => {
     const label = option.querySelector<HTMLElement>('.option-label')!
     Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 240 })
     Object.defineProperty(label, 'clientWidth', { configurable: true, value: 80 })
+    invokeCallback = true
     option.dispatchEvent(new Event('pointerenter', { bubbles: true }))
     vi.advanceTimersByTime(300)
     expect(option.classList).toContain('has-overflow')
