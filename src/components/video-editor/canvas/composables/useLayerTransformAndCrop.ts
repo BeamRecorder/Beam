@@ -18,6 +18,17 @@ const TRANSFORM_MAX = 3;
 const SIZE_MAX = 4;
 type TransformClip = VisualClip | CaptionClip;
 
+const clampWebcamTransform = (value: NormalizedTransform): NormalizedTransform => {
+  const width = Math.min(1, Math.max(.02, value.width));
+  const height = Math.min(1, Math.max(.02, value.height));
+  return {
+    x: Math.min(1 - width, Math.max(0, value.x)),
+    y: Math.min(1 - height, Math.max(0, value.y)),
+    width,
+    height,
+  };
+};
+
 export interface UseLayerTransformAndCropOptions {
   composition: () => ClipComposition;
   currentTime: () => number;
@@ -222,11 +233,12 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale);
     const initial = transformDrag.transform;
     if (transformDrag.kind === "move") {
-      transformDraft.value = {
+      const moved = {
         ...initial,
         x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.x + dx)),
         y: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.y + dy)),
       };
+      transformDraft.value = clip.kind === "webcam" ? clampWebcamTransform(moved) : moved;
       return;
     }
     const left = transformDrag.corner?.includes("left");
@@ -239,12 +251,13 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const corner = horizontal && vertical;
     const width = Math.min(SIZE_MAX, Math.max(.02, corner && !freeAspect ? rawWidth : horizontal ? rawWidth : initial.width));
     const height = Math.min(SIZE_MAX, Math.max(.02, corner && !freeAspect ? width * ratio : vertical ? rawHeight : initial.height));
-    transformDraft.value = {
+    const resized = {
       x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, left ? initial.x + initial.width - width : initial.x)),
       y: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, top ? initial.y + initial.height - height : initial.y)),
       width,
       height,
     };
+    transformDraft.value = clip.kind === "webcam" ? clampWebcamTransform(resized) : resized;
   };
 
   const schedulePreview = (transform: NormalizedTransform) => {

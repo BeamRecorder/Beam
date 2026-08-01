@@ -35,6 +35,14 @@ describe("webcam zoom layout", () => {
     expect(layout.y).toBeGreaterThanOrEqual(0);
   });
 
+  it("clamps a persisted overlay that would extend beyond the frame", () => {
+    const layout = computeWebcamLayout(1000, 800, 1, undefined, { x: .9, y: .9, width: .5, height: .4 });
+    expect(layout.x).toBe(500);
+    expect(layout.y).toBe(480);
+    expect(layout.x + layout.width).toBe(1000);
+    expect(layout.y + layout.height).toBe(800);
+  });
+
   it("uses the persisted normalized position and size for a webcam", () => {
     const layout = computeWebcamLayout(1000, 800, 1, undefined, { x: .12, y: .34, width: .28, height: .21 });
     expect(layout.x).toBeCloseTo(120);

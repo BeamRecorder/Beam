@@ -27,16 +27,17 @@ const dimensions = (track: SessionTrackData) => ({
 
 const placement = (track: SessionTrackData) => {
   const value = track.format.placement;
-  if (!value || typeof value !== "object") return { x: 0.72, y: 0.72, width: 0.24, height: 0.24 };
+  const fallback = { x: 0.72, y: 0.72, width: 0.24, height: 0.24 };
+  if (!value || typeof value !== "object") return fallback;
   const input = value as Record<string, unknown>;
-  if (!["x", "y", "width", "height"].every((key) => typeof input[key] === "number" && Number.isFinite(input[key]))) {
-    return { x: 0.72, y: 0.72, width: 0.24, height: 0.24 };
-  }
+  if (!["x", "y", "width", "height"].every((key) => typeof input[key] === "number" && Number.isFinite(input[key]))) return fallback;
+  const width = Math.max(.001, Math.min(1, Number(input.width)));
+  const height = Math.max(.001, Math.min(1, Number(input.height)));
   return {
-    x: Number(input.x),
-    y: Number(input.y),
-    width: Number(input.width),
-    height: Number(input.height),
+    x: Math.max(0, Math.min(1 - width, Number(input.x))),
+    y: Math.max(0, Math.min(1 - height, Number(input.y))),
+    width,
+    height,
   };
 };
 

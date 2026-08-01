@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld(
     prepare: (config) => invoke("prepare", { config }),
     prepareRecording: (options = {}) => invoke("prepare-default-recording", { options }),
     startPreparedRecording: () => invoke("start-prepared-recording"),
+    stopNativeRecording: () => invoke("stop-native-recording"),
+    completeNativeRecording: () => invoke("complete-native-recording"),
     cancelPreparedRecording: () => invoke("cancel-prepared-recording"),
     discardRecording: (sessionId) => invoke("discard-recording", { sessionId }),
     startRecording: (options = {}) => invoke("start-default-recording", { options }),
@@ -136,6 +138,7 @@ contextBridge.exposeInMainWorld(
     },
     configureCameraOverlay: (state) => ipcRenderer.send("camera-overlay:configure", state),
     setCameraOverlayActive: (active) => ipcRenderer.send("camera-overlay:set-active", Boolean(active)),
+    resetCameraOverlayPlacement: () => ipcRenderer.send("camera-overlay:reset-placement"),
     getCameraOverlayState: () => ipcRenderer.invoke("camera-overlay:state"),
     onCameraOverlayState: (listener) => {
       const callback = (_event, state) => listener(state);

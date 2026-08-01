@@ -6,6 +6,8 @@ const capture = vi.hoisted(() => ({
   hideScreenRegionOverlay: vi.fn(),
   prepareRecording: vi.fn().mockResolvedValue({ state: 'armed' }),
   startPreparedRecording: vi.fn(),
+  stopNativeRecording: vi.fn().mockResolvedValue({ state: 'completed' }),
+  completeNativeRecording: vi.fn().mockResolvedValue({ state: 'completed' }),
   cancelPreparedRecording: vi.fn().mockResolvedValue(undefined),
   discardRecording: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn().mockResolvedValue({ state: 'completed' }),

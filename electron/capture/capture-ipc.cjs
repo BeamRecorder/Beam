@@ -26,6 +26,7 @@ function withProjectId(session) {
 function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages }) {
   const registerSession = (session) => { for (const storage of trackStorages) storage.registerSession(session); return withProjectId(session) }
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session)
+  let deferredStoppedSession = null
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
       const catalog = await captureEngine.request('discover')
@@ -54,6 +55,17 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
       await captureEngine.request('prepare', { config: payload.config })
       const session = await captureEngine.request('start')
       return registerSession(session)
+    }
+    if (command === 'stop-native-recording') {
+      if (deferredStoppedSession) throw new Error('A native recording is already waiting for its sidecar tracks to finish.')
+      deferredStoppedSession = await captureEngine.request('stop')
+      return withProjectId(deferredStoppedSession)
+    }
+    if (command === 'complete-native-recording') {
+      if (!deferredStoppedSession) throw new Error('No native recording is waiting for completion.')
+      const session = completeSession(deferredStoppedSession)
+      deferredStoppedSession = null
+      return withProjectId(completedVideoSource(session))
     }
     if (command === 'stop') return withProjectId(completedVideoSource(completeSession(await captureEngine.request('stop'))))
     if (!ALLOWED_COMMANDS.has(command)) throw new Error(`Commande de capture interdite: ${command}`)

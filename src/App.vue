@@ -131,6 +131,7 @@ const startRecordingFromEditor = async (configuration: RecordingConfiguration) =
   editorLoadError.value = "";
   recordingBarVisibility.value = configuration.recordingBarVisibility;
   capture.setCameraOverlayActive(true);
+  capture.resetCameraOverlayPlacement?.();
   await recording.start(configuration);
 };
 
@@ -144,6 +145,7 @@ const startRecording = async (configuration: RecordingConfiguration) => {
   currentView.value = "recorder";
   capture.setWindowMode("recorder");
   capture.setCameraOverlayActive(true);
+  capture.resetCameraOverlayPlacement?.();
   await recording.start(configuration);
   if (recording.phase.value === "idle") {
     currentView.value = "hud";
@@ -154,7 +156,9 @@ const startRecording = async (configuration: RecordingConfiguration) => {
 
 const cancelOrStopRecording = async () => {
   const wasCountdown = recording.phase.value === "countdown";
+  if (!wasCountdown) capture.setCameraOverlayActive(false);
   await recording.stop();
+  if (!wasCountdown && recording.phase.value !== "idle") capture.setCameraOverlayActive(true);
   if (wasCountdown && currentView.value === "recorder") {
     capture.setWindowMode("hud");
     capture.setSize(352, 512);
@@ -191,6 +195,7 @@ const revealEditor = async () => {
 const handleStopRecording = async (session: RecordingSessionResult) => {
   const launchedFromEditor = isRecordingStartedFromEditor.value;
   isRecordingStartedFromEditor.value = false;
+  capture.setCameraOverlayActive(false);
   capture.setWindowVisible?.(false);
   editorLoadError.value = "";
   isPreparingEditor.value = true;

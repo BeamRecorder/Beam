@@ -71,6 +71,17 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     configure(currentState || { cameraId: 'off' })
   }
 
+  const resetPlacement = () => {
+    if (!window || window.isDestroyed()) return false
+    const bounds = window.getBounds()
+    const area = screen.getDisplayMatching(bounds).workArea
+    window.setPosition(
+      Math.round(area.x + area.width - bounds.width - 20),
+      Math.round(area.y + area.height - bounds.height - 20),
+    )
+    return true
+  }
+
   const state = () => {
     if (!currentState) return null
     if (!window || window.isDestroyed()) return currentState
@@ -87,7 +98,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     }
   }
 
-  return { configure, setActive, state, destroy: () => { stopHoverTracking(); if (window && !window.isDestroyed()) window.destroy() } }
+  return { configure, setActive, resetPlacement, state, destroy: () => { stopHoverTracking(); if (window && !window.isDestroyed()) window.destroy() } }
 }
 
 module.exports = { createCameraOverlayWindow }

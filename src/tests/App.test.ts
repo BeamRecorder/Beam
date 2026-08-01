@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
     getPreferences: vi.fn(),
     setInteractive: vi.fn(),
     setCameraOverlayActive: vi.fn(),
+    resetCameraOverlayPlacement: vi.fn(),
     setWindowMode: vi.fn(),
     setSize: vi.fn(),
     showHud: vi.fn(),
@@ -148,6 +149,7 @@ describe("App", () => {
     await settle();
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith("recorder");
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(true);
+    expect(mocks.capture.resetCameraOverlayPlacement).toHaveBeenCalled();
     expect(mocks.controller.recording.start).toHaveBeenCalled();
 
     await wrapper.get(".pause").trigger("click");
@@ -189,6 +191,7 @@ describe("App", () => {
     mocks.controller.onComplete?.({ videoSrc: "project.mp4" });
     await settle();
     expect(wrapper.find(".mock-editor").exists()).toBe(true);
+    expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(false);
 
     vi.useFakeTimers();
     await wrapper.get(".back").trigger("click");

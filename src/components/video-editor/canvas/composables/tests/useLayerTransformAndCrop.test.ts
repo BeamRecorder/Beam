@@ -176,6 +176,23 @@ describe('useLayerTransformAndCrop', () => {
     expect(setPointerCapture).toHaveBeenCalled();
   });
 
+  it('keeps webcam transforms inside the output frame while moving and resizing', () => {
+    const mounted = mountComposable(webcamClip());
+    const target = document.createElement('div');
+    Object.assign(target, { setPointerCapture: vi.fn(), hasPointerCapture: vi.fn().mockReturnValue(true), releasePointerCapture: vi.fn() });
+
+    mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'move');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: -1000, clientY: -1000 }));
+    expect(mounted.state.transformDraft.value).toMatchObject({ x: 0, y: 0 });
+    mounted.state.endTransformDrag(pointer(target));
+
+    mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 5_000, clientY: 5_000 }));
+    const transform = mounted.state.transformDraft.value!;
+    expect(transform.x + transform.width).toBeLessThanOrEqual(1);
+    expect(transform.y + transform.height).toBeLessThanOrEqual(1);
+  });
+
   it('selects the topmost eligible visual or caption and ignores screen-only hits', () => {
     const mounted = mountComposable(imageClip());
     const canvas = document.createElement('canvas');

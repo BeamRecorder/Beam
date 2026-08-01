@@ -7,12 +7,16 @@ function cameraFormat(value) {
   if (appearance !== undefined && (!appearance || !['none', 'sm', 'md', 'lg'].includes(appearance.shadowSize) || !['none', 'sm', 'md', 'lg', 'full'].includes(appearance.cornerRadius))) throw new Error('Invalid camera appearance.')
   const placement = value.placement
   if (placement !== undefined && (!placement || !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(placement[key])) || placement.width <= 0 || placement.height <= 0)) throw new Error('Invalid camera placement.')
-  const normalizedPlacement = placement && {
-    x: Math.max(0, Math.min(1, placement.x)),
-    y: Math.max(0, Math.min(1, placement.y)),
-    width: Math.max(.001, Math.min(1, placement.width)),
-    height: Math.max(.001, Math.min(1, placement.height)),
-  }
+  const normalizedPlacement = placement && (() => {
+    const width = Math.max(.001, Math.min(1, placement.width))
+    const height = Math.max(.001, Math.min(1, placement.height))
+    return {
+      x: Math.max(0, Math.min(1 - width, placement.x)),
+      y: Math.max(0, Math.min(1 - height, placement.y)),
+      width,
+      height,
+    }
+  })()
   return { mediaType: 'video', codec: 'vp8', width: value.width, height: value.height, nominalFps: value.nominalFps, ...(appearance ? { appearance: { shadowSize: appearance.shadowSize, cornerRadius: appearance.cornerRadius } } : {}), ...(normalizedPlacement ? { placement: normalizedPlacement } : {}) }
 }
 

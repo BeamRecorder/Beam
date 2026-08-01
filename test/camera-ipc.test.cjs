@@ -81,3 +81,14 @@ test('persists the normalized camera placement used by the editor', () => {
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
   assert.deepEqual(manifest.tracks[0].format.placement, { x: .72, y: .68, width: .2, height: .2 })
 })
+
+test('keeps an oversized camera placement inside the output frame', () => {
+  const storage = createCameraStorage({})
+  const session = sessionFixture()
+  storage.registerSession(session)
+  const opened = storage.begin(16, { sessionId, sourceId, format: { ...format, placement: { x: .9, y: .85, width: .5, height: .4 } }, startNs: 0 })
+  storage.finalize(16, { jobId: opened.jobId, endNs: 1, metrics: {} })
+  storage.complete(session)
+  const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
+  assert.deepEqual(manifest.tracks[0].format.placement, { x: .5, y: .6, width: .5, height: .4 })
+})

@@ -199,6 +199,7 @@ app.whenReady().then(() => {
   const screenRegionOverlay = createScreenRegionOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state))
   ipcMain.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active))
+  ipcMain.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement())
   ipcMain.on('countdown:set', (_event, seconds) => countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null))
   ipcMain.handle('screen-region:select', (_event, options) => screenRegionOverlay.select(options))
   ipcMain.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options))

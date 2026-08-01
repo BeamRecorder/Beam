@@ -148,12 +148,18 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const preview = outputPreviewRect(width, height, output);
     const screen = screenClip();
     if (!screen) {
-      ctx.fillStyle = "rgba(15,23,42,.85)";
-      ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
-      ctx.fillStyle = "#fff";
-      ctx.font = "16px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("Video track disabled", preview.x + preview.width / 2, preview.y + preview.height / 2);
+      const hasEnabledScreenTrack = options.composition().clips.some((clip) => clip.kind === "screen" && clip.enabled);
+      if (!hasEnabledScreenTrack) {
+        ctx.fillStyle = "rgba(15,23,42,.85)";
+        ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Video track disabled", preview.x + preview.width / 2, preview.y + preview.height / 2);
+      }
+      videoWindowBounds.value = null;
+      screenHitBounds.value = null;
+      overlayWindowBounds.value = null;
       return null;
     }
     const videoWidth = video.videoWidth || 1920;

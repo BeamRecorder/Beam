@@ -15,6 +15,7 @@ import type { ZoomElement } from "../zoom/zoom-types";
 import { activeClipsAt, sourceTimeAt } from "../composition/engine/clip-engine";
 import {
   isVisualClip,
+  clipEndMs,
   type CaptionClip,
   type ClipComposition,
   type NormalizedCrop,
@@ -97,17 +98,23 @@ const playbackClockSeconds = () => playbackAnchorSeconds + (performance.now() - 
 const primaryScreenClip = computed<VisualClip | null>(() =>
   props.composition.clips.find((clip): clip is VisualClip => clip.kind === "screen" && clip.enabled) ?? null,
 );
-const activeScreenClip = computed<VisualClip | null>(() =>
+const liveScreenClip = computed<VisualClip | null>(() =>
   activeClipsAt(props.composition, props.currentTime * 1_000).find((clip): clip is VisualClip => clip.kind === "screen") ?? null,
 );
+const displayScreenClip = computed<VisualClip | null>(() => {
+  if (liveScreenClip.value) return liveScreenClip.value;
+  const clip = primaryScreenClip.value;
+  return clip && props.currentTime * 1_000 >= clip.timelineStartMs ? clip : null;
+});
 const screenAsset = computed(() => {
   const clip = primaryScreenClip.value;
   return clip ? props.composition.assets.find((asset) => asset.id === clip.assetId) ?? null : null;
 });
 const activeScreenSourceTime = computed(() => {
-  const clip = activeScreenClip.value;
+  const clip = displayScreenClip.value;
   if (!clip) return primaryScreenClip.value?.sourceInMs ? primaryScreenClip.value.sourceInMs / 1_000 : 0;
-  return (sourceTimeAt(clip, props.currentTime * 1_000) ?? clip.sourceInMs) / 1_000;
+  const timelineMs = Math.min(Math.max(props.currentTime * 1_000, clip.timelineStartMs), clipEndMs(clip) - 1);
+  return (sourceTimeAt(clip, timelineMs) ?? clip.sourceInMs) / 1_000;
 });
 const previewFrameStyle = computed(() => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
@@ -120,9 +127,9 @@ function renderOnce() {
 
 const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
   videoSrc: () => screenAsset.value?.src ?? props.videoSrc ?? "",
-  isPlaying: () => props.isPlaying && Boolean(activeScreenClip.value),
+  isPlaying: () => props.isPlaying && Boolean(liveScreenClip.value),
   sourceTime: () => activeScreenSourceTime.value,
-  playbackRate: () => activeScreenClip.value?.playbackRate ?? 1,
+  playbackRate: () => displayScreenClip.value?.playbackRate ?? 1,
   onDurationChange: () => undefined,
   onRenderOnce: renderOnce,
 });
@@ -232,8 +239,8 @@ const cursorOverlay = useCursorOverlay({
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
   editorData: () => props.editorData,
-  screenClip: () => activeScreenClip.value,
-  isScreenEnabled: () => Boolean(activeScreenClip.value),
+  screenClip: () => liveScreenClip.value,
+  isScreenEnabled: () => Boolean(liveScreenClip.value),
   showBackground: () => props.outputCanvas.showBackground,
   onRenderOnce: renderOnce,
 });
@@ -284,7 +291,6 @@ const renderCanvas = () => {
     );
   } else {
     const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
-    drawBackground(ctx, preview);
     const fallbackWindow = {
       dx: preview.x,
       dy: preview.y,
@@ -294,8 +300,14 @@ const renderCanvas = () => {
       focusX: preview.x + preview.width / 2,
       focusY: preview.y + preview.height / 2,
     };
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, 16);
+    ctx.clip();
+    drawBackground(ctx, preview);
     drawNonScreenVisuals(ctx, fallbackWindow);
     compositionMedia.drawComposition(ctx, fallbackWindow, videoEl.videoWidth || 1920);
+    ctx.restore();
   }
   if (props.isPlaying) {
     const nextTime = Math.min(props.duration, playbackClockSeconds());

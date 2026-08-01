@@ -5,7 +5,7 @@ import type { RecordingConfiguration } from "../recording-types";
 const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
   capture: {
     getCameraOverlayState: vi.fn(), setCountdown: vi.fn(), hideScreenRegionOverlay: vi.fn(),
-    prepareRecording: vi.fn(), startPreparedRecording: vi.fn(), cancelPreparedRecording: vi.fn(),
+    prepareRecording: vi.fn(), startPreparedRecording: vi.fn(), stopNativeRecording: vi.fn(), completeNativeRecording: vi.fn(), cancelPreparedRecording: vi.fn(),
     discardRecording: vi.fn(), stop: vi.fn(), pause: vi.fn(), resume: vi.fn(), setTeleprompterSession: vi.fn(),
     showScreenRegionOverlay: vi.fn(),
   },
@@ -51,6 +51,8 @@ beforeEach(() => {
   capture.getCameraOverlayState.mockResolvedValue({ shadowSize: "md", cornerRadius: "lg", placement: { x: .1, y: .2, width: .3, height: .4 } });
   capture.prepareRecording.mockResolvedValue(undefined);
   capture.startPreparedRecording.mockResolvedValue({ state: "recording", sessionId: "session-1", projectId: "project-1" });
+  capture.stopNativeRecording.mockResolvedValue({ state: "completed", sessionId: "session-1" });
+  capture.completeNativeRecording.mockResolvedValue({ state: "completed", sessionId: "session-1" });
   capture.cancelPreparedRecording.mockResolvedValue(undefined);
   capture.discardRecording.mockResolvedValue(undefined);
   capture.stop.mockResolvedValue({ state: "completed", sessionId: "session-1" });
@@ -94,7 +96,8 @@ describe("useRecordingController branch behavior", () => {
     expect(systemAudio.resume).toHaveBeenCalledWith("session-1");
 
     await controller.stop();
-    expect(capture.stop).toHaveBeenCalled();
+    expect(capture.stopNativeRecording).toHaveBeenCalled();
+    expect(capture.completeNativeRecording).toHaveBeenCalled();
     expect(complete).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "session-1" }));
     expect(controller.phase.value).toBe("idle");
   });
@@ -143,7 +146,7 @@ describe("useRecordingController branch behavior", () => {
   it("reports stop and preparation failures while preserving a recording phase", async () => {
     const controller = useRecordingController(vi.fn());
     await controller.start(configuration());
-    capture.stop.mockRejectedValueOnce(new Error("stop failed"));
+    capture.stopNativeRecording.mockRejectedValueOnce(new Error("stop failed"));
     await controller.stop();
     expect(controller.phase.value).toBe("recording");
     expect(controller.error.value).toBe("stop failed");

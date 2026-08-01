@@ -180,6 +180,11 @@ const props = () => ({
 const context = () => ({
   setTransform: vi.fn(),
   clearRect: vi.fn(),
+  save: vi.fn(),
+  restore: vi.fn(),
+  beginPath: vi.fn(),
+  roundRect: vi.fn(),
+  clip: vi.fn(),
   imageSmoothingEnabled: true,
   imageSmoothingQuality: "low",
 }) as unknown as CanvasRenderingContext2D;

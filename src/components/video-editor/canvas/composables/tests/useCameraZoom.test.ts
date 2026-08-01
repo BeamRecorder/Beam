@@ -110,6 +110,16 @@ describe("useCameraZoom", () => {
     expect(options.callbacks.drawBackground).toHaveBeenCalled();
   });
 
+  it("returns to the background-only frame after the screen clip ends", () => {
+    mountComposable();
+    const ctx = context();
+    options.currentTime.value = 3.1;
+
+    expect(state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA))).toBeNull();
+    expect(ctx.fillText).not.toHaveBeenCalled();
+    expect(options.callbacks.drawBackground).not.toHaveBeenCalled();
+  });
+
   it("applies auto zoom, computes manual target focus, and updates pointer focus", async () => {
     mountComposable();
     const ctx = context();

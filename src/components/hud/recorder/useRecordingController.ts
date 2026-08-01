@@ -9,6 +9,7 @@ type Recorder = BrowserCameraRecorder | BrowserMicrophoneRecorder | BrowserSyste
 
 const inactiveCamera = 'off'
 const inactiveMicrophone = 'no-audio'
+const DEFAULT_CAMERA_PLACEMENT: CameraPlacement = { x: .72, y: .72, width: .24, height: .24 }
 
 export function useRecordingController(onComplete: (session: RecordingSessionResult) => void) {
   const phase = ref<RecordingPhase>('idle')
@@ -38,9 +39,10 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     const appearance: CameraAppearance | undefined = overlay && ['none', 'sm', 'md', 'lg'].includes(overlay.shadowSize) && ['none', 'sm', 'md', 'lg', 'full'].includes(overlay.cornerRadius)
       ? { shadowSize: overlay.shadowSize as CameraAppearance['shadowSize'], cornerRadius: overlay.cornerRadius as CameraAppearance['cornerRadius'] }
       : undefined
-    const placement = overlay?.placement
-    const hasValidPlacement = placement && [placement.x, placement.y, placement.width, placement.height].every(Number.isFinite) && placement.width > 0 && placement.height > 0
-    return { appearance, ...(hasValidPlacement ? { placement } : {}) }
+    // The native preview can be moved independently of the recorded canvas.
+    // Start every recording from a deterministic, in-frame bottom-right layout;
+    // the user can adjust the webcam clip later in the editor.
+    return { appearance, placement: { ...DEFAULT_CAMERA_PLACEMENT } }
   }
 
   const isActive = computed(() => phase.value === 'countdown' || phase.value === 'recording' || phase.value === 'paused')
@@ -191,8 +193,17 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     if (phase.value !== 'recording' && phase.value !== 'paused') return
     phase.value = 'finalizing'
     try {
-      await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
-      const session = await capture.stop()
+      // Stop the native screen clock and request the sidecar recorders to stop
+      // at the same moment. Track storage is completed only after all sidecars
+      // have flushed their final chunks, so none can be cut off by native stop.
+      const nativeStop = capture.stopNativeRecording()
+      const sidecarsStop = Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
+      const results = await Promise.allSettled([nativeStop, sidecarsStop])
+      const nativeResult = results[0]
+      const sidecarsResult = results[1]
+      if (nativeResult.status === 'rejected') throw nativeResult.reason
+      if (sidecarsResult.status === 'rejected') throw sidecarsResult.reason
+      const session = await capture.completeNativeRecording()
       capture.hideScreenRegionOverlay()
       await resetState(true)
       onComplete(session)

@@ -19,6 +19,8 @@ export interface CaptureApi {
   prepare(config: CaptureConfig): Promise<CaptureSession>
   prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   startPreparedRecording(): Promise<CaptureSession>
+  stopNativeRecording(): Promise<CaptureSession>
+  completeNativeRecording(): Promise<CaptureSession>
   cancelPreparedRecording(): Promise<void>
   discardRecording(sessionId?: string): Promise<void>
   startRecording(options?: StartRecordingOptions): Promise<CaptureSession>
@@ -94,6 +96,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
   configureCameraOverlay(state: { cameraId: string; shadowSize?: string; cornerRadius?: string }): void
   setCameraOverlayActive(active: boolean): void
+  resetCameraOverlayPlacement?: () => void
   getCameraOverlayState(): Promise<{ cameraId: string; shadowSize: string; cornerRadius: string; placement?: { x: number; y: number; width: number; height: number } } | null>
   onCameraOverlayState(listener: (state: { cameraId: string; shadowSize: string; cornerRadius: string }) => void): () => void
   onCameraOverlayHover(listener: (hovered: boolean) => void): () => void

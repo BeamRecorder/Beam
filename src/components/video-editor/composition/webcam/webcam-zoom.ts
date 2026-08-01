@@ -44,8 +44,8 @@ export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, a
     return {
       width,
       height,
-      x: canvasWidth * (transform.x + transform.width) - width,
-      y: canvasHeight * (transform.y + transform.height) - height,
+      x: clamp(canvasWidth * (transform.x + transform.width) - width, 0, canvasWidth - width),
+      y: clamp(canvasHeight * (transform.y + transform.height) - height, 0, canvasHeight - height),
     }
   }
   const margin = Math.max(0, settings.margin)
