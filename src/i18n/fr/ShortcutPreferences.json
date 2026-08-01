@@ -1,4 +1,6 @@
 {
+  "recordingCategory": "Enregistrement",
+  "teleprompterCategory": "Téléprompteur",
   "startStopRecording": "Démarrer / Arrêter l'enregistrement",
   "startStopRecordingDesc": "Raccourci global pour basculer l'enregistrement",
   "pauseResume": "Pause / Reprendre",

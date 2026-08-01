@@ -34,7 +34,7 @@ function normalizeTeleprompterDocument(value, now = new Date().toISOString()) {
     mode: input.mode,
     autoscroll: input.autoscroll,
     scrollSpeed: numberInRange(input.scrollSpeed, 42, 5, 200),
-    fontSize: Math.round(numberInRange(input.fontSize, 48, 16, 120)),
+    fontSize: Math.round(numberInRange(input.fontSize, 36, 16, 120)),
     lineHeight: numberInRange(input.lineHeight, 1.35, 1, 2.5),
     textAlign: input.textAlign,
     theme: input.theme,

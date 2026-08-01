@@ -9,16 +9,25 @@ const { t } = useTranslate('ShortcutPreferences')
 const preferencesStore = usePreferencesStore()
 const shortcutErrors = ref<Record<string, string>>({})
 
-const shortcutDefinitions = [
+const recordingDefinitions = [
   { id: 'hud.startStopRecording', label: () => t('startStopRecording'), description: () => t('startStopRecordingDesc') },
   { id: 'hud.playPause', label: () => t('pauseResume'), description: () => t('pauseResumeDesc') },
   { id: 'hud.toggleMic', label: () => t('micOnOff'), description: () => t('micOnOffDesc') },
   { id: 'hud.toggleCamera', label: () => t('cameraOnOff'), description: () => t('cameraOnOffDesc') },
   { id: 'hud.toggleSystemAudio', label: () => t('systemAudioOnOff'), description: () => t('systemAudioOnOffDesc') },
+]
+
+const teleprompterDefinitions = [
   { id: 'teleprompter.toggleVisibility', label: () => t('teleprompterVisibility'), description: () => t('teleprompterVisibilityDesc') },
   { id: 'teleprompter.toggleAutoscroll', label: () => t('teleprompterAutoscroll'), description: () => t('teleprompterAutoscrollDesc') },
   { id: 'teleprompter.nextLine', label: () => t('teleprompterNextLine'), description: () => t('teleprompterNextLineDesc') },
   { id: 'teleprompter.previousLine', label: () => t('teleprompterPreviousLine'), description: () => t('teleprompterPreviousLineDesc') },
+]
+
+const shortcutDefinitions = [...recordingDefinitions, ...teleprompterDefinitions]
+const shortcutGroups = [
+  { id: 'recording', label: () => t('recordingCategory'), definitions: recordingDefinitions },
+  { id: 'teleprompter', label: () => t('teleprompterCategory'), definitions: teleprompterDefinitions },
 ]
 
 const defaultShortcuts: Record<string, string> = {
@@ -69,7 +78,8 @@ const updateShortcut = async (id: string, keys: string) => {
   if (hasConflict) return
 
   const currentShortcuts = preferencesStore.settings?.shortcuts || {}
-  const existing = currentShortcuts[id] || { scope: 'global', category: 'hud' }
+  const category = id.startsWith('teleprompter.') ? 'teleprompter' : 'hud'
+  const existing = currentShortcuts[id] || { scope: 'global', category }
 
   if (existing.keys === keys) {
     // If setting to same value, clear any error and return cleanly
@@ -106,24 +116,23 @@ const resetShortcut = async (id: string) => {
 
 <template>
   <div class="shortcut-preferences">
-    <div
-      v-for="item in shortcutDefinitions"
-      :key="item.id"
-      class="shortcut-row"
-    >
-      <div class="shortcut-info">
-        <span class="shortcut-label">{{ item.label() }}</span>
-        <span class="shortcut-desc">{{ item.description() }}</span>
+    <section v-for="group in shortcutGroups" :key="group.id" class="shortcut-group">
+      <h3 class="shortcut-group-title">{{ group.label() }}</h3>
+      <div v-for="item in group.definitions" :key="item.id" class="shortcut-row">
+        <div class="shortcut-info">
+          <span class="shortcut-label">{{ item.label() }}</span>
+          <span class="shortcut-desc">{{ item.description() }}</span>
+        </div>
+        <div class="shortcut-input-container">
+          <ShortcutInput
+            :model-value="getShortcutValue(item.id)"
+            :error="shortcutErrors[item.id]"
+            @update:model-value="updateShortcut(item.id, $event)"
+            @reset="resetShortcut(item.id)"
+          />
+        </div>
       </div>
-      <div class="shortcut-input-container">
-        <ShortcutInput
-          :model-value="getShortcutValue(item.id)"
-          :error="shortcutErrors[item.id]"
-          @update:model-value="updateShortcut(item.id, $event)"
-          @reset="resetShortcut(item.id)"
-        />
-      </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -131,8 +140,22 @@ const resetShortcut = async (id: string) => {
 .shortcut-preferences {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 18px;
   width: 100%;
+}
+
+.shortcut-group + .shortcut-group {
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.shortcut-group-title {
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .shortcut-row {
@@ -140,10 +163,9 @@ const resetShortcut = async (id: string) => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 10px;
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  min-height: 42px;
+  padding: 7px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
 }
 
 .shortcut-info {

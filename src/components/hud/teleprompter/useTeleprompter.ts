@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { capture } from '~/api/capture'
-import type { TeleprompterDocument, TeleprompterSessionContext } from './teleprompter-types'
+import type { TeleprompterDocument, TeleprompterSessionContext, TeleprompterSettings } from './teleprompter-types'
 import { clampTeleprompterLine, createDefaultTeleprompterDocument, splitTeleprompterLines } from './teleprompter-types'
 
 const saveDelay = 350
@@ -17,7 +17,47 @@ export function useTeleprompter() {
   let frame: number | null = null
   let lastFrameAt = 0
   let saveTimer: ReturnType<typeof setTimeout> | null = null
+  let preferencesSaveTimer: ReturnType<typeof setTimeout> | null = null
   let lineTimer: ReturnType<typeof setTimeout> | null = null
+  let settingsRevision = 0
+
+  const settingsFromDocument = (): TeleprompterSettings => ({
+    mode: document.value.mode,
+    autoscroll: document.value.autoscroll,
+    scrollSpeed: document.value.scrollSpeed,
+    fontSize: document.value.fontSize,
+    lineHeight: document.value.lineHeight,
+    textAlign: document.value.textAlign,
+    theme: document.value.theme,
+  })
+
+  const storedSettings = (value: unknown): Partial<TeleprompterSettings> => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+    const input = value as Record<string, unknown>
+    const patch: Partial<TeleprompterSettings> = {}
+    if (input.mode === 'continuous' || input.mode === 'line-by-line') patch.mode = input.mode
+    if (typeof input.autoscroll === 'boolean') patch.autoscroll = input.autoscroll
+    if (typeof input.scrollSpeed === 'number' && Number.isFinite(input.scrollSpeed)) patch.scrollSpeed = Math.max(5, Math.min(200, input.scrollSpeed))
+    if (typeof input.fontSize === 'number' && Number.isFinite(input.fontSize)) patch.fontSize = Math.round(Math.max(16, Math.min(120, input.fontSize)))
+    if (typeof input.lineHeight === 'number' && Number.isFinite(input.lineHeight)) patch.lineHeight = Math.max(1, Math.min(2.5, input.lineHeight))
+    if (input.textAlign === 'left' || input.textAlign === 'center') patch.textAlign = input.textAlign
+    if (input.theme === 'system' || input.theme === 'light' || input.theme === 'dark') patch.theme = input.theme
+    return patch
+  }
+
+  const loadPreferences = async () => {
+    if (typeof capture.getPreferences !== 'function') return
+    const revisionAtStart = settingsRevision
+    try {
+      const preferences = await capture.getPreferences()
+      if (settingsRevision !== revisionAtStart) return
+      document.value = { ...document.value, ...storedSettings(preferences.extras?.teleprompterSettings) }
+    } catch {
+      // Preferences are optional for the standalone teleprompter window.
+    }
+  }
+
+  const preferencesReady = loadPreferences()
 
   const cancelFrame = () => { if (frame !== null) window.cancelAnimationFrame(frame); frame = null; lastFrameAt = 0 }
   const cancelLineTimer = () => { if (lineTimer !== null) window.clearTimeout(lineTimer); lineTimer = null }
@@ -39,8 +79,26 @@ export function useTeleprompter() {
     saveTimer = setTimeout(() => { saveTimer = null; void save() }, saveDelay)
   }
 
+  const savePreferences = async () => {
+    if (typeof capture.updatePreferences !== 'function') return
+    try {
+      await capture.updatePreferences({ extras: { teleprompterSettings: settingsFromDocument() } })
+    } catch {
+      // A failed global preference write must not hide a valid session document.
+    }
+  }
+
+  const schedulePreferencesSave = () => {
+    if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer)
+    preferencesSaveTimer = setTimeout(() => { preferencesSaveTimer = null; void savePreferences() }, saveDelay)
+  }
+
   const updateDocument = (patch: Partial<Omit<TeleprompterDocument, 'schemaVersion' | 'updatedAtUtc'>>) => {
     document.value = { ...document.value, ...patch, updatedAtUtc: new Date().toISOString() }
+    if (Object.keys(patch).some((key) => key !== 'text')) {
+      settingsRevision += 1
+      schedulePreferencesSave()
+    }
     scheduleSave()
   }
 
@@ -99,6 +157,7 @@ export function useTeleprompter() {
   }
 
   const applySession = async (context: TeleprompterSessionContext | null) => {
+    await preferencesReady
     session.value = context
     error.value = ''
     activeLine.value = 0
@@ -127,7 +186,14 @@ export function useTeleprompter() {
   watch(() => lines.value.length, () => { activeLine.value = clampTeleprompterLine(activeLine.value, lines.value.length); startAutoscroll() })
   watch(() => document.value.autoscroll, startAutoscroll)
   watch(() => document.value.scrollSpeed, startAutoscroll)
-  onBeforeUnmount(() => { cancelFrame(); cancelLineTimer(); if (saveTimer) clearTimeout(saveTimer); void save() })
+  onBeforeUnmount(() => {
+    cancelFrame()
+    cancelLineTimer()
+    if (saveTimer) clearTimeout(saveTimer)
+    if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer)
+    void save()
+    void savePreferences()
+  })
 
   return { document, session, lines, activeLine, isEditing, isPaused, error, displayRef, setDisplayElement, updateDocument, applySession, handleShortcut, nextLine, previousLine, toggleAutoscroll, togglePause, save }
 }

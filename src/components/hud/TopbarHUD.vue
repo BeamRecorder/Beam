@@ -43,6 +43,10 @@ const handlePointerMove = (event: PointerEvent) => {
     const distance = Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY);
     if (distance < dragThreshold) return;
     isDragging.value = true;
+    // Do not capture the pointer for a click. Electron can report tiny
+    // synthetic movements on transparent frameless windows; capturing on
+    // pointerdown turns those movements into an accidental native drag.
+    dragElement?.setPointerCapture?.(event.pointerId);
     window.capture?.dragStart();
   }
   drag();
@@ -68,7 +72,6 @@ const startDrag = (event: PointerEvent) => {
   dragPointerId = event.pointerId;
   dragStartX = event.clientX;
   dragStartY = event.clientY;
-  dragElement?.setPointerCapture?.(event.pointerId);
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", stopDrag, { once: true });
   window.addEventListener("pointercancel", stopDrag, { once: true });

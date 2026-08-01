@@ -39,6 +39,7 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
           :icon="ChevronLeft"
           :aria-label="t('back')"
           :tooltip="t('back')"
+          tooltip-position="bottom"
           @click="isSettingsOpen = false"
         />
         <div class="teleprompter-title">{{ isSettingsOpen ? t('settings') : t('title') }}</div>
@@ -52,6 +53,7 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
           :icon="state.isEditing.value ? Eye : Edit3"
           :aria-label="state.isEditing.value ? t('preview') : t('edit')"
           :tooltip="state.isEditing.value ? t('preview') : t('edit')"
+          tooltip-position="bottom"
           @click="state.isEditing.value = !state.isEditing.value"
         />
         <Button
@@ -62,9 +64,10 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
           :icon="Settings"
           :aria-label="t('settings')"
           :tooltip="t('settings')"
+          tooltip-position="bottom"
           @click="isSettingsOpen = true"
         />
-        <Button variant="ghost" size="sm" icon-only :icon="Minus" :aria-label="t('hide')" :tooltip="t('hide')" @click="hide" />
+        <Button variant="ghost" size="sm" icon-only :icon="Minus" :aria-label="t('hide')" :tooltip="t('hide')" tooltip-position="bottom" @click="hide" />
       </div>
     </header>
     <Transition name="teleprompter-view" mode="out-in">
@@ -75,7 +78,7 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
           <BigSlider :model-value="state.document.value.scrollSpeed" :min="5" :max="200" :step="1" :label="t('speed')" :format-value="(value) => String(value) + ' px/s'" @update:model-value="state.updateDocument({ scrollSpeed: $event })" />
           <BigSlider :model-value="state.document.value.fontSize" :min="16" :max="120" :step="1" :label="t('fontSize')" :format-value="(value) => String(value) + 'px'" @update:model-value="state.updateDocument({ fontSize: $event })" />
           <BigSlider :model-value="state.document.value.lineHeight" :min="1" :max="2.5" :step="0.05" :label="t('lineHeight')" @update:model-value="state.updateDocument({ lineHeight: $event })" />
-          <div class="setting-row"><span>{{ t('align') }}</span><div class="align-actions"><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'left' }" :aria-label="t('alignLeft')" :icon="AlignLeft" @click="state.updateDocument({ textAlign: 'left' })" /><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'center' }" :aria-label="t('alignCenter')" :icon="AlignCenter" @click="state.updateDocument({ textAlign: 'center' })" /></div></div>
+          <div class="setting-row"><span>{{ t('align') }}</span><div class="align-actions"><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'left' }" :aria-label="t('alignLeft')" :tooltip="t('alignLeft')" tooltip-position="bottom" :icon="AlignLeft" @click="state.updateDocument({ textAlign: 'left' })" /><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'center' }" :aria-label="t('alignCenter')" :tooltip="t('alignCenter')" tooltip-position="bottom" :icon="AlignCenter" @click="state.updateDocument({ textAlign: 'center' })" /></div></div>
           <div class="setting-row"><span>{{ t('theme') }}</span><Select :model-value="state.document.value.theme" :options="themeOptions" @update:model-value="setTheme" /></div>
         </div>
       </section>
@@ -94,6 +97,7 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
               :icon="ChevronLeft"
               :aria-label="t('previousLine')"
               :tooltip="t('previousLine')"
+              tooltip-position="bottom"
               :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value <= 0"
               @click="state.previousLine"
             />
@@ -111,6 +115,7 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
             :icon="isAutoscrolling ? Pause : Play"
             :aria-label="isAutoscrolling ? t('pause') : t('resume')"
             :tooltip="isAutoscrolling ? t('pause') : t('resume')"
+            tooltip-position="bottom"
             @click="state.togglePause"
           />
           <div class="player-side player-side-right">
@@ -121,6 +126,7 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
               :icon="ChevronRight"
               :aria-label="t('nextLine')"
               :tooltip="t('nextLine')"
+              tooltip-position="bottom"
               :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value >= state.lines.value.length - 1"
               @click="state.nextLine"
             />
@@ -146,9 +152,10 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
 .settings-form { width: min(100%, 520px); display: flex; flex-direction: column; gap: 16px; margin: 0 auto; }
 .editor-panel { padding: 12px 16px 0; background: var(--teleprompter-bg); }
 .teleprompter-error { margin: 0; padding: 8px 16px; background: var(--color-error-light); color: var(--color-error); font-size: 12px; }
-.teleprompter-display { flex: 1; overflow-y: auto; padding: 34px 11%; scroll-behavior: smooth; font-size: var(--teleprompter-font-size); line-height: var(--teleprompter-line-height); color: var(--teleprompter-text); }
+.teleprompter-display { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -ms-overflow-style: none; padding: 34px 11%; scroll-behavior: smooth; font-size: var(--teleprompter-font-size); line-height: var(--teleprompter-line-height); color: var(--teleprompter-text); }
+.teleprompter-display::-webkit-scrollbar { width: 0; height: 0; }
 .teleprompter-display.is-centered { text-align: center; }
-.teleprompter-line { margin: 0 0 0.55em; white-space: pre-wrap; transition: color 0.2s, opacity 0.2s; }
+.teleprompter-line { max-width: 100%; margin: 0 0 0.55em; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; transition: color 0.2s, opacity 0.2s; }
 .teleprompter-line.past { color: var(--text-muted); opacity: 0.55; }
 .teleprompter-line.active { color: var(--color-primary); font-weight: 700; }
 .player-side { display: flex; align-items: center; gap: 8px; min-width: 0; }

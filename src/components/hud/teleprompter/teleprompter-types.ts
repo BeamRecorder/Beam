@@ -15,6 +15,11 @@ export interface TeleprompterDocument {
   updatedAtUtc: string
 }
 
+export type TeleprompterSettings = Pick<
+  TeleprompterDocument,
+  'mode' | 'autoscroll' | 'scrollSpeed' | 'fontSize' | 'lineHeight' | 'textAlign' | 'theme'
+>
+
 export interface TeleprompterSessionContext {
   projectId: string
   sessionId: string
@@ -32,7 +37,7 @@ export const TELEPROMPTER_DEFAULTS: Omit<TeleprompterDocument, 'updatedAtUtc'> =
   mode: 'continuous',
   autoscroll: true,
   scrollSpeed: 42,
-  fontSize: 48,
+  fontSize: 36,
   lineHeight: 1.35,
   textAlign: 'left',
   theme: 'system',
