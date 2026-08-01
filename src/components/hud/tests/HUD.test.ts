@@ -18,18 +18,18 @@ vi.mock('../../../api/system-audio-recorder', async () => {
   const systemAudio = await import('./system-audio-recorder.mock')
   return { BrowserSystemAudioRecorder: systemAudio.BrowserSystemAudioRecorder, recordSystemAudioFailure: systemAudio.recordSystemAudioFailure, systemAudioSource: systemAudio.systemAudioSource }
 })
-vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Close" @click="$emit(\'close\')"/></header>' } }))
+vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Close" @click="$emit(\'close\')"/><button aria-label="Minimize" @click="$emit(\'minimize\')"/><button aria-label="Teleprompter" @click="$emit(\'open-teleprompter\')"/></header>' } }))
 import HUD from '../HUD.vue'
 
 const catalog = { sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }], capabilities: { systemAudio: true } }
 const stubs = {
   Select: {
     props: ['modelValue', 'options'],
-    template: '<div class="select"><button class="select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button v-for="option in options" :key="option.value" class="select-option" @click="$emit(\'update:modelValue\', option.value)">{{ option.label }}</button></div>',
+    template: '<div class="select"><button class="select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button class="select-close" @click="$emit(\'toggle\', false)"/><button v-for="option in options" :key="option.value" class="select-option" @click="$emit(\'update:modelValue\', option.value)">{{ option.label }}</button></div>',
   },
   WindowSelect: {
     props: ['modelValue', 'options'],
-    template: '<div class="window-select"><button class="window-select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button v-for="option in options" :key="option.id" class="window-option" @click="$emit(\'update:modelValue\', option.id)">{{ option.name }}</button></div>',
+    template: '<div class="window-select"><button class="window-select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button class="window-select-close" @click="$emit(\'toggle\', false)"/><button v-for="option in options" :key="option.id" class="window-option" @click="$emit(\'update:modelValue\', option.id)">{{ option.name }}</button></div>',
   },
   ProjectPicker: { template: '<div class="project-picker-stub" />' },
   HudPreferences: { template: '<div class="preferences-stub"><button @click="$emit(\'close\')">Return</button></div>' },
@@ -149,5 +149,50 @@ describe('HUD', () => {
     await ready()
     expect(capture.stop).toHaveBeenCalledOnce()
     expect(wrapper.emitted('stop-recording')).toEqual([[{ state: 'stopped', sessionId: 'session-1' }]])
+  })
+
+  it('handles empty window catalogs, dropdown resize transitions, and native topbar controls', async () => {
+    capture.getPreferences.mockResolvedValueOnce({ schemaVersion: 2, theme: 'system', recordingBar: { visibility: 'auto-fade' }, devices: { cameraId: 'missing', micId: 'missing', systemAudioMode: 'invalid' }, shortcuts: {}, backgroundPresets: { colors: [], gradients: [] }, extras: { screenRegion: { x: 2, y: 2, width: 0, height: 0 } } })
+    capture.discover.mockResolvedValueOnce({ sources: [{ id: 'window:abc', kind: 'window', label: 'Only window' }], capabilities: {} })
+    capture.getSources.mockResolvedValue([])
+    const wrapper = mount(HUD, { global: { stubs } }); await ready()
+    await wrapper.findAll('button').find((button) => button.text() === 'Window')?.trigger('click')
+    await ready()
+    expect(wrapper.find('.window-select').exists()).toBe(true)
+    expect(wrapper.findAll('.window-option')).toHaveLength(0)
+    await wrapper.get('.window-select-control').trigger('click')
+    await wrapper.get('.window-select-close').trigger('click')
+    vi.advanceTimersByTime(220)
+    await wrapper.get('[aria-label="Teleprompter"]').trigger('click')
+    expect(capture.showTeleprompter).toHaveBeenCalledOnce()
+    await wrapper.get('[aria-label="Minimize"]').trigger('click')
+    vi.advanceTimersByTime(160)
+    expect(capture.minimize).toHaveBeenCalledOnce()
+    expect(capture.setSize).toHaveBeenCalled()
+  })
+
+  it('leaves an unmatched native window id undefined in the emitted configuration', async () => {
+    capture.discover.mockResolvedValueOnce({ sources: [{ id: 'window:abc', kind: 'window', label: 'Editor' }], capabilities: { systemAudio: false } })
+    capture.getSources.mockResolvedValue([{ id: 'window:123', name: 'Preview', thumbnail: '', appIcon: null }])
+    const wrapper = mount(HUD, { global: { stubs } }); await ready()
+    await wrapper.findAll('button').find((button) => button.text() === 'Window')?.trigger('click')
+    await ready()
+    await wrapper.get('.window-option').trigger('click')
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!
+    await record.trigger('click')
+    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: undefined })])
+  })
+
+  it('keeps a failed active stop visible as an error and resets transient dropdown state', async () => {
+    capture.stop.mockRejectedValueOnce(new Error('native stop failed'))
+    const wrapper = mount(HUD, { global: { stubs } }); await ready()
+    ;(wrapper.vm as any).$.setupState.isRecording = true
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find((button) => button.text().includes('Stop ('))!.trigger('click')
+    await ready()
+    expect(wrapper.get('[role="alert"]').text()).toContain('native stop failed')
+    await wrapper.get('.select-control').trigger('click')
+    await wrapper.get('.select-close').trigger('click')
+    expect(capture.setSize).toHaveBeenCalled()
   })
 })
