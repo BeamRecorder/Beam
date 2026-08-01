@@ -6,3 +6,10 @@ declare module 'virtual:public-background-media' {
   const wallpapers: { images: string[]; videos: string[] }
   export default wallpapers
 }
+
+declare module '*.vue' {
+  import type { DefineComponent } from 'vue'
+
+  const component: DefineComponent<Record<string, unknown>, Record<string, unknown>, unknown>
+  export default component
+}

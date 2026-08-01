@@ -144,7 +144,7 @@ describe('HUD', () => {
     const wrapper = mount(HUD, { global: { stubs } }); await ready()
     ;(wrapper.vm as any).$.setupState.isRecording = true
     await wrapper.vm.$nextTick()
-    const record = wrapper.findAll('button').find((button) => button.text().includes('Stop Recording'))!
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Stop ('))!
     await record.trigger('click')
     await ready()
     expect(capture.stop).toHaveBeenCalledOnce()

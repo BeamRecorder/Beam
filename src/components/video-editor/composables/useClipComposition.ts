@@ -174,6 +174,28 @@ export function useClipComposition(options: {
     if (asset.kind !== "image" && nativeDuration <= 0) throw new Error("Impossible de lire la durée du média importé.");
     const duration = asset.kind === "image" ? 5_000 : nativeDuration;
     const normalizedAsset = { ...asset, durationMs: duration };
+
+    if (asset.kind === "audio") {
+      const audio: AudioClip = {
+        id: crypto.randomUUID(),
+        kind: "audio",
+        name: asset.name,
+        assetId: asset.id,
+        role: "imported",
+        timelineStartMs: startMs,
+        timelineDurationMs: duration,
+        sourceInMs: 0,
+        sourceDurationMs: duration,
+        playbackRate: 1,
+        enabled: true,
+        order: composition.value.clips.length,
+        volume: 100,
+      };
+      composition.value = addClip(composition.value, audio, normalizedAsset);
+      selectClip(audio.id);
+      return;
+    }
+
     const groupId = asset.kind === "video" && await videoHasAudio(asset) ? crypto.randomUUID() : undefined;
     const visual: VisualClip = {
       id: crypto.randomUUID(),
