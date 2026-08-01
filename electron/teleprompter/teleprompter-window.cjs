@@ -27,6 +27,7 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
   let window = null
   let currentSession = null
   let ready = false
+  let rendererReady = false
   let requestedVisible = false
   let persistTimer = null
 
@@ -63,7 +64,8 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
   }
 
   const sendSession = () => {
-    if (window && !window.isDestroyed() && window.webContents.getURL()) window.webContents.send('teleprompter:session', currentSession)
+    if (!ready || !rendererReady || !window || window.isDestroyed()) return
+    window.webContents.send('teleprompter:session', currentSession)
   }
 
   const ensure = () => {
@@ -105,12 +107,13 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
     if (isContentProtectionSupported(process.platform) && typeof window.setContentProtection === 'function') window.setContentProtection(true)
     window.setAlwaysOnTop(true, 'floating')
     ready = false
+    rendererReady = false
     window.on('show', notifyVisibility)
     window.on('hide', notifyVisibility)
     window.on('move', scheduleBoundsPersistence)
     window.on('resize', scheduleBoundsPersistence)
     window.on('close', flushBounds)
-    window.on('closed', () => { ready = false; requestedVisible = false; window = null; notifyVisibility() })
+    window.on('closed', () => { ready = false; rendererReady = false; requestedVisible = false; window = null; notifyVisibility() })
     window.webContents.once('did-finish-load', () => {
       ready = true
       sendSession()
@@ -147,6 +150,12 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
     currentSession = context === null ? null : (validContext(context) ? { projectId: context.projectId, sessionId: context.sessionId } : null)
     sendSession()
   }
+  const markRendererReady = () => {
+    if (!window || window.isDestroyed()) return false
+    rendererReady = true
+    sendSession()
+    return true
+  }
   const handleShortcut = (id) => {
     if (id === 'teleprompter.toggleVisibility') return toggle()
     if (!['teleprompter.toggleAutoscroll', 'teleprompter.nextLine', 'teleprompter.previousLine'].includes(id)) return false
@@ -162,6 +171,7 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
     hide,
     toggle,
     setSession,
+    markRendererReady,
     handleShortcut,
     isVisible: () => Boolean(window && !window.isDestroyed() && window.isVisible()),
     bounds: () => window && !window.isDestroyed() ? window.getBounds() : null,

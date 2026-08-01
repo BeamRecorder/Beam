@@ -69,6 +69,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   hideTeleprompter(): void
   toggleTeleprompterVisibility(): void
   setTeleprompterSession(context: TeleprompterSessionContext | null): void
+  notifyTeleprompterReady?: () => void
   onTeleprompterShortcut(listener: (id: string) => void): () => void
   onTeleprompterSession(listener: (context: TeleprompterSessionContext | null) => void): () => void
   onTeleprompterVisibility(listener: (visible: boolean) => void): () => void

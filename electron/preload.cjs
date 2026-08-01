@@ -85,6 +85,7 @@ contextBridge.exposeInMainWorld(
     hideTeleprompter: () => ipcRenderer.send("teleprompter:hide"),
     toggleTeleprompterVisibility: () => ipcRenderer.send("teleprompter:toggle-visibility"),
     setTeleprompterSession: (context) => ipcRenderer.send("teleprompter:set-session", context),
+    notifyTeleprompterReady: () => ipcRenderer.send("teleprompter:ready"),
     onTeleprompterShortcut: (listener) => {
       const callback = (_event, id) => listener(id);
       ipcRenderer.on("teleprompter:shortcut", callback);

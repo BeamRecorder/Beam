@@ -35,6 +35,14 @@ describe('Teleprompter', () => {
     expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(['First line', 'Second line'])
   })
 
+  it('switches from editing to preview when recording starts', async () => {
+    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } })
+    window.dispatchEvent(new CustomEvent('teleprompter-session', { detail: { projectId: 'project-1', sessionId: 'session-1' } }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Edit"]').exists()).toBe(true)
+  })
+
   it('opens settings as a dedicated view and returns to the reader', async () => {
     const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } })
     await wrapper.get('[aria-label="Settings"]').trigger('click')

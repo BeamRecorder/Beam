@@ -147,6 +147,7 @@ describe("App", () => {
     await wrapper.get(".start").trigger("click");
     await settle();
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith("recorder");
+    expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(true);
     expect(mocks.controller.recording.start).toHaveBeenCalled();
 
     await wrapper.get(".pause").trigger("click");
