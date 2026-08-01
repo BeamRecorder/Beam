@@ -50,7 +50,10 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
       point,
       geometry,
     )
-    win.setBounds({ x: position.x, y: position.y, width: dragStartSize[0], height: dragStartSize[1] })
+    // Dragging must only move the native window. Reapplying full bounds on
+    // every pointer update can make Chromium/Electron recalculate the size
+    // of transparent HUD windows, especially across DPI/display boundaries.
+    win.setPosition(position.x, position.y)
     controllerForWindow(win)?.rememberRecorderPosition()
   }
 

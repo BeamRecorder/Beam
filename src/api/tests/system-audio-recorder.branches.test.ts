@@ -177,6 +177,19 @@ describe('BrowserSystemAudioRecorder', () => {
     expect(fatal).toHaveBeenCalledTimes(2);
   });
 
+  it('pauses and resumes as separate audio segments', async () => {
+    vi.spyOn(performance, 'now').mockReturnValue(100);
+    const recorder = await BrowserSystemAudioRecorder.request();
+    await recorder.start('session-pause');
+    await recorder.pause();
+    await recorder.resume('session-pause');
+    await recorder.stop();
+
+    expect(capture.beginSystemAudioSegment).toHaveBeenCalledTimes(2);
+    expect(capture.finalizeSystemAudioSegment).toHaveBeenCalledTimes(2);
+    expect(FakeMediaRecorder.instances).toHaveLength(2);
+  });
+
   it('converts rejected chunk values to Error and persists an explicit failure', async () => {
     const recorder = await BrowserSystemAudioRecorder.request();
     const fatal = vi.fn();

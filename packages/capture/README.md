@@ -16,4 +16,4 @@ cargo run -p capture --bin capture-smoke -- full
 
 Windows recording uses WGC H.264 and Win32 cursor sampling. macOS uses ScreenCaptureKit for display/window/application video plus CoreGraphics for cursor events. Webcams, microphones, and system audio are captured by Chromium and stored by Electron as WebM Opus/VP8 sidecars. Electron desktop loopback supplies system audio through `getDisplayMedia`; macOS 14.2+ requires `NSAudioCaptureUsageDescription`, and macOS 13+ is required for browser desktop audio capture. Direct ScreenCaptureKit MP4 recording requires macOS 15 or newer.
 
-Linux builds with hardware features require ALSA, PipeWire, SPA and udev development packages. The CI workflow installs these packages.
+Linux native recording is currently unavailable; Linux source discovery and permission metadata remain available for the Electron fallback and future native backend work.

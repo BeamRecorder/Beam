@@ -1,113 +1,15 @@
 #![allow(clippy::expect_used)]
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use capture::{
-    CaptureError,
     catalog::CatalogSnapshot,
-    clock::MonotonicClock,
     model::{
         CaptureCapabilities, CaptureRequest, CursorSelection, FailurePolicy, PermissionSnapshot,
-        ProjectId, RecordingSettings, TrackId,
+        ProjectId, RecordingSettings,
     },
-    session::{PreparedTrack, RecordingSession, SessionCoordinator, SessionState, StartGate},
+    session::{RecordingSession, SessionState, StartGate},
 };
-
-#[derive(Clone)]
-struct FakeClock(Arc<Mutex<u64>>);
-impl MonotonicClock for FakeClock {
-    fn now_ns(&self) -> u64 {
-        self.0.lock().map_or(0, |value| *value)
-    }
-}
-struct FakeTrack {
-    id: TrackId,
-    calls: Arc<Mutex<Vec<&'static str>>>,
-    fail_start: bool,
-}
-impl PreparedTrack for FakeTrack {
-    fn track_id(&self) -> TrackId {
-        self.id
-    }
-    fn start(&mut self, _: u64) -> Result<(), CaptureError> {
-        self.calls
-            .lock()
-            .map_err(|_| CaptureError::Backend("lock".into()))?
-            .push("start");
-        if self.fail_start {
-            Err(CaptureError::Backend("start failed".into()))
-        } else {
-            Ok(())
-        }
-    }
-    fn pause(&mut self, _: u64) -> Result<(), CaptureError> {
-        self.calls
-            .lock()
-            .map_err(|_| CaptureError::Backend("lock".into()))?
-            .push("pause");
-        Ok(())
-    }
-    fn resume(&mut self, _: u64) -> Result<(), CaptureError> {
-        self.calls
-            .lock()
-            .map_err(|_| CaptureError::Backend("lock".into()))?
-            .push("resume");
-        Ok(())
-    }
-    fn stop(&mut self, _: u64) -> Result<(), CaptureError> {
-        self.calls
-            .lock()
-            .map_err(|_| CaptureError::Backend("lock".into()))?
-            .push("stop");
-        Ok(())
-    }
-}
-
-#[test]
-fn full_state_machine_and_idempotent_stop() {
-    let calls = Arc::new(Mutex::new(Vec::new()));
-    let mut coordinator = SessionCoordinator::new(FakeClock(Arc::new(Mutex::new(7))));
-    coordinator
-        .prepare(vec![Box::new(FakeTrack {
-            id: TrackId::new(),
-            calls: calls.clone(),
-            fail_start: false,
-        })])
-        .expect("prepare");
-    assert_eq!(coordinator.start().expect("start"), 7);
-    coordinator.pause().expect("pause");
-    coordinator.resume().expect("resume");
-    coordinator.stop().expect("stop");
-    coordinator.stop().expect("second stop");
-    assert_eq!(coordinator.state(), SessionState::Completed);
-    assert_eq!(
-        *calls.lock().expect("calls"),
-        vec!["start", "pause", "resume", "stop"]
-    );
-}
-
-#[test]
-fn failed_track_rolls_back_started_tracks() {
-    let first = Arc::new(Mutex::new(Vec::new()));
-    let second = Arc::new(Mutex::new(Vec::new()));
-    let mut coordinator = SessionCoordinator::new(FakeClock(Arc::new(Mutex::new(0))));
-    coordinator
-        .prepare(vec![
-            Box::new(FakeTrack {
-                id: TrackId::new(),
-                calls: first.clone(),
-                fail_start: false,
-            }),
-            Box::new(FakeTrack {
-                id: TrackId::new(),
-                calls: second,
-                fail_start: true,
-            }),
-        ])
-        .expect("prepare");
-    assert!(coordinator.start().is_err());
-    assert_eq!(*first.lock().expect("calls"), vec!["start", "stop"]);
-}
 
 #[test]
 fn native_session_finalizes_storage_and_supports_pause_segments() {

@@ -201,8 +201,8 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
 
   const togglePause = async () => {
     if (!sessionId) return
-    if (phase.value === 'recording') { await Promise.all([capture.pause(), camera?.pause(), microphone?.pause()]); clearTimer(); phase.value = 'paused' }
-    else if (phase.value === 'paused') { await Promise.all([capture.resume(), camera?.resume(sessionId), microphone?.resume(sessionId)]); timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100); phase.value = 'recording' }
+    if (phase.value === 'recording') { await Promise.all([capture.pause(), camera?.pause(), microphone?.pause(), systemAudio?.pause()]); clearTimer(); phase.value = 'paused' }
+    else if (phase.value === 'paused') { await Promise.all([capture.resume(), camera?.resume(sessionId), microphone?.resume(sessionId), systemAudio?.resume(sessionId)]); timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100); phase.value = 'recording' }
   }
   const resolveCameraSourceId = async () => {
     if (!configuration) return null

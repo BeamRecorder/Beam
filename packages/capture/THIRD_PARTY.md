@@ -14,7 +14,6 @@ Versions are locked in `Cargo.lock`; licenses below describe direct dependencies
 | screencapturekit | macOS ScreenCaptureKit bindings | MIT OR Apache-2.0 |
 | core-graphics / objc2-av-foundation | macOS cursor events and permission state | MIT OR Apache-2.0 |
 | fs2 | Free-space validation | MIT OR Apache-2.0 |
-| pipewire / ashpd / x11rb | Linux capture, portal and X11 | MIT-compatible ecosystem licenses |
 | tracing | Structured diagnostics | MIT |
 
 Transitive licenses must be reviewed from `Cargo.lock` before release distribution.

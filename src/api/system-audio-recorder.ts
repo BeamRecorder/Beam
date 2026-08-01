@@ -57,6 +57,8 @@ export class BrowserSystemAudioRecorder {
 
   onFatal(handler: (error: Error) => void) { this.fatalHandler = handler }
   async start(sessionId: string) { this.startedAt = performance.now(); await this.startSegment(sessionId, 0) }
+  async pause() { await this.finishSegment(this.nowNs()) }
+  async resume(sessionId: string) { await this.startSegment(sessionId, this.nowNs()) }
   async stop() { if (this.recorder) await this.finishSegment(this.nowNs()); this.release() }
   async fail(sessionId: string, reason: string) {
     try { if (this.recorder) await this.finishSegment(this.nowNs()) } catch { /* The terminal error below remains authoritative. */ }
@@ -66,6 +68,7 @@ export class BrowserSystemAudioRecorder {
 
   private async startSegment(sessionId: string, startNs: number) {
     if (this.stopped) throw new Error('System audio recording has already stopped.')
+    if (this.recorder) throw new Error('System audio segment is already recording.')
     const opened = await api().beginSystemAudioSegment({ sessionId, sourceId: this.sourceId, format: this.format, startNs })
     this.jobId = opened.jobId; this.sequence = 0; this.segmentStartNs = startNs; this.writes = []; this.writeTail = Promise.resolve()
     const recorder = new MediaRecorder(this.stream, { mimeType: MIME_TYPE, audioBitsPerSecond: 128_000 })

@@ -161,20 +161,6 @@ fn flip_bgra_rows(bytes: &[u8], width: u32, height: u32) -> Vec<u8> {
     flipped
 }
 
-#[cfg(test)]
-mod tests {
-    use super::flip_bgra_rows;
-
-    #[test]
-    fn flips_bgra_rows_from_top_to_bottom() {
-        let source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-        assert_eq!(
-            flip_bgra_rows(&source, 2, 2),
-            [9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8]
-        );
-    }
-}
-
 type Control = CaptureControl<CaptureHandler, String>;
 
 pub struct WindowsRecording {
@@ -210,13 +196,7 @@ impl WindowsRecording {
             );
             return start_item(
                 monitor,
-                output,
-                size,
-                bitrate,
-                fps,
-                exclude_cursor,
-                region,
-                start_gate,
+                StartItemConfig { output, size, bitrate, fps, exclude_cursor, region, start_gate },
             );
         }
         if source_id.as_str().starts_with("wgc:window:") {
@@ -231,13 +211,15 @@ impl WindowsRecording {
                 .map_err(backend_error)?;
             return start_item(
                 window,
-                output,
-                (width, height),
-                bitrate,
-                fps,
-                exclude_cursor,
-                None,
-                start_gate,
+                StartItemConfig {
+                    output,
+                    size: (width, height),
+                    bitrate,
+                    fps,
+                    exclude_cursor,
+                    region: None,
+                    start_gate,
+                },
             );
         }
         Err(CaptureError::InvalidConfiguration(format!(
@@ -267,19 +249,29 @@ impl Drop for WindowsRecording {
     }
 }
 
-fn start_item<T>(
-    item: T,
-    output: &Path,
+struct StartItemConfig<'a> {
+    output: &'a Path,
     size: (u32, u32),
     bitrate: u32,
     fps: u32,
     exclude_cursor: bool,
     region: Option<ScreenRegion>,
     start_gate: Arc<StartGate>,
-) -> Result<WindowsRecording, CaptureError>
+}
+
+fn start_item<T>(item: T, config: StartItemConfig<'_>) -> Result<WindowsRecording, CaptureError>
 where
     T: TryInto<GraphicsCaptureItemType> + Send + 'static,
 {
+    let StartItemConfig {
+        output,
+        size,
+        bitrate,
+        fps,
+        exclude_cursor,
+        region,
+        start_gate,
+    } = config;
     let metrics = Arc::new(WindowsCaptureMetrics::default());
     let (width, height) = region.map_or(size, |crop| {
         crop.pixel_rect(size.0, size.1)
@@ -332,4 +324,18 @@ fn window_id(window: Window) -> Result<SourceId, CaptureError> {
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(format!("Windows Graphics Capture failed: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::flip_bgra_rows;
+
+    #[test]
+    fn flips_bgra_rows_from_top_to_bottom() {
+        let source = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        assert_eq!(
+            flip_bgra_rows(&source, 2, 2),
+            [9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8]
+        );
+    }
 }

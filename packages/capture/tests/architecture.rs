@@ -55,9 +55,6 @@ fn native_imports_remain_inside_platform_directories() {
         ("windows::", "/win/"),
         ("windows_capture::", "/win/"),
         ("screencapturekit::", "/mac/"),
-        ("pipewire::", "/linux/"),
-        ("ashpd::", "/linux/"),
-        ("x11rb::", "/linux/"),
     ];
     let mut violations = Vec::new();
     for entry in rust_sources() {

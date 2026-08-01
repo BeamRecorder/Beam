@@ -2,7 +2,7 @@
 
 ## Boundaries
 
-The common model, session clock, state machine, storage and protocol contain no native API types. Native frames cross the backend boundary as opaque handles whenever an encoder can consume them without a CPU copy. `VideoTrackWriter` and `AudioTrackWriter` isolate capture from containers and codecs. Every high-rate producer uses a bounded queue.
+The common model, session clock, state machine, storage and protocol contain no native API types. Platform recorders own their native streams and persist segmented output through the session layer. Every high-rate producer reports bounded metrics and explicit loss.
 
 OS APIs are confined to `win/`, `mac/` and `linux/` directories. The architecture tests enforce these imports and the 500-line source limit. Executables are thin JSON/JSONL adapters over the library.
 
@@ -20,4 +20,4 @@ Pause and resume close and create segments; they do not rewrite earlier media. C
 
 ## Current backend strategy
 
-Windows uses Windows Graphics Capture, the WGC hardware encoder and Win32 cursor sampling. macOS uses ScreenCaptureKit and its VideoToolbox-backed recording output plus CoreGraphics cursor events. Linux uses the XDG ScreenCast portal plus PipeWire, with X11/XFixes as an isolated fallback. Webcams, microphones, and system audio are captured by Chromium with `getUserMedia`/`getDisplayMedia` and `MediaRecorder`; Electron atomically persists their WebM segments beside native tracks. FFmpeg, when used for Linux H.264, is an optional child process and does not appear in public types.
+Windows uses Windows Graphics Capture, the WGC hardware encoder and Win32 cursor sampling. macOS uses ScreenCaptureKit and its VideoToolbox-backed recording output plus CoreGraphics cursor events. Linux currently exposes source and permission metadata only; native session recording is unavailable and recording uses the Electron fallback. Webcams, microphones, and system audio are captured by Chromium with `getUserMedia`/`getDisplayMedia` and `MediaRecorder`; Electron atomically persists their WebM segments beside native tracks.

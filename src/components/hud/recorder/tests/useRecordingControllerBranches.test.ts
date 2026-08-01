@@ -84,10 +84,14 @@ describe("useRecordingController branch behavior", () => {
     expect(controller.phase.value).toBe("paused");
     expect(capture.pause).toHaveBeenCalled();
     expect(camera.pause).toHaveBeenCalled();
+    expect(microphone.pause).toHaveBeenCalled();
+    expect(systemAudio.pause).toHaveBeenCalled();
     await controller.togglePause();
     expect(controller.phase.value).toBe("recording");
     expect(capture.resume).toHaveBeenCalled();
     expect(camera.resume).toHaveBeenCalledWith("session-1");
+    expect(microphone.resume).toHaveBeenCalledWith("session-1");
+    expect(systemAudio.resume).toHaveBeenCalledWith("session-1");
 
     await controller.stop();
     expect(capture.stop).toHaveBeenCalled();

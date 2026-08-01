@@ -161,7 +161,7 @@ fn report_loop(
                         track_id: sampler.track_id,
                         session_ns,
                         lost_units,
-                        reason: "bounded queue saturation or native frame loss".into(),
+                        reason: "native frame loss".into(),
                     },
                 )?;
             }
@@ -305,12 +305,10 @@ fn detect_source_changes(
     }
     events
 }
-
 #[cfg(not(test))]
 fn report_interval() -> std::time::Duration {
     std::time::Duration::from_secs(1)
 }
-
 #[cfg(test)]
 fn report_interval() -> std::time::Duration {
     std::time::Duration::from_millis(20)

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from "vue";
 import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
 import Badge from "~/ui/badge/Badge.vue";
 import Button from "~/ui/button/Button.vue";
@@ -30,58 +29,10 @@ const emit = defineEmits<{
   (event: "close"): void;
 }>();
 
-const isDragging = ref(false);
-let dragElement: HTMLElement | null = null;
-let dragPointerId: number | null = null;
-let dragStartX = 0;
-let dragStartY = 0;
-const dragThreshold = 4;
-const drag = () => window.capture?.drag();
-const handlePointerMove = (event: PointerEvent) => {
-  if (dragPointerId !== event.pointerId) return;
-  if (!isDragging.value) {
-    const distance = Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY);
-    if (distance < dragThreshold) return;
-    isDragging.value = true;
-    // Do not capture the pointer for a click. Electron can report tiny
-    // synthetic movements on transparent frameless windows; capturing on
-    // pointerdown turns those movements into an accidental native drag.
-    dragElement?.setPointerCapture?.(event.pointerId);
-    window.capture?.dragStart();
-  }
-  drag();
-};
-const stopDrag = () => {
-  if (isDragging.value) window.capture?.dragEnd();
-  isDragging.value = false;
-  window.removeEventListener("pointermove", handlePointerMove);
-  window.removeEventListener("pointerup", stopDrag);
-  window.removeEventListener("pointercancel", stopDrag);
-  if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture?.(dragPointerId)) dragElement.releasePointerCapture?.(dragPointerId);
-  dragElement = null;
-  dragPointerId = null;
-  dragStartX = 0;
-  dragStartY = 0;
-};
-const startDrag = (event: PointerEvent) => {
-  if (event.button !== 0) return;
-  const target = event.target instanceof Element ? event.target : null;
-  if (target?.closest("button, a, input, select, textarea, [role='button'], .window-actions")) return;
-  if (isDragging.value) return;
-  dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-  dragPointerId = event.pointerId;
-  dragStartX = event.clientX;
-  dragStartY = event.clientY;
-  window.addEventListener("pointermove", handlePointerMove);
-  window.addEventListener("pointerup", stopDrag, { once: true });
-  window.addEventListener("pointercancel", stopDrag, { once: true });
-};
-
-onBeforeUnmount(stopDrag);
 </script>
 
 <template>
-  <header class="hud-topbar" :class="{ dragging: isDragging }" @pointerdown="startDrag">
+  <header class="hud-topbar">
     <div class="topbar-identity">
       <div v-if="showBack" class="topbar-back-action">
         <Button
@@ -136,15 +87,9 @@ onBeforeUnmount(stopDrag);
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--color-border);
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
   flex-shrink: 0;
   cursor: grab;
-}
-.hud-topbar:active {
-  cursor: grabbing;
-}
-.hud-topbar.dragging {
-  cursor: grabbing;
 }
 .topbar-identity,
 .window-actions {
@@ -152,7 +97,11 @@ onBeforeUnmount(stopDrag);
   align-items: center;
   gap: 8px;
 }
+.topbar-identity {
+  -webkit-app-region: drag;
+}
 .settings-action { position: relative; display: inline-flex; }
+.settings-action { -webkit-app-region: no-drag; }
 .window-actions {
   gap: 4px;
   -webkit-app-region: no-drag;

@@ -206,7 +206,7 @@ pub(super) fn platform_backend() -> &'static str {
     } else if cfg!(target_os = "macos") {
         "screen-capture-kit"
     } else {
-        "pipewire"
+        "linux-native-unavailable"
     }
 }
 
