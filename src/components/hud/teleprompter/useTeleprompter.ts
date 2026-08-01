@@ -37,7 +37,7 @@ export function useTeleprompter() {
     if (input.mode === 'continuous' || input.mode === 'line-by-line') patch.mode = input.mode
     if (typeof input.autoscroll === 'boolean') patch.autoscroll = input.autoscroll
     if (typeof input.scrollSpeed === 'number' && Number.isFinite(input.scrollSpeed)) patch.scrollSpeed = Math.max(5, Math.min(200, input.scrollSpeed))
-    if (typeof input.fontSize === 'number' && Number.isFinite(input.fontSize)) patch.fontSize = TELEPROMPTER_FONT_SIZE
+    if (typeof input.fontSize === 'number' && Number.isFinite(input.fontSize)) patch.fontSize = Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, input.fontSize)))
     if (typeof input.lineHeight === 'number' && Number.isFinite(input.lineHeight)) patch.lineHeight = Math.max(1, Math.min(2.5, input.lineHeight))
     if (input.textAlign === 'left' || input.textAlign === 'center') patch.textAlign = input.textAlign
     return patch
@@ -92,7 +92,9 @@ export function useTeleprompter() {
   }
 
   const updateDocument = (patch: Partial<Omit<TeleprompterDocument, 'schemaVersion' | 'updatedAtUtc'>>) => {
-    const safePatch = patch.fontSize === undefined ? patch : { ...patch, fontSize: TELEPROMPTER_FONT_SIZE }
+    const safePatch = patch.fontSize === undefined
+      ? patch
+      : { ...patch, fontSize: Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, patch.fontSize))) }
     document.value = { ...document.value, ...safePatch, updatedAtUtc: new Date().toISOString() }
     if (Object.keys(patch).some((key) => key !== 'text')) {
       settingsRevision += 1
@@ -169,7 +171,7 @@ export function useTeleprompter() {
       error.value = reason instanceof Error ? reason.message : String(reason)
       return
     }
-    if (stored) document.value = { ...stored, fontSize: TELEPROMPTER_FONT_SIZE }
+    if (stored) document.value = { ...stored, fontSize: Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, stored.fontSize))) }
     else await save()
     startAutoscroll()
   }

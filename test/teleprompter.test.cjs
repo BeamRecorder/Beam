@@ -20,7 +20,7 @@ function storageFixture() {
 test('normalizes supported values and clamps numeric settings', () => {
   const normalized = normalizeTeleprompterDocument({ ...document, scrollSpeed: 999, fontSize: 1, lineHeight: 9 })
   assert.equal(normalized.scrollSpeed, 200)
-  assert.equal(normalized.fontSize, 36)
+  assert.equal(normalized.fontSize, 16)
   assert.equal(normalized.lineHeight, 2.5)
 })
 
