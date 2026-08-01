@@ -994,7 +994,7 @@ const openProject = (project: CaptureProject) => {
                     icon-only
                     :icon="isRegionConfirmationAnimating ? Check : Crop"
                     :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
-                    :title="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
+                    :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
                     :disabled="isRecording || isBusy || !selectedScreenPreview?.displayBounds"
                     :class="{
                       'screen-region-confirmed': Boolean(selectedScreenRegion),
@@ -1049,7 +1049,6 @@ const openProject = (project: CaptureProject) => {
                       :icon="ScrollText"
                       :aria-label="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
                       :tooltip="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
-                      :title="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
                       :disabled="isBusy"
                       :class="{ 'teleprompter-active': isTeleprompterVisible }"
                       @click="toggleTeleprompter"
@@ -1200,7 +1199,6 @@ const openProject = (project: CaptureProject) => {
 .screen-select-controls > :first-child { flex: 1; min-width: 0; }
 .mic-select-controls { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .mic-select-controls > :first-child { flex: 1; min-width: 0; }
-.mic-select-controls :deep(.btn) { width: 36px; height: 36px; padding: 0; }
 .mic-select-controls :deep(.btn-primary) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent); }
 
 .hud-wrapper.dropdown-open {
