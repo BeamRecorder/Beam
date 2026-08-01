@@ -64,7 +64,7 @@ describe('ScreenRegionOverlayApp', () => {
     expect(wrapper.get('.region-frame').attributes('style')).toMatch(/width: 30/)
     await main.trigger('pointercancel')
     await wrapper.findAll('.region-actions button')[0].trigger('click')
-    expect(wrapper.find('.region-frame').exists()).toBe(false)
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%')
   })
 
   it('cancels selection and ignores pointer input outside select mode', async () => {

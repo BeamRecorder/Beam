@@ -116,3 +116,25 @@ test('recorder tooltips choose the side with room after the bar moves', () => {
   assert.deepEqual(win.getBounds(), { x: 0, y: 228, width: 300, height: 344 })
   controller.setMode('hud')
 })
+
+test('recorder position persistence stores the compact bar position', () => {
+  const saved = []
+  const display = { id: 1, bounds: { x: 0, y: 0, width: 1000, height: 800 }, workArea: { x: 0, y: 0, width: 1000, height: 800 } }
+  const screenModule = {
+    getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+    getDisplayNearestPoint: () => display,
+  }
+  const preferencesStore = {
+    read: () => ({ extras: {} }),
+    patch: (value) => saved.push(value),
+  }
+  const win = fakeWindow()
+  const controller = new WindowController(win, { screenModule, preferencesStore })
+  controller.setMode('recorder')
+  controller.setRecorderTooltip(true)
+  controller.rememberRecorderPosition()
+  controller.flushRecorderPosition()
+
+  assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 908, y: 228 })
+  controller.setMode('hud')
+})

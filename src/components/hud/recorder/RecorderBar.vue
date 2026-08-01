@@ -12,7 +12,7 @@ import {
   Volume2,
   VolumeX,
 } from "@lucide/vue";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import Tooltip from "~/ui/tooltip/Tooltip.vue";
 import KeyboardChip from "~/ui/KeyboardChip.vue";
 import { usePreferencesStore } from "~/stores/preferences";
@@ -49,12 +49,9 @@ const emit = defineEmits<{
 
 const preferencesStore = usePreferencesStore();
 let tooltipSpaceReady: Promise<void> = Promise.resolve();
-const isDragging = ref(false);
 const tooltipSide = ref<'left' | 'right'>('left');
 const tooltipPosition = computed(() => tooltipSide.value);
-let dragElement: HTMLElement | null = null;
-let dragPointerId: number | null = null;
-let dragPending = false;
+let stopTooltipSideListener: (() => void) | undefined;
 
 const applyTooltipSide = (side: unknown, source: string) => {
   console.info('[RecorderBar] tooltip side', { source, previous: tooltipSide.value, side });
@@ -63,9 +60,13 @@ const applyTooltipSide = (side: unknown, source: string) => {
 
 onMounted(() => {
   preferencesStore.load();
+  stopTooltipSideListener = window.capture?.onRecorderTooltipSide((side) => applyTooltipSide(side, 'nativeMove'));
   // Reserve native space before the user reaches a control. Resizing only on
   // first button hover made the bar visibly jump once per recording.
   tooltipSpaceReady = (async () => {
+    const initialSide = await window.capture?.getRecorderTooltipSide();
+    applyTooltipSide(initialSide, 'before-expand');
+    await nextTick();
     const side = await window.capture?.setRecorderTooltip(true);
     applyTooltipSide(side, 'mount');
   })();
@@ -75,42 +76,6 @@ const getShortcut = (id: string, fallback: string): string => {
   return preferencesStore.settings?.shortcuts?.[id]?.keys || fallback;
 };
 
-const drag = () => window.capture?.drag();
-const stopDrag = async () => {
-  if (!isDragging.value && !dragPending) return;
-  const wasDragging = isDragging.value;
-  isDragging.value = false;
-  dragPending = false;
-  window.removeEventListener("pointermove", drag);
-  window.removeEventListener("pointerup", stopDrag);
-  window.removeEventListener("pointercancel", stopDrag);
-  if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
-  dragElement = null;
-  dragPointerId = null;
-  if (wasDragging) {
-    const side = await window.capture?.dragEnd();
-    applyTooltipSide(side, 'dragEnd');
-  }
-};
-const startDrag = (event: PointerEvent) => {
-  if (event.button !== 0) return;
-  const target = event.target instanceof HTMLElement ? event.target : null;
-  if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest(".drag-handle")) return;
-  if (isDragging.value || dragPending) return;
-  dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-  dragPointerId = event.pointerId;
-  dragPending = true;
-  window.addEventListener("pointerup", stopDrag, { once: true });
-  window.addEventListener("pointercancel", stopDrag, { once: true });
-  void tooltipSpaceReady.then(() => {
-    if (!dragPending || dragPointerId !== event.pointerId) return;
-    dragPending = false;
-    isDragging.value = true;
-    dragElement?.setPointerCapture?.(event.pointerId);
-    window.capture?.dragStart();
-    window.addEventListener("pointermove", drag);
-  });
-};
 const tooltipsReady = ref(false);
 const showTooltips = async () => {
   tooltipsReady.value = false;
@@ -121,7 +86,7 @@ const hideTooltips = () => {
   tooltipsReady.value = false;
 };
 onBeforeUnmount(() => {
-  stopDrag();
+  stopTooltipSideListener?.();
   void window.capture?.setRecorderTooltip(false);
 });
 </script>
@@ -129,9 +94,8 @@ onBeforeUnmount(() => {
 <template>
   <aside
     class="recorder-bar"
-    :class="{ 'auto-fade': visibility === 'auto-fade', dragging: isDragging, 'tooltip-right': tooltipSide === 'right' }"
+    :class="{ 'auto-fade': visibility === 'auto-fade', 'tooltip-right': tooltipSide === 'right' }"
     :aria-label="t('recordingControls')"
-    @pointerdown="startDrag"
     @mouseenter="showTooltips"
     @mouseleave="hideTooltips"
   >
@@ -140,7 +104,6 @@ onBeforeUnmount(() => {
       type="button"
       :aria-label="t('moveRecorderBar')"
       :title="t('moveRecorderBar')"
-      @pointerdown.stop="startDrag"
     >
       <GripVertical aria-hidden="true" />
     </button>
@@ -308,9 +271,6 @@ onBeforeUnmount(() => {
   cursor: grab;
   transition: opacity 0.18s ease;
 }
-.recorder-bar.dragging {
-  cursor: grabbing;
-}
 .recorder-bar.tooltip-right {
   left: 0;
   right: auto;
@@ -333,9 +293,6 @@ onBeforeUnmount(() => {
   background: var(--color-bg-element);
   color: var(--text-primary);
   outline: none;
-}
-.recorder-bar.dragging .drag-handle {
-  cursor: grabbing;
 }
 .drag-handle :deep(svg) {
   width: 18px;

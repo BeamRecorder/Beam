@@ -263,11 +263,19 @@ const selectScreenRegion = async () => {
       region: currentRegion ? { ...currentRegion } : null,
     });
     if (!region) return;
-    const plainRegion = { ...region };
-    selectedScreenRegion.value = plainRegion;
-    selectedScreenOverlay.value = { bounds, region: plainRegion };
-    savedScreenRegion.value = plainRegion;
-    void capture.updatePreferences({ extras: { screenRegion: plainRegion } });
+    const isFullScreen = region.x <= 0.01 && region.y <= 0.01 && region.width >= 0.98 && region.height >= 0.98;
+    if (isFullScreen) {
+      selectedScreenRegion.value = null;
+      selectedScreenOverlay.value = null;
+      savedScreenRegion.value = null;
+      void capture.updatePreferences({ extras: { screenRegion: null } });
+    } else {
+      const plainRegion = { ...region };
+      selectedScreenRegion.value = plainRegion;
+      selectedScreenOverlay.value = { bounds, region: plainRegion };
+      savedScreenRegion.value = plainRegion;
+      void capture.updatePreferences({ extras: { screenRegion: plainRegion } });
+    }
     isRegionConfirmationAnimating.value = true;
     if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
     regionConfirmationTimeout = setTimeout(() => {

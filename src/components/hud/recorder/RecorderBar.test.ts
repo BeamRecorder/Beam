@@ -1,16 +1,14 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { capture } = vi.hoisted(() => ({
   capture: {
     getPreferences: vi.fn(),
     onPreferencesChanged: vi.fn(),
+    getRecorderTooltipSide: vi.fn(),
     setRecorderTooltip: vi.fn(),
-    dragStart: vi.fn(),
-    drag: vi.fn(),
-    dragEnd: vi.fn(),
+    onRecorderTooltipSide: vi.fn(),
   },
 }))
 
@@ -46,8 +44,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   capture.getPreferences.mockResolvedValue(settings)
   capture.onPreferencesChanged.mockReturnValue(vi.fn())
+  capture.getRecorderTooltipSide.mockResolvedValue('right')
   capture.setRecorderTooltip.mockResolvedValue('right')
-  capture.dragEnd.mockResolvedValue('left')
+  capture.onRecorderTooltipSide.mockReturnValue(vi.fn())
   Object.defineProperty(window, 'capture', { configurable: true, value: capture })
 })
 
@@ -100,31 +99,16 @@ describe('RecorderBar', () => {
     wrapper.unmount()
 })
 
-  it('starts, moves and releases a drag only from permitted pointer input', async () => {
+  it('updates the tooltip side when native window movement reports a new side', async () => {
+    let sideListener: ((side: 'left' | 'right') => void) | undefined
+    capture.onRecorderTooltipSide.mockImplementation((listener) => {
+      sideListener = listener
+      return vi.fn()
+    })
     const wrapper = mount(RecorderBar, { props, global: { stubs: { Tooltip, KeyboardChip } } })
-    const bar = wrapper.get('.recorder-bar')
-    const setPointerCapture = vi.fn()
-    const hasPointerCapture = vi.fn(() => true)
-    const releasePointerCapture = vi.fn()
-    Object.defineProperty(bar.element, 'setPointerCapture', { value: setPointerCapture })
-    Object.defineProperty(bar.element, 'hasPointerCapture', { value: hasPointerCapture })
-    Object.defineProperty(bar.element, 'releasePointerCapture', { value: releasePointerCapture })
-
-    await bar.trigger('pointerdown', { button: 2, pointerId: 1 })
-    expect(capture.dragStart).not.toHaveBeenCalled()
-    await bar.trigger('pointerdown', { button: 0, pointerId: 2 })
-    await vi.waitFor(() => expect(capture.dragStart).toHaveBeenCalledOnce())
-    expect(capture.dragStart).toHaveBeenCalledOnce()
-    expect(setPointerCapture).toHaveBeenCalledWith(2)
-    expect(bar.classes()).toContain('dragging')
-    window.dispatchEvent(new Event('pointermove'))
-    expect(capture.drag).toHaveBeenCalled()
-    window.dispatchEvent(new Event('pointerup'))
-    await nextTick()
-    expect(capture.dragEnd).toHaveBeenCalledOnce()
-    expect(releasePointerCapture).toHaveBeenCalledWith(2)
-    expect(bar.classes()).not.toContain('dragging')
-    await vi.waitFor(() => expect(bar.classes()).not.toContain('tooltip-right'))
+    await vi.waitFor(() => expect(wrapper.get('.recorder-bar').classes()).toContain('tooltip-right'))
+    sideListener?.('left')
+    await vi.waitFor(() => expect(wrapper.get('.recorder-bar').classes()).not.toContain('tooltip-right'))
     wrapper.unmount()
   })
 })

@@ -41,15 +41,32 @@ const normalize = (x1: number, y1: number, x2: number, y2: number): ScreenRegion
   height: Math.abs(y2 - y1),
 })
 
+const isFullScreenRegion = (r: ScreenRegion | null): boolean => {
+  if (!r) return false
+  return r.x <= 0.01 && r.y <= 0.01 && r.width >= 0.98 && r.height >= 0.98
+}
+
 const begin = (event: PointerEvent) => {
   if (!isSelecting.value) return
   const target = event.target as HTMLElement
   const handle = target.dataset.handle as Handle | undefined
   const current = region.value
   const next = point(event)
-  if (handle && current) interaction = { kind: 'resize', handle, startX: next.x, startY: next.y, region: { ...current } }
-  else if (current && next.x >= current.x && next.x <= current.x + current.width && next.y >= current.y && next.y <= current.y + current.height) interaction = { kind: 'move', startX: next.x, startY: next.y, region: { ...current } }
-  else interaction = { kind: 'draw', startX: next.x, startY: next.y }
+  if (handle && current) {
+    interaction = { kind: 'resize', handle, startX: next.x, startY: next.y, region: { ...current } }
+  } else if (
+    current &&
+    !isFullScreenRegion(current) &&
+    next.x >= current.x &&
+    next.x <= current.x + current.width &&
+    next.y >= current.y &&
+    next.y <= current.y + current.height
+  ) {
+    interaction = { kind: 'move', startX: next.x, startY: next.y, region: { ...current } }
+  } else {
+    region.value = { x: next.x, y: next.y, width: 0, height: 0 }
+    interaction = { kind: 'draw', startX: next.x, startY: next.y }
+  }
   ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
 }
 
@@ -78,8 +95,10 @@ const move = (event: PointerEvent) => {
   region.value = { x: Math.max(0, left), y: Math.max(0, top), width: Math.min(1, right) - Math.max(0, left), height: Math.min(1, bottom) - Math.max(0, top) }
 }
 
+const FULL_SCREEN_REGION: ScreenRegion = { x: 0, y: 0, width: 1, height: 1 }
+
 const end = () => { interaction = null }
-const reset = () => { region.value = null }
+const reset = () => { region.value = { ...FULL_SCREEN_REGION } }
 const confirm = () => {
   if (!region.value || region.value.width <= 0 || region.value.height <= 0) return
   capture.confirmScreenRegion({ ...region.value })
@@ -89,7 +108,7 @@ const cancel = () => capture.cancelScreenRegion()
 onMounted(() => {
   unsubscribe = capture.onScreenRegionConfigure((next) => {
     options.value = next
-    region.value = next.region ? { ...next.region } : null
+    region.value = next.region ? { ...next.region } : { ...FULL_SCREEN_REGION }
   })
 })
 onBeforeUnmount(() => unsubscribe?.())
