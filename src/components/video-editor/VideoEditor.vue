@@ -284,6 +284,7 @@ onBeforeUnmount(() => {
           @update:clip-appearance="updateSelectedAppearance($event)"
           @update:clip-transform="updateSelectedTransform"
           @reset:clip-transform="updateSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
+          @back-to-hud="emit('back-to-hud')"
         />
 
         <div class="canvas-column">

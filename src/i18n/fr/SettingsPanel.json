@@ -4,5 +4,15 @@
   "dark": "Sombre",
   "system": "Système",
   "language": "Langue",
-  "chooseLanguage": "Choisir la langue d'affichage"
+  "chooseLanguage": "Choisir la langue d'affichage",
+  "devMode": "Mode Développeur",
+  "devModeDesc": "Activer les fonctionnalités et outils d'expérimentation",
+  "devOptionsTitle": "Options DEV",
+  "recorderTool": "Enregistreur vidéo",
+  "recorderDesc": "Accéder rapidement à l'enregistreur pour démarrer une nouvelle capture",
+  "launchRecorder": "Lancer l'enregistreur",
+  "sysInfoTool": "Informations système",
+  "sysInfoDesc": "Copier les détails du système et la version de l'application",
+  "copySysInfo": "Copier les infos système",
+  "copied": "Copié !"
 }

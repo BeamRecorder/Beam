@@ -112,6 +112,7 @@ const emit = defineEmits<{
   (event: "unlink-clip"): void;
   (event: "delete-clip"): void;
   (event: "split-clip"): void;
+  (event: "back-to-hud"): void;
 }>();
 </script>
 
@@ -127,7 +128,7 @@ const emit = defineEmits<{
       <AudioPanel v-else-if="activeTab === 'audio'" :volume="volume" :is-system-audio-enabled="isSystemAudioEnabled" :is-mic-audio-enabled="isMicAudioEnabled" :system-volume="systemVolume" :mic-volume="micVolume" @update:volume="emit('update:volume', $event)" @update:is-system-audio-enabled="emit('update:isSystemAudioEnabled', $event)" @update:is-mic-audio-enabled="emit('update:isMicAudioEnabled', $event)" @update:system-volume="emit('update:systemVolume', $event)" @update:mic-volume="emit('update:micVolume', $event)" />
       <ZoomPanel v-else-if="activeTab === 'zoom'" :selected-zoom="selectedZoom" :can-generate="canGenerateZooms" :has-automatic-zooms="hasAutomaticZooms" @update="emit('update:zoom', $event)" @delete="emit('delete:zoom')" @generate="emit('generate:zooms')" />
       <CaptionPanel v-else-if="activeTab === 'caption'" :composition="composition" :editor-data="editorData" :timeline-duration-ms="timelineDurationMs" @update:composition="emit('update:composition', $event)" @select-caption="emit('select-caption', $event)" />
-      <SettingsPanel v-else-if="activeTab === 'settings'" />
+      <SettingsPanel v-else-if="activeTab === 'settings'" @back-to-hud="emit('back-to-hud')" />
     </div>
   </div>
 </template>
