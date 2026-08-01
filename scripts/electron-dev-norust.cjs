@@ -1,18 +1,23 @@
 const { spawn } = require('child_process')
 const fs = require('fs')
 const path = require('path')
-const { prebuiltCaptureEnginePath } = require('../electron/capture/capture-engine-path.cjs')
+const { captureEngineFilename, prebuiltCaptureEnginePath } = require('../electron/capture/capture-engine-path.cjs')
 
 const applicationRoot = path.join(__dirname, '..')
-const executable = prebuiltCaptureEnginePath(applicationRoot)
+const filename = captureEngineFilename()
+const candidates = [
+  prebuiltCaptureEnginePath(applicationRoot),
+  filename && path.join(applicationRoot, 'target', 'release', filename),
+].filter(Boolean)
+const executable = candidates.find((candidate) => fs.existsSync(candidate))
 
-if (!executable) {
+if (!filename) {
   console.error(`[electron:dev-norust] No prebuilt capture engine is available for ${process.platform}. Beam supports Windows and macOS.`)
   process.exit(1)
 }
 
-if (!fs.existsSync(executable)) {
-  console.error(`[electron:dev-norust] Prebuilt capture engine not found: ${executable}`)
+if (!executable) {
+  console.error(`[electron:dev-norust] No release capture engine was found. Expected one of:\n${candidates.map((candidate) => `- ${candidate}`).join('\n')}`)
   console.error('Add the release binary for this platform, then run this command again.')
   process.exit(1)
 }
