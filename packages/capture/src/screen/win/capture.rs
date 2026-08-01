@@ -199,11 +199,11 @@ impl WindowsRecording {
                 StartItemConfig { output, size, bitrate, fps, exclude_cursor, region, start_gate },
             );
         }
-        if source_id.as_str().starts_with("wgc:window:") {
+        if source_id.as_str().starts_with("wgc:window:") || source_id.as_str().starts_with("window:") {
             let window = Window::enumerate()
                 .map_err(backend_error)?
                 .into_iter()
-                .find(|window| window_id(*window).is_ok_and(|id| &id == source_id))
+                .find(|window| matches_window_hwnd(window, source_id))
                 .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
             let width = u32::try_from(window.width().map_err(backend_error)?.max(1))
                 .map_err(backend_error)?;
@@ -322,6 +322,28 @@ where
 
 fn window_id(window: Window) -> Result<SourceId, CaptureError> {
     SourceId::new(format!("wgc:window:{:x}", window.as_raw_hwnd() as usize))
+}
+
+fn matches_window_hwnd(window: &Window, source_id: &SourceId) -> bool {
+    let hwnd = window.as_raw_hwnd() as usize;
+    let s = source_id.as_str();
+    let raw = s
+        .strip_prefix("wgc:window:")
+        .or_else(|| s.strip_prefix("window:"))
+        .unwrap_or(s);
+    let token = raw.split(':').next().unwrap_or(raw);
+
+    if let Ok(val) = usize::from_str_radix(token, 10) {
+        if val == hwnd {
+            return true;
+        }
+    }
+    if let Ok(val) = usize::from_str_radix(token, 16) {
+        if val == hwnd {
+            return true;
+        }
+    }
+    false
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {

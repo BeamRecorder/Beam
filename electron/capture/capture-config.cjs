@@ -1,10 +1,32 @@
 const { randomUUID } = require('crypto')
 
+function parseHwnd(id) {
+  if (!id) return null
+  const str = String(id).replace(/^(wgc:window:|window:)/, '').split(':')[0]
+  if (!str) return null
+  const numDec = parseInt(str, 10)
+  const numHex = parseInt(str, 16)
+  return { dec: isNaN(numDec) ? null : numDec, hex: isNaN(numHex) ? null : numHex }
+}
+
+function matchSourceId(source, requestedId) {
+  if (source.id === requestedId) return true
+  const a = parseHwnd(source.id)
+  const b = parseHwnd(requestedId)
+  if (!a || !b) return false
+  return (a.dec !== null && (a.dec === b.dec || a.dec === b.hex)) ||
+         (a.hex !== null && (a.hex === b.dec || a.hex === b.hex))
+}
+
 function selectSource(sources, kind, requestedId) {
   if (requestedId) {
-    const selected = sources.find((source) => source.id === requestedId && source.kind === kind)
-    if (!selected) throw new Error(`Source ${kind} introuvable: ${requestedId}`)
-    return selected
+    const selected = sources.find((source) => source.kind === kind && matchSourceId(source, requestedId))
+    if (selected) return selected
+    if (kind === 'window') {
+      const formattedId = requestedId.startsWith('wgc:window:') ? requestedId : `wgc:window:${requestedId.replace(/^window:/, '')}`
+      return { id: formattedId, kind: 'window' }
+    }
+    throw new Error(`Source ${kind} introuvable: ${requestedId}`)
   }
   return sources.find((source) => source.kind === kind && source.isDefault) || sources.find((source) => source.kind === kind) || null
 }
