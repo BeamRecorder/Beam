@@ -278,6 +278,8 @@ where
             .map(|(left, top, right, bottom)| (right - left, bottom - top))
             .unwrap_or((0, 0))
     });
+    let width = even_dimension(width);
+    let height = even_dimension(height);
     if width == 0 || height == 0 {
         return Err(CaptureError::InvalidConfiguration(
             "screen crop is empty".into(),
@@ -322,13 +324,14 @@ fn window_id(window: Window) -> Result<SourceId, CaptureError> {
     SourceId::new(format!("wgc:window:{:x}", window.as_raw_hwnd() as usize))
 }
 
-fn backend_error(error: impl std::fmt::Display) -> CaptureError {
-    CaptureError::Backend(format!("Windows Graphics Capture failed: {error}"))
+#[inline]
+pub(crate) fn even_dimension(val: u32) -> u32 {
+    (val & !1).max(2)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::flip_bgra_rows;
+    use super::{even_dimension, flip_bgra_rows};
 
     #[test]
     fn flips_bgra_rows_from_top_to_bottom() {
@@ -337,5 +340,13 @@ mod tests {
             flip_bgra_rows(&source, 2, 2),
             [9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8]
         );
+    }
+
+    #[test]
+    fn rounds_odd_dimensions_to_even() {
+        assert_eq!(even_dimension(1237), 1236);
+        assert_eq!(even_dimension(851), 850);
+        assert_eq!(even_dimension(1), 2);
+        assert_eq!(even_dimension(1920), 1920);
     }
 }

@@ -20,6 +20,7 @@
     "build": "npm run build:release",
     "preview": "vite preview",
     "electron:dev": "npm run capture:build-dev && electron .",
+    "electron:dev-norust": "node scripts/electron-dev-norust.cjs",
     "electron:build": "npm run build:release && electron-builder"
   },
   "dependencies": {

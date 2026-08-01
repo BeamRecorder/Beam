@@ -3,6 +3,7 @@ const { randomUUID } = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
+const { prebuiltCaptureEnginePath } = require('./capture-engine-path.cjs')
 
 const REQUEST_TIMEOUT_MS = 30_000
 
@@ -18,10 +19,11 @@ class CaptureEngine {
   resolveExecutable() {
     const filename = process.platform === 'win32' ? 'capture-engine.exe' : 'capture-engine'
     const bundled = this.app.isPackaged && path.join(process.resourcesPath, 'capture-engine', filename)
-    const development = [path.join(this.applicationRoot, 'target', 'debug', filename), path.join(this.applicationRoot, 'target', 'release', filename)]
+    const prebuilt = prebuiltCaptureEnginePath(this.applicationRoot)
+    const development = [path.join(this.applicationRoot, 'target', 'debug', filename), path.join(this.applicationRoot, 'target', 'release', filename), prebuilt]
     const candidates = [process.env.DEMO_RECORDER_CAPTURE_ENGINE, ...(bundled ? [bundled] : development)].filter(Boolean)
     const executable = candidates.find((candidate) => fs.existsSync(candidate))
-    if (!executable) throw new Error(`capture-engine introuvable. Exécutez "cargo build -p capture --bin capture-engine" ou définissez DEMO_RECORDER_CAPTURE_ENGINE. Chemins testés: ${candidates.join(', ')}`)
+    if (!executable) throw new Error(`capture-engine introuvable. Exécutez "cargo build -p capture --bin capture-engine" ou ajoutez le binaire précompilé à packages/native-recorder. Chemins testés: ${candidates.join(', ')}`)
     return executable
   }
 

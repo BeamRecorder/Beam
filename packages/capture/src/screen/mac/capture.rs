@@ -247,7 +247,8 @@ fn application_id(
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 fn dimension(value: f64) -> u32 {
-    value.clamp(1.0, f64::from(u32::MAX)) as u32
+    let rounded = value.clamp(2.0, f64::from(u32::MAX)) as u32;
+    (rounded & !1).max(2)
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {

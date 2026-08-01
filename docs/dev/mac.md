@@ -6,7 +6,7 @@ This guide covers the basic local development and verification workflow for Beam
 
 - macOS 13 or newer
 - Node.js 22 or newer with npm
-- [Rust stable](./INSTALL_RUST.md)
+- [Rust stable](./INSTALL_RUST.md) for native rebuilds
 - Xcode Command Line Tools
 - Git
 
@@ -35,6 +35,14 @@ npm run electron:dev
 Keep both terminals open while developing. Stop the processes with `Ctrl+C`.
 
 On first launch, grant Beam the macOS permissions it requests for Screen Recording, Microphone, and Camera when those sources are enabled.
+
+`npm run electron:dev` rebuilds the Rust capture engine before starting Electron. If Rust is not installed, place a macOS release binary at [`packages/native-recorder/mac/capture-engine`](../../packages/native-recorder/mac/README.md), then use:
+
+```bash
+npm run electron:dev-norust
+```
+
+This mode checks the prebuilt binary for the current operating system and starts Electron without running Cargo.
 
 ## Build a macOS executable
 

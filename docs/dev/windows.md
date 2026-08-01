@@ -5,7 +5,7 @@ This guide covers the basic local development and verification workflow for Beam
 ## Prerequisites
 
 - Node.js 22 or newer with npm
-- [Rust stable with the MSVC toolchain](./INSTALL_RUST.md)
+- [Rust stable with the MSVC toolchain](./INSTALL_RUST.md) for native rebuilds
 - Git
 
 Install the project dependencies once after cloning or when the lockfile changes:
@@ -31,6 +31,14 @@ npm run electron:dev
 ```
 
 Keep both terminals open while developing. Stop the processes with `Ctrl+C`.
+
+`npm run electron:dev` rebuilds the Rust capture engine before starting Electron. If Rust is not installed, place a Windows release binary at [`packages/native-recorder/win/capture-engine.exe`](../../packages/native-recorder/win/README.md), then use:
+
+```powershell
+npm run electron:dev-norust
+```
+
+This mode checks the prebuilt binary for the current operating system and starts Electron without running Cargo.
 
 ## Build a Windows executable
 
