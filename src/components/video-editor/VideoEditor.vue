@@ -27,6 +27,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (event: "back-to-hud"): void;
   (event: "open-project", project: CaptureProject): void;
+  (event: "start-recording", config: any): void;
 }>();
 
 const {
@@ -285,6 +286,7 @@ onBeforeUnmount(() => {
           @update:clip-transform="updateSelectedTransform"
           @reset:clip-transform="updateSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
           @back-to-hud="emit('back-to-hud')"
+          @start-recording="emit('start-recording', $event)"
         />
 
         <div class="canvas-column">

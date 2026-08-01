@@ -1,7 +1,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { capture } from '~/api/capture'
 import type { TeleprompterDocument, TeleprompterSessionContext, TeleprompterSettings } from './teleprompter-types'
-import { clampTeleprompterLine, createDefaultTeleprompterDocument, splitTeleprompterLines } from './teleprompter-types'
+import { clampTeleprompterLine, createDefaultTeleprompterDocument, splitTeleprompterLines, TELEPROMPTER_FONT_SIZE } from './teleprompter-types'
 
 const saveDelay = 350
 
@@ -38,7 +38,7 @@ export function useTeleprompter() {
     if (input.mode === 'continuous' || input.mode === 'line-by-line') patch.mode = input.mode
     if (typeof input.autoscroll === 'boolean') patch.autoscroll = input.autoscroll
     if (typeof input.scrollSpeed === 'number' && Number.isFinite(input.scrollSpeed)) patch.scrollSpeed = Math.max(5, Math.min(200, input.scrollSpeed))
-    if (typeof input.fontSize === 'number' && Number.isFinite(input.fontSize)) patch.fontSize = Math.round(Math.max(16, Math.min(120, input.fontSize)))
+    if (typeof input.fontSize === 'number' && Number.isFinite(input.fontSize)) patch.fontSize = TELEPROMPTER_FONT_SIZE
     if (typeof input.lineHeight === 'number' && Number.isFinite(input.lineHeight)) patch.lineHeight = Math.max(1, Math.min(2.5, input.lineHeight))
     if (input.textAlign === 'left' || input.textAlign === 'center') patch.textAlign = input.textAlign
     if (input.theme === 'system' || input.theme === 'light' || input.theme === 'dark') patch.theme = input.theme
@@ -94,7 +94,8 @@ export function useTeleprompter() {
   }
 
   const updateDocument = (patch: Partial<Omit<TeleprompterDocument, 'schemaVersion' | 'updatedAtUtc'>>) => {
-    document.value = { ...document.value, ...patch, updatedAtUtc: new Date().toISOString() }
+    const safePatch = patch.fontSize === undefined ? patch : { ...patch, fontSize: TELEPROMPTER_FONT_SIZE }
+    document.value = { ...document.value, ...safePatch, updatedAtUtc: new Date().toISOString() }
     if (Object.keys(patch).some((key) => key !== 'text')) {
       settingsRevision += 1
       schedulePreferencesSave()
@@ -170,7 +171,7 @@ export function useTeleprompter() {
       error.value = reason instanceof Error ? reason.message : String(reason)
       return
     }
-    if (stored) document.value = stored
+    if (stored) document.value = { ...stored, fontSize: TELEPROMPTER_FONT_SIZE }
     else await save()
     startAutoscroll()
   }

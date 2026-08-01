@@ -3,6 +3,8 @@ import { onBeforeUnmount, ref, watch } from 'vue'
 import Button from '~/ui/button/Button.vue'
 import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Select from '~/ui/select/Select.vue'
+import Popover from '~/ui/popover/Popover.vue'
+import HUD from '~/components/hud/HUD.vue'
 import { Sun, Moon, Monitor, Code, Video, Copy, Check } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 import { useLocaleStore } from '~/stores/locale'
@@ -17,6 +19,7 @@ const localeStore = useLocaleStore()
 const emit = defineEmits<{
   (e: 'back-to-hud'): void
   (e: 'open-recorder'): void
+  (e: 'start-recording', config: any): void
 }>()
 
 const isDevModeEnabled = ref(localStorage.getItem('dev_mode_enabled') === 'true')
@@ -24,15 +27,9 @@ watch(isDevModeEnabled, (value) => {
   localStorage.setItem('dev_mode_enabled', String(value))
 })
 
-const handleOpenRecorder = () => {
-  emit('back-to-hud')
-  emit('open-recorder')
-  try {
-    capture.setWindowMode('hud')
-    capture.showHud()
-  } catch {
-    // Fail-safe for non-Electron/test environments
-  }
+const handleStartRecordingFromPopover = (config: any, closePopover: () => void) => {
+  closePopover()
+  emit('start-recording', config)
 }
 
 const isCopiedSysInfo = ref(false)
@@ -172,15 +169,26 @@ const localeOptions = [
               <span class="dev-option-label">{{ t('recorderTool') }}</span>
               <span class="dev-option-desc">{{ t('recorderDesc') }}</span>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              class="dev-action-btn"
-              @click="handleOpenRecorder"
-            >
-              <template #icon><Video class="btn-icon" /></template>
-              {{ t('launchRecorder') }}
-            </Button>
+            <Popover align="right" direction="up" :match-trigger-width="false" flush>
+              <template #trigger>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  class="dev-action-btn"
+                >
+                  <template #icon><Video class="btn-icon" /></template>
+                  {{ t('launchRecorder') }}
+                </Button>
+              </template>
+              <template #default="{ close }">
+                <div class="hud-popover-content" @click.stop>
+                  <HUD
+                    embedded
+                    @start-recording="(config: any) => handleStartRecordingFromPopover(config, close)"
+                  />
+                </div>
+              </template>
+            </Popover>
           </div>
 
           <!-- System Info Copy Card -->
@@ -363,6 +371,18 @@ const localeOptions = [
 
 .text-success {
   color: var(--color-success) !important;
+}
+
+.hud-popover-content {
+  width: 336px;
+  max-height: 540px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.hud-popover-content :deep(.hud-wrapper) {
+  width: 100% !important;
+  margin: 0 !important;
 }
 
 .dev-frame-fade-enter-active,

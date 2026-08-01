@@ -1,6 +1,7 @@
 export type TeleprompterMode = 'continuous' | 'line-by-line'
 export type TeleprompterTextAlign = 'left' | 'center'
 export type TeleprompterTheme = 'system' | 'light' | 'dark'
+export const TELEPROMPTER_FONT_SIZE = 36
 
 export interface TeleprompterDocument {
   schemaVersion: 1
@@ -37,7 +38,7 @@ export const TELEPROMPTER_DEFAULTS: Omit<TeleprompterDocument, 'updatedAtUtc'> =
   mode: 'continuous',
   autoscroll: true,
   scrollSpeed: 42,
-  fontSize: 36,
+  fontSize: TELEPROMPTER_FONT_SIZE,
   lineHeight: 1.35,
   textAlign: 'left',
   theme: 'system',

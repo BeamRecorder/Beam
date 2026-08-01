@@ -9,7 +9,7 @@ const { clampTeleprompterBounds, isContentProtectionSupported } = require('../el
 
 const projectId = '11111111-1111-4111-8111-111111111111'
 const sessionId = '22222222-2222-4222-8222-222222222222'
-const document = { schemaVersion: 1, text: 'Hello\nWorld', mode: 'line-by-line', autoscroll: true, scrollSpeed: 70, fontSize: 56, lineHeight: 1.5, textAlign: 'center', theme: 'dark', updatedAtUtc: '2026-01-01T00:00:00.000Z' }
+const document = { schemaVersion: 1, text: 'Hello\nWorld', mode: 'line-by-line', autoscroll: true, scrollSpeed: 70, fontSize: 36, lineHeight: 1.5, textAlign: 'center', theme: 'dark', updatedAtUtc: '2026-01-01T00:00:00.000Z' }
 
 function storageFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-recorder-teleprompter-'))
@@ -20,7 +20,7 @@ function storageFixture() {
 test('normalizes supported values and clamps numeric settings', () => {
   const normalized = normalizeTeleprompterDocument({ ...document, scrollSpeed: 999, fontSize: 1, lineHeight: 9 })
   assert.equal(normalized.scrollSpeed, 200)
-  assert.equal(normalized.fontSize, 16)
+  assert.equal(normalized.fontSize, 36)
   assert.equal(normalized.lineHeight, 2.5)
 })
 

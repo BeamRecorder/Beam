@@ -26,6 +26,14 @@ const Select = {
 }
 const UpdateControls = { template: '<div class="update-controls-stub">Updates</div>' }
 
+const Popover = {
+  template: '<div class="popover-stub"><slot name="trigger" /><slot :close="() => {}" /></div>',
+}
+const HUD = {
+  emits: ['start-recording'],
+  template: '<div class="hud-stub"><button class="hud-start-btn" @click="$emit(\'start-recording\', { recordingBarVisibility: \'always\' })">Start</button></div>',
+}
+
 describe('SettingsPanel', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -47,7 +55,7 @@ describe('SettingsPanel', () => {
   })
 
   it('changes theme and locale through the stores', async () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls } } })
+    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
     const themeButtons = wrapper.findAll('.theme-button-group button')
     expect(themeButtons).toHaveLength(3)
     await themeButtons[1].trigger('click')
@@ -59,13 +67,13 @@ describe('SettingsPanel', () => {
   })
 
   it('renders the update controls section', () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls } } })
+    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
     expect(wrapper.find('.update-controls-stub').exists()).toBe(true)
     expect(wrapper.text()).toContain('Theme')
   })
 
   it('toggles dev mode and reveals the framed recorder options', async () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls } } })
+    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
     expect(wrapper.find('.dev-frame').exists()).toBe(false)
 
     const switchBtn = wrapper.get('.dev-switch')
@@ -74,19 +82,14 @@ describe('SettingsPanel', () => {
     expect(wrapper.find('.dev-frame').exists()).toBe(true)
     expect(localStorage.getItem('dev_mode_enabled')).toBe('true')
 
-    const devButtons = wrapper.findAll('.dev-action-btn')
-    expect(devButtons).toHaveLength(2)
+    const startBtn = wrapper.get('.hud-start-btn')
+    await startBtn.trigger('click')
 
-    await devButtons[0].trigger('click')
-
-    expect(wrapper.emitted('back-to-hud')).toBeTruthy()
-    expect(wrapper.emitted('open-recorder')).toBeTruthy()
-    expect(capture.setWindowMode).toHaveBeenCalledWith('hud')
-    expect(capture.showHud).toHaveBeenCalled()
+    expect(wrapper.emitted('start-recording')).toBeTruthy()
   })
 
   it('copies system information to clipboard when clicking copy button', async () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls } } })
+    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
     await wrapper.get('.dev-switch').trigger('click')
 
     const copyBtn = wrapper.findAll('.dev-action-btn')[1]
@@ -97,5 +100,6 @@ describe('SettingsPanel', () => {
     )
   })
 })
+
 
 

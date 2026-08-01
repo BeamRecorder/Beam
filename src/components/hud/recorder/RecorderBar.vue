@@ -258,6 +258,8 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 0;
   right: 0;
+  z-index: 999999;
+  pointer-events: auto;
   width: 72px;
   box-sizing: border-box;
   min-height: 344px;

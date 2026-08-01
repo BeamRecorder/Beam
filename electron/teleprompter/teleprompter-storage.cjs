@@ -34,7 +34,8 @@ function normalizeTeleprompterDocument(value, now = new Date().toISOString()) {
     mode: input.mode,
     autoscroll: input.autoscroll,
     scrollSpeed: numberInRange(input.scrollSpeed, 42, 5, 200),
-    fontSize: Math.round(numberInRange(input.fontSize, 36, 16, 120)),
+    // Keep the reader compact so the fixed playback bar remains visible.
+    fontSize: 36,
     lineHeight: numberInRange(input.lineHeight, 1.35, 1, 2.5),
     textAlign: input.textAlign,
     theme: input.theme,

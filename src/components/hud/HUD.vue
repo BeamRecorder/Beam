@@ -62,6 +62,14 @@ interface SavedDevices {
 }
 let savedDevices: SavedDevices | null = null;
 
+const props = withDefaults(
+  defineProps<{
+    embedded?: boolean;
+  }>(),
+  {
+    embedded: false,
+  },
+);
 
 const emit = defineEmits(["start-recording", "stop-recording", "open-project"]);
 const ProjectPicker = defineAsyncComponent(
@@ -267,6 +275,7 @@ let lastHeight = 0;
 let lastWidth = 0;
 
 const updateWindowSize = () => {
+  if (props.embedded) return;
   const isDropdownOpen = activeDropdowns.value > 0;
   let targetHeight = 480;
   const errorHeight =
@@ -793,7 +802,7 @@ onMounted(async () => {
     }
   }
   recordingBarVisibility.value = preferences.recordingBar.visibility;
-  updateWindowSize();
+  if (!props.embedded) updateWindowSize();
   await discoverSources();
   await loadPreviews();
 
@@ -875,15 +884,17 @@ const openProject = (project: CaptureProject) => {
     :class="[
       activeTab,
       {
+        embedded,
         'settings-open': showSettings,
         'dropdown-open': activeDropdowns > 0,
         'region-selection-leaving': isRegionSelectionLeaving,
         'region-selection-entering': isRegionSelectionEntering,
       },
     ]"
-    :style="{ height: `${hudHeight}px` }"
+    :style="embedded ? {} : { height: `${hudHeight}px` }"
   >
     <TopbarHUD
+      v-if="!embedded"
       :title="
         showProjectPicker
           ? t('openProject')
@@ -1140,6 +1151,15 @@ const openProject = (project: CaptureProject) => {
   flex-direction: column;
   transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden; /* Keep content clipped during transitions to avoid visual bugs */
+}
+
+.hud-wrapper.embedded {
+  width: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  height: auto !important;
 }
 
 .hud-wrapper.region-selection-leaving {

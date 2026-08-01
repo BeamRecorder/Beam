@@ -28,11 +28,11 @@ import type {
 } from "./api/types/capture-api";
 
 const INTERACTIVE_SELECTORS =
-  '.hud-wrapper, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content';
+  '.hud-wrapper, .recorder-bar, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content';
 let lastInteractive: boolean | null = null;
 
 const handleMouseMove = (e: MouseEvent) => {
-  if (currentView.value !== "hud") return;
+  if (currentView.value !== "hud" && recording.phase.value === "idle") return;
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const isInteractive =
     el != null &&
@@ -128,7 +128,17 @@ watch(currentView, (view) => {
   lastInteractive = null;
 });
 
+const isRecordingStartedFromEditor = ref(false);
+
+const startRecordingFromEditor = async (configuration: RecordingConfiguration) => {
+  isRecordingStartedFromEditor.value = true;
+  editorLoadError.value = "";
+  recordingBarVisibility.value = configuration.recordingBarVisibility;
+  await recording.start(configuration);
+};
+
 const startRecording = async (configuration: RecordingConfiguration) => {
+  isRecordingStartedFromEditor.value = false;
   editorLoadError.value = "";
   currentVideoSrc.value = null;
   currentProject.value = null;
@@ -148,7 +158,7 @@ const startRecording = async (configuration: RecordingConfiguration) => {
 const cancelOrStopRecording = async () => {
   const wasCountdown = recording.phase.value === "countdown";
   await recording.stop();
-  if (wasCountdown) {
+  if (wasCountdown && currentView.value === "recorder") {
     capture.setWindowMode("hud");
     capture.setSize(352, 512);
     currentView.value = "hud";
@@ -158,14 +168,20 @@ const cancelOrStopRecording = async () => {
 const cancelRecording = async () => {
   await recording.cancel();
   if (recording.phase.value !== "idle") return;
-  capture.setWindowMode("hud");
-  capture.setSize(352, 512);
-  currentView.value = "hud";
-  capture.setCameraOverlayActive(true);
-  capture.showHud();
+  if (currentView.value === "recorder") {
+    capture.setWindowMode("hud");
+    capture.setSize(352, 512);
+    currentView.value = "hud";
+    capture.setCameraOverlayActive(true);
+    capture.showHud();
+  }
 };
 
 const revealEditor = async () => {
+  capture.hideTeleprompter?.();
+  // Keep the HUD/recorder window click-through while the editor transition is
+  // still in progress. It is shown again only after the editor is mounted.
+  capture.setWindowVisible?.(false);
   capture.setCameraOverlayActive(false);
   capture.setWindowMode("editor");
   capture.setSize(EDITOR_WINDOW_SIZE.width, EDITOR_WINDOW_SIZE.height);
@@ -176,15 +192,34 @@ const revealEditor = async () => {
 };
 
 const handleStopRecording = async (session: RecordingSessionResult) => {
+  const launchedFromEditor = isRecordingStartedFromEditor.value;
+  isRecordingStartedFromEditor.value = false;
+  capture.setWindowVisible?.(false);
   editorLoadError.value = "";
   isPreparingEditor.value = true;
   if (session && session.videoSrc) currentVideoSrc.value = session.videoSrc;
   try {
     const projects = await capture.listProjects();
-    currentProject.value =
+    let targetProject =
       projects.find((project) => project.previewSrc === session?.videoSrc) ??
       projects[0] ??
       null;
+
+    if (targetProject && launchedFromEditor) {
+      const baseName = targetProject.name || `Project ${targetProject.id.slice(0, 8)}`;
+      if (!baseName.startsWith("DEBUG ")) {
+        try {
+          targetProject = await capture.renameProject(
+            targetProject.id,
+            `DEBUG ${baseName}`
+          );
+        } catch (renameErr) {
+          console.error("Failed to rename project with DEBUG prefix:", renameErr);
+        }
+      }
+    }
+
+    currentProject.value = targetProject;
     currentEditorData.value = currentProject.value
       ? await capture.getProjectEditorData(currentProject.value.id)
       : null;
@@ -196,6 +231,7 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
 };
 
 const handleOpenProject = (project: CaptureProject) => {
+  capture.setWindowVisible?.(false);
   isPreparingEditor.value = true;
   editorLoadError.value = "";
   currentProject.value = project;
@@ -212,6 +248,9 @@ const handleOpenProject = (project: CaptureProject) => {
       isPreparingEditor.value = false;
       editorLoadError.value =
         error instanceof Error ? error.message : String(error);
+      capture.setWindowMode("hud");
+      capture.setWindowVisible?.(true);
+      capture.showHud();
       console.error("Failed to load project editor data:", error);
     });
 };
@@ -238,7 +277,7 @@ const dismissEditorLoadError = () => {
     />
     <Transition name="recorder-return">
       <RecorderBar
-        v-if="currentView === 'recorder'"
+        v-if="currentView === 'recorder' || (currentView === 'editor' && recording.phase.value !== 'idle')"
         :phase="recording.phase.value"
         :seconds-remaining="recording.secondsRemaining.value"
         :recording-time="recording.recordingTime.value"
@@ -283,6 +322,7 @@ const dismissEditorLoadError = () => {
         :project="currentProject"
         @back-to-hud="setView('hud')"
         @open-project="handleOpenProject"
+        @start-recording="startRecordingFromEditor"
       />
     </Transition>
   </div>
