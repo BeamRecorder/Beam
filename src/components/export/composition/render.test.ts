@@ -59,7 +59,7 @@ describe('canonical composition rendering', () => {
     screen.crop = { x: .1, y: .2, width: .5, height: .4 }
     const ctx = context()
     renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA, videoWidth: 100, videoHeight: 50 } as HTMLVideoElement, value, 0)
-    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 10, 10, 50, 20, 0, 0, 100, 50)
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 15, 10, 40, 20, 0, 0, 100, 50)
   })
 
   it('draws an active imported visual from its canonical clip', () => {

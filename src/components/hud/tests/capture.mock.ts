@@ -3,6 +3,9 @@ import { vi } from "vitest";
 export const captureMock = {
   discover: vi.fn(),
   getSources: vi.fn(),
+  hideScreenRegionOverlay: vi.fn(),
+  setWindowVisible: vi.fn(),
+  selectScreenRegion: vi.fn(),
   startRecording: vi.fn(),
   stop: vi.fn(),
   discardRecording: vi.fn(),

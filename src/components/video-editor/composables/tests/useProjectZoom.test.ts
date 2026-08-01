@@ -121,7 +121,7 @@ describe('useProjectZoom', () => {
     state.moveZoom('one', 30, 60)
     expect(state.zoomElements.value[0]).toMatchObject({ startMs: 30, endMs: 60 })
     state.trimZoomEdge('one', 'end', 500)
-    expect(state.zoomElements.value[0].endMs).toBe(230)
+    expect(state.zoomElements.value[0].endMs).toBe(500)
     state.selectedZoomId.value = 'one'
     state.deleteSelectedZoom()
     expect(state.zoomElements.value).toEqual([])

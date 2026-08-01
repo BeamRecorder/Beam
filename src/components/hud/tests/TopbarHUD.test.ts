@@ -1,5 +1,12 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('../../../api/capture', () => ({
+  capture: {
+    getUpdateState: vi.fn().mockResolvedValue({ status: 'unsupported', currentVersion: '0.1.0', availableVersion: null, percent: null, message: null }),
+    onUpdateState: vi.fn().mockReturnValue(() => undefined),
+  },
+}))
 import TopbarHUD from '../TopbarHUD.vue'
 
 describe('TopbarHUD', () => {

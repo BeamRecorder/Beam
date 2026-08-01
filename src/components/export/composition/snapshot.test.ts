@@ -60,7 +60,7 @@ describe('createCompositionSnapshot', () => {
   it('rejects a composition without an available screen source', () => {
     const input = base()
     input.composition.assets[0].src = ''
-    expect(() => createCompositionSnapshot(input)).toThrow('indisponible')
+    expect(() => createCompositionSnapshot(input)).toThrow('session video is unavailable')
   })
 
   it('clamps invalid render metadata and duration without inventing cursor data', () => {

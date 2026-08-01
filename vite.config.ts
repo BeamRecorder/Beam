@@ -87,10 +87,11 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
+    setupFiles: ["tests/setup.ts"],
     environment: "jsdom",
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      reporter: ["text", "html", "json-summary"],
       include: ["src/**/*.{ts,vue}"],
       exclude: ["src/**/*.test.ts", "src/vite-env.d.ts"],
       thresholds: {

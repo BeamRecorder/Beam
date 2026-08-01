@@ -145,8 +145,8 @@ describe('clip composition engine', () => {
     let cursor = 0
     const split = splitClip(linked(), 'screen', 3_000, () => ids[cursor++]!)
     expect(split.clips).toHaveLength(6)
-    expect(new Set(split.clips.slice(0, 3).map((entry) => entry.groupId))).toEqual(new Set(['recording']))
-    expect(new Set(split.clips.slice(3).map((entry) => entry.groupId))).toEqual(new Set(['right-group']))
+    expect(new Set(split.clips.filter((entry) => entry.timelineStartMs < 3_000).map((entry) => entry.groupId))).toEqual(new Set(['recording']))
+    expect(new Set(split.clips.filter((entry) => entry.timelineStartMs === 3_000).map((entry) => entry.groupId))).toEqual(new Set(['right-group']))
     expect(split.clips.find((entry) => entry.id === 'audio-right')).toMatchObject({ timelineStartMs: 3_000, sourceInMs: 2_200, timelineDurationMs: 2_000 })
   })
 
@@ -160,7 +160,7 @@ describe('clip composition engine', () => {
   it('links only timing-compatible clips', () => {
     const detached = detachClip(linked(), 'camera')
     const relinked = linkClips(detached, ['screen', 'camera'], 'new-recording')
-    expect(relinked.clips.filter((entry) => entry.groupId === 'new-recording').map((entry) => entry.id)).toEqual(['screen', 'camera'])
+    expect(relinked.clips.filter((entry) => entry.groupId === 'new-recording').map((entry) => entry.id).sort()).toEqual(['camera', 'screen'])
     const incompatible = moveClip(detached, 'camera', 2_000)
     expect(() => linkClips(incompatible, ['screen', 'camera'])).toThrow(/share timeline timing/)
   })

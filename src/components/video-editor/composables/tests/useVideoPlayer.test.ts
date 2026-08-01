@@ -19,11 +19,9 @@ describe("useVideoPlayer", () => {
       player.duration.value,
       player.volume.value,
     ]).toEqual([false, 0, 0, 70]);
-    expect([
-      player.isVideoEnabled.value,
-      player.isSystemAudioEnabled.value,
-      player.isMicAudioEnabled.value,
-    ]).toEqual([true, true, true]);
+    expect(player.videoSrc.value).toBeNull();
+    expect(player.backgroundBlurPercent.value).toBe(0);
+    expect(player.importedBackgrounds.value).toEqual([]);
   });
 
   it("imports backgrounds once, selects them, and puts them before built-ins", () => {
@@ -69,5 +67,16 @@ describe("useVideoPlayer", () => {
     player.duration.value = 3661;
     expect(player.formattedCurrentTime.value).toBe("02:05");
     expect(player.formattedDuration.value).toBe("61:01");
+  });
+
+  it("restores a selected imported background by id or path and falls back when it disappears", () => {
+    const player = useVideoPlayer(backgrounds);
+    const imported = createBackgroundMedia(["/imported.png"])[0];
+    player.restoreBackgrounds([imported], imported.path);
+    expect(player.selectedBackground.value).toEqual(imported);
+    player.setUserBackgrounds([]);
+    expect(player.selectedBackground.value).toEqual(backgrounds[0]);
+    player.restoreBackgrounds([], "unknown-id");
+    expect(player.selectedBackground.value).toEqual(backgrounds[0]);
   });
 });

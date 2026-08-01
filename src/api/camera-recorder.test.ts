@@ -99,7 +99,7 @@ describe('BrowserCameraRecorder', () => {
     vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(stream)
     const recorder = await BrowserCameraRecorder.request('camera:chromium:device-7')
     await recorder.start('session', { shadowSize: 'md', cornerRadius: 'lg' }, { x: 1, y: 2, width: 3, height: 4 }, 50)
-    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(expect.objectContaining({ video: expect.objectContaining({ deviceId: { exact: 'device-7' } }) }))
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(expect.objectContaining({ audio: false, video: expect.objectContaining({ deviceId: { ideal: 'device-7' } }) }))
     expect(capture.beginCameraSegment).toHaveBeenCalledWith({ sessionId: 'session', sourceId: 'camera:chromium:device-7', format: expect.objectContaining({ width: 1280, height: 1080, nominalFps: 30, appearance: { shadowSize: 'md', cornerRadius: 'lg' } }), startNs: 0 })
     expect(FakeMediaRecorder.instances[0].start).toHaveBeenCalledWith(1000)
   })

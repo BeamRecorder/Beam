@@ -74,8 +74,8 @@ describe('slugged projects', () => {
   it('persists a global background reference without copying it into the project', () => {
     const root = temporary(); const store = createProjectStore(root); const project = store.create({ name: 'Background' })
     store.saveEditorState(project.id, {
-      schemaVersion: 1, composition: { media: [], layers: [] }, zoom: { elements: [], generatedSessions: [] },
-      presentation: { canvas: { preset: '16:9', width: 1920, height: 1080, showBackground: true }, selectedBackgroundId: 'user-wallpaper:image:global.png', background: null, blurPercent: 0, importedBackgrounds: [{ id: 'ignored', name: 'Ignored', path: 'file:///ignored.png', extension: 'png', kind: 'image' }], videoEnabled: true, systemAudioEnabled: true, micAudioEnabled: true },
+      schemaVersion: 2, composition: { schemaVersion: 1, assets: [], clips: [] }, zoom: { elements: [], generatedSessions: [] },
+      presentation: { canvas: { preset: '16:9', width: 1920, height: 1080, showBackground: true }, selectedBackgroundId: 'user-wallpaper:image:global.png', background: null, blurPercent: 0, importedBackgrounds: [] },
     })
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'project-background', 'project.json'), 'utf8'))
     expect(manifest.editor.presentation.selectedBackgroundId).toBe('user-wallpaper:image:global.png')
