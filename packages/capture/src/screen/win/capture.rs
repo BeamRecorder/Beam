@@ -324,6 +324,10 @@ fn window_id(window: Window) -> Result<SourceId, CaptureError> {
     SourceId::new(format!("wgc:window:{:x}", window.as_raw_hwnd() as usize))
 }
 
+fn backend_error(error: impl std::fmt::Display) -> CaptureError {
+    CaptureError::Backend(format!("Windows Graphics Capture failed: {error}"))
+}
+
 #[inline]
 pub(crate) fn even_dimension(val: u32) -> u32 {
     (val & !1).max(2)
