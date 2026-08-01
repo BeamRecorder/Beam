@@ -9,7 +9,6 @@ import {
 } from "vue";
 import { LoaderCircle } from "@lucide/vue";
 import HUD from "./components/hud/HUD.vue";
-import CameraShadowApp from "./components/hud/camera/CameraShadowApp.vue";
 import ToastProvider from "./components/ui/toast/ToastProvider.vue";
 import Button from "./components/ui/button/Button.vue";
 import RecorderBar from "./components/hud/recorder/RecorderBar.vue";
@@ -68,9 +67,6 @@ onBeforeUnmount(() => {
 const currentView = ref<"hud" | "recorder" | "editor">("hud");
 const isCameraOverlay = new URLSearchParams(window.location.search).has(
   "cameraOverlay",
-);
-const isCameraShadow = new URLSearchParams(window.location.search).has(
-  "cameraShadow",
 );
 const isCountdownOverlay = new URLSearchParams(window.location.search).has(
   "countdown",
@@ -265,11 +261,10 @@ const dismissEditorLoadError = () => {
   <template v-else>
     <ToastProvider />
     <CameraOverlayApp v-if="isCameraOverlay" />
-    <CameraShadowApp v-else-if="isCameraShadow" />
     <CountdownOverlay v-else-if="isCountdownOverlay" />
     <ScreenRegionOverlayApp v-else-if="isScreenRegionOverlay" />
   </template>
-  <div v-if="!isTeleprompter && !isCameraOverlay && !isCameraShadow && !isCountdownOverlay && !isScreenRegionOverlay" class="app-container">
+  <div v-if="!isTeleprompter && !isCameraOverlay && !isCountdownOverlay && !isScreenRegionOverlay" class="app-container">
     <HUD
       v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError"
       @start-recording="startRecording"

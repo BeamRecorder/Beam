@@ -22,6 +22,16 @@ const refreshRecordingState = async () => {
   }
 }
 
+const updateShadowSize = (shadowSize: string) => {
+  state.value = { ...state.value, shadowSize }
+  void capture.configureCameraOverlay(state.value)
+}
+
+const updateCornerRadius = (cornerRadius: string) => {
+  state.value = { ...state.value, cornerRadius }
+  void capture.configureCameraOverlay(state.value)
+}
+
 onMounted(async () => {
   unsubscribe = capture.onCameraOverlayState((next) => { state.value = next })
   unsubscribeHover = capture.onCameraOverlayHover((hovered) => { isHovered.value = hovered })
@@ -38,6 +48,18 @@ onBeforeUnmount(() => {
 })
 </script>
 
-<template><CameraPreviewOverlay :camera-id="state.cameraId" :shadow-size="state.shadowSize" :corner-radius="state.cornerRadius" :is-recording="isRecording" :is-hovered="isHovered" :theme="theme.theme" window-overlay @update:shadow-size="capture.configureCameraOverlay({ ...state, shadowSize: $event })" @update:corner-radius="capture.configureCameraOverlay({ ...state, cornerRadius: $event })" /></template>
+<template>
+  <CameraPreviewOverlay
+    :camera-id="state.cameraId"
+    :shadow-size="state.shadowSize"
+    :corner-radius="state.cornerRadius"
+    :is-recording="isRecording"
+    :is-hovered="isHovered"
+    :theme="theme.theme"
+    window-overlay
+    @update:shadow-size="updateShadowSize"
+    @update:corner-radius="updateCornerRadius"
+  />
+</template>
 
 <style scoped>:global(html), :global(body) { margin: 0; overflow: hidden; background: transparent; }</style>
