@@ -1,64 +1,49 @@
 <div align="center">
   <img src="./public/brand/BeamIcon.webp" alt="Beam" width="80" height="80" />
   <h1>Beam</h1>
-  <p>Record your screen. Focus what matters. Export.</p>
+  <p>A focused screen recorder for clear, polished product demos.</p>
   <p>
-    <a href="https://github.com/ExtraBinoss/demo-recorder/releases/latest">Download for Windows or macOS</a>
+    <a href="https://github.com/ExtraBinoss/Beam/releases/latest">Download Beam for Windows or macOS</a>
   </p>
 </div>
 
+## See Beam in action
+
 <div align="center">
-  <!-- Replace this source with the product demo before publishing the README. -->
-  <video controls width="100%" poster="./public/brand/BeamIcon.webp">
-    <source src="YOUR_DEMO_VIDEO_URL_HERE" type="video/mp4" />
+  <video controls preload="metadata" width="100%" poster="./public/brand/BeamIcon.webp">
+    <source src="./docs/assets/BeamDemo.webm" type="video/webm" />
     Your browser does not support video playback.
   </video>
 </div>
 
-<h2>Workflow</h2>
+## Features
 
-<p align="center">
-  <strong>Record your screen</strong>
-  &nbsp;→&nbsp;
-  <strong>Zoom applied automatically</strong>
-  &nbsp;→&nbsp;
-  <strong>Export</strong>
-</p>
+- 🖥️ **Screen, region, or window** — record a full display, a precise area, or a single application window.
+- 🖱️ **Cursor capture and replacement** — keep cursor movement accurate, then replace and style it cleanly in the editor.
+- 🎙️ **Microphone audio** — add clear voice narration to your recording.
+- 🔊 **System audio** — capture the sound coming from your computer.
+- 🎥 **Camera overlay** — include your webcam with a presentation-ready overlay.
+- 🔍 **Smart zoom** — focus attention on important moments with automatic or manual zooms.
+- 📝 **Captions** — generate and edit captions directly in your project.
+- 🎨 **Presentation styling** — use backgrounds, gradients, frames, and layout controls to make every recording feel intentional.
+- ⚡ **Fast export** — export your finished video to WebM or MP4 at the resolution you need.
+- 📖 **Teleprompter** — keep your script in view while you record.
 
-<h2>What you can record</h2>
+## Availability
 
-<ul>
-  <li>Choose a window or an entire screen.</li>
-  <li>Capture the cursor or use a custom cursor.</li>
-  <li>Record system audio.</li>
-  <li>Record a microphone.</li>
-  <li>Export quickly.</li>
-</ul>
+Beam is currently available for Windows and macOS.
 
-<h2>Supported platforms</h2>
+## Developer documentation
 
-<ul>
-  <li><strong>Windows</strong></li>
-  <li><strong>macOS</strong></li>
-  <li><strong>Linux:</strong> not supported yet. Reliable screen recording differs substantially across Linux environments. See <a href="./docs/linux/ELECTRON_FALLBACK_LINUX.md">the fallback notes</a> and <a href="./docs/linux/FUTURE_LINUX_RECORDING.md">the recording plan</a>.</li>
-</ul>
+If you want to run Beam locally or contribute to the project, start with the guide for your platform:
 
-<h2>Developer docs</h2>
+- [Windows development](./docs/dev/windows.md)
+- [macOS development](./docs/dev/mac.md)
 
-<p>
-  <a href="./docs/dev/windows.md">Windows</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/dev/mac.md">macOS</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/dev/linux.md">Linux</a>
-</p>
+The repository's engineering guidelines are linked from both guides.
 
-<h2>Special thanks</h2>
+## Acknowledgements
 
-<p>
-  Beam takes inspiration from <a href="https://github.com/webadderallorg/Recordly/">Recordly</a>. Some code ideas are inspired by it; Beam is not a fork.
-</p>
+Beam takes inspiration from [Recordly](https://github.com/webadderallorg/Recordly/). Some ideas are inspired by it; Beam is not a fork.
 
-<p>
-  Released under the <a href="./LICENSE">MIT License</a>.
-</p>
+Released under the [MIT License](./LICENSE).
