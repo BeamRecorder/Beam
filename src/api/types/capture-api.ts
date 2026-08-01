@@ -68,6 +68,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   setTeleprompterSession(context: TeleprompterSessionContext | null): void
   onTeleprompterShortcut(listener: (id: string) => void): () => void
   onTeleprompterSession(listener: (context: TeleprompterSessionContext | null) => void): () => void
+  onTeleprompterVisibility(listener: (visible: boolean) => void): () => void
   saveSessionTeleprompter(projectId: string, sessionId: string, document: TeleprompterDocument): Promise<TeleprompterDocument>
   getSessionTeleprompter(projectId: string, sessionId: string): Promise<TeleprompterDocument | null>
   listProjects(): Promise<CaptureProject[]>

@@ -45,8 +45,11 @@ export function useTeleprompter() {
   }
 
   const scrollActiveLine = () => {
-    const element = displayRef.value?.querySelector<HTMLElement>(`[data-line-index="${activeLine.value}"]`)
-    element?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    const display = displayRef.value
+    const element = display?.querySelector<HTMLElement>(`[data-line-index="${activeLine.value}"]`)
+    if (!display || !element) return
+    const targetTop = Math.max(0, element.offsetTop - display.clientHeight * 0.38)
+    display.scrollTo({ top: targetTop, behavior: 'smooth' })
   }
 
   const setActiveLine = (index: number) => {
@@ -59,7 +62,7 @@ export function useTeleprompter() {
   const scheduleLineAdvance = () => {
     cancelLineTimer()
     if (!document.value.autoscroll || isPaused.value || document.value.mode !== 'line-by-line' || activeLine.value >= lines.value.length - 1) return
-    const duration = Math.max(500, 6000 - document.value.scrollSpeed * 25)
+    const duration = Math.max(800, 2600 - document.value.scrollSpeed * 15)
     lineTimer = setTimeout(() => { nextLine(); scheduleLineAdvance() }, duration)
   }
 
@@ -83,7 +86,17 @@ export function useTeleprompter() {
   }
 
   const toggleAutoscroll = () => updateDocument({ autoscroll: !document.value.autoscroll })
-  const togglePause = () => { isPaused.value = !isPaused.value; startAutoscroll() }
+  const togglePause = () => {
+    if (isPaused.value || !document.value.autoscroll) {
+      isPaused.value = false
+      if (!document.value.autoscroll) updateDocument({ autoscroll: true })
+      startAutoscroll()
+      return
+    }
+    isPaused.value = true
+    cancelFrame()
+    cancelLineTimer()
+  }
 
   const applySession = async (context: TeleprompterSessionContext | null) => {
     session.value = context
@@ -111,6 +124,7 @@ export function useTeleprompter() {
 
   const setDisplayElement = (element: HTMLElement | null) => { displayRef.value = element; if (element) startAutoscroll() }
   watch(() => document.value.mode, () => { activeLine.value = 0; startAutoscroll() })
+  watch(() => lines.value.length, () => { activeLine.value = clampTeleprompterLine(activeLine.value, lines.value.length); startAutoscroll() })
   watch(() => document.value.autoscroll, startAutoscroll)
   watch(() => document.value.scrollSpeed, startAutoscroll)
   onBeforeUnmount(() => { cancelFrame(); cancelLineTimer(); if (saveTimer) clearTimeout(saveTimer); void save() })

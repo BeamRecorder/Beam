@@ -56,8 +56,8 @@ test('ships the four teleprompter shortcuts in the shared preference defaults', 
   const shortcuts = defaults().shortcuts
   assert.equal(shortcuts['teleprompter.toggleVisibility'].keys, 'Alt+Shift+T')
   assert.equal(shortcuts['teleprompter.toggleAutoscroll'].keys, 'Alt+Shift+O')
-  assert.equal(shortcuts['teleprompter.nextLine'].keys, 'Alt+Shift+Right')
-  assert.equal(shortcuts['teleprompter.previousLine'].keys, 'Alt+Shift+Left')
+  assert.equal(shortcuts['teleprompter.nextLine'].keys, 'Ctrl+Right')
+  assert.equal(shortcuts['teleprompter.previousLine'].keys, 'Ctrl+Left')
 })
 
 test('limits native content protection checks to supported desktop platforms', () => {

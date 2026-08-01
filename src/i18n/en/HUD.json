@@ -17,5 +17,7 @@
   "screenOption": "Screen {index}",
   "selectScreenRegion": "Select an area of the screen",
   "editScreenRegion": "Edit the screen area",
-  "screenRegionSelected": "Screen area selected"
+  "screenRegionSelected": "Screen area selected",
+  "openTeleprompter": "Open teleprompter",
+  "closeTeleprompter": "Hide teleprompter"
 }

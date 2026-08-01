@@ -18,7 +18,7 @@ vi.mock('../../../api/system-audio-recorder', async () => {
   const systemAudio = await import('./system-audio-recorder.mock')
   return { BrowserSystemAudioRecorder: systemAudio.BrowserSystemAudioRecorder, recordSystemAudioFailure: systemAudio.recordSystemAudioFailure, systemAudioSource: systemAudio.systemAudioSource }
 })
-vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Back" @click="$emit(\'back\')"/><button aria-label="Close" @click="$emit(\'close\')"/><button aria-label="Minimize" @click="$emit(\'minimize\')"/><button aria-label="Teleprompter" @click="$emit(\'open-teleprompter\')"/></header>' } }))
+vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Back" @click="$emit(\'back\')"/><button aria-label="Close" @click="$emit(\'close\')"/><button aria-label="Minimize" @click="$emit(\'minimize\')"/></header>' } }))
 import HUD from '../HUD.vue'
 
 const catalog = { sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }], capabilities: { systemAudio: true } }
@@ -163,7 +163,7 @@ describe('HUD', () => {
     await wrapper.get('.window-select-control').trigger('click')
     await wrapper.get('.window-select-close').trigger('click')
     vi.advanceTimersByTime(220)
-    await wrapper.get('[aria-label="Teleprompter"]').trigger('click')
+    await wrapper.get('[aria-label="Open teleprompter"]').trigger('click')
     expect(capture.showTeleprompter).toHaveBeenCalledOnce()
     await wrapper.get('[aria-label="Minimize"]').trigger('click')
     vi.advanceTimersByTime(160)

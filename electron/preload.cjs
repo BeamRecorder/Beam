@@ -88,6 +88,11 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on("teleprompter:session", callback);
       return () => ipcRenderer.removeListener("teleprompter:session", callback);
     },
+    onTeleprompterVisibility: (listener) => {
+      const callback = (_event, visible) => listener(Boolean(visible));
+      ipcRenderer.on("teleprompter:visibility", callback);
+      return () => ipcRenderer.removeListener("teleprompter:visibility", callback);
+    },
     saveSessionTeleprompter: (projectId, sessionId, document) => ipcRenderer.invoke("teleprompter:save-session", { projectId, sessionId, document }),
     getSessionTeleprompter: (projectId, sessionId) => ipcRenderer.invoke("teleprompter:get-session", { projectId, sessionId }),
     setCountdown: (seconds) => ipcRenderer.send("countdown:set", seconds),

@@ -1,12 +1,53 @@
 import { mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import BigSlider from './BigSlider.vue'
-import { propertyInteractionActive, resetPropertyInteractions } from '~/composables/property-interaction'
+
+const Input = {
+  inheritAttrs: false,
+  props: ['modelValue'],
+  emits: ['update:modelValue', 'keydown', 'blur'],
+  template: '<input :id="$attrs.id" :type="$attrs.type" :min="$attrs.min" :max="$attrs.max" :step="$attrs.step" :class="$attrs.class" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keydown="$emit(\'keydown\', $event)" @blur="$emit(\'blur\', $event)" />',
+}
 
 describe('BigSlider', () => {
-  afterEach(() => resetPropertyInteractions())
+  it('updates the range and reports interaction boundaries', async () => {
+    const wrapper = mount(BigSlider, {
+      props: { modelValue: 50, min: 0, max: 100, label: 'Opacity', defaultValue: 25, formatValue: (value: number) => `${value}%` },
+      global: { stubs: { Input } },
+    })
+    expect(wrapper.get('.big-slider-value').text()).toBe('50%')
+    await wrapper.get('.big-slider-input').setValue('80')
+    expect(wrapper.emitted('update:modelValue')).toContainEqual([80])
+    await wrapper.get('.big-slider-input').trigger('pointerdown')
+    await wrapper.get('.big-slider-input').trigger('change')
+    expect(wrapper.emitted('interaction-start')).toHaveLength(1)
+    expect(wrapper.emitted('interaction-end')).toHaveLength(1)
+  })
 
-  it('renders a formatted value and calculated fill', () => { const wrapper = mount(BigSlider, { props: { modelValue: .5, label: 'Zoom', formatValue: (value: number) => `${value * 100}%` } }); expect(wrapper.text()).toContain('50%'); expect(wrapper.attributes('style')).toContain('50%') })
-  it('emits numeric changes and saves through generic interaction boundaries', async () => { const wrapper = mount(BigSlider, { props: { modelValue: 0, label: 'Zoom' } }); const input = wrapper.get('input'); (input.element as HTMLInputElement).value = '.75'; await input.trigger('input'); await input.trigger('pointerdown'); expect(propertyInteractionActive.value).toBe(true); await input.trigger('change'); expect(propertyInteractionActive.value).toBe(false); expect(wrapper.emitted('update:modelValue')).toEqual([[.75]]); expect(wrapper.emitted('interaction-start')).toHaveLength(1); expect(wrapper.emitted('interaction-end')).toHaveLength(1) })
-  it('handles a zero range without an invalid percentage', () => { const wrapper = mount(BigSlider, { props: { modelValue: 1, min: 1, max: 1, label: 'Fixed' } }); expect(wrapper.attributes('style')).toContain('0%') })
+  it('edits, clamps and resets a changed value', async () => {
+    const wrapper = mount(BigSlider, {
+      props: { modelValue: 50, min: 0, max: 100, label: 'Opacity', defaultValue: 25 },
+      global: { stubs: { Input } },
+    })
+    await wrapper.get('.big-slider-value').trigger('click')
+    expect(wrapper.find('.slider-inline-input').exists()).toBe(true)
+    await wrapper.get('.slider-inline-input').setValue('150')
+    await wrapper.get('.slider-inline-input').trigger('keydown.enter')
+    expect(wrapper.emitted('update:modelValue')).toContainEqual([100])
+    expect(wrapper.find('.slider-reset-btn').exists()).toBe(true)
+    await wrapper.get('.slider-reset-btn').trigger('click')
+    expect(wrapper.emitted('update:modelValue')).toContainEqual([25])
+    expect(wrapper.emitted('reset')).toHaveLength(1)
+  })
+
+  it('falls back to the current value for invalid direct input and ends interaction on unmount', async () => {
+    const wrapper = mount(BigSlider, { props: { modelValue: 12, min: 0, max: 20, label: 'Value' }, global: { stubs: { Input } } })
+    await wrapper.get('.big-slider-value').trigger('click')
+    await wrapper.get('.slider-inline-input').setValue('invalid')
+    await wrapper.get('.slider-inline-input').trigger('blur')
+    expect(wrapper.emitted('update:modelValue')).toContainEqual([12])
+    await wrapper.get('.big-slider-input').trigger('pointerdown')
+    wrapper.unmount()
+    expect(wrapper.emitted('interaction-end')).toHaveLength(1)
+  })
 })

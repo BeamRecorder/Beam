@@ -24,7 +24,7 @@ describe('Teleprompter', () => {
     expect(wrapper.find('[aria-label="Hide"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="Settings"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true)
-    expect(wrapper.get('button').text()).toContain('Preview')
+    expect(wrapper.find('[aria-label="Preview"]').exists()).toBe(true)
   })
 
   it('hides the native window and renders edited lines', async () => {

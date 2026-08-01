@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
-import { AlignCenter, AlignLeft, ChevronLeft, ChevronRight, Edit3, Eye, Pause, Play, Settings, X } from '@lucide/vue'
+import { AlignCenter, AlignLeft, ChevronLeft, ChevronRight, Edit3, Eye, Pause, Play, Settings } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
 import Popover from '~/ui/popover/Popover.vue'
@@ -32,9 +32,17 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
     <header class="teleprompter-header">
       <div class="teleprompter-title">{{ t('title') }}</div>
       <div class="teleprompter-actions">
-        <Button variant="ghost" size="sm" :icon="state.isEditing.value ? Eye : Edit3" :aria-label="state.isEditing.value ? t('preview') : t('edit')" @click="state.isEditing.value = !state.isEditing.value">{{ state.isEditing.value ? t('preview') : t('edit') }}</Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="state.isEditing.value ? Eye : Edit3"
+          :aria-label="state.isEditing.value ? t('preview') : t('edit')"
+          :tooltip="state.isEditing.value ? t('preview') : t('edit')"
+          @click="state.isEditing.value = !state.isEditing.value"
+        />
         <Popover align="right" :match-trigger-width="false">
-          <template #trigger><Button variant="ghost" size="sm" :icon="Settings" :aria-label="t('settings')">{{ t('settings') }}</Button></template>
+          <template #trigger><Button variant="ghost" size="sm" icon-only :icon="Settings" :aria-label="t('settings')" :tooltip="t('settings')" /></template>
           <section class="settings-panel" :aria-label="t('settings')">
             <div class="setting-row"><span>{{ t('mode') }}</span><Select :model-value="state.document.value.mode" :options="modeOptions" @update:model-value="state.updateDocument({ mode: $event })" /></div>
             <div class="setting-row"><span>{{ t('autoscroll') }}</span><Switch :model-value="state.document.value.autoscroll" :label="state.document.value.autoscroll ? t('on') : t('off')" @update:model-value="state.updateDocument({ autoscroll: $event })" /></div>
@@ -45,7 +53,7 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
             <div class="setting-row"><span>{{ t('theme') }}</span><Select :model-value="state.document.value.theme" :options="themeOptions" @update:model-value="setTheme" /></div>
           </section>
         </Popover>
-        <Button variant="primary" size="sm" :icon="X" :aria-label="t('hide')" @click="hide">{{ t('hide') }}</Button>
+        <Button variant="ghost" size="sm" icon-only :icon="Eye" :aria-label="t('hide')" :tooltip="t('hide')" @click="hide" />
       </div>
     </header>
     <p v-if="state.error.value" class="teleprompter-error" role="alert">{{ state.error.value }}</p>
@@ -53,11 +61,46 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
     <section :ref="state.setDisplayElement" class="teleprompter-display" :class="{ 'is-centered': state.document.value.textAlign === 'center' }" :style="{ '--teleprompter-font-size': `${state.document.value.fontSize}px`, '--teleprompter-line-height': state.document.value.lineHeight }" :aria-label="t('readerLabel')">
       <p v-for="(line, index) in state.lines.value" :key="`${index}-${line}`" :data-line-index="index" class="teleprompter-line" :class="{ active: state.document.value.mode === 'line-by-line' && state.activeLine.value === index, past: state.document.value.mode === 'line-by-line' && index < state.activeLine.value }">{{ line || '\u00a0' }}</p>
     </section>
-    <footer class="teleprompter-footer">
-      <Button variant="secondary" size="sm" :icon="ChevronLeft" :aria-label="t('previousLine')" @click="state.previousLine">{{ t('previous') }}</Button>
-      <Button variant="primary" size="sm" :icon="isAutoscrolling ? Pause : Play" :aria-label="isAutoscrolling ? t('pause') : t('resume')" @click="state.togglePause">{{ isAutoscrolling ? t('pause') : t('resume') }}</Button>
-      <span class="scroll-status" :class="{ active: isAutoscrolling }"><span class="status-dot" />{{ isAutoscrolling ? t('autoscrolling') : t('autoscrollPaused') }}</span>
-      <Button variant="secondary" size="sm" :icon="ChevronRight" :aria-label="t('nextLine')" @click="state.nextLine">{{ t('next') }}</Button>
+    <footer class="teleprompter-footer" :aria-label="t('playbackControls')">
+      <div class="player-side player-side-left">
+        <Button
+          variant="secondary"
+          size="sm"
+          icon-only
+          :icon="ChevronLeft"
+          :aria-label="t('previousLine')"
+          :tooltip="t('previousLine')"
+          :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value <= 0"
+          @click="state.previousLine"
+        />
+        <span
+          v-if="state.document.value.mode === 'line-by-line'"
+          class="line-progress"
+          :aria-label="t('lineProgress', { current: state.activeLine.value + 1, total: Math.max(1, state.lines.value.length) })"
+        >{{ state.activeLine.value + 1 }} / {{ Math.max(1, state.lines.value.length) }}</span>
+      </div>
+      <Button
+        class="player-toggle"
+        variant="primary"
+        size="md"
+        icon-only
+        :icon="isAutoscrolling ? Pause : Play"
+        :aria-label="isAutoscrolling ? t('pause') : t('resume')"
+        :tooltip="isAutoscrolling ? t('pause') : t('resume')"
+        @click="state.togglePause"
+      />
+      <div class="player-side player-side-right">
+        <Button
+          variant="secondary"
+          size="sm"
+          icon-only
+          :icon="ChevronRight"
+          :aria-label="t('nextLine')"
+          :tooltip="t('nextLine')"
+          :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value >= state.lines.value.length - 1"
+          @click="state.nextLine"
+        />
+      </div>
     </footer>
   </main>
 </template>
@@ -66,8 +109,8 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
 .teleprompter-window { --teleprompter-bg: var(--color-bg-surface); --teleprompter-panel: var(--color-bg-element); --teleprompter-text: var(--text-primary); width: 100vw; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: var(--teleprompter-bg); color: var(--teleprompter-text); }
 .teleprompter-window.theme-dark { --teleprompter-bg: #101114; --teleprompter-panel: #1b1d22; --teleprompter-text: #f8fafc; }
 .teleprompter-window.theme-light { --teleprompter-bg: #f7f5f0; --teleprompter-panel: #fff; --teleprompter-text: #1e1e1e; }
-.teleprompter-header, .teleprompter-footer { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--teleprompter-panel); border-bottom: 1px solid var(--color-border); -webkit-app-region: drag; }
-.teleprompter-footer { border-top: 1px solid var(--color-border); border-bottom: 0; -webkit-app-region: no-drag; }
+.teleprompter-header, .teleprompter-footer { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--teleprompter-panel); border-bottom: 1px solid var(--color-border); -webkit-app-region: drag; }
+.teleprompter-footer { display: grid; grid-template-columns: 1fr auto 1fr; border-top: 1px solid var(--color-border); border-bottom: 0; -webkit-app-region: no-drag; }
 .teleprompter-title { font-weight: 700; flex: 1; user-select: none; }
 .teleprompter-actions, .align-actions { display: flex; align-items: center; gap: 6px; -webkit-app-region: no-drag; }
 .editor-panel { padding: 12px 16px 0; background: var(--teleprompter-bg); }
@@ -77,12 +120,14 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
 .teleprompter-line { margin: 0 0 0.55em; white-space: pre-wrap; transition: color 0.2s, opacity 0.2s; }
 .teleprompter-line.past { color: var(--text-muted); opacity: 0.55; }
 .teleprompter-line.active { color: var(--color-primary); font-weight: 700; }
-.scroll-status { display: inline-flex; align-items: center; gap: 6px; margin: 0 auto; color: var(--text-muted); font-size: 12px; }
-.scroll-status.active { color: var(--color-primary); }
-.status-dot { width: 7px; height: 7px; border-radius: var(--radius-full); background: currentColor; }
+.player-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.player-side-right { justify-content: flex-end; }
+.player-toggle :deep(.btn) { width: 42px; height: 42px; }
+.line-progress { min-width: 42px; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
 .settings-panel { width: 340px; max-width: calc(100vw - 24px); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
 .setting-row > span { color: var(--text-secondary); }
 .align-actions { gap: 4px; }
-@media (max-width: 640px) { .teleprompter-display { padding-inline: 24px; } .teleprompter-footer { gap: 6px; } }
+@media (max-width: 640px) { .teleprompter-display { padding-inline: 24px; } .teleprompter-footer { gap: 6px; } .line-progress { min-width: 36px; } }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 </style>

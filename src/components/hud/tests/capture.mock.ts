@@ -49,6 +49,7 @@ export const captureMock = {
   setTeleprompterSession: vi.fn(),
   onTeleprompterShortcut: vi.fn().mockReturnValue(() => undefined),
   onTeleprompterSession: vi.fn().mockReturnValue(() => undefined),
+  onTeleprompterVisibility: vi.fn().mockReturnValue(() => undefined),
   saveSessionTeleprompter: vi.fn().mockResolvedValue(null),
   getSessionTeleprompter: vi.fn().mockResolvedValue(null),
   getUpdateState: vi.fn().mockResolvedValue({ status: 'unsupported', currentVersion: '0.1.0', availableVersion: null, percent: null, message: null }),

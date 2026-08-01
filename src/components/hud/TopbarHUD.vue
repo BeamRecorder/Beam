@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from "vue";
-import { ChevronLeft, Minus, ScrollText, Settings, X } from "@lucide/vue";
+import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
 import Badge from "~/ui/badge/Badge.vue";
 import Button from "~/ui/button/Button.vue";
 import { useTranslate } from "~/i18n/useTranslate";
@@ -27,36 +27,49 @@ const emit = defineEmits<{
   (event: "back"): void;
   (event: "minimize"): void;
   (event: "open-settings"): void;
-  (event: "open-teleprompter"): void;
   (event: "close"): void;
 }>();
 
 const isDragging = ref(false);
 let dragElement: HTMLElement | null = null;
 let dragPointerId: number | null = null;
+let dragStartX = 0;
+let dragStartY = 0;
+const dragThreshold = 4;
 const drag = () => window.capture?.drag();
+const handlePointerMove = (event: PointerEvent) => {
+  if (dragPointerId !== event.pointerId) return;
+  if (!isDragging.value) {
+    const distance = Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY);
+    if (distance < dragThreshold) return;
+    isDragging.value = true;
+    window.capture?.dragStart();
+  }
+  drag();
+};
 const stopDrag = () => {
-  if (!isDragging.value) return;
+  if (isDragging.value) window.capture?.dragEnd();
   isDragging.value = false;
-  window.removeEventListener("pointermove", drag);
+  window.removeEventListener("pointermove", handlePointerMove);
   window.removeEventListener("pointerup", stopDrag);
   window.removeEventListener("pointercancel", stopDrag);
   if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
   dragElement = null;
   dragPointerId = null;
-  window.capture?.dragEnd();
+  dragStartX = 0;
+  dragStartY = 0;
 };
 const startDrag = (event: PointerEvent) => {
   if (event.button !== 0) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
-  if (target?.closest("button, a, input, select, textarea, [role='button']")) return;
+  if (target?.closest("button, a, input, select, textarea, [role='button'], .window-actions")) return;
   if (isDragging.value) return;
-  isDragging.value = true;
   dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   dragPointerId = event.pointerId;
+  dragStartX = event.clientX;
+  dragStartY = event.clientY;
   dragElement?.setPointerCapture(event.pointerId);
-  window.capture?.dragStart();
-  window.addEventListener("pointermove", drag);
+  window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", stopDrag, { once: true });
   window.addEventListener("pointercancel", stopDrag, { once: true });
 };
@@ -97,7 +110,6 @@ onBeforeUnmount(stopDrag);
         <Minus :size="16" />
       </button>
       <span v-if="showSettings" class="settings-action">
-        <Button variant="ghost" size="sm" icon-only :icon="ScrollText" :aria-label="t('teleprompter')" :tooltip="t('teleprompter')" @click="emit('open-teleprompter')" />
         <Button variant="ghost" size="sm" icon-only :icon="Settings" :aria-label="t('preferences')" @click="emit('open-settings')" />
         <UpdateAvailableBadge />
       </span>

@@ -17,5 +17,7 @@
   "screenOption": "Écran {index}",
   "selectScreenRegion": "Sélectionner une zone de l’écran",
   "editScreenRegion": "Modifier la zone de l’écran",
-  "screenRegionSelected": "Zone de l’écran validée"
+  "screenRegionSelected": "Zone de l’écran validée",
+  "openTeleprompter": "Ouvrir le téléprompteur",
+  "closeTeleprompter": "Masquer le téléprompteur"
 }

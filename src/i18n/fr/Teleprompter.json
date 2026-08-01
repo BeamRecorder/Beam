@@ -27,6 +27,8 @@
   "next": "Suivante",
   "previousLine": "Ligne précédente",
   "nextLine": "Ligne suivante",
+  "lineProgress": "Ligne {current} sur {total}",
+  "playbackControls": "Commandes de lecture",
   "pause": "Pause",
   "resume": "Reprendre",
   "autoscrolling": "Défilement en cours",

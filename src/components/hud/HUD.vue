@@ -47,6 +47,7 @@ import {
   Video,
   VideoOff,
   Crop,
+  ScrollText,
   Copy,
   Check,
 } from "@lucide/vue";
@@ -113,6 +114,7 @@ const micOptions = computed(() => [
   { value: "no-audio", label: t("noAudio") },
 ]);
 const selectedMicId = ref("no-audio");
+const isTeleprompterVisible = ref(false);
 const selectedScreenId = ref<string | null>(null);
 const selectedScreenRegion = ref<ScreenRegion | null>(null);
 const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
@@ -772,6 +774,13 @@ const discoverSources = async () => {
 };
 
 let unsubscribeShortcut: (() => void) | null = null;
+let unsubscribeTeleprompterVisibility: (() => void) | null = null;
+
+const toggleTeleprompter = () => {
+  isTeleprompterVisible.value = !isTeleprompterVisible.value;
+  if (isTeleprompterVisible.value) capture.showTeleprompter();
+  else capture.hideTeleprompter();
+};
 
 onMounted(async () => {
   const preferences = await capture.getPreferences();
@@ -793,6 +802,9 @@ onMounted(async () => {
       void toggleRecording();
     }
   });
+  unsubscribeTeleprompterVisibility = capture.onTeleprompterVisibility((visible) => {
+    isTeleprompterVisible.value = visible;
+  });
 
   // Periodically refresh window previews when settings is not open and not recording
   previewsRefreshInterval = setInterval(() => {
@@ -811,6 +823,7 @@ onBeforeUnmount(() => {
   if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
   if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
   unsubscribeShortcut?.();
+  unsubscribeTeleprompterVisibility?.();
   stopTimer();
   void activeCamera?.stop();
   void activeMicrophone?.stop();
@@ -884,7 +897,6 @@ const openProject = (project: CaptureProject) => {
       @back="handleTopbarBack"
       @minimize="minimizeApp"
       @open-settings="showSettings = true"
-      @open-teleprompter="capture.showTeleprompter()"
       @close="closeApp"
     />
 
@@ -1004,20 +1016,34 @@ const openProject = (project: CaptureProject) => {
                     class="device-icon"
                     :class="{ 'is-unavailable': selectedMicId === 'no-audio' }"
                   />
-                  <div v-if="isBusy && sources.length === 0">
-                    <Skeleton
-                      variant="radial"
-                      height="2.75rem"
-                      radius="var(--radius-md)"
+                  <div class="mic-select-controls">
+                    <div v-if="isBusy && sources.length === 0">
+                      <Skeleton
+                        variant="radial"
+                        height="2.75rem"
+                        radius="var(--radius-md)"
+                      />
+                    </div>
+                    <Select
+                      v-else
+                      v-model="selectedMicId"
+                      :options="micOptions"
+                      :disabled="isRecording || isBusy"
+                      @toggle="handleDropdownToggle"
+                    />
+                    <Button
+                      :variant="isTeleprompterVisible ? 'primary' : 'secondary'"
+                      size="sm"
+                      icon-only
+                      :icon="ScrollText"
+                      :aria-label="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
+                      :tooltip="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
+                      :title="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
+                      :disabled="isBusy"
+                      :class="{ 'teleprompter-active': isTeleprompterVisible }"
+                      @click="toggleTeleprompter"
                     />
                   </div>
-                  <Select
-                    v-else
-                    v-model="selectedMicId"
-                    :options="micOptions"
-                    :disabled="isRecording || isBusy"
-                    @toggle="handleDropdownToggle"
-                  />
                 </div>
 
                 <div class="device-row">
@@ -1152,6 +1178,10 @@ const openProject = (project: CaptureProject) => {
 
 .screen-select-controls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
 .screen-select-controls > :first-child { flex: 1; min-width: 0; }
+.mic-select-controls { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mic-select-controls > :first-child { flex: 1; min-width: 0; }
+.mic-select-controls :deep(.btn) { width: 36px; height: 36px; padding: 0; }
+.mic-select-controls :deep(.btn-primary) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent); }
 
 .hud-wrapper.dropdown-open {
   overflow: visible; /* Allow popovers to float when active */
