@@ -1,4 +1,4 @@
-import { defineComponent, h, nextTick, ref } from "vue";
+import { defineComponent, h, nextTick, ref, type Ref } from "vue";
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCanvasBackground } from "../useCanvasBackground";
@@ -66,8 +66,8 @@ const context = () => ({
 }) as unknown as CanvasRenderingContext2D;
 
 let wrapper: VueWrapper | undefined;
-let selected!: ReturnType<typeof ref<BackgroundValue | null>>;
-let blur!: ReturnType<typeof ref<number | undefined>>;
+let selected!: Ref<BackgroundValue | null>;
+let blur!: Ref<number | undefined>;
 let renderCanvas!: ReturnType<typeof vi.fn>;
 let state!: ReturnType<typeof useCanvasBackground>;
 let backgroundVideo!: HTMLVideoElement;
@@ -82,15 +82,15 @@ const mountComposable = () => {
       state = useCanvasBackground(
         () => selected.value,
         () => blur.value,
-        renderCanvas,
+        renderCanvas as unknown as () => void,
       );
       return () => h("div");
     },
   });
   wrapper = mount(Harness);
   backgroundVideo = createElementSpy.mock.results
-    .map((result) => result.value)
-    .find((element) => element instanceof HTMLVideoElement) as HTMLVideoElement;
+    .map((result: { value: unknown }) => result.value)
+    .find((element: unknown): element is HTMLVideoElement => element instanceof HTMLVideoElement) as HTMLVideoElement;
 };
 
 beforeEach(() => {

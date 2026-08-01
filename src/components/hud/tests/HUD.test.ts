@@ -18,7 +18,7 @@ vi.mock('../../../api/system-audio-recorder', async () => {
   const systemAudio = await import('./system-audio-recorder.mock')
   return { BrowserSystemAudioRecorder: systemAudio.BrowserSystemAudioRecorder, recordSystemAudioFailure: systemAudio.recordSystemAudioFailure, systemAudioSource: systemAudio.systemAudioSource }
 })
-vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Close" @click="$emit(\'close\')"/><button aria-label="Minimize" @click="$emit(\'minimize\')"/><button aria-label="Teleprompter" @click="$emit(\'open-teleprompter\')"/></header>' } }))
+vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Back" @click="$emit(\'back\')"/><button aria-label="Close" @click="$emit(\'close\')"/><button aria-label="Minimize" @click="$emit(\'minimize\')"/><button aria-label="Teleprompter" @click="$emit(\'open-teleprompter\')"/></header>' } }))
 import HUD from '../HUD.vue'
 
 const catalog = { sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }], capabilities: { systemAudio: true } }
@@ -31,8 +31,8 @@ const stubs = {
     props: ['modelValue', 'options'],
     template: '<div class="window-select"><button class="window-select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button class="window-select-close" @click="$emit(\'toggle\', false)"/><button v-for="option in options" :key="option.id" class="window-option" @click="$emit(\'update:modelValue\', option.id)">{{ option.name }}</button></div>',
   },
-  ProjectPicker: { template: '<div class="project-picker-stub" />' },
-  HudPreferences: { template: '<div class="preferences-stub"><button @click="$emit(\'close\')">Return</button></div>' },
+  ProjectPicker: { template: '<div class="project-picker-stub"><button class="project-back" @click="$emit(\'back\')"/><button class="project-open" @click="$emit(\'open-project\', { id: \'project-1\', name: \'Demo\', previewSrc: \'demo.mp4\' })"/><button class="project-toggle" @click="$emit(\'toggle-popover\', true)"/></div>' },
+  HudPreferences: { template: '<div class="preferences-stub"><button class="preference-update" @click="$emit(\'update:countdown-seconds\', 10)"/><button class="preference-visibility" @click="$emit(\'update:recording-bar-visibility\', \'auto-fade\')"/><button @click="$emit(\'close\')">Return</button></div>' },
   CameraPreviewOverlay: { template: '<div class="camera-preview-stub" />' },
 }
 const ready = async () => { await flushPromises(); await Promise.resolve() }
@@ -67,7 +67,7 @@ describe('HUD', () => {
     capture.discover.mockRejectedValueOnce(new Error('permission denied')); const wrapper = mount(HUD, { global: { stubs } }); await ready(); expect(wrapper.get('[role=alert]').text()).toContain('permission denied'); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready(); expect(wrapper.emitted('start-recording')).toHaveLength(1); expect(wrapper.get('[role=alert]').text()).toContain('permission denied')
   })
   it('switches views and delegates window controls safely', async () => {
-    const wrapper = mount(HUD, { global: { stubs } }); await ready(); await wrapper.get('[aria-label="Preferences"]').trigger('click'); expect(wrapper.find('.preferences-stub').exists()).toBe(true); await wrapper.get('.preferences-stub button').trigger('click'); await wrapper.get('.project-btn').trigger('click'); expect(wrapper.find('.project-picker-stub').exists()).toBe(true); await wrapper.get('[aria-label="Close"]').trigger('click'); expect(capture.close).toHaveBeenCalledOnce()
+    const wrapper = mount(HUD, { global: { stubs } }); await ready(); await wrapper.get('[aria-label="Preferences"]').trigger('click'); expect(wrapper.find('.preferences-stub').exists()).toBe(true); await wrapper.get('.preferences-stub button:last-child').trigger('click'); await wrapper.get('.project-btn').trigger('click'); expect(wrapper.find('.project-picker-stub').exists()).toBe(true); await wrapper.get('[aria-label="Close"]').trigger('click'); expect(capture.close).toHaveBeenCalledOnce()
   })
 
   it('switches to window capture, handles device choices and preference shortcuts', async () => {
@@ -194,5 +194,21 @@ describe('HUD', () => {
     await wrapper.get('.select-control').trigger('click')
     await wrapper.get('.select-close').trigger('click')
     expect(capture.setSize).toHaveBeenCalled()
+  })
+  it('routes project picker events, preference updates, and guarded region actions', async () => {
+    const wrapper = mount(HUD, { global: { stubs } }); await ready()
+    await wrapper.get('[aria-label="Preferences"]').trigger('click')
+    await wrapper.get('.preference-update').trigger('click')
+    await wrapper.get('.preference-visibility').trigger('click')
+    expect(capture.updatePreferences).toHaveBeenCalledWith({ recordingBar: { visibility: 'auto-fade' } })
+    await wrapper.get('[aria-label="Back"]').trigger('click')
+    await wrapper.get('.project-btn').trigger('click')
+    await wrapper.get('.project-open').trigger('click')
+    expect(wrapper.emitted('open-project')).toContainEqual([{ id: 'project-1', name: 'Demo', previewSrc: 'demo.mp4' }])
+    await wrapper.get('.project-toggle').trigger('click')
+    expect(capture.setSize).toHaveBeenCalled()
+    await wrapper.get('.project-back').trigger('click')
+    expect(wrapper.find('.project-picker-stub').exists()).toBe(false)
+    expect(wrapper.get('[aria-label="Select an area of the screen"]').attributes('disabled')).toBeDefined()
   })
 })

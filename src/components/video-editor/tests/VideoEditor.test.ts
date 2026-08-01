@@ -1,8 +1,7 @@
-import { defineComponent, h, ref } from "vue";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import VideoEditor from "../VideoEditor.vue";
-import type { ClipComposition, VisualClip } from "../composition/composition-types";
+import type { ClipComposition } from "../composition/composition-types";
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
 const capture = vi.hoisted(() => ({ setWindowMode: vi.fn(), maximize: vi.fn() }));

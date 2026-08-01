@@ -1,4 +1,4 @@
-import { defineComponent, h, nextTick, ref } from "vue";
+import { defineComponent, h, nextTick } from "vue";
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useWaveform } from "../useWaveform";

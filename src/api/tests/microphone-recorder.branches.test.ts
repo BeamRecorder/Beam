@@ -18,7 +18,11 @@ class FakeTrack extends EventTarget {
 }
 
 class FakeStream {
-  constructor(private readonly track: FakeTrack) {}
+  private readonly track: FakeTrack;
+
+  constructor(track: FakeTrack) {
+    this.track = track;
+  }
 
   getAudioTracks() {
     return [this.track];
@@ -34,8 +38,13 @@ class FakeMediaRecorder extends EventTarget {
   static supported = true;
   state = "inactive";
 
-  constructor(readonly stream: MediaStream, readonly options: MediaRecorderOptions) {
+  readonly stream: MediaStream;
+  readonly options: MediaRecorderOptions;
+
+  constructor(stream: MediaStream, options: MediaRecorderOptions) {
     super();
+    this.stream = stream;
+    this.options = options;
     FakeMediaRecorder.instances.push(this);
   }
 

@@ -65,7 +65,7 @@ const mountComposable = () => {
           },
         } as any),
         activeTab: () => activeTab.value, composition: () => compositionRef.value, isCropping: () => false,
-        drawBackground: callbacks.drawBackground, videoError: () => "recording unavailable",
+        videoError: () => "recording unavailable",
         renderVisualStack: (ctx, bounds, drawScreen) => { drawScreen(); callbacks.onSelectCanvas(ctx, bounds); },
         ...callbacks, selectedTransformClipExists: () => true,
       });
@@ -104,7 +104,7 @@ describe("useCameraZoom", () => {
     options.compositionRef.value = composition();
     state.drawVideoWindow(ctx, 800, 450, video(0));
     expect(ctx.fillText).toHaveBeenCalledWith("recording unavailable", 400, 225);
-    options.output.value = { ...options.output.value, showBackground: true };
+    options.output.value = { preset: "16:9", width: 800, height: 450, ...options.output.value, showBackground: true };
     expect(state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA))).not.toBeNull();
     expect(drawDecoratedMedia).toHaveBeenCalled();
     expect(options.callbacks.drawBackground).toHaveBeenCalled();
@@ -139,7 +139,7 @@ describe("useCameraZoom", () => {
     const pointer = (x: number, y: number, pointerId: number) => Object.assign(new MouseEvent("pointerdown", { clientX: x, clientY: y }), { pointerId }) as unknown as PointerEvent;
     state.beginSelectionMove(pointer(400, 200, 1));
     expect(options.callbacks.onSelectScreenClip).toHaveBeenCalledWith("screen");
-    options.output.value = { ...options.output.value, showBackground: true };
+    options.output.value = { preset: "16:9", width: 800, height: 450, ...options.output.value, showBackground: true };
     state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA));
     options.selected.value = manualZoom;
     options.activeTab.value = "canvas";

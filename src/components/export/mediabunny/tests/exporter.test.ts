@@ -9,6 +9,7 @@ const { videoCodec, audioCodec, renderedAudio } = vi.hoisted(() => ({
   audioCodec: vi.fn(),
   renderedAudio: { duration: 3 } as AudioBuffer,
 }));
+const exportRuntime = vi.hoisted(() => ({ outputs: [] as any[], sources: [] as any[], renderFrame: vi.fn(), createProvider: vi.fn() }));
 
 vi.mock("mediabunny", () => ({
   AudioBufferSource: class AudioBufferSource {
@@ -16,8 +17,8 @@ vi.mock("mediabunny", () => ({
     constructor(...args: unknown[]) { void args; }
   },
   CanvasSource: class CanvasSource {
-    add = vi.fn();
-    constructor(...args: unknown[]) { void args; }
+    add = vi.fn(async () => undefined);
+    constructor(...args: unknown[]) { void args; exportRuntime.sources.push(this); }
   },
   Mp4OutputFormat: class Mp4OutputFormat {},
   Output: class Output {
@@ -26,7 +27,7 @@ vi.mock("mediabunny", () => ({
     start = vi.fn(async () => undefined);
     finalize = vi.fn(async () => undefined);
     cancel = vi.fn(async () => undefined);
-    constructor(...args: unknown[]) { void args; }
+    constructor(...args: unknown[]) { void args; exportRuntime.outputs.push(this); }
   },
   StreamTarget: class StreamTarget {
     constructor(...args: unknown[]) { void args; }
@@ -40,6 +41,13 @@ vi.mock("mediabunny", () => ({
   },
   Input: class Input {},
   VideoSampleSink: class VideoSampleSink {},
+}));
+
+vi.mock("../../composition/render", () => ({ renderCompositionFrame: exportRuntime.renderFrame }));
+vi.mock("../video-frame-provider", () => ({ VideoFrameProvider: { create: exportRuntime.createProvider } }));
+vi.mock("../../../video-editor/properties/cursor/useCursorReplacer", () => ({
+  cursorTypeForKind: vi.fn(() => "default"),
+  useCursorReplacer: () => ({ getCursorImage: vi.fn(async () => ({ width: 24, height: 24 })) }),
 }));
 
 const screenAsset = (): MediaAsset => ({
@@ -106,13 +114,24 @@ class FakeOfflineAudioContext {
   readonly decodeAudioData = vi.fn(async () => ({ duration: 2 } as AudioBuffer));
   readonly startRendering = vi.fn(async () => renderedAudio);
 
-  constructor(public readonly channels: number, public readonly length: number, public readonly sampleRate: number) {}
+  readonly channels: number;
+  readonly length: number;
+  readonly sampleRate: number;
+
+  constructor(channels: number, length: number, sampleRate: number) {
+    this.channels = channels;
+    this.length = length;
+    this.sampleRate = sampleRate;
+  }
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  exportRuntime.outputs = [];
+  exportRuntime.sources = [];
   videoCodec.mockReturnValue("vp9");
   audioCodec.mockReturnValue("opus");
+  exportRuntime.createProvider.mockResolvedValue({ frameAt: vi.fn(async () => null), dispose: vi.fn() });
 });
 
 afterEach(() => {
@@ -191,5 +210,46 @@ describe("mediabunny exporter", () => {
     setCapture({ beginExport: vi.fn().mockResolvedValue({ jobId: "job", canceled: false }) });
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
     await expect(exportWithMediabunny(request(), onProgress, signal)).rejects.toThrow("Canvas 2D");
+  });
+
+  it("loads assets, renders frames, reports progress, and finalizes a native export", async () => {
+    const value = request();
+    value.snapshot.duration = 0.1;
+    value.snapshot.render.fps = 1;
+    const beginExport = vi.fn().mockResolvedValue({ jobId: "job-success", canceled: false });
+    const finalizeExport = vi.fn().mockResolvedValue({ path: "C:/exports/demo.webm" });
+    setCapture({ beginExport, writeExportChunk: vi.fn().mockResolvedValue(undefined), finalizeExport, abortExport: vi.fn().mockResolvedValue(undefined) });
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(function (this: HTMLMediaElement) {
+      queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as CanvasRenderingContext2D);
+    const onProgress = vi.fn();
+
+    await expect(exportWithMediabunny(value, onProgress, new AbortController().signal)).resolves.toEqual({ path: "C:/exports/demo.webm", format: "webm" });
+    expect(beginExport).toHaveBeenCalledWith({ projectName: "Demo", format: "webm" });
+    expect(exportRuntime.createProvider).toHaveBeenCalledWith("session.mp4", [0]);
+    expect(exportRuntime.renderFrame).toHaveBeenCalled();
+    expect(exportRuntime.sources[0].add).toHaveBeenCalledWith(0, 1);
+    expect(exportRuntime.outputs[0].start).toHaveBeenCalled();
+    expect(exportRuntime.outputs[0].finalize).toHaveBeenCalled();
+    expect(finalizeExport).toHaveBeenCalledWith("job-success");
+    expect(onProgress.mock.calls.map(([progress]) => progress.stage)).toEqual(["loading_assets", "audio_mixing", "encoding", "finalizing"]);
+  });
+
+  it("cancels the output and native job when the export signal aborts during encoding", async () => {
+    const value = request();
+    value.snapshot.duration = 0.1;
+    value.snapshot.render.fps = 1;
+    const abortExport = vi.fn().mockResolvedValue(undefined);
+    setCapture({ beginExport: vi.fn().mockResolvedValue({ jobId: "job-aborted", canceled: false }), abortExport, writeExportChunk: vi.fn() });
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(function (this: HTMLMediaElement) {
+      queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as CanvasRenderingContext2D);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(exportWithMediabunny(value, vi.fn(), controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+    expect(exportRuntime.outputs[0].cancel).toHaveBeenCalled();
+    expect(abortExport).toHaveBeenCalledWith("job-aborted");
   });
 });

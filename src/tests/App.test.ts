@@ -1,4 +1,4 @@
-import { defineComponent, h, nextTick, ref } from "vue";
+import { nextTick } from "vue";
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App.vue";
@@ -47,44 +47,6 @@ vi.mock("../components/hud/recorder/useRecordingController", async () => {
       return recording;
     },
   };
-});
-
-const hudStub = defineComponent({
-  name: "MockHud",
-  emits: ["start-recording", "open-project"],
-  setup(_, { emit }) {
-    return () => h("div", { class: "mock-hud" }, [
-      h("button", { class: "start", onClick: () => emit("start-recording", { screenKind: "display", cameraId: "off", microphoneId: "no-audio", systemAudio: false, targetFps: 30, countdownSeconds: 0, recordingBarVisibility: "always" }) }),
-      h("button", { class: "open", onClick: () => emit("open-project", { id: "project-1", name: "Project", previewSrc: "project.mp4" }) }),
-    ]);
-  },
-});
-
-const recorderStub = defineComponent({
-  name: "MockRecorderBar",
-  props: { visibility: { type: String, default: "" } },
-  emits: ["stop", "cancel", "pause", "camera", "microphone", "system-audio"],
-  setup(_, { emit }) {
-    return () => h("div", { class: "mock-recorder" }, [
-      h("button", { class: "stop", onClick: () => emit("stop") }),
-      h("button", { class: "cancel", onClick: () => emit("cancel") }),
-      h("button", { class: "pause", onClick: () => emit("pause") }),
-      h("button", { class: "camera", onClick: () => emit("camera") }),
-      h("button", { class: "microphone", onClick: () => emit("microphone") }),
-      h("button", { class: "system-audio", onClick: () => emit("system-audio") }),
-    ]);
-  },
-});
-
-const editorStub = defineComponent({
-  name: "MockVideoEditor",
-  emits: ["back-to-hud", "open-project"],
-  setup(_, { emit }) {
-    return () => h("div", { class: "mock-editor" }, [
-      h("button", { class: "back", onClick: () => emit("back-to-hud") }),
-      h("button", { class: "open-other", onClick: () => emit("open-project", { id: "other", name: "Other", previewSrc: "other.mp4" }) }),
-    ]);
-  },
 });
 
 vi.mock("../components/hud/HUD.vue", async () => {
@@ -205,6 +167,7 @@ describe("App", () => {
   });
 
   it("opens projects, displays loading errors, and dismisses them", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mocks.capture.getProjectEditorData.mockRejectedValueOnce(new Error("project is unreadable"));
     await wrapper.get(".open").trigger("click");
     await settle();
@@ -217,6 +180,7 @@ describe("App", () => {
     await settle();
     expect(wrapper.find(".mock-editor").exists()).toBe(true);
     expect(mocks.capture.present).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
   });
 
   it("handles completed recordings, missing projects, and editor back navigation", async () => {
