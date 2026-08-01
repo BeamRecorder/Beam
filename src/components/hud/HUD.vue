@@ -457,13 +457,9 @@ const toggleRecording = async () => {
     if (activeTab.value === "screen")
       screenId = selectedScreenId.value ?? undefined;
     else if (selectedSourceId.value) {
-      const hwndHex = Number(selectedSourceId.value.replace("window:", ""))
-        .toString(16)
-        .toLowerCase();
-      screenId = sources.value.find(
-        (source) =>
-          source.kind === "window" && source.id.toLowerCase().includes(hwndHex),
-      )?.id;
+      // Keep Electron's complete source id (usually `window:<hwnd>:<display>`).
+      // The main process canonicalizes it for the platform-specific Rust backend.
+      screenId = selectedSourceId.value;
     }
     emit("start-recording", {
       screenKind: activeTab.value === "window" ? "window" : "display",
@@ -521,13 +517,7 @@ const toggleRecording = async () => {
       let rustScreenId: string | undefined = undefined;
       if (selectedSourceId.value) {
         if (activeTab.value === "window") {
-          // Electron window ID: "window:12345"
-          const hwndDec = Number(selectedSourceId.value.replace("window:", ""));
-          const hwndHex = hwndDec.toString(16).toLowerCase();
-          const match = sources.value.find(
-            (s) => s.kind === "window" && s.id.toLowerCase().includes(hwndHex),
-          );
-          rustScreenId = match ? match.id : undefined;
+          rustScreenId = selectedSourceId.value;
         }
       }
 

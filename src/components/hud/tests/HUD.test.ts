@@ -8,7 +8,7 @@ import { browserSystemAudioMock } from './system-audio-recorder.mock'
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }))
 vi.mock('../../../api/camera-recorder', async () => {
   const camera = await import('./camera-recorder.mock')
-  return { BrowserCameraRecorder: camera.BrowserCameraRecorder, listBrowserCameras: camera.listBrowserCameras }
+  return { BrowserCameraRecorder: camera.BrowserCameraRecorder, listBrowserCameras: camera.listBrowserCameras, isCameraUnavailableError: camera.isCameraUnavailableError }
 })
 vi.mock('../../../api/microphone-recorder', async () => {
   const microphone = await import('./microphone-recorder.mock')
@@ -72,7 +72,7 @@ describe('HUD', () => {
 
   it('switches to window capture, handles device choices and preference shortcuts', async () => {
     capture.getSources.mockImplementation(async (types: string[]) => types[0] === 'window'
-      ? [{ id: 'window:123', name: 'Editor window', thumbnail: 'thumb', appIcon: null }]
+      ? [{ id: 'window:123:0', name: 'Editor window', thumbnail: 'thumb', appIcon: null }]
       : [{ id: 'display:preview', name: 'Display', thumbnail: 'thumb', displayId: 'display:1', displayBounds: { x: 0, y: 0, width: 1920, height: 1080 } }])
     capture.discover.mockResolvedValue({
       sources: [
@@ -91,7 +91,7 @@ describe('HUD', () => {
     await wrapper.findAll('.select-option').find((button) => button.text() === 'Cam')?.trigger('click')
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!
     await record.trigger('click')
-    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: 'window:7b', systemAudio: true, cameraId: 'camera:chromium:device-1', microphoneId: 'microphone:chromium:device-1' })])
+    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: 'window:123:0', systemAudio: true, cameraId: 'camera:chromium:device-1', microphoneId: 'microphone:chromium:device-1' })])
     const shortcut = capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined
     shortcut?.('ignored.action')
     shortcut?.('hud.startStopRecording')
@@ -171,7 +171,7 @@ describe('HUD', () => {
     expect(capture.setSize).toHaveBeenCalled()
   })
 
-  it('leaves an unmatched native window id undefined in the emitted configuration', async () => {
+  it('keeps the Electron window id for backend validation', async () => {
     capture.discover.mockResolvedValueOnce({ sources: [{ id: 'window:abc', kind: 'window', label: 'Editor' }], capabilities: { systemAudio: false } })
     capture.getSources.mockResolvedValue([{ id: 'window:123', name: 'Preview', thumbnail: '', appIcon: null }])
     const wrapper = mount(HUD, { global: { stubs } }); await ready()
@@ -180,7 +180,7 @@ describe('HUD', () => {
     await wrapper.get('.window-option').trigger('click')
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!
     await record.trigger('click')
-    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: undefined })])
+    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: 'window:123' })])
   })
 
   it('keeps a failed active stop visible as an error and resets transient dropdown state', async () => {

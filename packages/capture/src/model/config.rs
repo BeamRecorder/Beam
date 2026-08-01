@@ -54,12 +54,24 @@ impl ScreenRegion {
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn pixel_rect(self, width: u32, height: u32) -> Result<(u32, u32, u32, u32), crate::CaptureError> {
+    pub fn pixel_rect(
+        self,
+        width: u32,
+        height: u32,
+    ) -> Result<(u32, u32, u32, u32), crate::CaptureError> {
         self.validate()?;
-        let x = (self.x * f64::from(width)).round().clamp(0.0, f64::from(width.saturating_sub(1))) as u32;
-        let y = (self.y * f64::from(height)).round().clamp(0.0, f64::from(height.saturating_sub(1))) as u32;
-        let right = ((self.x + self.width) * f64::from(width)).round().clamp(f64::from(x + 1), f64::from(width)) as u32;
-        let bottom = ((self.y + self.height) * f64::from(height)).round().clamp(f64::from(y + 1), f64::from(height)) as u32;
+        let x = (self.x * f64::from(width))
+            .round()
+            .clamp(0.0, f64::from(width.saturating_sub(1))) as u32;
+        let y = (self.y * f64::from(height))
+            .round()
+            .clamp(0.0, f64::from(height.saturating_sub(1))) as u32;
+        let right = ((self.x + self.width) * f64::from(width))
+            .round()
+            .clamp(f64::from(x + 1), f64::from(width)) as u32;
+        let bottom = ((self.y + self.height) * f64::from(height))
+            .round()
+            .clamp(f64::from(y + 1), f64::from(height)) as u32;
         Ok((x, y, right, bottom))
     }
 }

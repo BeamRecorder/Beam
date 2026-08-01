@@ -2,10 +2,10 @@ const { randomUUID } = require('crypto')
 
 function parseHwnd(id) {
   if (!id) return null
-  const str = String(id).replace(/^(wgc:window:|window:)/, '').split(':')[0]
+  const str = String(id).replace(/^(wgc:window:|sck:window:|window:)/, '').split(':')[0]
   if (!str) return null
-  const numDec = parseInt(str, 10)
-  const numHex = parseInt(str, 16)
+  const numDec = /^\d+$/.test(str) ? Number(str) : null
+  const numHex = /^[0-9a-f]+$/i.test(str) ? Number.parseInt(str, 16) : null
   return { dec: isNaN(numDec) ? null : numDec, hex: isNaN(numHex) ? null : numHex }
 }
 
@@ -18,13 +18,42 @@ function matchSourceId(source, requestedId) {
          (a.hex !== null && (a.hex === b.dec || a.hex === b.hex))
 }
 
-function selectSource(sources, kind, requestedId) {
+function canonicalWindowSourceId(requestedId, platform) {
+  const parsed = parseHwnd(requestedId)
+  if (!parsed) return null
+  const numericId = parsed.dec ?? parsed.hex
+  if (!Number.isSafeInteger(numericId) || numericId <= 0) return null
+  return platform === 'darwin'
+    ? `sck:window:${numericId}`
+    : `wgc:window:${numericId.toString(16)}`
+}
+
+function selectSource(sources, kind, requestedId, platform) {
+  const platformPrefix =
+    kind === 'window'
+      ? platform === 'darwin'
+        ? 'sck:window:'
+        : platform === 'win32'
+          ? 'wgc:window:'
+          : null
+      : null
+
   if (requestedId) {
-    const selected = sources.find((source) => source.kind === kind && matchSourceId(source, requestedId))
+    const selected = sources.find(
+      (source) =>
+        source.kind === kind &&
+        source.id === requestedId,
+    ) || sources.find(
+      (source) =>
+        source.kind === kind &&
+        (!platformPrefix || source.id.startsWith(platformPrefix)) &&
+        matchSourceId(source, requestedId),
+    )
     if (selected) return selected
     if (kind === 'window') {
-      const formattedId = requestedId.startsWith('wgc:window:') ? requestedId : `wgc:window:${requestedId.replace(/^window:/, '')}`
-      return { id: formattedId, kind: 'window' }
+      const formattedId = canonicalWindowSourceId(requestedId, platform)
+      const canonical = sources.find((source) => source.kind === kind && source.id === formattedId)
+      if (canonical) return canonical
     }
     throw new Error(`Source ${kind} introuvable: ${requestedId}`)
   }
@@ -51,7 +80,7 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
   const sources = Array.isArray(catalog?.sources) ? catalog.sources : []
   const capabilities = catalog?.capabilities || {}
   const screenKind = options.screenKind === 'window' ? 'window' : 'display'
-  const screen = selectSource(sources, screenKind, options.screenId)
+  const screen = selectSource(sources, screenKind, options.screenId, environment.platform)
   if (!screen) throw new Error('Aucun écran ou fenêtre capturable n’est disponible')
   return {
     projectId: options.projectId || randomUUID(), screen: { mode: 'source', sourceId: screen.id },
@@ -63,4 +92,4 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
   }
 }
 
-module.exports = { buildDefaultCaptureConfig, selectSource, screenRegion }
+module.exports = { buildDefaultCaptureConfig, canonicalWindowSourceId, selectSource, screenRegion }

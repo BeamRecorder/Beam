@@ -7,3 +7,4 @@ export const browserCameraMock = {
 
 export const BrowserCameraRecorder = { request: browserCameraMock.request }
 export const listBrowserCameras = browserCameraMock.listBrowserCameras
+export const isCameraUnavailableError = vi.fn().mockReturnValue(false)

@@ -19,11 +19,16 @@ use screencapturekit::{
     },
 };
 
-use crate::{CaptureError, model::{ScreenRegion, SourceId}, session::StartGate};
+use crate::{
+    CaptureError,
+    model::{ScreenRegion, SourceId},
+    session::StartGate,
+};
 
 pub struct MacRecording {
     stream: Option<SCStream>,
     recording: SCRecordingOutput,
+    output: std::path::PathBuf,
     frame_handler: usize,
     metrics: Arc<MacCaptureMetrics>,
 }
@@ -110,6 +115,7 @@ impl MacRecording {
         Ok(Self {
             stream: Some(stream),
             recording,
+            output: output.to_owned(),
             frame_handler,
             metrics,
         })
@@ -138,7 +144,14 @@ impl MacRecording {
                 .remove_recording_output(&self.recording)
                 .map_err(backend_error)?;
         }
-        Ok(self.recording.recorded_file_size())
+        let size = self.recording.recorded_file_size();
+        if size <= 0 {
+            let _ = std::fs::remove_file(&self.output);
+            return Err(CaptureError::Backend(
+                "ScreenCaptureKit produced no frames for the selected window".into(),
+            ));
+        }
+        Ok(size)
     }
 }
 
@@ -152,7 +165,15 @@ pub(crate) fn resolve_filter(
     content: &SCShareableContent,
     source_id: &SourceId,
     region: Option<ScreenRegion>,
-) -> Result<(SCContentFilter, u32, u32, Option<screencapturekit::cg::CGRect>), CaptureError> {
+) -> Result<
+    (
+        SCContentFilter,
+        u32,
+        u32,
+        Option<screencapturekit::cg::CGRect>,
+    ),
+    CaptureError,
+> {
     if let Some(id) = source_id.as_str().strip_prefix("sck:display:") {
         let display_id = id
             .parse::<u32>()
@@ -168,7 +189,9 @@ pub(crate) fn resolve_filter(
             .with_display(&display)
             .with_excluding_windows(&[])
             .build();
-        let Some(region) = region else { return Ok((filter, width, height, None)); };
+        let Some(region) = region else {
+            return Ok((filter, width, height, None));
+        };
         let (left, top, right, bottom) = region.pixel_rect(width, height)?;
         let frame = display.frame();
         let source_rect = screencapturekit::cg::CGRect::new(

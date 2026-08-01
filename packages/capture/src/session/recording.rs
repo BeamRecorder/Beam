@@ -197,6 +197,10 @@ impl RecordingSession {
                 .warnings
                 .push(format!("track shutdown reported: {error}"));
         }
+        let required_screen_failed =
+            self.manifest.tracks.iter().any(|track| {
+                track.kind == TrackKind::Screen && track.status == TrackStatus::Failed
+            });
         for track in &mut self.manifest.tracks {
             if track.status != TrackStatus::Failed {
                 track.status = TrackStatus::Completed;
@@ -215,7 +219,8 @@ impl RecordingSession {
         }
         self.state = super::SessionState::Completed;
         if let Some(error) = close_error
-            && self.request.failure_policy == crate::model::FailurePolicy::FailFast
+            && (required_screen_failed
+                || self.request.failure_policy == crate::model::FailurePolicy::FailFast)
         {
             return Err(error);
         }

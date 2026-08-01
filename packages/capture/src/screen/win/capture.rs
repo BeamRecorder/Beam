@@ -1,8 +1,9 @@
 use std::{
+    ffi::c_void,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicU64, Ordering},
     },
 };
 
@@ -24,9 +25,9 @@ use windows_capture::{
 };
 
 use crate::{
+    CaptureError,
     model::{ScreenRegion, SourceId},
     session::StartGate,
-    CaptureError,
 };
 
 #[derive(Debug, Default)]
@@ -167,6 +168,7 @@ pub struct WindowsRecording {
     control: Option<Control>,
     callback: Arc<Mutex<CaptureHandler>>,
     metrics: Arc<WindowsCaptureMetrics>,
+    output: PathBuf,
 }
 
 impl WindowsRecording {
@@ -196,15 +198,21 @@ impl WindowsRecording {
             );
             return start_item(
                 monitor,
-                StartItemConfig { output, size, bitrate, fps, exclude_cursor, region, start_gate },
+                StartItemConfig {
+                    output,
+                    size,
+                    bitrate,
+                    fps,
+                    exclude_cursor,
+                    region,
+                    start_gate,
+                },
             );
         }
-        if source_id.as_str().starts_with("wgc:window:") || source_id.as_str().starts_with("window:") {
-            let window = Window::enumerate()
-                .map_err(backend_error)?
-                .into_iter()
-                .find(|window| matches_window_hwnd(window, source_id))
-                .ok_or_else(|| CaptureError::SourceNotFound(source_id.to_string()))?;
+        if source_id.as_str().starts_with("wgc:window:")
+            || source_id.as_str().starts_with("window:")
+        {
+            let window = window_from_source_id(source_id)?;
             let width = u32::try_from(window.width().map_err(backend_error)?.max(1))
                 .map_err(backend_error)?;
             let height = u32::try_from(window.height().map_err(backend_error)?.max(1))
@@ -228,10 +236,35 @@ impl WindowsRecording {
     }
 
     pub fn stop(mut self) -> Result<(), CaptureError> {
-        if let Some(control) = self.control.take() {
-            control.stop().map_err(backend_error)?;
+        let control_result = self
+            .control
+            .take()
+            .map_or(Ok(()), |control| control.stop().map_err(backend_error));
+        let finish_result = self.callback.lock().finish();
+        let result = match control_result {
+            Err(error) => Err(error),
+            Ok(()) => finish_result,
+        };
+        let result = result.and_then(|()| {
+            if self.metrics.frames_received() == 0 {
+                return Err(CaptureError::Backend(
+                    "Windows Graphics Capture produced no frames for the selected window".into(),
+                ));
+            }
+            let size = std::fs::metadata(&self.output)
+                .map_err(backend_error)?
+                .len();
+            if size == 0 {
+                return Err(CaptureError::Backend(
+                    "Windows Graphics Capture produced an empty video file".into(),
+                ));
+            }
+            Ok(())
+        });
+        if result.is_err() {
+            let _ = std::fs::remove_file(&self.output);
         }
-        self.callback.lock().finish()
+        result
     }
 
     #[must_use]
@@ -317,33 +350,35 @@ where
         control: Some(control),
         callback,
         metrics,
+        output: output.to_owned(),
     })
 }
 
-fn window_id(window: Window) -> Result<SourceId, CaptureError> {
-    SourceId::new(format!("wgc:window:{:x}", window.as_raw_hwnd() as usize))
-}
-
-fn matches_window_hwnd(window: &Window, source_id: &SourceId) -> bool {
-    let hwnd = window.as_raw_hwnd() as usize;
+fn window_from_source_id(source_id: &SourceId) -> Result<Window, CaptureError> {
     let s = source_id.as_str();
-    let raw = s
-        .strip_prefix("wgc:window:")
-        .or_else(|| s.strip_prefix("window:"))
-        .unwrap_or(s);
+    let (raw, radix) = if let Some(raw) = s.strip_prefix("wgc:window:") {
+        (raw, 16)
+    } else if let Some(raw) = s.strip_prefix("window:") {
+        (raw, 10)
+    } else {
+        return Err(CaptureError::InvalidConfiguration(format!(
+            "{source_id} is not a Windows window source"
+        )));
+    };
     let token = raw.split(':').next().unwrap_or(raw);
-
-    if let Ok(val) = usize::from_str_radix(token, 10) {
-        if val == hwnd {
-            return true;
-        }
+    let hwnd = usize::from_str_radix(token, radix).map_err(|error| {
+        CaptureError::InvalidConfiguration(format!(
+            "invalid Windows window handle {token}: {error}"
+        ))
+    })?;
+    if hwnd == 0 {
+        return Err(CaptureError::SourceNotFound(source_id.to_string()));
     }
-    if let Ok(val) = usize::from_str_radix(token, 16) {
-        if val == hwnd {
-            return true;
-        }
+    let window = Window::from_raw_hwnd(hwnd as *mut c_void);
+    if !window.is_valid() {
+        return Err(CaptureError::SourceNotFound(source_id.to_string()));
     }
-    false
+    Ok(window)
 }
 
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {

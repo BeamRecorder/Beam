@@ -82,7 +82,14 @@ fn native_session_discard_removes_the_project_and_session() {
     session.start().expect("start native session");
     session.discard().expect("discard native session");
 
-    assert!(temporary.path().read_dir().expect("read projects").next().is_none());
+    assert!(
+        temporary
+            .path()
+            .read_dir()
+            .expect("read projects")
+            .next()
+            .is_none()
+    );
 }
 
 #[test]

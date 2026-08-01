@@ -14,6 +14,8 @@ const catalog = {
     { id: 'display:2', kind: 'display', isDefault: false },
     { id: 'display:1', kind: 'display', isDefault: true },
     { id: 'window:1', kind: 'window', isDefault: false },
+    { id: 'wgc:window:7b', kind: 'window', isDefault: false },
+    { id: 'sck:window:123', kind: 'window', isDefault: false },
   ],
 }
 
@@ -21,6 +23,7 @@ const environment = { platform: 'win32', defaultOutputRoot: 'recordings', exclud
 
 test('builds a one-call recording config from defaults', () => {
   const config = buildDefaultCaptureConfig(catalog, {}, environment)
+
   assert.equal(config.screen.sourceId, 'display:1')
   assert.equal('microphone' in config, false)
   assert.equal('systemAudio' in config, false)
@@ -39,6 +42,22 @@ test('supports explicit source selection and disabling optional devices', () => 
     screenId: 'window:1',
   }, environment)
   assert.equal(config.screen.sourceId, 'window:1')
+})
+
+test('normalizes an Electron Windows window id to the Rust WGC source id', () => {
+  const config = buildDefaultCaptureConfig(catalog, {
+    screenKind: 'window',
+    screenId: 'window:123:0',
+  }, environment)
+  assert.equal(config.screen.sourceId, 'wgc:window:7b')
+})
+
+test('normalizes an Electron macOS window id to the ScreenCaptureKit source id', () => {
+  const config = buildDefaultCaptureConfig(catalog, {
+    screenKind: 'window',
+    screenId: 'window:123:0',
+  }, { ...environment, platform: 'darwin' })
+  assert.equal(config.screen.sourceId, 'sck:window:123')
 })
 
 test('rejects missing explicit sources and invalid queue capacity', () => {

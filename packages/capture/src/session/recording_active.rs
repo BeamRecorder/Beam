@@ -58,12 +58,15 @@ impl ActiveRecordings {
         } = request.cursor
         {
             let region = match &request.screen {
-                Some(ScreenSelection::Source { source_id }) => {
-                    crate::cursor::crop_region(
-                        crate::cursor::win::source_region(source_id)?,
-                        request.region.unwrap_or(crate::model::ScreenRegion { x: 0.0, y: 0.0, width: 1.0, height: 1.0 }),
-                    )?
-                }
+                Some(ScreenSelection::Source { source_id }) => crate::cursor::crop_region(
+                    crate::cursor::win::source_region(source_id)?,
+                    request.region.unwrap_or(crate::model::ScreenRegion {
+                        x: 0.0,
+                        y: 0.0,
+                        width: 1.0,
+                        height: 1.0,
+                    }),
+                )?,
                 _ => crate::cursor::CaptureRegion {
                     x: 0,
                     y: 0,
@@ -90,12 +93,15 @@ impl ActiveRecordings {
         #[cfg(all(target_os = "macos", feature = "cursor"))]
         if let CursorSelection::Separate { capture_clicks, .. } = request.cursor {
             let region = match &request.screen {
-                Some(ScreenSelection::Source { source_id }) => {
-                    crate::cursor::crop_region(
-                        crate::cursor::mac::source_region(source_id)?,
-                        request.region.unwrap_or(crate::model::ScreenRegion { x: 0.0, y: 0.0, width: 1.0, height: 1.0 }),
-                    )?
-                }
+                Some(ScreenSelection::Source { source_id }) => crate::cursor::crop_region(
+                    crate::cursor::mac::source_region(source_id)?,
+                    request.region.unwrap_or(crate::model::ScreenRegion {
+                        x: 0.0,
+                        y: 0.0,
+                        width: 1.0,
+                        height: 1.0,
+                    }),
+                )?,
                 _ => crate::cursor::CaptureRegion {
                     x: 0,
                     y: 0,
@@ -197,7 +203,9 @@ impl ActiveRecordings {
         #[cfg(windows)]
         if let Some(recording) = self.screen.take() {
             let metrics = recording.metrics();
-            record_result(recording.stop(), &mut first_error);
+            let result = recording.stop();
+            mark_track_failed(tracks, TrackKind::Screen, &result);
+            record_result(result, &mut first_error);
             update_video_metrics(
                 tracks,
                 TrackKind::Screen,
@@ -208,7 +216,9 @@ impl ActiveRecordings {
         #[cfg(target_os = "macos")]
         if let Some(recording) = self.screen.take() {
             let metrics = recording.metrics();
-            record_result(recording.stop().map(|_| ()), &mut first_error);
+            let result = recording.stop().map(|_| ());
+            mark_track_failed(tracks, TrackKind::Screen, &result);
+            record_result(result, &mut first_error);
             update_video_metrics(
                 tracks,
                 TrackKind::Screen,
@@ -247,5 +257,18 @@ impl ActiveRecordings {
             return Err(error);
         }
         Ok(())
+    }
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+fn mark_track_failed(
+    tracks: &mut [TrackMetadata],
+    kind: TrackKind,
+    result: &Result<(), CaptureError>,
+) {
+    let Err(error) = result else { return };
+    if let Some(track) = track_mut(tracks, kind) {
+        track.status = TrackStatus::Failed;
+        track.termination_reason = Some(error.to_string());
     }
 }
