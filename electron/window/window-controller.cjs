@@ -32,6 +32,7 @@ class WindowController {
     this.recorderTooltipVisible = false
     this.recorderTooltipRelayoutTimer = null
     this.recorderTooltipApplyTimer = null
+    this.recorderNativeDragActive = false
     this.recorderPointerPoll = null
     this.window.setIgnoreMouseEvents(true)
     this.window.on('show', () => this.applyInteractionPolicy())
@@ -99,6 +100,7 @@ class WindowController {
       this.recorderTooltipSide = null
       this.recorderTooltipWidth = null
       this.recorderTooltipVisible = false
+      this.recorderNativeDragActive = false
       this.stopRecorderPointerTracking()
     }
     this.mode = mode
@@ -109,6 +111,7 @@ class WindowController {
       this.recorderTooltipSide = null
       this.recorderTooltipWidth = null
       this.recorderTooltipVisible = false
+      this.recorderNativeDragActive = false
       this.placeRecorder()
     }
     if (mode === 'hud' && this.hudPosition) {
@@ -160,7 +163,18 @@ class WindowController {
   }
 
   scheduleRecorderTooltipRelayout() {
-    if (this.mode !== 'recorder' || !this.recorderTooltipVisible || this.window.isDestroyed()) return
+    if (this.mode !== 'recorder' || this.window.isDestroyed()) return
+    if (this.recorderNativeDragActive) {
+      this.clearRecorderTooltipRelayout()
+      this.recorderTooltipRelayoutTimer = setTimeout(() => {
+        this.recorderTooltipRelayoutTimer = null
+        if (!this.recorderNativeDragActive) return
+        this.recorderNativeDragActive = false
+        this.setRecorderTooltip(true)
+      }, 150)
+      return
+    }
+    if (!this.recorderTooltipVisible) return
     const layout = this.calculateRecorderTooltipLayout()
     const current = this.window.getBounds()
     if (current.x === layout.x && current.y === layout.base.y && Math.abs(current.width - layout.width) <= 1) return
@@ -214,7 +228,14 @@ class WindowController {
     return this.calculateRecorderTooltipLayout().side
   }
 
-  setRecorderTooltip(visible) {
+  beginRecorderDrag() {
+    if (this.mode !== 'recorder' || this.window.isDestroyed()) return
+    this.recorderNativeDragActive = true
+    this.setRecorderTooltip(false, { preserveSide: true })
+    this.scheduleRecorderTooltipRelayout()
+  }
+
+  setRecorderTooltip(visible, { preserveSide = false } = {}) {
     if (this.mode !== 'recorder' || this.window.isDestroyed()) return null
     if (visible) {
       this.recorderTooltipVisible = true
@@ -250,7 +271,7 @@ class WindowController {
     this.clearRecorderTooltipRelayout()
     const base = this.recorderBaseBounds
     if (base) this.window.setBounds(base)
-    this.recorderTooltipSide = null
+    if (!preserveSide) this.recorderTooltipSide = null
     this.recorderTooltipWidth = null
     console.info('[RecorderTooltip] compact', { bounds: this.window.getBounds(), base })
     return null

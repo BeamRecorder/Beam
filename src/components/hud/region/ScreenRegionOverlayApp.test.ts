@@ -5,6 +5,9 @@ const { capture } = vi.hoisted(() => ({
   capture: { onScreenRegionConfigure: vi.fn(), confirmScreenRegion: vi.fn(), cancelScreenRegion: vi.fn() },
 }))
 vi.mock('../../../api/capture', () => ({ capture }))
+vi.mock('~/i18n/useTranslate', () => ({
+  useTranslate: () => ({ t: (key: string) => key }),
+}))
 
 import ScreenRegionOverlayApp from './ScreenRegionOverlayApp.vue'
 

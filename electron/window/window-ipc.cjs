@@ -78,6 +78,7 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     win.setSize(targetWidth, targetHeight)
   })
   ipcMain.on('window:setInteractive', (event, overInteractive) => controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive))
+  ipcMain.on('window:recorder-drag-start', (event) => controllerForWindow(windowForEvent(event))?.beginRecorderDrag())
   ipcMain.on('window:set-visible', (event, visible) => controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible)))
   ipcMain.handle('window:set-recorder-tooltip', (event, visible) => {
     return controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible)) ?? null

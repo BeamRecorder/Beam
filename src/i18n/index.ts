@@ -71,6 +71,8 @@ import frBackgroundCatalog from './fr/backgroundCatalog.json'
 import frWhisperTypes from './fr/whisperTypes.json'
 import enTeleprompter from './en/Teleprompter.json'
 import frTeleprompter from './fr/Teleprompter.json'
+import enScreenRegionOverlay from './en/ScreenRegionOverlay.json'
+import frScreenRegionOverlay from './fr/ScreenRegionOverlay.json'
 
 const messages = {
   en: {
@@ -110,6 +112,7 @@ const messages = {
     backgroundCatalog: enBackgroundCatalog,
     whisperTypes: enWhisperTypes,
     Teleprompter: enTeleprompter,
+    ScreenRegionOverlay: enScreenRegionOverlay,
   },
   fr: {
     HUD: frHUD,
@@ -148,6 +151,7 @@ const messages = {
     backgroundCatalog: frBackgroundCatalog,
     whisperTypes: frWhisperTypes,
     Teleprompter: frTeleprompter,
+    ScreenRegionOverlay: frScreenRegionOverlay,
   },
 }
 

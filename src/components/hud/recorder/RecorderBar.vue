@@ -76,6 +76,13 @@ const getShortcut = (id: string, fallback: string): string => {
   return preferencesStore.settings?.shortcuts?.[id]?.keys || fallback;
 };
 
+const prepareNativeDrag = (event: PointerEvent) => {
+  if (event.button !== 0) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest(".drag-handle")) return;
+  window.capture?.beginRecorderDrag();
+};
+
 const tooltipsReady = ref(false);
 const showTooltips = async () => {
   tooltipsReady.value = false;
@@ -96,6 +103,7 @@ onBeforeUnmount(() => {
     class="recorder-bar"
     :class="{ 'auto-fade': visibility === 'auto-fade', 'tooltip-right': tooltipSide === 'right' }"
     :aria-label="t('recordingControls')"
+    @pointerdown="prepareNativeDrag"
     @mouseenter="showTooltips"
     @mouseleave="hideTooltips"
   >
@@ -104,6 +112,7 @@ onBeforeUnmount(() => {
       type="button"
       :aria-label="t('moveRecorderBar')"
       :title="t('moveRecorderBar')"
+      @pointerdown.stop="prepareNativeDrag"
     >
       <GripVertical aria-hidden="true" />
     </button>

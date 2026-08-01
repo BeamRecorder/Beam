@@ -4,6 +4,9 @@ import { Check, Move, RotateCcw, X } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import { capture } from '../../../api/capture'
 import type { ScreenRegionOverlayOptions, ScreenRegion } from '../../../api/types/screen-region'
+import { useTranslate } from '~/i18n/useTranslate'
+
+const { t } = useTranslate('ScreenRegionOverlay')
 
 type Interaction =
   | { kind: 'draw'; startX: number; startY: number }
@@ -125,11 +128,11 @@ onBeforeUnmount(() => unsubscribe?.())
       <span v-if="isSelecting" class="region-size">{{ Math.round(region.width * (options?.bounds.width || 0)) }} × {{ Math.round(region.height * (options?.bounds.height || 0)) }}</span>
     </div>
     <aside v-if="isSelecting" class="region-toolbar" @pointerdown.stop>
-      <span class="region-instruction"><Move :size="16" /> Select an area to record</span>
+      <span class="region-instruction"><Move :size="16" /> {{ t('instruction') }}</span>
       <div class="region-actions">
-        <Button variant="ghost" size="sm" :icon="RotateCcw" @click="reset">Reset</Button>
-        <Button variant="ghost" size="sm" :icon="X" @click="cancel">Cancel</Button>
-        <Button variant="primary" size="sm" :icon="Check" :disabled="!region" @click="confirm">Use this area</Button>
+        <Button variant="ghost" size="sm" :icon="RotateCcw" @click="reset">{{ t('reset') }}</Button>
+        <Button variant="ghost" size="sm" :icon="X" @click="cancel">{{ t('cancel') }}</Button>
+        <Button variant="primary" size="sm" :icon="Check" :disabled="!region" @click="confirm">{{ t('useThisArea') }}</Button>
       </div>
     </aside>
   </main>

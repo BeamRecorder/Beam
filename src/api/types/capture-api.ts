@@ -43,6 +43,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   setSizeSmooth(width: number, height: number): void
   setWindowVisible(visible: boolean): void
   setInteractive(overInteractive: boolean): void
+  beginRecorderDrag(): void
   getRecorderTooltipSide(): Promise<'left' | 'right' | null>
   setRecorderTooltip(visible: boolean): Promise<'left' | 'right' | null>
   setCountdown(seconds: number | null): void
