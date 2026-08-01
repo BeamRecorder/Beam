@@ -2,17 +2,53 @@ const { BrowserWindow, screen } = require('electron')
 const path = require('path')
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const DEFAULT_BOUNDS = { width: 720, height: 460 }
+const DEFAULT_BOUNDS = { width: 640, height: 400 }
 const MIN_BOUNDS = { width: 420, height: 260 }
 const isContentProtectionSupported = (platform) => platform === 'win32' || platform === 'darwin'
 
+const clampTeleprompterBounds = (bounds, area) => {
+  const width = Math.min(Math.max(Math.round(Number(bounds?.width) || DEFAULT_BOUNDS.width), MIN_BOUNDS.width), area.width)
+  const height = Math.min(Math.max(Math.round(Number(bounds?.height) || DEFAULT_BOUNDS.height), MIN_BOUNDS.height), area.height)
+  const minX = area.x
+  const minY = area.y
+  const maxX = area.x + Math.max(0, area.width - width)
+  const maxY = area.y + Math.max(0, area.height - height)
+  return {
+    x: Math.min(Math.max(Math.round(Number(bounds?.x) || minX), minX), maxX),
+    y: Math.min(Math.max(Math.round(Number(bounds?.y) || minY), minY), maxY),
+    width,
+    height,
+  }
+}
+
 const validContext = (context) => context && typeof context === 'object' && UUID.test(context.projectId) && UUID.test(context.sessionId)
 
-function createTeleprompterWindow({ applicationRoot, isPackaged }) {
+function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStore = null }) {
   let window = null
   let currentSession = null
   let ready = false
   let requestedVisible = false
+  let persistTimer = null
+
+  const flushBounds = () => {
+    if (persistTimer) clearTimeout(persistTimer)
+    persistTimer = null
+    if (!preferencesStore || !window || window.isDestroyed()) return
+    try {
+      preferencesStore.patch({ extras: { teleprompterWindow: window.getBounds() } })
+    } catch {
+      // Window persistence is best effort and must not affect the window.
+    }
+  }
+
+  const scheduleBoundsPersistence = () => {
+    if (!preferencesStore || !window || window.isDestroyed()) return
+    if (persistTimer) clearTimeout(persistTimer)
+    persistTimer = setTimeout(() => {
+      persistTimer = null
+      flushBounds()
+    }, 150)
+  }
 
   const load = (target) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/teleprompter.html'))
@@ -32,14 +68,24 @@ function createTeleprompterWindow({ applicationRoot, isPackaged }) {
 
   const ensure = () => {
     if (window && !window.isDestroyed()) return window
-    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+    const savedBounds = preferencesStore?.read()?.extras?.teleprompterWindow
+    const savedDisplay = savedBounds && Number.isFinite(Number(savedBounds.x)) && Number.isFinite(Number(savedBounds.y))
+      ? screen.getDisplayNearestPoint({ x: Number(savedBounds.x), y: Number(savedBounds.y) })
+      : null
+    const display = savedDisplay || screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
     const area = display.workArea
+    const initialBounds = clampTeleprompterBounds(
+      savedBounds || {
+        x: area.x + Math.round((area.width - DEFAULT_BOUNDS.width) / 2),
+        y: area.y + Math.round((area.height - DEFAULT_BOUNDS.height) / 2),
+        ...DEFAULT_BOUNDS,
+      },
+      area,
+    )
     window = new BrowserWindow({
-      ...DEFAULT_BOUNDS,
+      ...initialBounds,
       minWidth: MIN_BOUNDS.width,
       minHeight: MIN_BOUNDS.height,
-      x: area.x + Math.round((area.width - DEFAULT_BOUNDS.width) / 2),
-      y: area.y + Math.round((area.height - DEFAULT_BOUNDS.height) / 2),
       frame: false,
       transparent: false,
       backgroundColor: '#f7f5f0',
@@ -61,6 +107,9 @@ function createTeleprompterWindow({ applicationRoot, isPackaged }) {
     ready = false
     window.on('show', notifyVisibility)
     window.on('hide', notifyVisibility)
+    window.on('move', scheduleBoundsPersistence)
+    window.on('resize', scheduleBoundsPersistence)
+    window.on('close', flushBounds)
     window.on('closed', () => { ready = false; requestedVisible = false; window = null; notifyVisibility() })
     window.webContents.once('did-finish-load', () => {
       ready = true
@@ -107,6 +156,7 @@ function createTeleprompterWindow({ applicationRoot, isPackaged }) {
   }
 
   return {
+    prepare: () => { ensure(); return true },
     show,
     showInactive,
     hide,
@@ -115,8 +165,8 @@ function createTeleprompterWindow({ applicationRoot, isPackaged }) {
     handleShortcut,
     isVisible: () => Boolean(window && !window.isDestroyed() && window.isVisible()),
     bounds: () => window && !window.isDestroyed() ? window.getBounds() : null,
-    destroy: () => { if (window && !window.isDestroyed()) window.destroy(); window = null },
+    destroy: () => { flushBounds(); if (window && !window.isDestroyed()) window.destroy(); window = null },
   }
 }
 
-module.exports = { DEFAULT_BOUNDS, MIN_BOUNDS, isContentProtectionSupported, createTeleprompterWindow }
+module.exports = { DEFAULT_BOUNDS, MIN_BOUNDS, clampTeleprompterBounds, isContentProtectionSupported, createTeleprompterWindow }

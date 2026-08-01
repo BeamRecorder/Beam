@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
-import { AlignCenter, AlignLeft, ChevronLeft, ChevronRight, Edit3, Eye, Pause, Play, Settings } from '@lucide/vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { AlignCenter, AlignLeft, ChevronLeft, ChevronRight, Edit3, Eye, Minus, Pause, Play, Settings } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
 import BigSlider from '~/ui/slider/BigSlider.vue'
-import Popover from '~/ui/popover/Popover.vue'
 import Select from '~/ui/select/Select.vue'
 import Switch from '~/ui/switch/Switch.vue'
 import Textarea from '~/ui/textarea/Textarea.vue'
@@ -14,6 +13,7 @@ import { useTeleprompter } from './useTeleprompter'
 
 const { t } = useTranslate('Teleprompter')
 const state = useTeleprompter()
+const isSettingsOpen = ref(false)
 const themeClass = computed(() => `theme-${state.document.value.theme}`)
 const modeOptions = computed(() => [{ value: 'continuous', label: t('continuous') }, { value: 'line-by-line', label: t('lineByLine') }])
 const themeOptions = computed(() => [{ value: 'system', label: t('systemTheme') }, { value: 'light', label: t('lightTheme') }, { value: 'dark', label: t('darkTheme') }])
@@ -30,9 +30,22 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
 <template>
   <main class="teleprompter-window" :class="themeClass">
     <header class="teleprompter-header">
-      <div class="teleprompter-title">{{ t('title') }}</div>
+      <div class="teleprompter-title-group">
+        <Button
+          v-if="isSettingsOpen"
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="ChevronLeft"
+          :aria-label="t('back')"
+          :tooltip="t('back')"
+          @click="isSettingsOpen = false"
+        />
+        <div class="teleprompter-title">{{ isSettingsOpen ? t('settings') : t('title') }}</div>
+      </div>
       <div class="teleprompter-actions">
         <Button
+          v-if="!isSettingsOpen"
           variant="ghost"
           size="sm"
           icon-only
@@ -41,67 +54,80 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
           :tooltip="state.isEditing.value ? t('preview') : t('edit')"
           @click="state.isEditing.value = !state.isEditing.value"
         />
-        <Popover align="right" :match-trigger-width="false">
-          <template #trigger><Button variant="ghost" size="sm" icon-only :icon="Settings" :aria-label="t('settings')" :tooltip="t('settings')" /></template>
-          <section class="settings-panel" :aria-label="t('settings')">
-            <div class="setting-row"><span>{{ t('mode') }}</span><Select :model-value="state.document.value.mode" :options="modeOptions" @update:model-value="state.updateDocument({ mode: $event })" /></div>
-            <div class="setting-row"><span>{{ t('autoscroll') }}</span><Switch :model-value="state.document.value.autoscroll" :label="state.document.value.autoscroll ? t('on') : t('off')" @update:model-value="state.updateDocument({ autoscroll: $event })" /></div>
-            <BigSlider :model-value="state.document.value.scrollSpeed" :min="5" :max="200" :step="1" :label="t('speed')" :format-value="(value) => `${value} px/s`" @update:model-value="state.updateDocument({ scrollSpeed: $event })" />
-            <BigSlider :model-value="state.document.value.fontSize" :min="16" :max="120" :step="1" :label="t('fontSize')" :format-value="(value) => `${value}px`" @update:model-value="state.updateDocument({ fontSize: $event })" />
-            <BigSlider :model-value="state.document.value.lineHeight" :min="1" :max="2.5" :step="0.05" :label="t('lineHeight')" @update:model-value="state.updateDocument({ lineHeight: $event })" />
-            <div class="setting-row"><span>{{ t('align') }}</span><div class="align-actions"><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'left' }" :aria-label="t('alignLeft')" :icon="AlignLeft" @click="state.updateDocument({ textAlign: 'left' })" /><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'center' }" :aria-label="t('alignCenter')" :icon="AlignCenter" @click="state.updateDocument({ textAlign: 'center' })" /></div></div>
-            <div class="setting-row"><span>{{ t('theme') }}</span><Select :model-value="state.document.value.theme" :options="themeOptions" @update:model-value="setTheme" /></div>
-          </section>
-        </Popover>
-        <Button variant="ghost" size="sm" icon-only :icon="Eye" :aria-label="t('hide')" :tooltip="t('hide')" @click="hide" />
+        <Button
+          v-if="!isSettingsOpen"
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="Settings"
+          :aria-label="t('settings')"
+          :tooltip="t('settings')"
+          @click="isSettingsOpen = true"
+        />
+        <Button variant="ghost" size="sm" icon-only :icon="Minus" :aria-label="t('hide')" :tooltip="t('hide')" @click="hide" />
       </div>
     </header>
-    <p v-if="state.error.value" class="teleprompter-error" role="alert">{{ state.error.value }}</p>
-    <section v-if="state.isEditing.value" class="editor-panel"><Textarea :model-value="state.document.value.text" :placeholder="t('placeholder')" :aria-label="t('editorLabel')" :rows="4" @update:model-value="updateText" /></section>
-    <section :ref="state.setDisplayElement" class="teleprompter-display" :class="{ 'is-centered': state.document.value.textAlign === 'center' }" :style="{ '--teleprompter-font-size': `${state.document.value.fontSize}px`, '--teleprompter-line-height': state.document.value.lineHeight }" :aria-label="t('readerLabel')">
-      <p v-for="(line, index) in state.lines.value" :key="`${index}-${line}`" :data-line-index="index" class="teleprompter-line" :class="{ active: state.document.value.mode === 'line-by-line' && state.activeLine.value === index, past: state.document.value.mode === 'line-by-line' && index < state.activeLine.value }">{{ line || '\u00a0' }}</p>
-    </section>
-    <footer class="teleprompter-footer" :aria-label="t('playbackControls')">
-      <div class="player-side player-side-left">
-        <Button
-          variant="secondary"
-          size="sm"
-          icon-only
-          :icon="ChevronLeft"
-          :aria-label="t('previousLine')"
-          :tooltip="t('previousLine')"
-          :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value <= 0"
-          @click="state.previousLine"
-        />
-        <span
-          v-if="state.document.value.mode === 'line-by-line'"
-          class="line-progress"
-          :aria-label="t('lineProgress', { current: state.activeLine.value + 1, total: Math.max(1, state.lines.value.length) })"
-        >{{ state.activeLine.value + 1 }} / {{ Math.max(1, state.lines.value.length) }}</span>
-      </div>
-      <Button
-        class="player-toggle"
-        variant="primary"
-        size="md"
-        icon-only
-        :icon="isAutoscrolling ? Pause : Play"
-        :aria-label="isAutoscrolling ? t('pause') : t('resume')"
-        :tooltip="isAutoscrolling ? t('pause') : t('resume')"
-        @click="state.togglePause"
-      />
-      <div class="player-side player-side-right">
-        <Button
-          variant="secondary"
-          size="sm"
-          icon-only
-          :icon="ChevronRight"
-          :aria-label="t('nextLine')"
-          :tooltip="t('nextLine')"
-          :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value >= state.lines.value.length - 1"
-          @click="state.nextLine"
-        />
-      </div>
-    </footer>
+    <Transition name="teleprompter-view" mode="out-in">
+      <section v-if="isSettingsOpen" key="settings" class="settings-view" :aria-label="t('settings')">
+        <div class="settings-form">
+          <div class="setting-row"><span>{{ t('mode') }}</span><Select :model-value="state.document.value.mode" :options="modeOptions" @update:model-value="state.updateDocument({ mode: $event })" /></div>
+          <div class="setting-row"><span>{{ t('autoscroll') }}</span><Switch :model-value="state.document.value.autoscroll" :label="state.document.value.autoscroll ? t('on') : t('off')" @update:model-value="state.updateDocument({ autoscroll: $event })" /></div>
+          <BigSlider :model-value="state.document.value.scrollSpeed" :min="5" :max="200" :step="1" :label="t('speed')" :format-value="(value) => String(value) + ' px/s'" @update:model-value="state.updateDocument({ scrollSpeed: $event })" />
+          <BigSlider :model-value="state.document.value.fontSize" :min="16" :max="120" :step="1" :label="t('fontSize')" :format-value="(value) => String(value) + 'px'" @update:model-value="state.updateDocument({ fontSize: $event })" />
+          <BigSlider :model-value="state.document.value.lineHeight" :min="1" :max="2.5" :step="0.05" :label="t('lineHeight')" @update:model-value="state.updateDocument({ lineHeight: $event })" />
+          <div class="setting-row"><span>{{ t('align') }}</span><div class="align-actions"><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'left' }" :aria-label="t('alignLeft')" :icon="AlignLeft" @click="state.updateDocument({ textAlign: 'left' })" /><Button variant="tab" size="sm" icon-only :class="{ active: state.document.value.textAlign === 'center' }" :aria-label="t('alignCenter')" :icon="AlignCenter" @click="state.updateDocument({ textAlign: 'center' })" /></div></div>
+          <div class="setting-row"><span>{{ t('theme') }}</span><Select :model-value="state.document.value.theme" :options="themeOptions" @update:model-value="setTheme" /></div>
+        </div>
+      </section>
+      <section v-else key="reader" class="reader-view">
+        <p v-if="state.error.value" class="teleprompter-error" role="alert">{{ state.error.value }}</p>
+        <section v-if="state.isEditing.value" class="editor-panel"><Textarea :model-value="state.document.value.text" :placeholder="t('placeholder')" :aria-label="t('editorLabel')" :rows="4" @update:model-value="updateText" /></section>
+        <section :ref="state.setDisplayElement" class="teleprompter-display" :class="{ 'is-centered': state.document.value.textAlign === 'center' }" :style="{ '--teleprompter-font-size': String(state.document.value.fontSize) + 'px', '--teleprompter-line-height': state.document.value.lineHeight }" :aria-label="t('readerLabel')">
+          <p v-for="(line, index) in state.lines.value" :key="index + '-' + line" :data-line-index="index" class="teleprompter-line" :class="{ active: state.document.value.mode === 'line-by-line' && state.activeLine.value === index, past: state.document.value.mode === 'line-by-line' && index < state.activeLine.value }">{{ line || '\u00a0' }}</p>
+        </section>
+        <footer class="teleprompter-footer" :aria-label="t('playbackControls')">
+          <div class="player-side player-side-left">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon-only
+              :icon="ChevronLeft"
+              :aria-label="t('previousLine')"
+              :tooltip="t('previousLine')"
+              :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value <= 0"
+              @click="state.previousLine"
+            />
+            <span
+              v-if="state.document.value.mode === 'line-by-line'"
+              class="line-progress"
+              :aria-label="t('lineProgress', { current: state.activeLine.value + 1, total: Math.max(1, state.lines.value.length) })"
+            >{{ state.activeLine.value + 1 }} / {{ Math.max(1, state.lines.value.length) }}</span>
+          </div>
+          <Button
+            class="player-toggle"
+            variant="primary"
+            size="md"
+            icon-only
+            :icon="isAutoscrolling ? Pause : Play"
+            :aria-label="isAutoscrolling ? t('pause') : t('resume')"
+            :tooltip="isAutoscrolling ? t('pause') : t('resume')"
+            @click="state.togglePause"
+          />
+          <div class="player-side player-side-right">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon-only
+              :icon="ChevronRight"
+              :aria-label="t('nextLine')"
+              :tooltip="t('nextLine')"
+              :disabled="state.document.value.mode === 'line-by-line' && state.activeLine.value >= state.lines.value.length - 1"
+              @click="state.nextLine"
+            />
+          </div>
+        </footer>
+      </section>
+    </Transition>
   </main>
 </template>
 
@@ -111,8 +137,13 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
 .teleprompter-window.theme-light { --teleprompter-bg: #f7f5f0; --teleprompter-panel: #fff; --teleprompter-text: #1e1e1e; }
 .teleprompter-header, .teleprompter-footer { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--teleprompter-panel); border-bottom: 1px solid var(--color-border); -webkit-app-region: drag; }
 .teleprompter-footer { display: grid; grid-template-columns: 1fr auto 1fr; border-top: 1px solid var(--color-border); border-bottom: 0; -webkit-app-region: no-drag; }
-.teleprompter-title { font-weight: 700; flex: 1; user-select: none; }
+.teleprompter-title-group { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
+.teleprompter-title-group :deep(.btn-container), .teleprompter-title-group :deep(.tooltip-wrapper) { -webkit-app-region: no-drag; }
+.teleprompter-title { font-weight: 700; user-select: none; }
 .teleprompter-actions, .align-actions { display: flex; align-items: center; gap: 6px; -webkit-app-region: no-drag; }
+.reader-view { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.settings-view { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; background: var(--teleprompter-bg); }
+.settings-form { width: min(100%, 520px); display: flex; flex-direction: column; gap: 16px; margin: 0 auto; }
 .editor-panel { padding: 12px 16px 0; background: var(--teleprompter-bg); }
 .teleprompter-error { margin: 0; padding: 8px 16px; background: var(--color-error-light); color: var(--color-error); font-size: 12px; }
 .teleprompter-display { flex: 1; overflow-y: auto; padding: 34px 11%; scroll-behavior: smooth; font-size: var(--teleprompter-font-size); line-height: var(--teleprompter-line-height); color: var(--teleprompter-text); }
@@ -124,10 +155,13 @@ onBeforeUnmount(() => { window.removeEventListener('teleprompter-session', onSes
 .player-side-right { justify-content: flex-end; }
 .player-toggle :deep(.btn) { width: 42px; height: 42px; }
 .line-progress { min-width: 42px; color: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
-.settings-panel { width: 340px; max-width: calc(100vw - 24px); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
 .setting-row > span { color: var(--text-secondary); }
 .align-actions { gap: 4px; }
 @media (max-width: 640px) { .teleprompter-display { padding-inline: 24px; } .teleprompter-footer { gap: 6px; } .line-progress { min-width: 36px; } }
+.teleprompter-view-enter-active, .teleprompter-view-leave-active { transition: opacity 0.16s ease, transform 0.16s ease; }
+.teleprompter-view-enter-from { opacity: 0; transform: translateX(12px); }
+.teleprompter-view-leave-to { opacity: 0; transform: translateX(-12px); }
+@media (prefers-reduced-motion: reduce) { .teleprompter-view-enter-active, .teleprompter-view-leave-active { transition: none; } }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 </style>

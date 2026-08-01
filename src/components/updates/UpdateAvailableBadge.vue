@@ -17,5 +17,5 @@ onBeforeUnmount(() => stopListening?.())
 <template><span v-if="visible" class="update-badge" aria-hidden="true" /></template>
 
 <style scoped>
-.update-badge { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border: 2px solid var(--color-bg-element); border-radius: 50%; background: var(--color-error); }
+.update-badge { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border: 2px solid var(--color-bg-element); border-radius: 50%; background: var(--color-error); pointer-events: none; }
 </style>

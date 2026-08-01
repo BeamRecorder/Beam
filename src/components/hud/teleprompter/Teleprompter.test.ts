@@ -35,6 +35,15 @@ describe('Teleprompter', () => {
     expect(wrapper.findAll('.teleprompter-line').map((line) => line.text())).toEqual(['First line', 'Second line'])
   })
 
+  it('opens settings as a dedicated view and returns to the reader', async () => {
+    const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } })
+    await wrapper.get('[aria-label="Settings"]').trigger('click')
+    expect(wrapper.find('.settings-view').exists()).toBe(true)
+    await wrapper.get('[aria-label="Back"]').trigger('click')
+    expect(wrapper.find('.settings-view').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true)
+  })
+
   it('uses the French translation namespace when the locale changes', () => {
     i18n.global.locale.value = 'fr'
     const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } })

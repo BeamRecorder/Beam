@@ -5,7 +5,7 @@ const path = require('node:path')
 const test = require('node:test')
 const { defaults } = require('../electron/preferences/preferences-store.cjs')
 const { createTeleprompterStorage, normalizeTeleprompterDocument } = require('../electron/teleprompter/teleprompter-storage.cjs')
-const { isContentProtectionSupported } = require('../electron/teleprompter/teleprompter-window.cjs')
+const { clampTeleprompterBounds, isContentProtectionSupported } = require('../electron/teleprompter/teleprompter-window.cjs')
 
 const projectId = '11111111-1111-4111-8111-111111111111'
 const sessionId = '22222222-2222-4222-8222-222222222222'
@@ -64,4 +64,11 @@ test('limits native content protection checks to supported desktop platforms', (
   assert.equal(isContentProtectionSupported('win32'), true)
   assert.equal(isContentProtectionSupported('darwin'), true)
   assert.equal(isContentProtectionSupported('linux'), false)
+})
+
+test('clamps persisted teleprompter bounds to the active display', () => {
+  assert.deepEqual(
+    clampTeleprompterBounds({ x: -500, y: -200, width: 1600, height: 1200 }, { x: 0, y: 0, width: 1280, height: 720 }),
+    { x: 0, y: 0, width: 1280, height: 720 },
+  )
 })

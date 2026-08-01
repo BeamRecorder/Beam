@@ -53,7 +53,7 @@ const stopDrag = () => {
   window.removeEventListener("pointermove", handlePointerMove);
   window.removeEventListener("pointerup", stopDrag);
   window.removeEventListener("pointercancel", stopDrag);
-  if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
+  if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture?.(dragPointerId)) dragElement.releasePointerCapture?.(dragPointerId);
   dragElement = null;
   dragPointerId = null;
   dragStartX = 0;
@@ -61,14 +61,14 @@ const stopDrag = () => {
 };
 const startDrag = (event: PointerEvent) => {
   if (event.button !== 0) return;
-  const target = event.target instanceof HTMLElement ? event.target : null;
+  const target = event.target instanceof Element ? event.target : null;
   if (target?.closest("button, a, input, select, textarea, [role='button'], .window-actions")) return;
   if (isDragging.value) return;
   dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   dragPointerId = event.pointerId;
   dragStartX = event.clientX;
   dragStartY = event.clientY;
-  dragElement?.setPointerCapture(event.pointerId);
+  dragElement?.setPointerCapture?.(event.pointerId);
   window.addEventListener("pointermove", handlePointerMove);
   window.addEventListener("pointerup", stopDrag, { once: true });
   window.addEventListener("pointercancel", stopDrag, { once: true });

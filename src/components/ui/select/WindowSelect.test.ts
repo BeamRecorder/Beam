@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import WindowSelect from './WindowSelect.vue'
 
 const options = [
@@ -31,4 +31,41 @@ describe('WindowSelect', () => {
     expect(document.body.querySelector('.options-empty')?.textContent).toContain('No windows detected')
     wrapper.unmount()
   })
+
+  it('sizes long labels and scrolls overflowing options in both directions', async () => {
+    vi.useFakeTimers()
+    let raf!: ReturnType<typeof vi.spyOn>
+    raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      if (raf.mock.calls.length === 1) callback(100)
+      return 1
+    })
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
+    const longName = 'A window name that is definitely longer than twenty eight characters'
+    const wrapper = mount(WindowSelect, {
+      attachTo: document.body,
+      props: { modelValue: 'long', options: [{ id: 'long', name: longName, thumbnail: '/long.png' }], direction: 'up' },
+    })
+    expect((wrapper.get('.select-label').element as HTMLElement).style.fontSize).toBe('0.75rem')
+    await wrapper.get('.select-trigger').trigger('click')
+    const option = document.body.querySelector<HTMLElement>('.select-option')!
+    const label = option.querySelector<HTMLElement>('.option-label')!
+    Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 240 })
+    Object.defineProperty(label, 'clientWidth', { configurable: true, value: 80 })
+    option.dispatchEvent(new Event('pointerenter', { bubbles: true }))
+    vi.advanceTimersByTime(300)
+    expect(option.classList).toContain('has-overflow')
+    expect(label.style.transform).toContain('translateX')
+    option.dispatchEvent(new Event('pointerleave', { bubbles: true }))
+    expect(label.style.transform).toBe('')
+
+    Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 80 })
+    option.dispatchEvent(new Event('pointerenter', { bubbles: true }))
+    expect(option.classList).not.toContain('has-overflow')
+    wrapper.unmount()
+  })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
 })
