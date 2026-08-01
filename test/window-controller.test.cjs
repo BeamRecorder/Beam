@@ -94,3 +94,25 @@ test('recorder mode passes through clicks outside the compact bar', async () => 
   assert.deepEqual(win.calls.at(-1), ['mouse', true, { forward: true }])
   controller.setMode('hud')
 })
+
+test('recorder tooltips choose the side with room after the bar moves', () => {
+  const display = { id: 1, bounds: { x: 0, y: 0, width: 1000, height: 800 }, workArea: { x: 0, y: 0, width: 1000, height: 800 } }
+  const screenModule = {
+    getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+    getDisplayNearestPoint: () => display,
+  }
+  const win = fakeWindow()
+  const controller = new WindowController(win, { screenModule })
+  controller.setMode('recorder')
+  controller.markReadyToShow()
+
+  assert.equal(controller.setRecorderTooltip(true), 'left')
+  assert.equal(win.getBounds().width, 300)
+
+  controller.setRecorderTooltip(false)
+  win.setPosition(0, 228)
+  controller.rememberRecorderPosition()
+  assert.equal(controller.setRecorderTooltip(true), 'right')
+  assert.deepEqual(win.getBounds(), { x: 0, y: 228, width: 300, height: 344 })
+  controller.setMode('hud')
+})

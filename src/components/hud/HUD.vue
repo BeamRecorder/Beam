@@ -52,6 +52,8 @@ import {
   Check,
 } from "@lucide/vue";
 import { useTranslate } from "~/i18n/useTranslate";
+import { useAudioLevelMeter } from "./audio/useAudioLevelMeter";
+import AudioIconMeter from "./audio/AudioIconMeter.vue";
 
 const { t } = useTranslate("HUD");
 
@@ -133,6 +135,11 @@ const isRegionConfirmationAnimating = ref(false);
 let regionSelectionEnterTimeout: ReturnType<typeof setTimeout> | null = null;
 let regionConfirmationTimeout: ReturnType<typeof setTimeout> | null = null;
 const systemAudioMode = ref<"on" | "off">("off");
+
+const isMicEnabled = computed(() => selectedMicId.value !== "no-audio");
+const isSystemAudioEnabled = computed(() => systemAudioMode.value === "on");
+const { level: micLevel } = useAudioLevelMeter(isMicEnabled, selectedMicId, false);
+const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
   void capture.updatePreferences({ devices: { cameraId: selectedCameraId.value, micId: selectedMicId.value, systemAudioMode: systemAudioMode.value } });
@@ -1008,10 +1015,11 @@ const openProject = (project: CaptureProject) => {
               <!-- Audio and input devices -->
               <div class="selectors-stack">
                 <div class="device-row">
-                  <component
-                    :is="systemAudioMode === 'off' ? VolumeX : Volume2"
+                  <AudioIconMeter
                     class="device-icon"
-                    :class="{ 'is-unavailable': systemAudioMode === 'off' }"
+                    kind="system"
+                    :enabled="systemAudioMode === 'on'"
+                    :level="systemAudioLevel"
                   />
                   <Select
                     v-model="systemAudioMode"
@@ -1022,10 +1030,11 @@ const openProject = (project: CaptureProject) => {
                 </div>
 
                 <div class="device-row">
-                  <component
-                    :is="selectedMicId === 'no-audio' ? MicOff : Mic"
+                  <AudioIconMeter
                     class="device-icon"
-                    :class="{ 'is-unavailable': selectedMicId === 'no-audio' }"
+                    kind="mic"
+                    :enabled="selectedMicId !== 'no-audio'"
+                    :level="micLevel"
                   />
                   <div class="mic-select-controls">
                     <div v-if="isBusy && sources.length === 0">

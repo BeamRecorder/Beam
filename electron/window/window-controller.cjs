@@ -28,6 +28,7 @@ class WindowController {
     this.hudPosition = null
     this.recorderBaseBounds = null
     this.recorderTooltipSide = null
+    this.recorderTooltipWidth = null
     this.recorderPointerPoll = null
     this.window.setIgnoreMouseEvents(true)
     this.window.on('show', () => this.applyInteractionPolicy())
@@ -86,6 +87,7 @@ class WindowController {
     if (mode !== 'recorder') {
       this.recorderBaseBounds = null
       this.recorderTooltipSide = null
+      this.recorderTooltipWidth = null
       this.stopRecorderPointerTracking()
     }
     this.mode = mode
@@ -93,6 +95,7 @@ class WindowController {
     if (mode === 'recorder') {
       this.recorderBaseBounds = null
       this.recorderTooltipSide = null
+      this.recorderTooltipWidth = null
       this.placeRecorder()
     }
     if (mode === 'hud' && this.hudPosition) {
@@ -136,8 +139,16 @@ class WindowController {
     this.scheduleRecorderPositionSave()
   }
 
-  dragGeometry(size) {
-    return { width: size[0], leftOffset: 0 }
+  dragGeometry(_size) {
+    if (this.mode !== 'recorder' || !this.recorderTooltipSide || !this.recorderTooltipWidth) {
+      return { width: RECORDER_SIZE.width, leftOffset: 0 }
+    }
+    return {
+      width: RECORDER_SIZE.width,
+      leftOffset: this.recorderTooltipSide === 'left'
+        ? this.recorderTooltipWidth - RECORDER_SIZE.width
+        : 0,
+    }
   }
 
   setRecorderTooltip(visible) {
@@ -147,17 +158,27 @@ class WindowController {
       const display = this.screen.getDisplayNearestPoint({ x: base.x + base.width / 2, y: base.y + base.height / 2 })
       const leftSpace = base.x - display.bounds.x
       const rightSpace = display.bounds.x + display.bounds.width - (base.x + base.width)
-      this.recorderTooltipSide = leftSpace >= 200 || rightSpace < leftSpace ? 'left' : 'right'
+      const expansion = RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width
+      const canFitLeft = leftSpace >= expansion
+      const canFitRight = rightSpace >= expansion
+      this.recorderTooltipSide = canFitLeft && canFitRight
+        ? (leftSpace >= rightSpace ? 'left' : 'right')
+        : canFitLeft ? 'left'
+          : canFitRight ? 'right'
+            : leftSpace >= rightSpace ? 'left' : 'right'
+      const availableSpace = this.recorderTooltipSide === 'left' ? leftSpace : rightSpace
+      this.recorderTooltipWidth = base.width + Math.min(expansion, Math.max(0, availableSpace))
       const x = this.recorderTooltipSide === 'left'
-        ? base.x - (RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width)
+        ? base.x - (this.recorderTooltipWidth - base.width)
         : base.x
-      this.window.setBounds({ x, y: base.y, width: RECORDER_TOOLTIP_WIDTH, height: RECORDER_SIZE.height })
+      this.window.setBounds({ x, y: base.y, width: this.recorderTooltipWidth, height: RECORDER_SIZE.height })
       this.startRecorderPointerTracking()
       return this.recorderTooltipSide
     }
     const base = this.recorderBaseBounds
     if (base) this.window.setBounds(base)
     this.recorderTooltipSide = null
+    this.recorderTooltipWidth = null
     return null
   }
 

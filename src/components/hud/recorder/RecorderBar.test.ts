@@ -47,6 +47,7 @@ beforeEach(() => {
   capture.getPreferences.mockResolvedValue(settings)
   capture.onPreferencesChanged.mockReturnValue(vi.fn())
   capture.setRecorderTooltip.mockResolvedValue('right')
+  capture.dragEnd.mockResolvedValue('left')
   Object.defineProperty(window, 'capture', { configurable: true, value: capture })
 })
 
@@ -123,6 +124,7 @@ describe('RecorderBar', () => {
     expect(capture.dragEnd).toHaveBeenCalledOnce()
     expect(releasePointerCapture).toHaveBeenCalledWith(2)
     expect(bar.classes()).not.toContain('dragging')
+    expect(bar.classes()).not.toContain('tooltip-right')
     wrapper.unmount()
-})
+  })
 })

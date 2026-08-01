@@ -107,21 +107,25 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
   ipcMain.on('window:dragStart', (event) => {
     const win = windowForEvent(event)
     if (!win) return
+    const controller = controllerForWindow(win)
+    controller?.setRecorderTooltip(false)
     clearDragState()
     dragStartMouse = screen.getCursorScreenPoint()
     dragStartWindow = win.getPosition()
     dragStartSize = win.getSize()
-    dragStartGeometry = controllerForWindow(win)?.dragGeometry?.(dragStartSize) || { width: dragStartSize[0], leftOffset: 0 }
+    dragStartGeometry = controller?.dragGeometry?.(dragStartSize) || { width: dragStartSize[0], leftOffset: 0 }
     dragTimer = setInterval(() => updateDragPosition(win), 16)
   })
   ipcMain.on('window:drag', (event) => {
     const win = windowForEvent(event)
     updateDragPosition(win)
   })
-  ipcMain.on('window:dragEnd', (event) => {
+  ipcMain.handle('window:dragEnd', (event) => {
     const win = windowForEvent(event)
-    controllerForWindow(win)?.flushRecorderPosition()
+    const controller = controllerForWindow(win)
     clearDragState()
+    controller?.flushRecorderPosition()
+    return controller?.setRecorderTooltip(true) ?? null
   })
 }
 

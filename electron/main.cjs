@@ -227,3 +227,10 @@ app.on('before-quit', (event) => {
   captureShutdown ??= captureEngine.shutdown().finally(() => { quitting = true; app.quit() })
 })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
+
+process.on('SIGINT', () => {
+  if (!quitting) app.quit()
+})
+process.on('SIGTERM', () => {
+  if (!quitting) app.quit()
+})

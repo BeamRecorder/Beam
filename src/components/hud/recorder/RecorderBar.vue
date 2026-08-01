@@ -18,10 +18,12 @@ import KeyboardChip from "~/ui/KeyboardChip.vue";
 import { usePreferencesStore } from "~/stores/preferences";
 import type { RecordingPhase } from "./recording-types";
 import { useTranslate } from "~/i18n/useTranslate";
+import { useAudioLevelMeter } from "../audio/useAudioLevelMeter";
+import AudioIconMeter from "../audio/AudioIconMeter.vue";
 
 const { t } = useTranslate("RecorderBar");
 
-defineProps<{
+const props = defineProps<{
   phase: RecordingPhase;
   secondsRemaining: number;
   recordingTime: string;
@@ -30,6 +32,11 @@ defineProps<{
   systemAudioEnabled: boolean;
   visibility: "always" | "auto-fade";
 }>();
+
+const isMicEnabled = computed(() => props.microphoneEnabled);
+const isSystemAudioEnabled = computed(() => props.systemAudioEnabled);
+const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false);
+const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
 
 const emit = defineEmits<{
   stop: [];
@@ -64,7 +71,7 @@ const getShortcut = (id: string, fallback: string): string => {
 };
 
 const drag = () => window.capture?.drag();
-const stopDrag = () => {
+const stopDrag = async () => {
   if (!isDragging.value && !dragPending) return;
   const wasDragging = isDragging.value;
   isDragging.value = false;
@@ -75,7 +82,10 @@ const stopDrag = () => {
   if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
   dragElement = null;
   dragPointerId = null;
-  if (wasDragging) window.capture?.dragEnd();
+  if (wasDragging) {
+    const side = await window.capture?.dragEnd();
+    if (side === 'left' || side === 'right') tooltipSide.value = side;
+  }
 };
 const startDrag = (event: PointerEvent) => {
   if (event.button !== 0) return;
@@ -195,7 +205,12 @@ onBeforeUnmount(() => {
         @pointerdown.stop
         @click="emit('microphone')"
       >
-        <Mic v-if="microphoneEnabled" /><MicOff v-else />
+        <AudioIconMeter
+          kind="mic"
+          :enabled="microphoneEnabled"
+          :level="micLevel"
+          size="sm"
+        />
       </button>
     </Tooltip>
 
@@ -237,7 +252,12 @@ onBeforeUnmount(() => {
         @pointerdown.stop
         @click="emit('systemAudio')"
       >
-        <Volume2 v-if="systemAudioEnabled" /><VolumeX v-else />
+        <AudioIconMeter
+          kind="system"
+          :enabled="systemAudioEnabled"
+          :level="systemAudioLevel"
+          size="sm"
+        />
       </button>
     </Tooltip>
 

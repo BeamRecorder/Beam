@@ -71,6 +71,9 @@ export class BrowserCameraRecorder {
     this.track = track
     this.format = format
     this.track.addEventListener('ended', () => this.reportFatal(new Error('The selected camera was disconnected or stopped.')), { once: true })
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => this.release(), { once: true })
+    }
   }
 
   static async request(sourceId: string) {
