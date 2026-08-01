@@ -36,7 +36,11 @@ const props = defineProps<{
 const isMicEnabled = computed(() => props.microphoneEnabled);
 const isSystemAudioEnabled = computed(() => props.systemAudioEnabled);
 const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false);
-const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
+const { level: systemAudioLevel } = useAudioLevelMeter(
+  isSystemAudioEnabled,
+  undefined,
+  true,
+);
 
 const emit = defineEmits<{
   stop: [];
@@ -49,26 +53,27 @@ const emit = defineEmits<{
 
 const preferencesStore = usePreferencesStore();
 let tooltipSpaceReady: Promise<void> = Promise.resolve();
-const tooltipSide = ref<'left' | 'right'>('left');
+const tooltipSide = ref<"left" | "right">("left");
 const tooltipPosition = computed(() => tooltipSide.value);
 let stopTooltipSideListener: (() => void) | undefined;
 
 const applyTooltipSide = (side: unknown, source: string) => {
-  console.info('[RecorderBar] tooltip side', { source, previous: tooltipSide.value, side });
-  if (side === 'left' || side === 'right') tooltipSide.value = side;
+  if (side === "left" || side === "right") tooltipSide.value = side;
 };
 
 onMounted(() => {
   preferencesStore.load();
-  stopTooltipSideListener = window.capture?.onRecorderTooltipSide((side) => applyTooltipSide(side, 'nativeMove'));
+  stopTooltipSideListener = window.capture?.onRecorderTooltipSide((side) =>
+    applyTooltipSide(side, "nativeMove"),
+  );
   // Reserve native space before the user reaches a control. Resizing only on
   // first button hover made the bar visibly jump once per recording.
   tooltipSpaceReady = (async () => {
     const initialSide = await window.capture?.getRecorderTooltipSide();
-    applyTooltipSide(initialSide, 'before-expand');
+    applyTooltipSide(initialSide, "before-expand");
     await nextTick();
     const side = await window.capture?.setRecorderTooltip(true);
-    applyTooltipSide(side, 'mount');
+    applyTooltipSide(side, "mount");
   })();
 });
 
@@ -79,7 +84,11 @@ const getShortcut = (id: string, fallback: string): string => {
 const prepareNativeDrag = (event: PointerEvent) => {
   if (event.button !== 0) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
-  if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest(".drag-handle")) return;
+  if (
+    target?.closest("button, a, input, select, textarea, [role='button']") &&
+    !target?.closest(".drag-handle")
+  )
+    return;
   window.capture?.beginRecorderDrag();
 };
 
@@ -101,7 +110,10 @@ onBeforeUnmount(() => {
 <template>
   <aside
     class="recorder-bar"
-    :class="{ 'auto-fade': visibility === 'auto-fade', 'tooltip-right': tooltipSide === 'right' }"
+    :class="{
+      'auto-fade': visibility === 'auto-fade',
+      'tooltip-right': tooltipSide === 'right',
+    }"
     :aria-label="t('recordingControls')"
     @pointerdown="prepareNativeDrag"
     @mouseenter="showTooltips"
@@ -122,15 +134,24 @@ onBeforeUnmount(() => {
       :class="{ countdown: phase === 'countdown' }"
       aria-live="polite"
     >
-      {{ phase === "countdown" ? t('ready') : recordingTime }}
+      {{ phase === "countdown" ? t("ready") : recordingTime }}
     </p>
 
     <!-- Play/Pause -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip
+      :position="tooltipPosition"
+      :max-width="220"
+      :disabled="!tooltipsReady"
+    >
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ phase === 'paused' ? t('resumeRecording') : t('pauseRecording') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.playPause', 'Alt+Shift+P')" size="sm" />
+          <span>{{
+            phase === "paused" ? t("resumeRecording") : t("pauseRecording")
+          }}</span>
+          <KeyboardChip
+            :shortcut="getShortcut('hud.playPause', 'Alt+Shift+P')"
+            size="sm"
+          />
         </div>
       </template>
       <button
@@ -147,11 +168,18 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Stop -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip
+      :position="tooltipPosition"
+      :max-width="220"
+      :disabled="!tooltipsReady"
+    >
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ t('stopRecording') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.startStopRecording', 'Alt+Shift+R')" size="sm" />
+          <span>{{ t("stopRecording") }}</span>
+          <KeyboardChip
+            :shortcut="getShortcut('hud.startStopRecording', 'Alt+Shift+R')"
+            size="sm"
+          />
         </div>
       </template>
       <button
@@ -165,19 +193,26 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Mic -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip
+      :position="tooltipPosition"
+      :max-width="220"
+      :disabled="!tooltipsReady"
+    >
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ microphoneEnabled ? t('turnMicOff') : t('turnMicOn') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.toggleMic', 'Alt+Shift+M')" size="sm" />
+          <span>{{
+            microphoneEnabled ? t("turnMicOff") : t("turnMicOn")
+          }}</span>
+          <KeyboardChip
+            :shortcut="getShortcut('hud.toggleMic', 'Alt+Shift+M')"
+            size="sm"
+          />
         </div>
       </template>
       <button
         class="control"
         :class="{ inactive: !microphoneEnabled }"
-        :aria-label="
-          microphoneEnabled ? t('turnMicOff') : t('turnMicOn')
-        "
+        :aria-label="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
         :disabled="phase === 'countdown'"
         @pointerdown.stop
         @click="emit('microphone')"
@@ -192,11 +227,20 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- Camera -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip
+      :position="tooltipPosition"
+      :max-width="220"
+      :disabled="!tooltipsReady"
+    >
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ cameraEnabled ? t('turnCameraOff') : t('turnCameraOn') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.toggleCamera', 'Alt+Shift+C')" size="sm" />
+          <span>{{
+            cameraEnabled ? t("turnCameraOff") : t("turnCameraOn")
+          }}</span>
+          <KeyboardChip
+            :shortcut="getShortcut('hud.toggleCamera', 'Alt+Shift+C')"
+            size="sm"
+          />
         </div>
       </template>
       <button
@@ -212,11 +256,22 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <!-- System Audio -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
+    <Tooltip
+      :position="tooltipPosition"
+      :max-width="220"
+      :disabled="!tooltipsReady"
+    >
       <template #content>
         <div class="tooltip-shortcut-content">
-          <span>{{ systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.toggleSystemAudio', 'Alt+Shift+A')" size="sm" />
+          <span>{{
+            systemAudioEnabled
+              ? t("turnSystemAudioOff")
+              : t("turnSystemAudioOn")
+          }}</span>
+          <KeyboardChip
+            :shortcut="getShortcut('hud.toggleSystemAudio', 'Alt+Shift+A')"
+            size="sm"
+          />
         </div>
       </template>
       <button
@@ -239,9 +294,13 @@ onBeforeUnmount(() => {
     </Tooltip>
 
     <div class="cancel-slot">
-      <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
+      <Tooltip
+        :position="tooltipPosition"
+        :max-width="220"
+        :disabled="!tooltipsReady"
+      >
         <template #content>
-          <span>{{ t('cancelRecording') }}</span>
+          <span>{{ t("cancelRecording") }}</span>
         </template>
         <button
           class="control cancel"
@@ -254,7 +313,6 @@ onBeforeUnmount(() => {
         </button>
       </Tooltip>
     </div>
-
   </aside>
 </template>
 

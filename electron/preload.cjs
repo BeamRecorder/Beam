@@ -45,7 +45,7 @@ contextBridge.exposeInMainWorld(
     setSizeSmooth: (width, height) => ipcRenderer.send("window:setSizeSmooth", width, height),
     setWindowVisible: (visible) => ipcRenderer.send("window:set-visible", Boolean(visible)),
     setInteractive: (value) => ipcRenderer.send("window:setInteractive", value),
-    beginRecorderDrag: () => ipcRenderer.send("window:recorder-drag-start"),
+    beginRecorderDrag: () => ipcRenderer.sendSync("window:recorder-drag-start"),
     getRecorderTooltipSide: () => ipcRenderer.invoke("window:get-recorder-tooltip-side"),
     setRecorderTooltip: (visible) => ipcRenderer.invoke("window:set-recorder-tooltip", Boolean(visible)),
     dragStart: () => ipcRenderer.send("window:dragStart"),
