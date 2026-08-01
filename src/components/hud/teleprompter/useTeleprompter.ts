@@ -28,7 +28,6 @@ export function useTeleprompter() {
     fontSize: document.value.fontSize,
     lineHeight: document.value.lineHeight,
     textAlign: document.value.textAlign,
-    theme: document.value.theme,
   })
 
   const storedSettings = (value: unknown): Partial<TeleprompterSettings> => {
@@ -41,7 +40,6 @@ export function useTeleprompter() {
     if (typeof input.fontSize === 'number' && Number.isFinite(input.fontSize)) patch.fontSize = TELEPROMPTER_FONT_SIZE
     if (typeof input.lineHeight === 'number' && Number.isFinite(input.lineHeight)) patch.lineHeight = Math.max(1, Math.min(2.5, input.lineHeight))
     if (input.textAlign === 'left' || input.textAlign === 'center') patch.textAlign = input.textAlign
-    if (input.theme === 'system' || input.theme === 'light' || input.theme === 'dark') patch.theme = input.theme
     return patch
   }
 

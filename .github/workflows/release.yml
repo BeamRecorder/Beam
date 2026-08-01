@@ -1,14 +1,15 @@
-name: Release Windows
+name: Release
 
 on:
   push:
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 # Serializing releases closes the race between the version check and publication.
 concurrency:
-  group: windows-release
+  group: release
   cancel-in-progress: false
 
 jobs:
@@ -17,7 +18,7 @@ jobs:
     # The condition prevents a runner from being provisioned for regular pushes.
     if: >-
       github.actor == 'ExtraBinoss' &&
-      startsWith(github.event.head_commit.message, '[RELEASE]')
+      (github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[RELEASE]'))
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -87,13 +88,48 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  package-macos:
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-macos
+          cache-on-failure: true
+      - run: npm ci
+      - run: npm run capture:build-release
+      - run: npx vite build
+      - run: npx electron-builder --mac dmg zip --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-assets
+          path: |
+            dist_electron/*.dmg
+            dist_electron/*.zip
+            dist_electron/*.blockmap
+            dist_electron/latest-mac.yml
+          if-no-files-found: error
+          retention-days: 1
+
   publish:
-    needs: [prepare, package-windows]
+    needs: [prepare, package-windows, package-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: windows-release-assets
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-release-assets
           path: release-assets
       - env:
           GH_TOKEN: ${{ github.token }}

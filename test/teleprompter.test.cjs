@@ -71,4 +71,8 @@ test('clamps persisted teleprompter bounds to the active display', () => {
     clampTeleprompterBounds({ x: -500, y: -200, width: 1600, height: 1200 }, { x: 0, y: 0, width: 1280, height: 720 }),
     { x: 0, y: 0, width: 1280, height: 720 },
   )
+  assert.deepEqual(
+    clampTeleprompterBounds({ x: 20, y: 20, width: 80, height: 80 }, { x: 0, y: 0, width: 1280, height: 720 }),
+    { x: 20, y: 20, width: 240, height: 140 },
+  )
 })

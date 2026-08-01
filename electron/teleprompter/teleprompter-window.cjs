@@ -3,7 +3,7 @@ const path = require('path')
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DEFAULT_BOUNDS = { width: 640, height: 400 }
-const MIN_BOUNDS = { width: 420, height: 260 }
+const MIN_BOUNDS = { width: 240, height: 140 }
 const isContentProtectionSupported = (platform) => platform === 'win32' || platform === 'darwin'
 
 const clampTeleprompterBounds = (bounds, area) => {

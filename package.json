@@ -78,6 +78,12 @@
     "win": {
       "target": "nsis",
       "icon": "public/brand/DemoRecorderIcon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ]
     }
   }
 }

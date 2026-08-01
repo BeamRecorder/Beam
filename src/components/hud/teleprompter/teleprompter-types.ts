@@ -18,7 +18,7 @@ export interface TeleprompterDocument {
 
 export type TeleprompterSettings = Pick<
   TeleprompterDocument,
-  'mode' | 'autoscroll' | 'scrollSpeed' | 'fontSize' | 'lineHeight' | 'textAlign' | 'theme'
+  'mode' | 'autoscroll' | 'scrollSpeed' | 'fontSize' | 'lineHeight' | 'textAlign'
 >
 
 export interface TeleprompterSessionContext {
