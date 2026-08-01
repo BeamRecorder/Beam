@@ -25,14 +25,24 @@ function deviceId(sourceId: string) {
 
 export function isCameraUnavailableError(error: unknown) {
   const name = typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : ''
-  const message = error instanceof Error ? error.message.toLowerCase() : ''
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase()
   return ['NotFoundError', 'NotReadableError', 'OverconstrainedError'].includes(name)
     || message.includes('could not start video source')
     || message.includes('hardware resources')
+    || message.includes('0xc00d3704')
+    || message.includes('ressources')
 }
 
 function positive(value: number | undefined, fallback: number) {
   return Number.isFinite(value) && value! > 0 ? Math.round(value!) : fallback
+}
+
+export async function validateCameraAccess(sourceId: string): Promise<void> {
+  if (!sourceId || sourceId === 'off') return
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable in this Chromium build.')
+  const rawId = deviceId(sourceId)
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: rawId ? { deviceId: { ideal: rawId } } : true })
+  stream.getTracks().forEach((track) => track.stop())
 }
 
 export async function listBrowserCameras(): Promise<CaptureSource[]> {

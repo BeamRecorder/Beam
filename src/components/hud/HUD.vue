@@ -11,6 +11,8 @@ import { capture } from "../../api/capture";
 import {
   BrowserCameraRecorder,
   listBrowserCameras,
+  validateCameraAccess,
+  isCameraUnavailableError,
 } from "../../api/camera-recorder";
 import {
   BrowserMicrophoneRecorder,
@@ -146,10 +148,21 @@ watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
 });
 watch(
   [selectedCameraId],
-  () => {
+  async () => {
+    const camId = selectedCameraId.value;
     capture.configureCameraOverlay({
-      cameraId: selectedCameraId.value,
+      cameraId: camId,
     });
+    if (camId && camId !== "off") {
+      try {
+        await validateCameraAccess(camId);
+      } catch (err) {
+        if (isCameraUnavailableError(err)) {
+          selectedCameraId.value = "off";
+          errorMessage.value = t("cameraUnavailableError", "Camera is unavailable: hardware resources are locked by another application or Windows Media Foundation (0xC00D3704).");
+        }
+      }
+    }
   },
   { immediate: true },
 );

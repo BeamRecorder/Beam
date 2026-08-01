@@ -56,13 +56,18 @@ let dragElement: HTMLElement | null = null;
 let dragPointerId: number | null = null;
 let dragPending = false;
 
+const applyTooltipSide = (side: unknown, source: string) => {
+  console.info('[RecorderBar] tooltip side', { source, previous: tooltipSide.value, side });
+  if (side === 'left' || side === 'right') tooltipSide.value = side;
+};
+
 onMounted(() => {
   preferencesStore.load();
   // Reserve native space before the user reaches a control. Resizing only on
   // first button hover made the bar visibly jump once per recording.
   tooltipSpaceReady = (async () => {
     const side = await window.capture?.setRecorderTooltip(true);
-    if (side === 'left' || side === 'right') tooltipSide.value = side;
+    applyTooltipSide(side, 'mount');
   })();
 });
 
@@ -84,7 +89,7 @@ const stopDrag = async () => {
   dragPointerId = null;
   if (wasDragging) {
     const side = await window.capture?.dragEnd();
-    if (side === 'left' || side === 'right') tooltipSide.value = side;
+    applyTooltipSide(side, 'dragEnd');
   }
 };
 const startDrag = (event: PointerEvent) => {

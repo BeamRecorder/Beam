@@ -45,6 +45,9 @@ watch(() => props.disabled, (disabled) => {
   if (disabled) return hide()
   if (wrapperRef.value?.matches(':hover')) void show()
 })
+watch(() => props.position, () => {
+  if (visible.value) updatePosition()
+})
 
 window.addEventListener('resize', updatePosition)
 window.addEventListener('scroll', updatePosition, true)

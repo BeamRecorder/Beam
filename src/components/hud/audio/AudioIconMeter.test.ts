@@ -17,7 +17,6 @@ describe('AudioIconMeter', () => {
     })
     expect(wrapper.classes()).toContain('enabled')
     expect(wrapper.find('.level-bar-fill').exists()).toBe(true)
-    expect(wrapper.find('.meter-eq-bars').exists()).toBe(true)
   })
 
   it('renders system audio variant when requested', () => {

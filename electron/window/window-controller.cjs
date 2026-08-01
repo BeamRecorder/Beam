@@ -171,14 +171,25 @@ class WindowController {
       const x = this.recorderTooltipSide === 'left'
         ? base.x - (this.recorderTooltipWidth - base.width)
         : base.x
+      console.info('[RecorderTooltip] calculate', {
+        base,
+        displayBounds: display.bounds,
+        leftSpace,
+        rightSpace,
+        side: this.recorderTooltipSide,
+        width: this.recorderTooltipWidth,
+        x,
+      })
       this.window.setBounds({ x, y: base.y, width: this.recorderTooltipWidth, height: RECORDER_SIZE.height })
       this.startRecorderPointerTracking()
+      console.info('[RecorderTooltip] applied', { bounds: this.window.getBounds(), side: this.recorderTooltipSide })
       return this.recorderTooltipSide
     }
     const base = this.recorderBaseBounds
     if (base) this.window.setBounds(base)
     this.recorderTooltipSide = null
     this.recorderTooltipWidth = null
+    console.info('[RecorderTooltip] compact', { bounds: this.window.getBounds(), base })
     return null
   }
 

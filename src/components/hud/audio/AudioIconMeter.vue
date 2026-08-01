@@ -55,31 +55,6 @@ const meterColor = computed(() => {
       class="meter-icon"
       :class="{ 'is-disabled': !enabled }"
     />
-
-    <!-- Real-time EQ bars -->
-    <div v-if="enabled" class="meter-eq-bars" aria-hidden="true">
-      <span
-        class="eq-bar"
-        :style="{
-          transform: `scaleY(${Math.max(0.2, level * 1.15)})`,
-          background: meterColor,
-        }"
-      />
-      <span
-        class="eq-bar"
-        :style="{
-          transform: `scaleY(${Math.max(0.2, level * 1.4)})`,
-          background: meterColor,
-        }"
-      />
-      <span
-        class="eq-bar"
-        :style="{
-          transform: `scaleY(${Math.max(0.2, level * 0.9)})`,
-          background: meterColor,
-        }"
-      />
-    </div>
   </div>
 </template>
 
@@ -130,24 +105,5 @@ const meterColor = computed(() => {
 }
 .audio-icon-meter.enabled .meter-icon {
   color: var(--text-primary, #f4f4f5);
-}
-
-.meter-eq-bars {
-  position: absolute;
-  top: -1px;
-  right: -2px;
-  display: flex;
-  align-items: flex-end;
-  gap: 1.5px;
-  height: 10px;
-  z-index: 3;
-  pointer-events: none;
-}
-.eq-bar {
-  width: 2px;
-  height: 100%;
-  border-radius: 1px;
-  transform-origin: bottom;
-  transition: transform 0.06s ease-out, background 0.15s ease;
 }
 </style>

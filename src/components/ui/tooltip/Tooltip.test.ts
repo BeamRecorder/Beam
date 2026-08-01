@@ -52,4 +52,26 @@ describe('Tooltip', () => {
     await wrapper.setProps({ disabled: true })
     wrapper.unmount()
   })
+
+  it('repositions an already visible tooltip when its direction changes', async () => {
+    const wrapper = mount(Tooltip, {
+      attachTo: document.body,
+      props: { content: 'Dynamic position', position: 'left' },
+      slots: { default: '<button>Trigger</button>' },
+    })
+    vi.spyOn(wrapper.get('.tooltip-wrapper').element as HTMLElement, 'getBoundingClientRect').mockReturnValue({
+      top: 10, left: 20, right: 120, bottom: 60, width: 100, height: 50,
+    } as DOMRect)
+
+    await wrapper.get('.tooltip-wrapper').trigger('mouseenter')
+    await nextTick()
+    const tooltip = document.body.querySelector<HTMLElement>('.tooltip-content')
+    expect(tooltip?.style.left).toBe('12px')
+
+    await wrapper.setProps({ position: 'right' })
+    await nextTick()
+    expect(tooltip?.classList).toContain('right')
+    expect(tooltip?.style.left).toBe('128px')
+    wrapper.unmount()
+  })
 })

@@ -114,6 +114,7 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     dragStartWindow = win.getPosition()
     dragStartSize = win.getSize()
     dragStartGeometry = controller?.dragGeometry?.(dragStartSize) || { width: dragStartSize[0], leftOffset: 0 }
+    console.info('[RecorderTooltip] dragStart', { window: dragStartWindow, size: dragStartSize, geometry: dragStartGeometry })
     dragTimer = setInterval(() => updateDragPosition(win), 16)
   })
   ipcMain.on('window:drag', (event) => {
@@ -125,7 +126,9 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     const controller = controllerForWindow(win)
     clearDragState()
     controller?.flushRecorderPosition()
-    return controller?.setRecorderTooltip(true) ?? null
+    const side = controller?.setRecorderTooltip(true) ?? null
+    console.info('[RecorderTooltip] dragEnd', { side, bounds: win?.getBounds?.() ?? null })
+    return side
   })
 }
 
