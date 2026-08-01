@@ -86,6 +86,18 @@ describe('ExportPopover', () => {
     expect((window.capture as unknown as { openFile: ReturnType<typeof vi.fn> }).openFile).toHaveBeenCalledWith('C:\\Exports\\demo.webm')
   })
 
+  it('supports selecting output resolution options without upscaling', async () => {
+    const wrapper = mountExport()
+    const buttons = wrapper.findAll('.button-stub')
+    await buttons.find((button) => button.text() === '720p')?.trigger('click')
+    await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click')
+    expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({
+      snapshot: expect.objectContaining({
+        canvas: expect.objectContaining({ width: 1280, height: 720 })
+      })
+    }))
+  })
+
   it('renders export progress, percentage, elapsed time and cancellation', async () => {
     const wrapper = mountExport()
     const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>

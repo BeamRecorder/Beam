@@ -19,5 +19,12 @@
   "openFile": "Open File",
   "frameCount": "Frame {completed} / {total}",
   "exportVideoAria": "Export video",
-  "video": "video"
+  "video": "video",
+  "resolution": "Resolution",
+  "resMax": "Max",
+  "res1080p": "1080p",
+  "res720p": "720p",
+  "resMaxDesc": "Raw native resolution ({width}x{height})",
+  "res1080pDesc": "Full HD scale ({width}x{height})",
+  "res720pDesc": "HD scale ({width}x{height})"
 }

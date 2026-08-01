@@ -14,9 +14,12 @@ import { useTranslate } from '~/i18n/useTranslate'
 
 const { t } = useTranslate('ExportPopover')
 
+export type ExportResolutionOption = '720p' | '1080p' | 'max'
+
 const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>()
 const format = ref<ExportFormat>('webm')
 const preset = ref<ExportPreset>('medium')
+const resolution = ref<ExportResolutionOption>('max')
 const presets: ExportPreset[] = ['low', 'medium', 'high']
 
 const formatDescriptions: Record<ExportFormat, string> = {
@@ -24,8 +27,43 @@ const formatDescriptions: Record<ExportFormat, string> = {
   mp4: t('mp4Desc'),
 }
 
+const nativeWidth = computed(() => props.request.snapshot.canvas?.width || props.request.snapshot.render?.sourceWidth || 1920)
+const nativeHeight = computed(() => props.request.snapshot.canvas?.height || props.request.snapshot.render?.sourceHeight || 1080)
+
+const computeExportDimensions = (res: ExportResolutionOption) => {
+  const nativeW = nativeWidth.value
+  const nativeH = nativeHeight.value
+  const aspectRatio = nativeW / nativeH
+
+  let targetH = nativeH
+  if (res === '720p') {
+    targetH = Math.min(720, nativeH)
+  } else if (res === '1080p') {
+    targetH = Math.min(1080, nativeH)
+  }
+
+  let targetW = Math.round(targetH * aspectRatio)
+  targetW = Math.max(2, targetW & ~1)
+  targetH = Math.max(2, targetH & ~1)
+
+  return { width: targetW, height: targetH }
+}
+
+const activeDimensions = computed(() => computeExportDimensions(resolution.value))
+
+const resolutionDescriptions = computed<Record<ExportResolutionOption, string>>(() => {
+  const dims720 = computeExportDimensions('720p')
+  const dims1080 = computeExportDimensions('1080p')
+  const dimsMax = computeExportDimensions('max')
+  return {
+    '720p': t('res720pDesc', { width: dims720.width, height: dims720.height }),
+    '1080p': t('res1080pDesc', { width: dims1080.width, height: dims1080.height }),
+    'max': t('resMaxDesc', { width: dimsMax.width, height: dimsMax.height }),
+  }
+})
+
 const getMb = (p: ExportPreset) => {
-  const { width, height } = props.request.snapshot.canvas
+  const { width, height } = activeDimensions.value
   const { fps } = props.request.snapshot.render
   const bps = bitrateFor(p, width, height, fps)
   return (bps / 1_000_000).toFixed(1)
@@ -50,7 +88,20 @@ const openFile = (path: string) => {
 
 const run = async () => {
   availability.value = null
-  const request = { ...props.request, format: format.value, preset: preset.value }
+  const { width, height } = activeDimensions.value
+  const request: ExportRequest = {
+    ...props.request,
+    format: format.value,
+    preset: preset.value,
+    snapshot: {
+      ...props.request.snapshot,
+      canvas: {
+        ...props.request.snapshot.canvas,
+        width,
+        height,
+      },
+    },
+  }
   if (!await supportedVideoCodec(request)) { availability.value = t('formatNotSupported', { format: format.value.toUpperCase() }); return }
   await start(request)
   if (result.value?.path) {
@@ -127,6 +178,42 @@ const formatMs = (ms: number) => {
               </Button>
             </ButtonGroup>
             <span class="option-hint">{{ formatDescriptions[format] }}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">{{ t('resolution') }}</span>
+            <ButtonGroup full>
+              <Button
+                variant="tab"
+                size="sm"
+                block
+                :disabled="nativeHeight < 720"
+                :class="{ active: resolution === '720p' }"
+                @click="resolution = '720p'"
+              >
+                {{ t('res720p') }}
+              </Button>
+              <Button
+                variant="tab"
+                size="sm"
+                block
+                :disabled="nativeHeight < 1080"
+                :class="{ active: resolution === '1080p' }"
+                @click="resolution = '1080p'"
+              >
+                {{ t('res1080p') }}
+              </Button>
+              <Button
+                variant="tab"
+                size="sm"
+                block
+                :class="{ active: resolution === 'max' }"
+                @click="resolution = 'max'"
+              >
+                {{ t('resMax') }}
+              </Button>
+            </ButtonGroup>
+            <span class="option-hint">{{ resolutionDescriptions[resolution] }}</span>
           </div>
 
           <div class="field">
