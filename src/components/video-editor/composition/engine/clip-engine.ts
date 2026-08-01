@@ -24,7 +24,7 @@ const integer = (value: number) => Math.round(value);
 // proxies before copying, unlike structuredClone which throws on reactive state.
 const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const clone = (composition: ClipComposition): ClipComposition => cloneValue(composition);
-const createId = () => crypto.randomUUID();
+const createId = (): string => crypto.randomUUID();
 
 const byId = (composition: ClipComposition, clipId: string) => {
   const clip = composition.clips.find((entry) => entry.id === clipId);

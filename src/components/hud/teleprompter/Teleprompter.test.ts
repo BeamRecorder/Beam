@@ -21,9 +21,9 @@ const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: { Telepro
 describe('Teleprompter', () => {
   it('keeps Hide, Edit, Settings and the script editor available', () => {
     const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } })
-    expect(wrapper.get('[aria-label="Hide"]').exists()).toBe(true)
-    expect(wrapper.get('[aria-label="Settings"]').exists()).toBe(true)
-    expect(wrapper.get('[aria-label="Teleprompter script"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="Hide"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="Settings"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(true)
     expect(wrapper.get('button').text()).toContain('Preview')
   })
 
@@ -38,7 +38,7 @@ describe('Teleprompter', () => {
   it('uses the French translation namespace when the locale changes', () => {
     i18n.global.locale.value = 'fr'
     const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } })
-    expect(wrapper.get('[aria-label="Masquer"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="Masquer"]').exists()).toBe(true)
     i18n.global.locale.value = 'en'
   })
 })

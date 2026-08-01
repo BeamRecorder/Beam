@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
 const { registerProjectIpc } = require('../electron/projects/project-ipc.cjs') as {
-  registerProjectIpc: (ipcMain: { handle: (channel: string, handler: Function) => void }, projectStore: object, dialog: object) => void
+  registerProjectIpc: (
+    ipcMain: { handle: (channel: string, handler: Function) => void },
+    projectStore: object,
+    backgroundLibrary: object,
+    dialog: object,
+    BrowserWindow: object,
+  ) => void
 }
 
 const setup = () => {

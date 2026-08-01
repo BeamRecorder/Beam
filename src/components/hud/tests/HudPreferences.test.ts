@@ -6,7 +6,6 @@ import { captureMock as capture } from './capture.mock'
 
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }))
 
-const Switch = { template: '<button class="quality" @click="$emit(\'update:modelValue\', false)" />' }
 const Select = { template: '<button class="countdown" @click="$emit(\'update:modelValue\', 10)" />' }
 describe('HudPreferences', () => {
   beforeEach(() => { setActivePinia(createPinia()); capture.getPreferences.mockResolvedValue({ schemaVersion: 2, theme: 'light', recordingBar: { visibility: 'always' }, devices: {}, shortcuts: {}, backgroundPresets: { colors: [], gradients: [] }, extras: {} }); capture.updatePreferences.mockResolvedValue({}); window.matchMedia ??= () => ({ matches: false, addEventListener: () => undefined }) as unknown as MediaQueryList })

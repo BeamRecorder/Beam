@@ -3,7 +3,7 @@ import { bitrateFor } from "../export-presets";
 import type { ExportProgress, ExportRequest, ExportResult } from "../export-types";
 import { renderCompositionFrame } from "../composition/render";
 import { activeClipsAt, sourceTimeAt } from "../../video-editor/composition/engine/clip-engine";
-import { isAudioClip, isVisualClip, type VisualClip } from "../../video-editor/composition/composition-types";
+import { isAudioClip, isVisualClip, type AudioClip, type VisualClip } from "../../video-editor/composition/composition-types";
 import { cursorTypeForKind, useCursorReplacer } from "../../video-editor/properties/cursor/useCursorReplacer";
 import { VideoFrameProvider } from "./video-frame-provider";
 import { tNamespace } from "../../../i18n";
@@ -32,7 +32,7 @@ export async function supportedAudioCodec(request: ExportRequest) {
 
 export async function renderMixedAudio(request: ExportRequest): Promise<AudioBuffer | null> {
   const assets = new Map(request.snapshot.composition.assets.map((asset) => [asset.id, asset]));
-  const clips = request.snapshot.composition.clips.filter((clip) => isAudioClip(clip) && clip.enabled);
+  const clips = request.snapshot.composition.clips.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled);
   if (!clips.length) return null;
   if (!window.OfflineAudioContext) throw new Error($t("offlineAudioUnavailable"));
   const context = new OfflineAudioContext(2, Math.max(1, Math.ceil(request.snapshot.duration * 48_000)), 48_000);

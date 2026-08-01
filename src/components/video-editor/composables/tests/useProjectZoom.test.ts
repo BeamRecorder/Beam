@@ -53,7 +53,7 @@ const create = (initialData: ProjectEditorData | null = data(), duration = 5_000
 }
 
 beforeEach(() => {
-  vi.spyOn(crypto, 'randomUUID').mockReturnValue('generated-id')
+  vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001')
 })
 afterEach(() => vi.restoreAllMocks())
 
@@ -74,9 +74,9 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual([])
     state.addZoomAtTime(-99)
     expect(state.zoomElements.value).toEqual([
-      expect.objectContaining({ id: 'generated-id', sessionId: 'manual', startMs: 0, endMs: 1_000, mode: 'manual' }),
+      expect.objectContaining({ id: '00000000-0000-4000-8000-000000000001', sessionId: 'manual', startMs: 0, endMs: 1_000, mode: 'manual' }),
     ])
-    expect(state.selectedZoomId.value).toBe('generated-id')
+    expect(state.selectedZoomId.value).toBe('00000000-0000-4000-8000-000000000001')
     expect(activeTab.value).toBe('zoom')
     state.addZoomAtTime(Number.NaN)
     expect(state.zoomElements.value).toHaveLength(1)

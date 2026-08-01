@@ -8,9 +8,15 @@ class FakeMediaRecorder {
   static instances: FakeMediaRecorder[] = []
   static isTypeSupported = vi.fn(() => FakeMediaRecorder.supported)
   private readonly listeners = new Map<string, Listener[]>()
+  readonly stream: MediaStream
+  readonly options: MediaRecorderOptions
   start = vi.fn()
   stop = vi.fn(() => this.emit('stop'))
-  constructor(readonly stream: MediaStream, readonly options: MediaRecorderOptions) { FakeMediaRecorder.instances.push(this) }
+  constructor(stream: MediaStream, options: MediaRecorderOptions) {
+    this.stream = stream
+    this.options = options
+    FakeMediaRecorder.instances.push(this)
+  }
   addEventListener(type: string, listener: Listener) { this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]) }
   emit(type: string, event: unknown = {}) { this.listeners.get(type)?.forEach((listener) => listener(event)) }
 }

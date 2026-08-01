@@ -1,7 +1,7 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api'
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog'
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types'
-import type { ClipComposition } from '../../video-editor/composition/composition-types'
+import type { ClipComposition, VisualClip } from '../../video-editor/composition/composition-types'
 import type { CursorRenderSettings, CompositionSnapshot } from '../export-types'
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas'
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas'
@@ -35,7 +35,7 @@ export function createCompositionSnapshot(input: {
   composition: ClipComposition
   cursorSettings: CursorRenderSettings
 }): CompositionSnapshot {
-  const screen = input.composition.clips.find((clip) => clip.kind === 'screen' && clip.enabled)
+  const screen = input.composition.clips.find((clip): clip is VisualClip => clip.kind === 'screen' && clip.enabled)
   const asset = screen && input.composition.assets.find((entry) => entry.id === screen.assetId)
   if (!screen || !asset?.src) throw new Error($t('sessionVideoUnavailable'))
   return {

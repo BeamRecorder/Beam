@@ -117,11 +117,13 @@ describe("cursor playback", () => {
     expect(
       cursorAssetForState(
         {
-          x: 0,
-          y: 0,
-          visible: true,
-          shapeId: "arrow",
-          hotspot: { x: 0, y: 0 },
+        x: 0,
+        y: 0,
+        visible: true,
+        cursorId: null,
+        shapeId: "arrow",
+        cursorKind: null,
+        hotspot: { x: 0, y: 0 },
         },
         { arrow: asset },
       ),
@@ -129,11 +131,13 @@ describe("cursor playback", () => {
     expect(
       cursorAssetForState(
         {
-          x: 0,
-          y: 0,
-          visible: true,
-          shapeId: "missing",
-          hotspot: { x: 0, y: 0 },
+        x: 0,
+        y: 0,
+        visible: true,
+        cursorId: null,
+        shapeId: "missing",
+        cursorKind: null,
+        hotspot: { x: 0, y: 0 },
         },
         {},
       ),

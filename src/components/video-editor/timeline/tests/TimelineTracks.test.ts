@@ -179,7 +179,7 @@ afterEach(() => {
   if (originalResizeObserver) globalThis.ResizeObserver = originalResizeObserver;
   else delete (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
   if (originalElementFromPoint) document.elementFromPoint = originalElementFromPoint;
-  else delete (document as Document & { elementFromPoint?: typeof document.elementFromPoint }).elementFromPoint;
+  else delete (document as { elementFromPoint?: typeof document.elementFromPoint }).elementFromPoint;
   vi.restoreAllMocks();
 });
 

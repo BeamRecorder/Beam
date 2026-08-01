@@ -9,7 +9,7 @@ export interface ToastAction {
 export interface Toast {
   id: string
   message: string
-  type: 'success' | 'error' | 'info'
+  type: 'success' | 'error' | 'info' | 'warning'
   duration?: number
   action?: ToastAction
 }
@@ -29,6 +29,8 @@ export const useToastStore = defineStore('toast', () => {
     }
   }
 
+  const addToast = add
+
   const remove = (id: string) => {
     toasts.value = toasts.value.filter(t => t.id !== id)
   }
@@ -40,6 +42,7 @@ export const useToastStore = defineStore('toast', () => {
   return {
     toasts,
     add,
+    addToast,
     remove,
     success,
     error,

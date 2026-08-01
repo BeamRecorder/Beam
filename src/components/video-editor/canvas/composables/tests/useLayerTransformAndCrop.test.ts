@@ -8,7 +8,6 @@ import {
 import type {
   CaptionClip,
   ClipComposition,
-  NormalizedTransform,
   VisualClip,
 } from '../../../composition/composition-types';
 import type { VideoWindowBounds } from '../useCameraZoom';

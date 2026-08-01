@@ -1,8 +1,8 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useClipComposition } from '../useClipComposition';
-import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
+import type { CaptureProject, ProjectEditorData } from '../../../../api/types/capture-api';
 import type { MediaAsset } from '../../composition/composition-types';
 
 const { capture, getAudioTracks } = vi.hoisted(() => ({
@@ -13,7 +13,10 @@ const { capture, getAudioTracks } = vi.hoisted(() => ({
 vi.mock('../../../../api/capture', () => ({ capture }));
 vi.mock('mediabunny', () => ({
   ALL_FORMATS: [],
-  BlobSource: class BlobSource { constructor(public readonly blob: Blob) {} },
+  BlobSource: class BlobSource {
+    readonly blob: Blob
+    constructor(blob: Blob) { this.blob = blob }
+  },
   Input: class Input {
     async getAudioTracks() { return getAudioTracks(); }
     dispose() {}
@@ -95,7 +98,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   capture.pickProjectMedia.mockResolvedValue(null);
   getAudioTracks.mockResolvedValue([]);
-  vi.spyOn(globalThis.crypto, 'randomUUID').mockImplementation(() => `uuid-${Math.random().toString(36).slice(2, 8)}`);
+  let uuidCounter = 0;
+  vi.spyOn(globalThis.crypto, 'randomUUID').mockImplementation(() => {
+    uuidCounter += 1;
+    return `00000000-0000-4000-8000-${String(uuidCounter).padStart(12, '0')}` as ReturnType<typeof crypto.randomUUID>;
+  });
 });
 
 describe('useClipComposition', () => {

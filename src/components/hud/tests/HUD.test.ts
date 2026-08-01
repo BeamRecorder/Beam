@@ -55,9 +55,9 @@ describe('HUD', () => {
   afterEach(() => {
     vi.useRealTimers()
     if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard)
-    else delete (navigator as Navigator & { clipboard?: Clipboard }).clipboard
+    else delete (navigator as { clipboard?: Clipboard }).clipboard
     if (originalExecCommand) Object.defineProperty(document, 'execCommand', originalExecCommand)
-    else delete (document as Document & { execCommand?: typeof document.execCommand }).execCommand
+    else delete (document as { execCommand?: typeof document.execCommand }).execCommand
   })
   it('discovers defaults and starts a screen recording with selected sources', async () => {
     capture.startRecording.mockResolvedValue({ state: 'recording', sessionId: '019f84dd-4d9d-7f61-ac30-5da50169ecbc' }); const wrapper = mount(HUD, { global: { stubs } }); await ready(); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready()
@@ -114,7 +114,7 @@ describe('HUD', () => {
     expect(capture.selectScreenRegion).toHaveBeenCalledWith({ bounds: { x: 10, y: 20, width: 1920, height: 1080 }, region: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 } })
     expect(capture.updatePreferences).toHaveBeenCalledWith({ extras: { screenRegion: { x: 0.2, y: 0.25, width: 0.4, height: 0.3 } } })
     expect(capture.setWindowVisible).toHaveBeenLastCalledWith(true)
-    expect(wrapper.get('[aria-label="Screen area selected"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="Screen area selected"]').exists()).toBe(true)
     vi.advanceTimersByTime(700)
     capture.selectScreenRegion.mockRejectedValueOnce(new Error('region denied'))
     await wrapper.get('[aria-label="Screen area selected"]').trigger('click')
