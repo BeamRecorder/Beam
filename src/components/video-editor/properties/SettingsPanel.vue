@@ -51,7 +51,7 @@ const copySystemInfo = async () => {
   }
 
   const infoLines = [
-    `=== DemoRecorder System Info ===`,
+    `=== Beam System Info ===`,
     `App Version: ${appVersion}`,
     `Platform: ${navigator.platform || 'Unknown'}`,
     `User Agent: ${navigator.userAgent}`,
@@ -396,4 +396,3 @@ const localeOptions = [
   transform: translateY(-4px);
 }
 </style>
-

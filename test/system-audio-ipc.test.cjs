@@ -11,7 +11,7 @@ const sourceId = 'system-audio:chromium:desktop-loopback'
 const format = { codec: 'opus', sampleRate: 48_000, channels: 2 }
 
 function sessionFixture() {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-recorder-system-audio-'))
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-system-audio-'))
   const manifestPath = path.join(directory, 'manifest.json')
   fs.writeFileSync(manifestPath, JSON.stringify({ selectedSources: { systemAudio: null }, permissions: { systemAudio: null }, tracks: [], warnings: [] }))
   return { directory, manifestPath, sessionId }

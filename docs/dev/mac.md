@@ -1,6 +1,6 @@
 # macOS development
 
-Install dependencies, then start DemoRecorder locally:
+Install dependencies, then start Beam locally:
 
 ```bash
 npm ci

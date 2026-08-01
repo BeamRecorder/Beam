@@ -112,6 +112,7 @@ describe('RecorderBar', () => {
     await bar.trigger('pointerdown', { button: 2, pointerId: 1 })
     expect(capture.dragStart).not.toHaveBeenCalled()
     await bar.trigger('pointerdown', { button: 0, pointerId: 2 })
+    await vi.waitFor(() => expect(capture.dragStart).toHaveBeenCalledOnce())
     expect(capture.dragStart).toHaveBeenCalledOnce()
     expect(setPointerCapture).toHaveBeenCalledWith(2)
     expect(bar.classes()).toContain('dragging')

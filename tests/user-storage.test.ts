@@ -8,14 +8,14 @@ const { createBackgroundLibrary } = require('../electron/backgrounds/background-
 const { createProjectStore } = require('../electron/projects/project-store.cjs') as { createProjectStore: (root: string) => { create: (options: { name: string }) => { id: string }; list: () => Array<{ id: string; name: string }>; rename: (id: string, name: string) => { name: string }; saveEditorState: (id: string, state: unknown) => unknown } }
 
 const roots: string[] = []
-const temporary = () => { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demorecorder-user-')); roots.push(root); return root }
+const temporary = () => { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-user-')); roots.push(root); return root }
 afterEach(() => { vi.restoreAllMocks(); for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true }) })
 
 describe('user storage paths', () => {
   it('resolves the complete user hierarchy without creating it', () => {
     const videos = temporary(); const paths = createUserPaths(videos)
-    expect(paths.preferences).toBe(path.join(videos, 'DemoRecorder', 'user', 'preferences.json'))
-    expect(paths.projects).toBe(path.join(videos, 'DemoRecorder', 'user', 'projects'))
+    expect(paths.preferences).toBe(path.join(videos, 'Beam', 'user', 'preferences.json'))
+    expect(paths.projects).toBe(path.join(videos, 'Beam', 'user', 'projects'))
     expect(fs.existsSync(paths.user)).toBe(false)
   })
 

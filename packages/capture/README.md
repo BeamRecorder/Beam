@@ -1,6 +1,6 @@
 # capture
 
-`capture` is DemoRecorder's native Rust capture engine. It discovers selectable media sources, validates requests, coordinates separately timestamped tracks and writes recoverable sidecars. The library never performs UI composition or sends media through stdout.
+`capture` is Beam's native Rust capture engine. It discovers selectable media sources, validates requests, coordinates separately timestamped tracks and writes recoverable sidecars. The library never performs UI composition or sends media through stdout.
 
 ## Commands
 

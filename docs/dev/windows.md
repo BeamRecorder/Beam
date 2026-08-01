@@ -1,6 +1,6 @@
 # Windows development
 
-Develop and test DemoRecorder on Windows through PowerShell.
+Develop and test Beam on Windows through PowerShell.
 
 ```powershell
 npm ci

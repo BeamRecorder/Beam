@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="./public/brand/DemoRecorderIcon.webp" alt="DemoRecorder" width="80" height="80" />
-  <h1>DemoRecorder</h1>
+  <img src="./public/brand/BeamIcon.webp" alt="Beam" width="80" height="80" />
+  <h1>Beam</h1>
   <p>Record your screen. Focus what matters. Export.</p>
   <p>
     <a href="https://github.com/ExtraBinoss/demo-recorder/releases/latest">Download for Windows or macOS</a>
@@ -9,7 +9,7 @@
 
 <div align="center">
   <!-- Replace this source with the product demo before publishing the README. -->
-  <video controls width="100%" poster="./public/brand/DemoRecorderIcon.webp">
+  <video controls width="100%" poster="./public/brand/BeamIcon.webp">
     <source src="YOUR_DEMO_VIDEO_URL_HERE" type="video/mp4" />
     Your browser does not support video playback.
   </video>
@@ -56,7 +56,7 @@
 <h2>Special thanks</h2>
 
 <p>
-  DemoRecorder takes inspiration from <a href="https://github.com/webadderallorg/Recordly/">Recordly</a>. Some code ideas are inspired by it; DemoRecorder is not a fork.
+  Beam takes inspiration from <a href="https://github.com/webadderallorg/Recordly/">Recordly</a>. Some code ideas are inspired by it; Beam is not a fork.
 </p>
 
 <p>

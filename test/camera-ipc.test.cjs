@@ -11,7 +11,7 @@ const sourceId = 'camera:chromium:device-1'
 const format = { codec: 'vp8', width: 1920, height: 1080, nominalFps: 30 }
 
 function sessionFixture() {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-recorder-camera-'))
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-camera-'))
   const manifestPath = path.join(directory, 'manifest.json')
   fs.writeFileSync(manifestPath, JSON.stringify({ selectedSources: { screen: 'display:1', camera: null }, permissions: { camera: null }, tracks: [], warnings: [] }))
   return { directory, manifestPath, sessionId }

@@ -1,6 +1,6 @@
 # Architecture Guidelines
 
-DemoRecorder is an Electron application with a Vue renderer and a native Rust capture engine. The boundaries below are intentional and must remain explicit.
+Beam is an Electron application with a Vue renderer and a native Rust capture engine. The boundaries below are intentional and must remain explicit.
 
 ## Runtime layers
 

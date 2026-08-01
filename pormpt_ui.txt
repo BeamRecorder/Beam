@@ -1,7 +1,0 @@
-Peut tu faire un design système (design.md) et un style.css dans notre app vue pour faire respecter ? je veux les fonts de stack sans
-l'app s'appelle DemoRecorder c'est un truc Nuxt/vue
-
-je veux une app avec des couleurs franches, du style un orange bien moderne comme un beau bleu sympa, noir bleu et blanc bleu tu vois (un blanc cassé hein)!
-faut aussi commencer a faire les src/components/ui/button/button.vue etc.. (button,popover, tooltip, (button prend un tooltip), dialog, toast (avec store), Select (button avec chevron down + popover) 
-
-Si tu peux avoir un truc ~/ui/button pour les appeller et pouvoir les appeller de partout c'est encore mieux ! je préfèrerais

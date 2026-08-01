@@ -99,7 +99,7 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
     @dblclick="capture.toggleMaximize()"
   >
     <div class="left-actions" @dblclick.stop>
-      <img src="/brand/DemoRecorderIcon.webp" class="brand-logo" alt="DemoRecorder" />
+      <img src="/brand/BeamIcon.webp" class="brand-logo" alt="Beam" />
       <Button
         variant="ghost"
         size="sm"

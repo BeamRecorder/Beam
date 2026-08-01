@@ -49,8 +49,8 @@
     "vue-tsc": "^3.3.9"
   },
   "build": {
-    "appId": "com.demorecorder.app",
-    "productName": "DemoRecorder",
+    "appId": "com.beam.app",
+    "productName": "Beam",
     "files": [
       "dist/**/*",
       "electron/**/*"
@@ -77,7 +77,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/brand/DemoRecorderIcon.ico"
+      "icon": "public/brand/BeamIcon.ico"
     },
     "mac": {
       "target": [

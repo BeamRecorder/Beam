@@ -11,7 +11,7 @@ const sourceId = 'microphone:chromium:device-1'
 const format = { codec: 'opus', sampleRate: 48_000, channels: 2 }
 
 function sessionFixture() {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-recorder-microphone-'))
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-microphone-'))
   const manifestPath = path.join(directory, 'manifest.json')
   fs.writeFileSync(manifestPath, JSON.stringify({ selectedSources: { screen: 'display:1', microphone: null }, permissions: { microphone: null }, tracks: [], warnings: [] }))
   return { directory, manifestPath, sessionId }

@@ -12,7 +12,7 @@ const sessionId = '22222222-2222-4222-8222-222222222222'
 const document = { schemaVersion: 1, text: 'Hello\nWorld', mode: 'line-by-line', autoscroll: true, scrollSpeed: 70, fontSize: 36, lineHeight: 1.5, textAlign: 'center', theme: 'dark', updatedAtUtc: '2026-01-01T00:00:00.000Z' }
 
 function storageFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-recorder-teleprompter-'))
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-teleprompter-'))
   const file = path.join(root, 'session', 'teleprompter.json')
   return { root, file, storage: createTeleprompterStorage({ projectStore: { teleprompterFileFor: () => file } }) }
 }

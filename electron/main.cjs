@@ -102,7 +102,7 @@ function createWindow(preferencesStore) {
   logStartup('Creating BrowserWindow.')
   const win = new BrowserWindow({
     width: 352, height: 512, frame: false, transparent: true, alwaysOnTop: false,
-    icon: path.join(applicationRoot, 'public/brand/DemoRecorderIcon.ico'), resizable: true, maximizable: true, hasShadow: true, show: false,
+    icon: path.join(applicationRoot, 'public/brand/BeamIcon.ico'), resizable: true, maximizable: true, hasShadow: true, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false },
   })
   const controller = new WindowController(win, { preferencesStore })

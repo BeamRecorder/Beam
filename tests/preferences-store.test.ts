@@ -10,7 +10,7 @@ const { createPreferencesStore, normalize } = require('../electron/preferences/p
 
 const directories: string[] = []
 const directory = () => {
-  const value = fs.mkdtempSync(path.join(os.tmpdir(), 'demorecorder-preferences-'))
+  const value = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-preferences-'))
   directories.push(value)
   return value
 }

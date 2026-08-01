@@ -7,7 +7,7 @@ const MAX_CHUNK_BYTES = 32 * 1024 * 1024
 function safeExportName(name, extension) {
   const base = typeof name === 'string' ? name.normalize('NFKC').trim() : ''
   const cleaned = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').replace(/[. ]+$/g, '').slice(0, 120)
-  return `${cleaned || 'DemoRecorder export'}.${extension}`
+  return `${cleaned || 'Beam export'}.${extension}`
 }
 
 function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, pathModule = path }) {

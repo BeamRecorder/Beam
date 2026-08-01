@@ -47,6 +47,7 @@ const tooltipSide = ref<'left' | 'right'>('left');
 const tooltipPosition = computed(() => tooltipSide.value);
 let dragElement: HTMLElement | null = null;
 let dragPointerId: number | null = null;
+let dragPending = false;
 
 onMounted(() => {
   preferencesStore.load();
@@ -64,29 +65,36 @@ const getShortcut = (id: string, fallback: string): string => {
 
 const drag = () => window.capture?.drag();
 const stopDrag = () => {
-  if (!isDragging.value) return;
+  if (!isDragging.value && !dragPending) return;
+  const wasDragging = isDragging.value;
   isDragging.value = false;
+  dragPending = false;
   window.removeEventListener("pointermove", drag);
   window.removeEventListener("pointerup", stopDrag);
   window.removeEventListener("pointercancel", stopDrag);
   if (dragElement && dragPointerId !== null && dragElement.hasPointerCapture(dragPointerId)) dragElement.releasePointerCapture(dragPointerId);
   dragElement = null;
   dragPointerId = null;
-  window.capture?.dragEnd();
+  if (wasDragging) window.capture?.dragEnd();
 };
 const startDrag = (event: PointerEvent) => {
   if (event.button !== 0) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest(".drag-handle")) return;
-  if (isDragging.value) return;
-  isDragging.value = true;
+  if (isDragging.value || dragPending) return;
   dragElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   dragPointerId = event.pointerId;
-  dragElement?.setPointerCapture(event.pointerId);
-  window.capture?.dragStart();
-  window.addEventListener("pointermove", drag);
+  dragPending = true;
   window.addEventListener("pointerup", stopDrag, { once: true });
   window.addEventListener("pointercancel", stopDrag, { once: true });
+  void tooltipSpaceReady.then(() => {
+    if (!dragPending || dragPointerId !== event.pointerId) return;
+    dragPending = false;
+    isDragging.value = true;
+    dragElement?.setPointerCapture?.(event.pointerId);
+    window.capture?.dragStart();
+    window.addEventListener("pointermove", drag);
+  });
 };
 const tooltipsReady = ref(false);
 const showTooltips = async () => {
@@ -271,7 +279,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-surface);
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
   cursor: grab;
   transition: opacity 0.18s ease;
 }
@@ -293,7 +301,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--text-muted);
   cursor: grab;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
 }
 .drag-handle:hover,
 .drag-handle:focus-visible {

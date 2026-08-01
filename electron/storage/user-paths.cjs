@@ -2,7 +2,7 @@ const path = require('path')
 
 /** Resolves every mutable user-data location without creating it. */
 function createUserPaths(videosDirectory) {
-  const user = path.join(videosDirectory, 'DemoRecorder', 'user')
+  const user = path.join(videosDirectory, 'Beam', 'user')
   return Object.freeze({
     user,
     preferences: path.join(user, 'preferences.json'),

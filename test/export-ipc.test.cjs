@@ -18,7 +18,7 @@ function setup(filePath) {
 
 test('sanitizes an export filename and keeps its extension', () => {
   assert.equal(safeExportName(' demo:/recording. ', 'webm'), 'demo recording.webm')
-  assert.equal(safeExportName('', 'mp4'), 'DemoRecorder export.mp4')
+  assert.equal(safeExportName('', 'mp4'), 'Beam export.mp4')
 })
 
 test('writes ordered chunks atomically and finalizes the selected file', async () => {
