@@ -74,6 +74,22 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on("preferences:shortcut", callback);
       return () => ipcRenderer.removeListener("preferences:shortcut", callback);
     },
+    showTeleprompter: () => ipcRenderer.send("teleprompter:show"),
+    hideTeleprompter: () => ipcRenderer.send("teleprompter:hide"),
+    toggleTeleprompterVisibility: () => ipcRenderer.send("teleprompter:toggle-visibility"),
+    setTeleprompterSession: (context) => ipcRenderer.send("teleprompter:set-session", context),
+    onTeleprompterShortcut: (listener) => {
+      const callback = (_event, id) => listener(id);
+      ipcRenderer.on("teleprompter:shortcut", callback);
+      return () => ipcRenderer.removeListener("teleprompter:shortcut", callback);
+    },
+    onTeleprompterSession: (listener) => {
+      const callback = (_event, context) => listener(context);
+      ipcRenderer.on("teleprompter:session", callback);
+      return () => ipcRenderer.removeListener("teleprompter:session", callback);
+    },
+    saveSessionTeleprompter: (projectId, sessionId, document) => ipcRenderer.invoke("teleprompter:save-session", { projectId, sessionId, document }),
+    getSessionTeleprompter: (projectId, sessionId) => ipcRenderer.invoke("teleprompter:get-session", { projectId, sessionId }),
     setCountdown: (seconds) => ipcRenderer.send("countdown:set", seconds),
     onCountdown: (listener) => {
       const callback = (_event, seconds) => listener(seconds);

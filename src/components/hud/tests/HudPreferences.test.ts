@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import HudPreferences from '../HudPreferences.vue'
+import HudPreferences from '../settings/HudPreferences.vue'
 
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }))
 

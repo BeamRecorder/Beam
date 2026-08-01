@@ -17,7 +17,7 @@ const catalog = {
   ],
 }
 
-const environment = { platform: 'win32', defaultOutputRoot: 'recordings' }
+const environment = { platform: 'win32', defaultOutputRoot: 'recordings', excludedProcessId: 4242 }
 
 test('builds a one-call recording config from defaults', () => {
   const config = buildDefaultCaptureConfig(catalog, {}, environment)
@@ -30,6 +30,7 @@ test('builds a one-call recording config from defaults', () => {
     captureShape: false,
   })
   assert.equal(config.recording.outputRoot, 'recordings')
+  assert.equal(config.excludedProcessId, 4242)
 })
 
 test('supports explicit source selection and disabling optional devices', () => {

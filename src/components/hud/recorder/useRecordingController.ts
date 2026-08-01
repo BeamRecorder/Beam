@@ -22,6 +22,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   let countdown: number | null = null
   let timer: number | null = null
   let sessionId: string | null = null
+  let projectId: string | null = null
   let camera: BrowserCameraRecorder | null = null
   let microphone: BrowserMicrophoneRecorder | null = null
   let systemAudio: BrowserSystemAudioRecorder | null = null
@@ -94,6 +95,8 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     }
     if (!session.sessionId) throw new Error('The capture session did not provide an identifier.')
     sessionId = session.sessionId
+    projectId = session.projectId ?? null
+    if (projectId) capture.setTeleprompterSession({ projectId, sessionId })
     await startSidecars()
     if (generation !== recordingGeneration) {
       await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
@@ -149,7 +152,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     capture.hideScreenRegionOverlay()
     clearTimer()
     if (!sidecarsAlreadyStopped) await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
-    camera = null; microphone = null; systemAudio = null; sessionId = null; sessionTimelineStartedAt = 0
+    camera = null; microphone = null; systemAudio = null; sessionId = null; projectId = null; sessionTimelineStartedAt = 0
     cameraEnabled.value = false; microphoneEnabled.value = false; systemAudioEnabled.value = false
     elapsedTenths.value = 0
     phase.value = 'idle'
@@ -173,6 +176,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       if (nativeRecording) phase.value = 'finalizing'
       await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
       if (nativeRecording) await capture.discardRecording(nativeSessionId ?? undefined)
+      capture.setTeleprompterSession(null)
       await resetState(true)
     } catch (reason) {
       error.value = reason instanceof Error ? reason.message : String(reason)

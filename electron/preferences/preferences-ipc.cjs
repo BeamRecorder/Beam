@@ -1,10 +1,13 @@
-function registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store }) {
+function registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store, shortcutHandler = null }) {
   const broadcast = (preferences) => BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:changed', preferences))
   const registerShortcuts = (preferences) => {
     globalShortcut.unregisterAll()
     for (const [id, entry] of Object.entries(preferences.shortcuts)) {
       if (entry.scope !== 'global') continue
-      globalShortcut.register(entry.keys, () => BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:shortcut', id)))
+      globalShortcut.register(entry.keys, () => {
+        if (shortcutHandler && id.startsWith('teleprompter.')) return shortcutHandler(id)
+        BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:shortcut', id))
+      })
     }
   }
   const update = (patch) => { const preferences = store.patch(patch); registerShortcuts(preferences); broadcast(preferences); return preferences }

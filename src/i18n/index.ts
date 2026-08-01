@@ -69,6 +69,8 @@ import enBackgroundCatalog from './en/backgroundCatalog.json'
 import enWhisperTypes from './en/whisperTypes.json'
 import frBackgroundCatalog from './fr/backgroundCatalog.json'
 import frWhisperTypes from './fr/whisperTypes.json'
+import enTeleprompter from './en/Teleprompter.json'
+import frTeleprompter from './fr/Teleprompter.json'
 
 const messages = {
   en: {
@@ -107,6 +109,7 @@ const messages = {
     UndoRedoToast: enUndoRedoToast,
     backgroundCatalog: enBackgroundCatalog,
     whisperTypes: enWhisperTypes,
+    Teleprompter: enTeleprompter,
   },
   fr: {
     HUD: frHUD,
@@ -144,6 +147,7 @@ const messages = {
     UndoRedoToast: frUndoRedoToast,
     backgroundCatalog: frBackgroundCatalog,
     whisperTypes: frWhisperTypes,
+    Teleprompter: frTeleprompter,
   },
 }
 

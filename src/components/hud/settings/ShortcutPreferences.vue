@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { usePreferencesStore } from '~/stores/preferences'
 import ShortcutInput from '~/ui/input/ShortcutInput.vue'
 import { useTranslate } from '~/i18n/useTranslate'
+import { TELEPROMPTER_SHORTCUTS } from '../teleprompter/shortcut-definitions'
 
 const { t } = useTranslate('ShortcutPreferences')
 const preferencesStore = usePreferencesStore()
@@ -14,6 +15,10 @@ const shortcutDefinitions = [
   { id: 'hud.toggleMic', label: () => t('micOnOff'), description: () => t('micOnOffDesc') },
   { id: 'hud.toggleCamera', label: () => t('cameraOnOff'), description: () => t('cameraOnOffDesc') },
   { id: 'hud.toggleSystemAudio', label: () => t('systemAudioOnOff'), description: () => t('systemAudioOnOffDesc') },
+  { id: 'teleprompter.toggleVisibility', label: () => t('teleprompterVisibility'), description: () => t('teleprompterVisibilityDesc') },
+  { id: 'teleprompter.toggleAutoscroll', label: () => t('teleprompterAutoscroll'), description: () => t('teleprompterAutoscrollDesc') },
+  { id: 'teleprompter.nextLine', label: () => t('teleprompterNextLine'), description: () => t('teleprompterNextLineDesc') },
+  { id: 'teleprompter.previousLine', label: () => t('teleprompterPreviousLine'), description: () => t('teleprompterPreviousLineDesc') },
 ]
 
 const defaultShortcuts: Record<string, string> = {
@@ -22,6 +27,7 @@ const defaultShortcuts: Record<string, string> = {
   'hud.toggleMic': 'Alt+Shift+M',
   'hud.toggleCamera': 'Alt+Shift+C',
   'hud.toggleSystemAudio': 'Alt+Shift+A',
+  ...Object.fromEntries(TELEPROMPTER_SHORTCUTS.map(({ id, defaultKeys }) => [id, defaultKeys])),
 }
 
 onMounted(() => {

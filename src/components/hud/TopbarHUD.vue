@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from "vue";
-import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
+import { ChevronLeft, Minus, ScrollText, Settings, X } from "@lucide/vue";
 import Badge from "~/ui/badge/Badge.vue";
 import Button from "~/ui/button/Button.vue";
 import { useTranslate } from "~/i18n/useTranslate";
@@ -27,6 +27,7 @@ const emit = defineEmits<{
   (event: "back"): void;
   (event: "minimize"): void;
   (event: "open-settings"): void;
+  (event: "open-teleprompter"): void;
   (event: "close"): void;
 }>();
 
@@ -96,6 +97,7 @@ onBeforeUnmount(stopDrag);
         <Minus :size="16" />
       </button>
       <span v-if="showSettings" class="settings-action">
+        <Button variant="ghost" size="sm" icon-only :icon="ScrollText" :aria-label="t('teleprompter')" :tooltip="t('teleprompter')" @click="emit('open-teleprompter')" />
         <Button variant="ghost" size="sm" icon-only :icon="Settings" :aria-label="t('preferences')" @click="emit('open-settings')" />
         <UpdateAvailableBadge />
       </span>

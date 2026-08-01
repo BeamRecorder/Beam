@@ -5,6 +5,7 @@ import type { ClipComposition, MediaAsset } from '../../components/video-editor/
 import type { BackgroundMedia, BackgroundValue, GradientBackground } from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
 import type { CursorClickEffects } from './cursor-settings'
+import type { TeleprompterDocument, TeleprompterSessionContext } from '../../components/hud/teleprompter/teleprompter-types'
 
 export type * from './capture-config'
 export type * from './screen-region'
@@ -61,6 +62,14 @@ export interface DesktopCaptureApi extends CaptureApi {
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void
   onPreferenceShortcut(listener: (id: string) => void): () => void
+  showTeleprompter(): void
+  hideTeleprompter(): void
+  toggleTeleprompterVisibility(): void
+  setTeleprompterSession(context: TeleprompterSessionContext | null): void
+  onTeleprompterShortcut(listener: (id: string) => void): () => void
+  onTeleprompterSession(listener: (context: TeleprompterSessionContext | null) => void): () => void
+  saveSessionTeleprompter(projectId: string, sessionId: string, document: TeleprompterDocument): Promise<TeleprompterDocument>
+  getSessionTeleprompter(projectId: string, sessionId: string): Promise<TeleprompterDocument | null>
   listProjects(): Promise<CaptureProject[]>
   projectMediaUrl(source: string): Promise<string | null>
   getProjectEditorData(projectId: string): Promise<ProjectEditorData | null>

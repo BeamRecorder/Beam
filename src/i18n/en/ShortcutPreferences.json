@@ -9,6 +9,14 @@
   "cameraOnOffDesc": "Toggle camera overlay",
   "systemAudioOnOff": "System Audio On / Off",
   "systemAudioOnOffDesc": "Toggle internal system audio",
+  "teleprompterVisibility": "Show / Hide teleprompter",
+  "teleprompterVisibilityDesc": "Global shortcut to show or hide the teleprompter",
+  "teleprompterAutoscroll": "Pause / Resume teleprompter",
+  "teleprompterAutoscrollDesc": "Pause or resume automatic scrolling",
+  "teleprompterNextLine": "Next line",
+  "teleprompterNextLineDesc": "Move to the next teleprompter line",
+  "teleprompterPreviousLine": "Previous line",
+  "teleprompterPreviousLineDesc": "Move to the previous teleprompter line",
   "conflictWith": "Conflict with \"{name}\"",
   "failedToUpdate": "Failed to update shortcut"
 }

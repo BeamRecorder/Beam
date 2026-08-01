@@ -11,6 +11,7 @@ const capture = vi.hoisted(() => ({
   stop: vi.fn().mockResolvedValue({ state: 'completed' }),
   pause: vi.fn(),
   resume: vi.fn(),
+  setTeleprompterSession: vi.fn(),
 }))
 
 vi.mock('../../../api/capture', () => ({ capture }))
@@ -95,5 +96,14 @@ describe('useRecordingController cancellation', () => {
 
     expect(capture.discardRecording).toHaveBeenCalledWith('session-4')
     expect(controller.phase.value).toBe('idle')
+  })
+
+  it('synchronizes the active project and session with the teleprompter window', async () => {
+    const context = { projectId: '11111111-1111-4111-8111-111111111111', sessionId: '22222222-2222-4222-8222-222222222222' }
+    capture.startPreparedRecording.mockResolvedValue({ state: 'recording', ...context })
+    const controller = useRecordingController(vi.fn())
+    await controller.start(configuration(0))
+    expect(capture.setTeleprompterSession).toHaveBeenCalledWith(context)
+    await controller.cancel()
   })
 })

@@ -78,11 +78,17 @@ const isCountdownOverlay = new URLSearchParams(window.location.search).has(
 const isScreenRegionOverlay = new URLSearchParams(window.location.search).has(
   "screenRegion",
 );
+const isTeleprompter = new URLSearchParams(window.location.search).has(
+  "teleprompter",
+);
 const CameraOverlayApp = defineAsyncComponent(
   () => import("./components/hud/camera/CameraOverlayApp.vue"),
 );
 const VideoEditor = defineAsyncComponent(
   () => import("./components/video-editor/VideoEditor.vue"),
+);
+const TeleprompterWindowApp = defineAsyncComponent(
+  () => import("./components/hud/teleprompter/TeleprompterWindowApp.vue"),
 );
 const currentVideoSrc = ref<string | null>(null);
 const currentProject = ref<CaptureProject | null>(null);
@@ -216,12 +222,15 @@ const dismissEditorLoadError = () => {
 </script>
 
 <template>
-  <ToastProvider />
-  <CameraOverlayApp v-if="isCameraOverlay" />
-  <CameraShadowApp v-else-if="isCameraShadow" />
-  <CountdownOverlay v-else-if="isCountdownOverlay" />
-  <ScreenRegionOverlayApp v-else-if="isScreenRegionOverlay" />
-  <div v-else class="app-container">
+  <TeleprompterWindowApp v-if="isTeleprompter" />
+  <template v-else>
+    <ToastProvider />
+    <CameraOverlayApp v-if="isCameraOverlay" />
+    <CameraShadowApp v-else-if="isCameraShadow" />
+    <CountdownOverlay v-else-if="isCountdownOverlay" />
+    <ScreenRegionOverlayApp v-else-if="isScreenRegionOverlay" />
+  </template>
+  <div v-if="!isTeleprompter && !isCameraOverlay && !isCameraShadow && !isCountdownOverlay && !isScreenRegionOverlay" class="app-container">
     <HUD
       v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError"
       @start-recording="startRecording"

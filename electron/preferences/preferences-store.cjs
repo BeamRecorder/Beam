@@ -12,7 +12,11 @@ const defaults = () => ({
     'hud.toggleMic': { keys: 'Alt+Shift+M', scope: 'global', category: 'hud' },
     'hud.toggleCamera': { keys: 'Alt+Shift+C', scope: 'global', category: 'hud' },
     'hud.toggleSystemAudio': { keys: 'Alt+Shift+A', scope: 'global', category: 'hud' },
-    'editor.playPause': { keys: 'Space', scope: 'application', category: 'video-editor' }
+    'editor.playPause': { keys: 'Space', scope: 'application', category: 'video-editor' },
+    'teleprompter.toggleVisibility': { keys: 'Alt+Shift+T', scope: 'global', category: 'teleprompter' },
+    'teleprompter.toggleAutoscroll': { keys: 'Alt+Shift+O', scope: 'global', category: 'teleprompter' },
+    'teleprompter.nextLine': { keys: 'Alt+Shift+Right', scope: 'global', category: 'teleprompter' },
+    'teleprompter.previousLine': { keys: 'Alt+Shift+Left', scope: 'global', category: 'teleprompter' }
   },
   backgroundPresets: { colors: [], gradients: [] },
   extras: {}
@@ -42,14 +46,16 @@ const presets = (value) => {
 }
 const normalize = (value) => {
   const base = defaults(); const next = value && typeof value === 'object' ? value : {}
-  const shortcuts = next.shortcuts && typeof next.shortcuts === 'object' ? Object.fromEntries(Object.entries(next.shortcuts).flatMap(([id, entry]) => typeof id === 'string' && shortcut(entry) ? [[id, { keys: entry.keys, scope: entry.scope, category: entry.category }]] : [])) : base.shortcuts
+  const providedShortcuts = next.shortcuts && typeof next.shortcuts === 'object' ? Object.fromEntries(Object.entries(next.shortcuts).flatMap(([id, entry]) => typeof id === 'string' && shortcut(entry) ? [[id, { keys: entry.keys, scope: entry.scope, category: entry.category }]] : [])) : {}
+  const shortcuts = { ...base.shortcuts, ...providedShortcuts }
   const globalKeys = new Set(); for (const entry of Object.values(shortcuts)) { if (entry.scope === 'global') { const key = entry.keys.toLowerCase(); if (globalKeys.has(key)) throw new Error('Raccourci global dupliqué'); globalKeys.add(key) } }
   return { schemaVersion: 2, theme: themes.has(next.theme) ? next.theme : base.theme, recordingBar: { visibility: next.recordingBar?.visibility === 'auto-fade' ? 'auto-fade' : 'always' }, devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {}, shortcuts, backgroundPresets: presets(next.backgroundPresets), extras: next.extras && typeof next.extras === 'object' && !Array.isArray(next.extras) ? next.extras : {} }
 }
 function createPreferencesStore(file) {
-  const read = () => { try { return normalize(JSON.parse(fs.readFileSync(file, 'utf8'))) } catch { return defaults() } }
-  const write = (value) => { const next = normalize(value); fs.mkdirSync(path.dirname(file), { recursive: true }); const temp = `${file}.tmp`; fs.writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`); fs.renameSync(temp, file); return next }
+  const targetFile = path.extname(file) ? file : path.join(file, 'preferencesSettings.json')
+  const read = () => { try { return normalize(JSON.parse(fs.readFileSync(targetFile, 'utf8'))) } catch { return defaults() } }
+  const write = (value) => { const next = normalize(value); fs.mkdirSync(path.dirname(targetFile), { recursive: true }); const temp = `${targetFile}.tmp`; fs.writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`); fs.renameSync(temp, targetFile); return next }
   const patch = (value) => { const current = read(); return write({ ...current, ...(value || {}), recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) }, devices: { ...current.devices, ...(value?.devices || {}) }, shortcuts: { ...current.shortcuts, ...(value?.shortcuts || {}) }, backgroundPresets: { ...current.backgroundPresets, ...(value?.backgroundPresets || {}) }, extras: { ...current.extras, ...(value?.extras || {}) } }) }
-  return { read, write, patch, file }
+  return { read, write, patch, file: targetFile }
 }
 module.exports = { createPreferencesStore, defaults, normalize }

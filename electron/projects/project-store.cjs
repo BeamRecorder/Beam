@@ -271,6 +271,7 @@ function createProjectStore(root) {
     mediaUrlFor,
     mediaFileForUrl,
     directoryFor,
+    teleprompterFileFor: (id, sessionId) => sessionFileFor(directoryFor(id), sessionId, path.join('session', 'teleprompter.json')),
     editorData,
     editorState,
     saveEditorState,

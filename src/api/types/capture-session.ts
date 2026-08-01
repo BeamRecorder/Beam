@@ -14,6 +14,7 @@ export type CaptureState =
 
 export interface CaptureSession {
   state: CaptureState
+  projectId?: string | null
   sessionId?: string | null
   manifestPath?: string | null
   videoSrc?: string | null

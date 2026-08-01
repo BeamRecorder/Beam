@@ -9,6 +9,14 @@
   "cameraOnOffDesc": "Activer/couper la caméra",
   "systemAudioOnOff": "Audio système On / Off",
   "systemAudioOnOffDesc": "Activer/couper l'audio système",
+  "teleprompterVisibility": "Afficher / Masquer le téléprompteur",
+  "teleprompterVisibilityDesc": "Raccourci global pour afficher ou masquer le téléprompteur",
+  "teleprompterAutoscroll": "Pause / Reprendre le téléprompteur",
+  "teleprompterAutoscrollDesc": "Mettre en pause ou reprendre le défilement automatique",
+  "teleprompterNextLine": "Ligne suivante",
+  "teleprompterNextLineDesc": "Passer à la ligne suivante du téléprompteur",
+  "teleprompterPreviousLine": "Ligne précédente",
+  "teleprompterPreviousLineDesc": "Revenir à la ligne précédente du téléprompteur",
   "conflictWith": "Conflit avec \"{name}\"",
   "failedToUpdate": "Échec de la mise à jour du raccourci"
 }

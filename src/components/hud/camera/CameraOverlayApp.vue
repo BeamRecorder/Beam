@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { capture } from '../../api/capture'
-import { useThemeStore } from '../../stores/theme'
+import { capture } from '../../../api/capture'
+import { useThemeStore } from '../../../stores/theme'
 import CameraPreviewOverlay from './CameraPreviewOverlay.vue'
 
 // Instantiate the shared theme store in this separate Electron renderer too.

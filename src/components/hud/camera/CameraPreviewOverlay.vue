@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Settings, Video } from '@lucide/vue'
 import Button from '~/ui/button/Button.vue'
-import { isCameraUnavailableError } from '../../api/camera-recorder'
+import { isCameraUnavailableError } from '../../../api/camera-recorder'
 import { useTranslate } from '~/i18n/useTranslate'
 
 const { t } = useTranslate('CameraPreviewOverlay')

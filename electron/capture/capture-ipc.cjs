@@ -13,8 +13,18 @@ function completedVideoSource(session) {
   return video ? { ...session, videoSrc: pathToFileURL(path.join(screenDirectory, video)).href } : session
 }
 
+function withProjectId(session) {
+  if (!session || typeof session !== 'object' || typeof session.manifestPath !== 'string') return session
+  try {
+    const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
+    return typeof manifest.projectId === 'string' ? { ...session, projectId: manifest.projectId } : session
+  } catch {
+    return session
+  }
+}
+
 function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages }) {
-  const registerSession = (session) => { for (const storage of trackStorages) storage.registerSession(session); return session }
+  const registerSession = (session) => { for (const storage of trackStorages) storage.registerSession(session); return withProjectId(session) }
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session)
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
@@ -27,7 +37,7 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
     if (command === 'prepare-default-recording') {
       const catalog = await captureEngine.request('discover')
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, { platform: process.platform, defaultOutputRoot: userPaths.projects, excludedProcessId: process.pid })
-      return captureEngine.request('prepare', { config })
+      return withProjectId(await captureEngine.request('prepare', { config }))
     }
     if (command === 'start-prepared-recording') return registerSession(await captureEngine.request('start'))
     if (command === 'cancel-prepared-recording') {
@@ -45,9 +55,9 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
       const session = await captureEngine.request('start')
       return registerSession(session)
     }
-    if (command === 'stop') return completedVideoSource(completeSession(await captureEngine.request('stop')))
+    if (command === 'stop') return withProjectId(completedVideoSource(completeSession(await captureEngine.request('stop'))))
     if (!ALLOWED_COMMANDS.has(command)) throw new Error(`Commande de capture interdite: ${command}`)
-    return captureEngine.request(command, payload)
+    return withProjectId(await captureEngine.request(command, payload))
   })
   ipcMain.handle('window:getSources', async (_event, types) => {
     const sources = await desktopCapturer.getSources({ types: types || ['window', 'screen'], thumbnailSize: { width: 300, height: 200 }, fetchWindowIcons: true })

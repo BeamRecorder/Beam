@@ -67,7 +67,7 @@ const ProjectPicker = defineAsyncComponent(
   () => import("../projects/ProjectPicker.vue"),
 );
 const HudPreferences = defineAsyncComponent(
-  () => import("./HudPreferences.vue"),
+  () => import("./settings/HudPreferences.vue"),
 );
 
 // Window state
@@ -884,6 +884,7 @@ const openProject = (project: CaptureProject) => {
       @back="handleTopbarBack"
       @minimize="minimizeApp"
       @open-settings="showSettings = true"
+      @open-teleprompter="capture.showTeleprompter()"
       @close="closeApp"
     />
 

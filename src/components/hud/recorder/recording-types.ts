@@ -17,5 +17,6 @@ export interface RecordingConfiguration {
 
 export interface RecordingSessionResult {
   videoSrc?: string | null
+  projectId?: string | null
   sessionId?: string | null
 }
