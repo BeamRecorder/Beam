@@ -124,7 +124,7 @@ describe('RecorderBar', () => {
     expect(capture.dragEnd).toHaveBeenCalledOnce()
     expect(releasePointerCapture).toHaveBeenCalledWith(2)
     expect(bar.classes()).not.toContain('dragging')
-    expect(bar.classes()).not.toContain('tooltip-right')
+    await vi.waitFor(() => expect(bar.classes()).not.toContain('tooltip-right'))
     wrapper.unmount()
   })
 })
