@@ -253,4 +253,21 @@ describe("BrowserMicrophoneRecorder", () => {
       reason: "permission denied",
     });
   });
+
+  it("reports non-Error chunk failures as Error instances", async () => {
+    const recorder = await BrowserMicrophoneRecorder.request("microphone:chromium:default");
+    const fatal = vi.fn();
+    recorder.onFatal(fatal);
+    await recorder.start("session-6");
+    capture.writeMicrophoneSegment.mockRejectedValueOnce("write failed");
+
+    FakeMediaRecorder.instances[0].data(new Uint8Array([9]));
+    await recorder.fail("session-6", "capture failed");
+
+    expect(fatal).toHaveBeenCalledWith(expect.objectContaining({ message: "write failed" }));
+    expect(capture.failMicrophone).toHaveBeenCalledWith(expect.objectContaining({
+      sessionId: "session-6",
+      reason: "capture failed",
+    }));
+  });
 });
