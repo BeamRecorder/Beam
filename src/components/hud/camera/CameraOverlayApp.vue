@@ -4,9 +4,8 @@ import { capture } from '../../../api/capture'
 import { useThemeStore } from '../../../stores/theme'
 import CameraPreviewOverlay from './CameraPreviewOverlay.vue'
 
-// Instantiate the shared theme store in this separate Electron renderer too.
 const theme = useThemeStore()
-const state = ref({ cameraId: 'off', shadowSize: 'md', cornerRadius: 'md' })
+const cameraId = ref('off')
 const isRecording = ref(false)
 const isHovered = ref(false)
 let unsubscribe: (() => void) | null = null
@@ -22,21 +21,11 @@ const refreshRecordingState = async () => {
   }
 }
 
-const updateShadowSize = (shadowSize: string) => {
-  state.value = { ...state.value, shadowSize }
-  void capture.configureCameraOverlay(state.value)
-}
-
-const updateCornerRadius = (cornerRadius: string) => {
-  state.value = { ...state.value, cornerRadius }
-  void capture.configureCameraOverlay(state.value)
-}
-
 onMounted(async () => {
-  unsubscribe = capture.onCameraOverlayState((next) => { state.value = next })
+  unsubscribe = capture.onCameraOverlayState((next) => { cameraId.value = next.cameraId })
   unsubscribeHover = capture.onCameraOverlayHover((hovered) => { isHovered.value = hovered })
   const saved = await capture.getCameraOverlayState()
-  if (saved) state.value = saved
+  if (saved) cameraId.value = saved.cameraId
   await refreshRecordingState()
   statusTimer = window.setInterval(() => { void refreshRecordingState() }, 500)
 })
@@ -50,15 +39,11 @@ onBeforeUnmount(() => {
 
 <template>
   <CameraPreviewOverlay
-    :camera-id="state.cameraId"
-    :shadow-size="state.shadowSize"
-    :corner-radius="state.cornerRadius"
+    :camera-id="cameraId"
     :is-recording="isRecording"
     :is-hovered="isHovered"
     :theme="theme.theme"
     window-overlay
-    @update:shadow-size="updateShadowSize"
-    @update:corner-radius="updateCornerRadius"
   />
 </template>
 

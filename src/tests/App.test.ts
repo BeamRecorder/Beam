@@ -95,7 +95,6 @@ vi.mock("../components/video-editor/VideoEditor.vue", async () => {
   return { __esModule: true, __isTeleport: false, default: Object.assign(component, { __isTeleport: false }) };
 });
 vi.mock("../components/hud/camera/CameraOverlayApp.vue", async () => ({ default: (await import("vue")).defineComponent({ template: "<div />" }) }));
-vi.mock("../components/hud/camera/CameraShadowApp.vue", async () => ({ default: (await import("vue")).defineComponent({ template: "<div />" }) }));
 vi.mock("../components/hud/teleprompter/TeleprompterWindowApp.vue", async () => ({ default: (await import("vue")).defineComponent({ template: "<div />" }) }));
 vi.mock("../components/ui/toast/ToastProvider.vue", async () => ({ default: (await import("vue")).defineComponent({ template: "<div />" }) }));
 

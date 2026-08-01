@@ -38,42 +38,22 @@ afterEach(() => {
 })
 
 describe('CameraPreviewOverlay', () => {
-  it('loads a camera, exposes appearance controls and cleans up the stream', async () => {
+  it('loads a camera and cleans up the stream', async () => {
     const wrapper = mount(CameraPreviewOverlay, {
       props: { cameraId: 'camera:chromium:front', isHovered: true },
-      global: { stubs: { Button } },
     })
     await vi.runAllTimersAsync()
     await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledWith({ audio: false, video: { deviceId: { ideal: 'front' } } }))
     expect(wrapper.get('.camera-overlay-container').classes()).toContain('is-hovered')
     expect(wrapper.find('.camera-overlay-skeleton').exists()).toBe(false)
 
-    await wrapper.get('.settings-button').trigger('click')
-    expect(wrapper.find('.camera-settings').exists()).toBe(true)
-    const settingButtons = wrapper.findAll('.camera-settings .button-stub')
-    await settingButtons[0].trigger('click')
-    await settingButtons.at(-1)?.trigger('click')
-    expect(wrapper.emitted('update:shadowSize')).toContainEqual(['none'])
-    expect(wrapper.emitted('update:cornerRadius')).toContainEqual(['full'])
-
-    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('.camera-settings').exists()).toBe(false)
-    await wrapper.get('.settings-button').trigger('click')
-    window.dispatchEvent(new Event('blur'))
-    await wrapper.vm.$nextTick()
-    expect(wrapper.find('.camera-settings').exists()).toBe(false)
-
-    await wrapper.setProps({ isRecording: true })
-    expect(wrapper.find('.settings-button').exists()).toBe(true)
-    expect(wrapper.find('.camera-settings').exists()).toBe(false)
     wrapper.unmount()
     expect(track.stop).toHaveBeenCalledOnce()
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled()
   })
 
   it('does not request the disabled camera and shows hardware errors', async () => {
-    const wrapper = mount(CameraPreviewOverlay, { props: { cameraId: 'off' }, global: { stubs: { Button } } })
+    const wrapper = mount(CameraPreviewOverlay, { props: { cameraId: 'off' } })
     await vi.runAllTimersAsync()
     expect(getUserMedia).not.toHaveBeenCalled()
 
@@ -89,7 +69,7 @@ describe('CameraPreviewOverlay', () => {
     const staleTrack = new FakeTrack()
     const staleStream = { getTracks: () => [staleTrack] } as unknown as MediaStream
     getUserMedia.mockImplementationOnce(() => new Promise<MediaStream>((resolve) => { resolveRequest = resolve }))
-    const wrapper = mount(CameraPreviewOverlay, { props: { cameraId: 'camera:chromium:first' }, global: { stubs: { Button } } })
+    const wrapper = mount(CameraPreviewOverlay, { props: { cameraId: 'camera:chromium:first' } })
     await vi.runAllTimersAsync()
     await wrapper.setProps({ cameraId: 'off' })
     resolveRequest(staleStream)

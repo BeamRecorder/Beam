@@ -6,7 +6,6 @@ const capture = vi.hoisted(() => ({
   getCameraOverlayState: vi.fn(),
   onCameraOverlayState: vi.fn(),
   onCameraOverlayHover: vi.fn(),
-  configureCameraOverlay: vi.fn(),
 }))
 vi.mock('../../../api/capture', () => ({ capture }))
 vi.mock('../../../stores/theme', () => ({ useThemeStore: () => ({ theme: 'dark' }) }))
@@ -14,21 +13,21 @@ vi.mock('../../../stores/theme', () => ({ useThemeStore: () => ({ theme: 'dark' 
 import CameraOverlayApp from './CameraOverlayApp.vue'
 
 const CameraPreviewOverlay = {
-  emits: ['update:shadowSize', 'update:cornerRadius'],
-  template: '<div class="camera-preview-stub"><button class="shadow-size" @click="$emit(\'update:shadowSize\', \'lg\')">Shadow</button><button class="corner-radius" @click="$emit(\'update:cornerRadius\', \'full\')">Corner</button></div>',
+  props: ['cameraId', 'isRecording', 'isHovered'],
+  template: '<div class="camera-preview-stub">{{ cameraId }}</div>',
 }
 
 describe('CameraOverlayApp', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     capture.status.mockResolvedValue({ state: 'recording' })
-    capture.getCameraOverlayState.mockResolvedValue({ cameraId: 'camera:front', shadowSize: 'sm', cornerRadius: 'full' })
+    capture.getCameraOverlayState.mockResolvedValue({ cameraId: 'camera:front' })
     capture.onCameraOverlayState.mockReturnValue(() => undefined)
     capture.onCameraOverlayHover.mockReturnValue(() => undefined)
   })
 
-  it('loads state, tracks recording and forwards appearance updates', async () => {
-    let stateListener!: (state: { cameraId: string; shadowSize: string; cornerRadius: string }) => void
+  it('loads state and tracks recording state', async () => {
+    let stateListener!: (state: { cameraId: string }) => void
     let hoverListener!: (hovered: boolean) => void
     const stopState = vi.fn()
     const stopHover = vi.fn()
@@ -36,13 +35,10 @@ describe('CameraOverlayApp', () => {
     capture.onCameraOverlayHover.mockImplementation((listener) => { hoverListener = listener; return stopHover })
     const wrapper = mount(CameraOverlayApp, { global: { stubs: { CameraPreviewOverlay } } })
     await vi.waitFor(() => expect(capture.status).toHaveBeenCalled())
-    stateListener({ cameraId: 'camera:back', shadowSize: 'md', cornerRadius: 'md' })
+    stateListener({ cameraId: 'camera:back' })
     hoverListener(true)
     await wrapper.vm.$nextTick()
-    await wrapper.get('.shadow-size').trigger('click')
-    await wrapper.get('.corner-radius').trigger('click')
-    expect(capture.configureCameraOverlay).toHaveBeenNthCalledWith(1, { cameraId: 'camera:back', shadowSize: 'lg', cornerRadius: 'md' })
-    expect(capture.configureCameraOverlay).toHaveBeenNthCalledWith(2, { cameraId: 'camera:back', shadowSize: 'md', cornerRadius: 'full' })
+    expect(wrapper.text()).toContain('camera:back')
     wrapper.unmount()
     expect(stopState).toHaveBeenCalledOnce()
     expect(stopHover).toHaveBeenCalledOnce()
