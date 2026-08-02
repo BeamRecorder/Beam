@@ -118,9 +118,9 @@ describe('BrowserCameraRecorder', () => {
     const nativeRecorder = FakeMediaRecorder.instances[0]
     nativeRecorder.emit('dataavailable', { data: { size: 5, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer } })
     nativeRecorder.emit('dataavailable', { data: { size: 0, arrayBuffer: async () => new ArrayBuffer(0) } })
-    await recorder.stop()
+    await recorder.stop(123_000_000)
     expect(capture.writeCameraSegment).toHaveBeenCalledWith(expect.objectContaining({ jobId: 'job-1', sequence: 0, data: expect.any(Uint8Array) }))
-    expect(capture.finalizeCameraSegment).toHaveBeenCalledWith(expect.objectContaining({ jobId: 'job-1', endNs: 0, metrics: { framesAcquired: 0, framesReceived: 0 } }))
+    expect(capture.finalizeCameraSegment).toHaveBeenCalledWith(expect.objectContaining({ jobId: 'job-1', endNs: 123_000_000, metrics: { framesAcquired: 0, framesReceived: 0 } }))
     expect(track.stop).toHaveBeenCalledOnce()
   })
 

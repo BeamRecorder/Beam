@@ -38,6 +38,12 @@ const recorder = () => ({
   pause: vi.fn().mockResolvedValue(undefined), resume: vi.fn().mockResolvedValue(undefined),
 });
 
+const deferred = <T>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => { resolve = next; });
+  return { promise, resolve };
+};
+
 let camera: ReturnType<typeof recorder>;
 let microphone: ReturnType<typeof recorder>;
 let systemAudio: ReturnType<typeof recorder>;
@@ -97,21 +103,40 @@ describe("useRecordingController branch behavior", () => {
 
     await controller.stop();
     expect(capture.stopNativeRecording).toHaveBeenCalled();
+    expect(camera.stop).toHaveBeenCalledWith(expect.any(Number));
+    expect(microphone.stop).toHaveBeenCalledWith(expect.any(Number));
+    expect(systemAudio.stop).toHaveBeenCalledWith(expect.any(Number));
     expect(capture.completeNativeRecording).toHaveBeenCalled();
     expect(complete).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "session-1" }));
     expect(controller.phase.value).toBe("idle");
   });
 
-  it("counts down and launches only after the native prewarm completes", async () => {
+  it("arms the native session before the countdown and hides the overlay at zero", async () => {
     const controller = useRecordingController(vi.fn());
     await controller.start(configuration({ countdownSeconds: 2 }));
     expect(controller.phase.value).toBe("countdown");
     expect(controller.secondsRemaining.value).toBe(2);
+    expect(capture.setCountdown).toHaveBeenCalledWith(2);
     await vi.advanceTimersByTimeAsync(1_000);
     expect(controller.secondsRemaining.value).toBe(1);
     await vi.advanceTimersByTimeAsync(1_000);
     expect(controller.phase.value).toBe("recording");
-    expect(capture.setCountdown).toHaveBeenCalledWith(0);
+    expect(capture.setCountdown).toHaveBeenLastCalledWith(null);
+  });
+
+  it("does not begin the visible countdown until native preparation is ready", async () => {
+    const prepared = deferred<void>();
+    capture.prepareRecording.mockReturnValueOnce(prepared.promise);
+    const controller = useRecordingController(vi.fn());
+    const starting = controller.start(configuration({ countdownSeconds: 2 }));
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(controller.phase.value).toBe("countdown");
+    expect(capture.setCountdown).not.toHaveBeenCalled();
+
+    prepared.resolve();
+    await starting;
+    expect(capture.setCountdown).toHaveBeenCalledWith(2);
   });
 
   it("downgrades unavailable cameras and cleans up toggle failures", async () => {

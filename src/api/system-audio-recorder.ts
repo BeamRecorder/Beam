@@ -57,9 +57,9 @@ export class BrowserSystemAudioRecorder {
 
   onFatal(handler: (error: Error) => void) { this.fatalHandler = handler }
   async start(sessionId: string) { this.startedAt = performance.now(); await this.startSegment(sessionId, 0) }
-  async pause() { await this.finishSegment(this.nowNs()) }
+  async pause(endNs = this.nowNs()) { await this.finishSegment(endNs) }
   async resume(sessionId: string) { await this.startSegment(sessionId, this.nowNs()) }
-  async stop() { if (this.recorder) await this.finishSegment(this.nowNs()); this.release() }
+  async stop(endNs = this.nowNs()) { if (this.recorder) await this.finishSegment(endNs); this.release() }
   async fail(sessionId: string, reason: string) {
     try { if (this.recorder) await this.finishSegment(this.nowNs()) } catch { /* The terminal error below remains authoritative. */ }
     await api().failSystemAudio({ sessionId, sourceId: this.sourceId, format: this.format, reason })

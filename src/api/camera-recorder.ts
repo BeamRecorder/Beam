@@ -109,12 +109,12 @@ export class BrowserCameraRecorder {
     await this.startSegment(sessionId, 0)
   }
 
-  async pause() { await this.finishSegment(this.nowNs()) }
+  async pause(endNs = this.nowNs()) { await this.finishSegment(endNs) }
 
   async resume(sessionId: string) { await this.startSegment(sessionId, this.nowNs()) }
 
-  async stop() {
-    try { if (this.recorder) await this.finishSegment(this.nowNs()) }
+  async stop(endNs = this.nowNs()) {
+    try { if (this.recorder) await this.finishSegment(endNs) }
     finally { this.release() }
   }
 

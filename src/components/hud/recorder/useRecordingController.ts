@@ -48,7 +48,10 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   const isActive = computed(() => phase.value === 'countdown' || phase.value === 'recording' || phase.value === 'paused')
   const clearCountdown = () => { if (countdown !== null) window.clearInterval(countdown); countdown = null }
   const clearTimer = () => { if (timer !== null) window.clearInterval(timer); timer = null }
-  const stopRecorder = async (recorder: Recorder | null) => { await recorder?.stop().catch(() => undefined) }
+  const timelineNowNs = () => sessionId !== null
+    ? Math.max(0, Math.round((performance.now() - sessionTimelineStartedAt) * 1_000_000))
+    : undefined
+  const stopRecorder = async (recorder: Recorder | null, endNs?: number) => { await recorder?.stop(endNs).catch(() => undefined) }
 
   const prepareSources = async () => {
     if (!configuration) return
@@ -129,15 +132,20 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       if (next.region && next.regionOverlay) capture.showScreenRegionOverlay({ ...next.regionOverlay, region: next.region })
       secondsRemaining.value = Math.max(0, next.countdownSeconds)
       phase.value = 'countdown'
-      capture.setCountdown(secondsRemaining.value)
       prewarm = prewarmNativeRecording(generation)
-      void prewarm.catch((reason: unknown) => { error.value = reason instanceof Error ? reason.message : String(reason); void cancel() })
+      if (!await prewarm || generation !== recordingGeneration) return
       if (secondsRemaining.value === 0) return await launchNativeRecording(generation)
+      capture.setCountdown(secondsRemaining.value)
       countdown = window.setInterval(() => {
         secondsRemaining.value -= 1
-        capture.setCountdown(secondsRemaining.value)
-        if (secondsRemaining.value > 0) return
+        if (secondsRemaining.value > 0) {
+          capture.setCountdown(secondsRemaining.value)
+          return
+        }
         clearCountdown()
+        // The countdown is a visual gate, not part of the recording. Hide it
+        // at the exact zero boundary before waiting on IPC/native start.
+        capture.setCountdown(null)
         const operation = launchNativeRecording(generation)
         void operation.catch((reason: unknown) => { error.value = reason instanceof Error ? reason.message : String(reason); void cancel() })
       }, 1000)
@@ -176,7 +184,8 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     const nativeSessionId = sessionId
     try {
       if (nativeRecording) phase.value = 'finalizing'
-      await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
+      const stopNs = nativeRecording ? timelineNowNs() : undefined
+      await Promise.all([stopRecorder(camera, stopNs), stopRecorder(microphone, stopNs), stopRecorder(systemAudio, stopNs)])
       if (nativeRecording) await capture.discardRecording(nativeSessionId ?? undefined)
       capture.setTeleprompterSession(null)
       await resetState(true)
@@ -196,8 +205,9 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       // Stop the native screen clock and request the sidecar recorders to stop
       // at the same moment. Track storage is completed only after all sidecars
       // have flushed their final chunks, so none can be cut off by native stop.
+      const stopNs = timelineNowNs()
       const nativeStop = capture.stopNativeRecording()
-      const sidecarsStop = Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)])
+      const sidecarsStop = Promise.all([stopRecorder(camera, stopNs), stopRecorder(microphone, stopNs), stopRecorder(systemAudio, stopNs)])
       const results = await Promise.allSettled([nativeStop, sidecarsStop])
       const nativeResult = results[0]
       const sidecarsResult = results[1]
@@ -212,7 +222,11 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
 
   const togglePause = async () => {
     if (!sessionId) return
-    if (phase.value === 'recording') { await Promise.all([capture.pause(), camera?.pause(), microphone?.pause(), systemAudio?.pause()]); clearTimer(); phase.value = 'paused' }
+    if (phase.value === 'recording') {
+      const pauseNs = timelineNowNs()
+      await Promise.all([capture.pause(), camera?.pause(pauseNs), microphone?.pause(pauseNs), systemAudio?.pause(pauseNs)])
+      clearTimer(); phase.value = 'paused'
+    }
     else if (phase.value === 'paused') { await Promise.all([capture.resume(), camera?.resume(sessionId), microphone?.resume(sessionId), systemAudio?.resume(sessionId)]); timer = window.setInterval(() => { elapsedTenths.value += 1 }, 100); phase.value = 'recording' }
   }
   const resolveCameraSourceId = async () => {
