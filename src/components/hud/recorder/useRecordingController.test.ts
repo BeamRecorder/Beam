@@ -6,8 +6,6 @@ const capture = vi.hoisted(() => ({
   hideScreenRegionOverlay: vi.fn(),
   prepareRecording: vi.fn().mockResolvedValue({ state: 'armed' }),
   startPreparedRecording: vi.fn(),
-  stopNativeRecording: vi.fn().mockResolvedValue({ state: 'completed' }),
-  completeNativeRecording: vi.fn().mockResolvedValue({ state: 'completed' }),
   cancelPreparedRecording: vi.fn().mockResolvedValue(undefined),
   discardRecording: vi.fn().mockResolvedValue(undefined),
   stop: vi.fn().mockResolvedValue({ state: 'completed' }),
@@ -17,9 +15,6 @@ const capture = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../api/capture', () => ({ capture }))
-vi.mock('../../../api/camera-recorder', () => ({ BrowserCameraRecorder: { request: vi.fn() }, isCameraUnavailableError: vi.fn().mockReturnValue(false), listBrowserCameras: vi.fn().mockResolvedValue([]) }))
-vi.mock('../../../api/microphone-recorder', () => ({ BrowserMicrophoneRecorder: { request: vi.fn() }, listBrowserMicrophones: vi.fn().mockResolvedValue([]) }))
-vi.mock('../../../api/system-audio-recorder', () => ({ BrowserSystemAudioRecorder: { request: vi.fn() } }))
 
 import { useRecordingController } from './useRecordingController'
 import type { RecordingConfiguration } from './recording-types'
@@ -51,7 +46,7 @@ describe('useRecordingController cancellation', () => {
 
   afterEach(() => vi.useRealTimers())
 
-  it('stops a native session that resolves after Stop during the countdown', async () => {
+  it('discards a native session that resolves after cancellation during the countdown', async () => {
     const started = deferred<{ state: string; sessionId: string }>()
     capture.startPreparedRecording.mockReturnValue(started.promise)
     const controller = useRecordingController(vi.fn())
@@ -60,11 +55,11 @@ describe('useRecordingController cancellation', () => {
     const cancellation = controller.cancel()
     started.resolve({ state: 'recording', sessionId: 'session-1' })
     await cancellation
-    expect(capture.stop).toHaveBeenCalledOnce()
+    expect(capture.discardRecording).toHaveBeenCalledWith('session-1')
     expect(controller.phase.value).toBe('idle')
   })
 
-  it('also cancels an immediate native start before it can become recording', async () => {
+  it('also discards an immediate native start cancelled before it becomes recording', async () => {
     const started = deferred<{ state: string; sessionId: string }>()
     capture.startPreparedRecording.mockReturnValue(started.promise)
     const controller = useRecordingController(vi.fn())
@@ -73,7 +68,7 @@ describe('useRecordingController cancellation', () => {
     const cancellation = controller.cancel()
     started.resolve({ state: 'recording', sessionId: 'session-2' })
     await Promise.all([starting, cancellation])
-    expect(capture.stop).toHaveBeenCalledOnce()
+    expect(capture.discardRecording).not.toHaveBeenCalled()
     expect(controller.phase.value).toBe('idle')
   })
 

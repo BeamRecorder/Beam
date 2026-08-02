@@ -3,7 +3,7 @@ const path = require('path')
 const { pathToFileURL } = require('url')
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs')
 
-const ALLOWED_COMMANDS = new Set(['discover', 'capabilities', 'permissions', 'formats', 'prepare', 'start', 'pause', 'resume', 'stop', 'status'])
+const ALLOWED_COMMANDS = new Set(['discover', 'capabilities', 'permissions', 'formats', 'prepare', 'start', 'pause', 'resume', 'stop', 'status', 'preview-start', 'preview-stop'])
 
 function completedVideoSource(session) {
   if (!session?.manifestPath) return session
@@ -23,10 +23,8 @@ function withProjectId(session) {
   }
 }
 
-function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages }) {
-  const registerSession = (session) => { for (const storage of trackStorages) storage.registerSession(session); return withProjectId(session) }
-  const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session)
-  let deferredStoppedSession = null
+function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths }) {
+  const registerSession = (session) => withProjectId(session)
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
       const catalog = await captureEngine.request('discover')
@@ -46,9 +44,7 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
       return undefined
     }
     if (command === 'discard-recording') {
-      for (const storage of trackStorages) storage.forgetSession(payload.sessionId)
       const session = await captureEngine.request('discard')
-      for (const storage of trackStorages) storage.forgetSession(session?.sessionId)
       return undefined
     }
     if (command === 'start-recording') {
@@ -56,18 +52,9 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
       const session = await captureEngine.request('start')
       return registerSession(session)
     }
-    if (command === 'stop-native-recording') {
-      if (deferredStoppedSession) throw new Error('A native recording is already waiting for its sidecar tracks to finish.')
-      deferredStoppedSession = await captureEngine.request('stop')
-      return withProjectId(deferredStoppedSession)
-    }
-    if (command === 'complete-native-recording') {
-      if (!deferredStoppedSession) throw new Error('No native recording is waiting for completion.')
-      const session = completeSession(deferredStoppedSession)
-      deferredStoppedSession = null
-      return withProjectId(completedVideoSource(session))
-    }
-    if (command === 'stop') return withProjectId(completedVideoSource(completeSession(await captureEngine.request('stop'))))
+    if (command === 'camera-preview-start') return captureEngine.request('preview-start', { source: payload.cameraId })
+    if (command === 'camera-preview-stop') return captureEngine.request('preview-stop')
+    if (command === 'stop') return withProjectId(completedVideoSource(await captureEngine.request('stop')))
     if (!ALLOWED_COMMANDS.has(command)) throw new Error(`Commande de capture interdite: ${command}`)
     return withProjectId(await captureEngine.request(command, payload))
   })

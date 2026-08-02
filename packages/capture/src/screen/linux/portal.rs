@@ -38,5 +38,6 @@ pub fn permissions() -> PermissionSnapshot {
             PermissionState::Granted
         }),
         accessibility: Some(PermissionState::NotApplicable),
+        ..PermissionSnapshot::default()
     }
 }

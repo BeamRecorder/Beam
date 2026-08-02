@@ -82,8 +82,17 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
   const screenKind = options.screenKind === 'window' ? 'window' : 'display'
   const screen = selectSource(sources, screenKind, options.screenId, environment.platform)
   if (!screen) throw new Error('Aucun écran ou fenêtre capturable n’est disponible')
+  const optionalSource = (kind, requestedId, enabled) => {
+    if (!enabled) return null
+    const source = selectSource(sources, kind, requestedId, environment.platform)
+    if (!source) throw new Error(`Aucun périphérique ${kind} natif n’est disponible`)
+    return source.id
+  }
   return {
     projectId: options.projectId || randomUUID(), screen: { mode: 'source', sourceId: screen.id },
+    camera: optionalSource('camera', options.cameraId === 'off' ? null : options.cameraId, Boolean(options.cameraId && options.cameraId !== 'off')),
+    microphone: optionalSource('microphone', options.microphoneId === 'no-audio' ? null : options.microphoneId, Boolean(options.microphoneId && options.microphoneId !== 'no-audio')),
+    systemAudio: optionalSource('system-audio', options.systemAudioId, Boolean(options.systemAudio)),
     cursor: options.cursor !== false && capabilities.separateCursor ? { mode: 'separate', captureClicks: Boolean(capabilities.cursorClicks), captureShape: Boolean(capabilities.cursorShapes) } : { mode: capabilities.embeddedCursor ? 'embedded' : 'disabled' },
     recording: { outputRoot: options.outputRoot || environment.defaultOutputRoot, videoBitrateBps: positiveInteger(options.videoBitrateBps, 12_000_000, 'videoBitrateBps'), targetFps: positiveInteger(options.targetFps, 60, 'targetFps'), keyframeIntervalSeconds: 2, queueCapacity: positiveInteger(options.queueCapacity, 8, 'queueCapacity'), minimumFreeBytes: options.minimumFreeBytes ?? 536_870_912 },
     failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',

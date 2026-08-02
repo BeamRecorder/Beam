@@ -25,4 +25,6 @@ pub enum Command {
     Discard,
     Stop,
     Status,
+    PreviewStart { source: String },
+    PreviewStop,
 }

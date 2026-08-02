@@ -1,27 +1,17 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { captureMock as capture } from './capture.mock'
-import { browserCameraMock } from './camera-recorder.mock'
-import { browserMicrophoneMock } from './microphone-recorder.mock'
-import { browserSystemAudioMock } from './system-audio-recorder.mock'
 
 vi.mock('../../../api/capture', async () => ({ capture: (await import('./capture.mock')).captureMock }))
-vi.mock('../../../api/camera-recorder', async () => {
-  const camera = await import('./camera-recorder.mock')
-  return { BrowserCameraRecorder: camera.BrowserCameraRecorder, listBrowserCameras: camera.listBrowserCameras, isCameraUnavailableError: camera.isCameraUnavailableError }
-})
-vi.mock('../../../api/microphone-recorder', async () => {
-  const microphone = await import('./microphone-recorder.mock')
-  return { BrowserMicrophoneRecorder: microphone.BrowserMicrophoneRecorder, listBrowserMicrophones: microphone.listBrowserMicrophones, recordMicrophoneFailure: microphone.recordMicrophoneFailure }
-})
-vi.mock('../../../api/system-audio-recorder', async () => {
-  const systemAudio = await import('./system-audio-recorder.mock')
-  return { BrowserSystemAudioRecorder: systemAudio.BrowserSystemAudioRecorder, recordSystemAudioFailure: systemAudio.recordSystemAudioFailure, systemAudioSource: systemAudio.systemAudioSource }
-})
 vi.mock('../TopbarHUD.vue', () => ({ default: { template: '<header><button aria-label="Preferences" @click="$emit(\'open-settings\')"/><button aria-label="Back" @click="$emit(\'back\')"/><button aria-label="Close" @click="$emit(\'close\')"/><button aria-label="Minimize" @click="$emit(\'minimize\')"/></header>' } }))
 import HUD from '../HUD.vue'
 
-const catalog = { sources: [{ id: 'display:1', kind: 'display', label: 'Display', isDefault: true }], capabilities: { systemAudio: true } }
+const catalog = { sources: [
+  { id: 'display:1', kind: 'display', label: 'Display', isDefault: true },
+  { id: 'camera:nokhwa:0', kind: 'camera', label: 'Cam', isDefault: true },
+  { id: 'microphone:cpal:default', kind: 'microphone', label: 'Mic', isDefault: true },
+  { id: 'system-audio:cpal:default', kind: 'system-audio', label: 'System audio', isDefault: true },
+], capabilities: { systemAudioCapture: true } }
 const stubs = {
   Select: {
     props: ['modelValue', 'options'],
@@ -50,7 +40,7 @@ describe('HUD', () => {
     } else {
       vi.spyOn(navigator.mediaDevices, 'getUserMedia').mockResolvedValue({ getTracks: () => [] } as any)
     }
-    Object.values(capture).forEach((mock) => mock.mockReset()); Object.values(browserCameraMock).forEach((mock) => mock.mockReset()); Object.values(browserMicrophoneMock).forEach((mock) => mock.mockReset()); Object.values(browserSystemAudioMock).forEach((mock) => mock.mockReset()); capture.getPreferences.mockResolvedValue({ schemaVersion: 2, theme: 'system', recordingBar: { visibility: 'always' }, devices: { cameraId: 'camera:chromium:device-1', micId: 'microphone:chromium:device-1', systemAudioMode: 'off' }, shortcuts: {}, backgroundPresets: { colors: [], gradients: [] }, extras: {} }); capture.onPreferenceShortcut.mockReturnValue(() => undefined); capture.onCameraOverlayState.mockReturnValue(() => undefined); capture.onCameraOverlayHover.mockReturnValue(() => undefined); capture.onCameraShadow.mockReturnValue(() => undefined); browserSystemAudioMock.systemAudioSource.mockReturnValue({ id: 'system-audio:chromium:desktop-loopback', kind: 'system-audio', label: 'System audio', isDefault: true }); browserCameraMock.listBrowserCameras.mockResolvedValue([{ id: 'camera:chromium:device-1', kind: 'camera', label: 'Cam', isDefault: true }]); browserMicrophoneMock.listBrowserMicrophones.mockResolvedValue([{ id: 'microphone:chromium:device-1', kind: 'microphone', label: 'Mic', isDefault: true }]); browserCameraMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); browserMicrophoneMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); browserSystemAudioMock.request.mockResolvedValue({ onFatal: vi.fn(), start: vi.fn(), stop: vi.fn(), fail: vi.fn() }); capture.discover.mockResolvedValue(catalog); capture.getSources.mockResolvedValue([{ id: 'screen:1', name: 'Display', thumbnail: '', appIcon: null }])
+    Object.values(capture).forEach((mock) => mock.mockReset()); capture.getPreferences.mockResolvedValue({ schemaVersion: 2, theme: 'system', recordingBar: { visibility: 'always' }, devices: { cameraId: 'camera:nokhwa:0', micId: 'microphone:cpal:default', systemAudioMode: 'off' }, shortcuts: {}, backgroundPresets: { colors: [], gradients: [] }, extras: {} }); capture.onPreferenceShortcut.mockReturnValue(() => undefined); capture.onCameraOverlayState.mockReturnValue(() => undefined); capture.onCameraOverlayHover.mockReturnValue(() => undefined); capture.onCameraShadow.mockReturnValue(() => undefined); capture.discover.mockResolvedValue(catalog); capture.getSources.mockResolvedValue([{ id: 'screen:1', name: 'Display', thumbnail: '', appIcon: null }])
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -61,7 +51,7 @@ describe('HUD', () => {
   })
   it('discovers defaults and starts a screen recording with selected sources', async () => {
     capture.startRecording.mockResolvedValue({ state: 'recording', sessionId: '019f84dd-4d9d-7f61-ac30-5da50169ecbc' }); const wrapper = mount(HUD, { global: { stubs } }); await ready(); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready()
-    expect(capture.startRecording).not.toHaveBeenCalled(); expect(browserCameraMock.request).not.toHaveBeenCalled(); expect(browserMicrophoneMock.request).not.toHaveBeenCalled(); expect(wrapper.emitted('start-recording')).toEqual([[expect.objectContaining({ screenKind: 'display', screenId: 'display:1', microphoneId: 'microphone:chromium:device-1', cameraId: 'camera:chromium:device-1', systemAudio: false, targetFps: 60 })]])
+    expect(capture.startRecording).not.toHaveBeenCalled(); expect(wrapper.emitted('start-recording')).toEqual([[expect.objectContaining({ screenKind: 'display', screenId: 'display:1', microphoneId: 'microphone:cpal:default', cameraId: 'camera:nokhwa:0', systemAudio: false, targetFps: 60 })]])
   })
   it('shows actionable errors when discovery or recording fails', async () => {
     capture.discover.mockRejectedValueOnce(new Error('permission denied')); const wrapper = mount(HUD, { global: { stubs } }); await ready(); expect(wrapper.get('[role=alert]').text()).toContain('permission denied'); const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording')); await record?.trigger('click'); await ready(); expect(wrapper.emitted('start-recording')).toHaveLength(1); expect(wrapper.get('[role=alert]').text()).toContain('permission denied')
@@ -78,6 +68,8 @@ describe('HUD', () => {
       sources: [
         { id: 'display:1', kind: 'display', label: 'Display', isDefault: true },
         { id: 'window:7b', kind: 'window', label: 'Editor' },
+        { id: 'camera:nokhwa:0', kind: 'camera', label: 'Cam', isDefault: true },
+        { id: 'microphone:cpal:default', kind: 'microphone', label: 'Mic', isDefault: true },
       ],
       capabilities: { systemAudio: true },
     })
@@ -91,7 +83,7 @@ describe('HUD', () => {
     await wrapper.findAll('.select-option').find((button) => button.text() === 'Cam')?.trigger('click')
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!
     await record.trigger('click')
-    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: 'window:123:0', systemAudio: true, cameraId: 'camera:chromium:device-1', microphoneId: 'microphone:chromium:device-1' })])
+    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: 'window:123:0', systemAudio: true, cameraId: 'camera:nokhwa:0', microphoneId: 'microphone:cpal:default' })])
     const shortcut = capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined
     shortcut?.('ignored.action')
     shortcut?.('hud.startStopRecording')
@@ -139,17 +131,6 @@ describe('HUD', () => {
     expect(wrapper.get('.capture-error-copy').text()).toContain('Copy error')
   })
 
-  it('stops an active session and reports the stop event', async () => {
-    capture.stop.mockResolvedValue({ state: 'stopped', sessionId: 'session-1' })
-    const wrapper = mount(HUD, { global: { stubs } }); await ready()
-    ;(wrapper.vm as any).$.setupState.isRecording = true
-    await wrapper.vm.$nextTick()
-    const record = wrapper.findAll('button').find((button) => button.text().includes('Stop ('))!
-    await record.trigger('click')
-    await ready()
-    expect(capture.stop).toHaveBeenCalledOnce()
-    expect(wrapper.emitted('stop-recording')).toEqual([[{ state: 'stopped', sessionId: 'session-1' }]])
-  })
 
   it('handles empty window catalogs, dropdown resize transitions, and native topbar controls', async () => {
     capture.getPreferences.mockResolvedValueOnce({ schemaVersion: 2, theme: 'system', recordingBar: { visibility: 'auto-fade' }, devices: { cameraId: 'missing', micId: 'missing', systemAudioMode: 'invalid' }, shortcuts: {}, backgroundPresets: { colors: [], gradients: [] }, extras: { screenRegion: { x: 2, y: 2, width: 0, height: 0 } } })
@@ -183,18 +164,6 @@ describe('HUD', () => {
     expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ screenKind: 'window', screenId: 'window:123' })])
   })
 
-  it('keeps a failed active stop visible as an error and resets transient dropdown state', async () => {
-    capture.stop.mockRejectedValueOnce(new Error('native stop failed'))
-    const wrapper = mount(HUD, { global: { stubs } }); await ready()
-    ;(wrapper.vm as any).$.setupState.isRecording = true
-    await wrapper.vm.$nextTick()
-    await wrapper.findAll('button').find((button) => button.text().includes('Stop ('))!.trigger('click')
-    await ready()
-    expect(wrapper.get('[role="alert"]').text()).toContain('native stop failed')
-    await wrapper.get('.select-control').trigger('click')
-    await wrapper.get('.select-close').trigger('click')
-    expect(capture.setSize).toHaveBeenCalled()
-  })
   it('routes project picker events, preference updates, and guarded region actions', async () => {
     const wrapper = mount(HUD, { global: { stubs } }); await ready()
     await wrapper.get('[aria-label="Preferences"]').trigger('click')

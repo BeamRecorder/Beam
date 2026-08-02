@@ -10,10 +10,10 @@ cargo run -p capture --bin capture-engine
 cargo run -p capture --bin capture-smoke -- full
 ```
 
-`capture-smoke full --duration 10 --output recordings-smoke` opens every available native track and produces a complete project containing screen and cursor data. Browser-owned camera, microphone, and system-audio sidecars are exercised through Electron rather than this native smoke binary.
+`capture-smoke full --duration 10 --output recordings-smoke` opens every available native track and produces a complete project containing screen, cursor, camera and audio data where the platform backend is available.
 
 `capture-engine` reads JSONL on stdin and reserves stdout for JSONL responses. Logs and fatal diagnostics go to stderr. Hardware tests are ignored unless `hardware-tests` is explicitly enabled.
 
-Windows recording uses WGC H.264 and Win32 cursor sampling. macOS uses ScreenCaptureKit for display/window/application video plus CoreGraphics for cursor events. Webcams, microphones, and system audio are captured by Chromium and stored by Electron as WebM Opus/VP8 sidecars. Electron desktop loopback supplies system audio through `getDisplayMedia`; macOS 14.2+ requires `NSAudioCaptureUsageDescription`, and macOS 13+ is required for browser desktop audio capture. Direct ScreenCaptureKit MP4 recording requires macOS 15 or newer.
+Windows recording uses WGC H.264 and Win32 cursor sampling, Nokhwa for camera frames and native preview, and CPAL for microphone plus render-loopback audio. macOS uses ScreenCaptureKit for display/window/application video plus CoreGraphics for cursor events, Nokhwa for native camera preview and CPAL for audio sources. The macOS camera recording writer remains an explicit unsupported optional track until its AVFoundation/VideoToolbox writer is added. Direct ScreenCaptureKit MP4 recording requires macOS 15 or newer.
 
-Linux native recording is currently unavailable; Linux source discovery and permission metadata remain available for the Electron fallback and future native backend work.
+Linux native recording is currently unavailable; Linux source discovery and permission metadata remain available for future native backend work.

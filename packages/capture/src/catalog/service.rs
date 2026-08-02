@@ -35,6 +35,7 @@ pub fn validate_request(
             SourceKind::Display => snapshot.capabilities.display_capture,
             SourceKind::Window => snapshot.capabilities.window_capture,
             SourceKind::Application => snapshot.capabilities.application_capture,
+            SourceKind::Camera | SourceKind::Microphone | SourceKind::SystemAudio => false,
         };
         require_capability(supported, "selected screen source")?;
     } else if matches!(request.screen, Some(ScreenSelection::Portal { .. })) {
@@ -62,6 +63,49 @@ pub fn validate_request(
     }
     if request.screen.is_some() && snapshot.permissions.screen == Some(PermissionState::Denied) {
         return Err(CaptureError::PermissionDenied("screen recording".into()));
+    }
+    validate_optional_source(
+        request.camera.as_ref(),
+        SourceKind::Camera,
+        snapshot,
+        snapshot.capabilities.camera_capture,
+        "camera",
+        snapshot.permissions.camera,
+    )?;
+    validate_optional_source(
+        request.microphone.as_ref(),
+        SourceKind::Microphone,
+        snapshot,
+        snapshot.capabilities.microphone_capture,
+        "microphone",
+        snapshot.permissions.microphone,
+    )?;
+    validate_optional_source(
+        request.system_audio.as_ref(),
+        SourceKind::SystemAudio,
+        snapshot,
+        snapshot.capabilities.system_audio_capture,
+        "system audio",
+        snapshot.permissions.system_audio,
+    )?;
+    Ok(())
+}
+
+fn validate_optional_source(
+    id: Option<&SourceId>,
+    expected_kind: SourceKind,
+    snapshot: &CatalogSnapshot,
+    capability: bool,
+    label: &str,
+    permission: Option<PermissionState>,
+) -> Result<(), CaptureError> {
+    let Some(id) = id else {
+        return Ok(());
+    };
+    require_kind(snapshot, id, &[expected_kind])?;
+    require_capability(capability, &format!("{label} capture"))?;
+    if permission == Some(PermissionState::Denied) {
+        return Err(CaptureError::PermissionDenied(label.into()));
     }
     Ok(())
 }

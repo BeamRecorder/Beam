@@ -5,7 +5,7 @@ const { buildDefaultCaptureConfig } = require('../electron/capture/capture-confi
 
 const catalog = {
   capabilities: {
-    systemAudio: true,
+    systemAudioCapture: true,
     separateCursor: true,
     cursorClicks: true,
     cursorShapes: false,
@@ -16,6 +16,9 @@ const catalog = {
     { id: 'window:1', kind: 'window', isDefault: false },
     { id: 'wgc:window:7b', kind: 'window', isDefault: false },
     { id: 'sck:window:123', kind: 'window', isDefault: false },
+    { id: 'camera:nokhwa:0', kind: 'camera', isDefault: true },
+    { id: 'microphone:cpal:default', kind: 'microphone', isDefault: true },
+    { id: 'system-audio:cpal:default', kind: 'system-audio', isDefault: true },
   ],
 }
 
@@ -25,8 +28,9 @@ test('builds a one-call recording config from defaults', () => {
   const config = buildDefaultCaptureConfig(catalog, {}, environment)
 
   assert.equal(config.screen.sourceId, 'display:1')
-  assert.equal('microphone' in config, false)
-  assert.equal('systemAudio' in config, false)
+  assert.equal(config.camera, null)
+  assert.equal(config.microphone, null)
+  assert.equal(config.systemAudio, null)
   assert.deepEqual(config.cursor, {
     mode: 'separate',
     captureClicks: true,

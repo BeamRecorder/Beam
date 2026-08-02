@@ -17,6 +17,9 @@ fn native_session_finalizes_storage_and_supports_pause_segments() {
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: None,
+        camera: None,
+        microphone: None,
+        system_audio: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings {
             output_root: temporary.path().into(),
@@ -60,6 +63,9 @@ fn native_session_discard_removes_the_project_and_session() {
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: None,
+        camera: None,
+        microphone: None,
+        system_audio: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings {
             output_root: temporary.path().into(),

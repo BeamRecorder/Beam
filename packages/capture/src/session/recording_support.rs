@@ -10,8 +10,8 @@ use crate::{
     catalog::CatalogSnapshot,
     model::{
         CaptureRequest, CursorSelection, HealthEvent, MediaFormat, ScreenSelection,
-        SelectedSources, SourceDescriptor, SourceId, TimingAnchor, TrackFormat, TrackId, TrackKind,
-        TrackMetadata, TrackMetrics, TrackStatus,
+        SelectedSources, SourceDescriptor, SourceId, SourceKind, TimingAnchor, TrackFormat,
+        TrackId, TrackKind, TrackMetadata, TrackMetrics, TrackStatus,
     },
 };
 
@@ -71,7 +71,85 @@ pub(super) fn track_metadata(
             },
         ));
     }
+    optional_track(
+        request.camera.as_ref(),
+        snapshot,
+        &mut tracks,
+        TrackKind::Camera,
+        SourceKind::Camera,
+    )?;
+    optional_track(
+        request.microphone.as_ref(),
+        snapshot,
+        &mut tracks,
+        TrackKind::Microphone,
+        SourceKind::Microphone,
+    )?;
+    optional_track(
+        request.system_audio.as_ref(),
+        snapshot,
+        &mut tracks,
+        TrackKind::SystemAudio,
+        SourceKind::SystemAudio,
+    )?;
     Ok(tracks)
+}
+
+fn optional_track(
+    source_id: Option<&SourceId>,
+    snapshot: &CatalogSnapshot,
+    tracks: &mut Vec<TrackMetadata>,
+    kind: TrackKind,
+    expected_kind: SourceKind,
+) -> Result<(), CaptureError> {
+    let Some(source_id) = source_id else {
+        return Ok(());
+    };
+    let source = source(snapshot, source_id)?;
+    if source.kind != expected_kind {
+        return Err(CaptureError::InvalidConfiguration(format!(
+            "source {source_id} is not a {expected_kind:?}"
+        )));
+    }
+    let format = source
+        .capabilities
+        .formats
+        .iter()
+        .find(|format| {
+            matches!(
+                (kind, format),
+                (TrackKind::Camera, MediaFormat::Video { .. })
+                    | (
+                        TrackKind::Microphone | TrackKind::SystemAudio,
+                        MediaFormat::Audio { .. }
+                    )
+            )
+        })
+        .cloned()
+        .ok_or_else(|| {
+            CaptureError::Unsupported(format!("source {source_id} has no usable native format"))
+        })?;
+    let track_format = match format {
+        MediaFormat::Video {
+            width, height, fps, ..
+        } => TrackFormat::Video {
+            codec: "h264".into(),
+            width,
+            height,
+            nominal_fps: fps,
+        },
+        MediaFormat::Audio {
+            sample_rate,
+            channels,
+            sample_format,
+        } => TrackFormat::Audio {
+            sample_format,
+            sample_rate,
+            channels,
+        },
+    };
+    tracks.push(new_track(kind, Some(source_id.clone()), track_format));
+    Ok(())
 }
 
 fn new_track(kind: TrackKind, source_id: Option<SourceId>, format: TrackFormat) -> TrackMetadata {
@@ -192,19 +270,17 @@ pub(super) fn selected_sources(
             Some(ScreenSelection::Source { source_id }) => Some(source_id.clone()),
             _ => None,
         },
-        system_audio: None,
-        microphone: None,
-        // Browser-owned camera capture merges its selected source after the native session
-        // has finalized. Rust never opens a camera device.
-        camera: None,
+        system_audio: request.system_audio.clone(),
+        microphone: request.microphone.clone(),
+        camera: request.camera.clone(),
     }
 }
 
 pub(super) fn platform_backend() -> &'static str {
     if cfg!(windows) {
-        "windows-graphics-capture"
+        "windows-graphics-capture-native-media"
     } else if cfg!(target_os = "macos") {
-        "screen-capture-kit"
+        "screen-capture-kit-native-media"
     } else {
         "linux-native-unavailable"
     }

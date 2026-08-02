@@ -61,7 +61,9 @@ fn native_imports_remain_inside_platform_directories() {
         let path = entry.path().to_string_lossy().replace('\\', "/");
         let contents = std::fs::read_to_string(entry.path()).unwrap_or_default();
         for (needle, directory) in rules {
-            if contents.contains(needle) && !path.contains(directory) {
+            let backend_directory =
+                needle == "windows_capture::" && path.contains("/backends/windows/");
+            if contents.contains(needle) && !path.contains(directory) && !backend_directory {
                 violations.push(format!("{path}: {needle}"));
             }
         }

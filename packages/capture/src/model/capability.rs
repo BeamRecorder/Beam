@@ -13,6 +13,9 @@ pub struct CaptureCapabilities {
     pub cursor_clicks: bool,
     pub hardware_h264: bool,
     pub hardware_hevc: bool,
+    pub camera_capture: bool,
+    pub microphone_capture: bool,
+    pub system_audio_capture: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,4 +33,7 @@ pub enum PermissionState {
 pub struct PermissionSnapshot {
     pub screen: Option<PermissionState>,
     pub accessibility: Option<PermissionState>,
+    pub camera: Option<PermissionState>,
+    pub microphone: Option<PermissionState>,
+    pub system_audio: Option<PermissionState>,
 }

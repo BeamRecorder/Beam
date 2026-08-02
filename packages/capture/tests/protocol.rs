@@ -33,6 +33,9 @@ fn engine_eof_finalizes_an_active_session() {
     let request = CaptureRequest {
         project_id,
         screen: None,
+        camera: None,
+        microphone: None,
+        system_audio: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings {
             output_root: temporary.path().to_owned(),

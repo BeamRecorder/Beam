@@ -1,5 +1,7 @@
 use std::io::{self, BufReader, Write};
 
+#[cfg(any(windows, target_os = "macos"))]
+use capture::{backends::camera_preview::CameraPreview, model::SourceId};
 use capture::{
     catalog::{NativeCatalog, SourceCatalog},
     protocol::{Command, RequestEnvelope, ResponseEnvelope, read_json_line, write_json_line},
@@ -42,6 +44,8 @@ fn run() -> Result<(), capture::CaptureError> {
 #[derive(Default)]
 struct Engine {
     session: Option<RecordingSession>,
+    #[cfg(any(windows, target_os = "macos"))]
+    camera_preview: Option<CameraPreview>,
 }
 
 impl Engine {
@@ -91,6 +95,12 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                 });
             }
             let snapshot = NativeCatalog::default().snapshot()?;
+            #[cfg(any(windows, target_os = "macos"))]
+            let camera_preview = take_camera_preview(engine, config.camera.as_ref())?;
+            #[cfg(any(windows, target_os = "macos"))]
+            let session =
+                RecordingSession::prepare_with_camera_preview(*config, snapshot, camera_preview)?;
+            #[cfg(not(any(windows, target_os = "macos")))]
             let session = RecordingSession::prepare(*config, snapshot)?;
             let value = serde_json::json!({
                 "state": session.state(),
@@ -154,6 +164,33 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             "sessionId": engine.session.as_ref().map(RecordingSession::session_id),
             "manifestPath": engine.session.as_ref().map(RecordingSession::manifest_path),
         })),
+        Command::PreviewStart { source } => {
+            #[cfg(any(windows, target_os = "macos"))]
+            {
+                if let Some(preview) = engine.camera_preview.take() {
+                    preview.stop()?;
+                }
+                let source = SourceId::new(source)?;
+                let preview = CameraPreview::start(&source)?;
+                let url = preview.url().to_owned();
+                engine.camera_preview = Some(preview);
+                Ok(serde_json::json!({ "url": url }))
+            }
+            #[cfg(not(any(windows, target_os = "macos")))]
+            {
+                let _ = source;
+                Err(capture::CaptureError::Unsupported(
+                    "native camera preview is unavailable on this platform".into(),
+                ))
+            }
+        }
+        Command::PreviewStop => {
+            #[cfg(any(windows, target_os = "macos"))]
+            if let Some(preview) = engine.camera_preview.take() {
+                preview.stop()?;
+            }
+            Ok(serde_json::json!({ "state": "idle" }))
+        }
     })();
     match result {
         Ok(value) => ResponseEnvelope::success(request.id, value),
@@ -177,4 +214,20 @@ fn session_value(session: &RecordingSession) -> Result<serde_json::Value, captur
         "sessionId": session.session_id(),
         "manifestPath": session.manifest_path(),
     }))
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+fn take_camera_preview(
+    engine: &mut Engine,
+    requested: Option<&SourceId>,
+) -> Result<Option<capture::backends::camera_preview::CameraPreviewResources>, capture::CaptureError>
+{
+    let Some(preview) = engine.camera_preview.take() else {
+        return Ok(None);
+    };
+    if requested.is_some_and(|source| source == preview.source_id()) {
+        return preview.into_recording().map(Some);
+    }
+    preview.stop()?;
+    Ok(None)
 }

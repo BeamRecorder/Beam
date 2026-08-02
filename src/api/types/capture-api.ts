@@ -19,8 +19,6 @@ export interface CaptureApi {
   prepare(config: CaptureConfig): Promise<CaptureSession>
   prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>
   startPreparedRecording(): Promise<CaptureSession>
-  stopNativeRecording(): Promise<CaptureSession>
-  completeNativeRecording(): Promise<CaptureSession>
   cancelPreparedRecording(): Promise<void>
   discardRecording(sessionId?: string): Promise<void>
   startRecording(options?: StartRecordingOptions): Promise<CaptureSession>
@@ -29,6 +27,8 @@ export interface CaptureApi {
   resume(): Promise<CaptureSession>
   stop(): Promise<CaptureSession>
   status(): Promise<CaptureSession>
+  startCameraPreview(cameraId: string): Promise<{ url: string }>
+  stopCameraPreview(): Promise<void>
 }
 
 export interface DesktopCaptureApi extends CaptureApi {
@@ -113,18 +113,6 @@ export interface DesktopCaptureApi extends CaptureApi {
   quitAndInstallUpdate(): Promise<boolean>
   openUpdateChangelog(): Promise<void>
   onUpdateState(listener: (state: AppUpdateState) => void): () => void
-  beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>
-  writeCameraSegment(payload: MediaSegmentChunk): Promise<void>
-  finalizeCameraSegment(payload: CameraSegmentFinish): Promise<void>
-  failCamera(payload: { sessionId: string; reason: string }): Promise<void>
-  beginMicrophoneSegment(payload: MicrophoneSegmentStart): Promise<{ jobId: string }>
-  writeMicrophoneSegment(payload: MediaSegmentChunk): Promise<void>
-  finalizeMicrophoneSegment(payload: MicrophoneSegmentFinish): Promise<void>
-  failMicrophone(payload: MicrophoneFailure): Promise<void>
-  beginSystemAudioSegment(payload: SystemAudioSegmentStart): Promise<{ jobId: string }>
-  writeSystemAudioSegment(payload: MediaSegmentChunk): Promise<void>
-  finalizeSystemAudioSegment(payload: SystemAudioSegmentFinish): Promise<void>
-  failSystemAudio(payload: SystemAudioFailure): Promise<void>
 }
 
 export interface AppUpdateState {
@@ -162,20 +150,6 @@ export interface ProjectEditorState {
   presentation: ProjectEditorPresentation
 }
 
-export interface CameraSegmentStart {
-  sessionId: string
-  sourceId: string
-  format: { codec: 'vp8'; width: number; height: number; nominalFps: number; appearance?: { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' }; placement?: { x: number; y: number; width: number; height: number } }
-  startNs: number
-}
-export interface MediaSegmentChunk { jobId: string; sequence: number; data: Uint8Array }
-export interface CameraSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
-export interface MicrophoneSegmentStart { sessionId: string; sourceId: string; format: { codec: 'opus'; sampleRate: number; channels: number }; startNs: number }
-export interface MicrophoneSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
-export interface MicrophoneFailure { sessionId: string; sourceId: string; reason: string; format?: { codec: 'opus'; sampleRate: number; channels: number } }
-export interface SystemAudioSegmentStart { sessionId: string; sourceId: string; format: { codec: 'opus'; sampleRate: number; channels: number }; startNs: number }
-export interface SystemAudioSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
-export interface SystemAudioFailure { sessionId: string; sourceId: string; reason: string; format?: { codec: 'opus'; sampleRate: number; channels: number } }
 export interface CapturePreview { id: string; name: string; thumbnail: string; appIcon: string | null; displayId?: string; displayBounds?: { x: number; y: number; width: number; height: number } }
 export interface CaptureSource { id: string; kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'; label: string; isDefault: boolean; displayId?: string }
 export interface CaptureCatalog { sources: CaptureSource[]; capabilities: Record<string, boolean> }

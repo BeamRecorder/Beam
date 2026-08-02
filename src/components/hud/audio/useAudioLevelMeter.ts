@@ -32,22 +32,17 @@ export function useAudioLevelMeter(
     if (!isEnabled.value) return;
 
     try {
-      if (isSystemAudio) {
-        if (!navigator.mediaDevices?.getDisplayMedia) return;
-        stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-        stream.getVideoTracks().forEach((t) => t.stop());
-      } else {
-        if (!navigator.mediaDevices?.getUserMedia) return;
-        let rawId = sourceId?.value;
-        if (rawId && rawId.startsWith('microphone:chromium:')) {
-          rawId = rawId.replace('microphone:chromium:', '');
-        }
-        const constraints: MediaStreamConstraints = {
-          audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
-          video: false,
-        };
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-      }
+      // System audio is recorded by the native backend. There is no browser
+      // loopback stream to meter here until native telemetry is exposed.
+      if (isSystemAudio) return;
+      if (!navigator.mediaDevices?.getUserMedia) return;
+      let rawId = sourceId?.value;
+      if (rawId && rawId.startsWith('microphone:cpal:')) rawId = undefined;
+      const constraints: MediaStreamConstraints = {
+        audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
+        video: false,
+      };
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       if (!stream || !stream.getAudioTracks().length) {
         stop();

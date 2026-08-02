@@ -16,6 +16,11 @@ use super::{
     recording_support::*,
 };
 
+#[cfg(any(windows, target_os = "macos"))]
+type CameraPreviewResources = crate::backends::camera_preview::CameraPreviewResources;
+#[cfg(not(any(windows, target_os = "macos")))]
+type CameraPreviewResources = ();
+
 /// A prepared native recording session controlled by the JSONL engine.
 pub struct RecordingSession {
     request: CaptureRequest,
@@ -30,12 +35,30 @@ pub struct RecordingSession {
     active: ActiveRecordings,
     project_layout: ProjectLayout,
     project_existed: bool,
+    camera_preview: Option<CameraPreviewResources>,
 }
 
 impl RecordingSession {
     pub fn prepare(
         request: CaptureRequest,
         snapshot: CatalogSnapshot,
+    ) -> Result<Self, CaptureError> {
+        Self::prepare_internal(request, snapshot, None)
+    }
+
+    #[cfg(any(windows, target_os = "macos"))]
+    pub fn prepare_with_camera_preview(
+        request: CaptureRequest,
+        snapshot: CatalogSnapshot,
+        camera_preview: Option<crate::backends::camera_preview::CameraPreviewResources>,
+    ) -> Result<Self, CaptureError> {
+        Self::prepare_internal(request, snapshot, camera_preview)
+    }
+
+    fn prepare_internal(
+        request: CaptureRequest,
+        snapshot: CatalogSnapshot,
+        camera_preview: Option<CameraPreviewResources>,
     ) -> Result<Self, CaptureError> {
         validate_request(&request, &snapshot)?;
         ensure_free_space(
@@ -88,6 +111,7 @@ impl RecordingSession {
             active: ActiveRecordings::default(),
             project_layout,
             project_existed,
+            camera_preview,
         })
     }
 
@@ -191,6 +215,7 @@ impl RecordingSession {
             None
         };
         self.state = super::SessionState::Finalizing;
+        self.camera_preview.take();
         self.manifest.duration_ns = now;
         if let Some(error) = &close_error {
             self.manifest
@@ -249,6 +274,12 @@ impl RecordingSession {
             start_ns,
             tracks: &mut self.manifest.tracks,
             start_gate,
+            clock: Arc::new(self.clock.clone()),
+            #[cfg(any(windows, target_os = "macos"))]
+            preview: self
+                .camera_preview
+                .as_ref()
+                .map(|preview| preview.publisher.clone()),
         });
         if let Err(error) = result {
             start_gate.cancel();

@@ -8,27 +8,10 @@ import {
   watch,
 } from "vue";
 import { capture } from "../../api/capture";
-import {
-  BrowserCameraRecorder,
-  listBrowserCameras,
-  validateCameraAccess,
-  isCameraUnavailableError,
-} from "../../api/camera-recorder";
-import {
-  BrowserMicrophoneRecorder,
-  listBrowserMicrophones,
-  recordMicrophoneFailure,
-} from "../../api/microphone-recorder";
-import {
-  BrowserSystemAudioRecorder,
-  recordSystemAudioFailure,
-  systemAudioSource,
-} from "../../api/system-audio-recorder";
 import type {
   CaptureCatalog,
   CapturePreview,
   CaptureProject,
-  CaptureSession,
   CaptureSource,
 } from "../../api/types/capture-api";
 import type { ScreenRegion, ScreenRegionOverlayOptions } from "../../api/types/screen-region";
@@ -148,21 +131,11 @@ watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
 });
 watch(
   [selectedCameraId],
-  async () => {
+  () => {
     const camId = selectedCameraId.value;
     capture.configureCameraOverlay({
       cameraId: camId,
     });
-    if (camId && camId !== "off") {
-      try {
-        await validateCameraAccess(camId);
-      } catch (err) {
-        if (isCameraUnavailableError(err)) {
-          selectedCameraId.value = "off";
-          errorMessage.value = t("cameraUnavailableError", "Camera is unavailable: hardware resources are locked by another application or Windows Media Foundation (0xC00D3704).");
-        }
-      }
-    }
   },
   { immediate: true },
 );
@@ -187,37 +160,7 @@ const systemAudioOptions = computed(() => [
   { value: "off", label: t("off") },
 ]);
 
-// Timer / Duration simulation
-const recordingTime = ref("00:00");
-let timerInterval: ReturnType<typeof setInterval> | null = null;
 let previewsRefreshInterval: ReturnType<typeof setInterval> | null = null;
-let activeCamera: BrowserCameraRecorder | null = null;
-let activeCameraSessionId: string | null = null;
-let activeMicrophone: BrowserMicrophoneRecorder | null = null;
-let activeMicrophoneSessionId: string | null = null;
-let activeSystemAudio: BrowserSystemAudioRecorder | null = null;
-let activeSystemAudioSessionId: string | null = null;
-const secondsElapsed = ref(0);
-
-const startTimer = () => {
-  secondsElapsed.value = 0;
-  recordingTime.value = "00:00";
-  timerInterval = setInterval(() => {
-    secondsElapsed.value++;
-    const mins = Math.floor(secondsElapsed.value / 60)
-      .toString()
-      .padStart(2, "0");
-    const secs = (secondsElapsed.value % 60).toString().padStart(2, "0");
-    recordingTime.value = `${mins}:${secs}`;
-  }, 1000);
-};
-
-const stopTimer = () => {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-};
 
 // Previews loading
 const loadPreviews = async () => {
@@ -448,315 +391,35 @@ const copyError = async () => {
   }, 2000);
 };
 
-// Control functions
+// The recorder controller owns the native session. HUD only emits intent and
+// never opens a media stream or writes a segment.
 const toggleRecording = async () => {
   if (isBusy.value) return;
-  // Recording ownership lives in App.vue.  The HUD only collects configuration.
-  if (!isRecording.value) {
-    let screenId: string | undefined;
-    if (activeTab.value === "screen")
-      screenId = selectedScreenId.value ?? undefined;
-    else if (selectedSourceId.value) {
-      // Keep Electron's complete source id (usually `window:<hwnd>:<display>`).
-      // The main process canonicalizes it for the platform-specific Rust backend.
-      screenId = selectedSourceId.value;
-    }
-    emit("start-recording", {
-      screenKind: activeTab.value === "window" ? "window" : "display",
-      screenId,
-      cameraId: selectedCameraId.value,
-      microphoneId: selectedMicId.value,
-      systemAudio: systemAudioMode.value === "on",
-      targetFps: 60,
-      countdownSeconds: countdownSeconds.value,
-      recordingBarVisibility: recordingBarVisibility.value,
-      region: activeTab.value === "screen" && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
-      regionOverlay: activeTab.value === "screen" && selectedScreenOverlay.value
-        ? {
-            bounds: { ...selectedScreenOverlay.value.bounds },
-            region: selectedScreenOverlay.value.region ? { ...selectedScreenOverlay.value.region } : null,
-          }
-        : null,
-    });
-    return;
-  }
-  isBusy.value = true;
-  errorMessage.value = "";
-  try {
-    if (!isRecording.value) {
-      const systemAudioRequested = systemAudioMode.value === "on";
-      let systemAudio: BrowserSystemAudioRecorder | null = null;
-      let systemAudioError: Error | null = null;
-      if (systemAudioRequested) {
-        try {
-          systemAudio = await BrowserSystemAudioRecorder.request();
-        } catch (error) {
-          systemAudioError =
-            error instanceof Error
-              ? new Error(`${error.name}: ${error.message}`)
-              : new Error(String(error));
-        }
-      }
-      const camera =
-        selectedCameraId.value === "off"
-          ? null
-          : await BrowserCameraRecorder.request(selectedCameraId.value);
-      const microphoneId =
-        selectedMicId.value === "no-audio" ? null : selectedMicId.value;
-      let microphone: BrowserMicrophoneRecorder | null = null;
-      let microphoneError: Error | null = null;
-      if (microphoneId) {
-        try {
-          microphone = await BrowserMicrophoneRecorder.request(microphoneId);
-        } catch (error) {
-          microphoneError =
-            error instanceof Error ? error : new Error(String(error));
-        }
-      }
-      // Find matching Rust catalog ID for the selected preview source
-      let rustScreenId: string | undefined = undefined;
-      if (selectedSourceId.value) {
-        if (activeTab.value === "window") {
-          rustScreenId = selectedSourceId.value;
-        }
-      }
-
-      if (activeTab.value === "screen")
-        rustScreenId = selectedScreenId.value ?? undefined;
-
-      let session: CaptureSession | undefined;
-      try {
-        session = await capture.startRecording({
-          screenKind: activeTab.value === "window" ? "window" : "display",
-          screenId: rustScreenId,
-          microphoneId: null,
-          cameraId: camera ? selectedCameraId.value : null,
-          systemAudio: false,
-          cursor: true,
-          targetFps: 60,
-        });
-        isRecording.value =
-          session.state === "recording" || session.state === "degraded";
-        if (!isRecording.value)
-          throw new Error(`Unexpected state after start: ${session.state}`);
-        if (camera) {
-          if (!session.sessionId)
-            throw new Error(
-              "The capture session did not provide an identifier.",
-            );
-          const cameraSessionId = session.sessionId;
-          activeCamera = camera;
-          activeCameraSessionId = cameraSessionId;
-          camera.onFatal((reason) => {
-            void stopForCameraFailure(camera, cameraSessionId, reason);
-          });
-          await camera.start(cameraSessionId);
-        }
-        if (session.sessionId && microphone) {
-          const microphoneSessionId = session.sessionId;
-          activeMicrophone = microphone;
-          activeMicrophoneSessionId = microphoneSessionId;
-          microphone.onFatal((reason) => {
-            void stopForMicrophoneFailure(
-              microphone,
-              microphoneSessionId,
-              reason,
-            );
-          });
-          try {
-            await microphone.start(microphoneSessionId);
-          } catch (error) {
-            await stopForMicrophoneFailure(
-              microphone,
-              microphoneSessionId,
-              error instanceof Error ? error : new Error(String(error)),
-            );
-          }
-        } else if (session.sessionId && microphoneId && microphoneError) {
-          await recordMicrophoneFailure(
-            session.sessionId,
-            microphoneId,
-            microphoneError.message,
-          );
-          errorMessage.value = `Microphone recording is unavailable: ${microphoneError.message}`;
-        }
-        if (session.sessionId && systemAudio) {
-          const systemAudioSessionId = session.sessionId;
-          activeSystemAudio = systemAudio;
-          activeSystemAudioSessionId = systemAudioSessionId;
-          systemAudio.onFatal((reason) => {
-            void stopForSystemAudioFailure(
-              systemAudio,
-              systemAudioSessionId,
-              reason,
-            );
-          });
-          try {
-            await systemAudio.start(systemAudioSessionId);
-          } catch (error) {
-            await stopForSystemAudioFailure(
-              systemAudio,
-              systemAudioSessionId,
-              error instanceof Error ? error : new Error(String(error)),
-            );
-          }
-        } else if (
-          session.sessionId &&
-          systemAudioRequested &&
-          systemAudioError
-        ) {
-          await recordSystemAudioFailure(
-            session.sessionId,
-            systemAudioError.message,
-          );
-          errorMessage.value = `System audio recording is unavailable: ${systemAudioError.message}`;
-        }
-      } catch (error) {
-        if (camera) await camera.stop().catch(() => undefined);
-        if (microphone) await microphone.stop().catch(() => undefined);
-        if (systemAudio) await systemAudio.stop().catch(() => undefined);
-        if (session?.sessionId) await capture.stop().catch(() => undefined);
-        activeCamera = null;
-        activeCameraSessionId = null;
-        activeMicrophone = null;
-        activeMicrophoneSessionId = null;
-        activeSystemAudio = null;
-        activeSystemAudioSessionId = null;
-        isRecording.value = false;
-        throw error;
-      }
-      if (!session) throw new Error("The capture session did not start.");
-      startTimer();
-      emit("start-recording", session);
-    } else {
-      let cameraStopError: Error | null = null;
-      if (activeSystemAudio) {
-        try {
-          await activeSystemAudio.stop();
-        } catch (error) {
-          if (activeSystemAudioSessionId)
-            await activeSystemAudio.fail(
-              activeSystemAudioSessionId,
-              error instanceof Error ? error.message : String(error),
-            );
-          errorMessage.value = `System audio recording failed: ${error instanceof Error ? error.message : String(error)}`;
-        }
-      }
-      if (activeMicrophone) {
-        try {
-          await activeMicrophone.stop();
-        } catch (error) {
-          if (activeMicrophoneSessionId)
-            await activeMicrophone.fail(
-              activeMicrophoneSessionId,
-              error instanceof Error ? error.message : String(error),
-            );
-          errorMessage.value = `Microphone recording failed: ${error instanceof Error ? error.message : String(error)}`;
-        }
-      }
-      if (activeCamera) {
-        try {
-          await activeCamera.stop();
-        } catch (error) {
-          cameraStopError =
-            error instanceof Error ? error : new Error(String(error));
-          if (activeCameraSessionId)
-            await activeCamera.fail(
-              activeCameraSessionId,
-              cameraStopError.message,
-            );
-        }
-      }
-      const session = await capture.stop();
-      activeCamera = null;
-      activeCameraSessionId = null;
-      activeMicrophone = null;
-      activeMicrophoneSessionId = null;
-      activeSystemAudio = null;
-      activeSystemAudioSessionId = null;
-      stopTimer();
-      isRecording.value = false;
-      emit("stop-recording", session);
-      if (cameraStopError) throw cameraStopError;
-    }
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    isBusy.value = false;
-  }
-};
-
-const stopForMicrophoneFailure = async (
-  microphone: BrowserMicrophoneRecorder,
-  sessionId: string,
-  reason: Error,
-) => {
-  if (activeMicrophone !== microphone) return;
-  try {
-    await microphone.fail(sessionId, reason.message);
-    errorMessage.value = `Microphone recording stopped: ${reason.message}`;
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    activeMicrophone = null;
-    activeMicrophoneSessionId = null;
-  }
-};
-
-const stopForSystemAudioFailure = async (
-  systemAudio: BrowserSystemAudioRecorder,
-  sessionId: string,
-  reason: Error,
-) => {
-  if (activeSystemAudio !== systemAudio) return;
-  try {
-    await systemAudio.fail(sessionId, reason.message);
-    errorMessage.value = `System audio recording stopped: ${reason.message}`;
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    activeSystemAudio = null;
-    activeSystemAudioSessionId = null;
-  }
-};
-
-const stopForCameraFailure = async (
-  camera: BrowserCameraRecorder,
-  sessionId: string,
-  reason: Error,
-) => {
-  if (activeCamera !== camera || !isRecording.value) return;
-  isRecording.value = false;
-  isBusy.value = true;
-  try {
-    await camera.fail(sessionId, reason.message);
-    await capture.stop();
-    stopTimer();
-    activeCamera = null;
-    activeCameraSessionId = null;
-    errorMessage.value = `Camera recording stopped: ${reason.message}`;
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    isBusy.value = false;
-  }
+  const screenId = activeTab.value === "screen"
+    ? selectedScreenId.value ?? undefined
+    : selectedSourceId.value ?? undefined;
+  emit("start-recording", {
+    screenKind: activeTab.value === "window" ? "window" : "display",
+    screenId,
+    cameraId: selectedCameraId.value,
+    microphoneId: selectedMicId.value,
+    systemAudio: systemAudioMode.value === "on",
+    targetFps: 60,
+    countdownSeconds: countdownSeconds.value,
+    recordingBarVisibility: recordingBarVisibility.value,
+    region: activeTab.value === "screen" && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
+    regionOverlay: activeTab.value === "screen" && selectedScreenOverlay.value
+      ? { bounds: { ...selectedScreenOverlay.value.bounds }, region: selectedScreenOverlay.value.region ? { ...selectedScreenOverlay.value.region } : null }
+      : null,
+  });
 };
 
 const discoverSources = async () => {
   isBusy.value = true;
   errorMessage.value = "";
   try {
-    const [catalog, cameras, microphones] = (await Promise.all([
-      capture.discover(),
-      listBrowserCameras(),
-      listBrowserMicrophones(),
-    ])) as [CaptureCatalog, CaptureSource[], CaptureSource[]];
-    sources.value = [
-      ...(Array.isArray(catalog.sources) ? catalog.sources : []),
-      ...cameras,
-      ...microphones,
-      systemAudioSource(),
-    ];
+    const catalog = await capture.discover() as CaptureCatalog;
+    sources.value = Array.isArray(catalog.sources) ? catalog.sources : [];
     if (
       savedDevices?.cameraId &&
       (savedDevices.cameraId === "off" ||
@@ -851,14 +514,7 @@ onBeforeUnmount(() => {
   if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
   unsubscribeShortcut?.();
   unsubscribeTeleprompterVisibility?.();
-  stopTimer();
-  void activeCamera?.stop();
-  void activeMicrophone?.stop();
-  void activeSystemAudio?.stop();
   if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
-  activeCameraSessionId = null;
-  activeMicrophoneSessionId = null;
-  activeSystemAudioSessionId = null;
   if (previewsRefreshInterval) clearInterval(previewsRefreshInterval);
 });
 
@@ -1133,7 +789,7 @@ const openProject = (project: CaptureProject) => {
               isBusy
                 ? t('pleaseWait')
                 : isRecording
-                  ? t('stopRecording', { time: recordingTime })
+                  ? t('stopRecording', { time: '00:00' })
                   : t('startRecording')
             }}
           </Button>

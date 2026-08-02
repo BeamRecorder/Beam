@@ -137,6 +137,12 @@ pub struct CaptureRequest {
     pub project_id: ProjectId,
     pub screen: Option<ScreenSelection>,
     #[serde(default)]
+    pub camera: Option<SourceId>,
+    #[serde(default)]
+    pub microphone: Option<SourceId>,
+    #[serde(default)]
+    pub system_audio: Option<SourceId>,
+    #[serde(default)]
     pub cursor: CursorSelection,
     #[serde(default)]
     pub recording: RecordingSettings,
@@ -165,6 +171,20 @@ impl CaptureRequest {
         if self.recording.target_fps == 0 || self.recording.queue_capacity == 0 {
             return Err(crate::CaptureError::InvalidConfiguration(
                 "fps and queue capacity must be non-zero".into(),
+            ));
+        }
+        let optional_sources = [
+            self.camera.as_ref(),
+            self.microphone.as_ref(),
+            self.system_audio.as_ref(),
+        ];
+        if optional_sources
+            .into_iter()
+            .flatten()
+            .any(|id| id.as_str().is_empty())
+        {
+            return Err(crate::CaptureError::InvalidConfiguration(
+                "optional source identifiers must not be empty".into(),
             ));
         }
         if !(1..=2).contains(&self.recording.keyframe_interval_seconds) {

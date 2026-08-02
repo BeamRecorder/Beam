@@ -83,12 +83,20 @@ fn platform_metadata() -> (CaptureCapabilities, PermissionSnapshot, Vec<String>)
 
 #[cfg(target_os = "macos")]
 fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
-    Ok(crate::screen::mac::discover_sources().unwrap_or_default())
+    let mut sources = crate::screen::mac::discover_sources().unwrap_or_default();
+    sources.extend(crate::backends::mac::camera::discover_sources().unwrap_or_default());
+    sources.extend(crate::backends::mac::audio::discover_sources().unwrap_or_default());
+    Ok(sources)
 }
 #[cfg(target_os = "macos")]
 fn platform_metadata() -> (CaptureCapabilities, PermissionSnapshot, Vec<String>) {
     (
-        crate::screen::mac::capabilities(),
+        CaptureCapabilities {
+            camera_capture: true,
+            microphone_capture: true,
+            system_audio_capture: true,
+            ..crate::screen::mac::capabilities()
+        },
         crate::screen::mac::permissions(),
         Vec::new(),
     )
@@ -96,12 +104,20 @@ fn platform_metadata() -> (CaptureCapabilities, PermissionSnapshot, Vec<String>)
 
 #[cfg(windows)]
 fn platform_screen_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
-    crate::screen::win::discover_sources()
+    let mut sources = crate::screen::win::discover_sources()?;
+    sources.extend(crate::backends::win::camera::discover_sources().unwrap_or_default());
+    sources.extend(crate::backends::win::audio::discover_sources().unwrap_or_default());
+    Ok(sources)
 }
 #[cfg(windows)]
 fn platform_metadata() -> (CaptureCapabilities, PermissionSnapshot, Vec<String>) {
     (
-        crate::screen::win::capabilities(),
+        CaptureCapabilities {
+            camera_capture: true,
+            microphone_capture: true,
+            system_audio_capture: true,
+            ..crate::screen::win::capabilities()
+        },
         crate::screen::win::permissions(),
         Vec::new(),
     )

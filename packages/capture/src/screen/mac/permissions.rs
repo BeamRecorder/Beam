@@ -13,6 +13,7 @@ pub fn capabilities() -> CaptureCapabilities {
         cursor_clicks: true,
         hardware_h264: true,
         hardware_hevc: true,
+        ..CaptureCapabilities::default()
     }
 }
 
@@ -27,5 +28,6 @@ pub fn permissions() -> PermissionSnapshot {
             },
         ),
         accessibility: Some(PermissionState::NotApplicable),
+        ..PermissionSnapshot::default()
     }
 }

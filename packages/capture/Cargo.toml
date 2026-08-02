@@ -19,11 +19,15 @@ time = { version = "0.3", features = ["formatting"] }
 fs2 = "0.4"
 
 [target.'cfg(windows)'.dependencies]
+cpal = "0.18.1"
+nokhwa = { version = "0.10.11", default-features = false, features = ["input-native"] }
 windows-capture = "2.0.0"
 parking_lot = "0.12"
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D11", "Win32_Graphics_Dxgi", "Win32_Graphics_Gdi", "Win32_System_Com", "Win32_System_Performance", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
+cpal = "0.18.1"
+nokhwa = { version = "0.10.11", default-features = false, features = ["input-native"] }
 objc2 = "0.6.4"
 objc2-app-kit = { version = "0.3.2", features = ["NSCursor"] }
 screencapturekit = { version = "8.0.1", features = ["macos_15_0"] }

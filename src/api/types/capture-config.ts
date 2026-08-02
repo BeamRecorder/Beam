@@ -37,6 +37,9 @@ export interface CaptureConfig {
     kind: 'monitor' | 'window' | 'monitor-or-window'
     restoreToken: string | null
   }
+  camera?: string | null
+  microphone?: string | null
+  systemAudio?: string | null
   cursor: { mode: 'disabled' | 'embedded' } | {
     mode: 'separate'
     captureClicks: boolean
