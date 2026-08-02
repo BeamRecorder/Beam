@@ -1,5 +1,5 @@
 import type { ClipAppearance, NormalizedCrop, NormalizedTransform, WebcamAppearance } from '../composition-types'
-import { drawDecoratedMedia } from '../appearance/render-decorated-media'
+import { DEFAULT_CLIP_APPEARANCE, drawDecoratedMedia } from '../appearance/render-decorated-media'
 import type { MediaRect } from '../appearance/appearance-types'
 
 export interface WebcamOverlaySettings { widthPercent: number; heightPercent: number; margin: number; reactToZoom: boolean; mirror: boolean; cornerRadius: number; shadowOpacity: number; shadowColor: string; shadowOffsetX: number; shadowOffsetY: number }
@@ -59,9 +59,8 @@ export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, a
 
 export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform, crop?: NormalizedCrop, appearance?: ClipAppearance, title = 'Camera') {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform)
-  const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source instanceof HTMLImageElement ? source.naturalWidth : 0
-  const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source instanceof HTMLImageElement ? source.naturalHeight : 0
-  const legacyAppearance: ClipAppearance = { cornerRadius: settings.cornerRadius, shadowSize: settings.shadowOpacity === 0 ? 'none' : settings.shadowOpacity <= .3 ? 'sm' : settings.shadowOpacity <= .5 ? 'md' : 'lg', shadowColor: settings.shadowColor, shadowDirection: settings.shadowOffsetY < 0 ? 'top-left' : settings.shadowOffsetX > 0 ? 'bottom-right' : settings.shadowOffsetY === 0 ? 'all' : 'bottom', borderEnabled: false, borderColor: '#000000', borderWidth: 1, frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true }
+  const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source instanceof HTMLImageElement ? source.naturalWidth : typeof (source as { displayWidth?: unknown }).displayWidth === 'number' ? (source as { displayWidth: number }).displayWidth : 0
+  const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source instanceof HTMLImageElement ? source.naturalHeight : typeof (source as { displayHeight?: unknown }).displayHeight === 'number' ? (source as { displayHeight: number }).displayHeight : 0
   const sourceRect: MediaRect | undefined = crop && sourceWidth > 0 && sourceHeight > 0 ? { x: crop.x * sourceWidth, y: crop.y * sourceHeight, width: crop.width * sourceWidth, height: crop.height * sourceHeight } : undefined
-  drawDecoratedMedia(ctx, { source, sourceRect, rect: layout, appearance: appearance ?? legacyAppearance, title, mirrored: settings.mirror })
+  drawDecoratedMedia(ctx, { source, sourceRect, rect: layout, appearance: { ...DEFAULT_CLIP_APPEARANCE, ...appearance }, title, mirrored: settings.mirror })
 }

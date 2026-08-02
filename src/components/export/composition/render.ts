@@ -152,9 +152,12 @@ export function drawCompositionLayers(
       drawCaption(ctx, clip, timeMs, positionedMedia ?? { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height }, mainVideoWidth);
       continue;
     }
-    if (!isVisualClip(clip) || clip.kind === "webcam") continue;
+    if (!isVisualClip(clip)) continue;
     const source = visuals.get(clip.assetId);
-    if (source) drawVisualClip(ctx, clip, source, snapshot.canvas, positionedMedia);
+    if (!source) continue;
+    if (clip.kind === "webcam") {
+      drawWebcamOverlay(ctx, source, snapshot.canvas.width, snapshot.canvas.height, 1, webcamSettingsForAppearance(clip.appearance, clip.isMirrored), clip.transform, clip.crop, clip.appearance, clip.name);
+    } else drawVisualClip(ctx, clip, source, snapshot.canvas, positionedMedia);
   }
 }
 
