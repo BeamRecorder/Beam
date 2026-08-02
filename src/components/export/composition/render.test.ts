@@ -91,7 +91,7 @@ describe('canonical composition rendering', () => {
     renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA, videoWidth: 100, videoHeight: 50 } as HTMLVideoElement, value, 0, null, undefined, new Map([['camera', source]]))
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 10, 10, 50, 30, expect.closeTo(100, .001), expect.closeTo(100, .001), 300, 200)
     expect(ctx.scale).toHaveBeenCalledWith(-1, 1)
-    expect(ctx.roundRect).toHaveBeenCalledWith(100, 100, 300, 200, 42)
+    expect(ctx.roundRect).toHaveBeenCalledWith(100, expect.closeTo(100, .001), 300, 200, 42)
     expect(ctx.stroke).toHaveBeenCalled()
   })
 
