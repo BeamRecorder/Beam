@@ -25,6 +25,12 @@ import {
 import TimelineClip from "./TimelineClip.vue";
 import { useCompositionAudioWaveforms } from "./composables/useCompositionAudioWaveforms";
 import { useTranslate } from "~/i18n/useTranslate";
+import {
+  calculateSnapThresholdMs,
+  collectSnapTargets,
+  snapSpan,
+  snapValue,
+} from "./composables/timeline-snap";
 
 const { t } = useTranslate("TimelineTracks");
 const props = defineProps<{
@@ -211,6 +217,7 @@ const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>
 const zoomPreview = ref<Record<string, { startMs: number; endMs: number }>>({});
 const activeTrimState = ref<{ ids: string[]; edge: "start" | "end"; durationMs: number } | null>(null);
 const movingClipIds = ref<string[]>([]);
+const activeSnapTimeMs = ref<number | null>(null);
 const displayedClip = (clip: Clip): Clip => {
   const preview = clipPreview.value[clip.id];
   return preview ? { ...clip, timelineStartMs: preview.startMs, timelineDurationMs: preview.durationMs } : clip;
@@ -245,11 +252,30 @@ const beginClipMove = (event: PointerEvent, clip: Clip) => {
   movingClipIds.value = ids;
   const pointerStartMs = timeAt(event.clientX);
   const originalStartMs = clip.timelineStartMs;
-  const maxStartMs = Math.max(0, durationMs.value - clip.timelineDurationMs);
+  const clipLengthMs = clip.timelineDurationMs;
+  const maxStartMs = Math.max(0, durationMs.value - clipLengthMs);
+
+  const snapTargets = collectSnapTargets({
+    composition: props.composition,
+    zoomElements: props.zoomElements,
+    currentTime: displayedPlayheadTime.value,
+    duration: props.duration,
+    ignoreClipIds: ids,
+  });
+  const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+
   let finalStartMs = originalStartMs;
   const move = (next: PointerEvent) => {
-    finalStartMs = Math.max(0, Math.min(maxStartMs, originalStartMs + timeAt(next.clientX) - pointerStartMs));
-    previewLinked(ids, finalStartMs, clip.timelineDurationMs);
+    const proposedStartMs = Math.max(0, Math.min(maxStartMs, originalStartMs + timeAt(next.clientX) - pointerStartMs));
+    const snap = snapSpan(proposedStartMs, clipLengthMs, snapTargets, snapThresholdMs);
+    if (snap) {
+      finalStartMs = Math.max(0, Math.min(maxStartMs, snap.snappedStartMs));
+      activeSnapTimeMs.value = snap.targetMs;
+    } else {
+      finalStartMs = proposedStartMs;
+      activeSnapTimeMs.value = null;
+    }
+    previewLinked(ids, finalStartMs, clipLengthMs);
   };
   const end = () => {
     window.removeEventListener("pointermove", move);
@@ -257,6 +283,7 @@ const beginClipMove = (event: PointerEvent, clip: Clip) => {
     window.removeEventListener("pointercancel", end);
     clearLinkedPreview(ids);
     movingClipIds.value = [];
+    activeSnapTimeMs.value = null;
     if (finalStartMs !== originalStartMs) emit("move:clip", { id: clip.id, startMs: finalStartMs });
   };
   window.addEventListener("pointermove", move);
@@ -269,12 +296,33 @@ const beginClipTrim = (event: PointerEvent, clip: Clip, edge: "start" | "end") =
   const ids = linkedIdsFor(clip);
   const originalStartMs = clip.timelineStartMs;
   const originalEndMs = clip.timelineStartMs + clip.timelineDurationMs;
+  const snapTargets = collectSnapTargets({
+    composition: props.composition,
+    zoomElements: props.zoomElements,
+    currentTime: displayedPlayheadTime.value,
+    duration: props.duration,
+    ignoreClipIds: ids,
+  });
+  const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+
   let finalTimeMs = edge === "start" ? originalStartMs : originalEndMs;
   const move = (next: PointerEvent) => {
     const raw = timeAt(next.clientX);
-    finalTimeMs = edge === "start"
+    let proposedTimeMs = edge === "start"
       ? Math.max(0, Math.min(originalEndMs - MIN_DURATION_MS, raw))
       : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(durationMs.value, raw));
+
+    const snap = snapValue(proposedTimeMs, snapTargets, snapThresholdMs);
+    if (snap) {
+      proposedTimeMs = edge === "start"
+        ? Math.max(0, Math.min(originalEndMs - MIN_DURATION_MS, snap.snappedValueMs))
+        : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(durationMs.value, snap.snappedValueMs));
+      activeSnapTimeMs.value = snap.targetMs;
+    } else {
+      activeSnapTimeMs.value = null;
+    }
+
+    finalTimeMs = proposedTimeMs;
     const startMs = edge === "start" ? finalTimeMs : originalStartMs;
     const endMs = edge === "end" ? finalTimeMs : originalEndMs;
     previewLinked(ids, startMs, endMs - startMs);
@@ -286,6 +334,7 @@ const beginClipTrim = (event: PointerEvent, clip: Clip, edge: "start" | "end") =
     window.removeEventListener("pointercancel", end);
     clearLinkedPreview(ids);
     activeTrimState.value = null;
+    activeSnapTimeMs.value = null;
     const original = edge === "start" ? originalStartMs : originalEndMs;
     if (finalTimeMs !== original) emit("trim:clip", { id: clip.id, edge, timeMs: finalTimeMs });
   };
@@ -301,9 +350,26 @@ const beginZoomMove = (event: PointerEvent, zoom: ZoomElement) => {
   const pointerStartMs = timeAt(event.clientX);
   const lengthMs = zoom.endMs - zoom.startMs;
   const maxStartMs = Math.max(0, durationMs.value - lengthMs);
+  const snapTargets = collectSnapTargets({
+    composition: props.composition,
+    zoomElements: props.zoomElements,
+    currentTime: displayedPlayheadTime.value,
+    duration: props.duration,
+    ignoreZoomIds: [zoom.id],
+  });
+  const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+
   let finalStartMs = zoom.startMs;
   const move = (next: PointerEvent) => {
-    finalStartMs = Math.max(0, Math.min(maxStartMs, zoom.startMs + timeAt(next.clientX) - pointerStartMs));
+    const proposedStartMs = Math.max(0, Math.min(maxStartMs, zoom.startMs + timeAt(next.clientX) - pointerStartMs));
+    const snap = snapSpan(proposedStartMs, lengthMs, snapTargets, snapThresholdMs);
+    if (snap) {
+      finalStartMs = Math.max(0, Math.min(maxStartMs, snap.snappedStartMs));
+      activeSnapTimeMs.value = snap.targetMs;
+    } else {
+      finalStartMs = proposedStartMs;
+      activeSnapTimeMs.value = null;
+    }
     zoomPreview.value = { ...zoomPreview.value, [zoom.id]: { startMs: finalStartMs, endMs: finalStartMs + lengthMs } };
   };
   const end = () => {
@@ -312,6 +378,7 @@ const beginZoomMove = (event: PointerEvent, zoom: ZoomElement) => {
     const next = { ...zoomPreview.value };
     delete next[zoom.id];
     zoomPreview.value = next;
+    activeSnapTimeMs.value = null;
     if (finalStartMs !== zoom.startMs) emit("move:zoom", { id: zoom.id, startMs: finalStartMs, endMs: finalStartMs + lengthMs });
   };
   window.addEventListener("pointermove", move);
@@ -321,10 +388,32 @@ const beginZoomTrim = (event: PointerEvent, zoom: ZoomElement, edge: "start" | "
   event.preventDefault();
   event.stopPropagation();
   let finalTimeMs = edge === "start" ? zoom.startMs : zoom.endMs;
+  const snapTargets = collectSnapTargets({
+    composition: props.composition,
+    zoomElements: props.zoomElements,
+    currentTime: displayedPlayheadTime.value,
+    duration: props.duration,
+    ignoreZoomIds: [zoom.id],
+  });
+  const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+
   const move = (next: PointerEvent) => {
-    finalTimeMs = edge === "start"
-      ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, timeAt(next.clientX)))
-      : Math.max(zoom.startMs + MIN_DURATION_MS, Math.min(durationMs.value, timeAt(next.clientX)));
+    const raw = timeAt(next.clientX);
+    let proposedTimeMs = edge === "start"
+      ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, raw))
+      : Math.max(zoom.startMs + MIN_DURATION_MS, Math.min(durationMs.value, raw));
+
+    const snap = snapValue(proposedTimeMs, snapTargets, snapThresholdMs);
+    if (snap) {
+      proposedTimeMs = edge === "start"
+        ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, snap.snappedValueMs))
+        : Math.max(zoom.startMs + MIN_DURATION_MS, Math.min(durationMs.value, snap.snappedValueMs));
+      activeSnapTimeMs.value = snap.targetMs;
+    } else {
+      activeSnapTimeMs.value = null;
+    }
+
+    finalTimeMs = proposedTimeMs;
     zoomPreview.value = {
       ...zoomPreview.value,
       [zoom.id]: {
@@ -341,6 +430,7 @@ const beginZoomTrim = (event: PointerEvent, zoom: ZoomElement, edge: "start" | "
     delete next[zoom.id];
     zoomPreview.value = next;
     activeTrimState.value = null;
+    activeSnapTimeMs.value = null;
     const original = edge === "start" ? zoom.startMs : zoom.endMs;
     if (finalTimeMs !== original) emit("trim:zoom", { id: zoom.id, edge, timeMs: finalTimeMs });
   };
@@ -448,6 +538,13 @@ const beginReorder = (event: PointerEvent, clipId: string) => {
             <span class="marker-tick" />
           </div>
           <div class="timeline-playhead" :style="playheadStyle"><span class="playhead-knob" /></div>
+          <div
+            v-if="activeSnapTimeMs !== null"
+            class="timeline-snap-guide"
+            :style="{ left: `${durationMs > 0 ? (activeSnapTimeMs / durationMs) * 100 : 0}%` }"
+          >
+            <span class="snap-guide-badge">{{ (activeSnapTimeMs / 1000).toFixed(2) }}s</span>
+          </div>
         </div>
       </div>
 
@@ -606,6 +703,8 @@ const beginReorder = (event: PointerEvent, clipId: string) => {
 .marker-tick { width: 1px; height: 6px; background: var(--color-border-strong); }.is-major .marker-tick { height: 10px; background: var(--color-border-dark); }
 .timeline-playhead { position: absolute; top: 0; left: 0; width: 2px; height: 600px; background: var(--color-primary); z-index: 50; pointer-events: none; }
 .playhead-knob { position: absolute; top: 0; left: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--color-primary); box-shadow: var(--shadow-sm); }
+.timeline-snap-guide { position: absolute; top: 0; width: 2px; height: 600px; background: var(--color-primary); box-shadow: 0 0 8px var(--color-primary-border); z-index: 48; pointer-events: none; }
+.snap-guide-badge { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); padding: 1px 5px; border-radius: var(--radius-sm); background: var(--color-primary); color: #ffffff; font-size: 9px; font-weight: 800; font-family: monospace; white-space: nowrap; box-shadow: var(--shadow-md); }
 .tracks-stack { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
 .track-row { display: flex; align-items: center; height: 32px; position: relative; background: var(--color-bg-element); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
 .track-row.audio-track { height: 48px; }
