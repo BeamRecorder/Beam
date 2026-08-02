@@ -1,5 +1,10 @@
 # Handoff Native Recorder
 
+  git fetch origin                                                                                
+  git switch full-native-refactor                                                                 
+  git rebase origin/main
+  git push --force-with-lease origin full-native-refactor 
+  
 Date du checkpoint : 2 août 2026
 
 Cette branche (`full-native-refactor`) est un point de reprise pour le recorder entièrement natif prévu pour la v0.2.0. La priorité immédiate reste de pouvoir shipper la version actuelle sur Windows avec les limites décrites ci-dessous. Ce document décrit donc l’état réel du code, et ne doit pas être lu comme une validation hardware complète.
