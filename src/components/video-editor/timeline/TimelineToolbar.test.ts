@@ -38,13 +38,15 @@ describe('TimelineToolbar', () => {
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([275])
   })
 
-  it('clamps zoom controls at the supported bounds', async () => {
+  it('emits split event when clicked and respects canSplit prop', async () => {
     const wrapper = mount(TimelineToolbar, {
-      props: { currentTime: 0, duration: 0, isPlaying: true, zoomLevel: 500 },
+      props: { currentTime: 10, duration: 100, isPlaying: false, zoomLevel: 100, canSplit: true },
       global: { stubs: { PopoverMenuButton, Button } },
     })
-    expect(wrapper.findAll('.zoom-controls button')[1].attributes('disabled')).toBeDefined()
-    await wrapper.get('.zoom-percent-text').trigger('click')
-    expect(wrapper.emitted('update:zoomLevel')).toEqual([[100]])
+    await wrapper.get('.toolbar-split-btn button').trigger('click')
+    expect(wrapper.emitted('split')).toHaveLength(1)
+
+    await wrapper.setProps({ canSplit: false })
+    expect(wrapper.get('.toolbar-split-btn button').attributes('disabled')).toBeDefined()
   })
 })

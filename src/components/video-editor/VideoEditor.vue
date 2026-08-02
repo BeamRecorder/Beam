@@ -204,12 +204,17 @@ const toggleCrop = () => { if (selectedTransformClip.value && isVisualClip(selec
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, "custom">) => { outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false }; };
 const handleKeyDown = (event: KeyboardEvent) => {
   if ((event.key === "Enter" || event.key === "Escape") && isCropping.value) isCropping.value = false;
-  if (event.key !== "Delete" && event.key !== "Backspace") return;
   const active = document.activeElement;
   if (active) {
     const tag = active.tagName.toLowerCase();
     if (["input", "textarea", "select"].includes(tag) || active.getAttribute("contenteditable") === "true") return;
   }
+  if ((event.key === "s" || event.key === "S") && selectedClipId.value) {
+    event.preventDefault();
+    splitSelectedClip();
+    return;
+  }
+  if (event.key !== "Delete" && event.key !== "Backspace") return;
   if (selectedClipId.value) { event.preventDefault(); deleteSelectedClip(); }
   else if (selectedZoom.value && activeTab.value === "zoom") { event.preventDefault(); deleteSelectedZoom(); }
 };
@@ -326,7 +331,7 @@ onBeforeUnmount(() => {
             @done:crop="isCropping = false"
             @deselect:zoom="selectedZoomId = null"
           />
-          <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" />
+          <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" :can-split="Boolean(selectedClipId)" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" @split="splitSelectedClip" />
         </div>
       </div>
       <div class="workspace-lower">

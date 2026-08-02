@@ -8,6 +8,7 @@ import {
   ZoomIn,
   ZoomOut,
   Plus,
+  Scissors,
   Video,
   Image as ImageIcon,
   Volume2,
@@ -25,8 +26,9 @@ const props = withDefaults(
     duration: number;
     isPlaying: boolean;
     zoomLevel: number; // 100 to 500
+    canSplit?: boolean;
   }>(),
-  { zoomLevel: 100 },
+  { zoomLevel: 100, canSplit: false },
 );
 
 const emit = defineEmits<{
@@ -34,6 +36,7 @@ const emit = defineEmits<{
   (e: "update:currentTime", value: number): void;
   (e: "update:zoomLevel", value: number): void;
   (e: "add:element", type: "video" | "image" | "sound" | "caption"): void;
+  (e: "split"): void;
 }>();
 
 const handleAdd = (type: "video" | "image" | "sound" | "caption") => {
@@ -70,9 +73,20 @@ const handleZoomOut = () => {
 
 <template>
   <div class="timeline-toolbar">
-    <!-- Left Section with Add Popover -->
+    <!-- Left Section with Add Popover & Split Button -->
     <div class="left-section">
       <PopoverMenuButton :label="t('add')" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
+      <Button
+        variant="secondary"
+        size="sm"
+        :icon="Scissors"
+        :disabled="!canSplit"
+        :tooltip="canSplit ? `${t('split')} (S)` : t('selectClipToSplit')"
+        class="toolbar-split-btn"
+        @click="emit('split')"
+      >
+        {{ t('split') }}
+      </Button>
     </div>
 
     <!-- Centered Controls -->
@@ -174,6 +188,15 @@ const handleZoomOut = () => {
 .left-section {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.toolbar-split-btn :deep(.btn) {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
 }
 
 .add-track-button {

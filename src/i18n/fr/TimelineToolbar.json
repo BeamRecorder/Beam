@@ -1,5 +1,7 @@
 {
   "add": "Ajouter",
+  "split": "Découper",
+  "selectClipToSplit": "Sélectionnez un clip à découper",
   "video": "Vidéo",
   "image": "Image",
   "sound": "Son",
