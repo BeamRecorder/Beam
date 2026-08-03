@@ -125,9 +125,10 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   const launchNativeRecording = (generation: number) => {
     const operation = beginNativeRecording(generation)
     pendingNativeStart = operation
-    void operation.finally(() => {
+    const clearPending = () => {
       if (pendingNativeStart === operation) pendingNativeStart = null
-    })
+    }
+    void operation.then(clearPending, clearPending)
     return operation
   }
 
@@ -189,10 +190,11 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       if (activeSessionId) {
         phase.value = 'finalizing'
         await capture.discardRecording(activeSessionId)
+      } else if (pendingStart) {
+        await pendingStart.catch(() => undefined)
       } else if (hadPreparedSession) {
         await capture.cancelPreparedRecording()
       }
-      if (pendingStart) await pendingStart.catch(() => undefined)
       capture.setTeleprompterSession(null)
       resetState()
     } catch (reason) {
