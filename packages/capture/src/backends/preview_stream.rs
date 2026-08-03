@@ -1,16 +1,21 @@
 use std::{
     io::Write,
     net::{TcpListener, TcpStream},
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, TrySendError, bounded};
 
 use crate::CaptureError;
 
-const PREVIEW_QUEUE_CAPACITY: usize = 2;
-const MAX_PREVIEW_WIDTH: usize = 640;
+const PREVIEW_QUEUE_CAPACITY: usize = 1;
+const MAX_PREVIEW_WIDTH: usize = 360;
+const PREVIEW_MIN_FRAME_INTERVAL_NS: u64 = 33_000_000;
 const FRAME_BOUNDARY: &[u8] = b"frame";
 
 struct PreviewFrame {
@@ -22,6 +27,9 @@ struct PreviewFrame {
 #[derive(Clone)]
 pub(crate) struct PreviewPublisher {
     frames: Sender<PreviewFrame>,
+    stale_frames: Receiver<PreviewFrame>,
+    started_at: Instant,
+    last_frame_ns: Arc<AtomicU64>,
 }
 
 impl PreviewPublisher {
@@ -31,7 +39,7 @@ impl PreviewPublisher {
         width: u32,
         height: u32,
     ) -> Result<(), CaptureError> {
-        if self.frames.is_full() {
+        if !self.reserve_frame_slot() {
             return Ok(());
         }
         let frame = PreviewFrame {
@@ -40,10 +48,42 @@ impl PreviewPublisher {
             height,
         };
         match self.frames.try_send(frame) {
-            Ok(()) | Err(TrySendError::Full(_)) => Ok(()),
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(frame)) => {
+                while self.stale_frames.try_recv().is_ok() {}
+                match self.frames.try_send(frame) {
+                    Ok(()) | Err(TrySendError::Full(_)) => Ok(()),
+                    Err(TrySendError::Disconnected(_)) => Err(CaptureError::Backend(
+                        "native camera preview stream is no longer available".into(),
+                    )),
+                }
+            }
             Err(TrySendError::Disconnected(_)) => Err(CaptureError::Backend(
                 "native camera preview stream is no longer available".into(),
             )),
+        }
+    }
+
+    fn reserve_frame_slot(&self) -> bool {
+        let now_ns = self
+            .started_at
+            .elapsed()
+            .as_nanos()
+            .min(u128::from(u64::MAX)) as u64;
+        let mut previous = self.last_frame_ns.load(Ordering::Relaxed);
+        loop {
+            if now_ns.saturating_sub(previous) < PREVIEW_MIN_FRAME_INTERVAL_NS {
+                return false;
+            }
+            match self.last_frame_ns.compare_exchange_weak(
+                previous,
+                now_ns,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => return true,
+                Err(next) => previous = next,
+            }
         }
     }
 }
@@ -61,6 +101,7 @@ impl PreviewStream {
         let address = listener.local_addr().map_err(backend_error)?;
         let (frames, receiver) = bounded::<PreviewFrame>(PREVIEW_QUEUE_CAPACITY);
         let (stop, stop_receiver) = bounded(1);
+        let stale_frames = receiver.clone();
         let worker = thread::Builder::new()
             .name("capture-camera-preview-server".into())
             .spawn(move || serve(listener, receiver, stop_receiver))
@@ -71,7 +112,12 @@ impl PreviewStream {
                 stop: Some(stop),
                 worker: Some(worker),
             },
-            PreviewPublisher { frames },
+            PreviewPublisher {
+                frames,
+                stale_frames,
+                started_at: Instant::now(),
+                last_frame_ns: Arc::new(AtomicU64::new(0)),
+            },
         ))
     }
 
@@ -110,11 +156,12 @@ fn serve(listener: TcpListener, frames: Receiver<PreviewFrame>, stop: Receiver<(
         if client.is_none() {
             match listener.accept() {
                 Ok((stream, _)) => {
+                    let _ = stream.set_nodelay(true);
                     client = Some(stream);
                     header_written = false;
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                    thread::sleep(Duration::from_millis(20));
+                    thread::sleep(Duration::from_millis(10));
                     continue;
                 }
                 Err(_) => break,
@@ -128,7 +175,7 @@ fn serve(listener: TcpListener, frames: Receiver<PreviewFrame>, stop: Receiver<(
             continue;
         }
         header_written = true;
-        match frames.recv_timeout(Duration::from_millis(100)) {
+        match frames.recv_timeout(Duration::from_millis(30)) {
             Ok(frame) => match encode_preview_bmp(frame) {
                 Ok(encoded) if write_frame(stream, &encoded).is_ok() => {}
                 Ok(_) | Err(_) => {
@@ -142,11 +189,12 @@ fn serve(listener: TcpListener, frames: Receiver<PreviewFrame>, stop: Receiver<(
 }
 
 fn write_header(stream: &mut TcpStream) -> std::io::Result<()> {
-    stream.set_write_timeout(Some(Duration::from_millis(250)))?;
+    stream.set_write_timeout(Some(Duration::from_millis(100)))?;
     stream.write_all(
         b"HTTP/1.1 200 OK\r\n\
 Cache-Control: no-cache, no-store, must-revalidate\r\n\
 Pragma: no-cache\r\n\
+X-Accel-Buffering: no\r\n\
 Connection: close\r\n\
 Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n",
     )
@@ -160,7 +208,8 @@ fn write_frame(stream: &mut TcpStream, frame: &[u8]) -> std::io::Result<()> {
         frame.len()
     )?;
     stream.write_all(frame)?;
-    stream.write_all(b"\r\n")
+    stream.write_all(b"\r\n")?;
+    stream.flush()
 }
 
 fn encode_bmp(rgb: &[u8], width: u32, height: u32) -> Result<Vec<u8>, CaptureError> {
