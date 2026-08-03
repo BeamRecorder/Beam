@@ -59,6 +59,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "avassetwriter"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8d886c22b90eec7cc89d0d6e3279cc71b5b19b0d19a95c72d78f153ee067118"
+dependencies = [
+ "apple-cf",
+ "doom-fish-utils",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.65.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -136,6 +148,8 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 name = "capture"
 version = "0.1.0"
 dependencies = [
+ "apple-cf",
+ "avassetwriter",
  "core-graphics 0.25.0",
  "cpal",
  "crossbeam-channel",
@@ -151,7 +165,9 @@ dependencies = [
  "thiserror 2.0.19",
  "time",
  "uuid",
+ "videotoolbox",
  "walkdir",
+ "wasapi",
  "windows",
  "windows-capture",
 ]
@@ -957,6 +973,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-integer"
+version = "0.1.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1719,6 +1744,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "videotoolbox"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c2c3d936f5f1bd6f9d706c68149ea5277e11142af9e580eb08607645d635cca"
+dependencies = [
+ "apple-cf",
+]
+
+[[package]]
 name = "walkdir"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1726,6 +1760,19 @@ checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
 dependencies = [
  "same-file",
  "winapi-util",
+]
+
+[[package]]
+name = "wasapi"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80c3aa5d6b0e7acc3ea10cb19c334df0c8d825060f14a30d9e3b03385e6e5175"
+dependencies = [
+ "log",
+ "num-integer",
+ "thiserror 2.0.19",
+ "windows",
+ "windows-core",
 ]
 
 [[package]]

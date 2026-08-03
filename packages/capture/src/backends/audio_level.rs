@@ -307,7 +307,7 @@ fn wasapi_level_loop(
         Ok::<_, CaptureError>((apartment, client, event, capture))
     })();
 
-    let (_apartment, mut client, event, capture) = match initialized {
+    let (_apartment, client, event, capture) = match initialized {
         Ok(value) => {
             let _ = ready.send(Ok(()));
             value
