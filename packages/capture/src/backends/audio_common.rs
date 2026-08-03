@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -70,46 +71,84 @@ impl AudioCaptureMetrics {
     }
 }
 
-pub fn discover_microphones() -> Result<Vec<SourceDescriptor>, CaptureError> {
+pub(crate) fn discover_microphones() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let host = cpal::default_host();
-    let default_input = host
-        .default_input_device()
+    let default_input = host.default_input_device();
+    let default_id = default_input
+        .as_ref()
         .and_then(|device| device.id().ok())
         .map(|id| id.to_string());
+    let mut seen = HashSet::new();
     let mut sources = Vec::new();
-    for device in host
-        .input_devices()
-        .map_err(|error| CaptureError::Backend(error.to_string()))?
-    {
-        let id = device
-            .id()
-            .map_err(|error| CaptureError::Backend(error.to_string()))?
-            .to_string();
-        let label = device
-            .description()
-            .map_err(|error| CaptureError::Backend(error.to_string()))?
-            .to_string();
-        let config = device
-            .default_input_config()
-            .map_err(|error| CaptureError::Backend(error.to_string()))?;
+
+    if let Ok(devices) = host.input_devices() {
+        for device in devices {
+            push_microphone_source(&device, default_id.as_deref(), &mut seen, &mut sources);
+        }
+    }
+
+    if sources.is_empty() {
+        if let Some(device) = default_input.as_ref() {
+            push_microphone_source(device, default_id.as_deref(), &mut seen, &mut sources);
+        }
+    }
+
+    if sources.is_empty() && default_input.is_some() {
         sources.push(SourceDescriptor {
-            id: SourceId::new(format!("microphone:cpal:{id}"))?,
+            id: SourceId::new("microphone:cpal:default")?,
             kind: SourceKind::Microphone,
-            label,
-            is_default: default_input.as_deref() == Some(id.as_str()),
+            label: "Default microphone".into(),
+            is_default: true,
             selection_mode: SourceSelectionMode::Direct,
             display_id: None,
-            capabilities: SourceCapabilities {
-                formats: vec![MediaFormat::Audio {
-                    sample_rate: config.sample_rate(),
-                    channels: config.channels(),
-                    sample_format: "f32".into(),
-                }],
-                ..SourceCapabilities::default()
-            },
+            capabilities: SourceCapabilities::default(),
         });
     }
+
     Ok(sources)
+}
+
+fn push_microphone_source(
+    device: &cpal::Device,
+    default_id: Option<&str>,
+    seen: &mut HashSet<String>,
+    sources: &mut Vec<SourceDescriptor>,
+) {
+    let Ok(device_id) = device.id().map(|id| id.to_string()) else {
+        return;
+    };
+    if !seen.insert(device_id.clone()) {
+        return;
+    }
+    let Ok(source_id) = SourceId::new(format!("microphone:cpal:{device_id}")) else {
+        return;
+    };
+    let label = device
+        .description()
+        .map(|value| value.to_string())
+        .unwrap_or_else(|_| "Microphone".into());
+    let formats = device.default_input_config().map_or_else(
+        |_| Vec::new(),
+        |config| {
+            vec![MediaFormat::Audio {
+                sample_rate: config.sample_rate(),
+                channels: config.channels(),
+                sample_format: "f32".into(),
+            }]
+        },
+    );
+    sources.push(SourceDescriptor {
+        id: source_id,
+        kind: SourceKind::Microphone,
+        label,
+        is_default: default_id == Some(device_id.as_str()),
+        selection_mode: SourceSelectionMode::Direct,
+        display_id: None,
+        capabilities: SourceCapabilities {
+            formats,
+            ..SourceCapabilities::default()
+        },
+    });
 }
 
 #[derive(Clone)]
@@ -339,13 +378,14 @@ fn find_microphone(host: &cpal::Host, source_id: &str) -> Result<cpal::Device, C
                 "{source_id} is not a native microphone source"
             ))
         })?;
+    if requested == "default" {
+        return host
+            .default_input_device()
+            .ok_or_else(|| CaptureError::SourceNotFound(source_id.into()));
+    }
     host.input_devices()
         .map_err(|error| CaptureError::Backend(error.to_string()))?
-        .find(|device| {
-            device
-                .id()
-                .is_ok_and(|id| id.to_string() == requested)
-        })
+        .find(|device| device.id().is_ok_and(|id| id.to_string() == requested))
         .ok_or_else(|| CaptureError::SourceNotFound(source_id.into()))
 }
 
