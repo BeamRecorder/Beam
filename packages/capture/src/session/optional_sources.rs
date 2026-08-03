@@ -15,11 +15,20 @@ pub(super) fn handle_optional_failure(
     if policy == FailurePolicy::FailFast {
         return Err(error);
     }
+    mark_optional_failed(tracks, kind, error);
+    Ok(())
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+pub(super) fn mark_optional_failed(
+    tracks: &mut [TrackMetadata],
+    kind: TrackKind,
+    error: CaptureError,
+) {
     if let Some(track) = track_mut(tracks, kind) {
         track.status = TrackStatus::Failed;
         track.termination_reason = Some(error.to_string());
     }
-    Ok(())
 }
 
 #[cfg(any(windows, target_os = "macos"))]
