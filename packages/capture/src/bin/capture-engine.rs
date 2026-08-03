@@ -1,12 +1,11 @@
-use std::{
-    collections::HashMap,
-    io::{self, BufReader, Write},
-};
+use std::io::{self, BufReader, Write};
 
+#[cfg(any(windows, target_os = "macos"))]
+use std::collections::HashMap;
 #[cfg(any(windows, target_os = "macos"))]
 use capture::{
     backends::{audio_level::NativeAudioLevelMonitor, camera_preview::CameraPreview},
-    model::SourceId,
+    model::{SourceId, SourceId as CameraSourceId},
 };
 use capture::{
     catalog::{NativeCatalog, SourceCatalog},
@@ -66,12 +65,8 @@ impl Engine {
     }
 
     #[cfg(any(windows, target_os = "macos"))]
-    fn close_device_monitors(&mut self) -> Result<(), capture::CaptureError> {
+    fn close_audio_levels(&mut self) {
         self.audio_levels.clear();
-        if let Some(preview) = self.camera_preview.take() {
-            preview.stop()?;
-        }
-        Ok(())
     }
 }
 
@@ -114,10 +109,13 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                 });
             }
             #[cfg(any(windows, target_os = "macos"))]
-            engine.close_device_monitors()?;
+            engine.close_audio_levels();
             let snapshot = NativeCatalog::default().snapshot()?;
             #[cfg(any(windows, target_os = "macos"))]
-            let session = RecordingSession::prepare_with_camera_preview(*config, snapshot, None)?;
+            let camera_preview = take_camera_preview(engine, config.camera.as_ref())?;
+            #[cfg(any(windows, target_os = "macos"))]
+            let session =
+                RecordingSession::prepare_with_camera_preview(*config, snapshot, camera_preview)?;
             #[cfg(not(any(windows, target_os = "macos")))]
             let session = RecordingSession::prepare(*config, snapshot)?;
             let value = serde_json::json!({
@@ -283,4 +281,20 @@ fn session_value(session: &RecordingSession) -> Result<serde_json::Value, captur
         "sessionId": session.session_id(),
         "manifestPath": session.manifest_path(),
     }))
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+fn take_camera_preview(
+    engine: &mut Engine,
+    requested: Option<&CameraSourceId>,
+) -> Result<Option<capture::backends::camera_preview::CameraPreviewResources>, capture::CaptureError>
+{
+    let Some(preview) = engine.camera_preview.take() else {
+        return Ok(None);
+    };
+    if requested.is_some_and(|source| source == preview.source_id()) {
+        return preview.into_recording().map(Some);
+    }
+    preview.stop()?;
+    Ok(None)
 }
