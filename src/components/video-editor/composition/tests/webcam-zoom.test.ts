@@ -62,8 +62,10 @@ describe("webcam zoom layout", () => {
   it("maps every recorded visual preset to deterministic canvas settings", () => {
     expect(webcamSettingsForAppearance({ shadowSize: "none", cornerRadius: "none" })).toMatchObject({ shadowOpacity: 0, cornerRadius: 0 });
     expect(webcamSettingsForAppearance({ shadowSize: "md", cornerRadius: "md" })).toMatchObject({ shadowOpacity: .42, cornerRadius: 14 });
-    const full = webcamSettingsForAppearance({ shadowSize: "lg", cornerRadius: "full" });
+    const full = webcamSettingsForAppearance({ shadowSize: "lg", cornerRadius: "full" }, false, true);
     expect(full.shadowOpacity).toBe(.58);
     expect(full.cornerRadius).toBeGreaterThan(1_000_000);
+    expect(full.mirror).toBe(false);
+    expect(full.mirrorY).toBe(true);
   });
 });
