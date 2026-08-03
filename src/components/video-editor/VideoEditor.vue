@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
-import type { CaptureProject, ProjectEditorData } from "../../api/types/capture-api";
-import SidebarPanel from "./sidebar/SidebarPanel.vue";
-import PropertiesPanel from "./properties/PropertiesPanel.vue";
-import EditorCanvas from "./canvas/EditorCanvas.vue";
-import CanvasToolbar from "./canvas/CanvasToolbar.vue";
-import EditorTimeline from "./timeline/EditorTimeline.vue";
-import TimelineToolbar from "./timeline/TimelineToolbar.vue";
-import Topbar from "./Topbar.vue";
-import { useVideoEditor } from "./composables/useVideoEditor";
-import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
-import { capture } from "../../api/capture";
+import type { CaptureProject, ProjectEditorData } from "~/api/types/capture-api";
+import SidebarPanel from "~/components/video-editor/sidebar/SidebarPanel.vue";
+import PropertiesPanel from "~/components/video-editor/properties/PropertiesPanel.vue";
+import EditorCanvas from "~/components/video-editor/canvas/EditorCanvas.vue";
+import CanvasToolbar from "~/components/video-editor/canvas/CanvasToolbar.vue";
+import EditorTimeline from "~/components/video-editor/timeline/EditorTimeline.vue";
+import TimelineToolbar from "~/components/video-editor/timeline/TimelineToolbar.vue";
+import Topbar from "~/components/video-editor/Topbar.vue";
+import { useVideoEditor } from "~/components/video-editor/composables/useVideoEditor";
+import { useEditorUndoRedo, type EditorStateSnapshot } from "~/components/video-editor/composables/useEditorUndoRedo";
+import { capture } from "~/api/capture";
 import { Sparkles } from "@lucide/vue";
 import { useTranslate } from "~/i18n/useTranslate";
-import { useExportJob } from "../export/useExportJob";
-import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from "./canvas/output-canvas";
-import { compositionDurationMs, setVolume } from "./composition/engine/clip-engine";
-import { isAudioClip, isCaptionClip, isVisualClip } from "./composition/composition-types";
+import { useExportJob } from "~/components/export/useExportJob";
+import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from "~/components/video-editor/canvas/output-canvas";
+import { compositionDurationMs, setVolume } from "~/components/video-editor/composition/engine/clip-engine";
+import { isAudioClip, isCaptionClip, isVisualClip } from "~/components/video-editor/composition/composition-types";
 
 const { t } = useTranslate("VideoEditor");
 const props = withDefaults(defineProps<{

@@ -4,9 +4,9 @@ import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
 import Popover from "~/ui/popover/Popover.vue";
 import DeleteItem from "~/ui/button/DeleteItem.vue";
-import ZoomClickEmptyState from "./zoom/ZoomClickEmptyState.vue";
+import ZoomClickEmptyState from "~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue";
 import { MousePointer, Sparkles, ZoomIn } from "@lucide/vue";
-import type { ZoomElement } from "../zoom/zoom-types";
+import type { ZoomElement } from "~/components/video-editor/zoom/zoom-types";
 import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("ZoomPanel");

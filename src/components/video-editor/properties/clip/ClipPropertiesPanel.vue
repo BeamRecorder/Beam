@@ -5,12 +5,12 @@ import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import Switch from "~/ui/switch/Switch.vue";
 import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
-import ShadowDirectionGroup from "../cursor/ShadowDirectionGroup.vue";
-import BorderAndFrameControls from "./BorderAndFrameControls.vue";
+import ShadowDirectionGroup from "~/components/video-editor/properties/cursor/ShadowDirectionGroup.vue";
+import BorderAndFrameControls from "~/components/video-editor/properties/clip/BorderAndFrameControls.vue";
 import Divider from "~/ui/divider/Divider.vue";
 import DeleteItem from "~/ui/button/DeleteItem.vue";
-import TimelineClickEmptyState from "./TimelineClickEmptyState.vue";
-import type { ShadowDirection } from "../shadow-types";
+import TimelineClickEmptyState from "~/components/video-editor/properties/clip/TimelineClickEmptyState.vue";
+import type { ShadowDirection } from "~/components/video-editor/properties/shadow-types";
 import {
   Unlink,
   Trash2,

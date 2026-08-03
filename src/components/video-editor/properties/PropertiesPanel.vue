@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { CursorType } from "./cursor/useCursorReplacer";
+import type { CursorType } from "~/components/video-editor/properties/cursor/useCursorReplacer";
 import type {
   BackgroundMedia,
   BackgroundValue,
   BackgroundMediaGroup,
-} from "../composables/backgroundCatalog";
-import CursorPanel from "./cursor/CursorPanel.vue";
-import CanvasPanel from "./canvas/CanvasPanel.vue";
-import AudioPanel from "./audio/AudioPanel.vue";
-import ZoomPanel from "./zoom/ZoomPanel.vue";
-import SettingsPanel from "./settings/SettingsPanel.vue";
-import ClipPropertiesPanel from "./clip/ClipPropertiesPanel.vue";
-import AudioClipPropertiesPanel from "./clip/AudioClipPropertiesPanel.vue";
-import CaptionPanel from "./captions/CaptionPanel.vue";
-import CaptionClipPanel from "./captions/CaptionClipPanel.vue";
-import type { ZoomElement } from "../zoom/zoom-types";
+} from "~/components/video-editor/composables/backgroundCatalog";
+import CursorPanel from "~/components/video-editor/properties/cursor/CursorPanel.vue";
+import CanvasPanel from "~/components/video-editor/properties/canvas/CanvasPanel.vue";
+import AudioPanel from "~/components/video-editor/properties/audio/AudioPanel.vue";
+import ZoomPanel from "~/components/video-editor/properties/zoom/ZoomPanel.vue";
+import SettingsPanel from "~/components/video-editor/properties/settings/SettingsPanel.vue";
+import ClipPropertiesPanel from "~/components/video-editor/properties/clip/ClipPropertiesPanel.vue";
+import AudioClipPropertiesPanel from "~/components/video-editor/properties/clip/AudioClipPropertiesPanel.vue";
+import CaptionPanel from "~/components/video-editor/properties/captions/CaptionPanel.vue";
+import CaptionClipPanel from "~/components/video-editor/properties/captions/CaptionClipPanel.vue";
+import type { ZoomElement } from "~/components/video-editor/zoom/zoom-types";
 import type {
   CaptionClip,
   ClipComposition,
   ClipFrame,
   NormalizedTransform,
-} from "../composition/composition-types";
+} from "~/components/video-editor/composition/composition-types";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
 import type { ShadowDirection } from "./shadow-types";
