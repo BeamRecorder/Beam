@@ -1,20 +1,25 @@
 use crate::{
     CaptureError,
-    model::{TrackKind, TrackMetadata, TrackStatus},
+    model::{FailurePolicy, TrackKind, TrackMetadata, TrackStatus},
 };
 
 use super::super::recording_support::track_mut;
 
 #[cfg(any(windows, target_os = "macos"))]
-pub(super) fn mark_optional_failed(
+pub(super) fn handle_optional_failure(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
+    policy: FailurePolicy,
     error: CaptureError,
-) {
+) -> Result<(), CaptureError> {
+    if policy == FailurePolicy::FailFast {
+        return Err(error);
+    }
     if let Some(track) = track_mut(tracks, kind) {
         track.status = TrackStatus::Failed;
         track.termination_reason = Some(error.to_string());
     }
+    Ok(())
 }
 
 #[cfg(any(windows, target_os = "macos"))]
