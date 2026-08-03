@@ -5,11 +5,11 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use apple_cf::iosurface::{IOSurface, IOSurfaceLockOptions};
-use avassetwriter::prelude::{AVWriterError, FileType, Writer};
+use avassetwriter::prelude::{AVWriterError, FileType, InputId, Writer};
 use crossbeam_channel::{Receiver, Sender, TryRecvError, TrySendError, bounded};
 use nokhwa::{
     pixel_format::RgbFormat,
@@ -30,6 +30,8 @@ use crate::{
 };
 
 const VIDEO_TIMESCALE: i32 = 1_000_000_000;
+const MAX_CONSECUTIVE_CAPTURE_ERRORS: u32 = 5;
+const WRITER_READY_TIMEOUT: Duration = Duration::from_secs(5);
 
 enum CameraMessage {
     Frame(Frame),
@@ -128,29 +130,14 @@ impl MacCameraRecording {
         if output.exists() {
             std::fs::remove_file(output).map_err(backend_error)?;
         }
+
         let index = camera_index(source_id)?;
         let (sender, receiver) = bounded(queue_capacity);
         let (stop_sender, stop_receiver) = bounded(1);
         let metrics = Arc::new(CameraCaptureMetrics::default());
-        let capture_metrics = metrics.clone();
-        let capture_gate = start_gate.clone();
-        let capture_clock = clock;
-        let capture = thread::Builder::new()
-            .name("capture-camera-input".into())
-            .spawn(move || {
-                capture_frames(
-                    index,
-                    sender,
-                    stop_receiver,
-                    capture_gate,
-                    capture_clock,
-                    capture_metrics,
-                    preview,
-                )
-            })
-            .map_err(|error| CaptureError::Backend(error.to_string()))?;
+
         let encoder_metrics = metrics.clone();
-        let encoder_gate = start_gate;
+        let encoder_gate = start_gate.clone();
         let encoder_output = output.to_owned();
         let encoder = thread::Builder::new()
             .name("capture-camera-videotoolbox".into())
@@ -165,6 +152,32 @@ impl MacCameraRecording {
                 )
             })
             .map_err(|error| CaptureError::Backend(error.to_string()))?;
+
+        let capture_metrics = metrics.clone();
+        let capture_gate = start_gate.clone();
+        let capture = match thread::Builder::new()
+            .name("capture-camera-input".into())
+            .spawn(move || {
+                capture_frames(
+                    index,
+                    sender,
+                    stop_receiver,
+                    capture_gate,
+                    clock,
+                    capture_metrics,
+                    preview,
+                )
+            })
+        {
+            Ok(capture) => capture,
+            Err(error) => {
+                start_gate.cancel();
+                let _ = encoder.join();
+                let _ = std::fs::remove_file(output);
+                return Err(CaptureError::Backend(error.to_string()));
+            }
+        };
+
         Ok(Self {
             stop: Some(stop_sender),
             capture: Some(capture),
@@ -178,8 +191,16 @@ impl MacCameraRecording {
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
         }
-        join_capture(self.capture.take())?;
-        join_encoder(self.encoder.take())?;
+        let capture_result = join_capture(self.capture.take());
+        let encoder_result = join_encoder(self.encoder.take());
+        if let Err(error) = capture_result {
+            let _ = std::fs::remove_file(&self.output);
+            return Err(error);
+        }
+        if let Err(error) = encoder_result {
+            let _ = std::fs::remove_file(&self.output);
+            return Err(error);
+        }
         if self.metrics.frames_encoded() == 0 {
             let _ = std::fs::remove_file(&self.output);
             return Err(CaptureError::Backend(
@@ -231,21 +252,35 @@ fn capture_frames(
     let mut camera = open_camera(index)?;
     let start_ns = gate.wait()?;
     let mut mapper = None;
+    let mut consecutive_errors = 0u32;
+
     loop {
         if matches!(stop.try_recv(), Ok(()) | Err(TryRecvError::Disconnected)) {
             break;
         }
         let buffer = match camera.frame() {
-            Ok(frame) => frame,
+            Ok(frame) => {
+                consecutive_errors = 0;
+                frame
+            }
             Err(error) => {
+                consecutive_errors = consecutive_errors.saturating_add(1);
                 metrics.interruptions.fetch_add(1, Ordering::Relaxed);
-                return Err(backend_error(error));
+                if consecutive_errors >= MAX_CONSECUTIVE_CAPTURE_ERRORS {
+                    return Err(backend_error(error));
+                }
+                thread::sleep(Duration::from_millis(10));
+                continue;
             }
         };
         let resolution = buffer.resolution();
         let image = buffer.decode_image::<RgbFormat>().map_err(backend_error)?;
-        if let Some(preview) = preview.as_ref() {
-            preview.publish_rgb(image.as_raw(), resolution.width_x, resolution.height_y)?;
+        if let Some(preview) = preview.as_ref()
+            && preview
+                .publish_rgb(image.as_raw(), resolution.width_x, resolution.height_y)
+                .is_err()
+        {
+            metrics.interruptions.fetch_add(1, Ordering::Relaxed);
         }
         let bgra = rgb_to_bgra(image.as_raw(), resolution.width_x, resolution.height_y)?;
         let pts_ns = if let Some(native) = buffer.capture_timestamp() {
@@ -312,9 +347,10 @@ fn encode_frames(
         .with_real_time(true)
         .with_average_bit_rate(bitrate)
         .with_expected_frame_rate(f64::from(target_fps))
-        .with_max_keyframe_interval(fps)
+        .with_max_keyframe_interval(fps.saturating_mul(2))
         .build()
         .map_err(backend_error)?;
+
     fill_surface(&surface, &first)?;
     let first_encoded = encoder
         .encode(&surface, (pts_value(first.pts_ns), VIDEO_TIMESCALE))
@@ -331,6 +367,7 @@ fn encode_frames(
         .map_err(backend_error)?;
     append_sample(&writer, input, first_sample)?;
     metrics.frames_encoded.fetch_add(1, Ordering::Relaxed);
+
     while let Ok(message) = receiver.recv() {
         let CameraMessage::Frame(frame) = message else {
             break;
@@ -354,13 +391,21 @@ fn encode_frames(
 
 fn append_sample(
     writer: &Writer,
-    input: usize,
+    input: InputId,
     sample: &apple_cf::cm::CMSampleBuffer,
 ) -> Result<(), CaptureError> {
+    let deadline = Instant::now() + WRITER_READY_TIMEOUT;
     loop {
         match writer.append_sample(input, sample) {
             Ok(()) => return Ok(()),
-            Err(AVWriterError::InputNotReady) => thread::sleep(Duration::from_millis(1)),
+            Err(AVWriterError::InputNotReady) if Instant::now() < deadline => {
+                thread::sleep(Duration::from_millis(1));
+            }
+            Err(AVWriterError::InputNotReady) => {
+                return Err(CaptureError::Backend(
+                    "AVAssetWriter input stayed unavailable for five seconds".into(),
+                ));
+            }
             Err(error) => return Err(backend_error(error)),
         }
     }
@@ -429,10 +474,10 @@ fn camera_index(source_id: &SourceId) -> Result<CameraIndex, CaptureError> {
         .ok_or_else(|| {
             CaptureError::InvalidConfiguration(format!("{source_id} is not a Nokhwa camera source"))
         })?;
-    let index = value.parse::<u32>().map_err(|error| {
-        CaptureError::InvalidConfiguration(format!("invalid camera index: {error}"))
-    })?;
-    Ok(CameraIndex::Index(index))
+    Ok(value.parse::<u32>().map_or_else(
+        |_| CameraIndex::String(value.to_owned()),
+        CameraIndex::Index,
+    ))
 }
 
 fn join_capture(handle: Option<JoinHandle<Result<(), CaptureError>>>) -> Result<(), CaptureError> {
@@ -455,7 +500,10 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
 
 #[cfg(test)]
 mod tests {
-    use super::rgb_to_bgra;
+    use nokhwa::utils::CameraIndex;
+
+    use super::{camera_index, rgb_to_bgra};
+    use crate::model::SourceId;
 
     #[test]
     fn converts_rgb_to_top_down_bgra() {
@@ -468,5 +516,14 @@ mod tests {
     #[test]
     fn rejects_wrong_rgb_buffer_size() {
         assert!(rgb_to_bgra(&[1, 2], 1, 1).is_err());
+    }
+
+    #[test]
+    fn preserves_string_camera_indexes() {
+        let id = SourceId::new("camera:nokhwa:FaceTime HD Camera").unwrap_or_default();
+        assert_eq!(
+            camera_index(&id).unwrap_or(CameraIndex::Index(0)),
+            CameraIndex::String("FaceTime HD Camera".into())
+        );
     }
 }
