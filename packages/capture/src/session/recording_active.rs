@@ -9,9 +9,7 @@ mod source_watches;
 use super::periodic_reporter::PeriodicReporter;
 use super::recording_support::*;
 #[cfg(any(windows, target_os = "macos"))]
-use crate::model::TrackKind;
-#[cfg(any(windows, target_os = "macos"))]
-use crate::model::{CursorSelection, SourceId, SourceKind};
+use crate::model::{CursorSelection, SourceId, TrackKind};
 use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
@@ -32,19 +30,22 @@ pub(super) struct ActiveRecordings {
     screen: Option<crate::screen::mac::MacRecording>,
     #[cfg(windows)]
     camera: Option<crate::backends::win::camera::WindowsCameraRecording>,
-    #[cfg(windows)]
-    microphone: Option<crate::backends::win::audio::CpalAudioRecording>,
-    #[cfg(windows)]
-    system_audio: Option<crate::backends::win::audio::CpalAudioRecording>,
     #[cfg(target_os = "macos")]
-    microphone: Option<crate::backends::mac::audio::CpalAudioRecording>,
+    camera: Option<crate::backends::mac::camera::MacCameraRecording>,
+    #[cfg(windows)]
+    microphone: Option<crate::backends::win::audio::MicrophoneRecording>,
     #[cfg(target_os = "macos")]
-    system_audio: Option<crate::backends::mac::audio::CpalAudioRecording>,
+    microphone: Option<crate::backends::mac::audio::MicrophoneRecording>,
+    #[cfg(windows)]
+    system_audio: Option<crate::backends::win::system_audio::WasapiLoopbackRecording>,
+    #[cfg(target_os = "macos")]
+    system_audio: Option<crate::backends::mac::system_audio::ScreenCaptureAudioRecording>,
     #[cfg(all(windows, feature = "cursor"))]
     cursor: Option<crate::cursor::win::WindowsCursorRecording>,
     #[cfg(all(target_os = "macos", feature = "cursor"))]
     cursor: Option<crate::cursor::mac::MacCursorRecording>,
 }
+
 pub(super) struct OpenContext<'a> {
     pub(super) request: &'a CaptureRequest,
     pub(super) snapshot: &'a CatalogSnapshot,
@@ -57,6 +58,7 @@ pub(super) struct OpenContext<'a> {
     #[cfg(any(windows, target_os = "macos"))]
     pub(super) preview: Option<crate::backends::preview_stream::PreviewPublisher>,
 }
+
 impl ActiveRecordings {
     pub(super) fn open(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
         let OpenContext {
@@ -71,6 +73,7 @@ impl ActiveRecordings {
             #[cfg(any(windows, target_os = "macos"))]
             preview,
         } = context;
+
         #[cfg(all(windows, feature = "cursor"))]
         if let CursorSelection::Separate {
             capture_clicks,
@@ -110,6 +113,7 @@ impl ActiveRecordings {
             ));
             track.status = TrackStatus::Recording;
         }
+
         #[cfg(all(target_os = "macos", feature = "cursor"))]
         if let CursorSelection::Separate { capture_clicks, .. } = request.cursor {
             let region = match &request.screen {
@@ -144,6 +148,7 @@ impl ActiveRecordings {
             ));
             track.status = TrackStatus::Recording;
         }
+
         self.open_screen(request, layout, generation, start_ns, tracks, start_gate)?;
         self.open_optional_sources(
             request,
@@ -156,7 +161,7 @@ impl ActiveRecordings {
             #[cfg(any(windows, target_os = "macos"))]
             preview,
         )?;
-        let _ = snapshot;
+
         let samplers = metrics::samplers(self, tracks);
         if !samplers.is_empty() {
             self.reporter = Some(PeriodicReporter::start(
@@ -170,6 +175,7 @@ impl ActiveRecordings {
         }
         Ok(())
     }
+
     #[allow(clippy::too_many_arguments)]
     fn open_optional_sources(
         &mut self,
@@ -206,10 +212,8 @@ impl ActiveRecordings {
                 }
             }
             if let Some(source_id) = request.microphone.as_ref() {
-                self.open_audio(
+                self.open_microphone(
                     source_id,
-                    SourceKind::Microphone,
-                    TrackKind::Microphone,
                     layout,
                     generation,
                     start_ns,
@@ -219,10 +223,8 @@ impl ActiveRecordings {
                 )?;
             }
             if let Some(source_id) = request.system_audio.as_ref() {
-                self.open_audio(
+                self.open_system_audio(
                     source_id,
-                    SourceKind::SystemAudio,
-                    TrackKind::SystemAudio,
                     layout,
                     generation,
                     start_ns,
@@ -232,22 +234,31 @@ impl ActiveRecordings {
                 )?;
             }
         }
+
         #[cfg(target_os = "macos")]
         {
-            if request.camera.is_some() {
-                mark_optional_failed(
-                    tracks,
-                    TrackKind::Camera,
-                    CaptureError::Unsupported(
-                        "macOS camera encoding is unavailable in this build".into(),
-                    ),
-                );
+            if let Some(source_id) = request.camera.as_ref() {
+                let path = segment_path(layout, TrackKind::Camera, generation, "mp4");
+                match crate::backends::mac::camera::MacCameraRecording::start(
+                    source_id,
+                    &path,
+                    u32::try_from(request.recording.video_bitrate_bps).unwrap_or(u32::MAX),
+                    request.recording.target_fps,
+                    request.recording.queue_capacity,
+                    start_gate.clone(),
+                    clock.clone(),
+                    preview,
+                ) {
+                    Ok(recording) => {
+                        self.camera = Some(recording);
+                        add_segment(tracks, TrackKind::Camera, generation, "mp4", start_ns)?;
+                    }
+                    Err(error) => mark_optional_failed(tracks, TrackKind::Camera, error),
+                }
             }
             if let Some(source_id) = request.microphone.as_ref() {
-                self.open_audio(
+                self.open_microphone(
                     source_id,
-                    SourceKind::Microphone,
-                    TrackKind::Microphone,
                     layout,
                     generation,
                     start_ns,
@@ -257,10 +268,8 @@ impl ActiveRecordings {
                 )?;
             }
             if let Some(source_id) = request.system_audio.as_ref() {
-                self.open_audio(
+                self.open_system_audio(
                     source_id,
-                    SourceKind::SystemAudio,
-                    TrackKind::SystemAudio,
                     layout,
                     generation,
                     start_ns,
@@ -270,8 +279,8 @@ impl ActiveRecordings {
                 )?;
             }
         }
-        #[cfg(target_os = "macos")]
-        let _ = preview;
+
+        #[cfg(not(any(windows, target_os = "macos")))]
         let _ = (
             request, layout, generation, start_ns, tracks, start_gate, clock,
         );
@@ -280,11 +289,9 @@ impl ActiveRecordings {
 
     #[cfg(any(windows, target_os = "macos"))]
     #[allow(clippy::too_many_arguments)]
-    fn open_audio(
+    fn open_microphone(
         &mut self,
         source_id: &SourceId,
-        source_kind: SourceKind,
-        track_kind: TrackKind,
         layout: &crate::storage::SessionLayout,
         generation: u32,
         start_ns: u64,
@@ -292,44 +299,77 @@ impl ActiveRecordings {
         start_gate: Arc<super::StartGate>,
         tracks: &mut [TrackMetadata],
     ) -> Result<(), CaptureError> {
-        let output = segment_path(layout, track_kind, generation, "wav");
-        let recording = match source_kind {
-            SourceKind::Microphone | SourceKind::SystemAudio => {
-                #[cfg(windows)]
-                {
-                    crate::backends::win::audio::CpalAudioRecording::start(
-                        source_id.as_str(),
-                        source_kind,
-                        &output,
-                        queue_capacity,
-                        start_gate,
-                    )
-                }
-                #[cfg(target_os = "macos")]
-                {
-                    crate::backends::mac::audio::CpalAudioRecording::start(
-                        source_id.as_str(),
-                        source_kind,
-                        &output,
-                        queue_capacity,
-                        start_gate,
-                    )
-                }
-            }
-            _ => Err(CaptureError::InvalidConfiguration(
-                "invalid audio source kind".into(),
-            )),
-        };
+        let output = segment_path(layout, TrackKind::Microphone, generation, "wav");
+        #[cfg(windows)]
+        let recording = crate::backends::win::audio::MicrophoneRecording::start(
+            source_id.as_str(),
+            &output,
+            queue_capacity,
+            start_gate,
+        );
+        #[cfg(target_os = "macos")]
+        let recording = crate::backends::mac::audio::MicrophoneRecording::start(
+            source_id.as_str(),
+            &output,
+            queue_capacity,
+            start_gate,
+        );
         match recording {
             Ok(recording) => {
-                if track_kind == TrackKind::Microphone {
-                    self.microphone = Some(recording);
-                } else {
-                    self.system_audio = Some(recording);
-                }
-                add_segment(tracks, track_kind, generation, "wav", start_ns)?;
+                self.microphone = Some(recording);
+                add_segment(
+                    tracks,
+                    TrackKind::Microphone,
+                    generation,
+                    "wav",
+                    start_ns,
+                )?;
             }
-            Err(error) => mark_optional_failed(tracks, track_kind, error),
+            Err(error) => mark_optional_failed(tracks, TrackKind::Microphone, error),
+        }
+        Ok(())
+    }
+
+    #[cfg(any(windows, target_os = "macos"))]
+    #[allow(clippy::too_many_arguments)]
+    fn open_system_audio(
+        &mut self,
+        source_id: &SourceId,
+        layout: &crate::storage::SessionLayout,
+        generation: u32,
+        start_ns: u64,
+        queue_capacity: usize,
+        start_gate: Arc<super::StartGate>,
+        tracks: &mut [TrackMetadata],
+    ) -> Result<(), CaptureError> {
+        let output = segment_path(layout, TrackKind::SystemAudio, generation, "wav");
+        #[cfg(windows)]
+        let recording = crate::backends::win::system_audio::WasapiLoopbackRecording::start(
+            source_id.as_str(),
+            &output,
+            queue_capacity,
+            start_gate,
+        );
+        #[cfg(target_os = "macos")]
+        let recording =
+            crate::backends::mac::system_audio::ScreenCaptureAudioRecording::start(
+                source_id.as_str(),
+                &output,
+                queue_capacity,
+                start_gate,
+            );
+        match recording {
+            Ok(recording) => {
+                self.system_audio = Some(recording);
+                add_segment(
+                    tracks,
+                    TrackKind::SystemAudio,
+                    generation,
+                    "wav",
+                    start_ns,
+                )?;
+            }
+            Err(error) => mark_optional_failed(tracks, TrackKind::SystemAudio, error),
         }
         Ok(())
     }
@@ -394,6 +434,7 @@ impl ActiveRecordings {
         if let Some(reporter) = self.reporter.take() {
             record_result(reporter.stop(), &mut first_error);
         }
+
         #[cfg(windows)]
         if let Some(recording) = self.screen.take() {
             let metrics = recording.metrics();
@@ -407,6 +448,7 @@ impl ActiveRecordings {
                 metrics.frames_dropped(),
             );
         }
+
         #[cfg(target_os = "macos")]
         if let Some(recording) = self.screen.take() {
             let metrics = recording.metrics();
@@ -420,7 +462,8 @@ impl ActiveRecordings {
                 metrics.frames_dropped(),
             );
         }
-        #[cfg(windows)]
+
+        #[cfg(any(windows, target_os = "macos"))]
         if let Some(recording) = self.camera.take() {
             let metrics = recording.metrics();
             let result = recording.stop();
@@ -437,6 +480,7 @@ impl ActiveRecordings {
                 track.metrics.interruptions += metrics.interruptions();
             }
         }
+
         #[cfg(any(windows, target_os = "macos"))]
         if let Some(recording) = self.microphone.take() {
             let metrics = recording.metrics();
@@ -451,6 +495,7 @@ impl ActiveRecordings {
                 metrics.interruptions(),
             );
         }
+
         #[cfg(any(windows, target_os = "macos"))]
         if let Some(recording) = self.system_audio.take() {
             let metrics = recording.metrics();
@@ -465,6 +510,7 @@ impl ActiveRecordings {
                 metrics.interruptions(),
             );
         }
+
         #[cfg(all(windows, feature = "cursor"))]
         if let Some(recording) = self.cursor.take() {
             let metrics = recording.metrics();
@@ -474,6 +520,7 @@ impl ActiveRecordings {
                 track.metrics.interruptions += metrics.interruptions();
             }
         }
+
         #[cfg(all(target_os = "macos", feature = "cursor"))]
         if let Some(recording) = self.cursor.take() {
             let metrics = recording.metrics();
@@ -483,6 +530,7 @@ impl ActiveRecordings {
                 track.metrics.interruptions += metrics.interruptions();
             }
         }
+
         for track in tracks
             .iter_mut()
             .filter(|track| track.status == TrackStatus::Recording)
