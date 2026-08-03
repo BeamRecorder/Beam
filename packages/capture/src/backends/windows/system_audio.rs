@@ -7,7 +7,7 @@ use std::{
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError, bounded};
 use wasapi::{
-    Device, DeviceEnumerator, Direction, SampleType, StreamMode, WaveFormat, deinitialize,
+    DeviceEnumerator, Direction, SampleType, StreamMode, WasapiError, WaveFormat, deinitialize,
     initialize_mta,
 };
 
@@ -96,7 +96,7 @@ impl WasapiLoopbackRecording {
         )?;
         let metrics = sink.metrics();
         let (stop_sender, stop_receiver) = bounded(1);
-        let capture = thread::Builder::new()
+        let capture = match thread::Builder::new()
             .name("capture-wasapi-loopback".into())
             .spawn(move || {
                 capture_loop(
@@ -106,7 +106,14 @@ impl WasapiLoopbackRecording {
                     start_gate,
                 )
             })
-            .map_err(|error| CaptureError::Backend(error.to_string()))?;
+        {
+            Ok(capture) => capture,
+            Err(error) => {
+                drop(sink);
+                let _ = std::fs::remove_file(output);
+                return Err(CaptureError::Backend(error.to_string()));
+            }
+        };
         Ok(Self {
             stop: Some(stop_sender),
             capture: Some(capture),
@@ -193,24 +200,36 @@ fn capture_loop(
     let _ = start_gate.wait()?;
     client.start_stream().map_err(backend_error)?;
     let mut bytes = VecDeque::new();
-    let result = loop {
+
+    let capture_result = loop {
         match stop.try_recv() {
             Ok(()) | Err(TryRecvError::Disconnected) => break Ok(()),
             Err(TryRecvError::Empty) => {}
         }
-        if event.wait_for_event(READ_TIMEOUT_MS).is_err() {
-            continue;
+        match event.wait_for_event(READ_TIMEOUT_MS) {
+            Ok(()) => {}
+            Err(WasapiError::EventTimeout) => continue,
+            Err(error) => break Err(backend_error(error)),
         }
-        capture
-            .read_from_device_to_deque(&mut bytes)
-            .map_err(backend_error)?;
-        let samples = drain_f32(&mut bytes);
-        if !samples.is_empty() {
-            publisher.publish(samples);
+        loop {
+            let packet_size = capture.get_next_packet_size().map_err(backend_error)?;
+            if !packet_size.is_some_and(|frames| frames > 0) {
+                break;
+            }
+            let info = capture
+                .read_from_device_to_deque(&mut bytes)
+                .map_err(backend_error)?;
+            if info.flags.data_discontinuity || info.flags.timestamp_error {
+                publisher.interruption();
+            }
+            let samples = drain_f32(&mut bytes);
+            if !samples.is_empty() {
+                publisher.publish(samples);
+            }
         }
     };
     let stop_result = client.stop_stream().map_err(backend_error);
-    result.and(stop_result)
+    capture_result.and(stop_result)
 }
 
 fn drain_f32(bytes: &mut VecDeque<u8>) -> Vec<f32> {
