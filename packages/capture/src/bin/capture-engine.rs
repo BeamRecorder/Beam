@@ -1,12 +1,20 @@
-use std::io::{self, BufReader, Write};
+use std::{
+    collections::HashMap,
+    io::{self, BufReader, Write},
+};
 
 #[cfg(any(windows, target_os = "macos"))]
-use capture::{backends::camera_preview::CameraPreview, model::SourceId};
+use capture::{
+    backends::{audio_level::NativeAudioLevelMonitor, camera_preview::CameraPreview},
+    model::SourceId,
+};
 use capture::{
     catalog::{NativeCatalog, SourceCatalog},
     protocol::{Command, RequestEnvelope, ResponseEnvelope, read_json_line, write_json_line},
     session::{RecordingSession, SessionState},
 };
+#[cfg(any(windows, target_os = "macos"))]
+use uuid::Uuid;
 
 fn main() {
     let code = match run() {
@@ -46,6 +54,8 @@ struct Engine {
     session: Option<RecordingSession>,
     #[cfg(any(windows, target_os = "macos"))]
     camera_preview: Option<CameraPreview>,
+    #[cfg(any(windows, target_os = "macos"))]
+    audio_levels: HashMap<String, NativeAudioLevelMonitor>,
 }
 
 impl Engine {
@@ -53,6 +63,15 @@ impl Engine {
         self.session
             .as_ref()
             .map_or(SessionState::Idle, RecordingSession::state)
+    }
+
+    #[cfg(any(windows, target_os = "macos"))]
+    fn close_device_monitors(&mut self) -> Result<(), capture::CaptureError> {
+        self.audio_levels.clear();
+        if let Some(preview) = self.camera_preview.take() {
+            preview.stop()?;
+        }
+        Ok(())
     }
 }
 
@@ -94,12 +113,11 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                     to: "Preparing".into(),
                 });
             }
+            #[cfg(any(windows, target_os = "macos"))]
+            engine.close_device_monitors()?;
             let snapshot = NativeCatalog::default().snapshot()?;
             #[cfg(any(windows, target_os = "macos"))]
-            let camera_preview = take_camera_preview(engine, config.camera.as_ref())?;
-            #[cfg(any(windows, target_os = "macos"))]
-            let session =
-                RecordingSession::prepare_with_camera_preview(*config, snapshot, camera_preview)?;
+            let session = RecordingSession::prepare_with_camera_preview(*config, snapshot, None)?;
             #[cfg(not(any(windows, target_os = "macos")))]
             let session = RecordingSession::prepare(*config, snapshot)?;
             let value = serde_json::json!({
@@ -191,6 +209,57 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             }
             Ok(serde_json::json!({ "state": "idle" }))
         }
+        Command::AudioLevelStart { source } => {
+            #[cfg(any(windows, target_os = "macos"))]
+            {
+                if engine.session.as_ref().is_some_and(|session| {
+                    matches!(session.state(), SessionState::Recording | SessionState::Paused)
+                }) {
+                    return Err(capture::CaptureError::InvalidTransition {
+                        from: format!("{:?}", engine.state()),
+                        to: "AudioLevelMonitoring".into(),
+                    });
+                }
+                let monitor = NativeAudioLevelMonitor::start(&source)?;
+                let id = Uuid::now_v7().to_string();
+                engine.audio_levels.insert(id.clone(), monitor);
+                Ok(serde_json::json!({ "monitorId": id }))
+            }
+            #[cfg(not(any(windows, target_os = "macos")))]
+            {
+                let _ = source;
+                Err(capture::CaptureError::Unsupported(
+                    "native audio level monitoring is unavailable on this platform".into(),
+                ))
+            }
+        }
+        Command::AudioLevelRead { monitor } => {
+            #[cfg(any(windows, target_os = "macos"))]
+            {
+                let value = engine
+                    .audio_levels
+                    .get(&monitor)
+                    .ok_or_else(|| capture::CaptureError::SourceNotFound(monitor))?
+                    .take_level();
+                Ok(serde_json::json!({ "level": value }))
+            }
+            #[cfg(not(any(windows, target_os = "macos")))]
+            {
+                let _ = monitor;
+                Err(capture::CaptureError::Unsupported(
+                    "native audio level monitoring is unavailable on this platform".into(),
+                ))
+            }
+        }
+        Command::AudioLevelStop { monitor } => {
+            #[cfg(any(windows, target_os = "macos"))]
+            {
+                engine.audio_levels.remove(&monitor);
+            }
+            #[cfg(not(any(windows, target_os = "macos")))]
+            let _ = monitor;
+            Ok(serde_json::json!({ "state": "stopped" }))
+        }
     })();
     match result {
         Ok(value) => ResponseEnvelope::success(request.id, value),
@@ -214,20 +283,4 @@ fn session_value(session: &RecordingSession) -> Result<serde_json::Value, captur
         "sessionId": session.session_id(),
         "manifestPath": session.manifest_path(),
     }))
-}
-
-#[cfg(any(windows, target_os = "macos"))]
-fn take_camera_preview(
-    engine: &mut Engine,
-    requested: Option<&SourceId>,
-) -> Result<Option<capture::backends::camera_preview::CameraPreviewResources>, capture::CaptureError>
-{
-    let Some(preview) = engine.camera_preview.take() else {
-        return Ok(None);
-    };
-    if requested.is_some_and(|source| source == preview.source_id()) {
-        return preview.into_recording().map(Some);
-    }
-    preview.stop()?;
-    Ok(None)
 }
