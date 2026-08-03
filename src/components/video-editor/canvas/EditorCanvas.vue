@@ -61,6 +61,7 @@ const props = defineProps<{
   selectedTransformClip: TransformClip | null;
   loopProgress?: number;
   isCropping?: boolean;
+  isGridVisible?: boolean;
   historyAction?: HistoryAction | null;
 }>();
 
@@ -157,6 +158,33 @@ const transformAndCrop = useLayerTransformAndCrop({
   onPreviewTransform: (transform) => emit("preview:clip-transform", transform),
   onUpdateCrop: (crop) => emit("update:clip-crop", crop),
   onSelectTransformClip: (clipId) => emit("select:clip", clipId),
+});
+
+const renderGuideLines = computed(() => {
+  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+  return transformAndCrop.activeGuideLines.value.map((guide) => {
+    if (guide.type === "vertical") {
+      const x = preview.x + guide.position * preview.width;
+      return {
+        type: "vertical" as const,
+        style: {
+          left: `${x}px`,
+          top: `${preview.y}px`,
+          height: `${preview.height}px`,
+        },
+      };
+    } else {
+      const y = preview.y + guide.position * preview.height;
+      return {
+        type: "horizontal" as const,
+        style: {
+          top: `${y}px`,
+          left: `${preview.x}px`,
+          width: `${preview.width}px`,
+        },
+      };
+    }
+  });
 });
 
 cameraZoom = useCameraZoom({
@@ -399,6 +427,19 @@ defineExpose({
         class="editor-canvas"
         :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual', 'is-format-transitioning': isFormatTransitioning }"
       ></canvas>
+      <div v-if="isGridVisible" class="canvas-3x3-grid" :style="previewFrameStyle">
+        <div class="grid-line vertical line-1"></div>
+        <div class="grid-line vertical line-2"></div>
+        <div class="grid-line horizontal line-1"></div>
+        <div class="grid-line horizontal line-2"></div>
+      </div>
+      <div
+        v-for="(guide, index) in renderGuideLines"
+        :key="index"
+        class="canvas-guide-line"
+        :class="guide.type"
+        :style="guide.style"
+      ></div>
       <Skeleton v-if="!isVideoFrameReady && !videoError" class="canvas-loading-skeleton" width="100%" height="100%" radius="var(--radius-lg)" :aria-label="t('videoPreviewLoading')" />
       <div v-if="selectedTransformClip && !isCropping" class="webcam-selection" :style="transformAndCrop.transformHandleStyle.value" @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')" @pointermove="transformAndCrop.moveTransformDrag" @pointerup="transformAndCrop.endTransformDrag" @pointercancel="transformAndCrop.endTransformDrag">
         <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)" />
@@ -447,6 +488,37 @@ defineExpose({
   left: 0;
   will-change: transform;
 }
+.canvas-3x3-grid {
+  position: absolute;
+  pointer-events: none;
+  z-index: 30;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.canvas-3x3-grid .grid-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.45);
+}
+.canvas-3x3-grid .grid-line.vertical { top: 0; bottom: 0; width: 1px; }
+.canvas-3x3-grid .grid-line.vertical.line-1 { left: 33.333%; }
+.canvas-3x3-grid .grid-line.vertical.line-2 { left: 66.666%; }
+.canvas-3x3-grid .grid-line.horizontal { left: 0; right: 0; height: 1px; }
+.canvas-3x3-grid .grid-line.horizontal.line-1 { top: 33.333%; }
+.canvas-3x3-grid .grid-line.horizontal.line-2 { top: 66.666%; }
+
+.canvas-guide-line {
+  position: absolute;
+  background: var(--color-primary, #ff5a1f);
+  z-index: 35;
+  pointer-events: none;
+}
+.canvas-guide-line.vertical {
+  width: 1px;
+}
+.canvas-guide-line.horizontal {
+  height: 1px;
+}
+
 .editor-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
 .canvas-loading-skeleton { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .preview-frame { position: absolute; z-index: 0; border-radius: var(--radius-lg); background: var(--color-bg-element); box-shadow: var(--shadow-lg); pointer-events: none; }

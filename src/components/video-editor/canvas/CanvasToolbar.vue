@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Crop, Check, ZoomIn, ZoomOut } from '@lucide/vue'
+import { Crop, Check, ZoomIn, ZoomOut, Grid } from '@lucide/vue'
 import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue'
 import Button from '../../ui/button/Button.vue'
 import type { OutputCanvasPreset } from './output-canvas'
@@ -13,10 +13,12 @@ const props = withDefaults(
     preset: OutputCanvasPreset
     canCrop: boolean
     isCropping: boolean
+    isGridVisible?: boolean
     zoomPercent?: number
     isZoomedOrPanned?: boolean
   }>(),
   {
+    isGridVisible: false,
     zoomPercent: 100,
     isZoomedOrPanned: false,
   }
@@ -25,6 +27,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (event: 'select:preset', preset: Exclude<OutputCanvasPreset, 'custom'>): void
   (event: 'toggle:crop'): void
+  (event: 'toggle:grid'): void
   (event: 'zoom:in'): void
   (event: 'zoom:out'): void
   (event: 'reset:zoom'): void
@@ -50,6 +53,17 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
     </Button>
 
     <div class="toolbar-divider"></div>
+
+    <Button
+      variant="ghost"
+      size="xs"
+      :icon="Grid"
+      :aria-label="t('toggleGrid')"
+      :tooltip="t('toggleGrid')"
+      class="grid-toggle-btn"
+      :class="{ 'is-active': isGridVisible }"
+      @click="emit('toggle:grid')"
+    />
 
     <div class="zoom-controls">
       <Button variant="ghost" size="xs" :icon="ZoomOut" :aria-label="t('zoomOut')" :tooltip="t('zoomOut')" class="zoom-btn" @click="emit('zoom:out')" />
@@ -120,6 +134,17 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
   height: 18px;
   background: var(--color-border, rgba(255, 255, 255, 0.12));
   margin: 0 2px;
+}
+
+.canvas-toolbar :deep(.grid-toggle-btn) {
+  padding: 0 6px !important;
+  min-width: 28px !important;
+}
+
+.canvas-toolbar :deep(.grid-toggle-btn.is-active) {
+  color: var(--color-primary, #ff5a1f) !important;
+  background: var(--color-primary-light, rgba(255, 90, 31, 0.15)) !important;
+  border-color: var(--color-primary, #ff5a1f) !important;
 }
 
 .zoom-controls {

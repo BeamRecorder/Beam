@@ -13,6 +13,8 @@ import {
 } from "../../composition/composition-types";
 import { computeWebcamLayout, webcamSettingsForAppearance } from "../../composition/webcam/webcam-zoom";
 
+import { computeCanvasAlignmentSnapping, type AlignmentGuide } from "./canvas-alignment";
+
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
 const SIZE_MAX = 4;
@@ -46,6 +48,7 @@ export interface UseLayerTransformAndCropOptions {
 export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOptions) {
   const transformDraft = ref<NormalizedTransform | null>(null);
   const cropDraft = ref<NormalizedCrop | null>(null);
+  const activeGuideLines = ref<AlignmentGuide[]>([]);
   let previewFrame: number | null = null;
   let pendingPreview: NormalizedTransform | null = null;
   let transformDrag: {
@@ -257,11 +260,25 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale * vScale);
     const initial = transformDrag.transform;
     if (transformDrag.kind === "move") {
-      const moved = {
+      let moved = {
         ...initial,
         x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.x + dx)),
         y: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, initial.y + dy)),
       };
+
+      const currentTimeMs = options.currentTime() * 1_000;
+      const otherTargets = activeClipsAt(options.composition(), currentTimeMs)
+        .filter((c): c is TransformClip => (c.kind === "caption" || isVisualClip(c)) && c.id !== clip.id && c.enabled)
+        .map((c) => {
+          const t = c.kind === "caption" ? getCaptionTransform(c) : c.transform;
+          return { id: c.id, x: t.x, y: t.y, width: t.width, height: t.height };
+        });
+
+      const snapResult = computeCanvasAlignmentSnapping(moved, otherTargets, 0.015);
+      moved.x = snapResult.x;
+      moved.y = snapResult.y;
+      activeGuideLines.value = snapResult.guides;
+
       transformDraft.value = clip.kind === "webcam" ? clampWebcamTransform(moved) : moved;
       return;
     }
@@ -301,6 +318,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (event.key === "Shift" && transformDrag) applyTransformDrag(transformDrag.lastX, transformDrag.lastY, event.type === "keydown");
   };
   const endTransformDrag = (event: PointerEvent) => {
+    activeGuideLines.value = [];
     if (!transformDrag) return;
     if (previewFrame !== null) cancelAnimationFrame(previewFrame);
     previewFrame = null;
@@ -315,9 +333,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const selectVisualAt = (event: PointerEvent, canvas: HTMLCanvasElement | null) => {
     if (!canvas) return false;
     const rect = canvas.getBoundingClientRect();
-    const vScale = options.zoomScale?.() ?? 1;
-    const x = (event.clientX - rect.left) / vScale;
-    const y = (event.clientY - rect.top) / vScale;
+    const scaleRatio = rect.width / (canvas.clientWidth || 1);
+    const x = (event.clientX - rect.left) / (scaleRatio || 1);
+    const y = (event.clientY - rect.top) / (scaleRatio || 1);
     const clips = activeClipsAt(options.composition(), options.currentTime() * 1_000)
       .filter((clip): clip is TransformClip => clip.kind === "caption" || isVisualClip(clip))
       .sort((a, b) => a.order - b.order);
@@ -349,6 +367,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     transformHandleStyle,
     cropContainerStyle,
     cropOverlayStyle,
+    activeGuideLines,
     beginTransformDrag,
     moveTransformDrag,
     endTransformDrag,

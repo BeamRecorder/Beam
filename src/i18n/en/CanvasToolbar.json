@@ -8,5 +8,6 @@
   "zoomIn": "Zoom in canvas",
   "zoomOut": "Zoom out canvas",
   "resetZoom": "Reset canvas view",
-  "canvasZoom": "Canvas zoom"
+  "canvasZoom": "Canvas zoom",
+  "toggleGrid": "Toggle 3x3 grid"
 }

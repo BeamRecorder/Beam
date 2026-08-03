@@ -198,6 +198,7 @@ watch(screenSource, (source) => {
 }, { immediate: true });
 
 const isCropping = ref(false);
+const isGridVisible = ref(false);
 const timelineZoomLevel = ref(100);
 const isSnappingEnabled = ref(true);
 const isTimelineReady = ref(false);
@@ -305,10 +306,12 @@ onBeforeUnmount(() => {
             :preset="outputCanvas.preset"
             :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
             :is-cropping="isCropping"
+            :is-grid-visible="isGridVisible"
             :zoom-percent="editorCanvasRef?.viewportZoom.zoomPercent.value ?? 100"
             :is-zoomed-or-panned="editorCanvasRef?.viewportZoom.isZoomedOrPanned.value ?? false"
             @select:preset="selectCanvasPreset"
             @toggle:crop="toggleCrop"
+            @toggle:grid="isGridVisible = !isGridVisible"
             @zoom:in="editorCanvasRef?.viewportZoom.zoomIn()"
             @zoom:out="editorCanvasRef?.viewportZoom.zoomOut()"
             @reset:zoom="editorCanvasRef?.viewportZoom.resetZoom()"
@@ -338,6 +341,7 @@ onBeforeUnmount(() => {
             :active-tab="activeTab"
             :selected-transform-clip="selectedTransformClip"
             :is-cropping="isCropping"
+            :is-grid-visible="isGridVisible"
             :history-action="historyAction"
             @update:zoom="updateZoom"
             @preview:zoom="previewZoom"
