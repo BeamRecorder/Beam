@@ -238,6 +238,7 @@ const cursorOverlay = useCursorOverlay({
   shadowBlur: () => props.shadowBlur,
   shadowColor: () => props.shadowColor,
   shadowDirection: () => props.shadowDirection,
+  outputCanvas: () => props.outputCanvas,
   deviceScale: () => deviceScale.value,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,

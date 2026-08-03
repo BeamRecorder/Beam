@@ -95,6 +95,18 @@ describe('useVideoEditor', () => {
     expect(api.exportRequest.value).toMatchObject({ projectName: 'Demo project', snapshot: { snapshot: true } })
     expect(state.createCompositionSnapshot).toHaveBeenCalledWith(expect.objectContaining({ fps: 60, width: 1920, height: 1080 }))
 
+    state.cursor.cursorSize.value = 17
+    state.cursor.selectedCursor.value = 'handpointing'
+    api.cursorMotion.value = { preset: 'custom', smoothing: 0, springMassMultiplier: .5, motionBlur: 0 }
+    void api.exportRequest.value
+    expect(state.createCompositionSnapshot).toHaveBeenLastCalledWith(expect.objectContaining({
+      cursorSettings: expect.objectContaining({
+        selectedCursor: 'handpointing',
+        size: 17,
+        motion: { preset: 'custom', smoothing: 0, springMassMultiplier: .5, motionBlur: 0 },
+      }),
+    }))
+
     videoSrc.value = 'video://second'
     api.handleSelectTab('zoom')
     await wrapper.vm.$nextTick()

@@ -29,6 +29,10 @@ export function drawCursorLayer(
   const cursor = cursorStateAt(snapshot.cursor.events, time);
   const motionCursor = cursorMotionPlayer.sample(time, cursor);
   const settings = snapshot.cursorSettings;
+  // Cursor size and shadow blur are output pixels. Keep the value selected in
+  // the editor stable when the user exports at a different video resolution.
+  const cursorSize = settings.size;
+  const shadowBlur = settings.shadow.blur;
   const settingsForButton = (button: number): CursorClickEffectSettings | null => {
     const effectButton = effectButtonForRecordedButton(button);
     return effectButton ? settings.clickEffects[effectButton] : null;
@@ -64,7 +68,7 @@ export function drawCursorLayer(
   const cursorType = cursorTypeAt(settings.selectedCursor, motionCursor);
   const image = cursorImages?.get(cursorType);
   if (!motionCursor?.visible || !image?.complete || image.naturalWidth <= 0) return;
-  const hotspot = cursorHotspotAtSize(cursorType, settings.size);
+  const hotspot = cursorHotspotAtSize(cursorType, cursorSize);
   const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.28), time)
     .reverse()
     .find((event) => settingsForButton(event.button)?.springEnabled);
@@ -84,14 +88,14 @@ export function drawCursorLayer(
     ctx.globalAlpha = sample.alpha;
     if (settings.shadow.enabled) {
       ctx.shadowColor = settings.shadow.color;
-      ctx.shadowBlur = settings.shadow.blur;
-      const offset = cursorShadowOffset(settings.shadow.blur, settings.shadow.direction);
+      ctx.shadowBlur = shadowBlur;
+      const offset = cursorShadowOffset(shadowBlur, settings.shadow.direction);
       ctx.shadowOffsetX = offset.x;
       ctx.shadowOffsetY = offset.y;
     }
     ctx.translate(samplePosition.x, samplePosition.y);
     ctx.scale(clickScale, clickScale);
-    ctx.drawImage(image, -hotspot.x, -hotspot.y, settings.size, settings.size);
+    ctx.drawImage(image, -hotspot.x, -hotspot.y, cursorSize, cursorSize);
     ctx.restore();
   }
 }

@@ -31,6 +31,7 @@ const baseOptions = () => ({
   shadowBlur: () => 8,
   shadowColor: () => '#000000',
   shadowDirection: () => 'bottom-right' as const,
+  outputCanvas: () => ({ preset: '16:9' as const, width: 1920, height: 1080, showBackground: false }),
   deviceScale: () => 1,
   currentTime: () => 1,
   isPlaying: () => true,
@@ -75,6 +76,7 @@ describe('useCursorOverlay', () => {
     expect(ctx.arc).toHaveBeenCalled()
     expect(ctx.drawImage).toHaveBeenCalled()
     expect(ctx.shadowColor).toBe('#000000')
+    expect(ctx.drawImage).toHaveBeenLastCalledWith(expect.anything(), expect.any(Number), expect.any(Number), expect.closeTo(10, .01), expect.closeTo(10, .01))
     expect(ctx.fillText).toHaveBeenCalledWith('System cursor not translated', expect.any(Number), 29)
     expect(drawContent).toHaveBeenCalledOnce()
   })
