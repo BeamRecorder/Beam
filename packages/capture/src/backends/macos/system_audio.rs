@@ -4,8 +4,7 @@ use std::{
 };
 
 use screencapturekit::{
-    cm::CMSampleBufferExt,
-    prelude::CMSampleBuffer,
+    cm::{AudioBufferList, CMSampleBuffer, CMSampleBufferExt},
     shareable_content::SCShareableContent,
     stream::{
         SCStream,
@@ -84,7 +83,7 @@ impl ScreenCaptureAudioRecording {
             .with_queue_depth(3)
             .with_captures_audio(true)
             .with_sample_rate(SAMPLE_RATE)
-            .with_channel_count(CHANNELS);
+            .with_channel_count(u32::from(CHANNELS));
         let (sink, publisher) = AudioSink::start(
             output,
             SAMPLE_RATE,
@@ -163,11 +162,7 @@ impl Drop for ScreenCaptureAudioRecording {
     }
 }
 
-fn publish_sample(
-    sample: &CMSampleBuffer,
-    gate: &StartGate,
-    publisher: &AudioPublisher,
-) {
+fn publish_sample(sample: &CMSampleBuffer, gate: &StartGate, publisher: &AudioPublisher) {
     let Some(list) = sample.audio_buffer_list() else {
         publisher.interruption();
         return;
@@ -183,7 +178,7 @@ fn publish_sample(
     }
 }
 
-fn interleaved_f32(list: &screencapturekit::AudioBufferList) -> Vec<f32> {
+fn interleaved_f32(list: &AudioBufferList) -> Vec<f32> {
     let buffers = list.iter().collect::<Vec<_>>();
     if buffers.is_empty() {
         return Vec::new();
