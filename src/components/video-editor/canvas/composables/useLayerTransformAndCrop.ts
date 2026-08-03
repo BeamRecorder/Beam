@@ -192,6 +192,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   };
 
   const beginCropDrag = (event: PointerEvent, kind: "move" | "resize", corner?: ResizeCorner) => {
+    if (event.button !== 0) return;
     cropDrag = { kind, corner, startX: event.clientX, startY: event.clientY, value: displayCrop(cropValue.value) };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   };
@@ -231,6 +232,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   };
 
   const beginTransformDrag = (event: PointerEvent, kind: "move" | "resize", corner?: ResizeCorner) => {
+    if (event.button !== 0) return;
     const clip = options.selectedTransformClip();
     if (!clip) return;
     const transform = transformDraft.value ?? transformFor(clip);

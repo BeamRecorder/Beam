@@ -40,6 +40,8 @@ import { synchronizeRecordingClips } from "../composition/session-clips";
 const DEFAULT_APPEARANCE: ClipAppearance = {
   cornerRadius: "sm",
   shadowSize: "md",
+  shadowBlur: 20,
+  shadowMode: "solid",
   shadowColor: "#000000",
   shadowDirection: "all",
   borderEnabled: false,

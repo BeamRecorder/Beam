@@ -10,6 +10,7 @@ import {
 } from "../../composition/composition-types";
 import { drawWebcamOverlay, webcamSettingsForAppearance } from "../../composition/webcam/webcam-zoom";
 import { drawDecoratedMedia } from "../../composition/appearance/render-decorated-media";
+import type { OutputCanvasSettings } from "../output-canvas";
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
@@ -18,6 +19,7 @@ export interface UseCompositionMediaOptions {
   selectedTransformClip: () => VisualClip | CaptionClip | null;
   transformDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
+  outputCanvas?: () => OutputCanvasSettings;
   onRenderOnce: () => void;
 }
 
@@ -147,11 +149,14 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
     const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
     const crop = options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop;
+    const output = options.outputCanvas?.();
+    const shadowScale = output ? Math.min(window.dw / Math.max(1, output.width), window.dh / Math.max(1, output.height)) : 1;
     drawDecoratedMedia(ctx, {
       source,
       sourceRect: crop && sourceWidth > 0 && sourceHeight > 0 ? { x: crop.x * sourceWidth, y: crop.y * sourceHeight, width: crop.width * sourceWidth, height: crop.height * sourceHeight } : undefined,
       rect: { x: window.dx + transform.x * window.dw, y: window.dy + transform.y * window.dh, width: transform.width * window.dw, height: transform.height * window.dh },
       appearance: clip.appearance,
+      shadowScale,
       title: clip.name,
       mirrored: clip.isMirrored,
       mirroredY: clip.isMirroredY,
@@ -198,6 +203,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
         clip.appearance,
         clip.name,
+        options.outputCanvas ? Math.min(window.dw / Math.max(1, options.outputCanvas().width), window.dh / Math.max(1, options.outputCanvas().height)) : 1,
       );
       ctx.restore();
     }

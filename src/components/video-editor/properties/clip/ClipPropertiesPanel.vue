@@ -18,8 +18,7 @@ import {
   FlipHorizontal,
   FlipVertical,
 } from "@lucide/vue";
-import type { NormalizedTransform } from "../../composition/composition-types";
-import type { ClipFrame } from "../../composition/composition-types";
+import type { ClipFrame, ClipShadowMode, ClipShadowSize, NormalizedTransform } from "../../composition/composition-types";
 import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("ClipPropertiesPanel");
@@ -35,6 +34,8 @@ const props = defineProps<{
     enabled?: boolean;
     isLinked?: boolean;
     shadowSize?: string;
+    shadowBlur?: number;
+    shadowMode?: ClipShadowMode;
     shadowColor?: string;
     shadowDirection?: string;
     cornerRadius?: string | number;
@@ -60,7 +61,7 @@ const emit = defineEmits<{
   (e: "update:cornerRadius", radius: string): void;
   (
     e: "update:shadow",
-    shadow: { size: string; color?: string; direction?: string },
+    shadow: { size: ClipShadowSize; blur?: number; mode?: ClipShadowMode; color?: string; direction?: string },
   ): void;
   (
     e: "update:appearance",
@@ -97,13 +98,16 @@ const shadowPresets = computed(() => [
   { id: "sm", label: t("soft") },
   { id: "md", label: t("medium") },
   { id: "lg", label: t("strong") },
+  { id: "custom", label: t("custom") },
 ]);
 
 const NAMED_RADII = ["none", "sm", "md", "lg", "full"];
 
 const selectedRadius = ref<string>("md");
 const customRadiusValue = ref<number>(32);
-const selectedShadowSize = ref(props.selectedClip?.shadowSize ?? "md");
+const selectedShadowSize = ref<ClipShadowSize>((props.selectedClip?.shadowSize as ClipShadowSize | undefined) ?? "md");
+const customShadowBlur = ref(props.selectedClip?.shadowBlur ?? 40);
+const selectedShadowMode = ref<ClipShadowMode>(props.selectedClip?.shadowMode ?? "solid");
 const selectedShadowColor = ref(props.selectedClip?.shadowColor ?? "#000000");
 const selectedShadowDirection = ref<ShadowDirection>(
   (props.selectedClip?.shadowDirection as ShadowDirection | undefined) ?? "all",
@@ -128,7 +132,9 @@ watch(
       selectedRadius.value = "custom";
       customRadiusValue.value = parseFloat(String(r)) || 32;
     }
-    selectedShadowSize.value = clip?.shadowSize ?? "md";
+    selectedShadowSize.value = (clip?.shadowSize as ClipShadowSize | undefined) ?? "md";
+    customShadowBlur.value = clip?.shadowBlur ?? 40;
+    selectedShadowMode.value = clip?.shadowMode ?? "solid";
     selectedShadowColor.value = clip?.shadowColor ?? "#000000";
     selectedShadowDirection.value =
       (clip?.shadowDirection as ShadowDirection | undefined) ?? "all";
@@ -152,9 +158,33 @@ const handleCustomRadiusChange = (value: number) => {
 };
 
 const handleShadowPresetChange = (sizeId: string) => {
-  selectedShadowSize.value = sizeId;
+  selectedShadowSize.value = sizeId as ClipShadowSize;
   emit("update:shadow", {
-    size: sizeId,
+    size: selectedShadowSize.value,
+    blur: customShadowBlur.value,
+    mode: selectedShadowMode.value,
+    color: selectedShadowColor.value,
+    direction: selectedShadowDirection.value,
+  });
+};
+
+const handleShadowModeChange = (mode: ClipShadowMode) => {
+  selectedShadowMode.value = mode;
+  emit("update:shadow", {
+    size: selectedShadowSize.value,
+    blur: customShadowBlur.value,
+    mode,
+    color: selectedShadowColor.value,
+    direction: selectedShadowDirection.value,
+  });
+};
+
+const handleCustomShadowBlurChange = (blur: number) => {
+  customShadowBlur.value = blur;
+  emit("update:shadow", {
+    size: "custom",
+    blur,
+    mode: selectedShadowMode.value,
     color: selectedShadowColor.value,
     direction: selectedShadowDirection.value,
   });
@@ -164,6 +194,8 @@ const handleShadowDirectionChange = (directionId: ShadowDirection) => {
   selectedShadowDirection.value = directionId;
   emit("update:shadow", {
     size: selectedShadowSize.value,
+    blur: customShadowBlur.value,
+    mode: selectedShadowMode.value,
     color: selectedShadowColor.value,
     direction: directionId,
   });
@@ -173,6 +205,8 @@ const handleShadowColorChange = (color: string) => {
   selectedShadowColor.value = color;
   emit("update:shadow", {
     size: selectedShadowSize.value,
+    blur: customShadowBlur.value,
+    mode: selectedShadowMode.value,
     color,
     direction: selectedShadowDirection.value,
   });
@@ -314,6 +348,41 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           </Button>
         </ButtonGroup>
 
+        <div class="sub-group margin-top-sm">
+          <span class="sub-label">{{ t("shadowStyle") }}</span>
+          <ButtonGroup full>
+            <Button
+              :variant="selectedShadowMode === 'solid' ? 'primary' : 'ghost'"
+              size="xs"
+              @click="handleShadowModeChange('solid')"
+            >
+              {{ t("solid") }}
+            </Button>
+            <Button
+              :variant="selectedShadowMode === 'adaptive' ? 'primary' : 'ghost'"
+              size="xs"
+              @click="handleShadowModeChange('adaptive')"
+            >
+              {{ t("adaptive") }}
+            </Button>
+          </ButtonGroup>
+          <span v-if="selectedShadowMode === 'adaptive'" class="shadow-hint">
+            {{ t("adaptiveShadowDescription") }}
+          </span>
+        </div>
+
+        <BigSlider
+          v-if="selectedShadowSize === 'custom'"
+          :model-value="customShadowBlur"
+          :min="4"
+          :max="96"
+          :step="1"
+          :label="t('shadowBlur')"
+          :default-value="40"
+          :format-value="(value) => `${Math.round(value)}px`"
+          @update:modelValue="handleCustomShadowBlurChange"
+        />
+
         <div
           v-if="selectedShadowSize !== 'none'"
           class="sub-group margin-top-sm"
@@ -326,7 +395,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         </div>
 
         <div
-          v-if="selectedShadowSize !== 'none'"
+          v-if="selectedShadowSize !== 'none' && selectedShadowMode === 'solid'"
           class="sub-group margin-top-sm"
         >
           <span class="sub-label">{{ t("shadowColor") }}</span>
@@ -517,6 +586,12 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 .sub-label {
   font-size: 10px;
   font-weight: 500;
+  color: var(--text-muted);
+}
+
+.shadow-hint {
+  font-size: 10px;
+  line-height: 1.35;
   color: var(--text-muted);
 }
 

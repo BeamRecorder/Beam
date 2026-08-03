@@ -1,10 +1,13 @@
 import type { ClipAppearance } from "../composition-types";
 import type { DecoratedMediaOptions, MediaRect } from "./appearance-types";
 import { drawFrameChrome, frameContentRect } from "./frames";
+import { adaptiveShadowColor } from "./adaptive-shadow";
 
 export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   cornerRadius: "sm",
   shadowSize: "md",
+  shadowBlur: 20,
+  shadowMode: "solid",
   shadowColor: "#000000",
   shadowDirection: "all",
   borderEnabled: false,
@@ -16,6 +19,15 @@ export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   frameShowMenu: true,
   frameShowScrollbars: true,
 };
+const SHADOW_BLURS = { sm: 10, md: 20, lg: 32 } as const;
+
+export function shadowBlurForAppearance(appearance: ClipAppearance | undefined) {
+  const style = { ...DEFAULT_CLIP_APPEARANCE, ...appearance };
+  if (style.shadowSize === "none") return 0;
+  if (style.shadowSize === "custom") return Math.min(96, Math.max(0, style.shadowBlur ?? 40));
+  return SHADOW_BLURS[style.shadowSize];
+}
+
 export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
   const value =
     appearance?.cornerRadius ?? DEFAULT_CLIP_APPEARANCE.cornerRadius;
@@ -32,10 +44,16 @@ export function applyClipShadow(
   ctx: CanvasRenderingContext2D,
   appearance: ClipAppearance | undefined,
   width: number,
+  source?: CanvasImageSource,
+  sourceRect?: MediaRect,
+  shadowScale = 1,
 ) {
   const style = { ...DEFAULT_CLIP_APPEARANCE, ...appearance };
-  const blur = { none: 0, sm: 10, md: 20, lg: 32 }[style.shadowSize];
-  ctx.shadowColor = blur > 0 ? style.shadowColor : "transparent";
+  const blur = shadowBlurForAppearance(style) * Math.max(0, shadowScale);
+  const shadowColor = style.shadowMode === "adaptive" && source
+    ? adaptiveShadowColor(source, sourceRect, style.shadowColor)
+    : style.shadowColor;
+  ctx.shadowColor = blur > 0 ? shadowColor : "transparent";
   ctx.shadowBlur = blur;
   ctx.shadowOffsetX =
     style.shadowDirection === "top-left"
@@ -86,7 +104,7 @@ export function drawDecoratedMedia(
   );
   if (appearance.shadowSize !== "none") {
     ctx.save();
-    applyClipShadow(ctx, appearance, options.rect.width);
+    applyClipShadow(ctx, appearance, options.rect.width, options.source, options.sourceRect, options.shadowScale);
     ctx.fillStyle =
       appearance.frame !== "none" ? appearance.frameColor : "#000000";
     ctx.beginPath();

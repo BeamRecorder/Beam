@@ -59,10 +59,10 @@ export function computeWebcamLayout(canvasWidth: number, canvasHeight: number, a
   return { width, height, x: Math.max(margin, canvasWidth - width - margin), y: Math.max(margin, canvasHeight - height - margin) }
 }
 
-export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform, crop?: NormalizedCrop, appearance?: ClipAppearance, title = 'Camera') {
+export function drawWebcamOverlay(ctx: CanvasRenderingContext2D, source: CanvasImageSource, canvasWidth: number, canvasHeight: number, appliedZoomScale: number, settings = DEFAULT_WEBCAM_SETTINGS, transform?: NormalizedTransform, crop?: NormalizedCrop, appearance?: ClipAppearance, title = 'Camera', shadowScale = 1) {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform)
   const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source instanceof HTMLImageElement ? source.naturalWidth : typeof (source as { displayWidth?: unknown }).displayWidth === 'number' ? (source as { displayWidth: number }).displayWidth : 0
   const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source instanceof HTMLImageElement ? source.naturalHeight : typeof (source as { displayHeight?: unknown }).displayHeight === 'number' ? (source as { displayHeight: number }).displayHeight : 0
   const sourceRect: MediaRect | undefined = crop && sourceWidth > 0 && sourceHeight > 0 ? { x: crop.x * sourceWidth, y: crop.y * sourceHeight, width: crop.width * sourceWidth, height: crop.height * sourceHeight } : undefined
-  drawDecoratedMedia(ctx, { source, sourceRect, rect: layout, appearance: { ...DEFAULT_CLIP_APPEARANCE, ...appearance }, title, mirrored: settings.mirror, mirroredY: settings.mirrorY })
+  drawDecoratedMedia(ctx, { source, sourceRect, rect: layout, appearance: { ...DEFAULT_CLIP_APPEARANCE, ...appearance }, shadowScale, title, mirrored: settings.mirror, mirroredY: settings.mirrorY })
 }

@@ -39,6 +39,13 @@ const INITIAL_MEDIA_COUNT = 15;
 const visibleCount = ref(INITIAL_MEDIA_COUNT);
 
 const blurDraft = ref(props.blurPercent);
+watch(() => props.blurPercent, (val) => {
+  blurDraft.value = val;
+});
+const handleBlurUpdate = (val: number) => {
+  blurDraft.value = val;
+  emit("update:blurPercent", val);
+};
 
 const gridRef = ref<HTMLElement | null>(null);
 const tileElements = new Map<string, Element>();
@@ -396,7 +403,7 @@ const importLabel = computed(() => activeKind.value === "image"
         :step="1"
         :label="t('blur')"
         :format-value="(value: number) => `${Math.round(value)}%`"
-        @update:model-value="blurDraft = $event"
+        @update:model-value="handleBlurUpdate"
         @interaction-end="emit('update:blurPercent', blurDraft)"
       />
     </div>

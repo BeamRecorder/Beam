@@ -6,6 +6,8 @@ export interface DecoratedMediaOptions {
   sourceRect?: MediaRect;
   rect: MediaRect;
   appearance?: ClipAppearance;
+  /** Shadow values are stored in output pixels; preview callers provide their display scale. */
+  shadowScale?: number;
   title: string;
   mirrored?: boolean;
   mirroredY?: boolean;

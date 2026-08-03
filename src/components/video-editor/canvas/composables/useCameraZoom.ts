@@ -113,6 +113,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   };
 
   const beginSelectionMove = (event: PointerEvent) => {
+    if (event.button !== 0) return;
     const selectedZoom = options.selectedZoom();
     const editingManualZoom = selectedZoom?.mode === "manual" && options.activeTab() === "zoom";
     if (!editingManualZoom) {
@@ -235,6 +236,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             frameShowMenu: true,
             frameShowScrollbars: true,
           },
+          shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
           title: screen.name,
           mirrored: screen.isMirrored,
           mirroredY: screen.isMirroredY,

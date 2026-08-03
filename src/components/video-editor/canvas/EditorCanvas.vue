@@ -233,6 +233,7 @@ const compositionMedia = useCompositionMedia({
   selectedTransformClip: () => props.selectedTransformClip,
   transformDraft: () => transformAndCrop.transformDraft.value,
   isCropping: () => props.isCropping,
+  outputCanvas: () => props.outputCanvas,
   onRenderOnce: renderOnce,
 });
 
