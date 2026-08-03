@@ -32,6 +32,9 @@ export interface CaptureApi {
 export interface DesktopCaptureApi extends CaptureApi {
   startCameraPreview(cameraId: string): Promise<{ url: string }>
   stopCameraPreview(): Promise<void>
+  startAudioLevelMonitor(sourceId: string): Promise<{ monitorId: string }>
+  readAudioLevelMonitor(monitorId: string): Promise<{ level: number }>
+  stopAudioLevelMonitor(monitorId: string): Promise<void>
   close(): void
   minimize(): void
   setWindowMode(mode: 'hud' | 'recorder' | 'editor'): void
