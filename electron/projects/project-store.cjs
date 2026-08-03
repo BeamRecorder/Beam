@@ -82,12 +82,22 @@ function createProjectStore(root) {
     const file = safePath(root, relativePath)
     return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null
   }
-  const previewFor = (directory, sessions) => {
+  const previewFor = (directory, manifest, sessions) => {
+    if (typeof manifest.previewSrc === 'string' && manifest.previewSrc) {
+      let file
+      try { file = fileURLToPath(manifest.previewSrc) } catch { file = null }
+      if (file && fs.existsSync(file)) return manifest.previewSrc
+    }
     for (const session of [...sessions].reverse()) {
       const sessionDirectory = safePath(directory, session.relativePath)
       const screenDirectory = sessionDirectory && path.join(sessionDirectory, 'screen')
       const video = screenDirectory && fs.existsSync(screenDirectory) && fs.readdirSync(screenDirectory).filter((name) => /\.mp4$/i.test(name)).sort()[0]
-      if (video) return pathToFileURL(path.join(screenDirectory, video)).href
+      if (video) {
+        const url = pathToFileURL(path.join(screenDirectory, video)).href
+        manifest.previewSrc = url
+        try { writeManifest(directory, manifest) } catch {}
+        return url
+      }
     }
     return null
   }
@@ -100,7 +110,7 @@ function createProjectStore(root) {
       createdAt: typeof manifest.createdAtUtc === 'string' ? manifest.createdAtUtc : '',
       updatedAt: typeof manifest.updatedAtUtc === 'string' ? manifest.updatedAtUtc : '',
       sessionCount: sessions.length,
-      previewSrc: previewFor(directory, sessions),
+      previewSrc: previewFor(directory, manifest, sessions),
       thumbnailSrc: thumbnailFor(directory),
     }
   }

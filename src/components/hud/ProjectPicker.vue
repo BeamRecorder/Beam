@@ -933,6 +933,8 @@ defineExpose({
   height: 72px;
   background: var(--color-bg-surface);
   overflow: hidden;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview-video {
@@ -945,6 +947,8 @@ defineExpose({
   background-color: transparent;
   transition: opacity 0.2s ease;
   z-index: 3;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview-thumb {
@@ -952,6 +956,8 @@ defineExpose({
   height: 100%;
   object-fit: cover;
   display: block;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview-video.is-loaded {
@@ -962,12 +968,16 @@ defineExpose({
   position: absolute;
   inset: 0;
   z-index: 2;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .preview-placeholder-icon {

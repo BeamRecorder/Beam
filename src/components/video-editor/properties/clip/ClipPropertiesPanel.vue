@@ -5,7 +5,7 @@ import Button from "~/ui/button/Button.vue";
 import ButtonGroup from "~/ui/button/ButtonGroup.vue";
 import Switch from "~/ui/switch/Switch.vue";
 import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
-import ShadowDirectionGroup from "../ShadowDirectionGroup.vue";
+import ShadowDirectionGroup from "../cursor/ShadowDirectionGroup.vue";
 import BorderAndFrameControls from "./BorderAndFrameControls.vue";
 import Divider from "~/ui/divider/Divider.vue";
 import DeleteItem from "~/ui/button/DeleteItem.vue";
@@ -62,7 +62,19 @@ const emit = defineEmits<{
     e: "update:shadow",
     shadow: { size: string; color?: string; direction?: string },
   ): void;
-  (e: "update:appearance", appearance: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void;
+  (
+    e: "update:appearance",
+    appearance: {
+      borderEnabled?: boolean;
+      borderColor?: string;
+      borderWidth?: number;
+      frame?: ClipFrame;
+      frameTitle?: string;
+      frameColor?: string;
+      frameShowMenu?: boolean;
+      frameShowScrollbars?: boolean;
+    },
+  ): void;
   (e: "update:clipTransform", transform: NormalizedTransform): void;
   (e: "reset:clipTransform"): void;
   (e: "unlink"): void;
@@ -118,7 +130,8 @@ watch(
     }
     selectedShadowSize.value = clip?.shadowSize ?? "md";
     selectedShadowColor.value = clip?.shadowColor ?? "#000000";
-    selectedShadowDirection.value = (clip?.shadowDirection as ShadowDirection | undefined) ?? "bottom";
+    selectedShadowDirection.value =
+      (clip?.shadowDirection as ShadowDirection | undefined) ?? "bottom";
   },
   { immediate: true },
 );
@@ -174,8 +187,15 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   if (!current) return;
   const width = Math.min(4, Math.max(0.02, patch.width ?? current.width));
   let height = Math.min(4, Math.max(0.02, patch.height ?? current.height));
-  if (patch.width !== undefined && patch.height === undefined && current.width > 0) {
-    height = Math.min(4, Math.max(0.02, (current.height * width) / current.width));
+  if (
+    patch.width !== undefined &&
+    patch.height === undefined &&
+    current.width > 0
+  ) {
+    height = Math.min(
+      4,
+      Math.max(0.02, (current.height * width) / current.width),
+    );
   }
   emit("update:clipTransform", {
     x: Math.min(3, Math.max(-3, patch.x ?? current.x)),
@@ -194,8 +214,15 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       <!-- Placement Section -->
       <div v-if="clipTransform" class="section-block">
         <div class="section-header">
-          <span class="section-title">{{ t('placement') }}</span>
-          <Button variant="ghost" size="xs" :icon="RotateCcw" :aria-label="t('resetClipPlacement')" @click="emit('reset:clipTransform')">{{ t('reset') }}</Button>
+          <span class="section-title">{{ t("placement") }}</span>
+          <Button
+            variant="ghost"
+            size="xs"
+            :icon="RotateCcw"
+            :aria-label="t('resetClipPlacement')"
+            @click="emit('reset:clipTransform')"
+            >{{ t("reset") }}</Button
+          >
         </div>
         <div class="sliders-stack">
           <BigSlider
@@ -229,12 +256,23 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Divider -->
-      <Divider v-if="clipTransform && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
+      <Divider
+        v-if="
+          clipTransform &&
+          ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)
+        "
+        spacing="xs"
+      />
 
       <!-- Appearance Section (Corner Radius, Shadow & Mirror) -->
-      <div v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" class="section-block">
+      <div
+        v-if="
+          ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)
+        "
+        class="section-block"
+      >
         <div class="section-header">
-          <span class="section-title">{{ t('cornerRadius') }}</span>
+          <span class="section-title">{{ t("cornerRadius") }}</span>
         </div>
         <ButtonGroup full>
           <Button
@@ -262,7 +300,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         <Divider spacing="xs" />
 
         <div class="section-header">
-          <span class="section-title">{{ t('dropShadow') }}</span>
+          <span class="section-title">{{ t("dropShadow") }}</span>
         </div>
         <ButtonGroup full>
           <Button
@@ -276,16 +314,22 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           </Button>
         </ButtonGroup>
 
-        <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top-sm">
-          <span class="sub-label">{{ t('direction') }}</span>
+        <div
+          v-if="selectedShadowSize !== 'none'"
+          class="sub-group margin-top-sm"
+        >
+          <span class="sub-label">{{ t("direction") }}</span>
           <ShadowDirectionGroup
             :model-value="selectedShadowDirection"
             @update:model-value="handleShadowDirectionChange"
           />
         </div>
 
-        <div v-if="selectedShadowSize !== 'none'" class="sub-group margin-top-sm">
-          <span class="sub-label">{{ t('shadowColor') }}</span>
+        <div
+          v-if="selectedShadowSize !== 'none'"
+          class="sub-group margin-top-sm"
+        >
+          <span class="sub-label">{{ t("shadowColor") }}</span>
           <ColorPicker
             :model-value="selectedShadowColor"
             :show-label="false"
@@ -296,7 +340,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         <Divider spacing="xs" />
 
         <div class="section-header">
-          <span class="section-title">{{ t('mirroring') }}</span>
+          <span class="section-title">{{ t("mirroring") }}</span>
         </div>
         <ButtonGroup full>
           <Button
@@ -305,7 +349,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
             :icon="FlipHorizontal"
             @click="emit('update:isMirrored', !selectedClip.isMirrored)"
           >
-            {{ t('horizontal') }}
+            {{ t("horizontal") }}
           </Button>
           <Button
             :variant="selectedClip.isMirroredY ? 'primary' : 'ghost'"
@@ -313,7 +357,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
             :icon="FlipVertical"
             @click="emit('update:isMirroredY', !selectedClip.isMirroredY)"
           >
-            {{ t('vertical') }}
+            {{ t("vertical") }}
           </Button>
         </ButtonGroup>
         <BorderAndFrameControls
@@ -330,12 +374,18 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Divider -->
-      <Divider v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
+      <Divider
+        v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)"
+        spacing="xs"
+      />
 
       <!-- Speed Boost / Rate Controls -->
-      <div v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" class="section-block">
+      <div
+        v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)"
+        class="section-block"
+      >
         <div class="section-header">
-          <span class="section-title">{{ t('speedBoost') }}</span>
+          <span class="section-title">{{ t("speedBoost") }}</span>
         </div>
         <BigSlider
           :model-value="currentPlaybackRate"
@@ -367,7 +417,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       <!-- Controls & Link -->
       <div class="section-block">
         <div class="prop-row">
-          <span class="prop-label">{{ t('enabled') }}</span>
+          <span class="prop-label">{{ t("enabled") }}</span>
           <Switch
             :model-value="selectedClip.enabled ?? true"
             @update:modelValue="emit('update:enabled', $event)"
@@ -377,7 +427,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         <div v-if="selectedClip.isLinked" class="prop-row">
           <div class="link-label">
             <Unlink :size="14" />
-            <span>{{ t('sidecarLink') }}</span>
+            <span>{{ t("sidecarLink") }}</span>
           </div>
           <Button variant="outline" size="sm" @click="emit('unlink')">
             Unlink

@@ -15,8 +15,8 @@ const defaults = () => ({
     'editor.playPause': { keys: 'Space', scope: 'application', category: 'video-editor' },
     'teleprompter.toggleVisibility': { keys: 'Alt+Shift+T', scope: 'global', category: 'teleprompter' },
     'teleprompter.toggleAutoscroll': { keys: 'Alt+Shift+O', scope: 'global', category: 'teleprompter' },
-    'teleprompter.nextLine': { keys: 'Ctrl+Right', scope: 'global', category: 'teleprompter' },
-    'teleprompter.previousLine': { keys: 'Ctrl+Left', scope: 'global', category: 'teleprompter' }
+    'teleprompter.nextLine': { keys: 'Ctrl+Shift+Right', scope: 'global', category: 'teleprompter' },
+    'teleprompter.previousLine': { keys: 'Ctrl+Shift+Left', scope: 'global', category: 'teleprompter' }
   },
   backgroundPresets: { colors: [], gradients: [] },
   extras: {}
