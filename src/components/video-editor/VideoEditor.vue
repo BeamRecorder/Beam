@@ -203,6 +203,7 @@ const isSnappingEnabled = ref(true);
 const isTimelineReady = ref(false);
 let timelineTimer: ReturnType<typeof setTimeout> | null = null;
 let timelineFrame: number | null = null;
+const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const toggleCrop = () => { if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value; };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, "custom">) => { outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false }; };
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -300,8 +301,20 @@ onBeforeUnmount(() => {
         />
 
         <div class="canvas-column">
-          <CanvasToolbar :preset="outputCanvas.preset" :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))" :is-cropping="isCropping" @select:preset="selectCanvasPreset" @toggle:crop="toggleCrop" />
+          <CanvasToolbar
+            :preset="outputCanvas.preset"
+            :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
+            :is-cropping="isCropping"
+            :zoom-percent="editorCanvasRef?.viewportZoom.zoomPercent.value ?? 100"
+            :is-zoomed-or-panned="editorCanvasRef?.viewportZoom.isZoomedOrPanned.value ?? false"
+            @select:preset="selectCanvasPreset"
+            @toggle:crop="toggleCrop"
+            @zoom:in="editorCanvasRef?.viewportZoom.zoomIn()"
+            @zoom:out="editorCanvasRef?.viewportZoom.zoomOut()"
+            @reset:zoom="editorCanvasRef?.viewportZoom.resetZoom()"
+          />
           <EditorCanvas
+            ref="editorCanvasRef"
             v-model:is-playing="isPlaying"
             v-model:current-time="currentTime"
             :duration="duration"

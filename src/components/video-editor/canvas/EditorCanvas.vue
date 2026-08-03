@@ -30,6 +30,7 @@ import { useCompositionMedia } from "./composables/useCompositionMedia";
 import { useCursorOverlay } from "./composables/useCursorOverlay";
 import { useCameraZoom } from "./composables/useCameraZoom";
 import { useLayerTransformAndCrop } from "./composables/useLayerTransformAndCrop";
+import { useViewportZoom } from "./composables/useViewportZoom";
 import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("EditorCanvas");
@@ -91,6 +92,8 @@ let playbackAnchorSeconds = 0;
 let playbackAnchorTime = performance.now();
 let drawVisualStack: ((ctx: CanvasRenderingContext2D, videoWindow: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number }, drawScreen: () => void) => void) | null = null;
 
+const viewportZoom = useViewportZoom();
+
 const resetPlaybackClock = (seconds = props.currentTime) => {
   playbackAnchorSeconds = Math.max(0, Math.min(props.duration, seconds));
   playbackAnchorTime = performance.now();
@@ -149,6 +152,7 @@ const transformAndCrop = useLayerTransformAndCrop({
   videoWindowBounds: () => cameraZoom.videoWindowBounds.value,
   overlayWindowBounds: () => cameraZoom.overlayWindowBounds.value,
   isCropping: () => props.isCropping,
+  zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit("update:clip-transform", transform),
   onPreviewTransform: (transform) => emit("preview:clip-transform", transform),
   onUpdateCrop: (crop) => emit("update:clip-crop", crop),
@@ -316,8 +320,6 @@ const renderCanvas = () => {
   if (props.isPlaying) {
     const nextTime = playbackClockSeconds();
     if (props.duration > 0 && nextTime >= props.duration) {
-      // Keep the master playback state active and restart every synced layer
-      // from the beginning of the composition.
       resetPlaybackClock(0);
       emit("update:currentTime", 0);
     } else if (props.duration <= 0) {
@@ -336,6 +338,31 @@ function draw() {
   if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
 }
 
+const handleIslandPointerDown = (event: PointerEvent) => {
+  if (viewportZoom.beginPan(event, containerRef.value)) return;
+  cameraZoom.beginSelectionMove(event);
+};
+
+const handleIslandPointerMove = (event: PointerEvent) => {
+  if (viewportZoom.isPanning.value) {
+    viewportZoom.movePan(event);
+    return;
+  }
+  cameraZoom.moveSelection(event);
+};
+
+const handleIslandPointerUp = (event: PointerEvent) => {
+  if (viewportZoom.isPanning.value) {
+    viewportZoom.endPan(event, containerRef.value);
+    return;
+  }
+  cameraZoom.endSelectionMove(event);
+};
+
+const handleIslandWheel = (event: WheelEvent) => {
+  viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect());
+};
+
 onMounted(() => {
   resetPlaybackClock();
   resizeCanvas();
@@ -348,41 +375,73 @@ onUnmounted(() => {
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
+
+defineExpose({
+  viewportZoom,
+});
 </script>
 
 <template>
-  <div class="canvas-island" ref="containerRef">
-    <div class="preview-frame" :style="previewFrameStyle" aria-hidden="true"></div>
-    <canvas
-      ref="canvasRef"
-      class="editor-canvas"
-      :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual', 'is-format-transitioning': isFormatTransitioning }"
-      @pointerdown="cameraZoom.beginSelectionMove"
-      @pointermove="cameraZoom.moveSelection"
-      @pointerup="cameraZoom.endSelectionMove"
-      @pointercancel="cameraZoom.endSelectionMove"
-    ></canvas>
-    <Skeleton v-if="!isVideoFrameReady && !videoError" class="canvas-loading-skeleton" width="100%" height="100%" radius="var(--radius-lg)" :aria-label="t('videoPreviewLoading')" />
-    <div v-if="selectedTransformClip && !isCropping" class="webcam-selection" :style="transformAndCrop.transformHandleStyle.value" @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')" @pointermove="transformAndCrop.moveTransformDrag" @pointerup="transformAndCrop.endTransformDrag" @pointercancel="transformAndCrop.endTransformDrag">
-      <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)" />
-    </div>
-    <div class="zoom-selection-box" :class="{ locked: selectedZoom?.mode !== 'manual' }" :style="cameraZoom.focusTargetStyle.value" aria-hidden="true"></div>
-    <div v-if="isCropping && selectedTransformClip" class="crop-overlay-box" :style="transformAndCrop.cropOverlayStyle.value" @pointerdown="transformAndCrop.beginCropDrag($event, 'move')" @pointermove="transformAndCrop.moveCropDrag" @pointerup="transformAndCrop.endCropDrag" @pointercancel="transformAndCrop.endCropDrag">
-      <div class="crop-grid">
-        <div class="grid-line vertical line-1"></div><div class="grid-line vertical line-2"></div>
-        <div class="grid-line horizontal line-1"></div><div class="grid-line horizontal line-2"></div>
+  <div
+    class="canvas-island"
+    ref="containerRef"
+    :class="{ 'is-grabbing': viewportZoom.isPanning.value, 'is-space-pressed': viewportZoom.isSpacePressed.value }"
+    @wheel="handleIslandWheel"
+    @pointerdown="handleIslandPointerDown"
+    @pointermove="handleIslandPointerMove"
+    @pointerup="handleIslandPointerUp"
+    @pointercancel="handleIslandPointerUp"
+  >
+    <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
+      <div class="preview-frame" :style="previewFrameStyle" aria-hidden="true"></div>
+      <canvas
+        ref="canvasRef"
+        class="editor-canvas"
+        :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual', 'is-format-transitioning': isFormatTransitioning }"
+      ></canvas>
+      <Skeleton v-if="!isVideoFrameReady && !videoError" class="canvas-loading-skeleton" width="100%" height="100%" radius="var(--radius-lg)" :aria-label="t('videoPreviewLoading')" />
+      <div v-if="selectedTransformClip && !isCropping" class="webcam-selection" :style="transformAndCrop.transformHandleStyle.value" @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')" @pointermove="transformAndCrop.moveTransformDrag" @pointerup="transformAndCrop.endTransformDrag" @pointercancel="transformAndCrop.endTransformDrag">
+        <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)" />
       </div>
-      <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
-        <Button variant="primary" size="xs" :icon="Check" @click.stop="commitCrop">{{ t('ok') }}</Button>
+      <div class="zoom-selection-box" :class="{ locked: selectedZoom?.mode !== 'manual' }" :style="cameraZoom.focusTargetStyle.value" aria-hidden="true"></div>
+      <div v-if="isCropping && selectedTransformClip" class="crop-overlay-box" :style="transformAndCrop.cropOverlayStyle.value" @pointerdown="transformAndCrop.beginCropDrag($event, 'move')" @pointermove="transformAndCrop.moveCropDrag" @pointerup="transformAndCrop.endCropDrag" @pointercancel="transformAndCrop.endCropDrag">
+        <div class="crop-grid">
+          <div class="grid-line vertical line-1"></div><div class="grid-line vertical line-2"></div>
+          <div class="grid-line horizontal line-1"></div><div class="grid-line horizontal line-2"></div>
+        </div>
+        <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
+          <Button variant="primary" size="xs" :icon="Check" @click.stop="commitCrop">{{ t('ok') }}</Button>
+        </div>
+        <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
       </div>
-      <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
     </div>
     <UndoRedoToast :action="historyAction ?? null" />
   </div>
 </template>
 
 <style scoped>
-.canvas-island { flex: 1; margin: 0 12px; background: transparent; position: relative; overflow: visible; display: flex; justify-content: center; align-items: center; min-height: 0; }
+.canvas-island {
+  flex: 1;
+  margin: 0 12px;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  user-select: none;
+}
+.canvas-island.is-space-pressed { cursor: grab !important; }
+.canvas-island.is-grabbing { cursor: grabbing !important; }
+.canvas-viewport {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
 .editor-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
 .canvas-loading-skeleton { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .preview-frame { position: absolute; z-index: 0; border-radius: var(--radius-lg); background: var(--color-bg-element); box-shadow: var(--shadow-lg); pointer-events: none; }

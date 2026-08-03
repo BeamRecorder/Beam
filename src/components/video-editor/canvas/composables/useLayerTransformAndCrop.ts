@@ -36,6 +36,7 @@ export interface UseLayerTransformAndCropOptions {
   videoWindowBounds: () => VideoWindowBounds | null;
   overlayWindowBounds: () => VideoWindowBounds | null;
   isCropping: () => boolean | undefined;
+  zoomScale?: () => number;
   onUpdateTransform: (transform: NormalizedTransform) => void;
   onPreviewTransform: (transform: NormalizedTransform) => void;
   onUpdateCrop: (crop: NormalizedCrop) => void;
@@ -183,8 +184,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (!cropDrag) return;
     const layout = visualLayout();
     if (!layout) return;
-    const dx = (event.clientX - cropDrag.startX) / Math.max(1, layout.width);
-    const dy = (event.clientY - cropDrag.startY) / Math.max(1, layout.height);
+    const vScale = options.zoomScale?.() ?? 1;
+    const dx = (event.clientX - cropDrag.startX) / Math.max(1, layout.width * vScale);
+    const dy = (event.clientY - cropDrag.startY) / Math.max(1, layout.height * vScale);
     if (cropDrag.kind === "move") {
       cropDraft.value = sourceCrop(clampCrop({ ...cropDrag.value, x: cropDrag.value.x + dx, y: cropDrag.value.y + dy }));
       return;
@@ -238,8 +240,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     transformDrag.lastX = clientX;
     transformDrag.lastY = clientY;
     const scale = clip.kind === "screen" ? bounds.scale || 1 : 1;
-    const dx = (clientX - transformDrag.startX) / Math.max(1, bounds.dw * scale);
-    const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale);
+    const vScale = options.zoomScale?.() ?? 1;
+    const dx = (clientX - transformDrag.startX) / Math.max(1, bounds.dw * scale * vScale);
+    const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale * vScale);
     const initial = transformDrag.transform;
     if (transformDrag.kind === "move") {
       const moved = {
@@ -300,8 +303,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const selectVisualAt = (event: PointerEvent, canvas: HTMLCanvasElement | null) => {
     if (!canvas) return false;
     const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    const vScale = options.zoomScale?.() ?? 1;
+    const x = (event.clientX - rect.left) / vScale;
+    const y = (event.clientY - rect.top) / vScale;
     const clips = activeClipsAt(options.composition(), options.currentTime() * 1_000)
       .filter((clip): clip is TransformClip => clip.kind === "caption" || isVisualClip(clip))
       .sort((a, b) => a.order - b.order);
