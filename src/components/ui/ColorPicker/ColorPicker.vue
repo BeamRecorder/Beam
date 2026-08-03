@@ -183,15 +183,21 @@ function handleDragEnd() {
         width: 100%;
     }
 
+    .color-picker-wrapper :deep(.popover-container),
+    .color-picker-wrapper :deep(.popover-trigger) {
+        width: 100%;
+        display: block;
+    }
+
     .color-picker-wrapper.is-disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }
 
     .color-picker-label {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 500;
-        color: var(--text-color, #fff);
+        color: var(--text-secondary, #94a3b8);
     }
 
     .color-picker-trigger-container {
@@ -239,6 +245,12 @@ function handleDragEnd() {
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
     }
 
+    .color-hex-input {
+        flex: 1;
+        width: 100%;
+        min-width: 0;
+    }
+
     .color-hex-input.input-wrapper {
         background: transparent !important;
         border: none !important;
@@ -253,7 +265,7 @@ function handleDragEnd() {
         font-family: var(--font-mono, monospace);
         font-size: 0.85rem;
         font-weight: 600;
-        color: var(--text-color, #fff);
+        color: var(--text-primary, #ffffff);
         background: transparent !important;
         border: none !important;
         outline: none !important;

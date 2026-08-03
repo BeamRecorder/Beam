@@ -581,6 +581,14 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: 100%;
+}
+
+.sub-group :deep(.color-picker-wrapper),
+.sub-group :deep(.popover-container),
+.sub-group :deep(.popover-trigger),
+.sub-group :deep(.color-picker-trigger-container) {
+  width: 100%;
 }
 
 .sub-label {
