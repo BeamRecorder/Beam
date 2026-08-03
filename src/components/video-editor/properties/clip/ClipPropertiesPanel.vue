@@ -8,6 +8,8 @@ import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import ShadowDirectionGroup from "../ShadowDirectionGroup.vue";
 import BorderAndFrameControls from "./BorderAndFrameControls.vue";
 import Divider from "~/ui/divider/Divider.vue";
+import DeleteItem from "~/ui/button/DeleteItem.vue";
+import TimelineClickEmptyState from "./TimelineClickEmptyState.vue";
 import type { ShadowDirection } from "../shadow-types";
 import {
   Unlink,
@@ -186,11 +188,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
 <template>
   <div class="clip-properties">
-    <div v-if="!selectedClip" class="empty-state">
-      <div class="empty-icon">🎬</div>
-      <p class="empty-title">{{ t('noClipSelected') }}</p>
-      <p class="empty-desc">{{ t('noClipSelectedDesc') }}</p>
-    </div>
+    <TimelineClickEmptyState v-if="!selectedClip" />
 
     <div v-else class="options-group">
       <!-- Placement Section -->
@@ -231,7 +229,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Divider -->
-      <Divider v-if="clipTransform && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="md" />
+      <Divider v-if="clipTransform && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
 
       <!-- Appearance Section (Corner Radius, Shadow & Mirror) -->
       <div v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" class="section-block">
@@ -261,7 +259,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           @update:modelValue="handleCustomRadiusChange"
         />
 
-        <Divider spacing="sm" />
+        <Divider spacing="xs" />
 
         <div class="section-header">
           <span class="section-title">{{ t('dropShadow') }}</span>
@@ -295,7 +293,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           />
         </div>
 
-        <Divider spacing="sm" />
+        <Divider spacing="xs" />
 
         <div class="section-header">
           <span class="section-title">{{ t('mirroring') }}</span>
@@ -332,7 +330,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Divider -->
-      <Divider v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" spacing="md" />
+      <Divider v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
 
       <!-- Speed Boost / Rate Controls -->
       <div v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" class="section-block">
@@ -364,7 +362,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Divider -->
-      <Divider spacing="md" />
+      <Divider spacing="xs" />
 
       <!-- Controls & Link -->
       <div class="section-block">
@@ -389,15 +387,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
       <!-- Danger Delete Button -->
       <div class="danger-zone">
-        <Button
-          variant="danger"
-          size="sm"
-          :icon="Trash2"
-          block
-          @click="emit('delete')"
-        >
-          Delete Clip
-        </Button>
+        <DeleteItem :label="t('deleteClip')" @click="emit('delete:selected')" />
       </div>
     </div>
   </div>

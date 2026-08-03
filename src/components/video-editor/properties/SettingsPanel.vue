@@ -5,6 +5,7 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Select from '~/ui/select/Select.vue'
 import Popover from '~/ui/popover/Popover.vue'
 import HUD from '~/components/hud/HUD.vue'
+import Divider from '~/ui/divider/Divider.vue'
 import { Sun, Moon, Monitor, Code, Video, Copy, Check } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 import { useLocaleStore } from '~/stores/locale'
@@ -124,6 +125,8 @@ const localeOptions = [
       </ButtonGroup>
     </div>
 
+    <Divider spacing="xs" />
+
     <div class="prop-item">
       <span class="prop-label">{{ t('language') }}</span>
       <Select
@@ -134,9 +137,13 @@ const localeOptions = [
       />
     </div>
 
+    <Divider spacing="xs" />
+
     <div class="prop-item">
       <UpdateControls />
     </div>
+
+    <Divider spacing="xs" />
 
     <!-- Dev Mode Toggle & Framed Options -->
     <div class="prop-item dev-mode-section">
@@ -256,9 +263,8 @@ const localeOptions = [
 
 /* Dev Mode Styles */
 .dev-mode-section {
-  border-top: 1px solid var(--color-border);
-  padding-top: 16px;
-  margin-top: 4px;
+  padding-top: 0;
+  margin-top: 0;
 }
 
 .dev-toggle-row {

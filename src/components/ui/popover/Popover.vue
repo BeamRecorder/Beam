@@ -202,6 +202,7 @@ defineExpose({
   z-index: 50;
   box-sizing: border-box;
   overflow: hidden;
+  width: fit-content;
   max-width: calc(100vw - 16px);
 }
 

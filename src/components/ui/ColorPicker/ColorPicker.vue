@@ -127,6 +127,7 @@ function handleDragEnd() {
             v-else
             align="left"
             :match-trigger-width="false"
+            block
             @toggle="isPopoverOpen = $event"
         >
             <template #trigger="{ isOpen }">
@@ -202,8 +203,8 @@ function handleDragEnd() {
         border-radius: var(--radius-md);
         border: 1px solid var(--color-border);
         transition: border-color var(--fast) ease, background-color var(--fast) ease;
-        width: fit-content;
-        min-width: 120px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .color-picker-trigger-container:hover {
@@ -265,13 +266,13 @@ function handleDragEnd() {
 
     .popover-picker-content {
         padding: 0;
-        width: min(304px, calc(100vw - 32px));
+        width: fit-content;
         max-width: calc(100vw - 32px);
         overflow: hidden;
     }
 
     .popover-picker-content.is-triangle {
-        width: 240px;
+        width: fit-content;
     }
 
     @media (max-width: 480px) {

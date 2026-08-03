@@ -24,8 +24,8 @@ onBeforeUnmount(() => stopListening?.())
 
 <template>
   <div class="update-controls">
-    <div>
-      <p class="update-title">{{ t('title') }}</p>
+    <div class="update-header">
+      <span class="update-title">{{ t('title') }}</span>
       <p class="update-description">
         <template v-if="state?.status === 'downloaded'">{{ t('readyToRestart', { version: state.availableVersion }) }}</template>
         <template v-else-if="state?.status === 'downloading'">{{ t('downloading', { percent: state.percent ?? 0 }) }}</template>
@@ -37,19 +37,19 @@ onBeforeUnmount(() => stopListening?.())
       </p>
     </div>
     <div class="update-actions">
-      <Button variant="secondary" size="sm" :disabled="!state" @click="openChangelog">
+      <Button variant="secondary" size="xs" :disabled="!state" @click="openChangelog" class="update-btn">
         <template #icon><ExternalLink class="button-icon" /></template>
         {{ t('viewChangelog') }}
       </Button>
-      <Button v-if="state?.status === 'downloaded'" variant="primary" size="sm" @click="restart">
+      <Button v-if="state?.status === 'downloaded'" variant="primary" size="xs" @click="restart" class="update-btn">
         <template #icon><RotateCcw class="button-icon" /></template>
         {{ t('restart') }}
       </Button>
-      <Button v-else-if="state?.status === 'available'" variant="primary" size="sm" @click="download">
+      <Button v-else-if="state?.status === 'available'" variant="primary" size="xs" @click="download" class="update-btn">
         <template #icon><Download class="button-icon" /></template>
         {{ t('download') }}
       </Button>
-      <Button v-else variant="secondary" size="sm" :disabled="!state || state.status === 'checking' || state.status === 'downloading' || state.status === 'unsupported'" @click="refresh">
+      <Button v-else variant="secondary" size="xs" :disabled="!state || state.status === 'checking' || state.status === 'downloading' || state.status === 'unsupported'" @click="refresh" class="update-btn">
         <template #icon><Download v-if="state?.status === 'downloading'" class="button-icon" /><RefreshCw v-else class="button-icon" /></template>
         {{ state?.status === 'checking' ? t('checking') : t('checkForUpdates') }}
       </Button>
@@ -58,10 +58,45 @@ onBeforeUnmount(() => stopListening?.())
 </template>
 
 <style scoped>
-.update-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.update-title, .update-description { margin: 0; }
-.update-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.update-description { margin-top: 2px; font-size: 11px; color: var(--text-muted); }
-.button-icon { width: 16px; height: 16px; }
-.update-actions { display: flex; gap: 8px; }
+.update-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.update-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.update-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.update-description {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.update-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.update-btn {
+  flex: 1;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.button-icon {
+  width: 14px;
+  height: 14px;
+}
 </style>

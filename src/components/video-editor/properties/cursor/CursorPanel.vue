@@ -5,6 +5,7 @@ import Select from '~/ui/select/Select.vue'
 import ColorInput from '~/ui/input/ColorInput.vue'
 import ShadowDirectionGroup from '../ShadowDirectionGroup.vue'
 import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue'
+import Divider from '~/ui/divider/Divider.vue'
 import type { ShadowDirection } from '../shadow-types'
 import { cursorOptions, type CursorType } from './useCursorReplacer'
 import type { CursorClickEffects } from '../../../../api/types/cursor-settings'
@@ -65,6 +66,8 @@ const emit = defineEmits<{
       @update:modelValue="emit('update:cursorColor', $event)"
     />
 
+    <Divider spacing="none" />
+
     <div class="prop-row">
       <span class="prop-label">{{ t('dropShadow') }}</span>
       <Switch 
@@ -102,6 +105,8 @@ const emit = defineEmits<{
       </div>
     </Transition>
 
+    <Divider spacing="none" />
+
     <CursorClickEffectsPanel
       :model-value="clickEffects"
       @update:model-value="emit('update:clickEffects', $event)"
@@ -127,11 +132,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  margin-top: -4px;
+  padding: 4px 0 0 0;
 }
 
 .prop-row {
