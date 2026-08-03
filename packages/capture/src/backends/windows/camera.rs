@@ -5,6 +5,7 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
     thread::{self, JoinHandle},
+    time::Duration,
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError, TrySendError, bounded};
@@ -29,13 +30,15 @@ use crate::{
     session::StartGate,
 };
 
+const MAX_CONSECUTIVE_CAPTURE_ERRORS: u32 = 5;
+
 enum CameraMessage {
     Frame(Frame),
     End,
 }
 
 struct Frame {
-    pts_ns: Option<u64>,
+    pts_ns: u64,
     width: u32,
     height: u32,
     bgra_bottom_up: Vec<u8>,
@@ -54,14 +57,17 @@ impl CameraCaptureMetrics {
     pub fn frames_received(&self) -> u64 {
         self.frames_received.load(Ordering::Relaxed)
     }
+
     #[must_use]
     pub fn frames_encoded(&self) -> u64 {
         self.frames_encoded.load(Ordering::Relaxed)
     }
+
     #[must_use]
     pub fn frames_dropped(&self) -> u64 {
         self.frames_dropped.load(Ordering::Relaxed)
     }
+
     #[must_use]
     pub fn interruptions(&self) -> u64 {
         self.interruptions.load(Ordering::Relaxed)
@@ -82,9 +88,8 @@ pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
         .into_iter()
         .enumerate()
         .map(|(position, camera)| {
-            let id = SourceId::new(format!("camera:nokhwa:{}", camera.index().as_string()))?;
             Ok(SourceDescriptor {
-                id,
+                id: SourceId::new(format!("camera:nokhwa:{}", camera.index().as_string()))?,
                 kind: SourceKind::Camera,
                 label: camera.human_name(),
                 is_default: position == 0,
@@ -121,36 +126,24 @@ impl WindowsCameraRecording {
                 "camera bitrate, fps and queue capacity must be non-zero".into(),
             ));
         }
+        if output.exists() {
+            std::fs::remove_file(output).map_err(backend_error)?;
+        }
+
         let index = camera_index(source_id)?;
         let (sender, receiver) = bounded(queue_capacity);
         let (stop_sender, stop_receiver) = bounded(1);
         let metrics = Arc::new(CameraCaptureMetrics::default());
-        let capture_metrics = metrics.clone();
-        let capture_gate = start_gate.clone();
-        let capture_clock = clock.clone();
-        let capture = thread::Builder::new()
-            .name("capture-camera-input".into())
-            .spawn(move || {
-                capture_frames(
-                    index,
-                    sender,
-                    stop_receiver,
-                    capture_gate,
-                    capture_clock,
-                    capture_metrics,
-                    preview,
-                )
-            })
-            .map_err(|error| CaptureError::Backend(error.to_string()))?;
+
         let encoder_metrics = metrics.clone();
-        let encoder_gate = start_gate;
-        let encoder = output.to_owned();
-        let encoder_thread = thread::Builder::new()
+        let encoder_gate = start_gate.clone();
+        let encoder_output = output.to_owned();
+        let encoder = thread::Builder::new()
             .name("capture-camera-encoder".into())
             .spawn(move || {
                 encode_frames(
                     receiver,
-                    encoder,
+                    encoder_output,
                     bitrate,
                     target_fps,
                     encoder_gate,
@@ -158,10 +151,36 @@ impl WindowsCameraRecording {
                 )
             })
             .map_err(|error| CaptureError::Backend(error.to_string()))?;
+
+        let capture_metrics = metrics.clone();
+        let capture_gate = start_gate.clone();
+        let capture = match thread::Builder::new()
+            .name("capture-camera-input".into())
+            .spawn(move || {
+                capture_frames(
+                    index,
+                    sender,
+                    stop_receiver,
+                    capture_gate,
+                    clock,
+                    capture_metrics,
+                    preview,
+                )
+            })
+        {
+            Ok(capture) => capture,
+            Err(error) => {
+                start_gate.cancel();
+                let _ = encoder.join();
+                let _ = std::fs::remove_file(output);
+                return Err(CaptureError::Backend(error.to_string()));
+            }
+        };
+
         Ok(Self {
             stop: Some(stop_sender),
             capture: Some(capture),
-            encoder: Some(encoder_thread),
+            encoder: Some(encoder),
             metrics,
             output: output.to_owned(),
         })
@@ -171,8 +190,16 @@ impl WindowsCameraRecording {
         if let Some(stop) = self.stop.take() {
             let _ = stop.send(());
         }
-        join_capture(self.capture.take())?;
-        join_encoder(self.encoder.take())?;
+        let capture_result = join_capture(self.capture.take());
+        let encoder_result = join_encoder(self.encoder.take());
+        if let Err(error) = capture_result {
+            let _ = std::fs::remove_file(&self.output);
+            return Err(error);
+        }
+        if let Err(error) = encoder_result {
+            let _ = std::fs::remove_file(&self.output);
+            return Err(error);
+        }
         if self.metrics.frames_encoded() == 0 {
             let _ = std::fs::remove_file(&self.output);
             return Err(CaptureError::Backend(
@@ -224,21 +251,35 @@ fn capture_frames(
     let mut camera = open_camera(index)?;
     let start_ns = gate.wait()?;
     let mut mapper = None;
+    let mut consecutive_errors = 0u32;
+
     loop {
         if matches!(stop.try_recv(), Ok(()) | Err(TryRecvError::Disconnected)) {
             break;
         }
         let buffer = match camera.frame() {
-            Ok(frame) => frame,
+            Ok(frame) => {
+                consecutive_errors = 0;
+                frame
+            }
             Err(error) => {
+                consecutive_errors = consecutive_errors.saturating_add(1);
                 metrics.interruptions.fetch_add(1, Ordering::Relaxed);
-                return Err(backend_error(error));
+                if consecutive_errors >= MAX_CONSECUTIVE_CAPTURE_ERRORS {
+                    return Err(backend_error(error));
+                }
+                thread::sleep(Duration::from_millis(10));
+                continue;
             }
         };
         let resolution = buffer.resolution();
         let image = buffer.decode_image::<RgbFormat>().map_err(backend_error)?;
-        if let Some(preview) = preview.as_ref() {
-            preview.publish_rgb(image.as_raw(), resolution.width_x, resolution.height_y)?;
+        if let Some(preview) = preview.as_ref()
+            && preview
+                .publish_rgb(image.as_raw(), resolution.width_x, resolution.height_y)
+                .is_err()
+        {
+            metrics.interruptions.fetch_add(1, Ordering::Relaxed);
         }
         let bgra = rgb_to_bottom_up_bgra(image.as_raw(), resolution.width_x, resolution.height_y)?;
         let pts_ns = if let Some(native) = buffer.capture_timestamp() {
@@ -249,17 +290,17 @@ fn capture_frames(
             mapper
                 .as_mut()
                 .and_then(|value| value.to_session_ns(native_ns).ok())
+                .unwrap_or_else(|| clock.now_ns().saturating_sub(start_ns))
         } else {
-            Some(clock.now_ns().saturating_sub(start_ns))
+            clock.now_ns().saturating_sub(start_ns)
         };
         metrics.frames_received.fetch_add(1, Ordering::Relaxed);
-        let frame = CameraMessage::Frame(Frame {
+        match sender.try_send(CameraMessage::Frame(Frame {
             pts_ns,
             width: resolution.width_x,
             height: resolution.height_y,
             bgra_bottom_up: bgra,
-        });
-        match sender.try_send(frame) {
+        })) {
             Ok(()) => {}
             Err(TrySendError::Full(_)) => {
                 metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
@@ -288,13 +329,19 @@ fn encode_frames(
             "camera input produced no frame".into(),
         ));
     };
-    let mut encoder = new_encoder(&output, first.width, first.height, bitrate, target_fps)?;
+    let width = first.width;
+    let height = first.height;
+    let mut encoder = new_encoder(&output, width, height, bitrate, target_fps)?;
     encode_one(&mut encoder, first, &metrics)?;
     while let Ok(message) = receiver.recv() {
-        match message {
-            CameraMessage::Frame(frame) => encode_one(&mut encoder, frame, &metrics)?,
-            CameraMessage::End => break,
+        let CameraMessage::Frame(frame) = message else {
+            break;
+        };
+        if frame.width != width || frame.height != height {
+            metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
+            continue;
         }
+        encode_one(&mut encoder, frame, &metrics)?;
     }
     encoder.finish().map_err(backend_error)
 }
@@ -324,7 +371,7 @@ fn encode_one(
     frame: Frame,
     metrics: &CameraCaptureMetrics,
 ) -> Result<(), CaptureError> {
-    let timestamp = i64::try_from(frame.pts_ns.unwrap_or(0) / 100).unwrap_or(i64::MAX);
+    let timestamp = i64::try_from(frame.pts_ns / 100).unwrap_or(i64::MAX);
     encoder
         .send_frame_buffer(&frame.bgra_bottom_up, timestamp)
         .map_err(|error| {
@@ -348,11 +395,11 @@ fn rgb_to_bottom_up_bgra(rgb: &[u8], width: u32, height: u32) -> Result<Vec<u8>,
             "camera returned a frame with an unexpected size".into(),
         ));
     }
-    let mut output = vec![0u8; expected / 3 * 4];
     let width = usize::try_from(width)
         .map_err(|_| CaptureError::InvalidConfiguration("camera width is too large".into()))?;
     let height = usize::try_from(height)
         .map_err(|_| CaptureError::InvalidConfiguration("camera height is too large".into()))?;
+    let mut output = vec![0u8; expected / 3 * 4];
     for row in 0..height {
         for col in 0..width {
             let source = (row * width + col) * 3;
@@ -375,10 +422,10 @@ fn camera_index(source_id: &SourceId) -> Result<CameraIndex, CaptureError> {
         .ok_or_else(|| {
             CaptureError::InvalidConfiguration(format!("{source_id} is not a Nokhwa camera source"))
         })?;
-    let index = value.parse::<u32>().map_err(|error| {
-        CaptureError::InvalidConfiguration(format!("invalid camera index: {error}"))
-    })?;
-    Ok(CameraIndex::Index(index))
+    Ok(value.parse::<u32>().map_or_else(
+        |_| CameraIndex::String(value.to_owned()),
+        CameraIndex::Index,
+    ))
 }
 
 fn join_capture(handle: Option<JoinHandle<Result<(), CaptureError>>>) -> Result<(), CaptureError> {
@@ -387,12 +434,14 @@ fn join_capture(handle: Option<JoinHandle<Result<(), CaptureError>>>) -> Result<
         .join()
         .map_err(|_| CaptureError::Backend("camera capture thread panicked".into()))?
 }
+
 fn join_encoder(handle: Option<JoinHandle<Result<(), CaptureError>>>) -> Result<(), CaptureError> {
     handle
         .ok_or_else(|| CaptureError::Backend("camera encoder handle missing".into()))?
         .join()
         .map_err(|_| CaptureError::Backend("camera encoder thread panicked".into()))?
 }
+
 fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(format!("native camera failed: {error}"))
 }
@@ -400,6 +449,7 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
 #[cfg(test)]
 mod tests {
     use super::rgb_to_bottom_up_bgra;
+
     #[test]
     fn converts_rgb_to_bottom_up_bgra() {
         let converted = rgb_to_bottom_up_bgra(&[1, 2, 3, 4, 5, 6], 2, 1);
@@ -409,6 +459,7 @@ mod tests {
             vec![3, 2, 1, 255, 6, 5, 4, 255]
         );
     }
+
     #[test]
     fn rejects_wrong_rgb_buffer_size() {
         assert!(rgb_to_bottom_up_bgra(&[1, 2], 1, 1).is_err());
