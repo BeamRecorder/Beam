@@ -309,6 +309,16 @@ describe("EditorCanvas", () => {
     expect(mounted.emitted("update:isPlaying")).toContainEqual([false]);
     expect(mounted.emitted("update:currentTime")).toContainEqual([0]);
 
+    vi.useFakeTimers();
+    await mounted.setProps({ isPlaying: true, duration: 2, currentTime: 1.5 });
+    await nextTick();
+    vi.advanceTimersByTime(600);
+    runFrame();
+    const currentTimeEvents = mounted.emitted("update:currentTime") ?? [];
+    expect(currentTimeEvents.at(-1)).toEqual([0]);
+    expect(mounted.emitted("update:isPlaying")).toEqual([[false]]);
+    vi.useRealTimers();
+
     await mounted.setProps({ isPlaying: false, duration: 3, currentTime: 1 });
     await nextTick();
     expect(state.syncVideoPlayback).toHaveBeenLastCalledWith(false);

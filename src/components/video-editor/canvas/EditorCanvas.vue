@@ -313,11 +313,18 @@ const renderCanvas = () => {
     ctx.restore();
   }
   if (props.isPlaying) {
-    const nextTime = Math.min(props.duration, playbackClockSeconds());
-    emit("update:currentTime", nextTime);
-    if (nextTime >= props.duration) {
-      resetPlaybackClock(props.duration);
+    const nextTime = playbackClockSeconds();
+    if (props.duration > 0 && nextTime >= props.duration) {
+      // Keep the master playback state active and restart every synced layer
+      // from the beginning of the composition.
+      resetPlaybackClock(0);
+      emit("update:currentTime", 0);
+    } else if (props.duration <= 0) {
+      resetPlaybackClock(0);
+      emit("update:currentTime", 0);
       emit("update:isPlaying", false);
+    } else {
+      emit("update:currentTime", Math.max(0, nextTime));
     }
   }
 };
