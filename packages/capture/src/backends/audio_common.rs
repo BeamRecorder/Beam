@@ -8,7 +8,7 @@ use std::{
 };
 
 use cpal::{
-    FromSample, SampleFormat, SizedSample, Stream, StreamConfig, SupportedStreamConfig,
+    FromSample, SampleFormat, SizedSample, Stream, StreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 use crossbeam_channel::{Receiver, Sender, TrySendError, bounded};
@@ -35,19 +35,46 @@ pub struct AudioCaptureMetrics {
     interruptions: AtomicU64,
 }
 
-pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
+impl AudioCaptureMetrics {
+    #[must_use]
+    pub fn samples_received(&self) -> u64 {
+        self.samples_received.load(Ordering::Relaxed)
+    }
+
+    #[must_use]
+    pub fn samples_dropped(&self) -> u64 {
+        self.samples_dropped.load(Ordering::Relaxed)
+    }
+
+    #[must_use]
+    pub fn interruptions(&self) -> u64 {
+        self.interruptions.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn record_received(&self, samples: usize) {
+        self.samples_received
+            .fetch_add(u64::try_from(samples).unwrap_or(u64::MAX), Ordering::Relaxed);
+    }
+
+    pub(crate) fn record_dropped(&self, samples: usize) {
+        self.samples_dropped
+            .fetch_add(u64::try_from(samples).unwrap_or(u64::MAX), Ordering::Relaxed);
+    }
+
+    pub(crate) fn record_interruption(&self) {
+        self.interruptions.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+pub fn discover_microphones() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let host = cpal::default_host();
     let default_input = host
         .default_input_device()
         .and_then(|device| device.id().ok())
         .map(|id| id.to_string());
-    let default_output = host
-        .default_output_device()
-        .and_then(|device| device.id().ok())
-        .map(|id| id.to_string());
     let mut sources = Vec::new();
     for device in host
-        .devices()
+        .input_devices()
         .map_err(|error| CaptureError::Backend(error.to_string()))?
     {
         let id = device
@@ -58,180 +85,133 @@ pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
             .description()
             .map_err(|error| CaptureError::Backend(error.to_string()))?
             .to_string();
-        if let Ok(config) = device.default_input_config() {
-            sources.push(audio_source(
-                format!("microphone:cpal:{id}"),
-                SourceKind::Microphone,
-                label.clone(),
-                default_input.as_deref() == Some(id.as_str()),
-                &config,
-            )?);
-        }
-        if let Ok(config) = device.default_output_config() {
-            sources.push(audio_source(
-                format!("system-audio:cpal:{id}"),
-                SourceKind::SystemAudio,
-                label,
-                default_output.as_deref() == Some(id.as_str()),
-                &config,
-            )?);
-        }
+        let config = device
+            .default_input_config()
+            .map_err(|error| CaptureError::Backend(error.to_string()))?;
+        sources.push(SourceDescriptor {
+            id: SourceId::new(format!("microphone:cpal:{id}"))?,
+            kind: SourceKind::Microphone,
+            label,
+            is_default: default_input.as_deref() == Some(id.as_str()),
+            selection_mode: SourceSelectionMode::Direct,
+            display_id: None,
+            capabilities: SourceCapabilities {
+                formats: vec![MediaFormat::Audio {
+                    sample_rate: config.sample_rate(),
+                    channels: config.channels(),
+                    sample_format: "f32".into(),
+                }],
+                ..SourceCapabilities::default()
+            },
+        });
     }
     Ok(sources)
 }
 
-fn audio_source(
-    id: String,
-    kind: SourceKind,
-    label: String,
-    is_default: bool,
-    config: &SupportedStreamConfig,
-) -> Result<SourceDescriptor, CaptureError> {
-    SourceId::new(id).map(|id| SourceDescriptor {
-        id,
-        kind,
-        label,
-        is_default,
-        selection_mode: SourceSelectionMode::Direct,
-        display_id: None,
-        capabilities: SourceCapabilities {
-            formats: vec![MediaFormat::Audio {
-                sample_rate: config.sample_rate(),
-                channels: config.channels(),
-                sample_format: "f32".into(),
-            }],
-            ..SourceCapabilities::default()
-        },
-    })
+#[derive(Clone)]
+pub(crate) struct AudioPublisher {
+    sender: Sender<AudioMessage>,
+    metrics: Arc<AudioCaptureMetrics>,
 }
 
-impl AudioCaptureMetrics {
-    #[must_use]
-    pub fn samples_received(&self) -> u64 {
-        self.samples_received.load(Ordering::Relaxed)
+impl AudioPublisher {
+    pub(crate) fn publish(&self, samples: Vec<f32>) {
+        self.metrics.record_received(samples.len());
+        match self.sender.try_send(AudioMessage::Samples(samples)) {
+            Ok(()) => {}
+            Err(TrySendError::Full(AudioMessage::Samples(samples))) => {
+                self.metrics.record_dropped(samples.len());
+            }
+            Err(TrySendError::Disconnected(_)) | Err(TrySendError::Full(AudioMessage::Stop)) => {
+                self.metrics.record_interruption();
+            }
+        }
     }
-    #[must_use]
-    pub fn samples_dropped(&self) -> u64 {
-        self.samples_dropped.load(Ordering::Relaxed)
+
+    pub(crate) fn drop_samples(&self, samples: usize) {
+        self.metrics.record_dropped(samples);
     }
-    #[must_use]
-    pub fn interruptions(&self) -> u64 {
-        self.interruptions.load(Ordering::Relaxed)
+
+    pub(crate) fn interruption(&self) {
+        self.metrics.record_interruption();
     }
 }
 
-pub struct CpalAudioRecording {
-    stream: Option<Stream>,
+pub(crate) struct AudioSink {
     sender: Option<Sender<AudioMessage>>,
     writer: Option<JoinHandle<Result<u64, CaptureError>>>,
     metrics: Arc<AudioCaptureMetrics>,
     output: PathBuf,
 }
 
-impl CpalAudioRecording {
-    pub fn start(
-        source_id: &str,
-        kind: SourceKind,
+impl AudioSink {
+    pub(crate) fn start(
         output: &Path,
+        sample_rate: u32,
+        channels: u16,
         queue_capacity: usize,
-        start_gate: Arc<StartGate>,
-    ) -> Result<Self, CaptureError> {
+        thread_name: &str,
+    ) -> Result<(Self, AudioPublisher), CaptureError> {
         if queue_capacity == 0 {
             return Err(CaptureError::InvalidConfiguration(
                 "audio queue capacity must be non-zero".into(),
             ));
         }
-        let host = cpal::default_host();
-        let device = find_device(&host, source_id, kind)?;
-        let (supported, stream_config) = stream_configuration(&device, kind)?;
-        let sample_rate = supported.sample_rate();
-        let channels = supported.channels();
+        if sample_rate == 0 || channels == 0 {
+            return Err(CaptureError::InvalidConfiguration(
+                "audio sample rate and channel count must be non-zero".into(),
+            ));
+        }
         let (sender, receiver) = bounded(queue_capacity);
         let metrics = Arc::new(AudioCaptureMetrics::default());
-        let worker_metrics = metrics.clone();
-        let path = output.to_owned();
-        let writer_path = path.clone();
+        let writer_metrics = metrics.clone();
+        let writer_path = output.to_owned();
         let writer = thread::Builder::new()
-            .name(format!(
-                "capture-audio-writer-{}",
-                source_id.replace(':', "-")
-            ))
+            .name(thread_name.into())
             .spawn(move || {
-                write_audio(receiver, writer_path, sample_rate, channels, worker_metrics)
+                write_audio(
+                    receiver,
+                    writer_path,
+                    sample_rate,
+                    channels,
+                    writer_metrics,
+                )
             })
             .map_err(|error| CaptureError::Backend(error.to_string()))?;
-        let callback_metrics = metrics.clone();
-        let callback_sender = sender.clone();
-        let callback_gate = start_gate;
-        let error_metrics = metrics.clone();
-        let error_callback = move |_error| {
-            error_metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+        let publisher = AudioPublisher {
+            sender: sender.clone(),
+            metrics: metrics.clone(),
         };
-        let stream = match build_stream(
-            &device,
-            &stream_config,
-            supported.sample_format(),
-            move |data: &[f32]| {
-                if !callback_gate.is_released() {
-                    callback_metrics
-                        .samples_dropped
-                        .fetch_add(data.len() as u64, Ordering::Relaxed);
-                    return;
-                }
-                callback_metrics
-                    .samples_received
-                    .fetch_add(data.len() as u64, Ordering::Relaxed);
-                match callback_sender.try_send(AudioMessage::Samples(data.to_vec())) {
-                    Ok(()) => {}
-                    Err(TrySendError::Full(AudioMessage::Samples(samples))) => {
-                        callback_metrics
-                            .samples_dropped
-                            .fetch_add(samples.len() as u64, Ordering::Relaxed);
-                    }
-                    Err(TrySendError::Disconnected(_))
-                    | Err(TrySendError::Full(AudioMessage::Stop)) => {
-                        callback_metrics
-                            .interruptions
-                            .fetch_add(1, Ordering::Relaxed);
-                    }
-                }
+        Ok((
+            Self {
+                sender: Some(sender),
+                writer: Some(writer),
+                metrics,
+                output: output.to_owned(),
             },
-            error_callback,
-        ) {
-            Ok(stream) => stream,
-            Err(error) => {
-                let _ = sender.send(AudioMessage::Stop);
-                let _ = writer.join();
-                let _ = std::fs::remove_file(output);
-                return Err(error);
-            }
-        };
-        if let Err(error) = stream.play() {
-            let _ = sender.send(AudioMessage::Stop);
-            let _ = writer.join();
-            let _ = std::fs::remove_file(output);
-            return Err(CaptureError::Backend(error.to_string()));
-        }
-        Ok(Self {
-            stream: Some(stream),
-            sender: Some(sender),
-            writer: Some(writer),
-            metrics,
-            output: path,
-        })
+            publisher,
+        ))
     }
 
-    pub fn stop(mut self) -> Result<(), CaptureError> {
-        self.stream.take();
+    pub(crate) fn stop(mut self) -> Result<(), CaptureError> {
+        self.finish()
+    }
+
+    #[must_use]
+    pub(crate) fn metrics(&self) -> Arc<AudioCaptureMetrics> {
+        self.metrics.clone()
+    }
+
+    fn finish(&mut self) -> Result<(), CaptureError> {
         if let Some(sender) = self.sender.take() {
             sender.send(AudioMessage::Stop).map_err(|_| {
                 CaptureError::Backend("audio writer stopped before finalization".into())
             })?;
         }
-        let size = self
-            .writer
-            .take()
-            .ok_or_else(|| CaptureError::Backend("audio writer handle missing".into()))?
+        let Some(writer) = self.writer.take() else {
+            return Ok(());
+        };
+        let size = writer
             .join()
             .map_err(|_| CaptureError::Backend("audio writer panicked".into()))??;
         if size <= 44 {
@@ -242,22 +222,107 @@ impl CpalAudioRecording {
         }
         Ok(())
     }
-
-    #[must_use]
-    pub fn metrics(&self) -> Arc<AudioCaptureMetrics> {
-        self.metrics.clone()
-    }
 }
 
-impl Drop for CpalAudioRecording {
+impl Drop for AudioSink {
     fn drop(&mut self) {
-        self.stream.take();
         if let Some(sender) = self.sender.take() {
             let _ = sender.send(AudioMessage::Stop);
         }
         if let Some(writer) = self.writer.take() {
             let _ = writer.join();
         }
+    }
+}
+
+pub struct CpalAudioRecording {
+    stream: Option<Stream>,
+    sink: Option<AudioSink>,
+}
+
+impl CpalAudioRecording {
+    pub fn start(
+        source_id: &str,
+        kind: SourceKind,
+        output: &Path,
+        queue_capacity: usize,
+        start_gate: Arc<StartGate>,
+    ) -> Result<Self, CaptureError> {
+        if kind != SourceKind::Microphone {
+            return Err(CaptureError::InvalidConfiguration(
+                "CPAL is reserved for microphone capture; system audio requires a platform loopback backend"
+                    .into(),
+            ));
+        }
+        let host = cpal::default_host();
+        let device = find_microphone(&host, source_id)?;
+        let supported = device
+            .default_input_config()
+            .map_err(|error| CaptureError::Backend(error.to_string()))?;
+        let stream_config: StreamConfig = supported.clone().into();
+        let sample_rate = supported.sample_rate();
+        let channels = supported.channels();
+        let (sink, publisher) = AudioSink::start(
+            output,
+            sample_rate,
+            channels,
+            queue_capacity,
+            "capture-microphone-writer",
+        )?;
+        let error_publisher = publisher.clone();
+        let callback_gate = start_gate;
+        let stream = match build_stream(
+            &device,
+            &stream_config,
+            supported.sample_format(),
+            move |data: &[f32]| {
+                if callback_gate.is_released() {
+                    publisher.publish(data.to_vec());
+                } else {
+                    publisher.drop_samples(data.len());
+                }
+            },
+            move |_error| error_publisher.interruption(),
+        ) {
+            Ok(stream) => stream,
+            Err(error) => {
+                drop(sink);
+                let _ = std::fs::remove_file(output);
+                return Err(error);
+            }
+        };
+        if let Err(error) = stream.play() {
+            drop(stream);
+            drop(sink);
+            let _ = std::fs::remove_file(output);
+            return Err(CaptureError::Backend(error.to_string()));
+        }
+        Ok(Self {
+            stream: Some(stream),
+            sink: Some(sink),
+        })
+    }
+
+    pub fn stop(mut self) -> Result<(), CaptureError> {
+        self.stream.take();
+        self.sink
+            .take()
+            .ok_or_else(|| CaptureError::Backend("microphone audio sink missing".into()))?
+            .stop()
+    }
+
+    #[must_use]
+    pub fn metrics(&self) -> Arc<AudioCaptureMetrics> {
+        self.sink
+            .as_ref()
+            .map_or_else(|| Arc::new(AudioCaptureMetrics::default()), AudioSink::metrics)
+    }
+}
+
+impl Drop for CpalAudioRecording {
+    fn drop(&mut self) {
+        self.stream.take();
+        self.sink.take();
     }
 }
 
@@ -277,61 +342,27 @@ fn write_audio(
     }
     let result = writer.finish();
     if result.is_err() {
-        metrics.interruptions.fetch_add(1, Ordering::Relaxed);
+        metrics.record_interruption();
     }
     result
 }
 
-fn find_device(
-    host: &cpal::Host,
-    source_id: &str,
-    kind: SourceKind,
-) -> Result<cpal::Device, CaptureError> {
-    let requested = match kind {
-        SourceKind::Microphone => source_id
-            .strip_prefix("microphone:cpal:")
-            .unwrap_or(source_id),
-        SourceKind::SystemAudio => source_id
-            .strip_prefix("system-audio:cpal:")
-            .unwrap_or(source_id),
-        _ => source_id,
-    };
-    let devices = host
-        .devices()
-        .map_err(|error| CaptureError::Backend(error.to_string()))?;
-    devices
-        .filter(|device| match kind {
-            SourceKind::SystemAudio => device.supports_output(),
-            _ => device.supports_input(),
-        })
+fn find_microphone(host: &cpal::Host, source_id: &str) -> Result<cpal::Device, CaptureError> {
+    let requested = source_id
+        .strip_prefix("microphone:cpal:")
+        .unwrap_or(source_id);
+    host.input_devices()
+        .map_err(|error| CaptureError::Backend(error.to_string()))?
         .find(|device| {
             device
                 .id()
-                .map(|id| id.to_string() == requested)
-                .unwrap_or(false)
+                .is_ok_and(|id| id.to_string() == requested)
                 || device
                     .description()
-                    .map(|name| name.to_string() == requested)
-                    .unwrap_or(false)
+                    .is_ok_and(|name| name.to_string() == requested)
         })
-        .or_else(|| match kind {
-            SourceKind::SystemAudio => host.default_output_device(),
-            _ => host.default_input_device(),
-        })
+        .or_else(|| host.default_input_device())
         .ok_or_else(|| CaptureError::SourceNotFound(source_id.into()))
-}
-
-fn stream_configuration(
-    device: &cpal::Device,
-    kind: SourceKind,
-) -> Result<(SupportedStreamConfig, StreamConfig), CaptureError> {
-    let supported = match kind {
-        SourceKind::SystemAudio => device.default_output_config(),
-        _ => device.default_input_config(),
-    }
-    .map_err(|error| CaptureError::Backend(error.to_string()))?;
-    let stream_config = supported.into();
-    Ok((supported, stream_config))
 }
 
 fn build_stream<D, E>(
