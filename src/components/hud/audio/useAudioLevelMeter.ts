@@ -10,8 +10,10 @@ export function useAudioLevelMeter(
   let analyser: AnalyserNode | null = null;
   let stream: MediaStream | null = null;
   let animId: number | null = null;
+  let lifecycle = 0;
 
   const stop = () => {
+    lifecycle += 1;
     if (animId !== null) {
       cancelAnimationFrame(animId);
       animId = null;
@@ -30,24 +32,32 @@ export function useAudioLevelMeter(
   const start = async () => {
     stop();
     if (!isEnabled.value) return;
+    const requestLifecycle = lifecycle;
 
     try {
-      // System audio is recorded by the native backend. There is no browser
-      // loopback stream to meter here until native telemetry is exposed.
-      if (isSystemAudio) return;
-      if (!navigator.mediaDevices?.getUserMedia) return;
-      let rawId = sourceId?.value;
-      if (rawId && rawId.startsWith('microphone:cpal:')) rawId = undefined;
-      const constraints: MediaStreamConstraints = {
-        audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
-        video: false,
-      };
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      let nextStream: MediaStream;
+      if (isSystemAudio) {
+        if (!navigator.mediaDevices?.getDisplayMedia) return;
+        nextStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        nextStream.getVideoTracks().forEach((t) => t.stop());
+      } else {
+        if (!navigator.mediaDevices?.getUserMedia) return;
+        let rawId = sourceId?.value;
+        if (rawId && rawId.startsWith('microphone:chromium:')) {
+          rawId = rawId.replace('microphone:chromium:', '');
+        }
+        const constraints: MediaStreamConstraints = {
+          audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
+          video: false,
+        };
+        nextStream = await navigator.mediaDevices.getUserMedia(constraints);
+      }
 
-      if (!stream || !stream.getAudioTracks().length) {
-        stop();
+      if (requestLifecycle !== lifecycle || !isEnabled.value || !nextStream.getAudioTracks().length) {
+        nextStream.getTracks().forEach((track) => track.stop());
         return;
       }
+      stream = nextStream;
 
       audioCtx = new AudioContext();
       const sourceNode = audioCtx.createMediaStreamSource(stream);
