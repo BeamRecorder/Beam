@@ -59,7 +59,7 @@ struct LevelAccumulator {
 }
 
 impl LevelAccumulator {
-    fn observe_f32(&self, samples: &[f32]) {
+    fn observe(&self, samples: &[f32]) {
         if samples.is_empty() {
             return;
         }
@@ -68,8 +68,7 @@ impl LevelAccumulator {
             total + value * value
         });
         let rms = (sum / samples.len() as f64).sqrt() as f32;
-        let normalized = (rms * 4.0).clamp(0.0, 1.0);
-        let candidate = normalized.to_bits();
+        let candidate = (rms * 4.0).clamp(0.0, 1.0).to_bits();
         let mut current = self.peak_bits.load(Ordering::Relaxed);
         while candidate > current {
             match self.peak_bits.compare_exchange_weak(
@@ -82,18 +81,6 @@ impl LevelAccumulator {
                 Err(next) => current = next,
             }
         }
-    }
-
-    fn observe<T>(&self, samples: &[T])
-    where
-        T: SizedSample,
-        f32: FromSample<T>,
-    {
-        let converted = samples
-            .iter()
-            .map(|sample| sample.to_sample::<f32>())
-            .collect::<Vec<_>>();
-        self.observe_f32(&converted);
     }
 
     fn take(&self) -> f32 {
@@ -126,12 +113,11 @@ impl MicrophoneLevelMonitor {
         let supported = device.default_input_config().map_err(backend_error)?;
         let config: StreamConfig = supported.clone().into();
         let level = Arc::new(LevelAccumulator::default());
-        let callback_level = level.clone();
         let stream = build_input_stream(
             &device,
             &config,
             supported.sample_format(),
-            move |samples| callback_level.observe_f32(samples),
+            level.clone(),
         )?;
         stream.play().map_err(backend_error)?;
         Ok(Self {
@@ -145,35 +131,26 @@ impl MicrophoneLevelMonitor {
     }
 }
 
-fn build_input_stream<D>(
+fn build_input_stream(
     device: &cpal::Device,
     config: &StreamConfig,
     format: SampleFormat,
-    mut on_data: D,
-) -> Result<Stream, CaptureError>
-where
-    D: FnMut(&[f32]) + Send + 'static,
-{
+    level: Arc<LevelAccumulator>,
+) -> Result<Stream, CaptureError> {
     macro_rules! build {
         ($sample:ty) => {{
-            let level = Arc::new(LevelAccumulator::default());
-            let conversion_level = level.clone();
-            let stream = device
+            let callback_level = level.clone();
+            device
                 .build_input_stream(
                     config.clone(),
-                    move |data: &[$sample], _| conversion_level.observe(data),
+                    move |data: &[$sample], _| observe_samples(data, &callback_level),
                     move |_error| {},
                     None,
                 )
-                .map_err(backend_error)?;
-            let bridge = level;
-            let bridged_stream = stream;
-            let _ = &mut on_data;
-            Ok::<(Stream, Arc<LevelAccumulator>), CaptureError>((bridged_stream, bridge))
+                .map_err(backend_error)
         }};
     }
-
-    let (stream, conversion) = match format {
+    match format {
         SampleFormat::I8 => build!(i8),
         SampleFormat::I16 => build!(i16),
         SampleFormat::I24 => build!(cpal::I24),
@@ -186,40 +163,28 @@ where
         SampleFormat::U64 => build!(u64),
         SampleFormat::F32 => build!(f32),
         SampleFormat::F64 => build!(f64),
-        _ => {
-            return Err(CaptureError::Unsupported(format!(
-                "audio sample format {format} is not supported"
-            )));
-        }
-    }?;
-
-    let relay = thread_relay(conversion, move |samples| on_data(samples));
-    relay.attach(stream)
-}
-
-fn thread_relay<D>(level: Arc<LevelAccumulator>, mut on_data: D) -> LevelRelay
-where
-    D: FnMut(&[f32]) + Send + 'static,
-{
-    let _ = &mut on_data;
-    LevelRelay { level }
-}
-
-struct LevelRelay {
-    level: Arc<LevelAccumulator>,
-}
-
-impl LevelRelay {
-    fn attach(self, stream: Stream) -> Result<Stream, CaptureError> {
-        let _ = self.level;
-        Ok(stream)
+        _ => Err(CaptureError::Unsupported(format!(
+            "audio sample format {format} is not supported"
+        ))),
     }
+}
+
+fn observe_samples<T>(samples: &[T], level: &LevelAccumulator)
+where
+    T: SizedSample,
+    f32: FromSample<T>,
+{
+    let converted = samples
+        .iter()
+        .map(|sample| sample.to_sample::<f32>())
+        .collect::<Vec<_>>();
+    level.observe(&converted);
 }
 
 #[cfg(windows)]
 use std::{
     collections::VecDeque,
-    sync::mpsc::{self, Receiver as StdReceiver, Sender as StdSender},
+    sync::mpsc,
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -233,10 +198,6 @@ use wasapi::{
 
 #[cfg(windows)]
 const WASAPI_PREFIX: &str = "system-audio:wasapi:";
-#[cfg(windows)]
-const LEVEL_SAMPLE_RATE: u32 = 48_000;
-#[cfg(windows)]
-const LEVEL_CHANNELS: u16 = 2;
 
 #[cfg(windows)]
 struct WasapiLevelMonitor {
@@ -263,16 +224,12 @@ impl WasapiLevelMonitor {
         let thread = thread::Builder::new()
             .name("capture-wasapi-level".into())
             .spawn(move || {
-                let result = wasapi_level_loop(
+                let _ = wasapi_level_loop(
                     &endpoint_id,
                     callback_level,
                     stop_receiver,
                     ready_sender,
                 );
-                if result.is_err() {
-                    // The reader receives zero after a runtime failure. Session capture
-                    // still reports its own detailed error independently.
-                }
             })
             .map_err(backend_error)?;
         match ready_receiver.recv_timeout(Duration::from_secs(5)) {
@@ -318,12 +275,10 @@ fn wasapi_level_loop(
     endpoint_id: &str,
     level: Arc<LevelAccumulator>,
     stop: Receiver<()>,
-    ready: StdSender<Result<(), String>>,
+    ready: mpsc::Sender<Result<(), String>>,
 ) -> Result<(), CaptureError> {
-    let initialization = (|| {
-        initialize_mta()
-            .ok()
-            .map_err(|error| backend_error(format!("COM init failed: {error}")))?;
+    let initialized = (|| {
+        let apartment = ComApartment::initialize()?;
         let enumerator = DeviceEnumerator::new().map_err(backend_error)?;
         let device = enumerator.get_device(endpoint_id).map_err(backend_error)?;
         let mut client = device.get_iaudioclient().map_err(backend_error)?;
@@ -331,8 +286,8 @@ fn wasapi_level_loop(
             32,
             32,
             &SampleType::Float,
-            usize::try_from(LEVEL_SAMPLE_RATE).unwrap_or(48_000),
-            usize::from(LEVEL_CHANNELS),
+            48_000,
+            2,
             None,
         );
         let (_, minimum_period) = client.get_device_period().map_err(backend_error)?;
@@ -349,17 +304,16 @@ fn wasapi_level_loop(
         let event = client.set_get_eventhandle().map_err(backend_error)?;
         let capture = client.get_audiocaptureclient().map_err(backend_error)?;
         client.start_stream().map_err(backend_error)?;
-        Ok::<_, CaptureError>((client, event, capture))
+        Ok::<_, CaptureError>((apartment, client, event, capture))
     })();
 
-    let (mut client, event, capture) = match initialization {
+    let (_apartment, mut client, event, capture) = match initialized {
         Ok(value) => {
             let _ = ready.send(Ok(()));
             value
         }
         Err(error) => {
             let _ = ready.send(Err(error.to_string()));
-            deinitialize();
             return Err(error);
         }
     };
@@ -383,12 +337,10 @@ fn wasapi_level_loop(
             capture
                 .read_from_device_to_deque(&mut bytes)
                 .map_err(backend_error)?;
-            let samples = drain_level_f32(&mut bytes);
-            level.observe_f32(&samples);
+            level.observe(&drain_level_f32(&mut bytes));
         }
     })();
     let stop_result = client.stop_stream().map_err(backend_error);
-    deinitialize();
     result.and(stop_result)
 }
 
@@ -406,6 +358,26 @@ fn drain_level_f32(bytes: &mut VecDeque<u8>) -> Vec<f32> {
         samples.push(f32::from_le_bytes(sample));
     }
     samples
+}
+
+#[cfg(windows)]
+struct ComApartment;
+
+#[cfg(windows)]
+impl ComApartment {
+    fn initialize() -> Result<Self, CaptureError> {
+        initialize_mta()
+            .ok()
+            .map_err(|error| backend_error(format!("COM init failed: {error}")))?;
+        Ok(Self)
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ComApartment {
+    fn drop(&mut self) {
+        deinitialize();
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -466,7 +438,7 @@ impl ScreenCaptureKitLevelMonitor {
                         return;
                     }
                     if let Some(list) = sample.audio_buffer_list() {
-                        callback_level.observe_f32(&interleaved_level_f32(&list));
+                        callback_level.observe(&interleaved_level_f32(&list));
                     }
                 },
                 SCStreamOutputType::Audio,
