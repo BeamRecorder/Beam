@@ -1,110 +1,87 @@
-import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
+import { onBeforeUnmount, ref, watch, type Ref } from 'vue'
+import { capture } from '../../../api/capture'
+
+const POLL_INTERVAL_MS = 50
 
 export function useAudioLevelMeter(
   isEnabled: Ref<boolean>,
   sourceId?: Ref<string | undefined>,
-  isSystemAudio = false
+  isSystemAudio = false,
 ) {
-  const level = ref(0);
-  let audioCtx: AudioContext | null = null;
-  let analyser: AnalyserNode | null = null;
-  let stream: MediaStream | null = null;
-  let animId: number | null = null;
-  let lifecycle = 0;
+  const level = ref(0)
+  let monitorId: string | null = null
+  let pollTimer: number | null = null
+  let lifecycle = 0
 
-  const stop = () => {
-    lifecycle += 1;
-    if (animId !== null) {
-      cancelAnimationFrame(animId);
-      animId = null;
+  const clearPollTimer = () => {
+    if (pollTimer !== null) window.clearTimeout(pollTimer)
+    pollTimer = null
+  }
+
+  const stop = async () => {
+    lifecycle += 1
+    clearPollTimer()
+    const activeMonitor = monitorId
+    monitorId = null
+    level.value = 0
+    if (activeMonitor) {
+      await capture.stopAudioLevelMonitor(activeMonitor).catch(() => undefined)
     }
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      stream = null;
+  }
+
+  const resolveSourceId = async () => {
+    const selected = sourceId?.value
+    if (selected && selected !== 'no-audio') return selected
+    if (!isSystemAudio) return null
+    const catalog = await capture.discover()
+    const systemSources = catalog.sources.filter((source) => source.kind === 'system-audio')
+    return systemSources.find((source) => source.isDefault)?.id ?? systemSources[0]?.id ?? null
+  }
+
+  const poll = async (token: number) => {
+    if (token !== lifecycle || !monitorId || !isEnabled.value) return
+    try {
+      const sample = await capture.readAudioLevelMonitor(monitorId)
+      if (token !== lifecycle || !monitorId) return
+      const next = Math.min(1, Math.max(0, Number.isFinite(sample.level) ? sample.level : 0))
+      level.value = level.value * 0.35 + next * 0.65
+      pollTimer = window.setTimeout(() => void poll(token), POLL_INTERVAL_MS)
+    } catch {
+      if (token === lifecycle) await stop()
     }
-    if (audioCtx && audioCtx.state !== 'closed') {
-      void audioCtx.close().catch(() => undefined);
-      audioCtx = null;
-    }
-    level.value = 0;
-  };
+  }
 
   const start = async () => {
-    stop();
-    if (!isEnabled.value) return;
-    const requestLifecycle = lifecycle;
-
+    await stop()
+    if (!isEnabled.value) return
+    const token = lifecycle
     try {
-      let nextStream: MediaStream;
-      if (isSystemAudio) {
-        if (!navigator.mediaDevices?.getDisplayMedia) return;
-        nextStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-        nextStream.getVideoTracks().forEach((t) => t.stop());
-      } else {
-        if (!navigator.mediaDevices?.getUserMedia) return;
-        let rawId = sourceId?.value;
-        if (rawId && rawId.startsWith('microphone:chromium:')) {
-          rawId = rawId.replace('microphone:chromium:', '');
-        }
-        const constraints: MediaStreamConstraints = {
-          audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
-          video: false,
-        };
-        nextStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const selectedSource = await resolveSourceId()
+      if (token !== lifecycle || !isEnabled.value || !selectedSource) return
+      const started = await capture.startAudioLevelMonitor(selectedSource)
+      if (token !== lifecycle || !isEnabled.value) {
+        await capture.stopAudioLevelMonitor(started.monitorId).catch(() => undefined)
+        return
       }
-
-      if (requestLifecycle !== lifecycle || !isEnabled.value || !nextStream.getAudioTracks().length) {
-        nextStream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-      stream = nextStream;
-
-      audioCtx = new AudioContext();
-      const sourceNode = audioCtx.createMediaStreamSource(stream);
-      analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 128;
-      analyser.smoothingTimeConstant = 0.6;
-      sourceNode.connect(analyser);
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const tick = () => {
-        if (!analyser || !isEnabled.value) return;
-        analyser.getByteFrequencyData(dataArray);
-
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-        const avg = sum / bufferLength;
-        const targetLevel = Math.min(1, Math.max(0, avg / 50));
-        level.value = level.value * 0.35 + targetLevel * 0.65;
-
-        animId = requestAnimationFrame(tick);
-      };
-
-      tick();
+      monitorId = started.monitorId
+      await poll(token)
     } catch {
-      stop();
+      if (token === lifecycle) await stop()
     }
-  };
+  }
 
   watch(
     [isEnabled, () => sourceId?.value],
     () => {
-      if (isEnabled.value) {
-        void start();
-      } else {
-        stop();
-      }
+      if (isEnabled.value) void start()
+      else void stop()
     },
-    { immediate: true }
-  );
+    { immediate: true },
+  )
 
   onBeforeUnmount(() => {
-    stop();
-  });
+    void stop()
+  })
 
-  return { level };
+  return { level }
 }
