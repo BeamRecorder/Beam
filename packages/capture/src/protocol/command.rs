@@ -27,4 +27,7 @@ pub enum Command {
     Status,
     PreviewStart { source: String },
     PreviewStop,
+    AudioLevelStart { source: String },
+    AudioLevelRead { monitor: String },
+    AudioLevelStop { monitor: String },
 }
