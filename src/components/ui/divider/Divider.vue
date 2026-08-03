@@ -3,10 +3,12 @@ withDefaults(
   defineProps<{
     orientation?: 'horizontal' | 'vertical'
     label?: string
+    spacing?: 'none' | 'sm' | 'md' | 'lg'
   }>(),
   {
     orientation: 'horizontal',
     label: '',
+    spacing: 'md',
   },
 )
 </script>
@@ -14,7 +16,7 @@ withDefaults(
 <template>
   <div
     class="divider"
-    :class="`divider-${orientation}`"
+    :class="[`divider-${orientation}`, `spacing-${spacing}`]"
     role="separator"
     :aria-orientation="orientation"
   >
@@ -26,19 +28,28 @@ withDefaults(
 .divider {
   flex-shrink: 0;
   background: var(--color-border);
+  opacity: 0.6;
 }
 
 .divider-horizontal {
   width: 100%;
   height: 1px;
-  margin: 4px 0;
 }
+
+.divider-horizontal.spacing-none { margin: 0; }
+.divider-horizontal.spacing-sm { margin: 8px 0; }
+.divider-horizontal.spacing-md { margin: 16px 0; }
+.divider-horizontal.spacing-lg { margin: 24px 0; }
 
 .divider-vertical {
   width: 1px;
   height: 100%;
-  margin: 0 4px;
 }
+
+.divider-vertical.spacing-none { margin: 0; }
+.divider-vertical.spacing-sm { margin: 0 8px; }
+.divider-vertical.spacing-md { margin: 0 16px; }
+.divider-vertical.spacing-lg { margin: 0 24px; }
 
 .divider-label {
   position: relative;

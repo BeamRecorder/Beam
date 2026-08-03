@@ -7,6 +7,7 @@ import Switch from "~/ui/switch/Switch.vue";
 import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import ShadowDirectionGroup from "../ShadowDirectionGroup.vue";
 import BorderAndFrameControls from "./BorderAndFrameControls.vue";
+import Divider from "~/ui/divider/Divider.vue";
 import type { ShadowDirection } from "../shadow-types";
 import {
   Unlink,
@@ -229,6 +230,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         </div>
       </div>
 
+      <!-- Divider -->
+      <Divider v-if="clipTransform && ['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="md" />
+
       <!-- Appearance Section (Corner Radius, Shadow & Mirror) -->
       <div v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" class="section-block">
         <div class="section-header">
@@ -257,7 +261,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           @update:modelValue="handleCustomRadiusChange"
         />
 
-        <div class="section-header margin-top-md">
+        <Divider spacing="sm" />
+
+        <div class="section-header">
           <span class="section-title">{{ t('dropShadow') }}</span>
         </div>
         <ButtonGroup full>
@@ -289,7 +295,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           />
         </div>
 
-        <div class="section-header margin-top-md">
+        <Divider spacing="sm" />
+
+        <div class="section-header">
           <span class="section-title">{{ t('mirroring') }}</span>
         </div>
         <ButtonGroup full>
@@ -323,6 +331,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
         />
       </div>
 
+      <!-- Divider -->
+      <Divider v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" spacing="md" />
+
       <!-- Speed Boost / Rate Controls -->
       <div v-if="['screen', 'video', 'webcam'].includes(selectedClip.kind)" class="section-block">
         <div class="section-header">
@@ -351,6 +362,9 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           </button>
         </div>
       </div>
+
+      <!-- Divider -->
+      <Divider spacing="md" />
 
       <!-- Controls & Link -->
       <div class="section-block">
