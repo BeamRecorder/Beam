@@ -89,6 +89,9 @@ export class BrowserCameraRecorder {
   static async request(sourceId: string) {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is unavailable in this Chromium build.')
     if (!MediaRecorder.isTypeSupported(MIME_TYPE)) throw new Error('This Chromium build cannot record VP8 WebM camera video.')
+    // Keep the request permissive. Windows Media Foundation can reject an
+    // otherwise valid camera when a preferred resolution/fps combination
+    // cannot be allocated, especially after another camera stream was closed.
     const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { deviceId: { ideal: deviceId(sourceId) } } })
     const track = stream.getVideoTracks()[0]
     if (!track) { stream.getTracks().forEach((entry) => entry.stop()); throw new Error('The selected camera did not provide a video track.') }
@@ -107,12 +110,17 @@ export class BrowserCameraRecorder {
   }
 
   async pause(endNs = this.nowNs()) { await this.finishSegment(endNs) }
+
   async resume(sessionId: string) { await this.startSegment(sessionId, this.nowNs()) }
-  async stop(endNs = this.nowNs()) { try { if (this.recorder) await this.finishSegment(endNs) } finally { this.release() } }
+
+  async stop(endNs = this.nowNs()) {
+    try { if (this.recorder) await this.finishSegment(endNs) }
+    finally { this.release() }
+  }
 
   async fail(sessionId: string, reason: string) {
     try {
-      try { if (this.recorder) await this.finishSegment(this.nowNs()) } catch { }
+      try { if (this.recorder) await this.finishSegment(this.nowNs()) } catch { /* The explicit failure reason is persisted below. */ }
       await api().failCamera({ sessionId, reason })
     } finally { this.release() }
   }
@@ -161,6 +169,7 @@ export class BrowserCameraRecorder {
   }
 
   private nowNs() { return Math.max(0, Math.round((performance.now() - this.timelineStartedAt) * 1_000_000)) }
+
   private startFrameCounter() {
     const video = document.createElement('video')
     video.muted = true
@@ -170,7 +179,12 @@ export class BrowserCameraRecorder {
     const count = () => { if (!this.stopped) video.requestVideoFrameCallback(() => { this.frameCount += 1; count() }) }
     void video.play().then(count).catch(() => undefined)
   }
-  private reportFatal(error: Error) { if (!this.stopped) this.fatalHandler?.(error) }
+
+  private reportFatal(error: Error) {
+    if (this.stopped) return
+    this.fatalHandler?.(error)
+  }
+
   private release() {
     this.stopped = true
     this.video?.pause()
