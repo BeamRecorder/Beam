@@ -72,9 +72,8 @@ impl TimestampMapper for LinearTimestampMapper {
         {
             self.reanchor(native);
         }
-        let mapped = self
-            .last_ns
-            .map_or_else(|| self.map_from_anchor(native), |last| self.map_from_anchor(native).max(last));
+        let candidate = self.map_from_anchor(native);
+        let mapped = self.last_ns.map_or(candidate, |last| candidate.max(last));
         self.last_native = Some(native);
         self.last_ns = Some(mapped);
         Ok(mapped)
@@ -87,13 +86,15 @@ mod tests {
 
     #[test]
     fn maps_native_ticks_to_nanoseconds() {
-        let mut mapper = LinearTimestampMapper::new(100, 1_000, 10).unwrap_or_else(|_| unreachable!());
-        assert_eq!(mapper.to_session_ns(110), Ok(1_000_000_001_000));
+        let mut mapper =
+            LinearTimestampMapper::new(100, 1_000, 10).unwrap_or_else(|_| unreachable!());
+        assert_eq!(mapper.to_session_ns(110), Ok(1_000_001_000));
     }
 
     #[test]
     fn reanchors_after_native_clock_reset() {
-        let mut mapper = LinearTimestampMapper::new(100, 10, 1_000).unwrap_or_else(|_| unreachable!());
+        let mut mapper =
+            LinearTimestampMapper::new(100, 10, 1_000).unwrap_or_else(|_| unreachable!());
         let first = mapper.to_session_ns(200).unwrap_or_default();
         let reset = mapper.to_session_ns(5).unwrap_or_default();
         assert!(reset > first);
@@ -102,7 +103,8 @@ mod tests {
 
     #[test]
     fn duplicate_ticks_are_non_decreasing() {
-        let mut mapper = LinearTimestampMapper::new(0, 0, 1).unwrap_or_else(|_| unreachable!());
+        let mut mapper =
+            LinearTimestampMapper::new(0, 0, 1).unwrap_or_else(|_| unreachable!());
         let first = mapper.to_session_ns(1).unwrap_or_default();
         let second = mapper.to_session_ns(1).unwrap_or_default();
         assert_eq!(first, second);
