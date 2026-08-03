@@ -24,6 +24,50 @@ const isShape = (event: CursorEvent): event is CursorShapeEvent => event.event =
 const isButton = (event: CursorEvent): event is CursorButtonEvent => event.event === 'button'
 
 const eventTime = (event: CursorEvent) => event.sessionNs / 1_000_000_000
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value))
+const smoothStep = (value: number) => {
+  const clamped = clamp01(value)
+  return clamped * clamped * (3 - 2 * clamped)
+}
+
+const smoothCoordinateAt = (
+  before: CursorMoveEvent | null,
+  start: CursorMoveEvent,
+  end: CursorMoveEvent,
+  after: CursorMoveEvent | null,
+  timeSeconds: number,
+  coordinate: (event: CursorMoveEvent) => number,
+) => {
+  const startTime = eventTime(start)
+  const endTime = eventTime(end)
+  const duration = Math.max(0.000001, endTime - startTime)
+  const progress = clamp01((timeSeconds - startTime) / duration)
+
+  // Without points on both sides there is no reliable tangent to estimate.
+  // Easing this edge segment still removes the hard start/stop of a fast move.
+  if (!before || !after) {
+    const eased = smoothStep(progress)
+    return coordinate(start) + (coordinate(end) - coordinate(start)) * eased
+  }
+
+  const startSlope = before && startTime > eventTime(before)
+    ? (coordinate(end) - coordinate(before)) / (endTime - eventTime(before))
+    : (coordinate(end) - coordinate(start)) / duration
+  const endSlope = after && eventTime(after) > endTime
+    ? (coordinate(after) - coordinate(start)) / (eventTime(after) - startTime)
+    : (coordinate(end) - coordinate(start)) / duration
+  const progressSquared = progress * progress
+  const progressCubed = progressSquared * progress
+  const h00 = 2 * progressCubed - 3 * progressSquared + 1
+  const h10 = progressCubed - 2 * progressSquared + progress
+  const h01 = -2 * progressCubed + 3 * progressSquared
+  const h11 = progressCubed - progressSquared
+  const value = h00 * coordinate(start)
+    + h10 * duration * startSlope
+    + h01 * coordinate(end)
+    + h11 * duration * endSlope
+  return clamp01(value)
+}
 
 const moveState = (event: CursorMoveEvent): CursorPlaybackState => ({
   x: event.normalizedX,
@@ -44,7 +88,9 @@ export function cursorStateAt(
   const isTimelineStart = timeSeconds === 0
   const time = Math.max(0, timeSeconds)
   let previousMove: CursorMoveEvent | null = null
+  let beforePreviousMove: CursorMoveEvent | null = null
   let nextMove: CursorMoveEvent | null = null
+  let afterNextMove: CursorMoveEvent | null = null
   let visible = true
   let cursorId = initialCursorId
   let cursorKind: CursorKind | null = null
@@ -52,10 +98,14 @@ export function cursorStateAt(
 
   for (const event of events) {
     if (eventTime(event) > time) {
-      if (isMove(event) && !nextMove) nextMove = event
+      if (isMove(event)) {
+        if (!nextMove) nextMove = event
+        else if (!afterNextMove) afterNextMove = event
+      }
       continue
     }
     if (isMove(event)) {
+      beforePreviousMove = previousMove
       previousMove = event
       visible = event.visible
     } else if (isShape(event)) {
@@ -87,9 +137,8 @@ export function cursorStateAt(
   state.cursorKind = cursorKind
   state.hotspot = hotspot
   if (nextMove && eventTime(nextMove) > eventTime(previousMove)) {
-    const ratio = Math.min(1, Math.max(0, (time - eventTime(previousMove)) / (eventTime(nextMove) - eventTime(previousMove))))
-    state.x += (nextMove.normalizedX - state.x) * ratio
-    state.y += (nextMove.normalizedY - state.y) * ratio
+    state.x = smoothCoordinateAt(beforePreviousMove, previousMove, nextMove, afterNextMove, time, (event) => event.normalizedX)
+    state.y = smoothCoordinateAt(beforePreviousMove, previousMove, nextMove, afterNextMove, time, (event) => event.normalizedY)
   }
   return state
 }

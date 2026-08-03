@@ -8,6 +8,8 @@ import {
   ZoomIn,
   ZoomOut,
   Plus,
+  Scissors,
+  Magnet,
   Video,
   Image as ImageIcon,
   Volume2,
@@ -25,15 +27,19 @@ const props = withDefaults(
     duration: number;
     isPlaying: boolean;
     zoomLevel: number; // 100 to 500
+    canSplit?: boolean;
+    isSnappingEnabled?: boolean;
   }>(),
-  { zoomLevel: 100 },
+  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true },
 );
 
 const emit = defineEmits<{
   (e: "update:isPlaying", value: boolean): void;
   (e: "update:currentTime", value: number): void;
   (e: "update:zoomLevel", value: number): void;
+  (e: "update:isSnappingEnabled", value: boolean): void;
   (e: "add:element", type: "video" | "image" | "sound" | "caption"): void;
+  (e: "split"): void;
 }>();
 
 const handleAdd = (type: "video" | "image" | "sound" | "caption") => {
@@ -70,9 +76,29 @@ const handleZoomOut = () => {
 
 <template>
   <div class="timeline-toolbar">
-    <!-- Left Section with Add Popover -->
+    <!-- Left Section with Add Popover & Split Button -->
     <div class="left-section">
       <PopoverMenuButton :label="t('add')" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="Scissors"
+        :disabled="!canSplit"
+        :tooltip="canSplit ? `${t('split')} (S)` : t('selectClipToSplit')"
+        class="toolbar-split-btn"
+        @click="emit('split')"
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        icon-only
+        :icon="Magnet"
+        :class="{ 'is-active': isSnappingEnabled }"
+        :tooltip="isSnappingEnabled ? t('snappingOn') : t('snappingOff')"
+        class="toolbar-snap-btn"
+        @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
+      />
     </div>
 
     <!-- Centered Controls -->
@@ -174,6 +200,12 @@ const handleZoomOut = () => {
 .left-section {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.left-section :deep(.toolbar-snap-btn.is-active) {
+  color: var(--color-primary) !important;
+  background: var(--color-primary-light, rgba(255, 90, 31, 0.15)) !important;
 }
 
 .add-track-button {

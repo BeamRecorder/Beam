@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from "vue";
-import type { CaptureProject, ProjectEditorData } from "../../api/types/capture-api";
-import SidebarPanel from "./sidebar/SidebarPanel.vue";
-import PropertiesPanel from "./properties/PropertiesPanel.vue";
-import EditorCanvas from "./canvas/EditorCanvas.vue";
-import CanvasToolbar from "./canvas/CanvasToolbar.vue";
-import EditorTimeline from "./timeline/EditorTimeline.vue";
-import TimelineToolbar from "./timeline/TimelineToolbar.vue";
-import Topbar from "./Topbar.vue";
-import { useVideoEditor } from "./composables/useVideoEditor";
-import { useEditorUndoRedo, type EditorStateSnapshot } from "./composables/useEditorUndoRedo";
-import { capture } from "../../api/capture";
+import type { CaptureProject, ProjectEditorData } from "~/api/types/capture-api";
+import SidebarPanel from "~/components/video-editor/sidebar/SidebarPanel.vue";
+import PropertiesPanel from "~/components/video-editor/properties/PropertiesPanel.vue";
+import EditorCanvas from "~/components/video-editor/canvas/EditorCanvas.vue";
+import CanvasToolbar from "~/components/video-editor/canvas/CanvasToolbar.vue";
+import EditorTimeline from "~/components/video-editor/timeline/EditorTimeline.vue";
+import TimelineToolbar from "~/components/video-editor/timeline/TimelineToolbar.vue";
+import Topbar from "~/components/video-editor/Topbar.vue";
+import { useVideoEditor } from "~/components/video-editor/composables/useVideoEditor";
+import { useEditorUndoRedo, type EditorStateSnapshot } from "~/components/video-editor/composables/useEditorUndoRedo";
+import { capture } from "~/api/capture";
 import { Sparkles } from "@lucide/vue";
 import { useTranslate } from "~/i18n/useTranslate";
-import { useExportJob } from "../export/useExportJob";
-import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from "./canvas/output-canvas";
-import { compositionDurationMs, setVolume } from "./composition/engine/clip-engine";
-import { isAudioClip, isCaptionClip, isVisualClip } from "./composition/composition-types";
+import { useExportJob } from "~/components/export/useExportJob";
+import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from "~/components/video-editor/canvas/output-canvas";
+import { compositionDurationMs, setVolume } from "~/components/video-editor/composition/engine/clip-engine";
+import { isAudioClip, isCaptionClip, isVisualClip } from "~/components/video-editor/composition/composition-types";
 
 const { t } = useTranslate("VideoEditor");
 const props = withDefaults(defineProps<{
@@ -37,6 +37,7 @@ const {
   sourceSize,
   player,
   cursor,
+  cursorMotion,
   compositionState,
   editorState,
   zoomState,
@@ -94,6 +95,7 @@ const {
   previewSelectedTransform,
   updateSelectedCrop,
   updateSelectedMirrored,
+  updateSelectedMirroredY,
   updateSelectedRate,
   updateSelectedVolume,
   updateSelectedEnabled,
@@ -197,6 +199,7 @@ watch(screenSource, (source) => {
 
 const isCropping = ref(false);
 const timelineZoomLevel = ref(100);
+const isSnappingEnabled = ref(true);
 const isTimelineReady = ref(false);
 let timelineTimer: ReturnType<typeof setTimeout> | null = null;
 let timelineFrame: number | null = null;
@@ -204,12 +207,17 @@ const toggleCrop = () => { if (selectedTransformClip.value && isVisualClip(selec
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, "custom">) => { outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false }; };
 const handleKeyDown = (event: KeyboardEvent) => {
   if ((event.key === "Enter" || event.key === "Escape") && isCropping.value) isCropping.value = false;
-  if (event.key !== "Delete" && event.key !== "Backspace") return;
   const active = document.activeElement;
   if (active) {
     const tag = active.tagName.toLowerCase();
     if (["input", "textarea", "select"].includes(tag) || active.getAttribute("contenteditable") === "true") return;
   }
+  if ((event.key === "s" || event.key === "S") && selectedClipId.value) {
+    event.preventDefault();
+    splitSelectedClip();
+    return;
+  }
+  if (event.key !== "Delete" && event.key !== "Backspace") return;
   if (selectedClipId.value) { event.preventDefault(); deleteSelectedClip(); }
   else if (selectedZoom.value && activeTab.value === "zoom") { event.preventDefault(); deleteSelectedZoom(); }
 };
@@ -247,6 +255,7 @@ onBeforeUnmount(() => {
           v-model:shadow-color="shadowColor"
           v-model:shadow-direction="shadowDirection"
           v-model:click-effects="clickEffects"
+          v-model:motion="cursorMotion"
           v-model:volume="volume"
           v-model:system-volume="systemVolume"
           v-model:mic-volume="micVolume"
@@ -280,6 +289,7 @@ onBeforeUnmount(() => {
           @update:clip-enabled="updateSelectedEnabled"
           @unlink-clip="detachSelectedClip"
           @update:clip-is-mirrored="updateSelectedMirrored"
+          @update:clip-is-mirrored-y="updateSelectedMirroredY"
           @update:clip-corner-radius="updateSelectedAppearance({ cornerRadius: ['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : Number($event) })"
           @update:clip-shadow="updateSelectedAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color ?? '#000000', shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
           @update:clip-appearance="updateSelectedAppearance($event)"
@@ -303,6 +313,7 @@ onBeforeUnmount(() => {
             :shadow-color="shadowColor"
             :shadow-direction="shadowDirection"
             :click-effects="clickEffects"
+            :motion="cursorMotion"
             :selected-background="selectedBackgroundMedia"
             :background-blur-percent="backgroundBlurPercent"
             :video-src="playerVideoSrc || ''"
@@ -326,7 +337,7 @@ onBeforeUnmount(() => {
             @done:crop="isCropping = false"
             @deselect:zoom="selectedZoomId = null"
           />
-          <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" />
+          <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" :can-split="Boolean(selectedClipId)" v-model:zoom-level="timelineZoomLevel" v-model:is-snapping-enabled="isSnappingEnabled" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" @split="splitSelectedClip" />
         </div>
       </div>
       <div class="workspace-lower">
@@ -335,6 +346,7 @@ onBeforeUnmount(() => {
           v-model:current-time="currentTime"
           v-model:is-playing="isPlaying"
           v-model:zoom-level="timelineZoomLevel"
+          :is-snapping-enabled="isSnappingEnabled"
           :duration="duration"
           :export-progress="exportProgress"
           :zoom-elements="zoomElements"

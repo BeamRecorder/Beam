@@ -27,6 +27,7 @@ const baseOptions = () => ({
   cursorColor: () => '#ffffff',
   enableShadow: () => true,
   clickEffects: () => effects,
+  motion: () => ({ preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 }),
   shadowBlur: () => 8,
   shadowColor: () => '#000000',
   shadowDirection: () => 'bottom-right' as const,
@@ -38,7 +39,7 @@ const baseOptions = () => ({
     events: [
       { event: 'shape', sessionNs: 0, cursorId: 'custom:arrow', cursorKind: 'custom', hotspot: { x: 2, y: 3 } },
       { event: 'move', sessionNs: 0, pixelX: 0, pixelY: 0, normalizedX: 0.25, normalizedY: 0.35, visible: true },
-      { event: 'button', sessionNs: second(0.5), button: 1, pressed: true },
+      { event: 'button', sessionNs: second(0.5), button: 1, pressed: true, normalizedX: 0.25, normalizedY: 0.35 },
     ],
   } }) as never,
   screenClip: () => ({ transform: { x: 0, y: 0, width: 1, height: 1 }, isMirrored: false }) as never,

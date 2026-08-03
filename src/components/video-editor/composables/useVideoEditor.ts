@@ -10,6 +10,7 @@ import { useProjectEditorState } from "./useProjectEditorState";
 import { createCompositionSnapshot } from "../../export/composition/snapshot";
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from "../canvas/output-canvas";
 import { compositionDurationMs } from "../composition/engine/clip-engine";
+import { createDefaultCursorMotionSettings } from "../../../api/types/cursor-settings";
 
 export function useVideoEditor(options: {
   videoSrc: Ref<string | null | undefined>;
@@ -25,6 +26,7 @@ export function useVideoEditor(options: {
   const player = useVideoPlayer();
   const durationMs = computed(() => Math.round(player.duration.value * 1_000));
   const cursor = useCursorReplacer();
+  const cursorMotion = ref(createDefaultCursorMotionSettings());
 
   watch(options.videoSrc, (source) => { player.videoSrc.value = source ?? null; }, { immediate: true });
   const compositionState = useClipComposition({
@@ -50,6 +52,7 @@ export function useVideoEditor(options: {
     backgroundBlurPercent: player.backgroundBlurPercent,
     canvas: outputCanvas,
     cursorEffects: cursor.clickEffects,
+    cursorMotion,
     availableBackgrounds: player.backgroundGroups,
   });
 
@@ -92,6 +95,7 @@ export function useVideoEditor(options: {
               direction: cursor.shadowDirection.value,
             },
             clickEffects: cursor.clickEffects.value,
+            motion: cursorMotion.value,
           },
         }),
       };
@@ -129,6 +133,7 @@ export function useVideoEditor(options: {
     outputCanvas,
     player,
     cursor,
+    cursorMotion,
     compositionState,
     editorState,
     zoomState,

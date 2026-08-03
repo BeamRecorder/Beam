@@ -557,7 +557,7 @@ const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileView
 
 <style scoped>
 .custom-color-picker {
-    width: 100%;
+    width: fit-content;
     display: flex;
     flex-direction: column;
     user-select: none;

@@ -6,6 +6,7 @@ import ColorPicker from "~/ui/ColorPicker/ColorPicker.vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
 import Switch from "~/ui/switch/Switch.vue";
 import Input from "~/ui/input/Input.vue";
+import Divider from "~/ui/divider/Divider.vue";
 import type { ClipFrame } from "../../composition/composition-types";
 import { useTranslate } from "~/i18n/useTranslate";
 
@@ -33,7 +34,8 @@ const frames = computed(() => [
       <ColorPicker :model-value="borderColor ?? '#000000'" :show-label="false" @update:modelValue="emit('update', { borderColor: $event })" />
       <BigSlider :model-value="borderWidth ?? 1" :min="1" :max="32" :step="1" :label="t('width')" :format-value="(value) => `${Math.round(value)}px`" @update:modelValue="emit('update', { borderWidth: $event })" />
     </div>
-    <div class="section-header margin-top-md"><span class="section-title">{{ t('frame') }}</span></div>
+    <Divider spacing="sm" />
+    <div class="section-header"><span class="section-title">{{ t('frame') }}</span></div>
     <ButtonGroup full>
       <Button v-for="item in frames" :key="item.id" :variant="activeFrame === item.id ? 'primary' : 'ghost'" size="xs" @click="emit('update', { frame: item.id })">{{ item.label }}</Button>
     </ButtonGroup>

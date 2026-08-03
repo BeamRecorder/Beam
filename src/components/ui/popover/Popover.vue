@@ -107,7 +107,6 @@ watch(() => props.direction, (val) => {
   directionClass.value = val
 })
 
-let mousedownWasOutside = false
 const repositionOpenPopover = () => { if (isOpen.value) void adjustPosition() }
 const closeOnWindowBlur = () => close()
 
@@ -120,23 +119,18 @@ const isClickInsideThisOrChildPopover = (target: Element | null) => {
   return false
 }
 
-const handleMouseDownOutside = (event: MouseEvent) => {
+const handleOutsideInteraction = (event: Event) => {
+  if (!isOpen.value) return
   const target = event.target as Element | null
-  mousedownWasOutside = !isClickInsideThisOrChildPopover(target)
-}
-
-const handleClickOutside = (event: MouseEvent) => {
-  if (mousedownWasOutside) {
-    const target = event.target as Element | null
-    if (!isClickInsideThisOrChildPopover(target)) {
-      close()
-    }
+  if (!isClickInsideThisOrChildPopover(target)) {
+    close()
   }
 }
 
 onMounted(() => {
-  document.addEventListener('mousedown', handleMouseDownOutside)
-  document.addEventListener('click', handleClickOutside)
+  window.addEventListener('pointerdown', handleOutsideInteraction, true)
+  window.addEventListener('mousedown', handleOutsideInteraction, true)
+  window.addEventListener('click', handleOutsideInteraction, true)
   window.addEventListener('resize', repositionOpenPopover)
   window.addEventListener('scroll', repositionOpenPopover, true)
   window.addEventListener('blur', closeOnWindowBlur)
@@ -145,8 +139,9 @@ onMounted(() => {
 onUnmounted(() => {
   resizeObserver?.disconnect()
   resizeObserver = null
-  document.removeEventListener('mousedown', handleMouseDownOutside)
-  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('pointerdown', handleOutsideInteraction, true)
+  window.removeEventListener('mousedown', handleOutsideInteraction, true)
+  window.removeEventListener('click', handleOutsideInteraction, true)
   window.removeEventListener('resize', repositionOpenPopover)
   window.removeEventListener('scroll', repositionOpenPopover, true)
   window.removeEventListener('blur', closeOnWindowBlur)
@@ -207,6 +202,7 @@ defineExpose({
   z-index: 50;
   box-sizing: border-box;
   overflow: hidden;
+  width: fit-content;
   max-width: calc(100vw - 16px);
 }
 

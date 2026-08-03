@@ -279,6 +279,12 @@ export const setMirrored = (composition: ClipComposition, clipId: string, isMirr
     return { ...clip, isMirrored };
   });
 
+export const setMirroredY = (composition: ClipComposition, clipId: string, isMirroredY: boolean) =>
+  updateClip(composition, clipId, (clip) => {
+    if (!isVisualClip(clip)) throw new CompositionEngineError("Only visual clips can be mirrored.");
+    return { ...clip, isMirroredY };
+  });
+
 export const setVolume = (composition: ClipComposition, clipId: string, volume: number) =>
   updateClip(composition, clipId, (clip) => {
     if (!isAudioClip(clip)) throw new CompositionEngineError("Only audio clips have a volume.");

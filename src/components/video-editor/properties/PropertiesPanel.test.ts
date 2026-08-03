@@ -18,7 +18,7 @@ const ClipPropertiesPanel = { props: ['selectedClip'], template: '<div class="cl
 const baseProps = {
   activeTab: 'canvas', selectedClip: null, selectedCaptionClip: null, selectedCursor: 'default', cursorSize: 24,
   cursorColor: '#000000', enableShadow: false, shadowBlur: 8, shadowColor: '#000000', shadowDirection: 'bottom-right',
-  clickEffects: {} as never, volume: 100, isSystemAudioEnabled: false, isMicAudioEnabled: false, selectedBackground: null,
+  clickEffects: {} as never, motion: { preset: 'smooth', smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 }, volume: 100, isSystemAudioEnabled: false, isMicAudioEnabled: false, selectedBackground: null,
   blurPercent: 0, backgroundGroups: [], selectedZoom: null, canGenerateZooms: false, hasAutomaticZooms: false,
   composition: { assets: [], clips: [] }, editorData: null, timelineDurationMs: 1000, projectId: null,
   canvas: { preset: '16:9', width: 1920, height: 1080, showBackground: false },

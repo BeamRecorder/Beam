@@ -154,6 +154,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       appearance: clip.appearance,
       title: clip.name,
       mirrored: clip.isMirrored,
+      mirroredY: clip.isMirroredY,
     });
   };
 
@@ -192,7 +193,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         window.dw,
         window.dh,
         window.scale,
-        webcamSettingsForAppearance(clip.appearance, clip.isMirrored),
+        webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
         clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
         options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
         clip.appearance,

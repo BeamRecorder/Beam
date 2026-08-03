@@ -31,6 +31,7 @@ const snapshot = (): CompositionSnapshot => ({
       left: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#f00' },
       right: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#00f' },
     },
+    motion: { preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
   },
   composition: composition(),
 })
@@ -72,6 +73,41 @@ describe('canonical composition rendering', () => {
     expect(ctx.drawImage).toHaveBeenCalledWith(image, 10, 10, 30, 20)
   })
 
+  it('exports webcam placement, crop, mirror and complete appearance settings', () => {
+    const value = snapshot()
+    value.canvas = { ...value.canvas, width: 1000, height: 500 }
+    const camera = { id: 'camera', kind: 'video' as const, name: 'Webcam', fileName: null, durationMs: 1_000, width: 100, height: 50, src: 'file:///camera.mp4', origin: 'session' as const }
+    value.composition.assets.push(camera)
+    value.composition.clips.push({
+      id: 'webcam', kind: 'webcam', name: 'Webcam', assetId: camera.id, timelineStartMs: 0, timelineDurationMs: 1_000,
+      sourceInMs: 0, sourceDurationMs: 1_000, playbackRate: 1, enabled: true, order: 1,
+      transform: { x: .1, y: .2, width: .3, height: .4 }, crop: { x: .1, y: .2, width: .5, height: .6 }, isMirrored: true,
+      appearance: {
+        cornerRadius: 42, shadowSize: 'none', shadowColor: '#123456', shadowDirection: 'top-left', borderEnabled: true,
+        borderColor: '#abcdef', borderWidth: 4, frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true,
+      },
+    })
+    const source = { displayWidth: 100, displayHeight: 50 } as unknown as CanvasImageSource
+    const ctx = context()
+    renderCompositionFrame(ctx, { readyState: HTMLMediaElement.HAVE_CURRENT_DATA, videoWidth: 100, videoHeight: 50 } as HTMLVideoElement, value, 0, null, undefined, new Map([['camera', source]]))
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 10, 10, 50, 30, expect.closeTo(100, .001), expect.closeTo(100, .001), 300, 200)
+    expect(ctx.scale).toHaveBeenCalledWith(-1, 1)
+    expect(ctx.roundRect).toHaveBeenCalledWith(100, expect.closeTo(100, .001), 300, 200, 42)
+    expect(ctx.stroke).toHaveBeenCalled()
+  })
+
+  it('keeps webcam layers when the screen frame is temporarily unavailable', () => {
+    const value = snapshot()
+    value.canvas = { ...value.canvas, width: 1000, height: 500 }
+    const camera = { id: 'camera', kind: 'video' as const, name: 'Webcam', fileName: null, durationMs: 1_000, width: 100, height: 50, src: 'file:///camera.mp4', origin: 'session' as const }
+    value.composition.assets.push(camera)
+    value.composition.clips.push({ id: 'webcam', kind: 'webcam', name: 'Webcam', assetId: camera.id, timelineStartMs: 0, timelineDurationMs: 1_000, sourceInMs: 0, sourceDurationMs: 1_000, playbackRate: 1, enabled: true, order: 1, transform: { x: .1, y: .2, width: .3, height: .4 } })
+    const source = {} as CanvasImageSource
+    const ctx = context()
+    renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['camera', source]]))
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 100, expect.closeTo(100, .001), 300, 200)
+  })
+
   it('draws only the caption sentence active at the current time', () => {
     const value = snapshot()
     value.composition.clips.push({ id: 'caption', kind: 'caption', name: 'Caption', timelineStartMs: 0, timelineDurationMs: 1_000, sourceInMs: 0, sourceDurationMs: 1_000, playbackRate: 1, enabled: true, order: 1, caption: { sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }], style: { color: '#fff', fontSize: 20, shadowColor: '#000', shadowBlur: 0, placement: 'bottom' } } })
@@ -90,7 +126,7 @@ describe('canonical composition rendering', () => {
       catalog: {},
       events: [
         { event: 'move', sessionNs: 0, pixelX: 25, pixelY: 25, normalizedX: .25, normalizedY: .5, visible: true },
-        { event: 'button', sessionNs: 100_000_000, button: 2, pressed: true },
+        { event: 'button', sessionNs: 100_000_000, button: 2, pressed: true, normalizedX: .25, normalizedY: .5 },
       ],
     }
     value.cursorSettings.clickEffects = {

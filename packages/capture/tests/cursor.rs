@@ -51,11 +51,15 @@ fn telemetry_marks_two_near_left_clicks_as_double_click() {
             session_ns: 100_000_000,
             button: 1,
             pressed: true,
+            normalized_x: 0.4,
+            normalized_y: 0.5,
         },
         CursorEvent::Button {
             session_ns: 300_000_000,
             button: 1,
             pressed: true,
+            normalized_x: 0.4,
+            normalized_y: 0.5,
         },
     ];
     let telemetry = telemetry_from_events(&events);
@@ -81,6 +85,8 @@ fn telemetry_distinguishes_a_right_click() {
             session_ns: 100_000_000,
             button: 2,
             pressed: true,
+            normalized_x: 0.4,
+            normalized_y: 0.5,
         },
     ];
     let telemetry = telemetry_from_events(&events);
@@ -107,4 +113,19 @@ fn telemetry_keeps_the_latest_hour_of_samples() {
         telemetry_from_events(&events).samples.len(),
         MAX_CURSOR_TELEMETRY_SAMPLES
     );
+}
+
+#[test]
+fn movement_sampling_is_capped_at_sixty_hz_without_drift() {
+    let mut next = 0;
+    assert!(move_sample_due(&mut next, 0));
+    assert_eq!(next, CURSOR_SAMPLE_INTERVAL_NS);
+    assert!(!move_sample_due(&mut next, CURSOR_SAMPLE_INTERVAL_NS - 1));
+    assert!(move_sample_due(&mut next, CURSOR_SAMPLE_INTERVAL_NS));
+    assert_eq!(next, CURSOR_SAMPLE_INTERVAL_NS * 2);
+    assert!(move_sample_due(
+        &mut next,
+        CURSOR_SAMPLE_INTERVAL_NS * 4 + 1
+    ));
+    assert_eq!(next, CURSOR_SAMPLE_INTERVAL_NS * 5);
 }

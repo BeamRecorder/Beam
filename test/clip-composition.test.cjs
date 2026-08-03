@@ -169,10 +169,12 @@ test('persists and reads one atomic editor state', () => {
       background: null,
       blurPercent: 0,
       importedBackgrounds: [],
+      cursorMotion: { preset: 'custom', smoothing: 0.55, springMassMultiplier: 1.1, motionBlur: 0.2 },
     },
   })
   assert.equal(saved.schemaVersion, 2)
   assert.equal(saved.composition.clips[0].id, 'clip-video')
   assert.match(saved.composition.assets[0].src, /^file:/)
   assert.deepEqual(saved.presentation.canvas, { preset: '16:9', width: 1920, height: 1080, showBackground: true })
+  assert.deepEqual(saved.presentation.cursorMotion, { preset: 'custom', smoothing: 0.55, springMassMultiplier: 1.1, motionBlur: 0.2 })
 })

@@ -1,5 +1,7 @@
 {
   "add": "Add",
+  "split": "Split",
+  "selectClipToSplit": "Select a clip to split",
   "video": "Video",
   "image": "Image",
   "sound": "Sound",
@@ -10,5 +12,7 @@
   "pause": "Pause",
   "doubleClickResetZoom": "Double click to reset zoom",
   "zoomOut": "Zoom Out",
-  "zoomIn": "Zoom In"
+  "zoomIn": "Zoom In",
+  "snappingOn": "Magnet Snapping Enabled",
+  "snappingOff": "Magnet Snapping Disabled"
 }

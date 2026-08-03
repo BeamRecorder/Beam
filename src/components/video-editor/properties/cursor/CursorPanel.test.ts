@@ -15,6 +15,7 @@ describe('CursorPanel', () => {
       props: {
         selectedCursor: 'default', cursorSize: 24, cursorColor: '#000', enableShadow: true,
         shadowBlur: 8, shadowColor: '#111', shadowDirection: 'bottom-right',
+        motion: { preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
         clickEffects: { left: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' }, right: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' } },
       },
       global: { stubs: { Select, BigSlider, ColorInput, Switch, ShadowDirectionGroup, CursorClickEffectsPanel } },
@@ -23,8 +24,8 @@ describe('CursorPanel', () => {
     await wrapper.get('.cursor-select').trigger('click')
     await wrapper.get('.cursor-slider').trigger('click')
     await wrapper.findAll('.cursor-color')[0].trigger('click')
-    await wrapper.get('.cursor-switch').trigger('click')
     await wrapper.findAll('.cursor-slider')[1].trigger('click')
+    await wrapper.get('.cursor-switch').trigger('click')
     await wrapper.findAll('.cursor-color')[1].trigger('click')
     await wrapper.get('.shadow-direction').trigger('click')
     await wrapper.get('.click-effects-stub').trigger('click')
@@ -42,6 +43,7 @@ describe('CursorPanel', () => {
       props: {
         selectedCursor: 'default', cursorSize: 24, cursorColor: '#000', enableShadow: false,
         shadowBlur: 8, shadowColor: '#111', shadowDirection: 'bottom-right',
+        motion: { preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
         clickEffects: { left: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' }, right: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' } },
       },
       global: { stubs: { Select, BigSlider, ColorInput, Switch, ShadowDirectionGroup, CursorClickEffectsPanel } },

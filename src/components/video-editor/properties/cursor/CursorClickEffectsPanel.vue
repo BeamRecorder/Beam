@@ -3,6 +3,7 @@ import { computed } from "vue";
 import BigSlider from "~/ui/slider/BigSlider.vue";
 import Switch from "~/ui/switch/Switch.vue";
 import ColorInput from "~/ui/input/ColorInput.vue";
+import Divider from "~/ui/divider/Divider.vue";
 import { useTranslate } from "~/i18n/useTranslate";
 import type { CursorClickButton, CursorClickEffects } from "../../../../api/types/cursor-settings";
 
@@ -33,7 +34,9 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
       <span class="section-description">{{ t("clicksDescription") }}</span>
     </div>
 
-    <div v-for="button in buttons" :key="button.id" class="click-card">
+    <template v-for="(button, index) in buttons" :key="button.id">
+      <Divider v-if="index > 0" spacing="xs" />
+      <div class="click-card">
       <div class="click-card-header">
         <span class="click-card-title">{{ button.label }}</span>
         <span class="click-badge">{{ button.id === "left" ? "L" : "R" }}</span>
@@ -80,7 +83,8 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
           @update:modelValue="updateEffect(button.id, { rippleColor: $event })"
         />
       </div>
-    </div>
+      </div>
+    </template>
   </section>
 </template>
 
@@ -114,10 +118,7 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: 0;
 }
 
 .click-card-header,

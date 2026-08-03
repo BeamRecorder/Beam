@@ -12,8 +12,8 @@ use std::{
 use crate::{
     CaptureError,
     cursor::{
-        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter,
-        CursorShapeCatalogEntry, telemetry_from_events,
+        CaptureRegion, CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, move_sample_due,
+        telemetry_from_events,
     },
     session::StartGate,
     storage::write_atomic,
@@ -131,11 +131,9 @@ impl Drop for WindowsCursorRecording {
 
 #[derive(Default)]
 struct Previous {
-    position: Option<(i32, i32)>,
     visible: Option<bool>,
     buttons: [bool; 3],
     shape: Option<usize>,
-    last_sample_ns: Option<u64>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -157,16 +155,13 @@ fn capture_loop(
     start_gate.wait()?;
     let started = Instant::now();
     let mut previous = Previous::default();
+    let mut next_move_sample_ns = segment_start_ns;
     while !cancel.load(Ordering::Acquire) {
         let session_ns = segment_start_ns
             .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
         match sample_cursor(region, capture_shape) {
             Ok(sample) => {
-                if previous.position != Some((sample.position.pixel_x, sample.position.pixel_y))
-                    || previous.last_sample_ns.is_none_or(|last| {
-                        session_ns.saturating_sub(last) >= CURSOR_SAMPLE_INTERVAL_NS
-                    })
-                {
+                if move_sample_due(&mut next_move_sample_ns, session_ns) {
                     push(
                         &mut writer,
                         metrics,
@@ -179,8 +174,6 @@ fn capture_loop(
                             visible: sample.visible,
                         },
                     )?;
-                    previous.position = Some((sample.position.pixel_x, sample.position.pixel_y));
-                    previous.last_sample_ns = Some(session_ns);
                 }
                 if previous.visible != Some(sample.visible) {
                     push(
@@ -210,6 +203,8 @@ fn capture_loop(
                                     session_ns,
                                     button: u8::try_from(button + 1).unwrap_or(u8::MAX),
                                     pressed,
+                                    normalized_x: sample.position.normalized_x,
+                                    normalized_y: sample.position.normalized_y,
                                 },
                             )?;
                             previous.buttons[button] = pressed;

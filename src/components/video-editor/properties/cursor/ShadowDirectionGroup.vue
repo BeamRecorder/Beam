@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { CircleDot, MoveDown, MoveDownRight, MoveUpLeft } from '@lucide/vue'
-import type { ShadowDirection } from './shadow-types'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed } from "vue";
+import { CircleDot, MoveDown, MoveDownRight, MoveUpLeft } from "@lucide/vue";
+import type { ShadowDirection } from "./shadow-types";
+import { useTranslate } from "~/i18n/useTranslate";
 
-const { t } = useTranslate('ShadowDirectionGroup')
+const { t } = useTranslate("ShadowDirectionGroup");
 
-defineProps<{ modelValue: ShadowDirection }>()
+defineProps<{ modelValue: ShadowDirection }>();
 
-const emit = defineEmits<{ (event: 'update:modelValue', value: ShadowDirection): void }>()
+const emit = defineEmits<{
+  (event: "update:modelValue", value: ShadowDirection): void;
+}>();
 
 const directions = computed(() => [
-  { id: 'all' as const, label: t('around'), icon: CircleDot },
-  { id: 'bottom' as const, label: t('bottom'), icon: MoveDown },
-  { id: 'bottom-right' as const, label: t('bottomRight'), icon: MoveDownRight },
-  { id: 'top-left' as const, label: t('topLeft'), icon: MoveUpLeft },
-])
+  { id: "all" as const, label: t("around"), icon: CircleDot },
+  { id: "bottom" as const, label: t("bottom"), icon: MoveDown },
+  { id: "bottom-right" as const, label: t("bottomRight"), icon: MoveDownRight },
+  { id: "top-left" as const, label: t("topLeft"), icon: MoveUpLeft },
+]);
 </script>
 
 <template>
@@ -57,7 +59,9 @@ const directions = computed(() => [
   height: 26px;
   cursor: pointer;
   color: var(--text-secondary);
-  transition: background var(--fast) ease, color var(--fast) ease;
+  transition:
+    background var(--fast) ease,
+    color var(--fast) ease;
 }
 
 .direction-btn:hover {

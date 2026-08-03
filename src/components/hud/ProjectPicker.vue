@@ -60,7 +60,7 @@ const projectRows = computed(() => {
 });
 
 const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
-  itemHeight: () => (props.compact ? 120 : 132),
+  itemHeight: () => (props.compact ? 128 : 144),
   overscan: 3,
 });
 
@@ -120,7 +120,9 @@ const selectProject = (project: CaptureProject) => {
 };
 
 const openSelectedProject = () => {
-  if (selectedProject.value) emit("open-project", selectedProject.value);
+  if (selectedProject.value && selectedProject.value.id !== props.currentProjectId) {
+    emit("open-project", selectedProject.value);
+  }
 };
 
 const formatDate = (date: string) => {
@@ -507,7 +509,14 @@ defineExpose({
                   @timeupdate="handleVideoTimeUpdate(project.id, $event)"
                 />
                 <span
-                  v-if="project.id === selectedProjectId"
+                  v-if="project.id === currentProjectId"
+                  class="current-indicator"
+                  :aria-label="t('current')"
+                >
+                  {{ t("current") }}
+                </span>
+                <span
+                  v-else-if="project.id === selectedProjectId"
                   class="selected-indicator"
                   :aria-label="t('selected')"
                 >
@@ -665,7 +674,7 @@ defineExpose({
           variant="primary"
           size="sm"
           :icon="FolderOpen"
-          :disabled="!selectedProject"
+          :disabled="!selectedProject || selectedProject.id === currentProjectId"
           @click="openSelectedProject"
         >
           {{ t("openProject") }}
@@ -800,12 +809,13 @@ defineExpose({
 }
 
 .project-row {
-  height: 124px;
-  margin-bottom: 8px;
+  height: 132px;
+  margin-bottom: 12px;
 }
 
 .compact .project-row {
-  height: 112px;
+  height: 116px;
+  margin-bottom: 12px;
 }
 
 .project-card-container {
@@ -933,6 +943,8 @@ defineExpose({
   height: 72px;
   background: var(--color-bg-surface);
   overflow: hidden;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview-video {
@@ -945,6 +957,8 @@ defineExpose({
   background-color: transparent;
   transition: opacity 0.2s ease;
   z-index: 3;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview-thumb {
@@ -952,6 +966,8 @@ defineExpose({
   height: 100%;
   object-fit: cover;
   display: block;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview-video.is-loaded {
@@ -962,12 +978,16 @@ defineExpose({
   position: absolute;
   inset: 0;
   z-index: 2;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .project-preview video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-top-left-radius: calc(var(--radius-md) - 1px);
+  border-top-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .preview-placeholder-icon {
@@ -982,6 +1002,22 @@ defineExpose({
   left: 0;
   right: 0;
   z-index: 10;
+}
+
+.current-indicator {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  z-index: 3;
 }
 
 .selected-indicator {

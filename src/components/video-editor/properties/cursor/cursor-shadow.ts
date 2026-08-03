@@ -1,4 +1,4 @@
-import type { ShadowDirection } from '../shadow-types'
+import type { ShadowDirection } from './shadow-types'
 
 export function cursorShadowOffset(blur: number, direction: ShadowDirection) {
   const offset = Math.round(blur * 0.4)

@@ -56,7 +56,7 @@ const clip = (overrides: Record<string, unknown> = {}) => ({
   isLinked: true,
   shadowSize: "md",
   shadowColor: "#000000",
-  shadowDirection: "bottom",
+  shadowDirection: "all",
   cornerRadius: "sm",
   borderEnabled: false,
   clipTransform: { x: 0, y: 0, width: 1, height: 0.5 },
@@ -107,15 +107,20 @@ describe("ClipPropertiesPanel", () => {
 
     const shadowNone = wrapper.findAll("button").filter((button) => button.text().toLowerCase() === "none")[1];
     await shadowNone!.trigger("click");
-    expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "none", color: "#000000", direction: "bottom" }]);
+    expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "none", color: "#000000", direction: "all" }]);
     const shadowSoft = wrapper.findAll("button").find((button) => button.text().toLowerCase() === "soft");
     await shadowSoft!.trigger("click");
     await wrapper.get(".direction-stub").trigger("click");
     await wrapper.get(".color-stub").trigger("click");
     expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "sm", color: "#abcdef", direction: "top-left" }]);
 
-    await wrapper.findAll(".switch-stub")[0].trigger("click");
+    const horizBtn = wrapper.findAll("button").find((button) => button.text().toLowerCase() === "horizontal");
+    await horizBtn!.trigger("click");
     expect(wrapper.emitted("update:isMirrored")).toContainEqual([true]);
+
+    const vertBtn = wrapper.findAll("button").find((button) => button.text().toLowerCase() === "vertical");
+    await vertBtn!.trigger("click");
+    expect(wrapper.emitted("update:isMirroredY")).toContainEqual([true]);
     await wrapper.get(".frame-stub").trigger("click");
     expect(wrapper.emitted("update:appearance")).toContainEqual([{ borderEnabled: true, frame: "safari" }]);
     await wrapper.get(".preset-pill").trigger("click");

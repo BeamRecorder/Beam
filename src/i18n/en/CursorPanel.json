@@ -14,5 +14,14 @@
   "springIntensity": "Bounce intensity",
   "clickRippleEffect": "Click Ripple Effect",
   "rippleSize": "Ripple Size",
-  "rippleColor": "Ripple Color"
+  "rippleColor": "Ripple Color",
+  "cursorMotion": "Cursor Motion",
+  "cursorMotionDescription": "Retimes cursor travel and adds a subtle directional blur.",
+  "motionPreset": "Motion Preset",
+  "focusedPreset": "Focused",
+  "smoothPreset": "Smooth",
+  "customPreset": "Custom",
+  "cursorSmoothing": "Cursor Smoothing",
+  "springMassMultiplier": "Spring Mass",
+  "motionBlur": "Motion Blur"
 }

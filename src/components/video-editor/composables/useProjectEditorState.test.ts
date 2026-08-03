@@ -2,7 +2,7 @@ import { nextTick, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_OUTPUT_CANVAS } from "../canvas/output-canvas";
 import { emptyComposition } from "../composition/composition-types";
-import { createDefaultCursorClickEffects } from "../../../api/types/cursor-settings";
+import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from "../../../api/types/cursor-settings";
 import type { CaptureProject, ProjectEditorState } from "../../../api/types/capture-api";
 import type { BackgroundMedia, BackgroundValue } from "./backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
@@ -24,6 +24,7 @@ const createState = () => {
     backgroundBlurPercent: ref(0),
     canvas: ref({ ...DEFAULT_OUTPUT_CANVAS }),
     cursorEffects: ref(createDefaultCursorClickEffects()),
+    cursorMotion: ref(createDefaultCursorMotionSettings()),
     availableBackgrounds: ref<Array<{ items: BackgroundMedia[] }>>([]),
   };
 };
@@ -66,6 +67,7 @@ describe("useProjectEditorState property persistence", () => {
       presentation: {
         canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 1280 }, selectedBackgroundId: "global", background: null,
         blurPercent: 250, importedBackgrounds: [globalBackground], cursorEffects: createDefaultCursorClickEffects(),
+        cursorMotion: { preset: "custom", smoothing: .5, springMassMultiplier: 1.1, motionBlur: .2 },
       },
     } satisfies ProjectEditorState);
     state.availableBackgrounds.value = [{ items: [globalBackground] }];
@@ -79,6 +81,7 @@ describe("useProjectEditorState property persistence", () => {
     expect(state.selectedBackground.value).toEqual(globalBackground);
     expect(state.backgroundBlurPercent.value).toBe(100);
     expect(state.canvas.value.width).toBe(1280);
+    expect(state.cursorMotion.value).toEqual({ preset: "custom", smoothing: .5, springMassMultiplier: 1.1, motionBlur: .2 });
     expect(editor.loading.value).toBe(false);
   });
 

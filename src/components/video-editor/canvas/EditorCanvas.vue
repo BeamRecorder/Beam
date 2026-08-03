@@ -8,8 +8,9 @@ import UndoRedoToast from "./UndoRedoToast.vue";
 import type { HistoryAction } from "../composables/useEditorUndoRedo";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { CursorType } from "../properties/cursor/useCursorReplacer";
-import type { ShadowDirection } from "../properties/shadow-types";
+import type { ShadowDirection } from "../properties/cursor/shadow-types";
 import type { CursorClickEffects } from "../../../api/types/cursor-settings";
+import type { CursorMotionSettings } from "../../../api/types/cursor-settings";
 import type { BackgroundValue } from "../composables/backgroundCatalog";
 import type { ZoomElement } from "../zoom/zoom-types";
 import { activeClipsAt, sourceTimeAt } from "../composition/engine/clip-engine";
@@ -46,6 +47,7 @@ const props = defineProps<{
   shadowColor: string;
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;
+  motion: CursorMotionSettings;
   selectedBackground: BackgroundValue | null;
   backgroundBlurPercent?: number;
   videoSrc?: string | null;
@@ -232,6 +234,7 @@ const cursorOverlay = useCursorOverlay({
   cursorColor: () => props.cursorColor,
   enableShadow: () => props.enableShadow,
   clickEffects: () => props.clickEffects,
+  motion: () => props.motion,
   shadowBlur: () => props.shadowBlur,
   shadowColor: () => props.shadowColor,
   shadowDirection: () => props.shadowDirection,
@@ -252,7 +255,7 @@ watch(() => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.ou
   renderOnce();
 });
 watch(() => [props.composition, props.currentTime, props.isCropping] as const, renderOnce, { deep: true });
-watch(() => [props.selectedCursor, props.cursorSize, props.cursorColor, props.enableShadow, props.shadowBlur, props.shadowColor, props.shadowDirection, props.clickEffects] as const, renderOnce, { deep: true });
+watch(() => [props.selectedCursor, props.cursorSize, props.cursorColor, props.enableShadow, props.shadowBlur, props.shadowColor, props.shadowDirection, props.clickEffects, props.motion] as const, renderOnce, { deep: true });
 watch(transformAndCrop.transformDraft, renderOnce, { deep: true });
 watch(isMasterPlaying, renderOnce);
 
@@ -310,11 +313,18 @@ const renderCanvas = () => {
     ctx.restore();
   }
   if (props.isPlaying) {
-    const nextTime = Math.min(props.duration, playbackClockSeconds());
-    emit("update:currentTime", nextTime);
-    if (nextTime >= props.duration) {
-      resetPlaybackClock(props.duration);
+    const nextTime = playbackClockSeconds();
+    if (props.duration > 0 && nextTime >= props.duration) {
+      // Keep the master playback state active and restart every synced layer
+      // from the beginning of the composition.
+      resetPlaybackClock(0);
+      emit("update:currentTime", 0);
+    } else if (props.duration <= 0) {
+      resetPlaybackClock(0);
+      emit("update:currentTime", 0);
       emit("update:isPlaying", false);
+    } else {
+      emit("update:currentTime", Math.max(0, nextTime));
     }
   }
 };

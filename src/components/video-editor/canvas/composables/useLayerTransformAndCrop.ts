@@ -90,7 +90,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const bounds = boundsFor(clip);
     if (!bounds) return null;
     if (clip.kind === "webcam") {
-      const layout = computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(clip.appearance, clip.isMirrored), transform);
+      const layout = computeWebcamLayout(bounds.dw, bounds.dh, bounds.scale, webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY), transform);
       return { left: bounds.dx + layout.x, top: bounds.dy + layout.y, width: layout.width, height: layout.height };
     }
     const rect = {
@@ -133,7 +133,16 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const clip = options.selectedTransformClip();
     return Boolean(clip && isVisualClip(clip) && clip.isMirrored);
   };
-  const displayCrop = (crop: NormalizedCrop) => mirrored() ? { ...crop, x: 1 - crop.x - crop.width } : crop;
+  const mirroredY = () => {
+    const clip = options.selectedTransformClip();
+    return Boolean(clip && isVisualClip(clip) && clip.isMirroredY);
+  };
+  const displayCrop = (crop: NormalizedCrop) => {
+    let c = crop;
+    if (mirrored()) c = { ...c, x: 1 - c.x - c.width };
+    if (mirroredY()) c = { ...c, y: 1 - c.y - c.height };
+    return c;
+  };
   const sourceCrop = displayCrop;
 
   const visualLayout = () => {

@@ -1,5 +1,52 @@
 export type CursorClickButton = "left" | "right";
 
+export type CursorMotionPreset = "focused" | "smooth" | "custom";
+
+export interface CursorMotionSettings {
+  preset: CursorMotionPreset;
+  smoothing: number;
+  springMassMultiplier: number;
+  motionBlur: number;
+}
+
+const FOCUSED_MOTION: Omit<CursorMotionSettings, "preset"> = {
+  smoothing: 0.67,
+  springMassMultiplier: 1,
+  motionBlur: 0.25,
+};
+
+const SMOOTH_MOTION: Omit<CursorMotionSettings, "preset"> = {
+  smoothing: 0.67,
+  springMassMultiplier: 1.29,
+  motionBlur: 0.4,
+};
+
+export const createDefaultCursorMotionSettings = (): CursorMotionSettings => ({
+  preset: "smooth",
+  ...SMOOTH_MOTION,
+});
+
+export const cursorMotionPreset = (preset: Exclude<CursorMotionPreset, "custom">): CursorMotionSettings => ({
+  preset,
+  ...(preset === "focused" ? FOCUSED_MOTION : SMOOTH_MOTION),
+});
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+export const normalizeCursorMotionSettings = (value: unknown): CursorMotionSettings => {
+  const input = isRecord(value) ? value : {};
+  const fallback = createDefaultCursorMotionSettings();
+  const preset = input.preset === "focused" || input.preset === "smooth" || input.preset === "custom"
+    ? input.preset
+    : fallback.preset;
+  return {
+    preset,
+    smoothing: clamp(finiteNumber(input.smoothing, fallback.smoothing), 0, 1),
+    springMassMultiplier: clamp(finiteNumber(input.springMassMultiplier, fallback.springMassMultiplier), 0.5, 2),
+    motionBlur: clamp(finiteNumber(input.motionBlur, fallback.motionBlur), 0, 1),
+  };
+};
+
 export interface CursorClickEffectSettings {
   springEnabled: boolean;
   springIntensity: number;

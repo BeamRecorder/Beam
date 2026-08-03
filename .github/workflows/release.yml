@@ -73,8 +73,7 @@ jobs:
           shared-key: release-windows
           cache-on-failure: true
       - run: npm ci
-      - run: npm run capture:build-release
-      - run: npx vite build
+      - run: npm run build:release
       - run: npx electron-builder --win nsis --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
@@ -103,8 +102,7 @@ jobs:
           shared-key: release-macos
           cache-on-failure: true
       - run: npm ci
-      - run: npm run capture:build-release
-      - run: npx vite build
+      - run: npm run build:release
       - run: npx electron-builder --mac dmg zip --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
