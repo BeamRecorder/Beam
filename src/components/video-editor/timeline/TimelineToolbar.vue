@@ -77,16 +77,15 @@ const handleZoomOut = () => {
     <div class="left-section">
       <PopoverMenuButton :label="t('add')" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
       <Button
-        variant="secondary"
+        variant="ghost"
         size="sm"
+        icon-only
         :icon="Scissors"
         :disabled="!canSplit"
         :tooltip="canSplit ? `${t('split')} (S)` : t('selectClipToSplit')"
         class="toolbar-split-btn"
         @click="emit('split')"
-      >
-        {{ t('split') }}
-      </Button>
+      />
     </div>
 
     <!-- Centered Controls -->
@@ -189,14 +188,6 @@ const handleZoomOut = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.toolbar-split-btn :deep(.btn) {
-  height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: var(--radius-md);
 }
 
 .add-track-button {
