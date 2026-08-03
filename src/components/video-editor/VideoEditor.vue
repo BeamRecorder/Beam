@@ -198,11 +198,13 @@ watch(screenSource, (source) => {
 }, { immediate: true });
 
 const isCropping = ref(false);
+const isGridVisible = ref(false);
 const timelineZoomLevel = ref(100);
 const isSnappingEnabled = ref(true);
 const isTimelineReady = ref(false);
 let timelineTimer: ReturnType<typeof setTimeout> | null = null;
 let timelineFrame: number | null = null;
+const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const toggleCrop = () => { if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value; };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, "custom">) => { outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false }; };
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -291,7 +293,7 @@ onBeforeUnmount(() => {
           @update:clip-is-mirrored="updateSelectedMirrored"
           @update:clip-is-mirrored-y="updateSelectedMirroredY"
           @update:clip-corner-radius="updateSelectedAppearance({ cornerRadius: ['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : Number($event) })"
-          @update:clip-shadow="updateSelectedAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color ?? '#000000', shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
+          @update:clip-shadow="updateSelectedAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg' | 'custom', shadowBlur: Number($event.blur ?? 40), shadowMode: ($event.mode ?? 'solid') as 'solid' | 'adaptive', shadowColor: $event.color ?? '#000000', shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
           @update:clip-appearance="updateSelectedAppearance($event)"
           @update:clip-transform="updateSelectedTransform"
           @reset:clip-transform="updateSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
@@ -300,8 +302,22 @@ onBeforeUnmount(() => {
         />
 
         <div class="canvas-column">
-          <CanvasToolbar :preset="outputCanvas.preset" :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))" :is-cropping="isCropping" @select:preset="selectCanvasPreset" @toggle:crop="toggleCrop" />
+          <CanvasToolbar
+            :preset="outputCanvas.preset"
+            :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
+            :is-cropping="isCropping"
+            :is-grid-visible="isGridVisible"
+            :zoom-percent="editorCanvasRef?.viewportZoom.zoomPercent.value ?? 100"
+            :is-zoomed-or-panned="editorCanvasRef?.viewportZoom.isZoomedOrPanned.value ?? false"
+            @select:preset="selectCanvasPreset"
+            @toggle:crop="toggleCrop"
+            @toggle:grid="isGridVisible = !isGridVisible"
+            @zoom:in="editorCanvasRef?.viewportZoom.zoomIn()"
+            @zoom:out="editorCanvasRef?.viewportZoom.zoomOut()"
+            @reset:zoom="editorCanvasRef?.viewportZoom.resetZoom()"
+          />
           <EditorCanvas
+            ref="editorCanvasRef"
             v-model:is-playing="isPlaying"
             v-model:current-time="currentTime"
             :duration="duration"
@@ -325,6 +341,7 @@ onBeforeUnmount(() => {
             :active-tab="activeTab"
             :selected-transform-clip="selectedTransformClip"
             :is-cropping="isCropping"
+            :is-grid-visible="isGridVisible"
             :history-action="historyAction"
             @update:zoom="updateZoom"
             @preview:zoom="previewZoom"

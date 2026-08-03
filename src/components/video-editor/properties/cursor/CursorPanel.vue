@@ -74,7 +74,7 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
         :model-value="cursorSize"
         :default-value="24"
         :min="16"
-        :max="64"
+        :max="128"
         :label="t('cursorSize')"
         :format-value="(val) => `${val}px`"
         @update:modelValue="emit('update:cursorSize', $event)"

@@ -4,5 +4,10 @@
   "cropSelected": "Crop selected element",
   "selectElementToCrop": "Select an element to crop",
   "ok": "OK",
-  "crop": "Crop"
+  "crop": "Crop",
+  "zoomIn": "Zoom in canvas",
+  "zoomOut": "Zoom out canvas",
+  "resetZoom": "Reset canvas view",
+  "canvasZoom": "Canvas zoom",
+  "toggleGrid": "Toggle 3x3 grid"
 }

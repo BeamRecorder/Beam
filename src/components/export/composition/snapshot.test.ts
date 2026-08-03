@@ -77,6 +77,14 @@ describe('createCompositionSnapshot', () => {
     expect(snapshot.canvas).toMatchObject({ width: 1080, height: 1350, showBackground: false })
   })
 
+  it('normalizes motion settings in the export snapshot', () => {
+    const snapshot = createCompositionSnapshot({
+      ...base(),
+      cursorSettings: { ...base().cursorSettings, motion: { preset: 'custom', smoothing: 2, springMassMultiplier: .1, motionBlur: -1 } },
+    })
+    expect(snapshot.cursorSettings.motion).toEqual({ preset: 'custom', smoothing: 1, springMassMultiplier: .5, motionBlur: 0 })
+  })
+
   it('keeps an immutable copy of zooms and composition', () => {
     const zooms = [{ id: 'z', sessionId: 's', startMs: 0, endMs: 10, focus: { cx: .5, cy: .5 }, depth: 1 as const, mode: 'manual' as const }]
     const input = base()

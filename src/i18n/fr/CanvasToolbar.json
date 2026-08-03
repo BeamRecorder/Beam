@@ -4,5 +4,10 @@
   "cropSelected": "Recadrer l'élément sélectionné",
   "selectElementToCrop": "Sélectionnez un élément pour le recadrer",
   "ok": "OK",
-  "crop": "Recadrer"
+  "crop": "Recadrer",
+  "zoomIn": "Zoomer le canvas",
+  "zoomOut": "Dézoomer le canvas",
+  "resetZoom": "Réinitialiser la vue canvas",
+  "canvasZoom": "Zoom canvas",
+  "toggleGrid": "Afficher/Masquer la grille 3x3"
 }

@@ -54,6 +54,12 @@ const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
 });
 
+const zoomPercentage = computed(() => {
+  const min = 100;
+  const max = 500;
+  return Math.min(100, Math.max(0, ((props.zoomLevel - min) / (max - min)) * 100));
+});
+
 const formatTime = (time: number) => {
   const mins = Math.floor(time / 60);
   const secs = Math.floor(time % 60);
@@ -162,6 +168,9 @@ const handleZoomOut = () => {
         step="10"
         :value="zoomLevel"
         class="zoom-slider"
+        :style="{
+          background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`
+        }"
         @input="
           emit(
             'update:zoomLevel',
@@ -363,9 +372,9 @@ const handleZoomOut = () => {
   width: 80px;
   height: 4px;
   border-radius: var(--radius-full);
-  background: var(--color-border);
   outline: none;
   cursor: pointer;
+  transition: background 0.05s ease;
 }
 
 .zoom-slider::-webkit-slider-thumb {

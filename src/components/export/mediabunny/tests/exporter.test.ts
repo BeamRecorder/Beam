@@ -9,7 +9,7 @@ const { videoCodec, audioCodec, renderedAudio } = vi.hoisted(() => ({
   audioCodec: vi.fn(),
   renderedAudio: { duration: 3 } as AudioBuffer,
 }));
-const exportRuntime = vi.hoisted(() => ({ outputs: [] as any[], sources: [] as any[], renderFrame: vi.fn(), createProvider: vi.fn() }));
+const exportRuntime = vi.hoisted(() => ({ outputs: [] as any[], sources: [] as any[], renderFrame: vi.fn(), createProvider: vi.fn(), getCursorImage: vi.fn() }));
 
 vi.mock("mediabunny", () => ({
   AudioBufferSource: class AudioBufferSource {
@@ -47,7 +47,7 @@ vi.mock("../../composition/render", () => ({ renderCompositionFrame: exportRunti
 vi.mock("../video-frame-provider", () => ({ VideoFrameProvider: { create: exportRuntime.createProvider } }));
 vi.mock("../../../video-editor/properties/cursor/useCursorReplacer", () => ({
   cursorTypeForKind: vi.fn(() => "default"),
-  useCursorReplacer: () => ({ getCursorImage: vi.fn(async () => ({ width: 24, height: 24 })) }),
+  useCursorReplacer: () => ({ getCursorImage: exportRuntime.getCursorImage }),
 }));
 
 const screenAsset = (): MediaAsset => ({
@@ -130,6 +130,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   exportRuntime.outputs = [];
   exportRuntime.sources = [];
+  exportRuntime.getCursorImage.mockResolvedValue({ width: 24, height: 24 });
   videoCodec.mockReturnValue("vp9");
   audioCodec.mockReturnValue("opus");
   exportRuntime.createProvider.mockResolvedValue({ frameAt: vi.fn(async () => null), dispose: vi.fn() });
@@ -235,6 +236,27 @@ describe("mediabunny exporter", () => {
     expect(exportRuntime.outputs[0].finalize).toHaveBeenCalled();
     expect(finalizeExport).toHaveBeenCalledWith("job-success");
     expect(onProgress.mock.calls.map(([progress]) => progress.stage)).toEqual(["loading_assets", "audio_mixing", "encoding", "finalizing"]);
+  });
+
+  it("passes the editor cursor size and motion settings through the export renderer", async () => {
+    const value = request();
+    value.snapshot.duration = 0.1;
+    value.snapshot.render.fps = 1;
+    value.snapshot.cursorSettings.size = 50;
+    value.snapshot.cursorSettings.motion = { preset: "custom", smoothing: 0, springMassMultiplier: .5, motionBlur: 0 };
+    setCapture({ beginExport: vi.fn().mockResolvedValue({ jobId: "job-settings", canceled: false }), writeExportChunk: vi.fn().mockResolvedValue(undefined), finalizeExport: vi.fn().mockResolvedValue({ path: "C:/exports/settings.webm" }) });
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(function (this: HTMLMediaElement) {
+      queueMicrotask(() => this.dispatchEvent(new Event("loadedmetadata")));
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as CanvasRenderingContext2D);
+
+    await exportWithMediabunny(value, vi.fn(), new AbortController().signal);
+
+    expect(exportRuntime.getCursorImage).toHaveBeenCalledWith("default", 300, "#fff");
+    expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[2].cursorSettings).toMatchObject({
+      size: 50,
+      motion: { preset: "custom", smoothing: 0, springMassMultiplier: .5, motionBlur: 0 },
+    });
   });
 
   it("cancels the output and native job when the export signal aborts during encoding", async () => {

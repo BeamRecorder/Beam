@@ -28,7 +28,9 @@ const appearance = (value) => {
   const radius = finite(value.cornerRadius) ? Math.max(0, Math.min(9999, value.cornerRadius)) : ['none', 'sm', 'md', 'lg', 'full'].includes(value.cornerRadius) ? value.cornerRadius : 'sm'
   return {
     cornerRadius: radius,
-    shadowSize: ['none', 'sm', 'md', 'lg'].includes(value.shadowSize) ? value.shadowSize : 'md',
+    shadowSize: ['none', 'sm', 'md', 'lg', 'custom'].includes(value.shadowSize) ? value.shadowSize : 'md',
+    shadowBlur: finite(value.shadowBlur) ? Math.max(0, Math.min(96, value.shadowBlur)) : 40,
+    shadowMode: ['solid', 'adaptive'].includes(value.shadowMode) ? value.shadowMode : 'solid',
     shadowColor: color(value.shadowColor, '#000000'),
     shadowDirection: ['all', 'bottom', 'bottom-right', 'top-left'].includes(value.shadowDirection) ? value.shadowDirection : 'bottom',
     borderEnabled: value.borderEnabled === true,

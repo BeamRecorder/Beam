@@ -30,6 +30,7 @@ import { useCompositionMedia } from "./composables/useCompositionMedia";
 import { useCursorOverlay } from "./composables/useCursorOverlay";
 import { useCameraZoom } from "./composables/useCameraZoom";
 import { useLayerTransformAndCrop } from "./composables/useLayerTransformAndCrop";
+import { useViewportZoom } from "./composables/useViewportZoom";
 import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("EditorCanvas");
@@ -60,6 +61,7 @@ const props = defineProps<{
   selectedTransformClip: TransformClip | null;
   loopProgress?: number;
   isCropping?: boolean;
+  isGridVisible?: boolean;
   historyAction?: HistoryAction | null;
 }>();
 
@@ -90,6 +92,8 @@ let animationFrameId: number | null = null;
 let playbackAnchorSeconds = 0;
 let playbackAnchorTime = performance.now();
 let drawVisualStack: ((ctx: CanvasRenderingContext2D, videoWindow: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number }, drawScreen: () => void) => void) | null = null;
+
+const viewportZoom = useViewportZoom();
 
 const resetPlaybackClock = (seconds = props.currentTime) => {
   playbackAnchorSeconds = Math.max(0, Math.min(props.duration, seconds));
@@ -149,10 +153,38 @@ const transformAndCrop = useLayerTransformAndCrop({
   videoWindowBounds: () => cameraZoom.videoWindowBounds.value,
   overlayWindowBounds: () => cameraZoom.overlayWindowBounds.value,
   isCropping: () => props.isCropping,
+  zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit("update:clip-transform", transform),
   onPreviewTransform: (transform) => emit("preview:clip-transform", transform),
   onUpdateCrop: (crop) => emit("update:clip-crop", crop),
   onSelectTransformClip: (clipId) => emit("select:clip", clipId),
+});
+
+const renderGuideLines = computed(() => {
+  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+  return transformAndCrop.activeGuideLines.value.map((guide) => {
+    if (guide.type === "vertical") {
+      const x = preview.x + guide.position * preview.width;
+      return {
+        type: "vertical" as const,
+        style: {
+          left: `${x}px`,
+          top: `${preview.y}px`,
+          height: `${preview.height}px`,
+        },
+      };
+    } else {
+      const y = preview.y + guide.position * preview.height;
+      return {
+        type: "horizontal" as const,
+        style: {
+          top: `${y}px`,
+          left: `${preview.x}px`,
+          width: `${preview.width}px`,
+        },
+      };
+    }
+  });
 });
 
 cameraZoom = useCameraZoom({
@@ -201,6 +233,7 @@ const compositionMedia = useCompositionMedia({
   selectedTransformClip: () => props.selectedTransformClip,
   transformDraft: () => transformAndCrop.transformDraft.value,
   isCropping: () => props.isCropping,
+  outputCanvas: () => props.outputCanvas,
   onRenderOnce: renderOnce,
 });
 
@@ -238,6 +271,7 @@ const cursorOverlay = useCursorOverlay({
   shadowBlur: () => props.shadowBlur,
   shadowColor: () => props.shadowColor,
   shadowDirection: () => props.shadowDirection,
+  outputCanvas: () => props.outputCanvas,
   deviceScale: () => deviceScale.value,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
@@ -315,8 +349,6 @@ const renderCanvas = () => {
   if (props.isPlaying) {
     const nextTime = playbackClockSeconds();
     if (props.duration > 0 && nextTime >= props.duration) {
-      // Keep the master playback state active and restart every synced layer
-      // from the beginning of the composition.
       resetPlaybackClock(0);
       emit("update:currentTime", 0);
     } else if (props.duration <= 0) {
@@ -335,6 +367,31 @@ function draw() {
   if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
 }
 
+const handleIslandPointerDown = (event: PointerEvent) => {
+  if (viewportZoom.beginPan(event, containerRef.value)) return;
+  cameraZoom.beginSelectionMove(event);
+};
+
+const handleIslandPointerMove = (event: PointerEvent) => {
+  if (viewportZoom.isPanning.value) {
+    viewportZoom.movePan(event);
+    return;
+  }
+  cameraZoom.moveSelection(event);
+};
+
+const handleIslandPointerUp = (event: PointerEvent) => {
+  if (viewportZoom.isPanning.value) {
+    viewportZoom.endPan(event, containerRef.value);
+    return;
+  }
+  cameraZoom.endSelectionMove(event);
+};
+
+const handleIslandWheel = (event: WheelEvent) => {
+  viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect());
+};
+
 onMounted(() => {
   resetPlaybackClock();
   resizeCanvas();
@@ -347,41 +404,122 @@ onUnmounted(() => {
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
+
+defineExpose({
+  viewportZoom,
+});
 </script>
 
 <template>
-  <div class="canvas-island" ref="containerRef">
-    <div class="preview-frame" :style="previewFrameStyle" aria-hidden="true"></div>
-    <canvas
-      ref="canvasRef"
-      class="editor-canvas"
-      :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual', 'is-format-transitioning': isFormatTransitioning }"
-      @pointerdown="cameraZoom.beginSelectionMove"
-      @pointermove="cameraZoom.moveSelection"
-      @pointerup="cameraZoom.endSelectionMove"
-      @pointercancel="cameraZoom.endSelectionMove"
-    ></canvas>
-    <Skeleton v-if="!isVideoFrameReady && !videoError" class="canvas-loading-skeleton" width="100%" height="100%" radius="var(--radius-lg)" :aria-label="t('videoPreviewLoading')" />
-    <div v-if="selectedTransformClip && !isCropping" class="webcam-selection" :style="transformAndCrop.transformHandleStyle.value" @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')" @pointermove="transformAndCrop.moveTransformDrag" @pointerup="transformAndCrop.endTransformDrag" @pointercancel="transformAndCrop.endTransformDrag">
-      <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)" />
-    </div>
-    <div class="zoom-selection-box" :class="{ locked: selectedZoom?.mode !== 'manual' }" :style="cameraZoom.focusTargetStyle.value" aria-hidden="true"></div>
-    <div v-if="isCropping && selectedTransformClip" class="crop-overlay-box" :style="transformAndCrop.cropOverlayStyle.value" @pointerdown="transformAndCrop.beginCropDrag($event, 'move')" @pointermove="transformAndCrop.moveCropDrag" @pointerup="transformAndCrop.endCropDrag" @pointercancel="transformAndCrop.endCropDrag">
-      <div class="crop-grid">
-        <div class="grid-line vertical line-1"></div><div class="grid-line vertical line-2"></div>
-        <div class="grid-line horizontal line-1"></div><div class="grid-line horizontal line-2"></div>
+  <div
+    class="canvas-island"
+    ref="containerRef"
+    :class="{ 'is-grabbing': viewportZoom.isPanning.value, 'is-space-pressed': viewportZoom.isSpacePressed.value }"
+    @wheel="handleIslandWheel"
+    @pointerdown="handleIslandPointerDown"
+    @pointermove="handleIslandPointerMove"
+    @pointerup="handleIslandPointerUp"
+    @pointercancel="handleIslandPointerUp"
+  >
+    <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
+      <div class="preview-frame" :style="previewFrameStyle" aria-hidden="true"></div>
+      <canvas
+        ref="canvasRef"
+        class="editor-canvas"
+        :class="{ 'is-selection-editable': selectedZoom?.mode === 'manual', 'is-format-transitioning': isFormatTransitioning }"
+      ></canvas>
+      <div v-if="isGridVisible" class="canvas-3x3-grid" :style="previewFrameStyle">
+        <div class="grid-line vertical line-1"></div>
+        <div class="grid-line vertical line-2"></div>
+        <div class="grid-line horizontal line-1"></div>
+        <div class="grid-line horizontal line-2"></div>
       </div>
-      <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
-        <Button variant="primary" size="xs" :icon="Check" @click.stop="commitCrop">{{ t('ok') }}</Button>
+      <div
+        v-for="(guide, index) in renderGuideLines"
+        :key="index"
+        class="canvas-guide-line"
+        :class="guide.type"
+        :style="guide.style"
+      ></div>
+      <Skeleton v-if="!isVideoFrameReady && !videoError" class="canvas-loading-skeleton" width="100%" height="100%" radius="var(--radius-lg)" :aria-label="t('videoPreviewLoading')" />
+      <div v-if="selectedTransformClip && !isCropping" class="webcam-selection" :style="transformAndCrop.transformHandleStyle.value" @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')" @pointermove="transformAndCrop.moveTransformDrag" @pointerup="transformAndCrop.endTransformDrag" @pointercancel="transformAndCrop.endTransformDrag">
+        <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)" />
       </div>
-      <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
+      <div class="zoom-selection-box" :class="{ locked: selectedZoom?.mode !== 'manual' }" :style="cameraZoom.focusTargetStyle.value" aria-hidden="true"></div>
+      <div v-if="isCropping && selectedTransformClip" class="crop-container" :style="transformAndCrop.cropContainerStyle.value">
+        <div class="crop-mask-wrapper">
+          <div class="crop-mask-hole" :style="transformAndCrop.cropOverlayStyle.value"></div>
+        </div>
+        <div class="crop-overlay-box" :style="transformAndCrop.cropOverlayStyle.value" @pointerdown="transformAndCrop.beginCropDrag($event, 'move')" @pointermove="transformAndCrop.moveCropDrag" @pointerup="transformAndCrop.endCropDrag" @pointercancel="transformAndCrop.endCropDrag">
+          <div class="crop-grid">
+            <div class="grid-line vertical line-1"></div><div class="grid-line vertical line-2"></div>
+            <div class="grid-line horizontal line-1"></div><div class="grid-line horizontal line-2"></div>
+          </div>
+          <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
+            <Button variant="primary" size="xs" :icon="Check" class="crop-ok-button" @click.stop="commitCrop">{{ t('ok') }}</Button>
+          </div>
+          <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
+        </div>
+      </div>
     </div>
     <UndoRedoToast :action="historyAction ?? null" />
   </div>
 </template>
 
 <style scoped>
-.canvas-island { flex: 1; margin: 0 12px; background: transparent; position: relative; overflow: visible; display: flex; justify-content: center; align-items: center; min-height: 0; }
+.canvas-island {
+  flex: 1;
+  margin: 0 12px;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  user-select: none;
+}
+.canvas-island.is-space-pressed { cursor: grab !important; }
+.canvas-island.is-grabbing { cursor: grabbing !important; }
+.canvas-viewport {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+.canvas-3x3-grid {
+  position: absolute;
+  pointer-events: none;
+  z-index: 30;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.canvas-3x3-grid .grid-line {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.45);
+}
+.canvas-3x3-grid .grid-line.vertical { top: 0; bottom: 0; width: 1px; }
+.canvas-3x3-grid .grid-line.vertical.line-1 { left: 33.333%; }
+.canvas-3x3-grid .grid-line.vertical.line-2 { left: 66.666%; }
+.canvas-3x3-grid .grid-line.horizontal { left: 0; right: 0; height: 1px; }
+.canvas-3x3-grid .grid-line.horizontal.line-1 { top: 33.333%; }
+.canvas-3x3-grid .grid-line.horizontal.line-2 { top: 66.666%; }
+
+.canvas-guide-line {
+  position: absolute;
+  background: var(--color-primary, #ff5a1f);
+  z-index: 35;
+  pointer-events: none;
+}
+.canvas-guide-line.vertical {
+  width: 1px;
+}
+.canvas-guide-line.horizontal {
+  height: 1px;
+}
+
 .editor-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
 .canvas-loading-skeleton { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .preview-frame { position: absolute; z-index: 0; border-radius: var(--radius-lg); background: var(--color-bg-element); box-shadow: var(--shadow-lg); pointer-events: none; }
@@ -389,8 +527,55 @@ onUnmounted(() => {
 .webcam-selection { position: absolute; z-index: 2; border: 2px solid var(--color-primary); box-sizing: border-box; cursor: move; }
 .zoom-selection-box { position: absolute; top: 0; left: 0; z-index: 2; border: 2px dashed rgba(255,255,255,.9); background: rgba(255,255,255,.08); box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; border-radius: var(--radius-md); box-sizing: border-box; contain: layout style; }
 .zoom-selection-box.locked { border-style: solid; border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.03); }
-.crop-overlay-box { position: absolute; z-index: 4; border: 2px solid var(--color-primary, #ff5a1f); box-shadow: 0 0 0 9999px rgba(0,0,0,.5); cursor: move; box-sizing: border-box; }
-.crop-done-wrapper { position: absolute; top: calc(100% - 24px); left: calc(100% + 8px); z-index: 10; white-space: nowrap; pointer-events: auto; }
+.crop-container {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+}
+.crop-mask-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: var(--radius-sm, 4px);
+}
+.crop-mask-hole {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.crop-overlay-box {
+  position: absolute;
+  border: 2px solid var(--color-primary, #ff5a1f);
+  cursor: move;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+.crop-overlay-box :deep(.resize-handle) {
+  z-index: 25 !important;
+}
+.crop-done-wrapper { position: absolute; bottom: 8px; right: 8px; z-index: 10; white-space: nowrap; pointer-events: auto; }
+.crop-done-wrapper :deep(button),
+.crop-done-wrapper :deep(.btn) {
+  background: #ff5a1f !important;
+  background-color: #ff5a1f !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  padding: 0 12px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  border-radius: var(--radius-md, 6px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.crop-done-wrapper :deep(button:hover),
+.crop-done-wrapper :deep(.btn:hover) {
+  background: #e04810 !important;
+  background-color: #e04810 !important;
+}
 .crop-grid { position: absolute; inset: 0; pointer-events: none; }
 .grid-line { position: absolute; background: rgba(255,255,255,.35); }
 .grid-line.vertical { top: 0; bottom: 0; width: 1px; }

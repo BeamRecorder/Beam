@@ -6,6 +6,7 @@ import type { CursorRenderSettings, CompositionSnapshot } from '../export-types'
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas'
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas'
 import { tNamespace } from '../../../i18n'
+import { normalizeCursorMotionSettings } from '../../../api/types/cursor-settings'
 
 const $t = tNamespace('exporter')
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -38,6 +39,7 @@ export function createCompositionSnapshot(input: {
   const screen = input.composition.clips.find((clip): clip is VisualClip => clip.kind === 'screen' && clip.enabled)
   const asset = screen && input.composition.assets.find((entry) => entry.id === screen.assetId)
   if (!screen || !asset?.src) throw new Error($t('sessionVideoUnavailable'))
+  const canvas = normalizeOutputCanvas(input.canvas)
   return {
     duration: Math.max(0, input.duration),
     render: {
@@ -45,14 +47,14 @@ export function createCompositionSnapshot(input: {
       sourceWidth: Math.max(1, asset.width ?? input.width),
       sourceHeight: Math.max(1, asset.height ?? input.height),
     },
-    canvas: normalizeOutputCanvas(input.canvas),
+    canvas,
     background: input.background?.kind === 'color' ? { kind: 'color', color: input.background.color }
       : input.background?.kind === 'gradient' ? { kind: 'gradient', gradient: cloneJson(input.background.gradient) }
       : input.background ? { kind: input.background.kind, src: input.background.path } : null,
     blurPercent: Math.max(0, Math.min(100, Math.round(input.blurPercent))),
     zooms: copyZooms(input.zooms),
     cursor: copyCursor(input.editorData?.cursor),
-    cursorSettings: cloneJson(input.cursorSettings),
+    cursorSettings: cloneJson({ ...input.cursorSettings, motion: normalizeCursorMotionSettings(input.cursorSettings.motion) }),
     composition: cloneJson(input.composition),
   }
 }

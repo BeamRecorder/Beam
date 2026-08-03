@@ -148,4 +148,30 @@ describe('canonical composition rendering', () => {
     expect(ctx.scale).toHaveBeenCalledWith(expect.closeTo(.707, 3), expect.closeTo(.707, 3))
     expect(ctx.drawImage).toHaveBeenCalled()
   })
+
+  it('uses the configured cursor size as output pixels', () => {
+    const value = snapshot()
+    value.cursor = {
+      available: true,
+      telemetry: [],
+      missing: [],
+      shapes: {},
+      catalog: {},
+      events: [{ event: 'move', sessionNs: 0, pixelX: 25, pixelY: 25, normalizedX: .25, normalizedY: .5, visible: true }],
+    }
+    value.cursorSettings.size = 50
+    const ctx = context()
+    const image = { complete: true, naturalWidth: 24 } as HTMLImageElement
+
+    renderCompositionFrame(
+      ctx,
+      { readyState: HTMLMediaElement.HAVE_CURRENT_DATA, videoWidth: 100, videoHeight: 50 } as HTMLVideoElement,
+      value,
+      0,
+      null,
+      new Map([['default', image]]),
+    )
+
+    expect(ctx.drawImage).toHaveBeenLastCalledWith(image, expect.any(Number), expect.any(Number), 50, 50)
+  })
 })

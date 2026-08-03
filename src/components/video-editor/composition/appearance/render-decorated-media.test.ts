@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { frameContentRect } from "./frames";
-import { drawDecoratedMedia } from "./render-decorated-media";
+import { applyClipShadow, drawDecoratedMedia, shadowBlurForAppearance } from "./render-decorated-media";
 import type { ClipAppearance } from "../composition-types";
 
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({ cornerRadius: "sm", shadowSize: "none", shadowColor: "#000000", shadowDirection: "all", borderEnabled: false, borderColor: "#ff0000", borderWidth: 2, frame: "none", frameTitle: "", frameColor: "#c0c0c0", frameShowMenu: true, frameShowScrollbars: true, ...patch });
@@ -21,5 +21,17 @@ describe("decorated media rendering", () => {
     expect(rect).toEqual({ x: 13, y: 52, width: 111, height: 44.61538461538461 });
     const ctx = context(); drawDecoratedMedia(ctx, { source, rect: { x: 10, y: 20, width: 120, height: 80 }, appearance: appearance({ frame: "windows-95", borderEnabled: true }), title: "Clip" });
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 13, 52, 111, 44.61538461538461); expect(ctx.strokeRect).toHaveBeenCalled(); expect(ctx.stroke).toHaveBeenCalled();
+  });
+  it("keeps adaptive color independent from the selected shadow size", () => {
+    expect(shadowBlurForAppearance(appearance({ shadowSize: "none", shadowMode: "adaptive" }))).toBe(0);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: "sm", shadowMode: "adaptive" }))).toBe(10);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: "md", shadowMode: "adaptive" }))).toBe(20);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: "lg", shadowMode: "adaptive" }))).toBe(32);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: "custom", shadowBlur: 56, shadowMode: "adaptive" }))).toBe(56);
+  });
+  it("scales output-pixel shadows in the preview", () => {
+    const ctx = context();
+    applyClipShadow(ctx, appearance({ shadowSize: "custom", shadowBlur: 40, shadowMode: "solid" }), 100, source, undefined, 0.5);
+    expect(ctx.shadowBlur).toBe(20);
   });
 });

@@ -92,13 +92,16 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const selected = options.selectedZoom();
     if (!canvas || !bounds || !selected || selected.mode !== "manual") return;
     const rect = canvas.getBoundingClientRect();
+    const scaleRatio = rect.width / (canvas.clientWidth || 1);
+    const canvasX = (event.clientX - rect.left) / (scaleRatio || 1);
+    const canvasY = (event.clientY - rect.top) / (scaleRatio || 1);
     const scale = bounds.scale || 1;
     const centerX = bounds.dx + bounds.dw / 2;
     const centerY = bounds.dy + bounds.dh / 2;
     const focusX = bounds.focusX ?? centerX;
     const focusY = bounds.focusY ?? centerY;
-    const unzoomedX = (event.clientX - rect.left - centerX) / scale + focusX;
-    const unzoomedY = (event.clientY - rect.top - centerY) / scale + focusY;
+    const unzoomedX = (canvasX - centerX) / scale + focusX;
+    const unzoomedY = (canvasY - centerY) / scale + focusY;
     const updated = {
       ...selected,
       focus: {
@@ -110,6 +113,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   };
 
   const beginSelectionMove = (event: PointerEvent) => {
+    if (event.button !== 0) return;
     const selectedZoom = options.selectedZoom();
     const editingManualZoom = selectedZoom?.mode === "manual" && options.activeTab() === "zoom";
     if (!editingManualZoom) {
@@ -118,8 +122,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       const bounds = screenHitBounds.value ?? videoWindowBounds.value;
       if (canvas && bounds) {
         const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const scaleRatio = rect.width / (canvas.clientWidth || 1);
+        const x = (event.clientX - rect.left) / (scaleRatio || 1);
+        const y = (event.clientY - rect.top) / (scaleRatio || 1);
         if (x >= bounds.dx && x <= bounds.dx + bounds.dw && y >= bounds.dy && y <= bounds.dy + bounds.dh) {
           const screen = screenClip();
           if (screen) options.onSelectScreenClip(screen.id);
@@ -231,6 +236,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             frameShowMenu: true,
             frameShowScrollbars: true,
           },
+          shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
           title: screen.name,
           mirrored: screen.isMirrored,
           mirroredY: screen.isMirroredY,

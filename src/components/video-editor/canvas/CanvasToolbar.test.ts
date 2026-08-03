@@ -34,4 +34,18 @@ describe('CanvasToolbar', () => {
     expect(wrapper.get('.crop-button').attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('OK')
   })
+
+  it('renders zoom and grid controls and emits events', async () => {
+    const wrapper = mount(CanvasToolbar, {
+      props: { preset: '16:9', canCrop: true, isCropping: false, isGridVisible: true, zoomPercent: 150, isZoomedOrPanned: true },
+      global: { stubs: { PopoverMenuButton, Button } },
+    })
+    expect(wrapper.text()).toContain('150%')
+
+    await wrapper.get('.grid-toggle-btn').trigger('click')
+    expect(wrapper.emitted('toggle:grid')).toHaveLength(1)
+
+    await wrapper.get('.zoom-indicator').trigger('click')
+    expect(wrapper.emitted('reset:zoom')).toHaveLength(1)
+  })
 })

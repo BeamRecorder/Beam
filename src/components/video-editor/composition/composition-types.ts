@@ -55,8 +55,13 @@ export interface CaptionData {
   style: CaptionStyle;
 }
 
+export type ClipShadowSize = "none" | "sm" | "md" | "lg" | "custom";
+export type ClipShadowMode = "solid" | "adaptive";
+
 export interface WebcamAppearance {
-  shadowSize: "none" | "sm" | "md" | "lg";
+  shadowSize: ClipShadowSize;
+  shadowBlur?: number;
+  shadowMode?: ClipShadowMode;
   cornerRadius: "none" | "sm" | "md" | "lg" | "full" | number;
 }
 
