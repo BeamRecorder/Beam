@@ -6,6 +6,7 @@ import { activeClipsAt, sourceTimeAt } from "../../video-editor/composition/engi
 import { isAudioClip, isVisualClip, type AudioClip, type VisualClip } from "../../video-editor/composition/composition-types";
 import { cursorTypeForKind, useCursorReplacer } from "../../video-editor/properties/cursor/useCursorReplacer";
 import { VideoFrameProvider } from "./video-frame-provider";
+import { createCursorMotionPlayer } from "../../video-editor/composables/cursor-motion";
 import { tNamespace } from "../../../i18n";
 
 const $t = tNamespace("exporter");
@@ -148,6 +149,12 @@ export async function exportWithMediabunny(request: ExportRequest, onProgress: (
     onProgress({ stage: "loading_assets", stageLabel: $t("loadingMediaAssets"), completed: 0, total, currentTimeMs: 0, totalTimeMs });
     const background = await loadBackground(request);
     const cursorImages = await loadCursorImages(request);
+    const cursorMotionPlayer = createCursorMotionPlayer(
+      request.snapshot.cursor.events,
+      request.snapshot.cursorSettings.motion,
+      request.snapshot.render.sourceWidth,
+      request.snapshot.render.sourceHeight,
+    );
     loaded = await loadVisuals(request);
     screenFrames = await VideoFrameProvider.create(screenAsset.src, times.map((time) => Math.max(0, (sourceTimeAt(screen, time * 1_000) ?? screen.sourceInMs) / 1_000)));
     if (!screenFrames) { fallbackVideo.load(); await waitFor(fallbackVideo, "loadedmetadata"); }
@@ -182,7 +189,7 @@ export async function exportWithMediabunny(request: ExportRequest, onProgress: (
       const decodedIds = new Set(decodedFrames.filter(([, value]) => Boolean(value)).map(([assetId]) => assetId));
       const visuals = await visualsAtTime(request, loaded, time, decodedIds);
       for (const [assetId, value] of decodedFrames) if (value) visuals.set(assetId, value);
-      try { renderCompositionFrame(context, screenFrame ?? fallbackVideo, request.snapshot, time, background, cursorImages, visuals); }
+      try { renderCompositionFrame(context, screenFrame ?? fallbackVideo, request.snapshot, time, background, cursorImages, visuals, cursorMotionPlayer); }
       finally { screenFrame?.close(); decodedFrames.forEach(([, value]) => value?.close()); }
       await source.add(time, 1 / fps);
     }

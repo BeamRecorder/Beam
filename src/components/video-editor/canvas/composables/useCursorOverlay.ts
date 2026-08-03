@@ -5,10 +5,11 @@ import { type CursorType, useCursorReplacer } from "../../properties/cursor/useC
 import { ZOOM_DEPTH_SCALES } from "../../zoom/zoom-types";
 import { cursorClickSpringScale } from "../../composables/cursor-click-spring";
 import { cursorShadowOffset } from "../../properties/cursor/cursor-shadow";
-import type { ShadowDirection } from "../../properties/shadow-types";
+import type { ShadowDirection } from "../../properties/cursor/shadow-types";
 import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from "../../properties/cursor/cursor-rendering";
 import type { VisualClip } from "../../composition/composition-types";
-import { effectButtonForRecordedButton, type CursorClickEffectSettings, type CursorClickEffects } from "../../../../api/types/cursor-settings";
+import { createCursorMotionPlayer, motionBlurTrail } from "../../composables/cursor-motion";
+import { effectButtonForRecordedButton, type CursorClickEffectSettings, type CursorClickEffects, type CursorMotionSettings } from "../../../../api/types/cursor-settings";
 
 export interface Ripple { x: number; y: number; radius: number; alpha: number; color: string; size: number }
 
@@ -18,6 +19,7 @@ export interface UseCursorOverlayOptions {
   cursorColor: () => string;
   enableShadow: () => boolean;
   clickEffects: () => CursorClickEffects;
+  motion: () => CursorMotionSettings;
   shadowBlur: () => number;
   shadowColor: () => string;
   shadowDirection: () => ShadowDirection;
@@ -44,6 +46,9 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   const customCursorImage = ref<HTMLImageElement | null>(null);
   const ripples = ref<Ripple[]>([]);
   let lastDrawTime = 0;
+  let motionPlayer: ReturnType<typeof createCursorMotionPlayer> | null = null;
+  let motionPlayerEvents: ProjectEditorData["cursor"]["events"] | null = null;
+  let motionPlayerKey = "";
   const maxZoomScale = Math.max(...Object.values(ZOOM_DEPTH_SCALES));
 
   watch(
@@ -102,6 +107,17 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     return effectButton ? options.clickEffects()[effectButton] : null;
   };
 
+  const playerFor = (events: ProjectEditorData["cursor"]["events"], videoWidth: number, videoHeight: number) => {
+    const motion = options.motion();
+    const key = `${events.length}:${events.at(-1)?.sessionNs ?? 0}:${videoWidth}:${videoHeight}:${motion.preset}:${motion.smoothing}:${motion.springMassMultiplier}:${motion.motionBlur}`;
+    if (!motionPlayer || motionPlayerEvents !== events || motionPlayerKey !== key) {
+      motionPlayer = createCursorMotionPlayer(events, motion, videoWidth || 1920, videoHeight || 1080);
+      motionPlayerEvents = events;
+      motionPlayerKey = key;
+    }
+    return motionPlayer;
+  };
+
   const updateAndDrawRipplesAndCursor = (
     ctx: CanvasRenderingContext2D,
     videoWindow: { dx: number; dy: number; dw: number; dh: number; focusX: number; focusY: number; scale: number },
@@ -117,18 +133,25 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     }
     const time = options.currentTime();
     const playing = options.isPlaying();
+    const player = playerFor(cursorData.events, videoWidth, videoHeight);
+    if (time < lastDrawTime) {
+      player.reset();
+      ripples.value = [];
+    }
     if (playing && time >= lastDrawTime) {
       for (const button of buttonEventsBetween(cursorData.events, lastDrawTime, time)) {
         const effect = settingsForButton(button.button);
         if (!effect?.rippleEnabled) continue;
         const state = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000);
         if (!state) continue;
-        const position = positionAt(state, videoWindow, videoWidth, videoHeight);
+        const target = player.timeline.targetAt(button.sessionNs / 1_000_000_000);
+        const position = positionAt(target ? { ...state, x: target.x, y: target.y } : state, videoWindow, videoWidth, videoHeight);
         ripples.value.push({ x: position.x, y: position.y, radius: 2, alpha: 1, color: effect.rippleColor, size: effect.rippleSize });
       }
     }
     lastDrawTime = time;
     const state = cursorStateAt(cursorData.events, time);
+    const motionState = player.sample(time, state);
     if (options.selectedCursor() === "automatic" && state?.cursorKind === "custom") warning(ctx, "System cursor not translated", logicalWidth);
 
     drawInCameraSpace(() => {
@@ -142,27 +165,39 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       }
       const image = customCursorImage.value;
       if (!state?.visible || !image?.complete || image.naturalWidth <= 0) return;
-      const position = positionAt(state, videoWindow, videoWidth, videoHeight);
+      if (!motionState) return;
       const size = options.cursorSize();
-      const hotspot = cursorHotspotAtSize(cursorTypeAt(options.selectedCursor(), state), size);
-      ctx.save();
-      if (options.enableShadow()) {
-        ctx.shadowColor = options.shadowColor();
-        ctx.shadowBlur = options.shadowBlur();
-        const offset = cursorShadowOffset(options.shadowBlur(), options.shadowDirection());
-        ctx.shadowOffsetX = offset.x;
-        ctx.shadowOffsetY = offset.y;
-      }
+      const hotspot = cursorHotspotAtSize(cursorTypeAt(options.selectedCursor(), motionState), size);
       const click = buttonEventsBetween(cursorData.events, Math.max(0, time - .28), time)
         .reverse()
         .find((event) => settingsForButton(event.button)?.springEnabled);
       const age = click ? Math.max(0, time - click.sessionNs / 1_000_000_000) : Infinity;
       const spring = click ? settingsForButton(click.button) : null;
       const scale = cursorClickSpringScale(age, Boolean(spring?.springEnabled), spring?.springIntensity ?? 0);
-      ctx.translate(position.x, position.y);
-      ctx.scale(scale, scale);
-      ctx.drawImage(image, -hotspot.x, -hotspot.y, size, size);
-      ctx.restore();
+      const trail = motionBlurTrail(
+        { x: motionState.x, y: motionState.y },
+        { x: motionState.previousX, y: motionState.previousY },
+        motionState.deltaSeconds,
+        options.motion().motionBlur,
+        { width: videoWindow.dw, height: videoWindow.dh },
+      );
+      for (const sample of trail) {
+        const sampleState = { ...motionState, x: sample.x, y: sample.y };
+        const samplePosition = positionAt(sampleState, videoWindow, videoWidth, videoHeight);
+        ctx.save();
+        ctx.globalAlpha = sample.alpha;
+        if (options.enableShadow()) {
+          ctx.shadowColor = options.shadowColor();
+          ctx.shadowBlur = options.shadowBlur();
+          const offset = cursorShadowOffset(options.shadowBlur(), options.shadowDirection());
+          ctx.shadowOffsetX = offset.x;
+          ctx.shadowOffsetY = offset.y;
+        }
+        ctx.translate(samplePosition.x, samplePosition.y);
+        ctx.scale(scale, scale);
+        ctx.drawImage(image, -hotspot.x, -hotspot.y, size, size);
+        ctx.restore();
+      }
     });
     ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0);
   };

@@ -3,8 +3,8 @@ import type { ZoomElement } from '../video-editor/zoom/zoom-types'
 import type { ClipComposition } from '../video-editor/composition/composition-types'
 import type { CursorType } from '../video-editor/properties/cursor/useCursorReplacer'
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas'
-import type { ShadowDirection } from '../video-editor/properties/shadow-types'
-import type { CursorClickEffects } from '../../api/types/cursor-settings'
+import type { ShadowDirection } from '../video-editor/properties/cursor/shadow-types'
+import type { CursorClickEffects, CursorMotionSettings } from '../../api/types/cursor-settings'
 
 export type ExportFormat = 'webm' | 'mp4'
 export type ExportPreset = 'low' | 'medium' | 'high'
@@ -30,6 +30,7 @@ export interface CursorRenderSettings {
   color: string
   shadow: { enabled: boolean; blur: number; color: string; direction: ShadowDirection }
   clickEffects: CursorClickEffects
+  motion: CursorMotionSettings
 }
 export interface CompositionSnapshot {
   duration: number

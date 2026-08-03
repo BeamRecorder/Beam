@@ -162,6 +162,7 @@ const props = () => ({
   shadowColor: "#000000",
   shadowDirection: "bottom" as const,
   clickEffects: effects,
+  motion: { preset: "smooth" as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
   selectedBackground: null,
   backgroundBlurPercent: 0,
   videoSrc: null,

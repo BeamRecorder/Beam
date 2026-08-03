@@ -36,6 +36,7 @@ vi.mock("../composables/useVideoEditor", async () => {
         selectedCursor: ref("automatic"), cursorSize: ref(24), cursorColor: ref("#fff"), enableShadow: ref(true),
         shadowBlur: ref(4), shadowColor: ref("#000"), shadowDirection: ref("bottom"), clickEffects: ref({}),
       };
+      const cursorMotion = ref({ preset: "smooth", smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 });
       const compositionState = {
         composition, selectedClipId, selectedClip, selectedClipInfo: computed(() => selectedClip.value ? { id: selectedClip.value.id, kind: selectedClip.value.kind } : null),
         selectedCaptionClip: computed(() => null), isVideoEnabled: ref(true), isWebcamEnabled: ref(true),
@@ -56,7 +57,7 @@ vi.mock("../composables/useVideoEditor", async () => {
       const outputCanvas = ref({ preset: "16:9", width: 1920, height: 1080, showBackground: false });
       const store = {
         activeTab, systemVolume: ref(100), micVolume: ref(100), sourceSize: ref({ width: 1280, height: 720 }),
-        player, cursor, compositionState, editorState: { loading: ref(false), isSaving: ref(false), scheduleSave: vi.fn(), saveNow: vi.fn().mockResolvedValue(undefined) },
+        player, cursor, cursorMotion, compositionState, editorState: { loading: ref(false), isSaving: ref(false), scheduleSave: vi.fn(), saveNow: vi.fn().mockResolvedValue(undefined) },
         zoomState, exportRequest: computed(() => ({ projectName: "Demo", snapshot: {}, format: "webm", preset: "medium" })),
         outputCanvas, handleSelectTab: vi.fn((tab: string) => { activeTab.value = tab; }),
       };

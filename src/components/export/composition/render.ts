@@ -2,13 +2,8 @@ import {
   clampFocusToScale,
   zoomAtTime,
 } from "../../video-editor/zoom/zoom-playback";
-import {
-  buttonEventsBetween,
-  cursorStateAt,
-} from "../../video-editor/composables/cursorPlayback";
 import type {
   CompositionSnapshot,
-  CursorRenderSettings,
 } from "../export-types";
 import { activeClipsAt } from "../../video-editor/composition/engine/clip-engine";
 import {
@@ -27,17 +22,8 @@ import {
   outputPoint,
 } from "../../video-editor/canvas/output-canvas";
 import { drawDecoratedMedia } from "../../video-editor/composition/appearance/render-decorated-media";
-import { cursorClickSpringScale } from "../../video-editor/composables/cursor-click-spring";
-import { cursorShadowOffset } from "../../video-editor/properties/cursor/cursor-shadow";
-import {
-  cursorHotspotAtSize,
-  cursorPositionAt,
-  cursorTypeAt,
-} from "../../video-editor/properties/cursor/cursor-rendering";
-import {
-  effectButtonForRecordedButton,
-  type CursorClickEffectSettings,
-} from "../../../api/types/cursor-settings";
+import { createCursorMotionPlayer } from "../../video-editor/composables/cursor-motion";
+import { drawCursorLayer } from "./cursor-render";
 
 export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
 export const OUTPUT_FALLBACK_COLOR = "#1e1e24";
@@ -317,6 +303,7 @@ export function renderCompositionFrame(
   background?: CanvasImageSource | null,
   cursorImages?: ReadonlyMap<string, HTMLImageElement>,
   visuals?: CompositionVisuals,
+  cursorMotionPlayer?: ReturnType<typeof createCursorMotionPlayer>,
 ) {
   const { width, height } = snapshot.canvas;
   ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
@@ -441,95 +428,17 @@ export function renderCompositionFrame(
   ctx.translate(width / 2, height / 2);
   ctx.scale(scale, scale);
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  const cursor = cursorStateAt(snapshot.cursor.events, time);
-  const settings: CursorRenderSettings = snapshot.cursorSettings;
-  const settingsForButton = (
-    button: number,
-  ): CursorClickEffectSettings | null => {
-    const effectButton = effectButtonForRecordedButton(button);
-    return effectButton ? settings.clickEffects[effectButton] : null;
-  };
-  for (const click of buttonEventsBetween(
-    snapshot.cursor.events,
-    Math.max(0, time - 0.5),
+  drawCursorLayer(
+    ctx,
+    snapshot,
     time,
-  )) {
-    const effect = settingsForButton(click.button);
-    if (!effect?.rippleEnabled) continue;
-    const state = cursorStateAt(
-      snapshot.cursor.events,
-      click.sessionNs / 1_000_000_000,
-    );
-    if (!state) continue;
-    const position = cursorPositionAt(
-      state,
-      { width: sourceWidth, height: sourceHeight },
-      { x: 0, y: 0, width, height },
-      snapshot.canvas.showBackground,
-      screen.transform,
-      screen.isMirrored ?? false,
-      screen.isMirroredY ?? false,
-    );
-    const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, 1 - age / 0.5);
-    ctx.strokeStyle = effect.rippleColor;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(
-      position.x,
-      position.y,
-      2 + age * effect.rippleSize * 2,
-      0,
-      Math.PI * 2,
-    );
-    ctx.stroke();
-    ctx.restore();
-  }
-  const cursorType = cursorTypeAt(settings.selectedCursor, cursor);
-  const image = cursorImages?.get(cursorType);
-  if (cursor?.visible && image?.complete && image.naturalWidth > 0) {
-    const position = cursorPositionAt(
-      cursor,
-      { width: sourceWidth, height: sourceHeight },
-      { x: 0, y: 0, width, height },
-      snapshot.canvas.showBackground,
-      screen.transform,
-      screen.isMirrored ?? false,
-      screen.isMirroredY ?? false,
-    );
-    const hotspot = cursorHotspotAtSize(cursorType, settings.size);
-    ctx.save();
-    if (settings.shadow.enabled) {
-      ctx.shadowColor = settings.shadow.color;
-      ctx.shadowBlur = settings.shadow.blur;
-      const offset = cursorShadowOffset(
-        settings.shadow.blur,
-        settings.shadow.direction,
-      );
-      ctx.shadowOffsetX = offset.x;
-      ctx.shadowOffsetY = offset.y;
-    }
-    const click = buttonEventsBetween(
-      snapshot.cursor.events,
-      Math.max(0, time - 0.28),
-      time,
-    )
-      .reverse()
-      .find((event) => settingsForButton(event.button)?.springEnabled);
-    const age = click
-      ? Math.max(0, time - click.sessionNs / 1_000_000_000)
-      : Infinity;
-    const spring = click ? settingsForButton(click.button) : null;
-    const clickScale = cursorClickSpringScale(
-      age,
-      Boolean(spring?.springEnabled),
-      spring?.springIntensity ?? 0,
-    );
-    ctx.translate(position.x, position.y);
-    ctx.scale(clickScale, clickScale);
-    ctx.drawImage(image, -hotspot.x, -hotspot.y, settings.size, settings.size);
-    ctx.restore();
-  }
+    screen,
+    sourceWidth,
+    sourceHeight,
+    width,
+    height,
+    cursorImages,
+    cursorMotionPlayer ?? createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight),
+  );
   ctx.restore();
 }

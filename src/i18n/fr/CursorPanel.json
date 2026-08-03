@@ -14,5 +14,14 @@
   "springIntensity": "Intensité du rebond",
   "clickRippleEffect": "Effet de vague",
   "rippleSize": "Taille de vague",
-  "rippleColor": "Couleur de vague"
+  "rippleColor": "Couleur de vague",
+  "cursorMotion": "Mouvement du curseur",
+  "cursorMotionDescription": "Réajustez la durée des déplacements et ajoutez un flou directionnel discret.",
+  "motionPreset": "Préréglage du mouvement",
+  "focusedPreset": "Focus",
+  "smoothPreset": "Fluide",
+  "customPreset": "Personnalisé",
+  "cursorSmoothing": "Lissage du curseur",
+  "springMassMultiplier": "Masse du ressort",
+  "motionBlur": "Flou de mouvement"
 }

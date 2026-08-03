@@ -3,7 +3,9 @@ import {
   clickButtonForRecordedButton,
   createDefaultCursorClickEffects,
   effectButtonForRecordedButton,
+  createDefaultCursorMotionSettings,
   normalizeCursorClickEffects,
+  normalizeCursorMotionSettings,
 } from "./cursor-settings";
 
 describe("cursor click settings", () => {
@@ -29,5 +31,23 @@ describe("cursor click settings", () => {
     expect(clickButtonForRecordedButton(3)).toBe("middle");
     expect(effectButtonForRecordedButton(3)).toBe("left");
     expect(effectButtonForRecordedButton(99)).toBeNull();
+  });
+
+  it("defaults motion settings to the smooth Recordly-inspired preset", () => {
+    expect(createDefaultCursorMotionSettings()).toEqual({
+      preset: "smooth",
+      smoothing: 0.67,
+      springMassMultiplier: 1.29,
+      motionBlur: 0.4,
+    });
+  });
+
+  it("clamps invalid motion settings at the persisted boundary", () => {
+    expect(normalizeCursorMotionSettings({ preset: "custom", smoothing: 4, springMassMultiplier: 0, motionBlur: -1 })).toEqual({
+      preset: "custom",
+      smoothing: 1,
+      springMassMultiplier: 0.5,
+      motionBlur: 0,
+    });
   });
 });

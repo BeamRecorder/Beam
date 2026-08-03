@@ -6,14 +6,15 @@ import ColorInput from "~/ui/input/ColorInput.vue";
 import ShadowDirectionGroup from "~/components/video-editor/properties/cursor/ShadowDirectionGroup.vue";
 import CursorClickEffectsPanel from "~/components/video-editor/properties/cursor/CursorClickEffectsPanel.vue";
 import Divider from "~/ui/divider/Divider.vue";
-import type { ShadowDirection } from "~/components/video-editor/properties/shadow-types";
+import type { ShadowDirection } from "./shadow-types";
 import { cursorOptions, type CursorType } from "./useCursorReplacer";
 import type { CursorClickEffects } from "../../../../api/types/cursor-settings";
+import { cursorMotionPreset, type CursorMotionPreset, type CursorMotionSettings } from "../../../../api/types/cursor-settings";
 import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("CursorPanel");
 
-defineProps<{
+const props = defineProps<{
   selectedCursor: CursorType;
   cursorSize: number;
   cursorColor: string;
@@ -22,6 +23,7 @@ defineProps<{
   shadowColor: string;
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;
+  motion: CursorMotionSettings;
 }>();
 
 const emit = defineEmits<{
@@ -33,7 +35,26 @@ const emit = defineEmits<{
   (e: "update:shadowColor", value: string): void;
   (e: "update:shadowDirection", value: ShadowDirection): void;
   (e: "update:clickEffects", value: CursorClickEffects): void;
+  (e: "update:motion", value: CursorMotionSettings): void;
 }>();
+
+const motionPresetOptions: Array<{ value: CursorMotionPreset; label: string }> = [
+  { value: "focused", label: t("focusedPreset") },
+  { value: "smooth", label: t("smoothPreset") },
+  { value: "custom", label: t("customPreset") },
+];
+
+const updateMotion = (patch: Partial<CursorMotionSettings>) => {
+  emit("update:motion", {
+    ...props.motion,
+    ...patch,
+    preset: patch.preset ?? "custom",
+  });
+};
+
+const selectMotionPreset = (preset: CursorMotionPreset) => {
+  emit("update:motion", preset === "custom" ? { ...props.motion, preset } : cursorMotionPreset(preset));
+};
 </script>
 
 <template>
@@ -107,6 +128,52 @@ const emit = defineEmits<{
 
     <Divider spacing="none" />
 
+    <section class="motion-options" aria-labelledby="cursor-motion-title">
+      <div class="section-heading">
+        <span id="cursor-motion-title" class="section-title">{{ t("cursorMotion") }}</span>
+        <span class="section-description">{{ t("cursorMotionDescription") }}</span>
+      </div>
+
+      <div class="prop-item">
+        <label class="prop-label">{{ t("motionPreset") }}</label>
+        <Select
+          :model-value="motion.preset"
+          :options="motionPresetOptions"
+          @update:modelValue="selectMotionPreset($event as CursorMotionPreset)"
+        />
+      </div>
+
+      <BigSlider
+        :model-value="motion.smoothing"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        :label="t('cursorSmoothing')"
+        :format-value="(value) => `${Math.round(value * 100)}%`"
+        @update:modelValue="updateMotion({ smoothing: $event })"
+      />
+      <BigSlider
+        :model-value="motion.springMassMultiplier"
+        :min="0.5"
+        :max="2"
+        :step="0.01"
+        :label="t('springMassMultiplier')"
+        :format-value="(value) => value.toFixed(2)"
+        @update:modelValue="updateMotion({ springMassMultiplier: $event })"
+      />
+      <BigSlider
+        :model-value="motion.motionBlur"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        :label="t('motionBlur')"
+        :format-value="(value) => `${Math.round(value * 100)}%`"
+        @update:modelValue="updateMotion({ motionBlur: $event })"
+      />
+    </section>
+
+    <Divider spacing="none" />
+
     <CursorClickEffectsPanel
       :model-value="clickEffects"
       @update:model-value="emit('update:clickEffects', $event)"
@@ -150,6 +217,30 @@ const emit = defineEmits<{
 .sub-label {
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.motion-options,
+.section-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-heading {
+  gap: 3px;
+}
+
+.section-title {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.section-description {
+  color: var(--text-muted);
+  font-size: 10px;
 }
 
 /* Slide fade transition for switch toggling */

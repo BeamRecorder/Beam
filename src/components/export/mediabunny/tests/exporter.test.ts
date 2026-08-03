@@ -91,6 +91,7 @@ const request = (options: { screen?: boolean; audio?: boolean; audioEnabled?: bo
         left: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: "#f00" },
         right: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: "#00f" },
       },
+      motion: { preset: "smooth" as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
     },
     composition: composition(options),
   },

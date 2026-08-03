@@ -4,7 +4,7 @@ import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomStat
 import type { ClipComposition, MediaAsset } from '../../components/video-editor/composition/composition-types'
 import type { BackgroundMedia, BackgroundValue, GradientBackground } from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
-import type { CursorClickEffects } from './cursor-settings'
+import type { CursorClickEffects, CursorMotionSettings } from './cursor-settings'
 import type { TeleprompterDocument, TeleprompterSessionContext } from '../../components/hud/teleprompter/teleprompter-types'
 
 export type * from './capture-config'
@@ -153,6 +153,7 @@ export interface ProjectEditorPresentation {
   blurPercent?: number
   importedBackgrounds: BackgroundMedia[]
   cursorEffects: CursorClickEffects
+  cursorMotion?: CursorMotionSettings
 }
 
 export interface ProjectEditorState {

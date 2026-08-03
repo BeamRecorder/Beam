@@ -53,7 +53,7 @@ describe("cursor playback", () => {
         hotspot: { x: 3, y: 4 },
       },
       move(1, 0.2, 0.4),
-      { event: "button", sessionNs: second(1.1), button: 0, pressed: true },
+      { event: "button", sessionNs: second(1.1), button: 0, pressed: true, normalizedX: 0.2, normalizedY: 0.4 },
       { event: "visibility", sessionNs: second(1.2), visible: false },
       move(3, 0.8, 0.6),
     ];
@@ -93,7 +93,7 @@ describe("cursor playback", () => {
       },
       move(3, 0.5, 0.5),
       move(4, 1, 1),
-      { event: "button", sessionNs: second(5), button: 0, pressed: true },
+      { event: "button", sessionNs: second(5), button: 0, pressed: true, normalizedX: 1, normalizedY: 1 },
     ];
     expect(cursorStateAt(events, 2, "initial")).toMatchObject({
       x: 0.25,
@@ -104,9 +104,9 @@ describe("cursor playback", () => {
 
   it("returns only pressed button events in the half-open playback interval", () => {
     const events: CursorEvent[] = [
-      { event: "button", sessionNs: second(1), button: 1, pressed: true },
-      { event: "button", sessionNs: second(2), button: 1, pressed: false },
-      { event: "button", sessionNs: second(3), button: 2, pressed: true },
+      { event: "button", sessionNs: second(1), button: 1, pressed: true, normalizedX: 0, normalizedY: 0 },
+      { event: "button", sessionNs: second(2), button: 1, pressed: false, normalizedX: 0, normalizedY: 0 },
+      { event: "button", sessionNs: second(3), button: 2, pressed: true, normalizedX: 1, normalizedY: 1 },
     ];
     expect(buttonEventsBetween(events, 1, 3)).toEqual([events[2]]);
     expect(buttonEventsBetween(events, 0, 3, "right")).toEqual([events[2]]);

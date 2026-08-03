@@ -153,6 +153,19 @@ function createProjectStore(root) {
       right: cursorEffectState(input.right, defaults.right),
     }
   }
+  const defaultCursorMotion = () => ({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 })
+  const cursorMotionState = (value) => {
+    const fallback = defaultCursorMotion()
+    const input = value && typeof value === 'object' ? value : {}
+    const number = (candidate, defaultValue, min, max) => Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue
+    const preset = ['focused', 'smooth', 'custom'].includes(input.preset) ? input.preset : fallback.preset
+    return {
+      preset,
+      smoothing: number(input.smoothing, fallback.smoothing, 0, 1),
+      springMassMultiplier: number(input.springMassMultiplier, fallback.springMassMultiplier, 0.5, 2),
+      motionBlur: number(input.motionBlur, fallback.motionBlur, 0, 1),
+    }
+  }
   const presentationState = (value) => {
     const next = value || {}
     const canvasInput = next.canvas || {}
@@ -169,6 +182,7 @@ function createProjectStore(root) {
       blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
       importedBackgrounds: Array.isArray(next.importedBackgrounds) ? next.importedBackgrounds.filter((item) => item && typeof item.id === 'string' && typeof item.path === 'string') : [],
       cursorEffects: cursorEffectsState(next.cursorEffects),
+      cursorMotion: cursorMotionState(next.cursorMotion),
     }
   }
   const readJsonArray = (file) => {

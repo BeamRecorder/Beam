@@ -37,6 +37,7 @@ const {
   sourceSize,
   player,
   cursor,
+  cursorMotion,
   compositionState,
   editorState,
   zoomState,
@@ -254,6 +255,7 @@ onBeforeUnmount(() => {
           v-model:shadow-color="shadowColor"
           v-model:shadow-direction="shadowDirection"
           v-model:click-effects="clickEffects"
+          v-model:motion="cursorMotion"
           v-model:volume="volume"
           v-model:system-volume="systemVolume"
           v-model:mic-volume="micVolume"
@@ -311,6 +313,7 @@ onBeforeUnmount(() => {
             :shadow-color="shadowColor"
             :shadow-direction="shadowDirection"
             :click-effects="clickEffects"
+            :motion="cursorMotion"
             :selected-background="selectedBackgroundMedia"
             :background-blur-percent="backgroundBlurPercent"
             :video-src="playerVideoSrc || ''"

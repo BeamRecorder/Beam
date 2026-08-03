@@ -18,8 +18,8 @@ use crate::{
     CaptureError,
     cursor::mac::appkit::current_system_shape,
     cursor::{
-        CURSOR_SAMPLE_INTERVAL_NS, CaptureRegion, CursorEvent, CursorEventWriter,
-        CursorShapeCatalogEntry, map_coordinates, telemetry_from_events,
+        CaptureRegion, CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, map_coordinates,
+        move_sample_due, telemetry_from_events,
     },
     model::SourceId,
     session::StartGate,
@@ -191,8 +191,7 @@ fn capture_loop(
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
     start_gate.wait()?;
     let started = Instant::now();
-    let mut previous_position = None;
-    let mut last_sample_ns = None;
+    let mut next_move_sample_ns = segment_start_ns;
     let mut previous_buttons = [false; 3];
     push(
         &mut writer,
@@ -228,11 +227,8 @@ fn capture_loop(
         let location = event.location();
         let x = coordinate(location.x);
         let y = coordinate(location.y);
-        if previous_position != Some((x, y))
-            || last_sample_ns
-                .is_none_or(|last| session_ns.saturating_sub(last) >= CURSOR_SAMPLE_INTERVAL_NS)
-        {
-            let position = map_coordinates(x, y, region)?;
+        let position = map_coordinates(x, y, region)?;
+        if move_sample_due(&mut next_move_sample_ns, session_ns) {
             push(
                 &mut writer,
                 metrics,
@@ -245,8 +241,6 @@ fn capture_loop(
                     visible: true,
                 },
             )?;
-            previous_position = Some((x, y));
-            last_sample_ns = Some(session_ns);
         }
         if capture_clicks {
             for (index, button) in [
@@ -266,6 +260,8 @@ fn capture_loop(
                             session_ns,
                             button: u8::try_from(index + 1).unwrap_or(u8::MAX),
                             pressed,
+                            normalized_x: position.normalized_x,
+                            normalized_y: position.normalized_y,
                         },
                     )?;
                     previous_buttons[index] = pressed;

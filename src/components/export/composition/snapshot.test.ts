@@ -53,6 +53,7 @@ const base = () => ({
       left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
       right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
     },
+    motion: { preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
   },
 })
 

@@ -24,8 +24,8 @@ import type {
 } from "~/components/video-editor/composition/composition-types";
 import type { ProjectEditorData } from "../../../api/types/capture-api";
 import type { OutputCanvasSettings } from "../canvas/output-canvas";
-import type { ShadowDirection } from "./shadow-types";
-import type { CursorClickEffects } from "../../../api/types/cursor-settings";
+import type { ShadowDirection } from "./cursor/shadow-types";
+import type { CursorClickEffects, CursorMotionSettings } from "../../../api/types/cursor-settings";
 import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("PropertiesPanel");
@@ -67,6 +67,7 @@ const props = defineProps<{
   shadowColor: string;
   shadowDirection: ShadowDirection;
   clickEffects: CursorClickEffects;
+  motion: CursorMotionSettings;
   volume: number;
   isSystemAudioEnabled: boolean;
   isMicAudioEnabled: boolean;
@@ -104,6 +105,7 @@ const emit = defineEmits<{
   (event: "update:shadowColor", value: string): void;
   (event: "update:shadowDirection", value: ShadowDirection): void;
   (event: "update:clickEffects", value: CursorClickEffects): void;
+  (event: "update:motion", value: CursorMotionSettings): void;
   (event: "update:volume", value: number): void;
   (event: "update:isSystemAudioEnabled", value: boolean): void;
   (event: "update:isMicAudioEnabled", value: boolean): void;
@@ -211,6 +213,7 @@ const emit = defineEmits<{
         :shadow-color="shadowColor"
         :shadow-direction="shadowDirection"
         :click-effects="clickEffects"
+        :motion="motion"
         @update:selected-cursor="emit('update:selectedCursor', $event)"
         @update:cursor-size="emit('update:cursorSize', $event)"
         @update:cursor-color="emit('update:cursorColor', $event)"
@@ -219,6 +222,7 @@ const emit = defineEmits<{
         @update:shadow-color="emit('update:shadowColor', $event)"
         @update:shadow-direction="emit('update:shadowDirection', $event)"
         @update:click-effects="emit('update:clickEffects', $event)"
+        @update:motion="emit('update:motion', $event)"
       />
       <AudioPanel
         v-else-if="activeTab === 'audio'"

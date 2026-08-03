@@ -31,6 +31,7 @@ const snapshot = (): CompositionSnapshot => ({
       left: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#f00' },
       right: { springEnabled: true, springIntensity: 50, rippleEnabled: false, rippleSize: 30, rippleColor: '#00f' },
     },
+    motion: { preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
   },
   composition: composition(),
 })
@@ -125,7 +126,7 @@ describe('canonical composition rendering', () => {
       catalog: {},
       events: [
         { event: 'move', sessionNs: 0, pixelX: 25, pixelY: 25, normalizedX: .25, normalizedY: .5, visible: true },
-        { event: 'button', sessionNs: 100_000_000, button: 2, pressed: true },
+        { event: 'button', sessionNs: 100_000_000, button: 2, pressed: true, normalizedX: .25, normalizedY: .5 },
       ],
     }
     value.cursorSettings.clickEffects = {

@@ -10,7 +10,7 @@ import BorderAndFrameControls from "~/components/video-editor/properties/clip/Bo
 import Divider from "~/ui/divider/Divider.vue";
 import DeleteItem from "~/ui/button/DeleteItem.vue";
 import TimelineClickEmptyState from "~/components/video-editor/properties/clip/TimelineClickEmptyState.vue";
-import type { ShadowDirection } from "~/components/video-editor/properties/shadow-types";
+import type { ShadowDirection } from "../cursor/shadow-types";
 import {
   Unlink,
   Trash2,

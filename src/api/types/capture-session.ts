@@ -61,6 +61,8 @@ export interface CursorButtonEvent {
   sessionNs: number
   button: number
   pressed: boolean
+  normalizedX: number
+  normalizedY: number
 }
 
 export interface CursorVisibilityEvent {
