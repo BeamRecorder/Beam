@@ -13,7 +13,7 @@ export function webcamSettingsForAppearance(appearance: WebcamAppearance | ClipA
   const mirror = isMirrored ?? DEFAULT_WEBCAM_SETTINGS.mirror
   const mirrorY = isMirroredY ?? DEFAULT_WEBCAM_SETTINGS.mirrorY
   if (!appearance) return { ...DEFAULT_WEBCAM_SETTINGS, mirror, mirrorY }
-  const direction = 'shadowDirection' in appearance ? appearance.shadowDirection : 'bottom'
+  const direction = 'shadowDirection' in appearance ? appearance.shadowDirection : 'all'
   const offsets = direction === 'top-left' ? [-.7, -.7] : direction === 'bottom-right' ? [.7, .7] : direction === 'all' ? [0, 0] : [0, 1]
   const cornerRadius = typeof appearance.cornerRadius === 'number'
     ? appearance.cornerRadius

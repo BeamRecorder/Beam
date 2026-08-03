@@ -131,7 +131,7 @@ watch(
     selectedShadowSize.value = clip?.shadowSize ?? "md";
     selectedShadowColor.value = clip?.shadowColor ?? "#000000";
     selectedShadowDirection.value =
-      (clip?.shadowDirection as ShadowDirection | undefined) ?? "bottom";
+      (clip?.shadowDirection as ShadowDirection | undefined) ?? "all";
   },
   { immediate: true },
 );

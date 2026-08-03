@@ -41,7 +41,7 @@ const DEFAULT_APPEARANCE: ClipAppearance = {
   cornerRadius: "sm",
   shadowSize: "md",
   shadowColor: "#000000",
-  shadowDirection: "bottom",
+  shadowDirection: "all",
   borderEnabled: false,
   borderColor: "#000000",
   borderWidth: 1,
