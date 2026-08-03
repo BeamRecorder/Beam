@@ -42,6 +42,8 @@ export interface SelectedClipProperties {
   frameShowMenu?: boolean;
   frameShowScrollbars?: boolean;
   clipTransform?: NormalizedTransform;
+  isMirrored?: boolean;
+  isMirroredY?: boolean;
   volume?: number;
 }
 const props = defineProps<{
@@ -104,6 +106,7 @@ const emit = defineEmits<{
   (event: "update:clip-enabled", enabled: boolean): void;
   (event: "update:clip-volume", volume: number): void;
   (event: "update:clip-is-mirrored", isMirrored: boolean): void;
+  (event: "update:clip-is-mirrored-y", isMirroredY: boolean): void;
   (event: "update:clip-corner-radius", radius: string): void;
   (event: "update:clip-shadow", shadow: { size: string; color?: string; direction?: string }): void;
   (event: "update:clip-appearance", appearance: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void;
@@ -124,7 +127,7 @@ const emit = defineEmits<{
       <CanvasPanel v-if="activeTab === 'canvas'" :selected-background="selectedBackground" :blur-percent="blurPercent" :background-groups="backgroundGroups" :project-id="projectId" @update:selected-background="emit('update:selectedBackground', $event)" @update:blur-percent="emit('update:blurPercent', $event)" @import:background="emit('import:background', $event)" />
       <AudioClipPropertiesPanel v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'" :clip="normalizedSelectedClip" @update:volume="emit('update:clip-volume', $event)" @update:enabled="emit('update:clip-enabled', $event)" @delete="emit('delete-clip')" />
       <CaptionClipPanel v-else-if="activeTab === 'clip' && selectedCaptionClip" :clip="selectedCaptionClip" @update="emit('update:caption', $event)" @delete="emit('delete-clip')" />
-      <ClipPropertiesPanel v-else-if="activeTab === 'clip'" :selected-clip="normalizedSelectedClip" @update:playback-rate="emit('update:clip-rate', $event)" @update:enabled="emit('update:clip-enabled', $event)" @update:is-mirrored="emit('update:clip-is-mirrored', $event)" @update:corner-radius="emit('update:clip-corner-radius', $event)" @update:shadow="emit('update:clip-shadow', $event)" @update:appearance="emit('update:clip-appearance', $event)" @update:clip-transform="emit('update:clip-transform', $event)" @reset:clip-transform="emit('reset:clip-transform')" @unlink="emit('unlink-clip')" @delete="emit('delete-clip')" @split="emit('split-clip')" />
+      <ClipPropertiesPanel v-else-if="activeTab === 'clip'" :selected-clip="normalizedSelectedClip" @update:playback-rate="emit('update:clip-rate', $event)" @update:enabled="emit('update:clip-enabled', $event)" @update:is-mirrored="emit('update:clip-is-mirrored', $event)" @update:is-mirrored-y="emit('update:clip-is-mirrored-y', $event)" @update:corner-radius="emit('update:clip-corner-radius', $event)" @update:shadow="emit('update:clip-shadow', $event)" @update:appearance="emit('update:clip-appearance', $event)" @update:clip-transform="emit('update:clip-transform', $event)" @reset:clip-transform="emit('reset:clip-transform')" @unlink="emit('unlink-clip')" @delete="emit('delete-clip')" @split="emit('split-clip')" />
       <CursorPanel v-else-if="activeTab === 'cursor'" :selected-cursor="selectedCursor" :cursor-size="cursorSize" :cursor-color="cursorColor" :enable-shadow="enableShadow" :shadow-blur="shadowBlur" :shadow-color="shadowColor" :shadow-direction="shadowDirection" :click-effects="clickEffects" @update:selected-cursor="emit('update:selectedCursor', $event)" @update:cursor-size="emit('update:cursorSize', $event)" @update:cursor-color="emit('update:cursorColor', $event)" @update:enable-shadow="emit('update:enableShadow', $event)" @update:shadow-blur="emit('update:shadowBlur', $event)" @update:shadow-color="emit('update:shadowColor', $event)" @update:shadow-direction="emit('update:shadowDirection', $event)" @update:click-effects="emit('update:clickEffects', $event)" />
       <AudioPanel v-else-if="activeTab === 'audio'" :volume="volume" :is-system-audio-enabled="isSystemAudioEnabled" :is-mic-audio-enabled="isMicAudioEnabled" :system-volume="systemVolume" :mic-volume="micVolume" @update:volume="emit('update:volume', $event)" @update:is-system-audio-enabled="emit('update:isSystemAudioEnabled', $event)" @update:is-mic-audio-enabled="emit('update:isMicAudioEnabled', $event)" @update:system-volume="emit('update:systemVolume', $event)" @update:mic-volume="emit('update:micVolume', $event)" />
       <ZoomPanel v-else-if="activeTab === 'zoom'" :selected-zoom="selectedZoom" :can-generate="canGenerateZooms" :has-automatic-zooms="hasAutomaticZooms" @update="emit('update:zoom', $event)" @delete="emit('delete:zoom')" @generate="emit('generate:zooms')" />

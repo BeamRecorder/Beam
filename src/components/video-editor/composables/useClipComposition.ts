@@ -27,6 +27,7 @@ import {
   setClipEnabled,
   setCrop,
   setMirrored,
+  setMirroredY,
   setPlaybackRate,
   setTransform,
   setVolume,
@@ -84,6 +85,7 @@ export function useClipComposition(options: {
       ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
       ...(isVisualClip(clip) ? {
         isMirrored: clip.isMirrored ?? false,
+        isMirroredY: clip.isMirroredY ?? false,
         clipTransform: clip.transform,
         ...(clip.appearance ?? DEFAULT_APPEARANCE),
       } : {}),
@@ -297,6 +299,9 @@ export function useClipComposition(options: {
   const updateSelectedMirrored = (mirrored: boolean) => {
     if (selectedClipId.value) composition.value = setMirrored(composition.value, selectedClipId.value, mirrored);
   };
+  const updateSelectedMirroredY = (mirroredY: boolean) => {
+    if (selectedClipId.value) composition.value = setMirroredY(composition.value, selectedClipId.value, mirroredY);
+  };
   const updateSelectedRate = (rate: number) => {
     if (selectedClipId.value) composition.value = setPlaybackRate(composition.value, selectedClipId.value, rate);
   };
@@ -344,6 +349,7 @@ export function useClipComposition(options: {
     previewSelectedTransform,
     updateSelectedCrop,
     updateSelectedMirrored,
+    updateSelectedMirroredY,
     updateSelectedRate,
     updateSelectedVolume,
     updateSelectedEnabled,

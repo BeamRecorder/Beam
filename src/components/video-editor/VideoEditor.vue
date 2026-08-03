@@ -94,6 +94,7 @@ const {
   previewSelectedTransform,
   updateSelectedCrop,
   updateSelectedMirrored,
+  updateSelectedMirroredY,
   updateSelectedRate,
   updateSelectedVolume,
   updateSelectedEnabled,
@@ -285,6 +286,7 @@ onBeforeUnmount(() => {
           @update:clip-enabled="updateSelectedEnabled"
           @unlink-clip="detachSelectedClip"
           @update:clip-is-mirrored="updateSelectedMirrored"
+          @update:clip-is-mirrored-y="updateSelectedMirroredY"
           @update:clip-corner-radius="updateSelectedAppearance({ cornerRadius: ['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : Number($event) })"
           @update:clip-shadow="updateSelectedAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg', shadowColor: $event.color ?? '#000000', shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
           @update:clip-appearance="updateSelectedAppearance($event)"

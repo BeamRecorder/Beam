@@ -112,6 +112,7 @@ export interface VisualClip extends ClipBase {
   crop?: NormalizedCrop;
   appearance?: ClipAppearance;
   isMirrored?: boolean;
+  isMirroredY?: boolean;
 }
 
 export interface AudioClip extends ClipBase {

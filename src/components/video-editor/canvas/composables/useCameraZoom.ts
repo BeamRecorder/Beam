@@ -233,6 +233,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           },
           title: screen.name,
           mirrored: screen.isMirrored,
+          mirroredY: screen.isMirroredY,
         });
       } else {
         ctx.fillStyle = "#334155";

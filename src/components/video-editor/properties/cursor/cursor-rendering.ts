@@ -25,6 +25,7 @@ export function cursorPositionAt(
   showBackground: boolean,
   transform: NormalizedTransform = { x: 0, y: 0, width: 1, height: 1 },
   mirrored = false,
+  mirroredY = false,
 ) {
   const point = outputPoint(
     Math.max(0, Math.min(1, state.x)),
@@ -36,8 +37,9 @@ export function cursorPositionAt(
     showBackground,
   )
   const x = mirrored ? 1 - point.cx : point.cx
+  const y = mirroredY ? 1 - point.cy : point.cy
   return {
     x: viewport.x + (x * transform.width + transform.x) * viewport.width,
-    y: viewport.y + (point.cy * transform.height + transform.y) * viewport.height,
+    y: viewport.y + (y * transform.height + transform.y) * viewport.height,
   }
 }

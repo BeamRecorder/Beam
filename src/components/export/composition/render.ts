@@ -134,6 +134,7 @@ function drawVisualClip(ctx: CanvasRenderingContext2D, clip: VisualClip, source:
     appearance: clip.appearance,
     title: clip.name,
     mirrored: clip.isMirrored,
+    mirroredY: clip.isMirroredY,
   });
 }
 
@@ -156,7 +157,7 @@ export function drawCompositionLayers(
     const source = visuals.get(clip.assetId);
     if (!source) continue;
     if (clip.kind === "webcam") {
-      drawWebcamOverlay(ctx, source, snapshot.canvas.width, snapshot.canvas.height, 1, webcamSettingsForAppearance(clip.appearance, clip.isMirrored), clip.transform, clip.crop, clip.appearance, clip.name);
+      drawWebcamOverlay(ctx, source, snapshot.canvas.width, snapshot.canvas.height, 1, webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY), clip.transform, clip.crop, clip.appearance, clip.name);
     } else drawVisualClip(ctx, clip, source, snapshot.canvas, positionedMedia);
   }
 }
@@ -222,7 +223,7 @@ export function renderCompositionFrame(
     ctx.translate(width / 2, height / 2);
     ctx.scale(scale, scale);
     ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-    drawDecoratedMedia(ctx, { source: video, sourceRect: source, rect: positionedMedia, appearance: screen.appearance, title: screen.name, mirrored: screen.isMirrored });
+    drawDecoratedMedia(ctx, { source: video, sourceRect: source, rect: positionedMedia, appearance: screen.appearance, title: screen.name, mirrored: screen.isMirrored, mirroredY: screen.isMirroredY });
     ctx.restore();
   };
 
@@ -235,7 +236,7 @@ export function renderCompositionFrame(
     const sourceVisual = visuals?.get(clip.assetId);
     if (!sourceVisual) continue;
     if (clip.kind === "webcam") {
-      drawWebcamOverlay(ctx, sourceVisual, width, height, scale, webcamSettingsForAppearance(clip.appearance, clip.isMirrored), clip.transform, clip.crop, clip.appearance, clip.name);
+      drawWebcamOverlay(ctx, sourceVisual, width, height, scale, webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY), clip.transform, clip.crop, clip.appearance, clip.name);
     } else drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas, positionedMedia);
   }
   for (const clip of active) if (clip.kind === "caption") drawCaption(ctx, clip, timeMs, positionedMedia, sourceWidth);
@@ -255,7 +256,7 @@ export function renderCompositionFrame(
     if (!effect?.rippleEnabled) continue;
     const state = cursorStateAt(snapshot.cursor.events, click.sessionNs / 1_000_000_000);
     if (!state) continue;
-    const position = cursorPositionAt(state, { width: sourceWidth, height: sourceHeight }, { x: 0, y: 0, width, height }, snapshot.canvas.showBackground, screen.transform, screen.isMirrored ?? false);
+    const position = cursorPositionAt(state, { width: sourceWidth, height: sourceHeight }, { x: 0, y: 0, width, height }, snapshot.canvas.showBackground, screen.transform, screen.isMirrored ?? false, screen.isMirroredY ?? false);
     const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
     ctx.save();
     ctx.globalAlpha = Math.max(0, 1 - age / .5);
@@ -269,7 +270,7 @@ export function renderCompositionFrame(
   const cursorType = cursorTypeAt(settings.selectedCursor, cursor);
   const image = cursorImages?.get(cursorType);
   if (cursor?.visible && image?.complete && image.naturalWidth > 0) {
-    const position = cursorPositionAt(cursor, { width: sourceWidth, height: sourceHeight }, { x: 0, y: 0, width, height }, snapshot.canvas.showBackground, screen.transform, screen.isMirrored ?? false);
+    const position = cursorPositionAt(cursor, { width: sourceWidth, height: sourceHeight }, { x: 0, y: 0, width, height }, snapshot.canvas.showBackground, screen.transform, screen.isMirrored ?? false, screen.isMirroredY ?? false);
     const hotspot = cursorHotspotAtSize(cursorType, settings.size);
     ctx.save();
     if (settings.shadow.enabled) {

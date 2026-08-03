@@ -114,8 +114,13 @@ describe("ClipPropertiesPanel", () => {
     await wrapper.get(".color-stub").trigger("click");
     expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "sm", color: "#abcdef", direction: "top-left" }]);
 
-    await wrapper.findAll(".switch-stub")[0].trigger("click");
+    const horizBtn = wrapper.findAll("button").find((button) => button.text().toLowerCase() === "horizontal");
+    await horizBtn!.trigger("click");
     expect(wrapper.emitted("update:isMirrored")).toContainEqual([true]);
+
+    const vertBtn = wrapper.findAll("button").find((button) => button.text().toLowerCase() === "vertical");
+    await vertBtn!.trigger("click");
+    expect(wrapper.emitted("update:isMirroredY")).toContainEqual([true]);
     await wrapper.get(".frame-stub").trigger("click");
     expect(wrapper.emitted("update:appearance")).toContainEqual([{ borderEnabled: true, frame: "safari" }]);
     await wrapper.get(".preset-pill").trigger("click");

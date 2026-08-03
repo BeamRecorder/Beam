@@ -8,4 +8,5 @@ export interface DecoratedMediaOptions {
   appearance?: ClipAppearance;
   title: string;
   mirrored?: boolean;
+  mirroredY?: boolean;
 }

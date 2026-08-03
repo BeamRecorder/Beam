@@ -12,6 +12,8 @@ import {
   Unlink,
   Trash2,
   RotateCcw,
+  FlipHorizontal,
+  FlipVertical,
 } from "@lucide/vue";
 import type { NormalizedTransform } from "../../composition/composition-types";
 import type { ClipFrame } from "../../composition/composition-types";
@@ -43,6 +45,7 @@ const props = defineProps<{
     frameShowScrollbars?: boolean;
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
+    isMirroredY?: boolean;
   } | null;
 }>();
 
@@ -50,6 +53,7 @@ const emit = defineEmits<{
   (e: "update:playbackRate", rate: number): void;
   (e: "update:enabled", enabled: boolean): void;
   (e: "update:isMirrored", isMirrored: boolean): void;
+  (e: "update:isMirroredY", isMirroredY: boolean): void;
   (e: "update:cornerRadius", radius: string): void;
   (
     e: "update:shadow",
@@ -285,13 +289,27 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           />
         </div>
 
-        <div class="prop-row margin-top-md">
-          <span class="prop-label">{{ t('mirrorHorizontally') }}</span>
-          <Switch
-            :model-value="selectedClip.isMirrored ?? false"
-            @update:modelValue="emit('update:isMirrored', $event)"
-          />
+        <div class="section-header margin-top-md">
+          <span class="section-title">{{ t('mirroring') }}</span>
         </div>
+        <ButtonGroup full>
+          <Button
+            :variant="selectedClip.isMirrored ? 'primary' : 'ghost'"
+            size="xs"
+            :icon="FlipHorizontal"
+            @click="emit('update:isMirrored', !selectedClip.isMirrored)"
+          >
+            {{ t('horizontal') }}
+          </Button>
+          <Button
+            :variant="selectedClip.isMirroredY ? 'primary' : 'ghost'"
+            size="xs"
+            :icon="FlipVertical"
+            @click="emit('update:isMirroredY', !selectedClip.isMirroredY)"
+          >
+            {{ t('vertical') }}
+          </Button>
+        </ButtonGroup>
         <BorderAndFrameControls
           :border-enabled="selectedClip.borderEnabled"
           :border-color="selectedClip.borderColor"

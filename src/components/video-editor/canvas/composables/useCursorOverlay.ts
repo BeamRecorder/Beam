@@ -93,6 +93,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       options.showBackground(),
       screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 },
       screen?.isMirrored ?? false,
+      screen?.isMirroredY ?? false,
     );
   };
 
