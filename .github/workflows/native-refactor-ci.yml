@@ -1,0 +1,53 @@
+name: Native recorder refactor
+
+on:
+  push:
+    branches: [codex-native-refactor]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-recorder-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            cache: native-windows
+          - os: macos-latest
+            cache: native-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.cache }}
+          cache-on-failure: true
+      - run: cargo fmt --all --check
+      - run: cargo test --workspace --all-features
+      - run: cargo clippy -p capture --all-targets --all-features -- -D warnings
+      - run: cargo build -p capture --bin capture-engine --release
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vite build
+      - run: npm test
+      - run: npx vitest run src/api src/components/hud/recorder src/components/recorder/CameraPreviewOverlay.test.ts
