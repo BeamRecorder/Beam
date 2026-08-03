@@ -111,6 +111,22 @@ describe("useRecordingController branch behavior", () => {
     expect(controller.phase.value).toBe("idle");
   });
 
+  it("starts the sidecar timeline after delayed native startup", async () => {
+    capture.startPreparedRecording.mockImplementationOnce(() => new Promise((resolve) => {
+      setTimeout(() => resolve({ state: "recording", sessionId: "session-1", projectId: "project-1" }), 2_000);
+    }));
+    const controller = useRecordingController(vi.fn());
+    const starting = controller.start(configuration({ cameraId: "camera:one" }));
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await starting;
+    await vi.advanceTimersByTimeAsync(500);
+    await controller.stop();
+
+    expect(camera.stop).toHaveBeenCalledOnce();
+    expect(camera.stop.mock.calls[0][0]).toBeCloseTo(500_000_000, -7);
+  });
+
   it("arms the native session before the countdown and hides the overlay at zero", async () => {
     const controller = useRecordingController(vi.fn());
     await controller.start(configuration({ countdownSeconds: 2 }));

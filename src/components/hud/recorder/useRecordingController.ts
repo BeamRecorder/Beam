@@ -91,8 +91,11 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     if (!configuration || generation !== recordingGeneration) return
     if (!prewarm || !await prewarm || generation !== recordingGeneration) return
     capture.setCountdown(null)
-    sessionTimelineStartedAt = performance.now()
     const session = await capture.startPreparedRecording()
+    // The native track creates the session timeline only once its start gate
+    // is released. Sidecars must use that same epoch, otherwise native startup
+    // latency is added to their final duration.
+    sessionTimelineStartedAt = performance.now()
     preparedGeneration = null
     if (generation !== recordingGeneration) {
       await capture.stop().catch(() => undefined)

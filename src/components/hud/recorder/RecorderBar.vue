@@ -33,8 +33,8 @@ const props = defineProps<{
   visibility: "always" | "auto-fade";
 }>();
 
-const isMicEnabled = computed(() => props.microphoneEnabled);
-const isSystemAudioEnabled = computed(() => props.systemAudioEnabled);
+const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== "finalizing");
+const isSystemAudioEnabled = computed(() => props.systemAudioEnabled && props.phase !== "finalizing");
 const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false);
 const { level: systemAudioLevel } = useAudioLevelMeter(
   isSystemAudioEnabled,

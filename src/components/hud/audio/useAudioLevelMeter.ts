@@ -10,8 +10,10 @@ export function useAudioLevelMeter(
   let analyser: AnalyserNode | null = null;
   let stream: MediaStream | null = null;
   let animId: number | null = null;
+  let lifecycle = 0;
 
   const stop = () => {
+    lifecycle += 1;
     if (animId !== null) {
       cancelAnimationFrame(animId);
       animId = null;
@@ -30,12 +32,14 @@ export function useAudioLevelMeter(
   const start = async () => {
     stop();
     if (!isEnabled.value) return;
+    const requestLifecycle = lifecycle;
 
     try {
+      let nextStream: MediaStream;
       if (isSystemAudio) {
         if (!navigator.mediaDevices?.getDisplayMedia) return;
-        stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-        stream.getVideoTracks().forEach((t) => t.stop());
+        nextStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        nextStream.getVideoTracks().forEach((t) => t.stop());
       } else {
         if (!navigator.mediaDevices?.getUserMedia) return;
         let rawId = sourceId?.value;
@@ -46,13 +50,14 @@ export function useAudioLevelMeter(
           audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
           video: false,
         };
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        nextStream = await navigator.mediaDevices.getUserMedia(constraints);
       }
 
-      if (!stream || !stream.getAudioTracks().length) {
-        stop();
+      if (requestLifecycle !== lifecycle || !isEnabled.value || !nextStream.getAudioTracks().length) {
+        nextStream.getTracks().forEach((track) => track.stop());
         return;
       }
+      stream = nextStream;
 
       audioCtx = new AudioContext();
       const sourceNode = audioCtx.createMediaStreamSource(stream);
