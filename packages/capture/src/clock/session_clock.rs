@@ -76,7 +76,9 @@ mod tests {
     fn clones_share_one_epoch() {
         let clock = SessionClock::start();
         let clone = clock.clone();
-        assert!(clone.now_ns() >= clock.now_ns());
+        let first = clock.now_ns();
+        let second = clone.now_ns();
+        assert!(second >= first);
     }
 
     #[test]
