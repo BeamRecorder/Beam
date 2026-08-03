@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { MousePointer } from '@lucide/vue'
-import { useTranslate } from '~/i18n/useTranslate'
+import { MousePointer } from "@lucide/vue";
+import { useTranslate } from "~/i18n/useTranslate";
 
-const { t } = useTranslate('ZoomPanel')
+const { t } = useTranslate("ZoomPanel");
 </script>
 
 <template>
@@ -41,9 +41,7 @@ const { t } = useTranslate('ZoomPanel')
           </div>
           <div class="track-content cursor-content">
             <!-- Ghost preview indicator on hover -->
-            <div class="cursor-zoom-indicator preview-ghost">
-              + Add Zoom
-            </div>
+            <div class="cursor-zoom-indicator preview-ghost">+ Add Zoom</div>
             <!-- Real solid zoom indicator created on click -->
             <div class="cursor-zoom-indicator real-zoom-indicator">
               <span class="clip-center-title">2.00×</span>
@@ -66,8 +64,8 @@ const { t } = useTranslate('ZoomPanel')
 
     <!-- Text & Instructions -->
     <div class="text-content">
-      <h3 class="empty-title">{{ t('noZoomSelected') }}</h3>
-      <p class="empty-desc">{{ t('noZoomSelectedDesc') }}</p>
+      <h3 class="empty-title">{{ t("noZoomSelected") }}</h3>
+      <p class="empty-desc">{{ t("noZoomSelectedDesc") }}</p>
     </div>
   </div>
 </template>
@@ -282,24 +280,36 @@ const { t } = useTranslate('ZoomPanel')
 */
 
 @keyframes hoverGhostAnim {
-  0%, 18% { opacity: 0; }
-  22%, 40% { opacity: 0.85; }
-  42%, 100% { opacity: 0; }
+  0%,
+  18% {
+    opacity: 0;
+  }
+  22%,
+  40% {
+    opacity: 0.85;
+  }
+  42%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes realZoomAnim {
-  0%, 41% {
+  0%,
+  41% {
     opacity: 0;
     transform: scale(0.95);
     outline: 2px solid transparent;
   }
-  43%, 82% {
+  43%,
+  82% {
     opacity: 1;
     transform: scale(1);
     outline: 2px solid var(--color-primary);
     box-shadow: 0 0 12px var(--color-primary);
   }
-  90%, 100% {
+  90%,
+  100% {
     opacity: 0;
   }
 }
@@ -343,7 +353,8 @@ const { t } = useTranslate('ZoomPanel')
 }
 
 @keyframes rippleAnim {
-  0%, 41% {
+  0%,
+  41% {
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
   }
