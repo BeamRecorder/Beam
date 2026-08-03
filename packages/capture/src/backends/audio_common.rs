@@ -52,13 +52,17 @@ impl AudioCaptureMetrics {
     }
 
     pub(crate) fn record_received(&self, samples: usize) {
-        self.samples_received
-            .fetch_add(u64::try_from(samples).unwrap_or(u64::MAX), Ordering::Relaxed);
+        self.samples_received.fetch_add(
+            u64::try_from(samples).unwrap_or(u64::MAX),
+            Ordering::Relaxed,
+        );
     }
 
     pub(crate) fn record_dropped(&self, samples: usize) {
-        self.samples_dropped
-            .fetch_add(u64::try_from(samples).unwrap_or(u64::MAX), Ordering::Relaxed);
+        self.samples_dropped.fetch_add(
+            u64::try_from(samples).unwrap_or(u64::MAX),
+            Ordering::Relaxed,
+        );
     }
 
     pub(crate) fn record_interruption(&self) {
@@ -128,10 +132,6 @@ impl AudioPublisher {
         }
     }
 
-    pub(crate) fn drop_samples(&self, samples: usize) {
-        self.metrics.record_dropped(samples);
-    }
-
     pub(crate) fn interruption(&self) {
         self.metrics.record_interruption();
     }
@@ -161,6 +161,10 @@ impl AudioSink {
             return Err(CaptureError::InvalidConfiguration(
                 "audio sample rate and channel count must be non-zero".into(),
             ));
+        }
+        if output.exists() {
+            std::fs::remove_file(output)
+                .map_err(|error| CaptureError::storage(output, error))?;
         }
         let (sender, receiver) = bounded(queue_capacity);
         let metrics = Arc::new(AudioCaptureMetrics::default());
@@ -204,9 +208,7 @@ impl AudioSink {
 
     fn finish(&mut self) -> Result<(), CaptureError> {
         if let Some(sender) = self.sender.take() {
-            sender.send(AudioMessage::Stop).map_err(|_| {
-                CaptureError::Backend("audio writer stopped before finalization".into())
-            })?;
+            let _ = sender.send(AudioMessage::Stop);
         }
         let Some(writer) = self.writer.take() else {
             return Ok(());
@@ -226,174 +228,84 @@ impl AudioSink {
 
 impl Drop for AudioSink {
     fn drop(&mut self) {
-        if let Some(sender) = self.sender.take() {
-            let _ = sender.send(AudioMessage::Stop);
-        }
+        self.sender.take();
         if let Some(writer) = self.writer.take() {
             let _ = writer.join();
         }
     }
 }
 
-enum NativeAudioBackend {
-    Microphone {
-        stream: Option<Stream>,
-        sink: Option<AudioSink>,
-    },
-    #[cfg(windows)]
-    System(crate::backends::win::system_audio::WasapiLoopbackRecording),
-    #[cfg(target_os = "macos")]
-    System(crate::backends::mac::system_audio::ScreenCaptureAudioRecording),
+pub struct MicrophoneRecording {
+    stream: Option<Stream>,
+    sink: Option<AudioSink>,
 }
 
-pub struct CpalAudioRecording {
-    backend: Option<NativeAudioBackend>,
-}
-
-impl CpalAudioRecording {
+impl MicrophoneRecording {
     pub fn start(
         source_id: &str,
-        kind: SourceKind,
         output: &Path,
         queue_capacity: usize,
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
-        let backend = match kind {
-            SourceKind::Microphone => start_microphone(
-                source_id,
-                output,
-                queue_capacity,
-                start_gate,
-            )?,
-            SourceKind::SystemAudio => {
-                #[cfg(windows)]
-                {
-                    NativeAudioBackend::System(
-                        crate::backends::win::system_audio::WasapiLoopbackRecording::start(
-                            source_id,
-                            output,
-                            queue_capacity,
-                            start_gate,
-                        )?,
-                    )
+        let host = cpal::default_host();
+        let device = find_microphone(&host, source_id)?;
+        let supported = device
+            .default_input_config()
+            .map_err(|error| CaptureError::Backend(error.to_string()))?;
+        let stream_config: StreamConfig = supported.clone().into();
+        let (sink, publisher) = AudioSink::start(
+            output,
+            supported.sample_rate(),
+            supported.channels(),
+            queue_capacity,
+            "capture-microphone-writer",
+        )?;
+        let error_publisher = publisher.clone();
+        let callback_gate = start_gate;
+        let stream = match build_stream(
+            &device,
+            &stream_config,
+            supported.sample_format(),
+            move |data: &[f32]| {
+                if callback_gate.is_released() {
+                    publisher.publish(data.to_vec());
                 }
-                #[cfg(target_os = "macos")]
-                {
-                    NativeAudioBackend::System(
-                        crate::backends::mac::system_audio::ScreenCaptureAudioRecording::start(
-                            source_id,
-                            output,
-                            queue_capacity,
-                            start_gate,
-                        )?,
-                    )
-                }
-                #[cfg(not(any(windows, target_os = "macos")))]
-                {
-                    let _ = (source_id, output, queue_capacity, start_gate);
-                    return Err(CaptureError::Unsupported(
-                        "native system audio is unavailable on this platform".into(),
-                    ));
-                }
-            }
-            _ => {
-                return Err(CaptureError::InvalidConfiguration(
-                    "invalid native audio source kind".into(),
-                ));
+            },
+            move |_error| error_publisher.interruption(),
+        ) {
+            Ok(stream) => stream,
+            Err(error) => {
+                drop(sink);
+                let _ = std::fs::remove_file(output);
+                return Err(error);
             }
         };
+        if let Err(error) = stream.play() {
+            drop(stream);
+            drop(sink);
+            let _ = std::fs::remove_file(output);
+            return Err(CaptureError::Backend(error.to_string()));
+        }
         Ok(Self {
-            backend: Some(backend),
+            stream: Some(stream),
+            sink: Some(sink),
         })
     }
 
     pub fn stop(mut self) -> Result<(), CaptureError> {
-        match self
-            .backend
+        self.stream.take();
+        self.sink
             .take()
-            .ok_or_else(|| CaptureError::Backend("native audio backend missing".into()))?
-        {
-            NativeAudioBackend::Microphone { mut stream, mut sink } => {
-                stream.take();
-                sink.take()
-                    .ok_or_else(|| CaptureError::Backend("microphone audio sink missing".into()))?
-                    .stop()
-            }
-            #[cfg(windows)]
-            NativeAudioBackend::System(recording) => recording.stop(),
-            #[cfg(target_os = "macos")]
-            NativeAudioBackend::System(recording) => recording.stop(),
-        }
+            .ok_or_else(|| CaptureError::Backend("microphone audio sink missing".into()))?
+            .stop()
     }
 
     #[must_use]
     pub fn metrics(&self) -> Arc<AudioCaptureMetrics> {
-        match self.backend.as_ref() {
-            Some(NativeAudioBackend::Microphone { sink, .. }) => sink
-                .as_ref()
-                .map_or_else(|| Arc::new(AudioCaptureMetrics::default()), AudioSink::metrics),
-            #[cfg(windows)]
-            Some(NativeAudioBackend::System(recording)) => recording.metrics(),
-            #[cfg(target_os = "macos")]
-            Some(NativeAudioBackend::System(recording)) => recording.metrics(),
-            None => Arc::new(AudioCaptureMetrics::default()),
-        }
+        self.sink
+            .as_ref()
+            .map_or_else(|| Arc::new(AudioCaptureMetrics::default()), AudioSink::metrics)
     }
-}
-
-fn start_microphone(
-    source_id: &str,
-    output: &Path,
-    queue_capacity: usize,
-    start_gate: Arc<StartGate>,
-) -> Result<NativeAudioBackend, CaptureError> {
-    let host = cpal::default_host();
-    let device = find_microphone(&host, source_id)?;
-    let supported = device
-        .default_input_config()
-        .map_err(|error| CaptureError::Backend(error.to_string()))?;
-    let stream_config: StreamConfig = supported.clone().into();
-    let sample_rate = supported.sample_rate();
-    let channels = supported.channels();
-    let (sink, publisher) = AudioSink::start(
-        output,
-        sample_rate,
-        channels,
-        queue_capacity,
-        "capture-microphone-writer",
-    )?;
-    let error_publisher = publisher.clone();
-    let callback_gate = start_gate;
-    let stream = match build_stream(
-        &device,
-        &stream_config,
-        supported.sample_format(),
-        move |data: &[f32]| {
-            if callback_gate.is_released() {
-                publisher.publish(data.to_vec());
-            } else {
-                publisher.drop_samples(data.len());
-            }
-        },
-        move |_error| error_publisher.interruption(),
-    ) {
-        Ok(stream) => stream,
-        Err(error) => {
-            drop(sink);
-            let _ = std::fs::remove_file(output);
-            return Err(error);
-        }
-    };
-    if let Err(error) = stream.play() {
-        drop(stream);
-        drop(sink);
-        let _ = std::fs::remove_file(output);
-        return Err(CaptureError::Backend(error.to_string()));
-    }
-    Ok(NativeAudioBackend::Microphone {
-        stream: Some(stream),
-        sink: Some(sink),
-    })
 }
 
 fn write_audio(
@@ -403,14 +315,16 @@ fn write_audio(
     channels: u16,
     metrics: Arc<AudioCaptureMetrics>,
 ) -> Result<u64, CaptureError> {
-    let mut writer = WavWriter::create(&output, sample_rate, channels)?;
-    while let Ok(message) = receiver.recv() {
-        match message {
-            AudioMessage::Samples(samples) => writer.write_f32(&samples)?,
-            AudioMessage::Stop => break,
+    let result = (|| {
+        let mut writer = WavWriter::create(&output, sample_rate, channels)?;
+        while let Ok(message) = receiver.recv() {
+            match message {
+                AudioMessage::Samples(samples) => writer.write_f32(&samples)?,
+                AudioMessage::Stop => break,
+            }
         }
-    }
-    let result = writer.finish();
+        writer.finish()
+    })();
     if result.is_err() {
         metrics.record_interruption();
     }
@@ -420,18 +334,18 @@ fn write_audio(
 fn find_microphone(host: &cpal::Host, source_id: &str) -> Result<cpal::Device, CaptureError> {
     let requested = source_id
         .strip_prefix("microphone:cpal:")
-        .unwrap_or(source_id);
+        .ok_or_else(|| {
+            CaptureError::InvalidConfiguration(format!(
+                "{source_id} is not a native microphone source"
+            ))
+        })?;
     host.input_devices()
         .map_err(|error| CaptureError::Backend(error.to_string()))?
         .find(|device| {
             device
                 .id()
                 .is_ok_and(|id| id.to_string() == requested)
-                || device
-                    .description()
-                    .is_ok_and(|name| name.to_string() == requested)
         })
-        .or_else(|| host.default_input_device())
         .ok_or_else(|| CaptureError::SourceNotFound(source_id.into()))
 }
 
