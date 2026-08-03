@@ -37,39 +37,69 @@ pub struct WasapiLoopbackRecording {
 pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let _com = ComApartment::initialize()?;
     let enumerator = DeviceEnumerator::new().map_err(backend_error)?;
-    let default_id = enumerator
-        .get_default_device(&Direction::Render)
-        .and_then(|device| device.get_id())
-        .ok();
-    let collection = enumerator
-        .get_device_collection(&Direction::Render)
-        .map_err(backend_error)?;
-    let count = collection.get_nbr_devices().map_err(backend_error)?;
-    let mut sources = Vec::with_capacity(usize::try_from(count).unwrap_or_default());
-    for index in 0..count {
-        let device = collection
-            .get_device_at_index(index)
-            .map_err(backend_error)?;
-        let endpoint_id = device.get_id().map_err(backend_error)?;
-        let label = device.get_friendlyname().map_err(backend_error)?;
-        sources.push(SourceDescriptor {
-            id: SourceId::new(format!("{SOURCE_PREFIX}{endpoint_id}"))?,
-            kind: SourceKind::SystemAudio,
-            label,
-            is_default: default_id.as_deref() == Some(endpoint_id.as_str()),
-            selection_mode: SourceSelectionMode::Direct,
-            display_id: None,
-            capabilities: SourceCapabilities {
-                formats: vec![MediaFormat::Audio {
-                    sample_rate: SAMPLE_RATE,
-                    channels: CHANNELS,
-                    sample_format: "f32".into(),
-                }],
-                ..SourceCapabilities::default()
-            },
-        });
+    let default_device = enumerator.get_default_device(&Direction::Render).ok();
+    let default_id = default_device
+        .as_ref()
+        .and_then(|device| device.get_id().ok());
+    let mut sources = Vec::new();
+
+    if let Ok(collection) = enumerator.get_device_collection(&Direction::Render) {
+        if let Ok(count) = collection.get_nbr_devices() {
+            for index in 0..count {
+                let Ok(device) = collection.get_device_at_index(index) else {
+                    continue;
+                };
+                let Ok(endpoint_id) = device.get_id() else {
+                    continue;
+                };
+                let Ok(source_id) = SourceId::new(format!("{SOURCE_PREFIX}{endpoint_id}")) else {
+                    continue;
+                };
+                let label = device
+                    .get_friendlyname()
+                    .unwrap_or_else(|_| "System audio".into());
+                sources.push(SourceDescriptor {
+                    id: source_id,
+                    kind: SourceKind::SystemAudio,
+                    label,
+                    is_default: default_id.as_deref() == Some(endpoint_id.as_str()),
+                    selection_mode: SourceSelectionMode::Direct,
+                    display_id: None,
+                    capabilities: system_audio_capabilities(),
+                });
+            }
+        }
     }
+
+    if sources.is_empty() {
+        if let Some(device) = default_device.as_ref() {
+            let endpoint_id = device.get_id().map_err(backend_error)?;
+            sources.push(SourceDescriptor {
+                id: SourceId::new(format!("{SOURCE_PREFIX}{endpoint_id}"))?,
+                kind: SourceKind::SystemAudio,
+                label: device
+                    .get_friendlyname()
+                    .unwrap_or_else(|_| "Default system audio".into()),
+                is_default: true,
+                selection_mode: SourceSelectionMode::Direct,
+                display_id: None,
+                capabilities: system_audio_capabilities(),
+            });
+        }
+    }
+
     Ok(sources)
+}
+
+fn system_audio_capabilities() -> SourceCapabilities {
+    SourceCapabilities {
+        formats: vec![MediaFormat::Audio {
+            sample_rate: SAMPLE_RATE,
+            channels: CHANNELS,
+            sample_format: "f32".into(),
+        }],
+        ..SourceCapabilities::default()
+    }
 }
 
 impl WasapiLoopbackRecording {
@@ -98,14 +128,7 @@ impl WasapiLoopbackRecording {
         let (stop_sender, stop_receiver) = bounded(1);
         let capture = match thread::Builder::new()
             .name("capture-wasapi-loopback".into())
-            .spawn(move || {
-                capture_loop(
-                    &endpoint_id,
-                    publisher,
-                    stop_receiver,
-                    start_gate,
-                )
-            })
+            .spawn(move || capture_loop(&endpoint_id, publisher, stop_receiver, start_gate))
         {
             Ok(capture) => capture,
             Err(error) => {
