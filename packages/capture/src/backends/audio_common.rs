@@ -235,9 +235,19 @@ impl Drop for AudioSink {
     }
 }
 
+enum NativeAudioBackend {
+    Microphone {
+        stream: Option<Stream>,
+        sink: Option<AudioSink>,
+    },
+    #[cfg(windows)]
+    System(crate::backends::win::system_audio::WasapiLoopbackRecording),
+    #[cfg(target_os = "macos")]
+    System(crate::backends::mac::system_audio::ScreenCaptureAudioRecording),
+}
+
 pub struct CpalAudioRecording {
-    stream: Option<Stream>,
-    sink: Option<AudioSink>,
+    backend: Option<NativeAudioBackend>,
 }
 
 impl CpalAudioRecording {
@@ -248,82 +258,142 @@ impl CpalAudioRecording {
         queue_capacity: usize,
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
-        if kind != SourceKind::Microphone {
-            return Err(CaptureError::InvalidConfiguration(
-                "CPAL is reserved for microphone capture; system audio requires a platform loopback backend"
-                    .into(),
-            ));
-        }
-        let host = cpal::default_host();
-        let device = find_microphone(&host, source_id)?;
-        let supported = device
-            .default_input_config()
-            .map_err(|error| CaptureError::Backend(error.to_string()))?;
-        let stream_config: StreamConfig = supported.clone().into();
-        let sample_rate = supported.sample_rate();
-        let channels = supported.channels();
-        let (sink, publisher) = AudioSink::start(
-            output,
-            sample_rate,
-            channels,
-            queue_capacity,
-            "capture-microphone-writer",
-        )?;
-        let error_publisher = publisher.clone();
-        let callback_gate = start_gate;
-        let stream = match build_stream(
-            &device,
-            &stream_config,
-            supported.sample_format(),
-            move |data: &[f32]| {
-                if callback_gate.is_released() {
-                    publisher.publish(data.to_vec());
-                } else {
-                    publisher.drop_samples(data.len());
+        let backend = match kind {
+            SourceKind::Microphone => start_microphone(
+                source_id,
+                output,
+                queue_capacity,
+                start_gate,
+            )?,
+            SourceKind::SystemAudio => {
+                #[cfg(windows)]
+                {
+                    NativeAudioBackend::System(
+                        crate::backends::win::system_audio::WasapiLoopbackRecording::start(
+                            source_id,
+                            output,
+                            queue_capacity,
+                            start_gate,
+                        )?,
+                    )
                 }
-            },
-            move |_error| error_publisher.interruption(),
-        ) {
-            Ok(stream) => stream,
-            Err(error) => {
-                drop(sink);
-                let _ = std::fs::remove_file(output);
-                return Err(error);
+                #[cfg(target_os = "macos")]
+                {
+                    NativeAudioBackend::System(
+                        crate::backends::mac::system_audio::ScreenCaptureAudioRecording::start(
+                            source_id,
+                            output,
+                            queue_capacity,
+                            start_gate,
+                        )?,
+                    )
+                }
+                #[cfg(not(any(windows, target_os = "macos")))]
+                {
+                    let _ = (source_id, output, queue_capacity, start_gate);
+                    return Err(CaptureError::Unsupported(
+                        "native system audio is unavailable on this platform".into(),
+                    ));
+                }
+            }
+            _ => {
+                return Err(CaptureError::InvalidConfiguration(
+                    "invalid native audio source kind".into(),
+                ));
             }
         };
-        if let Err(error) = stream.play() {
-            drop(stream);
-            drop(sink);
-            let _ = std::fs::remove_file(output);
-            return Err(CaptureError::Backend(error.to_string()));
-        }
         Ok(Self {
-            stream: Some(stream),
-            sink: Some(sink),
+            backend: Some(backend),
         })
     }
 
     pub fn stop(mut self) -> Result<(), CaptureError> {
-        self.stream.take();
-        self.sink
+        match self
+            .backend
             .take()
-            .ok_or_else(|| CaptureError::Backend("microphone audio sink missing".into()))?
-            .stop()
+            .ok_or_else(|| CaptureError::Backend("native audio backend missing".into()))?
+        {
+            NativeAudioBackend::Microphone { mut stream, mut sink } => {
+                stream.take();
+                sink.take()
+                    .ok_or_else(|| CaptureError::Backend("microphone audio sink missing".into()))?
+                    .stop()
+            }
+            #[cfg(windows)]
+            NativeAudioBackend::System(recording) => recording.stop(),
+            #[cfg(target_os = "macos")]
+            NativeAudioBackend::System(recording) => recording.stop(),
+        }
     }
 
     #[must_use]
     pub fn metrics(&self) -> Arc<AudioCaptureMetrics> {
-        self.sink
-            .as_ref()
-            .map_or_else(|| Arc::new(AudioCaptureMetrics::default()), AudioSink::metrics)
+        match self.backend.as_ref() {
+            Some(NativeAudioBackend::Microphone { sink, .. }) => sink
+                .as_ref()
+                .map_or_else(|| Arc::new(AudioCaptureMetrics::default()), AudioSink::metrics),
+            #[cfg(windows)]
+            Some(NativeAudioBackend::System(recording)) => recording.metrics(),
+            #[cfg(target_os = "macos")]
+            Some(NativeAudioBackend::System(recording)) => recording.metrics(),
+            None => Arc::new(AudioCaptureMetrics::default()),
+        }
     }
 }
 
-impl Drop for CpalAudioRecording {
-    fn drop(&mut self) {
-        self.stream.take();
-        self.sink.take();
+fn start_microphone(
+    source_id: &str,
+    output: &Path,
+    queue_capacity: usize,
+    start_gate: Arc<StartGate>,
+) -> Result<NativeAudioBackend, CaptureError> {
+    let host = cpal::default_host();
+    let device = find_microphone(&host, source_id)?;
+    let supported = device
+        .default_input_config()
+        .map_err(|error| CaptureError::Backend(error.to_string()))?;
+    let stream_config: StreamConfig = supported.clone().into();
+    let sample_rate = supported.sample_rate();
+    let channels = supported.channels();
+    let (sink, publisher) = AudioSink::start(
+        output,
+        sample_rate,
+        channels,
+        queue_capacity,
+        "capture-microphone-writer",
+    )?;
+    let error_publisher = publisher.clone();
+    let callback_gate = start_gate;
+    let stream = match build_stream(
+        &device,
+        &stream_config,
+        supported.sample_format(),
+        move |data: &[f32]| {
+            if callback_gate.is_released() {
+                publisher.publish(data.to_vec());
+            } else {
+                publisher.drop_samples(data.len());
+            }
+        },
+        move |_error| error_publisher.interruption(),
+    ) {
+        Ok(stream) => stream,
+        Err(error) => {
+            drop(sink);
+            let _ = std::fs::remove_file(output);
+            return Err(error);
+        }
+    };
+    if let Err(error) = stream.play() {
+        drop(stream);
+        drop(sink);
+        let _ = std::fs::remove_file(output);
+        return Err(CaptureError::Backend(error.to_string()));
     }
+    Ok(NativeAudioBackend::Microphone {
+        stream: Some(stream),
+        sink: Some(sink),
+    })
 }
 
 fn write_audio(
