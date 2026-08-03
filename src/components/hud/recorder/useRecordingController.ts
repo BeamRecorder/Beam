@@ -46,6 +46,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   }
 
   const startTimer = () => {
+    clearTimer()
     recordingStartedAt = performance.now()
     updateElapsed()
     timer = window.setInterval(updateElapsed, 50)
@@ -179,6 +180,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     cancelling = true
     const activeSessionId = sessionId
     const hadPreparedSession = preparedGeneration !== null
+    const pendingStart = pendingNativeStart
     ++recordingGeneration
     clearCountdown()
     clearTimer()
@@ -190,6 +192,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       } else if (hadPreparedSession) {
         await capture.cancelPreparedRecording()
       }
+      if (pendingStart) await pendingStart.catch(() => undefined)
       capture.setTeleprompterSession(null)
       resetState()
     } catch (reason) {
@@ -226,14 +229,23 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     if (!sessionId) return
     if (phase.value === 'recording') {
       stopTimer()
-      await capture.pause()
-      phase.value = 'paused'
+      try {
+        await capture.pause()
+        phase.value = 'paused'
+      } catch (reason) {
+        error.value = reason instanceof Error ? reason.message : String(reason)
+        startTimer()
+      }
       return
     }
     if (phase.value === 'paused') {
-      await capture.resume()
-      phase.value = 'recording'
-      startTimer()
+      try {
+        await capture.resume()
+        phase.value = 'recording'
+        startTimer()
+      } catch (reason) {
+        error.value = reason instanceof Error ? reason.message : String(reason)
+      }
     }
   }
 
