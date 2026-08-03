@@ -2,22 +2,42 @@
 
 ## Boundaries
 
-The common model, session clock, state machine, storage and protocol contain no native API types. Platform recorders own their native streams and persist segmented output through the session layer. Every high-rate producer reports bounded metrics and explicit loss.
+The common model, session clock, state machine, storage and protocol contain no native API types. Platform recorders own their native streams and persist segmented output through the session layer. Every high-rate producer uses a bounded queue, reports explicit loss, and rejects empty output instead of creating placeholder media.
 
-OS APIs are confined to `win/`, `mac/` and `linux/` directories. The architecture tests enforce these imports and the 500-line source limit. Executables are thin JSON/JSONL adapters over the library.
+OS APIs are confined to platform backend modules. Executables remain thin JSONL adapters over the library, while Electron only transports commands and renders native preview or telemetry results. Browser media capture APIs are not part of the recorder architecture.
 
-## macOS crate decision
+## Native platform paths
 
-The selected crate is `screencapturekit 8.0.1`. Its cumulative `macos_15_0` feature includes the macOS 13 APIs while also exposing `SCRecordingOutput`, used for direct hardware H.264 MP4 recording on macOS 15 and newer. Screen, window and application video use ScreenCaptureKit directly. Camera discovery and live preview use Nokhwa; microphone and system audio use CPAL. The macOS camera writer is still an explicit optional-track failure until an AVFoundation/VideoToolbox writer is added; it never creates an empty placeholder segment. The older `screen-capture-kit 0.7.1` lacks the direct recording surface and was therefore not selected. All native references remain under OS-specific directories.
+### Windows
+
+- Screen and window video use Windows Graphics Capture and the native H.264 encoder.
+- Camera discovery and acquisition use Nokhwa 0.10.11 with Media Foundation; frames are converted to BGRA and encoded to MP4 through the Windows native encoder.
+- Microphone discovery and capture use CPAL with exact endpoint identifiers.
+- System audio uses event-driven WASAPI render-loopback capture for the selected output endpoint.
+- Audio meters use the same native microphone or WASAPI endpoints and are closed before an armed recording opens its devices.
+
+### macOS
+
+- Screen, window, application and system-audio capture use ScreenCaptureKit directly.
+- Camera discovery and acquisition use Nokhwa 0.10.11 with AVFoundation.
+- Camera frames are converted to BGRA IOSurfaces, encoded as H.264 with VideoToolbox, and muxed into MP4 with AVAssetWriter.
+- Microphone discovery and capture use CPAL with exact endpoint identifiers.
+- System audio and its level meter use ScreenCaptureKit audio output and exclude Beam's own process audio to prevent feedback.
+
+Camera, microphone and system-audio startup failures are surfaced as real track failures. No backend writes empty files, synthetic samples, or placeholder segments.
 
 ## Persistence and time
 
-Projects, sessions, tracks and segments use UUID v7 newtypes. Session timestamps are monotonic nanoseconds. Native timestamps are mapped through explicit rate-aware mappers and periodic anchors are appended to `timing.jsonl`.
+Projects, sessions, tracks and segments use UUID v7 newtypes. Every clone of the session clock shares one monotonic epoch and one atomically published last timestamp. Native timestamps are mapped through rate-aware mappers that re-anchor after discontinuities and never publish time that moves backwards.
 
 Recording checkpoints go to `manifest.partial.json`. Media is segmented and never rewritten. Clean finalization fsyncs a temporary manifest, atomically renames it to `manifest.json`, then removes the partial manifest. Recovery accepts a partial manifest and ignores only invalid trailing JSONL records.
 
 Pause and resume close and create segments; they do not rewrite earlier media. Cursor movements may be coalesced, while clicks, visibility and shape events force the pending movement to flush first.
 
-## Current backend strategy
+## Preview and telemetry
 
-Windows uses Windows Graphics Capture, the WGC hardware encoder and Win32 cursor sampling. Nokhwa supplies camera frames, CPAL supplies microphone input and Windows render-loopback audio, and bounded queues feed native writers. The camera preview is also produced by Nokhwa/Rust and exposed as a localhost multipart image stream; Electron only renders its URL. macOS uses ScreenCaptureKit and its VideoToolbox-backed recording output plus CoreGraphics cursor events; CPAL supplies microphone and system-audio sources, while Nokhwa supplies the native camera preview. Linux currently exposes source and permission metadata only; native session recording is unavailable. Browser media APIs are not used for camera preview or recording.
+The camera preview is produced once by Nokhwa in Rust and can be handed directly to recording when the selected source is unchanged. The current renderer transport is a bounded localhost multipart stream; publishing preview frames is best-effort and can never terminate camera recording. Audio levels are sampled by native CPAL, WASAPI or ScreenCaptureKit monitors and polled through the JSONL protocol. Electron does not call `MediaRecorder`, `getUserMedia`, or `getDisplayMedia`.
+
+## Manual validation
+
+Native capture must be validated on physical Windows and macOS machines because device drivers, permissions, endpoint formats and hardware encoders cannot be proven by cross-platform static review. The repository intentionally contains no CI workflow for this branch; builds and hardware tests are run manually by the project owner.
