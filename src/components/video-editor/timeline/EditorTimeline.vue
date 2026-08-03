@@ -5,17 +5,21 @@ import type { ExportProgress } from "../../export/export-types";
 import type { ZoomElement } from "../zoom/zoom-types";
 import type { ClipComposition } from "../composition/composition-types";
 
-const props = defineProps<{
-  currentTime: number;
-  duration: number;
-  isPlaying: boolean;
-  exportProgress?: ExportProgress | null;
-  zoomElements: ZoomElement[];
-  selectedZoomId: string | null;
-  composition: ClipComposition;
-  selectedClipId: string | null;
-  zoomLevel: number;
-}>();
+const props = withDefaults(
+  defineProps<{
+    currentTime: number;
+    duration: number;
+    isPlaying: boolean;
+    exportProgress?: ExportProgress | null;
+    zoomElements: ZoomElement[];
+    selectedZoomId: string | null;
+    composition: ClipComposition;
+    selectedClipId: string | null;
+    zoomLevel: number;
+    isSnappingEnabled?: boolean;
+  }>(),
+  { isSnappingEnabled: true },
+);
 const emit = defineEmits<{
   (event: "update:currentTime", value: number): void;
   (event: "update:isPlaying", value: boolean): void;
@@ -57,6 +61,7 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeyDown));
       :selected-zoom-id="selectedZoomId"
       :composition="composition"
       :selected-clip-id="selectedClipId"
+      :is-snapping-enabled="isSnappingEnabled"
       @update:current-time="emit('update:currentTime', $event)"
       @update:zoom-level="emit('update:zoomLevel', $event)"
       @select:zoom="emit('select:zoom', $event)"

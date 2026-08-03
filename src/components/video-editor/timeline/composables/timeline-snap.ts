@@ -8,6 +8,7 @@ export interface SnapTargetParams {
   duration: number;
   ignoreClipIds?: string[];
   ignoreZoomIds?: string[];
+  ignorePlayhead?: boolean;
 }
 
 export interface SnapResult {
@@ -22,6 +23,7 @@ export const collectSnapTargets = ({
   duration,
   ignoreClipIds = [],
   ignoreZoomIds = [],
+  ignorePlayhead = false,
 }: SnapTargetParams): number[] => {
   const durationMs = Math.round(duration * 1_000);
   const targets = new Set<number>();
@@ -29,9 +31,11 @@ export const collectSnapTargets = ({
   targets.add(0);
   if (durationMs > 0) targets.add(durationMs);
 
-  const playheadMs = Math.round(currentTime * 1_000);
-  if (playheadMs >= 0 && playheadMs <= durationMs) {
-    targets.add(playheadMs);
+  if (!ignorePlayhead) {
+    const playheadMs = Math.round(currentTime * 1_000);
+    if (playheadMs >= 0 && playheadMs <= durationMs) {
+      targets.add(playheadMs);
+    }
   }
 
   const ignoreClipsSet = new Set(ignoreClipIds);

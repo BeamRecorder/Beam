@@ -33,16 +33,20 @@ import {
 } from "./composables/timeline-snap";
 
 const { t } = useTranslate("TimelineTracks");
-const props = defineProps<{
-  currentTime: number;
-  duration: number;
-  zoomLevel: number;
-  exportProgress?: ExportProgress | null;
-  zoomElements: ZoomElement[];
-  selectedZoomId: string | null;
-  composition: ClipComposition;
-  selectedClipId: string | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    currentTime: number;
+    duration: number;
+    zoomLevel: number;
+    exportProgress?: ExportProgress | null;
+    zoomElements: ZoomElement[];
+    selectedZoomId: string | null;
+    composition: ClipComposition;
+    selectedClipId: string | null;
+    isSnappingEnabled?: boolean;
+  }>(),
+  { isSnappingEnabled: true },
+);
 const emit = defineEmits<{
   (event: "update:currentTime", value: number): void;
   (event: "update:zoomLevel", value: number): void;
@@ -173,10 +177,45 @@ const centeredStartAt = (clientX: number, lengthMs: number) => {
   return Math.round(Math.max(0, Math.min(maximumStart, timeAt(clientX) - lengthMs / 2)));
 };
 const emitScrub = (timeMs: number) => emit("update:currentTime", timeMs / 1_000);
+let lastScrubX = 0;
+let lastScrubTimestamp = 0;
+
+const calculateScrubSnap = (clientX: number): number => {
+  const rawTimeMs = timeAt(clientX);
+  if (props.isSnappingEnabled === false) {
+    activeSnapTimeMs.value = null;
+    return rawTimeMs;
+  }
+
+  const now = performance.now();
+  const deltaX = Math.abs(clientX - lastScrubX);
+  const deltaTime = Math.max(1, now - lastScrubTimestamp);
+  const speedPxPerMs = deltaX / deltaTime;
+  lastScrubX = clientX;
+  lastScrubTimestamp = now;
+
+  const thresholdPx = speedPxPerMs < 0.8 ? 14 : 8;
+  const thresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value, thresholdPx);
+  const targets = collectSnapTargets({
+    composition: props.composition,
+    zoomElements: props.zoomElements,
+    currentTime: props.currentTime,
+    duration: props.duration,
+    ignorePlayhead: true,
+  });
+
+  const snapResult = snapValue(rawTimeMs, targets, thresholdMs);
+  if (snapResult) {
+    activeSnapTimeMs.value = snapResult.snappedValueMs;
+    return snapResult.snappedValueMs;
+  }
+
+  activeSnapTimeMs.value = null;
+  return rawTimeMs;
+};
+
 const scheduleScrubAt = (clientX: number) => {
-  pendingScrubTime = timeAt(clientX);
-  // The playhead is cheap to move, unlike decoding a video frame. Keep it under
-  // the pointer immediately while the media seek is coalesced to the next frame.
+  pendingScrubTime = calculateScrubSnap(clientX);
   scrubPreviewTime.value = pendingScrubTime / 1_000;
   if (scrubFrame !== null) return;
   scrubFrame = requestAnimationFrame(() => {
@@ -186,18 +225,22 @@ const scheduleScrubAt = (clientX: number) => {
   });
 };
 const flushScrubAt = (clientX: number) => {
-  pendingScrubTime = timeAt(clientX);
+  pendingScrubTime = calculateScrubSnap(clientX);
   scrubPreviewTime.value = pendingScrubTime / 1_000;
   if (scrubFrame !== null) cancelAnimationFrame(scrubFrame);
   scrubFrame = null;
   if (pendingScrubTime !== null) emitScrub(pendingScrubTime);
   pendingScrubTime = null;
   scrubPreviewTime.value = null;
+  activeSnapTimeMs.value = null;
 };
+const isScrubbing = ref(false);
 const beginScrub = (event: PointerEvent) => {
+  isScrubbing.value = true;
   scheduleScrubAt(event.clientX);
   const move = (next: PointerEvent) => scheduleScrubAt(next.clientX);
   const end = (next: PointerEvent) => {
+    isScrubbing.value = false;
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", end);
     window.removeEventListener("pointercancel", end);
@@ -267,7 +310,7 @@ const beginClipMove = (event: PointerEvent, clip: Clip) => {
   let finalStartMs = originalStartMs;
   const move = (next: PointerEvent) => {
     const proposedStartMs = Math.max(0, Math.min(maxStartMs, originalStartMs + timeAt(next.clientX) - pointerStartMs));
-    const snap = snapSpan(proposedStartMs, clipLengthMs, snapTargets, snapThresholdMs);
+    const snap = props.isSnappingEnabled !== false ? snapSpan(proposedStartMs, clipLengthMs, snapTargets, snapThresholdMs) : null;
     if (snap) {
       finalStartMs = Math.max(0, Math.min(maxStartMs, snap.snappedStartMs));
       activeSnapTimeMs.value = snap.targetMs;
@@ -312,7 +355,7 @@ const beginClipTrim = (event: PointerEvent, clip: Clip, edge: "start" | "end") =
       ? Math.max(0, Math.min(originalEndMs - MIN_DURATION_MS, raw))
       : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(durationMs.value, raw));
 
-    const snap = snapValue(proposedTimeMs, snapTargets, snapThresholdMs);
+    const snap = props.isSnappingEnabled !== false ? snapValue(proposedTimeMs, snapTargets, snapThresholdMs) : null;
     if (snap) {
       proposedTimeMs = edge === "start"
         ? Math.max(0, Math.min(originalEndMs - MIN_DURATION_MS, snap.snappedValueMs))
@@ -362,7 +405,7 @@ const beginZoomMove = (event: PointerEvent, zoom: ZoomElement) => {
   let finalStartMs = zoom.startMs;
   const move = (next: PointerEvent) => {
     const proposedStartMs = Math.max(0, Math.min(maxStartMs, zoom.startMs + timeAt(next.clientX) - pointerStartMs));
-    const snap = snapSpan(proposedStartMs, lengthMs, snapTargets, snapThresholdMs);
+    const snap = props.isSnappingEnabled !== false ? snapSpan(proposedStartMs, lengthMs, snapTargets, snapThresholdMs) : null;
     if (snap) {
       finalStartMs = Math.max(0, Math.min(maxStartMs, snap.snappedStartMs));
       activeSnapTimeMs.value = snap.targetMs;
@@ -403,7 +446,7 @@ const beginZoomTrim = (event: PointerEvent, zoom: ZoomElement, edge: "start" | "
       ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, raw))
       : Math.max(zoom.startMs + MIN_DURATION_MS, Math.min(durationMs.value, raw));
 
-    const snap = snapValue(proposedTimeMs, snapTargets, snapThresholdMs);
+    const snap = props.isSnappingEnabled !== false ? snapValue(proposedTimeMs, snapTargets, snapThresholdMs) : null;
     if (snap) {
       proposedTimeMs = edge === "start"
         ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, snap.snappedValueMs))
@@ -537,7 +580,13 @@ const beginReorder = (event: PointerEvent, clipId: string) => {
             <span v-if="isRulerLabel(second)" class="marker-label">{{ formatRulerLabel(second) }}</span>
             <span class="marker-tick" />
           </div>
-          <div class="timeline-playhead" :style="playheadStyle"><span class="playhead-knob" /></div>
+          <div class="timeline-playhead" :style="playheadStyle">
+            <div class="playhead-head">
+              <svg width="12" height="15" viewBox="0 0 12 15" fill="var(--color-primary)">
+                <path d="M0 2C0 0.89543 0.895431 0 2 0H10C11.1046 0 12 0.89543 12 2V7.5C12 8.02701 11.7919 8.53272 11.4216 8.90566L6.5 14.8596L1.57841 8.90566C1.20814 8.53272 1 8.02701 1 7.5V2Z" />
+              </svg>
+            </div>
+          </div>
           <div
             v-if="activeSnapTimeMs !== null"
             class="timeline-snap-guide"
@@ -701,10 +750,10 @@ const beginReorder = (event: PointerEvent, clipId: string) => {
 .ruler-marker { position: absolute; inset-block: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
 .marker-label { position: absolute; top: 4px; font-size: 8px; font-weight: 700; color: var(--text-muted); font-family: monospace; }
 .marker-tick { width: 1px; height: 6px; background: var(--color-border-strong); }.is-major .marker-tick { height: 10px; background: var(--color-border-dark); }
-.timeline-playhead { position: absolute; top: 0; left: 0; width: 2px; height: 600px; background: var(--color-primary); z-index: 50; pointer-events: none; }
-.playhead-knob { position: absolute; top: 0; left: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--color-primary); box-shadow: var(--shadow-sm); }
-.timeline-snap-guide { position: absolute; top: 0; width: 2px; height: 600px; background: var(--color-primary); box-shadow: 0 0 8px var(--color-primary-border); z-index: 48; pointer-events: none; }
-.snap-guide-badge { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); padding: 1px 5px; border-radius: var(--radius-sm); background: var(--color-primary); color: #ffffff; font-size: 9px; font-weight: 800; font-family: monospace; white-space: nowrap; box-shadow: var(--shadow-md); }
+.timeline-playhead { position: absolute; top: 0; left: 0; width: 2px; height: 600px; background: var(--color-primary); z-index: 100; pointer-events: none; }
+.playhead-head { position: absolute; top: -3px; left: -5px; width: 12px; height: 15px; color: var(--color-primary); filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3)); z-index: 101; }
+.timeline-snap-guide { position: absolute; top: 0; width: 2px; height: 600px; background: var(--color-primary); box-shadow: 0 0 10px var(--color-primary); z-index: 200; pointer-events: none; }
+.snap-guide-badge { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); padding: 2px 6px; border-radius: var(--radius-sm); background: var(--color-primary); color: #ffffff; font-size: 9px; font-weight: 800; font-family: monospace; white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); z-index: 201; }
 .tracks-stack { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
 .track-row { display: flex; align-items: center; height: 32px; position: relative; background: var(--color-bg-element); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
 .track-row.audio-track { height: 48px; }

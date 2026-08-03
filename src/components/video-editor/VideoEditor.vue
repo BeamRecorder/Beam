@@ -198,6 +198,7 @@ watch(screenSource, (source) => {
 
 const isCropping = ref(false);
 const timelineZoomLevel = ref(100);
+const isSnappingEnabled = ref(true);
 const isTimelineReady = ref(false);
 let timelineTimer: ReturnType<typeof setTimeout> | null = null;
 let timelineFrame: number | null = null;
@@ -333,7 +334,7 @@ onBeforeUnmount(() => {
             @done:crop="isCropping = false"
             @deselect:zoom="selectedZoomId = null"
           />
-          <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" :can-split="Boolean(selectedClipId)" v-model:zoom-level="timelineZoomLevel" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" @split="splitSelectedClip" />
+          <TimelineToolbar :current-time="currentTime" :duration="duration" :is-playing="isPlaying" :can-split="Boolean(selectedClipId)" v-model:zoom-level="timelineZoomLevel" v-model:is-snapping-enabled="isSnappingEnabled" @update:is-playing="isPlaying = $event" @update:current-time="currentTime = $event" @add:element="addTimelineElement" @split="splitSelectedClip" />
         </div>
       </div>
       <div class="workspace-lower">
@@ -342,6 +343,7 @@ onBeforeUnmount(() => {
           v-model:current-time="currentTime"
           v-model:is-playing="isPlaying"
           v-model:zoom-level="timelineZoomLevel"
+          :is-snapping-enabled="isSnappingEnabled"
           :duration="duration"
           :export-progress="exportProgress"
           :zoom-elements="zoomElements"

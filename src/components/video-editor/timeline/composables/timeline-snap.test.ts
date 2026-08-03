@@ -86,6 +86,19 @@ describe("timeline-snap", () => {
 
       expect(targets).toEqual([0, 2_500, 5_000, 8_000, 10_000]);
     });
+
+    it("ignores playhead position when ignorePlayhead is true", () => {
+      const composition = mockComposition();
+      const targets = collectSnapTargets({
+        composition,
+        zoomElements: mockZooms,
+        currentTime: 2.5,
+        duration: 10,
+        ignorePlayhead: true,
+      });
+
+      expect(targets).toEqual([0, 1_000, 3_000, 3_500, 4_500, 5_000, 8_000, 10_000]);
+    });
   });
 
   describe("calculateSnapThresholdMs", () => {
