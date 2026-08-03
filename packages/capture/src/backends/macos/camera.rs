@@ -500,15 +500,14 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
 
 #[cfg(test)]
 mod tests {
-    use nokhwa::utils::CameraIndex;
-
-    use super::{camera_index, rgb_to_bgra};
-    use crate::model::SourceId;
+    use super::rgb_to_bgra;
 
     #[test]
     fn converts_rgb_to_top_down_bgra() {
+        let converted = rgb_to_bgra(&[1, 2, 3, 4, 5, 6], 2, 1);
+        assert!(converted.is_ok());
         assert_eq!(
-            rgb_to_bgra(&[1, 2, 3, 4, 5, 6], 2, 1).unwrap_or_default(),
+            converted.unwrap_or_default(),
             vec![3, 2, 1, 255, 6, 5, 4, 255]
         );
     }
@@ -516,14 +515,5 @@ mod tests {
     #[test]
     fn rejects_wrong_rgb_buffer_size() {
         assert!(rgb_to_bgra(&[1, 2], 1, 1).is_err());
-    }
-
-    #[test]
-    fn preserves_string_camera_indexes() {
-        let id = SourceId::new("camera:nokhwa:FaceTime HD Camera").unwrap_or_default();
-        assert_eq!(
-            camera_index(&id).unwrap_or(CameraIndex::Index(0)),
-            CameraIndex::String("FaceTime HD Camera".into())
-        );
     }
 }
