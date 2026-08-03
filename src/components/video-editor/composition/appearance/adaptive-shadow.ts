@@ -9,11 +9,16 @@ const fallback = (color: string) => color || "#000000";
 
 const contextForSampling = () => {
   if (sampleContext) return sampleContext;
-  if (typeof document === "undefined") return null;
-  sampleCanvas = document.createElement("canvas");
-  sampleCanvas.width = SAMPLE_SIZE;
-  sampleCanvas.height = SAMPLE_SIZE;
-  sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+  try {
+    if (typeof document === "undefined") return null;
+    sampleCanvas = document.createElement("canvas");
+    sampleCanvas.width = SAMPLE_SIZE;
+    sampleCanvas.height = SAMPLE_SIZE;
+    sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+  } catch {
+    sampleCanvas = null;
+    sampleContext = null;
+  }
   return sampleContext;
 };
 

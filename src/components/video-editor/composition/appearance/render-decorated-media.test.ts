@@ -31,7 +31,7 @@ describe("decorated media rendering", () => {
   });
   it("scales output-pixel shadows in the preview", () => {
     const ctx = context();
-    applyClipShadow(ctx, appearance({ shadowSize: "custom", shadowBlur: 40, shadowMode: "adaptive" }), 100, source, undefined, 0.5);
+    applyClipShadow(ctx, appearance({ shadowSize: "custom", shadowBlur: 40, shadowMode: "solid" }), 100, source, undefined, 0.5);
     expect(ctx.shadowBlur).toBe(20);
   });
 });

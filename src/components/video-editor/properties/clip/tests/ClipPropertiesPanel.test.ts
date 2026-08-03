@@ -107,12 +107,12 @@ describe("ClipPropertiesPanel", () => {
 
     const shadowNone = wrapper.findAll("button").filter((button) => button.text().toLowerCase() === "none")[1];
     await shadowNone!.trigger("click");
-    expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "none", color: "#000000", direction: "all" }]);
+    expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "none", blur: 40, mode: "solid", color: "#000000", direction: "all" }]);
     const shadowSoft = wrapper.findAll("button").find((button) => button.text().toLowerCase() === "soft");
     await shadowSoft!.trigger("click");
     await wrapper.get(".direction-stub").trigger("click");
     await wrapper.get(".color-stub").trigger("click");
-    expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "sm", color: "#abcdef", direction: "top-left" }]);
+    expect(wrapper.emitted("update:shadow")).toContainEqual([{ size: "sm", blur: 40, mode: "solid", color: "#abcdef", direction: "top-left" }]);
 
     const horizBtn = wrapper.findAll("button").find((button) => button.text().toLowerCase() === "horizontal");
     await horizBtn!.trigger("click");
