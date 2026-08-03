@@ -81,7 +81,6 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
   height: 28px;
 }
 
-.canvas-toolbar :deep(.crop-button),
 .canvas-toolbar :deep(.btn) {
   height: 28px !important;
   min-height: 28px !important;
@@ -97,7 +96,20 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
   box-shadow: var(--shadow-sm);
 }
 
-.canvas-toolbar :deep(.crop-button:hover:not(:disabled)) {
+.canvas-toolbar :deep(.crop-button.btn-primary) {
+  background: var(--color-primary, #ff5a1f) !important;
+  background-color: var(--color-primary, #ff5a1f) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary, #ff5a1f) !important;
+}
+
+.canvas-toolbar :deep(.crop-button.btn-primary:hover:not(:disabled)) {
+  background: var(--color-primary-hover, #e04810) !important;
+  background-color: var(--color-primary-hover, #e04810) !important;
+  color: #ffffff !important;
+}
+
+.canvas-toolbar :deep(.crop-button.btn-outline:hover:not(:disabled)) {
   background: var(--color-primary-light) !important;
   border-color: var(--color-primary) !important;
   color: var(--color-primary) !important;

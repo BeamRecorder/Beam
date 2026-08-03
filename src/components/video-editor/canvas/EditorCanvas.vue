@@ -404,15 +404,20 @@ defineExpose({
         <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)" />
       </div>
       <div class="zoom-selection-box" :class="{ locked: selectedZoom?.mode !== 'manual' }" :style="cameraZoom.focusTargetStyle.value" aria-hidden="true"></div>
-      <div v-if="isCropping && selectedTransformClip" class="crop-overlay-box" :style="transformAndCrop.cropOverlayStyle.value" @pointerdown="transformAndCrop.beginCropDrag($event, 'move')" @pointermove="transformAndCrop.moveCropDrag" @pointerup="transformAndCrop.endCropDrag" @pointercancel="transformAndCrop.endCropDrag">
-        <div class="crop-grid">
-          <div class="grid-line vertical line-1"></div><div class="grid-line vertical line-2"></div>
-          <div class="grid-line horizontal line-1"></div><div class="grid-line horizontal line-2"></div>
+      <div v-if="isCropping && selectedTransformClip" class="crop-container" :style="transformAndCrop.cropContainerStyle.value">
+        <div class="crop-mask-wrapper">
+          <div class="crop-mask-hole" :style="transformAndCrop.cropOverlayStyle.value"></div>
         </div>
-        <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
-          <Button variant="primary" size="xs" :icon="Check" @click.stop="commitCrop">{{ t('ok') }}</Button>
+        <div class="crop-overlay-box" :style="transformAndCrop.cropOverlayStyle.value" @pointerdown="transformAndCrop.beginCropDrag($event, 'move')" @pointermove="transformAndCrop.moveCropDrag" @pointerup="transformAndCrop.endCropDrag" @pointercancel="transformAndCrop.endCropDrag">
+          <div class="crop-grid">
+            <div class="grid-line vertical line-1"></div><div class="grid-line vertical line-2"></div>
+            <div class="grid-line horizontal line-1"></div><div class="grid-line horizontal line-2"></div>
+          </div>
+          <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
+            <Button variant="primary" size="xs" :icon="Check" class="crop-ok-button" @click.stop="commitCrop">{{ t('ok') }}</Button>
+          </div>
+          <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
         </div>
-        <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginCropDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveCropDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endCropDrag(event)" />
       </div>
     </div>
     <UndoRedoToast :action="historyAction ?? null" />
@@ -449,8 +454,55 @@ defineExpose({
 .webcam-selection { position: absolute; z-index: 2; border: 2px solid var(--color-primary); box-sizing: border-box; cursor: move; }
 .zoom-selection-box { position: absolute; top: 0; left: 0; z-index: 2; border: 2px dashed rgba(255,255,255,.9); background: rgba(255,255,255,.08); box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; border-radius: var(--radius-md); box-sizing: border-box; contain: layout style; }
 .zoom-selection-box.locked { border-style: solid; border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.03); }
-.crop-overlay-box { position: absolute; z-index: 4; border: 2px solid var(--color-primary, #ff5a1f); box-shadow: 0 0 0 9999px rgba(0,0,0,.5); cursor: move; box-sizing: border-box; }
-.crop-done-wrapper { position: absolute; top: calc(100% - 24px); left: calc(100% + 8px); z-index: 10; white-space: nowrap; pointer-events: auto; }
+.crop-container {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+}
+.crop-mask-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: var(--radius-sm, 4px);
+}
+.crop-mask-hole {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.crop-overlay-box {
+  position: absolute;
+  border: 2px solid var(--color-primary, #ff5a1f);
+  cursor: move;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+.crop-overlay-box :deep(.resize-handle) {
+  z-index: 25 !important;
+}
+.crop-done-wrapper { position: absolute; bottom: 8px; right: 8px; z-index: 10; white-space: nowrap; pointer-events: auto; }
+.crop-done-wrapper :deep(button),
+.crop-done-wrapper :deep(.btn) {
+  background: #ff5a1f !important;
+  background-color: #ff5a1f !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  padding: 0 12px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  border-radius: var(--radius-md, 6px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.crop-done-wrapper :deep(button:hover),
+.crop-done-wrapper :deep(.btn:hover) {
+  background: #e04810 !important;
+  background-color: #e04810 !important;
+}
 .crop-grid { position: absolute; inset: 0; pointer-events: none; }
 .grid-line { position: absolute; background: rgba(255,255,255,.35); }
 .grid-line.vertical { top: 0; bottom: 0; width: 1px; }

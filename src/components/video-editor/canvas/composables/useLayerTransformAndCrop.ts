@@ -152,16 +152,28 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     return displayLayoutFor(clip);
   };
 
+  const cropContainerStyle = computed(() => {
+    if (!options.isCropping()) return { display: "none" };
+    const layout = visualLayout();
+    if (!layout) return { display: "none" };
+    return {
+      left: `${layout.left}px`,
+      top: `${layout.top}px`,
+      width: `${layout.width}px`,
+      height: `${layout.height}px`,
+    };
+  });
+
   const cropOverlayStyle = computed(() => {
     if (!options.isCropping()) return { display: "none" };
     const layout = visualLayout();
     if (!layout) return { display: "none" };
     const crop = displayCrop(cropValue.value);
     return {
-      left: `${layout.left + crop.x * layout.width}px`,
-      top: `${layout.top + crop.y * layout.height}px`,
-      width: `${crop.width * layout.width}px`,
-      height: `${crop.height * layout.height}px`,
+      left: `${crop.x * 100}%`,
+      top: `${crop.y * 100}%`,
+      width: `${crop.width * 100}%`,
+      height: `${crop.height * 100}%`,
     };
   });
 
@@ -335,6 +347,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     transformDraft,
     cropDraft,
     transformHandleStyle,
+    cropContainerStyle,
     cropOverlayStyle,
     beginTransformDrag,
     moveTransformDrag,
