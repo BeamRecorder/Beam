@@ -3,7 +3,23 @@ const path = require('path')
 const { pathToFileURL } = require('url')
 const { buildDefaultCaptureConfig } = require('./capture-config.cjs')
 
-const ALLOWED_COMMANDS = new Set(['discover', 'capabilities', 'permissions', 'formats', 'prepare', 'start', 'pause', 'resume', 'stop', 'status', 'preview-start', 'preview-stop'])
+const ALLOWED_COMMANDS = new Set([
+  'discover',
+  'capabilities',
+  'permissions',
+  'formats',
+  'prepare',
+  'start',
+  'pause',
+  'resume',
+  'stop',
+  'status',
+  'preview-start',
+  'preview-stop',
+  'audio-level-start',
+  'audio-level-read',
+  'audio-level-stop',
+])
 
 function completedVideoSource(session) {
   if (!session?.manifestPath) return session
@@ -44,7 +60,7 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
       return undefined
     }
     if (command === 'discard-recording') {
-      const session = await captureEngine.request('discard')
+      await captureEngine.request('discard')
       return undefined
     }
     if (command === 'start-recording') {
