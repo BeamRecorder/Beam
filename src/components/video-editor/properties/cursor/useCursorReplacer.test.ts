@@ -39,7 +39,7 @@ describe("useCursorReplacer", () => {
       cursor.clickEffects.value,
     ]).toEqual([
       "automatic",
-      24,
+      45,
       "#000000",
       true,
       6,

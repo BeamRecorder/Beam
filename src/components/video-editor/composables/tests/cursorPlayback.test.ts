@@ -39,6 +39,11 @@ describe("cursor playback", () => {
     });
   });
 
+  it("smooths movement between recorded cursor positions", () => {
+    const state = cursorStateAt([move(0, 0, 0), move(1, 1, 0)], 0.25);
+    expect(state?.x).toBeCloseTo(0.15625);
+  });
+
   it("interpolates the next move and applies shape and visibility events", () => {
     const events: CursorEvent[] = [
       {
