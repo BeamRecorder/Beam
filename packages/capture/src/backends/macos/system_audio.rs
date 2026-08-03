@@ -82,6 +82,7 @@ impl ScreenCaptureAudioRecording {
             .with_height(2)
             .with_queue_depth(3)
             .with_captures_audio(true)
+            .with_excludes_current_process_audio(true)
             .with_sample_rate(SAMPLE_RATE)
             .with_channel_count(u32::from(CHANNELS));
         let (sink, publisher) = AudioSink::start(
@@ -97,10 +98,9 @@ impl ScreenCaptureAudioRecording {
         let handler = stream
             .add_output_handler(
                 move |sample: CMSampleBuffer, output_type| {
-                    if output_type != SCStreamOutputType::Audio {
-                        return;
+                    if output_type == SCStreamOutputType::Audio {
+                        publish_sample(&sample, &callback_gate, &publisher);
                     }
-                    publish_sample(&sample, &callback_gate, &publisher);
                 },
                 SCStreamOutputType::Audio,
             )
@@ -110,6 +110,7 @@ impl ScreenCaptureAudioRecording {
                 )
             })?;
         if let Err(error) = stream.start_capture() {
+            let _ = stream.remove_output_handler(handler, SCStreamOutputType::Audio);
             drop(sink);
             let _ = std::fs::remove_file(output);
             return Err(backend_error(error));
@@ -135,8 +136,14 @@ impl ScreenCaptureAudioRecording {
     fn finish(&mut self) -> Result<(), CaptureError> {
         let stream_result = if let Some(mut stream) = self.stream.take() {
             let stop_result = stream.stop_capture().map_err(backend_error);
-            let _ = stream.remove_output_handler(self.handler, SCStreamOutputType::Audio);
-            stop_result
+            let removed = stream.remove_output_handler(self.handler, SCStreamOutputType::Audio);
+            if !removed && stop_result.is_ok() {
+                Err(CaptureError::Backend(
+                    "ScreenCaptureKit could not remove the system-audio handler".into(),
+                ))
+            } else {
+                stop_result
+            }
         } else {
             Ok(())
         };
@@ -163,18 +170,16 @@ impl Drop for ScreenCaptureAudioRecording {
 }
 
 fn publish_sample(sample: &CMSampleBuffer, gate: &StartGate, publisher: &AudioPublisher) {
+    if !gate.is_released() || !sample.data_is_ready() {
+        return;
+    }
     let Some(list) = sample.audio_buffer_list() else {
         publisher.interruption();
         return;
     };
     let samples = interleaved_f32(&list);
-    if samples.is_empty() {
-        return;
-    }
-    if gate.is_released() {
+    if !samples.is_empty() {
         publisher.publish(samples);
-    } else {
-        publisher.drop_samples(samples.len());
     }
 }
 
