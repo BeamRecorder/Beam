@@ -60,7 +60,7 @@ const projectRows = computed(() => {
 });
 
 const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
-  itemHeight: () => (props.compact ? 120 : 132),
+  itemHeight: () => (props.compact ? 128 : 144),
   overscan: 3,
 });
 
@@ -809,12 +809,13 @@ defineExpose({
 }
 
 .project-row {
-  height: 124px;
-  margin-bottom: 8px;
+  height: 132px;
+  margin-bottom: 12px;
 }
 
 .compact .project-row {
-  height: 112px;
+  height: 116px;
+  margin-bottom: 12px;
 }
 
 .project-card-container {
