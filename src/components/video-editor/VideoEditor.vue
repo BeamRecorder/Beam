@@ -132,8 +132,14 @@ const addTimelineElement = (kind: "video" | "image" | "sound" | "caption") => {
   void addElement(kind).catch((error) => console.error("Unable to add media:", error));
 };
 const selectEditorClip = (clipId: string) => {
+  selectedZoomId.value = null;
   selectClip(clipId);
   activeTab.value = isAudioClip(composition.value.clips.find((clip) => clip.id === clipId)!) ? "audio" : "clip";
+};
+const selectEditorZoom = (zoomId: string) => {
+  selectedClipId.value = null;
+  selectedZoomId.value = zoomId;
+  activeTab.value = "zoom";
 };
 const replaceComposition = (value: typeof composition.value) => {
   composition.value = value;
@@ -237,7 +243,11 @@ const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const toggleCrop = () => { if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value; };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, "custom">) => { outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false }; };
 const handleKeyDown = (event: KeyboardEvent) => {
-  if ((event.key === "Enter" || event.key === "Escape") && isCropping.value) isCropping.value = false;
+  if (event.key === "Escape") {
+    if (isCropping.value) isCropping.value = false;
+    else if (selectedZoomId.value) selectedZoomId.value = null;
+    else if (selectedClipId.value) selectedClipId.value = null;
+  }
   const active = document.activeElement;
   if (active) {
     const tag = active.tagName.toLowerCase();
@@ -392,7 +402,7 @@ onBeforeUnmount(() => {
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
           :selected-clip-id="selectedClipId"
-          @select:zoom="selectedZoomId = $event; activeTab = 'zoom'"
+          @select:zoom="selectEditorZoom"
           @select:clip="selectEditorClip"
           @toggle:clip="toggleClip"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"

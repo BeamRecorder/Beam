@@ -442,7 +442,7 @@ defineExpose({
         :style="guide.style"
       ></div>
       <Skeleton v-if="!isVideoFrameReady && !videoError" class="canvas-loading-skeleton" width="100%" height="100%" radius="var(--radius-lg)" :aria-label="t('videoPreviewLoading')" />
-      <div v-if="selectedTransformClip && !isCropping" class="webcam-selection" :style="transformAndCrop.transformHandleStyle.value" @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')" @pointermove="transformAndCrop.moveTransformDrag" @pointerup="transformAndCrop.endTransformDrag" @pointercancel="transformAndCrop.endTransformDrag">
+      <div v-if="selectedTransformClip && !isCropping && selectedZoom?.mode !== 'manual'" class="webcam-selection" :style="transformAndCrop.transformHandleStyle.value" @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')" @pointermove="transformAndCrop.moveTransformDrag" @pointerup="transformAndCrop.endTransformDrag" @pointercancel="transformAndCrop.endTransformDrag">
         <ResizeHandle @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)" @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)" @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)" />
       </div>
       <div class="zoom-selection-box" :class="{ locked: selectedZoom?.mode !== 'manual' }" :style="cameraZoom.focusTargetStyle.value" aria-hidden="true"></div>
@@ -523,7 +523,7 @@ defineExpose({
 .editor-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
 .canvas-loading-skeleton { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .preview-frame { position: absolute; z-index: 0; border-radius: var(--radius-lg); background: var(--color-bg-element); box-shadow: var(--shadow-lg); pointer-events: none; }
-.editor-canvas.is-selection-editable { cursor: move; }
+.editor-canvas.is-selection-editable { cursor: crosshair; }
 .webcam-selection { position: absolute; z-index: 2; border: 2px solid var(--color-primary); box-sizing: border-box; cursor: move; }
 .zoom-selection-box { position: absolute; top: 0; left: 0; z-index: 2; border: 2px dashed rgba(255,255,255,.9); background: rgba(255,255,255,.08); box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; border-radius: var(--radius-md); box-sizing: border-box; contain: layout style; }
 .zoom-selection-box.locked { border-style: solid; border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.03); }

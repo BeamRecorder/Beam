@@ -54,6 +54,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
   const screenHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
   const isMovingSelection = ref(false);
+  const draftFocus = ref<{ cx: number; cy: number } | null>(null);
+  let pendingZoomPreview: ZoomElement | null = null;
+  let zoomPreviewFrame: number | null = null;
 
   const screenClip = (): VisualClip | null => activeClipsAt(options.composition(), options.currentTime() * 1_000)
     .find((clip): clip is VisualClip => clip.kind === "screen") ?? null;
@@ -76,8 +79,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const focusY = bounds.focusY ?? centerY;
     const targetWidth = bounds.dw / selectionScale;
     const targetHeight = bounds.dh / selectionScale;
-    const left = bounds.dx + selected.focus.cx * bounds.dw - targetWidth / 2;
-    const top = bounds.dy + selected.focus.cy * bounds.dh - targetHeight / 2;
+    const cx = draftFocus.value?.cx ?? selected.focus.cx;
+    const cy = draftFocus.value?.cy ?? selected.focus.cy;
+    const left = bounds.dx + cx * bounds.dw - targetWidth / 2;
+    const top = bounds.dy + cy * bounds.dh - targetHeight / 2;
     return {
       width: `${targetWidth * scale}px`,
       height: `${targetHeight * scale}px`,
@@ -85,6 +90,18 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       willChange: isMovingSelection.value ? "transform" : "auto",
     };
   });
+
+  const scheduleZoomPreview = (updated: ZoomElement) => {
+    pendingZoomPreview = updated;
+    if (zoomPreviewFrame !== null) return;
+    zoomPreviewFrame = requestAnimationFrame(() => {
+      zoomPreviewFrame = null;
+      if (pendingZoomPreview) {
+        (options.onPreviewZoom ?? options.onUpdateZoom)(pendingZoomPreview);
+        pendingZoomPreview = null;
+      }
+    });
+  };
 
   const updateFocus = (event: PointerEvent, final: boolean) => {
     const canvas = options.canvasRef();
@@ -102,50 +119,66 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const focusY = bounds.focusY ?? centerY;
     const unzoomedX = (canvasX - centerX) / scale + focusX;
     const unzoomedY = (canvasY - centerY) / scale + focusY;
-    const updated = {
+    const cx = Math.min(1, Math.max(0, (unzoomedX - bounds.dx) / bounds.dw));
+    const cy = Math.min(1, Math.max(0, (unzoomedY - bounds.dy) / bounds.dh));
+
+    draftFocus.value = { cx, cy };
+    const updated: ZoomElement = {
       ...selected,
-      focus: {
-        cx: Math.min(1, Math.max(0, (unzoomedX - bounds.dx) / bounds.dw)),
-        cy: Math.min(1, Math.max(0, (unzoomedY - bounds.dy) / bounds.dh)),
-      },
+      focus: { cx, cy },
     };
-    (final ? options.onUpdateZoom : options.onPreviewZoom ?? options.onUpdateZoom)(updated);
+
+    if (final) {
+      if (zoomPreviewFrame !== null) {
+        cancelAnimationFrame(zoomPreviewFrame);
+        zoomPreviewFrame = null;
+      }
+      pendingZoomPreview = null;
+      options.onUpdateZoom(updated);
+    } else {
+      scheduleZoomPreview(updated);
+    }
   };
 
   const beginSelectionMove = (event: PointerEvent) => {
     if (event.button !== 0) return;
     const selectedZoom = options.selectedZoom();
-    const editingManualZoom = selectedZoom?.mode === "manual" && options.activeTab() === "zoom";
-    if (!editingManualZoom) {
-      if (options.selectVisualAt(event)) return;
-      const canvas = options.canvasRef();
-      const bounds = screenHitBounds.value ?? videoWindowBounds.value;
-      if (canvas && bounds) {
-        const rect = canvas.getBoundingClientRect();
-        const scaleRatio = rect.width / (canvas.clientWidth || 1);
-        const x = (event.clientX - rect.left) / (scaleRatio || 1);
-        const y = (event.clientY - rect.top) / (scaleRatio || 1);
-        if (x >= bounds.dx && x <= bounds.dx + bounds.dw && y >= bounds.dy && y <= bounds.dy + bounds.dh) {
-          const screen = screenClip();
-          if (screen) options.onSelectScreenClip(screen.id);
-          return;
-        }
-      }
-      options.onSelectCanvas();
-      if (options.selectedTransformClipExists()) options.onDeselectTransformClip();
-      if (selectedZoom && options.activeTab() !== "zoom") options.onDeselectZoom();
+    const isManualZoom = selectedZoom?.mode === "manual";
+    if (isManualZoom) {
+      isMovingSelection.value = true;
+      const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
+      if (target?.setPointerCapture) target.setPointerCapture(event.pointerId);
+      updateFocus(event, false);
+      return;
     }
-    if (selectedZoom?.mode !== "manual") return;
-    isMovingSelection.value = true;
-    options.canvasRef()?.setPointerCapture(event.pointerId);
-    updateFocus(event, false);
+
+    if (options.selectVisualAt(event)) return;
+    const canvas = options.canvasRef();
+    const bounds = screenHitBounds.value ?? videoWindowBounds.value;
+    if (canvas && bounds) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleRatio = rect.width / (canvas.clientWidth || 1);
+      const x = (event.clientX - rect.left) / (scaleRatio || 1);
+      const y = (event.clientY - rect.top) / (scaleRatio || 1);
+      if (x >= bounds.dx && x <= bounds.dx + bounds.dw && y >= bounds.dy && y <= bounds.dy + bounds.dh) {
+        const screen = screenClip();
+        if (screen) options.onSelectScreenClip(screen.id);
+        return;
+      }
+    }
+    options.onSelectCanvas();
+    if (options.selectedTransformClipExists()) options.onDeselectTransformClip();
+    if (selectedZoom) options.onDeselectZoom();
   };
   const moveSelection = (event: PointerEvent) => { if (isMovingSelection.value) updateFocus(event, false); };
   const endSelectionMove = (event: PointerEvent) => {
-    if (isMovingSelection.value) updateFocus(event, true);
-    isMovingSelection.value = false;
-    const canvas = options.canvasRef();
-    if (canvas?.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+    if (isMovingSelection.value) {
+      updateFocus(event, true);
+      isMovingSelection.value = false;
+      draftFocus.value = null;
+      const target = (event.currentTarget as HTMLElement) ?? options.canvasRef();
+      if (target?.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId);
+    }
   };
 
   const drawVideoWindow = (ctx: CanvasRenderingContext2D, width: number, height: number, video: HTMLVideoElement): RenderedVideoWindow | null => {
