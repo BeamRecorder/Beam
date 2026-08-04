@@ -6,7 +6,7 @@ import Select from '~/ui/select/Select.vue'
 import Popover from '~/ui/popover/Popover.vue'
 import HUD from '~/components/hud/HUD.vue'
 import Divider from '~/ui/divider/Divider.vue'
-import { Sun, Moon, Monitor, Code, Video, Copy, Check } from '@lucide/vue'
+import { Sun, Moon, Monitor, Code, Video, Copy, Check, Terminal } from '@lucide/vue'
 import { useThemeStore } from '~/stores/theme'
 import { useLocaleStore } from '~/stores/locale'
 import { useTranslate } from '~/i18n/useTranslate'
@@ -16,6 +16,10 @@ import UpdateControls from '~/components/updates/UpdateControls.vue'
 const { t } = useTranslate('SettingsPanel')
 const themeStore = useThemeStore()
 const localeStore = useLocaleStore()
+
+const toggleDevTools = () => {
+  capture.toggleDevTools?.()
+}
 
 const emit = defineEmits<{
   (e: 'back-to-hud'): void
@@ -215,6 +219,23 @@ const localeOptions = [
                 <Copy v-else class="btn-icon" />
               </template>
               {{ isCopiedSysInfo ? t('copied') : t('copySysInfo') }}
+            </Button>
+          </div>
+
+          <!-- Developer Tools Card -->
+          <div class="dev-option-card">
+            <div class="dev-option-info">
+              <span class="dev-option-label">{{ t('devToolsTool') }}</span>
+              <span class="dev-option-desc">{{ t('devToolsDesc') }}</span>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              class="dev-action-btn"
+              @click="toggleDevTools"
+            >
+              <template #icon><Terminal class="btn-icon" /></template>
+              {{ t('openDevTools') }}
             </Button>
           </div>
         </div>

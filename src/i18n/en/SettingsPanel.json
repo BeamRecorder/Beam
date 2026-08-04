@@ -14,5 +14,8 @@
   "sysInfoTool": "System Information",
   "sysInfoDesc": "Copy system details and application version info",
   "copySysInfo": "Copy System Info",
-  "copied": "Copied!"
+  "copied": "Copied!",
+  "devToolsTool": "Developer Tools",
+  "devToolsDesc": "Toggle Chrome DevTools in Electron window",
+  "openDevTools": "DevTools"
 }

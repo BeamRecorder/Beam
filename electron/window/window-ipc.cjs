@@ -64,6 +64,15 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
 
   ipcMain.on('window:close', (event) => windowForEvent(event)?.close())
   ipcMain.on('window:minimize', (event) => windowForEvent(event)?.minimize())
+  ipcMain.on('window:toggle-devtools', (event) => {
+    const win = windowForEvent(event)
+    if (!win || win.isDestroyed()) return
+    if (win.webContents.isDevToolsOpened()) {
+      win.webContents.closeDevTools()
+    } else {
+      win.webContents.openDevTools({ mode: 'detach' })
+    }
+  })
   ipcMain.on('window:set-mode', (event, mode) => { logWindow('set-mode', mode); controllerForWindow(windowForEvent(event))?.setMode(mode) })
   ipcMain.on('window:maximize', (event) => controllerForWindow(windowForEvent(event))?.maximize())
   ipcMain.on('window:unmaximize', (event) => controllerForWindow(windowForEvent(event))?.restore())

@@ -34,6 +34,7 @@ export interface CaptureApi {
 export interface DesktopCaptureApi extends CaptureApi {
   close(): void
   minimize(): void
+  toggleDevTools?(): void
   setWindowMode(mode: 'hud' | 'recorder' | 'editor'): void
   showHud(): void
   present(): void

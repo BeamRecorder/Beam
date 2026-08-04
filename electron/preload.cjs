@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld(
     failSystemAudio: (payload) => ipcRenderer.invoke("system-audio:fail", payload),
     close: () => ipcRenderer.send("window:close"),
     minimize: () => ipcRenderer.send("window:minimize"),
+    toggleDevTools: () => ipcRenderer.send("window:toggle-devtools"),
     setWindowMode: (mode) => ipcRenderer.send("window:set-mode", mode),
     showHud: () => ipcRenderer.send("window:show-hud"),
     present: () => ipcRenderer.send("window:present"),
