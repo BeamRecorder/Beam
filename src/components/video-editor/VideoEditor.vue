@@ -19,12 +19,18 @@ import { compositionDurationMs, setVolume } from "~/components/video-editor/comp
 import { isAudioClip, isCaptionClip, isVisualClip } from "~/components/video-editor/composition/composition-types";
 
 const { t } = useTranslate("VideoEditor");
+const logEditor = (message: string, details?: unknown) => {
+  if (!import.meta.env.DEV) return;
+  if (details === undefined) console.log(`[Beam editor] ${message}`);
+  else console.log(`[Beam editor] ${message}`, details);
+};
 const props = withDefaults(defineProps<{
   videoSrc?: string | null;
   project?: CaptureProject | null;
   editorData?: ProjectEditorData | null;
 }>(), { videoSrc: null, project: null, editorData: null });
 const emit = defineEmits<{
+  (event: "ready"): void;
   (event: "back-to-hud"): void;
   (event: "open-project", project: CaptureProject): void;
   (event: "start-recording", config: any): void;
@@ -155,7 +161,7 @@ const createEditorSnapshot = (): EditorStateSnapshot => ({
   selectedBackground: selectedBackground.value ? cloneSerializable(selectedBackground.value) : null,
   backgroundBlurPercent: backgroundBlurPercent.value,
 });
-const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction } = useEditorUndoRedo({
+const { recordSnapshot, commitNow, undo, redo, canUndo, canRedo, lastAction: historyAction } = useEditorUndoRedo({
   onRestoreSnapshot: async (snapshot) => {
     composition.value = snapshot.composition;
     zoomElements.value = snapshot.zoomElements;
@@ -165,7 +171,24 @@ const { recordSnapshot, undo, redo, canUndo, canRedo, lastAction: historyAction 
     await editorState.saveNow();
   },
 });
+
+const commitSelectedTransform = (transform: NormalizedTransform) => {
+  updateSelectedTransform(transform);
+  commitNow(createEditorSnapshot());
+};
+
+const commitSelectedCrop = (crop: NormalizedCrop) => {
+  updateSelectedCrop(crop);
+  commitNow(createEditorSnapshot());
+};
+
+const commitZoom = (zoom: ZoomElement) => {
+  updateZoom(zoom);
+  commitNow(createEditorSnapshot());
+};
+
 let historyInitialized = false;
+let editorReadyTimer: ReturnType<typeof setTimeout> | null = null;
 watch(editorState.loading, (loading) => {
   if (loading || historyInitialized) return;
   historyInitialized = true;
@@ -176,9 +199,18 @@ watch([composition, zoomElements, outputCanvas, selectedBackground, backgroundBl
 }, { deep: true });
 
 onMounted(() => {
+  logEditor("VideoEditor mounted", { projectId: props.project?.id, hasEditorData: Boolean(props.editorData) });
   playerVideoSrc.value = props.videoSrc ?? "";
   capture.setWindowMode("editor");
   capture.maximize();
+  // requestAnimationFrame is paused while the native window is hidden. A
+  // short timer lets the parent reveal it without waiting for a frame that
+  // cannot run in a hidden Electron window.
+  editorReadyTimer = setTimeout(() => {
+    editorReadyTimer = null;
+    logEditor("VideoEditor ready signal emitted");
+    emit("ready");
+  }, 0);
 });
 watch(() => props.videoSrc, (src) => { playerVideoSrc.value = src ?? ""; });
 const screenSource = computed(() => {
@@ -235,6 +267,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeyDown);
   if (timelineFrame !== null) cancelAnimationFrame(timelineFrame);
   if (timelineTimer) clearTimeout(timelineTimer);
+  if (editorReadyTimer) clearTimeout(editorReadyTimer);
 });
 </script>
 
@@ -295,8 +328,8 @@ onBeforeUnmount(() => {
           @update:clip-corner-radius="updateSelectedAppearance({ cornerRadius: ['none','sm','md','lg','full'].includes($event) ? $event as 'none' | 'sm' | 'md' | 'lg' | 'full' : Number($event) })"
           @update:clip-shadow="updateSelectedAppearance({ shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg' | 'custom', shadowBlur: Number($event.blur ?? 40), shadowMode: ($event.mode ?? 'solid') as 'solid' | 'adaptive', shadowColor: $event.color ?? '#000000', shadowDirection: ($event.direction ?? 'bottom') as 'all' | 'bottom' | 'bottom-right' | 'top-left' })"
           @update:clip-appearance="updateSelectedAppearance($event)"
-          @update:clip-transform="updateSelectedTransform"
-          @reset:clip-transform="updateSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
+          @update:clip-transform="commitSelectedTransform"
+          @reset:clip-transform="commitSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
           @back-to-hud="emit('back-to-hud')"
           @start-recording="emit('start-recording', $event)"
         />
@@ -343,14 +376,14 @@ onBeforeUnmount(() => {
             :is-cropping="isCropping"
             :is-grid-visible="isGridVisible"
             :history-action="historyAction"
-            @update:zoom="updateZoom"
+            @update:zoom="commitZoom"
             @preview:zoom="previewZoom"
             @select:clip="selectEditorClip"
             @select:canvas="selectedClipId = null; activeTab = 'canvas'; isCropping = false"
             @deselect:transform-clip="selectedClipId = null; isCropping = false"
-            @update:clip-transform="updateSelectedTransform"
+            @update:clip-transform="commitSelectedTransform"
             @preview:clip-transform="previewSelectedTransform"
-            @update:clip-crop="updateSelectedCrop"
+            @update:clip-crop="commitSelectedCrop"
             @done:crop="isCropping = false"
             @deselect:zoom="selectedZoomId = null"
           />

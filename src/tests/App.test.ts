@@ -82,11 +82,12 @@ vi.mock("../components/hud/recorder/RecorderBar.vue", async () => {
   }) };
 });
 vi.mock("../components/video-editor/VideoEditor.vue", async () => {
-  const { defineComponent, h } = await import("vue");
+  const { defineComponent, h, onMounted } = await import("vue");
   const component = defineComponent({
     name: "MockVideoEditor",
-    emits: ["back-to-hud", "open-project"],
+    emits: ["ready", "back-to-hud", "open-project"],
     setup(_, { emit }) {
+      onMounted(() => emit("ready"));
       return () => h("div", { class: "mock-editor" }, [
         h("button", { class: "back", onClick: () => emit("back-to-hud") }),
         h("button", { class: "open-other", onClick: () => emit("open-project", { id: "other", name: "Other", previewSrc: "other.mp4" }) }),

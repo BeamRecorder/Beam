@@ -17,7 +17,12 @@ function clampToDisplayBounds(x, y, width, height, point, geometry = { width, le
   }
 }
 
-function registerWindowIpc(ipcMain, controllerForWindow) {
+function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {}) {
+  const logWindow = (message, details) => {
+    if (!debug) return
+    if (details === undefined) console.log(`[electron window] ${message}`)
+    else console.log(`[electron window] ${message}`, details)
+  }
   let resizeTimer = null
   let dragStartMouse = null
   let dragStartWindow = null
@@ -59,11 +64,11 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
 
   ipcMain.on('window:close', (event) => windowForEvent(event)?.close())
   ipcMain.on('window:minimize', (event) => windowForEvent(event)?.minimize())
-  ipcMain.on('window:set-mode', (event, mode) => controllerForWindow(windowForEvent(event))?.setMode(mode))
+  ipcMain.on('window:set-mode', (event, mode) => { logWindow('set-mode', mode); controllerForWindow(windowForEvent(event))?.setMode(mode) })
   ipcMain.on('window:maximize', (event) => controllerForWindow(windowForEvent(event))?.maximize())
   ipcMain.on('window:unmaximize', (event) => controllerForWindow(windowForEvent(event))?.restore())
   ipcMain.on('window:toggleMaximize', (event) => controllerForWindow(windowForEvent(event))?.toggleMaximize())
-  ipcMain.on('window:present', (event) => controllerForWindow(windowForEvent(event))?.present())
+  ipcMain.on('window:present', (event) => { logWindow('present'); controllerForWindow(windowForEvent(event))?.present() })
   ipcMain.on('window:show-hud', (event) => controllerForWindow(windowForEvent(event))?.showHud())
   ipcMain.on('window:setPosition', (event, x, y) => { const win = windowForEvent(event); win?.setPosition(Math.round(x), Math.round(y)); controllerForWindow(win)?.rememberRecorderPosition() })
   ipcMain.on('window:setSize', (event, width, height) => {
@@ -82,7 +87,7 @@ function registerWindowIpc(ipcMain, controllerForWindow) {
     controllerForWindow(windowForEvent(event))?.beginRecorderDrag()
     event.returnValue = true
   })
-  ipcMain.on('window:set-visible', (event, visible) => controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible)))
+  ipcMain.on('window:set-visible', (event, visible) => { logWindow('set-visible', Boolean(visible)); controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible)) })
   ipcMain.handle('window:set-recorder-tooltip', (event, visible) => {
     return controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible)) ?? null
   })

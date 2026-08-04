@@ -29,7 +29,7 @@ const { createBackgroundLibrary } = require('./backgrounds/background-library.cj
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs')
 
 // Set to true only while diagnosing Electron startup or renderer requests.
-const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = false
+const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -193,7 +193,7 @@ app.whenReady().then(() => {
   })
   registerWhisperIpc({ ipcMain, store: whisperStore })
   logStartup('Whisper model IPC registered.')
-  registerWindowIpc(ipcMain, (win) => win && controllers.get(win))
+  registerWindowIpc(ipcMain, (win) => win && controllers.get(win), { debug: !app.isPackaged })
   const cameraOverlay = createCameraOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
   const countdownOverlay = createCountdownWindow({ applicationRoot, isPackaged: app.isPackaged })
   const screenRegionOverlay = createScreenRegionOverlayWindow({ applicationRoot, isPackaged: app.isPackaged })
