@@ -89,7 +89,9 @@ describe('UpdateControls', () => {
       captureMock.getUpdateState.mockResolvedValueOnce(current)
       const wrapper = mount(UpdateControls, { global: { stubs: { Button } } })
       await flushPromises()
-      expect(wrapper.get('.update-description').text()).toContain(current.status === 'error' ? current.message : '')
+      if (current.status === 'error') {
+        expect(wrapper.get('.error-log').text()).toContain(current.message!)
+      }
       if (current.status === 'checking' || current.status === 'downloading' || current.status === 'unsupported') {
         expect(wrapper.findAll('.action-button')[1]!.attributes('disabled')).toBeDefined()
       }

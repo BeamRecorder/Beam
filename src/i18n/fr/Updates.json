@@ -11,5 +11,7 @@
   "availableInInstalledApp": "Les mises à jour sont disponibles dans l’application installée.",
   "currentVersion": "Version actuelle : {version}",
   "updateAvailable": "La version {version} est disponible.",
-  "updateAvailableGeneric": "Une mise à jour est disponible."
+  "updateAvailableGeneric": "Une mise à jour est disponible.",
+  "updateError": "Impossible de vérifier les mises à jour.",
+  "showDetails": "Détails de l'erreur"
 }
