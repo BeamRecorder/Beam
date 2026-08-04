@@ -21,6 +21,8 @@ import type {
 } from "./components/hud/recorder/recording-types";
 
 import { capture } from "./api/capture";
+import { useLocaleStore } from "./stores/locale";
+import { useTranslate } from "./i18n/useTranslate";
 import type {
   CaptureProject,
   ProjectEditorData,
@@ -52,6 +54,24 @@ const handleMouseLeave = () => {
 };
 
 const loadVideoEditor = () => import("./components/video-editor/VideoEditor.vue");
+const localeStore = useLocaleStore();
+const { t: tHud } = useTranslate("HUD");
+
+const syncTrayMenu = () => {
+  capture.updateTrayMenu?.({
+    openHud: tHud("openHud"),
+    quit: tHud("quit"),
+    tooltip: "Beam",
+  });
+};
+
+watch(
+  () => localeStore.locale,
+  () => {
+    void nextTick(() => syncTrayMenu());
+  },
+  { immediate: true },
+);
 const logEditor = (message: string, details?: unknown) => {
   if (!import.meta.env.DEV) return;
   if (details === undefined) console.log(`[Beam editor] ${message}`);

@@ -35,6 +35,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   close(): void
   minimize(): void
   toggleDevTools?(): void
+  updateTrayMenu?(labels: { openHud?: string; quit?: string; tooltip?: string }): void
   setWindowMode(mode: 'hud' | 'recorder' | 'editor'): void
   showHud(): void
   present(): void

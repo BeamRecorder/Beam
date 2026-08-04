@@ -19,5 +19,7 @@
   "editScreenRegion": "Modifier la zone de l’écran",
   "screenRegionSelected": "Zone de l’écran validée",
   "openTeleprompter": "Ouvrir le téléprompteur",
-  "closeTeleprompter": "Masquer le téléprompteur"
+  "closeTeleprompter": "Masquer le téléprompteur",
+  "openHud": "Ouvrir le HUD",
+  "quit": "Quitter Beam"
 }

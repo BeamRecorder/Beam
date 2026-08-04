@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld(
     close: () => ipcRenderer.send("window:close"),
     minimize: () => ipcRenderer.send("window:minimize"),
     toggleDevTools: () => ipcRenderer.send("window:toggle-devtools"),
+    updateTrayMenu: (labels) => ipcRenderer.send("tray:update-menu", labels),
     setWindowMode: (mode) => ipcRenderer.send("window:set-mode", mode),
     showHud: () => ipcRenderer.send("window:show-hud"),
     present: () => ipcRenderer.send("window:present"),

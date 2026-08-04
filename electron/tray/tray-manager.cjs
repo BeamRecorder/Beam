@@ -1,24 +1,12 @@
-const { Tray, Menu, nativeImage, app } = require('electron')
+const { Tray, Menu, nativeImage, app, ipcMain } = require('electron')
 const path = require('path')
-
-const enTray = require('../../src/i18n/en/Tray.json')
-const frTray = require('../../src/i18n/fr/Tray.json')
-
-const messages = {
-  fr: frTray,
-  en: enTray,
-}
 
 function createTrayManager({ applicationRoot, getWindow, getController }) {
   let tray = null
-
-  const getLocale = () => {
-    try {
-      const loc = app.getLocale() || 'en'
-      return loc.startsWith('fr') ? 'fr' : 'en'
-    } catch {
-      return 'en'
-    }
+  let labels = {
+    openHud: 'Open HUD',
+    quit: 'Quit Beam',
+    tooltip: 'Beam',
   }
 
   const showHud = () => {
@@ -34,22 +22,30 @@ function createTrayManager({ applicationRoot, getWindow, getController }) {
   }
 
   const buildMenu = () => {
-    const lang = getLocale()
-    const t = messages[lang] || messages.en
-
     return Menu.buildFromTemplate([
       {
-        label: t.openHud,
+        label: labels.openHud,
         click: () => showHud(),
       },
       { type: 'separator' },
       {
-        label: t.quit,
+        label: labels.quit,
         click: () => {
           app.quit()
         },
       },
     ])
+  }
+
+  const updateMenu = (newLabels = {}) => {
+    if (typeof newLabels.openHud === 'string' && newLabels.openHud) labels.openHud = newLabels.openHud
+    if (typeof newLabels.quit === 'string' && newLabels.quit) labels.quit = newLabels.quit
+    if (typeof newLabels.tooltip === 'string' && newLabels.tooltip) labels.tooltip = newLabels.tooltip
+
+    if (tray && !tray.isDestroyed()) {
+      tray.setToolTip(labels.tooltip)
+      tray.setContextMenu(buildMenu())
+    }
   }
 
   const init = () => {
@@ -62,10 +58,7 @@ function createTrayManager({ applicationRoot, getWindow, getController }) {
     }
 
     tray = new Tray(icon)
-    const lang = getLocale()
-    const t = messages[lang] || messages.en
-    tray.setToolTip(t.tooltip)
-
+    tray.setToolTip(labels.tooltip)
     tray.setContextMenu(buildMenu())
 
     tray.on('click', () => {
@@ -74,6 +67,12 @@ function createTrayManager({ applicationRoot, getWindow, getController }) {
 
     tray.on('double-click', () => {
       showHud()
+    })
+
+    ipcMain.on('tray:update-menu', (_event, payload) => {
+      if (payload && typeof payload === 'object') {
+        updateMenu(payload)
+      }
     })
 
     return tray
@@ -90,6 +89,7 @@ function createTrayManager({ applicationRoot, getWindow, getController }) {
     init,
     destroy,
     showHud,
+    updateMenu,
   }
 }
 

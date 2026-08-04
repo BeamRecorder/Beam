@@ -19,5 +19,7 @@
   "editScreenRegion": "Edit the screen area",
   "screenRegionSelected": "Screen area selected",
   "openTeleprompter": "Open teleprompter",
-  "closeTeleprompter": "Hide teleprompter"
+  "closeTeleprompter": "Hide teleprompter",
+  "openHud": "Open HUD",
+  "quit": "Quit Beam"
 }
