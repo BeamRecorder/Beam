@@ -99,11 +99,24 @@ function configureDesktopLoopback() {
   })
 }
 
+function getAppIconPath() {
+  const candidates = [
+    path.join(applicationRoot, 'dist/brand/BeamIcon.ico'),
+    path.join(applicationRoot, 'public/brand/BeamIcon.ico'),
+    path.join(__dirname, '../dist/brand/BeamIcon.ico'),
+    path.join(__dirname, '../public/brand/BeamIcon.ico'),
+  ]
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate
+  }
+  return path.join(applicationRoot, 'public/brand/BeamIcon.ico')
+}
+
 function createWindow(preferencesStore) {
   logStartup('Creating BrowserWindow.')
   const win = new BrowserWindow({
     width: 352, height: 512, frame: false, transparent: true, alwaysOnTop: false,
-    icon: path.join(applicationRoot, 'public/brand/BeamIcon.ico'), resizable: true, maximizable: true, hasShadow: false, show: false,
+    icon: getAppIconPath(), resizable: true, maximizable: true, hasShadow: false, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false },
   })
   const controller = new WindowController(win, { preferencesStore })

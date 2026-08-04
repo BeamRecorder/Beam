@@ -51,10 +51,25 @@ function createTrayManager({ applicationRoot, getWindow, getController }) {
   const init = () => {
     if (tray) return tray
 
-    const iconPath = path.join(applicationRoot, 'public/brand/BeamIcon.ico')
-    let icon = nativeImage.createFromPath(iconPath)
-    if (icon.isEmpty()) {
-      icon = nativeImage.createEmpty()
+    const fs = require('fs')
+    const candidatePaths = [
+      path.join(applicationRoot, 'dist/brand/BeamIcon.ico'),
+      path.join(applicationRoot, 'public/brand/BeamIcon.ico'),
+      path.join(__dirname, '../../dist/brand/BeamIcon.ico'),
+      path.join(__dirname, '../../public/brand/BeamIcon.ico'),
+      path.join(process.cwd(), 'dist/brand/BeamIcon.ico'),
+      path.join(process.cwd(), 'public/brand/BeamIcon.ico'),
+    ]
+
+    let icon = nativeImage.createEmpty()
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        const loaded = nativeImage.createFromPath(p)
+        if (!loaded.isEmpty()) {
+          icon = loaded
+          break
+        }
+      }
     }
 
     tray = new Tray(icon)
