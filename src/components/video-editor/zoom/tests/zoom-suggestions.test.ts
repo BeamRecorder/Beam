@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { CursorTelemetryPoint } from "../../../api/types/capture-session";
+import type { CursorTelemetryPoint } from "../../../../api/types/capture-session";
 import {
   buildAutomaticZoomElements,
   normalizeCursorTelemetry,
-} from "./zoom-suggestions";
+} from "../zoom-suggestions";
 
 const sample = (
   timeMs: number,

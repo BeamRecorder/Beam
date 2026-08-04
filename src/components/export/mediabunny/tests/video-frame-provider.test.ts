@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { VideoFrameProvider } from './video-frame-provider'
+import { VideoFrameProvider } from '../video-frame-provider'
 
 const runtime = vi.hoisted(() => ({
   track: null as { canDecode: () => Promise<boolean>; getDecoderConfig: () => Promise<unknown> } | null,

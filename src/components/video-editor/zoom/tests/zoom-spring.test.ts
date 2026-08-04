@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCameraVelocity, stepCameraSpring } from './zoom-spring'
+import { createCameraVelocity, stepCameraSpring } from '../zoom-spring'
 
 describe('camera spring', () => {
   it('moves toward the target without overshoot', () => {

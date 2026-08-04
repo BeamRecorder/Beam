@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCursorFollowCameraState, updateCursorFollowCamera } from './zoom-camera'
+import { createCursorFollowCameraState, updateCursorFollowCamera } from '../zoom-camera'
 
 describe('cursor follow camera', () => {
   it('does not move while cursor remains in its safe zone', () => {

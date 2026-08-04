@@ -14,7 +14,7 @@ import {
 } from "@lucide/vue";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import Tooltip from "~/ui/tooltip/Tooltip.vue";
-import KeyboardChip from "~/ui/KeyboardChip.vue";
+import KeyboardChip from "~/ui/Kbd/KeyboardChip.vue";
 import { usePreferencesStore } from "~/stores/preferences";
 import type { RecordingPhase } from "./recording-types";
 import { useTranslate } from "~/i18n/useTranslate";
@@ -33,8 +33,12 @@ const props = defineProps<{
   visibility: "always" | "auto-fade";
 }>();
 
-const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== "finalizing");
-const isSystemAudioEnabled = computed(() => props.systemAudioEnabled && props.phase !== "finalizing");
+const isMicEnabled = computed(
+  () => props.microphoneEnabled && props.phase !== "finalizing",
+);
+const isSystemAudioEnabled = computed(
+  () => props.systemAudioEnabled && props.phase !== "finalizing",
+);
 const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false);
 const { level: systemAudioLevel } = useAudioLevelMeter(
   isSystemAudioEnabled,

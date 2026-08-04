@@ -6,7 +6,7 @@ import {
   createDefaultCursorMotionSettings,
   normalizeCursorClickEffects,
   normalizeCursorMotionSettings,
-} from "./cursor-settings";
+} from "../types/cursor-settings";
 
 describe("cursor click settings", () => {
   it("keeps left and right defaults independent", () => {

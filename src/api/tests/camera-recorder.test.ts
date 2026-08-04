@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { BrowserCameraRecorder, listBrowserCameras } from './camera-recorder'
+import { BrowserCameraRecorder, listBrowserCameras } from '../camera-recorder'
 
 type Listener = (...args: unknown[]) => void
 
