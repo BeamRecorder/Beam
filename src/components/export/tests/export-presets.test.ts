@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bitrateFor } from './export-presets'
+import { bitrateFor } from '../export-presets'
 
 describe('bitrateFor', () => {
   it('uses medium quality by default scale for HD video', () => {

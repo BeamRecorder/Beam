@@ -13,6 +13,8 @@
     "rust-test:coverage": "powershell.exe -NoProfile -Command \"cargo llvm-cov --workspace --all-features --html --output-dir coverage/rust; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --text --show-missing-lines; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --lcov --output-path coverage/rust/lcov.info\"",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit --pretty false",
     "typecheck:vue": "vue-tsc -b --pretty false",
+    "format": "prettier --write \"src/**/*.{vue,ts}\" \"*.cjs\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
+    "format:check": "prettier --check \"src/**/*.{vue,ts}\" \"*.cjs\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "dev": "vite",
     "dev:all": "node start-dev.cjs",
     "dev:all:devtools": "node start-dev.cjs --devtools",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vitest/coverage-v8": "^4.1.10",
     "@vue/test-utils": "^2.4.6",
@@ -48,7 +51,7 @@
     "electron": "^43.1.1",
     "electron-builder": "^26.15.3",
     "jsdom": "^26.1.0",
-    "@typescript/native": "npm:typescript@^7.0.2",
+    "prettier": "^3.9.6",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vite": "^8.1.1",
     "vue-tsc": "^3.3.9"

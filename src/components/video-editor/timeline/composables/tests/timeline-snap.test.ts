@@ -4,9 +4,9 @@ import {
   collectSnapTargets,
   snapSpan,
   snapValue,
-} from "./timeline-snap";
-import type { ClipComposition } from "../../composition/composition-types";
-import type { ZoomElement } from "../../zoom/zoom-types";
+} from "../timeline-snap";
+import type { ClipComposition } from "../../../composition/composition-types";
+import type { ZoomElement } from "../../../zoom/zoom-types";
 
 const mockComposition = (
   overrides: Partial<ClipComposition> = {},
@@ -70,7 +70,9 @@ describe("timeline-snap", () => {
         duration: 10,
       });
 
-      expect(targets).toEqual([0, 1_000, 2_500, 3_000, 3_500, 4_500, 5_000, 8_000, 10_000]);
+      expect(targets).toEqual([
+        0, 1_000, 2_500, 3_000, 3_500, 4_500, 5_000, 8_000, 10_000,
+      ]);
     });
 
     it("ignores specified clip and zoom IDs", () => {
@@ -97,7 +99,9 @@ describe("timeline-snap", () => {
         ignorePlayhead: true,
       });
 
-      expect(targets).toEqual([0, 1_000, 3_000, 3_500, 4_500, 5_000, 8_000, 10_000]);
+      expect(targets).toEqual([
+        0, 1_000, 3_000, 3_500, 4_500, 5_000, 8_000, 10_000,
+      ]);
     });
   });
 

@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useRecordingController } from "../useRecordingController";
-import type { RecordingConfiguration } from "../recording-types";
+import { useRecordingController } from "../recorder/useRecordingController";
+import type { RecordingConfiguration } from "../recorder/recording-types";
 
 const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
   capture: {
-    getCameraOverlayState: vi.fn(), setCountdown: vi.fn(), hideScreenRegionOverlay: vi.fn(),
-    prepareRecording: vi.fn(), startPreparedRecording: vi.fn(), stopNativeRecording: vi.fn(), completeNativeRecording: vi.fn(), cancelPreparedRecording: vi.fn(),
-    discardRecording: vi.fn(), stop: vi.fn(), pause: vi.fn(), resume: vi.fn(), setTeleprompterSession: vi.fn(),
+    getCameraOverlayState: vi.fn(),
+    setCountdown: vi.fn(),
+    hideScreenRegionOverlay: vi.fn(),
+    prepareRecording: vi.fn(),
+    startPreparedRecording: vi.fn(),
+    stopNativeRecording: vi.fn(),
+    completeNativeRecording: vi.fn(),
+    cancelPreparedRecording: vi.fn(),
+    discardRecording: vi.fn(),
+    stop: vi.fn(),
+    pause: vi.fn(),
+    resume: vi.fn(),
+    setTeleprompterSession: vi.fn(),
     showScreenRegionOverlay: vi.fn(),
   },
   cameraApi: { request: vi.fn(), list: vi.fn() },
@@ -18,7 +28,8 @@ vi.mock("../../../../api/capture", () => ({ capture }));
 vi.mock("../../../../api/camera-recorder", () => ({
   BrowserCameraRecorder: { request: cameraApi.request },
   listBrowserCameras: cameraApi.list,
-  isCameraUnavailableError: (reason: unknown) => (reason as { code?: string })?.code === "camera-unavailable",
+  isCameraUnavailableError: (reason: unknown) =>
+    (reason as { code?: string })?.code === "camera-unavailable",
 }));
 vi.mock("../../../../api/microphone-recorder", () => ({
   BrowserMicrophoneRecorder: { request: microphoneApi.request },
@@ -28,19 +39,32 @@ vi.mock("../../../../api/system-audio-recorder", () => ({
   BrowserSystemAudioRecorder: { request: systemApi.request },
 }));
 
-const configuration = (overrides: Partial<RecordingConfiguration> = {}): RecordingConfiguration => ({
-  screenKind: "display", screenId: "display:1", cameraId: "off", microphoneId: "no-audio",
-  systemAudio: false, targetFps: 60, countdownSeconds: 0, recordingBarVisibility: "always", ...overrides,
+const configuration = (
+  overrides: Partial<RecordingConfiguration> = {},
+): RecordingConfiguration => ({
+  screenKind: "display",
+  screenId: "display:1",
+  cameraId: "off",
+  microphoneId: "no-audio",
+  systemAudio: false,
+  targetFps: 60,
+  countdownSeconds: 0,
+  recordingBarVisibility: "always",
+  ...overrides,
 });
 
 const recorder = () => ({
-  start: vi.fn().mockResolvedValue(undefined), stop: vi.fn().mockResolvedValue(undefined),
-  pause: vi.fn().mockResolvedValue(undefined), resume: vi.fn().mockResolvedValue(undefined),
+  start: vi.fn().mockResolvedValue(undefined),
+  stop: vi.fn().mockResolvedValue(undefined),
+  pause: vi.fn().mockResolvedValue(undefined),
+  resume: vi.fn().mockResolvedValue(undefined),
 });
 
 const deferred = <T>() => {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((next) => { resolve = next; });
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
   return { promise, resolve };
 };
 
@@ -54,21 +78,44 @@ beforeEach(() => {
   microphone = recorder();
   systemAudio = recorder();
   vi.clearAllMocks();
-  capture.getCameraOverlayState.mockResolvedValue({ shadowSize: "md", cornerRadius: "lg", placement: { x: .1, y: .2, width: .3, height: .4 } });
+  capture.getCameraOverlayState.mockResolvedValue({
+    shadowSize: "md",
+    cornerRadius: "lg",
+    placement: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+  });
   capture.prepareRecording.mockResolvedValue(undefined);
-  capture.startPreparedRecording.mockResolvedValue({ state: "recording", sessionId: "session-1", projectId: "project-1" });
-  capture.stopNativeRecording.mockResolvedValue({ state: "completed", sessionId: "session-1" });
-  capture.completeNativeRecording.mockResolvedValue({ state: "completed", sessionId: "session-1" });
+  capture.startPreparedRecording.mockResolvedValue({
+    state: "recording",
+    sessionId: "session-1",
+    projectId: "project-1",
+  });
+  capture.stopNativeRecording.mockResolvedValue({
+    state: "completed",
+    sessionId: "session-1",
+  });
+  capture.completeNativeRecording.mockResolvedValue({
+    state: "completed",
+    sessionId: "session-1",
+  });
   capture.cancelPreparedRecording.mockResolvedValue(undefined);
   capture.discardRecording.mockResolvedValue(undefined);
-  capture.stop.mockResolvedValue({ state: "completed", sessionId: "session-1" });
+  capture.stop.mockResolvedValue({
+    state: "completed",
+    sessionId: "session-1",
+  });
   capture.pause.mockResolvedValue(undefined);
   capture.resume.mockResolvedValue(undefined);
   cameraApi.request.mockResolvedValue(camera);
   microphoneApi.request.mockResolvedValue(microphone);
   systemApi.request.mockResolvedValue(systemAudio);
-  cameraApi.list.mockResolvedValue([{ id: "camera:one", isDefault: true }, { id: "camera:chromium:", isDefault: false }]);
-  microphoneApi.list.mockResolvedValue([{ id: "microphone:one", isDefault: true }, { id: "microphone:chromium:", isDefault: false }]);
+  cameraApi.list.mockResolvedValue([
+    { id: "camera:one", isDefault: true },
+    { id: "camera:chromium:", isDefault: false },
+  ]);
+  microphoneApi.list.mockResolvedValue([
+    { id: "microphone:one", isDefault: true },
+    { id: "microphone:chromium:", isDefault: false },
+  ]);
 });
 
 afterEach(() => vi.useRealTimers());
@@ -77,14 +124,25 @@ describe("useRecordingController branch behavior", () => {
   it("starts sidecars, tracks elapsed time, pauses/resumes, and completes", async () => {
     const complete = vi.fn();
     const controller = useRecordingController(complete);
-    await controller.start(configuration({ cameraId: "camera:one", microphoneId: "microphone:one", systemAudio: true, region: { x: .1, y: .2, width: .5, height: .4 }, regionOverlay: { bounds: { x: 10, y: 20, width: 100, height: 80 } } }));
+    await controller.start(
+      configuration({
+        cameraId: "camera:one",
+        microphoneId: "microphone:one",
+        systemAudio: true,
+        region: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 },
+        regionOverlay: { bounds: { x: 10, y: 20, width: 100, height: 80 } },
+      }),
+    );
 
     expect(controller.phase.value).toBe("recording");
     expect(controller.cameraEnabled.value).toBe(true);
     expect(controller.microphoneEnabled.value).toBe(true);
     expect(controller.systemAudioEnabled.value).toBe(true);
     expect(capture.showScreenRegionOverlay).toHaveBeenCalled();
-    expect(capture.setTeleprompterSession).toHaveBeenCalledWith({ projectId: "project-1", sessionId: "session-1" });
+    expect(capture.setTeleprompterSession).toHaveBeenCalledWith({
+      projectId: "project-1",
+      sessionId: "session-1",
+    });
     await vi.advanceTimersByTimeAsync(350);
     expect(controller.recordingTime.value).toBe("00:00.3");
 
@@ -107,16 +165,31 @@ describe("useRecordingController branch behavior", () => {
     expect(microphone.stop).toHaveBeenCalledWith(expect.any(Number));
     expect(systemAudio.stop).toHaveBeenCalledWith(expect.any(Number));
     expect(capture.completeNativeRecording).toHaveBeenCalled();
-    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "session-1" }));
+    expect(complete).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "session-1" }),
+    );
     expect(controller.phase.value).toBe("idle");
   });
 
   it("starts the sidecar timeline after delayed native startup", async () => {
-    capture.startPreparedRecording.mockImplementationOnce(() => new Promise((resolve) => {
-      setTimeout(() => resolve({ state: "recording", sessionId: "session-1", projectId: "project-1" }), 2_000);
-    }));
+    capture.startPreparedRecording.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                state: "recording",
+                sessionId: "session-1",
+                projectId: "project-1",
+              }),
+            2_000,
+          );
+        }),
+    );
     const controller = useRecordingController(vi.fn());
-    const starting = controller.start(configuration({ cameraId: "camera:one" }));
+    const starting = controller.start(
+      configuration({ cameraId: "camera:one" }),
+    );
 
     await vi.advanceTimersByTimeAsync(2_000);
     await starting;

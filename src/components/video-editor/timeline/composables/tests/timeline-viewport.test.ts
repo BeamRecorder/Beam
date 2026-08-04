@@ -3,11 +3,13 @@ import {
   timelinePercentStyle,
   timelineRulerSecondsInView,
   timelineSecondsInView,
-} from "./timeline-viewport";
+} from "../timeline-viewport";
 
 describe("timeline viewport", () => {
   it("limits thumbnails to the visible interval plus a small buffer", () => {
-    expect(timelineSecondsInView(120, 40, 43)).toEqual([37, 38, 39, 40, 41, 42, 43, 44, 45, 46]);
+    expect(timelineSecondsInView(120, 40, 43)).toEqual([
+      37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
+    ]);
   });
 
   it("clamps thumbnail intervals at both ends of the recording", () => {
@@ -20,7 +22,9 @@ describe("timeline viewport", () => {
   });
 
   it("keeps the first and final ruler labels available", () => {
-    expect(timelineRulerSecondsInView(65, [10, 11, 12])).toEqual([0, 10, 11, 12, 65]);
+    expect(timelineRulerSecondsInView(65, [10, 11, 12])).toEqual([
+      0, 10, 11, 12, 65,
+    ]);
   });
 
   it("positions a frame against the full timeline, not the viewport", () => {

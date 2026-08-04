@@ -1,8 +1,8 @@
 import { reactive } from 'vue'
 import { describe, expect, it } from 'vitest'
-import { createCompositionSnapshot } from './snapshot'
-import { DEFAULT_OUTPUT_CANVAS } from '../../video-editor/canvas/output-canvas'
-import type { ClipComposition } from '../../video-editor/composition/composition-types'
+import { createCompositionSnapshot } from '../snapshot'
+import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas'
+import type { ClipComposition } from '../../../video-editor/composition/composition-types'
 
 const composition = (): ClipComposition => ({
   schemaVersion: 1,

@@ -5,7 +5,7 @@ import {
   svgAtRasterSize,
   useCursorReplacer,
   cursorTypeForKind,
-} from "./useCursorReplacer";
+} from "../useCursorReplacer";
 
 class LoadingImage {
   onload: (() => void) | null = null;
@@ -46,8 +46,20 @@ describe("useCursorReplacer", () => {
       "#000000",
       "bottom",
       {
-        left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: "#ff5a1f" },
-        right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: "#6366f1" },
+        left: {
+          springEnabled: true,
+          springIntensity: 50,
+          rippleEnabled: true,
+          rippleSize: 30,
+          rippleColor: "#ff5a1f",
+        },
+        right: {
+          springEnabled: true,
+          springIntensity: 50,
+          rippleEnabled: true,
+          rippleSize: 30,
+          rippleColor: "#6366f1",
+        },
       },
     ]);
     expect(cursorOptions).toHaveLength(Object.keys(cursorUrls).length);
@@ -60,14 +72,12 @@ describe("useCursorReplacer", () => {
   });
 
   it("loads, resizes, recolors, and releases a cursor image", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        text: vi
-          .fn()
-          .mockResolvedValue('<svg width="12" height="14" fill="#000000"/>'),
-      });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi
+        .fn()
+        .mockResolvedValue('<svg width="12" height="14" fill="#000000"/>'),
+    });
     const createObjectURL = vi.fn().mockReturnValue("blob:cursor");
     const revokeObjectURL = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -91,13 +101,18 @@ describe("useCursorReplacer", () => {
   });
 
   it("replaces existing SVG dimensions instead of adding conflicting attributes", () => {
-    const resized = svgAtRasterSize('<svg width="32" height="32" viewBox="0 0 32 32"/>', 64);
+    const resized = svgAtRasterSize(
+      '<svg width="32" height="32" viewBox="0 0 32 32"/>',
+      64,
+    );
     expect(resized).toContain('width="64" height="64"');
     expect(resized).not.toContain('width="32"');
   });
 
   it("keeps SVG dimensions valid when an invalid raster size is requested", () => {
-    expect(svgAtRasterSize('<svg viewBox="0 0 32 32"/>', 0)).toContain('width="1" height="1"');
+    expect(svgAtRasterSize('<svg viewBox="0 0 32 32"/>', 0)).toContain(
+      'width="1" height="1"',
+    );
   });
 
   it("fails on an unavailable asset and on an undecodable SVG", async () => {
@@ -112,12 +127,10 @@ describe("useCursorReplacer", () => {
     );
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          text: vi.fn().mockResolvedValue("<svg/>"),
-        }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: vi.fn().mockResolvedValue("<svg/>"),
+      }),
     );
     const revokeObjectURL = vi.fn();
     vi.stubGlobal("Image", FailingImage);
@@ -134,8 +147,8 @@ describe("useCursorReplacer", () => {
   });
 
   it("maps semantic cursor kinds and never guesses custom cursors", () => {
-    expect(cursorTypeForKind('handpointing')).toBe('handpointing');
-    expect(cursorTypeForKind('custom')).toBe('default');
-    expect(cursorTypeForKind('unknown')).toBe('default');
+    expect(cursorTypeForKind("handpointing")).toBe("handpointing");
+    expect(cursorTypeForKind("custom")).toBe("default");
+    expect(cursorTypeForKind("unknown")).toBe("default");
   });
 });
