@@ -892,7 +892,10 @@ const handleTopbarBack = () => {
 };
 
 const openProject = (project: CaptureProject) => {
-  emit("open-project", project);
+  closeProjectPicker();
+  if (props.currentProjectId !== project.id) {
+    emit("open-project", project);
+  }
 };
 </script>
 

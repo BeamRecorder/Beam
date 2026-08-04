@@ -31,7 +31,9 @@ const toggleProjectMenu = () => {
 
 const handleProjectSelected = (project: CaptureProject) => {
   projectMenuOpen.value = false
-  emit('open-project', project)
+  if (props.project?.id !== project.id) {
+    emit('open-project', project)
+  }
 }
 
 const handleWindowPointerDown = (event: MouseEvent | PointerEvent) => {

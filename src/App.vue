@@ -233,6 +233,9 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
 };
 
 const handleOpenProject = (project: CaptureProject) => {
+  if (currentProject.value?.id === project.id && currentView.value === 'editor' && !isPreparingEditor.value) {
+    return;
+  }
   capture.setWindowVisible?.(false);
   isPreparingEditor.value = true;
   editorLoadError.value = "";
