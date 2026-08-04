@@ -59,6 +59,9 @@ const handleClick = (e: MouseEvent) => {
 
 <style scoped>
 .delete-item-btn {
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
   transition: all var(--fast, 0.15s) ease;
 }
 </style>

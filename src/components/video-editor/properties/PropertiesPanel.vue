@@ -296,6 +296,7 @@ const emit = defineEmits<{
   overflow-x: hidden;
   padding-right: 14px;
   box-sizing: border-box;
+  scrollbar-gutter: stable;
 }
 .panel-content::-webkit-scrollbar {
   width: 5px;

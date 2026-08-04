@@ -506,7 +506,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
       <!-- Danger Delete Button -->
       <div class="danger-zone">
-        <DeleteItem :label="t('deleteClip')" @click="emit('delete:selected')" />
+        <DeleteItem :label="t('deleteClip')" @click="emit('delete')" />
       </div>
     </div>
   </div>
@@ -669,6 +669,12 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   padding-top: 12px;
   background: var(--color-bg-element);
   z-index: 10;
+  width: 100%;
+}
+
+.danger-zone :deep(.btn-container),
+.danger-zone :deep(.delete-item-btn) {
+  width: 100%;
 }
 
 .sub-group :deep(.color-picker-trigger-container) {
