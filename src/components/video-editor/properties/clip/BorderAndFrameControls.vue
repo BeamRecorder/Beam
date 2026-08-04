@@ -12,8 +12,8 @@ import { useTranslate } from "~/i18n/useTranslate";
 
 const { t } = useTranslate("BorderAndFrameControls");
 
-const props = defineProps<{ borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }>();
-const emit = defineEmits<{ (event: "update", value: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean }): void }>();
+const props = defineProps<{ borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean; frameChromeScale?: number }>();
+const emit = defineEmits<{ (event: "update", value: { borderEnabled?: boolean; borderColor?: string; borderWidth?: number; frame?: ClipFrame; frameTitle?: string; frameColor?: string; frameShowMenu?: boolean; frameShowScrollbars?: boolean; frameChromeScale?: number }): void }>();
 const activeFrame = computed(() => props.frame ?? "none");
 const frames = computed(() => [
   { id: "none" as ClipFrame, label: t("none") },
@@ -41,7 +41,8 @@ const frames = computed(() => [
     </ButtonGroup>
     <div v-if="activeFrame !== 'none'" class="sub-group margin-top-sm">
       <label class="sub-label" for="frame-title">{{ t('windowTitle') }}</label>
-      <Input id="frame-title" :model-value="frameTitle ?? ''" :placeholder="t('screenRecording')" @update:modelValue="emit('update', { frameTitle: $event })" />
+      <Input id="frame-title" :model-value="frameTitle ?? ''" :placeholder="t('screenRecording')" @update:modelValue="emit('update', { frameTitle: String($event) })" />
+      <BigSlider :model-value="(frameChromeScale ?? 1) * 100" :min="50" :max="200" :step="5" :label="t('windowSize')" :format-value="(value) => `${Math.round(value)}%`" @update:modelValue="emit('update', { frameChromeScale: $event / 100 })" />
       <template v-if="activeFrame === 'windows-95'">
         <span class="sub-label">{{ t('windowColor') }}</span>
         <ColorPicker :model-value="frameColor ?? '#c0c0c0'" :show-label="false" @update:modelValue="emit('update', { frameColor: $event })" />

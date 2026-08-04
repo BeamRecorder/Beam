@@ -41,6 +41,7 @@ const appearance = (value) => {
     frameColor: color(value.frameColor, '#c0c0c0'),
     frameShowMenu: value.frameShowMenu !== false,
     frameShowScrollbars: value.frameShowScrollbars !== false,
+    frameChromeScale: finite(value.frameChromeScale) ? Math.max(0.5, Math.min(2, value.frameChromeScale)) : 1,
   }
 }
 

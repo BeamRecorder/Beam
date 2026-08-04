@@ -49,7 +49,7 @@ test('opens the matching GitHub release for the current or available version', a
   autoUpdater.emit('update-available', { version: '0.2.0' })
   await updater.openChangelog()
   assert.deepEqual(openedUrls, [
-    'https://github.com/ExtraBinoss/demo-recorder/releases/tag/0.1.0',
-    'https://github.com/ExtraBinoss/demo-recorder/releases/tag/0.2.0',
+    'https://github.com/ExtraBinoss/Beam/releases/tag/0.1.0',
+    'https://github.com/ExtraBinoss/Beam/releases/tag/0.2.0',
   ])
 })

@@ -68,6 +68,7 @@ describe("BorderAndFrameControls", () => {
       frame: "windows-95",
       frameShowMenu: true,
       frameShowScrollbars: true,
+      frameChromeScale: 1,
     });
     expect(wrapper.find("#frame-title").exists()).toBe(true);
     expect(wrapper.findAll(".color-stub")).toHaveLength(1);
@@ -76,6 +77,7 @@ describe("BorderAndFrameControls", () => {
     await wrapper.findAll(".color-stub")[0]!.trigger("click");
     await wrapper.findAll(".switch-stub")[1]!.trigger("click");
     await wrapper.findAll(".switch-stub")[2]!.trigger("click");
+    await wrapper.get(".slider-stub").trigger("click");
     expect(wrapper.emitted("update")).toContainEqual([{ frameTitle: "Demo" }]);
     expect(wrapper.emitted("update")).toContainEqual([
       { frameColor: "#123456" },
@@ -86,5 +88,6 @@ describe("BorderAndFrameControls", () => {
     expect(wrapper.emitted("update")).toContainEqual([
       { frameShowScrollbars: false },
     ]);
+    expect(wrapper.emitted("update")).toContainEqual([{ frameChromeScale: 0.12 }]);
   });
 });

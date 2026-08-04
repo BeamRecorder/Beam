@@ -50,6 +50,7 @@ export interface SelectedClipProperties {
   frameColor?: string;
   frameShowMenu?: boolean;
   frameShowScrollbars?: boolean;
+  frameChromeScale?: number;
   clipTransform?: NormalizedTransform;
   isMirrored?: boolean;
   isMirroredY?: boolean;
@@ -142,6 +143,7 @@ const emit = defineEmits<{
       frameColor?: string;
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
+      frameChromeScale?: number;
     },
   ): void;
   (event: "update:clip-transform", transform: NormalizedTransform): void;

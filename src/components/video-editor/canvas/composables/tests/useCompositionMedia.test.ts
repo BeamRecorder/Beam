@@ -7,7 +7,7 @@ import type { ClipComposition, CaptionClip, VisualClip } from "../../../composit
 const appearance = {
   cornerRadius: "sm" as const, shadowSize: "md" as const, shadowColor: "#000", shadowDirection: "bottom" as const,
   borderEnabled: true, borderColor: "#f00", borderWidth: 2, frame: "none" as const, frameTitle: "",
-  frameColor: "#c0c0c0", frameShowMenu: true, frameShowScrollbars: true,
+  frameColor: "#c0c0c0", frameShowMenu: true, frameShowScrollbars: true, frameChromeScale: 1,
 };
 
 const visual = (kind: "image" | "video" | "webcam", id: string, assetId: string, order: number): VisualClip => ({

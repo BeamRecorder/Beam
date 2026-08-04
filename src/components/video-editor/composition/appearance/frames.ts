@@ -2,19 +2,32 @@ import type { ClipFrame } from "../composition-types";
 import type { MediaRect } from "./appearance-types";
 
 const SAFARI_REFERENCE = { width: 1800, height: 1150, toolbarHeight: 68 };
-const safariToolbarHeight = (rect: MediaRect) =>
-  Math.min(rect.height - 2, Math.max(18, rect.height * SAFARI_REFERENCE.toolbarHeight / SAFARI_REFERENCE.height));
-const safariScale = (rect: MediaRect) => ({ x: rect.width / SAFARI_REFERENCE.width, y: safariToolbarHeight(rect) / SAFARI_REFERENCE.toolbarHeight });
+export const normalizeFrameChromeScale = (value: number | undefined) =>
+  Number.isFinite(value) ? Math.min(2, Math.max(.5, value ?? 1)) : 1;
+const safariToolbarHeight = (rect: MediaRect, chromeScale = 1) =>
+  Math.min(rect.height - 2, Math.max(18, rect.height * SAFARI_REFERENCE.toolbarHeight / SAFARI_REFERENCE.height * normalizeFrameChromeScale(chromeScale)));
+const safariScale = (rect: MediaRect, chromeScale = 1) => {
+  const scale = normalizeFrameChromeScale(chromeScale);
+  const horizontalScale = Math.min(1, scale);
+  const baseX = rect.width / SAFARI_REFERENCE.width;
+  const chromeWidth = SAFARI_REFERENCE.width * baseX * horizontalScale;
+  return {
+    x: baseX * horizontalScale,
+    y: safariToolbarHeight(rect, scale) / SAFARI_REFERENCE.toolbarHeight,
+    offsetX: (rect.width - chromeWidth) / 2,
+  };
+};
 
-export interface WindowsFrameOptions { showMenu?: boolean; showScrollbars?: boolean }
+export interface WindowsFrameOptions { showMenu?: boolean; showScrollbars?: boolean; chromeScale?: number }
 
 export const frameContentRect = (rect: MediaRect, frame: ClipFrame, windows: WindowsFrameOptions = {}): MediaRect => {
   if (frame === "safari") {
-    const header = safariToolbarHeight(rect);
+    const header = safariToolbarHeight(rect, windows.chromeScale);
     return { x: rect.x + 1, y: rect.y + header, width: Math.max(1, rect.width - 2), height: Math.max(1, rect.height - header - 1) };
   }
   if (frame === "windows-95") {
-    const scaleX = rect.width / 800, scaleY = rect.height / 520;
+    const chromeScale = normalizeFrameChromeScale(windows.chromeScale);
+    const scaleX = rect.width / 800 * chromeScale, scaleY = rect.height / 520 * chromeScale;
     const left = Math.max(3, 12 * scaleX), titleHeight = Math.max(18, 31 * scaleY);
     const top = titleHeight + (windows.showMenu === false ? Math.max(3, 5 * scaleY) : Math.max(14, 35 * scaleY));
     const right = windows.showScrollbars === false ? left : Math.max(6, 30 * scaleX);
@@ -34,11 +47,11 @@ function safariPath(ctx: CanvasRenderingContext2D, points: Array<[number, number
   ctx.stroke();
 }
 
-function drawSafariToolbar(ctx: CanvasRenderingContext2D, rect: MediaRect, title: string, paintBackground: boolean) {
-  const header = safariToolbarHeight(rect);
-  const scale = safariScale(rect);
+function drawSafariToolbar(ctx: CanvasRenderingContext2D, rect: MediaRect, title: string, paintBackground: boolean, chromeScale = 1) {
+  const header = safariToolbarHeight(rect, chromeScale);
+  const scale = safariScale(rect, chromeScale);
   const radius = frameRadius("safari", 0, rect);
-  const x = (value: number) => rect.x + value * scale.x;
+  const x = (value: number) => rect.x + scale.offsetX + value * scale.x;
   const y = (value: number) => rect.y + value * scale.y;
   const line = Math.max(.6, Math.min(scale.x, scale.y));
 
@@ -103,17 +116,18 @@ function drawOuterWindowsBevel(ctx: CanvasRenderingContext2D, rect: MediaRect) {
 }
 
 function drawWindows95Frame(ctx: CanvasRenderingContext2D, rect: MediaRect, title: string, paintBackground: boolean, color: string, windows: WindowsFrameOptions) {
-  const sx = rect.width / 800; const sy = rect.height / 520;
+  const chromeScale = normalizeFrameChromeScale(windows.chromeScale);
+  const sx = rect.width / 800 * chromeScale; const sy = rect.height / 520 * chromeScale;
   const px = (value: number) => rect.x + Math.round(value * sx); const py = (value: number) => rect.y + Math.round(value * sy);
   const content = frameContentRect(rect, "windows-95", windows);
   if (paintBackground) { ctx.fillStyle = color; ctx.fillRect(rect.x, rect.y, rect.width, rect.height); }
   drawOuterWindowsBevel(ctx, rect);
-  const titleX = px(3), titleY = py(3), titleW = Math.max(1, px(797) - titleX), titleH = Math.max(18, py(31) - titleY);
+  const titleX = px(3), titleY = py(3), titleRight = rect.x + rect.width - Math.max(3, Math.round(3 * chromeScale)), titleW = Math.max(1, titleRight - titleX), titleH = Math.max(18, py(31) - titleY);
   ctx.fillStyle = "#000080"; ctx.fillRect(titleX, titleY, titleW, titleH);
   ctx.fillStyle = "#ffffff"; ctx.font = `${Math.max(9, Math.round(16 * Math.min(sx, sy)))}px "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif`; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(title, px(16), titleY + titleH / 2);
   const buttonSize = Math.max(12, Math.round(18 * Math.min(sx, sy))); const buttonY = titleY + Math.max(1, Math.round(4 * sy));
-  [3, 2, 1].forEach((offset, index) => { const buttonX = rect.x + rect.width - Math.round((6 + offset * 19) * sx); drawBevel(ctx, buttonX, buttonY, buttonSize, buttonSize, true, color); ctx.strokeStyle = "#000000"; ctx.lineWidth = 1; if (index === 0) { ctx.beginPath(); ctx.moveTo(buttonX + 5, buttonY + buttonSize - 5); ctx.lineTo(buttonX + buttonSize - 5, buttonY + buttonSize - 5); ctx.stroke(); } else if (index === 1) ctx.strokeRect(buttonX + 5, buttonY + 5, Math.max(2, buttonSize - 10), Math.max(2, buttonSize - 10)); else { ctx.beginPath(); ctx.moveTo(buttonX + 5, buttonY + 5); ctx.lineTo(buttonX + buttonSize - 5, buttonY + buttonSize - 5); ctx.moveTo(buttonX + buttonSize - 5, buttonY + 5); ctx.lineTo(buttonX + 5, buttonY + buttonSize - 5); ctx.stroke(); } });
-  if (windows.showMenu !== false) { const menuY = py(31), menuH = Math.max(14, py(65) - menuY); ctx.fillStyle = color; ctx.fillRect(px(3), menuY, Math.max(1, px(797) - px(3)), menuH); ctx.fillStyle = "#000000"; ctx.font = `${Math.max(8, Math.round(14 * Math.min(sx, sy)))}px "MS Sans Serif", sans-serif`; ctx.textBaseline = "middle"; ctx.fillText("File", px(12), menuY + menuH / 2); ctx.fillText("Edit", px(54), menuY + menuH / 2); ctx.fillText("Search", px(94), menuY + menuH / 2); }
+  [3, 2, 1].forEach((offset, index) => { const buttonX = rect.x + rect.width - Math.max(3, Math.round(6 * chromeScale)) - buttonSize - Math.round((offset - 1) * 19 * chromeScale); drawBevel(ctx, buttonX, buttonY, buttonSize, buttonSize, true, color); ctx.strokeStyle = "#000000"; ctx.lineWidth = 1; if (index === 0) { ctx.beginPath(); ctx.moveTo(buttonX + 5, buttonY + buttonSize - 5); ctx.lineTo(buttonX + buttonSize - 5, buttonY + buttonSize - 5); ctx.stroke(); } else if (index === 1) ctx.strokeRect(buttonX + 5, buttonY + 5, Math.max(2, buttonSize - 10), Math.max(2, buttonSize - 10)); else { ctx.beginPath(); ctx.moveTo(buttonX + 5, buttonY + 5); ctx.lineTo(buttonX + buttonSize - 5, buttonY + buttonSize - 5); ctx.moveTo(buttonX + buttonSize - 5, buttonY + 5); ctx.lineTo(buttonX + 5, buttonY + buttonSize - 5); ctx.stroke(); } });
+  if (windows.showMenu !== false) { const menuY = py(31), menuH = Math.max(14, py(65) - menuY); ctx.fillStyle = color; ctx.fillRect(titleX, menuY, titleW, menuH); ctx.fillStyle = "#000000"; ctx.font = `${Math.max(8, Math.round(14 * Math.min(sx, sy)))}px "MS Sans Serif", sans-serif`; ctx.textBaseline = "middle"; ctx.fillText("File", px(12), menuY + menuH / 2); ctx.fillText("Edit", px(54), menuY + menuH / 2); ctx.fillText("Search", px(94), menuY + menuH / 2); }
   const clientX = content.x - 2, clientY = content.y - 2, clientW = content.width + 4, clientH = content.height + 4;
   if (paintBackground) drawBevel(ctx, clientX, clientY, clientW, clientH, false, "#ffffff");
   else drawBevelEdges(ctx, clientX, clientY, clientW, clientH, false);
@@ -123,7 +137,7 @@ function drawWindows95Frame(ctx: CanvasRenderingContext2D, rect: MediaRect, titl
 export function drawFrameChrome(ctx: CanvasRenderingContext2D, rect: MediaRect, frame: ClipFrame, title: string, paintBackground = true, frameColor = "#c0c0c0", windows: WindowsFrameOptions = {}) {
   if (frame === "none") return;
   if (frame === "safari") {
-    drawSafariToolbar(ctx, rect, title, paintBackground);
+    drawSafariToolbar(ctx, rect, title, paintBackground, windows.chromeScale);
     ctx.save(); ctx.strokeStyle = "rgba(169, 169, 169, .75)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(rect.x + .5, rect.y + .5, Math.max(0, rect.width - 1), Math.max(0, rect.height - 1), frameRadius(frame, 0, rect)); ctx.stroke(); ctx.restore();
     return;
   }

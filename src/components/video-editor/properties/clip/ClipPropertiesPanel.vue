@@ -47,6 +47,7 @@ const props = defineProps<{
     frameColor?: string;
     frameShowMenu?: boolean;
     frameShowScrollbars?: boolean;
+    frameChromeScale?: number;
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
     isMirroredY?: boolean;
@@ -74,6 +75,7 @@ const emit = defineEmits<{
       frameColor?: string;
       frameShowMenu?: boolean;
       frameShowScrollbars?: boolean;
+      frameChromeScale?: number;
     },
   ): void;
   (e: "update:clipTransform", transform: NormalizedTransform): void;
@@ -438,6 +440,7 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           :frame-color="selectedClip.frameColor"
           :frame-show-menu="selectedClip.frameShowMenu"
           :frame-show-scrollbars="selectedClip.frameShowScrollbars"
+          :frame-chrome-scale="selectedClip.frameChromeScale"
           @update="emit('update:appearance', $event)"
         />
       </div>

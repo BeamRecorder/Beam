@@ -30,6 +30,7 @@ onBeforeUnmount(() => stopListening?.())
         <template v-if="state?.status === 'downloaded'">{{ t('readyToRestart', { version: state.availableVersion }) }}</template>
         <template v-else-if="state?.status === 'downloading'">{{ t('downloading', { percent: state.percent ?? 0 }) }}</template>
         <template v-else-if="state?.status === 'checking'">{{ t('checking') }}</template>
+        <template v-else-if="state?.status === 'available'">{{ t('updateAvailable', { version: state.availableVersion ?? '…' }) }}</template>
         <template v-else-if="state?.status === 'not-available'">{{ t('upToDate', { version: state.currentVersion }) }}</template>
         <template v-else-if="state?.status === 'error'">{{ state.message }}</template>
         <template v-else-if="state?.status === 'unsupported'">{{ t('availableInInstalledApp') }}</template>

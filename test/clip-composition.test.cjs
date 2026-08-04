@@ -113,6 +113,9 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
     frameColor: '#c0c0c0',
     frameShowMenu: true,
     frameShowScrollbars: true,
+    frameChromeScale: 1,
+    shadowBlur: 40,
+    shadowMode: 'solid',
   })
 })
 

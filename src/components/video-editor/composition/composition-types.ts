@@ -76,6 +76,7 @@ export interface ClipAppearance extends WebcamAppearance {
   frameColor: string;
   frameShowMenu: boolean;
   frameShowScrollbars: boolean;
+  frameChromeScale: number;
 }
 
 export type ClipFrame = "none" | "safari" | "windows-95";

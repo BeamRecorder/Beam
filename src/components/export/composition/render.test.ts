@@ -7,7 +7,7 @@ import type { ClipComposition, ClipAppearance } from '../../video-editor/composi
 const screenAppearance: ClipAppearance = {
   cornerRadius: 'none', shadowSize: 'none', shadowColor: '#000000', shadowDirection: 'all',
   borderEnabled: false, borderColor: '#000000', borderWidth: 1,
-  frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true,
+  frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true, frameChromeScale: 1,
 }
 const composition = (): ClipComposition => ({
   schemaVersion: 1,
@@ -84,7 +84,7 @@ describe('canonical composition rendering', () => {
       transform: { x: .1, y: .2, width: .3, height: .4 }, crop: { x: .1, y: .2, width: .5, height: .6 }, isMirrored: true,
       appearance: {
         cornerRadius: 42, shadowSize: 'none', shadowColor: '#123456', shadowDirection: 'top-left', borderEnabled: true,
-        borderColor: '#abcdef', borderWidth: 4, frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true,
+        borderColor: '#abcdef', borderWidth: 4, frame: 'none', frameTitle: '', frameColor: '#c0c0c0', frameShowMenu: true, frameShowScrollbars: true, frameChromeScale: 1,
       },
     })
     const source = { displayWidth: 100, displayHeight: 50 } as unknown as CanvasImageSource

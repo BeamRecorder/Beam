@@ -8,7 +8,7 @@ function createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal, isPa
   let state = idleState(app.getVersion(), isPackaged ? 'idle' : 'unsupported')
   const publish = () => BrowserWindow.getAllWindows().forEach((window) => { if (!window.isDestroyed()) window.webContents.send(UPDATE_CHANNEL, state) })
   const setState = (nextState) => { state = { ...state, ...nextState }; publish(); return state }
-  const openChangelog = () => openExternal(`https://github.com/ExtraBinoss/demo-recorder/releases/tag/${encodeURIComponent(state.availableVersion || state.currentVersion)}`)
+  const openChangelog = () => openExternal(`https://github.com/ExtraBinoss/Beam/releases/tag/${encodeURIComponent(state.availableVersion || state.currentVersion)}`)
 
   if (!isPackaged) return { checkForUpdates: async () => state, getState: () => state, quitAndInstall: () => false, openChangelog }
   autoUpdater.autoDownload = false

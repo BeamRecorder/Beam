@@ -52,6 +52,7 @@ const DEFAULT_APPEARANCE: ClipAppearance = {
   frameColor: "#c0c0c0",
   frameShowMenu: true,
   frameShowScrollbars: true,
+  frameChromeScale: 1,
 };
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;

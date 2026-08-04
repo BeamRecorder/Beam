@@ -18,6 +18,7 @@ export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   frameColor: "#c0c0c0",
   frameShowMenu: true,
   frameShowScrollbars: true,
+  frameChromeScale: 1,
 };
 const SHADOW_BLURS = { sm: 10, md: 20, lg: 32 } as const;
 
@@ -91,6 +92,7 @@ export function drawDecoratedMedia(
   const windowsOptions = {
     showMenu: appearance.frameShowMenu,
     showScrollbars: appearance.frameShowScrollbars,
+    chromeScale: appearance.frameChromeScale,
   };
   const content = frameContentRect(
     options.rect,

@@ -9,5 +9,7 @@
   "restart": "Redémarrer maintenant",
   "upToDate": "L’application est à jour (version {version}).",
   "availableInInstalledApp": "Les mises à jour sont disponibles dans l’application installée.",
-  "currentVersion": "Version actuelle : {version}"
+  "currentVersion": "Version actuelle : {version}",
+  "updateAvailable": "La version {version} est disponible.",
+  "updateAvailableGeneric": "Une mise à jour est disponible."
 }

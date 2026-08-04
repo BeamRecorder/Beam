@@ -69,7 +69,7 @@ describe('UpdateControls', () => {
     captureMock.getUpdateState.mockResolvedValue(state('available'))
     const available = mount(UpdateControls, { global: { stubs: { Button } } })
     await flushPromises()
-    expect(available.get('.update-description').text()).toContain('1.0.0')
+    expect(available.get('.update-description').text()).toContain('1.1.0')
     await available.findAll('.action-button')[1]!.trigger('click')
     expect(captureMock.downloadUpdate).toHaveBeenCalledOnce()
 

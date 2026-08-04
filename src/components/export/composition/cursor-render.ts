@@ -45,6 +45,8 @@ export function drawCursorLayer(
     screen.transform,
     screen.isMirrored ?? false,
     screen.isMirroredY ?? false,
+    screen.appearance,
+    screen.crop,
   );
 
   for (const click of buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.5), time)) {

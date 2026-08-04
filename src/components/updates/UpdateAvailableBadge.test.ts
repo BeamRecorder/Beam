@@ -36,6 +36,7 @@ describe('UpdateAvailableBadge', () => {
       captureMock.listener?.(update(status))
       await wrapper.vm.$nextTick()
       expect(wrapper.find('.update-badge').exists()).toBe(true)
+      expect(wrapper.find('.update-badge').attributes('title')).toContain('1.1.0')
     }
     captureMock.listener?.(update('error'))
     await wrapper.vm.$nextTick()

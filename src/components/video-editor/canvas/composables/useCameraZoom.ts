@@ -268,6 +268,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
             frameColor: "#c0c0c0",
             frameShowMenu: true,
             frameShowScrollbars: true,
+            frameChromeScale: 1,
           },
           shadowScale: Math.min(dw / Math.max(1, output.width), dh / Math.max(1, output.height)),
           title: screen.name,
