@@ -37,6 +37,21 @@ describe('useEditorUndoRedo', () => {
     wrapper.unmount()
   })
 
+  it('flushes pending debounced snapshots on undo/redo before rolling back', async () => {
+    const restored: unknown[] = []
+    let api!: ReturnType<typeof useEditorUndoRedo>
+    const Harness = defineComponent({ setup: () => (api = useEditorUndoRedo({ onRestoreSnapshot: (value) => { restored.push(value) } }), {}), template: '<div />' })
+    const wrapper = mount(Harness)
+    api.recordSnapshot(snapshot(1))
+    api.recordSnapshot(snapshot(2), 300)
+    expect(api.undoStack.value).toHaveLength(1)
+    await api.undo()
+    expect(restored).toHaveLength(1)
+    expect(api.lastAction.value?.type).toBe('undo')
+    expect(api.canRedo.value).toBe(true)
+    wrapper.unmount()
+  })
+
   it('debounces records, cancels pending work and keeps the history bounded', () => {
     let api!: ReturnType<typeof useEditorUndoRedo>
     const Harness = defineComponent({ setup: () => (api = useEditorUndoRedo({ onRestoreSnapshot: () => undefined }), {}), template: '<div />' })
