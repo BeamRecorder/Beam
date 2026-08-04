@@ -250,8 +250,8 @@ const { t } = useTranslate("ZoomPanel");
 
 .animated-cursor {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   top: 75px;
   left: 210px;
   animation: cursorHoverAndClick 3.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -260,8 +260,8 @@ const { t } = useTranslate("ZoomPanel");
 
 .cursor-ripple {
   position: absolute;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 2px solid var(--color-primary);
   top: 62px;

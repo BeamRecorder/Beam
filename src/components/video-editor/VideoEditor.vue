@@ -233,9 +233,6 @@ const isCropping = ref(false);
 const isGridVisible = ref(false);
 const timelineZoomLevel = ref(100);
 const isSnappingEnabled = ref(true);
-const isTimelineReady = ref(false);
-let timelineTimer: ReturnType<typeof setTimeout> | null = null;
-let timelineFrame: number | null = null;
 const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const toggleCrop = () => { if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value; };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, "custom">) => { outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false }; };
@@ -257,16 +254,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
 };
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
-  timelineFrame = requestAnimationFrame(() => {
-    timelineFrame = requestAnimationFrame(() => {
-      timelineTimer = setTimeout(() => { isTimelineReady.value = true; timelineTimer = null; }, 120);
-    });
-  });
 });
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeyDown);
-  if (timelineFrame !== null) cancelAnimationFrame(timelineFrame);
-  if (timelineTimer) clearTimeout(timelineTimer);
   if (editorReadyTimer) clearTimeout(editorReadyTimer);
 });
 </script>
@@ -392,7 +382,6 @@ onBeforeUnmount(() => {
       </div>
       <div class="workspace-lower">
         <EditorTimeline
-          v-if="isTimelineReady"
           v-model:current-time="currentTime"
           v-model:is-playing="isPlaying"
           v-model:zoom-level="timelineZoomLevel"
