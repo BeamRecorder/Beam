@@ -31,7 +31,7 @@
 
 ## Availability
 
-Beam is currently available for Windows and macOS.
+Beam is currently available for Windows and macOS. (Linux supports is not made yet)
 
 ## Developer documentation
 
