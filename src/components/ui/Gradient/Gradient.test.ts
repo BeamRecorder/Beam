@@ -34,10 +34,11 @@ const baseGradient: GradientValue = {
   ],
 }
 
-const mountGradient = (props: Record<string, unknown> = {}) => mount(Gradient, {
-  props: { modelValue: baseGradient, ...props },
-  global: { stubs: { Select, BigSlider, ColorInput, Button } },
-})
+const mountGradient = (props: Record<string, unknown> = {}) =>
+  mount(Gradient, {
+    props: { modelValue: baseGradient, ...props },
+    global: { stubs: { Select, BigSlider, ColorInput, Button } },
+  })
 
 describe('Gradient', () => {
   it('renders stops, edits type and angle, adds a stop, and edits the selected stop', async () => {
@@ -54,15 +55,21 @@ describe('Gradient', () => {
     expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({ angle: 360 })
 
     await track.trigger('pointerdown', { clientX: 200, clientY: 30 })
-    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({ stops: expect.arrayContaining([expect.objectContaining({ position: 0.5 })]) })
+    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({
+      stops: expect.arrayContaining([expect.objectContaining({ position: 0.5 })]),
+    })
 
     await wrapper.find('.stop-handle').trigger('click')
     await nextTick()
     expect(wrapper.find('.stop-edit-form').exists()).toBe(true)
     await wrapper.get('.color-stub').trigger('click')
-    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({ stops: expect.arrayContaining([expect.objectContaining({ color: '#123456' })]) })
+    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({
+      stops: expect.arrayContaining([expect.objectContaining({ color: '#123456' })]),
+    })
     await wrapper.findAll('.slider-stub')[1].trigger('click')
-    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({ stops: expect.arrayContaining([expect.objectContaining({ position: 1 })]) })
+    expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toMatchObject({
+      stops: expect.arrayContaining([expect.objectContaining({ position: 1 })]),
+    })
   })
 
   it('locks the track at max stops and does not add a duplicate stop', async () => {

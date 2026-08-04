@@ -12,12 +12,16 @@ const candidates = [
 const executable = candidates.find((candidate) => fs.existsSync(candidate))
 
 if (!filename) {
-  console.error(`[electron:dev-norust] No prebuilt capture engine is available for ${process.platform}. Beam supports Windows and macOS.`)
+  console.error(
+    `[electron:dev-norust] No prebuilt capture engine is available for ${process.platform}. Beam supports Windows and macOS.`,
+  )
   process.exit(1)
 }
 
 if (!executable) {
-  console.error(`[electron:dev-norust] No release capture engine was found. Expected one of:\n${candidates.map((candidate) => `- ${candidate}`).join('\n')}`)
+  console.error(
+    `[electron:dev-norust] No release capture engine was found. Expected one of:\n${candidates.map((candidate) => `- ${candidate}`).join('\n')}`,
+  )
   console.error('Add the release binary for this platform, then run this command again.')
   process.exit(1)
 }

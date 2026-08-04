@@ -7,14 +7,15 @@ afterEach(() => {
   document.body.style.overflow = ''
 })
 
-const mountDialog = (props: Record<string, unknown> = {}) => mount(Dialog, {
-  attachTo: document.body,
-  props: { isOpen: true, ...props },
-  slots: {
-    default: '<p class="dialog-content-slot">Body</p>',
-    footer: '<button class="footer-action">Save</button>',
-  },
-})
+const mountDialog = (props: Record<string, unknown> = {}) =>
+  mount(Dialog, {
+    attachTo: document.body,
+    props: { isOpen: true, ...props },
+    slots: {
+      default: '<p class="dialog-content-slot">Body</p>',
+      footer: '<button class="footer-action">Save</button>',
+    },
+  })
 
 describe('Dialog', () => {
   it('renders title, body, footer, size and closes from its button', async () => {

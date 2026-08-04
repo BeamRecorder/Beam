@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { MousePointer } from "@lucide/vue";
-import { useTranslate } from "~/i18n/useTranslate";
-import { resolvePublicAssetUrl } from "~/utils/public-asset";
+import { MousePointer } from '@lucide/vue'
+import { useTranslate } from '~/i18n/useTranslate'
+import { resolvePublicAssetUrl } from '~/utils/public-asset'
 
-const { t } = useTranslate("ZoomPanel");
+const { t } = useTranslate('ZoomPanel')
 </script>
 
 <template>
@@ -65,8 +65,8 @@ const { t } = useTranslate("ZoomPanel");
 
     <!-- Text & Instructions -->
     <div class="text-content">
-      <h3 class="empty-title">{{ t("noZoomSelected") }}</h3>
-      <p class="empty-desc">{{ t("noZoomSelectedDesc") }}</p>
+      <h3 class="empty-title">{{ t('noZoomSelected') }}</h3>
+      <p class="empty-desc">{{ t('noZoomSelectedDesc') }}</p>
     </div>
   </div>
 </template>

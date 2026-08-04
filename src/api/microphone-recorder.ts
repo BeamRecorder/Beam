@@ -1,4 +1,9 @@
-import type { CaptureSource, MicrophoneFailure, MicrophoneSegmentFinish, MicrophoneSegmentStart } from './types/capture-api'
+import type {
+  CaptureSource,
+  MicrophoneFailure,
+  MicrophoneSegmentFinish,
+  MicrophoneSegmentStart,
+} from './types/capture-api'
 
 const MIME_TYPE = 'audio/webm;codecs=opus'
 const MICROPHONE_PREFIX = 'microphone:chromium:'
@@ -17,7 +22,8 @@ function api(): MicrophoneApi {
 }
 
 export function microphoneDeviceId(sourceId: string) {
-  if (!sourceId.startsWith(MICROPHONE_PREFIX) || sourceId.length === MICROPHONE_PREFIX.length) throw new Error('The selected microphone is invalid.')
+  if (!sourceId.startsWith(MICROPHONE_PREFIX) || sourceId.length === MICROPHONE_PREFIX.length)
+    throw new Error('The selected microphone is invalid.')
   return sourceId.slice(MICROPHONE_PREFIX.length)
 }
 
@@ -26,14 +32,17 @@ export function normalizedMicrophoneSetting(value: number | undefined) {
 }
 
 export async function listBrowserMicrophones(): Promise<CaptureSource[]> {
-  if (!navigator.mediaDevices?.enumerateDevices) throw new Error('Microphone discovery is unavailable in this Chromium build.')
+  if (!navigator.mediaDevices?.enumerateDevices)
+    throw new Error('Microphone discovery is unavailable in this Chromium build.')
   const devices = await navigator.mediaDevices.enumerateDevices()
-  return devices.filter((device) => device.kind === 'audioinput').map((device, index) => ({
-    id: `${MICROPHONE_PREFIX}${device.deviceId}`,
-    kind: 'microphone' as const,
-    label: device.label || `Microphone ${index + 1}`,
-    isDefault: index === 0,
-  }))
+  return devices
+    .filter((device) => device.kind === 'audioinput')
+    .map((device, index) => ({
+      id: `${MICROPHONE_PREFIX}${device.deviceId}`,
+      kind: 'microphone' as const,
+      label: device.label || `Microphone ${index + 1}`,
+      isDefault: index === 0,
+    }))
 }
 
 export class BrowserMicrophoneRecorder {
@@ -54,24 +63,48 @@ export class BrowserMicrophoneRecorder {
   private readonly audioContext: AudioContext
   private readonly gain: GainNode
 
-  private constructor(stream: MediaStream, sourceId: string, track: MediaStreamTrack, format: MicrophoneFormat, audioContext: AudioContext, gain: GainNode) {
+  private constructor(
+    stream: MediaStream,
+    sourceId: string,
+    track: MediaStreamTrack,
+    format: MicrophoneFormat,
+    audioContext: AudioContext,
+    gain: GainNode,
+  ) {
     this.stream = stream
     this.sourceId = sourceId
     this.track = track
     this.format = format
     this.audioContext = audioContext
     this.gain = gain
-    this.track.addEventListener('ended', () => this.reportFatal(new Error('The selected microphone was disconnected or stopped.')), { once: true })
+    this.track.addEventListener(
+      'ended',
+      () => this.reportFatal(new Error('The selected microphone was disconnected or stopped.')),
+      { once: true },
+    )
     this.track.addEventListener('mute', () => this.fadeTo(0), { passive: true })
     this.track.addEventListener('unmute', () => this.fadeTo(1), { passive: true })
   }
 
   static async request(sourceId: string) {
-    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone access is unavailable in this Chromium build.')
-    if (!MediaRecorder.isTypeSupported(MIME_TYPE)) throw new Error('This Chromium build cannot record Opus WebM microphone audio.')
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: microphoneDeviceId(sourceId) }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false })
+    if (!navigator.mediaDevices?.getUserMedia)
+      throw new Error('Microphone access is unavailable in this Chromium build.')
+    if (!MediaRecorder.isTypeSupported(MIME_TYPE))
+      throw new Error('This Chromium build cannot record Opus WebM microphone audio.')
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: { exact: microphoneDeviceId(sourceId) },
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+      video: false,
+    })
     const track = stream.getAudioTracks()[0]
-    if (!track) { stream.getTracks().forEach((entry) => entry.stop()); throw new Error('The selected microphone did not provide an audio track.') }
+    if (!track) {
+      stream.getTracks().forEach((entry) => entry.stop())
+      throw new Error('The selected microphone did not provide an audio track.')
+    }
     const settings = track.getSettings()
     const audioContext = new AudioContext()
     try {
@@ -81,7 +114,18 @@ export class BrowserMicrophoneRecorder {
       gain.gain.value = track.muted ? 0 : 1
       source.connect(gain).connect(destination)
       await audioContext.resume()
-      return new BrowserMicrophoneRecorder(destination.stream, sourceId, track, { codec: 'opus', sampleRate: normalizedMicrophoneSetting(settings.sampleRate), channels: normalizedMicrophoneSetting(settings.channelCount) }, audioContext, gain)
+      return new BrowserMicrophoneRecorder(
+        destination.stream,
+        sourceId,
+        track,
+        {
+          codec: 'opus',
+          sampleRate: normalizedMicrophoneSetting(settings.sampleRate),
+          channels: normalizedMicrophoneSetting(settings.channelCount),
+        },
+        audioContext,
+        gain,
+      )
     } catch (error) {
       stream.getTracks().forEach((entry) => entry.stop())
       await audioContext.close().catch(() => undefined)
@@ -89,16 +133,22 @@ export class BrowserMicrophoneRecorder {
     }
   }
 
-  onFatal(handler: (error: Error) => void) { this.fatalHandler = handler }
+  onFatal(handler: (error: Error) => void) {
+    this.fatalHandler = handler
+  }
 
   async start(sessionId: string) {
     this.timelineStartedAt = performance.now()
     await this.startSegment(sessionId, 0)
   }
 
-  async pause(endNs = this.nowNs()) { await this.finishSegment(endNs) }
+  async pause(endNs = this.nowNs()) {
+    await this.finishSegment(endNs)
+  }
 
-  async resume(sessionId: string) { await this.startSegment(sessionId, this.nowNs()) }
+  async resume(sessionId: string) {
+    await this.startSegment(sessionId, this.nowNs())
+  }
 
   async stop(endNs = this.nowNs()) {
     if (this.recorder) await this.finishSegment(endNs)
@@ -106,7 +156,11 @@ export class BrowserMicrophoneRecorder {
   }
 
   async fail(sessionId: string, reason: string) {
-    try { if (this.recorder) await this.finishSegment(this.nowNs()) } catch { /* The explicit failure is persisted below. */ }
+    try {
+      if (this.recorder) await this.finishSegment(this.nowNs())
+    } catch {
+      /* The explicit failure is persisted below. */
+    }
     await api().failMicrophone({ sessionId, sourceId: this.sourceId, format: this.format, reason })
     this.release()
   }
@@ -114,7 +168,12 @@ export class BrowserMicrophoneRecorder {
   private async startSegment(sessionId: string, startNs: number) {
     if (this.stopped) throw new Error('Microphone recording has already stopped.')
     if (this.recorder) throw new Error('Microphone segment is already recording.')
-    const opened = await api().beginMicrophoneSegment({ sessionId, sourceId: this.sourceId, format: this.format, startNs })
+    const opened = await api().beginMicrophoneSegment({
+      sessionId,
+      sourceId: this.sourceId,
+      format: this.format,
+      startNs,
+    })
     this.jobId = opened.jobId
     this.sequence = 0
     this.segmentStartNs = startNs
@@ -132,7 +191,11 @@ export class BrowserMicrophoneRecorder {
       this.pendingWrites.push(write)
       void write.catch((error: unknown) => this.reportFatal(asError(error)))
     })
-    recorder.addEventListener('error', () => this.reportFatal(new Error('Chromium failed while encoding microphone audio.')), { once: true })
+    recorder.addEventListener(
+      'error',
+      () => this.reportFatal(new Error('Chromium failed while encoding microphone audio.')),
+      { once: true },
+    )
     this.recorder = recorder
     recorder.start(1000)
   }
@@ -143,7 +206,11 @@ export class BrowserMicrophoneRecorder {
     if (!recorder || !jobId) return
     await new Promise<void>((resolve, reject) => {
       recorder.addEventListener('stop', () => resolve(), { once: true })
-      recorder.addEventListener('error', () => reject(new Error('Chromium failed while finalizing microphone audio.')), { once: true })
+      recorder.addEventListener(
+        'error',
+        () => reject(new Error('Chromium failed while finalizing microphone audio.')),
+        { once: true },
+      )
       recorder.stop()
     })
     await Promise.all(this.pendingWrites)
@@ -152,7 +219,9 @@ export class BrowserMicrophoneRecorder {
     this.jobId = null
   }
 
-  private nowNs() { return Math.max(0, Math.round((performance.now() - this.timelineStartedAt) * 1_000_000)) }
+  private nowNs() {
+    return Math.max(0, Math.round((performance.now() - this.timelineStartedAt) * 1_000_000))
+  }
 
   private fadeTo(value: number) {
     const now = this.audioContext.currentTime
@@ -178,4 +247,6 @@ export async function recordMicrophoneFailure(sessionId: string, sourceId: strin
   await api().failMicrophone({ sessionId, sourceId, reason })
 }
 
-function asError(value: unknown) { return value instanceof Error ? value : new Error(String(value)) }
+function asError(value: unknown) {
+  return value instanceof Error ? value : new Error(String(value))
+}

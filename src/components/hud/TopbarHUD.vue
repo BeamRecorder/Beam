@@ -1,79 +1,63 @@
 <script setup lang="ts">
-import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
-import Badge from "~/ui/badge/Badge.vue";
-import Button from "~/ui/button/Button.vue";
-import { useTranslate } from "~/i18n/useTranslate";
-import { resolvePublicAssetUrl } from "~/utils/public-asset";
-import UpdateAvailableBadge from "~/components/updates/UpdateAvailableBadge.vue";
+import { ChevronLeft, Minus, Settings, X } from '@lucide/vue'
+import Badge from '~/ui/badge/Badge.vue'
+import Button from '~/ui/button/Button.vue'
+import { useTranslate } from '~/i18n/useTranslate'
+import { resolvePublicAssetUrl } from '~/utils/public-asset'
+import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue'
 
-const { t } = useTranslate("TopbarHUD");
+const { t } = useTranslate('TopbarHUD')
 
 withDefaults(
   defineProps<{
-    title?: string;
-    showBack?: boolean;
-    showSettings?: boolean;
-    isRecording?: boolean;
+    title?: string
+    showBack?: boolean
+    showSettings?: boolean
+    isRecording?: boolean
   }>(),
   {
-    title: "",
+    title: '',
     showBack: false,
     showSettings: false,
     isRecording: false,
   },
-);
+)
 
 const emit = defineEmits<{
-  (event: "back"): void;
-  (event: "minimize"): void;
-  (event: "open-settings"): void;
-  (event: "close"): void;
-}>();
-
+  (event: 'back'): void
+  (event: 'minimize'): void
+  (event: 'open-settings'): void
+  (event: 'close'): void
+}>()
 </script>
 
 <template>
   <header class="hud-topbar">
     <div class="topbar-identity">
       <div v-if="showBack" class="topbar-back-action">
-        <Button
-          variant="ghost"
-          size="sm"
-          icon-only
-          :icon="ChevronLeft"
-          :aria-label="t('back')"
-          @click="emit('back')"
-        />
+        <Button variant="ghost" size="sm" icon-only :icon="ChevronLeft" :aria-label="t('back')" @click="emit('back')" />
       </div>
-      <img
-        v-else
-        :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')"
-        class="brand-logo"
-        :alt="t('title')"
-      />
+      <img v-else :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="brand-logo" :alt="t('title')" />
       <span class="topbar-title">{{ title || t('title') }}</span>
       <Badge v-if="isRecording" variant="error" class="rec-badge">{{ t('rec') }}</Badge>
     </div>
 
     <div class="window-actions">
-      <button
-        type="button"
-        class="window-action"
-        :aria-label="t('minimize')"
-        @click="emit('minimize')"
-      >
+      <button type="button" class="window-action" :aria-label="t('minimize')" @click="emit('minimize')">
         <Minus :size="16" />
       </button>
       <span v-if="showSettings" class="settings-action">
-        <Button variant="ghost" size="sm" icon-only :icon="Settings" :aria-label="t('preferences')" @click="emit('open-settings')" />
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="Settings"
+          :aria-label="t('preferences')"
+          @click="emit('open-settings')"
+        />
         <UpdateAvailableBadge />
       </span>
-      <button
-        type="button"
-        class="window-action close-button"
-        :aria-label="t('close')"
-        @click="emit('close')"
-      >
+      <button type="button" class="window-action close-button" :aria-label="t('close')" @click="emit('close')">
         <X :size="16" />
       </button>
     </div>
@@ -101,8 +85,13 @@ const emit = defineEmits<{
 .topbar-identity {
   -webkit-app-region: drag;
 }
-.settings-action { position: relative; display: inline-flex; }
-.settings-action { -webkit-app-region: no-drag; }
+.settings-action {
+  position: relative;
+  display: inline-flex;
+}
+.settings-action {
+  -webkit-app-region: no-drag;
+}
 .window-actions {
   gap: 4px;
   -webkit-app-region: no-drag;
@@ -140,7 +129,9 @@ const emit = defineEmits<{
   background: transparent;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 .window-action:hover {
   background: var(--color-bg-surface-hover);

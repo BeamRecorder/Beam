@@ -39,7 +39,11 @@ const handleProjectSelected = (project: CaptureProject) => {
 const handleWindowPointerDown = (event: MouseEvent | PointerEvent) => {
   if (!projectMenuOpen.value) return
   const target = event.target as Element | null
-  if (target?.closest('.popover-content') || target?.closest('.dialog-overlay') || target?.closest('.dialog-container')) {
+  if (
+    target?.closest('.popover-content') ||
+    target?.closest('.dialog-overlay') ||
+    target?.closest('.dialog-container')
+  ) {
     return
   }
   if (switcherRef.value && !switcherRef.value.contains(target as Node)) {
@@ -148,7 +152,11 @@ onUnmounted(() => {
   opacity: 1;
   animation: spin 700ms linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .project-menu-panel {
   position: absolute;
@@ -165,7 +173,9 @@ onUnmounted(() => {
 
 .project-menu-enter-active,
 .project-menu-leave-active {
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
   transform-origin: top left;
 }
 

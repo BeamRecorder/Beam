@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
-const props = withDefaults(defineProps<{
-  content?: string
-  position?: 'top' | 'bottom' | 'left' | 'right'
-  variant?: 'default' | 'error'
-  disabled?: boolean
-  maxWidth?: number
-}>(), {
-  position: 'top',
-  variant: 'default',
-})
+const props = withDefaults(
+  defineProps<{
+    content?: string
+    position?: 'top' | 'bottom' | 'left' | 'right'
+    variant?: 'default' | 'error'
+    disabled?: boolean
+    maxWidth?: number
+  }>(),
+  {
+    position: 'top',
+    variant: 'default',
+  },
+)
 
 const visible = ref(false)
 const wrapperRef = ref<HTMLElement | null>(null)
@@ -22,13 +25,29 @@ const updatePosition = () => {
   const rect = wrapper.getBoundingClientRect()
   const offset = 8
   if (props.position === 'bottom') {
-    tooltipStyle.value = { top: `${rect.bottom + offset}px`, left: `${rect.left + rect.width / 2}px`, transform: 'translateX(-50%)' }
+    tooltipStyle.value = {
+      top: `${rect.bottom + offset}px`,
+      left: `${rect.left + rect.width / 2}px`,
+      transform: 'translateX(-50%)',
+    }
   } else if (props.position === 'left') {
-    tooltipStyle.value = { top: `${rect.top + rect.height / 2}px`, left: `${rect.left - offset}px`, transform: 'translate(-100%, -50%)' }
+    tooltipStyle.value = {
+      top: `${rect.top + rect.height / 2}px`,
+      left: `${rect.left - offset}px`,
+      transform: 'translate(-100%, -50%)',
+    }
   } else if (props.position === 'right') {
-    tooltipStyle.value = { top: `${rect.top + rect.height / 2}px`, left: `${rect.right + offset}px`, transform: 'translateY(-50%)' }
+    tooltipStyle.value = {
+      top: `${rect.top + rect.height / 2}px`,
+      left: `${rect.right + offset}px`,
+      transform: 'translateY(-50%)',
+    }
   } else {
-    tooltipStyle.value = { top: `${rect.top - offset}px`, left: `${rect.left + rect.width / 2}px`, transform: 'translate(-50%, -100%)' }
+    tooltipStyle.value = {
+      top: `${rect.top - offset}px`,
+      left: `${rect.left + rect.width / 2}px`,
+      transform: 'translate(-50%, -100%)',
+    }
   }
 }
 
@@ -39,15 +58,23 @@ const show = async () => {
   updatePosition()
 }
 
-const hide = () => { visible.value = false }
+const hide = () => {
+  visible.value = false
+}
 
-watch(() => props.disabled, (disabled) => {
-  if (disabled) return hide()
-  if (wrapperRef.value?.matches(':hover')) void show()
-})
-watch(() => props.position, () => {
-  if (visible.value) updatePosition()
-})
+watch(
+  () => props.disabled,
+  (disabled) => {
+    if (disabled) return hide()
+    if (wrapperRef.value?.matches(':hover')) void show()
+  },
+)
+watch(
+  () => props.position,
+  () => {
+    if (visible.value) updatePosition()
+  },
+)
 
 window.addEventListener('resize', updatePosition)
 window.addEventListener('scroll', updatePosition, true)
@@ -58,21 +85,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div 
-    ref="wrapperRef"
-    class="tooltip-wrapper" 
-    @mouseenter="show" 
-    @mouseleave="hide"
-    @focusin="show"
-    @focusout="hide"
-  >
+  <div ref="wrapperRef" class="tooltip-wrapper" @mouseenter="show" @mouseleave="hide" @focusin="show" @focusout="hide">
     <slot />
   </div>
   <Teleport to="body">
     <Transition name="fade">
-      <div 
-        v-if="visible && (content || $slots.content)" 
-        class="tooltip-content" 
+      <div
+        v-if="visible && (content || $slots.content)"
+        class="tooltip-content"
         :class="[position || 'top', `tooltip-${variant}`]"
         :style="{ ...tooltipStyle, ...(maxWidth ? { maxWidth: `${maxWidth}px` } : {}) }"
         role="tooltip"
@@ -110,11 +130,23 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.tooltip-content.tooltip-error { background-color: var(--color-error); border-color: var(--color-error); color: #ffffff; }
-.tooltip-content.tooltip-error.top .tooltip-arrow { border-color: var(--color-error) transparent transparent transparent; }
-.tooltip-content.tooltip-error.bottom .tooltip-arrow { border-color: transparent transparent var(--color-error) transparent; }
-.tooltip-content.tooltip-error.left .tooltip-arrow { border-color: transparent transparent transparent var(--color-error); }
-.tooltip-content.tooltip-error.right .tooltip-arrow { border-color: transparent var(--color-error) transparent transparent; }
+.tooltip-content.tooltip-error {
+  background-color: var(--color-error);
+  border-color: var(--color-error);
+  color: #ffffff;
+}
+.tooltip-content.tooltip-error.top .tooltip-arrow {
+  border-color: var(--color-error) transparent transparent transparent;
+}
+.tooltip-content.tooltip-error.bottom .tooltip-arrow {
+  border-color: transparent transparent var(--color-error) transparent;
+}
+.tooltip-content.tooltip-error.left .tooltip-arrow {
+  border-color: transparent transparent transparent var(--color-error);
+}
+.tooltip-content.tooltip-error.right .tooltip-arrow {
+  border-color: transparent var(--color-error) transparent transparent;
+}
 
 /* Arrow placement & styles */
 .tooltip-arrow {
@@ -161,11 +193,13 @@ onBeforeUnmount(() => {
 }
 
 /* Transitions */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
-
 </style>

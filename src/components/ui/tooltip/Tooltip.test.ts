@@ -11,7 +11,12 @@ describe('Tooltip', () => {
       slots: { default: '<button>Focus me</button>' },
     })
     vi.spyOn(wrapper.get('.tooltip-wrapper').element as HTMLElement, 'getBoundingClientRect').mockReturnValue({
-      top: 10, left: 20, right: 120, bottom: 60, width: 100, height: 50,
+      top: 10,
+      left: 20,
+      right: 120,
+      bottom: 60,
+      width: 100,
+      height: 50,
     } as DOMRect)
 
     for (const position of ['top', 'bottom', 'left', 'right'] as const) {
@@ -60,7 +65,12 @@ describe('Tooltip', () => {
       slots: { default: '<button>Trigger</button>' },
     })
     vi.spyOn(wrapper.get('.tooltip-wrapper').element as HTMLElement, 'getBoundingClientRect').mockReturnValue({
-      top: 10, left: 20, right: 120, bottom: 60, width: 100, height: 50,
+      top: 10,
+      left: 20,
+      right: 120,
+      bottom: 60,
+      width: 100,
+      height: 50,
     } as DOMRect)
 
     await wrapper.get('.tooltip-wrapper').trigger('mouseenter')

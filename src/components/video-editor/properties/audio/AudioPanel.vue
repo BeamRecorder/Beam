@@ -17,7 +17,7 @@ const props = withDefaults(
   {
     systemVolume: 100,
     micVolume: 100,
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -45,10 +45,10 @@ const handleMicVolChange = (val: number) => {
 <template>
   <div class="options-group">
     <div class="prop-item">
-      <BigSlider 
-        :model-value="volume" 
+      <BigSlider
+        :model-value="volume"
         :default-value="100"
-        :min="0" 
+        :min="0"
         :max="100"
         :label="t('globalVolume')"
         :format-value="(val) => `${val}%`"
@@ -59,16 +59,13 @@ const handleMicVolChange = (val: number) => {
     <div class="audio-section">
       <div class="prop-row">
         <span class="prop-label">{{ t('systemSoundTrack') }}</span>
-        <Switch 
-          :model-value="isSystemAudioEnabled" 
-          @update:modelValue="emit('update:isSystemAudioEnabled', $event)"
-        />
+        <Switch :model-value="isSystemAudioEnabled" @update:modelValue="emit('update:isSystemAudioEnabled', $event)" />
       </div>
       <div v-if="isSystemAudioEnabled" class="prop-item sub-slider">
-        <BigSlider 
-          :model-value="localSystemVolume" 
+        <BigSlider
+          :model-value="localSystemVolume"
           :default-value="100"
-          :min="0" 
+          :min="0"
           :max="100"
           :label="t('systemVolume')"
           :format-value="(val) => `${val}%`"
@@ -80,16 +77,13 @@ const handleMicVolChange = (val: number) => {
     <div class="audio-section">
       <div class="prop-row">
         <span class="prop-label">{{ t('microphoneTrack') }}</span>
-        <Switch 
-          :model-value="isMicAudioEnabled" 
-          @update:modelValue="emit('update:isMicAudioEnabled', $event)"
-        />
+        <Switch :model-value="isMicAudioEnabled" @update:modelValue="emit('update:isMicAudioEnabled', $event)" />
       </div>
       <div v-if="isMicAudioEnabled" class="prop-item sub-slider">
-        <BigSlider 
-          :model-value="localMicVolume" 
+        <BigSlider
+          :model-value="localMicVolume"
           :default-value="100"
-          :min="0" 
+          :min="0"
           :max="100"
           :label="t('microphoneVolume')"
           :format-value="(val) => `${val}%`"

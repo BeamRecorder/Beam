@@ -18,7 +18,10 @@ export interface ExportProgress {
   currentTimeMs?: number
   totalTimeMs?: number
 }
-export interface ExportResult { path: string; format: ExportFormat }
+export interface ExportResult {
+  path: string
+  format: ExportFormat
+}
 export interface ExportRenderSettings {
   fps: number
   sourceWidth: number
@@ -36,7 +39,11 @@ export interface CompositionSnapshot {
   duration: number
   render: ExportRenderSettings
   canvas: OutputCanvasSettings
-  background: { kind: 'color'; color: string } | { kind: 'gradient'; gradient: import('../video-editor/composables/backgroundCatalog').GradientBackground } | { kind: 'image' | 'video'; src: string } | null
+  background:
+    | { kind: 'color'; color: string }
+    | { kind: 'gradient'; gradient: import('../video-editor/composables/backgroundCatalog').GradientBackground }
+    | { kind: 'image' | 'video'; src: string }
+    | null
   blurPercent: number
   zooms: ZoomElement[]
   cursor: ProjectEditorData['cursor']

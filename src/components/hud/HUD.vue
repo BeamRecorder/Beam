@@ -1,43 +1,36 @@
 <script setup lang="ts">
-import {
-  computed,
-  defineAsyncComponent,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
-} from "vue";
-import { capture } from "../../api/capture";
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { capture } from '../../api/capture'
 import {
   BrowserCameraRecorder,
   listBrowserCameras,
   validateCameraAccess,
   isCameraUnavailableError,
-} from "../../api/camera-recorder";
+} from '../../api/camera-recorder'
 import {
   BrowserMicrophoneRecorder,
   listBrowserMicrophones,
   recordMicrophoneFailure,
-} from "../../api/microphone-recorder";
+} from '../../api/microphone-recorder'
 import {
   BrowserSystemAudioRecorder,
   recordSystemAudioFailure,
   systemAudioSource,
-} from "../../api/system-audio-recorder";
+} from '../../api/system-audio-recorder'
 import type {
   CaptureCatalog,
   CapturePreview,
   CaptureProject,
   CaptureSession,
   CaptureSource,
-} from "../../api/types/capture-api";
-import type { ScreenRegion, ScreenRegionOverlayOptions } from "../../api/types/screen-region";
-import Button from "~/ui/button/Button.vue";
-import Select from "~/ui/select/Select.vue";
-import ButtonGroup from "~/ui/button/ButtonGroup.vue";
-import WindowSelect from "~/ui/select/WindowSelect.vue";
-import Skeleton from "~/ui/skeleton/Skeleton.vue";
-import TopbarHUD from "./TopbarHUD.vue";
+} from '../../api/types/capture-api'
+import type { ScreenRegion, ScreenRegionOverlayOptions } from '../../api/types/screen-region'
+import Button from '~/ui/button/Button.vue'
+import Select from '~/ui/select/Select.vue'
+import ButtonGroup from '~/ui/button/ButtonGroup.vue'
+import WindowSelect from '~/ui/select/WindowSelect.vue'
+import Skeleton from '~/ui/skeleton/Skeleton.vue'
+import TopbarHUD from './TopbarHUD.vue'
 import {
   Monitor,
   Layout,
@@ -52,309 +45,299 @@ import {
   ScrollText,
   Copy,
   Check,
-} from "@lucide/vue";
-import { useTranslate } from "~/i18n/useTranslate";
-import { useAudioLevelMeter } from "./audio/useAudioLevelMeter";
-import AudioIconMeter from "./audio/AudioIconMeter.vue";
+} from '@lucide/vue'
+import { useTranslate } from '~/i18n/useTranslate'
+import { useAudioLevelMeter } from './audio/useAudioLevelMeter'
+import AudioIconMeter from './audio/AudioIconMeter.vue'
 
-const { t } = useTranslate("HUD");
+const { t } = useTranslate('HUD')
 
 interface SavedDevices {
-  cameraId?: string;
-  micId?: string;
-  systemAudioMode?: "on" | "off";
+  cameraId?: string
+  micId?: string
+  systemAudioMode?: 'on' | 'off'
 }
-let savedDevices: SavedDevices | null = null;
+let savedDevices: SavedDevices | null = null
 
 const props = withDefaults(
   defineProps<{
-    embedded?: boolean;
+    embedded?: boolean
   }>(),
   {
     embedded: false,
   },
-);
+)
 
-const emit = defineEmits(["start-recording", "stop-recording", "open-project"]);
-const ProjectPicker = defineAsyncComponent(
-  () => import("../projects/ProjectPicker.vue"),
-);
-const HudPreferences = defineAsyncComponent(
-  () => import("./settings/HudPreferences.vue"),
-);
+const emit = defineEmits(['start-recording', 'stop-recording', 'open-project'])
+const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'))
+const HudPreferences = defineAsyncComponent(() => import('./settings/HudPreferences.vue'))
 
 // Window state
-const activeTab = ref<"screen" | "window">("screen");
-const isRecording = ref(false);
-const isBusy = ref(false);
-const errorMessage = ref("");
-const copiedError = ref(false);
-let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
-const sources = ref<CaptureSource[]>([]);
+const activeTab = ref<'screen' | 'window'>('screen')
+const isRecording = ref(false)
+const isBusy = ref(false)
+const errorMessage = ref('')
+const copiedError = ref(false)
+let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null
+const sources = ref<CaptureSource[]>([])
 
 // View State (Main vs Settings)
-const showSettings = ref(false);
-const showProjectPicker = ref(false);
+const showSettings = ref(false)
+const showProjectPicker = ref(false)
 
 // Preference settings
-const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
-const recordingBarVisibility = ref<"always" | "auto-fade">(
-  "always",
-);
-watch(recordingBarVisibility, (value) =>
-  void capture.updatePreferences({ recordingBar: { visibility: value } }),
-);
+const countdownSeconds = ref(3) // 0 for Off, 3, 5, 10
+const recordingBarVisibility = ref<'always' | 'auto-fade'>('always')
+watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }))
 
 // Previews
-const previews = ref<CapturePreview[]>([]);
-const screenPreviews = ref<CapturePreview[]>([]);
-const selectedSourceId = ref<string | null>(null);
+const previews = ref<CapturePreview[]>([])
+const screenPreviews = ref<CapturePreview[]>([])
+const selectedSourceId = ref<string | null>(null)
 
 // Sources lists (Camera / Microphone)
 const cameraOptions = computed(() => [
   ...sources.value
-    .filter((source) => source.kind === "camera")
+    .filter((source) => source.kind === 'camera')
     .map((source) => ({ value: source.id, label: source.label })),
-  { value: "off", label: t("cameraOff") },
-]);
-const selectedCameraId = ref("off");
+  { value: 'off', label: t('cameraOff') },
+])
+const selectedCameraId = ref('off')
 
 const micOptions = computed(() => [
   ...sources.value
-    .filter((source) => source.kind === "microphone")
+    .filter((source) => source.kind === 'microphone')
     .map((source) => ({ value: source.id, label: source.label })),
-  { value: "no-audio", label: t("noAudio") },
-]);
-const selectedMicId = ref("no-audio");
-const isTeleprompterVisible = ref(false);
-const selectedScreenId = ref<string | null>(null);
-const selectedScreenRegion = ref<ScreenRegion | null>(null);
-const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
-const savedScreenRegion = ref<ScreenRegion | null>(null);
-const isRegionSelectionLeaving = ref(false);
-const isRegionSelectionEntering = ref(false);
-const isRegionConfirmationAnimating = ref(false);
-let regionSelectionEnterTimeout: ReturnType<typeof setTimeout> | null = null;
-let regionConfirmationTimeout: ReturnType<typeof setTimeout> | null = null;
-const systemAudioMode = ref<"on" | "off">("off");
+  { value: 'no-audio', label: t('noAudio') },
+])
+const selectedMicId = ref('no-audio')
+const isTeleprompterVisible = ref(false)
+const selectedScreenId = ref<string | null>(null)
+const selectedScreenRegion = ref<ScreenRegion | null>(null)
+const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null)
+const savedScreenRegion = ref<ScreenRegion | null>(null)
+const isRegionSelectionLeaving = ref(false)
+const isRegionSelectionEntering = ref(false)
+const isRegionConfirmationAnimating = ref(false)
+let regionSelectionEnterTimeout: ReturnType<typeof setTimeout> | null = null
+let regionConfirmationTimeout: ReturnType<typeof setTimeout> | null = null
+const systemAudioMode = ref<'on' | 'off'>('off')
 
-const isMicEnabled = computed(() => selectedMicId.value !== "no-audio");
-const isSystemAudioEnabled = computed(() => systemAudioMode.value === "on");
-const { level: micLevel } = useAudioLevelMeter(isMicEnabled, selectedMicId, false);
-const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
+const isMicEnabled = computed(() => selectedMicId.value !== 'no-audio')
+const isSystemAudioEnabled = computed(() => systemAudioMode.value === 'on')
+const { level: micLevel } = useAudioLevelMeter(isMicEnabled, selectedMicId, false)
+const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true)
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
-  void capture.updatePreferences({ devices: { cameraId: selectedCameraId.value, micId: selectedMicId.value, systemAudioMode: systemAudioMode.value } });
-});
+  void capture.updatePreferences({
+    devices: { cameraId: selectedCameraId.value, micId: selectedMicId.value, systemAudioMode: systemAudioMode.value },
+  })
+})
 watch(
   [selectedCameraId],
   async () => {
-    const camId = selectedCameraId.value;
+    const camId = selectedCameraId.value
     capture.configureCameraOverlay({
       cameraId: camId,
-    });
-    if (camId && camId !== "off") {
+    })
+    if (camId && camId !== 'off') {
       try {
-        await validateCameraAccess(camId);
+        await validateCameraAccess(camId)
       } catch (err) {
         if (isCameraUnavailableError(err)) {
-          selectedCameraId.value = "off";
-          errorMessage.value = t("cameraUnavailableError", "Camera is unavailable: hardware resources are locked by another application or Windows Media Foundation (0xC00D3704).");
+          selectedCameraId.value = 'off'
+          errorMessage.value = t(
+            'cameraUnavailableError',
+            'Camera is unavailable: hardware resources are locked by another application or Windows Media Foundation (0xC00D3704).',
+          )
         }
       }
     }
   },
   { immediate: true },
-);
+)
 const screenOptions = computed(() =>
   sources.value
-    .filter((source) => source.kind === "display")
+    .filter((source) => source.kind === 'display')
     .map((source, index) => ({
       value: source.id,
-      label: t("screenOption", { index: index + 1 }),
+      label: t('screenOption', { index: index + 1 }),
     })),
-);
-const selectedScreen = computed(() => sources.value.find((source) => source.id === selectedScreenId.value) ?? null);
+)
+const selectedScreen = computed(() => sources.value.find((source) => source.id === selectedScreenId.value) ?? null)
 const selectedScreenPreview = computed(() => {
-  const source = selectedScreen.value;
-  if (!source) return null;
-  return screenPreviews.value.find((preview) => source.displayId && preview.displayId === source.displayId)
-    ?? screenPreviews.value.find((preview) => preview.displayBounds)
-    ?? null;
-});
+  const source = selectedScreen.value
+  if (!source) return null
+  return (
+    screenPreviews.value.find((preview) => source.displayId && preview.displayId === source.displayId) ??
+    screenPreviews.value.find((preview) => preview.displayBounds) ??
+    null
+  )
+})
 const systemAudioOptions = computed(() => [
-  { value: "on", label: t("systemAudio") },
-  { value: "off", label: t("off") },
-]);
+  { value: 'on', label: t('systemAudio') },
+  { value: 'off', label: t('off') },
+])
 
 // Timer / Duration simulation
-const recordingTime = ref("00:00");
-let timerInterval: ReturnType<typeof setInterval> | null = null;
-let previewsRefreshInterval: ReturnType<typeof setInterval> | null = null;
-let activeCamera: BrowserCameraRecorder | null = null;
-let activeCameraSessionId: string | null = null;
-let activeMicrophone: BrowserMicrophoneRecorder | null = null;
-let activeMicrophoneSessionId: string | null = null;
-let activeSystemAudio: BrowserSystemAudioRecorder | null = null;
-let activeSystemAudioSessionId: string | null = null;
-const secondsElapsed = ref(0);
+const recordingTime = ref('00:00')
+let timerInterval: ReturnType<typeof setInterval> | null = null
+let previewsRefreshInterval: ReturnType<typeof setInterval> | null = null
+let activeCamera: BrowserCameraRecorder | null = null
+let activeCameraSessionId: string | null = null
+let activeMicrophone: BrowserMicrophoneRecorder | null = null
+let activeMicrophoneSessionId: string | null = null
+let activeSystemAudio: BrowserSystemAudioRecorder | null = null
+let activeSystemAudioSessionId: string | null = null
+const secondsElapsed = ref(0)
 
 const startTimer = () => {
-  secondsElapsed.value = 0;
-  recordingTime.value = "00:00";
+  secondsElapsed.value = 0
+  recordingTime.value = '00:00'
   timerInterval = setInterval(() => {
-    secondsElapsed.value++;
+    secondsElapsed.value++
     const mins = Math.floor(secondsElapsed.value / 60)
       .toString()
-      .padStart(2, "0");
-    const secs = (secondsElapsed.value % 60).toString().padStart(2, "0");
-    recordingTime.value = `${mins}:${secs}`;
-  }, 1000);
-};
+      .padStart(2, '0')
+    const secs = (secondsElapsed.value % 60).toString().padStart(2, '0')
+    recordingTime.value = `${mins}:${secs}`
+  }, 1000)
+}
 
 const stopTimer = () => {
   if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
+    clearInterval(timerInterval)
+    timerInterval = null
   }
-};
+}
 
 // Previews loading
 const loadPreviews = async () => {
   try {
-    const type = activeTab.value === "screen" ? "screen" : "window";
-    const results = await capture.getSources([type]);
-    previews.value = results;
-    if (activeTab.value === "screen") screenPreviews.value = results;
+    const type = activeTab.value === 'screen' ? 'screen' : 'window'
+    const results = await capture.getSources([type])
+    previews.value = results
+    if (activeTab.value === 'screen') screenPreviews.value = results
 
     // Auto-select first source if none or invalid is selected
     if (results.length > 0) {
-      if (
-        !selectedSourceId.value ||
-        !results.some((result) => result.id === selectedSourceId.value)
-      ) {
-        selectedSourceId.value = results[0].id;
+      if (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value)) {
+        selectedSourceId.value = results[0].id
       }
     } else {
-      selectedSourceId.value = null;
+      selectedSourceId.value = null
     }
   } catch (err) {
-    console.error("Failed to load window/screen previews:", err);
+    console.error('Failed to load window/screen previews:', err)
   }
-};
+}
 
-const wait = (duration: number) => new Promise((resolve) => window.setTimeout(resolve, duration));
+const wait = (duration: number) => new Promise((resolve) => window.setTimeout(resolve, duration))
 
 const selectScreenRegion = async () => {
-  const preview = selectedScreenPreview.value;
-  if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value || !preview?.displayBounds) return;
-  errorMessage.value = "";
-  isRegionSelectionLeaving.value = true;
-  await wait(180);
-  capture.setWindowVisible(false);
+  const preview = selectedScreenPreview.value
+  if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value || !preview?.displayBounds) return
+  errorMessage.value = ''
+  isRegionSelectionLeaving.value = true
+  await wait(180)
+  capture.setWindowVisible(false)
   try {
-    const sourceBounds = preview.displayBounds;
-    const bounds = { x: sourceBounds.x, y: sourceBounds.y, width: sourceBounds.width, height: sourceBounds.height };
+    const sourceBounds = preview.displayBounds
+    const bounds = { x: sourceBounds.x, y: sourceBounds.y, width: sourceBounds.width, height: sourceBounds.height }
     // The saved region is only a starting point for the next selection. It
     // must not activate crop mode just because the HUD was opened.
-    const currentRegion = selectedScreenRegion.value ?? savedScreenRegion.value;
+    const currentRegion = selectedScreenRegion.value ?? savedScreenRegion.value
     const region = await capture.selectScreenRegion({
       bounds,
       region: currentRegion ? { ...currentRegion } : null,
-    });
-    if (!region) return;
-    const isFullScreen = region.x <= 0.01 && region.y <= 0.01 && region.width >= 0.98 && region.height >= 0.98;
+    })
+    if (!region) return
+    const isFullScreen = region.x <= 0.01 && region.y <= 0.01 && region.width >= 0.98 && region.height >= 0.98
     if (isFullScreen) {
-      selectedScreenRegion.value = null;
-      selectedScreenOverlay.value = null;
-      savedScreenRegion.value = null;
-      void capture.updatePreferences({ extras: { screenRegion: null } });
+      selectedScreenRegion.value = null
+      selectedScreenOverlay.value = null
+      savedScreenRegion.value = null
+      void capture.updatePreferences({ extras: { screenRegion: null } })
     } else {
-      const plainRegion = { ...region };
-      selectedScreenRegion.value = plainRegion;
-      selectedScreenOverlay.value = { bounds, region: plainRegion };
-      savedScreenRegion.value = plainRegion;
-      void capture.updatePreferences({ extras: { screenRegion: plainRegion } });
+      const plainRegion = { ...region }
+      selectedScreenRegion.value = plainRegion
+      selectedScreenOverlay.value = { bounds, region: plainRegion }
+      savedScreenRegion.value = plainRegion
+      void capture.updatePreferences({ extras: { screenRegion: plainRegion } })
     }
-    isRegionConfirmationAnimating.value = true;
-    if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
+    isRegionConfirmationAnimating.value = true
+    if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout)
     regionConfirmationTimeout = setTimeout(() => {
-      isRegionConfirmationAnimating.value = false;
-      regionConfirmationTimeout = null;
-    }, 700);
+      isRegionConfirmationAnimating.value = false
+      regionConfirmationTimeout = null
+    }, 700)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
-    isRegionSelectionLeaving.value = false;
-    isRegionSelectionEntering.value = true;
-    capture.setWindowVisible(true);
-    if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
+    isRegionSelectionLeaving.value = false
+    isRegionSelectionEntering.value = true
+    capture.setWindowVisible(true)
+    if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout)
     regionSelectionEnterTimeout = setTimeout(() => {
-      isRegionSelectionEntering.value = false;
-      regionSelectionEnterTimeout = null;
-    }, 280);
+      isRegionSelectionEntering.value = false
+      regionSelectionEnterTimeout = null
+    }, 280)
   }
-};
+}
 
-const activeDropdowns = ref(0);
+const activeDropdowns = ref(0)
 // Start without an assumed size so the first HUD render also reserves the
 // outer margin required for its border and shadow.
-let lastHeight = 0;
-let lastWidth = 0;
+let lastHeight = 0
+let lastWidth = 0
 
 const updateWindowSize = () => {
-  if (props.embedded) return;
-  const isDropdownOpen = activeDropdowns.value > 0;
-  let targetHeight = 480;
-  const errorHeight =
-    !showSettings.value && !showProjectPicker.value && errorMessage.value
-      ? 116
-      : 0;
+  if (props.embedded) return
+  const isDropdownOpen = activeDropdowns.value > 0
+  let targetHeight = 480
+  const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0
   if (showSettings.value) {
-    targetHeight = 520;
+    targetHeight = 520
   } else if (showProjectPicker.value) {
-    targetHeight = 520;
+    targetHeight = 520
   } else {
-    if (activeTab.value === "window") {
-      targetHeight = isDropdownOpen ? 660 : 500;
+    if (activeTab.value === 'window') {
+      targetHeight = isDropdownOpen ? 660 : 500
     } else {
-      targetHeight = isDropdownOpen ? 640 : 480;
+      targetHeight = isDropdownOpen ? 640 : 480
     }
   }
 
-  targetHeight += errorHeight;
+  targetHeight += errorHeight
   // Popovers are teleported and viewport-bounded; resizing the HUD horizontally
   // makes the card jump to the right without creating usable space.
-  const targetWidth = 320;
+  const targetWidth = 320
 
   if (targetHeight > lastHeight || targetWidth > lastWidth) {
     // Grow the Electron window instantly so transitions are not clipped
-    capture.setSize(targetWidth + 32, targetHeight + 32);
+    capture.setSize(targetWidth + 32, targetHeight + 32)
   } else if (targetHeight < lastHeight || targetWidth < lastWidth) {
     // Wait for the card's CSS transition (200ms) to complete before shrinking
-    const snapshotDropdownOpen = activeDropdowns.value > 0;
-    const snapshotHeight = targetHeight;
-    const snapshotWidth = targetWidth;
+    const snapshotDropdownOpen = activeDropdowns.value > 0
+    const snapshotHeight = targetHeight
+    const snapshotWidth = targetWidth
     setTimeout(() => {
-      const currentDropdownOpen = activeDropdowns.value > 0;
-      let currentTargetHeight = 480;
-      const errorHeight =
-        !showSettings.value && !showProjectPicker.value && errorMessage.value
-          ? 116
-          : 0;
+      const currentDropdownOpen = activeDropdowns.value > 0
+      let currentTargetHeight = 480
+      const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0
       if (showSettings.value) {
-        currentTargetHeight = 520;
+        currentTargetHeight = 520
       } else if (showProjectPicker.value) {
-        currentTargetHeight = 520;
+        currentTargetHeight = 520
       } else {
-        if (activeTab.value === "window") {
-          currentTargetHeight = currentDropdownOpen ? 660 : 500;
+        if (activeTab.value === 'window') {
+          currentTargetHeight = currentDropdownOpen ? 660 : 500
         } else {
-          currentTargetHeight = currentDropdownOpen ? 640 : 480;
+          currentTargetHeight = currentDropdownOpen ? 640 : 480
         }
       }
-      currentTargetHeight += errorHeight;
-      const currentTargetWidth = 320;
+      currentTargetHeight += errorHeight
+      const currentTargetWidth = 320
 
       // Only apply if the situation hasn't changed (don't override a subsequent open)
       if (
@@ -362,541 +345,490 @@ const updateWindowSize = () => {
         currentTargetHeight === snapshotHeight &&
         currentTargetWidth === snapshotWidth
       ) {
-        capture.setSize(snapshotWidth + 32, snapshotHeight + 32);
+        capture.setSize(snapshotWidth + 32, snapshotHeight + 32)
       }
-    }, 200);
+    }, 200)
   }
-  lastHeight = targetHeight;
-  lastWidth = targetWidth;
-};
+  lastHeight = targetHeight
+  lastWidth = targetWidth
+}
 
 const hudHeight = computed(() => {
-  const errorHeight =
-    !showSettings.value && !showProjectPicker.value && errorMessage.value
-      ? 116
-      : 0;
+  const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0
   if (showSettings.value || showProjectPicker.value) {
-    return 520 + errorHeight;
+    return 520 + errorHeight
   }
-  return (activeTab.value === "window" ? 500 : 480) + errorHeight;
-});
+  return (activeTab.value === 'window' ? 500 : 480) + errorHeight
+})
 
 const handleDropdownToggle = (isOpen: boolean) => {
   if (isOpen) {
-    activeDropdowns.value++;
+    activeDropdowns.value++
   } else {
-    activeDropdowns.value = Math.max(0, activeDropdowns.value - 1);
+    activeDropdowns.value = Math.max(0, activeDropdowns.value - 1)
   }
-  updateWindowSize();
-};
+  updateWindowSize()
+}
 
 // Watch tab change to reload previews and resize window
 watch(activeTab, () => {
-  capture.hideScreenRegionOverlay();
-  if (activeTab.value !== "screen") {
-    selectedScreenRegion.value = null;
-    selectedScreenOverlay.value = null;
+  capture.hideScreenRegionOverlay()
+  if (activeTab.value !== 'screen') {
+    selectedScreenRegion.value = null
+    selectedScreenOverlay.value = null
   }
-  previews.value = [];
-  updateWindowSize();
-  void loadPreviews();
-});
+  previews.value = []
+  updateWindowSize()
+  void loadPreviews()
+})
 
 watch(selectedScreenId, () => {
-  selectedScreenRegion.value = null;
-  selectedScreenOverlay.value = null;
-  capture.hideScreenRegionOverlay();
-});
+  selectedScreenRegion.value = null
+  selectedScreenOverlay.value = null
+  capture.hideScreenRegionOverlay()
+})
 
 // Watch settings view toggle to update window size
 watch(showSettings, () => {
-  updateWindowSize();
-});
+  updateWindowSize()
+})
 
 watch(showProjectPicker, () => {
-  updateWindowSize();
-});
+  updateWindowSize()
+})
 
 watch(errorMessage, () => {
-  copiedError.value = false;
-  updateWindowSize();
-});
+  copiedError.value = false
+  updateWindowSize()
+})
 
 const copyError = async () => {
-  if (!errorMessage.value) return;
+  if (!errorMessage.value) return
   try {
-    await navigator.clipboard.writeText(errorMessage.value);
+    await navigator.clipboard.writeText(errorMessage.value)
   } catch {
-    const text = document.createElement("textarea");
-    text.value = errorMessage.value;
-    text.setAttribute("readonly", "");
-    text.style.position = "fixed";
-    text.style.opacity = "0";
-    document.body.append(text);
+    const text = document.createElement('textarea')
+    text.value = errorMessage.value
+    text.setAttribute('readonly', '')
+    text.style.position = 'fixed'
+    text.style.opacity = '0'
+    document.body.append(text)
     try {
-      text.select();
-      if (!document.execCommand("copy"))
-        throw new Error("Unable to copy the error.");
+      text.select()
+      if (!document.execCommand('copy')) throw new Error('Unable to copy the error.')
     } finally {
-      text.remove();
+      text.remove()
     }
   }
-  copiedError.value = true;
-  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
+  copiedError.value = true
+  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout)
   copiedErrorTimeout = setTimeout(() => {
-    copiedError.value = false;
-  }, 2000);
-};
+    copiedError.value = false
+  }, 2000)
+}
 
 // Control functions
 const toggleRecording = async () => {
-  if (isBusy.value) return;
+  if (isBusy.value) return
   // Recording ownership lives in App.vue.  The HUD only collects configuration.
   if (!isRecording.value) {
-    let screenId: string | undefined;
-    if (activeTab.value === "screen")
-      screenId = selectedScreenId.value ?? undefined;
+    let screenId: string | undefined
+    if (activeTab.value === 'screen') screenId = selectedScreenId.value ?? undefined
     else if (selectedSourceId.value) {
       // Keep Electron's complete source id (usually `window:<hwnd>:<display>`).
       // The main process canonicalizes it for the platform-specific Rust backend.
-      screenId = selectedSourceId.value;
+      screenId = selectedSourceId.value
     }
-    emit("start-recording", {
-      screenKind: activeTab.value === "window" ? "window" : "display",
+    emit('start-recording', {
+      screenKind: activeTab.value === 'window' ? 'window' : 'display',
       screenId,
       cameraId: selectedCameraId.value,
       microphoneId: selectedMicId.value,
-      systemAudio: systemAudioMode.value === "on",
+      systemAudio: systemAudioMode.value === 'on',
       targetFps: 60,
       countdownSeconds: countdownSeconds.value,
       recordingBarVisibility: recordingBarVisibility.value,
-      region: activeTab.value === "screen" && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
-      regionOverlay: activeTab.value === "screen" && selectedScreenOverlay.value
-        ? {
-            bounds: { ...selectedScreenOverlay.value.bounds },
-            region: selectedScreenOverlay.value.region ? { ...selectedScreenOverlay.value.region } : null,
-          }
-        : null,
-    });
-    return;
+      region: activeTab.value === 'screen' && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
+      regionOverlay:
+        activeTab.value === 'screen' && selectedScreenOverlay.value
+          ? {
+              bounds: { ...selectedScreenOverlay.value.bounds },
+              region: selectedScreenOverlay.value.region ? { ...selectedScreenOverlay.value.region } : null,
+            }
+          : null,
+    })
+    return
   }
-  isBusy.value = true;
-  errorMessage.value = "";
+  isBusy.value = true
+  errorMessage.value = ''
   try {
     if (!isRecording.value) {
-      const systemAudioRequested = systemAudioMode.value === "on";
-      let systemAudio: BrowserSystemAudioRecorder | null = null;
-      let systemAudioError: Error | null = null;
+      const systemAudioRequested = systemAudioMode.value === 'on'
+      let systemAudio: BrowserSystemAudioRecorder | null = null
+      let systemAudioError: Error | null = null
       if (systemAudioRequested) {
         try {
-          systemAudio = await BrowserSystemAudioRecorder.request();
+          systemAudio = await BrowserSystemAudioRecorder.request()
         } catch (error) {
           systemAudioError =
-            error instanceof Error
-              ? new Error(`${error.name}: ${error.message}`)
-              : new Error(String(error));
+            error instanceof Error ? new Error(`${error.name}: ${error.message}`) : new Error(String(error))
         }
       }
       const camera =
-        selectedCameraId.value === "off"
-          ? null
-          : await BrowserCameraRecorder.request(selectedCameraId.value);
-      const microphoneId =
-        selectedMicId.value === "no-audio" ? null : selectedMicId.value;
-      let microphone: BrowserMicrophoneRecorder | null = null;
-      let microphoneError: Error | null = null;
+        selectedCameraId.value === 'off' ? null : await BrowserCameraRecorder.request(selectedCameraId.value)
+      const microphoneId = selectedMicId.value === 'no-audio' ? null : selectedMicId.value
+      let microphone: BrowserMicrophoneRecorder | null = null
+      let microphoneError: Error | null = null
       if (microphoneId) {
         try {
-          microphone = await BrowserMicrophoneRecorder.request(microphoneId);
+          microphone = await BrowserMicrophoneRecorder.request(microphoneId)
         } catch (error) {
-          microphoneError =
-            error instanceof Error ? error : new Error(String(error));
+          microphoneError = error instanceof Error ? error : new Error(String(error))
         }
       }
       // Find matching Rust catalog ID for the selected preview source
-      let rustScreenId: string | undefined = undefined;
+      let rustScreenId: string | undefined = undefined
       if (selectedSourceId.value) {
-        if (activeTab.value === "window") {
-          rustScreenId = selectedSourceId.value;
+        if (activeTab.value === 'window') {
+          rustScreenId = selectedSourceId.value
         }
       }
 
-      if (activeTab.value === "screen")
-        rustScreenId = selectedScreenId.value ?? undefined;
+      if (activeTab.value === 'screen') rustScreenId = selectedScreenId.value ?? undefined
 
-      let session: CaptureSession | undefined;
+      let session: CaptureSession | undefined
       try {
         session = await capture.startRecording({
-          screenKind: activeTab.value === "window" ? "window" : "display",
+          screenKind: activeTab.value === 'window' ? 'window' : 'display',
           screenId: rustScreenId,
           microphoneId: null,
           cameraId: camera ? selectedCameraId.value : null,
           systemAudio: false,
           cursor: true,
           targetFps: 60,
-        });
-        isRecording.value =
-          session.state === "recording" || session.state === "degraded";
-        if (!isRecording.value)
-          throw new Error(`Unexpected state after start: ${session.state}`);
+        })
+        isRecording.value = session.state === 'recording' || session.state === 'degraded'
+        if (!isRecording.value) throw new Error(`Unexpected state after start: ${session.state}`)
         if (camera) {
-          if (!session.sessionId)
-            throw new Error(
-              "The capture session did not provide an identifier.",
-            );
-          const cameraSessionId = session.sessionId;
-          activeCamera = camera;
-          activeCameraSessionId = cameraSessionId;
+          if (!session.sessionId) throw new Error('The capture session did not provide an identifier.')
+          const cameraSessionId = session.sessionId
+          activeCamera = camera
+          activeCameraSessionId = cameraSessionId
           camera.onFatal((reason) => {
-            void stopForCameraFailure(camera, cameraSessionId, reason);
-          });
-          await camera.start(cameraSessionId);
+            void stopForCameraFailure(camera, cameraSessionId, reason)
+          })
+          await camera.start(cameraSessionId)
         }
         if (session.sessionId && microphone) {
-          const microphoneSessionId = session.sessionId;
-          activeMicrophone = microphone;
-          activeMicrophoneSessionId = microphoneSessionId;
+          const microphoneSessionId = session.sessionId
+          activeMicrophone = microphone
+          activeMicrophoneSessionId = microphoneSessionId
           microphone.onFatal((reason) => {
-            void stopForMicrophoneFailure(
-              microphone,
-              microphoneSessionId,
-              reason,
-            );
-          });
+            void stopForMicrophoneFailure(microphone, microphoneSessionId, reason)
+          })
           try {
-            await microphone.start(microphoneSessionId);
+            await microphone.start(microphoneSessionId)
           } catch (error) {
             await stopForMicrophoneFailure(
               microphone,
               microphoneSessionId,
               error instanceof Error ? error : new Error(String(error)),
-            );
+            )
           }
         } else if (session.sessionId && microphoneId && microphoneError) {
-          await recordMicrophoneFailure(
-            session.sessionId,
-            microphoneId,
-            microphoneError.message,
-          );
-          errorMessage.value = `Microphone recording is unavailable: ${microphoneError.message}`;
+          await recordMicrophoneFailure(session.sessionId, microphoneId, microphoneError.message)
+          errorMessage.value = `Microphone recording is unavailable: ${microphoneError.message}`
         }
         if (session.sessionId && systemAudio) {
-          const systemAudioSessionId = session.sessionId;
-          activeSystemAudio = systemAudio;
-          activeSystemAudioSessionId = systemAudioSessionId;
+          const systemAudioSessionId = session.sessionId
+          activeSystemAudio = systemAudio
+          activeSystemAudioSessionId = systemAudioSessionId
           systemAudio.onFatal((reason) => {
-            void stopForSystemAudioFailure(
-              systemAudio,
-              systemAudioSessionId,
-              reason,
-            );
-          });
+            void stopForSystemAudioFailure(systemAudio, systemAudioSessionId, reason)
+          })
           try {
-            await systemAudio.start(systemAudioSessionId);
+            await systemAudio.start(systemAudioSessionId)
           } catch (error) {
             await stopForSystemAudioFailure(
               systemAudio,
               systemAudioSessionId,
               error instanceof Error ? error : new Error(String(error)),
-            );
+            )
           }
-        } else if (
-          session.sessionId &&
-          systemAudioRequested &&
-          systemAudioError
-        ) {
-          await recordSystemAudioFailure(
-            session.sessionId,
-            systemAudioError.message,
-          );
-          errorMessage.value = `System audio recording is unavailable: ${systemAudioError.message}`;
+        } else if (session.sessionId && systemAudioRequested && systemAudioError) {
+          await recordSystemAudioFailure(session.sessionId, systemAudioError.message)
+          errorMessage.value = `System audio recording is unavailable: ${systemAudioError.message}`
         }
       } catch (error) {
-        if (camera) await camera.stop().catch(() => undefined);
-        if (microphone) await microphone.stop().catch(() => undefined);
-        if (systemAudio) await systemAudio.stop().catch(() => undefined);
-        if (session?.sessionId) await capture.stop().catch(() => undefined);
-        activeCamera = null;
-        activeCameraSessionId = null;
-        activeMicrophone = null;
-        activeMicrophoneSessionId = null;
-        activeSystemAudio = null;
-        activeSystemAudioSessionId = null;
-        isRecording.value = false;
-        throw error;
+        if (camera) await camera.stop().catch(() => undefined)
+        if (microphone) await microphone.stop().catch(() => undefined)
+        if (systemAudio) await systemAudio.stop().catch(() => undefined)
+        if (session?.sessionId) await capture.stop().catch(() => undefined)
+        activeCamera = null
+        activeCameraSessionId = null
+        activeMicrophone = null
+        activeMicrophoneSessionId = null
+        activeSystemAudio = null
+        activeSystemAudioSessionId = null
+        isRecording.value = false
+        throw error
       }
-      if (!session) throw new Error("The capture session did not start.");
-      startTimer();
-      emit("start-recording", session);
+      if (!session) throw new Error('The capture session did not start.')
+      startTimer()
+      emit('start-recording', session)
     } else {
-      let cameraStopError: Error | null = null;
+      let cameraStopError: Error | null = null
       if (activeSystemAudio) {
         try {
-          await activeSystemAudio.stop();
+          await activeSystemAudio.stop()
         } catch (error) {
           if (activeSystemAudioSessionId)
             await activeSystemAudio.fail(
               activeSystemAudioSessionId,
               error instanceof Error ? error.message : String(error),
-            );
-          errorMessage.value = `System audio recording failed: ${error instanceof Error ? error.message : String(error)}`;
+            )
+          errorMessage.value = `System audio recording failed: ${error instanceof Error ? error.message : String(error)}`
         }
       }
       if (activeMicrophone) {
         try {
-          await activeMicrophone.stop();
+          await activeMicrophone.stop()
         } catch (error) {
           if (activeMicrophoneSessionId)
             await activeMicrophone.fail(
               activeMicrophoneSessionId,
               error instanceof Error ? error.message : String(error),
-            );
-          errorMessage.value = `Microphone recording failed: ${error instanceof Error ? error.message : String(error)}`;
+            )
+          errorMessage.value = `Microphone recording failed: ${error instanceof Error ? error.message : String(error)}`
         }
       }
       if (activeCamera) {
         try {
-          await activeCamera.stop();
+          await activeCamera.stop()
         } catch (error) {
-          cameraStopError =
-            error instanceof Error ? error : new Error(String(error));
-          if (activeCameraSessionId)
-            await activeCamera.fail(
-              activeCameraSessionId,
-              cameraStopError.message,
-            );
+          cameraStopError = error instanceof Error ? error : new Error(String(error))
+          if (activeCameraSessionId) await activeCamera.fail(activeCameraSessionId, cameraStopError.message)
         }
       }
-      const session = await capture.stop();
-      activeCamera = null;
-      activeCameraSessionId = null;
-      activeMicrophone = null;
-      activeMicrophoneSessionId = null;
-      activeSystemAudio = null;
-      activeSystemAudioSessionId = null;
-      stopTimer();
-      isRecording.value = false;
-      emit("stop-recording", session);
-      if (cameraStopError) throw cameraStopError;
+      const session = await capture.stop()
+      activeCamera = null
+      activeCameraSessionId = null
+      activeMicrophone = null
+      activeMicrophoneSessionId = null
+      activeSystemAudio = null
+      activeSystemAudioSessionId = null
+      stopTimer()
+      isRecording.value = false
+      emit('stop-recording', session)
+      if (cameraStopError) throw cameraStopError
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
-    isBusy.value = false;
+    isBusy.value = false
   }
-};
+}
 
-const stopForMicrophoneFailure = async (
-  microphone: BrowserMicrophoneRecorder,
-  sessionId: string,
-  reason: Error,
-) => {
-  if (activeMicrophone !== microphone) return;
+const stopForMicrophoneFailure = async (microphone: BrowserMicrophoneRecorder, sessionId: string, reason: Error) => {
+  if (activeMicrophone !== microphone) return
   try {
-    await microphone.fail(sessionId, reason.message);
-    errorMessage.value = `Microphone recording stopped: ${reason.message}`;
+    await microphone.fail(sessionId, reason.message)
+    errorMessage.value = `Microphone recording stopped: ${reason.message}`
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
-    activeMicrophone = null;
-    activeMicrophoneSessionId = null;
+    activeMicrophone = null
+    activeMicrophoneSessionId = null
   }
-};
+}
 
-const stopForSystemAudioFailure = async (
-  systemAudio: BrowserSystemAudioRecorder,
-  sessionId: string,
-  reason: Error,
-) => {
-  if (activeSystemAudio !== systemAudio) return;
+const stopForSystemAudioFailure = async (systemAudio: BrowserSystemAudioRecorder, sessionId: string, reason: Error) => {
+  if (activeSystemAudio !== systemAudio) return
   try {
-    await systemAudio.fail(sessionId, reason.message);
-    errorMessage.value = `System audio recording stopped: ${reason.message}`;
+    await systemAudio.fail(sessionId, reason.message)
+    errorMessage.value = `System audio recording stopped: ${reason.message}`
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
-    activeSystemAudio = null;
-    activeSystemAudioSessionId = null;
+    activeSystemAudio = null
+    activeSystemAudioSessionId = null
   }
-};
+}
 
-const stopForCameraFailure = async (
-  camera: BrowserCameraRecorder,
-  sessionId: string,
-  reason: Error,
-) => {
-  if (activeCamera !== camera || !isRecording.value) return;
-  isRecording.value = false;
-  isBusy.value = true;
+const stopForCameraFailure = async (camera: BrowserCameraRecorder, sessionId: string, reason: Error) => {
+  if (activeCamera !== camera || !isRecording.value) return
+  isRecording.value = false
+  isBusy.value = true
   try {
-    await camera.fail(sessionId, reason.message);
-    await capture.stop();
-    stopTimer();
-    activeCamera = null;
-    activeCameraSessionId = null;
-    errorMessage.value = `Camera recording stopped: ${reason.message}`;
+    await camera.fail(sessionId, reason.message)
+    await capture.stop()
+    stopTimer()
+    activeCamera = null
+    activeCameraSessionId = null
+    errorMessage.value = `Camera recording stopped: ${reason.message}`
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
-    isBusy.value = false;
+    isBusy.value = false
   }
-};
+}
 
 const discoverSources = async () => {
-  isBusy.value = true;
-  errorMessage.value = "";
+  isBusy.value = true
+  errorMessage.value = ''
   try {
     const [catalog, cameras, microphones] = (await Promise.all([
       capture.discover(),
       listBrowserCameras(),
       listBrowserMicrophones(),
-    ])) as [CaptureCatalog, CaptureSource[], CaptureSource[]];
+    ])) as [CaptureCatalog, CaptureSource[], CaptureSource[]]
     sources.value = [
       ...(Array.isArray(catalog.sources) ? catalog.sources : []),
       ...cameras,
       ...microphones,
       systemAudioSource(),
-    ];
+    ]
     if (
       savedDevices?.cameraId &&
-      (savedDevices.cameraId === "off" ||
-        sources.value.some((s) => s.id === savedDevices?.cameraId))
+      (savedDevices.cameraId === 'off' || sources.value.some((s) => s.id === savedDevices?.cameraId))
     ) {
-      selectedCameraId.value = savedDevices.cameraId;
+      selectedCameraId.value = savedDevices.cameraId
     } else {
-      selectedCameraId.value = "off";
+      selectedCameraId.value = 'off'
     }
 
     if (
       savedDevices?.micId &&
-      (savedDevices.micId === "no-audio" ||
-        sources.value.some((s) => s.id === savedDevices?.micId))
+      (savedDevices.micId === 'no-audio' || sources.value.some((s) => s.id === savedDevices?.micId))
     ) {
-      selectedMicId.value = savedDevices.micId;
+      selectedMicId.value = savedDevices.micId
     } else {
-      selectedMicId.value = "no-audio";
+      selectedMicId.value = 'no-audio'
     }
 
     if (
       savedDevices?.systemAudioMode &&
-      (savedDevices.systemAudioMode === "on" ||
-        savedDevices.systemAudioMode === "off")
+      (savedDevices.systemAudioMode === 'on' || savedDevices.systemAudioMode === 'off')
     ) {
-      systemAudioMode.value = savedDevices.systemAudioMode;
+      systemAudioMode.value = savedDevices.systemAudioMode
     } else {
-      systemAudioMode.value = "off";
+      systemAudioMode.value = 'off'
     }
 
     selectedScreenId.value =
-      sources.value.find(
-        (source) => source.kind === "display" && source.isDefault,
-      )?.id ??
-      sources.value.find((source) => source.kind === "display")?.id ??
-      null;
+      sources.value.find((source) => source.kind === 'display' && source.isDefault)?.id ??
+      sources.value.find((source) => source.kind === 'display')?.id ??
+      null
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
-    isBusy.value = false;
+    isBusy.value = false
   }
-};
+}
 
-let unsubscribeShortcut: (() => void) | null = null;
-let unsubscribeTeleprompterVisibility: (() => void) | null = null;
+let unsubscribeShortcut: (() => void) | null = null
+let unsubscribeTeleprompterVisibility: (() => void) | null = null
 
 const toggleTeleprompter = () => {
-  isTeleprompterVisible.value = !isTeleprompterVisible.value;
-  if (isTeleprompterVisible.value) capture.showTeleprompter();
-  else capture.hideTeleprompter();
-};
+  isTeleprompterVisible.value = !isTeleprompterVisible.value
+  if (isTeleprompterVisible.value) capture.showTeleprompter()
+  else capture.hideTeleprompter()
+}
 
 onMounted(async () => {
-  const preferences = await capture.getPreferences();
-  savedDevices = (preferences.devices as unknown) as SavedDevices;
-  const savedRegion = preferences.extras?.screenRegion;
-  if (savedRegion && typeof savedRegion === "object") {
-    const candidate = savedRegion as Partial<ScreenRegion>;
-    if ([candidate.x, candidate.y, candidate.width, candidate.height].every((value) => typeof value === "number" && Number.isFinite(value)) && candidate.x! >= 0 && candidate.y! >= 0 && candidate.width! > 0 && candidate.height! > 0 && candidate.x! + candidate.width! <= 1 && candidate.y! + candidate.height! <= 1) {
-      savedScreenRegion.value = { x: candidate.x!, y: candidate.y!, width: candidate.width!, height: candidate.height! };
+  const preferences = await capture.getPreferences()
+  savedDevices = preferences.devices as unknown as SavedDevices
+  const savedRegion = preferences.extras?.screenRegion
+  if (savedRegion && typeof savedRegion === 'object') {
+    const candidate = savedRegion as Partial<ScreenRegion>
+    if (
+      [candidate.x, candidate.y, candidate.width, candidate.height].every(
+        (value) => typeof value === 'number' && Number.isFinite(value),
+      ) &&
+      candidate.x! >= 0 &&
+      candidate.y! >= 0 &&
+      candidate.width! > 0 &&
+      candidate.height! > 0 &&
+      candidate.x! + candidate.width! <= 1 &&
+      candidate.y! + candidate.height! <= 1
+    ) {
+      savedScreenRegion.value = { x: candidate.x!, y: candidate.y!, width: candidate.width!, height: candidate.height! }
     }
   }
-  recordingBarVisibility.value = preferences.recordingBar.visibility;
-  if (!props.embedded) updateWindowSize();
-  await discoverSources();
-  await loadPreviews();
+  recordingBarVisibility.value = preferences.recordingBar.visibility
+  if (!props.embedded) updateWindowSize()
+  await discoverSources()
+  await loadPreviews()
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
-    if (actionId === "hud.startStopRecording") {
-      void toggleRecording();
+    if (actionId === 'hud.startStopRecording') {
+      void toggleRecording()
     }
-  });
+  })
   unsubscribeTeleprompterVisibility = capture.onTeleprompterVisibility((visible) => {
-    isTeleprompterVisible.value = visible;
-  });
+    isTeleprompterVisible.value = visible
+  })
 
   // Periodically refresh window previews when settings is not open and not recording
   previewsRefreshInterval = setInterval(() => {
-    if (
-      !showSettings.value &&
-      !isRecording.value &&
-      activeTab.value === "window"
-    ) {
-      void loadPreviews();
+    if (!showSettings.value && !isRecording.value && activeTab.value === 'window') {
+      void loadPreviews()
     }
-  }, 5000);
-});
+  }, 5000)
+})
 
 onBeforeUnmount(() => {
-  capture.hideScreenRegionOverlay();
-  if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
-  if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
-  unsubscribeShortcut?.();
-  unsubscribeTeleprompterVisibility?.();
-  stopTimer();
-  void activeCamera?.stop();
-  void activeMicrophone?.stop();
-  void activeSystemAudio?.stop();
-  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
-  activeCameraSessionId = null;
-  activeMicrophoneSessionId = null;
-  activeSystemAudioSessionId = null;
-  if (previewsRefreshInterval) clearInterval(previewsRefreshInterval);
-});
+  capture.hideScreenRegionOverlay()
+  if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout)
+  if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout)
+  unsubscribeShortcut?.()
+  unsubscribeTeleprompterVisibility?.()
+  stopTimer()
+  void activeCamera?.stop()
+  void activeMicrophone?.stop()
+  void activeSystemAudio?.stop()
+  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout)
+  activeCameraSessionId = null
+  activeMicrophoneSessionId = null
+  activeSystemAudioSessionId = null
+  if (previewsRefreshInterval) clearInterval(previewsRefreshInterval)
+})
 
 const closeApp = () => {
-  capture.close();
-};
+  capture.close()
+}
 
 const minimizeApp = () => {
-  document.body.classList.add("app-minimizing");
+  document.body.classList.add('app-minimizing')
   setTimeout(() => {
-    capture.minimize();
-    document.body.classList.remove("app-minimizing");
-  }, 160);
-};
+    capture.minimize()
+    document.body.classList.remove('app-minimizing')
+  }, 160)
+}
 
 const openProjectPicker = () => {
-  showSettings.value = false;
-  showProjectPicker.value = true;
-};
+  showSettings.value = false
+  showProjectPicker.value = true
+}
 
 const closeProjectPicker = () => {
-  showProjectPicker.value = false;
-};
+  showProjectPicker.value = false
+}
 
 const handleTopbarBack = () => {
   if (showProjectPicker.value) {
-    closeProjectPicker();
-    return;
+    closeProjectPicker()
+    return
   }
-  showSettings.value = false;
-};
+  showSettings.value = false
+}
 
 const openProject = (project: CaptureProject) => {
-  closeProjectPicker();
+  closeProjectPicker()
   if (props.currentProjectId !== project.id) {
-    emit("open-project", project);
+    emit('open-project', project)
   }
-};
+}
 </script>
 
 <template>
@@ -916,13 +848,7 @@ const openProject = (project: CaptureProject) => {
   >
     <TopbarHUD
       v-if="!embedded"
-      :title="
-        showProjectPicker
-          ? t('openProject')
-          : showSettings
-            ? t('preferences')
-            : t('title')
-      "
+      :title="showProjectPicker ? t('openProject') : showSettings ? t('preferences') : t('title')"
       :show-back="showProjectPicker || showSettings"
       :show-settings="!showSettings && !showProjectPicker"
       :is-recording="isRecording"
@@ -956,19 +882,11 @@ const openProject = (project: CaptureProject) => {
       <div v-else key="hud" class="hud-body">
         <!-- Tabs (Screen / Window) -->
         <ButtonGroup class="mode-tabs">
-          <Button
-            :class="{ active: activeTab === 'screen' }"
-            variant="tab"
-            @click="activeTab = 'screen'"
-          >
+          <Button :class="{ active: activeTab === 'screen' }" variant="tab" @click="activeTab = 'screen'">
             <template #icon><Monitor class="btn-icon" /></template>
             {{ t('screen') }}
           </Button>
-          <Button
-            :class="{ active: activeTab === 'window' }"
-            variant="tab"
-            @click="activeTab = 'window'"
-          >
+          <Button :class="{ active: activeTab === 'window' }" variant="tab" @click="activeTab = 'window'">
             <template #icon><Layout class="btn-icon" /></template>
             {{ t('window') }}
           </Button>
@@ -981,11 +899,7 @@ const openProject = (project: CaptureProject) => {
               <template v-if="activeTab === 'window'">
                 <div v-if="isBusy && previews.length === 0" class="device-row">
                   <Layout class="device-icon" />
-                  <Skeleton
-                    variant="linear"
-                    height="2.75rem"
-                    radius="var(--radius-md)"
-                  />
+                  <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
                 </div>
                 <div v-else class="device-row">
                   <Layout class="device-icon" />
@@ -1004,9 +918,7 @@ const openProject = (project: CaptureProject) => {
                   <Select
                     v-model="selectedScreenId"
                     :options="screenOptions"
-                    :disabled="
-                      isRecording || isBusy || screenOptions.length === 0
-                    "
+                    :disabled="isRecording || isBusy || screenOptions.length === 0"
                     @toggle="handleDropdownToggle"
                   />
                   <Button
@@ -1052,11 +964,7 @@ const openProject = (project: CaptureProject) => {
                   />
                   <div class="mic-select-controls">
                     <div v-if="isBusy && sources.length === 0">
-                      <Skeleton
-                        variant="radial"
-                        height="2.75rem"
-                        radius="var(--radius-md)"
-                      />
+                      <Skeleton variant="radial" height="2.75rem" radius="var(--radius-md)" />
                     </div>
                     <Select
                       v-else
@@ -1086,11 +994,7 @@ const openProject = (project: CaptureProject) => {
                     :class="{ 'is-unavailable': selectedCameraId === 'off' }"
                   />
                   <div v-if="isBusy && sources.length === 0">
-                    <Skeleton
-                      variant="linear"
-                      height="2.75rem"
-                      radius="var(--radius-md)"
-                    />
+                    <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
                   </div>
                   <Select
                     v-else
@@ -1133,11 +1037,7 @@ const openProject = (project: CaptureProject) => {
               <span class="pulse-dot" v-if="isRecording"></span>
             </template>
             {{
-              isBusy
-                ? t('pleaseWait')
-                : isRecording
-                  ? t('stopRecording', { time: recordingTime })
-                  : t('startRecording')
+              isBusy ? t('pleaseWait') : isRecording ? t('stopRecording', { time: recordingTime }) : t('startRecording')
             }}
           </Button>
         </div>
@@ -1163,9 +1063,7 @@ const openProject = (project: CaptureProject) => {
 .hud-wrapper {
   width: calc(100% - 32px);
   margin: 16px;
-  background: var(
-    --color-bg-surface
-  ); /* Solid opaque background to avoid transparency rendering issues */
+  background: var(--color-bg-surface); /* Solid opaque background to avoid transparency rendering issues */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -1202,27 +1100,73 @@ const openProject = (project: CaptureProject) => {
 }
 
 @keyframes hud-region-out {
-  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-  to { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    filter: blur(3px);
+  }
 }
 
 @keyframes hud-region-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(3px); }
-  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
 }
 
 @keyframes screen-region-checkmark {
-  0% { opacity: 0; transform: scale(0.45) rotate(-18deg); }
-  45% { opacity: 1; transform: scale(1.2) rotate(0deg); }
-  70% { transform: scale(0.92); }
-  100% { opacity: 1; transform: scale(1); }
+  0% {
+    opacity: 0;
+    transform: scale(0.45) rotate(-18deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.2) rotate(0deg);
+  }
+  70% {
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.screen-select-controls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
-.screen-select-controls > :first-child { flex: 1; min-width: 0; }
-.mic-select-controls { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.mic-select-controls > :first-child { flex: 1; min-width: 0; }
-.mic-select-controls :deep(.btn-primary) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent); }
+.screen-select-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.screen-select-controls > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.mic-select-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mic-select-controls > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.mic-select-controls :deep(.btn-primary) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
 
 .hud-wrapper.dropdown-open {
   overflow: visible; /* Allow popovers to float when active */

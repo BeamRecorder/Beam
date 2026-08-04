@@ -21,7 +21,7 @@ const props = withDefaults(
     isGridVisible: false,
     zoomPercent: 100,
     isZoomedOrPanned: false,
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -39,7 +39,13 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 
 <template>
   <div class="canvas-toolbar">
-    <PopoverMenuButton transparent :label="preset" :aria-label="t('formatPreset', { preset })" :items="items" @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)" />
+    <PopoverMenuButton
+      transparent
+      :label="preset"
+      :aria-label="t('formatPreset', { preset })"
+      :items="items"
+      @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)"
+    />
     <Button
       class="crop-button"
       :variant="isCropping ? 'primary' : 'outline'"
@@ -66,11 +72,32 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
     />
 
     <div class="zoom-controls">
-      <Button variant="ghost" size="xs" :icon="ZoomOut" :aria-label="t('zoomOut')" :tooltip="t('zoomOut')" class="zoom-btn" @click="emit('zoom:out')" />
-      <span class="zoom-indicator" :class="{ 'is-active': isZoomedOrPanned }" :title="t('canvasZoom')" @click="emit('reset:zoom')">
+      <Button
+        variant="ghost"
+        size="xs"
+        :icon="ZoomOut"
+        :aria-label="t('zoomOut')"
+        :tooltip="t('zoomOut')"
+        class="zoom-btn"
+        @click="emit('zoom:out')"
+      />
+      <span
+        class="zoom-indicator"
+        :class="{ 'is-active': isZoomedOrPanned }"
+        :title="t('canvasZoom')"
+        @click="emit('reset:zoom')"
+      >
         {{ zoomPercent }}%
       </span>
-      <Button variant="ghost" size="xs" :icon="ZoomIn" :aria-label="t('zoomIn')" :tooltip="t('zoomIn')" class="zoom-btn" @click="emit('zoom:in')" />
+      <Button
+        variant="ghost"
+        size="xs"
+        :icon="ZoomIn"
+        :aria-label="t('zoomIn')"
+        :tooltip="t('zoomIn')"
+        class="zoom-btn"
+        @click="emit('zoom:in')"
+      />
     </div>
   </div>
 </template>

@@ -1,66 +1,70 @@
 <script setup lang="ts">
-import BigSlider from "~/ui/slider/BigSlider.vue";
-import Switch from "~/ui/switch/Switch.vue";
-import Select from "~/ui/select/Select.vue";
-import ColorInput from "~/ui/input/ColorInput.vue";
-import ShadowDirectionGroup from "~/components/video-editor/properties/cursor/ShadowDirectionGroup.vue";
-import CursorClickEffectsPanel from "~/components/video-editor/properties/cursor/CursorClickEffectsPanel.vue";
-import Divider from "~/ui/divider/Divider.vue";
-import type { ShadowDirection } from "./shadow-types";
-import { cursorOptions, type CursorType } from "./useCursorReplacer";
-import type { CursorClickEffects } from "../../../../api/types/cursor-settings";
-import { cursorMotionPreset, type CursorMotionPreset, type CursorMotionSettings } from "../../../../api/types/cursor-settings";
-import { useTranslate } from "~/i18n/useTranslate";
+import BigSlider from '~/ui/slider/BigSlider.vue'
+import Switch from '~/ui/switch/Switch.vue'
+import Select from '~/ui/select/Select.vue'
+import ColorInput from '~/ui/input/ColorInput.vue'
+import ShadowDirectionGroup from '~/components/video-editor/properties/cursor/ShadowDirectionGroup.vue'
+import CursorClickEffectsPanel from '~/components/video-editor/properties/cursor/CursorClickEffectsPanel.vue'
+import Divider from '~/ui/divider/Divider.vue'
+import type { ShadowDirection } from './shadow-types'
+import { cursorOptions, type CursorType } from './useCursorReplacer'
+import type { CursorClickEffects } from '../../../../api/types/cursor-settings'
+import {
+  cursorMotionPreset,
+  type CursorMotionPreset,
+  type CursorMotionSettings,
+} from '../../../../api/types/cursor-settings'
+import { useTranslate } from '~/i18n/useTranslate'
 
-const { t } = useTranslate("CursorPanel");
+const { t } = useTranslate('CursorPanel')
 
 const props = defineProps<{
-  selectedCursor: CursorType;
-  cursorSize: number;
-  cursorColor: string;
-  enableShadow: boolean;
-  shadowBlur: number;
-  shadowColor: string;
-  shadowDirection: ShadowDirection;
-  clickEffects: CursorClickEffects;
-  motion: CursorMotionSettings;
-}>();
+  selectedCursor: CursorType
+  cursorSize: number
+  cursorColor: string
+  enableShadow: boolean
+  shadowBlur: number
+  shadowColor: string
+  shadowDirection: ShadowDirection
+  clickEffects: CursorClickEffects
+  motion: CursorMotionSettings
+}>()
 
 const emit = defineEmits<{
-  (e: "update:selectedCursor", value: CursorType): void;
-  (e: "update:cursorSize", value: number): void;
-  (e: "update:cursorColor", value: string): void;
-  (e: "update:enableShadow", value: boolean): void;
-  (e: "update:shadowBlur", value: number): void;
-  (e: "update:shadowColor", value: string): void;
-  (e: "update:shadowDirection", value: ShadowDirection): void;
-  (e: "update:clickEffects", value: CursorClickEffects): void;
-  (e: "update:motion", value: CursorMotionSettings): void;
-}>();
+  (e: 'update:selectedCursor', value: CursorType): void
+  (e: 'update:cursorSize', value: number): void
+  (e: 'update:cursorColor', value: string): void
+  (e: 'update:enableShadow', value: boolean): void
+  (e: 'update:shadowBlur', value: number): void
+  (e: 'update:shadowColor', value: string): void
+  (e: 'update:shadowDirection', value: ShadowDirection): void
+  (e: 'update:clickEffects', value: CursorClickEffects): void
+  (e: 'update:motion', value: CursorMotionSettings): void
+}>()
 
 const motionPresetOptions: Array<{ value: CursorMotionPreset; label: string }> = [
-  { value: "focused", label: t("focusedPreset") },
-  { value: "smooth", label: t("smoothPreset") },
-  { value: "custom", label: t("customPreset") },
-];
+  { value: 'focused', label: t('focusedPreset') },
+  { value: 'smooth', label: t('smoothPreset') },
+  { value: 'custom', label: t('customPreset') },
+]
 
 const updateMotion = (patch: Partial<CursorMotionSettings>) => {
-  emit("update:motion", {
+  emit('update:motion', {
     ...props.motion,
     ...patch,
-    preset: patch.preset ?? "custom",
-  });
-};
+    preset: patch.preset ?? 'custom',
+  })
+}
 
 const selectMotionPreset = (preset: CursorMotionPreset) => {
-  emit("update:motion", preset === "custom" ? { ...props.motion, preset } : cursorMotionPreset(preset));
-};
+  emit('update:motion', preset === 'custom' ? { ...props.motion, preset } : cursorMotionPreset(preset))
+}
 </script>
 
 <template>
   <div class="options-group">
     <div class="prop-item">
-      <label class="prop-label">{{ t("cursorStyle") }}</label>
+      <label class="prop-label">{{ t('cursorStyle') }}</label>
       <Select
         :model-value="selectedCursor"
         :options="cursorOptions"
@@ -90,11 +94,8 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
     <Divider spacing="none" />
 
     <div class="prop-row">
-      <span class="prop-label">{{ t("dropShadow") }}</span>
-      <Switch
-        :model-value="enableShadow"
-        @update:modelValue="emit('update:enableShadow', $event)"
-      />
+      <span class="prop-label">{{ t('dropShadow') }}</span>
+      <Switch :model-value="enableShadow" @update:modelValue="emit('update:enableShadow', $event)" />
     </div>
 
     <Transition name="slide-fade">
@@ -117,7 +118,7 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
         />
 
         <div class="prop-item">
-          <span class="sub-label">{{ t("direction") }}</span>
+          <span class="sub-label">{{ t('direction') }}</span>
           <ShadowDirectionGroup
             :model-value="shadowDirection"
             @update:model-value="emit('update:shadowDirection', $event)"
@@ -130,12 +131,12 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
 
     <section class="motion-options" aria-labelledby="cursor-motion-title">
       <div class="section-heading">
-        <span id="cursor-motion-title" class="section-title">{{ t("cursorMotion") }}</span>
-        <span class="section-description">{{ t("cursorMotionDescription") }}</span>
+        <span id="cursor-motion-title" class="section-title">{{ t('cursorMotion') }}</span>
+        <span class="section-description">{{ t('cursorMotionDescription') }}</span>
       </div>
 
       <div class="prop-item">
-        <label class="prop-label">{{ t("motionPreset") }}</label>
+        <label class="prop-label">{{ t('motionPreset') }}</label>
         <Select
           :model-value="motion.preset"
           :options="motionPresetOptions"
@@ -174,10 +175,7 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
 
     <Divider spacing="none" />
 
-    <CursorClickEffectsPanel
-      :model-value="clickEffects"
-      @update:model-value="emit('update:clickEffects', $event)"
-    />
+    <CursorClickEffectsPanel :model-value="clickEffects" @update:model-value="emit('update:clickEffects', $event)" />
   </div>
 </template>
 

@@ -2,10 +2,17 @@ import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from 
 import type { ScreenRegion, ScreenRegionOverlayOptions } from './screen-region'
 import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomState } from './capture-session'
 import type { ClipComposition, MediaAsset } from '../../components/video-editor/composition/composition-types'
-import type { BackgroundMedia, BackgroundValue, GradientBackground } from '../../components/video-editor/composables/backgroundCatalog'
+import type {
+  BackgroundMedia,
+  BackgroundValue,
+  GradientBackground,
+} from '../../components/video-editor/composables/backgroundCatalog'
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas'
 import type { CursorClickEffects, CursorMotionSettings } from './cursor-settings'
-import type { TeleprompterDocument, TeleprompterSessionContext } from '../../components/hud/teleprompter/teleprompter-types'
+import type {
+  TeleprompterDocument,
+  TeleprompterSessionContext,
+} from '../../components/hud/teleprompter/teleprompter-types'
 
 export type * from './capture-config'
 export type * from './screen-region'
@@ -60,7 +67,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   selectScreenRegion(options: ScreenRegionOverlayOptions): Promise<ScreenRegion | null>
   showScreenRegionOverlay(options: ScreenRegionOverlayOptions): void
   hideScreenRegionOverlay(): void
-  onScreenRegionConfigure(listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void): () => void
+  onScreenRegionConfigure(
+    listener: (options: ScreenRegionOverlayOptions & { mode?: 'select' | 'record' }) => void,
+  ): () => void
   confirmScreenRegion(region: ScreenRegion): void
   cancelScreenRegion(): void
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>
@@ -77,7 +86,11 @@ export interface DesktopCaptureApi extends CaptureApi {
   onTeleprompterShortcut(listener: (id: string) => void): () => void
   onTeleprompterSession(listener: (context: TeleprompterSessionContext | null) => void): () => void
   onTeleprompterVisibility(listener: (visible: boolean) => void): () => void
-  saveSessionTeleprompter(projectId: string, sessionId: string, document: TeleprompterDocument): Promise<TeleprompterDocument>
+  saveSessionTeleprompter(
+    projectId: string,
+    sessionId: string,
+    document: TeleprompterDocument,
+  ): Promise<TeleprompterDocument>
   getSessionTeleprompter(projectId: string, sessionId: string): Promise<TeleprompterDocument | null>
   listProjects(): Promise<CaptureProject[]>
   projectMediaUrl(source: string): Promise<string | null>
@@ -93,17 +106,39 @@ export interface DesktopCaptureApi extends CaptureApi {
   deleteProject(projectId: string): Promise<void>
   revealProject(projectId: string): Promise<boolean>
   saveProjectThumbnail(projectId: string, dataUrl: string): Promise<string | null>
-  whisperModels(): Promise<Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>>
-  downloadWhisperModel(modelId: string): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
-  onWhisperProgress(listener: (progress: { id: string; status: 'downloading'; downloadedBytes: number; totalBytes: number | null; artifact: string }) => void): () => void
+  whisperModels(): Promise<
+    Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
+  >
+  downloadWhisperModel(
+    modelId: string,
+  ): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
+  onWhisperProgress(
+    listener: (progress: {
+      id: string
+      status: 'downloading'
+      downloadedBytes: number
+      totalBytes: number | null
+      artifact: string
+    }) => void,
+  ): () => void
   configureCameraOverlay(state: { cameraId: string; shadowSize?: string; cornerRadius?: string }): void
   setCameraOverlayActive(active: boolean): void
   resetCameraOverlayPlacement?: () => void
-  getCameraOverlayState(): Promise<{ cameraId: string; shadowSize: string; cornerRadius: string; placement?: { x: number; y: number; width: number; height: number } } | null>
-  onCameraOverlayState(listener: (state: { cameraId: string; shadowSize: string; cornerRadius: string }) => void): () => void
+  getCameraOverlayState(): Promise<{
+    cameraId: string
+    shadowSize: string
+    cornerRadius: string
+    placement?: { x: number; y: number; width: number; height: number }
+  } | null>
+  onCameraOverlayState(
+    listener: (state: { cameraId: string; shadowSize: string; cornerRadius: string }) => void,
+  ): () => void
   onCameraOverlayHover(listener: (hovered: boolean) => void): () => void
   onCameraShadow(listener: (state: { shadowSize: string; cornerRadius: string }) => void): () => void
-  beginExport(options: { projectName: string; format: 'webm' | 'mp4' }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
+  beginExport(options: {
+    projectName: string
+    format: 'webm' | 'mp4'
+  }): Promise<{ canceled: true } | { canceled: false; jobId: string }>
   writeExportChunk(payload: { jobId: string; sequence: number; data: Uint8Array; position: number }): Promise<void>
   finalizeExport(jobId: string): Promise<{ path: string }>
   abortExport(jobId: string): Promise<void>
@@ -139,7 +174,11 @@ export interface AppUpdateState {
   message: string | null
 }
 
-export interface PreferenceShortcut { keys: string; scope: 'global' | 'application'; category: string }
+export interface PreferenceShortcut {
+  keys: string
+  scope: 'global' | 'application'
+  category: string
+}
 export interface PreferenceSettings {
   schemaVersion: 2
   theme: 'light' | 'dark' | 'system'
@@ -170,17 +209,76 @@ export interface ProjectEditorState {
 export interface CameraSegmentStart {
   sessionId: string
   sourceId: string
-  format: { codec: 'vp8'; width: number; height: number; nominalFps: number; appearance?: { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' }; placement?: { x: number; y: number; width: number; height: number } }
+  format: {
+    codec: 'vp8'
+    width: number
+    height: number
+    nominalFps: number
+    appearance?: { shadowSize: 'none' | 'sm' | 'md' | 'lg'; cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' }
+    placement?: { x: number; y: number; width: number; height: number }
+  }
   startNs: number
 }
-export interface MediaSegmentChunk { jobId: string; sequence: number; data: Uint8Array }
-export interface CameraSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
-export interface MicrophoneSegmentStart { sessionId: string; sourceId: string; format: { codec: 'opus'; sampleRate: number; channels: number }; startNs: number }
-export interface MicrophoneSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
-export interface MicrophoneFailure { sessionId: string; sourceId: string; reason: string; format?: { codec: 'opus'; sampleRate: number; channels: number } }
-export interface SystemAudioSegmentStart { sessionId: string; sourceId: string; format: { codec: 'opus'; sampleRate: number; channels: number }; startNs: number }
-export interface SystemAudioSegmentFinish { jobId: string; endNs: number; metrics: Record<string, number> }
-export interface SystemAudioFailure { sessionId: string; sourceId: string; reason: string; format?: { codec: 'opus'; sampleRate: number; channels: number } }
-export interface CapturePreview { id: string; name: string; thumbnail: string; appIcon: string | null; displayId?: string; displayBounds?: { x: number; y: number; width: number; height: number } }
-export interface CaptureSource { id: string; kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'; label: string; isDefault: boolean; displayId?: string }
-export interface CaptureCatalog { sources: CaptureSource[]; capabilities: Record<string, boolean> }
+export interface MediaSegmentChunk {
+  jobId: string
+  sequence: number
+  data: Uint8Array
+}
+export interface CameraSegmentFinish {
+  jobId: string
+  endNs: number
+  metrics: Record<string, number>
+}
+export interface MicrophoneSegmentStart {
+  sessionId: string
+  sourceId: string
+  format: { codec: 'opus'; sampleRate: number; channels: number }
+  startNs: number
+}
+export interface MicrophoneSegmentFinish {
+  jobId: string
+  endNs: number
+  metrics: Record<string, number>
+}
+export interface MicrophoneFailure {
+  sessionId: string
+  sourceId: string
+  reason: string
+  format?: { codec: 'opus'; sampleRate: number; channels: number }
+}
+export interface SystemAudioSegmentStart {
+  sessionId: string
+  sourceId: string
+  format: { codec: 'opus'; sampleRate: number; channels: number }
+  startNs: number
+}
+export interface SystemAudioSegmentFinish {
+  jobId: string
+  endNs: number
+  metrics: Record<string, number>
+}
+export interface SystemAudioFailure {
+  sessionId: string
+  sourceId: string
+  reason: string
+  format?: { codec: 'opus'; sampleRate: number; channels: number }
+}
+export interface CapturePreview {
+  id: string
+  name: string
+  thumbnail: string
+  appIcon: string | null
+  displayId?: string
+  displayBounds?: { x: number; y: number; width: number; height: number }
+}
+export interface CaptureSource {
+  id: string
+  kind: 'display' | 'window' | 'application' | 'system-audio' | 'microphone' | 'camera'
+  label: string
+  isDefault: boolean
+  displayId?: string
+}
+export interface CaptureCatalog {
+  sources: CaptureSource[]
+  capabilities: Record<string, boolean>
+}

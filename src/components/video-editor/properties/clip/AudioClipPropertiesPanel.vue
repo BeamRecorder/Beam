@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import BigSlider from "~/ui/slider/BigSlider.vue";
-import DeleteItem from "~/ui/button/DeleteItem.vue";
-import Switch from "~/ui/switch/Switch.vue";
-import { useTranslate } from "~/i18n/useTranslate";
+import { computed } from 'vue'
+import BigSlider from '~/ui/slider/BigSlider.vue'
+import DeleteItem from '~/ui/button/DeleteItem.vue'
+import Switch from '~/ui/switch/Switch.vue'
+import { useTranslate } from '~/i18n/useTranslate'
 
-const { t } = useTranslate("AudioClipPropertiesPanel");
+const { t } = useTranslate('AudioClipPropertiesPanel')
 
 const props = defineProps<{
-  clip: { name?: string; enabled?: boolean; volume?: number } | null;
-}>();
+  clip: { name?: string; enabled?: boolean; volume?: number } | null
+}>()
 
 const emit = defineEmits<{
-  (e: "update:volume", value: number): void;
-  (e: "update:enabled", value: boolean): void;
-  (e: "delete"): void;
-}>();
+  (e: 'update:volume', value: number): void
+  (e: 'update:enabled', value: boolean): void
+  (e: 'delete'): void
+}>()
 
-const volume = computed(() => props.clip?.volume ?? 100);
+const volume = computed(() => props.clip?.volume ?? 100)
 </script>
 
 <template>
@@ -43,10 +43,7 @@ const volume = computed(() => props.clip?.volume ?? 100);
       <div class="section-block">
         <div class="prop-row">
           <span class="prop-label">{{ t('enabled') }}</span>
-          <Switch
-            :model-value="clip.enabled ?? true"
-            @update:model-value="emit('update:enabled', $event)"
-          />
+          <Switch :model-value="clip.enabled ?? true" @update:model-value="emit('update:enabled', $event)" />
         </div>
       </div>
       <div class="danger-zone">
@@ -57,14 +54,45 @@ const volume = computed(() => props.clip?.volume ?? 100);
 </template>
 
 <style scoped>
-.audio-clip-properties { display: flex; flex: 1; flex-direction: column; }
-.options-group { display: flex; flex-direction: column; gap: 16px; flex: 1; }
-.section-block { display: flex; flex-direction: column; gap: 10px; }
-.section-title { color: var(--text-primary); font-size: 12px; font-weight: 700; }
-.prop-row { display: flex; align-items: center; justify-content: space-between; }
-.prop-label, .empty-desc { color: var(--text-secondary); font-size: 12px; }
-.empty-title { margin: 0 0 6px; color: var(--text-primary); font-weight: 700; }
-.empty-desc { margin: 0; }
+.audio-clip-properties {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+.section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.section-title {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+.prop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.prop-label,
+.empty-desc {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.empty-title {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.empty-desc {
+  margin: 0;
+}
 .danger-zone {
   margin-top: auto;
   position: sticky;

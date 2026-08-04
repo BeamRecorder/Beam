@@ -22,12 +22,18 @@ const refreshRecordingState = async () => {
 }
 
 onMounted(async () => {
-  unsubscribe = capture.onCameraOverlayState((next) => { cameraId.value = next.cameraId })
-  unsubscribeHover = capture.onCameraOverlayHover((hovered) => { isHovered.value = hovered })
+  unsubscribe = capture.onCameraOverlayState((next) => {
+    cameraId.value = next.cameraId
+  })
+  unsubscribeHover = capture.onCameraOverlayHover((hovered) => {
+    isHovered.value = hovered
+  })
   const saved = await capture.getCameraOverlayState()
   if (saved) cameraId.value = saved.cameraId
   await refreshRecordingState()
-  statusTimer = window.setInterval(() => { void refreshRecordingState() }, 500)
+  statusTimer = window.setInterval(() => {
+    void refreshRecordingState()
+  }, 500)
 })
 
 onBeforeUnmount(() => {
@@ -47,4 +53,11 @@ onBeforeUnmount(() => {
   />
 </template>
 
-<style scoped>:global(html), :global(body) { margin: 0; overflow: hidden; background: transparent; }</style>
+<style scoped>
+:global(html),
+:global(body) {
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+</style>

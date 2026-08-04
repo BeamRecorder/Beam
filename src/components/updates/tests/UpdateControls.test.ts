@@ -19,11 +19,17 @@ vi.mock('~/api/capture', () => ({ capture: captureMock }))
 const Button = {
   props: ['disabled'],
   emits: ['click'],
-  template: '<button class="action-button" :disabled="disabled" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
+  template:
+    '<button class="action-button" :disabled="disabled" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
 }
 
 const state = (status: AppUpdateState['status'], overrides: Partial<AppUpdateState> = {}): AppUpdateState => ({
-  status, currentVersion: '1.0.0', availableVersion: '1.1.0', percent: 42, message: 'Update failed', ...overrides,
+  status,
+  currentVersion: '1.0.0',
+  availableVersion: '1.1.0',
+  percent: 42,
+  message: 'Update failed',
+  ...overrides,
 })
 
 beforeEach(() => {
@@ -83,9 +89,7 @@ describe('UpdateControls', () => {
   })
 
   it('describes all transient and failure states and disables unavailable actions', async () => {
-    for (const current of [
-      state('checking'), state('downloading'), state('error'), state('unsupported'),
-    ]) {
+    for (const current of [state('checking'), state('downloading'), state('error'), state('unsupported')]) {
       captureMock.getUpdateState.mockResolvedValueOnce(current)
       const wrapper = mount(UpdateControls, { global: { stubs: { Button } } })
       await flushPromises()

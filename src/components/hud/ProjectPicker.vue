@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import { useVirtualList } from "@vueuse/core";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useVirtualList } from '@vueuse/core'
 import {
   ArrowLeft,
   Check,
@@ -12,358 +12,330 @@ import {
   Pencil,
   ExternalLink,
   Trash2,
-} from "@lucide/vue";
-import Button from "~/ui/button/Button.vue";
-import ButtonGroup from "~/ui/button/ButtonGroup.vue";
-import Dialog from "~/ui/dialog/Dialog.vue";
-import Popover from "~/ui/popover/Popover.vue";
-import Input from "~/ui/input/Input.vue";
-import Skeleton from "~/ui/skeleton/Skeleton.vue";
-import ProgressBar from "../ui/progressbar/ProgressBar.vue";
-import { capture } from "../../api/capture";
-import type { CaptureProject } from "../../api/types/capture-api";
-import { useTranslate } from "~/i18n/useTranslate";
+} from '@lucide/vue'
+import Button from '~/ui/button/Button.vue'
+import ButtonGroup from '~/ui/button/ButtonGroup.vue'
+import Dialog from '~/ui/dialog/Dialog.vue'
+import Popover from '~/ui/popover/Popover.vue'
+import Input from '~/ui/input/Input.vue'
+import Skeleton from '~/ui/skeleton/Skeleton.vue'
+import ProgressBar from '../ui/progressbar/ProgressBar.vue'
+import { capture } from '../../api/capture'
+import type { CaptureProject } from '../../api/types/capture-api'
+import { useTranslate } from '~/i18n/useTranslate'
 
-const { t } = useTranslate("ProjectPicker");
+const { t } = useTranslate('ProjectPicker')
 
-let cachedProjects: CaptureProject[] | null = null;
+let cachedProjects: CaptureProject[] | null = null
 
 const emit = defineEmits<{
-  (event: "back"): void;
-  (event: "open-project", project: CaptureProject): void;
-  (event: "select-project", project: CaptureProject): void;
-  (event: "toggle-popover", isOpen: boolean): void;
-}>();
+  (event: 'back'): void
+  (event: 'open-project', project: CaptureProject): void
+  (event: 'select-project', project: CaptureProject): void
+  (event: 'toggle-popover', isOpen: boolean): void
+}>()
 
 const props = withDefaults(
   defineProps<{
-    compact?: boolean;
-    currentProjectId?: string | null;
+    compact?: boolean
+    currentProjectId?: string | null
   }>(),
   {
     compact: false,
     currentProjectId: null,
   },
-);
+)
 
-const projects = ref<CaptureProject[]>([]);
-const selectedProjectId = ref<string | null>(null);
-const isLoading = ref(true);
-const errorMessage = ref("");
+const projects = ref<CaptureProject[]>([])
+const selectedProjectId = ref<string | null>(null)
+const isLoading = ref(true)
+const errorMessage = ref('')
 
 const projectRows = computed(() => {
-  const rows: CaptureProject[][] = [];
+  const rows: CaptureProject[][] = []
   for (let index = 0; index < projects.value.length; index += 2) {
-    rows.push(projects.value.slice(index, index + 2));
+    rows.push(projects.value.slice(index, index + 2))
   }
-  return rows;
-});
+  return rows
+})
 
 const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
   itemHeight: () => (props.compact ? 128 : 144),
   overscan: 3,
-});
+})
 
-const selectedProject = computed(
-  () =>
-    projects.value.find((project) => project.id === selectedProjectId.value) ??
-    null,
-);
+const selectedProject = computed(() => projects.value.find((project) => project.id === selectedProjectId.value) ?? null)
 
-import { useProjectThumbnailGenerator } from "./useProjectThumbnailGenerator";
+import { useProjectThumbnailGenerator } from './useProjectThumbnailGenerator'
 
-const hoveredProjectId = ref<string | null>(null);
-const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator();
+const hoveredProjectId = ref<string | null>(null)
+const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator()
 
 const generateThumbnailsForProjects = async (projectList: CaptureProject[]) => {
   for (const project of projectList) {
-    if (
-      project.previewSrc &&
-      !project.thumbnailSrc &&
-      !thumbnailCache[project.id]
-    ) {
-      void generateThumbnail(project.id, project.previewSrc);
+    if (project.previewSrc && !project.thumbnailSrc && !thumbnailCache[project.id]) {
+      void generateThumbnail(project.id, project.previewSrc)
     }
   }
-};
+}
 
 const loadProjects = async () => {
   if (cachedProjects && cachedProjects.length > 0) {
-    projects.value = [...cachedProjects];
-    isLoading.value = false;
-    void generateThumbnailsForProjects(projects.value);
+    projects.value = [...cachedProjects]
+    isLoading.value = false
+    void generateThumbnailsForProjects(projects.value)
   } else {
-    isLoading.value = true;
+    isLoading.value = true
   }
-  errorMessage.value = "";
+  errorMessage.value = ''
   try {
-    const nextProjects = await capture.listProjects();
-    cachedProjects = nextProjects;
-    projects.value = [...nextProjects];
-    selectedProjectId.value = projects.value.some(
-      (project) => project.id === props.currentProjectId,
-    )
+    const nextProjects = await capture.listProjects()
+    cachedProjects = nextProjects
+    projects.value = [...nextProjects]
+    selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
       ? props.currentProjectId
-      : (projects.value[0]?.id ?? null);
-    void generateThumbnailsForProjects(projects.value);
+      : (projects.value[0]?.id ?? null)
+    void generateThumbnailsForProjects(projects.value)
   } catch (error) {
-    if (!cachedProjects) projects.value = [];
-    errorMessage.value = error instanceof Error ? error.message : String(error);
+    if (!cachedProjects) projects.value = []
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const selectProject = (project: CaptureProject) => {
-  selectedProjectId.value = project.id;
-  if (props.compact) emit("select-project", project);
-};
+  selectedProjectId.value = project.id
+  if (props.compact) emit('select-project', project)
+}
 
 const openSelectedProject = () => {
   if (selectedProject.value && selectedProject.value.id !== props.currentProjectId) {
-    emit("open-project", selectedProject.value);
+    emit('open-project', selectedProject.value)
   }
-};
+}
 
 const formatDate = (date: string) => {
-  const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) return t("dateUnknown");
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-    parsedDate,
-  );
-};
+  const parsedDate = new Date(date)
+  if (Number.isNaN(parsedDate.getTime())) return t('dateUnknown')
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsedDate)
+}
 
-const videoProgress = ref<Record<string, { current: number; total: number }>>(
-  {},
-);
-const isVideoLoaded = ref<Record<string, boolean>>({});
+const videoProgress = ref<Record<string, { current: number; total: number }>>({})
+const isVideoLoaded = ref<Record<string, boolean>>({})
 
 const handleVideoTimeUpdate = (projectId: string, event: Event) => {
-  const video = event.currentTarget as HTMLVideoElement | null;
+  const video = event.currentTarget as HTMLVideoElement | null
   if (video) {
     videoProgress.value[projectId] = {
       current: video.currentTime,
       total: video.duration || 1,
-    };
+    }
   }
-};
+}
 
 const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
-  const target = event.currentTarget as HTMLElement | null;
+  const target = event.currentTarget as HTMLElement | null
   void nextTick(() => {
-    const video = (
-      target?.tagName === "VIDEO" ? target : target?.querySelector("video")
-    ) as HTMLVideoElement | null;
-    if (video && typeof video.play === "function") {
+    const video = (target?.tagName === 'VIDEO' ? target : target?.querySelector('video')) as HTMLVideoElement | null
+    if (video && typeof video.play === 'function') {
       if (video.readyState === 0) {
-        video.load();
+        video.load()
       }
-      video.play().catch((err) => console.debug("Play interrupted:", err));
+      video.play().catch((err) => console.debug('Play interrupted:', err))
     }
-  });
-};
+  })
+}
 
 const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
-  isVideoLoaded.value[projectId] = false;
-  const target = event.currentTarget as HTMLElement | null;
-  const video = (
-    target?.tagName === "VIDEO" ? target : target?.querySelector("video")
-  ) as HTMLVideoElement | null;
-  if (video && typeof video.pause === "function") {
-    video.pause();
-    video.currentTime = Math.min(0.1, video.duration || 0);
-    videoProgress.value[projectId] = { current: 0, total: 1 };
+  isVideoLoaded.value[projectId] = false
+  const target = event.currentTarget as HTMLElement | null
+  const video = (target?.tagName === 'VIDEO' ? target : target?.querySelector('video')) as HTMLVideoElement | null
+  if (video && typeof video.pause === 'function') {
+    video.pause()
+    video.currentTime = Math.min(0.1, video.duration || 0)
+    videoProgress.value[projectId] = { current: 0, total: 1 }
   }
-};
+}
 
 onMounted(() => {
-  void loadProjects();
-});
+  void loadProjects()
+})
 
 onUnmounted(() => {
   // Stop all video elements to prevent holding media resources/decoders when closing
-  const container = document.querySelector(".projects-viewport");
+  const container = document.querySelector('.projects-viewport')
   if (container) {
-    const videos = container.querySelectorAll("video");
+    const videos = container.querySelectorAll('video')
     videos.forEach((v) => {
-      v.pause();
-      v.src = "";
-      v.load();
-    });
+      v.pause()
+      v.src = ''
+      v.load()
+    })
   }
-});
+})
 
 watch(
   () => props.currentProjectId,
   (projectId) => {
-    if (
-      projectId &&
-      projects.value.some((project) => project.id === projectId)
-    ) {
-      selectedProjectId.value = projectId;
+    if (projectId && projects.value.some((project) => project.id === projectId)) {
+      selectedProjectId.value = projectId
     }
   },
-);
+)
 
 // New project states
-const isNewProjectOpen = ref(false);
-const newProjectName = ref("");
-const newProjectError = ref("");
-const newProjectBusy = ref(false);
+const isNewProjectOpen = ref(false)
+const newProjectName = ref('')
+const newProjectError = ref('')
+const newProjectBusy = ref(false)
 
 // Rename project states
-const renameProjectId = ref("");
-const renameValue = ref("");
-const renameError = ref("");
-const renameBusy = ref(false);
+const renameProjectId = ref('')
+const renameValue = ref('')
+const renameError = ref('')
+const renameBusy = ref(false)
 
 // Delete project states
-const deleteProjectId = ref("");
-const deleteProjectName = ref("");
-const deleteError = ref("");
-const deleteBusy = ref(false);
-const deleteConfirmProjectId = ref<string | null>(null);
+const deleteProjectId = ref('')
+const deleteProjectName = ref('')
+const deleteError = ref('')
+const deleteBusy = ref(false)
+const deleteConfirmProjectId = ref<string | null>(null)
 
 const handleActionPopoverToggle = (isOpen: boolean) => {
   if (!isOpen) {
-    deleteConfirmProjectId.value = null;
-    deleteError.value = "";
+    deleteConfirmProjectId.value = null
+    deleteError.value = ''
   }
-  emit("toggle-popover", isOpen);
-};
+  emit('toggle-popover', isOpen)
+}
 
 const openNewProjectDialog = () => {
-  newProjectName.value = "";
-  newProjectError.value = "";
-  isNewProjectOpen.value = true;
-};
+  newProjectName.value = ''
+  newProjectError.value = ''
+  isNewProjectOpen.value = true
+}
 
 const handleCreateProject = async () => {
-  newProjectBusy.value = true;
-  newProjectError.value = "";
+  newProjectBusy.value = true
+  newProjectError.value = ''
   try {
     const created = await capture.createProject({
       name: newProjectName.value.trim() || undefined,
-    });
-    cachedProjects = null;
-    await loadProjects();
-    isNewProjectOpen.value = false;
-    emit("open-project", created);
+    })
+    cachedProjects = null
+    await loadProjects()
+    isNewProjectOpen.value = false
+    emit('open-project', created)
   } catch (error) {
-    newProjectError.value =
-      error instanceof Error ? error.message : String(error);
+    newProjectError.value = error instanceof Error ? error.message : String(error)
   } finally {
-    newProjectBusy.value = false;
+    newProjectBusy.value = false
   }
-};
+}
 
-let renameOpenedAt = 0;
+let renameOpenedAt = 0
 
 const startRename = (project: CaptureProject) => {
-  renameOpenedAt = Date.now();
-  renameProjectId.value = project.id;
-  renameValue.value = project.name;
-  renameError.value = "";
+  renameOpenedAt = Date.now()
+  renameProjectId.value = project.id
+  renameValue.value = project.name
+  renameError.value = ''
   void nextTick(() => {
-    const cardEl = document.querySelector<HTMLElement>(`.project-card-container[data-project-id="${project.id}"]`);
-    const inputEl = cardEl?.querySelector<HTMLInputElement>("input");
+    const cardEl = document.querySelector<HTMLElement>(`.project-card-container[data-project-id="${project.id}"]`)
+    const inputEl = cardEl?.querySelector<HTMLInputElement>('input')
     if (inputEl) {
-      inputEl.focus();
-      inputEl.select();
+      inputEl.focus()
+      inputEl.select()
     }
-  });
-};
+  })
+}
 
 const cancelRename = () => {
-  renameProjectId.value = "";
-  renameValue.value = "";
-};
+  renameProjectId.value = ''
+  renameValue.value = ''
+}
 
 const handleRenameProject = async () => {
   if (Date.now() - renameOpenedAt < 250) {
-    return;
+    return
   }
-  const trimmed = renameValue.value.trim();
-  const originalProject = projects.value.find(
-    (p) => p.id === renameProjectId.value,
-  );
+  const trimmed = renameValue.value.trim()
+  const originalProject = projects.value.find((p) => p.id === renameProjectId.value)
   if (!trimmed || (originalProject && originalProject.name === trimmed)) {
-    cancelRename();
-    return;
+    cancelRename()
+    return
   }
-  renameBusy.value = true;
-  renameError.value = "";
+  renameBusy.value = true
+  renameError.value = ''
   try {
-    await capture.renameProject(renameProjectId.value, trimmed);
-    cachedProjects = null;
-    await loadProjects();
-    cancelRename();
+    await capture.renameProject(renameProjectId.value, trimmed)
+    cachedProjects = null
+    await loadProjects()
+    cancelRename()
   } catch (error) {
-    renameError.value = error instanceof Error ? error.message : String(error);
-    console.error("Rename failed:", renameError.value);
-    cancelRename();
+    renameError.value = error instanceof Error ? error.message : String(error)
+    console.error('Rename failed:', renameError.value)
+    cancelRename()
   } finally {
-    renameBusy.value = false;
+    renameBusy.value = false
   }
-};
+}
 
 const confirmDeleteProject = (project: CaptureProject) => {
-  deleteProjectId.value = project.id;
-  deleteProjectName.value = project.name;
-  deleteError.value = "";
-  deleteConfirmProjectId.value = project.id;
-};
+  deleteProjectId.value = project.id
+  deleteProjectName.value = project.name
+  deleteError.value = ''
+  deleteConfirmProjectId.value = project.id
+}
 
 const handleDeleteProject = async () => {
-  deleteBusy.value = true;
-  deleteError.value = "";
+  deleteBusy.value = true
+  deleteError.value = ''
   try {
-    await capture.deleteProject(deleteProjectId.value);
-    cachedProjects = null;
-    await loadProjects();
-    deleteConfirmProjectId.value = null;
+    await capture.deleteProject(deleteProjectId.value)
+    cachedProjects = null
+    await loadProjects()
+    deleteConfirmProjectId.value = null
 
     // If the currently selected project was deleted, pick the first remaining one
     if (selectedProjectId.value === deleteProjectId.value) {
-      const remaining = projects.value;
-      const nextProject = remaining[0] ?? null;
+      const remaining = projects.value
+      const nextProject = remaining[0] ?? null
       if (nextProject) {
-        selectedProjectId.value = nextProject.id;
-        emit("select-project", nextProject);
+        selectedProjectId.value = nextProject.id
+        emit('select-project', nextProject)
       } else {
-        selectedProjectId.value = null;
+        selectedProjectId.value = null
       }
     }
   } catch (error) {
-    deleteError.value = error instanceof Error ? error.message : String(error);
+    deleteError.value = error instanceof Error ? error.message : String(error)
   } finally {
-    deleteBusy.value = false;
+    deleteBusy.value = false
   }
-};
+}
 
 const revealProjectFolder = (project: CaptureProject) => {
-  void capture.revealProject(project.id);
-};
+  void capture.revealProject(project.id)
+}
 
 defineExpose({
   refresh: loadProjects,
   invalidate: () => {
-    cachedProjects = null;
+    cachedProjects = null
   },
-});
+})
 </script>
 
 <template>
-  <section
-    class="project-picker"
-    :class="{ compact }"
-    aria-labelledby="project-picker-title"
-  >
+  <section class="project-picker" :class="{ compact }" aria-labelledby="project-picker-title">
     <div class="project-picker-heading">
       <div>
-        <h1 id="project-picker-title">{{ t("projects") }}</h1>
+        <h1 id="project-picker-title">{{ t('projects') }}</h1>
         <p>
-          {{ compact ? t("switchProject") : t("chooseRecording") }}
+          {{ compact ? t('switchProject') : t('chooseRecording') }}
         </p>
       </div>
       <div class="heading-actions">
@@ -391,11 +363,7 @@ defineExpose({
       </div>
     </div>
 
-    <div
-      v-if="isLoading"
-      class="project-grid project-skeleton-grid"
-      :aria-label="t('loadingProjects')"
-    >
+    <div v-if="isLoading" class="project-grid project-skeleton-grid" :aria-label="t('loadingProjects')">
       <div v-for="index in 6" :key="index" class="project-card-skeleton">
         <Skeleton
           class="project-skeleton-preview"
@@ -404,46 +372,26 @@ defineExpose({
           radius="var(--radius-md) var(--radius-md) 0 0"
         />
         <div class="project-card-skeleton-content">
-          <Skeleton
-            class="project-skeleton-line title"
-            variant="linear"
-            width="72%"
-            height="10px"
-          />
-          <Skeleton
-            class="project-skeleton-line meta"
-            variant="linear"
-            width="46%"
-            height="8px"
-          />
+          <Skeleton class="project-skeleton-line title" variant="linear" width="72%" height="10px" />
+          <Skeleton class="project-skeleton-line meta" variant="linear" width="46%" height="8px" />
         </div>
       </div>
     </div>
 
-    <div
-      v-else-if="errorMessage"
-      class="project-state project-error"
-      role="alert"
-    >
+    <div v-else-if="errorMessage" class="project-state project-error" role="alert">
       <p>{{ errorMessage }}</p>
-      <Button variant="link" size="sm" @click="loadProjects">{{
-        t("tryAgain")
-      }}</Button>
+      <Button variant="link" size="sm" @click="loadProjects">{{ t('tryAgain') }}</Button>
     </div>
 
     <div v-else-if="projects.length === 0" class="project-state">
       <Film class="empty-icon" />
-      <p>{{ t("noProjects") }}</p>
-      <span>{{ t("recordDemoFirst") }}</span>
+      <p>{{ t('noProjects') }}</p>
+      <span>{{ t('recordDemoFirst') }}</span>
     </div>
 
     <div v-else v-bind="containerProps" class="projects-viewport">
       <div v-bind="wrapperProps" class="projects-list">
-        <div
-          v-for="row in list"
-          :key="row.index"
-          class="project-grid project-row"
-        >
+        <div v-for="row in list" :key="row.index" class="project-grid project-row">
           <div
             v-for="project in row.data"
             :key="project.id"
@@ -457,43 +405,35 @@ defineExpose({
               role="button"
               tabindex="0"
               @mouseenter="
-                hoveredProjectId = project.id;
+                hoveredProjectId = project.id
                 if (project.previewSrc) {
-                  videoProgress[project.id] = { current: 0, total: 1 };
+                  videoProgress[project.id] = { current: 0, total: 1 }
                 }
-                handleMouseEnterVideo(project.id, $event);
+                handleMouseEnterVideo(project.id, $event)
               "
               @mouseleave="
-                hoveredProjectId = null;
-                handleMouseLeaveVideo(project.id, $event);
+                hoveredProjectId = null
+                handleMouseLeaveVideo(project.id, $event)
               "
               @click="selectProject(project)"
               @dblclick="
-                selectProject(project);
-                openSelectedProject();
+                selectProject(project)
+                openSelectedProject()
               "
               @keydown.enter.self="
-                selectProject(project);
-                openSelectedProject();
+                selectProject(project)
+                openSelectedProject()
               "
               @keydown.space.self="selectProject(project)"
             >
-              <div
-                class="project-preview project-card-media"
-              >
+              <div class="project-preview project-card-media">
                 <img
                   v-if="thumbnailCache[project.id] || project.thumbnailSrc"
                   :src="thumbnailCache[project.id] || project.thumbnailSrc!"
                   class="project-preview-thumb"
                   :alt="t('preview')"
                 />
-                <Skeleton
-                  v-else
-                  class="project-preview-skeleton"
-                  variant="linear"
-                  height="100%"
-                  width="100%"
-                />
+                <Skeleton v-else class="project-preview-skeleton" variant="linear" height="100%" width="100%" />
                 <video
                   v-if="project.previewSrc && hoveredProjectId === project.id"
                   :src="project.previewSrc"
@@ -508,12 +448,8 @@ defineExpose({
                   @playing="isVideoLoaded[project.id] = true"
                   @timeupdate="handleVideoTimeUpdate(project.id, $event)"
                 />
-                <span
-                  v-if="project.id === currentProjectId"
-                  class="current-indicator"
-                  :aria-label="t('current')"
-                >
-                  {{ t("current") }}
+                <span v-if="project.id === currentProjectId" class="current-indicator" :aria-label="t('current')">
+                  {{ t('current') }}
                 </span>
                 <span
                   v-else-if="project.id === selectedProjectId"
@@ -522,14 +458,8 @@ defineExpose({
                 >
                   <Check />
                 </span>
-                <div
-                  v-if="project.previewSrc && videoProgress[project.id]"
-                  class="preview-progress-overlay"
-                >
-                  <ProgressBar
-                    :value="videoProgress[project.id].current"
-                    :max="videoProgress[project.id].total"
-                  />
+                <div v-if="project.previewSrc && videoProgress[project.id]" class="preview-progress-overlay">
+                  <ProgressBar :value="videoProgress[project.id].current" :max="videoProgress[project.id].total" />
                 </div>
               </div>
               <div class="project-card-info">
@@ -548,18 +478,8 @@ defineExpose({
                     @keydown.esc.stop="cancelRename"
                     @blur="handleRenameProject"
                   />
-                  <span
-                    v-else
-                    class="project-card-name"
-                    :title="project.name"
-                    >{{ project.name }}</span
-                  >
-                  <div
-                    v-if="renameProjectId !== project.id"
-                    class="project-card-actions"
-                    @click.stop
-                    @mousedown.stop
-                  >
+                  <span v-else class="project-card-name" :title="project.name">{{ project.name }}</span>
+                  <div v-if="renameProjectId !== project.id" class="project-card-actions" @click.stop @mousedown.stop>
                     <Popover
                       align="right"
                       direction="down"
@@ -578,16 +498,11 @@ defineExpose({
                       </template>
                       <template #default="{ close }">
                         <div class="action-menu-content">
-                          <template
-                            v-if="deleteConfirmProjectId === project.id"
-                          >
+                          <template v-if="deleteConfirmProjectId === project.id">
                             <p class="delete-confirm-text">
-                              {{ t("deleteConfirm", { name: project.name }) }}
+                              {{ t('deleteConfirm', { name: project.name }) }}
                             </p>
-                            <p
-                              v-if="deleteError"
-                              class="delete-confirm-error"
-                            >
+                            <p v-if="deleteError" class="delete-confirm-error">
                               {{ deleteError }}
                             </p>
                             <div class="delete-confirm-actions">
@@ -596,17 +511,17 @@ defineExpose({
                                 size="sm"
                                 :disabled="deleteBusy"
                                 @click.stop="
-                                  deleteConfirmProjectId = null;
-                                  deleteError = '';
+                                  deleteConfirmProjectId = null
+                                  deleteError = ''
                                 "
-                                >{{ t("cancel") }}</Button
+                                >{{ t('cancel') }}</Button
                               >
                               <Button
                                 variant="danger"
                                 size="sm"
                                 :loading="deleteBusy"
                                 @click.stop="handleDeleteProject().then(() => close())"
-                                >{{ t("delete") }}</Button
+                                >{{ t('delete') }}</Button
                               >
                             </div>
                           </template>
@@ -616,18 +531,24 @@ defineExpose({
                               size="sm"
                               :icon="Pencil"
                               class="menu-action-item"
-                              @click.stop="startRename(project); close()"
+                              @click.stop="
+                                startRename(project)
+                                close()
+                              "
                             >
-                              {{ t("rename") }}
+                              {{ t('rename') }}
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               :icon="ExternalLink"
                               class="menu-action-item"
-                              @click.stop="revealProjectFolder(project); close()"
+                              @click.stop="
+                                revealProjectFolder(project)
+                                close()
+                              "
                             >
-                              {{ t("explore") }}
+                              {{ t('explore') }}
                             </Button>
                             <Button
                               variant="ghost"
@@ -636,7 +557,7 @@ defineExpose({
                               class="menu-action-item delete-item"
                               @click.stop="confirmDeleteProject(project)"
                             >
-                              {{ t("delete") }}
+                              {{ t('delete') }}
                             </Button>
                           </template>
                         </div>
@@ -646,9 +567,7 @@ defineExpose({
                 </div>
                 <span class="project-card-meta">
                   {{ project.sessionCount }}
-                  {{
-                    project.sessionCount === 1 ? t("session") : t("sessions")
-                  }}
+                  {{ project.sessionCount === 1 ? t('session') : t('sessions') }}
                   ·
                   {{ formatDate(project.updatedAt) }}
                 </span>
@@ -661,14 +580,8 @@ defineExpose({
 
     <footer v-if="!compact" class="project-picker-footer">
       <ButtonGroup class="project-footer-actions">
-        <Button
-          variant="ghost"
-          size="sm"
-          class="back-project-button"
-          :icon="ArrowLeft"
-          @click="emit('back')"
-        >
-          {{ t("back") }}
+        <Button variant="ghost" size="sm" class="back-project-button" :icon="ArrowLeft" @click="emit('back')">
+          {{ t('back') }}
         </Button>
         <Button
           variant="primary"
@@ -677,21 +590,14 @@ defineExpose({
           :disabled="!selectedProject || selectedProject.id === currentProjectId"
           @click="openSelectedProject"
         >
-          {{ t("openProject") }}
+          {{ t('openProject') }}
         </Button>
       </ButtonGroup>
     </footer>
 
     <!-- New Project Dialog -->
-    <Dialog
-      :is-open="isNewProjectOpen"
-      :title="t('newProject')"
-      size="sm"
-      @close="isNewProjectOpen = false"
-    >
-      <div
-        style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0"
-      >
+    <Dialog :is-open="isNewProjectOpen" :title="t('newProject')" size="sm" @close="isNewProjectOpen = false">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 4px 0">
         <Input
           v-model="newProjectName"
           :placeholder="t('projectName')"
@@ -699,29 +605,16 @@ defineExpose({
           autofocus
           @keyup.enter="handleCreateProject"
         />
-        <p
-          v-if="newProjectError"
-          style="color: var(--color-error); font-size: 11px; margin: 0"
-        >
+        <p v-if="newProjectError" style="color: var(--color-error); font-size: 11px; margin: 0">
           {{ newProjectError }}
         </p>
       </div>
       <template #footer="{ close }">
         <ButtonGroup>
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="newProjectBusy"
-            @click="close"
-            >{{ t("cancel") }}</Button
-          >
-          <Button
-            variant="primary"
-            size="sm"
-            :loading="newProjectBusy"
-            @click="handleCreateProject"
-            >{{ t("create") }}</Button
-          >
+          <Button variant="ghost" size="sm" :disabled="newProjectBusy" @click="close">{{ t('cancel') }}</Button>
+          <Button variant="primary" size="sm" :loading="newProjectBusy" @click="handleCreateProject">{{
+            t('create')
+          }}</Button>
         </ButtonGroup>
       </template>
     </Dialog>

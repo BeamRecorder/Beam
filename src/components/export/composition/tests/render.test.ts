@@ -1,48 +1,45 @@
-import { describe, expect, it, vi } from "vitest";
-import { drawCompositionLayers, renderCompositionFrame } from "../render";
-import type { CompositionSnapshot } from "../../export-types";
-import { DEFAULT_OUTPUT_CANVAS } from "../../../video-editor/canvas/output-canvas";
-import type {
-  ClipComposition,
-  ClipAppearance,
-} from "../../../video-editor/composition/composition-types";
+import { describe, expect, it, vi } from 'vitest'
+import { drawCompositionLayers, renderCompositionFrame } from '../render'
+import type { CompositionSnapshot } from '../../export-types'
+import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas'
+import type { ClipComposition, ClipAppearance } from '../../../video-editor/composition/composition-types'
 
 const screenAppearance: ClipAppearance = {
-  cornerRadius: "none",
-  shadowSize: "none",
-  shadowColor: "#000000",
-  shadowDirection: "all",
+  cornerRadius: 'none',
+  shadowSize: 'none',
+  shadowColor: '#000000',
+  shadowDirection: 'all',
   borderEnabled: false,
-  borderColor: "#000000",
+  borderColor: '#000000',
   borderWidth: 1,
-  frame: "none",
-  frameTitle: "",
-  frameColor: "#c0c0c0",
+  frame: 'none',
+  frameTitle: '',
+  frameColor: '#c0c0c0',
   frameShowMenu: true,
   frameShowScrollbars: true,
   frameChromeScale: 1,
-};
+}
 const composition = (): ClipComposition => ({
   schemaVersion: 1,
   assets: [
     {
-      id: "screen-asset",
-      kind: "video",
-      name: "Screen",
+      id: 'screen-asset',
+      kind: 'video',
+      name: 'Screen',
       fileName: null,
       durationMs: 1_000,
       width: 100,
       height: 50,
-      src: "file:///screen.mp4",
-      origin: "session",
+      src: 'file:///screen.mp4',
+      origin: 'session',
     },
   ],
   clips: [
     {
-      id: "screen",
-      kind: "screen",
-      name: "Screen",
-      assetId: "screen-asset",
+      id: 'screen',
+      kind: 'screen',
+      name: 'Screen',
+      assetId: 'screen-asset',
       timelineStartMs: 0,
       timelineDurationMs: 1_000,
       sourceInMs: 0,
@@ -54,7 +51,7 @@ const composition = (): ClipComposition => ({
       appearance: screenAppearance,
     },
   ],
-});
+})
 const snapshot = (): CompositionSnapshot => ({
   duration: 1,
   render: { sourceWidth: 100, sourceHeight: 50, fps: 30 },
@@ -71,45 +68,45 @@ const snapshot = (): CompositionSnapshot => ({
     events: [],
   },
   cursorSettings: {
-    selectedCursor: "automatic",
+    selectedCursor: 'automatic',
     size: 24,
-    color: "#000",
-    shadow: { enabled: false, blur: 0, color: "#000", direction: "bottom" },
+    color: '#000',
+    shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
     clickEffects: {
       left: {
         springEnabled: true,
         springIntensity: 50,
         rippleEnabled: false,
         rippleSize: 30,
-        rippleColor: "#f00",
+        rippleColor: '#f00',
       },
       right: {
         springEnabled: true,
         springIntensity: 50,
         rippleEnabled: false,
         rippleSize: 30,
-        rippleColor: "#00f",
+        rippleColor: '#00f',
       },
     },
     motion: {
-      preset: "smooth" as const,
+      preset: 'smooth' as const,
       smoothing: 0.67,
       springMassMultiplier: 1.29,
       motionBlur: 0.4,
     },
   },
   composition: composition(),
-});
+})
 const context = () =>
   ({
-    fillStyle: "",
-    strokeStyle: "",
-    filter: "",
-    font: "",
-    textAlign: "",
-    textBaseline: "",
-    lineJoin: "",
-    shadowColor: "",
+    fillStyle: '',
+    strokeStyle: '',
+    filter: '',
+    font: '',
+    textAlign: '',
+    textBaseline: '',
+    lineJoin: '',
+    shadowColor: '',
     shadowBlur: 0,
     shadowOffsetX: 0,
     shadowOffsetY: 0,
@@ -135,21 +132,21 @@ const context = () =>
     closePath: vi.fn(),
     createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
     createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-  }) as unknown as CanvasRenderingContext2D;
+  }) as unknown as CanvasRenderingContext2D
 
-describe("canonical composition rendering", () => {
-  it("paints the fallback canvas when the screen clip has no available frame", () => {
-    const ctx = context();
-    renderCompositionFrame(ctx, null, snapshot(), 0);
-    expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 100, 50);
-  });
+describe('canonical composition rendering', () => {
+  it('paints the fallback canvas when the screen clip has no available frame', () => {
+    const ctx = context()
+    renderCompositionFrame(ctx, null, snapshot(), 0)
+    expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 100, 50)
+  })
 
-  it("uses crop and transform stored on the screen clip", () => {
-    const value = snapshot();
-    const screen = value.composition.clips[0];
-    if (screen.kind !== "screen") throw new Error("screen fixture missing");
-    screen.crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
-    const ctx = context();
+  it('uses crop and transform stored on the screen clip', () => {
+    const value = snapshot()
+    const screen = value.composition.clips[0]
+    if (screen.kind !== 'screen') throw new Error('screen fixture missing')
+    screen.crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 }
+    const ctx = context()
     renderCompositionFrame(
       ctx,
       {
@@ -159,38 +156,28 @@ describe("canonical composition rendering", () => {
       } as HTMLVideoElement,
       value,
       0,
-    );
-    expect(ctx.drawImage).toHaveBeenCalledWith(
-      expect.anything(),
-      15,
-      10,
-      40,
-      20,
-      0,
-      0,
-      100,
-      50,
-    );
-  });
+    )
+    expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 15, 10, 40, 20, 0, 0, 100, 50)
+  })
 
-  it("draws an active imported visual from its canonical clip", () => {
-    const value = snapshot();
+  it('draws an active imported visual from its canonical clip', () => {
+    const value = snapshot()
     value.composition.assets.push({
-      id: "image",
-      kind: "image",
-      name: "Logo",
-      fileName: "logo.png",
+      id: 'image',
+      kind: 'image',
+      name: 'Logo',
+      fileName: 'logo.png',
       durationMs: 1_000,
       width: 10,
       height: 10,
-      src: "file:///logo.png",
-      origin: "project",
-    });
+      src: 'file:///logo.png',
+      origin: 'project',
+    })
     value.composition.clips.push({
-      id: "logo",
-      kind: "image",
-      name: "Logo",
-      assetId: "image",
+      id: 'logo',
+      kind: 'image',
+      name: 'Logo',
+      assetId: 'image',
       timelineStartMs: 0,
       timelineDurationMs: 1_000,
       sourceInMs: 0,
@@ -200,32 +187,32 @@ describe("canonical composition rendering", () => {
       order: 1,
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
       appearance: screenAppearance,
-    });
-    const image = {} as CanvasImageSource;
-    const ctx = context();
-    drawCompositionLayers(ctx, value, 0.2, new Map([["image", image]]));
-    expect(ctx.drawImage).toHaveBeenCalledWith(image, 10, 10, 30, 20);
-  });
+    })
+    const image = {} as CanvasImageSource
+    const ctx = context()
+    drawCompositionLayers(ctx, value, 0.2, new Map([['image', image]]))
+    expect(ctx.drawImage).toHaveBeenCalledWith(image, 10, 10, 30, 20)
+  })
 
-  it("exports webcam placement, crop, mirror and complete appearance settings", () => {
-    const value = snapshot();
-    value.canvas = { ...value.canvas, width: 1000, height: 500 };
+  it('exports webcam placement, crop, mirror and complete appearance settings', () => {
+    const value = snapshot()
+    value.canvas = { ...value.canvas, width: 1000, height: 500 }
     const camera = {
-      id: "camera",
-      kind: "video" as const,
-      name: "Webcam",
+      id: 'camera',
+      kind: 'video' as const,
+      name: 'Webcam',
       fileName: null,
       durationMs: 1_000,
       width: 100,
       height: 50,
-      src: "file:///camera.mp4",
-      origin: "session" as const,
-    };
-    value.composition.assets.push(camera);
+      src: 'file:///camera.mp4',
+      origin: 'session' as const,
+    }
+    value.composition.assets.push(camera)
     value.composition.clips.push({
-      id: "webcam",
-      kind: "webcam",
-      name: "Webcam",
+      id: 'webcam',
+      kind: 'webcam',
+      name: 'Webcam',
       assetId: camera.id,
       timelineStartMs: 0,
       timelineDurationMs: 1_000,
@@ -239,25 +226,25 @@ describe("canonical composition rendering", () => {
       isMirrored: true,
       appearance: {
         cornerRadius: 42,
-        shadowSize: "none",
-        shadowColor: "#123456",
-        shadowDirection: "top-left",
+        shadowSize: 'none',
+        shadowColor: '#123456',
+        shadowDirection: 'top-left',
         borderEnabled: true,
-        borderColor: "#abcdef",
+        borderColor: '#abcdef',
         borderWidth: 4,
-        frame: "none",
-        frameTitle: "",
-        frameColor: "#c0c0c0",
+        frame: 'none',
+        frameTitle: '',
+        frameColor: '#c0c0c0',
         frameShowMenu: true,
         frameShowScrollbars: true,
         frameChromeScale: 1,
       },
-    });
+    })
     const source = {
       displayWidth: 100,
       displayHeight: 50,
-    } as unknown as CanvasImageSource;
-    const ctx = context();
+    } as unknown as CanvasImageSource
+    const ctx = context()
     renderCompositionFrame(
       ctx,
       {
@@ -269,8 +256,8 @@ describe("canonical composition rendering", () => {
       0,
       null,
       undefined,
-      new Map([["camera", source]]),
-    );
+      new Map([['camera', source]]),
+    )
     expect(ctx.drawImage).toHaveBeenCalledWith(
       source,
       10,
@@ -281,37 +268,31 @@ describe("canonical composition rendering", () => {
       expect.closeTo(100, 0.001),
       300,
       200,
-    );
-    expect(ctx.scale).toHaveBeenCalledWith(-1, 1);
-    expect(ctx.roundRect).toHaveBeenCalledWith(
-      100,
-      expect.closeTo(100, 0.001),
-      300,
-      200,
-      42,
-    );
-    expect(ctx.stroke).toHaveBeenCalled();
-  });
+    )
+    expect(ctx.scale).toHaveBeenCalledWith(-1, 1)
+    expect(ctx.roundRect).toHaveBeenCalledWith(100, expect.closeTo(100, 0.001), 300, 200, 42)
+    expect(ctx.stroke).toHaveBeenCalled()
+  })
 
-  it("keeps webcam layers when the screen frame is temporarily unavailable", () => {
-    const value = snapshot();
-    value.canvas = { ...value.canvas, width: 1000, height: 500 };
+  it('keeps webcam layers when the screen frame is temporarily unavailable', () => {
+    const value = snapshot()
+    value.canvas = { ...value.canvas, width: 1000, height: 500 }
     const camera = {
-      id: "camera",
-      kind: "video" as const,
-      name: "Webcam",
+      id: 'camera',
+      kind: 'video' as const,
+      name: 'Webcam',
       fileName: null,
       durationMs: 1_000,
       width: 100,
       height: 50,
-      src: "file:///camera.mp4",
-      origin: "session" as const,
-    };
-    value.composition.assets.push(camera);
+      src: 'file:///camera.mp4',
+      origin: 'session' as const,
+    }
+    value.composition.assets.push(camera)
     value.composition.clips.push({
-      id: "webcam",
-      kind: "webcam",
-      name: "Webcam",
+      id: 'webcam',
+      kind: 'webcam',
+      name: 'Webcam',
       assetId: camera.id,
       timelineStartMs: 0,
       timelineDurationMs: 1_000,
@@ -321,33 +302,19 @@ describe("canonical composition rendering", () => {
       enabled: true,
       order: 1,
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
-    });
-    const source = {} as CanvasImageSource;
-    const ctx = context();
-    renderCompositionFrame(
-      ctx,
-      null,
-      value,
-      0,
-      null,
-      undefined,
-      new Map([["camera", source]]),
-    );
-    expect(ctx.drawImage).toHaveBeenCalledWith(
-      source,
-      100,
-      expect.closeTo(100, 0.001),
-      300,
-      200,
-    );
-  });
+    })
+    const source = {} as CanvasImageSource
+    const ctx = context()
+    renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['camera', source]]))
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 100, expect.closeTo(100, 0.001), 300, 200)
+  })
 
-  it("draws only the caption sentence active at the current time", () => {
-    const value = snapshot();
+  it('draws only the caption sentence active at the current time', () => {
+    const value = snapshot()
     value.composition.clips.push({
-      id: "caption",
-      kind: "caption",
-      name: "Caption",
+      id: 'caption',
+      kind: 'caption',
+      name: 'Caption',
       timelineStartMs: 0,
       timelineDurationMs: 1_000,
       sourceInMs: 0,
@@ -356,30 +323,23 @@ describe("canonical composition rendering", () => {
       enabled: true,
       order: 1,
       caption: {
-        sentences: [
-          { id: "s", text: "Visible", startMs: 100, endMs: 300, words: [] },
-        ],
+        sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }],
         style: {
-          color: "#fff",
+          color: '#fff',
           fontSize: 20,
-          shadowColor: "#000",
+          shadowColor: '#000',
           shadowBlur: 0,
-          placement: "bottom",
+          placement: 'bottom',
         },
       },
-    });
-    const ctx = context();
-    drawCompositionLayers(ctx, value, 0.2);
-    expect(ctx.fillText).toHaveBeenCalledWith(
-      "Visible",
-      expect.any(Number),
-      expect.any(Number),
-      expect.any(Number),
-    );
-  });
+    })
+    const ctx = context()
+    drawCompositionLayers(ctx, value, 0.2)
+    expect(ctx.fillText).toHaveBeenCalledWith('Visible', expect.any(Number), expect.any(Number), expect.any(Number))
+  })
 
-  it("exports a right click with its own ripple and rebound settings", () => {
-    const value = snapshot();
+  it('exports a right click with its own ripple and rebound settings', () => {
+    const value = snapshot()
     value.cursor = {
       available: true,
       telemetry: [],
@@ -388,7 +348,7 @@ describe("canonical composition rendering", () => {
       catalog: {},
       events: [
         {
-          event: "move",
+          event: 'move',
           sessionNs: 0,
           pixelX: 25,
           pixelY: 25,
@@ -397,7 +357,7 @@ describe("canonical composition rendering", () => {
           visible: true,
         },
         {
-          event: "button",
+          event: 'button',
           sessionNs: 100_000_000,
           button: 2,
           pressed: true,
@@ -405,25 +365,25 @@ describe("canonical composition rendering", () => {
           normalizedY: 0.5,
         },
       ],
-    };
+    }
     value.cursorSettings.clickEffects = {
       left: {
         springEnabled: false,
         springIntensity: 50,
         rippleEnabled: false,
         rippleSize: 30,
-        rippleColor: "#f00",
+        rippleColor: '#f00',
       },
       right: {
         springEnabled: true,
         springIntensity: 100,
         rippleEnabled: true,
         rippleSize: 60,
-        rippleColor: "#00f",
+        rippleColor: '#00f',
       },
-    };
-    const ctx = context();
-    const image = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    }
+    const ctx = context()
+    const image = { complete: true, naturalWidth: 24 } as HTMLImageElement
     renderCompositionFrame(
       ctx,
       {
@@ -434,25 +394,16 @@ describe("canonical composition rendering", () => {
       value,
       0.15,
       null,
-      new Map([["default", image]]),
-    );
-    expect(ctx.strokeStyle).toBe("#00f");
-    expect(ctx.arc).toHaveBeenCalledWith(
-      expect.any(Number),
-      expect.any(Number),
-      expect.closeTo(8, 5),
-      0,
-      Math.PI * 2,
-    );
-    expect(ctx.scale).toHaveBeenCalledWith(
-      expect.closeTo(0.707, 3),
-      expect.closeTo(0.707, 3),
-    );
-    expect(ctx.drawImage).toHaveBeenCalled();
-  });
+      new Map([['default', image]]),
+    )
+    expect(ctx.strokeStyle).toBe('#00f')
+    expect(ctx.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), expect.closeTo(8, 5), 0, Math.PI * 2)
+    expect(ctx.scale).toHaveBeenCalledWith(expect.closeTo(0.707, 3), expect.closeTo(0.707, 3))
+    expect(ctx.drawImage).toHaveBeenCalled()
+  })
 
-  it("uses the configured cursor size as output pixels", () => {
-    const value = snapshot();
+  it('uses the configured cursor size as output pixels', () => {
+    const value = snapshot()
     value.cursor = {
       available: true,
       telemetry: [],
@@ -461,7 +412,7 @@ describe("canonical composition rendering", () => {
       catalog: {},
       events: [
         {
-          event: "move",
+          event: 'move',
           sessionNs: 0,
           pixelX: 25,
           pixelY: 25,
@@ -470,10 +421,10 @@ describe("canonical composition rendering", () => {
           visible: true,
         },
       ],
-    };
-    value.cursorSettings.size = 50;
-    const ctx = context();
-    const image = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    }
+    value.cursorSettings.size = 50
+    const ctx = context()
+    const image = { complete: true, naturalWidth: 24 } as HTMLImageElement
 
     renderCompositionFrame(
       ctx,
@@ -485,15 +436,9 @@ describe("canonical composition rendering", () => {
       value,
       0,
       null,
-      new Map([["default", image]]),
-    );
+      new Map([['default', image]]),
+    )
 
-    expect(ctx.drawImage).toHaveBeenLastCalledWith(
-      image,
-      expect.any(Number),
-      expect.any(Number),
-      50,
-      50,
-    );
-  });
-});
+    expect(ctx.drawImage).toHaveBeenLastCalledWith(image, expect.any(Number), expect.any(Number), 50, 50)
+  })
+})

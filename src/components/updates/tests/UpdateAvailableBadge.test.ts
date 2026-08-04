@@ -13,7 +13,11 @@ const captureMock = vi.hoisted(() => ({
 vi.mock('~/api/capture', () => ({ capture: captureMock }))
 
 const update = (status: AppUpdateState['status']): AppUpdateState => ({
-  status, currentVersion: '1.0.0', availableVersion: '1.1.0', percent: 50, message: null,
+  status,
+  currentVersion: '1.0.0',
+  availableVersion: '1.1.0',
+  percent: 50,
+  message: null,
 })
 
 beforeEach(() => {

@@ -1,48 +1,134 @@
-import { describe, expect, it, vi } from "vitest";
-import { frameContentRect } from "./frames";
-import { applyClipShadow, drawDecoratedMedia, shadowBlurForAppearance } from "./render-decorated-media";
-import type { ClipAppearance } from "../composition-types";
+import { describe, expect, it, vi } from 'vitest'
+import { frameContentRect } from './frames'
+import { applyClipShadow, drawDecoratedMedia, shadowBlurForAppearance } from './render-decorated-media'
+import type { ClipAppearance } from '../composition-types'
 
-const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({ cornerRadius: "sm", shadowSize: "none", shadowColor: "#000000", shadowDirection: "all", borderEnabled: false, borderColor: "#ff0000", borderWidth: 2, frame: "none", frameTitle: "", frameColor: "#c0c0c0", frameShowMenu: true, frameShowScrollbars: true, frameChromeScale: 1, ...patch });
-const context = () => ({ fillStyle: "", strokeStyle: "", lineWidth: 0, shadowColor: "", shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0, font: "", textAlign: "", textBaseline: "", save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), stroke: vi.fn(), clip: vi.fn(), drawImage: vi.fn(), fillRect: vi.fn(), fillText: vi.fn(), arc: vi.fn(), translate: vi.fn(), scale: vi.fn(), strokeRect: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })) }) as unknown as CanvasRenderingContext2D;
-const source = {} as CanvasImageSource;
+const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
+  cornerRadius: 'sm',
+  shadowSize: 'none',
+  shadowColor: '#000000',
+  shadowDirection: 'all',
+  borderEnabled: false,
+  borderColor: '#ff0000',
+  borderWidth: 2,
+  frame: 'none',
+  frameTitle: '',
+  frameColor: '#c0c0c0',
+  frameShowMenu: true,
+  frameShowScrollbars: true,
+  frameChromeScale: 1,
+  ...patch,
+})
+const context = () =>
+  ({
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    shadowColor: '',
+    shadowBlur: 0,
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
+    font: '',
+    textAlign: '',
+    textBaseline: '',
+    save: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    roundRect: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    clip: vi.fn(),
+    drawImage: vi.fn(),
+    fillRect: vi.fn(),
+    fillText: vi.fn(),
+    arc: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    strokeRect: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+  }) as unknown as CanvasRenderingContext2D
+const source = {} as CanvasImageSource
 
-describe("decorated media rendering", () => {
-  it("draws a border independently from a shadow", () => {
-    const ctx = context(); drawDecoratedMedia(ctx, { source, rect: { x: 2, y: 3, width: 100, height: 60 }, appearance: appearance({ borderEnabled: true }), title: "Image" });
-    expect(ctx.stroke).toHaveBeenCalledOnce(); expect(ctx.drawImage).toHaveBeenCalledWith(source, 2, 3, 100, 60);
-  });
-  it("draws Safari media inside its chrome and uses the supplied title", () => {
-    const ctx = context(); drawDecoratedMedia(ctx, { source, rect: { x: 0, y: 0, width: 160, height: 100 }, appearance: appearance({ frame: "safari" }), title: "Screen recording" });
-    expect(ctx.drawImage).toHaveBeenCalledWith(source, 1, 18, 158, 81); expect(ctx.fillText).toHaveBeenCalledWith("Screen recording", expect.any(Number), 9);
-  });
-  it("scales Safari chrome uniformly instead of stretching only its vertical axis", () => {
-    const ctx = context();
-    drawDecoratedMedia(ctx, { source, rect: { x: 0, y: 0, width: 1800, height: 1150 }, appearance: appearance({ frame: "safari", frameChromeScale: 1.5 }), title: "Scaled" });
-    expect(ctx.fillText).toHaveBeenCalledWith("Scaled", 876, 51);
-    expect(ctx.drawImage).toHaveBeenCalledWith(source, 1, 102, 1798, 1047);
-  });
-  it("draws Windows 95 chrome and keeps its content rect proportional", () => {
-    const rect = frameContentRect({ x: 10, y: 20, width: 120, height: 80 }, "windows-95");
-    expect(rect).toEqual({ x: 13, y: 52, width: 111, height: 44.61538461538461 });
-    const ctx = context(); drawDecoratedMedia(ctx, { source, rect: { x: 10, y: 20, width: 120, height: 80 }, appearance: appearance({ frame: "windows-95", borderEnabled: true }), title: "Clip" });
-    expect(ctx.drawImage).toHaveBeenCalledWith(source, 13, 52, 111, 44.61538461538461); expect(ctx.strokeRect).toHaveBeenCalled(); expect(ctx.stroke).toHaveBeenCalled();
-  });
-  it("keeps the Windows 95 title bar at full width when chrome is reduced", () => {
-    const ctx = context();
-    drawDecoratedMedia(ctx, { source, rect: { x: 0, y: 0, width: 400, height: 260 }, appearance: appearance({ frame: "windows-95", frameChromeScale: .5 }), title: "Compact" });
-    expect(ctx.fillRect).toHaveBeenCalledWith(1, 1, 396, 18);
-  });
-  it("keeps adaptive color independent from the selected shadow size", () => {
-    expect(shadowBlurForAppearance(appearance({ shadowSize: "none", shadowMode: "adaptive" }))).toBe(0);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: "sm", shadowMode: "adaptive" }))).toBe(10);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: "md", shadowMode: "adaptive" }))).toBe(20);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: "lg", shadowMode: "adaptive" }))).toBe(32);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: "custom", shadowBlur: 56, shadowMode: "adaptive" }))).toBe(56);
-  });
-  it("scales output-pixel shadows in the preview", () => {
-    const ctx = context();
-    applyClipShadow(ctx, appearance({ shadowSize: "custom", shadowBlur: 40, shadowMode: "solid" }), 100, source, undefined, 0.5);
-    expect(ctx.shadowBlur).toBe(20);
-  });
-});
+describe('decorated media rendering', () => {
+  it('draws a border independently from a shadow', () => {
+    const ctx = context()
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 2, y: 3, width: 100, height: 60 },
+      appearance: appearance({ borderEnabled: true }),
+      title: 'Image',
+    })
+    expect(ctx.stroke).toHaveBeenCalledOnce()
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 2, 3, 100, 60)
+  })
+  it('draws Safari media inside its chrome and uses the supplied title', () => {
+    const ctx = context()
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 0, y: 0, width: 160, height: 100 },
+      appearance: appearance({ frame: 'safari' }),
+      title: 'Screen recording',
+    })
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 1, 18, 158, 81)
+    expect(ctx.fillText).toHaveBeenCalledWith('Screen recording', expect.any(Number), 9)
+  })
+  it('scales Safari chrome uniformly instead of stretching only its vertical axis', () => {
+    const ctx = context()
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 0, y: 0, width: 1800, height: 1150 },
+      appearance: appearance({ frame: 'safari', frameChromeScale: 1.5 }),
+      title: 'Scaled',
+    })
+    expect(ctx.fillText).toHaveBeenCalledWith('Scaled', 876, 51)
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 1, 102, 1798, 1047)
+  })
+  it('draws Windows 95 chrome and keeps its content rect proportional', () => {
+    const rect = frameContentRect({ x: 10, y: 20, width: 120, height: 80 }, 'windows-95')
+    expect(rect).toEqual({ x: 13, y: 52, width: 111, height: 44.61538461538461 })
+    const ctx = context()
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 10, y: 20, width: 120, height: 80 },
+      appearance: appearance({ frame: 'windows-95', borderEnabled: true }),
+      title: 'Clip',
+    })
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 13, 52, 111, 44.61538461538461)
+    expect(ctx.strokeRect).toHaveBeenCalled()
+    expect(ctx.stroke).toHaveBeenCalled()
+  })
+  it('keeps the Windows 95 title bar at full width when chrome is reduced', () => {
+    const ctx = context()
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 0, y: 0, width: 400, height: 260 },
+      appearance: appearance({ frame: 'windows-95', frameChromeScale: 0.5 }),
+      title: 'Compact',
+    })
+    expect(ctx.fillRect).toHaveBeenCalledWith(1, 1, 396, 18)
+  })
+  it('keeps adaptive color independent from the selected shadow size', () => {
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'none', shadowMode: 'adaptive' }))).toBe(0)
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'sm', shadowMode: 'adaptive' }))).toBe(10)
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'md', shadowMode: 'adaptive' }))).toBe(20)
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'lg', shadowMode: 'adaptive' }))).toBe(32)
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'custom', shadowBlur: 56, shadowMode: 'adaptive' }))).toBe(
+      56,
+    )
+  })
+  it('scales output-pixel shadows in the preview', () => {
+    const ctx = context()
+    applyClipShadow(
+      ctx,
+      appearance({ shadowSize: 'custom', shadowBlur: 40, shadowMode: 'solid' }),
+      100,
+      source,
+      undefined,
+      0.5,
+    )
+    expect(ctx.shadowBlur).toBe(20)
+  })
+})

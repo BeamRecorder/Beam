@@ -10,15 +10,25 @@ const runtime = vi.hoisted(() => ({
 
 vi.mock('mediabunny', () => ({
   ALL_FORMATS: [],
-  BlobSource: class BlobSource { constructor(...args: unknown[]) { void args } },
+  BlobSource: class BlobSource {
+    constructor(...args: unknown[]) {
+      void args
+    }
+  },
   Input: class Input {
     dispose = vi.fn()
-    constructor(...args: unknown[]) { void args; runtime.inputs.push(this) }
+    constructor(...args: unknown[]) {
+      void args
+      runtime.inputs.push(this)
+    }
     getPrimaryVideoTrack = vi.fn(async () => runtime.track)
   },
   VideoSampleSink: class VideoSampleSink {
     samplesAtTimestamps = vi.fn(() => runtime.iterator)
-    constructor(...args: unknown[]) { void args; runtime.sinks.push(this) }
+    constructor(...args: unknown[]) {
+      void args
+      runtime.sinks.push(this)
+    }
   },
 }))
 
@@ -50,8 +60,12 @@ describe('VideoFrameProvider', () => {
     ]
     let index = 0
     const iterator = {
-      next: vi.fn(async () => index < samples.length ? { done: false, value: samples[index++] } : { done: true, value: undefined }),
-      [Symbol.asyncIterator]() { return this },
+      next: vi.fn(async () =>
+        index < samples.length ? { done: false, value: samples[index++] } : { done: true, value: undefined },
+      ),
+      [Symbol.asyncIterator]() {
+        return this
+      },
     }
     runtime.iterator = iterator
     const provider = await VideoFrameProvider.create('video.mp4', [0, 1, 2])

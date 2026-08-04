@@ -39,7 +39,9 @@ describe('CursorClickEffectsPanel', () => {
 
   it('does not render optional controls when effects are disabled', () => {
     const wrapper = mount(CursorClickEffectsPanel, {
-      props: { modelValue: { left: { ...effects.left, springEnabled: false, rippleEnabled: false }, right: effects.right } },
+      props: {
+        modelValue: { left: { ...effects.left, springEnabled: false, rippleEnabled: false }, right: effects.right },
+      },
       global: { stubs: { BigSlider, Switch, ColorInput } },
     })
     expect(wrapper.findAll('.effect-slider')).toHaveLength(0)

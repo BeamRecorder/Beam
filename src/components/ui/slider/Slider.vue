@@ -14,7 +14,7 @@ const props = withDefaults(
     max: 100,
     step: 1,
     disabled: false,
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -46,7 +46,7 @@ const handleInput = (event: Event) => {
         :disabled="disabled"
         class="slider-input"
         :style="{
-          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`
+          background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percentage}%, var(--color-border) ${percentage}%, var(--color-border) 100%)`,
         }"
         @input="handleInput"
       />
@@ -99,7 +99,9 @@ const handleInput = (event: Event) => {
   background: white;
   border: 4px solid var(--color-primary);
   box-shadow: var(--shadow-md);
-  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  transition:
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.2s ease;
 }
 
 .slider-input:hover:not(:disabled)::-webkit-slider-thumb {
@@ -120,7 +122,9 @@ const handleInput = (event: Event) => {
   background: white;
   border: 4px solid var(--color-primary);
   box-shadow: var(--shadow-md);
-  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  transition:
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.2s ease;
   cursor: pointer;
 }
 

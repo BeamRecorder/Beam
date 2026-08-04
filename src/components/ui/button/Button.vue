@@ -1,88 +1,76 @@
 <script lang="ts">
 export default {
   inheritAttrs: false,
-};
+}
 </script>
 
 <script setup lang="ts">
-import { computed, type Component } from "vue";
-import Tooltip from "../tooltip/Tooltip.vue";
-import { Loader } from "@lucide/vue";
+import { computed, type Component } from 'vue'
+import Tooltip from '../tooltip/Tooltip.vue'
+import { Loader } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
-    variant?:
-      | "primary"
-      | "secondary"
-      | "outline"
-      | "ghost"
-      | "link"
-      | "tab"
-      | "card"
-      | "danger";
-    size?: "xs" | "sm" | "md" | "lg";
-    loading?: boolean;
-    disabled?: boolean;
-    block?: boolean;
-    tooltip?: string;
-    tooltipPosition?: "top" | "bottom" | "left" | "right";
-    tooltipVariant?: "default" | "error";
-    type?: "button" | "submit" | "reset";
-    icon?: Component;
-    iconOnly?: boolean;
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card' | 'danger'
+    size?: 'xs' | 'sm' | 'md' | 'lg'
+    loading?: boolean
+    disabled?: boolean
+    block?: boolean
+    tooltip?: string
+    tooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
+    tooltipVariant?: 'default' | 'error'
+    type?: 'button' | 'submit' | 'reset'
+    icon?: Component
+    iconOnly?: boolean
   }>(),
   {
-    variant: "primary",
-    size: "md",
+    variant: 'primary',
+    size: 'md',
     loading: false,
     disabled: false,
     block: false,
-    tooltip: "",
-    tooltipPosition: "top",
-    tooltipVariant: "default",
-    type: "button",
+    tooltip: '',
+    tooltipPosition: 'top',
+    tooltipVariant: 'default',
+    type: 'button',
     iconOnly: false,
   },
-);
+)
 
 const emit = defineEmits<{
-  (e: "click", event: MouseEvent): void;
-}>();
+  (e: 'click', event: MouseEvent): void
+}>()
 
 const buttonClasses = computed(() => {
   return [
-    "btn",
+    'btn',
     `btn-${props.variant}`,
     `btn-${props.size}`,
-    { "btn-loading": props.loading },
-    { "btn-block": props.block },
-    { "btn-icon-only": props.iconOnly },
-  ];
-});
+    { 'btn-loading': props.loading },
+    { 'btn-block': props.block },
+    { 'btn-icon-only': props.iconOnly },
+  ]
+})
 
 const handleClick = (event: MouseEvent) => {
   if (props.disabled || props.loading) {
-    event.preventDefault();
-    event.stopPropagation();
-    return;
+    event.preventDefault()
+    event.stopPropagation()
+    return
   }
-  emit("click", event);
-};
+  emit('click', event)
+}
 </script>
 
 <template>
   <component
     :is="tooltip ? Tooltip : 'div'"
-    v-bind="tooltip ? { content: tooltip, position: tooltipPosition, variant: disabled ? 'error' : tooltipVariant } : {}"
+    v-bind="
+      tooltip ? { content: tooltip, position: tooltipPosition, variant: disabled ? 'error' : tooltipVariant } : {}
+    "
     :class="['btn-container', { 'btn-block': block }]"
   >
-    <button
-      v-bind="$attrs"
-      :type="type"
-      :class="buttonClasses"
-      :disabled="disabled || loading"
-      @click="handleClick"
-    >
+    <button v-bind="$attrs" :type="type" :class="buttonClasses" :disabled="disabled || loading" @click="handleClick">
       <Loader v-if="loading" class="icon-spin btn-icon" />
       <span v-if="icon && !$slots.icon && !loading" class="btn-icon-wrapper">
         <component :is="icon" class="btn-icon" />

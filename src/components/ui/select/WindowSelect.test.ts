@@ -21,7 +21,9 @@ describe('WindowSelect', () => {
   })
 
   it('shows the empty state and honors disabled triggers', async () => {
-    const wrapper = mount(WindowSelect, { props: { modelValue: null, options: [], disabled: true, placeholder: 'No window' } })
+    const wrapper = mount(WindowSelect, {
+      props: { modelValue: null, options: [], disabled: true, placeholder: 'No window' },
+    })
     expect(wrapper.get('.select-label').text()).toBe('No window')
     await wrapper.get('.select-trigger').trigger('click')
     expect(wrapper.find('.select-trigger').classes()).not.toContain('is-open')
@@ -36,7 +38,10 @@ describe('WindowSelect', () => {
     vi.useFakeTimers()
     let invokeCallback = true
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-      if (invokeCallback) { invokeCallback = false; callback(100) }
+      if (invokeCallback) {
+        invokeCallback = false
+        callback(100)
+      }
       return 1
     })
     vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)

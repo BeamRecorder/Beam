@@ -7,7 +7,9 @@ function setup({ packaged = true, version = '0.1.0' } = {}) {
   const autoUpdater = new EventEmitter()
   autoUpdater.checkForUpdates = async () => undefined
   autoUpdater.downloadUpdate = async () => undefined
-  autoUpdater.quitAndInstall = () => { autoUpdater.quitCalled = true }
+  autoUpdater.quitAndInstall = () => {
+    autoUpdater.quitCalled = true
+  }
   const openedUrls = []
   const updater = createAutoUpdater({
     app: { isPackaged: packaged, getVersion: () => version },

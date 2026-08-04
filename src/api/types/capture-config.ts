@@ -32,16 +32,21 @@ export interface RecordingSettings {
 
 export interface CaptureConfig {
   projectId: string
-  screen: null | { mode: 'source'; sourceId: string } | {
-    mode: 'portal'
-    kind: 'monitor' | 'window' | 'monitor-or-window'
-    restoreToken: string | null
-  }
-  cursor: { mode: 'disabled' | 'embedded' } | {
-    mode: 'separate'
-    captureClicks: boolean
-    captureShape: boolean
-  }
+  screen:
+    | null
+    | { mode: 'source'; sourceId: string }
+    | {
+        mode: 'portal'
+        kind: 'monitor' | 'window' | 'monitor-or-window'
+        restoreToken: string | null
+      }
+  cursor:
+    | { mode: 'disabled' | 'embedded' }
+    | {
+        mode: 'separate'
+        captureClicks: boolean
+        captureShape: boolean
+      }
   recording: RecordingSettings
   failurePolicy: 'fail-fast' | 'continue-without-optional-tracks'
   /** Electron process whose windows must be excluded by native capturers when supported. */

@@ -11,12 +11,12 @@ const { t } = useTranslate('Topbar')
 
 withDefaults(
   defineProps<{
-    exportRequest?: any;
-    project?: any;
-    isSaving?: boolean;
-    canUndo?: boolean;
-    canRedo?: boolean;
-    historyTooltipPosition?: "top" | "bottom" | "left" | "right";
+    exportRequest?: any
+    project?: any
+    isSaving?: boolean
+    canUndo?: boolean
+    canRedo?: boolean
+    historyTooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
   }>(),
   {
     exportRequest: null,
@@ -24,27 +24,27 @@ withDefaults(
     isSaving: false,
     canUndo: false,
     canRedo: false,
-    historyTooltipPosition: "bottom",
+    historyTooltipPosition: 'bottom',
   },
-);
+)
 
 const emit = defineEmits<{
-  (e: 'back-to-hud'): void;
-  (e: 'open-project', project: any): void;
-  (e: 'undo'): void;
-  (e: 'redo'): void;
-}>();
+  (e: 'back-to-hud'): void
+  (e: 'open-project', project: any): void
+  (e: 'undo'): void
+  (e: 'redo'): void
+}>()
 
 const handleExit = () => {
   emit('back-to-hud')
 }
 
 const minimizeApp = () => {
-  document.body.classList.add('app-minimizing');
+  document.body.classList.add('app-minimizing')
   setTimeout(() => {
-    capture.minimize();
-    document.body.classList.remove('app-minimizing');
-  }, 160);
+    capture.minimize()
+    document.body.classList.remove('app-minimizing')
+  }, 160)
 }
 
 const closeApp = () => {
@@ -98,27 +98,13 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
 </script>
 
 <template>
-  <header
-    class="editor-titlebar"
-    @mousedown="onMouseDown"
-    @dblclick="capture.toggleMaximize()"
-  >
+  <header class="editor-titlebar" @mousedown="onMouseDown" @dblclick="capture.toggleMaximize()">
     <div class="left-actions" @dblclick.stop>
       <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="brand-logo" alt="Beam" />
-      <Button
-        variant="ghost"
-        size="sm"
-        :icon="ArrowLeft"
-        @click.stop="handleExit"
-        class="exit-btn titlebar-btn"
-      >
+      <Button variant="ghost" size="sm" :icon="ArrowLeft" @click.stop="handleExit" class="exit-btn titlebar-btn">
         {{ t('exitToHUD') }}
       </Button>
-      <VideoProjectEdition
-        :project="project"
-        :is-saving="isSaving"
-        @open-project="emit('open-project', $event)"
-      />
+      <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
       <div class="history-actions" @dblclick.stop>
         <Button
           variant="ghost"
@@ -153,31 +139,16 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
           @click.stop="openDiscordInvite"
         >
           <template #icon>
-            <img
-              :src="resolvePublicAssetUrl('/discord_svg.svg')"
-              class="discord-icon"
-              alt=""
-              aria-hidden="true"
-            />
+            <img :src="resolvePublicAssetUrl('/discord_svg.svg')" class="discord-icon" alt="" aria-hidden="true" />
           </template>
         </Button>
       </div>
       <ExportPopover v-if="exportRequest" :request="exportRequest" />
       <div class="window-controls">
-        <button
-          type="button"
-          :aria-label="t('minimize')"
-          class="control-btn"
-          @click.stop="minimizeApp"
-        >
+        <button type="button" :aria-label="t('minimize')" class="control-btn" @click.stop="minimizeApp">
           <Minus class="btn-icon" />
         </button>
-        <button
-          type="button"
-          :aria-label="t('close')"
-          class="control-btn close-btn"
-          @click.stop="closeApp"
-        >
+        <button type="button" :aria-label="t('close')" class="control-btn close-btn" @click.stop="closeApp">
           <X class="btn-icon" />
         </button>
       </div>
@@ -271,7 +242,9 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   align-items: center;
   justify-content: center;
   cursor: default;
-  transition: background-color var(--fast) ease, color var(--fast) ease;
+  transition:
+    background-color var(--fast) ease,
+    color var(--fast) ease;
 }
 
 .control-btn:hover {

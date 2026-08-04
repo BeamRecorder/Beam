@@ -5,7 +5,8 @@ import AudioPanel from './AudioPanel.vue'
 const BigSlider = {
   props: ['label', 'modelValue'],
   emits: ['update:modelValue'],
-  template: '<button class="big-slider" :data-label="label" @click="$emit(\'update:modelValue\', 42)">{{ label }}: {{ modelValue }}</button>',
+  template:
+    '<button class="big-slider" :data-label="label" @click="$emit(\'update:modelValue\', 42)">{{ label }}: {{ modelValue }}</button>',
 }
 
 const Switch = {

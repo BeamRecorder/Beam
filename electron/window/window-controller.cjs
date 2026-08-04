@@ -116,7 +116,13 @@ class WindowController {
     }
     if (mode === 'hud' && this.hudPosition) {
       const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] })
-      const position = clampToDisplayBounds(this.hudPosition[0], this.hudPosition[1], HUD_SIZE.width, HUD_SIZE.height, display.bounds)
+      const position = clampToDisplayBounds(
+        this.hudPosition[0],
+        this.hudPosition[1],
+        HUD_SIZE.width,
+        HUD_SIZE.height,
+        display.bounds,
+      )
       this.window.setPosition(position.x, position.y)
     }
     this.applyModePolicy({ restoreMaximized })
@@ -143,9 +149,7 @@ class WindowController {
       x: bounds.x + Math.round(bounds.width / 2),
       y: bounds.y + Math.round(bounds.height / 2),
     })
-    const baseX = this.recorderTooltipSide === 'left'
-      ? bounds.x + bounds.width - RECORDER_SIZE.width
-      : bounds.x
+    const baseX = this.recorderTooltipSide === 'left' ? bounds.x + bounds.width - RECORDER_SIZE.width : bounds.x
     const baseY = bounds.y
     const clamped = clampToDisplayBounds(baseX, baseY, RECORDER_SIZE.width, RECORDER_SIZE.height, display.workArea)
 
@@ -196,9 +200,7 @@ class WindowController {
     }
     return {
       width: RECORDER_SIZE.width,
-      leftOffset: this.recorderTooltipSide === 'left'
-        ? this.recorderTooltipWidth - RECORDER_SIZE.width
-        : 0,
+      leftOffset: this.recorderTooltipSide === 'left' ? this.recorderTooltipWidth - RECORDER_SIZE.width : 0,
     }
   }
 
@@ -215,13 +217,7 @@ class WindowController {
     }
     let rawBaseY = currentBounds.y
 
-    const base = clampToDisplayBounds(
-      rawBaseX,
-      rawBaseY,
-      RECORDER_SIZE.width,
-      RECORDER_SIZE.height,
-      display.workArea,
-    )
+    const base = clampToDisplayBounds(rawBaseX, rawBaseY, RECORDER_SIZE.width, RECORDER_SIZE.height, display.workArea)
     this.recorderBaseBounds = { ...base, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height }
 
     const leftSpace = base.x - display.workArea.x
@@ -230,11 +226,18 @@ class WindowController {
 
     const canFitLeft = leftSpace >= expansion
     const canFitRight = rightSpace >= expansion
-    const side = canFitLeft && canFitRight
-      ? (leftSpace >= rightSpace ? 'left' : 'right')
-      : canFitLeft ? 'left'
-        : canFitRight ? 'right'
-          : leftSpace >= rightSpace ? 'left' : 'right'
+    const side =
+      canFitLeft && canFitRight
+        ? leftSpace >= rightSpace
+          ? 'left'
+          : 'right'
+        : canFitLeft
+          ? 'left'
+          : canFitRight
+            ? 'right'
+            : leftSpace >= rightSpace
+              ? 'left'
+              : 'right'
 
     const availableSpace = side === 'left' ? leftSpace : rightSpace
     const width = RECORDER_SIZE.width + Math.min(expansion, Math.max(0, availableSpace))
@@ -259,7 +262,10 @@ class WindowController {
   beginRecorderDrag() {
     if (this.mode !== 'recorder' || this.window.isDestroyed()) return
     this.recorderNativeDragActive = true
-    console.info('[RecorderTooltip] native drag start', { bounds: this.window.getBounds(), side: this.recorderTooltipSide })
+    console.info('[RecorderTooltip] native drag start', {
+      bounds: this.window.getBounds(),
+      side: this.recorderTooltipSide,
+    })
     this.setRecorderTooltip(false, { preserveSide: true })
     this.scheduleRecorderTooltipRelayout()
   }
@@ -285,7 +291,8 @@ class WindowController {
       }
 
       const current = this.window.getBounds()
-      const needsBoundsChange = current.x !== layout.x || current.y !== layout.base.y || Math.abs(current.width - layout.width) > 1
+      const needsBoundsChange =
+        current.x !== layout.x || current.y !== layout.base.y || Math.abs(current.width - layout.width) > 1
       if (needsBoundsChange) {
         this.recorderTooltipApplyTimer = setTimeout(applyBounds, 16)
       } else {
@@ -298,7 +305,10 @@ class WindowController {
     this.recorderTooltipVisible = false
     this.clearRecorderTooltipRelayout()
     const current = this.window.getBounds()
-    const display = this.screen.getDisplayNearestPoint({ x: current.x + Math.round(current.width / 2), y: current.y + Math.round(current.height / 2) })
+    const display = this.screen.getDisplayNearestPoint({
+      x: current.x + Math.round(current.width / 2),
+      y: current.y + Math.round(current.height / 2),
+    })
     const base = clampToDisplayBounds(
       this.recorderTooltipSide === 'left' ? current.x + current.width - RECORDER_SIZE.width : current.x,
       current.y,
@@ -320,7 +330,11 @@ class WindowController {
       if (this.mode !== 'recorder' || this.window.isDestroyed() || !this.recorderBaseBounds) return
       const point = this.screen.getCursorScreenPoint()
       const bounds = this.recorderBaseBounds
-      const overBar = point.x >= bounds.x && point.x < bounds.x + bounds.width && point.y >= bounds.y && point.y < bounds.y + bounds.height
+      const overBar =
+        point.x >= bounds.x &&
+        point.x < bounds.x + bounds.width &&
+        point.y >= bounds.y &&
+        point.y < bounds.y + bounds.height
       if (overBar === this.recorderOverInteractive) return
       this.recorderOverInteractive = overBar
       if (overBar) this.window.setIgnoreMouseEvents(false)
@@ -392,7 +406,10 @@ class WindowController {
     if (overInteractive) {
       this.window.setIgnoreMouseEvents(false)
     } else if (this.mode === 'recorder') {
-      this.window.setIgnoreMouseEvents(this.recorderOverInteractive ? false : true, this.recorderOverInteractive ? undefined : { forward: true })
+      this.window.setIgnoreMouseEvents(
+        this.recorderOverInteractive ? false : true,
+        this.recorderOverInteractive ? undefined : { forward: true },
+      )
     } else {
       this.window.setIgnoreMouseEvents(true, { forward: true })
     }
@@ -426,7 +443,10 @@ class WindowController {
       else this.window.setIgnoreMouseEvents(true, { forward: true })
     } else if (this.mode === 'recorder') {
       this.startRecorderPointerTracking()
-      this.window.setIgnoreMouseEvents(this.recorderOverInteractive ? false : true, this.recorderOverInteractive ? undefined : { forward: true })
+      this.window.setIgnoreMouseEvents(
+        this.recorderOverInteractive ? false : true,
+        this.recorderOverInteractive ? undefined : { forward: true },
+      )
     } else {
       // Editor: full opaque window, capture everything.
       this.window.setIgnoreMouseEvents(false)
@@ -442,11 +462,17 @@ class WindowController {
       this.window.setResizable?.(false)
       this.window.setMaximizable?.(false)
       this.window.setMinimumSize?.(HUD_SIZE.width, HUD_SIZE.height)
-      this.window.setMaximumSize?.(HUD_SIZE.width,HUD_SIZE.height)
+      this.window.setMaximumSize?.(HUD_SIZE.width, HUD_SIZE.height)
       this.window.setSize?.(HUD_SIZE.width, HUD_SIZE.height)
       if (this.hudPosition && Array.isArray(this.hudPosition)) {
         const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] })
-        const position = clampToDisplayBounds(this.hudPosition[0], this.hudPosition[1], HUD_SIZE.width, HUD_SIZE.height, display.bounds)
+        const position = clampToDisplayBounds(
+          this.hudPosition[0],
+          this.hudPosition[1],
+          HUD_SIZE.width,
+          HUD_SIZE.height,
+          display.bounds,
+        )
         this.window.setPosition?.(position.x, position.y)
       } else {
         this.window.center?.()

@@ -14,12 +14,29 @@ const isExporting = computed(() => controller.value !== null)
 export function useExportJob() {
   const start = async (request: ExportRequest) => {
     if (controller.value) return
-    error.value = null; result.value = null; progress.value = { stage: 'preparing', stageLabel: $t('preparingExport'), completed: 0, total: 1, currentTimeMs: 0, totalTimeMs: Math.round(request.snapshot.duration * 1000) }
-    const next = new AbortController(); controller.value = next
+    error.value = null
+    result.value = null
+    progress.value = {
+      stage: 'preparing',
+      stageLabel: $t('preparingExport'),
+      completed: 0,
+      total: 1,
+      currentTimeMs: 0,
+      totalTimeMs: Math.round(request.snapshot.duration * 1000),
+    }
+    const next = new AbortController()
+    controller.value = next
     try {
-      result.value = await exportWithMediabunny(request, (value) => { progress.value = value }, next.signal)
+      result.value = await exportWithMediabunny(
+        request,
+        (value) => {
+          progress.value = value
+        },
+        next.signal,
+      )
     } catch (reason) {
-      if (!(reason instanceof DOMException && reason.name === 'AbortError')) error.value = reason instanceof Error ? reason.message : $t('exportFailed')
+      if (!(reason instanceof DOMException && reason.name === 'AbortError'))
+        error.value = reason instanceof Error ? reason.message : $t('exportFailed')
     } finally {
       controller.value = null
       progress.value = null

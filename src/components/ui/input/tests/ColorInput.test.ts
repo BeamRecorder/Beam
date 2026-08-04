@@ -5,7 +5,8 @@ import ColorInput from '../ColorInput.vue'
 const ColorPicker = {
   props: ['modelValue', 'disabled'],
   emits: ['update:modelValue'],
-  template: '<button class="picker-stub" :disabled="disabled" @click="$emit(\'update:modelValue\', \'#123456\')">Pick</button>',
+  template:
+    '<button class="picker-stub" :disabled="disabled" @click="$emit(\'update:modelValue\', \'#123456\')">Pick</button>',
 }
 
 describe('ColorInput', () => {

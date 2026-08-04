@@ -2,9 +2,15 @@ const { BrowserWindow } = require('electron')
 const path = require('path')
 
 function finiteBounds(value) {
-  if (!value || !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(value[key]))) throw new Error('Screen overlay bounds are invalid')
+  if (!value || !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(value[key])))
+    throw new Error('Screen overlay bounds are invalid')
   if (value.width <= 0 || value.height <= 0) throw new Error('Screen overlay size is invalid')
-  return { x: Math.round(value.x), y: Math.round(value.y), width: Math.round(value.width), height: Math.round(value.height) }
+  return {
+    x: Math.round(value.x),
+    y: Math.round(value.y),
+    width: Math.round(value.width),
+    height: Math.round(value.height),
+  }
 }
 
 function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
@@ -31,14 +37,25 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
       skipTaskbar: true,
       show: false,
       alwaysOnTop: true,
-      webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false },
+      webPreferences: {
+        preload: path.join(applicationRoot, 'electron/preload.cjs'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false,
+      },
     })
     window.setContentProtection(true)
-    window.once('ready-to-show', () => { ready = true; send(current) })
+    window.once('ready-to-show', () => {
+      ready = true
+      send(current)
+    })
     window.on('closed', () => {
       ready = false
       window = null
-      if (pending) { pending.resolve(null); pending = null }
+      if (pending) {
+        pending.resolve(null)
+        pending = null
+      }
     })
     if (isPackaged) window.loadFile(path.join(applicationRoot, 'dist/index.html'), { query: { screenRegion: '1' } })
     else window.loadURL('http://localhost:6500/?screenRegion=1')
@@ -62,12 +79,19 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
 
   return {
     select(options) {
-      if (pending) { pending.resolve(null); pending = null }
-      const result = new Promise((resolve) => { pending = { resolve } })
+      if (pending) {
+        pending.resolve(null)
+        pending = null
+      }
+      const result = new Promise((resolve) => {
+        pending = { resolve }
+      })
       configure(options, true)
       return result
     },
-    show(options) { configure(options, false) },
+    show(options) {
+      configure(options, false)
+    },
     hide() {
       current = null
       if (window && !window.isDestroyed()) window.hide()
@@ -89,7 +113,10 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
       resolve(null)
     },
     destroy() {
-      if (pending) { pending.resolve(null); pending = null }
+      if (pending) {
+        pending.resolve(null)
+        pending = null
+      }
       window?.destroy()
       window = null
     },

@@ -26,7 +26,10 @@ test('stops native capture before completing sidecar tracks', async () => {
   }
   const storage = {
     registerSession: () => undefined,
-    complete: (value) => { completeCalls += 1; return value },
+    complete: (value) => {
+      completeCalls += 1
+      return value
+    },
   }
 
   registerCaptureIpc({

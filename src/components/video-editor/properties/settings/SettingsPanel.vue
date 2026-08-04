@@ -100,7 +100,7 @@ const localeOptions = [
     <div class="prop-item">
       <span class="prop-label">{{ t('themeMode') }}</span>
       <ButtonGroup class="theme-button-group">
-        <Button 
+        <Button
           :class="{ active: themeStore.theme === 'light' }"
           variant="tab"
           size="sm"
@@ -109,7 +109,7 @@ const localeOptions = [
           <template #icon><Sun class="btn-icon" /></template>
           {{ t('light') }}
         </Button>
-        <Button 
+        <Button
           :class="{ active: themeStore.theme === 'dark' }"
           variant="tab"
           size="sm"
@@ -118,7 +118,7 @@ const localeOptions = [
           <template #icon><Moon class="btn-icon" /></template>
           {{ t('dark') }}
         </Button>
-        <Button 
+        <Button
           :class="{ active: themeStore.theme === 'system' }"
           variant="tab"
           size="sm"
@@ -187,21 +187,14 @@ const localeOptions = [
             </div>
             <Popover align="right" direction="up" :match-trigger-width="false" flush>
               <template #trigger>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  class="dev-action-btn"
-                >
+                <Button variant="secondary" size="sm" class="dev-action-btn">
                   <template #icon><Video class="btn-icon" /></template>
                   {{ t('launchRecorder') }}
                 </Button>
               </template>
               <template #default="{ close }">
                 <div class="hud-popover-content" @click.stop>
-                  <HUD
-                    embedded
-                    @start-recording="(config: any) => handleStartRecordingFromPopover(config, close)"
-                  />
+                  <HUD embedded @start-recording="(config: any) => handleStartRecordingFromPopover(config, close)" />
                 </div>
               </template>
             </Popover>
@@ -213,12 +206,7 @@ const localeOptions = [
               <span class="dev-option-label">{{ t('sysInfoTool') }}</span>
               <span class="dev-option-desc">{{ t('sysInfoDesc') }}</span>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              class="dev-action-btn"
-              @click="copySystemInfo"
-            >
+            <Button variant="secondary" size="sm" class="dev-action-btn" @click="copySystemInfo">
               <template #icon>
                 <Check v-if="isCopiedSysInfo" class="btn-icon text-success" />
                 <Copy v-else class="btn-icon" />
@@ -233,12 +221,7 @@ const localeOptions = [
               <span class="dev-option-label">{{ t('devToolsTool') }}</span>
               <span class="dev-option-desc">{{ t('devToolsDesc') }}</span>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              class="dev-action-btn"
-              @click="toggleDevTools"
-            >
+            <Button variant="secondary" size="sm" class="dev-action-btn" @click="toggleDevTools">
               <template #icon><Terminal class="btn-icon" /></template>
               {{ t('openDevTools') }}
             </Button>
@@ -315,7 +298,9 @@ const localeOptions = [
   border: 1px solid var(--color-border-strong);
   cursor: pointer;
   padding: 2px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
   flex-shrink: 0;
 }
 

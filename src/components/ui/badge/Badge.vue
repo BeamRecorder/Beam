@@ -5,7 +5,7 @@ withDefaults(
   }>(),
   {
     variant: 'primary',
-  }
+  },
 )
 </script>
 

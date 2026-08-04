@@ -21,7 +21,7 @@ const props = withDefaults(
     size: 'sm',
     block: true,
     disabled: false,
-  }
+  },
 )
 
 const emit = defineEmits<{

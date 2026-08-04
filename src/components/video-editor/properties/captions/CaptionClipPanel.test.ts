@@ -6,25 +6,71 @@ const Input = {
   inheritAttrs: false,
   props: ['modelValue'],
   emits: ['update:modelValue', 'blur'],
-  template: '<input :id="$attrs.id" :type="$attrs.type" :placeholder="$attrs.placeholder" :aria-label="$attrs[\'aria-label\']" :min="$attrs.min" :class="$attrs.class" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @blur="$emit(\'blur\', $event)" />',
+  template:
+    '<input :id="$attrs.id" :type="$attrs.type" :placeholder="$attrs.placeholder" :aria-label="$attrs[\'aria-label\']" :min="$attrs.min" :class="$attrs.class" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @blur="$emit(\'blur\', $event)" />',
 }
-const ColorPicker = { emits: ['update:modelValue'], template: '<button class="color-picker-stub" @click="$emit(\'update:modelValue\', \'#abcdef\')">Color</button>' }
-const BigSlider = { emits: ['update:modelValue'], template: '<button class="caption-slider" @click="$emit(\'update:modelValue\', 42)">Slider</button>' }
-const Select = { emits: ['update:modelValue'], template: '<button class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button>' }
-const Button = { emits: ['click'], template: '<button class="delete-caption" @click="$emit(\'click\')"><slot /></button>' }
+const ColorPicker = {
+  emits: ['update:modelValue'],
+  template: '<button class="color-picker-stub" @click="$emit(\'update:modelValue\', \'#abcdef\')">Color</button>',
+}
+const BigSlider = {
+  emits: ['update:modelValue'],
+  template: '<button class="caption-slider" @click="$emit(\'update:modelValue\', 42)">Slider</button>',
+}
+const Select = {
+  emits: ['update:modelValue'],
+  template: '<button class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button>',
+}
+const Button = {
+  emits: ['click'],
+  template: '<button class="delete-caption" @click="$emit(\'click\')"><slot /></button>',
+}
 
 const clip = {
-  id: 'caption-1', kind: 'caption', name: 'Caption', timelineStartMs: 0, timelineDurationMs: 1000,
-  sourceInMs: 0, sourceDurationMs: 1000, playbackRate: 1, enabled: true, order: 0, isAiGenerated: true,
+  id: 'caption-1',
+  kind: 'caption',
+  name: 'Caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 1000,
+  sourceInMs: 0,
+  sourceDurationMs: 1000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  isAiGenerated: true,
   caption: {
-    sentences: [{ id: 'sentence-1', text: 'Hello world', startMs: 100, endMs: 500, words: [{ text: 'Hello', startMs: 100, endMs: 250 }, { text: 'world', startMs: 260, endMs: 500 }] }],
-    style: { color: '#ffffff', fontSize: 36, shadowColor: '#000000', shadowBlur: 8, shadowDirection: 'bottom-right', placement: 'bottom', boxColor: '#000000', boxPadding: 6, boxRadius: 4 },
+    sentences: [
+      {
+        id: 'sentence-1',
+        text: 'Hello world',
+        startMs: 100,
+        endMs: 500,
+        words: [
+          { text: 'Hello', startMs: 100, endMs: 250 },
+          { text: 'world', startMs: 260, endMs: 500 },
+        ],
+      },
+    ],
+    style: {
+      color: '#ffffff',
+      fontSize: 36,
+      shadowColor: '#000000',
+      shadowBlur: 8,
+      shadowDirection: 'bottom-right',
+      placement: 'bottom',
+      boxColor: '#000000',
+      boxPadding: 6,
+      boxRadius: 4,
+    },
   },
 } as never
 
 describe('CaptionClipPanel', () => {
   it('renders AI metadata and updates text, style, timings and deletion', async () => {
-    const wrapper = mount(CaptionClipPanel, { props: { clip }, global: { stubs: { Input, ColorPicker, BigSlider, Select, Button } } })
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Button } },
+    })
     expect(wrapper.find('.ai-badge-header').exists()).toBe(true)
     expect(wrapper.findAll('.caption-slider')).toHaveLength(4)
     expect(wrapper.findAll('.color-picker-stub')).toHaveLength(3)
@@ -46,7 +92,10 @@ describe('CaptionClipPanel', () => {
   })
 
   it('renders nothing without a selected caption clip', () => {
-    const wrapper = mount(CaptionClipPanel, { props: { clip: null }, global: { stubs: { Input, ColorPicker, BigSlider, Select, Button } } })
+    const wrapper = mount(CaptionClipPanel, {
+      props: { clip: null },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Button } },
+    })
     expect(wrapper.find('.caption-clip-panel').exists()).toBe(false)
   })
 })

@@ -30,8 +30,19 @@ const cloneGradient = (value: GradientBackground): GradientBackground => ({
 const colorDraft = ref(props.color)
 const gradientDraft = ref<GradientBackground>(cloneGradient(props.gradient))
 
-watch(() => props.color, (value) => { colorDraft.value = value })
-watch(() => props.gradient, (value) => { gradientDraft.value = cloneGradient(value) }, { deep: true })
+watch(
+  () => props.color,
+  (value) => {
+    colorDraft.value = value
+  },
+)
+watch(
+  () => props.gradient,
+  (value) => {
+    gradientDraft.value = cloneGradient(value)
+  },
+  { deep: true },
+)
 
 let colorRaf: number | null = null
 let gradientRaf: number | null = null
@@ -46,15 +57,19 @@ watch(colorDraft, (val) => {
   }
 })
 
-watch(gradientDraft, (val) => {
-  if (props.kind === 'gradient') {
-    if (gradientRaf !== null) cancelAnimationFrame(gradientRaf)
-    gradientRaf = requestAnimationFrame(() => {
-      emit('update-gradient', cloneGradient(val))
-      gradientRaf = null
-    })
-  }
-}, { deep: true })
+watch(
+  gradientDraft,
+  (val) => {
+    if (props.kind === 'gradient') {
+      if (gradientRaf !== null) cancelAnimationFrame(gradientRaf)
+      gradientRaf = requestAnimationFrame(() => {
+        emit('update-gradient', cloneGradient(val))
+        gradientRaf = null
+      })
+    }
+  },
+  { deep: true },
+)
 
 const add = () => {
   if (props.kind === 'color') emit('add-color', colorDraft.value)
@@ -64,12 +79,7 @@ const add = () => {
 
 <template>
   <section class="composer" :aria-label="kind === 'color' ? t('addCustomColor') : t('addCustomGradient')">
-    <ColorPicker
-      v-if="kind === 'color'"
-      v-model="colorDraft"
-      inline
-      :show-label="false"
-    />
+    <ColorPicker v-if="kind === 'color'" v-model="colorDraft" inline :show-label="false" />
     <Gradient v-else v-model="gradientDraft" :show-angle="true" />
     <div class="composer-actions">
       <Button size="sm" variant="secondary" @click="emit('close')">{{ t('close') }}</Button>
@@ -100,11 +110,19 @@ const add = () => {
 }
 
 @keyframes composer-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .composer { animation: none; }
+  .composer {
+    animation: none;
+  }
 }
 </style>

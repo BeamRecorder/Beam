@@ -2,21 +2,54 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import CursorPanel from './CursorPanel.vue'
 
-const Select = { emits: ['update:modelValue'], template: '<button class="cursor-select" @click="$emit(\'update:modelValue\', \'pointer\')">Select</button>' }
-const BigSlider = { emits: ['update:modelValue'], template: '<button class="cursor-slider" @click="$emit(\'update:modelValue\', 30)">Slider</button>' }
-const ColorInput = { emits: ['update:modelValue'], template: '<button class="cursor-color" @click="$emit(\'update:modelValue\', \'#fff\')">Color</button>' }
-const Switch = { props: ['modelValue'], emits: ['update:modelValue'], template: '<button class="cursor-switch" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>' }
-const ShadowDirectionGroup = { emits: ['update:modelValue'], template: '<button class="shadow-direction" @click="$emit(\'update:modelValue\', \'top-left\')">Direction</button>' }
-const CursorClickEffectsPanel = { emits: ['update:modelValue'], template: '<button class="click-effects-stub" @click="$emit(\'update:modelValue\', {})">Clicks</button>' }
+const Select = {
+  emits: ['update:modelValue'],
+  template: '<button class="cursor-select" @click="$emit(\'update:modelValue\', \'pointer\')">Select</button>',
+}
+const BigSlider = {
+  emits: ['update:modelValue'],
+  template: '<button class="cursor-slider" @click="$emit(\'update:modelValue\', 30)">Slider</button>',
+}
+const ColorInput = {
+  emits: ['update:modelValue'],
+  template: '<button class="cursor-color" @click="$emit(\'update:modelValue\', \'#fff\')">Color</button>',
+}
+const Switch = {
+  props: ['modelValue'],
+  emits: ['update:modelValue'],
+  template: '<button class="cursor-switch" @click="$emit(\'update:modelValue\', !modelValue)">Switch</button>',
+}
+const ShadowDirectionGroup = {
+  emits: ['update:modelValue'],
+  template: '<button class="shadow-direction" @click="$emit(\'update:modelValue\', \'top-left\')">Direction</button>',
+}
+const CursorClickEffectsPanel = {
+  emits: ['update:modelValue'],
+  template: '<button class="click-effects-stub" @click="$emit(\'update:modelValue\', {})">Clicks</button>',
+}
 
 describe('CursorPanel', () => {
   it('emits cursor and shadow property updates', async () => {
     const wrapper = mount(CursorPanel, {
       props: {
-        selectedCursor: 'default', cursorSize: 24, cursorColor: '#000', enableShadow: true,
-        shadowBlur: 8, shadowColor: '#111', shadowDirection: 'bottom-right',
-        motion: { preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
-        clickEffects: { left: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' }, right: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' } },
+        selectedCursor: 'default',
+        cursorSize: 24,
+        cursorColor: '#000',
+        enableShadow: true,
+        shadowBlur: 8,
+        shadowColor: '#111',
+        shadowDirection: 'bottom-right',
+        motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+        clickEffects: {
+          left: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' },
+          right: {
+            springEnabled: false,
+            springIntensity: 0,
+            rippleEnabled: false,
+            rippleSize: 20,
+            rippleColor: '#000',
+          },
+        },
       },
       global: { stubs: { Select, BigSlider, ColorInput, Switch, ShadowDirectionGroup, CursorClickEffectsPanel } },
     })
@@ -41,10 +74,24 @@ describe('CursorPanel', () => {
   it('hides nested shadow settings when shadow is disabled', () => {
     const wrapper = mount(CursorPanel, {
       props: {
-        selectedCursor: 'default', cursorSize: 24, cursorColor: '#000', enableShadow: false,
-        shadowBlur: 8, shadowColor: '#111', shadowDirection: 'bottom-right',
-        motion: { preset: 'smooth' as const, smoothing: .67, springMassMultiplier: 1.29, motionBlur: .4 },
-        clickEffects: { left: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' }, right: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' } },
+        selectedCursor: 'default',
+        cursorSize: 24,
+        cursorColor: '#000',
+        enableShadow: false,
+        shadowBlur: 8,
+        shadowColor: '#111',
+        shadowDirection: 'bottom-right',
+        motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+        clickEffects: {
+          left: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' },
+          right: {
+            springEnabled: false,
+            springIntensity: 0,
+            rippleEnabled: false,
+            rippleSize: 20,
+            rippleColor: '#000',
+          },
+        },
       },
       global: { stubs: { Select, BigSlider, ColorInput, Switch, ShadowDirectionGroup, CursorClickEffectsPanel } },
     })

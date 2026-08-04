@@ -33,7 +33,8 @@ const Popover = {
 }
 const HUD = {
   emits: ['start-recording'],
-  template: '<div class="hud-stub"><button class="hud-start-btn" @click="$emit(\'start-recording\', { recordingBarVisibility: \'always\' })">Start</button></div>',
+  template:
+    '<div class="hud-stub"><button class="hud-start-btn" @click="$emit(\'start-recording\', { recordingBarVisibility: \'always\' })">Start</button></div>',
 }
 
 describe('SettingsPanel', () => {
@@ -57,7 +58,9 @@ describe('SettingsPanel', () => {
   })
 
   it('changes theme and locale through the stores', async () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    })
     const themeButtons = wrapper.findAll('.theme-button-group button')
     expect(themeButtons).toHaveLength(3)
     await themeButtons[1].trigger('click')
@@ -69,13 +72,17 @@ describe('SettingsPanel', () => {
   })
 
   it('renders the update controls section', () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    })
     expect(wrapper.find('.update-controls-stub').exists()).toBe(true)
     expect(wrapper.text()).toContain('Theme')
   })
 
   it('opens the community links from the socials section', async () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    })
     const socialButtons = wrapper.findAll('.social-links button')
 
     await socialButtons[0].trigger('click')
@@ -88,7 +95,9 @@ describe('SettingsPanel', () => {
   })
 
   it('toggles dev mode and reveals the framed recorder options', async () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    })
     expect(wrapper.find('.dev-frame').exists()).toBe(false)
 
     const switchBtn = wrapper.get('.dev-switch')
@@ -104,15 +113,14 @@ describe('SettingsPanel', () => {
   })
 
   it('copies system information to clipboard when clicking copy button', async () => {
-    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
+    const wrapper = mount(SettingsPanel, {
+      global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
+    })
     await wrapper.get('.dev-switch').trigger('click')
 
     const copyBtn = wrapper.findAll('.dev-action-btn')[1]
     await copyBtn.trigger('click')
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('App Version: 1.2.3'),
-    )
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('App Version: 1.2.3'))
   })
 })
-

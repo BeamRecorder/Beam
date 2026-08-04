@@ -52,9 +52,19 @@ export interface CursorShapeEvent {
 }
 
 export type CursorKind =
-  | 'default' | 'textcursor' | 'handpointing' | 'busy' | 'help' | 'cross'
-  | 'move' | 'notallowed' | 'resizenorthsouth' | 'resizewesteast'
-  | 'resizenortheastsouthwest' | 'resizenorthwestsoutheast' | 'custom'
+  | 'default'
+  | 'textcursor'
+  | 'handpointing'
+  | 'busy'
+  | 'help'
+  | 'cross'
+  | 'move'
+  | 'notallowed'
+  | 'resizenorthsouth'
+  | 'resizewesteast'
+  | 'resizenortheastsouthwest'
+  | 'resizenorthwestsoutheast'
+  | 'custom'
 
 export interface CursorButtonEvent {
   event: 'button'

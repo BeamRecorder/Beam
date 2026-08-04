@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed } from 'vue'
 import {
   Play,
   Pause,
@@ -14,77 +14,87 @@ import {
   Image as ImageIcon,
   Volume2,
   Type,
-} from "@lucide/vue";
-import Button from "~/ui/button/Button.vue";
-import PopoverMenuButton from "~/ui/popover/PopoverMenuButton.vue";
-import { useTranslate } from "~/i18n/useTranslate";
+} from '@lucide/vue'
+import Button from '~/ui/button/Button.vue'
+import PopoverMenuButton from '~/ui/popover/PopoverMenuButton.vue'
+import { useTranslate } from '~/i18n/useTranslate'
 
-const { t } = useTranslate("TimelineToolbar");
+const { t } = useTranslate('TimelineToolbar')
 
 const props = withDefaults(
   defineProps<{
-    currentTime: number;
-    duration: number;
-    isPlaying: boolean;
-    zoomLevel: number; // 100 to 500
-    canSplit?: boolean;
-    isSnappingEnabled?: boolean;
+    currentTime: number
+    duration: number
+    isPlaying: boolean
+    zoomLevel: number // 100 to 500
+    canSplit?: boolean
+    isSnappingEnabled?: boolean
   }>(),
   { zoomLevel: 100, canSplit: false, isSnappingEnabled: true },
-);
+)
 
 const emit = defineEmits<{
-  (e: "update:isPlaying", value: boolean): void;
-  (e: "update:currentTime", value: number): void;
-  (e: "update:zoomLevel", value: number): void;
-  (e: "update:isSnappingEnabled", value: boolean): void;
-  (e: "add:element", type: "video" | "image" | "sound" | "caption"): void;
-  (e: "split"): void;
-}>();
+  (e: 'update:isPlaying', value: boolean): void
+  (e: 'update:currentTime', value: number): void
+  (e: 'update:zoomLevel', value: number): void
+  (e: 'update:isSnappingEnabled', value: boolean): void
+  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption'): void
+  (e: 'split'): void
+}>()
 
-const handleAdd = (type: "video" | "image" | "sound" | "caption") => {
-  emit("add:element", type);
-};
-const addItems = computed(() => [
-  { id: 'video', label: t('video'), icon: Video }, { id: 'image', label: t('image'), icon: ImageIcon },
-  { id: 'sound', label: t('sound'), icon: Volume2 }, { id: 'caption', label: t('text'), icon: Type },
-] as const);
+const handleAdd = (type: 'video' | 'image' | 'sound' | 'caption') => {
+  emit('add:element', type)
+}
+const addItems = computed(
+  () =>
+    [
+      { id: 'video', label: t('video'), icon: Video },
+      { id: 'image', label: t('image'), icon: ImageIcon },
+      { id: 'sound', label: t('sound'), icon: Volume2 },
+      { id: 'caption', label: t('text'), icon: Type },
+    ] as const,
+)
 
 const zoomPercentageText = computed(() => {
-  return `${Math.round(props.zoomLevel)}%`;
-});
+  return `${Math.round(props.zoomLevel)}%`
+})
 
 const zoomPercentage = computed(() => {
-  const min = 100;
-  const max = 500;
-  return Math.min(100, Math.max(0, ((props.zoomLevel - min) / (max - min)) * 100));
-});
+  const min = 100
+  const max = 500
+  return Math.min(100, Math.max(0, ((props.zoomLevel - min) / (max - min)) * 100))
+})
 
 const formatTime = (time: number) => {
-  const mins = Math.floor(time / 60);
-  const secs = Math.floor(time % 60);
-  const ms = Math.floor((time % 1) * 100);
-  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
-};
+  const mins = Math.floor(time / 60)
+  const secs = Math.floor(time % 60)
+  const ms = Math.floor((time % 1) * 100)
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`
+}
 
 const handleZoomReset = () => {
-  emit("update:zoomLevel", 100);
-};
+  emit('update:zoomLevel', 100)
+}
 
 const handleZoomIn = () => {
-  emit("update:zoomLevel", Math.min(500, props.zoomLevel + 50));
-};
+  emit('update:zoomLevel', Math.min(500, props.zoomLevel + 50))
+}
 
 const handleZoomOut = () => {
-  emit("update:zoomLevel", Math.max(100, props.zoomLevel - 50));
-};
+  emit('update:zoomLevel', Math.max(100, props.zoomLevel - 50))
+}
 </script>
 
 <template>
   <div class="timeline-toolbar">
     <!-- Left Section with Add Popover & Split Button -->
     <div class="left-section">
-      <PopoverMenuButton :label="t('add')" :icon="Plus" :items="addItems" @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')" />
+      <PopoverMenuButton
+        :label="t('add')"
+        :icon="Plus"
+        :items="addItems"
+        @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')"
+      />
       <Button
         variant="ghost"
         size="sm"
@@ -146,12 +156,9 @@ const handleZoomOut = () => {
 
     <!-- Right Zoom Controls -->
     <div class="zoom-controls">
-      <span
-        class="zoom-percent-text"
-        @click="handleZoomReset"
-        :title="t('doubleClickResetZoom')"
-        >{{ zoomPercentageText }}</span
-      >
+      <span class="zoom-percent-text" @click="handleZoomReset" :title="t('doubleClickResetZoom')">{{
+        zoomPercentageText
+      }}</span>
       <Button
         variant="ghost"
         size="sm"
@@ -169,14 +176,9 @@ const handleZoomOut = () => {
         :value="zoomLevel"
         class="zoom-slider"
         :style="{
-          background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`
+          background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`,
         }"
-        @input="
-          emit(
-            'update:zoomLevel',
-            parseFloat(($event.target as HTMLInputElement).value),
-          )
-        "
+        @input="emit('update:zoomLevel', parseFloat(($event.target as HTMLInputElement).value))"
       />
       <Button
         variant="ghost"

@@ -9,18 +9,13 @@ const toastStore = useToastStore()
 <template>
   <div class="toast-container" aria-live="assertive">
     <TransitionGroup name="toast-list">
-      <div 
-        v-for="toast in toastStore.toasts" 
-        :key="toast.id" 
-        class="toast-item"
-        :class="toast.type"
-      >
+      <div v-for="toast in toastStore.toasts" :key="toast.id" class="toast-item" :class="toast.type">
         <span class="toast-icon-wrapper">
           <CheckCircle v-if="toast.type === 'success'" class="toast-icon success" />
           <AlertCircle v-else-if="toast.type === 'error'" class="toast-icon error" />
           <Info v-else class="toast-icon info" />
         </span>
-        
+
         <span class="toast-message">{{ toast.message }}</span>
 
         <Button
@@ -28,17 +23,15 @@ const toastStore = useToastStore()
           variant="secondary"
           size="sm"
           class="toast-action-btn"
-          @click="toast.action.onClick(); toastStore.remove(toast.id)"
+          @click="
+            toast.action.onClick()
+            toastStore.remove(toast.id)
+          "
         >
           {{ toast.action.label }}
         </Button>
-        
-        <button 
-          type="button" 
-          class="toast-close" 
-          @click="toastStore.remove(toast.id)"
-          aria-label="Dismiss toast"
-        >
+
+        <button type="button" class="toast-close" @click="toastStore.remove(toast.id)" aria-label="Dismiss toast">
           <X class="close-icon" />
         </button>
       </div>
@@ -85,9 +78,15 @@ const toastStore = useToastStore()
   width: 4px;
 }
 
-.toast-item.success::before { background-color: var(--color-success); }
-.toast-item.error::before { background-color: var(--color-error); }
-.toast-item.info::before { background-color: var(--color-info); }
+.toast-item.success::before {
+  background-color: var(--color-success);
+}
+.toast-item.error::before {
+  background-color: var(--color-error);
+}
+.toast-item.info::before {
+  background-color: var(--color-info);
+}
 
 .toast-icon-wrapper {
   display: flex;
@@ -101,9 +100,15 @@ const toastStore = useToastStore()
   height: 1.25rem;
 }
 
-.toast-icon.success { color: var(--color-success); }
-.toast-icon.error { color: var(--color-error); }
-.toast-icon.info { color: var(--color-info); }
+.toast-icon.success {
+  color: var(--color-success);
+}
+.toast-icon.error {
+  color: var(--color-error);
+}
+.toast-icon.info {
+  color: var(--color-info);
+}
 
 .toast-message {
   font-size: 0.95rem;

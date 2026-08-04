@@ -15,7 +15,7 @@ const props = withDefaults(
     block: false,
     matchTriggerWidth: true,
     flush: false,
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -48,7 +48,7 @@ const adjustPosition = async () => {
   const content = contentRef.value.getBoundingClientRect()
   const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN
   const spaceAbove = rect.top - VIEWPORT_MARGIN
-  
+
   const requiredHeight = Math.max(content.height, 150)
   if (props.direction === 'down' && spaceBelow < requiredHeight && spaceAbove > spaceBelow) {
     directionClass.value = 'up'
@@ -57,10 +57,11 @@ const adjustPosition = async () => {
   } else {
     directionClass.value = props.direction
   }
-  
-  const top = directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - content.height - VIEWPORT_MARGIN
+
+  const top =
+    directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - content.height - VIEWPORT_MARGIN
   let left = rect.left
-  
+
   if (props.align === 'left') {
     left = rect.left
   } else if (props.align === 'right') {
@@ -77,10 +78,12 @@ const adjustPosition = async () => {
     zIndex: '10000',
     maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
     overflowY: 'auto',
-    ...(props.matchTriggerWidth ? {
-      width: `${Math.min(rect.width, window.innerWidth - 16)}px`,
-      maxWidth: 'calc(100vw - 16px)',
-    } : {}),
+    ...(props.matchTriggerWidth
+      ? {
+          width: `${Math.min(rect.width, window.innerWidth - 16)}px`,
+          maxWidth: 'calc(100vw - 16px)',
+        }
+      : {}),
   }
 }
 
@@ -103,11 +106,16 @@ watch(isOpen, (val) => {
   emit('toggle', val)
 })
 
-watch(() => props.direction, (val) => {
-  directionClass.value = val
-})
+watch(
+  () => props.direction,
+  (val) => {
+    directionClass.value = val
+  },
+)
 
-const repositionOpenPopover = () => { if (isOpen.value) void adjustPosition() }
+const repositionOpenPopover = () => {
+  if (isOpen.value) void adjustPosition()
+}
 const closeOnWindowBlur = () => close()
 
 const isClickInsideThisOrChildPopover = (target: Element | null) => {
@@ -162,7 +170,15 @@ defineExpose({
 
     <Teleport to="body">
       <Transition name="pop">
-        <div v-if="isOpen" ref="contentRef" class="popover-content" :data-popover-id="popoverId" :data-popover-owner="parentPopoverId" :class="[align, directionClass, { 'popover-block': block, 'popover-flush': flush }]" :style="floatingStyle">
+        <div
+          v-if="isOpen"
+          ref="contentRef"
+          class="popover-content"
+          :data-popover-id="popoverId"
+          :data-popover-owner="parentPopoverId"
+          :class="[align, directionClass, { 'popover-block': block, 'popover-flush': flush }]"
+          :style="floatingStyle"
+        >
           <slot :close="close" />
         </div>
       </Transition>
@@ -218,7 +234,9 @@ defineExpose({
 /* Animations */
 .pop-enter-active,
 .pop-leave-active {
-  transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .pop-enter-from,
@@ -235,7 +253,9 @@ defineExpose({
 
 .pop-enter-active.center,
 .pop-leave-active.center {
-  transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .pop-enter-from.center,

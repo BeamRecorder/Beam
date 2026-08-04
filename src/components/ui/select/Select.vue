@@ -30,7 +30,7 @@ const props = withDefaults(
     direction: 'down',
     previewOnHover: false,
     loading: false,
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -48,7 +48,7 @@ watch(
     if (hoveredValue.value === null) {
       actualValue.value = newVal
     }
-  }
+  },
 )
 
 const normalizedOptions = computed<Option[]>(() => {
@@ -56,7 +56,7 @@ const normalizedOptions = computed<Option[]>(() => {
 })
 
 const selectedOption = computed(() => {
-  return normalizedOptions.value.find(opt => opt.value === props.modelValue) || null
+  return normalizedOptions.value.find((opt) => opt.value === props.modelValue) || null
 })
 
 const handleToggle = (isOpen: boolean) => {
@@ -99,18 +99,15 @@ const handleMouseLeaveList = () => {
 }
 
 const itemHeight = computed(() => {
-  if (normalizedOptions.value.some(opt => opt.thumbnail || opt.loading)) {
+  if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.loading)) {
     return 52
   }
   return 38
 })
 
-const { list, containerProps, wrapperProps } = useVirtualList(
-  normalizedOptions,
-  {
-    itemHeight: () => itemHeight.value,
-  }
-)
+const { list, containerProps, wrapperProps } = useVirtualList(normalizedOptions, {
+  itemHeight: () => itemHeight.value,
+})
 
 const labelStyle = computed(() => {
   const text = selectedOption.value ? selectedOption.value.label : props.placeholder
@@ -173,10 +170,10 @@ const stopMarquee = (event: PointerEvent) => {
 <template>
   <Popover align="left" :direction="direction" :block="true" class="select-popover" @toggle="handleToggle">
     <template #trigger="{ isOpen }">
-      <button 
-        type="button" 
-        class="select-trigger" 
-        :class="{ 'is-open': isOpen, 'is-disabled': disabled }" 
+      <button
+        type="button"
+        class="select-trigger"
+        :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
         :disabled="disabled"
       >
         <div class="trigger-content-wrapper">
@@ -184,11 +181,11 @@ const stopMarquee = (event: PointerEvent) => {
           <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
             <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" />
           </div>
-          
+
           <!-- Color preview -->
-          <div 
-            v-else-if="selectedOption?.color" 
-            class="selected-color-badge" 
+          <div
+            v-else-if="selectedOption?.color"
+            class="selected-color-badge"
             :style="{ backgroundColor: selectedOption.color }"
           ></div>
 
@@ -197,28 +194,24 @@ const stopMarquee = (event: PointerEvent) => {
             <Skeleton variant="linear" width="100%" height="100%" />
           </div>
 
-          <span 
-            class="select-label" 
-            :class="{ 'is-placeholder': !selectedOption }"
-            :style="labelStyle"
-          >
+          <span class="select-label" :class="{ 'is-placeholder': !selectedOption }" :style="labelStyle">
             {{ selectedOption ? selectedOption.label : placeholder }}
           </span>
         </div>
-        <ChevronDown class="select-chevron" :class="{ 'rotate': isOpen }" />
+        <ChevronDown class="select-chevron" :class="{ rotate: isOpen }" />
       </button>
     </template>
-    
+
     <template #default="{ close }">
       <div v-bind="containerProps" class="virtual-scroll-container" @pointerleave="handleMouseLeaveList">
         <ul v-bind="wrapperProps" class="select-options">
-          <li 
-            v-for="item in list" 
-            :key="item.data.value" 
+          <li
+            v-for="item in list"
+            :key="item.data.value"
             class="select-option"
-            :class="{ 
+            :class="{
               'is-selected': item.data.value === modelValue,
-              'is-hovered': item.data.value === hoveredValue 
+              'is-hovered': item.data.value === hoveredValue,
             }"
             @click="handleSelect(item.data, close)"
             @pointerenter="handleMouseEnterOption(item.data, $event)"
@@ -230,13 +223,9 @@ const stopMarquee = (event: PointerEvent) => {
               <div v-if="item.data.thumbnail" class="thumbnail-wrapper">
                 <img :src="item.data.thumbnail" class="thumbnail-img" />
               </div>
-              
+
               <!-- Color preview -->
-              <div 
-                v-else-if="item.data.color" 
-                class="color-badge" 
-                :style="{ backgroundColor: item.data.color }"
-              ></div>
+              <div v-else-if="item.data.color" class="color-badge" :style="{ backgroundColor: item.data.color }"></div>
 
               <!-- Skeleton loader -->
               <div v-else-if="item.data.loading" class="thumbnail-wrapper">
@@ -245,7 +234,7 @@ const stopMarquee = (event: PointerEvent) => {
 
               <span class="option-label">{{ item.data.label }}</span>
             </div>
-            
+
             <template v-if="previewOnHover && item.data.value === hoveredValue">
               <Eye class="option-check option-eye" />
             </template>

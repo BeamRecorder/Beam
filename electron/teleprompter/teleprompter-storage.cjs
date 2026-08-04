@@ -22,12 +22,14 @@ const numberInRange = (value, fallback, min, max) => {
 function normalizeTeleprompterDocument(value, now = new Date().toISOString()) {
   const input = assertObject(value)
   if (input.schemaVersion !== 1) throw new Error('Version du document téléprompteur invalide')
-  if (typeof input.text !== 'string' || input.text.length > MAX_TEXT_LENGTH) throw new Error('Texte téléprompteur invalide')
+  if (typeof input.text !== 'string' || input.text.length > MAX_TEXT_LENGTH)
+    throw new Error('Texte téléprompteur invalide')
   if (!['continuous', 'line-by-line'].includes(input.mode)) throw new Error('Mode téléprompteur invalide')
   if (typeof input.autoscroll !== 'boolean') throw new Error('Autoscroll téléprompteur invalide')
   if (!['left', 'center'].includes(input.textAlign)) throw new Error('Alignement téléprompteur invalide')
   if (!['system', 'light', 'dark'].includes(input.theme)) throw new Error('Thème téléprompteur invalide')
-  const updatedAtUtc = typeof input.updatedAtUtc === 'string' && !Number.isNaN(Date.parse(input.updatedAtUtc)) ? input.updatedAtUtc : now
+  const updatedAtUtc =
+    typeof input.updatedAtUtc === 'string' && !Number.isNaN(Date.parse(input.updatedAtUtc)) ? input.updatedAtUtc : now
   return {
     schemaVersion: 1,
     text: input.text,

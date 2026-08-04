@@ -37,26 +37,38 @@ test('builds a one-call recording config from defaults', () => {
 })
 
 test('supports explicit source selection and disabling optional devices', () => {
-  const config = buildDefaultCaptureConfig(catalog, {
-    screenKind: 'window',
-    screenId: 'window:1',
-  }, environment)
+  const config = buildDefaultCaptureConfig(
+    catalog,
+    {
+      screenKind: 'window',
+      screenId: 'window:1',
+    },
+    environment,
+  )
   assert.equal(config.screen.sourceId, 'window:1')
 })
 
 test('normalizes an Electron Windows window id to the Rust WGC source id', () => {
-  const config = buildDefaultCaptureConfig(catalog, {
-    screenKind: 'window',
-    screenId: 'window:123:0',
-  }, environment)
+  const config = buildDefaultCaptureConfig(
+    catalog,
+    {
+      screenKind: 'window',
+      screenId: 'window:123:0',
+    },
+    environment,
+  )
   assert.equal(config.screen.sourceId, 'wgc:window:7b')
 })
 
 test('normalizes an Electron macOS window id to the ScreenCaptureKit source id', () => {
-  const config = buildDefaultCaptureConfig(catalog, {
-    screenKind: 'window',
-    screenId: 'window:123:0',
-  }, { ...environment, platform: 'darwin' })
+  const config = buildDefaultCaptureConfig(
+    catalog,
+    {
+      screenKind: 'window',
+      screenId: 'window:123:0',
+    },
+    { ...environment, platform: 'darwin' },
+  )
   assert.equal(config.screen.sourceId, 'sck:window:123')
 })
 
@@ -65,8 +77,5 @@ test('rejects missing explicit sources and invalid queue capacity', () => {
     () => buildDefaultCaptureConfig(catalog, { screenId: 'missing' }, environment),
     /Source display introuvable/,
   )
-  assert.throws(
-    () => buildDefaultCaptureConfig(catalog, { queueCapacity: 0 }, environment),
-    /queueCapacity/,
-  )
+  assert.throws(() => buildDefaultCaptureConfig(catalog, { queueCapacity: 0 }, environment), /queueCapacity/)
 })

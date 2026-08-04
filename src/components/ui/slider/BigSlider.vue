@@ -1,95 +1,95 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onBeforeUnmount } from "vue";
-import { RotateCcw } from "@lucide/vue";
-import Input from "../input/Input.vue";
-import { beginPropertyInteraction, endPropertyInteraction } from "~/composables/property-interaction";
+import { computed, ref, nextTick, onBeforeUnmount } from 'vue'
+import { RotateCcw } from '@lucide/vue'
+import Input from '../input/Input.vue'
+import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction'
 
 const props = withDefaults(
   defineProps<{
-    modelValue: number;
-    min?: number;
-    max?: number;
-    step?: number;
-    label: string;
-    defaultValue?: number;
-    formatValue?: (val: number) => string;
+    modelValue: number
+    min?: number
+    max?: number
+    step?: number
+    label: string
+    defaultValue?: number
+    formatValue?: (val: number) => string
   }>(),
   { min: 0, max: 1, step: 0.01 },
-);
+)
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: number): void;
-  (e: "interaction-start"): void;
-  (e: "interaction-end"): void;
-  (e: "reset"): void;
-}>();
+  (e: 'update:modelValue', value: number): void
+  (e: 'interaction-start'): void
+  (e: 'interaction-end'): void
+  (e: 'reset'): void
+}>()
 
-const isEditing = ref(false);
-const isInteracting = ref(false);
-const editValue = ref<number | string>(props.modelValue);
+const isEditing = ref(false)
+const isInteracting = ref(false)
+const editValue = ref<number | string>(props.modelValue)
 
 const percentage = computed(() => {
-  const range = props.max - props.min;
-  if (range === 0) return 0;
-  return Math.min(100, Math.max(0, ((props.modelValue - props.min) / range) * 100));
-});
+  const range = props.max - props.min
+  if (range === 0) return 0
+  return Math.min(100, Math.max(0, ((props.modelValue - props.min) / range) * 100))
+})
 
 const displayValue = computed(() => {
-  if (props.formatValue) return props.formatValue(props.modelValue);
-  return props.modelValue.toString();
-});
+  if (props.formatValue) return props.formatValue(props.modelValue)
+  return props.modelValue.toString()
+})
 
 const isChanged = computed(() => {
-  if (props.defaultValue === undefined) return false;
-  return Math.abs(props.modelValue - props.defaultValue) > 0.0001;
-});
+  if (props.defaultValue === undefined) return false
+  return Math.abs(props.modelValue - props.defaultValue) > 0.0001
+})
 
 const startEditing = () => {
-  editValue.value = props.modelValue;
-  isEditing.value = true;
+  editValue.value = props.modelValue
+  isEditing.value = true
   void nextTick(() => {
-    const el = document.getElementById(`slider-input-${props.label.replace(/\s+/g, '-')}`);
+    const el = document.getElementById(`slider-input-${props.label.replace(/\s+/g, '-')}`)
     if (el) {
-      el.focus();
-      if (el instanceof HTMLInputElement) el.select();
+      el.focus()
+      if (el instanceof HTMLInputElement) el.select()
     }
-  });
-};
+  })
+}
 
 const finishEditing = () => {
-  if (!isEditing.value) return;
-  isEditing.value = false;
-  let parsed = typeof editValue.value === "number" ? editValue.value : parseFloat(String(editValue.value));
-  if (isNaN(parsed)) parsed = props.modelValue;
-  if (props.min !== undefined) parsed = Math.max(props.min, parsed);
-  if (props.max !== undefined) parsed = Math.min(props.max, parsed);
-  emit("update:modelValue", parsed);
-};
+  if (!isEditing.value) return
+  isEditing.value = false
+  let parsed = typeof editValue.value === 'number' ? editValue.value : parseFloat(String(editValue.value))
+  if (isNaN(parsed)) parsed = props.modelValue
+  if (props.min !== undefined) parsed = Math.max(props.min, parsed)
+  if (props.max !== undefined) parsed = Math.min(props.max, parsed)
+  emit('update:modelValue', parsed)
+}
 
 const handleReset = (e: MouseEvent) => {
-  e.stopPropagation();
-  e.preventDefault();
+  e.stopPropagation()
+  e.preventDefault()
   if (props.defaultValue !== undefined) {
-    emit("update:modelValue", props.defaultValue);
+    emit('update:modelValue', props.defaultValue)
   }
-  emit("reset");
-};
+  emit('reset')
+}
 
 const startInteraction = () => {
-  if (isInteracting.value) return;
-  isInteracting.value = true;
-  beginPropertyInteraction();
-  emit("interaction-start");
-};
+  if (isInteracting.value) return
+  isInteracting.value = true
+  beginPropertyInteraction()
+  emit('interaction-start')
+}
 
 const endInteraction = () => {
-  if (!isInteracting.value) return;
-  isInteracting.value = false;
-  endPropertyInteraction();
-  emit("interaction-end");
-};
+  if (!isInteracting.value) return
+  isInteracting.value = false
+  endPropertyInteraction()
+  emit('interaction-end')
+}
 
-onBeforeUnmount(endInteraction);
+onBeforeUnmount(endInteraction)
 </script>
 
 <template>
@@ -153,12 +153,7 @@ onBeforeUnmount(endInteraction);
         :step="step"
         :value="modelValue"
         class="big-slider-input"
-        @input="
-          emit(
-            'update:modelValue',
-            parseFloat(($event.target as HTMLInputElement).value),
-          )
-        "
+        @input="emit('update:modelValue', parseFloat(($event.target as HTMLInputElement).value))"
         @pointerdown="startInteraction"
         @pointercancel="endInteraction"
         @change="endInteraction"
@@ -234,7 +229,9 @@ onBeforeUnmount(endInteraction);
   justify-content: center;
   padding: 2px;
   border-radius: 4px;
-  transition: color var(--fast) ease, background-color var(--fast) ease;
+  transition:
+    color var(--fast) ease,
+    background-color var(--fast) ease;
   pointer-events: auto;
   position: relative;
   z-index: 10;
@@ -258,7 +255,9 @@ onBeforeUnmount(endInteraction);
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;
-  transition: background-color var(--fast) ease, color var(--fast) ease;
+  transition:
+    background-color var(--fast) ease,
+    color var(--fast) ease;
   pointer-events: auto;
   position: relative;
   z-index: 10;

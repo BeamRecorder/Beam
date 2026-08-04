@@ -13,7 +13,15 @@ const format = { codec: 'vp8', width: 1920, height: 1080, nominalFps: 30 }
 function sessionFixture() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-camera-'))
   const manifestPath = path.join(directory, 'manifest.json')
-  fs.writeFileSync(manifestPath, JSON.stringify({ selectedSources: { screen: 'display:1', camera: null }, permissions: { camera: null }, tracks: [], warnings: [] }))
+  fs.writeFileSync(
+    manifestPath,
+    JSON.stringify({
+      selectedSources: { screen: 'display:1', camera: null },
+      permissions: { camera: null },
+      tracks: [],
+      warnings: [],
+    }),
+  )
   return { directory, manifestPath, sessionId }
 }
 
@@ -23,7 +31,11 @@ test('finalizes ordered WebM chunks beside the native session and merges the cam
   storage.registerSession(session)
   const opened = storage.begin(11, { sessionId, sourceId, format, startNs: 0 })
   storage.write(11, { jobId: opened.jobId, sequence: 0, data: new Uint8Array([1, 2, 3]) })
-  storage.finalize(11, { jobId: opened.jobId, endNs: 1_000_000_000, metrics: { framesAcquired: 30, framesReceived: 30 } })
+  storage.finalize(11, {
+    jobId: opened.jobId,
+    endNs: 1_000_000_000,
+    metrics: { framesAcquired: 30, framesReceived: 30 },
+  })
   storage.complete(session)
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
   assert.equal(manifest.selectedSources.camera, sourceId)
@@ -62,7 +74,12 @@ test('persists validated camera appearance with the recorded sidecar', () => {
   const storage = createCameraStorage({})
   const session = sessionFixture()
   storage.registerSession(session)
-  const opened = storage.begin(14, { sessionId, sourceId, format: { ...format, appearance: { shadowSize: 'lg', cornerRadius: 'full' } }, startNs: 0 })
+  const opened = storage.begin(14, {
+    sessionId,
+    sourceId,
+    format: { ...format, appearance: { shadowSize: 'lg', cornerRadius: 'full' } },
+    startNs: 0,
+  })
   storage.write(14, { jobId: opened.jobId, sequence: 0, data: new Uint8Array([1]) })
   storage.finalize(14, { jobId: opened.jobId, endNs: 1, metrics: {} })
   storage.complete(session)
@@ -74,21 +91,31 @@ test('persists the normalized camera placement used by the editor', () => {
   const storage = createCameraStorage({})
   const session = sessionFixture()
   storage.registerSession(session)
-  const opened = storage.begin(15, { sessionId, sourceId, format: { ...format, placement: { x: .72, y: .68, width: .2, height: .2 } }, startNs: 0 })
+  const opened = storage.begin(15, {
+    sessionId,
+    sourceId,
+    format: { ...format, placement: { x: 0.72, y: 0.68, width: 0.2, height: 0.2 } },
+    startNs: 0,
+  })
   storage.write(15, { jobId: opened.jobId, sequence: 0, data: new Uint8Array([1]) })
   storage.finalize(15, { jobId: opened.jobId, endNs: 1, metrics: {} })
   storage.complete(session)
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
-  assert.deepEqual(manifest.tracks[0].format.placement, { x: .72, y: .68, width: .2, height: .2 })
+  assert.deepEqual(manifest.tracks[0].format.placement, { x: 0.72, y: 0.68, width: 0.2, height: 0.2 })
 })
 
 test('keeps an oversized camera placement inside the output frame', () => {
   const storage = createCameraStorage({})
   const session = sessionFixture()
   storage.registerSession(session)
-  const opened = storage.begin(16, { sessionId, sourceId, format: { ...format, placement: { x: .9, y: .85, width: .5, height: .4 } }, startNs: 0 })
+  const opened = storage.begin(16, {
+    sessionId,
+    sourceId,
+    format: { ...format, placement: { x: 0.9, y: 0.85, width: 0.5, height: 0.4 } },
+    startNs: 0,
+  })
   storage.finalize(16, { jobId: opened.jobId, endNs: 1, metrics: {} })
   storage.complete(session)
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
-  assert.deepEqual(manifest.tracks[0].format.placement, { x: .5, y: .6, width: .5, height: .4 })
+  assert.deepEqual(manifest.tracks[0].format.placement, { x: 0.5, y: 0.6, width: 0.5, height: 0.4 })
 })

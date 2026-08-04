@@ -34,13 +34,7 @@ watch(
 
 <template>
   <Transition name="undo-redo-toast">
-    <div
-      v-if="isVisible && currentAction"
-      :key="animationKey"
-      class="undo-redo-toast"
-      role="status"
-      aria-live="polite"
-    >
+    <div v-if="isVisible && currentAction" :key="animationKey" class="undo-redo-toast" role="status" aria-live="polite">
       <Undo2 v-if="currentAction.type === 'undo'" class="toast-icon" :size="15" />
       <Redo2 v-else class="toast-icon" :size="15" />
       <span class="toast-text">

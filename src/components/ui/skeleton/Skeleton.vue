@@ -13,7 +13,7 @@ const props = withDefaults(
     width: '100%',
     height: '20px',
     radius: 'var(--radius-sm)',
-  }
+  },
 )
 
 const skeletonStyle = computed(() => ({
@@ -24,11 +24,7 @@ const skeletonStyle = computed(() => ({
 </script>
 
 <template>
-  <div 
-    class="skeleton" 
-    :class="`shimmer-${variant}`" 
-    :style="skeletonStyle"
-  ></div>
+  <div class="skeleton" :class="`shimmer-${variant}`" :style="skeletonStyle"></div>
 </template>
 
 <style scoped>

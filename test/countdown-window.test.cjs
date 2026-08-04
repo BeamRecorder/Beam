@@ -8,7 +8,9 @@ test('preloads the countdown renderer before the first value is shown', () => {
   let destroyed = false
   const window = {
     webContents: {
-      once: (event, listener) => { if (event === 'did-finish-load') finishLoad = listener },
+      once: (event, listener) => {
+        if (event === 'did-finish-load') finishLoad = listener
+      },
       send: (...args) => calls.push(['send', ...args]),
     },
     isDestroyed: () => destroyed,
@@ -17,13 +19,18 @@ test('preloads the countdown renderer before the first value is shown', () => {
     showInactive: () => calls.push(['show']),
     moveTop: () => calls.push(['top']),
     hide: () => calls.push(['hide']),
-    destroy: () => { destroyed = true },
+    destroy: () => {
+      destroyed = true
+    },
     loadURL: (url) => calls.push(['loadURL', url]),
     loadFile: (...args) => calls.push(['loadFile', ...args]),
   }
   const electron = {
     BrowserWindow: class {
-      constructor(options) { calls.push(['constructor', options]); return window }
+      constructor(options) {
+        calls.push(['constructor', options])
+        return window
+      }
     },
     screen: {
       getCursorScreenPoint: () => ({ x: 500, y: 400 }),

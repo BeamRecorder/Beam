@@ -42,7 +42,6 @@ const localeOptions = [
   { value: 'en', label: 'EN - English - Anglais' },
   { value: 'fr', label: 'FR - French - Français' },
 ]
-
 </script>
 
 <template>
@@ -164,7 +163,6 @@ const localeOptions = [
           </div>
 
           <SocialLinks />
-
         </div>
 
         <Button variant="primary" size="md" block @click="emit('close')">
@@ -271,7 +269,9 @@ const localeOptions = [
 /* View Slide Transition */
 .slide-view-enter-active,
 .slide-view-leave-active {
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .slide-view-enter-from {

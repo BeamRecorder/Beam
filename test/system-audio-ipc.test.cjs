@@ -13,7 +13,15 @@ const format = { codec: 'opus', sampleRate: 48_000, channels: 2 }
 function sessionFixture() {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-system-audio-'))
   const manifestPath = path.join(directory, 'manifest.json')
-  fs.writeFileSync(manifestPath, JSON.stringify({ selectedSources: { systemAudio: null }, permissions: { systemAudio: null }, tracks: [], warnings: [] }))
+  fs.writeFileSync(
+    manifestPath,
+    JSON.stringify({
+      selectedSources: { systemAudio: null },
+      permissions: { systemAudio: null },
+      tracks: [],
+      warnings: [],
+    }),
+  )
   return { directory, manifestPath, sessionId }
 }
 
@@ -27,9 +35,17 @@ test('stores Chromium loopback WebM beside the session with its negotiated audio
   storage.complete(session)
   const manifest = JSON.parse(fs.readFileSync(session.manifestPath, 'utf8'))
   assert.equal(manifest.selectedSources.systemAudio, sourceId)
-  assert.deepEqual(manifest.tracks[0].format, { mediaType: 'audio', sampleFormat: 'opus', sampleRate: 48_000, channels: 2 })
+  assert.deepEqual(manifest.tracks[0].format, {
+    mediaType: 'audio',
+    sampleFormat: 'opus',
+    sampleRate: 48_000,
+    channels: 2,
+  })
   assert.equal(manifest.tracks[0].segments[0].path, 'system-audio/segment-0001.webm')
-  assert.deepEqual(fs.readFileSync(path.join(session.directory, 'system-audio', 'segment-0001.webm')), Buffer.from([9, 8, 7]))
+  assert.deepEqual(
+    fs.readFileSync(path.join(session.directory, 'system-audio', 'segment-0001.webm')),
+    Buffer.from([9, 8, 7]),
+  )
 })
 
 test('records a loopback permission failure as an explicit failed optional track', () => {
@@ -48,8 +64,15 @@ test('rejects non-loopback sources, malformed formats, and cross-renderer finali
   const storage = createSystemAudioStorage({})
   const session = sessionFixture()
   storage.registerSession(session)
-  assert.throws(() => storage.begin(33, { sessionId, sourceId: 'system-audio:wasapi:default', format, startNs: 0 }), /Invalid Chromium system-audio source/)
-  assert.throws(() => storage.begin(33, { sessionId, sourceId, format: { codec: 'aac', sampleRate: 48_000, channels: 2 }, startNs: 0 }), /Invalid system audio format/)
+  assert.throws(
+    () => storage.begin(33, { sessionId, sourceId: 'system-audio:wasapi:default', format, startNs: 0 }),
+    /Invalid Chromium system-audio source/,
+  )
+  assert.throws(
+    () =>
+      storage.begin(33, { sessionId, sourceId, format: { codec: 'aac', sampleRate: 48_000, channels: 2 }, startNs: 0 }),
+    /Invalid system audio format/,
+  )
   const opened = storage.begin(33, { sessionId, sourceId, format, startNs: 0 })
   assert.throws(() => storage.finalize(34, { jobId: opened.jobId, endNs: 1, metrics: {} }), /not authorized/)
   storage.forgetSession(sessionId)

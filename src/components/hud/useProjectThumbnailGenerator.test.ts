@@ -25,11 +25,19 @@ describe('useProjectThumbnailGenerator', () => {
     track = { getDurationFromMetadata: vi.fn(), computeDuration: vi.fn() }
     canvasesAtTimestamps = vi.fn()
     saveProjectThumbnail = vi.fn()
-    media.BlobSource.mockImplementation(function BlobSourceMock(blob) { return { blob } })
-    media.Input.mockImplementation(function InputMock() { return input })
-    media.CanvasSink.mockImplementation(function CanvasSinkMock() { return { canvasesAtTimestamps } })
+    media.BlobSource.mockImplementation(function BlobSourceMock(blob) {
+      return { blob }
+    })
+    media.Input.mockImplementation(function InputMock() {
+      return input
+    })
+    media.CanvasSink.mockImplementation(function CanvasSinkMock() {
+      return { canvasesAtTimestamps }
+    })
     Object.defineProperty(window, 'capture', { configurable: true, value: { saveProjectThumbnail } })
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({ drawImage: vi.fn() }) as unknown as CanvasRenderingContext2D)
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
+      () => ({ drawImage: vi.fn() }) as unknown as CanvasRenderingContext2D,
+    )
     vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/webp;base64,thumbnail')
   })
 
@@ -40,11 +48,17 @@ describe('useProjectThumbnailGenerator', () => {
     fetchMock.mockResolvedValue({ ok: true, blob: vi.fn().mockResolvedValue(new Blob(['video'])) })
     input.getPrimaryVideoTrack.mockResolvedValue(track)
     track.getDurationFromMetadata.mockResolvedValue(10)
-    canvasesAtTimestamps.mockReturnValue((async function* () { yield { canvas: sourceCanvas } })())
+    canvasesAtTimestamps.mockReturnValue(
+      (async function* () {
+        yield { canvas: sourceCanvas }
+      })(),
+    )
     saveProjectThumbnail.mockResolvedValue('saved://thumbnail')
     const { generateThumbnail, thumbnailCache } = useProjectThumbnailGenerator()
 
-    await expect(generateThumbnail('success-project', 'video://source')).resolves.toBe('data:image/webp;base64,thumbnail')
+    await expect(generateThumbnail('success-project', 'video://source')).resolves.toBe(
+      'data:image/webp;base64,thumbnail',
+    )
     expect(fetchMock).toHaveBeenCalledWith('video://source')
     expect(media.Input).toHaveBeenCalledWith(expect.objectContaining({ formats: media.ALL_FORMATS }))
     expect(canvasesAtTimestamps).toHaveBeenCalledWith([5])
@@ -79,10 +93,12 @@ describe('useProjectThumbnailGenerator', () => {
     input.getPrimaryVideoTrack.mockResolvedValue(track)
     track.getDurationFromMetadata.mockResolvedValue(null)
     track.computeDuration.mockResolvedValue(null)
-    canvasesAtTimestamps.mockReturnValue((async function* () {
-      yield { canvas: undefined }
-      yield { canvas: sourceCanvas }
-    })())
+    canvasesAtTimestamps.mockReturnValue(
+      (async function* () {
+        yield { canvas: undefined }
+        yield { canvas: sourceCanvas }
+      })(),
+    )
     const context = HTMLCanvasElement.prototype.getContext as unknown as ReturnType<typeof vi.fn>
     context.mockReturnValueOnce(null).mockReturnValueOnce({ drawImage: vi.fn() })
     const { generateThumbnail } = useProjectThumbnailGenerator()
@@ -103,9 +119,15 @@ describe('useProjectThumbnailGenerator', () => {
     const sourceCanvas = document.createElement('canvas')
     sourceCanvas.width = 240
     sourceCanvas.height = 135
-    canvasesAtTimestamps.mockReturnValue((async function* () { yield { canvas: sourceCanvas } })())
+    canvasesAtTimestamps.mockReturnValue(
+      (async function* () {
+        yield { canvas: sourceCanvas }
+      })(),
+    )
     saveProjectThumbnail.mockRejectedValue(new Error('permission'))
-    await expect(first.generateThumbnail('save-error-project', 'video://save-error')).resolves.toBe('data:image/webp;base64,thumbnail')
+    await expect(first.generateThumbnail('save-error-project', 'video://save-error')).resolves.toBe(
+      'data:image/webp;base64,thumbnail',
+    )
     expect(input.dispose).toHaveBeenCalledOnce()
   })
 })

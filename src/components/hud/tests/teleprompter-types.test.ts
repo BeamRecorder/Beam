@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { clampTeleprompterLine, createDefaultTeleprompterDocument, splitTeleprompterLines } from './teleprompter-types'
+import {
+  clampTeleprompterLine,
+  createDefaultTeleprompterDocument,
+  splitTeleprompterLines,
+} from '../teleprompter/teleprompter-types'
 
 describe('teleprompter types', () => {
   it('creates a complete versioned default document', () => {

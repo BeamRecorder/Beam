@@ -32,10 +32,11 @@ export const useToastStore = defineStore('toast', () => {
   const addToast = add
 
   const remove = (id: string) => {
-    toasts.value = toasts.value.filter(t => t.id !== id)
+    toasts.value = toasts.value.filter((t) => t.id !== id)
   }
 
-  const success = (message: string, duration?: number, action?: ToastAction) => add(message, 'success', duration, action)
+  const success = (message: string, duration?: number, action?: ToastAction) =>
+    add(message, 'success', duration, action)
   const error = (message: string, duration?: number, action?: ToastAction) => add(message, 'error', duration, action)
   const info = (message: string, duration?: number, action?: ToastAction) => add(message, 'info', duration, action)
 

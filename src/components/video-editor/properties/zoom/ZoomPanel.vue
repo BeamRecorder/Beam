@@ -1,43 +1,43 @@
 <script setup lang="ts">
-import Button from "~/ui/button/Button.vue";
-import ButtonGroup from "~/ui/button/ButtonGroup.vue";
-import BigSlider from "~/ui/slider/BigSlider.vue";
-import Popover from "~/ui/popover/Popover.vue";
-import DeleteItem from "~/ui/button/DeleteItem.vue";
-import ZoomClickEmptyState from "~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue";
-import { MousePointer, Sparkles, ZoomIn } from "@lucide/vue";
-import type { ZoomElement } from "~/components/video-editor/zoom/zoom-types";
-import { useTranslate } from "~/i18n/useTranslate";
+import Button from '~/ui/button/Button.vue'
+import ButtonGroup from '~/ui/button/ButtonGroup.vue'
+import BigSlider from '~/ui/slider/BigSlider.vue'
+import Popover from '~/ui/popover/Popover.vue'
+import DeleteItem from '~/ui/button/DeleteItem.vue'
+import ZoomClickEmptyState from '~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue'
+import { MousePointer, Sparkles, ZoomIn } from '@lucide/vue'
+import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types'
+import { useTranslate } from '~/i18n/useTranslate'
 
-const { t } = useTranslate("ZoomPanel");
+const { t } = useTranslate('ZoomPanel')
 
 const props = defineProps<{
-  selectedZoom: ZoomElement | null;
-  canGenerate: boolean;
-  hasAutomaticZooms: boolean;
-}>();
+  selectedZoom: ZoomElement | null
+  canGenerate: boolean
+  hasAutomaticZooms: boolean
+}>()
 
 const emit = defineEmits<{
-  (event: "update", value: ZoomElement): void;
-  (event: "delete"): void;
-  (event: "generate"): void;
-}>();
+  (event: 'update', value: ZoomElement): void
+  (event: 'delete'): void
+  (event: 'generate'): void
+}>()
 
-const magnificationValues = [1.25, 1.5, 1.8, 2.2, 3.5, 5.0];
+const magnificationValues = [1.25, 1.5, 1.8, 2.2, 3.5, 5.0]
 
 const updateDepth = (depth: number) => {
-  if (!props.selectedZoom) return;
-  const clamped = Math.max(1, Math.min(6, Math.round(depth)));
-  emit("update", { ...props.selectedZoom, depth: clamped });
-};
+  if (!props.selectedZoom) return
+  const clamped = Math.max(1, Math.min(6, Math.round(depth)))
+  emit('update', { ...props.selectedZoom, depth: clamped })
+}
 
-const setMode = (mode: ZoomElement["mode"]) => {
-  if (!props.selectedZoom || props.selectedZoom.mode === mode) return;
-  emit("update", {
+const setMode = (mode: ZoomElement['mode']) => {
+  if (!props.selectedZoom || props.selectedZoom.mode === mode) return
+  emit('update', {
     ...props.selectedZoom,
     mode,
-  });
-};
+  })
+}
 </script>
 
 <template>
@@ -57,13 +57,7 @@ const setMode = (mode: ZoomElement["mode"]) => {
       </Button>
       <Popover v-else block>
         <template #trigger>
-          <Button
-            variant="outline"
-            size="sm"
-            :icon="Sparkles"
-            :disabled="!canGenerate"
-            block
-          >
+          <Button variant="outline" size="sm" :icon="Sparkles" :disabled="!canGenerate" block>
             Regenerate Auto Zooms
           </Button>
         </template>
@@ -76,8 +70,8 @@ const setMode = (mode: ZoomElement["mode"]) => {
                 variant="danger"
                 size="xs"
                 @click="
-                  emit('generate');
-                  close();
+                  emit('generate')
+                  close()
                 "
               >
                 Regenerate
@@ -94,25 +88,17 @@ const setMode = (mode: ZoomElement["mode"]) => {
       <div class="section-block">
         <span class="section-title">{{ t('mode') }}</span>
         <ButtonGroup full>
-          <Button
-            size="xs"
-            :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'"
-            @click="setMode('auto')"
-          >
+          <Button size="xs" :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'" @click="setMode('auto')">
             Auto (Cursor)
           </Button>
-          <Button
-            size="xs"
-            :variant="selectedZoom.mode === 'manual' ? 'primary' : 'ghost'"
-            @click="setMode('manual')"
-          >
+          <Button size="xs" :variant="selectedZoom.mode === 'manual' ? 'primary' : 'ghost'" @click="setMode('manual')">
             Manual Focus
           </Button>
         </ButtonGroup>
         <div class="hint-card">
           <MousePointer :size="13" class="hint-icon" />
           <span>
-            {{ selectedZoom.mode === "manual" ? t('manualHint') : t('autoHint') }}
+            {{ selectedZoom.mode === 'manual' ? t('manualHint') : t('autoHint') }}
           </span>
         </div>
       </div>

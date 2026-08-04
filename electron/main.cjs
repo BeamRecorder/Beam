@@ -1,4 +1,15 @@
-const { app, BrowserWindow, desktopCapturer, ipcMain, session, protocol, globalShortcut, screen, net, shell } = require('electron')
+const {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  ipcMain,
+  session,
+  protocol,
+  globalShortcut,
+  screen,
+  net,
+  shell,
+} = require('electron')
 const { autoUpdater } = require('electron-updater')
 const fs = require('fs')
 const path = require('path')
@@ -67,7 +78,8 @@ function profileRendererRequests(webContents) {
     if (!request) return
     requests.delete(details.id)
     const elapsedMs = performance.now() - request.startedAt
-    if (elapsedMs >= 100) logStartup(`Renderer request ${details.statusCode} in ${elapsedMs.toFixed(0)} ms: ${request.url}`)
+    if (elapsedMs >= 100)
+      logStartup(`Renderer request ${details.statusCode} in ${elapsedMs.toFixed(0)} ms: ${request.url}`)
   })
   session.webRequest.onErrorOccurred({ urls: ['http://localhost:6500/*'] }, (details) => {
     const request = requests.get(details.id)
@@ -82,7 +94,9 @@ function isTrustedRenderer(url) {
 
 function configureMediaPermission() {
   const trusted = (webContents) => Boolean(webContents) && isTrustedRenderer(webContents.getURL())
-  session.defaultSession.setPermissionCheckHandler((webContents, permission) => trusted(webContents) && (permission === 'media' || permission === 'display-capture'))
+  session.defaultSession.setPermissionCheckHandler(
+    (webContents, permission) => trusted(webContents) && (permission === 'media' || permission === 'display-capture'),
+  )
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     if (!trusted(webContents)) return callback(false)
     callback(permission === 'media' || permission === 'display-capture')
@@ -93,7 +107,10 @@ function configureDesktopLoopback() {
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
       const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
-      if (!app.isPackaged) logStartup(`Desktop loopback request received (${sources.length} screen source${sources.length === 1 ? '' : 's'}).`)
+      if (!app.isPackaged)
+        logStartup(
+          `Desktop loopback request received (${sources.length} screen source${sources.length === 1 ? '' : 's'}).`,
+        )
       callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {})
     } catch {
       if (!app.isPackaged) logStartup('Desktop loopback source discovery failed.')
@@ -118,14 +135,28 @@ function getAppIconPath() {
 function createWindow(preferencesStore) {
   logStartup('Creating BrowserWindow.')
   const win = new BrowserWindow({
-    width: 352, height: 512, frame: false, transparent: true, alwaysOnTop: false,
-    icon: getAppIconPath(), resizable: true, maximizable: true, hasShadow: false, show: false,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false, webSecurity: false },
+    width: 352,
+    height: 512,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: false,
+    icon: getAppIconPath(),
+    resizable: true,
+    maximizable: true,
+    hasShadow: false,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+      webSecurity: false,
+    },
   })
   const controller = new WindowController(win, { preferencesStore })
   controllers.set(win, controller)
   // use profileRendererRequests() to see all the requests made by the app and find out why it's slow to launch.
-  // profileRendererRequests(win.webContents) 
+  // profileRendererRequests(win.webContents)
   win.once('ready-to-show', () => {
     logStartup('Window is ready to show (ready-to-show).')
     controller.markReadyToShow()
@@ -133,7 +164,9 @@ function createWindow(preferencesStore) {
   win.webContents.once('did-start-loading', () => logStartup('Renderer navigation started.'))
   win.webContents.once('dom-ready', () => logStartup('Renderer DOM is ready.'))
   win.webContents.once('did-finish-load', () => logStartup('Renderer loading finished.'))
-  win.webContents.on('render-process-gone', (_event, details) => logStartup(`Renderer process exited (${details.reason}).`))
+  win.webContents.on('render-process-gone', (_event, details) =>
+    logStartup(`Renderer process exited (${details.reason}).`),
+  )
   if (!app.isPackaged) {
     win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }))
   }
@@ -156,10 +189,24 @@ app.whenReady().then(() => {
   const preferencesStore = createPreferencesStore(userPaths.preferences)
   const teleprompterWindow = createTeleprompterWindow({ applicationRoot, isPackaged: app.isPackaged, preferencesStore })
   setTimeout(() => teleprompterWindow.prepare(), 0)
-  const preferencesCleanup = registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store: preferencesStore, shortcutHandler: (id) => teleprompterWindow.handleShortcut(id) })
+  const preferencesCleanup = registerPreferencesIpc({
+    ipcMain,
+    BrowserWindow,
+    globalShortcut,
+    store: preferencesStore,
+    shortcutHandler: (id) => teleprompterWindow.handleShortcut(id),
+  })
   app.once('will-quit', preferencesCleanup)
   logStartup('Desktop loopback policy registered.')
-  registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage] })
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer,
+    screen,
+    captureEngine,
+    app,
+    userPaths,
+    trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage],
+  })
   logStartup('Capture IPC registered.')
   registerCameraIpc({ ipcMain, storage: cameraStorage })
   logStartup('Camera IPC registered.')
@@ -170,7 +217,13 @@ app.whenReady().then(() => {
   const projectStore = createProjectStore(userPaths.projects)
   const teleprompterStorage = createTeleprompterStorage({ projectStore })
   registerTeleprompterIpc({ ipcMain, teleprompterWindow, storage: teleprompterStorage })
-  registerProjectIpc(ipcMain, projectStore, createBackgroundLibrary(userPaths), require('electron').dialog, BrowserWindow)
+  registerProjectIpc(
+    ipcMain,
+    projectStore,
+    createBackgroundLibrary(userPaths),
+    require('electron').dialog,
+    BrowserWindow,
+  )
   protocol.handle('project-media', async (request) => {
     try {
       const file = projectStore.mediaFileForUrl(request.url)
@@ -206,7 +259,9 @@ app.whenReady().then(() => {
   protocol.handle('whisper-model', (request) => {
     const file = whisperStore.fileForUrl(request.url)
     return file
-      ? new Response(Readable.toWeb(fs.createReadStream(file)), { headers: { 'Content-Length': String(fs.statSync(file).size) } })
+      ? new Response(Readable.toWeb(fs.createReadStream(file)), {
+          headers: { 'Content-Length': String(fs.statSync(file).size) },
+        })
       : new Response('Not found', { status: 404 })
   })
   registerWhisperIpc({ ipcMain, store: whisperStore })
@@ -218,7 +273,9 @@ app.whenReady().then(() => {
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state))
   ipcMain.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active))
   ipcMain.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement())
-  ipcMain.on('countdown:set', (_event, seconds) => countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null))
+  ipcMain.on('countdown:set', (_event, seconds) =>
+    countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null),
+  )
   ipcMain.handle('screen-region:select', (_event, options) => screenRegionOverlay.select(options))
   ipcMain.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options))
   ipcMain.on('screen-region:hide', () => screenRegionOverlay.hide())
@@ -228,7 +285,12 @@ app.whenReady().then(() => {
   logStartup('Window IPC registered.')
   const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow })
   logStartup('Export IPC registered.')
-  const updater = createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal: require('electron').shell.openExternal })
+  const updater = createAutoUpdater({
+    app,
+    BrowserWindow,
+    autoUpdater,
+    openExternal: require('electron').shell.openExternal,
+  })
   registerUpdateIpc(ipcMain, updater)
   ipcMain.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL))
   ipcMain.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL))
@@ -248,8 +310,17 @@ app.whenReady().then(() => {
     teleprompterWindow.destroy()
   })
   void updater.checkForUpdates()
-  win.webContents.once('destroyed', () => { cameraOverlay.destroy(); screenRegionOverlay.destroy(); exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id); microphoneStorage.cleanupOwner(win.webContents.id); systemAudioStorage.cleanupOwner(win.webContents.id) })
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(preferencesStore) })
+  win.webContents.once('destroyed', () => {
+    cameraOverlay.destroy()
+    screenRegionOverlay.destroy()
+    exportIpc.cleanupWindow(win.webContents)
+    cameraStorage.cleanupOwner(win.webContents.id)
+    microphoneStorage.cleanupOwner(win.webContents.id)
+    systemAudioStorage.cleanupOwner(win.webContents.id)
+  })
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(preferencesStore)
+  })
 })
 
 let quitting = false
@@ -257,9 +328,14 @@ let captureShutdown = null
 app.on('before-quit', (event) => {
   if (quitting) return
   event.preventDefault()
-  captureShutdown ??= captureEngine.shutdown().finally(() => { quitting = true; app.quit() })
+  captureShutdown ??= captureEngine.shutdown().finally(() => {
+    quitting = true
+    app.quit()
+  })
 })
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit()
+})
 
 process.on('SIGINT', () => {
   if (!quitting) app.quit()

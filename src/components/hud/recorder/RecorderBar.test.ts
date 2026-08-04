@@ -78,10 +78,13 @@ describe('RecorderBar', () => {
     wrapper.unmount()
     expect(capture.setRecorderTooltip).toHaveBeenNthCalledWith(1, true)
     expect(capture.setRecorderTooltip).toHaveBeenLastCalledWith(false)
-})
+  })
 
   it('renders countdown and finalizing states with the right disabled controls', async () => {
-    const wrapper = mount(RecorderBar, { props: { ...props, phase: 'countdown', visibility: 'auto-fade' }, global: { stubs: { Tooltip, KeyboardChip } } })
+    const wrapper = mount(RecorderBar, {
+      props: { ...props, phase: 'countdown', visibility: 'auto-fade' },
+      global: { stubs: { Tooltip, KeyboardChip } },
+    })
     await Promise.resolve()
     expect(wrapper.get('.recorder-bar').classes()).toContain('auto-fade')
     expect(wrapper.get('.recording-time').text()).toContain('Ready')
@@ -97,7 +100,7 @@ describe('RecorderBar', () => {
     await wrapper.setProps({ phase: 'finalizing' })
     expect(wrapper.findAll('.control')[5].attributes('disabled')).toBeDefined()
     wrapper.unmount()
-})
+  })
 
   it('updates the tooltip side when native window movement reports a new side', async () => {
     let sideListener: ((side: 'left' | 'right') => void) | undefined

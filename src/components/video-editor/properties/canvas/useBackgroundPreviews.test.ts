@@ -14,15 +14,29 @@ const workerState = vi.hoisted(() => {
     onmessage?: (event: MessageEvent) => void
     postMessage = vi.fn()
     terminate = vi.fn()
-    constructor() { instances.push(this) }
+    constructor() {
+      instances.push(this)
+    }
   }
   return { FakeWorker, instances }
 })
 
 vi.mock('./background-preview.worker?worker&inline', () => ({ default: workerState.FakeWorker }))
 
-const image = (id: string): BackgroundMedia => ({ id, name: id, path: `/media/${id}.png`, extension: 'png', kind: 'image' })
-const video = (id: string): BackgroundMedia => ({ id, name: id, path: `/media/${id}.mp4`, extension: 'mp4', kind: 'video' })
+const image = (id: string): BackgroundMedia => ({
+  id,
+  name: id,
+  path: `/media/${id}.png`,
+  extension: 'png',
+  kind: 'image',
+})
+const video = (id: string): BackgroundMedia => ({
+  id,
+  name: id,
+  path: `/media/${id}.mp4`,
+  extension: 'mp4',
+  kind: 'video',
+})
 
 describe('useBackgroundPreviews', () => {
   let api: ReturnType<typeof useBackgroundPreviews>
@@ -73,7 +87,9 @@ describe('useBackgroundPreviews', () => {
     expect(worker.postMessage).toHaveBeenCalledTimes(1)
 
     for (let index = 0; index < 180; index += 1) {
-      worker.onmessage?.({ data: { type: 'ready', id: `cached-${index}`, preview: new Blob([String(index)]) } } as MessageEvent)
+      worker.onmessage?.({
+        data: { type: 'ready', id: `cached-${index}`, preview: new Blob([String(index)]) },
+      } as MessageEvent)
     }
     expect(Object.keys(api.previews)).toHaveLength(180)
     expect(api.previews.first).toBeUndefined()
@@ -87,13 +103,18 @@ describe('useBackgroundPreviews', () => {
     Object.defineProperty(fakeVideo, 'currentTime', {
       configurable: true,
       get: () => currentTime,
-      set: (value: number) => { currentTime = value; fakeVideo.dispatchEvent(new Event('seeked')) },
+      set: (value: number) => {
+        currentTime = value
+        fakeVideo.dispatchEvent(new Event('seeked'))
+      },
     })
     vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
       if (tagName.toLowerCase() === 'video') return fakeVideo
       return realCreateElement(tagName, options)
     }) as typeof document.createElement)
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D)
     vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['frame'])))
 
     api.request(video('movie'))

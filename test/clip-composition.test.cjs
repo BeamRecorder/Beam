@@ -96,10 +96,13 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
       audioClip(asset.id, { groupId }),
     ],
   })
-  assert.deepEqual(normalized.clips.map((clip) => [clip.kind, clip.groupId, clip.timelineDurationMs]), [
-    ['video', groupId, 1_000],
-    ['audio', groupId, 1_000],
-  ])
+  assert.deepEqual(
+    normalized.clips.map((clip) => [clip.kind, clip.groupId, clip.timelineDurationMs]),
+    [
+      ['video', groupId, 1_000],
+      ['audio', groupId, 1_000],
+    ],
+  )
   assert.deepEqual(normalized.clips[0].appearance, {
     cornerRadius: 37,
     shadowSize: 'sm',
@@ -129,7 +132,18 @@ test('materializes project and recording assets without persisting runtime URLs'
   fs.writeFileSync(path.join(directory, 'media', 'video.mp4'), 'video')
   const composition = normalizeComposition({
     schemaVersion: 1,
-    assets: [{ id: 'asset-video', kind: 'video', name: 'Video', fileName: 'video.mp4', durationMs: 1_000, width: 1920, height: 1080, origin: 'project' }],
+    assets: [
+      {
+        id: 'asset-video',
+        kind: 'video',
+        name: 'Video',
+        fileName: 'video.mp4',
+        durationMs: 1_000,
+        width: 1920,
+        height: 1080,
+        origin: 'project',
+      },
+    ],
     clips: [visualClip('asset-video')],
   })
   const materialized = materializeComposition(directory, composition, () => null)
@@ -143,7 +157,18 @@ test('prunes only project media that is no longer referenced', () => {
   fs.writeFileSync(path.join(directory, 'media', 'unused.mp4'), 'video')
   const previous = {
     schemaVersion: 1,
-    assets: [{ id: 'unused', kind: 'video', name: 'Unused', fileName: 'unused.mp4', durationMs: 1_000, width: 1, height: 1, origin: 'project' }],
+    assets: [
+      {
+        id: 'unused',
+        kind: 'video',
+        name: 'Unused',
+        fileName: 'unused.mp4',
+        durationMs: 1_000,
+        width: 1,
+        height: 1,
+        origin: 'project',
+      },
+    ],
     clips: [visualClip('unused')],
   }
   pruneProjectMedia(directory, previous, emptyComposition())
@@ -179,5 +204,10 @@ test('persists and reads one atomic editor state', () => {
   assert.equal(saved.composition.clips[0].id, 'clip-video')
   assert.match(saved.composition.assets[0].src, /^file:/)
   assert.deepEqual(saved.presentation.canvas, { preset: '16:9', width: 1920, height: 1080, showBackground: true })
-  assert.deepEqual(saved.presentation.cursorMotion, { preset: 'custom', smoothing: 0.55, springMassMultiplier: 1.1, motionBlur: 0.2 })
+  assert.deepEqual(saved.presentation.cursorMotion, {
+    preset: 'custom',
+    smoothing: 0.55,
+    springMassMultiplier: 1.1,
+    motionBlur: 0.2,
+  })
 })

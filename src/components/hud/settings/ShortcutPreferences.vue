@@ -10,7 +10,11 @@ const preferencesStore = usePreferencesStore()
 const shortcutErrors = ref<Record<string, string>>({})
 
 const recordingDefinitions = [
-  { id: 'hud.startStopRecording', label: () => t('startStopRecording'), description: () => t('startStopRecordingDesc') },
+  {
+    id: 'hud.startStopRecording',
+    label: () => t('startStopRecording'),
+    description: () => t('startStopRecordingDesc'),
+  },
   { id: 'hud.playPause', label: () => t('pauseResume'), description: () => t('pauseResumeDesc') },
   { id: 'hud.toggleMic', label: () => t('micOnOff'), description: () => t('micOnOffDesc') },
   { id: 'hud.toggleCamera', label: () => t('cameraOnOff'), description: () => t('cameraOnOffDesc') },
@@ -18,10 +22,26 @@ const recordingDefinitions = [
 ]
 
 const teleprompterDefinitions = [
-  { id: 'teleprompter.toggleVisibility', label: () => t('teleprompterVisibility'), description: () => t('teleprompterVisibilityDesc') },
-  { id: 'teleprompter.toggleAutoscroll', label: () => t('teleprompterAutoscroll'), description: () => t('teleprompterAutoscrollDesc') },
-  { id: 'teleprompter.nextLine', label: () => t('teleprompterNextLine'), description: () => t('teleprompterNextLineDesc') },
-  { id: 'teleprompter.previousLine', label: () => t('teleprompterPreviousLine'), description: () => t('teleprompterPreviousLineDesc') },
+  {
+    id: 'teleprompter.toggleVisibility',
+    label: () => t('teleprompterVisibility'),
+    description: () => t('teleprompterVisibilityDesc'),
+  },
+  {
+    id: 'teleprompter.toggleAutoscroll',
+    label: () => t('teleprompterAutoscroll'),
+    description: () => t('teleprompterAutoscrollDesc'),
+  },
+  {
+    id: 'teleprompter.nextLine',
+    label: () => t('teleprompterNextLine'),
+    description: () => t('teleprompterNextLineDesc'),
+  },
+  {
+    id: 'teleprompter.previousLine',
+    label: () => t('teleprompterPreviousLine'),
+    description: () => t('teleprompterPreviousLineDesc'),
+  },
 ]
 
 const shortcutDefinitions = [...recordingDefinitions, ...teleprompterDefinitions]

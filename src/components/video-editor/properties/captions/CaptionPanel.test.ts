@@ -32,14 +32,55 @@ const ProgressBar = { template: '<div class="progress-stub" />' }
 
 const audioComposition = {
   schemaVersion: 1,
-  assets: [{ id: 'audio-1', kind: 'audio', name: 'System audio', fileName: null, durationMs: 2000, width: null, height: null, src: 'audio://system', origin: 'session', sessionId: 'session-1' }],
-  clips: [{ id: 'audio-clip', kind: 'audio', name: 'System audio', assetId: 'audio-1', role: 'system', timelineStartMs: 0, timelineDurationMs: 2000, sourceInMs: 0, sourceDurationMs: 2000, playbackRate: 1, enabled: true, order: 0, volume: 1 }],
+  assets: [
+    {
+      id: 'audio-1',
+      kind: 'audio',
+      name: 'System audio',
+      fileName: null,
+      durationMs: 2000,
+      width: null,
+      height: null,
+      src: 'audio://system',
+      origin: 'session',
+      sessionId: 'session-1',
+    },
+  ],
+  clips: [
+    {
+      id: 'audio-clip',
+      kind: 'audio',
+      name: 'System audio',
+      assetId: 'audio-1',
+      role: 'system',
+      timelineStartMs: 0,
+      timelineDurationMs: 2000,
+      sourceInMs: 0,
+      sourceDurationMs: 2000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      volume: 1,
+    },
+  ],
 }
 
 const aiCaption = {
-  id: 'caption-old', kind: 'caption', name: 'Old AI caption', timelineStartMs: 0, timelineDurationMs: 300,
-  sourceInMs: 0, sourceDurationMs: 300, playbackRate: 1, enabled: true, order: 1, isAiGenerated: true,
-  caption: { sentences: [], style: { color: '#fff', fontSize: 36, shadowColor: '#000', shadowBlur: 8, placement: 'bottom' } },
+  id: 'caption-old',
+  kind: 'caption',
+  name: 'Old AI caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 300,
+  sourceInMs: 0,
+  sourceDurationMs: 300,
+  playbackRate: 1,
+  enabled: true,
+  order: 1,
+  isAiGenerated: true,
+  caption: {
+    sentences: [],
+    style: { color: '#fff', fontSize: 36, shadowColor: '#000', shadowBlur: 8, placement: 'bottom' },
+  },
 }
 
 describe('CaptionPanel', () => {
@@ -48,7 +89,9 @@ describe('CaptionPanel', () => {
     whisper.progress.status = 'idle'
     whisper.progress.message = ''
     whisper.progress.progress = undefined
-    capture.whisperModels.mockResolvedValue([{ id: 'Xenova/whisper-tiny', status: 'missing', downloadedBytes: 0, totalBytes: 100 }])
+    capture.whisperModels.mockResolvedValue([
+      { id: 'Xenova/whisper-tiny', status: 'missing', downloadedBytes: 0, totalBytes: 100 },
+    ])
     capture.downloadWhisperModel.mockResolvedValue(undefined)
     capture.onWhisperProgress.mockReturnValue(() => undefined)
     whisper.transcribe.mockResolvedValue({ words: [], sentences: [] })
@@ -56,8 +99,14 @@ describe('CaptionPanel', () => {
 
   it('loads a missing model, displays progress/errors and downloads it', async () => {
     let progressListener!: (event: { id: string; downloadedBytes: number; totalBytes: number | null }) => void
-    capture.onWhisperProgress.mockImplementation((listener) => { progressListener = listener; return () => undefined })
-    const wrapper = mount(CaptionPanel, { props: { composition: audioComposition, timelineDurationMs: 2000 }, global: { stubs: { Button, Select, ProgressBar } } })
+    capture.onWhisperProgress.mockImplementation((listener) => {
+      progressListener = listener
+      return () => undefined
+    })
+    const wrapper = mount(CaptionPanel, {
+      props: { composition: audioComposition, timelineDurationMs: 2000 },
+      global: { stubs: { Button, Select, ProgressBar } },
+    })
     await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce())
     expect(wrapper.find('.sub-group').exists()).toBe(true)
     expect(wrapper.find('button[variant="primary"]').attributes('disabled')).toBeDefined()
@@ -73,13 +122,26 @@ describe('CaptionPanel', () => {
   })
 
   it('generates captions, replaces old AI captions, and exposes the edit action', async () => {
-    capture.whisperModels.mockResolvedValue([{ id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 }])
-    whisper.transcribe.mockResolvedValue({ words: [], sentences: [{ id: 'sentence-1', text: 'Hello', startMs: 100, endMs: 120 }] })
-    const wrapper = mount(CaptionPanel, { props: { composition: { ...audioComposition, clips: [...audioComposition.clips, aiCaption] }, timelineDurationMs: 2000 }, global: { stubs: { Button, Select, ProgressBar } } })
+    capture.whisperModels.mockResolvedValue([
+      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+    ])
+    whisper.transcribe.mockResolvedValue({
+      words: [],
+      sentences: [{ id: 'sentence-1', text: 'Hello', startMs: 100, endMs: 120 }],
+    })
+    const wrapper = mount(CaptionPanel, {
+      props: {
+        composition: { ...audioComposition, clips: [...audioComposition.clips, aiCaption] },
+        timelineDurationMs: 2000,
+      },
+      global: { stubs: { Button, Select, ProgressBar } },
+    })
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true))
     expect(wrapper.text()).toContain('1 subtitle track')
     await wrapper.get('button[variant="primary"]').trigger('click')
-    await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledWith('audio://system', 'Xenova/whisper-tiny', 2000))
+    await vi.waitFor(() =>
+      expect(whisper.transcribe).toHaveBeenCalledWith('audio://system', 'Xenova/whisper-tiny', 2000),
+    )
     expect(createComposition).toHaveBeenCalled()
     expect(wrapper.emitted('update:composition')).toHaveLength(1)
     expect(wrapper.emitted('select-caption')).toHaveLength(1)
@@ -88,8 +150,13 @@ describe('CaptionPanel', () => {
   })
 
   it('does nothing when transcription returns no sentences', async () => {
-    capture.whisperModels.mockResolvedValue([{ id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 }])
-    const wrapper = mount(CaptionPanel, { props: { composition: audioComposition, timelineDurationMs: 2000 }, global: { stubs: { Button, Select, ProgressBar } } })
+    capture.whisperModels.mockResolvedValue([
+      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+    ])
+    const wrapper = mount(CaptionPanel, {
+      props: { composition: audioComposition, timelineDurationMs: 2000 },
+      global: { stubs: { Button, Select, ProgressBar } },
+    })
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true))
     await wrapper.get('button[variant="primary"]').trigger('click')
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalled())

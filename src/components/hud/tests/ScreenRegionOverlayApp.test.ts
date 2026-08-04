@@ -25,9 +25,16 @@ describe('ScreenRegionOverlayApp', () => {
   })
 
   it('draws a selected region, shows its dimensions and confirms it', async () => {
-    let configure!: (value: { mode: 'select'; bounds: { width: number; height: number }; region?: { x: number; y: number; width: number; height: number } }) => void
+    let configure!: (value: {
+      mode: 'select'
+      bounds: { width: number; height: number }
+      region?: { x: number; y: number; width: number; height: number }
+    }) => void
     const unsubscribe = vi.fn()
-    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => { configure = next; return unsubscribe })
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next
+      return unsubscribe
+    })
     const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button } } })
     configure({ mode: 'select', bounds: { width: 1000, height: 500 } })
     await wrapper.vm.$nextTick()
@@ -50,10 +57,21 @@ describe('ScreenRegionOverlayApp', () => {
   })
 
   it('moves and resizes an existing region while clamping to the viewport', async () => {
-    let configure!: (value: { mode: 'select'; bounds: { width: number; height: number }; region: { x: number; y: number; width: number; height: number } }) => void
-    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => { configure = next; return vi.fn() })
+    let configure!: (value: {
+      mode: 'select'
+      bounds: { width: number; height: number }
+      region: { x: number; y: number; width: number; height: number }
+    }) => void
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next
+      return vi.fn()
+    })
     const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button } } })
-    configure({ mode: 'select', bounds: { width: 1000, height: 500 }, region: { x: 0.2, y: 0.2, width: 0.3, height: 0.3 } })
+    configure({
+      mode: 'select',
+      bounds: { width: 1000, height: 500 },
+      region: { x: 0.2, y: 0.2, width: 0.3, height: 0.3 },
+    })
     await wrapper.vm.$nextTick()
     const main = wrapper.get('.region-overlay')
     Object.defineProperty(main.element, 'setPointerCapture', { value: vi.fn() })
@@ -72,7 +90,10 @@ describe('ScreenRegionOverlayApp', () => {
 
   it('cancels selection and ignores pointer input outside select mode', async () => {
     let configure!: (value: { mode: 'select' | 'record'; bounds: { width: number; height: number } }) => void
-    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => { configure = next; return vi.fn() })
+    capture.onScreenRegionConfigure.mockImplementation((next: typeof configure) => {
+      configure = next
+      return vi.fn()
+    })
     const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button } } })
     configure({ mode: 'record', bounds: { width: 100, height: 100 } })
     await wrapper.vm.$nextTick()

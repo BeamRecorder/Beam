@@ -18,8 +18,14 @@ describe('TeleprompterWindowApp', () => {
     let shortcutListener: ((value: string) => void) | undefined
     const stopSession = vi.fn()
     const stopShortcut = vi.fn()
-    capture.onTeleprompterSession.mockImplementation((next: typeof sessionListener) => { sessionListener = next; return stopSession })
-    capture.onTeleprompterShortcut.mockImplementation((next: typeof shortcutListener) => { shortcutListener = next; return stopShortcut })
+    capture.onTeleprompterSession.mockImplementation((next: typeof sessionListener) => {
+      sessionListener = next
+      return stopSession
+    })
+    capture.onTeleprompterShortcut.mockImplementation((next: typeof shortcutListener) => {
+      shortcutListener = next
+      return stopShortcut
+    })
     const sessionEvent = vi.fn()
     const shortcutEvent = vi.fn()
     window.addEventListener('teleprompter-session', sessionEvent)
@@ -30,7 +36,10 @@ describe('TeleprompterWindowApp', () => {
     sessionListener?.({ projectId: 'project-1', sessionId: 'session-1' })
     shortcutListener?.('toggleVisibility')
     expect(sessionEvent).toHaveBeenCalledOnce()
-    expect((sessionEvent.mock.calls[0][0] as CustomEvent).detail).toEqual({ projectId: 'project-1', sessionId: 'session-1' })
+    expect((sessionEvent.mock.calls[0][0] as CustomEvent).detail).toEqual({
+      projectId: 'project-1',
+      sessionId: 'session-1',
+    })
     expect(shortcutEvent).toHaveBeenCalledOnce()
     expect((shortcutEvent.mock.calls[0][0] as CustomEvent).detail).toBe('toggleVisibility')
     expect(capture.notifyTeleprompterReady).toHaveBeenCalledOnce()

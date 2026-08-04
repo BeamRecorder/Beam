@@ -37,7 +37,14 @@ describe('CanvasToolbar', () => {
 
   it('renders zoom and grid controls and emits events', async () => {
     const wrapper = mount(CanvasToolbar, {
-      props: { preset: '16:9', canCrop: true, isCropping: false, isGridVisible: true, zoomPercent: 150, isZoomedOrPanned: true },
+      props: {
+        preset: '16:9',
+        canCrop: true,
+        isCropping: false,
+        isGridVisible: true,
+        zoomPercent: 150,
+        isZoomedOrPanned: true,
+      },
       global: { stubs: { PopoverMenuButton, Button } },
     })
     expect(wrapper.text()).toContain('150%')

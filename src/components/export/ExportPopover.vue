@@ -27,8 +27,12 @@ const formatDescriptions: Record<ExportFormat, string> = {
   mp4: t('mp4Desc'),
 }
 
-const nativeWidth = computed(() => props.request.snapshot.canvas?.width || props.request.snapshot.render?.sourceWidth || 1920)
-const nativeHeight = computed(() => props.request.snapshot.canvas?.height || props.request.snapshot.render?.sourceHeight || 1080)
+const nativeWidth = computed(
+  () => props.request.snapshot.canvas?.width || props.request.snapshot.render?.sourceWidth || 1920,
+)
+const nativeHeight = computed(
+  () => props.request.snapshot.canvas?.height || props.request.snapshot.render?.sourceHeight || 1080,
+)
 
 const computeExportDimensions = (res: ExportResolutionOption) => {
   const nativeW = nativeWidth.value
@@ -58,7 +62,7 @@ const resolutionDescriptions = computed<Record<ExportResolutionOption, string>>(
   return {
     '720p': t('res720pDesc', { width: dims720.width, height: dims720.height }),
     '1080p': t('res1080pDesc', { width: dims1080.width, height: dims1080.height }),
-    'max': t('resMaxDesc', { width: dimsMax.width, height: dimsMax.height }),
+    max: t('resMaxDesc', { width: dimsMax.width, height: dimsMax.height }),
   }
 })
 
@@ -78,7 +82,9 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
 const availability = ref<string | null>(null)
 const { progress, error, result, isExporting, start, cancel } = useExportJob()
 const toastStore = useToastStore()
-const percentage = computed(() => progress.value ? (progress.value.completed / Math.max(1, progress.value.total)) * 100 : 0)
+const percentage = computed(() =>
+  progress.value ? (progress.value.completed / Math.max(1, progress.value.total)) * 100 : 0,
+)
 
 const openFile = (path: string) => {
   if (path && window.capture?.openFile) {
@@ -102,19 +108,18 @@ const run = async () => {
       },
     },
   }
-  if (!await supportedVideoCodec(request)) { availability.value = t('formatNotSupported', { format: format.value.toUpperCase() }); return }
+  if (!(await supportedVideoCodec(request))) {
+    availability.value = t('formatNotSupported', { format: format.value.toUpperCase() })
+    return
+  }
   await start(request)
   if (result.value?.path) {
     const exportedPath = result.value.path
     const filename = exportedPath.split(/[/\\]/).pop() || t('video')
-    toastStore.success(
-      t('savedTo', { path: filename }),
-      6000,
-      {
-        label: t('openFile'),
-        onClick: () => openFile(exportedPath),
-      }
-    )
+    toastStore.success(t('savedTo', { path: filename }), 6000, {
+      label: t('openFile'),
+      onClick: () => openFile(exportedPath),
+    })
   }
 }
 
@@ -145,8 +150,12 @@ const formatMs = (ms: number) => {
           <ProgressBar :value="percentage" class="main-progress-bar" />
 
           <div class="progress-details">
-            <span class="detail-item">{{ t('frameCount', { completed: progress?.completed ?? 0, total: progress?.total ?? 0 }) }}</span>
-            <span class="detail-item time-item">{{ formatMs(progress?.currentTimeMs ?? 0) }} / {{ formatMs(progress?.totalTimeMs ?? 0) }}</span>
+            <span class="detail-item">{{
+              t('frameCount', { completed: progress?.completed ?? 0, total: progress?.total ?? 0 })
+            }}</span>
+            <span class="detail-item time-item"
+              >{{ formatMs(progress?.currentTimeMs ?? 0) }} / {{ formatMs(progress?.totalTimeMs ?? 0) }}</span
+            >
           </div>
 
           <div class="actions">
@@ -158,22 +167,10 @@ const formatMs = (ms: number) => {
           <div class="field">
             <span class="field-label">{{ t('format') }}</span>
             <ButtonGroup full>
-              <Button
-                variant="tab"
-                size="sm"
-                block
-                :class="{ active: format === 'webm' }"
-                @click="format = 'webm'"
-              >
+              <Button variant="tab" size="sm" block :class="{ active: format === 'webm' }" @click="format = 'webm'">
                 {{ t('webm') }}
               </Button>
-              <Button
-                variant="tab"
-                size="sm"
-                block
-                :class="{ active: format === 'mp4' }"
-                @click="format = 'mp4'"
-              >
+              <Button variant="tab" size="sm" block :class="{ active: format === 'mp4' }" @click="format = 'mp4'">
                 {{ t('mp4') }}
               </Button>
             </ButtonGroup>
@@ -237,7 +234,9 @@ const formatMs = (ms: number) => {
           <p v-if="availability || error" class="error" role="alert">{{ availability || error }}</p>
           <div v-if="result" class="result-box">
             <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
-            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">{{ t('openFile') }}</Button>
+            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">{{
+              t('openFile')
+            }}</Button>
           </div>
           <div class="actions">
             <Button variant="primary" size="sm" block :icon="Download" @click="run">{{ t('exportVideo') }}</Button>
@@ -249,16 +248,61 @@ const formatMs = (ms: number) => {
 </template>
 
 <style scoped>
-.export-popover { width: 320px; padding: 16px; display: grid; gap: 14px; }
-.field { display: grid; gap: 6px; width: 100%; }
-.field :deep(.btn-group) { width: 100% !important; box-sizing: border-box; }
-.field :deep(.btn-group .btn-container) { flex: 1 !important; display: flex !important; min-width: 0 !important; }
-.field :deep(.btn-group .btn) { width: 100% !important; justify-content: center !important; }
-.field-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
-.option-hint { font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; margin-top: 1px; }
-.job-status { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: .75rem; color: var(--text-muted); text-transform: capitalize; }
-.error { color: var(--color-danger, #ef4444); font-size: .75rem; margin: 0; }
-.success { color: var(--color-success, #22c55e); font-size: .75rem; margin: 0; overflow-wrap: anywhere; }
+.export-popover {
+  width: 320px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+.field {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.field :deep(.btn-group) {
+  width: 100% !important;
+  box-sizing: border-box;
+}
+.field :deep(.btn-group .btn-container) {
+  flex: 1 !important;
+  display: flex !important;
+  min-width: 0 !important;
+}
+.field :deep(.btn-group .btn) {
+  width: 100% !important;
+  justify-content: center !important;
+}
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.option-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin-top: 1px;
+}
+.job-status {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+.error {
+  color: var(--color-danger, #ef4444);
+  font-size: 0.75rem;
+  margin: 0;
+}
+.success {
+  color: var(--color-success, #22c55e);
+  font-size: 0.75rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .result-box {
   display: flex;
   flex-direction: column;
@@ -268,7 +312,11 @@ const formatMs = (ms: number) => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
-.actions { display: flex; width: 100%; margin-top: 4px; }
+.actions {
+  display: flex;
+  width: 100%;
+  margin-top: 4px;
+}
 .export-progress-card {
   display: flex;
   flex-direction: column;

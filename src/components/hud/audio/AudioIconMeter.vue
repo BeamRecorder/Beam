@@ -1,29 +1,27 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { Mic, MicOff, Volume2, VolumeX } from "@lucide/vue";
+import { computed } from 'vue'
+import { Mic, MicOff, Volume2, VolumeX } from '@lucide/vue'
 
 const props = withDefaults(
   defineProps<{
-    enabled: boolean;
-    level: number;
-    kind: "mic" | "system";
-    size?: "sm" | "md";
+    enabled: boolean
+    level: number
+    kind: 'mic' | 'system'
+    size?: 'sm' | 'md'
   }>(),
   {
-    size: "md",
-  }
-);
+    size: 'md',
+  },
+)
 
-const percent = computed(() =>
-  Math.min(100, Math.max(0, Math.round(props.level * 100)))
-);
+const percent = computed(() => Math.min(100, Math.max(0, Math.round(props.level * 100))))
 
 const meterColor = computed(() => {
-  const lvl = props.level;
-  if (lvl > 0.75) return "var(--color-error, #ef4444)";
-  if (lvl > 0.4) return "var(--color-warning, #f59e0b)";
-  return "var(--color-success, #10b981)";
-});
+  const lvl = props.level
+  if (lvl > 0.75) return 'var(--color-error, #ef4444)'
+  if (lvl > 0.4) return 'var(--color-warning, #f59e0b)'
+  return 'var(--color-success, #10b981)'
+})
 </script>
 
 <template>
@@ -47,11 +45,7 @@ const meterColor = computed(() => {
 
     <!-- Icon -->
     <component
-      :is="
-        kind === 'mic'
-          ? (enabled ? Mic : MicOff)
-          : (enabled ? Volume2 : VolumeX)
-      "
+      :is="kind === 'mic' ? (enabled ? Mic : MicOff) : enabled ? Volume2 : VolumeX"
       class="meter-icon"
       :class="{ 'is-disabled': !enabled }"
     />
@@ -84,7 +78,9 @@ const meterColor = computed(() => {
   width: 100%;
   opacity: 0.25;
   border-radius: 2px;
-  transition: height 0.06s ease-out, background 0.15s ease;
+  transition:
+    height 0.06s ease-out,
+    background 0.15s ease;
   pointer-events: none;
 }
 
@@ -97,7 +93,9 @@ const meterColor = computed(() => {
   z-index: 2;
   width: 100%;
   height: 100%;
-  transition: color 0.15s ease, transform 0.08s ease;
+  transition:
+    color 0.15s ease,
+    transform 0.08s ease;
 }
 .meter-icon.is-disabled {
   color: var(--text-muted, #71717a);

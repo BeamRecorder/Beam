@@ -1,32 +1,32 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { DesktopCaptureApi } from '../types/capture-api';
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { DesktopCaptureApi } from '../types/capture-api'
 
-const previousCapture = window.capture;
+const previousCapture = window.capture
 
 afterEach(() => {
-  vi.resetModules();
+  vi.resetModules()
   if (previousCapture) {
-    window.capture = previousCapture;
+    window.capture = previousCapture
   } else {
-    delete window.capture;
+    delete window.capture
   }
-});
+})
 
 describe('capture preload bridge', () => {
   it('fails clearly when the Electron preload did not expose the bridge', async () => {
-    delete window.capture;
-    vi.resetModules();
+    delete window.capture
+    vi.resetModules()
 
-    await expect(import('../capture')).rejects.toThrow('Capture API indisponible');
-  });
+    await expect(import('../capture')).rejects.toThrow('Capture API indisponible')
+  })
 
   it('returns the exact API exposed by the preload', async () => {
-    const exposed = { discover: vi.fn() } as unknown as DesktopCaptureApi;
-    window.capture = exposed;
-    vi.resetModules();
+    const exposed = { discover: vi.fn() } as unknown as DesktopCaptureApi
+    window.capture = exposed
+    vi.resetModules()
 
-    const module = await import('../capture');
+    const module = await import('../capture')
 
-    expect(module.capture).toBe(exposed);
-  });
-});
+    expect(module.capture).toBe(exposed)
+  })
+})

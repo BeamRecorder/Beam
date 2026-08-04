@@ -50,22 +50,22 @@ const smoothCoordinateAt = (
     return coordinate(start) + (coordinate(end) - coordinate(start)) * eased
   }
 
-  const startSlope = before && startTime > eventTime(before)
-    ? (coordinate(end) - coordinate(before)) / (endTime - eventTime(before))
-    : (coordinate(end) - coordinate(start)) / duration
-  const endSlope = after && eventTime(after) > endTime
-    ? (coordinate(after) - coordinate(start)) / (eventTime(after) - startTime)
-    : (coordinate(end) - coordinate(start)) / duration
+  const startSlope =
+    before && startTime > eventTime(before)
+      ? (coordinate(end) - coordinate(before)) / (endTime - eventTime(before))
+      : (coordinate(end) - coordinate(start)) / duration
+  const endSlope =
+    after && eventTime(after) > endTime
+      ? (coordinate(after) - coordinate(start)) / (eventTime(after) - startTime)
+      : (coordinate(end) - coordinate(start)) / duration
   const progressSquared = progress * progress
   const progressCubed = progressSquared * progress
   const h00 = 2 * progressCubed - 3 * progressSquared + 1
   const h10 = progressCubed - 2 * progressSquared + progress
   const h01 = -2 * progressCubed + 3 * progressSquared
   const h11 = progressCubed - progressSquared
-  const value = h00 * coordinate(start)
-    + h10 * duration * startSlope
-    + h01 * coordinate(end)
-    + h11 * duration * endSlope
+  const value =
+    h00 * coordinate(start) + h10 * duration * startSlope + h01 * coordinate(end) + h11 * duration * endSlope
   return clamp01(value)
 }
 
@@ -137,8 +137,22 @@ export function cursorStateAt(
   state.cursorKind = cursorKind
   state.hotspot = hotspot
   if (nextMove && eventTime(nextMove) > eventTime(previousMove)) {
-    state.x = smoothCoordinateAt(beforePreviousMove, previousMove, nextMove, afterNextMove, time, (event) => event.normalizedX)
-    state.y = smoothCoordinateAt(beforePreviousMove, previousMove, nextMove, afterNextMove, time, (event) => event.normalizedY)
+    state.x = smoothCoordinateAt(
+      beforePreviousMove,
+      previousMove,
+      nextMove,
+      afterNextMove,
+      time,
+      (event) => event.normalizedX,
+    )
+    state.y = smoothCoordinateAt(
+      beforePreviousMove,
+      previousMove,
+      nextMove,
+      afterNextMove,
+      time,
+      (event) => event.normalizedY,
+    )
   }
   return state
 }
@@ -150,19 +164,17 @@ export function buttonEventsBetween(
   button?: CursorClickButton,
 ): CursorButtonEvent[] {
   if (endSeconds < startSeconds) return []
-  return events.filter((event): event is CursorButtonEvent =>
-    isButton(event)
-      && event.pressed
-      && eventTime(event) > startSeconds
-      && eventTime(event) <= endSeconds
-      && (button === undefined || clickButtonForRecordedButton(event.button) === button),
+  return events.filter(
+    (event): event is CursorButtonEvent =>
+      isButton(event) &&
+      event.pressed &&
+      eventTime(event) > startSeconds &&
+      eventTime(event) <= endSeconds &&
+      (button === undefined || clickButtonForRecordedButton(event.button) === button),
   )
 }
 
-export function cursorAssetForState(
-  state: CursorPlaybackState | null,
-  shapes: Record<string, CursorShapeAsset>,
-) {
+export function cursorAssetForState(state: CursorPlaybackState | null, shapes: Record<string, CursorShapeAsset>) {
   const cursorId = state?.cursorId ?? state?.shapeId
-  return cursorId ? shapes[cursorId] ?? null : null
+  return cursorId ? (shapes[cursorId] ?? null) : null
 }

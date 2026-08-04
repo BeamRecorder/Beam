@@ -1,353 +1,331 @@
-import { ref } from "vue";
-import type { ShadowDirection } from "../cursor/shadow-types";
-import {
-  createDefaultCursorClickEffects,
-  type CursorClickEffects,
-} from "../../../../api/types/cursor-settings";
-import { resolvePublicAssetUrl } from "~/utils/public-asset";
+import { ref } from 'vue'
+import type { ShadowDirection } from '../cursor/shadow-types'
+import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../../../api/types/cursor-settings'
+import { resolvePublicAssetUrl } from '~/utils/public-asset'
 
 export type CursorType =
-  | "automatic"
-  | "default"
-  | "beachball"
-  | "busy"
-  | "cell"
-  | "contextualmenu"
-  | "copy"
-  | "cross"
-  | "handgrabbing"
-  | "handopen"
-  | "handpointing"
-  | "help"
-  | "makealias"
-  | "move"
-  | "notallowed"
-  | "poof"
-  | "resizenorth"
-  | "resizenortheast"
-  | "resizenortheastsouthwest"
-  | "resizenorthsouth"
-  | "resizenorthwest"
-  | "resizenorthwestsoutheast"
-  | "resizeright"
-  | "resizesouth"
-  | "resizesoutheast"
-  | "resizesouthwest"
-  | "resizeup"
-  | "resizeupdown"
-  | "resizewest"
-  | "resizewesteast"
-  | "screenshotselection"
-  | "screenshotwindow"
-  | "textcursor"
-  | "textcursorvertical"
-  | "zoomin"
-  | "zoomout";
+  | 'automatic'
+  | 'default'
+  | 'beachball'
+  | 'busy'
+  | 'cell'
+  | 'contextualmenu'
+  | 'copy'
+  | 'cross'
+  | 'handgrabbing'
+  | 'handopen'
+  | 'handpointing'
+  | 'help'
+  | 'makealias'
+  | 'move'
+  | 'notallowed'
+  | 'poof'
+  | 'resizenorth'
+  | 'resizenortheast'
+  | 'resizenortheastsouthwest'
+  | 'resizenorthsouth'
+  | 'resizenorthwest'
+  | 'resizenorthwestsoutheast'
+  | 'resizeright'
+  | 'resizesouth'
+  | 'resizesoutheast'
+  | 'resizesouthwest'
+  | 'resizeup'
+  | 'resizeupdown'
+  | 'resizewest'
+  | 'resizewesteast'
+  | 'screenshotselection'
+  | 'screenshotwindow'
+  | 'textcursor'
+  | 'textcursorvertical'
+  | 'zoomin'
+  | 'zoomout'
 
 export const cursorUrls: Record<CursorType, string> = {
-  automatic: "",
-  default: resolvePublicAssetUrl("/macOsSvgCursors/default.svg"),
-  beachball: resolvePublicAssetUrl("/macOsSvgCursors/beachball.svg"),
-  busy: resolvePublicAssetUrl("/macOsSvgCursors/busy.svg"),
-  cell: resolvePublicAssetUrl("/macOsSvgCursors/cell.svg"),
-  contextualmenu: resolvePublicAssetUrl("/macOsSvgCursors/contextualmenu.svg"),
-  copy: resolvePublicAssetUrl("/macOsSvgCursors/copy.svg"),
-  cross: resolvePublicAssetUrl("/macOsSvgCursors/cross.svg"),
-  handgrabbing: resolvePublicAssetUrl("/macOsSvgCursors/handgrabbing.svg"),
-  handopen: resolvePublicAssetUrl("/macOsSvgCursors/handopen.svg"),
-  handpointing: resolvePublicAssetUrl("/macOsSvgCursors/handpointing.svg"),
-  help: resolvePublicAssetUrl("/macOsSvgCursors/help.svg"),
-  makealias: resolvePublicAssetUrl("/macOsSvgCursors/makealias.svg"),
-  move: resolvePublicAssetUrl("/macOsSvgCursors/move.svg"),
-  notallowed: resolvePublicAssetUrl("/macOsSvgCursors/notallowed.svg"),
-  poof: resolvePublicAssetUrl("/macOsSvgCursors/poof.svg"),
-  resizenorth: resolvePublicAssetUrl("/macOsSvgCursors/resizenorth.svg"),
-  resizenortheast: resolvePublicAssetUrl("/macOsSvgCursors/resizenortheast.svg"),
-  resizenortheastsouthwest: resolvePublicAssetUrl("/macOsSvgCursors/resizenortheastsouthwest.svg"),
-  resizenorthsouth: resolvePublicAssetUrl("/macOsSvgCursors/resizenorthsouth.svg"),
-  resizenorthwest: resolvePublicAssetUrl("/macOsSvgCursors/resizenorthwest.svg"),
-  resizenorthwestsoutheast: resolvePublicAssetUrl("/macOsSvgCursors/resizenorthwestsoutheast.svg"),
-  resizeright: resolvePublicAssetUrl("/macOsSvgCursors/resizeright.svg"),
-  resizesouth: resolvePublicAssetUrl("/macOsSvgCursors/resizesouth.svg"),
-  resizesoutheast: resolvePublicAssetUrl("/macOsSvgCursors/resizesoutheast.svg"),
-  resizesouthwest: resolvePublicAssetUrl("/macOsSvgCursors/resizesouthwest.svg"),
-  resizeup: resolvePublicAssetUrl("/macOsSvgCursors/resizeup.svg"),
-  resizeupdown: resolvePublicAssetUrl("/macOsSvgCursors/resizeupdown.svg"),
-  resizewest: resolvePublicAssetUrl("/macOsSvgCursors/resizewest.svg"),
-  resizewesteast: resolvePublicAssetUrl("/macOsSvgCursors/resizewesteast.svg"),
-  screenshotselection: resolvePublicAssetUrl("/macOsSvgCursors/screenshotselection.svg"),
-  screenshotwindow: resolvePublicAssetUrl("/macOsSvgCursors/screenshotwindow.svg"),
-  textcursor: resolvePublicAssetUrl("/macOsSvgCursors/textcursor.svg"),
-  textcursorvertical: resolvePublicAssetUrl("/macOsSvgCursors/textcursorvertical.svg"),
-  zoomin: resolvePublicAssetUrl("/macOsSvgCursors/zoomin.svg"),
-  zoomout: resolvePublicAssetUrl("/macOsSvgCursors/zoomout.svg"),
-};
+  automatic: '',
+  default: resolvePublicAssetUrl('/macOsSvgCursors/default.svg'),
+  beachball: resolvePublicAssetUrl('/macOsSvgCursors/beachball.svg'),
+  busy: resolvePublicAssetUrl('/macOsSvgCursors/busy.svg'),
+  cell: resolvePublicAssetUrl('/macOsSvgCursors/cell.svg'),
+  contextualmenu: resolvePublicAssetUrl('/macOsSvgCursors/contextualmenu.svg'),
+  copy: resolvePublicAssetUrl('/macOsSvgCursors/copy.svg'),
+  cross: resolvePublicAssetUrl('/macOsSvgCursors/cross.svg'),
+  handgrabbing: resolvePublicAssetUrl('/macOsSvgCursors/handgrabbing.svg'),
+  handopen: resolvePublicAssetUrl('/macOsSvgCursors/handopen.svg'),
+  handpointing: resolvePublicAssetUrl('/macOsSvgCursors/handpointing.svg'),
+  help: resolvePublicAssetUrl('/macOsSvgCursors/help.svg'),
+  makealias: resolvePublicAssetUrl('/macOsSvgCursors/makealias.svg'),
+  move: resolvePublicAssetUrl('/macOsSvgCursors/move.svg'),
+  notallowed: resolvePublicAssetUrl('/macOsSvgCursors/notallowed.svg'),
+  poof: resolvePublicAssetUrl('/macOsSvgCursors/poof.svg'),
+  resizenorth: resolvePublicAssetUrl('/macOsSvgCursors/resizenorth.svg'),
+  resizenortheast: resolvePublicAssetUrl('/macOsSvgCursors/resizenortheast.svg'),
+  resizenortheastsouthwest: resolvePublicAssetUrl('/macOsSvgCursors/resizenortheastsouthwest.svg'),
+  resizenorthsouth: resolvePublicAssetUrl('/macOsSvgCursors/resizenorthsouth.svg'),
+  resizenorthwest: resolvePublicAssetUrl('/macOsSvgCursors/resizenorthwest.svg'),
+  resizenorthwestsoutheast: resolvePublicAssetUrl('/macOsSvgCursors/resizenorthwestsoutheast.svg'),
+  resizeright: resolvePublicAssetUrl('/macOsSvgCursors/resizeright.svg'),
+  resizesouth: resolvePublicAssetUrl('/macOsSvgCursors/resizesouth.svg'),
+  resizesoutheast: resolvePublicAssetUrl('/macOsSvgCursors/resizesoutheast.svg'),
+  resizesouthwest: resolvePublicAssetUrl('/macOsSvgCursors/resizesouthwest.svg'),
+  resizeup: resolvePublicAssetUrl('/macOsSvgCursors/resizeup.svg'),
+  resizeupdown: resolvePublicAssetUrl('/macOsSvgCursors/resizeupdown.svg'),
+  resizewest: resolvePublicAssetUrl('/macOsSvgCursors/resizewest.svg'),
+  resizewesteast: resolvePublicAssetUrl('/macOsSvgCursors/resizewesteast.svg'),
+  screenshotselection: resolvePublicAssetUrl('/macOsSvgCursors/screenshotselection.svg'),
+  screenshotwindow: resolvePublicAssetUrl('/macOsSvgCursors/screenshotwindow.svg'),
+  textcursor: resolvePublicAssetUrl('/macOsSvgCursors/textcursor.svg'),
+  textcursorvertical: resolvePublicAssetUrl('/macOsSvgCursors/textcursorvertical.svg'),
+  zoomin: resolvePublicAssetUrl('/macOsSvgCursors/zoomin.svg'),
+  zoomout: resolvePublicAssetUrl('/macOsSvgCursors/zoomout.svg'),
+}
 
 export const cursorOptions = [
   {
-    value: "automatic",
-    label: "Automatic (Recommended)",
-    thumbnail: "/macOsSvgCursors/default.svg",
+    value: 'automatic',
+    label: 'Automatic (Recommended)',
+    thumbnail: '/macOsSvgCursors/default.svg',
   },
   {
-    value: "default",
-    label: "macOS Pointer",
-    thumbnail: "/macOsSvgCursors/default.svg",
+    value: 'default',
+    label: 'macOS Pointer',
+    thumbnail: '/macOsSvgCursors/default.svg',
   },
   {
-    value: "beachball",
-    label: "macOS Beachball (Busy)",
-    thumbnail: "/macOsSvgCursors/beachball.svg",
+    value: 'beachball',
+    label: 'macOS Beachball (Busy)',
+    thumbnail: '/macOsSvgCursors/beachball.svg',
   },
   {
-    value: "busy",
-    label: "macOS Busy Loader",
-    thumbnail: "/macOsSvgCursors/busy.svg",
+    value: 'busy',
+    label: 'macOS Busy Loader',
+    thumbnail: '/macOsSvgCursors/busy.svg',
   },
   {
-    value: "cell",
-    label: "macOS Cell Selection",
-    thumbnail: "/macOsSvgCursors/cell.svg",
+    value: 'cell',
+    label: 'macOS Cell Selection',
+    thumbnail: '/macOsSvgCursors/cell.svg',
   },
   {
-    value: "contextualmenu",
-    label: "macOS Context Menu",
-    thumbnail: "/macOsSvgCursors/contextualmenu.svg",
+    value: 'contextualmenu',
+    label: 'macOS Context Menu',
+    thumbnail: '/macOsSvgCursors/contextualmenu.svg',
   },
   {
-    value: "copy",
-    label: "macOS Copy Pointer",
-    thumbnail: "/macOsSvgCursors/copy.svg",
+    value: 'copy',
+    label: 'macOS Copy Pointer',
+    thumbnail: '/macOsSvgCursors/copy.svg',
   },
   {
-    value: "cross",
-    label: "macOS Crosshair",
-    thumbnail: "/macOsSvgCursors/cross.svg",
+    value: 'cross',
+    label: 'macOS Crosshair',
+    thumbnail: '/macOsSvgCursors/cross.svg',
   },
   {
-    value: "handgrabbing",
-    label: "macOS Grabbing Hand",
-    thumbnail: "/macOsSvgCursors/handgrabbing.svg",
+    value: 'handgrabbing',
+    label: 'macOS Grabbing Hand',
+    thumbnail: '/macOsSvgCursors/handgrabbing.svg',
   },
   {
-    value: "handopen",
-    label: "macOS Open Hand",
-    thumbnail: "/macOsSvgCursors/handopen.svg",
+    value: 'handopen',
+    label: 'macOS Open Hand',
+    thumbnail: '/macOsSvgCursors/handopen.svg',
   },
   {
-    value: "handpointing",
-    label: "macOS Link Hand",
-    thumbnail: "/macOsSvgCursors/handpointing.svg",
+    value: 'handpointing',
+    label: 'macOS Link Hand',
+    thumbnail: '/macOsSvgCursors/handpointing.svg',
   },
   {
-    value: "help",
-    label: "macOS Help Indicator",
-    thumbnail: "/macOsSvgCursors/help.svg",
+    value: 'help',
+    label: 'macOS Help Indicator',
+    thumbnail: '/macOsSvgCursors/help.svg',
   },
   {
-    value: "makealias",
-    label: "macOS Make Alias",
-    thumbnail: "/macOsSvgCursors/makealias.svg",
+    value: 'makealias',
+    label: 'macOS Make Alias',
+    thumbnail: '/macOsSvgCursors/makealias.svg',
   },
   {
-    value: "move",
-    label: "macOS Move Cursor",
-    thumbnail: "/macOsSvgCursors/move.svg",
+    value: 'move',
+    label: 'macOS Move Cursor',
+    thumbnail: '/macOsSvgCursors/move.svg',
   },
   {
-    value: "notallowed",
-    label: "macOS Not Allowed",
-    thumbnail: "/macOsSvgCursors/notallowed.svg",
+    value: 'notallowed',
+    label: 'macOS Not Allowed',
+    thumbnail: '/macOsSvgCursors/notallowed.svg',
   },
   {
-    value: "poof",
-    label: "macOS Poof Animation",
-    thumbnail: "/macOsSvgCursors/poof.svg",
+    value: 'poof',
+    label: 'macOS Poof Animation',
+    thumbnail: '/macOsSvgCursors/poof.svg',
   },
   {
-    value: "resizenorth",
-    label: "macOS Resize North",
-    thumbnail: "/macOsSvgCursors/resizenorth.svg",
+    value: 'resizenorth',
+    label: 'macOS Resize North',
+    thumbnail: '/macOsSvgCursors/resizenorth.svg',
   },
   {
-    value: "resizenortheast",
-    label: "macOS Resize Northeast",
-    thumbnail: "/macOsSvgCursors/resizenortheast.svg",
+    value: 'resizenortheast',
+    label: 'macOS Resize Northeast',
+    thumbnail: '/macOsSvgCursors/resizenortheast.svg',
   },
   {
-    value: "resizenortheastsouthwest",
-    label: "macOS Resize NE-SW",
-    thumbnail: "/macOsSvgCursors/resizenortheastsouthwest.svg",
+    value: 'resizenortheastsouthwest',
+    label: 'macOS Resize NE-SW',
+    thumbnail: '/macOsSvgCursors/resizenortheastsouthwest.svg',
   },
   {
-    value: "resizenorthsouth",
-    label: "macOS Resize North-South",
-    thumbnail: "/macOsSvgCursors/resizenorthsouth.svg",
+    value: 'resizenorthsouth',
+    label: 'macOS Resize North-South',
+    thumbnail: '/macOsSvgCursors/resizenorthsouth.svg',
   },
   {
-    value: "resizenorthwest",
-    label: "macOS Resize Northwest",
-    thumbnail: "/macOsSvgCursors/resizenorthwest.svg",
+    value: 'resizenorthwest',
+    label: 'macOS Resize Northwest',
+    thumbnail: '/macOsSvgCursors/resizenorthwest.svg',
   },
   {
-    value: "resizenorthwestsoutheast",
-    label: "macOS Resize NW-SE",
-    thumbnail: "/macOsSvgCursors/resizenorthwestsoutheast.svg",
+    value: 'resizenorthwestsoutheast',
+    label: 'macOS Resize NW-SE',
+    thumbnail: '/macOsSvgCursors/resizenorthwestsoutheast.svg',
   },
   {
-    value: "resizeright",
-    label: "macOS Resize Right",
-    thumbnail: "/macOsSvgCursors/resizeright.svg",
+    value: 'resizeright',
+    label: 'macOS Resize Right',
+    thumbnail: '/macOsSvgCursors/resizeright.svg',
   },
   {
-    value: "resizesouth",
-    label: "macOS Resize South",
-    thumbnail: "/macOsSvgCursors/resizesouth.svg",
+    value: 'resizesouth',
+    label: 'macOS Resize South',
+    thumbnail: '/macOsSvgCursors/resizesouth.svg',
   },
   {
-    value: "resizesoutheast",
-    label: "macOS Resize Southeast",
-    thumbnail: "/macOsSvgCursors/resizesoutheast.svg",
+    value: 'resizesoutheast',
+    label: 'macOS Resize Southeast',
+    thumbnail: '/macOsSvgCursors/resizesoutheast.svg',
   },
   {
-    value: "resizesouthwest",
-    label: "macOS Resize Southwest",
-    thumbnail: "/macOsSvgCursors/resizesouthwest.svg",
+    value: 'resizesouthwest',
+    label: 'macOS Resize Southwest',
+    thumbnail: '/macOsSvgCursors/resizesouthwest.svg',
   },
   {
-    value: "resizeup",
-    label: "macOS Resize Up",
-    thumbnail: "/macOsSvgCursors/resizeup.svg",
+    value: 'resizeup',
+    label: 'macOS Resize Up',
+    thumbnail: '/macOsSvgCursors/resizeup.svg',
   },
   {
-    value: "resizeupdown",
-    label: "macOS Resize Up-Down",
-    thumbnail: "/macOsSvgCursors/resizeupdown.svg",
+    value: 'resizeupdown',
+    label: 'macOS Resize Up-Down',
+    thumbnail: '/macOsSvgCursors/resizeupdown.svg',
   },
   {
-    value: "resizewest",
-    label: "macOS Resize West",
-    thumbnail: "/macOsSvgCursors/resizewest.svg",
+    value: 'resizewest',
+    label: 'macOS Resize West',
+    thumbnail: '/macOsSvgCursors/resizewest.svg',
   },
   {
-    value: "resizewesteast",
-    label: "macOS Resize West-East",
-    thumbnail: "/macOsSvgCursors/resizewesteast.svg",
+    value: 'resizewesteast',
+    label: 'macOS Resize West-East',
+    thumbnail: '/macOsSvgCursors/resizewesteast.svg',
   },
   {
-    value: "screenshotselection",
-    label: "macOS Select Screenshot",
-    thumbnail: "/macOsSvgCursors/screenshotselection.svg",
+    value: 'screenshotselection',
+    label: 'macOS Select Screenshot',
+    thumbnail: '/macOsSvgCursors/screenshotselection.svg',
   },
   {
-    value: "screenshotwindow",
-    label: "macOS Window Screenshot",
-    thumbnail: "/macOsSvgCursors/screenshotwindow.svg",
+    value: 'screenshotwindow',
+    label: 'macOS Window Screenshot',
+    thumbnail: '/macOsSvgCursors/screenshotwindow.svg',
   },
   {
-    value: "textcursor",
-    label: "macOS Text I-Beam",
-    thumbnail: "/macOsSvgCursors/textcursor.svg",
+    value: 'textcursor',
+    label: 'macOS Text I-Beam',
+    thumbnail: '/macOsSvgCursors/textcursor.svg',
   },
   {
-    value: "textcursorvertical",
-    label: "macOS Vertical Text I-Beam",
-    thumbnail: "/macOsSvgCursors/textcursorvertical.svg",
+    value: 'textcursorvertical',
+    label: 'macOS Vertical Text I-Beam',
+    thumbnail: '/macOsSvgCursors/textcursorvertical.svg',
   },
   {
-    value: "zoomin",
-    label: "macOS Zoom In",
-    thumbnail: "/macOsSvgCursors/zoomin.svg",
+    value: 'zoomin',
+    label: 'macOS Zoom In',
+    thumbnail: '/macOsSvgCursors/zoomin.svg',
   },
   {
-    value: "zoomout",
-    label: "macOS Zoom Out",
-    thumbnail: "/macOsSvgCursors/zoomout.svg",
+    value: 'zoomout',
+    label: 'macOS Zoom Out',
+    thumbnail: '/macOsSvgCursors/zoomout.svg',
   },
-].map((option) => ({ ...option, thumbnail: resolvePublicAssetUrl(option.thumbnail) }));
+].map((option) => ({ ...option, thumbnail: resolvePublicAssetUrl(option.thumbnail) }))
 
 /** `custom` is intentionally rendered as the default pointer, never guessed. */
-export const cursorTypeForKind = (
-  kind: string | null | undefined,
-): CursorType => {
-  const candidate = kind === "custom" ? "default" : kind;
-  return candidate && candidate in cursorUrls && candidate !== "automatic"
-    ? (candidate as CursorType)
-    : "default";
-};
+export const cursorTypeForKind = (kind: string | null | undefined): CursorType => {
+  const candidate = kind === 'custom' ? 'default' : kind
+  return candidate && candidate in cursorUrls && candidate !== 'automatic' ? (candidate as CursorType) : 'default'
+}
 
 export const svgAtRasterSize = (svgContent: string, rasterWidth: number) => {
-  const viewBox = svgContent.match(
-    /\bviewBox=["']\s*[-.\d]+\s+[-.\d]+\s+([-.\d]+)\s+([-.\d]+)\s*["']/i,
-  );
-  const viewBoxWidth = Number(viewBox?.[1]) || 1;
-  const viewBoxHeight = Number(viewBox?.[2]) || viewBoxWidth;
-  const width = Math.max(1, Math.ceil(rasterWidth));
-  const height = Math.max(1, Math.ceil((width * viewBoxHeight) / viewBoxWidth));
+  const viewBox = svgContent.match(/\bviewBox=["']\s*[-.\d]+\s+[-.\d]+\s+([-.\d]+)\s+([-.\d]+)\s*["']/i)
+  const viewBoxWidth = Number(viewBox?.[1]) || 1
+  const viewBoxHeight = Number(viewBox?.[2]) || viewBoxWidth
+  const width = Math.max(1, Math.ceil(rasterWidth))
+  const height = Math.max(1, Math.ceil((width * viewBoxHeight) / viewBoxWidth))
 
   return svgContent.replace(/<svg\b([^>]*)>/i, (_tag, attributes: string) => {
-    const withoutDimensions = attributes.replace(
-      /\s(?:width|height)=["'][^"']*["']/gi,
-      "",
-    );
-    return `<svg${withoutDimensions} width="${width}" height="${height}">`;
-  });
-};
+    const withoutDimensions = attributes.replace(/\s(?:width|height)=["'][^"']*["']/gi, '')
+    return `<svg${withoutDimensions} width="${width}" height="${height}">`
+  })
+}
 
 export function useCursorReplacer() {
-  const selectedCursor = ref<CursorType>("automatic");
-  const cursorSize = ref(45);
-  const cursorColor = ref("#000000");
-  const enableShadow = ref(true);
-  const shadowBlur = ref(6);
-  const shadowColor = ref("#000000");
-  const shadowDirection = ref<ShadowDirection>("bottom");
-  const clickEffects = ref<CursorClickEffects>(
-    createDefaultCursorClickEffects(),
-  );
+  const selectedCursor = ref<CursorType>('automatic')
+  const cursorSize = ref(45)
+  const cursorColor = ref('#000000')
+  const enableShadow = ref(true)
+  const shadowBlur = ref(6)
+  const shadowColor = ref('#000000')
+  const shadowDirection = ref<ShadowDirection>('bottom')
+  const clickEffects = ref<CursorClickEffects>(createDefaultCursorClickEffects())
 
   // Canvas rasterizes an SVG when drawing it. Decode it at the largest required
   // pixel size so the cursor stays sharp while the camera zoom is applied.
-  const getCursorImage = async (
-    type: CursorType,
-    rasterSize: number,
-    color: string,
-  ): Promise<HTMLImageElement> => {
-    const urlPath = cursorUrls[type];
-    let svgContent = "";
-    const response = await fetch(urlPath);
+  const getCursorImage = async (type: CursorType, rasterSize: number, color: string): Promise<HTMLImageElement> => {
+    const urlPath = cursorUrls[type]
+    let svgContent = ''
+    const response = await fetch(urlPath)
     if (!response.ok) {
-      throw new Error(
-        `Unable to load cursor asset: ${urlPath} (${response.status})`,
-      );
+      throw new Error(`Unable to load cursor asset: ${urlPath} (${response.status})`)
     }
-    svgContent = await response.text();
+    svgContent = await response.text()
 
     // Replace width and height attributes in SVG with responsive viewBox preserved
-    if (color !== "#000000") {
-      svgContent = svgContent
-        .replace(/fill="#000000"/gi, `fill="${color}"`)
-        .replace(/fill="#000"/gi, `fill="${color}"`);
+    if (color !== '#000000') {
+      svgContent = svgContent.replace(/fill="#000000"/gi, `fill="${color}"`).replace(/fill="#000"/gi, `fill="${color}"`)
     }
-    svgContent = svgAtRasterSize(svgContent, rasterSize);
+    svgContent = svgAtRasterSize(svgContent, rasterSize)
 
     return new Promise((resolve, reject) => {
-      const img = new Image();
+      const img = new Image()
       const svgBlob = new Blob([svgContent], {
-        type: "image/svg+xml;charset=utf-8",
-      });
-      const url = URL.createObjectURL(svgBlob);
+        type: 'image/svg+xml;charset=utf-8',
+      })
+      const url = URL.createObjectURL(svgBlob)
       img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(img);
-      };
+        URL.revokeObjectURL(url)
+        resolve(img)
+      }
       img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error(`Unable to decode cursor asset: ${urlPath}`));
-      };
-      img.src = url;
-    });
-  };
+        URL.revokeObjectURL(url)
+        reject(new Error(`Unable to decode cursor asset: ${urlPath}`))
+      }
+      img.src = url
+    })
+  }
 
   return {
     selectedCursor,
@@ -359,5 +337,5 @@ export function useCursorReplacer() {
     shadowDirection,
     clickEffects,
     getCursorImage,
-  };
+  }
 }

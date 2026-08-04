@@ -3,7 +3,12 @@ import { vi } from 'vitest'
 export const browserSystemAudioMock = {
   request: vi.fn(),
   recordSystemAudioFailure: vi.fn(),
-  systemAudioSource: vi.fn(() => ({ id: 'system-audio:chromium:desktop-loopback', kind: 'system-audio', label: 'System audio', isDefault: true })),
+  systemAudioSource: vi.fn(() => ({
+    id: 'system-audio:chromium:desktop-loopback',
+    kind: 'system-audio',
+    label: 'System audio',
+    isDefault: true,
+  })),
 }
 
 export const BrowserSystemAudioRecorder = { request: browserSystemAudioMock.request }

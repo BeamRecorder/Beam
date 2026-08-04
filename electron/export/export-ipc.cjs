@@ -6,7 +6,11 @@ const MAX_CHUNK_BYTES = 32 * 1024 * 1024
 
 function safeExportName(name, extension) {
   const base = typeof name === 'string' ? name.normalize('NFKC').trim() : ''
-  const cleaned = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').replace(/[. ]+$/g, '').slice(0, 120)
+  const cleaned = base
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[. ]+$/g, '')
+    .slice(0, 120)
   return `${cleaned || 'Beam export'}.${extension}`
 }
 
@@ -37,7 +41,8 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
     })
     if (result.canceled || !result.filePath) return { canceled: true }
     const targetPath = pathModule.resolve(result.filePath)
-    if (pathModule.extname(targetPath).toLowerCase() !== `.${format}`) throw new Error(`Le fichier doit utiliser l’extension .${format}.`)
+    if (pathModule.extname(targetPath).toLowerCase() !== `.${format}`)
+      throw new Error(`Le fichier doit utiliser l’extension .${format}.`)
     const id = crypto.randomUUID()
     const temporaryPath = `${targetPath}.${id}.partial`
     const handle = fsModule.openSync(temporaryPath, 'wx')
@@ -46,11 +51,19 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
   })
   ipcMain.handle('export:write', (event, payload = {}) => {
     const job = requireJob(event, payload.jobId)
-    if (!Number.isSafeInteger(payload.sequence) || payload.sequence !== job.nextSequence) throw new Error('Ordre de chunk d’export invalide.')
+    if (!Number.isSafeInteger(payload.sequence) || payload.sequence !== job.nextSequence)
+      throw new Error('Ordre de chunk d’export invalide.')
     if (!Number.isSafeInteger(payload.position) || payload.position < 0) throw new Error('Position de chunk invalide.')
     const data = payload.data
-    if (!(data instanceof Uint8Array) || data.byteLength === 0 || data.byteLength > MAX_CHUNK_BYTES) throw new Error('Taille de chunk d’export invalide.')
-    fsModule.writeSync(job.handle, Buffer.from(data.buffer, data.byteOffset, data.byteLength), 0, data.byteLength, payload.position)
+    if (!(data instanceof Uint8Array) || data.byteLength === 0 || data.byteLength > MAX_CHUNK_BYTES)
+      throw new Error('Taille de chunk d’export invalide.')
+    fsModule.writeSync(
+      job.handle,
+      Buffer.from(data.buffer, data.byteOffset, data.byteLength),
+      0,
+      data.byteLength,
+      payload.position,
+    )
     job.nextSequence += 1
   })
   ipcMain.handle('export:finalize', (event, payload = {}) => {
@@ -75,9 +88,11 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
       shell.showItemInFolder(payload.path)
     }
   })
-  return { cleanupWindow: (webContents) => {
-    for (const job of jobs.values()) if (job.ownerId === webContents.id) cleanup(job)
-  } }
+  return {
+    cleanupWindow: (webContents) => {
+      for (const job of jobs.values()) if (job.ownerId === webContents.id) cleanup(job)
+    },
+  }
 }
 
 module.exports = { registerExportIpc, safeExportName }

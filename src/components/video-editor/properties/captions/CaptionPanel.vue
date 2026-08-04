@@ -1,73 +1,95 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import Button from "~/ui/button/Button.vue";
-import ProgressBar from "~/ui/progressbar/ProgressBar.vue";
-import Select from "~/ui/select/Select.vue";
-import Divider from "~/ui/divider/Divider.vue";
-import type { CaptionClip, ClipComposition } from "../../composition/composition-types";
-import { createComposition } from "../../composition/engine/clip-engine";
-import { useWhisperTranscription } from "../../captions/useWhisperTranscription";
-import { whisperModels, type TranscriptionSource, type WhisperModelId } from "../../captions/whisper-types";
-import type { ProjectEditorData } from "../../../../api/types/capture-api";
-import { capture } from "../../../../api/capture";
-import { captionSources } from "./caption-sources";
-import { useTranslate } from "~/i18n/useTranslate";
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import Button from '~/ui/button/Button.vue'
+import ProgressBar from '~/ui/progressbar/ProgressBar.vue'
+import Select from '~/ui/select/Select.vue'
+import Divider from '~/ui/divider/Divider.vue'
+import type { CaptionClip, ClipComposition } from '../../composition/composition-types'
+import { createComposition } from '../../composition/engine/clip-engine'
+import { useWhisperTranscription } from '../../captions/useWhisperTranscription'
+import { whisperModels, type TranscriptionSource, type WhisperModelId } from '../../captions/whisper-types'
+import type { ProjectEditorData } from '../../../../api/types/capture-api'
+import { capture } from '../../../../api/capture'
+import { captionSources } from './caption-sources'
+import { useTranslate } from '~/i18n/useTranslate'
 
-const { t } = useTranslate("CaptionPanel");
-const props = defineProps<{ composition: ClipComposition; editorData?: ProjectEditorData | null; timelineDurationMs: number }>();
+const { t } = useTranslate('CaptionPanel')
+const props = defineProps<{
+  composition: ClipComposition
+  editorData?: ProjectEditorData | null
+  timelineDurationMs: number
+}>()
 const emit = defineEmits<{
-  (event: "update:composition", composition: ClipComposition): void;
-  (event: "select-caption", clipId: string): void;
-}>();
+  (event: 'update:composition', composition: ClipComposition): void
+  (event: 'select-caption', clipId: string): void
+}>()
 
-const source = ref<TranscriptionSource>("system");
-const model = ref<WhisperModelId>("Xenova/whisper-tiny");
-const { progress, transcribe } = useWhisperTranscription();
-const modelStates = ref<Record<string, { status: "missing" | "ready"; downloadedBytes: number; totalBytes: number | null }>>({});
-const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null);
-const downloadError = ref<string | null>(null);
+const source = ref<TranscriptionSource>('system')
+const model = ref<WhisperModelId>('Xenova/whisper-tiny')
+const { progress, transcribe } = useWhisperTranscription()
+const modelStates = ref<
+  Record<string, { status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
+>({})
+const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null)
+const downloadError = ref<string | null>(null)
 
-const selectedModelState = computed(() => modelStates.value[model.value]);
-const modelReady = computed(() => selectedModelState.value?.status === "ready");
-const progressPercent = computed(() => downloadProgress.value?.totalBytes ? downloadProgress.value.downloadedBytes / downloadProgress.value.totalBytes * 100 : 0);
-const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+const selectedModelState = computed(() => modelStates.value[model.value])
+const modelReady = computed(() => selectedModelState.value?.status === 'ready')
+const progressPercent = computed(() =>
+  downloadProgress.value?.totalBytes
+    ? (downloadProgress.value.downloadedBytes / downloadProgress.value.totalBytes) * 100
+    : 0,
+)
+const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`
 
-const aiCaptions = computed(() => props.composition.clips.filter((clip): clip is CaptionClip => clip.kind === "caption" && Boolean(clip.isAiGenerated)));
-const hasAiCaptions = computed(() => aiCaptions.value.length > 0);
+const aiCaptions = computed(() =>
+  props.composition.clips.filter((clip): clip is CaptionClip => clip.kind === 'caption' && Boolean(clip.isAiGenerated)),
+)
+const hasAiCaptions = computed(() => aiCaptions.value.length > 0)
 
-const loadModels = async () => { modelStates.value = Object.fromEntries((await capture.whisperModels()).map((item) => [item.id, item])); };
+const loadModels = async () => {
+  modelStates.value = Object.fromEntries((await capture.whisperModels()).map((item) => [item.id, item]))
+}
 const downloadModel = async () => {
-  downloadError.value = null;
-  downloadProgress.value = null;
-  try { await capture.downloadWhisperModel(model.value); await loadModels(); }
-  catch (error) { downloadError.value = error instanceof Error ? error.message : t("modelDownloadFailed"); }
-};
+  downloadError.value = null
+  downloadProgress.value = null
+  try {
+    await capture.downloadWhisperModel(model.value)
+    await loadModels()
+  } catch (error) {
+    downloadError.value = error instanceof Error ? error.message : t('modelDownloadFailed')
+  }
+}
 
-let unsubscribe: (() => void) | null = null;
+let unsubscribe: (() => void) | null = null
 onMounted(async () => {
-  await loadModels();
-  unsubscribe = capture.onWhisperProgress((event) => { if (event.id === model.value) downloadProgress.value = event; });
-});
-onBeforeUnmount(() => unsubscribe?.());
+  await loadModels()
+  unsubscribe = capture.onWhisperProgress((event) => {
+    if (event.id === model.value) downloadProgress.value = event
+  })
+})
+onBeforeUnmount(() => unsubscribe?.())
 
-const sources = computed(() => captionSources(props.composition, props.editorData));
-const selectedSource = computed(() => sources.value.find((item) => item.id === source.value) ?? null);
-const modelSelectItems = computed(() => whisperModels.map((item) => ({
-  value: item.id,
-  label: `${modelStates.value[item.id]?.status === "ready" ? "✓ " : ""}${item.label} (${item.languages})`,
-})));
-const sourceSelectItems = computed(() => sources.value.map((item) => ({ value: item.id, label: item.label })));
+const sources = computed(() => captionSources(props.composition, props.editorData))
+const selectedSource = computed(() => sources.value.find((item) => item.id === source.value) ?? null)
+const modelSelectItems = computed(() =>
+  whisperModels.map((item) => ({
+    value: item.id,
+    label: `${modelStates.value[item.id]?.status === 'ready' ? '✓ ' : ''}${item.label} (${item.languages})`,
+  })),
+)
+const sourceSelectItems = computed(() => sources.value.map((item) => ({ value: item.id, label: item.label })))
 
 const runTranscription = async () => {
-  if (!selectedSource.value) return;
-  const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs);
-  if (!result.sentences.length) return;
-  const preserved = props.composition.clips.filter((clip) => clip.kind !== "caption" || !clip.isAiGenerated);
+  if (!selectedSource.value) return
+  const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs)
+  if (!result.sentences.length) return
+  const preserved = props.composition.clips.filter((clip) => clip.kind !== 'caption' || !clip.isAiGenerated)
   const captions: CaptionClip[] = result.sentences.map((sentence, index) => {
-    const durationMs = Math.max(40, sentence.endMs - sentence.startMs);
+    const durationMs = Math.max(40, sentence.endMs - sentence.startMs)
     return {
       id: crypto.randomUUID(),
-      kind: "caption",
+      kind: 'caption',
       name: `AI Caption ${index + 1}`,
       timelineStartMs: sentence.startMs,
       timelineDurationMs: durationMs,
@@ -80,19 +102,19 @@ const runTranscription = async () => {
       caption: {
         sentences: [sentence],
         style: {
-          color: "#ffffff",
+          color: '#ffffff',
           fontSize: 36,
-          shadowColor: "rgba(0, 0, 0, 0.8)",
+          shadowColor: 'rgba(0, 0, 0, 0.8)',
           shadowBlur: 8,
-          shadowDirection: "bottom-right",
-          placement: "bottom",
+          shadowDirection: 'bottom-right',
+          placement: 'bottom',
         },
       },
-    };
-  });
-  emit("update:composition", createComposition(props.composition.assets, [...preserved, ...captions]));
-  emit("select-caption", captions[0].id);
-};
+    }
+  })
+  emit('update:composition', createComposition(props.composition.assets, [...preserved, ...captions]))
+  emit('select-caption', captions[0].id)
+}
 </script>
 
 <template>
@@ -107,12 +129,22 @@ const runTranscription = async () => {
 
         <div v-if="sources.length" class="sub-group">
           <span class="sub-label">{{ t('audioSource') }}</span>
-          <Select :items="sourceSelectItems" :model-value="source" size="sm" @update:model-value="source = $event as TranscriptionSource" />
+          <Select
+            :items="sourceSelectItems"
+            :model-value="source"
+            size="sm"
+            @update:model-value="source = $event as TranscriptionSource"
+          />
         </div>
 
         <div class="sub-group">
           <span class="sub-label">{{ t('whisperModel') }}</span>
-          <Select :items="modelSelectItems" :model-value="model" size="sm" @update:model-value="model = $event as WhisperModelId" />
+          <Select
+            :items="modelSelectItems"
+            :model-value="model"
+            size="sm"
+            @update:model-value="model = $event as WhisperModelId"
+          />
           <span v-if="modelReady" class="model-ready-text">{{ t('modelReady') }}</span>
         </div>
 
@@ -120,7 +152,10 @@ const runTranscription = async () => {
 
         <div v-if="downloadProgress?.id === model" class="progress-block">
           <ProgressBar :value="progressPercent" />
-          <span class="progress-text">{{ formatMegabytes(downloadProgress.downloadedBytes) }} / {{ downloadProgress.totalBytes ? formatMegabytes(downloadProgress.totalBytes) : '…' }}</span>
+          <span class="progress-text"
+            >{{ formatMegabytes(downloadProgress.downloadedBytes) }} /
+            {{ downloadProgress.totalBytes ? formatMegabytes(downloadProgress.totalBytes) : '…' }}</span
+          >
         </div>
 
         <div v-if="progress.status === 'loading' || progress.status === 'running'" class="progress-block">
@@ -128,7 +163,9 @@ const runTranscription = async () => {
           <span class="progress-text">{{ progress.message }}</span>
         </div>
 
-        <p v-if="downloadError || progress.status === 'error'" class="error-text">{{ downloadError || progress.message }}</p>
+        <p v-if="downloadError || progress.status === 'error'" class="error-text">
+          {{ downloadError || progress.message }}
+        </p>
 
         <Button
           variant="primary"
@@ -137,7 +174,13 @@ const runTranscription = async () => {
           @click="runTranscription"
           block
         >
-          {{ progress.status === 'idle' ? (hasAiCaptions ? t('regenerateAICaptions') : t('generateCaptions')) : t('processing') }}
+          {{
+            progress.status === 'idle'
+              ? hasAiCaptions
+                ? t('regenerateAICaptions')
+                : t('generateCaptions')
+              : t('processing')
+          }}
         </Button>
       </div>
 

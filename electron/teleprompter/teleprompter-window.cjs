@@ -7,8 +7,14 @@ const MIN_BOUNDS = { width: 240, height: 140 }
 const isContentProtectionSupported = (platform) => platform === 'win32' || platform === 'darwin'
 
 const clampTeleprompterBounds = (bounds, area) => {
-  const width = Math.min(Math.max(Math.round(Number(bounds?.width) || DEFAULT_BOUNDS.width), MIN_BOUNDS.width), area.width)
-  const height = Math.min(Math.max(Math.round(Number(bounds?.height) || DEFAULT_BOUNDS.height), MIN_BOUNDS.height), area.height)
+  const width = Math.min(
+    Math.max(Math.round(Number(bounds?.width) || DEFAULT_BOUNDS.width), MIN_BOUNDS.width),
+    area.width,
+  )
+  const height = Math.min(
+    Math.max(Math.round(Number(bounds?.height) || DEFAULT_BOUNDS.height), MIN_BOUNDS.height),
+    area.height,
+  )
   const minX = area.x
   const minY = area.y
   const maxX = area.x + Math.max(0, area.width - width)
@@ -21,7 +27,8 @@ const clampTeleprompterBounds = (bounds, area) => {
   }
 }
 
-const validContext = (context) => context && typeof context === 'object' && UUID.test(context.projectId) && UUID.test(context.sessionId)
+const validContext = (context) =>
+  context && typeof context === 'object' && UUID.test(context.projectId) && UUID.test(context.sessionId)
 
 function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStore = null }) {
   let window = null
@@ -71,9 +78,10 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
   const ensure = () => {
     if (window && !window.isDestroyed()) return window
     const savedBounds = preferencesStore?.read()?.extras?.teleprompterWindow
-    const savedDisplay = savedBounds && Number.isFinite(Number(savedBounds.x)) && Number.isFinite(Number(savedBounds.y))
-      ? screen.getDisplayNearestPoint({ x: Number(savedBounds.x), y: Number(savedBounds.y) })
-      : null
+    const savedDisplay =
+      savedBounds && Number.isFinite(Number(savedBounds.x)) && Number.isFinite(Number(savedBounds.y))
+        ? screen.getDisplayNearestPoint({ x: Number(savedBounds.x), y: Number(savedBounds.y) })
+        : null
     const display = savedDisplay || screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
     const area = display.workArea
     const initialBounds = clampTeleprompterBounds(
@@ -104,7 +112,8 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
         sandbox: false,
       },
     })
-    if (isContentProtectionSupported(process.platform) && typeof window.setContentProtection === 'function') window.setContentProtection(true)
+    if (isContentProtectionSupported(process.platform) && typeof window.setContentProtection === 'function')
+      window.setContentProtection(true)
     window.setAlwaysOnTop(true, 'floating')
     ready = false
     rendererReady = false
@@ -113,7 +122,13 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
     window.on('move', scheduleBoundsPersistence)
     window.on('resize', scheduleBoundsPersistence)
     window.on('close', flushBounds)
-    window.on('closed', () => { ready = false; rendererReady = false; requestedVisible = false; window = null; notifyVisibility() })
+    window.on('closed', () => {
+      ready = false
+      rendererReady = false
+      requestedVisible = false
+      window = null
+      notifyVisibility()
+    })
     window.webContents.once('did-finish-load', () => {
       ready = true
       sendSession()
@@ -144,10 +159,19 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
     }
     return true
   }
-  const hide = () => { requestedVisible = false; if (window && !window.isDestroyed()) window.hide(); return true }
+  const hide = () => {
+    requestedVisible = false
+    if (window && !window.isDestroyed()) window.hide()
+    return true
+  }
   const toggle = () => (window && !window.isDestroyed() && window.isVisible() ? hide() : showInactive())
   const setSession = (context) => {
-    currentSession = context === null ? null : (validContext(context) ? { projectId: context.projectId, sessionId: context.sessionId } : null)
+    currentSession =
+      context === null
+        ? null
+        : validContext(context)
+          ? { projectId: context.projectId, sessionId: context.sessionId }
+          : null
     sendSession()
   }
   const markRendererReady = () => {
@@ -158,14 +182,18 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
   }
   const handleShortcut = (id) => {
     if (id === 'teleprompter.toggleVisibility') return toggle()
-    if (!['teleprompter.toggleAutoscroll', 'teleprompter.nextLine', 'teleprompter.previousLine'].includes(id)) return false
+    if (!['teleprompter.toggleAutoscroll', 'teleprompter.nextLine', 'teleprompter.previousLine'].includes(id))
+      return false
     if (!window || window.isDestroyed()) return false
     window.webContents.send('teleprompter:shortcut', id)
     return true
   }
 
   return {
-    prepare: () => { ensure(); return true },
+    prepare: () => {
+      ensure()
+      return true
+    },
     show,
     showInactive,
     hide,
@@ -174,9 +202,19 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
     markRendererReady,
     handleShortcut,
     isVisible: () => Boolean(window && !window.isDestroyed() && window.isVisible()),
-    bounds: () => window && !window.isDestroyed() ? window.getBounds() : null,
-    destroy: () => { flushBounds(); if (window && !window.isDestroyed()) window.destroy(); window = null },
+    bounds: () => (window && !window.isDestroyed() ? window.getBounds() : null),
+    destroy: () => {
+      flushBounds()
+      if (window && !window.isDestroyed()) window.destroy()
+      window = null
+    },
   }
 }
 
-module.exports = { DEFAULT_BOUNDS, MIN_BOUNDS, clampTeleprompterBounds, isContentProtectionSupported, createTeleprompterWindow }
+module.exports = {
+  DEFAULT_BOUNDS,
+  MIN_BOUNDS,
+  clampTeleprompterBounds,
+  isContentProtectionSupported,
+  createTeleprompterWindow,
+}

@@ -33,12 +33,7 @@ const openGithubRepository = () => {
       </Button>
       <Button variant="secondary" size="sm" block @click="openGithubRepository">
         <template #icon>
-          <img
-            :src="resolvePublicAssetUrl('/github.svg')"
-            class="social-icon github-icon"
-            alt=""
-            aria-hidden="true"
-          />
+          <img :src="resolvePublicAssetUrl('/github.svg')" class="social-icon github-icon" alt="" aria-hidden="true" />
         </template>
         {{ t('github') }}
       </Button>

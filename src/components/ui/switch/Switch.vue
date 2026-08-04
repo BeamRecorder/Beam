@@ -8,7 +8,7 @@ const props = withDefaults(
   {
     disabled: false,
     label: '',
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -22,11 +22,7 @@ const toggle = () => {
 </script>
 
 <template>
-  <div 
-    class="switch-container" 
-    :class="{ 'is-disabled': disabled }" 
-    @click="toggle"
-  >
+  <div class="switch-container" :class="{ 'is-disabled': disabled }" @click="toggle">
     <button
       type="button"
       role="switch"

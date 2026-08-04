@@ -21,8 +21,7 @@ export type ThumbnailWorkerResponse =
   | { type: 'error'; generation: number; message: string }
 
 export function uniqueSortedTimes(times: readonly number[]): number[] {
-  return [...new Set(times.filter((time) => Number.isFinite(time) && time >= 0))]
-    .sort((left, right) => left - right)
+  return [...new Set(times.filter((time) => Number.isFinite(time) && time >= 0))].sort((left, right) => left - right)
 }
 
 export function isThumbnailWorkerRequest(value: unknown): value is ThumbnailWorkerRequest {
@@ -30,8 +29,10 @@ export function isThumbnailWorkerRequest(value: unknown): value is ThumbnailWork
   const message = value as Partial<ThumbnailWorkerRequest>
   if (!Number.isInteger(message.generation) || (message.generation ?? -1) < 0) return false
   if (message.type === 'clear') return true
-  return message.type === 'request-frames'
-    && typeof message.source === 'string'
-    && Array.isArray(message.visibleTimes)
-    && message.visibleTimes.every((time) => typeof time === 'number')
+  return (
+    message.type === 'request-frames' &&
+    typeof message.source === 'string' &&
+    Array.isArray(message.visibleTimes) &&
+    message.visibleTimes.every((time) => typeof time === 'number')
+  )
 }

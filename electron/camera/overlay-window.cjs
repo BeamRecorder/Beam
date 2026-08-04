@@ -20,7 +20,11 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     if (!window || window.isDestroyed()) return
     const bounds = window.getBounds()
     const point = screen.getCursorScreenPoint()
-    const next = point.x >= bounds.x && point.x < bounds.x + bounds.width && point.y >= bounds.y && point.y < bounds.y + bounds.height
+    const next =
+      point.x >= bounds.x &&
+      point.x < bounds.x + bounds.width &&
+      point.y >= bounds.y &&
+      point.y < bounds.y + bounds.height
     if (next === isHovered) return
     isHovered = next
     window.webContents.send('camera-overlay:hover', next)
@@ -41,11 +45,36 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   const create = () => {
     if (window && !window.isDestroyed()) return window
     const area = screen.getPrimaryDisplay().workArea
-    window = new BrowserWindow({ width: DEFAULT_SIZE.width, height: DEFAULT_SIZE.height, minWidth: MIN_SIZE.width, minHeight: MIN_SIZE.height, x: area.x + area.width - DEFAULT_SIZE.width - 20, y: area.y + area.height - DEFAULT_SIZE.height - 20, frame: false, transparent: true, backgroundColor: '#00000000', alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false, webPreferences: { preload: path.join(applicationRoot, 'electron/preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: false } })
+    window = new BrowserWindow({
+      width: DEFAULT_SIZE.width,
+      height: DEFAULT_SIZE.height,
+      minWidth: MIN_SIZE.width,
+      minHeight: MIN_SIZE.height,
+      x: area.x + area.width - DEFAULT_SIZE.width - 20,
+      y: area.y + area.height - DEFAULT_SIZE.height - 20,
+      frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: true,
+      hasShadow: false,
+      webPreferences: {
+        preload: path.join(applicationRoot, 'electron/preload.cjs'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false,
+      },
+    })
     window.setContentProtection(true)
     window.setAlwaysOnTop(true, 'floating')
-    window.on('closed', () => { window = null; stopHoverTracking() })
-    window.webContents.once('did-finish-load', () => { if (currentState) window?.webContents.send('camera-overlay:state', currentState) })
+    window.on('closed', () => {
+      window = null
+      stopHoverTracking()
+    })
+    window.webContents.once('did-finish-load', () => {
+      if (currentState) window?.webContents.send('camera-overlay:state', currentState)
+    })
     load(window, { cameraOverlay: '1' })
     return window
   }
@@ -98,7 +127,16 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     }
   }
 
-  return { configure, setActive, resetPlacement, state, destroy: () => { stopHoverTracking(); if (window && !window.isDestroyed()) window.destroy() } }
+  return {
+    configure,
+    setActive,
+    resetPlacement,
+    state,
+    destroy: () => {
+      stopHoverTracking()
+      if (window && !window.isDestroyed()) window.destroy()
+    },
+  }
 }
 
 module.exports = { createCameraOverlayWindow }

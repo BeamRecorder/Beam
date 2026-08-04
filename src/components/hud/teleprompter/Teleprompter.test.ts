@@ -16,7 +16,11 @@ vi.mock('~/api/capture', () => ({ capture }))
 
 import Teleprompter from './Teleprompter.vue'
 
-const i18n = createI18n({ legacy: false, locale: 'en', messages: { en: { Teleprompter: en }, fr: { Teleprompter: fr } } })
+const i18n = createI18n({
+  legacy: false,
+  locale: 'en',
+  messages: { en: { Teleprompter: en }, fr: { Teleprompter: fr } },
+})
 
 describe('Teleprompter', () => {
   it('keeps Hide, Edit, Settings and the script editor available', () => {
@@ -37,7 +41,9 @@ describe('Teleprompter', () => {
 
   it('switches from editing to preview when recording starts', async () => {
     const wrapper = mount(Teleprompter, { global: { plugins: [i18n] } })
-    window.dispatchEvent(new CustomEvent('teleprompter-session', { detail: { projectId: 'project-1', sessionId: 'session-1' } }))
+    window.dispatchEvent(
+      new CustomEvent('teleprompter-session', { detail: { projectId: 'project-1', sessionId: 'session-1' } }),
+    )
     await wrapper.vm.$nextTick()
     expect(wrapper.find('[aria-label="Teleprompter script"]').exists()).toBe(false)
     expect(wrapper.find('[aria-label="Edit"]').exists()).toBe(true)

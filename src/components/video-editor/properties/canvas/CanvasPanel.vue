@@ -1,56 +1,59 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from "vue";
-import { Image, Plus, SlidersHorizontal, Upload, Video } from "@lucide/vue";
-import Button from "~/ui/button/Button.vue";
-import ButtonGroup from "~/ui/button/ButtonGroup.vue";
-import BigSlider from "~/ui/slider/BigSlider.vue";
-import Popover from "~/ui/popover/Popover.vue";
-import BackgroundPresetComposer from "./BackgroundPresetComposer.vue";
-import { capture } from "../../../../api/capture";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from 'vue'
+import { Image, Plus, SlidersHorizontal, Upload, Video } from '@lucide/vue'
+import Button from '~/ui/button/Button.vue'
+import ButtonGroup from '~/ui/button/ButtonGroup.vue'
+import BigSlider from '~/ui/slider/BigSlider.vue'
+import Popover from '~/ui/popover/Popover.vue'
+import BackgroundPresetComposer from './BackgroundPresetComposer.vue'
+import { capture } from '../../../../api/capture'
 import {
   customColor,
   customGradient,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
-} from "../../composables/backgroundCatalog";
-import { useBackgroundPreviews } from "./useBackgroundPreviews";
-import { useBackgroundPresets } from "./useBackgroundPresets";
-import { useTranslate } from "~/i18n/useTranslate";
+} from '../../composables/backgroundCatalog'
+import { useBackgroundPreviews } from './useBackgroundPreviews'
+import { useBackgroundPresets } from './useBackgroundPresets'
+import { useTranslate } from '~/i18n/useTranslate'
 
-const { t } = useTranslate("CanvasPanel");
+const { t } = useTranslate('CanvasPanel')
 
 const props = defineProps<{
-  selectedBackground: BackgroundValue | null;
-  backgroundGroups: BackgroundMediaGroup[];
-  projectId?: string | null;
-  blurPercent: number;
-}>();
+  selectedBackground: BackgroundValue | null
+  backgroundGroups: BackgroundMediaGroup[]
+  projectId?: string | null
+  blurPercent: number
+}>()
 
 const emit = defineEmits<{
-  (e: "update:selectedBackground", value: BackgroundValue): void;
-  (e: "update:blurPercent", value: number): void;
-  (e: "import:background", value: BackgroundMedia): void;
-}>();
+  (e: 'update:selectedBackground', value: BackgroundValue): void
+  (e: 'update:blurPercent', value: number): void
+  (e: 'import:background', value: BackgroundMedia): void
+}>()
 
-const activeKind = ref<"image" | "video" | "color" | "gradient">("image");
-const hoveredId = ref<string | null>(null);
-const INITIAL_MEDIA_COUNT = 15;
-const visibleCount = ref(INITIAL_MEDIA_COUNT);
+const activeKind = ref<'image' | 'video' | 'color' | 'gradient'>('image')
+const hoveredId = ref<string | null>(null)
+const INITIAL_MEDIA_COUNT = 15
+const visibleCount = ref(INITIAL_MEDIA_COUNT)
 
-const blurDraft = ref(props.blurPercent);
-watch(() => props.blurPercent, (val) => {
-  blurDraft.value = val;
-});
+const blurDraft = ref(props.blurPercent)
+watch(
+  () => props.blurPercent,
+  (val) => {
+    blurDraft.value = val
+  },
+)
 const handleBlurUpdate = (val: number) => {
-  blurDraft.value = val;
-  emit("update:blurPercent", val);
-};
+  blurDraft.value = val
+  emit('update:blurPercent', val)
+}
 
-const gridRef = ref<HTMLElement | null>(null);
-const tileElements = new Map<string, Element>();
-let previewObserver: IntersectionObserver | null = null;
-const { previews, failed, request: requestPreview } = useBackgroundPreviews();
+const gridRef = ref<HTMLElement | null>(null)
+const tileElements = new Map<string, Element>()
+let previewObserver: IntersectionObserver | null = null
+const { previews, failed, request: requestPreview } = useBackgroundPreviews()
 
 const {
   colorPresets,
@@ -66,102 +69,103 @@ const {
   saveGradient: addGradientPreset,
   updateLiveColor,
   updateLiveGradient,
-} = useBackgroundPresets((value) => emit("update:selectedBackground", value));
+} = useBackgroundPresets((value) => emit('update:selectedBackground', value))
 
-const items = computed(
-  () =>
-    props.backgroundGroups.find((group) => group.kind === activeKind.value)
-      ?.items ?? [],
-);
+const items = computed(() => props.backgroundGroups.find((group) => group.kind === activeKind.value)?.items ?? [])
 
-const visibleItems = computed(() =>
-  items.value.slice(0, visibleCount.value),
-);
+const visibleItems = computed(() => items.value.slice(0, visibleCount.value))
 
-const hasMore = computed(() => visibleCount.value < items.value.length);
+const hasMore = computed(() => visibleCount.value < items.value.length)
 
 const observeMediaTile = (element: Element | ComponentPublicInstance | null, item: BackgroundMedia) => {
-  const domElement = element && "$el" in element ? (element.$el as Element | null) : (element as Element | null);
-  const previous = tileElements.get(item.id);
-  if (previous) previewObserver?.unobserve(previous);
+  const domElement = element && '$el' in element ? (element.$el as Element | null) : (element as Element | null)
+  const previous = tileElements.get(item.id)
+  if (previous) previewObserver?.unobserve(previous)
   if (!domElement) {
-    tileElements.delete(item.id);
-    return;
+    tileElements.delete(item.id)
+    return
   }
-  tileElements.set(item.id, domElement);
-  previewObserver?.observe(domElement);
-};
+  tileElements.set(item.id, domElement)
+  previewObserver?.observe(domElement)
+}
 
 const observeVisibleTiles = () => {
   for (const item of visibleItems.value) {
-    const element = tileElements.get(item.id);
-    if (element) previewObserver?.observe(element);
+    const element = tileElements.get(item.id)
+    if (element) previewObserver?.observe(element)
   }
-};
+}
 
 const scheduleVisibleTileObservation = () => {
-  requestAnimationFrame(() => nextTick(observeVisibleTiles));
-};
+  requestAnimationFrame(() => nextTick(observeVisibleTiles))
+}
 
 onMounted(() => {
-  previewObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      if (!entry.isIntersecting) continue;
-      const item = visibleItems.value.find((candidate) => tileElements.get(candidate.id) === entry.target);
-      if (item) requestPreview(item);
-    }
-  }, { root: null, rootMargin: "120px", threshold: 0.01 });
-  scheduleVisibleTileObservation();
-});
+  previewObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const item = visibleItems.value.find((candidate) => tileElements.get(candidate.id) === entry.target)
+        if (item) requestPreview(item)
+      }
+    },
+    { root: null, rootMargin: '120px', threshold: 0.01 },
+  )
+  scheduleVisibleTileObservation()
+})
 
 onUnmounted(() => {
-  previewObserver?.disconnect();
-  tileElements.clear();
-});
+  previewObserver?.disconnect()
+  tileElements.clear()
+})
 
 // Instant tab switch
-const switchKind = (kind: "image" | "video" | "color" | "gradient") => {
-  if (activeKind.value === kind) return;
+const switchKind = (kind: 'image' | 'video' | 'color' | 'gradient') => {
+  if (activeKind.value === kind) return
 
-  activeKind.value = kind;
-  visibleCount.value = INITIAL_MEDIA_COUNT;
-  closeCustomEditor();
+  activeKind.value = kind
+  visibleCount.value = INITIAL_MEDIA_COUNT
+  closeCustomEditor()
 
   if (gridRef.value) {
-    gridRef.value.scrollTop = 0;
+    gridRef.value.scrollTop = 0
   }
 
-  scheduleVisibleTileObservation();
+  scheduleVisibleTileObservation()
+}
 
-};
-
-watch(visibleItems, (newItems) => {
-  void newItems;
-  scheduleVisibleTileObservation();
-}, { flush: "post" });
+watch(
+  visibleItems,
+  (newItems) => {
+    void newItems
+    scheduleVisibleTileObservation()
+  },
+  { flush: 'post' },
+)
 
 const loadMore = () => {
-  visibleCount.value = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT);
-};
+  visibleCount.value = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT)
+}
 
-const isSelected = (entry: BackgroundValue) =>
-  props.selectedBackground?.id === entry.id;
-const selectedColorPreset = computed(() => colorPresets.value.find((item) => isSelected(item)) ?? null);
-const selectedGradientPreset = computed(() => gradientPresets.value.find((item) => isSelected(item)) ?? null);
+const isSelected = (entry: BackgroundValue) => props.selectedBackground?.id === entry.id
+const selectedColorPreset = computed(() => colorPresets.value.find((item) => isSelected(item)) ?? null)
+const selectedGradientPreset = computed(() => gradientPresets.value.find((item) => isSelected(item)) ?? null)
 
 const triggerImport = async () => {
-  const kind = activeKind.value === "image" || activeKind.value === "video" ? activeKind.value : "media";
-  const background = await capture.pickBackgroundLibraryMedia(kind);
+  const kind = activeKind.value === 'image' || activeKind.value === 'video' ? activeKind.value : 'media'
+  const background = await capture.pickBackgroundLibraryMedia(kind)
   if (background) {
-    emit("import:background", background);
+    emit('import:background', background)
   }
-};
+}
 
-const importLabel = computed(() => activeKind.value === "image"
-  ? t("importCustomImage")
-  : activeKind.value === "video"
-    ? t("importCustomVideo")
-    : t("importCustomBackground"));
+const importLabel = computed(() =>
+  activeKind.value === 'image'
+    ? t('importCustomImage')
+    : activeKind.value === 'video'
+      ? t('importCustomVideo')
+      : t('importCustomBackground'),
+)
 </script>
 
 <template>
@@ -184,51 +188,26 @@ const importLabel = computed(() => activeKind.value === "image"
       >
         {{ t('video') }}
       </Button>
-      <Button
-        size="xs"
-        :variant="activeKind === 'color' ? 'primary' : 'ghost'"
-        @click="switchKind('color')"
-      >
+      <Button size="xs" :variant="activeKind === 'color' ? 'primary' : 'ghost'" @click="switchKind('color')">
         {{ t('color') }}
       </Button>
-      <Button
-        size="xs"
-        :variant="activeKind === 'gradient' ? 'primary' : 'ghost'"
-        @click="switchKind('gradient')"
-      >
+      <Button size="xs" :variant="activeKind === 'gradient' ? 'primary' : 'ghost'" @click="switchKind('gradient')">
         {{ t('gradient') }}
       </Button>
     </ButtonGroup>
 
     <!-- Custom Background Import Button -->
-    <Button
-      variant="secondary"
-      size="sm"
-      block
-      :icon="Upload"
-      class="import-btn"
-      @click="triggerImport"
-    >
+    <Button variant="secondary" size="sm" block :icon="Upload" class="import-btn" @click="triggerImport">
       {{ importLabel }}
     </Button>
 
     <!-- Hardware-Accelerated Tab Content Container -->
     <div :key="activeKind" class="tab-content-panel">
       <!-- Image & Video Media Grid -->
-      <div
-        v-if="activeKind === 'image' || activeKind === 'video'"
-        ref="gridRef"
-        class="media-scroll-grid"
-      >
+      <div v-if="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
         <div v-if="!items.length" class="empty-backgrounds">
           <span>{{ t('noBackgroundFound') }}</span>
-          <Button
-            variant="secondary"
-            size="sm"
-            block
-            :icon="Upload"
-            @click="triggerImport"
-          >
+          <Button variant="secondary" size="sm" block :icon="Upload" @click="triggerImport">
             {{ importLabel }}
           </Button>
         </div>
@@ -252,12 +231,7 @@ const importLabel = computed(() => activeKind.value === "image"
             preload="none"
             class="media-content"
           />
-          <img
-            v-else-if="previews[item.id]"
-            :src="previews[item.id]"
-            :alt="item.name"
-            class="media-content loaded"
-          />
+          <img v-else-if="previews[item.id]" :src="previews[item.id]" :alt="item.name" class="media-content loaded" />
           <span v-else-if="item.kind === 'video'" class="video-placeholder">
             <Video :size="16" />
           </span>
@@ -268,16 +242,8 @@ const importLabel = computed(() => activeKind.value === "image"
             class="media-content loaded"
           />
         </button>
-        <div
-          v-if="hasMore"
-          class="load-more"
-        >
-          <Button
-            variant="secondary"
-            size="sm"
-            block
-            @click="loadMore"
-          >
+        <div v-if="hasMore" class="load-more">
+          <Button variant="secondary" size="sm" block @click="loadMore">
             {{ t('showMore') }}
           </Button>
         </div>
@@ -286,7 +252,16 @@ const importLabel = computed(() => activeKind.value === "image"
       <!-- Color Swatches Grid -->
       <div v-else-if="activeKind === 'color'" class="swatches-section">
         <div class="swatches-grid">
-          <Popover block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+          <Popover
+            block
+            :match-trigger-width="false"
+            flush
+            @toggle="
+              (open) => {
+                if (!open) closeCustomEditor()
+              }
+            "
+          >
             <template #trigger>
               <button
                 type="button"
@@ -303,9 +278,19 @@ const importLabel = computed(() => activeKind.value === "image"
                 kind="color"
                 :color="selectedColorPreset?.color ?? customColorValue"
                 :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-                @add-color="(val) => { addColorPreset(val); close(); }"
+                @add-color="
+                  (val) => {
+                    addColorPreset(val)
+                    close()
+                  }
+                "
                 @update-color="updateLiveColor"
-                @close="() => { closeCustomEditor(); close(); }"
+                @close="
+                  () => {
+                    closeCustomEditor()
+                    close()
+                  }
+                "
               />
             </template>
           </Popover>
@@ -320,18 +305,47 @@ const importLabel = computed(() => activeKind.value === "image"
             @click="emit('update:selectedBackground', item)"
           />
         </div>
-        <Popover v-if="selectedColorPreset" block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+        <Popover
+          v-if="selectedColorPreset"
+          block
+          :match-trigger-width="false"
+          flush
+          @toggle="
+            (open) => {
+              if (!open) closeCustomEditor()
+            }
+          "
+        >
           <template #trigger>
-            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedColorPreset.id)" class="edit-selected-preset" @click="toggleColor(selectedColorPreset)">{{ isEditing(selectedColorPreset.id) ? t('closeEditing') : t('edit') }}</Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              block
+              :icon="SlidersHorizontal"
+              :aria-pressed="isEditing(selectedColorPreset.id)"
+              class="edit-selected-preset"
+              @click="toggleColor(selectedColorPreset)"
+              >{{ isEditing(selectedColorPreset.id) ? t('closeEditing') : t('edit') }}</Button
+            >
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
               kind="color"
               :color="selectedColorPreset?.color ?? customColorValue"
               :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-              @add-color="(val) => { addColorPreset(val); close(); }"
+              @add-color="
+                (val) => {
+                  addColorPreset(val)
+                  close()
+                }
+              "
               @update-color="updateLiveColor"
-              @close="() => { closeCustomEditor(); close(); }"
+              @close="
+                () => {
+                  closeCustomEditor()
+                  close()
+                }
+              "
             />
           </template>
         </Popover>
@@ -340,7 +354,16 @@ const importLabel = computed(() => activeKind.value === "image"
       <!-- Gradient Presets Grid -->
       <div v-else class="gradients-section">
         <div class="gradients-grid">
-          <Popover block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+          <Popover
+            block
+            :match-trigger-width="false"
+            flush
+            @toggle="
+              (open) => {
+                if (!open) closeCustomEditor()
+              }
+            "
+          >
             <template #trigger>
               <button
                 type="button"
@@ -357,9 +380,19 @@ const importLabel = computed(() => activeKind.value === "image"
                 kind="gradient"
                 :color="selectedColorPreset?.color ?? customColorValue"
                 :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-                @add-gradient="(val) => { addGradientPreset(val); close(); }"
+                @add-gradient="
+                  (val) => {
+                    addGradientPreset(val)
+                    close()
+                  }
+                "
                 @update-gradient="updateLiveGradient"
-                @close="() => { closeCustomEditor(); close(); }"
+                @close="
+                  () => {
+                    closeCustomEditor()
+                    close()
+                  }
+                "
               />
             </template>
           </Popover>
@@ -370,24 +403,53 @@ const importLabel = computed(() => activeKind.value === "image"
             class="swatch-tile"
             :class="{ active: isSelected(item), editing: isEditing(item.id) }"
             :style="{
-              background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`
+              background: `linear-gradient(${item.gradient.angle}deg, ${item.gradient.stops.map((s: { color: string; position: number }) => `${s.color} ${s.position * 100}%`).join(', ')})`,
             }"
             :aria-label="item.name"
             @click="emit('update:selectedBackground', item)"
           />
         </div>
-        <Popover v-if="selectedGradientPreset" block :match-trigger-width="false" flush @toggle="(open) => { if (!open) closeCustomEditor() }">
+        <Popover
+          v-if="selectedGradientPreset"
+          block
+          :match-trigger-width="false"
+          flush
+          @toggle="
+            (open) => {
+              if (!open) closeCustomEditor()
+            }
+          "
+        >
           <template #trigger>
-            <Button variant="secondary" size="sm" block :icon="SlidersHorizontal" :aria-pressed="isEditing(selectedGradientPreset.id)" class="edit-selected-preset" @click="toggleGradient(selectedGradientPreset)">{{ isEditing(selectedGradientPreset.id) ? t('closeEditing') : t('edit') }}</Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              block
+              :icon="SlidersHorizontal"
+              :aria-pressed="isEditing(selectedGradientPreset.id)"
+              class="edit-selected-preset"
+              @click="toggleGradient(selectedGradientPreset)"
+              >{{ isEditing(selectedGradientPreset.id) ? t('closeEditing') : t('edit') }}</Button
+            >
           </template>
           <template #default="{ close }">
             <BackgroundPresetComposer
               kind="gradient"
               :color="selectedColorPreset?.color ?? customColorValue"
               :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
-              @add-gradient="(val) => { addGradientPreset(val); close(); }"
+              @add-gradient="
+                (val) => {
+                  addGradientPreset(val)
+                  close()
+                }
+              "
               @update-gradient="updateLiveGradient"
-              @close="() => { closeCustomEditor(); close(); }"
+              @close="
+                () => {
+                  closeCustomEditor()
+                  close()
+                }
+              "
             />
           </template>
         </Popover>
@@ -470,12 +532,14 @@ const importLabel = computed(() => activeKind.value === "image"
   cursor: pointer;
   overflow: hidden;
   box-sizing: border-box;
-  transition: border-color var(--fast) ease, box-shadow var(--fast) ease;
+  transition:
+    border-color var(--fast) ease,
+    box-shadow var(--fast) ease;
   contain: strict;
 }
 
 .media-tile::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background: var(--color-bg-surface-hover);
@@ -524,7 +588,11 @@ img.media-content.loaded {
   border-radius: 8px;
 }
 
-.load-more { grid-column: 1 / -1; justify-self: stretch; width: 100%; }
+.load-more {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  width: 100%;
+}
 
 .empty-backgrounds {
   grid-column: 1 / -1;
@@ -561,7 +629,10 @@ img.media-content.loaded {
   border: 1.5px solid var(--color-border, rgba(255, 255, 255, 0.15));
   cursor: pointer;
   box-sizing: border-box;
-  transition: transform 0.12s ease, border 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.12s ease,
+    border 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .edit-selected-preset {
@@ -627,8 +698,14 @@ img.media-content.loaded {
 }
 
 @keyframes edit-action-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

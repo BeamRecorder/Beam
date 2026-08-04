@@ -73,13 +73,23 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
       win.webContents.openDevTools({ mode: 'detach' })
     }
   })
-  ipcMain.on('window:set-mode', (event, mode) => { logWindow('set-mode', mode); controllerForWindow(windowForEvent(event))?.setMode(mode) })
+  ipcMain.on('window:set-mode', (event, mode) => {
+    logWindow('set-mode', mode)
+    controllerForWindow(windowForEvent(event))?.setMode(mode)
+  })
   ipcMain.on('window:maximize', (event) => controllerForWindow(windowForEvent(event))?.maximize())
   ipcMain.on('window:unmaximize', (event) => controllerForWindow(windowForEvent(event))?.restore())
   ipcMain.on('window:toggleMaximize', (event) => controllerForWindow(windowForEvent(event))?.toggleMaximize())
-  ipcMain.on('window:present', (event) => { logWindow('present'); controllerForWindow(windowForEvent(event))?.present() })
+  ipcMain.on('window:present', (event) => {
+    logWindow('present')
+    controllerForWindow(windowForEvent(event))?.present()
+  })
   ipcMain.on('window:show-hud', (event) => controllerForWindow(windowForEvent(event))?.showHud())
-  ipcMain.on('window:setPosition', (event, x, y) => { const win = windowForEvent(event); win?.setPosition(Math.round(x), Math.round(y)); controllerForWindow(win)?.rememberRecorderPosition() })
+  ipcMain.on('window:setPosition', (event, x, y) => {
+    const win = windowForEvent(event)
+    win?.setPosition(Math.round(x), Math.round(y))
+    controllerForWindow(win)?.rememberRecorderPosition()
+  })
   ipcMain.on('window:setSize', (event, width, height) => {
     const win = windowForEvent(event)
     if (!win) return
@@ -91,12 +101,17 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
     }
     win.setSize(targetWidth, targetHeight)
   })
-  ipcMain.on('window:setInteractive', (event, overInteractive) => controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive))
+  ipcMain.on('window:setInteractive', (event, overInteractive) =>
+    controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive),
+  )
   ipcMain.on('window:recorder-drag-start', (event) => {
     controllerForWindow(windowForEvent(event))?.beginRecorderDrag()
     event.returnValue = true
   })
-  ipcMain.on('window:set-visible', (event, visible) => { logWindow('set-visible', Boolean(visible)); controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible)) })
+  ipcMain.on('window:set-visible', (event, visible) => {
+    logWindow('set-visible', Boolean(visible))
+    controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible))
+  })
   ipcMain.handle('window:set-recorder-tooltip', (event, visible) => {
     return controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible)) ?? null
   })
@@ -118,7 +133,10 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
     resizeTimer = setInterval(() => {
       step += 1
       const ease = 1 - Math.pow(1 - step / 12, 3)
-      win.setSize(Math.round(currentWidth + (targetWidth - currentWidth) * ease), Math.round(currentHeight + (targetHeight - currentHeight) * ease))
+      win.setSize(
+        Math.round(currentWidth + (targetWidth - currentWidth) * ease),
+        Math.round(currentHeight + (targetHeight - currentHeight) * ease),
+      )
       if (step < 12) return
       clearInterval(resizeTimer)
       resizeTimer = null
@@ -135,7 +153,11 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
     dragStartWindow = win.getPosition()
     dragStartSize = win.getSize()
     dragStartGeometry = controller?.dragGeometry?.(dragStartSize) || { width: dragStartSize[0], leftOffset: 0 }
-    console.info('[RecorderTooltip] dragStart', { window: dragStartWindow, size: dragStartSize, geometry: dragStartGeometry })
+    console.info('[RecorderTooltip] dragStart', {
+      window: dragStartWindow,
+      size: dragStartSize,
+      geometry: dragStartGeometry,
+    })
     dragTimer = setInterval(() => updateDragPosition(win), 16)
   })
   ipcMain.on('window:drag', (event) => {

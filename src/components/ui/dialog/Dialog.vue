@@ -13,7 +13,7 @@ const props = withDefaults(
     title: '',
     size: 'md',
     closeOnOverlayClick: true,
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -30,13 +30,16 @@ const handleKeyDown = (event: KeyboardEvent) => {
   }
 }
 
-watch(() => props.isOpen, (newVal) => {
-  if (newVal) {
-    document.body.style.overflow = 'hidden'
-  } else {
-    document.body.style.overflow = ''
-  }
-})
+watch(
+  () => props.isOpen,
+  (newVal) => {
+    if (newVal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+  },
+)
 
 let mousedownTarget: EventTarget | null = null
 
@@ -64,32 +67,20 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <Transition name="fade-overlay">
-      <div 
-        v-if="isOpen" 
-        class="dialog-overlay" 
-        @mousedown="handleOverlayMouseDown"
-        @mouseup="handleOverlayMouseUp"
-      >
+      <div v-if="isOpen" class="dialog-overlay" @mousedown="handleOverlayMouseDown" @mouseup="handleOverlayMouseUp">
         <Transition name="scale-modal" appear>
-          <div 
-            class="dialog-content" 
-            :class="size" 
-            @mousedown.stop
-            @mouseup.stop
-            role="dialog"
-            aria-modal="true"
-          >
+          <div class="dialog-content" :class="size" @mousedown.stop @mouseup.stop role="dialog" aria-modal="true">
             <header class="dialog-header">
               <h3 v-if="title" class="dialog-title">{{ title }}</h3>
               <button type="button" class="dialog-close" @click="close" aria-label="Close dialog">
                 <X class="close-icon" />
               </button>
             </header>
-            
+
             <div class="dialog-body">
               <slot />
             </div>
-            
+
             <footer v-if="$slots.footer" class="dialog-footer">
               <slot name="footer" :close="close" />
             </footer>
@@ -130,10 +121,18 @@ onUnmounted(() => {
 }
 
 /* Sizes */
-.dialog-content.sm { max-width: 440px; }
-.dialog-content.md { max-width: 560px; }
-.dialog-content.lg { max-width: 800px; }
-.dialog-content.xl { max-width: 1140px; }
+.dialog-content.sm {
+  max-width: 440px;
+}
+.dialog-content.md {
+  max-width: 560px;
+}
+.dialog-content.lg {
+  max-width: 800px;
+}
+.dialog-content.xl {
+  max-width: 1140px;
+}
 
 .dialog-header {
   display: flex;
@@ -202,10 +201,14 @@ onUnmounted(() => {
 
 /* Modal Scale Transition */
 .scale-modal-enter-active {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease;
 }
 .scale-modal-leave-active {
-  transition: transform 0.2s ease-in, opacity 0.15s ease-in;
+  transition:
+    transform 0.2s ease-in,
+    opacity 0.15s ease-in;
 }
 
 .scale-modal-enter-from,

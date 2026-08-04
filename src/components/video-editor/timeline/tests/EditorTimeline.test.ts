@@ -4,12 +4,19 @@ import EditorTimeline from './EditorTimeline.vue'
 
 const TimelineTracks = {
   emits: ['update:currentTime', 'select:clip'],
-  template: '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button></div>',
+  template:
+    '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button></div>',
 }
 
 const props = {
-  currentTime: 0, duration: 1000, isPlaying: false, zoomElements: [], selectedZoomId: null,
-  composition: { assets: [], clips: [] }, selectedClipId: null, zoomLevel: 100,
+  currentTime: 0,
+  duration: 1000,
+  isPlaying: false,
+  zoomElements: [],
+  selectedZoomId: null,
+  composition: { assets: [], clips: [] },
+  selectedClipId: null,
+  zoomLevel: 100,
 }
 
 describe('EditorTimeline', () => {

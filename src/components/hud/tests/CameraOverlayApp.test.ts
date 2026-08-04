@@ -31,8 +31,14 @@ describe('CameraOverlayApp', () => {
     let hoverListener!: (hovered: boolean) => void
     const stopState = vi.fn()
     const stopHover = vi.fn()
-    capture.onCameraOverlayState.mockImplementation((listener) => { stateListener = listener; return stopState })
-    capture.onCameraOverlayHover.mockImplementation((listener) => { hoverListener = listener; return stopHover })
+    capture.onCameraOverlayState.mockImplementation((listener) => {
+      stateListener = listener
+      return stopState
+    })
+    capture.onCameraOverlayHover.mockImplementation((listener) => {
+      hoverListener = listener
+      return stopHover
+    })
     const wrapper = mount(CameraOverlayApp, { global: { stubs: { CameraPreviewOverlay } } })
     await vi.waitFor(() => expect(capture.status).toHaveBeenCalled())
     stateListener({ cameraId: 'camera:back' })

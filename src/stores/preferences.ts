@@ -8,7 +8,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
   let unsubscribe: (() => void) | null = null
   const load = async () => {
     settings.value = await capture.getPreferences()
-    unsubscribe ??= capture.onPreferencesChanged((next) => { settings.value = next })
+    unsubscribe ??= capture.onPreferencesChanged((next) => {
+      settings.value = next
+    })
     return settings.value
   }
   const update = async (patch: Partial<PreferenceSettings>) => {

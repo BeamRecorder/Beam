@@ -24,7 +24,7 @@ const props = withDefaults(
     placeholder: 'Select a window',
     disabled: false,
     direction: 'down',
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -33,7 +33,7 @@ const emit = defineEmits<{
 }>()
 
 const selectedOption = computed(() => {
-  return props.options.find(opt => opt.id === props.modelValue) || null
+  return props.options.find((opt) => opt.id === props.modelValue) || null
 })
 
 const handleSelect = (option: WindowOption, close: () => void) => {
@@ -47,7 +47,7 @@ const { list, containerProps, wrapperProps } = useVirtualList(
   computed(() => props.options),
   {
     itemHeight: 52, // 44px thumbnail aspect height + padding
-  }
+  },
 )
 
 const labelStyle = computed(() => {
@@ -110,10 +110,10 @@ const stopMarquee = (event: PointerEvent) => {
 <template>
   <Popover align="left" :direction="direction" :block="true" class="select-popover" @toggle="$emit('toggle', $event)">
     <template #trigger="{ isOpen }">
-      <button 
-        type="button" 
-        class="select-trigger" 
-        :class="{ 'is-open': isOpen, 'is-disabled': disabled }" 
+      <button
+        type="button"
+        class="select-trigger"
+        :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
         :disabled="disabled"
       >
         <div class="trigger-content-wrapper">
@@ -126,33 +126,27 @@ const stopMarquee = (event: PointerEvent) => {
               <Skeleton variant="linear" width="100%" height="100%" />
             </template>
           </div>
-          <span 
-            class="select-label" 
-            :class="{ 'is-placeholder': !selectedOption }"
-            :style="labelStyle"
-          >
+          <span class="select-label" :class="{ 'is-placeholder': !selectedOption }" :style="labelStyle">
             {{ selectedOption ? selectedOption.name : placeholder }}
           </span>
         </div>
-        <ChevronDown class="select-chevron" :class="{ 'rotate': isOpen }" />
+        <ChevronDown class="select-chevron" :class="{ rotate: isOpen }" />
       </button>
     </template>
-    
+
     <template #default="{ close }">
-      <div v-if="options.length === 0" class="options-empty">
-        No windows detected
-      </div>
+      <div v-if="options.length === 0" class="options-empty">No windows detected</div>
       <div v-else v-bind="containerProps" class="virtual-scroll-container">
         <ul v-bind="wrapperProps" class="select-options">
-          <li 
-            v-for="item in list" 
-            :key="item.data.id" 
+          <li
+            v-for="item in list"
+            :key="item.data.id"
             class="select-option"
             :class="{ 'is-selected': item.data.id === modelValue }"
             @click="handleSelect(item.data, close)"
             @pointerenter="startMarquee"
             @pointerleave="stopMarquee"
-            style="height: 52px;"
+            style="height: 52px"
           >
             <div class="option-content">
               <div class="thumbnail-wrapper">
@@ -401,5 +395,4 @@ const stopMarquee = (event: PointerEvent) => {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
-
 </style>

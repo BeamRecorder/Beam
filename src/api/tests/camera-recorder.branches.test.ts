@@ -1,68 +1,68 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BrowserCameraRecorder, isCameraUnavailableError } from '../camera-recorder';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { BrowserCameraRecorder, isCameraUnavailableError } from '../camera-recorder'
 
 class FakeTrack {
-  stopped = false;
-  private readonly listeners = new Map<string, Array<() => void>>();
+  stopped = false
+  private readonly listeners = new Map<string, Array<() => void>>()
 
   addEventListener(type: string, listener: () => void) {
-    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener])
   }
 
   getSettings() {
-    return { width: 1280, height: 720, frameRate: 30 };
+    return { width: 1280, height: 720, frameRate: 30 }
   }
 
   stop() {
-    this.stopped = true;
+    this.stopped = true
   }
 }
 
 class FakeStream {
-  private readonly track: FakeTrack;
+  private readonly track: FakeTrack
 
   constructor(track: FakeTrack) {
-    this.track = track;
+    this.track = track
   }
 
   getVideoTracks() {
-    return [this.track];
+    return [this.track]
   }
 
   getTracks() {
-    return [this.track];
+    return [this.track]
   }
 }
 
 class FakeMediaRecorder extends EventTarget {
-  static instances: FakeMediaRecorder[] = [];
-  readonly stream: MediaStream;
-  readonly options: MediaRecorderOptions;
+  static instances: FakeMediaRecorder[] = []
+  readonly stream: MediaStream
+  readonly options: MediaRecorderOptions
 
   constructor(stream: MediaStream, options: MediaRecorderOptions) {
-    super();
-    this.stream = stream;
-    this.options = options;
-    FakeMediaRecorder.instances.push(this);
+    super()
+    this.stream = stream
+    this.options = options
+    FakeMediaRecorder.instances.push(this)
   }
 
   static isTypeSupported() {
-    return true;
+    return true
   }
 
   start() {}
 
   stop() {
-    this.dispatchEvent(new Event('stop'));
+    this.dispatchEvent(new Event('stop'))
   }
 
   data() {
-    const event = new Event('dataavailable') as Event & { data: Blob };
+    const event = new Event('dataavailable') as Event & { data: Blob }
     event.data = {
       size: 1,
       arrayBuffer: () => Promise.resolve(new Uint8Array([1]).buffer),
-    } as unknown as Blob;
-    this.dispatchEvent(event);
+    } as unknown as Blob
+    this.dispatchEvent(event)
   }
 }
 
@@ -71,38 +71,38 @@ const capture = {
   writeCameraSegment: vi.fn().mockResolvedValue(undefined),
   finalizeCameraSegment: vi.fn().mockResolvedValue(undefined),
   failCamera: vi.fn().mockResolvedValue(undefined),
-};
+}
 
-let track!: FakeTrack;
-let previousMediaDevices: MediaDevices | undefined;
-let previousCapture: typeof window.capture;
+let track!: FakeTrack
+let previousMediaDevices: MediaDevices | undefined
+let previousCapture: typeof window.capture
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  FakeMediaRecorder.instances = [];
-  track = new FakeTrack();
-  previousMediaDevices = navigator.mediaDevices;
-  previousCapture = window.capture;
+  vi.clearAllMocks()
+  FakeMediaRecorder.instances = []
+  track = new FakeTrack()
+  previousMediaDevices = navigator.mediaDevices
+  previousCapture = window.capture
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,
     value: { getUserMedia: vi.fn().mockResolvedValue(new FakeStream(track)) },
-  });
-  window.capture = capture as unknown as typeof window.capture;
-  vi.stubGlobal('MediaRecorder', FakeMediaRecorder);
-  vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
-  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+  })
+  window.capture = capture as unknown as typeof window.capture
+  vi.stubGlobal('MediaRecorder', FakeMediaRecorder)
+  vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
   Object.defineProperty(HTMLVideoElement.prototype, 'requestVideoFrameCallback', {
     configurable: true,
     value: vi.fn(),
-  });
-});
+  })
+})
 
 afterEach(() => {
-  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: previousMediaDevices });
-  window.capture = previousCapture;
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: previousMediaDevices })
+  window.capture = previousCapture
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('camera recorder branch behavior', () => {
   it.each([
@@ -114,19 +114,19 @@ describe('camera recorder branch behavior', () => {
     [new Error('hardware resources are exhausted'), true],
     [new Error('unrelated failure'), false],
   ])('classifies camera availability failures: %s', (error, expected) => {
-    expect(isCameraUnavailableError(error)).toBe(expected);
-  });
+    expect(isCameraUnavailableError(error)).toBe(expected)
+  })
 
   it('reports non-Error chunk failures through the fatal handler', async () => {
-    const recorder = await BrowserCameraRecorder.request('camera:chromium:camera-1');
-    const fatal = vi.fn();
-    recorder.onFatal(fatal);
-    await recorder.start('session-1');
-    capture.writeCameraSegment.mockRejectedValueOnce('write failed');
-    FakeMediaRecorder.instances[0].data();
+    const recorder = await BrowserCameraRecorder.request('camera:chromium:camera-1')
+    const fatal = vi.fn()
+    recorder.onFatal(fatal)
+    await recorder.start('session-1')
+    capture.writeCameraSegment.mockRejectedValueOnce('write failed')
+    FakeMediaRecorder.instances[0].data()
 
-    await expect(recorder.stop()).rejects.toThrow('write failed');
-    expect(fatal).toHaveBeenCalledWith(expect.objectContaining({ message: 'write failed' }));
-    expect(track.stopped).toBe(true);
-  });
-});
+    await expect(recorder.stop()).rejects.toThrow('write failed')
+    expect(fatal).toHaveBeenCalledWith(expect.objectContaining({ message: 'write failed' }))
+    expect(track.stopped).toBe(true)
+  })
+})

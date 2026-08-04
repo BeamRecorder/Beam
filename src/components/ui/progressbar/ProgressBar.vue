@@ -9,7 +9,7 @@ const props = withDefaults(
   {
     value: 0,
     max: 100,
-  }
+  },
 )
 
 const percentage = computed(() => {

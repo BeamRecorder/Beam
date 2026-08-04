@@ -1,7 +1,12 @@
 import type { CursorTelemetryPoint } from '../../../api/types/capture-session'
 import { ZOOM_DEPTH_SCALES, type ZoomElement, type ZoomFocus } from './zoom-types'
 
-export interface AppliedZoom { scale: number; focus: ZoomFocus; strength: number; mode: ZoomElement['mode'] }
+export interface AppliedZoom {
+  scale: number
+  focus: ZoomFocus
+  strength: number
+  mode: ZoomElement['mode']
+}
 export const ZOOM_IN_MS = 1522.575
 export const ZOOM_OUT_MS = 1015.05
 const LEAD_MS = 200
@@ -25,7 +30,11 @@ export function regionStrength(region: ZoomElement, timeMs: number): number {
   const inStart = region.startMs + IN_OVERLAP_MS - ZOOM_IN_MS
   let inEnd = inStart + ZOOM_IN_MS
   let outStart = region.endMs - OUT_EARLY_MS
-  if (inEnd > outStart) { const midpoint = (inEnd + outStart) / 2; inEnd = midpoint; outStart = midpoint }
+  if (inEnd > outStart) {
+    const midpoint = (inEnd + outStart) / 2
+    inEnd = midpoint
+    outStart = midpoint
+  }
   if (adjusted < inStart || adjusted > outStart + ZOOM_OUT_MS) return 0
   if (adjusted < inEnd) return easeOut((adjusted - inStart) / Math.max(1, inEnd - inStart))
   if (adjusted <= outStart) return 1
@@ -61,33 +70,66 @@ export function smoothedCursorFocusAt(samples: CursorTelemetryPoint[], timeMs: n
   return { cx: weightedX / totalWeight, cy: weightedY / totalWeight }
 }
 
-export function zoomAtTime(elements: ZoomElement[], timeMs: number, telemetry: CursorTelemetryPoint[] = []): AppliedZoom | null {
-  const pair = [...elements].sort((left, right) => left.startMs - right.startMs).find((current, index, sorted) => {
-    const next = sorted[index + 1]
-    return next && next.startMs - current.endMs <= CONNECTED_GAP_MS && timeMs >= current.endMs + LEAD_MS && timeMs <= current.endMs + LEAD_MS + CONNECTED_PAN_MS
-  })
+export function zoomAtTime(
+  elements: ZoomElement[],
+  timeMs: number,
+  telemetry: CursorTelemetryPoint[] = [],
+): AppliedZoom | null {
+  const pair = [...elements]
+    .sort((left, right) => left.startMs - right.startMs)
+    .find((current, index, sorted) => {
+      const next = sorted[index + 1]
+      return (
+        next &&
+        next.startMs - current.endMs <= CONNECTED_GAP_MS &&
+        timeMs >= current.endMs + LEAD_MS &&
+        timeMs <= current.endMs + LEAD_MS + CONNECTED_PAN_MS
+      )
+    })
   if (pair) {
-    const next = [...elements].sort((left, right) => left.startMs - right.startMs).find((candidate) => candidate.startMs >= pair.endMs && candidate.startMs - pair.endMs <= CONNECTED_GAP_MS)
+    const next = [...elements]
+      .sort((left, right) => left.startMs - right.startMs)
+      .find((candidate) => candidate.startMs >= pair.endMs && candidate.startMs - pair.endMs <= CONNECTED_GAP_MS)
     if (next) {
       const t = easeOut((timeMs - pair.endMs - LEAD_MS) / CONNECTED_PAN_MS)
       const startScale = ZOOM_DEPTH_SCALES[pair.depth]
       const endScale = ZOOM_DEPTH_SCALES[next.depth]
       const startFocus = clampFocusToScale(pair.focus, startScale)
       const endFocus = clampFocusToScale(next.focus, endScale)
-      return { scale: lerp(startScale, endScale, t), focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) }, strength: 1, mode: 'auto' }
+      return {
+        scale: lerp(startScale, endScale, t),
+        focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) },
+        strength: 1,
+        mode: 'auto',
+      }
     }
   }
-  const active = elements.map((element) => ({ element, strength: regionStrength(element, timeMs) })).filter((entry) => entry.strength > 0).sort((a, b) => b.strength - a.strength || b.element.startMs - a.element.startMs)
+  const active = elements
+    .map((element) => ({ element, strength: regionStrength(element, timeMs) }))
+    .filter((entry) => entry.strength > 0)
+    .sort((a, b) => b.strength - a.strength || b.element.startMs - a.element.startMs)
   if (active.length === 0) return null
   const current = active[0]
   const currentScale = ZOOM_DEPTH_SCALES[current.element.depth]
-  const next = elements.filter((candidate) => candidate.startMs >= current.element.endMs && candidate.startMs - current.element.endMs <= CONNECTED_GAP_MS).sort((a, b) => a.startMs - b.startMs)[0]
+  const next = elements
+    .filter(
+      (candidate) =>
+        candidate.startMs >= current.element.endMs && candidate.startMs - current.element.endMs <= CONNECTED_GAP_MS,
+    )
+    .sort((a, b) => a.startMs - b.startMs)[0]
   let focus = clampFocusToScale(current.element.focus, currentScale)
   let scale = currentScale
-  if (next && timeMs >= current.element.endMs + LEAD_MS && timeMs <= current.element.endMs + LEAD_MS + CONNECTED_PAN_MS) {
+  if (
+    next &&
+    timeMs >= current.element.endMs + LEAD_MS &&
+    timeMs <= current.element.endMs + LEAD_MS + CONNECTED_PAN_MS
+  ) {
     const t = easeOut((timeMs - current.element.endMs - LEAD_MS) / CONNECTED_PAN_MS)
     const nextScale = ZOOM_DEPTH_SCALES[next.depth]
-    focus = { cx: lerp(focus.cx, clampFocusToScale(next.focus, nextScale).cx, t), cy: lerp(focus.cy, clampFocusToScale(next.focus, nextScale).cy, t) }
+    focus = {
+      cx: lerp(focus.cx, clampFocusToScale(next.focus, nextScale).cx, t),
+      cy: lerp(focus.cy, clampFocusToScale(next.focus, nextScale).cy, t),
+    }
     scale = lerp(scale, nextScale, t)
   } else if (current.element.mode === 'auto') {
     const cursor = smoothedCursorFocusAt(telemetry, timeMs)

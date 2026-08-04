@@ -169,8 +169,7 @@ function detectLocale(): string {
     if (stored === 'en' || stored === 'fr') return stored
     const navLang = navigator.language
     if (navLang.startsWith('fr')) return 'fr'
-  } catch {
-  }
+  } catch {}
   return 'en'
 }
 
@@ -193,13 +192,10 @@ export function setCurrentLocale(locale: 'en' | 'fr') {
   i18n.global.locale.value = locale
   try {
     localStorage.setItem('locale', locale)
-  } catch {
-  }
+  } catch {}
 }
 
 export function tNamespace(ns: string) {
   return (key: string, params?: Record<string, unknown>) =>
-    params
-      ? i18n.global.t(`${ns}.${key}`, params as Record<string, any>)
-      : i18n.global.t(`${ns}.${key}`)
+    params ? i18n.global.t(`${ns}.${key}`, params as Record<string, any>) : i18n.global.t(`${ns}.${key}`)
 }

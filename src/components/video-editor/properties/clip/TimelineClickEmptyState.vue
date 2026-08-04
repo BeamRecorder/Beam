@@ -273,24 +273,28 @@ const { t } = useTranslate('ClipPropertiesPanel')
 */
 
 @keyframes clipHoverAndSelect {
-  0%, 18% {
+  0%,
+  18% {
     border: 1px solid transparent;
     outline: 2px solid transparent;
     box-shadow: none;
   }
-  20%, 40% {
+  20%,
+  40% {
     /* Hover state */
     border: 1px solid rgba(255, 255, 255, 0.8);
     outline: 2px solid transparent;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
-  43%, 82% {
+  43%,
+  82% {
     /* Selected state */
     border: 1px solid transparent;
     outline: 2px solid var(--color-primary);
     box-shadow: 0 0 12px var(--color-primary);
   }
-  90%, 100% {
+  90%,
+  100% {
     border: 1px solid transparent;
     outline: 2px solid transparent;
     box-shadow: none;
@@ -336,7 +340,8 @@ const { t } = useTranslate('ClipPropertiesPanel')
 }
 
 @keyframes rippleAnim {
-  0%, 41% {
+  0%,
+  41% {
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
   }

@@ -9,7 +9,7 @@ const props = withDefaults(
   }>(),
   {
     size: 'sm',
-  }
+  },
 )
 
 // Standardize platform key representation
@@ -92,7 +92,9 @@ const parsedKeys = computed(() => {
   color: var(--text-primary);
   background: var(--color-bg-element);
   border: 1px solid var(--color-border-strong);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-sm);
   line-height: 1;
   user-select: none;

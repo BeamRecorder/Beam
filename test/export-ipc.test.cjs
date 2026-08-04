@@ -30,7 +30,10 @@ test('writes ordered chunks atomically and finalizes the selected file', async (
   await api.invoke('export:write', { jobId: opened.jobId, sequence: 1, position: 2, data: new Uint8Array([3]) })
   assert.equal((await api.invoke('export:finalize', { jobId: opened.jobId })).path, target)
   assert.deepEqual([...fs.readFileSync(target)], [1, 2, 3])
-  assert.equal(fs.readdirSync(root).some((name) => name.endsWith('.partial')), false)
+  assert.equal(
+    fs.readdirSync(root).some((name) => name.endsWith('.partial')),
+    false,
+  )
 })
 
 test('rejects unordered chunks and removes a cancelled partial export', async () => {
@@ -38,8 +41,14 @@ test('rejects unordered chunks and removes a cancelled partial export', async ()
   const target = path.join(root, 'result.mp4')
   const api = setup(target)
   const opened = await api.invoke('export:begin', { projectName: 'Demo', format: 'mp4' })
-  assert.throws(() => api.invoke('export:write', { jobId: opened.jobId, sequence: 1, position: 0, data: new Uint8Array([1]) }), /Ordre/)
+  assert.throws(
+    () => api.invoke('export:write', { jobId: opened.jobId, sequence: 1, position: 0, data: new Uint8Array([1]) }),
+    /Ordre/,
+  )
   await api.invoke('export:abort', { jobId: opened.jobId })
   assert.equal(fs.existsSync(target), false)
-  assert.equal(fs.readdirSync(root).some((name) => name.endsWith('.partial')), false)
+  assert.equal(
+    fs.readdirSync(root).some((name) => name.endsWith('.partial')),
+    false,
+  )
 })

@@ -11,7 +11,7 @@ const zoom = (id: string, mode: ZoomElement['mode'] = 'manual', sessionId = 'ses
   endMs: 2_000,
   depth: 2,
   mode,
-  focus: { cx: .5, cy: .5 },
+  focus: { cx: 0.5, cy: 0.5 },
 })
 
 const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => ({
@@ -35,7 +35,7 @@ const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => 
   cursor: {
     available: true,
     events: [],
-    telemetry: [{ timeMs: 2_000, cx: .2, cy: .8, interactionType: 'click' }],
+    telemetry: [{ timeMs: 2_000, cx: 0.2, cy: 0.8, interactionType: 'click' }],
     shapes: {},
     catalog: {},
     missing: [],
@@ -74,7 +74,13 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value).toEqual([])
     state.addZoomAtTime(-99)
     expect(state.zoomElements.value).toEqual([
-      expect.objectContaining({ id: '00000000-0000-4000-8000-000000000001', sessionId: 'manual', startMs: 0, endMs: 1_000, mode: 'manual' }),
+      expect.objectContaining({
+        id: '00000000-0000-4000-8000-000000000001',
+        sessionId: 'manual',
+        startMs: 0,
+        endMs: 1_000,
+        mode: 'manual',
+      }),
     ])
     expect(state.selectedZoomId.value).toBe('00000000-0000-4000-8000-000000000001')
     expect(activeTab.value).toBe('zoom')
@@ -91,20 +97,26 @@ describe('useProjectZoom', () => {
     ]
     state.generatedSessions.value = [{ sessionId: 'other', algorithmVersion: 4, generatedAt: 'old' }]
     state.generateZooms()
-    expect(state.zoomElements.value).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 'manual' }),
-      expect.objectContaining({ id: 'other-auto' }),
-      expect.objectContaining({ id: 'auto:session:2000', mode: 'auto' }),
-    ]))
+    expect(state.zoomElements.value).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'manual' }),
+        expect.objectContaining({ id: 'other-auto' }),
+        expect.objectContaining({ id: 'auto:session:2000', mode: 'auto' }),
+      ]),
+    )
     expect(state.zoomElements.value.find((item) => item.id === 'old-auto')).toBeUndefined()
-    expect(state.generatedSessions.value).toEqual(expect.arrayContaining([
-      expect.objectContaining({ sessionId: 'session', algorithmVersion: 4 }),
-      expect.objectContaining({ sessionId: 'other' }),
-    ]))
+    expect(state.generatedSessions.value).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sessionId: 'session', algorithmVersion: 4 }),
+        expect.objectContaining({ sessionId: 'other' }),
+      ]),
+    )
   })
 
   it('does not generate when cursor data is unavailable', () => {
-    const noCursor = data({ cursor: { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] } })
+    const noCursor = data({
+      cursor: { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] },
+    })
     const { state } = create(noCursor)
     state.generateZooms()
     expect(state.zoomElements.value).toEqual([])

@@ -1,10 +1,22 @@
 /// <reference lib="webworker" />
 import { env, pipeline } from '@huggingface/transformers'
 
-type Request = { type: 'transcribe'; id: string; model: string; audio: Float32Array; sampleRate: number; locale: string }
+type Request = {
+  type: 'transcribe'
+  id: string
+  model: string
+  audio: Float32Array
+  sampleRate: number
+  locale: string
+}
 
 type Chunk = { text?: string; timestamp?: [number, number] }
-type TranscriptionOptions = { sampling_rate: number; return_timestamps: 'word'; language?: 'french'; task?: 'transcribe' }
+type TranscriptionOptions = {
+  sampling_rate: number
+  return_timestamps: 'word'
+  language?: 'french'
+  task?: 'transcribe'
+}
 type Transcriber = (audio: Float32Array, options: TranscriptionOptions) => Promise<{ chunks?: Chunk[] }>
 let loadedModel = ''
 let transcriber: Transcriber | null = null
@@ -27,9 +39,9 @@ const messages: Record<string, Record<string, string>> = {
     'loading.ready': 'Model ready; preparing transcription…',
     'loading.file': 'Loading {file}',
     'loading.generic': 'Loading model…',
-    'transcribing': 'Transcribing segment {current}/{total} — {time} / {duration}',
-    'transcribed': 'Transcribed {current}/{total} segments — {time} / {duration}',
-    'failed': 'Whisper failed.',
+    transcribing: 'Transcribing segment {current}/{total} — {time} / {duration}',
+    transcribed: 'Transcribed {current}/{total} segments — {time} / {duration}',
+    failed: 'Whisper failed.',
   },
   fr: {
     'loading.model': 'Chargement de {model} ({device})…',
@@ -37,9 +49,9 @@ const messages: Record<string, Record<string, string>> = {
     'loading.ready': 'Modèle prêt ; préparation de la transcription…',
     'loading.file': 'Chargement de {file}',
     'loading.generic': 'Chargement du modèle…',
-    'transcribing': 'Transcription du segment {current}/{total} — {time} / {duration}',
-    'transcribed': '{current}/{total} segments transcrits — {time} / {duration}',
-    'failed': 'Échec de Whisper.',
+    transcribing: 'Transcription du segment {current}/{total} — {time} / {duration}',
+    transcribed: '{current}/{total} segments transcrits — {time} / {duration}',
+    failed: 'Échec de Whisper.',
   },
 }
 
@@ -55,17 +67,42 @@ self.onmessage = async ({ data }: MessageEvent<Request>) => {
   try {
     const device = navigator.gpu ? 'webgpu' : 'wasm'
     if (!transcriber || loadedModel !== data.model) {
-      self.postMessage({ type: 'progress', id: data.id, status: 'loading', message: _t(locale, 'loading.model', { model: data.model, device }) })
-      transcriber = await pipeline('automatic-speech-recognition', data.model, {
+      self.postMessage({
+        type: 'progress',
+        id: data.id,
+        status: 'loading',
+        message: _t(locale, 'loading.model', { model: data.model, device }),
+      })
+      transcriber = (await pipeline('automatic-speech-recognition', data.model, {
         device,
         dtype: 'q8',
-        progress_callback: (event: { progress?: number; status?: string; file?: string; loaded?: number; total?: number }) => {
-          const byteProgress = event.loaded !== undefined && event.total !== undefined
-            ? _t(locale, 'loading.progress', { loaded: formatMegabytes(event.loaded), total: formatMegabytes(event.total) })
-            : event.status === 'ready' ? _t(locale, 'loading.ready') : event.file ? _t(locale, 'loading.file', { file: event.file }) : _t(locale, 'loading.generic')
-          self.postMessage({ type: 'progress', id: data.id, status: 'loading', message: byteProgress, progress: event.progress })
+        progress_callback: (event: {
+          progress?: number
+          status?: string
+          file?: string
+          loaded?: number
+          total?: number
+        }) => {
+          const byteProgress =
+            event.loaded !== undefined && event.total !== undefined
+              ? _t(locale, 'loading.progress', {
+                  loaded: formatMegabytes(event.loaded),
+                  total: formatMegabytes(event.total),
+                })
+              : event.status === 'ready'
+                ? _t(locale, 'loading.ready')
+                : event.file
+                  ? _t(locale, 'loading.file', { file: event.file })
+                  : _t(locale, 'loading.generic')
+          self.postMessage({
+            type: 'progress',
+            id: data.id,
+            status: 'loading',
+            message: byteProgress,
+            progress: event.progress,
+          })
         },
-      }) as unknown as Transcriber
+      })) as unknown as Transcriber
       loadedModel = data.model
     }
     const totalSeconds = data.audio.length / data.sampleRate
@@ -80,12 +117,52 @@ self.onmessage = async ({ data }: MessageEvent<Request>) => {
     for (let offset = 0; offset < data.audio.length; offset += chunkSamples) {
       const chunkIndex = Math.floor(offset / chunkSamples)
       const processedSeconds = Math.min(totalSeconds, (offset + chunkSamples) / data.sampleRate)
-      self.postMessage({ type: 'progress', id: data.id, status: 'running', message: _t(locale, 'transcribing', { current: String(chunkIndex + 1), total: String(chunkCount), time: formatTime(offset / data.sampleRate), duration: formatTime(totalSeconds) }), progress: (offset / data.audio.length) * 100 })
+      self.postMessage({
+        type: 'progress',
+        id: data.id,
+        status: 'running',
+        message: _t(locale, 'transcribing', {
+          current: String(chunkIndex + 1),
+          total: String(chunkCount),
+          time: formatTime(offset / data.sampleRate),
+          duration: formatTime(totalSeconds),
+        }),
+        progress: (offset / data.audio.length) * 100,
+      })
       const result = await transcriber(data.audio.subarray(offset, offset + chunkSamples), transcriptionOptions)
       const offsetMs = Math.round((offset / data.sampleRate) * 1000)
-      words.push(...(result.chunks || []).flatMap((chunk) => chunk.timestamp && chunk.text ? [{ text: chunk.text.trim(), startMs: offsetMs + Math.round(chunk.timestamp[0] * 1000), endMs: offsetMs + Math.round(chunk.timestamp[1] * 1000) }] : []))
-      self.postMessage({ type: 'progress', id: data.id, status: 'running', message: _t(locale, 'transcribed', { current: String(chunkIndex + 1), total: String(chunkCount), time: formatTime(processedSeconds), duration: formatTime(totalSeconds) }), progress: (processedSeconds / totalSeconds) * 100 })
+      words.push(
+        ...(result.chunks || []).flatMap((chunk) =>
+          chunk.timestamp && chunk.text
+            ? [
+                {
+                  text: chunk.text.trim(),
+                  startMs: offsetMs + Math.round(chunk.timestamp[0] * 1000),
+                  endMs: offsetMs + Math.round(chunk.timestamp[1] * 1000),
+                },
+              ]
+            : [],
+        ),
+      )
+      self.postMessage({
+        type: 'progress',
+        id: data.id,
+        status: 'running',
+        message: _t(locale, 'transcribed', {
+          current: String(chunkIndex + 1),
+          total: String(chunkCount),
+          time: formatTime(processedSeconds),
+          duration: formatTime(totalSeconds),
+        }),
+        progress: (processedSeconds / totalSeconds) * 100,
+      })
     }
     self.postMessage({ type: 'result', id: data.id, words })
-  } catch (error) { self.postMessage({ type: 'error', id: data.id, message: error instanceof Error ? error.message : _t(locale, 'failed') }) }
+  } catch (error) {
+    self.postMessage({
+      type: 'error',
+      id: data.id,
+      message: error instanceof Error ? error.message : _t(locale, 'failed'),
+    })
+  }
 }

@@ -9,13 +9,13 @@ const { t } = useTranslate('CameraPreviewOverlay')
 
 const props = withDefaults(
   defineProps<{
-    cameraId: string;
-    isRecording?: boolean;
-    isHovered?: boolean;
-    theme?: 'light' | 'dark' | 'system';
-    windowOverlay?: boolean;
+    cameraId: string
+    isRecording?: boolean
+    isHovered?: boolean
+    theme?: 'light' | 'dark' | 'system'
+    windowOverlay?: boolean
   }>(),
-  { isRecording: false, isHovered: false, theme: 'light' }
+  { isRecording: false, isHovered: false, theme: 'light' },
 )
 
 const videoRef = ref<HTMLVideoElement | null>(null)
@@ -35,15 +35,27 @@ const stopCameraStream = () => {
 const loadCamera = async (cameraId: string) => {
   const request = ++cameraRequest
   stopCameraStream()
-  if (!cameraId || cameraId === 'off') { isLoading.value = false; return }
+  if (!cameraId || cameraId === 'off') {
+    isLoading.value = false
+    return
+  }
   try {
     streamError.value = null
     isLoading.value = true
     const deviceId = cameraId.replace('camera:chromium:', '')
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: deviceId ? { deviceId: { ideal: deviceId } } : true })
-    if (request !== cameraRequest) { stream.getTracks().forEach((track) => track.stop()); return }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: deviceId ? { deviceId: { ideal: deviceId } } : true,
+    })
+    if (request !== cameraRequest) {
+      stream.getTracks().forEach((track) => track.stop())
+      return
+    }
     cameraStream.value = stream
-    if (videoRef.value) { videoRef.value.srcObject = stream; await videoRef.value.play() }
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream
+      await videoRef.value.play()
+    }
   } catch (error) {
     if (request === cameraRequest) {
       streamError.value = error instanceof Error ? error.message : t('unableToStartCamera')
@@ -54,10 +66,17 @@ const loadCamera = async (cameraId: string) => {
   }
 }
 
-watch(() => props.cameraId, (cameraId) => { void loadCamera(cameraId) })
+watch(
+  () => props.cameraId,
+  (cameraId) => {
+    void loadCamera(cameraId)
+  },
+)
 
 onMounted(() => {
-  initialLoadTimer = window.setTimeout(() => { void loadCamera(props.cameraId) }, 0)
+  initialLoadTimer = window.setTimeout(() => {
+    void loadCamera(props.cameraId)
+  }, 0)
 })
 
 onBeforeUnmount(() => {
@@ -68,7 +87,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main v-show="cameraId !== 'off'" class="camera-overlay-container" :data-theme="theme" :class="{ 'is-recording': isRecording, 'is-hovered': isHovered }">
+  <main
+    v-show="cameraId !== 'off'"
+    class="camera-overlay-container"
+    :data-theme="theme"
+    :class="{ 'is-recording': isRecording, 'is-hovered': isHovered }"
+  >
     <video ref="videoRef" autoplay muted playsinline class="camera-overlay-video" />
     <div v-if="isLoading" class="camera-overlay-skeleton" :aria-label="t('loadingCameraPreview')"><div /></div>
     <div v-else-if="streamError" class="camera-overlay-error"><Video :size="24" /></div>
@@ -119,7 +143,11 @@ onBeforeUnmount(() => {
   background: var(--color-bg-surface);
 }
 @keyframes camera-skeleton {
-  from { transform: translateX(-130%); }
-  to { transform: translateX(340%); }
+  from {
+    transform: translateX(-130%);
+  }
+  to {
+    transform: translateX(340%);
+  }
 }
 </style>

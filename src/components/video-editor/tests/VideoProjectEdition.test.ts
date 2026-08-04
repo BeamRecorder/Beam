@@ -7,7 +7,8 @@ import VideoProjectEdition from './VideoProjectEdition.vue'
 
 const ProjectPicker = {
   emits: ['select-project', 'open-project'],
-  template: '<div class="project-picker-stub"><button class="select-project" @click="$emit(\'select-project\', { id: \'next\', name: \'Next project\' })">Select</button><button class="open-project" @click="$emit(\'open-project\', { id: \'opened\', name: \'Opened project\' })">Open</button></div>',
+  template:
+    "<div class=\"project-picker-stub\"><button class=\"select-project\" @click=\"$emit('select-project', { id: 'next', name: 'Next project' })\">Select</button><button class=\"open-project\" @click=\"$emit('open-project', { id: 'opened', name: 'Opened project' })\">Open</button></div>",
 }
 
 describe('VideoProjectEdition', () => {
