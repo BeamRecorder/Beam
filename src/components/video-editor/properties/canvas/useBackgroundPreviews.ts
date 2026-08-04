@@ -1,6 +1,7 @@
 import { onUnmounted, reactive } from "vue";
 import BackgroundPreviewWorker from "./background-preview.worker?worker&inline";
 import type { BackgroundMedia } from "../../composables/backgroundCatalog";
+import { resolvePublicAssetUrl } from "~/utils/public-asset";
 
 const CACHE_LIMIT = 180;
 
@@ -66,8 +67,9 @@ export function useBackgroundPreviews() {
   const request = (media: BackgroundMedia) => {
     if (previews[media.id] || failed[media.id] || pending.has(media.id)) return;
     pending.add(media.id);
-    if (media.kind === "image") worker.postMessage({ type: "request", id: media.id, source: media.path });
-    else void videoPreview(media.path).then((preview) => {
+    const source = resolvePublicAssetUrl(media.path);
+    if (media.kind === "image") worker.postMessage({ type: "request", id: media.id, source });
+    else void videoPreview(source).then((preview) => {
       pending.delete(media.id); previews[media.id] = URL.createObjectURL(preview); order.push(media.id);
       while (order.length > CACHE_LIMIT) { const expired = order.shift(); if (expired) release(expired); }
     }).catch(() => { pending.delete(media.id); failed[media.id] = true; });

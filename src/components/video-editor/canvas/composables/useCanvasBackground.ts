@@ -1,5 +1,6 @@
 import { ref, watch, onUnmounted } from "vue";
 import type { BackgroundValue } from "../../composables/backgroundCatalog";
+import { resolvePublicAssetUrl } from "~/utils/public-asset";
 
 export function useCanvasBackground(
   selectedBackground: () => BackgroundValue | null,
@@ -58,7 +59,7 @@ export function useCanvasBackground(
       }
       const loadVersion = ++backgroundLoadVersion;
       const image = new Image();
-      image.src = nextBg.path;
+      image.src = resolvePublicAssetUrl(nextBg.path);
       image.addEventListener("load", () => {
         if (loadVersion !== backgroundLoadVersion || !image.naturalWidth)
           return;
@@ -73,7 +74,7 @@ export function useCanvasBackground(
       prevBgState.value = activeBgState.value;
       prevBgImg.value = activeBgImg.value;
       activeBgState.value = nextBg;
-      backgroundVideo.src = nextBg.path;
+      backgroundVideo.src = resolvePublicAssetUrl(nextBg.path);
       backgroundVideo.load();
       activeBgImg.value = null;
       triggerBgTransition();

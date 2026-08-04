@@ -4,6 +4,7 @@ import {
   createDefaultCursorClickEffects,
   type CursorClickEffects,
 } from "../../../../api/types/cursor-settings";
+import { resolvePublicAssetUrl } from "~/utils/public-asset";
 
 export type CursorType =
   | "automatic"
@@ -45,41 +46,41 @@ export type CursorType =
 
 export const cursorUrls: Record<CursorType, string> = {
   automatic: "",
-  default: "/macOsSvgCursors/default.svg",
-  beachball: "/macOsSvgCursors/beachball.svg",
-  busy: "/macOsSvgCursors/busy.svg",
-  cell: "/macOsSvgCursors/cell.svg",
-  contextualmenu: "/macOsSvgCursors/contextualmenu.svg",
-  copy: "/macOsSvgCursors/copy.svg",
-  cross: "/macOsSvgCursors/cross.svg",
-  handgrabbing: "/macOsSvgCursors/handgrabbing.svg",
-  handopen: "/macOsSvgCursors/handopen.svg",
-  handpointing: "/macOsSvgCursors/handpointing.svg",
-  help: "/macOsSvgCursors/help.svg",
-  makealias: "/macOsSvgCursors/makealias.svg",
-  move: "/macOsSvgCursors/move.svg",
-  notallowed: "/macOsSvgCursors/notallowed.svg",
-  poof: "/macOsSvgCursors/poof.svg",
-  resizenorth: "/macOsSvgCursors/resizenorth.svg",
-  resizenortheast: "/macOsSvgCursors/resizenortheast.svg",
-  resizenortheastsouthwest: "/macOsSvgCursors/resizenortheastsouthwest.svg",
-  resizenorthsouth: "/macOsSvgCursors/resizenorthsouth.svg",
-  resizenorthwest: "/macOsSvgCursors/resizenorthwest.svg",
-  resizenorthwestsoutheast: "/macOsSvgCursors/resizenorthwestsoutheast.svg",
-  resizeright: "/macOsSvgCursors/resizeright.svg",
-  resizesouth: "/macOsSvgCursors/resizesouth.svg",
-  resizesoutheast: "/macOsSvgCursors/resizesoutheast.svg",
-  resizesouthwest: "/macOsSvgCursors/resizesouthwest.svg",
-  resizeup: "/macOsSvgCursors/resizeup.svg",
-  resizeupdown: "/macOsSvgCursors/resizeupdown.svg",
-  resizewest: "/macOsSvgCursors/resizewest.svg",
-  resizewesteast: "/macOsSvgCursors/resizewesteast.svg",
-  screenshotselection: "/macOsSvgCursors/screenshotselection.svg",
-  screenshotwindow: "/macOsSvgCursors/screenshotwindow.svg",
-  textcursor: "/macOsSvgCursors/textcursor.svg",
-  textcursorvertical: "/macOsSvgCursors/textcursorvertical.svg",
-  zoomin: "/macOsSvgCursors/zoomin.svg",
-  zoomout: "/macOsSvgCursors/zoomout.svg",
+  default: resolvePublicAssetUrl("/macOsSvgCursors/default.svg"),
+  beachball: resolvePublicAssetUrl("/macOsSvgCursors/beachball.svg"),
+  busy: resolvePublicAssetUrl("/macOsSvgCursors/busy.svg"),
+  cell: resolvePublicAssetUrl("/macOsSvgCursors/cell.svg"),
+  contextualmenu: resolvePublicAssetUrl("/macOsSvgCursors/contextualmenu.svg"),
+  copy: resolvePublicAssetUrl("/macOsSvgCursors/copy.svg"),
+  cross: resolvePublicAssetUrl("/macOsSvgCursors/cross.svg"),
+  handgrabbing: resolvePublicAssetUrl("/macOsSvgCursors/handgrabbing.svg"),
+  handopen: resolvePublicAssetUrl("/macOsSvgCursors/handopen.svg"),
+  handpointing: resolvePublicAssetUrl("/macOsSvgCursors/handpointing.svg"),
+  help: resolvePublicAssetUrl("/macOsSvgCursors/help.svg"),
+  makealias: resolvePublicAssetUrl("/macOsSvgCursors/makealias.svg"),
+  move: resolvePublicAssetUrl("/macOsSvgCursors/move.svg"),
+  notallowed: resolvePublicAssetUrl("/macOsSvgCursors/notallowed.svg"),
+  poof: resolvePublicAssetUrl("/macOsSvgCursors/poof.svg"),
+  resizenorth: resolvePublicAssetUrl("/macOsSvgCursors/resizenorth.svg"),
+  resizenortheast: resolvePublicAssetUrl("/macOsSvgCursors/resizenortheast.svg"),
+  resizenortheastsouthwest: resolvePublicAssetUrl("/macOsSvgCursors/resizenortheastsouthwest.svg"),
+  resizenorthsouth: resolvePublicAssetUrl("/macOsSvgCursors/resizenorthsouth.svg"),
+  resizenorthwest: resolvePublicAssetUrl("/macOsSvgCursors/resizenorthwest.svg"),
+  resizenorthwestsoutheast: resolvePublicAssetUrl("/macOsSvgCursors/resizenorthwestsoutheast.svg"),
+  resizeright: resolvePublicAssetUrl("/macOsSvgCursors/resizeright.svg"),
+  resizesouth: resolvePublicAssetUrl("/macOsSvgCursors/resizesouth.svg"),
+  resizesoutheast: resolvePublicAssetUrl("/macOsSvgCursors/resizesoutheast.svg"),
+  resizesouthwest: resolvePublicAssetUrl("/macOsSvgCursors/resizesouthwest.svg"),
+  resizeup: resolvePublicAssetUrl("/macOsSvgCursors/resizeup.svg"),
+  resizeupdown: resolvePublicAssetUrl("/macOsSvgCursors/resizeupdown.svg"),
+  resizewest: resolvePublicAssetUrl("/macOsSvgCursors/resizewest.svg"),
+  resizewesteast: resolvePublicAssetUrl("/macOsSvgCursors/resizewesteast.svg"),
+  screenshotselection: resolvePublicAssetUrl("/macOsSvgCursors/screenshotselection.svg"),
+  screenshotwindow: resolvePublicAssetUrl("/macOsSvgCursors/screenshotwindow.svg"),
+  textcursor: resolvePublicAssetUrl("/macOsSvgCursors/textcursor.svg"),
+  textcursorvertical: resolvePublicAssetUrl("/macOsSvgCursors/textcursorvertical.svg"),
+  zoomin: resolvePublicAssetUrl("/macOsSvgCursors/zoomin.svg"),
+  zoomout: resolvePublicAssetUrl("/macOsSvgCursors/zoomout.svg"),
 };
 
 export const cursorOptions = [
@@ -263,7 +264,7 @@ export const cursorOptions = [
     label: "macOS Zoom Out",
     thumbnail: "/macOsSvgCursors/zoomout.svg",
   },
-];
+].map((option) => ({ ...option, thumbnail: resolvePublicAssetUrl(option.thumbnail) }));
 
 /** `custom` is intentionally rendered as the default pointer, never guessed. */
 export const cursorTypeForKind = (

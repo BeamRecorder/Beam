@@ -5,6 +5,7 @@ import ExportPopover from '../export/ExportPopover.vue'
 import Button from '~/ui/button/Button.vue'
 import { ArrowLeft, Minus, X, Undo2, Redo2 } from '@lucide/vue'
 import { useTranslate } from '~/i18n/useTranslate'
+import { resolvePublicAssetUrl } from '~/utils/public-asset'
 
 const { t } = useTranslate('Topbar')
 
@@ -99,7 +100,7 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
     @dblclick="capture.toggleMaximize()"
   >
     <div class="left-actions" @dblclick.stop>
-      <img src="/brand/BeamIcon.webp" class="brand-logo" alt="Beam" />
+      <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="brand-logo" alt="Beam" />
       <Button
         variant="ghost"
         size="sm"

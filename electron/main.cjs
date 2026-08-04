@@ -27,6 +27,7 @@ const { createTeleprompterStorage } = require('./teleprompter/teleprompter-stora
 const { createUserPaths } = require('./storage/user-paths.cjs')
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs')
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs')
+const { createTrayManager } = require('./tray/tray-manager.cjs')
 
 // Set to true only while diagnosing Electron startup or renderer requests.
 const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged
@@ -214,8 +215,20 @@ app.whenReady().then(() => {
   const updater = createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal: require('electron').shell.openExternal })
   registerUpdateIpc(ipcMain, updater)
   const win = createWindow(preferencesStore)
-  win.on('closed', () => teleprompterWindow.destroy())
-  app.once('will-quit', () => teleprompterWindow.destroy())
+  const trayManager = createTrayManager({
+    applicationRoot,
+    getWindow: () => win,
+    getController: () => win && controllers.get(win),
+  })
+  trayManager.init()
+  win.on('closed', () => {
+    trayManager.destroy()
+    teleprompterWindow.destroy()
+  })
+  app.once('will-quit', () => {
+    trayManager.destroy()
+    teleprompterWindow.destroy()
+  })
   void updater.checkForUpdates()
   win.webContents.once('destroyed', () => { cameraOverlay.destroy(); screenRegionOverlay.destroy(); exportIpc.cleanupWindow(win.webContents); cameraStorage.cleanupOwner(win.webContents.id); microphoneStorage.cleanupOwner(win.webContents.id); systemAudioStorage.cleanupOwner(win.webContents.id) })
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(preferencesStore) })

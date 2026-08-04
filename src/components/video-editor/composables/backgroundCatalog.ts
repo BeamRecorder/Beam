@@ -1,5 +1,6 @@
 import wallpapers from "virtual:public-background-media";
 import { tNamespace } from '~/i18n'
+import { resolvePublicAssetUrl } from "~/utils/public-asset";
 
 const $t = tNamespace('backgroundCatalog')
 
@@ -27,12 +28,13 @@ const hex = (value: unknown): value is string => typeof value === "string" && /^
 export const backgroundKindFor = (path: string): BackgroundMediaKind | null => mediaKinds[extensionFor(path)] ?? null;
 export const createBackgroundMedia = (paths: readonly string[]): BackgroundMedia[] => [...new Set(paths)].flatMap((path) => {
   const kind = backgroundKindFor(path); if (!kind) return [];
-  return [{ id: path, name: nameFor(path), path, extension: extensionFor(path), kind }];
+  const resolved = resolvePublicAssetUrl(path);
+  return [{ id: resolved, name: nameFor(path), path: resolved, extension: extensionFor(path), kind }];
 }).sort((left, right) => left.name.localeCompare(right.name));
 
 const mediaForKind = (paths: readonly string[], kind: BackgroundMediaKind) => {
-  const root = `/wallpapers/${kind}/`;
-  return createBackgroundMedia(paths).filter((item) => item.kind === kind && item.path.startsWith(root));
+  const root = `wallpapers/${kind}/`;
+  return createBackgroundMedia(paths).filter((item) => item.kind === kind && item.path.includes(root));
 };
 
 /** Built-in wallpapers are deliberately sourced from their matching folder only. */
@@ -57,7 +59,10 @@ export const normalizeGradient = (value: unknown): GradientBackground => {
 export const normalizeBackgroundValue = (value: unknown): BackgroundValue | null => {
   if (!value || typeof value !== "object") return null;
   const entry = value as Partial<BackgroundEntry>;
-  if ((entry.kind === "image" || entry.kind === "video") && typeof entry.path === "string" && backgroundKindFor(entry.path) === entry.kind) return { id: typeof entry.id === "string" ? entry.id : entry.path, name: typeof entry.name === "string" ? entry.name : nameFor(entry.path), path: entry.path, extension: extensionFor(entry.path), kind: entry.kind, ...(typeof entry.fileName === "string" ? { fileName: entry.fileName } : {}) };
+  if ((entry.kind === "image" || entry.kind === "video") && typeof entry.path === "string" && backgroundKindFor(entry.path) === entry.kind) {
+    const resolved = resolvePublicAssetUrl(entry.path);
+    return { id: typeof entry.id === "string" ? entry.id : resolved, name: typeof entry.name === "string" ? entry.name : nameFor(entry.path), path: resolved, extension: extensionFor(entry.path), kind: entry.kind, ...(typeof entry.fileName === "string" ? { fileName: entry.fileName } : {}) };
+  }
   if (entry.kind === "color" && hex(entry.color)) return { id: typeof entry.id === "string" ? entry.id : `color:${entry.color.toLowerCase()}`, name: typeof entry.name === "string" ? entry.name : entry.color, kind: "color", color: entry.color };
   if (entry.kind === "gradient") return { id: typeof entry.id === "string" ? entry.id : "gradient:custom", name: typeof entry.name === "string" ? entry.name : $t("customGradient"), kind: "gradient", gradient: normalizeGradient(entry.gradient) };
   return null;

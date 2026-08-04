@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { MousePointer } from "@lucide/vue";
 import { useTranslate } from "~/i18n/useTranslate";
+import { resolvePublicAssetUrl } from "~/utils/public-asset";
 
 const { t } = useTranslate("ZoomPanel");
 </script>
@@ -53,7 +54,7 @@ const { t } = useTranslate("ZoomPanel");
         <div class="animated-cursor-layer">
           <div class="cursor-ripple" />
           <img
-            src="/macOsSvgCursors/handpointing.svg"
+            :src="resolvePublicAssetUrl('/macOsSvgCursors/handpointing.svg')"
             alt="Cursor"
             class="animated-cursor"
             aria-hidden="true"

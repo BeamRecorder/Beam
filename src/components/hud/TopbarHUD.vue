@@ -3,6 +3,7 @@ import { ChevronLeft, Minus, Settings, X } from "@lucide/vue";
 import Badge from "~/ui/badge/Badge.vue";
 import Button from "~/ui/button/Button.vue";
 import { useTranslate } from "~/i18n/useTranslate";
+import { resolvePublicAssetUrl } from "~/utils/public-asset";
 import UpdateAvailableBadge from "~/components/updates/UpdateAvailableBadge.vue";
 
 const { t } = useTranslate("TopbarHUD");
@@ -46,7 +47,7 @@ const emit = defineEmits<{
       </div>
       <img
         v-else
-        :src="'/brand/BeamIcon.webp'"
+        :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')"
         class="brand-logo"
         :alt="t('title')"
       />
