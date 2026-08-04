@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./public/brand/BeamIcon.webp" alt="Beam" width="80" height="80" />
   <h1>Beam</h1>
-  <p>A focused screen recorder for clear, polished product demos.</p>
+  <p>A Screen Recorder for clear, polished product demo, similar to Recordly or ScreenStudio.</p>
   <p>
     <a href="https://github.com/ExtraBinoss/Beam/releases/latest">Download Beam for Windows or macOS</a>
   </p>
