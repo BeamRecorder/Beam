@@ -18,7 +18,7 @@ pub(crate) struct MacCursorShape {
 /// as an unknown cursor instead of pretending it is the arrow cursor.
 #[allow(deprecated)]
 pub(crate) fn current_system_shape() -> MacCursorShape {
-    autoreleasepool(|| match NSCursor::currentSystemCursor() {
+    autoreleasepool(|_| match NSCursor::currentSystemCursor() {
         Some(cursor) => descriptor_for(&cursor),
         None => custom_descriptor(0, Hotspot { x: 0, y: 0 }),
     })
