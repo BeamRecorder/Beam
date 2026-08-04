@@ -44,6 +44,6 @@ The repository's engineering guidelines are linked from both guides.
 
 ## Acknowledgements
 
-Beam takes inspiration from [Recordly](https://github.com/webadderallorg/Recordly/). Some ideas are inspired by it; Beam is not a fork.
+Beam takes inspiration from [Recordly](https://github.com/webadderallorg/Recordly/). Some ideas are inspired by it; Beam is not a fork, it is a complete rewrite.
 
 Released under the [MIT License](./LICENSE).
