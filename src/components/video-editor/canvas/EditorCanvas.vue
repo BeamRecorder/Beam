@@ -414,7 +414,11 @@ defineExpose({
   <div
     class="canvas-island"
     ref="containerRef"
-    :class="{ 'is-grabbing': viewportZoom.isPanning.value, 'is-space-pressed': viewportZoom.isSpacePressed.value }"
+    :class="{
+      'is-grabbing': viewportZoom.isPanning.value,
+      'is-space-pressed': viewportZoom.isSpacePressed.value,
+      'is-selection-editable': selectedZoom?.mode === 'manual'
+    }"
     @wheel="handleIslandWheel"
     @pointerdown="handleIslandPointerDown"
     @pointermove="handleIslandPointerMove"
@@ -523,7 +527,11 @@ defineExpose({
 .editor-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
 .canvas-loading-skeleton { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .preview-frame { position: absolute; z-index: 0; border-radius: var(--radius-lg); background: var(--color-bg-element); box-shadow: var(--shadow-lg); pointer-events: none; }
-.editor-canvas.is-selection-editable { cursor: crosshair; }
+.canvas-island.is-selection-editable,
+.canvas-island.is-selection-editable *,
+.editor-canvas.is-selection-editable {
+  cursor: crosshair !important;
+}
 .webcam-selection { position: absolute; z-index: 2; border: 2px solid var(--color-primary); box-sizing: border-box; cursor: move; }
 .zoom-selection-box { position: absolute; top: 0; left: 0; z-index: 2; border: 2px dashed rgba(255,255,255,.9); background: rgba(255,255,255,.08); box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; border-radius: var(--radius-md); box-sizing: border-box; contain: layout style; }
 .zoom-selection-box.locked { border-style: solid; border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.03); }
