@@ -328,6 +328,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     pendingPreview = null;
     if (transformDraft.value) options.onUpdateTransform(transformDraft.value);
     transformDrag = null;
+    transformDraft.value = null;
     const target = event.currentTarget as HTMLElement;
     if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
   };
