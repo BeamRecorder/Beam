@@ -134,4 +134,7 @@ jobs:
           TAG: ${{ needs.prepare.outputs.version }}
         shell: bash
         run: |
-          gh release create "$TAG" release-assets/* --title "$TAG" --generate-notes
+          gh release create "$TAG" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --generate-notes
