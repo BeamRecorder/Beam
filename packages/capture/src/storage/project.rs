@@ -98,13 +98,7 @@ fn generated_project_name(
     if !existing_project_name(root, &base_name)? {
         return Ok(base_name);
     }
-    let uuid = project_id.as_uuid();
-    let bytes = uuid.as_bytes();
-    let initial_suffix = (u32::from_be_bytes([bytes[2], bytes[3], bytes[4], bytes[5]])
-        % MAX_PROJECT_NAME_SUFFIX)
-        + 1;
-    for offset in 0..MAX_PROJECT_NAME_SUFFIX {
-        let suffix = ((initial_suffix - 1 + offset) % MAX_PROJECT_NAME_SUFFIX) + 1;
+    for suffix in 2..=MAX_PROJECT_NAME_SUFFIX {
         let candidate = format!("{base_name} {suffix}");
         if !existing_project_name(root, &candidate)? {
             return Ok(candidate);

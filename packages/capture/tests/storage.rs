@@ -140,7 +140,7 @@ fn generated_project_names_receive_a_unique_positive_suffix_on_collision() {
     )
     .expect("second project");
     assert_eq!(first.name, "Calm Comet");
-    assert_eq!(second.name, "Calm Comet 3");
+    assert_eq!(second.name, "Calm Comet 2");
 }
 
 #[test]
