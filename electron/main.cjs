@@ -107,7 +107,8 @@ function createWindow(preferencesStore) {
   })
   const controller = new WindowController(win, { preferencesStore })
   controllers.set(win, controller)
-  profileRendererRequests(win.webContents)
+  // use profileRendererRequests() to see all the requests made by the app and find out why it's slow to launch.
+  // profileRendererRequests(win.webContents) 
   win.once('ready-to-show', () => {
     logStartup('Window is ready to show (ready-to-show).')
     controller.markReadyToShow()
