@@ -12,6 +12,7 @@ import { useLocaleStore } from '~/stores/locale'
 import { useTranslate } from '~/i18n/useTranslate'
 import { capture } from '~/api/capture'
 import UpdateControls from '~/components/updates/UpdateControls.vue'
+import SocialLinks from '~/components/socials/SocialLinks.vue'
 
 const { t } = useTranslate('SettingsPanel')
 const themeStore = useThemeStore()
@@ -146,6 +147,10 @@ const localeOptions = [
     <div class="prop-item">
       <UpdateControls />
     </div>
+
+    <Divider spacing="xs" />
+
+    <SocialLinks />
 
     <Divider spacing="xs" />
 

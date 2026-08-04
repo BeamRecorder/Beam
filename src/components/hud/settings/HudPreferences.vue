@@ -9,6 +9,7 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue'
 import Select from '~/ui/select/Select.vue'
 import ShortcutPreferences from './ShortcutPreferences.vue'
 import UpdateControls from '~/components/updates/UpdateControls.vue'
+import SocialLinks from '~/components/socials/SocialLinks.vue'
 
 const { t } = useTranslate('HudPreferences')
 
@@ -41,6 +42,7 @@ const localeOptions = [
   { value: 'en', label: 'EN - English - Anglais' },
   { value: 'fr', label: 'FR - French - Français' },
 ]
+
 </script>
 
 <template>
@@ -157,9 +159,12 @@ const localeOptions = [
             </ButtonGroup>
           </div>
 
-          <div class="preference-item">
+          <div class="preference-item update-preference-item">
             <UpdateControls />
           </div>
+
+          <SocialLinks />
+
         </div>
 
         <Button variant="primary" size="md" block @click="emit('close')">
@@ -212,6 +217,20 @@ const localeOptions = [
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+}
+.update-preference-item {
+  min-width: 0;
+  padding: 8px;
+}
+.update-preference-item :deep(.update-actions) {
+  flex-direction: column;
+  gap: 6px;
+}
+.update-preference-item :deep(.update-btn) {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.15;
 }
 .preference-item.clickable {
   cursor: pointer;

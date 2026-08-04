@@ -168,6 +168,8 @@ contextBridge.exposeInMainWorld(
     downloadUpdate: () => ipcRenderer.invoke("app-update:download"),
     quitAndInstallUpdate: () => ipcRenderer.invoke("app-update:quit-and-install"),
     openUpdateChangelog: () => ipcRenderer.invoke("app-update:open-changelog"),
+    openDiscordInvite: () => ipcRenderer.invoke("community:open-discord"),
+    openGithubRepository: () => ipcRenderer.invoke("community:open-github"),
     onUpdateState: (listener) => {
       const callback = (_event, state) => listener(state);
       ipcRenderer.on("app-update:state", callback);

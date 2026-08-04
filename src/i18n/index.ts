@@ -3,6 +3,7 @@ import enHUD from './en/HUD.json'
 import enTopbarHUD from './en/TopbarHUD.json'
 import enHudPreferences from './en/HudPreferences.json'
 import enSettingsPanel from './en/SettingsPanel.json'
+import enSocials from './en/Socials.json'
 import enUpdates from './en/Updates.json'
 import enProjectPicker from './en/ProjectPicker.json'
 import enCameraPreviewOverlay from './en/CameraPreviewOverlay.json'
@@ -36,6 +37,7 @@ import frHUD from './fr/HUD.json'
 import frTopbarHUD from './fr/TopbarHUD.json'
 import frHudPreferences from './fr/HudPreferences.json'
 import frSettingsPanel from './fr/SettingsPanel.json'
+import frSocials from './fr/Socials.json'
 import frUpdates from './fr/Updates.json'
 import frProjectPicker from './fr/ProjectPicker.json'
 import frCameraPreviewOverlay from './fr/CameraPreviewOverlay.json'
@@ -82,6 +84,7 @@ const messages = {
     TopbarHUD: enTopbarHUD,
     HudPreferences: enHudPreferences,
     SettingsPanel: enSettingsPanel,
+    Socials: enSocials,
     Updates: enUpdates,
     ProjectPicker: enProjectPicker,
     CameraPreviewOverlay: enCameraPreviewOverlay,
@@ -122,6 +125,7 @@ const messages = {
     TopbarHUD: frTopbarHUD,
     HudPreferences: frHudPreferences,
     SettingsPanel: frSettingsPanel,
+    Socials: frSocials,
     Updates: frUpdates,
     ProjectPicker: frProjectPicker,
     CameraPreviewOverlay: frCameraPreviewOverlay,

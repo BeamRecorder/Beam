@@ -9,6 +9,8 @@ const capture = vi.hoisted(() => ({
   setWindowMode: vi.fn(),
   showHud: vi.fn(),
   getUpdateState: vi.fn(() => Promise.resolve({ currentVersion: '1.2.3' })),
+  openDiscordInvite: vi.fn(),
+  openGithubRepository: vi.fn(),
 }))
 vi.mock('~/api/capture', () => ({ capture }))
 
@@ -72,6 +74,19 @@ describe('SettingsPanel', () => {
     expect(wrapper.text()).toContain('Theme')
   })
 
+  it('opens the community links from the socials section', async () => {
+    const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
+    const socialButtons = wrapper.findAll('.social-links button')
+
+    await socialButtons[0].trigger('click')
+    await socialButtons[1].trigger('click')
+
+    expect(capture.openDiscordInvite).toHaveBeenCalledOnce()
+    expect(capture.openGithubRepository).toHaveBeenCalledOnce()
+    expect(wrapper.find('.discord-icon').attributes('src')).toContain('discord_svg.svg')
+    expect(wrapper.find('.github-icon').attributes('src')).toContain('github.svg')
+  })
+
   it('toggles dev mode and reveals the framed recorder options', async () => {
     const wrapper = mount(SettingsPanel, { global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } } })
     expect(wrapper.find('.dev-frame').exists()).toBe(false)
@@ -100,6 +115,4 @@ describe('SettingsPanel', () => {
     )
   })
 })
-
-
 

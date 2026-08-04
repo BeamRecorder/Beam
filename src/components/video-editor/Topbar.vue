@@ -51,6 +51,10 @@ const closeApp = () => {
   capture.close()
 }
 
+const openDiscordInvite = () => {
+  void capture.openDiscordInvite()
+}
+
 const onMouseDown = (mouseDownEvent: MouseEvent) => {
   if (mouseDownEvent.button !== 0) return
 
@@ -138,6 +142,26 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
     </div>
 
     <div class="right-actions" @dblclick.stop>
+      <div class="discord-action">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :tooltip="t('discordTooltip')"
+          tooltip-position="bottom"
+          :aria-label="t('discordAriaLabel')"
+          @click.stop="openDiscordInvite"
+        >
+          <template #icon>
+            <img
+              :src="resolvePublicAssetUrl('/discord_svg.svg')"
+              class="discord-icon"
+              alt=""
+              aria-hidden="true"
+            />
+          </template>
+        </Button>
+      </div>
       <ExportPopover v-if="exportRequest" :request="exportRequest" />
       <div class="window-controls">
         <button
@@ -210,6 +234,27 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   height: 100%;
   align-items: stretch;
   margin-left: 4px;
+}
+
+.discord-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.discord-action :deep(.btn-container) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.discord-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  transform: translateY(1px);
 }
 
 .control-btn {

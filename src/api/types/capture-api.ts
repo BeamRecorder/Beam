@@ -114,6 +114,8 @@ export interface DesktopCaptureApi extends CaptureApi {
   downloadUpdate(): Promise<boolean>
   quitAndInstallUpdate(): Promise<boolean>
   openUpdateChangelog(): Promise<void>
+  openDiscordInvite(): Promise<void>
+  openGithubRepository(): Promise<void>
   onUpdateState(listener: (state: AppUpdateState) => void): () => void
   beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>
   writeCameraSegment(payload: MediaSegmentChunk): Promise<void>

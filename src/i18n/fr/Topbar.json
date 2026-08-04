@@ -2,6 +2,8 @@
   "exitToHUD": "Quitter vers le HUD",
   "undoTooltip": "Annuler (Ctrl+Z)",
   "redoTooltip": "Rétablir (Ctrl+Y)",
+  "discordTooltip": "Rejoindre le Discord de Beam",
+  "discordAriaLabel": "Ouvrir le Discord de Beam",
   "minimize": "Réduire",
   "close": "Fermer"
 }

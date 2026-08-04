@@ -1,4 +1,4 @@
-const { app, BrowserWindow, desktopCapturer, ipcMain, session, protocol, globalShortcut, screen, net } = require('electron')
+const { app, BrowserWindow, desktopCapturer, ipcMain, session, protocol, globalShortcut, screen, net, shell } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const fs = require('fs')
 const path = require('path')
@@ -28,6 +28,9 @@ const { createUserPaths } = require('./storage/user-paths.cjs')
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs')
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs')
 const { createTrayManager } = require('./tray/tray-manager.cjs')
+
+const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB'
+const GITHUB_REPOSITORY_URL = 'https://github.com/ExtraBinoss/Beam'
 
 // Set to true only while diagnosing Electron startup or renderer requests.
 const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged
@@ -227,6 +230,8 @@ app.whenReady().then(() => {
   logStartup('Export IPC registered.')
   const updater = createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal: require('electron').shell.openExternal })
   registerUpdateIpc(ipcMain, updater)
+  ipcMain.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL))
+  ipcMain.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL))
   const win = createWindow(preferencesStore)
   const trayManager = createTrayManager({
     applicationRoot,
