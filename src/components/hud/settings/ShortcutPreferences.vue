@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { usePreferencesStore } from '~/stores/preferences'
-import ShortcutInput from '~/ui/input/ShortcutInput.vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import { TELEPROMPTER_SHORTCUTS } from '../teleprompter/shortcut-definitions'
+import { ref, onMounted } from 'vue';
+import { usePreferencesStore } from '~/stores/preferences';
+import ShortcutInput from '~/ui/input/ShortcutInput.vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { TELEPROMPTER_SHORTCUTS } from '../teleprompter/shortcut-definitions';
 
-const { t } = useTranslate('ShortcutPreferences')
-const preferencesStore = usePreferencesStore()
-const shortcutErrors = ref<Record<string, string>>({})
+const { t } = useTranslate('ShortcutPreferences');
+const preferencesStore = usePreferencesStore();
+const shortcutErrors = ref<Record<string, string>>({});
 
 const recordingDefinitions = [
   {
@@ -19,7 +19,7 @@ const recordingDefinitions = [
   { id: 'hud.toggleMic', label: () => t('micOnOff'), description: () => t('micOnOffDesc') },
   { id: 'hud.toggleCamera', label: () => t('cameraOnOff'), description: () => t('cameraOnOffDesc') },
   { id: 'hud.toggleSystemAudio', label: () => t('systemAudioOnOff'), description: () => t('systemAudioOnOffDesc') },
-]
+];
 
 const teleprompterDefinitions = [
   {
@@ -42,13 +42,13 @@ const teleprompterDefinitions = [
     label: () => t('teleprompterPreviousLine'),
     description: () => t('teleprompterPreviousLineDesc'),
   },
-]
+];
 
-const shortcutDefinitions = [...recordingDefinitions, ...teleprompterDefinitions]
+const shortcutDefinitions = [...recordingDefinitions, ...teleprompterDefinitions];
 const shortcutGroups = [
   { id: 'recording', label: () => t('recordingCategory'), definitions: recordingDefinitions },
   { id: 'teleprompter', label: () => t('teleprompterCategory'), definitions: teleprompterDefinitions },
-]
+];
 
 const defaultShortcuts: Record<string, string> = {
   'hud.startStopRecording': 'Alt+Shift+R',
@@ -57,81 +57,81 @@ const defaultShortcuts: Record<string, string> = {
   'hud.toggleCamera': 'Alt+Shift+C',
   'hud.toggleSystemAudio': 'Alt+Shift+A',
   ...Object.fromEntries(TELEPROMPTER_SHORTCUTS.map(({ id, defaultKeys }) => [id, defaultKeys])),
-}
+};
 
 onMounted(() => {
-  preferencesStore.load()
-})
+  preferencesStore.load();
+});
 
 const getShortcutValue = (id: string): string => {
-  return preferencesStore.settings?.shortcuts?.[id]?.keys ?? defaultShortcuts[id] ?? ''
-}
+  return preferencesStore.settings?.shortcuts?.[id]?.keys ?? defaultShortcuts[id] ?? '';
+};
 
 const checkDuplicates = (targetId: string, value: string) => {
-  const errors: Record<string, string> = { ...shortcutErrors.value }
-  delete errors[targetId]
+  const errors: Record<string, string> = { ...shortcutErrors.value };
+  delete errors[targetId];
 
   if (!value) {
-    shortcutErrors.value = errors
-    return false
+    shortcutErrors.value = errors;
+    return false;
   }
 
-  const normalizedVal = value.toLowerCase()
+  const normalizedVal = value.toLowerCase();
 
-  const shortcuts = preferencesStore.settings?.shortcuts || {}
+  const shortcuts = preferencesStore.settings?.shortcuts || {};
   for (const [id, s] of Object.entries(shortcuts)) {
     if (id !== targetId && s.keys && s.keys.toLowerCase() === normalizedVal) {
-      const match = shortcutDefinitions.find((def) => def.id === id)
-      const name = match ? match.label() : id
-      errors[targetId] = t('conflictWith', { name })
-      shortcutErrors.value = errors
-      return true
+      const match = shortcutDefinitions.find((def) => def.id === id);
+      const name = match ? match.label() : id;
+      errors[targetId] = t('conflictWith', { name });
+      shortcutErrors.value = errors;
+      return true;
     }
   }
 
-  shortcutErrors.value = errors
-  return false
-}
+  shortcutErrors.value = errors;
+  return false;
+};
 
 const updateShortcut = async (id: string, keys: string) => {
-  const hasConflict = checkDuplicates(id, keys)
-  if (hasConflict) return
+  const hasConflict = checkDuplicates(id, keys);
+  if (hasConflict) return;
 
-  const currentShortcuts = preferencesStore.settings?.shortcuts || {}
-  const category = id.startsWith('teleprompter.') ? 'teleprompter' : 'hud'
-  const existing = currentShortcuts[id] || { scope: 'global', category }
+  const currentShortcuts = preferencesStore.settings?.shortcuts || {};
+  const category = id.startsWith('teleprompter.') ? 'teleprompter' : 'hud';
+  const existing = currentShortcuts[id] || { scope: 'global', category };
 
   if (existing.keys === keys) {
     // If setting to same value, clear any error and return cleanly
-    const errors = { ...shortcutErrors.value }
-    delete errors[id]
-    shortcutErrors.value = errors
-    return
+    const errors = { ...shortcutErrors.value };
+    delete errors[id];
+    shortcutErrors.value = errors;
+    return;
   }
 
   // Create plain shortcuts copy without reactivity proxies
-  const updatedShortcuts = JSON.parse(JSON.stringify(currentShortcuts))
+  const updatedShortcuts = JSON.parse(JSON.stringify(currentShortcuts));
   updatedShortcuts[id] = {
     ...existing,
     keys,
-  }
+  };
 
   try {
     await preferencesStore.update({
       shortcuts: updatedShortcuts,
-    })
+    });
   } catch (err: any) {
     shortcutErrors.value = {
       ...shortcutErrors.value,
       [id]: err?.message || t('failedToUpdate'),
-    }
+    };
   }
-}
+};
 
 const resetShortcut = async (id: string) => {
-  const defaultKey = defaultShortcuts[id] || ''
-  await updateShortcut(id, defaultKey)
-}
+  const defaultKey = defaultShortcuts[id] || '';
+  await updateShortcut(id, defaultKey);
+};
 </script>
 
 <template>

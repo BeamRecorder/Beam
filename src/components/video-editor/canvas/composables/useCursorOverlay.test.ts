@@ -1,19 +1,19 @@
-import { nextTick } from 'vue'
-import { describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue';
+import { describe, expect, it, vi } from 'vitest';
 
-const getCursorImage = vi.hoisted(() => vi.fn())
+const getCursorImage = vi.hoisted(() => vi.fn());
 vi.mock('../../properties/cursor/useCursorReplacer', () => ({
   useCursorReplacer: () => ({ getCursorImage }),
   cursorTypeForKind: () => 'default',
-}))
+}));
 
-import { getRippleStyleColor, useCursorOverlay } from './useCursorOverlay'
+import { getRippleStyleColor, useCursorOverlay } from './useCursorOverlay';
 
-const second = (value: number) => value * 1_000_000_000
+const second = (value: number) => value * 1_000_000_000;
 const effects = {
   left: { springEnabled: true, springIntensity: 80, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff0000' },
   right: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#0000ff' },
-}
+};
 
 const createContext = () =>
   ({
@@ -38,7 +38,7 @@ const createContext = () =>
     shadowBlur: 0,
     shadowOffsetX: 0,
     shadowOffsetY: 0,
-  }) as unknown as CanvasRenderingContext2D
+  }) as unknown as CanvasRenderingContext2D;
 
 const baseOptions = () => ({
   selectedCursor: () => 'automatic' as const,
@@ -69,30 +69,30 @@ const baseOptions = () => ({
   isScreenEnabled: () => true,
   showBackground: () => false,
   onRenderOnce: vi.fn(),
-})
+});
 
 describe('useCursorOverlay', () => {
   it('formats ripple colors and loads the current cursor image', async () => {
-    expect(getRippleStyleColor('#12ab34', 0.5)).toBe('rgba(18, 171, 52, 0.5)')
-    expect(getRippleStyleColor('var(--cursor)', 0.5)).toBe('var(--cursor)')
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement)
-    const options = baseOptions()
-    const overlay = useCursorOverlay(options)
-    await nextTick()
-    await Promise.resolve()
-    expect(getCursorImage).toHaveBeenCalledWith('default', 120, '#ffffff')
-    expect(options.onRenderOnce).toHaveBeenCalled()
-    expect(overlay.customCursorImage.value).not.toBeNull()
-  })
+    expect(getRippleStyleColor('#12ab34', 0.5)).toBe('rgba(18, 171, 52, 0.5)');
+    expect(getRippleStyleColor('var(--cursor)', 0.5)).toBe('var(--cursor)');
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const options = baseOptions();
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+    expect(getCursorImage).toHaveBeenCalledWith('default', 120, '#ffffff');
+    expect(options.onRenderOnce).toHaveBeenCalled();
+    expect(overlay.customCursorImage.value).not.toBeNull();
+  });
 
   it('draws cursor, shadow, click ripple and custom-cursor warning', async () => {
-    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement)
-    const options = baseOptions()
-    const overlay = useCursorOverlay(options)
-    await nextTick()
-    await Promise.resolve()
-    const ctx = createContext()
-    const drawContent = vi.fn((draw: () => void) => draw())
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const options = baseOptions();
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+    const ctx = createContext();
+    const drawContent = vi.fn((draw: () => void) => draw());
     overlay.updateAndDrawRipplesAndCursor(
       ctx,
       { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
@@ -100,27 +100,27 @@ describe('useCursorOverlay', () => {
       1080,
       800,
       drawContent,
-    )
-    expect(overlay.ripples.value).toHaveLength(1)
-    expect(ctx.arc).toHaveBeenCalled()
-    expect(ctx.drawImage).toHaveBeenCalled()
-    expect(ctx.shadowColor).toBe('#000000')
+    );
+    expect(overlay.ripples.value).toHaveLength(1);
+    expect(ctx.arc).toHaveBeenCalled();
+    expect(ctx.drawImage).toHaveBeenCalled();
+    expect(ctx.shadowColor).toBe('#000000');
     expect(ctx.drawImage).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.any(Number),
       expect.any(Number),
       expect.closeTo(10, 0.01),
       expect.closeTo(10, 0.01),
-    )
-    expect(ctx.fillText).toHaveBeenCalledWith('System cursor not translated', expect.any(Number), 29)
-    expect(drawContent).toHaveBeenCalledOnce()
-  })
+    );
+    expect(ctx.fillText).toHaveBeenCalledWith('System cursor not translated', expect.any(Number), 29);
+    expect(drawContent).toHaveBeenCalledOnce();
+  });
 
   it('warns when cursor data is unavailable and removes expired ripples', () => {
-    const options = baseOptions()
-    options.editorData = () => ({ cursor: { available: false, events: [] } }) as never
-    const overlay = useCursorOverlay(options)
-    const ctx = createContext()
+    const options = baseOptions();
+    options.editorData = () => ({ cursor: { available: false, events: [] } }) as never;
+    const overlay = useCursorOverlay(options);
+    const ctx = createContext();
     overlay.updateAndDrawRipplesAndCursor(
       ctx,
       { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
@@ -128,10 +128,10 @@ describe('useCursorOverlay', () => {
       1080,
       800,
       vi.fn(),
-    )
-    expect(ctx.fillText).toHaveBeenCalledWith('Cursor data missing', expect.any(Number), 29)
-    overlay.ripples.value.push({ x: 1, y: 1, radius: 2, alpha: 0, color: '#fff', size: 10 })
-    options.editorData = () => ({ cursor: { available: true, events: [] } }) as never
+    );
+    expect(ctx.fillText).toHaveBeenCalledWith('Cursor data missing', expect.any(Number), 29);
+    overlay.ripples.value.push({ x: 1, y: 1, radius: 2, alpha: 0, color: '#fff', size: 10 });
+    options.editorData = () => ({ cursor: { available: true, events: [] } }) as never;
     overlay.updateAndDrawRipplesAndCursor(
       ctx,
       { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
@@ -139,19 +139,19 @@ describe('useCursorOverlay', () => {
       1080,
       800,
       vi.fn(),
-    )
-    expect(overlay.ripples.value).toHaveLength(0)
-  })
+    );
+    expect(overlay.ripples.value).toHaveLength(0);
+  });
 
   it('clears the image when the cursor replacement fails', async () => {
-    getCursorImage.mockRejectedValue(new Error('cursor unavailable'))
-    const options = baseOptions()
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    const overlay = useCursorOverlay(options)
-    await nextTick()
-    await Promise.resolve()
-    expect(overlay.customCursorImage.value).toBeNull()
-    expect(error).toHaveBeenCalledWith('Failed to load custom cursor image:', expect.any(Error))
-    error.mockRestore()
-  })
-})
+    getCursorImage.mockRejectedValue(new Error('cursor unavailable'));
+    const options = baseOptions();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+    expect(overlay.customCursorImage.value).toBeNull();
+    expect(error).toHaveBeenCalledWith('Failed to load custom cursor image:', expect.any(Error));
+    error.mockRestore();
+  });
+});

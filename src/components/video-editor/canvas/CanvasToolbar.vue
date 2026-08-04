@@ -1,40 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Crop, Check, ZoomIn, ZoomOut, Grid } from '@lucide/vue'
-import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue'
-import Button from '../../ui/button/Button.vue'
-import type { OutputCanvasPreset } from './output-canvas'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed } from 'vue';
+import { Crop, Check, ZoomIn, ZoomOut, Grid } from '@lucide/vue';
+import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue';
+import Button from '../../ui/button/Button.vue';
+import type { OutputCanvasPreset } from './output-canvas';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('CanvasToolbar')
+const { t } = useTranslate('CanvasToolbar');
 
 const props = withDefaults(
   defineProps<{
-    preset: OutputCanvasPreset
-    canCrop: boolean
-    isCropping: boolean
-    isGridVisible?: boolean
-    zoomPercent?: number
-    isZoomedOrPanned?: boolean
+    preset: OutputCanvasPreset;
+    canCrop: boolean;
+    isCropping: boolean;
+    isGridVisible?: boolean;
+    zoomPercent?: number;
+    isZoomedOrPanned?: boolean;
   }>(),
   {
     isGridVisible: false,
     zoomPercent: 100,
     isZoomedOrPanned: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (event: 'select:preset', preset: Exclude<OutputCanvasPreset, 'custom'>): void
-  (event: 'toggle:crop'): void
-  (event: 'toggle:grid'): void
-  (event: 'zoom:in'): void
-  (event: 'zoom:out'): void
-  (event: 'reset:zoom'): void
-}>()
+  (event: 'select:preset', preset: Exclude<OutputCanvasPreset, 'custom'>): void;
+  (event: 'toggle:crop'): void;
+  (event: 'toggle:grid'): void;
+  (event: 'zoom:in'): void;
+  (event: 'zoom:out'): void;
+  (event: 'reset:zoom'): void;
+}>();
 
-const presets: Exclude<OutputCanvasPreset, 'custom'>[] = ['16:9', '9:16', '1:1', '4:5', '3:4', '4:3', '21:9']
-const items = computed(() => presets.map((id) => ({ id, label: id, active: props.preset === id })))
+const presets: Exclude<OutputCanvasPreset, 'custom'>[] = ['16:9', '9:16', '1:1', '4:5', '3:4', '4:3', '21:9'];
+const items = computed(() => presets.map((id) => ({ id, label: id, active: props.preset === id })));
 </script>
 
 <template>

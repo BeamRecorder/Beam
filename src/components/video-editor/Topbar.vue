@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { capture } from '../../api/capture'
-import VideoProjectEdition from './VideoProjectEdition.vue'
-import ExportPopover from '../export/ExportPopover.vue'
-import Button from '~/ui/button/Button.vue'
-import { ArrowLeft, Minus, X, Undo2, Redo2 } from '@lucide/vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import { resolvePublicAssetUrl } from '~/utils/public-asset'
+import { capture } from '../../api/capture';
+import VideoProjectEdition from './VideoProjectEdition.vue';
+import ExportPopover from '../export/ExportPopover.vue';
+import Button from '~/ui/button/Button.vue';
+import { ArrowLeft, Minus, X, Undo2, Redo2 } from '@lucide/vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
-const { t } = useTranslate('Topbar')
+const { t } = useTranslate('Topbar');
 
 withDefaults(
   defineProps<{
-    exportRequest?: any
-    project?: any
-    isSaving?: boolean
-    canUndo?: boolean
-    canRedo?: boolean
-    historyTooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
+    exportRequest?: any;
+    project?: any;
+    isSaving?: boolean;
+    canUndo?: boolean;
+    canRedo?: boolean;
+    historyTooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
   }>(),
   {
     exportRequest: null,
@@ -26,39 +26,39 @@ withDefaults(
     canRedo: false,
     historyTooltipPosition: 'bottom',
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'back-to-hud'): void
-  (e: 'open-project', project: any): void
-  (e: 'undo'): void
-  (e: 'redo'): void
-}>()
+  (e: 'back-to-hud'): void;
+  (e: 'open-project', project: any): void;
+  (e: 'undo'): void;
+  (e: 'redo'): void;
+}>();
 
 const handleExit = () => {
-  emit('back-to-hud')
-}
+  emit('back-to-hud');
+};
 
 const minimizeApp = () => {
-  document.body.classList.add('app-minimizing')
+  document.body.classList.add('app-minimizing');
   setTimeout(() => {
-    capture.minimize()
-    document.body.classList.remove('app-minimizing')
-  }, 160)
-}
+    capture.minimize();
+    document.body.classList.remove('app-minimizing');
+  }, 160);
+};
 
 const closeApp = () => {
-  capture.close()
-}
+  capture.close();
+};
 
 const openDiscordInvite = () => {
-  void capture.openDiscordInvite()
-}
+  void capture.openDiscordInvite();
+};
 
 const onMouseDown = (mouseDownEvent: MouseEvent) => {
-  if (mouseDownEvent.button !== 0) return
+  if (mouseDownEvent.button !== 0) return;
 
-  const target = mouseDownEvent.target as HTMLElement
+  const target = mouseDownEvent.target as HTMLElement;
   if (
     target.closest('.left-actions') ||
     target.closest('.center-actions') ||
@@ -67,34 +67,34 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
     target.closest('button') ||
     target.closest('a')
   ) {
-    return
+    return;
   }
 
-  const startX = mouseDownEvent.screenX
-  const startY = mouseDownEvent.screenY
-  let isDragging = false
+  const startX = mouseDownEvent.screenX;
+  const startY = mouseDownEvent.screenY;
+  let isDragging = false;
 
   const handleMouseMove = (mouseMoveEvent: MouseEvent) => {
     if (!isDragging) {
-      const deltaX = mouseMoveEvent.screenX - startX
-      const deltaY = mouseMoveEvent.screenY - startY
+      const deltaX = mouseMoveEvent.screenX - startX;
+      const deltaY = mouseMoveEvent.screenY - startY;
       if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-        isDragging = true
-        capture.dragStart()
+        isDragging = true;
+        capture.dragStart();
       }
     }
 
-    if (isDragging) capture.drag()
-  }
+    if (isDragging) capture.drag();
+  };
 
   const handleMouseUp = () => {
-    window.removeEventListener('mousemove', handleMouseMove)
-    window.removeEventListener('mouseup', handleMouseUp)
-  }
+    window.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('mouseup', handleMouseUp);
+  };
 
-  window.addEventListener('mousemove', handleMouseMove)
-  window.addEventListener('mouseup', handleMouseUp)
-}
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('mouseup', handleMouseUp);
+};
 </script>
 
 <template>

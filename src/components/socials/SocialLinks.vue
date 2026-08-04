@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import Button from '~/ui/button/Button.vue'
-import { capture } from '~/api/capture'
-import { useTranslate } from '~/i18n/useTranslate'
-import { resolvePublicAssetUrl } from '~/utils/public-asset'
+import Button from '~/ui/button/Button.vue';
+import { capture } from '~/api/capture';
+import { useTranslate } from '~/i18n/useTranslate';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
-const { t } = useTranslate('Socials')
+const { t } = useTranslate('Socials');
 
 const openDiscordInvite = () => {
-  void capture.openDiscordInvite()
-}
+  void capture.openDiscordInvite();
+};
 
 const openGithubRepository = () => {
-  void capture.openGithubRepository()
-}
+  void capture.openGithubRepository();
+};
 </script>
 
 <template>

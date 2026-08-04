@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = withDefaults(
   defineProps<{
-    modelValue: number
-    min?: number
-    max?: number
-    step?: number
-    disabled?: boolean
+    modelValue: number;
+    min?: number;
+    max?: number;
+    step?: number;
+    disabled?: boolean;
   }>(),
   {
     min: 0,
@@ -15,23 +15,23 @@ const props = withDefaults(
     step: 1,
     disabled: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: number): void
-}>()
+  (e: 'update:modelValue', value: number): void;
+}>();
 
 const percentage = computed(() => {
-  const range = props.max - props.min
-  if (range <= 0) return 0
-  return ((props.modelValue - props.min) / range) * 100
-})
+  const range = props.max - props.min;
+  if (range <= 0) return 0;
+  return ((props.modelValue - props.min) / range) * 100;
+});
 
 const handleInput = (event: Event) => {
-  if (props.disabled) return
-  const val = Number((event.target as HTMLInputElement).value)
-  emit('update:modelValue', val)
-}
+  if (props.disabled) return;
+  const val = Number((event.target as HTMLInputElement).value);
+  emit('update:modelValue', val);
+};
 </script>
 
 <template>

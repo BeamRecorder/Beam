@@ -1,56 +1,56 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import Select from '~/ui/select/Select.vue'
-import Popover from '~/ui/popover/Popover.vue'
-import HUD from '~/components/hud/HUD.vue'
-import Divider from '~/ui/divider/Divider.vue'
-import { Sun, Moon, Monitor, Code, Video, Copy, Check, Terminal } from '@lucide/vue'
-import { useThemeStore } from '~/stores/theme'
-import { useLocaleStore } from '~/stores/locale'
-import { useTranslate } from '~/i18n/useTranslate'
-import { capture } from '~/api/capture'
-import UpdateControls from '~/components/updates/UpdateControls.vue'
-import SocialLinks from '~/components/socials/SocialLinks.vue'
+import { onBeforeUnmount, ref, watch } from 'vue';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Select from '~/ui/select/Select.vue';
+import Popover from '~/ui/popover/Popover.vue';
+import HUD from '~/components/hud/HUD.vue';
+import Divider from '~/ui/divider/Divider.vue';
+import { Sun, Moon, Monitor, Code, Video, Copy, Check, Terminal } from '@lucide/vue';
+import { useThemeStore } from '~/stores/theme';
+import { useLocaleStore } from '~/stores/locale';
+import { useTranslate } from '~/i18n/useTranslate';
+import { capture } from '~/api/capture';
+import UpdateControls from '~/components/updates/UpdateControls.vue';
+import SocialLinks from '~/components/socials/SocialLinks.vue';
 
-const { t } = useTranslate('SettingsPanel')
-const themeStore = useThemeStore()
-const localeStore = useLocaleStore()
+const { t } = useTranslate('SettingsPanel');
+const themeStore = useThemeStore();
+const localeStore = useLocaleStore();
 
 const toggleDevTools = () => {
-  capture.toggleDevTools?.()
-}
+  capture.toggleDevTools?.();
+};
 
 const emit = defineEmits<{
-  (e: 'back-to-hud'): void
-  (e: 'open-recorder'): void
-  (e: 'start-recording', config: any): void
-}>()
+  (e: 'back-to-hud'): void;
+  (e: 'open-recorder'): void;
+  (e: 'start-recording', config: any): void;
+}>();
 
-const isDevModeEnabled = ref(localStorage.getItem('dev_mode_enabled') === 'true')
+const isDevModeEnabled = ref(localStorage.getItem('dev_mode_enabled') === 'true');
 watch(isDevModeEnabled, (value) => {
-  localStorage.setItem('dev_mode_enabled', String(value))
-})
+  localStorage.setItem('dev_mode_enabled', String(value));
+});
 
 const handleStartRecordingFromPopover = (config: any, closePopover: () => void) => {
-  closePopover()
-  emit('start-recording', config)
-}
+  closePopover();
+  emit('start-recording', config);
+};
 
-const isCopiedSysInfo = ref(false)
-let copyTimeout: ReturnType<typeof setTimeout> | null = null
+const isCopiedSysInfo = ref(false);
+let copyTimeout: ReturnType<typeof setTimeout> | null = null;
 
 onBeforeUnmount(() => {
-  if (copyTimeout) clearTimeout(copyTimeout)
-})
+  if (copyTimeout) clearTimeout(copyTimeout);
+});
 
 const copySystemInfo = async () => {
-  let appVersion = 'Inconnue'
+  let appVersion = 'Inconnue';
   try {
-    const updateState = await capture.getUpdateState()
+    const updateState = await capture.getUpdateState();
     if (updateState?.currentVersion) {
-      appVersion = updateState.currentVersion
+      appVersion = updateState.currentVersion;
     }
   } catch {
     // Fail-safe if capture API is not available
@@ -67,32 +67,32 @@ const copySystemInfo = async () => {
     `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
     `Date: ${new Date().toISOString()}`,
     `================================`,
-  ].join('\n')
+  ].join('\n');
 
   try {
-    await navigator.clipboard.writeText(infoLines)
+    await navigator.clipboard.writeText(infoLines);
   } catch {
-    const textarea = document.createElement('textarea')
-    textarea.value = infoLines
-    textarea.style.position = 'fixed'
-    textarea.style.opacity = '0'
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    textarea.remove()
+    const textarea = document.createElement('textarea');
+    textarea.value = infoLines;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
   }
 
-  isCopiedSysInfo.value = true
-  if (copyTimeout) clearTimeout(copyTimeout)
+  isCopiedSysInfo.value = true;
+  if (copyTimeout) clearTimeout(copyTimeout);
   copyTimeout = setTimeout(() => {
-    isCopiedSysInfo.value = false
-  }, 2000)
-}
+    isCopiedSysInfo.value = false;
+  }, 2000);
+};
 
 const localeOptions = [
   { value: 'en', label: 'EN - English - Anglais' },
   { value: 'fr', label: 'FR - French - Français' },
-]
+];
 </script>
 
 <template>

@@ -1,41 +1,41 @@
-const { randomUUID } = require('crypto')
-const fs = require('fs')
-const path = require('path')
-const { fileURLToPath, pathToFileURL } = require('url')
-const { kindFor } = require('../backgrounds/background-library.cjs')
+const { randomUUID } = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const { fileURLToPath, pathToFileURL } = require('url');
+const { kindFor } = require('../backgrounds/background-library.cjs');
 const {
   emptyComposition,
   normalizeComposition,
   materializeComposition,
   importMedia,
   pruneProjectMedia,
-} = require('./clip-composition.cjs')
+} = require('./clip-composition.cjs');
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
-    if (typeof relativePath !== 'string' || !relativePath) return null
-    const resolvedRoot = path.resolve(directory)
-    const candidate = path.resolve(resolvedRoot, relativePath)
-    return candidate === resolvedRoot || candidate.startsWith(`${resolvedRoot}${path.sep}`) ? candidate : null
-  }
+    if (typeof relativePath !== 'string' || !relativePath) return null;
+    const resolvedRoot = path.resolve(directory);
+    const candidate = path.resolve(resolvedRoot, relativePath);
+    return candidate === resolvedRoot || candidate.startsWith(`${resolvedRoot}${path.sep}`) ? candidate : null;
+  };
   const assertId = (id) => {
     if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
-      throw new Error('Identifiant de projet invalide')
-    return id
-  }
+      throw new Error('Identifiant de projet invalide');
+    return id;
+  };
   const slugify = (value) => {
     const normalized = String(value)
       .normalize('NFKD')
       .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-    return normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'untitled-project'
-  }
-  const readManifest = (directory) => JSON.parse(fs.readFileSync(path.join(directory, 'project.json'), 'utf8'))
+      .toLowerCase();
+    return normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'untitled-project';
+  };
+  const readManifest = (directory) => JSON.parse(fs.readFileSync(path.join(directory, 'project.json'), 'utf8'));
   const writeManifest = (directory, manifest) => {
-    const target = path.join(directory, 'project.json')
-    fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
-    fs.renameSync(`${target}.tmp`, target)
-  }
+    const target = path.join(directory, 'project.json');
+    fs.writeFileSync(`${target}.tmp`, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+    fs.renameSync(`${target}.tmp`, target);
+  };
   const projectDirectories = () =>
     !fs.existsSync(root)
       ? []
@@ -43,107 +43,107 @@ function createProjectStore(root) {
           .readdirSync(root, { withFileTypes: true })
           .filter((entry) => entry.isDirectory())
           .map((entry) => path.join(root, entry.name))
-          .filter((directory) => fs.existsSync(path.join(directory, 'project.json')))
+          .filter((directory) => fs.existsSync(path.join(directory, 'project.json')));
   const directoryFor = (id) => {
-    const projectId = assertId(id)
+    const projectId = assertId(id);
     const directory = projectDirectories().find((candidate) => {
       try {
-        return readManifest(candidate).projectId === projectId
+        return readManifest(candidate).projectId === projectId;
       } catch {
-        return false
+        return false;
       }
-    })
-    if (!directory) throw new Error('Projet introuvable')
-    return directory
-  }
+    });
+    if (!directory) throw new Error('Projet introuvable');
+    return directory;
+  };
   const sessionFileFor = (directory, sessionId, sessionPath) => {
-    const project = readManifest(directory)
+    const project = readManifest(directory);
     const session = Array.isArray(project.sessions)
       ? project.sessions.find((entry) => entry?.sessionId === sessionId)
-      : null
-    const sessionDirectory = session && safePath(directory, session.relativePath)
-    return sessionDirectory ? safePath(sessionDirectory, sessionPath) : null
-  }
+      : null;
+    const sessionDirectory = session && safePath(directory, session.relativePath);
+    return sessionDirectory ? safePath(sessionDirectory, sessionPath) : null;
+  };
   const availableDirectory = (name, currentDirectory = null) => {
-    const base = `project-${slugify(name)}`
+    const base = `project-${slugify(name)}`;
     for (let suffix = 1; suffix <= 2_147_483_647; suffix += 1) {
-      const candidate = path.join(root, suffix === 1 ? base : `${base}-${suffix}`)
-      if (candidate === currentDirectory || !fs.existsSync(candidate)) return candidate
+      const candidate = path.join(root, suffix === 1 ? base : `${base}-${suffix}`);
+      if (candidate === currentDirectory || !fs.existsSync(candidate)) return candidate;
     }
-    throw new Error('Impossible de créer un dossier de projet unique')
-  }
+    throw new Error('Impossible de créer un dossier de projet unique');
+  };
   const thumbnailFor = (directory) => {
     for (const file of ['thumbnail.webp', 'thumbnail.png', 'thumbnail.jpg', 'thumbnail.jpeg']) {
-      const target = path.join(directory, file)
-      if (fs.existsSync(target)) return pathToFileURL(target).href
+      const target = path.join(directory, file);
+      if (fs.existsSync(target)) return pathToFileURL(target).href;
     }
-    return null
-  }
+    return null;
+  };
   const mediaUrlFor = (fileUrl) => {
-    if (typeof fileUrl !== 'string') return null
-    let file
+    if (typeof fileUrl !== 'string') return null;
+    let file;
     try {
-      file = fileURLToPath(fileUrl)
+      file = fileURLToPath(fileUrl);
     } catch {
-      return null
+      return null;
     }
-    const relativePath = path.relative(root, file)
-    const safeFile = safePath(root, relativePath)
+    const relativePath = path.relative(root, file);
+    const safeFile = safePath(root, relativePath);
     return safeFile && safeFile === path.resolve(file) && fs.existsSync(safeFile) && fs.statSync(safeFile).isFile()
       ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
-      : null
-  }
+      : null;
+  };
   const mediaFileForUrl = (mediaUrl) => {
-    let parsed
+    let parsed;
     try {
-      parsed = new URL(mediaUrl)
+      parsed = new URL(mediaUrl);
     } catch {
-      return null
+      return null;
     }
-    if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'asset') return null
-    let relativePath
+    if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'asset') return null;
+    let relativePath;
     try {
-      relativePath = decodeURIComponent(parsed.pathname.slice(1))
+      relativePath = decodeURIComponent(parsed.pathname.slice(1));
     } catch {
-      return null
+      return null;
     }
-    const file = safePath(root, relativePath)
-    return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null
-  }
+    const file = safePath(root, relativePath);
+    return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null;
+  };
   const previewFor = (directory, manifest, sessions) => {
     if (typeof manifest.previewSrc === 'string' && manifest.previewSrc) {
-      let file
+      let file;
       try {
-        file = fileURLToPath(manifest.previewSrc)
+        file = fileURLToPath(manifest.previewSrc);
       } catch {
-        file = null
+        file = null;
       }
-      if (file && fs.existsSync(file)) return manifest.previewSrc
+      if (file && fs.existsSync(file)) return manifest.previewSrc;
     }
     for (const session of [...sessions].reverse()) {
-      const sessionDirectory = safePath(directory, session.relativePath)
-      const screenDirectory = sessionDirectory && path.join(sessionDirectory, 'screen')
+      const sessionDirectory = safePath(directory, session.relativePath);
+      const screenDirectory = sessionDirectory && path.join(sessionDirectory, 'screen');
       const video =
         screenDirectory &&
         fs.existsSync(screenDirectory) &&
         fs
           .readdirSync(screenDirectory)
           .filter((name) => /\.mp4$/i.test(name))
-          .sort()[0]
+          .sort()[0];
       if (video) {
-        const url = pathToFileURL(path.join(screenDirectory, video)).href
-        manifest.previewSrc = url
+        const url = pathToFileURL(path.join(screenDirectory, video)).href;
+        manifest.previewSrc = url;
         try {
-          writeManifest(directory, manifest)
+          writeManifest(directory, manifest);
         } catch {}
-        return url
+        return url;
       }
     }
-    return null
-  }
+    return null;
+  };
   const summary = (directory, manifest, fallbackId) => {
-    const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
-    const id = typeof manifest.projectId === 'string' ? manifest.projectId : fallbackId
+    const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : [];
+    const id = typeof manifest.projectId === 'string' ? manifest.projectId : fallbackId;
     return {
       id,
       name:
@@ -153,12 +153,12 @@ function createProjectStore(root) {
       sessionCount: sessions.length,
       previewSrc: previewFor(directory, manifest, sessions),
       thumbnailSrc: thumbnailFor(directory),
-    }
-  }
+    };
+  };
   const zoomState = (value) => {
     if (!value || !Array.isArray(value.elements) || !Array.isArray(value.generatedSessions))
-      return { elements: [], generatedSessions: [] }
-    const ids = new Set()
+      return { elements: [], generatedSessions: [] };
+    const ids = new Set();
     const elements = value.elements.map((element) => {
       if (
         !element ||
@@ -179,8 +179,8 @@ function createProjectStore(root) {
         ![1, 2, 3, 4, 5, 6].includes(element.depth) ||
         !['auto', 'manual'].includes(element.mode)
       )
-        throw new Error('Propriétés de zoom invalides')
-      ids.add(element.id)
+        throw new Error('Propriétés de zoom invalides');
+      ids.add(element.id);
       return {
         id: element.id,
         sessionId: element.sessionId,
@@ -189,8 +189,8 @@ function createProjectStore(root) {
         focus: { cx: element.focus.cx, cy: element.focus.cy },
         depth: element.depth,
         mode: element.mode,
-      }
-    })
+      };
+    });
     const generatedSessions = value.generatedSessions.map((record) => {
       if (
         !record ||
@@ -199,60 +199,69 @@ function createProjectStore(root) {
         !Number.isInteger(record.algorithmVersion) ||
         typeof record.generatedAt !== 'string'
       )
-        throw new Error('Métadonnées de génération invalides')
-      return { sessionId: record.sessionId, algorithmVersion: record.algorithmVersion, generatedAt: record.generatedAt }
-    })
-    return { elements, generatedSessions }
-  }
+        throw new Error('Métadonnées de génération invalides');
+      return {
+        sessionId: record.sessionId,
+        algorithmVersion: record.algorithmVersion,
+        generatedAt: record.generatedAt,
+      };
+    });
+    return { elements, generatedSessions };
+  };
   const defaultCursorEffects = () => ({
     left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
     right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
-  })
+  });
   const cursorEffectState = (value, fallback) => {
-    const input = value && typeof value === 'object' ? value : {}
+    const input = value && typeof value === 'object' ? value : {};
     const number = (candidate, defaultValue, min, max) =>
-      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue
-    const boolean = (candidate, defaultValue) => (typeof candidate === 'boolean' ? candidate : defaultValue)
-    const color = (candidate, defaultValue) => (typeof candidate === 'string' && candidate ? candidate : defaultValue)
+      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue;
+    const boolean = (candidate, defaultValue) => (typeof candidate === 'boolean' ? candidate : defaultValue);
+    const color = (candidate, defaultValue) => (typeof candidate === 'string' && candidate ? candidate : defaultValue);
     return {
       springEnabled: boolean(input.springEnabled, fallback.springEnabled),
       springIntensity: number(input.springIntensity, fallback.springIntensity, 0, 100),
       rippleEnabled: boolean(input.rippleEnabled, fallback.rippleEnabled),
       rippleSize: number(input.rippleSize, fallback.rippleSize, 10, 80),
       rippleColor: color(input.rippleColor, fallback.rippleColor),
-    }
-  }
+    };
+  };
   const cursorEffectsState = (value) => {
-    const defaults = defaultCursorEffects()
-    const input = value && typeof value === 'object' ? value : {}
+    const defaults = defaultCursorEffects();
+    const input = value && typeof value === 'object' ? value : {};
     return {
       left: cursorEffectState(input.left, defaults.left),
       right: cursorEffectState(input.right, defaults.right),
-    }
-  }
-  const defaultCursorMotion = () => ({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 })
+    };
+  };
+  const defaultCursorMotion = () => ({
+    preset: 'smooth',
+    smoothing: 0.67,
+    springMassMultiplier: 1.29,
+    motionBlur: 0.4,
+  });
   const cursorMotionState = (value) => {
-    const fallback = defaultCursorMotion()
-    const input = value && typeof value === 'object' ? value : {}
+    const fallback = defaultCursorMotion();
+    const input = value && typeof value === 'object' ? value : {};
     const number = (candidate, defaultValue, min, max) =>
-      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue
-    const preset = ['focused', 'smooth', 'custom'].includes(input.preset) ? input.preset : fallback.preset
+      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue;
+    const preset = ['focused', 'smooth', 'custom'].includes(input.preset) ? input.preset : fallback.preset;
     return {
       preset,
       smoothing: number(input.smoothing, fallback.smoothing, 0, 1),
       springMassMultiplier: number(input.springMassMultiplier, fallback.springMassMultiplier, 0.5, 2),
       motionBlur: number(input.motionBlur, fallback.motionBlur, 0, 1),
-    }
-  }
+    };
+  };
   const presentationState = (value) => {
-    const next = value || {}
-    const canvasInput = next.canvas || {}
-    const preset = ['16:9', '9:16', '1:1', '4:5', 'custom'].includes(canvasInput.preset) ? canvasInput.preset : '16:9'
-    const presets = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] }
-    const [presetWidth, presetHeight] = presets[preset] || []
-    const width = preset === 'custom' ? Math.max(1, Math.round(canvasInput.width)) : presetWidth
-    const height = preset === 'custom' ? Math.max(1, Math.round(canvasInput.height)) : presetHeight
-    if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('Dimensions du canvas invalides')
+    const next = value || {};
+    const canvasInput = next.canvas || {};
+    const preset = ['16:9', '9:16', '1:1', '4:5', 'custom'].includes(canvasInput.preset) ? canvasInput.preset : '16:9';
+    const presets = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
+    const [presetWidth, presetHeight] = presets[preset] || [];
+    const width = preset === 'custom' ? Math.max(1, Math.round(canvasInput.width)) : presetWidth;
+    const height = preset === 'custom' ? Math.max(1, Math.round(canvasInput.height)) : presetHeight;
+    if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('Dimensions du canvas invalides');
     return {
       canvas: {
         preset,
@@ -270,13 +279,13 @@ function createProjectStore(root) {
         : [],
       cursorEffects: cursorEffectsState(next.cursorEffects),
       cursorMotion: cursorMotionState(next.cursorMotion),
-    }
-  }
+    };
+  };
   const readJsonArray = (file) => {
-    if (!fs.existsSync(file)) return null
+    if (!fs.existsSync(file)) return null;
     try {
-      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'))
-      return Array.isArray(parsed) ? parsed : null
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return Array.isArray(parsed) ? parsed : null;
     } catch {
       return fs
         .readFileSync(file, 'utf8')
@@ -284,15 +293,15 @@ function createProjectStore(root) {
         .filter(Boolean)
         .flatMap((line) => {
           try {
-            return [JSON.parse(line)]
+            return [JSON.parse(line)];
           } catch {
-            return []
+            return [];
           }
-        })
+        });
     }
-  }
+  };
   const telemetryFor = (file) => {
-    if (!fs.existsSync(file)) return []
+    if (!fs.existsSync(file)) return [];
     try {
       return (JSON.parse(fs.readFileSync(file, 'utf8'))?.samples || [])
         .filter(
@@ -310,56 +319,56 @@ function createProjectStore(root) {
             : undefined,
           cursorType: typeof sample.cursorType === 'string' ? sample.cursorType : undefined,
         }))
-        .sort((a, b) => a.timeMs - b.timeMs)
+        .sort((a, b) => a.timeMs - b.timeMs);
     } catch {
-      return []
+      return [];
     }
-  }
+  };
   const editorData = (id) => {
-    const directory = directoryFor(id)
-    const manifest = readManifest(directory)
-    const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : []
+    const directory = directoryFor(id);
+    const manifest = readManifest(directory);
+    const sessions = Array.isArray(manifest.sessions) ? manifest.sessions : [];
     for (const session of [...sessions].reverse()) {
-      const sessionDirectory = safePath(directory, session.relativePath)
-      if (!sessionDirectory || !fs.existsSync(sessionDirectory)) continue
+      const sessionDirectory = safePath(directory, session.relativePath);
+      if (!sessionDirectory || !fs.existsSync(sessionDirectory)) continue;
       const manifestPath = [
         path.join(sessionDirectory, 'manifest.json'),
         path.join(sessionDirectory, 'manifest.partial.json'),
-      ].find(fs.existsSync)
-      if (!manifestPath) continue
-      let sessionManifest
+      ].find(fs.existsSync);
+      if (!manifestPath) continue;
+      let sessionManifest;
       try {
-        sessionManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+        sessionManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
       } catch {
-        continue
+        continue;
       }
-      const screenDirectory = path.join(sessionDirectory, 'screen')
+      const screenDirectory = path.join(sessionDirectory, 'screen');
       const video =
         fs.existsSync(screenDirectory) &&
         fs
           .readdirSync(screenDirectory)
           .filter((name) => /\.mp4$/i.test(name))
-          .sort()[0]
+          .sort()[0];
       const tracks = Array.isArray(sessionManifest.tracks)
         ? sessionManifest.tracks.map((track) => ({
             ...track,
             assets: Array.isArray(track.segments)
               ? track.segments.map((segment) => {
-                  const assetPath = safePath(sessionDirectory, segment.path)
+                  const assetPath = safePath(sessionDirectory, segment.path);
                   return {
                     ...segment,
                     src: assetPath && fs.existsSync(assetPath) ? pathToFileURL(assetPath).href : null,
                     exists: Boolean(assetPath && fs.existsSync(assetPath)),
-                  }
+                  };
                 })
               : [],
           }))
-        : []
-      const cursorDirectory = path.join(sessionDirectory, 'cursor')
-      const events = readJsonArray(path.join(cursorDirectory, 'cursor.json'))
-      let metadata = {}
+        : [];
+      const cursorDirectory = path.join(sessionDirectory, 'cursor');
+      const events = readJsonArray(path.join(cursorDirectory, 'cursor.json'));
+      let metadata = {};
       try {
-        metadata = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'shapes.json'), 'utf8')) || {}
+        metadata = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'shapes.json'), 'utf8')) || {};
       } catch {}
       const catalog = Object.fromEntries(
         Object.entries(metadata)
@@ -378,18 +387,18 @@ function createProjectStore(root) {
               hotspot: value.hotspot || { x: 0, y: 0 },
             },
           ]),
-      )
+      );
       const shapes = Object.fromEntries(
         Object.entries(metadata).flatMap(([shapeId, value]) => {
-          const shapePath = path.join(cursorDirectory, 'shapes', `${shapeId}.png`)
+          const shapePath = path.join(cursorDirectory, 'shapes', `${shapeId}.png`);
           return fs.existsSync(shapePath)
             ? [[shapeId, { src: pathToFileURL(shapePath).href, hotspot: value?.hotspot || value || { x: 0, y: 0 } }]]
-            : []
+            : [];
         }),
-      )
+      );
       const missing = Object.keys(metadata)
         .filter((shapeId) => !catalog[shapeId] && !shapes[shapeId])
-        .map((shapeId) => `shapes/${shapeId}.png`)
+        .map((shapeId) => `shapes/${shapeId}.png`);
       return {
         sessionId: session.sessionId,
         manifest: sessionManifest,
@@ -404,93 +413,93 @@ function createProjectStore(root) {
           missing: [...(Array.isArray(events) ? [] : ['cursor.json']), ...missing],
         },
         zoom: manifest.editor?.zoom ? zoomState(manifest.editor.zoom) : { elements: [], generatedSessions: [] },
-      }
+      };
     }
-    return null
-  }
+    return null;
+  };
   const generatedBaseName = (id) => {
-    const adjectives = ['Bright', 'Calm', 'Clever', 'Golden', 'Quiet', 'Rapid', 'Soft', 'Vivid']
-    const nouns = ['Aurora', 'Canvas', 'Comet', 'Horizon', 'Orbit', 'Pixel', 'Signal', 'Studio']
-    return `${adjectives[Number.parseInt(id.slice(0, 2), 16) % adjectives.length]} ${nouns[Number.parseInt(id.slice(2, 4), 16) % nouns.length]}`
-  }
+    const adjectives = ['Bright', 'Calm', 'Clever', 'Golden', 'Quiet', 'Rapid', 'Soft', 'Vivid'];
+    const nouns = ['Aurora', 'Canvas', 'Comet', 'Horizon', 'Orbit', 'Pixel', 'Signal', 'Studio'];
+    return `${adjectives[Number.parseInt(id.slice(0, 2), 16) % adjectives.length]} ${nouns[Number.parseInt(id.slice(2, 4), 16) % nouns.length]}`;
+  };
   const generatedName = (id) => {
-    const baseName = generatedBaseName(id)
+    const baseName = generatedBaseName(id);
     const names = new Set(
       projectDirectories().flatMap((directory) => {
         try {
-          return [readManifest(directory).name]
+          return [readManifest(directory).name];
         } catch {
-          return []
+          return [];
         }
       }),
-    )
-    if (!names.has(baseName)) return baseName
+    );
+    if (!names.has(baseName)) return baseName;
     for (let suffix = 2; suffix <= 2_147_483_647; suffix += 1)
-      if (!names.has(`${baseName} ${suffix}`)) return `${baseName} ${suffix}`
-    throw new Error('Impossible de générer un nom de projet unique')
-  }
+      if (!names.has(`${baseName} ${suffix}`)) return `${baseName} ${suffix}`;
+    throw new Error('Impossible de générer un nom de projet unique');
+  };
   const editorState = (id) => {
-    const directory = directoryFor(id)
-    const manifest = readManifest(directory)
-    const editor = manifest.editor || {}
-    const composition = normalizeComposition(editor.composition || emptyComposition())
+    const directory = directoryFor(id);
+    const manifest = readManifest(directory);
+    const editor = manifest.editor || {};
+    const composition = normalizeComposition(editor.composition || emptyComposition());
     return {
       schemaVersion: 2,
       composition: materializeComposition(directory, composition, sessionFileFor),
       zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] },
       presentation: presentationState(editor.presentation),
-    }
-  }
+    };
+  };
   const saveEditorState = (id, value) => {
-    if (!value || value.schemaVersion !== 2) throw new Error('État éditeur invalide')
-    const directory = directoryFor(id)
-    const manifest = readManifest(directory)
-    const previous = normalizeComposition(manifest.editor?.composition || emptyComposition())
-    const composition = normalizeComposition(value.composition)
-    const zoom = zoomState(value.zoom)
-    const presentation = presentationState(value.presentation)
-    pruneProjectMedia(directory, previous, composition)
-    manifest.editor = { composition, zoom, presentation }
-    manifest.updatedAtUtc = new Date().toISOString()
-    writeManifest(directory, manifest)
-    return editorState(id)
-  }
+    if (!value || value.schemaVersion !== 2) throw new Error('État éditeur invalide');
+    const directory = directoryFor(id);
+    const manifest = readManifest(directory);
+    const previous = normalizeComposition(manifest.editor?.composition || emptyComposition());
+    const composition = normalizeComposition(value.composition);
+    const zoom = zoomState(value.zoom);
+    const presentation = presentationState(value.presentation);
+    pruneProjectMedia(directory, previous, composition);
+    manifest.editor = { composition, zoom, presentation };
+    manifest.updatedAtUtc = new Date().toISOString();
+    writeManifest(directory, manifest);
+    return editorState(id);
+  };
   const applyPendingRenames = () => {
     for (const directory of projectDirectories()) {
-      let manifest
+      let manifest;
       try {
-        manifest = readManifest(directory)
+        manifest = readManifest(directory);
       } catch {
-        continue
+        continue;
       }
-      if (typeof manifest.pendingDirectorySlug !== 'string' || !manifest.pendingDirectorySlug) continue
-      const target = availableDirectory(manifest.pendingDirectorySlug, directory)
+      if (typeof manifest.pendingDirectorySlug !== 'string' || !manifest.pendingDirectorySlug) continue;
+      const target = availableDirectory(manifest.pendingDirectorySlug, directory);
       try {
-        fs.renameSync(directory, target)
-        delete manifest.pendingDirectorySlug
-        writeManifest(target, manifest)
+        fs.renameSync(directory, target);
+        delete manifest.pendingDirectorySlug;
+        writeManifest(target, manifest);
       } catch {}
     }
-  }
+  };
   const importBackground = (id, input = {}) => {
-    const directory = directoryFor(id)
-    const source = input.source
-    if (typeof source !== 'string' || !source) throw new Error('Fond importé invalide')
-    let sourceStats
+    const directory = directoryFor(id);
+    const source = input.source;
+    if (typeof source !== 'string' || !source) throw new Error('Fond importé invalide');
+    let sourceStats;
     try {
-      sourceStats = fs.statSync(source)
+      sourceStats = fs.statSync(source);
     } catch {
-      throw new Error('Fond importé invalide')
+      throw new Error('Fond importé invalide');
     }
-    if (!sourceStats.isFile()) throw new Error('Fond importé invalide')
-    const extension = path.extname(source).toLowerCase()
-    const kind = kindFor(source)
-    if (!kind) throw new Error('Type de fond non autorisé')
-    const targetDirectory = path.join(directory, 'backgrounds')
-    fs.mkdirSync(targetDirectory, { recursive: true })
-    const fileName = `${randomUUID()}${extension}`
-    const targetPath = path.join(targetDirectory, fileName)
-    fs.copyFileSync(source, targetPath)
+    if (!sourceStats.isFile()) throw new Error('Fond importé invalide');
+    const extension = path.extname(source).toLowerCase();
+    const kind = kindFor(source);
+    if (!kind) throw new Error('Type de fond non autorisé');
+    const targetDirectory = path.join(directory, 'backgrounds');
+    fs.mkdirSync(targetDirectory, { recursive: true });
+    const fileName = `${randomUUID()}${extension}`;
+    const targetPath = path.join(targetDirectory, fileName);
+    fs.copyFileSync(source, targetPath);
     return {
       id: `project-bg:${fileName}`,
       name: path.basename(source, extension).slice(0, 160),
@@ -498,19 +507,19 @@ function createProjectStore(root) {
       extension: extension.slice(1),
       kind,
       path: pathToFileURL(targetPath).href,
-    }
-  }
+    };
+  };
 
-  applyPendingRenames()
+  applyPendingRenames();
   return {
     list: () =>
       projectDirectories()
         .map((directory) => {
           try {
-            const manifest = readManifest(directory)
-            return summary(directory, manifest, manifest.projectId)
+            const manifest = readManifest(directory);
+            return summary(directory, manifest, manifest.projectId);
           } catch {
-            return null
+            return null;
           }
         })
         .filter(Boolean)
@@ -526,13 +535,13 @@ function createProjectStore(root) {
     importEditorMedia: (id, input) => importMedia(directoryFor(id), input),
     importBackground,
     create: (options = {}) => {
-      const id = randomUUID()
-      const now = new Date().toISOString()
+      const id = randomUUID();
+      const now = new Date().toISOString();
       const name =
-        typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id)
-      fs.mkdirSync(root, { recursive: true })
-      const directory = availableDirectory(name)
-      fs.mkdirSync(directory)
+        typeof options.name === 'string' && options.name.trim() ? options.name.trim().slice(0, 80) : generatedName(id);
+      fs.mkdirSync(root, { recursive: true });
+      const directory = availableDirectory(name);
+      fs.mkdirSync(directory);
       const manifest = {
         schemaVersion: 1,
         projectId: id,
@@ -545,38 +554,38 @@ function createProjectStore(root) {
           zoom: { elements: [], generatedSessions: [] },
           presentation: presentationState(),
         },
-      }
-      writeManifest(directory, manifest)
-      return summary(directory, manifest, id)
+      };
+      writeManifest(directory, manifest);
+      return summary(directory, manifest, id);
     },
     rename: (id, name) => {
-      const directory = directoryFor(id)
-      const manifest = readManifest(directory)
-      const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : ''
-      if (!nextName) throw new Error('Le nom du projet ne peut pas être vide')
-      const target = availableDirectory(nextName, directory)
-      manifest.name = nextName
-      manifest.updatedAtUtc = new Date().toISOString()
+      const directory = directoryFor(id);
+      const manifest = readManifest(directory);
+      const nextName = typeof name === 'string' ? name.trim().slice(0, 80) : '';
+      if (!nextName) throw new Error('Le nom du projet ne peut pas être vide');
+      const target = availableDirectory(nextName, directory);
+      manifest.name = nextName;
+      manifest.updatedAtUtc = new Date().toISOString();
       try {
-        fs.renameSync(directory, target)
-        delete manifest.pendingDirectorySlug
-        writeManifest(target, manifest)
-        return summary(target, manifest, id)
+        fs.renameSync(directory, target);
+        delete manifest.pendingDirectorySlug;
+        writeManifest(target, manifest);
+        return summary(target, manifest, id);
       } catch {
-        manifest.pendingDirectorySlug = slugify(nextName)
-        writeManifest(directory, manifest)
-        return summary(directory, manifest, id)
+        manifest.pendingDirectorySlug = slugify(nextName);
+        writeManifest(directory, manifest);
+        return summary(directory, manifest, id);
       }
     },
     saveThumbnail: (id, dataUrl) => {
-      const directory = directoryFor(id)
-      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null
-      const targetPath = path.join(directory, 'thumbnail.webp')
-      fs.writeFileSync(targetPath, Buffer.from(dataUrl.replace(/^data:image\/\w+;base64,/, ''), 'base64'))
-      return pathToFileURL(targetPath).href
+      const directory = directoryFor(id);
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) return null;
+      const targetPath = path.join(directory, 'thumbnail.webp');
+      fs.writeFileSync(targetPath, Buffer.from(dataUrl.replace(/^data:image\/\w+;base64,/, ''), 'base64'));
+      return pathToFileURL(targetPath).href;
     },
     delete: (id) => fs.rmSync(directoryFor(id), { recursive: true, force: false }),
-  }
+  };
 }
 
-module.exports = { createProjectStore }
+module.exports = { createProjectStore };

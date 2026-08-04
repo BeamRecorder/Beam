@@ -1,6 +1,6 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import ProgressBar from './ProgressBar.vue'
+import { mount } from '@vue/test-utils';
+import { describe, expect, it } from 'vitest';
+import ProgressBar from './ProgressBar.vue';
 
 describe('ProgressBar', () => {
   it.each([
@@ -11,6 +11,6 @@ describe('ProgressBar', () => {
   ])('clamps %s/%s to %s', (value, max, expected) => {
     expect(mount(ProgressBar, { props: { value, max } }).get('.progress-bar-fill').attributes('style')).toContain(
       expected,
-    )
-  })
-})
+    );
+  });
+});

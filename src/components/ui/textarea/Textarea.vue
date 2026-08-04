@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { useAttrs } from 'vue'
+import { useAttrs } from 'vue';
 
-defineOptions({ inheritAttrs: false })
-const attrs = useAttrs()
+defineOptions({ inheritAttrs: false });
+const attrs = useAttrs();
 
 withDefaults(
   defineProps<{
-    modelValue: string
-    placeholder?: string
-    disabled?: boolean
-    rows?: number
-    id?: string
-    ariaLabel?: string
+    modelValue: string;
+    placeholder?: string;
+    disabled?: boolean;
+    rows?: number;
+    id?: string;
+    ariaLabel?: string;
   }>(),
   { placeholder: '', disabled: false, rows: 5, ariaLabel: undefined },
-)
+);
 
-const emit = defineEmits<{ (event: 'update:modelValue', value: string): void }>()
+const emit = defineEmits<{ (event: 'update:modelValue', value: string): void }>();
 </script>
 
 <template>

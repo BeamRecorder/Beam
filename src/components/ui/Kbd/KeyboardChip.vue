@@ -1,68 +1,68 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = withDefaults(
   defineProps<{
-    shortcut?: string
-    keys?: string[]
-    size?: 'sm' | 'md'
+    shortcut?: string;
+    keys?: string[];
+    size?: 'sm' | 'md';
   }>(),
   {
     size: 'sm',
   },
-)
+);
 
 // Standardize platform key representation
-const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
 const normalizeKey = (key: string): string => {
-  const trimmed = key.trim()
-  const lower = trimmed.toLowerCase()
+  const trimmed = key.trim();
+  const lower = trimmed.toLowerCase();
 
   if (lower === 'commandorcontrol' || lower === 'cmdorctrl' || lower === 'ctrl') {
-    return isMac ? '⌘' : 'Ctrl'
+    return isMac ? '⌘' : 'Ctrl';
   }
   if (lower === 'command' || lower === 'cmd' || lower === 'meta') {
-    return '⌘'
+    return '⌘';
   }
   if (lower === 'alt' || lower === 'option') {
-    return isMac ? '⌥' : 'Alt'
+    return isMac ? '⌥' : 'Alt';
   }
   if (lower === 'shift') {
-    return isMac ? '⇧' : 'Shift'
+    return isMac ? '⇧' : 'Shift';
   }
   if (lower === 'control') {
-    return isMac ? '⌃' : 'Ctrl'
+    return isMac ? '⌃' : 'Ctrl';
   }
   if (lower === 'space') {
-    return 'Space'
+    return 'Space';
   }
   if (lower === 'enter' || lower === 'return') {
-    return '↵'
+    return '↵';
   }
   if (lower === 'backspace') {
-    return '⌫'
+    return '⌫';
   }
   if (lower === 'escape' || lower === 'esc') {
-    return 'Esc'
+    return 'Esc';
   }
 
   // Capitalize single letter or normal word
   if (trimmed.length === 1) {
-    return trimmed.toUpperCase()
+    return trimmed.toUpperCase();
   }
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
-}
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
 
 const parsedKeys = computed(() => {
   if (props.keys && props.keys.length > 0) {
-    return props.keys.map(normalizeKey)
+    return props.keys.map(normalizeKey);
   }
   if (props.shortcut) {
-    return props.shortcut.split('+').map(normalizeKey)
+    return props.shortcut.split('+').map(normalizeKey);
   }
-  return []
-})
+  return [];
+});
 </script>
 
 <template>

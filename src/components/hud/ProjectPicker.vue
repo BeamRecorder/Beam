@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useVirtualList } from '@vueuse/core'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useVirtualList } from '@vueuse/core';
 import {
   ArrowLeft,
   Check,
@@ -12,321 +12,341 @@ import {
   Pencil,
   ExternalLink,
   Trash2,
-} from '@lucide/vue'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import Dialog from '~/ui/dialog/Dialog.vue'
-import Popover from '~/ui/popover/Popover.vue'
-import Input from '~/ui/input/Input.vue'
-import Skeleton from '~/ui/skeleton/Skeleton.vue'
-import ProgressBar from '../ui/progressbar/ProgressBar.vue'
-import { capture } from '../../api/capture'
-import type { CaptureProject } from '../../api/types/capture-api'
-import { useTranslate } from '~/i18n/useTranslate'
+} from '@lucide/vue';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Dialog from '~/ui/dialog/Dialog.vue';
+import Popover from '~/ui/popover/Popover.vue';
+import Input from '~/ui/input/Input.vue';
+import Skeleton from '~/ui/skeleton/Skeleton.vue';
+import ProgressBar from '../ui/progressbar/ProgressBar.vue';
+import { capture } from '../../api/capture';
+import type { CaptureProject } from '../../api/types/capture-api';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('ProjectPicker')
+const { t } = useTranslate('ProjectPicker');
 
-let cachedProjects: CaptureProject[] | null = null
+let cachedProjects: CaptureProject[] | null = null;
 
 const emit = defineEmits<{
-  (event: 'back'): void
-  (event: 'open-project', project: CaptureProject): void
-  (event: 'select-project', project: CaptureProject): void
-  (event: 'toggle-popover', isOpen: boolean): void
-}>()
+  (event: 'back'): void;
+  (event: 'open-project', project: CaptureProject): void;
+  (event: 'select-project', project: CaptureProject): void;
+  (event: 'toggle-popover', isOpen: boolean): void;
+}>();
 
 const props = withDefaults(
   defineProps<{
-    compact?: boolean
-    currentProjectId?: string | null
+    compact?: boolean;
+    currentProjectId?: string | null;
   }>(),
   {
     compact: false,
     currentProjectId: null,
   },
-)
+);
 
-const projects = ref<CaptureProject[]>([])
-const selectedProjectId = ref<string | null>(null)
-const isLoading = ref(true)
-const errorMessage = ref('')
+const projects = ref<CaptureProject[]>([]);
+const selectedProjectId = ref<string | null>(null);
+const isLoading = ref(true);
+const errorMessage = ref('');
 
 const projectRows = computed(() => {
-  const rows: CaptureProject[][] = []
+  const rows: CaptureProject[][] = [];
   for (let index = 0; index < projects.value.length; index += 2) {
-    rows.push(projects.value.slice(index, index + 2))
+    rows.push(projects.value.slice(index, index + 2));
   }
-  return rows
-})
+  return rows;
+});
 
 const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
   itemHeight: () => (props.compact ? 128 : 144),
   overscan: 3,
-})
+});
 
-const selectedProject = computed(() => projects.value.find((project) => project.id === selectedProjectId.value) ?? null)
+const selectedProject = computed(
+  () => projects.value.find((project) => project.id === selectedProjectId.value) ?? null,
+);
 
-import { useProjectThumbnailGenerator } from './useProjectThumbnailGenerator'
+import { useProjectThumbnailGenerator } from './useProjectThumbnailGenerator';
 
-const hoveredProjectId = ref<string | null>(null)
-const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator()
+const hoveredProjectId = ref<string | null>(null);
+const { thumbnailCache, generateThumbnail } = useProjectThumbnailGenerator();
 
 const generateThumbnailsForProjects = async (projectList: CaptureProject[]) => {
   for (const project of projectList) {
     if (project.previewSrc && !project.thumbnailSrc && !thumbnailCache[project.id]) {
-      void generateThumbnail(project.id, project.previewSrc)
+      void generateThumbnail(project.id, project.previewSrc);
     }
   }
-}
+};
 
 const loadProjects = async () => {
   if (cachedProjects && cachedProjects.length > 0) {
-    projects.value = [...cachedProjects]
-    isLoading.value = false
-    void generateThumbnailsForProjects(projects.value)
+    projects.value = [...cachedProjects];
+    isLoading.value = false;
+    void generateThumbnailsForProjects(projects.value);
   } else {
-    isLoading.value = true
+    isLoading.value = true;
   }
-  errorMessage.value = ''
+  errorMessage.value = '';
   try {
-    const nextProjects = await capture.listProjects()
-    cachedProjects = nextProjects
-    projects.value = [...nextProjects]
+    const nextProjects = await capture.listProjects();
+    cachedProjects = nextProjects;
+    projects.value = [...nextProjects];
     selectedProjectId.value = projects.value.some((project) => project.id === props.currentProjectId)
       ? props.currentProjectId
-      : (projects.value[0]?.id ?? null)
-    void generateThumbnailsForProjects(projects.value)
+      : (projects.value[0]?.id ?? null);
+    void generateThumbnailsForProjects(projects.value);
   } catch (error) {
-    if (!cachedProjects) projects.value = []
-    errorMessage.value = error instanceof Error ? error.message : String(error)
+    if (!cachedProjects) projects.value = [];
+    errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 const selectProject = (project: CaptureProject) => {
-  selectedProjectId.value = project.id
-  if (props.compact) emit('select-project', project)
-}
+  selectedProjectId.value = project.id;
+  if (props.compact) emit('select-project', project);
+};
 
 const openSelectedProject = () => {
   if (selectedProject.value && selectedProject.value.id !== props.currentProjectId) {
-    emit('open-project', selectedProject.value)
+    emit('open-project', selectedProject.value);
   }
-}
+};
 
 const formatDate = (date: string) => {
-  const parsedDate = new Date(date)
-  if (Number.isNaN(parsedDate.getTime())) return t('dateUnknown')
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsedDate)
-}
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return t('dateUnknown');
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsedDate);
+};
 
-const videoProgress = ref<Record<string, { current: number; total: number }>>({})
-const isVideoLoaded = ref<Record<string, boolean>>({})
+const videoProgress = ref<Record<string, { current: number; total: number }>>({});
+const isVideoLoaded = ref<Record<string, boolean>>({});
 
 const handleVideoTimeUpdate = (projectId: string, event: Event) => {
-  const video = event.currentTarget as HTMLVideoElement | null
+  const video = event.currentTarget as HTMLVideoElement | null;
   if (video) {
     videoProgress.value[projectId] = {
       current: video.currentTime,
       total: video.duration || 1,
-    }
+    };
   }
-}
+};
 
 const handleMouseEnterVideo = (_projectId: string, event: MouseEvent) => {
-  const target = event.currentTarget as HTMLElement | null
+  const target = event.currentTarget as HTMLElement | null;
   void nextTick(() => {
-    const video = (target?.tagName === 'VIDEO' ? target : target?.querySelector('video')) as HTMLVideoElement | null
+    const video = (target?.tagName === 'VIDEO' ? target : target?.querySelector('video')) as HTMLVideoElement | null;
     if (video && typeof video.play === 'function') {
       if (video.readyState === 0) {
-        video.load()
+        video.load();
       }
-      video.play().catch((err) => console.debug('Play interrupted:', err))
+      video.play().catch((err) => console.debug('Play interrupted:', err));
     }
-  })
-}
+  });
+};
 
 const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
-  isVideoLoaded.value[projectId] = false
-  const target = event.currentTarget as HTMLElement | null
-  const video = (target?.tagName === 'VIDEO' ? target : target?.querySelector('video')) as HTMLVideoElement | null
+  isVideoLoaded.value[projectId] = false;
+  const target = event.currentTarget as HTMLElement | null;
+  const video = (target?.tagName === 'VIDEO' ? target : target?.querySelector('video')) as HTMLVideoElement | null;
   if (video && typeof video.pause === 'function') {
-    video.pause()
-    video.currentTime = Math.min(0.1, video.duration || 0)
-    videoProgress.value[projectId] = { current: 0, total: 1 }
+    video.pause();
+    video.currentTime = Math.min(0.1, video.duration || 0);
+    videoProgress.value[projectId] = { current: 0, total: 1 };
   }
-}
+};
+
+const handleProjectMouseEnter = (project: CaptureProject, event: MouseEvent) => {
+  hoveredProjectId.value = project.id;
+  if (project.previewSrc) {
+    videoProgress.value[project.id] = { current: 0, total: 1 };
+  }
+  handleMouseEnterVideo(project.id, event);
+};
+
+const handleProjectMouseLeave = (project: CaptureProject, event: MouseEvent) => {
+  hoveredProjectId.value = null;
+  handleMouseLeaveVideo(project.id, event);
+};
+
+const handleProjectOpen = (project: CaptureProject) => {
+  selectProject(project);
+  openSelectedProject();
+};
 
 onMounted(() => {
-  void loadProjects()
-})
+  void loadProjects();
+});
 
 onUnmounted(() => {
   // Stop all video elements to prevent holding media resources/decoders when closing
-  const container = document.querySelector('.projects-viewport')
+  const container = document.querySelector('.projects-viewport');
   if (container) {
-    const videos = container.querySelectorAll('video')
+    const videos = container.querySelectorAll('video');
     videos.forEach((v) => {
-      v.pause()
-      v.src = ''
-      v.load()
-    })
+      v.pause();
+      v.src = '';
+      v.load();
+    });
   }
-})
+});
 
 watch(
   () => props.currentProjectId,
   (projectId) => {
     if (projectId && projects.value.some((project) => project.id === projectId)) {
-      selectedProjectId.value = projectId
+      selectedProjectId.value = projectId;
     }
   },
-)
+);
 
 // New project states
-const isNewProjectOpen = ref(false)
-const newProjectName = ref('')
-const newProjectError = ref('')
-const newProjectBusy = ref(false)
+const isNewProjectOpen = ref(false);
+const newProjectName = ref('');
+const newProjectError = ref('');
+const newProjectBusy = ref(false);
 
 // Rename project states
-const renameProjectId = ref('')
-const renameValue = ref('')
-const renameError = ref('')
-const renameBusy = ref(false)
+const renameProjectId = ref('');
+const renameValue = ref('');
+const renameError = ref('');
+const renameBusy = ref(false);
 
 // Delete project states
-const deleteProjectId = ref('')
-const deleteProjectName = ref('')
-const deleteError = ref('')
-const deleteBusy = ref(false)
-const deleteConfirmProjectId = ref<string | null>(null)
+const deleteProjectId = ref('');
+const deleteProjectName = ref('');
+const deleteError = ref('');
+const deleteBusy = ref(false);
+const deleteConfirmProjectId = ref<string | null>(null);
 
 const handleActionPopoverToggle = (isOpen: boolean) => {
   if (!isOpen) {
-    deleteConfirmProjectId.value = null
-    deleteError.value = ''
+    deleteConfirmProjectId.value = null;
+    deleteError.value = '';
   }
-  emit('toggle-popover', isOpen)
-}
+  emit('toggle-popover', isOpen);
+};
 
 const openNewProjectDialog = () => {
-  newProjectName.value = ''
-  newProjectError.value = ''
-  isNewProjectOpen.value = true
-}
+  newProjectName.value = '';
+  newProjectError.value = '';
+  isNewProjectOpen.value = true;
+};
 
 const handleCreateProject = async () => {
-  newProjectBusy.value = true
-  newProjectError.value = ''
+  newProjectBusy.value = true;
+  newProjectError.value = '';
   try {
     const created = await capture.createProject({
       name: newProjectName.value.trim() || undefined,
-    })
-    cachedProjects = null
-    await loadProjects()
-    isNewProjectOpen.value = false
-    emit('open-project', created)
+    });
+    cachedProjects = null;
+    await loadProjects();
+    isNewProjectOpen.value = false;
+    emit('open-project', created);
   } catch (error) {
-    newProjectError.value = error instanceof Error ? error.message : String(error)
+    newProjectError.value = error instanceof Error ? error.message : String(error);
   } finally {
-    newProjectBusy.value = false
+    newProjectBusy.value = false;
   }
-}
+};
 
-let renameOpenedAt = 0
+let renameOpenedAt = 0;
 
 const startRename = (project: CaptureProject) => {
-  renameOpenedAt = Date.now()
-  renameProjectId.value = project.id
-  renameValue.value = project.name
-  renameError.value = ''
+  renameOpenedAt = Date.now();
+  renameProjectId.value = project.id;
+  renameValue.value = project.name;
+  renameError.value = '';
   void nextTick(() => {
-    const cardEl = document.querySelector<HTMLElement>(`.project-card-container[data-project-id="${project.id}"]`)
-    const inputEl = cardEl?.querySelector<HTMLInputElement>('input')
+    const cardEl = document.querySelector<HTMLElement>(`.project-card-container[data-project-id="${project.id}"]`);
+    const inputEl = cardEl?.querySelector<HTMLInputElement>('input');
     if (inputEl) {
-      inputEl.focus()
-      inputEl.select()
+      inputEl.focus();
+      inputEl.select();
     }
-  })
-}
+  });
+};
 
 const cancelRename = () => {
-  renameProjectId.value = ''
-  renameValue.value = ''
-}
+  renameProjectId.value = '';
+  renameValue.value = '';
+};
 
 const handleRenameProject = async () => {
   if (Date.now() - renameOpenedAt < 250) {
-    return
+    return;
   }
-  const trimmed = renameValue.value.trim()
-  const originalProject = projects.value.find((p) => p.id === renameProjectId.value)
+  const trimmed = renameValue.value.trim();
+  const originalProject = projects.value.find((p) => p.id === renameProjectId.value);
   if (!trimmed || (originalProject && originalProject.name === trimmed)) {
-    cancelRename()
-    return
+    cancelRename();
+    return;
   }
-  renameBusy.value = true
-  renameError.value = ''
+  renameBusy.value = true;
+  renameError.value = '';
   try {
-    await capture.renameProject(renameProjectId.value, trimmed)
-    cachedProjects = null
-    await loadProjects()
-    cancelRename()
+    await capture.renameProject(renameProjectId.value, trimmed);
+    cachedProjects = null;
+    await loadProjects();
+    cancelRename();
   } catch (error) {
-    renameError.value = error instanceof Error ? error.message : String(error)
-    console.error('Rename failed:', renameError.value)
-    cancelRename()
+    renameError.value = error instanceof Error ? error.message : String(error);
+    console.error('Rename failed:', renameError.value);
+    cancelRename();
   } finally {
-    renameBusy.value = false
+    renameBusy.value = false;
   }
-}
+};
 
 const confirmDeleteProject = (project: CaptureProject) => {
-  deleteProjectId.value = project.id
-  deleteProjectName.value = project.name
-  deleteError.value = ''
-  deleteConfirmProjectId.value = project.id
-}
+  deleteProjectId.value = project.id;
+  deleteProjectName.value = project.name;
+  deleteError.value = '';
+  deleteConfirmProjectId.value = project.id;
+};
 
 const handleDeleteProject = async () => {
-  deleteBusy.value = true
-  deleteError.value = ''
+  deleteBusy.value = true;
+  deleteError.value = '';
   try {
-    await capture.deleteProject(deleteProjectId.value)
-    cachedProjects = null
-    await loadProjects()
-    deleteConfirmProjectId.value = null
+    await capture.deleteProject(deleteProjectId.value);
+    cachedProjects = null;
+    await loadProjects();
+    deleteConfirmProjectId.value = null;
 
     // If the currently selected project was deleted, pick the first remaining one
     if (selectedProjectId.value === deleteProjectId.value) {
-      const remaining = projects.value
-      const nextProject = remaining[0] ?? null
+      const remaining = projects.value;
+      const nextProject = remaining[0] ?? null;
       if (nextProject) {
-        selectedProjectId.value = nextProject.id
-        emit('select-project', nextProject)
+        selectedProjectId.value = nextProject.id;
+        emit('select-project', nextProject);
       } else {
-        selectedProjectId.value = null
+        selectedProjectId.value = null;
       }
     }
   } catch (error) {
-    deleteError.value = error instanceof Error ? error.message : String(error)
+    deleteError.value = error instanceof Error ? error.message : String(error);
   } finally {
-    deleteBusy.value = false
+    deleteBusy.value = false;
   }
-}
+};
 
 const revealProjectFolder = (project: CaptureProject) => {
-  void capture.revealProject(project.id)
-}
+  void capture.revealProject(project.id);
+};
 
 defineExpose({
   refresh: loadProjects,
   invalidate: () => {
-    cachedProjects = null
+    cachedProjects = null;
   },
-})
+});
 </script>
 
 <template>
@@ -404,26 +424,11 @@ defineExpose({
               :aria-pressed="project.id === selectedProjectId"
               role="button"
               tabindex="0"
-              @mouseenter="
-                hoveredProjectId = project.id
-                if (project.previewSrc) {
-                  videoProgress[project.id] = { current: 0, total: 1 }
-                }
-                handleMouseEnterVideo(project.id, $event)
-              "
-              @mouseleave="
-                hoveredProjectId = null
-                handleMouseLeaveVideo(project.id, $event)
-              "
+              @mouseenter="handleProjectMouseEnter(project, $event)"
+              @mouseleave="handleProjectMouseLeave(project, $event)"
               @click="selectProject(project)"
-              @dblclick="
-                selectProject(project)
-                openSelectedProject()
-              "
-              @keydown.enter.self="
-                selectProject(project)
-                openSelectedProject()
-              "
+              @dblclick="handleProjectOpen(project)"
+              @keydown.enter.self="handleProjectOpen(project)"
               @keydown.space.self="selectProject(project)"
             >
               <div class="project-preview project-card-media">
@@ -511,8 +516,8 @@ defineExpose({
                                 size="sm"
                                 :disabled="deleteBusy"
                                 @click.stop="
-                                  deleteConfirmProjectId = null
-                                  deleteError = ''
+                                  deleteConfirmProjectId = null;
+                                  deleteError = '';
                                 "
                                 >{{ t('cancel') }}</Button
                               >
@@ -532,8 +537,8 @@ defineExpose({
                               :icon="Pencil"
                               class="menu-action-item"
                               @click.stop="
-                                startRename(project)
-                                close()
+                                startRename(project);
+                                close();
                               "
                             >
                               {{ t('rename') }}
@@ -544,8 +549,8 @@ defineExpose({
                               :icon="ExternalLink"
                               class="menu-action-item"
                               @click.stop="
-                                revealProjectFolder(project)
-                                close()
+                                revealProjectFolder(project);
+                                close();
                               "
                             >
                               {{ t('explore') }}

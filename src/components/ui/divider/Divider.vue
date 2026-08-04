@@ -1,16 +1,16 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    orientation?: 'horizontal' | 'vertical'
-    label?: string
-    spacing?: 'none' | 'xs' | 'sm' | 'md' | 'lg'
+    orientation?: 'horizontal' | 'vertical';
+    label?: string;
+    spacing?: 'none' | 'xs' | 'sm' | 'md' | 'lg';
   }>(),
   {
     orientation: 'horizontal',
     label: '',
     spacing: 'sm',
   },
-)
+);
 </script>
 
 <template>

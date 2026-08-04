@@ -1,92 +1,92 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import Button from '~/ui/button/Button.vue'
-import ProgressBar from '~/ui/progressbar/ProgressBar.vue'
-import Select from '~/ui/select/Select.vue'
-import Divider from '~/ui/divider/Divider.vue'
-import type { CaptionClip, ClipComposition } from '../../composition/composition-types'
-import { createComposition } from '../../composition/engine/clip-engine'
-import { useWhisperTranscription } from '../../captions/useWhisperTranscription'
-import { whisperModels, type TranscriptionSource, type WhisperModelId } from '../../captions/whisper-types'
-import type { ProjectEditorData } from '../../../../api/types/capture-api'
-import { capture } from '../../../../api/capture'
-import { captionSources } from './caption-sources'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import Button from '~/ui/button/Button.vue';
+import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
+import Select from '~/ui/select/Select.vue';
+import Divider from '~/ui/divider/Divider.vue';
+import type { CaptionClip, ClipComposition } from '../../composition/composition-types';
+import { createComposition } from '../../composition/engine/clip-engine';
+import { useWhisperTranscription } from '../../captions/useWhisperTranscription';
+import { whisperModels, type TranscriptionSource, type WhisperModelId } from '../../captions/whisper-types';
+import type { ProjectEditorData } from '../../../../api/types/capture-api';
+import { capture } from '../../../../api/capture';
+import { captionSources } from './caption-sources';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('CaptionPanel')
+const { t } = useTranslate('CaptionPanel');
 const props = defineProps<{
-  composition: ClipComposition
-  editorData?: ProjectEditorData | null
-  timelineDurationMs: number
-}>()
+  composition: ClipComposition;
+  editorData?: ProjectEditorData | null;
+  timelineDurationMs: number;
+}>();
 const emit = defineEmits<{
-  (event: 'update:composition', composition: ClipComposition): void
-  (event: 'select-caption', clipId: string): void
-}>()
+  (event: 'update:composition', composition: ClipComposition): void;
+  (event: 'select-caption', clipId: string): void;
+}>();
 
-const source = ref<TranscriptionSource>('system')
-const model = ref<WhisperModelId>('Xenova/whisper-tiny')
-const { progress, transcribe } = useWhisperTranscription()
+const source = ref<TranscriptionSource>('system');
+const model = ref<WhisperModelId>('Xenova/whisper-tiny');
+const { progress, transcribe } = useWhisperTranscription();
 const modelStates = ref<
   Record<string, { status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
->({})
-const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null)
-const downloadError = ref<string | null>(null)
+>({});
+const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null);
+const downloadError = ref<string | null>(null);
 
-const selectedModelState = computed(() => modelStates.value[model.value])
-const modelReady = computed(() => selectedModelState.value?.status === 'ready')
+const selectedModelState = computed(() => modelStates.value[model.value]);
+const modelReady = computed(() => selectedModelState.value?.status === 'ready');
 const progressPercent = computed(() =>
   downloadProgress.value?.totalBytes
     ? (downloadProgress.value.downloadedBytes / downloadProgress.value.totalBytes) * 100
     : 0,
-)
-const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`
+);
+const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
 
 const aiCaptions = computed(() =>
   props.composition.clips.filter((clip): clip is CaptionClip => clip.kind === 'caption' && Boolean(clip.isAiGenerated)),
-)
-const hasAiCaptions = computed(() => aiCaptions.value.length > 0)
+);
+const hasAiCaptions = computed(() => aiCaptions.value.length > 0);
 
 const loadModels = async () => {
-  modelStates.value = Object.fromEntries((await capture.whisperModels()).map((item) => [item.id, item]))
-}
+  modelStates.value = Object.fromEntries((await capture.whisperModels()).map((item) => [item.id, item]));
+};
 const downloadModel = async () => {
-  downloadError.value = null
-  downloadProgress.value = null
+  downloadError.value = null;
+  downloadProgress.value = null;
   try {
-    await capture.downloadWhisperModel(model.value)
-    await loadModels()
+    await capture.downloadWhisperModel(model.value);
+    await loadModels();
   } catch (error) {
-    downloadError.value = error instanceof Error ? error.message : t('modelDownloadFailed')
+    downloadError.value = error instanceof Error ? error.message : t('modelDownloadFailed');
   }
-}
+};
 
-let unsubscribe: (() => void) | null = null
+let unsubscribe: (() => void) | null = null;
 onMounted(async () => {
-  await loadModels()
+  await loadModels();
   unsubscribe = capture.onWhisperProgress((event) => {
-    if (event.id === model.value) downloadProgress.value = event
-  })
-})
-onBeforeUnmount(() => unsubscribe?.())
+    if (event.id === model.value) downloadProgress.value = event;
+  });
+});
+onBeforeUnmount(() => unsubscribe?.());
 
-const sources = computed(() => captionSources(props.composition, props.editorData))
-const selectedSource = computed(() => sources.value.find((item) => item.id === source.value) ?? null)
+const sources = computed(() => captionSources(props.composition, props.editorData));
+const selectedSource = computed(() => sources.value.find((item) => item.id === source.value) ?? null);
 const modelSelectItems = computed(() =>
   whisperModels.map((item) => ({
     value: item.id,
     label: `${modelStates.value[item.id]?.status === 'ready' ? '✓ ' : ''}${item.label} (${item.languages})`,
   })),
-)
-const sourceSelectItems = computed(() => sources.value.map((item) => ({ value: item.id, label: item.label })))
+);
+const sourceSelectItems = computed(() => sources.value.map((item) => ({ value: item.id, label: item.label })));
 
 const runTranscription = async () => {
-  if (!selectedSource.value) return
-  const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs)
-  if (!result.sentences.length) return
-  const preserved = props.composition.clips.filter((clip) => clip.kind !== 'caption' || !clip.isAiGenerated)
+  if (!selectedSource.value) return;
+  const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs);
+  if (!result.sentences.length) return;
+  const preserved = props.composition.clips.filter((clip) => clip.kind !== 'caption' || !clip.isAiGenerated);
   const captions: CaptionClip[] = result.sentences.map((sentence, index) => {
-    const durationMs = Math.max(40, sentence.endMs - sentence.startMs)
+    const durationMs = Math.max(40, sentence.endMs - sentence.startMs);
     return {
       id: crypto.randomUUID(),
       kind: 'caption',
@@ -110,11 +110,11 @@ const runTranscription = async () => {
           placement: 'bottom',
         },
       },
-    }
-  })
-  emit('update:composition', createComposition(props.composition.assets, [...preserved, ...captions]))
-  emit('select-caption', captions[0].id)
-}
+    };
+  });
+  emit('update:composition', createComposition(props.composition.assets, [...preserved, ...captions]));
+  emit('select-caption', captions[0].id);
+};
 </script>
 
 <template>

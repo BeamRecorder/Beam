@@ -1,9 +1,9 @@
-import { effectScope, nextTick, ref } from 'vue'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useCompositionAudio } from '../useCompositionAudio'
-import type { ClipComposition } from '../../composition/composition-types'
+import { effectScope, nextTick, ref } from 'vue';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useCompositionAudio } from '../useCompositionAudio';
+import type { ClipComposition } from '../../composition/composition-types';
 
-const starts: Array<{ when: number; offset: number; duration?: number }> = []
+const starts: Array<{ when: number; offset: number; duration?: number }> = [];
 
 class FakeGain {
   gain = {
@@ -12,32 +12,32 @@ class FakeGain {
     linearRampToValueAtTime: vi.fn(),
     setTargetAtTime: vi.fn(),
     cancelScheduledValues: vi.fn(),
-  }
-  connect = vi.fn()
-  disconnect = vi.fn()
+  };
+  connect = vi.fn();
+  disconnect = vi.fn();
 }
 
 class FakeSource {
-  buffer: AudioBuffer | null = null
-  playbackRate = { value: 1 }
-  onended: (() => void) | null = null
-  connect = vi.fn()
-  disconnect = vi.fn()
-  stop = vi.fn()
+  buffer: AudioBuffer | null = null;
+  playbackRate = { value: 1 };
+  onended: (() => void) | null = null;
+  connect = vi.fn();
+  disconnect = vi.fn();
+  stop = vi.fn();
   start(when: number, offset: number, duration?: number) {
-    starts.push({ when, offset, duration })
+    starts.push({ when, offset, duration });
   }
 }
 
 class FakeAudioContext {
-  currentTime = 4
-  state: AudioContextState = 'running'
-  destination = {} as AudioDestinationNode
-  createGain = () => new FakeGain() as unknown as GainNode
-  createBufferSource = () => new FakeSource() as unknown as AudioBufferSourceNode
-  decodeAudioData = vi.fn(async () => ({ duration: 12 }) as AudioBuffer)
-  resume = vi.fn(async () => undefined)
-  close = vi.fn(async () => undefined)
+  currentTime = 4;
+  state: AudioContextState = 'running';
+  destination = {} as AudioDestinationNode;
+  createGain = () => new FakeGain() as unknown as GainNode;
+  createBufferSource = () => new FakeSource() as unknown as AudioBufferSourceNode;
+  decodeAudioData = vi.fn(async () => ({ duration: 12 }) as AudioBuffer);
+  resume = vi.fn(async () => undefined);
+  close = vi.fn(async () => undefined);
 }
 
 const composition = (): ClipComposition => ({
@@ -72,41 +72,41 @@ const composition = (): ClipComposition => ({
       volume: 100,
     },
   ],
-})
+});
 
 const settle = async () => {
-  await nextTick()
-  await Promise.resolve()
-  await Promise.resolve()
-  await nextTick()
-}
+  await nextTick();
+  await Promise.resolve();
+  await Promise.resolve();
+  await nextTick();
+};
 
 describe('useCompositionAudio', () => {
   afterEach(() => {
-    vi.unstubAllGlobals()
-    starts.length = 0
-  })
+    vi.unstubAllGlobals();
+    starts.length = 0;
+  });
 
   it('starts a preloaded clip when playback naturally crosses its start', async () => {
-    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.stubGlobal('AudioContext', FakeAudioContext);
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => new Response(new ArrayBuffer(8), { status: 200 })),
-    )
-    const scope = effectScope()
-    const currentTime = ref(0)
-    const isPlaying = ref(false)
-    scope.run(() => useCompositionAudio({ composition: ref(composition()), currentTime, isPlaying, volume: ref(100) }))
-    await settle()
+    );
+    const scope = effectScope();
+    const currentTime = ref(0);
+    const isPlaying = ref(false);
+    scope.run(() => useCompositionAudio({ composition: ref(composition()), currentTime, isPlaying, volume: ref(100) }));
+    await settle();
 
-    isPlaying.value = true
-    await settle()
-    expect(starts).toEqual([])
+    isPlaying.value = true;
+    await settle();
+    expect(starts).toEqual([]);
 
-    currentTime.value = 1
-    await settle()
-    expect(starts).toHaveLength(1)
-    expect(starts[0]).toMatchObject({ when: 4, offset: 0, duration: 4 })
-    scope.stop()
-  })
-})
+    currentTime.value = 1;
+    await settle();
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toMatchObject({ when: 4, offset: 0, duration: 4 });
+    scope.stop();
+  });
+});

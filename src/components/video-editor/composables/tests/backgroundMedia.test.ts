@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   backgroundKindFor,
   createBackgroundMedia,
@@ -8,7 +8,7 @@ import {
   customGradient,
   normalizeBackgroundValue,
   normalizeGradient,
-} from '../backgroundCatalog'
+} from '../backgroundCatalog';
 
 describe('background media', () => {
   it('classifies every supported extension case-insensitively', () => {
@@ -16,19 +16,19 @@ describe('background media', () => {
       ['avif', 'bmp', 'jpeg', 'jpg', 'png', 'webp'].map((extension) =>
         backgroundKindFor(`/media/file.${extension.toUpperCase()}`),
       ),
-    ).toEqual(['image', 'image', 'image', 'image', 'image', 'image'])
-    expect(backgroundKindFor('/media/animation.gif')).toBeNull()
+    ).toEqual(['image', 'image', 'image', 'image', 'image', 'image']);
+    expect(backgroundKindFor('/media/animation.gif')).toBeNull();
     expect(
       ['m4v', 'mov', 'mp4', 'ogv', 'webm'].map((extension) => backgroundKindFor(`/media/file.${extension}`)),
-    ).toEqual(['video', 'video', 'video', 'video', 'video'])
-  })
+    ).toEqual(['video', 'video', 'video', 'video', 'video']);
+  });
 
   it('rejects paths with no supported extension', () => {
-    expect(backgroundKindFor('/media/file.txt')).toBeNull()
-    expect(backgroundKindFor('/media/no-extension')).toBeNull()
-    expect(backgroundKindFor('')).toBeNull()
-    expect(backgroundKindFor('/media/.hidden')).toBeNull()
-  })
+    expect(backgroundKindFor('/media/file.txt')).toBeNull();
+    expect(backgroundKindFor('/media/no-extension')).toBeNull();
+    expect(backgroundKindFor('')).toBeNull();
+    expect(backgroundKindFor('/media/.hidden')).toBeNull();
+  });
 
   it('deduplicates, filters, normalizes names, and sorts media', () => {
     expect(
@@ -53,8 +53,8 @@ describe('background media', () => {
         extension: 'mp4',
         kind: 'video',
       },
-    ])
-  })
+    ]);
+  });
 
   it('supports paths without a directory segment', () => {
     expect(createBackgroundMedia(['plain_name.png'])).toEqual([
@@ -65,8 +65,8 @@ describe('background media', () => {
         extension: 'png',
         kind: 'image',
       },
-    ])
-  })
+    ]);
+  });
 
   it('keeps built-in images and videos in their dedicated collections', () => {
     expect(
@@ -77,8 +77,8 @@ describe('background media', () => {
     ).toEqual([
       expect.objectContaining({ path: '/wallpapers/image/nested/landscape.PNG', kind: 'image' }),
       expect.objectContaining({ path: '/wallpapers/video/nested/loop.WEBM', kind: 'video' }),
-    ])
-  })
+    ]);
+  });
 
   it('does not turn misplaced or unsupported built-in files into wallpapers', () => {
     expect(
@@ -86,21 +86,21 @@ describe('background media', () => {
         ['/wallpapers/image/clip.mp4', '/app/icon.png'],
         ['/wallpapers/video/photo.jpg', '/public/other.webm'],
       ),
-    ).toEqual([])
-    expect(createWallpaperMedia([], [])).toEqual([])
-  })
+    ).toEqual([]);
+    expect(createWallpaperMedia([], [])).toEqual([]);
+  });
 
   it('groups media in display order and excludes empty groups', () => {
-    const media = createBackgroundMedia(['/z.mp4', '/b.png', '/c.jpg'])
+    const media = createBackgroundMedia(['/z.mp4', '/b.png', '/c.jpg']);
     expect(groupBackgroundMedia(media)).toEqual([
       { kind: 'image', label: 'Images', items: [media[0], media[1]] },
       { kind: 'video', label: 'Videos', items: [media[2]] },
-    ])
-    expect(groupBackgroundMedia([])).toEqual([])
-  })
+    ]);
+    expect(groupBackgroundMedia([])).toEqual([]);
+  });
 
   it('normalizes custom color and gradients into typed background values', () => {
-    expect(customColor('#123456')).toMatchObject({ kind: 'color', color: '#123456' })
+    expect(customColor('#123456')).toMatchObject({ kind: 'color', color: '#123456' });
     expect(
       customGradient({
         type: 'linear',
@@ -110,25 +110,25 @@ describe('background media', () => {
           { id: 'b', position: 1, color: '#ffffff', alpha: 1 },
         ],
       }).gradient.angle,
-    ).toBe(90)
+    ).toBe(90);
     expect(normalizeBackgroundValue({ kind: 'gradient', gradient: { stops: [] } })).toMatchObject({
       kind: 'gradient',
       gradient: { stops: [{ position: 0 }, { position: 1 }] },
-    })
-  })
+    });
+  });
 
   it('rejects malformed persisted background values', () => {
-    expect(normalizeBackgroundValue({ kind: 'color', color: 'red' })).toBeNull()
-    expect(normalizeBackgroundValue({ kind: 'video', path: '/wrong.png' })).toBeNull()
-    expect(normalizeBackgroundValue(null)).toBeNull()
-  })
+    expect(normalizeBackgroundValue({ kind: 'color', color: 'red' })).toBeNull();
+    expect(normalizeBackgroundValue({ kind: 'video', path: '/wrong.png' })).toBeNull();
+    expect(normalizeBackgroundValue(null)).toBeNull();
+  });
 
   it('normalizes missing, malformed, and radial gradient fields', () => {
     expect(normalizeGradient(null)).toMatchObject({
       type: 'linear',
       angle: 135,
       stops: [{ color: '#4f46e5' }, { color: '#ec4899' }],
-    })
+    });
     expect(
       normalizeGradient({
         type: 'radial',
@@ -145,24 +145,24 @@ describe('background media', () => {
         { id: 'stop-0', position: 0, color: '#ffffff', alpha: 1 },
         { id: 'end', position: 1, color: '#ABCDEF', alpha: 0 },
       ],
-    })
-  })
+    });
+  });
 
   it('fills optional persisted media, color, and gradient identifiers', () => {
     expect(normalizeBackgroundValue({ kind: 'image', path: '/media/photo.png' })).toMatchObject({
       id: '/media/photo.png',
       name: 'Photo',
       extension: 'png',
-    })
+    });
     expect(normalizeBackgroundValue({ kind: 'color', color: '#ABCDEF' })).toMatchObject({
       id: 'color:#abcdef',
       name: '#ABCDEF',
-    })
+    });
     expect(
       normalizeBackgroundValue({
         kind: 'gradient',
         gradient: { type: 'radial', stops: [{ color: '#000000' }, { color: '#ffffff' }] },
       }),
-    ).toMatchObject({ id: 'gradient:custom', name: 'Custom gradient', gradient: { type: 'radial' } })
-  })
-})
+    ).toMatchObject({ id: 'gradient:custom', name: 'Custom gradient', gradient: { type: 'radial' } });
+  });
+});

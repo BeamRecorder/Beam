@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { isThumbnailWorkerRequest, uniqueSortedTimes } from '../thumbnail-protocol'
+import { describe, expect, it } from 'vitest';
+import { isThumbnailWorkerRequest, uniqueSortedTimes } from '../thumbnail-protocol';
 
 describe('thumbnail worker protocol', () => {
   it('sorts, deduplicates, and rejects invalid timestamps', () => {
-    expect(uniqueSortedTimes([3, -1, 1, 3, Number.NaN, 2])).toEqual([1, 2, 3])
-  })
+    expect(uniqueSortedTimes([3, -1, 1, 3, Number.NaN, 2])).toEqual([1, 2, 3]);
+  });
 
   it('accepts a complete frame request', () => {
     expect(
@@ -14,8 +14,8 @@ describe('thumbnail worker protocol', () => {
         source: 'file:///recording.mp4',
         visibleTimes: [0, 1],
       }),
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
 
   it('rejects incomplete and malformed worker messages', () => {
     expect(
@@ -25,8 +25,8 @@ describe('thumbnail worker protocol', () => {
         source: 'x',
         visibleTimes: ['1'],
       }),
-    ).toBe(false)
-    expect(isThumbnailWorkerRequest({ type: 'clear', generation: -1 })).toBe(false)
-    expect(isThumbnailWorkerRequest(null)).toBe(false)
-  })
-})
+    ).toBe(false);
+    expect(isThumbnailWorkerRequest({ type: 'clear', generation: -1 })).toBe(false);
+    expect(isThumbnailWorkerRequest(null)).toBe(false);
+  });
+});

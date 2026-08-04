@@ -1,87 +1,87 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = withDefaults(
   defineProps<{
-    content?: string
-    position?: 'top' | 'bottom' | 'left' | 'right'
-    variant?: 'default' | 'error'
-    disabled?: boolean
-    maxWidth?: number
+    content?: string;
+    position?: 'top' | 'bottom' | 'left' | 'right';
+    variant?: 'default' | 'error';
+    disabled?: boolean;
+    maxWidth?: number;
   }>(),
   {
     position: 'top',
     variant: 'default',
   },
-)
+);
 
-const visible = ref(false)
-const wrapperRef = ref<HTMLElement | null>(null)
-const tooltipStyle = ref<Record<string, string>>({})
+const visible = ref(false);
+const wrapperRef = ref<HTMLElement | null>(null);
+const tooltipStyle = ref<Record<string, string>>({});
 
 const updatePosition = () => {
-  const wrapper = wrapperRef.value
-  if (!wrapper) return
-  const rect = wrapper.getBoundingClientRect()
-  const offset = 8
+  const wrapper = wrapperRef.value;
+  if (!wrapper) return;
+  const rect = wrapper.getBoundingClientRect();
+  const offset = 8;
   if (props.position === 'bottom') {
     tooltipStyle.value = {
       top: `${rect.bottom + offset}px`,
       left: `${rect.left + rect.width / 2}px`,
       transform: 'translateX(-50%)',
-    }
+    };
   } else if (props.position === 'left') {
     tooltipStyle.value = {
       top: `${rect.top + rect.height / 2}px`,
       left: `${rect.left - offset}px`,
       transform: 'translate(-100%, -50%)',
-    }
+    };
   } else if (props.position === 'right') {
     tooltipStyle.value = {
       top: `${rect.top + rect.height / 2}px`,
       left: `${rect.right + offset}px`,
       transform: 'translateY(-50%)',
-    }
+    };
   } else {
     tooltipStyle.value = {
       top: `${rect.top - offset}px`,
       left: `${rect.left + rect.width / 2}px`,
       transform: 'translate(-50%, -100%)',
-    }
+    };
   }
-}
+};
 
 const show = async () => {
-  if (props.disabled) return
-  visible.value = true
-  await nextTick()
-  updatePosition()
-}
+  if (props.disabled) return;
+  visible.value = true;
+  await nextTick();
+  updatePosition();
+};
 
 const hide = () => {
-  visible.value = false
-}
+  visible.value = false;
+};
 
 watch(
   () => props.disabled,
   (disabled) => {
-    if (disabled) return hide()
-    if (wrapperRef.value?.matches(':hover')) void show()
+    if (disabled) return hide();
+    if (wrapperRef.value?.matches(':hover')) void show();
   },
-)
+);
 watch(
   () => props.position,
   () => {
-    if (visible.value) updatePosition()
+    if (visible.value) updatePosition();
   },
-)
+);
 
-window.addEventListener('resize', updatePosition)
-window.addEventListener('scroll', updatePosition, true)
+window.addEventListener('resize', updatePosition);
+window.addEventListener('scroll', updatePosition, true);
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updatePosition)
-  window.removeEventListener('scroll', updatePosition, true)
-})
+  window.removeEventListener('resize', updatePosition);
+  window.removeEventListener('scroll', updatePosition, true);
+});
 </script>
 
 <template>

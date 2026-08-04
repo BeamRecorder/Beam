@@ -1,30 +1,30 @@
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { capture } from '~/api/capture'
-import type { TeleprompterDocument, TeleprompterSessionContext, TeleprompterSettings } from './teleprompter-types'
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { capture } from '~/api/capture';
+import type { TeleprompterDocument, TeleprompterSessionContext, TeleprompterSettings } from './teleprompter-types';
 import {
   clampTeleprompterLine,
   createDefaultTeleprompterDocument,
   splitTeleprompterLines,
   TELEPROMPTER_FONT_SIZE,
-} from './teleprompter-types'
+} from './teleprompter-types';
 
-const saveDelay = 350
+const saveDelay = 350;
 
 export function useTeleprompter() {
-  const document = ref<TeleprompterDocument>(createDefaultTeleprompterDocument())
-  const session = ref<TeleprompterSessionContext | null>(null)
-  const activeLine = ref(0)
-  const isEditing = ref(true)
-  const isPaused = ref(false)
-  const error = ref('')
-  const displayRef = ref<HTMLElement | null>(null)
-  const lines = computed(() => splitTeleprompterLines(document.value.text))
-  let frame: number | null = null
-  let lastFrameAt = 0
-  let saveTimer: ReturnType<typeof setTimeout> | null = null
-  let preferencesSaveTimer: ReturnType<typeof setTimeout> | null = null
-  let lineTimer: ReturnType<typeof setTimeout> | null = null
-  let settingsRevision = 0
+  const document = ref<TeleprompterDocument>(createDefaultTeleprompterDocument());
+  const session = ref<TeleprompterSessionContext | null>(null);
+  const activeLine = ref(0);
+  const isEditing = ref(true);
+  const isPaused = ref(false);
+  const error = ref('');
+  const displayRef = ref<HTMLElement | null>(null);
+  const lines = computed(() => splitTeleprompterLines(document.value.text));
+  let frame: number | null = null;
+  let lastFrameAt = 0;
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let preferencesSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  let lineTimer: ReturnType<typeof setTimeout> | null = null;
+  let settingsRevision = 0;
 
   const settingsFromDocument = (): TeleprompterSettings => ({
     mode: document.value.mode,
@@ -33,223 +33,223 @@ export function useTeleprompter() {
     fontSize: document.value.fontSize,
     lineHeight: document.value.lineHeight,
     textAlign: document.value.textAlign,
-  })
+  });
 
   const storedSettings = (value: unknown): Partial<TeleprompterSettings> => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
-    const input = value as Record<string, unknown>
-    const patch: Partial<TeleprompterSettings> = {}
-    if (input.mode === 'continuous' || input.mode === 'line-by-line') patch.mode = input.mode
-    if (typeof input.autoscroll === 'boolean') patch.autoscroll = input.autoscroll
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    const input = value as Record<string, unknown>;
+    const patch: Partial<TeleprompterSettings> = {};
+    if (input.mode === 'continuous' || input.mode === 'line-by-line') patch.mode = input.mode;
+    if (typeof input.autoscroll === 'boolean') patch.autoscroll = input.autoscroll;
     if (typeof input.scrollSpeed === 'number' && Number.isFinite(input.scrollSpeed))
-      patch.scrollSpeed = Math.max(5, Math.min(200, input.scrollSpeed))
+      patch.scrollSpeed = Math.max(5, Math.min(200, input.scrollSpeed));
     if (typeof input.fontSize === 'number' && Number.isFinite(input.fontSize))
-      patch.fontSize = Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, input.fontSize)))
+      patch.fontSize = Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, input.fontSize)));
     if (typeof input.lineHeight === 'number' && Number.isFinite(input.lineHeight))
-      patch.lineHeight = Math.max(1, Math.min(2.5, input.lineHeight))
-    if (input.textAlign === 'left' || input.textAlign === 'center') patch.textAlign = input.textAlign
-    return patch
-  }
+      patch.lineHeight = Math.max(1, Math.min(2.5, input.lineHeight));
+    if (input.textAlign === 'left' || input.textAlign === 'center') patch.textAlign = input.textAlign;
+    return patch;
+  };
 
   const loadPreferences = async () => {
-    if (typeof capture.getPreferences !== 'function') return
-    const revisionAtStart = settingsRevision
+    if (typeof capture.getPreferences !== 'function') return;
+    const revisionAtStart = settingsRevision;
     try {
-      const preferences = await capture.getPreferences()
-      if (settingsRevision !== revisionAtStart) return
-      document.value = { ...document.value, ...storedSettings(preferences.extras?.teleprompterSettings) }
+      const preferences = await capture.getPreferences();
+      if (settingsRevision !== revisionAtStart) return;
+      document.value = { ...document.value, ...storedSettings(preferences.extras?.teleprompterSettings) };
     } catch {
       // Preferences are optional for the standalone teleprompter window.
     }
-  }
+  };
 
-  const preferencesReady = loadPreferences()
+  const preferencesReady = loadPreferences();
 
   const cancelFrame = () => {
-    if (frame !== null) window.cancelAnimationFrame(frame)
-    frame = null
-    lastFrameAt = 0
-  }
+    if (frame !== null) window.cancelAnimationFrame(frame);
+    frame = null;
+    lastFrameAt = 0;
+  };
   const cancelLineTimer = () => {
-    if (lineTimer !== null) window.clearTimeout(lineTimer)
-    lineTimer = null
-  }
+    if (lineTimer !== null) window.clearTimeout(lineTimer);
+    lineTimer = null;
+  };
 
   const save = async () => {
-    if (!session.value) return
-    const next = { ...document.value, updatedAtUtc: new Date().toISOString() }
-    document.value = next
+    if (!session.value) return;
+    const next = { ...document.value, updatedAtUtc: new Date().toISOString() };
+    document.value = next;
     try {
-      await capture.saveSessionTeleprompter(session.value.projectId, session.value.sessionId, next)
-      error.value = ''
+      await capture.saveSessionTeleprompter(session.value.projectId, session.value.sessionId, next);
+      error.value = '';
     } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : String(reason)
+      error.value = reason instanceof Error ? reason.message : String(reason);
     }
-  }
+  };
 
   const scheduleSave = () => {
-    if (saveTimer) clearTimeout(saveTimer)
+    if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      saveTimer = null
-      void save()
-    }, saveDelay)
-  }
+      saveTimer = null;
+      void save();
+    }, saveDelay);
+  };
 
   const savePreferences = async () => {
-    if (typeof capture.updatePreferences !== 'function') return
+    if (typeof capture.updatePreferences !== 'function') return;
     try {
-      await capture.updatePreferences({ extras: { teleprompterSettings: settingsFromDocument() } })
+      await capture.updatePreferences({ extras: { teleprompterSettings: settingsFromDocument() } });
     } catch {
       // A failed global preference write must not hide a valid session document.
     }
-  }
+  };
 
   const schedulePreferencesSave = () => {
-    if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer)
+    if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer);
     preferencesSaveTimer = setTimeout(() => {
-      preferencesSaveTimer = null
-      void savePreferences()
-    }, saveDelay)
-  }
+      preferencesSaveTimer = null;
+      void savePreferences();
+    }, saveDelay);
+  };
 
   const updateDocument = (patch: Partial<Omit<TeleprompterDocument, 'schemaVersion' | 'updatedAtUtc'>>) => {
     const safePatch =
       patch.fontSize === undefined
         ? patch
-        : { ...patch, fontSize: Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, patch.fontSize))) }
-    document.value = { ...document.value, ...safePatch, updatedAtUtc: new Date().toISOString() }
+        : { ...patch, fontSize: Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, patch.fontSize))) };
+    document.value = { ...document.value, ...safePatch, updatedAtUtc: new Date().toISOString() };
     if (Object.keys(patch).some((key) => key !== 'text')) {
-      settingsRevision += 1
-      schedulePreferencesSave()
+      settingsRevision += 1;
+      schedulePreferencesSave();
     }
-    scheduleSave()
-  }
+    scheduleSave();
+  };
 
   const scrollActiveLine = () => {
-    const display = displayRef.value
-    const element = display?.querySelector<HTMLElement>(`[data-line-index="${activeLine.value}"]`)
-    if (!display || !element) return
-    const targetTop = Math.max(0, element.offsetTop - display.clientHeight * 0.38)
-    display.scrollTo({ top: targetTop, behavior: 'smooth' })
-  }
+    const display = displayRef.value;
+    const element = display?.querySelector<HTMLElement>(`[data-line-index="${activeLine.value}"]`);
+    if (!display || !element) return;
+    const targetTop = Math.max(0, element.offsetTop - display.clientHeight * 0.38);
+    display.scrollTo({ top: targetTop, behavior: 'smooth' });
+  };
 
   const setActiveLine = (index: number) => {
-    activeLine.value = clampTeleprompterLine(index, lines.value.length)
-    if (document.value.mode === 'line-by-line') scrollActiveLine()
-  }
-  const nextLine = () => setActiveLine(activeLine.value + 1)
-  const previousLine = () => setActiveLine(activeLine.value - 1)
+    activeLine.value = clampTeleprompterLine(index, lines.value.length);
+    if (document.value.mode === 'line-by-line') scrollActiveLine();
+  };
+  const nextLine = () => setActiveLine(activeLine.value + 1);
+  const previousLine = () => setActiveLine(activeLine.value - 1);
 
   const scheduleLineAdvance = () => {
-    cancelLineTimer()
+    cancelLineTimer();
     if (
       !document.value.autoscroll ||
       isPaused.value ||
       document.value.mode !== 'line-by-line' ||
       activeLine.value >= lines.value.length - 1
     )
-      return
-    const duration = Math.max(800, 2600 - document.value.scrollSpeed * 15)
+      return;
+    const duration = Math.max(800, 2600 - document.value.scrollSpeed * 15);
     lineTimer = setTimeout(() => {
-      nextLine()
-      scheduleLineAdvance()
-    }, duration)
-  }
+      nextLine();
+      scheduleLineAdvance();
+    }, duration);
+  };
 
   const tick = (now: number) => {
-    frame = null
-    if (!document.value.autoscroll || isPaused.value || document.value.mode !== 'continuous') return
-    const element = displayRef.value
+    frame = null;
+    if (!document.value.autoscroll || isPaused.value || document.value.mode !== 'continuous') return;
+    const element = displayRef.value;
     if (!element) {
-      frame = window.requestAnimationFrame(tick)
-      return
+      frame = window.requestAnimationFrame(tick);
+      return;
     }
-    const elapsed = lastFrameAt ? Math.min(100, now - lastFrameAt) : 0
-    lastFrameAt = now
-    const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight)
-    element.scrollTop = Math.min(maxScroll, element.scrollTop + (document.value.scrollSpeed * elapsed) / 1000)
-    if (element.scrollTop < maxScroll) frame = window.requestAnimationFrame(tick)
-  }
+    const elapsed = lastFrameAt ? Math.min(100, now - lastFrameAt) : 0;
+    lastFrameAt = now;
+    const maxScroll = Math.max(0, element.scrollHeight - element.clientHeight);
+    element.scrollTop = Math.min(maxScroll, element.scrollTop + (document.value.scrollSpeed * elapsed) / 1000);
+    if (element.scrollTop < maxScroll) frame = window.requestAnimationFrame(tick);
+  };
 
   const startAutoscroll = () => {
-    cancelFrame()
-    cancelLineTimer()
-    if (!document.value.autoscroll || isPaused.value) return
-    if (document.value.mode === 'continuous') frame = window.requestAnimationFrame(tick)
-    else scheduleLineAdvance()
-  }
+    cancelFrame();
+    cancelLineTimer();
+    if (!document.value.autoscroll || isPaused.value) return;
+    if (document.value.mode === 'continuous') frame = window.requestAnimationFrame(tick);
+    else scheduleLineAdvance();
+  };
 
-  const toggleAutoscroll = () => updateDocument({ autoscroll: !document.value.autoscroll })
+  const toggleAutoscroll = () => updateDocument({ autoscroll: !document.value.autoscroll });
   const togglePause = () => {
     if (isPaused.value || !document.value.autoscroll) {
-      isPaused.value = false
-      if (!document.value.autoscroll) updateDocument({ autoscroll: true })
-      startAutoscroll()
-      return
+      isPaused.value = false;
+      if (!document.value.autoscroll) updateDocument({ autoscroll: true });
+      startAutoscroll();
+      return;
     }
-    isPaused.value = true
-    cancelFrame()
-    cancelLineTimer()
-  }
+    isPaused.value = true;
+    cancelFrame();
+    cancelLineTimer();
+  };
 
   const applySession = async (context: TeleprompterSessionContext | null) => {
-    await preferencesReady
-    session.value = context
-    error.value = ''
-    activeLine.value = 0
-    cancelFrame()
-    cancelLineTimer()
-    if (!context) return
-    let stored: TeleprompterDocument | null = null
+    await preferencesReady;
+    session.value = context;
+    error.value = '';
+    activeLine.value = 0;
+    cancelFrame();
+    cancelLineTimer();
+    if (!context) return;
+    let stored: TeleprompterDocument | null = null;
     try {
-      stored = await capture.getSessionTeleprompter(context.projectId, context.sessionId)
+      stored = await capture.getSessionTeleprompter(context.projectId, context.sessionId);
     } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : String(reason)
-      return
+      error.value = reason instanceof Error ? reason.message : String(reason);
+      return;
     }
     if (stored)
       document.value = {
         ...stored,
         fontSize: Math.round(Math.max(16, Math.min(TELEPROMPTER_FONT_SIZE, stored.fontSize))),
-      }
-    else await save()
-    startAutoscroll()
-  }
+      };
+    else await save();
+    startAutoscroll();
+  };
 
   const handleShortcut = (id: string) => {
-    if (id === 'teleprompter.toggleAutoscroll') toggleAutoscroll()
-    else if (id === 'teleprompter.nextLine') nextLine()
-    else if (id === 'teleprompter.previousLine') previousLine()
-  }
+    if (id === 'teleprompter.toggleAutoscroll') toggleAutoscroll();
+    else if (id === 'teleprompter.nextLine') nextLine();
+    else if (id === 'teleprompter.previousLine') previousLine();
+  };
 
   const setDisplayElement = (element: HTMLElement | null) => {
-    displayRef.value = element
-    if (element) startAutoscroll()
-  }
+    displayRef.value = element;
+    if (element) startAutoscroll();
+  };
   watch(
     () => document.value.mode,
     () => {
-      activeLine.value = 0
-      startAutoscroll()
+      activeLine.value = 0;
+      startAutoscroll();
     },
-  )
+  );
   watch(
     () => lines.value.length,
     () => {
-      activeLine.value = clampTeleprompterLine(activeLine.value, lines.value.length)
-      startAutoscroll()
+      activeLine.value = clampTeleprompterLine(activeLine.value, lines.value.length);
+      startAutoscroll();
     },
-  )
-  watch(() => document.value.autoscroll, startAutoscroll)
-  watch(() => document.value.scrollSpeed, startAutoscroll)
+  );
+  watch(() => document.value.autoscroll, startAutoscroll);
+  watch(() => document.value.scrollSpeed, startAutoscroll);
   onBeforeUnmount(() => {
-    cancelFrame()
-    cancelLineTimer()
-    if (saveTimer) clearTimeout(saveTimer)
-    if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer)
-    void save()
-    void savePreferences()
-  })
+    cancelFrame();
+    cancelLineTimer();
+    if (saveTimer) clearTimeout(saveTimer);
+    if (preferencesSaveTimer) clearTimeout(preferencesSaveTimer);
+    void save();
+    void savePreferences();
+  });
 
   return {
     document,
@@ -269,5 +269,5 @@ export function useTeleprompter() {
     toggleAutoscroll,
     togglePause,
     save,
-  }
+  };
 }

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { inject, nextTick, provide, ref, onMounted, onUnmounted, watch } from 'vue'
+import { inject, nextTick, provide, ref, onMounted, onUnmounted, watch } from 'vue';
 
 const props = withDefaults(
   defineProps<{
-    align?: 'left' | 'right' | 'center'
-    direction?: 'up' | 'down'
-    block?: boolean
-    matchTriggerWidth?: boolean
-    flush?: boolean
+    align?: 'left' | 'right' | 'center';
+    direction?: 'up' | 'down';
+    block?: boolean;
+    matchTriggerWidth?: boolean;
+    flush?: boolean;
   }>(),
   {
     align: 'left',
@@ -16,61 +16,61 @@ const props = withDefaults(
     matchTriggerWidth: true,
     flush: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'toggle', isOpen: boolean): void
-}>()
+  (e: 'toggle', isOpen: boolean): void;
+}>();
 
-const isOpen = ref(false)
-const popoverRef = ref<HTMLElement | null>(null)
-const contentRef = ref<HTMLElement | null>(null)
-const directionClass = ref(props.direction)
-const floatingStyle = ref<Record<string, string>>({})
-const VIEWPORT_MARGIN = 8
-const parentPopoverId = inject<string | null>('popover-owner-id', null)
-const popoverId = `popover-${Math.random().toString(36).slice(2)}`
-provide('popover-owner-id', popoverId)
+const isOpen = ref(false);
+const popoverRef = ref<HTMLElement | null>(null);
+const contentRef = ref<HTMLElement | null>(null);
+const directionClass = ref(props.direction);
+const floatingStyle = ref<Record<string, string>>({});
+const VIEWPORT_MARGIN = 8;
+const parentPopoverId = inject<string | null>('popover-owner-id', null);
+const popoverId = `popover-${Math.random().toString(36).slice(2)}`;
+provide('popover-owner-id', popoverId);
 
 const toggle = () => {
-  isOpen.value = !isOpen.value
-}
+  isOpen.value = !isOpen.value;
+};
 
 const close = () => {
-  isOpen.value = false
-}
+  isOpen.value = false;
+};
 
 const adjustPosition = async () => {
-  if (!popoverRef.value || !contentRef.value) return
-  const triggerEl = popoverRef.value.querySelector('.popover-trigger') || popoverRef.value
-  const rect = triggerEl.getBoundingClientRect()
-  await nextTick()
-  const content = contentRef.value.getBoundingClientRect()
-  const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN
-  const spaceAbove = rect.top - VIEWPORT_MARGIN
+  if (!popoverRef.value || !contentRef.value) return;
+  const triggerEl = popoverRef.value.querySelector('.popover-trigger') || popoverRef.value;
+  const rect = triggerEl.getBoundingClientRect();
+  await nextTick();
+  const content = contentRef.value.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
+  const spaceAbove = rect.top - VIEWPORT_MARGIN;
 
-  const requiredHeight = Math.max(content.height, 150)
+  const requiredHeight = Math.max(content.height, 150);
   if (props.direction === 'down' && spaceBelow < requiredHeight && spaceAbove > spaceBelow) {
-    directionClass.value = 'up'
+    directionClass.value = 'up';
   } else if (props.direction === 'up' && spaceAbove < requiredHeight && spaceBelow > spaceAbove) {
-    directionClass.value = 'down'
+    directionClass.value = 'down';
   } else {
-    directionClass.value = props.direction
+    directionClass.value = props.direction;
   }
 
   const top =
-    directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - content.height - VIEWPORT_MARGIN
-  let left = rect.left
+    directionClass.value === 'down' ? rect.bottom + VIEWPORT_MARGIN : rect.top - content.height - VIEWPORT_MARGIN;
+  let left = rect.left;
 
   if (props.align === 'left') {
-    left = rect.left
+    left = rect.left;
   } else if (props.align === 'right') {
-    left = rect.right - content.width
+    left = rect.right - content.width;
   } else {
-    left = rect.left + rect.width / 2 - content.width / 2
+    left = rect.left + rect.width / 2 - content.width / 2;
   }
-  const clampedLeft = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - content.width - VIEWPORT_MARGIN))
-  const clampedTop = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - content.height - VIEWPORT_MARGIN))
+  const clampedLeft = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - content.width - VIEWPORT_MARGIN));
+  const clampedTop = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - content.height - VIEWPORT_MARGIN));
   floatingStyle.value = {
     position: 'fixed',
     top: `${clampedTop}px`,
@@ -84,82 +84,82 @@ const adjustPosition = async () => {
           maxWidth: 'calc(100vw - 16px)',
         }
       : {}),
-  }
-}
+  };
+};
 
-let resizeObserver: ResizeObserver | null = null
+let resizeObserver: ResizeObserver | null = null;
 
 watch(isOpen, (val) => {
   if (val) {
-    window.requestAnimationFrame(() => void adjustPosition())
+    window.requestAnimationFrame(() => void adjustPosition());
     void nextTick(() => {
       if (contentRef.value && typeof ResizeObserver !== 'undefined') {
-        resizeObserver?.disconnect()
-        resizeObserver = new ResizeObserver(() => void adjustPosition())
-        resizeObserver.observe(contentRef.value)
+        resizeObserver?.disconnect();
+        resizeObserver = new ResizeObserver(() => void adjustPosition());
+        resizeObserver.observe(contentRef.value);
       }
-    })
+    });
   } else {
-    resizeObserver?.disconnect()
-    resizeObserver = null
+    resizeObserver?.disconnect();
+    resizeObserver = null;
   }
-  emit('toggle', val)
-})
+  emit('toggle', val);
+});
 
 watch(
   () => props.direction,
   (val) => {
-    directionClass.value = val
+    directionClass.value = val;
   },
-)
+);
 
 const repositionOpenPopover = () => {
-  if (isOpen.value) void adjustPosition()
-}
-const closeOnWindowBlur = () => close()
+  if (isOpen.value) void adjustPosition();
+};
+const closeOnWindowBlur = () => close();
 
 const isClickInsideThisOrChildPopover = (target: Element | null) => {
-  if (!target) return false
-  if (popoverRef.value && popoverRef.value.contains(target)) return true
-  if (contentRef.value && contentRef.value.contains(target)) return true
-  const targetOwnerId = target.closest('[data-popover-owner]')?.getAttribute('data-popover-owner')
-  if (targetOwnerId === popoverId) return true
-  return false
-}
+  if (!target) return false;
+  if (popoverRef.value && popoverRef.value.contains(target)) return true;
+  if (contentRef.value && contentRef.value.contains(target)) return true;
+  const targetOwnerId = target.closest('[data-popover-owner]')?.getAttribute('data-popover-owner');
+  if (targetOwnerId === popoverId) return true;
+  return false;
+};
 
 const handleOutsideInteraction = (event: Event) => {
-  if (!isOpen.value) return
-  const target = event.target as Element | null
+  if (!isOpen.value) return;
+  const target = event.target as Element | null;
   if (!isClickInsideThisOrChildPopover(target)) {
-    close()
+    close();
   }
-}
+};
 
 onMounted(() => {
-  window.addEventListener('pointerdown', handleOutsideInteraction, true)
-  window.addEventListener('mousedown', handleOutsideInteraction, true)
-  window.addEventListener('click', handleOutsideInteraction, true)
-  window.addEventListener('resize', repositionOpenPopover)
-  window.addEventListener('scroll', repositionOpenPopover, true)
-  window.addEventListener('blur', closeOnWindowBlur)
-})
+  window.addEventListener('pointerdown', handleOutsideInteraction, true);
+  window.addEventListener('mousedown', handleOutsideInteraction, true);
+  window.addEventListener('click', handleOutsideInteraction, true);
+  window.addEventListener('resize', repositionOpenPopover);
+  window.addEventListener('scroll', repositionOpenPopover, true);
+  window.addEventListener('blur', closeOnWindowBlur);
+});
 
 onUnmounted(() => {
-  resizeObserver?.disconnect()
-  resizeObserver = null
-  window.removeEventListener('pointerdown', handleOutsideInteraction, true)
-  window.removeEventListener('mousedown', handleOutsideInteraction, true)
-  window.removeEventListener('click', handleOutsideInteraction, true)
-  window.removeEventListener('resize', repositionOpenPopover)
-  window.removeEventListener('scroll', repositionOpenPopover, true)
-  window.removeEventListener('blur', closeOnWindowBlur)
-})
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+  window.removeEventListener('pointerdown', handleOutsideInteraction, true);
+  window.removeEventListener('mousedown', handleOutsideInteraction, true);
+  window.removeEventListener('click', handleOutsideInteraction, true);
+  window.removeEventListener('resize', repositionOpenPopover);
+  window.removeEventListener('scroll', repositionOpenPopover, true);
+  window.removeEventListener('blur', closeOnWindowBlur);
+});
 
 defineExpose({
   isOpen,
   toggle,
   close,
-})
+});
 </script>
 
 <template>

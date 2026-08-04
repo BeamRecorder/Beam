@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Trash2 } from '@lucide/vue'
-import Button from '~/ui/button/Button.vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import ColorInput from '~/ui/input/ColorInput.vue'
-import Select from '~/ui/select/Select.vue'
-import { useGradient, type GradientValue, type GradientPreset } from './composables/useGradient'
+import { Trash2 } from '@lucide/vue';
+import Button from '~/ui/button/Button.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import ColorInput from '~/ui/input/ColorInput.vue';
+import Select from '~/ui/select/Select.vue';
+import { useGradient, type GradientValue, type GradientPreset } from './composables/useGradient';
 
 const uiText = {
   editStop: 'Edit Stop',
@@ -17,24 +17,24 @@ const uiText = {
   removeStop: 'Remove Stop',
   dragUpToDelete: 'Drag up to delete',
   dragDownToDelete: 'Drag down to delete',
-}
+};
 
 const props = withDefaults(
   defineProps<{
-    modelValue: GradientValue | null | undefined
-    presets?: GradientPreset[]
-    minStops?: number
-    maxStops?: number
-    showAngle?: boolean
+    modelValue: GradientValue | null | undefined;
+    presets?: GradientPreset[];
+    minStops?: number;
+    maxStops?: number;
+    showAngle?: boolean;
   }>(),
   {
     showAngle: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: GradientValue): void
-}>()
+  (e: 'update:modelValue', value: GradientValue): void;
+}>();
 
 const {
   stops,
@@ -61,14 +61,14 @@ const {
   updateSelectedStopPosition,
   hexToRgb,
   effectiveMaxStops,
-} = useGradient(props, emit)
-void trackRef
-void addStop
+} = useGradient(props, emit);
+void trackRef;
+void addStop;
 
 const gradientTypeOptions = [
   { label: 'Linear', value: 'linear' },
   { label: 'Radial', value: 'radial' },
-]
+];
 </script>
 
 <template>

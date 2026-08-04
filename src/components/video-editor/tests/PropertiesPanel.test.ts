@@ -1,29 +1,29 @@
-import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { mount } from '@vue/test-utils';
+import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../api/capture', () => ({ capture: {} }))
+vi.mock('../../../api/capture', () => ({ capture: {} }));
 
-import PropertiesPanel from './PropertiesPanel.vue'
+import PropertiesPanel from './PropertiesPanel.vue';
 
 const CanvasPanel = {
   emits: ['update:selectedBackground'],
   template:
     '<button class="canvas-panel-stub" @click="$emit(\'update:selectedBackground\', { id: \'background\' })">Canvas</button>',
-}
-const AudioPanel = { template: '<div class="audio-panel-stub">Audio</div>' }
-const ZoomPanel = { template: '<div class="zoom-panel-stub">Zoom</div>' }
-const SettingsPanel = { template: '<div class="settings-panel-stub">Settings</div>' }
+};
+const AudioPanel = { template: '<div class="audio-panel-stub">Audio</div>' };
+const ZoomPanel = { template: '<div class="zoom-panel-stub">Zoom</div>' };
+const SettingsPanel = { template: '<div class="settings-panel-stub">Settings</div>' };
 const AudioClipPropertiesPanel = {
   props: ['clip'],
   template: '<div class="audio-clip-stub">{{ clip?.kind || "audio" }}</div>',
-}
-const CaptionClipPanel = { template: '<div class="caption-clip-stub">Caption clip</div>' }
-const CaptionPanel = { template: '<div class="caption-panel-stub">Captions</div>' }
-const CursorPanel = { template: '<div class="cursor-panel-stub">Cursor</div>' }
+};
+const CaptionClipPanel = { template: '<div class="caption-clip-stub">Caption clip</div>' };
+const CaptionPanel = { template: '<div class="caption-panel-stub">Captions</div>' };
+const CursorPanel = { template: '<div class="cursor-panel-stub">Cursor</div>' };
 const ClipPropertiesPanel = {
   props: ['selectedClip'],
   template: '<div class="clip-panel-stub">{{ selectedClip?.kind }}</div>',
-}
+};
 
 const baseProps = {
   activeTab: 'canvas',
@@ -52,7 +52,7 @@ const baseProps = {
   timelineDurationMs: 1000,
   projectId: null,
   canvas: { preset: '16:9', width: 1920, height: 1080, showBackground: false },
-}
+};
 
 const global = {
   stubs: {
@@ -66,11 +66,11 @@ const global = {
     CursorPanel,
     ClipPropertiesPanel,
   },
-}
+};
 
 describe('PropertiesPanel', () => {
   it('selects the correct child panel for every editor tab', async () => {
-    const wrapper = mount(PropertiesPanel, { props: baseProps, global })
+    const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     const cases = [
       ['canvas', '.canvas-panel-stub'],
       ['audio', '.audio-panel-stub'],
@@ -78,32 +78,32 @@ describe('PropertiesPanel', () => {
       ['settings', '.settings-panel-stub'],
       ['cursor', '.cursor-panel-stub'],
       ['caption', '.caption-panel-stub'],
-    ] as const
+    ] as const;
     for (const [tab, selector] of cases) {
-      await wrapper.setProps({ activeTab: tab })
-      expect(wrapper.find(selector).exists()).toBe(true)
+      await wrapper.setProps({ activeTab: tab });
+      expect(wrapper.find(selector).exists()).toBe(true);
     }
-  })
+  });
 
   it('selects audio, caption and regular clip property editors', async () => {
-    const wrapper = mount(PropertiesPanel, { props: baseProps, global })
+    const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     await wrapper.setProps({
       activeTab: 'clip',
       selectedClip: { id: 'audio', kind: 'audio', timelineStartMs: 0, timelineDurationMs: 100 },
-    })
-    expect(wrapper.find('.audio-clip-stub').exists()).toBe(true)
-    await wrapper.setProps({ selectedClip: null, selectedCaptionClip: { id: 'caption' } })
-    expect(wrapper.find('.caption-clip-stub').exists()).toBe(true)
+    });
+    expect(wrapper.find('.audio-clip-stub').exists()).toBe(true);
+    await wrapper.setProps({ selectedClip: null, selectedCaptionClip: { id: 'caption' } });
+    expect(wrapper.find('.caption-clip-stub').exists()).toBe(true);
     await wrapper.setProps({
       selectedCaptionClip: null,
       selectedClip: { id: 'screen', kind: 'screen', timelineStartMs: 0, timelineDurationMs: 100 },
-    })
-    expect(wrapper.find('.clip-panel-stub').text()).toBe('video')
-  })
+    });
+    expect(wrapper.find('.clip-panel-stub').text()).toBe('video');
+  });
 
   it('forwards child events through the parent contract', async () => {
-    const wrapper = mount(PropertiesPanel, { props: baseProps, global })
-    await wrapper.get('.canvas-panel-stub').trigger('click')
-    expect(wrapper.emitted('update:selectedBackground')).toEqual([[{ id: 'background' }]])
-  })
-})
+    const wrapper = mount(PropertiesPanel, { props: baseProps, global });
+    await wrapper.get('.canvas-panel-stub').trigger('click');
+    expect(wrapper.emitted('update:selectedBackground')).toEqual([[{ id: 'background' }]]);
+  });
+});

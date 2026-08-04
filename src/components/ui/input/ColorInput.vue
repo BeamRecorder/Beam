@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
+import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 
 defineProps<{
-  modelValue: string
-  label?: string
-  showLabel?: boolean
-  disabled?: boolean
-}>()
+  modelValue: string;
+  label?: string;
+  showLabel?: boolean;
+  disabled?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-}>()
+  (e: 'update:modelValue', value: string): void;
+}>();
 </script>
 
 <template>

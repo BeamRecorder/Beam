@@ -1,73 +1,73 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import ProjectPicker from '../hud/ProjectPicker.vue'
-import { ChevronDown, LoaderCircle } from '@lucide/vue'
-import type { CaptureProject } from '../../api/types/capture-api'
-import { useTranslate } from '~/i18n/useTranslate'
+import { ref, onMounted, onUnmounted } from 'vue';
+import ProjectPicker from '../hud/ProjectPicker.vue';
+import { ChevronDown, LoaderCircle } from '@lucide/vue';
+import type { CaptureProject } from '../../api/types/capture-api';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('VideoProjectEdition')
+const { t } = useTranslate('VideoProjectEdition');
 
 const props = withDefaults(
   defineProps<{
-    project?: CaptureProject | null
-    isSaving?: boolean
+    project?: CaptureProject | null;
+    isSaving?: boolean;
   }>(),
   {
     project: null,
     isSaving: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (event: 'open-project', project: CaptureProject): void
-}>()
+  (event: 'open-project', project: CaptureProject): void;
+}>();
 
-const projectMenuOpen = ref(false)
-const switcherRef = ref<HTMLDivElement | null>(null)
+const projectMenuOpen = ref(false);
+const switcherRef = ref<HTMLDivElement | null>(null);
 
 const toggleProjectMenu = () => {
-  projectMenuOpen.value = !projectMenuOpen.value
-}
+  projectMenuOpen.value = !projectMenuOpen.value;
+};
 
 const handleProjectSelected = (project: CaptureProject) => {
-  projectMenuOpen.value = false
+  projectMenuOpen.value = false;
   if (props.project?.id !== project.id) {
-    emit('open-project', project)
+    emit('open-project', project);
   }
-}
+};
 
 const handleWindowPointerDown = (event: MouseEvent | PointerEvent) => {
-  if (!projectMenuOpen.value) return
-  const target = event.target as Element | null
+  if (!projectMenuOpen.value) return;
+  const target = event.target as Element | null;
   if (
     target?.closest('.popover-content') ||
     target?.closest('.dialog-overlay') ||
     target?.closest('.dialog-container')
   ) {
-    return
+    return;
   }
   if (switcherRef.value && !switcherRef.value.contains(target as Node)) {
-    projectMenuOpen.value = false
+    projectMenuOpen.value = false;
   }
-}
+};
 
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape' && projectMenuOpen.value) {
-    projectMenuOpen.value = false
+    projectMenuOpen.value = false;
   }
-}
+};
 
 onMounted(() => {
-  window.addEventListener('pointerdown', handleWindowPointerDown, { capture: true })
-  window.addEventListener('mousedown', handleWindowPointerDown, { capture: true })
-  window.addEventListener('keydown', handleKeyDown)
-})
+  window.addEventListener('pointerdown', handleWindowPointerDown, { capture: true });
+  window.addEventListener('mousedown', handleWindowPointerDown, { capture: true });
+  window.addEventListener('keydown', handleKeyDown);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('pointerdown', handleWindowPointerDown, { capture: true })
-  window.removeEventListener('mousedown', handleWindowPointerDown, { capture: true })
-  window.removeEventListener('keydown', handleKeyDown)
-})
+  window.removeEventListener('pointerdown', handleWindowPointerDown, { capture: true });
+  window.removeEventListener('mousedown', handleWindowPointerDown, { capture: true });
+  window.removeEventListener('keydown', handleKeyDown);
+});
 </script>
 
 <template>

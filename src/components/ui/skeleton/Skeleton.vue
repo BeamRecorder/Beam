@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'linear' | 'radial'
-    width?: string
-    height?: string
-    radius?: string
+    variant?: 'linear' | 'radial';
+    width?: string;
+    height?: string;
+    radius?: string;
   }>(),
   {
     variant: 'linear',
@@ -14,13 +14,13 @@ const props = withDefaults(
     height: '20px',
     radius: 'var(--radius-sm)',
   },
-)
+);
 
 const skeletonStyle = computed(() => ({
   width: props.width,
   height: props.height,
   borderRadius: props.radius,
-}))
+}));
 </script>
 
 <template>

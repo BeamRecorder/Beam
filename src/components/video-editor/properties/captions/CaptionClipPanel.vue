@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { computed, toRef } from 'vue'
-import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
-import Input from '~/ui/input/Input.vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Select from '~/ui/select/Select.vue'
-import Divider from '~/ui/divider/Divider.vue'
-import DeleteItem from '~/ui/button/DeleteItem.vue'
-import type { CaptionClip, CaptionStyle, CaptionWord } from '../../composition/composition-types'
-import { useCaptionDraft } from './useCaptionDraft'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed, toRef } from 'vue';
+import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
+import Input from '~/ui/input/Input.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import Select from '~/ui/select/Select.vue';
+import Divider from '~/ui/divider/Divider.vue';
+import DeleteItem from '~/ui/button/DeleteItem.vue';
+import type { CaptionClip, CaptionStyle, CaptionWord } from '../../composition/composition-types';
+import { useCaptionDraft } from './useCaptionDraft';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('CaptionClipPanel')
-const props = defineProps<{ clip: CaptionClip | null }>()
+const { t } = useTranslate('CaptionClipPanel');
+const props = defineProps<{ clip: CaptionClip | null }>();
 const emit = defineEmits<{
-  (event: 'update', clip: CaptionClip): void
-  (event: 'delete', clipId: string): void
-}>()
+  (event: 'update', clip: CaptionClip): void;
+  (event: 'delete', clipId: string): void;
+}>();
 
-const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip))
+const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
 const captionStyle = computed<CaptionStyle>(() => ({
   color: '#ffffff',
   fontSize: 36,
@@ -29,37 +29,37 @@ const captionStyle = computed<CaptionStyle>(() => ({
   boxPadding: 6,
   boxRadius: 4,
   ...draft.value?.caption.style,
-}))
+}));
 
-const sentences = computed(() => draft.value?.caption.sentences ?? [])
+const sentences = computed(() => draft.value?.caption.sentences ?? []);
 const displayText = computed(
   () => captionStyle.value.customText || sentences.value.map((sentence) => sentence.text).join(' '),
-)
+);
 
 const updateStyle = (key: keyof CaptionStyle, value: CaptionStyle[keyof CaptionStyle]) =>
   update((clip) => ({
     ...clip,
     caption: { ...clip.caption, style: { ...clip.caption.style, [key]: value } },
-  }))
+  }));
 
 const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, value: string) => {
-  const parsed = key === 'text' ? value : Number(value)
-  if (key !== 'text' && (!Number.isFinite(parsed) || Number(parsed) < 0)) return
+  const parsed = key === 'text' ? value : Number(value);
+  if (key !== 'text' && (!Number.isFinite(parsed) || Number(parsed) < 0)) return;
   update((clip) => {
     const sentences = clip.caption.sentences.map((sentence) => {
-      if (sentence.id !== sentenceId) return sentence
-      const words = sentence.words.map((word, wordIndex) => (wordIndex === index ? { ...word, [key]: parsed } : word))
+      if (sentence.id !== sentenceId) return sentence;
+      const words = sentence.words.map((word, wordIndex) => (wordIndex === index ? { ...word, [key]: parsed } : word));
       return {
         ...sentence,
         words,
         text: words.map((word) => word.text).join(' '),
         startMs: words[0]?.startMs ?? sentence.startMs,
         endMs: words.at(-1)?.endMs ?? sentence.endMs,
-      }
-    })
-    const startMs = sentences[0]?.startMs ?? clip.timelineStartMs
-    const endMs = sentences.at(-1)?.endMs ?? startMs + clip.timelineDurationMs
-    const durationMs = Math.max(40, endMs - startMs)
+      };
+    });
+    const startMs = sentences[0]?.startMs ?? clip.timelineStartMs;
+    const endMs = sentences.at(-1)?.endMs ?? startMs + clip.timelineDurationMs;
+    const durationMs = Math.max(40, endMs - startMs);
     return {
       ...clip,
       timelineStartMs: startMs,
@@ -67,16 +67,16 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
       sourceInMs: 0,
       sourceDurationMs: durationMs * clip.playbackRate,
       caption: { ...clip.caption, sentences },
-    }
-  })
-}
+    };
+  });
+};
 
 const shadowDirectionOptions = computed(() => [
   { value: 'all', label: t('shadowAllAround') },
   { value: 'bottom', label: t('shadowBottom') },
   { value: 'bottom-right', label: t('shadowBottomRight') },
   { value: 'top-left', label: t('shadowTopLeft') },
-])
+]);
 </script>
 
 <template>

@@ -1,18 +1,18 @@
-import { mount } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import TimelineClip from './TimelineClip.vue'
-import type { Clip, MediaAsset } from '../../composition/composition-types'
+import { mount } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import TimelineClip from './TimelineClip.vue';
+import type { Clip, MediaAsset } from '../../composition/composition-types';
 
 const thumbnailState = vi.hoisted(() => ({
   thumbnails: { 0: '/thumb-0.png' } as Record<number, string>,
   requestVisibleFrames: vi.fn(),
-}))
+}));
 
 vi.mock('./waveform/useThumbnails', () => ({
   useThumbnails: () => thumbnailState,
-}))
+}));
 
-const Skeleton = { template: '<div class="skeleton-stub" />' }
+const Skeleton = { template: '<div class="skeleton-stub" />' };
 
 const asset = (kind: MediaAsset['kind'], src = `/media/${kind}`): MediaAsset => ({
   id: `${kind}-asset`,
@@ -24,7 +24,7 @@ const asset = (kind: MediaAsset['kind'], src = `/media/${kind}`): MediaAsset => 
   height: kind === 'audio' ? null : 720,
   src,
   origin: 'project',
-})
+});
 
 const clip = (overrides: Partial<Clip> = {}): Clip =>
   ({
@@ -41,7 +41,7 @@ const clip = (overrides: Partial<Clip> = {}): Clip =>
     assetId: 'video-asset',
     transform: { x: 0, y: 0, width: 1, height: 1 },
     ...overrides,
-  }) as Clip
+  }) as Clip;
 
 const baseProps = {
   clip: clip(),
@@ -49,23 +49,23 @@ const baseProps = {
   duration: 10,
   visibleSeconds: [0, 1, 2, 3],
   selected: true,
-}
+};
 
 beforeEach(() => {
-  thumbnailState.requestVisibleFrames.mockClear()
-  vi.useFakeTimers()
+  thumbnailState.requestVisibleFrames.mockClear();
+  vi.useFakeTimers();
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-    const callCount = (window.requestAnimationFrame as ReturnType<typeof vi.fn>).mock.calls.length
-    if (callCount === 1) callback(100)
-    return 1
-  })
-  vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
-})
+    const callCount = (window.requestAnimationFrame as ReturnType<typeof vi.fn>).mock.calls.length;
+    if (callCount === 1) callback(100);
+    return 1;
+  });
+  vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+});
 
 afterEach(() => {
-  vi.useRealTimers()
-  vi.restoreAllMocks()
-})
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe('TimelineClip', () => {
   it('renders video frames, speed and trim state, then emits clip interactions', async () => {
@@ -73,25 +73,25 @@ describe('TimelineClip', () => {
       attachTo: document.body,
       props: { ...baseProps, trimState: { edge: 'start', durationMs: 1_250 } },
       global: { stubs: { Skeleton } },
-    })
+    });
 
-    expect(wrapper.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['selected', 'kind-video']))
-    expect(wrapper.get('.timeline-clip').attributes('style')).toContain('left: 10%')
-    expect(wrapper.get('.timeline-clip').attributes('style')).toContain('width: 20%')
-    expect(wrapper.get('.speed-badge').text()).toBe('1.25×')
-    expect(wrapper.get('.trim-side-badge').text()).toBe('01.2s')
-    expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(2)
-    expect(wrapper.find('.thumbnail-img').attributes('src')).toBe('/thumb-0.png')
-    expect(wrapper.find('.skeleton-stub').exists()).toBe(true)
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1])
+    expect(wrapper.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['selected', 'kind-video']));
+    expect(wrapper.get('.timeline-clip').attributes('style')).toContain('left: 10%');
+    expect(wrapper.get('.timeline-clip').attributes('style')).toContain('width: 20%');
+    expect(wrapper.get('.speed-badge').text()).toBe('1.25×');
+    expect(wrapper.get('.trim-side-badge').text()).toBe('01.2s');
+    expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(2);
+    expect(wrapper.find('.thumbnail-img').attributes('src')).toBe('/thumb-0.png');
+    expect(wrapper.find('.skeleton-stub').exists()).toBe(true);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1]);
 
-    await wrapper.get('.timeline-clip').trigger('click')
-    await wrapper.get('.timeline-clip').trigger('pointerdown')
-    await wrapper.get('.trim-handle.end').trigger('pointerdown')
-    expect(wrapper.emitted('select')).toHaveLength(1)
-    expect(wrapper.emitted('move')).toHaveLength(1)
-    expect(wrapper.emitted('trim')?.[0]?.[0]).toEqual(expect.objectContaining({ edge: 'end' }))
-  })
+    await wrapper.get('.timeline-clip').trigger('click');
+    await wrapper.get('.timeline-clip').trigger('pointerdown');
+    await wrapper.get('.trim-handle.end').trigger('pointerdown');
+    expect(wrapper.emitted('select')).toHaveLength(1);
+    expect(wrapper.emitted('move')).toHaveLength(1);
+    expect(wrapper.emitted('trim')?.[0]?.[0]).toEqual(expect.objectContaining({ edge: 'end' }));
+  });
 
   it('renders audio waveforms, image previews and unavailable waveform labels', async () => {
     const audio = mount(TimelineClip, {
@@ -109,10 +109,10 @@ describe('TimelineClip', () => {
         selected: false,
       },
       global: { stubs: { Skeleton } },
-    })
-    expect(audio.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['kind-audio', 'disabled']))
-    expect(audio.findAll('.waveform > span')).toHaveLength(2)
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([])
+    });
+    expect(audio.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['kind-audio', 'disabled']));
+    expect(audio.findAll('.waveform > span')).toHaveLength(2);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([]);
 
     const unavailable = mount(TimelineClip, {
       props: {
@@ -122,8 +122,8 @@ describe('TimelineClip', () => {
         waveformBars: [],
       },
       global: { stubs: { Skeleton } },
-    })
-    expect(unavailable.find('.waveform-unavailable').exists()).toBe(true)
+    });
+    expect(unavailable.find('.waveform-unavailable').exists()).toBe(true);
 
     const image = mount(TimelineClip, {
       props: {
@@ -132,36 +132,36 @@ describe('TimelineClip', () => {
         asset: asset('image', '/poster.png'),
       },
       global: { stubs: { Skeleton } },
-    })
-    expect(image.get('.image-preview').attributes('src')).toBe('/poster.png')
-    audio.unmount()
-    unavailable.unmount()
-    image.unmount()
-  })
+    });
+    expect(image.get('.image-preview').attributes('src')).toBe('/poster.png');
+    audio.unmount();
+    unavailable.unmount();
+    image.unmount();
+  });
 
   it('marquees an overflowing label and stops it on leave and unmount', async () => {
     const wrapper = mount(TimelineClip, {
       props: baseProps,
       global: { stubs: { Skeleton } },
-    })
-    const label = wrapper.get('.clip-label-text').element as HTMLElement
+    });
+    const label = wrapper.get('.clip-label-text').element as HTMLElement;
     Object.defineProperty(label, 'scrollWidth', {
       configurable: true,
       value: 200,
-    })
+    });
     Object.defineProperty(label, 'clientWidth', {
       configurable: true,
       value: 80,
-    })
+    });
 
-    await wrapper.get('.timeline-clip').trigger('pointerenter')
-    vi.advanceTimersByTime(300)
-    expect(window.requestAnimationFrame).toHaveBeenCalled()
-    expect(label.style.transform).toContain('translateX')
+    await wrapper.get('.timeline-clip').trigger('pointerenter');
+    vi.advanceTimersByTime(300);
+    expect(window.requestAnimationFrame).toHaveBeenCalled();
+    expect(label.style.transform).toContain('translateX');
 
-    await wrapper.get('.timeline-clip').trigger('pointerleave')
-    expect(label.style.transform).toBe('')
-    wrapper.unmount()
-    expect(window.cancelAnimationFrame).toHaveBeenCalled()
-  })
-})
+    await wrapper.get('.timeline-clip').trigger('pointerleave');
+    expect(label.style.transform).toBe('');
+    wrapper.unmount();
+    expect(window.cancelAnimationFrame).toHaveBeenCalled();
+  });
+});

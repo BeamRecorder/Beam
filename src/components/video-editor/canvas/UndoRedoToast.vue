@@ -1,35 +1,35 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { Undo2, Redo2 } from '@lucide/vue'
-import type { HistoryAction } from '../composables/useEditorUndoRedo'
-import { useTranslate } from '~/i18n/useTranslate'
+import { ref, watch } from 'vue';
+import { Undo2, Redo2 } from '@lucide/vue';
+import type { HistoryAction } from '../composables/useEditorUndoRedo';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('UndoRedoToast')
+const { t } = useTranslate('UndoRedoToast');
 
 const props = defineProps<{
-  action: HistoryAction | null
-}>()
+  action: HistoryAction | null;
+}>();
 
-const isVisible = ref(false)
-const currentAction = ref<HistoryAction | null>(null)
-const animationKey = ref(0)
-let dismissTimer: ReturnType<typeof setTimeout> | null = null
+const isVisible = ref(false);
+const currentAction = ref<HistoryAction | null>(null);
+const animationKey = ref(0);
+let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 
 watch(
   () => props.action,
   (newAction) => {
-    if (!newAction) return
-    currentAction.value = newAction
-    animationKey.value++
-    isVisible.value = true
+    if (!newAction) return;
+    currentAction.value = newAction;
+    animationKey.value++;
+    isVisible.value = true;
 
-    if (dismissTimer) clearTimeout(dismissTimer)
+    if (dismissTimer) clearTimeout(dismissTimer);
     dismissTimer = setTimeout(() => {
-      isVisible.value = false
-    }, 1500)
+      isVisible.value = false;
+    }, 1500);
   },
   { deep: true },
-)
+);
 </script>
 
 <template>

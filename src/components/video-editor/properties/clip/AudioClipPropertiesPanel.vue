@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import DeleteItem from '~/ui/button/DeleteItem.vue'
-import Switch from '~/ui/switch/Switch.vue'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed } from 'vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import DeleteItem from '~/ui/button/DeleteItem.vue';
+import Switch from '~/ui/switch/Switch.vue';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('AudioClipPropertiesPanel')
+const { t } = useTranslate('AudioClipPropertiesPanel');
 
 const props = defineProps<{
-  clip: { name?: string; enabled?: boolean; volume?: number } | null
-}>()
+  clip: { name?: string; enabled?: boolean; volume?: number } | null;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:volume', value: number): void
-  (e: 'update:enabled', value: boolean): void
-  (e: 'delete'): void
-}>()
+  (e: 'update:volume', value: number): void;
+  (e: 'update:enabled', value: boolean): void;
+  (e: 'delete'): void;
+}>();
 
-const volume = computed(() => props.clip?.volume ?? 100)
+const volume = computed(() => props.clip?.volume ?? 100);
 </script>
 
 <template>

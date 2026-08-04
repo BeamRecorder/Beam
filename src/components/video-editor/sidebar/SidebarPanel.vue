@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Monitor, Film, ZoomIn, MousePointer, Type, Volume2, Settings } from '@lucide/vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue'
+import { computed } from 'vue';
+import { Monitor, Film, ZoomIn, MousePointer, Type, Volume2, Settings } from '@lucide/vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 
-const { t } = useTranslate('SidebarPanel')
+const { t } = useTranslate('SidebarPanel');
 
 defineProps<{
-  activeTab: string
-}>()
+  activeTab: string;
+}>();
 
 const emit = defineEmits<{
-  (e: 'select-tab', tab: string): void
-}>()
+  (e: 'select-tab', tab: string): void;
+}>();
 
 const menuItems = computed(() => [
   { id: 'canvas', label: t('canvas'), icon: Monitor },
@@ -21,7 +21,7 @@ const menuItems = computed(() => [
   { id: 'cursor', label: t('cursor'), icon: MousePointer },
   { id: 'caption', label: t('captions'), icon: Type },
   { id: 'audio', label: t('audio'), icon: Volume2 },
-])
+]);
 </script>
 
 <template>

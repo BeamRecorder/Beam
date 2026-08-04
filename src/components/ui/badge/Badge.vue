@@ -1,12 +1,12 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'outline'
+    variant?: 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'outline';
   }>(),
   {
     variant: 'primary',
   },
-)
+);
 </script>
 
 <template>

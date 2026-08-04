@@ -1,45 +1,45 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Switch from '~/ui/switch/Switch.vue'
-import { useTranslate } from '~/i18n/useTranslate'
+import { ref } from 'vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import Switch from '~/ui/switch/Switch.vue';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('AudioPanel')
+const { t } = useTranslate('AudioPanel');
 
 const props = withDefaults(
   defineProps<{
-    volume: number
-    isSystemAudioEnabled: boolean
-    isMicAudioEnabled: boolean
-    systemVolume?: number
-    micVolume?: number
+    volume: number;
+    isSystemAudioEnabled: boolean;
+    isMicAudioEnabled: boolean;
+    systemVolume?: number;
+    micVolume?: number;
   }>(),
   {
     systemVolume: 100,
     micVolume: 100,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:volume', value: number): void
-  (e: 'update:isSystemAudioEnabled', value: boolean): void
-  (e: 'update:isMicAudioEnabled', value: boolean): void
-  (e: 'update:systemVolume', value: number): void
-  (e: 'update:micVolume', value: number): void
-}>()
+  (e: 'update:volume', value: number): void;
+  (e: 'update:isSystemAudioEnabled', value: boolean): void;
+  (e: 'update:isMicAudioEnabled', value: boolean): void;
+  (e: 'update:systemVolume', value: number): void;
+  (e: 'update:micVolume', value: number): void;
+}>();
 
-const localSystemVolume = ref(props.systemVolume)
-const localMicVolume = ref(props.micVolume)
+const localSystemVolume = ref(props.systemVolume);
+const localMicVolume = ref(props.micVolume);
 
 const handleSystemVolChange = (val: number) => {
-  localSystemVolume.value = val
-  emit('update:systemVolume', val)
-}
+  localSystemVolume.value = val;
+  emit('update:systemVolume', val);
+};
 
 const handleMicVolChange = (val: number) => {
-  localMicVolume.value = val
-  emit('update:micVolume', val)
-}
+  localMicVolume.value = val;
+  emit('update:micVolume', val);
+};
 </script>
 
 <template>

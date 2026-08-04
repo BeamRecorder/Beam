@@ -1,435 +1,435 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { Pipette, ArrowUpDown, X } from '@lucide/vue'
-import { useColorPicker, type RGB } from './composables/useColorPicker'
-import Input from '../input/Input.vue'
-import Button from '../button/Button.vue'
-import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { Pipette, ArrowUpDown, X } from '@lucide/vue';
+import { useColorPicker, type RGB } from './composables/useColorPicker';
+import Input from '../input/Input.vue';
+import Button from '../button/Button.vue';
+import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 
 const uiText = {
   red: 'R',
   green: 'G',
   blue: 'B',
   hex: 'HEX',
-}
+};
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string
-    label?: string
-    flat?: boolean
-    type?: 'standard' | 'triangle'
-    alphaValue?: number
-    showAlpha?: boolean
+    modelValue: string;
+    label?: string;
+    flat?: boolean;
+    type?: 'standard' | 'triangle';
+    alphaValue?: number;
+    showAlpha?: boolean;
   }>(),
   {
     type: 'triangle',
     alphaValue: 1,
     showAlpha: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-  (e: 'update:alpha', value: number): void
-  (e: 'drag-start'): void
-  (e: 'drag-end'): void
-  (e: 'close'): void
-}>()
+  (e: 'update:modelValue', value: string): void;
+  (e: 'update:alpha', value: number): void;
+  (e: 'drag-start'): void;
+  (e: 'drag-end'): void;
+  (e: 'close'): void;
+}>();
 
-const { hexToRgb, rgbToHex, rgbToHsv, hsvToRgb } = useColorPicker()
+const { hexToRgb, rgbToHex, rgbToHsv, hsvToRgb } = useColorPicker();
 
 // Internal State
-const h = ref(0)
-const s = ref(0)
-const v = ref(0)
-const a = ref(1)
-const inputMode = ref(0) // 0: HEX, 1: RGB
+const h = ref(0);
+const s = ref(0);
+const v = ref(0);
+const a = ref(1);
+const inputMode = ref(0); // 0: HEX, 1: RGB
 
-const triangleCanvas = ref<HTMLCanvasElement | null>(null)
-const interactionLayer = ref<HTMLDivElement | null>(null)
-const svArea = ref<HTMLElement | null>(null)
-const hueSlider = ref<HTMLElement | null>(null)
-const alphaSlider = ref<HTMLElement | null>(null)
+const triangleCanvas = ref<HTMLCanvasElement | null>(null);
+const interactionLayer = ref<HTMLDivElement | null>(null);
+const svArea = ref<HTMLElement | null>(null);
+const hueSlider = ref<HTMLElement | null>(null);
+const alphaSlider = ref<HTMLElement | null>(null);
 
 // Constants for compact triangle
-const RING_OUTER = 76
-const RING_INNER = 64
-const TRI_RADIUS = 58
-const CANVAS_SIZE = 160
+const RING_OUTER = 76;
+const RING_INNER = 64;
+const TRI_RADIUS = 58;
+const CANVAS_SIZE = 160;
 
 watch(
   () => props.modelValue,
   (newVal) => {
-    if (!newVal) return
-    const hsvNow = hsvToRgb(h.value, s.value, v.value)
-    const currentHex = rgbToHex(hsvNow.r, hsvNow.g, hsvNow.b).toLowerCase()
+    if (!newVal) return;
+    const hsvNow = hsvToRgb(h.value, s.value, v.value);
+    const currentHex = rgbToHex(hsvNow.r, hsvNow.g, hsvNow.b).toLowerCase();
 
     if (newVal.toLowerCase() !== currentHex) {
-      const rgbVal = hexToRgb(newVal)
-      const hsvVal = rgbToHsv(rgbVal.r, rgbVal.g, rgbVal.b)
-      h.value = hsvVal.h
-      s.value = hsvVal.s
-      v.value = hsvVal.v
-      if (props.type === 'triangle') renderTriangle()
+      const rgbVal = hexToRgb(newVal);
+      const hsvVal = rgbToHsv(rgbVal.r, rgbVal.g, rgbVal.b);
+      h.value = hsvVal.h;
+      s.value = hsvVal.s;
+      v.value = hsvVal.v;
+      if (props.type === 'triangle') renderTriangle();
     }
   },
   { immediate: true },
-)
+);
 watch(
   () => props.alphaValue,
   (newVal) => {
-    const n = Number(newVal)
-    if (!Number.isFinite(n)) return
-    a.value = Math.max(0, Math.min(1, n))
+    const n = Number(newVal);
+    if (!Number.isFinite(n)) return;
+    a.value = Math.max(0, Math.min(1, n));
   },
   { immediate: true },
-)
+);
 
-const rgb = computed(() => hsvToRgb(h.value, s.value, v.value))
-const hex = computed(() => rgbToHex(rgb.value.r, rgb.value.g, rgb.value.b))
+const rgb = computed(() => hsvToRgb(h.value, s.value, v.value));
+const hex = computed(() => rgbToHex(rgb.value.r, rgb.value.g, rgb.value.b));
 const pureHueColor = computed(() => {
-  const rVal = hsvToRgb(h.value, 100, 100)
-  return rgbToHex(rVal.r, rVal.g, rVal.b)
-})
+  const rVal = hsvToRgb(h.value, 100, 100);
+  return rgbToHex(rVal.r, rVal.g, rVal.b);
+});
 
 // Triangle Render
 function renderTriangle() {
-  const canvas = triangleCanvas.value
-  if (!canvas) return
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  const canvas = triangleCanvas.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
 
-  const center = CANVAS_SIZE / 2
-  const R = TRI_RADIUS
-  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+  const center = CANVAS_SIZE / 2;
+  const R = TRI_RADIUS;
+  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-  const v1 = { x: center + R, y: center }
-  const v2 = { x: center - R / 2, y: center - (R * Math.sqrt(3)) / 2 }
-  const v3 = { x: center - R / 2, y: center + (R * Math.sqrt(3)) / 2 }
+  const v1 = { x: center + R, y: center };
+  const v2 = { x: center - R / 2, y: center - (R * Math.sqrt(3)) / 2 };
+  const v3 = { x: center - R / 2, y: center + (R * Math.sqrt(3)) / 2 };
 
-  ctx.save()
-  ctx.beginPath()
-  ctx.moveTo(v1.x, v1.y)
-  ctx.lineTo(v2.x, v2.y)
-  ctx.lineTo(v3.x, v3.y)
-  ctx.closePath()
-  ctx.clip()
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(v1.x, v1.y);
+  ctx.lineTo(v2.x, v2.y);
+  ctx.lineTo(v3.x, v3.y);
+  ctx.closePath();
+  ctx.clip();
 
-  const grayGrad = ctx.createLinearGradient(v2.x, v2.y, v2.x, v3.y)
-  grayGrad.addColorStop(0, '#ffffff')
-  grayGrad.addColorStop(1, '#000000')
-  ctx.fillStyle = grayGrad
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+  const grayGrad = ctx.createLinearGradient(v2.x, v2.y, v2.x, v3.y);
+  grayGrad.addColorStop(0, '#ffffff');
+  grayGrad.addColorStop(1, '#000000');
+  ctx.fillStyle = grayGrad;
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-  const hueGrad = ctx.createLinearGradient(v1.x, v1.y, v2.x, v1.y)
-  hueGrad.addColorStop(0, pureHueColor.value)
-  hueGrad.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.globalAlpha = 0.9
-  ctx.fillStyle = hueGrad
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
-  ctx.restore()
+  const hueGrad = ctx.createLinearGradient(v1.x, v1.y, v2.x, v1.y);
+  hueGrad.addColorStop(0, pureHueColor.value);
+  hueGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = hueGrad;
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.restore();
 }
 
 // Interaction State
-type DragTarget = 'triangle' | 'ring' | 'standard-sv' | 'standard-hue' | 'standard-alpha' | null
+type DragTarget = 'triangle' | 'ring' | 'standard-sv' | 'standard-hue' | 'standard-alpha' | null;
 
-let currentDragTarget: DragTarget = null
-const activeDragTarget = ref<DragTarget>(null)
+let currentDragTarget: DragTarget = null;
+const activeDragTarget = ref<DragTarget>(null);
 
 function setDragTarget(target: DragTarget): void {
-  currentDragTarget = target
-  activeDragTarget.value = target
+  currentDragTarget = target;
+  activeDragTarget.value = target;
 }
 
 function handleTriangleRingUpdate(e: MouseEvent | TouchEvent) {
-  if (!interactionLayer.value) return
-  if ('touches' in e && e.touches.length === 0) return
-  const rect = interactionLayer.value.getBoundingClientRect()
-  const touch = 'touches' in e ? e.touches[0] : null
-  const clientX = touch ? touch.clientX : (e as MouseEvent).clientX
-  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY
+  if (!interactionLayer.value) return;
+  if ('touches' in e && e.touches.length === 0) return;
+  const rect = interactionLayer.value.getBoundingClientRect();
+  const touch = 'touches' in e ? e.touches[0] : null;
+  const clientX = touch ? touch.clientX : (e as MouseEvent).clientX;
+  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY;
 
-  const x = clientX - rect.left - rect.width / 2
-  const y = clientY - rect.top - rect.height / 2
+  const x = clientX - rect.left - rect.width / 2;
+  const y = clientY - rect.top - rect.height / 2;
 
   if (currentDragTarget === 'ring') {
-    const angle = Math.atan2(y, x)
-    let deg = (angle * 180) / Math.PI
-    if (deg < 0) deg += 360
-    h.value = deg
+    const angle = Math.atan2(y, x);
+    let deg = (angle * 180) / Math.PI;
+    if (deg < 0) deg += 360;
+    h.value = deg;
   } else if (currentDragTarget === 'triangle') {
-    const R = TRI_RADIUS
-    const h_tri = (R * 3) / 2
-    const s_raw = (x + R / 2) / h_tri
-    const s_val = Math.max(0, Math.min(1, s_raw))
-    const currentHalfHeight = ((1 - s_val) * (R * Math.sqrt(3))) / 2
+    const R = TRI_RADIUS;
+    const h_tri = (R * 3) / 2;
+    const s_raw = (x + R / 2) / h_tri;
+    const s_val = Math.max(0, Math.min(1, s_raw));
+    const currentHalfHeight = ((1 - s_val) * (R * Math.sqrt(3))) / 2;
 
-    let v_val = 1
+    let v_val = 1;
     if (currentHalfHeight > 0.01) {
-      const y_norm = (y + currentHalfHeight) / (currentHalfHeight * 2)
-      v_val = 1 - Math.max(0, Math.min(1, y_norm))
+      const y_norm = (y + currentHalfHeight) / (currentHalfHeight * 2);
+      v_val = 1 - Math.max(0, Math.min(1, y_norm));
     }
 
-    s.value = s_val * 100
-    v.value = v_val * 100
+    s.value = s_val * 100;
+    v.value = v_val * 100;
   }
-  emit('update:modelValue', hex.value)
+  emit('update:modelValue', hex.value);
 }
 
 function handleStandardSVUpdate(e: MouseEvent | TouchEvent) {
-  if (!svArea.value) return
-  if ('touches' in e && e.touches.length === 0) return
-  const rect = svArea.value.getBoundingClientRect()
-  const touch = 'touches' in e ? e.touches[0] : null
-  const clientX = touch ? touch.clientX : (e as MouseEvent).clientX
-  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY
-  const x = Math.max(0, Math.min(rect.width, clientX - rect.left))
-  const y = Math.max(0, Math.min(rect.height, clientY - rect.top))
-  s.value = (x / rect.width) * 100
-  v.value = (1 - y / rect.height) * 100
-  emit('update:modelValue', hex.value)
+  if (!svArea.value) return;
+  if ('touches' in e && e.touches.length === 0) return;
+  const rect = svArea.value.getBoundingClientRect();
+  const touch = 'touches' in e ? e.touches[0] : null;
+  const clientX = touch ? touch.clientX : (e as MouseEvent).clientX;
+  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY;
+  const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+  const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+  s.value = (x / rect.width) * 100;
+  v.value = (1 - y / rect.height) * 100;
+  emit('update:modelValue', hex.value);
 }
 
 function handleStandardHueUpdate(e: MouseEvent | TouchEvent) {
-  if (!hueSlider.value) return
-  if ('touches' in e && e.touches.length === 0) return
-  const rect = hueSlider.value.getBoundingClientRect()
-  const touch = 'touches' in e ? e.touches[0] : null
-  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY
-  const y = Math.max(0, Math.min(rect.height, clientY - rect.top))
-  h.value = (y / rect.height) * 360
-  emit('update:modelValue', hex.value)
+  if (!hueSlider.value) return;
+  if ('touches' in e && e.touches.length === 0) return;
+  const rect = hueSlider.value.getBoundingClientRect();
+  const touch = 'touches' in e ? e.touches[0] : null;
+  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY;
+  const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+  h.value = (y / rect.height) * 360;
+  emit('update:modelValue', hex.value);
 }
 
 function handleStandardAlphaUpdate(e: MouseEvent | TouchEvent) {
-  if (!alphaSlider.value) return
-  if ('touches' in e && e.touches.length === 0) return
-  const rect = alphaSlider.value.getBoundingClientRect()
-  const touch = 'touches' in e ? e.touches[0] : null
-  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY
-  const y = Math.max(0, Math.min(rect.height, clientY - rect.top))
-  a.value = 1 - y / rect.height
-  emit('update:alpha', a.value)
+  if (!alphaSlider.value) return;
+  if ('touches' in e && e.touches.length === 0) return;
+  const rect = alphaSlider.value.getBoundingClientRect();
+  const touch = 'touches' in e ? e.touches[0] : null;
+  const clientY = touch ? touch.clientY : (e as MouseEvent).clientY;
+  const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+  a.value = 1 - y / rect.height;
+  emit('update:alpha', a.value);
 }
 
 // Event Handlers
 function startInteraction() {
-  beginPropertyInteraction()
-  emit('drag-start')
+  beginPropertyInteraction();
+  emit('drag-start');
 }
 
 function onMouseDownTri(e: MouseEvent) {
-  if (!interactionLayer.value) return
-  const rect = interactionLayer.value.getBoundingClientRect()
-  const x = e.clientX - rect.left - rect.width / 2
-  const y = e.clientY - rect.top - rect.height / 2
-  const dist = Math.sqrt(x * x + y * y)
+  if (!interactionLayer.value) return;
+  const rect = interactionLayer.value.getBoundingClientRect();
+  const x = e.clientX - rect.left - rect.width / 2;
+  const y = e.clientY - rect.top - rect.height / 2;
+  const dist = Math.sqrt(x * x + y * y);
 
   if (dist >= RING_INNER - 6) {
-    setDragTarget('ring')
+    setDragTarget('ring');
   } else {
-    setDragTarget('triangle')
+    setDragTarget('triangle');
   }
 
-  startInteraction()
-  handleTriangleRingUpdate(e)
-  window.addEventListener('mousemove', onGlobalMouseMove)
-  window.addEventListener('mouseup', onGlobalMouseUp)
+  startInteraction();
+  handleTriangleRingUpdate(e);
+  window.addEventListener('mousemove', onGlobalMouseMove);
+  window.addEventListener('mouseup', onGlobalMouseUp);
 }
 
 function onTouchStartTri(e: TouchEvent) {
-  if (!interactionLayer.value || e.touches.length === 0) return
-  const touch = e.touches[0]
-  if (!touch) return
-  const rect = interactionLayer.value.getBoundingClientRect()
-  const x = touch.clientX - rect.left - rect.width / 2
-  const y = touch.clientY - rect.top - rect.height / 2
-  const dist = Math.sqrt(x * x + y * y)
+  if (!interactionLayer.value || e.touches.length === 0) return;
+  const touch = e.touches[0];
+  if (!touch) return;
+  const rect = interactionLayer.value.getBoundingClientRect();
+  const x = touch.clientX - rect.left - rect.width / 2;
+  const y = touch.clientY - rect.top - rect.height / 2;
+  const dist = Math.sqrt(x * x + y * y);
 
   if (dist >= RING_INNER - 6) {
-    setDragTarget('ring')
+    setDragTarget('ring');
   } else {
-    setDragTarget('triangle')
+    setDragTarget('triangle');
   }
 
-  startInteraction()
-  handleTriangleRingUpdate(e)
+  startInteraction();
+  handleTriangleRingUpdate(e);
   window.addEventListener('touchmove', onGlobalTouchMove, {
     passive: false,
-  })
-  window.addEventListener('touchend', onGlobalTouchEnd)
-  window.addEventListener('touchcancel', onGlobalTouchEnd)
+  });
+  window.addEventListener('touchend', onGlobalTouchEnd);
+  window.addEventListener('touchcancel', onGlobalTouchEnd);
 }
 
 function onMouseDownSV(e: MouseEvent) {
-  setDragTarget('standard-sv')
-  startInteraction()
-  handleStandardSVUpdate(e)
-  window.addEventListener('mousemove', onGlobalMouseMove)
-  window.addEventListener('mouseup', onGlobalMouseUp)
+  setDragTarget('standard-sv');
+  startInteraction();
+  handleStandardSVUpdate(e);
+  window.addEventListener('mousemove', onGlobalMouseMove);
+  window.addEventListener('mouseup', onGlobalMouseUp);
 }
 
 function onTouchStartSV(e: TouchEvent) {
-  setDragTarget('standard-sv')
-  startInteraction()
-  handleStandardSVUpdate(e)
+  setDragTarget('standard-sv');
+  startInteraction();
+  handleStandardSVUpdate(e);
   window.addEventListener('touchmove', onGlobalTouchMove, {
     passive: false,
-  })
-  window.addEventListener('touchend', onGlobalTouchEnd)
-  window.addEventListener('touchcancel', onGlobalTouchEnd)
+  });
+  window.addEventListener('touchend', onGlobalTouchEnd);
+  window.addEventListener('touchcancel', onGlobalTouchEnd);
 }
 
 function onMouseDownHue(e: MouseEvent) {
-  setDragTarget('standard-hue')
-  startInteraction()
-  handleStandardHueUpdate(e)
-  window.addEventListener('mousemove', onGlobalMouseMove)
-  window.addEventListener('mouseup', onGlobalMouseUp)
+  setDragTarget('standard-hue');
+  startInteraction();
+  handleStandardHueUpdate(e);
+  window.addEventListener('mousemove', onGlobalMouseMove);
+  window.addEventListener('mouseup', onGlobalMouseUp);
 }
 
 function onTouchStartHue(e: TouchEvent) {
-  setDragTarget('standard-hue')
-  startInteraction()
-  handleStandardHueUpdate(e)
+  setDragTarget('standard-hue');
+  startInteraction();
+  handleStandardHueUpdate(e);
   window.addEventListener('touchmove', onGlobalTouchMove, {
     passive: false,
-  })
-  window.addEventListener('touchend', onGlobalTouchEnd)
-  window.addEventListener('touchcancel', onGlobalTouchEnd)
+  });
+  window.addEventListener('touchend', onGlobalTouchEnd);
+  window.addEventListener('touchcancel', onGlobalTouchEnd);
 }
 
 function onMouseDownAlpha(e: MouseEvent) {
-  setDragTarget('standard-alpha')
-  startInteraction()
-  handleStandardAlphaUpdate(e)
-  window.addEventListener('mousemove', onGlobalMouseMove)
-  window.addEventListener('mouseup', onGlobalMouseUp)
+  setDragTarget('standard-alpha');
+  startInteraction();
+  handleStandardAlphaUpdate(e);
+  window.addEventListener('mousemove', onGlobalMouseMove);
+  window.addEventListener('mouseup', onGlobalMouseUp);
 }
 
 function onTouchStartAlpha(e: TouchEvent) {
-  setDragTarget('standard-alpha')
-  startInteraction()
-  handleStandardAlphaUpdate(e)
+  setDragTarget('standard-alpha');
+  startInteraction();
+  handleStandardAlphaUpdate(e);
   window.addEventListener('touchmove', onGlobalTouchMove, {
     passive: false,
-  })
-  window.addEventListener('touchend', onGlobalTouchEnd)
-  window.addEventListener('touchcancel', onGlobalTouchEnd)
+  });
+  window.addEventListener('touchend', onGlobalTouchEnd);
+  window.addEventListener('touchcancel', onGlobalTouchEnd);
 }
 
 function onGlobalMouseMove(e: MouseEvent) {
   if (currentDragTarget === 'ring' || currentDragTarget === 'triangle') {
-    handleTriangleRingUpdate(e)
+    handleTriangleRingUpdate(e);
   } else if (currentDragTarget === 'standard-sv') {
-    handleStandardSVUpdate(e)
+    handleStandardSVUpdate(e);
   } else if (currentDragTarget === 'standard-hue') {
-    handleStandardHueUpdate(e)
+    handleStandardHueUpdate(e);
   } else if (currentDragTarget === 'standard-alpha') {
-    handleStandardAlphaUpdate(e)
+    handleStandardAlphaUpdate(e);
   }
 }
 
 function onGlobalMouseUp() {
-  const wasDragging = currentDragTarget !== null
-  setDragTarget(null)
-  window.removeEventListener('mousemove', onGlobalMouseMove)
-  window.removeEventListener('mouseup', onGlobalMouseUp)
+  const wasDragging = currentDragTarget !== null;
+  setDragTarget(null);
+  window.removeEventListener('mousemove', onGlobalMouseMove);
+  window.removeEventListener('mouseup', onGlobalMouseUp);
   if (wasDragging) {
-    endPropertyInteraction()
-    emit('drag-end')
+    endPropertyInteraction();
+    emit('drag-end');
   }
 }
 
 function onGlobalTouchMove(e: TouchEvent) {
-  e.preventDefault()
+  e.preventDefault();
   if (currentDragTarget === 'ring' || currentDragTarget === 'triangle') {
-    handleTriangleRingUpdate(e)
+    handleTriangleRingUpdate(e);
   } else if (currentDragTarget === 'standard-sv') {
-    handleStandardSVUpdate(e)
+    handleStandardSVUpdate(e);
   } else if (currentDragTarget === 'standard-hue') {
-    handleStandardHueUpdate(e)
+    handleStandardHueUpdate(e);
   } else if (currentDragTarget === 'standard-alpha') {
-    handleStandardAlphaUpdate(e)
+    handleStandardAlphaUpdate(e);
   }
 }
 
 function onGlobalTouchEnd() {
-  const wasDragging = currentDragTarget !== null
-  setDragTarget(null)
-  window.removeEventListener('touchmove', onGlobalTouchMove)
-  window.removeEventListener('touchend', onGlobalTouchEnd)
-  window.removeEventListener('touchcancel', onGlobalTouchEnd)
+  const wasDragging = currentDragTarget !== null;
+  setDragTarget(null);
+  window.removeEventListener('touchmove', onGlobalTouchMove);
+  window.removeEventListener('touchend', onGlobalTouchEnd);
+  window.removeEventListener('touchcancel', onGlobalTouchEnd);
   if (wasDragging) {
-    endPropertyInteraction()
-    emit('drag-end')
+    endPropertyInteraction();
+    emit('drag-end');
   }
 }
 
-const isMobileViewport = ref(false)
+const isMobileViewport = ref(false);
 
 function updateIsMobileViewport() {
-  isMobileViewport.value = window.innerWidth <= 480
+  isMobileViewport.value = window.innerWidth <= 480;
 }
 
 // Lifecycle
 onMounted(() => {
-  if (props.type === 'triangle') nextTick(renderTriangle)
-  updateIsMobileViewport()
+  if (props.type === 'triangle') nextTick(renderTriangle);
+  updateIsMobileViewport();
   window.addEventListener('resize', updateIsMobileViewport, {
     passive: true,
-  })
-})
+  });
+});
 watch(
   () => h.value,
   () => {
-    if (props.type === 'triangle') renderTriangle()
+    if (props.type === 'triangle') renderTriangle();
   },
-)
+);
 onUnmounted(() => {
-  onGlobalMouseUp()
-  onGlobalTouchEnd()
-  window.removeEventListener('resize', updateIsMobileViewport)
-})
+  onGlobalMouseUp();
+  onGlobalTouchEnd();
+  window.removeEventListener('resize', updateIsMobileViewport);
+});
 
-const hasEyeDropper = ref(typeof window !== 'undefined' && 'EyeDropper' in window)
+const hasEyeDropper = ref(typeof window !== 'undefined' && 'EyeDropper' in window);
 
 async function openEyeDropper() {
-  if (!hasEyeDropper.value) return
+  if (!hasEyeDropper.value) return;
   try {
-    const eyeDropper = new (window as any).EyeDropper()
-    const result = await eyeDropper.open()
-    emit('update:modelValue', result.sRGBHex)
+    const eyeDropper = new (window as any).EyeDropper();
+    const result = await eyeDropper.open();
+    emit('update:modelValue', result.sRGBHex);
   } catch (e) {
     /* silent */
   }
 }
 
 function updateChannel(channel: keyof RGB, val: string | number) {
-  const n = Math.max(0, Math.min(255, Number(val) || 0))
-  const nextRgb = { ...rgb.value, [channel]: n }
-  emit('update:modelValue', rgbToHex(nextRgb.r, nextRgb.g, nextRgb.b))
+  const n = Math.max(0, Math.min(255, Number(val) || 0));
+  const nextRgb = { ...rgb.value, [channel]: n };
+  emit('update:modelValue', rgbToHex(nextRgb.r, nextRgb.g, nextRgb.b));
 }
 
 const triangleCursorStyle = computed(() => {
-  const R = TRI_RADIUS
-  const h_tri = (R * 3) / 2
-  const x = -R / 2 + (s.value / 100) * h_tri
-  const currentHalfHeight = ((1 - s.value / 100) * (R * Math.sqrt(3))) / 2
-  const y = (1 - v.value / 100) * (currentHalfHeight * 2) - currentHalfHeight
-  return { transform: `translate(${x}px, ${y}px)` }
-})
+  const R = TRI_RADIUS;
+  const h_tri = (R * 3) / 2;
+  const x = -R / 2 + (s.value / 100) * h_tri;
+  const currentHalfHeight = ((1 - s.value / 100) * (R * Math.sqrt(3))) / 2;
+  const y = (1 - v.value / 100) * (currentHalfHeight * 2) - currentHalfHeight;
+  return { transform: `translate(${x}px, ${y}px)` };
+});
 
 const hueRingIndicatorStyle = computed(() => {
-  const rad = (h.value * Math.PI) / 180
-  const r = (RING_INNER + RING_OUTER) / 2
+  const rad = (h.value * Math.PI) / 180;
+  const r = (RING_INNER + RING_OUTER) / 2;
   return {
     transform: `translate(${Math.cos(rad) * r}px, ${Math.sin(rad) * r}px) rotate(${h.value}deg)`,
-  }
-})
+  };
+});
 
-const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileViewport.value)
+const isDraggingMobile = computed(() => !!activeDragTarget.value && isMobileViewport.value);
 </script>
 
 <template>

@@ -1,47 +1,47 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Monitor, Moon, Sun, Keyboard, ArrowLeft } from '@lucide/vue'
-import { useThemeStore } from '~/stores/theme'
-import { useLocaleStore } from '~/stores/locale'
-import { useTranslate } from '~/i18n/useTranslate'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import Select from '~/ui/select/Select.vue'
-import ShortcutPreferences from './ShortcutPreferences.vue'
-import UpdateControls from '~/components/updates/UpdateControls.vue'
-import SocialLinks from '~/components/socials/SocialLinks.vue'
+import { ref } from 'vue';
+import { Monitor, Moon, Sun, Keyboard, ArrowLeft } from '@lucide/vue';
+import { useThemeStore } from '~/stores/theme';
+import { useLocaleStore } from '~/stores/locale';
+import { useTranslate } from '~/i18n/useTranslate';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Select from '~/ui/select/Select.vue';
+import ShortcutPreferences from './ShortcutPreferences.vue';
+import UpdateControls from '~/components/updates/UpdateControls.vue';
+import SocialLinks from '~/components/socials/SocialLinks.vue';
 
-const { t } = useTranslate('HudPreferences')
+const { t } = useTranslate('HudPreferences');
 
 const props = defineProps<{
-  countdownSeconds: number
-  recordingBarVisibility?: 'always' | 'auto-fade'
-}>()
+  countdownSeconds: number;
+  recordingBarVisibility?: 'always' | 'auto-fade';
+}>();
 
 const emit = defineEmits<{
-  (event: 'update:countdownSeconds', value: number): void
-  (event: 'update:recordingBarVisibility', value: 'always' | 'auto-fade'): void
-  (event: 'close'): void
-}>()
+  (event: 'update:countdownSeconds', value: number): void;
+  (event: 'update:recordingBarVisibility', value: 'always' | 'auto-fade'): void;
+  (event: 'close'): void;
+}>();
 
-const themeStore = useThemeStore()
-const localeStore = useLocaleStore()
-const currentView = ref<'general' | 'shortcuts'>('general')
+const themeStore = useThemeStore();
+const localeStore = useLocaleStore();
+const currentView = ref<'general' | 'shortcuts'>('general');
 
 const countdownOptions = [
   { value: 0, label: t('off') },
   { value: 3, label: t('option3s') },
   { value: 5, label: t('option5s') },
   { value: 10, label: t('option10s') },
-]
+];
 const recordingBarOptions = [
   { value: 'always', label: t('alwaysVisible') },
   { value: 'auto-fade', label: t('autoFade') },
-]
+];
 const localeOptions = [
   { value: 'en', label: 'EN - English - Anglais' },
   { value: 'fr', label: 'FR - French - Français' },
-]
+];
 </script>
 
 <template>

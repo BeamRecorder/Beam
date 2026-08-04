@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../cursor-rendering'
-import { frameContentRect } from '../../../composition/appearance/frames'
+import { describe, expect, it } from 'vitest';
+import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../cursor-rendering';
+import { frameContentRect } from '../../../composition/appearance/frames';
 
 const cursor = (x: number, y: number, cursorKind: string | null = 'default') => ({
   x,
@@ -10,19 +10,19 @@ const cursor = (x: number, y: number, cursorKind: string | null = 'default') => 
   shapeId: null,
   cursorKind: cursorKind as never,
   hotspot: { x: 0, y: 0 },
-})
+});
 
 describe('cursor rendering', () => {
   it('uses the recorded semantic type only when automatic is selected', () => {
-    expect(cursorTypeAt('automatic', cursor(0.5, 0.5, 'textcursor'))).toBe('textcursor')
-    expect(cursorTypeAt('handpointing', cursor(0.5, 0.5, 'textcursor'))).toBe('handpointing')
-    expect(cursorTypeAt('automatic', cursor(0.5, 0.5, 'custom'))).toBe('default')
-  })
+    expect(cursorTypeAt('automatic', cursor(0.5, 0.5, 'textcursor'))).toBe('textcursor');
+    expect(cursorTypeAt('handpointing', cursor(0.5, 0.5, 'textcursor'))).toBe('handpointing');
+    expect(cursorTypeAt('automatic', cursor(0.5, 0.5, 'custom'))).toBe('default');
+  });
 
   it('keeps cursor hotspots tied to logical cursor size, not raster dimensions', () => {
-    expect(cursorHotspotAtSize('default', 24)).toEqual({ x: 7.5, y: 5.25 })
-    expect(cursorHotspotAtSize('default', 48)).toEqual({ x: 15, y: 10.5 })
-  })
+    expect(cursorHotspotAtSize('default', 24)).toEqual({ x: 7.5, y: 5.25 });
+    expect(cursorHotspotAtSize('default', 48)).toEqual({ x: 15, y: 10.5 });
+  });
 
   it('uses the same framed-background and base-transform coordinates for every canvas', () => {
     expect(
@@ -32,12 +32,12 @@ describe('cursor rendering', () => {
         width: 0.8,
         height: 0.6,
       }),
-    ).toEqual({ x: 110, y: 120 })
-  })
+    ).toEqual({ x: 110, y: 120 });
+  });
 
   it('anchors the cursor to Safari content below the toolbar', () => {
-    const rect = { x: 10, y: 20, width: 400, height: 200 }
-    const content = frameContentRect(rect, 'safari')
+    const rect = { x: 10, y: 20, width: 400, height: 200 };
+    const content = frameContentRect(rect, 'safari');
     expect(
       cursorPositionAt(cursor(0.5, 0.5), { width: 400, height: 200 }, rect, false, undefined, false, false, {
         frame: 'safari',
@@ -48,22 +48,22 @@ describe('cursor rendering', () => {
     ).toEqual({
       x: content.x + content.width / 2,
       y: content.y + content.height / 2,
-    })
-  })
+    });
+  });
 
   it('includes Windows 95 chrome options and scale in cursor placement', () => {
-    const rect = { x: 0, y: 0, width: 400, height: 260 }
+    const rect = { x: 0, y: 0, width: 400, height: 260 };
     const appearance = {
       frame: 'windows-95' as const,
       frameShowMenu: true,
       frameShowScrollbars: false,
       frameChromeScale: 1.5,
-    }
+    };
     const content = frameContentRect(rect, 'windows-95', {
       showMenu: appearance.frameShowMenu,
       showScrollbars: appearance.frameShowScrollbars,
       chromeScale: appearance.frameChromeScale,
-    })
+    });
     const position = cursorPositionAt(
       cursor(0.25, 0.75),
       { width: 400, height: 260 },
@@ -73,17 +73,17 @@ describe('cursor rendering', () => {
       false,
       false,
       appearance,
-    )
+    );
     expect(position).toEqual({
       x: content.x + content.width * 0.25,
       y: content.y + content.height * 0.75,
-    })
-    expect(position.y).toBeGreaterThan(0.75 * rect.height)
-  })
+    });
+    expect(position.y).toBeGreaterThan(0.75 * rect.height);
+  });
 
   it('maps cropped source coordinates into the decorated content', () => {
-    const rect = { x: 0, y: 0, width: 400, height: 200 }
-    const content = frameContentRect(rect, 'safari')
+    const rect = { x: 0, y: 0, width: 400, height: 200 };
+    const content = frameContentRect(rect, 'safari');
     expect(
       cursorPositionAt(
         cursor(0.5, 0.5),
@@ -104,8 +104,8 @@ describe('cursor rendering', () => {
     ).toEqual({
       x: content.x + content.width / 2,
       y: content.y + content.height / 2,
-    })
-  })
+    });
+  });
 
   it('mirrors and clamps cursor coordinates at the shared geometry boundary', () => {
     expect(
@@ -117,6 +117,6 @@ describe('cursor rendering', () => {
         undefined,
         true,
       ),
-    ).toEqual({ x: 0, y: 0 })
-  })
-})
+    ).toEqual({ x: 0, y: 0 });
+  });
+});

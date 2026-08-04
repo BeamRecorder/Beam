@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = withDefaults(
   defineProps<{
-    value?: number // Value between 0 and 100 or 0 and 1
-    max?: number
+    value?: number; // Value between 0 and 100 or 0 and 1
+    max?: number;
   }>(),
   {
     value: 0,
     max: 100,
   },
-)
+);
 
 const percentage = computed(() => {
-  const maxVal = props.max || 100
-  const val = props.value || 0
-  return Math.min(100, Math.max(0, (val / maxVal) * 100))
-})
+  const maxVal = props.max || 100;
+  const val = props.value || 0;
+  return Math.min(100, Math.max(0, (val / maxVal) * 100));
+});
 </script>
 
 <template>

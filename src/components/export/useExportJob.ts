@@ -1,21 +1,21 @@
-import { computed, ref } from 'vue'
-import { exportWithMediabunny } from './mediabunny/exporter'
-import type { ExportProgress, ExportRequest, ExportResult } from './export-types'
-import { tNamespace } from '../../i18n'
+import { computed, ref } from 'vue';
+import { exportWithMediabunny } from './mediabunny/exporter';
+import type { ExportProgress, ExportRequest, ExportResult } from './export-types';
+import { tNamespace } from '../../i18n';
 
-const $t = tNamespace('exporter')
+const $t = tNamespace('exporter');
 
-const progress = ref<ExportProgress | null>(null)
-const error = ref<string | null>(null)
-const result = ref<ExportResult | null>(null)
-const controller = ref<AbortController | null>(null)
-const isExporting = computed(() => controller.value !== null)
+const progress = ref<ExportProgress | null>(null);
+const error = ref<string | null>(null);
+const result = ref<ExportResult | null>(null);
+const controller = ref<AbortController | null>(null);
+const isExporting = computed(() => controller.value !== null);
 
 export function useExportJob() {
   const start = async (request: ExportRequest) => {
-    if (controller.value) return
-    error.value = null
-    result.value = null
+    if (controller.value) return;
+    error.value = null;
+    result.value = null;
     progress.value = {
       stage: 'preparing',
       stageLabel: $t('preparingExport'),
@@ -23,25 +23,25 @@ export function useExportJob() {
       total: 1,
       currentTimeMs: 0,
       totalTimeMs: Math.round(request.snapshot.duration * 1000),
-    }
-    const next = new AbortController()
-    controller.value = next
+    };
+    const next = new AbortController();
+    controller.value = next;
     try {
       result.value = await exportWithMediabunny(
         request,
         (value) => {
-          progress.value = value
+          progress.value = value;
         },
         next.signal,
-      )
+      );
     } catch (reason) {
       if (!(reason instanceof DOMException && reason.name === 'AbortError'))
-        error.value = reason instanceof Error ? reason.message : $t('exportFailed')
+        error.value = reason instanceof Error ? reason.message : $t('exportFailed');
     } finally {
-      controller.value = null
-      progress.value = null
+      controller.value = null;
+      progress.value = null;
     }
-  }
-  const cancel = () => controller.value?.abort()
-  return { progress, error, result, isExporting, start, cancel }
+  };
+  const cancel = () => controller.value?.abort();
+  return { progress, error, result, isExporting, start, cancel };
 }

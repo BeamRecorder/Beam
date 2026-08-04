@@ -1,19 +1,19 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import VideoEditor from '../VideoEditor.vue'
-import type { ClipComposition } from '../composition/composition-types'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import VideoEditor from '../VideoEditor.vue';
+import type { ClipComposition } from '../composition/composition-types';
 
-const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }))
-const capture = vi.hoisted(() => ({ setWindowMode: vi.fn(), maximize: vi.fn() }))
-const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }))
+const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
+const capture = vi.hoisted(() => ({ setWindowMode: vi.fn(), maximize: vi.fn() }));
+const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
 
-vi.mock('../../../api/capture', () => ({ capture }))
+vi.mock('../../../api/capture', () => ({ capture }));
 
 vi.mock('../composables/useVideoEditor', async () => {
-  const { computed, ref } = await import('vue')
+  const { computed, ref } = await import('vue');
   return {
     useVideoEditor: vi.fn(() => {
-      const activeTab = ref('canvas')
+      const activeTab = ref('canvas');
       const composition = ref<ClipComposition>({
         schemaVersion: 1,
         assets: [
@@ -71,11 +71,11 @@ vi.mock('../composables/useVideoEditor', async () => {
             volume: 100,
           },
         ],
-      } as ClipComposition)
-      const selectedClipId = ref<string | null>(null)
+      } as ClipComposition);
+      const selectedClipId = ref<string | null>(null);
       const selectedClip = computed(
         () => composition.value.clips.find((clip) => clip.id === selectedClipId.value) ?? null,
-      )
+      );
       const player = {
         isPlaying: ref(false),
         currentTime: ref(0),
@@ -87,7 +87,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         backgroundBlurPercent: ref(0),
         backgroundGroups: ref([]),
         addBackground: vi.fn(),
-      }
+      };
       const cursor = {
         selectedCursor: ref('automatic'),
         cursorSize: ref(24),
@@ -97,8 +97,8 @@ vi.mock('../composables/useVideoEditor', async () => {
         shadowColor: ref('#000'),
         shadowDirection: ref('bottom'),
         clickEffects: ref({}),
-      }
-      const cursorMotion = ref({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 })
+      };
+      const cursorMotion = ref({ preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 });
       const compositionState = {
         composition,
         selectedClipId,
@@ -112,7 +112,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         isSystemAudioEnabled: ref(true),
         isMicAudioEnabled: ref(true),
         selectClip: vi.fn((id: string) => {
-          selectedClipId.value = id
+          selectedClipId.value = id;
         }),
         addElement: vi.fn().mockResolvedValue(undefined),
         addCaptionAtTime: vi.fn(),
@@ -132,7 +132,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         updateSelectedEnabled: vi.fn(),
         toggleClip: vi.fn(),
         detachSelectedClip: vi.fn(),
-      }
+      };
       const zoomState = {
         zoomElements: ref([]),
         selectedZoomId: ref<string | null>(null),
@@ -146,8 +146,8 @@ vi.mock('../composables/useVideoEditor', async () => {
         moveZoom: vi.fn(),
         previewZoom: vi.fn(),
         deleteSelectedZoom: vi.fn(),
-      }
-      const outputCanvas = ref({ preset: '16:9', width: 1920, height: 1080, showBackground: false })
+      };
+      const outputCanvas = ref({ preset: '16:9', width: 1920, height: 1080, showBackground: false });
       const store = {
         activeTab,
         systemVolume: ref(100),
@@ -167,17 +167,17 @@ vi.mock('../composables/useVideoEditor', async () => {
         exportRequest: computed(() => ({ projectName: 'Demo', snapshot: {}, format: 'webm', preset: 'medium' })),
         outputCanvas,
         handleSelectTab: vi.fn((tab: string) => {
-          activeTab.value = tab
+          activeTab.value = tab;
         }),
-      }
-      editorState.store = store
-      return store
+      };
+      editorState.store = store;
+      return store;
     }),
-  }
-})
+  };
+});
 
 vi.mock('../composables/useEditorUndoRedo', async () => {
-  const { ref } = await import('vue')
+  const { ref } = await import('vue');
   return {
     useEditorUndoRedo: vi.fn(() => ({
       recordSnapshot: vi.fn(),
@@ -187,22 +187,22 @@ vi.mock('../composables/useEditorUndoRedo', async () => {
       canRedo: ref(false),
       lastAction: ref(null),
     })),
-  }
-})
+  };
+});
 
 vi.mock('../../export/useExportJob', async () => {
-  const { ref } = await import('vue')
+  const { ref } = await import('vue');
   return {
     useExportJob: vi.fn(() => {
-      exportState.isExporting = ref(false)
-      exportState.progress = ref(null)
-      return { isExporting: exportState.isExporting, progress: exportState.progress, start: vi.fn() }
+      exportState.isExporting = ref(false);
+      exportState.progress = ref(null);
+      return { isExporting: exportState.isExporting, progress: exportState.progress, start: vi.fn() };
     }),
-  }
-})
+  };
+});
 
 vi.mock('../Topbar.vue', async () => {
-  const { defineComponent, h } = await import('vue')
+  const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockTopbar',
@@ -214,27 +214,27 @@ vi.mock('../Topbar.vue', async () => {
             h('button', { class: 'open', onClick: () => emit('open-project', { id: 'project-1' }) }),
             h('button', { class: 'undo', onClick: () => emit('undo') }),
             h('button', { class: 'redo', onClick: () => emit('redo') }),
-          ])
+          ]);
       },
     }),
-  }
-})
+  };
+});
 
 vi.mock('../sidebar/SidebarPanel.vue', async () => {
-  const { defineComponent, h } = await import('vue')
+  const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockSidebar',
       emits: ['select-tab'],
       setup(_, { emit }) {
-        return () => h('button', { class: 'sidebar-tab', onClick: () => emit('select-tab', 'zoom') })
+        return () => h('button', { class: 'sidebar-tab', onClick: () => emit('select-tab', 'zoom') });
       },
     }),
-  }
-})
+  };
+});
 
 vi.mock('../properties/PropertiesPanel.vue', async () => {
-  const { defineComponent, h } = await import('vue')
+  const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockProperties',
@@ -287,14 +287,14 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
               onClick: () => emit('update:clip-appearance', { borderEnabled: true }),
             }),
             h('button', { class: 'reset-transform', onClick: () => emit('reset:clip-transform') }),
-          ])
+          ]);
       },
     }),
-  }
-})
+  };
+});
 
 vi.mock('../canvas/EditorCanvas.vue', async () => {
-  const { defineComponent, h } = await import('vue')
+  const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockEditorCanvas',
@@ -341,14 +341,14 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
             }),
             h('button', { class: 'done-crop', onClick: () => emit('done:crop') }),
             h('button', { class: 'pause', onClick: () => emit('update:is-playing', false) }),
-          ])
+          ]);
       },
     }),
-  }
-})
+  };
+});
 
 vi.mock('../canvas/CanvasToolbar.vue', async () => {
-  const { defineComponent, h } = await import('vue')
+  const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockCanvasToolbar',
@@ -358,14 +358,14 @@ vi.mock('../canvas/CanvasToolbar.vue', async () => {
           h('div', [
             h('button', { class: 'preset', onClick: () => emit('select:preset', '1:1') }),
             h('button', { class: 'toggle-crop', onClick: () => emit('toggle:crop') }),
-          ])
+          ]);
       },
     }),
-  }
-})
+  };
+});
 
 vi.mock('../timeline/TimelineToolbar.vue', async () => {
-  const { defineComponent, h } = await import('vue')
+  const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockTimelineToolbar',
@@ -376,14 +376,14 @@ vi.mock('../timeline/TimelineToolbar.vue', async () => {
             h('button', { class: 'add-sound', onClick: () => emit('add:element', 'sound') }),
             h('button', { class: 'timeline-play', onClick: () => emit('update:is-playing', true) }),
             h('button', { class: 'timeline-time', onClick: () => emit('update:current-time', 1.25) }),
-          ])
+          ]);
       },
     }),
-  }
-})
+  };
+});
 
 vi.mock('../timeline/EditorTimeline.vue', async () => {
-  const { defineComponent, h } = await import('vue')
+  const { defineComponent, h } = await import('vue');
   return {
     default: defineComponent({
       name: 'MockEditorTimeline',
@@ -406,109 +406,109 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
             h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
             h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
             h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
-          ])
+          ]);
       },
     }),
-  }
-})
+  };
+});
 
-const project = { id: 'project-1', name: 'Project', createdAt: '', updatedAt: '', sessionCount: 1, previewSrc: null }
-let wrapper: VueWrapper | undefined
+const project = { id: 'project-1', name: 'Project', createdAt: '', updatedAt: '', sessionCount: 1, previewSrc: null };
+let wrapper: VueWrapper | undefined;
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.clearAllMocks();
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-    callback(0)
-    return 1
-  })
-  vi.stubGlobal('cancelAnimationFrame', vi.fn())
-  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined)
-  editorState.store = undefined
-})
+    callback(0);
+    return 1;
+  });
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
+  editorState.store = undefined;
+});
 afterEach(() => {
-  wrapper?.unmount()
-  wrapper = undefined
-  vi.unstubAllGlobals()
-  vi.restoreAllMocks()
-})
+  wrapper?.unmount();
+  wrapper = undefined;
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const mountEditor = () => {
-  wrapper = mount(VideoEditor, { props: { project, videoSrc: 'session.mp4', editorData: null } })
-  return wrapper
-}
+  wrapper = mount(VideoEditor, { props: { project, videoSrc: 'session.mp4', editorData: null } });
+  return wrapper;
+};
 
 describe('VideoEditor', () => {
   it('initializes editor window state and emits topbar navigation events', async () => {
-    const mounted = mountEditor()
-    await flushPromises()
-    expect(capture.setWindowMode).toHaveBeenCalledWith('editor')
-    expect(capture.maximize).toHaveBeenCalled()
-    await mounted.find('.back').trigger('click')
-    await mounted.find('.open').trigger('click')
-    expect(mounted.emitted('back-to-hud')).toHaveLength(1)
-    expect(mounted.emitted('open-project')).toHaveLength(1)
-  })
+    const mounted = mountEditor();
+    await flushPromises();
+    expect(capture.setWindowMode).toHaveBeenCalledWith('editor');
+    expect(capture.maximize).toHaveBeenCalled();
+    await mounted.find('.back').trigger('click');
+    await mounted.find('.open').trigger('click');
+    expect(mounted.emitted('back-to-hud')).toHaveLength(1);
+    expect(mounted.emitted('open-project')).toHaveLength(1);
+  });
 
   it('routes canvas, toolbar, timeline and property events to the editor state', async () => {
-    const mounted = mountEditor()
-    await mounted.find('.sidebar-tab').trigger('click')
-    await mounted.find('.preset').trigger('click')
-    await mounted.find('.import-background').trigger('click')
-    await mounted.find('.system-volume').trigger('click')
-    await mounted.find('.mic-volume').trigger('click')
-    await mounted.find('.update-zoom').trigger('click')
-    await mounted.find('.preview-zoom').trigger('click')
-    await mounted.find('.transform').trigger('click')
-    await mounted.find('.crop').trigger('click')
-    await mounted.find('.done-crop').trigger('click')
-    await mounted.find('.select-audio').trigger('click')
-    await mounted.find('.select-canvas').trigger('click')
-    await mounted.find('.add-sound').trigger('click')
-    await mounted.find('.timeline-play').trigger('click')
-    await mounted.find('.timeline-time').trigger('click')
-    await mounted.find('.update-rate').trigger('click')
-    await mounted.find('.update-volume').trigger('click')
-    await mounted.find('.update-enabled').trigger('click')
-    await mounted.find('.unlink').trigger('click')
-    await mounted.find('.mirrored').trigger('click')
-    await mounted.find('.appearance').trigger('click')
-    await mounted.find('.reset-transform').trigger('click')
-    await flushPromises()
+    const mounted = mountEditor();
+    await mounted.find('.sidebar-tab').trigger('click');
+    await mounted.find('.preset').trigger('click');
+    await mounted.find('.import-background').trigger('click');
+    await mounted.find('.system-volume').trigger('click');
+    await mounted.find('.mic-volume').trigger('click');
+    await mounted.find('.update-zoom').trigger('click');
+    await mounted.find('.preview-zoom').trigger('click');
+    await mounted.find('.transform').trigger('click');
+    await mounted.find('.crop').trigger('click');
+    await mounted.find('.done-crop').trigger('click');
+    await mounted.find('.select-audio').trigger('click');
+    await mounted.find('.select-canvas').trigger('click');
+    await mounted.find('.add-sound').trigger('click');
+    await mounted.find('.timeline-play').trigger('click');
+    await mounted.find('.timeline-time').trigger('click');
+    await mounted.find('.update-rate').trigger('click');
+    await mounted.find('.update-volume').trigger('click');
+    await mounted.find('.update-enabled').trigger('click');
+    await mounted.find('.unlink').trigger('click');
+    await mounted.find('.mirrored').trigger('click');
+    await mounted.find('.appearance').trigger('click');
+    await mounted.find('.reset-transform').trigger('click');
+    await flushPromises();
 
-    expect(editorState.store.handleSelectTab).toHaveBeenCalledWith('zoom')
-    expect(editorState.store.player.addBackground).toHaveBeenCalledWith({ kind: 'color', color: '#f00' })
-    expect(editorState.store.compositionState.selectClip).toHaveBeenCalledWith('audio')
-    expect(editorState.store.compositionState.addElement).toHaveBeenCalledWith('sound')
-    expect(editorState.store.compositionState.updateSelectedTransform).toHaveBeenCalled()
-    expect(editorState.store.compositionState.updateSelectedVolume).toHaveBeenCalledWith(80)
-    expect(editorState.store.outputCanvas.value.preset).toBe('1:1')
-  })
+    expect(editorState.store.handleSelectTab).toHaveBeenCalledWith('zoom');
+    expect(editorState.store.player.addBackground).toHaveBeenCalledWith({ kind: 'color', color: '#f00' });
+    expect(editorState.store.compositionState.selectClip).toHaveBeenCalledWith('audio');
+    expect(editorState.store.compositionState.addElement).toHaveBeenCalledWith('sound');
+    expect(editorState.store.compositionState.updateSelectedTransform).toHaveBeenCalled();
+    expect(editorState.store.compositionState.updateSelectedVolume).toHaveBeenCalledWith(80);
+    expect(editorState.store.outputCanvas.value.preset).toBe('1:1');
+  });
 
   it('updates role volumes and protects editable fields from destructive keyboard shortcuts', async () => {
-    const mounted = mountEditor()
-    editorState.store.compositionState.selectedClipId.value = 'audio'
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }))
-    expect(editorState.store.compositionState.deleteSelectedClip).toHaveBeenCalled()
+    const mounted = mountEditor();
+    editorState.store.compositionState.selectedClipId.value = 'audio';
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
+    expect(editorState.store.compositionState.deleteSelectedClip).toHaveBeenCalled();
 
-    editorState.store.compositionState.deleteSelectedClip.mockClear()
-    const input = document.createElement('input')
-    document.body.appendChild(input)
-    input.focus()
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }))
-    expect(editorState.store.compositionState.deleteSelectedClip).not.toHaveBeenCalled()
-    input.remove()
+    editorState.store.compositionState.deleteSelectedClip.mockClear();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', cancelable: true }));
+    expect(editorState.store.compositionState.deleteSelectedClip).not.toHaveBeenCalled();
+    input.remove();
 
-    editorState.store.compositionState.selectedClipId.value = null
-    editorState.store.activeTab.value = 'zoom'
-    editorState.store.zoomState.selectedZoom.value = { id: 'z', mode: 'manual' }
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true }))
-    expect(editorState.store.zoomState.deleteSelectedZoom).toHaveBeenCalled()
+    editorState.store.compositionState.selectedClipId.value = null;
+    editorState.store.activeTab.value = 'zoom';
+    editorState.store.zoomState.selectedZoom.value = { id: 'z', mode: 'manual' };
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', cancelable: true }));
+    expect(editorState.store.zoomState.deleteSelectedZoom).toHaveBeenCalled();
 
-    editorState.store.systemVolume.value = 150
-    editorState.store.micVolume.value = 125
-    await mounted.vm.$nextTick()
+    editorState.store.systemVolume.value = 150;
+    editorState.store.micVolume.value = 125;
+    await mounted.vm.$nextTick();
     expect(
       editorState.store.compositionState.composition.value.clips.find((clip: any) => clip.role === 'system')?.volume,
-    ).toBe(150)
-  })
-})
+    ).toBe(150);
+  });
+});

@@ -1,155 +1,155 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import KeyboardChip from '../Kbd/KeyboardChip.vue'
-import { X, RotateCcw } from '@lucide/vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import KeyboardChip from '../Kbd/KeyboardChip.vue';
+import { X, RotateCcw } from '@lucide/vue';
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string
-    placeholder?: string
-    disabled?: boolean
-    error?: boolean | string
+    modelValue: string;
+    placeholder?: string;
+    disabled?: boolean;
+    error?: boolean | string;
   }>(),
   {
     placeholder: 'Press shortcut...',
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-  (e: 'change', value: string): void
-  (e: 'reset'): void
-}>()
+  (e: 'update:modelValue', value: string): void;
+  (e: 'change', value: string): void;
+  (e: 'reset'): void;
+}>();
 
-const isRecording = ref(false)
-const capturedKeys = ref<string[]>([])
-const inputRef = ref<HTMLDivElement | null>(null)
+const isRecording = ref(false);
+const capturedKeys = ref<string[]>([]);
+const inputRef = ref<HTMLDivElement | null>(null);
 
-const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
 const normalizeEventKey = (e: KeyboardEvent): string | null => {
-  const code = e.code
+  const code = e.code;
 
   // Modifiers
-  if (['ControlLeft', 'ControlRight'].includes(code)) return isMac ? 'Control' : 'Ctrl'
-  if (['ShiftLeft', 'ShiftRight'].includes(code)) return 'Shift'
-  if (['AltLeft', 'AltRight'].includes(code)) return 'Alt'
-  if (['MetaLeft', 'MetaRight'].includes(code)) return isMac ? 'Command' : 'Super'
+  if (['ControlLeft', 'ControlRight'].includes(code)) return isMac ? 'Control' : 'Ctrl';
+  if (['ShiftLeft', 'ShiftRight'].includes(code)) return 'Shift';
+  if (['AltLeft', 'AltRight'].includes(code)) return 'Alt';
+  if (['MetaLeft', 'MetaRight'].includes(code)) return isMac ? 'Command' : 'Super';
 
   // Special keys
-  if (code === 'Space') return 'Space'
-  if (code === 'Enter' || code === 'NumpadEnter') return 'Enter'
-  if (code === 'Backspace') return 'Backspace'
-  if (code === 'Tab') return null // allow tabbing away if not recording
+  if (code === 'Space') return 'Space';
+  if (code === 'Enter' || code === 'NumpadEnter') return 'Enter';
+  if (code === 'Backspace') return 'Backspace';
+  if (code === 'Tab') return null; // allow tabbing away if not recording
 
   // Key codes like KeyA -> A, Digit1 -> 1, F1 -> F1
-  if (code.startsWith('Key')) return code.slice(3)
-  if (code.startsWith('Digit')) return code.slice(5)
-  if (code.startsWith('Numpad') && code.length === 7) return code.slice(6)
-  if (/^F\d+$/.test(code)) return code
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad') && code.length === 7) return code.slice(6);
+  if (/^F\d+$/.test(code)) return code;
 
   // Arrow keys
-  if (code === 'ArrowUp') return 'Up'
-  if (code === 'ArrowDown') return 'Down'
-  if (code === 'ArrowLeft') return 'Left'
-  if (code === 'ArrowRight') return 'Right'
+  if (code === 'ArrowUp') return 'Up';
+  if (code === 'ArrowDown') return 'Down';
+  if (code === 'ArrowLeft') return 'Left';
+  if (code === 'ArrowRight') return 'Right';
 
   // Fallback to e.key uppercase if single char
   if (e.key && e.key.length === 1) {
-    return e.key.toUpperCase()
+    return e.key.toUpperCase();
   }
 
-  return e.key || null
-}
+  return e.key || null;
+};
 
 const formatAccelerator = (modifiers: string[], key: string | null): string => {
-  const result: string[] = []
+  const result: string[] = [];
   if (modifiers.includes('Control') || modifiers.includes('Ctrl')) {
-    result.push(isMac ? 'Control' : 'Ctrl')
+    result.push(isMac ? 'Control' : 'Ctrl');
   }
-  if (modifiers.includes('Alt')) result.push('Alt')
-  if (modifiers.includes('Shift')) result.push('Shift')
+  if (modifiers.includes('Alt')) result.push('Alt');
+  if (modifiers.includes('Shift')) result.push('Shift');
   if (modifiers.includes('Command') || modifiers.includes('Super')) {
-    result.push(isMac ? 'Command' : 'Super')
+    result.push(isMac ? 'Command' : 'Super');
   }
   if (key && !modifiers.includes(key)) {
-    result.push(key)
+    result.push(key);
   }
-  return result.join('+')
-}
+  return result.join('+');
+};
 
 const handleKeyDown = (e: KeyboardEvent) => {
-  if (!isRecording.value || props.disabled) return
+  if (!isRecording.value || props.disabled) return;
 
-  e.preventDefault()
-  e.stopPropagation()
+  e.preventDefault();
+  e.stopPropagation();
 
   if (e.key === 'Escape') {
-    stopRecording()
-    return
+    stopRecording();
+    return;
   }
 
-  const modifiers: string[] = []
-  if (e.ctrlKey) modifiers.push(isMac ? 'Control' : 'Ctrl')
-  if (e.altKey) modifiers.push('Alt')
-  if (e.shiftKey) modifiers.push('Shift')
-  if (e.metaKey) modifiers.push(isMac ? 'Command' : 'Super')
+  const modifiers: string[] = [];
+  if (e.ctrlKey) modifiers.push(isMac ? 'Control' : 'Ctrl');
+  if (e.altKey) modifiers.push('Alt');
+  if (e.shiftKey) modifiers.push('Shift');
+  if (e.metaKey) modifiers.push(isMac ? 'Command' : 'Super');
 
-  const key = normalizeEventKey(e)
-  const isModifierOnly = key && ['Ctrl', 'Control', 'Alt', 'Shift', 'Command', 'Super'].includes(key)
+  const key = normalizeEventKey(e);
+  const isModifierOnly = key && ['Ctrl', 'Control', 'Alt', 'Shift', 'Command', 'Super'].includes(key);
 
   if (isModifierOnly) {
-    capturedKeys.value = [...new Set(modifiers)]
-    return
+    capturedKeys.value = [...new Set(modifiers)];
+    return;
   }
 
-  const mainKey = isModifierOnly ? null : key
-  const accelerator = formatAccelerator(modifiers, mainKey)
+  const mainKey = isModifierOnly ? null : key;
+  const accelerator = formatAccelerator(modifiers, mainKey);
 
   if (accelerator !== undefined) {
-    emit('update:modelValue', accelerator)
-    emit('change', accelerator)
-    stopRecording()
+    emit('update:modelValue', accelerator);
+    emit('change', accelerator);
+    stopRecording();
   }
-}
+};
 
 const startRecording = () => {
-  if (props.disabled) return
-  isRecording.value = true
-  capturedKeys.value = []
-}
+  if (props.disabled) return;
+  isRecording.value = true;
+  capturedKeys.value = [];
+};
 
 const stopRecording = () => {
-  isRecording.value = false
-  capturedKeys.value = []
-}
+  isRecording.value = false;
+  capturedKeys.value = [];
+};
 
 const handleClickOutside = (e: MouseEvent) => {
   if (inputRef.value && !inputRef.value.contains(e.target as Node)) {
-    stopRecording()
+    stopRecording();
   }
-}
+};
 
 const handleClear = (e: MouseEvent) => {
-  e.stopPropagation()
-  emit('update:modelValue', '')
-  emit('change', '')
-  stopRecording()
-}
+  e.stopPropagation();
+  emit('update:modelValue', '');
+  emit('change', '');
+  stopRecording();
+};
 
 const handleReset = (e: MouseEvent) => {
-  e.stopPropagation()
-  emit('reset')
-  stopRecording()
-}
+  e.stopPropagation();
+  emit('reset');
+  stopRecording();
+};
 
 onMounted(() => {
-  window.addEventListener('click', handleClickOutside)
-})
+  window.addEventListener('click', handleClickOutside);
+});
 
 onBeforeUnmount(() => {
-  window.removeEventListener('click', handleClickOutside)
-})
+  window.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <template>

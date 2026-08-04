@@ -1,46 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useVirtualList } from '@vueuse/core'
-import Popover from '../popover/Popover.vue'
-import Skeleton from '../skeleton/Skeleton.vue'
-import { ChevronDown, Check } from '@lucide/vue'
+import { computed } from 'vue';
+import { useVirtualList } from '@vueuse/core';
+import Popover from '../popover/Popover.vue';
+import Skeleton from '../skeleton/Skeleton.vue';
+import { ChevronDown, Check } from '@lucide/vue';
 
 interface WindowOption {
-  id: string
-  name: string
-  thumbnail: string
-  appIcon?: string | null
+  id: string;
+  name: string;
+  thumbnail: string;
+  appIcon?: string | null;
 }
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string | number | null
-    options: WindowOption[]
-    placeholder?: string
-    disabled?: boolean
-    direction?: 'up' | 'down'
+    modelValue: string | number | null;
+    options: WindowOption[];
+    placeholder?: string;
+    disabled?: boolean;
+    direction?: 'up' | 'down';
   }>(),
   {
     placeholder: 'Select a window',
     disabled: false,
     direction: 'down',
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: any): void
-  (e: 'toggle', isOpen: boolean): void
-}>()
+  (e: 'update:modelValue', value: any): void;
+  (e: 'toggle', isOpen: boolean): void;
+}>();
 
 const selectedOption = computed(() => {
-  return props.options.find((opt) => opt.id === props.modelValue) || null
-})
+  return props.options.find((opt) => opt.id === props.modelValue) || null;
+});
 
 const handleSelect = (option: WindowOption, close: () => void) => {
-  if (props.disabled) return
-  emit('update:modelValue', option.id)
-  close()
-}
+  if (props.disabled) return;
+  emit('update:modelValue', option.id);
+  close();
+};
 
 // Virtual list configuration
 const { list, containerProps, wrapperProps } = useVirtualList(
@@ -48,63 +48,63 @@ const { list, containerProps, wrapperProps } = useVirtualList(
   {
     itemHeight: 52, // 44px thumbnail aspect height + padding
   },
-)
+);
 
 const labelStyle = computed(() => {
-  const text = selectedOption.value ? selectedOption.value.name : props.placeholder
-  const len = text.length
-  if (len > 28) return { fontSize: '0.75rem' }
-  if (len > 20) return { fontSize: '0.85rem' }
-  return {}
-})
+  const text = selectedOption.value ? selectedOption.value.name : props.placeholder;
+  const len = text.length;
+  if (len > 28) return { fontSize: '0.75rem' };
+  if (len > 20) return { fontSize: '0.85rem' };
+  return {};
+});
 
-const marqueeRuns = new WeakMap<HTMLElement, { frame: number; timer: number }>()
+const marqueeRuns = new WeakMap<HTMLElement, { frame: number; timer: number }>();
 
 const stopMarqueeRun = (option: HTMLElement) => {
-  const run = marqueeRuns.get(option)
+  const run = marqueeRuns.get(option);
   if (run) {
-    window.cancelAnimationFrame(run.frame)
-    window.clearTimeout(run.timer)
-    marqueeRuns.delete(option)
+    window.cancelAnimationFrame(run.frame);
+    window.clearTimeout(run.timer);
+    marqueeRuns.delete(option);
   }
-  option.classList.remove('has-left-overflow', 'has-right-overflow')
-  const label = option.querySelector<HTMLElement>('.option-label')
-  if (label) label.style.transform = ''
-}
+  option.classList.remove('has-left-overflow', 'has-right-overflow');
+  const label = option.querySelector<HTMLElement>('.option-label');
+  if (label) label.style.transform = '';
+};
 
 const startMarquee = (event: PointerEvent) => {
-  const option = event.currentTarget as HTMLElement
-  const label = option.querySelector<HTMLElement>('.option-label')
-  if (!label) return
-  const distance = label.scrollWidth - label.clientWidth
+  const option = event.currentTarget as HTMLElement;
+  const label = option.querySelector<HTMLElement>('.option-label');
+  if (!label) return;
+  const distance = label.scrollWidth - label.clientWidth;
   if (distance <= 0) {
-    option.classList.remove('has-overflow')
-    return
+    option.classList.remove('has-overflow');
+    return;
   }
-  stopMarqueeRun(option)
-  option.classList.add('has-overflow', 'has-right-overflow')
+  stopMarqueeRun(option);
+  option.classList.add('has-overflow', 'has-right-overflow');
   const timer = window.setTimeout(() => {
-    const startedAt = performance.now()
+    const startedAt = performance.now();
     // Keep long window names readable: never exceed 36 pixels per second.
-    const travelMs = Math.max(3000, (distance / 36) * 1000)
+    const travelMs = Math.max(3000, (distance / 36) * 1000);
     const tick = (now: number) => {
-      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs
-      const progress = phase <= 1 ? phase : 2 - phase
-      label.style.transform = `translateX(${-distance * progress}px)`
-      option.classList.toggle('has-left-overflow', progress > 0.015)
-      option.classList.toggle('has-right-overflow', progress < 0.985)
-      const run = marqueeRuns.get(option)
-      if (run) run.frame = window.requestAnimationFrame(tick)
-    }
-    marqueeRuns.set(option, { frame: window.requestAnimationFrame(tick), timer: 0 })
-  }, 300)
-  marqueeRuns.set(option, { frame: 0, timer })
-}
+      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs;
+      const progress = phase <= 1 ? phase : 2 - phase;
+      label.style.transform = `translateX(${-distance * progress}px)`;
+      option.classList.toggle('has-left-overflow', progress > 0.015);
+      option.classList.toggle('has-right-overflow', progress < 0.985);
+      const run = marqueeRuns.get(option);
+      if (run) run.frame = window.requestAnimationFrame(tick);
+    };
+    marqueeRuns.set(option, { frame: window.requestAnimationFrame(tick), timer: 0 });
+  }, 300);
+  marqueeRuns.set(option, { frame: 0, timer });
+};
 
 const stopMarquee = (event: PointerEvent) => {
-  const option = event.currentTarget as HTMLElement
-  stopMarqueeRun(option)
-}
+  const option = event.currentTarget as HTMLElement;
+  stopMarqueeRun(option);
+};
 </script>
 
 <template>

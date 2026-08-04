@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { MousePointer } from '@lucide/vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import { resolvePublicAssetUrl } from '~/utils/public-asset'
+import { MousePointer } from '@lucide/vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
-const { t } = useTranslate('ZoomPanel')
+const { t } = useTranslate('ZoomPanel');
 </script>
 
 <template>

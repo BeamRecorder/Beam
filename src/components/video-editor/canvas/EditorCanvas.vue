@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { Check } from '@lucide/vue'
-import Button from '../../ui/button/Button.vue'
-import Skeleton from '../../ui/skeleton/Skeleton.vue'
-import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue'
-import UndoRedoToast from './UndoRedoToast.vue'
-import type { HistoryAction } from '../composables/useEditorUndoRedo'
-import type { ProjectEditorData } from '../../../api/types/capture-api'
-import type { CursorType } from '../properties/cursor/useCursorReplacer'
-import type { ShadowDirection } from '../properties/cursor/shadow-types'
-import type { CursorClickEffects } from '../../../api/types/cursor-settings'
-import type { CursorMotionSettings } from '../../../api/types/cursor-settings'
-import type { BackgroundValue } from '../composables/backgroundCatalog'
-import type { ZoomElement } from '../zoom/zoom-types'
-import { activeClipsAt, sourceTimeAt } from '../composition/engine/clip-engine'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { Check } from '@lucide/vue';
+import Button from '../../ui/button/Button.vue';
+import Skeleton from '../../ui/skeleton/Skeleton.vue';
+import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
+import UndoRedoToast from './UndoRedoToast.vue';
+import type { HistoryAction } from '../composables/useEditorUndoRedo';
+import type { ProjectEditorData } from '../../../api/types/capture-api';
+import type { CursorType } from '../properties/cursor/useCursorReplacer';
+import type { ShadowDirection } from '../properties/cursor/shadow-types';
+import type { CursorClickEffects } from '../../../api/types/cursor-settings';
+import type { CursorMotionSettings } from '../../../api/types/cursor-settings';
+import type { BackgroundValue } from '../composables/backgroundCatalog';
+import type { ZoomElement } from '../zoom/zoom-types';
+import { activeClipsAt, sourceTimeAt } from '../composition/engine/clip-engine';
 import {
   isVisualClip,
   clipEndMs,
@@ -22,122 +22,122 @@ import {
   type NormalizedCrop,
   type NormalizedTransform,
   type VisualClip,
-} from '../composition/composition-types'
-import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas'
-import { useCanvasBackground } from './composables/useCanvasBackground'
-import { useCanvasVideoElement } from './composables/useCanvasVideoElement'
-import { useCompositionMedia } from './composables/useCompositionMedia'
-import { useCursorOverlay } from './composables/useCursorOverlay'
-import { useCameraZoom } from './composables/useCameraZoom'
-import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop'
-import { useViewportZoom } from './composables/useViewportZoom'
-import { useTranslate } from '~/i18n/useTranslate'
+} from '../composition/composition-types';
+import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
+import { useCanvasBackground } from './composables/useCanvasBackground';
+import { useCanvasVideoElement } from './composables/useCanvasVideoElement';
+import { useCompositionMedia } from './composables/useCompositionMedia';
+import { useCursorOverlay } from './composables/useCursorOverlay';
+import { useCameraZoom } from './composables/useCameraZoom';
+import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
+import { useViewportZoom } from './composables/useViewportZoom';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('EditorCanvas')
-type TransformClip = VisualClip | CaptionClip
+const { t } = useTranslate('EditorCanvas');
+type TransformClip = VisualClip | CaptionClip;
 
 const props = defineProps<{
-  isPlaying: boolean
-  currentTime: number
-  duration: number
-  selectedCursor: CursorType
-  cursorSize: number
-  cursorColor: string
-  enableShadow: boolean
-  shadowBlur: number
-  shadowColor: string
-  shadowDirection: ShadowDirection
-  clickEffects: CursorClickEffects
-  motion: CursorMotionSettings
-  selectedBackground: BackgroundValue | null
-  backgroundBlurPercent?: number
-  videoSrc?: string | null
-  editorData?: ProjectEditorData | null
-  zoomElements: ZoomElement[]
-  selectedZoom: ZoomElement | null
-  composition: ClipComposition
-  outputCanvas: OutputCanvasSettings
-  activeTab: string
-  selectedTransformClip: TransformClip | null
-  loopProgress?: number
-  isCropping?: boolean
-  isGridVisible?: boolean
-  historyAction?: HistoryAction | null
-}>()
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  selectedCursor: CursorType;
+  cursorSize: number;
+  cursorColor: string;
+  enableShadow: boolean;
+  shadowBlur: number;
+  shadowColor: string;
+  shadowDirection: ShadowDirection;
+  clickEffects: CursorClickEffects;
+  motion: CursorMotionSettings;
+  selectedBackground: BackgroundValue | null;
+  backgroundBlurPercent?: number;
+  videoSrc?: string | null;
+  editorData?: ProjectEditorData | null;
+  zoomElements: ZoomElement[];
+  selectedZoom: ZoomElement | null;
+  composition: ClipComposition;
+  outputCanvas: OutputCanvasSettings;
+  activeTab: string;
+  selectedTransformClip: TransformClip | null;
+  loopProgress?: number;
+  isCropping?: boolean;
+  isGridVisible?: boolean;
+  historyAction?: HistoryAction | null;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:isPlaying', value: boolean): void
-  (e: 'update:currentTime', value: number): void
-  (e: 'duration-change', value: number): void
-  (e: 'update:zoom', value: ZoomElement): void
-  (e: 'preview:zoom', value: ZoomElement): void
-  (e: 'select:clip', clipId: string): void
-  (e: 'deselect:transform-clip'): void
-  (e: 'deselect:zoom'): void
-  (e: 'update:clip-transform', transform: NormalizedTransform): void
-  (e: 'preview:clip-transform', transform: NormalizedTransform): void
-  (e: 'update:clip-crop', crop: NormalizedCrop): void
-  (e: 'select:canvas'): void
-  (e: 'done:crop'): void
-}>()
+  (e: 'update:isPlaying', value: boolean): void;
+  (e: 'update:currentTime', value: number): void;
+  (e: 'duration-change', value: number): void;
+  (e: 'update:zoom', value: ZoomElement): void;
+  (e: 'preview:zoom', value: ZoomElement): void;
+  (e: 'select:clip', clipId: string): void;
+  (e: 'deselect:transform-clip'): void;
+  (e: 'deselect:zoom'): void;
+  (e: 'update:clip-transform', transform: NormalizedTransform): void;
+  (e: 'preview:clip-transform', transform: NormalizedTransform): void;
+  (e: 'update:clip-crop', crop: NormalizedCrop): void;
+  (e: 'select:canvas'): void;
+  (e: 'done:crop'): void;
+}>();
 
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const containerRef = ref<HTMLDivElement | null>(null)
-const logicalSize = ref({ width: 0, height: 0 })
-const deviceScale = ref(1)
-const isFormatTransitioning = ref(false)
-let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null
-let resizeObserver: ResizeObserver | null = null
-let animationFrameId: number | null = null
-let playbackAnchorSeconds = 0
-let playbackAnchorTime = performance.now()
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+const containerRef = ref<HTMLDivElement | null>(null);
+const logicalSize = ref({ width: 0, height: 0 });
+const deviceScale = ref(1);
+const isFormatTransitioning = ref(false);
+let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
+let resizeObserver: ResizeObserver | null = null;
+let animationFrameId: number | null = null;
+let playbackAnchorSeconds = 0;
+let playbackAnchorTime = performance.now();
 let drawVisualStack:
   | ((
       ctx: CanvasRenderingContext2D,
       videoWindow: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
       drawScreen: () => void,
     ) => void)
-  | null = null
+  | null = null;
 
-const viewportZoom = useViewportZoom()
+const viewportZoom = useViewportZoom();
 
 const resetPlaybackClock = (seconds = props.currentTime) => {
-  playbackAnchorSeconds = Math.max(0, Math.min(props.duration, seconds))
-  playbackAnchorTime = performance.now()
-}
-const playbackClockSeconds = () => playbackAnchorSeconds + (performance.now() - playbackAnchorTime) / 1_000
+  playbackAnchorSeconds = Math.max(0, Math.min(props.duration, seconds));
+  playbackAnchorTime = performance.now();
+};
+const playbackClockSeconds = () => playbackAnchorSeconds + (performance.now() - playbackAnchorTime) / 1_000;
 
 const primaryScreenClip = computed<VisualClip | null>(
   () => props.composition.clips.find((clip): clip is VisualClip => clip.kind === 'screen' && clip.enabled) ?? null,
-)
+);
 const liveScreenClip = computed<VisualClip | null>(
   () =>
     activeClipsAt(props.composition, props.currentTime * 1_000).find(
       (clip): clip is VisualClip => clip.kind === 'screen',
     ) ?? null,
-)
+);
 const displayScreenClip = computed<VisualClip | null>(() => {
-  if (liveScreenClip.value) return liveScreenClip.value
-  const clip = primaryScreenClip.value
-  return clip && props.currentTime * 1_000 >= clip.timelineStartMs ? clip : null
-})
+  if (liveScreenClip.value) return liveScreenClip.value;
+  const clip = primaryScreenClip.value;
+  return clip && props.currentTime * 1_000 >= clip.timelineStartMs ? clip : null;
+});
 const screenAsset = computed(() => {
-  const clip = primaryScreenClip.value
-  return clip ? (props.composition.assets.find((asset) => asset.id === clip.assetId) ?? null) : null
-})
+  const clip = primaryScreenClip.value;
+  return clip ? (props.composition.assets.find((asset) => asset.id === clip.assetId) ?? null) : null;
+});
 const activeScreenSourceTime = computed(() => {
-  const clip = displayScreenClip.value
-  if (!clip) return primaryScreenClip.value?.sourceInMs ? primaryScreenClip.value.sourceInMs / 1_000 : 0
-  const timelineMs = Math.min(Math.max(props.currentTime * 1_000, clip.timelineStartMs), clipEndMs(clip) - 1)
-  return (sourceTimeAt(clip, timelineMs) ?? clip.sourceInMs) / 1_000
-})
+  const clip = displayScreenClip.value;
+  if (!clip) return primaryScreenClip.value?.sourceInMs ? primaryScreenClip.value.sourceInMs / 1_000 : 0;
+  const timelineMs = Math.min(Math.max(props.currentTime * 1_000, clip.timelineStartMs), clipEndMs(clip) - 1);
+  return (sourceTimeAt(clip, timelineMs) ?? clip.sourceInMs) / 1_000;
+});
 const previewFrameStyle = computed(() => {
-  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas)
-  return { left: `${preview.x}px`, top: `${preview.y}px`, width: `${preview.width}px`, height: `${preview.height}px` }
-})
+  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+  return { left: `${preview.x}px`, top: `${preview.y}px`, width: `${preview.width}px`, height: `${preview.height}px` };
+});
 
 function renderOnce() {
-  if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw)
+  if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
 
 const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
@@ -147,14 +147,14 @@ const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
   playbackRate: () => displayScreenClip.value?.playbackRate ?? 1,
   onDurationChange: () => undefined,
   onRenderOnce: renderOnce,
-})
+});
 const { drawBackground, syncVideoPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
   renderOnce,
-)
+);
 
-let cameraZoom: ReturnType<typeof useCameraZoom>
+let cameraZoom: ReturnType<typeof useCameraZoom>;
 const transformAndCrop = useLayerTransformAndCrop({
   composition: () => props.composition,
   currentTime: () => props.currentTime,
@@ -167,13 +167,13 @@ const transformAndCrop = useLayerTransformAndCrop({
   onPreviewTransform: (transform) => emit('preview:clip-transform', transform),
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
-})
+});
 
 const renderGuideLines = computed(() => {
-  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas)
+  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
   return transformAndCrop.activeGuideLines.value.map((guide) => {
     if (guide.type === 'vertical') {
-      const x = preview.x + guide.position * preview.width
+      const x = preview.x + guide.position * preview.width;
       return {
         type: 'vertical' as const,
         style: {
@@ -181,9 +181,9 @@ const renderGuideLines = computed(() => {
           top: `${preview.y}px`,
           height: `${preview.height}px`,
         },
-      }
+      };
     } else {
-      const y = preview.y + guide.position * preview.height
+      const y = preview.y + guide.position * preview.height;
       return {
         type: 'horizontal' as const,
         style: {
@@ -191,10 +191,10 @@ const renderGuideLines = computed(() => {
           left: `${preview.x}px`,
           width: `${preview.width}px`,
         },
-      }
+      };
     }
-  })
-})
+  });
+});
 
 cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
@@ -218,32 +218,32 @@ cameraZoom = useCameraZoom({
   onDeselectZoom: () => emit('deselect:zoom'),
   selectVisualAt: (event) => transformAndCrop.selectVisualAt(event, canvasRef.value),
   selectedTransformClipExists: () => Boolean(props.selectedTransformClip),
-})
+});
 
 watch(
   () => props.isPlaying,
   (playing) => {
-    resetPlaybackClock()
-    syncVideoPlayback(playing)
-    if (!playing) cameraZoom.resetCamera()
+    resetPlaybackClock();
+    syncVideoPlayback(playing);
+    if (!playing) cameraZoom.resetCamera();
   },
-)
+);
 watch(
   () => props.currentTime,
   (time) => {
     if (!props.isPlaying) {
-      resetPlaybackClock(time)
-      return
+      resetPlaybackClock(time);
+      return;
     }
-    if (Math.abs(time - playbackClockSeconds()) > 0.25) resetPlaybackClock(time)
+    if (Math.abs(time - playbackClockSeconds()) > 0.25) resetPlaybackClock(time);
   },
-)
+);
 watch(
   () => props.duration,
   () => resetPlaybackClock(),
-)
+);
 
-const isMasterPlaying = () => props.isPlaying
+const isMasterPlaying = () => props.isPlaying;
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
   currentTime: () => props.currentTime,
@@ -253,7 +253,7 @@ const compositionMedia = useCompositionMedia({
   isCropping: () => props.isCropping,
   outputCanvas: () => props.outputCanvas,
   onRenderOnce: renderOnce,
-})
+});
 
 const drawNonScreenVisuals = (
   ctx: CanvasRenderingContext2D,
@@ -261,23 +261,23 @@ const drawNonScreenVisuals = (
 ) => {
   const clips = activeClipsAt(props.composition, props.currentTime * 1_000)
     .filter((clip) => isVisualClip(clip) && clip.kind !== 'screen')
-    .sort((left, right) => right.order - left.order)
+    .sort((left, right) => right.order - left.order);
   for (const clip of clips) {
-    if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id)
-    else compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920, clip.id)
+    if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
+    else compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920, clip.id);
   }
-}
+};
 
 drawVisualStack = (ctx, window, drawScreen) => {
   const clips = activeClipsAt(props.composition, props.currentTime * 1_000)
     .filter((clip) => isVisualClip(clip))
-    .sort((left, right) => right.order - left.order)
+    .sort((left, right) => right.order - left.order);
   for (const clip of clips) {
-    if (clip.kind === 'screen') drawScreen()
-    else if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id)
-    else compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920, clip.id)
+    if (clip.kind === 'screen') drawScreen();
+    else if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
+    else compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920, clip.id);
   }
-}
+};
 
 const cursorOverlay = useCursorOverlay({
   selectedCursor: () => props.selectedCursor,
@@ -298,20 +298,20 @@ const cursorOverlay = useCursorOverlay({
   isScreenEnabled: () => Boolean(liveScreenClip.value),
   showBackground: () => props.outputCanvas.showBackground,
   onRenderOnce: renderOnce,
-})
+});
 
 watch(
   () => `${props.outputCanvas.width}:${props.outputCanvas.height}:${props.outputCanvas.showBackground}`,
   () => {
-    isFormatTransitioning.value = true
-    if (formatTransitionTimer) clearTimeout(formatTransitionTimer)
+    isFormatTransitioning.value = true;
+    if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
     formatTransitionTimer = setTimeout(() => {
-      isFormatTransitioning.value = false
-    }, 260)
-    renderOnce()
+      isFormatTransitioning.value = false;
+    }, 260);
+    renderOnce();
   },
-)
-watch(() => [props.composition, props.currentTime, props.isCropping] as const, renderOnce, { deep: true })
+);
+watch(() => [props.composition, props.currentTime, props.isCropping] as const, renderOnce, { deep: true });
 watch(
   () =>
     [
@@ -327,35 +327,35 @@ watch(
     ] as const,
   renderOnce,
   { deep: true },
-)
-watch(transformAndCrop.transformDraft, renderOnce, { deep: true })
-watch(isMasterPlaying, renderOnce)
+);
+watch(transformAndCrop.transformDraft, renderOnce, { deep: true });
+watch(isMasterPlaying, renderOnce);
 
 const resizeCanvas = () => {
-  const canvas = canvasRef.value
-  const container = containerRef.value
-  if (!canvas || !container) return
-  const width = Math.max(1, container.clientWidth)
-  const height = Math.max(1, container.clientHeight)
-  const dpr = Math.min(window.devicePixelRatio || 1, 2)
-  deviceScale.value = dpr
-  logicalSize.value = { width, height }
-  canvas.width = Math.max(1, Math.round(width * dpr))
-  canvas.height = Math.max(1, Math.round(height * dpr))
-  renderCanvas()
-}
+  const canvas = canvasRef.value;
+  const container = containerRef.value;
+  if (!canvas || !container) return;
+  const width = Math.max(1, container.clientWidth);
+  const height = Math.max(1, container.clientHeight);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  deviceScale.value = dpr;
+  logicalSize.value = { width, height };
+  canvas.width = Math.max(1, Math.round(width * dpr));
+  canvas.height = Math.max(1, Math.round(height * dpr));
+  renderCanvas();
+};
 
 const renderCanvas = () => {
-  const canvas = canvasRef.value
-  const ctx = canvas?.getContext('2d')
-  if (!canvas || !ctx || !logicalSize.value.width || !logicalSize.value.height) return
-  ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0)
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = 'high'
-  ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height)
-  const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, videoEl)
+  const canvas = canvasRef.value;
+  const ctx = canvas?.getContext('2d');
+  if (!canvas || !ctx || !logicalSize.value.width || !logicalSize.value.height) return;
+  ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
+  const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, videoEl);
   if (window) {
-    compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920)
+    compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
       window,
@@ -363,9 +363,9 @@ const renderCanvas = () => {
       videoEl.videoHeight || 1080,
       logicalSize.value.width,
       (drawContent) => cameraZoom.drawInCameraSpace(ctx, window, drawContent),
-    )
+    );
   } else {
-    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas)
+    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
     const fallbackWindow = {
       dx: preview.x,
       dy: preview.y,
@@ -374,81 +374,81 @@ const renderCanvas = () => {
       scale: 1,
       focusX: preview.x + preview.width / 2,
       focusY: preview.y + preview.height / 2,
-    }
-    ctx.save()
-    ctx.beginPath()
-    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, 16)
-    ctx.clip()
-    drawBackground(ctx, preview)
-    drawNonScreenVisuals(ctx, fallbackWindow)
-    compositionMedia.drawComposition(ctx, fallbackWindow, videoEl.videoWidth || 1920)
-    ctx.restore()
+    };
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, 16);
+    ctx.clip();
+    drawBackground(ctx, preview);
+    drawNonScreenVisuals(ctx, fallbackWindow);
+    compositionMedia.drawComposition(ctx, fallbackWindow, videoEl.videoWidth || 1920);
+    ctx.restore();
   }
   if (props.isPlaying) {
-    const nextTime = playbackClockSeconds()
+    const nextTime = playbackClockSeconds();
     if (props.duration > 0 && nextTime >= props.duration) {
-      resetPlaybackClock(0)
-      emit('update:currentTime', 0)
+      resetPlaybackClock(0);
+      emit('update:currentTime', 0);
     } else if (props.duration <= 0) {
-      resetPlaybackClock(0)
-      emit('update:currentTime', 0)
-      emit('update:isPlaying', false)
+      resetPlaybackClock(0);
+      emit('update:currentTime', 0);
+      emit('update:isPlaying', false);
     } else {
-      emit('update:currentTime', Math.max(0, nextTime))
+      emit('update:currentTime', Math.max(0, nextTime));
     }
   }
-}
+};
 const commitCrop = () => {
-  transformAndCrop.commitCrop()
-  emit('done:crop')
-}
+  transformAndCrop.commitCrop();
+  emit('done:crop');
+};
 function draw() {
-  animationFrameId = null
-  renderCanvas()
-  if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw)
+  animationFrameId = null;
+  renderCanvas();
+  if (props.isPlaying || isTransitioningBackground.value) animationFrameId = requestAnimationFrame(draw);
 }
 
 const handleIslandPointerDown = (event: PointerEvent) => {
-  if (viewportZoom.beginPan(event, containerRef.value)) return
-  cameraZoom.beginSelectionMove(event)
-}
+  if (viewportZoom.beginPan(event, containerRef.value)) return;
+  cameraZoom.beginSelectionMove(event);
+};
 
 const handleIslandPointerMove = (event: PointerEvent) => {
   if (viewportZoom.isPanning.value) {
-    viewportZoom.movePan(event)
-    return
+    viewportZoom.movePan(event);
+    return;
   }
-  cameraZoom.moveSelection(event)
-}
+  cameraZoom.moveSelection(event);
+};
 
 const handleIslandPointerUp = (event: PointerEvent) => {
   if (viewportZoom.isPanning.value) {
-    viewportZoom.endPan(event, containerRef.value)
-    return
+    viewportZoom.endPan(event, containerRef.value);
+    return;
   }
-  cameraZoom.endSelectionMove(event)
-}
+  cameraZoom.endSelectionMove(event);
+};
 
 const handleIslandWheel = (event: WheelEvent) => {
-  viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect())
-}
+  viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect());
+};
 
 onMounted(() => {
-  resetPlaybackClock()
-  resizeCanvas()
-  resizeObserver = new ResizeObserver(resizeCanvas)
-  if (containerRef.value) resizeObserver.observe(containerRef.value)
-  renderOnce()
-})
+  resetPlaybackClock();
+  resizeCanvas();
+  resizeObserver = new ResizeObserver(resizeCanvas);
+  if (containerRef.value) resizeObserver.observe(containerRef.value);
+  renderOnce();
+});
 onUnmounted(() => {
-  resizeObserver?.disconnect()
-  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId)
-  if (formatTransitionTimer) clearTimeout(formatTransitionTimer)
-})
+  resizeObserver?.disconnect();
+  if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+  if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
+});
 
 defineExpose({
   viewportZoom,
-})
+});
 </script>
 
 <template>

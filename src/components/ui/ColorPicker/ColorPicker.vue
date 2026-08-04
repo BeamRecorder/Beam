@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
-import ColorPickerCustom from './ColorPickerCustom.vue'
-import Popover from '../popover/Popover.vue'
-import Input from '../input/Input.vue'
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue';
+import ColorPickerCustom from './ColorPickerCustom.vue';
+import Popover from '../popover/Popover.vue';
+import Input from '../input/Input.vue';
 
 const props = defineProps({
   modelValue: {
@@ -45,47 +45,47 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
-})
+});
 
-const emit = defineEmits(['update:modelValue', 'update:alpha', 'drag-start', 'drag-end'])
+const emit = defineEmits(['update:modelValue', 'update:alpha', 'drag-start', 'drag-end']);
 
-const displayLabel = computed(() => props.label ?? 'Color')
+const displayLabel = computed(() => props.label ?? 'Color');
 
-const isPopoverOpen = ref(false)
-const isDragging = ref(false)
-const isMobileViewport = ref(false)
+const isPopoverOpen = ref(false);
+const isDragging = ref(false);
+const isMobileViewport = ref(false);
 
 function updateIsMobileViewport() {
-  isMobileViewport.value = window.innerWidth <= 480
+  isMobileViewport.value = window.innerWidth <= 480;
 }
 
 onMounted(() => {
-  updateIsMobileViewport()
+  updateIsMobileViewport();
   window.addEventListener('resize', updateIsMobileViewport, {
     passive: true,
-  })
-})
+  });
+});
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateIsMobileViewport)
-})
+  window.removeEventListener('resize', updateIsMobileViewport);
+});
 
 const updateColor = (val: string | number) => {
-  if (props.disabled) return
-  emit('update:modelValue', String(val))
-}
+  if (props.disabled) return;
+  emit('update:modelValue', String(val));
+};
 const updateAlpha = (val: number) => {
-  emit('update:alpha', val)
-}
+  emit('update:alpha', val);
+};
 
 function handleDragStart() {
-  isDragging.value = true
-  emit('drag-start')
+  isDragging.value = true;
+  emit('drag-start');
 }
 
 function handleDragEnd() {
-  isDragging.value = false
-  emit('drag-end')
+  isDragging.value = false;
+  emit('drag-end');
 }
 </script>
 

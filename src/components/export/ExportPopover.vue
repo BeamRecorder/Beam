@@ -1,100 +1,100 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Download, FolderOpen, X } from '@lucide/vue'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import Popover from '~/ui/popover/Popover.vue'
-import ProgressBar from '~/ui/progressbar/ProgressBar.vue'
-import { useToastStore } from '~/ui/toast/toastStore'
-import { supportedVideoCodec } from './mediabunny/exporter'
-import { useExportJob } from './useExportJob'
-import { bitrateFor } from './export-presets'
-import type { ExportFormat, ExportPreset, ExportRequest } from './export-types'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed, ref } from 'vue';
+import { Download, FolderOpen, X } from '@lucide/vue';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Popover from '~/ui/popover/Popover.vue';
+import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
+import { useToastStore } from '~/ui/toast/toastStore';
+import { supportedVideoCodec } from './mediabunny/exporter';
+import { useExportJob } from './useExportJob';
+import { bitrateFor } from './export-presets';
+import type { ExportFormat, ExportPreset, ExportRequest } from './export-types';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('ExportPopover')
+const { t } = useTranslate('ExportPopover');
 
-export type ExportResolutionOption = '720p' | '1080p' | 'max'
+export type ExportResolutionOption = '720p' | '1080p' | 'max';
 
-const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>()
-const format = ref<ExportFormat>('webm')
-const preset = ref<ExportPreset>('medium')
-const resolution = ref<ExportResolutionOption>('max')
-const presets: ExportPreset[] = ['low', 'medium', 'high']
+const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>();
+const format = ref<ExportFormat>('webm');
+const preset = ref<ExportPreset>('medium');
+const resolution = ref<ExportResolutionOption>('max');
+const presets: ExportPreset[] = ['low', 'medium', 'high'];
 
 const formatDescriptions: Record<ExportFormat, string> = {
   webm: t('webmDesc'),
   mp4: t('mp4Desc'),
-}
+};
 
 const nativeWidth = computed(
   () => props.request.snapshot.canvas?.width || props.request.snapshot.render?.sourceWidth || 1920,
-)
+);
 const nativeHeight = computed(
   () => props.request.snapshot.canvas?.height || props.request.snapshot.render?.sourceHeight || 1080,
-)
+);
 
 const computeExportDimensions = (res: ExportResolutionOption) => {
-  const nativeW = nativeWidth.value
-  const nativeH = nativeHeight.value
-  const aspectRatio = nativeW / nativeH
+  const nativeW = nativeWidth.value;
+  const nativeH = nativeHeight.value;
+  const aspectRatio = nativeW / nativeH;
 
-  let targetH = nativeH
+  let targetH = nativeH;
   if (res === '720p') {
-    targetH = Math.min(720, nativeH)
+    targetH = Math.min(720, nativeH);
   } else if (res === '1080p') {
-    targetH = Math.min(1080, nativeH)
+    targetH = Math.min(1080, nativeH);
   }
 
-  let targetW = Math.round(targetH * aspectRatio)
-  targetW = Math.max(2, targetW & ~1)
-  targetH = Math.max(2, targetH & ~1)
+  let targetW = Math.round(targetH * aspectRatio);
+  targetW = Math.max(2, targetW & ~1);
+  targetH = Math.max(2, targetH & ~1);
 
-  return { width: targetW, height: targetH }
-}
+  return { width: targetW, height: targetH };
+};
 
-const activeDimensions = computed(() => computeExportDimensions(resolution.value))
+const activeDimensions = computed(() => computeExportDimensions(resolution.value));
 
 const resolutionDescriptions = computed<Record<ExportResolutionOption, string>>(() => {
-  const dims720 = computeExportDimensions('720p')
-  const dims1080 = computeExportDimensions('1080p')
-  const dimsMax = computeExportDimensions('max')
+  const dims720 = computeExportDimensions('720p');
+  const dims1080 = computeExportDimensions('1080p');
+  const dimsMax = computeExportDimensions('max');
   return {
     '720p': t('res720pDesc', { width: dims720.width, height: dims720.height }),
     '1080p': t('res1080pDesc', { width: dims1080.width, height: dims1080.height }),
     max: t('resMaxDesc', { width: dimsMax.width, height: dimsMax.height }),
-  }
-})
+  };
+});
 
 const getMb = (p: ExportPreset) => {
-  const { width, height } = activeDimensions.value
-  const { fps } = props.request.snapshot.render
-  const bps = bitrateFor(p, width, height, fps)
-  return (bps / 1_000_000).toFixed(1)
-}
+  const { width, height } = activeDimensions.value;
+  const { fps } = props.request.snapshot.render;
+  const bps = bitrateFor(p, width, height, fps);
+  return (bps / 1_000_000).toFixed(1);
+};
 
 const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
   low: t('lowDesc', { mbps: getMb('low') }),
   medium: t('mediumDesc', { mbps: getMb('medium') }),
   high: t('highDesc', { mbps: getMb('high') }),
-}))
+}));
 
-const availability = ref<string | null>(null)
-const { progress, error, result, isExporting, start, cancel } = useExportJob()
-const toastStore = useToastStore()
+const availability = ref<string | null>(null);
+const { progress, error, result, isExporting, start, cancel } = useExportJob();
+const toastStore = useToastStore();
 const percentage = computed(() =>
   progress.value ? (progress.value.completed / Math.max(1, progress.value.total)) * 100 : 0,
-)
+);
 
 const openFile = (path: string) => {
   if (path && window.capture?.openFile) {
-    void window.capture.openFile(path)
+    void window.capture.openFile(path);
   }
-}
+};
 
 const run = async () => {
-  availability.value = null
-  const { width, height } = activeDimensions.value
+  availability.value = null;
+  const { width, height } = activeDimensions.value;
   const request: ExportRequest = {
     ...props.request,
     format: format.value,
@@ -107,29 +107,29 @@ const run = async () => {
         height,
       },
     },
-  }
+  };
   if (!(await supportedVideoCodec(request))) {
-    availability.value = t('formatNotSupported', { format: format.value.toUpperCase() })
-    return
+    availability.value = t('formatNotSupported', { format: format.value.toUpperCase() });
+    return;
   }
-  await start(request)
+  await start(request);
   if (result.value?.path) {
-    const exportedPath = result.value.path
-    const filename = exportedPath.split(/[/\\]/).pop() || t('video')
+    const exportedPath = result.value.path;
+    const filename = exportedPath.split(/[/\\]/).pop() || t('video');
     toastStore.success(t('savedTo', { path: filename }), 6000, {
       label: t('openFile'),
       onClick: () => openFile(exportedPath),
-    })
+    });
   }
-}
+};
 
 const formatMs = (ms: number) => {
-  const totalSeconds = Math.max(0, ms / 1000)
-  const mins = Math.floor(totalSeconds / 60)
-  const secs = Math.floor(totalSeconds % 60)
-  const millis = Math.floor((totalSeconds % 1) * 10)
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis}s`
-}
+  const totalSeconds = Math.max(0, ms / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = Math.floor(totalSeconds % 60);
+  const millis = Math.floor((totalSeconds % 1) * 10);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis}s`;
+};
 </script>
 
 <template>

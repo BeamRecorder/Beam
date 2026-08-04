@@ -1,1 +1,1 @@
-export type ShadowDirection = 'all' | 'bottom' | 'bottom-right' | 'top-left'
+export type ShadowDirection = 'all' | 'bottom' | 'bottom-right' | 'top-left';

@@ -1,6 +1,6 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron');
 
-const invoke = (command, payload) => ipcRenderer.invoke('capture:request', command, payload)
+const invoke = (command, payload) => ipcRenderer.invoke('capture:request', command, payload);
 
 contextBridge.exposeInMainWorld(
   'capture',
@@ -56,18 +56,18 @@ contextBridge.exposeInMainWorld(
     drag: () => ipcRenderer.send('window:drag'),
     dragEnd: () => ipcRenderer.invoke('window:dragEnd'),
     onRecorderTooltipSide: (listener) => {
-      const callback = (_event, side) => listener(side)
-      ipcRenderer.on('window:recorder-tooltip-side', callback)
-      return () => ipcRenderer.removeListener('window:recorder-tooltip-side', callback)
+      const callback = (_event, side) => listener(side);
+      ipcRenderer.on('window:recorder-tooltip-side', callback);
+      return () => ipcRenderer.removeListener('window:recorder-tooltip-side', callback);
     },
     getSources: (types) => ipcRenderer.invoke('window:getSources', types),
     selectScreenRegion: (options) => ipcRenderer.invoke('screen-region:select', options),
     showScreenRegionOverlay: (options) => ipcRenderer.send('screen-region:show', options),
     hideScreenRegionOverlay: () => ipcRenderer.send('screen-region:hide'),
     onScreenRegionConfigure: (listener) => {
-      const callback = (_event, options) => listener(options)
-      ipcRenderer.on('screen-region:configure', callback)
-      return () => ipcRenderer.removeListener('screen-region:configure', callback)
+      const callback = (_event, options) => listener(options);
+      ipcRenderer.on('screen-region:configure', callback);
+      return () => ipcRenderer.removeListener('screen-region:configure', callback);
     },
     confirmScreenRegion: (region) => ipcRenderer.send('screen-region:confirm', region),
     cancelScreenRegion: () => ipcRenderer.send('screen-region:cancel'),
@@ -76,14 +76,14 @@ contextBridge.exposeInMainWorld(
     updatePreferences: (patch) => ipcRenderer.invoke('preferences:update', patch),
     resetPreferences: (keys) => ipcRenderer.invoke('preferences:reset', keys),
     onPreferencesChanged: (listener) => {
-      const callback = (_event, preferences) => listener(preferences)
-      ipcRenderer.on('preferences:changed', callback)
-      return () => ipcRenderer.removeListener('preferences:changed', callback)
+      const callback = (_event, preferences) => listener(preferences);
+      ipcRenderer.on('preferences:changed', callback);
+      return () => ipcRenderer.removeListener('preferences:changed', callback);
     },
     onPreferenceShortcut: (listener) => {
-      const callback = (_event, id) => listener(id)
-      ipcRenderer.on('preferences:shortcut', callback)
-      return () => ipcRenderer.removeListener('preferences:shortcut', callback)
+      const callback = (_event, id) => listener(id);
+      ipcRenderer.on('preferences:shortcut', callback);
+      return () => ipcRenderer.removeListener('preferences:shortcut', callback);
     },
     showTeleprompter: () => ipcRenderer.send('teleprompter:show'),
     hideTeleprompter: () => ipcRenderer.send('teleprompter:hide'),
@@ -91,19 +91,19 @@ contextBridge.exposeInMainWorld(
     setTeleprompterSession: (context) => ipcRenderer.send('teleprompter:set-session', context),
     notifyTeleprompterReady: () => ipcRenderer.send('teleprompter:ready'),
     onTeleprompterShortcut: (listener) => {
-      const callback = (_event, id) => listener(id)
-      ipcRenderer.on('teleprompter:shortcut', callback)
-      return () => ipcRenderer.removeListener('teleprompter:shortcut', callback)
+      const callback = (_event, id) => listener(id);
+      ipcRenderer.on('teleprompter:shortcut', callback);
+      return () => ipcRenderer.removeListener('teleprompter:shortcut', callback);
     },
     onTeleprompterSession: (listener) => {
-      const callback = (_event, context) => listener(context)
-      ipcRenderer.on('teleprompter:session', callback)
-      return () => ipcRenderer.removeListener('teleprompter:session', callback)
+      const callback = (_event, context) => listener(context);
+      ipcRenderer.on('teleprompter:session', callback);
+      return () => ipcRenderer.removeListener('teleprompter:session', callback);
     },
     onTeleprompterVisibility: (listener) => {
-      const callback = (_event, visible) => listener(Boolean(visible))
-      ipcRenderer.on('teleprompter:visibility', callback)
-      return () => ipcRenderer.removeListener('teleprompter:visibility', callback)
+      const callback = (_event, visible) => listener(Boolean(visible));
+      ipcRenderer.on('teleprompter:visibility', callback);
+      return () => ipcRenderer.removeListener('teleprompter:visibility', callback);
     },
     saveSessionTeleprompter: (projectId, sessionId, document) =>
       ipcRenderer.invoke('teleprompter:save-session', { projectId, sessionId, document }),
@@ -111,9 +111,9 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke('teleprompter:get-session', { projectId, sessionId }),
     setCountdown: (seconds) => ipcRenderer.send('countdown:set', seconds),
     onCountdown: (listener) => {
-      const callback = (_event, seconds) => listener(seconds)
-      ipcRenderer.on('countdown:state', callback)
-      return () => ipcRenderer.removeListener('countdown:state', callback)
+      const callback = (_event, seconds) => listener(seconds);
+      ipcRenderer.on('countdown:state', callback);
+      return () => ipcRenderer.removeListener('countdown:state', callback);
     },
     listProjects: () => ipcRenderer.invoke('projects:list'),
     projectMediaUrl: (source) => ipcRenderer.invoke('projects:media-url', { source }),
@@ -125,9 +125,9 @@ contextBridge.exposeInMainWorld(
     listBackgroundLibrary: () => ipcRenderer.invoke('background-library:list'),
     pickBackgroundLibraryMedia: (kind = 'media') => ipcRenderer.invoke('background-library:pick-import', { kind }),
     onBackgroundLibraryChanged: (listener) => {
-      const callback = () => listener()
-      ipcRenderer.on('background-library:changed', callback)
-      return () => ipcRenderer.removeListener('background-library:changed', callback)
+      const callback = () => listener();
+      ipcRenderer.on('background-library:changed', callback);
+      return () => ipcRenderer.removeListener('background-library:changed', callback);
     },
     createProject: (options = {}) => ipcRenderer.invoke('projects:create', options),
     renameProject: (projectId, name) => ipcRenderer.invoke('projects:rename', { projectId, name }),
@@ -137,28 +137,28 @@ contextBridge.exposeInMainWorld(
     whisperModels: () => ipcRenderer.invoke('whisper:models'),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke('whisper:download', { modelId }),
     onWhisperProgress: (listener) => {
-      const callback = (_event, progress) => listener(progress)
-      ipcRenderer.on('whisper:progress', callback)
-      return () => ipcRenderer.removeListener('whisper:progress', callback)
+      const callback = (_event, progress) => listener(progress);
+      ipcRenderer.on('whisper:progress', callback);
+      return () => ipcRenderer.removeListener('whisper:progress', callback);
     },
     configureCameraOverlay: (state) => ipcRenderer.send('camera-overlay:configure', state),
     setCameraOverlayActive: (active) => ipcRenderer.send('camera-overlay:set-active', Boolean(active)),
     resetCameraOverlayPlacement: () => ipcRenderer.send('camera-overlay:reset-placement'),
     getCameraOverlayState: () => ipcRenderer.invoke('camera-overlay:state'),
     onCameraOverlayState: (listener) => {
-      const callback = (_event, state) => listener(state)
-      ipcRenderer.on('camera-overlay:state', callback)
-      return () => ipcRenderer.removeListener('camera-overlay:state', callback)
+      const callback = (_event, state) => listener(state);
+      ipcRenderer.on('camera-overlay:state', callback);
+      return () => ipcRenderer.removeListener('camera-overlay:state', callback);
     },
     onCameraOverlayHover: (listener) => {
-      const callback = (_event, hovered) => listener(hovered)
-      ipcRenderer.on('camera-overlay:hover', callback)
-      return () => ipcRenderer.removeListener('camera-overlay:hover', callback)
+      const callback = (_event, hovered) => listener(hovered);
+      ipcRenderer.on('camera-overlay:hover', callback);
+      return () => ipcRenderer.removeListener('camera-overlay:hover', callback);
     },
     onCameraShadow: (listener) => {
-      const callback = (_event, state) => listener(state)
-      ipcRenderer.on('camera-shadow:state', callback)
-      return () => ipcRenderer.removeListener('camera-shadow:state', callback)
+      const callback = (_event, state) => listener(state);
+      ipcRenderer.on('camera-shadow:state', callback);
+      return () => ipcRenderer.removeListener('camera-shadow:state', callback);
     },
     beginExport: (options) => ipcRenderer.invoke('export:begin', options),
     writeExportChunk: (payload) => ipcRenderer.invoke('export:write', payload),
@@ -174,9 +174,9 @@ contextBridge.exposeInMainWorld(
     openDiscordInvite: () => ipcRenderer.invoke('community:open-discord'),
     openGithubRepository: () => ipcRenderer.invoke('community:open-github'),
     onUpdateState: (listener) => {
-      const callback = (_event, state) => listener(state)
-      ipcRenderer.on('app-update:state', callback)
-      return () => ipcRenderer.removeListener('app-update:state', callback)
+      const callback = (_event, state) => listener(state);
+      ipcRenderer.on('app-update:state', callback);
+      return () => ipcRenderer.removeListener('app-update:state', callback);
     },
   }),
-)
+);

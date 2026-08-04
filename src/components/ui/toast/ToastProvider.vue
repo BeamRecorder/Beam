@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { useToastStore } from './toastStore'
-import { X, CheckCircle, AlertCircle, Info } from '@lucide/vue'
-import Button from '../button/Button.vue'
+import { useToastStore } from './toastStore';
+import { X, CheckCircle, AlertCircle, Info } from '@lucide/vue';
+import Button from '../button/Button.vue';
+import type { Toast } from './toastStore';
 
-const toastStore = useToastStore()
+const toastStore = useToastStore();
+const handleToastAction = (toast: Toast) => {
+  toast.action?.onClick();
+  toastStore.remove(toast.id);
+};
 </script>
 
 <template>
@@ -23,10 +28,7 @@ const toastStore = useToastStore()
           variant="secondary"
           size="sm"
           class="toast-action-btn"
-          @click="
-            toast.action.onClick()
-            toastStore.remove(toast.id)
-          "
+          @click="handleToastAction(toast)"
         >
           {{ toast.action.label }}
         </Button>

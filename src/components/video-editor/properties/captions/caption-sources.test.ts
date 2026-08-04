@@ -1,13 +1,13 @@
-import { describe, expect, it } from 'vitest'
-import { captionSources } from './caption-sources'
-import type { ClipComposition } from '../../composition/composition-types'
+import { describe, expect, it } from 'vitest';
+import { captionSources } from './caption-sources';
+import type { ClipComposition } from '../../composition/composition-types';
 
 const composition = (overrides: Partial<ClipComposition> = {}): ClipComposition => ({
   schemaVersion: 1,
   assets: [],
   clips: [],
   ...overrides,
-})
+});
 
 describe('captionSources', () => {
   it('lists an audio track linked to an imported video', () => {
@@ -44,10 +44,10 @@ describe('captionSources', () => {
           },
         ],
       }),
-    )
+    );
 
-    expect(sources).toEqual([{ id: 'media:video-audio', label: 'Demo audio', src: 'file:///demo.mp4' }])
-  })
+    expect(sources).toEqual([{ id: 'media:video-audio', label: 'Demo audio', src: 'file:///demo.mp4' }]);
+  });
 
   it('lists audio tracks regardless of their media kind', () => {
     const sources = captionSources(
@@ -83,10 +83,10 @@ describe('captionSources', () => {
           },
         ],
       }),
-    )
+    );
 
-    expect(sources).toEqual([{ id: 'media:narration', label: 'Voice-over', src: 'file:///voice.mp3' }])
-  })
+    expect(sources).toEqual([{ id: 'media:narration', label: 'Voice-over', src: 'file:///voice.mp3' }]);
+  });
 
   it('ignores audio tracks whose media is unavailable', () => {
     const sources = captionSources(
@@ -109,8 +109,8 @@ describe('captionSources', () => {
           },
         ],
       }),
-    )
+    );
 
-    expect(sources).toEqual([])
-  })
-})
+    expect(sources).toEqual([]);
+  });
+});

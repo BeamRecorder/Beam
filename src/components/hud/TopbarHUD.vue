@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { ChevronLeft, Minus, Settings, X } from '@lucide/vue'
-import Badge from '~/ui/badge/Badge.vue'
-import Button from '~/ui/button/Button.vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import { resolvePublicAssetUrl } from '~/utils/public-asset'
-import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue'
+import { ChevronLeft, Minus, Settings, X } from '@lucide/vue';
+import Badge from '~/ui/badge/Badge.vue';
+import Button from '~/ui/button/Button.vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 
-const { t } = useTranslate('TopbarHUD')
+const { t } = useTranslate('TopbarHUD');
 
 withDefaults(
   defineProps<{
-    title?: string
-    showBack?: boolean
-    showSettings?: boolean
-    isRecording?: boolean
+    title?: string;
+    showBack?: boolean;
+    showSettings?: boolean;
+    isRecording?: boolean;
   }>(),
   {
     title: '',
@@ -21,14 +21,14 @@ withDefaults(
     showSettings: false,
     isRecording: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (event: 'back'): void
-  (event: 'minimize'): void
-  (event: 'open-settings'): void
-  (event: 'close'): void
-}>()
+  (event: 'back'): void;
+  (event: 'minimize'): void;
+  (event: 'open-settings'): void;
+  (event: 'close'): void;
+}>();
 </script>
 
 <template>

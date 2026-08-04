@@ -1,89 +1,89 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Video } from '@lucide/vue'
-import { isCameraUnavailableError } from '../../../api/camera-recorder'
-import { useTranslate } from '~/i18n/useTranslate'
-import { capture } from '../../../api/capture'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Video } from '@lucide/vue';
+import { isCameraUnavailableError } from '../../../api/camera-recorder';
+import { useTranslate } from '~/i18n/useTranslate';
+import { capture } from '../../../api/capture';
 
-const { t } = useTranslate('CameraPreviewOverlay')
+const { t } = useTranslate('CameraPreviewOverlay');
 
 const props = withDefaults(
   defineProps<{
-    cameraId: string
-    isRecording?: boolean
-    isHovered?: boolean
-    theme?: 'light' | 'dark' | 'system'
-    windowOverlay?: boolean
+    cameraId: string;
+    isRecording?: boolean;
+    isHovered?: boolean;
+    theme?: 'light' | 'dark' | 'system';
+    windowOverlay?: boolean;
   }>(),
   { isRecording: false, isHovered: false, theme: 'light' },
-)
+);
 
-const videoRef = ref<HTMLVideoElement | null>(null)
-const cameraStream = ref<MediaStream | null>(null)
-const streamError = ref<string | null>(null)
-const isLoading = ref(false)
-let cameraRequest = 0
-let initialLoadTimer: number | null = null
+const videoRef = ref<HTMLVideoElement | null>(null);
+const cameraStream = ref<MediaStream | null>(null);
+const streamError = ref<string | null>(null);
+const isLoading = ref(false);
+let cameraRequest = 0;
+let initialLoadTimer: number | null = null;
 
 const stopCameraStream = () => {
-  videoRef.value?.pause()
-  if (videoRef.value) videoRef.value.srcObject = null
-  cameraStream.value?.getTracks().forEach((track) => track.stop())
-  cameraStream.value = null
-}
+  videoRef.value?.pause();
+  if (videoRef.value) videoRef.value.srcObject = null;
+  cameraStream.value?.getTracks().forEach((track) => track.stop());
+  cameraStream.value = null;
+};
 
 const loadCamera = async (cameraId: string) => {
-  const request = ++cameraRequest
-  stopCameraStream()
+  const request = ++cameraRequest;
+  stopCameraStream();
   if (!cameraId || cameraId === 'off') {
-    isLoading.value = false
-    return
+    isLoading.value = false;
+    return;
   }
   try {
-    streamError.value = null
-    isLoading.value = true
-    const deviceId = cameraId.replace('camera:chromium:', '')
+    streamError.value = null;
+    isLoading.value = true;
+    const deviceId = cameraId.replace('camera:chromium:', '');
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: deviceId ? { deviceId: { ideal: deviceId } } : true,
-    })
+    });
     if (request !== cameraRequest) {
-      stream.getTracks().forEach((track) => track.stop())
-      return
+      stream.getTracks().forEach((track) => track.stop());
+      return;
     }
-    cameraStream.value = stream
+    cameraStream.value = stream;
     if (videoRef.value) {
-      videoRef.value.srcObject = stream
-      await videoRef.value.play()
+      videoRef.value.srcObject = stream;
+      await videoRef.value.play();
     }
   } catch (error) {
     if (request === cameraRequest) {
-      streamError.value = error instanceof Error ? error.message : t('unableToStartCamera')
-      if (isCameraUnavailableError(error)) capture.configureCameraOverlay({ cameraId: 'off' })
+      streamError.value = error instanceof Error ? error.message : t('unableToStartCamera');
+      if (isCameraUnavailableError(error)) capture.configureCameraOverlay({ cameraId: 'off' });
     }
   } finally {
-    if (request === cameraRequest) isLoading.value = false
+    if (request === cameraRequest) isLoading.value = false;
   }
-}
+};
 
 watch(
   () => props.cameraId,
   (cameraId) => {
-    void loadCamera(cameraId)
+    void loadCamera(cameraId);
   },
-)
+);
 
 onMounted(() => {
   initialLoadTimer = window.setTimeout(() => {
-    void loadCamera(props.cameraId)
-  }, 0)
-})
+    void loadCamera(props.cameraId);
+  }, 0);
+});
 
 onBeforeUnmount(() => {
-  cameraRequest += 1
-  if (initialLoadTimer !== null) window.clearTimeout(initialLoadTimer)
-  stopCameraStream()
-})
+  cameraRequest += 1;
+  if (initialLoadTimer !== null) window.clearTimeout(initialLoadTimer);
+  stopCameraStream();
+});
 </script>
 
 <template>

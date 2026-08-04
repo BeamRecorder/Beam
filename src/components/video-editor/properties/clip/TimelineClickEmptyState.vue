@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Camera, MousePointer, Video } from '@lucide/vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import { resolvePublicAssetUrl } from '~/utils/public-asset'
+import { Camera, MousePointer, Video } from '@lucide/vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
-const { t } = useTranslate('ClipPropertiesPanel')
+const { t } = useTranslate('ClipPropertiesPanel');
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import {
   AlignCenter,
   AlignLeft,
@@ -12,42 +12,42 @@ import {
   Play,
   ScrollText,
   Settings,
-} from '@lucide/vue'
-import Button from '~/ui/button/Button.vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Select from '~/ui/select/Select.vue'
-import Switch from '~/ui/switch/Switch.vue'
-import Textarea from '~/ui/textarea/Textarea.vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import { capture } from '~/api/capture'
-import { useTeleprompter } from './useTeleprompter'
+} from '@lucide/vue';
+import Button from '~/ui/button/Button.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import Select from '~/ui/select/Select.vue';
+import Switch from '~/ui/switch/Switch.vue';
+import Textarea from '~/ui/textarea/Textarea.vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import { capture } from '~/api/capture';
+import { useTeleprompter } from './useTeleprompter';
 
-const { t } = useTranslate('Teleprompter')
-const state = useTeleprompter()
-const isSettingsOpen = ref(false)
+const { t } = useTranslate('Teleprompter');
+const state = useTeleprompter();
+const isSettingsOpen = ref(false);
 const modeOptions = computed(() => [
   { value: 'continuous', label: t('continuous') },
   { value: 'line-by-line', label: t('lineByLine') },
-])
-const isAutoscrolling = computed(() => state.document.value.autoscroll && !state.isPaused.value)
-const updateText = (text: string) => state.updateDocument({ text })
-const hide = () => capture.hideTeleprompter()
+]);
+const isAutoscrolling = computed(() => state.document.value.autoscroll && !state.isPaused.value);
+const updateText = (text: string) => state.updateDocument({ text });
+const hide = () => capture.hideTeleprompter();
 const onSession = (event: Event) => {
-  const context = (event as CustomEvent).detail ?? null
+  const context = (event as CustomEvent).detail ?? null;
   // A session is created when recording starts. The script should immediately
   // become a clean reader, while remaining editable before recording.
-  if (context) state.isEditing.value = false
-  void state.applySession(context)
-}
-const onShortcut = (event: Event) => state.handleShortcut(String((event as CustomEvent).detail ?? ''))
+  if (context) state.isEditing.value = false;
+  void state.applySession(context);
+};
+const onShortcut = (event: Event) => state.handleShortcut(String((event as CustomEvent).detail ?? ''));
 onMounted(() => {
-  window.addEventListener('teleprompter-session', onSession)
-  window.addEventListener('teleprompter-shortcut', onShortcut)
-})
+  window.addEventListener('teleprompter-session', onSession);
+  window.addEventListener('teleprompter-shortcut', onShortcut);
+});
 onBeforeUnmount(() => {
-  window.removeEventListener('teleprompter-session', onSession)
-  window.removeEventListener('teleprompter-shortcut', onShortcut)
-})
+  window.removeEventListener('teleprompter-session', onSession);
+  window.removeEventListener('teleprompter-shortcut', onShortcut);
+});
 </script>
 
 <template>

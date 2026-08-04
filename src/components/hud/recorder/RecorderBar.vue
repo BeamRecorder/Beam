@@ -1,88 +1,89 @@
 <script setup lang="ts">
-import { Video, VideoOff, GripVertical, Mic, MicOff, Pause, Play, Square, Trash2, Volume2, VolumeX } from '@lucide/vue'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import Tooltip from '~/ui/tooltip/Tooltip.vue'
-import KeyboardChip from '~/ui/Kbd/KeyboardChip.vue'
-import { usePreferencesStore } from '~/stores/preferences'
-import type { RecordingPhase } from './recording-types'
-import { useTranslate } from '~/i18n/useTranslate'
-import { useAudioLevelMeter } from '../audio/useAudioLevelMeter'
-import AudioIconMeter from '../audio/AudioIconMeter.vue'
+import { Video, VideoOff, GripVertical, Mic, MicOff, Pause, Play, Square, Trash2, Volume2, VolumeX } from '@lucide/vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import Tooltip from '~/ui/tooltip/Tooltip.vue';
+import KeyboardChip from '~/ui/Kbd/KeyboardChip.vue';
+import { usePreferencesStore } from '~/stores/preferences';
+import type { RecordingPhase } from './recording-types';
+import { useTranslate } from '~/i18n/useTranslate';
+import { useAudioLevelMeter } from '../audio/useAudioLevelMeter';
+import AudioIconMeter from '../audio/AudioIconMeter.vue';
 
-const { t } = useTranslate('RecorderBar')
+const { t } = useTranslate('RecorderBar');
 
 const props = defineProps<{
-  phase: RecordingPhase
-  secondsRemaining: number
-  recordingTime: string
-  cameraEnabled: boolean
-  microphoneEnabled: boolean
-  systemAudioEnabled: boolean
-  visibility: 'always' | 'auto-fade'
-}>()
+  phase: RecordingPhase;
+  secondsRemaining: number;
+  recordingTime: string;
+  cameraEnabled: boolean;
+  microphoneEnabled: boolean;
+  systemAudioEnabled: boolean;
+  visibility: 'always' | 'auto-fade';
+}>();
 
-const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== 'finalizing')
-const isSystemAudioEnabled = computed(() => props.systemAudioEnabled && props.phase !== 'finalizing')
-const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false)
-const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true)
+const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== 'finalizing');
+const isSystemAudioEnabled = computed(() => props.systemAudioEnabled && props.phase !== 'finalizing');
+const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false);
+const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
 
 const emit = defineEmits<{
-  stop: []
-  cancel: []
-  pause: []
-  camera: []
-  microphone: []
-  systemAudio: []
-}>()
+  stop: [];
+  cancel: [];
+  pause: [];
+  camera: [];
+  microphone: [];
+  systemAudio: [];
+}>();
 
-const preferencesStore = usePreferencesStore()
-let tooltipSpaceReady: Promise<void> = Promise.resolve()
-const tooltipSide = ref<'left' | 'right'>('left')
-const tooltipPosition = computed(() => tooltipSide.value)
-let stopTooltipSideListener: (() => void) | undefined
+const preferencesStore = usePreferencesStore();
+let tooltipSpaceReady: Promise<void> = Promise.resolve();
+const tooltipSide = ref<'left' | 'right'>('left');
+const tooltipPosition = computed(() => tooltipSide.value);
+let stopTooltipSideListener: (() => void) | undefined;
 
 const applyTooltipSide = (side: unknown, source: string) => {
-  if (side === 'left' || side === 'right') tooltipSide.value = side
-}
+  if (side === 'left' || side === 'right') tooltipSide.value = side;
+};
 
 onMounted(() => {
-  preferencesStore.load()
-  stopTooltipSideListener = window.capture?.onRecorderTooltipSide((side) => applyTooltipSide(side, 'nativeMove'))
+  preferencesStore.load();
+  stopTooltipSideListener = window.capture?.onRecorderTooltipSide((side) => applyTooltipSide(side, 'nativeMove'));
   // Reserve native space before the user reaches a control. Resizing only on
   // first button hover made the bar visibly jump once per recording.
   tooltipSpaceReady = (async () => {
-    const initialSide = await window.capture?.getRecorderTooltipSide()
-    applyTooltipSide(initialSide, 'before-expand')
-    await nextTick()
-    const side = await window.capture?.setRecorderTooltip(true)
-    applyTooltipSide(side, 'mount')
-  })()
-})
+    const initialSide = await window.capture?.getRecorderTooltipSide();
+    applyTooltipSide(initialSide, 'before-expand');
+    await nextTick();
+    const side = await window.capture?.setRecorderTooltip(true);
+    applyTooltipSide(side, 'mount');
+  })();
+});
 
 const getShortcut = (id: string, fallback: string): string => {
-  return preferencesStore.settings?.shortcuts?.[id]?.keys || fallback
-}
+  return preferencesStore.settings?.shortcuts?.[id]?.keys || fallback;
+};
 
 const prepareNativeDrag = (event: PointerEvent) => {
-  if (event.button !== 0) return
-  const target = event.target instanceof HTMLElement ? event.target : null
-  if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest('.drag-handle')) return
-  window.capture?.beginRecorderDrag()
-}
+  if (event.button !== 0) return;
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest('.drag-handle'))
+    return;
+  window.capture?.beginRecorderDrag();
+};
 
-const tooltipsReady = ref(false)
+const tooltipsReady = ref(false);
 const showTooltips = async () => {
-  tooltipsReady.value = false
-  await tooltipSpaceReady
-  tooltipsReady.value = true
-}
+  tooltipsReady.value = false;
+  await tooltipSpaceReady;
+  tooltipsReady.value = true;
+};
 const hideTooltips = () => {
-  tooltipsReady.value = false
-}
+  tooltipsReady.value = false;
+};
 onBeforeUnmount(() => {
-  stopTooltipSideListener?.()
-  void window.capture?.setRecorderTooltip(false)
-})
+  stopTooltipSideListener?.();
+  void window.capture?.setRecorderTooltip(false);
+});
 </script>
 
 <template>

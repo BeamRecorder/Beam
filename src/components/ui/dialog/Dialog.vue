@@ -1,67 +1,67 @@
 <script setup lang="ts">
-import { watch, onMounted, onUnmounted } from 'vue'
-import { X } from '@lucide/vue'
+import { watch, onMounted, onUnmounted } from 'vue';
+import { X } from '@lucide/vue';
 
 const props = withDefaults(
   defineProps<{
-    isOpen: boolean
-    title?: string
-    size?: 'sm' | 'md' | 'lg' | 'xl'
-    closeOnOverlayClick?: boolean
+    isOpen: boolean;
+    title?: string;
+    size?: 'sm' | 'md' | 'lg' | 'xl';
+    closeOnOverlayClick?: boolean;
   }>(),
   {
     title: '',
     size: 'md',
     closeOnOverlayClick: true,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+  (e: 'close'): void;
+}>();
 
 const close = () => {
-  emit('close')
-}
+  emit('close');
+};
 
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape' && props.isOpen) {
-    close()
+    close();
   }
-}
+};
 
 watch(
   () => props.isOpen,
   (newVal) => {
     if (newVal) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = ''
+      document.body.style.overflow = '';
     }
   },
-)
+);
 
-let mousedownTarget: EventTarget | null = null
+let mousedownTarget: EventTarget | null = null;
 
 const handleOverlayMouseDown = (event: MouseEvent) => {
-  mousedownTarget = event.target
-}
+  mousedownTarget = event.target;
+};
 
 const handleOverlayMouseUp = (event: MouseEvent) => {
   if (props.closeOnOverlayClick && mousedownTarget === event.currentTarget && event.target === event.currentTarget) {
-    close()
+    close();
   }
-  mousedownTarget = null
-}
+  mousedownTarget = null;
+};
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
-})
+  window.addEventListener('keydown', handleKeyDown);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-  document.body.style.overflow = ''
-})
+  window.removeEventListener('keydown', handleKeyDown);
+  document.body.style.overflow = '';
+});
 </script>
 
 <template>

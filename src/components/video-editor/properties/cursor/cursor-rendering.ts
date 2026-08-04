@@ -1,10 +1,10 @@
-import type { CursorPlaybackState } from '../../composables/cursorPlayback'
-import { framedMediaRect, outputPoint, type CanvasRect } from '../../canvas/output-canvas'
-import type { ClipAppearance, NormalizedCrop, NormalizedTransform } from '../../composition/composition-types'
-import { frameContentRect } from '../../composition/appearance/frames'
-import { cursorTypeForKind, type CursorType } from './useCursorReplacer'
+import type { CursorPlaybackState } from '../../composables/cursorPlayback';
+import { framedMediaRect, outputPoint, type CanvasRect } from '../../canvas/output-canvas';
+import type { ClipAppearance, NormalizedCrop, NormalizedTransform } from '../../composition/composition-types';
+import { frameContentRect } from '../../composition/appearance/frames';
+import { cursorTypeForKind, type CursorType } from './useCursorReplacer';
 
-export const CURSOR_REFERENCE_SIZE = 32
+export const CURSOR_REFERENCE_SIZE = 32;
 
 export const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   automatic: { x: 0, y: 0 },
@@ -43,16 +43,16 @@ export const cursorHotspots: Record<CursorType, { x: number; y: number }> = {
   textcursorvertical: { x: 16, y: 16 },
   zoomin: { x: 16, y: 16 },
   zoomout: { x: 16, y: 16 },
-}
+};
 
 export const cursorTypeAt = (selectedCursor: CursorType, state: CursorPlaybackState | null): CursorType =>
-  selectedCursor === 'automatic' ? cursorTypeForKind(state?.cursorKind) : selectedCursor
+  selectedCursor === 'automatic' ? cursorTypeForKind(state?.cursorKind) : selectedCursor;
 
 export const cursorHotspotAtSize = (type: CursorType, size: number) => {
-  const scale = size / CURSOR_REFERENCE_SIZE
-  const hotspot = cursorHotspots[type]
-  return { x: hotspot.x * scale, y: hotspot.y * scale }
-}
+  const scale = size / CURSOR_REFERENCE_SIZE;
+  const hotspot = cursorHotspots[type];
+  return { x: hotspot.x * scale, y: hotspot.y * scale };
+};
 
 export function cursorPositionAt(
   state: CursorPlaybackState,
@@ -65,34 +65,34 @@ export function cursorPositionAt(
   appearance?: Pick<ClipAppearance, 'frame' | 'frameShowMenu' | 'frameShowScrollbars' | 'frameChromeScale'>,
   crop?: NormalizedCrop,
 ) {
-  const hasCrop = Boolean(crop && crop.width > 0 && crop.height > 0)
-  const sourceWidth = hasCrop ? source.width * crop!.width : source.width
-  const sourceHeight = hasCrop ? source.height * crop!.height : source.height
-  const sourceX = hasCrop ? (state.x - crop!.x) / crop!.width : state.x
-  const sourceY = hasCrop ? (state.y - crop!.y) / crop!.height : state.y
-  const localX = Math.max(0, Math.min(1, sourceX))
-  const localY = Math.max(0, Math.min(1, sourceY))
+  const hasCrop = Boolean(crop && crop.width > 0 && crop.height > 0);
+  const sourceWidth = hasCrop ? source.width * crop!.width : source.width;
+  const sourceHeight = hasCrop ? source.height * crop!.height : source.height;
+  const sourceX = hasCrop ? (state.x - crop!.x) / crop!.width : state.x;
+  const sourceY = hasCrop ? (state.y - crop!.y) / crop!.height : state.y;
+  const localX = Math.max(0, Math.min(1, sourceX));
+  const localY = Math.max(0, Math.min(1, sourceY));
   const media = showBackground
     ? framedMediaRect(sourceWidth, sourceHeight, viewport.width, viewport.height)
-    : { x: 0, y: 0, width: viewport.width, height: viewport.height }
+    : { x: 0, y: 0, width: viewport.width, height: viewport.height };
   const point = showBackground
     ? { cx: localX, cy: localY }
-    : outputPoint(localX, localY, sourceWidth, sourceHeight, viewport.width, viewport.height, false)
+    : outputPoint(localX, localY, sourceWidth, sourceHeight, viewport.width, viewport.height, false);
   const outer = {
     x: viewport.x + media.x + transform.x * media.width,
     y: viewport.y + media.y + transform.y * media.height,
     width: media.width * transform.width,
     height: media.height * transform.height,
-  }
+  };
   const content = frameContentRect(outer, appearance?.frame ?? 'none', {
     showMenu: appearance?.frameShowMenu,
     showScrollbars: appearance?.frameShowScrollbars,
     chromeScale: appearance?.frameChromeScale,
-  })
-  const x = mirrored ? 1 - point.cx : point.cx
-  const y = mirroredY ? 1 - point.cy : point.cy
+  });
+  const x = mirrored ? 1 - point.cx : point.cx;
+  const y = mirroredY ? 1 - point.cy : point.cy;
   return {
     x: content.x + x * content.width,
     y: content.y + y * content.height,
-  }
+  };
 }

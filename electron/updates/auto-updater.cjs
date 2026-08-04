@@ -1,4 +1,4 @@
-const UPDATE_CHANNEL = 'app-update:state'
+const UPDATE_CHANNEL = 'app-update:state';
 
 const idleState = (version, status = 'idle') => ({
   status,
@@ -6,81 +6,81 @@ const idleState = (version, status = 'idle') => ({
   availableVersion: null,
   percent: null,
   message: null,
-})
-const versionOf = (info) => (typeof info?.version === 'string' ? info.version : null)
-const errorMessage = (error) => (error instanceof Error ? error.message : 'Unable to check for updates.')
+});
+const versionOf = (info) => (typeof info?.version === 'string' ? info.version : null);
+const errorMessage = (error) => (error instanceof Error ? error.message : 'Unable to check for updates.');
 
 function createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal, isPackaged = app.isPackaged }) {
-  let state = idleState(app.getVersion(), isPackaged ? 'idle' : 'unsupported')
+  let state = idleState(app.getVersion(), isPackaged ? 'idle' : 'unsupported');
   const publish = () =>
     BrowserWindow.getAllWindows().forEach((window) => {
-      if (!window.isDestroyed()) window.webContents.send(UPDATE_CHANNEL, state)
-    })
+      if (!window.isDestroyed()) window.webContents.send(UPDATE_CHANNEL, state);
+    });
   const setState = (nextState) => {
-    state = { ...state, ...nextState }
-    publish()
-    return state
-  }
+    state = { ...state, ...nextState };
+    publish();
+    return state;
+  };
   const openChangelog = () =>
     openExternal(
       `https://github.com/ExtraBinoss/Beam/releases/tag/${encodeURIComponent(state.availableVersion || state.currentVersion)}`,
-    )
+    );
 
   if (!isPackaged)
-    return { checkForUpdates: async () => state, getState: () => state, quitAndInstall: () => false, openChangelog }
-  autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = false
+    return { checkForUpdates: async () => state, getState: () => state, quitAndInstall: () => false, openChangelog };
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.on('checking-for-update', () =>
     setState({ status: 'checking', availableVersion: null, percent: null, message: null }),
-  )
+  );
   autoUpdater.on('update-available', (info) =>
     setState({ status: 'available', availableVersion: versionOf(info), percent: null, message: null }),
-  )
+  );
   autoUpdater.on('update-not-available', () =>
     setState({ status: 'not-available', availableVersion: null, percent: null, message: null }),
-  )
+  );
   autoUpdater.on('download-progress', (progress) =>
     setState({ status: 'downloading', percent: Math.round(progress.percent) }),
-  )
+  );
   autoUpdater.on('update-downloaded', (info) =>
     setState({ status: 'downloaded', availableVersion: versionOf(info), percent: 100, message: null }),
-  )
-  autoUpdater.on('error', (error) => setState({ status: 'error', percent: null, message: errorMessage(error) }))
+  );
+  autoUpdater.on('error', (error) => setState({ status: 'error', percent: null, message: errorMessage(error) }));
   return {
     async checkForUpdates() {
       try {
-        await autoUpdater.checkForUpdates()
+        await autoUpdater.checkForUpdates();
       } catch (error) {
-        setState({ status: 'error', percent: null, message: errorMessage(error) })
+        setState({ status: 'error', percent: null, message: errorMessage(error) });
       }
-      return state
+      return state;
     },
     getState: () => state,
     async downloadUpdate() {
-      if (state.status !== 'available') return false
+      if (state.status !== 'available') return false;
       try {
-        await autoUpdater.downloadUpdate()
-        return true
+        await autoUpdater.downloadUpdate();
+        return true;
       } catch (error) {
-        setState({ status: 'error', percent: null, message: errorMessage(error) })
-        return false
+        setState({ status: 'error', percent: null, message: errorMessage(error) });
+        return false;
       }
     },
     quitAndInstall: () => {
-      if (state.status !== 'downloaded') return false
-      autoUpdater.quitAndInstall()
-      return true
+      if (state.status !== 'downloaded') return false;
+      autoUpdater.quitAndInstall();
+      return true;
     },
     openChangelog,
-  }
+  };
 }
 
 function registerUpdateIpc(ipcMain, updater) {
-  ipcMain.handle('app-update:get-state', () => updater.getState())
-  ipcMain.handle('app-update:check', () => updater.checkForUpdates())
-  ipcMain.handle('app-update:download', () => updater.downloadUpdate())
-  ipcMain.handle('app-update:quit-and-install', () => updater.quitAndInstall())
-  ipcMain.handle('app-update:open-changelog', () => updater.openChangelog())
+  ipcMain.handle('app-update:get-state', () => updater.getState());
+  ipcMain.handle('app-update:check', () => updater.checkForUpdates());
+  ipcMain.handle('app-update:download', () => updater.downloadUpdate());
+  ipcMain.handle('app-update:quit-and-install', () => updater.quitAndInstall());
+  ipcMain.handle('app-update:open-changelog', () => updater.openChangelog());
 }
 
-module.exports = { UPDATE_CHANNEL, createAutoUpdater, registerUpdateIpc }
+module.exports = { UPDATE_CHANNEL, createAutoUpdater, registerUpdateIpc };

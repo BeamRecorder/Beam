@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { ref, useAttrs, onMounted } from 'vue'
-import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction'
+import { ref, useAttrs, onMounted } from 'vue';
+import { beginPropertyInteraction, endPropertyInteraction } from '~/composables/property-interaction';
 
-defineOptions({ inheritAttrs: false })
+defineOptions({ inheritAttrs: false });
 
-const attrs = useAttrs()
+const attrs = useAttrs();
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string | number
-    type?: string
-    placeholder?: string
-    disabled?: boolean
-    error?: boolean | string
-    id?: string
-    size?: 'sm' | 'md'
-    width?: string
-    min?: number
-    max?: number
-    step?: number
-    autofocus?: boolean
-    selectOnFocus?: boolean
+    modelValue: string | number;
+    type?: string;
+    placeholder?: string;
+    disabled?: boolean;
+    error?: boolean | string;
+    id?: string;
+    size?: 'sm' | 'md';
+    width?: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    autofocus?: boolean;
+    selectOnFocus?: boolean;
   }>(),
   {
     type: 'text',
@@ -28,106 +28,106 @@ const props = withDefaults(
     autofocus: false,
     selectOnFocus: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string | number): void
-}>()
+  (e: 'update:modelValue', value: string | number): void;
+}>();
 
-const inputRef = ref<HTMLInputElement | null>(null)
+const inputRef = ref<HTMLInputElement | null>(null);
 
 const focusInput = () => {
-  if (!inputRef.value) return
-  inputRef.value.focus()
+  if (!inputRef.value) return;
+  inputRef.value.focus();
   if (props.selectOnFocus || props.autofocus) {
-    inputRef.value.select()
+    inputRef.value.select();
   }
-}
+};
 
 onMounted(() => {
   if (props.autofocus) {
-    focusInput()
-    setTimeout(focusInput, 60)
+    focusInput();
+    setTimeout(focusInput, 60);
   }
-})
+});
 
 defineExpose({
   focus: focusInput,
   select: () => inputRef.value?.select(),
   inputRef,
-})
+});
 
-const isDragging = ref(false)
+const isDragging = ref(false);
 
 const handleMouseDown = (e: MouseEvent) => {
-  if (props.disabled || props.type !== 'number') return
+  if (props.disabled || props.type !== 'number') return;
 
   // Only allow drag on left click
-  if (e.button !== 0) return
+  if (e.button !== 0) return;
 
-  const startX = e.clientX
-  const startValue = parseFloat(String(props.modelValue)) || 0
-  let hasDragged = false
+  const startX = e.clientX;
+  const startValue = parseFloat(String(props.modelValue)) || 0;
+  let hasDragged = false;
 
   const handleMouseMove = (moveEvent: MouseEvent) => {
-    const deltaX = moveEvent.clientX - startX
+    const deltaX = moveEvent.clientX - startX;
     if (!hasDragged && Math.abs(deltaX) > 4) {
-      hasDragged = true
-      isDragging.value = true
-      beginPropertyInteraction()
-      document.body.style.cursor = 'ew-resize'
-      document.body.classList.add('is-dragging-input')
+      hasDragged = true;
+      isDragging.value = true;
+      beginPropertyInteraction();
+      document.body.style.cursor = 'ew-resize';
+      document.body.classList.add('is-dragging-input');
     }
 
     if (hasDragged) {
-      moveEvent.preventDefault()
-      const multiplier = moveEvent.shiftKey ? 10 : 1
-      const stepVal = props.step ?? 1
+      moveEvent.preventDefault();
+      const multiplier = moveEvent.shiftKey ? 10 : 1;
+      const stepVal = props.step ?? 1;
 
       // Let's change the value by stepVal for every 4 pixels of horizontal drag
-      const deltaValue = (deltaX / 4) * stepVal * multiplier
-      let newValue = startValue + deltaValue
+      const deltaValue = (deltaX / 4) * stepVal * multiplier;
+      let newValue = startValue + deltaValue;
 
       // Round value to avoid float precision issues
-      const decimals = (stepVal.toString().split('.')[1] || '').length
-      newValue = parseFloat(newValue.toFixed(decimals))
+      const decimals = (stepVal.toString().split('.')[1] || '').length;
+      newValue = parseFloat(newValue.toFixed(decimals));
 
       if (props.min !== undefined && newValue < props.min) {
-        newValue = props.min
+        newValue = props.min;
       }
       if (props.max !== undefined && newValue > props.max) {
-        newValue = props.max
+        newValue = props.max;
       }
 
-      emit('update:modelValue', newValue)
+      emit('update:modelValue', newValue);
     }
-  }
+  };
 
   const preventClick = (clickEvent: MouseEvent) => {
-    clickEvent.preventDefault()
-    clickEvent.stopPropagation()
-    window.removeEventListener('click', preventClick, true)
-  }
+    clickEvent.preventDefault();
+    clickEvent.stopPropagation();
+    window.removeEventListener('click', preventClick, true);
+  };
 
   const handleMouseUp = (_upEvent: MouseEvent) => {
-    window.removeEventListener('mousemove', handleMouseMove)
-    window.removeEventListener('mouseup', handleMouseUp)
+    window.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('mouseup', handleMouseUp);
 
     if (hasDragged) {
-      isDragging.value = false
-      endPropertyInteraction()
-      document.body.style.cursor = ''
-      document.body.classList.remove('is-dragging-input')
-      window.addEventListener('click', preventClick, true)
+      isDragging.value = false;
+      endPropertyInteraction();
+      document.body.style.cursor = '';
+      document.body.classList.remove('is-dragging-input');
+      window.addEventListener('click', preventClick, true);
       setTimeout(() => {
-        window.removeEventListener('click', preventClick, true)
-      }, 50)
+        window.removeEventListener('click', preventClick, true);
+      }, 50);
     }
-  }
+  };
 
-  window.addEventListener('mousemove', handleMouseMove)
-  window.addEventListener('mouseup', handleMouseUp)
-}
+  window.addEventListener('mousemove', handleMouseMove);
+  window.addEventListener('mouseup', handleMouseUp);
+};
 </script>
 
 <template>

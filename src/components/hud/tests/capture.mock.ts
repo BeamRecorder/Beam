@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi } from 'vitest';
 
 export const captureMock = {
   discover: vi.fn(),
@@ -52,18 +52,16 @@ export const captureMock = {
   onTeleprompterVisibility: vi.fn().mockReturnValue(() => undefined),
   saveSessionTeleprompter: vi.fn().mockResolvedValue(null),
   getSessionTeleprompter: vi.fn().mockResolvedValue(null),
-  getUpdateState: vi
-    .fn()
-    .mockResolvedValue({
-      status: 'unsupported',
-      currentVersion: '0.1.0',
-      availableVersion: null,
-      percent: null,
-      message: null,
-    }),
+  getUpdateState: vi.fn().mockResolvedValue({
+    status: 'unsupported',
+    currentVersion: '0.1.0',
+    availableVersion: null,
+    percent: null,
+    message: null,
+  }),
   checkForUpdates: vi.fn(),
   downloadUpdate: vi.fn(),
   quitAndInstallUpdate: vi.fn(),
   openUpdateChangelog: vi.fn(),
   onUpdateState: vi.fn().mockReturnValue(() => undefined),
-}
+};

@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useVirtualList } from '@vueuse/core'
-import Popover from '../popover/Popover.vue'
-import Skeleton from '../skeleton/Skeleton.vue'
-import { ChevronDown, Check, Eye } from '@lucide/vue'
+import { computed, ref, watch } from 'vue';
+import { useVirtualList } from '@vueuse/core';
+import Popover from '../popover/Popover.vue';
+import Skeleton from '../skeleton/Skeleton.vue';
+import { ChevronDown, Check, Eye } from '@lucide/vue';
 
 interface Option {
-  value: string | number
-  label: string
-  thumbnail?: string
-  color?: string
-  loading?: boolean
+  value: string | number;
+  label: string;
+  thumbnail?: string;
+  color?: string;
+  loading?: boolean;
 }
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string | number | null
-    options?: Option[]
-    items?: Option[]
-    placeholder?: string
-    disabled?: boolean
-    direction?: 'up' | 'down'
-    previewOnHover?: boolean
-    loading?: boolean
+    modelValue: string | number | null;
+    options?: Option[];
+    items?: Option[];
+    placeholder?: string;
+    disabled?: boolean;
+    direction?: 'up' | 'down';
+    previewOnHover?: boolean;
+    loading?: boolean;
   }>(),
   {
     placeholder: 'Select an option',
@@ -31,140 +31,140 @@ const props = withDefaults(
     previewOnHover: false,
     loading: false,
   },
-)
+);
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: any): void
-  (e: 'toggle', isOpen: boolean): void
-}>()
+  (e: 'update:modelValue', value: any): void;
+  (e: 'toggle', isOpen: boolean): void;
+}>();
 
-const actualValue = ref(props.modelValue)
-const hoveredValue = ref<string | number | null>(null)
+const actualValue = ref(props.modelValue);
+const hoveredValue = ref<string | number | null>(null);
 
 // Sync actualValue with modelValue when modelValue updates externally (not during preview)
 watch(
   () => props.modelValue,
   (newVal) => {
     if (hoveredValue.value === null) {
-      actualValue.value = newVal
+      actualValue.value = newVal;
     }
   },
-)
+);
 
 const normalizedOptions = computed<Option[]>(() => {
-  return props.options ?? props.items ?? []
-})
+  return props.options ?? props.items ?? [];
+});
 
 const selectedOption = computed(() => {
-  return normalizedOptions.value.find((opt) => opt.value === props.modelValue) || null
-})
+  return normalizedOptions.value.find((opt) => opt.value === props.modelValue) || null;
+});
 
 const handleToggle = (isOpen: boolean) => {
-  emit('toggle', isOpen)
+  emit('toggle', isOpen);
   if (isOpen) {
-    actualValue.value = props.modelValue
+    actualValue.value = props.modelValue;
   } else {
     // If popover is closed and we are still previewing, reset
     if (props.previewOnHover && props.modelValue !== actualValue.value) {
-      emit('update:modelValue', actualValue.value)
+      emit('update:modelValue', actualValue.value);
     }
-    hoveredValue.value = null
+    hoveredValue.value = null;
   }
-}
+};
 
 const handleSelect = (option: Option, close: () => void) => {
-  if (props.disabled) return
-  actualValue.value = option.value
-  emit('update:modelValue', option.value)
-  close()
-}
+  if (props.disabled) return;
+  actualValue.value = option.value;
+  emit('update:modelValue', option.value);
+  close();
+};
 
 const handleMouseEnterOption = (option: Option, event: PointerEvent) => {
-  hoveredValue.value = option.value
+  hoveredValue.value = option.value;
   if (props.previewOnHover && props.modelValue !== option.value) {
-    emit('update:modelValue', option.value)
+    emit('update:modelValue', option.value);
   }
-  startMarquee(event)
-}
+  startMarquee(event);
+};
 
 const handleMouseLeaveOption = (event: PointerEvent) => {
-  stopMarquee(event)
-}
+  stopMarquee(event);
+};
 
 const handleMouseLeaveList = () => {
-  hoveredValue.value = null
+  hoveredValue.value = null;
   if (props.previewOnHover && props.modelValue !== actualValue.value) {
-    emit('update:modelValue', actualValue.value)
+    emit('update:modelValue', actualValue.value);
   }
-}
+};
 
 const itemHeight = computed(() => {
   if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.loading)) {
-    return 52
+    return 52;
   }
-  return 38
-})
+  return 38;
+});
 
 const { list, containerProps, wrapperProps } = useVirtualList(normalizedOptions, {
   itemHeight: () => itemHeight.value,
-})
+});
 
 const labelStyle = computed(() => {
-  const text = selectedOption.value ? selectedOption.value.label : props.placeholder
-  const len = text.length
-  if (len > 28) return { fontSize: '0.75rem' }
-  if (len > 20) return { fontSize: '0.85rem' }
-  return {}
-})
+  const text = selectedOption.value ? selectedOption.value.label : props.placeholder;
+  const len = text.length;
+  if (len > 28) return { fontSize: '0.75rem' };
+  if (len > 20) return { fontSize: '0.85rem' };
+  return {};
+});
 
-const marqueeRuns = new WeakMap<HTMLElement, { frame: number; timer: number }>()
+const marqueeRuns = new WeakMap<HTMLElement, { frame: number; timer: number }>();
 
 const stopMarqueeRun = (option: HTMLElement) => {
-  const run = marqueeRuns.get(option)
+  const run = marqueeRuns.get(option);
   if (run) {
-    window.cancelAnimationFrame(run.frame)
-    window.clearTimeout(run.timer)
-    marqueeRuns.delete(option)
+    window.cancelAnimationFrame(run.frame);
+    window.clearTimeout(run.timer);
+    marqueeRuns.delete(option);
   }
-  option.classList.remove('has-left-overflow', 'has-right-overflow')
-  const label = option.querySelector<HTMLElement>('.option-label')
-  if (label) label.style.transform = ''
-}
+  option.classList.remove('has-left-overflow', 'has-right-overflow');
+  const label = option.querySelector<HTMLElement>('.option-label');
+  if (label) label.style.transform = '';
+};
 
 const startMarquee = (event: PointerEvent) => {
-  const option = event.currentTarget as HTMLElement
-  const label = option.querySelector<HTMLElement>('.option-label')
-  if (!label) return
-  const distance = label.scrollWidth - label.clientWidth
+  const option = event.currentTarget as HTMLElement;
+  const label = option.querySelector<HTMLElement>('.option-label');
+  if (!label) return;
+  const distance = label.scrollWidth - label.clientWidth;
   if (distance <= 0) {
-    option.classList.remove('has-overflow')
-    return
+    option.classList.remove('has-overflow');
+    return;
   }
-  stopMarqueeRun(option)
-  option.classList.add('has-overflow', 'has-right-overflow')
+  stopMarqueeRun(option);
+  option.classList.add('has-overflow', 'has-right-overflow');
   const timer = window.setTimeout(() => {
-    const startedAt = performance.now()
+    const startedAt = performance.now();
     // Keep long labels readable: duration grows with distance instead of
     // making their marquee move faster.
-    const travelMs = Math.max(3000, (distance / 36) * 1000)
+    const travelMs = Math.max(3000, (distance / 36) * 1000);
     const tick = (now: number) => {
-      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs
-      const progress = phase <= 1 ? phase : 2 - phase
-      label.style.transform = `translateX(${-distance * progress}px)`
-      option.classList.toggle('has-left-overflow', progress > 0.015)
-      option.classList.toggle('has-right-overflow', progress < 0.985)
-      const run = marqueeRuns.get(option)
-      if (run) run.frame = window.requestAnimationFrame(tick)
-    }
-    marqueeRuns.set(option, { frame: window.requestAnimationFrame(tick), timer: 0 })
-  }, 300)
-  marqueeRuns.set(option, { frame: 0, timer })
-}
+      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs;
+      const progress = phase <= 1 ? phase : 2 - phase;
+      label.style.transform = `translateX(${-distance * progress}px)`;
+      option.classList.toggle('has-left-overflow', progress > 0.015);
+      option.classList.toggle('has-right-overflow', progress < 0.985);
+      const run = marqueeRuns.get(option);
+      if (run) run.frame = window.requestAnimationFrame(tick);
+    };
+    marqueeRuns.set(option, { frame: window.requestAnimationFrame(tick), timer: 0 });
+  }, 300);
+  marqueeRuns.set(option, { frame: 0, timer });
+};
 
 const stopMarquee = (event: PointerEvent) => {
-  const option = event.currentTarget as HTMLElement
-  stopMarqueeRun(option)
-}
+  const option = event.currentTarget as HTMLElement;
+  stopMarqueeRun(option);
+};
 </script>
 
 <template>

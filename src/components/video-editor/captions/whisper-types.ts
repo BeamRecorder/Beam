@@ -1,7 +1,7 @@
-import type { CaptionSentence, CaptionWord } from '../composition/composition-types'
-import { tNamespace } from '~/i18n'
+import type { CaptionSentence, CaptionWord } from '../composition/composition-types';
+import { tNamespace } from '~/i18n';
 
-const $t = tNamespace('whisperTypes')
+const $t = tNamespace('whisperTypes');
 
 export type WhisperModelId =
   | 'Xenova/whisper-tiny'
@@ -12,22 +12,22 @@ export type WhisperModelId =
   | 'Xenova/whisper-small.en'
   | 'Xenova/whisper-medium'
   | 'Xenova/whisper-medium.en'
-  | 'Xenova/whisper-large-v3'
-export type TranscriptionSource = 'system' | 'microphone' | `media:${string}`
+  | 'Xenova/whisper-large-v3';
+export type TranscriptionSource = 'system' | 'microphone' | `media:${string}`;
 export interface WhisperModel {
-  id: WhisperModelId
-  label: string
-  languages: string
-  warning?: string
+  id: WhisperModelId;
+  label: string;
+  languages: string;
+  warning?: string;
 }
 export interface WhisperProgress {
-  status: 'idle' | 'loading' | 'running' | 'error'
-  message: string
-  progress?: number
+  status: 'idle' | 'loading' | 'running' | 'error';
+  message: string;
+  progress?: number;
 }
 export interface WhisperResult {
-  words: CaptionWord[]
-  sentences: CaptionSentence[]
+  words: CaptionWord[];
+  sentences: CaptionSentence[];
 }
 
 export const whisperModels: WhisperModel[] = [
@@ -65,4 +65,4 @@ export const whisperModels: WhisperModel[] = [
     languages: $t('languages.multilingual'),
     warning: $t('warnings.veryLarge'),
   },
-]
+];

@@ -1,50 +1,50 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Switch from '~/ui/switch/Switch.vue'
-import Input from '~/ui/input/Input.vue'
-import Divider from '~/ui/divider/Divider.vue'
-import type { ClipFrame } from '../../composition/composition-types'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed } from 'vue';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import Switch from '~/ui/switch/Switch.vue';
+import Input from '~/ui/input/Input.vue';
+import Divider from '~/ui/divider/Divider.vue';
+import type { ClipFrame } from '../../composition/composition-types';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('BorderAndFrameControls')
+const { t } = useTranslate('BorderAndFrameControls');
 
 const props = defineProps<{
-  borderEnabled?: boolean
-  borderColor?: string
-  borderWidth?: number
-  frame?: ClipFrame
-  frameTitle?: string
-  frameColor?: string
-  frameShowMenu?: boolean
-  frameShowScrollbars?: boolean
-  frameChromeScale?: number
-}>()
+  borderEnabled?: boolean;
+  borderColor?: string;
+  borderWidth?: number;
+  frame?: ClipFrame;
+  frameTitle?: string;
+  frameColor?: string;
+  frameShowMenu?: boolean;
+  frameShowScrollbars?: boolean;
+  frameChromeScale?: number;
+}>();
 const emit = defineEmits<{
   (
     event: 'update',
     value: {
-      borderEnabled?: boolean
-      borderColor?: string
-      borderWidth?: number
-      frame?: ClipFrame
-      frameTitle?: string
-      frameColor?: string
-      frameShowMenu?: boolean
-      frameShowScrollbars?: boolean
-      frameChromeScale?: number
+      borderEnabled?: boolean;
+      borderColor?: string;
+      borderWidth?: number;
+      frame?: ClipFrame;
+      frameTitle?: string;
+      frameColor?: string;
+      frameShowMenu?: boolean;
+      frameShowScrollbars?: boolean;
+      frameChromeScale?: number;
     },
-  ): void
-}>()
-const activeFrame = computed(() => props.frame ?? 'none')
+  ): void;
+}>();
+const activeFrame = computed(() => props.frame ?? 'none');
 const frames = computed(() => [
   { id: 'none' as ClipFrame, label: t('none') },
   { id: 'safari' as ClipFrame, label: 'Safari' },
   { id: 'windows-95' as ClipFrame, label: 'Windows 95' },
-])
+]);
 </script>
 
 <template>

@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import type { Component } from 'vue'
-import { ChevronDown } from '@lucide/vue'
-import Popover from './Popover.vue'
+import type { Component } from 'vue';
+import { ChevronDown } from '@lucide/vue';
+import Popover from './Popover.vue';
 
 export interface PopoverMenuItem {
-  id: string
-  label: string
-  icon?: Component
-  disabled?: boolean
-  active?: boolean
+  id: string;
+  label: string;
+  icon?: Component;
+  disabled?: boolean;
+  active?: boolean;
 }
 const props = defineProps<{
-  label: string
-  items: readonly PopoverMenuItem[]
-  icon?: Component
-  disabled?: boolean
-  ariaLabel?: string
-  transparent?: boolean
-}>()
-const emit = defineEmits<{ (event: 'select', id: string): void }>()
+  label: string;
+  items: readonly PopoverMenuItem[];
+  icon?: Component;
+  disabled?: boolean;
+  ariaLabel?: string;
+  transparent?: boolean;
+}>();
+const emit = defineEmits<{ (event: 'select', id: string): void }>();
 </script>
 
 <template>
@@ -48,8 +48,8 @@ const emit = defineEmits<{ (event: 'select', id: string): void }>()
           :disabled="item.disabled"
           role="menuitem"
           @click="
-            emit('select', item.id)
-            close()
+            emit('select', item.id);
+            close();
           "
         >
           <span v-if="item.icon" class="item-icon-wrapper">

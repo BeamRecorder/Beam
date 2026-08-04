@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { capture } from '../../../api/capture'
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { capture } from '../../../api/capture';
 
-const seconds = ref<number | null>(null)
-let unsubscribe: (() => void) | null = null
+const seconds = ref<number | null>(null);
+let unsubscribe: (() => void) | null = null;
 onMounted(() => {
   unsubscribe = capture.onCountdown((value) => {
-    seconds.value = value
-  })
-})
-onBeforeUnmount(() => unsubscribe?.())
+    seconds.value = value;
+  });
+});
+onBeforeUnmount(() => unsubscribe?.());
 </script>
 
 <template>

@@ -1,59 +1,59 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from 'vue'
-import { Image, Plus, SlidersHorizontal, Upload, Video } from '@lucide/vue'
-import Button from '~/ui/button/Button.vue'
-import ButtonGroup from '~/ui/button/ButtonGroup.vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Popover from '~/ui/popover/Popover.vue'
-import BackgroundPresetComposer from './BackgroundPresetComposer.vue'
-import { capture } from '../../../../api/capture'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, type ComponentPublicInstance } from 'vue';
+import { Image, Plus, SlidersHorizontal, Upload, Video } from '@lucide/vue';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import Popover from '~/ui/popover/Popover.vue';
+import BackgroundPresetComposer from './BackgroundPresetComposer.vue';
+import { capture } from '../../../../api/capture';
 import {
   customColor,
   customGradient,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
-} from '../../composables/backgroundCatalog'
-import { useBackgroundPreviews } from './useBackgroundPreviews'
-import { useBackgroundPresets } from './useBackgroundPresets'
-import { useTranslate } from '~/i18n/useTranslate'
+} from '../../composables/backgroundCatalog';
+import { useBackgroundPreviews } from './useBackgroundPreviews';
+import { useBackgroundPresets } from './useBackgroundPresets';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('CanvasPanel')
+const { t } = useTranslate('CanvasPanel');
 
 const props = defineProps<{
-  selectedBackground: BackgroundValue | null
-  backgroundGroups: BackgroundMediaGroup[]
-  projectId?: string | null
-  blurPercent: number
-}>()
+  selectedBackground: BackgroundValue | null;
+  backgroundGroups: BackgroundMediaGroup[];
+  projectId?: string | null;
+  blurPercent: number;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:selectedBackground', value: BackgroundValue): void
-  (e: 'update:blurPercent', value: number): void
-  (e: 'import:background', value: BackgroundMedia): void
-}>()
+  (e: 'update:selectedBackground', value: BackgroundValue): void;
+  (e: 'update:blurPercent', value: number): void;
+  (e: 'import:background', value: BackgroundMedia): void;
+}>();
 
-const activeKind = ref<'image' | 'video' | 'color' | 'gradient'>('image')
-const hoveredId = ref<string | null>(null)
-const INITIAL_MEDIA_COUNT = 15
-const visibleCount = ref(INITIAL_MEDIA_COUNT)
+const activeKind = ref<'image' | 'video' | 'color' | 'gradient'>('image');
+const hoveredId = ref<string | null>(null);
+const INITIAL_MEDIA_COUNT = 15;
+const visibleCount = ref(INITIAL_MEDIA_COUNT);
 
-const blurDraft = ref(props.blurPercent)
+const blurDraft = ref(props.blurPercent);
 watch(
   () => props.blurPercent,
   (val) => {
-    blurDraft.value = val
+    blurDraft.value = val;
   },
-)
+);
 const handleBlurUpdate = (val: number) => {
-  blurDraft.value = val
-  emit('update:blurPercent', val)
-}
+  blurDraft.value = val;
+  emit('update:blurPercent', val);
+};
 
-const gridRef = ref<HTMLElement | null>(null)
-const tileElements = new Map<string, Element>()
-let previewObserver: IntersectionObserver | null = null
-const { previews, failed, request: requestPreview } = useBackgroundPreviews()
+const gridRef = ref<HTMLElement | null>(null);
+const tileElements = new Map<string, Element>();
+let previewObserver: IntersectionObserver | null = null;
+const { previews, failed, request: requestPreview } = useBackgroundPreviews();
 
 const {
   colorPresets,
@@ -69,95 +69,95 @@ const {
   saveGradient: addGradientPreset,
   updateLiveColor,
   updateLiveGradient,
-} = useBackgroundPresets((value) => emit('update:selectedBackground', value))
+} = useBackgroundPresets((value) => emit('update:selectedBackground', value));
 
-const items = computed(() => props.backgroundGroups.find((group) => group.kind === activeKind.value)?.items ?? [])
+const items = computed(() => props.backgroundGroups.find((group) => group.kind === activeKind.value)?.items ?? []);
 
-const visibleItems = computed(() => items.value.slice(0, visibleCount.value))
+const visibleItems = computed(() => items.value.slice(0, visibleCount.value));
 
-const hasMore = computed(() => visibleCount.value < items.value.length)
+const hasMore = computed(() => visibleCount.value < items.value.length);
 
 const observeMediaTile = (element: Element | ComponentPublicInstance | null, item: BackgroundMedia) => {
-  const domElement = element && '$el' in element ? (element.$el as Element | null) : (element as Element | null)
-  const previous = tileElements.get(item.id)
-  if (previous) previewObserver?.unobserve(previous)
+  const domElement = element && '$el' in element ? (element.$el as Element | null) : (element as Element | null);
+  const previous = tileElements.get(item.id);
+  if (previous) previewObserver?.unobserve(previous);
   if (!domElement) {
-    tileElements.delete(item.id)
-    return
+    tileElements.delete(item.id);
+    return;
   }
-  tileElements.set(item.id, domElement)
-  previewObserver?.observe(domElement)
-}
+  tileElements.set(item.id, domElement);
+  previewObserver?.observe(domElement);
+};
 
 const observeVisibleTiles = () => {
   for (const item of visibleItems.value) {
-    const element = tileElements.get(item.id)
-    if (element) previewObserver?.observe(element)
+    const element = tileElements.get(item.id);
+    if (element) previewObserver?.observe(element);
   }
-}
+};
 
 const scheduleVisibleTileObservation = () => {
-  requestAnimationFrame(() => nextTick(observeVisibleTiles))
-}
+  requestAnimationFrame(() => nextTick(observeVisibleTiles));
+};
 
 onMounted(() => {
   previewObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
-        if (!entry.isIntersecting) continue
-        const item = visibleItems.value.find((candidate) => tileElements.get(candidate.id) === entry.target)
-        if (item) requestPreview(item)
+        if (!entry.isIntersecting) continue;
+        const item = visibleItems.value.find((candidate) => tileElements.get(candidate.id) === entry.target);
+        if (item) requestPreview(item);
       }
     },
     { root: null, rootMargin: '120px', threshold: 0.01 },
-  )
-  scheduleVisibleTileObservation()
-})
+  );
+  scheduleVisibleTileObservation();
+});
 
 onUnmounted(() => {
-  previewObserver?.disconnect()
-  tileElements.clear()
-})
+  previewObserver?.disconnect();
+  tileElements.clear();
+});
 
 // Instant tab switch
 const switchKind = (kind: 'image' | 'video' | 'color' | 'gradient') => {
-  if (activeKind.value === kind) return
+  if (activeKind.value === kind) return;
 
-  activeKind.value = kind
-  visibleCount.value = INITIAL_MEDIA_COUNT
-  closeCustomEditor()
+  activeKind.value = kind;
+  visibleCount.value = INITIAL_MEDIA_COUNT;
+  closeCustomEditor();
 
   if (gridRef.value) {
-    gridRef.value.scrollTop = 0
+    gridRef.value.scrollTop = 0;
   }
 
-  scheduleVisibleTileObservation()
-}
+  scheduleVisibleTileObservation();
+};
 
 watch(
   visibleItems,
   (newItems) => {
-    void newItems
-    scheduleVisibleTileObservation()
+    void newItems;
+    scheduleVisibleTileObservation();
   },
   { flush: 'post' },
-)
+);
 
 const loadMore = () => {
-  visibleCount.value = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT)
-}
+  visibleCount.value = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT);
+};
 
-const isSelected = (entry: BackgroundValue) => props.selectedBackground?.id === entry.id
-const selectedColorPreset = computed(() => colorPresets.value.find((item) => isSelected(item)) ?? null)
-const selectedGradientPreset = computed(() => gradientPresets.value.find((item) => isSelected(item)) ?? null)
+const isSelected = (entry: BackgroundValue) => props.selectedBackground?.id === entry.id;
+const selectedColorPreset = computed(() => colorPresets.value.find((item) => isSelected(item)) ?? null);
+const selectedGradientPreset = computed(() => gradientPresets.value.find((item) => isSelected(item)) ?? null);
 
 const triggerImport = async () => {
-  const kind = activeKind.value === 'image' || activeKind.value === 'video' ? activeKind.value : 'media'
-  const background = await capture.pickBackgroundLibraryMedia(kind)
+  const kind = activeKind.value === 'image' || activeKind.value === 'video' ? activeKind.value : 'media';
+  const background = await capture.pickBackgroundLibraryMedia(kind);
   if (background) {
-    emit('import:background', background)
+    emit('import:background', background);
   }
-}
+};
 
 const importLabel = computed(() =>
   activeKind.value === 'image'
@@ -165,7 +165,7 @@ const importLabel = computed(() =>
     : activeKind.value === 'video'
       ? t('importCustomVideo')
       : t('importCustomBackground'),
-)
+);
 </script>
 
 <template>
@@ -258,7 +258,7 @@ const importLabel = computed(() =>
             flush
             @toggle="
               (open) => {
-                if (!open) closeCustomEditor()
+                if (!open) closeCustomEditor();
               }
             "
           >
@@ -280,15 +280,15 @@ const importLabel = computed(() =>
                 :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
                 @add-color="
                   (val) => {
-                    addColorPreset(val)
-                    close()
+                    addColorPreset(val);
+                    close();
                   }
                 "
                 @update-color="updateLiveColor"
                 @close="
                   () => {
-                    closeCustomEditor()
-                    close()
+                    closeCustomEditor();
+                    close();
                   }
                 "
               />
@@ -312,7 +312,7 @@ const importLabel = computed(() =>
           flush
           @toggle="
             (open) => {
-              if (!open) closeCustomEditor()
+              if (!open) closeCustomEditor();
             }
           "
         >
@@ -335,15 +335,15 @@ const importLabel = computed(() =>
               :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
               @add-color="
                 (val) => {
-                  addColorPreset(val)
-                  close()
+                  addColorPreset(val);
+                  close();
                 }
               "
               @update-color="updateLiveColor"
               @close="
                 () => {
-                  closeCustomEditor()
-                  close()
+                  closeCustomEditor();
+                  close();
                 }
               "
             />
@@ -360,7 +360,7 @@ const importLabel = computed(() =>
             flush
             @toggle="
               (open) => {
-                if (!open) closeCustomEditor()
+                if (!open) closeCustomEditor();
               }
             "
           >
@@ -382,15 +382,15 @@ const importLabel = computed(() =>
                 :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
                 @add-gradient="
                   (val) => {
-                    addGradientPreset(val)
-                    close()
+                    addGradientPreset(val);
+                    close();
                   }
                 "
                 @update-gradient="updateLiveGradient"
                 @close="
                   () => {
-                    closeCustomEditor()
-                    close()
+                    closeCustomEditor();
+                    close();
                   }
                 "
               />
@@ -416,7 +416,7 @@ const importLabel = computed(() =>
           flush
           @toggle="
             (open) => {
-              if (!open) closeCustomEditor()
+              if (!open) closeCustomEditor();
             }
           "
         >
@@ -439,15 +439,15 @@ const importLabel = computed(() =>
               :gradient="selectedGradientPreset?.gradient ?? customGradientValue"
               @add-gradient="
                 (val) => {
-                  addGradientPreset(val)
-                  close()
+                  addGradientPreset(val);
+                  close();
                 }
               "
               @update-gradient="updateLiveGradient"
               @close="
                 () => {
-                  closeCustomEditor()
-                  close()
+                  closeCustomEditor();
+                  close();
                 }
               "
             />

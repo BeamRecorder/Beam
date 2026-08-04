@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import type { ResizeCorner } from './types'
-export type { ResizeCorner }
+import type { ResizeCorner } from './types';
+export type { ResizeCorner };
 
 withDefaults(defineProps<{ corners?: ResizeCorner[]; disabled?: boolean }>(), {
   corners: () => ['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'],
   disabled: false,
-})
+});
 
 const emit = defineEmits<{
-  (e: 'resize-start', corner: ResizeCorner, event: PointerEvent): void
-  (e: 'resize-move', corner: ResizeCorner, event: PointerEvent): void
-  (e: 'resize-end', corner: ResizeCorner, event: PointerEvent): void
-}>()
+  (e: 'resize-start', corner: ResizeCorner, event: PointerEvent): void;
+  (e: 'resize-move', corner: ResizeCorner, event: PointerEvent): void;
+  (e: 'resize-end', corner: ResizeCorner, event: PointerEvent): void;
+}>();
 
 const start = (corner: ResizeCorner, event: PointerEvent) => {
   if ((event.currentTarget as HTMLElement).setPointerCapture)
-    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-  emit('resize-start', corner, event)
-}
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  emit('resize-start', corner, event);
+};
 </script>
 
 <template>

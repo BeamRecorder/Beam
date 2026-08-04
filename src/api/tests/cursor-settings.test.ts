@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   clickButtonForRecordedButton,
   createDefaultCursorClickEffects,
@@ -6,14 +6,14 @@ import {
   createDefaultCursorMotionSettings,
   normalizeCursorClickEffects,
   normalizeCursorMotionSettings,
-} from '../types/cursor-settings'
+} from '../types/cursor-settings';
 
 describe('cursor click settings', () => {
   it('keeps left and right defaults independent', () => {
-    const defaults = createDefaultCursorClickEffects()
-    defaults.left.rippleSize = 42
-    expect(defaults.right.rippleSize).toBe(30)
-  })
+    const defaults = createDefaultCursorClickEffects();
+    defaults.left.rippleSize = 42;
+    expect(defaults.right.rippleSize).toBe(30);
+  });
 
   it('normalizes invalid persisted values without losing button separation', () => {
     expect(
@@ -24,16 +24,16 @@ describe('cursor click settings', () => {
     ).toEqual({
       left: { springEnabled: true, springIntensity: 100, rippleEnabled: true, rippleSize: 10, rippleColor: '#ff5a1f' },
       right: { springEnabled: false, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#00ff00' },
-    })
-  })
+    });
+  });
 
   it('maps the recording button numbers to the visual effect groups', () => {
-    expect(clickButtonForRecordedButton(1)).toBe('left')
-    expect(clickButtonForRecordedButton(2)).toBe('right')
-    expect(clickButtonForRecordedButton(3)).toBe('middle')
-    expect(effectButtonForRecordedButton(3)).toBe('left')
-    expect(effectButtonForRecordedButton(99)).toBeNull()
-  })
+    expect(clickButtonForRecordedButton(1)).toBe('left');
+    expect(clickButtonForRecordedButton(2)).toBe('right');
+    expect(clickButtonForRecordedButton(3)).toBe('middle');
+    expect(effectButtonForRecordedButton(3)).toBe('left');
+    expect(effectButtonForRecordedButton(99)).toBeNull();
+  });
 
   it('defaults motion settings to the smooth Recordly-inspired preset', () => {
     expect(createDefaultCursorMotionSettings()).toEqual({
@@ -41,8 +41,8 @@ describe('cursor click settings', () => {
       smoothing: 0.67,
       springMassMultiplier: 1.29,
       motionBlur: 0.4,
-    })
-  })
+    });
+  });
 
   it('clamps invalid motion settings at the persisted boundary', () => {
     expect(
@@ -52,6 +52,6 @@ describe('cursor click settings', () => {
       smoothing: 1,
       springMassMultiplier: 0.5,
       motionBlur: 0,
-    })
-  })
-})
+    });
+  });
+});

@@ -1,30 +1,30 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import BigSlider from '~/ui/slider/BigSlider.vue'
-import Switch from '~/ui/switch/Switch.vue'
-import ColorInput from '~/ui/input/ColorInput.vue'
-import Divider from '~/ui/divider/Divider.vue'
-import { useTranslate } from '~/i18n/useTranslate'
-import type { CursorClickButton, CursorClickEffects } from '../../../../api/types/cursor-settings'
+import { computed } from 'vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
+import Switch from '~/ui/switch/Switch.vue';
+import ColorInput from '~/ui/input/ColorInput.vue';
+import Divider from '~/ui/divider/Divider.vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import type { CursorClickButton, CursorClickEffects } from '../../../../api/types/cursor-settings';
 
-const { t } = useTranslate('CursorPanel')
+const { t } = useTranslate('CursorPanel');
 
-const props = defineProps<{ modelValue: CursorClickEffects }>()
+const props = defineProps<{ modelValue: CursorClickEffects }>();
 const emit = defineEmits<{
-  (event: 'update:modelValue', value: CursorClickEffects): void
-}>()
+  (event: 'update:modelValue', value: CursorClickEffects): void;
+}>();
 
 const buttons = computed<Array<{ id: CursorClickButton; label: string }>>(() => [
   { id: 'left', label: t('leftClick') },
   { id: 'right', label: t('rightClick') },
-])
+]);
 
 const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffects['left']>) => {
   emit('update:modelValue', {
     ...props.modelValue,
     [button]: { ...props.modelValue[button], ...patch },
-  })
-}
+  });
+};
 </script>
 
 <template>

@@ -1,53 +1,53 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
-import Skeleton from '~/ui/skeleton/Skeleton.vue'
-import type { Clip, MediaAsset } from '../composition/composition-types'
-import { useThumbnails } from './waveform/useThumbnails'
-import { useTranslate } from '~/i18n/useTranslate'
+import { computed, onUnmounted, ref, watch } from 'vue';
+import Skeleton from '~/ui/skeleton/Skeleton.vue';
+import type { Clip, MediaAsset } from '../composition/composition-types';
+import { useThumbnails } from './waveform/useThumbnails';
+import { useTranslate } from '~/i18n/useTranslate';
 
-const { t } = useTranslate('TimelineTracks')
+const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
-  clip: Clip
-  asset?: MediaAsset | null
-  duration: number
-  visibleSeconds: number[]
-  selected: boolean
-  waveformBars?: number[]
-  trimState?: { edge: 'start' | 'end'; durationMs: number } | null
-  deferThumbnailRequests?: boolean
-}>()
+  clip: Clip;
+  asset?: MediaAsset | null;
+  duration: number;
+  visibleSeconds: number[];
+  selected: boolean;
+  waveformBars?: number[];
+  trimState?: { edge: 'start' | 'end'; durationMs: number } | null;
+  deferThumbnailRequests?: boolean;
+}>();
 const emit = defineEmits<{
-  (event: 'select'): void
-  (event: 'move', value: PointerEvent): void
-  (event: 'trim', value: { event: PointerEvent; edge: 'start' | 'end' }): void
-}>()
+  (event: 'select'): void;
+  (event: 'move', value: PointerEvent): void;
+  (event: 'trim', value: { event: PointerEvent; edge: 'start' | 'end' }): void;
+}>();
 
-const source = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset.src : null))
-const { thumbnails, requestVisibleFrames } = useThumbnails(source)
-const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs)
-type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number }
+const source = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset.src : null));
+const { thumbnails, requestVisibleFrames } = useThumbnails(source);
+const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs);
+type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number };
 const frames = computed<TimelineFrame[]>(() =>
   props.visibleSeconds.flatMap((timelineSecond) => {
-    const timelineMs = timelineSecond * 1_000
+    const timelineMs = timelineSecond * 1_000;
     if (
       props.clip.kind === 'audio' ||
       timelineMs < props.clip.timelineStartMs ||
       timelineMs >= clipEndMs.value ||
       props.asset?.kind !== 'video'
     )
-      return []
-    const sourceMs = props.clip.sourceInMs + (timelineMs - props.clip.timelineStartMs) * props.clip.playbackRate
+      return [];
+    const sourceMs = props.clip.sourceInMs + (timelineMs - props.clip.timelineStartMs) * props.clip.playbackRate;
     return [
       {
         timelineSecond,
         mediaSecond: Math.max(0, Math.floor(sourceMs / 1_000)),
         relativeMs: timelineMs - props.clip.timelineStartMs,
       },
-    ]
+    ];
   }),
-)
-const frozenFrames = ref<TimelineFrame[]>([])
-const displayedFrames = computed(() => (frozenFrames.value.length ? frozenFrames.value : frames.value))
+);
+const frozenFrames = ref<TimelineFrame[]>([]);
+const displayedFrames = computed(() => (frozenFrames.value.length ? frozenFrames.value : frames.value));
 // Moving a clip changes only its timeline placement. The thumbnail content is
 // still the same source segment, so do not replace it (or show skeletons) on a
 // move commit. Refresh only when the viewport or source timing actually changes.
@@ -59,64 +59,64 @@ const thumbnailRefreshKey = computed(() =>
     props.clip.sourceDurationMs,
     props.clip.playbackRate,
   ].join('|'),
-)
+);
 watch(
   thumbnailRefreshKey,
   () => {
-    if (props.deferThumbnailRequests) return
-    const value = frames.value
-    frozenFrames.value = value
-    requestVisibleFrames([...new Set(value.map((frame) => frame.mediaSecond))])
+    if (props.deferThumbnailRequests) return;
+    const value = frames.value;
+    frozenFrames.value = value;
+    requestVisibleFrames([...new Set(value.map((frame) => frame.mediaSecond))]);
   },
   { immediate: true },
-)
+);
 
 const clipStyle = computed(() => ({
   left: `${props.duration > 0 ? (props.clip.timelineStartMs / (props.duration * 1_000)) * 100 : 0}%`,
   width: `${props.duration > 0 ? (props.clip.timelineDurationMs / (props.duration * 1_000)) * 100 : 0}%`,
-}))
+}));
 const frameStyle = (frame: TimelineFrame) => ({
   left: `${(frame.relativeMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
   width: `${(1_000 / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
-})
+});
 const formatTrimTime = (milliseconds: number) => {
-  const seconds = Math.max(0, milliseconds / 1_000)
-  const minutes = Math.floor(seconds / 60)
-  const wholeSeconds = Math.floor(seconds % 60)
-  const tenths = Math.floor((seconds % 1) * 10)
-  return `${minutes > 0 ? `${minutes}:` : ''}${wholeSeconds.toString().padStart(2, '0')}.${tenths}s`
-}
+  const seconds = Math.max(0, milliseconds / 1_000);
+  const minutes = Math.floor(seconds / 60);
+  const wholeSeconds = Math.floor(seconds % 60);
+  const tenths = Math.floor((seconds % 1) * 10);
+  return `${minutes > 0 ? `${minutes}:` : ''}${wholeSeconds.toString().padStart(2, '0')}.${tenths}s`;
+};
 
-let marqueeFrame = 0
-let marqueeTimer = 0
+let marqueeFrame = 0;
+let marqueeTimer = 0;
 const stopMarquee = (target?: HTMLElement | null) => {
-  window.cancelAnimationFrame(marqueeFrame)
-  window.clearTimeout(marqueeTimer)
-  marqueeFrame = 0
-  marqueeTimer = 0
-  const label = target?.querySelector<HTMLElement>('.clip-label-text')
-  if (label) label.style.transform = ''
-}
-const stopMarqueeForEvent = (event: PointerEvent) => stopMarquee(event.currentTarget as HTMLElement | null)
+  window.cancelAnimationFrame(marqueeFrame);
+  window.clearTimeout(marqueeTimer);
+  marqueeFrame = 0;
+  marqueeTimer = 0;
+  const label = target?.querySelector<HTMLElement>('.clip-label-text');
+  if (label) label.style.transform = '';
+};
+const stopMarqueeForEvent = (event: PointerEvent) => stopMarquee(event.currentTarget as HTMLElement | null);
 const startMarquee = (event: PointerEvent) => {
-  const target = event.currentTarget as HTMLElement
-  const label = target.querySelector<HTMLElement>('.clip-label-text')
-  if (!label) return
-  const distance = label.scrollWidth - label.clientWidth
-  if (distance <= 0) return
-  stopMarquee(target)
+  const target = event.currentTarget as HTMLElement;
+  const label = target.querySelector<HTMLElement>('.clip-label-text');
+  if (!label) return;
+  const distance = label.scrollWidth - label.clientWidth;
+  if (distance <= 0) return;
+  stopMarquee(target);
   marqueeTimer = window.setTimeout(() => {
-    const startedAt = performance.now()
-    const travelMs = Math.max(3_000, (distance / 36) * 1_000)
+    const startedAt = performance.now();
+    const travelMs = Math.max(3_000, (distance / 36) * 1_000);
     const tick = (now: number) => {
-      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs
-      label.style.transform = `translateX(${-distance * (phase <= 1 ? phase : 2 - phase)}px)`
-      marqueeFrame = window.requestAnimationFrame(tick)
-    }
-    marqueeFrame = window.requestAnimationFrame(tick)
-  }, 300)
-}
-onUnmounted(() => stopMarquee())
+      const phase = ((now - startedAt) % (travelMs * 2)) / travelMs;
+      label.style.transform = `translateX(${-distance * (phase <= 1 ? phase : 2 - phase)}px)`;
+      marqueeFrame = window.requestAnimationFrame(tick);
+    };
+    marqueeFrame = window.requestAnimationFrame(tick);
+  }, 300);
+};
+onUnmounted(() => stopMarquee());
 </script>
 
 <template>

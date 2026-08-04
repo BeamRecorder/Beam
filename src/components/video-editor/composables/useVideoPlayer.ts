@@ -1,43 +1,45 @@
-import { computed, ref } from 'vue'
+import { computed, ref } from 'vue';
 import {
   BACKGROUND_MEDIA,
   groupBackgroundMedia,
   type BackgroundMedia,
   type BackgroundMediaGroup,
   type BackgroundValue,
-} from './backgroundCatalog'
+} from './backgroundCatalog';
 
 export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] = BACKGROUND_MEDIA) {
-  const isPlaying = ref(false)
-  const currentTime = ref(0)
-  const duration = ref(0)
-  const volume = ref(70)
-  const videoSrc = ref<string | null>(null)
-  const selectedBackground = ref<BackgroundValue | null>(availableBackgrounds[0] ?? null)
-  const backgroundBlurPercent = ref(0)
-  const importedBackgrounds = ref<BackgroundMedia[]>([])
-  const allBackgrounds = computed(() => [...importedBackgrounds.value, ...availableBackgrounds])
-  const backgroundGroups = computed<BackgroundMediaGroup[]>(() => groupBackgroundMedia(allBackgrounds.value))
-  const selectedBackgroundMedia = computed(() => selectedBackground.value)
+  const isPlaying = ref(false);
+  const currentTime = ref(0);
+  const duration = ref(0);
+  const volume = ref(70);
+  const videoSrc = ref<string | null>(null);
+  const selectedBackground = ref<BackgroundValue | null>(availableBackgrounds[0] ?? null);
+  const backgroundBlurPercent = ref(0);
+  const importedBackgrounds = ref<BackgroundMedia[]>([]);
+  const allBackgrounds = computed(() => [...importedBackgrounds.value, ...availableBackgrounds]);
+  const backgroundGroups = computed<BackgroundMediaGroup[]>(() => groupBackgroundMedia(allBackgrounds.value));
+  const selectedBackgroundMedia = computed(() => selectedBackground.value);
   const addBackground = (background: BackgroundMedia) => {
     importedBackgrounds.value = [
       background,
       ...importedBackgrounds.value.filter((item) => item.path !== background.path),
-    ]
-    selectedBackground.value = background
-  }
+    ];
+    selectedBackground.value = background;
+  };
   const setUserBackgrounds = (backgrounds: BackgroundMedia[]) => {
-    importedBackgrounds.value = backgrounds
+    importedBackgrounds.value = backgrounds;
     if (
       selectedBackground.value &&
       (selectedBackground.value.kind === 'image' || selectedBackground.value.kind === 'video')
     ) {
       selectedBackground.value =
-        allBackgrounds.value.find((item) => item.id === selectedBackground.value?.id) ?? availableBackgrounds[0] ?? null
+        allBackgrounds.value.find((item) => item.id === selectedBackground.value?.id) ??
+        availableBackgrounds[0] ??
+        null;
     }
-  }
+  };
   const restoreBackgrounds = (backgrounds: BackgroundMedia[], selected: BackgroundValue | string | null) => {
-    importedBackgrounds.value = backgrounds
+    importedBackgrounds.value = backgrounds;
     selectedBackground.value =
       typeof selected === 'string'
         ? ([...backgrounds, ...availableBackgrounds].find(
@@ -45,24 +47,24 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
           ) ??
           availableBackgrounds[0] ??
           null)
-        : (selected ?? availableBackgrounds[0] ?? null)
-  }
+        : (selected ?? availableBackgrounds[0] ?? null);
+  };
   const togglePlay = () => {
-    isPlaying.value = !isPlaying.value
-  }
+    isPlaying.value = !isPlaying.value;
+  };
   const seek = (time: number) => {
-    if (!Number.isFinite(time)) throw new RangeError('Playback time must be finite.')
-    currentTime.value = Math.max(0, Math.min(time, duration.value))
-  }
+    if (!Number.isFinite(time)) throw new RangeError('Playback time must be finite.');
+    currentTime.value = Math.max(0, Math.min(time, duration.value));
+  };
   const formatTime = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds < 0)
-      throw new RangeError('Playback time must be a non-negative finite number.')
+      throw new RangeError('Playback time must be a non-negative finite number.');
     return `${Math.floor(seconds / 60)
       .toString()
       .padStart(2, '0')}:${Math.floor(seconds % 60)
       .toString()
-      .padStart(2, '0')}`
-  }
+      .padStart(2, '0')}`;
+  };
   return {
     isPlaying,
     currentTime,
@@ -82,5 +84,5 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     formattedCurrentTime: computed(() => formatTime(currentTime.value)),
     formattedDuration: computed(() => formatTime(duration.value)),
     formatTime,
-  }
+  };
 }

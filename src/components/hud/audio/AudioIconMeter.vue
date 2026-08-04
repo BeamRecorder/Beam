@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Mic, MicOff, Volume2, VolumeX } from '@lucide/vue'
+import { computed } from 'vue';
+import { Mic, MicOff, Volume2, VolumeX } from '@lucide/vue';
 
 const props = withDefaults(
   defineProps<{
-    enabled: boolean
-    level: number
-    kind: 'mic' | 'system'
-    size?: 'sm' | 'md'
+    enabled: boolean;
+    level: number;
+    kind: 'mic' | 'system';
+    size?: 'sm' | 'md';
   }>(),
   {
     size: 'md',
   },
-)
+);
 
-const percent = computed(() => Math.min(100, Math.max(0, Math.round(props.level * 100))))
+const percent = computed(() => Math.min(100, Math.max(0, Math.round(props.level * 100))));
 
 const meterColor = computed(() => {
-  const lvl = props.level
-  if (lvl > 0.75) return 'var(--color-error, #ef4444)'
-  if (lvl > 0.4) return 'var(--color-warning, #f59e0b)'
-  return 'var(--color-success, #10b981)'
-})
+  const lvl = props.level;
+  if (lvl > 0.75) return 'var(--color-error, #ef4444)';
+  if (lvl > 0.4) return 'var(--color-warning, #f59e0b)';
+  return 'var(--color-success, #10b981)';
+});
 </script>
 
 <template>

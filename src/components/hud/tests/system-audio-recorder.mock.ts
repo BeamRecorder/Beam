@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi } from 'vitest';
 
 export const browserSystemAudioMock = {
   request: vi.fn(),
@@ -9,8 +9,8 @@ export const browserSystemAudioMock = {
     label: 'System audio',
     isDefault: true,
   })),
-}
+};
 
-export const BrowserSystemAudioRecorder = { request: browserSystemAudioMock.request }
-export const recordSystemAudioFailure = browserSystemAudioMock.recordSystemAudioFailure
-export const systemAudioSource = browserSystemAudioMock.systemAudioSource
+export const BrowserSystemAudioRecorder = { request: browserSystemAudioMock.request };
+export const recordSystemAudioFailure = browserSystemAudioMock.recordSystemAudioFailure;
+export const systemAudioSource = browserSystemAudioMock.systemAudioSource;

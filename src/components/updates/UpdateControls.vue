@@ -1,35 +1,35 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { Download, ExternalLink, RefreshCw, RotateCcw } from '@lucide/vue'
-import { capture } from '~/api/capture'
-import type { AppUpdateState } from '~/api/types/capture-api'
-import { useTranslate } from '~/i18n/useTranslate'
-import Button from '~/ui/button/Button.vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { Download, ExternalLink, RefreshCw, RotateCcw } from '@lucide/vue';
+import { capture } from '~/api/capture';
+import type { AppUpdateState } from '~/api/types/capture-api';
+import { useTranslate } from '~/i18n/useTranslate';
+import Button from '~/ui/button/Button.vue';
 
-const { t } = useTranslate('Updates')
-const state = ref<AppUpdateState | null>(null)
-let stopListening: (() => void) | undefined
+const { t } = useTranslate('Updates');
+const state = ref<AppUpdateState | null>(null);
+let stopListening: (() => void) | undefined;
 
 const refresh = async () => {
-  state.value = await capture.checkForUpdates()
-}
+  state.value = await capture.checkForUpdates();
+};
 const download = async () => {
-  await capture.downloadUpdate()
-}
+  await capture.downloadUpdate();
+};
 const restart = async () => {
-  await capture.quitAndInstallUpdate()
-}
+  await capture.quitAndInstallUpdate();
+};
 const openChangelog = async () => {
-  await capture.openUpdateChangelog()
-}
+  await capture.openUpdateChangelog();
+};
 
 onMounted(async () => {
   stopListening = capture.onUpdateState((nextState) => {
-    state.value = nextState
-  })
-  state.value = await capture.getUpdateState()
-})
-onBeforeUnmount(() => stopListening?.())
+    state.value = nextState;
+  });
+  state.value = await capture.getUpdateState();
+});
+onBeforeUnmount(() => stopListening?.());
 </script>
 
 <template>

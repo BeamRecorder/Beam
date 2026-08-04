@@ -1,6 +1,6 @@
-import { createPinia, setActivePinia } from 'pinia'
-import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia';
+import { mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capture = vi.hoisted(() => ({
   getPreferences: vi.fn(),
@@ -11,116 +11,116 @@ const capture = vi.hoisted(() => ({
   getUpdateState: vi.fn(() => Promise.resolve({ currentVersion: '1.2.3' })),
   openDiscordInvite: vi.fn(),
   openGithubRepository: vi.fn(),
-}))
-vi.mock('~/api/capture', () => ({ capture }))
+}));
+vi.mock('~/api/capture', () => ({ capture }));
 
-import SettingsPanel from './SettingsPanel.vue'
+import SettingsPanel from './SettingsPanel.vue';
 
 const Button = {
   inheritAttrs: true,
   emits: ['click'],
   template: '<button v-bind="$attrs" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
-}
-const ButtonGroup = { template: '<div class="button-group"><slot /></div>' }
+};
+const ButtonGroup = { template: '<div class="button-group"><slot /></div>' };
 const Select = {
   emits: ['update:modelValue'],
   template: '<button class="language-select" @click="$emit(\'update:modelValue\', \'fr\')">Select</button>',
-}
-const UpdateControls = { template: '<div class="update-controls-stub">Updates</div>' }
+};
+const UpdateControls = { template: '<div class="update-controls-stub">Updates</div>' };
 
 const Popover = {
   template: '<div class="popover-stub"><slot name="trigger" /><slot :close="() => {}" /></div>',
-}
+};
 const HUD = {
   emits: ['start-recording'],
   template:
     '<div class="hud-stub"><button class="hud-start-btn" @click="$emit(\'start-recording\', { recordingBarVisibility: \'always\' })">Start</button></div>',
-}
+};
 
 describe('SettingsPanel', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-    localStorage.clear()
+    setActivePinia(createPinia());
+    localStorage.clear();
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       value: () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
-    })
+    });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
-    })
-    capture.getPreferences.mockResolvedValue({ theme: 'light' })
-    capture.updatePreferences.mockResolvedValue({ theme: 'light' })
-    vi.clearAllMocks()
-    capture.getPreferences.mockResolvedValue({ theme: 'light' })
-    capture.updatePreferences.mockResolvedValue({ theme: 'light' })
-    capture.getUpdateState.mockResolvedValue({ currentVersion: '1.2.3' })
-  })
+    });
+    capture.getPreferences.mockResolvedValue({ theme: 'light' });
+    capture.updatePreferences.mockResolvedValue({ theme: 'light' });
+    vi.clearAllMocks();
+    capture.getPreferences.mockResolvedValue({ theme: 'light' });
+    capture.updatePreferences.mockResolvedValue({ theme: 'light' });
+    capture.getUpdateState.mockResolvedValue({ currentVersion: '1.2.3' });
+  });
 
   it('changes theme and locale through the stores', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
-    })
-    const themeButtons = wrapper.findAll('.theme-button-group button')
-    expect(themeButtons).toHaveLength(3)
-    await themeButtons[1].trigger('click')
-    await themeButtons[2].trigger('click')
-    await wrapper.get('.language-select').trigger('click')
+    });
+    const themeButtons = wrapper.findAll('.theme-button-group button');
+    expect(themeButtons).toHaveLength(3);
+    await themeButtons[1].trigger('click');
+    await themeButtons[2].trigger('click');
+    await wrapper.get('.language-select').trigger('click');
 
-    expect(capture.updatePreferences).toHaveBeenLastCalledWith({ theme: 'system' })
-    expect(localStorage.getItem('locale')).toBe('fr')
-  })
+    expect(capture.updatePreferences).toHaveBeenLastCalledWith({ theme: 'system' });
+    expect(localStorage.getItem('locale')).toBe('fr');
+  });
 
   it('renders the update controls section', () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
-    })
-    expect(wrapper.find('.update-controls-stub').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Theme')
-  })
+    });
+    expect(wrapper.find('.update-controls-stub').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Theme');
+  });
 
   it('opens the community links from the socials section', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
-    })
-    const socialButtons = wrapper.findAll('.social-links button')
+    });
+    const socialButtons = wrapper.findAll('.social-links button');
 
-    await socialButtons[0].trigger('click')
-    await socialButtons[1].trigger('click')
+    await socialButtons[0].trigger('click');
+    await socialButtons[1].trigger('click');
 
-    expect(capture.openDiscordInvite).toHaveBeenCalledOnce()
-    expect(capture.openGithubRepository).toHaveBeenCalledOnce()
-    expect(wrapper.find('.discord-icon').attributes('src')).toContain('discord_svg.svg')
-    expect(wrapper.find('.github-icon').attributes('src')).toContain('github.svg')
-  })
+    expect(capture.openDiscordInvite).toHaveBeenCalledOnce();
+    expect(capture.openGithubRepository).toHaveBeenCalledOnce();
+    expect(wrapper.find('.discord-icon').attributes('src')).toContain('discord_svg.svg');
+    expect(wrapper.find('.github-icon').attributes('src')).toContain('github.svg');
+  });
 
   it('toggles dev mode and reveals the framed recorder options', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
-    })
-    expect(wrapper.find('.dev-frame').exists()).toBe(false)
+    });
+    expect(wrapper.find('.dev-frame').exists()).toBe(false);
 
-    const switchBtn = wrapper.get('.dev-switch')
-    await switchBtn.trigger('click')
+    const switchBtn = wrapper.get('.dev-switch');
+    await switchBtn.trigger('click');
 
-    expect(wrapper.find('.dev-frame').exists()).toBe(true)
-    expect(localStorage.getItem('dev_mode_enabled')).toBe('true')
+    expect(wrapper.find('.dev-frame').exists()).toBe(true);
+    expect(localStorage.getItem('dev_mode_enabled')).toBe('true');
 
-    const startBtn = wrapper.get('.hud-start-btn')
-    await startBtn.trigger('click')
+    const startBtn = wrapper.get('.hud-start-btn');
+    await startBtn.trigger('click');
 
-    expect(wrapper.emitted('start-recording')).toBeTruthy()
-  })
+    expect(wrapper.emitted('start-recording')).toBeTruthy();
+  });
 
   it('copies system information to clipboard when clicking copy button', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
-    })
-    await wrapper.get('.dev-switch').trigger('click')
+    });
+    await wrapper.get('.dev-switch').trigger('click');
 
-    const copyBtn = wrapper.findAll('.dev-action-btn')[1]
-    await copyBtn.trigger('click')
+    const copyBtn = wrapper.findAll('.dev-action-btn')[1];
+    await copyBtn.trigger('click');
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('App Version: 1.2.3'))
-  })
-})
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('App Version: 1.2.3'));
+  });
+});
