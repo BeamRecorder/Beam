@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
-import KeyboardChip from "../Kdb/KeyboardChip.vue";
+import KeyboardChip from "../Kbd/KeyboardChip.vue";
 import { X, RotateCcw } from "@lucide/vue";
 
 const props = withDefaults(
