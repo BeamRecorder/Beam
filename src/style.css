@@ -35,7 +35,7 @@
   --color-bg-surface: #f7f5f0;
   --color-bg-surface-hover: #ebe8e0;
   --color-bg-element: #ffffff;
-  
+
   /* Borders */
   --color-border: #e6e3dc;
   --color-border-strong: #d3cfc5;
@@ -73,16 +73,22 @@
   /* Fonts */
   /* Keep the product typeface first, then use glyph-complete platform fallbacks
      for Cyrillic, CJK, and Japanese characters. */
-  --font-sans: 'Stack Sans Text', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP', 'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
-  --font-headline: 'Stack Sans Headline', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP', 'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
-  
+  --font-sans:
+    'Stack Sans Text', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP',
+    'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo',
+    'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
+  --font-headline:
+    'Stack Sans Headline', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP',
+    'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo',
+    'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
+
   /* Shadow & Blur (Claude-inspired soft ambient shadows) */
   --shadow-sm: 0 1px 2px 0 rgba(22, 21, 18, 0.05);
   --shadow-md: 0 4px 12px -2px rgba(22, 21, 18, 0.05), 0 2px 6px -1px rgba(22, 21, 18, 0.03);
   --shadow-lg: 0 16px 32px -4px rgba(22, 21, 18, 0.08), 0 4px 16px -2px rgba(22, 21, 18, 0.04);
   --shadow-xl: 0 24px 48px -6px rgba(22, 21, 18, 0.12), 0 8px 24px -4px rgba(22, 21, 18, 0.06);
   --marquee-fade-shadow: rgba(88, 82, 72, 0.22);
-  
+
   /* Radials */
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -96,6 +102,15 @@
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Stack Sans does not contain Cyrillic glyphs. Use one coherent system face for
+   Russian and Bulgarian so fallback glyph metrics do not make words look spaced
+   out, while keeping the product face for the Latin and CJK locales. */
+:root:lang(ru),
+:root:lang(bg) {
+  --font-sans: system-ui, 'Segoe UI', 'Noto Sans', Arial, sans-serif;
+  --font-headline: system-ui, 'Segoe UI', 'Noto Sans', Arial, sans-serif;
 }
 
 :root.dark {
@@ -146,7 +161,8 @@ body.is-dragging-input * {
   user-select: none !important;
 }
 
-html, body {
+html,
+body {
   background: transparent !important;
   margin: 0;
   padding: 0;
@@ -163,7 +179,12 @@ html, body {
   margin: 0;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-headline);
   font-weight: 700;
   color: var(--text-primary);
@@ -172,22 +193,42 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slideInUp {
-  from { transform: translateY(1rem); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-fade-in {
@@ -257,7 +298,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Default Input and Select background overrides */
-input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='file']),
 select {
   background-color: var(--color-bg-surface);
   color: var(--text-primary);
