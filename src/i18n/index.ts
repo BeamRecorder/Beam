@@ -77,6 +77,20 @@ import enScreenRegionOverlay from './en/ScreenRegionOverlay.json';
 import frScreenRegionOverlay from './fr/ScreenRegionOverlay.json';
 import enTray from './en/Tray.json';
 import frTray from './fr/Tray.json';
+import esCore from './es/core.json';
+import esEditor from './es/editor.json';
+import deCore from './de/core.json';
+import deEditor from './de/editor.json';
+import ruCore from './ru/core.json';
+import ruEditor from './ru/editor.json';
+import bgCore from './bg/core.json';
+import bgEditor from './bg/editor.json';
+import zhCnCore from './zh-CN/core.json';
+import zhCnEditor from './zh-CN/editor.json';
+import koCore from './ko/core.json';
+import koEditor from './ko/editor.json';
+import { isSupportedLocale } from './locales';
+import type { AppLocale } from './types';
 
 const messages = {
   en: {
@@ -161,14 +175,39 @@ const messages = {
     ScreenRegionOverlay: frScreenRegionOverlay,
     Tray: frTray,
   },
+  es: {
+    ...esCore,
+    ...esEditor,
+  },
+  de: {
+    ...deCore,
+    ...deEditor,
+  },
+  ru: {
+    ...ruCore,
+    ...ruEditor,
+  },
+  bg: {
+    ...bgCore,
+    ...bgEditor,
+  },
+  'zh-CN': {
+    ...zhCnCore,
+    ...zhCnEditor,
+  },
+  ko: {
+    ...koCore,
+    ...koEditor,
+  },
 };
 
-function detectLocale(): string {
+function detectLocale(): AppLocale {
   try {
     const stored = localStorage.getItem('locale');
-    if (stored === 'en' || stored === 'fr') return stored;
-    const navLang = navigator.language;
-    if (navLang.startsWith('fr')) return 'fr';
+    if (stored && isSupportedLocale(stored)) return stored;
+    const navLang = navigator.language.toLowerCase();
+    const normalized = navLang.startsWith('zh') ? 'zh-CN' : navLang.split('-')[0];
+    if (isSupportedLocale(normalized)) return normalized;
   } catch {}
   return 'en';
 }
@@ -188,7 +227,7 @@ export function getCurrentLocale(): string {
   return i18n.global.locale.value;
 }
 
-export function setCurrentLocale(locale: 'en' | 'fr') {
+export function setCurrentLocale(locale: AppLocale) {
   i18n.global.locale.value = locale;
   try {
     localStorage.setItem('locale', locale);

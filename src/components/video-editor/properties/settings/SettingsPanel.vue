@@ -13,6 +13,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
+import { localeOptions } from '~/i18n/locales';
 
 const { t } = useTranslate('SettingsPanel');
 const themeStore = useThemeStore();
@@ -89,10 +90,6 @@ const copySystemInfo = async () => {
   }, 2000);
 };
 
-const localeOptions = [
-  { value: 'en', label: 'EN - English - Anglais' },
-  { value: 'fr', label: 'FR - French - Français' },
-];
 </script>
 
 <template>

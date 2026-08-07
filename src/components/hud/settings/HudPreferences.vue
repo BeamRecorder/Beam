@@ -10,6 +10,7 @@ import Select from '~/ui/select/Select.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
+import { localeOptions } from '~/i18n/locales';
 
 const { t } = useTranslate('HudPreferences');
 
@@ -37,10 +38,6 @@ const countdownOptions = [
 const recordingBarOptions = [
   { value: 'always', label: t('alwaysVisible') },
   { value: 'auto-fade', label: t('autoFade') },
-];
-const localeOptions = [
-  { value: 'en', label: 'EN - English - Anglais' },
-  { value: 'fr', label: 'FR - French - Français' },
 ];
 </script>
 

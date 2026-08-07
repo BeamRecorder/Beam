@@ -71,8 +71,10 @@
   --color-info-light: rgba(255, 90, 31, 0.1);
 
   /* Fonts */
-  --font-sans: 'Stack Sans Text', system-ui, -apple-system, sans-serif;
-  --font-headline: 'Stack Sans Headline', system-ui, -apple-system, sans-serif;
+  /* Keep the product typeface first, then use glyph-complete platform fallbacks
+     for Cyrillic, Simplified Chinese, and Korean characters. */
+  --font-sans: 'Stack Sans Text', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans KR', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
+  --font-headline: 'Stack Sans Headline', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans KR', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
   
   /* Shadow & Blur (Claude-inspired soft ambient shadows) */
   --shadow-sm: 0 1px 2px 0 rgba(22, 21, 18, 0.05);
