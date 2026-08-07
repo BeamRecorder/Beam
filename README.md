@@ -31,7 +31,21 @@
 
 ## Availability
 
-Beam is currently available for Windows and macOS. (Linux supports is not made yet)
+Beam is currently available for Windows and macOS. (Linux support is not made yet)
+
+> [!NOTE]
+> **🛠️ macOS Notice ("Beam is damaged and cannot be opened")**
+> 
+> If macOS displays a message stating the app is damaged and cannot be opened, run the following command in **Terminal** (after moving the app into the `/Applications` folder) to remove the macOS quarantine flag:
+> 
+> ```bash
+> xattr -cr /Applications/Beam.app
+> ```
+> 
+> **Alternative via macOS System Settings:**
+> 1. Go to **System Settings > Privacy & Security**.
+> 2. Scroll down to the **Security** section.
+> 3. Click **"Open Anyway"** to allow Beam to launch.
 
 ## Developer documentation
 
