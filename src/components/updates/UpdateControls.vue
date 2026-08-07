@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { Download, ExternalLink, RefreshCw, RotateCcw } from '@lucide/vue';
+import { Check, Copy, Download, ExternalLink, RefreshCw, RotateCcw } from '@lucide/vue';
 import { capture } from '~/api/capture';
 import type { AppUpdateState } from '~/api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 
 const { t } = useTranslate('Updates');
+const { t: tHud } = useTranslate('HUD');
 const state = ref<AppUpdateState | null>(null);
+const copiedError = ref(false);
+let copiedErrorTimeout: ReturnType<typeof setTimeout> | undefined;
 let stopListening: (() => void) | undefined;
 
 const refresh = async () => {
@@ -22,6 +25,31 @@ const restart = async () => {
 const openChangelog = async () => {
   await capture.openUpdateChangelog();
 };
+const copyError = async () => {
+  const message = state.value?.message;
+  if (!message) return;
+  try {
+    await navigator.clipboard.writeText(message);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = message;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.append(textarea);
+    try {
+      textarea.select();
+      if (!document.execCommand('copy')) throw new Error('Unable to copy the update error.');
+    } finally {
+      textarea.remove();
+    }
+  }
+  copiedError.value = true;
+  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
+  copiedErrorTimeout = setTimeout(() => {
+    copiedError.value = false;
+  }, 2000);
+};
 
 onMounted(async () => {
   stopListening = capture.onUpdateState((nextState) => {
@@ -29,7 +57,10 @@ onMounted(async () => {
   });
   state.value = await capture.getUpdateState();
 });
-onBeforeUnmount(() => stopListening?.());
+onBeforeUnmount(() => {
+  stopListening?.();
+  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
+});
 </script>
 
 <template>
@@ -55,10 +86,16 @@ onBeforeUnmount(() => stopListening?.());
         <template v-else>{{ t('currentVersion', { version: state?.currentVersion ?? '…' }) }}</template>
       </p>
 
-      <details v-if="state?.status === 'error' && state.message" class="error-details">
-        <summary class="error-summary">{{ t('showDetails') }}</summary>
-        <pre class="error-log">{{ state.message }}</pre>
-      </details>
+      <Button
+        v-if="state?.status === 'error' && state.message"
+        variant="ghost"
+        size="xs"
+        class="error-copy"
+        :icon="copiedError ? Check : Copy"
+        @click="copyError"
+      >
+        {{ copiedError ? tHud('copied') : tHud('copyError') }}
+      </Button>
     </div>
     <div class="update-actions">
       <Button variant="secondary" size="xs" :disabled="!state" @click="openChangelog" class="update-btn">
@@ -141,34 +178,8 @@ onBeforeUnmount(() => stopListening?.());
   height: 14px;
 }
 
-.error-details {
-  margin-top: 4px;
-  font-size: 11px;
-}
-
-.error-summary {
-  cursor: pointer;
-  user-select: none;
-  font-weight: 500;
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.error-summary:hover {
-  color: var(--text-secondary);
-}
-
-.error-log {
-  margin: 4px 0 0 0;
-  padding: 6px 8px;
-  font-family: monospace;
-  font-size: 10px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 100px;
-  overflow-y: auto;
-  background-color: var(--bg-tertiary, rgba(0, 0, 0, 0.2));
-  border-radius: 4px;
-  color: var(--text-muted);
+.error-copy {
+  align-self: flex-start;
+  margin-top: 2px;
 }
 </style>

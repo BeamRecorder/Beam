@@ -87,6 +87,9 @@
       "target": "nsis",
       "icon": "public/brand/BeamIcon.ico"
     },
+    "nsis": {
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
     "mac": {
       "target": [
         "dmg",

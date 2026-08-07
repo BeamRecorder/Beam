@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import UpdateControls from './UpdateControls.vue';
+import UpdateControls from '../UpdateControls.vue';
 import type { AppUpdateState } from '~/api/types/capture-api';
 
 const captureMock = vi.hoisted(() => ({
@@ -94,7 +94,7 @@ describe('UpdateControls', () => {
       const wrapper = mount(UpdateControls, { global: { stubs: { Button } } });
       await flushPromises();
       if (current.status === 'error') {
-        expect(wrapper.get('.error-log').text()).toContain(current.message!);
+        expect(wrapper.find('.error-copy').exists()).toBe(true);
       }
       if (current.status === 'checking' || current.status === 'downloading' || current.status === 'unsupported') {
         expect(wrapper.findAll('.action-button')[1]!.attributes('disabled')).toBeDefined();
