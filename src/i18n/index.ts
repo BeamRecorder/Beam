@@ -212,12 +212,19 @@ function detectLocale(): AppLocale {
   return 'en';
 }
 
+function syncDocumentLanguage(locale: AppLocale) {
+  if (typeof document !== 'undefined') document.documentElement.lang = locale;
+}
+
+const initialLocale = detectLocale();
+
 export const i18n = createI18n({
   legacy: false,
-  locale: detectLocale(),
+  locale: initialLocale,
   fallbackLocale: 'en',
   messages,
 });
+syncDocumentLanguage(initialLocale);
 
 export function initI18n() {
   return i18n;
@@ -229,6 +236,7 @@ export function getCurrentLocale(): string {
 
 export function setCurrentLocale(locale: AppLocale) {
   i18n.global.locale.value = locale;
+  syncDocumentLanguage(locale);
   try {
     localStorage.setItem('locale', locale);
   } catch {}

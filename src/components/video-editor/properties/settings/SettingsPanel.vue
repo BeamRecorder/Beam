@@ -89,7 +89,6 @@ const copySystemInfo = async () => {
     isCopiedSysInfo.value = false;
   }, 2000);
 };
-
 </script>
 
 <template>

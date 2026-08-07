@@ -227,7 +227,7 @@
     "loadingMediaAssets": "Загрузка медиаресурсов…",
     "mixingAudioTracks": "Смешивание аудиодорожек…",
     "encodingFrame": "Кодирование кадра {frame} из {total}",
-    "finalizingMediaFile": "Завершение медиafайла…",
+    "finalizingMediaFile": "Завершение медиафайла…",
     "offlineAudioUnavailable": "Микширование аудио офлайн недоступно в этой сборке Chromium.",
     "unableToReadAudioSidecar": "Не удалось прочитать дополнительный аудиофайл: {src}",
     "gifNotExportable": "Анимированные GIF пока нельзя экспортировать детерминированно.",
