@@ -113,6 +113,11 @@
   --font-headline: system-ui, 'Segoe UI', 'Noto Sans', Arial, sans-serif;
 }
 
+:root:lang(hi) {
+  --font-sans: 'Nirmala UI', 'Noto Sans Devanagari', system-ui, 'Noto Sans', Arial, sans-serif;
+  --font-headline: 'Nirmala UI', 'Noto Sans Devanagari', system-ui, 'Noto Sans', Arial, sans-serif;
+}
+
 :root.dark {
   /* Backgrounds & Surfaces */
   --color-bg-surface: #161512;

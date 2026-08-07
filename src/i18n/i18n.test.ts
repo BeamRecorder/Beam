@@ -23,6 +23,7 @@ describe('internationalization', () => {
       ['it', 'Avvia registrazione'],
       ['pl', 'Rozpocznij nagrywanie'],
       ['zh-TW', '開始錄影'],
+      ['hi', 'रिकॉर्डिंग शुरू करें'],
     ] as const;
 
     for (const [locale, expected] of checks) {
@@ -32,7 +33,7 @@ describe('internationalization', () => {
   });
 
   it('keeps interpolation parameters intact in every added locale', () => {
-    for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW'] as const) {
+    for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW', 'hi'] as const) {
       setCurrentLocale(locale);
       expect(i18n.global.t('HUD.stopRecording', { time: '00:03' })).toContain('00:03');
       expect(i18n.global.t('Updates.downloading', { percent: 42 })).toContain('42%');

@@ -25,6 +25,8 @@ import plCore from './pl/core.json';
 import plEditor from './pl/editor.json';
 import zhTwCore from './zh-TW/core.json';
 import zhTwEditor from './zh-TW/editor.json';
+import hiCore from './hi/core.json';
+import hiEditor from './hi/editor.json';
 import { isSupportedLocale } from './locales';
 import type { AppLocale } from './types';
 
@@ -80,6 +82,10 @@ const messages = {
   'zh-TW': {
     ...zhTwCore,
     ...zhTwEditor,
+  },
+  hi: {
+    ...hiCore,
+    ...hiEditor,
   },
 };
 
