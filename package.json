@@ -1,7 +1,7 @@
 {
   "name": "demo-recorder",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Beam — screen, webcam and audio recorder with a visual editor.",
   "author": "ExtraBinoss",
   "type": "module",

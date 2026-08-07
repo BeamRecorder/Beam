@@ -1,8 +1,8 @@
 import { createI18n } from 'vue-i18n';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import en from '~/i18n/en/Teleprompter.json';
-import fr from '~/i18n/fr/Teleprompter.json';
+import enEditor from '~/i18n/en/editor.json';
+import frEditor from '~/i18n/fr/editor.json';
 
 const capture = vi.hoisted(() => ({
   hideTeleprompter: vi.fn(),
@@ -19,7 +19,10 @@ import Teleprompter from './Teleprompter.vue';
 const i18n = createI18n({
   legacy: false,
   locale: 'en',
-  messages: { en: { Teleprompter: en }, fr: { Teleprompter: fr } },
+  messages: {
+    en: { Teleprompter: enEditor.Teleprompter },
+    fr: { Teleprompter: frEditor.Teleprompter },
+  },
 });
 
 describe('Teleprompter', () => {
