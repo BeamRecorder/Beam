@@ -1,11 +1,24 @@
 /**
- * Resolves a public asset path (e.g. "/brand/BeamIcon.webp", "/wallpapers/...")
- * to a relative URL compatible with both Vite dev server and Electron file:// protocol.
+ * Resolves a public asset path (e.g. "/brand/BeamIcon.webp", "./wallpapers/...")
+ * to an absolute/relative URL compatible with Vite dev server, Electron file://, and Web Workers.
  */
 export function resolvePublicAssetUrl(path: string): string {
   if (!path) return path;
   if (/^(https?|file|data|blob|project-media):/i.test(path)) return path;
-  const relativePath = path.startsWith('/') ? path.slice(1) : path;
+  const cleanPath = path.replace(/^(\/|\.\/)+/, '');
+
+  if (typeof window !== 'undefined' && window.location?.href) {
+    try {
+      return new URL(cleanPath, window.location.href).href;
+    } catch {
+      // Fallback if URL construction fails
+    }
+  }
+
   const baseUrl = import.meta.env.BASE_URL || './';
-  return baseUrl.endsWith('/') ? `${baseUrl}${relativePath}` : `${baseUrl}/${relativePath}`;
+  const prefix = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${prefix}${cleanPath}`;
 }
+
+
+

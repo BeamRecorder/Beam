@@ -79,9 +79,16 @@ const nameFor = (path: string) =>
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 const hex = (value: unknown): value is string => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
 
+const normalizeWallpaperPath = (path: string): string => {
+  if (typeof path === 'string' && path.includes('wallpapers/image/')) {
+    return path.replace(/\.(avif|jpg|jpeg|png)$/i, '.webp');
+  }
+  return path;
+};
+
 export const backgroundKindFor = (path: string): BackgroundMediaKind | null => mediaKinds[extensionFor(path)] ?? null;
 export const createBackgroundMedia = (paths: readonly string[]): BackgroundMedia[] =>
-  [...new Set(paths)]
+  [...new Set(paths.map(normalizeWallpaperPath))]
     .flatMap((path) => {
       const kind = backgroundKindFor(path);
       if (!kind) return [];
@@ -128,23 +135,55 @@ export const normalizeGradient = (value: unknown): GradientBackground => {
     stops: stops.length >= 2 ? stops : structuredClone(defaultGradient.stops),
   };
 };
+export const BACKGROUND_MEDIA = createWallpaperMedia(wallpapers.images, wallpapers.videos);
+
+export const findMatchingBackgroundMedia = (
+  candidates: readonly BackgroundMedia[],
+  idOrPath: string | null | undefined,
+): BackgroundMedia | null => {
+  if (!idOrPath) return null;
+  const resolved = resolvePublicAssetUrl(idOrPath);
+
+  const exact = candidates.find(
+    (item) => item.id === idOrPath || item.path === idOrPath || item.id === resolved || item.path === resolved,
+  );
+  if (exact) return exact;
+
+  const legacyReplaced = resolved.replace(/\.(avif|jpg|jpeg|png)$/i, '.webp');
+  const extensionMatch = candidates.find((item) => item.id === legacyReplaced || item.path === legacyReplaced);
+  if (extensionMatch) return extensionMatch;
+
+  const baseName = idOrPath.slice(idOrPath.lastIndexOf('/') + 1).replace(/\.[^.]+$/, '');
+  const baseMatch = candidates.find((item) => {
+    const itemBase = item.path.slice(item.path.lastIndexOf('/') + 1).replace(/\.[^.]+$/, '');
+    return itemBase.toLowerCase() === baseName.toLowerCase();
+  });
+  return baseMatch ?? null;
+};
+
 export const normalizeBackgroundValue = (value: unknown): BackgroundValue | null => {
   if (!value || typeof value !== 'object') return null;
   const entry = value as Partial<BackgroundEntry>;
   if (
     (entry.kind === 'image' || entry.kind === 'video') &&
-    typeof entry.path === 'string' &&
-    backgroundKindFor(entry.path) === entry.kind
+    (typeof entry.path === 'string' || typeof entry.id === 'string')
   ) {
-    const resolved = resolvePublicAssetUrl(entry.path);
-    return {
-      id: typeof entry.id === 'string' ? entry.id : resolved,
-      name: typeof entry.name === 'string' ? entry.name : nameFor(entry.path),
-      path: resolved,
-      extension: extensionFor(entry.path),
-      kind: entry.kind,
-      ...(typeof entry.fileName === 'string' ? { fileName: entry.fileName } : {}),
-    };
+    const matchedBuiltIn =
+      findMatchingBackgroundMedia(BACKGROUND_MEDIA, entry.path) ??
+      findMatchingBackgroundMedia(BACKGROUND_MEDIA, entry.id);
+    if (matchedBuiltIn) return matchedBuiltIn;
+
+    if (typeof entry.path === 'string' && backgroundKindFor(entry.path) === entry.kind) {
+      const resolved = resolvePublicAssetUrl(entry.path);
+      return {
+        id: typeof entry.id === 'string' ? entry.id : resolved,
+        name: typeof entry.name === 'string' ? entry.name : nameFor(entry.path),
+        path: resolved,
+        extension: extensionFor(entry.path),
+        kind: entry.kind,
+        ...(typeof entry.fileName === 'string' ? { fileName: entry.fileName } : {}),
+      };
+    }
   }
   if (entry.kind === 'color' && hex(entry.color))
     return {
@@ -162,7 +201,7 @@ export const normalizeBackgroundValue = (value: unknown): BackgroundValue | null
     };
   return null;
 };
-export const BACKGROUND_MEDIA = createWallpaperMedia(wallpapers.images, wallpapers.videos);
+
 export const BACKGROUND_COLORS: ColorBackground[] = [
   '#111827',
   '#ffffff',

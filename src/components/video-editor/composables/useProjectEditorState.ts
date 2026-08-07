@@ -5,6 +5,7 @@ import type { ClipComposition } from '../composition/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import {
   BACKGROUND_MEDIA,
+  findMatchingBackgroundMedia,
   normalizeBackgroundValue,
   type BackgroundMedia,
   type BackgroundValue,
@@ -113,8 +114,8 @@ export function useProjectEditorState(options: {
       savedBackgroundId = state.presentation.selectedBackgroundId;
       options.selectedBackground.value =
         normalizeBackgroundValue(state.presentation.background) ??
-        globalBackgrounds.find((item) => item.id === savedBackgroundId || item.path === savedBackgroundId) ??
-        BACKGROUND_MEDIA.find((item) => item.id === savedBackgroundId || item.path === savedBackgroundId) ??
+        findMatchingBackgroundMedia(globalBackgrounds, savedBackgroundId) ??
+        findMatchingBackgroundMedia(BACKGROUND_MEDIA, savedBackgroundId) ??
         null;
       options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
       options.canvas.value = state.presentation.canvas;

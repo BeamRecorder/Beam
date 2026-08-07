@@ -34,7 +34,8 @@ async function processNext() {
     image.close();
     const preview = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.72 });
     self.postMessage({ type: 'ready', id: next.id, preview });
-  } catch {
+  } catch (error) {
+    console.warn('[BackgroundPreviewWorker] Preview error for', next.source, error);
     self.postMessage({ type: 'error', id: next.id });
   } finally {
     processing = false;

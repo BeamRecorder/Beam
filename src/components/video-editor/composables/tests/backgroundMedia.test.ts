@@ -3,6 +3,7 @@ import {
   backgroundKindFor,
   createBackgroundMedia,
   createWallpaperMedia,
+  findMatchingBackgroundMedia,
   groupBackgroundMedia,
   customColor,
   customGradient,
@@ -150,7 +151,7 @@ describe('background media', () => {
 
   it('fills optional persisted media, color, and gradient identifiers', () => {
     expect(normalizeBackgroundValue({ kind: 'image', path: '/media/photo.png' })).toMatchObject({
-      id: '/media/photo.png',
+      id: './media/photo.png',
       name: 'Photo',
       extension: 'png',
     });
@@ -165,4 +166,15 @@ describe('background media', () => {
       }),
     ).toMatchObject({ id: 'gradient:custom', name: 'Custom gradient', gradient: { type: 'radial' } });
   });
+
+  it('matches legacy wallpaper paths (.avif, .jpg) to current .webp wallpapers', () => {
+    const candidates = [
+      { id: './wallpapers/image/bluerays.webp', name: 'Bluerays', path: './wallpapers/image/bluerays.webp', extension: 'webp', kind: 'image' as const },
+    ];
+
+    expect(findMatchingBackgroundMedia(candidates, './wallpapers/image/bluerays.avif')).toEqual(candidates[0]);
+    expect(findMatchingBackgroundMedia(candidates, './wallpapers/image/bluerays.jpg')).toEqual(candidates[0]);
+    expect(findMatchingBackgroundMedia(candidates, 'bluerays')).toEqual(candidates[0]);
+  });
 });
+

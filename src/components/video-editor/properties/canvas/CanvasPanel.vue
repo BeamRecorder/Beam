@@ -217,7 +217,7 @@ const importLabel = computed(() =>
           type="button"
           class="media-tile"
           :ref="(element) => observeMediaTile(element, item)"
-          :class="{ active: isSelected(item), loaded: Boolean(previews[item.id] || failed[item.id]) }"
+          :class="{ active: isSelected(item), loaded: Boolean(previews[item.id] || failed[item.id] || item.kind === 'image') }"
           @click="emit('update:selectedBackground', item)"
           @mouseenter="hoveredId = item.id"
           @mouseleave="hoveredId = null"
@@ -236,8 +236,8 @@ const importLabel = computed(() =>
             <Video :size="16" />
           </span>
           <img
-            v-else-if="previews[item.id] || failed[item.id]"
-            :src="previews[item.id] || item.path"
+            v-else
+            :src="item.path"
             :alt="item.name"
             class="media-content loaded"
           />
