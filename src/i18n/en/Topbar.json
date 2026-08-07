@@ -1,9 +1,0 @@
-{
-  "exitToHUD": "Exit to HUD",
-  "undoTooltip": "Undo (Ctrl+Z)",
-  "redoTooltip": "Redo (Ctrl+Y)",
-  "discordTooltip": "Join the Beam Discord",
-  "discordAriaLabel": "Open Beam Discord",
-  "minimize": "Minimize",
-  "close": "Close"
-}
