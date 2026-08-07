@@ -15,6 +15,16 @@ import zhCnCore from './zh-CN/core.json';
 import zhCnEditor from './zh-CN/editor.json';
 import koCore from './ko/core.json';
 import koEditor from './ko/editor.json';
+import ptBrCore from './pt-BR/core.json';
+import ptBrEditor from './pt-BR/editor.json';
+import jaCore from './ja/core.json';
+import jaEditor from './ja/editor.json';
+import itCore from './it/core.json';
+import itEditor from './it/editor.json';
+import plCore from './pl/core.json';
+import plEditor from './pl/editor.json';
+import zhTwCore from './zh-TW/core.json';
+import zhTwEditor from './zh-TW/editor.json';
 import { isSupportedLocale } from './locales';
 import type { AppLocale } from './types';
 
@@ -51,6 +61,26 @@ const messages = {
     ...koCore,
     ...koEditor,
   },
+  'pt-BR': {
+    ...ptBrCore,
+    ...ptBrEditor,
+  },
+  ja: {
+    ...jaCore,
+    ...jaEditor,
+  },
+  it: {
+    ...itCore,
+    ...itEditor,
+  },
+  pl: {
+    ...plCore,
+    ...plEditor,
+  },
+  'zh-TW': {
+    ...zhTwCore,
+    ...zhTwEditor,
+  },
 };
 
 function detectLocale(): AppLocale {
@@ -58,7 +88,14 @@ function detectLocale(): AppLocale {
     const stored = localStorage.getItem('locale');
     if (stored && isSupportedLocale(stored)) return stored;
     const navLang = navigator.language.toLowerCase();
-    const normalized = navLang.startsWith('zh') ? 'zh-CN' : navLang.split('-')[0];
+    const normalized =
+      navLang.startsWith('zh-tw') || navLang.startsWith('zh-hk')
+        ? 'zh-TW'
+        : navLang.startsWith('zh')
+          ? 'zh-CN'
+          : navLang.startsWith('pt-br')
+            ? 'pt-BR'
+            : navLang.split('-')[0];
     if (isSupportedLocale(normalized)) return normalized;
   } catch {}
   return 'en';

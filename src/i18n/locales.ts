@@ -9,6 +9,11 @@ export const SUPPORTED_LOCALES = [
   'bg',
   'zh-CN',
   'ko',
+  'pt-BR',
+  'ja',
+  'it',
+  'pl',
+  'zh-TW',
 ] as const satisfies readonly AppLocale[];
 
 export const localeOptions: Array<{ value: AppLocale; label: string }> = [
@@ -20,6 +25,11 @@ export const localeOptions: Array<{ value: AppLocale; label: string }> = [
   { value: 'bg', label: 'BG — Български' },
   { value: 'zh-CN', label: 'ZH — 简体中文' },
   { value: 'ko', label: 'KO — 한국어' },
+  { value: 'pt-BR', label: 'PT-BR — Português (Brasil)' },
+  { value: 'ja', label: 'JA — 日本語' },
+  { value: 'it', label: 'IT — Italiano' },
+  { value: 'pl', label: 'PL — Polski' },
+  { value: 'zh-TW', label: 'ZH-TW — 繁體中文' },
 ];
 
 export function isSupportedLocale(value: string): value is AppLocale {

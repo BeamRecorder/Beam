@@ -12,12 +12,17 @@ describe('internationalization', () => {
     expect(localeOptions.map((option) => option.value)).toEqual([...SUPPORTED_LOCALES]);
   });
 
-  it('renders UTF-8 translations for Cyrillic, Chinese, and Korean', () => {
+  it('renders UTF-8 translations across the supported writing systems', () => {
     const checks = [
       ['ru', 'Начать запись'],
       ['bg', 'Започване на запис'],
       ['zh-CN', '开始录制'],
       ['ko', '녹화 시작'],
+      ['pt-BR', 'Iniciar gravação'],
+      ['ja', '録画を開始'],
+      ['it', 'Avvia registrazione'],
+      ['pl', 'Rozpocznij nagrywanie'],
+      ['zh-TW', '開始錄影'],
     ] as const;
 
     for (const [locale, expected] of checks) {
@@ -27,7 +32,7 @@ describe('internationalization', () => {
   });
 
   it('keeps interpolation parameters intact in every added locale', () => {
-    for (const locale of ['ru', 'bg', 'zh-CN', 'ko'] as const) {
+    for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW'] as const) {
       setCurrentLocale(locale);
       expect(i18n.global.t('HUD.stopRecording', { time: '00:03' })).toContain('00:03');
       expect(i18n.global.t('Updates.downloading', { percent: 42 })).toContain('42%');

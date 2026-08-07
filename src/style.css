@@ -72,9 +72,9 @@
 
   /* Fonts */
   /* Keep the product typeface first, then use glyph-complete platform fallbacks
-     for Cyrillic, Simplified Chinese, and Korean characters. */
-  --font-sans: 'Stack Sans Text', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans KR', 'PingFang SC', 'Hiragino Sans GB', 'Apple SD Gothic Neo', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
-  --font-headline: 'Stack Sans Headline', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans KR', 'PingFang SC', 'Hiragino Sans GB', 'Apple SD Gothic Neo', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
+     for Cyrillic, CJK, and Japanese characters. */
+  --font-sans: 'Stack Sans Text', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP', 'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
+  --font-headline: 'Stack Sans Headline', 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC', 'Noto Sans KR', 'Noto Sans JP', 'PingFang SC', 'PingFang TC', 'Hiragino Sans GB', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Apple SD Gothic Neo', 'Microsoft YaHei', 'Malgun Gothic', 'Segoe UI', system-ui, sans-serif;
   
   /* Shadow & Blur (Claude-inspired soft ambient shadows) */
   --shadow-sm: 0 1px 2px 0 rgba(22, 21, 18, 0.05);
