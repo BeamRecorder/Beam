@@ -34,6 +34,7 @@ Transparent pixels in an Electron window still intercept input unless `setIgnore
 - Recorder: drag listeners are installed after mousedown and removed on mouseup. Never invoke `drag()` directly from `mousemove` in the template; it makes the bar flee the pointer.
 - Editor: use the native draggable titlebar region. Do not reintroduce renderer mousemove/IPC window dragging; it bypasses native edge snapping and window transitions.
 - Editor: keep `transparent: false`, `thickFrame: true`, and the native Window Controls Overlay. An HTML maximize button does not expose Windows 11 Snap Layouts.
+- Editor: configure Window Controls Overlay with a fixed transparent color and neutral symbol color at construction; omitting `color` lets Windows paint its light system color over a dark editor. Transparent WCO requires Electron 43.2 or newer because Electron 43.1.1 incorrectly fell back to the default frame color for fully transparent values. A live editor theme change is renderer-only: do not update `nativeTheme`, the BrowserWindow background, or `setTitleBarOverlay()` while the window is visible. Use the selected theme only as the next window's initial fallback background.
 - Countdown: uses its own non-focusable, click-through window. It must never steal focus from the recording target.
 
 ## Popovers in transparent windows

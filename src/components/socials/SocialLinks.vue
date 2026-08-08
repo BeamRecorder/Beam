@@ -73,10 +73,6 @@ const openGithubRepository = () => {
 }
 
 .github-icon {
-  filter: brightness(0);
-}
-
-:global(:root.dark) .github-icon {
-  filter: brightness(0) invert(1);
+  filter: var(--github-icon-filter);
 }
 </style>

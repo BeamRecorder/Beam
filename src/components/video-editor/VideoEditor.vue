@@ -528,9 +528,7 @@ onBeforeUnmount(() => {
   width: 100vw;
   height: 100vh;
   background-color: var(--color-bg-surface);
-  background-image:
-    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    radial-gradient(circle at 30% 0%, rgba(255, 90, 31, 0.06), rgba(255, 90, 31, 0) 50%);
+  background-image: var(--editor-page-background-image);
   background-size:
     24px 24px,
     100% 100%;
@@ -539,12 +537,6 @@ onBeforeUnmount(() => {
   color: var(--text-primary);
   overflow: hidden;
   transition: background-color 0.3s ease;
-}
-:global(.dark) .editor-page {
-  background-image:
-    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    radial-gradient(circle at 30% 0%, rgba(255, 90, 31, 0.07), rgba(255, 90, 31, 0) 50%),
-    radial-gradient(circle at 50% 50%, rgba(22, 21, 18, 0) 50%, rgba(13, 12, 10, 0.6) 100%);
 }
 .editor-workspace {
   flex: 1;

@@ -17,7 +17,22 @@ let removeContextListener: (() => void) | null = null;
 let themeObserver: MutationObserver | null = null;
 
 const syncTitlebarTheme = () => {
-  capture.setEditorTitlebarTheme(document.documentElement.classList.contains('dark'));
+  const dark = document.documentElement.classList.contains('dark');
+  const surface = document.querySelector<HTMLElement>('.editor-page');
+  const surfaceStyle = surface ? window.getComputedStyle(surface) : null;
+  console.info('[Beam editor theme] renderer class changed', {
+    dark,
+    rootBackground: window.getComputedStyle(document.documentElement).backgroundColor,
+    surface: surfaceStyle
+      ? {
+          background: surfaceStyle.backgroundColor,
+          display: surfaceStyle.display,
+          opacity: surfaceStyle.opacity,
+          visibility: surfaceStyle.visibility,
+        }
+      : null,
+  });
+  capture.setEditorTitlebarTheme(dark);
 };
 
 const waitForEditorPaint = async () => {
@@ -66,7 +81,9 @@ const handleStartRecording = (configuration: RecordingConfiguration) => {
 };
 
 onMounted(async () => {
-  syncTitlebarTheme();
+  // The main process creates the window with the persisted theme already
+  // applied. Observe subsequent renderer changes, but do not overwrite that
+  // native state with the store's temporary light default during hydration.
   themeObserver = new MutationObserver(syncTitlebarTheme);
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   removeContextListener = capture.onEditorContext(({ projectId }) => void loadProject(projectId));

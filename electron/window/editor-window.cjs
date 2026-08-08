@@ -5,10 +5,7 @@ const EDITOR_DEFAULT_SIZE = { width: 1280, height: 800 };
 const EDITOR_MIN_SIZE = { width: 960, height: 600 };
 const PROJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TITLEBAR_HEIGHT = 40;
-const TITLEBAR_COLORS = {
-  light: { color: '#ffffff', symbolColor: '#171717' },
-  dark: { color: '#201f1c', symbolColor: '#f7f5f0' },
-};
+const TITLEBAR_SYMBOL_COLOR = '#7a7a7a';
 const EDITOR_LOADING_PROGRESS = Object.freeze({
   openingWindow: 10,
   loadingEditor: 25,
@@ -60,7 +57,15 @@ function createEditorWindowManager({
   let rejectPresentation = null;
   let lastProgressValue = 0;
 
-  const overlayOptions = () => ({ ...TITLEBAR_COLORS[dark ? 'dark' : 'light'], height: TITLEBAR_HEIGHT });
+  // WCO defaults to the Windows system color when color is omitted. Keep its
+  // compositor layer transparent so the editor titlebar remains the only
+  // painted surface in both application themes. The neutral symbols remain
+  // visible without a risky runtime setTitleBarOverlay() call.
+  const overlayOptions = () => ({
+    color: '#00000000',
+    symbolColor: TITLEBAR_SYMBOL_COLOR,
+    height: TITLEBAR_HEIGHT,
+  });
 
   const sendProgress = (stage) => {
     const value = EDITOR_LOADING_PROGRESS[stage];
@@ -183,8 +188,12 @@ function createEditorWindowManager({
   const setTitlebarTheme = (event, isDark) => {
     if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
     dark = Boolean(isDark);
-    window.setBackgroundColor(dark ? '#141310' : '#f7f5f0');
-    if (process.platform !== 'darwin') window.setTitleBarOverlay(overlayOptions());
+    // Theme switching belongs to the renderer. Mutating nativeTheme,
+    // BrowserWindow.backgroundColor, or WCO while this window is visible can
+    // replace the live compositor surface with a blank layer on Windows.
+    // Remember the value only so a future editor window starts with the right
+    // fallback background before its first renderer paint.
+    if (!isPackaged) console.info('[Beam editor theme] renderer theme remembered', { dark });
     return true;
   };
 
@@ -220,5 +229,6 @@ module.exports = {
   EDITOR_DEFAULT_SIZE,
   EDITOR_MIN_SIZE,
   TITLEBAR_HEIGHT,
+  TITLEBAR_SYMBOL_COLOR,
   createEditorWindowManager,
 };

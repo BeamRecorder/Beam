@@ -68,6 +68,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     const {
       EDITOR_MIN_SIZE,
       TITLEBAR_HEIGHT,
+      TITLEBAR_SYMBOL_COLOR,
       createEditorWindowManager,
     } = require('../electron/window/editor-window.cjs');
     const hudWindow = {
@@ -104,7 +105,13 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.equal(options.thickFrame, true);
     assert.equal(options.minWidth, EDITOR_MIN_SIZE.width);
     assert.equal(options.minHeight, EDITOR_MIN_SIZE.height);
-    if (process.platform !== 'darwin') assert.equal(options.titleBarOverlay.height, TITLEBAR_HEIGHT);
+    if (process.platform !== 'darwin') {
+      assert.deepEqual(options.titleBarOverlay, {
+        color: '#00000000',
+        symbolColor: TITLEBAR_SYMBOL_COLOR,
+        height: TITLEBAR_HEIGHT,
+      });
+    }
     assert.equal(registered.length, 1);
     assert.equal(
       calls.some((call) => call[0] === 'hud-hide'),
@@ -128,7 +135,11 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.ok(calls.some((call) => call[0] === 'show'));
 
     ipcListeners.get('editor:titlebar-theme')({ sender: editor.webContents }, true);
-    assert.ok(calls.some((call) => call[0] === 'background' && call[1] === '#141310'));
+    assert.equal(
+      calls.some((call) => call[0] === 'background' || call[0] === 'overlay'),
+      false,
+      'a live theme change must not mutate the native compositor surface',
+    );
 
     manager.showHud();
     assert.ok(calls.some((call) => call[0] === 'show-hud'));
@@ -137,6 +148,8 @@ test('editor window is opaque and routes native editor lifecycle without changin
 
     const reopening = manager.open(projectId);
     const reopenedEditor = windows[1];
+    const reopenedOptions = calls.filter((call) => call[0] === 'constructor').at(-1)[1];
+    assert.equal(reopenedOptions.backgroundColor, '#141310');
     ipcListeners.get('editor:ready')({ sender: reopenedEditor.webContents });
     await reopening;
 

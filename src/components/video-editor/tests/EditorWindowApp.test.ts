@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorWindowApp from '../EditorWindowApp.vue';
 
 const state = vi.hoisted(() => ({
@@ -48,18 +48,31 @@ vi.mock('../VideoEditor.vue', async () => {
 });
 
 const project = { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' };
+const wrappers: Array<ReturnType<typeof mount>> = [];
+
+const mountEditor = () => {
+  const wrapper = mount(EditorWindowApp);
+  wrappers.push(wrapper);
+  return wrapper;
+};
 
 describe('EditorWindowApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    document.documentElement.classList.remove('dark');
     state.contextListener = null;
     capture.getEditorContext.mockResolvedValue({ projectId: project.id });
     capture.listProjects.mockResolvedValue([project]);
     capture.getProjectEditorData.mockResolvedValue({ composition: {}, zoom: {}, presentation: {} });
   });
 
+  afterEach(() => {
+    while (wrappers.length > 0) wrappers.pop()?.unmount();
+    document.documentElement.classList.remove('dark');
+  });
+
   it('loads the editor context and notifies the native window when ready', async () => {
-    const wrapper = mount(EditorWindowApp);
+    const wrapper = mountEditor();
     await flushPromises();
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await flushPromises();
@@ -75,7 +88,7 @@ describe('EditorWindowApp', () => {
   });
 
   it('returns to the HUD and forwards recording requests', async () => {
-    const wrapper = mount(EditorWindowApp);
+    const wrapper = mountEditor();
     await flushPromises();
 
     await wrapper.get('.back').trigger('click');
@@ -89,9 +102,20 @@ describe('EditorWindowApp', () => {
     });
   });
 
+  it('syncs a user-selected dark theme to the native window after the renderer class changes', async () => {
+    mountEditor();
+    await flushPromises();
+    capture.setEditorTitlebarTheme.mockClear();
+
+    document.documentElement.classList.add('dark');
+    await flushPromises();
+
+    expect(capture.setEditorTitlebarTheme).toHaveBeenLastCalledWith(true);
+  });
+
   it('shows a recoverable error when the requested project is unavailable', async () => {
     capture.listProjects.mockResolvedValue([]);
-    const wrapper = mount(EditorWindowApp);
+    const wrapper = mountEditor();
     await flushPromises();
 
     expect(wrapper.get('[role="alert"]').text()).toContain('Project not found');

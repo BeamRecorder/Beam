@@ -106,6 +106,7 @@ describe('theme store', () => {
     await nextTick();
     expect(store.theme).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
   });
 
   it('marks hydration complete when loading preferences fails, without adding a false dark mode', async () => {
