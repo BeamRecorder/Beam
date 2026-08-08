@@ -1,8 +1,8 @@
 # Linux development
 
-Linux is not supported for recording yet. There is no single reliable screen-recording path across the supported desktop, compositor, portal, and audio combinations.
+Linux recording is not available yet. Native screen acquisition is planned through the XDG ScreenCast Portal and PipeWire; see the [native Linux screen capture plan](../linux/screen-native.md).
 
-Do not present Linux capture as available. See the current [fallback notes](../linux/ELECTRON_FALLBACK_LINUX.md) and the [future recording plan](../linux/FUTURE_LINUX_RECORDING.md).
+Do not present Linux recording as available until every required gate in that plan has passed. In particular, receiving raw PipeWire frames is not by itself proof that Beam can persist a complete, playable recording.
 
 Repository rules still apply to documentation and non-capture changes:
 

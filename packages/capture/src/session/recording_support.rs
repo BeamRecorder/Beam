@@ -1,9 +1,7 @@
 use std::path::Path;
-#[cfg(any(windows, target_os = "macos"))]
 use std::path::PathBuf;
 use std::{fs::OpenOptions, io::Write};
 
-#[cfg(any(windows, target_os = "macos"))]
 use crate::storage::segment;
 use crate::{
     CaptureError,
@@ -112,7 +110,6 @@ pub(super) fn video_format(source: &SourceDescriptor, fallback_fps: u32) -> (u32
         .unwrap_or((0, 0, fallback_fps))
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn add_segment(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -133,7 +130,6 @@ pub(super) fn add_segment(
     Ok(())
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn track_mut(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -145,7 +141,6 @@ pub(super) fn track_for(tracks: &[TrackMetadata], kind: TrackKind) -> Option<&Tr
     tracks.iter().find(|track| track.kind == kind)
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn segment_path(
     layout: &crate::storage::SessionLayout,
     kind: TrackKind,
@@ -157,7 +152,6 @@ pub(super) fn segment_path(
         .join(format!("segment-{generation:04}.{extension}"))
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 fn track_directory(kind: TrackKind) -> &'static str {
     match kind {
         TrackKind::Screen => "screen",
@@ -168,7 +162,6 @@ fn track_directory(kind: TrackKind) -> &'static str {
     }
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn update_video_metrics(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,

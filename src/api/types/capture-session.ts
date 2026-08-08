@@ -33,6 +33,7 @@ export interface CaptureProject {
 export interface CursorMoveEvent {
   event: 'move';
   sessionNs: number;
+  cursorId?: string;
   pixelX: number;
   pixelY: number;
   normalizedX: number;

@@ -1,10 +1,4 @@
-use std::{
-    path::Path,
-    sync::{
-        Arc,
-        atomic::{AtomicU64, Ordering},
-    },
-};
+use std::{path::Path, sync::Arc};
 
 use screencapturekit::{
     cm::CMTime,
@@ -22,6 +16,7 @@ use screencapturekit::{
 use crate::{
     CaptureError,
     model::{ScreenRegion, SourceId},
+    screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest},
     session::StartGate,
 };
 
@@ -30,27 +25,34 @@ pub struct MacRecording {
     recording: SCRecordingOutput,
     output: std::path::PathBuf,
     frame_handler: usize,
-    metrics: Arc<MacCaptureMetrics>,
-}
-
-#[derive(Debug, Default)]
-pub struct MacCaptureMetrics {
-    frames_received: AtomicU64,
-    frames_dropped: AtomicU64,
-}
-
-impl MacCaptureMetrics {
-    #[must_use]
-    pub fn frames_received(&self) -> u64 {
-        self.frames_received.load(Ordering::Relaxed)
-    }
-    #[must_use]
-    pub fn frames_dropped(&self) -> u64 {
-        self.frames_dropped.load(Ordering::Relaxed)
-    }
+    metrics: Arc<ScreenCaptureMetrics>,
 }
 
 impl MacRecording {
+    pub(crate) fn open(request: ScreenOpenRequest<'_>) -> Result<Self, CaptureError> {
+        let crate::model::ScreenSelection::Source { source_id } = request.selection else {
+            return Err(CaptureError::InvalidConfiguration(
+                "macOS screen capture requires a direct source".into(),
+            ));
+        };
+        let ScreenConsumer::EncodedFile { path } = request.consumer else {
+            return Err(CaptureError::Unsupported(
+                "macOS raw screen samples are not available".into(),
+            ));
+        };
+        Self::start(
+            source_id,
+            &path,
+            request.recording.target_fps,
+            matches!(
+                request.cursor,
+                crate::model::CursorSelection::Separate { .. }
+            ),
+            request.region,
+            request.start_gate,
+        )
+    }
+
     pub fn start(
         source_id: &SourceId,
         output: &Path,
@@ -86,7 +88,7 @@ impl MacRecording {
                 "direct ScreenCaptureKit recording requires macOS 15 or newer".into(),
             )
         })?;
-        let metrics = Arc::new(MacCaptureMetrics::default());
+        let metrics = Arc::new(ScreenCaptureMetrics::default());
         let callback_metrics = metrics.clone();
         let callback_gate = start_gate;
         let mut stream = SCStream::new(&filter, &configuration);
@@ -94,14 +96,10 @@ impl MacRecording {
             .add_output_handler(
                 move |_, _| {
                     if !callback_gate.is_released() && callback_gate.wait().is_err() {
-                        callback_metrics
-                            .frames_dropped
-                            .fetch_add(1, Ordering::Relaxed);
+                        callback_metrics.dropped_frames(1);
                         return;
                     }
-                    callback_metrics
-                        .frames_received
-                        .fetch_add(1, Ordering::Relaxed);
+                    callback_metrics.received_frame(None, false);
                 },
                 SCStreamOutputType::Screen,
             )
@@ -121,7 +119,7 @@ impl MacRecording {
         })
     }
 
-    pub fn stop(mut self) -> Result<i64, CaptureError> {
+    pub fn stop(&mut self) -> Result<i64, CaptureError> {
         self.finish()
     }
 
@@ -131,7 +129,7 @@ impl MacRecording {
     }
 
     #[must_use]
-    pub fn metrics(&self) -> Arc<MacCaptureMetrics> {
+    pub fn metrics(&self) -> Arc<ScreenCaptureMetrics> {
         self.metrics.clone()
     }
 

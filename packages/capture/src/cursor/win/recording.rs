@@ -167,6 +167,10 @@ fn capture_loop(
                         metrics,
                         CursorEvent::Move {
                             session_ns,
+                            cursor_id: sample
+                                .shape
+                                .as_ref()
+                                .map(|shape| format!("win:{:x}", shape.native_id)),
                             pixel_x: sample.position.pixel_x,
                             pixel_y: sample.position.pixel_y,
                             normalized_x: sample.position.normalized_x,

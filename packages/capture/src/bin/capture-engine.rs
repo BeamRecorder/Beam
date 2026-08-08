@@ -157,7 +157,7 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
     })();
     match result {
         Ok(value) => ResponseEnvelope::success(request.id, value),
-        Err(error) => ResponseEnvelope::failure(request.id, "capture-error", error.to_string()),
+        Err(error) => ResponseEnvelope::failure(request.id, error.code(), error.to_string()),
     }
 }
 

@@ -10,4 +10,4 @@ pub mod screen;
 pub mod session;
 pub mod storage;
 
-pub use error::CaptureError;
+pub use error::{CaptureError, NativeCaptureErrorCode};

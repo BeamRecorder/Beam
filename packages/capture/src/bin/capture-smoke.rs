@@ -71,7 +71,7 @@ fn record_windows_screen() -> Result<(), capture::CaptureError> {
         .unwrap_or(10);
     let output = argument("--output")
         .map_or_else(|| PathBuf::from("capture-smoke-screen.mp4"), PathBuf::from);
-    let recording = capture::screen::win::WindowsRecording::start(
+    let mut recording = capture::screen::win::WindowsRecording::start(
         &source.id,
         &output,
         12_000_000,

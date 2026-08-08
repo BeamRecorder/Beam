@@ -84,6 +84,8 @@ pub struct CursorShapeCatalogEntry {
 pub enum CursorEvent {
     Move {
         session_ns: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        cursor_id: Option<String>,
         pixel_x: i32,
         pixel_y: i32,
         normalized_x: f64,

@@ -11,7 +11,8 @@ use crate::{
 };
 
 #[cfg(any(windows, target_os = "macos"))]
-use crate::model::{CursorSelection, TrackKind};
+use crate::model::CursorSelection;
+use crate::model::TrackKind;
 
 use super::periodic_reporter::PeriodicReporter;
 use super::recording_support::*;
@@ -20,10 +21,7 @@ use source_watches::source_watches;
 #[derive(Default)]
 pub(super) struct ActiveRecordings {
     reporter: Option<PeriodicReporter>,
-    #[cfg(windows)]
-    screen: Option<crate::screen::win::WindowsRecording>,
-    #[cfg(target_os = "macos")]
-    screen: Option<crate::screen::mac::MacRecording>,
+    screen: Option<crate::screen::ScreenRecording>,
     #[cfg(all(windows, feature = "cursor"))]
     cursor: Option<crate::cursor::win::WindowsCursorRecording>,
     #[cfg(all(target_os = "macos", feature = "cursor"))]
@@ -152,42 +150,23 @@ impl ActiveRecordings {
         let Some(ScreenSelection::Source { source_id }) = &request.screen else {
             return Ok(());
         };
-        #[cfg(any(windows, target_os = "macos"))]
-        {
-            let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
-            #[cfg(windows)]
-            {
-                self.screen = Some(crate::screen::win::WindowsRecording::start(
-                    source_id,
-                    &path,
-                    u32::try_from(request.recording.video_bitrate_bps).unwrap_or(u32::MAX),
-                    request.recording.target_fps,
-                    matches!(request.cursor, CursorSelection::Separate { .. }),
-                    request.region,
-                    start_gate.clone(),
-                )?);
-            }
-            #[cfg(target_os = "macos")]
-            {
-                self.screen = Some(crate::screen::mac::MacRecording::start(
-                    source_id,
-                    &path,
-                    request.recording.target_fps,
-                    matches!(request.cursor, CursorSelection::Separate { .. }),
-                    request.region,
-                    start_gate.clone(),
-                )?);
-            }
-            add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
-            Ok(())
-        }
-        #[cfg(not(any(windows, target_os = "macos")))]
-        {
-            let _ = (source_id, layout, generation, start_ns, tracks, start_gate);
-            Err(CaptureError::Unsupported(
-                "native session screen recording is unavailable on this platform".into(),
-            ))
-        }
+        let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
+        self.screen = Some(crate::screen::ScreenRecording::open(
+            crate::screen::ScreenOpenRequest {
+                selection: request.screen.as_ref().ok_or_else(|| {
+                    CaptureError::InvalidConfiguration("missing screen selection".into())
+                })?,
+                recording: &request.recording,
+                region: request.region,
+                cursor: request.cursor,
+                start_ns,
+                start_gate: start_gate.clone(),
+                consumer: crate::screen::ScreenConsumer::EncodedFile { path },
+            },
+        )?);
+        let _ = source_id;
+        add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
+        Ok(())
     }
 
     pub(super) fn stop(
@@ -200,23 +179,10 @@ impl ActiveRecordings {
         if let Some(reporter) = self.reporter.take() {
             record_result(reporter.stop(), &mut first_error);
         }
-        #[cfg(windows)]
         if let Some(recording) = self.screen.take() {
             let metrics = recording.metrics();
+            let mut recording = recording;
             let result = recording.stop();
-            mark_track_failed(tracks, TrackKind::Screen, &result);
-            record_result(result, &mut first_error);
-            update_video_metrics(
-                tracks,
-                TrackKind::Screen,
-                metrics.frames_received(),
-                metrics.frames_dropped(),
-            );
-        }
-        #[cfg(target_os = "macos")]
-        if let Some(recording) = self.screen.take() {
-            let metrics = recording.metrics();
-            let result = recording.stop().map(|_| ());
             mark_track_failed(tracks, TrackKind::Screen, &result);
             record_result(result, &mut first_error);
             update_video_metrics(
@@ -260,7 +226,6 @@ impl ActiveRecordings {
     }
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 fn mark_track_failed(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,

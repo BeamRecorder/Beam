@@ -29,6 +29,12 @@ objc2-app-kit = { version = "0.3.2", features = ["NSCursor"] }
 screencapturekit = { version = "8.0.1", features = ["macos_15_0"] }
 core-graphics = "0.25"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+ashpd = { version = "=0.13.13", default-features = false, features = ["tokio", "screencast"] }
+pipewire = { version = "=0.10.0", features = ["v0_3_65"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+futures-util = "0.3"
+
 [dev-dependencies]
 tempfile = "3"
 walkdir = "2"

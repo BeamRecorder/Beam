@@ -234,6 +234,7 @@ fn capture_loop(
                 metrics,
                 CursorEvent::Move {
                     session_ns,
+                    cursor_id: Some(shape.cursor_id.clone()),
                     pixel_x: position.pixel_x,
                     pixel_y: position.pixel_y,
                     normalized_x: position.normalized_x,

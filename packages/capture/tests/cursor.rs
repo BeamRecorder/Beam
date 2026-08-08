@@ -41,6 +41,7 @@ fn telemetry_marks_two_near_left_clicks_as_double_click() {
     let events = vec![
         CursorEvent::Move {
             session_ns: 0,
+            cursor_id: None,
             pixel_x: 0,
             pixel_y: 0,
             normalized_x: 0.4,
@@ -75,6 +76,7 @@ fn telemetry_distinguishes_a_right_click() {
     let events = vec![
         CursorEvent::Move {
             session_ns: 0,
+            cursor_id: None,
             pixel_x: 0,
             pixel_y: 0,
             normalized_x: 0.4,
@@ -102,6 +104,7 @@ fn telemetry_keeps_the_latest_hour_of_samples() {
         .map(|index| CursorEvent::Move {
             session_ns: u64::try_from(index).expect("sample index fits u64")
                 * CURSOR_SAMPLE_INTERVAL_NS,
+            cursor_id: None,
             pixel_x: 0,
             pixel_y: 0,
             normalized_x: 0.5,
