@@ -39,6 +39,20 @@ function withProjectId(session) {
   }
 }
 
+function displayBoundsForId(screen, displayId) {
+  if (typeof displayId !== 'string' || displayId.length === 0 || displayId.length > 128) return null;
+  const display = screen.getAllDisplays().find((item) => String(item.id) === displayId);
+  const bounds = display?.bounds;
+  if (
+    !bounds ||
+    !['x', 'y', 'width', 'height'].every((key) => Number.isFinite(bounds[key])) ||
+    bounds.width <= 0 ||
+    bounds.height <= 0
+  )
+    return null;
+  return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+}
+
 function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages }) {
   const registerSession = (session) => {
     for (const storage of trackStorages) storage.registerSession(session);
@@ -120,6 +134,7 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
       };
     });
   });
+  ipcMain.handle('screen:get-display-bounds', (_event, displayId) => displayBoundsForId(screen, displayId));
 }
 
-module.exports = { registerCaptureIpc };
+module.exports = { displayBoundsForId, registerCaptureIpc };

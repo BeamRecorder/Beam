@@ -1,9 +1,9 @@
 import { defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useEditorUndoRedo } from '../useEditorUndoRedo';
+import { useEditorUndoRedo, type EditorStateSnapshot } from '../useEditorUndoRedo';
 
-const snapshot = (value: number) =>
+const snapshot = (value: number): EditorStateSnapshot =>
   ({
     composition: { assets: [], clips: [{ id: `clip-${value}`, value }] },
     zoomElements: [],
@@ -15,7 +15,7 @@ const snapshot = (value: number) =>
     },
     selectedBackground: null,
     backgroundBlurPercent: value,
-  }) as never;
+  }) as unknown as EditorStateSnapshot;
 
 describe('useEditorUndoRedo', () => {
   beforeEach(() => vi.useFakeTimers());

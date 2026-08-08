@@ -543,6 +543,24 @@ describe('VideoEditor', () => {
     expect(editorState.store.outputCanvas.value.preset).toBe('1:1');
   });
 
+  it('keeps the canvas background enabled when changing the output format', async () => {
+    const mounted = mountEditor();
+    editorState.store.outputCanvas.value = {
+      ...editorState.store.outputCanvas.value,
+      showBackground: true,
+    };
+    await mounted.vm.$nextTick();
+
+    await mounted.find('.preset').trigger('click');
+
+    expect(editorState.store.outputCanvas.value).toMatchObject({
+      preset: '1:1',
+      width: 1080,
+      height: 1080,
+      showBackground: true,
+    });
+  });
+
   it('updates role volumes and protects editable fields from destructive keyboard shortcuts', async () => {
     const mounted = mountEditor();
     editorState.store.compositionState.selectedClipId.value = 'audio';

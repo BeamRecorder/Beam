@@ -46,12 +46,7 @@ const stubs = {
   Select: {
     props: ['modelValue', 'options'],
     template:
-      '<div class="select"><button class="select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button class="select-close" @click="$emit(\'toggle\', false)"/><button v-for="option in options" :key="option.value" class="select-option" @click="$emit(\'update:modelValue\', option.value)">{{ option.label }}</button></div>',
-  },
-  WindowSelect: {
-    props: ['modelValue', 'options'],
-    template:
-      '<div class="window-select"><button class="window-select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button class="window-select-close" @click="$emit(\'toggle\', false)"/><button v-for="option in options" :key="option.id" class="window-option" @click="$emit(\'update:modelValue\', option.id)">{{ option.name }}</button></div>',
+      '<div class="select"><button class="select-control" @click="$emit(\'toggle\', true)">{{ modelValue }}</button><button class="select-close" @click="$emit(\'toggle\', false)"/><button v-for="option in options" :key="option.value" :data-option-value="option.value" class="select-option" @click="$emit(\'update:modelValue\', option.value)"><img v-if="option.thumbnail" class="select-option-thumbnail" :src="option.thumbnail" />{{ option.label }}</button></div>',
   },
   ProjectPicker: {
     template:
@@ -120,6 +115,7 @@ describe('HUD', () => {
     });
     capture.discover.mockResolvedValue(catalog);
     capture.getSources.mockResolvedValue([{ id: 'screen:1', name: 'Display', thumbnail: '', appIcon: null }]);
+    capture.getDisplayBounds.mockResolvedValue(null);
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -218,8 +214,11 @@ describe('HUD', () => {
       .find((button) => button.text() === 'Window')
       ?.trigger('click');
     await ready();
-    expect(wrapper.find('.window-select').exists()).toBe(true);
-    await wrapper.findAll('.window-option')[0]!.trigger('click');
+    expect(wrapper.findAll('.select-option').some((option) => option.text() === 'Editor window')).toBe(true);
+    await wrapper
+      .findAll('.select-option')
+      .find((option) => option.text() === 'Editor window')
+      ?.trigger('click');
     await wrapper
       .findAll('.select-option')
       .find((button) => button.text() === 'System audio')
@@ -250,6 +249,93 @@ describe('HUD', () => {
     expect(wrapper.emitted('start-recording')).toHaveLength(2);
     await wrapper.find('.select-control').trigger('click');
     expect(capture.setSize).toHaveBeenCalled();
+  });
+
+  it('caches screen and window previews across tab switches with separate selections', async () => {
+    capture.discover.mockResolvedValue({
+      sources: [
+        { id: 'sck:display:1', kind: 'display', label: 'Display 1', isDefault: true, displayId: '1' },
+        { id: 'sck:display:2', kind: 'display', label: 'Display 2', isDefault: false, displayId: '2' },
+      ],
+      capabilities: { systemAudio: true },
+    });
+    capture.getSources.mockImplementation(async (types: string[]) =>
+      types[0] === 'screen'
+        ? [
+            {
+              id: 'screen:1',
+              name: 'Screen 1',
+              thumbnail: 'screen-1',
+              appIcon: null,
+              displayId: '1',
+            },
+            {
+              id: 'screen:2',
+              name: 'Screen 2',
+              thumbnail: 'screen-2',
+              appIcon: null,
+              displayId: '2',
+            },
+          ]
+        : [
+            { id: 'window:1', name: 'Window 1', thumbnail: 'window-1', appIcon: null },
+            { id: 'window:2', name: 'Window 2', thumbnail: 'window-2', appIcon: null },
+          ],
+    );
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const callsFor = (type: string) =>
+      capture.getSources.mock.calls.filter(([requested]) => (requested as string[])[0] === type);
+    expect(callsFor('screen')).toHaveLength(1);
+    expect(callsFor('window')).toHaveLength(1);
+
+    const screenTwo = wrapper
+      .findAll('[data-option-value]')
+      .find((option) => option.attributes('data-option-value') === 'sck:display:2');
+    expect(screenTwo).toBeDefined();
+    await screenTwo!.trigger('click');
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Window')
+      ?.trigger('click');
+    await ready();
+    const windowTwo = wrapper
+      .findAll('[data-option-value]')
+      .find((option) => option.attributes('data-option-value') === 'window:2');
+    expect(windowTwo).toBeDefined();
+    await windowTwo!.trigger('click');
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Screen')
+      ?.trigger('click');
+    await ready();
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Start Recording'))
+      ?.trigger('click');
+    expect(wrapper.emitted('start-recording')?.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ screenKind: 'display', screenId: 'sck:display:2' }),
+    );
+
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Window')
+      ?.trigger('click');
+    await ready();
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Start Recording'))
+      ?.trigger('click');
+    expect(wrapper.emitted('start-recording')?.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ screenKind: 'window', screenId: 'window:2' }),
+    );
+
+    expect(callsFor('screen')).toHaveLength(1);
+    expect(callsFor('window')).toHaveLength(1);
   });
 
   it('selects and confirms a screen region, persists it, and handles region errors', async () => {
@@ -295,6 +381,214 @@ describe('HUD', () => {
     await ready();
     expect(wrapper.get('[role="alert"]').text()).toContain('region denied');
     expect(capture.setWindowVisible).toHaveBeenLastCalledWith(true);
+  });
+
+  it('keeps macOS region selection enabled when the preview has no display bounds', async () => {
+    capture.discover.mockResolvedValue({
+      sources: [
+        {
+          id: 'sck:display:123',
+          kind: 'display',
+          label: 'Screen 1',
+          isDefault: true,
+          displayId: '123',
+        },
+      ],
+      capabilities: { systemAudio: true },
+    });
+    capture.getSources.mockResolvedValue([
+      {
+        id: 'screen:123',
+        name: 'Screen 1',
+        thumbnail: '',
+        appIcon: null,
+        displayId: '123',
+      },
+    ]);
+    capture.getDisplayBounds.mockResolvedValue({ x: 24, y: 48, width: 2560, height: 1440 });
+    capture.selectScreenRegion.mockResolvedValue({ x: 0.1, y: 0.2, width: 0.5, height: 0.4 });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    expect(capture.getDisplayBounds).toHaveBeenCalledWith('123');
+    const regionButton = wrapper.get('[aria-label="Select an area of the screen"]');
+    expect(regionButton.attributes('disabled')).toBeUndefined();
+
+    await regionButton.trigger('click');
+    vi.advanceTimersByTime(180);
+    await ready();
+
+    expect(capture.selectScreenRegion).toHaveBeenCalledWith({
+      bounds: { x: 24, y: 48, width: 2560, height: 1440 },
+      region: null,
+    });
+  });
+
+  it('shows the matching screen thumbnail without replacing the native screen id', async () => {
+    capture.discover.mockResolvedValue({
+      sources: [
+        {
+          id: 'sck:display:123',
+          kind: 'display',
+          label: 'Screen 1',
+          isDefault: true,
+          displayId: '123',
+        },
+        {
+          id: 'sck:display:456',
+          kind: 'display',
+          label: 'Screen 2',
+          isDefault: false,
+          displayId: '456',
+        },
+      ],
+      capabilities: { systemAudio: true },
+    });
+    capture.getSources.mockResolvedValue([
+      {
+        id: 'screen:123',
+        name: 'Screen 1 preview',
+        thumbnail: 'data:image/png;base64,screen-1',
+        appIcon: null,
+        displayId: '123',
+      },
+      {
+        id: 'screen:456',
+        name: 'Screen 2 preview',
+        thumbnail: 'data:image/png;base64,screen-2',
+        appIcon: null,
+        displayId: '456',
+      },
+    ]);
+    capture.getDisplayBounds.mockImplementation(async (displayId: string) => ({
+      x: displayId === '456' ? 2560 : 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    }));
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const secondScreenOption = wrapper
+      .findAll('[data-option-value]')
+      .find((option) => option.attributes('data-option-value') === 'sck:display:456');
+    expect(secondScreenOption).toBeDefined();
+    expect(secondScreenOption?.find('.select-option-thumbnail').attributes('src')).toBe(
+      'data:image/png;base64,screen-2',
+    );
+
+    await secondScreenOption?.trigger('click');
+    await ready();
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    await record?.trigger('click');
+
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({ screenKind: 'display', screenId: 'sck:display:456' }),
+    ]);
+  });
+
+  it('matches a numeric Electron preview to a Windows native display without changing its id', async () => {
+    const windowsDisplayId = String.raw`\\.\DISPLAY1`;
+    const nativeSourceId = `wgc:monitor:${windowsDisplayId}`;
+    capture.discover.mockResolvedValue({
+      sources: [
+        {
+          id: nativeSourceId,
+          kind: 'display',
+          label: 'Screen 1',
+          isDefault: true,
+          displayId: windowsDisplayId,
+        },
+      ],
+      capabilities: { systemAudio: true },
+    });
+    capture.getSources.mockResolvedValue([
+      {
+        id: 'screen:123456',
+        name: 'Screen 1 preview',
+        thumbnail: 'data:image/png;base64,windows-screen-1',
+        appIcon: null,
+        displayId: 123456,
+      },
+    ]);
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const screenOption = wrapper
+      .findAll('[data-option-value]')
+      .find((option) => option.attributes('data-option-value') === nativeSourceId);
+    expect(screenOption).toBeDefined();
+    expect(screenOption?.find('.select-option-thumbnail').attributes('src')).toBe(
+      'data:image/png;base64,windows-screen-1',
+    );
+
+    await screenOption?.trigger('click');
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    await record?.trigger('click');
+
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({ screenKind: 'display', screenId: nativeSourceId }),
+    ]);
+  });
+
+  it('clones Windows fallback bounds and restores an interactive HUD after a crop IPC error', async () => {
+    const windowsDisplayId = String.raw`\\.\DISPLAY1`;
+    const nativeSourceId = `wgc:monitor:${windowsDisplayId}`;
+    const cloneError = new DOMException('The object could not be cloned.', 'DataCloneError');
+    capture.discover.mockResolvedValue({
+      sources: [
+        {
+          id: nativeSourceId,
+          kind: 'display',
+          label: 'Screen 1',
+          isDefault: true,
+          displayId: windowsDisplayId,
+        },
+      ],
+      capabilities: { systemAudio: true },
+    });
+    capture.getSources.mockResolvedValue([
+      {
+        id: 'screen:123456',
+        name: 'Screen 1 preview',
+        thumbnail: 'data:image/png;base64,windows-screen-1',
+        appIcon: null,
+        displayId: 123456,
+        displayBounds: { x: 0, y: 0, width: 2560, height: 1440 },
+      },
+    ]);
+    capture.getDisplayBounds.mockResolvedValue(null);
+    capture.selectScreenRegion.mockImplementation(async (options: unknown) => {
+      expect(() => structuredClone(options)).not.toThrow();
+      throw cloneError;
+    });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+    const regionButton = wrapper.get('[aria-label="Select an area of the screen"]');
+    expect(regionButton.attributes('disabled')).toBeUndefined();
+
+    await regionButton.trigger('click');
+    vi.advanceTimersByTime(180);
+    await ready();
+
+    expect(capture.selectScreenRegion).toHaveBeenCalledWith({
+      bounds: { x: 0, y: 0, width: 2560, height: 1440 },
+      region: null,
+    });
+    expect(capture.setWindowVisible).toHaveBeenNthCalledWith(1, false);
+    expect(capture.setWindowVisible).toHaveBeenLastCalledWith(true);
+    expect(capture.setInteractive).toHaveBeenLastCalledWith(true);
+    expect(wrapper.get('[role="alert"]').text()).toContain('The object could not be cloned.');
+
+    await wrapper.get('.capture-error-copy').trigger('click');
+    await ready();
+    expect(writeText).toHaveBeenCalledWith(String(cloneError));
   });
 
   it('copies discovery errors through the clipboard fallback and clears copied state', async () => {
@@ -348,10 +642,10 @@ describe('HUD', () => {
       .find((button) => button.text() === 'Window')
       ?.trigger('click');
     await ready();
-    expect(wrapper.find('.window-select').exists()).toBe(true);
-    expect(wrapper.findAll('.window-option')).toHaveLength(0);
-    await wrapper.get('.window-select-control').trigger('click');
-    await wrapper.get('.window-select-close').trigger('click');
+    expect(wrapper.find('.select').exists()).toBe(true);
+    expect(wrapper.findAll('.select-option').some((option) => option.text() === 'Only window')).toBe(false);
+    await wrapper.get('.select-control').trigger('click');
+    await wrapper.get('.select-close').trigger('click');
     vi.advanceTimersByTime(220);
     await wrapper.get('[aria-label="Open teleprompter"]').trigger('click');
     expect(capture.showTeleprompter).toHaveBeenCalledOnce();
@@ -374,7 +668,10 @@ describe('HUD', () => {
       .find((button) => button.text() === 'Window')
       ?.trigger('click');
     await ready();
-    await wrapper.get('.window-option').trigger('click');
+    await wrapper
+      .findAll('.select-option')
+      .find((option) => option.text() === 'Preview')
+      ?.trigger('click');
     const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'))!;
     await record.trigger('click');
     expect(wrapper.emitted('start-recording')).toContainEqual([

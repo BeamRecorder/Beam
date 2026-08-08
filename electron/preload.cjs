@@ -75,6 +75,7 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('window:recorder-tooltip-side', callback);
     },
     getSources: (types) => ipcRenderer.invoke('window:getSources', types),
+    getDisplayBounds: (displayId) => ipcRenderer.invoke('screen:get-display-bounds', displayId),
     selectScreenRegion: (options) => ipcRenderer.invoke('screen-region:select', options),
     showScreenRegionOverlay: (options) => ipcRenderer.send('screen-region:show', options),
     hideScreenRegionOverlay: () => ipcRenderer.send('screen-region:hide'),

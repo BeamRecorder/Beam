@@ -25,13 +25,14 @@ import type {
   CaptureSource,
   EditorLoadingProgress,
 } from '../../api/types/capture-api';
-import type { ScreenRegion, ScreenRegionOverlayOptions } from '../../api/types/screen-region';
+import type { ScreenRegion, ScreenRegionBounds, ScreenRegionOverlayOptions } from '../../api/types/screen-region';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
-import WindowSelect from '~/ui/select/WindowSelect.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import TopbarHUD from './TopbarHUD.vue';
+import SourceSelect from './SourceSelect.vue';
+import { matchScreenPreview } from './source-preview';
 import {
   Monitor,
   Layout,
@@ -97,8 +98,10 @@ const recordingBarVisibility = ref<'always' | 'auto-fade'>('always');
 watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }));
 
 // Previews
-const previews = ref<CapturePreview[]>([]);
+const windowPreviews = ref<CapturePreview[]>([]);
 const screenPreviews = ref<CapturePreview[]>([]);
+const windowPreviewsLoading = ref(false);
+const screenPreviewsLoading = ref(false);
 const selectedSourceId = ref<string | null>(null);
 
 // Sources lists (Camera / Microphone)
@@ -121,6 +124,7 @@ const isTeleprompterVisible = ref(false);
 const selectedScreenId = ref<string | null>(null);
 const selectedScreenRegion = ref<ScreenRegion | null>(null);
 const selectedScreenOverlay = ref<ScreenRegionOverlayOptions | null>(null);
+const nativeScreenBounds = ref<ScreenRegionBounds | null>(null);
 const savedScreenRegion = ref<ScreenRegion | null>(null);
 const isRegionSelectionLeaving = ref(false);
 const isRegionSelectionEntering = ref(false);
@@ -162,24 +166,35 @@ watch(
   },
   { immediate: true },
 );
-const screenOptions = computed(() =>
-  sources.value
-    .filter((source) => source.kind === 'display')
-    .map((source, index) => ({
-      value: source.id,
-      label: t('screenOption', { index: index + 1 }),
-    })),
-);
+const displaySources = computed(() => sources.value.filter((source) => source.kind === 'display'));
 const selectedScreen = computed(() => sources.value.find((source) => source.id === selectedScreenId.value) ?? null);
 const selectedScreenPreview = computed(() => {
   const source = selectedScreen.value;
   if (!source) return null;
-  return (
-    screenPreviews.value.find((preview) => source.displayId && preview.displayId === source.displayId) ??
-    screenPreviews.value.find((preview) => preview.displayBounds) ??
-    null
-  );
+  return matchScreenPreview(source, displaySources.value, screenPreviews.value);
 });
+const selectedScreenBounds = computed(
+  () => nativeScreenBounds.value ?? selectedScreenPreview.value?.displayBounds ?? null,
+);
+let screenBoundsRequest = 0;
+const refreshSelectedScreenBounds = async (): Promise<ScreenRegionBounds | null> => {
+  const request = ++screenBoundsRequest;
+  const displayId = selectedScreen.value?.displayId;
+  if (!displayId) {
+    nativeScreenBounds.value = null;
+    return null;
+  }
+  try {
+    const bounds = await capture.getDisplayBounds(displayId);
+    if (request !== screenBoundsRequest) return null;
+    nativeScreenBounds.value = bounds;
+    return bounds;
+  } catch (error) {
+    if (request === screenBoundsRequest) nativeScreenBounds.value = null;
+    console.error('Failed to resolve selected screen bounds:', error);
+    return null;
+  }
+};
 const systemAudioOptions = computed(() => [
   { value: 'on', label: t('systemAudio') },
   { value: 'off', label: t('off') },
@@ -217,39 +232,60 @@ const stopTimer = () => {
   }
 };
 
-// Previews loading
-const loadPreviews = async () => {
-  try {
-    const type = activeTab.value === 'screen' ? 'screen' : 'window';
-    const results = await capture.getSources([type]);
-    previews.value = results;
-    if (activeTab.value === 'screen') screenPreviews.value = results;
+type PreviewKind = 'screen' | 'window';
+const previewLoaded: Record<PreviewKind, boolean> = { screen: false, window: false };
+const previewRequests: Record<PreviewKind, Promise<void> | null> = { screen: null, window: null };
 
-    // Auto-select first source if none or invalid is selected
-    if (results.length > 0) {
+const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
+  if (!force && previewLoaded[type]) return Promise.resolve();
+  if (previewRequests[type]) return previewRequests[type];
+
+  const target = type === 'screen' ? screenPreviews : windowPreviews;
+  const loading = type === 'screen' ? screenPreviewsLoading : windowPreviewsLoading;
+  if (target.value.length === 0) loading.value = true;
+
+  const request = capture
+    .getSources([type])
+    .then((results) => {
+      target.value = results;
+      previewLoaded[type] = true;
+      if (type !== 'window') return;
       if (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value)) {
-        selectedSourceId.value = results[0].id;
+        selectedSourceId.value = results[0]?.id ?? null;
       }
-    } else {
-      selectedSourceId.value = null;
-    }
-  } catch (err) {
-    console.error('Failed to load window/screen previews:', err);
-  }
+    })
+    .catch((error) => {
+      console.error(`Failed to load ${type} previews:`, error);
+    })
+    .finally(() => {
+      loading.value = false;
+      previewRequests[type] = null;
+    });
+
+  previewRequests[type] = request;
+  return request;
 };
 
 const wait = (duration: number) => new Promise((resolve) => window.setTimeout(resolve, duration));
+const snapshotScreenBounds = (bounds: ScreenRegionBounds): ScreenRegionBounds => ({
+  x: bounds.x,
+  y: bounds.y,
+  width: bounds.width,
+  height: bounds.height,
+});
 
 const selectScreenRegion = async () => {
-  const preview = selectedScreenPreview.value;
-  if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value || !preview?.displayBounds) return;
+  if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value || !selectedScreenBounds.value) return;
+  const resolvedBounds = (await refreshSelectedScreenBounds()) ?? selectedScreenBounds.value;
+  if (!resolvedBounds || isBusy.value || isRecording.value || isRegionSelectionLeaving.value) return;
+  // Values read from Vue refs/computed values can be reactive proxies. Electron
+  // IPC cannot structured-clone those proxies, so always send a plain snapshot.
+  const bounds = snapshotScreenBounds(resolvedBounds);
   errorMessage.value = '';
   isRegionSelectionLeaving.value = true;
   await wait(180);
   capture.setWindowVisible(false);
   try {
-    const sourceBounds = preview.displayBounds;
-    const bounds = { x: sourceBounds.x, y: sourceBounds.y, width: sourceBounds.width, height: sourceBounds.height };
     // The saved region is only a starting point for the next selection. It
     // must not activate crop mode just because the HUD was opened.
     const currentRegion = selectedScreenRegion.value ?? savedScreenRegion.value;
@@ -282,7 +318,11 @@ const selectScreenRegion = async () => {
   } finally {
     isRegionSelectionLeaving.value = false;
     isRegionSelectionEntering.value = true;
+    capture.hideScreenRegionOverlay();
     capture.setWindowVisible(true);
+    // Showing the HUD resets its native hit-test state. Force it interactive
+    // until the renderer's next pointer move refines the transparent areas.
+    capture.setInteractive(true);
     if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
     regionSelectionEnterTimeout = setTimeout(() => {
       isRegionSelectionEntering.value = false;
@@ -381,16 +421,16 @@ const handleDropdownToggle = (isOpen: boolean) => {
   updateWindowSize();
 };
 
-// Watch tab change to reload previews and resize window
+// Both preview catalogs are cached. Switching tabs only changes presentation;
+// a failed initial request may be retried without replacing a valid cache.
 watch(activeTab, () => {
   capture.hideScreenRegionOverlay();
   if (activeTab.value !== 'screen') {
     selectedScreenRegion.value = null;
     selectedScreenOverlay.value = null;
   }
-  previews.value = [];
   updateWindowSize();
-  void loadPreviews();
+  void loadPreviews(activeTab.value);
 });
 
 watch(
@@ -401,7 +441,9 @@ watch(
 watch(selectedScreenId, () => {
   selectedScreenRegion.value = null;
   selectedScreenOverlay.value = null;
+  nativeScreenBounds.value = null;
   capture.hideScreenRegionOverlay();
+  void refreshSelectedScreenBounds();
 });
 
 // Watch settings view toggle to update window size
@@ -779,7 +821,7 @@ onMounted(async () => {
   recordingBarVisibility.value = preferences.recordingBar.visibility;
   if (!props.embedded) updateWindowSize();
   await discoverSources();
-  await loadPreviews();
+  await Promise.allSettled([loadPreviews('screen'), loadPreviews('window')]);
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
     if (actionId === 'hud.startStopRecording') {
@@ -793,12 +835,13 @@ onMounted(async () => {
   // Periodically refresh window previews when settings is not open and not recording
   previewsRefreshInterval = setInterval(() => {
     if (!showSettings.value && !isRecording.value && activeTab.value === 'window') {
-      void loadPreviews();
+      void loadPreviews('window', true);
     }
   }, 5000);
 });
 
 onBeforeUnmount(() => {
+  screenBoundsRequest++;
   capture.hideScreenRegionOverlay();
   if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
   if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
@@ -928,15 +971,13 @@ const openProject = (project: CaptureProject) => {
             <div :key="activeTab" class="tab-content-container">
               <!-- Capture source -->
               <template v-if="activeTab === 'window'">
-                <div v-if="isBusy && previews.length === 0" class="device-row">
+                <div class="device-row">
                   <Layout class="device-icon" />
-                  <Skeleton variant="linear" height="2.75rem" radius="var(--radius-md)" />
-                </div>
-                <div v-else class="device-row">
-                  <Layout class="device-icon" />
-                  <WindowSelect
+                  <SourceSelect
                     v-model="selectedSourceId"
-                    :options="previews"
+                    kind="window"
+                    :previews="windowPreviews"
+                    :loading="windowPreviewsLoading"
                     :disabled="isRecording || isBusy"
                     @toggle="handleDropdownToggle"
                   />
@@ -946,10 +987,13 @@ const openProject = (project: CaptureProject) => {
               <div v-else class="device-row">
                 <Monitor class="device-icon" />
                 <div class="screen-select-controls">
-                  <Select
+                  <SourceSelect
                     v-model="selectedScreenId"
-                    :options="screenOptions"
-                    :disabled="isRecording || isBusy || screenOptions.length === 0"
+                    kind="screen"
+                    :sources="sources"
+                    :previews="screenPreviews"
+                    :loading="screenPreviewsLoading"
+                    :disabled="isRecording || isBusy || displaySources.length === 0"
                     @toggle="handleDropdownToggle"
                   />
                   <Button
@@ -959,7 +1003,7 @@ const openProject = (project: CaptureProject) => {
                     :icon="isRegionConfirmationAnimating ? Check : Crop"
                     :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
                     :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
-                    :disabled="isRecording || isBusy || !selectedScreenPreview?.displayBounds"
+                    :disabled="isRecording || isBusy || !selectedScreenBounds"
                     :class="{
                       'screen-region-confirmed': Boolean(selectedScreenRegion),
                       'screen-region-checkmark': isRegionConfirmationAnimating,

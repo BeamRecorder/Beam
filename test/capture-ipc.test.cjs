@@ -53,3 +53,39 @@ test('stops native capture before completing sidecar tracks', async () => {
   assert.match(completed.videoSrc, /primary\.mp4$/);
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+test('resolves display bounds by native display id without relying on desktop previews', async () => {
+  const handlers = new Map();
+  let previewCalls = 0;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const desktopCapturer = {
+    getSources: async () => {
+      previewCalls += 1;
+      return [];
+    },
+  };
+  const screen = {
+    getAllDisplays: () => [
+      { id: 42, bounds: { x: 0, y: 0, width: 2560, height: 1440 } },
+      { id: 84, bounds: { x: 2560, y: 0, width: 1920, height: 1080 } },
+    ],
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer,
+    screen,
+    captureEngine: { request: async () => undefined },
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+  });
+
+  const getDisplayBounds = handlers.get('screen:get-display-bounds');
+  assert.equal(typeof getDisplayBounds, 'function');
+  assert.deepEqual(await getDisplayBounds({}, '42'), { x: 0, y: 0, width: 2560, height: 1440 });
+  assert.deepEqual(await getDisplayBounds({}, '84'), { x: 2560, y: 0, width: 1920, height: 1080 });
+  assert.equal(await getDisplayBounds({}, '999'), null);
+  assert.equal(await getDisplayBounds({}, null), null);
+  assert.equal(previewCalls, 0);
+});

@@ -5,6 +5,8 @@ export const captureMock = {
   getSources: vi.fn(),
   hideScreenRegionOverlay: vi.fn(),
   setWindowVisible: vi.fn(),
+  setInteractive: vi.fn(),
+  getDisplayBounds: vi.fn(),
   selectScreenRegion: vi.fn(),
   startRecording: vi.fn(),
   stop: vi.fn(),

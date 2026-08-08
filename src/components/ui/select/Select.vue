@@ -9,6 +9,7 @@ interface Option {
   value: string | number;
   label: string;
   thumbnail?: string;
+  appIcon?: string | null;
   color?: string;
   loading?: boolean;
 }
@@ -23,6 +24,8 @@ const props = withDefaults(
     direction?: 'up' | 'down';
     previewOnHover?: boolean;
     loading?: boolean;
+    emptyLabel?: string;
+    variant?: 'default' | 'source';
   }>(),
   {
     placeholder: 'Select an option',
@@ -30,6 +33,8 @@ const props = withDefaults(
     direction: 'down',
     previewOnHover: false,
     loading: false,
+    emptyLabel: '',
+    variant: 'default',
   },
 );
 
@@ -173,13 +178,14 @@ const stopMarquee = (event: PointerEvent) => {
       <button
         type="button"
         class="select-trigger"
-        :class="{ 'is-open': isOpen, 'is-disabled': disabled }"
+        :class="{ 'is-open': isOpen, 'is-disabled': disabled, 'is-source': variant === 'source' }"
         :disabled="disabled"
       >
         <div class="trigger-content-wrapper">
           <!-- Thumbnail preview -->
           <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
             <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" />
+            <img v-if="selectedOption.appIcon" :src="selectedOption.appIcon" class="trigger-app-icon" />
           </div>
 
           <!-- Color preview -->
@@ -203,7 +209,14 @@ const stopMarquee = (event: PointerEvent) => {
     </template>
 
     <template #default="{ close }">
-      <div v-bind="containerProps" class="virtual-scroll-container" @pointerleave="handleMouseLeaveList">
+      <div v-if="normalizedOptions.length === 0" class="options-empty">{{ emptyLabel || placeholder }}</div>
+      <div
+        v-else
+        v-bind="containerProps"
+        class="virtual-scroll-container"
+        :class="{ 'is-source': variant === 'source' }"
+        @pointerleave="handleMouseLeaveList"
+      >
         <ul v-bind="wrapperProps" class="select-options">
           <li
             v-for="item in list"
@@ -222,6 +235,7 @@ const stopMarquee = (event: PointerEvent) => {
               <!-- Thumbnail preview -->
               <div v-if="item.data.thumbnail" class="thumbnail-wrapper">
                 <img :src="item.data.thumbnail" class="thumbnail-img" />
+                <img v-if="item.data.appIcon" :src="item.data.appIcon" class="app-icon" />
               </div>
 
               <!-- Color preview -->
@@ -314,6 +328,28 @@ const stopMarquee = (event: PointerEvent) => {
   height: 100%;
   object-fit: contain;
   padding: 1px;
+}
+
+.trigger-app-icon {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 8px;
+  height: 8px;
+  padding: 1px;
+  border-radius: 3px;
+  background: var(--color-bg-element);
+}
+
+.select-trigger.is-source .selected-thumbnail-wrapper {
+  width: 38px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface-hover);
+}
+
+.select-trigger.is-source .trigger-thumbnail-img {
+  object-fit: cover;
+  padding: 0;
 }
 
 .selected-color-badge {
@@ -412,6 +448,29 @@ const stopMarquee = (event: PointerEvent) => {
   padding: 2px;
 }
 
+.app-icon {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 12px;
+  height: 12px;
+  padding: 1px;
+  border-radius: 3px;
+  background: var(--color-bg-element);
+}
+
+.virtual-scroll-container.is-source .thumbnail-wrapper {
+  width: 60px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface-hover);
+}
+
+.virtual-scroll-container.is-source .thumbnail-img {
+  object-fit: cover;
+  padding: 0;
+}
+
 .color-badge {
   width: 16px;
   height: 16px;
@@ -467,5 +526,12 @@ const stopMarquee = (event: PointerEvent) => {
 
 .option-eye {
   color: var(--text-primary);
+}
+
+.options-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 </style>

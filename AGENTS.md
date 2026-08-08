@@ -23,7 +23,13 @@ You are in a WSL envrionnement, if you use `npm` or `cargo`, prefix it via power
 
 ## Verification
 
-Before handing off a change, run the smallest relevant checks and report any unavailable platform-specific checks. For frontend changes, run the TypeScript build and Vitest. For Rust changes, run formatting, tests, and Clippy when the toolchain is available.
+Before handing off a change, run the smallest relevant checks and report any unavailable platform-specific checks.
+
+- Run only the test files and test cases directly related to the code changed. For example, use a focused Vitest path for a Vue component and a focused Node test path for one Electron module.
+- Do **not** run the complete Vitest suite, the complete `npm test` suite, full coverage, or all-workspace Rust tests for a localized change.
+- A repository-wide test run is allowed only when the user explicitly requests it or when a genuinely cross-cutting change cannot be validated with targeted checks. Explain that need before starting the full run.
+- Type checking and the smallest relevant build may still be used when they validate compilation across a changed typed boundary.
+- For Rust changes, target the affected package/module for formatting, tests, and Clippy when the toolchain is available; do not default to the whole workspace.
 
 ## Protocole d'exécution du goal
 

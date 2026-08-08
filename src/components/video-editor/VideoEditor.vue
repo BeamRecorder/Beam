@@ -286,7 +286,7 @@ const toggleCrop = () => {
   if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value;
 };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
-  outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: false };
+  outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: outputCanvas.value.showBackground };
 };
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {

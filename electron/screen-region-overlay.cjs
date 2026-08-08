@@ -86,7 +86,14 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
       const result = new Promise((resolve) => {
         pending = { resolve };
       });
-      configure(options, true);
+      try {
+        configure(options, true);
+      } catch (error) {
+        pending = null;
+        current = null;
+        if (window && !window.isDestroyed()) window.hide();
+        throw error;
+      }
       return result;
     },
     show(options) {
