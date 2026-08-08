@@ -231,7 +231,7 @@ watch(
 watch(
   [composition, zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
   () => {
-    if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot(), 300);
+    if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
   },
   { deep: true },
 );

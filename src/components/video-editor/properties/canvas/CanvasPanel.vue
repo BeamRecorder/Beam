@@ -5,6 +5,7 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Popover from '~/ui/popover/Popover.vue';
+import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import BackgroundPresetComposer from './BackgroundPresetComposer.vue';
 import { capture } from '../../../../api/capture';
 import {
@@ -36,7 +37,9 @@ const emit = defineEmits<{
 const activeKind = ref<'image' | 'video' | 'color' | 'gradient'>('image');
 const hoveredId = ref<string | null>(null);
 const INITIAL_MEDIA_COUNT = 15;
+const LOAD_MORE_FRAME_SIZE = 3;
 const visibleCount = ref(INITIAL_MEDIA_COUNT);
+const isLoadingMore = ref(false);
 
 const blurDraft = ref(props.blurPercent);
 watch(
@@ -52,7 +55,13 @@ const handleBlurUpdate = (val: number) => {
 
 const gridRef = ref<HTMLElement | null>(null);
 const tileElements = new Map<string, Element>();
+const tileItems = new Map<string, BackgroundMedia>();
+const tileItemsByElement = new Map<Element, BackgroundMedia>();
+const tileRefHandlers = new Map<string, (element: Element | ComponentPublicInstance | null) => void>();
 let previewObserver: IntersectionObserver | null = null;
+let observationFrame: number | null = null;
+let loadMoreFrame: number | null = null;
+let loadMoreTarget = 0;
 const { previews, failed, request: requestPreview } = useBackgroundPreviews();
 
 const {
@@ -77,16 +86,33 @@ const visibleItems = computed(() => items.value.slice(0, visibleCount.value));
 
 const hasMore = computed(() => visibleCount.value < items.value.length);
 
-const observeMediaTile = (element: Element | ComponentPublicInstance | null, item: BackgroundMedia) => {
+const updateMediaTileElement = (element: Element | ComponentPublicInstance | null, item: BackgroundMedia) => {
   const domElement = element && '$el' in element ? (element.$el as Element | null) : (element as Element | null);
   const previous = tileElements.get(item.id);
-  if (previous) previewObserver?.unobserve(previous);
+  if (previous === domElement) return;
+  if (previous) {
+    previewObserver?.unobserve(previous);
+    tileItemsByElement.delete(previous);
+  }
   if (!domElement) {
     tileElements.delete(item.id);
     return;
   }
   tileElements.set(item.id, domElement);
+  tileItemsByElement.set(domElement, item);
   previewObserver?.observe(domElement);
+};
+
+const mediaTileRef = (item: BackgroundMedia) => {
+  tileItems.set(item.id, item);
+  const existing = tileRefHandlers.get(item.id);
+  if (existing) return existing;
+  const handler = (element: Element | ComponentPublicInstance | null) => {
+    const currentItem = tileItems.get(item.id);
+    if (currentItem) updateMediaTileElement(element, currentItem);
+  };
+  tileRefHandlers.set(item.id, handler);
+  return handler;
 };
 
 const observeVisibleTiles = () => {
@@ -97,7 +123,30 @@ const observeVisibleTiles = () => {
 };
 
 const scheduleVisibleTileObservation = () => {
-  requestAnimationFrame(() => nextTick(observeVisibleTiles));
+  if (observationFrame !== null) return;
+  observationFrame = requestAnimationFrame(() => {
+    observationFrame = null;
+    void nextTick(observeVisibleTiles);
+  });
+};
+
+const cancelLoadMore = () => {
+  if (loadMoreFrame !== null) cancelAnimationFrame(loadMoreFrame);
+  loadMoreFrame = null;
+  loadMoreTarget = 0;
+  isLoadingMore.value = false;
+};
+
+const loadMoreFrameStep = () => {
+  loadMoreFrame = null;
+  const target = Math.min(loadMoreTarget, items.value.length);
+  visibleCount.value = Math.min(visibleCount.value + LOAD_MORE_FRAME_SIZE, target);
+  if (visibleCount.value < target) {
+    loadMoreFrame = requestAnimationFrame(loadMoreFrameStep);
+    return;
+  }
+  loadMoreTarget = 0;
+  isLoadingMore.value = false;
 };
 
 onMounted(() => {
@@ -105,7 +154,7 @@ onMounted(() => {
     (entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        const item = visibleItems.value.find((candidate) => tileElements.get(candidate.id) === entry.target);
+        const item = tileItemsByElement.get(entry.target);
         if (item) requestPreview(item);
       }
     },
@@ -115,14 +164,20 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  cancelLoadMore();
+  if (observationFrame !== null) cancelAnimationFrame(observationFrame);
   previewObserver?.disconnect();
   tileElements.clear();
+  tileItems.clear();
+  tileItemsByElement.clear();
+  tileRefHandlers.clear();
 });
 
 // Instant tab switch
 const switchKind = (kind: 'image' | 'video' | 'color' | 'gradient') => {
   if (activeKind.value === kind) return;
 
+  cancelLoadMore();
   activeKind.value = kind;
   visibleCount.value = INITIAL_MEDIA_COUNT;
   closeCustomEditor();
@@ -130,21 +185,18 @@ const switchKind = (kind: 'image' | 'video' | 'color' | 'gradient') => {
   if (gridRef.value) {
     gridRef.value.scrollTop = 0;
   }
-
-  scheduleVisibleTileObservation();
 };
 
-watch(
-  visibleItems,
-  (newItems) => {
-    void newItems;
-    scheduleVisibleTileObservation();
-  },
-  { flush: 'post' },
-);
-
 const loadMore = () => {
-  visibleCount.value = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT);
+  if (isLoadingMore.value || !hasMore.value) return;
+  isLoadingMore.value = true;
+  loadMoreTarget = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT);
+  loadMoreFrame = requestAnimationFrame(loadMoreFrameStep);
+};
+
+const selectMediaBackground = (item: BackgroundMedia) => {
+  hoveredId.value = null;
+  emit('update:selectedBackground', item);
 };
 
 const isSelected = (entry: BackgroundValue) => props.selectedBackground?.id === entry.id;
@@ -202,7 +254,7 @@ const importLabel = computed(() =>
     </Button>
 
     <!-- Hardware-Accelerated Tab Content Container -->
-    <div :key="activeKind" class="tab-content-panel">
+    <div class="tab-content-panel">
       <!-- Image & Video Media Grid -->
       <div v-if="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
         <div v-if="!items.length" class="empty-backgrounds">
@@ -216,14 +268,18 @@ const importLabel = computed(() =>
           :key="item.id"
           type="button"
           class="media-tile"
-          :ref="(element) => observeMediaTile(element, item)"
-          :class="{ active: isSelected(item), loaded: Boolean(previews[item.id] || failed[item.id] || item.kind === 'image') }"
-          @click="emit('update:selectedBackground', item)"
+          :ref="mediaTileRef(item)"
+          :class="{
+            active: isSelected(item),
+          }"
+          :aria-label="item.name"
+          :aria-busy="!previews[item.id] && !failed[item.id]"
+          @click="selectMediaBackground(item)"
           @mouseenter="hoveredId = item.id"
           @mouseleave="hoveredId = null"
         >
           <video
-            v-if="item.kind === 'video' && (hoveredId === item.id || isSelected(item))"
+            v-if="item.kind === 'video' && hoveredId === item.id"
             :src="item.path"
             muted
             autoplay
@@ -231,19 +287,29 @@ const importLabel = computed(() =>
             preload="none"
             class="media-content"
           />
-          <img v-else-if="previews[item.id]" :src="previews[item.id]" :alt="item.name" class="media-content loaded" />
-          <span v-else-if="item.kind === 'video'" class="video-placeholder">
-            <Video :size="16" />
-          </span>
           <img
-            v-else
+            v-else-if="previews[item.id]"
+            :src="previews[item.id]"
+            :alt="item.name"
+            class="media-content loaded"
+            loading="lazy"
+            decoding="async"
+          />
+          <img
+            v-else-if="item.kind === 'image' && failed[item.id]"
             :src="item.path"
             :alt="item.name"
             class="media-content loaded"
+            loading="lazy"
+            decoding="async"
           />
+          <span v-else-if="item.kind === 'video' && failed[item.id]" class="video-placeholder">
+            <Video :size="16" />
+          </span>
+          <Skeleton v-else class="media-loading-skeleton" width="100%" height="100%" radius="inherit" />
         </button>
         <div v-if="hasMore" class="load-more">
-          <Button variant="secondary" size="sm" block @click="loadMore">
+          <Button variant="secondary" size="sm" block :disabled="isLoadingMore" @click="loadMore">
             {{ t('showMore') }}
           </Button>
         </div>
@@ -538,16 +604,10 @@ const importLabel = computed(() =>
   contain: strict;
 }
 
-.media-tile::before {
-  content: '';
+.media-loading-skeleton {
   position: absolute;
   inset: 0;
-  background: var(--color-bg-surface-hover);
   pointer-events: none;
-}
-
-.media-tile.loaded::before {
-  display: none;
 }
 
 .media-tile:hover:not(.active) {
@@ -565,7 +625,7 @@ const importLabel = computed(() =>
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 8px;
+  border-radius: inherit;
   transition: opacity 0.15s ease;
 }
 
@@ -585,7 +645,7 @@ img.media-content.loaded {
   justify-content: center;
   color: var(--text-muted, #9ca3af);
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  border-radius: inherit;
 }
 
 .load-more {

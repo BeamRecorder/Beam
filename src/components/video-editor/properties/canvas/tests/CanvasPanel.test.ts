@@ -1,4 +1,5 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BackgroundMedia, BackgroundMediaGroup, BackgroundValue } from '../../../composables/backgroundCatalog';
 import CanvasPanel from '../CanvasPanel.vue';
@@ -59,7 +60,7 @@ const media = (id: string, kind: 'image' | 'video'): BackgroundMedia => ({
   kind,
 });
 
-const imageItems = Array.from({ length: 16 }, (_, index) => media(`image-${index}`, 'image'));
+const imageItems = Array.from({ length: 46 }, (_, index) => media(`image-${index}`, 'image'));
 const videoItems = [media('video-0', 'video'), media('video-1', 'video')];
 const groups: BackgroundMediaGroup[] = [
   { kind: 'image', label: 'Images', items: imageItems },
@@ -68,6 +69,29 @@ const groups: BackgroundMediaGroup[] = [
 
 let wrapper: VueWrapper | undefined;
 const originalObserver = globalThis.IntersectionObserver;
+let frameCallbacks: Map<number, FrameRequestCallback>;
+let nextFrameId: number;
+let cancelAnimationFrameMock: ReturnType<typeof vi.fn>;
+const reactivePreviews = reactive<Record<string, string>>({});
+const reactiveFailed = reactive<Record<string, boolean>>({});
+
+const runNextFrame = async () => {
+  const next = frameCallbacks.entries().next();
+  if (next.done) return false;
+  const [id, callback] = next.value;
+  frameCallbacks.delete(id);
+  callback(0);
+  await nextTick();
+  await flushPromises();
+  return true;
+};
+
+const drainFrames = async () => {
+  while (await runNextFrame()) {
+    // Drain only work already queued by the component. New user actions must
+    // explicitly queue the next frame in each test.
+  }
+};
 
 const mountPanel = async (selectedBackground: BackgroundValue | null = null, backgroundGroups = groups) => {
   wrapper = mount(CanvasPanel, {
@@ -80,21 +104,29 @@ const mountPanel = async (selectedBackground: BackgroundValue | null = null, bac
     global: { stubs: { BackgroundPresetComposer: ComposerStub } },
   });
   await flushPromises();
+  await drainFrames();
   return wrapper;
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   TestIntersectionObserver.instances = [];
-  globalThis.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
-  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-    callback(0);
-    return 1;
+  frameCallbacks = new Map();
+  nextFrameId = 1;
+  cancelAnimationFrameMock = vi.fn((id: number) => {
+    frameCallbacks.delete(id);
   });
-  Object.keys(previewState.previews).forEach((key) => delete previewState.previews[key]);
-  Object.keys(previewState.failed).forEach((key) => delete previewState.failed[key]);
-  previewState.previews['image-0'] = 'blob:image-0';
-  previewState.failed['image-1'] = true;
+  globalThis.IntersectionObserver = TestIntersectionObserver as unknown as typeof IntersectionObserver;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    const id = nextFrameId++;
+    frameCallbacks.set(id, callback);
+    return id;
+  });
+  vi.stubGlobal('cancelAnimationFrame', cancelAnimationFrameMock);
+  Object.keys(reactivePreviews).forEach((key) => delete reactivePreviews[key]);
+  Object.keys(reactiveFailed).forEach((key) => delete reactiveFailed[key]);
+  previewState.previews = reactivePreviews;
+  previewState.failed = reactiveFailed;
   capture.getPreferences.mockResolvedValue({
     backgroundPresets: { colors: [], gradients: [] },
     extras: {},
@@ -115,28 +147,94 @@ afterEach(() => {
 });
 
 describe('CanvasPanel', () => {
-  it('renders media, requests visible previews, selects and previews hovered items, and loads more', async () => {
+  it('shows image skeletons while loading, worker previews when ready, and paths only on failure', async () => {
+    previewState.previews['image-0'] = 'blob:image-0';
+    previewState.failed['image-1'] = true;
     const mounted = await mountPanel(imageItems[0]);
     const observer = TestIntersectionObserver.instances[0]!;
     const tiles = mounted!.findAll('.media-tile');
     expect(tiles).toHaveLength(15);
     expect(tiles[0]!.classes()).toContain('active');
     expect(tiles[0]!.find('img').attributes('src')).toBe('blob:image-0');
+    expect(tiles[0]!.findAll('img')).toHaveLength(1);
+    expect(tiles[0]!.attributes('aria-busy')).toBe('false');
     expect(tiles[1]!.find('img').attributes('src')).toContain('image-1.png');
+    expect(tiles[1]!.find('img').attributes('loading')).toBe('lazy');
+    expect(tiles[1]!.find('img').attributes('decoding')).toBe('async');
+    expect(tiles[1]!.attributes('aria-busy')).toBe('false');
+    expect(tiles[2]!.find('img').exists()).toBe(false);
+    expect(tiles[2]!.find('.skeleton').exists()).toBe(true);
+    expect(tiles[2]!.attributes('aria-busy')).toBe('true');
+    expect(tiles.every((tile) => tile.findAll('img').length <= 1)).toBe(true);
     expect(observer.observe).toHaveBeenCalled();
 
     observer.trigger([{ isIntersecting: false, target: tiles[2]!.element }]);
     expect(previewState.request).not.toHaveBeenCalledWith(imageItems[2]);
     observer.trigger([{ isIntersecting: true, target: tiles[2]!.element }]);
     expect(previewState.request).toHaveBeenCalledWith(imageItems[2]);
+  });
 
-    await tiles[3]!.trigger('click');
-    expect(mounted.emitted('update:selectedBackground')?.at(-1)).toEqual([imageItems[3]]);
-    await tiles[4]!.trigger('mouseenter');
-    expect(mounted.findAll('.media-tile')[4]!.find('img').exists()).toBe(false);
-    await tiles[4]!.trigger('mouseleave');
+  it('keeps observer subscriptions stable across selection and preview arrival', async () => {
+    const mounted = await mountPanel(imageItems[0]);
+    const observer = TestIntersectionObserver.instances[0]!;
+    const initialObserveCount = observer.observe.mock.calls.length;
+    const initialUnobserveCount = observer.unobserve.mock.calls.length;
+    previewState.request.mockClear();
+
+    await mounted!.findAll('.media-tile')[0]!.trigger('click');
+    await nextTick();
+    expect(mounted!.emitted('update:selectedBackground')).toHaveLength(1);
+    expect(previewState.request).not.toHaveBeenCalled();
+    expect(observer.observe.mock.calls.length).toBe(initialObserveCount);
+    expect(observer.unobserve.mock.calls.length).toBe(initialUnobserveCount);
+
+    reactivePreviews['image-0'] = 'blob:image-0';
+    await nextTick();
+    expect(mounted!.findAll('.media-tile')[0]!.find('img').attributes('src')).toBe('blob:image-0');
+    expect(observer.observe.mock.calls.length).toBe(initialObserveCount);
+    expect(observer.unobserve.mock.calls.length).toBe(initialUnobserveCount);
+  });
+
+  it('adds one 15-item load-more batch across animation frames', async () => {
+    const mounted = await mountPanel();
+    const observer = TestIntersectionObserver.instances[0]!;
+    const initialObservedCount = observer.observe.mock.calls.length;
+    const loadMore = mounted!.get('.load-more button');
+
+    await loadMore.trigger('click');
+    await nextTick();
+    expect(mounted!.findAll('.media-tile')).toHaveLength(15);
+
+    const frameCounts: number[] = [];
+    while (await runNextFrame()) frameCounts.push(mounted!.findAll('.media-tile').length);
+    expect(frameCounts.some((count) => count > 15)).toBe(true);
+    expect(mounted!.findAll('.media-tile')).toHaveLength(30);
+    expect(observer.observe.mock.calls.length).toBe(initialObservedCount + 15);
+
     await mounted!.get('.load-more button').trigger('click');
-    expect(mounted!.findAll('.media-tile')).toHaveLength(16);
+    await nextTick();
+    await drainFrames();
+    expect(mounted!.findAll('.media-tile')).toHaveLength(45);
+    expect(observer.observe.mock.calls.length).toBe(initialObservedCount + 30);
+  });
+
+  it('coalesces multiple load-more clicks and cancels pending work on unmount', async () => {
+    const mounted = await mountPanel();
+    const loadMore = mounted!.get('.load-more button');
+
+    await loadMore.trigger('click');
+    await loadMore.trigger('click');
+    await nextTick();
+    expect(mounted!.findAll('.media-tile')).toHaveLength(15);
+    await drainFrames();
+    expect(mounted!.findAll('.media-tile')).toHaveLength(30);
+
+    await mounted!.get('.load-more button').trigger('click');
+    await nextTick();
+    expect(frameCallbacks.size).toBeGreaterThan(0);
+    mounted!.unmount();
+    expect(cancelAnimationFrameMock).toHaveBeenCalled();
+    expect(frameCallbacks.size).toBe(0);
   });
 
   it('switches image/video tabs, handles video hover and imports by active kind', async () => {
@@ -145,7 +243,15 @@ describe('CanvasPanel', () => {
     const tabButtons = mounted!.findAll('.kind-group button');
     await tabButtons[1]!.trigger('click');
     expect(mounted!.findAll('.media-tile')).toHaveLength(2);
-    expect(mounted!.findAll('.video-placeholder')).toHaveLength(2);
+    expect(mounted!.findAll('.media-loading-skeleton')).toHaveLength(2);
+    expect(mounted!.findAll('.video-placeholder')).toHaveLength(0);
+    reactiveFailed['video-1'] = true;
+    await nextTick();
+    expect(mounted!.findAll('.video-placeholder')).toHaveLength(1);
+    previewState.request.mockClear();
+    const observer = TestIntersectionObserver.instances[0]!;
+    observer.trigger([{ isIntersecting: true, target: mounted!.findAll('.media-tile')[1]!.element }]);
+    expect(previewState.request).toHaveBeenCalledWith(videoItems[1]);
     await mounted!.findAll('.media-tile')[0]!.trigger('mouseenter');
     expect(mounted!.findAll('video')).toHaveLength(1);
     await mounted!.get('.import-btn').trigger('click');

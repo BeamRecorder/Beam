@@ -18,6 +18,7 @@ export interface EditorStateSnapshot {
 }
 const MAX_HISTORY_DEPTH = 50;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+type SnapshotSource = EditorStateSnapshot | (() => EditorStateSnapshot);
 
 export function useEditorUndoRedo(options: {
   onRestoreSnapshot: (snapshot: EditorStateSnapshot) => void | Promise<void>;
@@ -27,10 +28,11 @@ export function useEditorUndoRedo(options: {
   const lastAction = ref<HistoryAction | null>(null);
   let restoring = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let pendingSnapshot: EditorStateSnapshot | null = null;
+  let pendingSnapshot: SnapshotSource | null = null;
 
   const canUndo = computed(() => undoStack.value.length > 1);
   const canRedo = computed(() => redoStack.value.length > 0);
+  const resolveSnapshot = (source: SnapshotSource) => (typeof source === 'function' ? source() : source);
 
   const recordImmediate = (snapshot: EditorStateSnapshot) => {
     if (restoring) return;
@@ -46,7 +48,7 @@ export function useEditorUndoRedo(options: {
     if (timer && pendingSnapshot) {
       clearTimeout(timer);
       timer = null;
-      const snapshot = pendingSnapshot;
+      const snapshot = resolveSnapshot(pendingSnapshot);
       pendingSnapshot = null;
       recordImmediate(snapshot);
     }
@@ -58,19 +60,20 @@ export function useEditorUndoRedo(options: {
     pendingSnapshot = null;
   };
 
-  const recordSnapshot = (snapshot: EditorStateSnapshot, debounceMs = 0) => {
+  const recordSnapshot = (snapshot: SnapshotSource, debounceMs = 0) => {
     if (restoring) return;
     if (debounceMs > 0) {
       pendingSnapshot = snapshot;
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         timer = null;
+        const pending = pendingSnapshot;
         pendingSnapshot = null;
-        recordImmediate(snapshot);
+        if (pending) recordImmediate(resolveSnapshot(pending));
       }, debounceMs);
     } else {
       cancel();
-      recordImmediate(snapshot);
+      recordImmediate(resolveSnapshot(snapshot));
     }
   };
 

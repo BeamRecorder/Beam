@@ -96,6 +96,51 @@ describe('useEditorUndoRedo', () => {
     wrapper.unmount();
   });
 
+  it('lazily resolves only the latest debounced factory and flushes it on undo', async () => {
+    const restored: unknown[] = [];
+    let api!: ReturnType<typeof useEditorUndoRedo>;
+    const Harness = defineComponent({
+      setup: () => (
+        (api = useEditorUndoRedo({
+          onRestoreSnapshot: (value) => {
+            restored.push(value);
+          },
+        })),
+        {}
+      ),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+
+    api.recordSnapshot(snapshot(0));
+    const firstFactory = vi.fn(() => snapshot(1));
+    const secondFactory = vi.fn(() => snapshot(2));
+    api.recordSnapshot(firstFactory, 300);
+    api.recordSnapshot(secondFactory, 300);
+    expect(firstFactory).not.toHaveBeenCalled();
+    expect(secondFactory).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(299);
+    expect(firstFactory).not.toHaveBeenCalled();
+    expect(secondFactory).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(firstFactory).not.toHaveBeenCalled();
+    expect(secondFactory).toHaveBeenCalledTimes(1);
+    expect(api.undoStack.value.at(-1)?.backgroundBlurPercent).toBe(2);
+
+    const flushedFactory = vi.fn(() => snapshot(3));
+    api.recordSnapshot(flushedFactory, 300);
+    expect(flushedFactory).not.toHaveBeenCalled();
+    await api.undo();
+    expect(flushedFactory).toHaveBeenCalledTimes(1);
+    expect(restored).toHaveLength(1);
+    expect((restored[0] as ReturnType<typeof snapshot>).backgroundBlurPercent).toBe(2);
+
+    api.commitNow(snapshot(4));
+    expect(api.undoStack.value.at(-1)?.backgroundBlurPercent).toBe(4);
+    wrapper.unmount();
+  });
+
   it('maps Ctrl/Cmd shortcuts and ignores editable fields', async () => {
     let api!: ReturnType<typeof useEditorUndoRedo>;
     const Harness = defineComponent({

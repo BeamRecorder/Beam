@@ -58,6 +58,8 @@ watch(
       :src="resolvedMediaPath"
       alt=""
       aria-hidden="true"
+      decoding="async"
+      fetchpriority="low"
       @error="mediaFailed = true"
     />
     <video

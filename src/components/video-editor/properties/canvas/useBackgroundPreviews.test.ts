@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useBackgroundPreviews } from './useBackgroundPreviews';
 import type { BackgroundMedia } from '../../composables/backgroundCatalog';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
 const workerState = vi.hoisted(() => {
   const instances: Array<{
@@ -38,6 +39,35 @@ const video = (id: string): BackgroundMedia => ({
   kind: 'video',
 });
 
+const mockVideoPreviewElements = () => {
+  const realCreateElement = document.createElement.bind(document);
+  const videos: HTMLVideoElement[] = [];
+  const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((
+    tagName: string,
+    options?: ElementCreationOptions,
+  ) => {
+    if (tagName.toLowerCase() !== 'video') return realCreateElement(tagName, options);
+    const fakeVideo = realCreateElement('video');
+    let currentTime = 0;
+    Object.defineProperty(fakeVideo, 'duration', { configurable: true, value: 10 });
+    Object.defineProperty(fakeVideo, 'currentTime', {
+      configurable: true,
+      get: () => currentTime,
+      set: (value: number) => {
+        currentTime = value;
+        fakeVideo.dispatchEvent(new Event('seeked'));
+      },
+    });
+    videos.push(fakeVideo);
+    return fakeVideo;
+  }) as typeof document.createElement);
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    drawImage: vi.fn(),
+  } as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['frame'])));
+  return { videos, createElementSpy };
+};
+
 describe('useBackgroundPreviews', () => {
   let api: ReturnType<typeof useBackgroundPreviews>;
   let wrapper: ReturnType<typeof mount>;
@@ -70,7 +100,11 @@ describe('useBackgroundPreviews', () => {
     api.request(image('first'));
     api.request(image('first'));
     expect(worker.postMessage).toHaveBeenCalledTimes(1);
-    expect(worker.postMessage).toHaveBeenCalledWith({ type: 'request', id: 'first', source: '/media/first.png' });
+    expect(worker.postMessage).toHaveBeenCalledWith({
+      type: 'request',
+      id: 'first',
+      source: resolvePublicAssetUrl('/media/first.png'),
+    });
 
     worker.onmessage?.({ data: { type: 'ready', id: 'first', preview: new Blob(['one']) } } as MessageEvent);
     expect(api.previews.first).toContain('blob:');
@@ -133,6 +167,50 @@ describe('useBackgroundPreviews', () => {
     await nextTick();
     await flushPromises();
     expect(api.failed['broken-video']).toBe(true);
+  });
+
+  it('serializes video preview generation and starts queued work after success', async () => {
+    const { videos } = mockVideoPreviewElements();
+
+    api.request(video('first'));
+    api.request(video('second'));
+    api.request(video('second'));
+    expect(videos).toHaveLength(1);
+
+    videos[0]!.dispatchEvent(new Event('loadedmetadata'));
+    await flushPromises();
+    expect(api.previews.first).toContain('blob:');
+    expect(videos).toHaveLength(2);
+    expect(api.previews.second).toBeUndefined();
+
+    videos[1]!.dispatchEvent(new Event('loadedmetadata'));
+    await flushPromises();
+    expect(api.previews.second).toContain('blob:');
+  });
+
+  it('starts the next queued video after an error and cleans active work on unmount', async () => {
+    const { videos } = mockVideoPreviewElements();
+
+    api.request(video('broken'));
+    api.request(video('queued'));
+    expect(videos).toHaveLength(1);
+
+    videos[0]!.dispatchEvent(new Event('error'));
+    await flushPromises();
+    expect(api.failed.broken).toBe(true);
+    expect(videos).toHaveLength(2);
+
+    videos[1]!.dispatchEvent(new Event('loadedmetadata'));
+    await flushPromises();
+    expect(api.previews.queued).toContain('blob:');
+
+    api.request(video('active'));
+    expect(videos).toHaveLength(3);
+    const removeActiveVideo = vi.spyOn(videos[2]!, 'remove');
+    wrapper.unmount();
+    await flushPromises();
+    expect(removeActiveVideo).toHaveBeenCalled();
+    expect(workerState.instances[0]!.terminate).toHaveBeenCalled();
   });
 
   it('cleans previews and terminates its worker when unmounted', async () => {
