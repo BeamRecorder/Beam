@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { LoaderCircle } from '@lucide/vue';
 import { capture } from '~/api/capture';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import type { RecordingConfiguration } from '~/components/hud/recorder/recording-types';
 import Button from '~/components/ui/button/Button.vue';
 import ToastProvider from '~/components/ui/toast/ToastProvider.vue';
+import { useTranslate } from '~/i18n/useTranslate';
+import EditorLoadingThrobber from './EditorLoadingThrobber.vue';
 import VideoEditor from './VideoEditor.vue';
 
 const project = ref<CaptureProject | null>(null);
@@ -15,6 +16,7 @@ const error = ref('');
 let loadGeneration = 0;
 let removeContextListener: (() => void) | null = null;
 let themeObserver: MutationObserver | null = null;
+const { t } = useTranslate('EditorPreparingHud');
 
 const syncTitlebarTheme = () => {
   const dark = document.documentElement.classList.contains('dark');
@@ -107,9 +109,8 @@ onBeforeUnmount(() => {
 
 <template>
   <ToastProvider />
-  <main v-if="loading" class="editor-window-state" aria-live="polite">
-    <LoaderCircle class="state-spinner" :size="28" />
-    <p>Preparing your editor…</p>
+  <main v-if="loading" class="editor-window-state" aria-busy="true">
+    <EditorLoadingThrobber :text="t('title')" />
   </main>
   <main v-else-if="error || !project" class="editor-window-state" role="alert">
     <p class="state-title">Unable to open this project</p>
@@ -142,18 +143,7 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-.state-spinner {
-  color: var(--color-primary);
-  animation: spin 0.85s linear infinite;
-}
-
 .state-title {
   font-weight: 700;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

@@ -1,5 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentLocale } from '../../../i18n';
 import EditorWindowApp from '../EditorWindowApp.vue';
 
 const state = vi.hoisted(() => ({
@@ -85,6 +86,14 @@ describe('EditorWindowApp', () => {
       'renderingEditor',
     ]);
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+  });
+
+  it('translates the animated editor loading message', () => {
+    setCurrentLocale('fr');
+    const wrapper = mountEditor();
+
+    expect(wrapper.get('.editor-loading-throbber').attributes('aria-label')).toBe('Préparation de l’éditeur');
+    expect(wrapper.find('.state-spinner').exists()).toBe(false);
   });
 
   it('returns to the HUD and forwards recording requests', async () => {
