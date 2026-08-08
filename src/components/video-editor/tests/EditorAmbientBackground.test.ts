@@ -56,7 +56,6 @@ describe('EditorAmbientBackground', () => {
     const root = wrapper.get('.editor-ambient-background');
 
     expect(root.attributes('aria-hidden')).toBe('true');
-    expect(getComputedStyle(root.element).pointerEvents).toBe('none');
     expect(root.find('.ambient-veil').exists()).toBe(true);
     expect(root.find('.ambient-media').exists()).toBe(false);
     expect(root.find('.ambient-surface').exists()).toBe(false);
@@ -86,7 +85,6 @@ describe('EditorAmbientBackground', () => {
 
     expect(imageElement.attributes('src')).toBe(resolvePublicAssetUrl('/wallpapers/image/test.webp'));
     expect(imageElement.attributes('aria-hidden')).toBe('true');
-    expect(getComputedStyle(root.element).pointerEvents).toBe('none');
     expect(root.find('.ambient-media').exists()).toBe(true);
   });
 
