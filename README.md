@@ -31,6 +31,8 @@
 - ⚡ **Fast export** — export your finished video to WebM or MP4 at the resolution you need.
 - 📖 **Teleprompter** — keep your script in view while you record.
 
+You want more ? Open an issue or discuss it with us on our Discord ! 
+
 ## Availability
 
 Beam is currently available for Windows and macOS. (Linux support is not made yet)

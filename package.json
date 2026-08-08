@@ -1,8 +1,8 @@
 {
   "name": "demo-recorder",
   "private": true,
-  "version": "0.1.1",
-  "description": "Beam — screen, webcam and audio recorder with a visual editor.",
+  "version": "0.1.2",
+  "description": "Beam - Screen recorder to create product demos.",
   "author": "ExtraBinoss",
   "type": "module",
   "main": "electron/main.cjs",
