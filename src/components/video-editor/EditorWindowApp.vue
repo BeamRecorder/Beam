@@ -33,9 +33,11 @@ const loadProject = async (projectId: string) => {
   loading.value = true;
   error.value = '';
   try {
+    capture.reportEditorLoadingStage('loadingProject');
     const projects = await capture.listProjects();
     const nextProject = projects.find((candidate) => candidate.id === projectId) ?? null;
     if (!nextProject) throw new Error('Project not found');
+    capture.reportEditorLoadingStage('loadingTimeline');
     const nextEditorData = await capture.getProjectEditorData(projectId);
     if (generation !== loadGeneration) return;
     project.value = nextProject;
@@ -74,6 +76,7 @@ onMounted(async () => {
     loading.value = false;
     error.value = 'No project selected';
   }
+  capture.reportEditorLoadingStage('renderingEditor');
   await waitForEditorPaint();
   capture.notifyEditorReady();
 });

@@ -243,7 +243,18 @@
     "openTeleprompter": "Open teleprompter",
     "closeTeleprompter": "Hide teleprompter",
     "openHud": "Open HUD",
-    "quit": "Quit Beam"
+    "quit": "Quit Beam",
+    "preparingEditor": "Opening editor"
+  },
+  "EditorPreparingHud": {
+    "title": "Preparing your editor",
+    "openingWindow": "Creating the editor window…",
+    "loadingEditor": "Loading the editor interface…",
+    "loadingProject": "Opening your project…",
+    "loadingTimeline": "Loading the timeline…",
+    "renderingEditor": "Rendering the editor…",
+    "ready": "Editor ready",
+    "progressLabel": "Editor loading progress"
   },
   "HudPreferences": {
     "preferences": "Preferences",

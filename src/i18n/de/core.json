@@ -243,7 +243,18 @@
     "openTeleprompter": "Teleprompter öffnen",
     "closeTeleprompter": "Teleprompter ausblenden",
     "openHud": "HUD öffnen",
-    "quit": "Beam beenden"
+    "quit": "Beam beenden",
+    "preparingEditor": "Editor wird geöffnet"
+  },
+  "EditorPreparingHud": {
+    "title": "Editor wird vorbereitet",
+    "openingWindow": "Editorfenster wird erstellt…",
+    "loadingEditor": "Editoroberfläche wird geladen…",
+    "loadingProject": "Projekt wird geöffnet…",
+    "loadingTimeline": "Zeitleiste wird geladen…",
+    "renderingEditor": "Editor wird dargestellt…",
+    "ready": "Editor bereit",
+    "progressLabel": "Ladefortschritt des Editors"
   },
   "HudPreferences": {
     "preferences": "Einstellungen",

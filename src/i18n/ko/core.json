@@ -243,7 +243,18 @@
     "openTeleprompter": "텔레프롬프터 열기",
     "closeTeleprompter": "텔레프롬프터 숨기기",
     "openHud": "HUD 열기",
-    "quit": "Beam 종료"
+    "quit": "Beam 종료",
+    "preparingEditor": "편집기 여는 중"
+  },
+  "EditorPreparingHud": {
+    "title": "편집기 준비 중",
+    "openingWindow": "편집기 창을 만드는 중…",
+    "loadingEditor": "편집기 인터페이스를 불러오는 중…",
+    "loadingProject": "프로젝트를 여는 중…",
+    "loadingTimeline": "타임라인을 불러오는 중…",
+    "renderingEditor": "편집기를 렌더링하는 중…",
+    "ready": "편집기 준비 완료",
+    "progressLabel": "편집기 로딩 진행률"
   },
   "HudPreferences": {
     "preferences": "환경 설정",

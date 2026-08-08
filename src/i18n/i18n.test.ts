@@ -40,6 +40,15 @@ describe('internationalization', () => {
     }
   });
 
+  it('translates every editor loading stage in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const stage of ['openingWindow', 'loadingEditor', 'loadingProject', 'loadingTimeline', 'renderingEditor']) {
+        expect(i18n.global.te(`EditorPreparingHud.${stage}`, locale)).toBe(true);
+      }
+    }
+  });
+
   it('persists the selected locale and updates the document language', () => {
     setCurrentLocale('zh-CN');
     expect(localStorage.getItem('locale')).toBe('zh-CN');

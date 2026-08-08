@@ -12,6 +12,7 @@ const capture = vi.hoisted(() => ({
   getProjectEditorData: vi.fn(),
   listProjects: vi.fn(),
   notifyEditorReady: vi.fn(),
+  reportEditorLoadingStage: vi.fn(),
   onEditorContext: vi.fn((listener: (context: { projectId: string }) => void) => {
     state.contextListener = listener;
     return state.removeContextListener;
@@ -65,6 +66,11 @@ describe('EditorWindowApp', () => {
 
     expect(wrapper.find('.mock-editor').exists()).toBe(true);
     expect(capture.getProjectEditorData).toHaveBeenCalledWith(project.id);
+    expect(capture.reportEditorLoadingStage.mock.calls.map(([stage]) => stage)).toEqual([
+      'loadingProject',
+      'loadingTimeline',
+      'renderingEditor',
+    ]);
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
   });
 

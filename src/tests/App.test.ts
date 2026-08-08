@@ -17,12 +17,14 @@ const mocks = vi.hoisted(() => ({
     hideTeleprompter: vi.fn(),
     openEditor: vi.fn(),
     onStartRecordingFromEditor: vi.fn(),
+    onEditorLoadingProgress: vi.fn(),
     listProjects: vi.fn(),
   },
   controller: {
     recording: undefined as any,
     onComplete: undefined as ((session: { videoSrc?: string | null }) => void) | undefined,
     startFromEditor: undefined as ((configuration: any) => void) | undefined,
+    editorProgress: undefined as ((progress: { stage: string; value: number }) => void) | undefined,
   },
 }));
 
@@ -59,28 +61,40 @@ vi.mock('../components/hud/HUD.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockHud',
+      props: {
+        preparingEditor: { type: Boolean, default: false },
+        editorLoadingProgress: { type: Object, default: () => ({ stage: 'openingWindow', value: 10 }) },
+      },
       emits: ['start-recording', 'open-project'],
-      setup(_, { emit }) {
+      setup(props, { emit }) {
         return () =>
-          h('div', { class: 'mock-hud' }, [
-            h('button', {
-              class: 'start',
-              onClick: () =>
-                emit('start-recording', {
-                  screenKind: 'display',
-                  cameraId: 'off',
-                  microphoneId: 'no-audio',
-                  systemAudio: false,
-                  targetFps: 30,
-                  countdownSeconds: 0,
-                  recordingBarVisibility: 'always',
-                }),
-            }),
-            h('button', {
-              class: 'open',
-              onClick: () => emit('open-project', { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' }),
-            }),
-          ]);
+          h(
+            'div',
+            {
+              class: 'mock-hud',
+              'data-preparing-editor': String(props.preparingEditor),
+              'data-editor-progress': String((props.editorLoadingProgress as { value: number }).value),
+            },
+            [
+              h('button', {
+                class: 'start',
+                onClick: () =>
+                  emit('start-recording', {
+                    screenKind: 'display',
+                    cameraId: 'off',
+                    microphoneId: 'no-audio',
+                    systemAudio: false,
+                    targetFps: 30,
+                    countdownSeconds: 0,
+                    recordingBarVisibility: 'always',
+                  }),
+              }),
+              h('button', {
+                class: 'open',
+                onClick: () => emit('open-project', { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' }),
+              }),
+            ],
+          );
       },
     }),
   };
@@ -128,6 +142,10 @@ beforeEach(() => {
   mocks.capture.openEditor.mockResolvedValue(true);
   mocks.capture.onStartRecordingFromEditor.mockImplementation((listener) => {
     mocks.controller.startFromEditor = listener;
+    return vi.fn();
+  });
+  mocks.capture.onEditorLoadingProgress.mockImplementation((listener) => {
+    mocks.controller.editorProgress = listener;
     return vi.fn();
   });
   wrapper = mount(App, {
@@ -208,6 +226,28 @@ describe('App', () => {
     expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1');
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
     expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it('keeps the HUD mounted and reflects real editor loading stages', async () => {
+    let finishOpening!: (value: boolean) => void;
+    mocks.capture.openEditor.mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        finishOpening = resolve;
+      }),
+    );
+
+    await wrapper.get('.open').trigger('click');
+    await nextTick();
+    expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('true');
+    expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('10');
+
+    mocks.controller.editorProgress?.({ stage: 'loadingTimeline', value: 65 });
+    await nextTick();
+    expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('65');
+
+    finishOpening(true);
+    await settle();
+    expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('false');
   });
 
   it('opens the dedicated editor after completed recordings and reports missing projects', async () => {

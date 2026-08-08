@@ -9,6 +9,14 @@ const TITLEBAR_COLORS = {
   light: { color: '#ffffff', symbolColor: '#171717' },
   dark: { color: '#201f1c', symbolColor: '#f7f5f0' },
 };
+const EDITOR_LOADING_PROGRESS = Object.freeze({
+  openingWindow: 10,
+  loadingEditor: 25,
+  loadingProject: 45,
+  loadingTimeline: 65,
+  renderingEditor: 90,
+  ready: 100,
+});
 
 class EditorWindowController {
   constructor(window, showHud) {
@@ -50,8 +58,17 @@ function createEditorWindowManager({
   let dark = initialDark;
   let resolvePresentation = null;
   let rejectPresentation = null;
+  let lastProgressValue = 0;
 
   const overlayOptions = () => ({ ...TITLEBAR_COLORS[dark ? 'dark' : 'light'], height: TITLEBAR_HEIGHT });
+
+  const sendProgress = (stage) => {
+    const value = EDITOR_LOADING_PROGRESS[stage];
+    if (value === undefined || value < lastProgressValue || hudWindow.isDestroyed()) return false;
+    lastProgressValue = value;
+    hudWindow.webContents.send('editor:loading-progress', { stage, value });
+    return true;
+  };
 
   const load = (target) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/editor.html'));
@@ -104,6 +121,7 @@ function createEditorWindowManager({
     controller = new EditorWindowController(window, showHud);
     registerController(window, controller);
     const contents = window.webContents;
+    contents.once('did-finish-load', () => sendProgress('loadingEditor'));
     contents.once('destroyed', () => cleanupWindow?.(contents));
     window.on('closed', () => {
       const shouldQuit = !returningToHud;
@@ -122,6 +140,8 @@ function createEditorWindowManager({
 
   const open = (projectId) => {
     if (!PROJECT_ID.test(projectId)) throw new Error('Identifiant de projet invalide');
+    lastProgressValue = 0;
+    sendProgress('openingWindow');
     currentProjectId = projectId;
     const target = ensure();
     if (rendererReady) {
@@ -142,6 +162,7 @@ function createEditorWindowManager({
   const markReady = (event) => {
     if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
     rendererReady = true;
+    sendProgress('ready');
     window.show();
     window.focus();
     hudWindow.hide();
@@ -167,6 +188,11 @@ function createEditorWindowManager({
     return true;
   };
 
+  const reportLoadingStage = (event, stage) => {
+    if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
+    return sendProgress(stage);
+  };
+
   ipcMain.handle('editor:open', (_event, projectId) => open(projectId));
   ipcMain.handle('editor:context', (event) =>
     window && !window.isDestroyed() && event.sender === window.webContents && currentProjectId
@@ -174,6 +200,7 @@ function createEditorWindowManager({
       : null,
   );
   ipcMain.on('editor:ready', markReady);
+  ipcMain.on('editor:loading-stage', reportLoadingStage);
   ipcMain.on('editor:start-recording', startRecording);
   ipcMain.on('editor:titlebar-theme', setTitlebarTheme);
 

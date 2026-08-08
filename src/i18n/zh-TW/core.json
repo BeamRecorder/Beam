@@ -243,7 +243,18 @@
     "openTeleprompter": "開啟提詞器",
     "closeTeleprompter": "隱藏提詞器",
     "openHud": "開啟 HUD",
-    "quit": "結束 Beam"
+    "quit": "結束 Beam",
+    "preparingEditor": "正在開啟編輯器"
+  },
+  "EditorPreparingHud": {
+    "title": "正在準備編輯器",
+    "openingWindow": "正在建立編輯器視窗…",
+    "loadingEditor": "正在載入編輯器介面…",
+    "loadingProject": "正在開啟專案…",
+    "loadingTimeline": "正在載入時間軸…",
+    "renderingEditor": "正在呈現編輯器…",
+    "ready": "編輯器已就緒",
+    "progressLabel": "編輯器載入進度"
   },
   "HudPreferences": {
     "preferences": "偏好設定",

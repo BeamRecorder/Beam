@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { LoaderCircle } from '@lucide/vue';
 import HUD from './components/hud/HUD.vue';
 import ToastProvider from './components/ui/toast/ToastProvider.vue';
 import Button from './components/ui/button/Button.vue';
@@ -14,11 +13,13 @@ import { capture } from './api/capture';
 import { useLocaleStore } from './stores/locale';
 import { useTranslate } from './i18n/useTranslate';
 import type { CaptureProject } from './api/types/capture-api';
+import type { EditorLoadingProgress } from './api/types/editor-window';
 
 const INTERACTIVE_SELECTORS =
   '.hud-wrapper, .recorder-bar, .camera-overlay-container, .camera-settings-popover, button, a, input, select, textarea, [role="button"], [tabindex], label, video, .popover-content, .popover-trigger, .action-menu-content';
 let lastInteractive: boolean | null = null;
 let removeEditorRecordingListener: (() => void) | null = null;
+let removeEditorLoadingListener: (() => void) | null = null;
 
 const handleMouseMove = (e: MouseEvent) => {
   if (currentView.value !== 'hud' && recording.phase.value === 'idle') return;
@@ -73,6 +74,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('mousemove', handleMouseMove);
   window.removeEventListener('mouseleave', handleMouseLeave);
   removeEditorRecordingListener?.();
+  removeEditorLoadingListener?.();
 });
 
 const currentView = ref<'hud' | 'recorder'>('hud');
@@ -87,6 +89,7 @@ const TeleprompterWindowApp = defineAsyncComponent(
 const currentProject = ref<CaptureProject | null>(null);
 const isPreparingEditor = ref(false);
 const editorLoadError = ref('');
+const editorLoadingProgress = ref<EditorLoadingProgress>({ stage: 'openingWindow', value: 10 });
 
 const recordingBarVisibility = ref<'always' | 'auto-fade'>('always');
 const recording = useRecordingController((session) => {
@@ -119,6 +122,9 @@ const startRecordingFromEditor = async (configuration: RecordingConfiguration) =
 onMounted(() => {
   removeEditorRecordingListener = capture.onStartRecordingFromEditor((configuration) => {
     void startRecordingFromEditor(configuration);
+  });
+  removeEditorLoadingListener = capture.onEditorLoadingProgress((progress) => {
+    if (isPreparingEditor.value) editorLoadingProgress.value = progress;
   });
 });
 
@@ -184,6 +190,9 @@ const handleStopRecording = async (session: RecordingSessionResult) => {
   capture.setCameraOverlayActive(false);
   editorLoadError.value = '';
   isPreparingEditor.value = true;
+  editorLoadingProgress.value = { stage: 'openingWindow', value: 10 };
+  currentView.value = 'hud';
+  capture.showHud();
   try {
     const projects = await capture.listProjects();
     let targetProject = projects.find((project) => project.previewSrc === session?.videoSrc) ?? projects[0] ?? null;
@@ -217,6 +226,7 @@ const handleOpenProject = (project: CaptureProject) => {
   logEditor('Project open requested', { projectId: project.id });
   if (isPreparingEditor.value) return;
   isPreparingEditor.value = true;
+  editorLoadingProgress.value = { stage: 'openingWindow', value: 10 };
   editorLoadError.value = '';
   currentProject.value = project;
   void revealEditor().catch((error) => {
@@ -247,7 +257,9 @@ const dismissEditorLoadError = () => {
     class="app-container"
   >
     <HUD
-      v-if="currentView === 'hud' && !isPreparingEditor && !editorLoadError"
+      v-if="currentView === 'hud' && !editorLoadError"
+      :preparing-editor="isPreparingEditor"
+      :editor-loading-progress="editorLoadingProgress"
       @start-recording="startRecording"
       @open-project="handleOpenProject"
     />
@@ -269,14 +281,7 @@ const dismissEditorLoadError = () => {
         @system-audio="recording.toggleSystemAudio"
       />
     </Transition>
-    <section v-if="isPreparingEditor" class="editor-preparing" aria-live="polite">
-      <LoaderCircle class="preparing-spinner" :size="28" />
-      <div>
-        <p class="preparing-title">Preparing your editor</p>
-        <p class="preparing-copy">Finalizing recording and loading your timeline…</p>
-      </div>
-    </section>
-    <section v-else-if="editorLoadError" class="editor-load-error" role="alert">
+    <section v-if="editorLoadError" class="editor-load-error" role="alert">
       <p class="editor-load-error-title">Unable to open this project</p>
       <p>{{ editorLoadError }}</p>
       <Button variant="secondary" size="sm" @click="dismissEditorLoadError">Back to projects</Button>
@@ -293,16 +298,6 @@ const dismissEditorLoadError = () => {
   justify-content: flex-start;
   overflow: hidden;
 }
-.editor-preparing {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  background: var(--color-bg-surface);
-  color: var(--text-primary);
-}
 .editor-load-error {
   width: 100vw;
   height: 100vh;
@@ -316,36 +311,8 @@ const dismissEditorLoadError = () => {
   color: var(--text-primary);
   text-align: center;
 }
-.editor-load-error-title,
-.preparing-title {
+.editor-load-error-title {
   font-weight: 700;
-}
-.preparing-spinner {
-  color: var(--color-primary);
-  animation: spin 0.85s linear infinite;
-}
-.preparing-copy {
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-.editor-reveal-enter-active,
-.editor-reveal-leave-active {
-  transition:
-    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.editor-reveal-enter-from,
-.editor-reveal-leave-to {
-  opacity: 0;
-  transform: scale(0.98) translateY(6px);
-}
-.exiting-editor {
-  opacity: 0;
-  transform: scale(0.96) translateY(12px);
-  transition:
-    opacity 0.18s ease-out,
-    transform 0.18s ease-out;
 }
 .recorder-return-enter-active,
 .recorder-return-leave-active {
@@ -357,11 +324,6 @@ const dismissEditorLoadError = () => {
 .recorder-return-leave-to {
   opacity: 0;
   transform: translateX(8px);
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>
 

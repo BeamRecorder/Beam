@@ -14,6 +14,8 @@ The transparent main window is controlled by `electron/window/window-controller.
 
 Use `window:show-hud` / `capture.showHud()` to return from the editor. Do not reproduce it by separately changing mode, maximize state, size, and position: ordering matters.
 
+While the editor opens, keep the transparent HUD window visible and replace only its card contents. Loading progress is phase-based and comes from validated editor lifecycle events (`BrowserWindow` creation, renderer load, project load, timeline load, and first paint); do not replace it with timer-driven progress. Hide the HUD only after `editor:ready`.
+
 ## Shadows and content size
 
 Electron clips painting outside the BrowserWindow. A CSS shadow around an element that touches the renderer viewport is therefore visibly cut off and looks like a rectangular dark block.

@@ -28,15 +28,17 @@ const percentage = computed(() => {
 <style scoped>
 .progress-bar-container {
   width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  height: 4px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
   overflow: hidden;
   position: relative;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--color-primary, #3b82f6);
-  transition: width 0.1s linear;
+  background: var(--color-primary);
+  border-radius: inherit;
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 </style>

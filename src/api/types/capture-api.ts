@@ -14,10 +14,12 @@ import type {
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
 import type { RecordingConfiguration } from '../../components/hud/recorder/recording-types';
+import type { EditorLoadingProgress, EditorLoadingStage } from './editor-window';
 
 export type * from './capture-config';
 export type * from './screen-region';
 export type * from './capture-session';
+export type * from './editor-window';
 
 export interface CaptureApi {
   discover(): Promise<CaptureCatalog>;
@@ -49,9 +51,11 @@ export interface DesktopCaptureApi extends CaptureApi {
   openEditor(projectId: string): Promise<boolean>;
   getEditorContext(): Promise<{ projectId: string } | null>;
   notifyEditorReady(): void;
+  reportEditorLoadingStage(stage: EditorLoadingStage): void;
   startRecordingFromEditor(configuration: RecordingConfiguration): void;
   setEditorTitlebarTheme(dark: boolean): void;
   onEditorContext(listener: (context: { projectId: string }) => void): () => void;
+  onEditorLoadingProgress(listener: (progress: EditorLoadingProgress) => void): () => void;
   onStartRecordingFromEditor(listener: (configuration: RecordingConfiguration) => void): () => void;
   setPosition(x: number, y: number): void;
   setSize(width: number, height: number): void;

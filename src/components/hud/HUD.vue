@@ -23,6 +23,7 @@ import type {
   CaptureProject,
   CaptureSession,
   CaptureSource,
+  EditorLoadingProgress,
 } from '../../api/types/capture-api';
 import type { ScreenRegion, ScreenRegionOverlayOptions } from '../../api/types/screen-region';
 import Button from '~/ui/button/Button.vue';
@@ -49,6 +50,7 @@ import {
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
+import EditorPreparingHud from './EditorPreparingHud.vue';
 
 const { t } = useTranslate('HUD');
 
@@ -62,9 +64,13 @@ let savedDevices: SavedDevices | null = null;
 const props = withDefaults(
   defineProps<{
     embedded?: boolean;
+    preparingEditor?: boolean;
+    editorLoadingProgress?: EditorLoadingProgress;
   }>(),
   {
     embedded: false,
+    preparingEditor: false,
+    editorLoadingProgress: () => ({ stage: 'openingWindow', value: 10 }),
   },
 );
 
@@ -296,7 +302,9 @@ const updateWindowSize = () => {
   const isDropdownOpen = activeDropdowns.value > 0;
   let targetHeight = 480;
   const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0;
-  if (showSettings.value) {
+  if (props.preparingEditor) {
+    targetHeight = 480;
+  } else if (showSettings.value) {
     targetHeight = 520;
   } else if (showProjectPicker.value) {
     targetHeight = 520;
@@ -325,7 +333,9 @@ const updateWindowSize = () => {
       const currentDropdownOpen = activeDropdowns.value > 0;
       let currentTargetHeight = 480;
       const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0;
-      if (showSettings.value) {
+      if (props.preparingEditor) {
+        currentTargetHeight = 480;
+      } else if (showSettings.value) {
         currentTargetHeight = 520;
       } else if (showProjectPicker.value) {
         currentTargetHeight = 520;
@@ -354,6 +364,7 @@ const updateWindowSize = () => {
 };
 
 const hudHeight = computed(() => {
+  if (props.preparingEditor) return 480;
   const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0;
   if (showSettings.value || showProjectPicker.value) {
     return 520 + errorHeight;
@@ -381,6 +392,11 @@ watch(activeTab, () => {
   updateWindowSize();
   void loadPreviews();
 });
+
+watch(
+  () => props.preparingEditor,
+  () => updateWindowSize(),
+);
 
 watch(selectedScreenId, () => {
   selectedScreenRegion.value = null;
@@ -853,9 +869,17 @@ const openProject = (project: CaptureProject) => {
   >
     <TopbarHUD
       v-if="!embedded"
-      :title="showProjectPicker ? t('openProject') : showSettings ? t('preferences') : t('title')"
-      :show-back="showProjectPicker || showSettings"
-      :show-settings="!showSettings && !showProjectPicker"
+      :title="
+        preparingEditor
+          ? t('preparingEditor')
+          : showProjectPicker
+            ? t('openProject')
+            : showSettings
+              ? t('preferences')
+              : t('title')
+      "
+      :show-back="!preparingEditor && (showProjectPicker || showSettings)"
+      :show-settings="!preparingEditor && !showSettings && !showProjectPicker"
       :is-recording="isRecording"
       @back="handleTopbarBack"
       @minimize="minimizeApp"
@@ -864,9 +888,11 @@ const openProject = (project: CaptureProject) => {
     />
 
     <Transition name="hud-view" mode="out-in">
+      <EditorPreparingHud v-if="preparingEditor" key="editor-preparing" :progress="editorLoadingProgress" />
+
       <!-- Project Picker View -->
       <ProjectPicker
-        v-if="showProjectPicker"
+        v-else-if="showProjectPicker"
         key="project-picker"
         @back="closeProjectPicker"
         @open-project="openProject"

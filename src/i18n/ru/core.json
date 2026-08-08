@@ -243,7 +243,18 @@
     "openTeleprompter": "Открыть телесуфлёр",
     "closeTeleprompter": "Скрыть телесуфлёр",
     "openHud": "Открыть HUD",
-    "quit": "Выйти из Beam"
+    "quit": "Выйти из Beam",
+    "preparingEditor": "Открытие редактора"
+  },
+  "EditorPreparingHud": {
+    "title": "Подготовка редактора",
+    "openingWindow": "Создание окна редактора…",
+    "loadingEditor": "Загрузка интерфейса редактора…",
+    "loadingProject": "Открытие проекта…",
+    "loadingTimeline": "Загрузка временной шкалы…",
+    "renderingEditor": "Отрисовка редактора…",
+    "ready": "Редактор готов",
+    "progressLabel": "Ход загрузки редактора"
   },
   "HudPreferences": {
     "preferences": "Настройки",

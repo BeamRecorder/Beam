@@ -16,6 +16,7 @@ function fakeWindow(calls) {
   };
   return {
     webContents,
+    emitContent: (event) => contentListeners.get(event)?.(),
     on: (event, listener) => listeners.set(event, listener),
     isDestroyed: () => destroyed,
     isMaximized: () => maximized,
@@ -112,6 +113,14 @@ test('editor window is opaque and routes native editor lifecycle without changin
     );
 
     const editor = windows[0];
+    assert.deepEqual(
+      calls.find((call) => call[0] === 'hud-send' && call[1] === 'editor:loading-progress'),
+      ['hud-send', 'editor:loading-progress', { stage: 'openingWindow', value: 10 }],
+    );
+    editor.emitContent('did-finish-load');
+    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingEditor', value: 25 }]);
+    ipcListeners.get('editor:loading-stage')({ sender: editor.webContents }, 'loadingTimeline');
+    assert.deepEqual(calls.at(-1), ['hud-send', 'editor:loading-progress', { stage: 'loadingTimeline', value: 65 }]);
     assert.deepEqual(ipcHandlers.get('editor:context')({ sender: editor.webContents }), { projectId });
     ipcListeners.get('editor:ready')({ sender: editor.webContents });
     await opening;
@@ -134,7 +143,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     const configuration = { screenKind: 'display', cameraId: 'off' };
     ipcListeners.get('editor:start-recording')({ sender: reopenedEditor.webContents }, configuration);
     assert.deepEqual(
-      calls.find((call) => call[0] === 'hud-send'),
+      calls.find((call) => call[0] === 'hud-send' && call[1] === 'editor:start-recording'),
       ['hud-send', 'editor:start-recording', configuration],
     );
   } finally {

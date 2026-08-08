@@ -174,6 +174,22 @@ describe('HUD', () => {
     expect(capture.close).toHaveBeenCalledOnce();
   });
 
+  it('replaces the HUD body with editor loading progress inside the same card', async () => {
+    const wrapper = mount(HUD, {
+      props: {
+        preparingEditor: true,
+        editorLoadingProgress: { stage: 'loadingTimeline', value: 65 },
+      },
+      global: { stubs },
+    });
+    await ready();
+
+    expect(wrapper.find('.hud-wrapper').exists()).toBe(true);
+    expect(wrapper.find('.hud-body').exists()).toBe(false);
+    expect(wrapper.get('.editor-preparing-hud').text()).toContain('Loading the timeline');
+    expect(wrapper.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('65');
+  });
+
   it('switches to window capture, handles device choices and preference shortcuts', async () => {
     capture.getSources.mockImplementation(async (types: string[]) =>
       types[0] === 'window'
@@ -391,10 +407,11 @@ describe('HUD', () => {
     expect(capture.updatePreferences).toHaveBeenCalledWith({ recordingBar: { visibility: 'auto-fade' } });
     await wrapper.get('[aria-label="Back"]').trigger('click');
     await wrapper.get('.project-btn').trigger('click');
-    await wrapper.get('.project-open').trigger('click');
-    expect(wrapper.emitted('open-project')).toContainEqual([{ id: 'project-1', name: 'Demo', previewSrc: 'demo.mp4' }]);
     await wrapper.get('.project-toggle').trigger('click');
     expect(capture.setSize).toHaveBeenCalled();
+    await wrapper.get('.project-open').trigger('click');
+    expect(wrapper.emitted('open-project')).toContainEqual([{ id: 'project-1', name: 'Demo', previewSrc: 'demo.mp4' }]);
+    await wrapper.get('.project-btn').trigger('click');
     await wrapper.get('.project-back').trigger('click');
     expect(wrapper.find('.project-picker-stub').exists()).toBe(false);
     expect(wrapper.get('[aria-label="Select an area of the screen"]').attributes('disabled')).toBeDefined();

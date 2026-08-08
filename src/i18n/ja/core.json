@@ -243,7 +243,18 @@
     "openTeleprompter": "テレプロンプターを開く",
     "closeTeleprompter": "テレプロンプターを隠す",
     "openHud": "HUDを開く",
-    "quit": "Beamを終了"
+    "quit": "Beamを終了",
+    "preparingEditor": "エディターを開いています"
+  },
+  "EditorPreparingHud": {
+    "title": "エディターを準備しています",
+    "openingWindow": "エディターウィンドウを作成しています…",
+    "loadingEditor": "エディター画面を読み込んでいます…",
+    "loadingProject": "プロジェクトを開いています…",
+    "loadingTimeline": "タイムラインを読み込んでいます…",
+    "renderingEditor": "エディターを描画しています…",
+    "ready": "エディターの準備ができました",
+    "progressLabel": "エディターの読み込み進捗"
   },
   "HudPreferences": {
     "preferences": "環境設定",

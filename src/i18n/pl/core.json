@@ -243,7 +243,18 @@
     "openTeleprompter": "Otwórz teleprompter",
     "closeTeleprompter": "Ukryj teleprompter",
     "openHud": "Otwórz HUD",
-    "quit": "Zakończ Beam"
+    "quit": "Zakończ Beam",
+    "preparingEditor": "Otwieranie edytora"
+  },
+  "EditorPreparingHud": {
+    "title": "Przygotowywanie edytora",
+    "openingWindow": "Tworzenie okna edytora…",
+    "loadingEditor": "Ładowanie interfejsu edytora…",
+    "loadingProject": "Otwieranie projektu…",
+    "loadingTimeline": "Ładowanie osi czasu…",
+    "renderingEditor": "Renderowanie edytora…",
+    "ready": "Edytor gotowy",
+    "progressLabel": "Postęp ładowania edytora"
   },
   "HudPreferences": {
     "preferences": "Preferencje",

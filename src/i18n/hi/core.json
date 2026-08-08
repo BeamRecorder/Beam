@@ -243,7 +243,18 @@
     "openTeleprompter": "टेलीप्रॉम्प्टर खोलें",
     "closeTeleprompter": "टेलीप्रॉम्प्टर छिपाएँ",
     "openHud": "HUD खोलें",
-    "quit": "Beam बंद करें"
+    "quit": "Beam बंद करें",
+    "preparingEditor": "एडिटर खोला जा रहा है"
+  },
+  "EditorPreparingHud": {
+    "title": "एडिटर तैयार हो रहा है",
+    "openingWindow": "एडिटर विंडो बनाई जा रही है…",
+    "loadingEditor": "एडिटर इंटरफ़ेस लोड हो रहा है…",
+    "loadingProject": "आपका प्रोजेक्ट खोला जा रहा है…",
+    "loadingTimeline": "टाइमलाइन लोड हो रही है…",
+    "renderingEditor": "एडिटर रेंडर हो रहा है…",
+    "ready": "एडिटर तैयार है",
+    "progressLabel": "एडिटर लोडिंग प्रगति"
   },
   "HudPreferences": {
     "preferences": "प्राथमिकताएँ",
