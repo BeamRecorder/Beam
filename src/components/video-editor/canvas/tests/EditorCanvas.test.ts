@@ -104,7 +104,9 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
       state.transformDraft = ref(null);
       return {
         transformHandleStyle: ref({ left: '1px', top: '2px', width: '100px', height: '80px' }),
+        cropContainerStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
         cropOverlayStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
+        activeGuideLines: ref([]),
         transformDraft: state.transformDraft,
         beginTransformDrag: state.beginTransformDrag,
         moveTransformDrag: state.moveTransformDrag,
