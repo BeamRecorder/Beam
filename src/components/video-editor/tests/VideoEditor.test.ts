@@ -181,6 +181,7 @@ vi.mock('../composables/useEditorUndoRedo', async () => {
   return {
     useEditorUndoRedo: vi.fn(() => ({
       recordSnapshot: vi.fn(),
+      commitNow: vi.fn(),
       undo: vi.fn(),
       redo: vi.fn(),
       canUndo: ref(false),
@@ -197,6 +198,27 @@ vi.mock('../../export/useExportJob', async () => {
       exportState.isExporting = ref(false);
       exportState.progress = ref(null);
       return { isExporting: exportState.isExporting, progress: exportState.progress, start: vi.fn() };
+    }),
+  };
+});
+
+vi.mock('../EditorAmbientBackground.vue', async () => {
+  const { defineComponent, h } = await import('vue');
+  return {
+    default: defineComponent({
+      name: 'MockEditorAmbientBackground',
+      props: { background: { default: null } },
+      setup(props) {
+        return () => {
+          const background = props.background as { kind?: string; id?: string; path?: string } | null;
+          return h('div', {
+            class: 'mock-editor-ambient',
+            'data-background-kind': background?.kind ?? 'none',
+            'data-background-id': background?.id ?? '',
+            'data-background-path': background?.path ?? '',
+          });
+        };
+      },
     }),
   };
 });
@@ -298,6 +320,7 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockEditorCanvas',
+      props: { isGridVisible: { type: Boolean, default: false } },
       emits: [
         'update:zoom',
         'preview:zoom',
@@ -312,9 +335,19 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
         'update:is-playing',
         'update:current-time',
       ],
-      setup(_, { emit }) {
+      setup(props, { emit, expose }) {
+        expose({
+          viewportZoom: {
+            zoomPercent: { value: 100 },
+            isZoomedOrPanned: { value: false },
+            zoomIn: vi.fn(),
+            zoomOut: vi.fn(),
+            resetZoom: vi.fn(),
+          },
+        });
         return () =>
           h('div', { class: 'mock-canvas' }, [
+            props.isGridVisible ? h('div', { class: 'canvas-3x3-grid' }) : null,
             h('button', { class: 'select-audio', onClick: () => emit('select:clip', 'audio') }),
             h('button', { class: 'select-canvas', onClick: () => emit('select:canvas') }),
             h('button', {
@@ -352,12 +385,13 @@ vi.mock('../canvas/CanvasToolbar.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockCanvasToolbar',
-      emits: ['select:preset', 'toggle:crop'],
+      emits: ['select:preset', 'toggle:crop', 'toggle:grid'],
       setup(_, { emit }) {
         return () =>
           h('div', [
             h('button', { class: 'preset', onClick: () => emit('select:preset', '1:1') }),
             h('button', { class: 'toggle-crop', onClick: () => emit('toggle:crop') }),
+            h('button', { class: 'toggle-grid', onClick: () => emit('toggle:grid') }),
           ]);
       },
     }),
@@ -445,6 +479,33 @@ describe('VideoEditor', () => {
     await mounted.find('.open').trigger('click');
     expect(mounted.emitted('back-to-hud')).toHaveLength(1);
     expect(mounted.emitted('open-project')).toHaveLength(1);
+  });
+
+  it('passes selectedBackgroundMedia to the ambient layer independently from the canvas grid', async () => {
+    const mounted = mountEditor();
+    const ambient = mounted.get('.mock-editor-ambient');
+
+    editorState.store.player.selectedBackground.value = { kind: 'color', color: '#ff0000' };
+    await mounted.vm.$nextTick();
+    expect(ambient.attributes('data-background-kind')).toBe('none');
+
+    editorState.store.player.selectedBackgroundMedia.value = {
+      id: 'wallpaper-image',
+      name: 'Wallpaper image',
+      kind: 'image',
+      path: '/wallpapers/image/wallpaper.webp',
+      extension: 'webp',
+    };
+    await mounted.vm.$nextTick();
+
+    expect(ambient.attributes('data-background-kind')).toBe('image');
+    expect(ambient.attributes('data-background-id')).toBe('wallpaper-image');
+    expect(ambient.attributes('data-background-path')).toBe('/wallpapers/image/wallpaper.webp');
+    expect(mounted.find('.canvas-3x3-grid').exists()).toBe(false);
+
+    await mounted.get('.toggle-grid').trigger('click');
+    expect(mounted.find('.canvas-3x3-grid').exists()).toBe(true);
+    expect(mounted.get('.mock-editor-ambient').attributes('data-background-kind')).toBe('image');
   });
 
   it('routes canvas, toolbar, timeline and property events to the editor state', async () => {

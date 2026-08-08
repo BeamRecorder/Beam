@@ -8,6 +8,7 @@ import CanvasToolbar from '~/components/video-editor/canvas/CanvasToolbar.vue';
 import EditorTimeline from '~/components/video-editor/timeline/EditorTimeline.vue';
 import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.vue';
 import Topbar from '~/components/video-editor/Topbar.vue';
+import EditorAmbientBackground from '~/components/video-editor/EditorAmbientBackground.vue';
 import { useVideoEditor } from '~/components/video-editor/composables/useVideoEditor';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
 import { Sparkles } from '@lucide/vue';
@@ -323,6 +324,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="editor-page">
+    <EditorAmbientBackground :background="selectedBackgroundMedia" />
     <Topbar
       :export-request="exportRequest"
       :project="project"
@@ -527,16 +529,18 @@ onBeforeUnmount(() => {
 .editor-page {
   width: 100vw;
   height: 100vh;
+  position: relative;
+  isolation: isolate;
   background-color: var(--color-bg-surface);
-  background-image: var(--editor-page-background-image);
-  background-size:
-    24px 24px,
-    100% 100%;
   display: flex;
   flex-direction: column;
   color: var(--text-primary);
   overflow: hidden;
   transition: background-color 0.3s ease;
+}
+.editor-page > :not(.editor-ambient-background) {
+  position: relative;
+  z-index: 1;
 }
 .editor-workspace {
   flex: 1;

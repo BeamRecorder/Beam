@@ -648,8 +648,10 @@ defineExpose({
   position: absolute;
   z-index: 0;
   border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-sizing: border-box;
   background: var(--color-bg-element);
-  box-shadow: var(--shadow-lg);
+  box-shadow: none;
   pointer-events: none;
 }
 .canvas-island.is-selection-editable,
