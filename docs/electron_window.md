@@ -4,13 +4,13 @@ This application uses transparent, frameless Electron windows as part of the UI.
 
 ## Window modes
 
-The main window is controlled by `electron/window/window-controller.cjs` and has three modes.
+The transparent main window is controlled by `electron/window/window-controller.cjs` and owns the HUD and Recorder modes. The editor uses a separate opaque window created by `electron/window/editor-window.cjs`; this separation is required for native window animations and Windows Snap Layouts.
 
-| Mode | Bounds / behavior | Interaction |
-| --- | --- | --- |
-| `hud` | `352 × 512`: a `320 × 480` HUD card plus 16 px of room on every edge for its border and shadow. It returns to its prior HUD position after Recorder mode. Dragging is bounded by the physical display bounds, not the taskbar-excluded work area. | Transparent pixels pass through; renderer enables mouse handling only over interactive HUD elements. |
-| `recorder` | `72 × 344`, positioned at the right-middle of the active display. It is draggable and remembers a position per display in preferences. | Always on top, fixed size, content protected. Drag starts only on mousedown, never on hover. |
-| `editor` | `1280 × 800` before presentation/maximization. | Normal opaque editor interaction. |
+| Mode       | Bounds / behavior                                                                                                                                                                                                                                 | Interaction                                                                                                                                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hud`      | `352 × 512`: a `320 × 480` HUD card plus 16 px of room on every edge for its border and shadow. It returns to its prior HUD position after Recorder mode. Dragging is bounded by the physical display bounds, not the taskbar-excluded work area. | Transparent pixels pass through; renderer enables mouse handling only over interactive HUD elements.                                                                                                             |
+| `recorder` | `72 × 344`, positioned at the right-middle of the active display. It is draggable and remembers a position per display in preferences.                                                                                                            | Always on top, fixed size, content protected. Drag starts only on mousedown, never on hover.                                                                                                                     |
+| `editor`   | Dedicated opaque window starting at `1280 × 800`, with a native minimum of `960 × 600`.                                                                                                                                                           | `titleBarStyle: hidden` keeps the custom Beam content while Window Controls Overlay supplies the native system buttons. The empty titlebar area uses `app-region: drag`; Beam actions stay in `no-drag` regions. |
 
 Use `window:show-hud` / `capture.showHud()` to return from the editor. Do not reproduce it by separately changing mode, maximize state, size, and position: ordering matters.
 
@@ -30,6 +30,8 @@ Transparent pixels in an Electron window still intercept input unless `setIgnore
 - HUD: `App.vue` detects an interactive element under the pointer and calls `capture.setInteractive`. Do not make the whole transparent HUD window interactive.
 - Camera overlay: starts in pass-through mode. `CameraOverlayApp.vue` enables interaction only for the camera, controls, and open popover.
 - Recorder: drag listeners are installed after mousedown and removed on mouseup. Never invoke `drag()` directly from `mousemove` in the template; it makes the bar flee the pointer.
+- Editor: use the native draggable titlebar region. Do not reintroduce renderer mousemove/IPC window dragging; it bypasses native edge snapping and window transitions.
+- Editor: keep `transparent: false`, `thickFrame: true`, and the native Window Controls Overlay. An HTML maximize button does not expose Windows 11 Snap Layouts.
 - Countdown: uses its own non-focusable, click-through window. It must never steal focus from the recording target.
 
 ## Popovers in transparent windows

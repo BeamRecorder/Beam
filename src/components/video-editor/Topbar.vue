@@ -3,7 +3,7 @@ import { capture } from '../../api/capture';
 import VideoProjectEdition from './VideoProjectEdition.vue';
 import ExportPopover from '../export/ExportPopover.vue';
 import Button from '~/ui/button/Button.vue';
-import { ArrowLeft, Minus, X, Undo2, Redo2 } from '@lucide/vue';
+import { ArrowLeft, Redo2, Undo2 } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
@@ -39,73 +39,20 @@ const handleExit = () => {
   emit('back-to-hud');
 };
 
-const minimizeApp = () => {
-  document.body.classList.add('app-minimizing');
-  setTimeout(() => {
-    capture.minimize();
-    document.body.classList.remove('app-minimizing');
-  }, 160);
-};
-
-const closeApp = () => {
-  capture.close();
-};
-
 const openDiscordInvite = () => {
   void capture.openDiscordInvite();
-};
-
-const onMouseDown = (mouseDownEvent: MouseEvent) => {
-  if (mouseDownEvent.button !== 0) return;
-
-  const target = mouseDownEvent.target as HTMLElement;
-  if (
-    target.closest('.left-actions') ||
-    target.closest('.center-actions') ||
-    target.closest('.right-actions') ||
-    target.closest('.project-switcher') ||
-    target.closest('button') ||
-    target.closest('a')
-  ) {
-    return;
-  }
-
-  const startX = mouseDownEvent.screenX;
-  const startY = mouseDownEvent.screenY;
-  let isDragging = false;
-
-  const handleMouseMove = (mouseMoveEvent: MouseEvent) => {
-    if (!isDragging) {
-      const deltaX = mouseMoveEvent.screenX - startX;
-      const deltaY = mouseMoveEvent.screenY - startY;
-      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
-        isDragging = true;
-        capture.dragStart();
-      }
-    }
-
-    if (isDragging) capture.drag();
-  };
-
-  const handleMouseUp = () => {
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-  };
-
-  window.addEventListener('mousemove', handleMouseMove);
-  window.addEventListener('mouseup', handleMouseUp);
 };
 </script>
 
 <template>
-  <header class="editor-titlebar" @mousedown="onMouseDown" @dblclick="capture.toggleMaximize()">
-    <div class="left-actions" @dblclick.stop>
+  <header class="editor-titlebar">
+    <div class="left-actions">
       <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="brand-logo" alt="Beam" />
       <Button variant="ghost" size="sm" :icon="ArrowLeft" @click.stop="handleExit" class="exit-btn titlebar-btn">
         {{ t('exitToHUD') }}
       </Button>
       <VideoProjectEdition :project="project" :is-saving="isSaving" @open-project="emit('open-project', $event)" />
-      <div class="history-actions" @dblclick.stop>
+      <div class="history-actions">
         <Button
           variant="ghost"
           size="xs"
@@ -127,7 +74,9 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
       </div>
     </div>
 
-    <div class="right-actions" @dblclick.stop>
+    <div class="titlebar-drag-region" aria-hidden="true" />
+
+    <div class="right-actions">
       <div class="discord-action">
         <Button
           variant="ghost"
@@ -144,14 +93,6 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
         </Button>
       </div>
       <ExportPopover v-if="exportRequest" :request="exportRequest" />
-      <div class="window-controls">
-        <button type="button" :aria-label="t('minimize')" class="control-btn" @click.stop="minimizeApp">
-          <Minus class="btn-icon" />
-        </button>
-        <button type="button" :aria-label="t('close')" class="control-btn close-btn" @click.stop="closeApp">
-          <X class="btn-icon" />
-        </button>
-      </div>
     </div>
   </header>
 </template>
@@ -161,12 +102,16 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   height: 40px;
   background: var(--color-bg-element);
   border-bottom: 1px solid var(--color-border);
-  padding: 0;
+  padding-left: env(titlebar-area-x, 0px);
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
   user-select: none;
   flex-shrink: 0;
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 
 .left-actions,
@@ -175,10 +120,20 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   align-items: center;
   gap: 12px;
   height: 100%;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 
 .left-actions {
   gap: 8px;
+}
+
+.titlebar-drag-region {
+  min-width: 32px;
+  height: 100%;
+  flex: 1 1 auto;
+  -webkit-app-region: drag;
+  app-region: drag;
 }
 
 .brand-logo {
@@ -200,13 +155,6 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   margin-right: 4px;
 }
 
-.window-controls {
-  display: flex;
-  height: 100%;
-  align-items: stretch;
-  margin-left: 4px;
-}
-
 .discord-action {
   display: flex;
   align-items: center;
@@ -226,44 +174,5 @@ const onMouseDown = (mouseDownEvent: MouseEvent) => {
   height: 22px;
   object-fit: contain;
   transform: translateY(1px);
-}
-
-.control-btn {
-  appearance: none;
-  width: 46px;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  outline: none;
-  background: transparent;
-  color: var(--text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: default;
-  transition:
-    background-color var(--fast) ease,
-    color var(--fast) ease;
-}
-
-.control-btn:hover {
-  background: var(--color-bg-surface-hover);
-  color: var(--text-primary);
-}
-
-.control-btn:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
-}
-
-.close-btn:hover {
-  background: #c42b1c;
-  color: #fff;
-}
-
-.btn-icon {
-  width: 14px;
-  height: 14px;
-  pointer-events: none;
 }
 </style>

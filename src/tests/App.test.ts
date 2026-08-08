@@ -1,4 +1,5 @@
 import { nextTick } from 'vue';
+import { createPinia } from 'pinia';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App.vue';
@@ -11,14 +12,17 @@ const mocks = vi.hoisted(() => ({
     resetCameraOverlayPlacement: vi.fn(),
     setWindowMode: vi.fn(),
     setSize: vi.fn(),
+    setWindowVisible: vi.fn(),
     showHud: vi.fn(),
-    present: vi.fn(),
+    hideTeleprompter: vi.fn(),
+    openEditor: vi.fn(),
+    onStartRecordingFromEditor: vi.fn(),
     listProjects: vi.fn(),
-    getProjectEditorData: vi.fn(),
   },
   controller: {
     recording: undefined as any,
     onComplete: undefined as ((session: { videoSrc?: string | null }) => void) | undefined,
+    startFromEditor: undefined as ((configuration: any) => void) | undefined,
   },
 }));
 
@@ -102,25 +106,6 @@ vi.mock('../components/hud/recorder/RecorderBar.vue', async () => {
     }),
   };
 });
-vi.mock('../components/video-editor/VideoEditor.vue', async () => {
-  const { defineComponent, h, onMounted } = await import('vue');
-  const component = defineComponent({
-    name: 'MockVideoEditor',
-    emits: ['ready', 'back-to-hud', 'open-project'],
-    setup(_, { emit }) {
-      onMounted(() => emit('ready'));
-      return () =>
-        h('div', { class: 'mock-editor' }, [
-          h('button', { class: 'back', onClick: () => emit('back-to-hud') }),
-          h('button', {
-            class: 'open-other',
-            onClick: () => emit('open-project', { id: 'other', name: 'Other', previewSrc: 'other.mp4' }),
-          }),
-        ]);
-    },
-  });
-  return { __esModule: true, __isTeleport: false, default: Object.assign(component, { __isTeleport: false }) };
-});
 vi.mock('../components/hud/camera/CameraOverlayApp.vue', async () => ({
   default: (await import('vue')).defineComponent({ template: '<div />' }),
 }));
@@ -132,7 +117,6 @@ vi.mock('../components/ui/toast/ToastProvider.vue', async () => ({
 }));
 
 const project = { id: 'project-1', name: 'Project', previewSrc: 'project.mp4' };
-const editorData = { composition: {}, zoom: {}, presentation: {} };
 
 let wrapper!: VueWrapper;
 
@@ -141,9 +125,14 @@ beforeEach(() => {
   Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => document.body) });
   mocks.capture.getPreferences.mockResolvedValue({ recordingBar: { visibility: 'auto-fade' } });
   mocks.capture.listProjects.mockResolvedValue([project]);
-  mocks.capture.getProjectEditorData.mockResolvedValue(editorData);
+  mocks.capture.openEditor.mockResolvedValue(true);
+  mocks.capture.onStartRecordingFromEditor.mockImplementation((listener) => {
+    mocks.controller.startFromEditor = listener;
+    return vi.fn();
+  });
   wrapper = mount(App, {
     global: {
+      plugins: [createPinia()],
       stubs: { Transition: false },
     },
   });
@@ -206,40 +195,51 @@ describe('App', () => {
 
   it('opens projects, displays loading errors, and dismisses them', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    mocks.capture.getProjectEditorData.mockRejectedValueOnce(new Error('project is unreadable'));
+    mocks.capture.openEditor.mockRejectedValueOnce(new Error('project is unreadable'));
     await wrapper.get('.open').trigger('click');
     await settle();
     expect(wrapper.get('[role="alert"]').text()).toContain('project is unreadable');
     await wrapper.get('[role="alert"] button').trigger('click');
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
 
-    mocks.capture.getProjectEditorData.mockResolvedValueOnce(editorData);
+    mocks.capture.openEditor.mockResolvedValueOnce(true);
     await wrapper.get('.open').trigger('click');
     await settle();
-    expect(wrapper.find('.mock-editor').exists()).toBe(true);
-    expect(mocks.capture.present).toHaveBeenCalled();
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1');
+    expect(wrapper.find('.mock-hud').exists()).toBe(true);
     expect(errorSpy).toHaveBeenCalled();
   });
 
-  it('handles completed recordings, missing projects, and editor back navigation', async () => {
+  it('opens the dedicated editor after completed recordings and reports missing projects', async () => {
     mocks.capture.listProjects.mockResolvedValueOnce([project]);
-    mocks.capture.getProjectEditorData.mockResolvedValueOnce(editorData);
     mocks.controller.onComplete?.({ videoSrc: 'project.mp4' });
     await settle();
-    expect(wrapper.find('.mock-editor').exists()).toBe(true);
+    expect(mocks.capture.openEditor).toHaveBeenCalledWith('project-1');
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(false);
-
-    vi.useFakeTimers();
-    await wrapper.get('.back').trigger('click');
-    vi.advanceTimersByTime(180);
-    await settle();
-    expect(mocks.capture.showHud).toHaveBeenCalled();
-    expect(wrapper.find('.mock-hud').exists()).toBe(true);
 
     mocks.capture.listProjects.mockResolvedValueOnce([]);
     mocks.controller.onComplete?.({ videoSrc: 'missing.mp4' });
     await settle();
-    expect(wrapper.find('.mock-editor').exists()).toBe(true);
+    expect(wrapper.get('[role="alert"]').text()).toContain('No recorded project was found');
+  });
+
+  it('moves the HUD window into recorder mode for recordings requested by the editor', async () => {
+    const configuration = {
+      screenKind: 'display',
+      cameraId: 'off',
+      microphoneId: 'no-audio',
+      systemAudio: false,
+      targetFps: 30,
+      countdownSeconds: 0,
+      recordingBarVisibility: 'always',
+    };
+
+    mocks.controller.startFromEditor?.(configuration);
+    await settle();
+
+    expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
+    expect(mocks.capture.setWindowVisible).toHaveBeenCalledWith(true);
+    expect(mocks.controller.recording.start).toHaveBeenCalledWith(configuration);
   });
 
   it('returns immediately after an idle start and ignores mouse events outside the HUD', async () => {

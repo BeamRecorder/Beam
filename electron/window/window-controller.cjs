@@ -92,7 +92,7 @@ class WindowController {
   }
 
   setMode(mode, { restoreMaximized = true } = {}) {
-    if (!['hud', 'recorder', 'editor'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`);
+    if (!['hud', 'recorder'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`);
     if (this.mode === 'hud' && mode === 'recorder') this.hudPosition = this.window.getPosition();
     if (mode !== 'recorder') {
       this.clearRecorderTooltipRelayout();
@@ -104,6 +104,7 @@ class WindowController {
       this.stopRecorderPointerTracking();
     }
     this.mode = mode;
+    this.applySizeConstraints();
     if (mode === 'hud') this.hudOverInteractive = false;
     if (mode === 'recorder') {
       this.clearRecorderTooltipRelayout();
@@ -192,16 +193,6 @@ class WindowController {
       this.recorderTooltipRelayoutTimer = null;
       if (this.recorderTooltipVisible) this.setRecorderTooltip(true);
     }, 150);
-  }
-
-  dragGeometry(_size) {
-    if (this.mode !== 'recorder' || !this.recorderTooltipSide || !this.recorderTooltipWidth) {
-      return { width: RECORDER_SIZE.width, leftOffset: 0 };
-    }
-    return {
-      width: RECORDER_SIZE.width,
-      leftOffset: this.recorderTooltipSide === 'left' ? this.recorderTooltipWidth - RECORDER_SIZE.width : 0,
-    };
   }
 
   calculateRecorderTooltipLayout() {
@@ -350,18 +341,9 @@ class WindowController {
     this.recorderOverInteractive = false;
   }
 
-  maximize() {
-    if (this.mode === 'editor' && !this.window.isMaximized()) this.window.maximize();
-  }
-
-  restore() {
-    if (this.window.isMaximized()) this.window.unmaximize();
-  }
-
-  toggleMaximize() {
-    if (this.mode !== 'editor') return;
-    if (this.window.isMaximized()) this.window.unmaximize();
-    else this.window.maximize();
+  applySizeConstraints() {
+    const minimumSize = this.mode === 'recorder' ? RECORDER_SIZE : HUD_SIZE;
+    this.window.setMinimumSize?.(minimumSize.width, minimumSize.height);
   }
 
   setOverlayAlwaysOnTop(value) {
@@ -374,23 +356,14 @@ class WindowController {
     this.window.setAlwaysOnTop(value);
   }
 
-  present() {
-    if (this.window.isDestroyed()) return;
-    if (this.window.isMinimized()) this.window.restore();
-    if (this.mode === 'editor' && !this.window.isMaximized()) this.window.maximize();
-    this.window.show();
-    this.window.moveTop();
-    this.window.focus();
-    this.applyInteractionPolicy();
-  }
-
   applyModePolicy({ restoreMaximized = true } = {}) {
     if (this.window.isDestroyed()) return;
     const isHud = this.mode === 'hud';
     const isRecorder = this.mode === 'recorder';
+    this.applySizeConstraints();
     this.setOverlayAlwaysOnTop((isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized());
-    this.window.setResizable(!isHud && !isRecorder);
-    this.window.setMaximizable(!isHud && !isRecorder);
+    this.window.setResizable(false);
+    this.window.setMaximizable(false);
     this.window.setContentProtection(isRecorder);
     if (restoreMaximized && (isHud || isRecorder) && this.window.isMaximized()) this.window.unmaximize();
     this.applyInteractionPolicy();
@@ -447,12 +420,9 @@ class WindowController {
         this.recorderOverInteractive ? false : true,
         this.recorderOverInteractive ? undefined : { forward: true },
       );
-    } else {
-      // Editor: full opaque window, capture everything.
-      this.window.setIgnoreMouseEvents(false);
     }
     this.interactive = true;
-    this.setOverlayAlwaysOnTop(this.mode === 'hud' || this.mode === 'recorder');
+    this.setOverlayAlwaysOnTop(true);
   }
 
   showHud() {
@@ -462,7 +432,6 @@ class WindowController {
       this.window.setResizable?.(false);
       this.window.setMaximizable?.(false);
       this.window.setMinimumSize?.(HUD_SIZE.width, HUD_SIZE.height);
-      this.window.setMaximumSize?.(HUD_SIZE.width, HUD_SIZE.height);
       this.window.setSize?.(HUD_SIZE.width, HUD_SIZE.height);
       if (this.hudPosition && Array.isArray(this.hudPosition)) {
         const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] });

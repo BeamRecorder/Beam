@@ -40,10 +40,21 @@ contextBridge.exposeInMainWorld(
     updateTrayMenu: (labels) => ipcRenderer.send('tray:update-menu', labels),
     setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
     showHud: () => ipcRenderer.send('window:show-hud'),
-    present: () => ipcRenderer.send('window:present'),
-    maximize: () => ipcRenderer.send('window:maximize'),
-    unmaximize: () => ipcRenderer.send('window:unmaximize'),
-    toggleMaximize: () => ipcRenderer.send('window:toggleMaximize'),
+    openEditor: (projectId) => ipcRenderer.invoke('editor:open', projectId),
+    getEditorContext: () => ipcRenderer.invoke('editor:context'),
+    notifyEditorReady: () => ipcRenderer.send('editor:ready'),
+    startRecordingFromEditor: (configuration) => ipcRenderer.send('editor:start-recording', configuration),
+    setEditorTitlebarTheme: (dark) => ipcRenderer.send('editor:titlebar-theme', Boolean(dark)),
+    onEditorContext: (listener) => {
+      const callback = (_event, context) => listener(context);
+      ipcRenderer.on('editor:context', callback);
+      return () => ipcRenderer.removeListener('editor:context', callback);
+    },
+    onStartRecordingFromEditor: (listener) => {
+      const callback = (_event, configuration) => listener(configuration);
+      ipcRenderer.on('editor:start-recording', callback);
+      return () => ipcRenderer.removeListener('editor:start-recording', callback);
+    },
     setPosition: (x, y) => ipcRenderer.send('window:setPosition', x, y),
     setSize: (width, height) => ipcRenderer.send('window:setSize', width, height),
     setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),
@@ -52,9 +63,6 @@ contextBridge.exposeInMainWorld(
     beginRecorderDrag: () => ipcRenderer.sendSync('window:recorder-drag-start'),
     getRecorderTooltipSide: () => ipcRenderer.invoke('window:get-recorder-tooltip-side'),
     setRecorderTooltip: (visible) => ipcRenderer.invoke('window:set-recorder-tooltip', Boolean(visible)),
-    dragStart: () => ipcRenderer.send('window:dragStart'),
-    drag: () => ipcRenderer.send('window:drag'),
-    dragEnd: () => ipcRenderer.invoke('window:dragEnd'),
     onRecorderTooltipSide: (listener) => {
       const callback = (_event, side) => listener(side);
       ipcRenderer.on('window:recorder-tooltip-side', callback);

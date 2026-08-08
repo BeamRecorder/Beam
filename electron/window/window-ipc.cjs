@@ -1,20 +1,7 @@
-const { BrowserWindow, screen } = require('electron');
+const { BrowserWindow } = require('electron');
 
 function windowForEvent(event) {
   return BrowserWindow.fromWebContents(event.sender);
-}
-
-function clampToDisplayBounds(x, y, width, height, point, geometry = { width, leftOffset: 0 }) {
-  // Use physical display bounds instead of workArea so the Windows taskbar
-  // does not become an artificial wall while dragging.
-  const displayBounds = screen.getDisplayNearestPoint(point).bounds;
-  const minX = displayBounds.x - geometry.leftOffset;
-  const maxX = displayBounds.x + Math.max(0, displayBounds.width - geometry.width) - geometry.leftOffset;
-  const maxY = displayBounds.y + Math.max(0, displayBounds.height - height);
-  return {
-    x: Math.min(Math.max(Math.round(x), minX), Math.max(minX, maxX)),
-    y: Math.min(Math.max(Math.round(y), displayBounds.y), maxY),
-  };
 }
 
 function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {}) {
@@ -24,43 +11,6 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
     else console.log(`[electron window] ${message}`, details);
   };
   let resizeTimer = null;
-  let dragStartMouse = null;
-  let dragStartWindow = null;
-  let dragStartSize = null;
-  let dragStartGeometry = null;
-  let dragTimer = null;
-
-  const clearDragState = () => {
-    if (dragTimer) clearInterval(dragTimer);
-    dragTimer = null;
-    dragStartMouse = null;
-    dragStartWindow = null;
-    dragStartSize = null;
-    dragStartGeometry = null;
-  };
-
-  const updateDragPosition = (win) => {
-    if (!win || win.isDestroyed()) {
-      clearDragState();
-      return;
-    }
-    if (!dragStartMouse || !dragStartWindow || !dragStartSize) return;
-    const point = screen.getCursorScreenPoint();
-    const geometry = dragStartGeometry || { width: dragStartSize[0], leftOffset: 0 };
-    const position = clampToDisplayBounds(
-      dragStartWindow[0] + point.x - dragStartMouse.x,
-      dragStartWindow[1] + point.y - dragStartMouse.y,
-      dragStartSize[0],
-      dragStartSize[1],
-      point,
-      geometry,
-    );
-    // Dragging must only move the native window. Reapplying full bounds on
-    // every pointer update can make Chromium/Electron recalculate the size
-    // of transparent HUD windows, especially across DPI/display boundaries.
-    win.setPosition(position.x, position.y);
-    controllerForWindow(win)?.rememberRecorderPosition();
-  };
 
   ipcMain.on('window:close', (event) => windowForEvent(event)?.close());
   ipcMain.on('window:minimize', (event) => windowForEvent(event)?.minimize());
@@ -75,14 +25,7 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
   });
   ipcMain.on('window:set-mode', (event, mode) => {
     logWindow('set-mode', mode);
-    controllerForWindow(windowForEvent(event))?.setMode(mode);
-  });
-  ipcMain.on('window:maximize', (event) => controllerForWindow(windowForEvent(event))?.maximize());
-  ipcMain.on('window:unmaximize', (event) => controllerForWindow(windowForEvent(event))?.restore());
-  ipcMain.on('window:toggleMaximize', (event) => controllerForWindow(windowForEvent(event))?.toggleMaximize());
-  ipcMain.on('window:present', (event) => {
-    logWindow('present');
-    controllerForWindow(windowForEvent(event))?.present();
+    controllerForWindow(windowForEvent(event))?.setMode?.(mode);
   });
   ipcMain.on('window:show-hud', (event) => controllerForWindow(windowForEvent(event))?.showHud());
   ipcMain.on('window:setPosition', (event, x, y) => {
@@ -142,36 +85,6 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
       resizeTimer = null;
       controllerForWindow(win)?.applyModePolicy();
     }, 16);
-  });
-  ipcMain.on('window:dragStart', (event) => {
-    const win = windowForEvent(event);
-    if (!win) return;
-    const controller = controllerForWindow(win);
-    controller?.setRecorderTooltip(false);
-    clearDragState();
-    dragStartMouse = screen.getCursorScreenPoint();
-    dragStartWindow = win.getPosition();
-    dragStartSize = win.getSize();
-    dragStartGeometry = controller?.dragGeometry?.(dragStartSize) || { width: dragStartSize[0], leftOffset: 0 };
-    console.info('[RecorderTooltip] dragStart', {
-      window: dragStartWindow,
-      size: dragStartSize,
-      geometry: dragStartGeometry,
-    });
-    dragTimer = setInterval(() => updateDragPosition(win), 16);
-  });
-  ipcMain.on('window:drag', (event) => {
-    const win = windowForEvent(event);
-    updateDragPosition(win);
-  });
-  ipcMain.handle('window:dragEnd', (event) => {
-    const win = windowForEvent(event);
-    const controller = controllerForWindow(win);
-    clearDragState();
-    controller?.flushRecorderPosition();
-    const side = controller?.setRecorderTooltip(true) ?? null;
-    console.info('[RecorderTooltip] dragEnd', { side, bounds: win?.getBounds?.() ?? null });
-    return side;
   });
 }
 

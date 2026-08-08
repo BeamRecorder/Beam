@@ -13,6 +13,7 @@ import type {
   TeleprompterDocument,
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
+import type { RecordingConfiguration } from '../../components/hud/recorder/recording-types';
 
 export type * from './capture-config';
 export type * from './screen-region';
@@ -43,12 +44,15 @@ export interface DesktopCaptureApi extends CaptureApi {
   minimize(): void;
   toggleDevTools?(): void;
   updateTrayMenu?(labels: { openHud?: string; quit?: string; tooltip?: string }): void;
-  setWindowMode(mode: 'hud' | 'recorder' | 'editor'): void;
+  setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
-  present(): void;
-  maximize(): void;
-  unmaximize(): void;
-  toggleMaximize(): void;
+  openEditor(projectId: string): Promise<boolean>;
+  getEditorContext(): Promise<{ projectId: string } | null>;
+  notifyEditorReady(): void;
+  startRecordingFromEditor(configuration: RecordingConfiguration): void;
+  setEditorTitlebarTheme(dark: boolean): void;
+  onEditorContext(listener: (context: { projectId: string }) => void): () => void;
+  onStartRecordingFromEditor(listener: (configuration: RecordingConfiguration) => void): () => void;
   setPosition(x: number, y: number): void;
   setSize(width: number, height: number): void;
   setSizeSmooth(width: number, height: number): void;
@@ -59,9 +63,6 @@ export interface DesktopCaptureApi extends CaptureApi {
   setRecorderTooltip(visible: boolean): Promise<'left' | 'right' | null>;
   setCountdown(seconds: number | null): void;
   onCountdown(listener: (seconds: number | null) => void): () => void;
-  dragStart(): void;
-  drag(): void;
-  dragEnd(): Promise<'left' | 'right' | null>;
   onRecorderTooltipSide(listener: (side: 'left' | 'right') => void): () => void;
   getSources(types?: string[]): Promise<CapturePreview[]>;
   selectScreenRegion(options: ScreenRegionOverlayOptions): Promise<ScreenRegion | null>;

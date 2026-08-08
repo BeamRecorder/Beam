@@ -9,6 +9,7 @@ const {
   screen,
   net,
   shell,
+  nativeTheme,
 } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
@@ -21,6 +22,7 @@ const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
+const { createEditorWindowManager } = require('./window/editor-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
 const { createCountdownWindow } = require('./countdown-window.cjs');
@@ -89,7 +91,15 @@ function profileRendererRequests(webContents) {
 }
 
 function isTrustedRenderer(url) {
-  return url === 'http://localhost:6500/' || url.startsWith('http://localhost:6500/?') || url.startsWith('file://');
+  if (url.startsWith('file://')) return true;
+  try {
+    const target = new URL(url);
+    return (
+      target.origin === 'http://localhost:6500' && ['/', '/editor.html', '/teleprompter.html'].includes(target.pathname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function configureMediaPermission() {
@@ -299,17 +309,36 @@ app.whenReady().then(() => {
   ipcMain.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
   ipcMain.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));
   const win = createWindow(preferencesStore);
+  const selectedTheme = preferencesStore.read().theme;
+  const editorWindow = createEditorWindowManager({
+    applicationRoot,
+    isPackaged: app.isPackaged,
+    ipcMain,
+    hudWindow: win,
+    hudController: controllers.get(win),
+    registerController: (target, controller) => controllers.set(target, controller),
+    initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
+    cleanupWindow: (contents) => {
+      exportIpc.cleanupWindow(contents);
+      cameraStorage.cleanupOwner(contents.id);
+      microphoneStorage.cleanupOwner(contents.id);
+      systemAudioStorage.cleanupOwner(contents.id);
+    },
+  });
   const trayManager = createTrayManager({
     applicationRoot,
     getWindow: () => win,
     getController: () => win && controllers.get(win),
+    onShowHud: () => editorWindow.showHud(),
   });
   trayManager.init();
   win.on('closed', () => {
+    editorWindow.destroy();
     trayManager.destroy();
     teleprompterWindow.destroy();
   });
   app.once('will-quit', () => {
+    editorWindow.destroy();
     trayManager.destroy();
     teleprompterWindow.destroy();
   });

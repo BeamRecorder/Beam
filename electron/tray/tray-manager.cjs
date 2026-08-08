@@ -1,7 +1,7 @@
 const { Tray, Menu, nativeImage, app, ipcMain } = require('electron');
 const path = require('path');
 
-function createTrayManager({ applicationRoot, getWindow, getController }) {
+function createTrayManager({ applicationRoot, getWindow, getController, onShowHud = null }) {
   let tray = null;
   let labels = {
     openHud: 'Open HUD',
@@ -10,6 +10,7 @@ function createTrayManager({ applicationRoot, getWindow, getController }) {
   };
 
   const showHud = () => {
+    if (onShowHud) return onShowHud();
     const win = getWindow();
     const controller = getController();
     if (!win || win.isDestroyed()) return;

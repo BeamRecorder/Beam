@@ -4,7 +4,7 @@ import VideoEditor from '../VideoEditor.vue';
 import type { ClipComposition } from '../composition/composition-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
-const capture = vi.hoisted(() => ({ setWindowMode: vi.fn(), maximize: vi.fn() }));
+const capture = vi.hoisted(() => ({}));
 const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
@@ -441,8 +441,6 @@ describe('VideoEditor', () => {
   it('initializes editor window state and emits topbar navigation events', async () => {
     const mounted = mountEditor();
     await flushPromises();
-    expect(capture.setWindowMode).toHaveBeenCalledWith('editor');
-    expect(capture.maximize).toHaveBeenCalled();
     await mounted.find('.back').trigger('click');
     await mounted.find('.open').trigger('click');
     expect(mounted.emitted('back-to-hud')).toHaveLength(1);

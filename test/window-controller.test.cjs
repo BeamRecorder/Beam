@@ -11,6 +11,9 @@ function fakeWindow() {
   let bounds = { x: 0, y: 0, width: HUD_SIZE.width, height: HUD_SIZE.height };
   return {
     calls,
+    webContents: {
+      send: (...args) => calls.push(['send', ...args]),
+    },
     on: (event, listener) => listeners.set(event, listener),
     once: (event, listener) =>
       listeners.set(event, () => {
@@ -42,6 +45,8 @@ function fakeWindow() {
     setIgnoreMouseEvents: (value, options) => calls.push(options ? ['mouse', value, options] : ['mouse', value]),
     setResizable: (value) => calls.push(['resizable', value]),
     setMaximizable: (value) => calls.push(['maximizable', value]),
+    setMinimumSize: (width, height) => calls.push(['minimumSize', width, height]),
+    setMaximumSize: (width, height) => calls.push(['maximumSize', width, height]),
     setContentProtection: (value) => calls.push(['contentProtection', value]),
     setSize: (width, height) => {
       bounds = { ...bounds, width, height };
@@ -66,6 +71,7 @@ function fakeWindow() {
     maximize: () => {
       maximized = true;
       calls.push(['maximize']);
+      listeners.get('maximize')?.();
     },
     unmaximize: () => {
       maximized = false;
@@ -90,14 +96,32 @@ test('ready HUD forwards pointer movement over transparent areas and stays on to
   assert.equal(win.calls.at(-1)[1], true);
 });
 
-test('editor mode is never topmost, including after maximize toggles', () => {
+test('recorder constraints are applied before its compact bounds', () => {
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
+  };
+  const screenModule = {
+    getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+    getDisplayNearestPoint: () => display,
+  };
   const win = fakeWindow();
-  const controller = new WindowController(win);
-  controller.markReadyToShow();
-  controller.setMode('editor');
-  controller.maximize();
-  controller.toggleMaximize();
-  assert.equal(win.calls.filter((call) => call[0] === 'top').at(-1)[1], false);
+  const controller = new WindowController(win, { screenModule });
+
+  const transitionStart = win.calls.length;
+  controller.setMode('recorder');
+  const transitionCalls = win.calls.slice(transitionStart);
+
+  const recorderMinimum = transitionCalls.findIndex(
+    (call) => call[0] === 'minimumSize' && call[1] === RECORDER_SIZE.width && call[2] === RECORDER_SIZE.height,
+  );
+  const recorderBounds = transitionCalls.findIndex(
+    (call) => call[0] === 'bounds' && call[1].width === RECORDER_SIZE.width,
+  );
+  assert.ok(recorderMinimum >= 0);
+  assert.ok(recorderMinimum < recorderBounds);
+  controller.setMode('hud');
 });
 
 test('minimized HUD stops intercepting clicks and loses topmost status', () => {
@@ -108,58 +132,6 @@ test('minimized HUD stops intercepting clicks and loses topmost status', () => {
   win.emit('minimize');
   assert.deepEqual(win.calls.at(-2), ['mouse', true]);
   assert.deepEqual(win.calls.at(-1), ['top', false]);
-});
-
-test('presenting an editor maximizes and focuses the visible window without making it topmost', () => {
-  const win = fakeWindow();
-  const controller = new WindowController(win);
-  controller.markReadyToShow();
-  controller.setMode('editor');
-  controller.present();
-  assert.ok(win.calls.some((call) => call[0] === 'maximize'));
-  assert.ok(win.calls.some((call) => call[0] === 'moveTop'));
-  assert.ok(win.calls.some((call) => call[0] === 'focus'));
-  assert.equal(win.calls.filter((call) => call[0] === 'top').at(-1)[1], false);
-});
-
-test('presenting a minimized editor restores it before focusing', () => {
-  const win = fakeWindow();
-  const controller = new WindowController(win);
-  controller.markReadyToShow();
-  controller.setMode('editor');
-  win.setMinimized(true);
-  controller.present();
-  assert.ok(win.calls.some((call) => call[0] === 'restore'));
-  assert.ok(win.calls.some((call) => call[0] === 'focus'));
-});
-
-test('presenting a hidden editor shows it before focusing', () => {
-  const win = fakeWindow();
-  const controller = new WindowController(win);
-  controller.setMode('editor');
-  controller.present();
-  assert.ok(win.calls.some((call) => call[0] === 'show'));
-  assert.ok(win.calls.some((call) => call[0] === 'focus'));
-});
-
-test('returning from a maximized editor applies HUD bounds after unmaximizing', async () => {
-  const win = fakeWindow();
-  const controller = new WindowController(win);
-  controller.setMode('editor');
-  controller.maximize();
-  controller.showHud();
-  await new Promise((resolve) => setTimeout(resolve, 25));
-  const unmaximize = win.calls.findIndex((call) => call[0] === 'size');
-  assert.ok(unmaximize >= 0);
-  assert.deepEqual(win.calls[unmaximize], ['size', HUD_SIZE.width, HUD_SIZE.height]);
-});
-
-test('returning from a restored editor applies HUD bounds immediately', () => {
-  const win = fakeWindow();
-  const controller = new WindowController(win);
-  controller.setMode('editor');
-  controller.showHud();
-  assert.deepEqual(win.calls.at(-1), ['size', HUD_SIZE.width, HUD_SIZE.height]);
 });
 
 test('recorder mode passes through clicks outside the compact bar', async () => {
@@ -191,7 +163,7 @@ test('recorder mode passes through clicks outside the compact bar', async () => 
   controller.setMode('hud');
 });
 
-test('recorder tooltips choose the side with room after the bar moves', () => {
+test('recorder tooltips choose the side with room after the bar moves', async () => {
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
@@ -207,12 +179,14 @@ test('recorder tooltips choose the side with room after the bar moves', () => {
   controller.markReadyToShow();
 
   assert.equal(controller.setRecorderTooltip(true), 'left');
+  await new Promise((resolve) => setTimeout(resolve, 20));
   assert.equal(win.getBounds().width, 300);
 
   controller.setRecorderTooltip(false);
   win.setPosition(0, 228);
   controller.rememberRecorderPosition();
   assert.equal(controller.setRecorderTooltip(true), 'right');
+  await new Promise((resolve) => setTimeout(resolve, 20));
   assert.deepEqual(win.getBounds(), { x: 0, y: 228, width: 300, height: 344 });
   controller.setMode('hud');
 });

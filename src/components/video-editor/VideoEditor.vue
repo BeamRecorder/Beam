@@ -10,7 +10,6 @@ import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.
 import Topbar from '~/components/video-editor/Topbar.vue';
 import { useVideoEditor } from '~/components/video-editor/composables/useVideoEditor';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
-import { capture } from '~/api/capture';
 import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
@@ -239,8 +238,6 @@ watch(
 onMounted(() => {
   logEditor('VideoEditor mounted', { projectId: props.project?.id, hasEditorData: Boolean(props.editorData) });
   playerVideoSrc.value = props.videoSrc ?? '';
-  capture.setWindowMode('editor');
-  capture.maximize();
   // requestAnimationFrame is paused while the native window is hidden. A
   // short timer lets the parent reveal it without waiting for a frame that
   // cannot run in a hidden Electron window.
