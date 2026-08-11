@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/brand/BeamIcon.webp" alt="Beam" width="80" height="80" />
+  <img src="./public/brand/BeamIcon.webp" alt="Beam" width="128" height="128" />
   <h1>Beam</h1>
   <p>A Screen Recorder for clear, polished product demo, similar to Recordly or ScreenStudio.</p>
   <p>
