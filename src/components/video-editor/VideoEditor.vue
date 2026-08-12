@@ -540,7 +540,6 @@ onBeforeUnmount(() => {
 }
 .editor-page > :not(.editor-ambient-background) {
   position: relative;
-  z-index: 1;
 }
 .editor-workspace {
   flex: 1;
