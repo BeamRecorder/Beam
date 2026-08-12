@@ -22,13 +22,10 @@ describe('HudPreferences', () => {
     capture.updatePreferences.mockResolvedValue({});
     window.matchMedia ??= () => ({ matches: false, addEventListener: () => undefined }) as unknown as MediaQueryList;
   });
-  it('relays recording preferences and closes', async () => {
+  it('relays recording preferences', async () => {
     const wrapper = mount(HudPreferences, { props: { countdownSeconds: 3 }, global: { stubs: { Select } } });
     await wrapper.findAll('.countdown')[1].trigger('click');
-    const returnToHud = wrapper.findAll('button').find((button) => button.text().includes('Return to HUD'));
-    await returnToHud?.trigger('click');
     expect(wrapper.emitted('update:countdownSeconds')).toContainEqual([10]);
-    expect(wrapper.emitted('close')).toHaveLength(1);
   });
   it('persists user theme selections through the capture preferences API', async () => {
     const wrapper = mount(HudPreferences, { props: { countdownSeconds: 0 }, global: { stubs: { Select } } });

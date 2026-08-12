@@ -282,7 +282,12 @@
     "alwaysVisible": "Always visible",
     "autoFade": "Auto-fade",
     "language": "Language",
-    "chooseLanguage": "Select display language"
+    "chooseLanguage": "Select display language",
+    "about": "About",
+    "aboutDesc": "Version and application info",
+    "view": "View",
+    "version": "Version {version}",
+    "aboutDescriptionText": "Beam is a screen recorder designed for creating clear, polished product demos. Record, style, and export your videos all in one place."
   },
   "ProjectPicker": {
     "projects": "Projects",

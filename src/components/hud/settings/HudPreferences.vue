@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Monitor, Moon, Sun, Keyboard, ArrowLeft } from '@lucide/vue';
+import { computed } from 'vue';
+import { Monitor, Moon, Sun, Keyboard, ArrowLeft, Info } from '@lucide/vue';
 import { useThemeStore } from '~/stores/theme';
 import { useLocaleStore } from '~/stores/locale';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -8,26 +8,38 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
+import About from './About.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
 import { localeOptions } from '~/i18n/locales';
 
 const { t } = useTranslate('HudPreferences');
 
-const props = defineProps<{
-  countdownSeconds: number;
-  recordingBarVisibility?: 'always' | 'auto-fade';
-}>();
+const props = withDefaults(
+  defineProps<{
+    countdownSeconds: number;
+    recordingBarVisibility?: 'always' | 'auto-fade';
+    view?: 'general' | 'shortcuts' | 'about';
+  }>(),
+  {
+    recordingBarVisibility: 'always',
+    view: 'general',
+  }
+);
 
 const emit = defineEmits<{
   (event: 'update:countdownSeconds', value: number): void;
   (event: 'update:recordingBarVisibility', value: 'always' | 'auto-fade'): void;
+  (event: 'update:view', value: 'general' | 'shortcuts' | 'about'): void;
   (event: 'close'): void;
 }>();
 
 const themeStore = useThemeStore();
 const localeStore = useLocaleStore();
-const currentView = ref<'general' | 'shortcuts'>('general');
+const currentView = computed({
+  get: () => props.view,
+  set: (val) => emit('update:view', val),
+});
 
 const countdownOptions = [
   { value: 0, label: t('off') },
@@ -46,21 +58,14 @@ const recordingBarOptions = [
     <Transition name="slide-view" mode="out-in">
       <!-- Sub-page: Edit Shortcuts -->
       <div v-if="currentView === 'shortcuts'" key="shortcuts" class="view-container">
-        <div class="view-header">
-          <Button variant="outline" size="sm" @click="currentView = 'general'">
-            <template #icon><ArrowLeft class="button-icon" /></template>
-            {{ t('back') }}
-          </Button>
-          <span class="view-title">{{ t('keyboardShortcuts') }}</span>
-        </div>
-
         <div class="preferences-list">
           <ShortcutPreferences />
         </div>
+      </div>
 
-        <Button variant="primary" size="md" block @click="currentView = 'general'">
-          {{ t('done') }}
-        </Button>
+      <!-- Sub-page: About -->
+      <div v-else-if="currentView === 'about'" key="about" class="view-container">
+        <About />
       </div>
 
       <!-- Main Preferences View -->
@@ -160,11 +165,18 @@ const recordingBarOptions = [
           </div>
 
           <SocialLinks />
-        </div>
 
-        <Button variant="primary" size="md" block @click="emit('close')">
-          {{ t('returnToHud') }}
-        </Button>
+          <div class="preference-item clickable" @click="currentView = 'about'">
+            <div>
+              <p class="preference-title">{{ t('about') }}</p>
+              <p class="preference-description">{{ t('aboutDesc') }}</p>
+            </div>
+            <Button variant="secondary" size="sm">
+              <template #icon><Info class="button-icon" /></template>
+              {{ t('view') }}
+            </Button>
+          </div>
+        </div>
       </div>
     </Transition>
   </section>
