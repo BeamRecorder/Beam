@@ -282,7 +282,12 @@
     "alwaysVisible": "Toujours visible",
     "autoFade": "Fondu automatique",
     "language": "Langue",
-    "chooseLanguage": "Choisir la langue d'affichage"
+    "chooseLanguage": "Choisir la langue d'affichage",
+    "about": "À propos",
+    "aboutDesc": "Version et informations sur l’application",
+    "view": "Voir",
+    "version": "Version {version}",
+    "aboutDescriptionText": "Beam est un enregistreur d’écran conçu pour créer des démos de produits claires et soignées. Enregistrez, habillez et exportez vos vidéos au même endroit."
   },
   "ProjectPicker": {
     "projects": "Projets",

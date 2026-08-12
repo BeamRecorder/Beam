@@ -54,6 +54,7 @@ import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
 
 const { t } = useTranslate('HUD');
+const { t: tPrefs } = useTranslate('HudPreferences');
 
 interface SavedDevices {
   cameraId?: string;
@@ -90,6 +91,7 @@ const sources = ref<CaptureSource[]>([]);
 
 // View State (Main vs Settings)
 const showSettings = ref(false);
+const settingsView = ref<'general' | 'shortcuts' | 'about'>('general');
 const showProjectPicker = ref(false);
 
 // Preference settings
@@ -447,7 +449,10 @@ watch(selectedScreenId, () => {
 });
 
 // Watch settings view toggle to update window size
-watch(showSettings, () => {
+watch(showSettings, (val) => {
+  if (!val) {
+    settingsView.value = 'general';
+  }
   updateWindowSize();
 });
 
@@ -884,7 +889,13 @@ const handleTopbarBack = () => {
     closeProjectPicker();
     return;
   }
-  showSettings.value = false;
+  if (showSettings.value) {
+    if (settingsView.value !== 'general') {
+      settingsView.value = 'general';
+    } else {
+      showSettings.value = false;
+    }
+  }
 };
 
 const openProject = (project: CaptureProject) => {
@@ -918,7 +929,11 @@ const openProject = (project: CaptureProject) => {
           : showProjectPicker
             ? t('openProject')
             : showSettings
-              ? t('preferences')
+              ? settingsView === 'shortcuts'
+                ? tPrefs('keyboardShortcuts')
+                : settingsView === 'about'
+                  ? tPrefs('about')
+                  : tPrefs('preferences')
               : t('title')
       "
       :show-back="!preparingEditor && (showProjectPicker || showSettings)"
@@ -945,6 +960,7 @@ const openProject = (project: CaptureProject) => {
       <HudPreferences
         v-else-if="showSettings"
         key="settings"
+        v-model:view="settingsView"
         :countdown-seconds="countdownSeconds"
         :recording-bar-visibility="recordingBarVisibility"
         @update:countdown-seconds="countdownSeconds = $event"
