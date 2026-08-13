@@ -24,7 +24,17 @@ describe('preferences background presets', () => {
     expect(normalize({ schemaVersion: 1, theme: 'dark' })).toMatchObject({
       schemaVersion: 2,
       theme: 'dark',
+      alwaysOnTop: true,
       backgroundPresets: { colors: [], gradients: [] },
+    })
+  })
+
+  it('normalizes alwaysOnTop preference setting', () => {
+    expect(normalize({ alwaysOnTop: false })).toMatchObject({
+      alwaysOnTop: false,
+    })
+    expect(normalize({ alwaysOnTop: true })).toMatchObject({
+      alwaysOnTop: true,
     })
   })
 

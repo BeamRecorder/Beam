@@ -287,7 +287,9 @@
     "aboutDesc": "Version et informations sur l’application",
     "view": "Voir",
     "version": "Version {version}",
-    "aboutDescriptionText": "Beam est un enregistreur d’écran conçu pour créer des démos de produits claires et soignées. Enregistrez, habillez et exportez vos vidéos au même endroit."
+    "aboutDescriptionText": "Beam est un enregistreur d’écran conçu pour créer des démos de produits claires et soignées. Enregistrez, habillez et exportez vos vidéos au même endroit.",
+    "alwaysOnTop": "Toujours au premier plan",
+    "alwaysOnTopDesc": "Garder la fenêtre au-dessus des autres"
   },
   "ProjectPicker": {
     "projects": "Projets",

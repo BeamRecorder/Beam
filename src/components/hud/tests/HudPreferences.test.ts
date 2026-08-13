@@ -14,6 +14,7 @@ describe('HudPreferences', () => {
       schemaVersion: 2,
       theme: 'light',
       recordingBar: { visibility: 'always' },
+      alwaysOnTop: true,
       devices: {},
       shortcuts: {},
       backgroundPresets: { colors: [], gradients: [] },
@@ -34,5 +35,11 @@ describe('HudPreferences', () => {
     await buttons[1].trigger('click');
     await buttons[2].trigger('click');
     expect(capture.updatePreferences).toHaveBeenLastCalledWith({ theme: 'system' });
+  });
+  it('relays alwaysOnTop toggle events', async () => {
+    const wrapper = mount(HudPreferences, { props: { countdownSeconds: 3, alwaysOnTop: true }, global: { stubs: { Select } } });
+    const switchEl = wrapper.find('.switch-container');
+    await switchEl.trigger('click');
+    expect(wrapper.emitted('update:alwaysOnTop')).toContainEqual([false]);
   });
 });

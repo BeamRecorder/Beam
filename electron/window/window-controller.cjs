@@ -361,7 +361,8 @@ class WindowController {
     const isHud = this.mode === 'hud';
     const isRecorder = this.mode === 'recorder';
     this.applySizeConstraints();
-    this.setOverlayAlwaysOnTop((isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized());
+    const alwaysOnTop = this.preferencesStore?.read()?.alwaysOnTop ?? true;
+    this.setOverlayAlwaysOnTop(alwaysOnTop && (isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized());
     this.window.setResizable(false);
     this.window.setMaximizable(false);
     this.window.setContentProtection(isRecorder);
@@ -422,7 +423,8 @@ class WindowController {
       );
     }
     this.interactive = true;
-    this.setOverlayAlwaysOnTop(true);
+    const alwaysOnTop = this.preferencesStore?.read()?.alwaysOnTop ?? true;
+    this.setOverlayAlwaysOnTop(alwaysOnTop);
   }
 
   showHud() {

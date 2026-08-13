@@ -216,3 +216,23 @@ test('recorder position persistence stores the compact bar position', () => {
   assert.deepEqual(saved.at(-1).extras.recorderPositions['1'], { x: 908, y: 228 });
   controller.setMode('hud');
 });
+
+test('window controller respects alwaysOnTop preference', () => {
+  let currentAlwaysOnTop = true;
+  const preferencesStore = {
+    read: () => ({ alwaysOnTop: currentAlwaysOnTop }),
+  };
+  const win = fakeWindow();
+  const controller = new WindowController(win, { preferencesStore });
+  
+  // HUD mode when ready, with alwaysOnTop: true
+  controller.markReadyToShow();
+  const alwaysOnTopCallsTrue = win.calls.filter((call) => call[0] === 'top');
+  assert.equal(alwaysOnTopCallsTrue.at(-1)[1], true);
+  
+  // Toggle alwaysOnTop to false, apply policy again
+  currentAlwaysOnTop = false;
+  controller.applyModePolicy();
+  const alwaysOnTopCallsFalse = win.calls.filter((call) => call[0] === 'top');
+  assert.equal(alwaysOnTopCallsFalse.at(-1)[1], false);
+});

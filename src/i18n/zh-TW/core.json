@@ -282,7 +282,9 @@
     "alwaysVisible": "永遠顯示",
     "autoFade": "自動淡出",
     "language": "語言",
-    "chooseLanguage": "選擇顯示語言"
+    "chooseLanguage": "選擇顯示語言",
+    "alwaysOnTop": "Always on top",
+    "alwaysOnTopDesc": "Keep the window hovering above other windows"
   },
   "ProjectPicker": {
     "projects": "專案",
