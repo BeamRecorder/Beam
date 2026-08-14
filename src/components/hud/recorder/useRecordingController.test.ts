@@ -201,6 +201,48 @@ describe('useRecordingController startup', () => {
     expect(controller.phase.value).toBe('idle');
   });
 
+  it('cancels the prepared session when a stale native start rejects', async () => {
+    let rejectStart: (reason: Error) => void = () => undefined;
+    mocks.capture.startPreparedRecording.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectStart = reject;
+      }),
+    );
+    const controller = useRecordingController(vi.fn(), vi.fn());
+    await controller.start({ ...baseConfig, countdownSeconds: 0 });
+    expect(controller.phase.value).toBe('starting');
+
+    await controller.cancel();
+    expect(controller.phase.value).toBe('idle');
+
+    // resetState deferred prepared-session cleanup to the stale-generation path;
+    // a rejecting start must still release the prepared native session.
+    rejectStart(new Error('native start failed'));
+    await vi.waitFor(() => expect(mocks.capture.cancelPreparedRecording).toHaveBeenCalled());
+    expect(mocks.capture.discardRecording).not.toHaveBeenCalled();
+    expect(controller.phase.value).toBe('idle');
+  });
+
+  it('cancels the prepared session when a stale surface preparation rejects', async () => {
+    let rejectSurface: (reason: Error) => void = () => undefined;
+    mocks.capture.prepareRecordingSurface.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectSurface = reject;
+      }),
+    );
+    const controller = useRecordingController(vi.fn(), vi.fn());
+    await controller.start({ ...baseConfig, countdownSeconds: 0 });
+    expect(controller.phase.value).toBe('starting');
+
+    await controller.cancel();
+    expect(controller.phase.value).toBe('idle');
+
+    rejectSurface(new Error('surface preparation failed'));
+    await vi.waitFor(() => expect(mocks.capture.cancelPreparedRecording).toHaveBeenCalled());
+    expect(mocks.capture.startPreparedRecording).not.toHaveBeenCalled();
+    expect(controller.phase.value).toBe('idle');
+  });
+
   it('keeps a new start blocked until deferred stale-session cleanup completes', async () => {
     let resolveStart: (value: { sessionId: string }) => void = () => undefined;
     let resolveDiscard: () => void = () => undefined;

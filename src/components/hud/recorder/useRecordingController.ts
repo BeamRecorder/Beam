@@ -249,13 +249,16 @@ export function useRecordingController(
   const performStartup = async (generation: number) => {
     if (!configuration) return;
     let stage: RecordingStartStage = 'prepare-native';
+    let ownsPreparedSession = false;
     try {
       if (preparedGeneration !== generation || generation !== recordingGeneration) return;
+      ownsPreparedSession = true;
       stage = 'start-native';
       await capture.setCountdown(null);
       recorderHoverOnlyActive.value = configuration.recordingBarVisibility === 'hover-only';
       await capture.prepareRecordingSurface();
       const session = await capture.startPreparedRecording();
+      ownsPreparedSession = false;
       sessionTimelineStartedAt = performance.now();
       if (generation !== recordingGeneration) {
         await cleanupStaleNativeStart(session);
@@ -280,7 +283,14 @@ export function useRecordingController(
       }, 100);
       phase.value = 'recording';
     } catch (reason) {
-      if (generation !== recordingGeneration) return;
+      if (generation !== recordingGeneration) {
+        // resetState cleared preparedGeneration and deferred cleanup here while
+        // pendingNativeStart was set. If this stale start still owns the prepared
+        // session (startPreparedRecording never resolved), release it so the next
+        // session does not overlap the leaked native process.
+        if (ownsPreparedSession) await capture.cancelPreparedRecording().catch(() => undefined);
+        return;
+      }
       await terminateStartup(generation, startupFailure(generation, stage, reason));
     }
   };
