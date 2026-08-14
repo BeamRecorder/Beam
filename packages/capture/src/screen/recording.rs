@@ -12,10 +12,13 @@ use crate::{
     session::StartGate,
 };
 
-use super::ScreenSampleSink;
+use super::{ScreenSampleSink, ScreenSegment, VideoFormat};
 
 pub enum ScreenConsumer {
-    EncodedFile { path: PathBuf },
+    EncodedFile {
+        path: PathBuf,
+        cursor_directory: Option<PathBuf>,
+    },
     Samples(Box<dyn ScreenSampleSink>),
 }
 
@@ -177,14 +180,27 @@ impl ScreenRecording {
         &mut self,
         start_ns: u64,
         start_gate: Arc<StartGate>,
+        segment: Option<ScreenSegment>,
     ) -> Result<(), CaptureError> {
         match &mut self.backend {
             #[cfg(target_os = "linux")]
-            PlatformScreenRecording::Linux(recording) => recording.resume(start_ns, start_gate),
+            PlatformScreenRecording::Linux(recording) => {
+                recording.resume(start_ns, start_gate, segment)
+            }
             #[cfg(any(windows, target_os = "macos"))]
             _ => Err(CaptureError::Unsupported(
                 "the encoded screen backend resumes with a new segment".into(),
             )),
+        }
+    }
+
+    #[must_use]
+    pub fn video_format(&self) -> Option<VideoFormat> {
+        match &self.backend {
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::Linux(recording) => recording.video_format(),
+            #[cfg(any(windows, target_os = "macos"))]
+            _ => None,
         }
     }
 

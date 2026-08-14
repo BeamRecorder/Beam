@@ -169,3 +169,41 @@ fn recovery_repairs_truncated_health_timing_and_cursor_jsonl() {
         );
     }
 }
+
+#[test]
+fn recovery_marks_a_missing_or_incomplete_media_segment_interrupted() {
+    let temporary = tempfile::tempdir().expect("temporary directory");
+    let project = ProjectId::new();
+    let session = SessionId::new();
+    let layout = ProjectLayout::new(temporary.path(), project).session(session);
+    layout.create().expect("layout");
+    let mut value = manifest(project, session);
+    value.tracks.push(TrackMetadata {
+        track_id: TrackId::new(),
+        kind: TrackKind::Screen,
+        source_id: None,
+        format: TrackFormat::Video {
+            codec: "h264".into(),
+            width: 1920,
+            height: 1080,
+            nominal_fps: 60,
+        },
+        segments: vec![segment("screen/segment-0001.mp4".into(), 0)],
+        metrics: TrackMetrics::default(),
+        status: TrackStatus::Recording,
+        termination_reason: None,
+    });
+    ManifestWriter::new(layout.clone())
+        .checkpoint(&value)
+        .expect("checkpoint");
+
+    let report = recover_session(&layout).expect("recover interrupted session");
+    assert_eq!(report.manifest.tracks[0].status, TrackStatus::Interrupted);
+    assert!(
+        report.manifest.tracks[0]
+            .termination_reason
+            .as_deref()
+            .is_some_and(|reason| reason.contains("finalized"))
+    );
+    assert!(!report.manifest.tracks[0].segments[0].complete);
+}

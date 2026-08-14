@@ -29,6 +29,17 @@ function canonicalWindowSourceId(requestedId, platform) {
   return platform === 'darwin' ? `sck:window:${numericId}` : `wgc:window:${numericId.toString(16)}`;
 }
 
+function stablePortalSource(requestedId, kind, platform) {
+  if (platform !== 'linux') return null;
+  if (kind === 'display' && requestedId === 'portal:monitor') {
+    return { id: requestedId, kind, selectionMode: 'portal' };
+  }
+  if (kind === 'window' && requestedId === 'portal:window') {
+    return { id: requestedId, kind, selectionMode: 'portal' };
+  }
+  return null;
+}
+
 function selectSource(sources, kind, requestedId, platform) {
   const platformPrefix =
     kind === 'window' ? (platform === 'darwin' ? 'sck:window:' : platform === 'win32' ? 'wgc:window:' : null) : null;
@@ -87,11 +98,27 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
   const sources = Array.isArray(catalog?.sources) ? catalog.sources : [];
   const capabilities = catalog?.capabilities || {};
   const screenKind = options.screenKind === 'window' ? 'window' : 'display';
-  const screen = selectSource(sources, screenKind, options.screenId, environment.platform);
+  // Portal sources are stable intents, not enumerated desktop objects. The HUD
+  // may have selected one from an earlier catalog snapshot, while a later
+  // capability probe can transiently return no virtual sources. Accept only
+  // Beam's exact Linux Portal IDs here; Rust revalidates Portal, PipeWire and
+  // FFmpeg before opening the system picker.
+  const screen =
+    stablePortalSource(options.screenId, screenKind, environment.platform) ||
+    selectSource(sources, screenKind, options.screenId, environment.platform);
   if (!screen) throw new Error('Aucun écran ou fenêtre capturable n’est disponible');
+  const portalSelection = screen.selectionMode === 'portal';
+  if (portalSelection && options.region != null)
+    throw new Error('La sélection de zone n’est pas disponible avec le picker système Linux');
   return {
     projectId: options.projectId || randomUUID(),
-    screen: { mode: 'source', sourceId: screen.id },
+    screen: portalSelection
+      ? {
+          mode: 'portal',
+          kind: screenKind === 'window' ? 'window' : 'monitor',
+          restoreToken: null,
+        }
+      : { mode: 'source', sourceId: screen.id },
     cursor:
       options.cursor !== false && capabilities.separateCursor
         ? {
@@ -109,7 +136,7 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
       minimumFreeBytes: options.minimumFreeBytes ?? 536_870_912,
     },
     failurePolicy: options.failurePolicy || 'continue-without-optional-tracks',
-    region: screenRegion(options.region, screenKind),
+    region: portalSelection ? null : screenRegion(options.region, screenKind),
     excludedProcessId: environment.excludedProcessId,
   };
 }

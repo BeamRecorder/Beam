@@ -1,6 +1,7 @@
 use std::{
     cell::RefCell,
     rc::Rc,
+    sync::mpsc,
     sync::{Arc, Mutex},
     time::Instant,
 };
@@ -15,7 +16,7 @@ use crate::{
     CaptureError, NativeCaptureErrorCode,
     screen::{
         CursorSampleState, OwnedScreenSample, ScreenCaptureMetrics, ScreenDiscontinuity,
-        VideoFormat,
+        ScreenSegment, VideoFormat,
     },
     session::StartGate,
 };
@@ -26,9 +27,11 @@ use super::{
 };
 
 pub(super) enum SinkMessage {
+    BeginSegment(ScreenSegment, mpsc::SyncSender<Result<(), CaptureError>>),
     Format(VideoFormat),
     Sample(OwnedScreenSample),
     Discontinuity(ScreenDiscontinuity),
+    EndSegment(mpsc::SyncSender<Result<(), CaptureError>>),
     Finish,
 }
 

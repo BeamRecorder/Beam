@@ -62,12 +62,7 @@ pub fn evaluate_capabilities(
 pub fn probe_native_capabilities(
     timeout: Duration,
 ) -> Result<LinuxNativeCapabilities, CaptureError> {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .map_err(|error| {
-            CaptureError::native(NativeCaptureErrorCode::PortalUnavailable, error.to_string())
-        })?;
+    let runtime = super::runtime::portal_runtime()?;
     let portal = runtime.block_on(async {
         tokio::time::timeout(timeout, query_portal_properties())
             .await

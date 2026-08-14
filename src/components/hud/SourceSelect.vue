@@ -31,28 +31,32 @@ const { t } = useTranslate('HUD');
 const displaySources = computed(() => props.sources.filter((source) => source.kind === 'display'));
 const options = computed(() => {
   if (props.kind === 'window') {
-    return props.previews.map((preview) => ({
-      value: preview.id,
-      label: preview.name,
-      thumbnail: preview.thumbnail || undefined,
-      appIcon: preview.appIcon,
-    }));
+    const portal = props.sources
+      .filter((source) => source.kind === 'window' && source.selectionMode === 'portal')
+      .map((source) => ({ value: source.id, label: source.label }));
+    return [
+      ...portal,
+      ...props.previews.map((preview) => ({
+        value: preview.id,
+        label: preview.name,
+        thumbnail: preview.thumbnail || undefined,
+        appIcon: preview.appIcon,
+      })),
+    ];
   }
 
   return displaySources.value.map((source, index) => {
     const preview = matchScreenPreview(source, displaySources.value, props.previews);
     return {
       value: source.id,
-      label: t('screenOption', { index: index + 1 }),
+      label: source.selectionMode === 'portal' ? source.label : t('screenOption', { index: index + 1 }),
       thumbnail: preview?.thumbnail || undefined,
-      loading: props.loading && !preview?.thumbnail,
+      loading: source.selectionMode !== 'portal' && props.loading && !preview?.thumbnail,
     };
   });
 });
 
-const emptyLabel = computed(() =>
-  props.kind === 'screen' ? t('noScreensDetected') : t('noWindowsDetected'),
-);
+const emptyLabel = computed(() => (props.kind === 'screen' ? t('noScreensDetected') : t('noWindowsDetected')));
 const placeholder = computed(() => {
   if (!props.loading && options.value.length === 0) return emptyLabel.value;
   return props.kind === 'screen' ? t('selectScreen') : t('selectWindow');

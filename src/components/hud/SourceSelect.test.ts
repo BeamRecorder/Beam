@@ -124,6 +124,43 @@ describe('SourceSelect', () => {
     wrapper.unmount();
   });
 
+  it('renders Portal monitor and window choices without Electron previews', async () => {
+    const monitor = mountSourceSelect({
+      modelValue: 'portal:monitor',
+      kind: 'screen',
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen with the system picker',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+      ],
+    });
+    expect(monitor.get('.select-label').text()).toBe('Choose a screen with the system picker');
+    monitor.unmount();
+
+    const window = mountSourceSelect({
+      modelValue: 'portal:window',
+      kind: 'window',
+      sources: [
+        {
+          id: 'portal:window',
+          kind: 'window',
+          label: 'Choose a window with the system picker',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+      ],
+      previews: [],
+    });
+    expect(window.get('.select-label').text()).toBe('Choose a window with the system picker');
+    await window.get('.select-trigger').trigger('click');
+    expect(document.body.querySelectorAll('.select-option')).toHaveLength(1);
+    window.unmount();
+  });
+
   it('shows loading state and an explicit empty state without allowing a fake selection', async () => {
     const loadingWrapper = mountSourceSelect({
       modelValue: 'sck:display:123',

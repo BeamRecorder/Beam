@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     CaptureError,
     model::ScreenSelection,
-    screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest},
+    screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, ScreenSegment, VideoFormat},
     session::StartGate,
 };
 
@@ -16,6 +16,7 @@ pub struct LinuxRecording {
     portal: Option<PreparedPortal>,
     pipewire: Option<PipewireCapture>,
     metrics: Arc<ScreenCaptureMetrics>,
+    encoded_output: bool,
 }
 
 impl LinuxRecording {
@@ -39,11 +40,26 @@ impl LinuxRecording {
                 "a normalized screen region is not supported by the Portal picker".into(),
             ));
         }
-        let ScreenConsumer::Samples(sink) = request.consumer else {
-            return Err(CaptureError::Unsupported(
-                "Linux raw acquisition has no product video segment sink yet".into(),
-            ));
-        };
+        let (sink, encoded_output): (Box<dyn crate::screen::ScreenSampleSink>, bool) =
+            match request.consumer {
+                ScreenConsumer::Samples(sink) => (sink, false),
+                ScreenConsumer::EncodedFile {
+                    path,
+                    cursor_directory,
+                } => {
+                    let capabilities = super::probe_ffmpeg()?;
+                    let sink = super::FfmpegScreenSink::new(
+                        capabilities,
+                        request.recording.clone(),
+                        ScreenSegment {
+                            path,
+                            start_ns: request.start_ns,
+                        },
+                        cursor_directory,
+                    )?;
+                    (Box::new(sink), true)
+                }
+            };
         let mut portal = super::portal::prepare_portal(kind.clone(), request.cursor)?;
         let remote_fd = portal.take_remote_fd()?;
         let stream_scope = portal
@@ -65,6 +81,7 @@ impl LinuxRecording {
             portal: Some(portal),
             pipewire: Some(pipewire),
             metrics,
+            encoded_output,
         })
     }
 
@@ -92,6 +109,7 @@ impl LinuxRecording {
         &mut self,
         start_ns: u64,
         start_gate: Arc<StartGate>,
+        segment: Option<ScreenSegment>,
     ) -> Result<(), CaptureError> {
         self.pipewire
             .as_mut()
@@ -99,7 +117,7 @@ impl LinuxRecording {
                 from: "Stopped".into(),
                 to: "Recording".into(),
             })?
-            .resume(start_ns, start_gate)
+            .resume(start_ns, start_gate, segment)
     }
 
     pub fn stop(&mut self) -> Result<(), CaptureError> {
@@ -117,6 +135,18 @@ impl LinuxRecording {
     #[must_use]
     pub fn metrics(&self) -> Arc<ScreenCaptureMetrics> {
         self.metrics.clone()
+    }
+
+    #[must_use]
+    pub fn video_format(&self) -> Option<VideoFormat> {
+        self.pipewire.as_ref().map(|capture| {
+            let format = capture.video_format();
+            if self.encoded_output {
+                super::encoded_video_format(format)
+            } else {
+                format
+            }
+        })
     }
 }
 

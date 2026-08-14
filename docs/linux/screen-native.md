@@ -1,8 +1,8 @@
 # Capture d'ecran native Linux avec Portal et PipeWire
 
-Statut : plan d'implementation, non implemente.
+Statut : implementation produit terminee ; validation materielle Portal interactive a executer manuellement.
 
-Ce document est l'unique plan Linux de capture d'ecran du depot. Il cible d'abord Fedora sous Wayland, puis les distributions Linux modernes qui fournissent un portail ScreenCast conforme et PipeWire. Il ne declare pas encore l'enregistrement Linux disponible.
+Ce document decrit l'implementation Linux de capture d'ecran du depot. Elle cible d'abord Fedora sous Wayland, puis les distributions Linux modernes qui fournissent un portail ScreenCast conforme, PipeWire et FFmpeg.
 
 ## Decision
 
@@ -15,6 +15,7 @@ Le backend Linux sera implemente dans le moteur Rust de Beam avec :
 - `MetaCursor` pour `cursor.id`, `cursor.x` et `cursor.y` ;
 - un chemin memoire CPU possede par Rust, sans `wgpu` ;
 - une interface interne neutre qui transmet un echantillon atomique au moteur existant.
+- un processus FFmpeg externe controle par Rust, avec H.264 (`libx264` ou `libopenh264`) et muxage MP4 atomique.
 
 Le backend ne contiendra aucun code specifique a Fedora, GNOME, KDE ou wlroots. Fedora GNOME Wayland est la premiere plateforme de validation, pas une dependance d'architecture.
 
@@ -82,14 +83,14 @@ Le renderer et Electron ne choisissent jamais une implementation native. Ils env
 
 `ashpd` et `pipewire` fournissent des buffers video bruts et leurs metadonnees. Ils ne produisent ni MP4, ni H.264, ni segment finalise.
 
-Aujourd'hui, Beam ne possede pas d'interface generique recevant des frames brutes : les backends Windows et macOS encodent directement dans leur implementation native. Ce plan cree donc l'entree generique necessaire et livre le chemin d'acquisition brut demande. Il n'ajoute pas en cachette GStreamer, FFmpeg, `wgpu` ou un nouvel encodeur.
+Beam possede maintenant l'interface generique `ScreenSampleSink` recevant les frames brutes. Sous Linux, le sink produit lance FFmpeg directement, lui transmet les frames BGRA par stdin, draine stderr, attend sa terminaison et ne publie le segment qu'apres une sortie reussie et non vide. Le choix FFmpeg est explicite et constitue une dependance runtime, pas une crate Rust ni une seconde voie de capture.
 
 Deux gates sont volontairement distincts :
 
-1. **Capture native terminee** : le moteur recoit de vrais echantillons image/timestamp/curseur, avec cycle de vie, erreurs, metriques et tests materiels conformes.
-2. **Enregistrement produit termine** : un consommateur du moteur transforme ces echantillons en segments lisibles respectant le manifeste Beam.
+1. **Capture native** : le moteur recoit de vrais echantillons image/timestamp/curseur, avec cycle de vie, erreurs et metriques.
+2. **Enregistrement produit** : le sink FFmpeg transforme ces echantillons en segments MP4 lisibles respectant le manifeste Beam.
 
-Le premier gate est couvert par ce plan. Le second exige une decision d'encodage separee si aucun consommateur compatible n'existe au moment de l'implementation. Tant que ce second gate n'est pas passe, `linux-native-capture` peut etre diagnostique, mais Linux ne doit pas etre annonce comme recorder complet.
+Les deux chemins sont raccordes. La matrice materielle interactive reste volontairement manuelle : elle ne peut pas etre remplacee par un test CI sans consentement Portal.
 
 ## Perimetre fonctionnel
 
@@ -117,7 +118,7 @@ Exclus :
 - persistance du bitmap du curseur ;
 - support opportuniste d'un DMA-BUF non mappable ;
 - fallback silencieux vers un curseur embarque ;
-- encodeur, muxeur ou processus externe non defini par la demande.
+- capture ou encodage silencieux sans verification des capacites runtime.
 
 ## Dependances Rust
 
@@ -149,6 +150,16 @@ Versions de reference au moment du plan :
 
 Le lockfile doit pinner la resolution effectivement validee. Une mise a jour mineure de ces crates repasse les tests deterministes et les tests materiels Linux.
 
+### Runtime FFmpeg
+
+FFmpeg est lance comme processus enfant direct, sans shell. Beam cherche `ffmpeg` dans `PATH`, ou utilise le chemin explicite de `BEAM_FFMPEG_PATH`. Avant tout picker, le probe exige :
+
+- une sortie de version FFmpeg valide ;
+- le muxeur `mp4` ;
+- `libx264` en priorite, sinon `libopenh264`.
+
+Il n'existe aucun fallback silencieux vers MPEG-4 Part 2 ni vers un encodeur materiel dependant de la machine. Les frames BGRA compactes sont transmises sur stdin ; stderr est draine sur un thread borne. Les arguments imposent H.264, YUV420, le bitrate, la cadence cible, l'intervalle de keyframes, des timestamps d'arrivee wall-clock et une sortie VFR. Le manifeste conserve la timeline native Beam ; FFmpeg produit la timeline media du segment a partir de l'arrivee ordonnee des echantillons.
+
 ## Installation
 
 ### Fedora Workstation / GNOME
@@ -162,7 +173,7 @@ sudo dnf install gcc clang-devel pkgconf-pkg-config pipewire-devel
 Runtime et outils de diagnostic :
 
 ```bash
-sudo dnf install pipewire pipewire-utils wireplumber xdg-desktop-portal xdg-desktop-portal-gnome
+sudo dnf install ffmpeg-free pipewire pipewire-utils wireplumber xdg-desktop-portal xdg-desktop-portal-gnome
 ```
 
 Sur KDE, remplacer le backend GNOME par `xdg-desktop-portal-kde`. Sur un bureau wlroots, installer le backend Portal recommande par ce bureau, par exemple `xdg-desktop-portal-wlr` lorsqu'il est approprie. Ne pas conseiller plusieurs backends concurrents sans configuration explicite.
@@ -175,12 +186,12 @@ Dependances de compilation :
 sudo apt install build-essential clang libclang-dev pkg-config libpipewire-0.3-dev
 ```
 
-Runtime : installer PipeWire, WirePlumber, `xdg-desktop-portal` et exactement le backend du bureau utilise. Les noms varient selon la version de la distribution ; le paquet GNOME est generalement `xdg-desktop-portal-gnome`, celui de KDE `xdg-desktop-portal-kde`.
+Runtime : installer FFmpeg, PipeWire, WirePlumber, `xdg-desktop-portal` et exactement le backend du bureau utilise. Les noms varient selon la version de la distribution ; le paquet GNOME est generalement `xdg-desktop-portal-gnome`, celui de KDE `xdg-desktop-portal-kde`.
 
 ### Arch Linux
 
 ```bash
-sudo pacman -S --needed base-devel clang pkgconf pipewire wireplumber xdg-desktop-portal
+sudo pacman -S --needed base-devel clang ffmpeg pkgconf pipewire wireplumber xdg-desktop-portal
 ```
 
 Ajouter ensuite le backend Portal correspondant au bureau, par exemple `xdg-desktop-portal-gnome`, `xdg-desktop-portal-kde` ou `xdg-desktop-portal-wlr`.
@@ -321,7 +332,7 @@ Le probe ne declenche jamais le picker et utilise un timeout borne. Ses resultat
 
 La permission reste `prompt-required` avant le picker. Le portail n'expose pas une autorisation durable fiable a inventer dans le catalogue.
 
-Ces capacites techniques ne doivent pas rendre le recorder selectionnable dans l'application tant qu'aucun sink produit ne sait finaliser la piste video. Jusqu'au gate recorder produit, le catalogue public de recording reste indisponible et le detail Portal/PipeWire est expose uniquement par le probe de diagnostic.
+Le catalogue rend les sources virtuelles Portal selectionnables uniquement lorsque le probe Portal/PipeWire reussit et que FFmpeg expose le muxeur MP4 ainsi que `libx264` ou `libopenh264`. Sinon, le catalogue reste vide et publie la raison technique dans `limitations`. Aucun picker n'est ouvert par ce probe.
 
 ### Preparation interactive
 
@@ -489,28 +500,28 @@ Vue -> window.capture -> preload -> IPC nomme -> JSONL -> Rust
 
 Ni le fd PipeWire, ni les buffers, ni les tokens Portal ne remontent dans Electron ou Vue.
 
-Le premier branchement utilise la facade `screen` de la bibliotheque `capture` et un mode materiel opt-in de `capture-probe`. Le probe appelle exactement la meme facade que `ActiveRecordings` ; il ne possede aucune implementation Portal/PipeWire alternative. Il injecte seulement un sink borne qui compte et valide les echantillons, puis affiche un bilan JSON final. Il ne fait jamais transiter les pixels par stdout.
+Le branchement utilise la facade `screen` de la bibliotheque `capture`. Le mode materiel opt-in de `capture-probe` appelle exactement la meme facade que `ActiveRecordings` ; il ne possede aucune implementation Portal/PipeWire alternative. Il injecte seulement un sink borne qui compte et valide les echantillons, puis affiche un bilan JSON final. Il ne fait jamais transiter les pixels par stdout.
 
-Ce branchement prouve que les donnees atteignent le moteur Rust existant sans creer un faux enregistrement. Il ne cree ni `TrackMetadata` complete sans segment, ni manifeste marque termine, ni source selectionnable dans le HUD.
+Le sink produit est cree seulement apres validation de FFmpeg. Le format negocie PipeWire cree la `TrackMetadata` video avec des dimensions reelles ; les dimensions impaires sont completees par padding pour la sortie YUV420. Chaque segment est d'abord ecrit en `segment-NNNN.partial.mp4`, puis fsync et renomme apres validation.
 
-Le branchement au recorder normal est realise uniquement au gate produit, apres fourniture du sink de segments. A ce moment-la, les points suivants deviennent obligatoires :
+Le recorder normal respecte les points suivants :
 
 - `ScreenSelection::Portal` devient le seul mode Linux supporte ;
 - le catalogue expose une source virtuelle de picker avec `selectionMode = portal` ;
 - le builder Electron construit `{ mode: "portal", kind, restoreToken: null }`, jamais `{ mode: "source" }` avec un faux ID ;
 - `track_metadata` attend la negotiation sans publier de largeur, hauteur ou codec fictifs ;
-- les dimensions et le format de sortie du sink mettent a jour la piste avant le passage a `Armed` ;
+- les dimensions negociees et le format de sortie du sink mettent a jour la piste avant le passage a `Armed` ;
 - `selected_sources.screen` enregistre l'ID opaque de stream Portal quand il existe, pas le node ID reutilisable ;
 - `ActiveRecordings` possede un handle Linux et ses metriques ;
 - l'objet prepare Linux survit a pause/reprise ;
 - `platform.backend` devient `xdg-portal-pipewire` uniquement apres ouverture reussie ;
 - les erreurs Portal/PipeWire utilisent des codes stables au lieu du seul `capture-error` ;
 - le timeout Electron devient specifique a la commande interactive ;
-- le chemin du binaire et le packaging ajoutent Linux seulement au gate de distribution.
+- le chemin du binaire et le packaging connaissent Linux ; FFmpeg reste une dependance systeme verifiee au runtime.
 
-Le modele de piste ne doit jamais utiliser `width = 0`, `height = 0`, `codec = "raw"` ou un autre placeholder pour faire passer la validation. Un format de sortie n'existe qu'apres que le sink produit l'a annonce.
+Le modele de piste n'utilise jamais `width = 0`, `height = 0`, `codec = "raw"` ou un autre placeholder. Un format de sortie n'existe qu'apres la negotiation PipeWire et l'application de la politique de padding du sink.
 
-Le probe n'est donc qu'un consommateur de test de la meme API native. Il ne devient jamais une seconde voie d'execution et ne justifie aucun branchement special dans Electron.
+Le probe reste un consommateur de test de la meme API native. Il ne devient jamais une seconde voie d'execution et ne justifie aucun branchement special dans Electron.
 
 ## Erreurs et comportement visible
 
@@ -530,7 +541,11 @@ Codes minimum :
 - `pipewire-buffer-invalid` ;
 - `pipewire-timestamp-discontinuity` ;
 - `screen-sink-backpressure` ;
-- `screen-sink-failed`.
+- `screen-sink-failed` ;
+- `ffmpeg-unavailable` ;
+- `ffmpeg-encoder-unavailable` ;
+- `ffmpeg-failed` ;
+- `ffmpeg-output-invalid`.
 
 Politique curseur :
 
@@ -543,6 +558,8 @@ Politique curseur :
 - une absence structurelle de `MetaCursor` apres negotiation degrade ou echoue la piste selon la politique de session, sans creer de donnees.
 
 ## Plan de livraison
+
+Etat du code : LNX-00 a LNX-04 et LNX-06 sont implementes. LNX-05 reste la matrice de validation interactive a executer sur le materiel cible ; elle ne bloque pas les tests deterministes mais reste obligatoire avant une declaration de compatibilite pour chaque environnement de bureau.
 
 ```text
 LNX-00 Contrat generique et probe honnete
@@ -703,33 +720,32 @@ Gate : Fedora GNOME passe obligatoirement image + PTS + id/x/y. Les autres envir
 
 ### LNX-06 — Gate recorder produit, session et distribution
 
-Avant d'annoncer Linux comme enregistreur Beam complet :
+Implementation livree :
 
-- identifier ou implementer un sink produit qui consomme `OwnedScreenSample` ;
-- documenter separement ses dependances ;
-- raccorder `ScreenSelection::Portal`, le catalogue, Electron et les types TS ;
-- resoudre le format de piste pendant la preparation interactive ;
-- injecter le sink produit dans la facade deja utilisee par `RecordingSession`/`ActiveRecordings`, puis raccorder timing, health et recovery ;
-- propager les erreurs typees jusqu'au renderer et adapter le timeout interactif ;
-- ajouter le binaire Linux aux chemins de developpement et au packaging ;
-- prouver que chaque segment declare existe, est non vide et lisible ;
-- prouver pause/reprise, finalisation, recovery et compatibilite editeur ;
-- executer les tests Node/TypeScript cibles de config, IPC et lecture de projet ;
-- mettre alors seulement a jour README, architecture, UI et packaging pour annoncer le support.
+- sink FFmpeg consommant `OwnedScreenSample` ;
+- dependance runtime et erreurs stables documentees ;
+- `ScreenSelection::Portal`, catalogue virtuel, Electron et types TS raccordes ;
+- format de piste resolu pendant la preparation interactive ;
+- meme facade `RecordingSession`/`ActiveRecordings`, timing, health et sidecar curseur ;
+- timeout interactif et arret du moteur en cas de depassement ;
+- chemin de binaire Linux et cibles de packaging ;
+- segment partiel, sortie FFmpeg reussie/non vide, fsync puis publication atomique ;
+- pause/reprise sans nouveau picker et finalisation des segments ;
+- tests Rust, Node et Vue cibles.
 
-Ce gate ne peut pas etre valide avec un sink de test ou une capture brute en memoire.
+Le smoke synthetique valide le vrai FFmpeg local. La preuve Portal/PipeWire avec un ecran reel reste le test interactif LNX-05 confie a l'utilisateur.
 
 ## Strategie de tests
 
 Les parsers Portal/SPA et les machines d'etat utilisent de petites interfaces injectables et des fixtures possedees. Les tests deterministes ne dependent jamais d'un compositor, de D-Bus ou de PipeWire reel.
 
-Fichiers de tests envisages :
+Tests principaux :
 
 ```text
 packages/capture/tests/linux_portal.rs
-packages/capture/tests/linux_pipewire.rs
-packages/capture/tests/linux_cursor_metadata.rs
-packages/capture/tests/hardware/linux_portal_smoke.rs
+packages/capture/src/screen/linux/pipewire/tests.rs
+packages/capture/src/screen/linux/ffmpeg_process_tests.rs
+packages/capture/src/screen/linux/ffmpeg_sink.rs
 test/capture-config.test.cjs
 test/capture-engine-path.test.cjs
 test/capture-ipc.test.cjs
@@ -743,8 +759,7 @@ Validations finales ciblees sur Fedora native :
 cargo fmt --all --check
 cargo test -p capture --test architecture
 cargo test -p capture --test linux_portal
-cargo test -p capture --test linux_pipewire
-cargo test -p capture --test linux_cursor_metadata
+cargo test -p capture --lib screen::linux
 cargo clippy -p capture --all-targets --all-features -- -D warnings
 cargo build -p capture --bin capture-engine
 ```

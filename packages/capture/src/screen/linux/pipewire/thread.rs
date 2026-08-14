@@ -13,7 +13,7 @@ use spa::{param::ParamType, pod::Pod};
 
 use crate::{
     CaptureError, NativeCaptureErrorCode,
-    screen::{ScreenCaptureMetrics, ScreenSampleSink},
+    screen::{ScreenCaptureMetrics, ScreenSampleSink, ScreenSegment, VideoFormat},
     session::StartGate,
 };
 
@@ -43,6 +43,8 @@ pub(crate) struct PipewireCapture {
     thread: Option<JoinHandle<Result<(), CaptureError>>>,
     sink_thread: Option<JoinHandle<Result<(), CaptureError>>>,
     fatal: Arc<Mutex<Option<CaptureError>>>,
+    sink: Sender<SinkMessage>,
+    format: VideoFormat,
     start_ns: u64,
     start_gate: Arc<StartGate>,
     running: bool,
@@ -89,6 +91,7 @@ impl PipewireCapture {
         let worker_metrics = metrics.clone();
         let worker_gate = start_gate.clone();
         let finish_sender = sink_sender.clone();
+        let lifecycle_sender = sink_sender.clone();
         let cleanup_sender = sink_sender.clone();
         let thread = thread::Builder::new()
             .name("beam-linux-pipewire".into())
@@ -118,7 +121,7 @@ impl PipewireCapture {
             }
         };
         drop(cleanup_sender);
-        let ready_result = ready_receiver
+        let format = match ready_receiver
             .recv_timeout(PIPEWIRE_READY_TIMEOUT)
             .map_err(|_| {
                 CaptureError::native(
@@ -126,18 +129,23 @@ impl PipewireCapture {
                     "PipeWire stream negotiation timed out",
                 )
             })
-            .and_then(|result| result);
-        if let Err(error) = ready_result {
-            let _ = commands.send(PipewireCommand::Stop);
-            let _ = thread.join();
-            let _ = sink_thread.join();
-            return Err(error);
-        }
+            .and_then(|result| result)
+        {
+            Ok(format) => format,
+            Err(error) => {
+                let _ = commands.send(PipewireCommand::Stop);
+                let _ = thread.join();
+                let _ = sink_thread.join();
+                return Err(error);
+            }
+        };
         Ok(Self {
             commands: Some(commands),
             thread: Some(thread),
             sink_thread: Some(sink_thread),
             fatal,
+            sink: lifecycle_sender,
+            format,
             start_ns,
             start_gate,
             running: false,
@@ -157,6 +165,7 @@ impl PipewireCapture {
     pub(crate) fn pause(&mut self) -> Result<(), CaptureError> {
         if self.running {
             self.send_wait(|reply| PipewireCommand::Pause { reply })?;
+            self.send_sink_wait(SinkMessage::EndSegment)?;
             self.running = false;
         }
         Ok(())
@@ -166,9 +175,13 @@ impl PipewireCapture {
         &mut self,
         start_ns: u64,
         start_gate: Arc<StartGate>,
+        segment: Option<ScreenSegment>,
     ) -> Result<(), CaptureError> {
         self.start_ns = start_ns;
         self.start_gate = start_gate.clone();
+        if let Some(segment) = segment {
+            self.send_sink_wait(|reply| SinkMessage::BeginSegment(segment, reply))?;
+        }
         self.send_wait(|reply| PipewireCommand::Start {
             start_ns,
             start_gate,
@@ -176,6 +189,11 @@ impl PipewireCapture {
         })?;
         self.running = true;
         Ok(())
+    }
+
+    #[must_use]
+    pub(crate) const fn video_format(&self) -> VideoFormat {
+        self.format
     }
 
     pub(crate) fn stop(&mut self) -> Result<(), CaptureError> {
@@ -208,6 +226,19 @@ impl PipewireCapture {
             .recv_timeout(PIPEWIRE_READY_TIMEOUT)
             .map_err(|_| pipewire_error("PipeWire lifecycle command timed out"))?
     }
+
+    fn send_sink_wait(
+        &self,
+        command: impl FnOnce(mpsc::SyncSender<Result<(), CaptureError>>) -> SinkMessage,
+    ) -> Result<(), CaptureError> {
+        let (reply, receiver) = mpsc::sync_channel(1);
+        self.sink
+            .send_timeout(command(reply), PIPEWIRE_READY_TIMEOUT)
+            .map_err(|_| sink_error("screen sink lifecycle channel is closed"))?;
+        receiver
+            .recv_timeout(PIPEWIRE_READY_TIMEOUT)
+            .map_err(|_| sink_error("screen sink lifecycle command timed out"))?
+    }
 }
 
 impl Drop for PipewireCapture {
@@ -227,7 +258,7 @@ fn pipewire_worker(
     metrics: Arc<ScreenCaptureMetrics>,
     start_ns: u64,
     start_gate: Arc<StartGate>,
-    ready: mpsc::SyncSender<Result<(), CaptureError>>,
+    ready: mpsc::SyncSender<Result<VideoFormat, CaptureError>>,
 ) -> Result<(), CaptureError> {
     let mainloop = pw::main_loop::MainLoopRc::new(None).map_err(pipewire_error)?;
     let context = pw::context::ContextRc::new(&mainloop, None).map_err(pipewire_error)?;
@@ -269,8 +300,10 @@ fn pipewire_worker(
                 send_ready_error(&listener_ready, pipewire_error(message));
                 listener_loop.quit();
             }
-            pw::stream::StreamState::Paused if listener_state.borrow().negotiated.is_some() => {
-                send_ready_ok(&listener_ready);
+            pw::stream::StreamState::Paused => {
+                if let Some(format) = listener_state.borrow().negotiated {
+                    send_ready_ok(&listener_ready, format);
+                }
             }
             _ => {}
         })
@@ -292,7 +325,7 @@ fn pipewire_worker(
                             return;
                         }
                         if matches!(stream.state(), pw::stream::StreamState::Paused) {
-                            send_ready_ok(&ready);
+                            send_ready_ok(&ready, format);
                         }
                     }
                     Err(error) => {

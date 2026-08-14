@@ -283,6 +283,7 @@ export interface CaptureSource {
   label: string;
   isDefault: boolean;
   displayId?: string;
+  selectionMode?: 'direct' | 'system-picker' | 'portal';
 }
 export interface CaptureCatalog {
   sources: CaptureSource[];

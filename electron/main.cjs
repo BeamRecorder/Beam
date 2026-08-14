@@ -22,6 +22,7 @@ const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
+const { shouldAutoOpenDevTools } = require('./window/devtools-policy.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
@@ -177,7 +178,7 @@ function createWindow(preferencesStore) {
   win.webContents.on('render-process-gone', (_event, details) =>
     logStartup(`Renderer process exited (${details.reason}).`),
   );
-  if (!app.isPackaged) {
+  if (shouldAutoOpenDevTools({ isPackaged: app.isPackaged })) {
     win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }));
   }
   if (app.isPackaged) {

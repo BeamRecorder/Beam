@@ -35,7 +35,7 @@ impl MacRecording {
                 "macOS screen capture requires a direct source".into(),
             ));
         };
-        let ScreenConsumer::EncodedFile { path } = request.consumer else {
+        let ScreenConsumer::EncodedFile { path, .. } = request.consumer else {
             return Err(CaptureError::Unsupported(
                 "macOS raw screen samples are not available".into(),
             ));

@@ -1,7 +1,11 @@
 const path = require('path');
 
-const PLATFORM_DIRECTORIES = Object.freeze({ win32: 'win', darwin: 'mac' });
-const PLATFORM_FILENAMES = Object.freeze({ win32: 'capture-engine.exe', darwin: 'capture-engine' });
+const PLATFORM_DIRECTORIES = Object.freeze({ win32: 'win', darwin: 'mac', linux: 'linux' });
+const PLATFORM_FILENAMES = Object.freeze({
+  win32: 'capture-engine.exe',
+  darwin: 'capture-engine',
+  linux: 'capture-engine',
+});
 
 function nativeRecorderDirectory(applicationRoot, platform = process.platform) {
   const directory = PLATFORM_DIRECTORIES[platform];

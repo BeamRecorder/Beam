@@ -34,11 +34,15 @@ pub(super) struct OpenContext<'a> {
     pub(super) layout: &'a crate::storage::SessionLayout,
     pub(super) generation: u32,
     pub(super) start_ns: u64,
-    pub(super) tracks: &'a mut [TrackMetadata],
+    pub(super) tracks: &'a mut Vec<TrackMetadata>,
     pub(super) start_gate: &'a Arc<super::StartGate>,
 }
 
 impl ActiveRecordings {
+    pub(super) fn has_screen(&self) -> bool {
+        self.screen.is_some()
+    }
+
     pub(super) fn open(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
         let OpenContext {
             request,
@@ -144,28 +148,132 @@ impl ActiveRecordings {
         layout: &crate::storage::SessionLayout,
         generation: u32,
         start_ns: u64,
-        tracks: &mut [TrackMetadata],
+        tracks: &mut Vec<TrackMetadata>,
         start_gate: &Arc<super::StartGate>,
     ) -> Result<(), CaptureError> {
-        let Some(ScreenSelection::Source { source_id }) = &request.screen else {
+        let Some(selection) = &request.screen else {
             return Ok(());
         };
         let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
-        self.screen = Some(crate::screen::ScreenRecording::open(
-            crate::screen::ScreenOpenRequest {
-                selection: request.screen.as_ref().ok_or_else(|| {
-                    CaptureError::InvalidConfiguration("missing screen selection".into())
-                })?,
+        let cursor_directory = matches!(
+            request.cursor,
+            crate::model::CursorSelection::Separate { .. }
+        )
+        .then(|| layout.track_dir(TrackKind::Cursor));
+        let mut recording =
+            crate::screen::ScreenRecording::open(crate::screen::ScreenOpenRequest {
+                selection,
                 recording: &request.recording,
                 region: request.region,
                 cursor: request.cursor,
                 start_ns,
                 start_gate: start_gate.clone(),
-                consumer: crate::screen::ScreenConsumer::EncodedFile { path },
-            },
-        )?);
-        let _ = source_id;
+                consumer: crate::screen::ScreenConsumer::EncodedFile {
+                    path,
+                    cursor_directory,
+                },
+            })?;
+        if let ScreenSelection::Portal { kind, .. } = selection {
+            let format = recording.video_format().ok_or_else(|| {
+                CaptureError::Backend("Linux screen format was not negotiated".into())
+            })?;
+            add_portal_screen_track(
+                tracks,
+                portal_source_id(kind)?,
+                format.width,
+                format.height,
+                request.recording.target_fps,
+            );
+            if matches!(
+                request.cursor,
+                crate::model::CursorSelection::Separate { .. }
+            ) && let Some(track) = track_mut(tracks, TrackKind::Cursor)
+                && track.segments.is_empty()
+            {
+                track.segments.push(crate::storage::segment(
+                    "cursor/cursor.json".into(),
+                    start_ns,
+                ));
+                track.status = TrackStatus::Recording;
+            }
+        }
         add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
+        recording.start()?;
+        self.screen = Some(recording);
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(super) fn pause_portal(
+        &mut self,
+        tracks: &mut [TrackMetadata],
+        end_ns: u64,
+    ) -> Result<(), CaptureError> {
+        if let Some(reporter) = self.reporter.take() {
+            reporter.stop()?;
+        }
+        let recording = self
+            .screen
+            .as_mut()
+            .ok_or_else(|| CaptureError::InvalidTransition {
+                from: "RecordingWithoutScreen".into(),
+                to: "Paused".into(),
+            })?;
+        let result = recording.pause();
+        mark_track_failed(tracks, TrackKind::Screen, &result);
+        result?;
+        let screen = track_mut(tracks, TrackKind::Screen)
+            .ok_or_else(|| CaptureError::Backend("missing screen track metadata".into()))?;
+        let segment = screen
+            .segments
+            .last_mut()
+            .ok_or_else(|| CaptureError::Backend("missing active screen segment".into()))?;
+        finish_segment(segment, end_ns)?;
+        screen.status = TrackStatus::Paused;
+        if let Some(cursor) = track_mut(tracks, TrackKind::Cursor) {
+            cursor.status = TrackStatus::Paused;
+        }
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(super) fn resume_portal(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
+        let OpenContext {
+            request,
+            snapshot,
+            layout,
+            generation,
+            start_ns,
+            tracks,
+            start_gate,
+        } = context;
+        let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
+        self.screen
+            .as_mut()
+            .ok_or_else(|| CaptureError::InvalidTransition {
+                from: "PausedWithoutScreen".into(),
+                to: "Recording".into(),
+            })?
+            .resume(
+                start_ns,
+                start_gate.clone(),
+                Some(crate::screen::ScreenSegment { path, start_ns }),
+            )?;
+        add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
+        if let Some(cursor) = track_mut(tracks, TrackKind::Cursor) {
+            cursor.status = TrackStatus::Recording;
+        }
+        let samplers = metrics::samplers(self, tracks);
+        if !samplers.is_empty() {
+            self.reporter = Some(PeriodicReporter::start(
+                layout.health(),
+                layout.timing(),
+                start_gate.clone(),
+                start_ns,
+                samplers,
+                source_watches(request, snapshot, tracks),
+            )?);
+        }
         Ok(())
     }
 
@@ -191,6 +299,11 @@ impl ActiveRecordings {
                 metrics.frames_received(),
                 metrics.frames_dropped(),
             );
+            #[cfg(target_os = "linux")]
+            if let Some(track) = track_mut(tracks, TrackKind::Cursor) {
+                track.metrics.frames_received = metrics.cursor_samples();
+                track.metrics.interruptions = metrics.frames_dropped();
+            }
         }
         #[cfg(all(windows, feature = "cursor"))]
         if let Some(recording) = self.cursor.take() {
@@ -210,10 +323,13 @@ impl ActiveRecordings {
                 track.metrics.interruptions += metrics.interruptions();
             }
         }
-        for track in tracks
-            .iter_mut()
-            .filter(|track| track.status == TrackStatus::Recording)
-        {
+        for track in tracks.iter_mut().filter(|track| {
+            matches!(track.status, TrackStatus::Recording | TrackStatus::Paused)
+                && track
+                    .segments
+                    .last()
+                    .is_some_and(|segment| !segment.complete)
+        }) {
             if let Some(last) = track.segments.last_mut() {
                 finish_segment(last, end_ns)?;
             }

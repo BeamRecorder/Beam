@@ -95,6 +95,14 @@
         "dmg",
         "zip"
       ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "AudioVideo"
     }
   }
 }

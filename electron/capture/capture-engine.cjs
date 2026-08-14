@@ -6,6 +6,7 @@ const readline = require('readline');
 const { prebuiltCaptureEnginePath } = require('./capture-engine-path.cjs');
 
 const REQUEST_TIMEOUT_MS = 30_000;
+const INTERACTIVE_REQUEST_TIMEOUT_MS = 120_000;
 
 class CaptureEngine {
   constructor(app, applicationRoot) {
@@ -85,10 +86,12 @@ class CaptureEngine {
     this.ensureStarted();
     const id = randomUUID();
     return new Promise((resolve, reject) => {
+      const timeoutMs = ['prepare', 'start'].includes(command) ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
       const timeout = setTimeout(() => {
         this.pending.delete(id);
+        if (['prepare', 'start'].includes(command) && this.process && !this.process.killed) this.process.kill();
         reject(new Error(`Délai dépassé pour la commande de capture "${command}"`));
-      }, REQUEST_TIMEOUT_MS);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timeout });
       this.process.stdin.write(`${JSON.stringify({ id, command, ...payload })}\n`, (error) => {
         if (!error) return;

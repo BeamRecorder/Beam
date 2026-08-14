@@ -21,6 +21,10 @@ pub enum NativeCaptureErrorCode {
     PipewireTimestampDiscontinuity,
     ScreenSinkBackpressure,
     ScreenSinkFailed,
+    FfmpegUnavailable,
+    FfmpegEncoderUnavailable,
+    FfmpegFailed,
+    FfmpegOutputInvalid,
 }
 
 impl NativeCaptureErrorCode {
@@ -42,6 +46,10 @@ impl NativeCaptureErrorCode {
             Self::PipewireTimestampDiscontinuity => "pipewire-timestamp-discontinuity",
             Self::ScreenSinkBackpressure => "screen-sink-backpressure",
             Self::ScreenSinkFailed => "screen-sink-failed",
+            Self::FfmpegUnavailable => "ffmpeg-unavailable",
+            Self::FfmpegEncoderUnavailable => "ffmpeg-encoder-unavailable",
+            Self::FfmpegFailed => "ffmpeg-failed",
+            Self::FfmpegOutputInvalid => "ffmpeg-output-invalid",
         }
     }
 }

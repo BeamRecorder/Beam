@@ -158,6 +158,68 @@ describe('HUD', () => {
     expect(wrapper.emitted('start-recording')).toHaveLength(1);
     expect(wrapper.get('[role=alert]').text()).toContain('permission denied');
   });
+
+  it('disables Start Recording and ignores click or shortcut when no capture source exists', async () => {
+    const shortcuts: Array<(action: string) => void> = [];
+    capture.discover.mockResolvedValueOnce({ sources: [], capabilities: {} });
+    capture.getSources.mockResolvedValue([]);
+    capture.onPreferenceShortcut.mockImplementationOnce((listener: (action: string) => void) => {
+      shortcuts.push(listener);
+      return () => undefined;
+    });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    expect(record).toBeDefined();
+    expect(record!.element).toHaveProperty('disabled', true);
+
+    await record!.trigger('click');
+    shortcuts[0]?.('hud.startStopRecording');
+    await ready();
+
+    expect(wrapper.emitted('start-recording')).toBeUndefined();
+    expect(capture.startRecording).not.toHaveBeenCalled();
+  });
+
+  it('keeps Linux Portal sources selectable without Electron desktop previews', async () => {
+    capture.discover.mockResolvedValueOnce({
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+        {
+          id: 'portal:window',
+          kind: 'window',
+          label: 'Choose a window',
+          isDefault: false,
+          selectionMode: 'portal',
+        },
+      ],
+      capabilities: { separateCursor: true },
+    });
+    capture.getSources.mockResolvedValue([]);
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const windowTab = wrapper.findAll('button').find((button) => button.text().trim() === 'Window');
+    await windowTab?.trigger('click');
+    await ready();
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    expect(record?.element).toHaveProperty('disabled', false);
+    await record?.trigger('click');
+    await ready();
+
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({ screenKind: 'window', screenId: 'portal:window' }),
+    ]);
+  });
+
   it('switches views and delegates window controls safely', async () => {
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
@@ -74,9 +74,17 @@ pub struct ScreenDiscontinuity {
     pub message: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScreenSegment {
+    pub path: PathBuf,
+    pub start_ns: u64,
+}
+
 pub trait ScreenSampleSink: Send {
+    fn begin_segment(&mut self, segment: ScreenSegment) -> Result<(), CaptureError>;
     fn format_changed(&mut self, format: VideoFormat) -> Result<(), CaptureError>;
     fn push(&mut self, sample: OwnedScreenSample) -> Result<(), CaptureError>;
     fn discontinuity(&mut self, event: ScreenDiscontinuity) -> Result<(), CaptureError>;
+    fn end_segment(&mut self) -> Result<(), CaptureError>;
     fn finish(&mut self) -> Result<(), CaptureError>;
 }

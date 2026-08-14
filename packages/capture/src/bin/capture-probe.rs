@@ -75,6 +75,13 @@ struct ProbeSink(Arc<Mutex<LinuxProbeSummary>>);
 
 #[cfg(target_os = "linux")]
 impl capture::screen::ScreenSampleSink for ProbeSink {
+    fn begin_segment(
+        &mut self,
+        _segment: capture::screen::ScreenSegment,
+    ) -> Result<(), capture::CaptureError> {
+        Ok(())
+    }
+
     fn format_changed(
         &mut self,
         format: capture::screen::VideoFormat,
@@ -111,6 +118,10 @@ impl capture::screen::ScreenSampleSink for ProbeSink {
         let mut summary = self.lock()?;
         summary.discontinuities = summary.discontinuities.saturating_add(1);
         summary.lost_frames = summary.lost_frames.saturating_add(event.lost_frames);
+        Ok(())
+    }
+
+    fn end_segment(&mut self) -> Result<(), capture::CaptureError> {
         Ok(())
     }
 
@@ -191,7 +202,7 @@ fn run_linux_native_capture() -> Result<serde_json::Value, capture::CaptureError
     let resume_ns = u64::try_from(first.as_nanos()).unwrap_or(u64::MAX);
     let resume_gate = Arc::new(StartGate::new());
     resume_gate.release(resume_ns)?;
-    recording.resume(resume_ns, resume_gate)?;
+    recording.resume(resume_ns, resume_gate, None)?;
     std::thread::sleep(total - first);
     recording.stop()?;
     let metrics = recording.metrics().snapshot();

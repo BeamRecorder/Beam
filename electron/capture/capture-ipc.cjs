@@ -53,7 +53,16 @@ function displayBoundsForId(screen, displayId) {
   return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
 }
 
-function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, app, userPaths, trackStorages }) {
+function registerCaptureIpc({
+  ipcMain,
+  desktopCapturer,
+  screen,
+  captureEngine,
+  app,
+  userPaths,
+  trackStorages,
+  platform = process.platform,
+}) {
   const registerSession = (session) => {
     for (const storage of trackStorages) storage.registerSession(session);
     return withProjectId(session);
@@ -64,7 +73,7 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
     if (command === 'start-default-recording') {
       const catalog = await captureEngine.request('discover');
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
-        platform: process.platform,
+        platform,
         defaultOutputRoot: userPaths.projects,
         excludedProcessId: process.pid,
       });
@@ -75,7 +84,7 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
     if (command === 'prepare-default-recording') {
       const catalog = await captureEngine.request('discover');
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
-        platform: process.platform,
+        platform,
         defaultOutputRoot: userPaths.projects,
         excludedProcessId: process.pid,
       });
@@ -115,6 +124,10 @@ function registerCaptureIpc({ ipcMain, desktopCapturer, screen, captureEngine, a
     return withProjectId(await captureEngine.request(command, payload));
   });
   ipcMain.handle('window:getSources', async (_event, types) => {
+    // Chromium's desktopCapturer opens the system Portal picker for every
+    // enumeration on Wayland. Beam's Linux product recorder remains gated, so
+    // these Electron preview IDs cannot be consumed by the Rust backend.
+    if (platform === 'linux') return [];
     const sources = await desktopCapturer.getSources({
       types: types || ['window', 'screen'],
       thumbnailSize: { width: 300, height: 200 },

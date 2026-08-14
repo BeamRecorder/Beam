@@ -358,6 +358,11 @@ struct SinkLog {
 }
 
 impl ScreenSampleSink for SinkLog {
+    fn begin_segment(&mut self, _: crate::screen::ScreenSegment) -> Result<(), CaptureError> {
+        self.calls.lock().expect("log lock").push("begin");
+        Ok(())
+    }
+
     fn format_changed(&mut self, _: VideoFormat) -> Result<(), CaptureError> {
         self.calls.lock().expect("log lock").push("format");
         Ok(())
@@ -375,6 +380,11 @@ impl ScreenSampleSink for SinkLog {
 
     fn discontinuity(&mut self, _: ScreenDiscontinuity) -> Result<(), CaptureError> {
         self.calls.lock().expect("log lock").push("discontinuity");
+        Ok(())
+    }
+
+    fn end_segment(&mut self) -> Result<(), CaptureError> {
+        self.calls.lock().expect("log lock").push("end");
         Ok(())
     }
 

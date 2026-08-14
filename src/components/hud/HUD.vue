@@ -87,6 +87,7 @@ const errorMessage = ref('');
 const copiedError = ref(false);
 let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 const sources = ref<CaptureSource[]>([]);
+const sourceDiscoveryCompleted = ref(false);
 
 // View State (Main vs Settings)
 const showSettings = ref(false);
@@ -168,6 +169,13 @@ watch(
 );
 const displaySources = computed(() => sources.value.filter((source) => source.kind === 'display'));
 const selectedScreen = computed(() => sources.value.find((source) => source.id === selectedScreenId.value) ?? null);
+const hasSelectedCaptureSource = computed(() => {
+  if (activeTab.value === 'screen') return selectedScreen.value !== null;
+  return (
+    windowPreviews.value.some((preview) => preview.id === selectedSourceId.value) ||
+    sources.value.some((source) => source.kind === 'window' && source.id === selectedSourceId.value)
+  );
+});
 const selectedScreenPreview = computed(() => {
   const source = selectedScreen.value;
   if (!source) return null;
@@ -250,7 +258,14 @@ const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
       target.value = results;
       previewLoaded[type] = true;
       if (type !== 'window') return;
-      if (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value)) {
+      const selectedPortalSource = sources.value.some(
+        (source) =>
+          source.id === selectedSourceId.value && source.kind === 'window' && source.selectionMode === 'portal',
+      );
+      if (
+        !selectedPortalSource &&
+        (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value))
+      ) {
         selectedSourceId.value = results[0]?.id ?? null;
       }
     })
@@ -490,6 +505,10 @@ const toggleRecording = async () => {
   if (isBusy.value) return;
   // Recording ownership lives in App.vue.  The HUD only collects configuration.
   if (!isRecording.value) {
+    if (sourceDiscoveryCompleted.value && !hasSelectedCaptureSource.value) {
+      errorMessage.value = activeTab.value === 'screen' ? t('noScreensDetected') : t('noWindowsDetected');
+      return;
+    }
     let screenId: string | undefined;
     if (activeTab.value === 'screen') screenId = selectedScreenId.value ?? undefined;
     else if (selectedSourceId.value) {
@@ -734,6 +753,7 @@ const stopForCameraFailure = async (camera: BrowserCameraRecorder, sessionId: st
 const discoverSources = async () => {
   isBusy.value = true;
   errorMessage.value = '';
+  sourceDiscoveryCompleted.value = false;
   try {
     const [catalog, cameras, microphones] = (await Promise.all([
       capture.discover(),
@@ -746,6 +766,7 @@ const discoverSources = async () => {
       ...microphones,
       systemAudioSource(),
     ];
+    sourceDiscoveryCompleted.value = true;
     if (
       savedDevices?.cameraId &&
       (savedDevices.cameraId === 'off' || sources.value.some((s) => s.id === savedDevices?.cameraId))
@@ -777,6 +798,11 @@ const discoverSources = async () => {
       sources.value.find((source) => source.kind === 'display' && source.isDefault)?.id ??
       sources.value.find((source) => source.kind === 'display')?.id ??
       null;
+    selectedSourceId.value =
+      sources.value.find((source) => source.kind === 'window' && source.selectionMode === 'portal' && source.isDefault)
+        ?.id ??
+      sources.value.find((source) => source.kind === 'window' && source.selectionMode === 'portal')?.id ??
+      selectedSourceId.value;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
@@ -976,6 +1002,7 @@ const openProject = (project: CaptureProject) => {
                   <SourceSelect
                     v-model="selectedSourceId"
                     kind="window"
+                    :sources="sources"
                     :previews="windowPreviews"
                     :loading="windowPreviewsLoading"
                     :disabled="isRecording || isBusy"
@@ -1105,7 +1132,7 @@ const openProject = (project: CaptureProject) => {
             :block="true"
             class="record-btn-override"
             :class="{ recording: isRecording }"
-            :disabled="isBusy"
+            :disabled="isBusy || (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)"
             @click="toggleRecording"
           >
             <template #icon>

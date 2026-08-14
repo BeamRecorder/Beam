@@ -125,12 +125,7 @@ fn portal_worker(
     commands: tokio::sync::mpsc::UnboundedReceiver<PortalCommand>,
     ready: mpsc::SyncSender<Result<PortalReady, CaptureError>>,
 ) -> Result<(), CaptureError> {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .map_err(|error| {
-            CaptureError::native(NativeCaptureErrorCode::PortalUnavailable, error.to_string())
-        })?;
+    let runtime = super::runtime::portal_runtime()?;
     runtime.block_on(portal_task(kind, cursor, commands, ready))
 }
 

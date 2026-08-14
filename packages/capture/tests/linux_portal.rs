@@ -209,6 +209,19 @@ const NATIVE_ERROR_CODES: &[(NativeCaptureErrorCode, &str)] = &[
         NativeCaptureErrorCode::ScreenSinkFailed,
         "screen-sink-failed",
     ),
+    (
+        NativeCaptureErrorCode::FfmpegUnavailable,
+        "ffmpeg-unavailable",
+    ),
+    (
+        NativeCaptureErrorCode::FfmpegEncoderUnavailable,
+        "ffmpeg-encoder-unavailable",
+    ),
+    (NativeCaptureErrorCode::FfmpegFailed, "ffmpeg-failed"),
+    (
+        NativeCaptureErrorCode::FfmpegOutputInvalid,
+        "ffmpeg-output-invalid",
+    ),
 ];
 
 #[test]

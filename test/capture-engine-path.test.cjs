@@ -26,8 +26,17 @@ test('resolves the macOS prebuilt capture engine', () => {
   );
 });
 
+test('resolves the Linux prebuilt capture engine', () => {
+  assert.equal(captureEngineFilename('linux'), 'capture-engine');
+  assert.equal(nativeRecorderDirectory(root, 'linux'), path.join(root, 'packages', 'native-recorder', 'linux'));
+  assert.equal(
+    prebuiltCaptureEnginePath(root, 'linux'),
+    path.join(root, 'packages', 'native-recorder', 'linux', 'capture-engine'),
+  );
+});
+
 test('does not advertise a prebuilt recorder for unsupported platforms', () => {
-  assert.equal(captureEngineFilename('linux'), null);
-  assert.equal(nativeRecorderDirectory(root, 'linux'), null);
-  assert.equal(prebuiltCaptureEnginePath(root, 'linux'), null);
+  assert.equal(captureEngineFilename('freebsd'), null);
+  assert.equal(nativeRecorderDirectory(root, 'freebsd'), null);
+  assert.equal(prebuiltCaptureEnginePath(root, 'freebsd'), null);
 });
