@@ -1,14 +1,10 @@
 import { computed, ref } from 'vue';
 import { capture } from '../../../api/capture';
-import {
-  BrowserCameraRecorder,
-  isCameraUnavailableError,
-  type CameraAppearance,
-  type CameraPlacement,
-} from '../../../api/camera-recorder';
+import { BrowserCameraRecorder, isCameraUnavailableError } from '../../../api/camera-recorder';
 import { BrowserMicrophoneRecorder } from '../../../api/microphone-recorder';
 import { BrowserSystemAudioRecorder } from '../../../api/system-audio-recorder';
 import { useDeviceToggles } from './useDeviceToggles';
+import { recordingCameraMetadata } from './recording-camera-metadata';
 import type {
   RecordingConfiguration,
   RecordingPhase,
@@ -23,7 +19,6 @@ type SidecarKind = 'camera' | 'microphone' | 'systemAudio';
 
 const inactiveCamera = 'off';
 const inactiveMicrophone = 'no-audio';
-const DEFAULT_CAMERA_PLACEMENT: CameraPlacement = { x: 0.72, y: 0.72, width: 0.24, height: 0.24 };
 
 export function useRecordingController(
   onComplete: (session: RecordingSessionResult) => void,
@@ -52,24 +47,11 @@ export function useRecordingController(
   let preparedGeneration: number | null = null;
   let nativeStarted = false;
   let cancelling = false;
+  let nativeCleanupBlocked = false;
   const sidecarStates: Record<SidecarKind, StartupSidecarState> = {
     camera: 'disabled',
     microphone: 'disabled',
     systemAudio: 'disabled',
-  };
-
-  const cameraMetadata = async (): Promise<{ appearance?: CameraAppearance; placement?: CameraPlacement }> => {
-    const overlay = await capture.getCameraOverlayState();
-    const appearance: CameraAppearance | undefined =
-      overlay &&
-      ['none', 'sm', 'md', 'lg'].includes(overlay.shadowSize) &&
-      ['none', 'sm', 'md', 'lg', 'full'].includes(overlay.cornerRadius)
-        ? {
-            shadowSize: overlay.shadowSize as CameraAppearance['shadowSize'],
-            cornerRadius: overlay.cornerRadius as CameraAppearance['cornerRadius'],
-          }
-        : undefined;
-    return { appearance, placement: { ...DEFAULT_CAMERA_PLACEMENT } };
   };
 
   const deviceToggles = useDeviceToggles({
@@ -106,7 +88,7 @@ export function useRecordingController(
     setError: (message) => {
       error.value = message;
     },
-    cameraMetadata,
+    cameraMetadata: recordingCameraMetadata,
   });
 
   const isActive = computed(
@@ -116,6 +98,15 @@ export function useRecordingController(
       phase.value === 'recording' ||
       phase.value === 'paused',
   );
+  const cleanupStaleNativeStart = async (session: { sessionId?: string | null }) => {
+    try {
+      await capture.discardRecording(session.sessionId ?? undefined);
+    } catch (reason) {
+      nativeCleanupBlocked = true;
+      const detail = reason instanceof Error ? reason.message : String(reason);
+      error.value = `The cancelled recording could not be cleaned up safely: ${detail}. Restart Beam before recording again.`;
+    }
+  };
   const clearCountdown = () => {
     if (countdown !== null) window.clearInterval(countdown);
     countdown = null;
@@ -174,7 +165,7 @@ export function useRecordingController(
 
   const startSidecars = async () => {
     if (!sessionId) return;
-    const { appearance, placement } = await cameraMetadata();
+    const { appearance, placement } = await recordingCameraMetadata();
     const results = await Promise.allSettled([
       camera?.start(sessionId, appearance, placement, sessionTimelineStartedAt),
       microphone?.start(sessionId),
@@ -232,22 +223,26 @@ export function useRecordingController(
         cleanupErrors.push(reason instanceof Error ? reason.message : String(reason));
       }
     };
-    // Break any self-reference so resetState does not await the very operation
-    // that is currently failing.
-    pendingNativeStart = null;
     const wasNativeStarted = nativeStarted;
     const wasNativePrepared = preparedGeneration === generation;
     const nativeSessionId = sessionId;
     await runCleanup(() => stopRecorderStrict(camera));
     await runCleanup(() => stopRecorderStrict(microphone));
     await runCleanup(() => stopRecorderStrict(systemAudio));
-    if (wasNativeStarted) await runCleanup(() => capture.discardRecording(nativeSessionId ?? undefined));
-    else if (wasNativePrepared) await runCleanup(() => capture.cancelPreparedRecording());
+    if (wasNativeStarted) {
+      const before = cleanupErrors.length;
+      await runCleanup(() => capture.discardRecording(nativeSessionId ?? undefined));
+      nativeCleanupBlocked ||= cleanupErrors.length > before;
+    } else if (wasNativePrepared) {
+      await runCleanup(() => capture.cancelPreparedRecording());
+    }
     preparedGeneration = null;
     capture.setTeleprompterSession(null);
     if (cleanupErrors.length > 0) failure.cleanupErrors = cleanupErrors;
     error.value = failure.message;
     await resetState(true);
+    if (nativeCleanupBlocked)
+      error.value = `${failure.message} Native cleanup is unresolved; restart Beam before recording again.`;
     onStartupFailure?.(failure);
   };
 
@@ -255,19 +250,15 @@ export function useRecordingController(
     if (!configuration) return;
     let stage: RecordingStartStage = 'prepare-native';
     try {
-      const prepared = prewarm ? await prewarm : false;
-      if (!prepared || generation !== recordingGeneration) return;
+      if (preparedGeneration !== generation || generation !== recordingGeneration) return;
       stage = 'start-native';
       await capture.setCountdown(null);
       recorderHoverOnlyActive.value = configuration.recordingBarVisibility === 'hover-only';
       await capture.prepareRecordingSurface();
       const session = await capture.startPreparedRecording();
-      // The native track creates the session timeline only once its start gate
-      // is released. Sidecars must use that same epoch, otherwise native startup
-      // latency is added to their final duration.
       sessionTimelineStartedAt = performance.now();
       if (generation !== recordingGeneration) {
-        await capture.stop().catch(() => undefined);
+        await cleanupStaleNativeStart(session);
         return;
       }
       nativeStarted = true;
@@ -280,7 +271,7 @@ export function useRecordingController(
       await startSidecars();
       if (generation !== recordingGeneration) {
         await Promise.all([stopRecorder(camera), stopRecorder(microphone), stopRecorder(systemAudio)]);
-        await capture.stop().catch(() => undefined);
+        await cleanupStaleNativeStart(session);
         return;
       }
       elapsedTenths.value = 0;
@@ -304,7 +295,14 @@ export function useRecordingController(
   };
 
   const start = async (next: RecordingConfiguration) => {
-    if (isActive.value || pendingNativeStart) return;
+    if (nativeCleanupBlocked) {
+      error.value ||= 'Native recording cleanup is unresolved. Restart Beam before recording again.';
+      return;
+    }
+    if (isActive.value || pendingNativeStart || prewarm) {
+      if (!isActive.value) error.value = 'The previous recording is still being cleaned up. Please try again.';
+      return;
+    }
     error.value = '';
     const generation = ++recordingGeneration;
     configuration = next;
@@ -322,8 +320,15 @@ export function useRecordingController(
       secondsRemaining.value = Math.max(0, next.countdownSeconds);
       phase.value = 'countdown';
       stage = 'prepare-native';
-      prewarm = prewarmNativeRecording(generation);
-      if (!(await prewarm) || generation !== recordingGeneration) return;
+      const preparation = prewarmNativeRecording(generation);
+      prewarm = preparation;
+      let prepared = false;
+      try {
+        prepared = await preparation;
+      } finally {
+        if (prewarm === preparation) prewarm = null;
+      }
+      if (!prepared || generation !== recordingGeneration) return;
       if (secondsRemaining.value === 0) {
         phase.value = 'starting';
         void launchNativeStartup(generation);
@@ -337,8 +342,6 @@ export function useRecordingController(
           return;
         }
         clearCountdown();
-        // The countdown is a visual gate, not part of the recording. Hide it
-        // at the zero boundary before waiting on IPC/native start.
         void capture.setCountdown(null);
         phase.value = 'starting';
         void launchNativeStartup(generation);
@@ -372,13 +375,14 @@ export function useRecordingController(
     sidecarStates.camera = 'disabled';
     sidecarStates.microphone = 'disabled';
     sidecarStates.systemAudio = 'disabled';
-    // Cancel a prepared native recording without waiting for a blocked start.
+    // A prepared session can be cancelled directly. Once the start command has
+    // been sent, however, the single-threaded native protocol cannot process a
+    // cancel until start returns. Keep pendingNativeStart as the cleanup gate;
+    // its stale-generation branch discards the returned session before clearing.
     if (preparedGeneration !== null) {
       preparedGeneration = null;
-      void capture.cancelPreparedRecording().catch(() => undefined);
+      if (!pendingNativeStart) await capture.cancelPreparedRecording().catch(() => undefined);
     }
-    pendingNativeStart = null;
-    prewarm = null;
     phase.value = 'idle';
   };
 
@@ -413,9 +417,6 @@ export function useRecordingController(
     phase.value = 'finalizing';
     clearTimer();
     try {
-      // Stop the native screen clock and request the sidecar recorders to stop
-      // at the same moment. Track storage is completed only after all sidecars
-      // have flushed their final chunks, so none can be cut off by native stop.
       const stopNs = timelineNowNs();
       const nativeStop = capture.stopNativeRecording();
       const sidecarsStop = Promise.all([

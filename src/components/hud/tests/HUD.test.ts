@@ -250,7 +250,7 @@ describe('HUD', () => {
     await wrapper.get('.project-btn').trigger('click');
     expect(wrapper.find('.project-picker-stub').exists()).toBe(true);
     await wrapper.get('[aria-label="Close"]').trigger('click');
-    expect(capture.close).toHaveBeenCalledOnce();
+    expect(capture.quit).toHaveBeenCalledOnce();
   });
 
   it('keeps available interaction access out of the main HUD and preserves its height', async () => {
@@ -278,7 +278,7 @@ describe('HUD', () => {
 
     expect(wrapper.find('.hud-wrapper').exists()).toBe(true);
     expect(wrapper.find('.hud-body').exists()).toBe(false);
-    expect(wrapper.get('.editor-preparing-hud').text()).toContain('Loading the timeline');
+    expect(wrapper.get('.editor-preparing-hud').text().replaceAll('\u00a0', ' ')).toContain('Loading the timeline');
     expect(wrapper.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('65');
   });
 

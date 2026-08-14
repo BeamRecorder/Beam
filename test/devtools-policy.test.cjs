@@ -11,7 +11,7 @@ test('auto-opens DevTools in development with explicit opt-in', () => {
   assert.equal(
     shouldAutoOpenDevTools({
       isPackaged: false,
-      environment: { DEMO_RECORDER_DEVTOOLS: '1' },
+      environment: { BEAM_DEVTOOLS: '1' },
     }),
     true,
   );
@@ -21,7 +21,7 @@ test('never auto-opens DevTools in packaged builds', () => {
   assert.equal(
     shouldAutoOpenDevTools({
       isPackaged: true,
-      environment: { DEMO_RECORDER_DEVTOOLS: '1' },
+      environment: { BEAM_DEVTOOLS: '1' },
     }),
     false,
   );

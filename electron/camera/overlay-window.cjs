@@ -4,7 +4,7 @@ const path = require('path');
 const DEFAULT_SIZE = { width: 320, height: 180 };
 const MIN_SIZE = { width: 120, height: 90 };
 
-function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
+function createCameraOverlayWindow({ applicationRoot, isPackaged, canAcceptWork = () => true }) {
   let window = null;
   let currentState = null;
   let hoverTimer = null;
@@ -43,6 +43,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   };
 
   const create = () => {
+    if (!canAcceptWork()) return null;
     if (window && !window.isDestroyed()) return window;
     const area = screen.getPrimaryDisplay().workArea;
     window = new BrowserWindow({
@@ -80,19 +81,22 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
   };
 
   const configure = (state) => {
+    if (!canAcceptWork()) return false;
     currentState = { cameraId: state?.cameraId || 'off' };
     if (!active || currentState.cameraId === 'off') {
       if (window && !window.isDestroyed()) {
         window.webContents.send('camera-overlay:state', { ...currentState, cameraId: 'off' });
         window.hide();
       }
-      return;
+      return true;
     }
     const overlay = create();
+    if (!overlay) return false;
     overlay.webContents.send('camera-overlay:state', currentState);
     overlay.showInactive();
     overlay.moveTop();
     startHoverTracking();
+    return true;
   };
 
   const setActive = (next) => {

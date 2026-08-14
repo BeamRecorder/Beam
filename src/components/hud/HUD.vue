@@ -901,7 +901,7 @@ onBeforeUnmount(() => {
 });
 
 const closeApp = () => {
-  capture.close();
+  capture.quit();
 };
 
 const minimizeApp = () => {

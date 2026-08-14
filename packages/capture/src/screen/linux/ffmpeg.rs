@@ -8,7 +8,7 @@ use std::{
 
 use crate::{CaptureError, NativeCaptureErrorCode};
 
-use super::{FfmpegAcceleration, FfmpegEncoder};
+use super::{FfmpegAcceleration, FfmpegEncoder, owned_child};
 
 const FFMPEG_PATH_ENV: &str = "BEAM_FFMPEG_PATH";
 const FFMPEG_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
@@ -163,15 +163,17 @@ fn probe_hardware_encoder(executable: &Path, encoder: &FfmpegEncoder) -> bool {
         "null".into(),
         "-".into(),
     ]);
-    let Ok(mut child) = Command::new(executable)
+    let mut command = Command::new(executable);
+    command
         .args(arguments)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-    else {
+        .stderr(Stdio::null());
+    owned_child::configure(&mut command);
+    let Ok(mut child) = command.spawn() else {
         return false;
     };
+    owned_child::register(&child);
     wait_for_probe(&mut child).is_some_and(|status| status.success())
 }
 
@@ -179,13 +181,15 @@ fn wait_for_probe(child: &mut std::process::Child) -> Option<std::process::ExitS
     let deadline = Instant::now() + FFMPEG_PROBE_TIMEOUT;
     loop {
         match child.try_wait() {
-            Ok(Some(status)) => return Some(status),
+            Ok(Some(status)) => {
+                owned_child::unregister(child);
+                return Some(status);
+            }
             Ok(None) if Instant::now() < deadline => {
                 std::thread::sleep(Duration::from_millis(10));
             }
             _ => {
-                let _ = child.kill();
-                let _ = child.wait();
+                owned_child::kill_and_wait(child);
                 return None;
             }
         }
@@ -193,34 +197,41 @@ fn wait_for_probe(child: &mut std::process::Child) -> Option<std::process::ExitS
 }
 
 fn run(executable: &Path, arguments: &[&str]) -> Result<String, CaptureError> {
-    let mut child = Command::new(executable)
+    let mut command = Command::new(executable);
+    command
         .args(arguments)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|error| {
-            ffmpeg_error(
-                NativeCaptureErrorCode::FfmpegUnavailable,
-                format!(
-                    "failed to execute {}: {error}. Install FFmpeg or set {FFMPEG_PATH_ENV}",
-                    executable.display()
-                ),
-            )
-        })?;
+        .stderr(Stdio::piped());
+    owned_child::configure(&mut command);
+    let mut child = command.spawn().map_err(|error| {
+        ffmpeg_error(
+            NativeCaptureErrorCode::FfmpegUnavailable,
+            format!(
+                "failed to execute {}: {error}. Install FFmpeg or set {FFMPEG_PATH_ENV}",
+                executable.display()
+            ),
+        )
+    })?;
+    owned_child::register(&child);
     let deadline = Instant::now() + FFMPEG_PROBE_TIMEOUT;
     let status = loop {
-        if let Some(status) = child.try_wait().map_err(|error| {
-            ffmpeg_error(
-                NativeCaptureErrorCode::FfmpegUnavailable,
-                format!("failed while waiting for {}: {error}", executable.display()),
-            )
-        })? {
-            break status;
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                owned_child::unregister(&child);
+                break status;
+            }
+            Err(error) => {
+                owned_child::kill_and_wait(&mut child);
+                return Err(ffmpeg_error(
+                    NativeCaptureErrorCode::FfmpegUnavailable,
+                    format!("failed while waiting for {}: {error}", executable.display()),
+                ));
+            }
+            Ok(None) => {}
         }
         if Instant::now() >= deadline {
-            let _ = child.kill();
-            let _ = child.wait();
+            owned_child::kill_and_wait(&mut child);
             return Err(ffmpeg_error(
                 NativeCaptureErrorCode::FfmpegUnavailable,
                 format!("{} capability probe timed out", executable.display()),

@@ -1,7 +1,7 @@
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
 
-function createCountdownWindow({ applicationRoot, isPackaged }) {
+function createCountdownWindow({ applicationRoot, isPackaged, canAcceptWork = () => true }) {
   let window = null;
   let seconds = null;
   let ready = false;
@@ -14,6 +14,7 @@ function createCountdownWindow({ applicationRoot, isPackaged }) {
     );
   };
   const create = () => {
+    if (!canAcceptWork()) return;
     if (window && !window.isDestroyed()) return;
     if (!window || window.isDestroyed()) {
       ready = false;
@@ -54,11 +55,12 @@ function createCountdownWindow({ applicationRoot, isPackaged }) {
     }
   };
   const show = (value) => {
+    if (!canAcceptWork()) return false;
     seconds = value;
     create();
     if (value === null) {
       window?.hide();
-      return;
+      return true;
     }
     position();
     if (ready) {
@@ -66,12 +68,20 @@ function createCountdownWindow({ applicationRoot, isPackaged }) {
       window.showInactive();
       window.moveTop();
     }
+    return true;
   };
   // Load the renderer while the application is idle. The first countdown
   // value can then be displayed immediately instead of waiting for a cold
   // BrowserWindow and renderer navigation.
   create();
-  return { show, destroy: () => window?.destroy() };
+  return {
+    show,
+    destroy: () => {
+      if (window && !window.isDestroyed()) window.destroy();
+      window = null;
+      ready = false;
+    },
+  };
 }
 
 module.exports = { createCountdownWindow };

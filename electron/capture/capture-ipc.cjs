@@ -62,6 +62,7 @@ function registerCaptureIpc({
   userPaths,
   trackStorages,
   platform = process.platform,
+  canAcceptWork = () => true,
 }) {
   const registerSession = (session) => {
     for (const storage of trackStorages) storage.registerSession(session);
@@ -83,6 +84,11 @@ function registerCaptureIpc({
     }
   };
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
+    if (!canAcceptWork()) {
+      const error = new Error(`capture command "${command}" rejected during application shutdown`);
+      error.code = 'application-shutting-down';
+      throw error;
+    }
     if (command === 'start-default-recording') {
       const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {

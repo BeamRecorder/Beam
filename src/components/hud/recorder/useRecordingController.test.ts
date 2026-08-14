@@ -18,8 +18,10 @@ const mocks = vi.hoisted(() => {
       cancelPreparedRecording: vi.fn(async () => undefined),
       setCountdown: vi.fn(async () => undefined),
       prepareRecordingSurface: vi.fn(async () => undefined),
-      startPreparedRecording: vi.fn(async () => ({ sessionId: 'session-1' })),
-      discardRecording: vi.fn(async () => undefined),
+      startPreparedRecording: vi.fn(async (): Promise<{ sessionId?: string; projectId?: string }> => ({
+        sessionId: 'session-1',
+      })),
+      discardRecording: vi.fn(async (): Promise<void> => undefined),
       stop: vi.fn(async () => ({ sessionId: 'session-1' })),
       stopNativeRecording: vi.fn(async () => ({ sessionId: 'session-1' })),
       completeNativeRecording: vi.fn(async () => ({ sessionId: 'session-1', videoSrc: 'file:///v.mp4' })),
@@ -97,6 +99,21 @@ afterEach(() => {
 });
 
 describe('useRecordingController countdown', () => {
+  it('clamps a negative countdown and starts native capture exactly once', async () => {
+    vi.useFakeTimers();
+    const controller = useRecordingController(vi.fn(), vi.fn());
+
+    await controller.start({ ...baseConfig, countdownSeconds: -10 });
+    expect(controller.phase.value).toBe('starting');
+    expect(controller.secondsRemaining.value).toBe(0);
+
+    await vi.waitFor(() => expect(mocks.capture.startPreparedRecording).toHaveBeenCalledTimes(1));
+    expect(controller.phase.value).toBe('recording');
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(mocks.capture.startPreparedRecording).toHaveBeenCalledTimes(1);
+    expect(controller.secondsRemaining.value).toBe(0);
+  });
+
   it('starts the native recorder exactly once when the countdown reaches zero', async () => {
     vi.useFakeTimers();
     const controller = useRecordingController(vi.fn(), vi.fn());
@@ -143,6 +160,22 @@ describe('useRecordingController countdown', () => {
     });
     expect(mocks.capture.cancelPreparedRecording).toHaveBeenCalled();
   });
+
+  it('cleans up a native session when startup returns without a session id', async () => {
+    mocks.capture.startPreparedRecording.mockResolvedValueOnce({} as { sessionId?: string });
+    const onStartupFailure = vi.fn();
+    const controller = useRecordingController(vi.fn(), onStartupFailure);
+
+    await controller.start(baseConfig);
+    await vi.waitFor(() => expect(onStartupFailure).toHaveBeenCalledTimes(1));
+
+    expect(onStartupFailure.mock.calls[0][0]).toMatchObject({
+      stage: 'start-native',
+      nativeStarted: true,
+    });
+    expect(mocks.capture.discardRecording).toHaveBeenCalledWith(undefined);
+    expect(controller.phase.value).toBe('idle');
+  });
 });
 
 describe('useRecordingController startup', () => {
@@ -159,12 +192,43 @@ describe('useRecordingController startup', () => {
 
     await controller.cancel();
     expect(controller.phase.value).toBe('idle');
-    expect(mocks.capture.cancelPreparedRecording).toHaveBeenCalled();
 
-    // The blocked start eventually resolves and must not resurrect the recording.
+    // The blocked start eventually resolves and must clean up the native session
+    // explicitly, without resurrecting the recording.
     resolveStart({ sessionId: 'session-1' });
-    await vi.waitFor(() => expect(controller.phase.value).toBe('idle'));
+    await vi.waitFor(() => expect(mocks.capture.discardRecording).toHaveBeenCalledWith('session-1'));
+    expect(mocks.capture.stop).not.toHaveBeenCalled();
     expect(controller.phase.value).toBe('idle');
+  });
+
+  it('keeps a new start blocked until deferred stale-session cleanup completes', async () => {
+    let resolveStart: (value: { sessionId: string }) => void = () => undefined;
+    let resolveDiscard: () => void = () => undefined;
+    mocks.capture.startPreparedRecording.mockReturnValue(
+      new Promise((resolve) => {
+        resolveStart = resolve;
+      }),
+    );
+    mocks.capture.discardRecording.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveDiscard = resolve;
+      }),
+    );
+    const controller = useRecordingController(vi.fn(), vi.fn());
+    await controller.start({ ...baseConfig, countdownSeconds: 0 });
+    await controller.cancel();
+
+    resolveStart({ sessionId: 'stale-session' });
+    await vi.waitFor(() => expect(mocks.capture.discardRecording).toHaveBeenCalledWith('stale-session'));
+
+    const prepareCallsBeforeRetry = mocks.capture.prepareRecording.mock.calls.length;
+    await controller.start({ ...baseConfig, countdownSeconds: 0 });
+    expect(mocks.capture.prepareRecording).toHaveBeenCalledTimes(prepareCallsBeforeRetry);
+
+    resolveDiscard();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await controller.start({ ...baseConfig, countdownSeconds: 0 });
+    await vi.waitFor(() => expect(mocks.capture.prepareRecording).toHaveBeenCalledTimes(prepareCallsBeforeRetry + 1));
   });
 
   it('reports per-component state when a sidecar fails to start', async () => {
@@ -186,6 +250,26 @@ describe('useRecordingController startup', () => {
     expect(mocks.capture.discardRecording).toHaveBeenCalledWith('session-1');
   });
 
+  it.each([
+    ['camera', () => mocks.cameraRecorder],
+    ['microphone', () => mocks.micRecorder],
+    ['systemAudio', () => mocks.systemAudioRecorder],
+  ] as const)('reports %s startup failure after native start', async (kind, recorder) => {
+    recorder().start.mockRejectedValueOnce(new Error(`${kind} start failed`));
+    const onStartupFailure = vi.fn();
+    const controller = useRecordingController(vi.fn(), onStartupFailure);
+    await controller.start(fullConfig);
+
+    await vi.waitFor(() => expect(onStartupFailure).toHaveBeenCalledTimes(1));
+    expect(onStartupFailure.mock.calls[0][0]).toMatchObject({
+      stage: 'start-sidecars',
+      nativeStarted: true,
+      [kind]: 'failed',
+    });
+    expect(controller.phase.value).toBe('idle');
+    expect(mocks.capture.discardRecording).toHaveBeenCalledWith('session-1');
+  });
+
   it('records cleanup errors when discarding the started native session fails', async () => {
     mocks.systemAudioRecorder.start.mockRejectedValue(new Error('system audio failed'));
     mocks.capture.discardRecording.mockRejectedValue(new Error('discard failed'));
@@ -196,6 +280,21 @@ describe('useRecordingController startup', () => {
     await vi.waitFor(() => expect(onStartupFailure).toHaveBeenCalledTimes(1));
     const failure = onStartupFailure.mock.calls[0][0];
     expect(failure.cleanupErrors).toContain('discard failed');
+    const prepareCalls = mocks.capture.prepareRecording.mock.calls.length;
+    await controller.start(fullConfig);
+    expect(mocks.capture.prepareRecording).toHaveBeenCalledTimes(prepareCalls);
+    expect(controller.error.value).toContain('restart Beam');
+  });
+
+  it('preserves sidecar cleanup errors in startup failure metadata', async () => {
+    mocks.systemAudioRecorder.start.mockRejectedValue(new Error('system audio failed'));
+    mocks.cameraRecorder.stop.mockRejectedValueOnce(new Error('camera cleanup failed'));
+    const onStartupFailure = vi.fn();
+    const controller = useRecordingController(vi.fn(), onStartupFailure);
+    await controller.start(fullConfig);
+
+    await vi.waitFor(() => expect(onStartupFailure).toHaveBeenCalledTimes(1));
+    expect(onStartupFailure.mock.calls[0][0].cleanupErrors).toContain('camera cleanup failed');
   });
 
   it('never lets a stale async callback restore the recording phase after cleanup', async () => {
@@ -211,7 +310,8 @@ describe('useRecordingController startup', () => {
     expect(controller.phase.value).toBe('idle');
 
     resolveStart({ sessionId: 'session-1' });
-    await vi.waitFor(() => expect(mocks.capture.stop).toHaveBeenCalled());
+    await vi.waitFor(() => expect(mocks.capture.discardRecording).toHaveBeenCalledWith('session-1'));
+    expect(mocks.capture.stop).not.toHaveBeenCalled();
     expect(controller.phase.value).toBe('idle');
   });
 
