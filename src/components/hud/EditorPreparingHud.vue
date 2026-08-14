@@ -4,6 +4,7 @@ import { Film } from '@lucide/vue';
 import type { EditorLoadingProgress } from '~/api/types/editor-window';
 import { useTranslate } from '~/i18n/useTranslate';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
+import Throbber from '~/ui/throbber/Throbber.vue';
 
 const props = defineProps<{
   progress: EditorLoadingProgress;
@@ -21,8 +22,8 @@ const stageLabel = computed(() => t(props.progress.stage));
     </div>
 
     <div class="editor-preparing-copy">
-      <h2>{{ t('title') }}</h2>
-      <p>{{ stageLabel }}</p>
+      <h2><Throbber :text="t('title')" variant="wave" color="default" size="lg" /></h2>
+      <p><Throbber :text="stageLabel" variant="breathe" color="muted" size="sm" /></p>
     </div>
 
     <div
