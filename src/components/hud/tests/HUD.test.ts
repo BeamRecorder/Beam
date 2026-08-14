@@ -814,11 +814,11 @@ describe('HUD', () => {
     expect(wrapper.get('[aria-label="Select an area of the screen"]').attributes('disabled')).toBeDefined();
   });
 
-  it('hides screen and window tabs and source selectors on Linux', async () => {
+  it('keeps screen and window tabs but omits source selector list on Linux', async () => {
     Object.defineProperty(window, 'capture', { configurable: true, value: { ...capture, platform: 'linux' } });
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
-    expect(wrapper.find('.mode-tabs').exists()).toBe(false);
+    expect(wrapper.find('.mode-tabs').exists()).toBe(true);
     expect(wrapper.find('.screen-select-controls').exists()).toBe(false);
   });
 });

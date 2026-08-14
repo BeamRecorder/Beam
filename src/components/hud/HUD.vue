@@ -1013,7 +1013,7 @@ const openProject = (project: CaptureProject) => {
       <!-- Main HUD Form -->
       <div v-else key="hud" class="hud-body">
         <!-- Tabs (Screen / Window) -->
-        <ButtonGroup v-if="desktopPlatform !== 'linux'" class="mode-tabs">
+        <ButtonGroup class="mode-tabs">
           <Button :class="{ active: activeTab === 'screen' }" variant="tab" @click="activeTab = 'screen'">
             <template #icon><Monitor class="btn-icon" /></template>
             {{ t('screen') }}
@@ -1026,7 +1026,7 @@ const openProject = (project: CaptureProject) => {
 
         <div class="form-inputs-area">
           <Transition name="fade-slide" mode="out-in">
-            <div :key="desktopPlatform === 'linux' ? 'linux' : activeTab" class="tab-content-container">
+            <div :key="activeTab" class="tab-content-container">
               <!-- Capture source (macOS / Windows only, on Linux PipeWire portal handles source selection on record) -->
               <template v-if="desktopPlatform !== 'linux'">
                 <template v-if="activeTab === 'window'">
