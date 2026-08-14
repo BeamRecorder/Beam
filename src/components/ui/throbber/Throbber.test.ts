@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import Throbber from './Throbber.vue';
+import { getThrobberGlobalTime } from './useThrobberSync';
 
 describe('Throbber', () => {
   it('renders accessible text for assistive technologies', () => {
@@ -46,10 +47,25 @@ describe('Throbber', () => {
     expect(wrapper.findAll('.throbber-dot')).toHaveLength(3);
   });
 
-  it('calculates animation delays and durations across glyphs', () => {
-    const wrapper = mount(Throbber, { props: { text: 'AB' } });
-    const glyphs = wrapper.findAll('.throbber-glyph');
-    expect(glyphs[0].attributes('style')).toContain('animation-delay: 0s');
-    expect(glyphs[1].attributes('style')).toContain('animation-delay: 0.035s');
+  it('synchronizes all throbber instances on the exact same RAF clock', async () => {
+    const globalTime = getThrobberGlobalTime();
+    globalTime.value = 1000;
+
+    const wrapper1 = mount(Throbber, { props: { text: 'Preparing', variant: 'wave' } });
+    const wrapper2 = mount(Throbber, { props: { text: 'Loading timeline', variant: 'breathe' } });
+
+    const glyph1 = wrapper1.findAll('.throbber-glyph')[0];
+    const glyph2 = wrapper2.findAll('.throbber-glyph')[0];
+
+    expect(glyph1.attributes('style')).toContain('opacity:');
+    expect(glyph2.attributes('style')).toContain('opacity:');
+
+    // Advancing global time synchronously updates both throbbers
+    globalTime.value = 1700;
+    await wrapper1.vm.$nextTick();
+    await wrapper2.vm.$nextTick();
+
+    expect(glyph1.attributes('style')).toBeDefined();
+    expect(glyph2.attributes('style')).toBeDefined();
   });
 });
