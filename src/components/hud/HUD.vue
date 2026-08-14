@@ -102,7 +102,7 @@ const showProjectPicker = ref(false);
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
 const recordingBarVisibility = ref<RecordingBarVisibility>('always');
 watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }));
-const interactionAccess = useInteractionAccess();
+const interactionAccess = useInteractionAccess(desktopPlatform);
 
 // Previews
 const windowPreviews = ref<CapturePreview[]>([]);

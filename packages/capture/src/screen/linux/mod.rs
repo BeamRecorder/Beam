@@ -6,6 +6,8 @@ mod ffmpeg_process;
 mod ffmpeg_process_tests;
 mod ffmpeg_sink;
 mod input_monitor;
+#[cfg(test)]
+mod input_monitor_tests;
 mod pipewire;
 mod portal;
 mod recording;

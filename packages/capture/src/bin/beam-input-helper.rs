@@ -17,24 +17,8 @@ mod linux {
     const POLL_INTERVAL: Duration = Duration::from_millis(4);
     const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
     const INSTALLED_POLICY: &str = "/usr/share/polkit-1/actions/com.beam.input-monitor.policy";
-    const POLICY: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
-  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
-<policyconfig>
-  <vendor>Beam</vendor>
-  <vendor_url>https://github.com/ExtraBinoss/Beam</vendor_url>
-  <action id="com.beam.input-monitor">
-    <description>Allow Beam to capture clicks and keyboard shortcuts</description>
-    <message>Authentication is required to let Beam capture clicks and keyboard shortcuts</message>
-    <defaults>
-      <allow_any>no</allow_any>
-      <allow_inactive>no</allow_inactive>
-      <allow_active>auth_self_keep</allow_active>
-    </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/beam-input-helper</annotate>
-  </action>
-</policyconfig>
-"#;
+    const POLICY_VERSION: u32 = 2;
+    const POLICY: &str = include_str!("beam-input-helper.policy");
 
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
@@ -68,7 +52,10 @@ mod linux {
             "stream" => stream(),
             "install" => install(),
             "uninstall" => uninstall(),
-            "version" => write_json(&serde_json::json!({ "version": env!("CARGO_PKG_VERSION") })),
+            "version" => write_json(&serde_json::json!({
+                "version": env!("CARGO_PKG_VERSION"),
+                "policyVersion": POLICY_VERSION
+            })),
             _ => Err("unsupported beam-input-helper command".into()),
         }
     }
@@ -160,7 +147,8 @@ mod linux {
         install_bytes(POLICY.as_bytes(), Path::new(INSTALLED_POLICY), 0o644)?;
         write_json(&serde_json::json!({
             "installed": true,
-            "version": env!("CARGO_PKG_VERSION")
+            "version": env!("CARGO_PKG_VERSION"),
+            "policyVersion": POLICY_VERSION
         }))
     }
 

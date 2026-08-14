@@ -11,7 +11,7 @@ const checkingState = (): InteractionAccessViewState => ({
   recordsText: false,
 });
 
-export function useInteractionAccess() {
+export function useInteractionAccess(platform: string = window.capture?.platform ?? 'unknown') {
   const status = ref<InteractionAccessViewState>(checkingState());
   const enabled = ref(false);
   const requesting = ref(false);
@@ -33,6 +33,10 @@ export function useInteractionAccess() {
       return;
     }
     status.value = await window.capture.inputAccessStatus();
+    if (platform === 'linux' && enabled.value && status.value.canRequest) {
+      await request();
+      return;
+    }
     if (status.value.state !== 'available' && enabled.value) {
       enabled.value = false;
       await capture.updatePreferences({ recordingInteractions: { enabled: false } });

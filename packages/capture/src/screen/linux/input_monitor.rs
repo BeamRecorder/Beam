@@ -263,7 +263,7 @@ fn ensure_installed_helper() -> Result<PathBuf, CaptureError> {
         .ok_or_else(|| CaptureError::Unsupported("Beam input helper is not installed".into()))
 }
 
-fn helper_version(path: &Path) -> Option<String> {
+fn helper_version(path: &Path) -> Option<(String, u64)> {
     let output = Command::new(path)
         .arg("version")
         .stdin(Stdio::null())
@@ -272,11 +272,15 @@ fn helper_version(path: &Path) -> Option<String> {
     if !output.status.success() {
         return None;
     }
-    serde_json::from_slice::<serde_json::Value>(&output.stdout)
-        .ok()?
-        .get("version")?
-        .as_str()
-        .map(ToOwned::to_owned)
+    parse_helper_version(&output.stdout)
+}
+
+pub(super) fn parse_helper_version(output: &[u8]) -> Option<(String, u64)> {
+    let value = serde_json::from_slice::<serde_json::Value>(output).ok()?;
+    Some((
+        value.get("version")?.as_str()?.to_owned(),
+        value.get("policyVersion")?.as_u64()?,
+    ))
 }
 
 fn executable_file(path: &Path) -> bool {
