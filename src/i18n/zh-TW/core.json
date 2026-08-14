@@ -269,6 +269,9 @@
     "progressLabel": "編輯器載入進度"
   },
   "HudPreferences": {
+    "categoryRecording": "錄影",
+    "categoryGeneral": "一般",
+    "categoryAbout": "關於",
     "preferences": "偏好設定",
     "back": "返回",
     "keyboardShortcuts": "鍵盤快速鍵",

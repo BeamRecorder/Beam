@@ -9,6 +9,7 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
 import Badge from '~/ui/badge/Badge.vue';
 import Switch from '~/ui/switch/Switch.vue';
+import Divider from '~/ui/divider/Divider.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
 import About from './About.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
@@ -89,7 +90,7 @@ const recordingBarOptions = [
     <Transition name="slide-view" mode="out-in">
       <!-- Sub-page: Edit Shortcuts -->
       <div v-if="currentView === 'shortcuts'" key="shortcuts" class="view-container">
-        <div class="preferences-list">
+        <div class="preferences-list shortcut-view-list">
           <ShortcutPreferences />
         </div>
       </div>
@@ -102,12 +103,17 @@ const recordingBarOptions = [
       <!-- Main Preferences View -->
       <div v-else key="general" class="view-container">
         <div class="preferences-list">
+          <!-- Category: Recording -->
+          <div class="preference-category-divider">
+            <Divider :label="t('categoryRecording')" spacing="none" />
+          </div>
+
           <div class="preference-item clickable" @click="currentView = 'shortcuts'">
-            <div>
+            <div class="preference-copy">
               <p class="preference-title">{{ t('shortcuts') }}</p>
               <p class="preference-description">{{ t('configureHotkeys') }}</p>
             </div>
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" class="preference-control">
               <template #icon><Keyboard class="button-icon" /></template>
               {{ t('edit') }}
             </Button>
@@ -122,7 +128,6 @@ const recordingBarOptions = [
               <Switch
                 v-if="props.inputAccess.state === 'available'"
                 :model-value="recordInteractions"
-                :label="t('recordInteractions')"
                 @update:model-value="emit('update:recordInteractions', $event)"
               />
               <Badge v-else-if="props.inputAccess.state === 'checking'" variant="outline">
@@ -143,11 +148,11 @@ const recordingBarOptions = [
           </div>
 
           <div class="preference-item">
-            <div>
+            <div class="preference-copy">
               <p class="preference-title">{{ t('recorderBar') }}</p>
               <p class="preference-description">{{ t('visibilityWhileRecording') }}</p>
             </div>
-            <div class="recorder-bar-select">
+            <div class="recorder-bar-select preference-control">
               <Select
                 :model-value="recordingBarVisibility ?? 'always'"
                 :options="recordingBarOptions"
@@ -158,19 +163,11 @@ const recordingBarOptions = [
           </div>
 
           <div class="preference-item">
-            <div>
-              <p class="preference-title">{{ t('alwaysOnTop') }}</p>
-              <p class="preference-description">{{ t('alwaysOnTopDesc') }}</p>
-            </div>
-            <Switch :model-value="alwaysOnTop ?? true" @update:model-value="emit('update:alwaysOnTop', $event)" />
-          </div>
-
-          <div class="preference-item">
-            <div>
+            <div class="preference-copy">
               <p class="preference-title">{{ t('countdown') }}</p>
               <p class="preference-description">{{ t('selectDelay') }}</p>
             </div>
-            <div class="countdown-select">
+            <div class="countdown-select preference-control">
               <Select
                 :model-value="countdownSeconds"
                 :options="countdownOptions"
@@ -180,12 +177,27 @@ const recordingBarOptions = [
             </div>
           </div>
 
+          <!-- Category: General -->
+          <div class="preference-category-divider">
+            <Divider :label="t('categoryGeneral')" spacing="none" />
+          </div>
+
           <div class="preference-item">
-            <div>
+            <div class="preference-copy">
+              <p class="preference-title">{{ t('alwaysOnTop') }}</p>
+              <p class="preference-description">{{ t('alwaysOnTopDesc') }}</p>
+            </div>
+            <div class="preference-control">
+              <Switch :model-value="alwaysOnTop ?? true" @update:model-value="emit('update:alwaysOnTop', $event)" />
+            </div>
+          </div>
+
+          <div class="preference-item">
+            <div class="preference-copy">
               <p class="preference-title">{{ t('language') }}</p>
               <p class="preference-description">{{ t('chooseLanguage') }}</p>
             </div>
-            <div class="countdown-select">
+            <div class="language-select preference-control">
               <Select
                 :model-value="localeStore.locale"
                 :options="localeOptions"
@@ -196,11 +208,11 @@ const recordingBarOptions = [
           </div>
 
           <div class="preference-item">
-            <div>
+            <div class="preference-copy">
               <p class="preference-title">{{ t('theme') }}</p>
               <p class="preference-description">{{ t('chooseColorMode') }}</p>
             </div>
-            <ButtonGroup class="theme-controls">
+            <ButtonGroup class="theme-controls preference-control">
               <Button
                 :class="{ active: themeStore.theme === 'light' }"
                 variant="tab"
@@ -228,18 +240,25 @@ const recordingBarOptions = [
             </ButtonGroup>
           </div>
 
+          <!-- Category: About -->
+          <div class="preference-category-divider">
+            <Divider :label="t('categoryAbout')" spacing="none" />
+          </div>
+
           <div class="preference-item update-preference-item">
             <UpdateControls />
           </div>
 
-          <SocialLinks />
+          <div class="preference-socials">
+            <SocialLinks />
+          </div>
 
           <div class="preference-item clickable" @click="currentView = 'about'">
-            <div>
+            <div class="preference-copy">
               <p class="preference-title">{{ t('about') }}</p>
               <p class="preference-description">{{ t('aboutDesc') }}</p>
             </div>
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" class="preference-control">
               <template #icon><Info class="button-icon" /></template>
               {{ t('view') }}
             </Button>
@@ -253,18 +272,21 @@ const recordingBarOptions = [
 <style scoped>
 .preferences {
   flex: 1;
-  padding: 16px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  min-height: 0;
+  width: 100%;
 }
 .view-container {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   flex: 1;
+  min-height: 0;
   height: 100%;
+  width: 100%;
 }
 .view-header {
   display: flex;
@@ -280,45 +302,69 @@ const recordingBarOptions = [
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
   overflow-y: auto;
-  padding-right: 2px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 0 12px 0;
+}
+.preference-category-divider {
+  padding: 14px 16px 6px;
+  box-sizing: border-box;
+  width: 100%;
+}
+.preference-category-divider:first-child {
+  padding-top: 10px;
+}
+.shortcut-view-list {
+  padding: 16px;
 }
 .preference-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  gap: 12px;
+  padding: 11px 16px;
+  background: transparent;
+  border-bottom: 1px solid var(--color-border);
+  box-sizing: border-box;
+  width: 100%;
+  transition: background-color 0.15s ease;
 }
 .preference-copy {
+  flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.preference-control {
+  flex-shrink: 0;
 }
 .input-access-item {
-  gap: 10px;
+  gap: 12px;
 }
 .input-access-actions {
-  flex: 0 0 auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 .update-preference-item {
   min-width: 0;
-  padding: 8px;
+  padding: 11px 16px;
 }
-.update-preference-item :deep(.update-actions) {
-  flex-direction: column;
-  gap: 6px;
-}
-.update-preference-item :deep(.update-btn) {
+.preference-socials {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  box-sizing: border-box;
   width: 100%;
-  min-width: 0;
-  white-space: normal;
-  line-height: 1.15;
 }
 .preference-item.clickable {
   cursor: pointer;
-  transition: background-color 0.15s ease;
+}
+.preference-item:hover {
+  background-color: color-mix(in srgb, var(--color-bg-surface-hover) 50%, transparent);
 }
 .preference-item.clickable:hover {
   background-color: var(--color-bg-surface-hover);
@@ -330,18 +376,22 @@ const recordingBarOptions = [
 .preference-title {
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.3;
   color: var(--text-primary);
 }
 .preference-description {
-  margin-top: 2px;
   font-size: 11px;
+  line-height: 1.35;
   color: var(--text-muted);
 }
 .countdown-select {
-  width: 80px;
+  width: 84px;
+}
+.language-select {
+  width: 136px;
 }
 .recorder-bar-select {
-  width: 148px;
+  width: 140px;
 }
 .theme-controls {
   width: auto;

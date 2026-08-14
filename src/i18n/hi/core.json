@@ -269,6 +269,9 @@
     "progressLabel": "एडिटर लोडिंग प्रगति"
   },
   "HudPreferences": {
+    "categoryRecording": "रिकॉर्डिंग",
+    "categoryGeneral": "सामान्य",
+    "categoryAbout": "के बारे में",
     "preferences": "प्राथमिकताएँ",
     "back": "वापस",
     "keyboardShortcuts": "कीबोर्ड शॉर्टकट",

@@ -269,6 +269,9 @@
     "progressLabel": "Editor loading progress"
   },
   "HudPreferences": {
+    "categoryRecording": "Recording",
+    "categoryGeneral": "General",
+    "categoryAbout": "About",
     "preferences": "Preferences",
     "back": "Back",
     "keyboardShortcuts": "Keyboard Shortcuts",

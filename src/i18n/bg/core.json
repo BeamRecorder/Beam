@@ -269,6 +269,9 @@
     "progressLabel": "Напредък на зареждането на редактора"
   },
   "HudPreferences": {
+    "categoryRecording": "Запис",
+    "categoryGeneral": "Общи",
+    "categoryAbout": "Относно",
     "preferences": "Предпочитания",
     "back": "Назад",
     "keyboardShortcuts": "Клавишни комбинации",

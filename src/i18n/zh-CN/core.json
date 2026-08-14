@@ -269,6 +269,9 @@
     "progressLabel": "编辑器加载进度"
   },
   "HudPreferences": {
+    "categoryRecording": "录制",
+    "categoryGeneral": "通用",
+    "categoryAbout": "关于",
     "preferences": "偏好设置",
     "back": "返回",
     "keyboardShortcuts": "键盘快捷键",

@@ -269,6 +269,9 @@
     "progressLabel": "Ход загрузки редактора"
   },
   "HudPreferences": {
+    "categoryRecording": "Запись",
+    "categoryGeneral": "Общие",
+    "categoryAbout": "О программе",
     "preferences": "Настройки",
     "back": "Назад",
     "keyboardShortcuts": "Сочетания клавиш",

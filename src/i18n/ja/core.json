@@ -269,7 +269,10 @@
     "progressLabel": "エディターの読み込み進捗"
   },
   "HudPreferences": {
-    "preferences": "環境設定",
+    "categoryRecording": "録画",
+    "categoryGeneral": "一般",
+    "categoryAbout": "情報",
+    "preferences": "設定",
     "back": "戻る",
     "keyboardShortcuts": "キーボードショートカット",
     "done": "完了",

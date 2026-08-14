@@ -269,6 +269,9 @@
     "progressLabel": "Progresso de carregamento do editor"
   },
   "HudPreferences": {
+    "categoryRecording": "Gravação",
+    "categoryGeneral": "Geral",
+    "categoryAbout": "Sobre",
     "preferences": "Preferências",
     "back": "Voltar",
     "keyboardShortcuts": "Atalhos de teclado",

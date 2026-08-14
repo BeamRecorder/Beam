@@ -269,6 +269,9 @@
     "progressLabel": "Postęp ładowania edytora"
   },
   "HudPreferences": {
+    "categoryRecording": "Nagrywanie",
+    "categoryGeneral": "Ogólne",
+    "categoryAbout": "O programie",
     "preferences": "Preferencje",
     "back": "Wstecz",
     "keyboardShortcuts": "Skróty klawiaturowe",

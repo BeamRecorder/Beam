@@ -269,6 +269,9 @@
     "progressLabel": "Avanzamento del caricamento dell’editor"
   },
   "HudPreferences": {
+    "categoryRecording": "Registrazione",
+    "categoryGeneral": "Generale",
+    "categoryAbout": "Informazioni",
     "preferences": "Preferenze",
     "back": "Indietro",
     "keyboardShortcuts": "Scorciatoie da tastiera",

@@ -117,8 +117,8 @@ const { list, containerProps, wrapperProps } = useVirtualList(normalizedOptions,
 const labelStyle = computed(() => {
   const text = selectedOption.value ? selectedOption.value.label : props.placeholder;
   const len = text.length;
-  if (len > 28) return { fontSize: '0.75rem' };
-  if (len > 20) return { fontSize: '0.85rem' };
+  if (len > 28) return { fontSize: '0.7rem' };
+  if (len > 20) return { fontSize: '0.75rem' };
   return {};
 });
 
@@ -273,17 +273,21 @@ const stopMarquee = (event: PointerEvent) => {
   justify-content: space-between;
   width: 100%;
   min-width: 80px;
-  height: 2.75rem;
-  padding: 0.4rem 0.8rem;
+  height: 2.125rem;
+  padding: 0.25rem 0.625rem;
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: 0.8125rem;
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+}
+
+.select-trigger.is-source {
+  height: 2.75rem;
 }
 
 .select-trigger:hover:not(.is-disabled) {
@@ -304,15 +308,16 @@ const stopMarquee = (event: PointerEvent) => {
 .trigger-content-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
   flex: 1;
+  min-width: 0;
 }
 
 .selected-thumbnail-wrapper {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 4px;
   overflow: hidden;
   background: #000;
@@ -343,6 +348,7 @@ const stopMarquee = (event: PointerEvent) => {
 
 .select-trigger.is-source .selected-thumbnail-wrapper {
   width: 38px;
+  height: 24px;
   border-radius: var(--radius-sm);
   background: var(--color-bg-surface-hover);
 }
@@ -353,8 +359,8 @@ const stopMarquee = (event: PointerEvent) => {
 }
 
 .selected-color-badge {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 1px solid var(--color-border-strong);
   flex-shrink: 0;
@@ -371,8 +377,8 @@ const stopMarquee = (event: PointerEvent) => {
 }
 
 .select-chevron {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 0.95rem;
+  height: 0.95rem;
   color: var(--text-secondary);
   transition: transform 0.2s ease;
   flex-shrink: 0;

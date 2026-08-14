@@ -94,7 +94,7 @@ describe('HudPreferences', () => {
     expect(wrapper.get('.input-access-item .preference-description').text()).toContain(
       'Records safe keyboard shortcuts.',
     );
-    expect(wrapper.get('.input-access-item .switch-label').text()).toContain('Record keyboard shortcuts');
+    expect(wrapper.get('.input-access-item .preference-title').text()).toContain('Record keyboard shortcuts');
     expect(wrapper.get('.input-access-actions [role="switch"]').attributes('aria-checked')).toBe('true');
     expect(wrapper.find('.input-access-actions .btn-secondary').exists()).toBe(false);
 

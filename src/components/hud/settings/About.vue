@@ -41,7 +41,10 @@ onMounted(async () => {
   align-items: center;
   flex: 1;
   height: 100%;
-  padding: 24px 0;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  width: 100%;
+  overflow-y: auto;
 }
 
 .about-content {

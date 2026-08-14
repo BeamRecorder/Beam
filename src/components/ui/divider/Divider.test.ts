@@ -13,4 +13,10 @@ describe('Divider', () => {
     expect(wrapper.classes()).toContain('divider-vertical');
     expect(wrapper.text()).toBe('or');
   });
+  it('renders horizontal divider with label and flanking lines', () => {
+    const wrapper = mount(Divider, { props: { label: 'Category' } });
+    expect(wrapper.classes()).toContain('has-label');
+    expect(wrapper.findAll('.divider-line')).toHaveLength(2);
+    expect(wrapper.find('.divider-label').text()).toBe('Category');
+  });
 });
