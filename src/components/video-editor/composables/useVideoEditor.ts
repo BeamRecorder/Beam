@@ -10,6 +10,7 @@ import { createCompositionSnapshot } from '../../export/composition/snapshot';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
 import { compositionDurationMs } from '~/media/shared';
 import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-settings';
+import { compositionPlaybackSignature } from './composition-playback-signature';
 
 export function useVideoEditor(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -119,9 +120,10 @@ export function useVideoEditor(options: {
   );
   let playbackLoad = 0;
   watch(
-    compositionState.composition,
-    (composition) => {
+    () => compositionPlaybackSignature(compositionState.composition.value),
+    () => {
       const request = ++playbackLoad;
+      const composition = compositionState.composition.value;
       void player.loadComposition(composition).catch((error: unknown) => {
         if (request !== playbackLoad) return;
         console.error(
@@ -132,7 +134,7 @@ export function useVideoEditor(options: {
         );
       });
     },
-    { deep: true, immediate: true, flush: 'post' },
+    { immediate: true, flush: 'post' },
   );
   return {
     activeTab,

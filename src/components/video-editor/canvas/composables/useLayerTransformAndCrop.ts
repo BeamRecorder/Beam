@@ -50,7 +50,6 @@ export interface UseLayerTransformAndCropOptions {
   measureCaptionText?: CaptionTextMeasurer;
   zoomScale?: () => number;
   onUpdateTransform: (transform: NormalizedTransform) => void;
-  onPreviewTransform: (transform: NormalizedTransform) => void;
   onUpdateCrop: (crop: NormalizedCrop) => void;
   onSelectTransformClip: (clipId: string) => void;
 }
@@ -59,8 +58,6 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const transformDraft = ref<NormalizedTransform | null>(null);
   const cropDraft = ref<NormalizedCrop | null>(null);
   const activeGuideLines = ref<AlignmentGuide[]>([]);
-  let previewFrame: number | null = null;
-  let pendingPreview: NormalizedTransform | null = null;
   let transformDrag: {
     kind: 'move' | 'resize';
     corner?: ResizeCorner;
@@ -364,18 +361,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     transformDraft.value = clip.kind === 'webcam' ? clampWebcamTransform(resized) : resized;
   };
 
-  const schedulePreview = (transform: NormalizedTransform) => {
-    pendingPreview = transform;
-    if (previewFrame !== null) return;
-    previewFrame = requestAnimationFrame(() => {
-      previewFrame = null;
-      if (pendingPreview) options.onPreviewTransform(pendingPreview);
-      pendingPreview = null;
-    });
-  };
   const moveTransformDrag = (event: PointerEvent) => {
     applyTransformDrag(event.clientX, event.clientY, event.shiftKey);
-    if (transformDraft.value) schedulePreview(transformDraft.value);
   };
   const updateAspectMode = (event: KeyboardEvent) => {
     if (event.key === 'Shift' && transformDrag)
@@ -384,10 +371,6 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
   const endTransformDrag = (event: PointerEvent) => {
     activeGuideLines.value = [];
     if (!transformDrag) return;
-    if (previewFrame !== null) cancelAnimationFrame(previewFrame);
-    previewFrame = null;
-    if (pendingPreview) options.onPreviewTransform(pendingPreview);
-    pendingPreview = null;
     if (transformDraft.value) options.onUpdateTransform(transformDraft.value);
     transformDrag = null;
     transformDraft.value = null;
@@ -421,7 +404,6 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     window.addEventListener('keyup', updateAspectMode);
   });
   onUnmounted(() => {
-    if (previewFrame !== null) cancelAnimationFrame(previewFrame);
     window.removeEventListener('keydown', updateAspectMode);
     window.removeEventListener('keyup', updateAspectMode);
   });

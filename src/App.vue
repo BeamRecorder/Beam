@@ -124,7 +124,6 @@ const startRecordingFromEditor = async (configuration: RecordingConfiguration) =
   capture.setWindowMode('recorder');
   capture.setWindowVisible(true);
   capture.setCameraOverlayActive(true);
-  capture.resetCameraOverlayPlacement?.();
   await recording.start(configuration);
   if (recording.phase.value === 'idle') {
     currentView.value = 'hud';
@@ -157,7 +156,6 @@ const startRecording = async (configuration: RecordingConfiguration) => {
   currentView.value = 'recorder';
   capture.setWindowMode('recorder');
   capture.setCameraOverlayActive(true);
-  capture.resetCameraOverlayPlacement?.();
   await recording.start(configuration);
   if (recording.phase.value === 'idle') {
     currentView.value = 'hud';

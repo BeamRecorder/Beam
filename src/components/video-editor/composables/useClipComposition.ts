@@ -308,7 +308,6 @@ export function useClipComposition(options: {
   const updateSelectedTransform = (transform: NormalizedTransform) => {
     if (selectedClipId.value) composition.value = setTransform(composition.value, selectedClipId.value, transform);
   };
-  const previewSelectedTransform = updateSelectedTransform;
   const updateSelectedCrop = (crop: NormalizedCrop) => {
     if (selectedClipId.value) composition.value = setCrop(composition.value, selectedClipId.value, crop);
   };
@@ -363,7 +362,6 @@ export function useClipComposition(options: {
     reorderVisualClip,
     updateSelectedAppearance,
     updateSelectedTransform,
-    previewSelectedTransform,
     updateSelectedCrop,
     updateSelectedMirrored,
     updateSelectedMirroredY,

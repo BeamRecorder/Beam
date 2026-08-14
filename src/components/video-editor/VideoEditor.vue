@@ -104,7 +104,6 @@ const {
   reorderVisualClip,
   updateSelectedAppearance,
   updateSelectedTransform,
-  previewSelectedTransform,
   updateSelectedCrop,
   updateSelectedMirrored,
   updateSelectedMirroredY,
@@ -456,7 +455,6 @@ onBeforeUnmount(() => {
             @select:canvas="selectEditorCanvas"
             @deselect:transform-clip="deselectTransformClip"
             @update:clip-transform="commitSelectedTransform"
-            @preview:clip-transform="previewSelectedTransform"
             @update:clip-crop="commitSelectedCrop"
             @done:crop="isCropping = false"
             @deselect:zoom="selectedZoomId = null"

@@ -136,14 +136,19 @@ const pointer = (target: HTMLElement, overrides: Partial<PointerEvent> = {}) =>
     ...overrides,
   }) as unknown as PointerEvent;
 
-const mountComposable = (selected: VisualClip | CaptionClip | null, cropping = false) => {
+const mountComposable = (
+  selected: VisualClip | CaptionClip | null,
+  cropping = false,
+  initialComposition: ClipComposition = composition(),
+) => {
   const selectedRef = ref<VisualClip | CaptionClip | null>(selected);
   const croppingRef = ref(cropping);
+  const compositionRef = ref(initialComposition);
   const selectedBounds = ref<VideoWindowBounds | null>(bounds());
   const overlayBounds = ref<VideoWindowBounds | null>({ dx: 0, dy: 0, dw: 800, dh: 450, scale: 1 });
   const outputCanvas = ref({ ...DEFAULT_OUTPUT_CANVAS, width: 800, height: 450 });
   const options: UseLayerTransformAndCropOptions = {
-    composition,
+    composition: () => compositionRef.value,
     currentTime: () => 1,
     selectedTransformClip: () => selectedRef.value,
     videoWindowBounds: () => selectedBounds.value,
@@ -151,7 +156,6 @@ const mountComposable = (selected: VisualClip | CaptionClip | null, cropping = f
     isCropping: () => croppingRef.value,
     outputCanvas: () => outputCanvas.value,
     onUpdateTransform: vi.fn(),
-    onPreviewTransform: vi.fn(),
     onUpdateCrop: vi.fn(),
     onSelectTransformClip: vi.fn(),
   };
@@ -165,6 +169,7 @@ const mountComposable = (selected: VisualClip | CaptionClip | null, cropping = f
   wrapper = mount(Harness);
   return {
     selectedRef,
+    compositionRef,
     croppingRef,
     selectedBounds,
     overlayBounds,
@@ -267,18 +272,22 @@ describe('useLayerTransformAndCrop', () => {
     mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'move');
     mounted.state.moveTransformDrag(pointer(target, { clientX: 900, clientY: -800 }));
     expect(mounted.state.transformDraft.value).toMatchObject({ x: 1.25, y: -1.8 });
+    expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
+    expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
     mounted.state.endTransformDrag(pointer(target));
-    expect(mounted.options.onPreviewTransform).toHaveBeenCalled();
+    expect(mounted.options.onUpdateTransform).toHaveBeenCalledTimes(1);
     expect(mounted.options.onUpdateTransform).toHaveBeenCalledWith(expect.objectContaining({ x: 1.25 }));
 
     mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
     mounted.state.moveTransformDrag(pointer(target, { clientX: 1000, clientY: 1000, shiftKey: false }));
     expect(mounted.state.transformDraft.value?.height).toBeCloseTo(mounted.state.transformDraft.value!.width * 0.8);
+    expect(mounted.options.onUpdateTransform).toHaveBeenCalledTimes(1);
     mounted.state.moveTransformDrag(pointer(target, { clientX: -1000, clientY: -1000, shiftKey: true }));
     expect(mounted.state.transformDraft.value?.width).toBeGreaterThanOrEqual(0.02);
     mounted.state.endTransformDrag(pointer(target));
     expect(setPointerCapture).toHaveBeenCalled();
+    expect(mounted.options.onUpdateTransform).toHaveBeenCalledTimes(2);
   });
 
   it('keeps webcam transforms inside the output frame while moving and resizing', () => {
@@ -367,5 +376,29 @@ describe('useLayerTransformAndCrop', () => {
     expect(mounted.options.onSelectTransformClip).toHaveBeenCalledTimes(1);
     mounted.selectedRef.value = null;
     mounted.state.beginTransformDrag(pointer(canvas), 'move');
+  });
+
+  it('selects a foreground imported video before an overlapping background visual', () => {
+    const importedVideo: VisualClip = {
+      ...imageClip(),
+      id: 'imported-video',
+      kind: 'video',
+      assetId: 'imported-video-asset',
+      order: 0,
+    };
+    const backgroundImage: VisualClip = {
+      ...imageClip(),
+      id: 'background-image',
+      order: 1,
+    };
+    const scene = composition();
+    scene.clips = [screenClip(), importedVideo, backgroundImage];
+    const mounted = mountComposable(null, false, scene);
+    const canvas = document.createElement('canvas');
+    Object.defineProperty(canvas, 'clientWidth', { configurable: true, value: 800 });
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 450 } as DOMRect);
+
+    expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 400, clientY: 225 }), canvas)).toBe(true);
+    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('imported-video');
   });
 });

@@ -74,7 +74,6 @@ const emit = defineEmits<{
   (e: 'deselect:transform-clip'): void;
   (e: 'deselect:zoom'): void;
   (e: 'update:clip-transform', transform: NormalizedTransform): void;
-  (e: 'preview:clip-transform', transform: NormalizedTransform): void;
   (e: 'update:clip-crop', crop: NormalizedCrop): void;
   (e: 'select:canvas'): void;
   (e: 'done:crop'): void;
@@ -150,7 +149,6 @@ const transformAndCrop = useLayerTransformAndCrop({
   measureCaptionText,
   zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit('update:clip-transform', transform),
-  onPreviewTransform: (transform) => emit('preview:clip-transform', transform),
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
 });

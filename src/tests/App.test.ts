@@ -197,7 +197,6 @@ describe('App', () => {
     await settle();
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(true);
-    expect(mocks.capture.resetCameraOverlayPlacement).toHaveBeenCalled();
     expect(mocks.controller.recording.start).toHaveBeenCalled();
 
     await wrapper.get('.pause').trigger('click');

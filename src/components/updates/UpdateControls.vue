@@ -163,14 +163,14 @@ onBeforeUnmount(() => {
 
 .update-actions {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
 }
 
 .update-btn {
-  flex: 1;
+  width: 100%;
   justify-content: center;
-  white-space: nowrap;
 }
 
 .button-icon {
