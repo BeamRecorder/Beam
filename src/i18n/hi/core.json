@@ -248,7 +248,15 @@
     "closeTeleprompter": "टेलीप्रॉम्प्टर छिपाएँ",
     "openHud": "HUD खोलें",
     "quit": "Beam बंद करें",
-    "preparingEditor": "एडिटर खोला जा रहा है"
+    "preparingEditor": "एडिटर खोला जा रहा है",
+    "interactionAccessNoticeTitle": "कीबोर्ड शॉर्टकट रिकॉर्डिंग की अनुमति दें",
+    "interactionAccessNoticeDescription": "कीबोर्ड शॉर्टकट रिकॉर्ड करने के लिए Beam को अतिरिक्त अनुमति चाहिए। Linux पर यह अनुमति माउस क्लिक मेटाडेटा भी चालू करती है। टाइप किया गया टेक्स्ट कभी सेव नहीं होता।",
+    "interactionAccessDeniedDescription": "अनुमति नहीं मिली। दोबारा कोशिश करें या बाद में सेटिंग्स में इसे चालू करें।",
+    "authorizeInteractions": "अनुमति दें",
+    "authorizingInteractions": "अनुमति दी जा रही है",
+    "dismissInteractionNotice": "अभी नहीं",
+    "interactionAccessSettingsHint": "सेटिंग्स में कीबोर्ड शॉर्टकट रिकॉर्ड करें विकल्प देखें।",
+    "dismissInteractionReminder": "रिमाइंडर बंद करें"
   },
   "EditorPreparingHud": {
     "title": "एडिटर तैयार हो रहा है",
@@ -281,8 +289,20 @@
     "option10s": "10 सेकंड",
     "alwaysVisible": "हमेशा दृश्यमान",
     "autoFade": "ऑटो फ़ेड",
+    "hiddenUntilHovered": "होवर तक छिपी हुई",
     "language": "भाषा",
-    "chooseLanguage": "प्रदर्शन भाषा चुनें"
+    "chooseLanguage": "प्रदर्शन भाषा चुनें",
+    "interactionAccess": "इंटरैक्शन एक्सेस",
+    "interactionAccessReadyDescription": "क्लिक और शॉर्टकट कैप्चर करता है। टाइप किया गया टेक्स्ट कभी सहेजा नहीं जाता।",
+    "interactionAccessUnavailableDescription": "इस सिस्टम पर इंटरैक्शन कैप्चर उपलब्ध नहीं है।",
+    "interactionAccessDescription": "क्लिक प्रभाव और भविष्य के शॉर्टकट कैप्शन के लिए आवश्यक। टाइप किया गया टेक्स्ट सहेजा नहीं जाता।",
+    "accessReady": "तैयार",
+    "checkingAccess": "जाँच जारी",
+    "requestingAccess": "अनुमति जारी",
+    "allowAccess": "अनुमति दें",
+    "accessUnavailable": "उपलब्ध नहीं",
+    "recordInteractions": "कीबोर्ड शॉर्टकट रिकॉर्ड करें",
+    "recordInteractionsDescription": "सुरक्षित कीबोर्ड शॉर्टकट रिकॉर्ड करता है। Linux पर इसे बंद करने से माउस क्लिक मेटाडेटा भी बंद हो जाता है। टाइप किया गया टेक्स्ट कभी सेव नहीं होता।"
   },
   "ProjectPicker": {
     "projects": "प्रोजेक्ट",

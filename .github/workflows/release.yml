@@ -141,8 +141,57 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  package-linux:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-linux
+          cache-on-failure: true
+      - name: Install native build and packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config rpm
+      - run: npm ci
+      - run: npm run build:release
+      - run: npx electron-builder --linux AppImage deb rpm --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - name: Verify Linux artifacts and bundled input helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x target/release/capture-engine
+          test -x target/release/beam-input-helper
+          appimage="$(find dist_electron -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
+          deb="$(find dist_electron -maxdepth 1 -type f -name '*.deb' -print -quit)"
+          rpm="$(find dist_electron -maxdepth 1 -type f -name '*.rpm' -print -quit)"
+          test -n "$appimage"
+          test -n "$deb"
+          test -n "$rpm"
+          dpkg-deb --contents "$deb" | grep 'resources/input-helper/beam-input-helper'
+          rpm --query --package --list "$rpm" | grep 'resources/input-helper/beam-input-helper'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-assets
+          path: |
+            dist_electron/*.AppImage
+            dist_electron/*.deb
+            dist_electron/*.rpm
+            dist_electron/*.blockmap
+            dist_electron/latest-linux.yml
+          if-no-files-found: error
+          retention-days: 1
+
   publish:
-    needs: [prepare, package-windows, package-macos]
+    needs: [prepare, package-windows, package-macos, package-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -152,6 +201,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: macos-release-assets
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-release-assets
           path: release-assets
       - env:
           GH_TOKEN: ${{ github.token }}

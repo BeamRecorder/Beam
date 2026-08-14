@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     CaptureError,
-    model::ScreenSelection,
+    model::{CursorSelection, ScreenSelection},
     screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, ScreenSegment, VideoFormat},
     session::StartGate,
 };
@@ -17,6 +17,7 @@ pub struct LinuxRecording {
     pipewire: Option<PipewireCapture>,
     metrics: Arc<ScreenCaptureMetrics>,
     encoded_output: bool,
+    encoded_codec: Option<String>,
 }
 
 impl LinuxRecording {
@@ -40,26 +41,41 @@ impl LinuxRecording {
                 "a normalized screen region is not supported by the Portal picker".into(),
             ));
         }
-        let (sink, encoded_output): (Box<dyn crate::screen::ScreenSampleSink>, bool) =
-            match request.consumer {
-                ScreenConsumer::Samples(sink) => (sink, false),
-                ScreenConsumer::EncodedFile {
-                    path,
+        let (sink, encoded_output, encoded_codec): (
+            Box<dyn crate::screen::ScreenSampleSink>,
+            bool,
+            Option<String>,
+        ) = match request.consumer {
+            ScreenConsumer::Samples(sink) => (sink, false, None),
+            ScreenConsumer::EncodedFile {
+                path,
+                cursor_directory,
+            } => {
+                let capabilities = super::probe_ffmpeg()?;
+                let codec = capabilities.encoder.codec.clone();
+                let capture_interactions = matches!(
+                    request.cursor,
+                    CursorSelection::Separate {
+                        capture_clicks: true,
+                        ..
+                    } | CursorSelection::Separate {
+                        capture_shortcuts: true,
+                        ..
+                    }
+                );
+                let sink = super::FfmpegScreenSink::new(
+                    capabilities,
+                    request.recording.clone(),
+                    ScreenSegment {
+                        path,
+                        start_ns: request.start_ns,
+                    },
                     cursor_directory,
-                } => {
-                    let capabilities = super::probe_ffmpeg()?;
-                    let sink = super::FfmpegScreenSink::new(
-                        capabilities,
-                        request.recording.clone(),
-                        ScreenSegment {
-                            path,
-                            start_ns: request.start_ns,
-                        },
-                        cursor_directory,
-                    )?;
-                    (Box::new(sink), true)
-                }
-            };
+                    capture_interactions,
+                )?;
+                (Box::new(sink), true, Some(codec))
+            }
+        };
         let mut portal = super::portal::prepare_portal(kind.clone(), request.cursor)?;
         let remote_fd = portal.take_remote_fd()?;
         let stream_scope = portal
@@ -82,6 +98,7 @@ impl LinuxRecording {
             pipewire: Some(pipewire),
             metrics,
             encoded_output,
+            encoded_codec,
         })
     }
 
@@ -147,6 +164,10 @@ impl LinuxRecording {
                 format
             }
         })
+    }
+
+    pub fn encoded_codec(&self) -> Option<&str> {
+        self.encoded_codec.as_deref()
     }
 }
 

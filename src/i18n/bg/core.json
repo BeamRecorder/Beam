@@ -248,7 +248,15 @@
     "closeTeleprompter": "Скриване на телесуфльора",
     "openHud": "Отваряне на HUD",
     "quit": "Изход от Beam",
-    "preparingEditor": "Отваряне на редактора"
+    "preparingEditor": "Отваряне на редактора",
+    "interactionAccessNoticeTitle": "Разрешаване на запис на клавишни комбинации",
+    "interactionAccessNoticeDescription": "Beam се нуждае от допълнителен достъп, за да записва клавишни комбинации. В Linux този достъп включва и метаданни за щраквания с мишката. Въведеният текст никога не се съхранява.",
+    "interactionAccessDeniedDescription": "Достъпът не беше предоставен. Опитайте отново или го включете по-късно в Настройки.",
+    "authorizeInteractions": "Разрешаване",
+    "authorizingInteractions": "Разрешаване",
+    "dismissInteractionNotice": "Игнориране",
+    "interactionAccessSettingsHint": "Намерете Запис на клавишни комбинации в Настройки.",
+    "dismissInteractionReminder": "Затваряне на напомнянето"
   },
   "EditorPreparingHud": {
     "title": "Подготовка на редактора",
@@ -281,8 +289,20 @@
     "option10s": "10 сек.",
     "alwaysVisible": "Винаги видима",
     "autoFade": "Автоматично избледняване",
+    "hiddenUntilHovered": "Скрита до посочване",
     "language": "Език",
-    "chooseLanguage": "Изберете езика на интерфейса"
+    "chooseLanguage": "Изберете езика на интерфейса",
+    "interactionAccess": "Достъп до взаимодействия",
+    "interactionAccessReadyDescription": "Записва кликове и клавишни комбинации. Въведеният текст никога не се съхранява.",
+    "interactionAccessUnavailableDescription": "Записването на взаимодействия не е достъпно на тази система.",
+    "interactionAccessDescription": "Необходимо за ефекти при клик и бъдещи надписи за комбинации. Въведеният текст не се съхранява.",
+    "accessReady": "Готово",
+    "checkingAccess": "Проверка",
+    "requestingAccess": "Упълномощаване",
+    "allowAccess": "Разреши",
+    "accessUnavailable": "Недостъпно",
+    "recordInteractions": "Запис на клавишни комбинации",
+    "recordInteractionsDescription": "Записва безопасни клавишни комбинации. В Linux изключването на тази настройка изключва и метаданните за щраквания с мишката. Въведеният текст никога не се съхранява."
   },
   "ProjectPicker": {
     "projects": "Проекти",

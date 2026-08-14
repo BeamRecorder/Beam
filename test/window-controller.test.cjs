@@ -41,7 +41,7 @@ function fakeWindow() {
     setMinimized: (value) => {
       minimized = value;
     },
-    setAlwaysOnTop: (value) => calls.push(['top', value]),
+    setAlwaysOnTop: (value, level) => calls.push(['top', value, level]),
     setIgnoreMouseEvents: (value, options) => calls.push(options ? ['mouse', value, options] : ['mouse', value]),
     setResizable: (value) => calls.push(['resizable', value]),
     setMaximizable: (value) => calls.push(['maximizable', value]),
@@ -81,6 +81,10 @@ function fakeWindow() {
   };
 }
 
+function topCalls(win) {
+  return win.calls.filter((call) => call[0] === 'top');
+}
+
 test('hidden window ignores mouse events before it is ready', () => {
   const win = fakeWindow();
   new WindowController(win);
@@ -92,8 +96,9 @@ test('ready HUD forwards pointer movement over transparent areas and stays on to
   const controller = new WindowController(win);
   controller.markReadyToShow();
   assert.ok(win.calls.some((call) => call[0] === 'mouse' && call[1] === true && call[2]?.forward === true));
-  assert.equal(win.calls.at(-1)[0], 'top');
-  assert.equal(win.calls.at(-1)[1], true);
+  const top = topCalls(win).at(-1);
+  assert.equal(top[1], true);
+  assert.equal(top[2], process.platform === 'darwin' ? undefined : 'screen-saver');
 });
 
 test('recorder constraints are applied before its compact bounds', () => {
@@ -124,25 +129,55 @@ test('recorder constraints are applied before its compact bounds', () => {
   controller.setMode('hud');
 });
 
-test('minimized HUD stops intercepting clicks and loses topmost status', () => {
+test('recorder reapplies always-on-top after the window is shown', () => {
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
+  };
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    screenModule: {
+      getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+      getDisplayNearestPoint: () => display,
+    },
+  });
+
+  controller.setMode('recorder');
+  assert.equal(topCalls(win).at(-1)[1], false);
+
+  controller.markReadyToShow();
+
+  const top = topCalls(win).at(-1);
+  assert.equal(top[1], true);
+  assert.equal(top[2], process.platform === 'darwin' ? undefined : 'screen-saver');
+  assert.ok(win.calls.some((call) => call[0] === 'moveTop'));
+  controller.setMode('hud');
+});
+
+test('minimized HUD loses topmost status and regains it after restore', () => {
   const win = fakeWindow();
   const controller = new WindowController(win);
   controller.markReadyToShow();
   win.setMinimized(true);
   win.emit('minimize');
-  assert.deepEqual(win.calls.at(-2), ['mouse', true]);
-  assert.deepEqual(win.calls.at(-1), ['top', false]);
+  assert.equal(win.calls.filter((call) => call[0] === 'mouse').at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[1], false);
+
+  win.restore();
+  const restoredTop = topCalls(win).at(-1);
+  assert.equal(restoredTop[1], true);
+  assert.equal(restoredTop[2], process.platform === 'darwin' ? undefined : 'screen-saver');
 });
 
-test('recorder mode passes through clicks outside the compact bar', async () => {
-  let cursor = { x: 100, y: 100 };
+test('recorder mode keeps its compact native hit target interactive', () => {
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
     workArea: { x: 0, y: 0, width: 1000, height: 800 },
   };
   const screenModule = {
-    getCursorScreenPoint: () => cursor,
+    getCursorScreenPoint: () => ({ x: 100, y: 100 }),
     getDisplayNearestPoint: () => display,
   };
   const win = fakeWindow();
@@ -151,16 +186,9 @@ test('recorder mode passes through clicks outside the compact bar', async () => 
   controller.markReadyToShow();
 
   assert.ok(win.calls.some((call) => call[0] === 'bounds' && call[1].width === RECORDER_SIZE.width));
-  assert.ok(win.calls.some((call) => call[0] === 'mouse' && call[1] === true && call[2]?.forward === true));
-
-  cursor = { x: 920, y: 240 };
-  await new Promise((resolve) => setTimeout(resolve, 25));
-  assert.deepEqual(win.calls.at(-1), ['mouse', false]);
-
-  cursor = { x: 100, y: 100 };
-  await new Promise((resolve) => setTimeout(resolve, 25));
-  assert.deepEqual(win.calls.at(-1), ['mouse', true, { forward: true }]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
   controller.setMode('hud');
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', true, { forward: true }]);
 });
 
 test('recorder tooltips choose the side with room after the bar moves', async () => {

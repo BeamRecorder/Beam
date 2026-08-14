@@ -8,6 +8,7 @@ const catalog = {
     systemAudio: true,
     separateCursor: true,
     cursorClicks: true,
+    inputShortcuts: true,
     cursorShapes: false,
   },
   sources: [
@@ -30,6 +31,7 @@ test('builds a one-call recording config from defaults', () => {
   assert.deepEqual(config.cursor, {
     mode: 'separate',
     captureClicks: true,
+    captureShortcuts: false,
     captureShape: false,
   });
   assert.equal(config.recording.outputRoot, 'recordings');
@@ -104,6 +106,44 @@ test('builds a Linux monitor Portal selection without a Chromium source id', () 
   assert.deepEqual(config.cursor, {
     mode: 'separate',
     captureClicks: false,
+    captureShortcuts: false,
+    captureShape: false,
+  });
+});
+
+test('keeps mouse clicks on Windows and macOS when interaction recording is off', () => {
+  for (const platform of ['win32', 'darwin']) {
+    const config = buildDefaultCaptureConfig(catalog, { recordInteractions: false }, { ...environment, platform });
+
+    assert.deepEqual(config.cursor, {
+      mode: 'separate',
+      captureClicks: true,
+      captureShortcuts: false,
+      captureShape: false,
+    });
+  }
+});
+
+test('enables clicks and shortcuts on Linux only when interaction recording is on', () => {
+  const linux = { ...environment, platform: 'linux' };
+  const linuxCatalog = {
+    capabilities: { portalSelection: true, separateCursor: true, cursorClicks: true, inputShortcuts: true },
+    sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
+  };
+
+  const disabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: false }, linux);
+  assert.deepEqual(disabled.cursor, {
+    mode: 'separate',
+    captureClicks: false,
+    captureShortcuts: false,
+    captureShape: false,
+  });
+
+  const enabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: true }, linux);
+  assert.deepEqual(enabled.cursor, {
+    mode: 'separate',
+    captureClicks: true,
+    captureShortcuts: true,
     captureShape: false,
   });
 });

@@ -248,7 +248,15 @@
     "closeTeleprompter": "Скрыть телесуфлёр",
     "openHud": "Открыть HUD",
     "quit": "Выйти из Beam",
-    "preparingEditor": "Открытие редактора"
+    "preparingEditor": "Открытие редактора",
+    "interactionAccessNoticeTitle": "Разрешить запись сочетаний клавиш",
+    "interactionAccessNoticeDescription": "Beam требуется дополнительный доступ для записи сочетаний клавиш. В Linux этот доступ также включает метаданные щелчков мыши. Введённый текст никогда не сохраняется.",
+    "interactionAccessDeniedDescription": "Доступ не предоставлен. Повторите попытку или включите его позже в настройках.",
+    "authorizeInteractions": "Разрешить",
+    "authorizingInteractions": "Авторизация",
+    "dismissInteractionNotice": "Игнорировать",
+    "interactionAccessSettingsHint": "Параметр «Записывать сочетания клавиш» находится в настройках.",
+    "dismissInteractionReminder": "Закрыть напоминание"
   },
   "EditorPreparingHud": {
     "title": "Подготовка редактора",
@@ -281,8 +289,20 @@
     "option10s": "10 с",
     "alwaysVisible": "Всегда видима",
     "autoFade": "Автоскрытие",
+    "hiddenUntilHovered": "Скрыта до наведения",
     "language": "Язык",
-    "chooseLanguage": "Выберите язык интерфейса"
+    "chooseLanguage": "Выберите язык интерфейса",
+    "interactionAccess": "Доступ к взаимодействиям",
+    "interactionAccessReadyDescription": "Записывает клики и сочетания клавиш. Введённый текст никогда не сохраняется.",
+    "interactionAccessUnavailableDescription": "Запись взаимодействий недоступна в этой системе.",
+    "interactionAccessDescription": "Требуется для эффектов кликов и будущих подписей сочетаний. Введённый текст не сохраняется.",
+    "accessReady": "Готово",
+    "checkingAccess": "Проверка",
+    "requestingAccess": "Авторизация",
+    "allowAccess": "Разрешить",
+    "accessUnavailable": "Недоступно",
+    "recordInteractions": "Записывать сочетания клавиш",
+    "recordInteractionsDescription": "Записывает безопасные сочетания клавиш. В Linux отключение этого параметра также отключает метаданные щелчков мыши. Введённый текст никогда не сохраняется."
   },
   "ProjectPicker": {
     "projects": "Проекты",

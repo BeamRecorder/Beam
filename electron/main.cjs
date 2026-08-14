@@ -21,6 +21,7 @@ const { registerCaptureIpc } = require('./capture/capture-ipc.cjs');
 const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
+const { configureLinuxWindowBackend } = require('./window/linux-window-backend.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
 const { shouldAutoOpenDevTools } = require('./window/devtools-policy.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
@@ -42,12 +43,18 @@ const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs');
 const { createTrayManager } = require('./tray/tray-manager.cjs');
+const { InputAccess, registerInputAccessIpc } = require('./input/input-access.cjs');
 
 const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB';
 const GITHUB_REPOSITORY_URL = 'https://github.com/ExtraBinoss/Beam';
 
 // Set to true only while diagnosing Electron startup or renderer requests.
 const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged;
+
+// Native Wayland toplevels cannot request a compositor-enforced always-on-top
+// layer. Prefer XWayland when it is available so the RecorderBar can use the
+// standard _NET_WM_STATE_ABOVE contract. An explicit user ozone switch wins.
+configureLinuxWindowBackend(app);
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -62,7 +69,15 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.join(__dirname, '..');
-const captureEngine = new CaptureEngine(app, applicationRoot);
+let captureEngine;
+const inputAccess = new InputAccess({
+  app,
+  applicationRoot,
+  nativeRequest: (command) => captureEngine.request(command),
+});
+captureEngine = new CaptureEngine(app, applicationRoot, {
+  inputHelperPath: () => inputAccess.helperForCapture(),
+});
 const cameraStorage = createCameraStorage({});
 const microphoneStorage = createMicrophoneStorage({});
 const systemAudioStorage = createSystemAudioStorage({});
@@ -150,7 +165,7 @@ function createWindow(preferencesStore) {
     height: 512,
     frame: false,
     transparent: true,
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     icon: getAppIconPath(),
     resizable: true,
     maximizable: true,
@@ -196,6 +211,7 @@ app.whenReady().then(() => {
   configureMediaPermission();
   logStartup('Media permission policy registered.');
   configureDesktopLoopback();
+  registerInputAccessIpc(ipcMain, inputAccess);
   const userPaths = createUserPaths(app.getPath('videos'));
   const preferencesStore = createPreferencesStore(userPaths.preferences);
   const teleprompterWindow = createTeleprompterWindow({
@@ -288,9 +304,16 @@ app.whenReady().then(() => {
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
   ipcMain.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
   ipcMain.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
-  ipcMain.on('countdown:set', (_event, seconds) =>
-    countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null),
-  );
+  ipcMain.handle('countdown:set', (_event, seconds) => {
+    countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null);
+  });
+  ipcMain.handle('recording-surface:prepare', async () => {
+    countdownOverlay.show(null);
+    screenRegionOverlay.hide();
+    // Wait for the compositor to commit both hidden overlay surfaces before
+    // the native start gate admits the first recorded frame.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
   ipcMain.handle('screen-region:select', (_event, options) => screenRegionOverlay.select(options));
   ipcMain.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
   ipcMain.on('screen-region:hide', () => screenRegionOverlay.hide());

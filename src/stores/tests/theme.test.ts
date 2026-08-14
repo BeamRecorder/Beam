@@ -4,9 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreferenceSettings } from '../../api/types/capture-api';
 
 const preferences = (theme: PreferenceSettings['theme']): PreferenceSettings => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   theme,
   recordingBar: { visibility: 'always' },
+  recordingInteractions: { enabled: false, noticeDismissed: false },
   devices: {},
   shortcuts: {},
   backgroundPresets: { colors: [], gradients: [] },

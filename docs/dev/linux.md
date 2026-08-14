@@ -9,10 +9,10 @@ Install the compiler and runtime packages for your distribution as documented in
 
 Beam checks these capabilities before opening the Portal picker. If FFmpeg is installed outside `PATH`, set `BEAM_FFMPEG_PATH` to its executable. A missing executable reports `ffmpeg-unavailable`; a build without either supported encoder reports `ffmpeg-encoder-unavailable`.
 
-For local development:
+For local development, build both the capture engine and the filtered input helper:
 
 ```bash
-cargo build -p capture --bin capture-engine
+cargo build -p capture --bin capture-engine --bin beam-input-helper
 npm run electron:dev-norust
 ```
 
@@ -27,6 +27,8 @@ cargo test -p capture --lib \
 ```
 
 A real monitor/window smoke remains interactive and must be run manually because the Portal requires explicit user consent.
+
+Click and shortcut metadata also requires explicit Polkit consent. Use **Record keyboard shortcuts** in HUD preferences. On Linux, turning this setting off disables both keyboard shortcuts and click metadata. Do not add the developer account to the `input` group: that would grant the entire Electron process broad access to every raw input device. Development, AppImage, RPM and DEB use the same filtered helper protocol and write structured events to `cursor/input.json`.
 
 Repository rules still apply to documentation and non-capture changes:
 

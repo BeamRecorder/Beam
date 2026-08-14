@@ -248,7 +248,15 @@
     "closeTeleprompter": "Nascondi teleprompter",
     "openHud": "Apri HUD",
     "quit": "Esci da Beam",
-    "preparingEditor": "Apertura dell’editor"
+    "preparingEditor": "Apertura dell’editor",
+    "interactionAccessNoticeTitle": "Consenti la registrazione delle scorciatoie",
+    "interactionAccessNoticeDescription": "Beam richiede un accesso aggiuntivo per registrare le scorciatoie da tastiera. Su Linux, questo accesso abilita anche i metadati dei clic del mouse. Il testo digitato non viene mai salvato.",
+    "interactionAccessDeniedDescription": "L’accesso non è stato concesso. Puoi riprovare o abilitarlo più tardi nelle Impostazioni.",
+    "authorizeInteractions": "Autorizza",
+    "authorizingInteractions": "Autorizzazione",
+    "dismissInteractionNotice": "Ignora",
+    "interactionAccessSettingsHint": "Trova Registra scorciatoie da tastiera nelle Impostazioni.",
+    "dismissInteractionReminder": "Chiudi promemoria"
   },
   "EditorPreparingHud": {
     "title": "Preparazione dell’editor",
@@ -281,8 +289,20 @@
     "option10s": "10 s",
     "alwaysVisible": "Sempre visibile",
     "autoFade": "Dissolvenza automatica",
+    "hiddenUntilHovered": "Nascosta fino al passaggio",
     "language": "Lingua",
-    "chooseLanguage": "Seleziona la lingua dell'interfaccia"
+    "chooseLanguage": "Seleziona la lingua dell'interfaccia",
+    "interactionAccess": "Accesso alle interazioni",
+    "interactionAccessReadyDescription": "Cattura clic e scorciatoie. Il testo digitato non viene mai salvato.",
+    "interactionAccessUnavailableDescription": "La cattura delle interazioni non è disponibile su questo sistema.",
+    "interactionAccessDescription": "Necessario per gli effetti clic e le future didascalie delle scorciatoie. Il testo digitato non viene salvato.",
+    "accessReady": "Pronto",
+    "checkingAccess": "Verifica",
+    "requestingAccess": "Autorizzazione",
+    "allowAccess": "Consenti",
+    "accessUnavailable": "Non disponibile",
+    "recordInteractions": "Registra scorciatoie da tastiera",
+    "recordInteractionsDescription": "Registra scorciatoie da tastiera sicure. Su Linux, disattivare questa opzione disabilita anche i metadati dei clic del mouse. Il testo digitato non viene mai salvato."
   },
   "ProjectPicker": {
     "projects": "Progetti",

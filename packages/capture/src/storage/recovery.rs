@@ -49,6 +49,7 @@ pub fn recover_session(layout: &SessionLayout) -> Result<RecoveryReport, crate::
         layout.timing(),
         cursor_directory.join("cursor.json"),
         cursor_directory.join("cursor.partial.jsonl"),
+        cursor_directory.join("input.partial.jsonl"),
     ];
     let ignored = jsonl_paths.iter().try_fold(0_usize, |total, path| {
         repair_invalid_trailing_lines(path).map(|ignored| total.saturating_add(ignored))

@@ -36,6 +36,7 @@ fn run() -> Result<(), capture::CaptureError> {
         let response = handle(request, &mut engine);
         write_json_line(&mut output, &response)?;
     }
+    capture::input::shutdown_input_access();
     Ok(())
 }
 
@@ -64,6 +65,12 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
         Command::Permissions => {
             serde_json::to_value(NativeCatalog::default().snapshot()?.permissions)
                 .map_err(Into::into)
+        }
+        Command::InputAccessStatus => {
+            serde_json::to_value(capture::input::input_access_status()).map_err(Into::into)
+        }
+        Command::RequestInputAccess => {
+            serde_json::to_value(capture::input::request_input_access()?).map_err(Into::into)
         }
         Command::Formats { source } => {
             let snapshot = NativeCatalog::default().snapshot()?;

@@ -9,12 +9,13 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const INTERACTIVE_REQUEST_TIMEOUT_MS = 120_000;
 
 class CaptureEngine {
-  constructor(app, applicationRoot) {
+  constructor(app, applicationRoot, options = {}) {
     this.app = app;
     this.applicationRoot = applicationRoot;
     this.process = null;
     this.pending = new Map();
     this.stderr = [];
+    this.inputHelperPath = options.inputHelperPath || (() => null);
   }
 
   resolveExecutable() {
@@ -43,6 +44,10 @@ class CaptureEngine {
       cwd: this.app.getPath('userData'),
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      env: {
+        ...process.env,
+        ...(this.inputHelperPath() ? { BEAM_INPUT_HELPER_PATH: this.inputHelperPath() } : {}),
+      },
     });
     this.process = child;
     this.stderr = [];
@@ -86,7 +91,9 @@ class CaptureEngine {
     this.ensureStarted();
     const id = randomUUID();
     return new Promise((resolve, reject) => {
-      const timeoutMs = ['prepare', 'start'].includes(command) ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+      const timeoutMs = ['prepare', 'start', 'request-input-access'].includes(command)
+        ? INTERACTIVE_REQUEST_TIMEOUT_MS
+        : REQUEST_TIMEOUT_MS;
       const timeout = setTimeout(() => {
         this.pending.delete(id);
         if (['prepare', 'start'].includes(command) && this.process && !this.process.killed) this.process.kill();

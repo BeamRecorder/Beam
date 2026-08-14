@@ -110,6 +110,67 @@ export interface CursorShapeCatalogEntry {
   hotspot: { x: number; y: number };
 }
 
+export type InputModifier = 'control' | 'shift' | 'alt' | 'meta';
+export type InputKey =
+  | 'a'
+  | 'b'
+  | 'c'
+  | 'd'
+  | 'e'
+  | 'f'
+  | 'g'
+  | 'h'
+  | 'i'
+  | 'j'
+  | 'k'
+  | 'l'
+  | 'm'
+  | 'n'
+  | 'o'
+  | 'p'
+  | 'q'
+  | 'r'
+  | 's'
+  | 't'
+  | 'u'
+  | 'v'
+  | 'w'
+  | 'x'
+  | 'y'
+  | 'z'
+  | `digit${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
+  | 'arrow-up'
+  | 'arrow-down'
+  | 'arrow-left'
+  | 'arrow-right'
+  | 'escape'
+  | 'enter'
+  | 'tab'
+  | 'backspace'
+  | 'delete'
+  | 'insert'
+  | 'home'
+  | 'end'
+  | 'page-up'
+  | 'page-down'
+  | 'space'
+  | `f${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12}`;
+
+export type InputEvent =
+  | { event: 'mouse-button'; sessionNs: number; button: number; pressed: boolean }
+  | {
+      event: 'shortcut';
+      sessionNs: number;
+      pressed: boolean;
+      modifiers: InputModifier[];
+      key: InputKey;
+    };
+
+export interface InputEventSidecar {
+  version: 1;
+  events: InputEvent[];
+}
+
 export interface ZoomFocus {
   cx: number;
   cy: number;
@@ -183,5 +244,6 @@ export interface ProjectEditorData {
     catalog: Record<string, CursorShapeCatalogEntry>;
     missing: string[];
   };
+  interactions?: InputEventSidecar;
   zoom: ProjectZoomState;
 }

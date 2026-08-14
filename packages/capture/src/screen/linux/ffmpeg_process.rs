@@ -226,7 +226,8 @@ pub(super) fn arguments(config: &FfmpegProcessConfig<'_>, partial_path: &Path) -
     let keyframe_interval = config
         .fps
         .saturating_mul(u32::from(config.keyframe_interval_seconds));
-    vec![
+    let mut arguments = config.capabilities.encoder.device_arguments();
+    arguments.extend([
         "-hide_banner".into(),
         "-loglevel".into(),
         "error".into(),
@@ -245,22 +246,26 @@ pub(super) fn arguments(config: &FfmpegProcessConfig<'_>, partial_path: &Path) -
         "pipe:0".into(),
         "-an".into(),
         "-c:v".into(),
-        config.capabilities.encoder.clone(),
+        config.capabilities.encoder.name.clone(),
         "-b:v".into(),
         config.bitrate_bps.to_string(),
         "-g".into(),
         keyframe_interval.to_string(),
         "-vf".into(),
-        "pad=ceil(iw/2)*2:ceil(ih/2)*2".into(),
-        "-pix_fmt".into(),
-        "yuv420p".into(),
+        config.capabilities.encoder.filter().into(),
+    ]);
+    if let Some(pixel_format) = config.capabilities.encoder.output_pixel_format() {
+        arguments.extend(["-pix_fmt".into(), pixel_format.into()]);
+    }
+    arguments.extend([
         "-fps_mode".into(),
         "vfr".into(),
         "-movflags".into(),
         "+faststart".into(),
         "-n".into(),
         partial_path.display().to_string(),
-    ]
+    ]);
+    arguments
 }
 
 pub(super) fn partial_path(final_path: &Path) -> Result<PathBuf, CaptureError> {

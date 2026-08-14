@@ -123,7 +123,10 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
       options.cursor !== false && capabilities.separateCursor
         ? {
             mode: 'separate',
-            captureClicks: Boolean(capabilities.cursorClicks),
+            captureClicks:
+              Boolean(capabilities.cursorClicks) &&
+              (environment.platform !== 'linux' || options.recordInteractions === true),
+            captureShortcuts: options.recordInteractions === true && Boolean(capabilities.inputShortcuts),
             captureShape: Boolean(capabilities.cursorShapes),
           }
         : { mode: capabilities.embeddedCursor ? 'embedded' : 'disabled' },

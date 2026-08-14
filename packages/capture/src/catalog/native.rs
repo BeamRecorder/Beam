@@ -58,14 +58,17 @@ fn platform_catalog() -> Result<
             ));
         }
     };
-    if let Err(error) = crate::screen::linux::probe_ffmpeg() {
-        return Ok((
-            Vec::new(),
-            CaptureCapabilities::default(),
-            permissions,
-            vec![error.to_string()],
-        ));
-    }
+    let ffmpeg = match crate::screen::linux::probe_ffmpeg() {
+        Ok(value) => value,
+        Err(error) => {
+            return Ok((
+                Vec::new(),
+                CaptureCapabilities::default(),
+                permissions,
+                vec![error.to_string()],
+            ));
+        }
+    };
     let mut sources = Vec::new();
     if native.display_capture {
         sources.push(portal_source(
@@ -90,16 +93,37 @@ fn platform_catalog() -> Result<
         embedded_cursor: native.embedded_cursor,
         separate_cursor: native.separate_cursor,
         cursor_shapes: false,
-        cursor_clicks: false,
+        cursor_clicks: native.cursor_clicks,
+        input_shortcuts: native.cursor_clicks,
+        hardware_h264: ffmpeg.encoder.is_hardware() && ffmpeg.encoder.codec == "h264",
+        hardware_av1: ffmpeg.encoder.is_hardware() && ffmpeg.encoder.codec == "av1",
+        hardware_vp9: ffmpeg.encoder.is_hardware() && ffmpeg.encoder.codec == "vp9",
         ..CaptureCapabilities::default()
+    };
+    let encoder = if ffmpeg.encoder.is_hardware() {
+        format!(
+            "Linux recording uses the hardware {} encoder ({})",
+            ffmpeg.encoder.codec, ffmpeg.encoder.name
+        )
+    } else {
+        format!(
+            "No working hardware encoder was found; Linux recording falls back to {} on CPU",
+            ffmpeg.encoder.name
+        )
+    };
+    let input_limitation = if native.cursor_clicks {
+        "Linux input monitoring records clicks and shortcut tokens without storing typed text"
+    } else {
+        "Install and authorize Beam interaction access to record clicks and keyboard shortcuts"
     };
     Ok((
         sources,
         capabilities,
         permissions,
         vec![
-            "Linux Portal cursor metadata does not provide click events or portable cursor bitmaps"
-                .into(),
+            encoder,
+            input_limitation.into(),
+            "Linux Portal cursor metadata does not provide portable cursor bitmaps".into(),
         ],
     ))
 }

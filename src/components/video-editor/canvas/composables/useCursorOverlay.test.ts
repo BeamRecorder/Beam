@@ -85,12 +85,14 @@ describe('useCursorOverlay', () => {
     expect(overlay.customCursorImage.value).not.toBeNull();
   });
 
-  it('draws cursor, shadow, click ripple and custom-cursor warning', async () => {
+  it('draws a Beam fallback for custom cursors without a canvas warning', async () => {
+    getCursorImage.mockClear();
     getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
     const options = baseOptions();
     const overlay = useCursorOverlay(options);
     await nextTick();
     await Promise.resolve();
+    expect(getCursorImage).toHaveBeenLastCalledWith('default', 120, '#ffffff');
     const ctx = createContext();
     const drawContent = vi.fn((draw: () => void) => draw());
     overlay.updateAndDrawRipplesAndCursor(
@@ -112,7 +114,7 @@ describe('useCursorOverlay', () => {
       expect.closeTo(10, 0.01),
       expect.closeTo(10, 0.01),
     );
-    expect(ctx.fillText).toHaveBeenCalledWith('System cursor not translated', expect.any(Number), 29);
+    expect(ctx.fillText).not.toHaveBeenCalledWith('System cursor not translated', expect.any(Number), 29);
     expect(drawContent).toHaveBeenCalledOnce();
   });
 

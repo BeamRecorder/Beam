@@ -42,6 +42,7 @@ pub(super) struct ProcessState {
     pub timestamp: TimestampMapper,
     pub start_gate: Arc<StartGate>,
     pub active: bool,
+    pub stopping: bool,
     pub clock: Instant,
     pub sink: Sender<SinkMessage>,
     pub metrics: Arc<ScreenCaptureMetrics>,
@@ -51,7 +52,17 @@ pub(super) struct ProcessState {
 
 pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<ProcessState>>) {
     let mut state = state.borrow_mut();
-    if !state.active || !state.start_gate.is_released() || has_fatal(&state.fatal) {
+    if has_fatal(&state.fatal) {
+        return;
+    }
+    // A PipeWire process notification must always be drained. During native
+    // preparation the stream can become active just before StartGate is
+    // released; leaving those buffers queued starves the stream and no later
+    // notification arrives for the first real recording frame.
+    let Some(mut buffer) = stream.dequeue_buffer() else {
+        return;
+    };
+    if !state.active || !state.start_gate.is_released() {
         return;
     }
     let Some(format) = state.negotiated else {
@@ -59,9 +70,6 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
             &state.fatal,
             super::format_error("received a buffer before format negotiation"),
         );
-        return;
-    };
-    let Some(mut buffer) = stream.dequeue_buffer() else {
         return;
     };
     let header = metadata::header(&buffer);

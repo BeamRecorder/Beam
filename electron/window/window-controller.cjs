@@ -22,7 +22,6 @@ class WindowController {
     // Start click-through so the renderer can classify the pointer from the
     // first forwarded mousemove, including when it starts over transparent HUD.
     this.hudOverInteractive = false;
-    this.recorderOverInteractive = false;
     this.recorderPositions = this.readRecorderPositions();
     this.recorderPositionSaveTimer = null;
     this.hudPosition = null;
@@ -33,12 +32,15 @@ class WindowController {
     this.recorderTooltipRelayoutTimer = null;
     this.recorderTooltipApplyTimer = null;
     this.recorderNativeDragActive = false;
-    this.recorderPointerPoll = null;
     this.window.setIgnoreMouseEvents(true);
-    this.window.on('show', () => this.applyInteractionPolicy());
-    this.window.on('hide', () => this.applyInteractionPolicy());
-    this.window.on('minimize', () => this.applyInteractionPolicy());
-    this.window.on('restore', () => this.applyInteractionPolicy());
+    const applyNativeWindowPolicy = () => {
+      this.applyInteractionPolicy();
+      this.applyZOrderPolicy();
+    };
+    this.window.on('show', applyNativeWindowPolicy);
+    this.window.on('hide', applyNativeWindowPolicy);
+    this.window.on('minimize', applyNativeWindowPolicy);
+    this.window.on('restore', applyNativeWindowPolicy);
     this.window.on('closed', () => {
       this.clearRecorderTooltipRelayout();
       this.flushRecorderPosition();
@@ -101,7 +103,6 @@ class WindowController {
       this.recorderTooltipWidth = null;
       this.recorderTooltipVisible = false;
       this.recorderNativeDragActive = false;
-      this.stopRecorderPointerTracking();
     }
     this.mode = mode;
     this.applySizeConstraints();
@@ -289,7 +290,6 @@ class WindowController {
       } else {
         applyBounds();
       }
-      this.startRecorderPointerTracking();
       return this.recorderTooltipSide;
     }
 
@@ -315,45 +315,30 @@ class WindowController {
     return null;
   }
 
-  startRecorderPointerTracking() {
-    if (this.recorderPointerPoll) return;
-    const update = () => {
-      if (this.mode !== 'recorder' || this.window.isDestroyed() || !this.recorderBaseBounds) return;
-      const point = this.screen.getCursorScreenPoint();
-      const bounds = this.recorderBaseBounds;
-      const overBar =
-        point.x >= bounds.x &&
-        point.x < bounds.x + bounds.width &&
-        point.y >= bounds.y &&
-        point.y < bounds.y + bounds.height;
-      if (overBar === this.recorderOverInteractive) return;
-      this.recorderOverInteractive = overBar;
-      if (overBar) this.window.setIgnoreMouseEvents(false);
-      else this.window.setIgnoreMouseEvents(true, { forward: true });
-    };
-    this.recorderPointerPoll = setInterval(update, 16);
-    update();
-  }
-
-  stopRecorderPointerTracking() {
-    if (this.recorderPointerPoll) clearInterval(this.recorderPointerPoll);
-    this.recorderPointerPoll = null;
-    this.recorderOverInteractive = false;
-  }
-
   applySizeConstraints() {
     const minimumSize = this.mode === 'recorder' ? RECORDER_SIZE : HUD_SIZE;
     this.window.setMinimumSize?.(minimumSize.width, minimumSize.height);
   }
 
   setOverlayAlwaysOnTop(value) {
-    if (value && process.platform === 'win32') {
-      // The Windows taskbar is itself topmost. Use the screen-saver level so
-      // the HUD and recorder remain visible when moved over the taskbar.
+    if (value && process.platform !== 'darwin') {
+      // Windows and Linux desktop surfaces can otherwise cover a floating
+      // transparent window. The stronger level keeps the Recorder available.
       this.window.setAlwaysOnTop(true, 'screen-saver');
+      this.window.moveTop?.();
       return;
     }
     this.window.setAlwaysOnTop(value);
+    if (value) this.window.moveTop?.();
+  }
+
+  applyZOrderPolicy() {
+    if (this.window.isDestroyed()) return;
+    const isOverlay = this.mode === 'hud' || this.mode === 'recorder';
+    // Keep the state while hidden so the compositor maps the surface directly
+    // into the topmost layer on the next show instead of promoting it after a
+    // normal frame has already been presented.
+    this.setOverlayAlwaysOnTop(this.ready && isOverlay && !this.window.isMinimized());
   }
 
   applyModePolicy({ restoreMaximized = true } = {}) {
@@ -361,12 +346,12 @@ class WindowController {
     const isHud = this.mode === 'hud';
     const isRecorder = this.mode === 'recorder';
     this.applySizeConstraints();
-    this.setOverlayAlwaysOnTop((isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized());
     this.window.setResizable(false);
     this.window.setMaximizable(false);
     this.window.setContentProtection(isRecorder);
     if (restoreMaximized && (isHud || isRecorder) && this.window.isMaximized()) this.window.unmaximize();
     this.applyInteractionPolicy();
+    this.applyZOrderPolicy();
   }
 
   // Called by the renderer (via IPC) on every mousemove to say whether the
@@ -378,11 +363,6 @@ class WindowController {
     this.hudOverInteractive = overInteractive;
     if (overInteractive) {
       this.window.setIgnoreMouseEvents(false);
-    } else if (this.mode === 'recorder') {
-      this.window.setIgnoreMouseEvents(
-        this.recorderOverInteractive ? false : true,
-        this.recorderOverInteractive ? undefined : { forward: true },
-      );
     } else {
       this.window.setIgnoreMouseEvents(true, { forward: true });
     }
@@ -403,10 +383,8 @@ class WindowController {
     if (this.window.isDestroyed()) return;
     const shouldBeActive = this.ready && this.window.isVisible() && !this.window.isMinimized();
     if (!shouldBeActive) {
-      if (this.mode === 'recorder') this.stopRecorderPointerTracking();
       this.window.setIgnoreMouseEvents(true);
       this.interactive = false;
-      this.setOverlayAlwaysOnTop(false);
       return;
     }
     if (this.mode === 'hud') {
@@ -415,14 +393,13 @@ class WindowController {
       if (this.hudOverInteractive) this.window.setIgnoreMouseEvents(false);
       else this.window.setIgnoreMouseEvents(true, { forward: true });
     } else if (this.mode === 'recorder') {
-      this.startRecorderPointerTracking();
-      this.window.setIgnoreMouseEvents(
-        this.recorderOverInteractive ? false : true,
-        this.recorderOverInteractive ? undefined : { forward: true },
-      );
+      // The compact Recorder window is itself the interactive hit target.
+      // Global pointer polling is unreliable on Wayland once a window is
+      // click-through, so Recorder mode must never depend on it to recover
+      // mouse input.
+      this.window.setIgnoreMouseEvents(false);
     }
     this.interactive = true;
-    this.setOverlayAlwaysOnTop(true);
   }
 
   showHud() {

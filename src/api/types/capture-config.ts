@@ -12,6 +12,7 @@ export interface StartRecordingOptions {
   cameraId?: string | null;
   systemAudio?: boolean;
   cursor?: boolean;
+  recordInteractions?: boolean;
   outputRoot?: string;
   targetFps?: number;
   videoBitrateBps?: number;
@@ -45,6 +46,7 @@ export interface CaptureConfig {
     | {
         mode: 'separate';
         captureClicks: boolean;
+        captureShortcuts: boolean;
         captureShape: boolean;
       };
   recording: RecordingSettings;

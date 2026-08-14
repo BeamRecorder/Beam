@@ -21,6 +21,7 @@ use crate::{
         CaptureRegion, CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, map_coordinates,
         move_sample_due, telemetry_from_events,
     },
+    input::{InputEvent, InputEventWriter, ShortcutSampler, finalize_input_events},
     model::SourceId,
     session::StartGate,
     storage::write_atomic,
@@ -50,6 +51,8 @@ pub struct MacCursorRecording {
     partial: PathBuf,
     final_path: PathBuf,
     telemetry_path: PathBuf,
+    input_partial_path: PathBuf,
+    input_path: PathBuf,
 }
 
 impl MacCursorRecording {
@@ -57,6 +60,7 @@ impl MacCursorRecording {
         directory: &Path,
         region: CaptureRegion,
         capture_clicks: bool,
+        capture_shortcuts: bool,
         segment_start_ns: u64,
         start_gate: Arc<StartGate>,
     ) -> Result<Self, CaptureError> {
@@ -65,19 +69,24 @@ impl MacCursorRecording {
         let partial = directory.join("cursor.partial.jsonl");
         let final_path = directory.join("cursor.json");
         let telemetry_path = directory.join("telemetry.json");
+        let input_partial_path = directory.join("input.partial.jsonl");
+        let input_path = directory.join("input.json");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
         let metrics = Arc::new(MacCursorMetrics::default());
         let thread_metrics = metrics.clone();
         let thread_path = partial.clone();
+        let thread_input_path = input_partial_path.clone();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
         let thread = std::thread::Builder::new()
             .name("capture-macos-cursor".into())
             .spawn(move || {
                 capture_loop(
                     &thread_path,
+                    &thread_input_path,
                     region,
                     capture_clicks,
+                    capture_shortcuts,
                     segment_start_ns,
                     &thread_cancel,
                     &thread_metrics,
@@ -96,6 +105,8 @@ impl MacCursorRecording {
             partial,
             final_path,
             telemetry_path,
+            input_partial_path,
+            input_path,
         })
     }
 
@@ -120,6 +131,7 @@ impl MacCursorRecording {
                 &self.final_path,
                 &self.final_path.with_file_name("shapes.json"),
             )?;
+            finalize_input_events(&self.input_partial_path, &self.input_path)?;
         }
         Ok(())
     }
@@ -177,8 +189,10 @@ impl Drop for MacCursorRecording {
 
 fn capture_loop(
     path: &Path,
+    input_path: &Path,
     region: CaptureRegion,
     capture_clicks: bool,
+    capture_shortcuts: bool,
     segment_start_ns: u64,
     cancel: &AtomicBool,
     metrics: &MacCursorMetrics,
@@ -186,6 +200,7 @@ fn capture_loop(
     start_gate: &Arc<StartGate>,
 ) -> Result<(), CaptureError> {
     let mut writer = CursorEventWriter::open(path)?;
+    let mut input_writer = InputEventWriter::open(input_path)?;
     ready
         .send(Ok(()))
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
@@ -202,6 +217,7 @@ fn capture_loop(
         },
     )?;
     let mut previous_shape = None;
+    let mut shortcuts = ShortcutSampler::default();
     while !cancel.load(Ordering::Acquire) {
         let session_ns = segment_start_ns
             .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
@@ -254,24 +270,40 @@ fn capture_loop(
             {
                 let pressed = button_state(button);
                 if previous_buttons[index] != pressed {
+                    let button = u8::try_from(index + 1).unwrap_or(u8::MAX);
                     push(
                         &mut writer,
                         metrics,
                         CursorEvent::Button {
                             session_ns,
-                            button: u8::try_from(index + 1).unwrap_or(u8::MAX),
+                            button,
                             pressed,
                             normalized_x: position.normalized_x,
                             normalized_y: position.normalized_y,
                         },
                     )?;
+                    input_writer.push(&InputEvent::MouseButton {
+                        session_ns,
+                        button,
+                        pressed,
+                    })?;
                     previous_buttons[index] = pressed;
                 }
             }
         }
+        if capture_shortcuts {
+            for event in shortcuts.sample(
+                session_ns,
+                super::shortcut_modifier_pressed,
+                super::shortcut_key_pressed,
+            ) {
+                input_writer.push(&event)?;
+            }
+        }
         std::thread::sleep(Duration::from_millis(8));
     }
-    writer.flush()
+    writer.flush()?;
+    input_writer.flush()
 }
 
 fn push(

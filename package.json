@@ -3,7 +3,10 @@
   "private": true,
   "version": "0.1.2",
   "description": "Beam - Screen recorder to create product demos.",
-  "author": "ExtraBinoss",
+  "author": {
+    "name": "ExtraBinoss",
+    "email": "ExtraBinoss@users.noreply.github.com"
+  },
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -18,8 +21,8 @@
     "dev": "vite",
     "dev:all": "node start-dev.cjs",
     "dev:all:devtools": "node start-dev.cjs --devtools",
-    "capture:build-dev": "cargo build -p capture --bin capture-engine",
-    "capture:build-release": "cargo build -p capture --bin capture-engine --release",
+    "capture:build-dev": "cargo build -p capture --bin capture-engine --bin beam-input-helper",
+    "capture:build-release": "cargo build -p capture --bin capture-engine --bin beam-input-helper --release",
     "build:dev": "npm run capture:build-dev && vite build --mode development",
     "build:release": "npm run capture:build-release && vite build",
     "build": "npm run build:release",
@@ -102,7 +105,24 @@
         "deb",
         "rpm"
       ],
-      "category": "AudioVideo"
+      "category": "AudioVideo",
+      "extraResources": [
+        {
+          "from": "target/release",
+          "to": "input-helper",
+          "filter": [
+            "beam-input-helper"
+          ]
+        }
+      ]
+    },
+    "deb": {
+      "afterInstall": "build/linux/after-install.sh",
+      "afterRemove": "build/linux/deb-after-remove.sh"
+    },
+    "rpm": {
+      "afterInstall": "build/linux/after-install.sh",
+      "afterRemove": "build/linux/rpm-after-remove.sh"
     }
   }
 }

@@ -15,11 +15,12 @@ use crate::{
         CaptureRegion, CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, move_sample_due,
         telemetry_from_events,
     },
+    input::{InputEvent, InputEventWriter, ShortcutSampler, finalize_input_events},
     session::StartGate,
     storage::write_atomic,
 };
 
-use super::sample_cursor;
+use super::{sample_cursor, shortcut_key_pressed, shortcut_modifier_pressed};
 
 #[derive(Debug, Default)]
 pub struct CursorCaptureMetrics {
@@ -47,6 +48,8 @@ pub struct WindowsCursorRecording {
     final_path: PathBuf,
     shapes_path: PathBuf,
     telemetry_path: PathBuf,
+    input_partial_path: PathBuf,
+    input_path: PathBuf,
 }
 
 impl WindowsCursorRecording {
@@ -54,6 +57,7 @@ impl WindowsCursorRecording {
         directory: &Path,
         region: CaptureRegion,
         capture_clicks: bool,
+        capture_shortcuts: bool,
         capture_shape: bool,
         segment_start_ns: u64,
         start_gate: Arc<StartGate>,
@@ -64,19 +68,24 @@ impl WindowsCursorRecording {
         let final_path = directory.join("cursor.json");
         let shapes_path = directory.join("shapes.json");
         let telemetry_path = directory.join("telemetry.json");
+        let input_partial_path = directory.join("input.partial.jsonl");
+        let input_path = directory.join("input.json");
         let cancel = Arc::new(AtomicBool::new(false));
         let thread_cancel = cancel.clone();
         let metrics = Arc::new(CursorCaptureMetrics::default());
         let thread_metrics = metrics.clone();
         let thread_partial = partial_path.clone();
+        let thread_input_partial = input_partial_path.clone();
         let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
         let thread = std::thread::Builder::new()
             .name("capture-windows-cursor".into())
             .spawn(move || {
                 capture_loop(
                     &thread_partial,
+                    &thread_input_partial,
                     region,
                     capture_clicks,
+                    capture_shortcuts,
                     capture_shape,
                     segment_start_ns,
                     &thread_cancel,
@@ -97,6 +106,8 @@ impl WindowsCursorRecording {
             final_path,
             shapes_path,
             telemetry_path,
+            input_partial_path,
+            input_path,
         })
     }
 
@@ -118,6 +129,7 @@ impl WindowsCursorRecording {
             finalize_events(&self.partial_path, &self.final_path)?;
             finalize_telemetry(&self.final_path, &self.telemetry_path)?;
             finalize_shapes(&self.final_path, &self.shapes_path)?;
+            finalize_input_events(&self.input_partial_path, &self.input_path)?;
         }
         Ok(())
     }
@@ -139,8 +151,10 @@ struct Previous {
 #[allow(clippy::too_many_arguments)]
 fn capture_loop(
     partial_path: &Path,
+    input_partial_path: &Path,
     region: CaptureRegion,
     capture_clicks: bool,
+    capture_shortcuts: bool,
     capture_shape: bool,
     segment_start_ns: u64,
     cancel: &AtomicBool,
@@ -149,6 +163,7 @@ fn capture_loop(
     start_gate: &Arc<StartGate>,
 ) -> Result<(), CaptureError> {
     let mut writer = CursorEventWriter::open(partial_path)?;
+    let mut input_writer = InputEventWriter::open(input_partial_path)?;
     ready
         .send(Ok(()))
         .map_err(|_| CaptureError::Backend("cursor startup receiver closed".into()))?;
@@ -156,6 +171,7 @@ fn capture_loop(
     let started = Instant::now();
     let mut previous = Previous::default();
     let mut next_move_sample_ns = segment_start_ns;
+    let mut shortcuts = ShortcutSampler::default();
     while !cancel.load(Ordering::Acquire) {
         let session_ns = segment_start_ns
             .saturating_add(u64::try_from(started.elapsed().as_nanos()).unwrap_or(u64::MAX));
@@ -200,18 +216,24 @@ fn capture_loop(
                     .enumerate()
                     {
                         if previous.buttons[button] != pressed {
+                            let button = u8::try_from(button + 1).unwrap_or(u8::MAX);
                             push(
                                 &mut writer,
                                 metrics,
                                 CursorEvent::Button {
                                     session_ns,
-                                    button: u8::try_from(button + 1).unwrap_or(u8::MAX),
+                                    button,
                                     pressed,
                                     normalized_x: sample.position.normalized_x,
                                     normalized_y: sample.position.normalized_y,
                                 },
                             )?;
-                            previous.buttons[button] = pressed;
+                            input_writer.push(&InputEvent::MouseButton {
+                                session_ns,
+                                button,
+                                pressed,
+                            })?;
+                            previous.buttons[usize::from(button.saturating_sub(1))] = pressed;
                         }
                     }
                 }
@@ -238,9 +260,17 @@ fn capture_loop(
                 metrics.interruptions.fetch_add(1, Ordering::Relaxed);
             }
         }
+        if capture_shortcuts {
+            for event in
+                shortcuts.sample(session_ns, shortcut_modifier_pressed, shortcut_key_pressed)
+            {
+                input_writer.push(&event)?;
+            }
+        }
         std::thread::sleep(Duration::from_millis(8));
     }
-    writer.flush()
+    writer.flush()?;
+    input_writer.flush()
 }
 
 fn push(

@@ -81,7 +81,6 @@ pub(super) fn prepare_portal(
     kind: PortalSourceKind,
     cursor: CursorSelection,
 ) -> Result<PreparedPortal, CaptureError> {
-    validate_cursor(cursor)?;
     let (commands, receiver) = tokio::sync::mpsc::unbounded_channel();
     let (ready_sender, ready_receiver) = mpsc::sync_channel(1);
     let thread = thread::Builder::new()
@@ -264,19 +263,6 @@ async fn verify_capabilities(
         return Err(CaptureError::native(
             NativeCaptureErrorCode::PortalCursorMetadataUnavailable,
             format!("the ScreenCast portal does not advertise cursor mode {requested_cursor:?}"),
-        ));
-    }
-    Ok(())
-}
-
-fn validate_cursor(cursor: CursorSelection) -> Result<(), CaptureError> {
-    if let CursorSelection::Separate {
-        capture_clicks: true,
-        ..
-    } = cursor
-    {
-        return Err(CaptureError::InvalidConfiguration(
-            "PipeWire cursor metadata does not provide global button events".into(),
         ));
     }
     Ok(())

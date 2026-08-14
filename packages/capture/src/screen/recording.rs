@@ -204,6 +204,16 @@ impl ScreenRecording {
         }
     }
 
+    #[must_use]
+    pub fn encoded_codec(&self) -> Option<&str> {
+        match &self.backend {
+            #[cfg(target_os = "linux")]
+            PlatformScreenRecording::Linux(recording) => recording.encoded_codec(),
+            #[cfg(any(windows, target_os = "macos"))]
+            _ => None,
+        }
+    }
+
     pub fn stop(&mut self) -> Result<(), CaptureError> {
         match &mut self.backend {
             #[cfg(windows)]

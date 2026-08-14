@@ -2,9 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 const defaults = () => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   theme: 'light',
   recordingBar: { visibility: 'always' },
+  recordingInteractions: { enabled: false, noticeDismissed: false },
   devices: {},
   shortcuts: {
     'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global', category: 'hud' },
@@ -86,9 +87,23 @@ const normalize = (value) => {
     }
   }
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     theme: themes.has(next.theme) ? next.theme : base.theme,
-    recordingBar: { visibility: next.recordingBar?.visibility === 'auto-fade' ? 'auto-fade' : 'always' },
+    recordingBar: {
+      visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)
+        ? next.recordingBar.visibility
+        : 'always',
+    },
+    recordingInteractions: {
+      enabled:
+        typeof next.recordingInteractions?.enabled === 'boolean'
+          ? next.recordingInteractions.enabled
+          : base.recordingInteractions.enabled,
+      noticeDismissed:
+        typeof next.recordingInteractions?.noticeDismissed === 'boolean'
+          ? next.recordingInteractions.noticeDismissed
+          : base.recordingInteractions.noticeDismissed,
+    },
     devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {},
     shortcuts,
     backgroundPresets: presets(next.backgroundPresets),
@@ -118,6 +133,10 @@ function createPreferencesStore(file) {
       ...current,
       ...(value || {}),
       recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) },
+      recordingInteractions: {
+        ...current.recordingInteractions,
+        ...(value?.recordingInteractions || {}),
+      },
       devices: { ...current.devices, ...(value?.devices || {}) },
       shortcuts: { ...current.shortcuts, ...(value?.shortcuts || {}) },
       backgroundPresets: { ...current.backgroundPresets, ...(value?.backgroundPresets || {}) },

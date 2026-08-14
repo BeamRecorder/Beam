@@ -17,9 +17,10 @@ vi.mock('../../../api/capture', () => ({ capture }));
 import RecorderBar from './RecorderBar.vue';
 
 const settings = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   theme: 'dark' as const,
   recordingBar: { visibility: 'always' as const },
+  recordingInteractions: { enabled: false, noticeDismissed: false },
   devices: {},
   shortcuts: { 'hud.playPause': { keys: 'Ctrl+P', scope: 'global' as const, category: 'recording' } },
   backgroundPresets: { colors: [], gradients: [] },
@@ -98,8 +99,19 @@ describe('RecorderBar', () => {
     expect(wrapper.get('.recording-time').text()).toBe('00:12.3');
     expect(wrapper.get('.control').attributes('aria-label')).toContain('Resume');
     await wrapper.setProps({ phase: 'finalizing' });
-    expect(wrapper.findAll('.control')[5].attributes('disabled')).toBeDefined();
+    expect(wrapper.findAll('.control').every((control) => control.attributes('disabled') !== undefined)).toBe(true);
     wrapper.unmount();
+  });
+
+  it('keeps the bar transparent until hover in hover-only mode, except during countdown', async () => {
+    const wrapper = mount(RecorderBar, {
+      props: { ...props, visibility: 'hover-only', hoverOnlyActive: true },
+      global: { stubs: { Tooltip, KeyboardChip } },
+    });
+
+    expect(wrapper.get('.recorder-bar').classes()).toContain('hover-only');
+    await wrapper.setProps({ hoverOnlyActive: false });
+    expect(wrapper.get('.recorder-bar').classes()).not.toContain('hover-only');
   });
 
   it('updates the tooltip side when native window movement reports a new side', async () => {

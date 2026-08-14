@@ -7,28 +7,50 @@ import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
+import Badge from '~/ui/badge/Badge.vue';
+import Switch from '~/ui/switch/Switch.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
 import { localeOptions } from '~/i18n/locales';
+import type { RecordingBarVisibility } from '../recorder/recording-types';
+import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
 
 const { t } = useTranslate('HudPreferences');
 
-const props = defineProps<{
-  countdownSeconds: number;
-  recordingBarVisibility?: 'always' | 'auto-fade';
-}>();
+const props = withDefaults(
+  defineProps<{
+    countdownSeconds: number;
+    recordingBarVisibility?: RecordingBarVisibility;
+    inputAccess?: InteractionAccessViewState;
+    recordInteractions?: boolean;
+    requestingInputAccess?: boolean;
+  }>(),
+  {
+    recordingBarVisibility: 'always',
+    inputAccess: () => ({
+      state: 'checking',
+      canRequest: false,
+      clicks: false,
+      shortcuts: false,
+      recordsText: false,
+    }),
+    recordInteractions: false,
+    requestingInputAccess: false,
+  },
+);
 
 const emit = defineEmits<{
   (event: 'update:countdownSeconds', value: number): void;
-  (event: 'update:recordingBarVisibility', value: 'always' | 'auto-fade'): void;
+  (event: 'update:recordingBarVisibility', value: RecordingBarVisibility): void;
+  (event: 'update:recordInteractions', value: boolean): void;
+  (event: 'requestInputAccess'): void;
   (event: 'close'): void;
 }>();
 
 const themeStore = useThemeStore();
 const localeStore = useLocaleStore();
 const currentView = ref<'general' | 'shortcuts'>('general');
-
 const countdownOptions = [
   { value: 0, label: t('off') },
   { value: 3, label: t('option3s') },
@@ -38,6 +60,7 @@ const countdownOptions = [
 const recordingBarOptions = [
   { value: 'always', label: t('alwaysVisible') },
   { value: 'auto-fade', label: t('autoFade') },
+  { value: 'hover-only', label: t('hiddenUntilHovered') },
 ];
 </script>
 
@@ -75,6 +98,43 @@ const recordingBarOptions = [
               <template #icon><Keyboard class="button-icon" /></template>
               {{ t('edit') }}
             </Button>
+          </div>
+
+          <div class="preference-item input-access-item">
+            <div class="preference-copy">
+              <p class="preference-title">{{ t('recordInteractions') }}</p>
+              <p class="preference-description">
+                {{
+                  props.inputAccess.state === 'available'
+                    ? t('recordInteractionsDescription')
+                    : props.inputAccess.state === 'unavailable'
+                      ? t('interactionAccessUnavailableDescription')
+                      : t('interactionAccessDescription')
+                }}
+              </p>
+            </div>
+            <div class="input-access-actions" role="status" aria-live="polite">
+              <Switch
+                v-if="props.inputAccess.state === 'available'"
+                :model-value="recordInteractions"
+                :label="t('recordInteractions')"
+                @update:model-value="emit('update:recordInteractions', $event)"
+              />
+              <Badge v-else-if="props.inputAccess.state === 'checking'" variant="outline">
+                {{ t('checkingAccess') }}
+              </Badge>
+              <Button
+                v-else-if="props.inputAccess.canRequest"
+                variant="secondary"
+                size="sm"
+                :disabled="requestingInputAccess"
+                @click="emit('requestInputAccess')"
+              >
+                <template #icon><Keyboard class="button-icon" /></template>
+                {{ requestingInputAccess ? t('requestingAccess') : t('allowAccess') }}
+              </Button>
+              <Badge v-else variant="outline">{{ t('accessUnavailable') }}</Badge>
+            </div>
           </div>
 
           <div class="preference-item">
@@ -212,6 +272,15 @@ const recordingBarOptions = [
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+}
+.preference-copy {
+  min-width: 0;
+}
+.input-access-item {
+  gap: 10px;
+}
+.input-access-actions {
+  flex: 0 0 auto;
 }
 .update-preference-item {
   min-width: 0;

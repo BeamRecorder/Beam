@@ -4,7 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import KeyboardChip from '~/ui/Kbd/KeyboardChip.vue';
 import { usePreferencesStore } from '~/stores/preferences';
-import type { RecordingPhase } from './recording-types';
+import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from '../audio/useAudioLevelMeter';
 import AudioIconMeter from '../audio/AudioIconMeter.vue';
@@ -18,7 +18,8 @@ const props = defineProps<{
   cameraEnabled: boolean;
   microphoneEnabled: boolean;
   systemAudioEnabled: boolean;
-  visibility: 'always' | 'auto-fade';
+  visibility: RecordingBarVisibility;
+  hoverOnlyActive?: boolean;
 }>();
 
 const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== 'finalizing');
@@ -48,14 +49,9 @@ const applyTooltipSide = (side: unknown, source: string) => {
 onMounted(() => {
   preferencesStore.load();
   stopTooltipSideListener = window.capture?.onRecorderTooltipSide((side) => applyTooltipSide(side, 'nativeMove'));
-  // Reserve native space before the user reaches a control. Resizing only on
-  // first button hover made the bar visibly jump once per recording.
   tooltipSpaceReady = (async () => {
     const initialSide = await window.capture?.getRecorderTooltipSide();
     applyTooltipSide(initialSide, 'before-expand');
-    await nextTick();
-    const side = await window.capture?.setRecorderTooltip(true);
-    applyTooltipSide(side, 'mount');
   })();
 });
 
@@ -72,13 +68,25 @@ const prepareNativeDrag = (event: PointerEvent) => {
 };
 
 const tooltipsReady = ref(false);
+let tooltipInteraction = 0;
 const showTooltips = async () => {
+  const interaction = ++tooltipInteraction;
   tooltipsReady.value = false;
   await tooltipSpaceReady;
+  if (interaction !== tooltipInteraction) return;
+  const side = await window.capture?.setRecorderTooltip(true);
+  if (interaction !== tooltipInteraction) {
+    void window.capture?.setRecorderTooltip(false);
+    return;
+  }
+  applyTooltipSide(side, 'hover');
+  await nextTick();
   tooltipsReady.value = true;
 };
 const hideTooltips = () => {
+  tooltipInteraction += 1;
   tooltipsReady.value = false;
+  void window.capture?.setRecorderTooltip(false);
 };
 onBeforeUnmount(() => {
   stopTooltipSideListener?.();
@@ -91,6 +99,7 @@ onBeforeUnmount(() => {
     class="recorder-bar"
     :class="{
       'auto-fade': visibility === 'auto-fade',
+      'hover-only': visibility === 'hover-only' && hoverOnlyActive,
       'tooltip-right': tooltipSide === 'right',
     }"
     :aria-label="t('recordingControls')"
@@ -123,7 +132,7 @@ onBeforeUnmount(() => {
       <button
         class="control"
         :aria-label="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
-        :disabled="phase === 'countdown'"
+        :disabled="phase === 'countdown' || phase === 'finalizing'"
         @pointerdown.stop
         @click="emit('pause')"
       >
@@ -139,7 +148,13 @@ onBeforeUnmount(() => {
           <KeyboardChip :shortcut="getShortcut('hud.startStopRecording', 'Alt+Shift+R')" size="sm" />
         </div>
       </template>
-      <button class="control stop" :aria-label="t('stopRecording')" @pointerdown.stop @click="emit('stop')">
+      <button
+        class="control stop"
+        :aria-label="t('stopRecording')"
+        :disabled="phase === 'finalizing'"
+        @pointerdown.stop
+        @click="emit('stop')"
+      >
         <Square />
       </button>
     </Tooltip>
@@ -156,7 +171,7 @@ onBeforeUnmount(() => {
         class="control"
         :class="{ inactive: !microphoneEnabled }"
         :aria-label="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
-        :disabled="phase === 'countdown'"
+        :disabled="phase === 'countdown' || phase === 'finalizing'"
         @pointerdown.stop
         @click="emit('microphone')"
       >
@@ -176,7 +191,7 @@ onBeforeUnmount(() => {
         class="control"
         :class="{ inactive: !cameraEnabled }"
         :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
-        :disabled="phase === 'countdown'"
+        :disabled="phase === 'countdown' || phase === 'finalizing'"
         @pointerdown.stop
         @click="emit('camera')"
       >
@@ -196,7 +211,7 @@ onBeforeUnmount(() => {
         class="control"
         :class="{ inactive: !systemAudioEnabled }"
         :aria-label="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
-        :disabled="phase === 'countdown'"
+        :disabled="phase === 'countdown' || phase === 'finalizing'"
         @pointerdown.stop
         @click="emit('systemAudio')"
       >
@@ -277,6 +292,13 @@ onBeforeUnmount(() => {
 }
 .recorder-bar.auto-fade:hover,
 .recorder-bar.auto-fade:focus-within {
+  opacity: 1;
+}
+.recorder-bar.hover-only {
+  opacity: 0;
+}
+.recorder-bar.hover-only:hover,
+.recorder-bar.hover-only:focus-within {
   opacity: 1;
 }
 .control {

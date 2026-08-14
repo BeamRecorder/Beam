@@ -88,6 +88,7 @@ fn new_track(kind: TrackKind, source_id: Option<SourceId>, format: TrackFormat) 
 pub(super) fn add_portal_screen_track(
     tracks: &mut Vec<TrackMetadata>,
     source_id: SourceId,
+    codec: String,
     width: u32,
     height: u32,
     nominal_fps: u32,
@@ -96,7 +97,7 @@ pub(super) fn add_portal_screen_track(
         TrackKind::Screen,
         Some(source_id),
         TrackFormat::Video {
-            codec: "h264".into(),
+            codec,
             width,
             height,
             nominal_fps,

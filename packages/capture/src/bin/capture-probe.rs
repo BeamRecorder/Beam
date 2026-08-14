@@ -187,6 +187,7 @@ fn run_linux_native_capture() -> Result<serde_json::Value, capture::CaptureError
         region: None,
         cursor: CursorSelection::Separate {
             capture_clicks: false,
+            capture_shortcuts: false,
             capture_shape: false,
         },
         start_ns: 0,

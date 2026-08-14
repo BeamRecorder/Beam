@@ -1,6 +1,7 @@
 import type { ScreenRegion, ScreenRegionOverlayOptions } from '../../../api/types/screen-region';
 
 export type RecordingPhase = 'idle' | 'countdown' | 'recording' | 'paused' | 'finalizing';
+export type RecordingBarVisibility = 'always' | 'auto-fade' | 'hover-only';
 
 export interface RecordingConfiguration {
   screenKind: 'display' | 'window';
@@ -10,7 +11,8 @@ export interface RecordingConfiguration {
   systemAudio: boolean;
   targetFps: number;
   countdownSeconds: number;
-  recordingBarVisibility: 'always' | 'auto-fade';
+  recordingBarVisibility: RecordingBarVisibility;
+  recordInteractions?: boolean;
   region?: ScreenRegion | null;
   regionOverlay?: ScreenRegionOverlayOptions | null;
 }

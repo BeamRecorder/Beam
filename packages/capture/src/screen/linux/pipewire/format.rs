@@ -123,6 +123,47 @@ pub(crate) fn copy_frame(
         )
         .ok_or_else(|| buffer_error("output frame size overflows"))?;
     let mut pixels = vec![0; output_len];
+    if layout.stride > 0
+        && layout.transform == VideoTransform::None
+        && matches!(
+            format.pixel_format,
+            NativePixelFormat::Bgrx | NativePixelFormat::Bgra
+        )
+    {
+        let crop_x = usize::try_from(crop.x)
+            .ok()
+            .and_then(|value| value.checked_mul(4))
+            .ok_or_else(|| buffer_error("crop row offset overflows"))?;
+        for y in 0..crop.height {
+            let source_y = crop.y + y;
+            let source = usize::try_from(source_y)
+                .ok()
+                .and_then(|row| row.checked_mul(stride))
+                .and_then(|row| row.checked_add(crop_x))
+                .ok_or_else(|| buffer_error("source row offset overflows"))?;
+            let destination = usize::try_from(y)
+                .ok()
+                .and_then(|row| row.checked_mul(output_stride))
+                .ok_or_else(|| buffer_error("output row offset overflows"))?;
+            let source_row = payload
+                .get(source..source + output_stride)
+                .ok_or_else(|| buffer_error("source row exceeds payload"))?;
+            let destination_row = &mut pixels[destination..destination + output_stride];
+            destination_row.copy_from_slice(source_row);
+            if format.pixel_format == NativePixelFormat::Bgrx {
+                for pixel in destination_row.chunks_exact_mut(4) {
+                    pixel[3] = 255;
+                }
+            }
+        }
+        return Ok(OwnedVideoFrame {
+            width: output_width,
+            height: output_height,
+            stride: output_stride,
+            pixel_format: PixelFormat::Bgra8,
+            pixels: Arc::from(pixels),
+        });
+    }
     for y in 0..crop.height {
         let source_y = crop.y + y;
         let physical_y = if layout.stride < 0 {

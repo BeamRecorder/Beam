@@ -51,7 +51,7 @@ pub fn evaluate_capabilities(
         hidden_cursor: portal.hidden_cursor,
         embedded_cursor: portal.embedded_cursor,
         separate_cursor: portal_selection && portal.metadata_cursor,
-        cursor_clicks: false,
+        cursor_clicks: super::input_helper_supported(),
         cursor_shapes: false,
         pipewire_available,
         // Raw acquisition is deliberately not the product recording gate.

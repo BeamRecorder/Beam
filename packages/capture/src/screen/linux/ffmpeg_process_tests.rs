@@ -1,18 +1,24 @@
 #![allow(clippy::expect_used)]
 
-use std::{fs, os::unix::fs::PermissionsExt, path::Path, sync::Arc};
+use std::{fs, io::Write, os::unix::fs::PermissionsExt, path::Path, sync::Arc};
 
-use crate::screen::{OwnedVideoFrame, PixelFormat};
+use crate::{
+    model::RecordingSettings,
+    screen::{
+        OwnedScreenSample, OwnedVideoFrame, PixelFormat, ScreenSampleSink, ScreenSegment,
+        TimestampSource, VideoFormat,
+    },
+};
 
 use super::{
-    FfmpegCapabilities,
+    FfmpegCapabilities, FfmpegEncoder, FfmpegScreenSink,
     ffmpeg_process::{FfmpegProcess, FfmpegProcessConfig, arguments, partial_path},
 };
 
 fn capabilities() -> FfmpegCapabilities {
     FfmpegCapabilities {
         executable: "ffmpeg".into(),
-        encoder: "libopenh264".into(),
+        encoder: FfmpegEncoder::software("libopenh264"),
     }
 }
 
@@ -79,7 +85,11 @@ fn partial_path_preserves_the_mp4_suffix() {
 fn fake_ffmpeg(script: &str) -> (tempfile::TempDir, FfmpegCapabilities) {
     let directory = tempfile::tempdir().expect("temporary FFmpeg directory");
     let executable = directory.path().join("ffmpeg-fake");
-    fs::write(&executable, script).expect("write fake FFmpeg");
+    let mut file = fs::File::create(&executable).expect("create fake FFmpeg");
+    file.write_all(script.as_bytes())
+        .expect("write fake FFmpeg");
+    file.sync_all().expect("sync fake FFmpeg");
+    drop(file);
     let mut permissions = fs::metadata(&executable)
         .expect("fake metadata")
         .permissions();
@@ -89,7 +99,7 @@ fn fake_ffmpeg(script: &str) -> (tempfile::TempDir, FfmpegCapabilities) {
         directory,
         FfmpegCapabilities {
             executable,
-            encoder: "libopenh264".into(),
+            encoder: FfmpegEncoder::software("libopenh264"),
         },
     )
 }
@@ -194,16 +204,75 @@ fn process_rejects_a_segment_without_frames() {
 }
 
 #[test]
+fn sink_accepts_the_initial_segment_when_format_arrives_before_frames_and_stop() {
+    let (_fake, capabilities) = fake_ffmpeg(
+        "#!/bin/sh\nfor output do :; done\nbytes=$(wc -c)\n[ \"$bytes\" -eq 16 ] || exit 9\nprintf 'fake-mp4' > \"$output\"\n",
+    );
+    let output_directory = tempfile::tempdir().expect("temporary sink directory");
+    let output = output_directory.path().join("segment-0001.mp4");
+    let mut sink = FfmpegScreenSink::new(
+        capabilities,
+        RecordingSettings {
+            minimum_free_bytes: 0,
+            target_fps: 30,
+            ..RecordingSettings::default()
+        },
+        ScreenSegment {
+            path: output.clone(),
+            start_ns: 0,
+        },
+        None,
+        false,
+    )
+    .expect("create FFmpeg sink");
+
+    sink.format_changed(VideoFormat {
+        width: 2,
+        height: 2,
+        stride: 8,
+        pixel_format: PixelFormat::Bgra8,
+    })
+    .expect("announce negotiated format");
+    sink.push(OwnedScreenSample {
+        frame: OwnedVideoFrame {
+            width: 2,
+            height: 2,
+            stride: 8,
+            pixel_format: PixelFormat::Bgra8,
+            pixels: Arc::from(vec![0; 16]),
+        },
+        timestamp: crate::screen::FrameTimestamp {
+            session_ns: 1,
+            native_pts_ns: Some(1),
+            source: TimestampSource::NativePresentation,
+        },
+        sequence: 1,
+        cursor: crate::screen::CursorSampleState::Unknown,
+    })
+    .expect("write first frame");
+    sink.finish().expect("finalize FFmpeg sink");
+
+    assert_eq!(fs::read(output).expect("read encoded segment"), b"fake-mp4");
+}
+
+#[test]
 #[ignore = "requires the system FFmpeg runtime"]
 fn system_ffmpeg_encodes_a_playable_mp4_segment() {
     let capabilities = super::probe_ffmpeg().expect("system FFmpeg capabilities");
     let output_directory = tempfile::tempdir().expect("temporary output");
     let output = output_directory.path().join("segment-0001.mp4");
+    // Hardware encoders commonly reject tiny test surfaces even though they
+    // support normal desktop resolutions. Keep this smoke test representative
+    // of the negotiated Portal format.
+    let width = 1280_u32;
+    let height = 720_u32;
+    let stride = usize::try_from(width).expect("test width") * 4;
+    let frame_bytes = stride * usize::try_from(height).expect("test height");
     let mut process = FfmpegProcess::spawn(FfmpegProcessConfig {
         capabilities: &capabilities,
         output: &output,
-        width: 32,
-        height: 32,
+        width,
+        height,
         fps: 30,
         bitrate_bps: 500_000,
         keyframe_interval_seconds: 1,
@@ -212,11 +281,11 @@ fn system_ffmpeg_encodes_a_playable_mp4_segment() {
     for shade in [0_u8, 32, 64, 96] {
         process
             .write_frame(&OwnedVideoFrame {
-                width: 32,
-                height: 32,
-                stride: 128,
+                width,
+                height,
+                stride,
                 pixel_format: PixelFormat::Bgra8,
-                pixels: Arc::from(vec![shade; 32 * 32 * 4]),
+                pixels: Arc::from(vec![shade; frame_bytes]),
             })
             .expect("write system FFmpeg frame");
         std::thread::sleep(std::time::Duration::from_millis(20));

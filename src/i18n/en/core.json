@@ -248,7 +248,15 @@
     "closeTeleprompter": "Hide teleprompter",
     "openHud": "Open HUD",
     "quit": "Quit Beam",
-    "preparingEditor": "Opening editor"
+    "preparingEditor": "Opening editor",
+    "interactionAccessNoticeTitle": "Allow keyboard shortcut recording",
+    "interactionAccessNoticeDescription": "Beam needs additional access to record keyboard shortcuts. On Linux, this access also enables mouse click metadata. Typed text is never stored.",
+    "interactionAccessDeniedDescription": "Access was not granted. You can try again or enable it later in Settings.",
+    "authorizeInteractions": "Authorize",
+    "authorizingInteractions": "Authorizing",
+    "dismissInteractionNotice": "Dismiss",
+    "interactionAccessSettingsHint": "Find Record keyboard shortcuts in Settings.",
+    "dismissInteractionReminder": "Dismiss interaction settings reminder"
   },
   "EditorPreparingHud": {
     "title": "Preparing your editor",
@@ -281,8 +289,20 @@
     "option10s": "10s",
     "alwaysVisible": "Always visible",
     "autoFade": "Auto-fade",
+    "hiddenUntilHovered": "Hidden until hovered",
     "language": "Language",
-    "chooseLanguage": "Select display language"
+    "chooseLanguage": "Select display language",
+    "interactionAccess": "Interaction access",
+    "interactionAccessReadyDescription": "Captures clicks and shortcut tokens. Typed text is never stored.",
+    "interactionAccessUnavailableDescription": "Interaction capture is unavailable on this system.",
+    "interactionAccessDescription": "Required for click effects and future shortcut captions. No typed text is stored.",
+    "accessReady": "Ready",
+    "checkingAccess": "Checking",
+    "requestingAccess": "Authorizing",
+    "allowAccess": "Allow",
+    "accessUnavailable": "Unavailable",
+    "recordInteractions": "Record keyboard shortcuts",
+    "recordInteractionsDescription": "Records safe keyboard shortcuts. On Linux, turning this off also disables mouse click metadata. Typed text is never stored."
   },
   "ProjectPicker": {
     "projects": "Projects",

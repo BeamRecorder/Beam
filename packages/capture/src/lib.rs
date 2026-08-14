@@ -4,6 +4,7 @@ pub mod catalog;
 pub mod clock;
 pub mod cursor;
 pub mod error;
+pub mod input;
 pub mod model;
 pub mod protocol;
 pub mod screen;

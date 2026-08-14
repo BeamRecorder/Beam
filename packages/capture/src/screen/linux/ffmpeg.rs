@@ -1,11 +1,14 @@
 use std::{
     io::Read,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
+    sync::OnceLock,
     time::{Duration, Instant},
 };
 
 use crate::{CaptureError, NativeCaptureErrorCode};
+
+use super::{FfmpegAcceleration, FfmpegEncoder};
 
 const FFMPEG_PATH_ENV: &str = "BEAM_FFMPEG_PATH";
 const FFMPEG_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
@@ -13,14 +16,20 @@ const FFMPEG_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct FfmpegCapabilities {
     pub(crate) executable: PathBuf,
-    pub(crate) encoder: String,
+    pub(crate) encoder: FfmpegEncoder,
 }
 
 pub(crate) fn probe_ffmpeg() -> Result<FfmpegCapabilities, CaptureError> {
+    static CAPABILITIES: OnceLock<FfmpegCapabilities> = OnceLock::new();
+    if let Some(capabilities) = CAPABILITIES.get() {
+        return Ok(capabilities.clone());
+    }
     let executable = std::env::var_os(FFMPEG_PATH_ENV)
         .filter(|value| !value.is_empty())
         .map_or_else(|| PathBuf::from("ffmpeg"), PathBuf::from);
-    probe_ffmpeg_at(executable)
+    let capabilities = probe_ffmpeg_at(executable)?;
+    let _ = CAPABILITIES.set(capabilities.clone());
+    Ok(capabilities)
 }
 
 fn probe_ffmpeg_at(executable: PathBuf) -> Result<FfmpegCapabilities, CaptureError> {
@@ -36,10 +45,10 @@ fn probe_ffmpeg_at(executable: PathBuf) -> Result<FfmpegCapabilities, CaptureErr
             )
         })?;
     let encoders = run(&executable, &["-hide_banner", "-encoders"])?;
-    let encoder = select_h264_encoder(&encoders).ok_or_else(|| {
+    let encoder = select_encoder(&executable, &encoders).ok_or_else(|| {
         ffmpeg_error(
             NativeCaptureErrorCode::FfmpegEncoderUnavailable,
-            "FFmpeg has neither the libx264 nor libopenh264 encoder",
+            "FFmpeg has no working hardware H.264/AV1/VP9 encoder and neither libx264 nor libopenh264",
         )
     })?;
     let muxers = run(&executable, &["-hide_banner", "-muxers"])?;
@@ -51,11 +60,139 @@ fn probe_ffmpeg_at(executable: PathBuf) -> Result<FfmpegCapabilities, CaptureErr
     }
     Ok(FfmpegCapabilities {
         executable,
-        encoder: encoder.into(),
+        encoder,
     })
 }
 
-fn run(executable: &std::path::Path, arguments: &[&str]) -> Result<String, CaptureError> {
+fn select_encoder(executable: &Path, output: &str) -> Option<FfmpegEncoder> {
+    for candidate in hardware_candidates() {
+        if has_named_component(output, &candidate.name)
+            && probe_hardware_encoder(executable, &candidate)
+        {
+            return Some(candidate);
+        }
+    }
+    select_h264_encoder(output).map(FfmpegEncoder::software)
+}
+
+fn hardware_candidates() -> Vec<FfmpegEncoder> {
+    let mut candidates = vec![
+        hardware("h264_nvenc", "h264", FfmpegAcceleration::Nvenc),
+        hardware("h264_qsv", "h264", FfmpegAcceleration::Qsv),
+    ];
+    for device in vaapi_devices() {
+        candidates.push(hardware(
+            "h264_vaapi",
+            "h264",
+            FfmpegAcceleration::Vaapi {
+                device: device.clone(),
+            },
+        ));
+    }
+    candidates.extend([
+        hardware("h264_amf", "h264", FfmpegAcceleration::Amf),
+        hardware("av1_nvenc", "av1", FfmpegAcceleration::Nvenc),
+        hardware("av1_qsv", "av1", FfmpegAcceleration::Qsv),
+    ]);
+    for device in vaapi_devices() {
+        candidates.push(hardware(
+            "av1_vaapi",
+            "av1",
+            FfmpegAcceleration::Vaapi {
+                device: device.clone(),
+            },
+        ));
+        candidates.push(hardware(
+            "vp9_vaapi",
+            "vp9",
+            FfmpegAcceleration::Vaapi { device },
+        ));
+    }
+    candidates.extend([
+        hardware("av1_amf", "av1", FfmpegAcceleration::Amf),
+        hardware("vp9_qsv", "vp9", FfmpegAcceleration::Qsv),
+    ]);
+    candidates
+}
+
+fn hardware(name: &str, codec: &str, acceleration: FfmpegAcceleration) -> FfmpegEncoder {
+    FfmpegEncoder {
+        name: name.into(),
+        codec: codec.into(),
+        acceleration,
+    }
+}
+
+fn vaapi_devices() -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir("/dev/dri") else {
+        return Vec::new();
+    };
+    let mut devices = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("renderD"))
+        })
+        .collect::<Vec<_>>();
+    devices.sort();
+    devices
+}
+
+fn probe_hardware_encoder(executable: &Path, encoder: &FfmpegEncoder) -> bool {
+    let mut arguments = encoder.device_arguments();
+    arguments.extend([
+        "-hide_banner".into(),
+        "-loglevel".into(),
+        "error".into(),
+        "-nostdin".into(),
+        "-f".into(),
+        "lavfi".into(),
+        "-i".into(),
+        "color=c=black:s=1280x720:r=60".into(),
+        "-frames:v".into(),
+        "2".into(),
+        "-vf".into(),
+        encoder.filter().into(),
+        "-b:v".into(),
+        "12000000".into(),
+        "-c:v".into(),
+        encoder.name.clone(),
+        "-f".into(),
+        "null".into(),
+        "-".into(),
+    ]);
+    let Ok(mut child) = Command::new(executable)
+        .args(arguments)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+    wait_for_probe(&mut child).is_some_and(|status| status.success())
+}
+
+fn wait_for_probe(child: &mut std::process::Child) -> Option<std::process::ExitStatus> {
+    let deadline = Instant::now() + FFMPEG_PROBE_TIMEOUT;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return Some(status),
+            Ok(None) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+        }
+    }
+}
+
+fn run(executable: &Path, arguments: &[&str]) -> Result<String, CaptureError> {
     let mut child = Command::new(executable)
         .args(arguments)
         .stdin(Stdio::null())
@@ -196,7 +333,8 @@ mod tests {
             "#!/bin/sh\ncase \"$2\" in\n-version) printf 'ffmpeg version fake\\n' ;;\n-encoders) printf ' V....D libopenh264 fake\\n' ;;\n-muxers) printf ' E mp4 fake\\n' ;;\nesac\n",
         );
         let capabilities = probe_ffmpeg_at(path).expect("valid fake FFmpeg");
-        assert_eq!(capabilities.encoder, "libopenh264");
+        assert_eq!(capabilities.encoder.name, "libopenh264");
+        assert!(!capabilities.encoder.is_hardware());
     }
 
     #[test]

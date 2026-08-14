@@ -56,6 +56,7 @@ impl ActiveRecordings {
         #[cfg(all(windows, feature = "cursor"))]
         if let CursorSelection::Separate {
             capture_clicks,
+            capture_shortcuts,
             capture_shape,
         } = request.cursor
         {
@@ -80,6 +81,7 @@ impl ActiveRecordings {
                 &layout.track_dir(TrackKind::Cursor),
                 region,
                 capture_clicks,
+                capture_shortcuts,
                 capture_shape,
                 start_ns,
                 start_gate.clone(),
@@ -93,7 +95,12 @@ impl ActiveRecordings {
             track.status = TrackStatus::Recording;
         }
         #[cfg(all(target_os = "macos", feature = "cursor"))]
-        if let CursorSelection::Separate { capture_clicks, .. } = request.cursor {
+        if let CursorSelection::Separate {
+            capture_clicks,
+            capture_shortcuts,
+            ..
+        } = request.cursor
+        {
             let region = match &request.screen {
                 Some(ScreenSelection::Source { source_id }) => crate::cursor::crop_region(
                     crate::cursor::mac::source_region(source_id)?,
@@ -115,6 +122,7 @@ impl ActiveRecordings {
                 &layout.track_dir(TrackKind::Cursor),
                 region,
                 capture_clicks,
+                capture_shortcuts,
                 start_ns,
                 start_gate.clone(),
             )?);
@@ -180,6 +188,10 @@ impl ActiveRecordings {
             add_portal_screen_track(
                 tracks,
                 portal_source_id(kind)?,
+                recording
+                    .encoded_codec()
+                    .ok_or_else(|| CaptureError::Backend("Linux encoder was not selected".into()))?
+                    .into(),
                 format.width,
                 format.height,
                 request.recording.target_fps,

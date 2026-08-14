@@ -3,8 +3,10 @@ use std::{collections::BTreeMap, path::PathBuf};
 use crate::{
     CaptureError, NativeCaptureErrorCode,
     cursor::{
-        CursorEvent, CursorEventWriter, CursorKind, CursorShapeCatalogEntry, telemetry_from_events,
+        CursorEvent, CursorEventWriter, CursorKind, CursorShapeCatalogEntry, Hotspot,
+        telemetry_from_events,
     },
+    input::{InputEvent, InputEventSidecar, NativeInputEvent},
     model::RecordingSettings,
     screen::{
         CursorSampleState, OwnedScreenSample, PixelFormat, ScreenDiscontinuity, ScreenSampleSink,
@@ -14,7 +16,7 @@ use crate::{
 };
 
 use super::ffmpeg_process::FfmpegProcess;
-use super::{FfmpegCapabilities, ffmpeg_process::FfmpegProcessConfig};
+use super::{FfmpegCapabilities, LinuxInputMonitor, ffmpeg_process::FfmpegProcessConfig};
 
 pub(crate) struct FfmpegScreenSink {
     capabilities: FfmpegCapabilities,
@@ -23,6 +25,7 @@ pub(crate) struct FfmpegScreenSink {
     process: Option<FfmpegProcess>,
     format: Option<VideoFormat>,
     cursor: Option<CursorOutput>,
+    input: Option<InputOutput>,
     finished: bool,
 }
 
@@ -33,6 +36,14 @@ struct CursorOutput {
     shapes: BTreeMap<String, CursorShapeCatalogEntry>,
     previous_id: Option<String>,
     previous_visibility: Option<bool>,
+    previous_position: Option<(f64, f64)>,
+}
+
+struct InputOutput {
+    directory: PathBuf,
+    monitor: Option<LinuxInputMonitor>,
+    anchor: Option<(u64, u64)>,
+    events: Vec<InputEvent>,
 }
 
 impl FfmpegScreenSink {
@@ -41,6 +52,7 @@ impl FfmpegScreenSink {
         recording: RecordingSettings,
         initial_segment: ScreenSegment,
         cursor_directory: Option<PathBuf>,
+        capture_interactions: bool,
     ) -> Result<Self, CaptureError> {
         if initial_segment
             .path
@@ -52,6 +64,12 @@ impl FfmpegScreenSink {
                 "Linux FFmpeg screen segments must use the .mp4 extension".into(),
             ));
         }
+        let input = cursor_directory
+            .as_ref()
+            .filter(|_| capture_interactions)
+            .map(|directory| InputOutput::new(directory.clone()))
+            .transpose()?
+            .flatten();
         Ok(Self {
             capabilities,
             recording,
@@ -59,6 +77,7 @@ impl FfmpegScreenSink {
             process: None,
             format: None,
             cursor: cursor_directory.map(CursorOutput::new),
+            input,
             finished: false,
         })
     }
@@ -110,6 +129,42 @@ impl FfmpegScreenSink {
                 .map_err(|error| CaptureError::storage(&partial, error))?;
         }
         Ok(())
+    }
+
+    fn collect_input(&mut self, first_sample_ns: Option<u64>) -> Result<(), CaptureError> {
+        let Some(input) = self.input.as_mut() else {
+            return Ok(());
+        };
+        let events = input.drain(first_sample_ns)?;
+        for event in events {
+            if let InputEvent::MouseButton {
+                session_ns,
+                button,
+                pressed,
+            } = event
+                && let Some(cursor) = self.cursor.as_mut()
+            {
+                cursor.push_button(session_ns, button, pressed)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn finalize_input(&mut self) -> Result<(), CaptureError> {
+        if let Some(monitor) = self.input.as_mut().and_then(|input| input.monitor.as_mut()) {
+            monitor.stop();
+        }
+        self.collect_input(None)?;
+        let Some(input) = self.input.as_mut() else {
+            return Ok(());
+        };
+        input.events.sort_by_key(InputEvent::session_ns);
+        std::fs::create_dir_all(&input.directory)
+            .map_err(|error| CaptureError::storage(&input.directory, error))?;
+        write_atomic(
+            &input.directory.join("input.json"),
+            &serde_json::to_vec_pretty(&InputEventSidecar::new(input.events.clone()))?,
+        )
     }
 }
 
@@ -172,6 +227,7 @@ impl ScreenSampleSink for FfmpegScreenSink {
             .as_mut()
             .ok_or_else(|| ffmpeg_error("FFmpeg is not running for the active segment"))?
             .write_frame(&sample.frame)?;
+        self.collect_input(Some(sample.timestamp.session_ns))?;
         if let Some(cursor) = self.cursor.as_mut() {
             cursor.push_sample(sample.timestamp.session_ns, sample.cursor)?;
         }
@@ -188,6 +244,10 @@ impl ScreenSampleSink for FfmpegScreenSink {
     }
 
     fn end_segment(&mut self) -> Result<(), CaptureError> {
+        self.collect_input(None)?;
+        if let Some(input) = self.input.as_mut() {
+            input.anchor = None;
+        }
         let _segment = self
             .current_segment
             .take()
@@ -202,14 +262,18 @@ impl ScreenSampleSink for FfmpegScreenSink {
         if self.finished {
             return Ok(());
         }
+        if let Some(monitor) = self.input.as_mut().and_then(|input| input.monitor.as_mut()) {
+            monitor.stop();
+        }
         let segment_result = if self.current_segment.is_some() {
             self.end_segment()
         } else {
             Ok(())
         };
+        let input_result = self.finalize_input();
         let cursor_result = self.finalize_cursor();
         self.finished = true;
-        segment_result.and(cursor_result)
+        segment_result.and(input_result).and(cursor_result)
     }
 }
 
@@ -222,6 +286,7 @@ impl CursorOutput {
             shapes: BTreeMap::new(),
             previous_id: None,
             previous_visibility: None,
+            previous_position: None,
         }
     }
 
@@ -243,23 +308,22 @@ impl CursorOutput {
             return Ok(());
         };
         if self.previous_id.as_deref() != Some(&native_cursor_id) {
-            if let Some(hotspot) = hotspot {
-                self.push(CursorEvent::Shape {
-                    session_ns,
-                    cursor_id: native_cursor_id.clone(),
+            let hotspot = hotspot.unwrap_or(Hotspot { x: 0, y: 0 });
+            self.push(CursorEvent::Shape {
+                session_ns,
+                cursor_id: native_cursor_id.clone(),
+                cursor_kind: CursorKind::Custom,
+                native_cursor_id: native_cursor_id.clone(),
+                hotspot,
+            })?;
+            self.shapes.insert(
+                native_cursor_id.clone(),
+                CursorShapeCatalogEntry {
                     cursor_kind: CursorKind::Custom,
                     native_cursor_id: native_cursor_id.clone(),
                     hotspot,
-                })?;
-                self.shapes.insert(
-                    native_cursor_id.clone(),
-                    CursorShapeCatalogEntry {
-                        cursor_kind: CursorKind::Custom,
-                        native_cursor_id: native_cursor_id.clone(),
-                        hotspot,
-                    },
-                );
-            }
+                },
+            );
             self.previous_id = Some(native_cursor_id.clone());
         }
         if self.previous_visibility != Some(visible) {
@@ -277,6 +341,26 @@ impl CursorOutput {
             normalized_x,
             normalized_y,
             visible,
+        })?;
+        self.previous_position = Some((normalized_x, normalized_y));
+        Ok(())
+    }
+
+    fn push_button(
+        &mut self,
+        session_ns: u64,
+        button: u8,
+        pressed: bool,
+    ) -> Result<(), CaptureError> {
+        let Some((normalized_x, normalized_y)) = self.previous_position else {
+            return Ok(());
+        };
+        self.push(CursorEvent::Button {
+            session_ns,
+            button,
+            pressed,
+            normalized_x,
+            normalized_y,
         })
     }
 
@@ -295,6 +379,85 @@ impl CursorOutput {
         self.events.push(event);
         Ok(())
     }
+}
+
+impl InputOutput {
+    fn new(directory: PathBuf) -> Result<Option<Self>, CaptureError> {
+        let Some(monitor) = LinuxInputMonitor::start()? else {
+            return Ok(None);
+        };
+        Ok(Some(Self {
+            directory,
+            monitor: Some(monitor),
+            anchor: None,
+            events: Vec::new(),
+        }))
+    }
+
+    fn drain(&mut self, first_sample_ns: Option<u64>) -> Result<Vec<InputEvent>, CaptureError> {
+        let Some(monitor) = self.monitor.as_ref() else {
+            return Ok(Vec::new());
+        };
+        if self.anchor.is_none() {
+            for _ in monitor.drain() {}
+            if let Some(session_ns) = first_sample_ns {
+                self.anchor = Some((monotonic_ns()?, session_ns));
+            }
+            return Ok(Vec::new());
+        }
+        let (native_anchor, session_anchor) = self.anchor.unwrap_or_default();
+        let mapped = monitor
+            .drain()
+            .filter(|event| event.monotonic_ns() >= native_anchor)
+            .map(|event| map_input_event(event, native_anchor, session_anchor))
+            .collect::<Vec<_>>();
+        self.events.extend(mapped.iter().cloned());
+        Ok(mapped)
+    }
+}
+
+fn map_input_event(event: NativeInputEvent, native_anchor: u64, session_anchor: u64) -> InputEvent {
+    let session_ns =
+        session_anchor.saturating_add(event.monotonic_ns().saturating_sub(native_anchor));
+    match event {
+        NativeInputEvent::MouseButton {
+            button, pressed, ..
+        } => InputEvent::MouseButton {
+            session_ns,
+            button,
+            pressed,
+        },
+        NativeInputEvent::Shortcut {
+            pressed,
+            modifiers,
+            key,
+            ..
+        } => InputEvent::Shortcut {
+            session_ns,
+            pressed,
+            modifiers,
+            key,
+        },
+    }
+}
+
+fn monotonic_ns() -> Result<u64, CaptureError> {
+    let mut timestamp = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    // SAFETY: timestamp points to valid writable memory for the duration of the call.
+    if unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &raw mut timestamp) } != 0 {
+        return Err(CaptureError::Backend(format!(
+            "monotonic input clock failed: {}",
+            std::io::Error::last_os_error()
+        )));
+    }
+    let seconds = u64::try_from(timestamp.tv_sec).unwrap_or(0);
+    let nanoseconds = u64::try_from(timestamp.tv_nsec).unwrap_or(0);
+    Ok(seconds
+        .saturating_mul(1_000_000_000)
+        .saturating_add(nanoseconds))
 }
 
 #[must_use]
@@ -316,165 +479,5 @@ fn ffmpeg_error(message: impl Into<String>) -> CaptureError {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used)]
-mod tests {
-    use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc};
-
-    use crate::{
-        cursor::Hotspot,
-        model::RecordingSettings,
-        screen::{
-            CursorSampleState, FrameTimestamp, OwnedScreenSample, OwnedVideoFrame, PixelFormat,
-            ScreenSampleSink, ScreenSegment, TimestampSource, VideoFormat,
-        },
-    };
-
-    use super::{CursorOutput, FfmpegCapabilities, FfmpegScreenSink, encoded_video_format};
-
-    #[test]
-    fn encoded_format_pads_odd_dimensions_for_yuv420() {
-        let actual = encoded_video_format(VideoFormat {
-            width: 1919,
-            height: 1079,
-            stride: 7_676,
-            pixel_format: PixelFormat::Bgra8,
-        });
-        assert_eq!(
-            (actual.width, actual.height, actual.stride),
-            (1920, 1080, 7680)
-        );
-    }
-
-    #[test]
-    fn encoded_format_preserves_even_dimensions() {
-        let actual = encoded_video_format(VideoFormat {
-            width: 1280,
-            height: 720,
-            stride: 5_120,
-            pixel_format: PixelFormat::Bgra8,
-        });
-        assert_eq!((actual.width, actual.height), (1280, 720));
-    }
-
-    #[test]
-    fn cursor_samples_keep_native_identity_visibility_and_hotspot() {
-        let mut output = CursorOutput::new(PathBuf::from("unused"));
-        output.partial_writer = None;
-        let sample = CursorSampleState::Known {
-            native_cursor_id: "pipewire:stream:7".into(),
-            pixel_x: -2,
-            pixel_y: 9,
-            normalized_x: -0.1,
-            normalized_y: 0.5,
-            visible: true,
-            hotspot: Some(Hotspot { x: 2, y: 3 }),
-        };
-        let temporary = tempfile::tempdir().expect("temporary cursor directory");
-        output.directory = temporary.path().into();
-        output.push_sample(42, sample).expect("cursor sample");
-        assert_eq!(output.events.len(), 3);
-        assert_eq!(output.shapes.len(), 1);
-        assert_eq!(output.previous_visibility, Some(true));
-    }
-
-    #[test]
-    fn unknown_cursor_sample_does_not_invent_events() {
-        let temporary = tempfile::tempdir().expect("temporary cursor directory");
-        let mut output = CursorOutput::new(temporary.path().into());
-        output
-            .push_sample(42, CursorSampleState::Unknown)
-            .expect("unknown sample");
-        assert!(output.events.is_empty());
-        assert!(!temporary.path().join("cursor.partial.jsonl").exists());
-    }
-
-    #[test]
-    fn sink_rotates_atomic_segments_and_finalizes_cursor_sidecars() {
-        let temporary = tempfile::tempdir().expect("temporary sink directory");
-        let executable = temporary.path().join("ffmpeg-fake");
-        fs::write(
-            &executable,
-            "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'fake-mp4' > \"$output\"\n",
-        )
-        .expect("write fake FFmpeg");
-        let mut permissions = fs::metadata(&executable)
-            .expect("fake FFmpeg metadata")
-            .permissions();
-        permissions.set_mode(0o755);
-        fs::set_permissions(&executable, permissions).expect("make fake FFmpeg executable");
-        let screen = temporary.path().join("screen");
-        let cursor = temporary.path().join("cursor");
-        let first = screen.join("segment-0001.mp4");
-        let second = screen.join("segment-0002.mp4");
-        let mut sink = FfmpegScreenSink::new(
-            FfmpegCapabilities {
-                executable,
-                encoder: "libopenh264".into(),
-            },
-            RecordingSettings {
-                minimum_free_bytes: 0,
-                target_fps: 30,
-                ..RecordingSettings::default()
-            },
-            ScreenSegment {
-                path: first.clone(),
-                start_ns: 0,
-            },
-            Some(cursor.clone()),
-        )
-        .expect("create FFmpeg sink");
-        sink.format_changed(VideoFormat {
-            width: 2,
-            height: 2,
-            stride: 8,
-            pixel_format: PixelFormat::Bgra8,
-        })
-        .expect("announce format");
-        sink.push(sample(10)).expect("first sample");
-        sink.end_segment().expect("finish first segment");
-        sink.begin_segment(ScreenSegment {
-            path: second.clone(),
-            start_ns: 100,
-        })
-        .expect("begin second segment");
-        sink.push(sample(110)).expect("second sample");
-        sink.finish().expect("finalize sink");
-
-        assert_eq!(fs::read(first).expect("first segment"), b"fake-mp4");
-        assert_eq!(fs::read(second).expect("second segment"), b"fake-mp4");
-        let events: Vec<crate::cursor::CursorEvent> =
-            serde_json::from_slice(&fs::read(cursor.join("cursor.json")).expect("cursor events"))
-                .expect("parse cursor events");
-        assert!(events.len() >= 4);
-        assert!(cursor.join("telemetry.json").is_file());
-        assert!(cursor.join("shapes.json").is_file());
-        assert!(!cursor.join("cursor.partial.jsonl").exists());
-    }
-
-    fn sample(session_ns: u64) -> OwnedScreenSample {
-        OwnedScreenSample {
-            frame: OwnedVideoFrame {
-                width: 2,
-                height: 2,
-                stride: 8,
-                pixel_format: PixelFormat::Bgra8,
-                pixels: Arc::from(vec![0; 16]),
-            },
-            timestamp: FrameTimestamp {
-                session_ns,
-                native_pts_ns: Some(session_ns),
-                source: TimestampSource::NativePresentation,
-            },
-            sequence: session_ns,
-            cursor: CursorSampleState::Known {
-                native_cursor_id: "pipewire:stream:7".into(),
-                pixel_x: 1,
-                pixel_y: 1,
-                normalized_x: 0.5,
-                normalized_y: 0.5,
-                visible: true,
-                hotspot: Some(Hotspot { x: 0, y: 0 }),
-            },
-        }
-    }
-}
+#[path = "ffmpeg_sink_tests.rs"]
+mod tests;

@@ -52,6 +52,8 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
+import type { RecordingBarVisibility } from './recorder/recording-types';
+import { useInteractionAccess } from './interactions/useInteractionAccess';
 
 const { t } = useTranslate('HUD');
 
@@ -95,8 +97,9 @@ const showProjectPicker = ref(false);
 
 // Preference settings
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
-const recordingBarVisibility = ref<'always' | 'auto-fade'>('always');
+const recordingBarVisibility = ref<RecordingBarVisibility>('always');
 watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }));
+const interactionAccess = useInteractionAccess();
 
 // Previews
 const windowPreviews = ref<CapturePreview[]>([]);
@@ -525,6 +528,7 @@ const toggleRecording = async () => {
       targetFps: 60,
       countdownSeconds: countdownSeconds.value,
       recordingBarVisibility: recordingBarVisibility.value,
+      recordInteractions: interactionAccess.recordingEnabled.value,
       region: activeTab.value === 'screen' && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
       regionOverlay:
         activeTab.value === 'screen' && selectedScreenOverlay.value
@@ -845,8 +849,9 @@ onMounted(async () => {
     }
   }
   recordingBarVisibility.value = preferences.recordingBar.visibility;
+  interactionAccess.hydrate(preferences);
   if (!props.embedded) updateWindowSize();
-  await discoverSources();
+  await Promise.all([discoverSources(), interactionAccess.refresh()]);
   await Promise.allSettled([loadPreviews('screen'), loadPreviews('window')]);
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
@@ -973,8 +978,13 @@ const openProject = (project: CaptureProject) => {
         key="settings"
         :countdown-seconds="countdownSeconds"
         :recording-bar-visibility="recordingBarVisibility"
+        :input-access="interactionAccess.status.value"
+        :record-interactions="interactionAccess.enabled.value"
+        :requesting-input-access="interactionAccess.requesting.value"
         @update:countdown-seconds="countdownSeconds = $event"
         @update:recording-bar-visibility="recordingBarVisibility = $event"
+        @update:record-interactions="interactionAccess.setEnabled"
+        @request-input-access="interactionAccess.request"
         @close="showSettings = false"
       />
 

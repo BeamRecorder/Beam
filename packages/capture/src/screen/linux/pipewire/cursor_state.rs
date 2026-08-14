@@ -5,7 +5,7 @@ use super::{CropRect, VideoTransform};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct CursorMetadata {
     pub valid: bool,
-    pub id: u32,
+    pub id: u64,
     pub x: i32,
     pub y: i32,
     pub hotspot: Option<Hotspot>,
@@ -14,7 +14,7 @@ pub(crate) struct CursorMetadata {
 #[derive(Debug)]
 pub(crate) struct CursorState {
     stream_scope: String,
-    native_id: Option<u32>,
+    native_id: Option<u64>,
 }
 
 impl CursorState {
@@ -33,11 +33,18 @@ impl CursorState {
         width: u32,
         height: u32,
     ) -> CursorSampleState {
-        let Some(metadata) = metadata.filter(|metadata| metadata.valid) else {
+        let Some(metadata) = metadata else {
             return CursorSampleState::Unknown;
         };
         if metadata.id != 0 {
             self.native_id = Some(metadata.id);
+        }
+        // Mutter uses id=1 as a validity/change marker, not as a stable shape
+        // identity. A valid position-only first sample may therefore arrive
+        // without bitmap bytes to hash. Give it a session-local fallback until
+        // the first shape-bearing sample replaces it with the stable hash.
+        if metadata.valid && self.native_id.is_none() {
+            self.native_id = Some(1);
         }
         let Some(native_id) = self.native_id else {
             return CursorSampleState::Unknown;
@@ -45,7 +52,8 @@ impl CursorState {
         if width == 0 || height == 0 {
             return CursorSampleState::Unknown;
         }
-        let visible = metadata.x >= 0
+        let visible = metadata.valid
+            && metadata.x >= 0
             && metadata.y >= 0
             && u32::try_from(metadata.x).is_ok_and(|x| x < width)
             && u32::try_from(metadata.y).is_ok_and(|y| y < height);

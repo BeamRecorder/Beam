@@ -248,7 +248,15 @@
     "closeTeleprompter": "隱藏提詞器",
     "openHud": "開啟 HUD",
     "quit": "結束 Beam",
-    "preparingEditor": "正在開啟編輯器"
+    "preparingEditor": "正在開啟編輯器",
+    "interactionAccessNoticeTitle": "允許錄製鍵盤快速鍵",
+    "interactionAccessNoticeDescription": "Beam 需要額外權限來錄製鍵盤快速鍵。在 Linux 上，此權限也會啟用滑鼠點擊中繼資料。輸入的文字不會被儲存。",
+    "interactionAccessDeniedDescription": "未取得權限。你可以重試，或稍後在設定中啟用。",
+    "authorizeInteractions": "授權",
+    "authorizingInteractions": "正在授權",
+    "dismissInteractionNotice": "暫不",
+    "interactionAccessSettingsHint": "可在設定中找到「錄製鍵盤快速鍵」。",
+    "dismissInteractionReminder": "關閉提醒"
   },
   "EditorPreparingHud": {
     "title": "正在準備編輯器",
@@ -281,8 +289,20 @@
     "option10s": "10 秒",
     "alwaysVisible": "永遠顯示",
     "autoFade": "自動淡出",
+    "hiddenUntilHovered": "游標懸停前隱藏",
     "language": "語言",
-    "chooseLanguage": "選擇顯示語言"
+    "chooseLanguage": "選擇顯示語言",
+    "interactionAccess": "互動存取",
+    "interactionAccessReadyDescription": "擷取點擊和快捷鍵。絕不會儲存輸入的文字。",
+    "interactionAccessUnavailableDescription": "此系統不支援互動擷取。",
+    "interactionAccessDescription": "點擊效果和未來的快捷鍵字幕需要此權限。不會儲存輸入文字。",
+    "accessReady": "就緒",
+    "checkingAccess": "正在檢查",
+    "requestingAccess": "正在授權",
+    "allowAccess": "允許",
+    "accessUnavailable": "無法使用",
+    "recordInteractions": "錄製鍵盤快速鍵",
+    "recordInteractionsDescription": "錄製安全的鍵盤快速鍵。在 Linux 上，關閉此選項也會停用滑鼠點擊中繼資料。輸入的文字不會被儲存。"
   },
   "ProjectPicker": {
     "projects": "專案",

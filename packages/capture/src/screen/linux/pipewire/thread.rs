@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     os::fd::OwnedFd,
     rc::Rc,
     sync::{Arc, Mutex, mpsc},
@@ -136,7 +136,10 @@ impl PipewireCapture {
                 let _ = commands.send(PipewireCommand::Stop);
                 let _ = thread.join();
                 let _ = sink_thread.join();
-                return Err(error);
+                return match take_fatal(&fatal) {
+                    Err(fatal) => Err(fatal),
+                    Ok(()) => Err(error),
+                };
             }
         };
         Ok(Self {
@@ -260,6 +263,7 @@ fn pipewire_worker(
     start_gate: Arc<StartGate>,
     ready: mpsc::SyncSender<Result<VideoFormat, CaptureError>>,
 ) -> Result<(), CaptureError> {
+    pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None).map_err(pipewire_error)?;
     let context = pw::context::ContextRc::new(&mainloop, None).map_err(pipewire_error)?;
     let core = context
@@ -282,6 +286,7 @@ fn pipewire_worker(
         timestamp: TimestampMapper::new(start_ns),
         start_gate,
         active: false,
+        stopping: false,
         clock: Instant::now(),
         sink,
         metrics,
@@ -289,20 +294,37 @@ fn pipewire_worker(
         pending_drops: 0,
     }));
     let ready = Rc::new(RefCell::new(Some(ready)));
+    let negotiation_stopped = Rc::new(Cell::new(false));
     let listener_state = state.clone();
     let listener_ready = ready.clone();
     let listener_loop = mainloop.clone();
+    let listener_negotiation_stopped = negotiation_stopped.clone();
+    let format_loop = mainloop.clone();
+    let format_negotiation_stopped = negotiation_stopped.clone();
     let listener = stream
         .add_local_listener_with_user_data(())
-        .state_changed(move |_, _, _, new| match new {
+        .state_changed(move |stream, _, _, new| match new {
             pw::stream::StreamState::Error(message) => {
                 set_fatal(&listener_state.borrow().fatal, stream_error(&message));
                 send_ready_error(&listener_ready, pipewire_error(message));
                 listener_loop.quit();
             }
             pw::stream::StreamState::Paused => {
-                if let Some(format) = listener_state.borrow().negotiated {
+                if listener_negotiation_stopped.get()
+                    && let Some(format) = listener_state.borrow().negotiated
+                {
                     send_ready_ok(&listener_ready, format);
+                }
+            }
+            pw::stream::StreamState::Streaming => {
+                if listener_state.borrow().negotiated.is_some()
+                    && !listener_negotiation_stopped.replace(true)
+                    && let Err(error) = stream.set_active(false)
+                {
+                    let diagnostic = error.to_string();
+                    set_fatal(&listener_state.borrow().fatal, pipewire_error(error));
+                    send_ready_error(&listener_ready, pipewire_error(diagnostic));
+                    listener_loop.quit();
                 }
             }
             _ => {}
@@ -314,6 +336,9 @@ fn pipewire_worker(
                 if id != ParamType::Format.as_raw() {
                     return;
                 }
+                if param.is_none() && state.borrow().stopping {
+                    return;
+                }
                 let result = param
                     .ok_or_else(|| format_error("PipeWire removed the negotiated format"))
                     .and_then(parse_format);
@@ -321,15 +346,31 @@ fn pipewire_worker(
                     Ok(format) => {
                         state.borrow_mut().negotiated = Some(format);
                         if let Err(error) = update_buffer_params(stream, format) {
+                            let diagnostic = error.to_string();
                             set_fatal(&state.borrow().fatal, error);
+                            send_ready_error(&ready, format_error(diagnostic));
+                            format_loop.quit();
                             return;
                         }
                         if matches!(stream.state(), pw::stream::StreamState::Paused) {
-                            send_ready_ok(&ready, format);
+                            if format_negotiation_stopped.get() {
+                                send_ready_ok(&ready, format);
+                            }
+                        } else if matches!(stream.state(), pw::stream::StreamState::Streaming)
+                            && !format_negotiation_stopped.replace(true)
+                            && let Err(error) = stream.set_active(false)
+                        {
+                            let diagnostic = error.to_string();
+                            set_fatal(&state.borrow().fatal, pipewire_error(error));
+                            send_ready_error(&ready, pipewire_error(diagnostic));
+                            format_loop.quit();
                         }
                     }
                     Err(error) => {
+                        let diagnostic = error.to_string();
                         set_fatal(&state.borrow().fatal, error);
+                        send_ready_error(&ready, format_error(diagnostic));
+                        format_loop.quit();
                     }
                 }
             }
@@ -377,7 +418,10 @@ fn pipewire_worker(
                 let _ = reply.send(result);
             }
             PipewireCommand::Stop => {
-                command_state.borrow_mut().active = false;
+                let mut state = command_state.borrow_mut();
+                state.active = false;
+                state.stopping = true;
+                drop(state);
                 let _ = stream.set_active(false);
                 let _ = stream.disconnect();
                 command_loop.quit();
@@ -392,9 +436,7 @@ fn pipewire_worker(
         .connect(
             spa::utils::Direction::Input,
             Some(node_id),
-            pw::stream::StreamFlags::AUTOCONNECT
-                | pw::stream::StreamFlags::MAP_BUFFERS
-                | pw::stream::StreamFlags::INACTIVE,
+            pw::stream::StreamFlags::AUTOCONNECT | pw::stream::StreamFlags::MAP_BUFFERS,
             &mut params,
         )
         .map_err(pipewire_error)?;

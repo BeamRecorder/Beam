@@ -10,6 +10,15 @@ use crate::CaptureError;
 
 use super::{NativePixelFormat, NegotiatedFormat, format_error, pipewire_error};
 
+// Mutter advertises SPA_META_Cursor with room for a 384 x 384 RGBA bitmap.
+// SPA_PARAM_META_size is negotiated as a fixed value, so asking for a smaller
+// block does not merely truncate the bitmap: the Cursor meta is omitted from
+// the allocated buffers altogether.
+const MAX_CURSOR_DIMENSION: usize = 384;
+pub(super) const CURSOR_META_SIZE: usize = size_of::<spa::sys::spa_meta_cursor>()
+    + size_of::<spa::sys::spa_meta_bitmap>()
+    + MAX_CURSOR_DIMENSION * MAX_CURSOR_DIMENSION * 4;
+
 pub(super) fn parse_format(param: &Pod) -> Result<NegotiatedFormat, CaptureError> {
     let (media_type, media_subtype) = spa::param::format_utils::parse_format(param)
         .map_err(|error| format_error(error.to_string()))?;
@@ -65,8 +74,8 @@ pub(super) fn format_parameter() -> Result<Vec<u8>, CaptureError> {
             Range,
             Rectangle,
             spa::utils::Rectangle {
-                width: 1,
-                height: 1
+                width: 1920,
+                height: 1080
             },
             spa::utils::Rectangle {
                 width: 1,
@@ -76,6 +85,15 @@ pub(super) fn format_parameter() -> Result<Vec<u8>, CaptureError> {
                 width: super::MAX_VIDEO_DIMENSION,
                 height: super::MAX_VIDEO_DIMENSION,
             }
+        ),
+        spa::pod::property!(
+            spa::param::format::FormatProperties::VideoFramerate,
+            Choice,
+            Range,
+            Fraction,
+            spa::utils::Fraction { num: 60, denom: 1 },
+            spa::utils::Fraction { num: 0, denom: 1 },
+            spa::utils::Fraction { num: 240, denom: 1 }
         ),
     );
     serialize_object(object)
@@ -115,10 +133,7 @@ pub(super) fn update_buffer_params(
             spa::sys::SPA_META_Header,
             size_of::<spa::sys::spa_meta_header>(),
         ),
-        (
-            spa::sys::SPA_META_Cursor,
-            size_of::<spa::sys::spa_meta_cursor>(),
-        ),
+        (spa::sys::SPA_META_Cursor, CURSOR_META_SIZE),
         (
             spa::sys::SPA_META_VideoCrop,
             size_of::<spa::sys::spa_meta_region>(),

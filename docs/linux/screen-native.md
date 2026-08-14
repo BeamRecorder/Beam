@@ -13,6 +13,7 @@ Le backend Linux sera implemente dans le moteur Rust de Beam avec :
 - `pipewire` 0.10 et SPA pour recevoir l'image et les metadonnees du meme buffer ;
 - `MetaHeader` pour le timestamp natif ;
 - `MetaCursor` pour `cursor.id`, `cursor.x` et `cursor.y` ;
+- un helper `beam-input-helper` limite aux boutons et raccourcis filtres, autorise par Polkit ;
 - un chemin memoire CPU possede par Rust, sans `wgpu` ;
 - une interface interne neutre qui transmet un echantillon atomique au moteur existant.
 - un processus FFmpeg externe controle par Rust, avec H.264 (`libx264` ou `libopenh264`) et muxage MP4 atomique.
@@ -106,6 +107,8 @@ Inclus :
 - metriques, diagnostics et erreurs stables ;
 - branchement au protocole et au cycle de session Rust existants ;
 - instructions de compilation et d'execution pour les distributions modernes.
+- clics gauche, droit, milieu et boutons lateraux dans `input.json` ;
+- raccourcis structures comme `Ctrl+W`, sans texte saisi ni donnees IME ;
 
 Exclus :
 
@@ -113,7 +116,7 @@ Exclus :
 - acces arbitraire au bureau Wayland sans consentement Portal ;
 - X11 direct ; un environnement X11 peut fonctionner uniquement si son portail ScreenCast est conforme ;
 - capture audio, microphone et camera ;
-- clics globaux du curseur, absents de `MetaCursor` ;
+- texte tape, mots de passe, composition IME et frappes imprimables sans modificateur ;
 - interpretation semantique de la forme du curseur ; son identifiant est opaque ;
 - persistance du bitmap du curseur ;
 - support opportuniste d'un DMA-BUF non mappable ;
@@ -132,6 +135,7 @@ ashpd = {
     features = ["tokio", "screencast"]
 }
 pipewire = "0.10"
+evdev = "0.13.2"
 tokio = {
     version = "1",
     features = ["rt-multi-thread", "macros"]
@@ -197,6 +201,23 @@ sudo pacman -S --needed base-devel clang ffmpeg pkgconf pipewire wireplumber xdg
 Ajouter ensuite le backend Portal correspondant au bureau, par exemple `xdg-desktop-portal-gnome`, `xdg-desktop-portal-kde` ou `xdg-desktop-portal-wlr`.
 
 Les paquets `-devel` ou `-dev` sont requis uniquement pour compiler. Le paquet Beam devra declarer ses dependances runtime a `libpipewire-0.3`, PipeWire et au portail ; il ne doit pas embarquer arbitrairement le backend d'un bureau particulier.
+
+### Acces aux interactions
+
+Le Portal ne fournit pas les boutons de souris ni les raccourcis clavier. Beam les recupere donc avec un helper Rust separe. Le processus Electron et le renderer n'obtiennent jamais de descripteur `/dev/input` et ne recoivent jamais de frappes brutes.
+
+Le helper applique une liste fermee avant toute sortie :
+
+- les boutons deviennent des evenements structures avec timestamp ;
+- les lettres, chiffres et espace sont ignores sans `Control`, `Alt` ou `Meta` ;
+- les fleches, touches de navigation et touches de fonction restent des tokens, pas du texte ;
+- les repetitions, caracteres Unicode et donnees de composition sont ignores.
+
+RPM et DEB installent le binaire root-owned dans `/usr/libexec/beam-input-helper` et sa policy Polkit dans `/usr/share/polkit-1/actions`. Une AppImage affiche une demande Polkit explicite depuis les preferences et installe exactement ces deux fichiers dans des chemins fixes. Aucun paquet Flatpak, groupe `input`, regle udev permissive ni commande terminal n'est necessaire.
+
+L'autorisation est disponible uniquement dans `HUD > Preferences > Enregistrer les raccourcis clavier`. Le HUD principal n'affiche aucune demande et ne change pas de taille. Sous Linux, desactiver ce reglage coupe a la fois les raccourcis et les metadonnees de clics. Le sidecar commun est `cursor/input.json`. Les clics sont aussi fusionnes dans `cursor/cursor.json` avec la derniere position PipeWire connue afin de conserver les effets de clic et le zoom automatique existants.
+
+Windows et macOS produisent le meme `input.json` depuis leurs APIs natives. Sur ces deux plateformes, desactiver le reglage coupe uniquement les raccourcis et conserve les clics. macOS affiche la demande systeme Input Monitoring uniquement apres l'action explicite d'autorisation dans les preferences ; Windows n'exige pas de helper privilegie.
 
 ### Diagnostic local
 

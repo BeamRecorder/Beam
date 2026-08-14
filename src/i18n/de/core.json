@@ -248,7 +248,15 @@
     "closeTeleprompter": "Teleprompter ausblenden",
     "openHud": "HUD öffnen",
     "quit": "Beam beenden",
-    "preparingEditor": "Editor wird geöffnet"
+    "preparingEditor": "Editor wird geöffnet",
+    "interactionAccessNoticeTitle": "Aufzeichnung von Tastenkürzeln erlauben",
+    "interactionAccessNoticeDescription": "Beam benötigt zusätzlichen Zugriff, um Tastenkürzel aufzuzeichnen. Unter Linux aktiviert dieser Zugriff auch Metadaten für Mausklicks. Eingegebener Text wird nie gespeichert.",
+    "interactionAccessDeniedDescription": "Der Zugriff wurde nicht gewährt. Du kannst es erneut versuchen oder später in den Einstellungen aktivieren.",
+    "authorizeInteractions": "Autorisieren",
+    "authorizingInteractions": "Autorisierung",
+    "dismissInteractionNotice": "Ignorieren",
+    "interactionAccessSettingsHint": "Tastenkürzel aufzeichnen findest du in den Einstellungen.",
+    "dismissInteractionReminder": "Erinnerung schließen"
   },
   "EditorPreparingHud": {
     "title": "Editor wird vorbereitet",
@@ -281,8 +289,20 @@
     "option10s": "10 s",
     "alwaysVisible": "Immer sichtbar",
     "autoFade": "Automatisch ausblenden",
+    "hiddenUntilHovered": "Bis zum Darüberfahren ausgeblendet",
     "language": "Sprache",
-    "chooseLanguage": "Anzeigesprache auswählen"
+    "chooseLanguage": "Anzeigesprache auswählen",
+    "interactionAccess": "Interaktionszugriff",
+    "interactionAccessReadyDescription": "Erfasst Klicks und Tastenkürzel. Eingegebener Text wird nie gespeichert.",
+    "interactionAccessUnavailableDescription": "Die Interaktionserfassung ist auf diesem System nicht verfügbar.",
+    "interactionAccessDescription": "Erforderlich für Klickeffekte und künftige Kürzelbeschriftungen. Eingegebener Text wird nicht gespeichert.",
+    "accessReady": "Bereit",
+    "checkingAccess": "Prüfen",
+    "requestingAccess": "Autorisieren",
+    "allowAccess": "Erlauben",
+    "accessUnavailable": "Nicht verfügbar",
+    "recordInteractions": "Tastenkürzel aufzeichnen",
+    "recordInteractionsDescription": "Zeichnet sichere Tastenkürzel auf. Unter Linux deaktiviert diese Einstellung auch Metadaten für Mausklicks. Eingegebener Text wird nie gespeichert."
   },
   "ProjectPicker": {
     "projects": "Projekte",
