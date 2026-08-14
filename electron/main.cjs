@@ -392,6 +392,11 @@ app.on('before-quit', (event) => {
     app.quit();
   });
 });
+app.on('will-quit', () => {
+  // Final guarantee: no capture-engine.exe may survive Electron exit, even if
+  // the graceful path above was bypassed (update install, window close, etc.).
+  captureEngine.terminateProcess(new Error('capture-engine will-quit'));
+});
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });

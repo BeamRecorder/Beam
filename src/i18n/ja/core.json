@@ -350,6 +350,7 @@
     "recordingControls": "録画コントロール",
     "moveRecorderBar": "録画バーを移動",
     "ready": "準備完了",
+    "preparing": "準備中…",
     "resumeRecording": "録画を再開",
     "pauseRecording": "録画を一時停止",
     "stopRecording": "録画を停止",

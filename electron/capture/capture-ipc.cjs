@@ -69,47 +69,60 @@ function registerCaptureIpc({
   };
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session);
   let deferredStoppedSession = null;
+  const requestEngine = async (command, payload = {}) => {
+    try {
+      // A poisoned engine respawns a fresh process on its next request; the
+      // previous (timed out) session is gone and must not be completed.
+      return await captureEngine.request(command, payload);
+    } catch (error) {
+      if (captureEngine.isPoisoned) deferredStoppedSession = null;
+      const message = error instanceof Error ? error.message : String(error);
+      const wrapped = new Error(`capture-engine a échoué pour "${command}": ${message}`);
+      wrapped.code = error?.code || 'capture-engine-error';
+      throw wrapped;
+    }
+  };
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
-      const catalog = await captureEngine.request('discover');
+      const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
         platform,
         defaultOutputRoot: userPaths.projects,
         excludedProcessId: process.pid,
       });
-      await captureEngine.request('prepare', { config });
-      const session = await captureEngine.request('start');
+      await requestEngine('prepare', { config });
+      const session = await requestEngine('start');
       return registerSession(session);
     }
     if (command === 'prepare-default-recording') {
-      const catalog = await captureEngine.request('discover');
+      const catalog = await requestEngine('discover');
       const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
         platform,
         defaultOutputRoot: userPaths.projects,
         excludedProcessId: process.pid,
       });
-      return withProjectId(await captureEngine.request('prepare', { config }));
+      return withProjectId(await requestEngine('prepare', { config }));
     }
-    if (command === 'start-prepared-recording') return registerSession(await captureEngine.request('start'));
+    if (command === 'start-prepared-recording') return registerSession(await requestEngine('start'));
     if (command === 'cancel-prepared-recording') {
-      await captureEngine.request('cancel');
+      await requestEngine('cancel');
       return undefined;
     }
     if (command === 'discard-recording') {
       for (const storage of trackStorages) storage.forgetSession(payload.sessionId);
-      const session = await captureEngine.request('discard');
+      const session = await requestEngine('discard');
       for (const storage of trackStorages) storage.forgetSession(session?.sessionId);
       return undefined;
     }
     if (command === 'start-recording') {
-      await captureEngine.request('prepare', { config: payload.config });
-      const session = await captureEngine.request('start');
+      await requestEngine('prepare', { config: payload.config });
+      const session = await requestEngine('start');
       return registerSession(session);
     }
     if (command === 'stop-native-recording') {
       if (deferredStoppedSession)
         throw new Error('A native recording is already waiting for its sidecar tracks to finish.');
-      deferredStoppedSession = await captureEngine.request('stop');
+      deferredStoppedSession = await requestEngine('stop');
       return withProjectId(deferredStoppedSession);
     }
     if (command === 'complete-native-recording') {
@@ -118,10 +131,9 @@ function registerCaptureIpc({
       deferredStoppedSession = null;
       return withProjectId(completedVideoSource(session));
     }
-    if (command === 'stop')
-      return withProjectId(completedVideoSource(completeSession(await captureEngine.request('stop'))));
+    if (command === 'stop') return withProjectId(completedVideoSource(completeSession(await requestEngine('stop'))));
     if (!ALLOWED_COMMANDS.has(command)) throw new Error(`Commande de capture interdite: ${command}`);
-    return withProjectId(await captureEngine.request(command, payload));
+    return withProjectId(await requestEngine(command, payload));
   });
   ipcMain.handle('window:getSources', async (_event, types) => {
     // Chromium's desktopCapturer opens the system Portal picker for every

@@ -90,6 +90,65 @@ test('resolves display bounds by native display id without relying on desktop pr
   assert.equal(previewCalls, 0);
 });
 
+test('wraps native errors with the failing command context', async () => {
+  const handlers = new Map();
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async () => {
+      throw new Error('boom');
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+  });
+
+  const request = handlers.get('capture:request');
+  await assert.rejects(() => request({}, 'start-prepared-recording'), /capture-engine a échoué pour "start": boom/);
+});
+
+test('invalidates the deferred session and rejects when the engine is poisoned', async () => {
+  const handlers = new Map();
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  let poisoned = false;
+  const captureEngine = {
+    get isPoisoned() {
+      return poisoned;
+    },
+    request: async (command) => {
+      if (poisoned) {
+        const error = new Error(`Délai dépassé pour la commande "${command}"`);
+        error.code = 'capture-engine-poisoned';
+        throw error;
+      }
+      return { state: 'stopped', sessionId: 'session-1', manifestPath: null };
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+  });
+
+  const request = handlers.get('capture:request');
+  await request({}, 'stop-native-recording');
+  poisoned = true;
+
+  await assert.rejects(() => request({}, 'start-prepared-recording'), /capture-engine a échoué pour "start"/);
+  await assert.rejects(() => request({}, 'complete-native-recording'), /No native recording is waiting/);
+});
+
 test('does not enumerate Electron sources on the Linux Portal path', async () => {
   const handlers = new Map();
   let previewCalls = 0;

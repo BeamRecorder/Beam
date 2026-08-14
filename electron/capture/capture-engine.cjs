@@ -20,6 +20,14 @@ class CaptureEngine {
     this.pending = new Map();
     this.stderr = [];
     this.inputHelperPath = options.inputHelperPath || (() => null);
+    this.poisoned = false;
+    this.stdoutReader = null;
+    this.stderrReader = null;
+    this.shutdownPromise = null;
+  }
+
+  get isPoisoned() {
+    return this.poisoned;
   }
 
   resolveExecutable() {
@@ -57,20 +65,26 @@ class CaptureEngine {
       },
     });
     this.process = child;
+    this.poisoned = false;
     this.stderr = [];
-    readline.createInterface({ input: child.stdout }).on('line', (line) => this.handleResponse(line));
-    readline.createInterface({ input: child.stderr }).on('line', (line) => {
+    this.stdoutReader = readline
+      .createInterface({ input: child.stdout })
+      .on('line', (line) => this.handleResponse(line));
+    this.stderrReader = readline.createInterface({ input: child.stderr }).on('line', (line) => {
       this.stderr.push(line);
       if (this.stderr.length > 20) this.stderr.shift();
     });
-    child.once('error', (error) => this.failAll(error));
+    child.once('error', (error) => {
+      if (this.process !== child) return;
+      this.terminateProcess(error);
+    });
     child.once('exit', (code, signal) => {
-      this.failAll(
+      if (this.process !== child) return;
+      this.terminateProcess(
         new Error(
           `capture-engine arrêté (code=${code}, signal=${signal}).${this.stderr.length ? `\n${this.stderr.join('\n')}` : ''}`,
         ),
       );
-      if (this.process === child) this.process = null;
     });
   }
 
@@ -94,17 +108,14 @@ class CaptureEngine {
     }
   }
 
-  request(command, payload = {}) {
+  request(command, payload = {}, options = {}) {
     this.ensureStarted();
     const id = randomUUID();
     return new Promise((resolve, reject) => {
-      const timeoutMs = ['prepare', 'start', 'request-input-access'].includes(command)
-        ? INTERACTIVE_REQUEST_TIMEOUT_MS
-        : REQUEST_TIMEOUT_MS;
+      const interactive = ['prepare', 'start', 'request-input-access'].includes(command);
+      const timeoutMs = options.timeoutMs ?? (interactive ? INTERACTIVE_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
       const timeout = setTimeout(() => {
-        this.pending.delete(id);
-        if (['prepare', 'start'].includes(command) && this.process && !this.process.killed) this.process.kill();
-        reject(new Error(`Délai dépassé pour la commande de capture "${command}"`));
+        this.terminateProcess(new Error(`Délai dépassé pour la commande de capture "${command}"`));
       }, timeoutMs);
       this.pending.set(id, { resolve, reject, timeout });
       this.process.stdin.write(`${JSON.stringify({ id, command, ...payload })}\n`, (error) => {
@@ -124,25 +135,49 @@ class CaptureEngine {
     this.pending.clear();
   }
 
+  closeReaders() {
+    if (this.stdoutReader) {
+      this.stdoutReader.close();
+      this.stdoutReader = null;
+    }
+    if (this.stderrReader) {
+      this.stderrReader.close();
+      this.stderrReader = null;
+    }
+  }
+
+  terminateProcess(reason) {
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    this.poisoned = true;
+    this.failAll(error);
+    const child = this.process;
+    this.process = null;
+    this.closeReaders();
+    if (child) {
+      try {
+        child.stdin.end();
+      } catch {}
+      try {
+        child.kill();
+      } catch {}
+    }
+  }
+
   async shutdown() {
+    if (this.shutdownPromise) return this.shutdownPromise;
+    this.shutdownPromise = this.performShutdown();
+    return this.shutdownPromise;
+  }
+
+  async performShutdown() {
     const child = this.process;
     if (!child) return;
     try {
-      await this.request('status');
-      await this.request('stop');
-    } catch {}
-    child.stdin.end();
-    await new Promise((resolve) => {
-      if (child.exitCode !== null) return resolve();
-      const timeout = setTimeout(() => {
-        if (this.process === child && !child.killed) child.kill();
-        resolve();
-      }, 2_000);
-      child.once('exit', () => {
-        clearTimeout(timeout);
-        resolve();
-      });
-    });
+      await this.request('stop', {}, { timeoutMs: 2_000 });
+    } catch {
+      // Graceful stop failed or timed out; the process is force-killed below.
+    }
+    this.terminateProcess(new Error('capture-engine shutdown'));
   }
 }
 
