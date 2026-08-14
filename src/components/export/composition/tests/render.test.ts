@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { drawCompositionLayers, renderCompositionFrame } from '../render';
+import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import type { CompositionSnapshot } from '../../export-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipComposition, ClipAppearance } from '../../../video-editor/composition/composition-types';
+import type { ClipComposition, ClipAppearance } from '~/media/shared/composition-types';
 
 const screenAppearance: ClipAppearance = {
   cornerRadius: 'none',
@@ -149,11 +149,7 @@ describe('canonical composition rendering', () => {
     const ctx = context();
     renderCompositionFrame(
       ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
+      { source: {}, width: 100, height: 50 } as RenderableMedia,
       value,
       0,
     );
@@ -188,10 +184,10 @@ describe('canonical composition rendering', () => {
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
       appearance: screenAppearance,
     });
-    const image = {} as CanvasImageSource;
+    const image = { source: {} as CanvasImageSource, width: 10, height: 10 } as RenderableMedia;
     const ctx = context();
-    drawCompositionLayers(ctx, value, 0.2, new Map([['image', image]]));
-    expect(ctx.drawImage).toHaveBeenCalledWith(image, 10, 10, 30, 20);
+    drawCompositionLayers(ctx, value, 0.2, new Map([['logo', image]]));
+    expect(ctx.drawImage).toHaveBeenCalledWith(image.source, 10, 10, 30, 20);
   });
 
   it('exports webcam placement, crop, mirror and complete appearance settings', () => {
@@ -240,26 +236,19 @@ describe('canonical composition rendering', () => {
         frameChromeScale: 1,
       },
     });
-    const source = {
-      displayWidth: 100,
-      displayHeight: 50,
-    } as unknown as CanvasImageSource;
+    const source = { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia;
     const ctx = context();
     renderCompositionFrame(
       ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
+      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
       value,
       0,
       null,
       undefined,
-      new Map([['camera', source]]),
+      new Map([['webcam', source]]),
     );
     expect(ctx.drawImage).toHaveBeenCalledWith(
-      source,
+      source.source,
       10,
       10,
       50,
@@ -303,10 +292,10 @@ describe('canonical composition rendering', () => {
       order: 1,
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
     });
-    const source = {} as CanvasImageSource;
+    const source = { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia;
     const ctx = context();
-    renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['camera', source]]));
-    expect(ctx.drawImage).toHaveBeenCalledWith(source, 100, expect.closeTo(100, 0.001), 300, 200);
+    renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['webcam', source]]));
+    expect(ctx.drawImage).toHaveBeenCalledWith(source.source, 100, expect.closeTo(100, 0.001), 300, 200);
   });
 
   it('draws only the caption sentence active at the current time', () => {
@@ -386,11 +375,7 @@ describe('canonical composition rendering', () => {
     const image = { complete: true, naturalWidth: 24 } as HTMLImageElement;
     renderCompositionFrame(
       ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
+      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
       value,
       0.15,
       null,
@@ -428,11 +413,7 @@ describe('canonical composition rendering', () => {
 
     renderCompositionFrame(
       ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
+      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
       value,
       0,
       null,

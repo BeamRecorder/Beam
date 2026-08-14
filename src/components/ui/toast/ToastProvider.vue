@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useToastStore } from './toastStore';
-import { X, CheckCircle, AlertCircle, Info } from '@lucide/vue';
+import { X, CheckCircle, AlertCircle, Copy, Info } from '@lucide/vue';
 import Button from '../button/Button.vue';
 import type { Toast } from './toastStore';
 
@@ -18,6 +18,7 @@ const handleToastAction = (toast: Toast) => {
         <span class="toast-icon-wrapper">
           <CheckCircle v-if="toast.type === 'success'" class="toast-icon success" />
           <AlertCircle v-else-if="toast.type === 'error'" class="toast-icon error" />
+          <AlertCircle v-else-if="toast.type === 'warning'" class="toast-icon warning" />
           <Info v-else class="toast-icon info" />
         </span>
 
@@ -28,9 +29,12 @@ const handleToastAction = (toast: Toast) => {
           variant="secondary"
           size="sm"
           class="toast-action-btn"
+          :aria-label="toast.action.label"
+          :tooltip="toast.type === 'error' ? toast.action.label : ''"
           @click="handleToastAction(toast)"
         >
-          {{ toast.action.label }}
+          <Copy v-if="toast.type === 'error'" :size="15" aria-hidden="true" />
+          <template v-else>{{ toast.action.label }}</template>
         </Button>
 
         <button type="button" class="toast-close" @click="toastStore.remove(toast.id)" aria-label="Dismiss toast">
@@ -86,6 +90,9 @@ const handleToastAction = (toast: Toast) => {
 .toast-item.error::before {
   background-color: var(--color-error);
 }
+.toast-item.warning::before {
+  background-color: var(--color-warning);
+}
 .toast-item.info::before {
   background-color: var(--color-info);
 }
@@ -107,6 +114,9 @@ const handleToastAction = (toast: Toast) => {
 }
 .toast-icon.error {
   color: var(--color-error);
+}
+.toast-icon.warning {
+  color: var(--color-warning);
 }
 .toast-icon.info {
   color: var(--color-info);

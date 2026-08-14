@@ -1,5 +1,5 @@
 import { onUnmounted, watch } from 'vue';
-import { activeClipsAt, sourceTimeAt } from '../../composition/engine/clip-engine';
+import { activeClipsAt, type MediaFrame } from '~/media/shared';
 import {
   getCaptionTransform,
   isVisualClip,
@@ -7,7 +7,7 @@ import {
   type ClipComposition,
   type NormalizedTransform,
   type VisualClip,
-} from '../../composition/composition-types';
+} from '~/media/shared/composition-types';
 import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 import type { OutputCanvasSettings } from '../output-canvas';
@@ -15,7 +15,7 @@ import type { OutputCanvasSettings } from '../output-canvas';
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
   currentTime: () => number;
-  isPlaying: () => boolean;
+  frameFor: (clipId: string) => MediaFrame | null;
   selectedTransformClip: () => VisualClip | CaptionClip | null;
   transformDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
@@ -25,66 +25,18 @@ export interface UseCompositionMediaOptions {
 
 export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const images = new Map<string, HTMLImageElement>();
-  const videos = new Map<string, HTMLVideoElement>();
-  const pendingSeeks = new Map<HTMLVideoElement, number>();
-  const seek = (media: HTMLVideoElement, targetTime: number) => {
-    if (media.seeking) {
-      pendingSeeks.set(media, targetTime);
-      return;
-    }
-    if (Math.abs(media.currentTime - targetTime) > 0.005) media.currentTime = targetTime;
-  };
-  const disposeVideo = (media: HTMLVideoElement) => {
-    pendingSeeks.delete(media);
-    media.pause();
-    media.removeAttribute('src');
-    media.load();
-  };
   const dispose = () => {
-    videos.forEach(disposeVideo);
     images.clear();
-    videos.clear();
-    pendingSeeks.clear();
   };
   const reconcile = () => {
     const assets = new Map(options.composition().assets.map((asset) => [asset.id, asset]));
-    for (const [id, media] of videos) {
-      const asset = assets.get(id);
-      if (asset?.kind === 'video' && asset.src === media.dataset.source) continue;
-      disposeVideo(media);
-      videos.delete(id);
-    }
     for (const [id] of images) if (assets.get(id)?.kind !== 'image') images.delete(id);
     for (const asset of assets.values()) {
-      if (!asset.src || asset.kind === 'audio') continue;
-      if (asset.kind === 'image') {
-        if (!images.has(asset.id)) {
-          const image = new Image();
-          image.src = asset.src;
-          images.set(asset.id, image);
-        }
-        continue;
+      if (asset.kind === 'image' && asset.src && !images.has(asset.id)) {
+        const image = new Image();
+        image.src = asset.src;
+        images.set(asset.id, image);
       }
-      if (videos.has(asset.id)) continue;
-      const media = document.createElement('video');
-      media.muted = true;
-      media.playsInline = true;
-      media.preload = 'auto';
-      media.dataset.source = asset.src;
-      media.src = asset.src;
-      const ready = () => {
-        const pending = pendingSeeks.get(media);
-        if (pending !== undefined) {
-          pendingSeeks.delete(media);
-          seek(media, pending);
-        } else if (options.isPlaying() && media.paused) void media.play().catch(() => undefined);
-        options.onRenderOnce();
-      };
-      media.addEventListener('seeked', ready);
-      media.addEventListener('canplay', ready);
-      media.addEventListener('loadeddata', ready);
-      media.load();
-      videos.set(asset.id, media);
     }
   };
   watch(
@@ -96,42 +48,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     reconcile,
     { immediate: true },
   );
-
-  const syncVideos = () => {
-    const composition = options.composition();
-    const timeMs = options.currentTime() * 1_000;
-    const active = activeClipsAt(composition, timeMs).filter(
-      (clip): clip is VisualClip => isVisualClip(clip) && clip.kind !== 'screen',
-    );
-    const activeIds = new Set(active.map((clip) => clip.id));
-    for (const clip of composition.clips) {
-      if (!isVisualClip(clip) || clip.kind === 'image' || clip.kind === 'screen') continue;
-      const media = videos.get(clip.assetId);
-      if (!media) continue;
-      if (!activeIds.has(clip.id)) {
-        media.pause();
-        continue;
-      }
-      const sourceMs = sourceTimeAt(clip, timeMs);
-      if (sourceMs === null) {
-        media.pause();
-        continue;
-      }
-      const localTime = sourceMs / 1_000;
-      media.playbackRate = clip.playbackRate;
-      if (!options.isPlaying()) {
-        media.pause();
-        seek(media, localTime);
-      } else {
-        if (Math.abs(media.currentTime - localTime) > 1.5) seek(media, localTime);
-        if (media.paused && !media.seeking) void media.play().catch(() => undefined);
-      }
-    }
-  };
-  watch(() => [options.currentTime(), options.isPlaying(), options.composition()] as const, syncVideos, {
-    flush: 'post',
-    deep: true,
-  });
 
   const drawCaption = (
     ctx: CanvasRenderingContext2D,
@@ -176,14 +92,15 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     clip: VisualClip,
     window: { dx: number; dy: number; dw: number; dh: number },
   ) => {
-    const source = clip.kind === 'image' ? images.get(clip.assetId) : videos.get(clip.assetId);
+    const frame = clip.kind === 'image' ? null : options.frameFor(clip.id);
+    const image = clip.kind === 'image' ? images.get(clip.assetId) : null;
+    if (image && (!image.complete || !image.naturalWidth)) return;
+    const source = frame?.bitmap ?? image;
     if (!source) return;
-    if (source instanceof HTMLVideoElement && source.readyState < HTMLMediaElement.HAVE_METADATA) return;
-    if (source instanceof HTMLImageElement && (!source.complete || !source.naturalWidth)) return;
     const selected = options.selectedTransformClip();
     const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
-    const sourceWidth = source instanceof HTMLVideoElement ? source.videoWidth : source.naturalWidth;
-    const sourceHeight = source instanceof HTMLVideoElement ? source.videoHeight : source.naturalHeight;
+    const sourceWidth = frame?.width ?? image?.naturalWidth ?? 0;
+    const sourceHeight = frame?.height ?? image?.naturalHeight ?? 0;
     const crop = options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop;
     const output = options.outputCanvas?.();
     const shadowScale = output
@@ -239,13 +156,14 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     const selected = options.selectedTransformClip();
     for (const clip of activeClipsAt(options.composition(), options.currentTime() * 1_000)) {
       if (clip.kind !== 'webcam' || (onlyClipId && clip.id !== onlyClipId)) continue;
-      const source = videos.get(clip.assetId);
-      if (!source || source.readyState < HTMLMediaElement.HAVE_METADATA) continue;
+      const frame = options.frameFor(clip.id);
+      if (!frame) continue;
       ctx.save();
       ctx.translate(window.dx, window.dy);
       drawWebcamOverlay(
         ctx,
-        source,
+        frame.bitmap,
+        { width: frame.width, height: frame.height },
         window.dw,
         window.dh,
         window.scale,
@@ -266,5 +184,5 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   onUnmounted(dispose);
-  return { images, videos, drawComposition, drawWebcamClips };
+  return { images, drawComposition, drawWebcamClips };
 }

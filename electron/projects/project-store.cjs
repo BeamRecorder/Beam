@@ -18,6 +18,15 @@ function createProjectStore(root) {
     const candidate = path.resolve(resolvedRoot, relativePath);
     return candidate === resolvedRoot || candidate.startsWith(`${resolvedRoot}${path.sep}`) ? candidate : null;
   };
+  const existingFileWithin = (directory, candidate) => {
+    try {
+      const realRoot = fs.realpathSync(directory);
+      const realFile = fs.realpathSync(candidate);
+      return realFile.startsWith(`${realRoot}${path.sep}`) && fs.statSync(realFile).isFile() ? realFile : null;
+    } catch {
+      return null;
+    }
+  };
   const assertId = (id) => {
     if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
       throw new Error('Identifiant de projet invalide');
@@ -89,7 +98,7 @@ function createProjectStore(root) {
     }
     const relativePath = path.relative(root, file);
     const safeFile = safePath(root, relativePath);
-    return safeFile && safeFile === path.resolve(file) && fs.existsSync(safeFile) && fs.statSync(safeFile).isFile()
+    return safeFile && safeFile === path.resolve(file) && existingFileWithin(root, safeFile)
       ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
       : null;
   };
@@ -108,7 +117,7 @@ function createProjectStore(root) {
       return null;
     }
     const file = safePath(root, relativePath);
-    return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null;
+    return file ? existingFileWithin(root, file) : null;
   };
   const previewFor = (directory, manifest, sessions) => {
     if (typeof manifest.previewSrc === 'string' && manifest.previewSrc) {
@@ -355,9 +364,10 @@ function createProjectStore(root) {
             assets: Array.isArray(track.segments)
               ? track.segments.map((segment) => {
                   const assetPath = safePath(sessionDirectory, segment.path);
+                  const fileUrl = assetPath && fs.existsSync(assetPath) ? pathToFileURL(assetPath).href : null;
                   return {
                     ...segment,
-                    src: assetPath && fs.existsSync(assetPath) ? pathToFileURL(assetPath).href : null,
+                    src: fileUrl ? mediaUrlFor(fileUrl) : null,
                     exists: Boolean(assetPath && fs.existsSync(assetPath)),
                   };
                 })
@@ -402,7 +412,7 @@ function createProjectStore(root) {
       return {
         sessionId: session.sessionId,
         manifest: sessionManifest,
-        videoSrc: video ? pathToFileURL(path.join(screenDirectory, video)).href : null,
+        videoSrc: video ? mediaUrlFor(pathToFileURL(path.join(screenDirectory, video)).href) : null,
         tracks,
         cursor: {
           available: Array.isArray(events),
@@ -445,7 +455,7 @@ function createProjectStore(root) {
     const composition = normalizeComposition(editor.composition || emptyComposition());
     return {
       schemaVersion: 2,
-      composition: materializeComposition(directory, composition, sessionFileFor),
+      composition: materializeComposition(directory, composition, sessionFileFor, mediaUrlFor),
       zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] },
       presentation: presentationState(editor.presentation),
     };
@@ -532,7 +542,22 @@ function createProjectStore(root) {
     editorData,
     editorState,
     saveEditorState,
-    importEditorMedia: (id, input) => importMedia(directoryFor(id), input),
+    importEditorMedia: (id, input) => {
+      const asset = importMedia(directoryFor(id), input);
+      return { ...asset, src: mediaUrlFor(asset.src) || '' };
+    },
+    importDroppedProjectMedia: (id, input) => {
+      if (!input || typeof input.source !== 'string' || !input.source) throw new Error('Chemin du média invalide');
+      let stats;
+      try {
+        stats = fs.statSync(input.source);
+      } catch {
+        throw new Error('Fichier média invalide');
+      }
+      if (!stats.isFile()) throw new Error('Fichier média invalide');
+      const asset = importMedia(directoryFor(id), input);
+      return { ...asset, src: mediaUrlFor(asset.src) || '' };
+    },
     importBackground,
     create: (options = {}) => {
       const id = randomUUID();

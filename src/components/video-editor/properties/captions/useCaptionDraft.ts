@@ -1,5 +1,5 @@
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
-import type { CaptionClip } from '../../composition/composition-types';
+import type { CaptionClip } from '~/media/shared/composition-types';
 
 const cloneCaption = (clip: CaptionClip): CaptionClip => ({
   ...clip,

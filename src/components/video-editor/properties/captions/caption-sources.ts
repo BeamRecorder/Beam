@@ -1,6 +1,6 @@
 import type { ProjectEditorData } from '../../../../api/types/capture-api';
-import type { ClipComposition } from '../../composition/composition-types';
-import { isAudioClip } from '../../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
+import { isAudioClip } from '~/media/shared/composition-types';
 import type { TranscriptionSource } from '../../captions/whisper-types';
 import { tNamespace } from '~/i18n';
 

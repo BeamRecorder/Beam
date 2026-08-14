@@ -1,4 +1,4 @@
-import type { ClipAppearance } from '../composition-types';
+import type { ClipAppearance } from '~/media/shared/composition-types';
 import type { DecoratedMediaOptions, MediaRect } from './appearance-types';
 import { drawFrameChrome, frameContentRect } from './frames';
 import { adaptiveShadowColor } from './adaptive-shadow';

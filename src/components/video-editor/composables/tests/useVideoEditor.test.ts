@@ -17,8 +17,8 @@ const state = vi.hoisted(() => ({
   compositionDurationMs: vi.fn(),
 }));
 
-vi.mock('../../../api/capture', () => ({ capture }));
-vi.mock('./useVideoPlayer', async () => {
+vi.mock('../../../../api/capture', () => ({ capture }));
+vi.mock('../useVideoPlayer', async () => {
   const { ref } = await import('vue');
   return {
     useVideoPlayer: () => {
@@ -27,21 +27,26 @@ vi.mock('./useVideoPlayer', async () => {
         isPlaying: ref(false),
         duration: ref(0),
         volume: ref(100),
-        videoSrc: ref<string | null>(null),
+        playbackState: ref('idle'),
+        playbackError: ref(null),
+        frameVersion: ref(0),
         importedBackgrounds: ref([]),
         selectedBackground: ref(null),
         selectedBackgroundMedia: ref(null),
         backgroundBlurPercent: ref(0),
         backgroundGroups: ref([]),
         setUserBackgrounds: vi.fn(),
+        loadComposition: vi.fn().mockResolvedValue(undefined),
+        frameFor: vi.fn().mockReturnValue(null),
+        setPlaying: vi.fn().mockResolvedValue(undefined),
+        seek: vi.fn().mockResolvedValue(undefined),
       };
       state.player = player;
       return player;
     },
   };
 });
-vi.mock('./useCompositionAudio', () => ({ useCompositionAudio: vi.fn() }));
-vi.mock('./useClipComposition', async () => {
+vi.mock('../useClipComposition', async () => {
   const { ref } = await import('vue');
   return {
     useClipComposition: () => {
@@ -52,7 +57,7 @@ vi.mock('./useClipComposition', async () => {
     },
   };
 });
-vi.mock('./useProjectZoom', async () => {
+vi.mock('../useProjectZoom', async () => {
   const { ref } = await import('vue');
   return {
     useProjectZoom: () => {
@@ -66,7 +71,7 @@ vi.mock('./useProjectZoom', async () => {
     },
   };
 });
-vi.mock('./useProjectEditorState', () => ({
+vi.mock('../useProjectEditorState', () => ({
   useProjectEditorState: () => {
     const value = {
       load: vi.fn().mockResolvedValue(undefined),
@@ -76,7 +81,7 @@ vi.mock('./useProjectEditorState', () => ({
     return value;
   },
 }));
-vi.mock('../properties/cursor/useCursorReplacer', async () => {
+vi.mock('../../properties/cursor/useCursorReplacer', async () => {
   const { ref } = await import('vue');
   return {
     useCursorReplacer: () => {
@@ -95,19 +100,12 @@ vi.mock('../properties/cursor/useCursorReplacer', async () => {
     },
   };
 });
-vi.mock('../../export/composition/snapshot', () => ({
+vi.mock('../../../export/composition/snapshot', () => ({
   createCompositionSnapshot: (...args: unknown[]) => {
     state.createCompositionSnapshot(...args);
     return { snapshot: true };
   },
 }));
-vi.mock('../composition/engine/clip-engine', () => ({
-  compositionDurationMs: (...args: unknown[]) => {
-    state.compositionDurationMs(...args);
-    return 2000;
-  },
-}));
-
 import { useVideoEditor } from '../useVideoEditor';
 
 const project = { id: 'project-1', name: 'Demo project' } as any;
@@ -123,16 +121,15 @@ describe('useVideoEditor', () => {
 
   it('initializes dependencies, synchronizes source/project changes and builds export data', async () => {
     let api!: ReturnType<typeof useVideoEditor>;
-    const videoSrc = ref<string | null>('video://first');
     const projectRef = ref(project);
     const editorData = ref(makeEditorData());
     const Harness = defineComponent({
-      setup: () => ((api = useVideoEditor({ videoSrc, project: projectRef, editorData })), {}),
+      setup: () => ((api = useVideoEditor({ project: projectRef, editorData })), {}),
       template: '<div />',
     });
     const wrapper = mount(Harness);
     await flushPromises();
-    expect(state.player.videoSrc.value).toBe('video://first');
+    expect(state.player.loadComposition).toHaveBeenCalledWith(state.compositionState.composition.value);
     expect(state.player.setUserBackgrounds).toHaveBeenCalledWith([{ id: 'background-1' }]);
     expect(state.editorState.load).toHaveBeenCalledWith('project-1');
     expect(capture.onBackgroundLibraryChanged).toHaveBeenCalledOnce();
@@ -168,10 +165,30 @@ describe('useVideoEditor', () => {
       }),
     );
 
-    videoSrc.value = 'video://second';
+    state.compositionState.composition.value = {
+      schemaVersion: 1,
+      assets: [],
+      clips: [
+        {
+          id: 'clip-1',
+          kind: 'screen',
+          name: 'Screen',
+          assetId: 'asset-1',
+          timelineStartMs: 0,
+          timelineDurationMs: 1000,
+          sourceInMs: 0,
+          sourceDurationMs: 1000,
+          playbackRate: 1,
+          enabled: true,
+          order: 0,
+          transform: { x: 0, y: 0, width: 1, height: 1 },
+        },
+      ],
+    };
     api.handleSelectTab('zoom');
     await wrapper.vm.$nextTick();
-    expect(state.player.videoSrc.value).toBe('video://second');
+    await flushPromises();
+    expect(state.player.loadComposition).toHaveBeenLastCalledWith(state.compositionState.composition.value);
     expect(api.activeTab.value).toBe('zoom');
     projectRef.value = null;
     await wrapper.vm.$nextTick();
@@ -188,11 +205,10 @@ describe('useVideoEditor', () => {
       refresh = listener;
       return vi.fn();
     });
-    const videoSrc = ref<string | null>(null);
     const projectRef = ref(null);
     const editorData = ref(null);
     const Harness = defineComponent({
-      setup: () => useVideoEditor({ videoSrc, project: projectRef, editorData }),
+      setup: () => useVideoEditor({ project: projectRef, editorData }),
       template: '<div />',
     });
     const wrapper = mount(Harness);

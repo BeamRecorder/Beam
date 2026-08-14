@@ -7,7 +7,7 @@ import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
 import { cursorShadowOffset } from '../../properties/cursor/cursor-shadow';
 import type { ShadowDirection } from '../../properties/cursor/shadow-types';
 import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../../properties/cursor/cursor-rendering';
-import type { VisualClip } from '../../composition/composition-types';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { createCursorMotionPlayer, motionBlurTrail } from '../../composables/cursor-motion';
 import {
   effectButtonForRecordedButton,
@@ -83,8 +83,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           options.cursorColor(),
         );
         options.onRenderOnce?.();
-      } catch (error) {
-        console.error('Failed to load custom cursor image:', error);
+      } catch {
+        console.error('Failed to load custom cursor image.');
         customCursorImage.value = null;
       }
     },

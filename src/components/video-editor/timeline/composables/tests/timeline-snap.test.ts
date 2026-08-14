@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from '../timeline-snap';
-import type { ClipComposition } from '../../../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../../zoom/zoom-types';
 
 const mockComposition = (overrides: Partial<ClipComposition> = {}): ClipComposition => ({

@@ -1,4 +1,6 @@
-import { computed, ref } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
+import { MediaPlaybackEngine, type PlaybackState } from '~/media/playback';
+import type { ClipComposition, MediaError } from '~/media/shared';
 import {
   BACKGROUND_MEDIA,
   groupBackgroundMedia,
@@ -12,7 +14,29 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const currentTime = ref(0);
   const duration = ref(0);
   const volume = ref(70);
-  const videoSrc = ref<string | null>(null);
+  const playbackState = ref<PlaybackState>('idle');
+  const playbackError = ref<MediaError | null>(null);
+  const frameVersion = ref(0);
+  let engine: MediaPlaybackEngine | null = null;
+  const ensureEngine = () => {
+    if (engine) return engine;
+    engine = new MediaPlaybackEngine();
+    engine.on('time', (value) => {
+      currentTime.value = value;
+    });
+    engine.on('frame', () => {
+      frameVersion.value += 1;
+    });
+    engine.on('state', (value) => {
+      playbackState.value = value;
+      isPlaying.value = value === 'playing';
+    });
+    engine.on('error', (value) => {
+      playbackError.value = value;
+    });
+    engine.setVolume(volume.value);
+    return engine;
+  };
   const selectedBackground = ref<BackgroundValue | null>(availableBackgrounds[0] ?? null);
   const backgroundBlurPercent = ref(0);
   const importedBackgrounds = ref<BackgroundMedia[]>([]);
@@ -49,12 +73,28 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
           null)
         : (selected ?? availableBackgrounds[0] ?? null);
   };
-  const togglePlay = () => {
-    isPlaying.value = !isPlaying.value;
+  const loadComposition = async (composition: ClipComposition) => {
+    const previousTime = currentTime.value;
+    duration.value = composition.clips.reduce(
+      (end, clip) => Math.max(end, (clip.timelineStartMs + clip.timelineDurationMs) / 1_000),
+      0,
+    );
+    playbackError.value = null;
+    await ensureEngine().loadComposition(composition);
+    if (previousTime > 0) await ensureEngine().seek(Math.min(previousTime, duration.value), 'seek');
   };
-  const seek = (time: number) => {
+
+  const setPlaying = async (playing: boolean) => {
+    const playback = ensureEngine();
+    if (playing) await playback.play(currentTime.value);
+    else playback.pause();
+  };
+  const togglePlay = () => setPlaying(!isPlaying.value);
+  const seek = async (time: number, mode: 'seek' | 'scrub' = 'seek') => {
     if (!Number.isFinite(time)) throw new RangeError('Playback time must be finite.');
-    currentTime.value = Math.max(0, Math.min(time, duration.value));
+    const target = Math.max(0, Math.min(time, duration.value));
+    currentTime.value = target;
+    return ensureEngine().seek(target, mode);
   };
   const formatTime = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds < 0)
@@ -65,12 +105,14 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
       .toString()
       .padStart(2, '0')}`;
   };
-  return {
+  const api = {
     isPlaying,
     currentTime,
     duration,
     volume,
-    videoSrc,
+    playbackState,
+    playbackError,
+    frameVersion,
     selectedBackground,
     backgroundBlurPercent,
     selectedBackgroundMedia,
@@ -79,10 +121,17 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     addBackground,
     setUserBackgrounds,
     restoreBackgrounds,
+    loadComposition,
+    setPlaying,
     togglePlay,
     seek,
+    frameFor: (clipId: string) => engine?.frameFor(clipId) ?? null,
     formattedCurrentTime: computed(() => formatTime(currentTime.value)),
     formattedDuration: computed(() => formatTime(duration.value)),
     formatTime,
   };
+
+  watch(volume, (value) => engine?.setVolume(value));
+  onScopeDispose(() => engine?.dispose());
+  return api;
 }

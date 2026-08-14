@@ -1,7 +1,7 @@
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config';
 import type { ScreenRegion, ScreenRegionBounds, ScreenRegionOverlayOptions } from './screen-region';
 import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomState } from './capture-session';
-import type { ClipComposition, MediaAsset } from '../../components/video-editor/composition/composition-types';
+import type { ClipComposition, MediaAsset } from '~/media/shared/composition-types';
 import type {
   BackgroundMedia,
   BackgroundValue,
@@ -104,6 +104,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>;
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>;
   pickProjectMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset | null>;
+  importDroppedProjectMedia(projectId: string, file: File, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset>;
   listBackgroundLibrary(): Promise<BackgroundMedia[]>;
   pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>;
   onBackgroundLibraryChanged(listener: () => void): () => void;

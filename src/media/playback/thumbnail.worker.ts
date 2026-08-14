@@ -1,6 +1,8 @@
-import { ALL_FORMATS, BlobSource, CanvasSink, Input } from 'mediabunny';
+import { CanvasSink } from 'mediabunny';
+import { openMediaInput, type MediaSourceDescriptor, type OpenedMediaInput } from '../shared';
 import {
   THUMBNAIL_WIDTH,
+  assertThumbnailWorkerResponse,
   isThumbnailWorkerRequest,
   uniqueSortedTimes,
   type ThumbnailRequest,
@@ -11,8 +13,8 @@ import {
 let latestGeneration = 0;
 let pendingRequest: ThumbnailRequest | null = null;
 let processing = false;
-let sourceUrl: string | null = null;
-let input: Input | null = null;
+let sourceKey: string | null = null;
+let opened: OpenedMediaInput | null = null;
 let sink: CanvasSink | null = null;
 
 self.onmessage = (event: MessageEvent<unknown>) => {
@@ -69,6 +71,7 @@ async function decodeBatch(request: ThumbnailRequest) {
     }
   } catch (error) {
     if (!isStale(request.generation)) {
+      console.error('[Beam media:thumbnail-worker] Thumbnail batch failed.', error);
       post({
         type: 'error',
         generation: request.generation,
@@ -78,23 +81,21 @@ async function decodeBatch(request: ThumbnailRequest) {
   }
 }
 
-async function sinkFor(source: string): Promise<CanvasSink> {
-  if (sink && sourceUrl === source) return sink;
+async function sinkFor(source: MediaSourceDescriptor): Promise<CanvasSink> {
+  const key = `${source.assetId}:${source.url}`;
+  if (sink && sourceKey === key) return sink;
   disposeDecoder();
-  sourceUrl = source;
-  const response = await fetch(source);
-  if (!response.ok) throw new Error(`Unable to read video source (${response.status}).`);
-  input = new Input({
-    source: new BlobSource(await response.blob()),
-    formats: ALL_FORMATS,
-  });
-  const track = await input.getPrimaryVideoTrack();
-  if (!track || !(await track.canDecode()) || typeof VideoDecoder === 'undefined') {
+  sourceKey = key;
+  opened = await openMediaInput(source);
+  const track = await opened.input.getPrimaryVideoTrack();
+  const canDecode = track ? await track.canDecode() : false;
+  if (!track || !canDecode || typeof VideoDecoder === 'undefined') {
     disposeDecoder();
     throw new Error('WebCodecs cannot decode this video source.');
   }
   const decoderConfig = await track.getDecoderConfig();
-  if (!decoderConfig || !(await VideoDecoder.isConfigSupported(decoderConfig)).supported) {
+  const configSupported = decoderConfig ? (await VideoDecoder.isConfigSupported(decoderConfig)).supported : false;
+  if (!decoderConfig || !configSupported) {
     disposeDecoder();
     throw new Error('This video codec is not supported by WebCodecs.');
   }
@@ -115,11 +116,12 @@ function isStale(generation: number) {
 
 function disposeDecoder() {
   sink = null;
-  input?.dispose();
-  input = null;
-  sourceUrl = null;
+  opened?.dispose();
+  opened = null;
+  sourceKey = null;
 }
 
 function post(message: ThumbnailWorkerResponse) {
+  assertThumbnailWorkerResponse(message);
   self.postMessage(message);
 }

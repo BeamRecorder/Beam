@@ -1,4 +1,4 @@
-import type { ClipAppearance, NormalizedCrop, NormalizedTransform, WebcamAppearance } from '../composition-types';
+import type { ClipAppearance, NormalizedCrop, NormalizedTransform, WebcamAppearance } from '~/media/shared/composition-types';
 import { DEFAULT_CLIP_APPEARANCE, drawDecoratedMedia } from '../appearance/render-decorated-media';
 import type { MediaRect } from '../appearance/appearance-types';
 
@@ -117,6 +117,7 @@ export function computeWebcamLayout(
 export function drawWebcamOverlay(
   ctx: CanvasRenderingContext2D,
   source: CanvasImageSource,
+  sourceDimensions: { width: number; height: number },
   canvasWidth: number,
   canvasHeight: number,
   appliedZoomScale: number,
@@ -128,22 +129,8 @@ export function drawWebcamOverlay(
   shadowScale = 1,
 ) {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform);
-  const sourceWidth =
-    source instanceof HTMLVideoElement
-      ? source.videoWidth
-      : source instanceof HTMLImageElement
-        ? source.naturalWidth
-        : typeof (source as { displayWidth?: unknown }).displayWidth === 'number'
-          ? (source as { displayWidth: number }).displayWidth
-          : 0;
-  const sourceHeight =
-    source instanceof HTMLVideoElement
-      ? source.videoHeight
-      : source instanceof HTMLImageElement
-        ? source.naturalHeight
-        : typeof (source as { displayHeight?: unknown }).displayHeight === 'number'
-          ? (source as { displayHeight: number }).displayHeight
-          : 0;
+  const sourceWidth = sourceDimensions.width;
+  const sourceHeight = sourceDimensions.height;
   const sourceRect: MediaRect | undefined =
     crop && sourceWidth > 0 && sourceHeight > 0
       ? {

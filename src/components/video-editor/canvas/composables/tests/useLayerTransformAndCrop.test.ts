@@ -2,7 +2,7 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLayerTransformAndCrop, type UseLayerTransformAndCropOptions } from '../useLayerTransformAndCrop';
-import type { CaptionClip, ClipComposition, VisualClip } from '../../../composition/composition-types';
+import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { VideoWindowBounds } from '../useCameraZoom';
 
 const screenClip = (): VisualClip => ({

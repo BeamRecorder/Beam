@@ -1,14 +1,14 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import TimelineClip from './TimelineClip.vue';
-import type { Clip, MediaAsset } from '../../composition/composition-types';
+import TimelineClip from '../TimelineClip.vue';
+import type { Clip, MediaAsset } from '~/media/shared/composition-types';
 
 const thumbnailState = vi.hoisted(() => ({
   thumbnails: { 0: '/thumb-0.png' } as Record<number, string>,
   requestVisibleFrames: vi.fn(),
 }));
 
-vi.mock('./waveform/useThumbnails', () => ({
+vi.mock('../waveform/useThumbnails', () => ({
   useThumbnails: () => thumbnailState,
 }));
 
@@ -47,7 +47,12 @@ const baseProps = {
   clip: clip(),
   asset: asset('video', '/video.mp4'),
   duration: 10,
-  visibleSeconds: [0, 1, 2, 3],
+  thumbnailSlots: [
+    { timelineSeconds: 0, durationSeconds: 1 },
+    { timelineSeconds: 1, durationSeconds: 1 },
+    { timelineSeconds: 2, durationSeconds: 1 },
+    { timelineSeconds: 3, durationSeconds: 1 },
+  ],
   selected: true,
 };
 
@@ -83,7 +88,9 @@ describe('TimelineClip', () => {
     expect(wrapper.findAll('.thumbnail-frame')).toHaveLength(2);
     expect(wrapper.find('.thumbnail-img').attributes('src')).toBe('/thumb-0.png');
     expect(wrapper.find('.skeleton-stub').exists()).toBe(true);
-    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1]);
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+    expect(wrapper.findAll('.thumbnail-frame')[0]?.attributes('style')).toContain('width: 50%');
+    expect(wrapper.findAll('.thumbnail-frame')[1]?.attributes('style')).toContain('width: 50%');
 
     await wrapper.get('.timeline-clip').trigger('click');
     await wrapper.get('.timeline-clip').trigger('pointerdown');
@@ -91,6 +98,36 @@ describe('TimelineClip', () => {
     expect(wrapper.emitted('select')).toHaveLength(1);
     expect(wrapper.emitted('move')).toHaveLength(1);
     expect(wrapper.emitted('trim')?.[0]?.[0]).toEqual(expect.objectContaining({ edge: 'end' }));
+  });
+
+  it('requests only frames in the virtualized viewport and refreshes after a zoom-derived range changes', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps },
+      global: { stubs: { Skeleton } },
+    });
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
+
+    thumbnailState.requestVisibleFrames.mockClear();
+    await wrapper.setProps({
+      thumbnailSlots: [
+        { timelineSeconds: 2, durationSeconds: 1 },
+        { timelineSeconds: 3, durationSeconds: 1 },
+      ],
+    });
+
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([1.25]);
+  });
+
+  it('restarts deferred thumbnail requests when the clip is no longer moving', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, deferThumbnailRequests: true },
+      global: { stubs: { Skeleton } },
+    });
+    expect(thumbnailState.requestVisibleFrames).not.toHaveBeenCalled();
+
+    await wrapper.setProps({ deferThumbnailRequests: false });
+
+    expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
   });
 
   it('renders audio waveforms, image previews and unavailable waveform labels', async () => {

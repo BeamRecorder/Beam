@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../../api/types/capture-api';
-import { emptyComposition, type ClipComposition } from '../composition-types';
+import { emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
@@ -177,5 +177,50 @@ describe('synchronizeRecordingClips', () => {
     expect(result.clips.filter((clip) => clip.id === 'screen')).toHaveLength(1);
     expect(result.clips[0]!.name).toBe('Trimmed screen');
     expect(result.assets.some((asset) => asset.src === '/segment.webm')).toBe(true);
+  });
+
+  it('keeps an already materialized project-media recording composition unchanged', () => {
+    const assetId = 'session:session-1:screen:segment.webm';
+    const composition: ClipComposition = {
+      ...emptyComposition(),
+      assets: [
+        {
+          id: assetId,
+          kind: 'video',
+          name: 'Screen recording',
+          fileName: null,
+          durationMs: 2000,
+          width: 1920,
+          height: 1080,
+          src: 'project-media://project-1/session-1/screen/segment.webm',
+          origin: 'session',
+          sessionId: 'session-1',
+          sessionPath: 'segment.webm',
+        },
+      ],
+      clips: [
+        {
+          id: 'screen',
+          kind: 'screen',
+          name: 'Screen recording',
+          assetId,
+          timelineStartMs: 0,
+          timelineDurationMs: 2000,
+          sourceInMs: 0,
+          sourceDurationMs: 2000,
+          playbackRate: 1,
+          enabled: true,
+          order: 30000,
+          transform: { x: 0, y: 0, width: 1, height: 1 },
+        },
+      ],
+    };
+    const result = synchronizeRecordingClips(
+      composition,
+      editorData([track('screen', [segment({ src: '/editor-data/segment.webm' })])]),
+    );
+
+    expect(result).toBe(composition);
+    expect(result.assets[0]?.src).toBe('project-media://project-1/session-1/screen/segment.webm');
   });
 });

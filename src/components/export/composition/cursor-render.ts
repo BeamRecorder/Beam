@@ -1,4 +1,4 @@
-import type { VisualClip } from '../../video-editor/composition/composition-types';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { cursorClickSpringScale } from '../../video-editor/composables/cursor-click-spring';
 import { createCursorMotionPlayer, motionBlurTrail } from '../../video-editor/composables/cursor-motion';
 import { buttonEventsBetween, cursorStateAt } from '../../video-editor/composables/cursorPlayback';

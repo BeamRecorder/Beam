@@ -1,6 +1,6 @@
 import type { ProjectEditorData } from '../../api/types/capture-api';
 import type { ZoomElement } from '../video-editor/zoom/zoom-types';
-import type { ClipComposition } from '../video-editor/composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import type { CursorType } from '../video-editor/properties/cursor/useCursorReplacer';
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas';
 import type { ShadowDirection } from '../video-editor/properties/cursor/shadow-types';

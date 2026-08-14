@@ -17,7 +17,7 @@ import type {
   ClipShadowMode,
   ClipShadowSize,
   NormalizedTransform,
-} from '../../composition/composition-types';
+} from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ClipPropertiesPanel');

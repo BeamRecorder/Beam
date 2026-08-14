@@ -35,7 +35,6 @@ const emit = defineEmits<{
 }>();
 
 const activeKind = ref<'image' | 'video' | 'color' | 'gradient'>('image');
-const hoveredId = ref<string | null>(null);
 const INITIAL_MEDIA_COUNT = 15;
 const LOAD_MORE_FRAME_SIZE = 3;
 const visibleCount = ref(INITIAL_MEDIA_COUNT);
@@ -195,7 +194,6 @@ const loadMore = () => {
 };
 
 const selectMediaBackground = (item: BackgroundMedia) => {
-  hoveredId.value = null;
   emit('update:selectedBackground', item);
 };
 
@@ -275,20 +273,9 @@ const importLabel = computed(() =>
           :aria-label="item.name"
           :aria-busy="!previews[item.id] && !failed[item.id]"
           @click="selectMediaBackground(item)"
-          @mouseenter="hoveredId = item.id"
-          @mouseleave="hoveredId = null"
         >
-          <video
-            v-if="item.kind === 'video' && hoveredId === item.id"
-            :src="item.path"
-            muted
-            autoplay
-            loop
-            preload="none"
-            class="media-content"
-          />
           <img
-            v-else-if="previews[item.id]"
+            v-if="previews[item.id]"
             :src="previews[item.id]"
             :alt="item.name"
             class="media-content loaded"

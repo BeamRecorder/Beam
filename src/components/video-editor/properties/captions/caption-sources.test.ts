@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { captionSources } from './caption-sources';
-import type { ClipComposition } from '../../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 
 const composition = (overrides: Partial<ClipComposition> = {}): ClipComposition => ({
   schemaVersion: 1,

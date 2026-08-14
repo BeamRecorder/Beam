@@ -1,7 +1,6 @@
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 
 const imageExtensions = new Set(['.avif', '.bmp', '.jpeg', '.jpg', '.png', '.webp']);
 const videoExtensions = new Set(['.m4v', '.mov', '.mp4', '.ogv', '.webm']);
@@ -21,8 +20,37 @@ function createBackgroundLibrary(paths) {
     fileName: file,
     extension: path.extname(file).slice(1).toLowerCase(),
     kind,
-    path: pathToFileURL(path.join(directoryFor(kind), file)).href,
+    path: `project-media://background/${kind}/${encodeURIComponent(file)}`,
   });
+  const fileForUrl = (mediaUrl) => {
+    let parsed;
+    try {
+      parsed = new URL(mediaUrl);
+    } catch {
+      return null;
+    }
+    if (parsed.protocol !== 'project-media:' || parsed.hostname !== 'background') return null;
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (segments.length !== 2 || (segments[0] !== 'image' && segments[0] !== 'video')) return null;
+    let file;
+    try {
+      file = decodeURIComponent(segments[1]);
+    } catch {
+      return null;
+    }
+    if (!file || file !== path.basename(file) || kindFor(file) !== segments[0]) return null;
+    const root = path.resolve(directoryFor(segments[0]));
+    const target = path.resolve(root, file);
+    if (!target.startsWith(`${root}${path.sep}`)) return null;
+    try {
+      const realRoot = fs.realpathSync(root);
+      const realTarget = fs.realpathSync(target);
+      const contained = realTarget.startsWith(`${realRoot}${path.sep}`);
+      return contained && fs.statSync(realTarget).isFile() ? realTarget : null;
+    } catch {
+      return null;
+    }
+  };
   const list = () =>
     ['image', 'video']
       .flatMap((kind) => {
@@ -52,7 +80,7 @@ function createBackgroundLibrary(paths) {
     fs.copyFileSync(source, path.join(targetDirectory, fileName));
     return mediaFor(fileName, kind);
   };
-  return { list, importFile };
+  return { list, importFile, fileForUrl };
 }
 
 module.exports = { createBackgroundLibrary, imageExtensions, videoExtensions, kindFor };

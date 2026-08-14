@@ -1,7 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { ResizeCorner } from '~/ui/ResizeHandle/types';
 import type { VideoWindowBounds } from './useCameraZoom';
-import { activeClipsAt } from '../../composition/engine/clip-engine';
+import { activeClipsAt } from '~/media/shared';
 import {
   getCaptionTransform,
   isVisualClip,
@@ -10,7 +10,7 @@ import {
   type NormalizedCrop,
   type NormalizedTransform,
   type VisualClip,
-} from '../../composition/composition-types';
+} from '~/media/shared/composition-types';
 import { computeWebcamLayout, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';

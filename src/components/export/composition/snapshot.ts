@@ -1,7 +1,7 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog';
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types';
-import type { ClipComposition, VisualClip } from '../../video-editor/composition/composition-types';
+import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { CursorRenderSettings, CompositionSnapshot } from '../export-types';
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas';
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas';

@@ -12,8 +12,9 @@ import {
   type OutputCanvasSettings,
 } from '../output-canvas';
 import type { ProjectEditorData } from '~/api/types/capture-api';
-import { activeClipsAt } from '../../composition/engine/clip-engine';
-import type { ClipComposition, VisualClip } from '../../composition/composition-types';
+import { activeClipsAt } from '~/media/shared';
+import type { MediaFrame } from '~/media/shared';
+import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 
 export interface VideoWindowBounds {
@@ -201,7 +202,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    video: HTMLVideoElement,
+    frame: MediaFrame | null,
   ): RenderedVideoWindow | null => {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
@@ -221,8 +222,19 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       overlayWindowBounds.value = null;
       return null;
     }
-    const videoWidth = video.videoWidth || 1920;
-    const videoHeight = video.videoHeight || 1080;
+    const asset = options.composition().assets.find((entry) => entry.id === screen.assetId);
+    const videoWidth = frame?.width ?? asset?.width ?? 0;
+    const videoHeight = frame?.height ?? asset?.height ?? 0;
+    if (videoWidth <= 0 || videoHeight <= 0) {
+      ctx.fillStyle = 'rgba(15,23,42,.85)';
+      ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(options.videoError() || 'Loading media metadata…', width / 2, height / 2);
+      videoWindowBounds.value = null;
+      return null;
+    }
     const { x: dx, y: dy, width: dw, height: dh } = preview;
     const crop = options.isCropping?.() ? undefined : screen.crop;
     const cropX = crop ? crop.x * videoWidth : 0;
@@ -298,9 +310,9 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       ctx.scale(camera.scale, camera.scale);
       ctx.translate(-camera.focusX, -camera.focusY);
       options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
-      if (video.readyState >= 1) {
+      if (frame) {
         drawDecoratedMedia(ctx, {
-          source: video,
+          source: frame.bitmap,
           sourceRect: source,
           rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
           appearance: screen.appearance ?? {

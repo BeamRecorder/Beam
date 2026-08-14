@@ -1,13 +1,15 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import VideoEditor from '../VideoEditor.vue';
-import type { ClipComposition } from '../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
 const capture = vi.hoisted(() => ({}));
 const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
+const toast = vi.hoisted(() => ({ error: vi.fn() }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
+vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
 
 vi.mock('../composables/useVideoEditor', async () => {
   const { computed, ref } = await import('vue');
@@ -81,12 +83,18 @@ vi.mock('../composables/useVideoEditor', async () => {
         currentTime: ref(0),
         duration: ref(2),
         volume: ref(100),
-        videoSrc: ref(''),
+        playbackState: ref('idle'),
+        playbackError: ref(null),
+        frameVersion: ref(0),
         selectedBackground: ref(null),
         selectedBackgroundMedia: ref(null),
         backgroundBlurPercent: ref(0),
         backgroundGroups: ref([]),
         addBackground: vi.fn(),
+        setPlaying: vi.fn().mockResolvedValue(undefined),
+        seek: vi.fn().mockResolvedValue(undefined),
+        loadComposition: vi.fn().mockResolvedValue(undefined),
+        frameFor: vi.fn().mockReturnValue(null),
       };
       const cursor = {
         selectedCursor: ref('automatic'),
@@ -456,7 +464,6 @@ beforeEach(() => {
     return 1;
   });
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
-  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
   editorState.store = undefined;
 });
 afterEach(() => {
@@ -466,8 +473,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const mountEditor = () => {
-  wrapper = mount(VideoEditor, { props: { project, videoSrc: 'session.mp4', editorData: null } });
+const mountEditor = (props: Record<string, unknown> = {}) => {
+  wrapper = mount(VideoEditor, { props: { project, editorData: null, ...props } });
   return wrapper;
 };
 
@@ -536,6 +543,8 @@ describe('VideoEditor', () => {
 
     expect(editorState.store.handleSelectTab).toHaveBeenCalledWith('zoom');
     expect(editorState.store.player.addBackground).toHaveBeenCalledWith({ kind: 'color', color: '#f00' });
+    expect(editorState.store.player.setPlaying).toHaveBeenCalledWith(true);
+    expect(editorState.store.player.seek).toHaveBeenCalledWith(1.25, 'seek');
     expect(editorState.store.compositionState.selectClip).toHaveBeenCalledWith('audio');
     expect(editorState.store.compositionState.addElement).toHaveBeenCalledWith('sound');
     expect(editorState.store.compositionState.updateSelectedTransform).toHaveBeenCalled();
@@ -558,6 +567,87 @@ describe('VideoEditor', () => {
       width: 1080,
       height: 1080,
       showBackground: true,
+    });
+  });
+
+  it('shows one copyable playback error toast per error instead of one per seek', async () => {
+    const mounted = mountEditor();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const playbackError = {
+      kind: 'decode-failure' as const,
+      sourceId: 'screen-asset',
+      message: 'The video could not be decoded.',
+    };
+
+    editorState.store.player.playbackError.value = playbackError;
+    await mounted.vm.$nextTick();
+    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining(playbackError.message),
+      expect.any(Number),
+      expect.objectContaining({ label: expect.stringMatching(/copy/i), onClick: expect.any(Function) }),
+    );
+    const copyAction = toast.error.mock.calls[0]?.[2] as { onClick: () => void };
+    copyAction.onClick();
+    await flushPromises();
+    const copied = JSON.parse(writeText.mock.calls[0]?.[0] as string) as { error: { kind: string } };
+    expect(copied.error.kind).toBe('decode-failure');
+
+    await mounted.get('.timeline-time').trigger('click');
+    editorState.store.player.playbackError.value = { ...playbackError };
+    await mounted.vm.$nextTick();
+    expect(toast.error).toHaveBeenCalledTimes(1);
+
+    editorState.store.player.playbackError.value = { ...playbackError, message: 'A different decode failure.' };
+    await mounted.vm.$nextTick();
+    expect(toast.error).toHaveBeenCalledTimes(2);
+  });
+
+  it('enriches missing session asset errors and copies the diagnostic JSON', async () => {
+    const mounted = mountEditor({
+      editorData: {
+        sessionId: 'session-42',
+        manifest: { completed: false },
+      } as any,
+    });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const screenAsset = editorState.store.compositionState.composition.value.assets.find(
+      (asset: any) => asset.id === 'screen-asset',
+    );
+    Object.assign(screenAsset, {
+      name: 'Screen recording',
+      sessionId: 'session-42',
+      sessionPath: 'screen/segment.webm',
+    });
+    editorState.store.player.playbackError.value = {
+      kind: 'missing' as const,
+      sourceId: 'screen-asset',
+      message: 'The session media is missing.',
+    };
+    await mounted.vm.$nextTick();
+
+    expect(toast.error).toHaveBeenCalledOnce();
+    const [message, , action] = toast.error.mock.calls[0] as [string, number, { onClick: () => void }];
+    expect(message).toContain('Project');
+    expect(message).toContain('Screen recording');
+    expect(message).toContain('session-session-42/screen/segment.webm');
+    expect(message).toMatch(/not finalized/i);
+
+    action.onClick();
+    await flushPromises();
+    const copied = JSON.parse(writeText.mock.calls[0]?.[0] as string) as {
+      project: { id: string; name: string };
+      recordingSession: { id: string; completed: boolean };
+      media: { id: string; name: string; expectedProjectPath: string };
+    };
+    expect(copied.project).toMatchObject({ id: 'project-1', name: 'Project' });
+    expect(copied.recordingSession).toEqual({ id: 'session-42', completed: false });
+    expect(copied.media).toEqual({
+      id: 'screen-asset',
+      name: 'Screen recording',
+      expectedProjectPath: 'session-session-42/screen/segment.webm',
     });
   });
 

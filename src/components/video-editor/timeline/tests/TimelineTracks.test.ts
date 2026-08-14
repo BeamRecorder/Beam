@@ -2,7 +2,7 @@ import { defineComponent } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type { ClipComposition, MediaAsset, VisualClip } from '../../composition/composition-types';
+import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import TimelineTracks from '../TimelineTracks.vue';
 
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
@@ -17,7 +17,12 @@ vi.mock('../composables/useCompositionAudioWaveforms', () => ({
 
 const TimelineClipStub = defineComponent({
   name: 'TimelineClip',
-  props: ['clip', 'selected', 'trimState'],
+  props: {
+    clip: { type: Object, required: true },
+    selected: { type: Boolean, default: false },
+    trimState: { type: Object, default: null },
+    thumbnailSlots: { type: Array, default: () => [] },
+  },
   emits: ['select', 'move', 'trim'],
   template: `
     <button
@@ -235,6 +240,44 @@ afterEach(() => {
 });
 
 describe('TimelineTracks', () => {
+  it('virtualizes thumbnail requests to the viewport with two seconds of overscan and preserves the range on zoom', async () => {
+    const mounted = await mountTracks();
+    const scroll = mounted!.get('.timeline-tracks-container').element;
+    vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue({
+      left: 520,
+      top: 0,
+      width: 400,
+      height: 200,
+      right: 920,
+      bottom: 200,
+    } as DOMRect);
+    scroll.dispatchEvent(new Event('scroll'));
+    await flushPromises();
+
+    const screen = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screen) throw new Error('Expected the screen timeline clip stub to be mounted.');
+    expect(screen?.props('thumbnailSlots')).toEqual([
+      { timelineSeconds: 2, durationSeconds: 1 },
+      { timelineSeconds: 3, durationSeconds: 1 },
+      { timelineSeconds: 4, durationSeconds: 1 },
+      { timelineSeconds: 5, durationSeconds: 1 },
+      { timelineSeconds: 6, durationSeconds: 1 },
+      { timelineSeconds: 7, durationSeconds: 1 },
+      { timelineSeconds: 8, durationSeconds: 1 },
+      { timelineSeconds: 9, durationSeconds: 1 },
+    ]);
+
+    await mounted!.setProps({ zoomLevel: 240 });
+    expect(mounted!.get('.timeline-viewport').attributes('style')).toContain('width: calc(240% + 230px)');
+    const thumbnailSlots = screen.props('thumbnailSlots') as
+      Array<{ timelineSeconds: number; durationSeconds: number }> | undefined;
+    if (!thumbnailSlots) throw new Error('Expected thumbnail slots after viewport zoom.');
+    expect(thumbnailSlots).toHaveLength(8);
+    expect(thumbnailSlots[0]!).toEqual({ timelineSeconds: 2, durationSeconds: 1 });
+  });
+
   it('renders ordered visual/audio/caption tracks and scrubs, zooms, selects, and toggles them', async () => {
     const mounted = await mountTracks();
     expect(mounted!.findAll('.visual-track')).toHaveLength(3);
@@ -249,9 +292,14 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('update:currentTime')).toBeTruthy();
 
     const tracksContainer = mounted!.get('.timeline-tracks-container').element;
+    const emittedBeforeWheel = mounted!.emitted('update:zoomLevel')?.length ?? 0;
     tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: false, deltaY: -100, bubbles: true }));
+    expect(mounted!.emitted('update:zoomLevel')?.length ?? 0).toBe(emittedBeforeWheel);
     tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, bubbles: true }));
-    expect(mounted!.emitted('update:zoomLevel')).toContainEqual([135]);
+    expect(mounted!.emitted('update:zoomLevel')).toContainEqual([145]);
+    await mounted!.setProps({ zoomLevel: 3_190 });
+    tracksContainer.dispatchEvent(new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, bubbles: true }));
+    expect(mounted!.emitted('update:zoomLevel')).toContainEqual([3_200]);
     await mounted!.get('.visual-track .track-info').trigger('click');
     expect(mounted!.emitted('toggle:clip')).toContainEqual(['image-clip']);
     await mounted!.get('.audio-track .track-info').trigger('click');

@@ -6,7 +6,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Select from '~/ui/select/Select.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import DeleteItem from '~/ui/button/DeleteItem.vue';
-import type { CaptionClip, CaptionStyle, CaptionWord } from '../../composition/composition-types';
+import type { CaptionClip, CaptionStyle, CaptionWord } from '~/media/shared/composition-types';
 import { useCaptionDraft } from './useCaptionDraft';
 import { useTranslate } from '~/i18n/useTranslate';
 

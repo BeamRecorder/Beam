@@ -18,11 +18,22 @@ describe('ToastProvider', () => {
     expect(wrapper.findAll('.toast-item')).toHaveLength(4);
     expect(wrapper.find('.toast-icon.success').exists()).toBe(true);
     expect(wrapper.find('.toast-icon.error').exists()).toBe(true);
+    expect(wrapper.find('.toast-item.warning .toast-icon.warning').exists()).toBe(true);
     expect(wrapper.find('.toast-icon.info').exists()).toBe(true);
     await wrapper.find('.toast-action-btn').trigger('click');
     expect(onClick).toHaveBeenCalledOnce();
     expect(store.toasts).toHaveLength(3);
     await wrapper.find('.toast-close').trigger('click');
     expect(store.toasts).toHaveLength(2);
+  });
+
+  it('renders a copy action with the Lucide Copy icon and an accessible label', () => {
+    const store = useToastStore();
+    store.error('Playback failed', 0, { label: 'Copy error', onClick: vi.fn() });
+    const wrapper = mount(ToastProvider);
+    const action = wrapper.get('.toast-action-btn');
+
+    expect(action.attributes('aria-label')).toBe('Copy error');
+    expect(action.find('svg').classes()).toEqual(expect.arrayContaining(['lucide-copy']));
   });
 });

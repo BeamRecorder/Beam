@@ -237,7 +237,7 @@ describe('CanvasPanel', () => {
     expect(frameCallbacks.size).toBe(0);
   });
 
-  it('switches image/video tabs, handles video hover and imports by active kind', async () => {
+  it('switches image/video tabs, renders poster previews without HTML video, and imports by active kind', async () => {
     capture.pickBackgroundLibraryMedia.mockResolvedValueOnce(videoItems[0]);
     const mounted = await mountPanel();
     const tabButtons = mounted!.findAll('.kind-group button');
@@ -245,15 +245,19 @@ describe('CanvasPanel', () => {
     expect(mounted!.findAll('.media-tile')).toHaveLength(2);
     expect(mounted!.findAll('.media-loading-skeleton')).toHaveLength(2);
     expect(mounted!.findAll('.video-placeholder')).toHaveLength(0);
+    expect(mounted!.findAll('video')).toHaveLength(0);
+    reactivePreviews['video-0'] = 'blob:video-0';
     reactiveFailed['video-1'] = true;
     await nextTick();
+    expect(mounted!.findAll('.media-tile')[0]!.find('img').attributes('src')).toBe('blob:video-0');
     expect(mounted!.findAll('.video-placeholder')).toHaveLength(1);
+    expect(mounted!.findAll('video')).toHaveLength(0);
     previewState.request.mockClear();
     const observer = TestIntersectionObserver.instances[0]!;
     observer.trigger([{ isIntersecting: true, target: mounted!.findAll('.media-tile')[1]!.element }]);
     expect(previewState.request).toHaveBeenCalledWith(videoItems[1]);
     await mounted!.findAll('.media-tile')[0]!.trigger('mouseenter');
-    expect(mounted!.findAll('video')).toHaveLength(1);
+    expect(mounted!.findAll('video')).toHaveLength(0);
     await mounted!.get('.import-btn').trigger('click');
     await flushPromises();
     expect(capture.pickBackgroundLibraryMedia).toHaveBeenCalledWith('video');

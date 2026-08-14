@@ -20,20 +20,6 @@ const { t } = useTranslate('EditorPreparingHud');
 
 const syncTitlebarTheme = () => {
   const dark = document.documentElement.classList.contains('dark');
-  const surface = document.querySelector<HTMLElement>('.editor-page');
-  const surfaceStyle = surface ? window.getComputedStyle(surface) : null;
-  console.info('[Beam editor theme] renderer class changed', {
-    dark,
-    rootBackground: window.getComputedStyle(document.documentElement).backgroundColor,
-    surface: surfaceStyle
-      ? {
-          background: surfaceStyle.backgroundColor,
-          display: surfaceStyle.display,
-          opacity: surfaceStyle.opacity,
-          visibility: surfaceStyle.visibility,
-        }
-      : null,
-  });
   capture.setEditorTitlebarTheme(dark);
 };
 
@@ -119,7 +105,6 @@ onBeforeUnmount(() => {
   </main>
   <VideoEditor
     v-else
-    :video-src="project.previewSrc"
     :editor-data="editorData"
     :project="project"
     @back-to-hud="handleBackToHud"

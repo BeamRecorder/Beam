@@ -13,19 +13,17 @@ import type { CursorClickEffects } from '../../../api/types/cursor-settings';
 import type { CursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { BackgroundValue } from '../composables/backgroundCatalog';
 import type { ZoomElement } from '../zoom/zoom-types';
-import { activeClipsAt, sourceTimeAt } from '../composition/engine/clip-engine';
+import { activeClipsAt, type MediaError, type MediaFrame } from '~/media/shared';
 import {
   isVisualClip,
-  clipEndMs,
   type CaptionClip,
   type ClipComposition,
   type NormalizedCrop,
   type NormalizedTransform,
   type VisualClip,
-} from '../composition/composition-types';
+} from '~/media/shared/composition-types';
 import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
-import { useCanvasVideoElement } from './composables/useCanvasVideoElement';
 import { useCompositionMedia } from './composables/useCompositionMedia';
 import { useCursorOverlay } from './composables/useCursorOverlay';
 import { useCameraZoom } from './composables/useCameraZoom';
@@ -39,7 +37,6 @@ type TransformClip = VisualClip | CaptionClip;
 const props = defineProps<{
   isPlaying: boolean;
   currentTime: number;
-  duration: number;
   selectedCursor: CursorType;
   cursorSize: number;
   cursorColor: string;
@@ -51,7 +48,10 @@ const props = defineProps<{
   motion: CursorMotionSettings;
   selectedBackground: BackgroundValue | null;
   backgroundBlurPercent?: number;
-  videoSrc?: string | null;
+  frameFor: (clipId: string) => MediaFrame | null;
+  frameVersion: number;
+  playbackState: 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'disposed';
+  playbackError: MediaError | null;
   editorData?: ProjectEditorData | null;
   zoomElements: ZoomElement[];
   selectedZoom: ZoomElement | null;
@@ -66,9 +66,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:isPlaying', value: boolean): void;
-  (e: 'update:currentTime', value: number): void;
-  (e: 'duration-change', value: number): void;
   (e: 'update:zoom', value: ZoomElement): void;
   (e: 'preview:zoom', value: ZoomElement): void;
   (e: 'select:clip', clipId: string): void;
@@ -89,8 +86,6 @@ const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
-let playbackAnchorSeconds = 0;
-let playbackAnchorTime = performance.now();
 let drawVisualStack:
   | ((
       ctx: CanvasRenderingContext2D,
@@ -101,35 +96,17 @@ let drawVisualStack:
 
 const viewportZoom = useViewportZoom();
 
-const resetPlaybackClock = (seconds = props.currentTime) => {
-  playbackAnchorSeconds = Math.max(0, Math.min(props.duration, seconds));
-  playbackAnchorTime = performance.now();
-};
-const playbackClockSeconds = () => playbackAnchorSeconds + (performance.now() - playbackAnchorTime) / 1_000;
-
-const primaryScreenClip = computed<VisualClip | null>(
-  () => props.composition.clips.find((clip): clip is VisualClip => clip.kind === 'screen' && clip.enabled) ?? null,
-);
 const liveScreenClip = computed<VisualClip | null>(
   () =>
     activeClipsAt(props.composition, props.currentTime * 1_000).find(
       (clip): clip is VisualClip => clip.kind === 'screen',
     ) ?? null,
 );
-const displayScreenClip = computed<VisualClip | null>(() => {
-  if (liveScreenClip.value) return liveScreenClip.value;
-  const clip = primaryScreenClip.value;
-  return clip && props.currentTime * 1_000 >= clip.timelineStartMs ? clip : null;
-});
-const screenAsset = computed(() => {
-  const clip = primaryScreenClip.value;
-  return clip ? (props.composition.assets.find((asset) => asset.id === clip.assetId) ?? null) : null;
-});
-const activeScreenSourceTime = computed(() => {
-  const clip = displayScreenClip.value;
-  if (!clip) return primaryScreenClip.value?.sourceInMs ? primaryScreenClip.value.sourceInMs / 1_000 : 0;
-  const timelineMs = Math.min(Math.max(props.currentTime * 1_000, clip.timelineStartMs), clipEndMs(clip) - 1);
-  return (sourceTimeAt(clip, timelineMs) ?? clip.sourceInMs) / 1_000;
+const screenFrame = computed(() => {
+  // frameFor reads the playback engine's non-reactive cache. frameVersion is
+  // the explicit invalidation signal emitted whenever that cache changes.
+  void props.frameVersion;
+  return liveScreenClip.value ? props.frameFor(liveScreenClip.value.id) : null;
 });
 const previewFrameStyle = computed(() => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
@@ -140,15 +117,7 @@ function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
 
-const { videoEl, videoError, isVideoFrameReady } = useCanvasVideoElement({
-  videoSrc: () => screenAsset.value?.src ?? props.videoSrc ?? '',
-  isPlaying: () => props.isPlaying && Boolean(liveScreenClip.value),
-  sourceTime: () => activeScreenSourceTime.value,
-  playbackRate: () => displayScreenClip.value?.playbackRate ?? 1,
-  onDurationChange: () => undefined,
-  onRenderOnce: renderOnce,
-});
-const { drawBackground, syncVideoPlayback, isTransitioningBackground } = useCanvasBackground(
+const { drawBackground, syncPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
   renderOnce,
@@ -208,7 +177,7 @@ cameraZoom = useCameraZoom({
   composition: () => props.composition,
   isCropping: () => props.isCropping,
   drawBackground,
-  videoError: () => videoError.value,
+  videoError: () => props.playbackError?.message ?? null,
   renderVisualStack: (ctx, window, drawScreen) => drawVisualStack?.(ctx, window, drawScreen),
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
   onPreviewZoom: (zoom) => emit('preview:zoom', zoom),
@@ -223,31 +192,16 @@ cameraZoom = useCameraZoom({
 watch(
   () => props.isPlaying,
   (playing) => {
-    resetPlaybackClock();
-    syncVideoPlayback(playing);
+    syncPlayback(playing);
     if (!playing) cameraZoom.resetCamera();
   },
-);
-watch(
-  () => props.currentTime,
-  (time) => {
-    if (!props.isPlaying) {
-      resetPlaybackClock(time);
-      return;
-    }
-    if (Math.abs(time - playbackClockSeconds()) > 0.25) resetPlaybackClock(time);
-  },
-);
-watch(
-  () => props.duration,
-  () => resetPlaybackClock(),
 );
 
 const isMasterPlaying = () => props.isPlaying;
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
   currentTime: () => props.currentTime,
-  isPlaying: isMasterPlaying,
+  frameFor: props.frameFor,
   selectedTransformClip: () => props.selectedTransformClip,
   transformDraft: () => transformAndCrop.transformDraft.value,
   isCropping: () => props.isCropping,
@@ -264,7 +218,7 @@ const drawNonScreenVisuals = (
     .sort((left, right) => right.order - left.order);
   for (const clip of clips) {
     if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
-    else compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920, clip.id);
+    else compositionMedia.drawComposition(ctx, window, screenFrame.value?.width ?? 1, clip.id);
   }
 };
 
@@ -275,7 +229,7 @@ drawVisualStack = (ctx, window, drawScreen) => {
   for (const clip of clips) {
     if (clip.kind === 'screen') drawScreen();
     else if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
-    else compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920, clip.id);
+    else compositionMedia.drawComposition(ctx, window, screenFrame.value?.width ?? 1, clip.id);
   }
 };
 
@@ -311,7 +265,9 @@ watch(
     renderOnce();
   },
 );
-watch(() => [props.composition, props.currentTime, props.isCropping] as const, renderOnce, { deep: true });
+watch(() => [props.composition, props.currentTime, props.frameVersion, props.isCropping] as const, renderOnce, {
+  deep: true,
+});
 watch(
   () =>
     [
@@ -353,14 +309,14 @@ const renderCanvas = () => {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
-  const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, videoEl);
+  const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
-    compositionMedia.drawComposition(ctx, window, videoEl.videoWidth || 1920);
+    compositionMedia.drawComposition(ctx, window, screenFrame.value?.width ?? 1);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
       window,
-      videoEl.videoWidth || 1920,
-      videoEl.videoHeight || 1080,
+      screenFrame.value?.width ?? 1,
+      screenFrame.value?.height ?? 1,
       logicalSize.value.width,
       (drawContent) => cameraZoom.drawInCameraSpace(ctx, window, drawContent),
     );
@@ -381,21 +337,8 @@ const renderCanvas = () => {
     ctx.clip();
     drawBackground(ctx, preview);
     drawNonScreenVisuals(ctx, fallbackWindow);
-    compositionMedia.drawComposition(ctx, fallbackWindow, videoEl.videoWidth || 1920);
+    compositionMedia.drawComposition(ctx, fallbackWindow, screenFrame.value?.width ?? 1);
     ctx.restore();
-  }
-  if (props.isPlaying) {
-    const nextTime = playbackClockSeconds();
-    if (props.duration > 0 && nextTime >= props.duration) {
-      resetPlaybackClock(0);
-      emit('update:currentTime', 0);
-    } else if (props.duration <= 0) {
-      resetPlaybackClock(0);
-      emit('update:currentTime', 0);
-      emit('update:isPlaying', false);
-    } else {
-      emit('update:currentTime', Math.max(0, nextTime));
-    }
   }
 };
 const commitCrop = () => {
@@ -434,7 +377,6 @@ const handleIslandWheel = (event: WheelEvent) => {
 };
 
 onMounted(() => {
-  resetPlaybackClock();
   resizeCanvas();
   resizeObserver = new ResizeObserver(resizeCanvas);
   if (containerRef.value) resizeObserver.observe(containerRef.value);
@@ -490,7 +432,7 @@ defineExpose({
         :style="guide.style"
       ></div>
       <Skeleton
-        v-if="!isVideoFrameReady && !videoError"
+        v-if="playbackState === 'loading' || (Boolean(liveScreenClip) && !screenFrame && !playbackError)"
         class="canvas-loading-skeleton"
         width="100%"
         height="100%"

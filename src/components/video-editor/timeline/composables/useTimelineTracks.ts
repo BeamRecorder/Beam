@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Camera, Image as ImageIcon, Video } from '@lucide/vue';
 import type { ExportProgress } from '../../../export/export-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
@@ -11,9 +11,11 @@ import {
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
-} from '../../composition/composition-types';
+} from '~/media/shared/composition-types';
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from './timeline-snap';
+import { timelineThumbnailSlots } from './timeline-viewport';
+import { clampTimelineZoom, zoomTimelineByWheel } from './timeline-zoom';
 
 export interface TimelineTracksProps {
   currentTime: number;
@@ -110,12 +112,18 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     second < 60 ? `${second}s` : `${Math.floor(second / 60)}:${(second % 60).toString().padStart(2, '0')}`;
 
   const visibleStartSecond = ref(0);
-  const visibleEndSecond = ref(60);
-  const visibleSeconds = computed(() => {
-    const start = Math.max(0, Math.floor(visibleStartSecond.value) - 2);
-    const end = Math.min(Math.max(0, Math.ceil(props.duration)), Math.ceil(visibleEndSecond.value) + 2);
-    return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
-  });
+  const visibleEndSecond = ref(0);
+  const viewportReady = ref(false);
+  const thumbnailSlots = computed(() =>
+    viewportReady.value
+      ? timelineThumbnailSlots(
+          props.duration,
+          visibleStartSecond.value,
+          visibleEndSecond.value,
+          rulerWidth.value / Math.max(1, props.duration),
+        )
+      : [],
+  );
   let scrollFrame: number | null = null;
   let scrubFrame: number | null = null;
   let pendingScrubTime: number | null = null;
@@ -124,13 +132,16 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const scroll = tracksScrollRef.value;
     const ticks = ticksAreaRef.value;
     if (!scroll || !ticks) return;
-    rulerWidth.value = ticks.clientWidth;
     if (props.duration <= 0) return;
-    const timelineLeft = 120 + 80;
-    const startPixel = Math.max(0, scroll.scrollLeft - timelineLeft);
-    const endPixel = Math.max(0, scroll.scrollLeft + scroll.clientWidth - timelineLeft);
-    visibleStartSecond.value = (startPixel / Math.max(1, ticks.clientWidth)) * props.duration;
-    visibleEndSecond.value = (endPixel / Math.max(1, ticks.clientWidth)) * props.duration;
+    const scrollRect = scroll.getBoundingClientRect();
+    const ticksRect = ticks.getBoundingClientRect();
+    const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
+    rulerWidth.value = timelineWidth;
+    const startPixel = Math.max(0, Math.min(timelineWidth, scrollRect.left - ticksRect.left));
+    const endPixel = Math.max(0, Math.min(timelineWidth, scrollRect.right - ticksRect.left));
+    visibleStartSecond.value = (startPixel / timelineWidth) * props.duration;
+    visibleEndSecond.value = (endPixel / timelineWidth) * props.duration;
+    viewportReady.value = true;
   };
   const onScroll = () => {
     if (scrollFrame !== null) return;
@@ -147,6 +158,17 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       if (tracksViewportRef.value) resizeObserver.observe(tracksViewportRef.value);
     }
   });
+  watch(
+    () => [props.duration, props.zoomLevel],
+    () => {
+      if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = null;
+        updateVisibleRange();
+      });
+    },
+    { flush: 'post' },
+  );
   onUnmounted(() => {
     resizeObserver?.disconnect();
     if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
@@ -245,7 +267,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const handleWheel = (event: WheelEvent) => {
     if (!event.ctrlKey) return;
     event.preventDefault();
-    emit('update:zoomLevel', Math.max(100, Math.min(500, props.zoomLevel + (event.deltaY < 0 ? 15 : -15))));
+    emit('update:zoomLevel', clampTimelineZoom(zoomTimelineByWheel(props.zoomLevel, event.deltaY)));
   };
 
   const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>({});
@@ -607,7 +629,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     rulerMarkerStyle,
     isRulerLabel,
     formatRulerLabel,
-    visibleSeconds,
+    thumbnailSlots,
     onScroll,
     percentageStyle,
     timeAt,

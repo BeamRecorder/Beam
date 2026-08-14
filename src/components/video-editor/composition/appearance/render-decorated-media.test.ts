@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { frameContentRect } from './frames';
 import { applyClipShadow, drawDecoratedMedia, shadowBlurForAppearance } from './render-decorated-media';
-import type { ClipAppearance } from '../composition-types';
+import type { ClipAppearance } from '~/media/shared/composition-types';
 
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
   cornerRadius: 'sm',
@@ -63,6 +63,20 @@ describe('decorated media rendering', () => {
     });
     expect(ctx.stroke).toHaveBeenCalledOnce();
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 2, 3, 100, 60);
+  });
+  it('draws an explicit source crop at frame dimensions and mirrors it', () => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source,
+      sourceRect: { x: 64, y: 36, width: 512, height: 288 },
+      rect: { x: 10, y: 20, width: 400, height: 240 },
+      appearance: appearance({ shadowSize: 'none' }),
+      mirrored: true,
+      mirroredY: true,
+      title: 'Cropped',
+    });
+    expect(ctx.scale).toHaveBeenCalledWith(-1, -1);
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 64, 36, 512, 288, 10, 20, 400, 240);
   });
   it('draws Safari media inside its chrome and uses the supplied title', () => {
     const ctx = context();

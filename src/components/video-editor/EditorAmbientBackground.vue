@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { computed, ref, watch, type CSSProperties } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch, type CSSProperties } from 'vue';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import type { BackgroundValue } from './composables/backgroundCatalog';
+import { decodeVideoPoster } from '~/media/playback';
+import { mediaSourceDescriptor, type MediaFrame } from '~/media/shared';
+import type { MediaAsset } from '~/media/shared/composition-types';
 
 const props = defineProps<{
   background: BackgroundValue | null;
 }>();
 
 const mediaFailed = ref(false);
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+let poster: MediaFrame | null = null;
+let loadVersion = 0;
 
 const resolvedMediaPath = computed(() => {
   const background = props.background;
@@ -20,6 +26,7 @@ const surfaceStyle = computed<CSSProperties>(() => {
   const background = props.background;
   if (!background || background.kind === 'image' || background.kind === 'video') return {};
   if (background.kind === 'color') return { background: background.color };
+  if (background.kind !== 'gradient') return {};
 
   const stops = background.gradient.stops
     .map((stop) => {
@@ -37,12 +44,54 @@ const surfaceStyle = computed<CSSProperties>(() => {
   };
 });
 
+const drawPoster = () => {
+  const canvas = canvasRef.value;
+  if (!canvas || !poster) return;
+  canvas.width = poster.width;
+  canvas.height = poster.height;
+  canvas.getContext('2d')?.drawImage(poster.bitmap, 0, 0);
+};
+
 watch(
-  () => props.background?.id,
-  () => {
+  () => props.background,
+  async (background) => {
+    const version = ++loadVersion;
+    poster?.close();
+    poster = null;
     mediaFailed.value = false;
+    if (background?.kind !== 'video') return;
+    const asset: MediaAsset = {
+      id: background.id,
+      kind: 'video',
+      name: background.name,
+      fileName: background.fileName ?? null,
+      durationMs: 0,
+      width: null,
+      height: null,
+      src: resolvePublicAssetUrl(background.path),
+      origin: 'project',
+    };
+    try {
+      const frame = await decodeVideoPoster(mediaSourceDescriptor(asset), { position: 0.5, width: 640 });
+      if (version !== loadVersion) {
+        frame.close();
+        return;
+      }
+      poster = frame;
+      await nextTick();
+      drawPoster();
+    } catch {
+      if (version === loadVersion) mediaFailed.value = true;
+    }
   },
+  { immediate: true, deep: true },
 );
+
+onUnmounted(() => {
+  loadVersion += 1;
+  poster?.close();
+  poster = null;
+});
 </script>
 
 <template>
@@ -62,16 +111,12 @@ watch(
       fetchpriority="low"
       @error="mediaFailed = true"
     />
-    <video
+    <canvas
       v-else-if="background?.kind === 'video' && !mediaFailed"
+      ref="canvasRef"
       class="ambient-media ambient-video"
-      :src="resolvedMediaPath"
-      muted
-      playsinline
-      preload="auto"
       aria-hidden="true"
-      @error="mediaFailed = true"
-    ></video>
+    ></canvas>
     <div class="ambient-veil"></div>
   </div>
 </template>

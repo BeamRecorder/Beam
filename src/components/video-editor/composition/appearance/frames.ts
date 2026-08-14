@@ -1,4 +1,4 @@
-import type { ClipFrame } from '../composition-types';
+import type { ClipFrame } from '~/media/shared/composition-types';
 import type { MediaRect } from './appearance-types';
 
 const SAFARI_REFERENCE = { width: 1800, height: 1150, toolbarHeight: 68 };

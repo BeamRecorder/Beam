@@ -1,39 +1,26 @@
 import { clampFocusToScale, zoomAtTime } from '../../video-editor/zoom/zoom-playback';
 import type { CompositionSnapshot } from '../export-types';
-import { activeClipsAt } from '../../video-editor/composition/engine/clip-engine';
-import {
-  getCaptionTransform,
-  isVisualClip,
-  type CaptionClip,
-  type VisualClip,
-} from '../../video-editor/composition/composition-types';
+import { activeClipsAt } from '~/media/shared';
+import { getCaptionTransform, isVisualClip, type CaptionClip, type VisualClip } from '~/media/shared/composition-types';
 import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../video-editor/composition/webcam/webcam-zoom';
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { drawCursorLayer } from './cursor-render';
 
-export type CompositionVisuals = ReadonlyMap<string, CanvasImageSource>;
-export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
+export interface RenderableMedia {
+  source: CanvasImageSource;
+  width: number;
+  height: number;
+}
 
-type RenderableVideo = CanvasImageSource & {
-  videoWidth?: number;
-  videoHeight?: number;
-  displayWidth?: number;
-  displayHeight?: number;
-};
-const sourceDimensions = (source: CanvasImageSource) => {
-  if (source instanceof HTMLVideoElement) return { width: source.videoWidth, height: source.videoHeight };
-  if (source instanceof HTMLImageElement) return { width: source.naturalWidth, height: source.naturalHeight };
-  if (typeof VideoFrame !== 'undefined' && source instanceof VideoFrame)
-    return { width: source.displayWidth, height: source.displayHeight };
-  return { width: 0, height: 0 };
-};
+export type CompositionVisuals = ReadonlyMap<string, RenderableMedia>;
+export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
 
 function drawSnapshotBackground(
   ctx: CanvasRenderingContext2D,
   snapshot: CompositionSnapshot,
-  background: CanvasImageSource | null | undefined,
+  background: RenderableMedia | null | undefined,
 ) {
   const { width, height } = snapshot.canvas;
   const value = snapshot.background;
@@ -71,8 +58,8 @@ function drawSnapshotBackground(
   if (blur > 0) {
     const overscan = blur * 2;
     ctx.filter = `blur(${blur}px)`;
-    ctx.drawImage(background, -overscan, -overscan, width + overscan * 2, height + overscan * 2);
-  } else ctx.drawImage(background, 0, 0, width, height);
+    ctx.drawImage(background.source, -overscan, -overscan, width + overscan * 2, height + overscan * 2);
+  } else ctx.drawImage(background.source, 0, 0, width, height);
   ctx.restore();
 }
 
@@ -148,7 +135,7 @@ function drawCaption(
 function drawVisualClip(
   ctx: CanvasRenderingContext2D,
   clip: VisualClip,
-  source: CanvasImageSource,
+  media: RenderableMedia,
   canvas: { width: number; height: number },
   window?: { x: number; y: number; width: number; height: number },
 ) {
@@ -158,7 +145,7 @@ function drawVisualClip(
     width: canvas.width,
     height: canvas.height,
   };
-  const { width: sourceWidth, height: sourceHeight } = sourceDimensions(source);
+  const { source, width: sourceWidth, height: sourceHeight } = media;
   const transform = clip.transform;
   const rect = {
     x: target.x + transform.x * target.width,
@@ -214,12 +201,13 @@ export function drawCompositionLayers(
       continue;
     }
     if (!isVisualClip(clip)) continue;
-    const source = visuals.get(clip.assetId);
-    if (!source) continue;
+    const media = visuals.get(clip.id);
+    if (!media) continue;
     if (clip.kind === 'webcam') {
       drawWebcamOverlay(
         ctx,
-        source,
+        media.source,
+        { width: media.width, height: media.height },
         snapshot.canvas.width,
         snapshot.canvas.height,
         1,
@@ -229,16 +217,16 @@ export function drawCompositionLayers(
         clip.appearance,
         clip.name,
       );
-    } else drawVisualClip(ctx, clip, source, snapshot.canvas, positionedMedia);
+    } else drawVisualClip(ctx, clip, media, snapshot.canvas, positionedMedia);
   }
 }
 
 export function renderCompositionFrame(
   ctx: CanvasRenderingContext2D,
-  video: RenderableVideo | null,
+  video: RenderableMedia | null,
   snapshot: CompositionSnapshot,
   time: number,
-  background?: CanvasImageSource | null,
+  background?: RenderableMedia | null,
   cursorImages?: ReadonlyMap<string, HTMLImageElement>,
   visuals?: CompositionVisuals,
   cursorMotionPlayer?: ReturnType<typeof createCursorMotionPlayer>,
@@ -249,18 +237,14 @@ export function renderCompositionFrame(
   const timeMs = time * 1_000;
   const active = activeClipsAt(snapshot.composition, timeMs);
   const screen = active.find((clip): clip is VisualClip => clip.kind === 'screen');
-  if (
-    !screen ||
-    !video ||
-    (video instanceof HTMLVideoElement && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
-  ) {
+  if (!screen || !video) {
     drawSnapshotBackground(ctx, snapshot, background);
     drawCompositionLayers(ctx, snapshot, time, visuals);
     return;
   }
 
-  const sourceWidth = video.videoWidth || video.displayWidth || snapshot.render.sourceWidth;
-  const sourceHeight = video.videoHeight || video.displayHeight || snapshot.render.sourceHeight;
+  const sourceWidth = video.width;
+  const sourceHeight = video.height;
   const crop = screen.crop;
   const cropX = crop ? crop.x * sourceWidth : 0;
   const cropY = crop ? crop.y * sourceHeight : 0;
@@ -304,7 +288,7 @@ export function renderCompositionFrame(
     ctx.scale(scale, scale);
     ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
     drawDecoratedMedia(ctx, {
-      source: video,
+      source: video.source,
       sourceRect: source,
       rect: positionedMedia,
       appearance: screen.appearance,
@@ -321,12 +305,13 @@ export function renderCompositionFrame(
       drawScreen();
       continue;
     }
-    const sourceVisual = visuals?.get(clip.assetId);
+    const sourceVisual = visuals?.get(clip.id);
     if (!sourceVisual) continue;
     if (clip.kind === 'webcam') {
       drawWebcamOverlay(
         ctx,
-        sourceVisual,
+        sourceVisual.source,
+        { width: sourceVisual.width, height: sourceVisual.height },
         width,
         height,
         scale,

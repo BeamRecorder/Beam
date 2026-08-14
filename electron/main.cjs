@@ -7,19 +7,18 @@ const {
   protocol,
   globalShortcut,
   screen,
-  net,
   shell,
   nativeTheme,
 } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 const { Readable } = require('stream');
 const { CaptureEngine } = require('./capture/capture-engine.cjs');
 const { registerCaptureIpc } = require('./capture/capture-ipc.cjs');
 const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
+const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
@@ -229,45 +228,11 @@ app.whenReady().then(() => {
   registerSystemAudioIpc({ ipcMain, storage: systemAudioStorage });
   logStartup('System audio IPC registered.');
   const projectStore = createProjectStore(userPaths.projects);
+  const backgroundLibrary = createBackgroundLibrary(userPaths);
   const teleprompterStorage = createTeleprompterStorage({ projectStore });
   registerTeleprompterIpc({ ipcMain, teleprompterWindow, storage: teleprompterStorage });
-  registerProjectIpc(
-    ipcMain,
-    projectStore,
-    createBackgroundLibrary(userPaths),
-    require('electron').dialog,
-    BrowserWindow,
-  );
-  protocol.handle('project-media', async (request) => {
-    try {
-      const file = projectStore.mediaFileForUrl(request.url);
-      if (!file || !fs.existsSync(file)) return new Response('Not found', { status: 404 });
-      const response = await net.fetch(pathToFileURL(file).href);
-      const ext = path.extname(file).toLowerCase();
-      const mimeTypes = {
-        '.mp4': 'video/mp4',
-        '.webm': 'video/webm',
-        '.mov': 'video/quicktime',
-        '.mkv': 'video/x-matroska',
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.webp': 'image/webp',
-      };
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-      const headers = new Headers(response.headers);
-      headers.set('content-type', contentType);
-      headers.set('access-control-allow-origin', '*');
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
-    } catch (e) {
-      console.error('[project-media] Error serving media:', e);
-      return new Response('Internal error', { status: 500 });
-    }
-  });
+  registerProjectIpc(ipcMain, projectStore, backgroundLibrary, require('electron').dialog, BrowserWindow);
+  protocol.handle('project-media', createProjectMediaHandler({ projectStore, backgroundLibrary }));
   logStartup('Project IPC registered.');
   const whisperStore = createWhisperModelStore(userPaths.whisperModels);
   protocol.handle('whisper-model', (request) => {

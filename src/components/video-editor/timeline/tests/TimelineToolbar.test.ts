@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import TimelineToolbar from './TimelineToolbar.vue';
+import TimelineToolbar from '../TimelineToolbar.vue';
 
 const PopoverMenuButton = {
   emits: ['select'],
@@ -43,10 +43,33 @@ describe('TimelineToolbar', () => {
       props: { currentTime: 10, duration: 100, isPlaying: false, zoomLevel: 100, canSplit: true },
       global: { stubs: { PopoverMenuButton, Button } },
     });
-    await wrapper.get('.toolbar-split-btn button').trigger('click');
+    await wrapper.get('.toolbar-split-btn').trigger('click');
     expect(wrapper.emitted('split')).toHaveLength(1);
 
     await wrapper.setProps({ canSplit: false });
-    expect(wrapper.get('.toolbar-split-btn button').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('.toolbar-split-btn').attributes('disabled')).toBeDefined();
+  });
+
+  it('uses stepped zoom controls through the full 3200% range', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100 },
+      global: { stubs: { PopoverMenuButton, Button } },
+    });
+    const zoomIn = () => wrapper.findAll('.zoom-controls button')[1]!;
+
+    await zoomIn().trigger('click');
+    expect(wrapper.emitted('update:zoomLevel')).toContainEqual([150]);
+    await wrapper.setProps({ zoomLevel: 450 });
+    await zoomIn().trigger('click');
+    expect(wrapper.emitted('update:zoomLevel')).toContainEqual([500]);
+    await wrapper.setProps({ zoomLevel: 900 });
+    await zoomIn().trigger('click');
+    expect(wrapper.emitted('update:zoomLevel')).toContainEqual([1_000]);
+    await wrapper.setProps({ zoomLevel: 3_000 });
+    await zoomIn().trigger('click');
+    expect(wrapper.emitted('update:zoomLevel')).toContainEqual([3_200]);
+    expect(wrapper.get('.zoom-slider').attributes()).toMatchObject({ min: '100', max: '3200', step: '25' });
+    await wrapper.setProps({ zoomLevel: 3_200 });
+    expect(zoomIn().attributes('disabled')).toBeDefined();
   });
 });

@@ -2,7 +2,7 @@ import { reactive } from 'vue';
 import { describe, expect, it } from 'vitest';
 import { createCompositionSnapshot } from '../snapshot';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipComposition } from '../../../video-editor/composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 
 const composition = (): ClipComposition => ({
   schemaVersion: 1,
@@ -15,7 +15,7 @@ const composition = (): ClipComposition => ({
       durationMs: 4_000,
       width: 1920,
       height: 1080,
-      src: 'file:///screen.mp4',
+      src: 'project-media://asset/screen.mp4',
       origin: 'session',
     },
   ],
@@ -134,7 +134,7 @@ describe('createCompositionSnapshot', () => {
         available: true,
         events: [{ event: 'shape' as const, sessionNs: 1, shapeId: 'arrow', hotspot: { x: 2, y: 3 } }],
         telemetry: [{ timeMs: 1, cx: 0.2, cy: 0.3 }],
-        shapes: { arrow: { src: 'file:///arrow.png', hotspot: { x: 2, y: 3 } } },
+        shapes: { arrow: { src: 'project-media://cursor/arrow.png', hotspot: { x: 2, y: 3 } } },
         catalog: {},
         missing: ['cursor.json'],
       },

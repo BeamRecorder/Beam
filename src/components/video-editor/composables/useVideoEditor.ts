@@ -2,18 +2,16 @@ import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
 import { useVideoPlayer } from './useVideoPlayer';
-import { useCompositionAudio } from './useCompositionAudio';
 import { useCursorReplacer } from '../properties/cursor/useCursorReplacer';
 import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
 import { useProjectEditorState } from './useProjectEditorState';
 import { createCompositionSnapshot } from '../../export/composition/snapshot';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
-import { compositionDurationMs } from '../composition/engine/clip-engine';
+import { compositionDurationMs } from '~/media/shared';
 import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-settings';
 
 export function useVideoEditor(options: {
-  videoSrc: Ref<string | null | undefined>;
   project: Ref<CaptureProject | null | undefined>;
   editorData: Ref<ProjectEditorData | null | undefined>;
 }) {
@@ -28,24 +26,11 @@ export function useVideoEditor(options: {
   const cursor = useCursorReplacer();
   const cursorMotion = ref(createDefaultCursorMotionSettings());
 
-  watch(
-    options.videoSrc,
-    (source) => {
-      player.videoSrc.value = source ?? null;
-    },
-    { immediate: true },
-  );
   const compositionState = useClipComposition({
     project,
     editorData,
     currentTimeSec: player.currentTime,
     activeTab,
-  });
-  useCompositionAudio({
-    composition: compositionState.composition,
-    currentTime: player.currentTime,
-    isPlaying: player.isPlaying,
-    volume: player.volume,
   });
   const zoomState = useProjectZoom({ editorData, durationMs, activeTab });
   const editorState = useProjectEditorState({
@@ -63,9 +48,9 @@ export function useVideoEditor(options: {
   });
 
   const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
-  void refreshBackgroundLibrary().catch((error) => console.error('Failed to load background library:', error));
+  void refreshBackgroundLibrary().catch(() => console.error('Failed to load background library.'));
   const stopBackgroundSubscription = capture.onBackgroundLibraryChanged(() => {
-    void refreshBackgroundLibrary().catch((error) => console.error('Failed to refresh background library:', error));
+    void refreshBackgroundLibrary().catch(() => console.error('Failed to refresh background library.'));
   });
   onScopeDispose(stopBackgroundSubscription);
 
@@ -117,11 +102,10 @@ export function useVideoEditor(options: {
       try {
         await editorState.load(id);
         compositionState.synchronizeRecording();
-        player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
         zoomState.ensureAutomaticZooms();
         editorState.scheduleSave();
-      } catch (error) {
-        console.error('Failed to load editor state:', error);
+      } catch {
+        console.error('Failed to load editor state.');
       }
     },
     { immediate: true },
@@ -130,24 +114,36 @@ export function useVideoEditor(options: {
     editorData,
     () => {
       compositionState.synchronizeRecording();
-      player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
     },
     { deep: true },
   );
+  let playbackLoad = 0;
   watch(
     compositionState.composition,
     (composition) => {
-      player.duration.value = compositionDurationMs(composition) / 1_000;
-      if (player.currentTime.value > player.duration.value) player.currentTime.value = player.duration.value;
+      const request = ++playbackLoad;
+      void player.loadComposition(composition).catch((error: unknown) => {
+        if (request !== playbackLoad) return;
+        console.error(
+          `[Beam media:editor] composition watcher load failed ${JSON.stringify({
+            request,
+            message: error instanceof Error ? error.message : 'Unknown playback error.',
+          })}`,
+        );
+      });
     },
-    { deep: true },
+    { deep: true, immediate: true, flush: 'post' },
   );
+  watch(player.frameVersion, () => {
+    const screen = compositionState.composition.value.clips.find((clip) => clip.kind === 'screen' && clip.enabled);
+    const frame = screen ? player.frameFor(screen.id) : null;
+    if (frame) sourceSize.value = { width: frame.width, height: frame.height };
+  });
 
   return {
     activeTab,
     systemVolume,
     micVolume,
-    sourceSize,
     outputCanvas,
     player,
     cursor,

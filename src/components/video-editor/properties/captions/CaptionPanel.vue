@@ -4,7 +4,7 @@ import Button from '~/ui/button/Button.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import Select from '~/ui/select/Select.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import type { CaptionClip, ClipComposition } from '../../composition/composition-types';
+import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
 import { createComposition } from '../../composition/engine/clip-engine';
 import { useWhisperTranscription } from '../../captions/useWhisperTranscription';
 import { whisperModels, type TranscriptionSource, type WhisperModelId } from '../../captions/whisper-types';

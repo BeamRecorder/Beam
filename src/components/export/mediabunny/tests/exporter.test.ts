@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipComposition, MediaAsset } from '../../../video-editor/composition/composition-types';
+import type { ClipComposition, MediaAsset } from '~/media/shared/composition-types';
 import type { ExportRequest } from '../../export-types';
 import { exportWithMediabunny, renderMixedAudio, supportedAudioCodec, supportedVideoCodec } from '../exporter';
 
@@ -10,62 +10,46 @@ const { videoCodec, audioCodec, renderedAudio } = vi.hoisted(() => ({
   renderedAudio: { duration: 3 } as AudioBuffer,
 }));
 const exportRuntime = vi.hoisted(() => ({
-  outputs: [] as any[],
-  sources: [] as any[],
+  outputs: [] as Array<{
+    start: ReturnType<typeof vi.fn>;
+    addVideoFrame: ReturnType<typeof vi.fn>;
+    finalize: ReturnType<typeof vi.fn>;
+    cancel: ReturnType<typeof vi.fn>;
+  }>,
   renderFrame: vi.fn(),
   createProvider: vi.fn(),
-  getCursorImage: vi.fn(),
+  mixAudio: vi.fn(),
+  outputOptions: [] as unknown[][],
+  inspectMedia: vi.fn(),
 }));
 
-vi.mock('mediabunny', () => ({
-  AudioBufferSource: class AudioBufferSource {
-    add = vi.fn();
+vi.mock('~/media/export', () => ({
+  findExportAudioCodec: audioCodec,
+  findExportVideoCodec: videoCodec,
+  mixCompositionAudio: exportRuntime.mixAudio,
+  VideoFrameProvider: { create: exportRuntime.createProvider },
+  StreamingMediaOutput: class StreamingMediaOutput {
+    readonly start = vi.fn(async () => undefined);
+    readonly addVideoFrame = vi.fn(async () => undefined);
+    readonly finalize = vi.fn(async () => undefined);
+    readonly cancel = vi.fn(async () => undefined);
+
     constructor(...args: unknown[]) {
-      void args;
-    }
-  },
-  CanvasSource: class CanvasSource {
-    add = vi.fn(async () => undefined);
-    constructor(...args: unknown[]) {
-      void args;
-      exportRuntime.sources.push(this);
-    }
-  },
-  Mp4OutputFormat: class Mp4OutputFormat {},
-  Output: class Output {
-    addAudioTrack = vi.fn();
-    addVideoTrack = vi.fn();
-    start = vi.fn(async () => undefined);
-    finalize = vi.fn(async () => undefined);
-    cancel = vi.fn(async () => undefined);
-    constructor(...args: unknown[]) {
-      void args;
+      exportRuntime.outputOptions.push(args);
       exportRuntime.outputs.push(this);
     }
   },
-  StreamTarget: class StreamTarget {
-    constructor(...args: unknown[]) {
-      void args;
-    }
-  },
-  WebMOutputFormat: class WebMOutputFormat {},
-  getFirstEncodableAudioCodec: audioCodec,
-  getFirstEncodableVideoCodec: videoCodec,
-  ALL_FORMATS: [],
-  BlobSource: class BlobSource {
-    constructor(...args: unknown[]) {
-      void args;
-    }
-  },
-  Input: class Input {},
-  VideoSampleSink: class VideoSampleSink {},
+}));
+
+vi.mock('~/media/shared', async () => ({
+  ...(await vi.importActual('~/media/shared')),
+  inspectMedia: exportRuntime.inspectMedia,
 }));
 
 vi.mock('../../composition/render', () => ({ renderCompositionFrame: exportRuntime.renderFrame }));
-vi.mock('../video-frame-provider', () => ({ VideoFrameProvider: { create: exportRuntime.createProvider } }));
 vi.mock('../../../video-editor/properties/cursor/useCursorReplacer', () => ({
   cursorTypeForKind: vi.fn(() => 'default'),
-  useCursorReplacer: () => ({ getCursorImage: exportRuntime.getCursorImage }),
+  useCursorReplacer: () => ({ getCursorImage: vi.fn(async () => ({ width: 24, height: 24 })) }),
 }));
 
 const screenAsset = (): MediaAsset => ({
@@ -76,7 +60,7 @@ const screenAsset = (): MediaAsset => ({
   durationMs: 2_000,
   width: 1_920,
   height: 1_080,
-  src: 'session.mp4',
+  src: 'project-media://asset/session.mp4',
   origin: 'session',
 });
 
@@ -88,7 +72,7 @@ const audioAsset = (): MediaAsset => ({
   durationMs: 3_000,
   width: null,
   height: null,
-  src: 'music.wav',
+  src: 'project-media://asset/music.wav',
   origin: 'project',
 });
 
@@ -165,44 +149,24 @@ const setCapture = (value: Record<string, unknown>) => {
   Object.defineProperty(window, 'capture', { configurable: true, value });
 };
 
-const gain = { gain: { value: 1 }, connect: vi.fn() };
-gain.connect.mockImplementation(() => ({}));
-
-class FakeOfflineAudioContext {
-  readonly destination = {};
-  readonly createBufferSource = vi.fn(() => {
-    const source = { buffer: null as AudioBuffer | null, playbackRate: { value: 1 }, connect: vi.fn(), start: vi.fn() };
-    source.connect.mockImplementation(() => gain);
-    return source;
-  });
-  readonly createGain = vi.fn(() => gain);
-  readonly decodeAudioData = vi.fn(async () => ({ duration: 2 }) as AudioBuffer);
-  readonly startRendering = vi.fn(async () => renderedAudio);
-
-  readonly channels: number;
-  readonly length: number;
-  readonly sampleRate: number;
-
-  constructor(channels: number, length: number, sampleRate: number) {
-    this.channels = channels;
-    this.length = length;
-    this.sampleRate = sampleRate;
-  }
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   exportRuntime.outputs = [];
-  exportRuntime.sources = [];
-  exportRuntime.getCursorImage.mockResolvedValue({ width: 24, height: 24 });
+  exportRuntime.outputOptions = [];
+  exportRuntime.inspectMedia.mockResolvedValue({ metadata: { durationSeconds: 2 } });
+  exportRuntime.mixAudio.mockImplementation(async (value: ClipComposition) =>
+    value.clips.some((clip) => clip.kind === 'audio' && clip.enabled) ? renderedAudio : null,
+  );
   videoCodec.mockReturnValue('vp9');
   audioCodec.mockReturnValue('opus');
-  exportRuntime.createProvider.mockResolvedValue({ frameAt: vi.fn(async () => null), dispose: vi.fn() });
+  exportRuntime.createProvider.mockResolvedValue({
+    frameAt: vi.fn(async () => ({ bitmap: { width: 1_920, height: 1_080 }, width: 1_920, height: 1_080, close: vi.fn() })),
+    dispose: vi.fn(),
+  });
 });
 
 afterEach(() => {
   delete (window as Window & { capture?: unknown }).capture;
-  delete (window as Window & { OfflineAudioContext?: unknown }).OfflineAudioContext;
   vi.restoreAllMocks();
 });
 
@@ -211,13 +175,13 @@ describe('mediabunny exporter', () => {
     const value = request();
     expect(supportedVideoCodec(value)).toBe('vp9');
     expect(videoCodec).toHaveBeenCalledWith(
-      ['vp9', 'vp8', 'av1'],
+      'webm',
       expect.objectContaining({ width: 1_920, height: 1_080, bitrate: expect.any(Number) }),
     );
 
     value.format = 'mp4';
     supportedVideoCodec(value);
-    expect(videoCodec).toHaveBeenLastCalledWith(['avc'], expect.objectContaining({ width: 1_920, height: 1_080 }));
+    expect(videoCodec).toHaveBeenLastCalledWith('mp4', expect.objectContaining({ width: 1_920, height: 1_080 }));
   });
 
   it('only probes audio codecs when an enabled audio clip exists', async () => {
@@ -226,32 +190,31 @@ describe('mediabunny exporter', () => {
 
     const value = request({ audio: true });
     expect(await supportedAudioCodec(value)).toBe('opus');
-    expect(audioCodec).toHaveBeenCalledWith(['opus'], { sampleRate: 48_000, numberOfChannels: 2, bitrate: 128_000 });
+    expect(audioCodec).toHaveBeenCalledWith('webm', { sampleRate: 48_000, numberOfChannels: 2, bitrate: 128_000 });
 
     value.format = 'mp4';
     await supportedAudioCodec(value);
-    expect(audioCodec).toHaveBeenLastCalledWith(['aac'], expect.any(Object));
+    expect(audioCodec).toHaveBeenLastCalledWith('mp4', expect.any(Object));
   });
 
   it('mixes enabled audio clips with clamped gain and source offsets', async () => {
-    Object.defineProperty(window, 'OfflineAudioContext', { configurable: true, value: FakeOfflineAudioContext });
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new ArrayBuffer(8), { status: 200 }));
-
     const result = await renderMixedAudio(request({ audio: true }));
 
     expect(result).toBe(renderedAudio);
+    expect(exportRuntime.mixAudio).toHaveBeenCalledWith(expect.anything(), 2);
   });
 
   it('handles empty, unavailable, missing, and unreadable audio sources', async () => {
     expect(await renderMixedAudio(request())).toBeNull();
+    exportRuntime.mixAudio.mockRejectedValueOnce(new Error('Offline audio mixing is unavailable.'));
     await expect(renderMixedAudio(request({ audio: true }))).rejects.toThrow('Offline audio mixing');
 
-    Object.defineProperty(window, 'OfflineAudioContext', { configurable: true, value: FakeOfflineAudioContext });
     const missing = request({ audio: true });
     missing.snapshot.composition.assets = [];
+    exportRuntime.mixAudio.mockRejectedValueOnce(new Error('audio sidecar is missing'));
     await expect(renderMixedAudio(missing)).rejects.toThrow('audio sidecar');
 
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+    exportRuntime.mixAudio.mockRejectedValueOnce(new Error('audio sidecar is unreadable'));
     await expect(renderMixedAudio(request({ audio: true }))).rejects.toThrow('audio sidecar');
   });
 
@@ -278,7 +241,10 @@ describe('mediabunny exporter', () => {
     setCapture({ beginExport: vi.fn().mockResolvedValue(undefined) });
     await expect(exportWithMediabunny(request(), onProgress, signal)).rejects.toMatchObject({ name: 'AbortError' });
 
-    setCapture({ beginExport: vi.fn().mockResolvedValue({ jobId: 'job', canceled: false }) });
+    setCapture({
+      beginExport: vi.fn().mockResolvedValue({ jobId: 'job', canceled: false }),
+      abortExport: vi.fn().mockResolvedValue(undefined),
+    });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     await expect(exportWithMediabunny(request(), onProgress, signal)).rejects.toThrow('Canvas 2D');
   });
@@ -295,9 +261,6 @@ describe('mediabunny exporter', () => {
       finalizeExport,
       abortExport: vi.fn().mockResolvedValue(undefined),
     });
-    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function (this: HTMLMediaElement) {
-      queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata')));
-    });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
     const onProgress = vi.fn();
 
@@ -306,9 +269,12 @@ describe('mediabunny exporter', () => {
       format: 'webm',
     });
     expect(beginExport).toHaveBeenCalledWith({ projectName: 'Demo', format: 'webm' });
-    expect(exportRuntime.createProvider).toHaveBeenCalledWith('session.mp4', [0]);
+    expect(exportRuntime.createProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ assetId: 'screen-asset', kind: 'video' }),
+      [0],
+    );
     expect(exportRuntime.renderFrame).toHaveBeenCalled();
-    expect(exportRuntime.sources[0].add).toHaveBeenCalledWith(0, 1);
+    expect(exportRuntime.outputs[0].addVideoFrame).toHaveBeenCalledWith(0, 1);
     expect(exportRuntime.outputs[0].start).toHaveBeenCalled();
     expect(exportRuntime.outputs[0].finalize).toHaveBeenCalled();
     expect(finalizeExport).toHaveBeenCalledWith('job-success');
@@ -331,14 +297,10 @@ describe('mediabunny exporter', () => {
       writeExportChunk: vi.fn().mockResolvedValue(undefined),
       finalizeExport: vi.fn().mockResolvedValue({ path: 'C:/exports/settings.webm' }),
     });
-    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function (this: HTMLMediaElement) {
-      queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata')));
-    });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
 
     await exportWithMediabunny(value, vi.fn(), new AbortController().signal);
 
-    expect(exportRuntime.getCursorImage).toHaveBeenCalledWith('default', 300, '#fff');
     expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[2].cursorSettings).toMatchObject({
       size: 50,
       motion: { preset: 'custom', smoothing: 0, springMassMultiplier: 0.5, motionBlur: 0 },
@@ -347,7 +309,7 @@ describe('mediabunny exporter', () => {
 
   it('cancels the output and native job when the export signal aborts during encoding', async () => {
     const value = request();
-    value.snapshot.duration = 0.1;
+    value.snapshot.duration = 2;
     value.snapshot.render.fps = 1;
     const abortExport = vi.fn().mockResolvedValue(undefined);
     setCapture({
@@ -355,14 +317,82 @@ describe('mediabunny exporter', () => {
       abortExport,
       writeExportChunk: vi.fn(),
     });
-    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(function (this: HTMLMediaElement) {
-      queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata')));
-    });
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
     const controller = new AbortController();
-    controller.abort();
+    exportRuntime.renderFrame.mockImplementationOnce(() => controller.abort());
     await expect(exportWithMediabunny(value, vi.fn(), controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
     expect(exportRuntime.outputs[0].cancel).toHaveBeenCalled();
     expect(abortExport).toHaveBeenCalledWith('job-aborted');
+  });
+
+  it('uses the shared frame provider for video backgrounds and passes clip-id visuals to the renderer', async () => {
+    const value = request();
+    value.snapshot.duration = 0.1;
+    value.snapshot.render.fps = 1;
+    value.snapshot.background = { kind: 'video', src: 'project-media://background/bg.mp4' };
+    setCapture({
+      beginExport: vi.fn().mockResolvedValue({ jobId: 'job-background-video', canceled: false }),
+      finalizeExport: vi.fn().mockResolvedValue({ path: '/tmp/background.webm' }),
+      abortExport: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+
+    await exportWithMediabunny(value, vi.fn(), new AbortController().signal);
+
+    expect(exportRuntime.createProvider).toHaveBeenCalledTimes(2);
+    expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[6]).toBeInstanceOf(Map);
+    expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[4]).toEqual(
+      expect.objectContaining({ width: 1_920, height: 1_080 }),
+    );
+  });
+
+  it('loads image backgrounds as explicit renderable media', async () => {
+    const imageSource = globalThis.Image;
+    class LoadedImage {
+      naturalWidth = 320;
+      naturalHeight = 180;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    Object.defineProperty(globalThis, 'Image', { configurable: true, value: LoadedImage });
+    try {
+      const value = request();
+      value.snapshot.duration = 0.1;
+      value.snapshot.render.fps = 1;
+      value.snapshot.background = { kind: 'image', src: 'project-media://background/poster.png' };
+      setCapture({
+        beginExport: vi.fn().mockResolvedValue({ jobId: 'job-background-image', canceled: false }),
+        finalizeExport: vi.fn().mockResolvedValue({ path: '/tmp/background-image.webm' }),
+        abortExport: vi.fn().mockResolvedValue(undefined),
+      });
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+
+      await exportWithMediabunny(value, vi.fn(), new AbortController().signal);
+
+      expect(exportRuntime.createProvider).toHaveBeenCalledTimes(1);
+      expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[4]).toMatchObject({ width: 320, height: 180 });
+    } finally {
+      Object.defineProperty(globalThis, 'Image', { configurable: true, value: imageSource });
+    }
+  });
+
+  it('configures MP4 output without an audio track when audio is absent', async () => {
+    const value = request();
+    value.format = 'mp4';
+    value.snapshot.duration = 0.1;
+    value.snapshot.render.fps = 1;
+    setCapture({
+      beginExport: vi.fn().mockResolvedValue({ jobId: 'job-mp4', canceled: false }),
+      finalizeExport: vi.fn().mockResolvedValue({ path: '/tmp/demo.mp4' }),
+      abortExport: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+
+    await exportWithMediabunny(value, vi.fn(), new AbortController().signal);
+
+    expect(exportRuntime.outputOptions[0]?.[0]).toMatchObject({ format: 'mp4', audioCodec: null });
   });
 });

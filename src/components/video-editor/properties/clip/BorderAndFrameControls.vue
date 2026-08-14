@@ -7,7 +7,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import type { ClipFrame } from '../../composition/composition-types';
+import type { ClipFrame } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('BorderAndFrameControls');

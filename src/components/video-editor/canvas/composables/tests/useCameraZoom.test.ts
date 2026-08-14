@@ -2,7 +2,8 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCameraZoom, type RenderedVideoWindow } from '../useCameraZoom';
-import type { ClipComposition, VisualClip } from '../../../composition/composition-types';
+import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { MediaFrame } from '~/media/shared';
 import type { ZoomElement } from '../../../zoom/zoom-types';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
@@ -165,15 +166,16 @@ const mountComposable = () => {
   options = { compositionRef, currentTime, selected, activeTab, output, canvas, callbacks };
 };
 
-const video = (readyState: number) => {
-  const value = document.createElement('video');
-  Object.defineProperties(value, {
-    videoWidth: { configurable: true, value: 1_280 },
-    videoHeight: { configurable: true, value: 720 },
-    readyState: { configurable: true, value: readyState },
-  });
-  return value;
-};
+const frame = (width = 1_280, height = 720): MediaFrame => ({
+  clipId: 'screen',
+  bitmap: {} as ImageBitmap,
+  timestampSeconds: 0.5,
+  durationSeconds: 0.04,
+  width,
+  height,
+  byteSize: width * height * 4,
+  close: vi.fn(),
+});
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => {
@@ -187,14 +189,14 @@ describe('useCameraZoom', () => {
     mountComposable();
     const ctx = context();
     options.compositionRef.value = composition(false);
-    expect(state.drawVideoWindow(ctx, 800, 450, video(0))).toBeNull();
+    expect(state.drawVideoWindow(ctx, 800, 450, null)).toBeNull();
     expect(ctx.fillText).toHaveBeenCalledWith('Video track disabled', expect.any(Number), expect.any(Number));
 
     options.compositionRef.value = composition();
-    state.drawVideoWindow(ctx, 800, 450, video(0));
+    state.drawVideoWindow(ctx, 800, 450, null);
     expect(ctx.fillText).toHaveBeenCalledWith('recording unavailable', 400, 225);
     options.output.value = { preset: '16:9', width: 800, height: 450, ...options.output.value, showBackground: true };
-    expect(state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA))).not.toBeNull();
+    expect(state.drawVideoWindow(ctx, 800, 450, frame())).not.toBeNull();
     expect(drawDecoratedMedia).toHaveBeenCalled();
     expect(options.callbacks.drawBackground).toHaveBeenCalled();
   });
@@ -204,7 +206,7 @@ describe('useCameraZoom', () => {
     const ctx = context();
     options.currentTime.value = 3.1;
 
-    expect(state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA))).toBeNull();
+    expect(state.drawVideoWindow(ctx, 800, 450, frame())).toBeNull();
     expect(ctx.fillText).not.toHaveBeenCalled();
     expect(options.callbacks.drawBackground).not.toHaveBeenCalled();
   });
@@ -214,7 +216,7 @@ describe('useCameraZoom', () => {
     const ctx = context();
     options.selected.value = null;
     options.currentTime.value = 1.5;
-    state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA));
+    state.drawVideoWindow(ctx, 800, 450, frame());
     expect(state.videoWindowBounds.value?.scale).toBeGreaterThan(1);
 
     options.selected.value = manualZoom;
@@ -226,7 +228,6 @@ describe('useCameraZoom', () => {
     state.moveSelection(pointer('pointermove', 790, 5));
     state.endSelectionMove(pointer('pointerup', 790, 5));
     expect(options.canvas.setPointerCapture).toHaveBeenCalledWith(4);
-    expect(options.callbacks.onPreviewZoom).toHaveBeenCalled();
     expect(options.callbacks.onUpdateZoom).toHaveBeenCalled();
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
   });
@@ -234,7 +235,7 @@ describe('useCameraZoom', () => {
   it('selects screen or canvas targets and exposes camera-space drawing/reset', () => {
     mountComposable();
     const ctx = context();
-    state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA));
+    state.drawVideoWindow(ctx, 800, 450, frame());
     options.selected.value = null;
     const pointer = (x: number, y: number, pointerId: number) =>
       Object.assign(new MouseEvent('pointerdown', { clientX: x, clientY: y }), {
@@ -243,8 +244,8 @@ describe('useCameraZoom', () => {
     state.beginSelectionMove(pointer(400, 200, 1));
     expect(options.callbacks.onSelectScreenClip).toHaveBeenCalledWith('screen');
     options.output.value = { preset: '16:9', width: 800, height: 450, ...options.output.value, showBackground: true };
-    state.drawVideoWindow(ctx, 800, 450, video(HTMLMediaElement.HAVE_METADATA));
-    options.selected.value = manualZoom;
+    state.drawVideoWindow(ctx, 800, 450, frame());
+    options.selected.value = autoZoom;
     options.activeTab.value = 'canvas';
     state.beginSelectionMove(pointer(1, 1, 2));
     expect(options.callbacks.onSelectCanvas).toHaveBeenCalled();

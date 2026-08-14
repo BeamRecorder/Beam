@@ -1,4 +1,4 @@
-import type { ClipComposition } from '../../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 
 export interface SnapTargetParams {

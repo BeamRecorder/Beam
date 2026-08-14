@@ -3,7 +3,6 @@ import {
   MAX_PLAYBACK_RATE,
   MIN_PLAYBACK_RATE,
   CompositionEngineError,
-  activeClipsAt,
   createComposition,
   deleteClip,
   detachClip,
@@ -12,17 +11,17 @@ import {
   setClipEnabled,
   setPlaybackRate,
   setTransform,
-  sourceTimeAt,
   splitClip,
   trimClip,
 } from '../../src/components/video-editor/composition/engine/clip-engine'
+import { activeClipsAt, sourceTimeAt } from '../../src/media/shared/timeline-mapping'
 import type {
   AudioClip,
   Clip,
   ClipComposition,
   MediaAsset,
   VisualClip,
-} from '../../src/components/video-editor/composition/composition-types'
+} from '../../src/media/shared/composition-types'
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,

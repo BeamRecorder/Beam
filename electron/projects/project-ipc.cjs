@@ -25,6 +25,9 @@ function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, Br
     if (selected.canceled || !selected.filePaths[0]) return null;
     return projectStore.importEditorMedia(payload.projectId, { kind, source: selected.filePaths[0] });
   });
+  ipcMain.handle('projects:import-dropped-media', (_event, payload = {}) =>
+    projectStore.importDroppedProjectMedia(payload.projectId, { kind: payload.kind, source: payload.source }),
+  );
   const notifyBackgroundLibraryChanged = () => {
     for (const window of BrowserWindow.getAllWindows()) window.webContents.send('background-library:changed');
   };

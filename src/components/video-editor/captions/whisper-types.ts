@@ -1,4 +1,4 @@
-import type { CaptionSentence, CaptionWord } from '../composition/composition-types';
+import type { CaptionSentence, CaptionWord } from '~/media/shared/composition-types';
 import { tNamespace } from '~/i18n';
 
 const $t = tNamespace('whisperTypes');

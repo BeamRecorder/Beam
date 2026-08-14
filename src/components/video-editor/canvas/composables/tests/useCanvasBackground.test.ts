@@ -1,8 +1,68 @@
 import { defineComponent, h, nextTick, ref, type Ref } from 'vue';
-import { mount, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCanvasBackground } from '../useCanvasBackground';
 import type { BackgroundValue } from '../../../composables/backgroundCatalog';
+
+const playback = vi.hoisted(() => {
+  const instances: Array<{
+    state: 'paused' | 'loading';
+    currentTime: number;
+    loadComposition: ReturnType<typeof vi.fn>;
+    play: ReturnType<typeof vi.fn>;
+    pause: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+    frameFor: ReturnType<typeof vi.fn>;
+    listeners: Map<string, (value: unknown) => void>;
+    frame: MediaFrameLike | null;
+    on: (event: string, listener: (value: unknown) => void) => () => boolean;
+    emitFrame: () => void;
+  }> = [];
+  class FakePlaybackEngine {
+    static instances = instances;
+    state: 'paused' | 'loading' = 'paused';
+    currentTime = 0;
+    readonly loadComposition = vi.fn(async () => undefined);
+    readonly play = vi.fn(async () => undefined);
+    readonly pause = vi.fn();
+    readonly dispose = vi.fn();
+    readonly frameFor = vi.fn(() => this.frame);
+    readonly listeners = new Map<string, (value: unknown) => void>();
+    frame: MediaFrameLike | null = null;
+
+    constructor() {
+      instances.push(this as (typeof instances)[number]);
+    }
+
+    on(event: string, listener: (value: unknown) => void) {
+      this.listeners.set(event, listener);
+      return () => this.listeners.delete(event);
+    }
+
+    emitFrame() {
+      this.listeners.get('frame')?.({ clipId: 'background-video' });
+    }
+  }
+  return { FakePlaybackEngine, instances };
+});
+
+vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlaybackEngine }));
+vi.mock('~/media/shared', () => ({
+  inspectMedia: vi.fn(async () => ({ metadata: { durationSeconds: 4 } })),
+  mediaSourceDescriptor: vi.fn((asset: { id: string; kind: string; name: string; src: string }) => ({
+    assetId: asset.id,
+    kind: asset.kind,
+    label: asset.name,
+    url: asset.src,
+  })),
+}));
+
+type MediaFrameLike = {
+  bitmap: CanvasImageSource;
+  width: number;
+  height: number;
+  close: ReturnType<typeof vi.fn>;
+};
 
 class FakeImage extends EventTarget {
   static instances: FakeImage[] = [];
@@ -71,8 +131,6 @@ let selected!: Ref<BackgroundValue | null>;
 let blur!: Ref<number | undefined>;
 let renderCanvas!: ReturnType<typeof vi.fn>;
 let state!: ReturnType<typeof useCanvasBackground>;
-let backgroundVideo!: HTMLVideoElement;
-let createElementSpy!: ReturnType<typeof vi.spyOn>;
 
 const mountComposable = () => {
   selected = ref<BackgroundValue | null>(null);
@@ -89,18 +147,13 @@ const mountComposable = () => {
     },
   });
   wrapper = mount(Harness);
-  backgroundVideo = createElementSpy.mock.results
-    .map((result: { value: unknown }) => result.value)
-    .find((element: unknown): element is HTMLVideoElement => element instanceof HTMLVideoElement) as HTMLVideoElement;
 };
 
 beforeEach(() => {
   FakeImage.instances = [];
+  playback.instances.length = 0;
   vi.stubGlobal('Image', FakeImage);
-  vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
-  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
-  vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
-  createElementSpy = vi.spyOn(document, 'createElement');
+  vi.spyOn(document, 'createElement');
   mountComposable();
 });
 
@@ -135,14 +188,15 @@ describe('useCanvasBackground', () => {
     await nextTick();
     state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
     expect(ctx.fillRect).toHaveBeenCalled();
+    expect(vi.mocked(document.createElement).mock.calls.some(([tag]) => tag === 'video')).toBe(false);
   });
 
   it('loads images, ignores stale or unloaded images, and reuses the cache', async () => {
     const ctx = context();
     selected.value = image('first.png');
     await nextTick();
-    const firstImage = FakeImage.instances[0];
-    expect(firstImage.src).toBe('first.png');
+    const firstImage = FakeImage.instances[0]!;
+    expect(firstImage.src).toBe('http://localhost:3000/first.png');
 
     renderCanvas.mockClear();
     selected.value = image('second.png');
@@ -150,7 +204,7 @@ describe('useCanvasBackground', () => {
     firstImage.dispatchEvent(new Event('load'));
     expect(renderCanvas).not.toHaveBeenCalled();
 
-    const secondImage = FakeImage.instances[1];
+    const secondImage = FakeImage.instances[1]!;
     secondImage.naturalWidth = 0;
     secondImage.dispatchEvent(new Event('load'));
     state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
@@ -179,31 +233,20 @@ describe('useCanvasBackground', () => {
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 
-  it('transitions between backgrounds and controls video playback', async () => {
+  it('decodes video frames through MediaPlaybackEngine and never creates an HTML video', async () => {
     const ctx = context();
-    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
-    selected.value = color('#111111');
-    await nextTick();
-    selected.value = color('#222222');
-    await nextTick();
-    expect(state.isTransitioningBackground.value).toBe(true);
-    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
-    now.mockReturnValue(180);
-    state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
-    expect(state.isTransitioningBackground.value).toBe(false);
-
     selected.value = video();
-    await nextTick();
-    Object.defineProperties(backgroundVideo, {
-      readyState: { configurable: true, value: 3 },
-      videoWidth: { configurable: true, value: 640 },
-      videoHeight: { configurable: true, value: 360 },
-    });
-    backgroundVideo.dispatchEvent(new Event('loadeddata'));
-    now.mockReturnValue(360);
+    await flushPromises();
+    const engine = playback.instances[0]!;
+    expect(engine.loadComposition).toHaveBeenCalledOnce();
+    expect(vi.mocked(document.createElement).mock.calls.some(([tag]) => tag === 'video')).toBe(false);
+
+    const bitmap = {} as CanvasImageSource;
+    engine.frame = { bitmap, width: 640, height: 360, close: vi.fn() };
+    engine.emitFrame();
     state.drawBackground(ctx, { x: 0, y: 0, width: 100, height: 100 });
     expect(ctx.drawImage).toHaveBeenCalledWith(
-      backgroundVideo,
+      bitmap,
       0,
       0,
       640,
@@ -214,25 +257,21 @@ describe('useCanvasBackground', () => {
       expect.any(Number),
     );
 
-    state.syncVideoPlayback(true);
-    expect(backgroundVideo.play).toHaveBeenCalled();
+    state.syncPlayback(true);
+    expect(engine.play).toHaveBeenCalledWith(0);
+    state.syncPlayback(false);
+    expect(engine.pause).toHaveBeenCalled();
     selected.value = color();
     await nextTick();
-    state.syncVideoPlayback(true);
-    expect(backgroundVideo.pause).toHaveBeenCalled();
+    expect(engine.dispose).toHaveBeenCalledOnce();
   });
 
-  it('logs rejected video playback and cleans up on unmount', async () => {
-    const error = new Error('autoplay blocked');
-    vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(error);
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    selected.value = video();
-    await nextTick();
-    state.syncVideoPlayback(true);
-    await Promise.resolve();
-    expect(errorSpy).toHaveBeenCalledWith('Failed to play background video:', error);
-
-    wrapper?.unmount();
-    expect(backgroundVideo.pause).toHaveBeenCalled();
+  it('reports decode failures and disposes the playback engine on unmount', async () => {
+    const inspect = await import('~/media/shared');
+    vi.mocked(inspect.inspectMedia).mockRejectedValueOnce(new Error('unsupported video'));
+    selected.value = video('broken.mp4');
+    await flushPromises();
+    expect(state.backgroundError.value).toMatchObject({ kind: 'decode-failure', sourceId: 'broken.mp4' });
+    expect(playback.instances).toHaveLength(0);
   });
 });

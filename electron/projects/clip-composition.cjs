@@ -214,14 +214,15 @@ function normalizeComposition(value) {
   };
 }
 
-const materializeComposition = (directory, composition, sessionFileFor) => ({
+const materializeComposition = (directory, composition, sessionFileFor, mediaUrlFor) => ({
   ...composition,
   assets: composition.assets.map((asset) => {
     const target =
       asset.origin === 'session'
         ? sessionFileFor(directory, asset.sessionId, asset.sessionPath)
         : path.join(directory, 'media', asset.fileName);
-    return { ...asset, src: target && fs.existsSync(target) ? pathToFileURL(target).href : '' };
+    const fileUrl = target && fs.existsSync(target) ? pathToFileURL(target).href : null;
+    return { ...asset, src: fileUrl ? mediaUrlFor(fileUrl) || '' : '' };
   }),
 });
 

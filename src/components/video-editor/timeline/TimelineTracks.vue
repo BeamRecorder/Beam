@@ -12,7 +12,7 @@ import {
 } from '@lucide/vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
-import type { ClipComposition } from '../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import TimelineClip from './TimelineClip.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
@@ -65,7 +65,7 @@ const {
   rulerMarkerStyle,
   isRulerLabel,
   formatRulerLabel,
-  visibleSeconds,
+  thumbnailSlots,
   onScroll,
   percentageStyle,
   beginScrub,
@@ -157,7 +157,7 @@ const {
               :clip="displayedClip(clip)"
               :asset="assetFor(clip)"
               :duration="duration"
-              :visible-seconds="visibleSeconds"
+              :thumbnail-slots="thumbnailSlots"
               :selected="selectedClipId === clip.id"
               :trim-state="trimStateFor(clip.id)"
               :defer-thumbnail-requests="movingClipIds.includes(clip.id)"
@@ -289,7 +289,7 @@ const {
               :clip="displayedClip(clip)"
               :asset="assetFor(clip)"
               :duration="duration"
-              :visible-seconds="visibleSeconds"
+              :thumbnail-slots="thumbnailSlots"
               :selected="selectedClipId === clip.id"
               :waveform-bars="audioBars[clip.id]"
               :trim-state="trimStateFor(clip.id)"
@@ -315,7 +315,7 @@ const {
               :clip="displayedClip(clip)"
               :asset="assetFor(clip)"
               :duration="duration"
-              :visible-seconds="visibleSeconds"
+              :thumbnail-slots="thumbnailSlots"
               :selected="selectedClipId === clip.id"
               :waveform-bars="audioBars[clip.id]"
               :trim-state="trimStateFor(clip.id)"
@@ -340,7 +340,7 @@ const {
               :clip="displayedClip(clip)"
               :asset="assetFor(clip)"
               :duration="duration"
-              :visible-seconds="visibleSeconds"
+              :thumbnail-slots="thumbnailSlots"
               :selected="selectedClipId === clip.id"
               :waveform-bars="audioBars[clip.id]"
               :trim-state="trimStateFor(clip.id)"

@@ -1,6 +1,6 @@
 import type { CursorPlaybackState } from '../../composables/cursorPlayback';
 import { framedMediaRect, outputPoint, type CanvasRect } from '../../canvas/output-canvas';
-import type { ClipAppearance, NormalizedCrop, NormalizedTransform } from '../../composition/composition-types';
+import type { ClipAppearance, NormalizedCrop, NormalizedTransform } from '~/media/shared/composition-types';
 import { frameContentRect } from '../../composition/appearance/frames';
 import { cursorTypeForKind, type CursorType } from './useCursorReplacer';
 

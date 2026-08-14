@@ -1,7 +1,7 @@
 import { computed, ref, toRaw, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorState } from '../../../api/types/capture-api';
-import type { ClipComposition } from '../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import {
   BACKGROUND_MEDIA,
@@ -96,10 +96,7 @@ export function useProjectEditorState(options: {
     if (loading.value || !options.project.value || propertyInteractionActive.value) return;
     if (timer) clearTimeout(timer);
     scheduledSave.value = true;
-    timer = setTimeout(
-      () => void saveNow().catch((error) => console.error('Failed to save editor state:', error)),
-      250,
-    );
+    timer = setTimeout(() => void saveNow().catch(() => console.error('Failed to save editor state.')), 250);
   };
 
   const load = async (projectId: string) => {

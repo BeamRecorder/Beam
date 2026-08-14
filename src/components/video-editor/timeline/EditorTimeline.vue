@@ -3,7 +3,7 @@ import { onMounted, onUnmounted } from 'vue';
 import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
-import type { ClipComposition } from '../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 
 const props = withDefaults(
   defineProps<{

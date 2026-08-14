@@ -1,0 +1,488 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AudioPlaybackScheduler } from '../audio-scheduler';
+import { MediaPlaybackEngine } from '../media-playback-engine';
+import type { PlaybackWorkerRequest, PlaybackWorkerResponse } from '../playback-types';
+import type { ClipComposition } from '../../shared';
+
+vi.mock('../playback.worker?worker', () => ({ default: class PlaybackWorker {} }));
+
+class FakeImageBitmap {
+  readonly width: number;
+  readonly height: number;
+  readonly close = vi.fn();
+
+  constructor(width = 4, height = 4) {
+    this.width = width;
+    this.height = height;
+  }
+}
+
+class FakeWorker {
+  onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
+  onerror: ((event: ErrorEvent) => void) | null = null;
+  readonly requests: PlaybackWorkerRequest[] = [];
+  readonly terminate = vi.fn();
+
+  postMessage = vi.fn((message: PlaybackWorkerRequest) => {
+    this.requests.push(message);
+  });
+
+  emit(message: unknown) {
+    this.onmessage?.({ data: message } as MessageEvent<unknown>);
+  }
+}
+
+class FakeAudio {
+  readonly loadComposition = vi.fn(async () => []);
+  readonly play = vi.fn(async () => undefined);
+  readonly pause = vi.fn();
+  readonly seek = vi.fn(async () => undefined);
+  readonly setVolume = vi.fn();
+  readonly dispose = vi.fn();
+  now = 0;
+
+  currentTime = vi.fn(() => this.now);
+}
+
+const asset = (id = 'asset-1') => ({
+  id,
+  kind: 'video' as const,
+  name: `Video ${id}`,
+  fileName: `${id}.mp4`,
+  durationMs: 10_000,
+  width: 1920,
+  height: 1080,
+  src: `https://cdn.example.test/${id}.mp4`,
+  origin: 'project' as const,
+});
+
+const videoClip = (id: string, assetId = 'asset-1', overrides: Partial<Record<string, unknown>> = {}) => ({
+  id,
+  kind: 'video' as const,
+  name: id,
+  assetId,
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  ...overrides,
+});
+
+const composition = (clips = [videoClip('clip-1')]): ClipComposition => ({
+  schemaVersion: 1,
+  assets: [asset(), asset('unused')],
+  clips,
+});
+
+const frameResponse = (
+  generation: number,
+  clipId: string,
+  timestampSeconds: number,
+  bitmap = new FakeImageBitmap(),
+): PlaybackWorkerResponse => ({
+  type: 'frame',
+  generation,
+  clipId,
+  assetId: 'asset-1',
+  bitmap: bitmap as unknown as ImageBitmap,
+  timestampSeconds,
+  durationSeconds: 0.04,
+});
+
+const seekRequest = (worker: FakeWorker) =>
+  worker.requests.find(
+    (request): request is Extract<PlaybackWorkerRequest, { type: 'seek' }> => request.type === 'seek',
+  );
+
+let rafCallbacks: FrameRequestCallback[] = [];
+
+beforeEach(() => {
+  vi.stubGlobal('ImageBitmap', FakeImageBitmap);
+  rafCallbacks = [];
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    rafCallbacks.push(callback);
+    return rafCallbacks.length;
+  });
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+async function load(engine: MediaPlaybackEngine, worker: FakeWorker, value = composition()) {
+  const pending = engine.loadComposition(value);
+  const loadRequest = worker.requests.find(
+    (request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load',
+  );
+  worker.emit({ type: 'ready', generation: loadRequest!.generation });
+  for (let index = 0; index < 4; index += 1) await Promise.resolve();
+  const request = seekRequest(worker);
+  expect(request).toBeDefined();
+  worker.emit({
+    type: 'seek-result',
+    generation: request!.generation,
+    requestId: request!.requestId,
+    result: 'presented',
+    latencyMs: 2,
+  });
+  await pending;
+}
+
+describe('MediaPlaybackEngine', () => {
+  it('loads, seeks, plays, pauses, and reports timeline time', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const states: string[] = [];
+    const times: number[] = [];
+    engine.on('state', (state) => states.push(state));
+    engine.on('time', (time) => times.push(time));
+
+    await load(engine, worker);
+    expect(engine.state).toBe('paused');
+    expect(worker.requests.find((request) => request.type === 'load')).toMatchObject({
+      type: 'load',
+      generation: 2,
+      clips: [{ clipId: 'clip-1', assetId: 'asset-1' }],
+    });
+
+    await engine.play(0.5);
+    expect(audio.play).toHaveBeenCalledWith(0.5, 4);
+    expect(worker.requests.at(-1)).toMatchObject({ type: 'play', generation: 4, timelineSeconds: 0.5 });
+    expect(engine.state).toBe('playing');
+    audio.now = 0.75;
+    rafCallbacks.shift()?.(0);
+    expect(engine.currentTime).toBe(0.75);
+    expect(worker.requests.at(-1)).toMatchObject({ type: 'tick', timelineSeconds: 0.75 });
+
+    engine.pause();
+    expect(audio.pause).toHaveBeenCalledWith(0.75);
+    expect(engine.state).toBe('paused');
+    expect(states).toEqual(['loading', 'paused', 'playing', 'paused']);
+    expect(times).toEqual([0, 0.75]);
+  });
+
+  it('clamps finite seeks and resolves worker latest-wins results, including superseded seeks', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+
+    const first = engine.seek(99, 'scrub');
+    await Promise.resolve();
+    const firstRequest = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    const second = engine.seek(-4, 'seek');
+    await Promise.resolve();
+    const secondRequest = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    expect(firstRequest.timelineSeconds).toBe(2);
+    expect(secondRequest.timelineSeconds).toBe(0);
+
+    worker.emit({
+      type: 'seek-result',
+      generation: firstRequest.generation,
+      requestId: firstRequest.requestId,
+      result: 'superseded',
+      latencyMs: 1,
+    });
+    worker.emit({
+      type: 'seek-result',
+      generation: secondRequest.generation,
+      requestId: secondRequest.requestId,
+      result: 'presented',
+      latencyMs: 2,
+    });
+    await expect(first).resolves.toBe('superseded');
+    await expect(second).resolves.toBe('presented');
+    await expect(engine.seek(Number.NaN, 'seek')).rejects.toThrow('finite');
+  });
+
+  it('accepts a pending scrub frame from an older generation but closes unrelated stale frames', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+
+    const pending = engine.seek(0.5, 'scrub');
+    await Promise.resolve();
+    const request = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    engine.pause();
+    const scrubFrame = new FakeImageBitmap(12, 8);
+    worker.emit({
+      ...frameResponse(request.generation, 'clip-1', 0.5, scrubFrame),
+      requestId: request.requestId,
+    });
+    expect(engine.frameFor('clip-1')?.bitmap).toBe(scrubFrame);
+
+    const staleFrame = new FakeImageBitmap(6, 6);
+    worker.emit(frameResponse(request.generation, 'clip-1', 0.25, staleFrame));
+    expect(staleFrame.close).toHaveBeenCalledOnce();
+    expect(engine.frameFor('clip-1')?.bitmap).toBe(scrubFrame);
+
+    worker.emit({
+      type: 'seek-result',
+      generation: request.generation,
+      requestId: request.requestId,
+      result: 'presented',
+      latencyMs: 2,
+    });
+    await expect(pending).resolves.toBe('presented');
+    engine.dispose();
+  });
+
+  it('keeps frames from two clip ids independent, closes stale frames, and evicts on dispose', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker, composition([videoClip('clip-1'), videoClip('clip-2')]));
+    const first = new FakeImageBitmap(10, 10);
+    const second = new FakeImageBitmap(20, 10);
+    const stale = new FakeImageBitmap(8, 8);
+    worker.emit(frameResponse(3, 'clip-1', 0, first));
+    worker.emit(frameResponse(3, 'clip-2', 0, second));
+    expect(engine.frameFor('clip-1')?.bitmap).toBe(first);
+    expect(engine.frameFor('clip-2')?.bitmap).toBe(second);
+    worker.emit(frameResponse(1, 'clip-1', 0.5, stale));
+    expect(stale.close).toHaveBeenCalledOnce();
+    expect(engine.developmentMetrics.disposedBitmaps).toBe(1);
+    engine.dispose();
+    expect(first.close).toHaveBeenCalledOnce();
+    expect(second.close).toHaveBeenCalledOnce();
+    expect(audio.dispose).toHaveBeenCalledOnce();
+    expect(worker.terminate).toHaveBeenCalledOnce();
+    expect(engine.state).toBe('disposed');
+  });
+
+  it('loops when the playback clock reaches composition end', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    await engine.play(1.9);
+    audio.now = 2;
+    rafCallbacks.shift()?.(0);
+    await Promise.resolve();
+    const loopSeek = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    expect(loopSeek).toMatchObject({ type: 'seek', timelineSeconds: 0, mode: 'seek' });
+    worker.emit({
+      type: 'seek-result',
+      generation: loopSeek.generation,
+      requestId: loopSeek.requestId,
+      result: 'presented',
+      latencyMs: 3,
+    });
+  });
+
+  it('fails safely for invalid worker responses and worker errors', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const errors: unknown[] = [];
+    engine.on('error', (error) => errors.push(error));
+    worker.emit({ type: 'not-a-response' });
+    expect(engine.state).toBe('error');
+    expect(errors[0]).toMatchObject({ kind: 'decode-failure', sourceId: 'playback-worker' });
+    worker.onerror?.({} as ErrorEvent);
+    expect(errors).toHaveLength(2);
+  });
+
+  it('ignores stale metrics and errors but fails on an error from the current generation', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    const currentSeek = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    const staleMetrics = {
+      decodedFrames: 99,
+      presentedFrames: 98,
+      droppedFrames: 97,
+      supersededRequests: 96,
+      queueSize: 95,
+      cacheBytes: 94,
+      disposedBitmaps: 93,
+      seekLatencyMs: [92],
+    };
+    worker.emit({ type: 'metrics', generation: currentSeek.generation - 1, metrics: staleMetrics });
+    worker.emit({
+      type: 'error',
+      generation: currentSeek.generation - 1,
+      error: { kind: 'decode-failure', sourceId: 'stale', message: 'stale failure' },
+    });
+    expect(engine.state).toBe('paused');
+    expect(engine.developmentMetrics).toMatchObject({ decodedFrames: 0, presentedFrames: 0, droppedFrames: 0 });
+
+    worker.emit({
+      type: 'error',
+      generation: currentSeek.generation,
+      error: { kind: 'decode-failure', sourceId: 'current', message: 'current failure' },
+    });
+    expect(engine.state).toBe('error');
+  });
+
+  it('closes a bitmap carried by an invalid worker response', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    const currentSeek = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    const bitmap = new FakeImageBitmap();
+    worker.emit({
+      type: 'frame',
+      generation: currentSeek.generation,
+      clipId: 'clip-1',
+      assetId: 'asset-1',
+      bitmap,
+      timestampSeconds: 0,
+      durationSeconds: Number.NaN,
+    });
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    expect(engine.state).toBe('error');
+  });
+
+  it('resolves a pending seek as superseded when the worker reports a seek error', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    const pending = engine.seek(0.5, 'seek');
+    await Promise.resolve();
+    const request = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    worker.emit({
+      type: 'error',
+      generation: request.generation,
+      requestId: request.requestId,
+      error: { kind: 'decode-failure', sourceId: 'asset-1', message: 'seek failed' },
+    });
+    await expect(pending).resolves.toBe('superseded');
+    expect(engine.state).toBe('error');
+  });
+
+  it('reports an invalid visual source without preventing a valid asset from loading', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const states: string[] = [];
+    const errors: unknown[] = [];
+    engine.on('state', (state) => states.push(state));
+    engine.on('error', (error) => errors.push(error));
+
+    const invalid: ClipComposition = {
+      schemaVersion: 1,
+      assets: [{ ...asset(), src: 'file:///recording.mp4' }, asset('valid-video')],
+      clips: [videoClip('invalid-clip'), videoClip('valid-clip', 'valid-video')],
+    };
+    await load(engine, worker, invalid);
+
+    expect(engine.state).toBe('paused');
+    expect(states).toEqual(['loading', 'paused']);
+    expect(errors[0]).toMatchObject({ kind: 'missing', sourceId: 'asset-1' });
+    engine.dispose();
+  });
+
+  it('skips a video asset with an empty source while loading valid visual media', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const issues: unknown[] = [];
+    engine.on('error', (error) => issues.push(error));
+    const invalidAsset = { ...asset('missing-video'), src: '' };
+    const value: ClipComposition = {
+      schemaVersion: 1,
+      assets: [asset(), invalidAsset],
+      clips: [videoClip('valid-clip'), videoClip('skipped-clip', 'missing-video')],
+    };
+
+    await load(engine, worker, value);
+
+    const loadRequest = worker.requests.find(
+      (request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load',
+    );
+    expect(loadRequest?.assets).toEqual([
+      expect.objectContaining({ assetId: 'asset-1', url: 'https://cdn.example.test/asset-1.mp4' }),
+    ]);
+    expect(loadRequest?.clips).toEqual([expect.objectContaining({ clipId: 'valid-clip', assetId: 'asset-1' })]);
+    expect(audio.loadComposition).toHaveBeenCalledWith(value);
+    expect(issues).toContainEqual(expect.objectContaining({ kind: 'missing', sourceId: 'missing-video' }));
+    expect(engine.state).toBe('paused');
+    engine.dispose();
+  });
+
+  it('resolves an older pending load when a newer composition supersedes it', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const first = engine.loadComposition(composition([videoClip('first')]));
+    for (let index = 0; index < 5; index += 1) await Promise.resolve();
+    const firstLoad = worker.requests.find(
+      (request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load',
+    );
+    expect(firstLoad).toBeDefined();
+
+    const second = engine.loadComposition(composition([videoClip('second')]));
+    for (let index = 0; index < 5; index += 1) await Promise.resolve();
+    const secondLoad = [...worker.requests]
+      .reverse()
+      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load');
+    expect(secondLoad).toBeDefined();
+    expect(secondLoad!.generation).toBeGreaterThan(firstLoad!.generation);
+    worker.emit({ type: 'ready', generation: secondLoad!.generation });
+    for (let index = 0; index < 5; index += 1) await Promise.resolve();
+    const secondSeek = [...worker.requests]
+      .reverse()
+      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'seek' }> => request.type === 'seek');
+    expect(secondSeek).toBeDefined();
+    worker.emit({
+      type: 'seek-result',
+      generation: secondSeek!.generation,
+      requestId: secondSeek!.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+
+    await expect(first).resolves.toBeUndefined();
+    await expect(second).resolves.toBeUndefined();
+    expect(engine.state).toBe('paused');
+    engine.dispose();
+  });
+});

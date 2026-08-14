@@ -1,6 +1,6 @@
 import { onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CaptionSentence, CaptionWord } from '../composition/composition-types';
+import type { CaptionSentence, CaptionWord } from '~/media/shared/composition-types';
 import type { WhisperModelId, WhisperProgress, WhisperResult } from './whisper-types';
 
 export const sentencesFromWords = (words: CaptionWord[]): CaptionSentence[] => {

@@ -1,17 +1,20 @@
 import { onUnmounted, reactive, ref, watch, type Ref } from 'vue';
-import ThumbnailWorker from './thumbnail.worker?worker&inline';
-import type { ThumbnailWorkerResponse } from './thumbnail-protocol';
+import ThumbnailWorker from '~/media/playback/thumbnail.worker?worker';
+import type { ThumbnailWorkerResponse } from '~/media/playback/thumbnail-protocol';
+import { mediaSourceDescriptor, type MediaAsset } from '~/media/shared';
 
-const CACHE_LIMIT = 180;
+const CACHE_LIMIT = 96;
 
-export function useThumbnails(videoSrcRef: Ref<string | null>) {
+export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
   const thumbnails = reactive<Record<number, string>>({});
   const isExtracting = ref(false);
+  const error = ref<string | null>(null);
   const cacheOrder: number[] = [];
-  const pendingTimes = new Set<number>();
+  const retainedTimes = new Set<number>();
   let worker: Worker | null = null;
   let generation = 0;
   let requestQueued = false;
+  let queuedTimes: number[] = [];
 
   const clearCache = () => {
     generation += 1;
@@ -21,36 +24,48 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
       delete thumbnails[Number(time)];
     }
     cacheOrder.length = 0;
-    pendingTimes.clear();
+    retainedTimes.clear();
+    queuedTimes = [];
     requestQueued = false;
     isExtracting.value = false;
+    error.value = null;
+  };
+
+  const touchThumbnail = (time: number) => {
+    const index = cacheOrder.indexOf(time);
+    if (index >= 0) cacheOrder.splice(index, 1);
+    cacheOrder.push(time);
+  };
+
+  const pruneCache = () => {
+    while (cacheOrder.length > CACHE_LIMIT) {
+      const expiredIndex = cacheOrder.findIndex((time) => !retainedTimes.has(time));
+      if (expiredIndex < 0) break;
+      const [expired] = cacheOrder.splice(expiredIndex, 1);
+      if (expired === undefined) continue;
+      URL.revokeObjectURL(thumbnails[expired]);
+      delete thumbnails[expired];
+    }
   };
 
   const cacheThumbnail = (time: number, blob: Blob) => {
     const existing = thumbnails[time];
-    if (existing) {
-      URL.revokeObjectURL(existing);
-      const existingIndex = cacheOrder.indexOf(time);
-      if (existingIndex >= 0) cacheOrder.splice(existingIndex, 1);
-    }
+    if (existing) URL.revokeObjectURL(existing);
     thumbnails[time] = URL.createObjectURL(blob);
-    cacheOrder.push(time);
-    while (cacheOrder.length > CACHE_LIMIT) {
-      const expired = cacheOrder.shift();
-      if (expired === undefined) break;
-      URL.revokeObjectURL(thumbnails[expired]);
-      delete thumbnails[expired];
-    }
+    touchThumbnail(time);
+    pruneCache();
   };
 
   const receiveWorkerMessage = (message: ThumbnailWorkerResponse) => {
     if (message.generation !== generation) return;
     if (message.type === 'batch-started') {
       isExtracting.value = true;
+      error.value = null;
       return;
     }
     if (message.type === 'batch-finished' || message.type === 'error') {
       isExtracting.value = false;
+      if (message.type === 'error') error.value = message.message;
       return;
     }
     cacheThumbnail(message.time, message.blob);
@@ -63,61 +78,66 @@ export function useThumbnails(videoSrcRef: Ref<string | null>) {
       receiveWorkerMessage(event.data);
     };
     worker.onerror = () => {
+      console.error('[Beam media:thumbnails] Thumbnail worker crashed.');
       isExtracting.value = false;
+      error.value = 'Timeline thumbnail decoding failed.';
     };
   };
 
   const requestVisibleFrames = (visibleTimes: number[]) => {
-    visibleTimes.forEach((time) => pendingTimes.add(time));
+    queuedTimes = [...new Set(visibleTimes.filter((time) => Number.isFinite(time) && time >= 0))].sort(
+      (left, right) => left - right,
+    );
+    retainedTimes.clear();
+    queuedTimes.forEach((time) => {
+      retainedTimes.add(time);
+      if (thumbnails[time]) touchThumbnail(time);
+    });
+    pruneCache();
     if (requestQueued) return;
     requestQueued = true;
     queueMicrotask(() => {
       requestQueued = false;
-      const times = [...pendingTimes];
-      pendingTimes.clear();
+      const times = queuedTimes;
+      queuedTimes = [];
       void requestMissingFrames(times);
     });
   };
 
-  const requestMissingFrames = async (visibleTimes: number[]) => {
-    const source = videoSrcRef.value;
-    if (!source || visibleTimes.length === 0) return;
+  const requestMissingFrames = (visibleTimes: number[]) => {
+    const asset = videoAssetRef.value;
+    if (!asset || visibleTimes.length === 0) return;
     const missingTimes = visibleTimes.filter((time) => !thumbnails[time]);
     if (missingTimes.length === 0) return;
     initWorker();
-    generation += 1;
     const requestGeneration = generation;
     isExtracting.value = true;
-    let workerSource: string | null | undefined;
+    error.value = null;
     try {
-      workerSource = await window.capture?.projectMediaUrl(source);
-    } catch (error) {
+      worker?.postMessage({
+        type: 'request-frames',
+        generation: requestGeneration,
+        source: mediaSourceDescriptor(asset),
+        visibleTimes: missingTimes,
+      });
+    } catch (postError) {
+      console.error('[Beam media:thumbnails] Thumbnail request failed.', postError);
       if (requestGeneration === generation) {
         isExtracting.value = false;
-        console.error('Unable to create a safe media URL for timeline thumbnails.', error);
+        error.value = 'Timeline thumbnail decoding failed.';
       }
-      return;
     }
-    if (requestGeneration !== generation) return;
-    if (!workerSource) {
-      isExtracting.value = false;
-      console.error('Unable to create a safe media URL for timeline thumbnails.');
-      return;
-    }
-    worker?.postMessage({
-      type: 'request-frames',
-      generation: requestGeneration,
-      source: workerSource,
-      visibleTimes: missingTimes,
-    });
   };
 
-  watch(videoSrcRef, clearCache);
+  watch(() => {
+    const asset = videoAssetRef.value;
+    return asset ? `${asset.id}\u0000${asset.src}` : null;
+  }, clearCache);
 
   onUnmounted(() => {
     clearCache();
     worker?.terminate();
   });
 
-  return { thumbnails, isExtracting, requestVisibleFrames, clearCache };
+  return { thumbnails, isExtracting, error, requestVisibleFrames, clearCache };
 }

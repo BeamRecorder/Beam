@@ -126,6 +126,11 @@ function createEditorWindowManager({
     controller = new EditorWindowController(window, showHud);
     registerController(window, controller);
     const contents = window.webContents;
+    if (!isPackaged) {
+      contents.on('console-message', (details) => {
+        if (details.message.startsWith('[Beam media:')) console.info(details.message);
+      });
+    }
     contents.once('did-finish-load', () => sendProgress('loadingEditor'));
     contents.once('destroyed', () => cleanupWindow?.(contents));
     window.on('closed', () => {

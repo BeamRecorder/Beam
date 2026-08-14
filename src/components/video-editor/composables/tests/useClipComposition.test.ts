@@ -3,16 +3,37 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useClipComposition } from '../useClipComposition';
 import type { CaptureProject, ProjectEditorData } from '../../../../api/types/capture-api';
-import type { MediaAsset } from '../../composition/composition-types';
+import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { DroppedMediaInspection } from '~/media/shared/media-types';
 
 const { capture, getAudioTracks } = vi.hoisted(() => ({
   capture: { pickProjectMedia: vi.fn() },
   getAudioTracks: vi.fn(),
 }));
+let mockInspectionDuration = 2.5;
 
 vi.mock('../../../../api/capture', () => ({ capture }));
 vi.mock('mediabunny', () => ({
   ALL_FORMATS: [],
+  MP4: {},
+  QTFF: {},
+  WEBM: {},
+  MATROSKA: {},
+  MP3: {},
+  WAVE: {},
+  OGG: {},
+  ADTS: {},
+  UnsupportedInputFormatError: class UnsupportedInputFormatError extends Error {},
+  InputDisposedError: class InputDisposedError extends Error {},
+  UrlSource: class UrlSource {
+    readonly url: string;
+    constructor(url: string) {
+      this.url = url;
+    }
+    ref() {
+      return { url: this.url, free: vi.fn() };
+    }
+  },
   BlobSource: class BlobSource {
     readonly blob: Blob;
     constructor(blob: Blob) {
@@ -20,8 +41,55 @@ vi.mock('mediabunny', () => ({
     }
   },
   Input: class Input {
+    readonly options: { source?: { url?: string } };
+    constructor(options: { source?: { url?: string } }) {
+      this.options = options;
+    }
+    private get isAudioSource() {
+      return /\.(?:mp3|wav|ogg|opus|m4a)(?:$|\?)/i.test(this.options.source?.url ?? '');
+    }
+    async getFormat() {
+      return { name: this.isAudioSource ? 'wav' : 'mp4' };
+    }
+    async getMimeType() {
+      return this.isAudioSource ? 'audio/wav' : 'video/mp4';
+    }
+    async getDurationFromMetadata() {
+      return mockInspectionDuration;
+    }
+    async getVideoTracks() {
+      if (this.isAudioSource) return [];
+      return [
+        {
+          id: 'video-track',
+          getCodec: async () => 'avc1',
+          getCodecParameterString: async () => null,
+          getCodedWidth: async () => 1920,
+          getCodedHeight: async () => 1080,
+          getDisplayWidth: async () => 1920,
+          getDisplayHeight: async () => 1080,
+          getRotation: async () => 0,
+          getPixelAspectRatio: async () => ({ num: 1, den: 1 }),
+          getDecoderConfig: async () => null,
+          canDecode: async () => true,
+        },
+      ];
+    }
     async getAudioTracks() {
-      return getAudioTracks();
+      const tracks = await getAudioTracks();
+      const sourceTracks = tracks.length > 0 || !this.isAudioSource ? tracks : [{ id: 'audio-track' }];
+      return sourceTracks.map((track: { id?: string }) => ({
+        id: track.id ?? 'audio-track',
+        getCodec: async () => 'opus',
+        getCodecParameterString: async () => null,
+        getNumberOfChannels: async () => 2,
+        getSampleRate: async () => 48_000,
+        getDecoderConfig: async () => null,
+        canDecode: async () => true,
+      }));
+    }
+    async computeDuration() {
+      return mockInspectionDuration;
     }
     dispose() {}
   },
@@ -70,6 +138,16 @@ const videoAsset = (): MediaAsset => ({
   height: 1080,
   src: 'video.mp4',
   origin: 'project',
+});
+
+const videoInspection = (canDecodeAudio: boolean): DroppedMediaInspection => ({
+  kind: 'video',
+  durationMs: 2_500,
+  width: 1_920,
+  height: 1_080,
+  hasAudio: true,
+  canDecodeAudio,
+  audioCodec: 'opus',
 });
 
 const editorData = (): ProjectEditorData => ({
@@ -157,6 +235,7 @@ const mountComposable = () => {
 };
 
 const mockMediaMetadata = (duration = 2.5) => {
+  mockInspectionDuration = duration;
   const original = document.createElement.bind(document);
   const create = vi.spyOn(document, 'createElement');
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
@@ -180,6 +259,7 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockInspectionDuration = 2.5;
   capture.pickProjectMedia.mockResolvedValue(null);
   getAudioTracks.mockResolvedValue([]);
   let uuidCounter = 0;
@@ -261,15 +341,61 @@ describe('useClipComposition', () => {
     getAudioTracks.mockRejectedValueOnce(new Error('cannot inspect'));
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(new Blob(['video']), { status: 200 }));
     capture.pickProjectMedia.mockResolvedValueOnce({ ...videoAsset(), id: 'video-2', name: 'Silent video' });
-    await mounted.state.addElement('video', 4_000);
-    expect(mounted.state.composition.value.clips.filter((clip) => clip.kind === 'video')).toHaveLength(2);
+    await expect(mounted.state.addElement('video', 4_000)).rejects.toThrow('media input could not be decoded');
+    expect(mounted.state.composition.value.clips.filter((clip) => clip.kind === 'video')).toHaveLength(1);
+  });
+
+  it('places imported visuals above existing visuals and links audio only when decodable', () => {
+    const mounted = mountComposable();
+    const existingVisual: VisualClip = {
+      id: 'existing-image',
+      kind: 'image',
+      name: 'Existing image',
+      assetId: 'image-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 5_000,
+      sourceInMs: 0,
+      sourceDurationMs: 5_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 4,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+    };
+    const current: ClipComposition = mounted.state.composition.value;
+    mounted.state.composition.value = {
+      ...current,
+      assets: [imageAsset()],
+      clips: [existingVisual],
+    };
+
+    mounted.state.addImportedAsset({ ...videoAsset(), id: 'video-with-audio' }, videoInspection(true), 1_000);
+    const linkedVisual = mounted.state.composition.value.clips.find(
+      (clip) => clip.kind === 'video' && clip.assetId === 'video-with-audio',
+    )!;
+    const linkedAudio = mounted.state.composition.value.clips.find(
+      (clip) => clip.kind === 'audio' && clip.assetId === 'video-with-audio',
+    )!;
+    expect(linkedVisual.order).toBeLessThan(existingVisual.order);
+    expect(linkedAudio.groupId).toBe(linkedVisual.groupId);
+    expect(linkedAudio.timelineStartMs).toBe(1_000);
+
+    mounted.state.addImportedAsset({ ...videoAsset(), id: 'video-without-audio' }, videoInspection(false), 2_000);
+    const undecodableClips = mounted.state.composition.value.clips.filter(
+      (clip) => clip.kind === 'video' && clip.assetId === 'video-without-audio',
+    );
+    expect(undecodableClips).toHaveLength(1);
+    expect(undecodableClips[0]?.kind).toBe('video');
+    const linkedVisualAfterSecondAdd = mounted.state.composition.value.clips.find(
+      (clip) => clip.kind === 'video' && clip.assetId === 'video-with-audio',
+    )!;
+    expect(undecodableClips[0]?.order).toBeLessThan(linkedVisualAfterSecondAdd.order);
   });
 
   it('rejects a video whose native metadata has no readable duration', async () => {
     const mounted = mountComposable();
     mockMediaMetadata(0);
     capture.pickProjectMedia.mockResolvedValueOnce({ ...videoAsset(), id: 'broken', name: 'Broken' });
-    await expect(mounted.state.addElement('video')).rejects.toThrow('Impossible de lire');
+    await expect(mounted.state.addElement('video')).rejects.toThrow('aucune durée exploitable');
   });
 
   it('previews edits, splits/reorders/deletes clips, and guards invalid selections', async () => {

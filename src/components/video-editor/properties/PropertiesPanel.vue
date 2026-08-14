@@ -21,7 +21,7 @@ import type {
   ClipComposition,
   ClipFrame,
   NormalizedTransform,
-} from '~/components/video-editor/composition/composition-types';
+} from '~/media/shared/composition-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import type { ShadowDirection } from './cursor/shadow-types';

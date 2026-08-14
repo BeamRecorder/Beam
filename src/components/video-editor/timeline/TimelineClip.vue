@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
-import type { Clip, MediaAsset } from '../composition/composition-types';
+import type { Clip, MediaAsset } from '~/media/shared/composition-types';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
+import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
   clip: Clip;
   asset?: MediaAsset | null;
   duration: number;
-  visibleSeconds: number[];
+  thumbnailSlots: readonly TimelineThumbnailSlot[];
   selected: boolean;
   waveformBars?: number[];
   trimState?: { edge: 'start' | 'end'; durationMs: number } | null;
@@ -22,26 +23,25 @@ const emit = defineEmits<{
   (event: 'trim', value: { event: PointerEvent; edge: 'start' | 'end' }): void;
 }>();
 
-const source = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset.src : null));
-const { thumbnails, requestVisibleFrames } = useThumbnails(source);
+const videoAsset = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset : null));
+const { thumbnails, requestVisibleFrames } = useThumbnails(videoAsset);
 const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs);
-type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number };
+type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number; durationMs: number };
 const frames = computed<TimelineFrame[]>(() =>
-  props.visibleSeconds.flatMap((timelineSecond) => {
-    const timelineMs = timelineSecond * 1_000;
-    if (
-      props.clip.kind === 'audio' ||
-      timelineMs < props.clip.timelineStartMs ||
-      timelineMs >= clipEndMs.value ||
-      props.asset?.kind !== 'video'
-    )
-      return [];
+  props.thumbnailSlots.flatMap((slot) => {
+    if (props.clip.kind === 'audio' || props.asset?.kind !== 'video') return [];
+    const slotStartMs = slot.timelineSeconds * 1_000;
+    const slotEndMs = slotStartMs + slot.durationSeconds * 1_000;
+    const timelineMs = Math.max(slotStartMs, props.clip.timelineStartMs);
+    const timelineEndMs = Math.min(slotEndMs, clipEndMs.value);
+    if (timelineEndMs <= timelineMs) return [];
     const sourceMs = props.clip.sourceInMs + (timelineMs - props.clip.timelineStartMs) * props.clip.playbackRate;
     return [
       {
-        timelineSecond,
-        mediaSecond: Math.max(0, Math.floor(sourceMs / 1_000)),
+        timelineSecond: slot.timelineSeconds,
+        mediaSecond: Math.max(0, Math.round(sourceMs) / 1_000),
         relativeMs: timelineMs - props.clip.timelineStartMs,
+        durationMs: timelineEndMs - timelineMs,
       },
     ];
   }),
@@ -53,7 +53,7 @@ const displayedFrames = computed(() => (frozenFrames.value.length ? frozenFrames
 // move commit. Refresh only when the viewport or source timing actually changes.
 const thumbnailRefreshKey = computed(() =>
   [
-    props.visibleSeconds.join(','),
+    props.thumbnailSlots.map((slot) => `${slot.timelineSeconds}:${slot.durationSeconds}`).join(','),
     props.asset?.src ?? '',
     props.clip.sourceInMs,
     props.clip.sourceDurationMs,
@@ -61,7 +61,7 @@ const thumbnailRefreshKey = computed(() =>
   ].join('|'),
 );
 watch(
-  thumbnailRefreshKey,
+  [thumbnailRefreshKey, () => props.deferThumbnailRequests],
   () => {
     if (props.deferThumbnailRequests) return;
     const value = frames.value;
@@ -77,7 +77,7 @@ const clipStyle = computed(() => ({
 }));
 const frameStyle = (frame: TimelineFrame) => ({
   left: `${(frame.relativeMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
-  width: `${(1_000 / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
+  width: `${(frame.durationMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
 });
 const formatTrimTime = (milliseconds: number) => {
   const seconds = Math.max(0, milliseconds / 1_000);

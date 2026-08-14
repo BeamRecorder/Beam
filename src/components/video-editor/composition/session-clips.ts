@@ -6,7 +6,7 @@ import {
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
-} from './composition-types';
+} from '~/media/shared/composition-types';
 import { createComposition } from './engine/clip-engine';
 
 const milliseconds = (nanoseconds: number | null | undefined) =>
@@ -130,6 +130,7 @@ export function synchronizeRecordingClips(
   const existingIds = new Set(clips.map((clip) => clip.id));
   const fallbackEndNs = editorData.manifest.durationNs;
   const candidates: Clip[] = [];
+  let assetsChanged = false;
 
   for (const track of editorData.tracks) {
     if (!['screen', 'camera', 'system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') continue;
@@ -137,7 +138,10 @@ export function synchronizeRecordingClips(
       if (!segment.complete || !segment.exists || !segment.src) continue;
       const durationMs = safeDuration(segment, fallbackEndNs);
       const asset = sessionAsset(editorData, track, segment, durationMs);
-      assets.set(asset.id, asset);
+      if (!assets.has(asset.id)) {
+        assets.set(asset.id, asset);
+        assetsChanged = true;
+      }
       const priority =
         track.kind === 'camera'
           ? 20_000
@@ -171,6 +175,7 @@ export function synchronizeRecordingClips(
       sessionPath: 'screen/primary',
     };
     assets.set(asset.id, asset);
+    assetsChanged = true;
     candidates.push({
       id: SCREEN_CLIP_ID,
       kind: 'screen',
@@ -202,5 +207,6 @@ export function synchronizeRecordingClips(
     });
   }
 
+  if (!assetsChanged && candidates.length === 0) return composition;
   return createComposition([...assets.values()], [...clips, ...candidates]);
 }

@@ -18,6 +18,7 @@ import {
 import Button from '~/ui/button/Button.vue';
 import PopoverMenuButton from '~/ui/popover/PopoverMenuButton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
+import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
 
 const { t } = useTranslate('TimelineToolbar');
 
@@ -26,7 +27,7 @@ const props = withDefaults(
     currentTime: number;
     duration: number;
     isPlaying: boolean;
-    zoomLevel: number; // 100 to 500
+    zoomLevel: number;
     canSplit?: boolean;
     isSnappingEnabled?: boolean;
   }>(),
@@ -60,9 +61,10 @@ const zoomPercentageText = computed(() => {
 });
 
 const zoomPercentage = computed(() => {
-  const min = 100;
-  const max = 500;
-  return Math.min(100, Math.max(0, ((props.zoomLevel - min) / (max - min)) * 100));
+  return Math.min(
+    100,
+    Math.max(0, ((props.zoomLevel - MIN_TIMELINE_ZOOM) / (MAX_TIMELINE_ZOOM - MIN_TIMELINE_ZOOM)) * 100),
+  );
 });
 
 const formatTime = (time: number) => {
@@ -73,15 +75,15 @@ const formatTime = (time: number) => {
 };
 
 const handleZoomReset = () => {
-  emit('update:zoomLevel', 100);
+  emit('update:zoomLevel', MIN_TIMELINE_ZOOM);
 };
 
 const handleZoomIn = () => {
-  emit('update:zoomLevel', Math.min(500, props.zoomLevel + 50));
+  emit('update:zoomLevel', zoomTimelineByButton(props.zoomLevel, 1));
 };
 
 const handleZoomOut = () => {
-  emit('update:zoomLevel', Math.max(100, props.zoomLevel - 50));
+  emit('update:zoomLevel', zoomTimelineByButton(props.zoomLevel, -1));
 };
 </script>
 
@@ -165,14 +167,14 @@ const handleZoomOut = () => {
         icon-only
         :icon="ZoomOut"
         :tooltip="t('zoomOut')"
-        :disabled="zoomLevel <= 100"
+        :disabled="zoomLevel <= MIN_TIMELINE_ZOOM"
         @click="handleZoomOut"
       />
       <input
         type="range"
-        min="100"
-        max="500"
-        step="10"
+        :min="MIN_TIMELINE_ZOOM"
+        :max="MAX_TIMELINE_ZOOM"
+        step="25"
         :value="zoomLevel"
         class="zoom-slider"
         :style="{
@@ -186,7 +188,7 @@ const handleZoomOut = () => {
         icon-only
         :icon="ZoomIn"
         :tooltip="t('zoomIn')"
-        :disabled="zoomLevel >= 500"
+        :disabled="zoomLevel >= MAX_TIMELINE_ZOOM"
         @click="handleZoomIn"
       />
     </div>
