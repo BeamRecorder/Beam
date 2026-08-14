@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>Beam</vendor>
+  <vendor_url>https://github.com/ExtraBinoss/Beam</vendor_url>
+  <action id="com.beam.input-monitor">
+    <description>Allow Beam to capture clicks and keyboard shortcuts</description>
+    <message>Authorization is required to update Beam interaction access</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/beam-input-helper</annotate>
+    <annotate key="org.freedesktop.policykit.exec.argv1">stream</annotate>
+    <annotate key="com.beam.policy-version">2</annotate>
+  </action>
+</policyconfig>

@@ -30,5 +30,12 @@ target-windows/
 
 # Electron build artifacts
 dist_electron/
+build/native/
+
+# Verified, versioned native-engine cache for development without Cargo
+packages/native-recorder/win/*/capture-engine-*.exe
+packages/native-recorder/mac/*/capture-engine-*
+packages/native-recorder/linux/*/capture-engine-*
+packages/native-recorder/linux/*/beam-input-helper-*
 
 coverage/*

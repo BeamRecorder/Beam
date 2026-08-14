@@ -13,7 +13,7 @@ import type {
   TeleprompterDocument,
   TeleprompterSessionContext,
 } from '../../components/hud/teleprompter/teleprompter-types';
-import type { RecordingConfiguration } from '../../components/hud/recorder/recording-types';
+import type { RecordingBarVisibility, RecordingConfiguration } from '../../components/hud/recorder/recording-types';
 import type { EditorLoadingProgress, EditorLoadingStage } from './editor-window';
 
 export type * from './capture-config';
@@ -22,9 +22,12 @@ export type * from './capture-session';
 export type * from './editor-window';
 
 export interface CaptureApi {
+  readonly platform: string;
   discover(): Promise<CaptureCatalog>;
   capabilities(): Promise<Record<string, boolean>>;
   permissions(): Promise<Record<string, unknown>>;
+  inputAccessStatus(): Promise<InputAccessStatus>;
+  requestInputAccess(): Promise<InputAccessStatus>;
   formats(sourceId: string): Promise<unknown>;
   prepare(config: CaptureConfig): Promise<CaptureSession>;
   prepareRecording(options?: StartRecordingOptions): Promise<CaptureSession>;
@@ -45,7 +48,14 @@ export interface DesktopCaptureApi extends CaptureApi {
   close(): void;
   minimize(): void;
   toggleDevTools?(): void;
-  updateTrayMenu?(labels: { openHud?: string; quit?: string; tooltip?: string }): void;
+  updateTrayMenu?(labels: {
+    openHud?: string;
+    stopRecording?: string;
+    quit?: string;
+    tooltip?: string;
+    recording?: boolean;
+  }): void;
+  onTrayStopRecording?(listener: () => void): () => void;
   setWindowMode(mode: 'hud' | 'recorder'): void;
   showHud(): void;
   openEditor(projectId: string): Promise<boolean>;
@@ -62,12 +72,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   setSizeSmooth(width: number, height: number): void;
   setWindowVisible(visible: boolean): void;
   setInteractive(overInteractive: boolean): void;
-  beginRecorderDrag(): void;
-  getRecorderTooltipSide(): Promise<'left' | 'right' | null>;
-  setRecorderTooltip(visible: boolean): Promise<'left' | 'right' | null>;
-  setCountdown(seconds: number | null): void;
+  setCountdown(seconds: number | null): Promise<void>;
+  prepareRecordingSurface(): Promise<void>;
   onCountdown(listener: (seconds: number | null) => void): () => void;
-  onRecorderTooltipSide(listener: (side: 'left' | 'right') => void): () => void;
   getSources(types?: string[]): Promise<CapturePreview[]>;
   getDisplayBounds(displayId: string): Promise<ScreenRegionBounds | null>;
   selectScreenRegion(options: ScreenRegionOverlayOptions): Promise<ScreenRegion | null>;
@@ -80,7 +87,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   cancelScreenRegion(): void;
   getWindowBounds(): Promise<{ x: number; y: number; width: number; height: number } | null>;
   getPreferences(): Promise<PreferenceSettings>;
-  updatePreferences(patch: Partial<PreferenceSettings>): Promise<PreferenceSettings>;
+  updatePreferences(patch: PreferencePatch): Promise<PreferenceSettings>;
   resetPreferences(keys?: Array<keyof PreferenceSettings>): Promise<PreferenceSettings>;
   onPreferencesChanged(listener: (preferences: PreferenceSettings) => void): () => void;
   onPreferenceShortcut(listener: (id: string) => void): () => void;
@@ -181,21 +188,36 @@ export interface AppUpdateState {
   message: string | null;
 }
 
+export interface InputAccessStatus {
+  state: 'available' | 'permission-required' | 'installation-required' | 'unavailable' | 'denied';
+  canRequest: boolean;
+  clicks: boolean;
+  shortcuts: boolean;
+  recordsText: false;
+  mouseDevices?: number;
+  keyboardDevices?: number;
+}
+
 export interface PreferenceShortcut {
   keys: string;
   scope: 'global' | 'application';
   category: string;
 }
 export interface PreferenceSettings {
-  schemaVersion: 2;
+  schemaVersion: 3;
   theme: 'light' | 'dark' | 'system';
-  recordingBar: { visibility: 'always' | 'auto-fade' };
+  recordingBar: { visibility: RecordingBarVisibility };
+  recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
   alwaysOnTop: boolean;
   devices: Record<string, unknown>;
   shortcuts: Record<string, PreferenceShortcut>;
   backgroundPresets: { colors: string[]; gradients: GradientBackground[] };
   extras: Record<string, unknown>;
 }
+
+export type PreferencePatch = Partial<Omit<PreferenceSettings, 'recordingInteractions'>> & {
+  recordingInteractions?: Partial<PreferenceSettings['recordingInteractions']>;
+};
 
 export interface ProjectEditorPresentation {
   canvas: OutputCanvasSettings;
@@ -284,8 +306,10 @@ export interface CaptureSource {
   label: string;
   isDefault: boolean;
   displayId?: string;
+  selectionMode?: 'direct' | 'system-picker' | 'portal';
 }
 export interface CaptureCatalog {
   sources: CaptureSource[];
   capabilities: Record<string, boolean>;
+  limitations?: string[];
 }

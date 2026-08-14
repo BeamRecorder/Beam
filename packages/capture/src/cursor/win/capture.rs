@@ -22,6 +22,7 @@ use windows::Win32::{
 use crate::{
     CaptureError,
     cursor::{CaptureRegion, CursorCoordinates, CursorKind, Hotspot, map_coordinates},
+    input::{InputKey, InputModifier},
     model::SourceId,
 };
 
@@ -116,6 +117,87 @@ fn region_from_rect(rect: windows::Win32::Foundation::RECT) -> Result<CaptureReg
 fn key_pressed(key: u16) -> bool {
     // SAFETY: the API accepts any virtual-key integer and dereferences no caller pointer.
     (unsafe { GetAsyncKeyState(i32::from(key)) }) < 0
+}
+
+#[must_use]
+pub fn shortcut_modifier_pressed(modifier: InputModifier) -> bool {
+    let key = match modifier {
+        InputModifier::Control => 0x11,
+        InputModifier::Shift => 0x10,
+        InputModifier::Alt => 0x12,
+        InputModifier::Meta => return key_pressed(0x5b) || key_pressed(0x5c),
+    };
+    key_pressed(key)
+}
+
+#[must_use]
+pub fn shortcut_key_pressed(key: InputKey) -> bool {
+    let virtual_key = match key {
+        InputKey::A => 0x41,
+        InputKey::B => 0x42,
+        InputKey::C => 0x43,
+        InputKey::D => 0x44,
+        InputKey::E => 0x45,
+        InputKey::F => 0x46,
+        InputKey::G => 0x47,
+        InputKey::H => 0x48,
+        InputKey::I => 0x49,
+        InputKey::J => 0x4a,
+        InputKey::K => 0x4b,
+        InputKey::L => 0x4c,
+        InputKey::M => 0x4d,
+        InputKey::N => 0x4e,
+        InputKey::O => 0x4f,
+        InputKey::P => 0x50,
+        InputKey::Q => 0x51,
+        InputKey::R => 0x52,
+        InputKey::S => 0x53,
+        InputKey::T => 0x54,
+        InputKey::U => 0x55,
+        InputKey::V => 0x56,
+        InputKey::W => 0x57,
+        InputKey::X => 0x58,
+        InputKey::Y => 0x59,
+        InputKey::Z => 0x5a,
+        InputKey::Digit0 => 0x30,
+        InputKey::Digit1 => 0x31,
+        InputKey::Digit2 => 0x32,
+        InputKey::Digit3 => 0x33,
+        InputKey::Digit4 => 0x34,
+        InputKey::Digit5 => 0x35,
+        InputKey::Digit6 => 0x36,
+        InputKey::Digit7 => 0x37,
+        InputKey::Digit8 => 0x38,
+        InputKey::Digit9 => 0x39,
+        InputKey::ArrowUp => 0x26,
+        InputKey::ArrowDown => 0x28,
+        InputKey::ArrowLeft => 0x25,
+        InputKey::ArrowRight => 0x27,
+        InputKey::Escape => 0x1b,
+        InputKey::Enter => 0x0d,
+        InputKey::Tab => 0x09,
+        InputKey::Backspace => 0x08,
+        InputKey::Delete => 0x2e,
+        InputKey::Insert => 0x2d,
+        InputKey::Home => 0x24,
+        InputKey::End => 0x23,
+        InputKey::PageUp => 0x21,
+        InputKey::PageDown => 0x22,
+        InputKey::Space => 0x20,
+        InputKey::F1 => 0x70,
+        InputKey::F2 => 0x71,
+        InputKey::F3 => 0x72,
+        InputKey::F4 => 0x73,
+        InputKey::F5 => 0x74,
+        InputKey::F6 => 0x75,
+        InputKey::F7 => 0x76,
+        InputKey::F8 => 0x77,
+        InputKey::F9 => 0x78,
+        InputKey::F10 => 0x79,
+        InputKey::F11 => 0x7a,
+        InputKey::F12 => 0x7b,
+    };
+    key_pressed(virtual_key)
 }
 
 fn cursor_shape(native_id: usize) -> Result<WindowsCursorShape, CaptureError> {

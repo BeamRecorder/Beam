@@ -1,12 +1,27 @@
 import { vi } from 'vitest';
 
 export const captureMock = {
+  platform: 'darwin',
   discover: vi.fn(),
   getSources: vi.fn(),
   hideScreenRegionOverlay: vi.fn(),
   setWindowVisible: vi.fn(),
   setInteractive: vi.fn(),
   getDisplayBounds: vi.fn(),
+  inputAccessStatus: vi.fn().mockResolvedValue({
+    state: 'available',
+    canRequest: false,
+    clicks: true,
+    shortcuts: true,
+    recordsText: false,
+  }),
+  requestInputAccess: vi.fn().mockResolvedValue({
+    state: 'available',
+    canRequest: false,
+    clicks: true,
+    shortcuts: true,
+    recordsText: false,
+  }),
   selectScreenRegion: vi.fn(),
   startRecording: vi.fn(),
   stop: vi.fn(),
@@ -25,9 +40,10 @@ export const captureMock = {
   onCameraOverlayHover: vi.fn().mockReturnValue(() => undefined),
   onCameraShadow: vi.fn().mockReturnValue(() => undefined),
   getPreferences: vi.fn().mockResolvedValue({
-    schemaVersion: 2,
+    schemaVersion: 3,
     theme: 'system',
     recordingBar: { visibility: 'always' },
+    recordingInteractions: { enabled: false, noticeDismissed: false },
     alwaysOnTop: true,
     devices: {},
     shortcuts: {},
@@ -35,9 +51,10 @@ export const captureMock = {
     extras: {},
   }),
   updatePreferences: vi.fn().mockImplementation(async (patch) => ({
-    schemaVersion: 2,
+    schemaVersion: 3,
     theme: patch.theme || 'system',
     recordingBar: { visibility: 'always' },
+    recordingInteractions: { enabled: false, noticeDismissed: false },
     alwaysOnTop: patch.alwaysOnTop !== undefined ? patch.alwaysOnTop : true,
     devices: {},
     shortcuts: {},

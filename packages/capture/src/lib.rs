@@ -4,10 +4,11 @@ pub mod catalog;
 pub mod clock;
 pub mod cursor;
 pub mod error;
+pub mod input;
 pub mod model;
 pub mod protocol;
 pub mod screen;
 pub mod session;
 pub mod storage;
 
-pub use error::CaptureError;
+pub use error::{CaptureError, NativeCaptureErrorCode};

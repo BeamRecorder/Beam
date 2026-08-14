@@ -5,9 +5,11 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
   let tray = null;
   let labels = {
     openHud: 'Open HUD',
+    stopRecording: 'Stop recording',
     quit: 'Quit Beam',
     tooltip: 'Beam',
   };
+  let recording = false;
 
   const showHud = () => {
     if (onShowHud) return onShowHud();
@@ -28,6 +30,17 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
         label: labels.openHud,
         click: () => showHud(),
       },
+      ...(recording
+        ? [
+            {
+              label: labels.stopRecording,
+              click: () => {
+                const win = getWindow();
+                if (win && !win.isDestroyed()) win.webContents.send('tray:stop-recording');
+              },
+            },
+          ]
+        : []),
       { type: 'separator' },
       {
         label: labels.quit,
@@ -40,8 +53,11 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
 
   const updateMenu = (newLabels = {}) => {
     if (typeof newLabels.openHud === 'string' && newLabels.openHud) labels.openHud = newLabels.openHud;
+    if (typeof newLabels.stopRecording === 'string' && newLabels.stopRecording)
+      labels.stopRecording = newLabels.stopRecording;
     if (typeof newLabels.quit === 'string' && newLabels.quit) labels.quit = newLabels.quit;
     if (typeof newLabels.tooltip === 'string' && newLabels.tooltip) labels.tooltip = newLabels.tooltip;
+    if (typeof newLabels.recording === 'boolean') recording = newLabels.recording;
 
     if (tray && !tray.isDestroyed()) {
       tray.setToolTip(labels.tooltip);

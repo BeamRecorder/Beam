@@ -23,12 +23,33 @@ pub fn recover_session(layout: &SessionLayout) -> Result<RecoveryReport, crate::
         &std::fs::read(&path).map_err(|e| crate::CaptureError::storage(&path, e))?,
     )?;
     manifest.completed = layout.manifest().exists();
+    if !manifest.completed {
+        for track in &mut manifest.tracks {
+            let missing_or_incomplete = track
+                .segments
+                .iter()
+                .any(|segment| !segment.complete || !layout.root().join(&segment.path).is_file());
+            if missing_or_incomplete
+                && matches!(
+                    track.status,
+                    crate::model::TrackStatus::Preparing
+                        | crate::model::TrackStatus::Recording
+                        | crate::model::TrackStatus::Paused
+                )
+            {
+                track.status = crate::model::TrackStatus::Interrupted;
+                track.termination_reason =
+                    Some("recording stopped before every declared segment was finalized".into());
+            }
+        }
+    }
     let cursor_directory = layout.track_dir(crate::model::TrackKind::Cursor);
     let jsonl_paths = [
         layout.health(),
         layout.timing(),
         cursor_directory.join("cursor.json"),
         cursor_directory.join("cursor.partial.jsonl"),
+        cursor_directory.join("input.partial.jsonl"),
     ];
     let ignored = jsonl_paths.iter().try_fold(0_usize, |total, path| {
         repair_invalid_trailing_lines(path).map(|ignored| total.saturating_add(ignored))

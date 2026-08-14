@@ -26,6 +26,7 @@ const props = withDefaults(
     loading?: boolean;
     emptyLabel?: string;
     variant?: 'default' | 'source';
+    size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large';
   }>(),
   {
     placeholder: 'Select an option',
@@ -35,6 +36,7 @@ const props = withDefaults(
     loading: false,
     emptyLabel: '',
     variant: 'default',
+    size: 'lg',
   },
 );
 
@@ -114,11 +116,26 @@ const { list, containerProps, wrapperProps } = useVirtualList(normalizedOptions,
   itemHeight: () => itemHeight.value,
 });
 
+const normalizedSize = computed(() => {
+  if (props.size === 'small') return 'sm';
+  if (props.size === 'medium') return 'md';
+  if (props.size === 'large') return 'lg';
+  return props.size ?? 'lg';
+});
+
 const labelStyle = computed(() => {
   const text = selectedOption.value ? selectedOption.value.label : props.placeholder;
   const len = text.length;
-  if (len > 28) return { fontSize: '0.75rem' };
-  if (len > 20) return { fontSize: '0.85rem' };
+  if (normalizedSize.value === 'sm') {
+    if (len > 28) return { fontSize: '0.7rem' };
+    if (len > 20) return { fontSize: '0.75rem' };
+  } else if (normalizedSize.value === 'md') {
+    if (len > 28) return { fontSize: '0.75rem' };
+    if (len > 20) return { fontSize: '0.82rem' };
+  } else {
+    if (len > 28) return { fontSize: '0.75rem' };
+    if (len > 20) return { fontSize: '0.85rem' };
+  }
   return {};
 });
 
@@ -178,7 +195,10 @@ const stopMarquee = (event: PointerEvent) => {
       <button
         type="button"
         class="select-trigger"
-        :class="{ 'is-open': isOpen, 'is-disabled': disabled, 'is-source': variant === 'source' }"
+        :class="[
+          `select-${normalizedSize}`,
+          { 'is-open': isOpen, 'is-disabled': disabled, 'is-source': variant === 'source' },
+        ]"
         :disabled="disabled"
       >
         <div class="trigger-content-wrapper">
@@ -273,17 +293,37 @@ const stopMarquee = (event: PointerEvent) => {
   justify-content: space-between;
   width: 100%;
   min-width: 80px;
-  height: 2.75rem;
-  padding: 0.4rem 0.8rem;
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
   font-family: var(--font-sans);
-  font-size: 1rem;
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+}
+
+/* Sizes */
+.select-trigger.select-sm {
+  height: 2.125rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+.select-trigger.select-md {
+  height: 2.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.select-trigger.select-lg {
+  height: 2.75rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 1rem;
+}
+
+.select-trigger.is-source {
+  height: 2.75rem;
 }
 
 .select-trigger:hover:not(.is-disabled) {
@@ -304,15 +344,16 @@ const stopMarquee = (event: PointerEvent) => {
 .trigger-content-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow: hidden;
   flex: 1;
+  min-width: 0;
 }
 
 .selected-thumbnail-wrapper {
   position: relative;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 4px;
   overflow: hidden;
   background: #000;
@@ -343,6 +384,7 @@ const stopMarquee = (event: PointerEvent) => {
 
 .select-trigger.is-source .selected-thumbnail-wrapper {
   width: 38px;
+  height: 24px;
   border-radius: var(--radius-sm);
   background: var(--color-bg-surface-hover);
 }
@@ -353,8 +395,8 @@ const stopMarquee = (event: PointerEvent) => {
 }
 
 .selected-color-badge {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 1px solid var(--color-border-strong);
   flex-shrink: 0;
@@ -371,11 +413,24 @@ const stopMarquee = (event: PointerEvent) => {
 }
 
 .select-chevron {
-  width: 1.1rem;
-  height: 1.1rem;
   color: var(--text-secondary);
   transition: transform 0.2s ease;
   flex-shrink: 0;
+}
+
+.select-trigger.select-sm .select-chevron {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.select-trigger.select-md .select-chevron {
+  width: 1rem;
+  height: 1rem;
+}
+
+.select-trigger.select-lg .select-chevron {
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .select-chevron.rotate {

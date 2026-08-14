@@ -3,30 +3,25 @@
   "private": true,
   "version": "0.1.2",
   "description": "Beam - Screen recorder to create product demos.",
-  "author": "ExtraBinoss",
+  "author": {
+    "name": "ExtraBinoss",
+    "email": "ExtraBinoss@users.noreply.github.com"
+  },
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
     "test": "node --test test/*.test.cjs",
     "test:coverage": "vitest run --coverage",
-    "rust-test": "powershell.exe -NoProfile -Command \"cargo test --workspace --all-features\"",
+    "rust-test": "cargo test -p capture --all-features",
     "rust-test:coverage": "powershell.exe -NoProfile -Command \"cargo llvm-cov --workspace --all-features --html --output-dir coverage/rust; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --text --show-missing-lines; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; cargo llvm-cov report --lcov --output-path coverage/rust/lcov.info\"",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit --pretty false",
     "typecheck:vue": "vue-tsc -b --pretty false",
     "format": "prettier --write \"src/**/*.{vue,ts}\" \"*.cjs\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "format:check": "prettier --check \"src/**/*.{vue,ts}\" \"*.cjs\" \"electron/**/*.cjs\" \"scripts/**/*.cjs\" \"test/**/*.cjs\"",
     "dev": "vite",
-    "dev:all": "node start-dev.cjs",
-    "dev:all:devtools": "node start-dev.cjs --devtools",
-    "capture:build-dev": "cargo build -p capture --bin capture-engine",
-    "capture:build-release": "cargo build -p capture --bin capture-engine --release",
-    "build:dev": "npm run capture:build-dev && vite build --mode development",
-    "build:release": "npm run capture:build-release && vite build",
-    "build": "npm run build:release",
-    "preview": "vite preview",
-    "electron:dev": "npm run capture:build-dev && electron .",
-    "electron:dev-norust": "node scripts/electron-dev-norust.cjs",
-    "electron:build": "npm run build:release && electron-builder --publish never"
+    "build": "node scripts/native/artifacts.cjs build && vite build",
+    "electron:dev": "node scripts/dev/electron.cjs",
+    "electron:build": "npm run build && electron-builder --publish never"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
@@ -50,6 +45,7 @@
     "@vue/tsconfig": "^0.9.1",
     "electron": "^43.4.0",
     "electron-builder": "^26.15.3",
+    "js-yaml": "^4.3.1",
     "jsdom": "^26.1.0",
     "prettier": "^3.9.6",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
@@ -63,16 +59,6 @@
       "dist/**/*",
       "electron/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "target/release",
-        "to": "capture-engine",
-        "filter": [
-          "capture-engine",
-          "capture-engine.exe"
-        ]
-      }
-    ],
     "directories": {
       "output": "dist_electron"
     },
@@ -85,16 +71,68 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/brand/BeamIcon.ico"
+      "icon": "public/brand/BeamIcon.ico",
+      "extraResources": [
+        {
+          "from": "build/native/${os}/${arch}",
+          "to": "capture-engine",
+          "filter": [
+            "capture-engine-${version}.exe"
+          ]
+        }
+      ]
     },
     "nsis": {
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "buildUniversalInstaller": true
     },
     "mac": {
       "target": [
         "dmg",
         "zip"
+      ],
+      "extraResources": [
+        {
+          "from": "build/native/${os}/${arch}",
+          "to": "capture-engine",
+          "filter": [
+            "capture-engine-${version}"
+          ]
+        }
       ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "AudioVideo",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "extraResources": [
+        {
+          "from": "build/native/${os}/${arch}",
+          "to": "capture-engine",
+          "filter": [
+            "capture-engine-${version}"
+          ]
+        },
+        {
+          "from": "build/native/${os}/${arch}",
+          "to": "input-helper",
+          "filter": [
+            "beam-input-helper-${version}"
+          ]
+        }
+      ]
+    },
+    "deb": {
+      "afterInstall": "build/linux/after-install.sh",
+      "afterRemove": "build/linux/deb-after-remove.sh"
+    },
+    "rpm": {
+      "afterInstall": "build/linux/after-install.sh",
+      "afterRemove": "build/linux/rpm-after-remove.sh"
     }
   }
 }

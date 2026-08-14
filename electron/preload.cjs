@@ -5,9 +5,12 @@ const invoke = (command, payload) => ipcRenderer.invoke('capture:request', comma
 contextBridge.exposeInMainWorld(
   'capture',
   Object.freeze({
+    platform: process.platform,
     discover: () => invoke('discover'),
     capabilities: () => invoke('capabilities'),
     permissions: () => invoke('permissions'),
+    inputAccessStatus: () => ipcRenderer.invoke('input-access:status'),
+    requestInputAccess: () => ipcRenderer.invoke('input-access:request'),
     formats: (sourceId) => invoke('formats', { source: sourceId }),
     prepare: (config) => invoke('prepare', { config }),
     prepareRecording: (options = {}) => invoke('prepare-default-recording', { options }),
@@ -38,6 +41,11 @@ contextBridge.exposeInMainWorld(
     minimize: () => ipcRenderer.send('window:minimize'),
     toggleDevTools: () => ipcRenderer.send('window:toggle-devtools'),
     updateTrayMenu: (labels) => ipcRenderer.send('tray:update-menu', labels),
+    onTrayStopRecording: (listener) => {
+      const callback = () => listener();
+      ipcRenderer.on('tray:stop-recording', callback);
+      return () => ipcRenderer.removeListener('tray:stop-recording', callback);
+    },
     setWindowMode: (mode) => ipcRenderer.send('window:set-mode', mode),
     showHud: () => ipcRenderer.send('window:show-hud'),
     openEditor: (projectId) => ipcRenderer.invoke('editor:open', projectId),
@@ -66,14 +74,6 @@ contextBridge.exposeInMainWorld(
     setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),
     setWindowVisible: (visible) => ipcRenderer.send('window:set-visible', Boolean(visible)),
     setInteractive: (value) => ipcRenderer.send('window:setInteractive', value),
-    beginRecorderDrag: () => ipcRenderer.sendSync('window:recorder-drag-start'),
-    getRecorderTooltipSide: () => ipcRenderer.invoke('window:get-recorder-tooltip-side'),
-    setRecorderTooltip: (visible) => ipcRenderer.invoke('window:set-recorder-tooltip', Boolean(visible)),
-    onRecorderTooltipSide: (listener) => {
-      const callback = (_event, side) => listener(side);
-      ipcRenderer.on('window:recorder-tooltip-side', callback);
-      return () => ipcRenderer.removeListener('window:recorder-tooltip-side', callback);
-    },
     getSources: (types) => ipcRenderer.invoke('window:getSources', types),
     getDisplayBounds: (displayId) => ipcRenderer.invoke('screen:get-display-bounds', displayId),
     selectScreenRegion: (options) => ipcRenderer.invoke('screen-region:select', options),
@@ -124,7 +124,8 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.invoke('teleprompter:save-session', { projectId, sessionId, document }),
     getSessionTeleprompter: (projectId, sessionId) =>
       ipcRenderer.invoke('teleprompter:get-session', { projectId, sessionId }),
-    setCountdown: (seconds) => ipcRenderer.send('countdown:set', seconds),
+    setCountdown: (seconds) => ipcRenderer.invoke('countdown:set', seconds),
+    prepareRecordingSurface: () => ipcRenderer.invoke('recording-surface:prepare'),
     onCountdown: (listener) => {
       const callback = (_event, seconds) => listener(seconds);
       ipcRenderer.on('countdown:state', callback);

@@ -3,7 +3,7 @@
   <h1>Beam</h1>
   <p>A Screen Recorder for clear, polished product demo, similar to Recordly or ScreenStudio.</p>
   <p>
-    <a href="https://github.com/ExtraBinoss/Beam/releases/latest">Download Beam for Windows or macOS</a>
+    <a href="https://github.com/ExtraBinoss/Beam/releases/latest">Download Beam for Windows, macOS, or Linux</a>
     ·
     <a href="https://discord.gg/6Q6v2xUCB"><img src="./public/discord_svg.svg" alt="Discord" width="18" height="20" valign="middle" /> Join Beam on Discord</a>
   </p>
@@ -35,7 +35,24 @@ You want more ? Open an issue or discuss it with us on our Discord !
 
 ## Availability
 
-Beam is currently available for Windows and macOS. (Linux support is not made yet)
+Beam is available for Windows, macOS, and Linux. Linux releases are distributed as AppImage, DEB, and RPM packages.
+
+The interface is available in 14 languages:
+
+- English
+- Français
+- Español
+- Deutsch
+- Русский
+- Български
+- 简体中文
+- 한국어
+- Português (Brasil)
+- 日本語
+- Italiano
+- Polski
+- 繁體中文
+- हिन्दी
 
 > [!NOTE]
 > **🛠️ macOS Notice ("Beam is damaged and cannot be opened")**
@@ -58,8 +75,9 @@ If you want to run Beam locally or contribute to the project, start with the gui
 
 - [Windows development](./docs/dev/windows.md)
 - [macOS development](./docs/dev/mac.md)
+- [Linux development](./docs/dev/linux.md)
 
-The repository's engineering guidelines are linked from both guides.
+The repository's engineering guidelines are linked from each guide.
 
 ## Join the Beam community
 

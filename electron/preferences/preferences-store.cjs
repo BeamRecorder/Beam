@@ -1,10 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const defaults = () => ({
-  schemaVersion: 2,
+const defaults = (platform = process.platform) => ({
+  schemaVersion: 3,
   theme: 'light',
-  recordingBar: { visibility: 'always' },
+  recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
+  recordingInteractions: { enabled: false, noticeDismissed: false },
   alwaysOnTop: true,
   devices: {},
   shortcuts: {
@@ -64,8 +65,8 @@ const presets = (value) => {
   const uniqueGradients = [...new Map(gradients.map((item) => [JSON.stringify(item), item])).values()];
   return { colors, gradients: uniqueGradients };
 };
-const normalize = (value) => {
-  const base = defaults();
+const normalize = (value, platform = process.platform) => {
+  const base = defaults(platform);
   const next = value && typeof value === 'object' ? value : {};
   const providedShortcuts =
     next.shortcuts && typeof next.shortcuts === 'object'
@@ -87,9 +88,23 @@ const normalize = (value) => {
     }
   }
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     theme: themes.has(next.theme) ? next.theme : base.theme,
-    recordingBar: { visibility: next.recordingBar?.visibility === 'auto-fade' ? 'auto-fade' : 'always' },
+    recordingBar: {
+      visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)
+        ? next.recordingBar.visibility
+        : base.recordingBar.visibility,
+    },
+    recordingInteractions: {
+      enabled:
+        typeof next.recordingInteractions?.enabled === 'boolean'
+          ? next.recordingInteractions.enabled
+          : base.recordingInteractions.enabled,
+      noticeDismissed:
+        typeof next.recordingInteractions?.noticeDismissed === 'boolean'
+          ? next.recordingInteractions.noticeDismissed
+          : base.recordingInteractions.noticeDismissed,
+    },
     alwaysOnTop: typeof next.alwaysOnTop === 'boolean' ? next.alwaysOnTop : base.alwaysOnTop,
     devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {},
     shortcuts,
@@ -97,17 +112,17 @@ const normalize = (value) => {
     extras: next.extras && typeof next.extras === 'object' && !Array.isArray(next.extras) ? next.extras : {},
   };
 };
-function createPreferencesStore(file) {
+function createPreferencesStore(file, { platform = process.platform } = {}) {
   const targetFile = path.extname(file) ? file : path.join(file, 'preferencesSettings.json');
   const read = () => {
     try {
-      return normalize(JSON.parse(fs.readFileSync(targetFile, 'utf8')));
+      return normalize(JSON.parse(fs.readFileSync(targetFile, 'utf8')), platform);
     } catch {
-      return defaults();
+      return defaults(platform);
     }
   };
   const write = (value) => {
-    const next = normalize(value);
+    const next = normalize(value, platform);
     fs.mkdirSync(path.dirname(targetFile), { recursive: true });
     const temp = `${targetFile}.tmp`;
     fs.writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`);
@@ -120,6 +135,10 @@ function createPreferencesStore(file) {
       ...current,
       ...(value || {}),
       recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) },
+      recordingInteractions: {
+        ...current.recordingInteractions,
+        ...(value?.recordingInteractions || {}),
+      },
       devices: { ...current.devices, ...(value?.devices || {}) },
       shortcuts: { ...current.shortcuts, ...(value?.shortcuts || {}) },
       backgroundPresets: { ...current.backgroundPresets, ...(value?.backgroundPresets || {}) },

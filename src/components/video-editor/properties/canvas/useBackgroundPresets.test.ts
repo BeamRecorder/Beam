@@ -11,9 +11,10 @@ const { capture } = vi.hoisted(() => ({
 vi.mock('../../../../api/capture', () => ({ capture }));
 
 const preferences = (overrides: Record<string, unknown> = {}): PreferenceSettings => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   theme: 'light',
   recordingBar: { visibility: 'always' },
+  recordingInteractions: { enabled: false, noticeDismissed: false },
   alwaysOnTop: true,
   devices: {},
   shortcuts: {},

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const capture = vi.hoisted(() => ({
   getCameraOverlayState: vi.fn().mockResolvedValue(null),
-  setCountdown: vi.fn(),
+  setCountdown: vi.fn().mockResolvedValue(undefined),
+  prepareRecordingSurface: vi.fn().mockResolvedValue(undefined),
   hideScreenRegionOverlay: vi.fn(),
   prepareRecording: vi.fn().mockResolvedValue({ state: 'armed' }),
   startPreparedRecording: vi.fn(),
@@ -55,7 +56,9 @@ const deferred = <T>() => {
 describe('useRecordingController cancellation', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    Object.values(capture).forEach((mock) => mock.mockClear());
+    Object.values(capture).forEach((mock) => {
+      if (vi.isMockFunction(mock)) mock.mockClear();
+    });
     capture.getCameraOverlayState.mockResolvedValue(null);
     capture.stop.mockResolvedValue({ state: 'completed' });
   });

@@ -7,7 +7,11 @@ import RecorderBar from './components/hud/recorder/RecorderBar.vue';
 import CountdownOverlay from './components/hud/recorder/CountdownOverlay.vue';
 import ScreenRegionOverlayApp from './components/hud/region/ScreenRegionOverlayApp.vue';
 import { useRecordingController } from './components/hud/recorder/useRecordingController';
-import type { RecordingConfiguration, RecordingSessionResult } from './components/hud/recorder/recording-types';
+import type {
+  RecordingBarVisibility,
+  RecordingConfiguration,
+  RecordingSessionResult,
+} from './components/hud/recorder/recording-types';
 
 import { capture } from './api/capture';
 import { useLocaleStore } from './stores/locale';
@@ -20,6 +24,8 @@ const INTERACTIVE_SELECTORS =
 let lastInteractive: boolean | null = null;
 let removeEditorRecordingListener: (() => void) | null = null;
 let removeEditorLoadingListener: (() => void) | null = null;
+let removeTrayStopListener: (() => void) | null = null;
+let removeRecordingShortcutListener: (() => void) | null = null;
 
 const handleMouseMove = (e: MouseEvent) => {
   if (currentView.value !== 'hud' && recording.phase.value === 'idle') return;
@@ -41,12 +47,15 @@ const handleMouseLeave = () => {
 
 const localeStore = useLocaleStore();
 const { t: tHud } = useTranslate('HUD');
+const { t: tRecorderBar } = useTranslate('RecorderBar');
 
 const syncTrayMenu = () => {
   capture.updateTrayMenu?.({
     openHud: tHud('openHud'),
+    stopRecording: tRecorderBar('stopRecording'),
     quit: tHud('quit'),
     tooltip: 'Beam',
+    recording: ['countdown', 'recording', 'paused'].includes(recording.phase.value),
   });
 };
 
@@ -75,6 +84,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('mouseleave', handleMouseLeave);
   removeEditorRecordingListener?.();
   removeEditorLoadingListener?.();
+  removeTrayStopListener?.();
+  removeRecordingShortcutListener?.();
 });
 
 const currentView = ref<'hud' | 'recorder'>('hud');
@@ -91,10 +102,12 @@ const isPreparingEditor = ref(false);
 const editorLoadError = ref('');
 const editorLoadingProgress = ref<EditorLoadingProgress>({ stage: 'openingWindow', value: 10 });
 
-const recordingBarVisibility = ref<'always' | 'auto-fade'>('always');
+const recordingBarVisibility = ref<RecordingBarVisibility>('always');
 const recording = useRecordingController((session) => {
   void handleStopRecording(session);
 });
+
+watch(recording.phase, () => syncTrayMenu(), { immediate: true });
 
 watch(currentView, (view) => {
   if (view !== 'hud') return;
@@ -125,6 +138,14 @@ onMounted(() => {
   });
   removeEditorLoadingListener = capture.onEditorLoadingProgress((progress) => {
     if (isPreparingEditor.value) editorLoadingProgress.value = progress;
+  });
+  removeTrayStopListener = capture.onTrayStopRecording?.(() => {
+    void cancelOrStopRecording();
+  }) ?? null;
+  removeRecordingShortcutListener = capture.onPreferenceShortcut((actionId) => {
+    if (actionId !== 'hud.startStopRecording') return;
+    if (!['countdown', 'recording', 'paused'].includes(recording.phase.value)) return;
+    void cancelOrStopRecording();
   });
 });
 
@@ -273,6 +294,7 @@ const dismissEditorLoadError = () => {
         :microphone-enabled="recording.microphoneEnabled.value"
         :system-audio-enabled="recording.systemAudioEnabled.value"
         :visibility="recordingBarVisibility"
+        :hover-only-active="recording.recorderHoverOnlyActive.value"
         @stop="cancelOrStopRecording"
         @cancel="cancelRecording"
         @pause="recording.togglePause"

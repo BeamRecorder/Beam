@@ -108,6 +108,7 @@ export function cursorStateAt(
       beforePreviousMove = previousMove;
       previousMove = event;
       visible = event.visible;
+      cursorId = event.cursorId ?? cursorId;
     } else if (isShape(event)) {
       cursorId = event.cursorId ?? event.shapeId ?? null;
       cursorKind = event.cursorKind ?? null;

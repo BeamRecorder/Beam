@@ -21,6 +21,7 @@ const { createProjectStore } = require('./projects/project-store.cjs');
 const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
+const { shouldAutoOpenDevTools } = require('./window/devtools-policy.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
@@ -40,6 +41,7 @@ const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs');
 const { createTrayManager } = require('./tray/tray-manager.cjs');
+const { InputAccess, registerInputAccessIpc } = require('./input/input-access.cjs');
 
 const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB';
 const GITHUB_REPOSITORY_URL = 'https://github.com/ExtraBinoss/Beam';
@@ -60,7 +62,15 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.join(__dirname, '..');
-const captureEngine = new CaptureEngine(app, applicationRoot);
+let captureEngine;
+const inputAccess = new InputAccess({
+  app,
+  applicationRoot,
+  nativeRequest: (command) => captureEngine.request(command),
+});
+captureEngine = new CaptureEngine(app, applicationRoot, {
+  inputHelperPath: () => inputAccess.helperForCapture(),
+});
 const cameraStorage = createCameraStorage({});
 const microphoneStorage = createMicrophoneStorage({});
 const systemAudioStorage = createSystemAudioStorage({});
@@ -148,7 +158,7 @@ function createWindow(preferencesStore) {
     height: 512,
     frame: false,
     transparent: true,
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     icon: getAppIconPath(),
     resizable: true,
     maximizable: true,
@@ -176,7 +186,7 @@ function createWindow(preferencesStore) {
   win.webContents.on('render-process-gone', (_event, details) =>
     logStartup(`Renderer process exited (${details.reason}).`),
   );
-  if (!app.isPackaged) {
+  if (shouldAutoOpenDevTools({ isPackaged: app.isPackaged })) {
     win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }));
   }
   if (app.isPackaged) {
@@ -194,8 +204,9 @@ app.whenReady().then(() => {
   configureMediaPermission();
   logStartup('Media permission policy registered.');
   configureDesktopLoopback();
+  registerInputAccessIpc(ipcMain, inputAccess);
   const userPaths = createUserPaths(app.getPath('videos'));
-  const preferencesStore = createPreferencesStore(userPaths.preferences);
+  const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
   const teleprompterWindow = createTeleprompterWindow({
     applicationRoot,
     isPackaged: app.isPackaged,
@@ -260,9 +271,16 @@ app.whenReady().then(() => {
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
   ipcMain.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
   ipcMain.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
-  ipcMain.on('countdown:set', (_event, seconds) =>
-    countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null),
-  );
+  ipcMain.handle('countdown:set', (_event, seconds) => {
+    countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null);
+  });
+  ipcMain.handle('recording-surface:prepare', async () => {
+    countdownOverlay.show(null);
+    screenRegionOverlay.hide();
+    // Wait for the compositor to commit both hidden overlay surfaces before
+    // the native start gate admits the first recorded frame.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
   ipcMain.handle('screen-region:select', (_event, options) => screenRegionOverlay.select(options));
   ipcMain.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
   ipcMain.on('screen-region:hide', () => screenRegionOverlay.hide());

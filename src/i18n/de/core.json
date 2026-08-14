@@ -252,7 +252,15 @@
     "closeTeleprompter": "Teleprompter ausblenden",
     "openHud": "HUD öffnen",
     "quit": "Beam beenden",
-    "preparingEditor": "Editor wird geöffnet"
+    "preparingEditor": "Editor wird geöffnet",
+    "interactionAccessNoticeTitle": "Aufzeichnung von Tastenkürzeln erlauben",
+    "interactionAccessNoticeDescription": "Beam benötigt zusätzlichen Zugriff, um Tastenkürzel aufzuzeichnen. Unter Linux aktiviert dieser Zugriff auch Metadaten für Mausklicks. Eingegebener Text wird nie gespeichert.",
+    "interactionAccessDeniedDescription": "Der Zugriff wurde nicht gewährt. Du kannst es erneut versuchen oder später in den Einstellungen aktivieren.",
+    "authorizeInteractions": "Autorisieren",
+    "authorizingInteractions": "Autorisierung",
+    "dismissInteractionNotice": "Ignorieren",
+    "interactionAccessSettingsHint": "Tastenkürzel aufzeichnen findest du in den Einstellungen.",
+    "dismissInteractionReminder": "Erinnerung schließen"
   },
   "EditorPreparingHud": {
     "title": "Editor wird vorbereitet",
@@ -265,6 +273,9 @@
     "progressLabel": "Ladefortschritt des Editors"
   },
   "HudPreferences": {
+    "categoryRecording": "Aufnahme",
+    "categoryGeneral": "Allgemein",
+    "categoryAbout": "Über",
     "preferences": "Einstellungen",
     "back": "Zurück",
     "keyboardShortcuts": "Tastaturkürzel",
@@ -285,10 +296,29 @@
     "option10s": "10 s",
     "alwaysVisible": "Immer sichtbar",
     "autoFade": "Automatisch ausblenden",
+    "hiddenUntilHovered": "Bis zum Darüberfahren ausgeblendet",
     "language": "Sprache",
     "chooseLanguage": "Anzeigesprache auswählen",
-    "alwaysOnTop": "Always on top",
-    "alwaysOnTopDesc": "Keep the window hovering above other windows"
+    "interactionAccess": "Interaktionszugriff",
+    "interactionAccessReadyDescription": "Erfasst Klicks und Tastenkürzel. Eingegebener Text wird nie gespeichert.",
+    "interactionAccessUnavailableDescription": "Die Interaktionserfassung ist auf diesem System nicht verfügbar.",
+    "interactionAccessDescription": "Erforderlich für Beschriftungen von Tastenkürzeln. Eingegebener Text wird nicht gespeichert.",
+    "interactionAccessDescriptionLinux": "Erforderlich für Beschriftungen von Tastenkürzeln und Metadaten für Mausklicks. Eingegebener Text wird nicht gespeichert.",
+    "accessReady": "Bereit",
+    "checkingAccess": "Prüfen",
+    "requestingAccess": "Autorisieren",
+    "allowAccess": "Erlauben",
+    "accessUnavailable": "Nicht verfügbar",
+    "recordInteractions": "Tastenkürzel aufzeichnen",
+    "recordInteractionsDescription": "Zeichnet sichere Tastenkürzel auf. Eingegebener Text wird nie gespeichert.",
+    "recordInteractionsDescriptionLinux": "Zeichnet sichere Tastenkürzel auf. Das Deaktivieren dieser Einstellung deaktiviert auch Metadaten für Mausklicks. Eingegebener Text wird nie gespeichert.",
+    "about": "Über Beam",
+    "aboutDesc": "Version und Anwendungsinformationen",
+    "view": "Anzeigen",
+    "version": "Version {version}",
+    "aboutDescriptionText": "Beam ist ein Bildschirmrekorder für klare und hochwertige Produktdemos. Nimm Videos auf, gestalte sie und exportiere sie an einem Ort.",
+    "alwaysOnTop": "Immer im Vordergrund",
+    "alwaysOnTopDesc": "Fenster über anderen Fenstern anzeigen"
   },
   "ProjectPicker": {
     "projects": "Projekte",

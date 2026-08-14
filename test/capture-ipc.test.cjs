@@ -89,3 +89,31 @@ test('resolves display bounds by native display id without relying on desktop pr
   assert.equal(await getDisplayBounds({}, null), null);
   assert.equal(previewCalls, 0);
 });
+
+test('does not enumerate Electron sources on the Linux Portal path', async () => {
+  const handlers = new Map();
+  let previewCalls = 0;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const desktopCapturer = {
+    getSources: async () => {
+      previewCalls += 1;
+      throw new Error('desktopCapturer must not run on Linux');
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer,
+    screen: {},
+    captureEngine: { request: async () => undefined },
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const getSources = handlers.get('window:getSources');
+  assert.equal(typeof getSources, 'function');
+  assert.deepEqual(await getSources({}, ['window']), []);
+  assert.equal(previewCalls, 0);
+});

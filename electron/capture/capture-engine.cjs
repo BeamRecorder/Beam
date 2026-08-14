@@ -3,26 +3,35 @@ const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const { prebuiltCaptureEnginePath } = require('./capture-engine-path.cjs');
+const {
+  captureEngineFilename,
+  packagedCaptureEnginePath,
+  prebuiltCaptureEnginePath,
+} = require('./capture-engine-path.cjs');
 
 const REQUEST_TIMEOUT_MS = 30_000;
+const INTERACTIVE_REQUEST_TIMEOUT_MS = 120_000;
 
 class CaptureEngine {
-  constructor(app, applicationRoot) {
+  constructor(app, applicationRoot, options = {}) {
     this.app = app;
     this.applicationRoot = applicationRoot;
     this.process = null;
     this.pending = new Map();
     this.stderr = [];
+    this.inputHelperPath = options.inputHelperPath || (() => null);
   }
 
   resolveExecutable() {
-    const filename = process.platform === 'win32' ? 'capture-engine.exe' : 'capture-engine';
-    const bundled = this.app.isPackaged && path.join(process.resourcesPath, 'capture-engine', filename);
-    const prebuilt = prebuiltCaptureEnginePath(this.applicationRoot);
+    const version = this.app.getVersion();
+    const filename = captureEngineFilename(version);
+    if (!filename) throw new Error(`Beam has no capture-engine build for ${process.platform}/${process.arch}`);
+    const buildFilename = process.platform === 'win32' ? 'capture-engine.exe' : 'capture-engine';
+    const bundled = this.app.isPackaged && packagedCaptureEnginePath(process.resourcesPath, version);
+    const prebuilt = prebuiltCaptureEnginePath(this.applicationRoot, version);
     const development = [
-      path.join(this.applicationRoot, 'target', 'debug', filename),
-      path.join(this.applicationRoot, 'target', 'release', filename),
+      path.join(this.applicationRoot, 'target', 'debug', buildFilename),
+      path.join(this.applicationRoot, 'target', 'release', buildFilename),
       prebuilt,
     ];
     const candidates = [process.env.DEMO_RECORDER_CAPTURE_ENGINE, ...(bundled ? [bundled] : development)].filter(
@@ -31,7 +40,7 @@ class CaptureEngine {
     const executable = candidates.find((candidate) => fs.existsSync(candidate));
     if (!executable)
       throw new Error(
-        `capture-engine introuvable. Exécutez "cargo build -p capture --bin capture-engine" ou ajoutez le binaire précompilé à packages/native-recorder. Chemins testés: ${candidates.join(', ')}`,
+        `capture-engine ${version} introuvable pour ${process.platform}/${process.arch}. Chemins testés: ${candidates.join(', ')}`,
       );
     return executable;
   }
@@ -42,6 +51,10 @@ class CaptureEngine {
       cwd: this.app.getPath('userData'),
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      env: {
+        ...process.env,
+        ...(this.inputHelperPath() ? { BEAM_INPUT_HELPER_PATH: this.inputHelperPath() } : {}),
+      },
     });
     this.process = child;
     this.stderr = [];
@@ -85,10 +98,14 @@ class CaptureEngine {
     this.ensureStarted();
     const id = randomUUID();
     return new Promise((resolve, reject) => {
+      const timeoutMs = ['prepare', 'start', 'request-input-access'].includes(command)
+        ? INTERACTIVE_REQUEST_TIMEOUT_MS
+        : REQUEST_TIMEOUT_MS;
       const timeout = setTimeout(() => {
         this.pending.delete(id);
+        if (['prepare', 'start'].includes(command) && this.process && !this.process.killed) this.process.kill();
         reject(new Error(`Délai dépassé pour la commande de capture "${command}"`));
-      }, REQUEST_TIMEOUT_MS);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timeout });
       this.process.stdin.write(`${JSON.stringify({ id, command, ...payload })}\n`, (error) => {
         if (!error) return;

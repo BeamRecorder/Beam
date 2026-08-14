@@ -2,3 +2,5 @@
 members = ["packages/capture"]
 resolver = "2"
 
+[profile.dev.package.capture]
+opt-level = 2

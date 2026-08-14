@@ -161,9 +161,6 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     lastDrawTime = time;
     const state = cursorStateAt(cursorData.events, time);
     const motionState = player.sample(time, state);
-    if (options.selectedCursor() === 'automatic' && state?.cursorKind === 'custom')
-      warning(ctx, 'System cursor not translated', logicalWidth);
-
     drawInCameraSpace(() => {
       const previewScale = previewScaleFor(videoWindow);
       for (const button of buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time)) {

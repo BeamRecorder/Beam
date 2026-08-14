@@ -24,6 +24,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   const cameraEnabled = ref(false);
   const microphoneEnabled = ref(false);
   const systemAudioEnabled = ref(false);
+  const recorderHoverOnlyActive = ref(false);
   const error = ref('');
   let configuration: RecordingConfiguration | null = null;
   let countdown: number | null = null;
@@ -114,6 +115,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       microphoneId: null,
       systemAudio: false,
       cursor: true,
+      recordInteractions: configuration.recordInteractions === true,
       targetFps: configuration.targetFps,
       region: configuration.region,
     });
@@ -128,7 +130,9 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   const beginNativeRecording = async (generation: number) => {
     if (!configuration || generation !== recordingGeneration) return;
     if (!prewarm || !(await prewarm) || generation !== recordingGeneration) return;
-    capture.setCountdown(null);
+    await capture.setCountdown(null);
+    recorderHoverOnlyActive.value = configuration.recordingBarVisibility === 'hover-only';
+    await capture.prepareRecordingSurface();
     const session = await capture.startPreparedRecording();
     // The native track creates the session timeline only once its start gate
     // is released. Sidecars must use that same epoch, otherwise native startup
@@ -179,17 +183,17 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       prewarm = prewarmNativeRecording(generation);
       if (!(await prewarm) || generation !== recordingGeneration) return;
       if (secondsRemaining.value === 0) return await launchNativeRecording(generation);
-      capture.setCountdown(secondsRemaining.value);
+      void capture.setCountdown(secondsRemaining.value);
       countdown = window.setInterval(() => {
         secondsRemaining.value -= 1;
         if (secondsRemaining.value > 0) {
-          capture.setCountdown(secondsRemaining.value);
+          void capture.setCountdown(secondsRemaining.value);
           return;
         }
         clearCountdown();
         // The countdown is a visual gate, not part of the recording. Hide it
         // at the exact zero boundary before waiting on IPC/native start.
-        capture.setCountdown(null);
+        void capture.setCountdown(null);
         const operation = launchNativeRecording(generation);
         void operation.catch((reason: unknown) => {
           error.value = reason instanceof Error ? reason.message : String(reason);
@@ -205,7 +209,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   const resetState = async (sidecarsAlreadyStopped = false) => {
     recordingGeneration += 1;
     clearCountdown();
-    capture.setCountdown(null);
+    await capture.setCountdown(null);
     capture.hideScreenRegionOverlay();
     clearTimer();
     if (!sidecarsAlreadyStopped)
@@ -219,8 +223,8 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     cameraEnabled.value = false;
     microphoneEnabled.value = false;
     systemAudioEnabled.value = false;
+    recorderHoverOnlyActive.value = false;
     elapsedTenths.value = 0;
-    phase.value = 'idle';
     const pending = pendingNativeStart;
     const armed = prewarm;
     if (pending) await pending.catch(() => undefined);
@@ -230,6 +234,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
       await capture.cancelPreparedRecording().catch(() => undefined);
     }
     prewarm = null;
+    phase.value = 'idle';
   };
 
   const cancel = async () => {
@@ -259,7 +264,9 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
   const stop = async () => {
     if (phase.value === 'countdown') return cancel();
     if (phase.value !== 'recording' && phase.value !== 'paused') return;
+    const wasRecording = phase.value === 'recording';
     phase.value = 'finalizing';
+    clearTimer();
     try {
       // Stop the native screen clock and request the sidecar recorders to stop
       // at the same moment. Track storage is completed only after all sidecars
@@ -283,6 +290,11 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     } catch (reason) {
       error.value = reason instanceof Error ? reason.message : String(reason);
       phase.value = 'recording';
+      if (wasRecording && timer === null) {
+        timer = window.setInterval(() => {
+          elapsedTenths.value += 1;
+        }, 100);
+      }
     }
   };
 
@@ -423,6 +435,7 @@ export function useRecordingController(onComplete: (session: RecordingSessionRes
     cameraEnabled,
     microphoneEnabled,
     systemAudioEnabled,
+    recorderHoverOnlyActive,
     error,
     start,
     stop,

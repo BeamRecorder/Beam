@@ -11,8 +11,11 @@ pub struct CaptureCapabilities {
     pub separate_cursor: bool,
     pub cursor_shapes: bool,
     pub cursor_clicks: bool,
+    pub input_shortcuts: bool,
     pub hardware_h264: bool,
     pub hardware_hevc: bool,
+    pub hardware_av1: bool,
+    pub hardware_vp9: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

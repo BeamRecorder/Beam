@@ -1,9 +1,7 @@
 use std::path::Path;
-#[cfg(any(windows, target_os = "macos"))]
 use std::path::PathBuf;
 use std::{fs::OpenOptions, io::Write};
 
-#[cfg(any(windows, target_os = "macos"))]
 use crate::storage::segment;
 use crate::{
     CaptureError,
@@ -87,6 +85,26 @@ fn new_track(kind: TrackKind, source_id: Option<SourceId>, format: TrackFormat) 
     }
 }
 
+pub(super) fn add_portal_screen_track(
+    tracks: &mut Vec<TrackMetadata>,
+    source_id: SourceId,
+    codec: String,
+    width: u32,
+    height: u32,
+    nominal_fps: u32,
+) {
+    tracks.push(new_track(
+        TrackKind::Screen,
+        Some(source_id),
+        TrackFormat::Video {
+            codec,
+            width,
+            height,
+            nominal_fps,
+        },
+    ));
+}
+
 pub(super) fn source<'a>(
     snapshot: &'a CatalogSnapshot,
     id: &SourceId,
@@ -112,7 +130,6 @@ pub(super) fn video_format(source: &SourceDescriptor, fallback_fps: u32) -> (u32
         .unwrap_or((0, 0, fallback_fps))
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn add_segment(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -133,7 +150,6 @@ pub(super) fn add_segment(
     Ok(())
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn track_mut(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -145,7 +161,6 @@ pub(super) fn track_for(tracks: &[TrackMetadata], kind: TrackKind) -> Option<&Tr
     tracks.iter().find(|track| track.kind == kind)
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn segment_path(
     layout: &crate::storage::SessionLayout,
     kind: TrackKind,
@@ -157,7 +172,6 @@ pub(super) fn segment_path(
         .join(format!("segment-{generation:04}.{extension}"))
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 fn track_directory(kind: TrackKind) -> &'static str {
     match kind {
         TrackKind::Screen => "screen",
@@ -168,7 +182,6 @@ fn track_directory(kind: TrackKind) -> &'static str {
     }
 }
 
-#[cfg(any(windows, target_os = "macos"))]
 pub(super) fn update_video_metrics(
     tracks: &mut [TrackMetadata],
     kind: TrackKind,
@@ -190,6 +203,7 @@ pub(super) fn selected_sources(
     SelectedSources {
         screen: match &request.screen {
             Some(ScreenSelection::Source { source_id }) => Some(source_id.clone()),
+            Some(ScreenSelection::Portal { kind, .. }) => portal_source_id(kind).ok(),
             _ => None,
         },
         system_audio: None,
@@ -205,9 +219,22 @@ pub(super) fn platform_backend() -> &'static str {
         "windows-graphics-capture"
     } else if cfg!(target_os = "macos") {
         "screen-capture-kit"
+    } else if cfg!(target_os = "linux") {
+        "xdg-portal-pipewire"
     } else {
-        "linux-native-unavailable"
+        "unsupported"
     }
+}
+
+pub(super) fn portal_source_id(
+    kind: &crate::model::PortalSourceKind,
+) -> Result<SourceId, CaptureError> {
+    let suffix = match kind {
+        crate::model::PortalSourceKind::Monitor => "monitor",
+        crate::model::PortalSourceKind::Window => "window",
+        crate::model::PortalSourceKind::MonitorOrWindow => "monitor-or-window",
+    };
+    SourceId::new(format!("portal:{suffix}"))
 }
 
 pub(super) fn invalid_transition(from: super::SessionState, to: &str) -> CaptureError {

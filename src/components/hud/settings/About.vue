@@ -22,14 +22,10 @@ onMounted(async () => {
 <template>
   <div class="about-container">
     <div class="about-content">
-      <img
-        :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')"
-        class="about-logo"
-        alt="Beam logo"
-      />
+      <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" class="about-logo" alt="Beam logo" />
       <h2 class="about-name">Beam</h2>
       <p class="about-version">{{ t('version', { version: currentVersion }) }}</p>
-      
+
       <p class="about-description">
         {{ t('aboutDescriptionText') }}
       </p>
@@ -45,7 +41,10 @@ onMounted(async () => {
   align-items: center;
   flex: 1;
   height: 100%;
-  padding: 24px 0;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  width: 100%;
+  overflow-y: auto;
 }
 
 .about-content {
@@ -62,8 +61,8 @@ onMounted(async () => {
   height: 96px;
   object-fit: contain;
   border-radius: 22px;
-  box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.08), 
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.08),
     0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
