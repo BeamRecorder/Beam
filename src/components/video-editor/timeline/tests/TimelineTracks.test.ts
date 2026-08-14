@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import TimelineTracks from '../TimelineTracks.vue';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
   useCompositionAudioWaveforms: () => ({
@@ -74,11 +75,14 @@ const visual = (overrides: Partial<VisualClip>): VisualClip => ({
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('screen'),
+  isMirrored: false,
+  isMirroredY: false,
   ...overrides,
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     asset('screen-asset', 'video'),
     asset('webcam-asset', 'video'),
@@ -106,8 +110,8 @@ const composition = (): ClipComposition => ({
       caption: {
         sentences: [],
         style: {
+          ...createDefaultCaptionStyle(32),
           color: '#ffffff',
-          fontSize: 32,
           shadowColor: '#000000',
           shadowBlur: 2,
           placement: 'bottom',
@@ -184,7 +188,13 @@ const mountTracks = async (overrides: Record<string, unknown> = {}) => {
       currentTime: 2,
       duration: 10,
       zoomLevel: 120,
-      exportProgress: { currentTimeMs: 2_500, totalTimeMs: 10_000 },
+      exportProgress: {
+        stage: 'encoding',
+        completed: 25,
+        total: 100,
+        currentTimeMs: 2_500,
+        totalTimeMs: 10_000,
+      },
       zoomElements: [zoom()],
       selectedZoomId: 'zoom-1',
       composition: composition(),

@@ -3,7 +3,7 @@ import { captionSources } from './caption-sources';
 import type { ClipComposition } from '~/media/shared/composition-types';
 
 const composition = (overrides: Partial<ClipComposition> = {}): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [],
   clips: [],
   ...overrides,

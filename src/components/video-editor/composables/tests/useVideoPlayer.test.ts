@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createBackgroundMedia } from '../backgroundCatalog';
 import { useVideoPlayer } from '../useVideoPlayer';
 import type { ClipComposition } from '~/media/shared';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const playback = vi.hoisted(() => {
   const instances: FakePlayback[] = [];
@@ -40,13 +41,27 @@ vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlayback 
 
 const backgrounds = createBackgroundMedia(['/built-in.png', '/clip.mp4']);
 const composition: ClipComposition = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [],
-  clips: [{
-    id: 'clip', kind: 'video', name: 'Clip', assetId: 'asset', timelineStartMs: 500, timelineDurationMs: 2_000,
-    sourceInMs: 0, sourceDurationMs: 2_000, playbackRate: 1, enabled: true, order: 0,
-    transform: { x: 0, y: 0, width: 1, height: 1 },
-  }],
+  clips: [
+    {
+      id: 'clip',
+      kind: 'video',
+      name: 'Clip',
+      assetId: 'asset',
+      timelineStartMs: 500,
+      timelineDurationMs: 2_000,
+      sourceInMs: 0,
+      sourceDurationMs: 2_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('video'),
+      isMirrored: false,
+      isMirroredY: false,
+    },
+  ],
 };
 
 describe('useVideoPlayer', () => {
@@ -55,9 +70,13 @@ describe('useVideoPlayer', () => {
     expect(player.selectedBackground.value).toEqual(backgrounds[0]);
     expect(player.selectedBackgroundMedia.value).toEqual(backgrounds[0]);
     expect(player.backgroundGroups.value.map((group) => group.kind)).toEqual(['image', 'video']);
-    expect([player.isPlaying.value, player.currentTime.value, player.duration.value, player.volume.value, player.playbackState.value]).toEqual([
-      false, 0, 0, 70, 'idle',
-    ]);
+    expect([
+      player.isPlaying.value,
+      player.currentTime.value,
+      player.duration.value,
+      player.volume.value,
+      player.playbackState.value,
+    ]).toEqual([false, 0, 0, 70, 'idle']);
     expect(player.frameFor('missing')).toBeNull();
   });
 

@@ -3,6 +3,7 @@ import type { AudioPlaybackScheduler } from '../audio-scheduler';
 import { MediaPlaybackEngine } from '../media-playback-engine';
 import type { PlaybackWorkerRequest, PlaybackWorkerResponse } from '../playback-types';
 import type { ClipComposition } from '../../shared';
+import { createDefaultClipAppearance } from '../../shared/composition-defaults';
 
 vi.mock('../playback.worker?worker', () => ({ default: class PlaybackWorker {} }));
 
@@ -69,11 +70,14 @@ const videoClip = (id: string, assetId = 'asset-1', overrides: Partial<Record<st
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('video'),
+  isMirrored: false,
+  isMirroredY: false,
   ...overrides,
 });
 
 const composition = (clips = [videoClip('clip-1')]): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [asset(), asset('unused')],
   clips,
 });
@@ -402,7 +406,7 @@ describe('MediaPlaybackEngine', () => {
     engine.on('error', (error) => errors.push(error));
 
     const invalid: ClipComposition = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       assets: [{ ...asset(), src: 'file:///recording.mp4' }, asset('valid-video')],
       clips: [videoClip('invalid-clip'), videoClip('valid-clip', 'valid-video')],
     };
@@ -425,7 +429,7 @@ describe('MediaPlaybackEngine', () => {
     engine.on('error', (error) => issues.push(error));
     const invalidAsset = { ...asset('missing-video'), src: '' };
     const value: ClipComposition = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       assets: [asset(), invalidAsset],
       clips: [videoClip('valid-clip'), videoClip('skipped-clip', 'missing-video')],
     };

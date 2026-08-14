@@ -13,7 +13,7 @@ const { extractWaveformPeaks } = vi.hoisted(() => ({
 vi.mock('~/media/playback', () => ({ extractWaveformPeaks }));
 
 const composition = (volume = 100, source = 'https://media.test/sound.mp4'): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     {
       id: 'audio',
@@ -142,7 +142,7 @@ describe('useCompositionAudioWaveforms', () => {
   });
 
   it('keeps empty compositions inert and ignores clips without a source', async () => {
-    mountComposable({ schemaVersion: 1, assets: [], clips: [] });
+    mountComposable({ schemaVersion: 2, assets: [], clips: [] });
     await flushPromises();
     expect(state.bars.value).toEqual({});
     expect(extractWaveformPeaks).not.toHaveBeenCalled();
