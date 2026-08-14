@@ -468,5 +468,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(not(target_os = "linux"))]
 fn main() {
-    eprintln!("beam-input-helper is only available on Linux");
+    use std::io::Write;
+
+    let _ = std::io::stderr().write_all(b"beam-input-helper is only available on Linux\n");
 }
