@@ -76,7 +76,21 @@ const audioAsset = (): MediaAsset => ({
   origin: 'project',
 });
 
-const composition = (options: { screen?: boolean; audio?: boolean; audioEnabled?: boolean } = {}): ClipComposition => {
+const importedVideoAsset = (): MediaAsset => ({
+  id: 'imported-video-asset',
+  kind: 'video',
+  name: 'Imported video',
+  fileName: 'imported.webm',
+  durationMs: 2_000,
+  width: 1_280,
+  height: 720,
+  src: 'project-media://asset/imported.webm',
+  origin: 'project',
+});
+
+const composition = (
+  options: { screen?: boolean; importedVideo?: boolean; audio?: boolean; audioEnabled?: boolean } = {},
+): ClipComposition => {
   const assets: MediaAsset[] = options.screen === false ? [] : [screenAsset()];
   const clips: ClipComposition['clips'] =
     options.screen === false
@@ -97,6 +111,23 @@ const composition = (options: { screen?: boolean; audio?: boolean; audioEnabled?
             transform: { x: 0, y: 0, width: 1, height: 1 },
           },
         ];
+  if (options.importedVideo) {
+    assets.push(importedVideoAsset());
+    clips.push({
+      id: 'imported-video',
+      kind: 'video',
+      name: 'Imported video',
+      assetId: 'imported-video-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 2_000,
+      sourceInMs: 0,
+      sourceDurationMs: 2_000,
+      playbackRate: 1,
+      enabled: true,
+      order: clips.length,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+    });
+  }
   if (options.audio) {
     assets.push(audioAsset());
     clips.push({
@@ -118,7 +149,9 @@ const composition = (options: { screen?: boolean; audio?: boolean; audioEnabled?
   return { schemaVersion: 1, assets, clips } as ClipComposition;
 };
 
-const request = (options: { screen?: boolean; audio?: boolean; audioEnabled?: boolean } = {}): ExportRequest => ({
+const request = (
+  options: { screen?: boolean; importedVideo?: boolean; audio?: boolean; audioEnabled?: boolean } = {},
+): ExportRequest => ({
   projectName: 'Demo',
   format: 'webm',
   preset: 'medium',
@@ -160,7 +193,12 @@ beforeEach(() => {
   videoCodec.mockReturnValue('vp9');
   audioCodec.mockReturnValue('opus');
   exportRuntime.createProvider.mockResolvedValue({
-    frameAt: vi.fn(async () => ({ bitmap: { width: 1_920, height: 1_080 }, width: 1_920, height: 1_080, close: vi.fn() })),
+    frameAt: vi.fn(async () => ({
+      bitmap: { width: 1_920, height: 1_080 },
+      width: 1_920,
+      height: 1_080,
+      close: vi.fn(),
+    })),
     dispose: vi.fn(),
   });
 });
@@ -218,10 +256,9 @@ describe('mediabunny exporter', () => {
     await expect(renderMixedAudio(request({ audio: true }))).rejects.toThrow('audio sidecar');
   });
 
-  it('rejects invalid sessions and unsupported codecs before opening native export', async () => {
+  it('rejects unsupported codecs before opening native export', async () => {
     const onProgress = vi.fn();
     const signal = new AbortController().signal;
-    await expect(exportWithMediabunny(request({ screen: false }), onProgress, signal)).rejects.toThrow('session video');
 
     videoCodec.mockReturnValueOnce(null);
     await expect(exportWithMediabunny(request(), onProgress, signal)).rejects.toThrow('not encodable');
@@ -229,6 +266,33 @@ describe('mediabunny exporter', () => {
     audioCodec.mockReturnValueOnce(null);
     await expect(exportWithMediabunny(request({ audio: true }), onProgress, signal)).rejects.toThrow(
       'audio is not encodable',
+    );
+  });
+
+  it('exports imported video while skipping an unavailable screen recording', async () => {
+    const value = request({ importedVideo: true });
+    value.snapshot.duration = 0.1;
+    value.snapshot.render.fps = 1;
+    value.snapshot.composition.assets[0].src = '';
+    setCapture({
+      beginExport: vi.fn().mockResolvedValue({ jobId: 'job-imported-video', canceled: false }),
+      writeExportChunk: vi.fn().mockResolvedValue(undefined),
+      finalizeExport: vi.fn().mockResolvedValue({ path: '/tmp/imported-video.webm' }),
+      abortExport: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+
+    await expect(exportWithMediabunny(value, vi.fn(), new AbortController().signal)).resolves.toMatchObject({
+      path: '/tmp/imported-video.webm',
+    });
+    expect(exportRuntime.createProvider).toHaveBeenCalledOnce();
+    expect(exportRuntime.createProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ assetId: 'imported-video-asset' }),
+      [0],
+    );
+    expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[1]).toBeNull();
+    expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[6]).toEqual(
+      new Map([['imported-video', expect.objectContaining({ width: 1_920, height: 1_080 })]]),
     );
   });
 

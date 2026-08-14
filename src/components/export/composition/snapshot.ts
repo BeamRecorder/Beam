@@ -1,14 +1,12 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog';
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import { isVisualClip, type ClipComposition, type VisualClip } from '~/media/shared/composition-types';
 import type { CursorRenderSettings, CompositionSnapshot } from '../export-types';
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas';
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas';
-import { tNamespace } from '../../../i18n';
 import { normalizeCursorMotionSettings } from '../../../api/types/cursor-settings';
 
-const $t = tNamespace('exporter');
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({ ...zoom, focus: { ...zoom.focus } }));
 const copyCursor = (cursor: ProjectEditorData['cursor'] | undefined): CompositionSnapshot['cursor'] => {
@@ -45,16 +43,19 @@ export function createCompositionSnapshot(input: {
   composition: ClipComposition;
   cursorSettings: CursorRenderSettings;
 }): CompositionSnapshot {
-  const screen = input.composition.clips.find((clip): clip is VisualClip => clip.kind === 'screen' && clip.enabled);
-  const asset = screen && input.composition.assets.find((entry) => entry.id === screen.assetId);
-  if (!screen || !asset?.src) throw new Error($t('sessionVideoUnavailable'));
+  const assets = new Map(input.composition.assets.map((asset) => [asset.id, asset]));
+  const visualClips = input.composition.clips.filter(
+    (clip): clip is VisualClip => isVisualClip(clip) && clip.enabled && Boolean(assets.get(clip.assetId)?.src),
+  );
+  const referenceClip = visualClips.find((clip) => clip.kind === 'screen') ?? visualClips[0];
+  const referenceAsset = referenceClip ? assets.get(referenceClip.assetId) : null;
   const canvas = normalizeOutputCanvas(input.canvas);
   return {
     duration: Math.max(0, input.duration),
     render: {
       fps: Math.max(1, input.fps),
-      sourceWidth: Math.max(1, asset.width ?? input.width),
-      sourceHeight: Math.max(1, asset.height ?? input.height),
+      sourceWidth: Math.max(1, referenceAsset?.width ?? input.width),
+      sourceHeight: Math.max(1, referenceAsset?.height ?? input.height),
     },
     canvas,
     background:

@@ -16,17 +16,6 @@ import { tNamespace } from '../../../i18n';
 
 const $t = tNamespace('exporter');
 
-const screenClipsFor = (request: ExportRequest) => {
-  const assets = new Map(request.snapshot.composition.assets.map((asset) => [asset.id, asset]));
-  const screens = request.snapshot.composition.clips.filter(
-    (clip): clip is VisualClip => clip.kind === 'screen' && clip.enabled,
-  );
-  if (!screens.length || screens.some((clip) => !assets.get(clip.assetId)?.src)) {
-    throw new Error($t('sessionVideoUnavailable'));
-  }
-  return screens;
-};
-
 export const supportedVideoCodec = (request: ExportRequest) =>
   findExportVideoCodec(request.format, {
     width: request.snapshot.canvas.width,
@@ -91,7 +80,10 @@ async function loadVisuals(request: ExportRequest, times: readonly number[]): Pr
     );
     await Promise.all(
       composition.clips
-        .filter((clip): clip is VisualClip => isVisualClip(clip) && clip.kind !== 'image' && clip.enabled)
+        .filter(
+          (clip): clip is VisualClip =>
+            isVisualClip(clip) && clip.kind !== 'image' && clip.enabled && Boolean(assets.get(clip.assetId)?.src),
+        )
         .map(async (clip) => {
           const asset = assets.get(clip.assetId);
           if (!asset?.src) throw new Error($t('unableToReadVideoSource', { src: clip.name }));
@@ -178,7 +170,6 @@ export async function exportWithMediabunny(
   onProgress: (progress: ExportProgress) => void,
   signal: AbortSignal,
 ): Promise<ExportResult> {
-  screenClipsFor(request);
   const fps = request.snapshot.render.fps;
   const codec = await supportedVideoCodec(request);
   if (!codec) throw new Error($t('formatNotEncodable', { format: request.format.toUpperCase() }));
@@ -270,12 +261,12 @@ export async function exportWithMediabunny(
           if (!isVisualClip(clip)) continue;
           if (clip.kind === 'image') {
             const image = loaded.images.get(clip.assetId);
-            if (!image) throw new Error($t('unableToLoadImage', { name: clip.name }));
+            if (!image) continue;
             visuals.set(clip.id, image);
             continue;
           }
           const provider = loaded.providers.get(clip.id);
-          if (!provider) throw new Error($t('unableToReadVideoSource', { src: clip.name }));
+          if (!provider) continue;
           const frame = await provider.frameAt(frameIndex);
           videoFrames.push(frame);
           const media = renderableFrame(frame);

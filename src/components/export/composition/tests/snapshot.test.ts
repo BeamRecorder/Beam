@@ -62,10 +62,46 @@ const base = () => ({
 });
 
 describe('createCompositionSnapshot', () => {
-  it('rejects a composition without an available screen source', () => {
+  it('uses an imported visual as the render reference when the screen source is unavailable', () => {
     const input = base();
     input.composition.assets[0].src = '';
-    expect(() => createCompositionSnapshot(input)).toThrow('session video is unavailable');
+    input.composition.assets.push({
+      id: 'imported-asset',
+      kind: 'video',
+      name: 'Imported video',
+      fileName: 'imported.webm',
+      durationMs: 4_000,
+      width: 1280,
+      height: 720,
+      src: 'project-media://asset/imported.webm',
+      origin: 'project',
+    });
+    input.composition.clips.push({
+      id: 'imported-video',
+      kind: 'video',
+      name: 'Imported video',
+      assetId: 'imported-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 4_000,
+      sourceInMs: 0,
+      sourceDurationMs: 4_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+    });
+
+    expect(createCompositionSnapshot(input).render).toMatchObject({ sourceWidth: 1280, sourceHeight: 720 });
+  });
+
+  it('falls back to the editor source size when the composition has no available visual source', () => {
+    const input = base();
+    input.composition.assets[0].src = '';
+
+    expect(createCompositionSnapshot({ ...input, width: 1440, height: 900 }).render).toMatchObject({
+      sourceWidth: 1440,
+      sourceHeight: 900,
+    });
   });
 
   it('clamps invalid render metadata and duration without inventing cursor data', () => {
