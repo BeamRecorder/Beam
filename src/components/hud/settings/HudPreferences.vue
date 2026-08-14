@@ -27,6 +27,7 @@ const props = withDefaults(
     recordInteractions?: boolean;
     requestingInputAccess?: boolean;
     platform?: string;
+    alwaysOnTop?: boolean;
     view?: 'general' | 'shortcuts' | 'about';
   }>(),
   {
@@ -41,6 +42,7 @@ const props = withDefaults(
     recordInteractions: false,
     requestingInputAccess: false,
     platform: 'unknown',
+    alwaysOnTop: true,
     view: 'general',
   },
 );
@@ -50,6 +52,7 @@ const emit = defineEmits<{
   (event: 'update:recordingBarVisibility', value: RecordingBarVisibility): void;
   (event: 'update:recordInteractions', value: boolean): void;
   (event: 'requestInputAccess'): void;
+  (event: 'update:alwaysOnTop', value: boolean): void;
   (event: 'update:view', value: 'general' | 'shortcuts' | 'about'): void;
   (event: 'close'): void;
 }>();
@@ -152,6 +155,14 @@ const recordingBarOptions = [
                 @update:model-value="emit('update:recordingBarVisibility', $event)"
               />
             </div>
+          </div>
+
+          <div class="preference-item">
+            <div>
+              <p class="preference-title">{{ t('alwaysOnTop') }}</p>
+              <p class="preference-description">{{ t('alwaysOnTopDesc') }}</p>
+            </div>
+            <Switch :model-value="alwaysOnTop ?? true" @update:model-value="emit('update:alwaysOnTop', $event)" />
           </div>
 
           <div class="preference-item">

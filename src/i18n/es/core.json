@@ -309,7 +309,9 @@
     "aboutDesc": "Versión e información de la aplicación",
     "view": "Ver",
     "version": "Versión {version}",
-    "aboutDescriptionText": "Beam es un grabador de pantalla diseñado para crear demostraciones de producto claras y cuidadas. Graba, personaliza y exporta tus vídeos en un solo lugar."
+    "aboutDescriptionText": "Beam es un grabador de pantalla diseñado para crear demostraciones de producto claras y cuidadas. Graba, personaliza y exporta tus vídeos en un solo lugar.",
+    "alwaysOnTop": "Siempre en primer plano",
+    "alwaysOnTopDesc": "Mantener la ventana sobre las demás"
   },
   "ProjectPicker": {
     "projects": "Proyectos",

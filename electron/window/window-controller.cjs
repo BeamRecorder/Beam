@@ -154,10 +154,11 @@ class WindowController {
   applyZOrderPolicy() {
     if (this.window.isDestroyed()) return;
     const isOverlay = this.mode === 'hud' || this.mode === 'recorder';
+    const alwaysOnTop = this.preferencesStore?.read()?.alwaysOnTop ?? true;
     // Keep the state while hidden so the compositor maps the surface directly
     // into the topmost layer on the next show instead of promoting it after a
     // normal frame has already been presented.
-    this.setOverlayAlwaysOnTop(this.ready && isOverlay && !this.window.isMinimized());
+    this.setOverlayAlwaysOnTop(this.ready && alwaysOnTop && isOverlay && !this.window.isMinimized());
   }
 
   applyModePolicy({ restoreMaximized = true } = {}) {

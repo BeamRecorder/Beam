@@ -309,7 +309,9 @@
     "aboutDesc": "版本與應用程式資訊",
     "view": "查看",
     "version": "版本 {version}",
-    "aboutDescriptionText": "Beam 是一款用來製作清晰、精緻產品展示的螢幕錄製工具。你可以在同一處完成錄製、樣式設計與影片匯出。"
+    "aboutDescriptionText": "Beam 是一款用來製作清晰、精緻產品展示的螢幕錄製工具。你可以在同一處完成錄製、樣式設計與影片匯出。",
+    "alwaysOnTop": "永遠置頂",
+    "alwaysOnTopDesc": "讓視窗保持在其他視窗上方"
   },
   "ProjectPicker": {
     "projects": "專案",

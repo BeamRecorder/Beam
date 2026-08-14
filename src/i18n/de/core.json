@@ -309,7 +309,9 @@
     "aboutDesc": "Version und Anwendungsinformationen",
     "view": "Anzeigen",
     "version": "Version {version}",
-    "aboutDescriptionText": "Beam ist ein Bildschirmrekorder für klare und hochwertige Produktdemos. Nimm Videos auf, gestalte sie und exportiere sie an einem Ort."
+    "aboutDescriptionText": "Beam ist ein Bildschirmrekorder für klare und hochwertige Produktdemos. Nimm Videos auf, gestalte sie und exportiere sie an einem Ort.",
+    "alwaysOnTop": "Immer im Vordergrund",
+    "alwaysOnTopDesc": "Fenster über anderen Fenstern anzeigen"
   },
   "ProjectPicker": {
     "projects": "Projekte",

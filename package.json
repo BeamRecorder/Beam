@@ -51,7 +51,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.9.1",
-    "electron": "^43.3.0",
+    "electron": "^43.4.0",
     "electron-builder": "^26.15.3",
     "jsdom": "^26.1.0",
     "prettier": "^3.9.6",

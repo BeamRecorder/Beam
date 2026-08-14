@@ -226,6 +226,14 @@ app.whenReady().then(() => {
     globalShortcut,
     store: preferencesStore,
     shortcutHandler: (id) => teleprompterWindow.handleShortcut(id),
+    onPreferencesChanged: (preferences) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        const controller = controllers.get(win);
+        if (controller) {
+          controller.applyModePolicy();
+        }
+      }
+    },
   });
   app.once('will-quit', preferencesCleanup);
   logStartup('Desktop loopback policy registered.');

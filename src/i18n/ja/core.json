@@ -309,7 +309,9 @@
     "aboutDesc": "バージョンとアプリ情報",
     "view": "表示",
     "version": "バージョン {version}",
-    "aboutDescriptionText": "Beam は、明快で洗練された製品デモを作成するためのスクリーンレコーダーです。録画、編集、書き出しを一か所で行えます。"
+    "aboutDescriptionText": "Beam は、明快で洗練された製品デモを作成するためのスクリーンレコーダーです。録画、編集、書き出しを一か所で行えます。",
+    "alwaysOnTop": "常に最前面",
+    "alwaysOnTopDesc": "ウィンドウをほかのウィンドウより前に表示します"
   },
   "ProjectPicker": {
     "projects": "プロジェクト",

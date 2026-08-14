@@ -32,6 +32,7 @@ const preferences = (enabled: boolean): PreferenceSettings => ({
   theme: 'light',
   recordingBar: { visibility: 'always' },
   recordingInteractions: { enabled, noticeDismissed: false },
+  alwaysOnTop: true,
   devices: {},
   shortcuts: {},
   backgroundPresets: { colors: [], gradients: [] },

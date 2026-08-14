@@ -309,7 +309,9 @@
     "aboutDesc": "Wersja i informacje o aplikacji",
     "view": "Wyświetl",
     "version": "Wersja {version}",
-    "aboutDescriptionText": "Beam to rejestrator ekranu stworzony do przygotowywania przejrzystych i dopracowanych prezentacji produktów. Nagrywaj, stylizuj i eksportuj filmy w jednym miejscu."
+    "aboutDescriptionText": "Beam to rejestrator ekranu stworzony do przygotowywania przejrzystych i dopracowanych prezentacji produktów. Nagrywaj, stylizuj i eksportuj filmy w jednym miejscu.",
+    "alwaysOnTop": "Zawsze na wierzchu",
+    "alwaysOnTopDesc": "Utrzymuj okno nad innymi oknami"
   },
   "ProjectPicker": {
     "projects": "Projekty",

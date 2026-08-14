@@ -309,7 +309,9 @@
     "aboutDesc": "Versione e informazioni sull’applicazione",
     "view": "Visualizza",
     "version": "Versione {version}",
-    "aboutDescriptionText": "Beam è un registratore dello schermo pensato per creare demo di prodotto chiare e curate. Registra, personalizza ed esporta i tuoi video in un unico posto."
+    "aboutDescriptionText": "Beam è un registratore dello schermo pensato per creare demo di prodotto chiare e curate. Registra, personalizza ed esporta i tuoi video in un unico posto.",
+    "alwaysOnTop": "Sempre in primo piano",
+    "alwaysOnTopDesc": "Mantieni la finestra sopra le altre"
   },
   "ProjectPicker": {
     "projects": "Progetti",

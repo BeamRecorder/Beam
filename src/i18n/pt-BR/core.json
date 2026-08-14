@@ -309,7 +309,9 @@
     "aboutDesc": "Versão e informações do aplicativo",
     "view": "Ver",
     "version": "Versão {version}",
-    "aboutDescriptionText": "O Beam é um gravador de tela criado para produzir demonstrações de produto claras e refinadas. Grave, personalize e exporte seus vídeos em um só lugar."
+    "aboutDescriptionText": "O Beam é um gravador de tela criado para produzir demonstrações de produto claras e refinadas. Grave, personalize e exporte seus vídeos em um só lugar.",
+    "alwaysOnTop": "Sempre em primeiro plano",
+    "alwaysOnTopDesc": "Manter a janela acima das outras"
   },
   "ProjectPicker": {
     "projects": "Projetos",

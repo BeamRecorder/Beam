@@ -207,6 +207,7 @@ export interface PreferenceSettings {
   theme: 'light' | 'dark' | 'system';
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
+  alwaysOnTop: boolean;
   devices: Record<string, unknown>;
   shortcuts: Record<string, PreferenceShortcut>;
   backgroundPresets: { colors: string[]; gradients: GradientBackground[] };

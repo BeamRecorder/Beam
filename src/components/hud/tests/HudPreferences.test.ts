@@ -60,6 +60,7 @@ describe('HudPreferences', () => {
       theme: 'light',
       recordingBar: { visibility: 'always' },
       recordingInteractions: { enabled: false, noticeDismissed: false },
+      alwaysOnTop: true,
       devices: {},
       shortcuts: {},
       backgroundPresets: { colors: [], gradients: [] },
@@ -73,7 +74,7 @@ describe('HudPreferences', () => {
     const wrapper = mountPreferences();
     await wrapper.get('.recording-bar-option').trigger('click');
     await wrapper.find('.countdown').trigger('click');
-    await wrapper.get('[role="switch"]').trigger('click');
+    await wrapper.get('.input-access-actions [role="switch"]').trigger('click');
     expect(wrapper.emitted('update:countdownSeconds')).toContainEqual([10]);
     expect(wrapper.emitted('update:recordingBarVisibility')).toContainEqual(['hover-only']);
     expect(wrapper.emitted('update:recordInteractions')).toContainEqual([true]);
@@ -87,18 +88,17 @@ describe('HudPreferences', () => {
     await buttons[2].trigger('click');
     expect(capture.updatePreferences).toHaveBeenLastCalledWith({ theme: 'system' });
   });
-
   it('shows the interaction switch only when input access is available', async () => {
     const wrapper = mountPreferences({ recordInteractions: true });
 
     expect(wrapper.get('.input-access-item .preference-description').text()).toContain(
       'Records safe keyboard shortcuts.',
     );
-    expect(wrapper.get('.switch-label').text()).toContain('Record keyboard shortcuts');
-    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('true');
+    expect(wrapper.get('.input-access-item .switch-label').text()).toContain('Record keyboard shortcuts');
+    expect(wrapper.get('.input-access-actions [role="switch"]').attributes('aria-checked')).toBe('true');
     expect(wrapper.find('.input-access-actions .btn-secondary').exists()).toBe(false);
 
-    await wrapper.get('[role="switch"]').trigger('click');
+    await wrapper.get('.input-access-actions [role="switch"]').trigger('click');
     expect(wrapper.emitted('update:recordInteractions')).toContainEqual([false]);
   });
 
@@ -132,7 +132,7 @@ describe('HudPreferences', () => {
     await wrapper.setProps({ requestingInputAccess: true });
     expect(authorize.attributes('disabled')).toBeDefined();
     expect(authorize.text()).toContain('Authorizing');
-    expect(wrapper.find('[role="switch"]').exists()).toBe(false);
+    expect(wrapper.find('.input-access-actions [role="switch"]').exists()).toBe(false);
   });
 
   it('renders the switch after the parent reports successful authorization', async () => {
@@ -140,7 +140,7 @@ describe('HudPreferences', () => {
     await wrapper.get('.input-access-actions .btn-secondary').trigger('click');
 
     await wrapper.setProps({ inputAccess: availableAccess, recordInteractions: true, requestingInputAccess: false });
-    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('true');
+    expect(wrapper.get('.input-access-actions [role="switch"]').attributes('aria-checked')).toBe('true');
     expect(wrapper.find('.input-access-actions .btn-secondary').exists()).toBe(false);
   });
 
@@ -159,12 +159,22 @@ describe('HudPreferences', () => {
       inputAccess: { state: 'checking', canRequest: false, clicks: false, shortcuts: false, recordsText: false },
     });
     expect(checking.get('.input-access-actions').text()).toContain('Checking');
-    expect(checking.find('[role="switch"]').exists()).toBe(false);
+    expect(checking.find('.input-access-actions [role="switch"]').exists()).toBe(false);
 
     const unavailable = mountPreferences({
       inputAccess: { state: 'unavailable', canRequest: false, clicks: false, shortcuts: false, recordsText: false },
     });
     expect(unavailable.get('.input-access-actions').text()).toContain('Unavailable');
-    expect(unavailable.find('[role="switch"]').exists()).toBe(false);
+    expect(unavailable.find('.input-access-actions [role="switch"]').exists()).toBe(false);
+  });
+
+  it('relays alwaysOnTop toggle events', async () => {
+    const wrapper = mount(HudPreferences, {
+      props: { countdownSeconds: 3, alwaysOnTop: true },
+      global: { stubs: { Select } },
+    });
+    const switchEl = wrapper.find('.switch-container');
+    await switchEl.trigger('click');
+    expect(wrapper.emitted('update:alwaysOnTop')).toContainEqual([false]);
   });
 });

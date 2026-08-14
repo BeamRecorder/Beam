@@ -15,6 +15,7 @@ const preferences = (overrides: Record<string, unknown> = {}): PreferenceSetting
   theme: 'light',
   recordingBar: { visibility: 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
+  alwaysOnTop: true,
   devices: {},
   shortcuts: {},
   backgroundPresets: {
