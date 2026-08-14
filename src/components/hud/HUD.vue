@@ -54,6 +54,7 @@ import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
 import type { RecordingBarVisibility } from './recorder/recording-types';
 import { useInteractionAccess } from './interactions/useInteractionAccess';
+import { useHudNavigation } from './navigation/useHudNavigation';
 
 const { t } = useTranslate('HUD');
 const { t: tPrefs } = useTranslate('HudPreferences');
@@ -93,10 +94,11 @@ let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 const sources = ref<CaptureSource[]>([]);
 const sourceDiscoveryCompleted = ref(false);
 
-// View State (Main vs Settings)
-const showSettings = ref(false);
-const settingsView = ref<'general' | 'shortcuts' | 'about'>('general');
-const showProjectPicker = ref(false);
+// Navigation & View State (Main vs Settings vs Project Picker)
+const navigation = useHudNavigation();
+const showSettings = navigation.showSettings;
+const settingsView = navigation.settingsView;
+const showProjectPicker = navigation.showProjectPicker;
 
 // Preference settings
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
@@ -470,10 +472,7 @@ watch(selectedScreenId, () => {
 });
 
 // Watch settings view toggle to update window size
-watch(showSettings, (val) => {
-  if (!val) {
-    settingsView.value = 'general';
-  }
+watch(showSettings, () => {
   updateWindowSize();
 });
 
@@ -911,26 +910,15 @@ const minimizeApp = () => {
 };
 
 const openProjectPicker = () => {
-  showSettings.value = false;
-  showProjectPicker.value = true;
+  navigation.openProjects();
 };
 
 const closeProjectPicker = () => {
-  showProjectPicker.value = false;
+  navigation.openHud();
 };
 
 const handleTopbarBack = () => {
-  if (showProjectPicker.value) {
-    closeProjectPicker();
-    return;
-  }
-  if (showSettings.value) {
-    if (settingsView.value !== 'general') {
-      settingsView.value = 'general';
-    } else {
-      showSettings.value = false;
-    }
-  }
+  navigation.handleTopbarBack();
 };
 
 const openProject = (project: CaptureProject) => {

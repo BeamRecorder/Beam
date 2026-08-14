@@ -278,7 +278,7 @@ describe('HUD', () => {
 
     expect(wrapper.find('.hud-wrapper').exists()).toBe(true);
     expect(wrapper.find('.hud-body').exists()).toBe(false);
-    expect(wrapper.get('.editor-preparing-hud').text()).toContain('Loading the timeline');
+    expect(wrapper.get('.editor-preparing-hud').text().replace(/\u00a0/g, ' ')).toContain('Loading the timeline');
     expect(wrapper.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('65');
   });
 
@@ -820,5 +820,30 @@ describe('HUD', () => {
     await ready();
     expect(wrapper.find('.mode-tabs').exists()).toBe(true);
     expect(wrapper.find('.screen-select-controls').exists()).toBe(false);
+  });
+
+  it('supports mouse back (button 3) and forward (button 4) navigation across HUD views', async () => {
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    // Start on HUD
+    expect(wrapper.find('.hud-body').exists()).toBe(true);
+    expect(wrapper.find('.preferences-stub').exists()).toBe(false);
+
+    // Open Preferences
+    await wrapper.get('[aria-label="Preferences"]').trigger('click');
+    expect(wrapper.find('.preferences-stub').exists()).toBe(true);
+
+    // Mouse back button (button 3) -> returns to HUD
+    window.dispatchEvent(new MouseEvent('mouseup', { button: 3 }));
+    await ready();
+    expect(wrapper.find('.preferences-stub').exists()).toBe(false);
+    expect(wrapper.find('.hud-body').exists()).toBe(true);
+
+    // Mouse forward button (button 4) -> returns to Preferences
+    window.dispatchEvent(new MouseEvent('mouseup', { button: 4 }));
+    await ready();
+    expect(wrapper.find('.preferences-stub').exists()).toBe(true);
+    expect(wrapper.find('.hud-body').exists()).toBe(false);
   });
 });
