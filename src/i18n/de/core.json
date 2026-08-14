@@ -96,6 +96,7 @@
     "shadowColor": "Schattenfarbe",
     "direction": "Richtung",
     "shadowBlur": "Schattenunschärfe",
+    "backdropBlur": "Hintergrundunschärfe",
     "shadowAllAround": "Rundum",
     "shadowBottom": "Unten",
     "shadowBottomRight": "Unten rechts",
@@ -218,6 +219,7 @@
     "resMax": "Maximal",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "Fehler kopieren",
     "resMaxDesc": "Unverarbeitete native Auflösung ({width}×{height})",
     "res1080pDesc": "Full-HD-Skalierung ({width}×{height})",
     "res720pDesc": "HD-Skalierung ({width}×{height})"

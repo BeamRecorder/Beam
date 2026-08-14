@@ -10,6 +10,8 @@ import DeleteItem from '~/ui/button/DeleteItem.vue';
 import type { CaptionClip, CaptionStyle, CaptionWord } from '~/media/shared/composition-types';
 import { useCaptionDraft } from './useCaptionDraft';
 import { useTranslate } from '~/i18n/useTranslate';
+import BackdropBlurControl from './BackdropBlurControl.vue';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 const { t } = useTranslate('CaptionClipPanel');
 const props = defineProps<{ clip: CaptionClip | null }>();
@@ -20,16 +22,8 @@ const emit = defineEmits<{
 
 const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
 const captionStyle = computed<CaptionStyle>(() => ({
-  color: '#ffffff',
-  fontSize: 36,
-  wrap: true,
-  shadowColor: 'rgba(0, 0, 0, 0.85)',
-  shadowBlur: 0,
+  ...createDefaultCaptionStyle(36),
   shadowDirection: 'bottom-right',
-  placement: 'bottom',
-  boxColor: '#000000',
-  boxPadding: 6,
-  boxRadius: 4,
   ...draft.value?.caption.style,
 }));
 
@@ -150,30 +144,34 @@ const shadowDirectionOptions = computed(() => [
         <div class="sub-group">
           <span class="sub-label">{{ t('outlineColor') }}</span>
           <ColorPicker
-            :model-value="captionStyle.boxColor ?? '#000000'"
+            :model-value="captionStyle.outlineColor"
             :show-label="false"
-            @update:model-value="updateStyle('boxColor', $event)"
+            @update:model-value="updateStyle('outlineColor', $event)"
           />
         </div>
         <BigSlider
           :label="t('outlineThickness')"
-          :model-value="captionStyle.boxPadding ?? 6"
+          :model-value="captionStyle.outlineWidth"
           :min="0"
           :max="30"
           :step="1"
           :default-value="6"
           :format-value="(value) => `${value}px`"
-          @update:model-value="updateStyle('boxPadding', $event)"
+          @update:model-value="updateStyle('outlineWidth', $event)"
         />
         <BigSlider
           :label="t('extrusionDepth')"
-          :model-value="captionStyle.boxRadius ?? 4"
+          :model-value="captionStyle.extrusionDepth"
           :min="0"
           :max="20"
           :step="1"
           :default-value="4"
           :format-value="(value) => `${value}px`"
-          @update:model-value="updateStyle('boxRadius', $event)"
+          @update:model-value="updateStyle('extrusionDepth', $event)"
+        />
+        <BackdropBlurControl
+          :model-value="captionStyle.backdropBlur"
+          @update:model-value="updateStyle('backdropBlur', $event)"
         />
       </div>
 
@@ -240,7 +238,7 @@ const shadowDirectionOptions = computed(() => [
               :model-value="word.startMs"
               type="number"
               size="sm"
-              min="0"
+              :min="0"
               :aria-label="t('wordStartTimeLabel')"
               @update:model-value="updateWord(sentence.id, index, 'startMs', String($event))"
               @blur="flush"
@@ -249,7 +247,7 @@ const shadowDirectionOptions = computed(() => [
               :model-value="word.endMs"
               type="number"
               size="sm"
-              min="0"
+              :min="0"
               :aria-label="t('wordEndTimeLabel')"
               @update:model-value="updateWord(sentence.id, index, 'endMs', String($event))"
               @blur="flush"

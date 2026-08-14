@@ -15,7 +15,6 @@ import type { BackgroundValue } from '../composables/backgroundCatalog';
 import type { ZoomElement } from '../zoom/zoom-types';
 import { activeClipsAt, type MediaError, type MediaFrame } from '~/media/shared';
 import {
-  isVisualClip,
   type CaptionClip,
   type ClipComposition,
   type NormalizedCrop,
@@ -31,6 +30,8 @@ import { useCameraZoom } from './composables/useCameraZoom';
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
+import { resolveCompositionSceneLayers } from '../composition/scene-layers';
+import { canvasGuideLines } from './canvas-guides';
 
 const { t } = useTranslate('EditorCanvas');
 type TransformClip = VisualClip | CaptionClip;
@@ -154,32 +155,9 @@ const transformAndCrop = useLayerTransformAndCrop({
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
 });
 
-const renderGuideLines = computed(() => {
-  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
-  return transformAndCrop.activeGuideLines.value.map((guide) => {
-    if (guide.type === 'vertical') {
-      const x = preview.x + guide.position * preview.width;
-      return {
-        type: 'vertical' as const,
-        style: {
-          left: `${x}px`,
-          top: `${preview.y}px`,
-          height: `${preview.height}px`,
-        },
-      };
-    } else {
-      const y = preview.y + guide.position * preview.height;
-      return {
-        type: 'horizontal' as const,
-        style: {
-          top: `${y}px`,
-          left: `${preview.x}px`,
-          width: `${preview.width}px`,
-        },
-      };
-    }
-  });
-});
+const renderGuideLines = computed(() =>
+  canvasGuideLines(logicalSize.value, props.outputCanvas, transformAndCrop.activeGuideLines.value),
+);
 
 cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
@@ -233,22 +211,16 @@ const drawNonScreenVisuals = (
   ctx: CanvasRenderingContext2D,
   window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
 ) => {
-  const clips = activeClipsAt(props.composition, props.currentTime * 1_000)
-    .filter((clip) => isVisualClip(clip) && clip.kind !== 'screen')
-    .sort((left, right) => right.order - left.order);
-  for (const clip of clips) {
-    if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
-    else compositionMedia.drawComposition(ctx, window, clip.id);
-  }
+  const layers = resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000);
+  for (const clip of layers.cameraVisuals)
+    if (clip.kind !== 'screen') compositionMedia.drawComposition(ctx, window, clip.id);
+  compositionMedia.drawWebcamClips(ctx, window);
 };
 
 drawVisualStack = (ctx, window, drawScreen) => {
-  const clips = activeClipsAt(props.composition, props.currentTime * 1_000)
-    .filter((clip) => isVisualClip(clip))
-    .sort((left, right) => right.order - left.order);
-  for (const clip of clips) {
+  const layers = resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000);
+  for (const clip of layers.cameraVisuals) {
     if (clip.kind === 'screen') drawScreen();
-    else if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
     else compositionMedia.drawComposition(ctx, window, clip.id);
   }
 };
@@ -331,6 +303,7 @@ const renderCanvas = () => {
   ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
+    compositionMedia.drawWebcamClips(ctx, window);
     compositionMedia.drawComposition(ctx, window);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
@@ -520,221 +493,4 @@ defineExpose({
   </div>
 </template>
 
-<style scoped>
-.canvas-island {
-  flex: 1;
-  margin: 0 12px;
-  background: transparent;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 0;
-  user-select: none;
-}
-.canvas-island.is-space-pressed {
-  cursor: grab !important;
-}
-.canvas-island.is-grabbing {
-  cursor: grabbing !important;
-}
-.canvas-viewport {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  will-change: transform;
-}
-.canvas-3x3-grid {
-  position: absolute;
-  pointer-events: none;
-  z-index: 30;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-.canvas-3x3-grid .grid-line {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.45);
-}
-.canvas-3x3-grid .grid-line.vertical {
-  top: 0;
-  bottom: 0;
-  width: 1px;
-}
-.canvas-3x3-grid .grid-line.vertical.line-1 {
-  left: 33.333%;
-}
-.canvas-3x3-grid .grid-line.vertical.line-2 {
-  left: 66.666%;
-}
-.canvas-3x3-grid .grid-line.horizontal {
-  left: 0;
-  right: 0;
-  height: 1px;
-}
-.canvas-3x3-grid .grid-line.horizontal.line-1 {
-  top: 33.333%;
-}
-.canvas-3x3-grid .grid-line.horizontal.line-2 {
-  top: 66.666%;
-}
-
-.canvas-guide-line {
-  position: absolute;
-  background: var(--color-primary, #ff5a1f);
-  z-index: 35;
-  pointer-events: none;
-}
-.canvas-guide-line.vertical {
-  width: 1px;
-}
-.canvas-guide-line.horizontal {
-  height: 1px;
-}
-
-.editor-canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
-  position: relative;
-  z-index: 1;
-}
-.canvas-loading-skeleton {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-.preview-frame {
-  position: absolute;
-  z-index: 0;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-sizing: border-box;
-  background: var(--color-bg-element);
-  box-shadow: none;
-  pointer-events: none;
-}
-.canvas-island.is-selection-editable,
-.canvas-island.is-selection-editable *,
-.editor-canvas.is-selection-editable {
-  cursor: crosshair !important;
-}
-.webcam-selection {
-  position: absolute;
-  z-index: 2;
-  border: 2px solid var(--color-primary);
-  box-sizing: border-box;
-  cursor: move;
-}
-.zoom-selection-box {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  border: 2px dashed rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
-  contain: layout style;
-}
-.zoom-selection-box.locked {
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.03);
-}
-.crop-container {
-  position: absolute;
-  z-index: 20;
-  pointer-events: none;
-}
-.crop-mask-wrapper {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  border-radius: var(--radius-sm, 4px);
-}
-.crop-mask-hole {
-  position: absolute;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
-  pointer-events: none;
-}
-.crop-overlay-box {
-  position: absolute;
-  border: 2px solid var(--color-primary, #ff5a1f);
-  cursor: move;
-  box-sizing: border-box;
-  pointer-events: auto;
-}
-.crop-overlay-box :deep(.resize-handle) {
-  z-index: 25 !important;
-}
-.crop-done-wrapper {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  z-index: 10;
-  white-space: nowrap;
-  pointer-events: auto;
-}
-.crop-done-wrapper :deep(button),
-.crop-done-wrapper :deep(.btn) {
-  background: #ff5a1f !important;
-  background-color: #ff5a1f !important;
-  color: #ffffff !important;
-  font-weight: 700 !important;
-  padding: 0 12px !important;
-  height: 26px !important;
-  min-height: 26px !important;
-  border-radius: var(--radius-md, 6px) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-}
-.crop-done-wrapper :deep(button:hover),
-.crop-done-wrapper :deep(.btn:hover) {
-  background: #e04810 !important;
-  background-color: #e04810 !important;
-}
-.crop-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.grid-line {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.35);
-}
-.grid-line.vertical {
-  top: 0;
-  bottom: 0;
-  width: 1px;
-}
-.grid-line.vertical.line-1 {
-  left: 33.333%;
-}
-.grid-line.vertical.line-2 {
-  left: 66.666%;
-}
-.grid-line.horizontal {
-  left: 0;
-  right: 0;
-  height: 1px;
-}
-.grid-line.horizontal.line-1 {
-  top: 33.333%;
-}
-.grid-line.horizontal.line-2 {
-  top: 66.666%;
-}
-.is-format-transitioning {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-</style>
+<style scoped src="./EditorCanvas.css"></style>

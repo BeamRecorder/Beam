@@ -96,6 +96,7 @@
     "shadowColor": "Цвят на сянката",
     "direction": "Посока",
     "shadowBlur": "Замъгляване на сянката",
+    "backdropBlur": "Замъгляване на фона",
     "shadowAllAround": "От всички страни",
     "shadowBottom": "Отдолу",
     "shadowBottomRight": "Долу вдясно",
@@ -218,6 +219,7 @@
     "resMax": "Макс.",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "Копиране на грешката",
     "resMaxDesc": "Нативна необработена разделителна способност ({width}×{height})",
     "res1080pDesc": "Full HD мащаб ({width}×{height})",
     "res720pDesc": "HD мащаб ({width}×{height})"

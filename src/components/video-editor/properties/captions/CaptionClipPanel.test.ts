@@ -60,13 +60,15 @@ const clip = {
     style: {
       color: '#ffffff',
       fontSize: 36,
+      wrap: true,
       shadowColor: '#000000',
       shadowBlur: 8,
       shadowDirection: 'bottom-right',
       placement: 'bottom',
-      boxColor: '#000000',
-      boxPadding: 6,
-      boxRadius: 4,
+      backdropBlur: 0,
+      outlineColor: '#000000',
+      outlineWidth: 6,
+      extrusionDepth: 4,
     },
   },
 } as never;
@@ -77,7 +79,7 @@ describe('CaptionClipPanel', () => {
       props: { clip },
       global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button } },
     });
-    expect(wrapper.findAll('.caption-slider')).toHaveLength(4);
+    expect(wrapper.findAll('.caption-slider')).toHaveLength(5);
     expect(wrapper.findAll('.color-picker-stub')).toHaveLength(3);
     expect(wrapper.get('.wrap-switch').attributes('aria-checked')).toBe('true');
     await wrapper.get('.wrap-switch').trigger('click');

@@ -4,6 +4,8 @@ import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { MediaPlaybackEngine } from '~/media/playback';
 import { inspectMedia, mediaSourceDescriptor, type MediaError, type MediaFrame } from '~/media/shared';
 import { COMPOSITION_SCHEMA_VERSION, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { renderBackground } from '../../composition/background/render-background';
 
 const BACKGROUND_CLIP_ID = 'background-video';
 
@@ -36,6 +38,9 @@ const backgroundComposition = (asset: MediaAsset, durationMs: number): ClipCompo
       enabled: true,
       order: 0,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('video'),
+      isMirrored: false,
+      isMirroredY: false,
     },
   ],
 });
@@ -200,83 +205,20 @@ export function useCanvasBackground(
     alpha: number,
   ) => {
     if (!bg || alpha <= 0) return;
-    ctx.save();
-    ctx.globalAlpha *= Math.max(0, Math.min(1, alpha));
-
-    const blur = Math.min(48, Math.max(0, (backgroundBlurPercent() ?? 0) * 0.48));
-    const overscan = blur > 0 ? blur * 2 : 0;
-
-    if (blur > 0) {
-      ctx.filter = `blur(${blur}px)`;
-    }
-
-    const targetRect = {
-      x: rect.x - overscan,
-      y: rect.y - overscan,
-      width: rect.width + overscan * 2,
-      height: rect.height + overscan * 2,
-    };
-
-    if (bg.kind === 'color') {
-      ctx.fillStyle = bg.color;
-      ctx.fillRect(targetRect.x, targetRect.y, targetRect.width, targetRect.height);
-    } else if (bg.kind === 'gradient') {
-      const gradient =
-        bg.gradient.type === 'radial'
-          ? ctx.createRadialGradient(
-              targetRect.x + targetRect.width / 2,
-              targetRect.y + targetRect.height / 2,
-              0,
-              targetRect.x + targetRect.width / 2,
-              targetRect.y + targetRect.height / 2,
-              Math.max(targetRect.width, targetRect.height) / 2,
-            )
-          : (() => {
-              const radians = ((bg.gradient.angle - 90) * Math.PI) / 180;
-              const dx = (Math.cos(radians) * targetRect.width) / 2;
-              const dy = (Math.sin(radians) * targetRect.height) / 2;
-              return ctx.createLinearGradient(
-                targetRect.x + targetRect.width / 2 - dx,
-                targetRect.y + targetRect.height / 2 - dy,
-                targetRect.x + targetRect.width / 2 + dx,
-                targetRect.y + targetRect.height / 2 + dy,
-              );
-            })();
-      for (const stop of bg.gradient.stops) {
-        gradient.addColorStop(
-          stop.position,
-          `${stop.color}${Math.round(stop.alpha * 255)
-            .toString(16)
-            .padStart(2, '0')}`,
-        );
-      }
-      ctx.fillStyle = gradient;
-      ctx.fillRect(targetRect.x, targetRect.y, targetRect.width, targetRect.height);
-    } else {
-      const source = bg.kind === 'video' ? (frame?.bitmap ?? null) : imgSource?.naturalWidth ? imgSource : null;
-
-      if (source) {
-        const sourceWidth = bg.kind === 'video' ? frame!.width : imgSource!.naturalWidth;
-        const sourceHeight = bg.kind === 'video' ? frame!.height : imgSource!.naturalHeight;
-        ctx.drawImage(
-          source,
-          0,
-          0,
-          sourceWidth,
-          sourceHeight,
-          targetRect.x,
-          targetRect.y,
-          targetRect.width,
-          targetRect.height,
-        );
-      } else {
-        ctx.fillStyle =
-          getComputedStyle(document.documentElement).getPropertyValue('--color-bg-surface').trim() || '#f7f5f0';
-        ctx.fillRect(targetRect.x, targetRect.y, targetRect.width, targetRect.height);
-      }
-    }
-
-    ctx.restore();
+    const source = bg.kind === 'video' ? (frame?.bitmap ?? null) : bg.kind === 'image' ? imgSource : null;
+    renderBackground(ctx, {
+      value: bg,
+      source,
+      sourceSize:
+        bg.kind === 'video' && frame
+          ? { width: frame.width, height: frame.height }
+          : bg.kind === 'image' && imgSource?.naturalWidth
+            ? { width: imgSource.naturalWidth, height: imgSource.naturalHeight }
+            : undefined,
+      rect,
+      blurPixels: (backgroundBlurPercent() ?? 0) * 0.48,
+      alpha,
+    });
   };
 
   const drawBackground = (

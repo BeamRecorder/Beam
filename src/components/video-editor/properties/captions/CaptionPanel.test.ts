@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
 
 const capture = vi.hoisted(() => ({
   whisperModels: vi.fn(),
@@ -10,7 +11,13 @@ const whisper = vi.hoisted(() => ({
   progress: { status: 'idle', message: '', progress: undefined as number | undefined },
   transcribe: vi.fn(),
 }));
-const createComposition = vi.hoisted(() => vi.fn((assets, clips) => ({ schemaVersion: 1, assets, clips })));
+const createComposition = vi.hoisted(() =>
+  vi.fn((assets: ClipComposition['assets'], clips: ClipComposition['clips']): ClipComposition => ({
+    schemaVersion: 2,
+    assets,
+    clips,
+  })),
+);
 
 vi.mock('../../../../api/capture', () => ({ capture }));
 vi.mock('../../captions/useWhisperTranscription', () => ({ useWhisperTranscription: () => whisper }));
@@ -30,8 +37,8 @@ const Select = {
 };
 const ProgressBar = { template: '<div class="progress-stub" />' };
 
-const audioComposition = {
-  schemaVersion: 1,
+const audioComposition: ClipComposition = {
+  schemaVersion: 2,
   assets: [
     {
       id: 'audio-1',
@@ -65,7 +72,7 @@ const audioComposition = {
   ],
 };
 
-const aiCaption = {
+const aiCaption: CaptionClip = {
   id: 'caption-old',
   kind: 'caption',
   name: 'Old AI caption',
@@ -79,7 +86,18 @@ const aiCaption = {
   isAiGenerated: true,
   caption: {
     sentences: [],
-    style: { color: '#fff', fontSize: 36, shadowColor: '#000', shadowBlur: 8, placement: 'bottom' },
+    style: {
+      color: '#fff',
+      fontSize: 36,
+      wrap: true,
+      shadowColor: '#000',
+      shadowBlur: 8,
+      backdropBlur: 0,
+      outlineColor: '#000',
+      outlineWidth: 6,
+      extrusionDepth: 4,
+      placement: 'bottom',
+    },
   },
 };
 

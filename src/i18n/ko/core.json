@@ -96,6 +96,7 @@
     "shadowColor": "그림자 색상",
     "direction": "방향",
     "shadowBlur": "그림자 흐림",
+    "backdropBlur": "배경 흐림",
     "shadowAllAround": "전체",
     "shadowBottom": "아래",
     "shadowBottomRight": "오른쪽 아래",
@@ -218,6 +219,7 @@
     "resMax": "최대",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "오류 복사",
     "resMaxDesc": "원본 해상도({width}×{height})",
     "res1080pDesc": "Full HD 크기 조정({width}×{height})",
     "res720pDesc": "HD 크기 조정({width}×{height})"

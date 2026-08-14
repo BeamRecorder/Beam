@@ -5,6 +5,7 @@ import { useCameraZoom, type RenderedVideoWindow } from '../useCameraZoom';
 import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
 import type { ZoomElement } from '../../../zoom/zoom-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 vi.mock('../../../composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
@@ -23,9 +24,12 @@ const screenClip = (enabled = true): VisualClip => ({
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
   crop: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+  appearance: createDefaultClipAppearance('screen'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 const composition = (enabled = true): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     {
       id: 'screen-asset',
@@ -80,6 +84,7 @@ let state!: ReturnType<typeof useCameraZoom>;
 let options!: {
   compositionRef: ReturnType<typeof ref<ClipComposition>>;
   currentTime: ReturnType<typeof ref<number>>;
+  playing: ReturnType<typeof ref<boolean>>;
   selected: ReturnType<typeof ref<ZoomElement | null>>;
   activeTab: ReturnType<typeof ref<string>>;
   output: ReturnType<typeof ref<{ preset: '16:9'; width: number; height: number; showBackground: boolean }>>;
@@ -90,6 +95,7 @@ let options!: {
 const mountComposable = () => {
   const compositionRef = ref(composition());
   const currentTime = ref(0.5);
+  const playing = ref(false);
   const selected = ref<ZoomElement | null>(manualZoom);
   const activeTab = ref('zoom');
   const zooms = ref<ZoomElement[]>([autoZoom]);
@@ -127,7 +133,7 @@ const mountComposable = () => {
         zoomElements: () => zooms.value,
         selectedZoom: () => selected.value,
         currentTime: () => currentTime.value,
-        isPlaying: () => false,
+        isPlaying: () => playing.value,
         editorData: () =>
           ({
             cursor: {
@@ -163,7 +169,7 @@ const mountComposable = () => {
     },
   });
   wrapper = mount(Harness);
-  options = { compositionRef, currentTime, selected, activeTab, output, canvas, callbacks };
+  options = { compositionRef, currentTime, playing, selected, activeTab, output, canvas, callbacks };
 };
 
 const frame = (width = 1_280, height = 720): MediaFrame => ({
@@ -261,5 +267,34 @@ describe('useCameraZoom', () => {
     state.beginSelectionMove(pointer(20, 20, 3));
     expect(options.callbacks.onSelectCanvas).toHaveBeenCalledTimes(3);
     expect(() => state.resetCamera()).not.toThrow();
+  });
+
+  it('does not make the camera sample depend on wall-clock frame spacing', () => {
+    mountComposable();
+    const firstContext = context();
+    options.playing.value = true;
+    options.currentTime.value = 0.5;
+    vi.spyOn(performance, 'now').mockReturnValue(0);
+    state.drawVideoWindow(firstContext, 800, 450, frame());
+    options.currentTime.value = 0.7;
+    vi.mocked(performance.now).mockReturnValue(16);
+    const firstRun = state.drawVideoWindow(firstContext, 800, 450, frame());
+
+    state.resetCamera();
+    const secondContext = context();
+    options.currentTime.value = 0.5;
+    vi.mocked(performance.now).mockReturnValue(1_000);
+    state.drawVideoWindow(secondContext, 800, 450, frame());
+    options.currentTime.value = 0.7;
+    vi.mocked(performance.now).mockReturnValue(1_500);
+    const secondRun = state.drawVideoWindow(secondContext, 800, 450, frame());
+
+    expect(firstRun).not.toBeNull();
+    expect(secondRun).not.toBeNull();
+    expect(secondRun).toMatchObject({
+      focusX: expect.closeTo(firstRun!.focusX, 0.0001),
+      focusY: expect.closeTo(firstRun!.focusY, 0.0001),
+      scale: expect.closeTo(firstRun!.scale, 0.0001),
+    });
   });
 });

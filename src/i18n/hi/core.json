@@ -96,6 +96,7 @@
     "shadowColor": "छाया का रंग",
     "direction": "दिशा",
     "shadowBlur": "छाया का ब्लर",
+    "backdropBlur": "पृष्ठभूमि ब्लर",
     "shadowAllAround": "चारों ओर",
     "shadowBottom": "नीचे",
     "shadowBottomRight": "नीचे दाएँ",
@@ -218,6 +219,7 @@
     "resMax": "अधिकतम",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "त्रुटि कॉपी करें",
     "resMaxDesc": "मूल रिज़ॉल्यूशन ({width}×{height})",
     "res1080pDesc": "Full HD स्केल ({width}×{height})",
     "res720pDesc": "HD स्केल ({width}×{height})"

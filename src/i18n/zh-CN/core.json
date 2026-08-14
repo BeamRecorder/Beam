@@ -96,6 +96,7 @@
     "shadowColor": "阴影颜色",
     "direction": "方向",
     "shadowBlur": "阴影模糊",
+    "backdropBlur": "背景模糊",
     "shadowAllAround": "四周",
     "shadowBottom": "底部",
     "shadowBottomRight": "右下",
@@ -218,6 +219,7 @@
     "resMax": "最大",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "复制错误",
     "resMaxDesc": "原始分辨率（{width}×{height}）",
     "res1080pDesc": "Full HD 缩放（{width}×{height}）",
     "res720pDesc": "HD 缩放（{width}×{height}）"

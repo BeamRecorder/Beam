@@ -2,44 +2,9 @@ import { ref } from 'vue';
 import type { ShadowDirection } from '../cursor/shadow-types';
 import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../../../api/types/cursor-settings';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import type { CursorType } from '../../../../api/types/cursor-presentation';
 
-export type CursorType =
-  | 'automatic'
-  | 'default'
-  | 'beachball'
-  | 'busy'
-  | 'cell'
-  | 'contextualmenu'
-  | 'copy'
-  | 'cross'
-  | 'handgrabbing'
-  | 'handopen'
-  | 'handpointing'
-  | 'help'
-  | 'makealias'
-  | 'move'
-  | 'notallowed'
-  | 'poof'
-  | 'resizenorth'
-  | 'resizenortheast'
-  | 'resizenortheastsouthwest'
-  | 'resizenorthsouth'
-  | 'resizenorthwest'
-  | 'resizenorthwestsoutheast'
-  | 'resizeright'
-  | 'resizesouth'
-  | 'resizesoutheast'
-  | 'resizesouthwest'
-  | 'resizeup'
-  | 'resizeupdown'
-  | 'resizewest'
-  | 'resizewesteast'
-  | 'screenshotselection'
-  | 'screenshotwindow'
-  | 'textcursor'
-  | 'textcursorvertical'
-  | 'zoomin'
-  | 'zoomout';
+export type { CursorType } from '../../../../api/types/cursor-presentation';
 
 export const cursorUrls: Record<CursorType, string> = {
   automatic: '',

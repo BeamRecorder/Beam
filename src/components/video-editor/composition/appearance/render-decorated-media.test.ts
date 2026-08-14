@@ -6,6 +6,8 @@ import type { ClipAppearance } from '~/media/shared/composition-types';
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
   cornerRadius: 'sm',
   shadowSize: 'none',
+  shadowBlur: 0,
+  shadowMode: 'solid',
   shadowColor: '#000000',
   shadowDirection: 'all',
   borderEnabled: false,

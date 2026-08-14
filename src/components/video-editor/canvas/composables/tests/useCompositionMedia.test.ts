@@ -15,6 +15,8 @@ vi.mock('../../../composition/appearance/render-decorated-media', async (importO
 const appearance = {
   cornerRadius: 'sm' as const,
   shadowSize: 'md' as const,
+  shadowBlur: 12,
+  shadowMode: 'solid' as const,
   shadowColor: '#000',
   shadowDirection: 'bottom' as const,
   borderEnabled: true,
@@ -67,14 +69,17 @@ const caption = (): CaptionClip => ({
       shadowColor: '#000',
       shadowBlur: 4,
       placement: 'center',
-      boxColor: '#111',
-      boxPadding: 8,
+      wrap: true,
+      backdropBlur: 0,
+      outlineColor: '#111',
+      outlineWidth: 8,
+      extrusionDepth: 0,
     },
   },
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     {
       id: 'image-asset',
@@ -290,8 +295,8 @@ describe('useCompositionMedia', () => {
       ...captionClip.caption.style,
       customText: 'One two three four',
       wrap: true,
-      boxColor: 'transparent',
-      boxRadius: 0,
+      outlineColor: 'transparent',
+      extrusionDepth: 0,
     };
     const ctx = context();
     const fillText = ctx.fillText as ReturnType<typeof vi.fn>;
@@ -308,8 +313,8 @@ describe('useCompositionMedia', () => {
       ...captionClip.caption.style,
       customText: 'One two three four',
       wrap: false,
-      boxColor: 'transparent',
-      boxRadius: 0,
+      outlineColor: 'transparent',
+      extrusionDepth: 0,
     };
     const ctx = context();
     state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, 'caption');

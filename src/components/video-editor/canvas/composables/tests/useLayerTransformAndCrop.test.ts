@@ -5,6 +5,7 @@ import { useLayerTransformAndCrop, type UseLayerTransformAndCropOptions } from '
 import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { VideoWindowBounds } from '../useCameraZoom';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const screenClip = (): VisualClip => ({
   id: 'screen',
@@ -19,6 +20,9 @@ const screenClip = (): VisualClip => ({
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('screen'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 
 const webcamClip = (): VisualClip => ({
@@ -34,7 +38,9 @@ const webcamClip = (): VisualClip => ({
   enabled: true,
   order: 1,
   transform: { x: 0.1, y: 0.1, width: 0.25, height: 0.25 },
+  appearance: createDefaultClipAppearance('webcam'),
   isMirrored: true,
+  isMirroredY: false,
 });
 
 const imageClip = (): VisualClip => ({
@@ -51,6 +57,9 @@ const imageClip = (): VisualClip => ({
   order: 2,
   transform: { x: 0.25, y: 0.2, width: 0.5, height: 0.4 },
   crop: { x: 0.1, y: 0.2, width: 0.7, height: 0.6 },
+  appearance: createDefaultClipAppearance('image'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 
 const captionClip = (): CaptionClip => ({
@@ -66,12 +75,12 @@ const captionClip = (): CaptionClip => ({
   order: 3,
   caption: {
     sentences: [],
-    style: { color: '#fff', fontSize: 32, shadowColor: '#000', shadowBlur: 2, placement: 'center' },
+    style: { ...createDefaultCaptionStyle(32), color: '#fff', shadowColor: '#000', shadowBlur: 2, placement: 'center' },
   },
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     {
       id: 'screen-asset',
@@ -338,7 +347,7 @@ describe('useLayerTransformAndCrop', () => {
     expect(mounted.state.transformDraft.value).toMatchObject({ width: 0.6, height: 0.24 });
   });
 
-  it('treats legacy captions without wrap as wrapped captions', () => {
+  it('uses horizontal resize handles for canonical wrapped captions', () => {
     const mounted = mountComposable(captionClip());
     expect(mounted.state.transformResizeCorners.value).toEqual(['left', 'right']);
   });

@@ -96,6 +96,7 @@
     "shadowColor": "Cor da sombra",
     "direction": "Direção",
     "shadowBlur": "Desfoque da sombra",
+    "backdropBlur": "Desfoque do fundo",
     "shadowAllAround": "Ao redor",
     "shadowBottom": "Inferior",
     "shadowBottomRight": "Inferior direito",
@@ -218,6 +219,7 @@
     "resMax": "Máxima",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "Copiar erro",
     "resMaxDesc": "Resolução nativa bruta ({width}×{height})",
     "res1080pDesc": "Escala Full HD ({width}×{height})",
     "res720pDesc": "Escala HD ({width}×{height})"

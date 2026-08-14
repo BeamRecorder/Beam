@@ -16,7 +16,7 @@ export interface CaptionTextLayout {
   wrap: boolean;
 }
 
-export const isCaptionWrapEnabled = (style: Pick<CaptionStyle, 'wrap'>) => style.wrap !== false;
+export const isCaptionWrapEnabled = (style: Pick<CaptionStyle, 'wrap'>) => style.wrap;
 
 export function captionTextAt(clip: CaptionClip, timeMs: number): string {
   if (clip.caption.style.customText) return clip.caption.style.customText;

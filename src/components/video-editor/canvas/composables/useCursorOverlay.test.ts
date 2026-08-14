@@ -52,7 +52,7 @@ const baseOptions = () => ({
   shadowDirection: () => 'bottom-right' as const,
   outputCanvas: () => ({ preset: '16:9' as const, width: 1920, height: 1080, showBackground: false }),
   deviceScale: () => 1,
-  currentTime: () => 1,
+  currentTime: () => 0.75,
   isPlaying: () => true,
   editorData: () =>
     ({
@@ -101,7 +101,6 @@ describe('useCursorOverlay', () => {
       800,
       drawContent,
     );
-    expect(overlay.ripples.value).toHaveLength(1);
     expect(ctx.arc).toHaveBeenCalled();
     expect(ctx.drawImage).toHaveBeenCalled();
     expect(ctx.shadowColor).toBe('#000000');
@@ -116,7 +115,7 @@ describe('useCursorOverlay', () => {
     expect(drawContent).toHaveBeenCalledOnce();
   });
 
-  it('warns when cursor data is unavailable and removes expired ripples', () => {
+  it('warns when cursor data is unavailable without retaining mutable ripple state', () => {
     const options = baseOptions();
     options.editorData = () => ({ cursor: { available: false, events: [] } }) as never;
     const overlay = useCursorOverlay(options);
@@ -130,7 +129,6 @@ describe('useCursorOverlay', () => {
       vi.fn(),
     );
     expect(ctx.fillText).toHaveBeenCalledWith('Cursor data missing', expect.any(Number), 29);
-    overlay.ripples.value.push({ x: 1, y: 1, radius: 2, alpha: 0, color: '#fff', size: 10 });
     options.editorData = () => ({ cursor: { available: true, events: [] } }) as never;
     overlay.updateAndDrawRipplesAndCursor(
       ctx,
@@ -140,7 +138,7 @@ describe('useCursorOverlay', () => {
       800,
       vi.fn(),
     );
-    expect(overlay.ripples.value).toHaveLength(0);
+    expect(ctx.arc).not.toHaveBeenCalled();
   });
 
   it('clears the image when the cursor replacement fails', async () => {
@@ -151,7 +149,7 @@ describe('useCursorOverlay', () => {
     await nextTick();
     await Promise.resolve();
     expect(overlay.customCursorImage.value).toBeNull();
-    expect(error).toHaveBeenCalledWith('Failed to load custom cursor image:', expect.any(Error));
+    expect(error).toHaveBeenCalledWith('Failed to load custom cursor image.');
     error.mockRestore();
   });
 });

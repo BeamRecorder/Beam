@@ -96,6 +96,7 @@
     "shadowColor": "Цвет тени",
     "direction": "Направление",
     "shadowBlur": "Размытие тени",
+    "backdropBlur": "Размытие фона",
     "shadowAllAround": "Со всех сторон",
     "shadowBottom": "Снизу",
     "shadowBottomRight": "Справа снизу",
@@ -218,6 +219,7 @@
     "resMax": "Максимальное",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "Копировать ошибку",
     "resMaxDesc": "Исходное разрешение ({width}×{height})",
     "res1080pDesc": "Масштаб Full HD ({width}×{height})",
     "res720pDesc": "Масштаб HD ({width}×{height})"

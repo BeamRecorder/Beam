@@ -12,6 +12,7 @@ import type { ProjectEditorData } from '../../../../api/types/capture-api';
 import { capture } from '../../../../api/capture';
 import { captionSources } from './caption-sources';
 import { useTranslate } from '~/i18n/useTranslate';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 const { t } = useTranslate('CaptionPanel');
 const props = defineProps<{
@@ -102,13 +103,10 @@ const runTranscription = async () => {
       caption: {
         sentences: [sentence],
         style: {
-          color: '#ffffff',
-          fontSize: 36,
-          wrap: true,
+          ...createDefaultCaptionStyle(36),
           shadowColor: 'rgba(0, 0, 0, 0.8)',
           shadowBlur: 8,
           shadowDirection: 'bottom-right',
-          placement: 'bottom',
         },
       },
     };

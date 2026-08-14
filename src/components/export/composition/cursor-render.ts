@@ -10,6 +10,7 @@ import {
 } from '../../video-editor/properties/cursor/cursor-rendering';
 import { effectButtonForRecordedButton, type CursorClickEffectSettings } from '../../../api/types/cursor-settings';
 import type { CompositionSnapshot } from '../export-types';
+import { cursorRippleAt } from '../../video-editor/composables/cursor-ripple';
 
 export function drawCursorLayer(
   ctx: CanvasRenderingContext2D,
@@ -55,12 +56,14 @@ export function drawCursorLayer(
     const target = cursorMotionPlayer.timeline.targetAt(click.sessionNs / 1_000_000_000);
     const position = positionAt(target ? { ...state, x: target.x, y: target.y } : state);
     const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
+    const ripple = cursorRippleAt(age, effect.rippleSize);
+    if (!ripple) continue;
     ctx.save();
-    ctx.globalAlpha = Math.max(0, 1 - age / 0.5);
+    ctx.globalAlpha = ripple.opacity;
     ctx.strokeStyle = effect.rippleColor;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(position.x, position.y, 2 + age * effect.rippleSize * 2, 0, Math.PI * 2);
+    ctx.arc(position.x, position.y, ripple.radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }

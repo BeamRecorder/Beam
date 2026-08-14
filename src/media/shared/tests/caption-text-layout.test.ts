@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isCaptionWrapEnabled, layoutCaptionText, wrapCaptionLines } from '../caption-text-layout';
 import type { CaptionClip } from '../composition-types';
+import { createDefaultCaptionStyle } from '../composition-defaults';
 
 const caption = (wrap?: boolean): CaptionClip => ({
   id: 'caption',
@@ -16,12 +17,12 @@ const caption = (wrap?: boolean): CaptionClip => ({
   caption: {
     sentences: [],
     style: {
+      ...createDefaultCaptionStyle(20),
       color: '#fff',
-      fontSize: 20,
       shadowColor: '#000',
       shadowBlur: 0,
       placement: 'center',
-      ...(wrap === undefined ? {} : { wrap }),
+      wrap: wrap ?? true,
     },
   },
 });
@@ -30,8 +31,8 @@ const measureByCharacter = (text: string) => text.length;
 const measureByTenPixels = (text: string) => text.length * 10;
 
 describe('caption text layout', () => {
-  it('enables wrapping for legacy styles that do not have a wrap field', () => {
-    expect(isCaptionWrapEnabled({})).toBe(true);
+  it('uses the canonical wrap setting', () => {
+    expect(isCaptionWrapEnabled({ wrap: true })).toBe(true);
     expect(
       layoutCaptionText({
         clip: caption(),
@@ -44,7 +45,7 @@ describe('caption text layout', () => {
     ).toMatchObject({ wrap: true, lines: ['one two', 'three'] });
   });
 
-  it('keeps the legacy single-line max-width behavior when wrapping is disabled', () => {
+  it('keeps the single-line max-width behavior when wrapping is disabled', () => {
     const layout = layoutCaptionText({
       clip: caption(false),
       text: 'one two three',

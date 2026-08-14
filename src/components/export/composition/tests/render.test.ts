@@ -3,10 +3,13 @@ import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } f
 import type { CompositionSnapshot } from '../../export-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
 import type { ClipComposition, ClipAppearance } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const screenAppearance: ClipAppearance = {
   cornerRadius: 'none',
   shadowSize: 'none',
+  shadowBlur: 0,
+  shadowMode: 'solid',
   shadowColor: '#000000',
   shadowDirection: 'all',
   borderEnabled: false,
@@ -20,7 +23,7 @@ const screenAppearance: ClipAppearance = {
   frameChromeScale: 1,
 };
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     {
       id: 'screen-asset',
@@ -49,6 +52,8 @@ const composition = (): ClipComposition => ({
       order: 0,
       transform: { x: 0, y: 0, width: 1, height: 1 },
       appearance: screenAppearance,
+      isMirrored: false,
+      isMirroredY: false,
     },
   ],
 });
@@ -179,6 +184,8 @@ describe('canonical composition rendering', () => {
       order: 1,
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
       appearance: screenAppearance,
+      isMirrored: false,
+      isMirroredY: false,
     });
     const image = { source: {} as CanvasImageSource, width: 10, height: 10 } as RenderableMedia;
     const ctx = context();
@@ -216,9 +223,12 @@ describe('canonical composition rendering', () => {
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
       crop: { x: 0.1, y: 0.2, width: 0.5, height: 0.6 },
       isMirrored: true,
+      isMirroredY: false,
       appearance: {
         cornerRadius: 42,
         shadowSize: 'none',
+        shadowBlur: 0,
+        shadowMode: 'solid',
         shadowColor: '#123456',
         shadowDirection: 'top-left',
         borderEnabled: true,
@@ -287,6 +297,9 @@ describe('canonical composition rendering', () => {
       enabled: true,
       order: 1,
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      appearance: createDefaultClipAppearance('webcam'),
+      isMirrored: false,
+      isMirroredY: false,
     });
     const source = { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia;
     const ctx = context();
@@ -310,14 +323,12 @@ describe('canonical composition rendering', () => {
       caption: {
         sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }],
         style: {
+          ...createDefaultCaptionStyle(20),
           color: '#fff',
-          fontSize: 20,
           shadowColor: '#000',
           shadowBlur: 0,
           placement: 'bottom',
           wrap: false,
-          boxColor: 'transparent',
-          boxRadius: 0,
         },
       },
     });
@@ -344,14 +355,12 @@ describe('canonical composition rendering', () => {
       caption: {
         sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
         style: {
+          ...createDefaultCaptionStyle(20),
           color: '#fff',
-          fontSize: 20,
           shadowColor: '#000',
           shadowBlur: 0,
           placement: 'center',
           wrap: true,
-          boxColor: 'transparent',
-          boxRadius: 0,
         },
       },
     });
@@ -363,7 +372,7 @@ describe('canonical composition rendering', () => {
     expect(ctx.font).toBe('800 20px sans-serif');
   });
 
-  it('keeps legacy constrained rendering when wrapping is disabled', () => {
+  it('keeps constrained rendering when wrapping is disabled', () => {
     const value = snapshot();
     value.composition.clips.push({
       id: 'nowrap-caption',
@@ -380,14 +389,13 @@ describe('canonical composition rendering', () => {
       caption: {
         sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
         style: {
+          ...createDefaultCaptionStyle(20),
           color: '#fff',
-          fontSize: 20,
           shadowColor: '#000',
           shadowBlur: 0,
           placement: 'center',
           wrap: false,
-          boxColor: 'transparent',
-          boxRadius: 0,
+          extrusionDepth: 0,
         },
       },
     });
@@ -457,7 +465,13 @@ describe('canonical composition rendering', () => {
       new Map([['default', image]]),
     );
     expect(ctx.strokeStyle).toBe('#00f');
-    expect(ctx.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), expect.closeTo(8, 5), 0, Math.PI * 2);
+    expect(ctx.arc).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.any(Number),
+      expect.closeTo(18.26, 2),
+      0,
+      Math.PI * 2,
+    );
     expect(ctx.scale).toHaveBeenCalledWith(expect.closeTo(0.707, 3), expect.closeTo(0.707, 3));
     expect(ctx.drawImage).toHaveBeenCalled();
   });

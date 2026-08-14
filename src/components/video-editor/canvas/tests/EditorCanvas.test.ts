@@ -7,6 +7,7 @@ import type { ClipComposition, VisualClip } from '~/media/shared/composition-typ
 import type { MediaFrame } from '~/media/shared';
 import type { CursorClickEffects } from '../../../../api/types/cursor-settings';
 import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const { state } = vi.hoisted(() => ({
   state: {
@@ -128,6 +129,9 @@ const screen = (): VisualClip => ({
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('screen'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 
 const webcam = (): VisualClip => ({
@@ -143,6 +147,9 @@ const webcam = (): VisualClip => ({
   enabled: true,
   order: 1,
   transform: { x: 0.1, y: 0.1, width: 0.3, height: 0.3 },
+  appearance: createDefaultClipAppearance('webcam'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 
 const image = (): VisualClip => ({
@@ -158,6 +165,9 @@ const image = (): VisualClip => ({
   enabled: true,
   order: 2,
   transform: { x: 0.5, y: 0.4, width: 0.2, height: 0.2 },
+  appearance: createDefaultClipAppearance('image'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 
 const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
@@ -172,7 +182,7 @@ const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     {
       id: 'screen-asset',
@@ -289,7 +299,7 @@ describe('EditorCanvas', () => {
     expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(true);
     expect(mounted.find('.preview-frame').attributes('style')).toContain('width: 800px');
     expect(state.drawBackground).toHaveBeenCalled();
-    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.any(Object), 'webcam');
+    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.any(Object));
     expect(state.drawComposition).toHaveBeenCalled();
     expect(mounted.find('.editor-canvas').classes()).toContain('is-selection-editable');
     expect(mounted.find('.zoom-selection-box').classes()).not.toContain('locked');
@@ -345,7 +355,7 @@ describe('EditorCanvas', () => {
     expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);
 
     state.renderVisualStack?.(contextMock, bounds, vi.fn());
-    expect(state.drawWebcamClips).toHaveBeenCalledWith(contextMock, bounds, 'webcam');
+    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), bounds);
     expect(state.drawComposition).toHaveBeenCalledWith(contextMock, bounds, 'image');
 
     await mounted.setProps({ isCropping: true });

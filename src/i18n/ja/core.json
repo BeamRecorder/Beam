@@ -96,6 +96,7 @@
     "shadowColor": "影の色",
     "direction": "方向",
     "shadowBlur": "影のぼかし",
+    "backdropBlur": "背景のぼかし",
     "shadowAllAround": "全周",
     "shadowBottom": "下",
     "shadowBottomRight": "右下",
@@ -218,6 +219,7 @@
     "resMax": "最大",
     "res1080p": "1080p",
     "res720p": "720p",
+    "copyError": "エラーをコピー",
     "resMaxDesc": "元の解像度（{width}×{height}）",
     "res1080pDesc": "フルHDスケール（{width}×{height}）",
     "res720pDesc": "HDスケール（{width}×{height}）"
