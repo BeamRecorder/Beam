@@ -109,7 +109,7 @@ const clip = (id: string, assetId = 'audio-1', overrides: Record<string, unknown
 });
 
 const composition = (clips: ReturnType<typeof clip>[], assets = [asset()]): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets,
   clips,
 });

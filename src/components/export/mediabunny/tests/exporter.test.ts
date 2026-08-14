@@ -3,6 +3,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canva
 import type { ClipComposition, MediaAsset } from '~/media/shared/composition-types';
 import type { ExportRequest } from '../../export-types';
 import { exportWithMediabunny, renderMixedAudio, supportedAudioCodec, supportedVideoCodec } from '../exporter';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const { videoCodec, audioCodec, renderedAudio } = vi.hoisted(() => ({
   videoCodec: vi.fn(),
@@ -21,6 +22,8 @@ const exportRuntime = vi.hoisted(() => ({
   mixAudio: vi.fn(),
   outputOptions: [] as unknown[][],
   inspectMedia: vi.fn(),
+  prepareExport: vi.fn(),
+  cameraEvaluator: { sample: vi.fn(() => ({ scale: 1, focus: { cx: 0.5, cy: 0.5 } })), invalidate: vi.fn() },
 }));
 
 vi.mock('~/media/export', () => ({
@@ -46,7 +49,11 @@ vi.mock('~/media/shared', async () => ({
   inspectMedia: exportRuntime.inspectMedia,
 }));
 
-vi.mock('../../composition/render', () => ({ renderCompositionFrame: exportRuntime.renderFrame }));
+vi.mock('../../composition/render', () => ({
+  renderCompositionFrame: exportRuntime.renderFrame,
+  createSnapshotCameraEvaluator: vi.fn(() => exportRuntime.cameraEvaluator),
+}));
+vi.mock('../export-preflight', () => ({ prepareExport: exportRuntime.prepareExport }));
 vi.mock('../../../video-editor/properties/cursor/useCursorReplacer', () => ({
   cursorTypeForKind: vi.fn(() => 'default'),
   useCursorReplacer: () => ({ getCursorImage: vi.fn(async () => ({ width: 24, height: 24 })) }),
@@ -109,6 +116,9 @@ const composition = (
             enabled: true,
             order: 0,
             transform: { x: 0, y: 0, width: 1, height: 1 },
+            appearance: createDefaultClipAppearance('screen'),
+            isMirrored: false,
+            isMirroredY: false,
           },
         ];
   if (options.importedVideo) {
@@ -126,6 +136,9 @@ const composition = (
       enabled: true,
       order: clips.length,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('video'),
+      isMirrored: false,
+      isMirroredY: false,
     });
   }
   if (options.audio) {
@@ -146,7 +159,7 @@ const composition = (
       volume: 150,
     });
   }
-  return { schemaVersion: 1, assets, clips } as ClipComposition;
+  return { schemaVersion: 2, assets, clips } as ClipComposition;
 };
 
 const request = (
@@ -190,6 +203,23 @@ beforeEach(() => {
   exportRuntime.mixAudio.mockImplementation(async (value: ClipComposition) =>
     value.clips.some((clip) => clip.kind === 'audio' && clip.enabled) ? renderedAudio : null,
   );
+  exportRuntime.prepareExport.mockImplementation(async (value: ExportRequest) => ({
+    fps: value.snapshot.render.fps,
+    activeClipIds: new Set(
+      value.snapshot.composition.clips
+        .filter((clip) => clip.enabled && clip.timelineDurationMs > 0)
+        .map((clip) => clip.id),
+    ),
+    images: new Map(),
+    backgroundImage:
+      value.snapshot.background?.kind === 'image' ? { source: {} as CanvasImageSource, width: 320, height: 180 } : null,
+    backgroundVideoDuration: value.snapshot.background?.kind === 'video' ? 2 : null,
+    mixedAudio: await exportRuntime.mixAudio(value.snapshot.composition, value.snapshot.duration),
+    screenSize: value.snapshot.composition.clips.some((clip) => clip.kind === 'screen' && clip.enabled)
+      ? { width: 1_920, height: 1_080 }
+      : null,
+    dispose: vi.fn(),
+  }));
   videoCodec.mockReturnValue('vp9');
   audioCodec.mockReturnValue('opus');
   exportRuntime.createProvider.mockResolvedValue({
@@ -269,36 +299,111 @@ describe('mediabunny exporter', () => {
     );
   });
 
-  it('exports imported video while skipping an unavailable screen recording', async () => {
+  it('rejects an active visual with a missing source before opening native export', async () => {
     const value = request({ importedVideo: true });
     value.snapshot.duration = 0.1;
     value.snapshot.render.fps = 1;
     value.snapshot.composition.assets[0].src = '';
+    exportRuntime.prepareExport.mockRejectedValueOnce(new Error('The media asset source is unavailable.'));
+    const beginExport = vi.fn().mockResolvedValue({ jobId: 'job-missing-screen', canceled: false });
     setCapture({
-      beginExport: vi.fn().mockResolvedValue({ jobId: 'job-imported-video', canceled: false }),
+      beginExport,
       writeExportChunk: vi.fn().mockResolvedValue(undefined),
-      finalizeExport: vi.fn().mockResolvedValue({ path: '/tmp/imported-video.webm' }),
       abortExport: vi.fn().mockResolvedValue(undefined),
     });
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
 
-    await expect(exportWithMediabunny(value, vi.fn(), new AbortController().signal)).resolves.toMatchObject({
-      path: '/tmp/imported-video.webm',
-    });
-    expect(exportRuntime.createProvider).toHaveBeenCalledOnce();
-    expect(exportRuntime.createProvider).toHaveBeenCalledWith(
-      expect.objectContaining({ assetId: 'imported-video-asset' }),
-      [0],
+    await expect(exportWithMediabunny(value, vi.fn(), new AbortController().signal)).rejects.toThrow(
+      /asset|source|unavailable|missing/i,
     );
-    expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[1]).toBeNull();
-    expect(exportRuntime.renderFrame.mock.calls.at(-1)?.[6]).toEqual(
-      new Map([['imported-video', expect.objectContaining({ width: 1_920, height: 1_080 })]]),
-    );
+    expect(beginExport).not.toHaveBeenCalled();
+    expect(exportRuntime.createProvider).not.toHaveBeenCalled();
+  });
+
+  it('does not load an image asset referenced only by a disabled clip', async () => {
+    const imageSource = globalThis.Image;
+    class BrokenImage {
+      naturalWidth = 0;
+      naturalHeight = 0;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        queueMicrotask(() => this.onerror?.());
+      }
+    }
+    Object.defineProperty(globalThis, 'Image', { configurable: true, value: BrokenImage });
+    try {
+      const value = request();
+      value.snapshot.duration = 0.1;
+      value.snapshot.render.fps = 1;
+      value.snapshot.composition.assets.push({
+        id: 'disabled-image-asset',
+        kind: 'image',
+        name: 'Disabled image',
+        fileName: 'disabled.png',
+        durationMs: 5_000,
+        width: 640,
+        height: 360,
+        src: 'project-media://asset/disabled.png',
+        origin: 'project',
+      });
+      value.snapshot.composition.clips.push({
+        id: 'disabled-image',
+        kind: 'image',
+        name: 'Disabled image',
+        assetId: 'disabled-image-asset',
+        timelineStartMs: 0,
+        timelineDurationMs: 100,
+        sourceInMs: 0,
+        sourceDurationMs: 100,
+        playbackRate: 1,
+        enabled: false,
+        order: 1,
+        transform: { x: 0, y: 0, width: 1, height: 1 },
+        appearance: {
+          shadowSize: 'none',
+          shadowBlur: 0,
+          shadowMode: 'solid',
+          cornerRadius: 'none',
+          shadowColor: '#000000',
+          shadowDirection: 'all',
+          borderEnabled: false,
+          borderColor: '#000000',
+          borderWidth: 0,
+          frame: 'none',
+          frameTitle: '',
+          frameColor: '#c0c0c0',
+          frameShowMenu: true,
+          frameShowScrollbars: true,
+          frameChromeScale: 1,
+        },
+        isMirrored: false,
+        isMirroredY: false,
+      });
+      const beginExport = vi.fn().mockResolvedValue({ jobId: 'job-disabled-image', canceled: false });
+      setCapture({
+        beginExport,
+        writeExportChunk: vi.fn().mockResolvedValue(undefined),
+        finalizeExport: vi.fn().mockResolvedValue({ path: '/tmp/disabled-image.webm' }),
+        abortExport: vi.fn().mockResolvedValue(undefined),
+      });
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+
+      await expect(exportWithMediabunny(value, vi.fn(), new AbortController().signal)).resolves.toMatchObject({
+        path: '/tmp/disabled-image.webm',
+      });
+      expect(beginExport).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(globalThis, 'Image', { configurable: true, value: imageSource });
+    }
   });
 
   it('maps native cancellation and missing canvas contexts to actionable errors', async () => {
     const signal = new AbortController().signal;
     const onProgress = vi.fn();
+    const getContext = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue({} as CanvasRenderingContext2D);
     setCapture({ beginExport: vi.fn().mockResolvedValue({ jobId: 'job', canceled: true }) });
     await expect(exportWithMediabunny(request(), onProgress, signal)).rejects.toMatchObject({ name: 'AbortError' });
 
@@ -309,7 +414,7 @@ describe('mediabunny exporter', () => {
       beginExport: vi.fn().mockResolvedValue({ jobId: 'job', canceled: false }),
       abortExport: vi.fn().mockResolvedValue(undefined),
     });
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    getContext.mockReturnValue(null);
     await expect(exportWithMediabunny(request(), onProgress, signal)).rejects.toThrow('Canvas 2D');
   });
 
@@ -348,6 +453,50 @@ describe('mediabunny exporter', () => {
       'encoding',
       'finalizing',
     ]);
+  });
+
+  it.each([24, 30, 60])('keeps composition time in seconds while changing frame density at %d FPS', async (fps) => {
+    const value = request();
+    value.snapshot.duration = 1;
+    value.snapshot.render.fps = fps;
+    setCapture({
+      beginExport: vi.fn().mockResolvedValue({ jobId: `job-fps-${fps}`, canceled: false }),
+      writeExportChunk: vi.fn().mockResolvedValue(undefined),
+      finalizeExport: vi.fn().mockResolvedValue({ path: `/tmp/fps-${fps}.webm` }),
+      abortExport: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+
+    await expect(exportWithMediabunny(value, vi.fn(), new AbortController().signal)).resolves.toMatchObject({
+      path: `/tmp/fps-${fps}.webm`,
+    });
+
+    const frames = exportRuntime.outputs[0]?.addVideoFrame.mock.calls ?? [];
+    expect(frames).toHaveLength(fps);
+    expect(frames[0]).toEqual([0, 1 / fps]);
+    expect(frames.at(-1)?.[0]).toBeCloseTo((fps - 1) / fps);
+    expect(frames.every(([, duration]) => duration === 1 / fps)).toBe(true);
+    expect(exportRuntime.mixAudio).toHaveBeenCalledWith(expect.anything(), 1);
+  });
+
+  it('renders an image-only composition at the explicit 30 FPS product rate', async () => {
+    const value = request({ screen: false });
+    value.snapshot.duration = 0.5;
+    value.snapshot.render.fps = 30;
+    value.snapshot.background = { kind: 'color', color: '#111' };
+    setCapture({
+      beginExport: vi.fn().mockResolvedValue({ jobId: 'job-image-only', canceled: false }),
+      writeExportChunk: vi.fn().mockResolvedValue(undefined),
+      finalizeExport: vi.fn().mockResolvedValue({ path: '/tmp/image-only.webm' }),
+      abortExport: vi.fn().mockResolvedValue(undefined),
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+
+    await exportWithMediabunny(value, vi.fn(), new AbortController().signal);
+
+    expect(exportRuntime.outputs[0]?.addVideoFrame).toHaveBeenCalledTimes(15);
+    expect(exportRuntime.outputOptions[0]?.[0]).toMatchObject({ frameRate: 30 });
+    expect(exportRuntime.createProvider).not.toHaveBeenCalled();
   });
 
   it('passes the editor cursor size and motion settings through the export renderer', async () => {

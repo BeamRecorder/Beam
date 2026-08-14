@@ -7,6 +7,7 @@ const $t = tNamespace('exporter');
 
 const progress = ref<ExportProgress | null>(null);
 const error = ref<string | null>(null);
+const errorContext = ref<unknown>(null);
 const result = ref<ExportResult | null>(null);
 const controller = ref<AbortController | null>(null);
 const isExporting = computed(() => controller.value !== null);
@@ -15,6 +16,7 @@ export function useExportJob() {
   const start = async (request: ExportRequest) => {
     if (controller.value) return;
     error.value = null;
+    errorContext.value = null;
     result.value = null;
     progress.value = {
       stage: 'preparing',
@@ -35,13 +37,15 @@ export function useExportJob() {
         next.signal,
       );
     } catch (reason) {
-      if (!(reason instanceof DOMException && reason.name === 'AbortError'))
+      if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+        errorContext.value = reason;
         error.value = reason instanceof Error ? reason.message : $t('exportFailed');
+      }
     } finally {
       controller.value = null;
       progress.value = null;
     }
   };
   const cancel = () => controller.value?.abort();
-  return { progress, error, result, isExporting, start, cancel };
+  return { progress, error, errorContext, result, isExporting, start, cancel };
 }

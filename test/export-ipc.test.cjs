@@ -21,6 +21,15 @@ test('sanitizes an export filename and keeps its extension', () => {
   assert.equal(safeExportName('', 'mp4'), 'Beam export.mp4');
 });
 
+test('rejects unsupported output formats before opening a destination file', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-export-invalid-'));
+  const target = path.join(root, 'result.gif');
+  const api = setup(target);
+
+  await assert.rejects(api.invoke('export:begin', { projectName: 'Demo', format: 'gif' }), /Format/);
+  assert.equal(fs.existsSync(target), false);
+});
+
 test('writes ordered chunks atomically and finalizes the selected file', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-export-'));
   const target = path.join(root, 'result.webm');

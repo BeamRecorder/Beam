@@ -19,7 +19,6 @@ export function useVideoEditor(options: {
   const activeTab = ref('canvas');
   const systemVolume = ref(100);
   const micVolume = ref(100);
-  const sourceSize = ref({ width: 1920, height: 1080 });
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
   const player = useVideoPlayer();
   const durationMs = computed(() => Math.round(player.duration.value * 1_000));
@@ -44,6 +43,13 @@ export function useVideoEditor(options: {
     canvas: outputCanvas,
     cursorEffects: cursor.clickEffects,
     cursorMotion,
+    selectedCursor: cursor.selectedCursor,
+    cursorSize: cursor.cursorSize,
+    cursorColor: cursor.cursorColor,
+    cursorShadowEnabled: cursor.enableShadow,
+    cursorShadowBlur: cursor.shadowBlur,
+    cursorShadowColor: cursor.shadowColor,
+    cursorShadowDirection: cursor.shadowDirection,
     availableBackgrounds: player.backgroundGroups,
   });
 
@@ -61,38 +67,32 @@ export function useVideoEditor(options: {
   });
   const exportRequest = computed(() => {
     if (!project.value) return null;
-    try {
-      return {
-        projectName: project.value.name,
-        snapshot: createCompositionSnapshot({
-          duration: compositionDurationMs(compositionState.composition.value) / 1_000,
-          width: sourceSize.value.width,
-          height: sourceSize.value.height,
-          canvas: outputCanvas.value,
-          fps: sourceFps.value,
-          background: player.selectedBackgroundMedia.value,
-          blurPercent: player.backgroundBlurPercent.value,
-          editorData: editorData.value,
-          zooms: zoomState.zoomElements.value,
-          composition: compositionState.composition.value,
-          cursorSettings: {
-            selectedCursor: cursor.selectedCursor.value,
-            size: cursor.cursorSize.value,
-            color: cursor.cursorColor.value,
-            shadow: {
-              enabled: cursor.enableShadow.value,
-              blur: cursor.shadowBlur.value,
-              color: cursor.shadowColor.value,
-              direction: cursor.shadowDirection.value,
-            },
-            clickEffects: cursor.clickEffects.value,
-            motion: cursorMotion.value,
+    return {
+      projectName: project.value.name,
+      snapshot: createCompositionSnapshot({
+        duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+        canvas: outputCanvas.value,
+        fps: sourceFps.value,
+        background: player.selectedBackgroundMedia.value,
+        blurPercent: player.backgroundBlurPercent.value,
+        editorData: editorData.value,
+        zooms: zoomState.zoomElements.value,
+        composition: compositionState.composition.value,
+        cursorSettings: {
+          selectedCursor: cursor.selectedCursor.value,
+          size: cursor.cursorSize.value,
+          color: cursor.cursorColor.value,
+          shadow: {
+            enabled: cursor.enableShadow.value,
+            blur: cursor.shadowBlur.value,
+            color: cursor.shadowColor.value,
+            direction: cursor.shadowDirection.value,
           },
-        }),
-      };
-    } catch {
-      return null;
-    }
+          clickEffects: cursor.clickEffects.value,
+          motion: cursorMotion.value,
+        },
+      }),
+    };
   });
 
   watch(
@@ -134,12 +134,6 @@ export function useVideoEditor(options: {
     },
     { deep: true, immediate: true, flush: 'post' },
   );
-  watch(player.frameVersion, () => {
-    const screen = compositionState.composition.value.clips.find((clip) => clip.kind === 'screen' && clip.enabled);
-    const frame = screen ? player.frameFor(screen.id) : null;
-    if (frame) sourceSize.value = { width: frame.width, height: frame.height };
-  });
-
   return {
     activeTab,
     systemVolume,

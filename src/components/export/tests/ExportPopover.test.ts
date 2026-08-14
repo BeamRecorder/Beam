@@ -2,10 +2,10 @@ import { createPinia, setActivePinia } from 'pinia';
 import { mount } from '@vue/test-utils';
 import { nextTick, type Ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useToastStore } from '~/ui/toast/toastStore';
 import type { ExportRequest } from '../export-types';
 
-const { supportedVideoCodec, mockJob } = vi.hoisted(() => ({
-  supportedVideoCodec: vi.fn(),
+const { mockJob } = vi.hoisted(() => ({
   mockJob: {
     start: vi.fn(),
     cancel: vi.fn(),
@@ -13,8 +13,7 @@ const { supportedVideoCodec, mockJob } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('./mediabunny/exporter', () => ({ supportedVideoCodec }));
-vi.mock('./useExportJob', async () => {
+vi.mock('../useExportJob', async () => {
   const { ref, computed } = await import('vue');
   const progress = ref(null);
   const error = ref<string | null>(null);
@@ -39,7 +38,7 @@ vi.mock('./useExportJob', async () => {
   };
 });
 
-import ExportPopover from './ExportPopover.vue';
+import ExportPopover from '../ExportPopover.vue';
 
 const Popover = {
   template: '<div class="popover-stub"><slot name="trigger" /><slot /></div>',
@@ -69,7 +68,8 @@ const request = {
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
-  supportedVideoCodec.mockResolvedValue('vp9');
+  mockJob.start.mockReset();
+  mockJob.cancel.mockReset();
   Object.defineProperty(window, 'capture', {
     configurable: true,
     value: { openFile: vi.fn() },
@@ -89,16 +89,17 @@ describe('ExportPopover', () => {
       global: { stubs: { Popover, Button, ButtonGroup, ProgressBar } },
     });
 
-  it('selects format and quality, then reports an unsupported codec', async () => {
-    supportedVideoCodec.mockResolvedValueOnce(null);
+  it('passes format and quality to the export job so validation errors stay visible', async () => {
+    mockJob.start.mockImplementationOnce(async (value: ExportRequest) => {
+      (mockJob.state?.error as Ref<string | null>).value = `${value.format.toUpperCase()} is not encodable`;
+    });
     const wrapper = mountExport();
     const buttons = wrapper.findAll('.button-stub');
     await buttons.find((button) => button.text() === 'MP4')?.trigger('click');
     await buttons.find((button) => button.text() === 'high')?.trigger('click');
     await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
-    expect(supportedVideoCodec).toHaveBeenCalledWith(expect.objectContaining({ format: 'mp4', preset: 'high' }));
+    expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ format: 'mp4', preset: 'high' }));
     expect(wrapper.get('[role="alert"]').text()).toContain('MP4');
-    expect(mockJob.start).not.toHaveBeenCalled();
   });
 
   it('starts an export, displays its result, and opens the generated file', async () => {
@@ -151,5 +152,40 @@ describe('ExportPopover', () => {
     expect(wrapper.text()).toContain('01:01.0s');
     await wrapper.find('.export-progress-card .button-stub').trigger('click');
     expect(mockJob.cancel).toHaveBeenCalledOnce();
+  });
+
+  it('keeps Export visible and publishes a sanitized copyable error toast', async () => {
+    const originalNavigator = globalThis.navigator;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { clipboard: { writeText } },
+    });
+    mockJob.start.mockImplementation(async () => {
+      (mockJob.state?.error as Ref<string | null>).value =
+        'Missing asset: /home/albi/projects/demo/media/recording.mp4';
+    });
+
+    try {
+      const wrapper = mountExport();
+      await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
+      await nextTick();
+
+      expect(wrapper.find('.export-trigger').exists()).toBe(true);
+      expect(wrapper.get('[role="alert"]').text()).toContain('Missing asset');
+
+      const toast = useToastStore().toasts.at(-1);
+      expect(toast).toMatchObject({
+        type: 'error',
+        action: { label: expect.stringMatching(/copy/i), onClick: expect.any(Function) },
+      });
+      toast?.action?.onClick();
+      await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      const copied = String(writeText.mock.calls[0]?.[0]);
+      expect(copied).toContain('Missing asset');
+      expect(copied).not.toContain('/home/albi');
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: originalNavigator });
+    }
   });
 });

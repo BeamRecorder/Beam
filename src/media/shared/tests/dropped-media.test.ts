@@ -82,10 +82,20 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('inspectDroppedMedia', () => {
+  it('rejects GIFs explicitly before probing Mediabunny', async () => {
+    await expect(inspectDroppedMedia(file('animation.GIF', 'image/gif'))).rejects.toThrow('GIF not supported');
+    expect(runtime.Input).not.toHaveBeenCalled();
+    expect(runtime.BlobSource).not.toHaveBeenCalled();
+  });
+
   it('detects images and returns dimensions with a fixed still-image duration', async () => {
     const bitmap = { width: 640, height: 360, close: vi.fn() };
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => bitmap));
-    runtime.inputFactory = () => input({ getFormat: vi.fn().mockRejectedValue(new runtime.UnsupportedInputFormatError()) });
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => bitmap),
+    );
+    runtime.inputFactory = () =>
+      input({ getFormat: vi.fn().mockRejectedValue(new runtime.UnsupportedInputFormatError()) });
 
     await expect(inspectDroppedMedia(file('poster.png', 'image/png'))).resolves.toEqual({
       kind: 'image',
@@ -145,9 +155,12 @@ describe('inspectDroppedMedia', () => {
   it('maps invalid containers and media with no tracks to explicit errors', async () => {
     const invalidInput = input({ getFormat: vi.fn().mockRejectedValue(new runtime.UnsupportedInputFormatError()) });
     runtime.inputFactory = () => invalidInput;
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => {
-      throw new Error('not an image');
-    }));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => {
+        throw new Error('not an image');
+      }),
+    );
     await expect(inspectDroppedMedia(file('broken.bin'), 'broken-source')).rejects.toMatchObject({
       detail: { kind: 'invalid-container', sourceId: 'broken-source' },
     });

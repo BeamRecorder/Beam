@@ -44,6 +44,7 @@ export function useEditorMediaDrop(options: EditorMediaDropOptions) {
       return options.t('mediaDropDecodeFailed');
     }
     const message = error instanceof Error ? error.message.toLowerCase() : '';
+    if (message.includes('gif not supported')) return 'GIF not supported';
     if (message.includes('non autorisé')) return options.t('mediaDropUnsupportedExtension');
     if (message.includes('fichier') || message.includes('chemin')) return options.t('mediaDropNotLocal');
     return options.t('mediaDropImportFailed');

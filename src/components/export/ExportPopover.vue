@@ -6,11 +6,11 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
-import { supportedVideoCodec } from './mediabunny/exporter';
 import { useExportJob } from './useExportJob';
 import { bitrateFor } from './export-presets';
 import type { ExportFormat, ExportPreset, ExportRequest } from './export-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import { safeExportErrorMessage, technicalExportError } from './mediabunny/export-preflight';
 
 const { t } = useTranslate('ExportPopover');
 
@@ -27,12 +27,8 @@ const formatDescriptions: Record<ExportFormat, string> = {
   mp4: t('mp4Desc'),
 };
 
-const nativeWidth = computed(
-  () => props.request.snapshot.canvas?.width || props.request.snapshot.render?.sourceWidth || 1920,
-);
-const nativeHeight = computed(
-  () => props.request.snapshot.canvas?.height || props.request.snapshot.render?.sourceHeight || 1080,
-);
+const nativeWidth = computed(() => props.request.snapshot.canvas.width);
+const nativeHeight = computed(() => props.request.snapshot.canvas.height);
 
 const computeExportDimensions = (res: ExportResolutionOption) => {
   const nativeW = nativeWidth.value;
@@ -80,11 +76,12 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
 }));
 
 const availability = ref<string | null>(null);
-const { progress, error, result, isExporting, start, cancel } = useExportJob();
+const { progress, error, errorContext, result, isExporting, start, cancel } = useExportJob();
 const toastStore = useToastStore();
 const percentage = computed(() =>
   progress.value ? (progress.value.completed / Math.max(1, progress.value.total)) * 100 : 0,
 );
+const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
 
 const openFile = (path: string) => {
   if (path && window.capture?.openFile) {
@@ -108,11 +105,15 @@ const run = async () => {
       },
     },
   };
-  if (!(await supportedVideoCodec(request))) {
-    availability.value = t('formatNotSupported', { format: format.value.toUpperCase() });
+  await start(request);
+  if (error.value) {
+    const technical = technicalExportError(errorContext?.value ?? error.value);
+    toastStore.error(safeExportErrorMessage(error.value), 0, {
+      label: t('copyError'),
+      onClick: () => void navigator.clipboard.writeText(technical),
+    });
     return;
   }
-  await start(request);
   if (result.value?.path) {
     const exportedPath = result.value.path;
     const filename = exportedPath.split(/[/\\]/).pop() || t('video');
@@ -231,7 +232,7 @@ const formatMs = (ms: number) => {
             <span class="option-hint">{{ presetDescriptions[preset] }}</span>
           </div>
 
-          <p v-if="availability || error" class="error" role="alert">{{ availability || error }}</p>
+          <p v-if="displayError" class="error" role="alert">{{ displayError }}</p>
           <div v-if="result" class="result-box">
             <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
             <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">{{

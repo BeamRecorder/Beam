@@ -75,9 +75,11 @@ const mountDrop = (currentTimeSeconds = 7.25) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.inspectDroppedMedia.mockImplementation(async (dropped: File) => inspection(dropped.name.endsWith('.mp3') ? 'audio' : 'video'));
-  mocks.capture.importDroppedProjectMedia.mockImplementation(async (_projectId: string, dropped: File, kind: MediaAsset['kind']) =>
-    asset(dropped.name, kind),
+  mocks.inspectDroppedMedia.mockImplementation(async (dropped: File) =>
+    inspection(dropped.name.endsWith('.mp3') ? 'audio' : 'video'),
+  );
+  mocks.capture.importDroppedProjectMedia.mockImplementation(
+    async (_projectId: string, dropped: File, kind: MediaAsset['kind']) => asset(dropped.name, kind),
   );
 });
 
@@ -87,6 +89,16 @@ afterEach(() => {
 });
 
 describe('useEditorMediaDrop', () => {
+  it('reports GIF rejection explicitly and never imports the file', async () => {
+    const { state } = mountDrop();
+    mocks.inspectDroppedMedia.mockRejectedValueOnce(new Error('GIF not supported'));
+
+    await state.importFiles([file('animation.gif', 'image/gif')]);
+
+    expect(mocks.capture.importDroppedProjectMedia).not.toHaveBeenCalled();
+    expect(mocks.toast.error).toHaveBeenCalledWith(expect.stringContaining('GIF not supported'), 6_000);
+  });
+
   it('accepts Files drops only and keeps the overlay active across nested drag depth', () => {
     const { state } = mountDrop();
     const nonFileEnter = event(['text/plain']);
@@ -136,23 +148,25 @@ describe('useEditorMediaDrop', () => {
     const { state, addImportedAsset } = mountDrop(2);
     const accepted = file('accepted.mp4');
     const rejected = file('broken.mp4');
-    mocks.inspectDroppedMedia
-      .mockResolvedValueOnce(inspection('video'))
-      .mockRejectedValueOnce(
-        new MediaInputError({
-          kind: 'unsupported-codec',
-          sourceId: rejected.name,
-          track: 'video',
-          codec: 'av1',
-          message: 'bad codec',
-        }),
-      );
+    mocks.inspectDroppedMedia.mockResolvedValueOnce(inspection('video')).mockRejectedValueOnce(
+      new MediaInputError({
+        kind: 'unsupported-codec',
+        sourceId: rejected.name,
+        track: 'video',
+        codec: 'av1',
+        message: 'bad codec',
+      }),
+    );
     mocks.capture.importDroppedProjectMedia.mockResolvedValueOnce(asset(accepted.name));
 
     await state.importFiles([accepted, rejected]);
 
     expect(addImportedAsset).toHaveBeenCalledTimes(1);
-    expect(addImportedAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'asset-accepted.mp4' }), expect.anything(), 2_000);
+    expect(addImportedAsset).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'asset-accepted.mp4' }),
+      expect.anything(),
+      2_000,
+    );
     expect(mocks.toast.success).toHaveBeenCalledWith(expect.stringContaining('mediaDropSingleSuccess'));
     expect(mocks.toast.error).toHaveBeenCalledWith(expect.stringContaining('mediaDropRejected'), 6_000);
   });
@@ -163,7 +177,11 @@ describe('useEditorMediaDrop', () => {
     await state.importFiles([file('silent-audio.mp4')]);
 
     expect(mocks.toast.success).toHaveBeenCalledOnce();
-    expect(mocks.toast.addToast).toHaveBeenCalledWith(expect.stringContaining('mediaDropAudioIgnored'), 'warning', 5_000);
+    expect(mocks.toast.addToast).toHaveBeenCalledWith(
+      expect.stringContaining('mediaDropAudioIgnored'),
+      'warning',
+      5_000,
+    );
   });
 
   it('rejects a concurrent import while the first batch is still validating', async () => {

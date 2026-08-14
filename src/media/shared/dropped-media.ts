@@ -49,6 +49,7 @@ export async function inspectDroppedMedia(file: File, sourceId = file.name): Pro
   if (!(file instanceof File) || file.size <= 0) {
     throw new MediaInputError({ kind: 'empty', sourceId, message: 'The dropped file is empty.' });
   }
+  if (/\.gif$/i.test(file.name) || file.type.toLowerCase() === 'image/gif') throw new Error('GIF not supported');
 
   const input = new Input({
     source: new BlobSource(file, { maxCacheSize: BLOB_CACHE_BYTES }),

@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { createCompositionSnapshot } from '../snapshot';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   assets: [
     {
       id: 'screen-asset',
@@ -33,14 +34,15 @@ const composition = (): ClipComposition => ({
       enabled: true,
       order: 0,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('screen'),
+      isMirrored: false,
+      isMirroredY: false,
     },
   ],
 });
 
 const base = () => ({
   duration: 4,
-  width: 1920,
-  height: 1080,
   fps: 30,
   canvas: DEFAULT_OUTPUT_CANVAS,
   background: null,
@@ -62,7 +64,7 @@ const base = () => ({
 });
 
 describe('createCompositionSnapshot', () => {
-  it('uses an imported visual as the render reference when the screen source is unavailable', () => {
+  it('does not fabricate render source dimensions from composition metadata', () => {
     const input = base();
     input.composition.assets[0].src = '';
     input.composition.assets.push({
@@ -89,18 +91,21 @@ describe('createCompositionSnapshot', () => {
       enabled: true,
       order: 1,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('video'),
+      isMirrored: false,
+      isMirroredY: false,
     });
 
-    expect(createCompositionSnapshot(input).render).toMatchObject({ sourceWidth: 1280, sourceHeight: 720 });
+    expect(createCompositionSnapshot(input).render).toMatchObject({ sourceWidth: null, sourceHeight: null });
   });
 
-  it('falls back to the editor source size when the composition has no available visual source', () => {
+  it('does not fall back to editor source dimensions', () => {
     const input = base();
     input.composition.assets[0].src = '';
 
-    expect(createCompositionSnapshot({ ...input, width: 1440, height: 900 }).render).toMatchObject({
-      sourceWidth: 1440,
-      sourceHeight: 900,
+    expect(createCompositionSnapshot(input).render).toMatchObject({
+      sourceWidth: null,
+      sourceHeight: null,
     });
   });
 
@@ -108,12 +113,10 @@ describe('createCompositionSnapshot', () => {
     const snapshot = createCompositionSnapshot({
       ...base(),
       duration: -1,
-      width: 0,
-      height: -8,
       fps: 0,
       composition: { ...composition(), assets: [{ ...composition().assets[0], width: null, height: null }] },
     });
-    expect(snapshot.render).toEqual({ sourceWidth: 1, sourceHeight: 1, fps: 1 });
+    expect(snapshot.render).toEqual({ sourceWidth: null, sourceHeight: null, fps: 1 });
     expect(snapshot.duration).toBe(0);
     expect(snapshot.cursor.available).toBe(false);
   });
@@ -123,7 +126,7 @@ describe('createCompositionSnapshot', () => {
       ...base(),
       canvas: { preset: '4:5', width: 1, height: 1, showBackground: false },
     });
-    expect(snapshot.render).toMatchObject({ sourceWidth: 1920, sourceHeight: 1080 });
+    expect(snapshot.render).toMatchObject({ sourceWidth: null, sourceHeight: null });
     expect(snapshot.canvas).toMatchObject({ width: 1080, height: 1350, showBackground: false });
   });
 

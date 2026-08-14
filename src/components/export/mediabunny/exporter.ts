@@ -1,7 +1,7 @@
 import { bitrateFor } from '../export-presets';
 import type { ExportProgress, ExportRequest, ExportResult } from '../export-types';
-import { renderCompositionFrame, type RenderableMedia } from '../composition/render';
-import { activeClipsAt, inspectMedia, mediaSourceDescriptor, sourceTimeAt, type MediaFrame } from '~/media/shared';
+import { createSnapshotCameraEvaluator, renderCompositionFrame, type RenderableMedia } from '../composition/render';
+import { activeClipsAt, mediaSourceDescriptor, sourceTimeAt, type MediaFrame } from '~/media/shared';
 import { isAudioClip, isVisualClip, type MediaAsset, type VisualClip } from '~/media/shared/composition-types';
 import {
   StreamingMediaOutput,
@@ -13,6 +13,8 @@ import {
 import { cursorTypeForKind, useCursorReplacer } from '../../video-editor/properties/cursor/useCursorReplacer';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { tNamespace } from '../../../i18n';
+import { ExportValidationError, type PreparedExport } from '../export-types';
+import { exportValidationFromMediaError, prepareExport } from './export-preflight';
 
 const $t = tNamespace('exporter');
 
@@ -36,14 +38,6 @@ export async function supportedAudioCodec(request: ExportRequest) {
 export const renderMixedAudio = (request: ExportRequest): Promise<AudioBuffer | null> =>
   mixCompositionAudio(request.snapshot.composition, request.snapshot.duration);
 
-const loadImage = (src: string, errorMessage: string) =>
-  new Promise<RenderableMedia>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve({ source: image, width: image.naturalWidth, height: image.naturalHeight });
-    image.onerror = () => reject(new Error(errorMessage));
-    image.src = src;
-  });
-
 const clipTimestamps = (clip: VisualClip, times: readonly number[]) => {
   const first = clip.sourceInMs / 1_000;
   const last = Math.max(first, (clip.sourceInMs + clip.sourceDurationMs) / 1_000 - 0.000_001);
@@ -62,43 +56,42 @@ type LoadedVisuals = {
   dispose(): void;
 };
 
-async function loadVisuals(request: ExportRequest, times: readonly number[]): Promise<LoadedVisuals> {
+async function loadVisuals(
+  request: ExportRequest,
+  times: readonly number[],
+  prepared: PreparedExport,
+): Promise<LoadedVisuals> {
   const composition = request.snapshot.composition;
   const assets = new Map(composition.assets.map((asset) => [asset.id, asset]));
-  const images = new Map<string, RenderableMedia>();
+  const images = new Map(prepared.images);
   const providers = new Map<string, VideoFrameProvider>();
-  let backgroundImage: RenderableMedia | null = null;
+  let backgroundImage: RenderableMedia | null = prepared.backgroundImage;
   let backgroundProvider: VideoFrameProvider | null = null;
   try {
-    await Promise.all(
-      composition.assets
-        .filter((asset) => asset.kind === 'image' && asset.src)
-        .map(async (asset) => {
-          if (/\.gif(?:$|[?#])/i.test(asset.src)) throw new Error($t('gifNotExportable'));
-          images.set(asset.id, await loadImage(asset.src, $t('unableToLoadImage', { name: asset.name })));
-        }),
-    );
     await Promise.all(
       composition.clips
         .filter(
           (clip): clip is VisualClip =>
-            isVisualClip(clip) && clip.kind !== 'image' && clip.enabled && Boolean(assets.get(clip.assetId)?.src),
+            isVisualClip(clip) && clip.kind !== 'image' && prepared.activeClipIds.has(clip.id),
         )
         .map(async (clip) => {
           const asset = assets.get(clip.assetId);
           if (!asset?.src) throw new Error($t('unableToReadVideoSource', { src: clip.name }));
-          const provider = await VideoFrameProvider.create(
-            { ...mediaSourceDescriptor(asset), kind: 'video' },
-            clipTimestamps(clip, times),
-          );
+          let provider: VideoFrameProvider;
+          try {
+            provider = await VideoFrameProvider.create(
+              { ...mediaSourceDescriptor(asset), kind: 'video' },
+              clipTimestamps(clip, times),
+            );
+          } catch (error) {
+            throw exportValidationFromMediaError(error, clip, asset);
+          }
           providers.set(clip.id, provider);
         }),
     );
 
     const background = request.snapshot.background;
-    if (background?.kind === 'image') {
-      backgroundImage = await loadImage(background.src, $t('unableToLoadBackground'));
-    } else if (background?.kind === 'video') {
+    if (background?.kind === 'video') {
       const asset: MediaAsset = {
         id: 'export-background',
         kind: 'video',
@@ -111,9 +104,8 @@ async function loadVisuals(request: ExportRequest, times: readonly number[]): Pr
         origin: 'project',
       };
       const descriptor = mediaSourceDescriptor(asset);
-      const inspection = await inspectMedia(descriptor);
-      const duration = inspection.metadata.durationSeconds;
-      if (!(duration > 0)) throw new Error($t('unableToLoadBackground'));
+      const duration = prepared.backgroundVideoDuration;
+      if (duration === null || duration <= 0) throw new Error($t('unableToLoadBackground'));
       backgroundProvider = await VideoFrameProvider.create(
         descriptor,
         times.map((time) => time % duration),
@@ -170,30 +162,62 @@ export async function exportWithMediabunny(
   onProgress: (progress: ExportProgress) => void,
   signal: AbortSignal,
 ): Promise<ExportResult> {
-  const fps = request.snapshot.render.fps;
-  const codec = await supportedVideoCodec(request);
-  if (!codec) throw new Error($t('formatNotEncodable', { format: request.format.toUpperCase() }));
-  const audioCodec = await supportedAudioCodec(request);
-  if (request.snapshot.composition.clips.some((clip) => isAudioClip(clip) && clip.enabled) && !audioCodec) {
-    throw new Error($t('formatAudioNotEncodable', { format: request.format.toUpperCase() }));
-  }
   if (signal.aborted) throw new DOMException($t('exportCancelled'), 'AbortError');
-  const opened = await window.capture?.beginExport({ projectName: request.projectName, format: request.format });
-  if (!opened || opened.canceled) throw new DOMException($t('exportCancelled'), 'AbortError');
-
+  const prepared = await prepareExport(request);
+  const fps = prepared.fps;
+  const canonicalRequest: ExportRequest = {
+    ...request,
+    snapshot: { ...request.snapshot, render: { ...request.snapshot.render, fps } },
+  };
   let loaded: LoadedVisuals | null = null;
   let output: StreamingMediaOutput | null = null;
+  let opened: { canceled: false; jobId: string } | null = null;
   try {
+    const codec = await supportedVideoCodec(canonicalRequest);
+    if (!codec)
+      throw new ExportValidationError({
+        code: 'unsupported-codec',
+        message: $t('formatNotEncodable', { format: request.format.toUpperCase() }),
+      });
+    const audioCodec = await supportedAudioCodec(canonicalRequest);
+    if (canonicalRequest.snapshot.composition.clips.some((clip) => isAudioClip(clip) && clip.enabled) && !audioCodec) {
+      throw new ExportValidationError({
+        code: 'unsupported-codec',
+        message: $t('formatAudioNotEncodable', { format: request.format.toUpperCase() }),
+      });
+    }
     const canvas = document.createElement('canvas');
     canvas.width = request.snapshot.canvas.width;
     canvas.height = request.snapshot.canvas.height;
     const context = canvas.getContext('2d');
-    if (!context) throw new Error($t('canvas2DUnavailable'));
+    if (!context) throw new ExportValidationError({ code: 'render-invariant', message: $t('canvas2DUnavailable') });
+    const totalTimeMs = Math.round(canonicalRequest.snapshot.duration * 1_000);
+    const total = Math.max(1, Math.ceil(canonicalRequest.snapshot.duration * fps));
+    const times = Array.from({ length: total }, (_, frame) =>
+      Math.min(canonicalRequest.snapshot.duration, frame / fps),
+    );
+    const cursorImages = await loadCursorImages(canonicalRequest);
+    const cursorMotionPlayer = prepared.screenSize
+      ? createCursorMotionPlayer(
+          canonicalRequest.snapshot.cursor.events,
+          canonicalRequest.snapshot.cursorSettings.motion,
+          prepared.screenSize.width,
+          prepared.screenSize.height,
+        )
+      : undefined;
+    const cameraEvaluator = prepared.screenSize
+      ? createSnapshotCameraEvaluator(canonicalRequest.snapshot, prepared.screenSize.width, prepared.screenSize.height)
+      : undefined;
+    loaded = await loadVisuals(canonicalRequest, times, prepared);
+    if (signal.aborted) throw new DOMException($t('exportCancelled'), 'AbortError');
+    const begun = await window.capture?.beginExport({ projectName: request.projectName, format: request.format });
+    if (!begun || begun.canceled) throw new DOMException($t('exportCancelled'), 'AbortError');
+    opened = begun;
     let sequence = 0;
     const writable = new WritableStream({
       write: (chunk: { data: Uint8Array; position: number }) =>
         window.capture!.writeExportChunk({
-          jobId: opened.jobId,
+          jobId: opened!.jobId,
           sequence: sequence++,
           data: chunk.data,
           position: chunk.position,
@@ -209,9 +233,6 @@ export async function exportWithMediabunny(
       audioCodec,
     });
 
-    const totalTimeMs = Math.round(request.snapshot.duration * 1_000);
-    const total = Math.max(1, Math.ceil(request.snapshot.duration * fps));
-    const times = Array.from({ length: total }, (_, frame) => Math.min(request.snapshot.duration, frame / fps));
     onProgress({
       stage: 'loading_assets',
       stageLabel: $t('loadingMediaAssets'),
@@ -220,14 +241,6 @@ export async function exportWithMediabunny(
       currentTimeMs: 0,
       totalTimeMs,
     });
-    const cursorImages = await loadCursorImages(request);
-    const cursorMotionPlayer = createCursorMotionPlayer(
-      request.snapshot.cursor.events,
-      request.snapshot.cursorSettings.motion,
-      request.snapshot.render.sourceWidth,
-      request.snapshot.render.sourceHeight,
-    );
-    loaded = await loadVisuals(request, times);
     onProgress({
       stage: 'audio_mixing',
       stageLabel: $t('mixingAudioTracks'),
@@ -236,8 +249,7 @@ export async function exportWithMediabunny(
       currentTimeMs: 0,
       totalTimeMs,
     });
-    const mixed = await renderMixedAudio(request);
-    await output.start(mixed);
+    await output.start(prepared.mixedAudio);
 
     for (let frameIndex = 0; frameIndex < total; frameIndex += 1) {
       if (signal.aborted) throw new DOMException($t('exportCancelled'), 'AbortError');
@@ -251,7 +263,7 @@ export async function exportWithMediabunny(
         currentTimeMs,
         totalTimeMs,
       });
-      const active = activeClipsAt(request.snapshot.composition, currentTimeMs);
+      const active = activeClipsAt(canonicalRequest.snapshot.composition, currentTimeMs);
       const videoFrames: MediaFrame[] = [];
       let backgroundFrame: MediaFrame | null = null;
       try {
@@ -261,13 +273,41 @@ export async function exportWithMediabunny(
           if (!isVisualClip(clip)) continue;
           if (clip.kind === 'image') {
             const image = loaded.images.get(clip.assetId);
-            if (!image) continue;
+            if (!image)
+              throw new ExportValidationError({
+                code: 'render-invariant',
+                message: 'A required prepared image is unavailable.',
+                assetId: clip.assetId,
+                clipId: clip.id,
+                name: clip.name,
+              });
             visuals.set(clip.id, image);
             continue;
           }
           const provider = loaded.providers.get(clip.id);
-          if (!provider) continue;
-          const frame = await provider.frameAt(frameIndex);
+          if (!provider)
+            throw new ExportValidationError({
+              code: 'render-invariant',
+              message: 'A required prepared video source is unavailable.',
+              assetId: clip.assetId,
+              clipId: clip.id,
+              name: clip.name,
+            });
+          let frame: MediaFrame;
+          try {
+            frame = await provider.frameAt(frameIndex);
+          } catch (error) {
+            const asset = canonicalRequest.snapshot.composition.assets.find((entry) => entry.id === clip.assetId);
+            if (!asset)
+              throw new ExportValidationError({
+                code: 'missing-asset',
+                assetId: clip.assetId,
+                clipId: clip.id,
+                name: clip.name,
+                message: 'A required export asset disappeared after preflight.',
+              });
+            throw exportValidationFromMediaError(error, clip, asset);
+          }
           videoFrames.push(frame);
           const media = renderableFrame(frame);
           if (clip.kind === 'screen') screen = media;
@@ -281,12 +321,13 @@ export async function exportWithMediabunny(
         renderCompositionFrame(
           context,
           screen,
-          request.snapshot,
+          canonicalRequest.snapshot,
           time,
           background,
           cursorImages,
           visuals,
           cursorMotionPlayer,
+          cameraEvaluator,
         );
       } finally {
         for (const frame of videoFrames) frame.close();
@@ -308,9 +349,10 @@ export async function exportWithMediabunny(
     return { path: result.path, format: request.format };
   } catch (error) {
     await output?.cancel().catch(() => undefined);
-    await window.capture!.abortExport(opened.jobId).catch(() => undefined);
+    if (opened) await window.capture!.abortExport(opened.jobId).catch(() => undefined);
     throw error;
   } finally {
     loaded?.dispose();
+    prepared.dispose();
   }
 }

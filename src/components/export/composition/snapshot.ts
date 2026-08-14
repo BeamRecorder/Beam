@@ -1,7 +1,7 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog';
 import type { ZoomElement } from '../../video-editor/zoom/zoom-types';
-import { isVisualClip, type ClipComposition, type VisualClip } from '~/media/shared/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import type { CursorRenderSettings, CompositionSnapshot } from '../export-types';
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas';
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas';
@@ -32,8 +32,6 @@ const copyCursor = (cursor: ProjectEditorData['cursor'] | undefined): Compositio
 
 export function createCompositionSnapshot(input: {
   duration: number;
-  width: number;
-  height: number;
   fps: number;
   canvas: OutputCanvasSettings;
   background: BackgroundValue | null;
@@ -43,19 +41,13 @@ export function createCompositionSnapshot(input: {
   composition: ClipComposition;
   cursorSettings: CursorRenderSettings;
 }): CompositionSnapshot {
-  const assets = new Map(input.composition.assets.map((asset) => [asset.id, asset]));
-  const visualClips = input.composition.clips.filter(
-    (clip): clip is VisualClip => isVisualClip(clip) && clip.enabled && Boolean(assets.get(clip.assetId)?.src),
-  );
-  const referenceClip = visualClips.find((clip) => clip.kind === 'screen') ?? visualClips[0];
-  const referenceAsset = referenceClip ? assets.get(referenceClip.assetId) : null;
   const canvas = normalizeOutputCanvas(input.canvas);
   return {
     duration: Math.max(0, input.duration),
     render: {
       fps: Math.max(1, input.fps),
-      sourceWidth: Math.max(1, referenceAsset?.width ?? input.width),
-      sourceHeight: Math.max(1, referenceAsset?.height ?? input.height),
+      sourceWidth: null,
+      sourceHeight: null,
     },
     canvas,
     background:
