@@ -33,6 +33,8 @@ class WindowController {
     this.window.on('hide', applyNativeWindowPolicy);
     this.window.on('minimize', applyNativeWindowPolicy);
     this.window.on('restore', applyNativeWindowPolicy);
+    this.window.on('blur', applyNativeWindowPolicy);
+    this.window.on('focus', applyNativeWindowPolicy);
     this.window.on('closed', () => {
       this.flushRecorderPosition();
     });
@@ -140,9 +142,8 @@ class WindowController {
   }
 
   setOverlayAlwaysOnTop(value) {
-    if (value && process.platform !== 'darwin') {
-      // Windows and Linux desktop surfaces can otherwise cover a floating
-      // transparent window. The stronger level keeps the Recorder available.
+    if (value && process.platform === 'win32') {
+      // The stronger Windows level keeps the Recorder above fullscreen apps.
       this.window.setAlwaysOnTop(true, 'screen-saver');
       this.window.moveTop?.();
       return;

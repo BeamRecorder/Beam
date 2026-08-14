@@ -85,6 +85,10 @@ function topCalls(win) {
   return win.calls.filter((call) => call[0] === 'top');
 }
 
+function expectedAlwaysOnTopLevel() {
+  return process.platform === 'win32' ? 'screen-saver' : undefined;
+}
+
 test('hidden window ignores mouse events before it is ready', () => {
   const win = fakeWindow();
   new WindowController(win);
@@ -98,7 +102,7 @@ test('ready HUD forwards pointer movement over transparent areas and stays on to
   assert.ok(win.calls.some((call) => call[0] === 'mouse' && call[1] === true && call[2]?.forward === true));
   const top = topCalls(win).at(-1);
   assert.equal(top[1], true);
-  assert.equal(top[2], process.platform === 'darwin' ? undefined : 'screen-saver');
+  assert.equal(top[2], expectedAlwaysOnTopLevel());
 });
 
 test('recorder constraints are applied before its compact bounds', () => {
@@ -150,8 +154,15 @@ test('recorder reapplies always-on-top after the window is shown', () => {
 
   const top = topCalls(win).at(-1);
   assert.equal(top[1], true);
-  assert.equal(top[2], process.platform === 'darwin' ? undefined : 'screen-saver');
+  assert.equal(top[2], expectedAlwaysOnTopLevel());
   assert.ok(win.calls.some((call) => call[0] === 'moveTop'));
+
+  win.emit('blur');
+  assert.equal(topCalls(win).at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[2], expectedAlwaysOnTopLevel());
+  win.emit('focus');
+  assert.equal(topCalls(win).at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[2], expectedAlwaysOnTopLevel());
   controller.setMode('hud');
 });
 
@@ -167,7 +178,7 @@ test('minimized HUD loses topmost status and regains it after restore', () => {
   win.restore();
   const restoredTop = topCalls(win).at(-1);
   assert.equal(restoredTop[1], true);
-  assert.equal(restoredTop[2], process.platform === 'darwin' ? undefined : 'screen-saver');
+  assert.equal(restoredTop[2], expectedAlwaysOnTopLevel());
 });
 
 test('recorder mode keeps its compact native hit target interactive', () => {
@@ -258,4 +269,12 @@ test('window controller respects alwaysOnTop preference', () => {
   controller.applyModePolicy();
   const alwaysOnTopCallsFalse = win.calls.filter((call) => call[0] === 'top');
   assert.equal(alwaysOnTopCallsFalse.at(-1)[1], false);
+
+  // A focus transition must not re-enable a disabled preference.
+  win.emit('blur');
+  assert.equal(topCalls(win).at(-1)[1], false);
+  currentAlwaysOnTop = true;
+  win.emit('focus');
+  assert.equal(topCalls(win).at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[2], expectedAlwaysOnTopLevel());
 });

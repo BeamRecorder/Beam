@@ -5,6 +5,7 @@ use super::{CropRect, VideoTransform};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct CursorMetadata {
     pub id: u64,
+    pub shape_id: Option<u64>,
     pub x: i32,
     pub y: i32,
     pub hotspot: Option<Hotspot>,
@@ -14,6 +15,7 @@ pub(crate) struct CursorMetadata {
 pub(crate) struct CursorState {
     stream_scope: String,
     native_id: Option<u64>,
+    last_raw_id: Option<u64>,
 }
 
 impl CursorState {
@@ -22,6 +24,7 @@ impl CursorState {
         Self {
             stream_scope: stream_scope.into(),
             native_id: None,
+            last_raw_id: None,
         }
     }
 
@@ -35,8 +38,19 @@ impl CursorState {
         let Some(metadata) = metadata else {
             return CursorSampleState::Unknown;
         };
-        if metadata.id != 0 {
+        if let Some(shape_id) = metadata.shape_id.filter(|id| *id != 0) {
+            // Mutter keeps MetaCursor.id at 1 across shape changes. Use the
+            // transient bitmap only to derive an opaque identity; its pixels
+            // never leave the PipeWire parser and are never persisted.
+            self.native_id = Some(shape_id);
+            if metadata.id != 0 {
+                self.last_raw_id = Some(metadata.id);
+            }
+        } else if metadata.id != 0 && self.last_raw_id != Some(metadata.id) {
+            // Other compositors may expose meaningful SPA ID changes without
+            // republishing bitmap bytes, so retain that portable fast path.
             self.native_id = Some(metadata.id);
+            self.last_raw_id = Some(metadata.id);
         }
         let Some(native_id) = self.native_id else {
             return CursorSampleState::Unknown;

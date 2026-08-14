@@ -54,7 +54,7 @@ const ENABLE_ELECTRON_DIAGNOSTIC_LOGS = !app.isPackaged;
 // Native Wayland toplevels cannot request a compositor-enforced always-on-top
 // layer. Prefer XWayland when it is available so the RecorderBar can use the
 // standard _NET_WM_STATE_ABOVE contract. An explicit user ozone switch wins.
-configureLinuxWindowBackend(app);
+const linuxWindowBackend = configureLinuxWindowBackend(app);
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'whisper-model', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -67,6 +67,7 @@ const logStartup = (step) => {
   const elapsedMs = Number(process.hrtime.bigint() - startupAt) / 1_000_000;
   console.log(`[electron +${elapsedMs.toFixed(0)} ms] ${step}`);
 };
+if (linuxWindowBackend) logStartup(`Linux window backend selected: ${linuxWindowBackend}.`);
 
 const applicationRoot = path.join(__dirname, '..');
 let captureEngine;

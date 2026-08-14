@@ -27,15 +27,17 @@ pub(super) fn header(buffer: &pipewire::buffer::Buffer<'_>) -> HeaderMetadata {
 pub(super) fn cursor(buffer: &pipewire::buffer::Buffer<'_>) -> Option<CursorMetadata> {
     let cursor = buffer.find_meta::<MetaCursor>()?;
     let position = cursor.position();
+    let shape = cursor_shape(cursor);
     Some(CursorMetadata {
         id: u64::from(cursor.id()),
+        shape_id: shape.map(|(id, _)| id),
         x: position.x,
         y: position.y,
-        hotspot: cursor_hotspot(cursor),
+        hotspot: shape.map(|(_, hotspot)| hotspot),
     })
 }
 
-fn cursor_hotspot(cursor: &MetaCursor) -> Option<Hotspot> {
+fn cursor_shape(cursor: &MetaCursor) -> Option<(u64, Hotspot)> {
     if !cursor.is_valid() {
         return None;
     }
@@ -65,12 +67,46 @@ fn cursor_hotspot(cursor: &MetaCursor) -> Option<Hotspot> {
     if data_offset < bitmap_meta_size || data_end > CURSOR_META_SIZE {
         return None;
     }
-    bitmap.bitmap_data()?;
+    let pixels = bitmap.bitmap_data()?;
+    let id = stable_cursor_shape_id(
+        bitmap.format().0,
+        size.width,
+        size.height,
+        bitmap.stride(),
+        pixels,
+    );
     let point = cursor.hotspot();
-    Some(Hotspot {
-        x: u32::try_from(point.x).unwrap_or(0),
-        y: u32::try_from(point.y).unwrap_or(0),
-    })
+    Some((
+        id,
+        Hotspot {
+            x: u32::try_from(point.x).unwrap_or(0),
+            y: u32::try_from(point.y).unwrap_or(0),
+        },
+    ))
+}
+
+pub(crate) fn stable_cursor_shape_id(
+    format: u32,
+    width: u32,
+    height: u32,
+    stride: i32,
+    pixels: &[u8],
+) -> u64 {
+    const FNV_OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+    let mut hash = FNV_OFFSET_BASIS;
+    for byte in format
+        .to_le_bytes()
+        .into_iter()
+        .chain(width.to_le_bytes())
+        .chain(height.to_le_bytes())
+        .chain(stride.to_le_bytes())
+        .chain(pixels.iter().copied())
+    {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    if hash == 0 { 1 } else { hash }
 }
 
 pub(super) fn crop(buffer: &pipewire::buffer::Buffer<'_>) -> Option<CropRect> {
