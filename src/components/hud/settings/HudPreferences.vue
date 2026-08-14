@@ -156,6 +156,7 @@ const recordingBarOptions = [
               <Select
                 :model-value="recordingBarVisibility ?? 'always'"
                 :options="recordingBarOptions"
+                size="sm"
                 direction="up"
                 @update:model-value="emit('update:recordingBarVisibility', $event)"
               />
@@ -171,6 +172,7 @@ const recordingBarOptions = [
               <Select
                 :model-value="countdownSeconds"
                 :options="countdownOptions"
+                size="sm"
                 direction="up"
                 @update:model-value="emit('update:countdownSeconds', $event)"
               />
@@ -201,6 +203,7 @@ const recordingBarOptions = [
               <Select
                 :model-value="localeStore.locale"
                 :options="localeOptions"
+                size="sm"
                 direction="up"
                 @update:model-value="localeStore.setLocale($event)"
               />

@@ -1013,7 +1013,7 @@ const openProject = (project: CaptureProject) => {
       <!-- Main HUD Form -->
       <div v-else key="hud" class="hud-body">
         <!-- Tabs (Screen / Window) -->
-        <ButtonGroup class="mode-tabs">
+        <ButtonGroup v-if="desktopPlatform !== 'linux'" class="mode-tabs">
           <Button :class="{ active: activeTab === 'screen' }" variant="tab" @click="activeTab = 'screen'">
             <template #icon><Monitor class="btn-icon" /></template>
             {{ t('screen') }}
@@ -1026,51 +1026,53 @@ const openProject = (project: CaptureProject) => {
 
         <div class="form-inputs-area">
           <Transition name="fade-slide" mode="out-in">
-            <div :key="activeTab" class="tab-content-container">
-              <!-- Capture source -->
-              <template v-if="activeTab === 'window'">
-                <div class="device-row">
-                  <Layout class="device-icon" />
-                  <SourceSelect
-                    v-model="selectedSourceId"
-                    kind="window"
-                    :sources="sources"
-                    :previews="windowPreviews"
-                    :loading="windowPreviewsLoading"
-                    :disabled="isRecording || isBusy"
-                    @toggle="handleDropdownToggle"
-                  />
+            <div :key="desktopPlatform === 'linux' ? 'linux' : activeTab" class="tab-content-container">
+              <!-- Capture source (macOS / Windows only, on Linux PipeWire portal handles source selection on record) -->
+              <template v-if="desktopPlatform !== 'linux'">
+                <template v-if="activeTab === 'window'">
+                  <div class="device-row">
+                    <Layout class="device-icon" />
+                    <SourceSelect
+                      v-model="selectedSourceId"
+                      kind="window"
+                      :sources="sources"
+                      :previews="windowPreviews"
+                      :loading="windowPreviewsLoading"
+                      :disabled="isRecording || isBusy"
+                      @toggle="handleDropdownToggle"
+                    />
+                  </div>
+                </template>
+
+                <div v-else class="device-row">
+                  <Monitor class="device-icon" />
+                  <div class="screen-select-controls">
+                    <SourceSelect
+                      v-model="selectedScreenId"
+                      kind="screen"
+                      :sources="sources"
+                      :previews="screenPreviews"
+                      :loading="screenPreviewsLoading"
+                      :disabled="isRecording || isBusy || displaySources.length === 0"
+                      @toggle="handleDropdownToggle"
+                    />
+                    <Button
+                      :variant="selectedScreenRegion ? 'primary' : 'secondary'"
+                      size="sm"
+                      icon-only
+                      :icon="isRegionConfirmationAnimating ? Check : Crop"
+                      :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
+                      :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
+                      :disabled="isRecording || isBusy || !selectedScreenBounds"
+                      :class="{
+                        'screen-region-confirmed': Boolean(selectedScreenRegion),
+                        'screen-region-checkmark': isRegionConfirmationAnimating,
+                      }"
+                      @click="selectScreenRegion"
+                    />
+                  </div>
                 </div>
               </template>
-
-              <div v-else class="device-row">
-                <Monitor class="device-icon" />
-                <div class="screen-select-controls">
-                  <SourceSelect
-                    v-model="selectedScreenId"
-                    kind="screen"
-                    :sources="sources"
-                    :previews="screenPreviews"
-                    :loading="screenPreviewsLoading"
-                    :disabled="isRecording || isBusy || displaySources.length === 0"
-                    @toggle="handleDropdownToggle"
-                  />
-                  <Button
-                    :variant="selectedScreenRegion ? 'primary' : 'secondary'"
-                    size="sm"
-                    icon-only
-                    :icon="isRegionConfirmationAnimating ? Check : Crop"
-                    :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
-                    :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
-                    :disabled="isRecording || isBusy || !selectedScreenBounds"
-                    :class="{
-                      'screen-region-confirmed': Boolean(selectedScreenRegion),
-                      'screen-region-checkmark': isRegionConfirmationAnimating,
-                    }"
-                    @click="selectScreenRegion"
-                  />
-                </div>
-              </div>
 
               <!-- Audio and input devices -->
               <div class="selectors-stack">
