@@ -3,7 +3,7 @@
 use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc};
 
 use crate::{
-    cursor::Hotspot,
+    cursor::{CursorKind, Hotspot},
     model::RecordingSettings,
     screen::{
         CursorSampleState, FrameTimestamp, OwnedScreenSample, OwnedVideoFrame, PixelFormat,
@@ -45,6 +45,7 @@ fn cursor_samples_keep_native_identity_visibility_and_hotspot() {
     let mut output = CursorOutput::new(PathBuf::from("unused"));
     let sample = CursorSampleState::Known {
         native_cursor_id: "pipewire:stream:7".into(),
+        cursor_kind: CursorKind::Handpointing,
         pixel_x: -2,
         pixel_y: 9,
         normalized_x: -0.1,
@@ -57,6 +58,17 @@ fn cursor_samples_keep_native_identity_visibility_and_hotspot() {
     output.push_sample(42, sample).expect("cursor sample");
     assert_eq!(output.events.len(), 3);
     assert_eq!(output.shapes.len(), 1);
+    assert!(matches!(
+        output.events.first(),
+        Some(crate::cursor::CursorEvent::Shape {
+            cursor_kind: CursorKind::Handpointing,
+            ..
+        })
+    ));
+    assert_eq!(
+        output.shapes["pipewire:stream:7"].cursor_kind,
+        CursorKind::Handpointing
+    );
     assert_eq!(output.previous_visibility, Some(true));
 }
 
@@ -69,6 +81,7 @@ fn cursor_samples_emit_a_shape_sidecar_without_a_hotspot() {
             42,
             CursorSampleState::Known {
                 native_cursor_id: "pipewire:stream:9".into(),
+                cursor_kind: CursorKind::Textcursor,
                 pixel_x: 10,
                 pixel_y: 12,
                 normalized_x: 0.25,
@@ -83,6 +96,7 @@ fn cursor_samples_emit_a_shape_sidecar_without_a_hotspot() {
         output.events.first(),
         Some(crate::cursor::CursorEvent::Shape {
             cursor_id,
+            cursor_kind: CursorKind::Textcursor,
             native_cursor_id,
             hotspot,
             ..
@@ -95,6 +109,70 @@ fn cursor_samples_emit_a_shape_sidecar_without_a_hotspot() {
         output.shapes["pipewire:stream:9"].hotspot,
         Hotspot { x: 0, y: 0 }
     );
+    assert_eq!(
+        output.shapes["pipewire:stream:9"].cursor_kind,
+        CursorKind::Textcursor
+    );
+}
+
+#[test]
+fn cursor_output_records_a_textcursor_transition_without_a_video_sample() {
+    let temporary = tempfile::tempdir().expect("temporary cursor directory");
+    let mut output = CursorOutput::new(temporary.path().into());
+    output
+        .push_sample(
+            10,
+            CursorSampleState::Known {
+                native_cursor_id: "pipewire:stream:default".into(),
+                cursor_kind: CursorKind::Default,
+                pixel_x: 10,
+                pixel_y: 20,
+                normalized_x: 0.1,
+                normalized_y: 0.2,
+                visible: true,
+                hotspot: Some(Hotspot { x: 0, y: 0 }),
+            },
+        )
+        .expect("default cursor sample");
+    output
+        .push_sample(
+            20,
+            CursorSampleState::Known {
+                native_cursor_id: "pipewire:stream:text".into(),
+                cursor_kind: CursorKind::Textcursor,
+                pixel_x: 11,
+                pixel_y: 20,
+                normalized_x: 0.11,
+                normalized_y: 0.2,
+                visible: true,
+                hotspot: Some(Hotspot { x: 8, y: 12 }),
+            },
+        )
+        .expect("text cursor sample");
+
+    let shapes: Vec<(u64, CursorKind)> = output
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            crate::cursor::CursorEvent::Shape {
+                session_ns,
+                cursor_kind,
+                ..
+            } => Some((*session_ns, *cursor_kind)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        shapes,
+        [(10, CursorKind::Default), (20, CursorKind::Textcursor),]
+    );
+    assert_eq!(output.shapes.len(), 2);
+    assert_eq!(
+        output.shapes["pipewire:stream:text"].cursor_kind,
+        CursorKind::Textcursor
+    );
+    assert!(temporary.path().join("cursor.partial.jsonl").is_file());
+    assert!(!temporary.path().join("segment-0001.mp4").exists());
 }
 
 #[test]
@@ -107,6 +185,7 @@ fn cursor_samples_emit_distinct_shapes_for_native_ids_without_bitmaps() {
                 session_ns,
                 CursorSampleState::Known {
                     native_cursor_id: native_cursor_id.into(),
+                    cursor_kind: CursorKind::Custom,
                     pixel_x: 10,
                     pixel_y: 12,
                     normalized_x: 0.25,
@@ -282,6 +361,7 @@ fn sample(session_ns: u64) -> OwnedScreenSample {
         sequence: session_ns,
         cursor: CursorSampleState::Known {
             native_cursor_id: "pipewire:stream:7".into(),
+            cursor_kind: CursorKind::Default,
             pixel_x: 1,
             pixel_y: 1,
             normalized_x: 0.5,

@@ -7,6 +7,7 @@ use std::{
 
 use crate::{
     CaptureError, NativeCaptureErrorCode,
+    cursor::CursorKind,
     screen::{
         CursorSampleState, FrameTimestamp, OwnedScreenSample, OwnedVideoFrame, PixelFormat,
         ScreenDiscontinuity, ScreenSampleSink, TimestampSource, VideoFormat,
@@ -277,6 +278,7 @@ fn cursor_spa_id_changes_without_a_bitmap_and_zero_preserves_identity() {
     let first = CursorMetadata {
         id: 17,
         shape_id: None,
+        cursor_kind: None,
         x: 4,
         y: 5,
         hotspot: None,
@@ -305,6 +307,7 @@ fn cursor_spa_id_changes_without_a_bitmap_and_zero_preserves_identity() {
         Some(CursorMetadata {
             id: 0,
             shape_id: None,
+            cursor_kind: None,
             x: 6,
             y: 7,
             hotspot: None,
@@ -327,6 +330,7 @@ fn cursor_spa_id_changes_without_a_bitmap_and_zero_preserves_identity() {
         Some(CursorMetadata {
             id: 0,
             shape_id: None,
+            cursor_kind: None,
             x: -1,
             y: -1,
             hotspot: None,
@@ -352,6 +356,7 @@ fn cursor_id_zero_without_a_previous_identity_is_unknown() {
             Some(CursorMetadata {
                 id: 0,
                 shape_id: None,
+                cursor_kind: None,
                 x: 4,
                 y: 5,
                 hotspot: None,
@@ -378,6 +383,7 @@ fn cursor_position_only_update_preserves_raw_spa_identity() {
         Some(CursorMetadata {
             id: 17,
             shape_id: None,
+            cursor_kind: None,
             x: 4,
             y: 5,
             hotspot: None,
@@ -395,6 +401,7 @@ fn cursor_position_only_update_preserves_raw_spa_identity() {
         Some(CursorMetadata {
             id: 0,
             shape_id: None,
+            cursor_kind: None,
             x: 7,
             y: 8,
             hotspot: None,
@@ -424,6 +431,7 @@ fn mutter_raw_id_one_uses_shape_hash_and_position_only_preserves_it() {
         Some(CursorMetadata {
             id: 1,
             shape_id: Some(shape_a),
+            cursor_kind: Some(CursorKind::Default),
             x: 4,
             y: 5,
             hotspot: None,
@@ -433,14 +441,18 @@ fn mutter_raw_id_one_uses_shape_hash_and_position_only_preserves_it() {
     );
     assert!(matches!(
         first,
-        CursorSampleState::Known { ref native_cursor_id, .. }
-            if native_cursor_id == &format!("pipewire:stream:{shape_a}")
+        CursorSampleState::Known {
+            ref native_cursor_id,
+            cursor_kind: CursorKind::Default,
+            ..
+        } if native_cursor_id == &format!("pipewire:stream:{shape_a}")
     ));
 
     let moved = state.resolve(
         Some(CursorMetadata {
             id: 1,
             shape_id: None,
+            cursor_kind: None,
             x: 7,
             y: 8,
             hotspot: None,
@@ -452,6 +464,7 @@ fn mutter_raw_id_one_uses_shape_hash_and_position_only_preserves_it() {
         moved,
         CursorSampleState::Known {
             ref native_cursor_id,
+            cursor_kind: CursorKind::Default,
             pixel_x: 7,
             pixel_y: 8,
             visible: true,
@@ -463,6 +476,7 @@ fn mutter_raw_id_one_uses_shape_hash_and_position_only_preserves_it() {
         Some(CursorMetadata {
             id: 1,
             shape_id: Some(shape_b),
+            cursor_kind: Some(CursorKind::Textcursor),
             x: 7,
             y: 8,
             hotspot: None,
@@ -472,8 +486,11 @@ fn mutter_raw_id_one_uses_shape_hash_and_position_only_preserves_it() {
     );
     assert!(matches!(
         changed,
-        CursorSampleState::Known { ref native_cursor_id, .. }
-            if native_cursor_id == &format!("pipewire:stream:{shape_b}")
+        CursorSampleState::Known {
+            ref native_cursor_id,
+            cursor_kind: CursorKind::Textcursor,
+            ..
+        } if native_cursor_id == &format!("pipewire:stream:{shape_b}")
     ));
     assert_ne!(shape_a, shape_b);
 }
@@ -500,6 +517,7 @@ fn raw_spa_id_change_then_bitmap_shape_change_updates_identity_in_order() {
         Some(CursorMetadata {
             id: 17,
             shape_id: Some(shape_a),
+            cursor_kind: Some(CursorKind::Default),
             x: 4,
             y: 5,
             hotspot: None,
@@ -517,6 +535,7 @@ fn raw_spa_id_change_then_bitmap_shape_change_updates_identity_in_order() {
         Some(CursorMetadata {
             id: 23,
             shape_id: None,
+            cursor_kind: None,
             x: 6,
             y: 7,
             hotspot: None,
@@ -534,6 +553,7 @@ fn raw_spa_id_change_then_bitmap_shape_change_updates_identity_in_order() {
         Some(CursorMetadata {
             id: 23,
             shape_id: Some(shape_b),
+            cursor_kind: Some(CursorKind::Handpointing),
             x: 6,
             y: 7,
             hotspot: None,
@@ -556,6 +576,7 @@ fn zero_shape_hash_does_not_replace_an_existing_identity() {
         Some(CursorMetadata {
             id: 17,
             shape_id: Some(shape),
+            cursor_kind: Some(CursorKind::Default),
             x: 4,
             y: 5,
             hotspot: None,
@@ -568,6 +589,7 @@ fn zero_shape_hash_does_not_replace_an_existing_identity() {
         Some(CursorMetadata {
             id: 17,
             shape_id: Some(0),
+            cursor_kind: None,
             x: 6,
             y: 7,
             hotspot: None,
@@ -587,6 +609,7 @@ fn cursor_coordinates_keep_signed_values_and_follow_crop_rotation() {
     let metadata = CursorMetadata {
         id: 3,
         shape_id: None,
+        cursor_kind: None,
         x: 12,
         y: 24,
         hotspot: None,
@@ -629,6 +652,7 @@ fn cursor_coordinates_keep_signed_values_and_follow_crop_rotation() {
 #[derive(Default)]
 struct SinkLog {
     calls: Arc<Mutex<Vec<&'static str>>>,
+    cursor_samples: Arc<Mutex<Vec<(u64, CursorSampleState)>>>,
     fail_push: bool,
 }
 
@@ -650,6 +674,19 @@ impl ScreenSampleSink for SinkLog {
                 "sink refused sample".into(),
             ));
         }
+        Ok(())
+    }
+
+    fn push_cursor(
+        &mut self,
+        session_ns: u64,
+        cursor: CursorSampleState,
+    ) -> Result<(), CaptureError> {
+        self.calls.lock().expect("log lock").push("cursor");
+        self.cursor_samples
+            .lock()
+            .expect("cursor log lock")
+            .push((session_ns, cursor));
         Ok(())
     }
 
@@ -693,6 +730,7 @@ fn sink_worker_orders_messages_and_always_finishes() {
     let calls = Arc::new(Mutex::new(Vec::new()));
     let sink = SinkLog {
         calls: calls.clone(),
+        cursor_samples: Arc::new(Mutex::new(Vec::new())),
         fail_push: false,
     };
     let (sender, receiver) = crossbeam_channel::unbounded();
@@ -706,6 +744,79 @@ fn sink_worker_orders_messages_and_always_finishes() {
     assert_eq!(
         *calls.lock().expect("log lock"),
         ["format", "push", "finish"]
+    );
+}
+
+#[test]
+fn sink_worker_routes_cursor_only_messages_in_order() {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let cursor_samples = Arc::new(Mutex::new(Vec::new()));
+    let sink = SinkLog {
+        calls: calls.clone(),
+        cursor_samples: cursor_samples.clone(),
+        fail_push: false,
+    };
+    let cursor = CursorSampleState::Known {
+        native_cursor_id: "pipewire:stream:text".into(),
+        cursor_kind: CursorKind::Textcursor,
+        pixel_x: 31,
+        pixel_y: 47,
+        normalized_x: 0.31,
+        normalized_y: 0.47,
+        visible: true,
+        hotspot: None,
+    };
+    let (sender, receiver) = crossbeam_channel::unbounded();
+    sender
+        .send(SinkMessage::Format(video_format(&sample().frame)))
+        .expect("format");
+    sender
+        .send(SinkMessage::Cursor(12, cursor.clone()))
+        .expect("cursor-only update");
+    sender.send(SinkMessage::Sample(sample())).expect("sample");
+    sender.send(SinkMessage::Finish).expect("finish");
+    let fatal = Arc::new(Mutex::new(None));
+    sink_worker(Box::new(sink), receiver, fatal).expect("sink succeeds");
+
+    assert_eq!(
+        *calls.lock().expect("log lock"),
+        ["format", "cursor", "push", "finish"]
+    );
+    assert_eq!(
+        *cursor_samples.lock().expect("cursor log lock"),
+        [(12, cursor)]
+    );
+}
+
+#[test]
+fn output_dimensions_follow_crop_and_rotation_for_cursor_only_updates() {
+    let format = negotiated(NativePixelFormat::Bgra, 1920, 1080);
+    let crop = Some(CropRect {
+        x: 100,
+        y: 50,
+        width: 800,
+        height: 600,
+    });
+    assert_eq!(
+        output_dimensions(format, crop, VideoTransform::None).expect("dimensions"),
+        (800, 600)
+    );
+    assert_eq!(
+        output_dimensions(format, crop, VideoTransform::Rotated90).expect("dimensions"),
+        (600, 800)
+    );
+    assert!(
+        output_dimensions(
+            format,
+            Some(CropRect {
+                x: 1_500,
+                y: 0,
+                width: 500,
+                height: 100,
+            }),
+            VideoTransform::None,
+        )
+        .is_err()
     );
 }
 

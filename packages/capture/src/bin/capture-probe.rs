@@ -111,6 +111,20 @@ impl capture::screen::ScreenSampleSink for ProbeSink {
         Ok(())
     }
 
+    fn push_cursor(
+        &mut self,
+        session_ns: u64,
+        cursor: capture::screen::CursorSampleState,
+    ) -> Result<(), capture::CaptureError> {
+        let mut summary = self.lock()?;
+        if matches!(cursor, capture::screen::CursorSampleState::Known { .. }) {
+            summary.cursor_samples = summary.cursor_samples.saturating_add(1);
+        }
+        summary.first_session_ns.get_or_insert(session_ns);
+        summary.last_session_ns = Some(session_ns);
+        Ok(())
+    }
+
     fn discontinuity(
         &mut self,
         event: capture::screen::ScreenDiscontinuity,

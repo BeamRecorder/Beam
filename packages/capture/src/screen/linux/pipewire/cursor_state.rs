@@ -1,6 +1,9 @@
-use crate::{cursor::Hotspot, screen::CursorSampleState};
+use crate::{
+    cursor::{CursorKind, Hotspot},
+    screen::CursorSampleState,
+};
 
-use super::{CropRect, VideoTransform};
+use super::{CropRect, CursorClassifier, VideoTransform};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct CursorMetadata {
@@ -9,6 +12,7 @@ pub(crate) struct CursorMetadata {
     pub x: i32,
     pub y: i32,
     pub hotspot: Option<Hotspot>,
+    pub cursor_kind: Option<CursorKind>,
 }
 
 #[derive(Debug)]
@@ -16,6 +20,8 @@ pub(crate) struct CursorState {
     stream_scope: String,
     native_id: Option<u64>,
     last_raw_id: Option<u64>,
+    cursor_kind: CursorKind,
+    classifier: CursorClassifier,
 }
 
 impl CursorState {
@@ -25,7 +31,13 @@ impl CursorState {
             stream_scope: stream_scope.into(),
             native_id: None,
             last_raw_id: None,
+            cursor_kind: CursorKind::Custom,
+            classifier: CursorClassifier::system(),
         }
+    }
+
+    pub(super) fn classifier_mut(&mut self) -> &mut CursorClassifier {
+        &mut self.classifier
     }
 
     #[must_use]
@@ -40,9 +52,10 @@ impl CursorState {
         };
         if let Some(shape_id) = metadata.shape_id.filter(|id| *id != 0) {
             // Mutter keeps MetaCursor.id at 1 across shape changes. Use the
-            // transient bitmap only to derive an opaque identity; its pixels
-            // never leave the PipeWire parser and are never persisted.
+            // transient bitmap to derive an opaque identity and portable kind;
+            // its pixels never leave the PipeWire parser and are never persisted.
             self.native_id = Some(shape_id);
+            self.cursor_kind = metadata.cursor_kind.unwrap_or(CursorKind::Custom);
             if metadata.id != 0 {
                 self.last_raw_id = Some(metadata.id);
             }
@@ -51,6 +64,7 @@ impl CursorState {
             // republishing bitmap bytes, so retain that portable fast path.
             self.native_id = Some(metadata.id);
             self.last_raw_id = Some(metadata.id);
+            self.cursor_kind = CursorKind::Custom;
         }
         let Some(native_id) = self.native_id else {
             return CursorSampleState::Unknown;
@@ -64,6 +78,7 @@ impl CursorState {
             && u32::try_from(metadata.y).is_ok_and(|y| y < height);
         CursorSampleState::Known {
             native_cursor_id: format!("pipewire:{}:{native_id}", self.stream_scope),
+            cursor_kind: self.cursor_kind,
             pixel_x: metadata.x,
             pixel_y: metadata.y,
             normalized_x: f64::from(metadata.x) / f64::from(width),

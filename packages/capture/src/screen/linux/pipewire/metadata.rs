@@ -8,7 +8,7 @@ use pipewire::spa::buffer::meta::{
 use crate::cursor::Hotspot;
 
 use super::params::CURSOR_META_SIZE;
-use super::{CropRect, CursorMetadata, HeaderMetadata, VideoTransform};
+use super::{CropRect, CursorClassifier, CursorMetadata, HeaderMetadata, VideoTransform};
 
 pub(super) fn header(buffer: &pipewire::buffer::Buffer<'_>) -> HeaderMetadata {
     let Some(header) = buffer.find_meta::<MetaHeader>() else {
@@ -24,20 +24,27 @@ pub(super) fn header(buffer: &pipewire::buffer::Buffer<'_>) -> HeaderMetadata {
     }
 }
 
-pub(super) fn cursor(buffer: &pipewire::buffer::Buffer<'_>) -> Option<CursorMetadata> {
+pub(super) fn cursor(
+    buffer: &pipewire::buffer::Buffer<'_>,
+    classifier: &mut CursorClassifier,
+) -> Option<CursorMetadata> {
     let cursor = buffer.find_meta::<MetaCursor>()?;
     let position = cursor.position();
-    let shape = cursor_shape(cursor);
+    let shape = cursor_shape(cursor, classifier);
     Some(CursorMetadata {
         id: u64::from(cursor.id()),
-        shape_id: shape.map(|(id, _)| id),
+        shape_id: shape.map(|(id, _, _)| id),
         x: position.x,
         y: position.y,
-        hotspot: shape.map(|(_, hotspot)| hotspot),
+        hotspot: shape.map(|(_, hotspot, _)| hotspot),
+        cursor_kind: shape.map(|(_, _, kind)| kind),
     })
 }
 
-fn cursor_shape(cursor: &MetaCursor) -> Option<(u64, Hotspot)> {
+fn cursor_shape(
+    cursor: &MetaCursor,
+    classifier: &mut CursorClassifier,
+) -> Option<(u64, Hotspot, crate::cursor::CursorKind)> {
     if !cursor.is_valid() {
         return None;
     }
@@ -56,7 +63,7 @@ fn cursor_shape(cursor: &MetaCursor) -> Option<(u64, Hotspot)> {
     let width = usize::try_from(size.width).ok()?;
     let height = usize::try_from(size.height).ok()?;
     let stride = usize::try_from(bitmap.stride().unsigned_abs()).ok()?;
-    if width == 0 || height == 0 || width > 384 || height > 384 || stride < width {
+    if width == 0 || height == 0 || width > 384 || height > 384 || stride < width.checked_mul(4)? {
         return None;
     }
     let data_offset = usize::try_from(bitmap.offset()).ok()?;
@@ -76,13 +83,20 @@ fn cursor_shape(cursor: &MetaCursor) -> Option<(u64, Hotspot)> {
         pixels,
     );
     let point = cursor.hotspot();
-    Some((
+    let hotspot = Hotspot {
+        x: u32::try_from(point.x).unwrap_or(0),
+        y: u32::try_from(point.y).unwrap_or(0),
+    };
+    let kind = classifier.classify(
         id,
-        Hotspot {
-            x: u32::try_from(point.x).unwrap_or(0),
-            y: u32::try_from(point.y).unwrap_or(0),
-        },
-    ))
+        bitmap.format(),
+        size.width,
+        size.height,
+        bitmap.stride(),
+        pixels,
+        hotspot,
+    );
+    Some((id, hotspot, kind))
 }
 
 pub(crate) fn stable_cursor_shape_id(

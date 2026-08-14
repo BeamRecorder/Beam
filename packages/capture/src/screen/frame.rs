@@ -2,7 +2,10 @@ use std::{path::PathBuf, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{CaptureError, cursor::Hotspot};
+use crate::{
+    CaptureError,
+    cursor::{CursorKind, Hotspot},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -48,6 +51,7 @@ pub enum CursorSampleState {
     Unknown,
     Known {
         native_cursor_id: String,
+        cursor_kind: CursorKind,
         pixel_x: i32,
         pixel_y: i32,
         normalized_x: f64,
@@ -84,6 +88,11 @@ pub trait ScreenSampleSink: Send {
     fn begin_segment(&mut self, segment: ScreenSegment) -> Result<(), CaptureError>;
     fn format_changed(&mut self, format: VideoFormat) -> Result<(), CaptureError>;
     fn push(&mut self, sample: OwnedScreenSample) -> Result<(), CaptureError>;
+    fn push_cursor(
+        &mut self,
+        session_ns: u64,
+        cursor: CursorSampleState,
+    ) -> Result<(), CaptureError>;
     fn discontinuity(&mut self, event: ScreenDiscontinuity) -> Result<(), CaptureError>;
     fn end_segment(&mut self) -> Result<(), CaptureError>;
     fn finish(&mut self) -> Result<(), CaptureError>;

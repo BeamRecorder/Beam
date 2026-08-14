@@ -185,6 +185,7 @@ dependencies = [
  "walkdir",
  "windows",
  "windows-capture",
+ "xcursor",
 ]
 
 [[package]]
@@ -1737,6 +1738,12 @@ checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
 ]
+
+[[package]]
+name = "xcursor"
+version = "0.3.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "163b33ed8786455e2fa5d72f554057ce3f3182425434f756cd39c99839d88e23"
 
 [[package]]
 name = "zbus"

@@ -37,6 +37,7 @@ pub(super) fn sink_worker(
             }
             SinkMessage::Format(format) => sink.format_changed(format),
             SinkMessage::Sample(sample) => sink.push(sample),
+            SinkMessage::Cursor(session_ns, cursor) => sink.push_cursor(session_ns, cursor),
             SinkMessage::Discontinuity(event) => sink.discontinuity(event),
             SinkMessage::EndSegment(reply) => {
                 let result = sink.end_segment();

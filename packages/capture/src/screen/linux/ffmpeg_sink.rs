@@ -3,8 +3,7 @@ use std::{collections::BTreeMap, path::PathBuf};
 use crate::{
     CaptureError, NativeCaptureErrorCode,
     cursor::{
-        CursorEvent, CursorEventWriter, CursorKind, CursorShapeCatalogEntry, Hotspot,
-        telemetry_from_events,
+        CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, Hotspot, telemetry_from_events,
     },
     input::{InputEvent, InputEventSidecar, NativeInputEvent},
     model::RecordingSettings,
@@ -227,9 +226,17 @@ impl ScreenSampleSink for FfmpegScreenSink {
             .as_mut()
             .ok_or_else(|| ffmpeg_error("FFmpeg is not running for the active segment"))?
             .write_frame(&sample.frame)?;
-        self.collect_input(Some(sample.timestamp.session_ns))?;
+        self.push_cursor(sample.timestamp.session_ns, sample.cursor)
+    }
+
+    fn push_cursor(
+        &mut self,
+        session_ns: u64,
+        cursor_sample: CursorSampleState,
+    ) -> Result<(), CaptureError> {
+        self.collect_input(Some(session_ns))?;
         if let Some(cursor) = self.cursor.as_mut() {
-            cursor.push_sample(sample.timestamp.session_ns, sample.cursor)?;
+            cursor.push_sample(session_ns, cursor_sample)?;
         }
         Ok(())
     }
@@ -297,6 +304,7 @@ impl CursorOutput {
     ) -> Result<(), CaptureError> {
         let CursorSampleState::Known {
             native_cursor_id,
+            cursor_kind,
             pixel_x,
             pixel_y,
             normalized_x,
@@ -312,14 +320,14 @@ impl CursorOutput {
             self.push(CursorEvent::Shape {
                 session_ns,
                 cursor_id: native_cursor_id.clone(),
-                cursor_kind: CursorKind::Custom,
+                cursor_kind,
                 native_cursor_id: native_cursor_id.clone(),
                 hotspot,
             })?;
             self.shapes.insert(
                 native_cursor_id.clone(),
                 CursorShapeCatalogEntry {
-                    cursor_kind: CursorKind::Custom,
+                    cursor_kind,
                     native_cursor_id: native_cursor_id.clone(),
                     hotspot,
                 },

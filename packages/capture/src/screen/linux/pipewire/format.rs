@@ -111,7 +111,7 @@ pub(crate) fn copy_frame(
         )));
     }
     let crop = validate_crop(layout.crop, format)?;
-    let (output_width, output_height) = output_size(crop, layout.transform);
+    let (output_width, output_height) = transformed_size(crop, layout.transform);
     let output_stride = usize::try_from(output_width)
         .ok()
         .and_then(|width| width.checked_mul(4))
@@ -251,7 +251,15 @@ fn validate_crop(
     Ok(crop)
 }
 
-fn output_size(crop: CropRect, transform: VideoTransform) -> (u32, u32) {
+pub(crate) fn output_dimensions(
+    format: NegotiatedFormat,
+    crop: Option<CropRect>,
+    transform: VideoTransform,
+) -> Result<(u32, u32), CaptureError> {
+    Ok(transformed_size(validate_crop(crop, format)?, transform))
+}
+
+fn transformed_size(crop: CropRect, transform: VideoTransform) -> (u32, u32) {
     match transform {
         VideoTransform::Rotated90
         | VideoTransform::Rotated270

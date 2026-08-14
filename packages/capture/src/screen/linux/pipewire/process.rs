@@ -30,6 +30,7 @@ pub(super) enum SinkMessage {
     BeginSegment(ScreenSegment, mpsc::SyncSender<Result<(), CaptureError>>),
     Format(VideoFormat),
     Sample(OwnedScreenSample),
+    Cursor(u64, CursorSampleState),
     Discontinuity(ScreenDiscontinuity),
     EndSegment(mpsc::SyncSender<Result<(), CaptureError>>),
     Finish,
@@ -73,7 +74,8 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         return;
     };
     let header = metadata::header(&buffer);
-    let cursor = metadata::cursor(&buffer);
+    let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
+    let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
     let crop = metadata::crop(&buffer);
     let transform = metadata::transform(&buffer);
     let arrival_ns = u64::try_from(state.clock.elapsed().as_nanos()).unwrap_or(u64::MAX);
@@ -95,6 +97,31 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         return;
     }
     let data = &mut datas[0];
+    let chunk = data.chunk();
+    let cursor = map_cursor_metadata(cursor, format.width, format.height, crop, transform);
+    let (cursor_width, cursor_height) = match super::output_dimensions(format, crop, transform) {
+        Ok(dimensions) => dimensions,
+        Err(error) => {
+            invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
+            return;
+        }
+    };
+    let sample_cursor = state.cursor.resolve(cursor, cursor_width, cursor_height);
+    // Mutter deliberately queues cursor-only updates with an empty video chunk
+    // flagged CORRUPTED. The MetaCursor payload remains valid and must reach the
+    // sidecar without duplicating the previous video frame.
+    if chunk.flags().contains(ChunkFlags::CORRUPTED) || chunk.size() == 0 {
+        if has_cursor_metadata && matches!(sample_cursor, CursorSampleState::Known { .. }) {
+            try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor);
+        } else {
+            invalid_buffer(
+                &mut state,
+                timestamp.session_ns,
+                "PipeWire delivered an empty or corrupted video chunk without cursor metadata",
+            );
+        }
+        return;
+    }
     let memory_type = data.type_();
     if !matches!(
         memory_type,
@@ -106,15 +133,6 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
                 NativeCaptureErrorCode::PipewireMemoryUnsupported,
                 format!("unsupported PipeWire memory type {memory_type:?}"),
             ),
-        );
-        return;
-    }
-    let chunk = data.chunk();
-    if chunk.flags().contains(ChunkFlags::CORRUPTED) {
-        invalid_buffer(
-            &mut state,
-            timestamp.session_ns,
-            "PipeWire marked the video chunk corrupted",
         );
         return;
     }
@@ -142,8 +160,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
             return;
         }
     };
-    let cursor = map_cursor_metadata(cursor, format.width, format.height, crop, transform);
-    let sample_cursor = state.cursor.resolve(cursor, frame.width, frame.height);
+    debug_assert_eq!((frame.width, frame.height), (cursor_width, cursor_height));
     let announced = video_format(&frame);
     if state.last_announced != Some(announced) {
         if let Err(error) = state.sink.try_send(SinkMessage::Format(announced)) {
@@ -173,6 +190,19 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     };
     match state.sink.try_send(SinkMessage::Sample(sample)) {
         Ok(()) => state.metrics.received_frame(native_pts, has_cursor),
+        Err(TrySendError::Full(_)) => {
+            state.metrics.dropped_frames(1);
+            state.pending_drops = state.pending_drops.saturating_add(1);
+        }
+        Err(TrySendError::Disconnected(_)) => {
+            set_fatal(&state.fatal, sink_error("screen sink channel disconnected"));
+        }
+    }
+}
+
+fn try_cursor_sample(state: &mut ProcessState, session_ns: u64, cursor: CursorSampleState) {
+    match state.sink.try_send(SinkMessage::Cursor(session_ns, cursor)) {
+        Ok(()) => {}
         Err(TrySendError::Full(_)) => {
             state.metrics.dropped_frames(1);
             state.pending_drops = state.pending_drops.saturating_add(1);
