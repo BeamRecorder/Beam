@@ -6,6 +6,7 @@ const settings = (theme: PreferenceSettings['theme'] = 'light'): PreferenceSetti
   schemaVersion: 2,
   theme,
   recordingBar: { visibility: 'always' },
+  alwaysOnTop: true,
   devices: {},
   shortcuts: {},
   backgroundPresets: { colors: [], gradients: [] },

@@ -282,7 +282,9 @@
     "alwaysVisible": "Sempre visível",
     "autoFade": "Desaparecimento automático",
     "language": "Idioma",
-    "chooseLanguage": "Selecione o idioma da interface"
+    "chooseLanguage": "Selecione o idioma da interface",
+    "alwaysOnTop": "Always on top",
+    "alwaysOnTopDesc": "Keep the window hovering above other windows"
   },
   "ProjectPicker": {
     "projects": "Projetos",

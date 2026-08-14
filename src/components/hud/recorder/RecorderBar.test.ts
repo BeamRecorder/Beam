@@ -20,6 +20,7 @@ const settings = {
   schemaVersion: 2,
   theme: 'dark' as const,
   recordingBar: { visibility: 'always' as const },
+  alwaysOnTop: true,
   devices: {},
   shortcuts: { 'hud.playPause': { keys: 'Ctrl+P', scope: 'global' as const, category: 'recording' } },
   backgroundPresets: { colors: [], gradients: [] },

@@ -14,6 +14,7 @@ const preferences = (overrides: Record<string, unknown> = {}): PreferenceSetting
   schemaVersion: 2,
   theme: 'light',
   recordingBar: { visibility: 'always' },
+  alwaysOnTop: true,
   devices: {},
   shortcuts: {},
   backgroundPresets: {

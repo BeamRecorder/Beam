@@ -98,6 +98,8 @@ const showProjectPicker = ref(false);
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
 const recordingBarVisibility = ref<'always' | 'auto-fade'>('always');
 watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }));
+const alwaysOnTop = ref(true);
+watch(alwaysOnTop, (value) => void capture.updatePreferences({ alwaysOnTop: value }));
 
 // Previews
 const windowPreviews = ref<CapturePreview[]>([]);
@@ -824,6 +826,7 @@ onMounted(async () => {
     }
   }
   recordingBarVisibility.value = preferences.recordingBar.visibility;
+  alwaysOnTop.value = preferences.alwaysOnTop ?? true;
   if (!props.embedded) updateWindowSize();
   await discoverSources();
   await Promise.allSettled([loadPreviews('screen'), loadPreviews('window')]);
@@ -963,6 +966,7 @@ const openProject = (project: CaptureProject) => {
         v-model:view="settingsView"
         :countdown-seconds="countdownSeconds"
         :recording-bar-visibility="recordingBarVisibility"
+        v-model:always-on-top="alwaysOnTop"
         @update:countdown-seconds="countdownSeconds = $event"
         @update:recording-bar-visibility="recordingBarVisibility = $event"
         @close="showSettings = false"

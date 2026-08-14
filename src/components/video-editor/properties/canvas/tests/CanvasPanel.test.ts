@@ -128,6 +128,12 @@ beforeEach(() => {
   previewState.previews = reactivePreviews;
   previewState.failed = reactiveFailed;
   capture.getPreferences.mockResolvedValue({
+    schemaVersion: 2,
+    theme: 'dark',
+    recordingBar: { visibility: 'always' },
+    alwaysOnTop: true,
+    devices: {},
+    shortcuts: {},
     backgroundPresets: { colors: [], gradients: [] },
     extras: {},
   });
