@@ -86,6 +86,8 @@
     "typography": "टाइपोग्राफ़ी",
     "textColor": "टेक्स्ट का रंग",
     "fontSize": "फ़ॉन्ट आकार",
+    "textWrap": "टेक्स्ट रैप",
+    "textWrapDescription": "फ़ॉन्ट का आकार बनाए रखता है और चौड़ाई बदलने पर ऊंचाई अपने आप समायोजित करता है।",
     "outlineExtrusion": "आउटलाइन और 3D प्रभाव",
     "outlineColor": "आउटलाइन का रंग",
     "outlineThickness": "आउटलाइन की मोटाई",

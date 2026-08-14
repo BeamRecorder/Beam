@@ -6,6 +6,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
 import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
 import type { CursorClickEffects } from '../../../../api/types/cursor-settings';
+import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
 
 const { state } = vi.hoisted(() => ({
   state: {
@@ -28,6 +29,7 @@ const { state } = vi.hoisted(() => ({
     endCropDrag: vi.fn(),
     commitCrop: vi.fn(),
     transformDraft: undefined as { value: unknown } | undefined,
+    transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
     renderVisualStack: undefined as ((...args: unknown[]) => void) | undefined,
   },
@@ -87,12 +89,14 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
   return {
     useLayerTransformAndCrop: () => {
       state.transformDraft = ref(null);
+      state.transformResizeCorners = ref(undefined);
       return {
         transformHandleStyle: ref({ left: '1px', top: '2px', width: '100px', height: '80px' }),
         cropContainerStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
         cropOverlayStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
         activeGuideLines: ref([]),
         transformDraft: state.transformDraft,
+        transformResizeCorners: state.transformResizeCorners,
         beginTransformDrag: state.beginTransformDrag,
         moveTransformDrag: state.moveTransformDrag,
         endTransformDrag: state.endTransformDrag,
@@ -327,7 +331,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition).toHaveBeenCalledWith(expect.anything(), bounds, 1_280);
+    expect(state.drawComposition).toHaveBeenCalledWith(expect.anything(), bounds);
     expect(state.updateCursor).toHaveBeenCalled();
     expect(mounted.find('.webcam-selection').exists()).toBe(true);
     await mounted.find('.webcam-selection').trigger('pointerdown');
@@ -336,10 +340,13 @@ describe('EditorCanvas', () => {
     expect(state.beginTransformDrag).toHaveBeenCalledWith(expect.anything(), 'move');
     expect(state.moveTransformDrag).toHaveBeenCalled();
     expect(state.endTransformDrag).toHaveBeenCalled();
+    state.transformResizeCorners!.value = ['left', 'right'];
+    await nextTick();
+    expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);
 
     state.renderVisualStack?.(contextMock, bounds, vi.fn());
     expect(state.drawWebcamClips).toHaveBeenCalledWith(contextMock, bounds, 'webcam');
-    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, bounds, 1_280, 'image');
+    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, bounds, 'image');
 
     await mounted.setProps({ isCropping: true });
     await nextTick();

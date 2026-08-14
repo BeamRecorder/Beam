@@ -86,6 +86,8 @@
     "typography": "排版",
     "textColor": "文字色彩",
     "fontSize": "字型大小",
+    "textWrap": "文字換行",
+    "textWrapDescription": "保留字型大小，並在寬度變更時自動調整文字框高度。",
     "outlineExtrusion": "輪廓與立體效果",
     "outlineColor": "輪廓色彩",
     "outlineThickness": "輪廓粗細",

@@ -86,6 +86,8 @@
     "typography": "排版",
     "textColor": "文字颜色",
     "fontSize": "字体大小",
+    "textWrap": "文本换行",
+    "textWrapDescription": "保持字体大小，并在宽度变化时自动调整文本框高度。",
     "outlineExtrusion": "描边和立体效果",
     "outlineColor": "描边颜色",
     "outlineThickness": "描边粗细",

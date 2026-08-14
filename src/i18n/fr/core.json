@@ -86,6 +86,8 @@
     "typography": "Typographie",
     "textColor": "Couleur du texte",
     "fontSize": "Taille de police",
+    "textWrap": "Retour à la ligne",
+    "textWrapDescription": "Conserve la taille de police et adapte automatiquement la hauteur lorsque la largeur change.",
     "outlineExtrusion": "Contour & extrusion",
     "outlineColor": "Couleur du contour",
     "outlineThickness": "Épaisseur du contour",

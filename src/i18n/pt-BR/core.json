@@ -86,6 +86,8 @@
     "typography": "Tipografia",
     "textColor": "Cor do texto",
     "fontSize": "Tamanho da fonte",
+    "textWrap": "Quebrar texto",
+    "textWrapDescription": "Mantém o tamanho da fonte e ajusta automaticamente a altura quando a largura muda.",
     "outlineExtrusion": "Contorno e extrusão",
     "outlineColor": "Cor do contorno",
     "outlineThickness": "Espessura do contorno",

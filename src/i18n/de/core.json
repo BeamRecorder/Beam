@@ -86,6 +86,8 @@
     "typography": "Typografie",
     "textColor": "Textfarbe",
     "fontSize": "Schriftgröße",
+    "textWrap": "Text umbrechen",
+    "textWrapDescription": "Behält die Schriftgröße bei und passt die Höhe automatisch an, wenn sich die Breite ändert.",
     "outlineExtrusion": "Kontur und Extrusion",
     "outlineColor": "Konturfarbe",
     "outlineThickness": "Konturstärke",

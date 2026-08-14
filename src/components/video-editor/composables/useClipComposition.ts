@@ -223,7 +223,14 @@ export function useClipComposition(options: {
         order: 0,
         caption: {
           sentences: [],
-          style: { color: '#ffffff', fontSize: 42, shadowColor: '#000000', shadowBlur: 4, placement: 'bottom' },
+          style: {
+            color: '#ffffff',
+            fontSize: 42,
+            wrap: true,
+            shadowColor: '#000000',
+            shadowBlur: 4,
+            placement: 'bottom',
+          },
         },
       };
       composition.value = addClip(composition.value, clip);

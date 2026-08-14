@@ -86,6 +86,8 @@
     "typography": "타이포그래피",
     "textColor": "텍스트 색상",
     "fontSize": "글꼴 크기",
+    "textWrap": "텍스트 줄 바꿈",
+    "textWrapDescription": "글꼴 크기를 유지하고 너비가 바뀌면 높이를 자동으로 조정합니다.",
     "outlineExtrusion": "윤곽선 및 입체 효과",
     "outlineColor": "윤곽선 색상",
     "outlineThickness": "윤곽선 두께",

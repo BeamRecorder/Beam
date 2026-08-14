@@ -86,6 +86,8 @@
     "typography": "Typografia",
     "textColor": "Kolor tekstu",
     "fontSize": "Rozmiar czcionki",
+    "textWrap": "Zawijanie tekstu",
+    "textWrapDescription": "Zachowuje rozmiar czcionki i automatycznie dopasowuje wysokość po zmianie szerokości.",
     "outlineExtrusion": "Obrys i ekstrudowanie",
     "outlineColor": "Kolor obrysu",
     "outlineThickness": "Grubość obrysu",

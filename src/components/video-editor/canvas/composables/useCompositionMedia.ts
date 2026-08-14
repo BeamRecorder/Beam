@@ -1,15 +1,16 @@
 import { onUnmounted, watch } from 'vue';
 import { activeClipsAt, type MediaFrame } from '~/media/shared';
 import {
-  getCaptionTransform,
   isVisualClip,
   type CaptionClip,
   type ClipComposition,
   type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
+import { captionTextAt } from '~/media/shared/caption-text-layout';
 import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
+import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
 import type { OutputCanvasSettings } from '../output-canvas';
 
 export interface UseCompositionMediaOptions {
@@ -19,7 +20,8 @@ export interface UseCompositionMediaOptions {
   selectedTransformClip: () => VisualClip | CaptionClip | null;
   transformDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
-  outputCanvas?: () => OutputCanvasSettings;
+  outputCanvas: () => OutputCanvasSettings;
+  captionViewport: () => CaptionViewport;
   onRenderOnce: () => void;
 }
 
@@ -49,42 +51,18 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     { immediate: true },
   );
 
-  const drawCaption = (
-    ctx: CanvasRenderingContext2D,
-    clip: CaptionClip,
-    timeMs: number,
-    window: { dx: number; dy: number; dw: number; dh: number },
-    referenceWidth: number,
-  ) => {
-    const sentence = clip.caption.sentences.find((item) => item.startMs <= timeMs && timeMs <= item.endMs);
-    const text = clip.caption.style.customText || sentence?.text;
+  const drawCaption = (ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number) => {
+    const text = captionTextAt(clip, timeMs);
     if (!text) return;
-    const style = clip.caption.style;
     const selected = options.selectedTransformClip();
-    const transform =
-      clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : getCaptionTransform(clip);
-    const centerX = window.dx + (transform.x + transform.width / 2) * window.dw;
-    const centerY = window.dy + (transform.y + transform.height / 2) * window.dh;
-    const boxWidth = transform.width * window.dw;
-    const fontSize = Math.max(12, (style.fontSize * window.dw) / Math.max(1, referenceWidth));
-    const strokeWidth = Math.max(1, ((style.boxPadding ?? 6) * window.dw) / Math.max(1, referenceWidth));
-    ctx.save();
-    ctx.font = `800 ${fontSize}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
-    if (style.shadowBlur > 0) {
-      ctx.shadowColor = style.shadowColor;
-      ctx.shadowBlur = style.shadowBlur;
-    }
-    if ((style.boxColor ?? '#000000') !== 'transparent') {
-      ctx.strokeStyle = style.boxColor ?? '#000000';
-      ctx.lineWidth = strokeWidth * 2;
-      ctx.strokeText(text, centerX, centerY, Math.max(10, boxWidth - 8));
-    }
-    ctx.fillStyle = style.color;
-    ctx.fillText(text, centerX, centerY, Math.max(10, boxWidth - 8));
-    ctx.restore();
+    const transformDraft = clip.id === selected?.id ? options.transformDraft() : null;
+    const renderClip = transformDraft ? { ...clip, transform: transformDraft } : clip;
+    drawCaptionText(ctx, {
+      clip: renderClip,
+      text,
+      canvas: options.outputCanvas(),
+      viewport: options.captionViewport(),
+    });
   };
 
   const drawVisual = (
@@ -134,7 +112,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   const drawComposition = (
     ctx: CanvasRenderingContext2D,
     window: { dx: number; dy: number; dw: number; dh: number },
-    referenceWidth: number,
     onlyClipId?: string,
   ) => {
     const timeMs = options.currentTime() * 1_000;
@@ -143,7 +120,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
       .sort((left, right) => right.order - left.order);
     for (const clip of clips) {
-      if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs, window, referenceWidth);
+      if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
       else if (isVisualClip(clip)) drawVisual(ctx, clip, window);
     }
   };

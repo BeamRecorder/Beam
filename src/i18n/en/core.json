@@ -86,6 +86,8 @@
     "typography": "Typography",
     "textColor": "Text color",
     "fontSize": "Font size",
+    "textWrap": "Wrap text",
+    "textWrapDescription": "Keep the font size and automatically fit the annotation height as its width changes.",
     "outlineExtrusion": "Outline & extrusion",
     "outlineColor": "Outline color",
     "outlineThickness": "Outline thickness",

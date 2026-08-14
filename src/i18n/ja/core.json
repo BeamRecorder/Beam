@@ -86,6 +86,8 @@
     "typography": "タイポグラフィ",
     "textColor": "テキストの色",
     "fontSize": "フォントサイズ",
+    "textWrap": "テキストを折り返す",
+    "textWrapDescription": "フォントサイズを保ち、幅の変更に合わせて高さを自動調整します。",
     "outlineExtrusion": "アウトラインと押し出し",
     "outlineColor": "アウトラインの色",
     "outlineThickness": "アウトラインの太さ",

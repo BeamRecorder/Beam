@@ -104,6 +104,7 @@ const runTranscription = async () => {
         style: {
           color: '#ffffff',
           fontSize: 36,
+          wrap: true,
           shadowColor: 'rgba(0, 0, 0, 0.8)',
           shadowBlur: 8,
           shadowDirection: 'bottom-right',

@@ -116,6 +116,7 @@ const context = () =>
     fill: vi.fn(),
     fillText: vi.fn(),
     strokeText: vi.fn(),
+    measureText: vi.fn((value: string) => ({ width: value.length * 10 })),
     drawImage: vi.fn(),
     save: vi.fn(),
     translate: vi.fn(),
@@ -147,12 +148,7 @@ describe('canonical composition rendering', () => {
     if (screen.kind !== 'screen') throw new Error('screen fixture missing');
     screen.crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
     const ctx = context();
-    renderCompositionFrame(
-      ctx,
-      { source: {}, width: 100, height: 50 } as RenderableMedia,
-      value,
-      0,
-    );
+    renderCompositionFrame(ctx, { source: {}, width: 100, height: 50 } as RenderableMedia, value, 0);
     expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 15, 10, 40, 20, 0, 0, 100, 50);
   });
 
@@ -319,12 +315,91 @@ describe('canonical composition rendering', () => {
           shadowColor: '#000',
           shadowBlur: 0,
           placement: 'bottom',
+          wrap: false,
+          boxColor: 'transparent',
+          boxRadius: 0,
         },
       },
     });
     const ctx = context();
     drawCompositionLayers(ctx, value, 0.2);
     expect(ctx.fillText).toHaveBeenCalledWith('Visible', expect.any(Number), expect.any(Number), expect.any(Number));
+  });
+
+  it('wraps captions into separate unconstrained lines when enabled', () => {
+    const value = snapshot();
+    value.render.sourceWidth = 4_000;
+    value.composition.clips.push({
+      id: 'wrapped-caption',
+      kind: 'caption',
+      name: 'Wrapped',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
+      caption: {
+        sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
+        style: {
+          color: '#fff',
+          fontSize: 20,
+          shadowColor: '#000',
+          shadowBlur: 0,
+          placement: 'center',
+          wrap: true,
+          boxColor: 'transparent',
+          boxRadius: 0,
+        },
+      },
+    });
+    const ctx = context();
+    const fillText = ctx.fillText as ReturnType<typeof vi.fn>;
+    drawCompositionLayers(ctx, value, 0.2);
+    expect(fillText.mock.calls.length).toBeGreaterThan(1);
+    expect(fillText.mock.calls.every((call: unknown[]) => call.length === 3)).toBe(true);
+    expect(ctx.font).toBe('800 20px sans-serif');
+  });
+
+  it('keeps legacy constrained rendering when wrapping is disabled', () => {
+    const value = snapshot();
+    value.composition.clips.push({
+      id: 'nowrap-caption',
+      kind: 'caption',
+      name: 'No wrap',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
+      caption: {
+        sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
+        style: {
+          color: '#fff',
+          fontSize: 20,
+          shadowColor: '#000',
+          shadowBlur: 0,
+          placement: 'center',
+          wrap: false,
+          boxColor: 'transparent',
+          boxRadius: 0,
+        },
+      },
+    });
+    const ctx = context();
+    drawCompositionLayers(ctx, value, 0.2);
+    expect(ctx.fillText).toHaveBeenCalledTimes(1);
+    expect(ctx.fillText).toHaveBeenCalledWith(
+      'One two three four',
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+    );
   });
 
   it('exports a right click with its own ripple and rebound settings', () => {

@@ -37,6 +37,8 @@ export interface CaptionSentence {
 export interface CaptionStyle {
   color: string;
   fontSize: number;
+  /** Wrap text to the annotation width. Missing values from older projects default to enabled. */
+  wrap?: boolean;
   shadowColor: string;
   shadowBlur: number;
   shadowDirection?: 'all' | 'bottom' | 'bottom-right' | 'top-left';

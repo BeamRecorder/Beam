@@ -22,6 +22,7 @@ import {
   type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
+import { approximateCaptionTextWidth } from '~/media/shared/caption-text-layout';
 import { outputPreviewRect, type OutputCanvasSettings } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
@@ -95,6 +96,15 @@ let drawVisualStack:
   | null = null;
 
 const viewportZoom = useViewportZoom();
+const measureCaptionText = (text: string, fontSize: number) => {
+  const context = canvasRef.value?.getContext('2d');
+  if (!context) return approximateCaptionTextWidth(text, fontSize);
+  context.save();
+  context.font = `800 ${fontSize}px sans-serif`;
+  const width = context.measureText(text).width;
+  context.restore();
+  return width;
+};
 
 const liveScreenClip = computed<VisualClip | null>(
   () =>
@@ -129,8 +139,14 @@ const transformAndCrop = useLayerTransformAndCrop({
   currentTime: () => props.currentTime,
   selectedTransformClip: () => props.selectedTransformClip,
   videoWindowBounds: () => cameraZoom.videoWindowBounds.value,
-  overlayWindowBounds: () => cameraZoom.overlayWindowBounds.value,
+  overlayWindowBounds: () => {
+    if (cameraZoom.overlayWindowBounds.value) return cameraZoom.overlayWindowBounds.value;
+    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+    return { dx: preview.x, dy: preview.y, dw: preview.width, dh: preview.height, scale: 1 };
+  },
   isCropping: () => props.isCropping,
+  outputCanvas: () => props.outputCanvas,
+  measureCaptionText,
   zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit('update:clip-transform', transform),
   onPreviewTransform: (transform) => emit('preview:clip-transform', transform),
@@ -206,6 +222,10 @@ const compositionMedia = useCompositionMedia({
   transformDraft: () => transformAndCrop.transformDraft.value,
   isCropping: () => props.isCropping,
   outputCanvas: () => props.outputCanvas,
+  captionViewport: () => {
+    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+    return { x: preview.x, y: preview.y, width: preview.width, height: preview.height };
+  },
   onRenderOnce: renderOnce,
 });
 
@@ -218,7 +238,7 @@ const drawNonScreenVisuals = (
     .sort((left, right) => right.order - left.order);
   for (const clip of clips) {
     if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
-    else compositionMedia.drawComposition(ctx, window, screenFrame.value?.width ?? 1, clip.id);
+    else compositionMedia.drawComposition(ctx, window, clip.id);
   }
 };
 
@@ -229,7 +249,7 @@ drawVisualStack = (ctx, window, drawScreen) => {
   for (const clip of clips) {
     if (clip.kind === 'screen') drawScreen();
     else if (clip.kind === 'webcam') compositionMedia.drawWebcamClips(ctx, window, clip.id);
-    else compositionMedia.drawComposition(ctx, window, screenFrame.value?.width ?? 1, clip.id);
+    else compositionMedia.drawComposition(ctx, window, clip.id);
   }
 };
 
@@ -311,7 +331,7 @@ const renderCanvas = () => {
   ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
-    compositionMedia.drawComposition(ctx, window, screenFrame.value?.width ?? 1);
+    compositionMedia.drawComposition(ctx, window);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
       window,
@@ -337,7 +357,7 @@ const renderCanvas = () => {
     ctx.clip();
     drawBackground(ctx, preview);
     drawNonScreenVisuals(ctx, fallbackWindow);
-    compositionMedia.drawComposition(ctx, fallbackWindow, screenFrame.value?.width ?? 1);
+    compositionMedia.drawComposition(ctx, fallbackWindow);
     ctx.restore();
   }
 };
@@ -449,6 +469,7 @@ defineExpose({
         @pointercancel="transformAndCrop.endTransformDrag"
       >
         <ResizeHandle
+          :corners="transformAndCrop.transformResizeCorners.value"
           @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
           @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)"
           @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)"

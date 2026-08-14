@@ -1,12 +1,14 @@
 import { clampFocusToScale, zoomAtTime } from '../../video-editor/zoom/zoom-playback';
 import type { CompositionSnapshot } from '../export-types';
 import { activeClipsAt } from '~/media/shared';
-import { getCaptionTransform, isVisualClip, type CaptionClip, type VisualClip } from '~/media/shared/composition-types';
+import { isVisualClip, type CaptionClip, type VisualClip } from '~/media/shared/composition-types';
 import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../video-editor/composition/webcam/webcam-zoom';
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { drawCursorLayer } from './cursor-render';
+import { captionTextAt } from '~/media/shared/caption-text-layout';
+import { drawCaptionText } from '../../video-editor/composition/captions/render-caption-text';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -63,73 +65,15 @@ function drawSnapshotBackground(
   ctx.restore();
 }
 
-function drawCaption(
-  ctx: CanvasRenderingContext2D,
-  clip: CaptionClip,
-  timeMs: number,
-  window: { x: number; y: number; width: number; height: number },
-  referenceWidth: number,
-) {
-  const sentence = clip.caption.sentences.find((item) => item.startMs <= timeMs && timeMs <= item.endMs);
-  const text = clip.caption.style.customText || sentence?.text;
+function drawCaption(ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number, snapshot: CompositionSnapshot) {
+  const text = captionTextAt(clip, timeMs);
   if (!text) return;
-  const style = clip.caption.style;
-  const transform = getCaptionTransform(clip);
-  const box = {
-    x: window.x + transform.x * window.width,
-    y: window.y + transform.y * window.height,
-    width: transform.width * window.width,
-    height: transform.height * window.height,
-  };
-  const centerX = box.x + box.width / 2;
-  const centerY = box.y + box.height / 2;
-  const fontSize = Math.max(12, (style.fontSize * window.width) / Math.max(1, referenceWidth));
-  const strokeWidth = Math.max(1, ((style.boxPadding ?? 6) * window.width) / Math.max(1, referenceWidth));
-  const extrusion = Math.max(0, ((style.boxRadius ?? 4) * window.width) / Math.max(1, referenceWidth));
-  ctx.save();
-  ctx.font = `800 ${fontSize}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineJoin = 'round';
-  if (style.shadowBlur > 0) {
-    const blur = style.shadowBlur;
-    const direction = style.shadowDirection ?? 'bottom-right';
-    ctx.shadowColor = style.shadowColor || 'rgba(0,0,0,.85)';
-    ctx.shadowBlur = blur;
-    ctx.shadowOffsetX =
-      style.shadowOffsetX ?? (direction === 'top-left' ? -blur * 0.5 : direction === 'bottom-right' ? blur * 0.5 : 0);
-    ctx.shadowOffsetY =
-      style.shadowOffsetY ??
-      (direction === 'top-left'
-        ? -blur * 0.5
-        : direction === 'bottom' || direction === 'bottom-right'
-          ? blur * 0.5
-          : 0);
-  }
-  if (extrusion > 0) {
-    ctx.save();
-    ctx.strokeStyle = style.shadowColor || 'rgba(0,0,0,.85)';
-    ctx.fillStyle = style.shadowColor || 'rgba(0,0,0,.85)';
-    ctx.lineWidth = strokeWidth * 2;
-    for (let step = Math.round(extrusion); step >= 1; step -= 1) {
-      const offset = (step * window.width) / Math.max(1, referenceWidth);
-      ctx.strokeText(text, centerX + offset, centerY + offset, Math.max(10, box.width - 8));
-      ctx.fillText(text, centerX + offset, centerY + offset, Math.max(10, box.width - 8));
-      ctx.shadowColor = 'transparent';
-    }
-    ctx.restore();
-    ctx.shadowColor = 'transparent';
-  }
-  const outline = style.boxColor ?? '#000000';
-  if (outline !== 'transparent' && strokeWidth > 0) {
-    ctx.strokeStyle = outline;
-    ctx.lineWidth = strokeWidth * 2;
-    ctx.strokeText(text, centerX, centerY, Math.max(10, box.width - 8));
-    ctx.shadowColor = 'transparent';
-  }
-  ctx.fillStyle = style.color || '#ffffff';
-  ctx.fillText(text, centerX, centerY, Math.max(10, box.width - 8));
-  ctx.restore();
+  drawCaptionText(ctx, {
+    clip,
+    text,
+    canvas: snapshot.canvas,
+    viewport: { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
+  });
 }
 
 function drawVisualClip(
@@ -178,7 +122,6 @@ export function drawCompositionLayers(
   time: number,
   visuals: CompositionVisuals = new Map(),
   positionedMedia?: { x: number; y: number; width: number; height: number },
-  mainVideoWidth = snapshot.render.sourceWidth,
 ) {
   const timeMs = time * 1_000;
   const clips = activeClipsAt(snapshot.composition, timeMs)
@@ -186,18 +129,7 @@ export function drawCompositionLayers(
     .sort((a, b) => b.order - a.order);
   for (const clip of clips) {
     if (clip.kind === 'caption') {
-      drawCaption(
-        ctx,
-        clip,
-        timeMs,
-        positionedMedia ?? {
-          x: 0,
-          y: 0,
-          width: snapshot.canvas.width,
-          height: snapshot.canvas.height,
-        },
-        mainVideoWidth,
-      );
+      drawCaption(ctx, clip, timeMs, snapshot);
       continue;
     }
     if (!isVisualClip(clip)) continue;
@@ -323,7 +255,7 @@ export function renderCompositionFrame(
       );
     } else drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas, positionedMedia);
   }
-  for (const clip of active) if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs, positionedMedia, sourceWidth);
+  for (const clip of active) if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs, snapshot);
 
   ctx.save();
   ctx.translate(width / 2, height / 2);

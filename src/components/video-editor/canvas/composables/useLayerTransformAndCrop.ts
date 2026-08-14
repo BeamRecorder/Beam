@@ -11,7 +11,15 @@ import {
   type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
+import {
+  approximateCaptionTextWidth,
+  captionTextAt,
+  isCaptionWrapEnabled,
+  layoutCaptionText,
+  type CaptionTextMeasurer,
+} from '~/media/shared/caption-text-layout';
 import { computeWebcamLayout, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
+import type { OutputCanvasSettings } from '../output-canvas';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
 
@@ -38,6 +46,8 @@ export interface UseLayerTransformAndCropOptions {
   videoWindowBounds: () => VideoWindowBounds | null;
   overlayWindowBounds: () => VideoWindowBounds | null;
   isCropping: () => boolean | undefined;
+  outputCanvas: () => OutputCanvasSettings;
+  measureCaptionText?: CaptionTextMeasurer;
   zoomScale?: () => number;
   onUpdateTransform: (transform: NormalizedTransform) => void;
   onPreviewTransform: (transform: NormalizedTransform) => void;
@@ -68,7 +78,18 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     value: NormalizedCrop;
   } | null = null;
 
-  const transformFor = (clip: TransformClip) => (clip.kind === 'caption' ? getCaptionTransform(clip) : clip.transform);
+  const captionTransformFor = (clip: CaptionClip, transform = getCaptionTransform(clip)) => {
+    const canvas = options.outputCanvas();
+    return layoutCaptionText({
+      clip,
+      text: captionTextAt(clip, options.currentTime() * 1_000),
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      transform,
+      measureText: options.measureCaptionText ?? approximateCaptionTextWidth,
+    }).transform;
+  };
+  const transformFor = (clip: TransformClip) => (clip.kind === 'caption' ? captionTransformFor(clip) : clip.transform);
   const boundsFor = (clip: TransformClip | null) =>
     clip?.kind === 'screen'
       ? options.videoWindowBounds()
@@ -140,6 +161,10 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       width: `${layout.width}px`,
       height: `${layout.height}px`,
     };
+  });
+  const transformResizeCorners = computed<ResizeCorner[] | undefined>(() => {
+    const clip = options.selectedTransformClip();
+    return clip?.kind === 'caption' && isCaptionWrapEnabled(clip.caption.style) ? ['left', 'right'] : undefined;
   });
 
   const cropValue = computed<NormalizedCrop>(() => {
@@ -291,7 +316,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       const otherTargets = activeClipsAt(options.composition(), currentTimeMs)
         .filter((c): c is TransformClip => (c.kind === 'caption' || isVisualClip(c)) && c.id !== clip.id && c.enabled)
         .map((c) => {
-          const t = c.kind === 'caption' ? getCaptionTransform(c) : c.transform;
+          const t = transformFor(c);
           return { id: c.id, x: t.x, y: t.y, width: t.width, height: t.height };
         });
 
@@ -309,6 +334,17 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const vertical = Boolean(top || transformDrag.corner?.includes('bottom'));
     const rawWidth = initial.width + (horizontal ? (left ? -dx : dx) : 0);
     const rawHeight = initial.height + (vertical ? (top ? -dy : dy) : 0);
+    if (clip.kind === 'caption' && isCaptionWrapEnabled(clip.caption.style)) {
+      if (!horizontal) return;
+      const width = Math.min(SIZE_MAX, Math.max(0.02, rawWidth));
+      transformDraft.value = captionTransformFor(clip, {
+        x: Math.min(TRANSFORM_MAX, Math.max(TRANSFORM_MIN, left ? initial.x + initial.width - width : initial.x)),
+        y: initial.y,
+        width,
+        height: initial.height,
+      });
+      return;
+    }
     const ratio = initial.height / initial.width;
     const corner = horizontal && vertical;
     const width = Math.min(
@@ -394,6 +430,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     transformDraft,
     cropDraft,
     transformHandleStyle,
+    transformResizeCorners,
     cropContainerStyle,
     cropOverlayStyle,
     activeGuideLines,

@@ -86,6 +86,8 @@
     "typography": "Типографика",
     "textColor": "Цвет текста",
     "fontSize": "Размер шрифта",
+    "textWrap": "Перенос текста",
+    "textWrapDescription": "Сохраняет размер шрифта и автоматически меняет высоту при изменении ширины.",
     "outlineExtrusion": "Контур и экструзия",
     "outlineColor": "Цвет контура",
     "outlineThickness": "Толщина контура",

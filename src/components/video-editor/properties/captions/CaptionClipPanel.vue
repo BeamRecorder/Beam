@@ -4,6 +4,7 @@ import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import Input from '~/ui/input/Input.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Select from '~/ui/select/Select.vue';
+import Switch from '~/ui/switch/Switch.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import DeleteItem from '~/ui/button/DeleteItem.vue';
 import type { CaptionClip, CaptionStyle, CaptionWord } from '~/media/shared/composition-types';
@@ -21,6 +22,7 @@ const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) =>
 const captionStyle = computed<CaptionStyle>(() => ({
   color: '#ffffff',
   fontSize: 36,
+  wrap: true,
   shadowColor: 'rgba(0, 0, 0, 0.85)',
   shadowBlur: 0,
   shadowDirection: 'bottom-right',
@@ -125,6 +127,17 @@ const shadowDirectionOptions = computed(() => [
           :format-value="(value) => `${value}px`"
           @update:model-value="updateStyle('fontSize', $event)"
         />
+        <div class="wrap-setting">
+          <div>
+            <span class="sub-label">{{ t('textWrap') }}</span>
+            <p class="section-desc">{{ t('textWrapDescription') }}</p>
+          </div>
+          <Switch
+            :model-value="captionStyle.wrap !== false"
+            :aria-label="t('textWrap')"
+            @update:model-value="updateStyle('wrap', $event)"
+          />
+        </div>
       </div>
 
       <Divider spacing="xs" />
@@ -299,6 +312,19 @@ const shadowDirectionOptions = computed(() => [
   flex-direction: column;
   gap: 6px;
   width: 100%;
+}
+
+.wrap-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wrap-setting > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .sub-group :deep(.color-picker-wrapper),

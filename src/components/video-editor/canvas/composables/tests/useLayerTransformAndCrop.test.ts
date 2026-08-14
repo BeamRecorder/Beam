@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLayerTransformAndCrop, type UseLayerTransformAndCropOptions } from '../useLayerTransformAndCrop';
 import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { VideoWindowBounds } from '../useCameraZoom';
+import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
 
 const screenClip = (): VisualClip => ({
   id: 'screen',
@@ -117,6 +118,7 @@ const pointer = (target: HTMLElement, overrides: Partial<PointerEvent> = {}) =>
   ({
     clientX: 100,
     clientY: 100,
+    button: 0,
     pointerId: 1,
     shiftKey: false,
     currentTarget: target,
@@ -130,6 +132,7 @@ const mountComposable = (selected: VisualClip | CaptionClip | null, cropping = f
   const croppingRef = ref(cropping);
   const selectedBounds = ref<VideoWindowBounds | null>(bounds());
   const overlayBounds = ref<VideoWindowBounds | null>({ dx: 0, dy: 0, dw: 800, dh: 450, scale: 1 });
+  const outputCanvas = ref({ ...DEFAULT_OUTPUT_CANVAS, width: 800, height: 450 });
   const options: UseLayerTransformAndCropOptions = {
     composition,
     currentTime: () => 1,
@@ -137,6 +140,7 @@ const mountComposable = (selected: VisualClip | CaptionClip | null, cropping = f
     videoWindowBounds: () => selectedBounds.value,
     overlayWindowBounds: () => overlayBounds.value,
     isCropping: () => croppingRef.value,
+    outputCanvas: () => outputCanvas.value,
     onUpdateTransform: vi.fn(),
     onPreviewTransform: vi.fn(),
     onUpdateCrop: vi.fn(),
@@ -155,6 +159,7 @@ const mountComposable = (selected: VisualClip | CaptionClip | null, cropping = f
     croppingRef,
     selectedBounds,
     overlayBounds,
+    outputCanvas,
     options,
     get state() {
       return state;
@@ -194,10 +199,10 @@ describe('useLayerTransformAndCrop', () => {
     mounted.croppingRef.value = true;
     await nextTick();
     expect(mounted.state.cropOverlayStyle.value).toEqual({
-      left: '240px',
-      top: '126px',
-      width: '280px',
-      height: '108px',
+      left: '10%',
+      top: '20%',
+      width: '70%',
+      height: '60%',
     });
 
     mounted.selectedRef.value = webcamClip();
@@ -288,9 +293,60 @@ describe('useLayerTransformAndCrop', () => {
     expect(transform.y + transform.height).toBeLessThanOrEqual(1);
   });
 
+  it('resizes wrapped captions with side handles and keeps the font size unchanged', () => {
+    const clip = captionClip();
+    clip.caption.style.customText =
+      'A long annotation should wrap onto multiple lines while its font remains at the selected size.';
+    const mounted = mountComposable(clip);
+    const target = document.createElement('div');
+    Object.assign(target, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn().mockReturnValue(true),
+      releasePointerCapture: vi.fn(),
+    });
+
+    expect(mounted.state.transformResizeCorners.value).toEqual(['left', 'right']);
+    mounted.state.beginTransformDrag(pointer(target, { clientX: 700 }), 'resize', 'right');
+    const initial = mounted.state.transformDraft.value!;
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 350 }));
+    const resized = mounted.state.transformDraft.value!;
+
+    expect(resized.width).toBeLessThan(initial.width);
+    expect(resized.height).toBeGreaterThan(initial.height);
+    expect(clip.caption.style.fontSize).toBe(32);
+    mounted.state.endTransformDrag(pointer(target, { clientX: 350 }));
+    expect(mounted.options.onUpdateTransform).toHaveBeenLastCalledWith(
+      expect.objectContaining({ width: resized.width, height: resized.height }),
+    );
+  });
+
+  it('keeps the existing aspect-ratio resize behavior when wrapping is disabled', () => {
+    const clip = captionClip();
+    clip.transform = { x: 0.2, y: 0.3, width: 0.5, height: 0.2 };
+    clip.caption.style.wrap = false;
+    const mounted = mountComposable(clip);
+    const target = document.createElement('div');
+    Object.assign(target, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn().mockReturnValue(true),
+      releasePointerCapture: vi.fn(),
+    });
+
+    expect(mounted.state.transformResizeCorners.value).toBeUndefined();
+    mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 180, clientY: 180 }));
+    expect(mounted.state.transformDraft.value).toMatchObject({ width: 0.6, height: 0.24 });
+  });
+
+  it('treats legacy captions without wrap as wrapped captions', () => {
+    const mounted = mountComposable(captionClip());
+    expect(mounted.state.transformResizeCorners.value).toEqual(['left', 'right']);
+  });
+
   it('selects the topmost eligible visual or caption and ignores screen-only hits', () => {
     const mounted = mountComposable(imageClip());
     const canvas = document.createElement('canvas');
+    Object.defineProperty(canvas, 'clientWidth', { configurable: true, value: 800 });
     vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 450 } as DOMRect);
     const event = pointer(canvas, { clientX: 300, clientY: 180 });
     expect(mounted.state.selectVisualAt(event, null)).toBe(false);
