@@ -284,7 +284,9 @@
     "alwaysVisible": "항상 표시",
     "autoFade": "자동 페이드",
     "language": "언어",
-    "chooseLanguage": "표시 언어 선택"
+    "chooseLanguage": "표시 언어 선택",
+    "alwaysOnTop": "Always on top",
+    "alwaysOnTopDesc": "Keep the window hovering above other windows"
   },
   "ProjectPicker": {
     "projects": "프로젝트",

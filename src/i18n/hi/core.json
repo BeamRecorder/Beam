@@ -284,7 +284,9 @@
     "alwaysVisible": "हमेशा दृश्यमान",
     "autoFade": "ऑटो फ़ेड",
     "language": "भाषा",
-    "chooseLanguage": "प्रदर्शन भाषा चुनें"
+    "chooseLanguage": "प्रदर्शन भाषा चुनें",
+    "alwaysOnTop": "Always on top",
+    "alwaysOnTopDesc": "Keep the window hovering above other windows"
   },
   "ProjectPicker": {
     "projects": "प्रोजेक्ट",

@@ -1,4 +1,4 @@
-function registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store, shortcutHandler = null }) {
+function registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store, shortcutHandler = null, onPreferencesChanged = null }) {
   const broadcast = (preferences) =>
     BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:changed', preferences));
   const registerShortcuts = (preferences) => {
@@ -15,6 +15,7 @@ function registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store,
     const preferences = store.patch(patch);
     registerShortcuts(preferences);
     broadcast(preferences);
+    onPreferencesChanged?.(preferences);
     return preferences;
   };
   ipcMain.handle('preferences:get', () => store.read());
@@ -28,6 +29,7 @@ function registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store,
     const preferences = store.write(next);
     registerShortcuts(preferences);
     broadcast(preferences);
+    onPreferencesChanged?.(preferences);
     return preferences;
   });
   registerShortcuts(store.read());

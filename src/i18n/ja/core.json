@@ -284,7 +284,9 @@
     "alwaysVisible": "常に表示",
     "autoFade": "自動フェード",
     "language": "言語",
-    "chooseLanguage": "表示言語を選択"
+    "chooseLanguage": "表示言語を選択",
+    "alwaysOnTop": "Always on top",
+    "alwaysOnTopDesc": "Keep the window hovering above other windows"
   },
   "ProjectPicker": {
     "projects": "プロジェクト",

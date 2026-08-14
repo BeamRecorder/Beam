@@ -7,6 +7,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
+import Switch from '~/ui/switch/Switch.vue';
 import ShortcutPreferences from './ShortcutPreferences.vue';
 import About from './About.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
@@ -19,10 +20,12 @@ const props = withDefaults(
   defineProps<{
     countdownSeconds: number;
     recordingBarVisibility?: 'always' | 'auto-fade';
+    alwaysOnTop?: boolean;
     view?: 'general' | 'shortcuts' | 'about';
   }>(),
   {
     recordingBarVisibility: 'always',
+    alwaysOnTop: true,
     view: 'general',
   }
 );
@@ -30,6 +33,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (event: 'update:countdownSeconds', value: number): void;
   (event: 'update:recordingBarVisibility', value: 'always' | 'auto-fade'): void;
+  (event: 'update:alwaysOnTop', value: boolean): void;
   (event: 'update:view', value: 'general' | 'shortcuts' | 'about'): void;
   (event: 'close'): void;
 }>();
@@ -95,6 +99,17 @@ const recordingBarOptions = [
                 @update:model-value="emit('update:recordingBarVisibility', $event)"
               />
             </div>
+          </div>
+
+          <div class="preference-item">
+            <div>
+              <p class="preference-title">{{ t('alwaysOnTop') }}</p>
+              <p class="preference-description">{{ t('alwaysOnTopDesc') }}</p>
+            </div>
+            <Switch
+              :model-value="alwaysOnTop ?? true"
+              @update:model-value="emit('update:alwaysOnTop', $event)"
+            />
           </div>
 
           <div class="preference-item">

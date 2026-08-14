@@ -289,7 +289,9 @@
     "aboutDesc": "Version and application info",
     "view": "View",
     "version": "Version {version}",
-    "aboutDescriptionText": "Beam is a screen recorder designed for creating clear, polished product demos. Record, style, and export your videos all in one place."
+    "aboutDescriptionText": "Beam is a screen recorder designed for creating clear, polished product demos. Record, style, and export your videos all in one place.",
+    "alwaysOnTop": "Always on top",
+    "alwaysOnTopDesc": "Keep the window hovering above other windows"
   },
   "ProjectPicker": {
     "projects": "Projects",

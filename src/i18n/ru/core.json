@@ -284,7 +284,9 @@
     "alwaysVisible": "Всегда видима",
     "autoFade": "Автоскрытие",
     "language": "Язык",
-    "chooseLanguage": "Выберите язык интерфейса"
+    "chooseLanguage": "Выберите язык интерфейса",
+    "alwaysOnTop": "Always on top",
+    "alwaysOnTopDesc": "Keep the window hovering above other windows"
   },
   "ProjectPicker": {
     "projects": "Проекты",

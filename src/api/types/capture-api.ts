@@ -190,6 +190,7 @@ export interface PreferenceSettings {
   schemaVersion: 2;
   theme: 'light' | 'dark' | 'system';
   recordingBar: { visibility: 'always' | 'auto-fade' };
+  alwaysOnTop: boolean;
   devices: Record<string, unknown>;
   shortcuts: Record<string, PreferenceShortcut>;
   backgroundPresets: { colors: string[]; gradients: GradientBackground[] };

@@ -5,6 +5,7 @@ const defaults = () => ({
   schemaVersion: 2,
   theme: 'light',
   recordingBar: { visibility: 'always' },
+  alwaysOnTop: true,
   devices: {},
   shortcuts: {
     'hud.startStopRecording': { keys: 'Alt+Shift+R', scope: 'global', category: 'hud' },
@@ -89,6 +90,7 @@ const normalize = (value) => {
     schemaVersion: 2,
     theme: themes.has(next.theme) ? next.theme : base.theme,
     recordingBar: { visibility: next.recordingBar?.visibility === 'auto-fade' ? 'auto-fade' : 'always' },
+    alwaysOnTop: typeof next.alwaysOnTop === 'boolean' ? next.alwaysOnTop : base.alwaysOnTop,
     devices: next.devices && typeof next.devices === 'object' && !Array.isArray(next.devices) ? next.devices : {},
     shortcuts,
     backgroundPresets: presets(next.backgroundPresets),

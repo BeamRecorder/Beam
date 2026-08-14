@@ -11,12 +11,13 @@ const { capture } = vi.hoisted(() => ({
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
 
-import ShortcutPreferences from './ShortcutPreferences.vue';
+import ShortcutPreferences from '../settings/ShortcutPreferences.vue';
 
 const settings = (shortcuts: Record<string, { keys: string; scope: 'global'; category: string }> = {}) => ({
   schemaVersion: 2 as const,
   theme: 'dark' as const,
   recordingBar: { visibility: 'always' as const },
+  alwaysOnTop: true,
   devices: {},
   shortcuts,
   backgroundPresets: { colors: [], gradients: [] },
