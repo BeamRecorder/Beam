@@ -2,7 +2,63 @@
 
 Beam records screens and windows on Linux through the XDG ScreenCast Portal, PipeWire and FFmpeg. Electron never enumerates desktop sources on Linux: the source selector represents the system picker, which opens once during preparation and remains attached across pause/resume.
 
-Install the compiler and runtime packages for your distribution as documented in the [native Linux screen capture design](../linux/screen-native.md). FFmpeg is a runtime dependency and must provide:
+## Prerequisites
+
+- Node.js 22 or newer with npm
+- [Rust stable](./INSTALL_RUST.md)
+- Git
+- a C/C++ compiler, Clang development libraries and pkg-config
+- PipeWire development headers and runtime services
+- FFmpeg with the MP4 muxer and either the `libx264` or `libopenh264` encoder
+- XDG Desktop Portal and the backend for the active desktop environment
+
+Install the native packages for your distribution. The commands below target GNOME; replace only the final portal backend package with `xdg-desktop-portal-kde` on KDE or `xdg-desktop-portal-wlr` on a compatible wlroots desktop. Do not install every backend indiscriminately.
+
+### Fedora
+
+```bash
+sudo dnf install \
+  gcc clang-devel pkgconf-pkg-config pipewire-devel \
+  ffmpeg-free pipewire wireplumber xdg-desktop-portal \
+  xdg-desktop-portal-gnome
+```
+
+Fedora's `ffmpeg-free` package provides the supported `libopenh264` encoder.
+
+### Debian and Ubuntu
+
+```bash
+sudo apt update
+sudo apt install \
+  build-essential clang libclang-dev pkg-config libpipewire-0.3-dev \
+  ffmpeg pipewire wireplumber xdg-desktop-portal \
+  xdg-desktop-portal-gnome
+```
+
+### Arch Linux
+
+```bash
+sudo pacman -S --needed \
+  base-devel clang pkgconf libpipewire pipewire wireplumber ffmpeg \
+  xdg-desktop-portal xdg-desktop-portal-gnome
+```
+
+Install the project dependencies once after cloning or when `package-lock.json` changes:
+
+```bash
+npm ci
+```
+
+Verify the native runtime before launching Beam:
+
+```bash
+pkg-config --modversion libpipewire-0.3
+ffmpeg -hide_banner -muxers | grep -w mp4
+ffmpeg -hide_banner -encoders | grep -E 'libx264|libopenh264'
+systemctl --user --no-pager status pipewire wireplumber xdg-desktop-portal
+```
+
+FFmpeg must report:
 
 - the `mp4` muxer;
 - either the `libx264` or `libopenh264` H.264 encoder.

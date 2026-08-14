@@ -11,10 +11,6 @@ These documents are part of the repository's engineering contract. If an impleme
 
 When a task affects Electron windows, read `docs/electron_window.md` first and follow its checklist. It documents the native-window pitfalls that CSS alone cannot fix.
 
-## Build :
-
-You are in a WSL envrionnement, if you use `npm` or `cargo`, prefix it via powershell.exe
-
 ## Non-negotiable defaults
 
 - Keep UI code consistent with `docs/UI.md`: use the existing `src/components/ui/` primitives, Lucide icons, theme tokens, and scoped styles without deep selectors whenever possible.
