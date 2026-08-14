@@ -265,7 +265,11 @@ app.whenReady().then(() => {
   registerWhisperIpc({ ipcMain, store: whisperStore });
   logStartup('Whisper model IPC registered.');
   registerWindowIpc(ipcMain, (win) => win && controllers.get(win), { debug: !app.isPackaged });
-  const cameraOverlay = createCameraOverlayWindow({ applicationRoot, isPackaged: app.isPackaged });
+  const cameraOverlay = createCameraOverlayWindow({
+    applicationRoot,
+    isPackaged: app.isPackaged,
+    preferencesStore,
+  });
   const countdownOverlay = createCountdownWindow({ applicationRoot, isPackaged: app.isPackaged });
   const screenRegionOverlay = createScreenRegionOverlayWindow({ applicationRoot, isPackaged: app.isPackaged });
   ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));

@@ -4,21 +4,82 @@ const path = require('path');
 const DEFAULT_SIZE = { width: 320, height: 180 };
 const MIN_SIZE = { width: 120, height: 90 };
 
-function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
+function createCameraOverlayWindow({ applicationRoot, isPackaged, preferencesStore = null }) {
   let window = null;
   let currentState = null;
   let hoverTimer = null;
+  let savePlacementTimer = null;
   let isHovered = false;
   let active = true;
+
+  const readSavedPlacement = () => {
+    const saved = preferencesStore?.read()?.extras?.cameraOverlay;
+    if (!saved || typeof saved !== 'object') return null;
+    const x = Number(saved.x);
+    const y = Number(saved.y);
+    const width = Number(saved.width);
+    const height = Number(saved.height);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) return null;
+    if (x === 0 && y === 0) return null;
+    return {
+      x: Math.round(x),
+      y: Math.round(y),
+      width: Math.max(MIN_SIZE.width, Math.round(width)),
+      height: Math.max(MIN_SIZE.height, Math.round(height)),
+    };
+  };
+
+  const persistPlacement = () => {
+    if (!preferencesStore || !window || window.isDestroyed() || !window.isVisible()) return;
+    const bounds = window.getBounds();
+    if (bounds.x === 0 && bounds.y === 0) return;
+    preferencesStore.patch({
+      extras: {
+        cameraOverlay: {
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+        },
+      },
+    });
+  };
+
+  const schedulePlacementSave = () => {
+    if (!preferencesStore) return;
+    if (savePlacementTimer) clearTimeout(savePlacementTimer);
+    savePlacementTimer = setTimeout(() => {
+      savePlacementTimer = null;
+      persistPlacement();
+    }, 150);
+  };
+
+  const flushPlacementSave = () => {
+    if (savePlacementTimer) clearTimeout(savePlacementTimer);
+    savePlacementTimer = null;
+    persistPlacement();
+  };
 
   const load = (target, query) => {
     if (isPackaged) target.loadFile(path.join(applicationRoot, 'dist/index.html'), { query });
     else target.loadURL(`http://localhost:6500/?${new URLSearchParams(query).toString()}`);
   };
 
+  let lastKnownBounds = null;
+
   const syncHoverState = () => {
     if (!window || window.isDestroyed()) return;
     const bounds = window.getBounds();
+    if (
+      !lastKnownBounds ||
+      bounds.x !== lastKnownBounds.x ||
+      bounds.y !== lastKnownBounds.y ||
+      bounds.width !== lastKnownBounds.width ||
+      bounds.height !== lastKnownBounds.height
+    ) {
+      lastKnownBounds = { ...bounds };
+      schedulePlacementSave();
+    }
     const point = screen.getCursorScreenPoint();
     const next =
       point.x >= bounds.x &&
@@ -44,14 +105,28 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
 
   const create = () => {
     if (window && !window.isDestroyed()) return window;
-    const area = screen.getPrimaryDisplay().workArea;
+    const saved = readSavedPlacement();
+    const primaryWorkArea = screen.getPrimaryDisplay().workArea;
+    const width = saved?.width || DEFAULT_SIZE.width;
+    const height = saved?.height || DEFAULT_SIZE.height;
+    let x = saved?.x ?? (primaryWorkArea.x + primaryWorkArea.width - width - 20);
+    let y = saved?.y ?? (primaryWorkArea.y + primaryWorkArea.height - height - 20);
+
+    const display = screen.getDisplayMatching({ x, y, width, height });
+    if (display) {
+      const maxX = display.workArea.x + Math.max(0, display.workArea.width - width);
+      const maxY = display.workArea.y + Math.max(0, display.workArea.height - height);
+      x = Math.min(Math.max(x, display.workArea.x), maxX);
+      y = Math.min(Math.max(y, display.workArea.y), maxY);
+    }
+
     window = new BrowserWindow({
-      width: DEFAULT_SIZE.width,
-      height: DEFAULT_SIZE.height,
+      width,
+      height,
       minWidth: MIN_SIZE.width,
       minHeight: MIN_SIZE.height,
-      x: area.x + area.width - DEFAULT_SIZE.width - 20,
-      y: area.y + area.height - DEFAULT_SIZE.height - 20,
+      x,
+      y,
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
@@ -68,7 +143,16 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     });
     window.setContentProtection(true);
     window.setAlwaysOnTop(true, 'floating');
+    window.on('move', schedulePlacementSave);
+    window.on('moved', () => {
+      flushPlacementSave();
+    });
+    window.on('resize', schedulePlacementSave);
+    window.on('resized', () => {
+      flushPlacementSave();
+    });
     window.on('closed', () => {
+      flushPlacementSave();
       window = null;
       stopHoverTracking();
     });
@@ -84,6 +168,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     if (!active || currentState.cameraId === 'off') {
       if (window && !window.isDestroyed()) {
         window.webContents.send('camera-overlay:state', { ...currentState, cameraId: 'off' });
+        flushPlacementSave();
         window.hide();
       }
       return;
@@ -108,6 +193,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
       Math.round(area.x + area.width - bounds.width - 20),
       Math.round(area.y + area.height - bounds.height - 20),
     );
+    persistPlacement();
     return true;
   };
 
@@ -133,6 +219,7 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged }) {
     resetPlacement,
     state,
     destroy: () => {
+      flushPlacementSave();
       stopHoverTracking();
       if (window && !window.isDestroyed()) window.destroy();
     },

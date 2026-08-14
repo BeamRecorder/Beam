@@ -23,7 +23,19 @@ class WindowController {
     this.hudOverInteractive = false;
     this.recorderPositions = this.readRecorderPositions();
     this.recorderPositionSaveTimer = null;
-    this.hudPosition = null;
+    this.hudPosition = this.readHudPosition();
+    this.hudPositionSaveTimer = null;
+    if (this.hudPosition) {
+      const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] });
+      const position = clampToDisplayBounds(
+        this.hudPosition[0],
+        this.hudPosition[1],
+        HUD_SIZE.width,
+        HUD_SIZE.height,
+        display.bounds,
+      );
+      this.window.setPosition(position.x, position.y);
+    }
     this.window.setIgnoreMouseEvents(true);
     const applyNativeWindowPolicy = () => {
       this.applyInteractionPolicy();
@@ -37,8 +49,21 @@ class WindowController {
     this.window.on('focus', applyNativeWindowPolicy);
     this.window.on('closed', () => {
       this.flushRecorderPosition();
+      this.flushHudPosition();
     });
-    this.window.on('move', () => this.rememberRecorderPosition());
+    this.window.on('move', () => {
+      if (this.mode === 'recorder') this.rememberRecorderPosition();
+      else if (this.mode === 'hud') this.rememberHudPosition();
+    });
+    this.window.on('moved', () => {
+      if (this.mode === 'recorder') {
+        this.rememberRecorderPosition();
+        this.flushRecorderPosition();
+      } else if (this.mode === 'hud') {
+        this.rememberHudPosition();
+        this.flushHudPosition();
+      }
+    });
   }
 
   readRecorderPositions() {
@@ -49,14 +74,22 @@ class WindowController {
       if (!value || typeof value !== 'object') continue;
       const x = Number(value.x);
       const y = Number(value.y);
-      if (Number.isFinite(x) && Number.isFinite(y)) positions.set(displayId, { x: Math.round(x), y: Math.round(y) });
+      if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)) {
+        positions.set(displayId, { x: Math.round(x), y: Math.round(y) });
+      }
     }
     return positions;
   }
 
   persistRecorderPositions() {
     if (!this.preferencesStore) return;
-    this.preferencesStore.patch({ extras: { recorderPositions: Object.fromEntries(this.recorderPositions) } });
+    const last = this.recorderPositions.size > 0 ? Array.from(this.recorderPositions.values()).at(-1) : null;
+    this.preferencesStore.patch({
+      extras: {
+        recorderPositions: Object.fromEntries(this.recorderPositions),
+        ...(last ? { lastRecorderPosition: last } : {}),
+      },
+    });
   }
 
   flushRecorderPosition() {
@@ -74,6 +107,48 @@ class WindowController {
     }, 150);
   }
 
+  readHudPosition() {
+    const stored = this.preferencesStore?.read()?.extras?.hudPosition;
+    if (!stored || typeof stored !== 'object') return null;
+    const x = Number(stored.x);
+    const y = Number(stored.y);
+    if (Number.isFinite(x) && Number.isFinite(y) && (x !== 0 || y !== 0)) return [Math.round(x), Math.round(y)];
+    return null;
+  }
+
+  rememberHudPosition() {
+    if (this.mode !== 'hud' || this.window.isDestroyed()) return;
+    const pos = this.window.getPosition();
+    if (!pos || (pos[0] === 0 && pos[1] === 0)) return;
+    this.hudPosition = pos;
+    this.scheduleHudPositionSave();
+  }
+
+  scheduleHudPositionSave() {
+    if (!this.preferencesStore) return;
+    if (this.hudPositionSaveTimer) clearTimeout(this.hudPositionSaveTimer);
+    this.hudPositionSaveTimer = setTimeout(() => {
+      this.hudPositionSaveTimer = null;
+      this.persistHudPosition();
+    }, 150);
+  }
+
+  flushHudPosition() {
+    if (this.hudPositionSaveTimer) clearTimeout(this.hudPositionSaveTimer);
+    this.hudPositionSaveTimer = null;
+    this.persistHudPosition();
+  }
+
+  persistHudPosition() {
+    if (!this.preferencesStore || !this.hudPosition) return;
+    if (this.hudPosition[0] === 0 && this.hudPosition[1] === 0) return;
+    this.preferencesStore.patch({
+      extras: {
+        hudPosition: { x: this.hudPosition[0], y: this.hudPosition[1] },
+      },
+    });
+  }
+
   markReadyToShow() {
     if (this.window.isDestroyed()) return;
     this.ready = true;
@@ -85,28 +160,39 @@ class WindowController {
 
   setMode(mode, { restoreMaximized = true } = {}) {
     if (!['hud', 'recorder'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`);
-    if (this.mode === 'hud' && mode === 'recorder') this.hudPosition = this.window.getPosition();
+    if (this.mode === 'recorder' && mode !== 'recorder') {
+      this.rememberRecorderPosition();
+      this.flushRecorderPosition();
+    }
+    if (this.mode === 'hud' && mode === 'recorder') {
+      this.rememberHudPosition();
+      this.flushHudPosition();
+    }
     this.mode = mode;
     this.applySizeConstraints();
     if (mode === 'hud') this.hudOverInteractive = false;
     if (mode === 'recorder') this.placeRecorder();
-    if (mode === 'hud' && this.hudPosition) {
-      const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] });
-      const position = clampToDisplayBounds(
-        this.hudPosition[0],
-        this.hudPosition[1],
-        HUD_SIZE.width,
-        HUD_SIZE.height,
-        display.bounds,
-      );
-      this.window.setPosition(position.x, position.y);
+    if (mode === 'hud') {
+      const targetPos = this.hudPosition || this.readHudPosition();
+      if (targetPos) {
+        const display = this.screen.getDisplayNearestPoint({ x: targetPos[0], y: targetPos[1] });
+        const position = clampToDisplayBounds(
+          targetPos[0],
+          targetPos[1],
+          HUD_SIZE.width,
+          HUD_SIZE.height,
+          display.bounds,
+        );
+        this.window.setPosition(position.x, position.y);
+      }
     }
     this.applyModePolicy({ restoreMaximized });
   }
 
   placeRecorder() {
     const display = this.screen.getDisplayNearestPoint(this.screen.getCursorScreenPoint());
-    const saved = this.recorderPositions.get(String(display.id));
+    const lastSaved = this.preferencesStore?.read()?.extras?.lastRecorderPosition;
+    const saved = this.recorderPositions.get(String(display.id)) ?? lastSaved;
     const position = clampToDisplayBounds(
       saved?.x ?? display.workArea.x + display.workArea.width - RECORDER_SIZE.width - 20,
       saved?.y ?? display.workArea.y + Math.round((display.workArea.height - RECORDER_SIZE.height) / 2),
@@ -120,6 +206,7 @@ class WindowController {
   rememberRecorderPosition() {
     if (this.mode !== 'recorder' || this.window.isDestroyed()) return;
     const bounds = this.window.getBounds();
+    if (bounds.x === 0 && bounds.y === 0) return;
     const display = this.screen.getDisplayNearestPoint({
       x: bounds.x + Math.round(bounds.width / 2),
       y: bounds.y + Math.round(bounds.height / 2),
