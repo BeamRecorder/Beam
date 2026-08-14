@@ -56,7 +56,9 @@ const deferred = <T>() => {
 describe('useRecordingController cancellation', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    Object.values(capture).forEach((mock) => mock.mockClear());
+    Object.values(capture).forEach((mock) => {
+      if (vi.isMockFunction(mock)) mock.mockClear();
+    });
     capture.getCameraOverlayState.mockResolvedValue(null);
     capture.stop.mockResolvedValue({ state: 'completed' });
   });

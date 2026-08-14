@@ -26,6 +26,7 @@ const props = withDefaults(
     inputAccess?: InteractionAccessViewState;
     recordInteractions?: boolean;
     requestingInputAccess?: boolean;
+    platform?: string;
     view?: 'general' | 'shortcuts' | 'about';
   }>(),
   {
@@ -39,6 +40,7 @@ const props = withDefaults(
     }),
     recordInteractions: false,
     requestingInputAccess: false,
+    platform: 'unknown',
     view: 'general',
   },
 );
@@ -57,6 +59,13 @@ const localeStore = useLocaleStore();
 const currentView = computed({
   get: () => props.view,
   set: (val) => emit('update:view', val),
+});
+const inputDescription = computed(() => {
+  if (props.inputAccess.state === 'unavailable') return t('interactionAccessUnavailableDescription');
+  if (props.inputAccess.state === 'available') {
+    return t(props.platform === 'linux' ? 'recordInteractionsDescriptionLinux' : 'recordInteractionsDescription');
+  }
+  return t(props.platform === 'linux' ? 'interactionAccessDescriptionLinux' : 'interactionAccessDescription');
 });
 
 const countdownOptions = [
@@ -104,15 +113,7 @@ const recordingBarOptions = [
           <div class="preference-item input-access-item">
             <div class="preference-copy">
               <p class="preference-title">{{ t('recordInteractions') }}</p>
-              <p class="preference-description">
-                {{
-                  props.inputAccess.state === 'available'
-                    ? t('recordInteractionsDescription')
-                    : props.inputAccess.state === 'unavailable'
-                      ? t('interactionAccessUnavailableDescription')
-                      : t('interactionAccessDescription')
-                }}
-              </p>
+              <p class="preference-description">{{ inputDescription }}</p>
             </div>
             <div class="input-access-actions" role="status" aria-live="polite">
               <Switch

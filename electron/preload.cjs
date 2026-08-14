@@ -5,6 +5,7 @@ const invoke = (command, payload) => ipcRenderer.invoke('capture:request', comma
 contextBridge.exposeInMainWorld(
   'capture',
   Object.freeze({
+    platform: process.platform,
     discover: () => invoke('discover'),
     capabilities: () => invoke('capabilities'),
     permissions: () => invoke('permissions'),

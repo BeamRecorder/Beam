@@ -57,6 +57,7 @@ import { useInteractionAccess } from './interactions/useInteractionAccess';
 
 const { t } = useTranslate('HUD');
 const { t: tPrefs } = useTranslate('HudPreferences');
+const desktopPlatform = window.capture?.platform ?? 'unknown';
 
 interface SavedDevices {
   cameraId?: string;
@@ -997,6 +998,7 @@ const openProject = (project: CaptureProject) => {
         :input-access="interactionAccess.status.value"
         :record-interactions="interactionAccess.enabled.value"
         :requesting-input-access="interactionAccess.requesting.value"
+        :platform="desktopPlatform"
         @update:countdown-seconds="countdownSeconds = $event"
         @update:recording-bar-visibility="recordingBarVisibility = $event"
         @update:record-interactions="interactionAccess.setEnabled"

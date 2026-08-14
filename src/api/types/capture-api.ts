@@ -22,6 +22,7 @@ export type * from './capture-session';
 export type * from './editor-window';
 
 export interface CaptureApi {
+  readonly platform: string;
   discover(): Promise<CaptureCatalog>;
   capabilities(): Promise<Record<string, boolean>>;
   permissions(): Promise<Record<string, unknown>>;

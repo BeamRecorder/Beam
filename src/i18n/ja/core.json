@@ -295,14 +295,21 @@
     "interactionAccess": "操作へのアクセス",
     "interactionAccessReadyDescription": "クリックとショートカットを記録します。入力したテキストは保存されません。",
     "interactionAccessUnavailableDescription": "このシステムでは操作の記録を利用できません。",
-    "interactionAccessDescription": "クリック効果と今後のショートカット字幕に必要です。入力テキストは保存されません。",
+    "interactionAccessDescription": "キーボードショートカットの字幕に必要です。入力テキストは保存されません。",
+    "interactionAccessDescriptionLinux": "キーボードショートカットの字幕とマウスクリックのメタデータに必要です。入力テキストは保存されません。",
     "accessReady": "準備完了",
     "checkingAccess": "確認中",
     "requestingAccess": "認証中",
     "allowAccess": "許可",
     "accessUnavailable": "利用不可",
     "recordInteractions": "キーボードショートカットを記録",
-    "recordInteractionsDescription": "安全なキーボードショートカットを記録します。Linux では、この設定をオフにするとマウスクリックのメタデータも無効になります。入力した文章は保存されません。"
+    "recordInteractionsDescription": "安全なキーボードショートカットを記録します。入力した文章は保存されません。",
+    "recordInteractionsDescriptionLinux": "安全なキーボードショートカットを記録します。この設定をオフにするとマウスクリックのメタデータも無効になります。入力した文章は保存されません。",
+    "about": "Beam について",
+    "aboutDesc": "バージョンとアプリ情報",
+    "view": "表示",
+    "version": "バージョン {version}",
+    "aboutDescriptionText": "Beam は、明快で洗練された製品デモを作成するためのスクリーンレコーダーです。録画、編集、書き出しを一か所で行えます。"
   },
   "ProjectPicker": {
     "projects": "プロジェクト",

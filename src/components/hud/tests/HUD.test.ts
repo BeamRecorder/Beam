@@ -77,7 +77,9 @@ describe('HUD', () => {
     } else {
       vi.spyOn(navigator.mediaDevices, 'getUserMedia').mockResolvedValue({ getTracks: () => [] } as any);
     }
-    Object.values(capture).forEach((mock) => mock.mockReset());
+    Object.values(capture).forEach((mock) => {
+      if (vi.isMockFunction(mock)) mock.mockReset();
+    });
     Object.values(browserCameraMock).forEach((mock) => mock.mockReset());
     Object.values(browserMicrophoneMock).forEach((mock) => mock.mockReset());
     Object.values(browserSystemAudioMock).forEach((mock) => mock.mockReset());

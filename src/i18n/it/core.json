@@ -295,14 +295,21 @@
     "interactionAccess": "Accesso alle interazioni",
     "interactionAccessReadyDescription": "Cattura clic e scorciatoie. Il testo digitato non viene mai salvato.",
     "interactionAccessUnavailableDescription": "La cattura delle interazioni non è disponibile su questo sistema.",
-    "interactionAccessDescription": "Necessario per gli effetti clic e le future didascalie delle scorciatoie. Il testo digitato non viene salvato.",
+    "interactionAccessDescription": "Necessario per le didascalie delle scorciatoie da tastiera. Il testo digitato non viene salvato.",
+    "interactionAccessDescriptionLinux": "Necessario per le didascalie delle scorciatoie da tastiera e i metadati dei clic del mouse. Il testo digitato non viene salvato.",
     "accessReady": "Pronto",
     "checkingAccess": "Verifica",
     "requestingAccess": "Autorizzazione",
     "allowAccess": "Consenti",
     "accessUnavailable": "Non disponibile",
     "recordInteractions": "Registra scorciatoie da tastiera",
-    "recordInteractionsDescription": "Registra scorciatoie da tastiera sicure. Su Linux, disattivare questa opzione disabilita anche i metadati dei clic del mouse. Il testo digitato non viene mai salvato."
+    "recordInteractionsDescription": "Registra scorciatoie da tastiera sicure. Il testo digitato non viene mai salvato.",
+    "recordInteractionsDescriptionLinux": "Registra scorciatoie da tastiera sicure. Disattivare questa opzione disabilita anche i metadati dei clic del mouse. Il testo digitato non viene mai salvato.",
+    "about": "Informazioni",
+    "aboutDesc": "Versione e informazioni sull’applicazione",
+    "view": "Visualizza",
+    "version": "Versione {version}",
+    "aboutDescriptionText": "Beam è un registratore dello schermo pensato per creare demo di prodotto chiare e curate. Registra, personalizza ed esporta i tuoi video in un unico posto."
   },
   "ProjectPicker": {
     "projects": "Progetti",

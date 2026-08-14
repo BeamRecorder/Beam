@@ -295,14 +295,21 @@
     "interactionAccess": "상호작용 접근",
     "interactionAccessReadyDescription": "클릭과 단축키를 캡처합니다. 입력한 텍스트는 저장하지 않습니다.",
     "interactionAccessUnavailableDescription": "이 시스템에서는 상호작용 캡처를 사용할 수 없습니다.",
-    "interactionAccessDescription": "클릭 효과와 향후 단축키 캡션에 필요합니다. 입력한 텍스트는 저장하지 않습니다.",
+    "interactionAccessDescription": "키보드 단축키 캡션에 필요합니다. 입력한 텍스트는 저장하지 않습니다.",
+    "interactionAccessDescriptionLinux": "키보드 단축키 캡션과 마우스 클릭 메타데이터에 필요합니다. 입력한 텍스트는 저장하지 않습니다.",
     "accessReady": "준비됨",
     "checkingAccess": "확인 중",
     "requestingAccess": "승인 중",
     "allowAccess": "허용",
     "accessUnavailable": "사용 불가",
     "recordInteractions": "키보드 단축키 기록",
-    "recordInteractionsDescription": "안전한 키보드 단축키를 기록합니다. Linux에서는 이 설정을 끄면 마우스 클릭 메타데이터도 비활성화됩니다. 입력한 텍스트는 저장되지 않습니다."
+    "recordInteractionsDescription": "안전한 키보드 단축키를 기록합니다. 입력한 텍스트는 저장되지 않습니다.",
+    "recordInteractionsDescriptionLinux": "안전한 키보드 단축키를 기록합니다. 이 설정을 끄면 마우스 클릭 메타데이터도 비활성화됩니다. 입력한 텍스트는 저장되지 않습니다.",
+    "about": "정보",
+    "aboutDesc": "버전 및 애플리케이션 정보",
+    "view": "보기",
+    "version": "버전 {version}",
+    "aboutDescriptionText": "Beam은 명확하고 완성도 높은 제품 데모를 만들기 위한 화면 녹화 도구입니다. 한곳에서 영상을 녹화하고 꾸미고 내보낼 수 있습니다."
   },
   "ProjectPicker": {
     "projects": "프로젝트",

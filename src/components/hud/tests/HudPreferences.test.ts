@@ -102,6 +102,26 @@ describe('HudPreferences', () => {
     expect(wrapper.emitted('update:recordInteractions')).toContainEqual([false]);
   });
 
+  it.each(['darwin', 'win32'] as const)(
+    'uses the generic keyboard-shortcut description on %s without Linux click metadata',
+    (platform) => {
+      const wrapper = mountPreferences({ platform });
+      const description = wrapper.get('.input-access-item .preference-description').text();
+
+      expect(description).toContain('Records safe keyboard shortcuts.');
+      expect(description).not.toContain('Linux');
+      expect(description).not.toContain('click');
+    },
+  );
+
+  it('mentions Linux click metadata in the platform-specific description', () => {
+    const wrapper = mountPreferences({ platform: 'linux' });
+    const description = wrapper.get('.input-access-item .preference-description').text();
+
+    expect(description).toContain('Records safe keyboard shortcuts.');
+    expect(description).toContain('mouse click metadata');
+  });
+
   it('emits an access request and exposes a busy state while it is pending', async () => {
     const wrapper = mountPreferences({ inputAccess: permissionRequiredAccess });
     const authorize = wrapper.get('.input-access-actions .btn-secondary');

@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 export const captureMock = {
+  platform: 'linux',
   discover: vi.fn(),
   getSources: vi.fn(),
   hideScreenRegionOverlay: vi.fn(),

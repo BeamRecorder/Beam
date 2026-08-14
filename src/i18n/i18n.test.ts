@@ -49,6 +49,27 @@ describe('internationalization', () => {
     }
   });
 
+  it('keeps the preferences About and Linux interaction catalog complete', () => {
+    const keys = [
+      'about',
+      'aboutDesc',
+      'view',
+      'version',
+      'aboutDescriptionText',
+      'interactionAccessDescriptionLinux',
+      'recordInteractionsDescriptionLinux',
+    ];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(i18n.global.te(`HudPreferences.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`HudPreferences.${key}`)).not.toBe(`HudPreferences.${key}`);
+      }
+      expect(i18n.global.t('HudPreferences.version', { version: '9.9.9' })).toContain('9.9.9');
+    }
+  });
+
   it('persists the selected locale and updates the document language', () => {
     setCurrentLocale('zh-CN');
     expect(localStorage.getItem('locale')).toBe('zh-CN');

@@ -295,14 +295,21 @@
     "interactionAccess": "Acesso às interações",
     "interactionAccessReadyDescription": "Captura cliques e atalhos. O texto digitado nunca é salvo.",
     "interactionAccessUnavailableDescription": "A captura de interações não está disponível neste sistema.",
-    "interactionAccessDescription": "Necessário para efeitos de clique e futuras legendas de atalhos. O texto digitado não é salvo.",
+    "interactionAccessDescription": "Necessário para legendas de atalhos de teclado. O texto digitado não é salvo.",
+    "interactionAccessDescriptionLinux": "Necessário para legendas de atalhos de teclado e metadados de cliques do mouse. O texto digitado não é salvo.",
     "accessReady": "Pronto",
     "checkingAccess": "Verificando",
     "requestingAccess": "Autorizando",
     "allowAccess": "Permitir",
     "accessUnavailable": "Indisponível",
     "recordInteractions": "Gravar atalhos de teclado",
-    "recordInteractionsDescription": "Grava atalhos de teclado seguros. No Linux, desativar esta opção também desativa os metadados de cliques do mouse. O texto digitado nunca é salvo."
+    "recordInteractionsDescription": "Grava atalhos de teclado seguros. O texto digitado nunca é salvo.",
+    "recordInteractionsDescriptionLinux": "Grava atalhos de teclado seguros. Desativar esta opção também desativa os metadados de cliques do mouse. O texto digitado nunca é salvo.",
+    "about": "Sobre",
+    "aboutDesc": "Versão e informações do aplicativo",
+    "view": "Ver",
+    "version": "Versão {version}",
+    "aboutDescriptionText": "O Beam é um gravador de tela criado para produzir demonstrações de produto claras e refinadas. Grave, personalize e exporte seus vídeos em um só lugar."
   },
   "ProjectPicker": {
     "projects": "Projetos",

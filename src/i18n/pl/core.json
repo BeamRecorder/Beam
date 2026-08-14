@@ -295,14 +295,21 @@
     "interactionAccess": "Dostęp do interakcji",
     "interactionAccessReadyDescription": "Rejestruje kliknięcia i skróty. Wpisywany tekst nigdy nie jest zapisywany.",
     "interactionAccessUnavailableDescription": "Rejestrowanie interakcji jest niedostępne w tym systemie.",
-    "interactionAccessDescription": "Wymagane dla efektów kliknięć i przyszłych podpisów skrótów. Wpisywany tekst nie jest zapisywany.",
+    "interactionAccessDescription": "Wymagane dla podpisów skrótów klawiaturowych. Wpisywany tekst nie jest zapisywany.",
+    "interactionAccessDescriptionLinux": "Wymagane dla podpisów skrótów klawiaturowych i metadanych kliknięć myszy. Wpisywany tekst nie jest zapisywany.",
     "accessReady": "Gotowe",
     "checkingAccess": "Sprawdzanie",
     "requestingAccess": "Autoryzacja",
     "allowAccess": "Zezwól",
     "accessUnavailable": "Niedostępne",
     "recordInteractions": "Nagrywaj skróty klawiaturowe",
-    "recordInteractionsDescription": "Nagrywa bezpieczne skróty klawiaturowe. W systemie Linux wyłączenie tej opcji wyłącza też metadane kliknięć myszy. Wpisywany tekst nigdy nie jest zapisywany."
+    "recordInteractionsDescription": "Nagrywa bezpieczne skróty klawiaturowe. Wpisywany tekst nigdy nie jest zapisywany.",
+    "recordInteractionsDescriptionLinux": "Nagrywa bezpieczne skróty klawiaturowe. Wyłączenie tej opcji wyłącza też metadane kliknięć myszy. Wpisywany tekst nigdy nie jest zapisywany.",
+    "about": "O aplikacji",
+    "aboutDesc": "Wersja i informacje o aplikacji",
+    "view": "Wyświetl",
+    "version": "Wersja {version}",
+    "aboutDescriptionText": "Beam to rejestrator ekranu stworzony do przygotowywania przejrzystych i dopracowanych prezentacji produktów. Nagrywaj, stylizuj i eksportuj filmy w jednym miejscu."
   },
   "ProjectPicker": {
     "projects": "Projekty",

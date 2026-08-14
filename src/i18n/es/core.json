@@ -295,14 +295,21 @@
     "interactionAccess": "Acceso a interacciones",
     "interactionAccessReadyDescription": "Captura clics y atajos. El texto escrito nunca se guarda.",
     "interactionAccessUnavailableDescription": "La captura de interacciones no está disponible en este sistema.",
-    "interactionAccessDescription": "Necesario para efectos de clic y futuros subtítulos de atajos. No se guarda texto escrito.",
+    "interactionAccessDescription": "Necesario para los subtítulos de atajos de teclado. No se guarda texto escrito.",
+    "interactionAccessDescriptionLinux": "Necesario para los subtítulos de atajos de teclado y los metadatos de clics del ratón. No se guarda texto escrito.",
     "accessReady": "Listo",
     "checkingAccess": "Comprobando",
     "requestingAccess": "Autorizando",
     "allowAccess": "Permitir",
     "accessUnavailable": "No disponible",
     "recordInteractions": "Grabar atajos de teclado",
-    "recordInteractionsDescription": "Graba atajos de teclado seguros. En Linux, desactivar esta opción también desactiva los metadatos de clics del ratón. El texto escrito nunca se guarda."
+    "recordInteractionsDescription": "Graba atajos de teclado seguros. El texto escrito nunca se guarda.",
+    "recordInteractionsDescriptionLinux": "Graba atajos de teclado seguros. Desactivar esta opción también desactiva los metadatos de clics del ratón. El texto escrito nunca se guarda.",
+    "about": "Acerca de",
+    "aboutDesc": "Versión e información de la aplicación",
+    "view": "Ver",
+    "version": "Versión {version}",
+    "aboutDescriptionText": "Beam es un grabador de pantalla diseñado para crear demostraciones de producto claras y cuidadas. Graba, personaliza y exporta tus vídeos en un solo lugar."
   },
   "ProjectPicker": {
     "projects": "Proyectos",

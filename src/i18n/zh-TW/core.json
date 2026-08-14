@@ -295,14 +295,21 @@
     "interactionAccess": "互動存取",
     "interactionAccessReadyDescription": "擷取點擊和快捷鍵。絕不會儲存輸入的文字。",
     "interactionAccessUnavailableDescription": "此系統不支援互動擷取。",
-    "interactionAccessDescription": "點擊效果和未來的快捷鍵字幕需要此權限。不會儲存輸入文字。",
+    "interactionAccessDescription": "鍵盤快速鍵字幕需要此權限。不會儲存輸入文字。",
+    "interactionAccessDescriptionLinux": "鍵盤快速鍵字幕和滑鼠點擊中繼資料需要此權限。不會儲存輸入文字。",
     "accessReady": "就緒",
     "checkingAccess": "正在檢查",
     "requestingAccess": "正在授權",
     "allowAccess": "允許",
     "accessUnavailable": "無法使用",
     "recordInteractions": "錄製鍵盤快速鍵",
-    "recordInteractionsDescription": "錄製安全的鍵盤快速鍵。在 Linux 上，關閉此選項也會停用滑鼠點擊中繼資料。輸入的文字不會被儲存。"
+    "recordInteractionsDescription": "錄製安全的鍵盤快速鍵。輸入的文字不會被儲存。",
+    "recordInteractionsDescriptionLinux": "錄製安全的鍵盤快速鍵。關閉此選項也會停用滑鼠點擊中繼資料。輸入的文字不會被儲存。",
+    "about": "關於",
+    "aboutDesc": "版本與應用程式資訊",
+    "view": "查看",
+    "version": "版本 {version}",
+    "aboutDescriptionText": "Beam 是一款用來製作清晰、精緻產品展示的螢幕錄製工具。你可以在同一處完成錄製、樣式設計與影片匯出。"
   },
   "ProjectPicker": {
     "projects": "專案",
