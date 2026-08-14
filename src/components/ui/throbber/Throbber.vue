@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MotionComponent, useReducedMotion, type Variant } from '@vueuse/motion';
 
 export type ThrobberVariant = 'wave' | 'breathe' | 'ripple' | 'glow' | 'bounce' | 'pulse';
 export type ThrobberColor = 'default' | 'primary' | 'muted' | 'secondary' | 'gradient' | 'white';
@@ -31,7 +30,6 @@ const props = withDefaults(
   },
 );
 
-const reducedMotion = useReducedMotion();
 const displayText = computed(() => props.text || '');
 const glyphs = computed(() => Array.from(displayText.value));
 
@@ -41,118 +39,50 @@ const speedMultiplier = computed(() => {
   return 1.0;
 });
 
-const initialVariant = computed<Variant>(() => ({
-  opacity: reducedMotion.value ? 1 : 0.38,
-  y: 0,
-  scale: 1,
-}));
-
-const enterVariant = (index: number): Variant => {
-  if (reducedMotion.value) {
-    return { opacity: 1, y: 0, scale: 1, transition: { immediate: true } };
-  }
-
+const glyphStyle = (index: number) => {
   const mul = speedMultiplier.value;
+  let delay = 0;
+  let duration = 1.1;
 
   switch (props.variant) {
     case 'breathe':
     case 'pulse':
-      return {
-        opacity: [0.4, 1, 0.4],
-        scale: [0.98, 1.02, 0.98],
-        transition: {
-          type: 'keyframes',
-          duration: 1.8 * mul,
-          ease: 'easeInOut',
-          times: [0, 0.5, 1],
-          repeat: Infinity,
-          repeatType: 'loop',
-          delay: index * 0.015 * mul,
-        },
-      } as unknown as Variant;
-
+      duration = 1.8;
+      delay = index * 0.02;
+      break;
     case 'ripple':
-      return {
-        opacity: [0.4, 1, 0.4],
-        y: [0, -4, 0],
-        transition: {
-          type: 'keyframes',
-          duration: 1.0 * mul,
-          ease: 'easeInOut',
-          times: [0, 0.5, 1],
-          repeat: Infinity,
-          repeatType: 'loop',
-          delay: index * 0.045 * mul,
-        },
-      } as unknown as Variant;
-
+      duration = 1.0;
+      delay = index * 0.045;
+      break;
     case 'bounce':
-      return {
-        opacity: [0.5, 1, 0.5],
-        y: [0, -3.5, 0],
-        scale: [1, 1.08, 1],
-        transition: {
-          type: 'keyframes',
-          duration: 0.9 * mul,
-          ease: 'easeInOut',
-          times: [0, 0.5, 1],
-          repeat: Infinity,
-          repeatType: 'loop',
-          delay: index * 0.04 * mul,
-        },
-      } as unknown as Variant;
-
+      duration = 0.9;
+      delay = index * 0.04;
+      break;
     case 'glow':
-      return {
-        opacity: [0.4, 1, 0.4],
-        filter: ['brightness(0.9)', 'brightness(1.4)', 'brightness(0.9)'],
-        transition: {
-          type: 'keyframes',
-          duration: 1.2 * mul,
-          ease: 'easeInOut',
-          times: [0, 0.45, 1],
-          repeat: Infinity,
-          repeatType: 'loop',
-          delay: index * 0.04 * mul,
-        },
-      } as unknown as Variant;
-
+    case 'shimmer':
+      duration = 1.3;
+      delay = index * 0.055;
+      break;
     case 'wave':
     default:
-      return {
-        opacity: [0.38, 1, 0.38],
-        transition: {
-          type: 'keyframes',
-          duration: 1.1 * mul,
-          ease: 'easeInOut',
-          times: [0, 0.45, 1],
-          repeat: Infinity,
-          repeatType: 'loop',
-          delay: index * 0.035 * mul,
-        },
-      } as unknown as Variant;
+      duration = 1.1;
+      delay = index * 0.035;
+      break;
   }
+
+  return {
+    animationDuration: `${duration * mul}s`,
+    animationDelay: `${delay * mul}s`,
+  };
 };
 
-const dotVariant = (dotIndex: number): Variant => {
-  if (reducedMotion.value) {
-    return { opacity: 1, y: 0, transition: { immediate: true } };
-  }
-
+const dotStyle = (dotIndex: number) => {
   const mul = speedMultiplier.value;
+  const baseDelay = glyphs.value.length * 0.025;
   return {
-    opacity: [0.25, 1, 0.25],
-    y: [0, -3, 0],
-    transition: {
-      type: 'keyframes',
-      duration: 0.9 * mul,
-      ease: 'easeInOut',
-      times: [0, 0.5, 1],
-      repeat: Infinity,
-      repeatType: 'loop',
-      delay: (glyphs.value.length * 0.02 + dotIndex * 0.15) * mul,
-    },
-  } as unknown as Variant;
+    animationDuration: `${0.9 * mul}s`,
+    animationDelay: `${(baseDelay + dotIndex * 0.15) * mul}s`,
+  };
 };
 </script>
 
@@ -172,24 +102,20 @@ const dotVariant = (dotIndex: number): Variant => {
     :aria-label="displayText"
   >
     <span aria-hidden="true" class="throbber-content">
-      <MotionComponent
+      <span
         v-for="(glyph, index) in glyphs"
-        :key="`${reducedMotion ? 'static' : 'animated'}-${variant}-${index}-${glyph}`"
-        is="span"
+        :key="`${variant}-${index}-${glyph}`"
         class="throbber-glyph editor-loading-glyph"
-        :initial="initialVariant"
-        :enter="enterVariant(index)"
-        >{{ glyph === ' ' ? '\u00a0' : glyph }}</MotionComponent
+        :style="glyphStyle(index)"
+        >{{ glyph === ' ' ? '\u00a0' : glyph }}</span
       >
       <span v-if="dots" class="throbber-dots">
-        <MotionComponent
+        <span
           v-for="d in 3"
           :key="`dot-${d}`"
-          is="span"
           class="throbber-dot"
-          :initial="{ opacity: reducedMotion ? 1 : 0.25, y: 0 }"
-          :enter="dotVariant(d)"
-          >.</MotionComponent
+          :style="dotStyle(d)"
+          >.</span
         >
       </span>
     </span>
@@ -222,6 +148,100 @@ const dotVariant = (dotIndex: number): Variant => {
 .throbber-dot {
   display: inline-block;
   will-change: opacity, transform;
+  animation: throbber-dot-bounce 0.9s ease-in-out infinite;
+}
+
+/* Animations */
+.throbber-variant-wave .throbber-glyph {
+  animation: throbber-wave 1.1s ease-in-out infinite;
+}
+
+.throbber-variant-breathe .throbber-glyph,
+.throbber-variant-pulse .throbber-glyph {
+  animation: throbber-breathe 1.8s ease-in-out infinite;
+}
+
+.throbber-variant-ripple .throbber-glyph {
+  animation: throbber-ripple 1.0s ease-in-out infinite;
+}
+
+.throbber-variant-bounce .throbber-glyph {
+  animation: throbber-bounce 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+
+.throbber-variant-glow .throbber-glyph,
+.throbber-variant-shimmer .throbber-glyph {
+  animation: throbber-glow 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes throbber-wave {
+  0%, 100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes throbber-breathe {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes throbber-ripple {
+  0%, 100% {
+    opacity: 0.38;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes throbber-bounce {
+  0%, 100% {
+    opacity: 0.45;
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-3.5px) scale(1.08);
+  }
+}
+
+@keyframes throbber-glow {
+  0% {
+    opacity: 0.25;
+    filter: brightness(0.75);
+  }
+  35% {
+    opacity: 1;
+    filter: brightness(1.6) contrast(1.08);
+  }
+  70%, 100% {
+    opacity: 0.25;
+    filter: brightness(0.75);
+  }
+}
+
+@keyframes throbber-dot-bounce {
+  0%, 100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }
 
 /* Colors */
@@ -245,7 +265,7 @@ const dotVariant = (dotIndex: number): Variant => {
   color: #ffffff;
 }
 
-.throbber-color-gradient {
+.throbber-color-gradient .throbber-glyph {
   background: linear-gradient(
     135deg,
     var(--color-primary) 0%,
@@ -254,6 +274,7 @@ const dotVariant = (dotIndex: number): Variant => {
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Sizes */
@@ -300,12 +321,5 @@ const dotVariant = (dotIndex: number): Variant => {
 
 .throbber-weight-bold {
   font-weight: 750;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .throbber-glyph,
-  .throbber-dot {
-    will-change: auto;
-  }
 }
 </style>

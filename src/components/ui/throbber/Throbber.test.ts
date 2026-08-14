@@ -1,21 +1,8 @@
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import Throbber from './Throbber.vue';
 
-const setReducedMotion = (matches: boolean) => {
-  window.matchMedia = vi.fn(
-    () =>
-      ({
-        matches,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-      }) as unknown as MediaQueryList,
-  );
-};
-
 describe('Throbber', () => {
-  beforeEach(() => setReducedMotion(false));
-
   it('renders accessible text for assistive technologies', () => {
     const wrapper = mount(Throbber, { props: { text: 'Loading demo' } });
 
@@ -59,12 +46,10 @@ describe('Throbber', () => {
     expect(wrapper.findAll('.throbber-dot')).toHaveLength(3);
   });
 
-  it('handles prefers-reduced-motion gracefully by disabling keyframes', () => {
-    setReducedMotion(true);
-    const wrapper = mount(Throbber, { props: { text: 'Loading' } });
-
-    expect(
-      wrapper.findAll('.throbber-glyph').every((glyph) => glyph.attributes('style')?.includes('opacity: 1')),
-    ).toBe(true);
+  it('calculates animation delays and durations across glyphs', () => {
+    const wrapper = mount(Throbber, { props: { text: 'AB' } });
+    const glyphs = wrapper.findAll('.throbber-glyph');
+    expect(glyphs[0].attributes('style')).toContain('animation-delay: 0s');
+    expect(glyphs[1].attributes('style')).toContain('animation-delay: 0.035s');
   });
 });

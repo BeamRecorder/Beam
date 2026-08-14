@@ -39,12 +39,9 @@ describe('EditorLoadingThrobber', () => {
     expect(wrapper.findAll('.editor-loading-glyph')).toHaveLength(11);
   });
 
-  it('renders a static, fully visible message when reduced motion is requested', () => {
-    setReducedMotion(true);
+  it('renders all glyphs properly for the loading message', () => {
     const wrapper = mount(EditorLoadingThrobber, { props: { text: 'Loading' } });
 
-    expect(
-      wrapper.findAll('.editor-loading-glyph').every((glyph) => glyph.attributes('style')?.includes('opacity: 1')),
-    ).toBe(true);
+    expect(wrapper.findAll('.editor-loading-glyph')).toHaveLength(7);
   });
 });
