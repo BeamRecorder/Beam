@@ -11,6 +11,7 @@ function fakeWindow(calls) {
   let maximized = false;
   const webContents = {
     id: 42,
+    on: (event, listener) => contentListeners.set(event, listener),
     once: (event, listener) => contentListeners.set(event, listener),
     send: (...args) => calls.push(['editor-send', ...args]),
   };
