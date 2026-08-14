@@ -74,14 +74,6 @@ contextBridge.exposeInMainWorld(
     setSizeSmooth: (width, height) => ipcRenderer.send('window:setSizeSmooth', width, height),
     setWindowVisible: (visible) => ipcRenderer.send('window:set-visible', Boolean(visible)),
     setInteractive: (value) => ipcRenderer.send('window:setInteractive', value),
-    beginRecorderDrag: () => ipcRenderer.sendSync('window:recorder-drag-start'),
-    getRecorderTooltipSide: () => ipcRenderer.invoke('window:get-recorder-tooltip-side'),
-    setRecorderTooltip: (visible) => ipcRenderer.invoke('window:set-recorder-tooltip', Boolean(visible)),
-    onRecorderTooltipSide: (listener) => {
-      const callback = (_event, side) => listener(side);
-      ipcRenderer.on('window:recorder-tooltip-side', callback);
-      return () => ipcRenderer.removeListener('window:recorder-tooltip-side', callback);
-    },
     getSources: (types) => ipcRenderer.invoke('window:getSources', types),
     getDisplayBounds: (displayId) => ipcRenderer.invoke('screen:get-display-bounds', displayId),
     selectScreenRegion: (options) => ipcRenderer.invoke('screen-region:select', options),

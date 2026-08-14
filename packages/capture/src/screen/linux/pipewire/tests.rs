@@ -272,75 +272,57 @@ fn timestamp_mapper_rejects_flags_regressions_missing_pts_and_overflow() {
 }
 
 #[test]
-fn cursor_zero_uses_fallback_identity_before_a_shape_is_available() {
+fn cursor_spa_id_changes_without_a_bitmap_and_zero_preserves_identity() {
     let mut state = CursorState::new("stream");
-    let zero = CursorMetadata {
-        valid: true,
-        id: 0,
-        x: 4,
-        y: 5,
-        hotspot: None,
-    };
-    assert!(matches!(
-        state.resolve(Some(zero), 10, 10),
-        CursorSampleState::Known {
-            ref native_cursor_id,
-            visible: true,
-            ..
-        } if native_cursor_id == "pipewire:stream:1"
-    ));
-    let identified = CursorMetadata { id: 7, ..zero };
-    assert!(matches!(
-        state.resolve(Some(identified), 10, 10),
-        CursorSampleState::Known { .. }
-    ));
-    let preserved = state.resolve(Some(zero), 10, 10);
-    assert!(matches!(
-        preserved,
-        CursorSampleState::Known { ref native_cursor_id, pixel_x: 4, pixel_y: 5, .. }
-            if native_cursor_id == "pipewire:stream:7"
-    ));
-    assert_eq!(state.resolve(None, 10, 10), CursorSampleState::Unknown);
-    assert!(matches!(
-        state.resolve(
-            Some(CursorMetadata {
-                valid: false,
-                ..zero
-            }),
-            10,
-            10
-        ),
-        CursorSampleState::Known {
-            ref native_cursor_id,
-            visible: false,
-            ..
-        } if native_cursor_id == "pipewire:stream:7"
-    ));
-}
-
-#[test]
-fn cursor_meta_allocation_matches_mutter_384_pixel_contract() {
-    let minimum = size_of::<pipewire::spa::sys::spa_meta_cursor>()
-        + size_of::<pipewire::spa::sys::spa_meta_bitmap>()
-        + 384 * 384 * 4;
-    assert!(CURSOR_META_SIZE >= minimum);
-}
-
-#[test]
-fn cursor_id_zero_after_identity_marks_cursor_hidden_without_losing_identity() {
-    let mut state = CursorState::new("stream");
-    let identified = CursorMetadata {
-        valid: true,
+    let first = CursorMetadata {
         id: 17,
         x: 4,
         y: 5,
         hotspot: None,
     };
-    let _ = state.resolve(Some(identified), 10, 10);
+    assert!(matches!(
+        state.resolve(Some(first), 10, 10),
+        CursorSampleState::Known {
+            ref native_cursor_id,
+            visible: true,
+            ..
+        } if native_cursor_id == "pipewire:stream:17"
+    ));
+
+    // SPA IDs are the identity even when no bitmap is present in the meta.
+    let changed = CursorMetadata { id: 23, ..first };
+    assert!(matches!(
+        state.resolve(Some(changed), 10, 10),
+        CursorSampleState::Known {
+            ref native_cursor_id,
+            visible: true,
+            ..
+        } if native_cursor_id == "pipewire:stream:23"
+    ));
+
+    let preserved = state.resolve(
+        Some(CursorMetadata {
+            id: 0,
+            x: 6,
+            y: 7,
+            hotspot: None,
+        }),
+        10,
+        10,
+    );
+    assert!(matches!(
+        preserved,
+        CursorSampleState::Known {
+            ref native_cursor_id,
+            pixel_x: 6,
+            pixel_y: 7,
+            visible: true,
+            ..
+        } if native_cursor_id == "pipewire:stream:23"
+    ));
 
     let hidden = state.resolve(
         Some(CursorMetadata {
-            valid: true,
             id: 0,
             x: -1,
             y: -1,
@@ -355,37 +337,42 @@ fn cursor_id_zero_after_identity_marks_cursor_hidden_without_losing_identity() {
             ref native_cursor_id,
             visible: false,
             ..
-        } if native_cursor_id == "pipewire:stream:17"
+        } if native_cursor_id == "pipewire:stream:23"
     ));
 }
 
 #[test]
-fn stable_cursor_shape_identity_changes_with_bitmap_bytes() {
-    let first = metadata::stable_cursor_shape_id(1, 2, 2, 8, &[0, 1, 2, 3]);
-    let second = metadata::stable_cursor_shape_id(1, 2, 2, 8, &[0, 1, 2, 4]);
-
-    assert_ne!(first, 0);
-    assert_ne!(second, 0);
-    assert_ne!(first, second);
+fn cursor_id_zero_without_a_previous_identity_is_unknown() {
+    let mut state = CursorState::new("stream");
+    assert_eq!(
+        state.resolve(
+            Some(CursorMetadata {
+                id: 0,
+                x: 4,
+                y: 5,
+                hotspot: None,
+            }),
+            10,
+            10,
+        ),
+        CursorSampleState::Unknown
+    );
 }
 
 #[test]
-fn stable_cursor_shape_identity_is_repeatable_for_identical_bitmap() {
-    let pixels = [10, 20, 30, 40, 50, 60, 70, 80];
-    let first = metadata::stable_cursor_shape_id(42, 2, 1, 8, &pixels);
-    let second = metadata::stable_cursor_shape_id(42, 2, 1, 8, &pixels);
-
-    assert_eq!(first, second);
+fn cursor_meta_allocation_matches_mutter_384_pixel_contract() {
+    let minimum = size_of::<pipewire::spa::sys::spa_meta_cursor>()
+        + size_of::<pipewire::spa::sys::spa_meta_bitmap>()
+        + 384 * 384 * 4;
+    assert!(CURSOR_META_SIZE >= minimum);
 }
 
 #[test]
-fn cursor_position_only_update_preserves_hashed_shape_identity() {
-    let shape_id = metadata::stable_cursor_shape_id(1, 2, 2, 8, &[0, 1, 2, 3]);
+fn cursor_position_only_update_preserves_raw_spa_identity() {
     let mut state = CursorState::new("stream");
     let identified = state.resolve(
         Some(CursorMetadata {
-            valid: true,
-            id: shape_id,
+            id: 17,
             x: 4,
             y: 5,
             hotspot: None,
@@ -396,12 +383,11 @@ fn cursor_position_only_update_preserves_hashed_shape_identity() {
     assert!(matches!(
         identified,
         CursorSampleState::Known { ref native_cursor_id, .. }
-            if native_cursor_id == &format!("pipewire:stream:{shape_id}")
+            if native_cursor_id == "pipewire:stream:17"
     ));
 
     let moved = state.resolve(
         Some(CursorMetadata {
-            valid: true,
             id: 0,
             x: 7,
             y: 8,
@@ -418,14 +404,13 @@ fn cursor_position_only_update_preserves_hashed_shape_identity() {
             pixel_y: 8,
             visible: true,
             ..
-        } if native_cursor_id == &format!("pipewire:stream:{shape_id}")
+        } if native_cursor_id == "pipewire:stream:17"
     ));
 }
 
 #[test]
 fn cursor_coordinates_keep_signed_values_and_follow_crop_rotation() {
     let metadata = CursorMetadata {
-        valid: true,
         id: 3,
         x: 12,
         y: 24,

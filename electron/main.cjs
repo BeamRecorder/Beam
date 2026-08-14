@@ -213,7 +213,7 @@ app.whenReady().then(() => {
   configureDesktopLoopback();
   registerInputAccessIpc(ipcMain, inputAccess);
   const userPaths = createUserPaths(app.getPath('videos'));
-  const preferencesStore = createPreferencesStore(userPaths.preferences);
+  const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
   const teleprompterWindow = createTeleprompterWindow({
     applicationRoot,
     isPackaged: app.isPackaged,

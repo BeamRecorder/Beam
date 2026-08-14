@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { Video, VideoOff, GripVertical, Mic, MicOff, Pause, Play, Square, Trash2, Volume2, VolumeX } from '@lucide/vue';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import Tooltip from '~/ui/tooltip/Tooltip.vue';
-import KeyboardChip from '~/ui/Kbd/KeyboardChip.vue';
-import { usePreferencesStore } from '~/stores/preferences';
+import { Video, VideoOff, GripVertical, Pause, Play, Square, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from '../audio/useAudioLevelMeter';
@@ -35,63 +32,6 @@ const emit = defineEmits<{
   microphone: [];
   systemAudio: [];
 }>();
-
-const preferencesStore = usePreferencesStore();
-let tooltipSpaceReady: Promise<void> = Promise.resolve();
-const tooltipSide = ref<'left' | 'right'>('left');
-const tooltipPosition = computed(() => tooltipSide.value);
-let stopTooltipSideListener: (() => void) | undefined;
-
-const applyTooltipSide = (side: unknown, source: string) => {
-  if (side === 'left' || side === 'right') tooltipSide.value = side;
-};
-
-onMounted(() => {
-  preferencesStore.load();
-  stopTooltipSideListener = window.capture?.onRecorderTooltipSide((side) => applyTooltipSide(side, 'nativeMove'));
-  tooltipSpaceReady = (async () => {
-    const initialSide = await window.capture?.getRecorderTooltipSide();
-    applyTooltipSide(initialSide, 'before-expand');
-  })();
-});
-
-const getShortcut = (id: string, fallback: string): string => {
-  return preferencesStore.settings?.shortcuts?.[id]?.keys || fallback;
-};
-
-const prepareNativeDrag = (event: PointerEvent) => {
-  if (event.button !== 0) return;
-  const target = event.target instanceof HTMLElement ? event.target : null;
-  if (target?.closest("button, a, input, select, textarea, [role='button']") && !target?.closest('.drag-handle'))
-    return;
-  window.capture?.beginRecorderDrag();
-};
-
-const tooltipsReady = ref(false);
-let tooltipInteraction = 0;
-const showTooltips = async () => {
-  const interaction = ++tooltipInteraction;
-  tooltipsReady.value = false;
-  await tooltipSpaceReady;
-  if (interaction !== tooltipInteraction) return;
-  const side = await window.capture?.setRecorderTooltip(true);
-  if (interaction !== tooltipInteraction) {
-    void window.capture?.setRecorderTooltip(false);
-    return;
-  }
-  applyTooltipSide(side, 'hover');
-  await nextTick();
-  tooltipsReady.value = true;
-};
-const hideTooltips = () => {
-  tooltipInteraction += 1;
-  tooltipsReady.value = false;
-  void window.capture?.setRecorderTooltip(false);
-};
-onBeforeUnmount(() => {
-  stopTooltipSideListener?.();
-  void window.capture?.setRecorderTooltip(false);
-});
 </script>
 
 <template>
@@ -100,20 +40,10 @@ onBeforeUnmount(() => {
     :class="{
       'auto-fade': visibility === 'auto-fade',
       'hover-only': visibility === 'hover-only' && hoverOnlyActive,
-      'tooltip-right': tooltipSide === 'right',
     }"
     :aria-label="t('recordingControls')"
-    @pointerdown="prepareNativeDrag"
-    @mouseenter="showTooltips"
-    @mouseleave="hideTooltips"
   >
-    <button
-      class="drag-handle"
-      type="button"
-      :aria-label="t('moveRecorderBar')"
-      :title="t('moveRecorderBar')"
-      @pointerdown.stop="prepareNativeDrag"
-    >
+    <button class="drag-handle" type="button" :aria-label="t('moveRecorderBar')" :title="t('moveRecorderBar')">
       <GripVertical aria-hidden="true" />
     </button>
 
@@ -121,119 +51,75 @@ onBeforeUnmount(() => {
       {{ phase === 'countdown' ? t('ready') : recordingTime }}
     </p>
 
-    <!-- Play/Pause -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
-      <template #content>
-        <div class="tooltip-shortcut-content">
-          <span>{{ phase === 'paused' ? t('resumeRecording') : t('pauseRecording') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.playPause', 'Alt+Shift+P')" size="sm" />
-        </div>
-      </template>
-      <button
-        class="control"
-        :aria-label="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
-        :disabled="phase === 'countdown' || phase === 'finalizing'"
-        @pointerdown.stop
-        @click="emit('pause')"
-      >
-        <Play v-if="phase === 'paused'" /><Pause v-else />
-      </button>
-    </Tooltip>
+    <button
+      class="control"
+      :aria-label="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
+      :title="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
+      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      @pointerdown.stop
+      @click="emit('pause')"
+    >
+      <Play v-if="phase === 'paused'" /><Pause v-else />
+    </button>
 
-    <!-- Stop -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
-      <template #content>
-        <div class="tooltip-shortcut-content">
-          <span>{{ t('stopRecording') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.startStopRecording', 'Alt+Shift+R')" size="sm" />
-        </div>
-      </template>
-      <button
-        class="control stop"
-        :aria-label="t('stopRecording')"
-        :disabled="phase === 'finalizing'"
-        @pointerdown.stop
-        @click="emit('stop')"
-      >
-        <Square />
-      </button>
-    </Tooltip>
+    <button
+      class="control stop"
+      :aria-label="t('stopRecording')"
+      :title="t('stopRecording')"
+      :disabled="phase === 'finalizing'"
+      @pointerdown.stop
+      @click="emit('stop')"
+    >
+      <Square />
+    </button>
 
-    <!-- Mic -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
-      <template #content>
-        <div class="tooltip-shortcut-content">
-          <span>{{ microphoneEnabled ? t('turnMicOff') : t('turnMicOn') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.toggleMic', 'Alt+Shift+M')" size="sm" />
-        </div>
-      </template>
-      <button
-        class="control"
-        :class="{ inactive: !microphoneEnabled }"
-        :aria-label="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
-        :disabled="phase === 'countdown' || phase === 'finalizing'"
-        @pointerdown.stop
-        @click="emit('microphone')"
-      >
-        <AudioIconMeter kind="mic" :enabled="microphoneEnabled" :level="micLevel" size="sm" />
-      </button>
-    </Tooltip>
+    <button
+      class="control"
+      :class="{ inactive: !microphoneEnabled }"
+      :aria-label="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
+      :title="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
+      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      @pointerdown.stop
+      @click="emit('microphone')"
+    >
+      <AudioIconMeter kind="mic" :enabled="microphoneEnabled" :level="micLevel" size="sm" />
+    </button>
 
-    <!-- Camera -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
-      <template #content>
-        <div class="tooltip-shortcut-content">
-          <span>{{ cameraEnabled ? t('turnCameraOff') : t('turnCameraOn') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.toggleCamera', 'Alt+Shift+C')" size="sm" />
-        </div>
-      </template>
-      <button
-        class="control"
-        :class="{ inactive: !cameraEnabled }"
-        :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
-        :disabled="phase === 'countdown' || phase === 'finalizing'"
-        @pointerdown.stop
-        @click="emit('camera')"
-      >
-        <Video v-if="cameraEnabled" /><VideoOff v-else />
-      </button>
-    </Tooltip>
+    <button
+      class="control"
+      :class="{ inactive: !cameraEnabled }"
+      :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
+      :title="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
+      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      @pointerdown.stop
+      @click="emit('camera')"
+    >
+      <Video v-if="cameraEnabled" /><VideoOff v-else />
+    </button>
 
-    <!-- System Audio -->
-    <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
-      <template #content>
-        <div class="tooltip-shortcut-content">
-          <span>{{ systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn') }}</span>
-          <KeyboardChip :shortcut="getShortcut('hud.toggleSystemAudio', 'Alt+Shift+A')" size="sm" />
-        </div>
-      </template>
-      <button
-        class="control"
-        :class="{ inactive: !systemAudioEnabled }"
-        :aria-label="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
-        :disabled="phase === 'countdown' || phase === 'finalizing'"
-        @pointerdown.stop
-        @click="emit('systemAudio')"
-      >
-        <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioLevel" size="sm" />
-      </button>
-    </Tooltip>
+    <button
+      class="control"
+      :class="{ inactive: !systemAudioEnabled }"
+      :aria-label="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
+      :title="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
+      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      @pointerdown.stop
+      @click="emit('systemAudio')"
+    >
+      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioLevel" size="sm" />
+    </button>
 
     <div class="cancel-slot">
-      <Tooltip :position="tooltipPosition" :max-width="220" :disabled="!tooltipsReady">
-        <template #content>
-          <span>{{ t('cancelRecording') }}</span>
-        </template>
-        <button
-          class="control cancel"
-          :aria-label="t('cancelRecording')"
-          :disabled="phase === 'finalizing'"
-          @pointerdown.stop
-          @click="emit('cancel')"
-        >
-          <Trash2 />
-        </button>
-      </Tooltip>
+      <button
+        class="control cancel"
+        :aria-label="t('cancelRecording')"
+        :title="t('cancelRecording')"
+        :disabled="phase === 'finalizing'"
+        @pointerdown.stop
+        @click="emit('cancel')"
+      >
+        <Trash2 />
+      </button>
     </div>
   </aside>
 </template>
@@ -259,10 +145,6 @@ onBeforeUnmount(() => {
   -webkit-app-region: drag;
   cursor: grab;
   transition: opacity 0.18s ease;
-}
-.recorder-bar.tooltip-right {
-  left: 0;
-  right: auto;
 }
 .drag-handle {
   width: 40px;
@@ -345,19 +227,5 @@ onBeforeUnmount(() => {
 }
 .countdown {
   color: var(--text-muted);
-}
-.tooltip-shortcut-content {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  max-width: 198px;
-  min-width: 0;
-  line-height: 1.35;
-}
-.tooltip-shortcut-content > span {
-  min-width: 0;
-  overflow-wrap: normal;
-  word-break: normal;
 }
 </style>

@@ -98,6 +98,43 @@ fn cursor_samples_emit_a_shape_sidecar_without_a_hotspot() {
 }
 
 #[test]
+fn cursor_samples_emit_distinct_shapes_for_native_ids_without_bitmaps() {
+    let temporary = tempfile::tempdir().expect("temporary cursor directory");
+    let mut output = CursorOutput::new(temporary.path().into());
+    for (session_ns, native_cursor_id) in [(10, "pipewire:stream:17"), (20, "pipewire:stream:23")] {
+        output
+            .push_sample(
+                session_ns,
+                CursorSampleState::Known {
+                    native_cursor_id: native_cursor_id.into(),
+                    pixel_x: 10,
+                    pixel_y: 12,
+                    normalized_x: 0.25,
+                    normalized_y: 0.5,
+                    visible: true,
+                    // No bitmap-derived shape data is available; the raw SPA
+                    // identity still needs to produce a distinct Shape event.
+                    hotspot: None,
+                },
+            )
+            .expect("cursor sample");
+    }
+
+    let shape_ids: Vec<&str> = output
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            crate::cursor::CursorEvent::Shape { cursor_id, .. } => Some(cursor_id.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(shape_ids, ["pipewire:stream:17", "pipewire:stream:23"]);
+    assert_eq!(output.shapes.len(), 2);
+    assert!(output.shapes.contains_key("pipewire:stream:17"));
+    assert!(output.shapes.contains_key("pipewire:stream:23"));
+}
+
+#[test]
 fn unknown_cursor_sample_does_not_invent_events() {
     let temporary = tempfile::tempdir().expect("temporary cursor directory");
     let mut output = CursorOutput::new(temporary.path().into());

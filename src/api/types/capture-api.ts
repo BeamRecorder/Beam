@@ -72,13 +72,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   setSizeSmooth(width: number, height: number): void;
   setWindowVisible(visible: boolean): void;
   setInteractive(overInteractive: boolean): void;
-  beginRecorderDrag(): void;
-  getRecorderTooltipSide(): Promise<'left' | 'right' | null>;
-  setRecorderTooltip(visible: boolean): Promise<'left' | 'right' | null>;
   setCountdown(seconds: number | null): Promise<void>;
   prepareRecordingSurface(): Promise<void>;
   onCountdown(listener: (seconds: number | null) => void): () => void;
-  onRecorderTooltipSide(listener: (side: 'left' | 'right') => void): () => void;
   getSources(types?: string[]): Promise<CapturePreview[]>;
   getDisplayBounds(displayId: string): Promise<ScreenRegionBounds | null>;
   selectScreenRegion(options: ScreenRegionOverlayOptions): Promise<ScreenRegion | null>;

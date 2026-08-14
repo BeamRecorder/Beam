@@ -47,19 +47,9 @@ function registerWindowIpc(ipcMain, controllerForWindow, { debug = false } = {})
   ipcMain.on('window:setInteractive', (event, overInteractive) =>
     controllerForWindow(windowForEvent(event))?.setHudInteractive(overInteractive),
   );
-  ipcMain.on('window:recorder-drag-start', (event) => {
-    controllerForWindow(windowForEvent(event))?.beginRecorderDrag();
-    event.returnValue = true;
-  });
   ipcMain.on('window:set-visible', (event, visible) => {
     logWindow('set-visible', Boolean(visible));
     controllerForWindow(windowForEvent(event))?.setVisible(Boolean(visible));
-  });
-  ipcMain.handle('window:set-recorder-tooltip', (event, visible) => {
-    return controllerForWindow(windowForEvent(event))?.setRecorderTooltip(Boolean(visible)) ?? null;
-  });
-  ipcMain.handle('window:get-recorder-tooltip-side', (event) => {
-    return controllerForWindow(windowForEvent(event))?.getRecorderTooltipSide() ?? null;
   });
   ipcMain.handle('window:bounds', (event) => windowForEvent(event)?.getBounds() ?? null);
 

@@ -191,7 +191,7 @@ test('recorder mode keeps its compact native hit target interactive', () => {
   assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', true, { forward: true }]);
 });
 
-test('recorder tooltips choose the side with room after the bar moves', async () => {
+test('recorder movement keeps the native bounds compact', () => {
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
@@ -206,16 +206,12 @@ test('recorder tooltips choose the side with room after the bar moves', async ()
   controller.setMode('recorder');
   controller.markReadyToShow();
 
-  assert.equal(controller.setRecorderTooltip(true), 'left');
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  assert.equal(win.getBounds().width, 300);
+  const boundsCalls = () => win.calls.filter((call) => call[0] === 'bounds');
+  const boundsCallsBeforeMove = boundsCalls().length;
+  win.emit('move');
 
-  controller.setRecorderTooltip(false);
-  win.setPosition(0, 228);
-  controller.rememberRecorderPosition();
-  assert.equal(controller.setRecorderTooltip(true), 'right');
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  assert.deepEqual(win.getBounds(), { x: 0, y: 228, width: 300, height: 344 });
+  assert.deepEqual(win.getBounds(), { x: 908, y: 228, width: 72, height: 344 });
+  assert.equal(boundsCalls().length, boundsCallsBeforeMove);
   controller.setMode('hud');
 });
 
@@ -237,7 +233,6 @@ test('recorder position persistence stores the compact bar position', () => {
   const win = fakeWindow();
   const controller = new WindowController(win, { screenModule, preferencesStore });
   controller.setMode('recorder');
-  controller.setRecorderTooltip(true);
   controller.rememberRecorderPosition();
   controller.flushRecorderPosition();
 

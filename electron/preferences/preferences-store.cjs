@@ -1,10 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const defaults = () => ({
+const defaults = (platform = process.platform) => ({
   schemaVersion: 3,
   theme: 'light',
-  recordingBar: { visibility: 'always' },
+  recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
   devices: {},
   shortcuts: {
@@ -64,8 +64,8 @@ const presets = (value) => {
   const uniqueGradients = [...new Map(gradients.map((item) => [JSON.stringify(item), item])).values()];
   return { colors, gradients: uniqueGradients };
 };
-const normalize = (value) => {
-  const base = defaults();
+const normalize = (value, platform = process.platform) => {
+  const base = defaults(platform);
   const next = value && typeof value === 'object' ? value : {};
   const providedShortcuts =
     next.shortcuts && typeof next.shortcuts === 'object'
@@ -92,7 +92,7 @@ const normalize = (value) => {
     recordingBar: {
       visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)
         ? next.recordingBar.visibility
-        : 'always',
+        : base.recordingBar.visibility,
     },
     recordingInteractions: {
       enabled:
@@ -110,17 +110,17 @@ const normalize = (value) => {
     extras: next.extras && typeof next.extras === 'object' && !Array.isArray(next.extras) ? next.extras : {},
   };
 };
-function createPreferencesStore(file) {
+function createPreferencesStore(file, { platform = process.platform } = {}) {
   const targetFile = path.extname(file) ? file : path.join(file, 'preferencesSettings.json');
   const read = () => {
     try {
-      return normalize(JSON.parse(fs.readFileSync(targetFile, 'utf8')));
+      return normalize(JSON.parse(fs.readFileSync(targetFile, 'utf8')), platform);
     } catch {
-      return defaults();
+      return defaults(platform);
     }
   };
   const write = (value) => {
-    const next = normalize(value);
+    const next = normalize(value, platform);
     fs.mkdirSync(path.dirname(targetFile), { recursive: true });
     const temp = `${targetFile}.tmp`;
     fs.writeFileSync(temp, `${JSON.stringify(next, null, 2)}\n`);

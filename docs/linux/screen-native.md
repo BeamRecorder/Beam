@@ -501,6 +501,7 @@ Known
 Regles :
 
 - exposer l'identite native comme `pipewire:<stream-scope>:<id>` afin d'eviter une collision entre streams ;
+- conserver directement l'ID SPA opaque ; ne jamais le remplacer par un hash du bitmap, car un compositeur peut publier un nouvel ID sans republier les pixels ;
 - conserver x/y signes tels que recus ;
 - calculer la visibilite a partir de la geometrie negociee et des indications documentees, jamais d'une valeur par defaut ;
 - lire le hotspot seulement si la metadonnee bitmap associee est valide ;

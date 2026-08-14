@@ -42,7 +42,7 @@ Transparent pixels in an Electron window still intercept input unless `setIgnore
 Teleporting a popover to `body` does not let it escape its BrowserWindow. It can still be clipped by the native window bounds.
 
 - Generic popovers clamp to their renderer viewport, switch up/down where possible, and limit height with scrolling.
-- The Recorder bar expands temporarily to the left while the pointer is over it so its left-hand tooltips can render. It preserves the screen position of the right edge and restores the exact compact bounds on leave.
+- Keep the Recorder native window fixed at `72 × 344`, including during hover and drag. Labels use the controls' accessible names and native `title` hints; never resize or reposition the native window to make renderer tooltips overflow because that makes the bar jump under the pointer.
 - The camera popover temporarily expands its native window. Before expansion, store the window bounds; after expansion, offset the rendered camera preview by the inverse native-window displacement. On close, restore both the original bounds and a zero preview offset. Without that compensation, opening the popover visibly moves the camera preview.
 - Nested teleported popovers must be registered as descendants using `data-popover-owner`; otherwise selecting an inner `Select` is treated as an outside click and closes its parent.
 
