@@ -3,9 +3,16 @@ import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../curs
 import type { CursorEvent, CursorShapeAsset } from '../../../../api/types/capture-api';
 
 const second = (value: number) => value * 1_000_000_000;
-const move = (time: number, x: number, y: number, visible = true): CursorEvent => ({
+const move = (
+  time: number,
+  x: number,
+  y: number,
+  visible = true,
+  cursorId?: string,
+): CursorEvent => ({
   event: 'move',
   sessionNs: second(time),
+  ...(cursorId ? { cursorId } : {}),
   pixelX: 0,
   pixelY: 0,
   normalizedX: x,
@@ -152,6 +159,18 @@ describe('cursor playback', () => {
       cursorId: 'win:arrow',
       cursorKind: 'default',
       hotspot: { x: 1, y: 2 },
+    });
+  });
+
+  it('keeps the cursor identity supplied by PipeWire move metadata', () => {
+    const events: CursorEvent[] = [
+      move(1, 0.2, 0.3, true, 'pipewire:stream:9'),
+      move(2, 0.4, 0.5, true, 'pipewire:stream:9'),
+    ];
+
+    expect(cursorStateAt(events, 1.5)).toMatchObject({
+      cursorId: 'pipewire:stream:9',
+      shapeId: 'pipewire:stream:9',
     });
   });
 

@@ -53,8 +53,9 @@ const stubs = {
       '<div class="project-picker-stub"><button class="project-back" @click="$emit(\'back\')"/><button class="project-open" @click="$emit(\'open-project\', { id: \'project-1\', name: \'Demo\', previewSrc: \'demo.mp4\' })"/><button class="project-toggle" @click="$emit(\'toggle-popover\', true)"/></div>',
   },
   HudPreferences: {
+    props: ['inputAccess', 'recordInteractions', 'requestingInputAccess'],
     template:
-      '<div class="preferences-stub"><button class="preference-update" @click="$emit(\'update:countdown-seconds\', 10)"/><button class="preference-visibility" @click="$emit(\'update:recording-bar-visibility\', \'auto-fade\')"/><button @click="$emit(\'close\')">Return</button></div>',
+      '<div class="preferences-stub"><span class="preferences-input-access">{{ inputAccess?.state }}</span><button class="preference-update" @click="$emit(\'update:countdown-seconds\', 10)"/><button class="preference-visibility" @click="$emit(\'update:recording-bar-visibility\', \'auto-fade\')"/><button @click="$emit(\'close\')">Return</button></div>',
   },
   CameraPreviewOverlay: { template: '<div class="camera-preview-stub" />' },
 };
@@ -76,20 +77,38 @@ describe('HUD', () => {
     } else {
       vi.spyOn(navigator.mediaDevices, 'getUserMedia').mockResolvedValue({ getTracks: () => [] } as any);
     }
-    Object.values(capture).forEach((mock) => mock.mockReset());
+    Object.values(capture).forEach((mock) => {
+      if (vi.isMockFunction(mock)) mock.mockReset();
+    });
     Object.values(browserCameraMock).forEach((mock) => mock.mockReset());
     Object.values(browserMicrophoneMock).forEach((mock) => mock.mockReset());
     Object.values(browserSystemAudioMock).forEach((mock) => mock.mockReset());
     capture.getPreferences.mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       theme: 'system',
       recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
       alwaysOnTop: true,
       devices: { cameraId: 'camera:chromium:device-1', micId: 'microphone:chromium:device-1', systemAudioMode: 'off' },
       shortcuts: {},
       backgroundPresets: { colors: [], gradients: [] },
       extras: {},
     });
+    capture.inputAccessStatus.mockResolvedValue({
+      state: 'available',
+      canRequest: false,
+      clicks: true,
+      shortcuts: true,
+      recordsText: false,
+    });
+    capture.requestInputAccess.mockResolvedValue({
+      state: 'available',
+      canRequest: false,
+      clicks: true,
+      shortcuts: true,
+      recordsText: false,
+    });
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
     capture.onPreferenceShortcut.mockReturnValue(() => undefined);
     capture.onCameraOverlayState.mockReturnValue(() => undefined);
     capture.onCameraOverlayHover.mockReturnValue(() => undefined);
@@ -120,6 +139,7 @@ describe('HUD', () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+    delete window.capture;
     if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
     else delete (navigator as { clipboard?: Clipboard }).clipboard;
     if (originalExecCommand) Object.defineProperty(document, 'execCommand', originalExecCommand);
@@ -159,6 +179,68 @@ describe('HUD', () => {
     expect(wrapper.emitted('start-recording')).toHaveLength(1);
     expect(wrapper.get('[role=alert]').text()).toContain('permission denied');
   });
+
+  it('disables Start Recording and ignores click or shortcut when no capture source exists', async () => {
+    const shortcuts: Array<(action: string) => void> = [];
+    capture.discover.mockResolvedValueOnce({ sources: [], capabilities: {} });
+    capture.getSources.mockResolvedValue([]);
+    capture.onPreferenceShortcut.mockImplementationOnce((listener: (action: string) => void) => {
+      shortcuts.push(listener);
+      return () => undefined;
+    });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    expect(record).toBeDefined();
+    expect(record!.element).toHaveProperty('disabled', true);
+
+    await record!.trigger('click');
+    shortcuts[0]?.('hud.startStopRecording');
+    await ready();
+
+    expect(wrapper.emitted('start-recording')).toBeUndefined();
+    expect(capture.startRecording).not.toHaveBeenCalled();
+  });
+
+  it('keeps Linux Portal sources selectable without Electron desktop previews', async () => {
+    capture.discover.mockResolvedValueOnce({
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+        {
+          id: 'portal:window',
+          kind: 'window',
+          label: 'Choose a window',
+          isDefault: false,
+          selectionMode: 'portal',
+        },
+      ],
+      capabilities: { separateCursor: true },
+    });
+    capture.getSources.mockResolvedValue([]);
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const windowTab = wrapper.findAll('button').find((button) => button.text().trim() === 'Window');
+    await windowTab?.trigger('click');
+    await ready();
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    expect(record?.element).toHaveProperty('disabled', false);
+    await record?.trigger('click');
+    await ready();
+
+    expect(wrapper.emitted('start-recording')).toContainEqual([
+      expect.objectContaining({ screenKind: 'window', screenId: 'portal:window' }),
+    ]);
+  });
+
   it('switches views and delegates window controls safely', async () => {
     const wrapper = mount(HUD, { global: { stubs } });
     await ready();
@@ -169,6 +251,19 @@ describe('HUD', () => {
     expect(wrapper.find('.project-picker-stub').exists()).toBe(true);
     await wrapper.get('[aria-label="Close"]').trigger('click');
     expect(capture.close).toHaveBeenCalledOnce();
+  });
+
+  it('keeps available interaction access out of the main HUD and preserves its height', async () => {
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    expect(wrapper.get('.hud-wrapper').attributes('style')).toContain('height: 480px');
+    expect(wrapper.find('.hud-body .interaction-access-notice').exists()).toBe(false);
+    expect(wrapper.find('.hud-body [role="status"]').exists()).toBe(false);
+    expect(wrapper.find('.preferences-input-access').exists()).toBe(false);
+
+    await wrapper.get('[aria-label="Preferences"]').trigger('click');
+    expect(wrapper.get('.preferences-input-access').text()).toBe('available');
   });
 
   it('replaces the HUD body with editor loading progress inside the same card', async () => {
@@ -341,9 +436,10 @@ describe('HUD', () => {
 
   it('selects and confirms a screen region, persists it, and handles region errors', async () => {
     capture.getPreferences.mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       theme: 'system',
       recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
       alwaysOnTop: true,
       devices: {},
       shortcuts: {},
@@ -624,9 +720,10 @@ describe('HUD', () => {
 
   it('handles empty window catalogs, dropdown resize transitions, and native topbar controls', async () => {
     capture.getPreferences.mockResolvedValueOnce({
-      schemaVersion: 2,
+      schemaVersion: 3,
       theme: 'system',
       recordingBar: { visibility: 'auto-fade' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
       alwaysOnTop: true,
       devices: { cameraId: 'missing', micId: 'missing', systemAudioMode: 'invalid' },
       shortcuts: {},
@@ -715,5 +812,13 @@ describe('HUD', () => {
     await wrapper.get('.project-back').trigger('click');
     expect(wrapper.find('.project-picker-stub').exists()).toBe(false);
     expect(wrapper.get('[aria-label="Select an area of the screen"]').attributes('disabled')).toBeDefined();
+  });
+
+  it('keeps screen and window tabs but omits source selector list on Linux', async () => {
+    Object.defineProperty(window, 'capture', { configurable: true, value: { ...capture, platform: 'linux' } });
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+    expect(wrapper.find('.mode-tabs').exists()).toBe(true);
+    expect(wrapper.find('.screen-select-controls').exists()).toBe(false);
   });
 });

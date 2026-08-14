@@ -44,4 +44,15 @@ describe('Select', () => {
     await wrapper.get('.select-trigger').trigger('click');
     expect(wrapper.find('.select-trigger').classes()).not.toContain('is-open');
   });
+
+  it('supports size variants sm, md, and lg', () => {
+    const sm = mount(Select, { props: { modelValue: 'one', options, size: 'sm' } });
+    expect(sm.get('.select-trigger').classes()).toContain('select-sm');
+
+    const md = mount(Select, { props: { modelValue: 'one', options, size: 'md' } });
+    expect(md.get('.select-trigger').classes()).toContain('select-md');
+
+    const lg = mount(Select, { props: { modelValue: 'one', options, size: 'lg' } });
+    expect(lg.get('.select-trigger').classes()).toContain('select-lg');
+  });
 });

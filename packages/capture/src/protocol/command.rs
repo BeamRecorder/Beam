@@ -16,6 +16,8 @@ pub enum Command {
     Discover,
     Capabilities,
     Permissions,
+    InputAccessStatus,
+    RequestInputAccess,
     Formats { source: String },
     Prepare { config: Box<CaptureRequest> },
     Start,

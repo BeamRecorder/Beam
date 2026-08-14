@@ -36,13 +36,7 @@ Keep both terminals open while developing. Stop the processes with `Ctrl+C`.
 
 On first launch, grant Beam the macOS permissions it requests for Screen Recording, Microphone, and Camera when those sources are enabled.
 
-`npm run electron:dev` rebuilds the Rust capture engine before starting Electron. If Rust is not installed, place a macOS release binary at [`packages/native-recorder/mac/capture-engine`](../../packages/native-recorder/mac/README.md), then use:
-
-```bash
-npm run electron:dev-norust
-```
-
-This mode checks the prebuilt binary for the current operating system and starts Electron without running Cargo.
+`npm run electron:dev` checks Cargo before starting. When Cargo is available, it rebuilds the engine and stops if compilation fails. Without Cargo, it looks for the exact application version and Apple Silicon architecture in [`packages/native-recorder`](../../packages/native-recorder/README.md). If the engine is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. A non-interactive process never prompts and downloads only when `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` is set explicitly.
 
 ## Build a macOS executable
 

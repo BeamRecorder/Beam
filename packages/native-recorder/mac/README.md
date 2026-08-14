@@ -1,3 +1,3 @@
-# macOS native recorder
+# macOS native engine
 
-Place the macOS release binary here as `capture-engine` to enable `npm run electron:dev-norust` on macOS.
+The verified Apple Silicon development cache uses `arm64/capture-engine-<version>`. See the [native-engine cache contract](../README.md); use only `npm run electron:dev`.

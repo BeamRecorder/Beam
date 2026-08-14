@@ -248,7 +248,15 @@
     "closeTeleprompter": "Ukryj teleprompter",
     "openHud": "Otwórz HUD",
     "quit": "Zakończ Beam",
-    "preparingEditor": "Otwieranie edytora"
+    "preparingEditor": "Otwieranie edytora",
+    "interactionAccessNoticeTitle": "Zezwól na nagrywanie skrótów klawiaturowych",
+    "interactionAccessNoticeDescription": "Beam potrzebuje dodatkowego dostępu, aby nagrywać skróty klawiaturowe. W systemie Linux ten dostęp włącza też metadane kliknięć myszy. Wpisywany tekst nigdy nie jest zapisywany.",
+    "interactionAccessDeniedDescription": "Nie przyznano dostępu. Spróbuj ponownie lub włącz go później w Ustawieniach.",
+    "authorizeInteractions": "Autoryzuj",
+    "authorizingInteractions": "Autoryzowanie",
+    "dismissInteractionNotice": "Pomiń",
+    "interactionAccessSettingsHint": "Opcję Nagrywaj skróty klawiaturowe znajdziesz w Ustawieniach.",
+    "dismissInteractionReminder": "Zamknij przypomnienie"
   },
   "EditorPreparingHud": {
     "title": "Przygotowywanie edytora",
@@ -261,6 +269,9 @@
     "progressLabel": "Postęp ładowania edytora"
   },
   "HudPreferences": {
+    "categoryRecording": "Nagrywanie",
+    "categoryGeneral": "Ogólne",
+    "categoryAbout": "O programie",
     "preferences": "Preferencje",
     "back": "Wstecz",
     "keyboardShortcuts": "Skróty klawiaturowe",
@@ -281,10 +292,29 @@
     "option10s": "10 s",
     "alwaysVisible": "Zawsze widoczne",
     "autoFade": "Automatyczne zanikanie",
+    "hiddenUntilHovered": "Ukryta do najechania",
     "language": "Język",
     "chooseLanguage": "Wybierz język interfejsu",
-    "alwaysOnTop": "Always on top",
-    "alwaysOnTopDesc": "Keep the window hovering above other windows"
+    "interactionAccess": "Dostęp do interakcji",
+    "interactionAccessReadyDescription": "Rejestruje kliknięcia i skróty. Wpisywany tekst nigdy nie jest zapisywany.",
+    "interactionAccessUnavailableDescription": "Rejestrowanie interakcji jest niedostępne w tym systemie.",
+    "interactionAccessDescription": "Wymagane dla podpisów skrótów klawiaturowych. Wpisywany tekst nie jest zapisywany.",
+    "interactionAccessDescriptionLinux": "Wymagane dla podpisów skrótów klawiaturowych i metadanych kliknięć myszy. Wpisywany tekst nie jest zapisywany.",
+    "accessReady": "Gotowe",
+    "checkingAccess": "Sprawdzanie",
+    "requestingAccess": "Autoryzacja",
+    "allowAccess": "Zezwól",
+    "accessUnavailable": "Niedostępne",
+    "recordInteractions": "Nagrywaj skróty klawiaturowe",
+    "recordInteractionsDescription": "Nagrywa bezpieczne skróty klawiaturowe. Wpisywany tekst nigdy nie jest zapisywany.",
+    "recordInteractionsDescriptionLinux": "Nagrywa bezpieczne skróty klawiaturowe. Wyłączenie tej opcji wyłącza też metadane kliknięć myszy. Wpisywany tekst nigdy nie jest zapisywany.",
+    "about": "O aplikacji",
+    "aboutDesc": "Wersja i informacje o aplikacji",
+    "view": "Wyświetl",
+    "version": "Wersja {version}",
+    "aboutDescriptionText": "Beam to rejestrator ekranu stworzony do przygotowywania przejrzystych i dopracowanych prezentacji produktów. Nagrywaj, stylizuj i eksportuj filmy w jednym miejscu.",
+    "alwaysOnTop": "Zawsze na wierzchu",
+    "alwaysOnTopDesc": "Utrzymuj okno nad innymi oknami"
   },
   "ProjectPicker": {
     "projects": "Projekty",

@@ -52,9 +52,12 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
+import type { RecordingBarVisibility } from './recorder/recording-types';
+import { useInteractionAccess } from './interactions/useInteractionAccess';
 
 const { t } = useTranslate('HUD');
 const { t: tPrefs } = useTranslate('HudPreferences');
+const desktopPlatform = window.capture?.platform ?? 'unknown';
 
 interface SavedDevices {
   cameraId?: string;
@@ -88,6 +91,7 @@ const errorMessage = ref('');
 const copiedError = ref(false);
 let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 const sources = ref<CaptureSource[]>([]);
+const sourceDiscoveryCompleted = ref(false);
 
 // View State (Main vs Settings)
 const showSettings = ref(false);
@@ -96,8 +100,9 @@ const showProjectPicker = ref(false);
 
 // Preference settings
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
-const recordingBarVisibility = ref<'always' | 'auto-fade'>('always');
+const recordingBarVisibility = ref<RecordingBarVisibility>('always');
 watch(recordingBarVisibility, (value) => void capture.updatePreferences({ recordingBar: { visibility: value } }));
+const interactionAccess = useInteractionAccess(desktopPlatform);
 const alwaysOnTop = ref(true);
 watch(alwaysOnTop, (value) => void capture.updatePreferences({ alwaysOnTop: value }));
 
@@ -172,6 +177,13 @@ watch(
 );
 const displaySources = computed(() => sources.value.filter((source) => source.kind === 'display'));
 const selectedScreen = computed(() => sources.value.find((source) => source.id === selectedScreenId.value) ?? null);
+const hasSelectedCaptureSource = computed(() => {
+  if (activeTab.value === 'screen') return selectedScreen.value !== null;
+  return (
+    windowPreviews.value.some((preview) => preview.id === selectedSourceId.value) ||
+    sources.value.some((source) => source.kind === 'window' && source.id === selectedSourceId.value)
+  );
+});
 const selectedScreenPreview = computed(() => {
   const source = selectedScreen.value;
   if (!source) return null;
@@ -254,7 +266,14 @@ const loadPreviews = (type: PreviewKind, force = false): Promise<void> => {
       target.value = results;
       previewLoaded[type] = true;
       if (type !== 'window') return;
-      if (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value)) {
+      const selectedPortalSource = sources.value.some(
+        (source) =>
+          source.id === selectedSourceId.value && source.kind === 'window' && source.selectionMode === 'portal',
+      );
+      if (
+        !selectedPortalSource &&
+        (!selectedSourceId.value || !results.some((result) => result.id === selectedSourceId.value))
+      ) {
         selectedSourceId.value = results[0]?.id ?? null;
       }
     })
@@ -497,6 +516,10 @@ const toggleRecording = async () => {
   if (isBusy.value) return;
   // Recording ownership lives in App.vue.  The HUD only collects configuration.
   if (!isRecording.value) {
+    if (sourceDiscoveryCompleted.value && !hasSelectedCaptureSource.value) {
+      errorMessage.value = activeTab.value === 'screen' ? t('noScreensDetected') : t('noWindowsDetected');
+      return;
+    }
     let screenId: string | undefined;
     if (activeTab.value === 'screen') screenId = selectedScreenId.value ?? undefined;
     else if (selectedSourceId.value) {
@@ -513,6 +536,7 @@ const toggleRecording = async () => {
       targetFps: 60,
       countdownSeconds: countdownSeconds.value,
       recordingBarVisibility: recordingBarVisibility.value,
+      recordInteractions: interactionAccess.recordingEnabled.value,
       region: activeTab.value === 'screen' && selectedScreenRegion.value ? { ...selectedScreenRegion.value } : null,
       regionOverlay:
         activeTab.value === 'screen' && selectedScreenOverlay.value
@@ -741,6 +765,7 @@ const stopForCameraFailure = async (camera: BrowserCameraRecorder, sessionId: st
 const discoverSources = async () => {
   isBusy.value = true;
   errorMessage.value = '';
+  sourceDiscoveryCompleted.value = false;
   try {
     const [catalog, cameras, microphones] = (await Promise.all([
       capture.discover(),
@@ -753,6 +778,7 @@ const discoverSources = async () => {
       ...microphones,
       systemAudioSource(),
     ];
+    sourceDiscoveryCompleted.value = true;
     if (
       savedDevices?.cameraId &&
       (savedDevices.cameraId === 'off' || sources.value.some((s) => s.id === savedDevices?.cameraId))
@@ -784,6 +810,11 @@ const discoverSources = async () => {
       sources.value.find((source) => source.kind === 'display' && source.isDefault)?.id ??
       sources.value.find((source) => source.kind === 'display')?.id ??
       null;
+    selectedSourceId.value =
+      sources.value.find((source) => source.kind === 'window' && source.selectionMode === 'portal' && source.isDefault)
+        ?.id ??
+      sources.value.find((source) => source.kind === 'window' && source.selectionMode === 'portal')?.id ??
+      selectedSourceId.value;
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
@@ -826,9 +857,10 @@ onMounted(async () => {
     }
   }
   recordingBarVisibility.value = preferences.recordingBar.visibility;
+  interactionAccess.hydrate(preferences);
   alwaysOnTop.value = preferences.alwaysOnTop ?? true;
   if (!props.embedded) updateWindowSize();
-  await discoverSources();
+  await Promise.all([discoverSources(), interactionAccess.refresh()]);
   await Promise.allSettled([loadPreviews('screen'), loadPreviews('window')]);
 
   unsubscribeShortcut = capture.onPreferenceShortcut((actionId: string) => {
@@ -966,9 +998,15 @@ const openProject = (project: CaptureProject) => {
         v-model:view="settingsView"
         :countdown-seconds="countdownSeconds"
         :recording-bar-visibility="recordingBarVisibility"
+        :input-access="interactionAccess.status.value"
+        :record-interactions="interactionAccess.enabled.value"
+        :requesting-input-access="interactionAccess.requesting.value"
+        :platform="desktopPlatform"
         v-model:always-on-top="alwaysOnTop"
         @update:countdown-seconds="countdownSeconds = $event"
         @update:recording-bar-visibility="recordingBarVisibility = $event"
+        @update:record-interactions="interactionAccess.setEnabled"
+        @request-input-access="interactionAccess.request"
         @close="showSettings = false"
       />
 
@@ -989,49 +1027,52 @@ const openProject = (project: CaptureProject) => {
         <div class="form-inputs-area">
           <Transition name="fade-slide" mode="out-in">
             <div :key="activeTab" class="tab-content-container">
-              <!-- Capture source -->
-              <template v-if="activeTab === 'window'">
-                <div class="device-row">
-                  <Layout class="device-icon" />
-                  <SourceSelect
-                    v-model="selectedSourceId"
-                    kind="window"
-                    :previews="windowPreviews"
-                    :loading="windowPreviewsLoading"
-                    :disabled="isRecording || isBusy"
-                    @toggle="handleDropdownToggle"
-                  />
+              <!-- Capture source (macOS / Windows only, on Linux PipeWire portal handles source selection on record) -->
+              <template v-if="desktopPlatform !== 'linux'">
+                <template v-if="activeTab === 'window'">
+                  <div class="device-row">
+                    <Layout class="device-icon" />
+                    <SourceSelect
+                      v-model="selectedSourceId"
+                      kind="window"
+                      :sources="sources"
+                      :previews="windowPreviews"
+                      :loading="windowPreviewsLoading"
+                      :disabled="isRecording || isBusy"
+                      @toggle="handleDropdownToggle"
+                    />
+                  </div>
+                </template>
+
+                <div v-else class="device-row">
+                  <Monitor class="device-icon" />
+                  <div class="screen-select-controls">
+                    <SourceSelect
+                      v-model="selectedScreenId"
+                      kind="screen"
+                      :sources="sources"
+                      :previews="screenPreviews"
+                      :loading="screenPreviewsLoading"
+                      :disabled="isRecording || isBusy || displaySources.length === 0"
+                      @toggle="handleDropdownToggle"
+                    />
+                    <Button
+                      :variant="selectedScreenRegion ? 'primary' : 'secondary'"
+                      size="sm"
+                      icon-only
+                      :icon="isRegionConfirmationAnimating ? Check : Crop"
+                      :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
+                      :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
+                      :disabled="isRecording || isBusy || !selectedScreenBounds"
+                      :class="{
+                        'screen-region-confirmed': Boolean(selectedScreenRegion),
+                        'screen-region-checkmark': isRegionConfirmationAnimating,
+                      }"
+                      @click="selectScreenRegion"
+                    />
+                  </div>
                 </div>
               </template>
-
-              <div v-else class="device-row">
-                <Monitor class="device-icon" />
-                <div class="screen-select-controls">
-                  <SourceSelect
-                    v-model="selectedScreenId"
-                    kind="screen"
-                    :sources="sources"
-                    :previews="screenPreviews"
-                    :loading="screenPreviewsLoading"
-                    :disabled="isRecording || isBusy || displaySources.length === 0"
-                    @toggle="handleDropdownToggle"
-                  />
-                  <Button
-                    :variant="selectedScreenRegion ? 'primary' : 'secondary'"
-                    size="sm"
-                    icon-only
-                    :icon="isRegionConfirmationAnimating ? Check : Crop"
-                    :aria-label="selectedScreenRegion ? t('screenRegionSelected') : t('selectScreenRegion')"
-                    :tooltip="selectedScreenRegion ? t('editScreenRegion') : t('selectScreenRegion')"
-                    :disabled="isRecording || isBusy || !selectedScreenBounds"
-                    :class="{
-                      'screen-region-confirmed': Boolean(selectedScreenRegion),
-                      'screen-region-checkmark': isRegionConfirmationAnimating,
-                    }"
-                    @click="selectScreenRegion"
-                  />
-                </div>
-              </div>
 
               <!-- Audio and input devices -->
               <div class="selectors-stack">
@@ -1125,7 +1166,7 @@ const openProject = (project: CaptureProject) => {
             :block="true"
             class="record-btn-override"
             :class="{ recording: isRecording }"
-            :disabled="isBusy"
+            :disabled="isBusy || (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)"
             @click="toggleRecording"
           >
             <template #icon>

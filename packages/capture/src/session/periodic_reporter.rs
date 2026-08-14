@@ -20,7 +20,6 @@ pub(super) struct MetricSampler {
 }
 
 impl MetricSampler {
-    #[allow(dead_code)] // Native Windows/macOS recorders instantiate samplers; Linux has no native recorder.
     pub(super) fn new(
         track_id: TrackId,
         format: TrackFormat,

@@ -32,13 +32,7 @@ npm run electron:dev
 
 Keep both terminals open while developing. Stop the processes with `Ctrl+C`.
 
-`npm run electron:dev` rebuilds the Rust capture engine before starting Electron. If Rust is not installed, place a Windows release binary at [`packages/native-recorder/win/capture-engine.exe`](../../packages/native-recorder/win/README.md), then use:
-
-```powershell
-npm run electron:dev-norust
-```
-
-This mode checks the prebuilt binary for the current operating system and starts Electron without running Cargo.
+`npm run electron:dev` checks Cargo before starting. When Cargo is available, it rebuilds the engine and stops if compilation fails. Without Cargo, it looks for the exact application version and CPU architecture in [`packages/native-recorder`](../../packages/native-recorder/README.md). If the engine is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. A non-interactive process never prompts and downloads only when `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` is set explicitly.
 
 ## Build a Windows executable
 
@@ -81,4 +75,4 @@ Read and follow the repository guidelines:
 1. Update `package.json` to a new stable semantic version, for example `0.1.1`.
 2. Commit the change with a message beginning with `[RELEASE]` and push it from the `ExtraBinoss` account.
 
-The GitHub Actions workflow checks that the version is newer than the latest GitHub Release, then publishes the Windows installer and macOS packages.
+The GitHub Actions workflow checks that the version is newer than the latest GitHub Release, validates every package and checksum in a draft release, then publishes the universal Windows installer and the macOS/Linux packages atomically.

@@ -248,7 +248,15 @@
     "closeTeleprompter": "隐藏提词器",
     "openHud": "打开 HUD",
     "quit": "退出 Beam",
-    "preparingEditor": "正在打开编辑器"
+    "preparingEditor": "正在打开编辑器",
+    "interactionAccessNoticeTitle": "允许录制键盘快捷键",
+    "interactionAccessNoticeDescription": "Beam 需要额外权限来录制键盘快捷键。在 Linux 上，此权限还会启用鼠标点击元数据。输入的文字不会被保存。",
+    "interactionAccessDeniedDescription": "未获得权限。你可以重试，或稍后在设置中启用。",
+    "authorizeInteractions": "授权",
+    "authorizingInteractions": "正在授权",
+    "dismissInteractionNotice": "暂不",
+    "interactionAccessSettingsHint": "可在设置中找到“录制键盘快捷键”。",
+    "dismissInteractionReminder": "关闭提醒"
   },
   "EditorPreparingHud": {
     "title": "正在准备编辑器",
@@ -261,6 +269,9 @@
     "progressLabel": "编辑器加载进度"
   },
   "HudPreferences": {
+    "categoryRecording": "录制",
+    "categoryGeneral": "通用",
+    "categoryAbout": "关于",
     "preferences": "偏好设置",
     "back": "返回",
     "keyboardShortcuts": "键盘快捷键",
@@ -281,10 +292,29 @@
     "option10s": "10 秒",
     "alwaysVisible": "始终可见",
     "autoFade": "自动淡出",
+    "hiddenUntilHovered": "悬停前隐藏",
     "language": "语言",
     "chooseLanguage": "选择显示语言",
-    "alwaysOnTop": "Always on top",
-    "alwaysOnTopDesc": "Keep the window hovering above other windows"
+    "interactionAccess": "交互访问",
+    "interactionAccessReadyDescription": "捕获点击和快捷键。绝不会保存输入的文本。",
+    "interactionAccessUnavailableDescription": "此系统不支持交互捕获。",
+    "interactionAccessDescription": "键盘快捷键字幕需要此权限。不会保存输入文本。",
+    "interactionAccessDescriptionLinux": "键盘快捷键字幕和鼠标点击元数据需要此权限。不会保存输入文本。",
+    "accessReady": "就绪",
+    "checkingAccess": "正在检查",
+    "requestingAccess": "正在授权",
+    "allowAccess": "允许",
+    "accessUnavailable": "不可用",
+    "recordInteractions": "录制键盘快捷键",
+    "recordInteractionsDescription": "录制安全的键盘快捷键。输入的文字不会被保存。",
+    "recordInteractionsDescriptionLinux": "录制安全的键盘快捷键。关闭此选项还会禁用鼠标点击元数据。输入的文字不会被保存。",
+    "about": "关于",
+    "aboutDesc": "版本和应用信息",
+    "view": "查看",
+    "version": "版本 {version}",
+    "aboutDescriptionText": "Beam 是一款用于制作清晰、精致产品演示的屏幕录制工具。你可以在一个地方完成录制、样式设计和视频导出。",
+    "alwaysOnTop": "始终置顶",
+    "alwaysOnTopDesc": "让窗口保持在其他窗口上方"
   },
   "ProjectPicker": {
     "projects": "项目",

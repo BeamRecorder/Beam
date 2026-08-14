@@ -87,6 +87,8 @@ pub enum CursorSelection {
     Embedded,
     Separate {
         capture_clicks: bool,
+        #[serde(default)]
+        capture_shortcuts: bool,
         capture_shape: bool,
     },
 }
@@ -95,6 +97,7 @@ impl Default for CursorSelection {
     fn default() -> Self {
         Self::Separate {
             capture_clicks: true,
+            capture_shortcuts: true,
             capture_shape: true,
         }
     }

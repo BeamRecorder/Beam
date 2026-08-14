@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
     openEditor: vi.fn(),
     onStartRecordingFromEditor: vi.fn(),
     onEditorLoadingProgress: vi.fn(),
+    onTrayStopRecording: vi.fn(),
+    onPreferenceShortcut: vi.fn(),
     listProjects: vi.fn(),
   },
   controller: {
@@ -41,6 +43,7 @@ vi.mock('../components/hud/recorder/useRecordingController', async () => {
         cameraEnabled: ref(false),
         microphoneEnabled: ref(false),
         systemAudioEnabled: ref(false),
+        recorderHoverOnlyActive: ref(false),
         start: vi.fn(async () => undefined),
         stop: vi.fn(async () => undefined),
         cancel: vi.fn(async () => undefined),
@@ -148,6 +151,8 @@ beforeEach(() => {
     mocks.controller.editorProgress = listener;
     return vi.fn();
   });
+  mocks.capture.onTrayStopRecording.mockReturnValue(vi.fn());
+  mocks.capture.onPreferenceShortcut.mockReturnValue(vi.fn());
   wrapper = mount(App, {
     global: {
       plugins: [createPinia()],
@@ -209,6 +214,18 @@ describe('App', () => {
     expect(mocks.controller.recording.cancel).toHaveBeenCalled();
     expect(mocks.capture.showHud).toHaveBeenCalled();
     expect(wrapper.find('.mock-hud').exists()).toBe(true);
+  });
+
+  it('routes tray stop and the global start/stop shortcut to an active recording', async () => {
+    await wrapper.get('.start').trigger('click');
+    await settle();
+    const trayStop = mocks.capture.onTrayStopRecording.mock.calls[0]?.[0] as (() => void) | undefined;
+    const shortcut = mocks.capture.onPreferenceShortcut.mock.calls[0]?.[0] as ((action: string) => void) | undefined;
+    trayStop?.();
+    shortcut?.('hud.startStopRecording');
+    await settle();
+
+    expect(mocks.controller.recording.stop).toHaveBeenCalledTimes(2);
   });
 
   it('opens projects, displays loading errors, and dismisses them', async () => {

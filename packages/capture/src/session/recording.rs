@@ -30,6 +30,7 @@ pub struct RecordingSession {
     active: ActiveRecordings,
     project_layout: ProjectLayout,
     project_existed: bool,
+    prepared_start_gate: Option<Arc<super::StartGate>>,
 }
 
 impl RecordingSession {
@@ -75,7 +76,7 @@ impl RecordingSession {
         let writer = ManifestWriter::new(layout.clone());
         writer.checkpoint(&manifest)?;
         checkpoint_tracks(&layout, &manifest.tracks)?;
-        Ok(Self {
+        let mut session = Self {
             request,
             snapshot,
             session_id,
@@ -88,7 +89,27 @@ impl RecordingSession {
             active: ActiveRecordings::default(),
             project_layout,
             project_existed,
-        })
+            prepared_start_gate: None,
+        };
+        #[cfg(target_os = "linux")]
+        if matches!(
+            session.request.screen,
+            Some(crate::model::ScreenSelection::Portal { .. })
+        ) {
+            let start_gate = Arc::new(super::StartGate::new());
+            if let Err(error) = session
+                .open_segment(0, &start_gate)
+                .and_then(|()| session.checkpoint())
+            {
+                start_gate.cancel();
+                let _ = session.active.stop(&mut session.manifest.tracks, 0);
+                session.state = super::SessionState::Failed;
+                let _ = session.remove_artifacts();
+                return Err(error);
+            }
+            session.prepared_start_gate = Some(start_gate);
+        }
+        Ok(session)
     }
 
     #[must_use]
@@ -110,8 +131,13 @@ impl RecordingSession {
         if self.state != super::SessionState::Armed {
             return Err(invalid_transition(self.state, "Recording"));
         }
-        let start_gate = Arc::new(super::StartGate::new());
-        self.open_segment(0, &start_gate)?;
+        let start_gate = self
+            .prepared_start_gate
+            .take()
+            .unwrap_or_else(|| Arc::new(super::StartGate::new()));
+        if !self.active.has_screen() {
+            self.open_segment(0, &start_gate)?;
+        }
         let t0 = self.clock.now_ns();
         self.manifest.session_start_monotonic_ns = t0;
         start_gate.release(t0)?;
@@ -120,17 +146,29 @@ impl RecordingSession {
         self.checkpoint()
     }
 
-    pub fn cancel(self) -> Result<(), CaptureError> {
+    pub fn cancel(mut self) -> Result<(), CaptureError> {
         if self.state != super::SessionState::Armed {
             return Err(invalid_transition(self.state, "Cancelled"));
         }
+        if let Some(gate) = self.prepared_start_gate.take() {
+            gate.cancel();
+        }
+        let _ = self.active.stop(&mut self.manifest.tracks, 0);
+        self.state = super::SessionState::Failed;
         self.remove_artifacts()
     }
 
     pub fn discard(mut self) -> Result<(), CaptureError> {
         if self.state == super::SessionState::Recording {
             let _ = self.close_segment(self.session_ns());
+        } else if self.active.has_screen() {
+            if let Some(gate) = self.prepared_start_gate.take() {
+                gate.cancel();
+            }
+            let now = self.session_ns();
+            let _ = self.active.stop(&mut self.manifest.tracks, now);
         }
+        self.state = super::SessionState::Failed;
         self.remove_artifacts()
     }
 
@@ -162,6 +200,19 @@ impl RecordingSession {
             return Err(invalid_transition(self.state, "Paused"));
         }
         let now = self.session_ns();
+        #[cfg(target_os = "linux")]
+        if matches!(
+            self.request.screen,
+            Some(crate::model::ScreenSelection::Portal { .. })
+        ) {
+            if let Err(error) = self.active.pause_portal(&mut self.manifest.tracks, now) {
+                self.state = super::SessionState::Failed;
+                return Err(error);
+            }
+        } else {
+            self.close_segment(now)?;
+        }
+        #[cfg(not(target_os = "linux"))]
         self.close_segment(now)?;
         self.state = super::SessionState::Paused;
         self.checkpoint()
@@ -173,6 +224,30 @@ impl RecordingSession {
         }
         let now = self.session_ns();
         let start_gate = Arc::new(super::StartGate::new());
+        #[cfg(target_os = "linux")]
+        if matches!(
+            self.request.screen,
+            Some(crate::model::ScreenSelection::Portal { .. })
+        ) {
+            self.generation = self.generation.saturating_add(1);
+            let result = self.active.resume_portal(OpenContext {
+                request: &self.request,
+                snapshot: &self.snapshot,
+                layout: &self.layout,
+                generation: self.generation,
+                start_ns: now,
+                tracks: &mut self.manifest.tracks,
+                start_gate: &start_gate,
+            });
+            if let Err(error) = result {
+                start_gate.cancel();
+                self.state = super::SessionState::Failed;
+                return Err(error);
+            }
+        } else {
+            self.open_segment(now, &start_gate)?;
+        }
+        #[cfg(not(target_os = "linux"))]
         self.open_segment(now, &start_gate)?;
         start_gate.release(self.clock.now_ns())?;
         write_timing_anchors(&self.layout, &self.manifest.tracks, now)?;
@@ -185,7 +260,13 @@ impl RecordingSession {
             return Ok(self.layout.manifest());
         }
         let now = self.session_ns();
-        let close_error = if self.state == super::SessionState::Recording {
+        let close_error = if self.state == super::SessionState::Recording
+            || (cfg!(target_os = "linux")
+                && self.state == super::SessionState::Paused
+                && matches!(
+                    self.request.screen,
+                    Some(crate::model::ScreenSelection::Portal { .. })
+                )) {
             self.close_segment(now).err()
         } else {
             None

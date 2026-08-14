@@ -41,7 +41,7 @@ function fakeWindow() {
     setMinimized: (value) => {
       minimized = value;
     },
-    setAlwaysOnTop: (value) => calls.push(['top', value]),
+    setAlwaysOnTop: (value, level) => calls.push(['top', value, level]),
     setIgnoreMouseEvents: (value, options) => calls.push(options ? ['mouse', value, options] : ['mouse', value]),
     setResizable: (value) => calls.push(['resizable', value]),
     setMaximizable: (value) => calls.push(['maximizable', value]),
@@ -81,6 +81,14 @@ function fakeWindow() {
   };
 }
 
+function topCalls(win) {
+  return win.calls.filter((call) => call[0] === 'top');
+}
+
+function expectedAlwaysOnTopLevel() {
+  return process.platform === 'win32' ? 'screen-saver' : undefined;
+}
+
 test('hidden window ignores mouse events before it is ready', () => {
   const win = fakeWindow();
   new WindowController(win);
@@ -92,8 +100,9 @@ test('ready HUD forwards pointer movement over transparent areas and stays on to
   const controller = new WindowController(win);
   controller.markReadyToShow();
   assert.ok(win.calls.some((call) => call[0] === 'mouse' && call[1] === true && call[2]?.forward === true));
-  assert.equal(win.calls.at(-1)[0], 'top');
-  assert.equal(win.calls.at(-1)[1], true);
+  const top = topCalls(win).at(-1);
+  assert.equal(top[1], true);
+  assert.equal(top[2], expectedAlwaysOnTopLevel());
 });
 
 test('recorder constraints are applied before its compact bounds', () => {
@@ -124,25 +133,62 @@ test('recorder constraints are applied before its compact bounds', () => {
   controller.setMode('hud');
 });
 
-test('minimized HUD stops intercepting clicks and loses topmost status', () => {
+test('recorder reapplies always-on-top after the window is shown', () => {
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
+  };
+  const win = fakeWindow();
+  const controller = new WindowController(win, {
+    screenModule: {
+      getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+      getDisplayNearestPoint: () => display,
+    },
+  });
+
+  controller.setMode('recorder');
+  assert.equal(topCalls(win).at(-1)[1], false);
+
+  controller.markReadyToShow();
+
+  const top = topCalls(win).at(-1);
+  assert.equal(top[1], true);
+  assert.equal(top[2], expectedAlwaysOnTopLevel());
+  assert.ok(win.calls.some((call) => call[0] === 'moveTop'));
+
+  win.emit('blur');
+  assert.equal(topCalls(win).at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[2], expectedAlwaysOnTopLevel());
+  win.emit('focus');
+  assert.equal(topCalls(win).at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[2], expectedAlwaysOnTopLevel());
+  controller.setMode('hud');
+});
+
+test('minimized HUD loses topmost status and regains it after restore', () => {
   const win = fakeWindow();
   const controller = new WindowController(win);
   controller.markReadyToShow();
   win.setMinimized(true);
   win.emit('minimize');
-  assert.deepEqual(win.calls.at(-2), ['mouse', true]);
-  assert.deepEqual(win.calls.at(-1), ['top', false]);
+  assert.equal(win.calls.filter((call) => call[0] === 'mouse').at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[1], false);
+
+  win.restore();
+  const restoredTop = topCalls(win).at(-1);
+  assert.equal(restoredTop[1], true);
+  assert.equal(restoredTop[2], expectedAlwaysOnTopLevel());
 });
 
-test('recorder mode passes through clicks outside the compact bar', async () => {
-  let cursor = { x: 100, y: 100 };
+test('recorder mode keeps its compact native hit target interactive', () => {
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
     workArea: { x: 0, y: 0, width: 1000, height: 800 },
   };
   const screenModule = {
-    getCursorScreenPoint: () => cursor,
+    getCursorScreenPoint: () => ({ x: 100, y: 100 }),
     getDisplayNearestPoint: () => display,
   };
   const win = fakeWindow();
@@ -151,19 +197,12 @@ test('recorder mode passes through clicks outside the compact bar', async () => 
   controller.markReadyToShow();
 
   assert.ok(win.calls.some((call) => call[0] === 'bounds' && call[1].width === RECORDER_SIZE.width));
-  assert.ok(win.calls.some((call) => call[0] === 'mouse' && call[1] === true && call[2]?.forward === true));
-
-  cursor = { x: 920, y: 240 };
-  await new Promise((resolve) => setTimeout(resolve, 25));
-  assert.deepEqual(win.calls.at(-1), ['mouse', false]);
-
-  cursor = { x: 100, y: 100 };
-  await new Promise((resolve) => setTimeout(resolve, 25));
-  assert.deepEqual(win.calls.at(-1), ['mouse', true, { forward: true }]);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
   controller.setMode('hud');
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', true, { forward: true }]);
 });
 
-test('recorder tooltips choose the side with room after the bar moves', async () => {
+test('recorder movement keeps the native bounds compact', () => {
   const display = {
     id: 1,
     bounds: { x: 0, y: 0, width: 1000, height: 800 },
@@ -178,16 +217,12 @@ test('recorder tooltips choose the side with room after the bar moves', async ()
   controller.setMode('recorder');
   controller.markReadyToShow();
 
-  assert.equal(controller.setRecorderTooltip(true), 'left');
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  assert.equal(win.getBounds().width, 300);
+  const boundsCalls = () => win.calls.filter((call) => call[0] === 'bounds');
+  const boundsCallsBeforeMove = boundsCalls().length;
+  win.emit('move');
 
-  controller.setRecorderTooltip(false);
-  win.setPosition(0, 228);
-  controller.rememberRecorderPosition();
-  assert.equal(controller.setRecorderTooltip(true), 'right');
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  assert.deepEqual(win.getBounds(), { x: 0, y: 228, width: 300, height: 344 });
+  assert.deepEqual(win.getBounds(), { x: 908, y: 228, width: 72, height: 344 });
+  assert.equal(boundsCalls().length, boundsCallsBeforeMove);
   controller.setMode('hud');
 });
 
@@ -209,7 +244,6 @@ test('recorder position persistence stores the compact bar position', () => {
   const win = fakeWindow();
   const controller = new WindowController(win, { screenModule, preferencesStore });
   controller.setMode('recorder');
-  controller.setRecorderTooltip(true);
   controller.rememberRecorderPosition();
   controller.flushRecorderPosition();
 
@@ -224,15 +258,23 @@ test('window controller respects alwaysOnTop preference', () => {
   };
   const win = fakeWindow();
   const controller = new WindowController(win, { preferencesStore });
-  
+
   // HUD mode when ready, with alwaysOnTop: true
   controller.markReadyToShow();
   const alwaysOnTopCallsTrue = win.calls.filter((call) => call[0] === 'top');
   assert.equal(alwaysOnTopCallsTrue.at(-1)[1], true);
-  
+
   // Toggle alwaysOnTop to false, apply policy again
   currentAlwaysOnTop = false;
   controller.applyModePolicy();
   const alwaysOnTopCallsFalse = win.calls.filter((call) => call[0] === 'top');
   assert.equal(alwaysOnTopCallsFalse.at(-1)[1], false);
+
+  // A focus transition must not re-enable a disabled preference.
+  win.emit('blur');
+  assert.equal(topCalls(win).at(-1)[1], false);
+  currentAlwaysOnTop = true;
+  win.emit('focus');
+  assert.equal(topCalls(win).at(-1)[1], true);
+  assert.equal(topCalls(win).at(-1)[2], expectedAlwaysOnTopLevel());
 });

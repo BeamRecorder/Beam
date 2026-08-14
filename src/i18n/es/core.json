@@ -248,7 +248,15 @@
     "closeTeleprompter": "Ocultar teleprompter",
     "openHud": "Abrir HUD",
     "quit": "Salir de Beam",
-    "preparingEditor": "Abriendo el editor"
+    "preparingEditor": "Abriendo el editor",
+    "interactionAccessNoticeTitle": "Permitir la grabación de atajos de teclado",
+    "interactionAccessNoticeDescription": "Beam necesita acceso adicional para grabar atajos de teclado. En Linux, este acceso también activa los metadatos de clics del ratón. El texto escrito nunca se guarda.",
+    "interactionAccessDeniedDescription": "No se concedió el acceso. Puedes intentarlo de nuevo o activarlo más tarde en Ajustes.",
+    "authorizeInteractions": "Autorizar",
+    "authorizingInteractions": "Autorizando",
+    "dismissInteractionNotice": "Ignorar",
+    "interactionAccessSettingsHint": "Busca Grabar atajos de teclado en Ajustes.",
+    "dismissInteractionReminder": "Cerrar recordatorio"
   },
   "EditorPreparingHud": {
     "title": "Preparando el editor",
@@ -261,6 +269,9 @@
     "progressLabel": "Progreso de carga del editor"
   },
   "HudPreferences": {
+    "categoryRecording": "Grabación",
+    "categoryGeneral": "General",
+    "categoryAbout": "Acerca de",
     "preferences": "Preferencias",
     "back": "Volver",
     "keyboardShortcuts": "Atajos de teclado",
@@ -281,10 +292,29 @@
     "option10s": "10 s",
     "alwaysVisible": "Siempre visible",
     "autoFade": "Desvanecimiento automático",
+    "hiddenUntilHovered": "Oculta hasta pasar el cursor",
     "language": "Idioma",
     "chooseLanguage": "Selecciona el idioma de la interfaz",
-    "alwaysOnTop": "Always on top",
-    "alwaysOnTopDesc": "Keep the window hovering above other windows"
+    "interactionAccess": "Acceso a interacciones",
+    "interactionAccessReadyDescription": "Captura clics y atajos. El texto escrito nunca se guarda.",
+    "interactionAccessUnavailableDescription": "La captura de interacciones no está disponible en este sistema.",
+    "interactionAccessDescription": "Necesario para los subtítulos de atajos de teclado. No se guarda texto escrito.",
+    "interactionAccessDescriptionLinux": "Necesario para los subtítulos de atajos de teclado y los metadatos de clics del ratón. No se guarda texto escrito.",
+    "accessReady": "Listo",
+    "checkingAccess": "Comprobando",
+    "requestingAccess": "Autorizando",
+    "allowAccess": "Permitir",
+    "accessUnavailable": "No disponible",
+    "recordInteractions": "Grabar atajos de teclado",
+    "recordInteractionsDescription": "Graba atajos de teclado seguros. El texto escrito nunca se guarda.",
+    "recordInteractionsDescriptionLinux": "Graba atajos de teclado seguros. Desactivar esta opción también desactiva los metadatos de clics del ratón. El texto escrito nunca se guarda.",
+    "about": "Acerca de",
+    "aboutDesc": "Versión e información de la aplicación",
+    "view": "Ver",
+    "version": "Versión {version}",
+    "aboutDescriptionText": "Beam es un grabador de pantalla diseñado para crear demostraciones de producto claras y cuidadas. Graba, personaliza y exporta tus vídeos en un solo lugar.",
+    "alwaysOnTop": "Siempre en primer plano",
+    "alwaysOnTopDesc": "Mantener la ventana sobre las demás"
   },
   "ProjectPicker": {
     "projects": "Proyectos",

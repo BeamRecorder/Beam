@@ -37,8 +37,28 @@ pub fn validate_request(
             SourceKind::Application => snapshot.capabilities.application_capture,
         };
         require_capability(supported, "selected screen source")?;
-    } else if matches!(request.screen, Some(ScreenSelection::Portal { .. })) {
+    } else if let Some(ScreenSelection::Portal { kind, .. }) = &request.screen {
         require_capability(snapshot.capabilities.portal_selection, "portal selection")?;
+        match kind {
+            crate::model::PortalSourceKind::Monitor => {
+                require_capability(
+                    snapshot.capabilities.display_capture,
+                    "portal monitor capture",
+                )?;
+            }
+            crate::model::PortalSourceKind::Window => {
+                require_capability(
+                    snapshot.capabilities.window_capture,
+                    "portal window capture",
+                )?;
+            }
+            crate::model::PortalSourceKind::MonitorOrWindow => {
+                require_capability(
+                    snapshot.capabilities.display_capture && snapshot.capabilities.window_capture,
+                    "combined portal monitor/window capture",
+                )?;
+            }
+        }
     }
     match request.cursor {
         CursorSelection::Disabled => {}
@@ -47,12 +67,17 @@ pub fn validate_request(
         }
         CursorSelection::Separate {
             capture_clicks,
+            capture_shortcuts,
             capture_shape,
         } => {
             require_capability(snapshot.capabilities.separate_cursor, "separate cursor")?;
             require_capability(
                 !capture_clicks || snapshot.capabilities.cursor_clicks,
                 "cursor clicks",
+            )?;
+            require_capability(
+                !capture_shortcuts || snapshot.capabilities.input_shortcuts,
+                "input shortcuts",
             )?;
             require_capability(
                 !capture_shape || snapshot.capabilities.cursor_shapes,

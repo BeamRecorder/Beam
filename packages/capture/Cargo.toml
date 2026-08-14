@@ -29,6 +29,15 @@ objc2-app-kit = { version = "0.3.2", features = ["NSCursor"] }
 screencapturekit = { version = "8.0.1", features = ["macos_15_0"] }
 core-graphics = "0.25"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+ashpd = { version = "=0.13.13", default-features = false, features = ["tokio", "screencast"] }
+evdev = "=0.13.2"
+libc = "0.2"
+pipewire = { version = "=0.10.0", features = ["v0_3_65"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+futures-util = "0.3"
+xcursor = "=0.3.11"
+
 [dev-dependencies]
 tempfile = "3"
 walkdir = "2"
@@ -66,6 +75,10 @@ path = "src/bin/capture-probe.rs"
 [[bin]]
 name = "capture-smoke"
 path = "src/bin/capture-smoke.rs"
+
+[[bin]]
+name = "beam-input-helper"
+path = "src/bin/beam-input-helper.rs"
 
 [[test]]
 name = "full_session_smoke"

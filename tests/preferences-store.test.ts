@@ -4,7 +4,10 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const { createPreferencesStore, normalize } = require('../electron/preferences/preferences-store.cjs') as {
-  createPreferencesStore: (directory: string) => { read: () => unknown; patch: (value: unknown) => any }
+  createPreferencesStore: (directory: string, options?: { platform?: string }) => {
+    read: () => any
+    patch: (value: unknown) => any
+  }
   normalize: (value: unknown) => any
 }
 
@@ -22,10 +25,11 @@ afterEach(() => {
 describe('preferences background presets', () => {
   it('migrates v1 preferences and supplies empty global presets', () => {
     expect(normalize({ schemaVersion: 1, theme: 'dark' })).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       theme: 'dark',
       alwaysOnTop: true,
       backgroundPresets: { colors: [], gradients: [] },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
     })
   })
 
@@ -64,8 +68,8 @@ describe('preferences background presets', () => {
   it('returns defaults when the on-disk preference file is corrupt or missing', () => {
     const root = directory()
     const store = createPreferencesStore(path.join(root, 'preferences.json'))
-    expect(store.read()).toMatchObject({ schemaVersion: 2, backgroundPresets: { colors: [], gradients: [] } })
+    expect(store.read()).toMatchObject({ schemaVersion: 3, backgroundPresets: { colors: [], gradients: [] } })
     fs.writeFileSync(path.join(root, 'preferences.json'), '{broken')
-    expect(store.read()).toMatchObject({ schemaVersion: 2, backgroundPresets: { colors: [], gradients: [] } })
+    expect(store.read()).toMatchObject({ schemaVersion: 3, backgroundPresets: { colors: [], gradients: [] } })
   })
 })

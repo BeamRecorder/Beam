@@ -1,10 +1,7 @@
 use std::{
     ffi::c_void,
     path::{Path, PathBuf},
-    sync::{
-        Arc,
-        atomic::{AtomicU64, Ordering},
-    },
+    sync::Arc,
 };
 
 use parking_lot::Mutex;
@@ -27,26 +24,9 @@ use windows_capture::{
 use crate::{
     CaptureError,
     model::{ScreenRegion, SourceId},
+    screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest},
     session::StartGate,
 };
-
-#[derive(Debug, Default)]
-pub struct WindowsCaptureMetrics {
-    frames_received: AtomicU64,
-    frames_dropped: AtomicU64,
-}
-
-impl WindowsCaptureMetrics {
-    #[must_use]
-    pub fn frames_received(&self) -> u64 {
-        self.frames_received.load(Ordering::Relaxed)
-    }
-
-    #[must_use]
-    pub fn frames_dropped(&self) -> u64 {
-        self.frames_dropped.load(Ordering::Relaxed)
-    }
-}
 
 struct HandlerFlags {
     output: PathBuf,
@@ -54,14 +34,14 @@ struct HandlerFlags {
     height: u32,
     bitrate: u32,
     fps: u32,
-    metrics: Arc<WindowsCaptureMetrics>,
+    metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
     region: Option<ScreenRegion>,
 }
 
 struct CaptureHandler {
     encoder: Option<VideoEncoder>,
-    metrics: Arc<WindowsCaptureMetrics>,
+    metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
     region: Option<ScreenRegion>,
 }
@@ -139,10 +119,10 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             encoder.send_frame(frame)
         };
         result.map_err(|error| {
-            self.metrics.frames_dropped.fetch_add(1, Ordering::Relaxed);
+            self.metrics.dropped_frames(1);
             error.to_string()
         })?;
-        self.metrics.frames_received.fetch_add(1, Ordering::Relaxed);
+        self.metrics.received_frame(None, false);
         Ok(())
     }
 
@@ -167,11 +147,36 @@ type Control = CaptureControl<CaptureHandler, String>;
 pub struct WindowsRecording {
     control: Option<Control>,
     callback: Arc<Mutex<CaptureHandler>>,
-    metrics: Arc<WindowsCaptureMetrics>,
+    metrics: Arc<ScreenCaptureMetrics>,
     output: PathBuf,
 }
 
 impl WindowsRecording {
+    pub(crate) fn open(request: ScreenOpenRequest<'_>) -> Result<Self, CaptureError> {
+        let crate::model::ScreenSelection::Source { source_id } = request.selection else {
+            return Err(CaptureError::InvalidConfiguration(
+                "Windows screen capture requires a direct source".into(),
+            ));
+        };
+        let ScreenConsumer::EncodedFile { path, .. } = request.consumer else {
+            return Err(CaptureError::Unsupported(
+                "Windows raw screen samples are not available".into(),
+            ));
+        };
+        Self::start(
+            source_id,
+            &path,
+            u32::try_from(request.recording.video_bitrate_bps).unwrap_or(u32::MAX),
+            request.recording.target_fps,
+            matches!(
+                request.cursor,
+                crate::model::CursorSelection::Separate { .. }
+            ),
+            request.region,
+            request.start_gate,
+        )
+    }
+
     pub fn start(
         source_id: &SourceId,
         output: &Path,
@@ -235,7 +240,7 @@ impl WindowsRecording {
         )))
     }
 
-    pub fn stop(mut self) -> Result<(), CaptureError> {
+    pub fn stop(&mut self) -> Result<(), CaptureError> {
         let control_result = self
             .control
             .take()
@@ -268,7 +273,7 @@ impl WindowsRecording {
     }
 
     #[must_use]
-    pub fn metrics(&self) -> Arc<WindowsCaptureMetrics> {
+    pub fn metrics(&self) -> Arc<ScreenCaptureMetrics> {
         self.metrics.clone()
     }
 }
@@ -305,7 +310,7 @@ where
         region,
         start_gate,
     } = config;
-    let metrics = Arc::new(WindowsCaptureMetrics::default());
+    let metrics = Arc::new(ScreenCaptureMetrics::default());
     let (width, height) = region.map_or(size, |crop| {
         crop.pixel_rect(size.0, size.1)
             .map(|(left, top, right, bottom)| (right - left, bottom - top))

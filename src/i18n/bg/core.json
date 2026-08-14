@@ -248,7 +248,15 @@
     "closeTeleprompter": "Скриване на телесуфльора",
     "openHud": "Отваряне на HUD",
     "quit": "Изход от Beam",
-    "preparingEditor": "Отваряне на редактора"
+    "preparingEditor": "Отваряне на редактора",
+    "interactionAccessNoticeTitle": "Разрешаване на запис на клавишни комбинации",
+    "interactionAccessNoticeDescription": "Beam се нуждае от допълнителен достъп, за да записва клавишни комбинации. В Linux този достъп включва и метаданни за щраквания с мишката. Въведеният текст никога не се съхранява.",
+    "interactionAccessDeniedDescription": "Достъпът не беше предоставен. Опитайте отново или го включете по-късно в Настройки.",
+    "authorizeInteractions": "Разрешаване",
+    "authorizingInteractions": "Разрешаване",
+    "dismissInteractionNotice": "Игнориране",
+    "interactionAccessSettingsHint": "Намерете Запис на клавишни комбинации в Настройки.",
+    "dismissInteractionReminder": "Затваряне на напомнянето"
   },
   "EditorPreparingHud": {
     "title": "Подготовка на редактора",
@@ -261,6 +269,9 @@
     "progressLabel": "Напредък на зареждането на редактора"
   },
   "HudPreferences": {
+    "categoryRecording": "Запис",
+    "categoryGeneral": "Общи",
+    "categoryAbout": "Относно",
     "preferences": "Предпочитания",
     "back": "Назад",
     "keyboardShortcuts": "Клавишни комбинации",
@@ -281,10 +292,29 @@
     "option10s": "10 сек.",
     "alwaysVisible": "Винаги видима",
     "autoFade": "Автоматично избледняване",
+    "hiddenUntilHovered": "Скрита до посочване",
     "language": "Език",
     "chooseLanguage": "Изберете езика на интерфейса",
-    "alwaysOnTop": "Always on top",
-    "alwaysOnTopDesc": "Keep the window hovering above other windows"
+    "interactionAccess": "Достъп до взаимодействия",
+    "interactionAccessReadyDescription": "Записва кликове и клавишни комбинации. Въведеният текст никога не се съхранява.",
+    "interactionAccessUnavailableDescription": "Записването на взаимодействия не е достъпно на тази система.",
+    "interactionAccessDescription": "Необходимо за надписи на клавишни комбинации. Въведеният текст не се съхранява.",
+    "interactionAccessDescriptionLinux": "Необходимо за надписи на клавишни комбинации и метаданни за щраквания с мишката. Въведеният текст не се съхранява.",
+    "accessReady": "Готово",
+    "checkingAccess": "Проверка",
+    "requestingAccess": "Упълномощаване",
+    "allowAccess": "Разреши",
+    "accessUnavailable": "Недостъпно",
+    "recordInteractions": "Запис на клавишни комбинации",
+    "recordInteractionsDescription": "Записва безопасни клавишни комбинации. Въведеният текст никога не се съхранява.",
+    "recordInteractionsDescriptionLinux": "Записва безопасни клавишни комбинации. Изключването на тази настройка изключва и метаданните за щраквания с мишката. Въведеният текст никога не се съхранява.",
+    "about": "Относно",
+    "aboutDesc": "Версия и информация за приложението",
+    "view": "Преглед",
+    "version": "Версия {version}",
+    "aboutDescriptionText": "Beam е екранен рекордер за създаване на ясни и изпипани продуктови демонстрации. Записвайте, оформяйте и експортирайте видеата си на едно място.",
+    "alwaysOnTop": "Винаги отгоре",
+    "alwaysOnTopDesc": "Дръжте прозореца над останалите прозорци"
   },
   "ProjectPicker": {
     "projects": "Проекти",

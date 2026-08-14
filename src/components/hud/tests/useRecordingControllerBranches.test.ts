@@ -5,7 +5,8 @@ import type { RecordingConfiguration } from '../recorder/recording-types';
 const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
   capture: {
     getCameraOverlayState: vi.fn(),
-    setCountdown: vi.fn(),
+    setCountdown: vi.fn().mockResolvedValue(undefined),
+    prepareRecordingSurface: vi.fn().mockResolvedValue(undefined),
     hideScreenRegionOverlay: vi.fn(),
     prepareRecording: vi.fn(),
     startPreparedRecording: vi.fn(),
@@ -24,17 +25,17 @@ const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
   systemApi: { request: vi.fn() },
 }));
 
-vi.mock('../../../../api/capture', () => ({ capture }));
-vi.mock('../../../../api/camera-recorder', () => ({
+vi.mock('../../../api/capture', () => ({ capture }));
+vi.mock('../../../api/camera-recorder', () => ({
   BrowserCameraRecorder: { request: cameraApi.request },
   listBrowserCameras: cameraApi.list,
   isCameraUnavailableError: (reason: unknown) => (reason as { code?: string })?.code === 'camera-unavailable',
 }));
-vi.mock('../../../../api/microphone-recorder', () => ({
+vi.mock('../../../api/microphone-recorder', () => ({
   BrowserMicrophoneRecorder: { request: microphoneApi.request },
   listBrowserMicrophones: microphoneApi.list,
 }));
-vi.mock('../../../../api/system-audio-recorder', () => ({
+vi.mock('../../../api/system-audio-recorder', () => ({
   BrowserSystemAudioRecorder: { request: systemApi.request },
 }));
 
@@ -204,6 +205,10 @@ describe('useRecordingController branch behavior', () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(controller.phase.value).toBe('recording');
     expect(capture.setCountdown).toHaveBeenLastCalledWith(null);
+    expect(capture.prepareRecordingSurface).toHaveBeenCalledOnce();
+    expect(capture.prepareRecordingSurface.mock.invocationCallOrder[0]).toBeLessThan(
+      capture.startPreparedRecording.mock.invocationCallOrder[0],
+    );
   });
 
   it('does not begin the visible countdown until native preparation is ready', async () => {

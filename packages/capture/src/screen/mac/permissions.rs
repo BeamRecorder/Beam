@@ -11,8 +11,10 @@ pub fn capabilities() -> CaptureCapabilities {
         separate_cursor: true,
         cursor_shapes: false,
         cursor_clicks: true,
+        input_shortcuts: true,
         hardware_h264: true,
         hardware_hevc: true,
+        ..CaptureCapabilities::default()
     }
 }
 

@@ -8,6 +8,7 @@ const catalog = {
     systemAudio: true,
     separateCursor: true,
     cursorClicks: true,
+    inputShortcuts: true,
     cursorShapes: false,
   },
   sources: [
@@ -30,6 +31,7 @@ test('builds a one-call recording config from defaults', () => {
   assert.deepEqual(config.cursor, {
     mode: 'separate',
     captureClicks: true,
+    captureShortcuts: false,
     captureShape: false,
   });
   assert.equal(config.recording.outputRoot, 'recordings');
@@ -78,4 +80,126 @@ test('rejects missing explicit sources and invalid queue capacity', () => {
     /Source display introuvable/,
   );
   assert.throws(() => buildDefaultCaptureConfig(catalog, { queueCapacity: 0 }, environment), /queueCapacity/);
+});
+
+test('builds a Linux monitor Portal selection without a Chromium source id', () => {
+  const config = buildDefaultCaptureConfig(
+    {
+      capabilities: { portalSelection: true, separateCursor: true, cursorShapes: true },
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+      ],
+    },
+    {},
+    { ...environment, platform: 'linux' },
+  );
+  assert.deepEqual(config.screen, {
+    mode: 'portal',
+    kind: 'monitor',
+    restoreToken: null,
+  });
+  assert.deepEqual(config.cursor, {
+    mode: 'separate',
+    captureClicks: false,
+    captureShortcuts: false,
+    captureShape: true,
+  });
+});
+
+test('keeps mouse clicks on Windows and macOS when interaction recording is off', () => {
+  for (const platform of ['win32', 'darwin']) {
+    const config = buildDefaultCaptureConfig(catalog, { recordInteractions: false }, { ...environment, platform });
+
+    assert.deepEqual(config.cursor, {
+      mode: 'separate',
+      captureClicks: true,
+      captureShortcuts: false,
+      captureShape: false,
+    });
+  }
+});
+
+test('enables clicks and shortcuts on Linux only when interaction recording is on', () => {
+  const linux = { ...environment, platform: 'linux' };
+  const linuxCatalog = {
+    capabilities: {
+      portalSelection: true,
+      separateCursor: true,
+      cursorClicks: true,
+      cursorShapes: true,
+      inputShortcuts: true,
+    },
+    sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
+  };
+
+  const disabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: false }, linux);
+  assert.deepEqual(disabled.cursor, {
+    mode: 'separate',
+    captureClicks: false,
+    captureShortcuts: false,
+    captureShape: true,
+  });
+
+  const enabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: true }, linux);
+  assert.deepEqual(enabled.cursor, {
+    mode: 'separate',
+    captureClicks: true,
+    captureShortcuts: true,
+    captureShape: true,
+  });
+});
+
+test('builds a Linux window Portal selection and rejects region capture', () => {
+  const portalCatalog = {
+    capabilities: { portalSelection: true },
+    sources: [
+      {
+        id: 'portal:window',
+        kind: 'window',
+        isDefault: true,
+        selectionMode: 'portal',
+      },
+    ],
+  };
+  const linux = { ...environment, platform: 'linux' };
+  assert.equal(buildDefaultCaptureConfig(portalCatalog, { screenKind: 'window' }, linux).screen.kind, 'window');
+  assert.throws(
+    () =>
+      buildDefaultCaptureConfig(
+        portalCatalog,
+        { screenKind: 'window', region: { x: 0, y: 0, width: 1, height: 1 } },
+        linux,
+      ),
+    /picker système Linux/,
+  );
+});
+
+test('keeps Linux Portal intents when a second discovery is empty', () => {
+  const linux = { ...environment, platform: 'linux' };
+  const firstCatalog = {
+    capabilities: { portalSelection: true },
+    sources: [
+      { id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' },
+      { id: 'portal:window', kind: 'window', isDefault: true, selectionMode: 'portal' },
+    ],
+  };
+  const emptySecondCatalog = { capabilities: {}, sources: [] };
+
+  for (const [screenKind, screenId, expectedKind] of [
+    [undefined, 'portal:monitor', 'monitor'],
+    ['window', 'portal:window', 'window'],
+  ]) {
+    const options = { screenId, ...(screenKind ? { screenKind } : {}) };
+    assert.equal(buildDefaultCaptureConfig(firstCatalog, options, linux).screen.kind, expectedKind);
+    assert.deepEqual(buildDefaultCaptureConfig(emptySecondCatalog, options, linux).screen, {
+      mode: 'portal',
+      kind: expectedKind,
+      restoreToken: null,
+    });
+  }
 });

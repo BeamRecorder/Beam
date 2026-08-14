@@ -248,7 +248,15 @@
     "closeTeleprompter": "Nascondi teleprompter",
     "openHud": "Apri HUD",
     "quit": "Esci da Beam",
-    "preparingEditor": "Apertura dell’editor"
+    "preparingEditor": "Apertura dell’editor",
+    "interactionAccessNoticeTitle": "Consenti la registrazione delle scorciatoie",
+    "interactionAccessNoticeDescription": "Beam richiede un accesso aggiuntivo per registrare le scorciatoie da tastiera. Su Linux, questo accesso abilita anche i metadati dei clic del mouse. Il testo digitato non viene mai salvato.",
+    "interactionAccessDeniedDescription": "L’accesso non è stato concesso. Puoi riprovare o abilitarlo più tardi nelle Impostazioni.",
+    "authorizeInteractions": "Autorizza",
+    "authorizingInteractions": "Autorizzazione",
+    "dismissInteractionNotice": "Ignora",
+    "interactionAccessSettingsHint": "Trova Registra scorciatoie da tastiera nelle Impostazioni.",
+    "dismissInteractionReminder": "Chiudi promemoria"
   },
   "EditorPreparingHud": {
     "title": "Preparazione dell’editor",
@@ -261,6 +269,9 @@
     "progressLabel": "Avanzamento del caricamento dell’editor"
   },
   "HudPreferences": {
+    "categoryRecording": "Registrazione",
+    "categoryGeneral": "Generale",
+    "categoryAbout": "Informazioni",
     "preferences": "Preferenze",
     "back": "Indietro",
     "keyboardShortcuts": "Scorciatoie da tastiera",
@@ -281,10 +292,29 @@
     "option10s": "10 s",
     "alwaysVisible": "Sempre visibile",
     "autoFade": "Dissolvenza automatica",
+    "hiddenUntilHovered": "Nascosta fino al passaggio",
     "language": "Lingua",
     "chooseLanguage": "Seleziona la lingua dell'interfaccia",
-    "alwaysOnTop": "Always on top",
-    "alwaysOnTopDesc": "Keep the window hovering above other windows"
+    "interactionAccess": "Accesso alle interazioni",
+    "interactionAccessReadyDescription": "Cattura clic e scorciatoie. Il testo digitato non viene mai salvato.",
+    "interactionAccessUnavailableDescription": "La cattura delle interazioni non è disponibile su questo sistema.",
+    "interactionAccessDescription": "Necessario per le didascalie delle scorciatoie da tastiera. Il testo digitato non viene salvato.",
+    "interactionAccessDescriptionLinux": "Necessario per le didascalie delle scorciatoie da tastiera e i metadati dei clic del mouse. Il testo digitato non viene salvato.",
+    "accessReady": "Pronto",
+    "checkingAccess": "Verifica",
+    "requestingAccess": "Autorizzazione",
+    "allowAccess": "Consenti",
+    "accessUnavailable": "Non disponibile",
+    "recordInteractions": "Registra scorciatoie da tastiera",
+    "recordInteractionsDescription": "Registra scorciatoie da tastiera sicure. Il testo digitato non viene mai salvato.",
+    "recordInteractionsDescriptionLinux": "Registra scorciatoie da tastiera sicure. Disattivare questa opzione disabilita anche i metadati dei clic del mouse. Il testo digitato non viene mai salvato.",
+    "about": "Informazioni",
+    "aboutDesc": "Versione e informazioni sull’applicazione",
+    "view": "Visualizza",
+    "version": "Versione {version}",
+    "aboutDescriptionText": "Beam è un registratore dello schermo pensato per creare demo di prodotto chiare e curate. Registra, personalizza ed esporta i tuoi video in un unico posto.",
+    "alwaysOnTop": "Sempre in primo piano",
+    "alwaysOnTopDesc": "Mantieni la finestra sopra le altre"
   },
   "ProjectPicker": {
     "projects": "Progetti",

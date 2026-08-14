@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { capture } from '../api/capture';
-import type { PreferenceSettings } from '../api/types/capture-api';
+import type { PreferencePatch, PreferenceSettings } from '../api/types/capture-api';
 
 export const usePreferencesStore = defineStore('preferences', () => {
   const settings = ref<PreferenceSettings | null>(null);
@@ -13,7 +13,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     });
     return settings.value;
   };
-  const update = async (patch: Partial<PreferenceSettings>) => {
+  const update = async (patch: PreferencePatch) => {
     const plainPatch = JSON.parse(JSON.stringify(patch));
     settings.value = await capture.updatePreferences(plainPatch);
     return settings.value;

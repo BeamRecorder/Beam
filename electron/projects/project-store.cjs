@@ -366,6 +366,11 @@ function createProjectStore(root) {
         : [];
       const cursorDirectory = path.join(sessionDirectory, 'cursor');
       const events = readJsonArray(path.join(cursorDirectory, 'cursor.json'));
+      let interactions = null;
+      try {
+        const parsed = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'input.json'), 'utf8'));
+        if (parsed && Number.isInteger(parsed.version) && Array.isArray(parsed.events)) interactions = parsed;
+      } catch {}
       let metadata = {};
       try {
         metadata = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'shapes.json'), 'utf8')) || {};
@@ -412,6 +417,7 @@ function createProjectStore(root) {
           catalog,
           missing: [...(Array.isArray(events) ? [] : ['cursor.json']), ...missing],
         },
+        interactions: interactions || { version: 1, events: [] },
         zoom: manifest.editor?.zoom ? zoomState(manifest.editor.zoom) : { elements: [], generatedSessions: [] },
       };
     }

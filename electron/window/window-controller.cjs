@@ -1,6 +1,5 @@
 const HUD_SIZE = { width: 352, height: 512 };
 const RECORDER_SIZE = { width: 72, height: 344 };
-const RECORDER_TOOLTIP_WIDTH = 300;
 
 function clampToDisplayBounds(x, y, width, height, displayBounds) {
   const maxX = displayBounds.x + Math.max(0, displayBounds.width - width);
@@ -22,31 +21,24 @@ class WindowController {
     // Start click-through so the renderer can classify the pointer from the
     // first forwarded mousemove, including when it starts over transparent HUD.
     this.hudOverInteractive = false;
-    this.recorderOverInteractive = false;
     this.recorderPositions = this.readRecorderPositions();
     this.recorderPositionSaveTimer = null;
     this.hudPosition = null;
-    this.recorderBaseBounds = null;
-    this.recorderTooltipSide = null;
-    this.recorderTooltipWidth = null;
-    this.recorderTooltipVisible = false;
-    this.recorderTooltipRelayoutTimer = null;
-    this.recorderTooltipApplyTimer = null;
-    this.recorderNativeDragActive = false;
-    this.recorderPointerPoll = null;
     this.window.setIgnoreMouseEvents(true);
-    this.window.on('show', () => this.applyInteractionPolicy());
-    this.window.on('hide', () => this.applyInteractionPolicy());
-    this.window.on('minimize', () => this.applyInteractionPolicy());
-    this.window.on('restore', () => this.applyInteractionPolicy());
+    const applyNativeWindowPolicy = () => {
+      this.applyInteractionPolicy();
+      this.applyZOrderPolicy();
+    };
+    this.window.on('show', applyNativeWindowPolicy);
+    this.window.on('hide', applyNativeWindowPolicy);
+    this.window.on('minimize', applyNativeWindowPolicy);
+    this.window.on('restore', applyNativeWindowPolicy);
+    this.window.on('blur', applyNativeWindowPolicy);
+    this.window.on('focus', applyNativeWindowPolicy);
     this.window.on('closed', () => {
-      this.clearRecorderTooltipRelayout();
       this.flushRecorderPosition();
     });
-    this.window.on('move', () => {
-      this.rememberRecorderPosition();
-      this.scheduleRecorderTooltipRelayout();
-    });
+    this.window.on('move', () => this.rememberRecorderPosition());
   }
 
   readRecorderPositions() {
@@ -94,27 +86,10 @@ class WindowController {
   setMode(mode, { restoreMaximized = true } = {}) {
     if (!['hud', 'recorder'].includes(mode)) throw new Error(`Mode de fenêtre invalide: ${mode}`);
     if (this.mode === 'hud' && mode === 'recorder') this.hudPosition = this.window.getPosition();
-    if (mode !== 'recorder') {
-      this.clearRecorderTooltipRelayout();
-      this.recorderBaseBounds = null;
-      this.recorderTooltipSide = null;
-      this.recorderTooltipWidth = null;
-      this.recorderTooltipVisible = false;
-      this.recorderNativeDragActive = false;
-      this.stopRecorderPointerTracking();
-    }
     this.mode = mode;
     this.applySizeConstraints();
     if (mode === 'hud') this.hudOverInteractive = false;
-    if (mode === 'recorder') {
-      this.clearRecorderTooltipRelayout();
-      this.recorderBaseBounds = null;
-      this.recorderTooltipSide = null;
-      this.recorderTooltipWidth = null;
-      this.recorderTooltipVisible = false;
-      this.recorderNativeDragActive = false;
-      this.placeRecorder();
-    }
+    if (mode === 'recorder') this.placeRecorder();
     if (mode === 'hud' && this.hudPosition) {
       const display = this.screen.getDisplayNearestPoint({ x: this.hudPosition[0], y: this.hudPosition[1] });
       const position = clampToDisplayBounds(
@@ -140,7 +115,6 @@ class WindowController {
       display.workArea,
     );
     this.window.setBounds({ ...position, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height });
-    this.recorderBaseBounds = { ...position, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height };
   }
 
   rememberRecorderPosition() {
@@ -150,195 +124,16 @@ class WindowController {
       x: bounds.x + Math.round(bounds.width / 2),
       y: bounds.y + Math.round(bounds.height / 2),
     });
-    const baseX = this.recorderTooltipSide === 'left' ? bounds.x + bounds.width - RECORDER_SIZE.width : bounds.x;
-    const baseY = bounds.y;
-    const clamped = clampToDisplayBounds(baseX, baseY, RECORDER_SIZE.width, RECORDER_SIZE.height, display.workArea);
-
-    this.recorderPositions.set(String(display.id), { x: clamped.x, y: clamped.y });
-    this.recorderBaseBounds = {
-      x: clamped.x,
-      y: clamped.y,
-      width: RECORDER_SIZE.width,
-      height: RECORDER_SIZE.height,
-    };
-    this.scheduleRecorderPositionSave();
-  }
-
-  clearRecorderTooltipRelayout() {
-    if (this.recorderTooltipRelayoutTimer) clearTimeout(this.recorderTooltipRelayoutTimer);
-    this.recorderTooltipRelayoutTimer = null;
-    if (this.recorderTooltipApplyTimer) clearTimeout(this.recorderTooltipApplyTimer);
-    this.recorderTooltipApplyTimer = null;
-  }
-
-  scheduleRecorderTooltipRelayout() {
-    if (this.mode !== 'recorder' || this.window.isDestroyed()) return;
-    if (this.recorderNativeDragActive) {
-      this.clearRecorderTooltipRelayout();
-      this.recorderTooltipRelayoutTimer = setTimeout(() => {
-        this.recorderTooltipRelayoutTimer = null;
-        if (!this.recorderNativeDragActive) return;
-        this.recorderNativeDragActive = false;
-        console.info('[RecorderTooltip] native drag settled', { bounds: this.window.getBounds() });
-        this.setRecorderTooltip(true);
-      }, 150);
-      return;
-    }
-    if (!this.recorderTooltipVisible) return;
-    const layout = this.calculateRecorderTooltipLayout();
-    const current = this.window.getBounds();
-    if (current.x === layout.x && current.y === layout.base.y && Math.abs(current.width - layout.width) <= 1) return;
-    this.clearRecorderTooltipRelayout();
-    this.recorderTooltipRelayoutTimer = setTimeout(() => {
-      this.recorderTooltipRelayoutTimer = null;
-      if (this.recorderTooltipVisible) this.setRecorderTooltip(true);
-    }, 150);
-  }
-
-  calculateRecorderTooltipLayout() {
-    const currentBounds = this.window.getBounds();
-    const display = this.screen.getDisplayNearestPoint({
-      x: currentBounds.x + Math.round(currentBounds.width / 2),
-      y: currentBounds.y + Math.round(currentBounds.height / 2),
-    });
-
-    let rawBaseX = currentBounds.x;
-    if (this.recorderTooltipSide === 'left' && currentBounds.width > RECORDER_SIZE.width) {
-      rawBaseX = currentBounds.x + currentBounds.width - RECORDER_SIZE.width;
-    }
-    let rawBaseY = currentBounds.y;
-
-    const base = clampToDisplayBounds(rawBaseX, rawBaseY, RECORDER_SIZE.width, RECORDER_SIZE.height, display.workArea);
-    this.recorderBaseBounds = { ...base, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height };
-
-    const leftSpace = base.x - display.workArea.x;
-    const rightSpace = display.workArea.x + display.workArea.width - (base.x + RECORDER_SIZE.width);
-    const expansion = RECORDER_TOOLTIP_WIDTH - RECORDER_SIZE.width;
-
-    const canFitLeft = leftSpace >= expansion;
-    const canFitRight = rightSpace >= expansion;
-    const side =
-      canFitLeft && canFitRight
-        ? leftSpace >= rightSpace
-          ? 'left'
-          : 'right'
-        : canFitLeft
-          ? 'left'
-          : canFitRight
-            ? 'right'
-            : leftSpace >= rightSpace
-              ? 'left'
-              : 'right';
-
-    const availableSpace = side === 'left' ? leftSpace : rightSpace;
-    const width = RECORDER_SIZE.width + Math.min(expansion, Math.max(0, availableSpace));
-    const x = side === 'left' ? base.x - (width - RECORDER_SIZE.width) : base.x;
-
-    return {
-      base,
-      displayBounds: display.workArea,
-      leftSpace,
-      rightSpace,
-      side,
-      width,
-      x,
-    };
-  }
-
-  getRecorderTooltipSide() {
-    if (this.mode !== 'recorder' || this.window.isDestroyed()) return null;
-    return this.calculateRecorderTooltipLayout().side;
-  }
-
-  beginRecorderDrag() {
-    if (this.mode !== 'recorder' || this.window.isDestroyed()) return;
-    this.recorderNativeDragActive = true;
-    console.info('[RecorderTooltip] native drag start', {
-      bounds: this.window.getBounds(),
-      side: this.recorderTooltipSide,
-    });
-    this.setRecorderTooltip(false, { preserveSide: true });
-    this.scheduleRecorderTooltipRelayout();
-  }
-
-  setRecorderTooltip(visible, { preserveSide = false } = {}) {
-    if (this.mode !== 'recorder' || this.window.isDestroyed()) return null;
-    if (visible) {
-      this.recorderTooltipVisible = true;
-      this.clearRecorderTooltipRelayout();
-      const layout = this.calculateRecorderTooltipLayout();
-      this.recorderTooltipSide = layout.side;
-      this.recorderTooltipWidth = layout.width;
-
-      this.window.webContents?.send?.('window:recorder-tooltip-side', this.recorderTooltipSide);
-
-      const applyBounds = () => {
-        this.recorderTooltipApplyTimer = null;
-        if (!this.recorderTooltipVisible || this.window.isDestroyed()) return;
-        const current = this.window.getBounds();
-        if (current.x !== layout.x || current.y !== layout.base.y || Math.abs(current.width - layout.width) > 1) {
-          this.window.setBounds({ x: layout.x, y: layout.base.y, width: layout.width, height: RECORDER_SIZE.height });
-        }
-      };
-
-      const current = this.window.getBounds();
-      const needsBoundsChange =
-        current.x !== layout.x || current.y !== layout.base.y || Math.abs(current.width - layout.width) > 1;
-      if (needsBoundsChange) {
-        this.recorderTooltipApplyTimer = setTimeout(applyBounds, 16);
-      } else {
-        applyBounds();
-      }
-      this.startRecorderPointerTracking();
-      return this.recorderTooltipSide;
-    }
-
-    this.recorderTooltipVisible = false;
-    this.clearRecorderTooltipRelayout();
-    const current = this.window.getBounds();
-    const display = this.screen.getDisplayNearestPoint({
-      x: current.x + Math.round(current.width / 2),
-      y: current.y + Math.round(current.height / 2),
-    });
-    const base = clampToDisplayBounds(
-      this.recorderTooltipSide === 'left' ? current.x + current.width - RECORDER_SIZE.width : current.x,
-      current.y,
+    const clamped = clampToDisplayBounds(
+      bounds.x,
+      bounds.y,
       RECORDER_SIZE.width,
       RECORDER_SIZE.height,
       display.workArea,
     );
-    this.window.setBounds({ ...base, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height });
-    this.recorderBaseBounds = { ...base, width: RECORDER_SIZE.width, height: RECORDER_SIZE.height };
-    if (!preserveSide) this.recorderTooltipSide = null;
-    this.recorderTooltipWidth = null;
-    console.info('[RecorderTooltip] compact', { bounds: this.window.getBounds(), base });
-    return null;
-  }
 
-  startRecorderPointerTracking() {
-    if (this.recorderPointerPoll) return;
-    const update = () => {
-      if (this.mode !== 'recorder' || this.window.isDestroyed() || !this.recorderBaseBounds) return;
-      const point = this.screen.getCursorScreenPoint();
-      const bounds = this.recorderBaseBounds;
-      const overBar =
-        point.x >= bounds.x &&
-        point.x < bounds.x + bounds.width &&
-        point.y >= bounds.y &&
-        point.y < bounds.y + bounds.height;
-      if (overBar === this.recorderOverInteractive) return;
-      this.recorderOverInteractive = overBar;
-      if (overBar) this.window.setIgnoreMouseEvents(false);
-      else this.window.setIgnoreMouseEvents(true, { forward: true });
-    };
-    this.recorderPointerPoll = setInterval(update, 16);
-    update();
-  }
-
-  stopRecorderPointerTracking() {
-    if (this.recorderPointerPoll) clearInterval(this.recorderPointerPoll);
-    this.recorderPointerPoll = null;
-    this.recorderOverInteractive = false;
+    this.recorderPositions.set(String(display.id), { x: clamped.x, y: clamped.y });
+    this.scheduleRecorderPositionSave();
   }
 
   applySizeConstraints() {
@@ -348,12 +143,23 @@ class WindowController {
 
   setOverlayAlwaysOnTop(value) {
     if (value && process.platform === 'win32') {
-      // The Windows taskbar is itself topmost. Use the screen-saver level so
-      // the HUD and recorder remain visible when moved over the taskbar.
+      // The stronger Windows level keeps the Recorder above fullscreen apps.
       this.window.setAlwaysOnTop(true, 'screen-saver');
+      this.window.moveTop?.();
       return;
     }
     this.window.setAlwaysOnTop(value);
+    if (value) this.window.moveTop?.();
+  }
+
+  applyZOrderPolicy() {
+    if (this.window.isDestroyed()) return;
+    const isOverlay = this.mode === 'hud' || this.mode === 'recorder';
+    const alwaysOnTop = this.preferencesStore?.read()?.alwaysOnTop ?? true;
+    // Keep the state while hidden so the compositor maps the surface directly
+    // into the topmost layer on the next show instead of promoting it after a
+    // normal frame has already been presented.
+    this.setOverlayAlwaysOnTop(this.ready && alwaysOnTop && isOverlay && !this.window.isMinimized());
   }
 
   applyModePolicy({ restoreMaximized = true } = {}) {
@@ -361,13 +167,12 @@ class WindowController {
     const isHud = this.mode === 'hud';
     const isRecorder = this.mode === 'recorder';
     this.applySizeConstraints();
-    const alwaysOnTop = this.preferencesStore?.read()?.alwaysOnTop ?? true;
-    this.setOverlayAlwaysOnTop(alwaysOnTop && (isHud || isRecorder) && this.window.isVisible() && !this.window.isMinimized());
     this.window.setResizable(false);
     this.window.setMaximizable(false);
     this.window.setContentProtection(isRecorder);
     if (restoreMaximized && (isHud || isRecorder) && this.window.isMaximized()) this.window.unmaximize();
     this.applyInteractionPolicy();
+    this.applyZOrderPolicy();
   }
 
   // Called by the renderer (via IPC) on every mousemove to say whether the
@@ -379,11 +184,6 @@ class WindowController {
     this.hudOverInteractive = overInteractive;
     if (overInteractive) {
       this.window.setIgnoreMouseEvents(false);
-    } else if (this.mode === 'recorder') {
-      this.window.setIgnoreMouseEvents(
-        this.recorderOverInteractive ? false : true,
-        this.recorderOverInteractive ? undefined : { forward: true },
-      );
     } else {
       this.window.setIgnoreMouseEvents(true, { forward: true });
     }
@@ -404,10 +204,8 @@ class WindowController {
     if (this.window.isDestroyed()) return;
     const shouldBeActive = this.ready && this.window.isVisible() && !this.window.isMinimized();
     if (!shouldBeActive) {
-      if (this.mode === 'recorder') this.stopRecorderPointerTracking();
       this.window.setIgnoreMouseEvents(true);
       this.interactive = false;
-      this.setOverlayAlwaysOnTop(false);
       return;
     }
     if (this.mode === 'hud') {
@@ -416,15 +214,13 @@ class WindowController {
       if (this.hudOverInteractive) this.window.setIgnoreMouseEvents(false);
       else this.window.setIgnoreMouseEvents(true, { forward: true });
     } else if (this.mode === 'recorder') {
-      this.startRecorderPointerTracking();
-      this.window.setIgnoreMouseEvents(
-        this.recorderOverInteractive ? false : true,
-        this.recorderOverInteractive ? undefined : { forward: true },
-      );
+      // The compact Recorder window is itself the interactive hit target.
+      // Global pointer polling is unreliable on Wayland once a window is
+      // click-through, so Recorder mode must never depend on it to recover
+      // mouse input.
+      this.window.setIgnoreMouseEvents(false);
     }
     this.interactive = true;
-    const alwaysOnTop = this.preferencesStore?.read()?.alwaysOnTop ?? true;
-    this.setOverlayAlwaysOnTop(alwaysOnTop);
   }
 
   showHud() {
