@@ -302,7 +302,12 @@
     "allowAccess": "Autoriser",
     "accessUnavailable": "Indisponible",
     "recordInteractions": "Enregistrer les raccourcis clavier",
-    "recordInteractionsDescription": "Enregistre les raccourcis clavier sûrs. Sous Linux, désactiver ce réglage coupe aussi les métadonnées de clics souris. Le texte saisi n’est jamais conservé."
+    "recordInteractionsDescription": "Enregistre les raccourcis clavier sûrs. Sous Linux, désactiver ce réglage coupe aussi les métadonnées de clics souris. Le texte saisi n’est jamais conservé.",
+    "about": "À propos",
+    "aboutDesc": "Version et informations sur l’application",
+    "view": "Voir",
+    "version": "Version {version}",
+    "aboutDescriptionText": "Beam est un enregistreur d’écran conçu pour créer des démos de produits claires et soignées. Enregistrez, habillez et exportez vos vidéos au même endroit."
   },
   "ProjectPicker": {
     "projects": "Projets",

@@ -302,7 +302,12 @@
     "allowAccess": "Allow",
     "accessUnavailable": "Unavailable",
     "recordInteractions": "Record keyboard shortcuts",
-    "recordInteractionsDescription": "Records safe keyboard shortcuts. On Linux, turning this off also disables mouse click metadata. Typed text is never stored."
+    "recordInteractionsDescription": "Records safe keyboard shortcuts. On Linux, turning this off also disables mouse click metadata. Typed text is never stored.",
+    "about": "About",
+    "aboutDesc": "Version and application info",
+    "view": "View",
+    "version": "Version {version}",
+    "aboutDescriptionText": "Beam is a screen recorder designed for creating clear, polished product demos. Record, style, and export your videos all in one place."
   },
   "ProjectPicker": {
     "projects": "Projects",

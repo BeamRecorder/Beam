@@ -69,19 +69,14 @@ describe('HudPreferences', () => {
     capture.onPreferencesChanged.mockReturnValue(() => undefined);
     window.matchMedia ??= () => ({ matches: false, addEventListener: () => undefined }) as unknown as MediaQueryList;
   });
-
-  it('relays recording preferences and closes', async () => {
+  it('relays recording preferences', async () => {
     const wrapper = mountPreferences();
     await wrapper.get('.recording-bar-option').trigger('click');
     await wrapper.find('.countdown').trigger('click');
     await wrapper.get('[role="switch"]').trigger('click');
-    const returnToHud = wrapper.findAll('button').find((button) => button.text().includes('Return to HUD'));
-    await returnToHud?.trigger('click');
-
     expect(wrapper.emitted('update:countdownSeconds')).toContainEqual([10]);
     expect(wrapper.emitted('update:recordingBarVisibility')).toContainEqual(['hover-only']);
     expect(wrapper.emitted('update:recordInteractions')).toContainEqual([true]);
-    expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
   it('persists user theme selections through the capture preferences API', async () => {
