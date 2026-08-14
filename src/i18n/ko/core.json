@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "AI 생성(Whisper)",
     "displayText": "표시 텍스트",
+    "followCursor": "커서 따라가기",
+    "followCursorDescription": "이 자막을 녹화된 커서 옆에 표시합니다.",
     "captionText": "자막 텍스트",
     "typeCustomText": "사용자 지정 텍스트 입력…",
     "customTextDescription": "편집하면 시간 지정된 전사가 사용자 지정 텍스트로 바뀝니다.",

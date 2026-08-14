@@ -17,7 +17,8 @@ vi.mock('../composables/useVideoEditor', async () => {
     useVideoEditor: vi.fn(() => {
       const activeTab = ref('canvas');
       const composition = ref<ClipComposition>({
-        schemaVersion: 2,
+        schemaVersion: 3,
+        keyboardCaptionSessions: [],
         assets: [
           {
             id: 'screen-asset',

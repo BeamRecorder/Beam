@@ -54,7 +54,8 @@ vi.mock('../useClipComposition', async () => {
   return {
     useClipComposition: () => {
       const composition = ref(
-        state.initialComposition ?? ({ schemaVersion: 2, assets: [], clips: [] } as ClipComposition),
+        state.initialComposition ??
+          ({ schemaVersion: 3, assets: [], clips: [], keyboardCaptionSessions: [] } as ClipComposition),
       );
       const value = { composition, synchronizeRecording: vi.fn() };
       state.compositionState = value;
@@ -170,7 +171,8 @@ const audioClip = (id: string, assetId: string, overrides: Partial<AudioClip> = 
 });
 
 const createCompositionFixture = (): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     mediaAsset('screen-asset', 'video', { origin: 'session', sessionId: 'session-1' }),
     mediaAsset('video-asset', 'video'),

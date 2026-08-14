@@ -4,6 +4,7 @@ const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const { kindFor } = require('../backgrounds/background-library.cjs');
 const { emptyComposition, importMedia } = require('./clip-composition.cjs');
+const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
 const { createDefaultPresentation, zoomState } = require('./project-editor-state.cjs');
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 
@@ -249,7 +250,7 @@ function createProjectStore(root) {
       let interactions = null;
       try {
         const parsed = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'input.json'), 'utf8'));
-        if (parsed && Number.isInteger(parsed.version) && Array.isArray(parsed.events)) interactions = parsed;
+        interactions = normalizeInputSidecar(parsed);
       } catch {}
       let metadata = {};
       try {
@@ -298,6 +299,7 @@ function createProjectStore(root) {
           missing: [...(Array.isArray(events) ? [] : ['cursor.json']), ...missing],
         },
         interactions: interactions || { version: 1, events: [] },
+        recordedPlatform: recordedPlatform(sessionManifest.platform?.os),
         zoom: manifest.editor?.zoom ? zoomState(manifest.editor.zoom) : { elements: [], generatedSessions: [] },
       };
     }

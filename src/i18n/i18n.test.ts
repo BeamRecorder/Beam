@@ -49,6 +49,16 @@ describe('internationalization', () => {
     }
   });
 
+  it('keeps keyboard and text caption labels available in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of ['keyboardCaptions', 'textCaptions']) {
+        expect(i18n.global.te(`SidebarPanel.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`SidebarPanel.${key}`)).not.toBe(`SidebarPanel.${key}`);
+      }
+    }
+  });
+
   it('keeps the preferences About and Linux interaction catalog complete', () => {
     const keys = [
       'about',

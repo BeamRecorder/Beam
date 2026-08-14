@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "Generado por IA (Whisper)",
     "displayText": "Texto mostrado",
+    "followCursor": "Seguir el cursor",
+    "followCursorDescription": "Mantiene este subtítulo junto al cursor grabado.",
     "captionText": "Texto del subtítulo",
     "typeCustomText": "Escribe un texto personalizado…",
     "customTextDescription": "Editar esto reemplaza la transcripción sincronizada por tu texto personalizado.",

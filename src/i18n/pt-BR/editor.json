@@ -36,6 +36,8 @@
     "zoom": "Zoom",
     "cursor": "Cursor",
     "captions": "Legendas",
+    "keyboardCaptions": "Atalhos do teclado",
+    "textCaptions": "Legendas de texto",
     "audio": "Áudio",
     "settings": "Configurações",
     "logo": "Logotipo"

@@ -1,5 +1,6 @@
 import type { CaptionClip, CaptionStyle, NormalizedTransform } from './composition-types';
 import { getCaptionTransform } from './composition-types';
+import { keyboardCaptionRunsAt, type KeyboardCaptionRun } from './keyboard-captions';
 
 export const CAPTION_LINE_HEIGHT = 1.2;
 export const CAPTION_HORIZONTAL_INSET = 8;
@@ -20,7 +21,20 @@ export const isCaptionWrapEnabled = (style: Pick<CaptionStyle, 'wrap'>) => style
 
 export function captionTextAt(clip: CaptionClip, timeMs: number): string {
   if (clip.caption.style.customText) return clip.caption.style.customText;
+  if (clip.caption.type === 'keyboard')
+    return keyboardCaptionRunsAt(clip, timeMs)
+      .map((run) => run.text)
+      .join('');
   return clip.caption.sentences.find((sentence) => sentence.startMs <= timeMs && timeMs <= sentence.endMs)?.text ?? '';
+}
+
+export function captionContentAt(
+  clip: CaptionClip,
+  timeMs: number,
+): { text: string; runs: KeyboardCaptionRun[] | null } {
+  if (clip.caption.type !== 'keyboard') return { text: captionTextAt(clip, timeMs), runs: null };
+  const runs = keyboardCaptionRunsAt(clip, timeMs);
+  return { text: runs.map((run) => run.text).join(''), runs };
 }
 
 export const approximateCaptionTextWidth: CaptionTextMeasurer = (text, fontSize) =>

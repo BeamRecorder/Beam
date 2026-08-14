@@ -74,13 +74,15 @@ const captionClip = (): CaptionClip => ({
   enabled: true,
   order: 3,
   caption: {
+    type: 'text',
     sentences: [],
     style: { ...createDefaultCaptionStyle(32), color: '#fff', shadowColor: '#000', shadowBlur: 2, placement: 'center' },
   },
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'screen-asset',

@@ -4,8 +4,8 @@ import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../video-edit
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
-import { drawCursorLayer } from './cursor-render';
-import { captionTextAt } from '~/media/shared/caption-text-layout';
+import { cursorPositionForKeyboardCaption, drawCursorLayer } from './cursor-render';
+import { captionContentAt } from '~/media/shared/caption-text-layout';
 import { drawCaptionText } from '../../video-editor/composition/captions/render-caption-text';
 import {
   createCompositionCameraEvaluator,
@@ -39,12 +39,20 @@ function drawSnapshotBackground(
   });
 }
 
-function drawCaption(ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number, snapshot: CompositionSnapshot) {
-  const text = captionTextAt(clip, timeMs);
+function drawCaption(
+  ctx: CanvasRenderingContext2D,
+  clip: CaptionClip,
+  timeMs: number,
+  snapshot: CompositionSnapshot,
+  cursorPosition?: { x: number; y: number } | null,
+) {
+  const { text, runs } = captionContentAt(clip, timeMs);
   if (!text) return;
   drawCaptionText(ctx, {
     clip,
     text,
+    runs,
+    cursorPosition,
     canvas: snapshot.canvas,
     viewport: { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
   });
@@ -233,7 +241,22 @@ export function renderCompositionFrame(
       clip.name,
     );
   }
-  for (const clip of layers.captions) drawCaption(ctx, clip, timeMs, snapshot);
+  const resolvedCursorMotionPlayer =
+    cursorMotionPlayer ??
+    createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight);
+  const keyboardCursorPosition = cursorPositionForKeyboardCaption(
+    snapshot,
+    time,
+    screen,
+    sourceWidth,
+    sourceHeight,
+    width,
+    height,
+    cursorImages,
+    resolvedCursorMotionPlayer,
+    camera,
+  );
+  for (const clip of layers.captions) drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition);
 
   ctx.save();
   ctx.translate(width / 2, height / 2);
@@ -249,8 +272,7 @@ export function renderCompositionFrame(
     width,
     height,
     cursorImages,
-    cursorMotionPlayer ??
-      createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight),
+    resolvedCursorMotionPlayer,
   );
   ctx.restore();
 }

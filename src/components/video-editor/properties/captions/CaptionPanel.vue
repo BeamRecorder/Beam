@@ -101,6 +101,7 @@ const runTranscription = async () => {
       order: preserved.length + index,
       isAiGenerated: true,
       caption: {
+        type: 'text',
         sentences: [sentence],
         style: {
           ...createDefaultCaptionStyle(36),
@@ -111,7 +112,10 @@ const runTranscription = async () => {
       },
     };
   });
-  emit('update:composition', createComposition(props.composition.assets, [...preserved, ...captions]));
+  emit(
+    'update:composition',
+    createComposition(props.composition.assets, [...preserved, ...captions], props.composition.keyboardCaptionSessions),
+  );
   emit('select-caption', captions[0].id);
 };
 </script>

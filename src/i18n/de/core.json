@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "Von KI generiert (Whisper)",
     "displayText": "Anzeigetext",
+    "followCursor": "Cursor folgen",
+    "followCursorDescription": "Hält diesen Untertitel neben dem aufgezeichneten Cursor.",
     "captionText": "Untertiteltext",
     "typeCustomText": "Benutzerdefinierten Text eingeben…",
     "customTextDescription": "Durch die Bearbeitung wird die zeitgesteuerte Transkription durch deinen eigenen Text ersetzt.",

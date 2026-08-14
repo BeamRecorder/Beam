@@ -40,6 +40,7 @@ const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => 
     catalog: {},
     missing: [],
   },
+  recordedPlatform: null,
   zoom: { elements: [], generatedSessions: [] },
   ...overrides,
 });

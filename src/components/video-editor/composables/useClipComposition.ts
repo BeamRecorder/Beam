@@ -207,6 +207,7 @@ export function useClipComposition(options: {
         enabled: true,
         order: 0,
         caption: {
+          type: 'text',
           sentences: [],
           style: createDefaultCaptionStyle(),
         },

@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "AI द्वारा बनाया गया (Whisper)",
     "displayText": "टेक्स्ट दिखाएँ",
+    "followCursor": "कर्सर का अनुसरण करें",
+    "followCursorDescription": "इस कैप्शन को रिकॉर्ड किए गए कर्सर के पास रखता है।",
     "captionText": "कैप्शन टेक्स्ट",
     "typeCustomText": "कस्टम टेक्स्ट लिखें…",
     "customTextDescription": "इसे एडिट करने पर टाइम्ड ट्रांसक्रिप्शन की जगह कस्टम टेक्स्ट आएगा।",

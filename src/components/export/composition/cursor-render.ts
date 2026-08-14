@@ -12,6 +12,47 @@ import { effectButtonForRecordedButton, type CursorClickEffectSettings } from '.
 import type { CompositionSnapshot } from '../export-types';
 import { cursorRippleAt } from '../../video-editor/composables/cursor-ripple';
 
+export function cursorPositionForKeyboardCaption(
+  snapshot: CompositionSnapshot,
+  time: number,
+  screen: VisualClip,
+  sourceWidth: number,
+  sourceHeight: number,
+  width: number,
+  height: number,
+  cursorImages: ReadonlyMap<string, HTMLImageElement> | undefined,
+  cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
+  camera: { scale: number; focus: { cx: number; cy: number } },
+) {
+  const state = cursorStateAt(snapshot.cursor.events, time);
+  const motionState = cursorMotionPlayer.sample(time, state);
+  const cursorType = cursorTypeAt(snapshot.cursorSettings.selectedCursor, motionState);
+  const image = cursorImages?.get(cursorType);
+  if (
+    !snapshot.cursor.available ||
+    !state?.visible ||
+    !motionState?.visible ||
+    !image?.complete ||
+    image.naturalWidth <= 0
+  )
+    return null;
+  const raw = cursorPositionAt(
+    motionState,
+    { width: sourceWidth, height: sourceHeight },
+    { x: 0, y: 0, width, height },
+    snapshot.canvas.showBackground,
+    screen.transform,
+    screen.isMirrored ?? false,
+    screen.isMirroredY ?? false,
+    screen.appearance,
+    screen.crop,
+  );
+  return {
+    x: width / 2 + camera.scale * (raw.x - camera.focus.cx * width),
+    y: height / 2 + camera.scale * (raw.y - camera.focus.cy * height),
+  };
+}
+
 export function drawCursorLayer(
   ctx: CanvasRenderingContext2D,
   snapshot: CompositionSnapshot,

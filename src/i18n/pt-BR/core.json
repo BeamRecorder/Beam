@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "Gerado por IA (Whisper)",
     "displayText": "Texto exibido",
+    "followCursor": "Seguir cursor",
+    "followCursorDescription": "Mantém esta legenda ao lado do cursor gravado.",
     "captionText": "Texto da legenda",
     "typeCustomText": "Digite um texto personalizado…",
     "customTextDescription": "Editar isto substitui a transcrição sincronizada pelo seu texto personalizado.",

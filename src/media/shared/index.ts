@@ -6,3 +6,5 @@ export * from './media-input';
 export * from './media-source';
 export * from './media-types';
 export * from './timeline-mapping';
+export * from './keyboard-captions';
+export * from './keyboard-caption-position';

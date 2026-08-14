@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "Wygenerowano przez AI (Whisper)",
     "displayText": "Wyświetlany tekst",
+    "followCursor": "Podążaj za kursorem",
+    "followCursorDescription": "Utrzymuje ten napis obok nagranego kursora.",
     "captionText": "Tekst napisów",
     "typeCustomText": "Wpisz własny tekst…",
     "customTextDescription": "Edycja zastąpi transkrypcję z synchronizacją czasową własnym tekstem.",

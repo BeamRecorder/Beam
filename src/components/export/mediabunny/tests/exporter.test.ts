@@ -159,7 +159,7 @@ const composition = (
       volume: 150,
     });
   }
-  return { schemaVersion: 2, assets, clips } as ClipComposition;
+  return { schemaVersion: 3, assets, clips, keyboardCaptionSessions: [] } as ClipComposition;
 };
 
 const request = (

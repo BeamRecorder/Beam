@@ -29,7 +29,8 @@ const screenClip = (enabled = true): VisualClip => ({
   isMirroredY: false,
 });
 const composition = (enabled = true): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'screen-asset',

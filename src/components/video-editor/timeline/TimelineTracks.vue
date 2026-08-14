@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import {
-  Camera,
-  GripVertical,
-  Image as ImageIcon,
-  Mic,
-  MousePointer,
-  Sparkles,
-  Type,
-  Video,
-  Volume2,
-} from '@lucide/vue';
+import { GripVertical, Mic, MousePointer, Volume2 } from '@lucide/vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import TimelineClip from './TimelineClip.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
+import { computed } from 'vue';
+import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
 
 const { t } = useTranslate('TimelineTracks');
 const props = withDefaults(
@@ -50,7 +42,8 @@ const emit = defineEmits<{
 const {
   durationMs,
   visualClips,
-  captionClips,
+  keyboardCaptionClips,
+  textCaptionClips,
   systemAudioClips,
   microphoneClips,
   importedAudioClips,
@@ -95,6 +88,15 @@ const {
   DEFAULT_ZOOM_DURATION_MS,
   DEFAULT_CAPTION_DURATION_MS,
 } = useTimelineTracks(props, emit, t);
+void tracksScrollRef;
+void tracksViewportRef;
+void ticksAreaRef;
+const exportProgressPercent = computed(() => {
+  const current = props.exportProgress?.currentTimeMs;
+  const total = props.exportProgress?.totalTimeMs;
+  if (current === undefined || total === undefined || total <= 0) return null;
+  return Math.min(100, Math.max(0, (current / total) * 100));
+});
 </script>
 
 <template>
@@ -104,10 +106,10 @@ const {
         <div class="ruler-info-spacer" />
         <div ref="ticksAreaRef" class="ruler-ticks-area" @pointerdown="beginScrub">
           <div
-            v-if="exportProgress && exportProgress.totalTimeMs > 0"
+            v-if="exportProgressPercent !== null"
             class="ruler-export-progress-bar"
             :style="{
-              width: `${Math.min(100, Math.max(0, (exportProgress.currentTimeMs / exportProgress.totalTimeMs) * 100))}%`,
+              width: `${exportProgressPercent}%`,
             }"
           />
           <div
@@ -224,57 +226,22 @@ const {
           </div>
         </div>
 
-        <div class="track-row annotation-track">
-          <div class="track-info static-info">
-            <Type class="track-icon" /><span class="track-title">{{ t('captions') }}</span>
-          </div>
-          <div
-            class="track-content annotation-content"
-            :title="t('clickToAddCaption')"
-            @pointerdown.stop
-            @mousemove="hoverAt($event, 'caption')"
-            @mouseleave="leaveTrack('caption')"
-            @click.stop="addAt($event, 'caption')"
-          >
-            <div
-              v-if="hoverCaptionTimeMs !== null"
-              class="annotation-indicator preview-ghost"
-              :style="percentageStyle(hoverCaptionTimeMs, DEFAULT_CAPTION_DURATION_MS)"
-            >
-              {{ t('addCaption') }}
-            </div>
-            <button
-              v-for="clip in captionClips"
-              :key="clip.id"
-              type="button"
-              class="annotation-indicator"
-              :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
-              :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
-              @click.stop="emit('select:clip', clip.id)"
-              @pointerdown="beginClipMove($event, clip)"
-            >
-              <span
-                class="trim-handle start"
-                :title="t('trimStart')"
-                @pointerdown.stop="beginClipTrim($event, clip, 'start')"
-              >
-                <span v-if="trimStateFor(clip.id)?.edge === 'start'" class="trim-side-badge"
-                  >{{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s</span
-                >
-              </span>
-              <span class="clip-center-title"><Sparkles v-if="clip.isAiGenerated" :size="11" />{{ clip.name }}</span>
-              <span
-                class="trim-handle end"
-                :title="t('trimEnd')"
-                @pointerdown.stop="beginClipTrim($event, clip, 'end')"
-              >
-                <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge"
-                  >{{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s</span
-                >
-              </span>
-            </button>
-          </div>
-        </div>
+        <TimelineCaptionTracks
+          :keyboard-clips="keyboardCaptionClips"
+          :text-clips="textCaptionClips"
+          :selected-clip-id="selectedClipId"
+          :hover-caption-time-ms="hoverCaptionTimeMs"
+          :default-caption-duration-ms="DEFAULT_CAPTION_DURATION_MS"
+          :percentage-style="percentageStyle"
+          :displayed-clip="displayedClip"
+          :trim-state-for="trimStateFor"
+          :begin-clip-move="beginClipMove"
+          :begin-clip-trim="beginClipTrim"
+          :hover-at="hoverAt"
+          :leave-track="leaveTrack"
+          :add-at="addAt"
+          @select="emit('select:clip', $event)"
+        />
 
         <div
           v-if="systemAudioClips.length"

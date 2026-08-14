@@ -23,7 +23,8 @@ const screenAppearance: ClipAppearance = {
   frameChromeScale: 1,
 };
 const composition = (): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'screen-asset',
@@ -321,6 +322,7 @@ describe('canonical composition rendering', () => {
       enabled: true,
       order: 1,
       caption: {
+        type: 'text',
         sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }],
         style: {
           ...createDefaultCaptionStyle(20),
@@ -353,6 +355,7 @@ describe('canonical composition rendering', () => {
       order: 1,
       transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
       caption: {
+        type: 'text',
         sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
         style: {
           ...createDefaultCaptionStyle(20),
@@ -387,6 +390,7 @@ describe('canonical composition rendering', () => {
       order: 1,
       transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
       caption: {
+        type: 'text',
         sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
         style: {
           ...createDefaultCaptionStyle(20),
@@ -408,6 +412,75 @@ describe('canonical composition rendering', () => {
       expect.any(Number),
       expect.any(Number),
     );
+  });
+
+  it('uses cursor-follow placement for keyboard captions and a fixed export fallback', () => {
+    const renderCaptionX = (withCursor: boolean) => {
+      const value = snapshot();
+      value.canvas = { ...value.canvas, width: 1_000, height: 500 };
+      value.composition.clips.push({
+        id: 'keyboard-caption',
+        kind: 'caption',
+        name: 'Ctrl K',
+        timelineStartMs: 0,
+        timelineDurationMs: 1_000,
+        sourceInMs: 0,
+        sourceDurationMs: 1_000,
+        playbackRate: 1,
+        enabled: true,
+        order: 1,
+        caption: {
+          type: 'keyboard',
+          steps: [{ offsetMs: 0, modifiers: ['control'], key: 'k' }],
+          followCursor: true,
+          recordedPlatform: 'windows',
+          sourceSessionId: 'session-1',
+          style: {
+            ...createDefaultCaptionStyle(20),
+            wrap: false,
+            backdropBlur: 0,
+            outlineWidth: 0,
+            extrusionDepth: 0,
+            shadowBlur: 0,
+          },
+        },
+      });
+      if (withCursor) {
+        value.cursor = {
+          ...value.cursor,
+          available: true,
+          events: [
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 90,
+              pixelY: 40,
+              normalizedX: 0.9,
+              normalizedY: 0.8,
+              visible: true,
+            },
+          ],
+        };
+      }
+      const ctx = context();
+      const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+      renderCompositionFrame(
+        ctx,
+        { source: {} as CanvasImageSource, width: 100, height: 50 },
+        value,
+        0.1,
+        null,
+        withCursor ? new Map([['default', cursorImage]]) : undefined,
+      );
+      const call = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls.find((entry) => entry[0] === 'Ctrl');
+      return call?.[1] as number | undefined;
+    };
+
+    const fixedX = renderCaptionX(false);
+    const followedX = renderCaptionX(true);
+    expect(fixedX).toBeDefined();
+    expect(followedX).toBeDefined();
+    expect(followedX).not.toBe(fixedX);
   });
 
   it('exports a right click with its own ripple and rebound settings', () => {

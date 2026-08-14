@@ -1,4 +1,4 @@
-export const COMPOSITION_SCHEMA_VERSION = 2 as const;
+export const COMPOSITION_SCHEMA_VERSION = 3 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -51,10 +51,31 @@ export interface CaptionStyle {
   customText?: string;
 }
 
-export interface CaptionData {
+export interface TextCaptionData {
+  type: 'text';
   sentences: CaptionSentence[];
   style: CaptionStyle;
 }
+
+export type KeyboardCaptionModifier = 'control' | 'shift' | 'alt' | 'meta';
+export type KeyboardCaptionPlatform = 'windows' | 'macos' | 'linux';
+
+export interface KeyboardCaptionStep {
+  offsetMs: number;
+  modifiers: KeyboardCaptionModifier[];
+  key: string;
+}
+
+export interface KeyboardCaptionData {
+  type: 'keyboard';
+  steps: KeyboardCaptionStep[];
+  followCursor: boolean;
+  recordedPlatform: KeyboardCaptionPlatform;
+  sourceSessionId: string;
+  style: CaptionStyle;
+}
+
+export type CaptionData = TextCaptionData | KeyboardCaptionData;
 
 export type ClipShadowSize = 'none' | 'sm' | 'md' | 'lg' | 'custom';
 export type ClipShadowMode = 'solid' | 'adaptive';
@@ -142,12 +163,14 @@ export interface ClipComposition {
   schemaVersion: typeof COMPOSITION_SCHEMA_VERSION;
   assets: MediaAsset[];
   clips: Clip[];
+  keyboardCaptionSessions: string[];
 }
 
 export const emptyComposition = (): ClipComposition => ({
   schemaVersion: COMPOSITION_SCHEMA_VERSION,
   assets: [],
   clips: [],
+  keyboardCaptionSessions: [],
 });
 
 export const clipEndMs = (clip: Pick<ClipBase, 'timelineStartMs' | 'timelineDurationMs'>) =>
@@ -158,6 +181,10 @@ export const isVisualClip = (clip: Clip): clip is VisualClip =>
 
 export const isAudioClip = (clip: Clip): clip is AudioClip => clip.kind === 'audio';
 export const isCaptionClip = (clip: Clip): clip is CaptionClip => clip.kind === 'caption';
+export const isTextCaptionClip = (clip: Clip): clip is CaptionClip & { caption: TextCaptionData } =>
+  clip.kind === 'caption' && clip.caption.type === 'text';
+export const isKeyboardCaptionClip = (clip: Clip): clip is CaptionClip & { caption: KeyboardCaptionData } =>
+  clip.kind === 'caption' && clip.caption.type === 'keyboard';
 
 export const getCaptionTransform = (clip: CaptionClip): NormalizedTransform => {
   if (clip.transform) return clip.transform;

@@ -36,6 +36,8 @@
     "zoom": "확대/축소",
     "cursor": "커서",
     "captions": "자막",
+    "keyboardCaptions": "키보드 단축키",
+    "textCaptions": "텍스트 자막",
     "audio": "오디오",
     "settings": "설정",
     "logo": "로고"

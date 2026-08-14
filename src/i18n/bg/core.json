@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "Генерирано от AI (Whisper)",
     "displayText": "Показван текст",
+    "followCursor": "Следване на курсора",
+    "followCursorDescription": "Поставя този субтитър до записания курсор.",
     "captionText": "Текст на субтитрите",
     "typeCustomText": "Въведете персонализиран текст…",
     "customTextDescription": "Редактирането заменя синхронизирания транскрипт с вашия текст.",

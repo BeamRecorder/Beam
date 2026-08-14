@@ -7,7 +7,7 @@ import {
   type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
-import { captionTextAt } from '~/media/shared/caption-text-layout';
+import { captionContentAt } from '~/media/shared/caption-text-layout';
 import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
@@ -22,6 +22,7 @@ export interface UseCompositionMediaOptions {
   isCropping?: () => boolean | undefined;
   outputCanvas: () => OutputCanvasSettings;
   captionViewport: () => CaptionViewport;
+  keyboardCursorPosition?: () => { x: number; y: number } | null;
   onRenderOnce: () => void;
 }
 
@@ -52,7 +53,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   );
 
   const drawCaption = (ctx: CanvasRenderingContext2D, clip: CaptionClip, timeMs: number) => {
-    const text = captionTextAt(clip, timeMs);
+    const { text, runs } = captionContentAt(clip, timeMs);
     if (!text) return;
     const selected = options.selectedTransformClip();
     const transformDraft = clip.id === selected?.id ? options.transformDraft() : null;
@@ -60,6 +61,9 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     drawCaptionText(ctx, {
       clip: renderClip,
       text,
+      runs,
+      cursorPosition:
+        clip.caption.type === 'keyboard' && clip.caption.followCursor ? options.keyboardCursorPosition?.() : null,
       canvas: options.outputCanvas(),
       viewport: options.captionViewport(),
     });

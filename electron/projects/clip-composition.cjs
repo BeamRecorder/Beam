@@ -3,10 +3,33 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
-const schemaVersion = 2;
-const previousSchemaVersion = 1;
+const schemaVersion = 3;
+const previousSchemaVersion = 2;
+const legacySchemaVersion = 1;
 const mediaKinds = new Set(['video', 'image', 'audio']);
 const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'audio', 'caption']);
+const keyboardModifiers = new Set(['control', 'shift', 'alt', 'meta']);
+const keyboardPlatforms = new Set(['windows', 'macos', 'linux']);
+const keyboardKeys = new Set([
+  ...'abcdefghijklmnopqrstuvwxyz',
+  ...Array.from({ length: 10 }, (_, index) => `digit${index}`),
+  'arrow-up',
+  'arrow-down',
+  'arrow-left',
+  'arrow-right',
+  'escape',
+  'enter',
+  'tab',
+  'backspace',
+  'delete',
+  'insert',
+  'home',
+  'end',
+  'page-up',
+  'page-down',
+  'space',
+  ...Array.from({ length: 12 }, (_, index) => `f${index + 1}`),
+]);
 const extensions = {
   video: new Set(['.mp4', '.webm', '.mov', '.mkv']),
   image: new Set(['.png', '.jpg', '.jpeg', '.webp']),
@@ -17,7 +40,7 @@ const text = (value, max = 160) => (typeof value === 'string' ? value.slice(0, m
 const id = (value) => typeof value === 'string' && value.length > 0 && value.length <= 600;
 const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
-const emptyComposition = () => ({ schemaVersion, assets: [], clips: [] });
+const emptyComposition = () => ({ schemaVersion, assets: [], clips: [], keyboardCaptionSessions: [] });
 
 const historicalAppearance = (kind, showBackground) => ({
   cornerRadius: kind === 'screen' ? (showBackground ? 'md' : 'none') : 'sm',
@@ -87,8 +110,41 @@ const appearance = (value) => {
   };
 };
 
-const caption = (value) => {
-  if (!value || !Array.isArray(value.sentences)) throw new Error('Caption invalide');
+const captionStyle = (value) => {
+  const style = value || {};
+  if (
+    typeof style.color !== 'string' ||
+    !finite(style.fontSize) ||
+    typeof style.wrap !== 'boolean' ||
+    typeof style.shadowColor !== 'string' ||
+    !finite(style.shadowBlur) ||
+    !finite(style.backdropBlur) ||
+    typeof style.outlineColor !== 'string' ||
+    !finite(style.outlineWidth) ||
+    !finite(style.extrusionDepth) ||
+    !['top', 'center', 'bottom'].includes(style.placement)
+  )
+    throw new Error('Style de caption invalide');
+  return {
+    color: style.color,
+    fontSize: Math.max(1, style.fontSize),
+    wrap: style.wrap,
+    shadowColor: style.shadowColor,
+    shadowBlur: Math.max(0, style.shadowBlur),
+    backdropBlur: Math.max(0, Math.min(48, style.backdropBlur)),
+    outlineColor: style.outlineColor,
+    outlineWidth: Math.max(0, Math.min(30, style.outlineWidth)),
+    extrusionDepth: Math.max(0, Math.min(20, style.extrusionDepth)),
+    placement: style.placement,
+    ...(typeof style.shadowDirection === 'string' ? { shadowDirection: style.shadowDirection } : {}),
+    ...(finite(style.shadowOffsetX) ? { shadowOffsetX: style.shadowOffsetX } : {}),
+    ...(finite(style.shadowOffsetY) ? { shadowOffsetY: style.shadowOffsetY } : {}),
+    ...(typeof style.customText === 'string' ? { customText: style.customText } : {}),
+  };
+};
+
+const textCaption = (value) => {
+  if (!Array.isArray(value.sentences)) throw new Error('Caption texte invalide');
   const sentences = value.sentences.map((sentence) => {
     if (!sentence || !id(sentence.id) || !Array.isArray(sentence.words)) throw new Error('Phrase de caption invalide');
     const words = sentence.words.map((word) => {
@@ -114,44 +170,59 @@ const caption = (value) => {
       words,
     };
   });
-  const style = value.style || {};
+  return { type: 'text', sentences, style: captionStyle(value.style) };
+};
+
+const keyboardCaption = (value) => {
   if (
-    typeof style.color !== 'string' ||
-    !finite(style.fontSize) ||
-    typeof style.wrap !== 'boolean' ||
-    typeof style.shadowColor !== 'string' ||
-    !finite(style.shadowBlur) ||
-    !finite(style.backdropBlur) ||
-    typeof style.outlineColor !== 'string' ||
-    !finite(style.outlineWidth) ||
-    !finite(style.extrusionDepth) ||
-    !['top', 'center', 'bottom'].includes(style.placement)
+    !Array.isArray(value.steps) ||
+    typeof value.followCursor !== 'boolean' ||
+    !keyboardPlatforms.has(value.recordedPlatform) ||
+    !id(value.sourceSessionId)
   )
-    throw new Error('Style de caption invalide');
+    throw new Error('Caption clavier invalide');
+  let previousOffset = -1;
+  const steps = value.steps.map((step) => {
+    if (
+      !step ||
+      !finite(step.offsetMs) ||
+      step.offsetMs < 0 ||
+      step.offsetMs < previousOffset ||
+      !Array.isArray(step.modifiers) ||
+      step.modifiers.some((modifier) => !keyboardModifiers.has(modifier)) ||
+      new Set(step.modifiers).size !== step.modifiers.length ||
+      !keyboardKeys.has(step.key)
+    )
+      throw new Error('Étape de caption clavier invalide');
+    previousOffset = Math.round(step.offsetMs);
+    return { offsetMs: previousOffset, modifiers: [...step.modifiers], key: step.key };
+  });
+  if (!steps.length) throw new Error('Caption clavier vide');
   return {
-    sentences,
-    style: {
-      color: style.color,
-      fontSize: Math.max(1, style.fontSize),
-      wrap: style.wrap,
-      shadowColor: style.shadowColor,
-      shadowBlur: Math.max(0, style.shadowBlur),
-      backdropBlur: Math.max(0, Math.min(48, style.backdropBlur)),
-      outlineColor: style.outlineColor,
-      outlineWidth: Math.max(0, Math.min(30, style.outlineWidth)),
-      extrusionDepth: Math.max(0, Math.min(20, style.extrusionDepth)),
-      placement: style.placement,
-      ...(typeof style.shadowDirection === 'string' ? { shadowDirection: style.shadowDirection } : {}),
-      ...(finite(style.shadowOffsetX) ? { shadowOffsetX: style.shadowOffsetX } : {}),
-      ...(finite(style.shadowOffsetY) ? { shadowOffsetY: style.shadowOffsetY } : {}),
-      ...(typeof style.customText === 'string' ? { customText: style.customText } : {}),
-    },
+    type: 'keyboard',
+    steps,
+    followCursor: value.followCursor,
+    recordedPlatform: value.recordedPlatform,
+    sourceSessionId: value.sourceSessionId,
+    style: captionStyle(value.style),
   };
+};
+
+const caption = (value) => {
+  if (!value || typeof value !== 'object') throw new Error('Caption invalide');
+  if (value.type === 'text') return textCaption(value);
+  if (value.type === 'keyboard') return keyboardCaption(value);
+  throw new Error('Type de caption invalide');
 };
 
 function normalizeComposition(value) {
   if (!value) throw new Error('Composition absente');
-  if (value.schemaVersion !== schemaVersion || !Array.isArray(value.assets) || !Array.isArray(value.clips))
+  if (
+    value.schemaVersion !== schemaVersion ||
+    !Array.isArray(value.assets) ||
+    !Array.isArray(value.clips) ||
+    !Array.isArray(value.keyboardCaptionSessions)
+  )
     throw new Error(`Version de composition inconnue: ${String(value.schemaVersion)}`);
   const assetIds = new Set();
   const assets = value.assets.map((asset) => {
@@ -260,16 +331,24 @@ function normalizeComposition(value) {
   return {
     schemaVersion,
     assets,
+    keyboardCaptionSessions: [
+      ...new Set(
+        value.keyboardCaptionSessions.map((sessionId) => {
+          if (!id(sessionId)) throw new Error('Session de captions clavier invalide');
+          return sessionId;
+        }),
+      ),
+    ],
     clips: clips.map((clip) =>
       clip.groupId && groupCounts.get(clip.groupId) < 2 ? { ...clip, groupId: undefined } : clip,
     ),
   };
 }
 
-function migrateComposition(value, showBackground) {
+function migrateComposition(value, showBackground, historicalSessionIds = []) {
   if (
     !value ||
-    value.schemaVersion !== previousSchemaVersion ||
+    ![legacySchemaVersion, previousSchemaVersion].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
   )
@@ -277,13 +356,17 @@ function migrateComposition(value, showBackground) {
   return normalizeComposition({
     schemaVersion,
     assets: value.assets,
+    keyboardCaptionSessions: historicalSessionIds,
     clips: value.clips.map((clip) => {
       if (clip.kind === 'caption') {
+        if (value.schemaVersion === previousSchemaVersion)
+          return { ...clip, caption: { ...clip.caption, type: 'text' } };
         const style = clip.caption?.style || {};
         return {
           ...clip,
           caption: {
             ...clip.caption,
+            type: 'text',
             style: {
               color: typeof style.color === 'string' ? style.color : '#ffffff',
               fontSize: finite(style.fontSize) ? style.fontSize : 42,

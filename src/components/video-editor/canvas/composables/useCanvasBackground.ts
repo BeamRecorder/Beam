@@ -24,6 +24,7 @@ const backgroundAsset = (background: BackgroundMedia): MediaAsset => ({
 const backgroundComposition = (asset: MediaAsset, durationMs: number): ClipComposition => ({
   schemaVersion: COMPOSITION_SCHEMA_VERSION,
   assets: [{ ...asset, durationMs }],
+  keyboardCaptionSessions: [],
   clips: [
     {
       id: BACKGROUND_CLIP_ID,

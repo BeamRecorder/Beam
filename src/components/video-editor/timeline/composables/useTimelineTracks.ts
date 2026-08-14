@@ -5,6 +5,8 @@ import type { ZoomElement } from '../../zoom/zoom-types';
 import {
   isAudioClip,
   isCaptionClip,
+  isKeyboardCaptionClip,
+  isTextCaptionClip,
   isVisualClip,
   type AudioClip,
   type Clip,
@@ -67,6 +69,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     ];
   });
   const captionClips = computed(() => orderedClips.value.filter(isCaptionClip));
+  const keyboardCaptionClips = computed(() => orderedClips.value.filter(isKeyboardCaptionClip));
+  const textCaptionClips = computed(() => orderedClips.value.filter(isTextCaptionClip));
   const systemAudioClips = computed(() =>
     orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'system'),
   );
@@ -536,7 +540,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       return;
     }
     const startMs = centeredStartAt(event.clientX, DEFAULT_CAPTION_DURATION_MS);
-    const captions = captionClips.value.map((clip) => ({
+    const captions = textCaptionClips.value.map((clip) => ({
       startMs: clip.timelineStartMs,
       endMs: clip.timelineStartMs + clip.timelineDurationMs,
     }));
@@ -555,7 +559,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       return;
     }
     const startMs = centeredStartAt(event.clientX, DEFAULT_CAPTION_DURATION_MS);
-    const captions = captionClips.value.map((clip) => ({
+    const captions = textCaptionClips.value.map((clip) => ({
       startMs: clip.timelineStartMs,
       endMs: clip.timelineStartMs + clip.timelineDurationMs,
     }));
@@ -617,6 +621,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     visualOrderPreview,
     visualClips,
     captionClips,
+    keyboardCaptionClips,
+    textCaptionClips,
     systemAudioClips,
     microphoneClips,
     importedAudioClips,

@@ -7,6 +7,7 @@ const {
   emptyComposition,
   importMedia,
   materializeComposition,
+  migrateComposition,
   normalizeComposition,
   pruneProjectMedia,
 } = require('../electron/projects/clip-composition.cjs');
@@ -83,6 +84,55 @@ const audioClip = (assetId, overrides = {}) => ({
   ...overrides,
 });
 
+const captionStyle = (overrides = {}) => ({
+  color: '#ffffff',
+  fontSize: 42,
+  wrap: true,
+  shadowColor: '#000000',
+  shadowBlur: 4,
+  backdropBlur: 0,
+  outlineColor: '#000000',
+  outlineWidth: 6,
+  extrusionDepth: 4,
+  placement: 'bottom',
+  ...overrides,
+});
+
+const textCaption = (overrides = {}) => ({
+  type: 'text',
+  sentences: [{ id: 'sentence', text: 'Caption', startMs: 0, endMs: 1_000, words: [] }],
+  style: captionStyle(),
+  ...overrides,
+});
+
+const keyboardCaption = (overrides = {}) => ({
+  type: 'keyboard',
+  steps: [
+    { offsetMs: 0, modifiers: ['control'], key: 'k' },
+    { offsetMs: 240, modifiers: ['control'], key: 'c' },
+  ],
+  followCursor: false,
+  recordedPlatform: 'linux',
+  sourceSessionId: 'session-keyboard',
+  style: captionStyle(),
+  ...overrides,
+});
+
+const captionClip = (caption, overrides = {}) => ({
+  id: 'clip-caption',
+  kind: 'caption',
+  name: 'Caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  caption,
+  ...overrides,
+});
+
 test('imports allowed project media and rejects unsupported extensions', () => {
   const { directory } = setup();
   const source = path.join(directory, 'voice.wav');
@@ -118,8 +168,9 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   };
   const groupId = 'recording';
   const normalized = normalizeComposition({
-    schemaVersion: 2,
+    schemaVersion: 3,
     assets: [asset],
+    keyboardCaptionSessions: [],
     clips: [
       visualClip(asset.id, {
         groupId,
@@ -168,6 +219,55 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
     shadowBlur: 40,
     shadowMode: 'solid',
   });
+});
+
+test('round-trips text and keyboard captions in the canonical composition schema', () => {
+  const normalized = normalizeComposition({
+    schemaVersion: 3,
+    assets: [],
+    keyboardCaptionSessions: ['session-keyboard', 'session-keyboard'],
+    clips: [captionClip(textCaption()), captionClip(keyboardCaption(), { id: 'clip-keyboard', order: 1 })],
+  });
+
+  assert.equal(normalized.schemaVersion, 3);
+  assert.deepEqual(normalized.keyboardCaptionSessions, ['session-keyboard']);
+  assert.equal(normalized.clips[0].caption.type, 'text');
+  assert.deepEqual(normalized.clips[1].caption, keyboardCaption());
+});
+
+test('rejects malformed keyboard captions and invalid keyboard session markers', () => {
+  const invalidCaptions = [
+    keyboardCaption({ steps: [] }),
+    keyboardCaption({ steps: [{ offsetMs: -1, modifiers: [], key: 'k' }] }),
+    keyboardCaption({
+      steps: [
+        { offsetMs: 10, modifiers: [], key: 'k' },
+        { offsetMs: 9, modifiers: [], key: 'c' },
+      ],
+    }),
+    keyboardCaption({ steps: [{ offsetMs: 0, modifiers: ['control', 'control'], key: 'k' }] }),
+    keyboardCaption({ steps: [{ offsetMs: 0, modifiers: ['unknown'], key: 'k' }] }),
+    keyboardCaption({ steps: [{ offsetMs: 0, modifiers: [], key: 'unknown' }] }),
+    keyboardCaption({ recordedPlatform: 'android' }),
+    keyboardCaption({ sourceSessionId: '' }),
+  ];
+
+  for (const caption of invalidCaptions)
+    assert.throws(
+      () =>
+        normalizeComposition({
+          schemaVersion: 3,
+          assets: [],
+          keyboardCaptionSessions: [],
+          clips: [captionClip(caption)],
+        }),
+      /caption|étape|session|type/i,
+    );
+
+  assert.throws(
+    () => normalizeComposition({ schemaVersion: 3, assets: [], keyboardCaptionSessions: [null], clips: [] }),
+    /session|caption/i,
+  );
 });
 
 test('rejects malformed and unknown composition schemas instead of returning an empty composition', () => {
@@ -266,7 +366,8 @@ test('migrates legacy composition fields and atomically persists the canonical e
 
   const migrated = store.editorState(project.id);
   assert.equal(migrated.schemaVersion, 3);
-  assert.equal(migrated.composition.schemaVersion, 2);
+  assert.equal(migrated.composition.schemaVersion, 3);
+  assert.deepEqual(migrated.composition.keyboardCaptionSessions, []);
   assert.deepEqual(migrated.presentation.canvas, {
     preset: '21:9',
     width: 2520,
@@ -287,15 +388,58 @@ test('migrates legacy composition fields and atomically persists the canonical e
   assert.equal(captionClip.caption.style.outlineColor, '#123456');
   assert.equal(captionClip.caption.style.outlineWidth, 6);
   assert.equal(captionClip.caption.style.extrusionDepth, 8);
+  assert.equal(captionClip.caption.type, 'text');
   assert.equal(Object.hasOwn(captionClip.caption.style, 'boxColor'), false);
   assert.equal(Object.hasOwn(captionClip.caption.style, 'boxPadding'), false);
   assert.equal(Object.hasOwn(captionClip.caption.style, 'boxRadius'), false);
 
   const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(rewritten.editor.schemaVersion, 3);
-  assert.equal(rewritten.editor.composition.schemaVersion, 2);
+  assert.equal(rewritten.editor.composition.schemaVersion, 3);
+  assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, []);
   assert.equal(rewritten.editor.composition.clips[0].isMirroredY, false);
   assert.equal(fs.existsSync(`${manifestPath}.tmp`), false);
+});
+
+test('migrates v2 composition to v3 and records historical project sessions once', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-v2-migration-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'V2 migration' });
+  const directory = store.directoryFor(project.id);
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.sessions = [
+    { sessionId: 'session-old', relativePath: 'session-old' },
+    { sessionId: 'session-new', relativePath: 'session-new' },
+  ];
+  const legacyText = textCaption();
+  delete legacyText.type;
+  manifest.editor = {
+    schemaVersion: 2,
+    composition: { schemaVersion: 2, assets: [], clips: [captionClip(legacyText)] },
+    zoom: { elements: [], generatedSessions: [] },
+    presentation: manifest.editor.presentation,
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const migrated = store.editorState(project.id);
+  assert.equal(migrated.composition.schemaVersion, 3);
+  assert.deepEqual(migrated.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
+  assert.equal(migrated.composition.clips[0].caption.type, 'text');
+
+  const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(rewritten.editor.schemaVersion, 3);
+  assert.equal(rewritten.editor.composition.schemaVersion, 3);
+  assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
+  assert.deepEqual(store.editorState(project.id).composition.keyboardCaptionSessions, ['session-old', 'session-new']);
+
+  const direct = migrateComposition(
+    { schemaVersion: 2, assets: [], clips: [captionClip({ ...textCaption(), type: undefined })] },
+    true,
+    ['session-old'],
+  );
+  assert.equal(direct.schemaVersion, 3);
+  assert.deepEqual(direct.keyboardCaptionSessions, ['session-old']);
 });
 
 test('preserves every supported non-custom canvas preset through editor-state persistence', () => {
@@ -338,7 +482,8 @@ test('materializes project and recording assets without persisting runtime URLs'
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'video.mp4'), 'video');
   const composition = normalizeComposition({
-    schemaVersion: 2,
+    schemaVersion: 3,
+    keyboardCaptionSessions: [],
     assets: [
       {
         id: 'asset-video',
@@ -368,7 +513,8 @@ test('prunes only project media that is no longer referenced', () => {
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'unused.mp4'), 'video');
   const previous = {
-    schemaVersion: 2,
+    schemaVersion: 3,
+    keyboardCaptionSessions: [],
     assets: [
       {
         id: 'unused',
@@ -395,7 +541,8 @@ test('persists and reads one atomic editor state', () => {
   fs.writeFileSync(source, 'video');
   const asset = store.importEditorMedia(project.id, { kind: 'video', source });
   const composition = {
-    schemaVersion: 2,
+    schemaVersion: 3,
+    keyboardCaptionSessions: [],
     assets: [{ ...asset, durationMs: 1_000 }],
     clips: [visualClip(asset.id)],
   };

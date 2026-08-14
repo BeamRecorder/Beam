@@ -143,7 +143,8 @@ const clip = (id: string, overrides: Partial<AudioClip> = {}): AudioClip => ({
 });
 
 const composition = (clips: AudioClip[] = [clip('clip-1')], assets = [asset()]): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets,
   clips,
 });

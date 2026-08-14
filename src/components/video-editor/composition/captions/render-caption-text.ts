@@ -1,5 +1,7 @@
 import type { CaptionClip } from '~/media/shared/composition-types';
 import { layoutCaptionText, type CaptionTextMeasurer } from '~/media/shared/caption-text-layout';
+import type { KeyboardCaptionRun } from '~/media/shared/keyboard-captions';
+import { keyboardCaptionTransformAtCursor } from '~/media/shared/keyboard-caption-position';
 
 export interface CaptionViewport {
   x: number;
@@ -59,6 +61,8 @@ export function drawCaptionText(
   options: {
     clip: CaptionClip;
     text: string;
+    runs?: KeyboardCaptionRun[] | null;
+    cursorPosition?: { x: number; y: number } | null;
     canvas: { width: number; height: number };
     viewport: CaptionViewport;
   },
@@ -69,12 +73,44 @@ export function drawCaptionText(
   ctx.save();
   ctx.font = canonicalFont;
   const measureText: CaptionTextMeasurer = (text) => ctx.measureText(text).width;
+  const canonicalCursor = options.cursorPosition
+    ? {
+        x:
+          ((options.cursorPosition.x - options.viewport.x) / Math.max(1, options.viewport.width)) *
+          options.canvas.width,
+        y:
+          ((options.cursorPosition.y - options.viewport.y) / Math.max(1, options.viewport.height)) *
+          options.canvas.height,
+      }
+    : null;
+  const followTransform =
+    canonicalCursor &&
+    options.clip.caption.type === 'keyboard' &&
+    options.clip.caption.followCursor &&
+    options.runs?.length
+      ? keyboardCaptionTransformAtCursor({
+          cursor: canonicalCursor,
+          canvas: options.canvas,
+          content: {
+            width:
+              options.runs.reduce((width, run) => {
+                ctx.font = `800 ${Math.max(1, style.fontSize * run.fontScale)}px sans-serif`;
+                return width + ctx.measureText(run.text).width;
+              }, 0) +
+              style.outlineWidth * 2 +
+              style.extrusionDepth,
+            height: style.fontSize * 1.2 + style.outlineWidth * 2 + style.extrusionDepth,
+          },
+        })
+      : undefined;
+  ctx.font = canonicalFont;
   const layout = layoutCaptionText({
     clip: options.clip,
     text: options.text,
     canvasWidth: options.canvas.width,
     canvasHeight: options.canvas.height,
     measureText,
+    transform: followTransform,
   });
   const scale = options.viewport.width / Math.max(1, options.canvas.width);
   const transform = layout.transform;
@@ -96,6 +132,57 @@ export function drawCaptionText(
     ctx.shadowBlur = shadowBlur;
     ctx.shadowOffsetX = style.shadowOffsetX === undefined ? offsets.x : style.shadowOffsetX * scale;
     ctx.shadowOffsetY = style.shadowOffsetY === undefined ? offsets.y : style.shadowOffsetY * scale;
+  }
+
+  if (options.runs?.length) {
+    const measured = options.runs.map((run) => {
+      const runFontSize = fontSize * run.fontScale;
+      ctx.font = `800 ${runFontSize}px sans-serif`;
+      return { ...run, fontSize: runFontSize, width: ctx.measureText(run.text).width };
+    });
+    const naturalWidth = measured.reduce((width, run) => width + run.width, 0);
+    const fitScale = Math.min(1, maxTextWidth / Math.max(1, naturalWidth));
+    const renderedWidth = naturalWidth * fitScale;
+    drawBackdropBlur(
+      ctx,
+      {
+        x: centerX - renderedWidth / 2 - strokeWidth,
+        y: centerY - fontSize / 2 - strokeWidth,
+        width: renderedWidth + strokeWidth * 2 + extrusion,
+        height: fontSize + strokeWidth * 2 + extrusion,
+      },
+      style.backdropBlur * scale,
+    );
+    let x = centerX - renderedWidth / 2;
+    for (const run of measured) {
+      const runFontSize = run.fontSize * fitScale;
+      const runWidth = run.width * fitScale;
+      const runCenter = x + runWidth / 2;
+      ctx.font = `800 ${runFontSize}px sans-serif`;
+      ctx.globalAlpha = run.opacity;
+      if (extrusion > 0) {
+        ctx.strokeStyle = style.shadowColor || 'rgba(0,0,0,.85)';
+        ctx.fillStyle = style.shadowColor || 'rgba(0,0,0,.85)';
+        ctx.lineWidth = strokeWidth * 2;
+        for (let step = Math.ceil(extrusion); step >= 1; step -= 1) {
+          const offset = Math.min(step, extrusion);
+          ctx.strokeText(run.text, runCenter + offset, centerY + offset);
+          ctx.fillText(run.text, runCenter + offset, centerY + offset);
+          ctx.shadowColor = 'transparent';
+        }
+      }
+      if (style.outlineColor !== 'transparent' && strokeWidth > 0) {
+        ctx.strokeStyle = style.outlineColor;
+        ctx.lineWidth = strokeWidth * 2;
+        ctx.strokeText(run.text, runCenter, centerY);
+        ctx.shadowColor = 'transparent';
+      }
+      ctx.fillStyle = style.color || '#ffffff';
+      ctx.fillText(run.text, runCenter, centerY);
+      x += runWidth;
+    }
+    ctx.restore();
+    return;
   }
 
   const firstY = centerY - ((layout.lines.length - 1) * lineHeight) / 2;

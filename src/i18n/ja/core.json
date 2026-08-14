@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "AI生成（Whisper）",
     "displayText": "表示テキスト",
+    "followCursor": "カーソルを追従",
+    "followCursorDescription": "このキャプションを記録されたカーソルの近くに配置します。",
     "captionText": "キャプションテキスト",
     "typeCustomText": "カスタムテキストを入力…",
     "customTextDescription": "編集すると、時間付きの文字起こしがカスタムテキストに置き換わります。",

@@ -2,7 +2,7 @@ import { defineComponent } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { CaptionClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
@@ -100,8 +100,30 @@ const visual = (overrides: Partial<VisualClip>): VisualClip => ({
   ...overrides,
 });
 
-const composition = (): ClipComposition => ({
-  schemaVersion: 2,
+const keyboardCaption = (): CaptionClip => ({
+  id: 'keyboard-caption',
+  kind: 'caption',
+  name: 'Keyboard shortcut',
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 4,
+  caption: {
+    type: 'keyboard',
+    steps: [{ offsetMs: 0, modifiers: ['control'], key: 'k' }],
+    followCursor: true,
+    recordedPlatform: 'linux',
+    sourceSessionId: 'session-1',
+    style: { ...createDefaultCaptionStyle(28), shadowDirection: 'bottom-right' },
+  },
+});
+
+const composition = (extraClips: ClipComposition['clips'] = []): ClipComposition => ({
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     asset('screen-asset', 'video'),
     asset('webcam-asset', 'video'),
@@ -127,6 +149,7 @@ const composition = (): ClipComposition => ({
       order: 3,
       isAiGenerated: true,
       caption: {
+        type: 'text',
         sentences: [],
         style: {
           ...createDefaultCaptionStyle(32),
@@ -182,6 +205,7 @@ const composition = (): ClipComposition => ({
       order: 6,
       volume: 80,
     },
+    ...extraClips,
   ],
 });
 
@@ -341,6 +365,33 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:clip')).toContainEqual(['screen-clip']);
     await mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').trigger('click');
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+  });
+
+  it('keeps the keyboard track above text, uses Lucide icons, and reserves manual additions for text', async () => {
+    const mounted = await mountTracks({ composition: composition([keyboardCaption()]) });
+    const rows = mounted!.findAll('.tracks-stack > .track-row');
+    const keyboardIndex = rows.findIndex((row) => row.classes().includes('keyboard-caption-track'));
+    const textIndex = rows.findIndex((row) => row.classes().includes('text-caption-track'));
+
+    expect(keyboardIndex).toBeGreaterThanOrEqual(0);
+    expect(keyboardIndex).toBeLessThan(textIndex);
+    expect(mounted!.get('.keyboard-caption-track .track-icon').classes()).toEqual(
+      expect.arrayContaining(['lucide', 'lucide-keyboard']),
+    );
+    expect(mounted!.get('.text-caption-track .track-icon').classes()).toEqual(
+      expect.arrayContaining(['lucide', 'lucide-type']),
+    );
+
+    await mounted!.get('.keyboard-caption-track .track-content').trigger('click', { clientX: 950 });
+    expect(mounted!.emitted('add:caption') ?? []).toHaveLength(0);
+    await mounted!.get('.text-caption-track .track-content').trigger('click', { clientX: 950 });
+    expect(mounted!.emitted('add:caption')).toContainEqual([7_300]);
+  });
+
+  it('does not render a keyboard track when the composition has no keyboard caption', async () => {
+    const mounted = await mountTracks();
+    expect(mounted!.find('.keyboard-caption-track').exists()).toBe(false);
+    expect(mounted!.find('.text-caption-track').exists()).toBe(true);
   });
 
   it('forwards per-clip waveform slices, loading status, and real errors to TimelineClip', async () => {

@@ -22,10 +22,11 @@ const Select = {
   template: '<button class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button>',
 };
 const Switch = {
+  inheritAttrs: true,
   props: ['modelValue'],
   emits: ['update:modelValue'],
   template:
-    '<button class="wrap-switch" role="switch" :aria-checked="String(modelValue)" @click="$emit(\'update:modelValue\', false)">Wrap</button>',
+    '<button v-bind="$attrs" class="wrap-switch" role="switch" :aria-checked="String(modelValue)" @click="$emit(\'update:modelValue\', false)">Wrap</button>',
 };
 const Button = {
   emits: ['click'],
@@ -45,6 +46,7 @@ const clip = {
   order: 0,
   isAiGenerated: true,
   caption: {
+    type: 'text',
     sentences: [
       {
         id: 'sentence-1',
@@ -82,6 +84,7 @@ describe('CaptionClipPanel', () => {
     expect(wrapper.findAll('.caption-slider')).toHaveLength(5);
     expect(wrapper.findAll('.color-picker-stub')).toHaveLength(3);
     expect(wrapper.get('.wrap-switch').attributes('aria-checked')).toBe('true');
+    expect(wrapper.find('.follow-cursor-setting').exists()).toBe(false);
     await wrapper.get('.wrap-switch').trigger('click');
     await wrapper.find('input[placeholder="Type custom text..."]').setValue('Custom caption');
     await wrapper.find('input[placeholder="Type custom text..."]').trigger('blur');

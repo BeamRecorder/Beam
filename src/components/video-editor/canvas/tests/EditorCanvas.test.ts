@@ -182,7 +182,8 @@ const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'screen-asset',

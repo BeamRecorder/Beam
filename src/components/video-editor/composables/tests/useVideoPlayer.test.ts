@@ -41,7 +41,8 @@ vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlayback 
 
 const backgrounds = createBackgroundMedia(['/built-in.png', '/clip.mp4']);
 const composition: ClipComposition = {
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [],
   clips: [
     {

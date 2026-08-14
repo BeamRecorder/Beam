@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "Создано ИИ (Whisper)",
     "displayText": "Отображаемый текст",
+    "followCursor": "Следовать за курсором",
+    "followCursorDescription": "Размещает субтитр рядом с записанным курсором.",
     "captionText": "Текст субтитров",
     "typeCustomText": "Введите собственный текст…",
     "customTextDescription": "Редактирование заменит синхронизированную расшифровку вашим текстом.",

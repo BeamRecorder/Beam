@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "AI 產生（Whisper）",
     "displayText": "顯示文字",
+    "followCursor": "跟隨游標",
+    "followCursorDescription": "將此字幕保持在錄製游標旁邊。",
     "captionText": "字幕文字",
     "typeCustomText": "輸入自訂文字…",
     "customTextDescription": "編輯此內容會以自訂文字取代定時轉錄內容。",

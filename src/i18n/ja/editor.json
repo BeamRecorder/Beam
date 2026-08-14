@@ -36,6 +36,8 @@
     "zoom": "ズーム",
     "cursor": "カーソル",
     "captions": "キャプション",
+    "keyboardCaptions": "キーボードショートカット",
+    "textCaptions": "テキストキャプション",
     "audio": "オーディオ",
     "settings": "設定",
     "logo": "ロゴ"

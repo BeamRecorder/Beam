@@ -80,6 +80,8 @@
   "CaptionClipPanel": {
     "generatedByAI": "Generato dall'IA (Whisper)",
     "displayText": "Testo visualizzato",
+    "followCursor": "Segui il cursore",
+    "followCursorDescription": "Mantiene questa didascalia accanto al cursore registrato.",
     "captionText": "Testo della didascalia",
     "typeCustomText": "Digita testo personalizzato…",
     "customTextDescription": "La modifica sostituisce la trascrizione sincronizzata con il testo personalizzato.",

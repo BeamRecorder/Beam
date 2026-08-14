@@ -17,6 +17,7 @@ const captionClip = (id = 'caption-1'): CaptionClip => ({
   enabled: true,
   order: 0,
   caption: {
+    type: 'text',
     style: {
       ...createDefaultCaptionStyle(36),
       color: '#ffffff',

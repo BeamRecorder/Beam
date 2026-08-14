@@ -36,6 +36,8 @@
     "zoom": "Zoom",
     "cursor": "Curseur",
     "captions": "Sous-titres",
+    "keyboardCaptions": "Raccourcis clavier",
+    "textCaptions": "Sous-titres texte",
     "audio": "Audio",
     "settings": "Paramètres",
     "logo": "Logo"

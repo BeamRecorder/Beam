@@ -9,6 +9,7 @@ import {
 } from '~/media/shared/composition-types';
 import { createComposition } from './engine/clip-engine';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { keyboardCaptionClipsFromInput } from '~/media/shared/keyboard-captions';
 
 const milliseconds = (nanoseconds: number | null | undefined) =>
   Math.max(0, Math.round((nanoseconds ?? 0) / 1_000_000));
@@ -134,6 +135,7 @@ export function synchronizeRecordingClips(
   const existingIds = new Set(clips.map((clip) => clip.id));
   const fallbackEndNs = editorData.manifest.durationNs;
   const candidates: Clip[] = [];
+  const keyboardCaptionSessions = [...composition.keyboardCaptionSessions];
   let assetsChanged = false;
 
   for (const track of editorData.tracks) {
@@ -199,8 +201,27 @@ export function synchronizeRecordingClips(
     });
   }
 
+  const sessionHasMaterializedSource =
+    Boolean(editorData.videoSrc) ||
+    editorData.tracks.some((track) =>
+      track.assets.some((asset) => asset.complete && asset.exists && Boolean(asset.src)),
+    );
+  if (sessionHasMaterializedSource && !keyboardCaptionSessions.includes(editorData.sessionId)) {
+    keyboardCaptionSessions.push(editorData.sessionId);
+    if (editorData.recordedPlatform && editorData.interactions) {
+      for (const clip of keyboardCaptionClipsFromInput(
+        editorData.interactions,
+        editorData.sessionId,
+        editorData.recordedPlatform,
+      )) {
+        if (!existingIds.has(clip.id)) candidates.push(clip);
+      }
+    }
+  }
+
   const groups = new Map<string, Clip[]>();
   for (const clip of candidates) {
+    if (clip.kind === 'caption') continue;
     const key = `${clip.timelineStartMs}:${clip.timelineDurationMs}`;
     const group = groups.get(key) ?? [];
     group.push(clip);
@@ -214,6 +235,11 @@ export function synchronizeRecordingClips(
     });
   }
 
-  if (!assetsChanged && candidates.length === 0) return composition;
-  return createComposition([...assets.values()], [...clips, ...candidates]);
+  if (
+    !assetsChanged &&
+    candidates.length === 0 &&
+    keyboardCaptionSessions.length === composition.keyboardCaptionSessions.length
+  )
+    return composition;
+  return createComposition([...assets.values()], [...clips, ...candidates], keyboardCaptionSessions);
 }

@@ -206,6 +206,7 @@ const editorData = (): ProjectEditorData => ({
     },
   ],
   cursor: { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] },
+  recordedPlatform: null,
   zoom: { elements: [], generatedSessions: [] },
 });
 

@@ -13,7 +13,8 @@ const whisper = vi.hoisted(() => ({
 }));
 const createComposition = vi.hoisted(() =>
   vi.fn((assets: ClipComposition['assets'], clips: ClipComposition['clips']): ClipComposition => ({
-    schemaVersion: 2,
+    schemaVersion: 3,
+    keyboardCaptionSessions: [],
     assets,
     clips,
   })),
@@ -38,7 +39,8 @@ const Select = {
 const ProgressBar = { template: '<div class="progress-stub" />' };
 
 const audioComposition: ClipComposition = {
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'audio-1',
@@ -85,6 +87,7 @@ const aiCaption: CaptionClip = {
   order: 1,
   isAiGenerated: true,
   caption: {
+    type: 'text',
     sentences: [],
     style: {
       color: '#fff',

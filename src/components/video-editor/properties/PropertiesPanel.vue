@@ -15,18 +15,15 @@ import ClipPropertiesPanel from '~/components/video-editor/properties/clip/ClipP
 import AudioClipPropertiesPanel from '~/components/video-editor/properties/clip/AudioClipPropertiesPanel.vue';
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
+import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
-import type {
-  CaptionClip,
-  ClipComposition,
-  ClipFrame,
-  NormalizedTransform,
-} from '~/media/shared/composition-types';
+import type { CaptionClip, ClipComposition, ClipFrame, NormalizedTransform } from '~/media/shared/composition-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import type { ShadowDirection } from './cursor/shadow-types';
 import type { CursorClickEffects, CursorMotionSettings } from '../../../api/types/cursor-settings';
 import { useTranslate } from '~/i18n/useTranslate';
+import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
 
 const { t } = useTranslate('PropertiesPanel');
 export interface SelectedClipProperties {
@@ -173,6 +170,12 @@ const emit = defineEmits<{
         :clip="normalizedSelectedClip"
         @update:volume="emit('update:clip-volume', $event)"
         @update:enabled="emit('update:clip-enabled', $event)"
+        @delete="emit('delete-clip')"
+      />
+      <KeyboardCaptionClipPanel
+        v-else-if="activeTab === 'clip' && selectedCaptionClip && isKeyboardCaptionClip(selectedCaptionClip)"
+        :clip="selectedCaptionClip"
+        @update="emit('update:caption', $event)"
         @delete="emit('delete-clip')"
       />
       <CaptionClipPanel

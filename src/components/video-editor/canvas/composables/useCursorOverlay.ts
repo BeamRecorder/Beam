@@ -222,5 +222,26 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     });
   };
 
-  return { customCursorImage, updateAndDrawRipplesAndCursor };
+  const cursorPositionForKeyboardCaption = (
+    videoWindow: { dx: number; dy: number; dw: number; dh: number; focusX: number; focusY: number; scale: number },
+    videoWidth: number,
+    videoHeight: number,
+  ) => {
+    const cursorData = options.editorData()?.cursor;
+    const screen = options.screenClip();
+    const image = customCursorImage.value;
+    if (!cursorData?.available || !screen || !options.isScreenEnabled() || !image?.complete || image.naturalWidth <= 0)
+      return null;
+    const time = options.currentTime();
+    const state = cursorStateAt(cursorData.events, time);
+    const motionState = playerFor(cursorData.events, videoWidth, videoHeight).sample(time, state);
+    if (!state?.visible || !motionState?.visible) return null;
+    const raw = positionAt(motionState, videoWindow, videoWidth, videoHeight);
+    return {
+      x: videoWindow.dx + videoWindow.dw / 2 + videoWindow.scale * (raw.x - videoWindow.focusX),
+      y: videoWindow.dy + videoWindow.dh / 2 + videoWindow.scale * (raw.y - videoWindow.focusY),
+    };
+  };
+
+  return { customCursorImage, cursorPositionForKeyboardCaption, updateAndDrawRipplesAndCursor };
 }

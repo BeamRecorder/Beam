@@ -59,7 +59,8 @@ type WaveformWorkerResponse =
     };
 
 const composition = (volume = 100, source = 'https://media.test/sound.mp4'): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'audio',
@@ -460,7 +461,7 @@ describe('useCompositionAudioWaveforms', () => {
   });
 
   it('keeps empty compositions inert and ignores clips without a source', async () => {
-    mountComposable({ schemaVersion: 2, assets: [], clips: [] });
+    mountComposable({ schemaVersion: 3, assets: [], clips: [], keyboardCaptionSessions: [] });
     await flushPromises();
     expect(state.slices.value).toEqual({});
     expect(waveformWorkerState.instances).toHaveLength(0);

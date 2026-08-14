@@ -36,6 +36,8 @@
     "zoom": "缩放",
     "cursor": "光标",
     "captions": "字幕",
+    "keyboardCaptions": "键盘快捷键",
+    "textCaptions": "文本字幕",
     "audio": "音频",
     "settings": "设置",
     "logo": "徽标"

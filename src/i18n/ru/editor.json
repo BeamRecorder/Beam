@@ -36,6 +36,8 @@
     "zoom": "Масштаб",
     "cursor": "Курсор",
     "captions": "Субтитры",
+    "keyboardCaptions": "Сочетания клавиш",
+    "textCaptions": "Текстовые субтитры",
     "audio": "Аудио",
     "settings": "Настройки",
     "logo": "Логотип"

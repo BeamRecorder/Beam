@@ -9,17 +9,21 @@ const { migratePresentation, presentationState, zoomState } = require('./project
 function createProjectEditorAccess(options) {
   const migrateEditor = (directory, manifest) => {
     const current = manifest.editor;
-    if (current?.schemaVersion === 3) return current;
-    if (current?.schemaVersion !== undefined && current.schemaVersion !== 2)
+    if (current?.schemaVersion === 3 && current.composition?.schemaVersion === 3) return current;
+    if (current?.schemaVersion !== undefined && ![2, 3].includes(current.schemaVersion))
       throw new Error(`Version d’état éditeur inconnue: ${String(current.schemaVersion)}`);
     const legacyComposition = current?.composition ?? { schemaVersion: 1, assets: [], clips: [] };
     const presentation = migratePresentation(current?.presentation);
     const editor = {
       schemaVersion: 3,
       composition:
-        legacyComposition.schemaVersion === 1
-          ? migrateComposition(legacyComposition, presentation.canvas.showBackground)
-          : normalizeComposition(legacyComposition),
+        legacyComposition.schemaVersion === 3
+          ? normalizeComposition(legacyComposition)
+          : migrateComposition(
+              legacyComposition,
+              presentation.canvas.showBackground,
+              Array.isArray(manifest.sessions) ? manifest.sessions.map((session) => session.sessionId) : [],
+            ),
       zoom: current?.zoom ? zoomState(current.zoom) : { elements: [], generatedSessions: [] },
       presentation,
     };

@@ -104,7 +104,8 @@ beforeEach(() => {
 describe('export preflight', () => {
   it('uses the maximum measured FPS and keeps screen dimensions', async () => {
     const composition: ClipComposition = {
-      schemaVersion: 2,
+      schemaVersion: 3,
+      keyboardCaptionSessions: [],
       assets: [asset('slow'), asset('fast')],
       clips: [visual('screen', 'slow', 'screen'), visual('overlay', 'fast')],
     };
@@ -115,19 +116,25 @@ describe('export preflight', () => {
   });
 
   it('uses exactly 30 FPS when no active video exists', async () => {
-    const prepared = await prepareExport(request({ schemaVersion: 2, assets: [], clips: [] }));
+    const prepared = await prepareExport(
+      request({ schemaVersion: 3, keyboardCaptionSessions: [], assets: [], clips: [] }),
+    );
     expect(prepared.fps).toBe(30);
     expect(runtime.openMediaInput).not.toHaveBeenCalled();
   });
 
   it('rejects active missing assets but ignores disabled broken assets', async () => {
     const disabled = visual('disabled', 'missing', 'video', false);
-    await expect(prepareExport(request({ schemaVersion: 2, assets: [], clips: [disabled] }))).resolves.toMatchObject({
+    await expect(
+      prepareExport(request({ schemaVersion: 3, keyboardCaptionSessions: [], assets: [], clips: [disabled] })),
+    ).resolves.toMatchObject({
       fps: 30,
     });
 
     const active = { ...disabled, id: 'active', enabled: true };
-    await expect(prepareExport(request({ schemaVersion: 2, assets: [], clips: [active] }))).rejects.toMatchObject({
+    await expect(
+      prepareExport(request({ schemaVersion: 3, keyboardCaptionSessions: [], assets: [], clips: [active] })),
+    ).rejects.toMatchObject({
       issue: { code: 'missing-asset', clipId: 'active' },
     });
   });
@@ -135,13 +142,22 @@ describe('export preflight', () => {
   it('rejects GIFs and unavailable frame rates explicitly', async () => {
     const gif = asset('gif', 'image', 'animation.gif');
     await expect(
-      prepareExport(request({ schemaVersion: 2, assets: [gif], clips: [visual('gif-clip', gif.id, 'image')] })),
+      prepareExport(
+        request({
+          schemaVersion: 3,
+          keyboardCaptionSessions: [],
+          assets: [gif],
+          clips: [visual('gif-clip', gif.id, 'image')],
+        }),
+      ),
     ).rejects.toMatchObject({ issue: { code: 'unsupported-format', message: 'GIF not supported' } });
 
     runtime.openMediaInput.mockResolvedValueOnce(openedVideo(Number.NaN));
     const video = asset('broken-fps');
     await expect(
-      prepareExport(request({ schemaVersion: 2, assets: [video], clips: [visual('video', video.id)] })),
+      prepareExport(
+        request({ schemaVersion: 3, keyboardCaptionSessions: [], assets: [video], clips: [visual('video', video.id)] }),
+      ),
     ).rejects.toMatchObject({ issue: { code: 'fps-unavailable', assetId: 'broken-fps' } });
   });
 });

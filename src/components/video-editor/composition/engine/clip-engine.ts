@@ -52,11 +52,16 @@ const normalizeOrders = (clips: Clip[]) =>
     )
     .map((clip, order) => ({ ...clip, order }));
 
-export const createComposition = (assets: MediaAsset[] = [], clips: Clip[] = []): ClipComposition => {
+export const createComposition = (
+  assets: MediaAsset[] = [],
+  clips: Clip[] = [],
+  keyboardCaptionSessions: string[] = [],
+): ClipComposition => {
   const composition: ClipComposition = {
     schemaVersion: COMPOSITION_SCHEMA_VERSION,
     assets: cloneValue(assets),
     clips: normalizeOrders(normalizeGroups(cloneValue(clips))),
+    keyboardCaptionSessions: [...new Set(keyboardCaptionSessions)],
   };
   validateComposition(composition);
   return composition;
@@ -67,7 +72,9 @@ export function validateComposition(composition: ClipComposition): void {
     !composition ||
     composition.schemaVersion !== COMPOSITION_SCHEMA_VERSION ||
     !Array.isArray(composition.assets) ||
-    !Array.isArray(composition.clips)
+    !Array.isArray(composition.clips) ||
+    !Array.isArray(composition.keyboardCaptionSessions) ||
+    composition.keyboardCaptionSessions.some((sessionId) => typeof sessionId !== 'string' || !sessionId)
   ) {
     throw new CompositionEngineError('Invalid composition schema.');
   }
@@ -119,8 +126,17 @@ export function validateComposition(composition: ClipComposition): void {
     }
     if (clip.kind !== 'caption' && !assetIds.has(clip.assetId))
       throw new CompositionEngineError(`Missing asset for clip: ${clip.id}`);
-    if (clip.kind === 'caption' && (!clip.caption || !Array.isArray(clip.caption.sentences)))
-      throw new CompositionEngineError('Invalid caption clip.');
+    if (clip.kind === 'caption') {
+      const caption = clip.caption;
+      const textCaption = caption?.type === 'text' && Array.isArray(caption.sentences);
+      const keyboardCaption =
+        caption?.type === 'keyboard' &&
+        Array.isArray(caption.steps) &&
+        caption.steps.length > 0 &&
+        typeof caption.followCursor === 'boolean' &&
+        Boolean(caption.sourceSessionId);
+      if (!textCaption && !keyboardCaption) throw new CompositionEngineError('Invalid caption clip.');
+    }
     if (
       isVisualClip(clip) &&
       (![clip.transform.x, clip.transform.y, clip.transform.width, clip.transform.height].every(finite) ||

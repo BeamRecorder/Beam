@@ -62,6 +62,7 @@ const caption = (): CaptionClip => ({
   order: 5,
   transform: { x: 0.2, y: 0.3, width: 0.6, height: 0.2 },
   caption: {
+    type: 'text',
     sentences: [{ id: 'sentence', text: 'Hello', startMs: 200, endMs: 900, words: [] }],
     style: {
       color: '#fff',
@@ -78,8 +79,22 @@ const caption = (): CaptionClip => ({
   },
 });
 
+const keyboardCaption = (): CaptionClip => ({
+  ...caption(),
+  id: 'keyboard-caption',
+  caption: {
+    type: 'keyboard',
+    steps: [{ offsetMs: 0, modifiers: ['control'], key: 'k' }],
+    followCursor: true,
+    recordedPlatform: 'windows',
+    sourceSessionId: 'session-1',
+    style: caption().caption.style,
+  },
+});
+
 const composition = (): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'image-asset',
@@ -183,6 +198,7 @@ const mountComposable = (initialComposition = composition()) => {
   ]);
   const frameFor = vi.fn((clipId: string) => frames.get(clipId) ?? null);
   const onRenderOnce = vi.fn();
+  const keyboardCursorPosition = ref<{ x: number; y: number } | null>(null);
   const Harness = defineComponent({
     setup() {
       state = useCompositionMedia({
@@ -194,13 +210,14 @@ const mountComposable = (initialComposition = composition()) => {
         isCropping: () => false,
         outputCanvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, width: 1_600, height: 900 }),
         captionViewport: () => ({ x: 0, y: 0, width: 800, height: 450 }),
+        keyboardCursorPosition: () => keyboardCursorPosition.value,
         onRenderOnce,
       });
       return () => h('div');
     },
   });
   wrapper = mount(Harness);
-  return { compositionRef, currentTime, selected, draft, frameFor, frames, onRenderOnce };
+  return { compositionRef, currentTime, selected, draft, frameFor, frames, onRenderOnce, keyboardCursorPosition };
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -325,6 +342,27 @@ describe('useCompositionMedia', () => {
       expect.any(Number),
       expect.any(Number),
     );
+  });
+
+  it('uses the preview cursor position for keyboard captions and falls back to fixed placement', () => {
+    const keyboard = keyboardCaption();
+    const base = composition();
+    const mounted = mountComposable({
+      ...base,
+      clips: [...base.clips.filter((clip) => clip.kind !== 'caption'), keyboard],
+    });
+    const fixed = context();
+    state.drawComposition(fixed, { dx: 0, dy: 0, dw: 800, dh: 450 }, 'keyboard-caption');
+    const fixedX = (fixed.fillText as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as number;
+
+    mounted.keyboardCursorPosition.value = { x: 700, y: 350 };
+    const followed = context();
+    state.drawComposition(followed, { dx: 0, dy: 0, dw: 800, dh: 450 }, 'keyboard-caption');
+    const followedX = (followed.fillText as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as number;
+
+    expect(fixedX).toBeDefined();
+    expect(followedX).toBeDefined();
+    expect(followedX).not.toBe(fixedX);
   });
 
   it('applies transform drafts and omits crop while cropping', async () => {

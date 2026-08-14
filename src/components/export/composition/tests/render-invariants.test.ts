@@ -23,7 +23,8 @@ const appearance: ClipAppearance = {
 };
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'screen-asset',
@@ -219,6 +220,7 @@ describe('composition rendering invariants', () => {
         enabled: true,
         order: 999,
         caption: {
+          type: 'text',
           sentences: [{ id: 's', text: 'Foreground', startMs: 0, endMs: 1_000, words: [] }],
           style: {
             color: '#fff',
