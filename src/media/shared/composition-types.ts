@@ -1,4 +1,4 @@
-export const COMPOSITION_SCHEMA_VERSION = 1 as const;
+export const COMPOSITION_SCHEMA_VERSION = 2 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -37,17 +37,16 @@ export interface CaptionSentence {
 export interface CaptionStyle {
   color: string;
   fontSize: number;
-  /** Wrap text to the annotation width. Missing values from older projects default to enabled. */
-  wrap?: boolean;
+  wrap: boolean;
   shadowColor: string;
   shadowBlur: number;
   shadowDirection?: 'all' | 'bottom' | 'bottom-right' | 'top-left';
   shadowOffsetX?: number;
   shadowOffsetY?: number;
-  backdropBlur?: number;
-  boxColor?: string;
-  boxPadding?: number;
-  boxRadius?: number;
+  backdropBlur: number;
+  outlineColor: string;
+  outlineWidth: number;
+  extrusionDepth: number;
   placement: 'top' | 'center' | 'bottom';
   customText?: string;
 }
@@ -62,8 +61,8 @@ export type ClipShadowMode = 'solid' | 'adaptive';
 
 export interface WebcamAppearance {
   shadowSize: ClipShadowSize;
-  shadowBlur?: number;
-  shadowMode?: ClipShadowMode;
+  shadowBlur: number;
+  shadowMode: ClipShadowMode;
   cornerRadius: 'none' | 'sm' | 'md' | 'lg' | 'full' | number;
 }
 
@@ -118,9 +117,9 @@ export interface VisualClip extends ClipBase {
   assetId: string;
   transform: NormalizedTransform;
   crop?: NormalizedCrop;
-  appearance?: ClipAppearance;
-  isMirrored?: boolean;
-  isMirroredY?: boolean;
+  appearance: ClipAppearance;
+  isMirrored: boolean;
+  isMirroredY: boolean;
 }
 
 export interface AudioClip extends ClipBase {

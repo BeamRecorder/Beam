@@ -3,13 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const { kindFor } = require('../backgrounds/background-library.cjs');
-const {
-  emptyComposition,
-  normalizeComposition,
-  materializeComposition,
-  importMedia,
-  pruneProjectMedia,
-} = require('./clip-composition.cjs');
+const { emptyComposition, importMedia } = require('./clip-composition.cjs');
+const { createDefaultPresentation, zoomState } = require('./project-editor-state.cjs');
+const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
@@ -162,132 +158,6 @@ function createProjectStore(root) {
       sessionCount: sessions.length,
       previewSrc: previewFor(directory, manifest, sessions),
       thumbnailSrc: thumbnailFor(directory),
-    };
-  };
-  const zoomState = (value) => {
-    if (!value || !Array.isArray(value.elements) || !Array.isArray(value.generatedSessions))
-      return { elements: [], generatedSessions: [] };
-    const ids = new Set();
-    const elements = value.elements.map((element) => {
-      if (
-        !element ||
-        typeof element.id !== 'string' ||
-        !element.id ||
-        ids.has(element.id) ||
-        typeof element.sessionId !== 'string' ||
-        !Number.isFinite(element.startMs) ||
-        !Number.isFinite(element.endMs) ||
-        element.endMs <= element.startMs ||
-        !element.focus ||
-        !Number.isFinite(element.focus.cx) ||
-        !Number.isFinite(element.focus.cy) ||
-        element.focus.cx < 0 ||
-        element.focus.cx > 1 ||
-        element.focus.cy < 0 ||
-        element.focus.cy > 1 ||
-        ![1, 2, 3, 4, 5, 6].includes(element.depth) ||
-        !['auto', 'manual'].includes(element.mode)
-      )
-        throw new Error('Propriétés de zoom invalides');
-      ids.add(element.id);
-      return {
-        id: element.id,
-        sessionId: element.sessionId,
-        startMs: Math.round(element.startMs),
-        endMs: Math.round(element.endMs),
-        focus: { cx: element.focus.cx, cy: element.focus.cy },
-        depth: element.depth,
-        mode: element.mode,
-      };
-    });
-    const generatedSessions = value.generatedSessions.map((record) => {
-      if (
-        !record ||
-        typeof record.sessionId !== 'string' ||
-        !record.sessionId ||
-        !Number.isInteger(record.algorithmVersion) ||
-        typeof record.generatedAt !== 'string'
-      )
-        throw new Error('Métadonnées de génération invalides');
-      return {
-        sessionId: record.sessionId,
-        algorithmVersion: record.algorithmVersion,
-        generatedAt: record.generatedAt,
-      };
-    });
-    return { elements, generatedSessions };
-  };
-  const defaultCursorEffects = () => ({
-    left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
-    right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
-  });
-  const cursorEffectState = (value, fallback) => {
-    const input = value && typeof value === 'object' ? value : {};
-    const number = (candidate, defaultValue, min, max) =>
-      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue;
-    const boolean = (candidate, defaultValue) => (typeof candidate === 'boolean' ? candidate : defaultValue);
-    const color = (candidate, defaultValue) => (typeof candidate === 'string' && candidate ? candidate : defaultValue);
-    return {
-      springEnabled: boolean(input.springEnabled, fallback.springEnabled),
-      springIntensity: number(input.springIntensity, fallback.springIntensity, 0, 100),
-      rippleEnabled: boolean(input.rippleEnabled, fallback.rippleEnabled),
-      rippleSize: number(input.rippleSize, fallback.rippleSize, 10, 80),
-      rippleColor: color(input.rippleColor, fallback.rippleColor),
-    };
-  };
-  const cursorEffectsState = (value) => {
-    const defaults = defaultCursorEffects();
-    const input = value && typeof value === 'object' ? value : {};
-    return {
-      left: cursorEffectState(input.left, defaults.left),
-      right: cursorEffectState(input.right, defaults.right),
-    };
-  };
-  const defaultCursorMotion = () => ({
-    preset: 'smooth',
-    smoothing: 0.67,
-    springMassMultiplier: 1.29,
-    motionBlur: 0.4,
-  });
-  const cursorMotionState = (value) => {
-    const fallback = defaultCursorMotion();
-    const input = value && typeof value === 'object' ? value : {};
-    const number = (candidate, defaultValue, min, max) =>
-      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue;
-    const preset = ['focused', 'smooth', 'custom'].includes(input.preset) ? input.preset : fallback.preset;
-    return {
-      preset,
-      smoothing: number(input.smoothing, fallback.smoothing, 0, 1),
-      springMassMultiplier: number(input.springMassMultiplier, fallback.springMassMultiplier, 0.5, 2),
-      motionBlur: number(input.motionBlur, fallback.motionBlur, 0, 1),
-    };
-  };
-  const presentationState = (value) => {
-    const next = value || {};
-    const canvasInput = next.canvas || {};
-    const preset = ['16:9', '9:16', '1:1', '4:5', 'custom'].includes(canvasInput.preset) ? canvasInput.preset : '16:9';
-    const presets = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
-    const [presetWidth, presetHeight] = presets[preset] || [];
-    const width = preset === 'custom' ? Math.max(1, Math.round(canvasInput.width)) : presetWidth;
-    const height = preset === 'custom' ? Math.max(1, Math.round(canvasInput.height)) : presetHeight;
-    if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('Dimensions du canvas invalides');
-    return {
-      canvas: {
-        preset,
-        width,
-        height,
-        showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : true,
-      },
-      selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
-      background: next.background && typeof next.background === 'object' ? next.background : null,
-      blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
-      importedBackgrounds: Array.isArray(next.importedBackgrounds)
-        ? next.importedBackgrounds.filter(
-            (item) => item && typeof item.id === 'string' && typeof item.path === 'string',
-          )
-        : [],
-      cursorEffects: cursorEffectsState(next.cursorEffects),
-      cursorMotion: cursorMotionState(next.cursorMotion),
     };
   };
   const readJsonArray = (file) => {
@@ -448,32 +318,13 @@ function createProjectStore(root) {
       if (!names.has(`${baseName} ${suffix}`)) return `${baseName} ${suffix}`;
     throw new Error('Impossible de générer un nom de projet unique');
   };
-  const editorState = (id) => {
-    const directory = directoryFor(id);
-    const manifest = readManifest(directory);
-    const editor = manifest.editor || {};
-    const composition = normalizeComposition(editor.composition || emptyComposition());
-    return {
-      schemaVersion: 2,
-      composition: materializeComposition(directory, composition, sessionFileFor, mediaUrlFor),
-      zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] },
-      presentation: presentationState(editor.presentation),
-    };
-  };
-  const saveEditorState = (id, value) => {
-    if (!value || value.schemaVersion !== 2) throw new Error('État éditeur invalide');
-    const directory = directoryFor(id);
-    const manifest = readManifest(directory);
-    const previous = normalizeComposition(manifest.editor?.composition || emptyComposition());
-    const composition = normalizeComposition(value.composition);
-    const zoom = zoomState(value.zoom);
-    const presentation = presentationState(value.presentation);
-    pruneProjectMedia(directory, previous, composition);
-    manifest.editor = { composition, zoom, presentation };
-    manifest.updatedAtUtc = new Date().toISOString();
-    writeManifest(directory, manifest);
-    return editorState(id);
-  };
+  const { editorState, saveEditorState } = createProjectEditorAccess({
+    directoryFor,
+    readManifest,
+    writeManifest,
+    sessionFileFor,
+    mediaUrlFor,
+  });
   const applyPendingRenames = () => {
     for (const directory of projectDirectories()) {
       let manifest;
@@ -575,9 +426,10 @@ function createProjectStore(root) {
         updatedAtUtc: now,
         sessions: [],
         editor: {
+          schemaVersion: 3,
           composition: emptyComposition(),
           zoom: { elements: [], generatedSessions: [] },
-          presentation: presentationState(),
+          presentation: createDefaultPresentation(),
         },
       };
       writeManifest(directory, manifest);

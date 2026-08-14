@@ -5,6 +5,7 @@ import { useClipComposition } from '../useClipComposition';
 import type { CaptureProject, ProjectEditorData } from '../../../../api/types/capture-api';
 import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import type { DroppedMediaInspection } from '~/media/shared/media-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const { capture, getAudioTracks } = vi.hoisted(() => ({
   capture: { pickProjectMedia: vi.fn() },
@@ -360,6 +361,9 @@ describe('useClipComposition', () => {
       enabled: true,
       order: 4,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('image'),
+      isMirrored: false,
+      isMirroredY: false,
     };
     const current: ClipComposition = mounted.state.composition.value;
     mounted.state.composition.value = {

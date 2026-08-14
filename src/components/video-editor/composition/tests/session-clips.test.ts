@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../../api/types/capture-api';
 import { emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
   path: 'segment.webm',
@@ -170,6 +171,9 @@ describe('synchronizeRecordingClips', () => {
           enabled: true,
           order: 1,
           transform: { x: 0, y: 0, width: 1, height: 1 },
+          appearance: createDefaultClipAppearance('screen'),
+          isMirrored: false,
+          isMirroredY: false,
         },
       ],
     };
@@ -212,6 +216,9 @@ describe('synchronizeRecordingClips', () => {
           enabled: true,
           order: 30000,
           transform: { x: 0, y: 0, width: 1, height: 1 },
+          appearance: createDefaultClipAppearance('screen'),
+          isMirrored: false,
+          isMirroredY: false,
         },
       ],
     };

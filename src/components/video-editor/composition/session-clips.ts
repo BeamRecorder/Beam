@@ -8,6 +8,7 @@ import {
   type VisualClip,
 } from '~/media/shared/composition-types';
 import { createComposition } from './engine/clip-engine';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const milliseconds = (nanoseconds: number | null | undefined) =>
   Math.max(0, Math.round((nanoseconds ?? 0) / 1_000_000));
@@ -112,6 +113,9 @@ const sessionClip = (
     kind: track.kind === 'camera' ? 'webcam' : 'screen',
     assetId: id,
     transform: track.kind === 'camera' ? placement(track) : { x: 0, y: 0, width: 1, height: 1 },
+    appearance: createDefaultClipAppearance(track.kind === 'camera' ? 'webcam' : 'screen'),
+    isMirrored: false,
+    isMirroredY: false,
   } satisfies VisualClip;
 };
 
@@ -189,6 +193,9 @@ export function synchronizeRecordingClips(
       enabled: true,
       order: 30_000,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('screen'),
+      isMirrored: false,
+      isMirroredY: false,
     });
   }
 

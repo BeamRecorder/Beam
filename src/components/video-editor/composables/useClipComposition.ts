@@ -17,6 +17,7 @@ import {
   type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   addClip,
   createComposition,
@@ -36,24 +37,6 @@ import {
   updateClip,
 } from '../composition/engine/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
-
-const DEFAULT_APPEARANCE: ClipAppearance = {
-  cornerRadius: 'sm',
-  shadowSize: 'md',
-  shadowBlur: 20,
-  shadowMode: 'solid',
-  shadowColor: '#000000',
-  shadowDirection: 'all',
-  borderEnabled: false,
-  borderColor: '#000000',
-  borderWidth: 1,
-  frame: 'none',
-  frameTitle: '',
-  frameColor: '#c0c0c0',
-  frameShowMenu: true,
-  frameShowScrollbars: true,
-  frameChromeScale: 1,
-};
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
@@ -88,10 +71,10 @@ export function useClipComposition(options: {
       ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
       ...(isVisualClip(clip)
         ? {
-            isMirrored: clip.isMirrored ?? false,
-            isMirroredY: clip.isMirroredY ?? false,
+            isMirrored: clip.isMirrored,
+            isMirroredY: clip.isMirroredY,
             clipTransform: clip.transform,
-            ...(clip.appearance ?? DEFAULT_APPEARANCE),
+            ...clip.appearance,
           }
         : {}),
     };
@@ -180,7 +163,9 @@ export function useClipComposition(options: {
       order: topVisualOrder,
       groupId,
       transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance: clone(DEFAULT_APPEARANCE),
+      appearance: createDefaultClipAppearance(asset.kind),
+      isMirrored: false,
+      isMirroredY: false,
     };
     let next = addClip(composition.value, visual, normalizedAsset);
     if (groupId) {
@@ -223,14 +208,7 @@ export function useClipComposition(options: {
         order: 0,
         caption: {
           sentences: [],
-          style: {
-            color: '#ffffff',
-            fontSize: 42,
-            wrap: true,
-            shadowColor: '#000000',
-            shadowBlur: 4,
-            placement: 'bottom',
-          },
+          style: createDefaultCaptionStyle(),
         },
       };
       composition.value = addClip(composition.value, clip);
@@ -322,7 +300,7 @@ export function useClipComposition(options: {
     const clip = selectedClip.value;
     if (!clip || !isVisualClip(clip)) return;
     composition.value = setAppearance(composition.value, clip.id, {
-      ...DEFAULT_APPEARANCE,
+      ...createDefaultClipAppearance(clip.kind),
       ...clip.appearance,
       ...patch,
     });

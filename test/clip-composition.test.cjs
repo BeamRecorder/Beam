@@ -30,7 +30,40 @@ const visualClip = (assetId, overrides = {}) => ({
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: {
+    cornerRadius: 'sm',
+    shadowSize: 'md',
+    shadowBlur: 20,
+    shadowMode: 'solid',
+    shadowColor: '#000000',
+    shadowDirection: 'all',
+    borderEnabled: false,
+    borderColor: '#000000',
+    borderWidth: 1,
+    frame: 'none',
+    frameTitle: '',
+    frameColor: '#c0c0c0',
+    frameShowMenu: true,
+    frameShowScrollbars: true,
+    frameChromeScale: 1,
+  },
+  isMirrored: false,
+  isMirroredY: false,
   ...overrides,
+});
+
+const cursorPresentation = (
+  motion = { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+) => ({
+  selectedCursor: 'automatic',
+  size: 45,
+  color: '#000000',
+  shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
+  clickEffects: {
+    left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
+    right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
+  },
+  motion,
 });
 
 const audioClip = (assetId, overrides = {}) => ({
@@ -64,6 +97,14 @@ test('imports allowed project media and rejects unsupported extensions', () => {
   assert.throws(() => importMedia(directory, { kind: 'video', source: unsafe }), /non autorisé/);
 });
 
+test('rejects GIF media with an explicit unsupported-format error', () => {
+  const { directory } = setup();
+  const source = path.join(directory, 'animated.gif');
+  fs.writeFileSync(source, 'GIF89a');
+
+  assert.throws(() => importMedia(directory, { kind: 'image', source }), /GIF not supported/);
+});
+
 test('normalizes canonical clip timing, linked groups and appearance', () => {
   const asset = {
     id: 'asset-video',
@@ -77,7 +118,7 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   };
   const groupId = 'recording';
   const normalized = normalizeComposition({
-    schemaVersion: 1,
+    schemaVersion: 2,
     assets: [asset],
     clips: [
       visualClip(asset.id, {
@@ -85,12 +126,19 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
         appearance: {
           cornerRadius: 37,
           shadowSize: 'sm',
+          shadowBlur: 40,
+          shadowMode: 'solid',
           shadowColor: '#112233',
           shadowDirection: 'bottom',
           borderEnabled: true,
           borderColor: '#abcdef',
           borderWidth: 4,
           frame: 'safari',
+          frameTitle: '',
+          frameColor: '#c0c0c0',
+          frameShowMenu: true,
+          frameShowScrollbars: true,
+          frameChromeScale: 1,
         },
       }),
       audioClip(asset.id, { groupId }),
@@ -122,8 +170,167 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   });
 });
 
-test('rejects noncanonical editor schemas instead of migrating legacy layers', () => {
-  assert.deepEqual(normalizeComposition({ media: [], layers: [] }), emptyComposition());
+test('rejects malformed and unknown composition schemas instead of returning an empty composition', () => {
+  assert.throws(() => normalizeComposition({ media: [], layers: [] }), /schema|schéma|composition/i);
+  assert.throws(() => normalizeComposition({ schemaVersion: 999, assets: [], clips: [] }), /version|schema|schéma/i);
+  assert.throws(
+    () => normalizeComposition({ schemaVersion: 1, assets: [], clips: 'invalid' }),
+    /version|schema|schéma/i,
+  );
+});
+
+test('migrates legacy composition fields and atomically persists the canonical editor state', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-migration-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Migration' });
+  const directory = store.directoryFor(project.id);
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.editor = {
+    composition: {
+      schemaVersion: 1,
+      assets: [
+        {
+          id: 'legacy-screen-asset',
+          kind: 'video',
+          name: 'Legacy screen',
+          fileName: 'screen.mp4',
+          durationMs: 1_000,
+          width: 1920,
+          height: 1080,
+          origin: 'project',
+        },
+      ],
+      clips: [
+        visualClip('legacy-screen-asset', {
+          id: 'legacy-screen',
+          kind: 'screen',
+          order: 0,
+        }),
+        {
+          id: 'legacy-caption',
+          kind: 'caption',
+          name: 'Legacy caption',
+          timelineStartMs: 0,
+          timelineDurationMs: 1_000,
+          sourceInMs: 0,
+          sourceDurationMs: 1_000,
+          playbackRate: 1,
+          enabled: true,
+          order: 1,
+          caption: {
+            sentences: [
+              {
+                id: 'sentence',
+                text: 'Legacy caption',
+                startMs: 0,
+                endMs: 1_000,
+                words: [],
+              },
+            ],
+            style: {
+              color: '#ffffff',
+              fontSize: 42,
+              shadowColor: '#000000',
+              shadowBlur: 4,
+              placement: 'bottom',
+              boxColor: '#123456',
+              boxPadding: 6,
+              boxRadius: 8,
+            },
+          },
+        },
+      ],
+    },
+    zoom: { elements: [], generatedSessions: [] },
+    presentation: {
+      canvas: { preset: '21:9', width: 2520, height: 1080, showBackground: true },
+      selectedBackgroundId: null,
+      background: null,
+      blurPercent: 0,
+      importedBackgrounds: [],
+      cursorEffects: {
+        left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
+        right: {
+          springEnabled: true,
+          springIntensity: 50,
+          rippleEnabled: true,
+          rippleSize: 30,
+          rippleColor: '#6366f1',
+        },
+      },
+      cursorMotion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+    },
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const migrated = store.editorState(project.id);
+  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.composition.schemaVersion, 2);
+  assert.deepEqual(migrated.presentation.canvas, {
+    preset: '21:9',
+    width: 2520,
+    height: 1080,
+    showBackground: true,
+  });
+
+  const screen = migrated.composition.clips.find((clip) => clip.id === 'legacy-screen');
+  assert.ok(screen);
+  assert.equal(typeof screen.appearance, 'object');
+  assert.equal(screen.isMirrored, false);
+  assert.equal(screen.isMirroredY, false);
+
+  const captionClip = migrated.composition.clips.find((clip) => clip.id === 'legacy-caption');
+  assert.ok(captionClip);
+  assert.equal(captionClip.caption.style.wrap, true);
+  assert.equal(captionClip.caption.style.backdropBlur, 0);
+  assert.equal(captionClip.caption.style.outlineColor, '#123456');
+  assert.equal(captionClip.caption.style.outlineWidth, 6);
+  assert.equal(captionClip.caption.style.extrusionDepth, 8);
+  assert.equal(Object.hasOwn(captionClip.caption.style, 'boxColor'), false);
+  assert.equal(Object.hasOwn(captionClip.caption.style, 'boxPadding'), false);
+  assert.equal(Object.hasOwn(captionClip.caption.style, 'boxRadius'), false);
+
+  const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(rewritten.editor.schemaVersion, 3);
+  assert.equal(rewritten.editor.composition.schemaVersion, 2);
+  assert.equal(rewritten.editor.composition.clips[0].isMirroredY, false);
+  assert.equal(fs.existsSync(`${manifestPath}.tmp`), false);
+});
+
+test('preserves every supported non-custom canvas preset through editor-state persistence', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-canvas-presets-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Canvas presets' });
+  const expected = {
+    '3:4': [1080, 1440],
+    '4:3': [1440, 1080],
+    '21:9': [2520, 1080],
+  };
+
+  for (const [preset, [width, height]] of Object.entries(expected)) {
+    const state = store.editorState(project.id);
+    state.presentation.canvas = { preset, width, height, showBackground: true };
+    const saved = store.saveEditorState(project.id, state);
+    const loaded = store.editorState(project.id);
+    assert.equal(saved.presentation.canvas.preset, preset);
+    assert.deepEqual(loaded.presentation.canvas, { preset, width, height, showBackground: true });
+  }
+});
+
+test('rejects an unknown persisted composition version without replacing it with an empty composition', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-unknown-schema-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Unknown schema' });
+  const directory = store.directoryFor(project.id);
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.editor.composition = { schemaVersion: 999, assets: [], clips: [] };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  assert.throws(() => store.editorState(project.id), /version|schema|schéma/i);
+  const unchanged = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(unchanged.editor.composition.schemaVersion, 999);
 });
 
 test('materializes project and recording assets without persisting runtime URLs', () => {
@@ -131,7 +338,7 @@ test('materializes project and recording assets without persisting runtime URLs'
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'video.mp4'), 'video');
   const composition = normalizeComposition({
-    schemaVersion: 1,
+    schemaVersion: 2,
     assets: [
       {
         id: 'asset-video',
@@ -161,7 +368,7 @@ test('prunes only project media that is no longer referenced', () => {
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'unused.mp4'), 'video');
   const previous = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     assets: [
       {
         id: 'unused',
@@ -188,12 +395,12 @@ test('persists and reads one atomic editor state', () => {
   fs.writeFileSync(source, 'video');
   const asset = store.importEditorMedia(project.id, { kind: 'video', source });
   const composition = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     assets: [{ ...asset, durationMs: 1_000 }],
     clips: [visualClip(asset.id)],
   };
   const saved = store.saveEditorState(project.id, {
-    schemaVersion: 2,
+    schemaVersion: 3,
     composition,
     zoom: { elements: [], generatedSessions: [] },
     presentation: {
@@ -202,14 +409,14 @@ test('persists and reads one atomic editor state', () => {
       background: null,
       blurPercent: 0,
       importedBackgrounds: [],
-      cursorMotion: { preset: 'custom', smoothing: 0.55, springMassMultiplier: 1.1, motionBlur: 0.2 },
+      cursor: cursorPresentation({ preset: 'custom', smoothing: 0.55, springMassMultiplier: 1.1, motionBlur: 0.2 }),
     },
   });
-  assert.equal(saved.schemaVersion, 2);
+  assert.equal(saved.schemaVersion, 3);
   assert.equal(saved.composition.clips[0].id, 'clip-video');
   assert.match(saved.composition.assets[0].src, /^project-media:/);
   assert.deepEqual(saved.presentation.canvas, { preset: '16:9', width: 1920, height: 1080, showBackground: true });
-  assert.deepEqual(saved.presentation.cursorMotion, {
+  assert.deepEqual(saved.presentation.cursor.motion, {
     preset: 'custom',
     smoothing: 0.55,
     springMassMultiplier: 1.1,
@@ -275,8 +482,5 @@ test('imports dropped project media safely and never returns a local path', () =
     () => store.importDroppedProjectMedia(project.id, { kind: 'video', source: folder }),
     /invalide|fichier|directory/i,
   );
-  assert.throws(
-    () => store.importDroppedProjectMedia(project.id, { kind: 'video', source: '' }),
-    /invalide|chemin/i,
-  );
+  assert.throws(() => store.importDroppedProjectMedia(project.id, { kind: 'video', source: '' }), /invalide|chemin/i);
 });

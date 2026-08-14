@@ -1,4 +1,5 @@
 export * from './composition-types';
+export * from './composition-defaults';
 export * from './dropped-media';
 export * from './media-frame';
 export * from './media-input';

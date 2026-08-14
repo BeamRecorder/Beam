@@ -8,7 +8,7 @@ import type {
   GradientBackground,
 } from '../../components/video-editor/composables/backgroundCatalog';
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas';
-import type { CursorClickEffects, CursorMotionSettings } from './cursor-settings';
+import type { CursorPresentationSettings } from './cursor-presentation';
 import type {
   TeleprompterDocument,
   TeleprompterSessionContext,
@@ -203,12 +203,11 @@ export interface ProjectEditorPresentation {
   background?: BackgroundValue | null;
   blurPercent?: number;
   importedBackgrounds: BackgroundMedia[];
-  cursorEffects: CursorClickEffects;
-  cursorMotion?: CursorMotionSettings;
+  cursor: CursorPresentationSettings;
 }
 
 export interface ProjectEditorState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   composition: ClipComposition;
   zoom: ProjectZoomState;
   presentation: ProjectEditorPresentation;

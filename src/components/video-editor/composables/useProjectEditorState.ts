@@ -11,13 +11,8 @@ import {
   type BackgroundValue,
 } from './backgroundCatalog';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
-import {
-  createDefaultCursorMotionSettings,
-  normalizeCursorClickEffects,
-  normalizeCursorMotionSettings,
-  type CursorClickEffects,
-  type CursorMotionSettings,
-} from '../../../api/types/cursor-settings';
+import { type CursorClickEffects, type CursorMotionSettings } from '../../../api/types/cursor-settings';
+import type { CursorType, CursorShadowDirection } from '../../../api/types/cursor-presentation';
 import { propertyInteractionActive } from '../../../composables/property-interaction';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -33,6 +28,13 @@ export function useProjectEditorState(options: {
   canvas: Ref<OutputCanvasSettings>;
   cursorEffects: Ref<CursorClickEffects>;
   cursorMotion: Ref<CursorMotionSettings>;
+  selectedCursor: Ref<CursorType>;
+  cursorSize: Ref<number>;
+  cursorColor: Ref<string>;
+  cursorShadowEnabled: Ref<boolean>;
+  cursorShadowBlur: Ref<number>;
+  cursorShadowColor: Ref<string>;
+  cursorShadowDirection: Ref<CursorShadowDirection>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
   const loading = ref(false);
@@ -44,7 +46,7 @@ export function useProjectEditorState(options: {
   let savedBackgroundId: string | null = null;
 
   const snapshot = (): ProjectEditorState => ({
-    schemaVersion: 2,
+    schemaVersion: 3,
     composition: clone(options.composition.value),
     zoom: {
       elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
@@ -59,8 +61,19 @@ export function useProjectEditorState(options: {
           : null,
       blurPercent: Math.max(0, Math.min(100, Math.round(options.backgroundBlurPercent.value))),
       importedBackgrounds: [],
-      cursorEffects: clone(options.cursorEffects.value),
-      cursorMotion: clone(options.cursorMotion.value),
+      cursor: {
+        selectedCursor: options.selectedCursor.value,
+        size: options.cursorSize.value,
+        color: options.cursorColor.value,
+        shadow: {
+          enabled: options.cursorShadowEnabled.value,
+          blur: options.cursorShadowBlur.value,
+          color: options.cursorShadowColor.value,
+          direction: options.cursorShadowDirection.value,
+        },
+        clickEffects: clone(options.cursorEffects.value),
+        motion: clone(options.cursorMotion.value),
+      },
     },
   });
 
@@ -116,10 +129,16 @@ export function useProjectEditorState(options: {
         null;
       options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
       options.canvas.value = state.presentation.canvas;
-      options.cursorEffects.value = normalizeCursorClickEffects(state.presentation.cursorEffects);
-      options.cursorMotion.value = normalizeCursorMotionSettings(
-        state.presentation.cursorMotion ?? createDefaultCursorMotionSettings(),
-      );
+      const cursor = state.presentation.cursor;
+      options.selectedCursor.value = cursor.selectedCursor;
+      options.cursorSize.value = cursor.size;
+      options.cursorColor.value = cursor.color;
+      options.cursorShadowEnabled.value = cursor.shadow.enabled;
+      options.cursorShadowBlur.value = cursor.shadow.blur;
+      options.cursorShadowColor.value = cursor.shadow.color;
+      options.cursorShadowDirection.value = cursor.shadow.direction;
+      options.cursorEffects.value = clone(cursor.clickEffects);
+      options.cursorMotion.value = clone(cursor.motion);
     } finally {
       loading.value = false;
     }
@@ -136,6 +155,13 @@ export function useProjectEditorState(options: {
       options.canvas,
       options.cursorEffects,
       options.cursorMotion,
+      options.selectedCursor,
+      options.cursorSize,
+      options.cursorColor,
+      options.cursorShadowEnabled,
+      options.cursorShadowBlur,
+      options.cursorShadowColor,
+      options.cursorShadowDirection,
     ],
     scheduleSave,
     { deep: true },
