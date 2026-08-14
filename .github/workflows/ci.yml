@@ -1,0 +1,218 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-quality-linux
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run typecheck:vue
+      - run: npm run test
+      - run: npm run test:coverage
+      - run: cargo fmt --all --check
+      - run: cargo test -p capture --all-features
+      - run: cargo clippy -p capture --all-targets --all-features -- -D warnings
+
+  package-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-package-linux
+      - name: Install Linux build, runtime, and inspection dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang cpio ffmpeg libclang-dev libpipewire-0.3-dev \
+            p7zip-full pipewire pkg-config rpm wireplumber \
+            xdg-desktop-portal xdg-desktop-portal-gnome
+      - run: npm ci
+      - run: npm run build
+      - run: npx electron-builder --linux AppImage deb rpm --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: node scripts/native/artifacts.cjs collect --output dist_native
+      - name: Inspect Linux packages and update metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          appimage="$(find dist_electron -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
+          deb="$(find dist_electron -maxdepth 1 -type f -name '*.deb' -print -quit)"
+          rpm_package="$(find dist_electron -maxdepth 1 -type f -name '*.rpm' -print -quit)"
+          test -n "$appimage" && test -n "$deb" && test -n "$rpm_package"
+          chmod +x "$appimage"
+          (cd dist_electron && "$(basename "$appimage")" --appimage-extract >/dev/null)
+          packaged_engine="$(find dist_electron/squashfs-root -type f -path "*/resources/capture-engine/capture-engine-$version" -print -quit)"
+          packaged_helper="$(find dist_electron/squashfs-root -type f -path "*/resources/input-helper/beam-input-helper-$version" -print -quit)"
+          test -x "$packaged_engine"
+          test -x "$packaged_helper"
+          dpkg-deb --contents "$deb" | grep "resources/capture-engine/capture-engine-$version"
+          dpkg-deb --contents "$deb" | grep 'resources/package-type'
+          rpm --query --package --list "$rpm_package" | grep "resources/capture-engine/capture-engine-$version"
+          rpm --query --package --list "$rpm_package" | grep 'resources/package-type'
+          node scripts/release/artifacts.cjs metadata dist_electron latest-linux.yml
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: linux-ci-packages
+          path: |
+            dist_electron/*.AppImage
+            dist_electron/*.deb
+            dist_electron/*.rpm
+            dist_electron/*.blockmap
+            dist_electron/latest-linux.yml
+            dist_native/*
+          if-no-files-found: error
+          retention-days: 5
+
+  package-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-package-windows
+      - run: npm ci
+      - name: Build and stage both Windows engines
+        shell: pwsh
+        run: |
+          cargo build -p capture --bin capture-engine --release --target x86_64-pc-windows-msvc
+          cargo build -p capture --bin capture-engine --release --target aarch64-pc-windows-msvc
+          node scripts/native/artifacts.cjs stage --platform win32 --arch x64 --target x86_64-pc-windows-msvc
+          node scripts/native/artifacts.cjs stage --platform win32 --arch arm64 --target aarch64-pc-windows-msvc
+          npx vite build
+      - run: npx electron-builder --win nsis --x64 --arm64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: node scripts/native/artifacts.cjs collect --output dist_native
+      - name: Verify universal installer and x64 payload
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          node scripts/release/verify-pe.cjs x64 "build/native/win/x64/capture-engine-$version.exe" "dist_electron/win-unpacked/Beam.exe" "dist_electron/win-unpacked/resources/capture-engine/capture-engine-$version.exe"
+          node scripts/release/verify-pe.cjs arm64 "build/native/win/arm64/capture-engine-$version.exe" "dist_electron/win-arm64-unpacked/Beam.exe" "dist_electron/win-arm64-unpacked/resources/capture-engine/capture-engine-$version.exe"
+          node scripts/release/artifacts.cjs metadata dist_electron latest.yml
+          $installer = Get-ChildItem dist_electron -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
+          $listing = & 7z l $installer.FullName | Out-String
+          if ($listing -notmatch 'app-64\.7z' -or $listing -notmatch 'app-arm64\.7z') { throw 'Universal NSIS payloads are missing' }
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs/Beam/Beam.exe'
+          node scripts/release/verify-pe.cjs x64 $installed
+          $engine = "build/native/win/x64/capture-engine-$version.exe"
+          $response = '{"id":"ci-status","command":"status"}' | & $engine | Select-Object -First 1 | ConvertFrom-Json
+          if (-not $response.ok) { throw 'x64 capture-engine status smoke failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-universal-ci
+          path: |
+            dist_electron/*.exe
+            dist_electron/*.blockmap
+            dist_electron/latest.yml
+            dist_native/*
+          if-no-files-found: error
+          retention-days: 5
+
+  smoke-windows-arm64:
+    needs: package-windows
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-universal-ci
+          path: windows-artifacts
+      - name: Install the universal NSIS and smoke the selected ARM64 engine
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $installer = Get-ChildItem windows-artifacts -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs/Beam/Beam.exe'
+          $engine = Join-Path $env:LOCALAPPDATA "Programs/Beam/resources/capture-engine/capture-engine-$version.exe"
+          node scripts/release/verify-pe.cjs arm64 $installed $engine
+          $response = '{"id":"ci-status","command":"status"}' | & $engine | Select-Object -First 1 | ConvertFrom-Json
+          if (-not $response.ok) { throw 'ARM64 capture-engine status smoke failed' }
+
+  package-macos-arm64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-package-macos-arm64
+      - run: npm ci
+      - name: Build the Apple Silicon engine and renderer
+        run: |
+          cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin
+          node scripts/native/artifacts.cjs stage --platform darwin --arch arm64 --target aarch64-apple-darwin
+          npx vite build
+      - run: npx electron-builder --mac dmg zip --arm64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: node scripts/native/artifacts.cjs collect --output dist_native
+      - name: Verify Apple Silicon payload and metadata
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          packaged="$(find dist_electron -type f -path "*/Beam.app/Contents/Resources/capture-engine/capture-engine-$version" -print -quit)"
+          test -n "$packaged"
+          file "$packaged" | grep 'arm64'
+          node scripts/release/artifacts.cjs metadata dist_electron latest-mac.yml
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: macos-arm64-ci-packages
+          path: |
+            dist_electron/*.dmg
+            dist_electron/*.zip
+            dist_electron/*.blockmap
+            dist_electron/latest-mac.yml
+            dist_native/*
+          if-no-files-found: error
+          retention-days: 5

@@ -7,15 +7,12 @@ on:
 permissions:
   contents: write
 
-# Serializing releases closes the race between the version check and publication.
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
   prepare:
-    # GitHub Actions does not support filtering push events by commit message.
-    # The condition prevents a runner from being provisioned for regular pushes.
     if: >-
       github.actor == 'ExtraBinoss' &&
       (github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[RELEASE]'))
@@ -32,29 +29,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          VERSION="$(node -p "require('./package.json').version")"
-          LATEST_TAG="$(gh release list --limit 100 --json tagName,isLatest --jq '.[] | select(.isLatest) | .tagName' | head -n 1)"
-          node --input-type=module - "$VERSION" "$LATEST_TAG" <<'NODE'
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          latest_tag="$(gh release list --limit 100 --json tagName,isLatest --jq '.[] | select(.isLatest) | .tagName' | head -n 1)"
+          node --input-type=module - "$version" "$latest_tag" <<'NODE'
           const [version, latestTag] = process.argv.slice(2)
           const parse = (value) => {
             const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value.replace(/^v/, ''))
             if (!match) throw new Error(`Expected a stable semantic version, received "${value}".`)
             return match.slice(1).map(Number)
           }
-          const compare = (left, right) => {
-            for (let index = 0; index < left.length; index += 1) {
-              if (left[index] !== right[index]) return left[index] - right[index]
-            }
-            return 0
-          }
           const current = parse(version)
           if (latestTag) {
             const latest = parse(latestTag)
-            const comparison = compare(current, latest)
-            if (comparison <= 0) throw new Error(`package.json is ${version}; it must be greater than the latest release (${latestTag}).`)
+            const comparison = current.findIndex((part, index) => part !== latest[index])
+            if (comparison < 0 || current[comparison] <= latest[comparison]) {
+              throw new Error(`package.json is ${version}; it must be greater than the latest release (${latestTag}).`)
+            }
           }
           NODE
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
   package-windows:
     needs: prepare
@@ -67,16 +61,38 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: release-windows
-          cache-on-failure: true
       - run: npm ci
-      - run: npm run build:release
-      - run: npx electron-builder --win nsis --publish never
+      - name: Build and stage x64 and ARM64 capture engines
+        shell: pwsh
+        run: |
+          cargo build -p capture --bin capture-engine --release --target x86_64-pc-windows-msvc
+          cargo build -p capture --bin capture-engine --release --target aarch64-pc-windows-msvc
+          node scripts/native/artifacts.cjs stage --platform win32 --arch x64 --target x86_64-pc-windows-msvc
+          node scripts/native/artifacts.cjs stage --platform win32 --arch arm64 --target aarch64-pc-windows-msvc
+          npx vite build
+      - run: npx electron-builder --win nsis --x64 --arm64 --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: node scripts/native/artifacts.cjs collect --output dist_native
+      - name: Verify payload architectures, metadata, installer selection, and engine smoke
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          node scripts/release/verify-pe.cjs x64 "build/native/win/x64/capture-engine-$version.exe" "dist_electron/win-unpacked/Beam.exe" "dist_electron/win-unpacked/resources/capture-engine/capture-engine-$version.exe"
+          node scripts/release/verify-pe.cjs arm64 "build/native/win/arm64/capture-engine-$version.exe" "dist_electron/win-arm64-unpacked/Beam.exe" "dist_electron/win-arm64-unpacked/resources/capture-engine/capture-engine-$version.exe"
+          node scripts/release/artifacts.cjs metadata dist_electron latest.yml
+          $installer = Get-ChildItem dist_electron -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
+          $listing = & 7z l $installer.FullName | Out-String
+          if ($listing -notmatch 'app-64\.7z' -or $listing -notmatch 'app-arm64\.7z') { throw 'Universal NSIS payloads are missing' }
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
+          node scripts/release/verify-pe.cjs x64 (Join-Path $env:LOCALAPPDATA 'Programs/Beam/Beam.exe')
+          $engine = "build/native/win/x64/capture-engine-$version.exe"
+          $response = '{"id":"release-status","command":"status"}' | & $engine | Select-Object -First 1 | ConvertFrom-Json
+          if (-not $response.ok) { throw 'x64 capture-engine status smoke failed' }
       - uses: actions/upload-artifact@v4
         with:
           name: windows-release-assets
@@ -84,8 +100,33 @@ jobs:
             dist_electron/*.exe
             dist_electron/*.blockmap
             dist_electron/latest.yml
+            dist_native/*
           if-no-files-found: error
           retention-days: 1
+
+  smoke-windows-arm64:
+    needs: [prepare, package-windows]
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release-assets
+          path: windows-assets
+      - name: Install universal NSIS and smoke the selected ARM64 engine
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $installer = Get-ChildItem windows-assets -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
+          $installed = Join-Path $env:LOCALAPPDATA 'Programs/Beam/Beam.exe'
+          $engine = Join-Path $env:LOCALAPPDATA "Programs/Beam/resources/capture-engine/capture-engine-$version.exe"
+          node scripts/release/verify-pe.cjs arm64 $installed $engine
+          $response = '{"id":"release-status","command":"status"}' | & $engine | Select-Object -First 1 | ConvertFrom-Json
+          if (-not $response.ok) { throw 'ARM64 capture-engine status smoke failed' }
 
   package-macos:
     needs: prepare
@@ -97,39 +138,31 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: release-macos
-          cache-on-failure: true
+          shared-key: release-macos-arm64
       - run: npm ci
-      - run: npm run build:release
-      - name: Verify capture-engine rpaths
-        shell: bash
+      - name: Build and stage the Apple Silicon engine
         run: |
-          set -euo pipefail
-          echo "=== Swift dependencies ==="
-          otool -L target/release/capture-engine
-
-          echo "=== LC_RPATH ==="
-          otool -l target/release/capture-engine | grep -A3 LC_RPATH || true
-      - run: npx electron-builder --mac dmg zip --publish never
+          cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin
+          node scripts/native/artifacts.cjs stage --platform darwin --arch arm64 --target aarch64-apple-darwin
+          npx vite build
+      - run: npx electron-builder --mac dmg zip --arm64 --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      - name: Verify packaged capture-engine
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: node scripts/native/artifacts.cjs collect --output dist_native
+      - name: Verify packaged engine and metadata
         shell: bash
         run: |
           set -euo pipefail
-          packaged_binary="$(find dist_electron -type f -path '*/Beam.app/Contents/Resources/capture-engine/capture-engine' -print -quit)"
-          test -n "$packaged_binary"
-
-          echo "=== Packaged binary ==="
-          echo "$packaged_binary"
-
-          echo "=== Swift dependencies ==="
-          otool -L "$packaged_binary"
-
-          echo "=== LC_RPATH ==="
-          otool -l "$packaged_binary" | grep -A3 LC_RPATH || true
+          version="$(node -p "require('./package.json').version")"
+          packaged="$(find dist_electron -type f -path "*/Beam.app/Contents/Resources/capture-engine/capture-engine-$version" -print -quit)"
+          test -n "$packaged"
+          file "$packaged" | grep 'arm64'
+          otool -L "$packaged"
+          node scripts/release/artifacts.cjs metadata dist_electron latest-mac.yml
       - uses: actions/upload-artifact@v4
         with:
           name: macos-release-assets
@@ -138,6 +171,7 @@ jobs:
             dist_electron/*.zip
             dist_electron/*.blockmap
             dist_electron/latest-mac.yml
+            dist_native/*
           if-no-files-found: error
           retention-days: 1
 
@@ -154,30 +188,33 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: release-linux
-          cache-on-failure: true
-      - name: Install native build and packaging dependencies
+      - name: Install Linux build and inspection dependencies
         run: |
           sudo apt-get update
           sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config rpm
       - run: npm ci
-      - run: npm run build:release
-      - run: npx electron-builder --linux AppImage deb rpm --publish never
+      - run: npm run build
+      - run: npx electron-builder --linux AppImage deb rpm --x64 --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      - name: Verify Linux artifacts and bundled input helper
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: node scripts/native/artifacts.cjs collect --output dist_native
+      - name: Inspect packages, bundled binaries, package markers, and metadata
         shell: bash
         run: |
           set -euo pipefail
-          test -x target/release/capture-engine
-          test -x target/release/beam-input-helper
+          version="$(node -p "require('./package.json').version")"
           appimage="$(find dist_electron -maxdepth 1 -type f -name '*.AppImage' -print -quit)"
           deb="$(find dist_electron -maxdepth 1 -type f -name '*.deb' -print -quit)"
-          rpm="$(find dist_electron -maxdepth 1 -type f -name '*.rpm' -print -quit)"
-          test -n "$appimage"
-          test -n "$deb"
-          test -n "$rpm"
-          dpkg-deb --contents "$deb" | grep 'resources/input-helper/beam-input-helper'
-          rpm --query --package --list "$rpm" | grep 'resources/input-helper/beam-input-helper'
+          rpm_package="$(find dist_electron -maxdepth 1 -type f -name '*.rpm' -print -quit)"
+          chmod +x "$appimage"
+          (cd dist_electron && "$(basename "$appimage")" --appimage-extract >/dev/null)
+          packaged_engine="$(find dist_electron/squashfs-root -type f -path "*/resources/capture-engine/capture-engine-$version" -print -quit)"
+          packaged_helper="$(find dist_electron/squashfs-root -type f -path "*/resources/input-helper/beam-input-helper-$version" -print -quit)"
+          test -x "$packaged_engine"
+          test -x "$packaged_helper"
+          dpkg-deb --contents "$deb" | grep 'resources/package-type'
+          rpm --query --package --list "$rpm_package" | grep 'resources/package-type'
+          node scripts/release/artifacts.cjs metadata dist_electron latest-linux.yml
       - uses: actions/upload-artifact@v4
         with:
           name: linux-release-assets
@@ -187,31 +224,69 @@ jobs:
             dist_electron/*.rpm
             dist_electron/*.blockmap
             dist_electron/latest-linux.yml
+            dist_native/*
           if-no-files-found: error
           retention-days: 1
 
   publish:
-    needs: [prepare, package-windows, package-macos, package-linux]
+    needs: [prepare, package-windows, smoke-windows-arm64, package-macos, package-linux]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install artifact inspection tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes p7zip-full rpm
       - uses: actions/download-artifact@v4
         with:
-          name: windows-release-assets
+          pattern: '*-release-assets'
           path: release-assets
-      - uses: actions/download-artifact@v4
-        with:
-          name: macos-release-assets
-          path: release-assets
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-release-assets
-          path: release-assets
-      - env:
+          merge-multiple: true
+      - name: Create or reuse the draft release
+        env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.version }}
         shell: bash
         run: |
-          gh release create "$TAG" release-assets/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "$TAG" \
-            --generate-notes
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft >/dev/null 2>&1; then
+            test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --draft
+          fi
+      - name: Generate, upload, and re-download every draft asset before validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/release/artifacts.cjs generate-native release-assets
+          gh release upload "$TAG" release-assets/* --repo "$GITHUB_REPOSITORY" --clobber
+          mkdir uploaded-assets
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir uploaded-assets
+          node scripts/release/artifacts.cjs release uploaded-assets
+          diff \
+            <(find release-assets -maxdepth 1 -type f -printf '%f\n' | sort) \
+            <(find uploaded-assets -maxdepth 1 -type f -printf '%f\n' | sort)
+      - name: Publish the complete draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.version }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+      - name: Verify public auto-update metadata and every referenced asset
+        env:
+          TAG: ${{ needs.prepare.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG"
+          node scripts/release/download.cjs "$base" post-release-assets
+          node scripts/release/artifacts.cjs metadata post-release-assets latest.yml
+          node scripts/release/artifacts.cjs metadata post-release-assets latest-linux.yml
+          node scripts/release/artifacts.cjs metadata post-release-assets latest-mac.yml

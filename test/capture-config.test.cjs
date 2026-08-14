@@ -85,7 +85,7 @@ test('rejects missing explicit sources and invalid queue capacity', () => {
 test('builds a Linux monitor Portal selection without a Chromium source id', () => {
   const config = buildDefaultCaptureConfig(
     {
-      capabilities: { portalSelection: true, separateCursor: true },
+      capabilities: { portalSelection: true, separateCursor: true, cursorShapes: true },
       sources: [
         {
           id: 'portal:monitor',
@@ -107,7 +107,7 @@ test('builds a Linux monitor Portal selection without a Chromium source id', () 
     mode: 'separate',
     captureClicks: false,
     captureShortcuts: false,
-    captureShape: false,
+    captureShape: true,
   });
 });
 
@@ -127,7 +127,13 @@ test('keeps mouse clicks on Windows and macOS when interaction recording is off'
 test('enables clicks and shortcuts on Linux only when interaction recording is on', () => {
   const linux = { ...environment, platform: 'linux' };
   const linuxCatalog = {
-    capabilities: { portalSelection: true, separateCursor: true, cursorClicks: true, inputShortcuts: true },
+    capabilities: {
+      portalSelection: true,
+      separateCursor: true,
+      cursorClicks: true,
+      cursorShapes: true,
+      inputShortcuts: true,
+    },
     sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
   };
 
@@ -136,7 +142,7 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
     mode: 'separate',
     captureClicks: false,
     captureShortcuts: false,
-    captureShape: false,
+    captureShape: true,
   });
 
   const enabled = buildDefaultCaptureConfig(linuxCatalog, { recordInteractions: true }, linux);
@@ -144,7 +150,7 @@ test('enables clicks and shortcuts on Linux only when interaction recording is o
     mode: 'separate',
     captureClicks: true,
     captureShortcuts: true,
-    captureShape: false,
+    captureShape: true,
   });
 });
 

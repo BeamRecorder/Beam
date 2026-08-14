@@ -125,8 +125,8 @@ function registerCaptureIpc({
   });
   ipcMain.handle('window:getSources', async (_event, types) => {
     // Chromium's desktopCapturer opens the system Portal picker for every
-    // enumeration on Wayland. Beam's Linux product recorder remains gated, so
-    // these Electron preview IDs cannot be consumed by the Rust backend.
+    // enumeration on Wayland. The Rust backend owns the single Portal picker,
+    // so Electron preview IDs are never used on Linux.
     if (platform === 'linux') return [];
     const sources = await desktopCapturer.getSources({
       types: types || ['window', 'screen'],

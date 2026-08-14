@@ -92,7 +92,7 @@ fn platform_catalog() -> Result<
         portal_selection: native.portal_selection,
         embedded_cursor: native.embedded_cursor,
         separate_cursor: native.separate_cursor,
-        cursor_shapes: false,
+        cursor_shapes: native.cursor_shapes,
         cursor_clicks: native.cursor_clicks,
         input_shortcuts: native.cursor_clicks,
         hardware_h264: ffmpeg.encoder.is_hardware() && ffmpeg.encoder.codec == "h264",
@@ -123,7 +123,8 @@ fn platform_catalog() -> Result<
         vec![
             encoder,
             input_limitation.into(),
-            "Linux Portal cursor metadata does not provide portable cursor bitmaps".into(),
+            "Linux cursor shapes are available when the Portal exposes separate cursor metadata"
+                .into(),
         ],
     ))
 }

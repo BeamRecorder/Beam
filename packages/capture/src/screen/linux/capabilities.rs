@@ -38,6 +38,7 @@ pub struct LinuxNativeCapabilities {
 pub fn evaluate_capabilities(
     portal: PortalProperties,
     pipewire_available: bool,
+    ffmpeg_available: bool,
 ) -> LinuxNativeCapabilities {
     let portal_selection = portal.version >= MIN_PORTAL_VERSION
         && (portal.monitor || portal.window)
@@ -52,10 +53,9 @@ pub fn evaluate_capabilities(
         embedded_cursor: portal.embedded_cursor,
         separate_cursor: portal_selection && portal.metadata_cursor,
         cursor_clicks: super::input_helper_supported(),
-        cursor_shapes: false,
+        cursor_shapes: portal_selection && portal.metadata_cursor,
         pipewire_available,
-        // Raw acquisition is deliberately not the product recording gate.
-        recording_available: false,
+        recording_available: portal_selection && ffmpeg_available,
     }
 }
 
@@ -73,7 +73,11 @@ pub fn probe_native_capabilities(
                 )
             })?
     })?;
-    Ok(evaluate_capabilities(portal, probe_pipewire()))
+    Ok(evaluate_capabilities(
+        portal,
+        probe_pipewire(),
+        super::probe_ffmpeg().is_ok(),
+    ))
 }
 
 async fn query_portal_properties() -> Result<PortalProperties, CaptureError> {

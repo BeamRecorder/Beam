@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { packagedInputHelperPath, prebuiltInputHelperPath } = require('../capture/capture-engine-path.cjs');
 
 const INSTALLED_HELPER = '/usr/libexec/beam-input-helper';
 
@@ -37,13 +38,15 @@ class InputAccess {
   }
 
   bundledHelper() {
+    const version = this.app.getVersion();
     const candidates = this.app.isPackaged
-      ? [path.join(process.resourcesPath, 'input-helper', 'beam-input-helper')]
+      ? [packagedInputHelperPath(process.resourcesPath, version, this.platform)]
       : [
           path.join(this.applicationRoot, 'target', 'debug', 'beam-input-helper'),
           path.join(this.applicationRoot, 'target', 'release', 'beam-input-helper'),
+          prebuiltInputHelperPath(this.applicationRoot, version, this.platform),
         ];
-    return candidates.find(executable) || null;
+    return candidates.filter(Boolean).find(executable) || null;
   }
 }
 

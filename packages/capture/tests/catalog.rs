@@ -96,6 +96,41 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
     ));
 }
 
+#[test]
+fn supported_cursor_shape_mode_is_accepted_by_runtime_capabilities() {
+    let display = source("display:1", SourceKind::Display);
+    let snapshot = CatalogSnapshot {
+        generation: 1,
+        created_at_utc: "2026-01-01T00:00:00Z".into(),
+        capabilities: CaptureCapabilities {
+            display_capture: true,
+            separate_cursor: true,
+            cursor_shapes: true,
+            ..CaptureCapabilities::default()
+        },
+        permissions: PermissionSnapshot::default(),
+        limitations: Vec::new(),
+        sources: vec![display.clone()],
+    };
+    let request = CaptureRequest {
+        project_id: ProjectId::new(),
+        screen: Some(ScreenSelection::Source {
+            source_id: display.id,
+        }),
+        cursor: CursorSelection::Separate {
+            capture_clicks: false,
+            capture_shortcuts: false,
+            capture_shape: true,
+        },
+        recording: RecordingSettings::default(),
+        failure_policy: FailurePolicy::FailFast,
+        region: None,
+        excluded_process_id: None,
+    };
+
+    assert!(validate_request(&request, &snapshot).is_ok());
+}
+
 fn portal_request(kind: PortalSourceKind) -> CaptureRequest {
     CaptureRequest {
         project_id: ProjectId::new(),

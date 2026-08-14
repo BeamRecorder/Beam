@@ -65,14 +65,13 @@ FFmpeg must report:
 
 Beam checks these capabilities before opening the Portal picker. If FFmpeg is installed outside `PATH`, set `BEAM_FFMPEG_PATH` to its executable. A missing executable reports `ffmpeg-unavailable`; a build without either supported encoder reports `ffmpeg-encoder-unavailable`.
 
-For local development, build both the capture engine and the filtered input helper:
+Start Electron from the second development terminal with:
 
 ```bash
-cargo build -p capture --bin capture-engine --bin beam-input-helper
-npm run electron:dev-norust
+npm run electron:dev
 ```
 
-`npm run electron:dev` also rebuilds the engine before starting Electron. A prebuilt engine may be placed at `packages/native-recorder/linux/capture-engine`.
+The command checks Cargo first. When Cargo is available, it builds both `capture-engine` and the filtered `beam-input-helper`, and stops if compilation fails. Without Cargo, it looks for the exact application version under `packages/native-recorder/linux/x64/`. If either native file is missing in an interactive terminal, confirm the verified download with `Y`; answer `N` to stop. Non-interactive execution never prompts and downloads only with the explicit `BEAM_DOWNLOAD_CAPTURE_ENGINE=1` opt-in.
 
 The deterministic FFmpeg tests use a fake child process. The opt-in synthetic runtime smoke uses the actual system executable without opening the Portal picker:
 

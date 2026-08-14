@@ -5,8 +5,9 @@ const path = require('node:path');
 const test = require('node:test');
 
 const { InputAccess } = require('../electron/input/input-access.cjs');
+const { prebuiltInputHelperPath, packagedInputHelperPath } = require('../electron/capture/capture-engine-path.cjs');
 
-const app = { isPackaged: false };
+const version = '1.2.3';
 const available = {
   state: 'available',
   canRequest: false,
@@ -15,10 +16,20 @@ const available = {
   recordsText: false,
 };
 
-test('non-Linux status delegates to the native capture engine without requesting permission', async () => {
+function app({ packaged = false, currentVersion = version } = {}) {
+  return { isPackaged: packaged, getVersion: () => currentVersion };
+}
+
+function writeExecutable(candidate) {
+  fs.mkdirSync(path.dirname(candidate), { recursive: true });
+  fs.writeFileSync(candidate, 'test fixture');
+  fs.chmodSync(candidate, 0o755);
+}
+
+test('non-Linux status delegates to the native capture engine without a helper', async () => {
   const commands = [];
   const inputAccess = new InputAccess({
-    app,
+    app: app(),
     applicationRoot: '/tmp/beam-input-test',
     platform: 'darwin',
     nativeRequest: async (command) => {
@@ -32,12 +43,23 @@ test('non-Linux status delegates to the native capture engine without requesting
   assert.equal(inputAccess.helperForCapture(), null);
 });
 
-test('Linux reports unavailable without starting the native engine when no helper exists', async () => {
+test('Linux returns unavailable without starting the native engine when no exact helper exists', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-input-access-'));
+  const originalStatSync = fs.statSync;
   let requests = 0;
   try {
+    fs.statSync = (candidate, ...args) => {
+      if (candidate === '/usr/libexec/beam-input-helper') {
+        const error = new Error('installed helper hidden for test');
+        error.code = 'ENOENT';
+        throw error;
+      }
+      return originalStatSync(candidate, ...args);
+    };
+    const stale = prebuiltInputHelperPath(root, '1.2.2', 'linux', process.arch);
+    writeExecutable(stale);
     const inputAccess = new InputAccess({
-      app,
+      app: app(),
       applicationRoot: root,
       platform: 'linux',
       nativeRequest: async () => {
@@ -46,24 +68,24 @@ test('Linux reports unavailable without starting the native engine when no helpe
       },
     });
 
+    assert.equal(inputAccess.helperForCapture(), null);
     assert.equal((await inputAccess.status()).state, 'unavailable');
     assert.equal((await inputAccess.request()).state, 'unavailable');
     assert.equal(requests, 0);
   } finally {
+    fs.statSync = originalStatSync;
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
-test('Linux uses the development helper and requests authorization only from request()', async () => {
+test('Linux resolves the exact versioned cache helper and only requests authorization from request()', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-input-access-'));
-  const helper = path.join(root, 'target', 'debug', 'beam-input-helper');
+  const helper = prebuiltInputHelperPath(root, version, 'linux', process.arch);
   const commands = [];
   try {
-    fs.mkdirSync(path.dirname(helper), { recursive: true });
-    fs.writeFileSync(helper, 'test fixture');
-    fs.chmodSync(helper, 0o755);
+    writeExecutable(helper);
     const inputAccess = new InputAccess({
-      app,
+      app: app(),
       applicationRoot: root,
       platform: 'linux',
       nativeRequest: async (command) => {
@@ -82,7 +104,47 @@ test('Linux uses the development helper and requests authorization only from req
   }
 });
 
-test('Linux prefers the installed helper when it is available', () => {
+test('Linux keeps the development helper ahead of the versioned cache', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-input-access-'));
+  const debugHelper = path.join(root, 'target', 'debug', 'beam-input-helper');
+  const cachedHelper = prebuiltInputHelperPath(root, version, 'linux', process.arch);
+  try {
+    writeExecutable(debugHelper);
+    writeExecutable(cachedHelper);
+    const inputAccess = new InputAccess({
+      app: app(),
+      applicationRoot: root,
+      platform: 'linux',
+      nativeRequest: async () => available,
+    });
+    assert.equal(inputAccess.helperForCapture(), debugHelper);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('packaged Linux resolves the versioned helper under resources/input-helper', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-input-access-'));
+  const previousResourcesPath = process.resourcesPath;
+  const helper = packagedInputHelperPath(root, version, 'linux', process.arch);
+  try {
+    process.resourcesPath = root;
+    writeExecutable(helper);
+    const inputAccess = new InputAccess({
+      app: app({ packaged: true }),
+      applicationRoot: '/unused',
+      platform: 'linux',
+      nativeRequest: async () => available,
+    });
+    assert.equal(inputAccess.helperForCapture(), helper);
+  } finally {
+    if (previousResourcesPath === undefined) delete process.resourcesPath;
+    else process.resourcesPath = previousResourcesPath;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Linux falls back to the installed helper when no bundled helper is available', () => {
   const originalStatSync = fs.statSync;
   fs.statSync = (candidate, ...args) => {
     if (candidate === '/usr/libexec/beam-input-helper') return { isFile: () => true, mode: 0o100755 };
@@ -91,7 +153,7 @@ test('Linux prefers the installed helper when it is available', () => {
 
   try {
     const inputAccess = new InputAccess({
-      app,
+      app: app(),
       applicationRoot: '/tmp/beam-input-test',
       platform: 'linux',
       nativeRequest: async () => available,
