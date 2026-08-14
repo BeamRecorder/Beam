@@ -1,14 +1,41 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
-import { isAudioClip, type ClipComposition } from '~/media/shared/composition-types';
-import { extractWaveformPeaks } from '~/media/playback';
+import WaveformWorker from '~/media/playback/waveform.worker?worker';
+import { isAudioClip, type AudioClip, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
 import { MediaInputError, mediaSourceDescriptor, type MediaError } from '~/media/shared';
+import {
+  assertWaveformWorkerResponse,
+  type WaveformResolution,
+  type WaveformWorkerRequest,
+} from '~/media/playback/waveform-protocol';
 
-// Audio rows are deliberately taller than the other tracks. Leave headroom so
-// real peaks read as a centred waveform instead of a row of tiny top-aligned bars.
 const MAX_BAR_HEIGHT = 38;
+const MAX_POINTS = 1_200;
+const COARSE_POINTS = 64;
+const PIXELS_PER_POINT = 3;
 
-const pointCountFor = (timelineDurationMs: number, totalDurationSeconds: number) =>
-  Math.max(24, Math.min(1_200, Math.round((900 * (timelineDurationMs / 1_000)) / Math.max(1, totalDurationSeconds))));
+export interface AudioWaveformViewport {
+  startSeconds: number;
+  endSeconds: number;
+  pixelsPerSecond: number;
+}
+
+export interface AudioWaveformSlice {
+  bars: number[];
+  leftPercent: number;
+  widthPercent: number;
+}
+
+export type AudioWaveformStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+type WaveformRequest = {
+  clip: AudioClip;
+  asset: MediaAsset | null;
+  sourceStartSeconds: number;
+  sourceEndSeconds: number;
+  pointCount: number;
+  leftPercent: number;
+  widthPercent: number;
+};
 
 const barsFromPeaks = (peaks: Float32Array) => {
   const count = Math.floor(peaks.length / 2);
@@ -24,85 +51,189 @@ const barsFromPeaks = (peaks: Float32Array) => {
   return Array.from(amplitudes, (amplitude) => Math.max(3, Math.min(MAX_BAR_HEIGHT, Math.round(amplitude * scale))));
 };
 
+const visibleRequest = (
+  clip: AudioClip,
+  asset: MediaAsset | null,
+  viewport: AudioWaveformViewport,
+): WaveformRequest | null => {
+  const clipStart = clip.timelineStartMs / 1_000;
+  const clipEnd = (clip.timelineStartMs + clip.timelineDurationMs) / 1_000;
+  const viewportSpan = Math.max(0.001, Math.round((viewport.endSeconds - viewport.startSeconds) * 1_000) / 1_000);
+  const viewportPage = Math.floor(viewport.startSeconds / viewportSpan);
+  const bufferedStart = Math.max(0, (viewportPage - 1) * viewportSpan);
+  const bufferedEnd = (viewportPage + 2) * viewportSpan;
+  const start = Math.max(clipStart, bufferedStart);
+  const end = Math.min(clipEnd, bufferedEnd);
+  if (end <= start || viewport.pixelsPerSecond <= 0) return null;
+  const timelineDuration = Math.max(0.001, clipEnd - clipStart);
+  const sourceStartSeconds = clip.sourceInMs / 1_000 + (start - clipStart) * clip.playbackRate;
+  const sourceLimit = (clip.sourceInMs + clip.sourceDurationMs) / 1_000;
+  const sourceEndSeconds = Math.min(sourceLimit, sourceStartSeconds + (end - start) * clip.playbackRate);
+  if (sourceEndSeconds <= sourceStartSeconds) return null;
+  return {
+    clip,
+    asset,
+    sourceStartSeconds,
+    sourceEndSeconds,
+    pointCount: Math.max(
+      8,
+      Math.min(MAX_POINTS, Math.ceil(((end - start) * viewport.pixelsPerSecond) / PIXELS_PER_POINT)),
+    ),
+    leftPercent: ((start - clipStart) / timelineDuration) * 100,
+    widthPercent: ((end - start) / timelineDuration) * 100,
+  };
+};
+
 export function useCompositionAudioWaveforms(
   composition: () => ClipComposition,
-  timelineDurationSeconds: () => number,
+  viewport: () => AudioWaveformViewport,
 ) {
-  const rawBars = ref<Record<string, number[]>>({});
+  const rawSlices = ref<Record<string, AudioWaveformSlice>>({});
   const errors = ref<Record<string, MediaError>>({});
+  const status = ref<Record<string, AudioWaveformStatus>>({});
+  let worker: Worker | null = null;
   let generation = 0;
+  let currentRequests = new Map<string, WaveformRequest>();
 
-  const bars = computed<Record<string, number[]>>(() => {
+  const slices = computed<Record<string, AudioWaveformSlice>>(() => {
     const volumes = new Map(
       composition()
         .clips.filter(isAudioClip)
         .map((clip) => [clip.id, Math.max(0, Math.min(2, clip.volume / 100))]),
     );
     return Object.fromEntries(
-      Object.entries(rawBars.value).map(([clipId, heights]) => {
+      Object.entries(rawSlices.value).map(([clipId, slice]) => {
         const gain = volumes.get(clipId) ?? 1;
         return [
           clipId,
-          heights.map((height) => (gain <= 0 ? 0 : Math.max(1, Math.min(MAX_BAR_HEIGHT, Math.round(height * gain))))),
+          {
+            ...slice,
+            bars: slice.bars.map((height) =>
+              gain <= 0 ? 0 : Math.max(1, Math.min(MAX_BAR_HEIGHT, Math.round(height * gain))),
+            ),
+          },
         ];
       }),
     );
   });
 
-  const sources = computed(() => {
+  const requests = computed(() => {
     const assets = new Map(composition().assets.map((asset) => [asset.id, asset]));
     return composition().clips.flatMap((clip) => {
-      if (!isAudioClip(clip)) return [];
-      const asset = assets.get(clip.assetId);
-      if (!asset?.src) return [];
-      return [
-        {
-          id: clip.id,
-          asset,
-          sourceInMs: clip.sourceInMs,
-          sourceDurationMs: clip.sourceDurationMs,
-          timelineDurationMs: clip.timelineDurationMs,
-        },
-      ];
+      if (!isAudioClip(clip) || !clip.enabled) return [];
+      const request = visibleRequest(clip, assets.get(clip.assetId) ?? null, viewport());
+      return request ? [request] : [];
     });
   });
-  const sourceSignature = computed(() =>
-    sources.value
+  const requestSignature = computed(() =>
+    requests.value
       .map(
-        (clip) => `${clip.id}:${clip.asset.src}:${clip.sourceInMs}:${clip.sourceDurationMs}:${clip.timelineDurationMs}`,
+        ({ clip, asset, sourceStartSeconds, sourceEndSeconds, pointCount }) =>
+          `${clip.id}:${asset?.src ?? ''}:${sourceStartSeconds}:${sourceEndSeconds}:${pointCount}`,
       )
       .join('|'),
   );
 
+  const publish = (clipId: string, request: WaveformRequest, peaks: Float32Array) => {
+    rawSlices.value = {
+      ...rawSlices.value,
+      [clipId]: { bars: barsFromPeaks(peaks), leftPercent: request.leftPercent, widthPercent: request.widthPercent },
+    };
+  };
+
+  const fail = (clipId: string, error: MediaError) => {
+    rawSlices.value = Object.fromEntries(Object.entries(rawSlices.value).filter(([id]) => id !== clipId));
+    errors.value = { ...errors.value, [clipId]: error };
+    status.value = { ...status.value, [clipId]: 'error' };
+  };
+
+  const failLoading = (message: string) => {
+    for (const [clipId, request] of currentRequests) {
+      if (status.value[clipId] !== 'loading') continue;
+      fail(clipId, { kind: 'decode-failure', sourceId: request.clip.assetId, message });
+    }
+  };
+
+  const postExtract = (request: WaveformRequest, resolution: WaveformResolution) => {
+    if (!request.asset || !worker) return;
+    const pointCount = resolution === 'coarse' ? Math.min(COARSE_POINTS, request.pointCount) : request.pointCount;
+    const message: WaveformWorkerRequest = {
+      type: 'extract',
+      generation,
+      clipId: request.clip.id,
+      source: mediaSourceDescriptor(request.asset),
+      startSeconds: request.sourceStartSeconds,
+      endSeconds: request.sourceEndSeconds,
+      pointCount,
+      resolution,
+    };
+    worker.postMessage(message);
+  };
+
+  const initWorker = () => {
+    if (worker) return;
+    worker = new WaveformWorker();
+    worker.onmessage = (event: MessageEvent<unknown>) => {
+      try {
+        assertWaveformWorkerResponse(event.data);
+      } catch (error) {
+        console.error('[Beam media:waveform] Invalid waveform worker response.', error);
+        failLoading('Timeline waveform decoding returned an invalid response.');
+        return;
+      }
+      const message = event.data;
+      if (message.generation !== generation) return;
+      const request = currentRequests.get(message.clipId);
+      if (!request) return;
+      if (message.type === 'error') {
+        fail(message.clipId, message.error);
+        return;
+      }
+      publish(message.clipId, request, message.peaks);
+      const coarseCount = Math.min(COARSE_POINTS, request.pointCount);
+      if (message.resolution === 'coarse' && request.pointCount > coarseCount) {
+        postExtract(request, 'refined');
+        return;
+      }
+      status.value = { ...status.value, [message.clipId]: 'ready' };
+    };
+    worker.onerror = () => {
+      console.error('[Beam media:waveform] Waveform worker crashed.');
+      failLoading('Timeline waveform decoding failed.');
+    };
+  };
+
   watch(
-    sourceSignature,
-    async () => {
-      const clips = sources.value;
-      const currentGeneration = ++generation;
-      const next: Record<string, number[]> = {};
-      const nextErrors: Record<string, MediaError> = {};
-      await Promise.all(
-        clips.map(async (clip) => {
-          try {
-            const peaks = await extractWaveformPeaks(
-              mediaSourceDescriptor(clip.asset),
-              clip.sourceInMs / 1_000,
-              (clip.sourceInMs + clip.sourceDurationMs) / 1_000,
-              pointCountFor(clip.timelineDurationMs, timelineDurationSeconds()),
-            );
-            next[clip.id] = barsFromPeaks(peaks);
-          } catch (error) {
-            nextErrors[clip.id] =
-              error instanceof MediaInputError
-                ? error.detail
-                : { kind: 'decode-failure', sourceId: clip.asset.id, message: 'The waveform could not be decoded.' };
-            next[clip.id] = [];
-          }
-        }),
-      );
-      if (currentGeneration === generation) {
-        rawBars.value = next;
-        errors.value = nextErrors;
+    requestSignature,
+    () => {
+      generation += 1;
+      const active = requests.value;
+      currentRequests = new Map(active.map((request) => [request.clip.id, request]));
+      const activeIds = new Set(active.map(({ clip }) => clip.id));
+      rawSlices.value = Object.fromEntries(Object.entries(rawSlices.value).filter(([clipId]) => activeIds.has(clipId)));
+      errors.value = {};
+      status.value = Object.fromEntries(active.map(({ clip }) => [clip.id, 'loading' as const]));
+      worker?.postMessage({ type: 'clear', generation } satisfies WaveformWorkerRequest);
+      for (const request of active) {
+        if (!request.asset) {
+          const error = new MediaInputError({
+            kind: 'missing',
+            sourceId: request.clip.assetId,
+            message: 'The waveform source asset is missing.',
+          });
+          fail(request.clip.id, error.detail);
+          continue;
+        }
+        try {
+          initWorker();
+          postExtract(request, 'coarse');
+        } catch (error) {
+          fail(request.clip.id, {
+            kind: 'decode-failure',
+            sourceId: request.clip.assetId,
+            message: error instanceof Error ? error.message : 'The waveform request could not be created.',
+          });
+        }
       }
     },
     { immediate: true },
@@ -110,7 +241,13 @@ export function useCompositionAudioWaveforms(
 
   onUnmounted(() => {
     generation += 1;
+    currentRequests.clear();
+    rawSlices.value = {};
+    errors.value = {};
+    status.value = {};
+    worker?.postMessage({ type: 'clear', generation } satisfies WaveformWorkerRequest);
+    worker?.terminate();
   });
 
-  return { bars, errors };
+  return { slices, errors, status };
 }

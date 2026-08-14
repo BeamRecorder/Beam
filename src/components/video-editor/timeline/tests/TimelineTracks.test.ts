@@ -3,15 +3,28 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
   useCompositionAudioWaveforms: () => ({
-    bars: {
-      'system-audio': [4, 12, 20],
-      'microphone-audio': [],
-      'imported-audio': [8, 16],
+    slices: {
+      'system-audio': { bars: [4, 12, 20], leftPercent: 0, widthPercent: 100 },
+      'microphone-audio': undefined,
+      'imported-audio': undefined,
+    },
+    status: {
+      'system-audio': 'ready',
+      'microphone-audio': 'loading',
+      'imported-audio': 'error',
+    },
+    errors: {
+      'imported-audio': {
+        kind: 'decode-failure',
+        sourceId: 'imported-asset',
+        message: 'The waveform could not be decoded.',
+      } satisfies MediaError,
     },
   }),
 }));
@@ -23,6 +36,11 @@ const TimelineClipStub = defineComponent({
     selected: { type: Boolean, default: false },
     trimState: { type: Object, default: null },
     thumbnailSlots: { type: Array, default: () => [] },
+    waveformBars: { type: Array, default: undefined },
+    waveformLeftPercent: { type: Number, default: 0 },
+    waveformWidthPercent: { type: Number, default: 100 },
+    waveformStatus: { type: String, default: undefined },
+    waveformError: { type: Object, default: undefined },
   },
   emits: ['select', 'move', 'trim'],
   template: `
@@ -34,6 +52,7 @@ const TimelineClipStub = defineComponent({
       @pointerdown="$emit('move', $event)"
     >
       <span class="clip-label-text">{{ clip.name }}</span>
+      <span class="waveform-state" :data-status="waveformStatus">{{ waveformError?.message }}</span>
       <span class="trim-handle start" @pointerdown.stop="$emit('trim', { event: $event, edge: 'start' })">
         <span v-if="trimState?.edge === 'start'" class="trim-side-badge">trim</span>
       </span>
@@ -322,6 +341,32 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:clip')).toContainEqual(['screen-clip']);
     await mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').trigger('click');
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+  });
+
+  it('forwards per-clip waveform slices, loading status, and real errors to TimelineClip', async () => {
+    const mounted = await mountTracks();
+    const clips = mounted!.findAllComponents(TimelineClipStub);
+    const system = clips.find((component) => component.props('clip').id === 'system-audio');
+    const microphone = clips.find((component) => component.props('clip').id === 'microphone-audio');
+    const imported = clips.find((component) => component.props('clip').id === 'imported-audio');
+    if (!system || !microphone || !imported) throw new Error('Expected all audio timeline clip stubs.');
+
+    expect(system.props('waveformBars')).toEqual([4, 12, 20]);
+    expect(system.props('waveformStatus')).toBe('ready');
+    expect(system.props('waveformLeftPercent')).toBe(0);
+    expect(system.props('waveformWidthPercent')).toBe(100);
+
+    expect(microphone.props('waveformBars')).toBeUndefined();
+    expect(microphone.props('waveformStatus')).toBe('loading');
+    expect(microphone.props('waveformError')).toBeUndefined();
+
+    expect(imported.props('waveformBars')).toBeUndefined();
+    expect(imported.props('waveformStatus')).toBe('error');
+    expect(imported.props('waveformError')).toEqual({
+      kind: 'decode-failure',
+      sourceId: 'imported-asset',
+      message: 'The waveform could not be decoded.',
+    });
   });
 
   it('previews and adds zooms/captions only in available gaps', async () => {

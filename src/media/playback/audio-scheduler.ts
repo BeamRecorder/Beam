@@ -35,12 +35,20 @@ export class AudioPlaybackScheduler {
   private readonly scheduled = new Set<ScheduledNode>();
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private schedulePromise: Promise<void> | null = null;
+  private queuedScheduleGeneration: number | null = null;
   private generation = 0;
   private playing = false;
   private anchorTimelineSeconds = 0;
   private anchorContextSeconds = 0;
   private pausedTimelineSeconds = 0;
+  private readonly onPlaybackError?: (error: MediaError) => void;
+
+  constructor(onPlaybackError?: (error: MediaError) => void) {
+    this.onPlaybackError = onPlaybackError;
+  }
 
   async loadComposition(composition: ClipComposition): Promise<MediaError[]> {
     this.stopPlayback();
@@ -96,8 +104,11 @@ export class AudioPlaybackScheduler {
     this.pausedTimelineSeconds = timelineSeconds;
     this.anchorContextSeconds = context.currentTime;
     this.createConsumers(timelineSeconds);
-    await this.schedule(generation);
-    this.timer = setInterval(() => void this.schedule(generation), SCHEDULE_INTERVAL_MS);
+    await this.requestSchedule(generation);
+    if (!this.playing || generation !== this.generation) return;
+    this.timer = setInterval(() => {
+      void this.requestSchedule(generation).catch((error: unknown) => this.handleScheduleError(error, generation));
+    }, SCHEDULE_INTERVAL_MS);
   }
 
   pause(timelineSeconds = this.currentTime()): void {
@@ -131,7 +142,9 @@ export class AudioPlaybackScheduler {
     this.stopPlayback();
     this.disposeDecoders();
     this.masterGain?.disconnect();
+    this.limiter?.disconnect();
     this.masterGain = null;
+    this.limiter = null;
     void this.context?.close();
     this.context = null;
     this.composition = null;
@@ -141,7 +154,14 @@ export class AudioPlaybackScheduler {
     if (this.context) return this.context;
     this.context = new AudioContext();
     this.masterGain = this.context.createGain();
-    this.masterGain.connect(this.context.destination);
+    this.limiter = this.context.createDynamicsCompressor();
+    this.limiter.threshold.value = -1;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = 0.003;
+    this.limiter.release.value = 0.1;
+    this.masterGain.connect(this.limiter);
+    this.limiter.connect(this.context.destination);
     return this.context;
   }
 
@@ -175,9 +195,27 @@ export class AudioPlaybackScheduler {
     await Promise.all(this.consumers.map((consumer) => this.scheduleConsumer(consumer, horizon, requestGeneration)));
   }
 
+  private requestSchedule(requestGeneration: number): Promise<void> {
+    this.queuedScheduleGeneration = requestGeneration;
+    if (this.schedulePromise) return this.schedulePromise;
+    const drain = async () => {
+      while (this.queuedScheduleGeneration !== null) {
+        const generation = this.queuedScheduleGeneration;
+        this.queuedScheduleGeneration = null;
+        await this.schedule(generation);
+      }
+    };
+    const promise = drain().finally(() => {
+      if (this.schedulePromise === promise) this.schedulePromise = null;
+    });
+    this.schedulePromise = promise;
+    return promise;
+  }
+
   private async scheduleConsumer(consumer: AudioConsumer, horizon: number, requestGeneration: number) {
     while (this.playing && requestGeneration === this.generation) {
       const wrapped = consumer.pending ?? (await consumer.iterator.next()).value ?? null;
+      if (!this.playing || requestGeneration !== this.generation) return;
       consumer.pending = null;
       if (!wrapped) return;
       const clip = consumer.clip;
@@ -237,6 +275,7 @@ export class AudioPlaybackScheduler {
   private stopNodes() {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    this.queuedScheduleGeneration = null;
     for (const node of this.scheduled) {
       try {
         node.source.stop();
@@ -270,6 +309,14 @@ export class AudioPlaybackScheduler {
           sourceId,
           message: error instanceof Error ? error.message : 'Audio playback failed.',
         };
+  }
+
+  private handleScheduleError(error: unknown, requestGeneration: number) {
+    if (!this.playing || requestGeneration !== this.generation) return;
+    const detail = this.mediaError(error, 'audio-playback');
+    this.stopPlayback();
+    if (this.onPlaybackError) this.onPlaybackError(detail);
+    else console.error('[Beam media:audio] Audio scheduling failed.', detail);
   }
 }
 

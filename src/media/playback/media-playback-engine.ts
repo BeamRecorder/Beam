@@ -57,7 +57,7 @@ export class MediaPlaybackEngine {
 
   constructor(options: { workerFactory?: () => WorkerLike; audio?: AudioPlaybackScheduler } = {}) {
     this.worker = options.workerFactory?.() ?? new PlaybackWorker();
-    this.audio = options.audio ?? new AudioPlaybackScheduler();
+    this.audio = options.audio ?? new AudioPlaybackScheduler((error) => this.fail(error));
     this.worker.onmessage = (event: MessageEvent<unknown>) => this.receive(event.data);
     this.worker.onerror = () => {
       const error: MediaError = {
@@ -110,7 +110,12 @@ export class MediaPlaybackEngine {
     const clamped = this.clampTime(timelineSeconds);
     const requestGeneration = ++this.generation;
     this.currentSeconds = clamped;
-    await this.audio.play(clamped, requestGeneration);
+    try {
+      await this.audio.play(clamped, requestGeneration);
+    } catch (error) {
+      if (requestGeneration === this.generation) this.fail(this.toMediaError(error, 'audio-playback'));
+      throw error;
+    }
     if (requestGeneration !== this.generation) return;
     this.post({ type: 'play', generation: requestGeneration, timelineSeconds: clamped });
     this.setState('playing');

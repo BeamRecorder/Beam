@@ -175,6 +175,26 @@ describe('MediaPlaybackEngine', () => {
     expect(times).toEqual([0, 0.75]);
   });
 
+  it('surfaces an audio scheduling failure through the existing error state', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    const errors: unknown[] = [];
+    engine.on('error', (error) => errors.push(error));
+    audio.play.mockRejectedValueOnce(new Error('audio scheduling failed'));
+
+    await expect(engine.play(0)).rejects.toThrow('audio scheduling failed');
+    expect(engine.state).toBe('error');
+    expect(errors).toContainEqual(
+      expect.objectContaining({ kind: 'decode-failure', message: 'audio scheduling failed' }),
+    );
+    engine.dispose();
+  });
+
   it('clamps finite seeks and resolves worker latest-wins results, including superseded seeks', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();

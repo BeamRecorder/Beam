@@ -12,6 +12,9 @@ import type {
 const reportPlaybackWorkerError = (message: string, error?: unknown) =>
   console.error(`[Beam media:playback-worker] ${message}`, error ?? '');
 
+const MAX_PREVIEW_WIDTH = 1_920;
+const MAX_PREVIEW_HEIGHT = 1_080;
+
 type QueuedFrame = {
   bitmap: ImageBitmap;
   timestampSeconds: number;
@@ -22,6 +25,8 @@ type AssetDecoder = {
   assetId: string;
   opened: OpenedMediaInput;
   sinkTrack: Awaited<ReturnType<OpenedMediaInput['input']['getPrimaryVideoTrack']>>;
+  previewWidth: number;
+  previewHeight: number;
 };
 
 type ClipConsumer = {
@@ -93,14 +98,14 @@ function receive(message: PlaybackWorkerRequest) {
 async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
   const version = ++loadVersion;
   disposeAll(false);
+  const loadedAssets = new Map<string, AssetDecoder>();
+  let committed = false;
   try {
     for (const descriptor of message.assets) {
       const opened = await openMediaInput(descriptor);
-      if (version !== loadVersion || disposed) {
-        opened.dispose();
-        return;
-      }
+      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
       const track = await opened.input.getPrimaryVideoTrack();
+      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
       if (!track) {
         opened.dispose();
         throw new MediaInputError({
@@ -111,7 +116,9 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
         });
       }
       const codec = await track.getCodec();
+      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
       const canDecode = await track.canDecode();
+      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
       if (!canDecode) {
         opened.dispose();
         throw new MediaInputError({
@@ -122,8 +129,22 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
           message: 'The playback video codec is unsupported.',
         });
       }
-      assets.set(descriptor.assetId, { assetId: descriptor.assetId, opened, sinkTrack: track });
+      const displayWidth = await track.getDisplayWidth();
+      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
+      const displayHeight = await track.getDisplayHeight();
+      if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
+      const preview = previewDimensions(displayWidth, displayHeight);
+      loadedAssets.set(descriptor.assetId, {
+        assetId: descriptor.assetId,
+        opened,
+        sinkTrack: track,
+        previewWidth: preview.width,
+        previewHeight: preview.height,
+      });
     }
+    if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets);
+    for (const [assetId, asset] of loadedAssets) assets.set(assetId, asset);
+    committed = true;
     for (const clip of message.clips) {
       const asset = assets.get(clip.assetId);
       if (!asset?.sinkTrack) {
@@ -136,7 +157,13 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
       consumers.set(clip.clipId, {
         clip,
         asset,
-        sink: new CanvasSink(asset.sinkTrack, { poolSize: 3 }),
+        sink: new CanvasSink(asset.sinkTrack, {
+          width: asset.previewWidth,
+          height: asset.previewHeight,
+          fit: 'contain',
+          poolSize: 3,
+          decoderOptions: { hardwareAcceleration: 'prefer-hardware', optimizeForLatency: true },
+        }),
         iterator: null,
         queue: [],
         iteratorGeneration: 0,
@@ -145,10 +172,33 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
     }
     post({ type: 'ready', generation: message.generation });
   } catch (error) {
+    if (!committed) disposeLoadedAssets(loadedAssets);
+    if (isStaleLoad(version)) return;
     reportPlaybackWorkerError('Composition load failed.', mediaError(error, 'playback'));
-    disposeAll();
+    if (committed) disposeAll(false);
     postError(mediaError(error, 'playback'), message.generation);
   }
+}
+
+function isStaleLoad(version: number) {
+  return version !== loadVersion || disposed;
+}
+
+function disposeLoadedAssets(loadedAssets: Map<string, AssetDecoder>, current?: OpenedMediaInput) {
+  current?.dispose();
+  for (const asset of loadedAssets.values()) asset.opened.dispose();
+  loadedAssets.clear();
+}
+
+function previewDimensions(displayWidth: number, displayHeight: number) {
+  if (!Number.isFinite(displayWidth) || displayWidth <= 0 || !Number.isFinite(displayHeight) || displayHeight <= 0) {
+    throw new RangeError('The playback video has invalid display dimensions.');
+  }
+  const scale = Math.min(1, MAX_PREVIEW_WIDTH / displayWidth, MAX_PREVIEW_HEIGHT / displayHeight);
+  return {
+    width: Math.max(1, Math.floor(displayWidth * scale)),
+    height: Math.max(1, Math.floor(displayHeight * scale)),
+  };
 }
 
 function activeAt(clip: PlaybackClipDescriptor, timelineSeconds: number) {
@@ -218,7 +268,7 @@ async function sequentialFrame(consumer: ClipConsumer, targetSeconds: number): P
 }
 
 async function processTicks() {
-  if (processingTick) return;
+  if (processingTick || processingSeek) return;
   processingTick = true;
   try {
     while (pendingTick && !disposed) {
@@ -228,7 +278,7 @@ async function processTicks() {
       for (const consumer of consumers.values()) {
         if (!activeAt(consumer.clip, request.timelineSeconds)) continue;
         const frame = await sequentialFrame(consumer, sourceTime(consumer.clip, request.timelineSeconds));
-        if (!frame || request.generation !== generation || pendingTick) {
+        if (!frame || request.generation !== generation) {
           if (frame) closeFrame(frame, true);
           continue;
         }
@@ -240,11 +290,13 @@ async function processTicks() {
     postError(mediaError(error, 'playback'), generation);
   } finally {
     processingTick = false;
+    if (pendingSeek) void processSeeks();
+    else if (pendingTick) void processTicks();
   }
 }
 
 async function processSeeks() {
-  if (processingSeek) return;
+  if (processingSeek || processingTick) return;
   processingSeek = true;
   let activeRequest: Extract<PlaybackWorkerRequest, { type: 'seek' }> | null = null;
   try {
@@ -301,6 +353,8 @@ async function processSeeks() {
     postError(mediaError(error, 'playback'), activeRequest?.generation ?? generation, activeRequest?.requestId);
   } finally {
     processingSeek = false;
+    if (pendingSeek) void processSeeks();
+    else if (pendingTick) void processTicks();
   }
 }
 

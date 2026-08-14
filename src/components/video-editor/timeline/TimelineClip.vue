@@ -2,9 +2,11 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import type { MediaError } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
+import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
@@ -14,6 +16,10 @@ const props = defineProps<{
   thumbnailSlots: readonly TimelineThumbnailSlot[];
   selected: boolean;
   waveformBars?: number[];
+  waveformLeftPercent?: number;
+  waveformWidthPercent?: number;
+  waveformStatus?: AudioWaveformStatus;
+  waveformError?: MediaError;
   trimState?: { edge: 'start' | 'end'; durationMs: number } | null;
   deferThumbnailRequests?: boolean;
 }>();
@@ -131,8 +137,23 @@ onUnmounted(() => stopMarquee());
     @pointerleave="stopMarqueeForEvent"
   >
     <div v-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
-      <span v-for="(height, index) in waveformBars" :key="index" :style="{ height: `${height}px` }" />
-      <span v-if="!waveformBars?.length" class="waveform-unavailable">{{ t('waveformUnavailable') }}</span>
+      <div
+        v-if="waveformBars?.length"
+        class="waveform-slice"
+        :style="{ left: `${waveformLeftPercent ?? 0}%`, width: `${waveformWidthPercent ?? 100}%` }"
+      >
+        <span v-for="(height, index) in waveformBars" :key="index" :style="{ height: `${height}px` }" />
+      </div>
+      <Skeleton
+        v-else-if="waveformStatus === 'loading'"
+        class="waveform-loading"
+        width="100%"
+        height="100%"
+        radius="2"
+      />
+      <span v-else-if="waveformStatus === 'error'" class="waveform-unavailable" :title="waveformError?.message">
+        {{ t('waveformUnavailable') }}
+      </span>
     </div>
     <div v-else-if="asset?.kind === 'video'" class="thumbnails-track">
       <div
@@ -256,7 +277,16 @@ onUnmounted(() => stopMarquee());
   height: 1px;
   background: rgba(5, 150, 105, 0.32);
 }
-.waveform > span:not(.waveform-unavailable) {
+.waveform-slice {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1px;
+}
+.waveform-slice > span {
   flex: 1 1 auto;
   max-width: 2px;
   min-width: 1px;
@@ -264,7 +294,7 @@ onUnmounted(() => stopMarquee());
   background: #07865f;
   opacity: 0.9;
 }
-.timeline-clip.selected .waveform > span:not(.waveform-unavailable) {
+.timeline-clip.selected .waveform-slice > span {
   background: #056247;
   opacity: 1;
 }
@@ -273,6 +303,9 @@ onUnmounted(() => stopMarquee());
   color: var(--text-muted);
   font-size: 9px;
   text-align: center;
+}
+.waveform-loading {
+  opacity: 0.45;
 }
 .trim-handle {
   position: absolute;

@@ -78,10 +78,6 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   );
   const assets = computed(() => new Map(props.composition.assets.map((asset: MediaAsset) => [asset.id, asset])));
   const assetFor = (clip: Clip) => (isCaptionClip(clip) ? null : (assets.value.get(clip.assetId) ?? null));
-  const { bars: audioBars } = useCompositionAudioWaveforms(
-    () => props.composition,
-    () => props.duration,
-  );
 
   const tracksScrollRef = ref<HTMLDivElement | null>(null);
   const tracksViewportRef = ref<HTMLDivElement | null>(null);
@@ -114,6 +110,18 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const visibleStartSecond = ref(0);
   const visibleEndSecond = ref(0);
   const viewportReady = ref(false);
+  const {
+    slices: audioWaveforms,
+    errors: audioWaveformErrors,
+    status: audioWaveformStatus,
+  } = useCompositionAudioWaveforms(
+    () => props.composition,
+    () => ({
+      startSeconds: viewportReady.value ? visibleStartSecond.value : 0,
+      endSeconds: viewportReady.value ? visibleEndSecond.value : 0,
+      pixelsPerSecond: rulerWidth.value / Math.max(1, props.duration),
+    }),
+  );
   const thumbnailSlots = computed(() =>
     viewportReady.value
       ? timelineThumbnailSlots(
@@ -614,7 +622,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     importedAudioClips,
     assets,
     assetFor,
-    audioBars,
+    audioWaveforms,
+    audioWaveformErrors,
+    audioWaveformStatus,
     tracksScrollRef,
     tracksViewportRef,
     ticksAreaRef,

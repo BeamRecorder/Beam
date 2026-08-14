@@ -83,6 +83,20 @@ const deferred = <T>() => {
   return { promise, resolve, reject };
 };
 
+const videoTrack = (displayWidth = 3_840, displayHeight = 1_920) => ({
+  canDecode: vi.fn().mockResolvedValue(true),
+  getCodec: vi.fn().mockResolvedValue('avc1.640028'),
+  getDisplayWidth: vi.fn().mockResolvedValue(displayWidth),
+  getDisplayHeight: vi.fn().mockResolvedValue(displayHeight),
+  displayWidth,
+  displayHeight,
+});
+
+const openedVideo = (track = videoTrack()) => ({
+  input: { getPrimaryVideoTrack: vi.fn().mockResolvedValue(track) },
+  dispose: vi.fn(),
+});
+
 const flush = async () => {
   for (let index = 0; index < 12; index += 1) await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -114,14 +128,7 @@ beforeEach(async () => {
     return instance;
   });
 
-  const track = {
-    canDecode: vi.fn().mockResolvedValue(true),
-    getCodec: vi.fn().mockResolvedValue('avc1.640028'),
-  };
-  runtime.openMediaInput.mockResolvedValue({
-    input: { getPrimaryVideoTrack: vi.fn().mockResolvedValue(track) },
-    dispose: vi.fn(),
-  });
+  runtime.openMediaInput.mockResolvedValue(openedVideo());
 
   await import('../playback.worker');
 });
@@ -141,14 +148,47 @@ describe('playback worker', () => {
 
     expect(runtime.openMediaInput).toHaveBeenCalledOnce();
     expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
-    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(1, expect.anything(), { poolSize: 3 });
-    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(2, expect.anything(), { poolSize: 3 });
+    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({ poolSize: 3 }));
+    expect(runtime.CanvasSink).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({ poolSize: 3 }));
     expect(messages()).toContainEqual({ type: 'ready', generation: 3 });
 
     send({ type: 'dispose' });
     const opened = await runtime.openMediaInput.mock.results[0]!.value;
     expect(opened.dispose).toHaveBeenCalledOnce();
     expect(workerSelf.postMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('bounds preview sink output for a 4K source and requests low-latency hardware decoding', async () => {
+    send({ type: 'load', generation: 4, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+
+    const options = runtime.CanvasSink.mock.calls[0]?.[1] as {
+      width?: number;
+      height?: number;
+      fit?: string;
+      decoderOptions?: Record<string, unknown>;
+    };
+    expect(options.width).toBeGreaterThan(0);
+    expect(options.height).toBeGreaterThan(0);
+    expect(options.width).toBeLessThanOrEqual(1_920);
+    expect(options.height).toBeLessThanOrEqual(1_080);
+    expect(options.fit).toBe('contain');
+    expect(options.decoderOptions).toMatchObject({
+      hardwareAcceleration: 'prefer-hardware',
+      optimizeForLatency: true,
+    });
+  });
+
+  it('never upscales a low-resolution preview sink', async () => {
+    runtime.openMediaInput.mockReset().mockResolvedValue(openedVideo(videoTrack(640, 480)));
+    send({ type: 'load', generation: 5, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+
+    const options = runtime.CanvasSink.mock.calls[0]?.[1] as { width?: number; height?: number };
+    expect(options.width).toBeGreaterThan(0);
+    expect(options.height).toBeGreaterThan(0);
+    expect(options.width).toBeLessThanOrEqual(640);
+    expect(options.height).toBeLessThanOrEqual(480);
   });
 
   it('shares the asset decoder when two clips reference the same asset', async () => {
@@ -339,7 +379,7 @@ describe('playback worker', () => {
     });
   });
 
-  it('coalesces ticks and closes a frame decoded for a stale tick', async () => {
+  it('presents a frame decoded by a slow tick instead of starving while a newer tick is pending', async () => {
     const next = deferred<IteratorResult<Wrapped>>();
     const stale = bitmap();
     const current = bitmap();
@@ -364,8 +404,9 @@ describe('playback worker', () => {
     next.resolve({ value: wrapped(1, stale), done: false });
     await flush();
 
-    expect(stale.close).toHaveBeenCalledOnce();
-    expect(messages().filter((message) => message.type === 'frame')).toHaveLength(1);
+    expect(stale.close).not.toHaveBeenCalled();
+    expect(messages().filter((message) => message.type === 'frame')).toHaveLength(2);
+    expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', timestampSeconds: 1 }));
     expect(messages()).toContainEqual(expect.objectContaining({ type: 'frame', timestampSeconds: 1.2 }));
   });
 
@@ -406,5 +447,34 @@ describe('playback worker', () => {
       generation: 0,
       error: { kind: 'decode-failure', sourceId: 'worker', message: 'Invalid playback worker message.' },
     });
+  });
+
+  it('does not let an obsolete load reinsert an asset after asynchronous track validation', async () => {
+    const firstOpen = deferred<ReturnType<typeof openedVideo>>();
+    const firstTrack = deferred<ReturnType<typeof videoTrack>>();
+    const firstOpened = {
+      input: { getPrimaryVideoTrack: vi.fn(() => firstTrack.promise) },
+      dispose: vi.fn(),
+    };
+    const secondOpened = openedVideo();
+    runtime.openMediaInput
+      .mockReset()
+      .mockImplementationOnce(() => firstOpen.promise)
+      .mockResolvedValueOnce(secondOpened);
+
+    send({ type: 'load', generation: 10, assets: [source('asset-1')], clips: [clip('old-clip')] });
+    firstOpen.resolve(firstOpened);
+    await flush();
+
+    send({ type: 'load', generation: 11, assets: [source('asset-1')], clips: [clip('current-clip')] });
+    await flush();
+    firstTrack.resolve(videoTrack());
+    await flush();
+
+    expect(messages().filter((message) => message.type === 'ready')).toEqual([
+      { type: 'ready', generation: 11 },
+    ]);
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(1);
+    expect(firstOpened.dispose).toHaveBeenCalledOnce();
   });
 });

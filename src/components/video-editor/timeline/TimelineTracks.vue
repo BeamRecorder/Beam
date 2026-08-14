@@ -55,7 +55,9 @@ const {
   microphoneClips,
   importedAudioClips,
   assetFor,
-  audioBars,
+  audioWaveforms,
+  audioWaveformErrors,
+  audioWaveformStatus,
   tracksScrollRef,
   tracksViewportRef,
   ticksAreaRef,
@@ -291,7 +293,11 @@ const {
               :duration="duration"
               :thumbnail-slots="thumbnailSlots"
               :selected="selectedClipId === clip.id"
-              :waveform-bars="audioBars[clip.id]"
+              :waveform-bars="audioWaveforms[clip.id]?.bars"
+              :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
+              :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+              :waveform-status="audioWaveformStatus[clip.id]"
+              :waveform-error="audioWaveformErrors[clip.id]"
               :trim-state="trimStateFor(clip.id)"
               @select="emit('select:clip', clip.id)"
               @move="beginClipMove($event, clip)"
@@ -317,7 +323,11 @@ const {
               :duration="duration"
               :thumbnail-slots="thumbnailSlots"
               :selected="selectedClipId === clip.id"
-              :waveform-bars="audioBars[clip.id]"
+              :waveform-bars="audioWaveforms[clip.id]?.bars"
+              :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
+              :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+              :waveform-status="audioWaveformStatus[clip.id]"
+              :waveform-error="audioWaveformErrors[clip.id]"
               :trim-state="trimStateFor(clip.id)"
               @select="emit('select:clip', clip.id)"
               @move="beginClipMove($event, clip)"
@@ -342,7 +352,11 @@ const {
               :duration="duration"
               :thumbnail-slots="thumbnailSlots"
               :selected="selectedClipId === clip.id"
-              :waveform-bars="audioBars[clip.id]"
+              :waveform-bars="audioWaveforms[clip.id]?.bars"
+              :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
+              :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+              :waveform-status="audioWaveformStatus[clip.id]"
+              :waveform-error="audioWaveformErrors[clip.id]"
               :trim-state="trimStateFor(clip.id)"
               @select="emit('select:clip', clip.id)"
               @move="beginClipMove($event, clip)"

@@ -41,6 +41,16 @@ type FakeSource = {
   stop: ReturnType<typeof vi.fn>;
 };
 
+type FakeCompressor = {
+  threshold: { value: number };
+  knee: { value: number };
+  ratio: { value: number };
+  attack: { value: number };
+  release: { value: number };
+  connect: ReturnType<typeof vi.fn>;
+  disconnect: ReturnType<typeof vi.fn>;
+};
+
 class FakeAudioContext {
   static instances: FakeAudioContext[] = [];
   state: AudioContextState = 'running';
@@ -53,6 +63,7 @@ class FakeAudioContext {
     connect: ReturnType<typeof vi.fn>;
     disconnect: ReturnType<typeof vi.fn>;
   }> = [];
+  readonly compressors: FakeCompressor[] = [];
   readonly sources: FakeSource[] = [];
 
   constructor() {
@@ -71,6 +82,20 @@ class FakeAudioContext {
     };
     this.gains.push(gain);
     return gain as unknown as GainNode;
+  }
+
+  createDynamicsCompressor() {
+    const compressor: FakeCompressor = {
+      threshold: { value: 0 },
+      knee: { value: 0 },
+      ratio: { value: 1 },
+      attack: { value: 0 },
+      release: { value: 0 },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    this.compressors.push(compressor);
+    return compressor as unknown as DynamicsCompressorNode;
   }
 
   createBufferSource() {
@@ -136,6 +161,20 @@ const iterator = (chunks: Array<{ timestamp: number; duration: number }>) => {
   };
 };
 
+const deferred = <T>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
+
+const flushMicrotasks = async () => {
+  for (let index = 0; index < 12; index += 1) await Promise.resolve();
+};
+
 const openedInput = (track: unknown = { canDecode: vi.fn(async () => true), getCodec: vi.fn(async () => 'aac') }) => ({
   descriptor: {
     assetId: 'audio-1',
@@ -194,6 +233,72 @@ describe('AudioPlaybackScheduler', () => {
     scheduler.dispose();
   });
 
+  it('keeps timer scheduling single-flight when a decoder is slower than the timer cadence', async () => {
+    const delayed = deferred<{
+      done: false;
+      value: { timestamp: number; duration: number; buffer: { id: string } };
+    }>();
+    const chunks = [
+      { timestamp: 0, duration: 0.4 },
+      { timestamp: 0.4, duration: 0.4 },
+      { timestamp: 0.8, duration: 0.2 },
+      { timestamp: 1.1, duration: 0.1 },
+    ];
+    let nextCalls = 0;
+    let inFlight = 0;
+    let maximumInFlight = 0;
+    let delayedResultReleased = false;
+    const scheduleIterator = {
+      next: vi.fn(() => {
+        const call = nextCalls++;
+        const track = <T>(promise: Promise<T>) => {
+          inFlight += 1;
+          maximumInFlight = Math.max(maximumInFlight, inFlight);
+          return promise.finally(() => {
+            inFlight -= 1;
+          });
+        };
+        if (call < chunks.length) {
+          const chunk = chunks[call]!;
+          return track(Promise.resolve({ done: false as const, value: { ...chunk, buffer: { id: String(call) } } }));
+        }
+        if (!delayedResultReleased) return track(delayed.promise);
+        return track(Promise.resolve({ done: true as const, value: undefined }));
+      }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    runtime.buffersFactory.mockImplementation(() => scheduleIterator);
+
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(composition());
+    await scheduler.play(0, 1);
+
+    const context = FakeAudioContext.instances[0]!;
+    context.now = 1;
+    vi.advanceTimersByTime(100);
+    await flushMicrotasks();
+    vi.advanceTimersByTime(100);
+    await flushMicrotasks();
+
+    expect(maximumInFlight).toBe(1);
+
+    delayedResultReleased = true;
+    delayed.resolve({
+      done: false,
+      value: { timestamp: 1.2, duration: 0.1, buffer: { id: 'delayed' } },
+    });
+    await flushMicrotasks();
+
+    const startsAtDelayedChunk = context.sources.filter((source) => {
+      const startTime = source.start.mock.calls[0]?.[0];
+      return typeof startTime === 'number' && Math.abs(startTime - 1.2) < 0.0001;
+    });
+    expect(startsAtDelayedChunk).toHaveLength(1);
+    scheduler.dispose();
+  });
+
   it('applies source trims, timeline offsets, playback rate, clip volume, and master volume', async () => {
     const wrapped = [{ timestamp: 1.5, duration: 1 }];
     runtime.buffersFactory.mockImplementation(() => iterator(wrapped));
@@ -219,6 +324,28 @@ describe('AudioPlaybackScheduler', () => {
     scheduler.setVolume(125);
     expect(context.gains[0]!.gain.setTargetAtTime).toHaveBeenCalledWith(1, 0, 0.004);
     scheduler.dispose();
+  });
+
+  it('routes monitoring through the configured limiter and disconnects it on dispose', async () => {
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(composition());
+    await scheduler.play(0, 1);
+
+    const context = FakeAudioContext.instances[0]!;
+    const masterGain = context.gains[0]!;
+    const limiter = context.compressors[0]!;
+    expect(context.compressors).toHaveLength(1);
+    expect(limiter.threshold.value).toBe(-1);
+    expect(limiter.knee.value).toBe(0);
+    expect(limiter.ratio.value).toBe(20);
+    expect(limiter.attack.value).toBe(0.003);
+    expect(limiter.release.value).toBe(0.1);
+    expect(masterGain.connect).toHaveBeenCalledWith(limiter);
+    expect(limiter.connect).toHaveBeenCalledWith(context.destination);
+
+    scheduler.dispose();
+    expect(masterGain.disconnect).toHaveBeenCalledOnce();
+    expect(limiter.disconnect).toHaveBeenCalledOnce();
   });
 
   it('handles overlapping clips and waits through gaps until they enter the scheduling window', async () => {

@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TimelineClip from '../TimelineClip.vue';
 import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import type { MediaError } from '~/media/shared/media-types';
 
 const thumbnailState = vi.hoisted(() => ({
   thumbnails: { 0: '/thumb-0.png' } as Record<number, string>,
@@ -130,7 +131,7 @@ describe('TimelineClip', () => {
     expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([0, 1.25]);
   });
 
-  it('renders audio waveforms, image previews and unavailable waveform labels', async () => {
+  it('renders audio waveforms, a loading skeleton, and an explicit unavailable error', async () => {
     const audio = mount(TimelineClip, {
       props: {
         ...baseProps,
@@ -143,24 +144,49 @@ describe('TimelineClip', () => {
         }),
         asset: asset('audio'),
         waveformBars: [4, 10],
+        waveformStatus: 'ready',
+        waveformLeftPercent: 20,
+        waveformWidthPercent: 60,
         selected: false,
       },
       global: { stubs: { Skeleton } },
     });
     expect(audio.get('.timeline-clip').classes()).toEqual(expect.arrayContaining(['kind-audio', 'disabled']));
-    expect(audio.findAll('.waveform > span')).toHaveLength(2);
+    expect(audio.findAll('.waveform-slice > span')).toHaveLength(2);
+    expect(audio.get('.waveform-slice').attributes('style')).toContain('left: 20%');
+    expect(audio.get('.waveform-slice').attributes('style')).toContain('width: 60%');
     expect(thumbnailState.requestVisibleFrames).toHaveBeenCalledWith([]);
 
+    const loading = mount(TimelineClip, {
+      props: {
+        ...baseProps,
+        clip: clip({ kind: 'audio', assetId: 'audio-asset' }),
+        asset: asset('audio'),
+        waveformStatus: 'loading',
+      },
+      global: { stubs: { Skeleton } },
+    });
+    expect(loading.find('.waveform-loading').exists()).toBe(true);
+    expect(loading.find('.waveform-unavailable').exists()).toBe(false);
+
+    const error: MediaError = {
+      kind: 'decode-failure',
+      sourceId: 'audio-asset',
+      message: 'The waveform could not be decoded.',
+    };
     const unavailable = mount(TimelineClip, {
       props: {
         ...baseProps,
         clip: clip({ kind: 'audio', assetId: 'audio-asset' }),
         asset: asset('audio'),
-        waveformBars: [],
+        waveformStatus: 'error',
+        waveformError: error,
       },
       global: { stubs: { Skeleton } },
     });
     expect(unavailable.find('.waveform-unavailable').exists()).toBe(true);
+    expect(unavailable.find('.waveform-unavailable').attributes('title')).toBe(error.message);
+    expect(unavailable.find('.waveform-loading').exists()).toBe(false);
 
     const image = mount(TimelineClip, {
       props: {
@@ -172,6 +198,7 @@ describe('TimelineClip', () => {
     });
     expect(image.get('.image-preview').attributes('src')).toBe('/poster.png');
     audio.unmount();
+    loading.unmount();
     unavailable.unmount();
     image.unmount();
   });
