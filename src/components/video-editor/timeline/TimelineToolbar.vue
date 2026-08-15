@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onUnmounted } from 'vue';
 import {
   Play,
   Pause,
@@ -92,6 +92,45 @@ const handleZoomIn = () => {
 const handleZoomOut = () => {
   emit('update:zoomLevel', zoomTimelineByButton(props.zoomLevel, -1));
 };
+
+let zoomSliderRafId: number | null = null;
+let pendingZoomValue: number | null = null;
+
+const handleZoomSliderInput = (event: Event) => {
+  const value = parseFloat((event.target as HTMLInputElement).value);
+  if (!Number.isFinite(value)) return;
+  pendingZoomValue = value;
+
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    if (zoomSliderRafId !== null) return;
+    zoomSliderRafId = window.requestAnimationFrame(() => {
+      zoomSliderRafId = null;
+      if (pendingZoomValue !== null) {
+        emit('update:zoomLevel', pendingZoomValue);
+      }
+    });
+  } else {
+    emit('update:zoomLevel', pendingZoomValue);
+  }
+};
+
+const handleZoomSliderChange = (event: Event) => {
+  if (typeof window !== 'undefined' && zoomSliderRafId !== null) {
+    window.cancelAnimationFrame(zoomSliderRafId);
+    zoomSliderRafId = null;
+  }
+  const value = parseFloat((event.target as HTMLInputElement).value);
+  if (Number.isFinite(value)) {
+    emit('update:zoomLevel', value);
+  }
+};
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined' && zoomSliderRafId !== null) {
+    window.cancelAnimationFrame(zoomSliderRafId);
+    zoomSliderRafId = null;
+  }
+});
 </script>
 
 <template>
@@ -214,7 +253,8 @@ const handleZoomOut = () => {
                 :style="{
                   background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`,
                 }"
-                @input="emit('update:zoomLevel', parseFloat(($event.target as HTMLInputElement).value))"
+                @input="handleZoomSliderInput"
+                @change="handleZoomSliderChange"
               />
               <ZoomIn :size="13" class="zoom-slider-icon" />
             </div>
