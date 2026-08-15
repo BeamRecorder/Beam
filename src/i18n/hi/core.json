@@ -222,6 +222,8 @@
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "त्रुटि कॉपी करें",
+    "copied": "कॉपी किया गया",
+    "copyFailed": "कॉपी नहीं हो सकी",
     "resMaxDesc": "मूल रिज़ॉल्यूशन ({width}×{height})",
     "res1080pDesc": "Full HD स्केल ({width}×{height})",
     "res720pDesc": "HD स्केल ({width}×{height})"

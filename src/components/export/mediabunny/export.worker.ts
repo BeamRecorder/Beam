@@ -189,19 +189,16 @@ async function loadCursors(request: ExportRequest, owned: Map<string, ImageBitma
   const result = new Map<string, ImageBitmap>();
   await Promise.all(
     [...types].map(async (type) => {
-      const path = `macOsSvgCursors/${type}.svg`;
+      const path = `macOsPngCursors/${type}.png`;
       const url = import.meta.env.DEV
         ? new URL(`/${path}`, self.location.href).href
         : new URL(`../${path}`, self.location.href).href;
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Unable to load cursor ${type}.`);
-      let svg = await response.text();
-      const color = request.snapshot.cursorSettings.color;
-      if (color !== '#000000') svg = svg.replace(/fill="#(?:000000|000)"/gi, `fill="${color}"`);
       const rasterWidth = Math.max(1, Math.ceil(request.snapshot.cursorSettings.size * 6));
       let bitmap: ImageBitmap;
       try {
-        bitmap = await createImageBitmap(new Blob([svg], { type: 'image/svg+xml' }), {
+        bitmap = await createImageBitmap(await response.blob(), {
           resizeWidth: rasterWidth,
           resizeHeight: rasterWidth,
           resizeQuality: 'high',
@@ -210,11 +207,35 @@ async function loadCursors(request: ExportRequest, owned: Map<string, ImageBitma
         const decoder = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
         throw new Error(`Unable to decode cursor "${type}" from ${url}; decoder: ${decoder}`, { cause: error });
       }
+      bitmap = recolorCursor(bitmap, request.snapshot.cursorSettings.color);
       owned.set(`cursor:${type}`, bitmap);
       result.set(type, bitmap);
     }),
   );
   return result;
+}
+
+function recolorCursor(bitmap: ImageBitmap, color: string) {
+  if (color.toLowerCase() === '#000000') return bitmap;
+  const match = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(color);
+  if (!match) return bitmap;
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const context = canvas.getContext('2d');
+  if (!context) return bitmap;
+  context.drawImage(bitmap, 0, 0);
+  const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height);
+  const red = Number.parseInt(match[1]!, 16);
+  const green = Number.parseInt(match[2]!, 16);
+  const blue = Number.parseInt(match[3]!, 16);
+  for (let index = 0; index < pixels.data.length; index += 4) {
+    if (pixels.data[index]! > 8 || pixels.data[index + 1]! > 8 || pixels.data[index + 2]! > 8) continue;
+    pixels.data[index] = red;
+    pixels.data[index + 1] = green;
+    pixels.data[index + 2] = blue;
+  }
+  context.putImageData(pixels, 0, 0);
+  bitmap.close();
+  return canvas.transferToImageBitmap();
 }
 
 async function renderVideo(

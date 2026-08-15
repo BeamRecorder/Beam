@@ -222,6 +222,8 @@
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "Copiar error",
+    "copied": "Copiado",
+    "copyFailed": "Error al copiar",
     "resMaxDesc": "Resolución nativa sin procesar ({width}×{height})",
     "res1080pDesc": "Escala Full HD ({width}×{height})",
     "res720pDesc": "Escala HD ({width}×{height})"

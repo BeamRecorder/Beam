@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted } from 'vue';
+import { computed } from 'vue';
 import {
   Play,
   Pause,
@@ -10,7 +10,6 @@ import {
   Plus,
   Scissors,
   Magnet,
-  RotateCcw,
   Video,
   Image as ImageIcon,
   Volume2,
@@ -19,6 +18,7 @@ import {
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import PopoverMenuButton from '~/ui/popover/PopoverMenuButton.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
 
@@ -62,13 +62,6 @@ const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
 });
 
-const zoomPercentage = computed(() => {
-  return Math.min(
-    100,
-    Math.max(0, ((props.zoomLevel - MIN_TIMELINE_ZOOM) / (MAX_TIMELINE_ZOOM - MIN_TIMELINE_ZOOM)) * 100),
-  );
-});
-
 const formatTime = (time: number) => {
   if (!Number.isFinite(time) || time < 0) time = 0;
   const totalSeconds = Math.floor(time);
@@ -92,45 +85,6 @@ const handleZoomIn = () => {
 const handleZoomOut = () => {
   emit('update:zoomLevel', zoomTimelineByButton(props.zoomLevel, -1));
 };
-
-let zoomSliderRafId: number | null = null;
-let pendingZoomValue: number | null = null;
-
-const handleZoomSliderInput = (event: Event) => {
-  const value = parseFloat((event.target as HTMLInputElement).value);
-  if (!Number.isFinite(value)) return;
-  pendingZoomValue = value;
-
-  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-    if (zoomSliderRafId !== null) return;
-    zoomSliderRafId = window.requestAnimationFrame(() => {
-      zoomSliderRafId = null;
-      if (pendingZoomValue !== null) {
-        emit('update:zoomLevel', pendingZoomValue);
-      }
-    });
-  } else {
-    emit('update:zoomLevel', pendingZoomValue);
-  }
-};
-
-const handleZoomSliderChange = (event: Event) => {
-  if (typeof window !== 'undefined' && zoomSliderRafId !== null) {
-    window.cancelAnimationFrame(zoomSliderRafId);
-    zoomSliderRafId = null;
-  }
-  const value = parseFloat((event.target as HTMLInputElement).value);
-  if (Number.isFinite(value)) {
-    emit('update:zoomLevel', value);
-  }
-};
-
-onUnmounted(() => {
-  if (typeof window !== 'undefined' && zoomSliderRafId !== null) {
-    window.cancelAnimationFrame(zoomSliderRafId);
-    zoomSliderRafId = null;
-  }
-});
 </script>
 
 <template>
@@ -228,39 +182,16 @@ onUnmounted(() => {
             </button>
           </template>
           <div class="zoom-popover-content">
-            <div class="zoom-popover-header">
-              <span class="zoom-popover-title">{{ t('zoom') || 'Zoom' }}</span>
-              <Button
-                variant="ghost"
-                size="xs"
-                icon-only
-                :icon="RotateCcw"
-                :tooltip="t('resetZoom') || 'Reset Zoom'"
-                :disabled="zoomLevel === MIN_TIMELINE_ZOOM"
-                class="zoom-reset-btn"
-                @click="handleZoomReset"
-              />
-            </div>
-            <div class="zoom-popover-slider-row">
-              <ZoomOut :size="13" class="zoom-slider-icon" />
-              <input
-                type="range"
-                :min="MIN_TIMELINE_ZOOM"
-                :max="MAX_TIMELINE_ZOOM"
-                step="25"
-                :value="zoomLevel"
-                class="zoom-slider"
-                :style="{
-                  background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`,
-                }"
-                @input="handleZoomSliderInput"
-                @change="handleZoomSliderChange"
-              />
-              <ZoomIn :size="13" class="zoom-slider-icon" />
-            </div>
-            <div class="zoom-popover-footer">
-              <span class="zoom-popover-pct">{{ zoomPercentageText }}</span>
-            </div>
+            <BigSlider
+              :label="t('zoom') || 'Zoom'"
+              :model-value="zoomLevel"
+              :min="MIN_TIMELINE_ZOOM"
+              :max="MAX_TIMELINE_ZOOM"
+              :step="25"
+              :default-value="MIN_TIMELINE_ZOOM"
+              :format-value="(val) => `${Math.round(val)}%`"
+              @update:model-value="emit('update:zoomLevel', $event)"
+            />
           </div>
         </Popover>
         <Button
@@ -401,90 +332,9 @@ onUnmounted(() => {
 }
 
 .zoom-popover-content {
-  padding: 12px;
-  min-width: 190px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.zoom-popover-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.zoom-popover-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.zoom-popover-slider-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.zoom-slider-icon {
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.zoom-popover-footer {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.zoom-popover-pct {
-  font-size: 11px;
-  font-family: var(--font-mono, monospace);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.zoom-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  flex: 1;
-  width: 100%;
-  height: 4px;
-  border-radius: var(--radius-full);
-  outline: none;
-  cursor: pointer;
-  transition: background 0.05s ease;
-}
-
-.zoom-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  border: none;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.1s ease;
-}
-
-.zoom-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.zoom-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  border: none;
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-
-.zoom-slider::-moz-range-thumb:hover {
-  transform: scale(1.2);
+  padding: 8px;
+  min-width: 170px;
+  box-sizing: border-box;
 }
 </style>
-
 

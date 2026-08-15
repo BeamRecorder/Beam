@@ -120,9 +120,11 @@ const run = async () => {
     const technical = technicalExportError(errorContext?.value ?? error.value);
     toastStore.error(safeExportErrorMessage(error.value), 0, {
       label: t('copyError'),
+      copiedLabel: t('copied'),
+      errorLabel: t('copyFailed'),
       detail: technical,
       dismissOnSuccess: false,
-      onClick: () => navigator.clipboard.writeText(technical),
+      copyText: technical,
     });
     return;
   }

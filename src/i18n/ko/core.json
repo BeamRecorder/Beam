@@ -222,6 +222,8 @@
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "오류 복사",
+    "copied": "복사됨",
+    "copyFailed": "복사하지 못했습니다",
     "resMaxDesc": "원본 해상도({width}×{height})",
     "res1080pDesc": "Full HD 크기 조정({width}×{height})",
     "res720pDesc": "HD 크기 조정({width}×{height})"

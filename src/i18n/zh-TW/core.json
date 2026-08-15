@@ -222,6 +222,8 @@
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "複製錯誤",
+    "copied": "已複製",
+    "copyFailed": "複製失敗",
     "resMaxDesc": "原始解析度（{width}×{height}）",
     "res1080pDesc": "Full HD 縮放（{width}×{height}）",
     "res720pDesc": "HD 縮放（{width}×{height}）"

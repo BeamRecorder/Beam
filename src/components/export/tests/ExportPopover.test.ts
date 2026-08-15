@@ -188,12 +188,6 @@ describe('ExportPopover', () => {
   });
 
   it('keeps Export visible and publishes a sanitized copyable error toast', async () => {
-    const originalNavigator = globalThis.navigator;
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: { clipboard: { writeText } },
-    });
     mockJob.start.mockImplementation(async () => {
       (mockJob.state?.error as Ref<string | null>).value = 'The source image could not be decoded.';
       (mockJob.state?.errorContext as Ref<unknown>).value = new ExportValidationError({
@@ -204,30 +198,22 @@ describe('ExportPopover', () => {
       });
     });
 
-    try {
-      const wrapper = mountExport();
-      await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
-      await nextTick();
+    const wrapper = mountExport();
+    await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
+    await nextTick();
 
-      expect(wrapper.find('.export-trigger').exists()).toBe(true);
-      expect(wrapper.get('[role="alert"]').text()).toContain('The source image could not be decoded.');
+    expect(wrapper.find('.export-trigger').exists()).toBe(true);
+    expect(wrapper.get('[role="alert"]').text()).toContain('The source image could not be decoded.');
 
-      const toast = useToastStore().toasts.at(-1);
-      expect(toast).toMatchObject({
-        type: 'error',
-        action: { label: expect.stringMatching(/copy/i), onClick: expect.any(Function) },
-      });
-      const copyResult = toast?.action?.onClick();
-      expect(copyResult).toBeInstanceOf(Promise);
-      await copyResult;
-      await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
-      const copied = String(writeText.mock.calls[0]?.[0]);
-      expect(wrapper.get('[role="alert"]').text()).toContain('The source image could not be decoded.');
-      expect(copied).toContain('decode-failure');
-      expect(copied).toContain('vivid-horizon');
-      expect(copied).not.toContain('/home/albi');
-    } finally {
-      Object.defineProperty(globalThis, 'navigator', { configurable: true, value: originalNavigator });
-    }
+    const toast = useToastStore().toasts.at(-1);
+    expect(toast).toMatchObject({
+      type: 'error',
+      action: { label: expect.stringMatching(/copy/i), copyText: expect.any(String) },
+    });
+    const copied = String(toast?.action?.copyText);
+    expect(wrapper.get('[role="alert"]').text()).toContain('The source image could not be decoded.');
+    expect(copied).toContain('decode-failure');
+    expect(copied).toContain('vivid-horizon');
+    expect(copied).not.toContain('/home/albi');
   });
 });

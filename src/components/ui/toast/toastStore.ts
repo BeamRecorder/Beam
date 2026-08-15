@@ -1,12 +1,17 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-export interface ToastAction {
+interface ToastActionBase {
   label: string;
-  onClick: () => void | Promise<void>;
   dismissOnSuccess?: boolean;
   detail?: string;
 }
+
+export type ToastAction = ToastActionBase &
+  (
+    | { onClick: () => void | Promise<void>; copyText?: never }
+    | { copyText: string; onClick?: never; copiedLabel?: string; errorLabel?: string }
+  );
 
 export interface Toast {
   id: string;

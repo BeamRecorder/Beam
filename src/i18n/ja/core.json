@@ -222,6 +222,8 @@
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "エラーをコピー",
+    "copied": "コピーしました",
+    "copyFailed": "コピーに失敗しました",
     "resMaxDesc": "元の解像度（{width}×{height}）",
     "res1080pDesc": "フルHDスケール（{width}×{height}）",
     "res720pDesc": "HDスケール（{width}×{height}）"

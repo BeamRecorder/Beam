@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useToastStore } from './toastStore';
-import { X, Check, CheckCircle, AlertCircle, Copy, Info } from '@lucide/vue';
+import { X, CheckCircle, AlertCircle, Info } from '@lucide/vue';
 import Button from '../button/Button.vue';
+import CopyButton from '../button/CopyButton.vue';
 import type { Toast } from './toastStore';
 
 const toastStore = useToastStore();
-const completedActions = ref<ReadonlySet<string>>(new Set());
+const reportCopyError = (error: Error) => {
+  console.error('Unable to copy toast details.', error);
+};
+
 const handleToastAction = async (toast: Toast) => {
-  if (!toast.action) return;
+  if (!toast.action?.onClick) return;
   try {
     await toast.action.onClick();
-    completedActions.value = new Set([...completedActions.value, toast.id]);
     if (toast.action.dismissOnSuccess !== false) toastStore.remove(toast.id);
   } catch (error) {
     console.error('Unable to complete toast action.', error);
@@ -35,18 +37,29 @@ const handleToastAction = async (toast: Toast) => {
           <code v-if="toast.action?.detail" class="toast-detail">{{ toast.action.detail }}</code>
         </span>
 
+        <CopyButton
+          v-if="toast.action?.copyText"
+          :text="toast.action.copyText"
+          display="icon"
+          variant="secondary"
+          size="sm"
+          class="toast-action-btn"
+          :label="toast.action.label"
+          :copied-label="toast.action.copiedLabel"
+          :error-label="toast.action.errorLabel"
+          @copied="toast.action.dismissOnSuccess === true && toastStore.remove(toast.id)"
+          @error="reportCopyError"
+        />
+
         <Button
-          v-if="toast.action"
+          v-else-if="toast.action"
           variant="secondary"
           size="sm"
           class="toast-action-btn"
           :aria-label="toast.action.label"
-          :tooltip="toast.type === 'error' ? toast.action.label : ''"
           @click="handleToastAction(toast)"
         >
-          <Check v-if="completedActions.has(toast.id)" :size="15" aria-hidden="true" />
-          <Copy v-else-if="toast.type === 'error'" :size="15" aria-hidden="true" />
-          <template v-else>{{ toast.action.label }}</template>
+          {{ toast.action.label }}
         </Button>
 
         <button type="button" class="toast-close" @click="toastStore.remove(toast.id)" aria-label="Dismiss toast">
@@ -150,9 +163,11 @@ const handleToastAction = async (toast: Toast) => {
 }
 
 .toast-detail {
-  max-height: 7.5rem;
-  overflow: auto;
-  white-space: pre-wrap;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  white-space: normal;
   overflow-wrap: anywhere;
   color: var(--text-secondary);
   font-size: 0.72rem;

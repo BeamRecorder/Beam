@@ -222,6 +222,8 @@
     "res1080p": "1080p",
     "res720p": "720p",
     "copyError": "Копировать ошибку",
+    "copied": "Скопировано",
+    "copyFailed": "Не удалось скопировать",
     "resMaxDesc": "Исходное разрешение ({width}×{height})",
     "res1080pDesc": "Масштаб Full HD ({width}×{height})",
     "res720pDesc": "Масштаб HD ({width}×{height})"

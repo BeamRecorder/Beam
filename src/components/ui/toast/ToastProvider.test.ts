@@ -1,11 +1,12 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useToastStore } from './toastStore';
 import ToastProvider from './ToastProvider.vue';
 
 describe('ToastProvider', () => {
   beforeEach(() => setActivePinia(createPinia()));
+  afterEach(() => vi.unstubAllGlobals());
 
   it('renders icons for each type and handles action and dismissal', async () => {
     const store = useToastStore();
@@ -29,7 +30,7 @@ describe('ToastProvider', () => {
 
   it('renders a copy action with the Lucide Copy icon and an accessible label', () => {
     const store = useToastStore();
-    store.error('Playback failed', 0, { label: 'Copy error', onClick: vi.fn() });
+    store.error('Playback failed', 0, { label: 'Copy error', copyText: 'diagnostic details' });
     const wrapper = mount(ToastProvider);
     const action = wrapper.get('.toast-action-btn');
 
@@ -52,18 +53,20 @@ describe('ToastProvider', () => {
 
   it('shows action details and a Check icon after a successful non-dismissing action', async () => {
     const store = useToastStore();
-    const onClick = vi.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
     store.error('Playback failed', 0, {
       label: 'Copy error',
       detail: 'Copied to clipboard',
       dismissOnSuccess: false,
-      onClick,
+      copyText: 'diagnostic details',
     });
     const wrapper = mount(ToastProvider);
 
     expect(wrapper.text()).toContain('Copied to clipboard');
+    expect(wrapper.get('.toast-detail').classes()).toContain('toast-detail');
     await wrapper.get('.toast-action-btn').trigger('click');
-    await vi.waitFor(() => expect(onClick).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
 
     expect(store.toasts).toHaveLength(1);
     expect(wrapper.get('.toast-action-btn').find('svg').classes()).toEqual(expect.arrayContaining(['lucide-check']));

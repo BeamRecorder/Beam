@@ -170,6 +170,35 @@ describe('export worker', () => {
     expect(createImageBitmap).not.toHaveBeenCalled();
   });
 
+  it('loads raster cursor assets instead of decoding SVG inside the worker', async () => {
+    installCanvasRuntime();
+    runtime.output.start.mockRejectedValueOnce(new Error('encoder startup failed'));
+    const base = request();
+    const worker = await importWorker();
+    startWorker(
+      worker,
+      request({
+        snapshot: {
+          ...base.snapshot,
+          cursor: {
+            ...base.snapshot.cursor,
+            available: true,
+            events: [{ event: 'shape', cursorKind: 'default', sessionNs: 0 }],
+          },
+          cursorSettings: { ...base.snapshot.cursorSettings, selectedCursor: 'automatic' },
+        },
+      }),
+    );
+
+    await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
+    expect(fetch).toHaveBeenCalledWith('http://localhost/macOsPngCursors/default.png');
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('macOsSvgCursors'));
+    expect(createImageBitmap).toHaveBeenCalledWith(
+      expect.any(Blob),
+      expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),
+    );
+  });
+
   it('disposes opened assets and cancels output when rendering fails', async () => {
     installCanvasRuntime();
     const dispose = vi.fn();
