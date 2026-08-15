@@ -46,6 +46,7 @@ export interface CaptureApi {
 
 export interface DesktopCaptureApi extends CaptureApi {
   close(): void;
+  quit(): void;
   minimize(): void;
   toggleDevTools?(): void;
   updateTrayMenu?(labels: {

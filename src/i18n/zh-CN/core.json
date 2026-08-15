@@ -350,6 +350,7 @@
     "recordingControls": "录制控制",
     "moveRecorderBar": "移动录制栏",
     "ready": "准备就绪",
+    "preparing": "准备中…",
     "resumeRecording": "继续录制",
     "pauseRecording": "暂停录制",
     "stopRecording": "停止录制",

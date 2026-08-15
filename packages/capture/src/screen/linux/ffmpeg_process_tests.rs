@@ -1,6 +1,15 @@
 #![allow(clippy::expect_used)]
 
-use std::{fs, io::Write, os::unix::fs::PermissionsExt, path::Path, sync::Arc};
+use std::{
+    fs,
+    io::{BufRead, BufReader, Write},
+    os::unix::fs::PermissionsExt,
+    path::Path,
+    process::{Command, Stdio},
+    sync::{Arc, Mutex, OnceLock},
+    thread,
+    time::{Duration, Instant},
+};
 
 use crate::{
     model::RecordingSettings,
@@ -13,7 +22,77 @@ use crate::{
 use super::{
     FfmpegCapabilities, FfmpegEncoder, FfmpegScreenSink,
     ffmpeg_process::{FfmpegProcess, FfmpegProcessConfig, arguments, partial_path},
+    owned_child,
 };
+
+fn child_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("child test lock")
+}
+
+#[test]
+fn kill_and_wait_terminates_a_descendant_in_the_owned_process_group() {
+    let _lock = child_test_lock();
+    let mut command = Command::new("sh");
+    command
+        .args(["-c", "sleep 30 & printf '%s\\n' \"$!\"; wait"])
+        .stdout(Stdio::piped());
+    owned_child::configure(&mut command);
+    let mut child = command.spawn().expect("spawn process-group test child");
+    let child_pid = libc::pid_t::try_from(child.id()).expect("child pid fits pid_t");
+    let stdout = child.stdout.take().expect("child stdout");
+    let mut stdout = BufReader::new(stdout);
+    let mut line = String::new();
+    stdout.read_line(&mut line).expect("read descendant pid");
+    let descendant_pid = line.trim().parse::<libc::pid_t>().expect("descendant pid");
+    assert_eq!(unsafe { libc::kill(descendant_pid, 0) }, 0);
+
+    owned_child::kill_and_wait(&mut child);
+
+    assert!(child.try_wait().expect("reap direct child").is_some());
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while unsafe { libc::kill(descendant_pid, 0) } == 0 && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(20));
+    }
+    assert_ne!(unsafe { libc::kill(descendant_pid, 0) }, 0);
+    assert_ne!(unsafe { libc::kill(-child_pid, 0) }, 0);
+}
+
+#[test]
+fn terminate_all_kills_registered_child_and_descendant_before_test_reaps_child() {
+    let _lock = child_test_lock();
+    let mut command = Command::new("sh");
+    command
+        .args(["-c", "sleep 30 & printf '%s\\n' \"$!\"; wait"])
+        .stdout(Stdio::piped());
+    owned_child::configure(&mut command);
+    let mut child = command
+        .spawn()
+        .expect("spawn registered process-group child");
+    let child_pid = libc::pid_t::try_from(child.id()).expect("child pid fits pid_t");
+    let stdout = child.stdout.take().expect("child stdout");
+    let mut stdout = BufReader::new(stdout);
+    let mut line = String::new();
+    stdout.read_line(&mut line).expect("read descendant pid");
+    drop(stdout);
+    let descendant_pid = line.trim().parse::<libc::pid_t>().expect("descendant pid");
+    assert_eq!(unsafe { libc::kill(descendant_pid, 0) }, 0);
+
+    owned_child::register(&child);
+    owned_child::terminate_all();
+    let status = child.wait().expect("reap registered child");
+    owned_child::unregister(&child);
+
+    assert!(!status.success());
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while unsafe { libc::kill(descendant_pid, 0) } == 0 && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(20));
+    }
+    assert_ne!(unsafe { libc::kill(descendant_pid, 0) }, 0);
+    assert_ne!(unsafe { libc::kill(-child_pid, 0) }, 0);
+}
 
 fn capabilities() -> FfmpegCapabilities {
     FfmpegCapabilities {
@@ -116,6 +195,7 @@ fn frame(stride: usize, bytes: Vec<u8>) -> OwnedVideoFrame {
 
 #[test]
 fn process_writes_compact_rows_and_atomically_publishes_output() {
+    let _lock = child_test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nbytes=$(wc -c)\n[ \"$bytes\" -eq 16 ] || exit 9\nprintf 'fake-mp4' > \"$output\"\n",
     );
@@ -152,6 +232,7 @@ fn process_writes_compact_rows_and_atomically_publishes_output() {
 
 #[test]
 fn process_propagates_non_zero_exit_and_removes_partial_output() {
+    let _lock = child_test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'broken' > \"$output\"\nprintf 'encoder exploded' >&2\nexit 7\n",
     );
@@ -183,6 +264,7 @@ fn process_propagates_non_zero_exit_and_removes_partial_output() {
 
 #[test]
 fn process_rejects_a_segment_without_frames() {
+    let _lock = child_test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'header-only' > \"$output\"\n",
     );
@@ -205,6 +287,7 @@ fn process_rejects_a_segment_without_frames() {
 
 #[test]
 fn sink_accepts_the_initial_segment_when_format_arrives_before_frames_and_stop() {
+    let _lock = child_test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nbytes=$(wc -c)\n[ \"$bytes\" -eq 16 ] || exit 9\nprintf 'fake-mp4' > \"$output\"\n",
     );
@@ -258,6 +341,7 @@ fn sink_accepts_the_initial_segment_when_format_arrives_before_frames_and_stop()
 #[test]
 #[ignore = "requires the system FFmpeg runtime"]
 fn system_ffmpeg_encodes_a_playable_mp4_segment() {
+    let _lock = child_test_lock();
     let capabilities = super::probe_ffmpeg().expect("system FFmpeg capabilities");
     let output_directory = tempfile::tempdir().expect("temporary output");
     let output = output_directory.path().join("segment-0001.mp4");
@@ -288,11 +372,11 @@ fn system_ffmpeg_encodes_a_playable_mp4_segment() {
                 pixels: Arc::from(vec![shade; frame_bytes]),
             })
             .expect("write system FFmpeg frame");
-        std::thread::sleep(std::time::Duration::from_millis(20));
+        thread::sleep(Duration::from_millis(20));
     }
     process.finish().expect("finalize system FFmpeg");
     assert!(fs::metadata(&output).expect("MP4 metadata").len() > 0);
-    let validation = std::process::Command::new(&capabilities.executable)
+    let validation = Command::new(&capabilities.executable)
         .args(["-hide_banner", "-loglevel", "error", "-i"])
         .arg(&output)
         .args(["-f", "null", "-"])

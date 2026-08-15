@@ -37,11 +37,36 @@ test('downloads only after the user requests it', async () => {
   assert.equal(updater.getState().status, 'downloaded');
 });
 
-test('restarts only after a downloaded update is ready', () => {
+test('restarts only after a downloaded update is ready', async () => {
   const { autoUpdater, updater } = setup();
-  assert.equal(updater.quitAndInstall(), false);
+  assert.equal(await updater.quitAndInstall(), false);
   autoUpdater.emit('update-downloaded', { version: '0.2.0' });
-  assert.equal(updater.quitAndInstall(), true);
+  assert.equal(await updater.quitAndInstall(), true);
+  assert.equal(autoUpdater.quitCalled, true);
+});
+
+test('waits for native shutdown before installing an update', async () => {
+  const autoUpdater = new EventEmitter();
+  autoUpdater.quitAndInstall = () => {
+    autoUpdater.quitCalled = true;
+  };
+  let releaseShutdown;
+  const updater = createAutoUpdater({
+    app: { isPackaged: true, getVersion: () => '0.1.0' },
+    BrowserWindow: { getAllWindows: () => [] },
+    autoUpdater,
+    openExternal: async () => undefined,
+    beforeQuitAndInstall: () =>
+      new Promise((resolve) => {
+        releaseShutdown = resolve;
+      }),
+  });
+  autoUpdater.emit('update-downloaded', { version: '0.2.0' });
+  const installing = updater.quitAndInstall();
+  await Promise.resolve();
+  assert.equal(autoUpdater.quitCalled, undefined);
+  releaseShutdown();
+  assert.equal(await installing, true);
   assert.equal(autoUpdater.quitCalled, true);
 });
 

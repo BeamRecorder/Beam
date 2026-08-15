@@ -66,6 +66,14 @@ const deferred = <T>() => {
   return { promise, resolve };
 };
 
+const waitForRecording = async (controller: ReturnType<typeof useRecordingController>) => {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (controller.phase.value === 'recording') return;
+    await Promise.resolve();
+  }
+  expect(controller.phase.value).toBe('recording');
+};
+
 let camera: ReturnType<typeof recorder>;
 let microphone: ReturnType<typeof recorder>;
 let systemAudio: ReturnType<typeof recorder>;
@@ -132,6 +140,7 @@ describe('useRecordingController branch behavior', () => {
       }),
     );
 
+    await waitForRecording(controller);
     expect(controller.phase.value).toBe('recording');
     expect(controller.cameraEnabled.value).toBe(true);
     expect(controller.microphoneEnabled.value).toBe(true);
@@ -187,6 +196,7 @@ describe('useRecordingController branch behavior', () => {
 
     await vi.advanceTimersByTimeAsync(2_000);
     await starting;
+    await waitForRecording(controller);
     await vi.advanceTimersByTimeAsync(500);
     await controller.stop();
 
@@ -203,6 +213,7 @@ describe('useRecordingController branch behavior', () => {
     await vi.advanceTimersByTimeAsync(1_000);
     expect(controller.secondsRemaining.value).toBe(1);
     await vi.advanceTimersByTimeAsync(1_000);
+    await waitForRecording(controller);
     expect(controller.phase.value).toBe('recording');
     expect(capture.setCountdown).toHaveBeenLastCalledWith(null);
     expect(capture.prepareRecordingSurface).toHaveBeenCalledOnce();
@@ -236,6 +247,7 @@ describe('useRecordingController branch behavior', () => {
     await controller.cancel();
     const active = useRecordingController(vi.fn());
     await active.start(configuration());
+    await waitForRecording(active);
     cameraApi.request.mockResolvedValueOnce(camera);
     await active.toggleCamera();
     expect(active.cameraEnabled.value).toBe(true);
@@ -244,6 +256,7 @@ describe('useRecordingController branch behavior', () => {
 
     const noCamera = useRecordingController(vi.fn());
     await noCamera.start(configuration());
+    await waitForRecording(noCamera);
     cameraApi.list.mockResolvedValueOnce([]);
     await noCamera.toggleCamera();
     expect(noCamera.error.value).toContain('No camera');
@@ -258,6 +271,7 @@ describe('useRecordingController branch behavior', () => {
   it('reports stop and preparation failures while preserving a recording phase', async () => {
     const controller = useRecordingController(vi.fn());
     await controller.start(configuration());
+    await waitForRecording(controller);
     capture.stopNativeRecording.mockRejectedValueOnce(new Error('stop failed'));
     await controller.stop();
     expect(controller.phase.value).toBe('recording');
