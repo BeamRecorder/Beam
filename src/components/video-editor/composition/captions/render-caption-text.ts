@@ -2,6 +2,7 @@ import type { CaptionClip } from '~/media/shared/composition-types';
 import { layoutCaptionText, type CaptionTextMeasurer } from '~/media/shared/caption-text-layout';
 import type { KeyboardCaptionRun } from '~/media/shared/keyboard-captions';
 import { keyboardCaptionTransformAtCursor } from '~/media/shared/keyboard-caption-position';
+import type { Canvas2DContext } from '~/types/canvas';
 
 export interface CaptionViewport {
   x: number;
@@ -25,7 +26,7 @@ const createScratchCanvas = (width: number, height: number): OffscreenCanvas | H
 };
 
 function drawBackdropBlur(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   rect: { x: number; y: number; width: number; height: number },
   blur: number,
 ) {
@@ -57,7 +58,7 @@ function drawBackdropBlur(
 }
 
 export function drawCaptionText(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   options: {
     clip: CaptionClip;
     text: string;

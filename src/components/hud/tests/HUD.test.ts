@@ -63,19 +63,31 @@ const ready = async () => {
   await flushPromises();
   await Promise.resolve();
 };
+const getDisplayMedia = vi.fn();
+const emptyDisplayStream = () => ({
+  getAudioTracks: () => [],
+  getVideoTracks: () => [],
+  getTracks: () => [],
+});
 const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
 const originalExecCommand = Object.getOwnPropertyDescriptor(document, 'execCommand');
 
 describe('HUD', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    getDisplayMedia.mockReset();
+    getDisplayMedia.mockResolvedValue(emptyDisplayStream());
     if (!navigator.mediaDevices) {
       Object.defineProperty(navigator, 'mediaDevices', {
-        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }) },
+        value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [] }), getDisplayMedia },
         configurable: true,
       });
     } else {
       vi.spyOn(navigator.mediaDevices, 'getUserMedia').mockResolvedValue({ getTracks: () => [] } as any);
+      Object.defineProperty(navigator.mediaDevices, 'getDisplayMedia', {
+        configurable: true,
+        value: getDisplayMedia,
+      });
     }
     Object.values(capture).forEach((mock) => {
       if (vi.isMockFunction(mock)) mock.mockReset();
@@ -204,6 +216,61 @@ describe('HUD', () => {
     expect(capture.startRecording).not.toHaveBeenCalled();
   });
 
+  it('does not acquire system audio for an idle HUD when the preference is restored as on', async () => {
+    capture.getPreferences.mockResolvedValueOnce({
+      schemaVersion: 3,
+      theme: 'system',
+      recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+      alwaysOnTop: true,
+      devices: { systemAudioMode: 'on' },
+      shortcuts: {},
+      backgroundPresets: { colors: [], gradients: [] },
+      extras: {},
+    });
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('does not acquire system audio for an embedded idle HUD when the preference is restored as on', async () => {
+    capture.getPreferences.mockResolvedValueOnce({
+      schemaVersion: 3,
+      theme: 'system',
+      recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+      alwaysOnTop: true,
+      devices: { systemAudioMode: 'on' },
+      shortcuts: {},
+      backgroundPresets: { colors: [], gradients: [] },
+      extras: {},
+    });
+
+    const wrapper = mount(HUD, { props: { embedded: true }, global: { stubs } });
+    await ready();
+
+    expect(wrapper.find('.hud-wrapper.embedded').exists()).toBe(true);
+    expect(getDisplayMedia).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('does not initialize capture APIs when an embedded HUD mounts', async () => {
+    const wrapper = mount(HUD, { props: { embedded: true }, global: { stubs } });
+    await ready();
+
+    expect(wrapper.find('.hud-wrapper.embedded').exists()).toBe(true);
+    expect(capture.getPreferences).not.toHaveBeenCalled();
+    expect(capture.discover).not.toHaveBeenCalled();
+    expect(capture.getSources).not.toHaveBeenCalled();
+    expect(capture.inputAccessStatus).not.toHaveBeenCalled();
+    expect(capture.configureCameraOverlay).not.toHaveBeenCalled();
+    expect(capture.updatePreferences).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
   it('keeps Linux Portal sources selectable without Electron desktop previews', async () => {
     capture.discover.mockResolvedValueOnce({
       sources: [
@@ -278,7 +345,12 @@ describe('HUD', () => {
 
     expect(wrapper.find('.hud-wrapper').exists()).toBe(true);
     expect(wrapper.find('.hud-body').exists()).toBe(false);
-    expect(wrapper.get('.editor-preparing-hud').text().replace(/\u00a0/g, ' ')).toContain('Loading the timeline');
+    expect(
+      wrapper
+        .get('.editor-preparing-hud')
+        .text()
+        .replace(/\u00a0/g, ' '),
+    ).toContain('Loading the timeline');
     expect(wrapper.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('65');
   });
 

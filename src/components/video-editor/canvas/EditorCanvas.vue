@@ -113,6 +113,8 @@ cameraZoom = useCameraZoom({
   editorData: () => props.editorData,
   activeTab: () => props.activeTab,
   composition: () => props.composition,
+  screenTransformDraft: () =>
+    props.selectedTransformClip?.kind === 'screen' ? transformAndCrop.transformDraft.value : null,
   isCropping: () => props.isCropping,
   drawBackground,
   videoError: () => props.playbackError?.message ?? null,
@@ -165,8 +167,7 @@ const drawNonScreenVisuals = (
   window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
 ) => {
   const layers = resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000);
-  for (const clip of layers.cameraVisuals)
-    if (clip.kind !== 'screen') compositionMedia.drawComposition(ctx, window, clip.id);
+  for (const clip of layers.viewportVisuals) compositionMedia.drawComposition(ctx, window, clip.id);
   compositionMedia.drawWebcamClips(ctx, window);
 };
 
@@ -257,7 +258,24 @@ const renderCanvas = () => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
     currentRenderWindow = window;
-    compositionMedia.drawWebcamClips(ctx, window);
+    const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+    const viewportWindow = {
+      dx: preview.x,
+      dy: preview.y,
+      dw: preview.width,
+      dh: preview.height,
+      scale: 1,
+      focusX: preview.x + preview.width / 2,
+      focusY: preview.y + preview.height / 2,
+    };
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, 16);
+    ctx.clip();
+    for (const clip of resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000).viewportVisuals)
+      compositionMedia.drawComposition(ctx, viewportWindow, clip.id);
+    compositionMedia.drawWebcamClips(ctx, viewportWindow);
+    ctx.restore();
     compositionMedia.drawComposition(ctx, window);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,

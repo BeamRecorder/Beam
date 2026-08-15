@@ -1,6 +1,12 @@
-import type { ClipAppearance, NormalizedCrop, NormalizedTransform, WebcamAppearance } from '~/media/shared/composition-types';
+import type {
+  ClipAppearance,
+  NormalizedCrop,
+  NormalizedTransform,
+  WebcamAppearance,
+} from '~/media/shared/composition-types';
 import { DEFAULT_CLIP_APPEARANCE, drawDecoratedMedia } from '../appearance/render-decorated-media';
 import type { MediaRect } from '../appearance/appearance-types';
+import type { Canvas2DContext } from '~/types/canvas';
 
 export interface WebcamOverlaySettings {
   widthPercent: number;
@@ -115,7 +121,7 @@ export function computeWebcamLayout(
 }
 
 export function drawWebcamOverlay(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   source: CanvasImageSource,
   sourceDimensions: { width: number; height: number },
   canvasWidth: number,

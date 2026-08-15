@@ -68,6 +68,53 @@ test('verifies regular Hugging Face files with their Git blob hash', async () =>
   const result = await store.download(model);
   assert.equal(result.status, 'ready');
 });
+test('coalesces concurrent downloads and fans out progress to every caller', async () => {
+  const files = fixture();
+  const fetchBase = fetchFor(files);
+  const artifactRequests = new Map();
+  const fetchImpl = async (url, options = {}) => {
+    const artifact = [...REQUIRED_PATHS].find((file) => url.endsWith(`/${file}`));
+    if (artifact) artifactRequests.set(artifact, (artifactRequests.get(artifact) || 0) + 1);
+    return fetchBase(url, options);
+  };
+  const store = createWhisperModelStore(root(), fetchImpl);
+  const firstProgress = [];
+  const secondProgress = [];
+
+  const first = store.download(model, (event) => firstProgress.push(event));
+  const second = store.download(model, (event) => secondProgress.push(event));
+  const [firstResult, secondResult] = await Promise.all([first, second]);
+
+  assert.equal(firstResult.status, 'ready');
+  assert.equal(secondResult.status, 'ready');
+  assert.ok(firstProgress.length > 0);
+  assert.deepEqual(secondProgress, firstProgress);
+  for (const artifact of REQUIRED_PATHS) assert.equal(artifactRequests.get(artifact), 1, artifact);
+});
+test('cleans up a rejected download so the next attempt can retry', async () => {
+  const files = fixture();
+  const fetchBase = fetchFor(files);
+  const artifactAttempts = new Map();
+  let failNextArtifact = true;
+  const fetchImpl = async (url, options = {}) => {
+    const artifact = [...REQUIRED_PATHS].find((file) => url.endsWith(`/${file}`));
+    if (artifact) {
+      artifactAttempts.set(artifact, (artifactAttempts.get(artifact) || 0) + 1);
+      if (failNextArtifact) {
+        failNextArtifact = false;
+        return new Response('', { status: 503 });
+      }
+    }
+    return fetchBase(url, options);
+  };
+  const store = createWhisperModelStore(root(), fetchImpl);
+
+  await assert.rejects(() => store.download(model), /Téléchargement Whisper impossible/);
+  const result = await store.download(model);
+
+  assert.equal(result.status, 'ready');
+  assert.equal(artifactAttempts.get('added_tokens.json'), 2);
+});
 test('rejects invalid models and keeps the custom protocol inside the model root', async () => {
   const store = createWhisperModelStore(root(), fetchFor(fixture()));
   await assert.rejects(() => store.state('Xenova/not-whisper'), /invalide/);

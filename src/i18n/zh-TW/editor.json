@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "解除麥克風軌道連結",
     "waveformUnavailable": "波形無法使用",
     "trimStart": "裁切開頭",
-    "trimEnd": "裁切結尾"
+    "trimEnd": "裁切結尾",
+    "keyboardCaptions": "鍵盤快速鍵",
+    "textCaptions": "文字字幕"
   },
   "TimelineVideoClip": {
     "trimStart": "裁切開頭",

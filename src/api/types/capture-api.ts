@@ -165,6 +165,10 @@ export interface DesktopCaptureApi extends CaptureApi {
   openUpdateChangelog(): Promise<void>;
   openDiscordInvite(): Promise<void>;
   openGithubRepository(): Promise<void>;
+  getGitHubStars(): Promise<{ stars: number }>;
+  openOnboarding(): Promise<void>;
+  closeOnboarding(): Promise<void>;
+  completeOnboarding(): Promise<void>;
   onUpdateState(listener: (state: AppUpdateState) => void): () => void;
   beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>;
   writeCameraSegment(payload: MediaSegmentChunk): Promise<void>;
@@ -208,6 +212,7 @@ export interface PreferenceSettings {
   theme: 'light' | 'dark' | 'system';
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
+  onboardingCompleted?: boolean;
   alwaysOnTop: boolean;
   devices: Record<string, unknown>;
   shortcuts: Record<string, PreferenceShortcut>;

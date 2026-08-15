@@ -237,15 +237,69 @@ describe('useHudNavigation', () => {
     nav.detachWindowListeners();
   });
 
+  it('handles native pointer or mouse back/forward buttons but leaves ordinary buttons and inputs alone', () => {
+    const nav = useHudNavigation({ attachListeners: false });
+    nav.openSettings('general');
+    nav.setSettingsView('shortcuts');
+    nav.attachWindowListeners();
+
+    const input = document.createElement('input');
+    const inputMouseUp = vi.fn();
+    input.addEventListener('mouseup', inputMouseUp);
+    document.body.append(input);
+
+    const dispatchButton = (target: EventTarget, type: 'pointerdown' | 'mouseup', button: number) => {
+      const event =
+        type === 'pointerdown' && typeof PointerEvent !== 'undefined'
+          ? new PointerEvent(type, { button, bubbles: true, cancelable: true })
+          : new MouseEvent(type, { button, bubbles: true, cancelable: true });
+      target.dispatchEvent(event);
+      return event;
+    };
+
+    try {
+      const leftClick = dispatchButton(document, 'mouseup', 0);
+      const middleClick = dispatchButton(document, 'mouseup', 1);
+      const rightClick = dispatchButton(document, 'mouseup', 2);
+      expect(leftClick.defaultPrevented).toBe(false);
+      expect(middleClick.defaultPrevented).toBe(false);
+      expect(rightClick.defaultPrevented).toBe(false);
+      expect(nav.currentEntry.value).toEqual({ view: 'settings', subview: 'shortcuts' });
+
+      const back = dispatchButton(document, 'pointerdown', 3);
+      expect(back.defaultPrevented).toBe(true);
+      expect(nav.currentEntry.value).toEqual({ view: 'settings', subview: 'general' });
+
+      const forward = dispatchButton(document, 'mouseup', 4);
+      expect(forward.defaultPrevented).toBe(true);
+      expect(nav.currentEntry.value).toEqual({ view: 'settings', subview: 'shortcuts' });
+
+      nav.goBack();
+      const inputBack = dispatchButton(input, 'mouseup', 3);
+      expect(inputBack.defaultPrevented).toBe(false);
+      expect(inputMouseUp).toHaveBeenCalledOnce();
+      expect(nav.currentEntry.value).toEqual({ view: 'settings', subview: 'general' });
+
+      const inputForward = dispatchButton(input, 'mouseup', 4);
+      expect(inputForward.defaultPrevented).toBe(false);
+      expect(inputMouseUp).toHaveBeenCalledTimes(2);
+      expect(nav.currentEntry.value).toEqual({ view: 'settings', subview: 'general' });
+    } finally {
+      nav.detachWindowListeners();
+      input.removeEventListener('mouseup', inputMouseUp);
+      input.remove();
+    }
+  });
+
   it('compares HUD entries with areHudEntriesEqual correctly', () => {
     expect(areHudEntriesEqual({ view: 'hud' }, { view: 'hud' })).toBe(true);
     expect(areHudEntriesEqual({ view: 'hud' }, { view: 'projects' })).toBe(false);
     expect(areHudEntriesEqual({ view: 'settings', subview: 'general' }, { view: 'settings', subview: 'general' })).toBe(
       true,
     );
-    expect(areHudEntriesEqual({ view: 'settings', subview: 'general' }, { view: 'settings', subview: 'shortcuts' })).toBe(
-      false,
-    );
+    expect(
+      areHudEntriesEqual({ view: 'settings', subview: 'general' }, { view: 'settings', subview: 'shortcuts' }),
+    ).toBe(false);
     expect(areHudEntriesEqual({ view: 'settings', subview: 'about' }, { view: 'projects' })).toBe(false);
   });
 });

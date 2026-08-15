@@ -103,6 +103,25 @@ describe('useRecordingController cancellation', () => {
     expect(controller.phase.value).toBe('recording');
   });
 
+  it('does not prepare or start the native Portal twice for overlapping start requests', async () => {
+    const prepared = deferred<void>();
+    capture.prepareRecording.mockReturnValue(prepared.promise);
+    const controller = useRecordingController(vi.fn());
+    const first = controller.start(configuration(0));
+    await Promise.resolve();
+    await Promise.resolve();
+    const second = controller.start(configuration(0));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(capture.prepareRecording).toHaveBeenCalledOnce();
+    expect(capture.startPreparedRecording).not.toHaveBeenCalled();
+
+    prepared.resolve();
+    await Promise.all([first, second]);
+    expect(capture.startPreparedRecording).toHaveBeenCalledOnce();
+  });
+
   it('discards the native session when cancelling an active recording', async () => {
     capture.startPreparedRecording.mockResolvedValue({
       state: 'recording',

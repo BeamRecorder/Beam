@@ -14,6 +14,7 @@ import { useVideoEditor } from '~/components/video-editor/composables/useVideoEd
 import { useEditorMediaDrop } from '~/components/video-editor/composables/useEditorMediaDrop';
 import { usePlaybackErrorToast } from '~/components/video-editor/composables/usePlaybackErrorToast';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
+import { useTimelineResize } from '~/components/video-editor/composables/useTimelineResize';
 import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
@@ -170,6 +171,11 @@ const replaceComposition = (value: typeof composition.value) => {
   composition.value = value;
   editorState.scheduleSave();
 };
+let skipNextCompositionHistory = false;
+const previewComposition = (value: typeof composition.value) => {
+  skipNextCompositionHistory = true;
+  composition.value = value;
+};
 const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
   let next = composition.value;
   for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
@@ -240,7 +246,18 @@ watch(
   { immediate: true },
 );
 watch(
-  [composition, zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
+  composition,
+  () => {
+    if (skipNextCompositionHistory) {
+      skipNextCompositionHistory = false;
+      return;
+    }
+    if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
+  },
+  { deep: true },
+);
+watch(
+  [zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
   () => {
     if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
   },
@@ -293,6 +310,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
     deleteSelectedZoom();
   }
 };
+
+const { timelineHeight, isResizingTimeline, startTimelineResize } = useTimelineResize();
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
 });
@@ -373,6 +393,7 @@ onBeforeUnmount(() => {
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
           @update:composition="replaceComposition"
+          @preview:composition="previewComposition"
           @select-caption="selectEditorClip"
           @delete-clip="deleteSelectedClip"
           @split-clip="splitSelectedClip"
@@ -473,7 +494,16 @@ onBeforeUnmount(() => {
           />
         </div>
       </div>
-      <div class="workspace-lower">
+      <div
+        class="timeline-resize-handle"
+        role="separator"
+        tabindex="0"
+        :class="{ 'is-resizing': isResizingTimeline }"
+        @pointerdown="startTimelineResize"
+      >
+        <div class="resize-handle-bar" />
+      </div>
+      <div class="workspace-lower" :style="{ height: `${timelineHeight}px` }">
         <EditorTimeline
           :current-time="currentTime"
           :is-playing="isPlaying"
@@ -560,10 +590,37 @@ onBeforeUnmount(() => {
   gap: 12px;
   overflow: hidden;
 }
+.timeline-resize-handle {
+  height: 12px;
+  margin-block: -6px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 20;
+  user-select: none;
+  touch-action: none;
+}
+.resize-handle-bar {
+  width: 36px;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--color-border);
+  transition: all 0.15s ease;
+}
+.timeline-resize-handle:hover .resize-handle-bar,
+.timeline-resize-handle.is-resizing .resize-handle-bar {
+  width: 56px;
+  height: 4px;
+  background: var(--color-primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
 .workspace-lower {
-  height: auto;
   flex-shrink: 0;
   border-radius: var(--radius-lg);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>

@@ -143,13 +143,7 @@ const dotStyle = (dotIndex: number) => {
         >{{ glyph === ' ' ? '\u00a0' : glyph }}</span
       >
       <span v-if="dots" class="throbber-dots">
-        <span
-          v-for="d in 3"
-          :key="`dot-${d}`"
-          class="throbber-dot"
-          :style="dotStyle(d)"
-          >.</span
-        >
+        <span v-for="d in 3" :key="`dot-${d}`" class="throbber-dot" :style="dotStyle(d)">.</span>
       </span>
     </span>
   </component>

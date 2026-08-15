@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "Odłącz ścieżkę mikrofonu",
     "waveformUnavailable": "Przebieg fali niedostępny",
     "trimStart": "Przytnij początek",
-    "trimEnd": "Przytnij koniec"
+    "trimEnd": "Przytnij koniec",
+    "keyboardCaptions": "Skróty klawiaturowe",
+    "textCaptions": "Napisy tekstowe"
   },
   "TimelineVideoClip": {
     "trimStart": "Przytnij początek",

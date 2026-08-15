@@ -123,6 +123,8 @@
     "addZoom": "+ Ajouter un zoom 1,5×",
     "zoomTitle": "Zoom {level}×",
     "captions": "Sous-titres",
+    "keyboardCaptions": "Raccourcis clavier",
+    "textCaptions": "Sous-titres texte",
     "unlinkCaptionsTrack": "Dissocier la piste des sous-titres",
     "clickToAddCaption": "Cliquer pour ajouter un sous-titre",
     "addCaption": "+ Ajouter un sous-titre",

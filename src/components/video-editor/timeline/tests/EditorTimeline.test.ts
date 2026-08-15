@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import EditorTimeline from './EditorTimeline.vue';
+import EditorTimeline from '../EditorTimeline.vue';
 
 const TimelineTracks = {
   emits: ['update:currentTime', 'select:clip'],

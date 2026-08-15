@@ -4,7 +4,12 @@ const path = require('path');
 const DEFAULT_SIZE = { width: 320, height: 180 };
 const MIN_SIZE = { width: 120, height: 90 };
 
-function createCameraOverlayWindow({ applicationRoot, isPackaged, preferencesStore = null }) {
+function createCameraOverlayWindow({
+  applicationRoot,
+  isPackaged,
+  preferencesStore = null,
+  platform = process.platform,
+}) {
   let window = null;
   let currentState = null;
   let hoverTimer = null;
@@ -20,7 +25,6 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged, preferencesSto
     const width = Number(saved.width);
     const height = Number(saved.height);
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) return null;
-    if (x === 0 && y === 0) return null;
     return {
       x: Math.round(x),
       y: Math.round(y),
@@ -32,7 +36,6 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged, preferencesSto
   const persistPlacement = () => {
     if (!preferencesStore || !window || window.isDestroyed() || !window.isVisible()) return;
     const bounds = window.getBounds();
-    if (bounds.x === 0 && bounds.y === 0) return;
     preferencesStore.patch({
       extras: {
         cameraOverlay: {
@@ -109,8 +112,8 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged, preferencesSto
     const primaryWorkArea = screen.getPrimaryDisplay().workArea;
     const width = saved?.width || DEFAULT_SIZE.width;
     const height = saved?.height || DEFAULT_SIZE.height;
-    let x = saved?.x ?? (primaryWorkArea.x + primaryWorkArea.width - width - 20);
-    let y = saved?.y ?? (primaryWorkArea.y + primaryWorkArea.height - height - 20);
+    let x = saved?.x ?? primaryWorkArea.x + primaryWorkArea.width - width - 20;
+    let y = saved?.y ?? primaryWorkArea.y + primaryWorkArea.height - height - 20;
 
     const display = screen.getDisplayMatching({ x, y, width, height });
     if (display) {
@@ -128,12 +131,17 @@ function createCameraOverlayWindow({ applicationRoot, isPackaged, preferencesSto
       x,
       y,
       frame: false,
-      transparent: true,
-      backgroundColor: '#00000000',
+      // Electron does not reliably support manually resizing transparent
+      // windows on Linux. The camera fills its window, so an opaque black
+      // backing preserves its appearance while restoring native resize edges.
+      transparent: platform !== 'linux',
+      backgroundColor: platform === 'linux' ? '#000000' : '#00000000',
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: true,
-      hasShadow: false,
+      // Wayland's compositor-provided resize boundary for frameless windows is
+      // part of the GTK shadow/decorations. Keep it enabled on Linux.
+      hasShadow: platform === 'linux',
       webPreferences: {
         preload: path.join(applicationRoot, 'electron/preload.cjs'),
         nodeIntegration: false,

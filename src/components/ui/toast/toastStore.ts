@@ -3,7 +3,9 @@ import { ref } from 'vue';
 
 export interface ToastAction {
   label: string;
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
+  dismissOnSuccess?: boolean;
+  detail?: string;
 }
 
 export interface Toast {

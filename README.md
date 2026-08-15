@@ -35,7 +35,48 @@ You want more ? Open an issue or discuss it with us on our Discord !
 
 ## Availability
 
-Beam is available for Windows, macOS, and Linux. Linux releases are distributed as AppImage, DEB, and RPM packages.
+Beam is available for Windows, macOS, and Linux.
+
+<details>
+<summary><strong>Windows</strong></summary>
+
+- Distributed as a native Windows installer.
+- Screen, window, region, camera, microphone, and system-audio recording are supported.
+- Overlay positions and sizes can be saved and restored.
+
+</details>
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+- Distributed as a DMG for Apple Silicon Macs running macOS 13 or newer.
+- Screen Recording, Microphone, and Camera permissions must be granted when those sources are used.
+- Overlay positions and sizes can be saved and restored.
+
+> [!NOTE]
+> **"Beam is damaged and cannot be opened"**
+>
+> After moving Beam into `/Applications`, remove the macOS quarantine flag in Terminal:
+>
+> ```bash
+> xattr -cr /Applications/Beam.app
+> ```
+>
+> Alternatively, go to **System Settings > Privacy & Security**, scroll to **Security**, and click **Open Anyway**.
+
+</details>
+
+<details>
+<summary><strong>Linux</strong></summary>
+
+- Distributed as AppImage, DEB, and RPM packages.
+- Screen and window capture uses XDG Desktop Portal, PipeWire, and FFmpeg. The system picker requests explicit permission when a capture starts.
+- Recording click and keyboard-shortcut metadata requires explicit Polkit consent.
+- On X11, overlay positions and sizes can be saved and restored.
+- On native Wayland, overlay sizes can be saved, but positions cannot. Wayland prevents applications from reading global window coordinates, so Electron reports `x: 0, y: 0` and Beam cannot restore the camera overlay or teleprompter position.
+- Beam does not force XWayland as a workaround because it can be incompatible with some GPU and X11 configurations.
+
+</details>
 
 The interface is available in 14 languages:
 
@@ -53,21 +94,6 @@ The interface is available in 14 languages:
 - Polski
 - 繁體中文
 - हिन्दी
-
-> [!NOTE]
-> **🛠️ macOS Notice ("Beam is damaged and cannot be opened")**
->
-> If macOS displays a message stating the app is damaged and cannot be opened, run the following command in **Terminal** (after moving the app into the `/Applications` folder) to remove the macOS quarantine flag:
->
-> ```bash
-> xattr -cr /Applications/Beam.app
-> ```
->
-> **Alternative via macOS System Settings:**
->
-> 1. Go to **System Settings > Privacy & Security**.
-> 2. Scroll down to the **Security** section.
-> 3. Click **"Open Anyway"** to allow Beam to launch.
 
 ## Developer documentation
 

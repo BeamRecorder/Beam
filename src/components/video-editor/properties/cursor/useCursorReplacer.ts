@@ -3,6 +3,7 @@ import type { ShadowDirection } from '../cursor/shadow-types';
 import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../../../api/types/cursor-settings';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import type { CursorType } from '../../../../api/types/cursor-presentation';
+export { cursorTypeForKind } from './cursor-kind';
 
 export type { CursorType } from '../../../../api/types/cursor-presentation';
 
@@ -227,12 +228,6 @@ export const cursorOptions = [
     thumbnail: '/macOsSvgCursors/zoomout.svg',
   },
 ].map((option) => ({ ...option, thumbnail: resolvePublicAssetUrl(option.thumbnail) }));
-
-/** `custom` is intentionally rendered as the default pointer, never guessed. */
-export const cursorTypeForKind = (kind: string | null | undefined): CursorType => {
-  const candidate = kind === 'custom' ? 'default' : kind;
-  return candidate && candidate in cursorUrls && candidate !== 'automatic' ? (candidate as CursorType) : 'default';
-};
 
 export const svgAtRasterSize = (svgContent: string, rasterWidth: number) => {
   const viewBox = svgContent.match(/\bviewBox=["']\s*[-.\d]+\s+[-.\d]+\s+([-.\d]+)\s+([-.\d]+)\s*["']/i);

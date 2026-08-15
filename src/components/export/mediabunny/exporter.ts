@@ -1,358 +1,96 @@
-import { bitrateFor } from '../export-presets';
 import type { ExportProgress, ExportRequest, ExportResult } from '../export-types';
-import { createSnapshotCameraEvaluator, renderCompositionFrame, type RenderableMedia } from '../composition/render';
-import { activeClipsAt, mediaSourceDescriptor, sourceTimeAt, type MediaFrame } from '~/media/shared';
-import { isAudioClip, isVisualClip, type MediaAsset, type VisualClip } from '~/media/shared/composition-types';
-import {
-  StreamingMediaOutput,
-  VideoFrameProvider,
-  findExportAudioCodec,
-  findExportVideoCodec,
-  mixCompositionAudio,
-} from '~/media/export';
-import { cursorTypeForKind, useCursorReplacer } from '../../video-editor/properties/cursor/useCursorReplacer';
-import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
-import { tNamespace } from '../../../i18n';
-import { ExportValidationError, type PreparedExport } from '../export-types';
-import { exportValidationFromMediaError, prepareExport } from './export-preflight';
+import { ExportValidationError } from '../export-types';
+import { isExportWorkerResponse, type ExportWorkerRequest } from './export-worker-protocol';
 
-const $t = tNamespace('exporter');
-
-export const supportedVideoCodec = (request: ExportRequest) =>
-  findExportVideoCodec(request.format, {
-    width: request.snapshot.canvas.width,
-    height: request.snapshot.canvas.height,
-    bitrate: bitrateFor(
-      request.preset,
-      request.snapshot.canvas.width,
-      request.snapshot.canvas.height,
-      request.snapshot.render.fps,
-    ),
-  });
-
-export async function supportedAudioCodec(request: ExportRequest) {
-  if (!request.snapshot.composition.clips.some((clip) => isAudioClip(clip) && clip.enabled)) return null;
-  return findExportAudioCodec(request.format, { sampleRate: 48_000, numberOfChannels: 2, bitrate: 128_000 });
-}
-
-export const renderMixedAudio = (request: ExportRequest): Promise<AudioBuffer | null> =>
-  mixCompositionAudio(request.snapshot.composition, request.snapshot.duration);
-
-const clipTimestamps = (clip: VisualClip, times: readonly number[]) => {
-  const first = clip.sourceInMs / 1_000;
-  const last = Math.max(first, (clip.sourceInMs + clip.sourceDurationMs) / 1_000 - 0.000_001);
-  return times.map((time) => {
-    const sourceMs = sourceTimeAt(clip, time * 1_000);
-    if (sourceMs !== null) return sourceMs / 1_000;
-    return time * 1_000 < clip.timelineStartMs ? first : last;
-  });
-};
-
-type LoadedVisuals = {
-  images: Map<string, RenderableMedia>;
-  providers: Map<string, VideoFrameProvider>;
-  backgroundImage: RenderableMedia | null;
-  backgroundProvider: VideoFrameProvider | null;
-  dispose(): void;
-};
-
-async function loadVisuals(
-  request: ExportRequest,
-  times: readonly number[],
-  prepared: PreparedExport,
-): Promise<LoadedVisuals> {
-  const composition = request.snapshot.composition;
-  const assets = new Map(composition.assets.map((asset) => [asset.id, asset]));
-  const images = new Map(prepared.images);
-  const providers = new Map<string, VideoFrameProvider>();
-  let backgroundImage: RenderableMedia | null = prepared.backgroundImage;
-  let backgroundProvider: VideoFrameProvider | null = null;
-  try {
-    await Promise.all(
-      composition.clips
-        .filter(
-          (clip): clip is VisualClip =>
-            isVisualClip(clip) && clip.kind !== 'image' && prepared.activeClipIds.has(clip.id),
-        )
-        .map(async (clip) => {
-          const asset = assets.get(clip.assetId);
-          if (!asset?.src) throw new Error($t('unableToReadVideoSource', { src: clip.name }));
-          let provider: VideoFrameProvider;
-          try {
-            provider = await VideoFrameProvider.create(
-              { ...mediaSourceDescriptor(asset), kind: 'video' },
-              clipTimestamps(clip, times),
-            );
-          } catch (error) {
-            throw exportValidationFromMediaError(error, clip, asset);
-          }
-          providers.set(clip.id, provider);
-        }),
-    );
-
-    const background = request.snapshot.background;
-    if (background?.kind === 'video') {
-      const asset: MediaAsset = {
-        id: 'export-background',
-        kind: 'video',
-        name: 'Background',
-        fileName: null,
-        durationMs: 0,
-        width: null,
-        height: null,
-        src: background.src,
-        origin: 'project',
-      };
-      const descriptor = mediaSourceDescriptor(asset);
-      const duration = prepared.backgroundVideoDuration;
-      if (duration === null || duration <= 0) throw new Error($t('unableToLoadBackground'));
-      backgroundProvider = await VideoFrameProvider.create(
-        descriptor,
-        times.map((time) => time % duration),
-      );
-    }
-    return {
-      images,
-      providers,
-      backgroundImage,
-      backgroundProvider,
-      dispose: () => {
-        for (const provider of providers.values()) provider.dispose();
-        backgroundProvider?.dispose();
-      },
-    };
-  } catch (error) {
-    for (const provider of providers.values()) provider.dispose();
-    backgroundProvider?.dispose();
-    throw error;
-  }
-}
-
-async function loadCursorImages(request: ExportRequest) {
-  const types = new Set(
-    request.snapshot.cursorSettings.selectedCursor === 'automatic'
-      ? request.snapshot.cursor.events
-          .filter((event) => event.event === 'shape')
-          .map((event) => cursorTypeForKind(event.cursorKind))
-      : [request.snapshot.cursorSettings.selectedCursor],
-  );
-  if (!types.size) types.add('default');
-  const { getCursorImage } = useCursorReplacer();
-  return new Map(
-    await Promise.all(
-      [...types].map(
-        async (type) =>
-          [
-            type,
-            await getCursorImage(type, request.snapshot.cursorSettings.size * 6, request.snapshot.cursorSettings.color),
-          ] as const,
-      ),
-    ),
-  );
-}
-
-const renderableFrame = (frame: MediaFrame): RenderableMedia => ({
-  source: frame.bitmap,
-  width: frame.width,
-  height: frame.height,
-});
+const abortError = () => new DOMException('Export cancelled.', 'AbortError');
 
 export async function exportWithMediabunny(
   request: ExportRequest,
   onProgress: (progress: ExportProgress) => void,
   signal: AbortSignal,
 ): Promise<ExportResult> {
-  if (signal.aborted) throw new DOMException($t('exportCancelled'), 'AbortError');
-  const prepared = await prepareExport(request);
-  const fps = prepared.fps;
-  const canonicalRequest: ExportRequest = {
-    ...request,
-    snapshot: { ...request.snapshot, render: { ...request.snapshot.render, fps } },
-  };
-  let loaded: LoadedVisuals | null = null;
-  let output: StreamingMediaOutput | null = null;
-  let opened: { canceled: false; jobId: string } | null = null;
-  try {
-    const codec = await supportedVideoCodec(canonicalRequest);
-    if (!codec)
-      throw new ExportValidationError({
-        code: 'unsupported-codec',
-        message: $t('formatNotEncodable', { format: request.format.toUpperCase() }),
-      });
-    const audioCodec = await supportedAudioCodec(canonicalRequest);
-    if (canonicalRequest.snapshot.composition.clips.some((clip) => isAudioClip(clip) && clip.enabled) && !audioCodec) {
-      throw new ExportValidationError({
-        code: 'unsupported-codec',
-        message: $t('formatAudioNotEncodable', { format: request.format.toUpperCase() }),
-      });
-    }
-    const canvas = document.createElement('canvas');
-    canvas.width = request.snapshot.canvas.width;
-    canvas.height = request.snapshot.canvas.height;
-    const context = canvas.getContext('2d');
-    if (!context) throw new ExportValidationError({ code: 'render-invariant', message: $t('canvas2DUnavailable') });
-    const totalTimeMs = Math.round(canonicalRequest.snapshot.duration * 1_000);
-    const total = Math.max(1, Math.ceil(canonicalRequest.snapshot.duration * fps));
-    const times = Array.from({ length: total }, (_, frame) =>
-      Math.min(canonicalRequest.snapshot.duration, frame / fps),
-    );
-    const cursorImages = await loadCursorImages(canonicalRequest);
-    const cursorMotionPlayer = prepared.screenSize
-      ? createCursorMotionPlayer(
-          canonicalRequest.snapshot.cursor.events,
-          canonicalRequest.snapshot.cursorSettings.motion,
-          prepared.screenSize.width,
-          prepared.screenSize.height,
-        )
-      : undefined;
-    const cameraEvaluator = prepared.screenSize
-      ? createSnapshotCameraEvaluator(canonicalRequest.snapshot, prepared.screenSize.width, prepared.screenSize.height)
-      : undefined;
-    loaded = await loadVisuals(canonicalRequest, times, prepared);
-    if (signal.aborted) throw new DOMException($t('exportCancelled'), 'AbortError');
-    const begun = await window.capture?.beginExport({ projectName: request.projectName, format: request.format });
-    if (!begun || begun.canceled) throw new DOMException($t('exportCancelled'), 'AbortError');
-    opened = begun;
-    let sequence = 0;
-    const writable = new WritableStream({
-      write: (chunk: { data: Uint8Array; position: number }) =>
-        window.capture!.writeExportChunk({
-          jobId: opened!.jobId,
-          sequence: sequence++,
-          data: chunk.data,
-          position: chunk.position,
-        }),
-    });
-    output = new StreamingMediaOutput({
-      format: request.format,
-      canvas,
-      writable,
-      videoCodec: codec,
-      videoBitrate: bitrateFor(request.preset, canvas.width, canvas.height, fps),
-      frameRate: fps,
-      audioCodec,
-    });
+  if (signal.aborted) throw abortError();
+  if (typeof Worker === 'undefined') throw new Error('Web Workers are unavailable; export cannot run on this device.');
 
-    onProgress({
-      stage: 'loading_assets',
-      stageLabel: $t('loadingMediaAssets'),
-      completed: 0,
-      total,
-      currentTimeMs: 0,
-      totalTimeMs,
-    });
-    onProgress({
-      stage: 'audio_mixing',
-      stageLabel: $t('mixingAudioTracks'),
-      completed: 0,
-      total,
-      currentTimeMs: 0,
-      totalTimeMs,
-    });
-    await output.start(prepared.mixedAudio);
-
-    for (let frameIndex = 0; frameIndex < total; frameIndex += 1) {
-      if (signal.aborted) throw new DOMException($t('exportCancelled'), 'AbortError');
-      const time = times[frameIndex]!;
-      const currentTimeMs = Math.round(time * 1_000);
-      onProgress({
-        stage: 'encoding',
-        stageLabel: $t('encodingFrame', { frame: frameIndex + 1, total }),
-        completed: frameIndex + 1,
-        total,
-        currentTimeMs,
-        totalTimeMs,
-      });
-      const active = activeClipsAt(canonicalRequest.snapshot.composition, currentTimeMs);
-      const videoFrames: MediaFrame[] = [];
-      let backgroundFrame: MediaFrame | null = null;
-      try {
-        const visuals = new Map<string, RenderableMedia>();
-        let screen: RenderableMedia | null = null;
-        for (const clip of active) {
-          if (!isVisualClip(clip)) continue;
-          if (clip.kind === 'image') {
-            const image = loaded.images.get(clip.assetId);
-            if (!image)
-              throw new ExportValidationError({
-                code: 'render-invariant',
-                message: 'A required prepared image is unavailable.',
-                assetId: clip.assetId,
-                clipId: clip.id,
-                name: clip.name,
-              });
-            visuals.set(clip.id, image);
-            continue;
-          }
-          const provider = loaded.providers.get(clip.id);
-          if (!provider)
-            throw new ExportValidationError({
-              code: 'render-invariant',
-              message: 'A required prepared video source is unavailable.',
-              assetId: clip.assetId,
-              clipId: clip.id,
-              name: clip.name,
-            });
-          let frame: MediaFrame;
-          try {
-            frame = await provider.frameAt(frameIndex);
-          } catch (error) {
-            const asset = canonicalRequest.snapshot.composition.assets.find((entry) => entry.id === clip.assetId);
-            if (!asset)
-              throw new ExportValidationError({
-                code: 'missing-asset',
-                assetId: clip.assetId,
-                clipId: clip.id,
-                name: clip.name,
-                message: 'A required export asset disappeared after preflight.',
-              });
-            throw exportValidationFromMediaError(error, clip, asset);
-          }
-          videoFrames.push(frame);
-          const media = renderableFrame(frame);
-          if (clip.kind === 'screen') screen = media;
-          else visuals.set(clip.id, media);
-        }
-        let background = loaded.backgroundImage;
-        if (loaded.backgroundProvider) {
-          backgroundFrame = await loaded.backgroundProvider.frameAt(frameIndex);
-          background = renderableFrame(backgroundFrame);
-        }
-        renderCompositionFrame(
-          context,
-          screen,
-          canonicalRequest.snapshot,
-          time,
-          background,
-          cursorImages,
-          visuals,
-          cursorMotionPlayer,
-          cameraEvaluator,
-        );
-      } finally {
-        for (const frame of videoFrames) frame.close();
-        backgroundFrame?.close();
-      }
-      await output.addVideoFrame(time, 1 / fps);
-    }
-
-    onProgress({
-      stage: 'finalizing',
-      stageLabel: $t('finalizingMediaFile'),
-      completed: total,
-      total,
-      currentTimeMs: totalTimeMs,
-      totalTimeMs,
-    });
-    await output.finalize();
-    const result = await window.capture!.finalizeExport(opened.jobId);
-    return { path: result.path, format: request.format };
-  } catch (error) {
-    await output?.cancel().catch(() => undefined);
-    if (opened) await window.capture!.abortExport(opened.jobId).catch(() => undefined);
-    throw error;
-  } finally {
-    loaded?.dispose();
-    prepared.dispose();
+  const opened = await window.capture?.beginExport({ projectName: request.projectName, format: request.format });
+  if (!opened || opened.canceled) throw abortError();
+  if (signal.aborted) {
+    await window.capture!.abortExport(opened.jobId).catch(() => undefined);
+    throw abortError();
   }
+  const worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
+
+  return new Promise<ExportResult>((resolve, reject) => {
+    let settled = false;
+    const finish = (error?: unknown, path?: string) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', cancel);
+      worker.terminate();
+      if (error) reject(error);
+      else resolve({ path: path!, format: request.format });
+    };
+    const abortNative = async (error: unknown) => {
+      await window.capture!.abortExport(opened.jobId).catch(() => undefined);
+      finish(error);
+    };
+    const cancel = () => {
+      worker.postMessage({ type: 'cancel' } satisfies ExportWorkerRequest);
+      void abortNative(abortError());
+    };
+    signal.addEventListener('abort', cancel, { once: true });
+    worker.onerror = (event) => void abortNative(new Error(event.message || 'The export Worker failed.'));
+    worker.onmessage = (event: MessageEvent<unknown>) => {
+      if (!isExportWorkerResponse(event.data)) return void abortNative(new Error('Invalid export Worker message.'));
+      const message = event.data;
+      if (message.type === 'progress') return onProgress(message.progress);
+      if (message.type === 'error') {
+        const error = message.error.issue
+          ? new ExportValidationError(message.error.issue)
+          : Object.assign(new Error(message.error.message), { name: message.error.name });
+        return void abortNative(error);
+      }
+      if (message.type === 'chunk') {
+        void window
+          .capture!.writeExportChunk({
+            jobId: opened.jobId,
+            sequence: message.sequence,
+            position: message.position,
+            data: message.data,
+          })
+          .then(
+            () => worker.postMessage({ type: 'chunkAck', sequence: message.sequence } satisfies ExportWorkerRequest),
+            (error: unknown) => {
+              const text = error instanceof Error ? error.message : 'Export chunk write failed.';
+              worker.postMessage({
+                type: 'chunkError',
+                sequence: message.sequence,
+                message: text,
+              } satisfies ExportWorkerRequest);
+              void abortNative(error);
+            },
+          );
+        return;
+      }
+      void window.capture!.finalizeExport(opened.jobId).then(
+        ({ path }) => {
+          const totalImages = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
+          onProgress({
+            stage: 'finalizing',
+            overallProgress: 1,
+            completedImages: totalImages,
+            totalImages,
+            audioProgress: request.snapshot.composition.clips.some((clip) => clip.kind === 'audio' && clip.enabled)
+              ? 1
+              : null,
+            currentTimeMs: Math.round(request.snapshot.duration * 1_000),
+            totalTimeMs: Math.round(request.snapshot.duration * 1_000),
+          });
+          finish(undefined, path);
+        },
+        (error: unknown) => void abortNative(error),
+      );
+    };
+    worker.postMessage({ type: 'start', request } satisfies ExportWorkerRequest);
+  });
 }

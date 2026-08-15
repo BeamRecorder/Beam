@@ -19,10 +19,14 @@ export function useExportJob() {
     errorContext.value = null;
     result.value = null;
     progress.value = {
-      stage: 'preparing',
+      stage: 'validating_assets',
       stageLabel: $t('preparingExport'),
-      completed: 0,
-      total: 1,
+      overallProgress: 0,
+      completedImages: 0,
+      totalImages: Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps)),
+      audioProgress: request.snapshot.composition.clips.some((clip) => clip.kind === 'audio' && clip.enabled)
+        ? 0
+        : null,
       currentTimeMs: 0,
       totalTimeMs: Math.round(request.snapshot.duration * 1000),
     };

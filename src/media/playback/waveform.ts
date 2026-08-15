@@ -1,11 +1,24 @@
 import { AudioSampleSink } from 'mediabunny';
 import { MediaInputError, openMediaInput, type MediaSourceDescriptor } from '../shared';
 
+export interface WaveformExtractionProgress {
+  pointOffset: number;
+  peaks: Float32Array;
+  complete: boolean;
+}
+
+export interface WaveformExtractionOptions {
+  pointsPerChunk: number;
+  shouldStop: () => boolean;
+  onProgress: (progress: WaveformExtractionProgress) => void;
+}
+
 export async function extractWaveformPeaks(
   descriptor: MediaSourceDescriptor,
   startSeconds: number,
   endSeconds: number,
   pointCount: number,
+  options?: WaveformExtractionOptions,
 ): Promise<Float32Array> {
   if (
     !Number.isFinite(startSeconds) ||
@@ -13,7 +26,8 @@ export async function extractWaveformPeaks(
     startSeconds < 0 ||
     endSeconds <= startSeconds ||
     !Number.isSafeInteger(pointCount) ||
-    pointCount <= 0
+    pointCount <= 0 ||
+    (options && (!Number.isSafeInteger(options.pointsPerChunk) || options.pointsPerChunk <= 0))
   ) {
     throw new RangeError('Invalid waveform range or point count.');
   }
@@ -45,9 +59,21 @@ export async function extractWaveformPeaks(
     );
     const peaks = new Float32Array(pointCount * 2);
     let point = 0;
+    const emitProgress = () => {
+      if (!options) return;
+      const complete = point === pointCount;
+      if (!complete && point % options.pointsPerChunk !== 0) return;
+      const start = Math.floor((point - 1) / options.pointsPerChunk) * options.pointsPerChunk;
+      options.onProgress({ pointOffset: start, peaks: peaks.slice(start * 2, point * 2), complete });
+    };
     for await (const sample of sink.samplesAtTimestamps(timestamps)) {
+      if (options?.shouldStop()) {
+        sample?.close();
+        break;
+      }
       if (!sample) {
         point += 1;
+        emitProgress();
         continue;
       }
       try {
@@ -71,6 +97,7 @@ export async function extractWaveformPeaks(
         sample.close();
       }
       point += 1;
+      emitProgress();
     }
     return peaks;
   } finally {

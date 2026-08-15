@@ -3,10 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const {
-  createProjectMediaHandler,
-  mimeTypeFor,
-} = require('../electron/projects/project-media-protocol.cjs');
+const { createProjectMediaHandler, mimeTypeFor } = require('../electron/projects/project-media-protocol.cjs');
 
 function fixture(contents = Buffer.from('0123456789')) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-project-media-'));
@@ -157,6 +154,34 @@ test('serves opaque background-library URLs and preserves range semantics', asyn
     assert.deepEqual(await responseBody(response), Buffer.from('ckgr'));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('uses image MIME types for AVIF and BMP assets', () => {
+  assert.equal(mimeTypeFor('/tmp/background.avif'), 'image/avif');
+  assert.equal(mimeTypeFor('/tmp/background.bmp'), 'image/bmp');
+});
+
+test('serves image content types for background-library assets', async (t) => {
+  for (const extension of ['avif', 'bmp']) {
+    await t.test(extension, async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-background-media-'));
+      const file = path.join(root, `wallpaper.${extension}`);
+      const url = `project-media://background/image/wallpaper.${extension}`;
+      fs.writeFileSync(file, 'image');
+      const handler = createProjectMediaHandler({
+        projectStore: { mediaFileForUrl: () => null },
+        backgroundLibrary: { fileForUrl: (candidate) => (candidate === url ? file : null) },
+      });
+      try {
+        const response = await handler(request(url));
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get('content-type'), `image/${extension}`);
+        assert.deepEqual(await responseBody(response), Buffer.from('image'));
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    });
   }
 });
 

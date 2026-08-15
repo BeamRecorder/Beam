@@ -5,8 +5,8 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import DeleteItem from '~/ui/button/DeleteItem.vue';
 import ZoomClickEmptyState from '~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue';
-import { MousePointer, Sparkles, ZoomIn } from '@lucide/vue';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import { MousePointer, Sparkles } from '@lucide/vue';
+import type { ZoomDepth, ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');
@@ -27,7 +27,7 @@ const magnificationValues = [1.25, 1.5, 1.8, 2.2, 3.5, 5.0];
 
 const updateDepth = (depth: number) => {
   if (!props.selectedZoom) return;
-  const clamped = Math.max(1, Math.min(6, Math.round(depth)));
+  const clamped = Math.max(1, Math.min(6, Math.round(depth))) as ZoomDepth;
   emit('update', { ...props.selectedZoom, depth: clamped });
 };
 

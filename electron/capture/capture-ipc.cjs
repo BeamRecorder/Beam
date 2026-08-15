@@ -69,6 +69,31 @@ function registerCaptureIpc({
   };
   const completeSession = (session) => trackStorages.reduce((value, storage) => storage.complete(value), session);
   let deferredStoppedSession = null;
+  let pendingDefaultPreparation = null;
+  const prepareDefaultRecording = (options) => {
+    const key = JSON.stringify(options || {});
+    if (pendingDefaultPreparation) {
+      if (pendingDefaultPreparation.key !== key)
+        throw new Error('A different native recording preparation is already in progress.');
+      return pendingDefaultPreparation.promise;
+    }
+    const promise = (async () => {
+      const catalog = await captureEngine.request('discover');
+      const config = buildDefaultCaptureConfig(catalog, options || {}, {
+        platform,
+        defaultOutputRoot: userPaths.projects,
+        excludedProcessId: process.pid,
+      });
+      return withProjectId(await captureEngine.request('prepare', { config }));
+    })();
+    const preparation = { key, promise };
+    pendingDefaultPreparation = preparation;
+    const clearPreparation = () => {
+      if (pendingDefaultPreparation === preparation) pendingDefaultPreparation = null;
+    };
+    void promise.then(clearPreparation, clearPreparation);
+    return promise;
+  };
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (command === 'start-default-recording') {
       const catalog = await captureEngine.request('discover');
@@ -81,15 +106,7 @@ function registerCaptureIpc({
       const session = await captureEngine.request('start');
       return registerSession(session);
     }
-    if (command === 'prepare-default-recording') {
-      const catalog = await captureEngine.request('discover');
-      const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
-        platform,
-        defaultOutputRoot: userPaths.projects,
-        excludedProcessId: process.pid,
-      });
-      return withProjectId(await captureEngine.request('prepare', { config }));
-    }
+    if (command === 'prepare-default-recording') return prepareDefaultRecording(payload.options);
     if (command === 'start-prepared-recording') return registerSession(await captureEngine.request('start'));
     if (command === 'cancel-prepared-recording') {
       await captureEngine.request('cancel');

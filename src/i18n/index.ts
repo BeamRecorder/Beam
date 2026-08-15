@@ -93,16 +93,20 @@ function detectLocale(): AppLocale {
   try {
     const stored = localStorage.getItem('locale');
     if (stored && isSupportedLocale(stored)) return stored;
-    const navLang = navigator.language.toLowerCase();
-    const normalized =
-      navLang.startsWith('zh-tw') || navLang.startsWith('zh-hk')
-        ? 'zh-TW'
-        : navLang.startsWith('zh')
-          ? 'zh-CN'
-          : navLang.startsWith('pt-br')
-            ? 'pt-BR'
-            : navLang.split('-')[0];
-    if (isSupportedLocale(normalized)) return normalized;
+    const languages = typeof navigator !== 'undefined' ? (navigator.languages?.length ? navigator.languages : [navigator.language]) : [];
+    for (const lang of languages) {
+      if (!lang) continue;
+      const navLang = lang.toLowerCase();
+      const normalized =
+        navLang.startsWith('zh-tw') || navLang.startsWith('zh-hk')
+          ? 'zh-TW'
+          : navLang.startsWith('zh')
+            ? 'zh-CN'
+            : navLang.startsWith('pt-br')
+              ? 'pt-BR'
+              : navLang.split('-')[0];
+      if (isSupportedLocale(normalized)) return normalized;
+    }
   } catch {}
   return 'en';
 }

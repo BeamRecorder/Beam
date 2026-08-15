@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "Премахване на връзката с пистата на микрофона",
     "waveformUnavailable": "Формата на вълната не е налична",
     "trimStart": "Изрязване на началото",
-    "trimEnd": "Изрязване на края"
+    "trimEnd": "Изрязване на края",
+    "keyboardCaptions": "Клавишни комбинации",
+    "textCaptions": "Текстови субтитри"
   },
   "TimelineVideoClip": {
     "trimStart": "Изрязване на началото",

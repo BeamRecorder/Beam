@@ -4,15 +4,20 @@ import { nextTick } from 'vue';
 const { exportWithMediabunny } = vi.hoisted(() => ({
   exportWithMediabunny: vi.fn(),
 }));
-vi.mock('./mediabunny/exporter', () => ({ exportWithMediabunny }));
+vi.mock('../mediabunny/exporter', () => ({ exportWithMediabunny }));
 import { useExportJob } from '../useExportJob';
+import type { ExportRequest } from '../export-types';
 
 const request = {
   projectName: 'Demo',
   format: 'webm' as const,
   preset: 'medium' as const,
-  snapshot: {},
-} as never;
+  snapshot: {
+    duration: 2,
+    render: { fps: 30, sourceWidth: null, sourceHeight: null },
+    composition: { schemaVersion: 3, assets: [], clips: [], keyboardCaptionSessions: [] },
+  },
+} as unknown as ExportRequest;
 
 describe('useExportJob', () => {
   beforeEach(() => exportWithMediabunny.mockReset());
@@ -24,8 +29,10 @@ describe('useExportJob', () => {
         reported = {
           stage: 'encoding',
           stageLabel: 'Encoding frame 1 of 2',
-          completed: 1,
-          total: 2,
+          overallProgress: 0.5,
+          completedImages: 1,
+          totalImages: 2,
+          audioProgress: null,
           currentTimeMs: 1000,
           totalTimeMs: 2000,
         };
@@ -38,8 +45,10 @@ describe('useExportJob', () => {
     expect(reported).toEqual({
       stage: 'encoding',
       stageLabel: 'Encoding frame 1 of 2',
-      completed: 1,
-      total: 2,
+      overallProgress: 0.5,
+      completedImages: 1,
+      totalImages: 2,
+      audioProgress: null,
       currentTimeMs: 1000,
       totalTimeMs: 2000,
     });

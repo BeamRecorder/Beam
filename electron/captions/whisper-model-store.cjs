@@ -48,6 +48,7 @@ const createArtifactHash = (artifact) => {
 
 function createWhisperModelStore(root, fetchImpl = fetch) {
   const manifests = new Map();
+  const activeDownloads = new Map();
   const validModel = (id) => Object.hasOwn(REVISIONS, id);
   const manifestFile = (id) => path.join(root, id, 'manifest.json');
   const fetchManifest = async (id) => {
@@ -204,7 +205,7 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
     fs.renameSync(partial, target);
     completed.value += artifact.size;
   };
-  const download = async (id, notify = () => {}) => {
+  const performDownload = async (id, notify) => {
     const manifest = await fetchManifest(id);
     const directory = path.join(root, id);
     fs.mkdirSync(directory, { recursive: true });
@@ -229,6 +230,19 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
     fs.writeFileSync(temporary, `${JSON.stringify(metadata, null, 2)}\n`);
     fs.renameSync(temporary, manifestFile(id));
     return state(id);
+  };
+  const download = (id, notify = () => {}) => {
+    let active = activeDownloads.get(id);
+    if (!active) {
+      const listeners = new Set();
+      const promise = performDownload(id, (progress) => {
+        for (const listener of listeners) listener(progress);
+      }).finally(() => activeDownloads.delete(id));
+      active = { listeners, promise };
+      activeDownloads.set(id, active);
+    }
+    active.listeners.add(notify);
+    return active.promise.finally(() => active.listeners.delete(notify));
   };
   const fileForUrl = (url) => {
     const parsed = new URL(url);

@@ -115,6 +115,7 @@ const emit = defineEmits<{
   (event: 'generate:zooms'): void;
   (event: 'update:caption', value: CaptionClip): void;
   (event: 'update:composition', value: ClipComposition): void;
+  (event: 'preview:composition', value: ClipComposition): void;
   (event: 'select-caption', clipId: string): void;
   (event: 'update:clip-rate', rate: number): void;
   (event: 'update:clip-enabled', enabled: boolean): void;
@@ -249,6 +250,7 @@ const emit = defineEmits<{
         :editor-data="editorData"
         :timeline-duration-ms="timelineDurationMs"
         @update:composition="emit('update:composition', $event)"
+        @preview:composition="emit('preview:composition', $event)"
         @select-caption="emit('select-caption', $event)"
       />
       <SettingsPanel

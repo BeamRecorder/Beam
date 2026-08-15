@@ -138,9 +138,10 @@ onMounted(() => {
   removeEditorLoadingListener = capture.onEditorLoadingProgress((progress) => {
     if (isPreparingEditor.value) editorLoadingProgress.value = progress;
   });
-  removeTrayStopListener = capture.onTrayStopRecording?.(() => {
-    void cancelOrStopRecording();
-  }) ?? null;
+  removeTrayStopListener =
+    capture.onTrayStopRecording?.(() => {
+      void cancelOrStopRecording();
+    }) ?? null;
   removeRecordingShortcutListener = capture.onPreferenceShortcut((actionId) => {
     if (actionId !== 'hud.startStopRecording') return;
     if (!['countdown', 'recording', 'paused'].includes(recording.phase.value)) return;

@@ -193,11 +193,13 @@ describe('App', () => {
   });
 
   it('starts recording, routes recorder controls, and returns to HUD on cancel', async () => {
+    await settle();
+    expect(mocks.controller.recording.start).not.toHaveBeenCalled();
     await wrapper.get('.start').trigger('click');
     await settle();
     expect(mocks.capture.setWindowMode).toHaveBeenCalledWith('recorder');
     expect(mocks.capture.setCameraOverlayActive).toHaveBeenCalledWith(true);
-    expect(mocks.controller.recording.start).toHaveBeenCalled();
+    expect(mocks.controller.recording.start).toHaveBeenCalledOnce();
 
     await wrapper.get('.pause').trigger('click');
     await wrapper.get('.camera').trigger('click');

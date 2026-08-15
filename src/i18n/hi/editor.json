@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "माइक्रोफ़ोन ट्रैक का लिंक हटाएँ",
     "waveformUnavailable": "वेवफ़ॉर्म उपलब्ध नहीं है",
     "trimStart": "शुरुआत ट्रिम करें",
-    "trimEnd": "अंत ट्रिम करें"
+    "trimEnd": "अंत ट्रिम करें",
+    "keyboardCaptions": "कीबोर्ड शॉर्टकट",
+    "textCaptions": "टेक्स्ट कैप्शन"
   },
   "TimelineVideoClip": {
     "trimStart": "शुरुआत ट्रिम करें",

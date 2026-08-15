@@ -1,14 +1,6 @@
 /// <reference lib="webworker" />
 import { env, pipeline } from '@huggingface/transformers';
-
-type Request = {
-  type: 'transcribe';
-  id: string;
-  model: string;
-  audio: Float32Array;
-  sampleRate: number;
-  locale: string;
-};
+import type { WhisperTranscribeRequest, WhisperWorkerEvent } from './whisper-worker-protocol';
 
 type Chunk = { text?: string; timestamp?: [number, number] };
 type TranscriptionOptions = {
@@ -60,14 +52,15 @@ const _t = (locale: string, key: string, vars?: Record<string, string>) => {
   if (vars) for (const [k, v] of Object.entries(vars)) msg = msg.replace(`{${k}}`, v);
   return msg;
 };
+const post = (event: WhisperWorkerEvent) => self.postMessage(event);
 
-self.onmessage = async ({ data }: MessageEvent<Request>) => {
+self.onmessage = async ({ data }: MessageEvent<WhisperTranscribeRequest>) => {
   if (data.type !== 'transcribe') return;
   const locale = data.locale ?? 'en';
   try {
     const device = navigator.gpu ? 'webgpu' : 'wasm';
     if (!transcriber || loadedModel !== data.model) {
-      self.postMessage({
+      post({
         type: 'progress',
         id: data.id,
         status: 'loading',
@@ -94,7 +87,7 @@ self.onmessage = async ({ data }: MessageEvent<Request>) => {
                 : event.file
                   ? _t(locale, 'loading.file', { file: event.file })
                   : _t(locale, 'loading.generic');
-          self.postMessage({
+          post({
             type: 'progress',
             id: data.id,
             status: 'loading',
@@ -117,7 +110,7 @@ self.onmessage = async ({ data }: MessageEvent<Request>) => {
     for (let offset = 0; offset < data.audio.length; offset += chunkSamples) {
       const chunkIndex = Math.floor(offset / chunkSamples);
       const processedSeconds = Math.min(totalSeconds, (offset + chunkSamples) / data.sampleRate);
-      self.postMessage({
+      post({
         type: 'progress',
         id: data.id,
         status: 'running',
@@ -144,7 +137,8 @@ self.onmessage = async ({ data }: MessageEvent<Request>) => {
             : [],
         ),
       );
-      self.postMessage({
+      post({ type: 'partial', id: data.id, words: [...words] });
+      post({
         type: 'progress',
         id: data.id,
         status: 'running',
@@ -157,9 +151,9 @@ self.onmessage = async ({ data }: MessageEvent<Request>) => {
         progress: (processedSeconds / totalSeconds) * 100,
       });
     }
-    self.postMessage({ type: 'result', id: data.id, words });
+    post({ type: 'result', id: data.id, words });
   } catch (error) {
-    self.postMessage({
+    post({
       type: 'error',
       id: data.id,
       message: error instanceof Error ? error.message : _t(locale, 'failed'),

@@ -1,4 +1,11 @@
-function registerPreferencesIpc({ ipcMain, BrowserWindow, globalShortcut, store, shortcutHandler = null, onPreferencesChanged = null }) {
+function registerPreferencesIpc({
+  ipcMain,
+  BrowserWindow,
+  globalShortcut,
+  store,
+  shortcutHandler = null,
+  onPreferencesChanged = null,
+}) {
   const broadcast = (preferences) =>
     BrowserWindow.getAllWindows().forEach((win) => win.webContents.send('preferences:changed', preferences));
   const registerShortcuts = (preferences) => {

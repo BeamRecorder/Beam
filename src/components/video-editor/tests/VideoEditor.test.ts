@@ -1,12 +1,18 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import VideoEditor from '../VideoEditor.vue';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import VideoEditor from '../VideoEditor.vue';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
 const capture = vi.hoisted(() => ({}));
 const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const historyState = vi.hoisted(() => ({
+  recordSnapshot: vi.fn(),
+  commitNow: vi.fn(),
+  undo: vi.fn(),
+  redo: vi.fn(),
+}));
 
 vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
@@ -189,10 +195,7 @@ vi.mock('../composables/useEditorUndoRedo', async () => {
   const { ref } = await import('vue');
   return {
     useEditorUndoRedo: vi.fn(() => ({
-      recordSnapshot: vi.fn(),
-      commitNow: vi.fn(),
-      undo: vi.fn(),
-      redo: vi.fn(),
+      ...historyState,
       canUndo: ref(false),
       canRedo: ref(false),
       lastAction: ref(null),
@@ -269,6 +272,7 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockProperties',
+      props: { composition: { type: Object, default: null } },
       emits: [
         'update:system-volume',
         'update:mic-volume',
@@ -280,6 +284,7 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
         'generate:zooms',
         'update:caption',
         'update:composition',
+        'preview:composition',
         'select-caption',
         'delete-clip',
         'split-clip',
@@ -292,7 +297,16 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
         'update:clip-transform',
         'reset:clip-transform',
       ],
-      setup(_, { emit }) {
+      setup(props, { emit }) {
+        const compositionWithTransform = (x: number) => {
+          const composition = props.composition as ClipComposition;
+          return {
+            ...composition,
+            clips: composition.clips.map((clip) =>
+              clip.kind === 'screen' ? { ...clip, transform: { ...clip.transform, x } } : clip,
+            ),
+          };
+        };
         return () =>
           h('div', { class: 'mock-properties' }, [
             h('button', { class: 'system-volume', onClick: () => emit('update:system-volume', 150) }),
@@ -304,6 +318,14 @@ vi.mock('../properties/PropertiesPanel.vue', async () => {
             h('button', {
               class: 'update-canvas',
               onClick: () => emit('update:canvas', { preset: '1:1', width: 1080, height: 1080, showBackground: true }),
+            }),
+            h('button', {
+              class: 'preview-composition',
+              onClick: () => emit('preview:composition', compositionWithTransform(0.25)),
+            }),
+            h('button', {
+              class: 'update-composition',
+              onClick: () => emit('update:composition', compositionWithTransform(0.5)),
             }),
             h('button', { class: 'delete-zoom', onClick: () => emit('delete:zoom') }),
             h('button', { class: 'generate-zooms', onClick: () => emit('generate:zooms') }),
@@ -551,6 +573,26 @@ describe('VideoEditor', () => {
     expect(editorState.store.compositionState.updateSelectedTransform).toHaveBeenCalled();
     expect(editorState.store.compositionState.updateSelectedVolume).toHaveBeenCalledWith(80);
     expect(editorState.store.outputCanvas.value.preset).toBe('1:1');
+  });
+
+  it('applies composition previews without saving or recording history, while final updates save', async () => {
+    const mounted = mountEditor();
+    await flushPromises();
+    const initialSnapshotCount = historyState.recordSnapshot.mock.calls.length;
+    const scheduleSave = editorState.store.editorState.scheduleSave;
+
+    await mounted.get('.preview-composition').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0.25);
+    expect(scheduleSave).not.toHaveBeenCalled();
+    expect(historyState.recordSnapshot).toHaveBeenCalledTimes(initialSnapshotCount);
+
+    await mounted.get('.update-composition').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0.5);
+    expect(scheduleSave).toHaveBeenCalledOnce();
   });
 
   it('keeps the canvas background enabled when changing the output format', async () => {

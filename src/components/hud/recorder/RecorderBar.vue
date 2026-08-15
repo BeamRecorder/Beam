@@ -20,9 +20,7 @@ const props = defineProps<{
 }>();
 
 const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== 'finalizing');
-const isSystemAudioEnabled = computed(() => props.systemAudioEnabled && props.phase !== 'finalizing');
-const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false);
-const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
+const { level: micLevel } = useAudioLevelMeter(isMicEnabled);
 
 const emit = defineEmits<{
   stop: [];
@@ -106,7 +104,7 @@ const emit = defineEmits<{
       @pointerdown.stop
       @click="emit('systemAudio')"
     >
-      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioLevel" size="sm" />
+      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="0" size="sm" />
     </button>
 
     <div class="cancel-slot">
@@ -139,9 +137,12 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-evenly;
   padding: 8px;
-  border: 1px solid var(--color-border);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, rgba(255, 255, 255, 0.12));
   border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
+  background: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
   -webkit-app-region: drag;
   cursor: grab;
   transition: opacity 0.18s ease;

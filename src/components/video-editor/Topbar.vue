@@ -79,12 +79,7 @@ const openDiscordInvite = () => {
 
     <div class="right-actions">
       <Tooltip :content="t('discordTooltip')" position="bottom">
-        <button
-          type="button"
-          class="discord-btn"
-          :aria-label="t('discordAriaLabel')"
-          @click.stop="openDiscordInvite"
-        >
+        <button type="button" class="discord-btn" :aria-label="t('discordAriaLabel')" @click.stop="openDiscordInvite">
           <img :src="resolvePublicAssetUrl('/discord_svg.svg')" class="discord-icon" alt="" aria-hidden="true" />
         </button>
       </Tooltip>

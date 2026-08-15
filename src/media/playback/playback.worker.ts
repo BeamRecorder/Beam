@@ -275,9 +275,24 @@ async function processTicks() {
       const request = pendingTick;
       pendingTick = null;
       if (request.generation !== generation) continue;
-      for (const consumer of consumers.values()) {
-        if (!activeAt(consumer.clip, request.timelineSeconds)) continue;
-        const frame = await sequentialFrame(consumer, sourceTime(consumer.clip, request.timelineSeconds));
+      const activeConsumers = [...consumers.values()].filter((consumer) =>
+        activeAt(consumer.clip, request.timelineSeconds),
+      );
+      const decoded = await Promise.allSettled(
+        activeConsumers.map(async (consumer) => ({
+          consumer,
+          frame: await sequentialFrame(consumer, sourceTime(consumer.clip, request.timelineSeconds)),
+        })),
+      );
+      const failure = decoded.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failure) {
+        for (const result of decoded)
+          if (result.status === 'fulfilled' && result.value.frame) closeFrame(result.value.frame, true);
+        throw failure.reason;
+      }
+      for (const result of decoded) {
+        if (result.status === 'rejected') continue;
+        const { consumer, frame } = result.value;
         if (!frame || request.generation !== generation) {
           if (frame) closeFrame(frame, true);
           continue;
@@ -305,20 +320,28 @@ async function processSeeks() {
       activeRequest = request;
       pendingSeek = null;
       const startedAt = performance.now();
-      const frames: Array<{ consumer: ClipConsumer; frame: QueuedFrame }> = [];
-      let activeConsumerCount = 0;
-      for (const consumer of consumers.values()) {
-        if (!activeAt(consumer.clip, request.timelineSeconds)) continue;
-        activeConsumerCount += 1;
-        const targetSeconds = sourceTime(consumer.clip, request.timelineSeconds);
-        let wrapped = await consumer.sink.getCanvas(targetSeconds);
-        if (!wrapped) {
-          const first = await consumer.sink.canvases(targetSeconds)[Symbol.asyncIterator]().next();
-          wrapped = first.done ? null : first.value;
-        }
-        if (wrapped) frames.push({ consumer, frame: await bitmapFor(wrapped) });
+      const activeConsumers = [...consumers.values()].filter((consumer) =>
+        activeAt(consumer.clip, request.timelineSeconds),
+      );
+      const decoded = await Promise.allSettled(
+        activeConsumers.map(async (consumer) => {
+          const targetSeconds = sourceTime(consumer.clip, request.timelineSeconds);
+          let wrapped = await consumer.sink.getCanvas(targetSeconds);
+          if (!wrapped) {
+            const first = await consumer.sink.canvases(targetSeconds)[Symbol.asyncIterator]().next();
+            wrapped = first.done ? null : first.value;
+          }
+          return wrapped ? { consumer, frame: await bitmapFor(wrapped) } : null;
+        }),
+      );
+      const failure = decoded.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failure) {
+        for (const result of decoded)
+          if (result.status === 'fulfilled' && result.value) closeFrame(result.value.frame, true);
+        throw failure.reason;
       }
-      if (activeConsumerCount > 0 && frames.length === 0) {
+      const frames = decoded.flatMap((result) => (result.status === 'fulfilled' && result.value ? [result.value] : []));
+      if (activeConsumers.length > 0 && frames.length === 0) {
         throw new MediaInputError({
           kind: 'decode-failure',
           sourceId: 'playback',

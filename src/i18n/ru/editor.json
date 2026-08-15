@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "Отвязать дорожку микрофона",
     "waveformUnavailable": "Форма волны недоступна",
     "trimStart": "Обрезать начало",
-    "trimEnd": "Обрезать конец"
+    "trimEnd": "Обрезать конец",
+    "keyboardCaptions": "Сочетания клавиш",
+    "textCaptions": "Текстовые субтитры"
   },
   "TimelineVideoClip": {
     "trimStart": "Обрезать начало",

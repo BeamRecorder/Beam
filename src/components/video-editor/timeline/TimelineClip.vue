@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
-import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import type { Clip, MediaAsset } from '~/media/shared/composition-types';
 import type { MediaError } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
 import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
+import WaveformCanvas from './waveform/WaveformCanvas.vue';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
@@ -18,6 +18,7 @@ const props = defineProps<{
   waveformBars?: number[];
   waveformLeftPercent?: number;
   waveformWidthPercent?: number;
+  waveformLoadingSegments?: Array<{ leftPercent: number; widthPercent: number }>;
   waveformStatus?: AudioWaveformStatus;
   waveformError?: MediaError;
   trimState?: { edge: 'start' | 'end'; durationMs: number } | null;
@@ -85,6 +86,16 @@ const frameStyle = (frame: TimelineFrame) => ({
   left: `${(frame.relativeMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
   width: `${(frame.durationMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
 });
+const thumbnailFor = (frame: TimelineFrame) => {
+  const exact = thumbnails[frame.mediaSecond];
+  if (exact) return exact;
+  let nearest: { distance: number; url: string } | null = null;
+  for (const [time, url] of Object.entries(thumbnails)) {
+    const distance = Math.abs(Number(time) - frame.mediaSecond);
+    if (!nearest || distance < nearest.distance) nearest = { distance, url };
+  }
+  return nearest?.url ?? null;
+};
 const formatTrimTime = (milliseconds: number) => {
   const seconds = Math.max(0, milliseconds / 1_000);
   const minutes = Math.floor(seconds / 60);
@@ -142,15 +153,15 @@ onUnmounted(() => stopMarquee());
         class="waveform-slice"
         :style="{ left: `${waveformLeftPercent ?? 0}%`, width: `${waveformWidthPercent ?? 100}%` }"
       >
-        <span v-for="(height, index) in waveformBars" :key="index" :style="{ height: `${height}px` }" />
+        <WaveformCanvas :bars="waveformBars" :selected="selected" />
+        <span
+          v-for="(segment, index) in waveformLoadingSegments"
+          :key="`loading:${index}`"
+          class="waveform-segment-loading"
+          :style="{ left: `${segment.leftPercent}%`, width: `${segment.widthPercent}%` }"
+        />
       </div>
-      <Skeleton
-        v-else-if="waveformStatus === 'loading'"
-        class="waveform-loading"
-        width="100%"
-        height="100%"
-        radius="2"
-      />
+      <span v-else-if="waveformStatus === 'loading'" class="waveform-loading" />
       <span v-else-if="waveformStatus === 'error'" class="waveform-unavailable" :title="waveformError?.message">
         {{ t('waveformUnavailable') }}
       </span>
@@ -162,14 +173,17 @@ onUnmounted(() => stopMarquee());
         class="thumbnail-frame"
         :style="frameStyle(frame)"
       >
-        <img
-          v-if="thumbnails[frame.mediaSecond]"
-          :src="thumbnails[frame.mediaSecond]"
-          class="thumbnail-img"
-          alt=""
-          draggable="false"
-        />
-        <Skeleton v-else width="100%" height="100%" radius="0" />
+        <Transition name="thumbnail-crossfade">
+          <img
+            v-if="thumbnailFor(frame)"
+            :key="thumbnailFor(frame)!"
+            :src="thumbnailFor(frame)!"
+            class="thumbnail-img"
+            alt=""
+            draggable="false"
+          />
+        </Transition>
+        <span v-if="!thumbnails[frame.mediaSecond]" class="thumbnail-loading-overlay" />
       </div>
     </div>
     <img
@@ -247,7 +261,7 @@ onUnmounted(() => stopMarquee());
   top: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--color-bg-surface);
+  background: #111;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
 }
 .thumbnail-img,
@@ -257,6 +271,34 @@ onUnmounted(() => stopMarquee());
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+.thumbnail-img {
+  position: absolute;
+  inset: 0;
+}
+.thumbnail-crossfade-enter-active,
+.thumbnail-crossfade-leave-active {
+  transition: opacity 160ms ease;
+}
+.thumbnail-crossfade-enter-from,
+.thumbnail-crossfade-leave-to {
+  opacity: 0;
+}
+.thumbnail-crossfade-leave-active {
+  position: absolute;
+}
+.thumbnail-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  animation: thumbnail-pending 900ms ease-in-out infinite alternate;
+}
+@keyframes thumbnail-pending {
+  to {
+    background: rgba(0, 0, 0, 0.32);
+  }
 }
 .waveform {
   position: absolute;
@@ -281,22 +323,21 @@ onUnmounted(() => stopMarquee());
   position: absolute;
   top: 0;
   bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1px;
 }
-.waveform-slice > span {
-  flex: 1 1 auto;
-  max-width: 2px;
-  min-width: 1px;
-  border-radius: 1px;
-  background: #07865f;
-  opacity: 0.9;
+.waveform-segment-loading {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.2);
+  border-inline: 1px solid rgba(7, 134, 95, 0.42);
+  pointer-events: none;
+  animation: waveform-segment-pending 700ms ease-in-out infinite alternate;
 }
-.timeline-clip.selected .waveform-slice > span {
-  background: #056247;
-  opacity: 1;
+@keyframes waveform-segment-pending {
+  to {
+    background: rgba(0, 0, 0, 0.34);
+  }
 }
 .waveform-unavailable {
   width: 100%;
@@ -305,7 +346,16 @@ onUnmounted(() => stopMarquee());
   text-align: center;
 }
 .waveform-loading {
-  opacity: 0.45;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: rgba(7, 134, 95, 0.2);
+  animation: waveform-pending 800ms ease-in-out infinite alternate;
+}
+@keyframes waveform-pending {
+  to {
+    opacity: 0.45;
+  }
 }
 .trim-handle {
   position: absolute;

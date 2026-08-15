@@ -137,11 +137,15 @@ describe('ClipPropertiesPanel', () => {
       { size: 'sm', blur: 40, mode: 'solid', color: '#abcdef', direction: 'top-left' },
     ]);
 
-    const horizBtn = wrapper.findAll('button').find((button) => button.text().toLowerCase() === 'horizontal');
+    const horizBtn = wrapper
+      .findAll('button')
+      .find((button) => button.text().toLowerCase() === 'horizontal' && !button.classes('slider-stub'));
     await horizBtn!.trigger('click');
     expect(wrapper.emitted('update:isMirrored')).toContainEqual([true]);
 
-    const vertBtn = wrapper.findAll('button').find((button) => button.text().toLowerCase() === 'vertical');
+    const vertBtn = wrapper
+      .findAll('button')
+      .find((button) => button.text().toLowerCase() === 'vertical' && !button.classes('slider-stub'));
     await vertBtn!.trigger('click');
     expect(wrapper.emitted('update:isMirroredY')).toContainEqual([true]);
     await wrapper.get('.frame-stub').trigger('click');

@@ -199,6 +199,10 @@ contextBridge.exposeInMainWorld(
     openUpdateChangelog: () => ipcRenderer.invoke('app-update:open-changelog'),
     openDiscordInvite: () => ipcRenderer.invoke('community:open-discord'),
     openGithubRepository: () => ipcRenderer.invoke('community:open-github'),
+    getGitHubStars: () => ipcRenderer.invoke('community:get-github-stars'),
+    openOnboarding: () => ipcRenderer.invoke('onboarding:open'),
+    closeOnboarding: () => ipcRenderer.invoke('onboarding:close'),
+    completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
     onUpdateState: (listener) => {
       const callback = (_event, state) => listener(state);
       ipcRenderer.on('app-update:state', callback);

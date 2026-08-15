@@ -373,6 +373,18 @@ describe('EditorCanvas', () => {
     expect(mounted.emitted('done:crop')).toHaveLength(1);
   });
 
+  it('draws viewport visuals with the output preview bounds when a camera window is active', async () => {
+    const cameraBounds = { dx: 20, dy: 30, dw: 400, dh: 300, scale: 2, focusX: 220, focusY: 180 };
+    const previewBounds = { dx: 175, dy: 0, dw: 450, dh: 450, scale: 1, focusX: 400, focusY: 225 };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+
+    mountEditor({ outputCanvas: { ...DEFAULT_OUTPUT_CANVAS, width: 600, height: 600 } });
+    await flushPromises();
+
+    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, previewBounds, 'image');
+    expect(state.drawComposition).not.toHaveBeenCalledWith(contextMock, cameraBounds, 'image');
+  });
+
   it('reacts to playback, format, duration, and transition watchers', async () => {
     const mounted = mountEditor();
     runFrame();

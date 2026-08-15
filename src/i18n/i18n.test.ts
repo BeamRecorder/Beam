@@ -55,6 +55,8 @@ describe('internationalization', () => {
       for (const key of ['keyboardCaptions', 'textCaptions']) {
         expect(i18n.global.te(`SidebarPanel.${key}`, locale)).toBe(true);
         expect(i18n.global.t(`SidebarPanel.${key}`)).not.toBe(`SidebarPanel.${key}`);
+        expect(i18n.global.te(`TimelineTracks.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`TimelineTracks.${key}`)).not.toBe(`TimelineTracks.${key}`);
       }
     }
   });
@@ -77,6 +79,18 @@ describe('internationalization', () => {
         expect(i18n.global.t(`HudPreferences.${key}`)).not.toBe(`HudPreferences.${key}`);
       }
       expect(i18n.global.t('HudPreferences.version', { version: '9.9.9' })).toContain('9.9.9');
+    }
+  });
+
+  it('registers every live-HUD onboarding instruction in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of ['tourSubtitle', 'emptyStateDesc']) {
+        expect(i18n.global.te(`Onboarding.${key}`, locale), `${locale}: missing Onboarding.${key}`).toBe(true);
+        expect(i18n.global.t(`Onboarding.${key}`), `${locale}: unresolved Onboarding.${key}`).not.toBe(
+          `Onboarding.${key}`,
+        );
+      }
     }
   });
 

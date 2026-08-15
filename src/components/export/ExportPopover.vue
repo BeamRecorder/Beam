@@ -13,6 +13,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { safeExportErrorMessage, technicalExportError } from './mediabunny/export-preflight';
 
 const { t } = useTranslate('ExportPopover');
+const { t: tExporter } = useTranslate('exporter');
 
 export type ExportResolutionOption = '720p' | '1080p' | 'max';
 
@@ -78,9 +79,18 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
 const availability = ref<string | null>(null);
 const { progress, error, errorContext, result, isExporting, start, cancel } = useExportJob();
 const toastStore = useToastStore();
-const percentage = computed(() =>
-  progress.value ? (progress.value.completed / Math.max(1, progress.value.total)) * 100 : 0,
-);
+const percentage = computed(() => (progress.value?.overallProgress ?? 0) * 100);
+const stageTitle = computed(() => {
+  if (progress.value?.stageLabel) return progress.value.stageLabel;
+  if (progress.value?.stage === 'loading_assets') return tExporter('loadingMediaAssets');
+  if (progress.value?.stage === 'encoding')
+    return tExporter('encodingFrame', {
+      frame: progress.value.completedImages,
+      total: progress.value.totalImages,
+    });
+  if (progress.value?.stage === 'finalizing') return tExporter('finalizingMediaFile');
+  return tExporter('preparingExport');
+});
 const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
 
 const openFile = (path: string) => {
@@ -110,7 +120,9 @@ const run = async () => {
     const technical = technicalExportError(errorContext?.value ?? error.value);
     toastStore.error(safeExportErrorMessage(error.value), 0, {
       label: t('copyError'),
-      onClick: () => void navigator.clipboard.writeText(technical),
+      detail: technical,
+      dismissOnSuccess: false,
+      onClick: () => navigator.clipboard.writeText(technical),
     });
     return;
   }
@@ -144,16 +156,19 @@ const formatMs = (ms: number) => {
       <section class="export-popover" :aria-label="t('exportVideoAria')" @click.stop>
         <div v-if="isExporting" class="export-progress-card">
           <div class="progress-header">
-            <span class="stage-title">{{ progress?.stageLabel || t('exporting') }}</span>
+            <span class="stage-title">{{ stageTitle }}</span>
             <span class="percentage-badge">{{ Math.round(percentage) }}%</span>
           </div>
 
           <ProgressBar :value="percentage" class="main-progress-bar" />
 
           <div class="progress-details">
-            <span class="detail-item">{{
-              t('frameCount', { completed: progress?.completed ?? 0, total: progress?.total ?? 0 })
-            }}</span>
+            <span v-if="progress?.stage === 'encoding'" class="detail-item">
+              {{ t('frameCount', { completed: progress.completedImages, total: progress.totalImages }) }}
+              <template v-if="progress.audioProgress !== null">
+                · Audio {{ Math.round(progress.audioProgress * 100) }}%</template
+              >
+            </span>
             <span class="detail-item time-item"
               >{{ formatMs(progress?.currentTimeMs ?? 0) }} / {{ formatMs(progress?.totalTimeMs ?? 0) }}</span
             >

@@ -36,4 +36,17 @@ describe('ToastProvider', () => {
     expect(action.attributes('aria-label')).toBe('Copy error');
     expect(action.find('svg').classes()).toEqual(expect.arrayContaining(['lucide-copy']));
   });
+
+  it('keeps an action toast visible when its asynchronous action fails', async () => {
+    const store = useToastStore();
+    const onClick = vi.fn().mockRejectedValue(new Error('clipboard unavailable'));
+    store.error('Playback failed', 0, { label: 'Copy error', onClick });
+    const wrapper = mount(ToastProvider);
+
+    await wrapper.get('.toast-action-btn').trigger('click');
+    await vi.waitFor(() => expect(onClick).toHaveBeenCalledOnce());
+
+    expect(store.toasts).toHaveLength(1);
+    expect(wrapper.find('.toast-item').exists()).toBe(true);
+  });
 });

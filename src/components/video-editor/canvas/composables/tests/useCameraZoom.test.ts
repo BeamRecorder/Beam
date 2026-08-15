@@ -2,7 +2,8 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCameraZoom, type RenderedVideoWindow } from '../useCameraZoom';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import * as compositionCamera from '../../../zoom/composition-camera';
+import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
 import type { ZoomElement } from '../../../zoom/zoom-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
@@ -89,6 +90,7 @@ let options!: {
   selected: ReturnType<typeof ref<ZoomElement | null>>;
   activeTab: ReturnType<typeof ref<string>>;
   output: ReturnType<typeof ref<{ preset: '16:9'; width: number; height: number; showBackground: boolean }>>;
+  screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
   canvas: HTMLCanvasElement;
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
 };
@@ -101,6 +103,7 @@ const mountComposable = () => {
   const activeTab = ref('zoom');
   const zooms = ref<ZoomElement[]>([autoZoom]);
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
+  const screenTransformDraft = ref<NormalizedTransform | null>(null);
   const canvas = document.createElement('canvas');
   canvas.getBoundingClientRect = () => ({
     left: 0,
@@ -157,6 +160,7 @@ const mountComposable = () => {
           }) as any,
         activeTab: () => activeTab.value,
         composition: () => compositionRef.value,
+        screenTransformDraft: () => screenTransformDraft.value,
         isCropping: () => false,
         videoError: () => 'recording unavailable',
         renderVisualStack: (ctx, bounds, drawScreen) => {
@@ -170,7 +174,17 @@ const mountComposable = () => {
     },
   });
   wrapper = mount(Harness);
-  options = { compositionRef, currentTime, playing, selected, activeTab, output, canvas, callbacks };
+  options = {
+    compositionRef,
+    currentTime,
+    playing,
+    selected,
+    activeTab,
+    output,
+    screenTransformDraft,
+    canvas,
+    callbacks,
+  };
 };
 
 const frame = (width = 1_280, height = 720): MediaFrame => ({
@@ -216,6 +230,36 @@ describe('useCameraZoom', () => {
     expect(state.drawVideoWindow(ctx, 800, 450, frame())).toBeNull();
     expect(ctx.fillText).not.toHaveBeenCalled();
     expect(options.callbacks.drawBackground).not.toHaveBeenCalled();
+  });
+
+  it('renders the screen transform draft immediately while the transform is being dragged', () => {
+    mountComposable();
+    options.screenTransformDraft.value = { x: 0.25, y: 0.2, width: 0.5, height: 0.5 };
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ rect: { x: 200, y: 90, width: 400, height: 225 } }),
+    );
+  });
+
+  it('updates a transform draft without rebuilding the camera evaluator', () => {
+    mountComposable();
+    const createEvaluator = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+    const evaluatorCount = createEvaluator.mock.calls.length;
+    expect(evaluatorCount).toBe(1);
+
+    options.screenTransformDraft.value = { x: 0.1, y: 0.15, width: 0.7, height: 0.6 };
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(createEvaluator).toHaveBeenCalledTimes(evaluatorCount);
+    expect(drawDecoratedMedia).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ rect: { x: 80, y: 67.5, width: 560, height: 270 } }),
+    );
   });
 
   it('applies auto zoom, computes manual target focus, and updates pointer focus', async () => {

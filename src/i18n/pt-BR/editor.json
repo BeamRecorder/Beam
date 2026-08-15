@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "Desvincular faixa do microfone",
     "waveformUnavailable": "Forma de onda indisponível",
     "trimStart": "Cortar início",
-    "trimEnd": "Cortar fim"
+    "trimEnd": "Cortar fim",
+    "keyboardCaptions": "Atalhos do teclado",
+    "textCaptions": "Legendas de texto"
   },
   "TimelineVideoClip": {
     "trimStart": "Cortar início",

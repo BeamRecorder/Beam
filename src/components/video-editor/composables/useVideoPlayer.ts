@@ -3,6 +3,7 @@ import { MediaPlaybackEngine, type PlaybackState } from '~/media/playback';
 import type { ClipComposition, MediaError } from '~/media/shared';
 import {
   BACKGROUND_MEDIA,
+  getRandomBackgroundImage,
   groupBackgroundMedia,
   type BackgroundMedia,
   type BackgroundMediaGroup,
@@ -37,7 +38,9 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     engine.setVolume(volume.value);
     return engine;
   };
-  const selectedBackground = ref<BackgroundValue | null>(availableBackgrounds[0] ?? null);
+  const selectedBackground = ref<BackgroundValue | null>(
+    getRandomBackgroundImage(availableBackgrounds) ?? availableBackgrounds[0] ?? null,
+  );
   const backgroundBlurPercent = ref(0);
   const importedBackgrounds = ref<BackgroundMedia[]>([]);
   const allBackgrounds = computed(() => [...importedBackgrounds.value, ...availableBackgrounds]);

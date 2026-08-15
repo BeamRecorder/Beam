@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { capture } = vi.hoisted(() => ({
   capture: {
@@ -35,12 +35,30 @@ const props = {
   visibility: 'always' as const,
 };
 
+const originalMediaDevices = navigator.mediaDevices;
+const getDisplayMedia = vi.fn();
+const emptyDisplayStream = () => ({
+  getAudioTracks: () => [],
+  getVideoTracks: () => [],
+  getTracks: () => [],
+});
+
 beforeEach(() => {
   setActivePinia(createPinia());
   vi.clearAllMocks();
+  getDisplayMedia.mockReset();
+  getDisplayMedia.mockResolvedValue(emptyDisplayStream());
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getDisplayMedia },
+  });
   capture.getPreferences.mockResolvedValue(settings);
   capture.onPreferencesChanged.mockReturnValue(vi.fn());
   Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+});
+
+afterEach(() => {
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: originalMediaDevices });
 });
 
 describe('RecorderBar', () => {
@@ -98,6 +116,17 @@ describe('RecorderBar', () => {
     expect(wrapper.get('.recorder-bar').classes()).toContain('hover-only');
     await wrapper.setProps({ hoverOnlyActive: false });
     expect(wrapper.get('.recorder-bar').classes()).not.toContain('hover-only');
+  });
+
+  it('does not request a second desktop stream for an already acquired system-audio recording', async () => {
+    await getDisplayMedia({ audio: true, video: true });
+    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+
+    const wrapper = mount(RecorderBar, { props });
+    await Promise.resolve();
+
+    expect(getDisplayMedia).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
   });
 
   it('keeps pause and stop clickable on their first pointer interaction', async () => {

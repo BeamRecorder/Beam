@@ -2,8 +2,14 @@ import { onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { CaptionSentence, CaptionWord } from '~/media/shared/composition-types';
 import type { WhisperModelId, WhisperProgress, WhisperResult } from './whisper-types';
+import type { WhisperTranscribeRequest, WhisperWorkerEvent } from './whisper-worker-protocol';
 
-export const sentencesFromWords = (words: CaptionWord[]): CaptionSentence[] => {
+type SentenceIdFactory = (words: CaptionWord[], index: number) => string;
+
+export const sentencesFromWords = (
+  words: CaptionWord[],
+  createId: SentenceIdFactory = () => crypto.randomUUID(),
+): CaptionSentence[] => {
   const groups: CaptionWord[][] = [];
   let group: CaptionWord[] = [];
   for (const word of words) {
@@ -14,8 +20,8 @@ export const sentencesFromWords = (words: CaptionWord[]): CaptionSentence[] => {
     }
   }
   if (group.length) groups.push(group);
-  const sentences = groups.map((items) => ({
-    id: crypto.randomUUID(),
+  const sentences = groups.map((items, index) => ({
+    id: createId(items, index),
     text: items.map((word) => word.text).join(' '),
     startMs: items[0].startMs,
     endMs: items.at(-1)!.endMs,
@@ -48,21 +54,38 @@ export function useWhisperTranscription() {
   const progress = ref<WhisperProgress>({ status: 'idle', message: '' });
   let worker: Worker | null = null;
   const { locale } = useI18n();
-  const transcribe = async (src: string, model: WhisperModelId, maximumDurationMs?: number): Promise<WhisperResult> => {
+  const transcribe = async (
+    src: string,
+    model: WhisperModelId,
+    maximumDurationMs?: number,
+    onPartial?: (result: WhisperResult) => void,
+  ): Promise<WhisperResult> => {
     const input = await mono(src, maximumDurationMs);
     worker ??= new Worker(new URL('./whisper.worker.ts', import.meta.url), { type: 'module' });
     const activeWorker = worker;
     const id = crypto.randomUUID();
+    const sentenceIds = new Map<string, string>();
+    const resultFromWords = (words: CaptionWord[]): WhisperResult => ({
+      words,
+      sentences: sentencesFromWords(words, (items, index) => {
+        const key = `${items[0]!.startMs}:${index}`;
+        const existing = sentenceIds.get(key);
+        if (existing) return existing;
+        const sentenceId = crypto.randomUUID();
+        sentenceIds.set(key, sentenceId);
+        return sentenceId;
+      }),
+    });
     return new Promise((resolve, reject) => {
-      const onMessage = ({ data }: MessageEvent) => {
+      const onMessage = ({ data }: MessageEvent<WhisperWorkerEvent>) => {
         if (data.id !== id) return;
         if (data.type === 'progress')
           progress.value = { status: data.status, message: data.message, progress: data.progress };
+        if (data.type === 'partial') onPartial?.(resultFromWords(data.words));
         if (data.type === 'result') {
           activeWorker.removeEventListener('message', onMessage);
           progress.value = { status: 'idle', message: '' };
-          const words = data.words as CaptionWord[];
-          resolve({ words, sentences: sentencesFromWords(words) });
+          resolve(resultFromWords(data.words));
         }
         if (data.type === 'error') {
           activeWorker.removeEventListener('message', onMessage);
@@ -71,10 +94,15 @@ export function useWhisperTranscription() {
         }
       };
       activeWorker.addEventListener('message', onMessage);
-      activeWorker.postMessage(
-        { type: 'transcribe', id, model, audio: input.samples, sampleRate: input.sampleRate, locale: locale.value },
-        [input.samples.buffer],
-      );
+      const request: WhisperTranscribeRequest = {
+        type: 'transcribe',
+        id,
+        model,
+        audio: input.samples,
+        sampleRate: input.sampleRate,
+        locale: locale.value,
+      };
+      activeWorker.postMessage(request, [input.samples.buffer]);
     });
   };
   onBeforeUnmount(() => worker?.terminate());

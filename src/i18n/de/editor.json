@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "Mikrofonspur lösen",
     "waveformUnavailable": "Wellenform nicht verfügbar",
     "trimStart": "Anfang zuschneiden",
-    "trimEnd": "Ende zuschneiden"
+    "trimEnd": "Ende zuschneiden",
+    "keyboardCaptions": "Tastaturkürzel",
+    "textCaptions": "Textuntertitel"
   },
   "TimelineVideoClip": {
     "trimStart": "Anfang zuschneiden",

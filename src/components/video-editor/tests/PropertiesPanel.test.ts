@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../api/capture', () => ({ capture: {} }));
 
-import PropertiesPanel from './PropertiesPanel.vue';
+import PropertiesPanel from '../properties/PropertiesPanel.vue';
 
 const CanvasPanel = {
   emits: ['update:selectedBackground'],
@@ -18,7 +18,19 @@ const AudioClipPropertiesPanel = {
   template: '<div class="audio-clip-stub">{{ clip?.kind || "audio" }}</div>',
 };
 const CaptionClipPanel = { template: '<div class="caption-clip-stub">Caption clip</div>' };
-const CaptionPanel = { template: '<div class="caption-panel-stub">Captions</div>' };
+const CaptionPanel = {
+  emits: ['preview:composition', 'update:composition'],
+  template: `
+    <div class="caption-panel-stub">
+      <button class="caption-preview" @click="$emit('preview:composition', { assets: [], clips: [] })">
+        Preview
+      </button>
+      <button class="caption-update" @click="$emit('update:composition', { assets: [], clips: [] })">
+        Update
+      </button>
+    </div>
+  `,
+};
 const CursorPanel = { template: '<div class="cursor-panel-stub">Cursor</div>' };
 const ClipPropertiesPanel = {
   props: ['selectedClip'],
@@ -105,5 +117,15 @@ describe('PropertiesPanel', () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     await wrapper.get('.canvas-panel-stub').trigger('click');
     expect(wrapper.emitted('update:selectedBackground')).toEqual([[{ id: 'background' }]]);
+  });
+
+  it('forwards composition previews separately from final composition updates', async () => {
+    const wrapper = mount(PropertiesPanel, { props: { ...baseProps, activeTab: 'caption' }, global });
+
+    await wrapper.get('.caption-preview').trigger('click');
+    await wrapper.get('.caption-update').trigger('click');
+
+    expect(wrapper.emitted('preview:composition')).toEqual([[{ assets: [], clips: [] }]]);
+    expect(wrapper.emitted('update:composition')).toEqual([[{ assets: [], clips: [] }]]);
   });
 });

@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "마이크 트랙 연결 해제",
     "waveformUnavailable": "파형을 사용할 수 없음",
     "trimStart": "시작 부분 자르기",
-    "trimEnd": "끝 부분 자르기"
+    "trimEnd": "끝 부분 자르기",
+    "keyboardCaptions": "키보드 단축키",
+    "textCaptions": "텍스트 자막"
   },
   "TimelineVideoClip": {
     "trimStart": "시작 부분 자르기",

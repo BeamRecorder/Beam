@@ -123,6 +123,8 @@
     "addZoom": "+ Add 1.5× Zoom",
     "zoomTitle": "Zoom {level}×",
     "captions": "Captions",
+    "keyboardCaptions": "Keyboard Captions",
+    "textCaptions": "Text Captions",
     "unlinkCaptionsTrack": "Unlink Captions track",
     "clickToAddCaption": "Click to add caption at position",
     "addCaption": "+ Add Caption",

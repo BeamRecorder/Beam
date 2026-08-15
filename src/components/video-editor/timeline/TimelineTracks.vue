@@ -122,22 +122,25 @@ const exportProgressPercent = computed(() => {
             <span v-if="isRulerLabel(second)" class="marker-label">{{ formatRulerLabel(second) }}</span>
             <span class="marker-tick" />
           </div>
-          <div class="timeline-playhead" :style="playheadStyle">
-            <div class="playhead-head">
-              <svg width="12" height="15" viewBox="0 0 12 15" fill="var(--color-primary)">
-                <path
-                  d="M0 2C0 0.89543 0.895431 0 2 0H10C11.1046 0 12 0.89543 12 2V7.5C12 8.02701 11.7919 8.53272 11.4216 8.90566L6.5 14.8596L1.57841 8.90566C1.20814 8.53272 1 8.02701 1 7.5V2Z"
-                />
-              </svg>
-            </div>
+        </div>
+      </div>
+
+      <div class="timeline-playhead-overlay">
+        <div class="timeline-playhead" :style="playheadStyle">
+          <div class="playhead-head">
+            <svg width="12" height="15" viewBox="0 0 12 15" fill="var(--color-primary)">
+              <path
+                d="M0 2C0 0.89543 0.895431 0 2 0H10C11.1046 0 12 0.89543 12 2V7.5C12 8.02701 11.7919 8.53272 11.4216 8.90566L6.5 14.8596L1.57841 8.90566C1.20814 8.53272 1 8.02701 1 7.5V2Z"
+              />
+            </svg>
           </div>
-          <div
-            v-if="activeSnapTimeMs !== null"
-            class="timeline-snap-guide"
-            :style="{ left: `${durationMs > 0 ? (activeSnapTimeMs / durationMs) * 100 : 0}%` }"
-          >
-            <span class="snap-guide-badge">{{ (activeSnapTimeMs / 1000).toFixed(2) }}s</span>
-          </div>
+        </div>
+        <div
+          v-if="activeSnapTimeMs !== null"
+          class="timeline-snap-guide"
+          :style="{ left: `${durationMs > 0 ? (activeSnapTimeMs / durationMs) * 100 : 0}%` }"
+        >
+          <span class="snap-guide-badge">{{ (activeSnapTimeMs / 1000).toFixed(2) }}s</span>
         </div>
       </div>
 
@@ -263,6 +266,7 @@ const exportProgressPercent = computed(() => {
               :waveform-bars="audioWaveforms[clip.id]?.bars"
               :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
               :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+              :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
               :waveform-status="audioWaveformStatus[clip.id]"
               :waveform-error="audioWaveformErrors[clip.id]"
               :trim-state="trimStateFor(clip.id)"
@@ -293,6 +297,7 @@ const exportProgressPercent = computed(() => {
               :waveform-bars="audioWaveforms[clip.id]?.bars"
               :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
               :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+              :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
               :waveform-status="audioWaveformStatus[clip.id]"
               :waveform-error="audioWaveformErrors[clip.id]"
               :trim-state="trimStateFor(clip.id)"
@@ -322,6 +327,7 @@ const exportProgressPercent = computed(() => {
               :waveform-bars="audioWaveforms[clip.id]?.bars"
               :waveform-left-percent="audioWaveforms[clip.id]?.leftPercent"
               :waveform-width-percent="audioWaveforms[clip.id]?.widthPercent"
+              :waveform-loading-segments="audioWaveforms[clip.id]?.loadingSegments"
               :waveform-status="audioWaveformStatus[clip.id]"
               :waveform-error="audioWaveformErrors[clip.id]"
               :trim-state="trimStateFor(clip.id)"
@@ -336,318 +342,4 @@ const exportProgressPercent = computed(() => {
   </div>
 </template>
 
-<style scoped>
-.timeline-tracks-container {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  border-radius: inherit;
-  position: relative;
-  user-select: none;
-}
-.timeline-viewport {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-}
-.timeline-ruler {
-  height: 28px;
-  display: flex;
-  background: var(--color-bg-element);
-  border-bottom: 1px solid var(--color-border);
-}
-.ruler-info-spacer {
-  width: 120px;
-  flex: 0 0 120px;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-}
-.ruler-ticks-area {
-  flex: 1;
-  position: relative;
-  height: 100%;
-  margin-left: 80px;
-  margin-right: 150px;
-  cursor: ew-resize;
-}
-.ruler-export-progress-bar {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: rgba(255, 90, 31, 0.25);
-  border-right: 2px solid var(--color-primary);
-  pointer-events: none;
-  z-index: 4;
-}
-.ruler-marker {
-  position: absolute;
-  inset-block: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-}
-.marker-label {
-  position: absolute;
-  top: 4px;
-  font-size: 8px;
-  font-weight: 700;
-  color: var(--text-muted);
-  font-family: monospace;
-}
-.marker-tick {
-  width: 1px;
-  height: 6px;
-  background: var(--color-border-strong);
-}
-.is-major .marker-tick {
-  height: 10px;
-  background: var(--color-border-dark);
-}
-.timeline-playhead {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 2px;
-  height: 600px;
-  background: var(--color-primary);
-  z-index: 100;
-  pointer-events: none;
-}
-.playhead-head {
-  position: absolute;
-  top: -3px;
-  left: -5px;
-  width: 12px;
-  height: 15px;
-  color: var(--color-primary);
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
-  z-index: 101;
-}
-.timeline-snap-guide {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 600px;
-  background: var(--color-primary);
-  box-shadow: 0 0 10px var(--color-primary);
-  z-index: 200;
-  pointer-events: none;
-}
-.snap-guide-badge {
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: #ffffff;
-  font-size: 9px;
-  font-weight: 800;
-  font-family: monospace;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  z-index: 201;
-}
-.tracks-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 0;
-}
-.track-row {
-  display: flex;
-  align-items: center;
-  height: 32px;
-  position: relative;
-  background: var(--color-bg-element);
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-}
-.track-row.audio-track {
-  height: 48px;
-}
-.track-row.disabled {
-  opacity: 0.35;
-}
-.track-row.dragging {
-  opacity: 0.55;
-}
-.track-info {
-  width: 120px;
-  height: 100%;
-  flex: 0 0 120px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  border: 0;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-bg-surface);
-  color: var(--text-secondary);
-  cursor: pointer;
-  text-align: left;
-}
-.track-info:hover {
-  background: var(--color-bg-surface-hover);
-}
-.static-info {
-  cursor: default;
-}
-.track-icon {
-  width: 13px;
-  height: 13px;
-  flex: 0 0 auto;
-}
-.track-grip {
-  width: 13px;
-  height: 13px;
-  color: var(--text-muted);
-}
-.track-drag-handle {
-  display: inline-flex;
-  width: 24px;
-  height: 100%;
-  margin-left: -5px;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  touch-action: none;
-}
-.track-drag-handle:active {
-  cursor: grabbing;
-}
-.track-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.track-content {
-  flex: 1;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  margin-left: 80px;
-  margin-right: 150px;
-}
-.visual-content {
-  background: var(--color-track-video-light);
-}
-.cursor-content {
-  background: var(--color-track-cursor-light);
-}
-.annotation-content {
-  background: var(--color-track-annotation-light);
-}
-.audio-content {
-  background: var(--color-track-audio-light);
-}
-.cursor-zoom-indicator,
-.annotation-indicator {
-  position: absolute;
-  top: 4px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  color: #fff;
-  font-size: 8px;
-  font-weight: 700;
-  cursor: grab;
-  box-shadow: var(--shadow-sm);
-  transition:
-    transform 0.15s ease,
-    border-color 0.15s ease;
-  overflow: visible;
-}
-.cursor-zoom-indicator {
-  background: var(--color-track-cursor);
-}
-.annotation-indicator {
-  background: var(--color-track-annotation);
-}
-.cursor-zoom-indicator:hover,
-.annotation-indicator:hover {
-  transform: translateY(-1px);
-  border-color: #fff;
-}
-.cursor-zoom-indicator.selected,
-.annotation-indicator.selected {
-  outline: 2px solid var(--color-primary);
-}
-.annotation-indicator.disabled {
-  opacity: 0.42;
-}
-.preview-ghost {
-  opacity: 0.65;
-  border: 1.5px dashed var(--color-primary) !important;
-  pointer-events: none;
-  z-index: 8;
-  box-shadow: 0 0 8px rgba(255, 90, 31, 0.3);
-  animation: pulse-ghost 1.2s infinite alternate ease-in-out;
-}
-@keyframes pulse-ghost {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 0.85;
-  }
-}
-.trim-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  z-index: 20;
-  cursor: col-resize;
-  background: rgba(255, 255, 255, 0.25);
-  transition: background var(--fast) ease;
-}
-.trim-handle:hover {
-  background: var(--color-primary);
-}
-.trim-handle.start {
-  left: 0;
-}
-.trim-handle.end {
-  right: 0;
-}
-.trim-side-badge {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 800;
-  font-family: monospace;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-.trim-handle.start .trim-side-badge {
-  left: 8px;
-}
-.trim-handle.end .trim-side-badge {
-  right: 8px;
-}
-.clip-center-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  pointer-events: none;
-  white-space: nowrap;
-}
-</style>
+<style scoped src="./timeline-tracks.css"></style>

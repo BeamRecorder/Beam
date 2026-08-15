@@ -2,18 +2,20 @@ import type { MediaRect } from './appearance-types';
 
 const SAMPLE_SIZE = 8;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-let sampleCanvas: HTMLCanvasElement | null = null;
-let sampleContext: CanvasRenderingContext2D | null = null;
+let sampleCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+let sampleContext: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
 
 const fallback = (color: string) => color || '#000000';
 
 const contextForSampling = () => {
   if (sampleContext) return sampleContext;
   try {
-    if (typeof document === 'undefined') return null;
-    sampleCanvas = document.createElement('canvas');
-    sampleCanvas.width = SAMPLE_SIZE;
-    sampleCanvas.height = SAMPLE_SIZE;
+    if (typeof OffscreenCanvas !== 'undefined') sampleCanvas = new OffscreenCanvas(SAMPLE_SIZE, SAMPLE_SIZE);
+    else if (typeof document !== 'undefined') {
+      sampleCanvas = document.createElement('canvas');
+      sampleCanvas.width = SAMPLE_SIZE;
+      sampleCanvas.height = SAMPLE_SIZE;
+    } else return null;
     sampleContext = sampleCanvas.getContext('2d', { willReadFrequently: true });
   } catch {
     sampleCanvas = null;

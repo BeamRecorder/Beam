@@ -6,15 +6,17 @@ import type { CursorPresentationSettings } from '../../api/types/cursor-presenta
 
 export type ExportFormat = 'webm' | 'mp4';
 export type ExportPreset = 'low' | 'medium' | 'high';
-export type ExportStage = 'preparing' | 'audio_mixing' | 'loading_assets' | 'encoding' | 'finalizing';
+export type ExportStage = 'validating_assets' | 'loading_assets' | 'encoding' | 'finalizing';
 
 export interface ExportProgress {
   stage: ExportStage;
   stageLabel?: string;
-  completed: number;
-  total: number;
-  currentTimeMs?: number;
-  totalTimeMs?: number;
+  overallProgress: number;
+  completedImages: number;
+  totalImages: number;
+  audioProgress: number | null;
+  currentTimeMs: number;
+  totalTimeMs: number;
 }
 export interface ExportResult {
   path: string;
@@ -75,15 +77,4 @@ export class ExportValidationError extends Error {
     this.name = 'ExportValidationError';
     this.issue = issue;
   }
-}
-
-export interface PreparedExport {
-  fps: number;
-  activeClipIds: ReadonlySet<string>;
-  images: ReadonlyMap<string, import('./composition/render').RenderableMedia>;
-  backgroundImage: import('./composition/render').RenderableMedia | null;
-  backgroundVideoDuration: number | null;
-  mixedAudio: AudioBuffer | null;
-  screenSize: { width: number; height: number } | null;
-  dispose(): void;
 }

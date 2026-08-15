@@ -130,6 +130,53 @@ describe('extractWaveformPeaks', () => {
     expect(opened.dispose).toHaveBeenCalledOnce();
   });
 
+  it('publishes ordered 32-point progress chunks with only the last chunk marked complete', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    openMediaInput.mockResolvedValue(opened);
+    sinkSamplesAtTimestamps.mockImplementation(async function* (timestamps: Iterable<number>) {
+      for (const timestamp of timestamps) yield audioSample([[0.5]], 100, timestamp);
+    });
+    const progress: Array<{ pointOffset: number; peaks: Float32Array; complete: boolean }> = [];
+
+    await extractWaveformPeaks(descriptor, 0, 1, 64, {
+      pointsPerChunk: 32,
+      shouldStop: () => false,
+      onProgress: (value) => progress.push(value),
+    });
+
+    expect(progress.map(({ pointOffset }) => pointOffset)).toEqual([0, 32]);
+    expect(progress.map(({ peaks }) => peaks.length / 2)).toEqual([32, 32]);
+    expect(progress.map(({ complete }) => complete)).toEqual([false, true]);
+    expect(progress[1]!.pointOffset).toBeGreaterThan(progress[0]!.pointOffset);
+  });
+
+  it('stops on request, closes the current sample, and leaves the unprocessed tail empty', async () => {
+    const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
+    openMediaInput.mockResolvedValue(opened);
+    const first = audioSample([[0.25]], 100);
+    const second = audioSample([[0.75]], 100);
+    sinkSamplesAtTimestamps.mockImplementation(async function* () {
+      yield first;
+      yield second;
+    });
+    let checks = 0;
+    const progress: Array<{ complete: boolean }> = [];
+
+    const peaks = await extractWaveformPeaks(descriptor, 0, 1, 4, {
+      pointsPerChunk: 2,
+      shouldStop: () => checks++ > 0,
+      onProgress: ({ complete }) => progress.push({ complete }),
+    });
+
+    expect(first.close).toHaveBeenCalledOnce();
+    expect(second.close).toHaveBeenCalledOnce();
+    expect(peaks[0]).toBe(0.25);
+    expect(peaks[1]).toBe(0.25);
+    expect(Array.from(peaks.slice(2))).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(progress).toEqual([]);
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
   it('averages channels while retaining the sample range in each bin', async () => {
     const opened = openedInput({ canDecode: vi.fn().mockResolvedValue(true) });
     openMediaInput.mockResolvedValue(opened);

@@ -4,6 +4,8 @@ const { Readable } = require('stream');
 
 const MIME_TYPES = Object.freeze({
   '.aac': 'audio/aac',
+  '.avif': 'image/avif',
+  '.bmp': 'image/bmp',
   '.flac': 'audio/flac',
   '.jpeg': 'image/jpeg',
   '.jpg': 'image/jpeg',

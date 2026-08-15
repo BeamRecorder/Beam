@@ -81,6 +81,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 <style scoped>
 .timeline-island-container {
   width: 100%;
+  height: 100%;
+  max-height: 100%;
   background: var(--color-bg-element);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);

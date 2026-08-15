@@ -1,12 +1,18 @@
 import type { GradientBackground } from '../../composables/backgroundCatalog';
+import type { Canvas2DContext } from '~/types/canvas';
 
 export type RenderBackgroundValue =
-  | { kind: 'color'; color: string }
-  | { kind: 'gradient'; gradient: GradientBackground }
-  | { kind: 'image' | 'video' };
+  { kind: 'color'; color: string } | { kind: 'gradient'; gradient: GradientBackground } | { kind: 'image' | 'video' };
 
 const sourceDimensions = (source: CanvasImageSource) => {
-  const value = source as { naturalWidth?: number; naturalHeight?: number; videoWidth?: number; videoHeight?: number; width?: number; height?: number };
+  const value = source as {
+    naturalWidth?: number;
+    naturalHeight?: number;
+    videoWidth?: number;
+    videoHeight?: number;
+    width?: number;
+    height?: number;
+  };
   const width = value.naturalWidth ?? value.videoWidth ?? value.width;
   const height = value.naturalHeight ?? value.videoHeight ?? value.height;
   if (!(typeof width === 'number' && width > 0 && typeof height === 'number' && height > 0))
@@ -15,7 +21,7 @@ const sourceDimensions = (source: CanvasImageSource) => {
 };
 
 export function renderBackground(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   options: {
     value: RenderBackgroundValue | null;
     source?: CanvasImageSource | null;
@@ -25,7 +31,8 @@ export function renderBackground(
     alpha?: number;
   },
 ) {
-  if (!options.value || (options.value.kind !== 'color' && options.value.kind !== 'gradient' && !options.source)) return;
+  if (!options.value || (options.value.kind !== 'color' && options.value.kind !== 'gradient' && !options.source))
+    return;
   const blur = Math.max(0, Math.min(48, options.blurPixels));
   const overscan = blur * 2;
   const target = {

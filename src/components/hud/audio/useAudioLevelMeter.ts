@@ -1,6 +1,6 @@
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
 
-export function useAudioLevelMeter(isEnabled: Ref<boolean>, sourceId?: Ref<string | undefined>, isSystemAudio = false) {
+export function useAudioLevelMeter(isEnabled: Ref<boolean>, sourceId?: Ref<string | undefined>) {
   const level = ref(0);
   let audioCtx: AudioContext | null = null;
   let analyser: AnalyserNode | null = null;
@@ -31,23 +31,16 @@ export function useAudioLevelMeter(isEnabled: Ref<boolean>, sourceId?: Ref<strin
     const requestLifecycle = lifecycle;
 
     try {
-      let nextStream: MediaStream;
-      if (isSystemAudio) {
-        if (!navigator.mediaDevices?.getDisplayMedia) return;
-        nextStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-        nextStream.getVideoTracks().forEach((t) => t.stop());
-      } else {
-        if (!navigator.mediaDevices?.getUserMedia) return;
-        let rawId = sourceId?.value;
-        if (rawId && rawId.startsWith('microphone:chromium:')) {
-          rawId = rawId.replace('microphone:chromium:', '');
-        }
-        const constraints: MediaStreamConstraints = {
-          audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
-          video: false,
-        };
-        nextStream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (!navigator.mediaDevices?.getUserMedia) return;
+      let rawId = sourceId?.value;
+      if (rawId && rawId.startsWith('microphone:chromium:')) {
+        rawId = rawId.replace('microphone:chromium:', '');
       }
+      const constraints: MediaStreamConstraints = {
+        audio: rawId && rawId !== 'no-audio' ? { deviceId: { exact: rawId } } : true,
+        video: false,
+      };
+      const nextStream = await navigator.mediaDevices.getUserMedia(constraints);
 
       if (requestLifecycle !== lifecycle || !isEnabled.value || !nextStream.getAudioTracks().length) {
         nextStream.getTracks().forEach((track) => track.stop());

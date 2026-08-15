@@ -23,6 +23,7 @@ const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
 const { shouldAutoOpenDevTools } = require('./window/devtools-policy.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
+const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
 const { createCountdownWindow } = require('./countdown-window.cjs');
@@ -104,7 +105,8 @@ function isTrustedRenderer(url) {
   try {
     const target = new URL(url);
     return (
-      target.origin === 'http://localhost:6500' && ['/', '/editor.html', '/teleprompter.html'].includes(target.pathname)
+      target.origin === 'http://localhost:6500' &&
+      ['/', '/index.html', '/editor.html', '/teleprompter.html', '/onboarding.html'].includes(target.pathname)
     );
   } catch {
     return false;
@@ -113,12 +115,13 @@ function isTrustedRenderer(url) {
 
 function configureMediaPermission() {
   const trusted = (webContents) => Boolean(webContents) && isTrustedRenderer(webContents.getURL());
+  const allowed = new Set(['media', 'camera', 'microphone', 'display-capture', 'speaker-selection']);
   session.defaultSession.setPermissionCheckHandler(
-    (webContents, permission) => trusted(webContents) && (permission === 'media' || permission === 'display-capture'),
+    (webContents, permission) => trusted(webContents) && allowed.has(permission),
   );
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     if (!trusted(webContents)) return callback(false);
-    callback(permission === 'media' || permission === 'display-capture');
+    callback(allowed.has(permission));
   });
 }
 
@@ -178,7 +181,10 @@ function createWindow(preferencesStore) {
   // profileRendererRequests(win.webContents)
   win.once('ready-to-show', () => {
     logStartup('Window is ready to show (ready-to-show).');
-    controller.markReadyToShow();
+    const prefs = preferencesStore.read();
+    if (prefs.onboardingCompleted) {
+      controller.markReadyToShow();
+    }
   });
   win.webContents.once('did-start-loading', () => logStartup('Renderer navigation started.'));
   win.webContents.once('dom-ready', () => logStartup('Renderer DOM is ready.'));
@@ -303,6 +309,30 @@ app.whenReady().then(() => {
   registerUpdateIpc(ipcMain, updater);
   ipcMain.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
   ipcMain.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));
+
+  let cachedStars = { count: 0, timestamp: 0 };
+  ipcMain.handle('community:get-github-stars', async () => {
+    const now = Date.now();
+    if (cachedStars.timestamp && now - cachedStars.timestamp < 300_000) {
+      return { stars: cachedStars.count };
+    }
+    try {
+      const response = await fetch('https://api.github.com/repos/ExtraBinoss/Beam', {
+        headers: { 'User-Agent': 'Beam-Desktop-App' },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (typeof data.stargazers_count === 'number') {
+          cachedStars = { count: data.stargazers_count, timestamp: now };
+          return { stars: data.stargazers_count };
+        }
+      }
+    } catch {
+      // offline or rate limited fallback
+    }
+    return { stars: cachedStars.count || 0 };
+  });
+
   const win = createWindow(preferencesStore);
   const selectedTheme = preferencesStore.read().theme;
   const editorWindow = createEditorWindowManager({
@@ -320,20 +350,41 @@ app.whenReady().then(() => {
       systemAudioStorage.cleanupOwner(contents.id);
     },
   });
+  const onboardingWindow = createOnboardingWindowManager({
+    applicationRoot,
+    isPackaged: app.isPackaged,
+    ipcMain,
+    hudWindow: win,
+    hudController: controllers.get(win),
+    registerController: (target, controller) => controllers.set(target, controller),
+    preferencesStore,
+    initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
+  });
   const trayManager = createTrayManager({
     applicationRoot,
     getWindow: () => win,
     getController: () => win && controllers.get(win),
-    onShowHud: () => editorWindow.showHud(),
+    onShowHud: () => {
+      onboardingWindow.destroy();
+      editorWindow.showHud();
+    },
   });
   trayManager.init();
+
+  const currentPrefs = preferencesStore.read();
+  if (!currentPrefs.onboardingCompleted) {
+    onboardingWindow.open();
+  }
+
   win.on('closed', () => {
     editorWindow.destroy();
+    onboardingWindow.destroy();
     trayManager.destroy();
     teleprompterWindow.destroy();
   });
   app.once('will-quit', () => {
     editorWindow.destroy();
+    onboardingWindow.destroy();
     trayManager.destroy();
     teleprompterWindow.destroy();
   });

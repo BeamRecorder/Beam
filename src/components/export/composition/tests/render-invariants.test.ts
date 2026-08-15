@@ -176,6 +176,80 @@ describe('composition rendering invariants', () => {
     expect(ctx.drawImage).toHaveBeenCalledWith(visual.source, 10, 10, 30, 20);
   });
 
+  it('draws viewport visuals after restoring the camera transform', () => {
+    const value = snapshot();
+    value.zooms = [
+      {
+        id: 'zoom',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 1_000,
+        focus: { cx: 0.8, cy: 0.2 },
+        depth: 2,
+        mode: 'manual',
+      },
+    ];
+    value.composition.assets.push({
+      id: 'image',
+      kind: 'image',
+      name: 'Logo',
+      fileName: 'logo.png',
+      durationMs: 1_000,
+      width: 10,
+      height: 10,
+      src: 'file:///logo.png',
+      origin: 'project',
+    });
+    value.composition.clips.push({
+      id: 'logo',
+      kind: 'image',
+      name: 'Logo',
+      assetId: 'image',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      appearance,
+      isMirrored: false,
+      isMirroredY: false,
+    });
+    const visual = image();
+    const cameraSource = {} as CanvasImageSource;
+    const ctx = context();
+    let cameraTransformActive = false;
+    const transformStack: boolean[] = [];
+    const visualDrawStates: boolean[] = [];
+    vi.mocked(ctx.save).mockImplementation(() => {
+      transformStack.push(cameraTransformActive);
+    });
+    vi.mocked(ctx.restore).mockImplementation(() => {
+      cameraTransformActive = transformStack.pop() ?? false;
+    });
+    vi.mocked(ctx.scale).mockImplementation((x, y) => {
+      if (x !== 1 || y !== 1) cameraTransformActive = true;
+    });
+    vi.mocked(ctx.drawImage).mockImplementation(((source: CanvasImageSource) => {
+      if (source === visual.source) visualDrawStates.push(cameraTransformActive);
+    }) as CanvasRenderingContext2D['drawImage']);
+
+    renderCompositionFrame(
+      ctx,
+      { source: cameraSource, width: 100, height: 50 },
+      value,
+      0.2,
+      null,
+      undefined,
+      new Map([['logo', visual]]),
+    );
+
+    expect((ctx.scale as ReturnType<typeof vi.fn>).mock.calls.some(([scale]) => Number(scale) > 1)).toBe(true);
+    expect(visualDrawStates).toEqual([false]);
+  });
+
   it('keeps captions above visuals when no screen is present regardless of clip order', () => {
     const value = snapshot();
     value.composition.clips = [];

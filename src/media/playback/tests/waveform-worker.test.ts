@@ -7,9 +7,7 @@ import {
   type WaveformWorkerResponse,
 } from '../waveform-protocol';
 
-const runtime = vi.hoisted(() => ({
-  extractWaveformPeaks: vi.fn(),
-}));
+const runtime = vi.hoisted(() => ({ extractWaveformPeaks: vi.fn() }));
 
 vi.mock('../waveform', () => ({ extractWaveformPeaks: runtime.extractWaveformPeaks }));
 
@@ -29,7 +27,8 @@ const extract = (overrides: Record<string, unknown> = {}) => ({
   startSeconds: 2,
   endSeconds: 4,
   pointCount: 64,
-  resolution: 'coarse',
+  segmentIndex: 0,
+  segmentCount: 1,
   ...overrides,
 });
 
@@ -66,24 +65,28 @@ afterEach(() => {
 const send = (message: unknown) => workerSelf.onmessage!({ data: message } as MessageEvent<unknown>);
 
 describe('waveform worker protocol', () => {
-  it('accepts extract and clear requests with bounded sparse extraction parameters', () => {
+  it('accepts bounded segmented extraction requests and rejects invalid segment metadata', () => {
     expect(isWaveformWorkerRequest(extract())).toBe(true);
     expect(isWaveformWorkerRequest({ type: 'clear', generation: 2 })).toBe(true);
-    expect(
-      isWaveformWorkerRequest(
-        extract({ startSeconds: 4, endSeconds: 4, pointCount: 0, resolution: 'unknown' }),
-      ),
-    ).toBe(false);
-    expect(isWaveformWorkerRequest(extract({ source: source({ url: 'file:///absolute/path/audio.webm' }) }))).toBe(false);
+    expect(isWaveformWorkerRequest(extract({ startSeconds: 4, endSeconds: 4, pointCount: 0 }))).toBe(false);
+    expect(isWaveformWorkerRequest(extract({ segmentIndex: 3, segmentCount: 3 }))).toBe(false);
+    expect(isWaveformWorkerRequest(extract({ segmentIndex: -1, segmentCount: 3 }))).toBe(false);
+    expect(isWaveformWorkerRequest(extract({ segmentIndex: 0, segmentCount: 0 }))).toBe(false);
+    expect(isWaveformWorkerRequest(extract({ source: source({ url: 'file:///absolute/path/audio.webm' }) }))).toBe(
+      false,
+    );
   });
 
-  it('accepts result and structured error responses, but rejects malformed payloads', () => {
+  it('validates streamed result offsets and completion markers', () => {
     const result: WaveformWorkerResponse = {
       type: 'result',
       generation: 1,
       clipId: 'clip-1',
-      resolution: 'coarse',
       peaks: new Float32Array([0, 1]),
+      segmentIndex: 0,
+      segmentCount: 1,
+      segmentPointOffset: 0,
+      segmentComplete: true,
     };
     const error: WaveformWorkerResponse = {
       type: 'error',
@@ -95,62 +98,85 @@ describe('waveform worker protocol', () => {
     expect(isWaveformWorkerResponse(error)).toBe(true);
     expect(() => assertWaveformWorkerResponse(result)).not.toThrow();
     expect(isWaveformWorkerResponse({ ...result, peaks: [0, 1] })).toBe(false);
+    expect(isWaveformWorkerResponse({ ...result, segmentPointOffset: -1 })).toBe(false);
+    expect(isWaveformWorkerResponse({ ...result, segmentComplete: undefined })).toBe(false);
     expect(isWaveformWorkerResponse({ ...error, error: { kind: 'decode-failure' } })).toBe(false);
   });
 });
 
 describe('waveform worker', () => {
-  it('returns sparse extraction results with the requested coarse/refined resolution', async () => {
-    runtime.extractWaveformPeaks.mockImplementation(async (_source, _start, _end, pointCount: number) => {
-      return new Float32Array(pointCount * 2).fill(0.25);
-    });
+  it('forwards ordered 32-point chunks for one segment without a coarse stage', async () => {
+    runtime.extractWaveformPeaks.mockImplementation(
+      async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
+        options?.onProgress({ pointOffset: 0, peaks: new Float32Array(32 * 2).fill(0.25), complete: false });
+        options?.onProgress({
+          pointOffset: 32,
+          peaks: new Float32Array((pointCount - 32) * 2).fill(0.25),
+          complete: true,
+        });
+      },
+    );
 
-    send(extract({ generation: 3, resolution: 'coarse', pointCount: 64 }));
-    await flush();
-    send(extract({ generation: 3, resolution: 'refined', pointCount: 480 }));
+    send(extract({ generation: 3, pointCount: 64, segmentIndex: 1, segmentCount: 3 }));
     await flush();
 
-    expect(runtime.extractWaveformPeaks).toHaveBeenNthCalledWith(
-      1,
+    expect(runtime.extractWaveformPeaks).toHaveBeenCalledWith(
       expect.objectContaining({ assetId: 'audio-1' }),
       2,
       4,
       64,
-    );
-    expect(runtime.extractWaveformPeaks).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ assetId: 'audio-1' }),
-      2,
-      4,
-      480,
+      expect.objectContaining({ pointsPerChunk: 32 }),
     );
     expect(messages()).toEqual([
-      {
+      expect.objectContaining({
         type: 'result',
         generation: 3,
         clipId: 'clip-1',
-        resolution: 'coarse',
+        segmentIndex: 1,
+        segmentCount: 3,
+        segmentPointOffset: 0,
+        segmentComplete: false,
         peaks: expect.any(Float32Array),
-      },
-      {
+      }),
+      expect.objectContaining({
         type: 'result',
         generation: 3,
         clipId: 'clip-1',
-        resolution: 'refined',
+        segmentIndex: 1,
+        segmentCount: 3,
+        segmentPointOffset: 32,
+        segmentComplete: true,
         peaks: expect.any(Float32Array),
-      },
+      }),
     ]);
   });
 
-  it('does not publish a stale generation after a clear and processes the new generation', async () => {
+  it('preserves identity for three contiguous segments and drops stale generations', async () => {
     const first = deferred<Float32Array>();
     const second = deferred<Float32Array>();
-    runtime.extractWaveformPeaks.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    runtime.extractWaveformPeaks
+      .mockImplementationOnce(
+        async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
+          await first.promise;
+          options?.onProgress({ pointOffset: 0, peaks: new Float32Array(pointCount * 2).fill(0.1), complete: true });
+        },
+      )
+      .mockImplementationOnce(
+        async (_source, _start, _end, pointCount: number, options?: { onProgress: (value: unknown) => void }) => {
+          await second.promise;
+          options?.onProgress({ pointOffset: 0, peaks: new Float32Array(pointCount * 2).fill(0.9), complete: true });
+        },
+      );
 
-    send(extract({ generation: 1, clipId: 'old-clip' }));
+    const segments = [
+      extract({ generation: 1, segmentIndex: 0, segmentCount: 3, startSeconds: 0, endSeconds: 2, pointCount: 21 }),
+      extract({ generation: 1, segmentIndex: 1, segmentCount: 3, startSeconds: 2, endSeconds: 4, pointCount: 21 }),
+      extract({ generation: 1, segmentIndex: 2, segmentCount: 3, startSeconds: 4, endSeconds: 6, pointCount: 22 }),
+    ];
+    send(segments[0]);
     await flush();
     send({ type: 'clear', generation: 2 });
-    send(extract({ generation: 2, clipId: 'new-clip' }));
+    send(extract({ generation: 2, clipId: 'new-clip', segmentIndex: 0, segmentCount: 1, pointCount: 32 }));
     await flush();
 
     first.resolve(new Float32Array([0, 0.1]));
@@ -160,13 +186,21 @@ describe('waveform worker', () => {
     second.resolve(new Float32Array([0, 0.9]));
     await flush();
     expect(messages()).toEqual([
-      {
+      expect.objectContaining({
         type: 'result',
         generation: 2,
         clipId: 'new-clip',
-        resolution: 'coarse',
-        peaks: new Float32Array([0, 0.9]),
-      },
+        segmentIndex: 0,
+        segmentCount: 1,
+        segmentPointOffset: 0,
+        segmentComplete: true,
+      }),
     ]);
+
+    // Protocol-level identity remains explicit for all contiguous segment requests.
+    expect(segments.map(({ segmentIndex }) => segmentIndex)).toEqual([0, 1, 2]);
+    expect(segments[0]!.endSeconds).toBe(segments[1]!.startSeconds);
+    expect(segments[1]!.endSeconds).toBe(segments[2]!.startSeconds);
+    expect(segments.reduce((sum, segment) => sum + segment.pointCount, 0)).toBe(64);
   });
 });

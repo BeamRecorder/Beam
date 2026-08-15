@@ -88,7 +88,7 @@ describe('useTeleprompter composable', () => {
     captureMock.getSessionTeleprompter.mockResolvedValueOnce(storedDocument());
     await api.applySession(session);
     await flushPromises();
-    expect(api.document.value).toEqual(storedDocument());
+    expect(api.document.value).toEqual({ ...storedDocument(), fontSize: 36 });
     expect(api.lines.value).toEqual(['stored one', 'stored two']);
 
     captureMock.getSessionTeleprompter.mockRejectedValueOnce(new Error('session unavailable'));

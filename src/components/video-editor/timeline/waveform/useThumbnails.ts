@@ -4,6 +4,7 @@ import type { ThumbnailWorkerResponse } from '~/media/playback/thumbnail-protoco
 import { mediaSourceDescriptor, type MediaAsset } from '~/media/shared';
 
 const CACHE_LIMIT = 96;
+const THUMBNAIL_WORKER_COUNT = 2;
 
 export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
   const thumbnails = reactive<Record<number, string>>({});
@@ -11,14 +12,17 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
   const error = ref<string | null>(null);
   const cacheOrder: number[] = [];
   const retainedTimes = new Set<number>();
-  let worker: Worker | null = null;
+  const workers: Worker[] = [];
+  const activeWorkers = new Set<number>();
+  const pendingFrames = new Map<number, Blob>();
   let generation = 0;
+  let thumbnailFrame = 0;
   let requestQueued = false;
   let queuedTimes: number[] = [];
 
   const clearCache = () => {
     generation += 1;
-    worker?.postMessage({ type: 'clear', generation });
+    for (const worker of workers) worker.postMessage({ type: 'clear', generation });
     for (const [time, url] of Object.entries(thumbnails)) {
       URL.revokeObjectURL(url);
       delete thumbnails[Number(time)];
@@ -28,6 +32,10 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
     queuedTimes = [];
     requestQueued = false;
     isExtracting.value = false;
+    activeWorkers.clear();
+    pendingFrames.clear();
+    cancelAnimationFrame(thumbnailFrame);
+    thumbnailFrame = 0;
     error.value = null;
   };
 
@@ -56,32 +64,48 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
     pruneCache();
   };
 
-  const receiveWorkerMessage = (message: ThumbnailWorkerResponse) => {
+  const queueThumbnail = (time: number, blob: Blob) => {
+    pendingFrames.set(time, blob);
+    if (thumbnailFrame) return;
+    thumbnailFrame = requestAnimationFrame(() => {
+      thumbnailFrame = 0;
+      for (const [pendingTime, pendingBlob] of pendingFrames) cacheThumbnail(pendingTime, pendingBlob);
+      pendingFrames.clear();
+    });
+  };
+
+  const receiveWorkerMessage = (message: ThumbnailWorkerResponse, workerIndex: number) => {
     if (message.generation !== generation) return;
     if (message.type === 'batch-started') {
+      activeWorkers.add(workerIndex);
       isExtracting.value = true;
       error.value = null;
       return;
     }
     if (message.type === 'batch-finished' || message.type === 'error') {
-      isExtracting.value = false;
+      activeWorkers.delete(workerIndex);
+      isExtracting.value = activeWorkers.size > 0;
       if (message.type === 'error') error.value = message.message;
       return;
     }
-    cacheThumbnail(message.time, message.blob);
+    queueThumbnail(message.time, message.blob);
   };
 
-  const initWorker = () => {
-    if (worker) return;
-    worker = new ThumbnailWorker();
-    worker.onmessage = (event: MessageEvent<ThumbnailWorkerResponse>) => {
-      receiveWorkerMessage(event.data);
-    };
-    worker.onerror = () => {
-      console.error('[Beam media:thumbnails] Thumbnail worker crashed.');
-      isExtracting.value = false;
-      error.value = 'Timeline thumbnail decoding failed.';
-    };
+  const initWorkers = () => {
+    if (workers.length > 0) return;
+    for (let index = 0; index < THUMBNAIL_WORKER_COUNT; index += 1) {
+      const worker = new ThumbnailWorker();
+      worker.onmessage = (event: MessageEvent<ThumbnailWorkerResponse>) => receiveWorkerMessage(event.data, index);
+      worker.onerror = () => {
+        console.error('[Beam media:thumbnails] Thumbnail worker crashed.');
+        for (const activeWorker of workers) activeWorker.terminate();
+        workers.length = 0;
+        activeWorkers.clear();
+        isExtracting.value = false;
+        error.value = 'Timeline thumbnail decoding failed.';
+      };
+      workers.push(worker);
+    }
   };
 
   const requestVisibleFrames = (visibleTimes: number[]) => {
@@ -109,20 +133,29 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
     if (!asset || visibleTimes.length === 0) return;
     const missingTimes = visibleTimes.filter((time) => !thumbnails[time]);
     if (missingTimes.length === 0) return;
-    initWorker();
-    const requestGeneration = generation;
+    initWorkers();
+    const requestGeneration = ++generation;
+    activeWorkers.clear();
     isExtracting.value = true;
     error.value = null;
     try {
-      worker?.postMessage({
-        type: 'request-frames',
-        generation: requestGeneration,
-        source: mediaSourceDescriptor(asset),
-        visibleTimes: missingTimes,
-      });
+      const workerCount = Math.min(workers.length, missingTimes.length);
+      const chunkSize = Math.ceil(missingTimes.length / workerCount);
+      for (let index = 0; index < workerCount; index += 1) {
+        const visibleTimes = missingTimes.slice(index * chunkSize, (index + 1) * chunkSize);
+        if (visibleTimes.length === 0) continue;
+        activeWorkers.add(index);
+        workers[index]!.postMessage({
+          type: 'request-frames',
+          generation: requestGeneration,
+          source: mediaSourceDescriptor(asset),
+          visibleTimes,
+        });
+      }
     } catch (postError) {
       console.error('[Beam media:thumbnails] Thumbnail request failed.', postError);
       if (requestGeneration === generation) {
+        activeWorkers.clear();
         isExtracting.value = false;
         error.value = 'Timeline thumbnail decoding failed.';
       }
@@ -136,7 +169,8 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
 
   onUnmounted(() => {
     clearCache();
-    worker?.terminate();
+    for (const worker of workers) worker.terminate();
+    workers.length = 0;
   });
 
   return { thumbnails, isExtracting, error, requestVisibleFrames, clearCache };

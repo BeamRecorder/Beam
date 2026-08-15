@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { nextTick, type Ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useToastStore } from '~/ui/toast/toastStore';
-import type { ExportRequest } from '../export-types';
+import { ExportValidationError, type ExportRequest } from '../export-types';
 
 const { mockJob } = vi.hoisted(() => ({
   mockJob: {
@@ -17,11 +17,13 @@ vi.mock('../useExportJob', async () => {
   const { ref, computed } = await import('vue');
   const progress = ref(null);
   const error = ref<string | null>(null);
+  const errorContext = ref<unknown>(null);
   const result = ref<{ path: string; format: 'webm' | 'mp4' } | null>(null);
   const exporting = ref(false);
   mockJob.state = {
     progress,
     error,
+    errorContext,
     result,
     isExporting: computed(() => exporting.value),
     exporting,
@@ -30,6 +32,7 @@ vi.mock('../useExportJob', async () => {
     useExportJob: () => ({
       progress,
       error,
+      errorContext,
       result,
       isExporting: computed(() => exporting.value),
       start: mockJob.start,
@@ -52,8 +55,8 @@ const ButtonGroup = {
   template: '<div class="button-group-stub"><slot /></div>',
 };
 const ProgressBar = {
-  props: ['value'],
-  template: '<div class="progress-stub">{{ value }}</div>',
+  props: ['value', 'indeterminate'],
+  template: '<div class="progress-stub" :data-indeterminate="indeterminate">{{ value }}</div>',
 };
 
 const request = {
@@ -77,6 +80,7 @@ beforeEach(() => {
   if (mockJob.state) {
     mockJob.state.progress.value = null;
     mockJob.state.error.value = null;
+    mockJob.state.errorContext.value = null;
     mockJob.state.result.value = null;
     mockJob.state.exporting.value = false;
   }
@@ -139,9 +143,12 @@ describe('ExportPopover', () => {
     const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
     const exporting = mockJob.state?.exporting as Ref<boolean>;
     progress.value = {
+      stage: 'encoding',
       stageLabel: 'Encoding',
-      completed: 5,
-      total: 10,
+      overallProgress: 0.5,
+      completedImages: 5,
+      totalImages: 10,
+      audioProgress: 0.4,
       currentTimeMs: 61_000,
       totalTimeMs: 125_000,
     };
@@ -149,9 +156,35 @@ describe('ExportPopover', () => {
     await nextTick();
     expect(wrapper.find('.export-progress-card').exists()).toBe(true);
     expect(wrapper.find('.percentage-badge').text()).toBe('50%');
+    expect(wrapper.find('.progress-details .detail-item:not(.time-item)').text()).toMatch(/Frame|Image/);
+    expect(wrapper.find('.progress-stub').attributes('data-indeterminate')).toBeUndefined();
     expect(wrapper.text()).toContain('01:01.0s');
     await wrapper.find('.export-progress-card .button-stub').trigger('click');
     expect(mockJob.cancel).toHaveBeenCalledOnce();
+  });
+
+  it('keeps zero percent visible before encoding and hides encoding details', async () => {
+    const wrapper = mountExport();
+    const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
+    const exporting = mockJob.state?.exporting as Ref<boolean>;
+    exporting.value = true;
+
+    for (const stage of ['validating_assets', 'loading_assets']) {
+      progress.value = {
+        stage,
+        overallProgress: stage === 'validating_assets' ? 0 : 0.05,
+        completedImages: 0,
+        totalImages: 1,
+        audioProgress: 0,
+        currentTimeMs: 0,
+        totalTimeMs: 125_000,
+      };
+      await nextTick();
+
+      expect(wrapper.find('.percentage-badge').exists()).toBe(true);
+      expect(wrapper.find('.progress-details .detail-item:not(.time-item)').exists()).toBe(false);
+      expect(wrapper.find('.progress-stub').attributes('data-indeterminate')).toBeUndefined();
+    }
   });
 
   it('keeps Export visible and publishes a sanitized copyable error toast', async () => {
@@ -163,7 +196,13 @@ describe('ExportPopover', () => {
     });
     mockJob.start.mockImplementation(async () => {
       (mockJob.state?.error as Ref<string | null>).value =
-        'Missing asset: /home/albi/projects/demo/media/recording.mp4';
+        'The source image could not be decoded.';
+      (mockJob.state?.errorContext as Ref<unknown>).value = new ExportValidationError({
+        code: 'decode-failure',
+        message: 'The source image could not be decoded.',
+        assetId: 'vivid-horizon',
+        name: 'Vivid Horizon',
+      });
     });
 
     try {
@@ -172,17 +211,21 @@ describe('ExportPopover', () => {
       await nextTick();
 
       expect(wrapper.find('.export-trigger').exists()).toBe(true);
-      expect(wrapper.get('[role="alert"]').text()).toContain('Missing asset');
+      expect(wrapper.get('[role="alert"]').text()).toContain('The source image could not be decoded.');
 
       const toast = useToastStore().toasts.at(-1);
       expect(toast).toMatchObject({
         type: 'error',
         action: { label: expect.stringMatching(/copy/i), onClick: expect.any(Function) },
       });
-      toast?.action?.onClick();
+      const copyResult = toast?.action?.onClick();
+      expect(copyResult).toBeInstanceOf(Promise);
+      await copyResult;
       await vi.waitFor(() => expect(writeText).toHaveBeenCalledOnce());
       const copied = String(writeText.mock.calls[0]?.[0]);
-      expect(copied).toContain('Missing asset');
+      expect(wrapper.get('[role="alert"]').text()).toContain('The source image could not be decoded.');
+      expect(copied).toContain('decode-failure');
+      expect(copied).toContain('vivid-horizon');
       expect(copied).not.toContain('/home/albi');
     } finally {
       Object.defineProperty(globalThis, 'navigator', { configurable: true, value: originalNavigator });

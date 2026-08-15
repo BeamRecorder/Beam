@@ -11,6 +11,14 @@ import {
 import { effectButtonForRecordedButton, type CursorClickEffectSettings } from '../../../api/types/cursor-settings';
 import type { CompositionSnapshot } from '../export-types';
 import { cursorRippleAt } from '../../video-editor/composables/cursor-ripple';
+import type { Canvas2DContext } from '~/types/canvas';
+
+type CursorImage = HTMLImageElement | ImageBitmap;
+const usableImage = (image: CursorImage | undefined) => {
+  if (!image) return false;
+  if ('complete' in image) return image.complete && image.naturalWidth > 0;
+  return image.width > 0;
+};
 
 export function cursorPositionForKeyboardCaption(
   snapshot: CompositionSnapshot,
@@ -20,7 +28,7 @@ export function cursorPositionForKeyboardCaption(
   sourceHeight: number,
   width: number,
   height: number,
-  cursorImages: ReadonlyMap<string, HTMLImageElement> | undefined,
+  cursorImages: ReadonlyMap<string, CursorImage> | undefined,
   cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
   camera: { scale: number; focus: { cx: number; cy: number } },
 ) {
@@ -28,14 +36,7 @@ export function cursorPositionForKeyboardCaption(
   const motionState = cursorMotionPlayer.sample(time, state);
   const cursorType = cursorTypeAt(snapshot.cursorSettings.selectedCursor, motionState);
   const image = cursorImages?.get(cursorType);
-  if (
-    !snapshot.cursor.available ||
-    !state?.visible ||
-    !motionState?.visible ||
-    !image?.complete ||
-    image.naturalWidth <= 0
-  )
-    return null;
+  if (!snapshot.cursor.available || !state?.visible || !motionState?.visible || !usableImage(image)) return null;
   const raw = cursorPositionAt(
     motionState,
     { width: sourceWidth, height: sourceHeight },
@@ -54,7 +55,7 @@ export function cursorPositionForKeyboardCaption(
 }
 
 export function drawCursorLayer(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   snapshot: CompositionSnapshot,
   time: number,
   screen: VisualClip,
@@ -62,7 +63,7 @@ export function drawCursorLayer(
   sourceHeight: number,
   width: number,
   height: number,
-  cursorImages: ReadonlyMap<string, HTMLImageElement> | undefined,
+  cursorImages: ReadonlyMap<string, CursorImage> | undefined,
   cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
 ) {
   const cursor = cursorStateAt(snapshot.cursor.events, time);
@@ -111,7 +112,7 @@ export function drawCursorLayer(
 
   const cursorType = cursorTypeAt(settings.selectedCursor, motionCursor);
   const image = cursorImages?.get(cursorType);
-  if (!motionCursor?.visible || !image?.complete || image.naturalWidth <= 0) return;
+  if (!motionCursor?.visible || !usableImage(image)) return;
   const hotspot = cursorHotspotAtSize(cursorType, cursorSize);
   const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.28), time)
     .reverse()
@@ -139,7 +140,7 @@ export function drawCursorLayer(
     }
     ctx.translate(samplePosition.x, samplePosition.y);
     ctx.scale(clickScale, clickScale);
-    ctx.drawImage(image, -hotspot.x, -hotspot.y, cursorSize, cursorSize);
+    ctx.drawImage(image!, -hotspot.x, -hotspot.y, cursorSize, cursorSize);
     ctx.restore();
   }
 }

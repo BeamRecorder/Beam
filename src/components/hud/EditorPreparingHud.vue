@@ -22,8 +22,8 @@ const stageLabel = computed(() => t(props.progress.stage));
     </div>
 
     <div class="editor-preparing-copy">
-      <h2><Throbber :text="t('title')" variant="wave" color="default" size="lg" /></h2>
-      <p><Throbber :text="stageLabel" variant="breathe" color="muted" size="sm" /></p>
+      <h2><Throbber :text="t('title')" variant="glow" color="default" size="lg" /></h2>
+      <p><Throbber :text="stageLabel" variant="glow" color="muted" size="sm" /></p>
     </div>
 
     <div

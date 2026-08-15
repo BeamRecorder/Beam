@@ -32,5 +32,4 @@ describe('resolvePublicAssetUrl', () => {
     expect(second).toBe(`${origin}/wallpapers/image/bluerays.webp`);
     expect(third).toBe(`${origin}/wallpapers/image/bluerays.webp`);
   });
-
 });

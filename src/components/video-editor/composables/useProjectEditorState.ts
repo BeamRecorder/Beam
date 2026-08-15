@@ -6,6 +6,7 @@ import type { ZoomElement } from '../zoom/zoom-types';
 import {
   BACKGROUND_MEDIA,
   findMatchingBackgroundMedia,
+  getRandomBackgroundImage,
   normalizeBackgroundValue,
   type BackgroundMedia,
   type BackgroundValue,
@@ -122,11 +123,16 @@ export function useProjectEditorState(options: {
       options.importedBackgrounds.value = state.presentation.importedBackgrounds;
       const globalBackgrounds = options.availableBackgrounds.value.flatMap((group) => group.items);
       savedBackgroundId = state.presentation.selectedBackgroundId;
-      options.selectedBackground.value =
+      const loadedBg =
         normalizeBackgroundValue(state.presentation.background) ??
         findMatchingBackgroundMedia(globalBackgrounds, savedBackgroundId) ??
         findMatchingBackgroundMedia(BACKGROUND_MEDIA, savedBackgroundId) ??
         null;
+      options.selectedBackground.value =
+        loadedBg ??
+        (savedBackgroundId
+          ? null
+          : (getRandomBackgroundImage(globalBackgrounds.length > 0 ? globalBackgrounds : BACKGROUND_MEDIA) ?? null));
       options.backgroundBlurPercent.value = Math.max(0, Math.min(100, Number(state.presentation.blurPercent) || 0));
       options.canvas.value = state.presentation.canvas;
       const cursor = state.presentation.cursor;

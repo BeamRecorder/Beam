@@ -3,13 +3,7 @@ import { buttonEventsBetween, cursorAssetForState, cursorStateAt } from '../curs
 import type { CursorEvent, CursorShapeAsset } from '../../../../api/types/capture-api';
 
 const second = (value: number) => value * 1_000_000_000;
-const move = (
-  time: number,
-  x: number,
-  y: number,
-  visible = true,
-  cursorId?: string,
-): CursorEvent => ({
+const move = (time: number, x: number, y: number, visible = true, cursorId?: string): CursorEvent => ({
   event: 'move',
   sessionNs: second(time),
   ...(cursorId ? { cursorId } : {}),

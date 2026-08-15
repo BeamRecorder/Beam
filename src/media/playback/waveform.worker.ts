@@ -10,6 +10,7 @@ import {
 let latestGeneration = 0;
 const pending = new Map<string, Extract<WaveformWorkerRequest, { type: 'extract' }>>();
 let processing = false;
+const POINTS_PER_CHUNK = 32;
 
 self.onmessage = (event: MessageEvent<unknown>) => {
   if (!isWaveformWorkerRequest(event.data)) return;
@@ -18,7 +19,7 @@ self.onmessage = (event: MessageEvent<unknown>) => {
     pending.clear();
     return;
   }
-  pending.set(event.data.clipId, event.data);
+  pending.set(`${event.data.clipId}:${event.data.segmentIndex}`, event.data);
   void processRequests();
 };
 
@@ -29,23 +30,25 @@ async function processRequests() {
     while (pending.size) {
       const request = pending.values().next().value;
       if (!request) break;
-      pending.delete(request.clipId);
+      pending.delete(`${request.clipId}:${request.segmentIndex}`);
       try {
-        const peaks = await extractWaveformPeaks(
-          request.source,
-          request.startSeconds,
-          request.endSeconds,
-          request.pointCount,
-        );
-        if (request.generation === latestGeneration) {
-          post({
-            type: 'result',
-            generation: request.generation,
-            clipId: request.clipId,
-            peaks,
-            resolution: request.resolution,
-          });
-        }
+        await extractWaveformPeaks(request.source, request.startSeconds, request.endSeconds, request.pointCount, {
+          pointsPerChunk: POINTS_PER_CHUNK,
+          shouldStop: () => request.generation !== latestGeneration,
+          onProgress: ({ pointOffset, peaks, complete }) => {
+            if (request.generation !== latestGeneration) return;
+            post({
+              type: 'result',
+              generation: request.generation,
+              clipId: request.clipId,
+              peaks,
+              segmentIndex: request.segmentIndex,
+              segmentCount: request.segmentCount,
+              segmentPointOffset: pointOffset,
+              segmentComplete: complete,
+            });
+          },
+        });
       } catch (error) {
         if (request.generation !== latestGeneration) continue;
         post({

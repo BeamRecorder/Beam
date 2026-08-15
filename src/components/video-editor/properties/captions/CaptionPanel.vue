@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Check, Copy } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import Select from '~/ui/select/Select.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
+import type { CaptionClip, CaptionSentence, ClipComposition } from '~/media/shared/composition-types';
 import { createComposition } from '../../composition/engine/clip-engine';
 import { useWhisperTranscription } from '../../captions/useWhisperTranscription';
 import { whisperModels, type TranscriptionSource, type WhisperModelId } from '../../captions/whisper-types';
@@ -15,6 +16,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 const { t } = useTranslate('CaptionPanel');
+const { t: tHud } = useTranslate('HUD');
 const props = defineProps<{
   composition: ClipComposition;
   editorData?: ProjectEditorData | null;
@@ -22,6 +24,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   (event: 'update:composition', composition: ClipComposition): void;
+  (event: 'preview:composition', composition: ClipComposition): void;
   (event: 'select-caption', clipId: string): void;
 }>();
 
@@ -33,14 +36,31 @@ const modelStates = ref<
 >({});
 const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null);
 const downloadError = ref<string | null>(null);
+const isDownloading = ref(false);
+const isTranscribing = ref(false);
+const copiedError = ref(false);
+let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const selectedModelState = computed(() => modelStates.value[model.value]);
 const modelReady = computed(() => selectedModelState.value?.status === 'ready');
+const isProcessing = computed(
+  () => isTranscribing.value || progress.value.status === 'loading' || progress.value.status === 'running',
+);
+const visibleError = computed(
+  () => downloadError.value || (progress.value.status === 'error' ? progress.value.message : ''),
+);
 const progressPercent = computed(() =>
   downloadProgress.value?.totalBytes
     ? (downloadProgress.value.downloadedBytes / downloadProgress.value.totalBytes) * 100
     : 0,
 );
+watch(visibleError, () => {
+  copiedError.value = false;
+  if (copiedErrorTimeout) {
+    clearTimeout(copiedErrorTimeout);
+    copiedErrorTimeout = null;
+  }
+});
 const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
 
 const aiCaptions = computed(() =>
@@ -52,6 +72,8 @@ const loadModels = async () => {
   modelStates.value = Object.fromEntries((await capture.whisperModels()).map((item) => [item.id, item]));
 };
 const downloadModel = async () => {
+  if (isDownloading.value) return;
+  isDownloading.value = true;
   downloadError.value = null;
   downloadProgress.value = null;
   try {
@@ -59,7 +81,34 @@ const downloadModel = async () => {
     await loadModels();
   } catch (error) {
     downloadError.value = error instanceof Error ? error.message : t('modelDownloadFailed');
+  } finally {
+    isDownloading.value = false;
   }
+};
+
+const copyError = async () => {
+  if (!visibleError.value) return;
+  try {
+    await navigator.clipboard.writeText(visibleError.value);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = visibleError.value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.append(textarea);
+    try {
+      textarea.select();
+      if (!document.execCommand('copy')) throw new Error('Unable to copy the Whisper error.');
+    } finally {
+      textarea.remove();
+    }
+  }
+  copiedError.value = true;
+  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
+  copiedErrorTimeout = setTimeout(() => {
+    copiedError.value = false;
+  }, 2_000);
 };
 
 let unsubscribe: (() => void) | null = null;
@@ -69,7 +118,10 @@ onMounted(async () => {
     if (event.id === model.value) downloadProgress.value = event;
   });
 });
-onBeforeUnmount(() => unsubscribe?.());
+onBeforeUnmount(() => {
+  unsubscribe?.();
+  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
+});
 
 const sources = computed(() => captionSources(props.composition, props.editorData));
 const selectedSource = computed(() => sources.value.find((item) => item.id === source.value) ?? null);
@@ -82,41 +134,63 @@ const modelSelectItems = computed(() =>
 const sourceSelectItems = computed(() => sources.value.map((item) => ({ value: item.id, label: item.label })));
 
 const runTranscription = async () => {
-  if (!selectedSource.value) return;
-  const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs);
-  if (!result.sentences.length) return;
-  const preserved = props.composition.clips.filter((clip) => clip.kind !== 'caption' || !clip.isAiGenerated);
-  const captions: CaptionClip[] = result.sentences.map((sentence, index) => {
-    const durationMs = Math.max(40, sentence.endMs - sentence.startMs);
-    return {
-      id: crypto.randomUUID(),
-      kind: 'caption',
-      name: `AI Caption ${index + 1}`,
-      timelineStartMs: sentence.startMs,
-      timelineDurationMs: durationMs,
-      sourceInMs: 0,
-      sourceDurationMs: durationMs,
-      playbackRate: 1,
-      enabled: true,
-      order: preserved.length + index,
-      isAiGenerated: true,
-      caption: {
-        type: 'text',
-        sentences: [sentence],
-        style: {
-          ...createDefaultCaptionStyle(36),
-          shadowColor: 'rgba(0, 0, 0, 0.8)',
-          shadowBlur: 8,
-          shadowDirection: 'bottom-right',
+  if (!selectedSource.value || isTranscribing.value) return;
+  isTranscribing.value = true;
+  const captionIds = new Map<string, string>();
+  const applySentences = (sentences: CaptionSentence[], preview = false) => {
+    if (!sentences.length) return [];
+    const preserved = props.composition.clips.filter((clip) => clip.kind !== 'caption' || !clip.isAiGenerated);
+    const captions: CaptionClip[] = sentences.map((sentence, index) => {
+      const durationMs = Math.max(40, sentence.endMs - sentence.startMs);
+      let clipId = captionIds.get(sentence.id);
+      if (!clipId) {
+        clipId = crypto.randomUUID();
+        captionIds.set(sentence.id, clipId);
+      }
+      return {
+        id: clipId,
+        kind: 'caption',
+        name: `AI Caption ${index + 1}`,
+        timelineStartMs: sentence.startMs,
+        timelineDurationMs: durationMs,
+        sourceInMs: 0,
+        sourceDurationMs: durationMs,
+        playbackRate: 1,
+        enabled: true,
+        order: preserved.length + index,
+        isAiGenerated: true,
+        caption: {
+          type: 'text',
+          sentences: [sentence],
+          style: {
+            ...createDefaultCaptionStyle(36),
+            shadowColor: 'rgba(0, 0, 0, 0.8)',
+            shadowBlur: 8,
+            shadowDirection: 'bottom-right',
+          },
         },
-      },
-    };
-  });
-  emit(
-    'update:composition',
-    createComposition(props.composition.assets, [...preserved, ...captions], props.composition.keyboardCaptionSessions),
-  );
-  emit('select-caption', captions[0].id);
+      };
+    });
+    const composition = createComposition(
+      props.composition.assets,
+      [...preserved, ...captions],
+      props.composition.keyboardCaptionSessions,
+    );
+    if (preview) emit('preview:composition', composition);
+    else emit('update:composition', composition);
+    return captions;
+  };
+  try {
+    const result = await transcribe(selectedSource.value.src, model.value, props.timelineDurationMs, (partial) =>
+      applySentences(partial.sentences, true),
+    );
+    const captions = applySentences(result.sentences);
+    if (captions.length) emit('select-caption', captions[0]!.id);
+  } catch {
+    // The composable exposes the actionable worker error through progress.
+  } finally {
+    isTranscribing.value = false;
+  }
 };
 </script>
 
@@ -151,7 +225,9 @@ const runTranscription = async () => {
           <span v-if="modelReady" class="model-ready-text">{{ t('modelReady') }}</span>
         </div>
 
-        <Button v-if="!modelReady" variant="secondary" size="sm" @click="downloadModel" block>Download Model</Button>
+        <Button v-if="!modelReady" variant="secondary" size="sm" :disabled="isDownloading" @click="downloadModel" block>
+          {{ t('downloadModel') }}
+        </Button>
 
         <div v-if="downloadProgress?.id === model" class="progress-block">
           <ProgressBar :value="progressPercent" />
@@ -166,24 +242,21 @@ const runTranscription = async () => {
           <span class="progress-text">{{ progress.message }}</span>
         </div>
 
-        <p v-if="downloadError || progress.status === 'error'" class="error-text">
-          {{ downloadError || progress.message }}
-        </p>
+        <div v-if="visibleError" class="error-block" role="alert">
+          <p class="error-text">{{ visibleError }}</p>
+          <Button variant="ghost" size="xs" :icon="copiedError ? Check : Copy" @click="copyError">
+            {{ copiedError ? tHud('copied') : tHud('copyError') }}
+          </Button>
+        </div>
 
         <Button
           variant="primary"
           size="md"
-          :disabled="!modelReady || !selectedSource || progress.status === 'loading' || progress.status === 'running'"
+          :disabled="!modelReady || !selectedSource || isProcessing"
           @click="runTranscription"
           block
         >
-          {{
-            progress.status === 'idle'
-              ? hasAiCaptions
-                ? t('regenerateAICaptions')
-                : t('generateCaptions')
-              : t('processing')
-          }}
+          {{ !isProcessing ? (hasAiCaptions ? t('regenerateAICaptions') : t('generateCaptions')) : t('processing') }}
         </Button>
       </div>
 
@@ -276,5 +349,14 @@ const runTranscription = async () => {
   color: var(--color-error, #ef4444);
   font-size: 11px;
   margin: 0;
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+
+.error-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 </style>

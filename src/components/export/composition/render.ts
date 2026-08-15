@@ -13,6 +13,7 @@ import {
 } from '../../video-editor/zoom/composition-camera';
 import { renderBackground } from '../../video-editor/composition/background/render-background';
 import { resolveCompositionSceneLayers } from '../../video-editor/composition/scene-layers';
+import type { Canvas2DContext } from '~/types/canvas';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -24,7 +25,7 @@ export type CompositionVisuals = ReadonlyMap<string, RenderableMedia>;
 export const OUTPUT_FALLBACK_COLOR = '#1e1e24';
 
 function drawSnapshotBackground(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   snapshot: CompositionSnapshot,
   background: RenderableMedia | null | undefined,
 ) {
@@ -40,7 +41,7 @@ function drawSnapshotBackground(
 }
 
 function drawCaption(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   clip: CaptionClip,
   timeMs: number,
   snapshot: CompositionSnapshot,
@@ -59,7 +60,7 @@ function drawCaption(
 }
 
 function drawVisualClip(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   clip: VisualClip,
   media: RenderableMedia,
   canvas: { width: number; height: number },
@@ -93,14 +94,14 @@ function drawVisualClip(
 }
 
 export function drawCompositionLayers(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   snapshot: CompositionSnapshot,
   time: number,
   visuals: CompositionVisuals = new Map(),
 ) {
   const timeMs = time * 1_000;
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
-  for (const clip of [...layers.cameraVisuals.filter((clip) => clip.kind !== 'screen'), ...layers.webcams]) {
+  for (const clip of [...layers.viewportVisuals, ...layers.webcams]) {
     const media = visuals.get(clip.id);
     if (!media) continue;
     if (clip.kind === 'webcam') {
@@ -145,12 +146,12 @@ export const createSnapshotCameraEvaluator = (
   });
 
 export function renderCompositionFrame(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   video: RenderableMedia | null,
   snapshot: CompositionSnapshot,
   time: number,
   background?: RenderableMedia | null,
-  cursorImages?: ReadonlyMap<string, HTMLImageElement>,
+  cursorImages?: ReadonlyMap<string, HTMLImageElement | ImageBitmap>,
   visuals?: CompositionVisuals,
   cursorMotionPlayer?: ReturnType<typeof createCursorMotionPlayer>,
   cameraEvaluator?: CompositionCameraEvaluator,
@@ -223,6 +224,12 @@ export function renderCompositionFrame(
     drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
   }
   ctx.restore();
+
+  for (const clip of layers.viewportVisuals) {
+    const sourceVisual = visuals?.get(clip.id);
+    if (!sourceVisual) continue;
+    drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
+  }
 
   for (const clip of layers.webcams) {
     const sourceVisual = visuals?.get(clip.id);

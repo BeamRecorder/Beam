@@ -11,7 +11,7 @@ import {
 import type { ProjectEditorData } from '~/api/types/capture-api';
 import { activeClipsAt } from '~/media/shared';
 import type { MediaFrame } from '~/media/shared';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 
 export interface VideoWindowBounds {
@@ -38,6 +38,7 @@ export interface UseCameraZoomOptions {
   editorData: () => ProjectEditorData | null | undefined;
   activeTab: () => string;
   composition: () => ClipComposition;
+  screenTransformDraft?: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
   drawBackground: (
     ctx: CanvasRenderingContext2D,
@@ -242,11 +243,12 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       source.y += cropY;
     }
     const media = output.showBackground ? framedMediaRect(cropW, cropH, dw, dh) : { x: 0, y: 0, width: dw, height: dh };
+    const screenTransform = options.screenTransformDraft?.() ?? screen.transform;
     const positioned = {
-      x: media.x + screen.transform.x * media.width,
-      y: media.y + screen.transform.y * media.height,
-      width: media.width * screen.transform.width,
-      height: media.height * screen.transform.height,
+      x: media.x + screenTransform.x * media.width,
+      y: media.y + screenTransform.y * media.height,
+      width: media.width * screenTransform.width,
+      height: media.height * screenTransform.height,
     };
 
     ctx.save();
@@ -259,7 +261,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       zooms: options.zoomElements(),
       telemetry,
       canvas: output,
-      screen: { transform: screen.transform, crop: screen.crop },
       source: [videoWidth, videoHeight],
     });
     if (!cameraEvaluator || key !== cameraEvaluatorKey) {

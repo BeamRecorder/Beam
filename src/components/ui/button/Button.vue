@@ -319,6 +319,9 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

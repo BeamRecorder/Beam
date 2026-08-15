@@ -1,7 +1,5 @@
 import type { MediaError, MediaSourceDescriptor } from '../shared';
 
-export type WaveformResolution = 'coarse' | 'refined';
-
 export type WaveformWorkerRequest =
   | {
       type: 'extract';
@@ -11,7 +9,8 @@ export type WaveformWorkerRequest =
       startSeconds: number;
       endSeconds: number;
       pointCount: number;
-      resolution: WaveformResolution;
+      segmentIndex: number;
+      segmentCount: number;
     }
   | { type: 'clear'; generation: number };
 
@@ -21,14 +20,22 @@ export type WaveformWorkerResponse =
       generation: number;
       clipId: string;
       peaks: Float32Array;
-      resolution: WaveformResolution;
+      segmentIndex: number;
+      segmentCount: number;
+      segmentPointOffset: number;
+      segmentComplete: boolean;
     }
   | { type: 'error'; generation: number; clipId: string; error: MediaError };
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object');
 const generation = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 0;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
-const resolution = (value: unknown): value is WaveformResolution => value === 'coarse' || value === 'refined';
+const segment = (index: unknown, count: unknown) =>
+  Number.isSafeInteger(index) &&
+  Number.isSafeInteger(count) &&
+  (index as number) >= 0 &&
+  (count as number) > 0 &&
+  (index as number) < (count as number);
 
 const source = (value: unknown): value is MediaSourceDescriptor => {
   if (!record(value) || typeof value.url !== 'string') return false;
@@ -54,8 +61,7 @@ const mediaError = (value: unknown): value is MediaError => {
   if (value.kind === 'missing-track') return value.track === 'audio' || value.track === 'video';
   if (value.kind === 'unsupported-codec') {
     return (
-      (value.track === 'audio' || value.track === 'video') &&
-      (value.codec === null || typeof value.codec === 'string')
+      (value.track === 'audio' || value.track === 'video') && (value.codec === null || typeof value.codec === 'string')
     );
   }
   return value.kind === 'decode-failure';
@@ -75,14 +81,22 @@ export function isWaveformWorkerRequest(value: unknown): value is WaveformWorker
     value.endSeconds > value.startSeconds &&
     Number.isSafeInteger(value.pointCount) &&
     (value.pointCount as number) > 0 &&
-    resolution(value.resolution)
+    segment(value.segmentIndex, value.segmentCount)
   );
 }
 
 export function isWaveformWorkerResponse(value: unknown): value is WaveformWorkerResponse {
   if (!record(value) || !generation(value.generation) || typeof value.clipId !== 'string') return false;
   if (value.type === 'result') {
-    return value.peaks instanceof Float32Array && value.peaks.length > 0 && value.peaks.length % 2 === 0 && resolution(value.resolution);
+    return (
+      value.peaks instanceof Float32Array &&
+      value.peaks.length > 0 &&
+      value.peaks.length % 2 === 0 &&
+      segment(value.segmentIndex, value.segmentCount) &&
+      Number.isSafeInteger(value.segmentPointOffset) &&
+      (value.segmentPointOffset as number) >= 0 &&
+      typeof value.segmentComplete === 'boolean'
+    );
   }
   return value.type === 'error' && mediaError(value.error);
 }

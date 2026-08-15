@@ -135,7 +135,9 @@
     "unlinkMicrophoneTrack": "マイクトラックのリンクを解除",
     "waveformUnavailable": "波形を利用できません",
     "trimStart": "先頭をトリミング",
-    "trimEnd": "末尾をトリミング"
+    "trimEnd": "末尾をトリミング",
+    "keyboardCaptions": "キーボードショートカット",
+    "textCaptions": "テキストキャプション"
   },
   "TimelineVideoClip": {
     "trimStart": "先頭をトリミング",
