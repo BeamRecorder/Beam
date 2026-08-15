@@ -120,15 +120,20 @@
     "whisperModel": "Model Whisper",
     "modelReady": "Model pobrany i zweryfikowany",
     "downloadModel": "Pobierz model",
+    "deleteModel": "Usuń model",
+    "deleting": "Usuwanie…",
     "generateCaptions": "Generuj napisy",
     "regenerateAICaptions": "Wygeneruj napisy AI ponownie",
     "processing": "Przetwarzanie…",
+    "preparingAudio": "Przygotowywanie dźwięku…",
+    "transcriptionCompleted": "Transkrypcja ukończona w {time}.",
     "aiCaptionsActive": "Napisy AI są aktywne",
     "subtitlesGenerated": "Wygenerowano {count} ścieżek napisów.",
     "edit": "Edytuj",
     "modelDownloadFailed": "Nie udało się pobrać modelu.",
     "systemAudio": "Dźwięk systemowy",
-    "microphone": "Mikrofon"
+    "microphone": "Mikrofon",
+    "cancel": "Anuluj"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Nie wybrano klipu",
@@ -193,7 +198,8 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Ładowanie podglądu wideo",
-    "ok": "OK"
+    "ok": "OK",
+    "recenter": "Wyśrodkuj widok"
   },
   "ExportPopover": {
     "exportVideo": "Eksportuj wideo",

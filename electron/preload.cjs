@@ -162,6 +162,7 @@ contextBridge.exposeInMainWorld(
     revealProject: (projectId) => ipcRenderer.invoke('projects:reveal', { projectId }),
     whisperModels: () => ipcRenderer.invoke('whisper:models'),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke('whisper:download', { modelId }),
+    deleteWhisperModel: (modelId) => ipcRenderer.invoke('whisper:delete', { modelId }),
     onWhisperProgress: (listener) => {
       const callback = (_event, progress) => listener(progress);
       ipcRenderer.on('whisper:progress', callback);

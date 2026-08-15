@@ -274,6 +274,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
 
       const startMs = edge === 'start' ? finalTimeMs : originalStartMs;
       const endMs = edge === 'end' ? finalTimeMs : originalEndMs;
+      previewDurationMs.value = endMs > baseDurationMs ? endMs : null;
       previewLinked(ids, startMs, endMs - startMs);
       activeTrimState.value = { ids, edge, durationMs: endMs - startMs, atLimit: isAtLimit };
     };
@@ -285,6 +286,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', cancel);
       clearLinkedPreview(ids);
+      previewDurationMs.value = null;
       activeTrimState.value = null;
       activeSnapTimeMs.value = null;
     };

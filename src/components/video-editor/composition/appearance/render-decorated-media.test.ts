@@ -128,8 +128,8 @@ describe('decorated media rendering', () => {
   });
   it('keeps adaptive color independent from the selected shadow size', () => {
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'none', shadowMode: 'adaptive' }))).toBe(0);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: 'sm', shadowMode: 'adaptive' }))).toBe(10);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: 'md', shadowMode: 'adaptive' }))).toBe(20);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'sm', shadowMode: 'adaptive' }))).toBe(16);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'md', shadowMode: 'adaptive' }))).toBe(24);
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'lg', shadowMode: 'adaptive' }))).toBe(32);
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'custom', shadowBlur: 56, shadowMode: 'adaptive' }))).toBe(
       56,
@@ -140,11 +140,18 @@ describe('decorated media rendering', () => {
     applyClipShadow(
       ctx,
       appearance({ shadowSize: 'custom', shadowBlur: 40, shadowMode: 'solid' }),
-      100,
       source,
       undefined,
       0.5,
     );
     expect(ctx.shadowBlur).toBe(20);
+  });
+  it('keeps a small directional shadow compact at preview scale', () => {
+    const ctx = context();
+    applyClipShadow(ctx, appearance({ shadowSize: 'sm', shadowDirection: 'bottom-right' }), source, undefined, 0.5);
+
+    expect(ctx.shadowBlur).toBe(8);
+    expect(ctx.shadowOffsetX).toBe(4);
+    expect(ctx.shadowOffsetY).toBe(4);
   });
 });

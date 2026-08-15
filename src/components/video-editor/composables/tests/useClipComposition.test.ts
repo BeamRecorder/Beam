@@ -451,4 +451,27 @@ describe('useClipComposition', () => {
     mounted.state.updateSelectedEnabled(true);
     await nextTick();
   });
+
+  it('allows extending and trimming caption clips beyond their initial duration', async () => {
+    const mounted = mountComposable();
+    await mounted.state.addElement('caption', 1_000);
+    const captionId = mounted.state.selectedClipId.value!;
+    const initialClip = mounted.state.selectedClip.value!;
+    expect(initialClip.timelineStartMs).toBe(1_000);
+
+    // Extend end boundary to 8,000ms
+    mounted.state.trimClipEdge(captionId, 'end', 8_000);
+    expect(mounted.state.selectedClip.value?.timelineStartMs).toBe(1_000);
+    expect(mounted.state.selectedClip.value?.timelineDurationMs).toBe(7_000);
+
+    // Extend start boundary backwards to 0ms
+    mounted.state.trimClipEdge(captionId, 'start', 0);
+    expect(mounted.state.selectedClip.value?.timelineStartMs).toBe(0);
+    expect(mounted.state.selectedClip.value?.timelineDurationMs).toBe(8_000);
+
+    // Shorten end boundary to 3,000ms
+    mounted.state.trimClipEdge(captionId, 'end', 3_000);
+    expect(mounted.state.selectedClip.value?.timelineStartMs).toBe(0);
+    expect(mounted.state.selectedClip.value?.timelineDurationMs).toBe(3_000);
+  });
 });

@@ -1,4 +1,5 @@
 import type { CaptionWord } from '~/media/shared/composition-types';
+import type { TranscriptionDiagnostics } from './whisper-types';
 
 export interface WhisperTranscribeRequest {
   type: 'transcribe';
@@ -17,6 +18,11 @@ export type WhisperWorkerEvent =
       message: string;
       progress?: number;
     }
+  | {
+      type: 'diagnostics';
+      id: string;
+      diagnostics: Partial<TranscriptionDiagnostics>;
+    }
   | { type: 'partial'; id: string; words: CaptionWord[] }
   | { type: 'result'; id: string; words: CaptionWord[] }
-  | { type: 'error'; id: string; message: string };
+  | { type: 'error'; id: string; message: string; diagnostics?: Partial<TranscriptionDiagnostics> };

@@ -428,4 +428,20 @@ describe('EditorCanvas', () => {
     expect(state.syncPlayback).toHaveBeenLastCalledWith(false);
     expect(state.resetCamera).toHaveBeenCalled();
   });
+
+  it('shows floating recenter button when zoomed and resets zoom on click', async () => {
+    const mounted = mountEditor();
+    expect(mounted.find('.recenter-button').exists()).toBe(false);
+
+    // Zooming the canvas
+    const island = mounted.get('.canvas-island');
+    await island.trigger('wheel', { deltaY: -100, preventDefault: vi.fn() });
+    await nextTick();
+
+    expect(mounted.find('.recenter-button').exists()).toBe(true);
+    await mounted.get('.recenter-button').trigger('click');
+    await nextTick();
+
+    expect(mounted.find('.recenter-button').exists()).toBe(false);
+  });
 });

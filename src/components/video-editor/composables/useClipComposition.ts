@@ -23,6 +23,7 @@ import {
   createComposition,
   deleteClip,
   detachClip,
+  MIN_CLIP_DURATION_MS,
   moveClip,
   setAppearance,
   setClipEnabled,
@@ -261,9 +262,40 @@ export function useClipComposition(options: {
 
   const previewClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip || clip.timelineDurationMs <= 80) return;
-    const clamped = Math.max(clip.timelineStartMs + 40, Math.min(endMs(clip) - 40, Math.round(timeMs)));
-    composition.value = trimClip(composition.value, clipId, edge, clamped);
+    if (!clip) return;
+    const asset =
+      clip.kind === 'caption'
+        ? undefined
+        : composition.value.assets.find((entry) => entry.id === clip.assetId);
+    const originalStartMs = clip.timelineStartMs;
+    const originalEndMs = endMs(clip);
+
+    if (edge === 'start') {
+      const maxLeftExpansionMs =
+        asset?.durationMs != null && clip.kind !== 'caption'
+          ? Math.round(clip.sourceInMs / Math.max(0.01, clip.playbackRate))
+          : originalStartMs;
+      const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs);
+      const maxStartMs = originalEndMs - MIN_CLIP_DURATION_MS;
+      const clamped = Math.max(minStartMs, Math.min(maxStartMs, Math.round(timeMs)));
+      composition.value = trimClip(composition.value, clipId, edge, clamped);
+    } else {
+      const remainingSourceMs =
+        asset?.durationMs != null && clip.kind !== 'caption'
+          ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs))
+          : Infinity;
+      const maxRightExpansionMs =
+        asset?.durationMs != null && clip.kind !== 'caption'
+          ? Math.round(remainingSourceMs / Math.max(0.01, clip.playbackRate))
+          : Infinity;
+      const minEndMs = originalStartMs + MIN_CLIP_DURATION_MS;
+      const maxEndMs = Number.isFinite(maxRightExpansionMs) ? originalEndMs + maxRightExpansionMs : Infinity;
+      const clamped = Math.max(
+        minEndMs,
+        Number.isFinite(maxEndMs) ? Math.min(maxEndMs, Math.round(timeMs)) : Math.round(timeMs),
+      );
+      composition.value = trimClip(composition.value, clipId, edge, clamped);
+    }
   };
 
   const trimClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => previewClipEdge(clipId, edge, timeMs);

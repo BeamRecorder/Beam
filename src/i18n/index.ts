@@ -27,6 +27,8 @@ import zhTwCore from './zh-TW/core.json';
 import zhTwEditor from './zh-TW/editor.json';
 import hiCore from './hi/core.json';
 import hiEditor from './hi/editor.json';
+import viCore from './vi/core.json';
+import viEditor from './vi/editor.json';
 import { isSupportedLocale } from './locales';
 import type { AppLocale } from './types';
 
@@ -86,6 +88,10 @@ const messages = {
   hi: {
     ...hiCore,
     ...hiEditor,
+  },
+  vi: {
+    ...viCore,
+    ...viEditor,
   },
 };
 

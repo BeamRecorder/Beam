@@ -119,6 +119,8 @@ export function buildBeamExportReport(options: {
   const clips = request.snapshot.composition?.clips ?? [];
   const visualClips = clips.filter((clip) => ['screen', 'video', 'image', 'webcam'].includes(clip.kind)).length;
   const audioClips = clips.filter((clip) => clip.kind === 'audio').length;
+  const audioProgress =
+    progress?.audioProgress ?? (options.status === 'completed' ? (audioClips ? 1 : null) : undefined);
 
   return [
     '=== Beam Export ===',
@@ -159,7 +161,19 @@ export function buildBeamExportReport(options: {
     `Visual Clips: ${visualClips}`,
     `Audio Clips: ${audioClips}`,
     `Output Video Codec: ${runtime?.videoCodec ?? 'Unknown'}`,
+    `Encoder Codec String: ${runtime?.encoderCodec ?? 'Unknown'}`,
+    `Hardware Acceleration Request: ${runtime?.hardwareAcceleration ?? 'Unknown'} (actual implementation not exposed)`,
+    `Encoder Bitrate: ${runtime?.encoderBitrate ? `${(runtime.encoderBitrate / 1_000_000).toFixed(2)} Mbps` : 'Unknown'}`,
     `Output Audio Codec: ${runtime?.audioCodec ?? (audioClips ? 'Unknown' : 'None')}`,
+    `Audio Encoder: ${
+      runtime?.audioEncoderImplementation === 'mediabunny-aac'
+        ? 'Mediabunny AAC-LC (WASM)'
+        : runtime?.audioEncoderImplementation === 'webcodecs'
+          ? 'Native WebCodecs'
+          : audioClips
+            ? 'Unknown'
+            : 'None'
+    }`,
     `Input Video Codecs: ${runtime?.inputVideoCodecs.join(', ') || 'Unknown'}`,
     `Input Audio Codecs: ${runtime?.inputAudioCodecs.join(', ') || (audioClips ? 'Unknown' : 'None')}`,
     '',
@@ -167,7 +181,7 @@ export function buildBeamExportReport(options: {
     `Phase: ${progress?.stage ?? runtime?.phase ?? (options.status === 'completed' ? 'finalizing' : 'Unknown')}`,
     `Video Frames: ${completedFrames} / ${totalFrames}`,
     `Video Progress: ${((completedFrames / totalFrames) * 100).toFixed(1)}%`,
-    `Audio Progress: ${progress?.audioProgress === null || progress?.audioProgress === undefined ? (audioClips ? 'Unknown' : 'None') : `${(progress.audioProgress * 100).toFixed(1)}%`}`,
+    `Audio Progress: ${audioProgress === null ? 'None' : audioProgress === undefined ? 'Unknown' : `${(audioProgress * 100).toFixed(1)}%`}`,
     `Timeline Position: ${duration(progress?.currentTimeMs ?? (options.status === 'completed' ? timelineMs : 0))} / ${duration(timelineMs)}`,
     '',
     '--- Performance ---',
@@ -189,6 +203,9 @@ export function buildBeamExportReport(options: {
     `Audio Mix Speed vs Realtime: ${runtime?.audioRealtimeSpeed === null || runtime?.audioRealtimeSpeed === undefined ? 'Unknown' : `${runtime.audioRealtimeSpeed.toFixed(2)}x`}`,
     `Chunks Written: ${runtime?.chunkCount ?? 0}`,
     `Bytes Written: ${bytes(runtime?.bytesWritten)}`,
+    `Encoded Video Packets: ${runtime?.encodedPacketCount ?? 'Unknown'}`,
+    `Video Key Frames: ${runtime?.keyFrameCount ?? 'Unknown'}`,
+    `Encoded Video Bytes: ${bytes(runtime?.encodedVideoBytes)}`,
     `Dominant Measured Bottleneck: ${dominantBottleneck(runtime)}`,
     ...(cleanedError(options.error) ? ['', '--- Error ---', cleanedError(options.error)!] : []),
     '===================',

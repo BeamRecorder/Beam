@@ -116,6 +116,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -291,8 +292,44 @@ describe('MediaPlaybackEngine', () => {
     expect(first.close).toHaveBeenCalledOnce();
     expect(second.close).toHaveBeenCalledOnce();
     expect(audio.dispose).toHaveBeenCalledOnce();
+    expect(worker.terminate).not.toHaveBeenCalled();
+    worker.emit({ type: 'disposed', generation: 3 });
     expect(worker.terminate).toHaveBeenCalledOnce();
     expect(engine.state).toBe('disposed');
+  });
+
+  it('waits for the worker disposed acknowledgement before terminating', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+
+    engine.dispose();
+    expect(worker.requests).toContainEqual({ type: 'dispose' });
+    expect(worker.terminate).not.toHaveBeenCalled();
+
+    worker.emit({ type: 'disposed', generation: 0 });
+    expect(worker.terminate).toHaveBeenCalledOnce();
+    engine.dispose();
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  it('falls back to terminating the worker when the disposed acknowledgement times out', () => {
+    vi.useFakeTimers();
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+
+    engine.dispose();
+    vi.advanceTimersByTime(1_999);
+    expect(worker.terminate).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
   it('loops when the playback clock reaches composition end', async () => {

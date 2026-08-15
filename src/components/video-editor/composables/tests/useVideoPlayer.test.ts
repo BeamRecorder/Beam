@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { effectScope } from 'vue';
 import { createBackgroundMedia } from '../backgroundCatalog';
 import { useVideoPlayer } from '../useVideoPlayer';
 import type { ClipComposition } from '~/media/shared';
@@ -133,6 +134,71 @@ describe('useVideoPlayer', () => {
     expect(versionAtReload).toBe(2);
     expect(player.frameVersion.value).toBe(3);
     expect(player.frameFor('clip')).toBe(replacement);
+  });
+
+  it('does not let an older project load seek after a newer project has finished loading', async () => {
+    const scope = effectScope();
+    let player!: ReturnType<typeof useVideoPlayer>;
+    scope.run(() => {
+      player = useVideoPlayer([]);
+    });
+    await player.setPlaying(false);
+    const engine = playback.instances.at(-1)!;
+    player.currentTime.value = 1;
+    engine.loadComposition.mockReset();
+    engine.seek.mockClear();
+    let finishFirstLoad!: () => void;
+    engine.loadComposition
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishFirstLoad = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(undefined);
+
+    const firstLoad = player.loadComposition(composition);
+    const replacement = {
+      ...composition,
+      clips: [{ ...composition.clips[0]!, timelineDurationMs: 5_000 }],
+    };
+    const secondLoad = player.loadComposition(replacement);
+    await secondLoad;
+    expect(player.duration.value).toBe(5.5);
+    expect(engine.seek).toHaveBeenCalledOnce();
+
+    finishFirstLoad();
+    await firstLoad;
+    expect(engine.seek).toHaveBeenCalledOnce();
+    scope.stop();
+  });
+
+  it('does not continue a pending project load after its scope is disposed', async () => {
+    const scope = effectScope();
+    let player!: ReturnType<typeof useVideoPlayer>;
+    scope.run(() => {
+      player = useVideoPlayer([]);
+    });
+    await player.setPlaying(false);
+    const engine = playback.instances.at(-1)!;
+    player.currentTime.value = 1;
+    engine.loadComposition.mockReset();
+    engine.seek.mockClear();
+    let finishLoad!: () => void;
+    engine.loadComposition.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishLoad = resolve;
+        }),
+    );
+
+    const pendingLoad = player.loadComposition(composition);
+    scope.stop();
+    expect(engine.dispose).toHaveBeenCalledOnce();
+
+    finishLoad();
+    await pendingLoad;
+    expect(engine.seek).not.toHaveBeenCalled();
   });
 
   it('rejects non-finite seeks and reports engine loading errors through state', async () => {

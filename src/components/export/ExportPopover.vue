@@ -268,21 +268,28 @@ const run = async () => {
 
           <p v-if="displayError" class="error" role="alert">{{ displayError }}</p>
           <div v-if="result" class="result-box">
-            <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
-            <div class="result-actions">
+            <div class="result-header">
+              <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
               <CopyButton
                 :text="exportReport"
-                display="text"
-                variant="secondary"
+                display="icon"
+                variant="ghost"
                 size="sm"
                 :label="t('copyReport')"
                 :copied-label="t('copied')"
                 :error-label="t('copyFailed')"
+                class="copy-report-icon-btn"
               />
-              <Button variant="secondary" size="sm" :icon="FolderOpen" @click="openFile(result.path)">{{
-                t('openFile')
-              }}</Button>
             </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              block
+              :icon="FolderOpen"
+              @click="openFile(result.path)"
+            >
+              {{ t('openFile') }}
+            </Button>
           </div>
           <div class="actions">
             <Button variant="primary" size="sm" block :icon="Download" :loading="isChoosingDestination" @click="run">{{
@@ -354,16 +361,20 @@ const run = async () => {
 .result-box {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding: 10px;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
-.result-actions {
+.result-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+}
+.copy-report-icon-btn {
+  flex-shrink: 0;
 }
 .actions {
   display: flex;

@@ -147,7 +147,7 @@ const mountComposable = (
   const croppingRef = ref(cropping);
   const compositionRef = ref(initialComposition);
   const selectedBounds = ref<VideoWindowBounds | null>(bounds());
-  const overlayBounds = ref<VideoWindowBounds | null>({ dx: 0, dy: 0, dw: 800, dh: 450, scale: 1 });
+  const overlayBounds = ref<VideoWindowBounds | null>(bounds());
   const outputCanvas = ref({ ...DEFAULT_OUTPUT_CANVAS, width: 800, height: 450 });
   const options: UseLayerTransformAndCropOptions = {
     composition: () => compositionRef.value,
@@ -206,14 +206,29 @@ describe('useLayerTransformAndCrop', () => {
     mounted.selectedRef.value = imageClip();
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toMatchObject({
-      left: '200px',
-      top: '90px',
-      width: '400px',
-      height: '180px',
+      left: '10px',
+      top: '-25px',
+      width: '800px',
+      height: '360px',
+    });
+
+    mounted.selectedRef.value = { ...imageClip(), id: 'video', kind: 'video' };
+    await nextTick();
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '10px',
+      top: '-25px',
+      width: '800px',
+      height: '360px',
     });
 
     mounted.croppingRef.value = true;
     await nextTick();
+    expect(mounted.state.cropContainerStyle.value).toMatchObject({
+      left: '10px',
+      top: '-25px',
+      width: '800px',
+      height: '360px',
+    });
     expect(mounted.state.cropOverlayStyle.value).toEqual({
       left: '10%',
       top: '20%',
@@ -223,7 +238,7 @@ describe('useLayerTransformAndCrop', () => {
 
     mounted.selectedRef.value = webcamClip();
     await nextTick();
-    expect(mounted.state.transformHandleStyle.value).toMatchObject({ width: '200px', height: '112.5px' });
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({ width: '100px', height: '56.25px' });
     expect(mounted.state.cropOverlayStyle.value).not.toEqual({ display: 'none' });
 
     mounted.selectedRef.value = captionClip();
@@ -273,13 +288,13 @@ describe('useLayerTransformAndCrop', () => {
 
     mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'move');
     mounted.state.moveTransformDrag(pointer(target, { clientX: 900, clientY: -800 }));
-    expect(mounted.state.transformDraft.value).toMatchObject({ x: 1.25, y: -1.8 });
+    expect(mounted.state.transformDraft.value).toMatchObject({ x: 0.75, y: -0.8 });
     expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift' }));
     expect(mounted.options.onUpdateTransform).not.toHaveBeenCalled();
     mounted.state.endTransformDrag(pointer(target));
     expect(mounted.options.onUpdateTransform).toHaveBeenCalledTimes(1);
-    expect(mounted.options.onUpdateTransform).toHaveBeenCalledWith(expect.objectContaining({ x: 1.25 }));
+    expect(mounted.options.onUpdateTransform).toHaveBeenCalledWith(expect.objectContaining({ x: 0.75 }));
 
     mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
     mounted.state.moveTransformDrag(pointer(target, { clientX: 1000, clientY: 1000, shiftKey: false }));

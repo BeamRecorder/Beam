@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { createWhisperModelStore, REQUIRED_PATHS } = require('../electron/captions/whisper-model-store.cjs');
+const { createWhisperModelStore, REQUIRED_PATHS, REVISIONS } = require('../electron/captions/whisper-model-store.cjs');
 
 const model = 'Xenova/whisper-tiny';
 const root = () => fs.mkdtempSync(path.join(os.tmpdir(), 'whisper-store-'));
@@ -33,6 +33,73 @@ const fetchFor =
     const offset = Number(String(options.headers?.Range || 'bytes=0-').match(/\d+/)?.[0] || 0);
     return new Response(files[artifact].subarray(offset), { status: offset ? 206 : 200 });
   };
+test('reports an absent model without making a network request', async () => {
+  const requests = [];
+  const store = createWhisperModelStore(root(), async (...args) => {
+    requests.push(args);
+    throw new Error('network should not be used for absent state');
+  });
+
+  assert.deepEqual(await store.state(model), {
+    id: model,
+    status: 'missing',
+    downloadedBytes: 0,
+    totalBytes: 0,
+    revision: REVISIONS[model],
+  });
+  assert.equal(requests.length, 0);
+});
+test('verifies a valid local manifest without making a network request', async () => {
+  const files = fixture();
+  const modelRoot = root();
+  const directory = path.join(modelRoot, model);
+  const hashes = {};
+  for (const file of REQUIRED_PATHS) {
+    const target = path.join(directory, file);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, files[file]);
+    hashes[file] = {
+      algorithm: 'sha256',
+      value: crypto.createHash('sha256').update(files[file]).digest('hex'),
+    };
+  }
+  fs.writeFileSync(
+    path.join(directory, 'manifest.json'),
+    JSON.stringify({
+      revision: REVISIONS[model],
+      hashes,
+      totalBytes: Object.values(files).reduce((total, file) => total + file.length, 0),
+    }),
+  );
+  const store = createWhisperModelStore(modelRoot, async () => {
+    throw new Error('network should not be used for a valid local manifest');
+  });
+
+  const result = await store.state(model);
+
+  assert.equal(result.status, 'ready');
+  assert.equal(result.downloadedBytes, result.totalBytes);
+  assert.equal(
+    result.totalBytes,
+    Object.values(files).reduce((total, file) => total + file.length, 0),
+  );
+});
+test('continues to fetch the manifest and artifacts when downloading an absent model', async () => {
+  const files = fixture();
+  const requests = [];
+  const fetchBase = fetchFor(files);
+  const store = createWhisperModelStore(root(), async (...args) => {
+    requests.push(args);
+    return fetchBase(...args);
+  });
+
+  const result = await store.download(model);
+
+  assert.equal(result.status, 'ready');
+  assert.equal(requests.length, REQUIRED_PATHS.size + 1);
+  assert.equal(requests.filter(([url]) => url.includes('/tree/')).length, 1);
+  assert.equal(requests.filter(([url]) => url.includes('/resolve/')).length, REQUIRED_PATHS.size);
+});
 test('downloads a pinned manifest, verifies hashes and reports actual total size', async () => {
   const files = fixture();
   const store = createWhisperModelStore(root(), fetchFor(files));

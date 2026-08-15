@@ -10,6 +10,7 @@ export type ExportWorkerRequest =
 export type ExportWorkerResponse =
   | { type: 'progress'; progress: ExportProgress }
   | { type: 'chunk'; sequence: number; position: number; data: Uint8Array }
+  | { type: 'disposed' }
   | { type: 'complete'; diagnostics: ExportRuntimeDiagnostics }
   | { type: 'error'; error: { name: string; message: string; issue?: ExportValidationIssue } };
 
@@ -42,8 +43,19 @@ const runtimeDiagnostics = (value: unknown): value is ExportRuntimeDiagnostics =
     sequence(value.bytesWritten) &&
     (value.videoCodec === null || typeof value.videoCodec === 'string') &&
     (value.audioCodec === null || typeof value.audioCodec === 'string') &&
+    (value.audioEncoderImplementation === undefined ||
+      value.audioEncoderImplementation === 'webcodecs' ||
+      value.audioEncoderImplementation === 'mediabunny-aac') &&
     strings(value.inputVideoCodecs) &&
-    strings(value.inputAudioCodecs)
+    strings(value.inputAudioCodecs) &&
+    (value.hardwareAcceleration === undefined ||
+      value.hardwareAcceleration === 'no-preference' ||
+      value.hardwareAcceleration === 'prefer-hardware') &&
+    (value.encoderCodec === undefined || value.encoderCodec === null || typeof value.encoderCodec === 'string') &&
+    (value.encoderBitrate === undefined || nullableFinite(value.encoderBitrate)) &&
+    (value.encodedPacketCount === undefined || sequence(value.encodedPacketCount)) &&
+    (value.keyFrameCount === undefined || sequence(value.keyFrameCount)) &&
+    (value.encodedVideoBytes === undefined || sequence(value.encodedVideoBytes))
   );
 };
 
@@ -66,6 +78,7 @@ export function isExportWorkerRequest(value: unknown): value is ExportWorkerRequ
 
 export function isExportWorkerResponse(value: unknown): value is ExportWorkerResponse {
   if (!record(value) || typeof value.type !== 'string') return false;
+  if (value.type === 'disposed') return true;
   if (value.type === 'complete') return runtimeDiagnostics(value.diagnostics);
   if (value.type === 'chunk')
     return (

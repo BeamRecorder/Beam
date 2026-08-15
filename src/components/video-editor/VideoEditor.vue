@@ -15,6 +15,7 @@ import { useEditorMediaDrop } from '~/components/video-editor/composables/useEdi
 import { usePlaybackErrorToast } from '~/components/video-editor/composables/usePlaybackErrorToast';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
 import { useTimelineResize } from '~/components/video-editor/composables/useTimelineResize';
+import { useTimelineZoom } from '~/components/video-editor/timeline/composables/useTimelineZoom';
 import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
@@ -276,7 +277,7 @@ onMounted(() => {
 
 const isCropping = ref(false);
 const isGridVisible = ref(false);
-const timelineZoomLevel = ref(100);
+const { timelineZoomLevel } = useTimelineZoom();
 const isSnappingEnabled = ref(true);
 const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const toggleCrop = () => {

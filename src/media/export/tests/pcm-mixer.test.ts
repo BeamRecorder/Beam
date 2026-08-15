@@ -168,6 +168,63 @@ describe('progressive PCM export mixer', () => {
     expect(sample.close).toHaveBeenCalledOnce();
   });
 
+  it('keeps timeline trims and placements correct when a clip crosses an audio block boundary', async () => {
+    const sample = inputSample([new Array(96_000).fill(0.4)], 48_000);
+    const source = track(sample);
+    const mixer = createProgressiveAudioMixer(
+      [
+        clip('cross-boundary', 'asset', {
+          timelineStartMs: 750,
+          timelineDurationMs: 500,
+          sourceInMs: 250,
+          sourceDurationMs: 500,
+        }),
+      ],
+      new Map([['asset', source]]),
+      2,
+    );
+
+    const firstBlock = await mixer.mixBlock(0, new AbortController().signal);
+    const secondBlock = await mixer.mixBlock(1, new AbortController().signal);
+    const firstValues = outputValues(firstBlock as unknown as InstanceType<typeof runtime.TestAudioSample>);
+    const secondValues = outputValues(secondBlock as unknown as InstanceType<typeof runtime.TestAudioSample>);
+
+    expect(firstValues.slice(0, 36_000 * 2).every((value) => value === 0)).toBe(true);
+    expect(firstValues.slice(36_000 * 2).every((value) => Math.abs(value - 0.4) < 1e-6)).toBe(true);
+    expect(secondValues.slice(0, 12_000 * 2).every((value) => Math.abs(value - 0.4) < 1e-6)).toBe(true);
+    expect(secondValues.slice(12_000 * 2).every((value) => value === 0)).toBe(true);
+    expect(sample.close).toHaveBeenCalledOnce();
+    expect(source.samples).toHaveBeenCalledOnce();
+  });
+
+  it('continues progressive decoding across blocks without reopening the track', async () => {
+    const sample = inputSample([new Array(72_000).fill(0.25)], 48_000);
+    const source = track(sample);
+    const mixer = createProgressiveAudioMixer(
+      [clip('long', 'asset', { timelineDurationMs: 1_500, sourceDurationMs: 1_500 })],
+      new Map([['asset', source]]),
+      1.5,
+    );
+
+    const firstBlock = await mixer.mixBlock(0, new AbortController().signal);
+    const secondBlock = await mixer.mixBlock(1, new AbortController().signal);
+
+    expect((firstBlock as unknown as InstanceType<typeof runtime.TestAudioSample>).numberOfFrames).toBe(48_000);
+    expect((secondBlock as unknown as InstanceType<typeof runtime.TestAudioSample>).numberOfFrames).toBe(24_000);
+    expect(
+      outputValues(firstBlock as unknown as InstanceType<typeof runtime.TestAudioSample>).every(
+        (value) => value === 0.25,
+      ),
+    ).toBe(true);
+    expect(
+      outputValues(secondBlock as unknown as InstanceType<typeof runtime.TestAudioSample>).every(
+        (value) => value === 0.25,
+      ),
+    ).toBe(true);
+    expect(source.samples).toHaveBeenCalledOnce();
+    expect(sample.close).toHaveBeenCalledOnce();
+  });
+
   it('finalizes every source iterator after a successful mix', async () => {
     const firstIterator = iterator([inputSample([[0.25]], 48_000)]);
     const secondIterator = iterator([inputSample([[0.5]], 48_000)]);
@@ -296,5 +353,33 @@ describe('progressive PCM export mixer', () => {
     expect(values).toEqual([1, 1]);
     expect(first.close).toHaveBeenCalledOnce();
     expect(second.close).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    {
+      name: 'mono',
+      channels: [[0.25]],
+      expected: [0.25, 0.25],
+    },
+    {
+      name: 'stereo',
+      channels: [[0.25], [-0.5]],
+      expected: [0.25, -0.5],
+    },
+    {
+      name: '5.1',
+      channels: [[0.2], [0.4], [0.5], [0.9], [0.1], [-0.3]],
+      expected: [0.2 + Math.SQRT1_2 * 0.6, 0.4 + Math.SQRT1_2 * 0.2],
+    },
+  ])('mixes $name channel layouts into the exported stereo stream', async ({ channels, expected }) => {
+    const mixer = createProgressiveAudioMixer(
+      [clip('layout', 'asset')],
+      new Map([['asset', track(inputSample(channels, 48_000))]]),
+      1 / 48_000,
+    );
+
+    const result = await mixer.mixBlock(0, new AbortController().signal);
+    const values = outputValues(result as unknown as InstanceType<typeof runtime.TestAudioSample>);
+    expected.forEach((value, index) => expect(values[index]).toBeCloseTo(value, 6));
   });
 });

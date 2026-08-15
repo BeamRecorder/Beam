@@ -120,15 +120,20 @@
     "whisperModel": "Модел Whisper",
     "modelReady": "Моделът е изтеглен и проверен",
     "downloadModel": "Изтегляне на модела",
+    "deleteModel": "Изтриване на модела",
+    "deleting": "Изтриване…",
     "generateCaptions": "Генериране на субтитри",
     "regenerateAICaptions": "Повторно генериране на AI субтитри",
     "processing": "Обработване…",
+    "preparingAudio": "Подготовка на аудиото…",
+    "transcriptionCompleted": "Транскрипцията завърши за {time}.",
     "aiCaptionsActive": "AI субтитрите са активни",
     "subtitlesGenerated": "Генерирани са {count} писта/писти със субтитри.",
     "edit": "Редактиране",
     "modelDownloadFailed": "Изтеглянето на модела не бе успешно.",
     "systemAudio": "Системен звук",
-    "microphone": "Микрофон"
+    "microphone": "Микрофон",
+    "cancel": "Отказ"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Няма избран клип",
@@ -192,8 +197,9 @@
     "motionBlur": "Замъгляване при движение"
   },
   "EditorCanvas": {
-    "videoPreviewLoading": "Зареждане на визуализацията на видеото",
-    "ok": "ОК"
+    "videoPreviewLoading": "Зареждане на видео визуализация",
+    "ok": "ОК",
+    "recenter": "Центриране"
   },
   "ExportPopover": {
     "exportVideo": "Експортиране на видео",

@@ -609,6 +609,48 @@ describe('playback worker', () => {
     send({ type: 'dispose' });
   });
 
+  it('acknowledges disposal only after active iterator cleanup completes', async () => {
+    const cleanup = deferred<void>();
+    const secondNext = deferred<IteratorResult<Wrapped>>();
+    const frame = bitmap();
+    const iterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0, frame), done: false })
+        .mockImplementationOnce(() => secondNext.promise),
+      return: vi.fn(() => {
+        secondNext.resolve({ value: undefined, done: true });
+        return cleanup.promise;
+      }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    send({ type: 'load', generation: 16, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+    const sink = runtime.sinkInstances[0]!;
+    sink.canvases.mockReturnValueOnce(iterator);
+    send({ type: 'tick', generation: 16, timelineSeconds: 0 });
+    for (let index = 0; index < 8; index += 1) await Promise.resolve();
+    expect(iterator.next).toHaveBeenCalledTimes(2);
+
+    send({ type: 'dispose' });
+    await Promise.resolve();
+    expect(iterator.return).toHaveBeenCalledOnce();
+    expect(messages().find((message) => message.type === 'disposed' && message.generation === 16)).toBeUndefined();
+
+    cleanup.resolve();
+    await flush();
+    expect(frame.close).toHaveBeenCalledOnce();
+    const allMessages = messages();
+    const disposedIndex = allMessages.findIndex((message) => message.type === 'disposed' && message.generation === 16);
+    const disposed = allMessages[disposedIndex];
+    expect(disposed).toEqual({ type: 'disposed', generation: 16 });
+    expect(iterator.return.mock.invocationCallOrder[0]).toBeLessThan(
+      workerSelf.postMessage.mock.invocationCallOrder[disposedIndex]!,
+    );
+  });
+
   it('reports invalid inbound messages as decode failures', async () => {
     send({ type: 'seek', generation: -1, requestId: 1, timelineSeconds: 0, mode: 'seek' });
     expect(messages()).toContainEqual({

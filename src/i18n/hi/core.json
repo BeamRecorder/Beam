@@ -120,15 +120,20 @@
     "whisperModel": "Whisper मॉडल",
     "modelReady": "मॉडल डाउनलोड और सत्यापित है",
     "downloadModel": "मॉडल डाउनलोड करें",
-    "generateCaptions": "कैप्शन बनाएँ",
+    "deleteModel": "मॉडल हटाएं",
+    "deleting": "हटाया जा रहा है…",
+    "generateCaptions": "सबटाइटल बनाएं",
     "regenerateAICaptions": "AI कैप्शन फिर से बनाएँ",
     "processing": "प्रोसेस हो रहा है…",
+    "preparingAudio": "ऑडियो तैयार हो रहा है…",
+    "transcriptionCompleted": "ट्रांसक्रिप्शन {time} में पूरा हुआ।",
     "aiCaptionsActive": "AI कैप्शन सक्रिय हैं",
     "subtitlesGenerated": "{count} कैप्शन ट्रैक बनाए गए।",
     "edit": "एडिट करें",
     "modelDownloadFailed": "मॉडल डाउनलोड नहीं हो सका।",
     "systemAudio": "सिस्टम ऑडियो",
-    "microphone": "माइक्रोफ़ोन"
+    "microphone": "माइक्रोफ़ोन",
+    "cancel": "रद्द करें"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "कोई क्लिप चयनित नहीं है",
@@ -192,8 +197,9 @@
     "motionBlur": "मोशन ब्लर"
   },
   "EditorCanvas": {
-    "videoPreviewLoading": "वीडियो प्रीव्यू लोड हो रहा है",
-    "ok": "ठीक है"
+    "videoPreviewLoading": "वीडियो पूर्वावलोकन लोड हो रहा है",
+    "ok": "ठीक है",
+    "recenter": "दृश्य पुनः केंद्रित करें"
   },
   "ExportPopover": {
     "exportVideo": "वीडियो एक्सपोर्ट करें",

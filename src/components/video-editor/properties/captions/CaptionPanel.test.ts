@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptionClip, CaptionSentence, ClipComposition } from '~/media/shared/composition-types';
-import type { WhisperResult } from '../../captions/whisper-types';
+import type { TranscriptionDiagnostics, WhisperResult } from '../../captions/whisper-types';
 
 type MockWhisperProgress = {
-  status: 'idle' | 'loading' | 'running' | 'error';
+  status: 'idle' | 'loading' | 'running' | 'completed' | 'error';
   message: string;
   progress?: number;
 };
@@ -12,11 +12,14 @@ type MockWhisperProgress = {
 const capture = vi.hoisted(() => ({
   whisperModels: vi.fn(),
   downloadWhisperModel: vi.fn(),
+  deleteWhisperModel: vi.fn(),
   onWhisperProgress: vi.fn(),
 }));
 const whisper = vi.hoisted(() => ({
   progress: undefined as { value: MockWhisperProgress } | undefined,
+  diagnostics: undefined as { value: TranscriptionDiagnostics | null } | undefined,
   transcribe: vi.fn(),
+  cancel: vi.fn(),
 }));
 const createComposition = vi.hoisted(() =>
   vi.fn((assets: ClipComposition['assets'], clips: ClipComposition['clips']): ClipComposition => ({
@@ -31,7 +34,15 @@ vi.mock('../../../../api/capture', () => ({ capture }));
 vi.mock('../../captions/useWhisperTranscription', async () => {
   const { ref } = await import('vue');
   whisper.progress = ref({ status: 'idle', message: '' });
-  return { useWhisperTranscription: () => ({ progress: whisper.progress!, transcribe: whisper.transcribe }) };
+  whisper.diagnostics = ref<TranscriptionDiagnostics | null>(null);
+  return {
+    useWhisperTranscription: () => ({
+      progress: whisper.progress!,
+      diagnostics: whisper.diagnostics!,
+      transcribe: whisper.transcribe,
+      cancel: whisper.cancel,
+    }),
+  };
 });
 vi.mock('../../composition/engine/clip-engine', () => ({ createComposition }));
 
@@ -48,6 +59,18 @@ const Select = {
   template: '<button class="caption-select" @click="$emit(\'update:modelValue\', modelValue)">Select</button>',
 };
 const ProgressBar = { template: '<div class="progress-stub" />' };
+const Throbber = {
+  props: ['text'],
+  template: '<span class="throbber-stub">{{ text }}</span>',
+};
+const CopyButton = {
+  inheritAttrs: true,
+  props: ['text', 'display', 'label'],
+  emits: ['copied'],
+  template:
+    '<button v-bind="$attrs" class="copy-button-stub" :data-copy-text="text" :data-display="display" :aria-label="label" @click="$emit(\'copied\')">{{ label }}</button>',
+};
+const stubs = { Button, Select, ProgressBar, Throbber, CopyButton };
 
 const audioComposition: ClipComposition = {
   schemaVersion: 3,
@@ -115,28 +138,54 @@ const aiCaption: CaptionClip = {
   },
 };
 
-describe('CaptionPanel', () => {
-  let clipboardDescriptor: PropertyDescriptor | undefined;
-  let execCommandDescriptor: PropertyDescriptor | undefined;
+const createDiagnostics = (overrides: Partial<TranscriptionDiagnostics> = {}): TranscriptionDiagnostics => ({
+  status: 'transcribing',
+  startedAt: '2026-08-15T12:00:00.000Z',
+  finishedAt: null,
+  elapsedMs: 0,
+  model: 'Xenova/whisper-tiny',
+  locale: 'en',
+  requestedDurationMs: 2_000,
+  audioDurationMs: 2_000,
+  sampleRate: 16_000,
+  sampleCount: 32_000,
+  pcmBytes: 64_000,
+  audioFetchMs: 20,
+  audioDecodeMs: 80,
+  audioResampleMs: 10,
+  backend: 'wasm',
+  dtype: 'q8',
+  transformersVersion: '3.7.0',
+  gpu: null,
+  hardwareConcurrency: 8,
+  crossOriginIsolated: false,
+  wasmThreads: 4,
+  userAgent: 'CaptionPanel.test',
+  chunkLengthSeconds: 30,
+  strideLengthSeconds: 5,
+  completedChunks: 1,
+  totalChunks: 1,
+  processedAudioMs: 2_000,
+  modelLoadMs: 400,
+  inferenceMs: 800,
+  modelWasWarm: true,
+  wordCount: 4,
+  sentenceCount: 1,
+  error: null,
+  ...overrides,
+});
 
+describe('CaptionPanel', () => {
   beforeEach(() => {
-    clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
-    execCommandDescriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
     vi.clearAllMocks();
     whisper.progress!.value = { status: 'idle', message: '', progress: undefined };
+    whisper.diagnostics!.value = null;
     capture.whisperModels.mockResolvedValue([
       { id: 'Xenova/whisper-tiny', status: 'missing', downloadedBytes: 0, totalBytes: 100 },
     ]);
     capture.downloadWhisperModel.mockResolvedValue(undefined);
     capture.onWhisperProgress.mockReturnValue(() => undefined);
     whisper.transcribe.mockResolvedValue({ words: [], sentences: [] });
-  });
-
-  afterEach(() => {
-    if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
-    else Reflect.deleteProperty(navigator, 'clipboard');
-    if (execCommandDescriptor) Object.defineProperty(document, 'execCommand', execCommandDescriptor);
-    else Reflect.deleteProperty(document, 'execCommand');
   });
 
   it('loads a missing model, displays progress/errors and downloads it', async () => {
@@ -147,7 +196,7 @@ describe('CaptionPanel', () => {
     });
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce());
     expect(wrapper.find('.sub-group').exists()).toBe(true);
@@ -173,7 +222,7 @@ describe('CaptionPanel', () => {
     );
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce());
 
@@ -191,44 +240,70 @@ describe('CaptionPanel', () => {
     wrapper.unmount();
   });
 
-  it('copies a download error with the clipboard API', async () => {
+  it('exposes a text CopyButton for a download error', async () => {
     capture.downloadWhisperModel.mockRejectedValueOnce(new Error('disk full'));
-    const clipboard = { writeText: vi.fn().mockResolvedValue(undefined) };
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce());
     await wrapper.get('button[variant="secondary"]').trigger('click');
     await vi.waitFor(() => expect(wrapper.find('.error-text').text()).toContain('disk full'));
 
-    await wrapper.get('button[variant="ghost"]').trigger('click');
-    await vi.waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith('disk full'));
-    expect(wrapper.find('button[variant="ghost"]').text()).toContain('Copied');
+    const copyButton = wrapper.get('.error-block .copy-button-stub');
+    expect(copyButton.attributes('data-copy-text')).toBe('disk full');
+    expect(copyButton.attributes('data-display')).toBe('text');
+    expect(copyButton.attributes('aria-label')).toBe('Copy error');
+    await copyButton.trigger('click');
+    expect(wrapper.findComponent(CopyButton).emitted('copied')).toHaveLength(1);
     wrapper.unmount();
   });
 
-  it('falls back to selecting a temporary textarea when clipboard writing fails', async () => {
-    const clipboard = { writeText: vi.fn().mockRejectedValue(new Error('clipboard unavailable')) };
-    const execCommand = vi.fn(() => true);
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
-    Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
-    const select = vi.spyOn(HTMLTextAreaElement.prototype, 'select');
+  it('exposes a diagnostics CopyButton while transcription runs and after it completes', async () => {
+    capture.whisperModels.mockResolvedValue([
+      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+    ]);
+    let resolveTranscription!: (result: WhisperResult) => void;
+    whisper.transcribe.mockImplementation(
+      () =>
+        new Promise<WhisperResult>((resolve) => {
+          resolveTranscription = resolve;
+        }),
+    );
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(capture.whisperModels).toHaveBeenCalledOnce());
-    whisper.progress!.value = { status: 'error', message: 'transcription failed' };
-    await wrapper.vm.$nextTick();
-    await vi.waitFor(() => expect(wrapper.find('.error-text').text()).toContain('transcription failed'));
+    await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
+    await wrapper.get('button[variant="primary"]').trigger('click');
+    await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalledOnce());
 
-    await wrapper.get('button[variant="ghost"]').trigger('click');
-    await vi.waitFor(() => expect(execCommand).toHaveBeenCalledWith('copy'));
-    expect(clipboard.writeText).toHaveBeenCalledWith('transcription failed');
-    expect(select).toHaveBeenCalledOnce();
-    expect(document.querySelector('textarea')).toBeNull();
+    whisper.progress!.value = { status: 'running', message: 'Transcribing…', progress: 0.5 };
+    whisper.diagnostics!.value = createDiagnostics({ status: 'transcribing', elapsedMs: 1_500 });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.transcription-throbber-row').exists()).toBe(true);
+    expect(wrapper.find('.transcription-diagnostics-row').exists()).toBe(false);
+
+    const cancelButton = wrapper.find('.cancel-transcription-btn');
+    expect(cancelButton.exists()).toBe(true);
+
+    whisper.progress!.value = { status: 'completed', message: 'Transcription complete', progress: 1 };
+    whisper.diagnostics!.value = createDiagnostics({
+      status: 'completed',
+      elapsedMs: 2_345,
+      finishedAt: '2026-08-15T12:00:02.345Z',
+    });
+    resolveTranscription({ words: [], sentences: [] });
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.transcription-diagnostics-status').text()).toBe('Transcription complete');
+    const reportButton = wrapper.get('.transcription-diagnostics-row .copy-button-stub');
+    expect(reportButton.attributes('data-display')).toBe('text');
+    expect(reportButton.attributes('data-copy-text')).toContain('Status: COMPLETED');
+    await reportButton.trigger('click');
+    expect(wrapper.findComponent(CopyButton).emitted('copied')).toHaveLength(1);
     wrapper.unmount();
   });
 
@@ -276,7 +351,7 @@ describe('CaptionPanel', () => {
     );
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
     await wrapper.get('button[variant="primary"]').trigger('click');
@@ -328,7 +403,7 @@ describe('CaptionPanel', () => {
         composition: { ...audioComposition, clips: [...audioComposition.clips, aiCaption] },
         timelineDurationMs: 2000,
       },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
     expect(wrapper.text()).toContain('1 subtitle track');
@@ -361,7 +436,7 @@ describe('CaptionPanel', () => {
     );
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
     const generateButton = wrapper.get('button[variant="primary"]');
@@ -383,11 +458,39 @@ describe('CaptionPanel', () => {
     ]);
     const wrapper = mount(CaptionPanel, {
       props: { composition: audioComposition, timelineDurationMs: 2000 },
-      global: { stubs: { Button, Select, ProgressBar } },
+      global: { stubs },
     });
     await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
     await wrapper.get('button[variant="primary"]').trigger('click');
     await vi.waitFor(() => expect(whisper.transcribe).toHaveBeenCalled());
     expect(wrapper.emitted('update:composition')).toBeUndefined();
+  });
+
+  it('deletes a downloaded model when clicking the delete button', async () => {
+    capture.whisperModels.mockResolvedValue([
+      { id: 'Xenova/whisper-tiny', status: 'ready', downloadedBytes: 100, totalBytes: 100 },
+    ]);
+    capture.deleteWhisperModel.mockResolvedValue({
+      id: 'Xenova/whisper-tiny',
+      status: 'missing',
+      downloadedBytes: 0,
+      totalBytes: 100,
+    });
+    const wrapper = mount(CaptionPanel, {
+      props: { composition: audioComposition, timelineDurationMs: 2000 },
+      global: { stubs },
+    });
+    await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(true));
+    const deleteButton = wrapper.get('button[variant="outline"]');
+    expect(deleteButton.text()).toContain('Delete Model');
+
+    capture.whisperModels.mockResolvedValue([
+      { id: 'Xenova/whisper-tiny', status: 'missing', downloadedBytes: 0, totalBytes: 100 },
+    ]);
+    await deleteButton.trigger('click');
+    await vi.waitFor(() => expect(capture.deleteWhisperModel).toHaveBeenCalledWith('Xenova/whisper-tiny'));
+    await vi.waitFor(() => expect(wrapper.find('.model-ready-text').exists()).toBe(false));
+    expect(wrapper.find('button[variant="secondary"]').exists()).toBe(true);
+    wrapper.unmount();
   });
 });

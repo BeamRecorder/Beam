@@ -25,32 +25,34 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
 <template>
   <div v-if="keyboardClips.length" class="track-row annotation-track keyboard-caption-track">
     <div class="track-content annotation-content">
-      <button
-        v-for="clip in keyboardClips"
-        :key="clip.id"
-        type="button"
-        class="annotation-indicator"
-        :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
-        :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
-        @click.stop="emit('select', clip.id)"
-        @pointerdown="beginClipMove($event, clip)"
-      >
-        <span
-          class="trim-handle start"
-          :title="t('trimStart')"
-          @pointerdown.stop="beginClipTrim($event, clip, 'start')"
+      <TransitionGroup name="caption-item">
+        <button
+          v-for="clip in keyboardClips"
+          :key="clip.id"
+          type="button"
+          class="annotation-indicator"
+          :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
+          :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
+          @click.stop="emit('select', clip.id)"
+          @pointerdown="beginClipMove($event, clip)"
         >
-          <span v-if="trimStateFor(clip.id)?.edge === 'start'" class="trim-side-badge">
-            {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+          <span
+            class="trim-handle start"
+            :title="t('trimStart')"
+            @pointerdown.stop="beginClipTrim($event, clip, 'start')"
+          >
+            <span v-if="trimStateFor(clip.id)?.edge === 'start'" class="trim-side-badge">
+              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+            </span>
           </span>
-        </span>
-        <span class="clip-center-title">{{ clip.name }}</span>
-        <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
-          <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
-            {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+          <span class="clip-center-title">{{ clip.name }}</span>
+          <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
+            <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
+              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      </TransitionGroup>
     </div>
   </div>
 
@@ -70,32 +72,34 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
       >
         {{ t('addCaption') }}
       </div>
-      <button
-        v-for="clip in textClips"
-        :key="clip.id"
-        type="button"
-        class="annotation-indicator"
-        :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
-        :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
-        @click.stop="emit('select', clip.id)"
-        @pointerdown="beginClipMove($event, clip)"
-      >
-        <span
-          class="trim-handle start"
-          :title="t('trimStart')"
-          @pointerdown.stop="beginClipTrim($event, clip, 'start')"
+      <TransitionGroup name="caption-item">
+        <button
+          v-for="clip in textClips"
+          :key="clip.id"
+          type="button"
+          class="annotation-indicator"
+          :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
+          :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
+          @click.stop="emit('select', clip.id)"
+          @pointerdown="beginClipMove($event, clip)"
         >
-          <span v-if="trimStateFor(clip.id)?.edge === 'start'" class="trim-side-badge">
-            {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+          <span
+            class="trim-handle start"
+            :title="t('trimStart')"
+            @pointerdown.stop="beginClipTrim($event, clip, 'start')"
+          >
+            <span v-if="trimStateFor(clip.id)?.edge === 'start'" class="trim-side-badge">
+              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+            </span>
           </span>
-        </span>
-        <span class="clip-center-title"><Sparkles v-if="clip.isAiGenerated" :size="11" />{{ clip.name }}</span>
-        <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
-          <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
-            {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+          <span class="clip-center-title"><Sparkles v-if="clip.isAiGenerated" :size="11" />{{ clip.name }}</span>
+          <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
+            <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
+              {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      </TransitionGroup>
     </div>
   </div>
 </template>

@@ -1,6 +1,7 @@
 import { CanvasSink, type WrappedCanvas } from 'mediabunny';
 import { MediaInputError, openMediaInput, type MediaError, type OpenedMediaInput } from '../shared';
 import { assertPlaybackWorkerRequest, assertPlaybackWorkerResponse } from './playback-protocol';
+import { playbackPreviewDimensions } from './playback-preview';
 import type {
   PlaybackClipDescriptor,
   PlaybackFrameMessage,
@@ -11,9 +12,6 @@ import type {
 
 const reportPlaybackWorkerError = (message: string, error?: unknown) =>
   console.error(`[Beam media:playback-worker] ${message}`, error ?? '');
-
-const MAX_PREVIEW_WIDTH = 1_920;
-const MAX_PREVIEW_HEIGHT = 1_080;
 
 type QueuedFrame = {
   bitmap: ImageBitmap;
@@ -48,6 +46,8 @@ let processingSeek = false;
 let pendingTick: Extract<PlaybackWorkerRequest, { type: 'tick' }> | null = null;
 let processingTick = false;
 let loadVersion = 0;
+const loadTasks = new Set<Promise<void>>();
+const processingIdleWaiters = new Set<() => void>();
 
 const metrics: PlaybackMetrics = {
   decodedFrames: 0,
@@ -72,14 +72,16 @@ self.onmessage = (event: MessageEvent<unknown>) => {
 
 function receive(message: PlaybackWorkerRequest) {
   if (message.type === 'dispose') {
-    disposeAll();
     disposed = true;
+    void shutdown();
     return;
   }
   if (disposed) return;
   generation = Math.max(generation, message.generation);
   if (message.type === 'load') {
-    void load(message);
+    const task = load(message);
+    loadTasks.add(task);
+    void task.finally(() => loadTasks.delete(task));
   } else if (message.type === 'seek') {
     if (pendingSeek) supersede(pendingSeek);
     pendingSeek = message;
@@ -97,7 +99,9 @@ function receive(message: PlaybackWorkerRequest) {
 
 async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
   const version = ++loadVersion;
-  disposeAll(false);
+  await disposeAll(false);
+  await waitForProcessingIdle();
+  if (isStaleLoad(version)) return;
   const loadedAssets = new Map<string, AssetDecoder>();
   let committed = false;
   try {
@@ -133,7 +137,7 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
       if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
       const displayHeight = await track.getDisplayHeight();
       if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
-      const preview = previewDimensions(displayWidth, displayHeight);
+      const preview = playbackPreviewDimensions(displayWidth, displayHeight);
       loadedAssets.set(descriptor.assetId, {
         assetId: descriptor.assetId,
         opened,
@@ -175,7 +179,7 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
     if (!committed) disposeLoadedAssets(loadedAssets);
     if (isStaleLoad(version)) return;
     reportPlaybackWorkerError('Composition load failed.', mediaError(error, 'playback'));
-    if (committed) disposeAll(false);
+    if (committed) await disposeAll(false);
     postError(mediaError(error, 'playback'), message.generation);
   }
 }
@@ -188,17 +192,6 @@ function disposeLoadedAssets(loadedAssets: Map<string, AssetDecoder>, current?: 
   current?.dispose();
   for (const asset of loadedAssets.values()) asset.opened.dispose();
   loadedAssets.clear();
-}
-
-function previewDimensions(displayWidth: number, displayHeight: number) {
-  if (!Number.isFinite(displayWidth) || displayWidth <= 0 || !Number.isFinite(displayHeight) || displayHeight <= 0) {
-    throw new RangeError('The playback video has invalid display dimensions.');
-  }
-  const scale = Math.min(1, MAX_PREVIEW_WIDTH / displayWidth, MAX_PREVIEW_HEIGHT / displayHeight);
-  return {
-    width: Math.max(1, Math.floor(displayWidth * scale)),
-    height: Math.max(1, Math.floor(displayHeight * scale)),
-  };
 }
 
 function activeAt(clip: PlaybackClipDescriptor, timelineSeconds: number) {
@@ -227,15 +220,17 @@ function closeFrame(frame: QueuedFrame, dropped = false) {
   if (dropped) metrics.droppedFrames += 1;
 }
 
-function closeIterator(iterator: AsyncIterator<WrappedCanvas> | null) {
+async function closeIterator(iterator: AsyncIterator<WrappedCanvas> | null) {
   if (!iterator) return;
-  void Promise.resolve(iterator.return?.()).catch((error: unknown) =>
-    reportPlaybackWorkerError('Canvas iterator cleanup failed.', error),
-  );
+  try {
+    await iterator.return?.();
+  } catch (error) {
+    reportPlaybackWorkerError('Canvas iterator cleanup failed.', error);
+  }
 }
 
-function resetSequential(consumer: ClipConsumer, startSeconds: number) {
-  closeIterator(consumer.iterator);
+async function resetSequential(consumer: ClipConsumer, startSeconds: number) {
+  await closeIterator(consumer.iterator);
   consumer.iteratorGeneration += 1;
   consumer.iterator = consumer.sink.canvases(startSeconds)[Symbol.asyncIterator]();
   consumer.lastTargetSeconds = startSeconds;
@@ -262,7 +257,7 @@ async function sequentialFrame(consumer: ClipConsumer, targetSeconds: number): P
     consumer.lastTargetSeconds === null ||
     targetSeconds < consumer.lastTargetSeconds ||
     targetSeconds - consumer.lastTargetSeconds > 0.5;
-  if (!consumer.iterator || jumped) resetSequential(consumer, targetSeconds);
+  if (!consumer.iterator || jumped) await resetSequential(consumer, targetSeconds);
   consumer.lastTargetSeconds = targetSeconds;
   await fillQueue(consumer);
   while (consumer.queue.length > 1 && consumer.queue[1]!.timestampSeconds <= targetSeconds) {
@@ -313,6 +308,7 @@ async function processTicks() {
     postError(mediaError(error, 'playback'), generation);
   } finally {
     processingTick = false;
+    resolveProcessingIdle();
     if (pendingSeek) void processSeeks();
     else if (pendingTick) void processTicks();
   }
@@ -389,6 +385,7 @@ async function processSeeks() {
     postError(mediaError(error, 'playback'), activeRequest?.generation ?? generation, activeRequest?.requestId);
   } finally {
     processingSeek = false;
+    resolveProcessingIdle();
     if (pendingSeek) void processSeeks();
     else if (pendingTick) void processTicks();
   }
@@ -452,12 +449,13 @@ function post(message: PlaybackWorkerResponse) {
   self.postMessage(message);
 }
 
-function disposeAll(invalidateLoad = true) {
+async function disposeAll(invalidateLoad = true) {
   if (invalidateLoad) loadVersion += 1;
   pendingSeek = null;
   pendingTick = null;
+  const iteratorCleanups: Promise<void>[] = [];
   for (const consumer of consumers.values()) {
-    closeIterator(consumer.iterator);
+    iteratorCleanups.push(closeIterator(consumer.iterator));
     consumer.iteratorGeneration += 1;
     for (const frame of consumer.queue) closeFrame(frame);
   }
@@ -465,4 +463,26 @@ function disposeAll(invalidateLoad = true) {
   for (const asset of assets.values()) asset.opened.dispose();
   assets.clear();
   updateQueueMetric();
+  await Promise.all(iteratorCleanups);
+}
+
+function waitForProcessingIdle() {
+  if (!processingSeek && !processingTick) return Promise.resolve();
+  return new Promise<void>((resolve) => processingIdleWaiters.add(resolve));
+}
+
+function resolveProcessingIdle() {
+  if (processingSeek || processingTick) return;
+  for (const resolve of processingIdleWaiters) resolve();
+  processingIdleWaiters.clear();
+}
+
+async function shutdown() {
+  await disposeAll();
+  await waitForProcessingIdle();
+  await Promise.allSettled([...loadTasks]);
+  // Let Mediabunny's iterator pumps observe disposal and synchronously close
+  // their WebCodecs decoders before the renderer terminates this worker.
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  post({ type: 'disposed', generation });
 }

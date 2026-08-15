@@ -193,6 +193,7 @@ export function useTimelineViewport(
   };
   let lastScrubX = 0;
   let lastScrubTimestamp = 0;
+  let cachedSnapTargets: ReturnType<typeof collectSnapTargets> | null = null;
   const calculateScrubSnap = (clientX: number) => {
     const rawTimeMs = Math.min(durationMs.value, timeAt(clientX));
     if (props.isSnappingEnabled === false) {
@@ -206,13 +207,14 @@ export function useTimelineViewport(
     const thresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value, speedPxPerMs < 0.8 ? 14 : 8);
     const snap = snapValue(
       rawTimeMs,
-      collectSnapTargets({
-        composition: props.composition,
-        zoomElements: props.zoomElements,
-        currentTime: props.currentTime,
-        duration: props.duration,
-        ignorePlayhead: true,
-      }),
+      cachedSnapTargets ??
+        collectSnapTargets({
+          composition: props.composition,
+          zoomElements: props.zoomElements,
+          currentTime: props.currentTime,
+          duration: props.duration,
+          ignorePlayhead: true,
+        }),
       thresholdMs,
     );
     activeSnapTimeMs.value = snap?.snappedValueMs ?? null;
@@ -237,8 +239,16 @@ export function useTimelineViewport(
     pendingScrubTime = null;
     scrubPreviewTime.value = null;
     activeSnapTimeMs.value = null;
+    cachedSnapTargets = null;
   };
   const beginScrub = (event: PointerEvent) => {
+    cachedSnapTargets = collectSnapTargets({
+      composition: props.composition,
+      zoomElements: props.zoomElements,
+      currentTime: props.currentTime,
+      duration: props.duration,
+      ignorePlayhead: true,
+    });
     scheduleScrubAt(event.clientX);
     const move = (next: PointerEvent) => scheduleScrubAt(next.clientX);
     const end = (next: PointerEvent) => {

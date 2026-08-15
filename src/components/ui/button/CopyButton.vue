@@ -96,13 +96,29 @@ const copy = async () => {
 
 <template>
   <Button
+    v-if="display === 'icon'"
     :variant="variant"
     :size="size"
     :icon="stateIcon"
-    :icon-only="display === 'icon'"
+    icon-only
     :loading="state === 'copying'"
     :disabled="disabled"
-    :tooltip="display === 'icon' ? stateLabel : ''"
+    :tooltip="stateLabel"
+    :tooltip-position="tooltipPosition"
+    :tooltip-variant="state === 'error' ? 'error' : 'default'"
+    :aria-label="stateLabel"
+    :aria-busy="state === 'copying'"
+    :data-state="state"
+    :class="[`copy-button-${state}`]"
+    @click="copy"
+  />
+  <Button
+    v-else
+    :variant="variant"
+    :size="size"
+    :icon="stateIcon"
+    :loading="state === 'copying'"
+    :disabled="disabled"
     :tooltip-position="tooltipPosition"
     :tooltip-variant="state === 'error' ? 'error' : 'default'"
     :aria-label="stateLabel"
@@ -111,7 +127,7 @@ const copy = async () => {
     :class="[`copy-button-${state}`]"
     @click="copy"
   >
-    <template v-if="display === 'text'">{{ stateLabel }}</template>
+    {{ stateLabel }}
   </Button>
 </template>
 

@@ -57,6 +57,21 @@ export class FrameLruCache {
     this.bytes = 0;
   }
 
+  findMatchingKey(clipId: string, timestampSeconds: number): string | undefined {
+    let closestKey: string | undefined;
+    let minDiff = Infinity;
+    for (const [key, frame] of this.frames.entries()) {
+      if (frame.clipId === clipId) {
+        const diff = Math.abs(frame.timestampSeconds - timestampSeconds);
+        if (diff <= Math.max(0.04, frame.durationSeconds) && diff < minDiff) {
+          minDiff = diff;
+          closestKey = key;
+        }
+      }
+    }
+    return closestKey;
+  }
+
   get byteSize(): number {
     return this.bytes;
   }

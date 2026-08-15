@@ -120,15 +120,20 @@
     "whisperModel": "Whisper 模型",
     "modelReady": "模型已下载并验证",
     "downloadModel": "下载模型",
+    "deleteModel": "删除模型",
+    "deleting": "正在删除…",
     "generateCaptions": "生成字幕",
     "regenerateAICaptions": "重新生成 AI 字幕",
     "processing": "处理中…",
+    "preparingAudio": "正在准备音频…",
+    "transcriptionCompleted": "转录已在 {time} 内完成。",
     "aiCaptionsActive": "AI 字幕已启用",
     "subtitlesGenerated": "已生成 {count} 条字幕轨道。",
     "edit": "编辑",
     "modelDownloadFailed": "模型下载失败。",
     "systemAudio": "系统音频",
-    "microphone": "麦克风"
+    "microphone": "麦克风",
+    "cancel": "取消"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "未选择片段",
@@ -193,7 +198,8 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "正在加载视频预览",
-    "ok": "确定"
+    "ok": "确定",
+    "recenter": "重新居中"
   },
   "ExportPopover": {
     "exportVideo": "导出视频",

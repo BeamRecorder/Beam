@@ -12,13 +12,17 @@ import {
   type CompositionCameraEvaluator,
 } from '../../video-editor/zoom/composition-camera';
 import { renderBackground } from '../../video-editor/composition/background/render-background';
-import { resolveCompositionSceneLayers } from '../../video-editor/composition/scene-layers';
+import {
+  resolveCompositionSceneLayers,
+  type CompositionSceneLayers,
+} from '../../video-editor/composition/scene-layers';
 import type { Canvas2DContext } from '~/types/canvas';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
   width: number;
   height: number;
+  preRendered?: boolean;
 }
 
 export type CompositionVisuals = ReadonlyMap<string, RenderableMedia>;
@@ -31,6 +35,10 @@ function drawSnapshotBackground(
 ) {
   const value = snapshot.background;
   if (!value && !background) return;
+  if (background?.preRendered) {
+    ctx.drawImage(background.source, 0, 0, snapshot.canvas.width, snapshot.canvas.height);
+    return;
+  }
   renderBackground(ctx, {
     value,
     source: background?.source,
@@ -155,12 +163,13 @@ export function renderCompositionFrame(
   visuals?: CompositionVisuals,
   cursorMotionPlayer?: ReturnType<typeof createCursorMotionPlayer>,
   cameraEvaluator?: CompositionCameraEvaluator,
+  resolvedLayers?: CompositionSceneLayers,
 ) {
   const { width, height } = snapshot.canvas;
   ctx.fillStyle = OUTPUT_FALLBACK_COLOR;
   ctx.fillRect(0, 0, width, height);
   const timeMs = time * 1_000;
-  const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
+  const layers = resolvedLayers ?? resolveCompositionSceneLayers(snapshot.composition, timeMs);
   const screen = layers.screen;
   const sourceWidth = video?.width ?? width;
   const sourceHeight = video?.height ?? height;

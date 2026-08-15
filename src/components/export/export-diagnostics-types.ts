@@ -18,8 +18,15 @@ export interface ExportRuntimeDiagnostics {
   bytesWritten: number;
   videoCodec: string | null;
   audioCodec: string | null;
+  audioEncoderImplementation?: 'webcodecs' | 'mediabunny-aac';
   inputVideoCodecs: string[];
   inputAudioCodecs: string[];
+  hardwareAcceleration?: 'no-preference' | 'prefer-hardware';
+  encoderCodec?: string | null;
+  encoderBitrate?: number | null;
+  encodedPacketCount?: number;
+  keyFrameCount?: number;
+  encodedVideoBytes?: number;
 }
 
 export interface ExportEnvironmentDiagnostics {

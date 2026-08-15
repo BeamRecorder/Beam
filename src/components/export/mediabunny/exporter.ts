@@ -38,9 +38,12 @@ export async function exportWithMediabunny(
 
   return new Promise<ExportResult>((resolve, reject) => {
     let settled = false;
+    let cancellationRequested = false;
+    let cancellationTimeout: ReturnType<typeof setTimeout> | null = null;
     const finish = (error?: unknown, path?: string) => {
       if (settled) return;
       settled = true;
+      if (cancellationTimeout) clearTimeout(cancellationTimeout);
       signal.removeEventListener('abort', cancel);
       worker.terminate();
       if (error) reject(error);
@@ -51,8 +54,10 @@ export async function exportWithMediabunny(
       finish(error);
     };
     const cancel = () => {
+      if (cancellationRequested || settled) return;
+      cancellationRequested = true;
       worker.postMessage({ type: 'cancel' } satisfies ExportWorkerRequest);
-      void abortNative(abortError());
+      cancellationTimeout = setTimeout(() => void abortNative(abortError()), 5_000);
     };
     signal.addEventListener('abort', cancel, { once: true });
     worker.onerror = (event) => void abortNative(new Error(event.message || 'The export Worker failed.'));
@@ -68,6 +73,10 @@ export async function exportWithMediabunny(
           ? new ExportValidationError(message.error.issue)
           : Object.assign(new Error(message.error.message), { name: message.error.name });
         return void abortNative(error);
+      }
+      if (message.type === 'disposed') {
+        if (cancellationRequested) return void abortNative(abortError());
+        return void abortNative(new Error('The export Worker disposed unexpectedly.'));
       }
       if (message.type === 'chunk') {
         void window

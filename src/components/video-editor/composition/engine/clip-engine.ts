@@ -236,27 +236,52 @@ export function trimClip(
   const next = clone(composition);
   const source = byId(next, clipId);
   const target = integer(timelineTimeMs);
-  if (!finite(target) || target <= source.timelineStartMs || target >= clipEndMs(source))
-    throw new CompositionEngineError('Trim must be inside the clip.');
-  const startDelta = target - source.timelineStartMs;
-  const endDuration = target - source.timelineStartMs;
+  if (!finite(target)) throw new CompositionEngineError('Invalid trim target time.');
+  const originalEnd = clipEndMs(source);
+
+  if (edge === 'start') {
+    if (target < 0 || target > originalEnd - MIN_CLIP_DURATION_MS) {
+      throw new CompositionEngineError('Invalid start trim boundary.');
+    }
+  } else {
+    if (target < source.timelineStartMs + MIN_CLIP_DURATION_MS) {
+      throw new CompositionEngineError('Invalid end trim boundary.');
+    }
+  }
+
   const ids = new Set(targetIds(next, clipId));
   next.clips = next.clips.map((clip) => {
     if (!ids.has(clip.id)) return clip;
+    const rate = Math.max(0.01, clip.playbackRate);
     if (edge === 'start') {
-      const sourceDelta = integer(startDelta * clip.playbackRate);
+      const startDelta = target - clip.timelineStartMs;
+      const newTimelineDuration = (clip.timelineStartMs + clip.timelineDurationMs) - target;
+      const newSourceDuration = integer(newTimelineDuration * rate);
+      if (clip.kind === 'caption') {
+        return {
+          ...clip,
+          timelineStartMs: target,
+          timelineDurationMs: newTimelineDuration,
+          sourceInMs: 0,
+          sourceDurationMs: newSourceDuration,
+        };
+      }
+      const sourceDelta = integer(startDelta * rate);
+      const newSourceInMs = Math.max(0, clip.sourceInMs + sourceDelta);
       return {
         ...clip,
-        timelineStartMs: clip.timelineStartMs + startDelta,
-        timelineDurationMs: clip.timelineDurationMs - startDelta,
-        sourceInMs: clip.sourceInMs + sourceDelta,
-        sourceDurationMs: clip.sourceDurationMs - sourceDelta,
+        timelineStartMs: target,
+        timelineDurationMs: newTimelineDuration,
+        sourceInMs: newSourceInMs,
+        sourceDurationMs: newSourceDuration,
       };
     }
+    const newTimelineDuration = target - clip.timelineStartMs;
+    const newSourceDuration = integer(newTimelineDuration * rate);
     return {
       ...clip,
-      timelineDurationMs: endDuration,
-      sourceDurationMs: integer(endDuration * clip.playbackRate),
+      timelineDurationMs: newTimelineDuration,
+      sourceDurationMs: newSourceDuration,
     };
   });
   validateComposition(next);

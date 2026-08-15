@@ -65,14 +65,12 @@
   font-weight: 700;
   cursor: grab;
   box-shadow: var(--shadow-sm);
-  transition:
-    transform 0.15s ease,
-    border-color 0.15s ease;
+  transition: border-color var(--fast) ease;
   overflow: visible;
+  box-sizing: border-box;
   background: var(--color-track-annotation);
 }
 .annotation-indicator:hover {
-  transform: translateY(-1px);
   border-color: #fff;
 }
 .annotation-indicator.selected {
@@ -127,4 +125,19 @@
   gap: 4px;
   pointer-events: none;
   white-space: nowrap;
+}
+
+.caption-item-enter-active {
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.caption-item-leave-active {
+  transition: all 0.2s ease;
+}
+.caption-item-enter-from {
+  opacity: 0;
+  transform: translateY(6px) scale(0.92);
+}
+.caption-item-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }

@@ -40,6 +40,7 @@ export class AudioPlaybackScheduler {
   private schedulePromise: Promise<void> | null = null;
   private queuedScheduleGeneration: number | null = null;
   private generation = 0;
+  private loadGeneration = 0;
   private playing = false;
   private anchorTimelineSeconds = 0;
   private anchorContextSeconds = 0;
@@ -51,12 +52,14 @@ export class AudioPlaybackScheduler {
   }
 
   async loadComposition(composition: ClipComposition): Promise<MediaError[]> {
+    const loadGeneration = ++this.loadGeneration;
     this.stopPlayback();
     this.disposeDecoders();
     this.composition = composition;
     const clips = composition.clips.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled);
     const assetIds = new Set(clips.map((clip) => clip.assetId));
     const issues: MediaError[] = [];
+    const loadedDecoders = new Map<string, AudioAssetDecoder>();
     for (const assetId of assetIds) {
       let opened: OpenedMediaInput | null = null;
       try {
@@ -64,7 +67,17 @@ export class AudioPlaybackScheduler {
         if (!asset) throw this.missingAsset(assetId);
         const descriptor = { ...mediaSourceDescriptor(asset), kind: 'audio' as const };
         opened = await openMediaInput(descriptor);
+        if (loadGeneration !== this.loadGeneration) {
+          opened.dispose();
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
         const track = await opened.input.getPrimaryAudioTrack();
+        if (loadGeneration !== this.loadGeneration) {
+          opened.dispose();
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
         if (!track) {
           throw new MediaInputError({
             kind: 'missing-track',
@@ -73,7 +86,13 @@ export class AudioPlaybackScheduler {
             message: 'An audio clip references media without an audio track.',
           });
         }
-        if (!(await track.canDecode())) {
+        const canDecode = await track.canDecode();
+        if (loadGeneration !== this.loadGeneration) {
+          opened.dispose();
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
+        if (!canDecode) {
           const codec = await track.getCodec();
           throw new MediaInputError({
             kind: 'unsupported-codec',
@@ -83,13 +102,22 @@ export class AudioPlaybackScheduler {
             message: 'The audio codec is unsupported by this device.',
           });
         }
-        this.decoders.set(assetId, { opened, sink: new AudioBufferSink(track) });
+        loadedDecoders.set(assetId, { opened, sink: new AudioBufferSink(track) });
         opened = null;
       } catch (error) {
         opened?.dispose();
+        if (loadGeneration !== this.loadGeneration) {
+          this.disposeDecoderMap(loadedDecoders);
+          return [];
+        }
         issues.push(this.mediaError(error, assetId));
       }
     }
+    if (loadGeneration !== this.loadGeneration) {
+      this.disposeDecoderMap(loadedDecoders);
+      return [];
+    }
+    for (const [assetId, decoder] of loadedDecoders) this.decoders.set(assetId, decoder);
     return issues;
   }
 
@@ -139,6 +167,7 @@ export class AudioPlaybackScheduler {
   }
 
   dispose(): void {
+    this.loadGeneration += 1;
     this.stopPlayback();
     this.disposeDecoders();
     this.masterGain?.disconnect();
@@ -297,8 +326,12 @@ export class AudioPlaybackScheduler {
   }
 
   private disposeDecoders() {
-    for (const decoder of this.decoders.values()) decoder.opened.dispose();
-    this.decoders.clear();
+    this.disposeDecoderMap(this.decoders);
+  }
+
+  private disposeDecoderMap(decoders: Map<string, AudioAssetDecoder>) {
+    for (const decoder of decoders.values()) decoder.opened.dispose();
+    decoders.clear();
   }
 
   private missingAsset(assetId: string) {

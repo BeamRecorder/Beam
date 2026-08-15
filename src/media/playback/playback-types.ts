@@ -56,6 +56,7 @@ export interface PlaybackMetrics {
 
 export type PlaybackWorkerResponse =
   | { type: 'ready'; generation: number }
+  | { type: 'disposed'; generation: number }
   | PlaybackFrameMessage
   | { type: 'seek-result'; generation: number; requestId: number; result: PlaybackSeekResult; latencyMs: number }
   | { type: 'metrics'; generation: number; metrics: PlaybackMetrics }

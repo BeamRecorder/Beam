@@ -21,7 +21,7 @@ export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   frameShowScrollbars: true,
   frameChromeScale: 1,
 };
-const SHADOW_BLURS = { sm: 10, md: 20, lg: 32 } as const;
+const SHADOW_BLURS = { sm: 16, md: 24, lg: 32 } as const;
 
 export function shadowBlurForAppearance(appearance: ClipAppearance | undefined) {
   const style = { ...DEFAULT_CLIP_APPEARANCE, ...appearance };
@@ -44,7 +44,6 @@ export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
 export function applyClipShadow(
   ctx: Canvas2DContext,
   appearance: ClipAppearance | undefined,
-  width: number,
   source?: CanvasImageSource,
   sourceRect?: MediaRect,
   shadowScale = 1,
@@ -57,14 +56,11 @@ export function applyClipShadow(
       : style.shadowColor;
   ctx.shadowColor = blur > 0 ? shadowColor : 'transparent';
   ctx.shadowBlur = blur;
+  const offset = blur * 0.5;
   ctx.shadowOffsetX =
-    style.shadowDirection === 'top-left'
-      ? -width * 0.018
-      : style.shadowDirection === 'bottom-right'
-        ? width * 0.018
-        : 0;
+    style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'bottom-right' ? offset : 0;
   ctx.shadowOffsetY =
-    style.shadowDirection === 'top-left' ? -width * 0.018 : style.shadowDirection === 'all' ? 0 : width * 0.018;
+    style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'all' ? 0 : offset;
 }
 const clipRect = (ctx: Canvas2DContext, rect: MediaRect, radius: number) => {
   ctx.beginPath();
@@ -82,7 +78,7 @@ export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMedia
   const outerRadius = Math.min(radiusForAppearance(appearance), options.rect.width / 2, options.rect.height / 2);
   if (appearance.shadowSize !== 'none') {
     ctx.save();
-    applyClipShadow(ctx, appearance, options.rect.width, options.source, options.sourceRect, options.shadowScale);
+    applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
     ctx.fillStyle = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
     ctx.beginPath();
     ctx.roundRect(options.rect.x, options.rect.y, options.rect.width, options.rect.height, outerRadius);

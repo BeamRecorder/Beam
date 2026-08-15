@@ -126,6 +126,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   downloadWhisperModel(
     modelId: string,
   ): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>;
+  deleteWhisperModel(
+    modelId: string,
+  ): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>;
   onWhisperProgress(
     listener: (progress: {
       id: string;

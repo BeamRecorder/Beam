@@ -54,18 +54,25 @@ export async function openExportAssets(
   if (background?.kind === 'video') required.set(background.id, { asset: background, video: true, audio: false });
   const entries = [...required.values()];
   const assets = new Map<string, ExportAsset>();
+  const openedInputs = new Set<OpenedMediaInput>();
   let completed = 0;
   let cursor = 0;
   let failed = false;
+  let failure: unknown = null;
+  const disposeOpened = (opened: OpenedMediaInput) => {
+    if (!openedInputs.delete(opened)) return;
+    opened.dispose();
+  };
   const worker = async () => {
     while (!failed && cursor < entries.length) {
       const entry = entries[cursor++]!;
       if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
       const opened = await openMediaInput(mediaSourceDescriptor(entry.asset));
+      openedInputs.add(opened);
       try {
         if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
         if (failed) {
-          opened.dispose();
+          disposeOpened(opened);
           return;
         }
         const [video, audio] = await Promise.all([
@@ -80,18 +87,28 @@ export async function openExportAssets(
         const metadataDuration = await opened.input.getDurationFromMetadata(tracks);
         const duration = metadataDuration ?? (await opened.input.computeDuration(tracks, { skipLiveWait: true }));
         if (!Number.isFinite(duration) || duration <= 0) throw new Error(`${entry.asset.name} has no valid duration.`);
+        if (failed || signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
         assets.set(entry.asset.id, { asset: entry.asset, opened, video, audio, duration });
         completed += 1;
         onValidated(completed, entries.length);
       } catch (error) {
+        if (!failed) failure = error;
         failed = true;
-        opened.dispose();
+        disposeOpened(opened);
         throw error;
       }
     }
   };
+  const workers = Array.from({ length: Math.min(4, Math.max(1, entries.length)) }, () => worker());
+  const results = await Promise.allSettled(workers);
+  const rejection = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (rejection) {
+    failed = true;
+    for (const opened of [...openedInputs]) disposeOpened(opened);
+    assets.clear();
+    throw failure ?? rejection.reason;
+  }
   try {
-    await Promise.all(Array.from({ length: Math.min(4, Math.max(1, entries.length)) }, () => worker()));
     const screenClip = active.find((clip) => clip.kind === 'screen');
     const screenTrack = screenClip && 'assetId' in screenClip ? assets.get(screenClip.assetId)?.video : null;
     const screenSize = screenTrack
@@ -101,13 +118,14 @@ export async function openExportAssets(
       assets,
       screenSize,
       dispose() {
-        for (const value of assets.values()) value.opened.dispose();
+        for (const opened of [...openedInputs]) disposeOpened(opened);
         assets.clear();
       },
     };
   } catch (error) {
     failed = true;
-    for (const value of assets.values()) value.opened.dispose();
+    for (const opened of [...openedInputs]) disposeOpened(opened);
+    assets.clear();
     throw error;
   }
 }

@@ -1,6 +1,6 @@
 import type { CursorTelemetryPoint } from '../../../api/types/capture-session';
 import { createCameraVelocity, stepCameraSpring, type CameraTransform, type CameraVelocity } from './zoom-spring';
-import { clampFocusToScale, zoomAtTime, type AppliedZoom } from './zoom-playback';
+import { clampFocusToScale, createZoomTimeEvaluator, type AppliedZoom } from './zoom-playback';
 import type { ZoomElement, ZoomFocus } from './zoom-types';
 
 export interface CameraSample {
@@ -33,8 +33,9 @@ const cloneState = (state: SimulationState): SimulationState => ({
 
 export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs): CompositionCameraEvaluator {
   const checkpoints = new Map<number, SimulationState>();
+  const zoomAt = createZoomTimeEvaluator(inputs.zooms, inputs.telemetry);
   const targetAt = (timeMs: number): CameraTransform => {
-    const zoom = zoomAtTime([...inputs.zooms], timeMs, [...inputs.telemetry]);
+    const zoom = zoomAt(timeMs);
     if (!zoom) return { focusX: 0.5, focusY: 0.5, scale: 1 };
     const mapped = inputs.mapFocus ? inputs.mapFocus(zoom.focus, zoom) : zoom.focus;
     const focus = clampFocusToScale(mapped, zoom.scale);

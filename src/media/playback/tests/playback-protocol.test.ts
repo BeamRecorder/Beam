@@ -153,6 +153,11 @@ describe('isPlaybackWorkerResponse', () => {
     expect(isPlaybackWorkerResponse({ type: 'ready', generation: 12, extra: 'ignored' })).toBe(true);
   });
 
+  it('accepts disposed acknowledgements at both generation boundaries', () => {
+    expect(isPlaybackWorkerResponse({ type: 'disposed', generation: 0 })).toBe(true);
+    expect(isPlaybackWorkerResponse({ type: 'disposed', generation: Number.MAX_SAFE_INTEGER })).toBe(true);
+  });
+
   it('accepts valid frame responses with optional and required frame fields', () => {
     expect(
       isPlaybackWorkerResponse({

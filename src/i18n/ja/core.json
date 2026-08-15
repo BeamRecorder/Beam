@@ -120,15 +120,20 @@
     "whisperModel": "Whisperモデル",
     "modelReady": "モデルをダウンロードして確認しました",
     "downloadModel": "モデルをダウンロード",
-    "generateCaptions": "キャプションを生成",
+    "deleteModel": "モデルを削除",
+    "deleting": "削除中…",
+    "generateCaptions": "字幕を生成",
     "regenerateAICaptions": "AIキャプションを再生成",
     "processing": "処理中…",
+    "preparingAudio": "音声を準備中…",
+    "transcriptionCompleted": "文字起こしが{time}で完了しました。",
     "aiCaptionsActive": "AIキャプションが有効",
     "subtitlesGenerated": "{count}件の字幕トラックを生成しました。",
     "edit": "編集",
     "modelDownloadFailed": "モデルのダウンロードに失敗しました。",
     "systemAudio": "システム音声",
-    "microphone": "マイク"
+    "microphone": "マイク",
+    "cancel": "キャンセル"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "クリップが選択されていません",
@@ -193,7 +198,8 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "動画プレビューを読み込み中",
-    "ok": "OK"
+    "ok": "OK",
+    "recenter": "表示をリセット"
   },
   "ExportPopover": {
     "exportVideo": "動画を書き出す",

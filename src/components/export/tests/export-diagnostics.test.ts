@@ -68,6 +68,12 @@ const diagnostics: ExportDiagnostics = {
     audioCodec: 'opus',
     inputVideoCodecs: ['avc1.640028', 'vp9'],
     inputAudioCodecs: ['opus'],
+    hardwareAcceleration: 'prefer-hardware',
+    encoderCodec: 'vp09.00.10.08',
+    encoderBitrate: 5_900_000,
+    encodedPacketCount: 300,
+    keyFrameCount: 5,
+    encodedVideoBytes: 1_900_000,
   },
 };
 
@@ -101,6 +107,10 @@ describe('buildBeamExportReport', () => {
     expect(report).not.toContain('/tmp/private.webm');
     expect(report).toContain('Video Codec: vp9');
     expect(report).toContain('Audio Codec: opus');
+    expect(report).toContain('Encoder Codec String: vp09.00.10.08');
+    expect(report).toContain('Hardware Acceleration Request: prefer-hardware');
+    expect(report).toContain('Encoded Video Packets: 300');
+    expect(report).toContain('Video Key Frames: 5');
     expect(report).toContain('WebGPU Available: true');
     expect(report).toContain('WebGL Renderer: Mesa GPU');
     expect(report).toContain('Destination Dialog: 125 ms');
@@ -113,5 +123,18 @@ describe('buildBeamExportReport', () => {
     expect(report).toContain('Audio Mix Speed vs Realtime: 8.50x');
     expect(report).toContain('Dominant Measured Bottleneck: IPC/disk wait');
     expect(report).toContain('Decoder failed at [redacted-path]');
+  });
+
+  it('reports completed audio when the transient progress state has already been cleared', () => {
+    const report = buildBeamExportReport({
+      request,
+      format: 'webm',
+      preset: 'high',
+      status: 'completed',
+      progress: null,
+      diagnostics,
+    });
+
+    expect(report).toContain('Audio Progress: 100.0%');
   });
 });

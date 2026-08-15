@@ -342,6 +342,7 @@ app.whenReady().then(() => {
     hudWindow: win,
     hudController: controllers.get(win),
     registerController: (target, controller) => controllers.set(target, controller),
+    preferencesStore,
     initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
     cleanupWindow: (contents) => {
       exportIpc.cleanupWindow(contents);

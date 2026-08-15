@@ -244,19 +244,19 @@ const emit = defineEmits<{
         @delete="emit('delete:zoom')"
         @generate="emit('generate:zooms')"
       />
+      <SettingsPanel
+        v-else-if="activeTab === 'settings'"
+        @back-to-hud="emit('back-to-hud')"
+        @start-recording="emit('start-recording', $event)"
+      />
       <CaptionPanel
-        v-else-if="activeTab === 'caption'"
+        v-show="activeTab === 'caption'"
         :composition="composition"
         :editor-data="editorData"
         :timeline-duration-ms="timelineDurationMs"
         @update:composition="emit('update:composition', $event)"
         @preview:composition="emit('preview:composition', $event)"
         @select-caption="emit('select-caption', $event)"
-      />
-      <SettingsPanel
-        v-else-if="activeTab === 'settings'"
-        @back-to-hud="emit('back-to-hud')"
-        @start-recording="emit('start-recording', $event)"
       />
     </div>
   </div>

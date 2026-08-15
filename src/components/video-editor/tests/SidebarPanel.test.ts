@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('~/api/capture', () => ({ capture: {} }));
 
-import SidebarPanel from './SidebarPanel.vue';
+import SidebarPanel from '../sidebar/SidebarPanel.vue';
 
 const UpdateAvailableBadge = { template: '<span class="update-badge-stub" />' };
 

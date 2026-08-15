@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { Check } from '@lucide/vue';
+import { Check, RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
 import Skeleton from '../../ui/skeleton/Skeleton.vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
@@ -355,6 +355,19 @@ defineExpose({
     @pointerup="handleIslandPointerUp"
     @pointercancel="handleIslandPointerUp"
   >
+    <Transition name="fade-slide">
+      <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float">
+        <Button
+          variant="outline"
+          size="xs"
+          :icon="RotateCcw"
+          class="recenter-button"
+          @click.stop="viewportZoom.resetZoom"
+        >
+          {{ t('recenter') }}
+        </Button>
+      </div>
+    </Transition>
     <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
       <div class="preview-frame" :style="previewFrameStyle" aria-hidden="true"></div>
       <canvas

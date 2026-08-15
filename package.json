@@ -26,6 +26,7 @@
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
     "@lucide/vue": "^1.25.0",
+    "@mediabunny/aac-encoder": "1.50.9",
     "@vueuse/core": "^14.3.0",
     "@vueuse/electron": "^14.3.0",
     "@vueuse/motion": "^3.0.3",

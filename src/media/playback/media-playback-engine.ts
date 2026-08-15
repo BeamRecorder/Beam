@@ -25,6 +25,7 @@ import type {
 
 type WorkerLike = Pick<Worker, 'postMessage' | 'terminate' | 'onmessage' | 'onerror'>;
 type Listener<K extends keyof PlaybackEventMap> = (value: PlaybackEventMap[K]) => void;
+const WORKER_DISPOSE_TIMEOUT_MS = 2_000;
 
 export class MediaPlaybackEngine {
   private readonly worker: WorkerLike;
@@ -42,6 +43,8 @@ export class MediaPlaybackEngine {
   private generation = 0;
   private nextRequestId = 1;
   private animationFrame: number | null = null;
+  private workerDisposeTimer: ReturnType<typeof setTimeout> | null = null;
+  private workerTerminated = false;
   private currentSeconds = 0;
   private playbackState: PlaybackState = 'idle';
   private metrics: PlaybackMetrics = {
@@ -60,6 +63,10 @@ export class MediaPlaybackEngine {
     this.audio = options.audio ?? new AudioPlaybackScheduler((error) => this.fail(error));
     this.worker.onmessage = (event: MessageEvent<unknown>) => this.receive(event.data);
     this.worker.onerror = () => {
+      if (this.playbackState === 'disposed') {
+        this.terminateWorker();
+        return;
+      }
       const error: MediaError = {
         kind: 'decode-failure',
         sourceId: 'playback-worker',
@@ -140,8 +147,28 @@ export class MediaPlaybackEngine {
     const requestId = this.nextRequestId++;
     this.currentSeconds = target;
     this.emit('time', target);
-    await this.audio.seek(target, requestGeneration, resume);
-    if (requestGeneration !== this.generation) return 'superseded';
+
+    if (this.composition) {
+      for (const clip of this.composition.clips) {
+        if (isVisualClip(clip) && clip.enabled) {
+          const clipStartSec = clip.timelineStartMs / 1_000;
+          const clipEndSec = (clip.timelineStartMs + clip.timelineDurationMs) / 1_000;
+          if (target >= clipStartSec && target <= clipEndSec) {
+            const srcSec = (clip.sourceInMs + (target - clipStartSec) * 1_000 * (clip.playbackRate ?? 1)) / 1_000;
+            const cachedKey = this.cache.findMatchingKey(clip.id, srcSec);
+            if (cachedKey) {
+              this.currentFrameKeys.set(clip.id, cachedKey);
+              this.emit('frame', { clipId: clip.id });
+            }
+          }
+        }
+      }
+    }
+
+    if (mode === 'seek' || resume) {
+      await this.audio.seek(target, requestGeneration, resume);
+      if (requestGeneration !== this.generation) return 'superseded';
+    }
     const result = new Promise<PlaybackSeekResult>((resolve) => this.pendingSeeks.set(requestId, { mode, resolve }));
     this.post({ type: 'seek', generation: requestGeneration, requestId, timelineSeconds: target, mode });
     return result;
@@ -183,7 +210,7 @@ export class MediaPlaybackEngine {
     this.stopClock();
     this.audio.dispose();
     this.post({ type: 'dispose' });
-    this.worker.terminate();
+    this.workerDisposeTimer = setTimeout(() => this.terminateWorker(), WORKER_DISPOSE_TIMEOUT_MS);
     this.cache.clear();
     this.currentFrameKeys.clear();
     for (const pending of this.pendingSeeks.values()) pending.resolve('superseded');
@@ -210,6 +237,14 @@ export class MediaPlaybackEngine {
       return;
     }
     const message: PlaybackWorkerResponse = value;
+    if (message.type === 'disposed') {
+      this.terminateWorker();
+      return;
+    }
+    if (this.playbackState === 'disposed') {
+      if (message.type === 'frame') message.bitmap.close();
+      return;
+    }
     if (message.type === 'seek-result') {
       this.pendingSeeks.get(message.requestId)?.resolve(message.result);
       this.pendingSeeks.delete(message.requestId);
@@ -340,6 +375,14 @@ export class MediaPlaybackEngine {
 
   private post(message: PlaybackWorkerRequest) {
     this.worker.postMessage(message);
+  }
+
+  private terminateWorker() {
+    if (this.workerTerminated) return;
+    this.workerTerminated = true;
+    if (this.workerDisposeTimer) clearTimeout(this.workerDisposeTimer);
+    this.workerDisposeTimer = null;
+    this.worker.terminate();
   }
 
   private emit<K extends keyof PlaybackEventMap>(event: K, value: PlaybackEventMap[K]) {

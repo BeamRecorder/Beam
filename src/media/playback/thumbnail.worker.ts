@@ -16,6 +16,7 @@ let processing = false;
 let sourceKey: string | null = null;
 let opened: OpenedMediaInput | null = null;
 let sink: CanvasSink | null = null;
+let decoderVersion = 0;
 
 self.onmessage = (event: MessageEvent<unknown>) => {
   if (!isThumbnailWorkerRequest(event.data)) return;
@@ -56,7 +57,7 @@ async function processRequests() {
 
 async function decodeBatch(request: ThumbnailRequest) {
   try {
-    const canvasSink = await sinkFor(request.source);
+    const canvasSink = await sinkFor(request.source, request.generation);
     if (!canvasSink || isStale(request.generation)) return;
     let index = 0;
     for await (const wrappedCanvas of canvasSink.canvasesAtTimestamps(request.visibleTimes)) {
@@ -81,26 +82,55 @@ async function decodeBatch(request: ThumbnailRequest) {
   }
 }
 
-async function sinkFor(source: MediaSourceDescriptor): Promise<CanvasSink> {
+async function sinkFor(source: MediaSourceDescriptor, requestGeneration: number): Promise<CanvasSink | null> {
   const key = `${source.assetId}:${source.url}`;
   if (sink && sourceKey === key) return sink;
-  disposeDecoder();
-  sourceKey = key;
-  opened = await openMediaInput(source);
-  const track = await opened.input.getPrimaryVideoTrack();
-  const canDecode = track ? await track.canDecode() : false;
-  if (!track || !canDecode || typeof VideoDecoder === 'undefined') {
-    disposeDecoder();
-    throw new Error('WebCodecs cannot decode this video source.');
+  const version = ++decoderVersion;
+  releaseDecoder();
+  let candidate: OpenedMediaInput | null = null;
+  try {
+    candidate = await openMediaInput(source);
+    if (decoderIsStale(version, requestGeneration)) {
+      candidate.dispose();
+      return null;
+    }
+    const track = await candidate.input.getPrimaryVideoTrack();
+    if (decoderIsStale(version, requestGeneration)) {
+      candidate.dispose();
+      return null;
+    }
+    const canDecode = track ? await track.canDecode() : false;
+    if (decoderIsStale(version, requestGeneration)) {
+      candidate.dispose();
+      return null;
+    }
+    if (!track || !canDecode || typeof VideoDecoder === 'undefined') {
+      throw new Error('WebCodecs cannot decode this video source.');
+    }
+    const decoderConfig = await track.getDecoderConfig();
+    if (decoderIsStale(version, requestGeneration)) {
+      candidate.dispose();
+      return null;
+    }
+    const configSupported = decoderConfig ? (await VideoDecoder.isConfigSupported(decoderConfig)).supported : false;
+    if (decoderIsStale(version, requestGeneration)) {
+      candidate.dispose();
+      return null;
+    }
+    if (!decoderConfig || !configSupported) {
+      throw new Error('This video codec is not supported by WebCodecs.');
+    }
+    const nextSink = new CanvasSink(track, { width: THUMBNAIL_WIDTH, poolSize: 2 });
+    opened = candidate;
+    candidate = null;
+    sink = nextSink;
+    sourceKey = key;
+    return nextSink;
+  } catch (error) {
+    candidate?.dispose();
+    if (version === decoderVersion) releaseDecoder();
+    throw error;
   }
-  const decoderConfig = await track.getDecoderConfig();
-  const configSupported = decoderConfig ? (await VideoDecoder.isConfigSupported(decoderConfig)).supported : false;
-  if (!decoderConfig || !configSupported) {
-    disposeDecoder();
-    throw new Error('This video codec is not supported by WebCodecs.');
-  }
-  sink = new CanvasSink(track, { width: THUMBNAIL_WIDTH, poolSize: 2 });
-  return sink;
 }
 
 async function canvasToJpeg(canvas: HTMLCanvasElement | OffscreenCanvas): Promise<Blob> {
@@ -114,7 +144,16 @@ function isStale(generation: number) {
   return generation !== latestGeneration;
 }
 
+function decoderIsStale(version: number, generation: number) {
+  return version !== decoderVersion || isStale(generation);
+}
+
 function disposeDecoder() {
+  decoderVersion += 1;
+  releaseDecoder();
+}
+
+function releaseDecoder() {
   sink = null;
   opened?.dispose();
   opened = null;

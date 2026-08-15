@@ -427,6 +427,49 @@ describe('AudioPlaybackScheduler', () => {
     ]);
   });
 
+  it('disposes an obsolete concurrent load without overwriting the current decoder', async () => {
+    const firstOpen = deferred<ReturnType<typeof openedInput>>();
+    const firstOpened = openedInput();
+    const secondOpened = openedInput();
+    const secondOpen = deferred<ReturnType<typeof openedInput>>();
+    runtime.openMediaInput
+      .mockReset()
+      .mockImplementationOnce(() => firstOpen.promise)
+      .mockImplementationOnce(() => secondOpen.promise);
+    const scheduler = new AudioPlaybackScheduler();
+
+    const firstLoad = scheduler.loadComposition(composition());
+    await flushMicrotasks();
+    const secondLoad = scheduler.loadComposition(composition([clip('replacement')]));
+    await flushMicrotasks();
+
+    secondOpen.resolve(secondOpened);
+    await secondLoad;
+    firstOpen.resolve(firstOpened);
+    await firstLoad;
+
+    expect(firstOpened.dispose).toHaveBeenCalledOnce();
+    expect(secondOpened.dispose).not.toHaveBeenCalled();
+    scheduler.dispose();
+    expect(secondOpened.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('disposes an input that resolves after the scheduler is disposed', async () => {
+    const open = deferred<ReturnType<typeof openedInput>>();
+    const opened = openedInput();
+    runtime.openMediaInput.mockReset().mockImplementationOnce(() => open.promise);
+    const scheduler = new AudioPlaybackScheduler();
+
+    const pendingLoad = scheduler.loadComposition(composition());
+    await flushMicrotasks();
+    scheduler.dispose();
+
+    open.resolve(opened);
+    await pendingLoad;
+
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
   it('skips an audio asset with an empty source while loading valid audio', async () => {
     runtime.openMediaInput.mockClear();
     const invalidAsset = { ...asset('missing-audio'), src: '' };

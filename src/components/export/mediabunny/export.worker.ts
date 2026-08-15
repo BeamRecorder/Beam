@@ -1,19 +1,18 @@
-import { VideoSampleSink, type VideoSample } from 'mediabunny';
-import { activeClipsAt, sourceTimeAt } from '~/media/shared';
-import { isAudioClip, isVisualClip, type AudioClip, type VisualClip } from '~/media/shared/composition-types';
-import { createProgressiveAudioMixer } from '~/media/export/pcm-mixer';
-import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
-import { createSnapshotCameraEvaluator, renderCompositionFrame, type RenderableMedia } from '../composition/render';
+import { isAudioClip, type AudioClip, type VisualClip } from '~/media/shared/composition-types';
+import type { RenderableMedia } from '../composition/render';
 import type { ExportProgress, ExportRequest } from '../export-types';
 import type { ExportRuntimeDiagnostics } from '../export-diagnostics-types';
 import { isExportWorkerRequest, type ExportWorkerResponse } from './export-worker-protocol';
 import { loadBitmap, openExportAssets, type ExportAssets } from './export-worker-assets';
 import { ExportWorkerOutput } from './export-worker-output';
 import { cursorTypeForKind } from '../../video-editor/properties/cursor/cursor-kind';
+import { renderExportAudio, renderExportVideo } from './export-worker-pipelines';
 
 let controller: AbortController | null = null;
 let output: ExportWorkerOutput | null = null;
+let outputCancelPromise: Promise<void> | null = null;
 let activeAssets: ExportAssets | null = null;
+let activeRun: Promise<void> | null = null;
 let lastProgress = 0;
 
 const post = (message: ExportWorkerResponse) => self.postMessage(message);
@@ -28,16 +27,31 @@ self.onmessage = (event: MessageEvent<unknown>) => {
   if (!isExportWorkerRequest(event.data)) return postError(new TypeError('Invalid export Worker request.'));
   const message = event.data;
   if (message.type === 'cancel') {
-    controller?.abort();
-    activeAssets?.dispose();
-    activeAssets = null;
-    void output?.cancel().catch(() => undefined);
+    void disposeActiveExport();
   } else if (message.type === 'chunkAck') output?.acknowledge(message.sequence);
   else if (message.type === 'chunkError') output?.reject(message.sequence, message.message);
   else if (!controller) {
     controller = new AbortController();
-    void run(message.request, controller.signal).catch(postError);
+    activeRun = run(message.request, controller.signal)
+      .catch(postError)
+      .finally(() => {
+        activeRun = null;
+        controller = null;
+      });
   }
+};
+
+async function disposeActiveExport() {
+  controller?.abort();
+  await cancelOutput();
+  await activeRun;
+  post({ type: 'disposed' });
+}
+
+const cancelOutput = () => {
+  if (!output) return Promise.resolve();
+  outputCancelPromise ??= output.cancel().catch(() => undefined);
+  return outputCancelPromise;
 };
 
 async function run(request: ExportRequest, signal: AbortSignal) {
@@ -113,42 +127,86 @@ async function run(request: ExportRequest, signal: AbortSignal) {
     if (!context) throw new Error('OffscreenCanvas 2D context is unavailable.');
     const setupStarted = performance.now();
     output = await ExportWorkerOutput.create(request, canvas, audioClips.length > 0);
+    outputCancelPromise = null;
     await output.start();
     measured.outputSetupMs = performance.now() - setupStarted;
-    const encodingStarted = performance.now();
     const shared = { video: 0, audio: audioClips.length ? 0 : 1 };
-    const reportEncoding = (timeMs: number) => {
-      report({
-        stage: 'encoding',
-        overallProgress: 0.08 + 0.9 * shared.video,
-        completedImages: Math.round(shared.video * totalFrames),
-        totalImages: totalFrames,
-        audioProgress: audioClips.length ? shared.audio : null,
-        currentTimeMs: timeMs,
-        totalTimeMs,
-      });
+    let lastEncodingReport = 0;
+    const reportEncoding = (timeMs: number, force = false) => {
+      const now = performance.now();
+      if (!force && now - lastEncodingReport < 100) return;
+      lastEncodingReport = now;
+      const workProgress = audioClips.length ? 0.85 * shared.video + 0.15 * shared.audio : shared.video;
+      report(
+        {
+          stage: 'encoding',
+          overallProgress: 0.08 + 0.9 * workProgress,
+          completedImages: Math.round(shared.video * totalFrames),
+          totalImages: totalFrames,
+          audioProgress: audioClips.length ? shared.audio : null,
+          currentTimeMs: timeMs,
+          totalTimeMs,
+        },
+        true,
+      );
     };
-    const [videoStats, audioStats] = await Promise.all([
-      renderVideo(request, assets, images, cursorImages, context, output, signal, (done, stats) => {
-        measured.decodeMs = stats.decodeMs;
-        measured.renderMs = stats.renderMs;
-        measured.encoderBackpressureMs = stats.encoderBackpressureMs;
-        shared.video = done / totalFrames;
-        reportEncoding(Math.round((done / totalFrames) * totalTimeMs));
-      }),
-      renderAudio(request, assets, audioClips, output, signal, (done, total, stats) => {
+    const pipelineController = new AbortController();
+    const abortPipeline = () => pipelineController.abort();
+    signal.addEventListener('abort', abortPipeline, { once: true });
+    if (signal.aborted) abortPipeline();
+    const stopPipelines = async <T>(task: Promise<T>) =>
+      task.catch(async (error) => {
+        pipelineController.abort();
+        await cancelOutput();
+        throw error;
+      });
+    const videoTask = stopPipelines(
+      renderExportVideo(
+        request,
+        assets,
+        images,
+        cursorImages,
+        context,
+        output,
+        pipelineController.signal,
+        (done, stats) => {
+          measured.decodeMs = stats.decodeMs;
+          measured.renderMs = stats.renderMs;
+          measured.encoderBackpressureMs = stats.encoderBackpressureMs;
+          shared.video = done / totalFrames;
+          reportEncoding(Math.round((done / totalFrames) * totalTimeMs));
+        },
+      ),
+    );
+    const audioTask = stopPipelines(
+      renderExportAudio(request, assets, audioClips, output, pipelineController.signal, (done, total, stats) => {
         measured.audioPipelineMs = stats.elapsedMs;
         measured.audioRealtimeSpeed = stats.realtimeSpeed;
         shared.audio = total ? done / total : 1;
         reportEncoding(Math.round(shared.video * totalTimeMs));
       }),
-    ]);
+    );
+    const [videoResult, audioResult] = await Promise.allSettled([videoTask, audioTask]);
+    signal.removeEventListener('abort', abortPipeline);
+    if (videoResult.status === 'rejected' || audioResult.status === 'rejected') {
+      const failures = [videoResult, audioResult].filter(
+        (result): result is PromiseRejectedResult => result.status === 'rejected',
+      );
+      const failure = failures.find(
+        (result) => !(result.reason instanceof DOMException && result.reason.name === 'AbortError'),
+      );
+      throw (failure ?? failures[0])!.reason;
+    }
+    const videoStats = videoResult.value;
+    const audioStats = audioResult.value;
     measured.videoPipelineMs = videoStats.elapsedMs;
     measured.decodeMs = videoStats.decodeMs;
     measured.renderMs = videoStats.renderMs;
     measured.encoderBackpressureMs = videoStats.encoderBackpressureMs;
     measured.audioPipelineMs = audioStats?.elapsedMs ?? null;
     measured.audioRealtimeSpeed = audioStats?.realtimeSpeed ?? null;
+    measured.encodedFps = totalFrames / Math.max(0.001, videoStats.elapsedMs / 1_000);
+    reportEncoding(totalTimeMs, true);
     report(
       {
         stage: 'finalizing',
@@ -164,7 +222,6 @@ async function run(request: ExportRequest, signal: AbortSignal) {
     const finalizingStarted = performance.now();
     await output.finalize();
     measured.muxFinalizationMs = performance.now() - finalizingStarted;
-    measured.encodedFps = totalFrames / Math.max(0.001, (performance.now() - encodingStarted) / 1_000);
     console.info('[Beam export] finalization', { elapsedMs: Math.round(measured.muxFinalizationMs) });
     console.info('[Beam export] encoding complete', {
       elapsedMs: Math.round(performance.now() - started),
@@ -172,7 +229,7 @@ async function run(request: ExportRequest, signal: AbortSignal) {
     });
     post({ type: 'complete', diagnostics: diagnostics('finalizing') });
   } catch (error) {
-    await output?.cancel().catch(() => undefined);
+    await cancelOutput();
     throw error;
   } finally {
     if (activeAssets === assets) {
@@ -180,6 +237,8 @@ async function run(request: ExportRequest, signal: AbortSignal) {
       activeAssets = null;
     }
     for (const bitmap of bitmaps.values()) bitmap.close();
+    output = null;
+    outputCancelPromise = null;
   }
 }
 
@@ -293,175 +352,6 @@ function recolorCursor(bitmap: ImageBitmap, color: string) {
   } finally {
     bitmap.close();
   }
-}
-
-async function renderVideo(
-  request: ExportRequest,
-  assets: ExportAssets,
-  images: Map<string, RenderableMedia>,
-  cursorImages: Map<string, ImageBitmap>,
-  context: OffscreenCanvasRenderingContext2D,
-  mediaOutput: ExportWorkerOutput,
-  signal: AbortSignal,
-  onFrame: (done: number, stats: { decodeMs: number; renderMs: number; encoderBackpressureMs: number }) => void,
-) {
-  const started = performance.now();
-  let decodeMs = 0;
-  let renderMs = 0;
-  let encoderBackpressureMs = 0;
-  const total = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
-  const consumers = new Map<string, AsyncIterator<VideoSample | null>>();
-  for (const clip of request.snapshot.composition.clips) {
-    if (isVisualClip(clip) && clip.kind !== 'image' && clip.enabled) {
-      const track = assets.assets.get(clip.assetId)?.video;
-      if (!track) continue;
-      const timestamps: number[] = [];
-      for (let frame = 0; frame < total; frame += 1) {
-        const sourceTime = sourceTimeAt(clip, (frame / request.snapshot.render.fps) * 1_000);
-        if (sourceTime !== null) timestamps.push(sourceTime / 1_000);
-      }
-      const samples = new VideoSampleSink(track).samplesAtTimestamps(timestamps, { skipLiveWait: true });
-      consumers.set(clip.id, samples[Symbol.asyncIterator]());
-    }
-  }
-  const backgroundTrack = assets.assets.get('export-background')?.video;
-  const backgroundSink = backgroundTrack ? new VideoSampleSink(backgroundTrack) : null;
-  const backgroundDuration = assets.assets.get('export-background')?.duration ?? 0;
-  const motion = assets.screenSize
-    ? createCursorMotionPlayer(
-        request.snapshot.cursor.events,
-        request.snapshot.cursorSettings.motion,
-        assets.screenSize.width,
-        assets.screenSize.height,
-      )
-    : undefined;
-  const camera = createSnapshotCameraEvaluator(
-    request.snapshot,
-    assets.screenSize?.width ?? request.snapshot.canvas.width,
-    assets.screenSize?.height ?? request.snapshot.canvas.height,
-  );
-  try {
-    for (let frame = 0; frame < total; frame += 1) {
-      if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
-      const time = frame / request.snapshot.render.fps;
-      const active = activeClipsAt(request.snapshot.composition, time * 1_000);
-      const samples: VideoSample[] = [];
-      const decoded: Array<{ clip: VisualClip; sample: VideoSample }> = [];
-      const visuals = new Map<string, RenderableMedia>();
-      let screen: RenderableMedia | null = null;
-      const decodeStarted = performance.now();
-      try {
-        for (const clip of active) {
-          if (!isVisualClip(clip)) continue;
-          if (clip.kind === 'image') {
-            const image = images.get(clip.assetId);
-            if (image) visuals.set(clip.id, image);
-            continue;
-          }
-          const sourceTime = sourceTimeAt(clip, time * 1_000);
-          const next = sourceTime === null ? null : await consumers.get(clip.id)?.next();
-          const sample = !next || next.done ? null : next.value;
-          if (!sample) continue;
-          samples.push(sample);
-          decoded.push({ clip, sample });
-        }
-        let background: RenderableMedia | null = null;
-        if (request.snapshot.background?.kind === 'image') {
-          const bitmap = imagesForBackground(request, images);
-          if (bitmap) background = bitmap;
-        } else if (backgroundSink && backgroundDuration > 0) {
-          const sample = await backgroundSink.getSample(time % backgroundDuration, { skipLiveWait: true });
-          if (sample) {
-            samples.push(sample);
-            background = {
-              source: sample.toCanvasImageSource(),
-              width: sample.displayWidth,
-              height: sample.displayHeight,
-            };
-          }
-        }
-        for (const { clip, sample } of decoded) {
-          const media = {
-            source: sample.toCanvasImageSource(),
-            width: sample.displayWidth,
-            height: sample.displayHeight,
-          };
-          if (clip.kind === 'screen') screen = media;
-          else visuals.set(clip.id, media);
-        }
-        decodeMs += performance.now() - decodeStarted;
-        const renderStarted = performance.now();
-        renderCompositionFrame(
-          context,
-          screen,
-          request.snapshot,
-          time,
-          background,
-          cursorImages,
-          visuals,
-          motion,
-          camera,
-        );
-        renderMs += performance.now() - renderStarted;
-      } finally {
-        for (const sample of samples) sample.close();
-      }
-      const encoderStarted = performance.now();
-      await mediaOutput.addVideo(time, 1 / request.snapshot.render.fps);
-      encoderBackpressureMs += performance.now() - encoderStarted;
-      onFrame(frame + 1, { decodeMs, renderMs, encoderBackpressureMs });
-    }
-  } finally {
-    await Promise.allSettled([...consumers.values()].map((consumer) => consumer.return?.()));
-  }
-  mediaOutput.closeVideo();
-  return { elapsedMs: performance.now() - started, decodeMs, renderMs, encoderBackpressureMs };
-}
-
-function imagesForBackground(request: ExportRequest, images: Map<string, RenderableMedia>) {
-  return request.snapshot.background?.kind === 'image' ? (images.get('export-background') ?? null) : null;
-}
-
-async function renderAudio(
-  request: ExportRequest,
-  assets: ExportAssets,
-  clips: ReturnType<typeof audioClipsFor>,
-  mediaOutput: ExportWorkerOutput,
-  signal: AbortSignal,
-  onBlock: (done: number, total: number, stats: { elapsedMs: number; realtimeSpeed: number }) => void,
-) {
-  if (!clips.length) return null;
-  const tracks = new Map(
-    [...assets.assets].flatMap(([id, asset]) => (asset.audio ? [[id, asset.audio] as const] : [])),
-  );
-  const mixer = createProgressiveAudioMixer(clips, tracks, request.snapshot.duration);
-  const started = performance.now();
-  try {
-    for (let block = 0; block < mixer.blockCount; block += 1) {
-      await mediaOutput.addAudio(await mixer.mixBlock(block, signal));
-      const elapsedMs = performance.now() - started;
-      onBlock(block + 1, mixer.blockCount, {
-        elapsedMs,
-        realtimeSpeed: request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000),
-      });
-    }
-    mediaOutput.closeAudio();
-    const elapsedMs = performance.now() - started;
-    const realtimeSpeed = request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000);
-    console.info('[Beam export] audio complete', {
-      elapsedMs: Math.round(elapsedMs),
-      realtimeSpeed: Number(realtimeSpeed.toFixed(2)),
-    });
-    return { elapsedMs, realtimeSpeed };
-  } finally {
-    await mixer.dispose();
-  }
-}
-
-function audioClipsFor(request: ExportRequest) {
-  return request.snapshot.composition.clips.filter(
-    (clip): clip is AudioClip => isAudioClip(clip) && clip.enabled && clip.timelineDurationMs > 0,
-  );
 }
 
 function postError(error: unknown) {

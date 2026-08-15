@@ -87,10 +87,12 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     }).transform;
   };
   const transformFor = (clip: TransformClip) => (clip.kind === 'caption' ? captionTransformFor(clip) : clip.transform);
-  const boundsFor = (clip: TransformClip | null) =>
-    clip?.kind === 'screen'
-      ? options.videoWindowBounds()
-      : (options.overlayWindowBounds() ?? options.videoWindowBounds());
+  const usesGlobalCamera = (clip: TransformClip | null): clip is VisualClip =>
+    Boolean(clip && (clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image'));
+  const boundsFor = (clip: TransformClip | null) => {
+    if (clip?.kind === 'screen') return options.videoWindowBounds();
+    return options.overlayWindowBounds() ?? options.videoWindowBounds();
+  };
 
   // Keep selection, crop and hit-testing in the same coordinate system as the
   // rendered canvas. A camera zoom is a projection around its focus point, not
@@ -131,11 +133,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       width: transform.width * bounds.dw,
       height: transform.height * bounds.dh,
     };
-    // The canvas renderer applies the camera transform only while drawing the
-    // screen track. Composition videos/images and captions are drawn afterward
-    // in output space, so projecting their handles would move them away from
-    // the pixels the user is seeing.
-    return clip.kind === 'screen' ? projectCameraRect(bounds, rect) : rect;
+    return usesGlobalCamera(clip) ? projectCameraRect(bounds, rect) : rect;
   };
 
   watch(
@@ -297,7 +295,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (!clip || !bounds || !transformDrag) return;
     transformDrag.lastX = clientX;
     transformDrag.lastY = clientY;
-    const scale = clip.kind === 'screen' ? bounds.scale || 1 : 1;
+    const scale = usesGlobalCamera(clip) ? bounds.scale || 1 : 1;
     const vScale = options.zoomScale?.() ?? 1;
     const dx = (clientX - transformDrag.startX) / Math.max(1, bounds.dw * scale * vScale);
     const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale * vScale);

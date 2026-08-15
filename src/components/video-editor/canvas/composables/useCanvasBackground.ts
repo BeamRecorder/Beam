@@ -95,35 +95,44 @@ export function useCanvasBackground(
   const loadVideo = async (nextBg: BackgroundMedia, loadVersion: number) => {
     const asset = backgroundAsset(nextBg);
     const descriptor = mediaSourceDescriptor(asset);
+    let engine: MediaPlaybackEngine | null = null;
     try {
       const inspection = await inspectMedia(descriptor);
       if (loadVersion !== backgroundLoadVersion) return;
       const durationMs = Math.max(1, Math.round(inspection.metadata.durationSeconds * 1_000));
-      const engine = new MediaPlaybackEngine();
-      backgroundEngine = engine;
-      stopFrameListener = engine.on('frame', ({ clipId }) => {
-        if (clipId !== BACKGROUND_CLIP_ID || engine !== backgroundEngine) return;
-        activeBgFrame.value = engine.frameFor(BACKGROUND_CLIP_ID);
+      const createdEngine = new MediaPlaybackEngine();
+      engine = createdEngine;
+      backgroundEngine = createdEngine;
+      stopFrameListener = createdEngine.on('frame', ({ clipId }) => {
+        if (clipId !== BACKGROUND_CLIP_ID || createdEngine !== backgroundEngine) return;
+        activeBgFrame.value = createdEngine.frameFor(BACKGROUND_CLIP_ID);
         renderCanvas();
       });
-      stopErrorListener = engine.on('error', (error) => {
-        if (engine !== backgroundEngine) return;
+      stopErrorListener = createdEngine.on('error', (error) => {
+        if (createdEngine !== backgroundEngine) return;
         backgroundError.value = error;
         renderCanvas();
       });
-      await engine.loadComposition(backgroundComposition(asset, durationMs));
-      if (loadVersion !== backgroundLoadVersion || engine !== backgroundEngine) {
-        engine.dispose();
+      await createdEngine.loadComposition(backgroundComposition(asset, durationMs));
+      if (loadVersion !== backgroundLoadVersion || createdEngine !== backgroundEngine) {
+        if (createdEngine === backgroundEngine) {
+          createdEngine.dispose();
+          backgroundEngine = null;
+        }
         return;
       }
       prevBgState.value = activeBgState.value?.kind === 'video' ? null : activeBgState.value;
       prevBgImg.value = activeBgImg.value;
       activeBgState.value = nextBg;
       activeBgImg.value = null;
-      activeBgFrame.value = engine.frameFor(BACKGROUND_CLIP_ID);
+      activeBgFrame.value = createdEngine.frameFor(BACKGROUND_CLIP_ID);
       triggerBgTransition();
-      if (shouldPlay) await engine.play(0);
+      if (shouldPlay) await createdEngine.play(0);
     } catch (error) {
+      if (engine && backgroundEngine === engine) {
+        engine.dispose();
+        backgroundEngine = null;
+      }
       if (loadVersion !== backgroundLoadVersion) return;
       backgroundError.value =
         error && typeof error === 'object' && 'detail' in error

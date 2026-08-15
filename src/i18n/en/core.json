@@ -120,15 +120,20 @@
     "whisperModel": "Whisper Model",
     "modelReady": "Model downloaded and verified",
     "downloadModel": "Download Model",
-    "generateCaptions": "Generate Captions",
+    "deleteModel": "Delete Model",
+    "deleting": "Deleting…",
+    "generateCaptions": "Generate Subtitles",
     "regenerateAICaptions": "Regenerate AI Captions",
     "processing": "Processing…",
+    "preparingAudio": "Preparing audio…",
+    "transcriptionCompleted": "Transcription completed in {time}.",
     "aiCaptionsActive": "AI Captions Active",
     "subtitlesGenerated": "{count} subtitle track(s) generated.",
     "edit": "Edit",
     "modelDownloadFailed": "Model download failed.",
     "systemAudio": "System Audio",
-    "microphone": "Microphone"
+    "microphone": "Microphone",
+    "cancel": "Cancel"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "No clip selected",
@@ -192,8 +197,9 @@
     "motionBlur": "Motion Blur"
   },
   "EditorCanvas": {
-    "videoPreviewLoading": "Video preview loading",
-    "ok": "OK"
+    "videoPreviewLoading": "Loading video preview",
+    "ok": "OK",
+    "recenter": "Recenter view"
   },
   "ExportPopover": {
     "exportVideo": "Export Video",

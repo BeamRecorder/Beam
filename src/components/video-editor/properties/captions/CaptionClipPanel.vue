@@ -195,7 +195,11 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
   margin-top: auto;
   position: sticky;
   bottom: 0;
-  padding-top: 12px;
+  padding-top: 14px;
+  padding-bottom: 2px;
   background: var(--color-bg-element);
+  z-index: 10;
+  width: 100%;
+  box-shadow: 0 -8px 16px var(--color-bg-element);
 }
 </style>

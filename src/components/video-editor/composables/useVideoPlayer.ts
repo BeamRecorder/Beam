@@ -19,7 +19,10 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const playbackError = ref<MediaError | null>(null);
   const frameVersion = ref(0);
   let engine: MediaPlaybackEngine | null = null;
+  let loadGeneration = 0;
+  let disposed = false;
   const ensureEngine = () => {
+    if (disposed) throw new Error('Video player is disposed.');
     if (engine) return engine;
     engine = new MediaPlaybackEngine();
     engine.on('time', (value) => {
@@ -77,6 +80,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
         : (selected ?? availableBackgrounds[0] ?? null);
   };
   const loadComposition = async (composition: ClipComposition) => {
+    const generation = ++loadGeneration;
     const previousTime = currentTime.value;
     duration.value = composition.clips.reduce(
       (end, clip) => Math.max(end, (clip.timelineStartMs + clip.timelineDurationMs) / 1_000),
@@ -86,8 +90,10 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     // The engine closes its cached frames synchronously when it reloads.
     // Invalidate Vue consumers before they can render one of those closed bitmaps.
     frameVersion.value += 1;
-    await ensureEngine().loadComposition(composition);
-    if (previousTime > 0) await ensureEngine().seek(Math.min(previousTime, duration.value), 'seek');
+    const playback = ensureEngine();
+    await playback.loadComposition(composition);
+    if (disposed || generation !== loadGeneration || playback !== engine) return;
+    if (previousTime > 0) await playback.seek(Math.min(previousTime, duration.value), 'seek');
   };
 
   const setPlaying = async (playing: boolean) => {
@@ -138,6 +144,12 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   };
 
   watch(volume, (value) => engine?.setVolume(value));
-  onScopeDispose(() => engine?.dispose());
+  onScopeDispose(() => {
+    disposed = true;
+    loadGeneration += 1;
+    const playback = engine;
+    engine = null;
+    playback?.dispose();
+  });
   return api;
 }

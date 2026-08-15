@@ -756,9 +756,11 @@ const discoverSources = async () => {
   errorMessage.value = '';
   sourceDiscoveryCompleted.value = false;
   try {
-    const microphones = await listBrowserMicrophones();
-    const cameras = await listBrowserCameras();
-    const catalog = await capture.discover();
+    const [microphones, cameras, catalog] = await Promise.all([
+      listBrowserMicrophones(),
+      listBrowserCameras(),
+      capture.discover(),
+    ]);
     sources.value = [
       ...(Array.isArray(catalog.sources) ? catalog.sources : []),
       ...cameras,

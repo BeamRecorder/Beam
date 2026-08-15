@@ -5,6 +5,7 @@ import { useCanvasBackground } from '../useCanvasBackground';
 import type { BackgroundValue } from '../../../composables/backgroundCatalog';
 
 const playback = vi.hoisted(() => {
+  const loadCompositionImpl = { current: null as (() => Promise<void>) | null };
   const instances: Array<{
     state: 'paused' | 'loading';
     currentTime: number;
@@ -22,7 +23,7 @@ const playback = vi.hoisted(() => {
     static instances = instances;
     state: 'paused' | 'loading' = 'paused';
     currentTime = 0;
-    readonly loadComposition = vi.fn(async () => undefined);
+    readonly loadComposition = vi.fn(() => loadCompositionImpl.current?.() ?? Promise.resolve());
     readonly play = vi.fn(async () => undefined);
     readonly pause = vi.fn();
     readonly dispose = vi.fn();
@@ -43,7 +44,7 @@ const playback = vi.hoisted(() => {
       this.listeners.get('frame')?.({ clipId: 'background-video' });
     }
   }
-  return { FakePlaybackEngine, instances };
+  return { FakePlaybackEngine, instances, loadCompositionImpl };
 });
 
 vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlaybackEngine }));
@@ -152,6 +153,7 @@ const mountComposable = () => {
 beforeEach(() => {
   FakeImage.instances = [];
   playback.instances.length = 0;
+  playback.loadCompositionImpl.current = null;
   vi.stubGlobal('Image', FakeImage);
   vi.spyOn(document, 'createElement');
   mountComposable();
@@ -273,5 +275,25 @@ describe('useCanvasBackground', () => {
     await flushPromises();
     expect(state.backgroundError.value).toMatchObject({ kind: 'decode-failure', sourceId: 'broken.mp4' });
     expect(playback.instances).toHaveLength(0);
+  });
+
+  it('disposes an obsolete background engine when its load rejects after a replacement', async () => {
+    let rejectLoad!: (reason: unknown) => void;
+    playback.loadCompositionImpl.current = () =>
+      new Promise<void>((_resolve, reject) => {
+        rejectLoad = reject;
+      });
+
+    selected.value = video('stale.mp4');
+    await flushPromises();
+    expect(playback.instances).toHaveLength(1);
+    const staleEngine = playback.instances[0]!;
+
+    selected.value = color();
+    await nextTick();
+    rejectLoad(new Error('stale background decode failed'));
+    await flushPromises();
+
+    expect(staleEngine.dispose).toHaveBeenCalledOnce();
   });
 });

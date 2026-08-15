@@ -4,11 +4,17 @@ const test = require('node:test');
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 
-function fakeWindow(calls) {
+function fakeWindow(calls, options = {}) {
   const listeners = new Map();
   const contentListeners = new Map();
   let destroyed = false;
   let maximized = false;
+  const bounds = {
+    x: options.x ?? 0,
+    y: options.y ?? 0,
+    width: options.width ?? 1280,
+    height: options.height ?? 800,
+  };
   const webContents = {
     id: 42,
     on: (event, listener) => contentListeners.set(event, listener),
@@ -22,9 +28,13 @@ function fakeWindow(calls) {
     webContents,
     emitContent: (event) => contentListeners.get(event)?.(),
     on: (event, listener) => listeners.set(event, listener),
+    emit: (event, ...args) => listeners.get(event)?.(...args),
     isDestroyed: () => destroyed,
     isMaximized: () => maximized,
     isMinimized: () => false,
+    isFullScreen: () => false,
+    getBounds: () => ({ ...bounds }),
+    setBounds: (next) => Object.assign(bounds, next),
     maximize: () => {
       maximized = true;
       calls.push(['maximize']);
@@ -57,7 +67,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     BrowserWindow: class {
       constructor(options) {
         calls.push(['constructor', options]);
-        const window = fakeWindow(calls);
+        const window = fakeWindow(calls, options);
         windows.push(window);
         return window;
       }
@@ -163,6 +173,75 @@ test('editor window is opaque and routes native editor lifecycle without changin
       calls.find((call) => call[0] === 'hud-send' && call[1] === 'editor:start-recording'),
       ['hud-send', 'editor:start-recording', configuration],
     );
+  } finally {
+    Module._load = originalLoad;
+  }
+});
+
+test('restores and persists editor window dimensions via preferencesStore', async () => {
+  const calls = [];
+  const windows = [];
+  const patches = [];
+  const preferenceState = { extras: { editorWindow: { width: 1400, height: 900 } } };
+  const preferencesStore = {
+    read: () => structuredClone(preferenceState),
+    patch: (patch) => {
+      patches.push(structuredClone(patch));
+      preferenceState.extras = { ...preferenceState.extras, ...(patch.extras || {}) };
+      return structuredClone(preferenceState);
+    },
+  };
+  const electron = {
+    BrowserWindow: class {
+      constructor(options) {
+        calls.push(['constructor', options]);
+        const window = fakeWindow(calls, options);
+        windows.push(window);
+        return window;
+      }
+    },
+  };
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    return request === 'electron' ? electron : originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    delete require.cache[require.resolve('../electron/window/editor-window.cjs')];
+    const { createEditorWindowManager } = require('../electron/window/editor-window.cjs');
+    const hudWindow = {
+      webContents: { send: () => undefined },
+      hide: () => undefined,
+      show: () => undefined,
+      focus: () => undefined,
+      close: () => undefined,
+      isDestroyed: () => false,
+      isMinimized: () => false,
+      restore: () => undefined,
+    };
+    const manager = createEditorWindowManager({
+      applicationRoot: '/app',
+      isPackaged: false,
+      ipcMain: { handle: () => undefined, on: () => undefined },
+      hudWindow,
+      hudController: { showHud: () => undefined },
+      registerController: () => undefined,
+      preferencesStore,
+    });
+
+    manager.open(projectId);
+    const options = calls.find((call) => call[0] === 'constructor')[1];
+    assert.equal(options.width, 1400);
+    assert.equal(options.height, 900);
+
+    const editor = windows[0];
+    editor.setBounds({ width: 1600, height: 950 });
+    editor.emit('resized');
+
+    assert.deepEqual(patches.at(-1)?.extras?.editorWindow, {
+      width: 1600,
+      height: 950,
+    });
   } finally {
     Module._load = originalLoad;
   }

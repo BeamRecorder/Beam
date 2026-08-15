@@ -119,16 +119,21 @@
     "audioSource": "Источник аудио",
     "whisperModel": "Модель Whisper",
     "modelReady": "Модель загружена и проверена",
-    "downloadModel": "Загрузить модель",
+    "downloadModel": "Скачать модель",
+    "deleteModel": "Удалить модель",
+    "deleting": "Удаление…",
     "generateCaptions": "Создать субтитры",
     "regenerateAICaptions": "Создать субтитры ИИ заново",
     "processing": "Обработка…",
+    "preparingAudio": "Подготовка аудио…",
+    "transcriptionCompleted": "Транскрипция завершена за {time}.",
     "aiCaptionsActive": "Субтитры ИИ активны",
     "subtitlesGenerated": "Создано дорожек субтитров: {count}.",
     "edit": "Изменить",
     "modelDownloadFailed": "Не удалось загрузить модель.",
     "systemAudio": "Системный звук",
-    "microphone": "Микрофон"
+    "microphone": "Микрофон",
+    "cancel": "Отмена"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Клип не выбран",
@@ -193,7 +198,8 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Загрузка предпросмотра видео",
-    "ok": "ОК"
+    "ok": "OK",
+    "recenter": "Центрировать вид"
   },
   "ExportPopover": {
     "exportVideo": "Экспортировать видео",

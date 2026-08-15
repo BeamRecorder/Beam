@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import UndoRedoToast from './UndoRedoToast.vue';
+import UndoRedoToast from '../UndoRedoToast.vue';
 
 describe('UndoRedoToast', () => {
   beforeEach(() => vi.useFakeTimers());

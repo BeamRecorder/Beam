@@ -19,6 +19,9 @@ export function useViewportZoom() {
 
   const zoomPercent = computed(() => Math.round(zoomScale.value * 100));
   const isZoomedOrPanned = computed(() => zoomScale.value !== 1.0 || panX.value !== 0 || panY.value !== 0);
+  const isOutOfBounds = computed(
+    () => Math.abs(zoomScale.value - 1.0) > 0.08 || Math.abs(panX.value) > 60 || Math.abs(panY.value) > 60,
+  );
 
   const clampZoom = (scale: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, scale));
 
@@ -140,6 +143,7 @@ export function useViewportZoom() {
     isPanning,
     isSpacePressed,
     isZoomedOrPanned,
+    isOutOfBounds,
     viewportStyle,
     zoomIn,
     zoomOut,

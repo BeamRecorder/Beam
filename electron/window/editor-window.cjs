@@ -46,6 +46,7 @@ function createEditorWindowManager({
   registerController,
   initialDark = false,
   cleanupWindow = null,
+  preferencesStore = null,
 }) {
   let window = null;
   let controller = null;
@@ -56,6 +57,34 @@ function createEditorWindowManager({
   let resolvePresentation = null;
   let rejectPresentation = null;
   let lastProgressValue = 0;
+  let persistTimer = null;
+
+  const flushBounds = () => {
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = null;
+    if (!preferencesStore || !window || window.isDestroyed()) return;
+    try {
+      if (window.isMaximized() || window.isMinimized() || window.isFullScreen()) return;
+      const bounds = window.getBounds();
+      const width = Math.round(bounds.width);
+      const height = Math.round(bounds.height);
+      if (width >= EDITOR_MIN_SIZE.width && height >= EDITOR_MIN_SIZE.height) {
+        preferencesStore.patch({ extras: { editorWindow: { width, height } } });
+      }
+    } catch {
+      // Window persistence is best effort and must not affect the window.
+    }
+  };
+
+  const scheduleBoundsPersistence = () => {
+    if (!preferencesStore || !window || window.isDestroyed()) return;
+    if (window.isMaximized() || window.isMinimized() || window.isFullScreen()) return;
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      persistTimer = null;
+      flushBounds();
+    }, 200);
+  };
 
   // WCO defaults to the Windows system color when color is omitted. Keep its
   // compositor layer transparent so the editor titlebar remains the only
@@ -98,8 +127,18 @@ function createEditorWindowManager({
     if (window && !window.isDestroyed()) return window;
     rendererReady = false;
     returningToHud = false;
+    const savedWindow = preferencesStore?.read()?.extras?.editorWindow;
+    const initialWidth =
+      typeof savedWindow?.width === 'number' && savedWindow.width >= EDITOR_MIN_SIZE.width
+        ? Math.round(savedWindow.width)
+        : EDITOR_DEFAULT_SIZE.width;
+    const initialHeight =
+      typeof savedWindow?.height === 'number' && savedWindow.height >= EDITOR_MIN_SIZE.height
+        ? Math.round(savedWindow.height)
+        : EDITOR_DEFAULT_SIZE.height;
     window = new BrowserWindow({
-      ...EDITOR_DEFAULT_SIZE,
+      width: initialWidth,
+      height: initialHeight,
       minWidth: EDITOR_MIN_SIZE.width,
       minHeight: EDITOR_MIN_SIZE.height,
       show: false,
@@ -123,6 +162,12 @@ function createEditorWindowManager({
         webSecurity: false,
       },
     });
+    window.on('resize', scheduleBoundsPersistence);
+    window.on('resized', () => {
+      scheduleBoundsPersistence();
+      flushBounds();
+    });
+    window.on('close', flushBounds);
     controller = new EditorWindowController(window, showHud);
     registerController(window, controller);
     const contents = window.webContents;

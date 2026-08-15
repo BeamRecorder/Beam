@@ -12,6 +12,12 @@ const runtime = vi.hoisted(() => ({
   }>,
   videoSample: vi.fn(),
   videoSamples: vi.fn(),
+  createProgressiveAudioMixer: vi.fn(),
+  audioMixer: {
+    blockCount: 0,
+    mixBlock: vi.fn(),
+    dispose: vi.fn(),
+  },
   output: {
     start: vi.fn(),
     addVideo: vi.fn(),
@@ -41,7 +47,7 @@ vi.mock('../../../video-editor/properties/cursor/useCursorReplacer', () => ({
   cursorTypeForKind: vi.fn(() => 'default'),
 }));
 vi.mock('~/media/export/pcm-mixer', () => ({
-  createProgressiveAudioMixer: vi.fn(),
+  createProgressiveAudioMixer: runtime.createProgressiveAudioMixer,
 }));
 vi.mock('mediabunny', async (importOriginal) => {
   const actual = await importOriginal<typeof import('mediabunny')>();
@@ -95,6 +101,8 @@ const installCanvasRuntime = () => {
   vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
   vi.stubGlobal('VideoEncoder', class VideoEncoder {});
   vi.stubGlobal('VideoDecoder', class VideoDecoder {});
+  vi.stubGlobal('AudioEncoder', class AudioEncoder {});
+  vi.stubGlobal('AudioDecoder', class AudioDecoder {});
 };
 
 const importWorker = async () => {
@@ -126,6 +134,10 @@ beforeEach(() => {
       for (let index = 0; index < 30; index += 1) yield runtime.videoSample();
     })(),
   );
+  runtime.audioMixer.blockCount = 0;
+  runtime.audioMixer.mixBlock.mockReset().mockResolvedValue({});
+  runtime.audioMixer.dispose.mockReset().mockResolvedValue(undefined);
+  runtime.createProgressiveAudioMixer.mockReset().mockReturnValue(runtime.audioMixer);
   runtime.output.start.mockReset().mockResolvedValue(undefined);
   runtime.output.addVideo.mockReset().mockResolvedValue(undefined);
   runtime.output.addAudio.mockReset().mockResolvedValue(undefined);
@@ -328,6 +340,61 @@ describe('export worker', () => {
     });
   });
 
+  it('weights overall encoding progress with 85% video and 15% audio', async () => {
+    installCanvasRuntime();
+    const now = vi.spyOn(performance, 'now');
+    let clock = 0;
+    now.mockImplementation(() => (clock += 101));
+    try {
+      const audioClip = {
+        id: 'audio-clip',
+        kind: 'audio',
+        name: 'Audio clip',
+        assetId: 'audio-asset',
+        timelineStartMs: 0,
+        timelineDurationMs: 1_000,
+        sourceInMs: 0,
+        sourceDurationMs: 1_000,
+        playbackRate: 1,
+        volume: 1,
+        enabled: true,
+        order: 0,
+      };
+      let releaseAudio!: (value: unknown) => void;
+      runtime.audioMixer.blockCount = 1;
+      runtime.audioMixer.mixBlock.mockReturnValueOnce(
+        new Promise((resolve) => {
+          releaseAudio = resolve;
+        }),
+      );
+      const worker = await importWorker();
+      startWorker(
+        worker,
+        request({ snapshot: { ...request().snapshot, composition: { assets: [], clips: [audioClip] } } }),
+      );
+
+      await vi.waitFor(() =>
+        expect(worker.postMessage).toHaveBeenCalledWith({
+          type: 'progress',
+          progress: expect.objectContaining({ stage: 'encoding', completedImages: 30, audioProgress: 0 }),
+        }),
+      );
+      const videoComplete = worker.postMessage.mock.calls.find(
+        ([message]) =>
+          message.type === 'progress' &&
+          message.progress?.stage === 'encoding' &&
+          message.progress?.completedImages === 30 &&
+          message.progress?.audioProgress === 0,
+      )?.[0];
+      expect(videoComplete?.progress.overallProgress).toBeCloseTo(0.08 + 0.9 * 0.85, 6);
+
+      releaseAudio({});
+      await vi.waitFor(() => expect(runtime.audioMixer.dispose).toHaveBeenCalledOnce());
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it('disposes opened assets and cancels output when rendering fails', async () => {
     installCanvasRuntime();
     const dispose = vi.fn();
@@ -342,6 +409,41 @@ describe('export worker', () => {
     expect(worker.postMessage).toHaveBeenCalledWith({
       type: 'error',
       error: expect.objectContaining({ message: 'encoder startup failed' }),
+    });
+  });
+
+  it('cancels the output and disposes the mixer when the audio pipeline fails', async () => {
+    installCanvasRuntime();
+    const dispose = vi.fn();
+    runtime.openExportAssets.mockResolvedValueOnce({ assets: new Map(), screenSize: null, dispose });
+    runtime.audioMixer.blockCount = 1;
+    runtime.audioMixer.mixBlock.mockRejectedValueOnce(new Error('audio pipeline failed'));
+    const audioClip = {
+      id: 'audio-clip',
+      kind: 'audio',
+      name: 'Audio clip',
+      assetId: 'audio-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      volume: 1,
+      enabled: true,
+      order: 0,
+    };
+    const worker = await importWorker();
+    startWorker(
+      worker,
+      request({ snapshot: { ...request().snapshot, composition: { assets: [], clips: [audioClip] } } }),
+    );
+
+    await vi.waitFor(() => expect(runtime.output.cancel).toHaveBeenCalledOnce());
+    expect(runtime.audioMixer.dispose).toHaveBeenCalledOnce();
+    expect(dispose).toHaveBeenCalledOnce();
+    expect(worker.postMessage).toHaveBeenCalledWith({
+      type: 'error',
+      error: expect.objectContaining({ message: 'audio pipeline failed' }),
     });
   });
 

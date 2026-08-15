@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { Check, Copy } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { Download, Trash2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import CopyButton from '~/ui/button/CopyButton.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import Select from '~/ui/select/Select.vue';
 import Divider from '~/ui/divider/Divider.vue';
+import Throbber from '~/ui/throbber/Throbber.vue';
 import type { CaptionClip, CaptionSentence, ClipComposition } from '~/media/shared/composition-types';
 import { createComposition } from '../../composition/engine/clip-engine';
 import { useWhisperTranscription } from '../../captions/useWhisperTranscription';
@@ -14,9 +16,11 @@ import { capture } from '../../../../api/capture';
 import { captionSources } from './caption-sources';
 import { useTranslate } from '~/i18n/useTranslate';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { buildBeamTranscriptionReport, formatTranscriptionElapsed } from '../../captions/transcription-diagnostics';
 
 const { t } = useTranslate('CaptionPanel');
 const { t: tHud } = useTranslate('HUD');
+const { t: tExport } = useTranslate('ExportPopover');
 const props = defineProps<{
   composition: ClipComposition;
   editorData?: ProjectEditorData | null;
@@ -30,16 +34,21 @@ const emit = defineEmits<{
 
 const source = ref<TranscriptionSource>('system');
 const model = ref<WhisperModelId>('Xenova/whisper-tiny');
-const { progress, transcribe } = useWhisperTranscription();
+const { progress, diagnostics, transcribe, cancel } = useWhisperTranscription();
 const modelStates = ref<
   Record<string, { status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
 >({});
 const downloadProgress = ref<{ id: string; downloadedBytes: number; totalBytes: number | null } | null>(null);
 const downloadError = ref<string | null>(null);
 const isDownloading = ref(false);
+const isDeleting = ref(false);
 const isTranscribing = ref(false);
-const copiedError = ref(false);
-let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
+const transcriptionSourceLabel = ref<string | null>(null);
+
+const cancelTranscription = () => {
+  cancel();
+  isTranscribing.value = false;
+};
 
 const selectedModelState = computed(() => modelStates.value[model.value]);
 const modelReady = computed(() => selectedModelState.value?.status === 'ready');
@@ -54,14 +63,15 @@ const progressPercent = computed(() =>
     ? (downloadProgress.value.downloadedBytes / downloadProgress.value.totalBytes) * 100
     : 0,
 );
-watch(visibleError, () => {
-  copiedError.value = false;
-  if (copiedErrorTimeout) {
-    clearTimeout(copiedErrorTimeout);
-    copiedErrorTimeout = null;
-  }
-});
 const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+const transcriptionReport = computed(() =>
+  diagnostics.value ? buildBeamTranscriptionReport(diagnostics.value, transcriptionSourceLabel.value) : '',
+);
+const transcriptionStatus = computed(() => {
+  if (!diagnostics.value) return '';
+  if (progress.value.status === 'completed') return progress.value.message;
+  return formatTranscriptionElapsed(diagnostics.value.elapsedMs);
+});
 
 const aiCaptions = computed(() =>
   props.composition.clips.filter((clip): clip is CaptionClip => clip.kind === 'caption' && Boolean(clip.isAiGenerated)),
@@ -72,7 +82,7 @@ const loadModels = async () => {
   modelStates.value = Object.fromEntries((await capture.whisperModels()).map((item) => [item.id, item]));
 };
 const downloadModel = async () => {
-  if (isDownloading.value) return;
+  if (isDownloading.value || isDeleting.value) return;
   isDownloading.value = true;
   downloadError.value = null;
   downloadProgress.value = null;
@@ -86,29 +96,18 @@ const downloadModel = async () => {
   }
 };
 
-const copyError = async () => {
-  if (!visibleError.value) return;
+const deleteModel = async () => {
+  if (isDeleting.value || isDownloading.value || isTranscribing.value) return;
+  isDeleting.value = true;
+  downloadError.value = null;
   try {
-    await navigator.clipboard.writeText(visibleError.value);
-  } catch {
-    const textarea = document.createElement('textarea');
-    textarea.value = visibleError.value;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.append(textarea);
-    try {
-      textarea.select();
-      if (!document.execCommand('copy')) throw new Error('Unable to copy the Whisper error.');
-    } finally {
-      textarea.remove();
-    }
+    await capture.deleteWhisperModel(model.value);
+    await loadModels();
+  } catch (error) {
+    downloadError.value = error instanceof Error ? error.message : t('modelDownloadFailed');
+  } finally {
+    isDeleting.value = false;
   }
-  copiedError.value = true;
-  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
-  copiedErrorTimeout = setTimeout(() => {
-    copiedError.value = false;
-  }, 2_000);
 };
 
 let unsubscribe: (() => void) | null = null;
@@ -120,7 +119,6 @@ onMounted(async () => {
 });
 onBeforeUnmount(() => {
   unsubscribe?.();
-  if (copiedErrorTimeout) clearTimeout(copiedErrorTimeout);
 });
 
 const sources = computed(() => captionSources(props.composition, props.editorData));
@@ -136,6 +134,7 @@ const sourceSelectItems = computed(() => sources.value.map((item) => ({ value: i
 const runTranscription = async () => {
   if (!selectedSource.value || isTranscribing.value) return;
   isTranscribing.value = true;
+  transcriptionSourceLabel.value = selectedSource.value.label;
   const captionIds = new Map<string, string>();
   const applySentences = (sentences: CaptionSentence[], preview = false) => {
     if (!sentences.length) return [];
@@ -222,12 +221,30 @@ const runTranscription = async () => {
             size="sm"
             @update:model-value="model = $event as WhisperModelId"
           />
-          <span v-if="modelReady" class="model-ready-text">{{ t('modelReady') }}</span>
+          <div v-if="modelReady" class="model-action-row">
+            <span class="model-ready-text">{{ t('modelReady') }}</span>
+            <Button
+              variant="outline"
+              size="xs"
+              :icon="Trash2"
+              :disabled="isDeleting || isProcessing"
+              @click="deleteModel"
+            >
+              {{ isDeleting ? t('deleting') : t('deleteModel') }}
+            </Button>
+          </div>
+          <Button
+            v-else
+            variant="secondary"
+            size="sm"
+            :icon="Download"
+            :disabled="isDownloading || isDeleting || isProcessing"
+            @click="downloadModel"
+            block
+          >
+            {{ isDownloading ? t('processing') : t('downloadModel') }}
+          </Button>
         </div>
-
-        <Button v-if="!modelReady" variant="secondary" size="sm" :disabled="isDownloading" @click="downloadModel" block>
-          {{ t('downloadModel') }}
-        </Button>
 
         <div v-if="downloadProgress?.id === model" class="progress-block">
           <ProgressBar :value="progressPercent" />
@@ -238,16 +255,69 @@ const runTranscription = async () => {
         </div>
 
         <div v-if="progress.status === 'loading' || progress.status === 'running'" class="progress-block">
+          <div class="transcription-throbber-row">
+            <Throbber
+              :text="progress.message || t('processing')"
+              size="xs"
+              variant="pulse"
+              speed="slow"
+              color="primary"
+              dots
+            />
+          </div>
           <ProgressBar :value="progress.progress ?? 0" />
-          <span class="progress-text">{{ progress.message }}</span>
         </div>
 
+        <div v-if="!isProcessing && transcriptionReport" class="transcription-diagnostics-row">
+          <span class="transcription-diagnostics-status" aria-live="polite">{{ transcriptionStatus }}</span>
+          <CopyButton
+            :text="transcriptionReport"
+            display="text"
+            variant="ghost"
+            size="xs"
+            :label="tExport('copyReport')"
+            :copied-label="tExport('copied')"
+            :error-label="tExport('copyFailed')"
+          />
+        </div>
+      </div>
+
+      <Divider v-if="hasAiCaptions" spacing="xs" />
+
+      <!-- Active Captions Status Block -->
+      <div v-if="hasAiCaptions" class="section-block">
+        <div class="section-header">
+          <span class="section-title">{{ t('aiCaptionsActive') }}</span>
+          <Button variant="ghost" size="xs" @click="emit('select-caption', aiCaptions[0].id)">{{ t('edit') }}</Button>
+        </div>
+        <p class="section-desc">{{ t('subtitlesGenerated', { count: aiCaptions.length }) }}</p>
+      </div>
+
+      <!-- Bottom Generate Action -->
+      <div class="generate-action-footer">
         <div v-if="visibleError" class="error-block" role="alert">
           <p class="error-text">{{ visibleError }}</p>
-          <Button variant="ghost" size="xs" :icon="copiedError ? Check : Copy" @click="copyError">
-            {{ copiedError ? tHud('copied') : tHud('copyError') }}
-          </Button>
+          <CopyButton
+            :text="visibleError"
+            display="text"
+            variant="ghost"
+            size="xs"
+            :label="tHud('copyError')"
+            :copied-label="tHud('copied')"
+            :error-label="tExport('copyFailed')"
+          />
         </div>
+
+        <Button
+          v-if="isProcessing"
+          variant="outline"
+          size="sm"
+          class="cancel-transcription-btn"
+          @click="cancelTranscription"
+          block
+        >
+          {{ t('cancel') }}
+        </Button>
 
         <Button
           variant="primary"
@@ -258,17 +328,6 @@ const runTranscription = async () => {
         >
           {{ !isProcessing ? (hasAiCaptions ? t('regenerateAICaptions') : t('generateCaptions')) : t('processing') }}
         </Button>
-      </div>
-
-      <Divider v-if="hasAiCaptions" spacing="xs" />
-
-      <!-- Active Captions Status Block -->
-      <div v-if="hasAiCaptions" class="section-block">
-        <div class="section-header">
-          <span class="section-title">{{ t('aiCaptionsActive') }}</span>
-          <Button variant="ghost" size="xs" @click="emit('select-caption', aiCaptions[0].id)">Edit</Button>
-        </div>
-        <p class="section-desc">{{ t('subtitlesGenerated', { count: aiCaptions.length }) }}</p>
       </div>
     </div>
   </div>
@@ -345,6 +404,21 @@ const runTranscription = async () => {
   color: var(--text-muted);
 }
 
+.transcription-diagnostics-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.transcription-diagnostics-status {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
 .error-text {
   color: var(--color-error, #ef4444);
   font-size: 11px;
@@ -358,5 +432,32 @@ const runTranscription = async () => {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+}
+
+.model-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.transcription-throbber-row {
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 0;
+}
+
+.cancel-transcription-btn {
+  margin-bottom: 2px;
+}
+
+.generate-action-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
 }
 </style>

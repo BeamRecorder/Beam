@@ -121,7 +121,7 @@ function isMediaError(value: unknown): boolean {
 
 export function isPlaybackWorkerResponse(value: unknown): value is PlaybackWorkerResponse {
   if (!record(value) || typeof value.type !== 'string' || !generation(value.generation)) return false;
-  if (value.type === 'ready') return true;
+  if (value.type === 'ready' || value.type === 'disposed') return true;
   if (value.type === 'frame') return isFrame(value);
   if (value.type === 'metrics') return isMetrics(value.metrics);
   if (value.type === 'seek-result') {

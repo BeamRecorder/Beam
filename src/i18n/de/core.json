@@ -120,15 +120,20 @@
     "whisperModel": "Whisper-Modell",
     "modelReady": "Modell heruntergeladen und überprüft",
     "downloadModel": "Modell herunterladen",
-    "generateCaptions": "Untertitel erstellen",
+    "deleteModel": "Modell löschen",
+    "deleting": "Wird gelöscht…",
+    "generateCaptions": "Untertitel generieren",
     "regenerateAICaptions": "KI-Untertitel neu erstellen",
     "processing": "Wird verarbeitet…",
+    "preparingAudio": "Audio wird vorbereitet…",
+    "transcriptionCompleted": "Transkription in {time} abgeschlossen.",
     "aiCaptionsActive": "KI-Untertitel aktiv",
     "subtitlesGenerated": "{count} Untertitelspur(en) erstellt.",
     "edit": "Bearbeiten",
     "modelDownloadFailed": "Das Modell konnte nicht heruntergeladen werden.",
     "systemAudio": "Systemaudio",
-    "microphone": "Mikrofon"
+    "microphone": "Mikrofon",
+    "cancel": "Abbrechen"
   },
   "ClipPropertiesPanel": {
     "noClipSelected": "Kein Clip ausgewählt",
@@ -193,7 +198,8 @@
   },
   "EditorCanvas": {
     "videoPreviewLoading": "Videovorschau wird geladen",
-    "ok": "OK"
+    "ok": "OK",
+    "recenter": "Ansicht zentrieren"
   },
   "ExportPopover": {
     "exportVideo": "Video exportieren",

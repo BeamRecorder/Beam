@@ -24,6 +24,7 @@ describe('internationalization', () => {
       ['pl', 'Rozpocznij nagrywanie'],
       ['zh-TW', '開始錄影'],
       ['hi', 'रिकॉर्डिंग शुरू करें'],
+      ['vi', 'Bắt đầu ghi'],
     ] as const;
 
     for (const [locale, expected] of checks) {
@@ -33,7 +34,7 @@ describe('internationalization', () => {
   });
 
   it('keeps interpolation parameters intact in every added locale', () => {
-    for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW', 'hi'] as const) {
+    for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW', 'hi', 'vi'] as const) {
       setCurrentLocale(locale);
       expect(i18n.global.t('HUD.stopRecording', { time: '00:03' })).toContain('00:03');
       expect(i18n.global.t('Updates.downloading', { percent: 42 })).toContain('42%');
@@ -57,6 +58,22 @@ describe('internationalization', () => {
         expect(i18n.global.t(`SidebarPanel.${key}`)).not.toBe(`SidebarPanel.${key}`);
         expect(i18n.global.te(`TimelineTracks.${key}`, locale)).toBe(true);
         expect(i18n.global.t(`TimelineTracks.${key}`)).not.toBe(`TimelineTracks.${key}`);
+      }
+      for (const captionKey of [
+        'aiAutoCaptioning',
+        'headerDesc',
+        'audioSource',
+        'whisperModel',
+        'modelReady',
+        'downloadModel',
+        'deleteModel',
+        'generateCaptions',
+        'regenerateAICaptions',
+        'processing',
+        'preparingAudio',
+        'cancel',
+      ]) {
+        expect(i18n.global.te(`CaptionPanel.${captionKey}`, locale), `${locale}: missing CaptionPanel.${captionKey}`).toBe(true);
       }
     }
   });

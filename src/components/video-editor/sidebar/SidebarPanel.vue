@@ -58,33 +58,64 @@ const menuItems = computed(() => [
 <style scoped>
 .sidebar-island {
   width: 92px;
+  max-height: 100%;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 16px 8px;
+  padding: 12px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.sidebar-island::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-island::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 10px;
+}
+
+.sidebar-island::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+  transition: background 0.2s ease-in-out;
+}
+
+:root.dark .sidebar-island::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.sidebar-island::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary, #ff5a1f) !important;
 }
 
 .nav-menu {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .sidebar-footer {
   margin-top: auto;
   width: 100%;
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
 .nav-btn {
   position: relative;
   width: 100%;
   height: 52px;
+  flex-shrink: 0;
   border: none;
   background: transparent;
   border-radius: var(--radius-md);

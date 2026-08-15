@@ -173,16 +173,27 @@ describe('export worker client', () => {
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
-  it('cancels the worker and removes the partial file immediately', async () => {
+  it('waits for worker disposal before aborting native export and terminating', async () => {
     const controller = new AbortController();
     const running = exportWithMediabunny(request(), vi.fn(), controller.signal);
     await flush();
     const worker = FakeWorker.instances[0]!;
+    let settled = false;
+    void running.catch(() => {
+      settled = true;
+    });
 
     controller.abort();
+    await flush();
+
+    expect(worker.posted).toContainEqual({ type: 'cancel' });
+    expect(settled).toBe(false);
+    expect(abortExport).not.toHaveBeenCalled();
+    expect(worker.terminate).not.toHaveBeenCalled();
+
+    worker.emit({ type: 'disposed' } as unknown as ExportWorkerResponse);
 
     await expect(running).rejects.toMatchObject({ name: 'AbortError' });
-    expect(worker.posted).toContainEqual({ type: 'cancel' });
     expect(abortExport).toHaveBeenCalledWith('job-1');
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
