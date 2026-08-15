@@ -14,6 +14,6 @@
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/beam-input-helper</annotate>
     <annotate key="org.freedesktop.policykit.exec.argv1">stream</annotate>
-    <annotate key="com.beam.policy-version">2</annotate>
+    <annotate key="com.beam.policy-version">3</annotate>
   </action>
 </policyconfig>

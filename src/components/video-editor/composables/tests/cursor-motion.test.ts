@@ -20,11 +20,11 @@ const move = (time: number, x: number, y: number): CursorEvent => ({
   visible: true,
 });
 
-const button = (time: number, x = 0.86, y = 0.84): CursorEvent => ({
+const button = (time: number, x = 0.86, y = 0.84, pressed = true): CursorEvent => ({
   event: 'button',
   sessionNs: time * 1_000_000_000,
   button: 1,
-  pressed: true,
+  pressed,
   normalizedX: x,
   normalizedY: y,
 });
@@ -82,6 +82,51 @@ describe('cursor motion', () => {
     const timeline = createCursorMotionTimeline(events(move(0, 0, 0), move(0.06, 1, 0), button(0.06, 1, 0)), settings);
     expect(timeline.targetAt(0.06)).toEqual({ x: 1, y: 0 });
     expect(timeline.segments.at(-1)?.endSeconds).toBe(0.06);
+  });
+
+  it('keeps a drag release as an exact motion deadline', () => {
+    const settings = createDefaultCursorMotionSettings();
+    const recorded = events(move(0, 0, 0), button(0, 0, 0), move(0.1, 1, 0), button(0.1, 1, 0, false));
+    const timeline = createCursorMotionTimeline(recorded, settings);
+    expect(timeline.targetAt(0.1)).toEqual({ x: 1, y: 0 });
+
+    const player = createCursorMotionPlayer(recorded, settings);
+    const raw = {
+      x: 0,
+      y: 0,
+      visible: true,
+      cursorId: null,
+      shapeId: null,
+      cursorKind: null,
+      hotspot: { x: 0, y: 0 },
+    };
+    player.sample(0, raw);
+    expect(player.sample(0.1, { ...raw, x: 1 })?.x).toBe(1);
+  });
+
+  it('follows the recorded cursor directly during a drag without spring lag', () => {
+    const settings = createDefaultCursorMotionSettings();
+    const recorded = events(
+      move(0, 0, 0),
+      button(0, 0, 0),
+      move(0.05, 0.7, 0.2),
+      move(0.1, 1, 0),
+      button(0.1, 1, 0, false),
+    );
+    const player = createCursorMotionPlayer(recorded, settings);
+    const raw = {
+      x: 0,
+      y: 0,
+      visible: true,
+      cursorId: null,
+      shapeId: null,
+      cursorKind: null,
+      hotspot: { x: 0, y: 0 },
+    };
+    player.sample(0, raw);
+    const duringDrag = player.sample(0.05, { ...raw, x: 0.7, y: 0.2 });
+    expect(duringDrag?.x).toBe(0.7);
+    expect(duringDrag?.y).toBe(0.2);
   });
 
   it('keeps the spring within normalized bounds and resets after a seek', () => {

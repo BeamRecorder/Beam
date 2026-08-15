@@ -1,9 +1,13 @@
 #[cfg(target_os = "linux")]
+#[path = "beam_input_helper/motion.rs"]
+mod input_motion;
+
+#[cfg(target_os = "linux")]
 mod linux {
     use std::{
         collections::{HashMap, HashSet},
         fs,
-        io::{self, Write},
+        io::{self, BufWriter, Write},
         os::unix::fs::PermissionsExt,
         path::{Path, PathBuf},
         thread,
@@ -11,13 +15,15 @@ mod linux {
     };
 
     use capture::input::{InputKey, InputModifier, NativeInputEvent};
-    use evdev::{Device, EventSummary, KeyCode};
+    use evdev::{Device, EventSummary, KeyCode, SynchronizationCode};
     use serde::Serialize;
+
+    use super::input_motion::MotionAccumulator;
 
     const POLL_INTERVAL: Duration = Duration::from_millis(4);
     const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
     const INSTALLED_POLICY: &str = "/usr/share/polkit-1/actions/com.beam.input-monitor.policy";
-    const POLICY_VERSION: u32 = 2;
+    const POLICY_VERSION: u32 = 3;
     const POLICY: &str = include_str!("beam-input-helper.policy");
 
     #[derive(Serialize)]
@@ -36,7 +42,7 @@ mod linux {
     }
 
     #[derive(Default)]
-    struct InputFilter {
+    pub(super) struct InputFilter {
         modifiers: HashSet<InputModifier>,
         active_shortcuts: HashMap<KeyCode, ActiveShortcut>,
     }
@@ -81,7 +87,7 @@ mod linux {
 
     fn stream() -> Result<(), Box<dyn std::error::Error>> {
         require_privileged()?;
-        let mut devices = open_input_devices()?
+        let devices = open_input_devices()?
             .into_iter()
             .filter(|device| supports_mouse(device) || supports_shortcuts(device))
             .collect::<Vec<_>>();
@@ -99,9 +105,13 @@ mod linux {
         for device in &devices {
             device.set_nonblocking(true)?;
         }
+        let mut devices = devices
+            .into_iter()
+            .map(|device| (device, MotionAccumulator::default()))
+            .collect::<Vec<_>>();
         let mut filter = InputFilter::default();
         let stdout = io::stdout();
-        let mut output = stdout.lock();
+        let mut output = BufWriter::with_capacity(64 * 1024, stdout.lock());
         serde_json::to_writer(
             &mut output,
             &serde_json::json!({
@@ -115,24 +125,51 @@ mod linux {
         output.flush()?;
         loop {
             let mut emitted = false;
-            for device in &mut devices {
+            for (device, motion) in &mut devices {
                 match device.fetch_events() {
                     Ok(events) => {
                         for event in events {
-                            let EventSummary::Key(_, key, value) = event.destructure() else {
-                                continue;
-                            };
-                            if let Some(filtered) = filter.apply(key, value, monotonic_ns()?) {
-                                serde_json::to_writer(&mut output, &filtered)?;
-                                output.write_all(b"\n")?;
-                                output.flush()?;
-                                emitted = true;
+                            match event.destructure() {
+                                EventSummary::RelativeAxis(_, axis, value) => {
+                                    motion.push(axis, value);
+                                }
+                                EventSummary::Key(_, key, value) => {
+                                    if let Some(relative) = motion.take(monotonic_ns()?) {
+                                        write_stream_event(&mut output, &relative)?;
+                                        emitted = true;
+                                    }
+                                    if let Some(filtered) =
+                                        filter.apply(key, value, monotonic_ns()?)
+                                    {
+                                        write_stream_event(&mut output, &filtered)?;
+                                        emitted = true;
+                                    }
+                                }
+                                EventSummary::Synchronization(
+                                    _,
+                                    SynchronizationCode::SYN_REPORT,
+                                    _,
+                                ) => {
+                                    if let Some(relative) = motion.take(monotonic_ns()?) {
+                                        write_stream_event(&mut output, &relative)?;
+                                        emitted = true;
+                                    }
+                                }
+                                EventSummary::Synchronization(
+                                    _,
+                                    SynchronizationCode::SYN_DROPPED,
+                                    _,
+                                ) => motion.reset(),
+                                _ => {}
                             }
                         }
                     }
                     Err(error) if error.kind() == io::ErrorKind::WouldBlock => {}
                     Err(error) => return Err(error.into()),
                 }
+            }
+            if emitted {
+                output.flush()?;
             }
             if !emitted {
                 thread::sleep(POLL_INTERVAL);
@@ -263,8 +300,17 @@ mod linux {
         Ok(())
     }
 
+    fn write_stream_event(
+        output: &mut impl Write,
+        event: &NativeInputEvent,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        serde_json::to_writer(&mut *output, event)?;
+        output.write_all(b"\n")?;
+        Ok(())
+    }
+
     impl InputFilter {
-        fn apply(
+        pub(super) fn apply(
             &mut self,
             key: KeyCode,
             value: i32,
@@ -424,42 +470,11 @@ mod linux {
         };
         Some(mapped)
     }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn printable_keys_require_a_non_shift_modifier() {
-            let mut filter = InputFilter::default();
-            assert_eq!(filter.apply(KeyCode::KEY_W, 1, 1), None);
-            assert_eq!(filter.apply(KeyCode::KEY_LEFTSHIFT, 1, 2), None);
-            assert_eq!(filter.apply(KeyCode::KEY_W, 1, 3), None);
-            assert_eq!(filter.apply(KeyCode::KEY_LEFTCTRL, 1, 4), None);
-            assert!(matches!(
-                filter.apply(KeyCode::KEY_W, 1, 5),
-                Some(NativeInputEvent::Shortcut {
-                    pressed: true,
-                    key: InputKey::W,
-                    ..
-                })
-            ));
-        }
-
-        #[test]
-        fn button_mapping_keeps_clicks_structured() {
-            let mut filter = InputFilter::default();
-            assert_eq!(
-                filter.apply(KeyCode::BTN_RIGHT, 1, 42),
-                Some(NativeInputEvent::MouseButton {
-                    monotonic_ns: 42,
-                    button: 2,
-                    pressed: true,
-                })
-            );
-        }
-    }
 }
+
+#[cfg(all(target_os = "linux", test))]
+#[path = "beam_input_helper/filter_tests.rs"]
+mod filter_tests;
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -14,6 +14,8 @@ use crate::{
 use crate::screen::linux::FfmpegEncoder;
 
 use super::{CursorOutput, FfmpegCapabilities, FfmpegScreenSink, encoded_video_format};
+use crate::screen::linux::cursor_buttons::RecordedButton;
+use crate::screen::linux::cursor_fusion::CursorInputEvent;
 
 #[test]
 fn encoded_format_pads_odd_dimensions_for_yuv420() {
@@ -222,6 +224,173 @@ fn unknown_cursor_sample_does_not_invent_events() {
         .expect("unknown sample");
     assert!(output.events.is_empty());
     assert!(!temporary.path().join("cursor.partial.jsonl").exists());
+}
+
+#[test]
+fn unknown_video_samples_do_not_discard_pending_buttons() {
+    let temporary = tempfile::tempdir().expect("temporary cursor directory");
+    let mut output = CursorOutput::new(temporary.path().into());
+    output
+        .push_sample(
+            0,
+            CursorSampleState::Known {
+                native_cursor_id: "pipewire:stream:7".into(),
+                cursor_kind: CursorKind::Default,
+                pixel_x: 10,
+                pixel_y: 10,
+                normalized_x: 0.1,
+                normalized_y: 0.1,
+                visible: true,
+                hotspot: None,
+            },
+        )
+        .expect("initial cursor anchor");
+    output.push_button(RecordedButton {
+        session_ns: 10,
+        button: 1,
+        pressed: true,
+    });
+    output.push_button(RecordedButton {
+        session_ns: 20,
+        button: 1,
+        pressed: false,
+    });
+    output
+        .push_sample(25, CursorSampleState::Unknown)
+        .expect("video frame without cursor metadata");
+    output
+        .push_sample(
+            30,
+            CursorSampleState::Known {
+                native_cursor_id: "pipewire:stream:7".into(),
+                cursor_kind: CursorKind::Default,
+                pixel_x: 10,
+                pixel_y: 10,
+                normalized_x: 0.1,
+                normalized_y: 0.1,
+                visible: true,
+                hotspot: None,
+            },
+        )
+        .expect("next cursor anchor");
+    output.materialize_buttons();
+
+    let buttons = output
+        .events
+        .iter()
+        .filter(|event| matches!(event, crate::cursor::CursorEvent::Button { .. }))
+        .collect::<Vec<_>>();
+    assert_eq!(buttons.len(), 2);
+    assert!(matches!(
+        buttons[0],
+        crate::cursor::CursorEvent::Button {
+            session_ns: 10,
+            pressed: true,
+            ..
+        }
+    ));
+    assert!(matches!(
+        buttons[1],
+        crate::cursor::CursorEvent::Button {
+            session_ns: 20,
+            pressed: false,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn cursor_output_places_drag_buttons_on_the_fused_evdev_path() {
+    let temporary = tempfile::tempdir().expect("temporary cursor directory");
+    let mut output = CursorOutput::new(temporary.path().into());
+    output
+        .push_sample(
+            0,
+            CursorSampleState::Known {
+                native_cursor_id: "pipewire:stream:7".into(),
+                cursor_kind: CursorKind::Default,
+                pixel_x: 0,
+                pixel_y: 0,
+                normalized_x: 0.0,
+                normalized_y: 0.0,
+                visible: true,
+                hotspot: None,
+            },
+        )
+        .expect("initial cursor anchor");
+    output.push_button(RecordedButton {
+        session_ns: 5,
+        button: 1,
+        pressed: true,
+    });
+    output.push_input(CursorInputEvent {
+        session_ns: 10,
+        delta_x: 5,
+        delta_y: 0,
+    });
+    output.push_button(RecordedButton {
+        session_ns: 15,
+        button: 1,
+        pressed: false,
+    });
+    output.push_input(CursorInputEvent {
+        session_ns: 20,
+        delta_x: 5,
+        delta_y: 0,
+    });
+    output
+        .push_sample(
+            30,
+            CursorSampleState::Known {
+                native_cursor_id: "pipewire:stream:7".into(),
+                cursor_kind: CursorKind::Default,
+                pixel_x: 100,
+                pixel_y: 0,
+                normalized_x: 1.0,
+                normalized_y: 0.0,
+                visible: true,
+                hotspot: None,
+            },
+        )
+        .expect("next cursor anchor");
+    output.materialize_buttons();
+
+    let drag_events = output
+        .events
+        .iter()
+        .filter(|event| match event {
+            crate::cursor::CursorEvent::Move { session_ns, .. }
+            | crate::cursor::CursorEvent::Button { session_ns, .. } => *session_ns > 0,
+            _ => false,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(drag_events.len(), 5);
+    assert!(matches!(
+        drag_events[0],
+        crate::cursor::CursorEvent::Button {
+            session_ns: 5,
+            normalized_x,
+            pressed: true,
+            ..
+        } if *normalized_x == 0.0
+    ));
+    assert!(matches!(
+        drag_events[2],
+        crate::cursor::CursorEvent::Button {
+            session_ns: 15,
+            normalized_x,
+            pressed: false,
+            ..
+        } if (*normalized_x - (1.0 / 3.0)).abs() < f64::EPSILON
+    ));
+    assert!(matches!(
+        drag_events[4],
+        crate::cursor::CursorEvent::Move {
+            session_ns: 30,
+            pixel_x: 100,
+            ..
+        }
+    ));
 }
 
 #[test]

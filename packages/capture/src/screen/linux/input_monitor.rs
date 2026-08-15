@@ -1,11 +1,11 @@
 use std::{
+    collections::VecDeque,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{
-        Arc, Mutex, OnceLock,
+        Arc, Mutex, OnceLock, Weak,
         atomic::{AtomicBool, AtomicUsize, Ordering},
-        mpsc::{self, Receiver, Sender},
     },
     thread::JoinHandle,
 };
@@ -16,12 +16,27 @@ use crate::{
 };
 
 const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
+pub(super) const INPUT_QUEUE_CAPACITY: usize = 4_096;
+
+pub(super) struct InputEventQueue {
+    pub(super) events: VecDeque<NativeInputEvent>,
+    pub(super) accepting: bool,
+}
+
+impl Default for InputEventQueue {
+    fn default() -> Self {
+        Self {
+            events: VecDeque::new(),
+            accepting: true,
+        }
+    }
+}
 
 struct BrokerShared {
     ready: AtomicBool,
     mouse_devices: AtomicUsize,
     keyboard_devices: AtomicUsize,
-    subscribers: Mutex<Vec<Sender<NativeInputEvent>>>,
+    subscribers: Mutex<Vec<Weak<Mutex<InputEventQueue>>>>,
 }
 
 impl Default for BrokerShared {
@@ -45,7 +60,7 @@ struct LinuxInputBroker {
 static BROKER: OnceLock<Mutex<LinuxInputBroker>> = OnceLock::new();
 
 pub(crate) struct LinuxInputMonitor {
-    receiver: Receiver<NativeInputEvent>,
+    queue: Arc<Mutex<InputEventQueue>>,
 }
 
 impl LinuxInputMonitor {
@@ -56,21 +71,28 @@ impl LinuxInputMonitor {
         if !broker.shared.ready.load(Ordering::Acquire) {
             return Ok(None);
         }
-        let (sender, receiver) = mpsc::channel();
+        let queue = Arc::new(Mutex::new(InputEventQueue::default()));
         broker
             .shared
             .subscribers
             .lock()
             .map_err(|_| CaptureError::Backend("input subscriber lock was poisoned".into()))?
-            .push(sender);
-        Ok(Some(Self { receiver }))
+            .push(Arc::downgrade(&queue));
+        Ok(Some(Self { queue }))
     }
 
-    pub(crate) fn drain(&self) -> impl Iterator<Item = NativeInputEvent> + '_ {
-        self.receiver.try_iter()
+    pub(crate) fn drain(&self) -> Vec<NativeInputEvent> {
+        let Ok(mut queue) = self.queue.lock() else {
+            return Vec::new();
+        };
+        queue.events.drain(..).collect()
     }
 
-    pub(crate) fn stop(&mut self) {}
+    pub(crate) fn stop(&mut self) {
+        if let Ok(mut queue) = self.queue.lock() {
+            queue.accepting = false;
+        }
+    }
 }
 
 #[must_use]
@@ -174,7 +196,15 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
                         continue;
                     };
                     if let Ok(mut subscribers) = shared.subscribers.lock() {
-                        subscribers.retain(|subscriber| subscriber.send(event.clone()).is_ok());
+                        subscribers.retain(|subscriber| {
+                            let Some(queue) = subscriber.upgrade() else {
+                                return false;
+                            };
+                            if let Ok(mut queue) = queue.lock() {
+                                queue.push(event.clone());
+                            }
+                            true
+                        });
                     }
                 }
                 shared.ready.store(false, Ordering::Release);
@@ -188,6 +218,44 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     );
     broker.child = Some(child);
     Ok(linux_input_access_status_from(&broker))
+}
+
+impl InputEventQueue {
+    pub(super) fn push(&mut self, event: NativeInputEvent) {
+        if !self.accepting {
+            return;
+        }
+        if self.events.len() < INPUT_QUEUE_CAPACITY {
+            self.events.push_back(event);
+            return;
+        }
+        if let NativeInputEvent::MouseMotion {
+            monotonic_ns,
+            delta_x,
+            delta_y,
+        } = &event
+            && let Some(NativeInputEvent::MouseMotion {
+                monotonic_ns: previous_ns,
+                delta_x: previous_x,
+                delta_y: previous_y,
+            }) = self.events.back_mut()
+        {
+            *previous_ns = *monotonic_ns;
+            *previous_x = previous_x.saturating_add(*delta_x);
+            *previous_y = previous_y.saturating_add(*delta_y);
+            return;
+        }
+        if let Some(index) = self
+            .events
+            .iter()
+            .position(|queued| matches!(queued, NativeInputEvent::MouseMotion { .. }))
+        {
+            self.events.remove(index);
+        } else {
+            self.events.pop_front();
+        }
+        self.events.push_back(event);
+    }
 }
 
 pub fn shutdown_linux_input_access() {

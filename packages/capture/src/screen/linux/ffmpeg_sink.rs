@@ -5,7 +5,7 @@ use crate::{
     cursor::{
         CursorEvent, CursorEventWriter, CursorShapeCatalogEntry, Hotspot, telemetry_from_events,
     },
-    input::{InputEvent, InputEventSidecar, NativeInputEvent},
+    input::InputEvent,
     model::RecordingSettings,
     screen::{
         CursorSampleState, OwnedScreenSample, PixelFormat, ScreenDiscontinuity, ScreenSampleSink,
@@ -15,7 +15,13 @@ use crate::{
 };
 
 use super::ffmpeg_process::FfmpegProcess;
-use super::{FfmpegCapabilities, LinuxInputMonitor, ffmpeg_process::FfmpegProcessConfig};
+use super::{
+    FfmpegCapabilities,
+    cursor_buttons::{RecordedButton, materialize_buttons},
+    cursor_fusion::{CursorAnchor, CursorFusion, CursorInputEvent, FusedCursorEvent},
+    ffmpeg_process::FfmpegProcessConfig,
+    input_timeline::{InputTimeline, MappedInputEvent},
+};
 
 pub(crate) struct FfmpegScreenSink {
     capabilities: FfmpegCapabilities,
@@ -24,7 +30,7 @@ pub(crate) struct FfmpegScreenSink {
     process: Option<FfmpegProcess>,
     format: Option<VideoFormat>,
     cursor: Option<CursorOutput>,
-    input: Option<InputOutput>,
+    input: Option<InputTimeline>,
     finished: bool,
 }
 
@@ -35,14 +41,8 @@ struct CursorOutput {
     shapes: BTreeMap<String, CursorShapeCatalogEntry>,
     previous_id: Option<String>,
     previous_visibility: Option<bool>,
-    previous_position: Option<(f64, f64)>,
-}
-
-struct InputOutput {
-    directory: PathBuf,
-    monitor: Option<LinuxInputMonitor>,
-    anchor: Option<(u64, u64)>,
-    events: Vec<InputEvent>,
+    fusion: CursorFusion,
+    buttons: Vec<RecordedButton>,
 }
 
 impl FfmpegScreenSink {
@@ -66,7 +66,7 @@ impl FfmpegScreenSink {
         let input = cursor_directory
             .as_ref()
             .filter(|_| capture_interactions)
-            .map(|directory| InputOutput::new(directory.clone()))
+            .map(|directory| InputTimeline::new(directory.clone()))
             .transpose()?
             .flatten();
         Ok(Self {
@@ -107,6 +107,8 @@ impl FfmpegScreenSink {
         let Some(cursor) = self.cursor.as_mut() else {
             return Ok(());
         };
+        cursor.finish_fusion()?;
+        cursor.materialize_buttons();
         std::fs::create_dir_all(&cursor.directory)
             .map_err(|error| CaptureError::storage(&cursor.directory, error))?;
         if let Some(writer) = cursor.partial_writer.as_mut() {
@@ -136,34 +138,43 @@ impl FfmpegScreenSink {
         };
         let events = input.drain(first_sample_ns)?;
         for event in events {
-            if let InputEvent::MouseButton {
-                session_ns,
-                button,
-                pressed,
-            } = event
-                && let Some(cursor) = self.cursor.as_mut()
-            {
-                cursor.push_button(session_ns, button, pressed)?;
+            let Some(cursor) = self.cursor.as_mut() else {
+                continue;
+            };
+            match event {
+                MappedInputEvent::Motion {
+                    session_ns,
+                    delta_x,
+                    delta_y,
+                } => cursor.push_input(CursorInputEvent {
+                    session_ns,
+                    delta_x,
+                    delta_y,
+                }),
+                MappedInputEvent::Persistent(InputEvent::MouseButton {
+                    session_ns,
+                    button,
+                    pressed,
+                }) => cursor.push_button(RecordedButton {
+                    session_ns,
+                    button,
+                    pressed,
+                }),
+                MappedInputEvent::Persistent(InputEvent::Shortcut { .. }) => {}
             }
         }
         Ok(())
     }
 
     fn finalize_input(&mut self) -> Result<(), CaptureError> {
-        if let Some(monitor) = self.input.as_mut().and_then(|input| input.monitor.as_mut()) {
-            monitor.stop();
+        if let Some(input) = self.input.as_mut() {
+            input.stop();
         }
         self.collect_input(None)?;
         let Some(input) = self.input.as_mut() else {
             return Ok(());
         };
-        input.events.sort_by_key(InputEvent::session_ns);
-        std::fs::create_dir_all(&input.directory)
-            .map_err(|error| CaptureError::storage(&input.directory, error))?;
-        write_atomic(
-            &input.directory.join("input.json"),
-            &serde_json::to_vec_pretty(&InputEventSidecar::new(input.events.clone()))?,
-        )
+        input.finalize()
     }
 }
 
@@ -219,6 +230,7 @@ impl ScreenSampleSink for FfmpegScreenSink {
             stride: sample.frame.stride,
             pixel_format: sample.frame.pixel_format,
         };
+        self.collect_input(Some(sample.timestamp.session_ns))?;
         if self.format != Some(actual) {
             self.format_changed(actual)?;
         }
@@ -226,7 +238,10 @@ impl ScreenSampleSink for FfmpegScreenSink {
             .as_mut()
             .ok_or_else(|| ffmpeg_error("FFmpeg is not running for the active segment"))?
             .write_frame(&sample.frame)?;
-        self.push_cursor(sample.timestamp.session_ns, sample.cursor)
+        if let Some(cursor) = self.cursor.as_mut() {
+            cursor.push_sample(sample.timestamp.session_ns, sample.cursor)?;
+        }
+        Ok(())
     }
 
     fn push_cursor(
@@ -252,8 +267,11 @@ impl ScreenSampleSink for FfmpegScreenSink {
 
     fn end_segment(&mut self) -> Result<(), CaptureError> {
         self.collect_input(None)?;
+        if let Some(cursor) = self.cursor.as_mut() {
+            cursor.finish_fusion()?;
+        }
         if let Some(input) = self.input.as_mut() {
-            input.anchor = None;
+            input.reset_anchor();
         }
         let _segment = self
             .current_segment
@@ -269,8 +287,8 @@ impl ScreenSampleSink for FfmpegScreenSink {
         if self.finished {
             return Ok(());
         }
-        if let Some(monitor) = self.input.as_mut().and_then(|input| input.monitor.as_mut()) {
-            monitor.stop();
+        if let Some(input) = self.input.as_mut() {
+            input.stop();
         }
         let segment_result = if self.current_segment.is_some() {
             self.end_segment()
@@ -293,7 +311,8 @@ impl CursorOutput {
             shapes: BTreeMap::new(),
             previous_id: None,
             previous_visibility: None,
-            previous_position: None,
+            fusion: CursorFusion::default(),
+            buttons: Vec::new(),
         }
     }
 
@@ -315,6 +334,14 @@ impl CursorOutput {
         else {
             return Ok(());
         };
+        let fused = self.fusion.reconcile(CursorAnchor {
+            session_ns,
+            pixel_x,
+            pixel_y,
+            normalized_x,
+            normalized_y,
+        });
+        self.push_fused(fused)?;
         if self.previous_id.as_deref() != Some(&native_cursor_id) {
             let hotspot = hotspot.unwrap_or(Hotspot { x: 0, y: 0 });
             self.push(CursorEvent::Shape {
@@ -350,26 +377,41 @@ impl CursorOutput {
             normalized_y,
             visible,
         })?;
-        self.previous_position = Some((normalized_x, normalized_y));
         Ok(())
     }
 
-    fn push_button(
-        &mut self,
-        session_ns: u64,
-        button: u8,
-        pressed: bool,
-    ) -> Result<(), CaptureError> {
-        let Some((normalized_x, normalized_y)) = self.previous_position else {
-            return Ok(());
-        };
-        self.push(CursorEvent::Button {
-            session_ns,
-            button,
-            pressed,
-            normalized_x,
-            normalized_y,
-        })
+    fn push_input(&mut self, event: CursorInputEvent) {
+        self.fusion.push(event);
+    }
+
+    fn push_button(&mut self, button: RecordedButton) {
+        self.buttons.push(button);
+    }
+
+    fn materialize_buttons(&mut self) {
+        materialize_buttons(&mut self.events, std::mem::take(&mut self.buttons));
+    }
+
+    fn finish_fusion(&mut self) -> Result<(), CaptureError> {
+        let events = self.fusion.finish();
+        self.push_fused(events)
+    }
+
+    fn push_fused(&mut self, events: Vec<FusedCursorEvent>) -> Result<(), CaptureError> {
+        let cursor_id = self.previous_id.clone();
+        let visible = self.previous_visibility.unwrap_or(true);
+        for event in events {
+            self.push(CursorEvent::Move {
+                session_ns: event.session_ns,
+                cursor_id: cursor_id.clone(),
+                pixel_x: event.pixel_x,
+                pixel_y: event.pixel_y,
+                normalized_x: event.normalized_x,
+                normalized_y: event.normalized_y,
+                visible,
+            })?;
+        }
+        Ok(())
     }
 
     fn push(&mut self, event: CursorEvent) -> Result<(), CaptureError> {
@@ -387,85 +429,6 @@ impl CursorOutput {
         self.events.push(event);
         Ok(())
     }
-}
-
-impl InputOutput {
-    fn new(directory: PathBuf) -> Result<Option<Self>, CaptureError> {
-        let Some(monitor) = LinuxInputMonitor::start()? else {
-            return Ok(None);
-        };
-        Ok(Some(Self {
-            directory,
-            monitor: Some(monitor),
-            anchor: None,
-            events: Vec::new(),
-        }))
-    }
-
-    fn drain(&mut self, first_sample_ns: Option<u64>) -> Result<Vec<InputEvent>, CaptureError> {
-        let Some(monitor) = self.monitor.as_ref() else {
-            return Ok(Vec::new());
-        };
-        if self.anchor.is_none() {
-            for _ in monitor.drain() {}
-            if let Some(session_ns) = first_sample_ns {
-                self.anchor = Some((monotonic_ns()?, session_ns));
-            }
-            return Ok(Vec::new());
-        }
-        let (native_anchor, session_anchor) = self.anchor.unwrap_or_default();
-        let mapped = monitor
-            .drain()
-            .filter(|event| event.monotonic_ns() >= native_anchor)
-            .map(|event| map_input_event(event, native_anchor, session_anchor))
-            .collect::<Vec<_>>();
-        self.events.extend(mapped.iter().cloned());
-        Ok(mapped)
-    }
-}
-
-fn map_input_event(event: NativeInputEvent, native_anchor: u64, session_anchor: u64) -> InputEvent {
-    let session_ns =
-        session_anchor.saturating_add(event.monotonic_ns().saturating_sub(native_anchor));
-    match event {
-        NativeInputEvent::MouseButton {
-            button, pressed, ..
-        } => InputEvent::MouseButton {
-            session_ns,
-            button,
-            pressed,
-        },
-        NativeInputEvent::Shortcut {
-            pressed,
-            modifiers,
-            key,
-            ..
-        } => InputEvent::Shortcut {
-            session_ns,
-            pressed,
-            modifiers,
-            key,
-        },
-    }
-}
-
-fn monotonic_ns() -> Result<u64, CaptureError> {
-    let mut timestamp = libc::timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    // SAFETY: timestamp points to valid writable memory for the duration of the call.
-    if unsafe { libc::clock_gettime(libc::CLOCK_MONOTONIC, &raw mut timestamp) } != 0 {
-        return Err(CaptureError::Backend(format!(
-            "monotonic input clock failed: {}",
-            std::io::Error::last_os_error()
-        )));
-    }
-    let seconds = u64::try_from(timestamp.tv_sec).unwrap_or(0);
-    let nanoseconds = u64::try_from(timestamp.tv_nsec).unwrap_or(0);
-    Ok(seconds
-        .saturating_mul(1_000_000_000)
-        .saturating_add(nanoseconds))
 }
 
 #[must_use]
