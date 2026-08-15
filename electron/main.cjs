@@ -160,7 +160,7 @@ function getAppIconPath() {
   return path.join(applicationRoot, `public/brand/BeamIcon.${extensions[0]}`);
 }
 
-function createWindow(preferencesStore) {
+function createWindow(preferencesStore, appIconPath) {
   logStartup('Creating BrowserWindow.');
   const win = new BrowserWindow({
     width: 352,
@@ -168,7 +168,7 @@ function createWindow(preferencesStore) {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    icon: getAppIconPath(),
+    icon: appIconPath,
     resizable: true,
     maximizable: true,
     hasShadow: false,
@@ -229,10 +229,12 @@ function initializeApplication() {
     registerInputAccessIpc(applicationIpc, inputAccess);
     const userPaths = createUserPaths(app.getPath('videos'));
     const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
+    const appIconPath = getAppIconPath();
     const teleprompterWindow = createTeleprompterWindow({
       applicationRoot,
       isPackaged: app.isPackaged,
       preferencesStore,
+      appIconPath,
     });
     setTimeout(() => teleprompterWindow.prepare(), 0);
     const preferencesCleanup = registerPreferencesIpc({
@@ -352,7 +354,7 @@ function initializeApplication() {
     ipcMain.on('app:quit', () => {
       if (coordinator.canAcceptWork()) app.quit();
     });
-    const win = createWindow(preferencesStore);
+    const win = createWindow(preferencesStore, appIconPath);
     const selectedTheme = preferencesStore.read().theme;
     const editorWindow = createEditorWindowManager({
       applicationRoot,
@@ -362,6 +364,7 @@ function initializeApplication() {
       hudController: controllers.get(win),
       registerController: (target, controller) => controllers.set(target, controller),
       preferencesStore,
+      appIconPath,
       initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
       cleanupWindow: (contents) => {
         exportIpc.cleanupWindow(contents);
@@ -379,6 +382,7 @@ function initializeApplication() {
       hudController: controllers.get(win),
       registerController: (target, controller) => controllers.set(target, controller),
       preferencesStore,
+      appIconPath,
       initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
     });
     showExistingHud = () => {

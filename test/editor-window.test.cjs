@@ -101,6 +101,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
       on: (channel, listener) => ipcListeners.set(channel, listener),
     };
     const registered = [];
+    const appIconPath = '/app/dist/brand/BeamIcon.png';
     const manager = createEditorWindowManager({
       applicationRoot: '/app',
       isPackaged: false,
@@ -108,6 +109,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
       hudWindow,
       hudController,
       registerController: (...args) => registered.push(args),
+      appIconPath,
     });
 
     assert.throws(() => manager.open('project'), /invalide/);
@@ -117,6 +119,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
     assert.equal(options.frame, true);
     assert.equal(options.titleBarStyle, 'hidden');
     assert.equal(options.thickFrame, true);
+    assert.equal(options.icon, appIconPath);
     assert.equal(options.minWidth, EDITOR_MIN_SIZE.width);
     assert.equal(options.minHeight, EDITOR_MIN_SIZE.height);
     if (process.platform !== 'darwin') {

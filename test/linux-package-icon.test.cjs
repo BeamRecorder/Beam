@@ -52,3 +52,15 @@ test('desktop packages use the Beam PNG icon and stable desktop identity', () =>
   assertPng('public/brand/BeamTrayTemplate.png', 16, 16);
   assertPng('public/brand/BeamTrayTemplate@2x.png', 32, 32);
 });
+
+test('Linux package lifecycle hooks refresh desktop and icon caches', () => {
+  for (const relativePath of [
+    'build/linux/after-install.sh',
+    'build/linux/deb-after-remove.sh',
+    'build/linux/rpm-after-remove.sh',
+  ]) {
+    const script = fs.readFileSync(path.resolve(__dirname, '..', relativePath), 'utf8');
+    assert.match(script, /update-desktop-database\s+\/usr\/share\/applications/);
+    assert.match(script, /gtk-update-icon-cache\s+--force\s+\/usr\/share\/icons\/hicolor/);
+  }
+});

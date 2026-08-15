@@ -47,6 +47,7 @@ function createEditorWindowManager({
   initialDark = false,
   cleanupWindow = null,
   preferencesStore = null,
+  appIconPath,
   canAcceptWork = () => true,
 }) {
   let window = null;
@@ -146,6 +147,7 @@ function createEditorWindowManager({
       minWidth: EDITOR_MIN_SIZE.width,
       minHeight: EDITOR_MIN_SIZE.height,
       show: false,
+      icon: appIconPath,
       frame: true,
       transparent: false,
       backgroundColor: dark ? '#141310' : '#f7f5f0',

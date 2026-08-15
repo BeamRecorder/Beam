@@ -131,16 +131,19 @@ function loadTeleprompterWindow() {
 
 test('persists teleprompter bounds after native move and resize events', () => {
   const fixture = createElectronFixture();
+  const appIconPath = '/app/dist/brand/BeamIcon.png';
   try {
     const { createTeleprompterWindow } = loadTeleprompterWindow();
     const teleprompter = createTeleprompterWindow({
       applicationRoot: '/app',
       isPackaged: false,
       preferencesStore: fixture.preferencesStore,
+      appIconPath,
     });
 
     teleprompter.showInactive();
     const window = fixture.windows[0];
+    assert.equal(window.options.icon, appIconPath);
     window.setBounds({ x: 355, y: 277, width: 800, height: 500 });
     window.emit('move');
     window.emit('resize');

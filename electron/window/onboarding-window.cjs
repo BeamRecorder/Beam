@@ -38,6 +38,7 @@ function createOnboardingWindowManager({
   hudController,
   registerController,
   preferencesStore,
+  appIconPath,
   initialDark = false,
 }) {
   let window = null;
@@ -82,6 +83,7 @@ function createOnboardingWindowManager({
       minHeight: ONBOARDING_MIN_SIZE.height,
       center: true,
       show: false,
+      icon: appIconPath,
       frame: true,
       transparent: false,
       backgroundColor: dark ? '#141310' : '#f7f5f0',

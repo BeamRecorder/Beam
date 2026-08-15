@@ -30,7 +30,7 @@ const clampTeleprompterBounds = (bounds, area) => {
 const validContext = (context) =>
   context && typeof context === 'object' && UUID.test(context.projectId) && UUID.test(context.sessionId);
 
-function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStore = null }) {
+function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStore = null, appIconPath }) {
   let window = null;
   let currentSession = null;
   let ready = false;
@@ -96,6 +96,7 @@ function createTeleprompterWindow({ applicationRoot, isPackaged, preferencesStor
       ...initialBounds,
       minWidth: MIN_BOUNDS.width,
       minHeight: MIN_BOUNDS.height,
+      icon: appIconPath,
       frame: false,
       transparent: false,
       backgroundColor: '#f7f5f0',
