@@ -223,7 +223,7 @@ mod macos {
             if queue < 0 {
                 unsafe { libc::_exit(1) };
             }
-            let mut change = libc::kevent {
+            let change = libc::kevent {
                 ident: parent as libc::uintptr_t,
                 filter: libc::EVFILT_PROC,
                 flags: libc::EV_ADD | libc::EV_ENABLE | libc::EV_ONESHOT,

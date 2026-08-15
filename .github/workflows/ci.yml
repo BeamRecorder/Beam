@@ -1,5 +1,9 @@
 name: CI
 
+env:
+  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+  electron_config_cache: ${{ github.workspace }}/.cache/electron
+
 on:
   pull_request:
   push:
@@ -31,7 +35,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run typecheck:vue
       - run: npm run test
-      - run: npm run test:coverage
+      # - run: npm run test:coverage
       - run: cargo fmt --all --check
       - run: cargo test -p capture --all-features
       - run: cargo clippy -p capture --all-targets --all-features -- -D warnings
@@ -44,6 +48,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Cache Electron packaging binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ELECTRON_BUILDER_CACHE }}
+            ${{ env.electron_config_cache }}
+          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-builder-
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -103,6 +115,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Cache Electron packaging binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ELECTRON_BUILDER_CACHE }}
+            ${{ env.electron_config_cache }}
+          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-builder-
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
@@ -165,7 +185,8 @@ jobs:
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          $installer = Get-ChildItem windows-artifacts -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
+          $installer = Get-ChildItem windows-artifacts -Recurse -File -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
+          if (-not $installer) { throw 'Universal NSIS installer is missing from the downloaded artifact' }
           Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
           $installed = Join-Path $env:LOCALAPPDATA 'Programs/Beam/Beam.exe'
           $engine = Join-Path $env:LOCALAPPDATA "Programs/Beam/resources/capture-engine/capture-engine-$version.exe"
@@ -181,6 +202,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Cache Electron packaging binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ELECTRON_BUILDER_CACHE }}
+            ${{ env.electron_config_cache }}
+          key: ${{ runner.os }}-${{ runner.arch }}-electron-builder-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-builder-
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin

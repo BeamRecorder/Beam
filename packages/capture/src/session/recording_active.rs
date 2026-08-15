@@ -6,12 +6,10 @@ mod source_watches;
 use crate::{
     CaptureError,
     catalog::CatalogSnapshot,
-    model::{CaptureRequest, ScreenSelection, TrackMetadata, TrackStatus},
+    model::{CaptureRequest, CursorSelection, ScreenSelection, TrackMetadata, TrackStatus},
     storage::finish_segment,
 };
 
-#[cfg(any(windows, target_os = "macos"))]
-use crate::model::CursorSelection;
 use crate::model::TrackKind;
 
 use super::periodic_reporter::PeriodicReporter;
@@ -163,11 +161,8 @@ impl ActiveRecordings {
             return Ok(());
         };
         let path = segment_path(layout, TrackKind::Screen, generation, "mp4");
-        let cursor_directory = matches!(
-            request.cursor,
-            crate::model::CursorSelection::Separate { .. }
-        )
-        .then(|| layout.track_dir(TrackKind::Cursor));
+        let cursor_directory = matches!(request.cursor, CursorSelection::Separate { .. })
+            .then(|| layout.track_dir(TrackKind::Cursor));
         let mut recording =
             crate::screen::ScreenRecording::open(crate::screen::ScreenOpenRequest {
                 selection,
@@ -196,10 +191,8 @@ impl ActiveRecordings {
                 format.height,
                 request.recording.target_fps,
             );
-            if matches!(
-                request.cursor,
-                crate::model::CursorSelection::Separate { .. }
-            ) && let Some(track) = track_mut(tracks, TrackKind::Cursor)
+            if matches!(request.cursor, CursorSelection::Separate { .. })
+                && let Some(track) = track_mut(tracks, TrackKind::Cursor)
                 && track.segments.is_empty()
             {
                 track.segments.push(crate::storage::segment(

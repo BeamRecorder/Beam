@@ -76,7 +76,7 @@ impl RecordingSession {
         let writer = ManifestWriter::new(layout.clone());
         writer.checkpoint(&manifest)?;
         checkpoint_tracks(&layout, &manifest.tracks)?;
-        let mut session = Self {
+        let session = Self {
             request,
             snapshot,
             session_id,
@@ -91,6 +91,8 @@ impl RecordingSession {
             project_existed,
             prepared_start_gate: None,
         };
+        #[cfg(target_os = "linux")]
+        let mut session = session;
         #[cfg(target_os = "linux")]
         if matches!(
             session.request.screen,

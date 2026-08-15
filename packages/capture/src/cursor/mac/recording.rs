@@ -238,7 +238,7 @@ fn capture_loop(
                     hotspot: shape.hotspot,
                 },
             )?;
-            previous_shape = Some(shape.cursor_id);
+            previous_shape = Some(shape.cursor_id.clone());
         }
         let location = event.location();
         let x = coordinate(location.x);

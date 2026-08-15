@@ -188,9 +188,12 @@ impl ScreenRecording {
                 recording.resume(start_ns, start_gate, segment)
             }
             #[cfg(any(windows, target_os = "macos"))]
-            _ => Err(CaptureError::Unsupported(
-                "the encoded screen backend resumes with a new segment".into(),
-            )),
+            _ => {
+                let _ = (start_ns, start_gate, segment);
+                Err(CaptureError::Unsupported(
+                    "the encoded screen backend resumes with a new segment".into(),
+                ))
+            }
         }
     }
 
