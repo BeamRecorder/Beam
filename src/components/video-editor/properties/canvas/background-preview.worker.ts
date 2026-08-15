@@ -1,5 +1,6 @@
+const MAX_CONCURRENT = 4;
+let activeCount = 0;
 let queue: Array<{ id: string; source: string }> = [];
-let processing = false;
 
 self.onmessage = (event: MessageEvent) => {
   const { type, id, source } = event.data;
@@ -7,20 +8,28 @@ self.onmessage = (event: MessageEvent) => {
     if (!queue.some((entry) => entry.id === id)) {
       queue.push({ id, source });
     }
-    processNext();
+    pump();
   }
   if (type === 'clear') {
     queue = [];
   }
 };
 
-async function processNext() {
-  if (processing || queue.length === 0) return;
-  processing = true;
-  const next = queue.shift();
-  if (!next) return;
+function pump() {
+  while (activeCount < MAX_CONCURRENT && queue.length > 0) {
+    const next = queue.shift();
+    if (!next) break;
+    activeCount += 1;
+    void processItem(next).finally(() => {
+      activeCount -= 1;
+      pump();
+    });
+  }
+}
+
+async function processItem(item: { id: string; source: string }) {
   try {
-    const response = await fetch(next.source);
+    const response = await fetch(item.source);
     if (!response.ok) throw new Error('Preview source unavailable');
     const image = await createImageBitmap(await response.blob(), {
       resizeWidth: 240,
@@ -33,11 +42,8 @@ async function processNext() {
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     image.close();
     const preview = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.72 });
-    self.postMessage({ type: 'ready', id: next.id, preview });
+    self.postMessage({ type: 'ready', id: item.id, preview });
   } catch {
-    self.postMessage({ type: 'error', id: next.id });
-  } finally {
-    processing = false;
-    processNext();
+    self.postMessage({ type: 'error', id: item.id });
   }
 }
