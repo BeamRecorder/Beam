@@ -1,10 +1,13 @@
 use std::{
     path::PathBuf,
     sync::{
-        Arc, Mutex,
+        Arc,
         atomic::{AtomicU64, Ordering},
     },
 };
+
+#[cfg(target_os = "linux")]
+use std::sync::Mutex;
 
 use crate::{
     CaptureError,
@@ -47,6 +50,7 @@ pub struct ScreenCaptureMetrics {
     cursor_samples: AtomicU64,
     format_changes: AtomicU64,
     last_native_pts_ns: AtomicU64,
+    #[cfg(target_os = "linux")]
     first_video_format: Mutex<Option<VideoFormat>>,
 }
 
@@ -58,6 +62,7 @@ impl Default for ScreenCaptureMetrics {
             cursor_samples: AtomicU64::new(0),
             format_changes: AtomicU64::new(0),
             last_native_pts_ns: AtomicU64::new(Self::NO_NATIVE_PTS),
+            #[cfg(target_os = "linux")]
             first_video_format: Mutex::new(None),
         }
     }
@@ -116,10 +121,12 @@ impl ScreenCaptureMetrics {
         self.frames_dropped.fetch_add(count, Ordering::Relaxed);
     }
 
+    #[cfg(target_os = "linux")]
     pub(crate) fn changed_format(&self) {
         self.format_changes.fetch_add(1, Ordering::Relaxed);
     }
 
+    #[cfg(target_os = "linux")]
     pub(crate) fn observe_video_format(&self, format: VideoFormat) {
         if let Ok(mut first) = self.first_video_format.lock()
             && first.is_none()
@@ -129,6 +136,7 @@ impl ScreenCaptureMetrics {
     }
 
     #[must_use]
+    #[cfg(target_os = "linux")]
     pub(crate) fn first_video_format(&self) -> Option<VideoFormat> {
         self.first_video_format
             .lock()

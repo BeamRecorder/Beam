@@ -1,4 +1,6 @@
 use std::{
+    cell::RefCell,
+    rc::Rc,
     sync::{Mutex, mpsc},
     thread::JoinHandle,
 };
@@ -7,12 +9,10 @@ use crate::{CaptureError, NativeCaptureErrorCode};
 
 use super::SystemAudioFormat;
 
-pub(super) fn send_ready(
-    ready: &std::rc::Rc<
-        std::cell::RefCell<Option<mpsc::SyncSender<Result<SystemAudioFormat, CaptureError>>>>,
-    >,
-    result: Result<SystemAudioFormat, CaptureError>,
-) {
+pub(super) type ReadySender =
+    Rc<RefCell<Option<mpsc::SyncSender<Result<SystemAudioFormat, CaptureError>>>>>;
+
+pub(super) fn send_ready(ready: &ReadySender, result: Result<SystemAudioFormat, CaptureError>) {
     if let Some(ready) = ready.borrow_mut().take() {
         let _ = ready.send(result);
     }

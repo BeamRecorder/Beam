@@ -116,6 +116,7 @@ impl CaptureError {
         }
     }
 
+    #[cfg(target_os = "linux")]
     pub(crate) fn native(code: NativeCaptureErrorCode, message: impl Into<String>) -> Self {
         Self::Native {
             code,

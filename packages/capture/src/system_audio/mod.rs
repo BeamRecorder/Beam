@@ -4,6 +4,7 @@ use crate::{CaptureError, model::SystemAudioSelection, session::StartGate};
 
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(any(target_os = "linux", test))]
 mod wav;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,8 +40,7 @@ impl SystemAudioMonitor {
     pub fn open(selection: SystemAudioSelection) -> Result<Self, CaptureError> {
         #[cfg(target_os = "linux")]
         {
-            return linux::PipewireSystemAudioRecording::open_preview(selection)
-                .map(|inner| Self { inner });
+            linux::PipewireSystemAudioRecording::open_preview(selection).map(|inner| Self { inner })
         }
         #[cfg(not(target_os = "linux"))]
         {
@@ -54,14 +54,18 @@ impl SystemAudioMonitor {
     #[must_use]
     pub fn level(&self) -> f32 {
         #[cfg(target_os = "linux")]
-        return self.inner.metrics().take_peak();
+        {
+            self.inner.metrics().take_peak()
+        }
         #[cfg(not(target_os = "linux"))]
         0.0
     }
 
     pub fn stop(&mut self) -> Result<(), CaptureError> {
         #[cfg(target_os = "linux")]
-        return self.inner.stop();
+        {
+            self.inner.stop()
+        }
         #[cfg(not(target_os = "linux"))]
         Ok(())
     }
@@ -71,7 +75,7 @@ impl SystemAudioRecording {
     pub fn open(request: SystemAudioOpenRequest) -> Result<Self, CaptureError> {
         #[cfg(target_os = "linux")]
         {
-            return linux::PipewireSystemAudioRecording::open(request).map(|inner| Self { inner });
+            linux::PipewireSystemAudioRecording::open(request).map(|inner| Self { inner })
         }
         #[cfg(not(target_os = "linux"))]
         {
@@ -84,7 +88,9 @@ impl SystemAudioRecording {
 
     pub fn start(&mut self) -> Result<(), CaptureError> {
         #[cfg(target_os = "linux")]
-        return self.inner.start();
+        {
+            self.inner.start()
+        }
         #[cfg(not(target_os = "linux"))]
         Err(CaptureError::Unsupported(
             "native system audio capture is not available on this platform".into(),
@@ -93,7 +99,9 @@ impl SystemAudioRecording {
 
     pub fn pause(&mut self) -> Result<(), CaptureError> {
         #[cfg(target_os = "linux")]
-        return self.inner.pause();
+        {
+            self.inner.pause()
+        }
         #[cfg(not(target_os = "linux"))]
         Err(CaptureError::Unsupported(
             "native system audio capture is not available on this platform".into(),
@@ -106,7 +114,9 @@ impl SystemAudioRecording {
         start_gate: Arc<StartGate>,
     ) -> Result<(), CaptureError> {
         #[cfg(target_os = "linux")]
-        return self.inner.resume(segment, start_gate);
+        {
+            self.inner.resume(segment, start_gate)
+        }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (segment, start_gate);
@@ -119,7 +129,9 @@ impl SystemAudioRecording {
     #[must_use]
     pub fn format(&self) -> SystemAudioFormat {
         #[cfg(target_os = "linux")]
-        return self.inner.format();
+        {
+            self.inner.format()
+        }
         #[cfg(not(target_os = "linux"))]
         unreachable!("a native system audio recording cannot be opened on this platform")
     }
@@ -127,14 +139,18 @@ impl SystemAudioRecording {
     #[must_use]
     pub fn metrics(&self) -> Arc<SystemAudioMetrics> {
         #[cfg(target_os = "linux")]
-        return self.inner.metrics();
+        {
+            self.inner.metrics()
+        }
         #[cfg(not(target_os = "linux"))]
         unreachable!("a native system audio recording cannot be opened on this platform")
     }
 
     pub fn stop(&mut self) -> Result<(), CaptureError> {
         #[cfg(target_os = "linux")]
-        return self.inner.stop();
+        {
+            self.inner.stop()
+        }
         #[cfg(not(target_os = "linux"))]
         Ok(())
     }
@@ -160,16 +176,19 @@ impl SystemAudioMetrics {
             .load(std::sync::atomic::Ordering::Relaxed)
     }
 
+    #[cfg(target_os = "linux")]
     fn received(&self, samples: u64) {
         self.samples_received
             .fetch_add(samples, std::sync::atomic::Ordering::Relaxed);
     }
 
+    #[cfg(target_os = "linux")]
     fn dropped(&self, samples: u64) {
         self.samples_dropped
             .fetch_add(samples, std::sync::atomic::Ordering::Relaxed);
     }
 
+    #[cfg(target_os = "linux")]
     fn peak(&self, level: f32) {
         let bits = level.clamp(0.0, 1.0).to_bits();
         self.peak_bits

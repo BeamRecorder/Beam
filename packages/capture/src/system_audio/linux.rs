@@ -19,7 +19,7 @@ mod format;
 mod support;
 mod writer;
 use format::{audio_format_parameter, parse_audio_format, peak_f32le};
-use support::{join, pipewire_error, send_ready, set_fatal, take_fatal};
+use support::{ReadySender, join, pipewire_error, send_ready, set_fatal, take_fatal};
 use writer::writer_worker;
 
 const READY_TIMEOUT: Duration = Duration::from_secs(10);
@@ -357,7 +357,7 @@ fn audio_listener(
     stream: &pw::stream::StreamRc,
     mainloop: &pw::main_loop::MainLoopRc,
     state: &Rc<RefCell<ProcessState>>,
-    ready: &Rc<RefCell<Option<mpsc::SyncSender<Result<SystemAudioFormat, CaptureError>>>>>,
+    ready: &ReadySender,
     negotiation_stopped: &Rc<Cell<bool>>,
 ) -> Result<pw::stream::StreamListener<()>, CaptureError> {
     let state_changed_state = state.clone();
