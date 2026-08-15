@@ -76,7 +76,8 @@ jobs:
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: release-windows
+          shared-key: cargo-package-windows-x64-arm64-release
+          cache-on-failure: true
       - run: npm ci
       - name: Build and stage x64 and ARM64 capture engines
         shell: pwsh
@@ -115,6 +116,15 @@ jobs:
             dist_native/*
           if-no-files-found: error
           retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-arm64-smoke-payload
+          path: |
+            dist_electron/win-arm64-unpacked/Beam.exe
+            dist_electron/win-arm64-unpacked/resources/capture-engine/*.exe
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
 
   smoke-windows-arm64:
     needs: [prepare, package-windows]
@@ -126,22 +136,17 @@ jobs:
           node-version: 22
       - uses: actions/download-artifact@v4
         with:
-          name: windows-release-assets
-          path: windows-assets
-      - name: Install universal NSIS and smoke the selected ARM64 engine
+          name: windows-arm64-smoke-payload
+          path: windows-arm64-payload
+      - name: Smoke the packaged ARM64 application payload
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          $installer = Get-ChildItem windows-assets -Recurse -File -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
-          if (-not $installer) { throw 'Universal NSIS installer is missing from the downloaded artifact' }
-          $installDirectory = Join-Path $env:RUNNER_TEMP 'Beam-arm64-smoke'
-          $installProcess = Start-Process -FilePath $installer.FullName -ArgumentList '/S', "/D=$installDirectory" -Wait -PassThru
-          if ($installProcess.ExitCode -ne 0) { throw "NSIS installer failed with exit code $($installProcess.ExitCode)" }
-          $installed = Join-Path $installDirectory 'Beam.exe'
-          $engine = Join-Path $installDirectory "resources/capture-engine/capture-engine-$version.exe"
-          if (-not (Test-Path $installed) -or -not (Test-Path $engine)) { throw 'ARM64 installation payload is incomplete' }
-          node scripts/release/verify-pe.cjs arm64 $installed $engine
-          $response = '{"id":"release-status","command":"status"}' | & $engine | Select-Object -First 1 | ConvertFrom-Json
+          $application = Get-ChildItem windows-arm64-payload -Recurse -File -Filter 'Beam.exe' | Select-Object -First 1
+          $engine = Get-ChildItem windows-arm64-payload -Recurse -File -Filter "capture-engine-$version.exe" | Select-Object -First 1
+          if (-not $application -or -not $engine) { throw 'ARM64 smoke payload is incomplete' }
+          node scripts/release/verify-pe.cjs arm64 $application.FullName $engine.FullName
+          $response = '{"id":"release-status","command":"status"}' | & $engine.FullName | Select-Object -First 1 | ConvertFrom-Json
           if (-not $response.ok) { throw 'ARM64 capture-engine status smoke failed' }
 
   package-macos:
@@ -166,7 +171,8 @@ jobs:
           targets: aarch64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: release-macos-arm64
+          shared-key: cargo-package-macos-aarch64-apple-darwin-release
+          cache-on-failure: true
       - run: npm ci
       - name: Build and stage the Apple Silicon engine
         run: |
@@ -219,7 +225,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: release-linux
+          shared-key: cargo-package-linux-x86_64-unknown-linux-gnu-release
+          cache-on-failure: true
       - name: Install Linux build and inspection dependencies
         run: |
           sudo apt-get update

@@ -1,3 +1,5 @@
+#![allow(clippy::expect_used)]
+
 use super::*;
 
 fn candidate(kind: CursorKind, pixels: &[[u8; 4]], hotspot: Hotspot) -> ThemeCursor {
@@ -7,7 +9,7 @@ fn candidate(kind: CursorKind, pixels: &[[u8; 4]], hotspot: Hotspot) -> ThemeCur
         width: 2,
         height: 2,
         hotspot,
-        signature: image_signature(&flat, 2, 2).unwrap(),
+        signature: image_signature(&flat, 2, 2).expect("valid 2x2 cursor signature"),
     }
 }
 
@@ -95,13 +97,13 @@ fn parses_quoted_and_ini_theme_values() {
     assert_eq!(clean_setting("\"Breeze\""), Some("Breeze".into()));
     assert_eq!(clean_setting("   "), None);
 
-    let directory = tempfile::tempdir().unwrap();
+    let directory = tempfile::tempdir().expect("temporary settings directory");
     let settings = directory.path().join("settings.ini");
     fs::write(
         &settings,
         "[Settings]\nother=x\ngtk-cursor-theme-name = TestTheme\n",
     )
-    .unwrap();
+    .expect("write GTK settings fixture");
     assert_eq!(
         setting_value(&settings, "gtk-cursor-theme-name"),
         Some("TestTheme".into())
