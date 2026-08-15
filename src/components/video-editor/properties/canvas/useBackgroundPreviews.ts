@@ -7,6 +7,18 @@ import { mediaSourceDescriptor } from '~/media/shared';
 import type { MediaAsset } from '~/media/shared/composition-types';
 
 const CACHE_LIMIT = 180;
+const sharedPreviewCache = new Map<string, string>();
+const sharedFailedCache = new Set<string>();
+const sharedOrder: string[] = [];
+
+export const clearBackgroundPreviewCache = () => {
+  for (const [, url] of sharedPreviewCache) {
+    URL.revokeObjectURL(url);
+  }
+  sharedPreviewCache.clear();
+  sharedFailedCache.clear();
+  sharedOrder.length = 0;
+};
 
 const videoAsset = (media: BackgroundMedia, source: string): MediaAsset => ({
   id: media.id,
@@ -55,18 +67,39 @@ export function useBackgroundPreviews() {
   const previews = reactive<Record<string, string>>({});
   const failed = reactive<Record<string, boolean>>({});
   const pending = new Set<string>();
-  const order: string[] = [];
   const videoQueue: Array<{ media: BackgroundMedia; source: string }> = [];
   const worker = new BackgroundPreviewWorker();
   let activeVideoAbort: AbortController | null = null;
   let processingVideo = false;
   let disposed = false;
 
+  for (const [id, url] of sharedPreviewCache) {
+    previews[id] = url;
+  }
+  for (const id of sharedFailedCache) {
+    failed[id] = true;
+  }
+
   const release = (id: string) => {
-    const url = previews[id];
+    const url = sharedPreviewCache.get(id) ?? previews[id];
     if (url) URL.revokeObjectURL(url);
+    sharedPreviewCache.delete(id);
     delete previews[id];
     delete failed[id];
+    sharedFailedCache.delete(id);
+  };
+
+  const storePreview = (id: string, blob: Blob) => {
+    const existingUrl = sharedPreviewCache.get(id);
+    if (existingUrl) URL.revokeObjectURL(existingUrl);
+    const url = URL.createObjectURL(blob);
+    sharedPreviewCache.set(id, url);
+    previews[id] = url;
+    sharedOrder.push(id);
+    while (sharedOrder.length > CACHE_LIMIT) {
+      const expired = sharedOrder.shift();
+      if (expired) release(expired);
+    }
   };
 
   worker.onmessage = (event: MessageEvent) => {
@@ -75,17 +108,12 @@ export function useBackgroundPreviews() {
     if (type === 'error') {
       pending.delete(id);
       failed[id] = true;
+      sharedFailedCache.add(id);
       return;
     }
     if (type !== 'ready' || !preview) return;
     pending.delete(id);
-    release(id);
-    previews[id] = URL.createObjectURL(preview as Blob);
-    order.push(id);
-    while (order.length > CACHE_LIMIT) {
-      const expired = order.shift();
-      if (expired) release(expired);
-    }
+    storePreview(id, preview as Blob);
   };
 
   const processNextVideo = () => {
@@ -99,17 +127,13 @@ export function useBackgroundPreviews() {
       .then((preview) => {
         if (disposed) return;
         pending.delete(next.media.id);
-        previews[next.media.id] = URL.createObjectURL(preview);
-        order.push(next.media.id);
-        while (order.length > CACHE_LIMIT) {
-          const expired = order.shift();
-          if (expired) release(expired);
-        }
+        storePreview(next.media.id, preview);
       })
       .catch(() => {
         if (disposed) return;
         pending.delete(next.media.id);
         failed[next.media.id] = true;
+        sharedFailedCache.add(next.media.id);
       })
       .finally(() => {
         processingVideo = false;
@@ -119,6 +143,14 @@ export function useBackgroundPreviews() {
   };
 
   const request = (media: BackgroundMedia) => {
+    if (sharedPreviewCache.has(media.id)) {
+      previews[media.id] = sharedPreviewCache.get(media.id)!;
+      return;
+    }
+    if (sharedFailedCache.has(media.id)) {
+      failed[media.id] = true;
+      return;
+    }
     if (previews[media.id] || failed[media.id] || pending.has(media.id)) return;
     pending.add(media.id);
     const source = resolvePublicAssetUrl(media.path);
@@ -133,7 +165,6 @@ export function useBackgroundPreviews() {
     disposed = true;
     activeVideoAbort?.abort();
     videoQueue.length = 0;
-    for (const id of Object.keys(previews)) release(id);
     pending.clear();
     worker.terminate();
   });

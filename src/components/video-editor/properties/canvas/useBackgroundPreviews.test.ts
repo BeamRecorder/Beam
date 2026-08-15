@@ -1,7 +1,7 @@
 import { defineComponent, nextTick } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useBackgroundPreviews } from './useBackgroundPreviews';
+import { clearBackgroundPreviewCache, useBackgroundPreviews } from './useBackgroundPreviews';
 import type { BackgroundMedia } from '../../composables/backgroundCatalog';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
@@ -67,6 +67,7 @@ describe('useBackgroundPreviews', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearBackgroundPreviewCache();
     workerState.instances.length = 0;
     runtime.decodeVideoPoster.mockResolvedValue(frame());
     createObjectURL.mockImplementation(() => `blob:${createObjectURL.mock.calls.length}`);
@@ -88,6 +89,7 @@ describe('useBackgroundPreviews', () => {
 
   afterEach(() => {
     wrapper.unmount();
+    clearBackgroundPreviewCache();
     vi.restoreAllMocks();
   });
 
@@ -179,14 +181,17 @@ describe('useBackgroundPreviews', () => {
     expect(api.previews.queued).toContain('blob:');
   });
 
-  it('cleans previews and terminates its worker when unmounted', async () => {
+  it('terminates its worker when unmounted and persists cached previews across mounts', async () => {
     const worker = workerState.instances[0]!;
     api.request(image('cleanup'));
     worker.onmessage?.({ data: { type: 'ready', id: 'cleanup', preview: new Blob(['cleanup']) } } as MessageEvent);
     expect(api.previews.cleanup).toBeDefined();
     wrapper.unmount();
     await nextTick();
-    expect(revokeObjectURL).toHaveBeenCalled();
     expect(worker.terminate).toHaveBeenCalled();
+
+    // Remounting immediately re-uses the cached preview without needing another request
+    const api2 = useBackgroundPreviews();
+    expect(api2.previews.cleanup).toBeDefined();
   });
 });
