@@ -16,6 +16,7 @@ const error = ref('');
 let loadGeneration = 0;
 let removeContextListener: (() => void) | null = null;
 let themeObserver: MutationObserver | null = null;
+let editorReadyNotified = false;
 const { t } = useTranslate('EditorPreparingHud');
 
 const syncTitlebarTheme = () => {
@@ -68,6 +69,14 @@ const handleStartRecording = (configuration: RecordingConfiguration) => {
   capture.startRecordingFromEditor(configuration);
 };
 
+const notifyEditorReady = async () => {
+  if (editorReadyNotified || loading.value || !project.value) return;
+  editorReadyNotified = true;
+  capture.reportEditorLoadingStage('renderingEditor');
+  await waitForEditorPaint();
+  capture.notifyEditorReady();
+};
+
 onMounted(async () => {
   // The main process creates the window with the persisted theme already
   // applied. Observe subsequent renderer changes, but do not overwrite that
@@ -81,9 +90,12 @@ onMounted(async () => {
     loading.value = false;
     error.value = 'No project selected';
   }
-  capture.reportEditorLoadingStage('renderingEditor');
-  await waitForEditorPaint();
-  capture.notifyEditorReady();
+  if (error.value || !project.value) {
+    editorReadyNotified = true;
+    capture.reportEditorLoadingStage('renderingEditor');
+    await waitForEditorPaint();
+    capture.notifyEditorReady();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -110,6 +122,7 @@ onBeforeUnmount(() => {
     @back-to-hud="handleBackToHud"
     @open-project="handleOpenProject"
     @start-recording="handleStartRecording"
+    @ready="notifyEditorReady"
   />
 </template>
 

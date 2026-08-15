@@ -13,6 +13,11 @@ import type {
 const reportPlaybackWorkerError = (message: string, error?: unknown) =>
   console.error(`[Beam media:playback-worker] ${message}`, error ?? '');
 
+const PLAYBACK_DECODER_OPTIONS = {
+  hardwareAcceleration: 'prefer-hardware' as const,
+  optimizeForLatency: true,
+};
+
 type QueuedFrame = {
   bitmap: ImageBitmap;
   timestampSeconds: number;
@@ -25,6 +30,7 @@ type AssetDecoder = {
   sinkTrack: Awaited<ReturnType<OpenedMediaInput['input']['getPrimaryVideoTrack']>>;
   previewWidth: number;
   previewHeight: number;
+  decoderOptions?: typeof PLAYBACK_DECODER_OPTIONS;
 };
 
 type ClipConsumer = {
@@ -133,6 +139,25 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
           message: 'The playback video codec is unsupported.',
         });
       }
+      const decoderConfig = await track.getDecoderConfig();
+      const baseConfigSupported =
+        typeof VideoDecoder !== 'undefined' &&
+        decoderConfig !== null &&
+        (await VideoDecoder.isConfigSupported(decoderConfig)).supported;
+      if (!baseConfigSupported) {
+        opened.dispose();
+        throw new MediaInputError({
+          kind: 'unsupported-codec',
+          sourceId: descriptor.assetId,
+          track: 'video',
+          codec,
+          message: 'The playback video decoder configuration is unsupported.',
+        });
+      }
+      const optimizedConfigSupported =
+        typeof VideoDecoder !== 'undefined' &&
+        decoderConfig !== null &&
+        (await VideoDecoder.isConfigSupported({ ...decoderConfig, ...PLAYBACK_DECODER_OPTIONS })).supported;
       const displayWidth = await track.getDisplayWidth();
       if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets, opened);
       const displayHeight = await track.getDisplayHeight();
@@ -144,6 +169,7 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
         sinkTrack: track,
         previewWidth: preview.width,
         previewHeight: preview.height,
+        decoderOptions: optimizedConfigSupported ? PLAYBACK_DECODER_OPTIONS : undefined,
       });
     }
     if (isStaleLoad(version)) return disposeLoadedAssets(loadedAssets);
@@ -166,7 +192,7 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
           height: asset.previewHeight,
           fit: 'contain',
           poolSize: 3,
-          decoderOptions: { hardwareAcceleration: 'prefer-hardware', optimizeForLatency: true },
+          ...(asset.decoderOptions ? { decoderOptions: asset.decoderOptions } : {}),
         }),
         iterator: null,
         queue: [],

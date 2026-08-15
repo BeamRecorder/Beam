@@ -29,6 +29,7 @@ const runtime = vi.hoisted(() => {
     openMediaInput: vi.fn(),
     MediaInputError: TestMediaInputError,
     CanvasSink: vi.fn(),
+    decoderSupport: vi.fn(),
     sinkInstances: [] as Array<{
       canvases: ReturnType<typeof vi.fn>;
       getCanvas: ReturnType<typeof vi.fn>;
@@ -86,6 +87,9 @@ const deferred = <T>() => {
 const videoTrack = (displayWidth = 3_840, displayHeight = 1_920) => ({
   canDecode: vi.fn().mockResolvedValue(true),
   getCodec: vi.fn().mockResolvedValue('avc1.640028'),
+  getDecoderConfig: vi
+    .fn()
+    .mockResolvedValue({ codec: 'avc1.640028', codedWidth: displayWidth, codedHeight: displayHeight }),
   getDisplayWidth: vi.fn().mockResolvedValue(displayWidth),
   getDisplayHeight: vi.fn().mockResolvedValue(displayHeight),
   displayWidth,
@@ -108,6 +112,7 @@ beforeEach(async () => {
   vi.resetModules();
   runtime.openMediaInput.mockReset();
   runtime.CanvasSink.mockReset();
+  runtime.decoderSupport.mockReset().mockResolvedValue({ supported: true });
   runtime.sinkInstances.length = 0;
 
   class TestImageBitmap {
@@ -118,6 +123,7 @@ beforeEach(async () => {
   vi.stubGlobal('ImageBitmap', TestImageBitmap);
   workerSelf = { onmessage: undefined, postMessage: vi.fn() };
   vi.stubGlobal('self', workerSelf);
+  vi.stubGlobal('VideoDecoder', { isConfigSupported: runtime.decoderSupport });
 
   runtime.CanvasSink.mockImplementation(function CanvasSinkMock() {
     const instance = {
@@ -142,6 +148,49 @@ const send = (message: unknown) => workerSelf.onmessage!({ data: message } as Me
 const messages = () => workerSelf.postMessage.mock.calls.map(([message]) => message as PlaybackWorkerResponse);
 
 describe('playback worker', () => {
+  it('validates the decoder configuration before creating playback sinks', async () => {
+    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+
+    expect(runtime.decoderSupport).toHaveBeenCalledWith(expect.objectContaining({ codec: 'avc1.640028' }));
+    expect(runtime.decoderSupport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        codec: 'avc1.640028',
+        hardwareAcceleration: 'prefer-hardware',
+        optimizeForLatency: true,
+      }),
+    );
+    expect(runtime.decoderSupport.mock.invocationCallOrder[0]).toBeLessThan(
+      runtime.CanvasSink.mock.invocationCallOrder[0]!,
+    );
+    expect(messages()).toContainEqual({ type: 'ready', generation: 2 });
+  });
+
+  it('falls back to default decoder options when performance hints are unsupported', async () => {
+    runtime.decoderSupport.mockResolvedValueOnce({ supported: true }).mockResolvedValueOnce({ supported: false });
+    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+
+    expect(runtime.CanvasSink).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.not.objectContaining({ decoderOptions: expect.anything() }),
+    );
+    expect(messages()).toContainEqual({ type: 'ready', generation: 2 });
+  });
+
+  it('rejects an unsupported decoder configuration before creating a sink', async () => {
+    runtime.decoderSupport.mockResolvedValueOnce({ supported: false });
+    send({ type: 'load', generation: 2, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+
+    expect(runtime.CanvasSink).not.toHaveBeenCalled();
+    expect(messages()).toContainEqual({
+      type: 'error',
+      generation: 2,
+      error: expect.objectContaining({ kind: 'unsupported-codec', track: 'video' }),
+    });
+  });
+
   it('loads one decoder per asset, creates consumers per clip, and disposes everything', async () => {
     send({ type: 'load', generation: 3, assets: [source('asset-1')], clips: [clip('clip-a'), clip('clip-b')] });
     await flush();

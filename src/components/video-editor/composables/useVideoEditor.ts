@@ -22,6 +22,7 @@ export function useVideoEditor(options: {
   const micVolume = ref(100);
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
   const player = useVideoPlayer();
+  const initialPlaybackSettled = ref(false);
   const cursor = useCursorReplacer();
   const cursorMotion = ref(createDefaultCursorMotionSettings());
 
@@ -123,19 +124,26 @@ export function useVideoEditor(options: {
   );
   let playbackLoad = 0;
   watch(
-    () => compositionPlaybackSignature(compositionState.composition.value),
+    () =>
+      `${project.value?.id ?? ''}:${editorData.value?.sessionId ?? ''}:${compositionPlaybackSignature(compositionState.composition.value)}`,
     () => {
+      if (!project.value) return;
       const request = ++playbackLoad;
       const composition = compositionState.composition.value;
-      void player.loadComposition(composition).catch((error: unknown) => {
-        if (request !== playbackLoad) return;
-        console.error(
-          `[Beam media:editor] composition watcher load failed ${JSON.stringify({
-            request,
-            message: error instanceof Error ? error.message : 'Unknown playback error.',
-          })}`,
-        );
-      });
+      void player
+        .loadComposition(composition)
+        .catch((error: unknown) => {
+          if (request !== playbackLoad) return;
+          console.error(
+            `[Beam media:editor] composition watcher load failed ${JSON.stringify({
+              request,
+              message: error instanceof Error ? error.message : 'Unknown playback error.',
+            })}`,
+          );
+        })
+        .finally(() => {
+          if (request === playbackLoad) initialPlaybackSettled.value = true;
+        });
     },
     { immediate: true, flush: 'post' },
   );
@@ -145,6 +153,7 @@ export function useVideoEditor(options: {
     micVolume,
     outputCanvas,
     player,
+    initialPlaybackSettled,
     cursor,
     cursorMotion,
     compositionState,

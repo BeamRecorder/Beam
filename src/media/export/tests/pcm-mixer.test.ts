@@ -116,7 +116,16 @@ const clip = (id: string, assetId: string, overrides: Partial<AudioClip> = {}): 
   ...overrides,
 });
 
-const outputValues = (sample: InstanceType<typeof runtime.TestAudioSample>) => Array.from(sample.data as Float32Array);
+const outputValues = (sample: InstanceType<typeof runtime.TestAudioSample>) => {
+  const data = sample.data as Float32Array;
+  if (sample.format !== 'f32-planar') return Array.from(data);
+  const values: number[] = [];
+  for (let frame = 0; frame < sample.numberOfFrames; frame += 1) {
+    for (let channel = 0; channel < sample.numberOfChannels; channel += 1)
+      values.push(data[channel * sample.numberOfFrames + frame]!);
+  }
+  return values;
+};
 
 describe('progressive PCM export mixer', () => {
   it('maps mono, stereo, quad, and 5.1 layouts to stereo', () => {
@@ -160,6 +169,7 @@ describe('progressive PCM export mixer', () => {
     );
 
     const result = await mixer.mixBlock(0, new AbortController().signal);
+    expect((result as unknown as InstanceType<typeof runtime.TestAudioSample>).format).toBe('f32-planar');
     const values = outputValues(result as unknown as InstanceType<typeof runtime.TestAudioSample>);
     expect(values.slice(0, 4)).toEqual([0.25, 0.25, 0.25, 0.25]);
     expect(values).toHaveLength(192);

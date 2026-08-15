@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { onMounted } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '../../../i18n';
 import EditorWindowApp from '../EditorWindowApp.vue';
@@ -34,6 +35,7 @@ vi.mock('../VideoEditor.vue', async () => {
       name: 'MockVideoEditor',
       emits: ['ready', 'back-to-hud', 'open-project', 'start-recording'],
       setup(_, { emit }) {
+        onMounted(() => emit('ready'));
         return () =>
           h('div', { class: 'mock-editor' }, [
             h('button', { class: 'ready', onClick: () => emit('ready') }),

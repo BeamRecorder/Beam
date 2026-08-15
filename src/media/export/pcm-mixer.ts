@@ -168,9 +168,14 @@ export function createProgressiveAudioMixer(
         }
         for (let index = 0; index < output.length; index += 1)
           output[index] = Math.max(-1, Math.min(1, output[index]!));
+        const planarOutput = new Float32Array(output.length);
+        for (let frame = 0; frame < frameCount; frame += 1) {
+          planarOutput[frame] = output[frame * EXPORT_AUDIO_CHANNELS]!;
+          planarOutput[frameCount + frame] = output[frame * EXPORT_AUDIO_CHANNELS + 1]!;
+        }
         return new AudioSample({
-          data: output,
-          format: 'f32',
+          data: planarOutput,
+          format: 'f32-planar',
           numberOfChannels: EXPORT_AUDIO_CHANNELS,
           sampleRate: EXPORT_AUDIO_RATE,
           timestamp: blockStart,
