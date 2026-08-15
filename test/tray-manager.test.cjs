@@ -123,8 +123,8 @@ function loadTrayIconPath(platform) {
   }
 }
 
-test('uses the PNG tray icon on Linux and the ICO icon on other platforms', () => {
+test('uses the PNG tray icon on Linux, the template icon on macOS, and ICO on Windows', () => {
   assert.match(loadTrayIconPath('linux'), /BeamIcon\.png$/);
   assert.match(loadTrayIconPath('win32'), /BeamIcon\.ico$/);
-  assert.match(loadTrayIconPath('darwin'), /BeamIcon\.ico$/);
+  assert.match(loadTrayIconPath('darwin'), /BeamTrayTemplate\.png$/);
 });

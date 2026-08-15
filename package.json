@@ -1,7 +1,7 @@
 {
   "name": "beam",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "desktopName": "com.beam.app",
   "description": "Beam - Screen recorder to create product demos.",
   "author": {
@@ -93,6 +93,7 @@
         "dmg",
         "zip"
       ],
+      "icon": "public/brand/BeamIcon.png",
       "extraResources": [
         {
           "from": "build/native/${os}/${arch}",

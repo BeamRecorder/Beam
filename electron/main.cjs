@@ -146,7 +146,7 @@ function configureDesktopLoopback() {
 }
 
 function getAppIconPath() {
-  const extensions = process.platform === 'linux' ? ['png', 'ico'] : ['ico', 'png'];
+  const extensions = process.platform === 'win32' ? ['ico', 'png'] : ['png', 'ico'];
   const roots = [
     path.join(applicationRoot, 'dist/brand'),
     path.join(applicationRoot, 'public/brand'),

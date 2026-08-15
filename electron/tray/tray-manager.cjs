@@ -69,7 +69,12 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
     if (tray) return tray;
 
     const fs = require('fs');
-    const extensions = process.platform === 'linux' ? ['png', 'ico'] : ['ico', 'png'];
+    const iconNames =
+      process.platform === 'darwin'
+        ? ['BeamTrayTemplate.png', 'BeamIcon.png']
+        : process.platform === 'win32'
+          ? ['BeamIcon.ico', 'BeamIcon.png']
+          : ['BeamIcon.png', 'BeamIcon.ico'];
     const roots = [
       path.join(applicationRoot, 'dist/brand'),
       path.join(applicationRoot, 'public/brand'),
@@ -78,9 +83,7 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
       path.join(process.cwd(), 'dist/brand'),
       path.join(process.cwd(), 'public/brand'),
     ];
-    const candidatePaths = roots.flatMap((root) =>
-      extensions.map((extension) => path.join(root, `BeamIcon.${extension}`)),
-    );
+    const candidatePaths = roots.flatMap((root) => iconNames.map((iconName) => path.join(root, iconName)));
 
     let icon = nativeImage.createEmpty();
     for (const p of candidatePaths) {
