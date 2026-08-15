@@ -148,37 +148,12 @@ const loadMoreFrameStep = () => {
   isLoadingMore.value = false;
 };
 
-onMounted(() => {
-  previewObserver = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        const item = tileItemsByElement.get(entry.target);
-        if (item) requestPreview(item);
-      }
-    },
-    { root: null, rootMargin: '120px', threshold: 0.01 },
-  );
-  scheduleVisibleTileObservation();
-});
-
-onUnmounted(() => {
-  cancelLoadMore();
-  if (observationFrame !== null) cancelAnimationFrame(observationFrame);
-  previewObserver?.disconnect();
-  tileElements.clear();
-  tileItems.clear();
-  tileItemsByElement.clear();
-  tileRefHandlers.clear();
-});
-
 // Instant tab switch
 const switchKind = (kind: 'image' | 'video' | 'color' | 'gradient') => {
   if (activeKind.value === kind) return;
 
   cancelLoadMore();
   activeKind.value = kind;
-  visibleCount.value = INITIAL_MEDIA_COUNT;
   closeCustomEditor();
 
   if (gridRef.value) {
@@ -216,6 +191,30 @@ const importLabel = computed(() =>
       ? t('importCustomVideo')
       : t('importCustomBackground'),
 );
+
+onMounted(() => {
+  previewObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const item = tileItemsByElement.get(entry.target);
+        if (item) requestPreview(item);
+      }
+    },
+    { root: null, rootMargin: '120px', threshold: 0.01 },
+  );
+  scheduleVisibleTileObservation();
+});
+
+onUnmounted(() => {
+  cancelLoadMore();
+  if (observationFrame !== null) cancelAnimationFrame(observationFrame);
+  previewObserver?.disconnect();
+  tileElements.clear();
+  tileItems.clear();
+  tileItemsByElement.clear();
+  tileRefHandlers.clear();
+});
 </script>
 
 <template>
@@ -254,7 +253,7 @@ const importLabel = computed(() =>
     <!-- Hardware-Accelerated Tab Content Container -->
     <div class="tab-content-panel">
       <!-- Image & Video Media Grid -->
-      <div v-if="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
+      <div v-show="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
         <div v-if="!items.length" class="empty-backgrounds">
           <span>{{ t('noBackgroundFound') }}</span>
           <Button variant="secondary" size="sm" block :icon="Upload" @click="triggerImport">
@@ -309,7 +308,7 @@ const importLabel = computed(() =>
       </div>
 
       <!-- Color Swatches Grid -->
-      <div v-else-if="activeKind === 'color'" class="swatches-section">
+      <div v-show="activeKind === 'color'" class="swatches-section">
         <div class="swatches-grid">
           <Popover
             block
@@ -411,7 +410,7 @@ const importLabel = computed(() =>
       </div>
 
       <!-- Gradient Presets Grid -->
-      <div v-else class="gradients-section">
+      <div v-show="activeKind === 'gradient'" class="gradients-section">
         <div class="gradients-grid">
           <Popover
             block
@@ -624,14 +623,9 @@ const importLabel = computed(() =>
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
-  transition: opacity 0.15s ease;
 }
 
 img.media-content {
-  opacity: 0;
-}
-
-img.media-content.loaded {
   opacity: 1;
 }
 
