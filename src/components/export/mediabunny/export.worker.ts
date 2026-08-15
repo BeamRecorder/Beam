@@ -5,6 +5,7 @@ import { createProgressiveAudioMixer } from '~/media/export/pcm-mixer';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
 import { createSnapshotCameraEvaluator, renderCompositionFrame, type RenderableMedia } from '../composition/render';
 import type { ExportProgress, ExportRequest } from '../export-types';
+import type { ExportRuntimeDiagnostics } from '../export-diagnostics-types';
 import { isExportWorkerRequest, type ExportWorkerResponse } from './export-worker-protocol';
 import { loadBitmap, openExportAssets, type ExportAssets } from './export-worker-assets';
 import { ExportWorkerOutput } from './export-worker-output';
@@ -53,34 +54,73 @@ async function run(request: ExportRequest, signal: AbortSignal) {
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
   let assets: ExportAssets | null = null;
   const bitmaps = new Map<string, ImageBitmap>();
+  const measured: Omit<ExportRuntimeDiagnostics, 'elapsedMs' | 'phase'> = {
+    validationMs: null,
+    assetLoadingMs: null,
+    outputSetupMs: null,
+    videoPipelineMs: null,
+    audioPipelineMs: null,
+    muxFinalizationMs: null,
+    nativeFinalizationMs: null,
+    decodeMs: 0,
+    renderMs: 0,
+    encoderBackpressureMs: 0,
+    ipcWriteWaitMs: 0,
+    encodedFps: null,
+    audioRealtimeSpeed: null,
+    chunkCount: 0,
+    bytesWritten: 0,
+    videoCodec: null,
+    audioCodec: null,
+    inputVideoCodecs: [],
+    inputAudioCodecs: [],
+  };
+  const diagnostics = (phase: ExportProgress['stage']): ExportRuntimeDiagnostics => ({
+    ...measured,
+    ...output?.diagnostics(),
+    elapsedMs: performance.now() - started,
+    phase,
+  });
+  const report = (value: ExportProgress, force = false) =>
+    progress({ ...value, diagnostics: diagnostics(value.stage) }, force);
   try {
-    progress(baseProgress('validating_assets', 0, totalFrames, audioClips.length > 0, totalTimeMs), true);
+    report(baseProgress('validating_assets', 0, totalFrames, audioClips.length > 0, totalTimeMs), true);
     assets = await openExportAssets(request, signal, (completed, total) => {
       const ratio = total ? completed / total : 1;
-      progress({ ...baseProgress('validating_assets', 0.05 * ratio, totalFrames, audioClips.length > 0, totalTimeMs) });
+      report({ ...baseProgress('validating_assets', 0.05 * ratio, totalFrames, audioClips.length > 0, totalTimeMs) });
     });
     activeAssets = assets;
     if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
-    console.info('[Beam export] asset validation', { elapsedMs: Math.round(performance.now() - started) });
-    progress(baseProgress('loading_assets', 0.05, totalFrames, audioClips.length > 0, totalTimeMs), true);
+    measured.validationMs = performance.now() - started;
+    const openedAssets = [...assets.assets.values()];
+    measured.inputVideoCodecs = [
+      ...new Set((await Promise.all(openedAssets.map((asset) => asset.video?.getCodec()))).filter(Boolean) as string[]),
+    ];
+    measured.inputAudioCodecs = [
+      ...new Set((await Promise.all(openedAssets.map((asset) => asset.audio?.getCodec()))).filter(Boolean) as string[]),
+    ];
+    console.info('[Beam export] asset validation', { elapsedMs: Math.round(measured.validationMs) });
+    report(baseProgress('loading_assets', 0.05, totalFrames, audioClips.length > 0, totalTimeMs), true);
     const loadingStarted = performance.now();
     const images = await loadImages(request, bitmaps);
     const cursorImages = await loadCursors(request, bitmaps);
-    console.info('[Beam export] asset loading', { elapsedMs: Math.round(performance.now() - loadingStarted) });
-    progress(baseProgress('loading_assets', 0.08, totalFrames, audioClips.length > 0, totalTimeMs), true);
+    measured.assetLoadingMs = performance.now() - loadingStarted;
+    console.info('[Beam export] asset loading', { elapsedMs: Math.round(measured.assetLoadingMs) });
+    report(baseProgress('loading_assets', 0.08, totalFrames, audioClips.length > 0, totalTimeMs), true);
 
     const canvas = new OffscreenCanvas(request.snapshot.canvas.width, request.snapshot.canvas.height);
     const context = canvas.getContext('2d');
     if (!context) throw new Error('OffscreenCanvas 2D context is unavailable.');
+    const setupStarted = performance.now();
     output = await ExportWorkerOutput.create(request, canvas, audioClips.length > 0);
     await output.start();
+    measured.outputSetupMs = performance.now() - setupStarted;
     const encodingStarted = performance.now();
     const shared = { video: 0, audio: audioClips.length ? 0 : 1 };
     const reportEncoding = (timeMs: number) => {
-      const media = audioClips.length ? 0.85 * shared.video + 0.15 * shared.audio : shared.video;
-      progress({
+      report({
         stage: 'encoding',
-        overallProgress: 0.08 + 0.9 * media,
+        overallProgress: 0.08 + 0.9 * shared.video,
         completedImages: Math.round(shared.video * totalFrames),
         totalImages: totalFrames,
         audioProgress: audioClips.length ? shared.audio : null,
@@ -88,17 +128,28 @@ async function run(request: ExportRequest, signal: AbortSignal) {
         totalTimeMs,
       });
     };
-    await Promise.all([
-      renderVideo(request, assets, images, cursorImages, context, output, signal, (done) => {
+    const [videoStats, audioStats] = await Promise.all([
+      renderVideo(request, assets, images, cursorImages, context, output, signal, (done, stats) => {
+        measured.decodeMs = stats.decodeMs;
+        measured.renderMs = stats.renderMs;
+        measured.encoderBackpressureMs = stats.encoderBackpressureMs;
         shared.video = done / totalFrames;
         reportEncoding(Math.round((done / totalFrames) * totalTimeMs));
       }),
-      renderAudio(request, assets, audioClips, output, signal, (done, total) => {
+      renderAudio(request, assets, audioClips, output, signal, (done, total, stats) => {
+        measured.audioPipelineMs = stats.elapsedMs;
+        measured.audioRealtimeSpeed = stats.realtimeSpeed;
         shared.audio = total ? done / total : 1;
         reportEncoding(Math.round(shared.video * totalTimeMs));
       }),
     ]);
-    progress(
+    measured.videoPipelineMs = videoStats.elapsedMs;
+    measured.decodeMs = videoStats.decodeMs;
+    measured.renderMs = videoStats.renderMs;
+    measured.encoderBackpressureMs = videoStats.encoderBackpressureMs;
+    measured.audioPipelineMs = audioStats?.elapsedMs ?? null;
+    measured.audioRealtimeSpeed = audioStats?.realtimeSpeed ?? null;
+    report(
       {
         stage: 'finalizing',
         overallProgress: 0.98,
@@ -112,12 +163,14 @@ async function run(request: ExportRequest, signal: AbortSignal) {
     );
     const finalizingStarted = performance.now();
     await output.finalize();
-    console.info('[Beam export] finalization', { elapsedMs: Math.round(performance.now() - finalizingStarted) });
+    measured.muxFinalizationMs = performance.now() - finalizingStarted;
+    measured.encodedFps = totalFrames / Math.max(0.001, (performance.now() - encodingStarted) / 1_000);
+    console.info('[Beam export] finalization', { elapsedMs: Math.round(measured.muxFinalizationMs) });
     console.info('[Beam export] encoding complete', {
       elapsedMs: Math.round(performance.now() - started),
-      encodingFps: Number((totalFrames / Math.max(0.001, (performance.now() - encodingStarted) / 1_000)).toFixed(2)),
+      encodingFps: Number(measured.encodedFps.toFixed(2)),
     });
-    post({ type: 'complete' });
+    post({ type: 'complete', diagnostics: diagnostics('finalizing') });
   } catch (error) {
     await output?.cancel().catch(() => undefined);
     throw error;
@@ -246,8 +299,12 @@ async function renderVideo(
   context: OffscreenCanvasRenderingContext2D,
   mediaOutput: ExportWorkerOutput,
   signal: AbortSignal,
-  onFrame: (done: number) => void,
+  onFrame: (done: number, stats: { decodeMs: number; renderMs: number; encoderBackpressureMs: number }) => void,
 ) {
+  const started = performance.now();
+  let decodeMs = 0;
+  let renderMs = 0;
+  let encoderBackpressureMs = 0;
   const total = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
   const consumers = new Map<string, AsyncIterator<VideoSample | null>>();
   for (const clip of request.snapshot.composition.clips) {
@@ -286,6 +343,7 @@ async function renderVideo(
       const decoded: Array<{ clip: VisualClip; sample: VideoSample }> = [];
       const visuals = new Map<string, RenderableMedia>();
       let screen: RenderableMedia | null = null;
+      const decodeStarted = performance.now();
       try {
         for (const clip of active) {
           if (!isVisualClip(clip)) continue;
@@ -325,6 +383,8 @@ async function renderVideo(
           if (clip.kind === 'screen') screen = media;
           else visuals.set(clip.id, media);
         }
+        decodeMs += performance.now() - decodeStarted;
+        const renderStarted = performance.now();
         renderCompositionFrame(
           context,
           screen,
@@ -336,16 +396,20 @@ async function renderVideo(
           motion,
           camera,
         );
+        renderMs += performance.now() - renderStarted;
       } finally {
         for (const sample of samples) sample.close();
       }
+      const encoderStarted = performance.now();
       await mediaOutput.addVideo(time, 1 / request.snapshot.render.fps);
-      onFrame(frame + 1);
+      encoderBackpressureMs += performance.now() - encoderStarted;
+      onFrame(frame + 1, { decodeMs, renderMs, encoderBackpressureMs });
     }
   } finally {
     for (const consumer of consumers.values()) await consumer.return?.();
   }
   mediaOutput.closeVideo();
+  return { elapsedMs: performance.now() - started, decodeMs, renderMs, encoderBackpressureMs };
 }
 
 function imagesForBackground(request: ExportRequest, images: Map<string, RenderableMedia>) {
@@ -358,9 +422,9 @@ async function renderAudio(
   clips: ReturnType<typeof audioClipsFor>,
   mediaOutput: ExportWorkerOutput,
   signal: AbortSignal,
-  onBlock: (done: number, total: number) => void,
+  onBlock: (done: number, total: number, stats: { elapsedMs: number; realtimeSpeed: number }) => void,
 ) {
-  if (!clips.length) return;
+  if (!clips.length) return null;
   const tracks = new Map(
     [...assets.assets].flatMap(([id, asset]) => (asset.audio ? [[id, asset.audio] as const] : [])),
   );
@@ -368,15 +432,20 @@ async function renderAudio(
   const started = performance.now();
   for (let block = 0; block < mixer.blockCount; block += 1) {
     await mediaOutput.addAudio(await mixer.mixBlock(block, signal));
-    onBlock(block + 1, mixer.blockCount);
+    const elapsedMs = performance.now() - started;
+    onBlock(block + 1, mixer.blockCount, {
+      elapsedMs,
+      realtimeSpeed: request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000),
+    });
   }
   mediaOutput.closeAudio();
+  const elapsedMs = performance.now() - started;
+  const realtimeSpeed = request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000);
   console.info('[Beam export] audio complete', {
-    elapsedMs: Math.round(performance.now() - started),
-    realtimeSpeed: Number(
-      (request.snapshot.duration / Math.max(0.001, (performance.now() - started) / 1_000)).toFixed(2),
-    ),
+    elapsedMs: Math.round(elapsedMs),
+    realtimeSpeed: Number(realtimeSpeed.toFixed(2)),
   });
+  return { elapsedMs, realtimeSpeed };
 }
 
 function audioClipsFor(request: ExportRequest) {

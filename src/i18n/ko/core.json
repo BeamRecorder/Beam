@@ -224,7 +224,7 @@
     "copyError": "오류 복사",
     "copied": "복사됨",
     "copyFailed": "복사하지 못했습니다",
-    "copyProgress": "진행 상황 복사",
+    "copyReport": "보고서 복사",
     "resMaxDesc": "원본 해상도({width}×{height})",
     "res1080pDesc": "Full HD 크기 조정({width}×{height})",
     "res720pDesc": "HD 크기 조정({width}×{height})"

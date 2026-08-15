@@ -2,9 +2,8 @@
   display: flex;
   align-items: center;
   height: 32px;
-  position: relative;
   background: var(--color-bg-element);
-  border-block: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 .track-info {
   width: 120px;
@@ -19,7 +18,7 @@
   color: var(--text-secondary);
   position: sticky;
   left: 0;
-  z-index: 5;
+  z-index: 50;
 }
 .track-icon {
   width: 13px;

@@ -21,7 +21,7 @@ const props = defineProps<{
   waveformLoadingSegments?: Array<{ leftPercent: number; widthPercent: number }>;
   waveformStatus?: AudioWaveformStatus;
   waveformError?: MediaError;
-  trimState?: { edge: 'start' | 'end'; durationMs: number } | null;
+  trimState?: { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
   deferThumbnailRequests?: boolean;
 }>();
 const emit = defineEmits<{
@@ -140,7 +140,7 @@ onUnmounted(() => stopMarquee());
   <button
     type="button"
     class="timeline-clip"
-    :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled }]"
+    :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
     :style="clipStyle"
     @click.stop="emit('select')"
     @pointerdown="emit('move', $event)"
@@ -195,10 +195,15 @@ onUnmounted(() => stopMarquee());
     />
     <span
       class="trim-handle start"
+      :class="{ 'at-limit': trimState?.edge === 'start' && trimState?.atLimit }"
       :title="t('trimStart')"
       @pointerdown.stop="emit('trim', { event: $event, edge: 'start' })"
     >
-      <span v-if="trimState?.edge === 'start'" class="trim-side-badge">{{ formatTrimTime(trimState.durationMs) }}</span>
+      <span
+        v-if="trimState?.edge === 'start'"
+        class="trim-side-badge"
+        :class="{ 'at-limit': trimState?.atLimit }"
+      >{{ formatTrimTime(trimState.durationMs) }}</span>
     </span>
     <span class="clip-label-overlay">
       <span class="clip-label-text">{{ clip.name }}</span>
@@ -206,10 +211,15 @@ onUnmounted(() => stopMarquee());
     </span>
     <span
       class="trim-handle end"
+      :class="{ 'at-limit': trimState?.edge === 'end' && trimState?.atLimit }"
       :title="t('trimEnd')"
       @pointerdown.stop="emit('trim', { event: $event, edge: 'end' })"
     >
-      <span v-if="trimState?.edge === 'end'" class="trim-side-badge">{{ formatTrimTime(trimState.durationMs) }}</span>
+      <span
+        v-if="trimState?.edge === 'end'"
+        class="trim-side-badge"
+        :class="{ 'at-limit': trimState?.atLimit }"
+      >{{ formatTrimTime(trimState.durationMs) }}</span>
     </span>
   </button>
 </template>
@@ -370,6 +380,11 @@ onUnmounted(() => stopMarquee());
 .trim-handle:hover {
   background: var(--color-primary);
 }
+.trim-handle.at-limit,
+.trim-handle.at-limit:hover {
+  background: var(--color-destructive, #ef4444);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+}
 .trim-handle.start {
   left: 0;
 }
@@ -389,6 +404,14 @@ onUnmounted(() => stopMarquee());
   font-family: monospace;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.trim-side-badge.at-limit {
+  background: var(--color-destructive, #ef4444);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+}
+.timeline-clip.trim-at-limit {
+  border-color: var(--color-destructive, #ef4444) !important;
+  box-shadow: 0 0 0 1px var(--color-destructive, #ef4444);
 }
 .trim-handle.start .trim-side-badge {
   left: 8px;

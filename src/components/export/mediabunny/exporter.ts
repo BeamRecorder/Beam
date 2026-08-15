@@ -96,13 +96,11 @@ export async function exportWithMediabunny(
         ({ path }) => {
           const nativeFinalizationMs = performance.now() - nativeFinalizationStarted;
           diagnostics.completedAt = new Date().toISOString();
-          if (message.diagnostics) {
-            diagnostics.runtime = {
-              ...message.diagnostics,
-              nativeFinalizationMs,
-              elapsedMs: message.diagnostics.elapsedMs + nativeFinalizationMs,
-            };
-          }
+          diagnostics.runtime = {
+            ...message.diagnostics,
+            nativeFinalizationMs,
+            elapsedMs: message.diagnostics.elapsedMs + nativeFinalizationMs,
+          };
           const totalImages = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
           onProgress({
             stage: 'finalizing',
@@ -114,7 +112,7 @@ export async function exportWithMediabunny(
               : null,
             currentTimeMs: Math.round(request.snapshot.duration * 1_000),
             totalTimeMs: Math.round(request.snapshot.duration * 1_000),
-            diagnostics: diagnostics.runtime ?? undefined,
+            diagnostics: diagnostics.runtime,
           });
           finish(undefined, path);
         },

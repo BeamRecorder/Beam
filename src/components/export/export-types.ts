@@ -23,7 +23,7 @@ export interface ExportProgress {
 export interface ExportResult {
   path: string;
   format: ExportFormat;
-  diagnostics?: ExportDiagnostics;
+  diagnostics: ExportDiagnostics;
 }
 export interface ExportRenderSettings {
   fps: number;

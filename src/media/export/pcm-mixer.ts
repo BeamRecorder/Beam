@@ -29,6 +29,7 @@ class ClipPcmReader {
   private readonly iterator: AsyncIterator<import('mediabunny').AudioSample>;
   private blocks: DecodedBlock[] = [];
   private ended = false;
+  private closed = false;
 
   constructor(clip: AudioClip, track: InputAudioTrack) {
     this.clip = clip;
@@ -85,11 +86,20 @@ class ClipPcmReader {
   discardBefore(sourceTime: number) {
     this.blocks = this.blocks.filter((block) => block.end >= sourceTime);
   }
+
+  async close() {
+    if (this.closed) return;
+    this.closed = true;
+    this.ended = true;
+    this.blocks = [];
+    await this.iterator.return?.();
+  }
 }
 
 export type ProgressiveAudioMixer = {
   readonly blockCount: number;
   mixBlock(index: number, signal: AbortSignal): Promise<AudioSample>;
+  dispose(): Promise<void>;
 };
 
 export function createProgressiveAudioMixer(
@@ -103,46 +113,55 @@ export function createProgressiveAudioMixer(
     return new ClipPcmReader(clip, track);
   });
   const blockCount = Math.ceil((durationSeconds * EXPORT_AUDIO_RATE) / EXPORT_AUDIO_BLOCK_FRAMES);
+  const dispose = async () => {
+    await Promise.allSettled(readers.map((reader) => reader.close()));
+  };
   return {
     blockCount,
     async mixBlock(index, signal) {
-      if (!Number.isInteger(index) || index < 0 || index >= blockCount) throw new RangeError('Invalid audio block.');
-      const startFrame = index * EXPORT_AUDIO_BLOCK_FRAMES;
-      const frameCount = Math.min(
-        EXPORT_AUDIO_BLOCK_FRAMES,
-        Math.ceil(durationSeconds * EXPORT_AUDIO_RATE) - startFrame,
-      );
-      const output = new Float32Array(frameCount * EXPORT_AUDIO_CHANNELS);
-      const blockStart = startFrame / EXPORT_AUDIO_RATE;
-      const blockEnd = (startFrame + frameCount) / EXPORT_AUDIO_RATE;
-      for (const reader of readers) {
-        const clipStart = reader.clip.timelineStartMs / 1_000;
-        const clipEnd = clipStart + reader.clip.timelineDurationMs / 1_000;
-        if (clipEnd <= blockStart || clipStart >= blockEnd) continue;
-        const activeEnd = Math.min(blockEnd, clipEnd);
-        const sourceEnd = reader.clip.sourceInMs / 1_000 + (activeEnd - clipStart) * reader.clip.playbackRate;
-        await reader.prepare(sourceEnd + 1 / EXPORT_AUDIO_RATE, signal);
-        for (let frame = 0; frame < frameCount; frame += 1) {
-          const timeline = (startFrame + frame) / EXPORT_AUDIO_RATE;
-          if (timeline < clipStart || timeline >= clipEnd) continue;
-          const source = reader.clip.sourceInMs / 1_000 + (timeline - clipStart) * reader.clip.playbackRate;
-          const [left, right] = reader.sampleAt(source);
-          const gain = Math.max(0, Math.min(2, reader.clip.volume / 100));
-          output[frame * 2] += left * gain;
-          output[frame * 2 + 1] += right * gain;
+      try {
+        if (!Number.isInteger(index) || index < 0 || index >= blockCount) throw new RangeError('Invalid audio block.');
+        const startFrame = index * EXPORT_AUDIO_BLOCK_FRAMES;
+        const frameCount = Math.min(
+          EXPORT_AUDIO_BLOCK_FRAMES,
+          Math.ceil(durationSeconds * EXPORT_AUDIO_RATE) - startFrame,
+        );
+        const output = new Float32Array(frameCount * EXPORT_AUDIO_CHANNELS);
+        const blockStart = startFrame / EXPORT_AUDIO_RATE;
+        const blockEnd = (startFrame + frameCount) / EXPORT_AUDIO_RATE;
+        for (const reader of readers) {
+          const clipStart = reader.clip.timelineStartMs / 1_000;
+          const clipEnd = clipStart + reader.clip.timelineDurationMs / 1_000;
+          if (clipEnd <= blockStart || clipStart >= blockEnd) continue;
+          const activeEnd = Math.min(blockEnd, clipEnd);
+          const sourceEnd = reader.clip.sourceInMs / 1_000 + (activeEnd - clipStart) * reader.clip.playbackRate;
+          await reader.prepare(sourceEnd + 1 / EXPORT_AUDIO_RATE, signal);
+          for (let frame = 0; frame < frameCount; frame += 1) {
+            const timeline = (startFrame + frame) / EXPORT_AUDIO_RATE;
+            if (timeline < clipStart || timeline >= clipEnd) continue;
+            const source = reader.clip.sourceInMs / 1_000 + (timeline - clipStart) * reader.clip.playbackRate;
+            const [left, right] = reader.sampleAt(source);
+            const gain = Math.max(0, Math.min(2, reader.clip.volume / 100));
+            output[frame * 2] += left * gain;
+            output[frame * 2 + 1] += right * gain;
+          }
+          const sourceStart =
+            reader.clip.sourceInMs / 1_000 + (Math.max(blockStart, clipStart) - clipStart) * reader.clip.playbackRate;
+          reader.discardBefore(sourceStart - 1 / EXPORT_AUDIO_RATE);
         }
-        const sourceStart =
-          reader.clip.sourceInMs / 1_000 + (Math.max(blockStart, clipStart) - clipStart) * reader.clip.playbackRate;
-        reader.discardBefore(sourceStart - 1 / EXPORT_AUDIO_RATE);
+        for (let index = 0; index < output.length; index += 1) output[index] = Math.max(-1, Math.min(1, output[index]!));
+        return new AudioSample({
+          data: output,
+          format: 'f32',
+          numberOfChannels: EXPORT_AUDIO_CHANNELS,
+          sampleRate: EXPORT_AUDIO_RATE,
+          timestamp: blockStart,
+        });
+      } catch (error) {
+        await dispose();
+        throw error;
       }
-      for (let index = 0; index < output.length; index += 1) output[index] = Math.max(-1, Math.min(1, output[index]!));
-      return new AudioSample({
-        data: output,
-        format: 'f32',
-        numberOfChannels: EXPORT_AUDIO_CHANNELS,
-        sampleRate: EXPORT_AUDIO_RATE,
-        timestamp: blockStart,
-      });
     },
+    dispose,
   };
 }

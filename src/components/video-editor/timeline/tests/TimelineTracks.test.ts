@@ -335,11 +335,11 @@ describe('TimelineTracks', () => {
 
   it('renders ordered visual/audio/caption tracks and scrubs, zooms, selects, and toggles them', async () => {
     const mounted = await mountTracks();
-    expect(mounted!.findAll('.visual-track')).toHaveLength(3);
+    expect(mounted!.findAll('.tracks-stack > .visual-track')).toHaveLength(3);
     expect(mounted!.find('.ruler-export-progress-bar').attributes('style')).toContain('25%');
     expect(mounted!.find('.cursor-zoom-indicator').text()).toContain('5.00×');
-    expect(mounted!.findAll('.audio-track')).toHaveLength(3);
-    expect(mounted!.findAll('.audio-track')[1]!.classes()).toContain('disabled');
+    expect(mounted!.findAll('.tracks-stack > .audio-track')).toHaveLength(3);
+    expect(mounted!.findAll('.tracks-stack > .audio-track')[1]!.classes()).toContain('disabled');
 
     await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 620 });
     window.dispatchEvent(pointerEvent('pointermove', 720));
@@ -378,11 +378,11 @@ describe('TimelineTracks', () => {
     expect(pendingFrames).toHaveLength(1);
     flushAnimationFrames();
     expect(mounted!.emitted('update:zoomLevel')).toContainEqual([3_200]);
-    await mounted!.get('.visual-track .track-info').trigger('click');
+    await mounted!.get('.sidebar-tracks-stack .visual-track .track-info').trigger('click');
     expect(mounted!.emitted('toggle:clip')).toContainEqual(['image-clip']);
-    await mounted!.get('.audio-track .track-info').trigger('click');
+    await mounted!.get('.sidebar-tracks-stack .audio-track .track-info').trigger('click');
     expect(mounted!.emitted('toggle:clip')).toContainEqual(['system-audio']);
-    await mounted!.findAll('.audio-track')[1]!.get('.track-info').trigger('click');
+    await mounted!.findAll('.sidebar-tracks-stack .audio-track')[1]!.get('.track-info').trigger('click');
     expect(mounted!.emitted('toggle:clip')).toContainEqual(['microphone-audio']);
 
     const clip = mounted!.findAll('.visual-track .timeline-clip')[2]!;
@@ -510,7 +510,7 @@ describe('TimelineTracks', () => {
 
   it('reorders visual clips and cancels a reorder without changing the composition', async () => {
     const mounted = await mountTracks();
-    const rows = mounted!.findAll('.visual-track');
+    const rows = mounted!.findAll('.sidebar-tracks-stack .visual-track');
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
       value: vi.fn().mockReturnValue(rows[2]!.element),
@@ -523,6 +523,6 @@ describe('TimelineTracks', () => {
     await rows[1]!.get('.track-drag-handle').trigger('pointerdown', { clientX: 10, clientY: 10 });
     window.dispatchEvent(pointerEvent('pointercancel', 10, 10));
     expect(mounted!.emitted('reorder:clip')).toHaveLength(1);
-    await mounted!.findAll('.audio-track')[1]!.get('.track-info').trigger('click');
+    await mounted!.findAll('.sidebar-tracks-stack .audio-track')[1]!.get('.track-info').trigger('click');
   });
 });

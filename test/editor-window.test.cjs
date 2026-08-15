@@ -14,6 +14,9 @@ function fakeWindow(calls) {
     on: (event, listener) => contentListeners.set(event, listener),
     once: (event, listener) => contentListeners.set(event, listener),
     send: (...args) => calls.push(['editor-send', ...args]),
+    openDevTools: (...args) => calls.push(['openDevTools', ...args]),
+    closeDevTools: () => calls.push(['closeDevTools']),
+    isDevToolsOpened: () => false,
   };
   return {
     webContents,

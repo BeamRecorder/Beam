@@ -83,6 +83,9 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
       0,
     );
     playbackError.value = null;
+    // The engine closes its cached frames synchronously when it reloads.
+    // Invalidate Vue consumers before they can render one of those closed bitmaps.
+    frameVersion.value += 1;
     await ensureEngine().loadComposition(composition);
     if (previousTime > 0) await ensureEngine().seek(Math.min(previousTime, duration.value), 'seek');
   };

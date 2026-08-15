@@ -156,6 +156,7 @@ const iterator = (chunks: Array<{ timestamp: number; duration: number }>) => {
       const value = chunks[index++];
       return value ? { done: false, value: { ...value, buffer: { id: index } } } : { done: true, value: undefined };
     }),
+    return: vi.fn(async () => ({ done: true, value: undefined })),
     [Symbol.asyncIterator]() {
       return this;
     },
@@ -373,6 +374,9 @@ describe('AudioPlaybackScheduler', () => {
   it('pauses and seeks by stopping nodes, and disposes decoders, graph, and context', async () => {
     const opened = openedInput();
     runtime.openMediaInput.mockResolvedValue(opened);
+    const firstIterator = iterator([{ timestamp: 0, duration: 0.5 }]);
+    const secondIterator = iterator([{ timestamp: 0.4, duration: 0.5 }]);
+    runtime.buffersFactory.mockReturnValueOnce(firstIterator).mockReturnValueOnce(secondIterator);
     const scheduler = new AudioPlaybackScheduler();
     await scheduler.loadComposition(composition());
     await scheduler.play(0, 1);
@@ -381,9 +385,11 @@ describe('AudioPlaybackScheduler', () => {
     scheduler.pause(0.4);
     expect(firstSource.stop).toHaveBeenCalledOnce();
     expect(firstSource.disconnect).toHaveBeenCalled();
+    expect(firstIterator.return).toHaveBeenCalledOnce();
     await scheduler.seek(0.4, 2, true);
     expect(context.sources).toHaveLength(2);
     scheduler.dispose();
+    expect(secondIterator.return).toHaveBeenCalledOnce();
     expect(opened.dispose).toHaveBeenCalledOnce();
     expect(context.close).toHaveBeenCalledOnce();
     expect(context.gains[0]!.disconnect).toHaveBeenCalled();

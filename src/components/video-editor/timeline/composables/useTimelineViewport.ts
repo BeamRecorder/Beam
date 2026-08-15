@@ -12,9 +12,14 @@ export function useTimelineViewport(
   activeSnapTimeMs: Ref<number | null>,
 ) {
   const tracksScrollRef = ref<HTMLDivElement | null>(null);
+  const sidebarScrollRef = ref<HTMLDivElement | null>(null);
   const tracksViewportRef = ref<HTMLDivElement | null>(null);
   const ticksAreaRef = ref<HTMLDivElement | null>(null);
   const rulerWidth = ref(0);
+  const currentDuration = computed(() => {
+    const ms = typeof durationMs.value === 'number' && Number.isFinite(durationMs.value) ? durationMs.value : 1_000;
+    return Math.max(1, ms / 1_000);
+  });
   const tracksWidthStyle = computed(() => ({
     width: `calc(${props.zoomLevel}% + 230px)`,
     minWidth: 'calc(100% + 230px)',
@@ -22,20 +27,36 @@ export function useTimelineViewport(
   const scrubPreviewTime = ref<number | null>(null);
   const displayedPlayheadTime = computed(() => scrubPreviewTime.value ?? props.currentTime);
   const playheadStyle = computed(() => ({
-    left: `${props.duration > 0 ? (displayedPlayheadTime.value / props.duration) * 100 : 0}%`,
+    left: `${currentDuration.value > 0 ? (displayedPlayheadTime.value / currentDuration.value) * 100 : 0}%`,
   }));
   const rulerLabelStep = computed(() => {
-    const pixelsPerSecond = rulerWidth.value / Math.max(1, props.duration);
-    return [1, 2, 5, 10, 15, 30, 60, 120, 300, 600].find((step) => step * pixelsPerSecond >= 68) ?? 600;
+    const dur = Math.max(0.1, currentDuration.value);
+    const width = Math.max(1, rulerWidth.value);
+    const pixelsPerSecond = width / dur;
+    const step = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600].find((s) => s * pixelsPerSecond >= 68) ?? 600;
+    return Math.max(1, step);
   });
-  const rulerTickStep = computed(() => (rulerLabelStep.value <= 5 ? 1 : rulerLabelStep.value / 5));
+  const rulerTickStep = computed(() => {
+    const step = rulerLabelStep.value <= 5 ? 1 : Math.max(1, Math.round(rulerLabelStep.value / 5));
+    return Math.max(1, step);
+  });
   const rulerSeconds = computed(() => {
+    const step = rulerTickStep.value;
+    const dur = currentDuration.value;
+    if (!Number.isFinite(dur) || dur <= 0 || !Number.isFinite(step) || step <= 0) return [];
+    const maxSecond = Math.min(36_000, Math.ceil(dur));
     const result: number[] = [];
-    for (let second = 0; second <= Math.ceil(props.duration); second += rulerTickStep.value) result.push(second);
+    for (let second = 0; second <= maxSecond; second += step) {
+      result.push(second);
+      if (result.length > 2_000) break;
+    }
     return result;
   });
-  const rulerMarkerStyle = (second: number) => ({ left: `${(second / Math.max(1, props.duration)) * 100}%` });
-  const isRulerLabel = (second: number) => second % rulerLabelStep.value === 0;
+  const rulerMarkerStyle = (second: number) => ({ left: `${(second / Math.max(1, currentDuration.value)) * 100}%` });
+  const isRulerLabel = (second: number) => {
+    const step = rulerLabelStep.value;
+    return step > 0 && second % step === 0;
+  };
   const formatRulerLabel = (second: number) =>
     second < 60 ? `${second}s` : `${Math.floor(second / 60)}:${(second % 60).toString().padStart(2, '0')}`;
 
@@ -51,16 +72,16 @@ export function useTimelineViewport(
     () => ({
       startSeconds: viewportReady.value ? visibleStartSecond.value : 0,
       endSeconds: viewportReady.value ? visibleEndSecond.value : 0,
-      pixelsPerSecond: rulerWidth.value / Math.max(1, props.duration),
+      pixelsPerSecond: rulerWidth.value / Math.max(1, currentDuration.value),
     }),
   );
   const thumbnailSlots = computed(() =>
     viewportReady.value
       ? timelineThumbnailSlots(
-          props.duration,
+          currentDuration.value,
           visibleStartSecond.value,
           visibleEndSecond.value,
-          rulerWidth.value / Math.max(1, props.duration),
+          rulerWidth.value / Math.max(1, currentDuration.value),
         )
       : [],
   );
@@ -74,23 +95,61 @@ export function useTimelineViewport(
   const updateVisibleRange = () => {
     const scroll = tracksScrollRef.value;
     const ticks = ticksAreaRef.value;
-    if (!scroll || !ticks || props.duration <= 0) return;
+    if (!scroll || !ticks || currentDuration.value <= 0) return;
     const scrollRect = scroll.getBoundingClientRect();
     const ticksRect = ticks.getBoundingClientRect();
     const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
     rulerWidth.value = timelineWidth;
     const startPixel = Math.max(0, Math.min(timelineWidth, scrollRect.left - ticksRect.left));
     const endPixel = Math.max(0, Math.min(timelineWidth, scrollRect.right - ticksRect.left));
-    visibleStartSecond.value = (startPixel / timelineWidth) * props.duration;
-    visibleEndSecond.value = (endPixel / timelineWidth) * props.duration;
+    visibleStartSecond.value = (startPixel / timelineWidth) * currentDuration.value;
+    visibleEndSecond.value = (endPixel / timelineWidth) * currentDuration.value;
     viewportReady.value = true;
   };
   const onScroll = () => {
+    if (sidebarScrollRef.value && tracksScrollRef.value) {
+      sidebarScrollRef.value.scrollTop = tracksScrollRef.value.scrollTop;
+    }
     if (scrollFrame !== null) return;
     scrollFrame = requestAnimationFrame(() => {
       scrollFrame = null;
       updateVisibleRange();
     });
+  };
+  let autoScrollRaf: number | null = null;
+  let autoScrollSpeed = 0;
+  const updateAutoScroll = (clientX: number) => {
+    const scrollEl = tracksScrollRef.value;
+    if (!scrollEl) return;
+    const rect = scrollEl.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return;
+    const rightZone = rect.right - 50;
+    const leftZone = rect.left + 50;
+    if (clientX > rightZone) {
+      const intensity = Math.min(1, (clientX - rightZone) / 50);
+      autoScrollSpeed = Math.round(4 + intensity * 10);
+    } else if (clientX < leftZone) {
+      const intensity = Math.min(1, (leftZone - clientX) / 50);
+      autoScrollSpeed = -Math.round(4 + intensity * 10);
+    } else {
+      autoScrollSpeed = 0;
+    }
+    if (autoScrollSpeed !== 0 && autoScrollRaf === null) {
+      autoScrollRaf = requestAnimationFrame(() => {
+        autoScrollRaf = null;
+        if (scrollEl && autoScrollSpeed !== 0) {
+          scrollEl.scrollLeft += autoScrollSpeed;
+          updateVisibleRange();
+        }
+      });
+    }
+  };
+  const stopAutoScroll = () => {
+    autoScrollSpeed = 0;
+    if (autoScrollRaf !== null) {
+      cancelAnimationFrame(autoScrollRaf);
+      autoScrollRaf = null;
+    }
   };
   onMounted(() => {
     updateVisibleRange();
@@ -125,8 +184,8 @@ export function useTimelineViewport(
     const target = ticksAreaRef.value;
     if (!target) return 0;
     const rect = target.getBoundingClientRect();
-    const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
-    return Math.round(fraction * durationMs.value);
+    const fraction = (clientX - rect.left) / Math.max(1, rect.width);
+    return Math.round(Math.max(0, fraction) * durationMs.value);
   };
   const centeredStartAt = (clientX: number, lengthMs: number) => {
     const maximumStart = Math.max(0, durationMs.value - lengthMs);
@@ -135,7 +194,7 @@ export function useTimelineViewport(
   let lastScrubX = 0;
   let lastScrubTimestamp = 0;
   const calculateScrubSnap = (clientX: number) => {
-    const rawTimeMs = timeAt(clientX);
+    const rawTimeMs = Math.min(durationMs.value, timeAt(clientX));
     if (props.isSnappingEnabled === false) {
       activeSnapTimeMs.value = null;
       return rawTimeMs;
@@ -206,6 +265,7 @@ export function useTimelineViewport(
 
   return {
     tracksScrollRef,
+    sidebarScrollRef,
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,
@@ -224,6 +284,8 @@ export function useTimelineViewport(
     audioWaveformStatus,
     thumbnailSlots,
     onScroll,
+    updateAutoScroll,
+    stopAutoScroll,
     percentageStyle,
     timeAt,
     centeredStartAt,

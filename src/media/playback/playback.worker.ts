@@ -227,7 +227,15 @@ function closeFrame(frame: QueuedFrame, dropped = false) {
   if (dropped) metrics.droppedFrames += 1;
 }
 
+function closeIterator(iterator: AsyncIterator<WrappedCanvas> | null) {
+  if (!iterator) return;
+  void Promise.resolve(iterator.return?.()).catch((error: unknown) =>
+    reportPlaybackWorkerError('Canvas iterator cleanup failed.', error),
+  );
+}
+
 function resetSequential(consumer: ClipConsumer, startSeconds: number) {
+  closeIterator(consumer.iterator);
   consumer.iteratorGeneration += 1;
   consumer.iterator = consumer.sink.canvases(startSeconds)[Symbol.asyncIterator]();
   consumer.lastTargetSeconds = startSeconds;
@@ -328,8 +336,13 @@ async function processSeeks() {
           const targetSeconds = sourceTime(consumer.clip, request.timelineSeconds);
           let wrapped = await consumer.sink.getCanvas(targetSeconds);
           if (!wrapped) {
-            const first = await consumer.sink.canvases(targetSeconds)[Symbol.asyncIterator]().next();
-            wrapped = first.done ? null : first.value;
+            const iterator = consumer.sink.canvases(targetSeconds)[Symbol.asyncIterator]();
+            try {
+              const first = await iterator.next();
+              wrapped = first.done ? null : first.value;
+            } finally {
+              await iterator.return?.();
+            }
           }
           return wrapped ? { consumer, frame: await bitmapFor(wrapped) } : null;
         }),
@@ -444,6 +457,7 @@ function disposeAll(invalidateLoad = true) {
   pendingSeek = null;
   pendingTick = null;
   for (const consumer of consumers.values()) {
+    closeIterator(consumer.iterator);
     consumer.iteratorGeneration += 1;
     for (const frame of consumer.queue) closeFrame(frame);
   }

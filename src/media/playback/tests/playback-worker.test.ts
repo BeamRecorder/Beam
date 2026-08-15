@@ -524,6 +524,91 @@ describe('playback worker', () => {
     expect(messages().filter((message) => message.type === 'frame')).toHaveLength(2);
   });
 
+  it('returns the previous CanvasSink iterator when a sequential tick jumps', async () => {
+    const firstIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.04), done: false })
+        .mockResolvedValueOnce({ value: wrapped(0.08), done: false }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const replacementIterator = {
+      next: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    send({ type: 'load', generation: 12, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+    const sink = runtime.sinkInstances[0]!;
+    sink.canvases.mockReturnValueOnce(firstIterator).mockReturnValueOnce(replacementIterator);
+
+    send({ type: 'tick', generation: 12, timelineSeconds: 0 });
+    await flush();
+    send({ type: 'tick', generation: 12, timelineSeconds: 1 });
+    await flush();
+
+    expect(firstIterator.return).toHaveBeenCalledOnce();
+    send({ type: 'dispose' });
+  });
+
+  it('returns the temporary CanvasSink iterator used by seek fallback', async () => {
+    send({ type: 'load', generation: 13, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+    const sink = runtime.sinkInstances[0]!;
+    const temporaryIterator = {
+      next: vi.fn().mockResolvedValue({ value: wrapped(0.04), done: false }),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    sink.getCanvas.mockResolvedValueOnce(null);
+    sink.canvases.mockReturnValueOnce(temporaryIterator);
+
+    send({ type: 'seek', generation: 13, requestId: 130, timelineSeconds: 0, mode: 'seek' });
+    await flush();
+
+    expect(temporaryIterator.return).toHaveBeenCalledOnce();
+    send({ type: 'dispose' });
+  });
+
+  it('returns active CanvasSink iterators when a load disposes the previous generation', async () => {
+    const secondNext = deferred<IteratorResult<Wrapped>>();
+    const firstIterator = {
+      next: vi
+        .fn()
+        .mockResolvedValueOnce({ value: wrapped(0), done: false })
+        .mockImplementationOnce(() => secondNext.promise),
+      return: vi.fn().mockResolvedValue({ value: undefined, done: true }),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const firstOpened = openedVideo();
+    const secondOpened = openedVideo();
+    runtime.openMediaInput.mockReset().mockResolvedValueOnce(firstOpened).mockResolvedValueOnce(secondOpened);
+
+    send({ type: 'load', generation: 14, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+    const firstSink = runtime.sinkInstances[0]!;
+    firstSink.canvases.mockReturnValueOnce(firstIterator);
+    send({ type: 'tick', generation: 14, timelineSeconds: 0 });
+    await flush();
+
+    send({ type: 'load', generation: 15, assets: [source('asset-1')], clips: [clip('clip-a')] });
+    await flush();
+
+    expect(firstIterator.return).toHaveBeenCalledOnce();
+    secondNext.resolve({ value: undefined, done: true });
+    send({ type: 'dispose' });
+  });
+
   it('reports invalid inbound messages as decode failures', async () => {
     send({ type: 'seek', generation: -1, requestId: 1, timelineSeconds: 0, mode: 'seek' });
     expect(messages()).toContainEqual({

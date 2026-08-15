@@ -12,9 +12,9 @@ import { bitrateFor } from './export-presets';
 import type { ExportFormat, ExportPreset, ExportRequest } from './export-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { safeExportErrorMessage, technicalExportError } from './mediabunny/export-preflight';
+import { buildBeamExportReport } from './export-diagnostics';
 
 const { t } = useTranslate('ExportPopover');
-const { t: tExporter } = useTranslate('exporter');
 
 export type ExportResolutionOption = '720p' | '1080p' | 'max';
 
@@ -78,33 +78,38 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
 }));
 
 const availability = ref<string | null>(null);
-const { progress, error, errorContext, result, isExporting, start, cancel } = useExportJob();
+const { progress, error, errorContext, result, diagnostics, isChoosingDestination, isExporting, start, cancel } =
+  useExportJob();
 const toastStore = useToastStore();
-const percentage = computed(() => (progress.value?.overallProgress ?? 0) * 100);
-const stageTitle = computed(() => {
-  if (progress.value?.stageLabel) return progress.value.stageLabel;
-  if (progress.value?.stage === 'loading_assets') return tExporter('loadingMediaAssets');
-  if (progress.value?.stage === 'encoding')
-    return tExporter('encodingFrame', {
-      frame: progress.value.completedImages,
-      total: progress.value.totalImages,
-    });
-  if (progress.value?.stage === 'finalizing') return tExporter('finalizingMediaFile');
-  return tExporter('preparingExport');
+const percentage = computed(() => {
+  const value = progress.value;
+  return value?.totalImages ? (value.completedImages / value.totalImages) * 100 : 0;
 });
 const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
 
-const progressCopyText = computed(() => {
-  const value = progress.value;
-  if (!value) return '';
-  const details = [stageTitle.value, `${Math.round(percentage.value)}%`];
-  if (value.stage === 'encoding') {
-    details.push(t('frameCount', { completed: value.completedImages, total: value.totalImages }));
-    if (value.audioProgress !== null) details.push(`Audio ${Math.round(value.audioProgress * 100)}%`);
-  }
-  details.push(`${formatMs(value.currentTimeMs)} / ${formatMs(value.totalTimeMs)}`);
-  return details.join('\n');
+const lastRequest = ref<ExportRequest | null>(null);
+const reportRequest = computed<ExportRequest>(() => {
+  if (lastRequest.value) return lastRequest.value;
+  const { width, height } = activeDimensions.value;
+  return {
+    ...props.request,
+    format: format.value,
+    preset: preset.value,
+    snapshot: { ...props.request.snapshot, canvas: { ...props.request.snapshot.canvas, width, height } },
+  };
 });
+const exportReport = computed(() =>
+  buildBeamExportReport({
+    request: reportRequest.value,
+    format: reportRequest.value.format,
+    preset: reportRequest.value.preset,
+    status: error.value ? 'failed' : result.value ? 'completed' : 'running',
+    progress: progress.value,
+    diagnostics: result.value?.diagnostics ?? diagnostics.value,
+    outputPath: result.value?.path,
+    error: error.value ? technicalExportError(errorContext?.value ?? error.value) : undefined,
+  }),
+);
 
 const openFile = (path: string) => {
   if (path && window.capture?.openFile) {
@@ -128,9 +133,10 @@ const run = async () => {
       },
     },
   };
+  lastRequest.value = request;
   await start(request);
   if (error.value) {
-    const technical = technicalExportError(errorContext?.value ?? error.value);
+    const technical = exportReport.value;
     toastStore.error(safeExportErrorMessage(error.value), 0, {
       label: t('copyError'),
       copiedLabel: t('copied'),
@@ -150,18 +156,10 @@ const run = async () => {
     });
   }
 };
-
-const formatMs = (ms: number) => {
-  const totalSeconds = Math.max(0, ms / 1000);
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = Math.floor(totalSeconds % 60);
-  const millis = Math.floor((totalSeconds % 1) * 10);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis}s`;
-};
 </script>
 
 <template>
-  <Popover align="right" :match-trigger-width="false">
+  <Popover align="right" :match-trigger-width="false" :close-on-window-blur="false">
     <template #trigger>
       <Button variant="primary" size="xs" :icon="Download" class="export-trigger">
         {{ isExporting ? `${Math.round(percentage)}%` : t('exportVideo') }}
@@ -172,22 +170,28 @@ const formatMs = (ms: number) => {
         <div v-if="isExporting" class="export-progress-card">
           <div class="progress-header">
             <span class="progress-title">{{ t('exporting') }}</span>
-            <div class="progress-tools">
+            <span class="percentage-badge" aria-live="polite">{{ Math.round(percentage) }}%</span>
+          </div>
+
+          <ProgressBar :value="percentage" class="main-progress-bar" />
+
+          <div class="progress-footer">
+            <div class="progress-actions">
               <CopyButton
-                :text="progressCopyText"
-                display="icon"
+                :text="exportReport"
+                display="text"
                 variant="ghost"
                 size="xs"
-                :label="t('copyProgress')"
+                :label="t('copyReport')"
                 :copied-label="t('copied')"
                 :error-label="t('copyFailed')"
                 class="copy-progress-button"
               />
-              <span class="percentage-badge" aria-live="polite">{{ Math.round(percentage) }}%</span>
             </div>
+            <span class="progress-details">
+              {{ t('frameCount', { completed: progress?.completedImages ?? 0, total: progress?.totalImages ?? 0 }) }}
+            </span>
           </div>
-
-          <ProgressBar :value="percentage" class="main-progress-bar" />
 
           <div class="actions">
             <Button variant="ghost" size="sm" block :icon="X" @click="cancel">{{ t('cancelExport') }}</Button>
@@ -265,12 +269,25 @@ const formatMs = (ms: number) => {
           <p v-if="displayError" class="error" role="alert">{{ displayError }}</p>
           <div v-if="result" class="result-box">
             <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
-            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">{{
-              t('openFile')
-            }}</Button>
+            <div class="result-actions">
+              <CopyButton
+                :text="exportReport"
+                display="text"
+                variant="secondary"
+                size="sm"
+                :label="t('copyReport')"
+                :copied-label="t('copied')"
+                :error-label="t('copyFailed')"
+              />
+              <Button variant="secondary" size="sm" :icon="FolderOpen" @click="openFile(result.path)">{{
+                t('openFile')
+              }}</Button>
+            </div>
           </div>
           <div class="actions">
-            <Button variant="primary" size="sm" block :icon="Download" @click="run">{{ t('exportVideo') }}</Button>
+            <Button variant="primary" size="sm" block :icon="Download" :loading="isChoosingDestination" @click="run">{{
+              t('exportVideo')
+            }}</Button>
           </div>
         </template>
       </section>
@@ -343,6 +360,11 @@ const formatMs = (ms: number) => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .actions {
   display: flex;
   width: 100%;
@@ -368,10 +390,26 @@ const formatMs = (ms: number) => {
   color: var(--text-primary);
 }
 
-.progress-tools {
+.progress-footer {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  min-height: 24px;
+  gap: 12px;
+}
+
+.progress-actions {
+  display: flex;
+  align-items: center;
+}
+
+.progress-details {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .percentage-badge {

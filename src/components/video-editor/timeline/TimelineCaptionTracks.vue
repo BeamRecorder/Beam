@@ -12,7 +12,7 @@ defineProps<{
   defaultCaptionDurationMs: number;
   percentageStyle: (startMs: number, durationMs: number) => Record<string, string>;
   displayedClip: (clip: CaptionClip) => Pick<CaptionClip, 'timelineStartMs' | 'timelineDurationMs'>;
-  trimStateFor: (clipId: string) => { edge: 'start' | 'end'; durationMs: number } | null;
+  trimStateFor: (clipId: string) => { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
   beginClipMove: (event: PointerEvent, clip: CaptionClip) => void;
   beginClipTrim: (event: PointerEvent, clip: CaptionClip, edge: 'start' | 'end') => void;
   hoverAt: (event: MouseEvent, kind: 'caption') => void;
@@ -24,9 +24,6 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
 
 <template>
   <div v-if="keyboardClips.length" class="track-row annotation-track keyboard-caption-track">
-    <div class="track-info static-info">
-      <Keyboard class="track-icon" /><span class="track-title">{{ t('keyboardCaptions') }}</span>
-    </div>
     <div class="track-content annotation-content">
       <button
         v-for="clip in keyboardClips"
@@ -58,9 +55,6 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
   </div>
 
   <div class="track-row annotation-track text-caption-track">
-    <div class="track-info static-info">
-      <Type class="track-icon" /><span class="track-title">{{ t('textCaptions') }}</span>
-    </div>
     <div
       class="track-content annotation-content"
       :title="t('clickToAddCaption')"

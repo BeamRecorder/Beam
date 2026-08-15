@@ -224,7 +224,7 @@
     "copyError": "Копиране на грешката",
     "copied": "Копирано",
     "copyFailed": "Копирането не бе успешно",
-    "copyProgress": "Копиране на напредъка",
+    "copyReport": "Копиране на отчета",
     "resMaxDesc": "Нативна необработена разделителна способност ({width}×{height})",
     "res1080pDesc": "Full HD мащаб ({width}×{height})",
     "res720pDesc": "HD мащаб ({width}×{height})"

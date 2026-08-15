@@ -44,7 +44,7 @@ describe('export worker protocol', () => {
   });
 
   it('accepts complete and structured worker errors', () => {
-    expect(isExportWorkerResponse({ type: 'complete' })).toBe(true);
+    expect(isExportWorkerResponse({ type: 'complete' })).toBe(false);
     expect(isExportWorkerResponse({ type: 'error', error: { name: 'Error', message: 'decode failed' } })).toBe(true);
     expect(isExportWorkerResponse({ type: 'error', error: { name: 'Error' } })).toBe(false);
     expect(isExportWorkerResponse({ type: 'unknown' })).toBe(false);

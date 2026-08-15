@@ -23,7 +23,15 @@ export const DEFAULT_CAPTION_DURATION_MS = 2_000;
 export const MIN_DURATION_MS = 40;
 
 export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits, t: (key: string) => string) {
-  const durationMs = computed(() => Math.max(1, Math.round(props.duration * 1_000)));
+  const previewDurationMs = ref<number | null>(null);
+  const durationMs = computed(() => {
+    const raw = typeof props.duration === 'number' && Number.isFinite(props.duration) ? props.duration * 1_000 : 0;
+    const preview =
+      typeof previewDurationMs.value === 'number' && Number.isFinite(previewDurationMs.value)
+        ? previewDurationMs.value
+        : 0;
+    return Math.max(1_000, Math.round(Math.max(raw, preview)));
+  });
   const orderedClips = computed(() => [...props.composition.clips].sort((left, right) => left.order - right.order));
   const baseVisualClips = computed(() => orderedClips.value.filter(isVisualClip));
   const visualOrderPreview = ref<string[] | null>(null);
@@ -58,6 +66,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const activeSnapTimeMs = ref<number | null>(null);
   const {
     tracksScrollRef,
+    sidebarScrollRef,
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,
@@ -76,6 +85,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     audioWaveformStatus,
     thumbnailSlots,
     onScroll,
+    updateAutoScroll,
+    stopAutoScroll,
     percentageStyle,
     timeAt,
     centeredStartAt,
@@ -85,7 +96,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
 
   const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>({});
   const zoomPreview = ref<Record<string, { startMs: number; endMs: number }>>({});
-  const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number } | null>(null);
+  const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(null);
   const movingClipIds = ref<string[]>([]);
   const displayedClip = (clip: Clip): Clip => {
     const preview = clipPreview.value[clip.id];
@@ -97,7 +108,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   };
   const trimStateFor = (id: string) => {
     const state = activeTrimState.value;
-    return state?.ids.includes(id) ? { edge: state.edge, durationMs: state.durationMs } : null;
+    return state?.ids.includes(id)
+      ? { edge: state.edge, durationMs: state.durationMs, atLimit: state.atLimit }
+      : null;
   };
   const linkedIdsFor = (clip: Clip) =>
     clip.groupId
@@ -114,16 +127,31 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     clipPreview.value = next;
   };
 
+  const resolveMsPerPx = () => {
+    const ticks = ticksAreaRef.value;
+    const scroll = tracksScrollRef.value;
+    const baseDurationMs = Math.max(1, Math.round(props.duration * 1_000));
+    const width = Math.max(
+      1,
+      rulerWidth.value ||
+        (ticks ? ticks.getBoundingClientRect().width : 0) ||
+        (scroll ? scroll.getBoundingClientRect().width : 0) ||
+        1_000,
+    );
+    return { baseDurationMs, width, msPerPx: baseDurationMs / width };
+  };
+
   const beginClipMove = (event: PointerEvent, clip: Clip) => {
     if ((event.target as HTMLElement).closest('.trim-handle')) return;
     event.preventDefault();
     event.stopPropagation();
     const ids = linkedIdsFor(clip);
     movingClipIds.value = ids;
-    const pointerStartMs = timeAt(event.clientX);
+    const pointerStartX = event.clientX;
+    const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
     const originalStartMs = clip.timelineStartMs;
     const clipLengthMs = clip.timelineDurationMs;
-    const maxStartMs = Math.max(0, durationMs.value - clipLengthMs);
 
     const snapTargets = collectSnapTargets({
       composition: props.composition,
@@ -132,35 +160,43 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       duration: props.duration,
       ignoreClipIds: ids,
     });
-    const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+    const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
     let finalStartMs = originalStartMs;
     const applyMove = (next: PointerEvent) => {
-      const proposedStartMs = Math.max(
-        0,
-        Math.min(maxStartMs, originalStartMs + timeAt(next.clientX) - pointerStartMs),
-      );
+      updateAutoScroll(next.clientX);
+      const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
+      const deltaMs = Math.round(deltaPx * msPerPx);
+      const proposedStartMs = Math.max(0, originalStartMs + deltaMs);
       const snap =
         props.isSnappingEnabled !== false
           ? snapSpan(proposedStartMs, clipLengthMs, snapTargets, snapThresholdMs)
           : null;
       if (snap) {
-        finalStartMs = Math.max(0, Math.min(maxStartMs, snap.snappedStartMs));
+        finalStartMs = Math.max(0, snap.snappedStartMs);
         activeSnapTimeMs.value = snap.targetMs;
       } else {
         finalStartMs = proposedStartMs;
         activeSnapTimeMs.value = null;
+      }
+      if (finalStartMs + clipLengthMs > baseDurationMs) {
+        previewDurationMs.value = finalStartMs + clipLengthMs;
+      } else {
+        previewDurationMs.value = null;
       }
       previewLinked(ids, finalStartMs, clipLengthMs);
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
     const end = () => {
+      stopAutoScroll();
       moveUpdates.flush();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
       clearLinkedPreview(ids);
+      previewDurationMs.value = null;
       movingClipIds.value = [];
       activeSnapTimeMs.value = null;
       if (finalStartMs !== originalStartMs) emit('move:clip', { id: clip.id, startMs: finalStartMs });
@@ -173,8 +209,24 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     event.preventDefault();
     event.stopPropagation();
     const ids = linkedIdsFor(clip);
+    const pointerStartX = event.clientX;
+    const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
     const originalStartMs = clip.timelineStartMs;
     const originalEndMs = clip.timelineStartMs + clip.timelineDurationMs;
+    const asset = assetFor(clip);
+    const maxLeftExpansionMs =
+      asset?.durationMs != null ? Math.round(clip.sourceInMs / Math.max(0.01, clip.playbackRate)) : Infinity;
+    const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs);
+
+    const remainingSourceMs =
+      asset?.durationMs != null
+        ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs))
+        : Infinity;
+    const maxRightExpansionMs =
+      asset?.durationMs != null ? Math.round(remainingSourceMs / Math.max(0.01, clip.playbackRate)) : Infinity;
+    const maxEndMs = originalEndMs + maxRightExpansionMs;
+
     const snapTargets = collectSnapTargets({
       composition: props.composition,
       zoomElements: props.zoomElements,
@@ -182,36 +234,45 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       duration: props.duration,
       ignoreClipIds: ids,
     });
-    const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+    const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
     let finalTimeMs = edge === 'start' ? originalStartMs : originalEndMs;
     const applyMove = (next: PointerEvent) => {
-      const raw = timeAt(next.clientX);
+      updateAutoScroll(next.clientX);
+      const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
+      const deltaMs = Math.round(deltaPx * msPerPx);
+      const raw = edge === 'start' ? originalStartMs + deltaMs : originalEndMs + deltaMs;
       let proposedTimeMs =
         edge === 'start'
-          ? Math.max(0, Math.min(originalEndMs - MIN_DURATION_MS, raw))
-          : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(durationMs.value, raw));
+          ? Math.max(minStartMs, Math.min(originalEndMs - MIN_DURATION_MS, raw))
+          : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(maxEndMs, raw));
 
       const snap = props.isSnappingEnabled !== false ? snapValue(proposedTimeMs, snapTargets, snapThresholdMs) : null;
       if (snap) {
         proposedTimeMs =
           edge === 'start'
-            ? Math.max(0, Math.min(originalEndMs - MIN_DURATION_MS, snap.snappedValueMs))
-            : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(durationMs.value, snap.snappedValueMs));
+            ? Math.max(minStartMs, Math.min(originalEndMs - MIN_DURATION_MS, snap.snappedValueMs))
+            : Math.max(originalStartMs + MIN_DURATION_MS, Math.min(maxEndMs, snap.snappedValueMs));
         activeSnapTimeMs.value = snap.targetMs;
       } else {
         activeSnapTimeMs.value = null;
       }
 
       finalTimeMs = proposedTimeMs;
+      const isAtLimit =
+        (edge === 'start' && raw <= minStartMs && Number.isFinite(minStartMs)) ||
+        (edge === 'end' && raw >= maxEndMs && Number.isFinite(maxEndMs));
+
       const startMs = edge === 'start' ? finalTimeMs : originalStartMs;
       const endMs = edge === 'end' ? finalTimeMs : originalEndMs;
       previewLinked(ids, startMs, endMs - startMs);
-      activeTrimState.value = { ids, edge, durationMs: endMs - startMs };
+      activeTrimState.value = { ids, edge, durationMs: endMs - startMs, atLimit: isAtLimit };
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
     const end = () => {
+      stopAutoScroll();
       moveUpdates.flush();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
@@ -231,9 +292,11 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     if ((event.target as HTMLElement).closest('.trim-handle')) return;
     event.preventDefault();
     event.stopPropagation();
-    const pointerStartMs = timeAt(event.clientX);
+    const pointerStartX = event.clientX;
+    const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
     const lengthMs = zoom.endMs - zoom.startMs;
-    const maxStartMs = Math.max(0, durationMs.value - lengthMs);
+
     const snapTargets = collectSnapTargets({
       composition: props.composition,
       zoomElements: props.zoomElements,
@@ -241,19 +304,28 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       duration: props.duration,
       ignoreZoomIds: [zoom.id],
     });
-    const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+    const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
     let finalStartMs = zoom.startMs;
     const applyMove = (next: PointerEvent) => {
-      const proposedStartMs = Math.max(0, Math.min(maxStartMs, zoom.startMs + timeAt(next.clientX) - pointerStartMs));
+      updateAutoScroll(next.clientX);
+      const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
+      const deltaMs = Math.round(deltaPx * msPerPx);
+      const proposedStartMs = Math.max(0, zoom.startMs + deltaMs);
       const snap =
         props.isSnappingEnabled !== false ? snapSpan(proposedStartMs, lengthMs, snapTargets, snapThresholdMs) : null;
       if (snap) {
-        finalStartMs = Math.max(0, Math.min(maxStartMs, snap.snappedStartMs));
+        finalStartMs = Math.max(0, snap.snappedStartMs);
         activeSnapTimeMs.value = snap.targetMs;
       } else {
         finalStartMs = proposedStartMs;
         activeSnapTimeMs.value = null;
+      }
+      if (finalStartMs + lengthMs > baseDurationMs) {
+        previewDurationMs.value = finalStartMs + lengthMs;
+      } else {
+        previewDurationMs.value = null;
       }
       zoomPreview.value = {
         ...zoomPreview.value,
@@ -263,12 +335,14 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
     const end = () => {
+      stopAutoScroll();
       moveUpdates.flush();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       const next = { ...zoomPreview.value };
       delete next[zoom.id];
       zoomPreview.value = next;
+      previewDurationMs.value = null;
       activeSnapTimeMs.value = null;
       if (finalStartMs !== zoom.startMs)
         emit('move:zoom', { id: zoom.id, startMs: finalStartMs, endMs: finalStartMs + lengthMs });
@@ -279,6 +353,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   const beginZoomTrim = (event: PointerEvent, zoom: ZoomElement, edge: 'start' | 'end') => {
     event.preventDefault();
     event.stopPropagation();
+    const pointerStartX = event.clientX;
+    const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
     let finalTimeMs = edge === 'start' ? zoom.startMs : zoom.endMs;
     const snapTargets = collectSnapTargets({
       composition: props.composition,
@@ -287,27 +364,36 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       duration: props.duration,
       ignoreZoomIds: [zoom.id],
     });
-    const snapThresholdMs = calculateSnapThresholdMs(durationMs.value, rulerWidth.value);
+    const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
     const applyMove = (next: PointerEvent) => {
-      const raw = timeAt(next.clientX);
+      updateAutoScroll(next.clientX);
+      const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
+      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
+      const deltaMs = Math.round(deltaPx * msPerPx);
+      const raw = edge === 'start' ? zoom.startMs + deltaMs : zoom.endMs + deltaMs;
       let proposedTimeMs =
         edge === 'start'
           ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, raw))
-          : Math.max(zoom.startMs + MIN_DURATION_MS, Math.min(durationMs.value, raw));
+          : Math.max(zoom.startMs + MIN_DURATION_MS, raw);
 
       const snap = props.isSnappingEnabled !== false ? snapValue(proposedTimeMs, snapTargets, snapThresholdMs) : null;
       if (snap) {
         proposedTimeMs =
           edge === 'start'
             ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, snap.snappedValueMs))
-            : Math.max(zoom.startMs + MIN_DURATION_MS, Math.min(durationMs.value, snap.snappedValueMs));
+            : Math.max(zoom.startMs + MIN_DURATION_MS, snap.snappedValueMs);
         activeSnapTimeMs.value = snap.targetMs;
       } else {
         activeSnapTimeMs.value = null;
       }
 
       finalTimeMs = proposedTimeMs;
+      if (edge === 'end' && finalTimeMs > baseDurationMs) {
+        previewDurationMs.value = finalTimeMs;
+      } else {
+        previewDurationMs.value = null;
+      }
       zoomPreview.value = {
         ...zoomPreview.value,
         [zoom.id]: {
@@ -318,19 +404,18 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       activeTrimState.value = {
         ids: [zoom.id],
         edge,
-        durationMs: (edge === 'end' ? finalTimeMs : zoom.endMs) - (edge === 'start' ? finalTimeMs : zoom.startMs),
+        durationMs: edge === 'start' ? zoom.endMs - finalTimeMs : finalTimeMs - zoom.startMs,
       };
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
     const end = () => {
+      stopAutoScroll();
       moveUpdates.flush();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
-      const next = { ...zoomPreview.value };
-      delete next[zoom.id];
-      zoomPreview.value = next;
       activeTrimState.value = null;
+      previewDurationMs.value = null;
       activeSnapTimeMs.value = null;
       const original = edge === 'start' ? zoom.startMs : zoom.endMs;
       if (finalTimeMs !== original) emit('trim:zoom', { id: zoom.id, edge, timeMs: finalTimeMs });
@@ -447,6 +532,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     audioWaveformErrors,
     audioWaveformStatus,
     tracksScrollRef,
+    sidebarScrollRef,
     tracksViewportRef,
     ticksAreaRef,
     rulerWidth,

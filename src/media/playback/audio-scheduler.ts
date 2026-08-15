@@ -116,14 +116,14 @@ export class AudioPlaybackScheduler {
     this.playing = false;
     this.generation += 1;
     this.stopNodes();
-    this.consumers = [];
+    this.releaseConsumers();
   }
 
   async seek(timelineSeconds: number, generation: number, resume: boolean): Promise<void> {
     this.pausedTimelineSeconds = timelineSeconds;
     this.generation = generation;
     this.stopNodes();
-    this.consumers = [];
+    this.releaseConsumers();
     if (resume) await this.play(timelineSeconds, generation);
   }
 
@@ -269,7 +269,15 @@ export class AudioPlaybackScheduler {
     this.playing = false;
     this.generation += 1;
     this.stopNodes();
+    this.releaseConsumers();
+  }
+
+  private releaseConsumers() {
+    const consumers = this.consumers;
     this.consumers = [];
+    for (const consumer of consumers) {
+      void Promise.resolve(consumer.iterator.return?.()).catch(() => undefined);
+    }
   }
 
   private stopNodes() {

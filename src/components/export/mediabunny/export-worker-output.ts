@@ -13,14 +13,19 @@ import { bitrateFor } from '../export-presets';
 import type { ExportRequest } from '../export-types';
 import type { ExportWorkerResponse } from './export-worker-protocol';
 
-type Ack = { resolve(): void; reject(error: Error): void };
+type Ack = { resolve(): void; reject(error: Error): void; sentAt: number };
 
 export class ExportWorkerOutput {
   private readonly pending = new Map<number, Ack>();
   private readonly output: Output;
   private readonly video: CanvasSource;
   private readonly audio: AudioSampleSource | null;
+  private readonly videoCodec: string;
+  private readonly audioCodec: string | null;
   private sequence = 0;
+  private chunkCount = 0;
+  private bytesWritten = 0;
+  private ipcWriteWaitMs = 0;
 
   private constructor(
     request: ExportRequest,
@@ -28,11 +33,15 @@ export class ExportWorkerOutput {
     videoCodec: import('mediabunny').VideoCodec,
     audioCodec: import('mediabunny').AudioCodec | null,
   ) {
+    this.videoCodec = videoCodec;
+    this.audioCodec = audioCodec;
     const writable = new WritableStream<{ data: Uint8Array; position: number }>({
       write: ({ data, position }) =>
         new Promise<void>((resolve, reject) => {
           const sequence = this.sequence++;
-          this.pending.set(sequence, { resolve, reject });
+          this.chunkCount += 1;
+          this.bytesWritten += data.byteLength;
+          this.pending.set(sequence, { resolve, reject, sentAt: performance.now() });
           const message: ExportWorkerResponse = { type: 'chunk', sequence, position, data };
           self.postMessage(message, { transfer: [data.buffer] });
         }),
@@ -76,7 +85,10 @@ export class ExportWorkerOutput {
     return this.video.add(timestamp, duration);
   }
   async addAudio(sample: AudioSample) {
-    if (!this.audio) return;
+    if (!this.audio) {
+      sample.close();
+      return;
+    }
     try {
       await this.audio.add(sample);
     } finally {
@@ -93,6 +105,7 @@ export class ExportWorkerOutput {
     const ack = this.pending.get(sequence);
     if (!ack) return;
     this.pending.delete(sequence);
+    this.ipcWriteWaitMs += performance.now() - ack.sentAt;
     ack.resolve();
   }
   reject(sequence: number, message: string) {
@@ -103,6 +116,15 @@ export class ExportWorkerOutput {
   }
   finalize() {
     return this.output.finalize();
+  }
+  diagnostics() {
+    return {
+      videoCodec: this.videoCodec,
+      audioCodec: this.audioCodec,
+      chunkCount: this.chunkCount,
+      bytesWritten: this.bytesWritten,
+      ipcWriteWaitMs: this.ipcWriteWaitMs,
+    };
   }
   cancel() {
     for (const ack of this.pending.values()) ack.reject(new DOMException('Export cancelled.', 'AbortError'));

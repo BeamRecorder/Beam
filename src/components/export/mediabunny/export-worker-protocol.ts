@@ -10,14 +10,15 @@ export type ExportWorkerRequest =
 export type ExportWorkerResponse =
   | { type: 'progress'; progress: ExportProgress }
   | { type: 'chunk'; sequence: number; position: number; data: Uint8Array }
-  | { type: 'complete'; diagnostics?: ExportRuntimeDiagnostics }
+  | { type: 'complete'; diagnostics: ExportRuntimeDiagnostics }
   | { type: 'error'; error: { name: string; message: string; issue?: ExportValidationIssue } };
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object');
 const sequence = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 0;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const nullableFinite = (value: unknown) => value === null || finite(value);
-const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === 'string');
+const strings = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string');
 
 const runtimeDiagnostics = (value: unknown): value is ExportRuntimeDiagnostics => {
   if (!record(value)) return false;
@@ -83,8 +84,8 @@ export function isExportWorkerResponse(value: unknown): value is ExportWorkerRes
       (progress.audioProgress === null ||
         (finite(progress.audioProgress) && progress.audioProgress >= 0 && progress.audioProgress <= 1)) &&
       sequence(progress.currentTimeMs) &&
-      sequence(progress.totalTimeMs)
-      && (progress.diagnostics === undefined || runtimeDiagnostics(progress.diagnostics))
+      sequence(progress.totalTimeMs) &&
+      (progress.diagnostics === undefined || runtimeDiagnostics(progress.diagnostics))
     );
   }
   return value.type === 'error' && record(value.error) && typeof value.error.message === 'string';

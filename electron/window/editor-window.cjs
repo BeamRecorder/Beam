@@ -130,8 +130,25 @@ function createEditorWindowManager({
       contents.on('console-message', (details) => {
         if (details.message.startsWith('[Beam media:')) console.info(details.message);
       });
+      contents.on('before-input-event', (event, input) => {
+        if (
+          input.type === 'keyDown' &&
+          (input.key === 'F12' ||
+            ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i'))
+        ) {
+          event.preventDefault();
+          if (contents.isDevToolsOpened?.()) {
+            contents.closeDevTools?.();
+          } else {
+            contents.openDevTools?.({ mode: 'detach' });
+          }
+        }
+      });
     }
-    contents.once('did-finish-load', () => sendProgress('loadingEditor'));
+    contents.once('did-finish-load', () => {
+      if (!isPackaged) contents.openDevTools?.({ mode: 'detach' });
+      sendProgress('loadingEditor');
+    });
     contents.once('destroyed', () => cleanupWindow?.(contents));
     window.on('closed', () => {
       const shouldQuit = !returningToHud;

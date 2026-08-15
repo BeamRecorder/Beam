@@ -107,6 +107,17 @@ describe('TimelineClip', () => {
     expect(wrapper.emitted('trim')?.[0]?.[0]).toEqual(expect.objectContaining({ edge: 'end' }));
   });
 
+  it('renders at-limit red styling when trimming reaches the source limit', async () => {
+    const wrapper = mount(TimelineClip, {
+      attachTo: document.body,
+      props: { ...baseProps, trimState: { edge: 'end', durationMs: 2_000, atLimit: true } },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+    expect(wrapper.get('.timeline-clip').classes()).toContain('trim-at-limit');
+    expect(wrapper.get('.trim-handle.end').classes()).toContain('at-limit');
+    expect(wrapper.get('.trim-side-badge').classes()).toContain('at-limit');
+  });
+
   it('requests only frames in the virtualized viewport and refreshes after a zoom-derived range changes', async () => {
     const wrapper = mount(TimelineClip, {
       props: { ...baseProps },

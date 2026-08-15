@@ -56,6 +56,32 @@ describe('useExportJob', () => {
     expect(job.result.value?.path).toBe('/tmp/demo.webm');
     expect(job.isExporting.value).toBe(false);
   });
+  it('keeps destination selection separate from active export state', async () => {
+    let choosingDuringCallback: boolean | undefined;
+    let exportingDuringCallback: boolean | undefined;
+    let choosingAfterCallback: boolean | undefined;
+    let exportingAfterCallback: boolean | undefined;
+    let job!: ReturnType<typeof useExportJob>;
+    exportWithMediabunny.mockImplementation(async (...args: unknown[]) => {
+      choosingDuringCallback = job.isChoosingDestination.value;
+      exportingDuringCallback = job.isExporting.value;
+      const onStarted = args[3];
+      if (typeof onStarted === 'function') onStarted({ schemaVersion: 1 } as never);
+      choosingAfterCallback = job.isChoosingDestination.value;
+      exportingAfterCallback = job.isExporting.value;
+      return { path: '/tmp/demo.webm', format: 'webm', diagnostics: null };
+    });
+    job = useExportJob();
+    await job.start(request);
+
+    expect(choosingDuringCallback).toBe(true);
+    expect(exportingDuringCallback).toBe(false);
+    expect(choosingAfterCallback).toBe(false);
+    expect(exportingAfterCallback).toBe(true);
+    expect(job.isChoosingDestination.value).toBe(false);
+    expect(job.isExporting.value).toBe(false);
+  });
+
   it('prevents concurrent submissions', async () => {
     let release!: () => void;
     exportWithMediabunny.mockReturnValue(

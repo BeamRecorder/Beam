@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExportRequest } from '../../export-types';
 import type { ExportWorkerResponse } from '../export-worker-protocol';
+import type { ExportRuntimeDiagnostics } from '../../export-diagnostics-types';
 import { exportWithMediabunny } from '../exporter';
 
 type WorkerMessage = { type: string; [key: string]: unknown };
@@ -54,6 +55,30 @@ const progress = (
   totalTimeMs: 2_000,
 });
 
+const diagnostics = (): ExportRuntimeDiagnostics => ({
+  elapsedMs: 1_000,
+  phase: 'finalizing',
+  validationMs: 10,
+  assetLoadingMs: 20,
+  outputSetupMs: 5,
+  videoPipelineMs: 900,
+  audioPipelineMs: null,
+  muxFinalizationMs: 50,
+  nativeFinalizationMs: null,
+  decodeMs: 300,
+  renderMs: 200,
+  encoderBackpressureMs: 400,
+  ipcWriteWaitMs: 25,
+  encodedFps: 120,
+  audioRealtimeSpeed: null,
+  chunkCount: 1,
+  bytesWritten: 3,
+  videoCodec: 'vp9',
+  audioCodec: null,
+  inputVideoCodecs: ['vp9'],
+  inputAudioCodecs: [],
+});
+
 const flush = async () => {
   await Promise.resolve();
   await Promise.resolve();
@@ -102,7 +127,7 @@ describe('export worker client', () => {
     expect(reported).toEqual([0, 0.05, 0.08, 0.65, 0.98]);
     expect(finalizeExport).not.toHaveBeenCalled();
 
-    worker.emit({ type: 'complete' });
+    worker.emit({ type: 'complete', diagnostics: diagnostics() });
     await expect(running).resolves.toMatchObject({ path: '/tmp/worker.webm', format: 'webm' });
     expect(finalizeExport).toHaveBeenCalledWith('job-1');
     expect(reported.at(-1)).toBe(1);
@@ -131,7 +156,7 @@ describe('export worker client', () => {
     await flush();
     expect(worker.posted).toContainEqual({ type: 'chunkAck', sequence: 0 });
 
-    worker.emit({ type: 'complete' });
+    worker.emit({ type: 'complete', diagnostics: diagnostics() });
     await expect(running).resolves.toMatchObject({ path: '/tmp/worker.webm' });
   });
 

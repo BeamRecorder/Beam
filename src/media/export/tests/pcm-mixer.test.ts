@@ -85,6 +85,7 @@ const iterator = (samples: readonly InputSample[]) => {
       const sample = samples[index++];
       return sample ? { done: false as const, value: sample } : { done: true as const, value: undefined };
     }),
+    return: vi.fn(async () => ({ done: true as const, value: undefined })),
     [Symbol.asyncIterator]() {
       return this;
     },
@@ -164,6 +165,56 @@ describe('progressive PCM export mixer', () => {
     expect(values).toHaveLength(192);
     expect(values.slice(96).every((value) => value === 0)).toBe(true);
     expect(source.samples).toHaveBeenCalledWith(0.001, 0.002, { skipLiveWait: true });
+    expect(sample.close).toHaveBeenCalledOnce();
+  });
+
+  it('finalizes every source iterator after a successful mix', async () => {
+    const firstIterator = iterator([inputSample([[0.25]], 48_000)]);
+    const secondIterator = iterator([inputSample([[0.5]], 48_000)]);
+    const first = { samples: vi.fn(() => firstIterator) } as unknown as InputAudioTrack;
+    const second = { samples: vi.fn(() => secondIterator) } as unknown as InputAudioTrack;
+    const mixer = createProgressiveAudioMixer(
+      [clip('first', 'first'), clip('second', 'second')],
+      new Map([
+        ['first', first],
+        ['second', second],
+      ]),
+      1 / 48_000,
+    );
+
+    await mixer.mixBlock(0, new AbortController().signal);
+    mixer.dispose();
+
+    expect(firstIterator.return).toHaveBeenCalledOnce();
+    expect(secondIterator.return).toHaveBeenCalledOnce();
+  });
+
+  it('finalizes every source iterator when cancellation interrupts decoding', async () => {
+    const sample = inputSample([[0.5]], 48_000);
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const sourceIterator = {
+      next: vi.fn(async () => {
+        await pending;
+        return { done: false as const, value: sample };
+      }),
+      return: vi.fn(async () => ({ done: true as const, value: undefined })),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    const source = { samples: vi.fn(() => sourceIterator) } as unknown as InputAudioTrack;
+    const controller = new AbortController();
+    const mixer = createProgressiveAudioMixer([clip('cancel', 'asset')], new Map([['asset', source]]), 1 / 48_000);
+    const running = mixer.mixBlock(0, controller.signal);
+
+    controller.abort();
+    release();
+
+    await expect(running).rejects.toMatchObject({ name: 'AbortError' });
+    expect(sourceIterator.return).toHaveBeenCalledOnce();
     expect(sample.close).toHaveBeenCalledOnce();
   });
 

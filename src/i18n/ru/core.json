@@ -224,7 +224,7 @@
     "copyError": "Копировать ошибку",
     "copied": "Скопировано",
     "copyFailed": "Не удалось скопировать",
-    "copyProgress": "Копировать прогресс",
+    "copyReport": "Копировать отчёт",
     "resMaxDesc": "Исходное разрешение ({width}×{height})",
     "res1080pDesc": "Масштаб Full HD ({width}×{height})",
     "res720pDesc": "Масштаб HD ({width}×{height})"

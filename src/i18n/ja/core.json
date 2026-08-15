@@ -224,7 +224,7 @@
     "copyError": "エラーをコピー",
     "copied": "コピーしました",
     "copyFailed": "コピーに失敗しました",
-    "copyProgress": "進行状況をコピー",
+    "copyReport": "レポートをコピー",
     "resMaxDesc": "元の解像度（{width}×{height}）",
     "res1080pDesc": "フルHDスケール（{width}×{height}）",
     "res720pDesc": "HDスケール（{width}×{height}）"

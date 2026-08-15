@@ -224,7 +224,7 @@
     "copyError": "Copiar erro",
     "copied": "Copiado",
     "copyFailed": "Falha ao copiar",
-    "copyProgress": "Copiar progresso",
+    "copyReport": "Copiar relatório",
     "resMaxDesc": "Resolução nativa bruta ({width}×{height})",
     "res1080pDesc": "Escala Full HD ({width}×{height})",
     "res720pDesc": "Escala HD ({width}×{height})"

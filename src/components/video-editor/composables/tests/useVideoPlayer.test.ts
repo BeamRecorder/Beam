@@ -106,6 +106,35 @@ describe('useVideoPlayer', () => {
     expect(player.isPlaying.value).toBe(false);
   });
 
+  it('invalidates the cached frame before reloading and exposes the replacement frame', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    const replacement = {
+      clipId: 'clip',
+      bitmap: {} as ImageBitmap,
+      timestampSeconds: 0,
+      durationSeconds: 1,
+      width: 2,
+      height: 2,
+      byteSize: 16,
+      close: vi.fn(),
+    };
+    engine.frameFor.mockReturnValue(replacement);
+    let versionAtReload = -1;
+    engine.loadComposition.mockImplementationOnce(async () => {
+      versionAtReload = player.frameVersion.value;
+      engine.listeners.get('state')?.('paused' as never);
+      engine.listeners.get('frame')?.({ clipId: 'clip' } as never);
+    });
+
+    await player.loadComposition(composition);
+
+    expect(versionAtReload).toBe(1);
+    expect(player.frameVersion.value).toBe(2);
+    expect(player.frameFor('clip')).toBe(replacement);
+  });
+
   it('rejects non-finite seeks and reports engine loading errors through state', async () => {
     const player = useVideoPlayer([]);
     await player.loadComposition(composition);

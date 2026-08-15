@@ -20,6 +20,7 @@ const runtime = vi.hoisted(() => ({
     closeAudio: vi.fn(),
     finalize: vi.fn(),
     cancel: vi.fn(),
+    diagnostics: vi.fn(),
   },
 }));
 
@@ -132,6 +133,13 @@ beforeEach(() => {
   runtime.output.closeAudio.mockReset();
   runtime.output.finalize.mockReset().mockResolvedValue(undefined);
   runtime.output.cancel.mockReset().mockResolvedValue(undefined);
+  runtime.output.diagnostics.mockReset().mockReturnValue({
+    videoCodec: 'vp9',
+    audioCodec: null,
+    chunkCount: 0,
+    bytesWritten: 0,
+    ipcWriteWaitMs: 0,
+  });
   runtime.openExportAssets.mockResolvedValue({
     assets: new Map(),
     screenSize: null,
@@ -182,6 +190,40 @@ describe('export worker', () => {
       progress: expect.objectContaining({ stage: 'validating_assets', overallProgress: 0 }),
     });
     expect(runtime.openExportAssets).toHaveBeenCalledOnce();
+  });
+
+  it('logs phase durations and measured encoding throughput after frame progress completes', async () => {
+    installCanvasRuntime();
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    try {
+      const worker = await importWorker();
+      startWorker(worker);
+      await vi.waitFor(() =>
+        expect(worker.postMessage).toHaveBeenCalledWith({
+          type: 'complete',
+          diagnostics: expect.objectContaining({ encodedFps: expect.any(Number), videoCodec: 'vp9' }),
+        }),
+      );
+
+      expect(info).toHaveBeenCalledWith(
+        '[Beam export] asset validation',
+        expect.objectContaining({ elapsedMs: expect.any(Number) }),
+      );
+      expect(info).toHaveBeenCalledWith(
+        '[Beam export] asset loading',
+        expect.objectContaining({ elapsedMs: expect.any(Number) }),
+      );
+      expect(info).toHaveBeenCalledWith(
+        '[Beam export] finalization',
+        expect.objectContaining({ elapsedMs: expect.any(Number) }),
+      );
+      expect(info).toHaveBeenCalledWith(
+        '[Beam export] encoding complete',
+        expect.objectContaining({ elapsedMs: expect.any(Number), encodingFps: expect.any(Number) }),
+      );
+    } finally {
+      info.mockRestore();
+    }
   });
 
   it('does not decode an SVG cursor when cursor data is unavailable', async () => {
@@ -263,7 +305,7 @@ describe('export worker', () => {
       isMirrored: false,
       isMirroredY: false,
     };
-    const track = {};
+    const track = { getCodec: vi.fn().mockResolvedValue('vp9') };
     runtime.openExportAssets.mockResolvedValueOnce({
       assets: new Map([[asset.id, { asset, opened: { dispose: vi.fn() }, video: track, audio: null, duration: 1 }]]),
       screenSize: null,
@@ -280,6 +322,10 @@ describe('export worker', () => {
     expect(sink.getSample).not.toHaveBeenCalled();
     expect(sink.samplesAtTimestamps.mock.calls.length + sink.samples.mock.calls.length).toBe(1);
     expect(runtime.output.addVideo).toHaveBeenCalledTimes(30);
+    expect(worker.postMessage).toHaveBeenCalledWith({
+      type: 'progress',
+      progress: expect.objectContaining({ stage: 'finalizing', completedImages: 30, totalImages: 30 }),
+    });
   });
 
   it('disposes opened assets and cancels output when rendering fails', async () => {
