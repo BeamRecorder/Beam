@@ -264,9 +264,7 @@ export function useClipComposition(options: {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
     if (!clip) return;
     const asset =
-      clip.kind === 'caption'
-        ? undefined
-        : composition.value.assets.find((entry) => entry.id === clip.assetId);
+      clip.kind === 'caption' ? undefined : composition.value.assets.find((entry) => entry.id === clip.assetId);
     const originalStartMs = clip.timelineStartMs;
     const originalEndMs = endMs(clip);
 

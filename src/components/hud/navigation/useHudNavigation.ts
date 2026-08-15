@@ -155,7 +155,11 @@ export function useHudNavigation(options: UseHudNavigationOptions = {}): UseHudN
     }
   };
 
+  const isEditableTarget = (target: EventTarget | null) =>
+    target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
+
   const handleMouseNavigation = (event: MouseEvent): boolean => {
+    if (isEditableTarget(event.target)) return false;
     if (event.button === 3) {
       event.preventDefault();
       event.stopPropagation();
@@ -174,8 +178,7 @@ export function useHudNavigation(options: UseHudNavigationOptions = {}): UseHudN
 
   const onMouseEvent = (event: MouseEvent) => {
     if (event.button === 3 || event.button === 4) {
-      event.preventDefault();
-      event.stopPropagation();
+      if (isEditableTarget(event.target)) return;
       const now = Date.now();
       if (event.button === lastButton && now - lastNavTime < 150) {
         return;
@@ -187,7 +190,7 @@ export function useHudNavigation(options: UseHudNavigationOptions = {}): UseHudN
   };
 
   const onAuxClick = (event: MouseEvent) => {
-    if (event.button === 3 || event.button === 4) {
+    if ((event.button === 3 || event.button === 4) && !isEditableTarget(event.target)) {
       event.preventDefault();
       event.stopPropagation();
     }

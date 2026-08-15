@@ -32,7 +32,8 @@ export function normalizedMicrophoneSetting(value: number | undefined) {
 }
 
 async function ensureMediaLabelsUnlocked(): Promise<MediaDeviceInfo[]> {
-  if (!navigator.mediaDevices?.enumerateDevices) return [];
+  if (!navigator.mediaDevices?.enumerateDevices)
+    throw new Error('Microphone discovery is unavailable in this Chromium build.');
   let devices = await navigator.mediaDevices.enumerateDevices();
   const needsUnlock = devices.some((d) => (d.kind === 'audioinput' || d.kind === 'videoinput') && !d.label);
   if (needsUnlock && navigator.mediaDevices.getUserMedia) {

@@ -130,7 +130,7 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
   it.each([
     { supported: true, expected: 'prefer-hardware' as const },
     { supported: false, expected: 'no-preference' as const },
-  ])('selects $expected only when hardware encoding is supported', async ({ supported, expected }) => {
+  ])('selects $expected for WebM when hardware encoding support is $supported', async ({ supported, expected }) => {
     runtime.canEncodeVideo.mockResolvedValueOnce(supported);
     const { ExportWorkerOutput } = await import('../export-worker-output');
     let now = 100;
@@ -202,6 +202,21 @@ describe('ExportWorkerOutput diagnostics and IPC backpressure', () => {
       encodedPacketCount: 2,
       keyFrameCount: 1,
       encodedVideoBytes: 200,
+    });
+  });
+
+  it('keeps MP4 AVC on the default hardware preference', async () => {
+    runtime.videoCodec.mockResolvedValueOnce('avc');
+    const { ExportWorkerOutput } = await import('../export-worker-output');
+
+    const output = await ExportWorkerOutput.create(request('mp4'), { width: 16, height: 16 } as OffscreenCanvas, false);
+
+    expect(runtime.canEncodeVideo).not.toHaveBeenCalled();
+    expect(runtime.videoOptions).toMatchObject({ codec: 'avc' });
+    expect(runtime.videoOptions).not.toHaveProperty('hardwareAcceleration');
+    expect(output.diagnostics()).toMatchObject({
+      videoCodec: 'avc',
+      hardwareAcceleration: 'no-preference',
     });
   });
 

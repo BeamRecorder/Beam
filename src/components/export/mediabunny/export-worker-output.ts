@@ -119,12 +119,14 @@ export class ExportWorkerOutput {
     const codecs: import('mediabunny').VideoCodec[] = request.format === 'webm' ? ['vp9', 'vp8', 'av1'] : ['avc'];
     const videoCodec = await getFirstEncodableVideoCodec(codecs, videoOptions);
     if (!videoCodec) throw new Error(`${request.format.toUpperCase()} video is not encodable on this device.`);
-    const hardwareAcceleration = (await canEncodeVideo(videoCodec, {
-      ...videoOptions,
-      hardwareAcceleration: 'prefer-hardware',
-    }))
-      ? 'prefer-hardware'
-      : 'no-preference';
+    const hardwareAcceleration =
+      request.format === 'webm' &&
+      (await canEncodeVideo(videoCodec, {
+        ...videoOptions,
+        hardwareAcceleration: 'prefer-hardware',
+      }))
+        ? 'prefer-hardware'
+        : 'no-preference';
     const audioSelection = await selectAudioEncoder(request, withAudio);
     return new ExportWorkerOutput(request, canvas, videoCodec, audioSelection, hardwareAcceleration);
   }

@@ -255,7 +255,7 @@ export function trimClip(
     const rate = Math.max(0.01, clip.playbackRate);
     if (edge === 'start') {
       const startDelta = target - clip.timelineStartMs;
-      const newTimelineDuration = (clip.timelineStartMs + clip.timelineDurationMs) - target;
+      const newTimelineDuration = clip.timelineStartMs + clip.timelineDurationMs - target;
       const newSourceDuration = integer(newTimelineDuration * rate);
       if (clip.kind === 'caption') {
         return {

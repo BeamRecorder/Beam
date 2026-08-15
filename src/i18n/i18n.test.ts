@@ -73,7 +73,10 @@ describe('internationalization', () => {
         'preparingAudio',
         'cancel',
       ]) {
-        expect(i18n.global.te(`CaptionPanel.${captionKey}`, locale), `${locale}: missing CaptionPanel.${captionKey}`).toBe(true);
+        expect(
+          i18n.global.te(`CaptionPanel.${captionKey}`, locale),
+          `${locale}: missing CaptionPanel.${captionKey}`,
+        ).toBe(true);
       }
     }
   });

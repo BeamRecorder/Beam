@@ -99,7 +99,12 @@ function detectLocale(): AppLocale {
   try {
     const stored = localStorage.getItem('locale');
     if (stored && isSupportedLocale(stored)) return stored;
-    const languages = typeof navigator !== 'undefined' ? (navigator.languages?.length ? navigator.languages : [navigator.language]) : [];
+    const languages =
+      typeof navigator !== 'undefined'
+        ? navigator.languages?.length
+          ? navigator.languages
+          : [navigator.language]
+        : [];
     for (const lang of languages) {
       if (!lang) continue;
       const navLang = lang.toLowerCase();

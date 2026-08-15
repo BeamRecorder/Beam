@@ -78,7 +78,10 @@ describe('background media', () => {
         ['/wallpapers/video/nested/loop.WEBM', '/wallpapers/video/wrong.jpg'],
       ),
     ).toEqual([
-      expect.objectContaining({ path: resolvePublicAssetUrl('/wallpapers/image/nested/landscape.webp'), kind: 'image' }),
+      expect.objectContaining({
+        path: resolvePublicAssetUrl('/wallpapers/image/nested/landscape.webp'),
+        kind: 'image',
+      }),
       expect.objectContaining({ path: resolvePublicAssetUrl('/wallpapers/video/nested/loop.WEBM'), kind: 'video' }),
     ]);
   });

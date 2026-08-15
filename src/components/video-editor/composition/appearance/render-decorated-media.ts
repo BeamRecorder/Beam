@@ -59,8 +59,7 @@ export function applyClipShadow(
   const offset = blur * 0.5;
   ctx.shadowOffsetX =
     style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'bottom-right' ? offset : 0;
-  ctx.shadowOffsetY =
-    style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'all' ? 0 : offset;
+  ctx.shadowOffsetY = style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'all' ? 0 : offset;
 }
 const clipRect = (ctx: Canvas2DContext, rect: MediaRect, radius: number) => {
   ctx.beginPath();

@@ -97,7 +97,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
 
   const clipPreview = ref<Record<string, { startMs: number; durationMs: number }>>({});
   const zoomPreview = ref<Record<string, { startMs: number; endMs: number }>>({});
-  const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(null);
+  const activeTrimState = ref<{ ids: string[]; edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null>(
+    null,
+  );
   const movingClipIds = ref<string[]>([]);
   const displayedClip = (clip: Clip): Clip => {
     const preview = clipPreview.value[clip.id];
@@ -109,9 +111,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   };
   const trimStateFor = (id: string) => {
     const state = activeTrimState.value;
-    return state?.ids.includes(id)
-      ? { edge: state.edge, durationMs: state.durationMs, atLimit: state.atLimit }
-      : null;
+    return state?.ids.includes(id) ? { edge: state.edge, durationMs: state.durationMs, atLimit: state.atLimit } : null;
   };
   const linkedIdsFor = (clip: Clip) =>
     clip.groupId
@@ -167,7 +167,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const applyMove = (next: PointerEvent) => {
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
+      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft);
       const deltaMs = Math.round(deltaPx * msPerPx);
       const proposedStartMs = Math.max(0, originalStartMs + deltaMs);
       const snap =
@@ -228,9 +228,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs);
 
     const remainingSourceMs =
-      asset?.durationMs != null
-        ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs))
-        : Infinity;
+      asset?.durationMs != null ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs)) : Infinity;
     const maxRightExpansionMs =
       asset?.durationMs != null ? Math.round(remainingSourceMs / Math.max(0.01, clip.playbackRate)) : Infinity;
     const maxEndMs = originalEndMs + maxRightExpansionMs;
@@ -248,7 +246,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const applyMove = (next: PointerEvent) => {
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
+      const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft);
       const deltaMs = Math.round(deltaPx * msPerPx);
       const raw = edge === 'start' ? originalStartMs + deltaMs : originalEndMs + deltaMs;
       let proposedTimeMs =

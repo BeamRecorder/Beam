@@ -6,7 +6,7 @@ const { capture } = vi.hoisted(() => ({
 }));
 vi.mock('../../../api/capture', () => ({ capture }));
 
-import CameraPreviewOverlay from './CameraPreviewOverlay.vue';
+import CameraPreviewOverlay from '../camera/CameraPreviewOverlay.vue';
 
 class FakeTrack {
   stop = vi.fn();

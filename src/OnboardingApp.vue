@@ -143,13 +143,7 @@ onUnmounted(() => {
 
     <!-- Bottom Navigation Bar (Shown on Steps 2 & 3) -->
     <footer v-if="currentStep > 1 && currentStep < 4" class="onboarding-footer">
-      <Button
-        variant="secondary"
-        size="sm"
-        class="nav-btn"
-        :icon="ChevronLeft"
-        @click="prevStep"
-      >
+      <Button variant="secondary" size="sm" class="nav-btn" :icon="ChevronLeft" @click="prevStep">
         <span>{{ t('back') }}</span>
       </Button>
 
@@ -167,12 +161,7 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <Button
-        variant="primary"
-        size="sm"
-        class="nav-btn"
-        @click="nextStep"
-      >
+      <Button variant="primary" size="sm" class="nav-btn" @click="nextStep">
         <span class="nav-next-flex">
           <span>{{ t('next') }}</span>
           <ChevronRight class="btn-icon" />

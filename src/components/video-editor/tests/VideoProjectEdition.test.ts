@@ -1,9 +1,9 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../api/capture', () => ({ capture: {} }));
+vi.mock('~/api/capture', () => ({ capture: {} }));
 
-import VideoProjectEdition from './VideoProjectEdition.vue';
+import VideoProjectEdition from '../VideoProjectEdition.vue';
 
 const ProjectPicker = {
   emits: ['select-project', 'open-project'],
@@ -14,7 +14,17 @@ const ProjectPicker = {
 describe('VideoProjectEdition', () => {
   it('opens the picker, emits selection and closes the menu', async () => {
     const wrapper = mount(VideoProjectEdition, {
-      props: { project: { id: 'current', name: 'Current project' }, isSaving: true },
+      props: {
+        project: {
+          id: 'current',
+          name: 'Current project',
+          createdAt: '2026-01-01',
+          updatedAt: '2026-01-01',
+          sessionCount: 0,
+          previewSrc: null,
+        },
+        isSaving: true,
+      },
       global: { stubs: { ProjectPicker } },
     });
 

@@ -337,4 +337,3 @@ const handleZoomOut = () => {
   box-sizing: border-box;
 }
 </style>
-

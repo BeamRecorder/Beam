@@ -602,6 +602,27 @@ test('returns opaque project-media URLs for editor session assets', () => {
   assert.doesNotMatch(data.videoSrc, /^file:/);
 });
 
+test('returns an opaque project-media URL for project previews', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-project-preview-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Opaque preview' });
+  const directory = store.directoryFor(project.id);
+  const sessionId = 'session-preview';
+  const screenDirectory = path.join(directory, 'sessions', sessionId, 'screen');
+  fs.mkdirSync(screenDirectory, { recursive: true });
+  fs.writeFileSync(path.join(screenDirectory, 'capture.mp4'), 'video');
+
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.sessions = [{ sessionId, relativePath: path.join('sessions', sessionId) }];
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const previewSrc = store.list().find((entry) => entry.id === project.id)?.previewSrc;
+  assert.match(previewSrc, /^project-media:\/\/asset\//);
+  assert.doesNotMatch(previewSrc, /^file:/);
+  assert.ok(store.mediaFileForUrl(previewSrc));
+});
+
 test('imports dropped project media safely and never returns a local path', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-dropped-media-'));
   const store = createProjectStore(root);

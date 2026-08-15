@@ -51,7 +51,8 @@ export function useTimelineResize(initialHeight = DEFAULT_TIMELINE_HEIGHT) {
 
     const applyHeightUpdate = (clientY: number) => {
       const deltaY = startY - clientY;
-      const maxHeight = typeof window !== 'undefined' ? Math.min(MAX_TIMELINE_HEIGHT, window.innerHeight * 0.6) : MAX_TIMELINE_HEIGHT;
+      const maxHeight =
+        typeof window !== 'undefined' ? Math.min(MAX_TIMELINE_HEIGHT, window.innerHeight * 0.6) : MAX_TIMELINE_HEIGHT;
       const newHeight = Math.max(MIN_TIMELINE_HEIGHT, Math.min(maxHeight, startHeight + deltaY));
       timelineHeight.value = Math.round(newHeight);
     };

@@ -9,7 +9,7 @@ vi.mock('~/i18n/useTranslate', () => ({
   useTranslate: () => ({ t: (key: string) => key }),
 }));
 
-import ScreenRegionOverlayApp from './ScreenRegionOverlayApp.vue';
+import ScreenRegionOverlayApp from '../region/ScreenRegionOverlayApp.vue';
 
 const Button = {
   props: ['disabled'],
@@ -38,7 +38,9 @@ describe('ScreenRegionOverlayApp', () => {
     const wrapper = mount(ScreenRegionOverlayApp, { global: { stubs: { Button } } });
     configure({ mode: 'select', bounds: { width: 1000, height: 500 } });
     await wrapper.vm.$nextTick();
-    expect(wrapper.find('.region-empty-backdrop').exists()).toBe(true);
+    expect(wrapper.find('.region-empty-backdrop').exists()).toBe(false);
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%');
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('height: 100%');
     const main = wrapper.get('.region-overlay');
     const setPointerCapture = vi.fn();
     Object.defineProperty(main.element, 'setPointerCapture', { value: setPointerCapture });
@@ -98,8 +100,11 @@ describe('ScreenRegionOverlayApp', () => {
     configure({ mode: 'record', bounds: { width: 100, height: 100 } });
     await wrapper.vm.$nextTick();
     expect(wrapper.find('.region-toolbar').exists()).toBe(false);
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%');
     await wrapper.get('.region-overlay').trigger('pointerdown', { clientX: 10, clientY: 10, pointerId: 1 });
-    expect(wrapper.find('.region-frame').exists()).toBe(false);
+    await wrapper.get('.region-overlay').trigger('pointermove', { clientX: 80, clientY: 80, pointerId: 1 });
+    expect(wrapper.get('.region-frame').attributes('style')).toContain('width: 100%');
+    expect(capture.confirmScreenRegion).not.toHaveBeenCalled();
 
     configure({ mode: 'select', bounds: { width: 100, height: 100 } });
     await wrapper.vm.$nextTick();

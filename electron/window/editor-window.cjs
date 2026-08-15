@@ -182,8 +182,7 @@ function createEditorWindowManager({
       contents.on('before-input-event', (event, input) => {
         if (
           input.type === 'keyDown' &&
-          (input.key === 'F12' ||
-            ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i'))
+          (input.key === 'F12' || ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i'))
         ) {
           event.preventDefault();
           if (contents.isDevToolsOpened?.()) {

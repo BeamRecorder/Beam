@@ -6,13 +6,9 @@ import Select from '~/components/ui/select/Select.vue';
 import AudioIconMeter from '~/components/hud/audio/AudioIconMeter.vue';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
-const micOptions = [
-  { value: 'mic1', label: 'Studio Microphone' },
-];
+const micOptions = [{ value: 'mic1', label: 'Studio Microphone' }];
 
-const cameraOptions = [
-  { value: 'cam1', label: 'FaceTime HD Camera' },
-];
+const cameraOptions = [{ value: 'cam1', label: 'FaceTime HD Camera' }];
 </script>
 
 <template>
@@ -36,13 +32,7 @@ const cameraOptions = [
         <div class="mini-device-row target-mic-row">
           <AudioIconMeter kind="mic" :enabled="true" :level="0.65" size="sm" />
           <div class="select-with-action">
-            <Select
-              model-value="mic1"
-              :options="micOptions"
-              size="sm"
-              class="mini-real-select"
-              :disabled="true"
-            />
+            <Select model-value="mic1" :options="micOptions" size="sm" class="mini-real-select" :disabled="true" />
             <Button variant="secondary" size="sm" icon-only :icon="ScrollText" :disabled="true" />
           </div>
         </div>
@@ -52,13 +42,7 @@ const cameraOptions = [
           <div class="mini-camera-icon-box">
             <Video class="camera-mini-icon" />
           </div>
-          <Select
-            model-value="cam1"
-            :options="cameraOptions"
-            size="sm"
-            class="mini-real-select"
-            :disabled="true"
-          />
+          <Select model-value="cam1" :options="cameraOptions" size="sm" class="mini-real-select" :disabled="true" />
         </div>
       </div>
 

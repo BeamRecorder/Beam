@@ -356,9 +356,7 @@ export function createCursorMotionPlayer(
   };
   const sample = (timeSeconds: number, rawState: CursorPlaybackState | null): CursorMotionSample | null => {
     if (!rawState) return null;
-    const dragging = drags.some(
-      (range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds,
-    );
+    const dragging = drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds);
     const target = dragging
       ? { x: rawState.x, y: rawState.y }
       : (timeline.targetAt(timeSeconds) ?? { x: rawState.x, y: rawState.y });

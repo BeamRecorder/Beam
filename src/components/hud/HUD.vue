@@ -960,7 +960,10 @@ const openProject = (project: CaptureProject) => {
       :is-recording="isRecording"
       @back="handleTopbarBack"
       @minimize="minimizeApp"
-      @open-settings="showSettings = true; emit('focus-feature', 'topbar')"
+      @open-settings="
+        showSettings = true;
+        emit('focus-feature', 'topbar');
+      "
       @close="closeApp"
     />
 
@@ -998,11 +1001,25 @@ const openProject = (project: CaptureProject) => {
       <div v-else key="hud" class="hud-body">
         <!-- Tabs (Screen / Window) -->
         <ButtonGroup class="mode-tabs">
-          <Button :class="{ active: activeTab === 'screen' }" variant="tab" @click="activeTab = 'screen'; emit('focus-feature', 'tabs')">
+          <Button
+            :class="{ active: activeTab === 'screen' }"
+            variant="tab"
+            @click="
+              activeTab = 'screen';
+              emit('focus-feature', 'tabs');
+            "
+          >
             <template #icon><Monitor class="btn-icon" /></template>
             {{ t('screen') }}
           </Button>
-          <Button :class="{ active: activeTab === 'window' }" variant="tab" @click="activeTab = 'window'; emit('focus-feature', 'tabs')">
+          <Button
+            :class="{ active: activeTab === 'window' }"
+            variant="tab"
+            @click="
+              activeTab = 'window';
+              emit('focus-feature', 'tabs');
+            "
+          >
             <template #icon><Layout class="btn-icon" /></template>
             {{ t('window') }}
           </Button>
@@ -1023,7 +1040,10 @@ const openProject = (project: CaptureProject) => {
                       :previews="windowPreviews"
                       :loading="windowPreviewsLoading"
                       :disabled="isRecording || isBusy"
-                      @toggle="handleDropdownToggle($event); if ($event) emit('focus-feature', 'source')"
+                      @toggle="
+                        handleDropdownToggle($event);
+                        if ($event) emit('focus-feature', 'source');
+                      "
                     />
                   </div>
                 </template>
@@ -1038,7 +1058,10 @@ const openProject = (project: CaptureProject) => {
                       :previews="screenPreviews"
                       :loading="screenPreviewsLoading"
                       :disabled="isRecording || isBusy || displaySources.length === 0"
-                      @toggle="handleDropdownToggle($event); if ($event) emit('focus-feature', 'source')"
+                      @toggle="
+                        handleDropdownToggle($event);
+                        if ($event) emit('focus-feature', 'source');
+                      "
                     />
                     <Button
                       :variant="selectedScreenRegion ? 'primary' : 'secondary'"
@@ -1052,7 +1075,10 @@ const openProject = (project: CaptureProject) => {
                         'screen-region-confirmed': Boolean(selectedScreenRegion),
                         'screen-region-checkmark': isRegionConfirmationAnimating,
                       }"
-                      @click="selectScreenRegion(); emit('focus-feature', 'source')"
+                      @click="
+                        selectScreenRegion();
+                        emit('focus-feature', 'source');
+                      "
                     />
                   </div>
                 </div>
@@ -1071,7 +1097,10 @@ const openProject = (project: CaptureProject) => {
                     v-model="systemAudioMode"
                     :options="systemAudioOptions"
                     :disabled="isRecording || isBusy"
-                    @toggle="handleDropdownToggle($event); if ($event) emit('focus-feature', 'systemAudio')"
+                    @toggle="
+                      handleDropdownToggle($event);
+                      if ($event) emit('focus-feature', 'systemAudio');
+                    "
                   />
                 </div>
 
@@ -1091,7 +1120,10 @@ const openProject = (project: CaptureProject) => {
                       v-model="selectedMicId"
                       :options="micOptions"
                       :disabled="isRecording || isBusy"
-                      @toggle="handleDropdownToggle($event); if ($event) emit('focus-feature', 'mic')"
+                      @toggle="
+                        handleDropdownToggle($event);
+                        if ($event) emit('focus-feature', 'mic');
+                      "
                     />
                     <Button
                       :variant="isTeleprompterVisible ? 'primary' : 'secondary'"
@@ -1102,7 +1134,10 @@ const openProject = (project: CaptureProject) => {
                       :tooltip="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
                       :disabled="isBusy"
                       :class="{ 'teleprompter-active': isTeleprompterVisible }"
-                      @click="toggleTeleprompter(); emit('focus-feature', 'teleprompter')"
+                      @click="
+                        toggleTeleprompter();
+                        emit('focus-feature', 'teleprompter');
+                      "
                     />
                   </div>
                 </div>
@@ -1121,7 +1156,10 @@ const openProject = (project: CaptureProject) => {
                     v-model="selectedCameraId"
                     :options="cameraOptions"
                     :disabled="isRecording || isBusy"
-                    @toggle="handleDropdownToggle($event); if ($event) emit('focus-feature', 'camera')"
+                    @toggle="
+                      handleDropdownToggle($event);
+                      if ($event) emit('focus-feature', 'camera');
+                    "
                   />
                 </div>
               </div>
@@ -1151,7 +1189,10 @@ const openProject = (project: CaptureProject) => {
             class="record-btn-override"
             :class="{ recording: isRecording }"
             :disabled="isBusy || (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)"
-            @click="toggleRecording(); emit('focus-feature', 'record')"
+            @click="
+              toggleRecording();
+              emit('focus-feature', 'record');
+            "
           >
             <template #icon>
               <span class="pulse-dot" v-if="isRecording"></span>
@@ -1169,7 +1210,10 @@ const openProject = (project: CaptureProject) => {
             size="sm"
             class="web-link-text project-btn"
             :icon="ArrowUpRight"
-            @click="openProjectPicker(); emit('focus-feature', 'projects')"
+            @click="
+              openProjectPicker();
+              emit('focus-feature', 'projects');
+            "
           >
             {{ t('openExistingProject') }}
           </Button>

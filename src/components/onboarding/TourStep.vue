@@ -1,17 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import {
-  Circle,
-  FolderOpen,
-  HelpCircle,
-  Layers,
-  Layout,
-  Mic,
-  Monitor,
-  ScrollText,
-  Video,
-  Volume2,
-} from '@lucide/vue';
+import { Circle, FolderOpen, HelpCircle, Layers, Layout, Mic, Monitor, ScrollText, Video, Volume2 } from '@lucide/vue';
 import HUD from '~/components/hud/HUD.vue';
 import HudClickEmptyState from './HudClickEmptyState.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -20,15 +9,7 @@ import { resolvePublicAssetUrl } from '~/utils/public-asset';
 const { t } = useTranslate('Onboarding');
 
 export type FeatureKey =
-  | 'mic'
-  | 'camera'
-  | 'teleprompter'
-  | 'systemAudio'
-  | 'source'
-  | 'tabs'
-  | 'projects'
-  | 'topbar'
-  | 'record';
+  'mic' | 'camera' | 'teleprompter' | 'systemAudio' | 'source' | 'tabs' | 'projects' | 'topbar' | 'record';
 
 const activeFeature = ref<FeatureKey | null>(null);
 
@@ -161,11 +142,7 @@ const toggleChip = (key: FeatureKey) => {
         </div>
 
         <div class="real-hud-frame">
-          <HUD
-            :embedded="true"
-            :show-topbar="true"
-            @focus-feature="handleFeatureFocus"
-          />
+          <HUD :embedded="true" :show-topbar="true" @focus-feature="handleFeatureFocus" />
         </div>
       </div>
 
@@ -494,7 +471,9 @@ const toggleChip = (key: FeatureKey) => {
 /* Transitions */
 .inspector-fade-enter-active,
 .inspector-fade-leave-active {
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 
 .inspector-fade-enter-from {

@@ -124,7 +124,7 @@ function createProjectStore(root) {
       } catch {
         file = null;
       }
-      if (file && fs.existsSync(file)) return manifest.previewSrc;
+      if (file && fs.existsSync(file)) return mediaUrlFor(manifest.previewSrc);
     }
     for (const session of [...sessions].reverse()) {
       const sessionDirectory = safePath(directory, session.relativePath);
@@ -142,7 +142,7 @@ function createProjectStore(root) {
         try {
           writeManifest(directory, manifest);
         } catch {}
-        return url;
+        return mediaUrlFor(url);
       }
     }
     return null;

@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import UpdateAvailableBadge from './UpdateAvailableBadge.vue';
+import UpdateAvailableBadge from '../UpdateAvailableBadge.vue';
 import type { AppUpdateState } from '~/api/types/capture-api';
 
 const captureMock = vi.hoisted(() => ({

@@ -199,11 +199,9 @@ onUnmounted(() => stopMarquee());
       :title="t('trimStart')"
       @pointerdown.stop="emit('trim', { event: $event, edge: 'start' })"
     >
-      <span
-        v-if="trimState?.edge === 'start'"
-        class="trim-side-badge"
-        :class="{ 'at-limit': trimState?.atLimit }"
-      >{{ formatTrimTime(trimState.durationMs) }}</span>
+      <span v-if="trimState?.edge === 'start'" class="trim-side-badge" :class="{ 'at-limit': trimState?.atLimit }">{{
+        formatTrimTime(trimState.durationMs)
+      }}</span>
     </span>
     <span class="clip-label-overlay">
       <span class="clip-label-text">{{ clip.name }}</span>
@@ -215,11 +213,9 @@ onUnmounted(() => stopMarquee());
       :title="t('trimEnd')"
       @pointerdown.stop="emit('trim', { event: $event, edge: 'end' })"
     >
-      <span
-        v-if="trimState?.edge === 'end'"
-        class="trim-side-badge"
-        :class="{ 'at-limit': trimState?.atLimit }"
-      >{{ formatTrimTime(trimState.durationMs) }}</span>
+      <span v-if="trimState?.edge === 'end'" class="trim-side-badge" :class="{ 'at-limit': trimState?.atLimit }">{{
+        formatTrimTime(trimState.durationMs)
+      }}</span>
     </span>
   </button>
 </template>

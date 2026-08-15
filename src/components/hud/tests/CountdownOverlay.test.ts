@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { capture } = vi.hoisted(() => ({ capture: { onCountdown: vi.fn() } }));
 vi.mock('../../../api/capture', () => ({ capture }));
 
-import CountdownOverlay from './CountdownOverlay.vue';
+import CountdownOverlay from '../recorder/CountdownOverlay.vue';
 
 describe('CountdownOverlay', () => {
   beforeEach(() => vi.clearAllMocks());

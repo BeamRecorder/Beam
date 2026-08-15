@@ -66,11 +66,7 @@ const highlights = [
     <div class="welcome-hero">
       <!-- Prominent Beam Logo (large, no excess whitespace) -->
       <div class="logo-box">
-        <img
-          :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')"
-          alt="Beam Logo"
-          class="beam-logo-img"
-        />
+        <img :src="resolvePublicAssetUrl('/brand/BeamIcon.webp')" alt="Beam Logo" class="beam-logo-img" />
       </div>
 
       <div class="hero-content">
@@ -80,11 +76,7 @@ const highlights = [
 
       <!-- Feature Grid -->
       <div class="features-grid">
-        <div
-          v-for="item in highlights"
-          :key="item.titleKey"
-          class="feature-card"
-        >
+        <div v-for="item in highlights" :key="item.titleKey" class="feature-card">
           <div class="feature-icon-container">
             <component :is="item.icon" class="feature-icon" />
           </div>
@@ -97,11 +89,7 @@ const highlights = [
 
       <!-- Call to Action (Breathing room for buttons & icons) -->
       <div class="cta-section">
-        <Button
-          size="lg"
-          class="cta-button"
-          @click="handleNext"
-        >
+        <Button size="lg" class="cta-button" @click="handleNext">
           <div class="cta-btn-inner">
             <span class="cta-label">{{ t('getStarted') }}</span>
             <ArrowRight class="btn-arrow-icon" />

@@ -281,13 +281,7 @@ const run = async () => {
                 class="copy-report-icon-btn"
               />
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              block
-              :icon="FolderOpen"
-              @click="openFile(result.path)"
-            >
+            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">
               {{ t('openFile') }}
             </Button>
           </div>
