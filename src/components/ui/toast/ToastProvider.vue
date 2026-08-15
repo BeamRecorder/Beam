@@ -1,13 +1,21 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { useToastStore } from './toastStore';
-import { X, CheckCircle, AlertCircle, Copy, Info } from '@lucide/vue';
+import { X, Check, CheckCircle, AlertCircle, Copy, Info } from '@lucide/vue';
 import Button from '../button/Button.vue';
 import type { Toast } from './toastStore';
 
 const toastStore = useToastStore();
-const handleToastAction = (toast: Toast) => {
-  toast.action?.onClick();
-  toastStore.remove(toast.id);
+const completedActions = ref<ReadonlySet<string>>(new Set());
+const handleToastAction = async (toast: Toast) => {
+  if (!toast.action) return;
+  try {
+    await toast.action.onClick();
+    completedActions.value = new Set([...completedActions.value, toast.id]);
+    if (toast.action.dismissOnSuccess !== false) toastStore.remove(toast.id);
+  } catch (error) {
+    console.error('Unable to complete toast action.', error);
+  }
 };
 </script>
 
@@ -22,7 +30,10 @@ const handleToastAction = (toast: Toast) => {
           <Info v-else class="toast-icon info" />
         </span>
 
-        <span class="toast-message">{{ toast.message }}</span>
+        <span class="toast-content">
+          <span class="toast-message">{{ toast.message }}</span>
+          <code v-if="toast.action?.detail" class="toast-detail">{{ toast.action.detail }}</code>
+        </span>
 
         <Button
           v-if="toast.action"
@@ -33,7 +44,8 @@ const handleToastAction = (toast: Toast) => {
           :tooltip="toast.type === 'error' ? toast.action.label : ''"
           @click="handleToastAction(toast)"
         >
-          <Copy v-if="toast.type === 'error'" :size="15" aria-hidden="true" />
+          <Check v-if="completedActions.has(toast.id)" :size="15" aria-hidden="true" />
+          <Copy v-else-if="toast.type === 'error'" :size="15" aria-hidden="true" />
           <template v-else>{{ toast.action.label }}</template>
         </Button>
 
@@ -122,12 +134,30 @@ const handleToastAction = (toast: Toast) => {
   color: var(--color-info);
 }
 
+.toast-content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .toast-message {
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-primary);
-  flex-grow: 1;
   line-height: 1.4;
+}
+
+.toast-detail {
+  max-height: 7.5rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  user-select: text;
 }
 
 .toast-close {

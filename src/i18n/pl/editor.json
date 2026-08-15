@@ -101,7 +101,9 @@
     "zoomOut": "Pomniejsz",
     "zoomIn": "Powiększ",
     "snappingOn": "Magnetyczne przyciąganie włączone",
-    "snappingOff": "Magnetyczne przyciąganie wyłączone"
+    "snappingOff": "Magnetyczne przyciąganie wyłączone",
+    "zoom": "Powiększenie",
+    "resetZoom": "Zresetuj powiększenie"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Kliknij, aby przełączyć ścieżkę wideo",

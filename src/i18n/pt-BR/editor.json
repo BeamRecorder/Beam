@@ -101,7 +101,9 @@
     "zoomOut": "Reduzir zoom",
     "zoomIn": "Aumentar zoom",
     "snappingOn": "Ajuste magnético ativado",
-    "snappingOff": "Ajuste magnético desativado"
+    "snappingOff": "Ajuste magnético desativado",
+    "zoom": "Zoom",
+    "resetZoom": "Redefinir zoom"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Clique para alternar a faixa de vídeo",

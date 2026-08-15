@@ -101,7 +101,9 @@
     "zoomOut": "缩小",
     "zoomIn": "放大",
     "snappingOn": "磁性吸附已启用",
-    "snappingOff": "磁性吸附已禁用"
+    "snappingOff": "磁性吸附已禁用",
+    "zoom": "缩放",
+    "resetZoom": "重置缩放"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "点击切换视频轨道",

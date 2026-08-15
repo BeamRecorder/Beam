@@ -101,7 +101,9 @@
     "zoomOut": "Riduci zoom",
     "zoomIn": "Aumenta zoom",
     "snappingOn": "Aggancio magnetico attivato",
-    "snappingOff": "Aggancio magnetico disattivato"
+    "snappingOff": "Aggancio magnetico disattivato",
+    "zoom": "Zoom",
+    "resetZoom": "Reimposta zoom"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Fai clic per attivare/disattivare la traccia video",

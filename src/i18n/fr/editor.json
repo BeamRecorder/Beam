@@ -101,7 +101,9 @@
     "zoomOut": "Dézoomer",
     "zoomIn": "Zoomer",
     "snappingOn": "Aimantage magnétique actif",
-    "snappingOff": "Aimantage désactivé"
+    "snappingOff": "Aimantage désactivé",
+    "zoom": "Zoom",
+    "resetZoom": "Réinitialiser le zoom"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Cliquer pour activer/désactiver la piste vidéo",

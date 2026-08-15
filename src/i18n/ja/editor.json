@@ -101,7 +101,9 @@
     "zoomOut": "縮小",
     "zoomIn": "拡大",
     "snappingOn": "マグネットスナップを有効化",
-    "snappingOff": "マグネットスナップを無効化"
+    "snappingOff": "マグネットスナップを無効化",
+    "zoom": "ズーム",
+    "resetZoom": "ズームをリセット"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "クリックして動画トラックを切り替え",

@@ -101,7 +101,9 @@
     "zoomOut": "ज़ूम आउट",
     "zoomIn": "ज़ूम इन",
     "snappingOn": "मैग्नेटिक स्नैपिंग चालू है",
-    "snappingOff": "मैग्नेटिक स्नैपिंग बंद है"
+    "snappingOff": "मैग्नेटिक स्नैपिंग बंद है",
+    "zoom": "ज़ूम",
+    "resetZoom": "ज़ूम रीसेट करें"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "वीडियो ट्रैक टॉगल करने के लिए क्लिक करें",

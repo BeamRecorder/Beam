@@ -195,8 +195,7 @@ describe('ExportPopover', () => {
       value: { clipboard: { writeText } },
     });
     mockJob.start.mockImplementation(async () => {
-      (mockJob.state?.error as Ref<string | null>).value =
-        'The source image could not be decoded.';
+      (mockJob.state?.error as Ref<string | null>).value = 'The source image could not be decoded.';
       (mockJob.state?.errorContext as Ref<unknown>).value = new ExportValidationError({
         code: 'decode-failure',
         message: 'The source image could not be decoded.',

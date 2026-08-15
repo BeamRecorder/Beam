@@ -101,7 +101,9 @@
     "zoomOut": "Zoom Out",
     "zoomIn": "Zoom In",
     "snappingOn": "Magnet Snapping Enabled",
-    "snappingOff": "Magnet Snapping Disabled"
+    "snappingOff": "Magnet Snapping Disabled",
+    "zoom": "Zoom",
+    "resetZoom": "Reset Zoom"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Click to toggle Video track",

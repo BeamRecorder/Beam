@@ -101,7 +101,9 @@
     "zoomOut": "축소",
     "zoomIn": "확대",
     "snappingOn": "자석 맞춤 사용",
-    "snappingOff": "자석 맞춤 사용 안 함"
+    "snappingOff": "자석 맞춤 사용 안 함",
+    "zoom": "확대/축소",
+    "resetZoom": "확대/축소 초기화"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "클릭하여 동영상 트랙 전환",

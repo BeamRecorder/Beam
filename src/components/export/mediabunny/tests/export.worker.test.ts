@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isExportWorkerRequest } from '../export-worker-protocol';
+import type { ExportRequest } from '../../export-types';
 
 const runtime = vi.hoisted(() => ({
   openExportAssets: vi.fn(),
@@ -52,7 +53,7 @@ const request = (overrides: Record<string, unknown> = {}) =>
       composition: { assets: [], clips: [] },
     },
     ...overrides,
-  }) as never;
+  }) as unknown as ExportRequest;
 
 const flush = async () => {
   await Promise.resolve();
@@ -137,6 +138,7 @@ describe('export worker', () => {
 
   it('publishes the validating-assets progress message before opening assets', async () => {
     installCanvasRuntime();
+    runtime.openExportAssets.mockReturnValueOnce(new Promise(() => undefined));
     const worker = await importWorker();
     startWorker(worker);
     await flush();
@@ -146,6 +148,26 @@ describe('export worker', () => {
       progress: expect.objectContaining({ stage: 'validating_assets', overallProgress: 0 }),
     });
     expect(runtime.openExportAssets).toHaveBeenCalledOnce();
+  });
+
+  it('does not decode an SVG cursor when cursor data is unavailable', async () => {
+    installCanvasRuntime();
+    runtime.output.start.mockRejectedValueOnce(new Error('encoder startup failed'));
+    const worker = await importWorker();
+    startWorker(
+      worker,
+      request({
+        snapshot: {
+          ...request().snapshot,
+          cursorSettings: { ...request().snapshot.cursorSettings, selectedCursor: 'default' },
+        },
+      }),
+    );
+
+    expect(runtime.openExportAssets).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('macOsSvgCursors'));
+    expect(createImageBitmap).not.toHaveBeenCalled();
   });
 
   it('disposes opened assets and cancels output when rendering fails', async () => {

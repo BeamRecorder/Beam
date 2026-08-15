@@ -176,6 +176,7 @@ async function loadImages(request: ExportRequest, owned: Map<string, ImageBitmap
 }
 
 async function loadCursors(request: ExportRequest, owned: Map<string, ImageBitmap>) {
+  if (!request.snapshot.cursor.available || request.snapshot.cursor.events.length === 0) return new Map();
   const selected = request.snapshot.cursorSettings.selectedCursor;
   const types = new Set(
     selected === 'automatic'
@@ -197,10 +198,18 @@ async function loadCursors(request: ExportRequest, owned: Map<string, ImageBitma
       let svg = await response.text();
       const color = request.snapshot.cursorSettings.color;
       if (color !== '#000000') svg = svg.replace(/fill="#(?:000000|000)"/gi, `fill="${color}"`);
-      const bitmap = await createImageBitmap(new Blob([svg], { type: 'image/svg+xml' }), {
-        resizeWidth: Math.max(1, Math.ceil(request.snapshot.cursorSettings.size * 6)),
-        resizeQuality: 'high',
-      });
+      const rasterWidth = Math.max(1, Math.ceil(request.snapshot.cursorSettings.size * 6));
+      let bitmap: ImageBitmap;
+      try {
+        bitmap = await createImageBitmap(new Blob([svg], { type: 'image/svg+xml' }), {
+          resizeWidth: rasterWidth,
+          resizeHeight: rasterWidth,
+          resizeQuality: 'high',
+        });
+      } catch (error) {
+        const decoder = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        throw new Error(`Unable to decode cursor "${type}" from ${url}; decoder: ${decoder}`, { cause: error });
+      }
       owned.set(`cursor:${type}`, bitmap);
       result.set(type, bitmap);
     }),

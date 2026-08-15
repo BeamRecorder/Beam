@@ -101,7 +101,9 @@
     "zoomOut": "Herauszoomen",
     "zoomIn": "Hineinzoomen",
     "snappingOn": "Magnetisches Einrasten aktiviert",
-    "snappingOff": "Magnetisches Einrasten deaktiviert"
+    "snappingOff": "Magnetisches Einrasten deaktiviert",
+    "zoom": "Zoom",
+    "resetZoom": "Zoom zurücksetzen"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Klicke, um die Videospur umzuschalten",
