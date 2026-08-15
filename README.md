@@ -11,12 +11,7 @@
 
 ## 🎥 Demo
 
-<div align="center">
-  <video controls preload="metadata" width="100%" poster="./public/brand/BeamIcon.webp">
-    <source src="[BeamDemo.webm](https://github.com/user-attachments/assets/8fb3851c-eccd-4c1a-94b8-3c4d6e0250b9)" type="video/webm" />
-    Your browser does not support video playback.
-  </video>
-</div>
+[BeamDemo.webm](https://github.com/user-attachments/assets/8fb3851c-eccd-4c1a-94b8-3c4d6e0250b9)
 
 ## 📸 Screenshots
 
