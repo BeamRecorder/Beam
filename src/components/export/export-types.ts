@@ -3,6 +3,7 @@ import type { ZoomElement } from '../video-editor/zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas';
 import type { CursorPresentationSettings } from '../../api/types/cursor-presentation';
+import type { ExportDiagnostics, ExportRuntimeDiagnostics } from './export-diagnostics-types';
 
 export type ExportFormat = 'webm' | 'mp4';
 export type ExportPreset = 'low' | 'medium' | 'high';
@@ -17,10 +18,12 @@ export interface ExportProgress {
   audioProgress: number | null;
   currentTimeMs: number;
   totalTimeMs: number;
+  diagnostics?: ExportRuntimeDiagnostics;
 }
 export interface ExportResult {
   path: string;
   format: ExportFormat;
+  diagnostics?: ExportDiagnostics;
 }
 export interface ExportRenderSettings {
   fps: number;

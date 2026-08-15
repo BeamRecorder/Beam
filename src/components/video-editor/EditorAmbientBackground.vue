@@ -96,27 +96,32 @@ onUnmounted(() => {
 
 <template>
   <div class="editor-ambient-background" aria-hidden="true">
-    <div
-      v-if="background && (background.kind === 'color' || background.kind === 'gradient')"
-      class="ambient-surface"
-      :style="surfaceStyle"
-    ></div>
-    <img
-      v-else-if="background?.kind === 'image' && !mediaFailed"
-      class="ambient-media"
-      :src="resolvedMediaPath"
-      alt=""
-      aria-hidden="true"
-      decoding="async"
-      fetchpriority="low"
-      @error="mediaFailed = true"
-    />
-    <canvas
-      v-else-if="background?.kind === 'video' && !mediaFailed"
-      ref="canvasRef"
-      class="ambient-media ambient-video"
-      aria-hidden="true"
-    ></canvas>
+    <Transition name="ambient-fade">
+      <div
+        v-if="background && (background.kind === 'color' || background.kind === 'gradient')"
+        key="surface"
+        class="ambient-surface"
+        :style="surfaceStyle"
+      ></div>
+      <img
+        v-else-if="background?.kind === 'image' && !mediaFailed"
+        :key="resolvedMediaPath"
+        class="ambient-media"
+        :src="resolvedMediaPath"
+        alt=""
+        aria-hidden="true"
+        decoding="async"
+        fetchpriority="low"
+        @error="mediaFailed = true"
+      />
+      <canvas
+        v-else-if="background?.kind === 'video' && !mediaFailed"
+        ref="canvasRef"
+        :key="background.id"
+        class="ambient-media ambient-video"
+        aria-hidden="true"
+      ></canvas>
+    </Transition>
     <div class="ambient-veil"></div>
   </div>
 </template>
@@ -141,6 +146,23 @@ onUnmounted(() => {
   opacity: var(--editor-ambient-media-opacity);
   filter: blur(56px) saturate(0.9) contrast(0.92);
   transform: scale(1.06);
+  transition:
+    opacity 0.4s cubic-bezier(0.25, 0.1, 0.25, 1),
+    background 0.4s ease,
+    filter 0.4s ease;
+  will-change: opacity, filter;
+}
+
+.ambient-fade-enter-active,
+.ambient-fade-leave-active {
+  transition:
+    opacity 0.4s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 0.45s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.ambient-fade-enter-from,
+.ambient-fade-leave-to {
+  opacity: 0;
 }
 
 .ambient-media {
@@ -152,6 +174,7 @@ onUnmounted(() => {
   inset: 0;
   background: var(--color-bg-surface);
   opacity: var(--editor-ambient-veil-opacity);
+  transition: opacity 0.4s ease;
 }
 
 @media (prefers-reduced-transparency: reduce) {
