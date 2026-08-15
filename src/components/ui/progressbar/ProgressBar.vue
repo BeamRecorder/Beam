@@ -30,7 +30,7 @@ const percentage = computed(() => {
 .progress-bar-container {
   width: 100%;
   height: 4px;
-  background: var(--color-border);
+  background: var(--color-bg-surface-hover);
   border-radius: var(--radius-full);
   overflow: hidden;
   position: relative;
@@ -38,9 +38,10 @@ const percentage = computed(() => {
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: linear-gradient(90deg, var(--color-primary-hover), var(--color-primary));
   border-radius: inherit;
   transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 6px rgba(255, 90, 31, 0.35);
 }
 
 .progress-bar-container.indeterminate .progress-bar-fill {

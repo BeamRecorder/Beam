@@ -1,4 +1,4 @@
-import { VideoSampleSink } from 'mediabunny';
+import { VideoSampleSink, type VideoSample } from 'mediabunny';
 import { activeClipsAt, sourceTimeAt } from '~/media/shared';
 import { isAudioClip, isVisualClip, type AudioClip, type VisualClip } from '~/media/shared/composition-types';
 import { createProgressiveAudioMixer } from '~/media/export/pcm-mixer';
@@ -248,17 +248,24 @@ async function renderVideo(
   signal: AbortSignal,
   onFrame: (done: number) => void,
 ) {
-  const consumers = new Map<string, VideoSampleSink>();
+  const total = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
+  const consumers = new Map<string, AsyncIterator<VideoSample | null>>();
   for (const clip of request.snapshot.composition.clips) {
     if (isVisualClip(clip) && clip.kind !== 'image' && clip.enabled) {
       const track = assets.assets.get(clip.assetId)?.video;
-      if (track) consumers.set(clip.id, new VideoSampleSink(track));
+      if (!track) continue;
+      const timestamps: number[] = [];
+      for (let frame = 0; frame < total; frame += 1) {
+        const sourceTime = sourceTimeAt(clip, (frame / request.snapshot.render.fps) * 1_000);
+        if (sourceTime !== null) timestamps.push(sourceTime / 1_000);
+      }
+      const samples = new VideoSampleSink(track).samplesAtTimestamps(timestamps, { skipLiveWait: true });
+      consumers.set(clip.id, samples[Symbol.asyncIterator]());
     }
   }
   const backgroundTrack = assets.assets.get('export-background')?.video;
   const backgroundSink = backgroundTrack ? new VideoSampleSink(backgroundTrack) : null;
   const backgroundDuration = assets.assets.get('export-background')?.duration ?? 0;
-  const total = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
   const motion = assets.screenSize
     ? createCursorMotionPlayer(
         request.snapshot.cursor.events,
@@ -270,71 +277,73 @@ async function renderVideo(
   const camera = assets.screenSize
     ? createSnapshotCameraEvaluator(request.snapshot, assets.screenSize.width, assets.screenSize.height)
     : undefined;
-  for (let frame = 0; frame < total; frame += 1) {
-    if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
-    const time = frame / request.snapshot.render.fps;
-    const active = activeClipsAt(request.snapshot.composition, time * 1_000);
-    const samples: import('mediabunny').VideoSample[] = [];
-    const decoded: Array<{ clip: VisualClip; sample: import('mediabunny').VideoSample }> = [];
-    const visuals = new Map<string, RenderableMedia>();
-    let screen: RenderableMedia | null = null;
-    try {
-      for (const clip of active) {
-        if (!isVisualClip(clip)) continue;
-        if (clip.kind === 'image') {
-          const image = images.get(clip.assetId);
-          if (image) visuals.set(clip.id, image);
-          continue;
-        }
-        const sourceTime = sourceTimeAt(clip, time * 1_000);
-        const sample =
-          sourceTime === null
-            ? null
-            : await consumers.get(clip.id)?.getSample(sourceTime / 1_000, { skipLiveWait: true });
-        if (!sample) continue;
-        samples.push(sample);
-        decoded.push({ clip, sample });
-      }
-      let background: RenderableMedia | null = null;
-      if (request.snapshot.background?.kind === 'image') {
-        const bitmap = imagesForBackground(request, images);
-        if (bitmap) background = bitmap;
-      } else if (backgroundSink && backgroundDuration > 0) {
-        const sample = await backgroundSink.getSample(time % backgroundDuration, { skipLiveWait: true });
-        if (sample) {
+  try {
+    for (let frame = 0; frame < total; frame += 1) {
+      if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
+      const time = frame / request.snapshot.render.fps;
+      const active = activeClipsAt(request.snapshot.composition, time * 1_000);
+      const samples: VideoSample[] = [];
+      const decoded: Array<{ clip: VisualClip; sample: VideoSample }> = [];
+      const visuals = new Map<string, RenderableMedia>();
+      let screen: RenderableMedia | null = null;
+      try {
+        for (const clip of active) {
+          if (!isVisualClip(clip)) continue;
+          if (clip.kind === 'image') {
+            const image = images.get(clip.assetId);
+            if (image) visuals.set(clip.id, image);
+            continue;
+          }
+          const sourceTime = sourceTimeAt(clip, time * 1_000);
+          const next = sourceTime === null ? null : await consumers.get(clip.id)?.next();
+          const sample = !next || next.done ? null : next.value;
+          if (!sample) continue;
           samples.push(sample);
-          background = {
+          decoded.push({ clip, sample });
+        }
+        let background: RenderableMedia | null = null;
+        if (request.snapshot.background?.kind === 'image') {
+          const bitmap = imagesForBackground(request, images);
+          if (bitmap) background = bitmap;
+        } else if (backgroundSink && backgroundDuration > 0) {
+          const sample = await backgroundSink.getSample(time % backgroundDuration, { skipLiveWait: true });
+          if (sample) {
+            samples.push(sample);
+            background = {
+              source: sample.toCanvasImageSource(),
+              width: sample.displayWidth,
+              height: sample.displayHeight,
+            };
+          }
+        }
+        for (const { clip, sample } of decoded) {
+          const media = {
             source: sample.toCanvasImageSource(),
             width: sample.displayWidth,
             height: sample.displayHeight,
           };
+          if (clip.kind === 'screen') screen = media;
+          else visuals.set(clip.id, media);
         }
+        renderCompositionFrame(
+          context,
+          screen,
+          request.snapshot,
+          time,
+          background,
+          cursorImages,
+          visuals,
+          motion,
+          camera,
+        );
+      } finally {
+        for (const sample of samples) sample.close();
       }
-      for (const { clip, sample } of decoded) {
-        const media = {
-          source: sample.toCanvasImageSource(),
-          width: sample.displayWidth,
-          height: sample.displayHeight,
-        };
-        if (clip.kind === 'screen') screen = media;
-        else visuals.set(clip.id, media);
-      }
-      renderCompositionFrame(
-        context,
-        screen,
-        request.snapshot,
-        time,
-        background,
-        cursorImages,
-        visuals,
-        motion,
-        camera,
-      );
-    } finally {
-      for (const sample of samples) sample.close();
+      await mediaOutput.addVideo(time, 1 / request.snapshot.render.fps);
+      onFrame(frame + 1);
     }
-    await mediaOutput.addVideo(time, 1 / request.snapshot.render.fps);
-    onFrame(frame + 1);
+  } finally {
+    for (const consumer of consumers.values()) await consumer.return?.();
   }
   mediaOutput.closeVideo();
 }

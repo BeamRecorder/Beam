@@ -224,6 +224,7 @@
     "copyError": "त्रुटि कॉपी करें",
     "copied": "कॉपी किया गया",
     "copyFailed": "कॉपी नहीं हो सकी",
+    "copyProgress": "प्रगति कॉपी करें",
     "resMaxDesc": "मूल रिज़ॉल्यूशन ({width}×{height})",
     "res1080pDesc": "Full HD स्केल ({width}×{height})",
     "res720pDesc": "HD स्केल ({width}×{height})"

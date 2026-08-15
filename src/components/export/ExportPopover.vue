@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { Download, FolderOpen, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import CopyButton from '~/ui/button/CopyButton.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
@@ -93,6 +94,18 @@ const stageTitle = computed(() => {
 });
 const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
 
+const progressCopyText = computed(() => {
+  const value = progress.value;
+  if (!value) return '';
+  const details = [stageTitle.value, `${Math.round(percentage.value)}%`];
+  if (value.stage === 'encoding') {
+    details.push(t('frameCount', { completed: value.completedImages, total: value.totalImages }));
+    if (value.audioProgress !== null) details.push(`Audio ${Math.round(value.audioProgress * 100)}%`);
+  }
+  details.push(`${formatMs(value.currentTimeMs)} / ${formatMs(value.totalTimeMs)}`);
+  return details.join('\n');
+});
+
 const openFile = (path: string) => {
   if (path && window.capture?.openFile) {
     void window.capture.openFile(path);
@@ -158,23 +171,23 @@ const formatMs = (ms: number) => {
       <section class="export-popover" :aria-label="t('exportVideoAria')" @click.stop>
         <div v-if="isExporting" class="export-progress-card">
           <div class="progress-header">
-            <span class="stage-title">{{ stageTitle }}</span>
-            <span class="percentage-badge">{{ Math.round(percentage) }}%</span>
+            <span class="progress-title">{{ t('exporting') }}</span>
+            <div class="progress-tools">
+              <CopyButton
+                :text="progressCopyText"
+                display="icon"
+                variant="ghost"
+                size="xs"
+                :label="t('copyProgress')"
+                :copied-label="t('copied')"
+                :error-label="t('copyFailed')"
+                class="copy-progress-button"
+              />
+              <span class="percentage-badge" aria-live="polite">{{ Math.round(percentage) }}%</span>
+            </div>
           </div>
 
           <ProgressBar :value="percentage" class="main-progress-bar" />
-
-          <div class="progress-details">
-            <span v-if="progress?.stage === 'encoding'" class="detail-item">
-              {{ t('frameCount', { completed: progress.completedImages, total: progress.totalImages }) }}
-              <template v-if="progress.audioProgress !== null">
-                · Audio {{ Math.round(progress.audioProgress * 100) }}%</template
-              >
-            </span>
-            <span class="detail-item time-item"
-              >{{ formatMs(progress?.currentTimeMs ?? 0) }} / {{ formatMs(progress?.totalTimeMs ?? 0) }}</span
-            >
-          </div>
 
           <div class="actions">
             <Button variant="ghost" size="sm" block :icon="X" @click="cancel">{{ t('cancelExport') }}</Button>
@@ -349,24 +362,26 @@ const formatMs = (ms: number) => {
   gap: 8px;
 }
 
-.stage-title {
+.progress-title {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
+.progress-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .percentage-badge {
+  display: inline-block;
+  width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--color-primary);
-}
-
-.progress-details {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  color: var(--text-muted);
 }
 
 :deep(.export-trigger) {
@@ -379,5 +394,8 @@ const formatMs = (ms: number) => {
   font-weight: 600 !important;
   display: inline-flex !important;
   align-items: center !important;
+  justify-content: center !important;
+  width: 104px !important;
+  font-variant-numeric: tabular-nums;
 }
 </style>

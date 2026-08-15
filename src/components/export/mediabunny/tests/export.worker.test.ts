@@ -5,6 +5,13 @@ import type { ExportRequest } from '../../export-types';
 const runtime = vi.hoisted(() => ({
   openExportAssets: vi.fn(),
   loadBitmap: vi.fn(),
+  videoSinks: [] as Array<{
+    getSample: ReturnType<typeof vi.fn>;
+    samplesAtTimestamps: ReturnType<typeof vi.fn>;
+    samples: ReturnType<typeof vi.fn>;
+  }>,
+  videoSample: vi.fn(),
+  videoSamples: vi.fn(),
   output: {
     start: vi.fn(),
     addVideo: vi.fn(),
@@ -35,6 +42,21 @@ vi.mock('../../../video-editor/properties/cursor/useCursorReplacer', () => ({
 vi.mock('~/media/export/pcm-mixer', () => ({
   createProgressiveAudioMixer: vi.fn(),
 }));
+vi.mock('mediabunny', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('mediabunny')>();
+  return {
+    ...actual,
+    VideoSampleSink: class VideoSampleSink {
+      readonly getSample = vi.fn(async () => runtime.videoSample());
+      readonly samplesAtTimestamps = vi.fn(() => runtime.videoSamples());
+      readonly samples = vi.fn(() => runtime.videoSamples());
+
+      constructor(_track: unknown) {
+        runtime.videoSinks.push(this as unknown as (typeof runtime.videoSinks)[number]);
+      }
+    },
+  };
+});
 
 const request = (overrides: Record<string, unknown> = {}) =>
   ({
@@ -91,6 +113,18 @@ const startWorker = (worker: Awaited<ReturnType<typeof importWorker>>, value = r
 beforeEach(() => {
   runtime.openExportAssets.mockReset();
   runtime.loadBitmap.mockReset();
+  runtime.videoSinks.length = 0;
+  runtime.videoSample = vi.fn(() => ({
+    displayWidth: 2,
+    displayHeight: 2,
+    toCanvasImageSource: vi.fn(() => ({})),
+    close: vi.fn(),
+  }));
+  runtime.videoSamples = vi.fn(() =>
+    (async function* () {
+      for (let index = 0; index < 30; index += 1) yield runtime.videoSample();
+    })(),
+  );
   runtime.output.start.mockReset().mockResolvedValue(undefined);
   runtime.output.addVideo.mockReset().mockResolvedValue(undefined);
   runtime.output.addAudio.mockReset().mockResolvedValue(undefined);
@@ -197,6 +231,55 @@ describe('export worker', () => {
       expect.any(Blob),
       expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),
     );
+  });
+
+  it('uses one persistent timestamp/sample iterator instead of getSample for every video image', async () => {
+    installCanvasRuntime();
+    const asset = {
+      id: 'video-1',
+      kind: 'video',
+      name: 'Video',
+      fileName: 'video.mp4',
+      durationMs: 1_000,
+      width: 2,
+      height: 2,
+      src: 'project-media://asset/video.mp4',
+      origin: 'project',
+    };
+    const clip = {
+      id: 'clip-1',
+      kind: 'video',
+      name: 'Video clip',
+      assetId: asset.id,
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 0,
+      transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: {},
+      isMirrored: false,
+      isMirroredY: false,
+    };
+    const track = {};
+    runtime.openExportAssets.mockResolvedValueOnce({
+      assets: new Map([[asset.id, { asset, opened: { dispose: vi.fn() }, video: track, audio: null, duration: 1 }]]),
+      screenSize: null,
+      dispose: vi.fn(),
+    });
+    const worker = await importWorker();
+    startWorker(
+      worker,
+      request({ snapshot: { ...request().snapshot, composition: { assets: [asset], clips: [clip] } } }),
+    );
+
+    await vi.waitFor(() => expect(runtime.output.finalize).toHaveBeenCalledOnce());
+    const sink = runtime.videoSinks[0]!;
+    expect(sink.getSample).not.toHaveBeenCalled();
+    expect(sink.samplesAtTimestamps.mock.calls.length + sink.samples.mock.calls.length).toBe(1);
+    expect(runtime.output.addVideo).toHaveBeenCalledTimes(30);
   });
 
   it('disposes opened assets and cancels output when rendering fails', async () => {

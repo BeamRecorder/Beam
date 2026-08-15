@@ -58,6 +58,10 @@ const ProgressBar = {
   props: ['value', 'indeterminate'],
   template: '<div class="progress-stub" :data-indeterminate="indeterminate">{{ value }}</div>',
 };
+const CopyButton = {
+  props: ['text', 'display', 'label', 'copiedLabel', 'errorLabel'],
+  template: '<button class="copy-progress-button" :data-copy-text="text" :aria-label="label">{{ label }}</button>',
+};
 
 const request = {
   projectName: 'Demo project',
@@ -90,7 +94,7 @@ describe('ExportPopover', () => {
   const mountExport = () =>
     mount(ExportPopover, {
       props: { request },
-      global: { stubs: { Popover, Button, ButtonGroup, ProgressBar } },
+      global: { stubs: { Popover, Button, ButtonGroup, ProgressBar, CopyButton } },
     });
 
   it('passes format and quality to the export job so validation errors stay visible', async () => {
@@ -138,7 +142,7 @@ describe('ExportPopover', () => {
     );
   });
 
-  it('renders export progress, percentage, elapsed time and cancellation', async () => {
+  it('renders stable export progress and cancellation', async () => {
     const wrapper = mountExport();
     const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
     const exporting = mockJob.state?.exporting as Ref<boolean>;
@@ -156,11 +160,42 @@ describe('ExportPopover', () => {
     await nextTick();
     expect(wrapper.find('.export-progress-card').exists()).toBe(true);
     expect(wrapper.find('.percentage-badge').text()).toBe('50%');
-    expect(wrapper.find('.progress-details .detail-item:not(.time-item)').text()).toMatch(/Frame|Image/);
+    expect(wrapper.find('.progress-title').exists()).toBe(true);
+    expect(wrapper.find('.progress-details').exists()).toBe(false);
     expect(wrapper.find('.progress-stub').attributes('data-indeterminate')).toBeUndefined();
-    expect(wrapper.text()).toContain('01:01.0s');
-    await wrapper.find('.export-progress-card .button-stub').trigger('click');
+    expect(wrapper.text()).not.toContain('01:01.0s');
+    await wrapper.find('.export-progress-card .actions .button-stub').trigger('click');
     expect(mockJob.cancel).toHaveBeenCalledOnce();
+  });
+
+  it('keeps progress minimal and stable while exposing the weighted progress summary for copying', async () => {
+    const wrapper = mountExport();
+    const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
+    const exporting = mockJob.state?.exporting as Ref<boolean>;
+    progress.value = {
+      stage: 'encoding',
+      overallProgress: 0.24595,
+      completedImages: 268,
+      totalImages: 6_623,
+      audioProgress: 1,
+      currentTimeMs: 10_000,
+      totalTimeMs: 40_000,
+    };
+    exporting.value = true;
+    await nextTick();
+
+    expect(wrapper.find('.export-progress-card').exists()).toBe(true);
+    expect(wrapper.get('.percentage-badge').text()).toBe('25%');
+    expect(wrapper.find('.stage-title').exists()).toBe(false);
+    expect(wrapper.find('.progress-details').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Audio 100%');
+
+    const copy = wrapper.get('.copy-progress-button');
+    const summary = copy.attributes('data-copy-text') ?? '';
+    expect(summary).toContain('268');
+    expect(summary).toContain('6623');
+    expect(summary).toContain('25%');
+    expect(summary).toContain('100%');
   });
 
   it('keeps zero percent visible before encoding and hides encoding details', async () => {
