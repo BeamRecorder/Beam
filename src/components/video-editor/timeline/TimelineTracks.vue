@@ -125,6 +125,8 @@ const exportProgressPercent = computed(() => {
         </div>
       </div>
 
+      <div class="timeline-sticky-barrier" aria-hidden="true" />
+
       <div class="timeline-playhead-overlay">
         <div class="timeline-playhead" :style="playheadStyle">
           <div class="playhead-head">

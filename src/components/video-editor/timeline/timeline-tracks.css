@@ -88,6 +88,18 @@
   height: 10px;
   background: var(--color-border-dark);
 }
+.timeline-sticky-barrier {
+  position: sticky;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 120px;
+  height: 100%;
+  background: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border);
+  pointer-events: none;
+  z-index: 4;
+}
 .timeline-playhead-overlay {
   position: absolute;
   top: 0;
@@ -97,7 +109,7 @@
   margin-left: 80px;
   margin-right: 150px;
   pointer-events: none;
-  z-index: 3;
+  z-index: 2;
 }
 .timeline-playhead {
   position: absolute;
@@ -105,7 +117,7 @@
   bottom: 0;
   width: 2px;
   background: var(--color-primary);
-  z-index: 3;
+  z-index: 2;
   pointer-events: none;
 }
 .playhead-head {
@@ -116,7 +128,7 @@
   height: 15px;
   color: var(--color-primary);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
-  z-index: 3;
+  z-index: 2;
 }
 .timeline-snap-guide {
   position: absolute;
