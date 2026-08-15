@@ -65,6 +65,26 @@ test('selects npm.cmd on Windows runners', () => {
   fixtureState.run();
 
   assert.equal(fixtureState.calls[0].command, 'npm.cmd');
+  assert.deepEqual(fixtureState.calls[0].spawnOptions, {
+    stdio: 'inherit',
+    shell: true,
+  });
+});
+
+test('keeps the Windows shell when retrying npm ci', () => {
+  const fixtureState = fixture([1, 0], { platform: 'win32' });
+
+  fixtureState.run();
+
+  assert.deepEqual(fixtureState.delays, [5_000]);
+  assert.equal(fixtureState.calls.length, 2);
+  assert.deepEqual(
+    fixtureState.calls.map(({ command, spawnOptions }) => ({ command, spawnOptions })),
+    [
+      { command: 'npm.cmd', spawnOptions: { stdio: 'inherit', shell: true } },
+      { command: 'npm.cmd', spawnOptions: { stdio: 'inherit', shell: true } },
+    ],
+  );
 });
 
 test('fails after the configured three attempts and does not pause again', () => {

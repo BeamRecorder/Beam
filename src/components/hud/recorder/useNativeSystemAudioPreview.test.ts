@@ -65,9 +65,7 @@ describe('useNativeSystemAudioPreview', () => {
   });
 
   it('starts the Linux preview, polls every 200ms, and clamps levels', async () => {
-    capture.systemAudioPreviewLevel
-      .mockResolvedValueOnce(1.4)
-      .mockResolvedValueOnce(-0.25);
+    capture.systemAudioPreviewLevel.mockResolvedValueOnce(1.4).mockResolvedValueOnce(-0.25);
     const wrapper = await mountPreview(true);
 
     expect(capture.startSystemAudioPreview).toHaveBeenCalledOnce();

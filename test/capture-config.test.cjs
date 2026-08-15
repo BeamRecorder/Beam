@@ -118,14 +118,16 @@ test('maps Linux system audio to the native default output only when requested',
     sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
   };
 
-  assert.deepEqual(
-    buildDefaultCaptureConfig(linuxCatalog, { systemAudio: true }, linux).systemAudio,
-    { mode: 'default-output' },
-  );
+  assert.deepEqual(buildDefaultCaptureConfig(linuxCatalog, { systemAudio: true }, linux).systemAudio, {
+    mode: 'default-output',
+  });
   assert.equal(buildDefaultCaptureConfig(linuxCatalog, { systemAudio: false }, linux).systemAudio, null);
 
   for (const platform of ['win32', 'darwin']) {
-    assert.equal(buildDefaultCaptureConfig(catalog, { systemAudio: true }, { ...environment, platform }).systemAudio, null);
+    assert.equal(
+      buildDefaultCaptureConfig(catalog, { systemAudio: true }, { ...environment, platform }).systemAudio,
+      null,
+    );
   }
 });
 

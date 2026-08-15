@@ -15,9 +15,13 @@ function runNpmCi({
   log = console.log,
 } = {}) {
   const command = platform === 'win32' ? 'npm.cmd' : 'npm';
+  const spawnOptions = {
+    stdio: 'inherit',
+    ...(platform === 'win32' ? { shell: true } : {}),
+  };
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     log(`[CI] npm ci attempt ${attempt}/${attempts}`);
-    const result = spawn(command, ['ci'], { stdio: 'inherit' });
+    const result = spawn(command, ['ci'], spawnOptions);
     if (result.error) throw result.error;
     if (result.status === 0) return;
     if (attempt === attempts) throw new Error(`npm ci failed after ${attempts} attempts`);
