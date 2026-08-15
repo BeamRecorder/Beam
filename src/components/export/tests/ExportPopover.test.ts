@@ -19,12 +19,16 @@ vi.mock('../useExportJob', async () => {
   const error = ref<string | null>(null);
   const errorContext = ref<unknown>(null);
   const result = ref<{ path: string; format: 'webm' | 'mp4' } | null>(null);
+  const diagnostics = ref(null);
+  const isChoosingDestination = ref(false);
   const exporting = ref(false);
   mockJob.state = {
     progress,
     error,
     errorContext,
     result,
+    diagnostics,
+    isChoosingDestination,
     isExporting: computed(() => exporting.value),
     exporting,
   };
@@ -34,6 +38,8 @@ vi.mock('../useExportJob', async () => {
       error,
       errorContext,
       result,
+      diagnostics,
+      isChoosingDestination,
       isExporting: computed(() => exporting.value),
       start: mockJob.start,
       cancel: mockJob.cancel,
@@ -86,6 +92,8 @@ beforeEach(() => {
     mockJob.state.error.value = null;
     mockJob.state.errorContext.value = null;
     mockJob.state.result.value = null;
+    mockJob.state.diagnostics.value = null;
+    mockJob.state.isChoosingDestination.value = false;
     mockJob.state.exporting.value = false;
   }
 });
@@ -122,7 +130,10 @@ describe('ExportPopover', () => {
     result.value = { path: 'C:\\Exports\\demo.webm', format: 'webm' };
     await nextTick();
     expect(wrapper.get('[role="status"]').text()).toContain('demo.webm');
-    await wrapper.get('[role="status"] + .button-stub').trigger('click');
+    expect(wrapper.get('.result-box .copy-progress-button').attributes('data-copy-text')).toContain(
+      '=== Beam Export ===',
+    );
+    await wrapper.get('.result-box .button-stub').trigger('click');
     expect((window.capture as unknown as { openFile: ReturnType<typeof vi.fn> }).openFile).toHaveBeenCalledWith(
       'C:\\Exports\\demo.webm',
     );
@@ -161,7 +172,8 @@ describe('ExportPopover', () => {
     expect(wrapper.find('.export-progress-card').exists()).toBe(true);
     expect(wrapper.find('.percentage-badge').text()).toBe('50%');
     expect(wrapper.find('.progress-title').exists()).toBe(true);
-    expect(wrapper.find('.progress-details').exists()).toBe(false);
+    expect(wrapper.get('.progress-details').text()).toContain('Frame 5 / 10');
+    expect(wrapper.find('.progress-actions .copy-progress-button').exists()).toBe(true);
     expect(wrapper.find('.progress-stub').attributes('data-indeterminate')).toBeUndefined();
     expect(wrapper.text()).not.toContain('01:01.0s');
     await wrapper.find('.export-progress-card .actions .button-stub').trigger('click');
@@ -189,7 +201,7 @@ describe('ExportPopover', () => {
     expect(wrapper.get('.export-trigger').text()).toBe('25%');
   });
 
-  it('keeps progress minimal and stable while exposing the weighted progress summary for copying', async () => {
+  it('bases visible progress on video frames while exposing the full diagnostic report for copying', async () => {
     const wrapper = mountExport();
     const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
     const exporting = mockJob.state?.exporting as Ref<boolean>;
@@ -206,17 +218,19 @@ describe('ExportPopover', () => {
     await nextTick();
 
     expect(wrapper.find('.export-progress-card').exists()).toBe(true);
-    expect(wrapper.get('.percentage-badge').text()).toBe('25%');
+    expect(wrapper.get('.percentage-badge').text()).toBe('4%');
     expect(wrapper.find('.stage-title').exists()).toBe(false);
-    expect(wrapper.find('.progress-details').exists()).toBe(false);
+    expect(wrapper.get('.progress-details').text()).toContain('268');
+    expect(wrapper.get('.progress-details').text()).toContain('6623');
     expect(wrapper.text()).not.toContain('Audio 100%');
 
     const copy = wrapper.get('.copy-progress-button');
     const summary = copy.attributes('data-copy-text') ?? '';
     expect(summary).toContain('268');
     expect(summary).toContain('6623');
-    expect(summary).toContain('25%');
-    expect(summary).toContain('100%');
+    expect(summary).toContain('=== Beam Export ===');
+    expect(summary).toContain('Video Progress: 4.0%');
+    expect(summary).toContain('Audio Progress: 100.0%');
   });
 
   it('keeps zero percent visible before encoding and hides encoding details', async () => {

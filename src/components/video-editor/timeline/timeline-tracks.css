@@ -45,7 +45,7 @@
   background: var(--color-bg-surface);
   position: sticky;
   left: 0;
-  z-index: 160;
+  z-index: 300;
 }
 .ruler-ticks-area {
   flex: 1;
@@ -125,7 +125,7 @@
   width: 2px;
   background: var(--color-primary);
   box-shadow: 0 0 10px var(--color-primary);
-  z-index: 200;
+  z-index: 210;
   pointer-events: none;
 }
 .snap-guide-badge {
@@ -142,7 +142,7 @@
   font-family: monospace;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  z-index: 201;
+  z-index: 211;
 }
 .tracks-stack {
   display: flex;
@@ -184,7 +184,7 @@
   text-align: left;
   position: sticky;
   left: 0;
-  z-index: 5;
+  z-index: 300;
 }
 .track-info:hover {
   background: var(--color-bg-surface-hover);
