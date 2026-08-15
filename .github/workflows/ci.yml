@@ -83,7 +83,7 @@ jobs:
           rpm_package="$(find dist_electron -maxdepth 1 -type f -name '*.rpm' -print -quit)"
           test -n "$appimage" && test -n "$deb" && test -n "$rpm_package"
           chmod +x "$appimage"
-          (cd dist_electron && "$(basename "$appimage")" --appimage-extract >/dev/null)
+          (cd dist_electron && "./$(basename "$appimage")" --appimage-extract >/dev/null)
           packaged_engine="$(find dist_electron/squashfs-root -type f -path "*/resources/capture-engine/capture-engine-$version" -print -quit)"
           packaged_helper="$(find dist_electron/squashfs-root -type f -path "*/resources/input-helper/beam-input-helper-$version" -print -quit)"
           test -x "$packaged_engine"
@@ -187,9 +187,12 @@ jobs:
           $version = node -p "require('./package.json').version"
           $installer = Get-ChildItem windows-artifacts -Recurse -File -Filter '*.exe' | Where-Object Name -Like '*Setup*' | Select-Object -First 1
           if (-not $installer) { throw 'Universal NSIS installer is missing from the downloaded artifact' }
-          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
-          $installed = Join-Path $env:LOCALAPPDATA 'Programs/Beam/Beam.exe'
-          $engine = Join-Path $env:LOCALAPPDATA "Programs/Beam/resources/capture-engine/capture-engine-$version.exe"
+          $installDirectory = Join-Path $env:RUNNER_TEMP 'Beam-arm64-smoke'
+          $installProcess = Start-Process -FilePath $installer.FullName -ArgumentList '/S', "/D=$installDirectory" -Wait -PassThru
+          if ($installProcess.ExitCode -ne 0) { throw "NSIS installer failed with exit code $($installProcess.ExitCode)" }
+          $installed = Join-Path $installDirectory 'Beam.exe'
+          $engine = Join-Path $installDirectory "resources/capture-engine/capture-engine-$version.exe"
+          if (-not (Test-Path $installed) -or -not (Test-Path $engine)) { throw 'ARM64 installation payload is incomplete' }
           node scripts/release/verify-pe.cjs arm64 $installed $engine
           $response = '{"id":"ci-status","command":"status"}' | & $engine | Select-Object -First 1 | ConvertFrom-Json
           if (-not $response.ok) { throw 'ARM64 capture-engine status smoke failed' }
