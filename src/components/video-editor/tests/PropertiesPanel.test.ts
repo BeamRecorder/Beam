@@ -1,5 +1,17 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
+import type { CursorType } from '~/api/types/cursor-presentation';
+import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
+import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import {
+  emptyComposition as createEmptyComposition,
+  type CaptionClip,
+  type ClipComposition,
+} from '~/media/shared/composition-types';
+import type { ZoomElement } from '../zoom/zoom-types';
+import type { ShadowDirection } from '../properties/cursor/shadow-types';
+import type { ProjectEditorData } from '../../../api/types/capture-api';
 
 vi.mock('../../../api/capture', () => ({ capture: {} }));
 
@@ -37,33 +49,92 @@ const ClipPropertiesPanel = {
   template: '<div class="clip-panel-stub">{{ selectedClip?.kind }}</div>',
 };
 
+const captionClip: CaptionClip = {
+  id: 'caption',
+  kind: 'caption',
+  name: 'Caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 100,
+  sourceInMs: 0,
+  sourceDurationMs: 100,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  caption: {
+    type: 'text',
+    sentences: [],
+    style: {
+      color: '#ffffff',
+      fontSize: 24,
+      wrap: true,
+      shadowColor: '#000000',
+      shadowBlur: 0,
+      placement: 'center',
+      backdropBlur: 0,
+      outlineColor: '#000000',
+      outlineWidth: 0,
+      extrusionDepth: 0,
+    },
+  },
+};
+
+const audioClip = {
+  id: 'audio',
+  kind: 'audio',
+  name: 'Audio',
+  timelineStartMs: 0,
+  timelineDurationMs: 100,
+} as const;
+
+const screenClip = {
+  id: 'screen',
+  kind: 'screen',
+  name: 'Screen',
+  timelineStartMs: 0,
+  timelineDurationMs: 100,
+} as const;
+
+const emptyBackgroundGroups: BackgroundMediaGroup[] = [];
+const composition: ClipComposition = createEmptyComposition();
+const noBackground: BackgroundValue | null = null;
+const noZoom: ZoomElement | null = null;
+const noEditorData: ProjectEditorData | null = null;
+const canvas: OutputCanvasSettings = {
+  preset: '16:9',
+  width: 1920,
+  height: 1080,
+  showBackground: false,
+};
+const selectedCursor: CursorType = 'default';
+const shadowDirection: ShadowDirection = 'bottom-right';
+
 const baseProps = {
   activeTab: 'canvas',
   selectedClip: null,
   selectedCaptionClip: null,
-  selectedCursor: 'default',
+  selectedCursor,
   cursorSize: 24,
   cursorColor: '#000000',
   enableShadow: false,
   shadowBlur: 8,
   shadowColor: '#000000',
-  shadowDirection: 'bottom-right',
-  clickEffects: {} as never,
-  motion: { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+  shadowDirection,
+  clickEffects: createDefaultCursorClickEffects(),
+  motion: createDefaultCursorMotionSettings(),
   volume: 100,
   isSystemAudioEnabled: false,
   isMicAudioEnabled: false,
-  selectedBackground: null,
+  selectedBackground: noBackground,
   blurPercent: 0,
-  backgroundGroups: [],
-  selectedZoom: null,
+  backgroundGroups: emptyBackgroundGroups,
+  selectedZoom: noZoom,
   canGenerateZooms: false,
   hasAutomaticZooms: false,
-  composition: { assets: [], clips: [] },
-  editorData: null,
+  composition,
+  editorData: noEditorData,
   timelineDurationMs: 1000,
   projectId: null,
-  canvas: { preset: '16:9', width: 1920, height: 1080, showBackground: false },
+  canvas,
 };
 
 const global = {
@@ -101,14 +172,14 @@ describe('PropertiesPanel', () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     await wrapper.setProps({
       activeTab: 'clip',
-      selectedClip: { id: 'audio', kind: 'audio', timelineStartMs: 0, timelineDurationMs: 100 },
+      selectedClip: audioClip,
     });
     expect(wrapper.find('.audio-clip-stub').exists()).toBe(true);
-    await wrapper.setProps({ selectedClip: null, selectedCaptionClip: { id: 'caption' } });
+    await wrapper.setProps({ selectedClip: null, selectedCaptionClip: captionClip });
     expect(wrapper.find('.caption-clip-stub').exists()).toBe(true);
     await wrapper.setProps({
       selectedCaptionClip: null,
-      selectedClip: { id: 'screen', kind: 'screen', timelineStartMs: 0, timelineDurationMs: 100 },
+      selectedClip: screenClip,
     });
     expect(wrapper.find('.clip-panel-stub').text()).toBe('video');
   });

@@ -168,6 +168,27 @@ describe('ExportPopover', () => {
     expect(mockJob.cancel).toHaveBeenCalledOnce();
   });
 
+  it('keeps the full export label before starting and shows only the percentage while exporting', async () => {
+    const wrapper = mountExport();
+    expect(wrapper.get('.export-trigger').text()).toBe('Export Video');
+
+    const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;
+    const exporting = mockJob.state?.exporting as Ref<boolean>;
+    progress.value = {
+      stage: 'encoding',
+      overallProgress: 0.25,
+      completedImages: 1,
+      totalImages: 4,
+      audioProgress: null,
+      currentTimeMs: 1_000,
+      totalTimeMs: 4_000,
+    };
+    exporting.value = true;
+    await nextTick();
+
+    expect(wrapper.get('.export-trigger').text()).toBe('25%');
+  });
+
   it('keeps progress minimal and stable while exposing the weighted progress summary for copying', async () => {
     const wrapper = mountExport();
     const progress = mockJob.state?.progress as Ref<Record<string, unknown> | null>;

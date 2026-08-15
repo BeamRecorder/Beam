@@ -272,6 +272,8 @@ const importLabel = computed(() =>
           }"
           :aria-label="item.name"
           :aria-busy="!previews[item.id] && !failed[item.id]"
+          draggable="false"
+          @dragstart.prevent
           @click="selectMediaBackground(item)"
         >
           <img
@@ -281,6 +283,8 @@ const importLabel = computed(() =>
             class="media-content loaded"
             loading="lazy"
             decoding="async"
+            draggable="false"
+            @dragstart.prevent
           />
           <img
             v-else-if="item.kind === 'image' && failed[item.id]"
@@ -289,6 +293,8 @@ const importLabel = computed(() =>
             class="media-content loaded"
             loading="lazy"
             decoding="async"
+            draggable="false"
+            @dragstart.prevent
           />
           <span v-else-if="item.kind === 'video' && failed[item.id]" class="video-placeholder">
             <Video :size="16" />
@@ -585,6 +591,8 @@ const importLabel = computed(() =>
   cursor: pointer;
   overflow: hidden;
   box-sizing: border-box;
+  user-select: none;
+  -webkit-user-drag: none;
   transition:
     border-color var(--fast) ease,
     box-shadow var(--fast) ease;
@@ -613,6 +621,9 @@ const importLabel = computed(() =>
   object-fit: cover;
   display: block;
   border-radius: inherit;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
   transition: opacity 0.15s ease;
 }
 

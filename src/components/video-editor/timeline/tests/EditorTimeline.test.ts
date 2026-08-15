@@ -1,11 +1,19 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import EditorTimeline from '../EditorTimeline.vue';
+import type { ClipComposition } from '~/media/shared/composition-types';
 
 const TimelineTracks = {
   emits: ['update:currentTime', 'select:clip'],
   template:
     '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button></div>',
+};
+
+const composition: ClipComposition = {
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
+  assets: [],
+  clips: [],
 };
 
 const props = {
@@ -14,7 +22,7 @@ const props = {
   isPlaying: false,
   zoomElements: [],
   selectedZoomId: null,
-  composition: { assets: [], clips: [] },
+  composition,
   selectedClipId: null,
   zoomLevel: 100,
 };
