@@ -97,7 +97,7 @@
   margin-left: 80px;
   margin-right: 150px;
   pointer-events: none;
-  z-index: 100;
+  z-index: 200;
 }
 .timeline-playhead {
   position: absolute;
@@ -105,7 +105,7 @@
   bottom: 0;
   width: 2px;
   background: var(--color-primary);
-  z-index: 100;
+  z-index: 200;
   pointer-events: none;
 }
 .playhead-head {
@@ -116,7 +116,7 @@
   height: 15px;
   color: var(--color-primary);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
-  z-index: 101;
+  z-index: 201;
 }
 .timeline-snap-guide {
   position: absolute;

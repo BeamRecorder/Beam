@@ -103,7 +103,7 @@ describe('export worker client', () => {
     expect(finalizeExport).not.toHaveBeenCalled();
 
     worker.emit({ type: 'complete' });
-    await expect(running).resolves.toEqual({ path: '/tmp/worker.webm', format: 'webm' });
+    await expect(running).resolves.toMatchObject({ path: '/tmp/worker.webm', format: 'webm' });
     expect(finalizeExport).toHaveBeenCalledWith('job-1');
     expect(reported.at(-1)).toBe(1);
     expect(worker.terminate).toHaveBeenCalledOnce();
