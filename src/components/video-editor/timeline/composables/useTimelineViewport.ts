@@ -1,7 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
 import { useCompositionAudioWaveforms } from './useCompositionAudioWaveforms';
 import { calculateSnapThresholdMs, collectSnapTargets, snapValue } from './timeline-snap';
-import { timelineThumbnailSlots } from './timeline-viewport';
+import { timelinePlaybackScrollDelta, timelineThumbnailSlots } from './timeline-viewport';
 import { clampTimelineZoom, zoomTimelineByWheel } from './timeline-zoom';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
@@ -116,6 +116,23 @@ export function useTimelineViewport(
       updateVisibleRange();
     });
   };
+  const followPlayback = () => {
+    if (!props.isPlaying || scrubPreviewTime.value !== null) return;
+    const scroll = tracksScrollRef.value;
+    const ticks = ticksAreaRef.value;
+    if (!scroll || !ticks || currentDuration.value <= 0) return;
+    const scrollRect = scroll.getBoundingClientRect();
+    const ticksRect = ticks.getBoundingClientRect();
+    const timelineWidth = Math.max(1, ticksRect.width || ticks.clientWidth);
+    const currentTime = Number.isFinite(props.currentTime)
+      ? Math.max(0, Math.min(currentDuration.value, props.currentTime))
+      : 0;
+    const playheadX = ticksRect.left + (currentTime / currentDuration.value) * timelineWidth;
+    const delta = timelinePlaybackScrollDelta(playheadX, scrollRect.left, scrollRect.right);
+    if (Math.abs(delta) < 1) return;
+    scroll.scrollLeft += delta;
+    updateVisibleRange();
+  };
   let autoScrollRaf: number | null = null;
   let autoScrollSpeed = 0;
   const updateAutoScroll = (clientX: number) => {
@@ -153,6 +170,7 @@ export function useTimelineViewport(
   };
   onMounted(() => {
     updateVisibleRange();
+    followPlayback();
     if (!tracksScrollRef.value) return;
     resizeObserver = new ResizeObserver(onScroll);
     resizeObserver.observe(tracksScrollRef.value);
@@ -169,6 +187,7 @@ export function useTimelineViewport(
     },
     { flush: 'post' },
   );
+  watch(() => [props.currentTime, props.isPlaying], followPlayback, { flush: 'post' });
   onUnmounted(() => {
     resizeObserver?.disconnect();
     if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { createAutoUpdater } = require('../electron/updates/auto-updater.cjs');
 
-function setup({ packaged = true, version = '0.1.0' } = {}) {
+function setup({ packaged = true, version = '0.1.0', onUpdateDownloaded = null } = {}) {
   const autoUpdater = new EventEmitter();
   autoUpdater.checkForUpdates = async () => undefined;
   autoUpdater.downloadUpdate = async () => undefined;
@@ -16,6 +16,7 @@ function setup({ packaged = true, version = '0.1.0' } = {}) {
     BrowserWindow: { getAllWindows: () => [] },
     autoUpdater,
     openExternal: async (url) => openedUrls.push(url),
+    onUpdateDownloaded,
   });
   return { autoUpdater, openedUrls, updater };
 }
@@ -35,6 +36,15 @@ test('downloads only after the user requests it', async () => {
   assert.equal(await updater.downloadUpdate(), true);
   autoUpdater.emit('update-downloaded', { version: '0.2.0' });
   assert.equal(updater.getState().status, 'downloaded');
+});
+
+test('calls onUpdateDownloaded with the downloaded version', () => {
+  const downloadedVersions = [];
+  const { autoUpdater } = setup({ onUpdateDownloaded: (version) => downloadedVersions.push(version) });
+
+  autoUpdater.emit('update-downloaded', { version: '0.2.0' });
+
+  assert.deepEqual(downloadedVersions, ['0.2.0']);
 });
 
 test('restarts only after a downloaded update is ready', async () => {

@@ -14,6 +14,7 @@ const props = withDefaults(
   defineProps<{
     currentTime: number;
     duration: number;
+    isPlaying: boolean;
     zoomLevel: number;
     exportProgress?: ExportProgress | null;
     zoomElements: ZoomElement[];

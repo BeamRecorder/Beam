@@ -14,12 +14,11 @@ use windows_capture::{
     frame::Frame,
     graphics_capture_api::InternalCaptureControl,
     monitor::Monitor,
-    settings::{
-        ColorFormat, CursorCaptureSettings, DirtyRegionSettings, DrawBorderSettings,
-        GraphicsCaptureItemType, MinimumUpdateIntervalSettings, SecondaryWindowSettings, Settings,
-    },
+    settings::{ColorFormat, DirtyRegionSettings, GraphicsCaptureItemType, Settings},
     window::Window,
 };
+
+use super::compatibility::compatible_settings;
 
 use crate::{
     CaptureError,
@@ -333,18 +332,13 @@ where
         start_gate,
         region,
     };
+    let compatibility = compatible_settings(exclude_cursor, fps);
     let settings = Settings::new(
         item,
-        if exclude_cursor {
-            CursorCaptureSettings::WithoutCursor
-        } else {
-            CursorCaptureSettings::WithCursor
-        },
-        DrawBorderSettings::WithoutBorder,
-        SecondaryWindowSettings::Exclude,
-        MinimumUpdateIntervalSettings::Custom(std::time::Duration::from_secs_f64(
-            1.0 / f64::from(fps),
-        )),
+        compatibility.cursor,
+        compatibility.border,
+        compatibility.secondary_windows,
+        compatibility.minimum_update_interval,
         DirtyRegionSettings::Default,
         ColorFormat::Bgra8,
         flags,

@@ -149,7 +149,7 @@ impl RecordingSession {
     }
 
     pub fn cancel(mut self) -> Result<(), CaptureError> {
-        if self.state != super::SessionState::Armed {
+        if !self.state.can_cancel() {
             return Err(invalid_transition(self.state, "Cancelled"));
         }
         if let Some(gate) = self.prepared_start_gate.take() {
@@ -352,3 +352,7 @@ impl RecordingSession {
         self.writer.checkpoint(&self.manifest)
     }
 }
+
+#[cfg(test)]
+#[path = "recording_tests.rs"]
+mod tests;

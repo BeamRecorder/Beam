@@ -5,10 +5,21 @@ export interface TimelineThumbnailSlot {
 
 export const TARGET_THUMBNAIL_WIDTH_PX = 96;
 export const THUMBNAIL_OVERSCAN_SLOTS = 2;
+export const PLAYBACK_FOLLOW_TARGET_RATIO = 0.15;
+export const PLAYBACK_FOLLOW_RIGHT_EDGE_RATIO = 0.9;
 
 const THUMBNAIL_STEPS_SECONDS = [0.25, 0.5, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1_200];
 
 const roundedSeconds = (value: number) => Math.round(value * 1_000) / 1_000;
+
+export const timelinePlaybackScrollDelta = (playheadX: number, viewportLeft: number, viewportRight: number) => {
+  if (![playheadX, viewportLeft, viewportRight].every(Number.isFinite)) return 0;
+  const viewportWidth = viewportRight - viewportLeft;
+  if (viewportWidth <= 0) return 0;
+  const followBoundary = viewportLeft + viewportWidth * PLAYBACK_FOLLOW_RIGHT_EDGE_RATIO;
+  if (playheadX >= viewportLeft && playheadX <= followBoundary) return 0;
+  return playheadX - (viewportLeft + viewportWidth * PLAYBACK_FOLLOW_TARGET_RATIO);
+};
 
 export const timelineThumbnailStep = (pixelsPerSecond: number, targetWidth = TARGET_THUMBNAIL_WIDTH_PX) => {
   if (!Number.isFinite(pixelsPerSecond) || pixelsPerSecond <= 0) return 1;

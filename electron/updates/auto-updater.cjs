@@ -17,6 +17,7 @@ function createAutoUpdater({
   openExternal,
   isPackaged = app.isPackaged,
   beforeQuitAndInstall = null,
+  onUpdateDownloaded = null,
 }) {
   let state = idleState(app.getVersion(), isPackaged ? 'idle' : 'unsupported');
   const publish = () =>
@@ -49,9 +50,11 @@ function createAutoUpdater({
   autoUpdater.on('download-progress', (progress) =>
     setState({ status: 'downloading', percent: Math.round(progress.percent) }),
   );
-  autoUpdater.on('update-downloaded', (info) =>
-    setState({ status: 'downloaded', availableVersion: versionOf(info), percent: 100, message: null }),
-  );
+  autoUpdater.on('update-downloaded', (info) => {
+    const availableVersion = versionOf(info);
+    if (availableVersion && onUpdateDownloaded) onUpdateDownloaded(availableVersion);
+    setState({ status: 'downloaded', availableVersion, percent: 100, message: null });
+  });
   autoUpdater.on('error', (error) => setState({ status: 'error', percent: null, message: errorMessage(error) }));
   return {
     async checkForUpdates() {

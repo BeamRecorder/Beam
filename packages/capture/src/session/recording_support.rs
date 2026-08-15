@@ -250,17 +250,29 @@ pub(super) fn now_utc() -> Result<String, CaptureError> {
         .map_err(|error| CaptureError::Backend(error.to_string()))
 }
 
+fn insufficient_disk_space_message(available: u64, minimum: u64) -> String {
+    format!(
+        "insufficient disk space: {} MB available, {} MB required",
+        available / 1024 / 1024,
+        minimum.div_ceil(1024 * 1024)
+    )
+}
+
 pub(super) fn ensure_free_space(root: &Path, minimum: u64) -> Result<(), CaptureError> {
     std::fs::create_dir_all(root).map_err(|error| CaptureError::storage(root, error))?;
     let available =
         fs2::available_space(root).map_err(|error| CaptureError::storage(root, error))?;
     if available < minimum {
-        return Err(CaptureError::InvalidConfiguration(format!(
-            "insufficient disk space: {available} bytes available, {minimum} required"
-        )));
+        return Err(CaptureError::InvalidConfiguration(
+            insufficient_disk_space_message(available, minimum),
+        ));
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "recording_support_tests.rs"]
+mod tests;
 
 pub(super) fn checkpoint_tracks(
     layout: &crate::storage::SessionLayout,

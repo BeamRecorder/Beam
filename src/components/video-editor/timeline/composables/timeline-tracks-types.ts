@@ -5,6 +5,7 @@ import type { ClipComposition } from '~/media/shared/composition-types';
 export interface TimelineTracksProps {
   currentTime: number;
   duration: number;
+  isPlaying: boolean;
   zoomLevel: number;
   exportProgress?: ExportProgress | null;
   zoomElements: ZoomElement[];

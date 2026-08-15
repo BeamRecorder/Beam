@@ -8,6 +8,8 @@ use crate::{
     },
 };
 
+use super::compatibility::supports_cursor_exclusion;
+
 pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let mut sources = discover_monitors()?;
     sources.extend(discover_windows()?);
@@ -16,6 +18,7 @@ pub fn discover_sources() -> Result<Vec<SourceDescriptor>, CaptureError> {
 
 pub fn discover_monitors() -> Result<Vec<SourceDescriptor>, CaptureError> {
     let primary = Monitor::primary().ok();
+    let supports_cursor_exclusion = supports_cursor_exclusion();
     Monitor::enumerate()
         .map_err(backend_error)?
         .into_iter()
@@ -43,7 +46,7 @@ pub fn discover_monitors() -> Result<Vec<SourceDescriptor>, CaptureError> {
                         fps,
                         pixel_format: Some("bgra8".into()),
                     }],
-                    supports_cursor_exclusion: true,
+                    supports_cursor_exclusion,
                 },
             })
         })
@@ -51,14 +54,18 @@ pub fn discover_monitors() -> Result<Vec<SourceDescriptor>, CaptureError> {
 }
 
 pub fn discover_windows() -> Result<Vec<SourceDescriptor>, CaptureError> {
+    let supports_cursor_exclusion = supports_cursor_exclusion();
     Window::enumerate()
         .map_err(backend_error)?
         .into_iter()
-        .filter_map(|window| window_descriptor(window).transpose())
+        .filter_map(|window| window_descriptor(window, supports_cursor_exclusion).transpose())
         .collect()
 }
 
-fn window_descriptor(window: Window) -> Result<Option<SourceDescriptor>, CaptureError> {
+fn window_descriptor(
+    window: Window,
+    supports_cursor_exclusion: bool,
+) -> Result<Option<SourceDescriptor>, CaptureError> {
     let title = window.title().map_err(backend_error)?;
     if title.trim().is_empty() {
         return Ok(None);
@@ -85,7 +92,7 @@ fn window_descriptor(window: Window) -> Result<Option<SourceDescriptor>, Capture
                 fps: 60,
                 pixel_format: Some("bgra8".into()),
             }],
-            supports_cursor_exclusion: true,
+            supports_cursor_exclusion,
         },
     }))
 }

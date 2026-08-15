@@ -230,6 +230,7 @@ const mountTracks = async (overrides: Record<string, unknown> = {}) => {
     props: {
       currentTime: 2,
       duration: 10,
+      isPlaying: false,
       zoomLevel: 120,
       exportProgress: {
         stage: 'encoding',
@@ -264,6 +265,31 @@ const mountTracks = async (overrides: Record<string, unknown> = {}) => {
   return wrapper;
 };
 
+const setPlaybackViewportGeometry = (mounted: VueWrapper) => {
+  const ticks = mounted.get('.ruler-ticks-area').element;
+  vi.mocked(ticks.getBoundingClientRect).mockReturnValue({
+    left: 120,
+    top: 0,
+    width: 2_000,
+    height: 28,
+    right: 2_120,
+    bottom: 28,
+  } as DOMRect);
+  const scroll = mounted.get('.timeline-tracks-container').element;
+  vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue({
+    left: 120,
+    top: 0,
+    width: 500,
+    height: 200,
+    right: 620,
+    bottom: 200,
+  } as DOMRect);
+  Object.defineProperty(scroll, 'clientWidth', { configurable: true, value: 500 });
+  Object.defineProperty(scroll, 'scrollWidth', { configurable: true, value: 2_000 });
+  scroll.scrollLeft = 0;
+  return scroll;
+};
+
 const pointerEvent = (type: string, clientX: number, clientY = 10) => {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperties(event, {
@@ -295,6 +321,24 @@ afterEach(() => {
 });
 
 describe('TimelineTracks', () => {
+  it('scrolls the playhead into view when playback crosses the right boundary', async () => {
+    const mounted = await mountTracks({ isPlaying: true });
+    const scroll = setPlaybackViewportGeometry(mounted!);
+
+    await mounted!.setProps({ currentTime: 8 });
+
+    expect(scroll.scrollLeft).toBeGreaterThan(0);
+  });
+
+  it('does not move the timeline when a paused playhead crosses the right boundary', async () => {
+    const mounted = await mountTracks({ isPlaying: false });
+    const scroll = setPlaybackViewportGeometry(mounted!);
+
+    await mounted!.setProps({ currentTime: 8 });
+
+    expect(scroll.scrollLeft).toBe(0);
+  });
+
   it('virtualizes thumbnail requests to the viewport with two seconds of overscan and preserves the range on zoom', async () => {
     const mounted = await mountTracks();
     const scroll = mounted!.get('.timeline-tracks-container').element;

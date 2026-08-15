@@ -1,5 +1,6 @@
 mod capture;
 mod catalog;
+mod compatibility;
 mod permissions;
 
 pub use capture::*;

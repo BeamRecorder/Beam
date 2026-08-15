@@ -42,6 +42,7 @@ const { createTeleprompterStorage } = require('./teleprompter/teleprompter-stora
 const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs');
+const { createUpdateCache, updaterCacheDirectory } = require('./updates/update-cache.cjs');
 const { createTrayManager } = require('./tray/tray-manager.cjs');
 const { InputAccess, registerInputAccessIpc } = require('./input/input-access.cjs');
 const { createShutdownCoordinator } = require('./lifecycle/shutdown-coordinator.cjs');
@@ -145,16 +146,18 @@ function configureDesktopLoopback() {
 }
 
 function getAppIconPath() {
-  const candidates = [
-    path.join(applicationRoot, 'dist/brand/BeamIcon.ico'),
-    path.join(applicationRoot, 'public/brand/BeamIcon.ico'),
-    path.join(__dirname, '../dist/brand/BeamIcon.ico'),
-    path.join(__dirname, '../public/brand/BeamIcon.ico'),
+  const extensions = process.platform === 'linux' ? ['png', 'ico'] : ['ico', 'png'];
+  const roots = [
+    path.join(applicationRoot, 'dist/brand'),
+    path.join(applicationRoot, 'public/brand'),
+    path.join(__dirname, '../dist/brand'),
+    path.join(__dirname, '../public/brand'),
   ];
+  const candidates = roots.flatMap((root) => extensions.map((extension) => path.join(root, `BeamIcon.${extension}`)));
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate;
   }
-  return path.join(applicationRoot, 'public/brand/BeamIcon.ico');
+  return path.join(applicationRoot, `public/brand/BeamIcon.${extensions[0]}`);
 }
 
 function createWindow(preferencesStore) {
@@ -316,12 +319,32 @@ function initializeApplication() {
     logStartup('Window IPC registered.');
     const exportIpc = registerExportIpc({ ipcMain: applicationIpc, dialog: require('electron').dialog, BrowserWindow });
     logStartup('Export IPC registered.');
+    const updateCache = app.isPackaged
+      ? createUpdateCache({
+          stateFile: path.join(app.getPath('userData'), 'update-cache-state.json'),
+          cacheDirectory: updaterCacheDirectory(),
+        })
+      : null;
+    if (updateCache) {
+      try {
+        updateCache.cleanupForVersion(app.getVersion());
+      } catch (error) {
+        console.warn('[Updater] Unable to clean installed update cache:', error);
+      }
+    }
     const updater = createAutoUpdater({
       app,
       BrowserWindow,
       autoUpdater,
       openExternal: require('electron').shell.openExternal,
       beforeQuitAndInstall: () => coordinator.requestShutdown('updater'),
+      onUpdateDownloaded: (targetVersion) => {
+        try {
+          updateCache?.markDownloaded(app.getVersion(), targetVersion);
+        } catch (error) {
+          console.warn('[Updater] Unable to record the downloaded update:', error);
+        }
+      },
     });
     registerUpdateIpc(applicationIpc, updater);
     applicationIpc.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));

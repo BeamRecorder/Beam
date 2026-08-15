@@ -20,6 +20,10 @@ pub enum SessionState {
 }
 
 impl SessionState {
+    pub(super) const fn can_cancel(self) -> bool {
+        matches!(self, Self::Armed | Self::Failed)
+    }
+
     pub fn transition(self, next: Self) -> Result<Self, CaptureError> {
         let valid = matches!(
             (self, next),
@@ -55,3 +59,7 @@ impl SessionState {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "state_tests.rs"]
+mod tests;

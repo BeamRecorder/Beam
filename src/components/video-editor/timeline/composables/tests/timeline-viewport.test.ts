@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  timelinePlaybackScrollDelta,
   timelinePercentStyle,
   timelineRulerSecondsInView,
   timelineSecondsInView,
@@ -8,6 +9,22 @@ import {
 } from '../timeline-viewport';
 
 describe('timeline viewport', () => {
+  it('does not scroll while the playhead remains inside the follow viewport', () => {
+    expect(timelinePlaybackScrollDelta(400, 100, 500)).toBe(0);
+  });
+
+  it('moves the timeline back toward the follow target after the right boundary', () => {
+    expect(timelinePlaybackScrollDelta(480, 100, 500)).toBe(320);
+  });
+
+  it('moves the timeline forward toward the follow target before the left edge', () => {
+    expect(timelinePlaybackScrollDelta(80, 100, 500)).toBe(-80);
+  });
+
+  it('ignores invalid viewport coordinates', () => {
+    expect(timelinePlaybackScrollDelta(Number.NaN, 100, 500)).toBe(0);
+  });
+
   it('adapts thumbnail spacing from three minutes at low zoom to three seconds at high zoom', () => {
     expect(timelineThumbnailStep(0.5)).toBe(180);
     expect(timelineThumbnailStep(32)).toBe(3);

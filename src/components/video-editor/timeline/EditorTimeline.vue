@@ -55,6 +55,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
     <TimelineTracks
       :current-time="currentTime"
       :duration="duration"
+      :is-playing="isPlaying"
       :zoom-level="zoomLevel"
       :export-progress="exportProgress"
       :zoom-elements="zoomElements"

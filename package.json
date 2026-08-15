@@ -2,6 +2,7 @@
   "name": "beam",
   "private": true,
   "version": "0.1.3",
+  "desktopName": "com.beam.app",
   "description": "Beam - Screen recorder to create product demos.",
   "author": {
     "name": "ExtraBinoss",
@@ -108,6 +109,8 @@
         "deb",
         "rpm"
       ],
+      "icon": "public/brand/BeamIcon.png",
+      "syncDesktopName": true,
       "category": "AudioVideo",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
       "extraResources": [
