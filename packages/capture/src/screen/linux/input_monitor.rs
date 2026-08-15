@@ -15,6 +15,8 @@ use crate::{
     input::{InputAccessStatus, NativeInputEvent},
 };
 
+use super::owned_child;
+
 const INSTALLED_HELPER: &str = "/usr/libexec/beam-input-helper";
 pub(super) const INPUT_QUEUE_CAPACITY: usize = 4_096;
 
@@ -133,34 +135,50 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     }
     broker.stop();
 
-    let mut child = Command::new("pkexec")
+    let mut command = Command::new("pkexec");
+    command
         .arg(helper)
         .arg("stream")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::null());
+    owned_child::configure(&mut command);
+    let mut child = command
         .spawn()
         .map_err(|error| CaptureError::Backend(format!("input helper failed to start: {error}")))?;
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| CaptureError::Backend("input helper stdout was unavailable".into()))?;
+    owned_child::register(&child);
+    let Some(stdout) = child.stdout.take() else {
+        owned_child::kill_and_wait(&mut child);
+        return Err(CaptureError::Backend(
+            "input helper stdout was unavailable".into(),
+        ));
+    };
     let mut reader = BufReader::new(stdout);
     let mut ready_line = String::new();
-    if reader
-        .read_line(&mut ready_line)
-        .map_err(|error| CaptureError::Backend(format!("input helper readiness failed: {error}")))?
-        == 0
-    {
-        let _ = child.wait();
-        return Err(CaptureError::PermissionDenied(
-            "interaction access was not authorized".into(),
-        ));
+    match reader.read_line(&mut ready_line) {
+        Ok(0) => {
+            owned_child::kill_and_wait(&mut child);
+            return Err(CaptureError::PermissionDenied(
+                "interaction access was not authorized".into(),
+            ));
+        }
+        Err(error) => {
+            owned_child::kill_and_wait(&mut child);
+            return Err(CaptureError::Backend(format!(
+                "input helper readiness failed: {error}"
+            )));
+        }
+        Ok(_) => {}
     }
-    let ready: serde_json::Value = serde_json::from_str(&ready_line)?;
+    let ready: serde_json::Value = match serde_json::from_str(&ready_line) {
+        Ok(ready) => ready,
+        Err(error) => {
+            owned_child::kill_and_wait(&mut child);
+            return Err(error.into());
+        }
+    };
     if ready.get("event").and_then(serde_json::Value::as_str) != Some("ready") {
-        let _ = child.kill();
-        let _ = child.wait();
+        owned_child::kill_and_wait(&mut child);
         return Err(CaptureError::Backend(
             "input helper returned an invalid readiness response".into(),
         ));
@@ -187,35 +205,41 @@ pub fn request_linux_input_access() -> Result<InputAccessStatus, CaptureError> {
     broker.shared.ready.store(true, Ordering::Release);
 
     let shared = broker.shared.clone();
-    broker.reader = Some(
-        std::thread::Builder::new()
-            .name("beam-linux-input-broker".into())
-            .spawn(move || {
-                for line in reader.lines().map_while(Result::ok) {
-                    let Ok(event) = serde_json::from_str::<NativeInputEvent>(&line) else {
-                        continue;
-                    };
-                    if let Ok(mut subscribers) = shared.subscribers.lock() {
-                        subscribers.retain(|subscriber| {
-                            let Some(queue) = subscriber.upgrade() else {
-                                return false;
-                            };
-                            if let Ok(mut queue) = queue.lock() {
-                                queue.push(event.clone());
-                            }
-                            true
-                        });
-                    }
-                }
-                shared.ready.store(false, Ordering::Release);
+    let reader_thread = std::thread::Builder::new()
+        .name("beam-linux-input-broker".into())
+        .spawn(move || {
+            for line in reader.lines().map_while(Result::ok) {
+                let Ok(event) = serde_json::from_str::<NativeInputEvent>(&line) else {
+                    continue;
+                };
                 if let Ok(mut subscribers) = shared.subscribers.lock() {
-                    subscribers.clear();
+                    subscribers.retain(|subscriber| {
+                        let Some(queue) = subscriber.upgrade() else {
+                            return false;
+                        };
+                        if let Ok(mut queue) = queue.lock() {
+                            queue.push(event.clone());
+                        }
+                        true
+                    });
                 }
-            })
-            .map_err(|error| {
-                CaptureError::Backend(format!("input broker reader failed to start: {error}"))
-            })?,
-    );
+            }
+            shared.ready.store(false, Ordering::Release);
+            if let Ok(mut subscribers) = shared.subscribers.lock() {
+                subscribers.clear();
+            }
+        });
+    let reader_thread = match reader_thread {
+        Ok(reader_thread) => reader_thread,
+        Err(error) => {
+            broker.shared.ready.store(false, Ordering::Release);
+            owned_child::kill_and_wait(&mut child);
+            return Err(CaptureError::Backend(format!(
+                "input broker reader failed to start: {error}"
+            )));
+        }
+    };
+    broker.reader = Some(reader_thread);
     broker.child = Some(child);
     Ok(linux_input_access_status_from(&broker))
 }
@@ -268,8 +292,7 @@ impl LinuxInputBroker {
     fn stop(&mut self) {
         self.shared.ready.store(false, Ordering::Release);
         if let Some(mut child) = self.child.take() {
-            let _ = child.kill();
-            let _ = child.wait();
+            owned_child::kill_and_wait(&mut child);
         }
         if let Some(reader) = self.reader.take() {
             let _ = reader.join();
@@ -308,18 +331,19 @@ fn ensure_installed_helper() -> Result<PathBuf, CaptureError> {
         && bundled != installed
         && (!executable_file(&installed) || helper_version(&bundled) != helper_version(&installed))
     {
-        let status = Command::new("pkexec")
+        let mut command = Command::new("pkexec");
+        command
             .arg(&bundled)
             .arg("install")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .map_err(|error| {
-                CaptureError::Backend(format!(
-                    "input helper installation failed to start: {error}"
-                ))
-            })?;
+            .stderr(Stdio::null());
+        owned_child::configure(&mut command);
+        let status = command.status().map_err(|error| {
+            CaptureError::Backend(format!(
+                "input helper installation failed to start: {error}"
+            ))
+        })?;
         if !status.success() {
             return Err(CaptureError::PermissionDenied(
                 "interaction access installation was not authorized".into(),
@@ -332,11 +356,10 @@ fn ensure_installed_helper() -> Result<PathBuf, CaptureError> {
 }
 
 fn helper_version(path: &Path) -> Option<(String, u64)> {
-    let output = Command::new(path)
-        .arg("version")
-        .stdin(Stdio::null())
-        .output()
-        .ok()?;
+    let mut command = Command::new(path);
+    command.arg("version").stdin(Stdio::null());
+    owned_child::configure(&mut command);
+    let output = command.output().ok()?;
     if !output.status.success() {
         return None;
     }

@@ -129,6 +129,24 @@ describe('RecorderBar', () => {
     wrapper.unmount();
   });
 
+  it('shows the Preparing throbber and never the timer while starting', async () => {
+    const wrapper = mount(RecorderBar, {
+      props: { ...props, phase: 'starting' as const },
+    });
+    expect(wrapper.get('.recording-time').text()).toContain('Preparing');
+    expect(wrapper.get('.recording-time').text()).not.toContain('00:');
+    // Pause and the three device toggles are disabled during startup.
+    const controls = wrapper.findAll('.control');
+    expect(controls[0].attributes('disabled')).toBeDefined();
+    expect(controls[2].attributes('disabled')).toBeDefined();
+    expect(controls[3].attributes('disabled')).toBeDefined();
+    expect(controls[4].attributes('disabled')).toBeDefined();
+    // Stop and cancel stay available so startup can be aborted.
+    expect(controls[1].attributes('disabled')).toBeUndefined();
+    expect(controls[5].attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it('keeps pause and stop clickable on their first pointer interaction', async () => {
     const wrapper = mount(RecorderBar, { props });
     const controls = wrapper.findAll('.control');

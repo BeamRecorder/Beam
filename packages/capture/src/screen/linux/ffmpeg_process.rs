@@ -8,7 +8,7 @@ use std::{
 
 use crate::{CaptureError, NativeCaptureErrorCode, screen::OwnedVideoFrame};
 
-use super::FfmpegCapabilities;
+use super::{FfmpegCapabilities, owned_child};
 
 const MAX_STDERR_BYTES: usize = 64 * 1024;
 
@@ -53,37 +53,42 @@ impl FfmpegProcess {
         })?;
         std::fs::create_dir_all(parent).map_err(|error| CaptureError::storage(parent, error))?;
         let arguments = arguments(&config, &partial_path);
-        let mut child = Command::new(&config.capabilities.executable)
+        let mut command = Command::new(&config.capabilities.executable);
+        command
             .args(&arguments)
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|error| {
-                ffmpeg_error(
-                    NativeCaptureErrorCode::FfmpegUnavailable,
-                    format!(
-                        "failed to start {}: {error}",
-                        config.capabilities.executable.display()
-                    ),
-                )
-            })?;
-        let stdin = child.stdin.take().ok_or_else(|| {
+            .stderr(Stdio::piped());
+        owned_child::configure(&mut command);
+        let mut child = command.spawn().map_err(|error| {
             ffmpeg_error(
+                NativeCaptureErrorCode::FfmpegUnavailable,
+                format!(
+                    "failed to start {}: {error}",
+                    config.capabilities.executable.display()
+                ),
+            )
+        })?;
+        owned_child::register(&child);
+        let Some(stdin) = child.stdin.take() else {
+            owned_child::kill_and_wait(&mut child);
+            return Err(ffmpeg_error(
                 NativeCaptureErrorCode::FfmpegFailed,
                 "FFmpeg did not expose its input pipe",
-            )
-        })?;
-        let stderr = child.stderr.take().ok_or_else(|| {
-            ffmpeg_error(
+            ));
+        };
+        let Some(stderr) = child.stderr.take() else {
+            owned_child::kill_and_wait(&mut child);
+            return Err(ffmpeg_error(
                 NativeCaptureErrorCode::FfmpegFailed,
                 "FFmpeg did not expose its diagnostic pipe",
-            )
-        })?;
-        let stderr = std::thread::Builder::new()
+            ));
+        };
+        let stderr_reader = std::thread::Builder::new()
             .name("beam-ffmpeg-stderr".into())
             .spawn(move || drain_stderr(stderr))
             .map_err(|error| {
+                owned_child::kill_and_wait(&mut child);
                 ffmpeg_error(
                     NativeCaptureErrorCode::FfmpegFailed,
                     format!("failed to start the FFmpeg diagnostic reader: {error}"),
@@ -92,7 +97,7 @@ impl FfmpegProcess {
         Ok(Self {
             child: Some(child),
             stdin: Some(stdin),
-            stderr: Some(stderr),
+            stderr: Some(stderr_reader),
             final_path,
             partial_path,
             frames: 0,
@@ -149,6 +154,9 @@ impl FfmpegProcess {
             .ok_or_else(|| ffmpeg_failed("FFmpeg process was already finalized"))?
             .wait()
             .map_err(ffmpeg_write_error)?;
+        if let Some(child) = self.child.as_ref() {
+            owned_child::unregister(child);
+        }
         self.child = None;
         let stderr = self
             .stderr
@@ -197,8 +205,7 @@ impl Drop for FfmpegProcess {
     fn drop(&mut self) {
         drop(self.stdin.take());
         if let Some(child) = self.child.as_mut() {
-            let _ = child.kill();
-            let _ = child.wait();
+            owned_child::kill_and_wait(child);
         }
         self.child = None;
         if let Some(stderr) = self.stderr.take() {

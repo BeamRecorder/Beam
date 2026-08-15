@@ -5,6 +5,7 @@ import type { RecordingBarVisibility, RecordingPhase } from './recording-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from '../audio/useAudioLevelMeter';
 import AudioIconMeter from '../audio/AudioIconMeter.vue';
+import Throbber from '~/ui/throbber/Throbber.vue';
 
 const { t } = useTranslate('RecorderBar');
 
@@ -46,14 +47,16 @@ const emit = defineEmits<{
     </button>
 
     <p class="recording-time" :class="{ countdown: phase === 'countdown' }" aria-live="polite">
-      {{ phase === 'countdown' ? t('ready') : recordingTime }}
+      <template v-if="phase === 'countdown'">{{ t('ready') }}</template>
+      <Throbber v-else-if="phase === 'starting'" :text="t('preparing')" variant="breathe" color="muted" size="xs" />
+      <template v-else>{{ recordingTime }}</template>
     </p>
 
     <button
       class="control"
       :aria-label="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
       :title="phase === 'paused' ? t('resumeRecording') : t('pauseRecording')"
-      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
       @pointerdown.stop
       @click="emit('pause')"
     >
@@ -76,7 +79,7 @@ const emit = defineEmits<{
       :class="{ inactive: !microphoneEnabled }"
       :aria-label="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
       :title="microphoneEnabled ? t('turnMicOff') : t('turnMicOn')"
-      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
       @pointerdown.stop
       @click="emit('microphone')"
     >
@@ -88,7 +91,7 @@ const emit = defineEmits<{
       :class="{ inactive: !cameraEnabled }"
       :aria-label="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
       :title="cameraEnabled ? t('turnCameraOff') : t('turnCameraOn')"
-      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
       @pointerdown.stop
       @click="emit('camera')"
     >
@@ -100,7 +103,7 @@ const emit = defineEmits<{
       :class="{ inactive: !systemAudioEnabled }"
       :aria-label="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
       :title="systemAudioEnabled ? t('turnSystemAudioOff') : t('turnSystemAudioOn')"
-      :disabled="phase === 'countdown' || phase === 'finalizing'"
+      :disabled="phase === 'countdown' || phase === 'starting' || phase === 'finalizing'"
       @pointerdown.stop
       @click="emit('systemAudio')"
     >

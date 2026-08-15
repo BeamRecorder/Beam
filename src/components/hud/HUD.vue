@@ -58,6 +58,7 @@ const props = withDefaults(
     showTopbar?: boolean;
     preparingEditor?: boolean;
     editorLoadingProgress?: EditorLoadingProgress;
+    externalError?: string;
   }>(),
   {
     embedded: false,
@@ -76,6 +77,7 @@ const activeTab = ref<'screen' | 'window'>('screen');
 const isRecording = ref(false);
 const isBusy = ref(false);
 const errorMessage = ref('');
+const shownError = computed(() => props.externalError || errorMessage.value);
 const copiedError = ref(false);
 let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 const sources = ref<CaptureSource[]>([]);
@@ -356,7 +358,7 @@ const updateWindowSize = () => {
   if (props.embedded) return;
   const isDropdownOpen = activeDropdowns.value > 0;
   let targetHeight = 480;
-  const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0;
+  const errorHeight = !showSettings.value && !showProjectPicker.value && shownError.value ? 116 : 0;
   if (props.preparingEditor) {
     targetHeight = 480;
   } else if (showSettings.value) {
@@ -387,7 +389,7 @@ const updateWindowSize = () => {
     setTimeout(() => {
       const currentDropdownOpen = activeDropdowns.value > 0;
       let currentTargetHeight = 480;
-      const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0;
+      const errorHeight = !showSettings.value && !showProjectPicker.value && shownError.value ? 116 : 0;
       if (props.preparingEditor) {
         currentTargetHeight = 480;
       } else if (showSettings.value) {
@@ -420,7 +422,7 @@ const updateWindowSize = () => {
 
 const hudHeight = computed(() => {
   if (props.preparingEditor) return 480;
-  const errorHeight = !showSettings.value && !showProjectPicker.value && errorMessage.value ? 116 : 0;
+  const errorHeight = !showSettings.value && !showProjectPicker.value && shownError.value ? 116 : 0;
   if (showSettings.value || showProjectPicker.value) {
     return 520 + errorHeight;
   }
@@ -470,18 +472,18 @@ watch(showProjectPicker, () => {
   updateWindowSize();
 });
 
-watch(errorMessage, () => {
+watch(shownError, () => {
   copiedError.value = false;
   updateWindowSize();
 });
 
 const copyError = async () => {
-  if (!errorMessage.value) return;
+  if (!shownError.value) return;
   try {
-    await navigator.clipboard.writeText(errorMessage.value);
+    await navigator.clipboard.writeText(shownError.value);
   } catch {
     const text = document.createElement('textarea');
-    text.value = errorMessage.value;
+    text.value = shownError.value;
     text.setAttribute('readonly', '');
     text.style.position = 'fixed';
     text.style.opacity = '0';
@@ -891,7 +893,7 @@ onBeforeUnmount(() => {
 
 const closeApp = () => {
   if (props.embedded) return;
-  capture.close();
+  capture.quit();
 };
 
 const minimizeApp = () => {
@@ -1127,8 +1129,8 @@ const openProject = (project: CaptureProject) => {
           </Transition>
         </div>
 
-        <div v-if="errorMessage" class="capture-error" role="alert">
-          <p class="capture-error-message">{{ errorMessage }}</p>
+        <div v-if="shownError" class="capture-error" role="alert">
+          <p class="capture-error-message">{{ shownError }}</p>
           <Button
             variant="ghost"
             size="sm"

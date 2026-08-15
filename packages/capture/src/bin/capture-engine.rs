@@ -18,10 +18,14 @@ fn main() {
 }
 
 fn run() -> Result<(), capture::CaptureError> {
+    capture::parent_watch::install_parent_death_guard()?;
     let mut reader = BufReader::new(io::stdin().lock());
     let mut output = io::stdout().lock();
     let mut engine = Engine::default();
     loop {
+        if capture::parent_watch::parent_death_requested() {
+            break;
+        }
         let request = match read_json_line::<RequestEnvelope>(&mut reader) {
             Ok(Some(request)) => request,
             Ok(None) => break,

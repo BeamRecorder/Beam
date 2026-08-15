@@ -6,6 +6,7 @@ pub mod cursor;
 pub mod error;
 pub mod input;
 pub mod model;
+pub mod parent_watch;
 pub mod protocol;
 pub mod screen;
 pub mod session;

@@ -28,6 +28,7 @@ export const captureMock = {
   discardRecording: vi.fn(),
   setSize: vi.fn(),
   close: vi.fn(),
+  quit: vi.fn(),
   minimize: vi.fn(),
   listProjects: vi.fn(),
   createProject: vi.fn(),

@@ -62,7 +62,7 @@ async function startElectron(executable, { root = applicationRoot, spawnImpl = s
   await runCommand(
     process.execPath,
     [electronCli, '.'],
-    { cwd: root, env: { ...env, DEMO_RECORDER_CAPTURE_ENGINE: executable } },
+    { cwd: root, env: { ...env, BEAM_CAPTURE_ENGINE: executable } },
     spawnImpl,
   );
 }

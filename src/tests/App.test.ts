@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
     getPreferences: vi.fn(),
     setInteractive: vi.fn(),
     setCameraOverlayActive: vi.fn(),
+    hideScreenRegionOverlay: vi.fn(),
+    setCountdown: vi.fn(async () => undefined),
     resetCameraOverlayPlacement: vi.fn(),
     setWindowMode: vi.fn(),
     setSize: vi.fn(),
@@ -21,6 +23,8 @@ const mocks = vi.hoisted(() => ({
     onTrayStopRecording: vi.fn(),
     onPreferenceShortcut: vi.fn(),
     listProjects: vi.fn(),
+    renameProject: vi.fn(),
+    updateTrayMenu: vi.fn(),
   },
   controller: {
     recording: undefined as any,

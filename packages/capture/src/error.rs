@@ -79,6 +79,8 @@ pub enum CaptureError {
     Serialization(#[from] serde_json::Error),
     #[error("backend error: {0}")]
     Backend(String),
+    #[error("parent-death guard unavailable: {0}")]
+    ParentDeathGuard(String),
     #[error("operation cancelled")]
     Cancelled,
     #[error("{code}: {message}", code = code.as_str())]
@@ -110,6 +112,7 @@ impl CaptureError {
             Self::Serialization(_) => "serialization-error",
             Self::Backend(_) => "capture-error",
             Self::Cancelled => "cancelled",
+            Self::ParentDeathGuard(_) => "parent-death-guard-unavailable",
         }
     }
 
@@ -118,5 +121,9 @@ impl CaptureError {
             code,
             message: message.into(),
         }
+    }
+
+    pub(crate) fn parent_death_unavailable(message: impl Into<String>) -> Self {
+        Self::ParentDeathGuard(message.into())
     }
 }

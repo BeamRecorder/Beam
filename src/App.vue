@@ -11,7 +11,9 @@ import type {
   RecordingBarVisibility,
   RecordingConfiguration,
   RecordingSessionResult,
+  RecordingStartFailure,
 } from './components/hud/recorder/recording-types';
+import { formatRecordingStartFailure } from './components/hud/recorder/recording-types';
 
 import { capture } from './api/capture';
 import { useLocaleStore } from './stores/locale';
@@ -55,7 +57,7 @@ const syncTrayMenu = () => {
     stopRecording: tRecorderBar('stopRecording'),
     quit: tHud('quit'),
     tooltip: 'Beam',
-    recording: ['countdown', 'recording', 'paused'].includes(recording.phase.value),
+    recording: ['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value),
   });
 };
 
@@ -103,11 +105,40 @@ const editorLoadError = ref('');
 const editorLoadingProgress = ref<EditorLoadingProgress>({ stage: 'openingWindow', value: 10 });
 
 const recordingBarVisibility = ref<RecordingBarVisibility>('always');
-const recording = useRecordingController((session) => {
-  void handleStopRecording(session);
-});
+const recordingStartupError = ref('');
+const recording = useRecordingController(
+  (session) => {
+    void handleStopRecording(session);
+  },
+  (failure) => {
+    handleRecordingStartupFailure(failure);
+  },
+);
 
-watch(recording.phase, () => syncTrayMenu(), { immediate: true });
+const returnToHud = () => {
+  if (currentView.value !== 'recorder') return;
+  capture.hideScreenRegionOverlay();
+  void capture.setCountdown(null);
+  capture.setCameraOverlayActive(true);
+  capture.showHud();
+  currentView.value = 'hud';
+};
+
+const handleRecordingStartupFailure = (failure: RecordingStartFailure) => {
+  recordingStartupError.value = formatRecordingStartFailure(failure);
+  returnToHud();
+};
+
+watch(
+  recording.phase,
+  (phase) => {
+    syncTrayMenu();
+    // Guarantee the recorder view never coexists with the idle phase, even if
+    // the failure callback above is bypassed or throws.
+    if (phase === 'idle') returnToHud();
+  },
+  { immediate: true },
+);
 
 watch(currentView, (view) => {
   if (view !== 'hud') return;
@@ -119,16 +150,14 @@ const isRecordingStartedFromEditor = ref(false);
 const startRecordingFromEditor = async (configuration: RecordingConfiguration) => {
   isRecordingStartedFromEditor.value = true;
   editorLoadError.value = '';
+  recordingStartupError.value = '';
   recordingBarVisibility.value = configuration.recordingBarVisibility;
   currentView.value = 'recorder';
   capture.setWindowMode('recorder');
   capture.setWindowVisible(true);
   capture.setCameraOverlayActive(true);
   await recording.start(configuration);
-  if (recording.phase.value === 'idle') {
-    currentView.value = 'hud';
-    capture.showHud();
-  }
+  if (recording.phase.value === 'idle') returnToHud();
 };
 
 onMounted(() => {
@@ -144,7 +173,7 @@ onMounted(() => {
     }) ?? null;
   removeRecordingShortcutListener = capture.onPreferenceShortcut((actionId) => {
     if (actionId !== 'hud.startStopRecording') return;
-    if (!['countdown', 'recording', 'paused'].includes(recording.phase.value)) return;
+    if (!['countdown', 'starting', 'recording', 'paused'].includes(recording.phase.value)) return;
     void cancelOrStopRecording();
   });
 });
@@ -153,40 +182,27 @@ const startRecording = async (configuration: RecordingConfiguration) => {
   isRecordingStartedFromEditor.value = false;
   editorLoadError.value = '';
   currentProject.value = null;
+  recordingStartupError.value = '';
   recordingBarVisibility.value = configuration.recordingBarVisibility;
   currentView.value = 'recorder';
   capture.setWindowMode('recorder');
   capture.setCameraOverlayActive(true);
   await recording.start(configuration);
-  if (recording.phase.value === 'idle') {
-    currentView.value = 'hud';
-    capture.setCameraOverlayActive(true);
-    capture.showHud();
-  }
+  if (recording.phase.value === 'idle') returnToHud();
 };
 
 const cancelOrStopRecording = async () => {
-  const wasCountdown = recording.phase.value === 'countdown';
-  if (!wasCountdown) capture.setCameraOverlayActive(false);
+  const wasStartup = recording.phase.value === 'countdown' || recording.phase.value === 'starting';
+  if (!wasStartup) capture.setCameraOverlayActive(false);
   await recording.stop();
-  if (!wasCountdown && recording.phase.value !== 'idle') capture.setCameraOverlayActive(true);
-  if (wasCountdown && currentView.value === 'recorder') {
-    capture.setWindowMode('hud');
-    capture.setSize(352, 512);
-    currentView.value = 'hud';
-  }
+  if (!wasStartup && recording.phase.value !== 'idle') capture.setCameraOverlayActive(true);
+  if (wasStartup) returnToHud();
 };
 
 const cancelRecording = async () => {
   await recording.cancel();
   if (recording.phase.value !== 'idle') return;
-  if (currentView.value === 'recorder') {
-    capture.setWindowMode('hud');
-    capture.setSize(352, 512);
-    currentView.value = 'hud';
-    capture.setCameraOverlayActive(true);
-    capture.showHud();
-  }
+  returnToHud();
 };
 
 const revealEditor = () => {
@@ -280,6 +296,7 @@ const dismissEditorLoadError = () => {
       v-if="currentView === 'hud' && !editorLoadError"
       :preparing-editor="isPreparingEditor"
       :editor-loading-progress="editorLoadingProgress"
+      :external-error="recordingStartupError"
       @start-recording="startRecording"
       @open-project="handleOpenProject"
     />

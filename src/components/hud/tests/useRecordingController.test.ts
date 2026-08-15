@@ -74,7 +74,8 @@ describe('useRecordingController cancellation', () => {
     const cancellation = controller.cancel();
     started.resolve({ state: 'recording', sessionId: 'session-1' });
     await cancellation;
-    expect(capture.stop).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(capture.discardRecording).toHaveBeenCalledWith('session-1'));
+    expect(capture.stop).not.toHaveBeenCalled();
     expect(controller.phase.value).toBe('idle');
   });
 
@@ -87,7 +88,8 @@ describe('useRecordingController cancellation', () => {
     const cancellation = controller.cancel();
     started.resolve({ state: 'recording', sessionId: 'session-2' });
     await Promise.all([starting, cancellation]);
-    expect(capture.stop).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(capture.discardRecording).toHaveBeenCalledWith('session-2'));
+    expect(capture.stop).not.toHaveBeenCalled();
     expect(controller.phase.value).toBe('idle');
   });
 
@@ -100,6 +102,7 @@ describe('useRecordingController cancellation', () => {
     expect(capture.startPreparedRecording).toHaveBeenCalledOnce();
     started.resolve({ state: 'recording', sessionId: 'session-3' });
     await starting;
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
     expect(controller.phase.value).toBe('recording');
   });
 
@@ -129,6 +132,7 @@ describe('useRecordingController cancellation', () => {
     });
     const controller = useRecordingController(vi.fn());
     await controller.start(configuration(0));
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
 
     await controller.cancel();
 
@@ -147,6 +151,7 @@ describe('useRecordingController cancellation', () => {
     });
     const controller = useRecordingController(vi.fn());
     await controller.start(configuration(0));
+    await vi.waitFor(() => expect(controller.phase.value).toBe('recording'));
     expect(capture.setTeleprompterSession).toHaveBeenCalledWith(context);
     await controller.cancel();
   });

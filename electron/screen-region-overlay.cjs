@@ -13,7 +13,7 @@ function finiteBounds(value) {
   };
 }
 
-function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
+function createScreenRegionOverlayWindow({ applicationRoot, isPackaged, canAcceptWork = () => true }) {
   let window = null;
   let ready = false;
   let pending = null;
@@ -25,6 +25,7 @@ function createScreenRegionOverlayWindow({ applicationRoot, isPackaged }) {
   };
 
   const ensureWindow = () => {
+    if (!canAcceptWork()) throw new Error('Cannot create a screen overlay while Beam is shutting down');
     if (window && !window.isDestroyed()) return window;
     window = new BrowserWindow({
       frame: false,

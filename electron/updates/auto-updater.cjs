@@ -10,7 +10,14 @@ const idleState = (version, status = 'idle') => ({
 const versionOf = (info) => (typeof info?.version === 'string' ? info.version : null);
 const errorMessage = (error) => (error instanceof Error ? error.message : 'Unable to check for updates.');
 
-function createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal, isPackaged = app.isPackaged }) {
+function createAutoUpdater({
+  app,
+  BrowserWindow,
+  autoUpdater,
+  openExternal,
+  isPackaged = app.isPackaged,
+  beforeQuitAndInstall = null,
+}) {
   let state = idleState(app.getVersion(), isPackaged ? 'idle' : 'unsupported');
   const publish = () =>
     BrowserWindow.getAllWindows().forEach((window) => {
@@ -66,8 +73,11 @@ function createAutoUpdater({ app, BrowserWindow, autoUpdater, openExternal, isPa
         return false;
       }
     },
-    quitAndInstall: () => {
+    quitAndInstall: async () => {
       if (state.status !== 'downloaded') return false;
+      // Run the central shutdown coordinator first so the native engine and
+      // every owned window are released before the installer takes over.
+      if (beforeQuitAndInstall) await beforeQuitAndInstall();
       autoUpdater.quitAndInstall();
       return true;
     },

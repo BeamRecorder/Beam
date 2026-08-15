@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld(
     finalizeSystemAudioSegment: (payload) => ipcRenderer.invoke('system-audio:finalize-segment', payload),
     failSystemAudio: (payload) => ipcRenderer.invoke('system-audio:fail', payload),
     close: () => ipcRenderer.send('window:close'),
+    quit: () => ipcRenderer.send('app:quit'),
     minimize: () => ipcRenderer.send('window:minimize'),
     toggleDevTools: () => ipcRenderer.send('window:toggle-devtools'),
     updateTrayMenu: (labels) => ipcRenderer.send('tray:update-menu', labels),

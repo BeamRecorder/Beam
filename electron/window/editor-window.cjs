@@ -47,6 +47,7 @@ function createEditorWindowManager({
   initialDark = false,
   cleanupWindow = null,
   preferencesStore = null,
+  canAcceptWork = () => true,
 }) {
   let window = null;
   let controller = null;
@@ -115,15 +116,18 @@ function createEditorWindowManager({
   };
 
   const showHud = () => {
+    if (!canAcceptWork()) return false;
     returningToHud = true;
     if (window && !window.isDestroyed()) window.close();
     if (hudWindow.isMinimized()) hudWindow.restore();
     hudController.showHud();
     hudWindow.show();
     hudWindow.focus();
+    return true;
   };
 
   const ensure = () => {
+    if (!canAcceptWork()) throw new Error('Cannot create an editor while Beam is shutting down');
     if (window && !window.isDestroyed()) return window;
     rendererReady = false;
     returningToHud = false;
@@ -211,6 +215,7 @@ function createEditorWindowManager({
   };
 
   const open = (projectId) => {
+    if (!canAcceptWork()) throw new Error('Cannot open an editor while Beam is shutting down');
     if (!PROJECT_ID.test(projectId)) throw new Error('Identifiant de projet invalide');
     lastProgressValue = 0;
     sendProgress('openingWindow');
@@ -245,6 +250,7 @@ function createEditorWindowManager({
   };
 
   const startRecording = (event, configuration) => {
+    if (!canAcceptWork()) return false;
     if (!window || window.isDestroyed() || event.sender !== window.webContents) return false;
     returningToHud = true;
     window.close();

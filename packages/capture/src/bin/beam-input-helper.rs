@@ -478,6 +478,14 @@ mod filter_tests;
 
 #[cfg(target_os = "linux")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // pkexec normally execs this helper. Tie it to that exact direct parent so
+    // an abrupt capture-engine exit cannot leave a privileged input streamer.
+    let parent = unsafe { libc::getppid() };
+    if unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } != 0
+        || unsafe { libc::getppid() } != parent
+    {
+        return Err(std::io::Error::other("failed to bind input helper to its parent").into());
+    }
     linux::run()
 }
 

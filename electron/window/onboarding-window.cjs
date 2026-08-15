@@ -158,6 +158,7 @@ function createOnboardingWindowManager({
   };
 
   const destroy = () => {
+    returningToHud = true;
     if (window && !window.isDestroyed()) {
       window.destroy();
       window = null;

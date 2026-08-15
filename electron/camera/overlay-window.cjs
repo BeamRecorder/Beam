@@ -9,6 +9,7 @@ function createCameraOverlayWindow({
   isPackaged,
   preferencesStore = null,
   platform = process.platform,
+  canAcceptWork = () => true,
 }) {
   let window = null;
   let currentState = null;
@@ -107,6 +108,7 @@ function createCameraOverlayWindow({
   };
 
   const create = () => {
+    if (!canAcceptWork()) return null;
     if (window && !window.isDestroyed()) return window;
     const saved = readSavedPlacement();
     const primaryWorkArea = screen.getPrimaryDisplay().workArea;
@@ -172,6 +174,7 @@ function createCameraOverlayWindow({
   };
 
   const configure = (state) => {
+    if (!canAcceptWork()) return false;
     currentState = { cameraId: state?.cameraId || 'off' };
     if (!active || currentState.cameraId === 'off') {
       if (window && !window.isDestroyed()) {
@@ -179,13 +182,15 @@ function createCameraOverlayWindow({
         flushPlacementSave();
         window.hide();
       }
-      return;
+      return true;
     }
     const overlay = create();
+    if (!overlay) return false;
     overlay.webContents.send('camera-overlay:state', currentState);
     overlay.showInactive();
     overlay.moveTop();
     startHoverTracking();
+    return true;
   };
 
   const setActive = (next) => {

@@ -9,6 +9,7 @@ const {
   screen,
   shell,
   nativeTheme,
+  powerMonitor,
 } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
@@ -43,6 +44,10 @@ const { createBackgroundLibrary } = require('./backgrounds/background-library.cj
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs');
 const { createTrayManager } = require('./tray/tray-manager.cjs');
 const { InputAccess, registerInputAccessIpc } = require('./input/input-access.cjs');
+const { createShutdownCoordinator } = require('./lifecycle/shutdown-coordinator.cjs');
+const { createShutdownAwareIpc } = require('./lifecycle/shutdown-ipc.cjs');
+const { registerFatalLifecycle } = require('./lifecycle/fatal-events.cjs');
+const { initializeSingleInstance } = require('./lifecycle/single-instance.cjs');
 
 const DISCORD_INVITE_URL = 'https://discord.gg/6Q6v2xUCB';
 const GITHUB_REPOSITORY_URL = 'https://github.com/ExtraBinoss/Beam';
@@ -63,19 +68,17 @@ const logStartup = (step) => {
 };
 
 const applicationRoot = path.join(__dirname, '..');
-let captureEngine;
-const inputAccess = new InputAccess({
-  app,
-  applicationRoot,
-  nativeRequest: (command) => captureEngine.request(command),
-});
-captureEngine = new CaptureEngine(app, applicationRoot, {
-  inputHelperPath: () => inputAccess.helperForCapture(),
-});
-const cameraStorage = createCameraStorage({});
-const microphoneStorage = createMicrophoneStorage({});
-const systemAudioStorage = createSystemAudioStorage({});
 const controllers = new WeakMap();
+let captureEngine = null;
+let coordinator = null;
+let quitting = false;
+let showExistingHud = () => false;
+let pendingHudRestore = false;
+
+function restoreCanonicalHud() {
+  if (showExistingHud()) pendingHudRestore = false;
+  else pendingHudRestore = true;
+}
 
 function profileRendererRequests(webContents) {
   if (app.isPackaged) return;
@@ -181,17 +184,11 @@ function createWindow(preferencesStore) {
   // profileRendererRequests(win.webContents)
   win.once('ready-to-show', () => {
     logStartup('Window is ready to show (ready-to-show).');
-    const prefs = preferencesStore.read();
-    if (prefs.onboardingCompleted) {
-      controller.markReadyToShow();
-    }
+    if (preferencesStore.read().onboardingCompleted) controller.markReadyToShow();
   });
   win.webContents.once('did-start-loading', () => logStartup('Renderer navigation started.'));
   win.webContents.once('dom-ready', () => logStartup('Renderer DOM is ready.'));
   win.webContents.once('did-finish-load', () => logStartup('Renderer loading finished.'));
-  win.webContents.on('render-process-gone', (_event, details) =>
-    logStartup(`Renderer process exited (${details.reason}).`),
-  );
   if (shouldAutoOpenDevTools({ isPackaged: app.isPackaged })) {
     win.webContents.once('did-finish-load', () => win.webContents.openDevTools({ mode: 'detach' }));
   }
@@ -205,221 +202,223 @@ function createWindow(preferencesStore) {
   return win;
 }
 
-app.whenReady().then(() => {
-  logStartup('Electron app.whenReady resolved.');
-  configureMediaPermission();
-  logStartup('Media permission policy registered.');
-  configureDesktopLoopback();
-  registerInputAccessIpc(ipcMain, inputAccess);
-  const userPaths = createUserPaths(app.getPath('videos'));
-  const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
-  const teleprompterWindow = createTeleprompterWindow({
-    applicationRoot,
-    isPackaged: app.isPackaged,
-    preferencesStore,
-  });
-  setTimeout(() => teleprompterWindow.prepare(), 0);
-  const preferencesCleanup = registerPreferencesIpc({
-    ipcMain,
-    BrowserWindow,
-    globalShortcut,
-    store: preferencesStore,
-    shortcutHandler: (id) => teleprompterWindow.handleShortcut(id),
-    onPreferencesChanged: (preferences) => {
-      for (const win of BrowserWindow.getAllWindows()) {
-        const controller = controllers.get(win);
-        if (controller) {
-          controller.applyModePolicy();
-        }
-      }
-    },
-  });
-  app.once('will-quit', preferencesCleanup);
-  logStartup('Desktop loopback policy registered.');
-  registerCaptureIpc({
-    ipcMain,
-    desktopCapturer,
-    screen,
-    captureEngine,
+function initializeApplication() {
+  const inputAccess = new InputAccess({
     app,
-    userPaths,
-    trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage],
-  });
-  logStartup('Capture IPC registered.');
-  registerCameraIpc({ ipcMain, storage: cameraStorage });
-  logStartup('Camera IPC registered.');
-  registerMicrophoneIpc({ ipcMain, storage: microphoneStorage });
-  logStartup('Microphone IPC registered.');
-  registerSystemAudioIpc({ ipcMain, storage: systemAudioStorage });
-  logStartup('System audio IPC registered.');
-  const projectStore = createProjectStore(userPaths.projects);
-  const backgroundLibrary = createBackgroundLibrary(userPaths);
-  const teleprompterStorage = createTeleprompterStorage({ projectStore });
-  registerTeleprompterIpc({ ipcMain, teleprompterWindow, storage: teleprompterStorage });
-  registerProjectIpc(ipcMain, projectStore, backgroundLibrary, require('electron').dialog, BrowserWindow);
-  protocol.handle('project-media', createProjectMediaHandler({ projectStore, backgroundLibrary }));
-  logStartup('Project IPC registered.');
-  const whisperStore = createWhisperModelStore(userPaths.whisperModels);
-  protocol.handle('whisper-model', (request) => {
-    const file = whisperStore.fileForUrl(request.url);
-    return file
-      ? new Response(Readable.toWeb(fs.createReadStream(file)), {
-          headers: { 'Content-Length': String(fs.statSync(file).size) },
-        })
-      : new Response('Not found', { status: 404 });
-  });
-  registerWhisperIpc({ ipcMain, store: whisperStore });
-  logStartup('Whisper model IPC registered.');
-  registerWindowIpc(ipcMain, (win) => win && controllers.get(win), { debug: !app.isPackaged });
-  const cameraOverlay = createCameraOverlayWindow({
     applicationRoot,
-    isPackaged: app.isPackaged,
-    preferencesStore,
+    nativeRequest: (command) => captureEngine.request(command),
   });
-  const countdownOverlay = createCountdownWindow({ applicationRoot, isPackaged: app.isPackaged });
-  const screenRegionOverlay = createScreenRegionOverlayWindow({ applicationRoot, isPackaged: app.isPackaged });
-  ipcMain.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
-  ipcMain.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
-  ipcMain.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
-  ipcMain.handle('countdown:set', (_event, seconds) => {
-    countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null);
+  captureEngine = new CaptureEngine(app, applicationRoot, {
+    inputHelperPath: () => inputAccess.helperForCapture(),
   });
-  ipcMain.handle('recording-surface:prepare', async () => {
-    countdownOverlay.show(null);
-    screenRegionOverlay.hide();
-    // Wait for the compositor to commit both hidden overlay surfaces before
-    // the native start gate admits the first recorded frame.
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  });
-  ipcMain.handle('screen-region:select', (_event, options) => screenRegionOverlay.select(options));
-  ipcMain.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
-  ipcMain.on('screen-region:hide', () => screenRegionOverlay.hide());
-  ipcMain.on('screen-region:confirm', (_event, region) => screenRegionOverlay.confirm(region));
-  ipcMain.on('screen-region:cancel', () => screenRegionOverlay.cancel());
-  ipcMain.handle('camera-overlay:state', () => cameraOverlay.state());
-  logStartup('Window IPC registered.');
-  const exportIpc = registerExportIpc({ ipcMain, dialog: require('electron').dialog, BrowserWindow });
-  logStartup('Export IPC registered.');
-  const updater = createAutoUpdater({
-    app,
-    BrowserWindow,
-    autoUpdater,
-    openExternal: require('electron').shell.openExternal,
-  });
-  registerUpdateIpc(ipcMain, updater);
-  ipcMain.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
-  ipcMain.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));
+  coordinator = createShutdownCoordinator({ captureEngine, log: logStartup });
+  const applicationIpc = createShutdownAwareIpc(ipcMain, () => coordinator.canAcceptWork());
+  registerFatalLifecycle({ app, powerMonitor, coordinator, log: logStartup });
+  const cameraStorage = createCameraStorage({});
+  const microphoneStorage = createMicrophoneStorage({});
+  const systemAudioStorage = createSystemAudioStorage({});
 
-  let cachedStars = { count: 0, timestamp: 0 };
-  ipcMain.handle('community:get-github-stars', async () => {
-    const now = Date.now();
-    if (cachedStars.timestamp && now - cachedStars.timestamp < 300_000) {
-      return { stars: cachedStars.count };
-    }
-    try {
-      const response = await fetch('https://api.github.com/repos/ExtraBinoss/Beam', {
-        headers: { 'User-Agent': 'Beam-Desktop-App' },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (typeof data.stargazers_count === 'number') {
-          cachedStars = { count: data.stargazers_count, timestamp: now };
-          return { stars: data.stargazers_count };
+  app.whenReady().then(() => {
+    logStartup('Electron app.whenReady resolved.');
+    configureMediaPermission();
+    logStartup('Media permission policy registered.');
+    configureDesktopLoopback();
+    registerInputAccessIpc(applicationIpc, inputAccess);
+    const userPaths = createUserPaths(app.getPath('videos'));
+    const preferencesStore = createPreferencesStore(userPaths.preferences, { platform: process.platform });
+    const teleprompterWindow = createTeleprompterWindow({
+      applicationRoot,
+      isPackaged: app.isPackaged,
+      preferencesStore,
+    });
+    setTimeout(() => teleprompterWindow.prepare(), 0);
+    const preferencesCleanup = registerPreferencesIpc({
+      ipcMain: applicationIpc,
+      BrowserWindow,
+      globalShortcut,
+      store: preferencesStore,
+      shortcutHandler: (id) => teleprompterWindow.handleShortcut(id),
+      onPreferencesChanged: (preferences) => {
+        for (const win of BrowserWindow.getAllWindows()) {
+          const controller = controllers.get(win);
+          if (controller) {
+            controller.applyModePolicy();
+          }
         }
-      }
-    } catch {
-      // offline or rate limited fallback
-    }
-    return { stars: cachedStars.count || 0 };
-  });
-
-  const win = createWindow(preferencesStore);
-  const selectedTheme = preferencesStore.read().theme;
-  const editorWindow = createEditorWindowManager({
-    applicationRoot,
-    isPackaged: app.isPackaged,
-    ipcMain,
-    hudWindow: win,
-    hudController: controllers.get(win),
-    registerController: (target, controller) => controllers.set(target, controller),
-    preferencesStore,
-    initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
-    cleanupWindow: (contents) => {
-      exportIpc.cleanupWindow(contents);
-      cameraStorage.cleanupOwner(contents.id);
-      microphoneStorage.cleanupOwner(contents.id);
-      systemAudioStorage.cleanupOwner(contents.id);
-    },
-  });
-  const onboardingWindow = createOnboardingWindowManager({
-    applicationRoot,
-    isPackaged: app.isPackaged,
-    ipcMain,
-    hudWindow: win,
-    hudController: controllers.get(win),
-    registerController: (target, controller) => controllers.set(target, controller),
-    preferencesStore,
-    initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
-  });
-  const trayManager = createTrayManager({
-    applicationRoot,
-    getWindow: () => win,
-    getController: () => win && controllers.get(win),
-    onShowHud: () => {
+      },
+    });
+    logStartup('Desktop loopback policy registered.');
+    registerCaptureIpc({
+      ipcMain,
+      desktopCapturer,
+      screen,
+      captureEngine,
+      app,
+      userPaths,
+      trackStorages: [cameraStorage, microphoneStorage, systemAudioStorage],
+      canAcceptWork: () => coordinator.canAcceptWork(),
+    });
+    logStartup('Capture IPC registered.');
+    registerCameraIpc({ ipcMain: applicationIpc, storage: cameraStorage });
+    registerMicrophoneIpc({ ipcMain: applicationIpc, storage: microphoneStorage });
+    registerSystemAudioIpc({ ipcMain: applicationIpc, storage: systemAudioStorage });
+    logStartup('Capture track IPC registered.');
+    const projectStore = createProjectStore(userPaths.projects);
+    const backgroundLibrary = createBackgroundLibrary(userPaths);
+    const teleprompterStorage = createTeleprompterStorage({ projectStore });
+    registerTeleprompterIpc({ ipcMain: applicationIpc, teleprompterWindow, storage: teleprompterStorage });
+    registerProjectIpc(applicationIpc, projectStore, backgroundLibrary, require('electron').dialog, BrowserWindow);
+    protocol.handle('project-media', createProjectMediaHandler({ projectStore, backgroundLibrary }));
+    logStartup('Project IPC registered.');
+    const whisperStore = createWhisperModelStore(userPaths.whisperModels);
+    protocol.handle('whisper-model', (request) => {
+      const file = whisperStore.fileForUrl(request.url);
+      return file
+        ? new Response(Readable.toWeb(fs.createReadStream(file)), {
+            headers: { 'Content-Length': String(fs.statSync(file).size) },
+          })
+        : new Response('Not found', { status: 404 });
+    });
+    registerWhisperIpc({ ipcMain: applicationIpc, store: whisperStore });
+    logStartup('Whisper model IPC registered.');
+    registerWindowIpc(applicationIpc, (win) => win && controllers.get(win), { debug: !app.isPackaged });
+    const lifecycleOptions = {
+      applicationRoot,
+      isPackaged: app.isPackaged,
+      canAcceptWork: () => coordinator.canAcceptWork(),
+    };
+    const cameraOverlay = createCameraOverlayWindow({
+      ...lifecycleOptions,
+      preferencesStore,
+      platform: process.platform,
+    });
+    const countdownOverlay = createCountdownWindow(lifecycleOptions);
+    const screenRegionOverlay = createScreenRegionOverlayWindow(lifecycleOptions);
+    applicationIpc.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
+    applicationIpc.on('camera-overlay:set-active', (_event, active) => cameraOverlay.setActive(active));
+    applicationIpc.on('camera-overlay:reset-placement', () => cameraOverlay.resetPlacement());
+    applicationIpc.handle('countdown:set', (_event, seconds) => {
+      countdownOverlay.show(Number.isInteger(seconds) && seconds >= 0 ? seconds : null);
+    });
+    applicationIpc.handle('recording-surface:prepare', async () => {
+      countdownOverlay.show(null);
+      screenRegionOverlay.hide();
+      // Wait for the compositor to commit both hidden overlay surfaces before
+      // the native start gate admits the first recorded frame.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    applicationIpc.handle('screen-region:select', (_event, options) => screenRegionOverlay.select(options));
+    applicationIpc.on('screen-region:show', (_event, options) => screenRegionOverlay.show(options));
+    applicationIpc.on('screen-region:hide', () => screenRegionOverlay.hide());
+    applicationIpc.on('screen-region:confirm', (_event, region) => screenRegionOverlay.confirm(region));
+    applicationIpc.on('screen-region:cancel', () => screenRegionOverlay.cancel());
+    applicationIpc.handle('camera-overlay:state', () => cameraOverlay.state());
+    logStartup('Window IPC registered.');
+    const exportIpc = registerExportIpc({ ipcMain: applicationIpc, dialog: require('electron').dialog, BrowserWindow });
+    logStartup('Export IPC registered.');
+    const updater = createAutoUpdater({
+      app,
+      BrowserWindow,
+      autoUpdater,
+      openExternal: require('electron').shell.openExternal,
+      beforeQuitAndInstall: () => coordinator.requestShutdown('updater'),
+    });
+    registerUpdateIpc(applicationIpc, updater);
+    applicationIpc.handle('community:open-discord', () => shell.openExternal(DISCORD_INVITE_URL));
+    applicationIpc.handle('community:open-github', () => shell.openExternal(GITHUB_REPOSITORY_URL));
+    ipcMain.on('app:quit', () => {
+      if (coordinator.canAcceptWork()) app.quit();
+    });
+    const win = createWindow(preferencesStore);
+    const selectedTheme = preferencesStore.read().theme;
+    const editorWindow = createEditorWindowManager({
+      applicationRoot,
+      isPackaged: app.isPackaged,
+      ipcMain: applicationIpc,
+      hudWindow: win,
+      hudController: controllers.get(win),
+      registerController: (target, controller) => controllers.set(target, controller),
+      preferencesStore,
+      initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
+      cleanupWindow: (contents) => {
+        exportIpc.cleanupWindow(contents);
+        cameraStorage.cleanupOwner(contents.id);
+        microphoneStorage.cleanupOwner(contents.id);
+        systemAudioStorage.cleanupOwner(contents.id);
+      },
+      canAcceptWork: () => coordinator.canAcceptWork(),
+    });
+    const onboardingWindow = createOnboardingWindowManager({
+      applicationRoot,
+      isPackaged: app.isPackaged,
+      ipcMain: applicationIpc,
+      hudWindow: win,
+      hudController: controllers.get(win),
+      registerController: (target, controller) => controllers.set(target, controller),
+      preferencesStore,
+      initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
+    });
+    showExistingHud = () => {
+      if (!coordinator.canAcceptWork()) return false;
       onboardingWindow.destroy();
-      editorWindow.showHud();
-    },
-  });
-  trayManager.init();
+      return editorWindow.showHud();
+    };
+    if (pendingHudRestore) restoreCanonicalHud();
+    const trayManager = createTrayManager({
+      applicationRoot,
+      getWindow: () => win,
+      getController: () => win && controllers.get(win),
+      onShowHud: showExistingHud,
+    });
+    trayManager.init();
+    if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
 
-  const currentPrefs = preferencesStore.read();
-  if (!currentPrefs.onboardingCompleted) {
-    onboardingWindow.open();
-  }
+    // Every owned resource must be released on shutdown. The eagerly preloaded
+    // countdown window is the hidden window that previously prevented
+    // `window-all-closed`, so it is registered alongside every other resource.
+    coordinator.registerCleanup({ id: 'hud-window', cleanup: () => win.destroy() });
+    coordinator.registerCleanup({ id: 'editor', cleanup: () => editorWindow.destroy() });
+    coordinator.registerCleanup({ id: 'onboarding', cleanup: () => onboardingWindow.destroy() });
+    coordinator.registerCleanup({ id: 'tray', cleanup: () => trayManager.destroy() });
+    coordinator.registerCleanup({ id: 'teleprompter', cleanup: () => teleprompterWindow.destroy() });
+    coordinator.registerCleanup({ id: 'countdown', cleanup: () => countdownOverlay.destroy() });
+    coordinator.registerCleanup({ id: 'camera-overlay', cleanup: () => cameraOverlay.destroy() });
+    coordinator.registerCleanup({ id: 'screen-region', cleanup: () => screenRegionOverlay.destroy() });
+    coordinator.registerCleanup({ id: 'preferences', cleanup: preferencesCleanup });
 
-  win.on('closed', () => {
-    editorWindow.destroy();
-    onboardingWindow.destroy();
-    trayManager.destroy();
-    teleprompterWindow.destroy();
-  });
-  app.once('will-quit', () => {
-    editorWindow.destroy();
-    onboardingWindow.destroy();
-    trayManager.destroy();
-    teleprompterWindow.destroy();
-  });
-  void updater.checkForUpdates();
-  win.webContents.once('destroyed', () => {
-    cameraOverlay.destroy();
-    screenRegionOverlay.destroy();
-    exportIpc.cleanupWindow(win.webContents);
-    cameraStorage.cleanupOwner(win.webContents.id);
-    microphoneStorage.cleanupOwner(win.webContents.id);
-    systemAudioStorage.cleanupOwner(win.webContents.id);
-  });
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow(preferencesStore);
-  });
-});
+    win.on('closed', () => {
+      if (coordinator.canAcceptWork()) app.quit();
+    });
 
-let quitting = false;
-let captureShutdown = null;
-app.on('before-quit', (event) => {
-  if (quitting) return;
-  event.preventDefault();
-  captureShutdown ??= captureEngine.shutdown().finally(() => {
+    win.webContents.once('destroyed', () => {
+      exportIpc.cleanupWindow(win.webContents);
+      cameraStorage.cleanupOwner(win.webContents.id);
+      microphoneStorage.cleanupOwner(win.webContents.id);
+      systemAudioStorage.cleanupOwner(win.webContents.id);
+    });
+    void updater.checkForUpdates();
+    app.on('activate', () => {
+      showExistingHud();
+    });
+  });
+
+  app.on('before-quit', (event) => {
+    if (coordinator.isComplete() || quitting) return;
+    event.preventDefault();
     quitting = true;
-    app.quit();
+    coordinator.requestShutdown('before-quit').finally(() => app.quit());
   });
-});
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  app.on('will-quit', () => {
+    // Final synchronous/best-effort safety net, not the primary cleanup path.
+    captureEngine.forceShutdown();
+  });
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+}
 
-process.on('SIGINT', () => {
-  if (!quitting) app.quit();
-});
-process.on('SIGTERM', () => {
-  if (!quitting) app.quit();
+initializeSingleInstance({
+  app,
+  initialize: initializeApplication,
+  restoreHud: restoreCanonicalHud,
 });
