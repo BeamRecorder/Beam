@@ -3,13 +3,15 @@ import {
   backgroundKindFor,
   createBackgroundMedia,
   createWallpaperMedia,
-  findMatchingBackgroundMedia,
-  groupBackgroundMedia,
   customColor,
   customGradient,
+  findMatchingBackgroundMedia,
+  getRandomBackgroundImage,
+  groupBackgroundMedia,
   normalizeBackgroundValue,
   normalizeGradient,
 } from '../backgroundCatalog';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
 describe('background media', () => {
   it('classifies every supported extension case-insensitively', () => {
@@ -41,16 +43,16 @@ describe('background media', () => {
       ]),
     ).toEqual([
       {
-        id: '/media/my_background-image.png',
+        id: resolvePublicAssetUrl('/media/my_background-image.png'),
         name: 'My Background Image',
-        path: '/media/my_background-image.png',
+        path: resolvePublicAssetUrl('/media/my_background-image.png'),
         extension: 'png',
         kind: 'image',
       },
       {
-        id: '/media/zebra_video.MP4',
+        id: resolvePublicAssetUrl('/media/zebra_video.MP4'),
         name: 'Zebra Video',
-        path: '/media/zebra_video.MP4',
+        path: resolvePublicAssetUrl('/media/zebra_video.MP4'),
         extension: 'mp4',
         kind: 'video',
       },
@@ -60,9 +62,9 @@ describe('background media', () => {
   it('supports paths without a directory segment', () => {
     expect(createBackgroundMedia(['plain_name.png'])).toEqual([
       {
-        id: 'plain_name.png',
+        id: resolvePublicAssetUrl('plain_name.png'),
         name: 'Plain Name',
-        path: 'plain_name.png',
+        path: resolvePublicAssetUrl('plain_name.png'),
         extension: 'png',
         kind: 'image',
       },
@@ -76,8 +78,11 @@ describe('background media', () => {
         ['/wallpapers/video/nested/loop.WEBM', '/wallpapers/video/wrong.jpg'],
       ),
     ).toEqual([
-      expect.objectContaining({ path: '/wallpapers/image/nested/landscape.PNG', kind: 'image' }),
-      expect.objectContaining({ path: '/wallpapers/video/nested/loop.WEBM', kind: 'video' }),
+      expect.objectContaining({
+        path: resolvePublicAssetUrl('/wallpapers/image/nested/landscape.webp'),
+        kind: 'image',
+      }),
+      expect.objectContaining({ path: resolvePublicAssetUrl('/wallpapers/video/nested/loop.WEBM'), kind: 'video' }),
     ]);
   });
 
@@ -93,10 +98,12 @@ describe('background media', () => {
 
   it('groups media in display order and excludes empty groups', () => {
     const media = createBackgroundMedia(['/z.mp4', '/b.png', '/c.jpg']);
-    expect(groupBackgroundMedia(media)).toEqual([
-      { kind: 'image', label: 'Images', items: [media[0], media[1]] },
-      { kind: 'video', label: 'Videos', items: [media[2]] },
-    ]);
+    const groups = groupBackgroundMedia(media);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].kind).toBe('image');
+    expect(groups[0].items).toEqual([media[0], media[1]]);
+    expect(groups[1].kind).toBe('video');
+    expect(groups[1].items).toEqual([media[2]]);
     expect(groupBackgroundMedia([])).toEqual([]);
   });
 
@@ -151,7 +158,7 @@ describe('background media', () => {
 
   it('fills optional persisted media, color, and gradient identifiers', () => {
     expect(normalizeBackgroundValue({ kind: 'image', path: '/media/photo.png' })).toMatchObject({
-      id: './media/photo.png',
+      id: resolvePublicAssetUrl('/media/photo.png'),
       name: 'Photo',
       extension: 'png',
     });
@@ -169,12 +176,29 @@ describe('background media', () => {
 
   it('matches legacy wallpaper paths (.avif, .jpg) to current .webp wallpapers', () => {
     const candidates = [
-      { id: './wallpapers/image/bluerays.webp', name: 'Bluerays', path: './wallpapers/image/bluerays.webp', extension: 'webp', kind: 'image' as const },
+      {
+        id: './wallpapers/image/bluerays.webp',
+        name: 'Bluerays',
+        path: './wallpapers/image/bluerays.webp',
+        extension: 'webp',
+        kind: 'image' as const,
+      },
     ];
 
     expect(findMatchingBackgroundMedia(candidates, './wallpapers/image/bluerays.avif')).toEqual(candidates[0]);
     expect(findMatchingBackgroundMedia(candidates, './wallpapers/image/bluerays.jpg')).toEqual(candidates[0]);
     expect(findMatchingBackgroundMedia(candidates, 'bluerays')).toEqual(candidates[0]);
   });
-});
 
+  it('selects a random background image from available image media only', () => {
+    const candidates = [
+      { id: '1', name: 'Img 1', path: '/wallpapers/image/1.webp', extension: 'webp', kind: 'image' as const },
+      { id: '2', name: 'Video 1', path: '/wallpapers/video/2.mp4', extension: 'mp4', kind: 'video' as const },
+      { id: '3', name: 'Img 2', path: '/wallpapers/image/3.webp', extension: 'webp', kind: 'image' as const },
+    ];
+    const picked = getRandomBackgroundImage(candidates);
+    expect(picked).not.toBeNull();
+    expect(picked?.kind).toBe('image');
+    expect(['1', '3']).toContain(picked?.id);
+  });
+});

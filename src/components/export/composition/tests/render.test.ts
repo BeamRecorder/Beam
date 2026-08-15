@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { drawCompositionLayers, renderCompositionFrame } from '../render';
+import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import type { CompositionSnapshot } from '../../export-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
-import type { ClipComposition, ClipAppearance } from '../../../video-editor/composition/composition-types';
+import type { ClipComposition, ClipAppearance } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const screenAppearance: ClipAppearance = {
   cornerRadius: 'none',
   shadowSize: 'none',
+  shadowBlur: 0,
+  shadowMode: 'solid',
   shadowColor: '#000000',
   shadowDirection: 'all',
   borderEnabled: false,
@@ -20,7 +23,8 @@ const screenAppearance: ClipAppearance = {
   frameChromeScale: 1,
 };
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'screen-asset',
@@ -49,6 +53,8 @@ const composition = (): ClipComposition => ({
       order: 0,
       transform: { x: 0, y: 0, width: 1, height: 1 },
       appearance: screenAppearance,
+      isMirrored: false,
+      isMirroredY: false,
     },
   ],
 });
@@ -116,6 +122,7 @@ const context = () =>
     fill: vi.fn(),
     fillText: vi.fn(),
     strokeText: vi.fn(),
+    measureText: vi.fn((value: string) => ({ width: value.length * 10 })),
     drawImage: vi.fn(),
     save: vi.fn(),
     translate: vi.fn(),
@@ -147,16 +154,7 @@ describe('canonical composition rendering', () => {
     if (screen.kind !== 'screen') throw new Error('screen fixture missing');
     screen.crop = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
     const ctx = context();
-    renderCompositionFrame(
-      ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
-      value,
-      0,
-    );
+    renderCompositionFrame(ctx, { source: {}, width: 100, height: 50 } as RenderableMedia, value, 0);
     expect(ctx.drawImage).toHaveBeenCalledWith(expect.anything(), 15, 10, 40, 20, 0, 0, 100, 50);
   });
 
@@ -187,11 +185,13 @@ describe('canonical composition rendering', () => {
       order: 1,
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
       appearance: screenAppearance,
+      isMirrored: false,
+      isMirroredY: false,
     });
-    const image = {} as CanvasImageSource;
+    const image = { source: {} as CanvasImageSource, width: 10, height: 10 } as RenderableMedia;
     const ctx = context();
-    drawCompositionLayers(ctx, value, 0.2, new Map([['image', image]]));
-    expect(ctx.drawImage).toHaveBeenCalledWith(image, 10, 10, 30, 20);
+    drawCompositionLayers(ctx, value, 0.2, new Map([['logo', image]]));
+    expect(ctx.drawImage).toHaveBeenCalledWith(image.source, 10, 10, 30, 20);
   });
 
   it('exports webcam placement, crop, mirror and complete appearance settings', () => {
@@ -224,9 +224,12 @@ describe('canonical composition rendering', () => {
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
       crop: { x: 0.1, y: 0.2, width: 0.5, height: 0.6 },
       isMirrored: true,
+      isMirroredY: false,
       appearance: {
         cornerRadius: 42,
         shadowSize: 'none',
+        shadowBlur: 0,
+        shadowMode: 'solid',
         shadowColor: '#123456',
         shadowDirection: 'top-left',
         borderEnabled: true,
@@ -240,26 +243,19 @@ describe('canonical composition rendering', () => {
         frameChromeScale: 1,
       },
     });
-    const source = {
-      displayWidth: 100,
-      displayHeight: 50,
-    } as unknown as CanvasImageSource;
+    const source = { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia;
     const ctx = context();
     renderCompositionFrame(
       ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
+      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
       value,
       0,
       null,
       undefined,
-      new Map([['camera', source]]),
+      new Map([['webcam', source]]),
     );
     expect(ctx.drawImage).toHaveBeenCalledWith(
-      source,
+      source.source,
       10,
       10,
       50,
@@ -302,11 +298,14 @@ describe('canonical composition rendering', () => {
       enabled: true,
       order: 1,
       transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+      appearance: createDefaultClipAppearance('webcam'),
+      isMirrored: false,
+      isMirroredY: false,
     });
-    const source = {} as CanvasImageSource;
+    const source = { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia;
     const ctx = context();
-    renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['camera', source]]));
-    expect(ctx.drawImage).toHaveBeenCalledWith(source, 100, expect.closeTo(100, 0.001), 300, 200);
+    renderCompositionFrame(ctx, null, value, 0, null, undefined, new Map([['webcam', source]]));
+    expect(ctx.drawImage).toHaveBeenCalledWith(source.source, 100, expect.closeTo(100, 0.001), 300, 200);
   });
 
   it('draws only the caption sentence active at the current time', () => {
@@ -323,19 +322,165 @@ describe('canonical composition rendering', () => {
       enabled: true,
       order: 1,
       caption: {
+        type: 'text',
         sentences: [{ id: 's', text: 'Visible', startMs: 100, endMs: 300, words: [] }],
         style: {
+          ...createDefaultCaptionStyle(20),
           color: '#fff',
-          fontSize: 20,
           shadowColor: '#000',
           shadowBlur: 0,
           placement: 'bottom',
+          wrap: false,
         },
       },
     });
     const ctx = context();
     drawCompositionLayers(ctx, value, 0.2);
     expect(ctx.fillText).toHaveBeenCalledWith('Visible', expect.any(Number), expect.any(Number), expect.any(Number));
+  });
+
+  it('wraps captions into separate unconstrained lines when enabled', () => {
+    const value = snapshot();
+    value.render.sourceWidth = 4_000;
+    value.composition.clips.push({
+      id: 'wrapped-caption',
+      kind: 'caption',
+      name: 'Wrapped',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
+      caption: {
+        type: 'text',
+        sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
+        style: {
+          ...createDefaultCaptionStyle(20),
+          color: '#fff',
+          shadowColor: '#000',
+          shadowBlur: 0,
+          placement: 'center',
+          wrap: true,
+        },
+      },
+    });
+    const ctx = context();
+    const fillText = ctx.fillText as ReturnType<typeof vi.fn>;
+    drawCompositionLayers(ctx, value, 0.2);
+    expect(fillText.mock.calls.length).toBeGreaterThan(1);
+    expect(fillText.mock.calls.every((call: unknown[]) => call.length === 3)).toBe(true);
+    expect(ctx.font).toBe('800 20px sans-serif');
+  });
+
+  it('keeps constrained rendering when wrapping is disabled', () => {
+    const value = snapshot();
+    value.composition.clips.push({
+      id: 'nowrap-caption',
+      kind: 'caption',
+      name: 'No wrap',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      enabled: true,
+      order: 1,
+      transform: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
+      caption: {
+        type: 'text',
+        sentences: [{ id: 's', text: 'One two three four', startMs: 0, endMs: 1_000, words: [] }],
+        style: {
+          ...createDefaultCaptionStyle(20),
+          color: '#fff',
+          shadowColor: '#000',
+          shadowBlur: 0,
+          placement: 'center',
+          wrap: false,
+          extrusionDepth: 0,
+        },
+      },
+    });
+    const ctx = context();
+    drawCompositionLayers(ctx, value, 0.2);
+    expect(ctx.fillText).toHaveBeenCalledTimes(1);
+    expect(ctx.fillText).toHaveBeenCalledWith(
+      'One two three four',
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+    );
+  });
+
+  it('uses cursor-follow placement for keyboard captions and a fixed export fallback', () => {
+    const renderCaptionX = (withCursor: boolean) => {
+      const value = snapshot();
+      value.canvas = { ...value.canvas, width: 1_000, height: 500 };
+      value.composition.clips.push({
+        id: 'keyboard-caption',
+        kind: 'caption',
+        name: 'Ctrl K',
+        timelineStartMs: 0,
+        timelineDurationMs: 1_000,
+        sourceInMs: 0,
+        sourceDurationMs: 1_000,
+        playbackRate: 1,
+        enabled: true,
+        order: 1,
+        caption: {
+          type: 'keyboard',
+          steps: [{ offsetMs: 0, modifiers: ['control'], key: 'k' }],
+          followCursor: true,
+          recordedPlatform: 'windows',
+          sourceSessionId: 'session-1',
+          style: {
+            ...createDefaultCaptionStyle(20),
+            wrap: false,
+            backdropBlur: 0,
+            outlineWidth: 0,
+            extrusionDepth: 0,
+            shadowBlur: 0,
+          },
+        },
+      });
+      if (withCursor) {
+        value.cursor = {
+          ...value.cursor,
+          available: true,
+          events: [
+            {
+              event: 'move',
+              sessionNs: 0,
+              pixelX: 90,
+              pixelY: 40,
+              normalizedX: 0.9,
+              normalizedY: 0.8,
+              visible: true,
+            },
+          ],
+        };
+      }
+      const ctx = context();
+      const cursorImage = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+      renderCompositionFrame(
+        ctx,
+        { source: {} as CanvasImageSource, width: 100, height: 50 },
+        value,
+        0.1,
+        null,
+        withCursor ? new Map([['default', cursorImage]]) : undefined,
+      );
+      const call = (ctx.fillText as ReturnType<typeof vi.fn>).mock.calls.find((entry) => entry[0] === 'Ctrl');
+      return call?.[1] as number | undefined;
+    };
+
+    const fixedX = renderCaptionX(false);
+    const followedX = renderCaptionX(true);
+    expect(fixedX).toBeDefined();
+    expect(followedX).toBeDefined();
+    expect(followedX).not.toBe(fixedX);
   });
 
   it('exports a right click with its own ripple and rebound settings', () => {
@@ -386,18 +531,20 @@ describe('canonical composition rendering', () => {
     const image = { complete: true, naturalWidth: 24 } as HTMLImageElement;
     renderCompositionFrame(
       ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
+      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
       value,
       0.15,
       null,
       new Map([['default', image]]),
     );
     expect(ctx.strokeStyle).toBe('#00f');
-    expect(ctx.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), expect.closeTo(8, 5), 0, Math.PI * 2);
+    expect(ctx.arc).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.any(Number),
+      expect.closeTo(18.26, 2),
+      0,
+      Math.PI * 2,
+    );
     expect(ctx.scale).toHaveBeenCalledWith(expect.closeTo(0.707, 3), expect.closeTo(0.707, 3));
     expect(ctx.drawImage).toHaveBeenCalled();
   });
@@ -428,11 +575,7 @@ describe('canonical composition rendering', () => {
 
     renderCompositionFrame(
       ctx,
-      {
-        readyState: HTMLMediaElement.HAVE_CURRENT_DATA,
-        videoWidth: 100,
-        videoHeight: 50,
-      } as HTMLVideoElement,
+      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
       value,
       0,
       null,

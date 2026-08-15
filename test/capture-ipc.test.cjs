@@ -176,3 +176,236 @@ test('does not enumerate Electron sources on the Linux Portal path', async () =>
   assert.deepEqual(await getSources({}, ['window']), []);
   assert.equal(previewCalls, 0);
 });
+
+test('starts a Linux Portal recording from one catalog without an Electron preview preflight', async () => {
+  const handlers = new Map();
+  const requests = [];
+  let previewCalls = 0;
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const desktopCapturer = {
+    getSources: async () => {
+      previewCalls += 1;
+      throw new Error('desktopCapturer must not run before a Linux Portal recording');
+    },
+  };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      if (command === 'discover') {
+        return {
+          sources: [],
+          capabilities: {
+            separateCursor: true,
+            cursorClicks: true,
+            cursorShapes: true,
+          },
+        };
+      }
+      if (command === 'prepare') return { state: 'armed', sessionId: 'session-1' };
+      if (command === 'start') return { state: 'recording', sessionId: 'session-1' };
+      throw new Error(`unexpected capture command: ${command}`);
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer,
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const request = handlers.get('capture:request');
+  const session = await request({}, 'start-default-recording', {
+    options: { screenId: 'portal:monitor' },
+  });
+
+  assert.equal(session.sessionId, 'session-1');
+  assert.deepEqual(
+    requests.map(({ command }) => command),
+    ['discover', 'prepare', 'start'],
+  );
+  assert.equal(requests.filter(({ command }) => command === 'discover').length, 1);
+  assert.deepEqual(requests[1].payload.config.screen, {
+    mode: 'portal',
+    kind: 'monitor',
+    restoreToken: null,
+  });
+  assert.equal(previewCalls, 0);
+});
+
+test('starts a prepared Linux Portal session without rediscovering or preparing it again', async () => {
+  const handlers = new Map();
+  const requests = [];
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      if (command === 'discover') {
+        return {
+          sources: [],
+          capabilities: {
+            separateCursor: true,
+            cursorClicks: true,
+            cursorShapes: true,
+          },
+        };
+      }
+      if (command === 'prepare') return { state: 'armed', sessionId: 'session-2' };
+      if (command === 'start') return { state: 'recording', sessionId: 'session-2' };
+      throw new Error(`unexpected capture command: ${command}`);
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const request = handlers.get('capture:request');
+  const prepared = await request({}, 'prepare-default-recording', {
+    options: { screenId: 'portal:monitor' },
+  });
+  const started = await request({}, 'start-prepared-recording');
+
+  assert.equal(prepared.sessionId, 'session-2');
+  assert.equal(started.sessionId, 'session-2');
+  assert.deepEqual(
+    requests.map(({ command }) => command),
+    ['discover', 'prepare', 'start'],
+  );
+  assert.equal(requests.filter(({ command }) => command === 'discover').length, 1);
+  assert.equal(requests.filter(({ command }) => command === 'prepare').length, 1);
+});
+
+test('coalesces concurrent identical Linux Portal preparation requests', async () => {
+  const handlers = new Map();
+  const requests = [];
+  let releasePrepare;
+  const prepareGate = new Promise((resolve) => {
+    releasePrepare = resolve;
+  });
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      if (command === 'discover') {
+        return {
+          sources: [],
+          capabilities: {
+            separateCursor: true,
+            cursorClicks: true,
+            cursorShapes: true,
+          },
+        };
+      }
+      if (command === 'prepare') return prepareGate;
+      throw new Error(`unexpected capture command: ${command}`);
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const request = handlers.get('capture:request');
+  const options = { projectId: 'project-concurrent', screenId: 'portal:monitor' };
+  const first = request({}, 'prepare-default-recording', { options });
+  const second = request({}, 'prepare-default-recording', { options });
+  await new Promise((resolve) => setImmediate(resolve));
+  releasePrepare({ state: 'armed', sessionId: 'session-concurrent' });
+  const [firstResult, secondResult] = await Promise.all([first, second]);
+
+  assert.equal(firstResult.sessionId, 'session-concurrent');
+  assert.equal(secondResult.sessionId, 'session-concurrent');
+  assert.deepEqual(
+    requests.map(({ command }) => command),
+    ['discover', 'prepare'],
+    'concurrent preparation must share one discovery and one native Portal prepare',
+  );
+});
+
+test('does not prepare the Linux Portal during discovery/previews and starts it once after the user request', async () => {
+  const handlers = new Map();
+  const requests = [];
+  const catalog = {
+    sources: [
+      {
+        id: 'portal:monitor',
+        kind: 'display',
+        isDefault: true,
+        selectionMode: 'portal',
+      },
+    ],
+    capabilities: { portalSelection: true, separateCursor: true },
+  };
+  const session = { state: 'recording', sessionId: 'session-portal-1' };
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      if (command === 'discover') return catalog;
+      if (command === 'prepare') return { state: 'armed', sessionId: 'session-portal-1' };
+      if (command === 'start') return session;
+      return undefined;
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {
+      getSources: async () => {
+        throw new Error('desktopCapturer must not run on Linux');
+      },
+    },
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+    platform: 'linux',
+  });
+
+  const request = handlers.get('capture:request');
+  const getSources = handlers.get('window:getSources');
+  await request({}, 'discover');
+  await getSources({}, ['screen']);
+  await getSources({}, ['window']);
+  assert.deepEqual(
+    requests.map(({ command }) => command),
+    ['discover'],
+    'catalog and previews must not prepare or start a Portal session',
+  );
+
+  const started = await request({}, 'start-default-recording', {
+    options: { screenKind: 'display', screenId: 'portal:monitor' },
+  });
+  assert.equal(started.sessionId, 'session-portal-1');
+  assert.deepEqual(
+    requests.map(({ command }) => command),
+    ['discover', 'discover', 'prepare', 'start'],
+  );
+  assert.equal(requests.filter(({ command }) => command === 'prepare').length, 1);
+  assert.equal(requests.filter(({ command }) => command === 'start').length, 1);
+  assert.deepEqual(requests.find(({ command }) => command === 'prepare')?.payload.config.screen, {
+    mode: 'portal',
+    kind: 'monitor',
+    restoreToken: null,
+  });
+});

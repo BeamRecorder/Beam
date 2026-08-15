@@ -1,7 +1,7 @@
 import { computed, ref, type Ref } from 'vue';
-import { ALL_FORMATS, BlobSource, Input } from 'mediabunny';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
+import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection } from '~/media/shared';
 import {
   emptyComposition,
   isAudioClip,
@@ -16,12 +16,14 @@ import {
   type NormalizedCrop,
   type NormalizedTransform,
   type VisualClip,
-} from '../composition/composition-types';
+} from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   addClip,
   createComposition,
   deleteClip,
   detachClip,
+  MIN_CLIP_DURATION_MS,
   moveClip,
   setAppearance,
   setClipEnabled,
@@ -36,24 +38,6 @@ import {
   updateClip,
 } from '../composition/engine/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
-
-const DEFAULT_APPEARANCE: ClipAppearance = {
-  cornerRadius: 'sm',
-  shadowSize: 'md',
-  shadowBlur: 20,
-  shadowMode: 'solid',
-  shadowColor: '#000000',
-  shadowDirection: 'all',
-  borderEnabled: false,
-  borderColor: '#000000',
-  borderWidth: 1,
-  frame: 'none',
-  frameTitle: '',
-  frameColor: '#c0c0c0',
-  frameShowMenu: true,
-  frameShowScrollbars: true,
-  frameChromeScale: 1,
-};
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
@@ -88,10 +72,10 @@ export function useClipComposition(options: {
       ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
       ...(isVisualClip(clip)
         ? {
-            isMirrored: clip.isMirrored ?? false,
-            isMirroredY: clip.isMirroredY ?? false,
+            isMirrored: clip.isMirrored,
+            isMirroredY: clip.isMirroredY,
             clipTransform: clip.transform,
-            ...(clip.appearance ?? DEFAULT_APPEARANCE),
+            ...clip.appearance,
           }
         : {}),
     };
@@ -126,63 +110,21 @@ export function useClipComposition(options: {
     composition.value = synchronizeRecordingClips(composition.value, options.editorData.value);
   };
 
-  const mediaDuration = (asset: MediaAsset) =>
-    new Promise<number>((resolve) => {
-      if (asset.kind === 'image') return resolve(5_000);
-      const media = document.createElement(asset.kind === 'audio' ? 'audio' : 'video');
-      media.preload = 'metadata';
-      media.onloadedmetadata = () => {
-        const duration = Math.round(media.duration * 1_000);
-        media.removeAttribute('src');
-        media.load();
-        resolve(duration);
-      };
-      media.onerror = () => resolve(0);
-      media.src = asset.src;
-    });
-
-  const videoHasAudio = async (asset: MediaAsset) => {
-    if (asset.kind !== 'video') return false;
-    try {
-      const response = await fetch(asset.src);
-      if (!response.ok) return false;
-      const input = new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS });
-      return (await input.getAudioTracks()).length > 0;
-    } catch {
-      return false;
-    }
-  };
-
-  const addElement = async (kind: 'video' | 'image' | 'sound' | 'caption', requestedStartMs?: number) => {
-    const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
-    if (kind === 'caption') {
-      const clip: CaptionClip = {
-        id: crypto.randomUUID(),
-        kind: 'caption',
-        name: 'Caption',
-        timelineStartMs: startMs,
-        timelineDurationMs: 2_000,
-        sourceInMs: 0,
-        sourceDurationMs: 2_000,
-        playbackRate: 1,
-        enabled: true,
-        order: 0,
-        caption: {
-          sentences: [],
-          style: { color: '#ffffff', fontSize: 42, shadowColor: '#000000', shadowBlur: 4, placement: 'bottom' },
-        },
-      };
-      composition.value = addClip(composition.value, clip);
-      selectClip(clip.id);
-      return;
-    }
-    if (!options.project.value) return;
-    const asset = await capture.pickProjectMedia(options.project.value.id, kind === 'sound' ? 'audio' : kind);
-    if (!asset) return;
-    const nativeDuration = await mediaDuration(asset);
-    if (asset.kind !== 'image' && nativeDuration <= 0) throw new Error('Impossible de lire la durée du média importé.');
-    const duration = asset.kind === 'image' ? 5_000 : nativeDuration;
-    const normalizedAsset = { ...asset, durationMs: duration };
+  const addImportedAsset = (
+    asset: MediaAsset,
+    inspection: DroppedMediaInspection,
+    requestedStartMs = options.currentTimeSec.value * 1_000,
+  ) => {
+    if (asset.kind !== inspection.kind) throw new Error('Le type du média importé est incohérent.');
+    const startMs = Math.max(0, Math.round(requestedStartMs));
+    const duration = Math.round(inspection.durationMs);
+    if (duration <= 0) throw new Error('Le média importé ne contient aucune durée exploitable.');
+    const normalizedAsset: MediaAsset = {
+      ...asset,
+      durationMs: duration,
+      width: inspection.width ?? asset.width,
+      height: inspection.height ?? asset.height,
+    };
 
     if (asset.kind === 'audio') {
       const audio: AudioClip = {
@@ -202,13 +144,15 @@ export function useClipComposition(options: {
       };
       composition.value = addClip(composition.value, audio, normalizedAsset);
       selectClip(audio.id);
-      return;
+      return audio.id;
     }
 
-    const groupId = asset.kind === 'video' && (await videoHasAudio(asset)) ? crypto.randomUUID() : undefined;
+    const groupId =
+      asset.kind === 'video' && inspection.hasAudio && inspection.canDecodeAudio ? crypto.randomUUID() : undefined;
+    const topVisualOrder = Math.min(0, ...composition.value.clips.filter(isVisualClip).map((clip) => clip.order)) - 1;
     const visual: VisualClip = {
       id: crypto.randomUUID(),
-      kind: asset.kind === 'image' ? 'image' : 'video',
+      kind: asset.kind,
       name: asset.name,
       assetId: asset.id,
       timelineStartMs: startMs,
@@ -217,10 +161,12 @@ export function useClipComposition(options: {
       sourceDurationMs: duration,
       playbackRate: 1,
       enabled: true,
-      order: 0,
+      order: topVisualOrder,
       groupId,
       transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance: clone(DEFAULT_APPEARANCE),
+      appearance: createDefaultClipAppearance(asset.kind),
+      isMirrored: false,
+      isMirroredY: false,
     };
     let next = addClip(composition.value, visual, normalizedAsset);
     if (groupId) {
@@ -244,6 +190,68 @@ export function useClipComposition(options: {
     }
     composition.value = next;
     selectClip(visual.id);
+    return visual.id;
+  };
+
+  const addElement = async (kind: 'video' | 'image' | 'sound' | 'caption', requestedStartMs?: number) => {
+    const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
+    if (kind === 'caption') {
+      const clip: CaptionClip = {
+        id: crypto.randomUUID(),
+        kind: 'caption',
+        name: 'Caption',
+        timelineStartMs: startMs,
+        timelineDurationMs: 2_000,
+        sourceInMs: 0,
+        sourceDurationMs: 2_000,
+        playbackRate: 1,
+        enabled: true,
+        order: 0,
+        caption: {
+          type: 'text',
+          sentences: [],
+          style: createDefaultCaptionStyle(),
+        },
+      };
+      composition.value = addClip(composition.value, clip);
+      selectClip(clip.id);
+      return;
+    }
+    if (!options.project.value) return;
+    const asset = await capture.pickProjectMedia(options.project.value.id, kind === 'sound' ? 'audio' : kind);
+    if (!asset) return;
+    if (asset.kind === 'image') {
+      addImportedAsset(
+        asset,
+        {
+          kind: 'image',
+          durationMs: 5_000,
+          width: asset.width,
+          height: asset.height,
+          hasAudio: false,
+          canDecodeAudio: false,
+          audioCodec: null,
+        },
+        startMs,
+      );
+      return;
+    }
+    const inspection = await inspectMedia(mediaSourceDescriptor(asset));
+    const videoMetadata = inspection.metadata.videoTracks[0];
+    const audioMetadata = inspection.metadata.audioTracks[0];
+    addImportedAsset(
+      asset,
+      {
+        kind: asset.kind,
+        durationMs: Math.round(inspection.metadata.durationSeconds * 1_000),
+        width: videoMetadata?.displayWidth ?? null,
+        height: videoMetadata?.displayHeight ?? null,
+        hasAudio: inspection.capabilities.hasAudio,
+        canDecodeAudio: audioMetadata?.canDecode ?? false,
+        audioCodec: audioMetadata?.codec ?? null,
+      },
+      startMs,
+    );
   };
 
   const addCaptionAtTime = (startMs: number) => addElement('caption', startMs);
@@ -254,9 +262,38 @@ export function useClipComposition(options: {
 
   const previewClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
-    if (!clip || clip.timelineDurationMs <= 80) return;
-    const clamped = Math.max(clip.timelineStartMs + 40, Math.min(endMs(clip) - 40, Math.round(timeMs)));
-    composition.value = trimClip(composition.value, clipId, edge, clamped);
+    if (!clip) return;
+    const asset =
+      clip.kind === 'caption' ? undefined : composition.value.assets.find((entry) => entry.id === clip.assetId);
+    const originalStartMs = clip.timelineStartMs;
+    const originalEndMs = endMs(clip);
+
+    if (edge === 'start') {
+      const maxLeftExpansionMs =
+        asset?.durationMs != null && clip.kind !== 'caption'
+          ? Math.round(clip.sourceInMs / Math.max(0.01, clip.playbackRate))
+          : originalStartMs;
+      const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs);
+      const maxStartMs = originalEndMs - MIN_CLIP_DURATION_MS;
+      const clamped = Math.max(minStartMs, Math.min(maxStartMs, Math.round(timeMs)));
+      composition.value = trimClip(composition.value, clipId, edge, clamped);
+    } else {
+      const remainingSourceMs =
+        asset?.durationMs != null && clip.kind !== 'caption'
+          ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs))
+          : Infinity;
+      const maxRightExpansionMs =
+        asset?.durationMs != null && clip.kind !== 'caption'
+          ? Math.round(remainingSourceMs / Math.max(0.01, clip.playbackRate))
+          : Infinity;
+      const minEndMs = originalStartMs + MIN_CLIP_DURATION_MS;
+      const maxEndMs = Number.isFinite(maxRightExpansionMs) ? originalEndMs + maxRightExpansionMs : Infinity;
+      const clamped = Math.max(
+        minEndMs,
+        Number.isFinite(maxEndMs) ? Math.min(maxEndMs, Math.round(timeMs)) : Math.round(timeMs),
+      );
+      composition.value = trimClip(composition.value, clipId, edge, clamped);
+    }
   };
 
   const trimClipEdge = (clipId: string, edge: 'start' | 'end', timeMs: number) => previewClipEdge(clipId, edge, timeMs);
@@ -294,7 +331,7 @@ export function useClipComposition(options: {
     const clip = selectedClip.value;
     if (!clip || !isVisualClip(clip)) return;
     composition.value = setAppearance(composition.value, clip.id, {
-      ...DEFAULT_APPEARANCE,
+      ...createDefaultClipAppearance(clip.kind),
       ...clip.appearance,
       ...patch,
     });
@@ -302,7 +339,6 @@ export function useClipComposition(options: {
   const updateSelectedTransform = (transform: NormalizedTransform) => {
     if (selectedClipId.value) composition.value = setTransform(composition.value, selectedClipId.value, transform);
   };
-  const previewSelectedTransform = updateSelectedTransform;
   const updateSelectedCrop = (crop: NormalizedCrop) => {
     if (selectedClipId.value) composition.value = setCrop(composition.value, selectedClipId.value, crop);
   };
@@ -345,6 +381,7 @@ export function useClipComposition(options: {
     synchronizeRecording,
     selectClip,
     addElement,
+    addImportedAsset,
     addCaptionAtTime,
     updateCaption,
     previewClipEdge,
@@ -356,7 +393,6 @@ export function useClipComposition(options: {
     reorderVisualClip,
     updateSelectedAppearance,
     updateSelectedTransform,
-    previewSelectedTransform,
     updateSelectedCrop,
     updateSelectedMirrored,
     updateSelectedMirroredY,

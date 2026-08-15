@@ -1,5 +1,6 @@
-import type { ClipFrame } from '../composition-types';
+import type { ClipFrame } from '~/media/shared/composition-types';
 import type { MediaRect } from './appearance-types';
+import type { Canvas2DContext } from '~/types/canvas';
 
 const SAFARI_REFERENCE = { width: 1800, height: 1150, toolbarHeight: 68 };
 export const normalizeFrameChromeScale = (value: number | undefined) =>
@@ -71,7 +72,7 @@ export const frameRadius = (frame: ClipFrame, fallback: number, rect: MediaRect)
     rect.height / 2,
   );
 
-function safariPath(ctx: CanvasRenderingContext2D, points: Array<[number, number]>, close = false) {
+function safariPath(ctx: Canvas2DContext, points: Array<[number, number]>, close = false) {
   ctx.beginPath();
   points.forEach(([x, y], index) => (index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   if (close) ctx.closePath();
@@ -79,7 +80,7 @@ function safariPath(ctx: CanvasRenderingContext2D, points: Array<[number, number
 }
 
 function drawSafariToolbar(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   rect: MediaRect,
   title: string,
   paintBackground: boolean,
@@ -236,14 +237,7 @@ function drawSafariToolbar(
   ctx.restore();
 }
 
-function drawBevelEdges(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  raised: boolean,
-) {
+function drawBevelEdges(ctx: Canvas2DContext, x: number, y: number, width: number, height: number, raised: boolean) {
   ctx.fillStyle = raised ? '#ffffff' : '#808080';
   ctx.fillRect(x, y, width, 1);
   ctx.fillRect(x, y, 1, height);
@@ -256,7 +250,7 @@ function drawBevelEdges(
 }
 
 function drawBevel(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   x: number,
   y: number,
   width: number,
@@ -269,7 +263,7 @@ function drawBevel(
   drawBevelEdges(ctx, x, y, width, height, raised);
 }
 
-function drawOuterWindowsBevel(ctx: CanvasRenderingContext2D, rect: MediaRect) {
+function drawOuterWindowsBevel(ctx: Canvas2DContext, rect: MediaRect) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(rect.x, rect.y, rect.width, 1);
   ctx.fillRect(rect.x, rect.y, 1, rect.height);
@@ -285,7 +279,7 @@ function drawOuterWindowsBevel(ctx: CanvasRenderingContext2D, rect: MediaRect) {
 }
 
 function drawWindows95Frame(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   rect: MediaRect,
   title: string,
   paintBackground: boolean,
@@ -414,7 +408,7 @@ function drawWindows95Frame(
 }
 
 export function drawFrameChrome(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   rect: MediaRect,
   frame: ClipFrame,
   title: string,

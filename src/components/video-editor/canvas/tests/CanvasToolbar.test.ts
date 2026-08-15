@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import CanvasToolbar from './CanvasToolbar.vue';
+import CanvasToolbar from '../CanvasToolbar.vue';
 
 const PopoverMenuButton = {
   emits: ['select'],

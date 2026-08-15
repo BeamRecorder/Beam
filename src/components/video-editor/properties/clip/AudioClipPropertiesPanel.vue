@@ -28,7 +28,7 @@ const volume = computed(() => props.clip?.volume ?? 100);
     </div>
     <div v-else class="options-group">
       <div class="section-block">
-        <span class="section-title">{{ t('audioControls') }}</span>
+        <span class="section-title">{{ clip.name || t('audioControls') }}</span>
         <BigSlider
           :model-value="volume"
           :default-value="100"

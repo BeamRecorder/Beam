@@ -45,7 +45,7 @@ fn helper_version_command_reports_the_current_policy_revision() {
         value
             .get("policyVersion")
             .and_then(serde_json::Value::as_u64),
-        Some(2)
+        Some(3)
     );
     let policy = policy_asset();
     let policy_version = value

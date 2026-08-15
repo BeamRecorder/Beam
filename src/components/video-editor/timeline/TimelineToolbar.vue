@@ -16,8 +16,11 @@ import {
   Type,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
+import Popover from '~/ui/popover/Popover.vue';
 import PopoverMenuButton from '~/ui/popover/PopoverMenuButton.vue';
+import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
+import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
 
 const { t } = useTranslate('TimelineToolbar');
 
@@ -26,7 +29,7 @@ const props = withDefaults(
     currentTime: number;
     duration: number;
     isPlaying: boolean;
-    zoomLevel: number; // 100 to 500
+    zoomLevel: number;
     canSplit?: boolean;
     isSnappingEnabled?: boolean;
   }>(),
@@ -59,35 +62,34 @@ const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
 });
 
-const zoomPercentage = computed(() => {
-  const min = 100;
-  const max = 500;
-  return Math.min(100, Math.max(0, ((props.zoomLevel - min) / (max - min)) * 100));
-});
-
 const formatTime = (time: number) => {
-  const mins = Math.floor(time / 60);
-  const secs = Math.floor(time % 60);
-  const ms = Math.floor((time % 1) * 100);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+  if (!Number.isFinite(time) || time < 0) time = 0;
+  const totalSeconds = Math.floor(time);
+  const hours = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = Math.floor(totalSeconds % 60);
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
 const handleZoomReset = () => {
-  emit('update:zoomLevel', 100);
+  emit('update:zoomLevel', MIN_TIMELINE_ZOOM);
 };
 
 const handleZoomIn = () => {
-  emit('update:zoomLevel', Math.min(500, props.zoomLevel + 50));
+  emit('update:zoomLevel', zoomTimelineByButton(props.zoomLevel, 1));
 };
 
 const handleZoomOut = () => {
-  emit('update:zoomLevel', Math.max(100, props.zoomLevel - 50));
+  emit('update:zoomLevel', zoomTimelineByButton(props.zoomLevel, -1));
 };
 </script>
 
 <template>
   <div class="timeline-toolbar">
-    <!-- Left Section with Add Popover & Split Button -->
+    <!-- Left Section: Add Popover & Tool Group -->
     <div class="left-section">
       <PopoverMenuButton
         :label="t('add')"
@@ -95,30 +97,31 @@ const handleZoomOut = () => {
         :items="addItems"
         @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')"
       />
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="Scissors"
-        :disabled="!canSplit"
-        :tooltip="canSplit ? `${t('split')} (S)` : t('selectClipToSplit')"
-        class="toolbar-split-btn"
-        @click="emit('split')"
-      />
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="Magnet"
-        :class="{ 'is-active': isSnappingEnabled }"
-        :tooltip="isSnappingEnabled ? t('snappingOn') : t('snappingOff')"
-        class="toolbar-snap-btn"
-        @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
-      />
+      <div class="tools-group">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="Scissors"
+          :disabled="!canSplit"
+          :tooltip="canSplit ? `${t('split')} (S)` : t('selectClipToSplit')"
+          class="toolbar-split-btn"
+          @click="emit('split')"
+        />
+        <Button
+          :variant="isSnappingEnabled ? 'primary' : 'ghost'"
+          size="sm"
+          icon-only
+          :icon="Magnet"
+          :tooltip="isSnappingEnabled ? t('snappingOn') : t('snappingOff')"
+          class="toolbar-snap-btn"
+          @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
+        />
+      </div>
     </div>
 
-    <!-- Centered Controls -->
-    <div class="center-controls">
+    <!-- Center Section: Playback Nav & Time Display -->
+    <div class="center-section">
       <div class="nav-controls">
         <Button
           variant="ghost"
@@ -154,41 +157,54 @@ const handleZoomOut = () => {
       </div>
     </div>
 
-    <!-- Right Zoom Controls -->
-    <div class="zoom-controls">
-      <span class="zoom-percent-text" @click="handleZoomReset" :title="t('doubleClickResetZoom')">{{
-        zoomPercentageText
-      }}</span>
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="ZoomOut"
-        :tooltip="t('zoomOut')"
-        :disabled="zoomLevel <= 100"
-        @click="handleZoomOut"
-      />
-      <input
-        type="range"
-        min="100"
-        max="500"
-        step="10"
-        :value="zoomLevel"
-        class="zoom-slider"
-        :style="{
-          background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`,
-        }"
-        @input="emit('update:zoomLevel', parseFloat(($event.target as HTMLInputElement).value))"
-      />
-      <Button
-        variant="ghost"
-        size="sm"
-        icon-only
-        :icon="ZoomIn"
-        :tooltip="t('zoomIn')"
-        :disabled="zoomLevel >= 500"
-        @click="handleZoomIn"
-      />
+    <!-- Right Section: Compact Segmented Zoom with Popover -->
+    <div class="right-section">
+      <div class="zoom-controls">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="ZoomOut"
+          :tooltip="t('zoomOut')"
+          :disabled="zoomLevel <= MIN_TIMELINE_ZOOM"
+          class="zoom-btn"
+          @click="handleZoomOut"
+        />
+        <Popover align="right" direction="up" :match-trigger-width="false">
+          <template #trigger>
+            <button
+              type="button"
+              class="zoom-percent-trigger"
+              :title="t('doubleClickResetZoom')"
+              @dblclick="handleZoomReset"
+            >
+              <span class="zoom-percent-text">{{ zoomPercentageText }}</span>
+            </button>
+          </template>
+          <div class="zoom-popover-content">
+            <BigSlider
+              :label="t('zoom') || 'Zoom'"
+              :model-value="zoomLevel"
+              :min="MIN_TIMELINE_ZOOM"
+              :max="MAX_TIMELINE_ZOOM"
+              :step="25"
+              :default-value="MIN_TIMELINE_ZOOM"
+              :format-value="(val) => `${Math.round(val)}%`"
+              @update:model-value="emit('update:zoomLevel', $event)"
+            />
+          </div>
+        </Popover>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="ZoomIn"
+          :tooltip="t('zoomIn')"
+          :disabled="zoomLevel >= MAX_TIMELINE_ZOOM"
+          class="zoom-btn"
+          @click="handleZoomIn"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -198,118 +214,43 @@ const handleZoomOut = () => {
   position: relative;
   width: 100%;
   box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: 8px 16px;
+  padding: 6px 16px;
   background: transparent;
   border-bottom: none;
   height: 48px;
   user-select: none;
+  gap: 12px;
 }
 
 .left-section {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  justify-content: flex-start;
 }
 
-.left-section :deep(.toolbar-snap-btn.is-active) {
-  color: var(--color-primary) !important;
-  background: var(--color-primary-light, rgba(255, 90, 31, 0.15)) !important;
-}
-
-.add-track-button {
-  display: inline-flex;
+.tools-group {
+  display: flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--fast) ease;
 }
 
-.add-track-button:hover,
-.add-track-button.is-open {
-  background: var(--color-bg-surface-hover);
-  border-color: var(--color-border-strong);
-}
-
-.add-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--color-primary);
-}
-
-.chevron-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--text-muted);
-  transition: transform var(--fast) ease;
-}
-
-.chevron-icon.is-flipped {
-  transform: rotate(180deg);
-}
-
-.add-menu-content {
-  display: flex;
-  flex-direction: column;
-  padding: 4px;
-  min-width: 160px;
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
-}
-
-.add-menu-item {
+.center-section {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 10px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color var(--fast) ease;
-}
-
-.add-menu-item:hover {
-  background: var(--color-bg-surface-hover);
-}
-
-.menu-icon {
-  width: 14px;
-  height: 14px;
-  color: var(--text-secondary);
-}
-
-.center-controls {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  gap: 14px;
+  justify-content: center;
+  min-width: 0;
 }
 
 .nav-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .play-pause-btn {
@@ -325,9 +266,14 @@ const handleZoomOut = () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: monospace;
-  font-size: 13px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  font-size: 12px;
   font-weight: 600;
+  background: var(--color-bg-surface-hover);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  letter-spacing: 0.02em;
 }
 
 .time-current {
@@ -342,71 +288,52 @@ const handleZoomOut = () => {
   color: var(--text-secondary);
 }
 
+.right-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 .zoom-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
+  background: var(--color-bg-surface-hover);
+  padding: 2px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.zoom-percent-trigger {
+  height: 28px;
+  padding: 0 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--fast) ease;
+  border-radius: var(--radius-sm);
+}
+
+.zoom-percent-trigger:hover {
+  background: var(--color-bg-surface);
+  color: var(--text-primary);
 }
 
 .zoom-percent-text {
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 8px;
-  cursor: pointer;
-  min-width: 48px;
-  text-align: center;
-  transition: all var(--fast) ease;
+  font-family: var(--font-mono, monospace);
 }
 
-.zoom-percent-text:hover {
-  background: var(--color-bg-surface-hover);
-  color: var(--text-primary);
-  border-color: var(--color-border-strong);
-}
-
-.zoom-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 80px;
-  height: 4px;
-  border-radius: var(--radius-full);
-  outline: none;
-  cursor: pointer;
-  transition: background 0.05s ease;
-}
-
-.zoom-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  border: none;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.1s ease;
-}
-
-.zoom-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.zoom-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  border: none;
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-
-.zoom-slider::-moz-range-thumb:hover {
-  transform: scale(1.2);
+.zoom-popover-content {
+  padding: 8px;
+  min-width: 170px;
+  box-sizing: border-box;
 }
 </style>

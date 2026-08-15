@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import CursorPanel from './CursorPanel.vue';
+import CursorPanel from '../CursorPanel.vue';
 
 const Select = {
   emits: ['update:modelValue'],

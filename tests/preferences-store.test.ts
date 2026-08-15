@@ -42,6 +42,15 @@ describe('preferences background presets', () => {
     })
   })
 
+  it('normalizes onboardingCompleted preference setting', () => {
+    expect(normalize({ onboardingCompleted: false })).toMatchObject({
+      onboardingCompleted: false,
+    })
+    expect(normalize({ onboardingCompleted: true })).toMatchObject({
+      onboardingCompleted: true,
+    })
+  })
+
   it('normalizes valid presets and deduplicates equivalent values', () => {
     const value = normalize({
       backgroundPresets: {

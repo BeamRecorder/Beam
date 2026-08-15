@@ -3,13 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const { kindFor } = require('../backgrounds/background-library.cjs');
-const {
-  emptyComposition,
-  normalizeComposition,
-  materializeComposition,
-  importMedia,
-  pruneProjectMedia,
-} = require('./clip-composition.cjs');
+const { emptyComposition, importMedia } = require('./clip-composition.cjs');
+const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
+const { createDefaultPresentation, zoomState } = require('./project-editor-state.cjs');
+const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 
 function createProjectStore(root) {
   const safePath = (directory, relativePath) => {
@@ -17,6 +14,15 @@ function createProjectStore(root) {
     const resolvedRoot = path.resolve(directory);
     const candidate = path.resolve(resolvedRoot, relativePath);
     return candidate === resolvedRoot || candidate.startsWith(`${resolvedRoot}${path.sep}`) ? candidate : null;
+  };
+  const existingFileWithin = (directory, candidate) => {
+    try {
+      const realRoot = fs.realpathSync(directory);
+      const realFile = fs.realpathSync(candidate);
+      return realFile.startsWith(`${realRoot}${path.sep}`) && fs.statSync(realFile).isFile() ? realFile : null;
+    } catch {
+      return null;
+    }
   };
   const assertId = (id) => {
     if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
@@ -89,7 +95,7 @@ function createProjectStore(root) {
     }
     const relativePath = path.relative(root, file);
     const safeFile = safePath(root, relativePath);
-    return safeFile && safeFile === path.resolve(file) && fs.existsSync(safeFile) && fs.statSync(safeFile).isFile()
+    return safeFile && safeFile === path.resolve(file) && existingFileWithin(root, safeFile)
       ? `project-media://asset/${encodeURIComponent(relativePath.split(path.sep).join('/'))}`
       : null;
   };
@@ -108,7 +114,7 @@ function createProjectStore(root) {
       return null;
     }
     const file = safePath(root, relativePath);
-    return file && fs.existsSync(file) && fs.statSync(file).isFile() ? file : null;
+    return file ? existingFileWithin(root, file) : null;
   };
   const previewFor = (directory, manifest, sessions) => {
     if (typeof manifest.previewSrc === 'string' && manifest.previewSrc) {
@@ -118,7 +124,7 @@ function createProjectStore(root) {
       } catch {
         file = null;
       }
-      if (file && fs.existsSync(file)) return manifest.previewSrc;
+      if (file && fs.existsSync(file)) return mediaUrlFor(manifest.previewSrc);
     }
     for (const session of [...sessions].reverse()) {
       const sessionDirectory = safePath(directory, session.relativePath);
@@ -136,7 +142,7 @@ function createProjectStore(root) {
         try {
           writeManifest(directory, manifest);
         } catch {}
-        return url;
+        return mediaUrlFor(url);
       }
     }
     return null;
@@ -153,132 +159,6 @@ function createProjectStore(root) {
       sessionCount: sessions.length,
       previewSrc: previewFor(directory, manifest, sessions),
       thumbnailSrc: thumbnailFor(directory),
-    };
-  };
-  const zoomState = (value) => {
-    if (!value || !Array.isArray(value.elements) || !Array.isArray(value.generatedSessions))
-      return { elements: [], generatedSessions: [] };
-    const ids = new Set();
-    const elements = value.elements.map((element) => {
-      if (
-        !element ||
-        typeof element.id !== 'string' ||
-        !element.id ||
-        ids.has(element.id) ||
-        typeof element.sessionId !== 'string' ||
-        !Number.isFinite(element.startMs) ||
-        !Number.isFinite(element.endMs) ||
-        element.endMs <= element.startMs ||
-        !element.focus ||
-        !Number.isFinite(element.focus.cx) ||
-        !Number.isFinite(element.focus.cy) ||
-        element.focus.cx < 0 ||
-        element.focus.cx > 1 ||
-        element.focus.cy < 0 ||
-        element.focus.cy > 1 ||
-        ![1, 2, 3, 4, 5, 6].includes(element.depth) ||
-        !['auto', 'manual'].includes(element.mode)
-      )
-        throw new Error('Propriétés de zoom invalides');
-      ids.add(element.id);
-      return {
-        id: element.id,
-        sessionId: element.sessionId,
-        startMs: Math.round(element.startMs),
-        endMs: Math.round(element.endMs),
-        focus: { cx: element.focus.cx, cy: element.focus.cy },
-        depth: element.depth,
-        mode: element.mode,
-      };
-    });
-    const generatedSessions = value.generatedSessions.map((record) => {
-      if (
-        !record ||
-        typeof record.sessionId !== 'string' ||
-        !record.sessionId ||
-        !Number.isInteger(record.algorithmVersion) ||
-        typeof record.generatedAt !== 'string'
-      )
-        throw new Error('Métadonnées de génération invalides');
-      return {
-        sessionId: record.sessionId,
-        algorithmVersion: record.algorithmVersion,
-        generatedAt: record.generatedAt,
-      };
-    });
-    return { elements, generatedSessions };
-  };
-  const defaultCursorEffects = () => ({
-    left: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff5a1f' },
-    right: { springEnabled: true, springIntensity: 50, rippleEnabled: true, rippleSize: 30, rippleColor: '#6366f1' },
-  });
-  const cursorEffectState = (value, fallback) => {
-    const input = value && typeof value === 'object' ? value : {};
-    const number = (candidate, defaultValue, min, max) =>
-      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue;
-    const boolean = (candidate, defaultValue) => (typeof candidate === 'boolean' ? candidate : defaultValue);
-    const color = (candidate, defaultValue) => (typeof candidate === 'string' && candidate ? candidate : defaultValue);
-    return {
-      springEnabled: boolean(input.springEnabled, fallback.springEnabled),
-      springIntensity: number(input.springIntensity, fallback.springIntensity, 0, 100),
-      rippleEnabled: boolean(input.rippleEnabled, fallback.rippleEnabled),
-      rippleSize: number(input.rippleSize, fallback.rippleSize, 10, 80),
-      rippleColor: color(input.rippleColor, fallback.rippleColor),
-    };
-  };
-  const cursorEffectsState = (value) => {
-    const defaults = defaultCursorEffects();
-    const input = value && typeof value === 'object' ? value : {};
-    return {
-      left: cursorEffectState(input.left, defaults.left),
-      right: cursorEffectState(input.right, defaults.right),
-    };
-  };
-  const defaultCursorMotion = () => ({
-    preset: 'smooth',
-    smoothing: 0.67,
-    springMassMultiplier: 1.29,
-    motionBlur: 0.4,
-  });
-  const cursorMotionState = (value) => {
-    const fallback = defaultCursorMotion();
-    const input = value && typeof value === 'object' ? value : {};
-    const number = (candidate, defaultValue, min, max) =>
-      Number.isFinite(candidate) ? Math.max(min, Math.min(max, candidate)) : defaultValue;
-    const preset = ['focused', 'smooth', 'custom'].includes(input.preset) ? input.preset : fallback.preset;
-    return {
-      preset,
-      smoothing: number(input.smoothing, fallback.smoothing, 0, 1),
-      springMassMultiplier: number(input.springMassMultiplier, fallback.springMassMultiplier, 0.5, 2),
-      motionBlur: number(input.motionBlur, fallback.motionBlur, 0, 1),
-    };
-  };
-  const presentationState = (value) => {
-    const next = value || {};
-    const canvasInput = next.canvas || {};
-    const preset = ['16:9', '9:16', '1:1', '4:5', 'custom'].includes(canvasInput.preset) ? canvasInput.preset : '16:9';
-    const presets = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350] };
-    const [presetWidth, presetHeight] = presets[preset] || [];
-    const width = preset === 'custom' ? Math.max(1, Math.round(canvasInput.width)) : presetWidth;
-    const height = preset === 'custom' ? Math.max(1, Math.round(canvasInput.height)) : presetHeight;
-    if (!Number.isFinite(width) || !Number.isFinite(height)) throw new Error('Dimensions du canvas invalides');
-    return {
-      canvas: {
-        preset,
-        width,
-        height,
-        showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : true,
-      },
-      selectedBackgroundId: typeof next.selectedBackgroundId === 'string' ? next.selectedBackgroundId : null,
-      background: next.background && typeof next.background === 'object' ? next.background : null,
-      blurPercent: Number.isFinite(next.blurPercent) ? Math.max(0, Math.min(100, Math.round(next.blurPercent))) : 0,
-      importedBackgrounds: Array.isArray(next.importedBackgrounds)
-        ? next.importedBackgrounds.filter(
-            (item) => item && typeof item.id === 'string' && typeof item.path === 'string',
-          )
-        : [],
-      cursorEffects: cursorEffectsState(next.cursorEffects),
-      cursorMotion: cursorMotionState(next.cursorMotion),
     };
   };
   const readJsonArray = (file) => {
@@ -355,9 +235,10 @@ function createProjectStore(root) {
             assets: Array.isArray(track.segments)
               ? track.segments.map((segment) => {
                   const assetPath = safePath(sessionDirectory, segment.path);
+                  const fileUrl = assetPath && fs.existsSync(assetPath) ? pathToFileURL(assetPath).href : null;
                   return {
                     ...segment,
-                    src: assetPath && fs.existsSync(assetPath) ? pathToFileURL(assetPath).href : null,
+                    src: fileUrl ? mediaUrlFor(fileUrl) : null,
                     exists: Boolean(assetPath && fs.existsSync(assetPath)),
                   };
                 })
@@ -369,7 +250,7 @@ function createProjectStore(root) {
       let interactions = null;
       try {
         const parsed = JSON.parse(fs.readFileSync(path.join(cursorDirectory, 'input.json'), 'utf8'));
-        if (parsed && Number.isInteger(parsed.version) && Array.isArray(parsed.events)) interactions = parsed;
+        interactions = normalizeInputSidecar(parsed);
       } catch {}
       let metadata = {};
       try {
@@ -407,7 +288,7 @@ function createProjectStore(root) {
       return {
         sessionId: session.sessionId,
         manifest: sessionManifest,
-        videoSrc: video ? pathToFileURL(path.join(screenDirectory, video)).href : null,
+        videoSrc: video ? mediaUrlFor(pathToFileURL(path.join(screenDirectory, video)).href) : null,
         tracks,
         cursor: {
           available: Array.isArray(events),
@@ -418,6 +299,7 @@ function createProjectStore(root) {
           missing: [...(Array.isArray(events) ? [] : ['cursor.json']), ...missing],
         },
         interactions: interactions || { version: 1, events: [] },
+        recordedPlatform: recordedPlatform(sessionManifest.platform?.os),
         zoom: manifest.editor?.zoom ? zoomState(manifest.editor.zoom) : { elements: [], generatedSessions: [] },
       };
     }
@@ -444,32 +326,13 @@ function createProjectStore(root) {
       if (!names.has(`${baseName} ${suffix}`)) return `${baseName} ${suffix}`;
     throw new Error('Impossible de générer un nom de projet unique');
   };
-  const editorState = (id) => {
-    const directory = directoryFor(id);
-    const manifest = readManifest(directory);
-    const editor = manifest.editor || {};
-    const composition = normalizeComposition(editor.composition || emptyComposition());
-    return {
-      schemaVersion: 2,
-      composition: materializeComposition(directory, composition, sessionFileFor),
-      zoom: editor.zoom ? zoomState(editor.zoom) : { elements: [], generatedSessions: [] },
-      presentation: presentationState(editor.presentation),
-    };
-  };
-  const saveEditorState = (id, value) => {
-    if (!value || value.schemaVersion !== 2) throw new Error('État éditeur invalide');
-    const directory = directoryFor(id);
-    const manifest = readManifest(directory);
-    const previous = normalizeComposition(manifest.editor?.composition || emptyComposition());
-    const composition = normalizeComposition(value.composition);
-    const zoom = zoomState(value.zoom);
-    const presentation = presentationState(value.presentation);
-    pruneProjectMedia(directory, previous, composition);
-    manifest.editor = { composition, zoom, presentation };
-    manifest.updatedAtUtc = new Date().toISOString();
-    writeManifest(directory, manifest);
-    return editorState(id);
-  };
+  const { editorState, saveEditorState } = createProjectEditorAccess({
+    directoryFor,
+    readManifest,
+    writeManifest,
+    sessionFileFor,
+    mediaUrlFor,
+  });
   const applyPendingRenames = () => {
     for (const directory of projectDirectories()) {
       let manifest;
@@ -538,7 +401,22 @@ function createProjectStore(root) {
     editorData,
     editorState,
     saveEditorState,
-    importEditorMedia: (id, input) => importMedia(directoryFor(id), input),
+    importEditorMedia: (id, input) => {
+      const asset = importMedia(directoryFor(id), input);
+      return { ...asset, src: mediaUrlFor(asset.src) || '' };
+    },
+    importDroppedProjectMedia: (id, input) => {
+      if (!input || typeof input.source !== 'string' || !input.source) throw new Error('Chemin du média invalide');
+      let stats;
+      try {
+        stats = fs.statSync(input.source);
+      } catch {
+        throw new Error('Fichier média invalide');
+      }
+      if (!stats.isFile()) throw new Error('Fichier média invalide');
+      const asset = importMedia(directoryFor(id), input);
+      return { ...asset, src: mediaUrlFor(asset.src) || '' };
+    },
     importBackground,
     create: (options = {}) => {
       const id = randomUUID();
@@ -556,9 +434,10 @@ function createProjectStore(root) {
         updatedAtUtc: now,
         sessions: [],
         editor: {
+          schemaVersion: 3,
           composition: emptyComposition(),
           zoom: { elements: [], generatedSessions: [] },
-          presentation: presentationState(),
+          presentation: createDefaultPresentation(),
         },
       };
       writeManifest(directory, manifest);

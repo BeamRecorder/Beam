@@ -3,7 +3,7 @@ import { DEFAULT_ZOOM_DEPTH, type ZoomElement, type ZoomFocus } from './zoom-typ
 
 export const CLICK_CLUSTER_GAP_MS = 2500;
 export const ZOOM_REGION_PADDING_MS = 500;
-export const ZOOM_ALGORITHM_VERSION = 4;
+export const ZOOM_ALGORITHM_VERSION = 5;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const explicitClickTypes = new Set(['click', 'double-click', 'right-click', 'middle-click']);

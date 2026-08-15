@@ -1,4 +1,4 @@
-import type { VisualClip } from '../../video-editor/composition/composition-types';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { cursorClickSpringScale } from '../../video-editor/composables/cursor-click-spring';
 import { createCursorMotionPlayer, motionBlurTrail } from '../../video-editor/composables/cursor-motion';
 import { buttonEventsBetween, cursorStateAt } from '../../video-editor/composables/cursorPlayback';
@@ -10,9 +10,17 @@ import {
 } from '../../video-editor/properties/cursor/cursor-rendering';
 import { effectButtonForRecordedButton, type CursorClickEffectSettings } from '../../../api/types/cursor-settings';
 import type { CompositionSnapshot } from '../export-types';
+import { cursorRippleAt } from '../../video-editor/composables/cursor-ripple';
+import type { Canvas2DContext } from '~/types/canvas';
 
-export function drawCursorLayer(
-  ctx: CanvasRenderingContext2D,
+type CursorImage = HTMLImageElement | ImageBitmap;
+const usableImage = (image: CursorImage | undefined) => {
+  if (!image) return false;
+  if ('complete' in image) return image.complete && image.naturalWidth > 0;
+  return image.width > 0;
+};
+
+export function cursorPositionForKeyboardCaption(
   snapshot: CompositionSnapshot,
   time: number,
   screen: VisualClip,
@@ -20,7 +28,42 @@ export function drawCursorLayer(
   sourceHeight: number,
   width: number,
   height: number,
-  cursorImages: ReadonlyMap<string, HTMLImageElement> | undefined,
+  cursorImages: ReadonlyMap<string, CursorImage> | undefined,
+  cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
+  camera: { scale: number; focus: { cx: number; cy: number } },
+) {
+  const state = cursorStateAt(snapshot.cursor.events, time);
+  const motionState = cursorMotionPlayer.sample(time, state);
+  const cursorType = cursorTypeAt(snapshot.cursorSettings.selectedCursor, motionState);
+  const image = cursorImages?.get(cursorType);
+  if (!snapshot.cursor.available || !state?.visible || !motionState?.visible || !usableImage(image)) return null;
+  const raw = cursorPositionAt(
+    motionState,
+    { width: sourceWidth, height: sourceHeight },
+    { x: 0, y: 0, width, height },
+    snapshot.canvas.showBackground,
+    screen.transform,
+    screen.isMirrored ?? false,
+    screen.isMirroredY ?? false,
+    screen.appearance,
+    screen.crop,
+  );
+  return {
+    x: width / 2 + camera.scale * (raw.x - camera.focus.cx * width),
+    y: height / 2 + camera.scale * (raw.y - camera.focus.cy * height),
+  };
+}
+
+export function drawCursorLayer(
+  ctx: Canvas2DContext,
+  snapshot: CompositionSnapshot,
+  time: number,
+  screen: VisualClip,
+  sourceWidth: number,
+  sourceHeight: number,
+  width: number,
+  height: number,
+  cursorImages: ReadonlyMap<string, CursorImage> | undefined,
   cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
 ) {
   const cursor = cursorStateAt(snapshot.cursor.events, time);
@@ -55,19 +98,21 @@ export function drawCursorLayer(
     const target = cursorMotionPlayer.timeline.targetAt(click.sessionNs / 1_000_000_000);
     const position = positionAt(target ? { ...state, x: target.x, y: target.y } : state);
     const age = Math.max(0, time - click.sessionNs / 1_000_000_000);
+    const ripple = cursorRippleAt(age, effect.rippleSize);
+    if (!ripple) continue;
     ctx.save();
-    ctx.globalAlpha = Math.max(0, 1 - age / 0.5);
+    ctx.globalAlpha = ripple.opacity;
     ctx.strokeStyle = effect.rippleColor;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(position.x, position.y, 2 + age * effect.rippleSize * 2, 0, Math.PI * 2);
+    ctx.arc(position.x, position.y, ripple.radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
 
   const cursorType = cursorTypeAt(settings.selectedCursor, motionCursor);
   const image = cursorImages?.get(cursorType);
-  if (!motionCursor?.visible || !image?.complete || image.naturalWidth <= 0) return;
+  if (!motionCursor?.visible || !usableImage(image)) return;
   const hotspot = cursorHotspotAtSize(cursorType, cursorSize);
   const click = buttonEventsBetween(snapshot.cursor.events, Math.max(0, time - 0.28), time)
     .reverse()
@@ -95,7 +140,7 @@ export function drawCursorLayer(
     }
     ctx.translate(samplePosition.x, samplePosition.y);
     ctx.scale(clickScale, clickScale);
-    ctx.drawImage(image, -hotspot.x, -hotspot.y, cursorSize, cursorSize);
+    ctx.drawImage(image!, -hotspot.x, -hotspot.y, cursorSize, cursorSize);
     ctx.restore();
   }
 }

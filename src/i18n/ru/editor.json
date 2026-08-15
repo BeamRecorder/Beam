@@ -36,6 +36,8 @@
     "zoom": "Масштаб",
     "cursor": "Курсор",
     "captions": "Субтитры",
+    "keyboardCaptions": "Сочетания клавиш",
+    "textCaptions": "Текстовые субтитры",
     "audio": "Аудио",
     "settings": "Настройки",
     "logo": "Логотип"
@@ -99,7 +101,9 @@
     "zoomOut": "Отдалить",
     "zoomIn": "Приблизить",
     "snappingOn": "Магнитная привязка включена",
-    "snappingOff": "Магнитная привязка выключена"
+    "snappingOff": "Магнитная привязка выключена",
+    "zoom": "Масштаб",
+    "resetZoom": "Сбросить масштаб"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Нажмите, чтобы переключить видеодорожку",
@@ -133,7 +137,9 @@
     "unlinkMicrophoneTrack": "Отвязать дорожку микрофона",
     "waveformUnavailable": "Форма волны недоступна",
     "trimStart": "Обрезать начало",
-    "trimEnd": "Обрезать конец"
+    "trimEnd": "Обрезать конец",
+    "keyboardCaptions": "Сочетания клавиш",
+    "textCaptions": "Текстовые субтитры"
   },
   "TimelineVideoClip": {
     "trimStart": "Обрезать начало",

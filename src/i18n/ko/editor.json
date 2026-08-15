@@ -36,6 +36,8 @@
     "zoom": "확대/축소",
     "cursor": "커서",
     "captions": "자막",
+    "keyboardCaptions": "키보드 단축키",
+    "textCaptions": "텍스트 자막",
     "audio": "오디오",
     "settings": "설정",
     "logo": "로고"
@@ -99,7 +101,9 @@
     "zoomOut": "축소",
     "zoomIn": "확대",
     "snappingOn": "자석 맞춤 사용",
-    "snappingOff": "자석 맞춤 사용 안 함"
+    "snappingOff": "자석 맞춤 사용 안 함",
+    "zoom": "확대/축소",
+    "resetZoom": "확대/축소 초기화"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "클릭하여 동영상 트랙 전환",
@@ -133,7 +137,9 @@
     "unlinkMicrophoneTrack": "마이크 트랙 연결 해제",
     "waveformUnavailable": "파형을 사용할 수 없음",
     "trimStart": "시작 부분 자르기",
-    "trimEnd": "끝 부분 자르기"
+    "trimEnd": "끝 부분 자르기",
+    "keyboardCaptions": "키보드 단축키",
+    "textCaptions": "텍스트 자막"
   },
   "TimelineVideoClip": {
     "trimStart": "시작 부분 자르기",

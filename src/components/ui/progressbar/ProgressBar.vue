@@ -5,6 +5,7 @@ const props = withDefaults(
   defineProps<{
     value?: number; // Value between 0 and 100 or 0 and 1
     max?: number;
+    indeterminate?: boolean;
   }>(),
   {
     value: 0,
@@ -20,7 +21,7 @@ const percentage = computed(() => {
 </script>
 
 <template>
-  <div class="progress-bar-container">
+  <div class="progress-bar-container" :class="{ indeterminate: props.indeterminate }">
     <div class="progress-bar-fill" :style="{ width: `${percentage}%` }"></div>
   </div>
 </template>
@@ -29,7 +30,7 @@ const percentage = computed(() => {
 .progress-bar-container {
   width: 100%;
   height: 4px;
-  background: var(--color-border);
+  background: var(--color-bg-surface-hover);
   border-radius: var(--radius-full);
   overflow: hidden;
   position: relative;
@@ -37,8 +38,29 @@ const percentage = computed(() => {
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: linear-gradient(90deg, var(--color-primary-hover), var(--color-primary));
   border-radius: inherit;
   transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 6px rgba(255, 90, 31, 0.35);
+}
+
+.progress-bar-container.indeterminate .progress-bar-fill {
+  width: 35% !important;
+  animation: progress-indeterminate 1.1s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(330%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar-container.indeterminate .progress-bar-fill {
+    animation-duration: 2.2s;
+  }
 }
 </style>

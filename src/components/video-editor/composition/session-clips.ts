@@ -6,8 +6,10 @@ import {
   type ClipComposition,
   type MediaAsset,
   type VisualClip,
-} from './composition-types';
+} from '~/media/shared/composition-types';
 import { createComposition } from './engine/clip-engine';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { keyboardCaptionClipsFromInput } from '~/media/shared/keyboard-captions';
 
 const milliseconds = (nanoseconds: number | null | undefined) =>
   Math.max(0, Math.round((nanoseconds ?? 0) / 1_000_000));
@@ -112,6 +114,9 @@ const sessionClip = (
     kind: track.kind === 'camera' ? 'webcam' : 'screen',
     assetId: id,
     transform: track.kind === 'camera' ? placement(track) : { x: 0, y: 0, width: 1, height: 1 },
+    appearance: createDefaultClipAppearance(track.kind === 'camera' ? 'webcam' : 'screen'),
+    isMirrored: false,
+    isMirroredY: false,
   } satisfies VisualClip;
 };
 
@@ -130,6 +135,8 @@ export function synchronizeRecordingClips(
   const existingIds = new Set(clips.map((clip) => clip.id));
   const fallbackEndNs = editorData.manifest.durationNs;
   const candidates: Clip[] = [];
+  const keyboardCaptionSessions = [...composition.keyboardCaptionSessions];
+  let assetsChanged = false;
 
   for (const track of editorData.tracks) {
     if (!['screen', 'camera', 'system-audio', 'microphone'].includes(track.kind) || track.status === 'failed') continue;
@@ -137,7 +144,10 @@ export function synchronizeRecordingClips(
       if (!segment.complete || !segment.exists || !segment.src) continue;
       const durationMs = safeDuration(segment, fallbackEndNs);
       const asset = sessionAsset(editorData, track, segment, durationMs);
-      assets.set(asset.id, asset);
+      if (!assets.has(asset.id)) {
+        assets.set(asset.id, asset);
+        assetsChanged = true;
+      }
       const priority =
         track.kind === 'camera'
           ? 20_000
@@ -171,6 +181,7 @@ export function synchronizeRecordingClips(
       sessionPath: 'screen/primary',
     };
     assets.set(asset.id, asset);
+    assetsChanged = true;
     candidates.push({
       id: SCREEN_CLIP_ID,
       kind: 'screen',
@@ -184,11 +195,33 @@ export function synchronizeRecordingClips(
       enabled: true,
       order: 30_000,
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('screen'),
+      isMirrored: false,
+      isMirroredY: false,
     });
+  }
+
+  const sessionHasMaterializedSource =
+    Boolean(editorData.videoSrc) ||
+    editorData.tracks.some((track) =>
+      track.assets.some((asset) => asset.complete && asset.exists && Boolean(asset.src)),
+    );
+  if (sessionHasMaterializedSource && !keyboardCaptionSessions.includes(editorData.sessionId)) {
+    keyboardCaptionSessions.push(editorData.sessionId);
+    if (editorData.recordedPlatform && editorData.interactions) {
+      for (const clip of keyboardCaptionClipsFromInput(
+        editorData.interactions,
+        editorData.sessionId,
+        editorData.recordedPlatform,
+      )) {
+        if (!existingIds.has(clip.id)) candidates.push(clip);
+      }
+    }
   }
 
   const groups = new Map<string, Clip[]>();
   for (const clip of candidates) {
+    if (clip.kind === 'caption') continue;
     const key = `${clip.timelineStartMs}:${clip.timelineDurationMs}`;
     const group = groups.get(key) ?? [];
     group.push(clip);
@@ -202,5 +235,11 @@ export function synchronizeRecordingClips(
     });
   }
 
-  return createComposition([...assets.values()], [...clips, ...candidates]);
+  if (
+    !assetsChanged &&
+    candidates.length === 0 &&
+    keyboardCaptionSessions.length === composition.keyboardCaptionSessions.length
+  )
+    return composition;
+  return createComposition([...assets.values()], [...clips, ...candidates], keyboardCaptionSessions);
 }

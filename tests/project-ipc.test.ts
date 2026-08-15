@@ -17,8 +17,18 @@ const setup = () => {
   const dialog = { showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['C:/wallpaper.png'] }) }
   const window = { webContents: { send: vi.fn() } }
   const windows = { getAllWindows: () => [window] }
-  registerProjectIpc(ipcMain, {}, { importFile, list: vi.fn() }, dialog, windows)
-  return { handler: handlers.get('background-library:pick-import')!, dialog, importFile, window }
+  const projectStore = {
+    importDroppedProjectMedia: vi.fn((projectId, input) => ({ projectId, ...input })),
+  }
+  registerProjectIpc(ipcMain, projectStore, { importFile, list: vi.fn() }, dialog, windows)
+  return {
+    handler: handlers.get('background-library:pick-import')!,
+    droppedHandler: handlers.get('projects:import-dropped-media')!,
+    dialog,
+    importFile,
+    projectStore,
+    window,
+  }
 }
 
 describe('background import IPC', () => {
@@ -51,5 +61,17 @@ describe('background import IPC', () => {
     const { handler, window } = setup()
     await handler({}, { kind: 'image' })
     expect(window.webContents.send).toHaveBeenCalledWith('background-library:changed')
+  })
+
+  it('delegates dropped media to the project store without rewriting the source', async () => {
+    const { droppedHandler, projectStore } = setup()
+    const source = '/tmp/drop/../recording.mp4'
+    expect(droppedHandler({}, { projectId: 'project-42', source, kind: 'video' })).toEqual({
+      projectId: 'project-42',
+      source,
+      kind: 'video',
+    })
+    expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledOnce()
+    expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledWith('project-42', { source, kind: 'video' })
   })
 })

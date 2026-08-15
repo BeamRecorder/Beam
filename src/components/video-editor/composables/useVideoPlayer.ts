@@ -1,6 +1,9 @@
-import { computed, ref } from 'vue';
+import { computed, onScopeDispose, ref, watch } from 'vue';
+import { MediaPlaybackEngine, type PlaybackState } from '~/media/playback';
+import type { ClipComposition, MediaError } from '~/media/shared';
 import {
   BACKGROUND_MEDIA,
+  getRandomBackgroundImage,
   groupBackgroundMedia,
   type BackgroundMedia,
   type BackgroundMediaGroup,
@@ -12,8 +15,35 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const currentTime = ref(0);
   const duration = ref(0);
   const volume = ref(70);
-  const videoSrc = ref<string | null>(null);
-  const selectedBackground = ref<BackgroundValue | null>(availableBackgrounds[0] ?? null);
+  const playbackState = ref<PlaybackState>('idle');
+  const playbackError = ref<MediaError | null>(null);
+  const frameVersion = ref(0);
+  let engine: MediaPlaybackEngine | null = null;
+  let loadGeneration = 0;
+  let disposed = false;
+  const ensureEngine = () => {
+    if (disposed) throw new Error('Video player is disposed.');
+    if (engine) return engine;
+    engine = new MediaPlaybackEngine();
+    engine.on('time', (value) => {
+      currentTime.value = value;
+    });
+    engine.on('frame', () => {
+      frameVersion.value += 1;
+    });
+    engine.on('state', (value) => {
+      playbackState.value = value;
+      isPlaying.value = value === 'playing';
+    });
+    engine.on('error', (value) => {
+      playbackError.value = value;
+    });
+    engine.setVolume(volume.value);
+    return engine;
+  };
+  const selectedBackground = ref<BackgroundValue | null>(
+    getRandomBackgroundImage(availableBackgrounds) ?? availableBackgrounds[0] ?? null,
+  );
   const backgroundBlurPercent = ref(0);
   const importedBackgrounds = ref<BackgroundMedia[]>([]);
   const allBackgrounds = computed(() => [...importedBackgrounds.value, ...availableBackgrounds]);
@@ -49,12 +79,34 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
           null)
         : (selected ?? availableBackgrounds[0] ?? null);
   };
-  const togglePlay = () => {
-    isPlaying.value = !isPlaying.value;
+  const loadComposition = async (composition: ClipComposition) => {
+    const generation = ++loadGeneration;
+    const previousTime = currentTime.value;
+    duration.value = composition.clips.reduce(
+      (end, clip) => Math.max(end, (clip.timelineStartMs + clip.timelineDurationMs) / 1_000),
+      0,
+    );
+    playbackError.value = null;
+    // The engine closes its cached frames synchronously when it reloads.
+    // Invalidate Vue consumers before they can render one of those closed bitmaps.
+    frameVersion.value += 1;
+    const playback = ensureEngine();
+    await playback.loadComposition(composition);
+    if (disposed || generation !== loadGeneration || playback !== engine) return;
+    if (previousTime > 0) await playback.seek(Math.min(previousTime, duration.value), 'seek');
   };
-  const seek = (time: number) => {
+
+  const setPlaying = async (playing: boolean) => {
+    const playback = ensureEngine();
+    if (playing) await playback.play(currentTime.value);
+    else playback.pause();
+  };
+  const togglePlay = () => setPlaying(!isPlaying.value);
+  const seek = async (time: number, mode: 'seek' | 'scrub' = 'seek') => {
     if (!Number.isFinite(time)) throw new RangeError('Playback time must be finite.');
-    currentTime.value = Math.max(0, Math.min(time, duration.value));
+    const target = Math.max(0, Math.min(time, duration.value));
+    currentTime.value = target;
+    return ensureEngine().seek(target, mode);
   };
   const formatTime = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds < 0)
@@ -65,12 +117,14 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
       .toString()
       .padStart(2, '0')}`;
   };
-  return {
+  const api = {
     isPlaying,
     currentTime,
     duration,
     volume,
-    videoSrc,
+    playbackState,
+    playbackError,
+    frameVersion,
     selectedBackground,
     backgroundBlurPercent,
     selectedBackgroundMedia,
@@ -79,10 +133,23 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     addBackground,
     setUserBackgrounds,
     restoreBackgrounds,
+    loadComposition,
+    setPlaying,
     togglePlay,
     seek,
+    frameFor: (clipId: string) => engine?.frameFor(clipId) ?? null,
     formattedCurrentTime: computed(() => formatTime(currentTime.value)),
     formattedDuration: computed(() => formatTime(duration.value)),
     formatTime,
   };
+
+  watch(volume, (value) => engine?.setVolume(value));
+  onScopeDispose(() => {
+    disposed = true;
+    loadGeneration += 1;
+    const playback = engine;
+    engine = null;
+    playback?.dispose();
+  });
+  return api;
 }

@@ -34,9 +34,11 @@ describe('ProjectPicker', () => {
     await settle();
     expect(wrapper.text()).toContain('First');
     expect(wrapper.text()).toContain('Unknown date');
+    expect(wrapper.findAll('.project-card')[1]?.find('.current-indicator').exists()).toBe(true);
+    await wrapper.findAll('.project-card')[0]?.trigger('click');
     const open = wrapper.findAll('button').find((button) => button.text().includes('Open project'));
     await open?.trigger('click');
-    expect(wrapper.emitted('open-project')).toEqual([[projects[1]]]);
+    expect(wrapper.emitted('open-project')).toEqual([[projects[0]]]);
   });
   it('shows a recoverable loading error and retries', async () => {
     capture.listProjects.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([]);

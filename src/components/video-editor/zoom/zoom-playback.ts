@@ -41,9 +41,19 @@ export function regionStrength(region: ZoomElement, timeMs: number): number {
   return 1 - easeOut((adjusted - outStart) / ZOOM_OUT_MS);
 }
 
-export function cursorFocusAt(samples: CursorTelemetryPoint[], timeMs: number): ZoomFocus | null {
-  const next = samples.find((sample) => sample.timeMs > timeMs);
-  const previous = [...samples].reverse().find((sample) => sample.timeMs <= timeMs);
+export function cursorFocusAt(samples: readonly CursorTelemetryPoint[], timeMs: number): ZoomFocus | null {
+  let lower = 0;
+  let upper = samples.length - 1;
+  let previousIndex = -1;
+  while (lower <= upper) {
+    const middle = (lower + upper) >> 1;
+    if (samples[middle]!.timeMs <= timeMs) {
+      previousIndex = middle;
+      lower = middle + 1;
+    } else upper = middle - 1;
+  }
+  const previous = previousIndex >= 0 ? samples[previousIndex] : undefined;
+  const next = samples[previousIndex + 1];
   if (!previous) return next ? { cx: next.cx, cy: next.cy } : null;
   if (!next) return { cx: previous.cx, cy: previous.cy };
   const t = (timeMs - previous.timeMs) / Math.max(1, next.timeMs - previous.timeMs);
@@ -51,7 +61,7 @@ export function cursorFocusAt(samples: CursorTelemetryPoint[], timeMs: number): 
 }
 
 /** Smooths recorded cursor samples so a fast cross-screen movement pans the camera instead of snapping it. */
-export function smoothedCursorFocusAt(samples: CursorTelemetryPoint[], timeMs: number): ZoomFocus | null {
+export function smoothedCursorFocusAt(samples: readonly CursorTelemetryPoint[], timeMs: number): ZoomFocus | null {
   const current = cursorFocusAt(samples, timeMs);
   if (!current) return null;
   let totalWeight = 1;
@@ -70,26 +80,24 @@ export function smoothedCursorFocusAt(samples: CursorTelemetryPoint[], timeMs: n
   return { cx: weightedX / totalWeight, cy: weightedY / totalWeight };
 }
 
-export function zoomAtTime(
-  elements: ZoomElement[],
+function zoomAtSortedTime(
+  elements: readonly ZoomElement[],
   timeMs: number,
-  telemetry: CursorTelemetryPoint[] = [],
+  telemetry: readonly CursorTelemetryPoint[],
 ): AppliedZoom | null {
-  const pair = [...elements]
-    .sort((left, right) => left.startMs - right.startMs)
-    .find((current, index, sorted) => {
-      const next = sorted[index + 1];
-      return (
-        next &&
-        next.startMs - current.endMs <= CONNECTED_GAP_MS &&
-        timeMs >= current.endMs + LEAD_MS &&
-        timeMs <= current.endMs + LEAD_MS + CONNECTED_PAN_MS
-      );
-    });
+  const pair = elements.find((current, index) => {
+    const next = elements[index + 1];
+    return (
+      next &&
+      next.startMs - current.endMs <= CONNECTED_GAP_MS &&
+      timeMs >= current.endMs + LEAD_MS &&
+      timeMs <= current.endMs + LEAD_MS + CONNECTED_PAN_MS
+    );
+  });
   if (pair) {
-    const next = [...elements]
-      .sort((left, right) => left.startMs - right.startMs)
-      .find((candidate) => candidate.startMs >= pair.endMs && candidate.startMs - pair.endMs <= CONNECTED_GAP_MS);
+    const next = elements.find(
+      (candidate) => candidate.startMs >= pair.endMs && candidate.startMs - pair.endMs <= CONNECTED_GAP_MS,
+    );
     if (next) {
       const t = easeOut((timeMs - pair.endMs - LEAD_MS) / CONNECTED_PAN_MS);
       const startScale = ZOOM_DEPTH_SCALES[pair.depth];
@@ -104,19 +112,23 @@ export function zoomAtTime(
       };
     }
   }
-  const active = elements
-    .map((element) => ({ element, strength: regionStrength(element, timeMs) }))
-    .filter((entry) => entry.strength > 0)
-    .sort((a, b) => b.strength - a.strength || b.element.startMs - a.element.startMs);
-  if (active.length === 0) return null;
-  const current = active[0];
-  const currentScale = ZOOM_DEPTH_SCALES[current.element.depth];
-  const next = elements
-    .filter(
-      (candidate) =>
-        candidate.startMs >= current.element.endMs && candidate.startMs - current.element.endMs <= CONNECTED_GAP_MS,
+  let current: { element: ZoomElement; strength: number } | null = null;
+  for (const element of elements) {
+    const strength = regionStrength(element, timeMs);
+    if (strength <= 0) continue;
+    if (
+      !current ||
+      strength > current.strength ||
+      (strength === current.strength && element.startMs > current.element.startMs)
     )
-    .sort((a, b) => a.startMs - b.startMs)[0];
+      current = { element, strength };
+  }
+  if (!current) return null;
+  const currentScale = ZOOM_DEPTH_SCALES[current.element.depth];
+  const next = elements.find(
+    (candidate) =>
+      candidate.startMs >= current.element.endMs && candidate.startMs - current.element.endMs <= CONNECTED_GAP_MS,
+  );
   let focus = clampFocusToScale(current.element.focus, currentScale);
   let scale = currentScale;
   if (
@@ -136,4 +148,21 @@ export function zoomAtTime(
     if (cursor) focus = clampFocusToScale(cursor, scale);
   }
   return { scale: 1 + (scale - 1) * current.strength, focus, strength: current.strength, mode: current.element.mode };
+}
+
+export function createZoomTimeEvaluator(
+  elements: readonly ZoomElement[],
+  telemetry: readonly CursorTelemetryPoint[] = [],
+) {
+  const sortedElements = [...elements].sort((left, right) => left.startMs - right.startMs);
+  const sortedTelemetry = [...telemetry].sort((left, right) => left.timeMs - right.timeMs);
+  return (timeMs: number) => zoomAtSortedTime(sortedElements, timeMs, sortedTelemetry);
+}
+
+export function zoomAtTime(
+  elements: readonly ZoomElement[],
+  timeMs: number,
+  telemetry: readonly CursorTelemetryPoint[] = [],
+): AppliedZoom | null {
+  return createZoomTimeEvaluator(elements, telemetry)(timeMs);
 }

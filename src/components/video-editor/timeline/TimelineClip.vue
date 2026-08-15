@@ -1,19 +1,27 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
-import Skeleton from '~/ui/skeleton/Skeleton.vue';
-import type { Clip, MediaAsset } from '../composition/composition-types';
+import type { Clip, MediaAsset } from '~/media/shared/composition-types';
+import type { MediaError } from '~/media/shared';
 import { useThumbnails } from './waveform/useThumbnails';
 import { useTranslate } from '~/i18n/useTranslate';
+import type { TimelineThumbnailSlot } from './composables/timeline-viewport';
+import type { AudioWaveformStatus } from './composables/useCompositionAudioWaveforms';
+import WaveformCanvas from './waveform/WaveformCanvas.vue';
 
 const { t } = useTranslate('TimelineTracks');
 const props = defineProps<{
   clip: Clip;
   asset?: MediaAsset | null;
   duration: number;
-  visibleSeconds: number[];
+  thumbnailSlots: readonly TimelineThumbnailSlot[];
   selected: boolean;
   waveformBars?: number[];
-  trimState?: { edge: 'start' | 'end'; durationMs: number } | null;
+  waveformLeftPercent?: number;
+  waveformWidthPercent?: number;
+  waveformLoadingSegments?: Array<{ leftPercent: number; widthPercent: number }>;
+  waveformStatus?: AudioWaveformStatus;
+  waveformError?: MediaError;
+  trimState?: { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
   deferThumbnailRequests?: boolean;
 }>();
 const emit = defineEmits<{
@@ -22,26 +30,25 @@ const emit = defineEmits<{
   (event: 'trim', value: { event: PointerEvent; edge: 'start' | 'end' }): void;
 }>();
 
-const source = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset.src : null));
-const { thumbnails, requestVisibleFrames } = useThumbnails(source);
+const videoAsset = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset : null));
+const { thumbnails, requestVisibleFrames } = useThumbnails(videoAsset);
 const clipEndMs = computed(() => props.clip.timelineStartMs + props.clip.timelineDurationMs);
-type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number };
+type TimelineFrame = { timelineSecond: number; mediaSecond: number; relativeMs: number; durationMs: number };
 const frames = computed<TimelineFrame[]>(() =>
-  props.visibleSeconds.flatMap((timelineSecond) => {
-    const timelineMs = timelineSecond * 1_000;
-    if (
-      props.clip.kind === 'audio' ||
-      timelineMs < props.clip.timelineStartMs ||
-      timelineMs >= clipEndMs.value ||
-      props.asset?.kind !== 'video'
-    )
-      return [];
+  props.thumbnailSlots.flatMap((slot) => {
+    if (props.clip.kind === 'audio' || props.asset?.kind !== 'video') return [];
+    const slotStartMs = slot.timelineSeconds * 1_000;
+    const slotEndMs = slotStartMs + slot.durationSeconds * 1_000;
+    const timelineMs = Math.max(slotStartMs, props.clip.timelineStartMs);
+    const timelineEndMs = Math.min(slotEndMs, clipEndMs.value);
+    if (timelineEndMs <= timelineMs) return [];
     const sourceMs = props.clip.sourceInMs + (timelineMs - props.clip.timelineStartMs) * props.clip.playbackRate;
     return [
       {
-        timelineSecond,
-        mediaSecond: Math.max(0, Math.floor(sourceMs / 1_000)),
+        timelineSecond: slot.timelineSeconds,
+        mediaSecond: Math.max(0, Math.round(sourceMs) / 1_000),
         relativeMs: timelineMs - props.clip.timelineStartMs,
+        durationMs: timelineEndMs - timelineMs,
       },
     ];
   }),
@@ -53,7 +60,7 @@ const displayedFrames = computed(() => (frozenFrames.value.length ? frozenFrames
 // move commit. Refresh only when the viewport or source timing actually changes.
 const thumbnailRefreshKey = computed(() =>
   [
-    props.visibleSeconds.join(','),
+    props.thumbnailSlots.map((slot) => `${slot.timelineSeconds}:${slot.durationSeconds}`).join(','),
     props.asset?.src ?? '',
     props.clip.sourceInMs,
     props.clip.sourceDurationMs,
@@ -61,7 +68,7 @@ const thumbnailRefreshKey = computed(() =>
   ].join('|'),
 );
 watch(
-  thumbnailRefreshKey,
+  [thumbnailRefreshKey, () => props.deferThumbnailRequests],
   () => {
     if (props.deferThumbnailRequests) return;
     const value = frames.value;
@@ -77,8 +84,18 @@ const clipStyle = computed(() => ({
 }));
 const frameStyle = (frame: TimelineFrame) => ({
   left: `${(frame.relativeMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
-  width: `${(1_000 / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
+  width: `${(frame.durationMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
 });
+const thumbnailFor = (frame: TimelineFrame) => {
+  const exact = thumbnails[frame.mediaSecond];
+  if (exact) return exact;
+  let nearest: { distance: number; url: string } | null = null;
+  for (const [time, url] of Object.entries(thumbnails)) {
+    const distance = Math.abs(Number(time) - frame.mediaSecond);
+    if (!nearest || distance < nearest.distance) nearest = { distance, url };
+  }
+  return nearest?.url ?? null;
+};
 const formatTrimTime = (milliseconds: number) => {
   const seconds = Math.max(0, milliseconds / 1_000);
   const minutes = Math.floor(seconds / 60);
@@ -123,7 +140,7 @@ onUnmounted(() => stopMarquee());
   <button
     type="button"
     class="timeline-clip"
-    :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled }]"
+    :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
     :style="clipStyle"
     @click.stop="emit('select')"
     @pointerdown="emit('move', $event)"
@@ -131,8 +148,23 @@ onUnmounted(() => stopMarquee());
     @pointerleave="stopMarqueeForEvent"
   >
     <div v-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
-      <span v-for="(height, index) in waveformBars" :key="index" :style="{ height: `${height}px` }" />
-      <span v-if="!waveformBars?.length" class="waveform-unavailable">{{ t('waveformUnavailable') }}</span>
+      <div
+        v-if="waveformBars?.length"
+        class="waveform-slice"
+        :style="{ left: `${waveformLeftPercent ?? 0}%`, width: `${waveformWidthPercent ?? 100}%` }"
+      >
+        <WaveformCanvas :bars="waveformBars" :selected="selected" />
+        <span
+          v-for="(segment, index) in waveformLoadingSegments"
+          :key="`loading:${index}`"
+          class="waveform-segment-loading"
+          :style="{ left: `${segment.leftPercent}%`, width: `${segment.widthPercent}%` }"
+        />
+      </div>
+      <span v-else-if="waveformStatus === 'loading'" class="waveform-loading" />
+      <span v-else-if="waveformStatus === 'error'" class="waveform-unavailable" :title="waveformError?.message">
+        {{ t('waveformUnavailable') }}
+      </span>
     </div>
     <div v-else-if="asset?.kind === 'video'" class="thumbnails-track">
       <div
@@ -141,14 +173,17 @@ onUnmounted(() => stopMarquee());
         class="thumbnail-frame"
         :style="frameStyle(frame)"
       >
-        <img
-          v-if="thumbnails[frame.mediaSecond]"
-          :src="thumbnails[frame.mediaSecond]"
-          class="thumbnail-img"
-          alt=""
-          draggable="false"
-        />
-        <Skeleton v-else width="100%" height="100%" radius="0" />
+        <Transition name="thumbnail-crossfade">
+          <img
+            v-if="thumbnailFor(frame)"
+            :key="thumbnailFor(frame)!"
+            :src="thumbnailFor(frame)!"
+            class="thumbnail-img"
+            alt=""
+            draggable="false"
+          />
+        </Transition>
+        <span v-if="!thumbnails[frame.mediaSecond]" class="thumbnail-loading-overlay" />
       </div>
     </div>
     <img
@@ -160,10 +195,13 @@ onUnmounted(() => stopMarquee());
     />
     <span
       class="trim-handle start"
+      :class="{ 'at-limit': trimState?.edge === 'start' && trimState?.atLimit }"
       :title="t('trimStart')"
       @pointerdown.stop="emit('trim', { event: $event, edge: 'start' })"
     >
-      <span v-if="trimState?.edge === 'start'" class="trim-side-badge">{{ formatTrimTime(trimState.durationMs) }}</span>
+      <span v-if="trimState?.edge === 'start'" class="trim-side-badge" :class="{ 'at-limit': trimState?.atLimit }">{{
+        formatTrimTime(trimState.durationMs)
+      }}</span>
     </span>
     <span class="clip-label-overlay">
       <span class="clip-label-text">{{ clip.name }}</span>
@@ -171,10 +209,13 @@ onUnmounted(() => stopMarquee());
     </span>
     <span
       class="trim-handle end"
+      :class="{ 'at-limit': trimState?.edge === 'end' && trimState?.atLimit }"
       :title="t('trimEnd')"
       @pointerdown.stop="emit('trim', { event: $event, edge: 'end' })"
     >
-      <span v-if="trimState?.edge === 'end'" class="trim-side-badge">{{ formatTrimTime(trimState.durationMs) }}</span>
+      <span v-if="trimState?.edge === 'end'" class="trim-side-badge" :class="{ 'at-limit': trimState?.atLimit }">{{
+        formatTrimTime(trimState.durationMs)
+      }}</span>
     </span>
   </button>
 </template>
@@ -226,7 +267,7 @@ onUnmounted(() => stopMarquee());
   top: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--color-bg-surface);
+  background: #111;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
 }
 .thumbnail-img,
@@ -236,6 +277,34 @@ onUnmounted(() => stopMarquee());
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+.thumbnail-img {
+  position: absolute;
+  inset: 0;
+}
+.thumbnail-crossfade-enter-active,
+.thumbnail-crossfade-leave-active {
+  transition: opacity 160ms ease;
+}
+.thumbnail-crossfade-enter-from,
+.thumbnail-crossfade-leave-to {
+  opacity: 0;
+}
+.thumbnail-crossfade-leave-active {
+  position: absolute;
+}
+.thumbnail-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  animation: thumbnail-pending 900ms ease-in-out infinite alternate;
+}
+@keyframes thumbnail-pending {
+  to {
+    background: rgba(0, 0, 0, 0.32);
+  }
 }
 .waveform {
   position: absolute;
@@ -256,23 +325,43 @@ onUnmounted(() => stopMarquee());
   height: 1px;
   background: rgba(5, 150, 105, 0.32);
 }
-.waveform > span:not(.waveform-unavailable) {
-  flex: 1 1 auto;
-  max-width: 2px;
-  min-width: 1px;
-  border-radius: 1px;
-  background: #07865f;
-  opacity: 0.9;
+.waveform-slice {
+  position: absolute;
+  top: 0;
+  bottom: 0;
 }
-.timeline-clip.selected .waveform > span:not(.waveform-unavailable) {
-  background: #056247;
-  opacity: 1;
+.waveform-segment-loading {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.2);
+  border-inline: 1px solid rgba(7, 134, 95, 0.42);
+  pointer-events: none;
+  animation: waveform-segment-pending 700ms ease-in-out infinite alternate;
+}
+@keyframes waveform-segment-pending {
+  to {
+    background: rgba(0, 0, 0, 0.34);
+  }
 }
 .waveform-unavailable {
   width: 100%;
   color: var(--text-muted);
   font-size: 9px;
   text-align: center;
+}
+.waveform-loading {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background: rgba(7, 134, 95, 0.2);
+  animation: waveform-pending 800ms ease-in-out infinite alternate;
+}
+@keyframes waveform-pending {
+  to {
+    opacity: 0.45;
+  }
 }
 .trim-handle {
   position: absolute;
@@ -286,6 +375,11 @@ onUnmounted(() => stopMarquee());
 }
 .trim-handle:hover {
   background: var(--color-primary);
+}
+.trim-handle.at-limit,
+.trim-handle.at-limit:hover {
+  background: var(--color-destructive, #ef4444);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
 }
 .trim-handle.start {
   left: 0;
@@ -306,6 +400,14 @@ onUnmounted(() => stopMarquee());
   font-family: monospace;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.trim-side-badge.at-limit {
+  background: var(--color-destructive, #ef4444);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+}
+.timeline-clip.trim-at-limit {
+  border-color: var(--color-destructive, #ef4444) !important;
+  box-shadow: 0 0 0 1px var(--color-destructive, #ef4444);
 }
 .trim-handle.start .trim-side-badge {
   left: 8px;

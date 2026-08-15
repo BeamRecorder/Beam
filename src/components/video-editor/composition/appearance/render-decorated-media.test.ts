@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { frameContentRect } from './frames';
 import { applyClipShadow, drawDecoratedMedia, shadowBlurForAppearance } from './render-decorated-media';
-import type { ClipAppearance } from '../composition-types';
+import type { ClipAppearance } from '~/media/shared/composition-types';
 
 const appearance = (patch: Partial<ClipAppearance> = {}): ClipAppearance => ({
   cornerRadius: 'sm',
   shadowSize: 'none',
+  shadowBlur: 0,
+  shadowMode: 'solid',
   shadowColor: '#000000',
   shadowDirection: 'all',
   borderEnabled: false,
@@ -64,6 +66,20 @@ describe('decorated media rendering', () => {
     expect(ctx.stroke).toHaveBeenCalledOnce();
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 2, 3, 100, 60);
   });
+  it('draws an explicit source crop at frame dimensions and mirrors it', () => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source,
+      sourceRect: { x: 64, y: 36, width: 512, height: 288 },
+      rect: { x: 10, y: 20, width: 400, height: 240 },
+      appearance: appearance({ shadowSize: 'none' }),
+      mirrored: true,
+      mirroredY: true,
+      title: 'Cropped',
+    });
+    expect(ctx.scale).toHaveBeenCalledWith(-1, -1);
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 64, 36, 512, 288, 10, 20, 400, 240);
+  });
   it('draws Safari media inside its chrome and uses the supplied title', () => {
     const ctx = context();
     drawDecoratedMedia(ctx, {
@@ -112,8 +128,8 @@ describe('decorated media rendering', () => {
   });
   it('keeps adaptive color independent from the selected shadow size', () => {
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'none', shadowMode: 'adaptive' }))).toBe(0);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: 'sm', shadowMode: 'adaptive' }))).toBe(10);
-    expect(shadowBlurForAppearance(appearance({ shadowSize: 'md', shadowMode: 'adaptive' }))).toBe(20);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'sm', shadowMode: 'adaptive' }))).toBe(16);
+    expect(shadowBlurForAppearance(appearance({ shadowSize: 'md', shadowMode: 'adaptive' }))).toBe(24);
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'lg', shadowMode: 'adaptive' }))).toBe(32);
     expect(shadowBlurForAppearance(appearance({ shadowSize: 'custom', shadowBlur: 56, shadowMode: 'adaptive' }))).toBe(
       56,
@@ -124,11 +140,18 @@ describe('decorated media rendering', () => {
     applyClipShadow(
       ctx,
       appearance({ shadowSize: 'custom', shadowBlur: 40, shadowMode: 'solid' }),
-      100,
       source,
       undefined,
       0.5,
     );
     expect(ctx.shadowBlur).toBe(20);
+  });
+  it('keeps a small directional shadow compact at preview scale', () => {
+    const ctx = context();
+    applyClipShadow(ctx, appearance({ shadowSize: 'sm', shadowDirection: 'bottom-right' }), source, undefined, 0.5);
+
+    expect(ctx.shadowBlur).toBe(8);
+    expect(ctx.shadowOffsetX).toBe(4);
+    expect(ctx.shadowOffsetY).toBe(4);
   });
 });

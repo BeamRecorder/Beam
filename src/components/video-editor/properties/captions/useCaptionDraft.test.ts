@@ -1,8 +1,9 @@
 import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CaptionClip } from '../../composition/composition-types';
+import type { CaptionClip } from '~/media/shared/composition-types';
 import { useCaptionDraft } from './useCaptionDraft';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 const captionClip = (id = 'caption-1'): CaptionClip => ({
   id,
@@ -16,9 +17,10 @@ const captionClip = (id = 'caption-1'): CaptionClip => ({
   enabled: true,
   order: 0,
   caption: {
+    type: 'text',
     style: {
+      ...createDefaultCaptionStyle(36),
       color: '#ffffff',
-      fontSize: 36,
       shadowColor: '#000000',
       shadowBlur: 0,
       placement: 'bottom',

@@ -3,14 +3,16 @@ import { computed, ref } from 'vue';
 import { Download, FolderOpen, X } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import CopyButton from '~/ui/button/CopyButton.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
-import { supportedVideoCodec } from './mediabunny/exporter';
 import { useExportJob } from './useExportJob';
 import { bitrateFor } from './export-presets';
 import type { ExportFormat, ExportPreset, ExportRequest } from './export-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import { safeExportErrorMessage, technicalExportError } from './mediabunny/export-preflight';
+import { buildBeamExportReport } from './export-diagnostics';
 
 const { t } = useTranslate('ExportPopover');
 
@@ -27,12 +29,8 @@ const formatDescriptions: Record<ExportFormat, string> = {
   mp4: t('mp4Desc'),
 };
 
-const nativeWidth = computed(
-  () => props.request.snapshot.canvas?.width || props.request.snapshot.render?.sourceWidth || 1920,
-);
-const nativeHeight = computed(
-  () => props.request.snapshot.canvas?.height || props.request.snapshot.render?.sourceHeight || 1080,
-);
+const nativeWidth = computed(() => props.request.snapshot.canvas.width);
+const nativeHeight = computed(() => props.request.snapshot.canvas.height);
 
 const computeExportDimensions = (res: ExportResolutionOption) => {
   const nativeW = nativeWidth.value;
@@ -80,10 +78,37 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
 }));
 
 const availability = ref<string | null>(null);
-const { progress, error, result, isExporting, start, cancel } = useExportJob();
+const { progress, error, errorContext, result, diagnostics, isChoosingDestination, isExporting, start, cancel } =
+  useExportJob();
 const toastStore = useToastStore();
-const percentage = computed(() =>
-  progress.value ? (progress.value.completed / Math.max(1, progress.value.total)) * 100 : 0,
+const percentage = computed(() => {
+  const value = progress.value;
+  return value?.totalImages ? (value.completedImages / value.totalImages) * 100 : 0;
+});
+const displayError = computed(() => availability.value || (error.value ? safeExportErrorMessage(error.value) : null));
+
+const lastRequest = ref<ExportRequest | null>(null);
+const reportRequest = computed<ExportRequest>(() => {
+  if (lastRequest.value) return lastRequest.value;
+  const { width, height } = activeDimensions.value;
+  return {
+    ...props.request,
+    format: format.value,
+    preset: preset.value,
+    snapshot: { ...props.request.snapshot, canvas: { ...props.request.snapshot.canvas, width, height } },
+  };
+});
+const exportReport = computed(() =>
+  buildBeamExportReport({
+    request: reportRequest.value,
+    format: reportRequest.value.format,
+    preset: reportRequest.value.preset,
+    status: error.value ? 'failed' : result.value ? 'completed' : 'running',
+    progress: progress.value,
+    diagnostics: result.value?.diagnostics ?? diagnostics.value,
+    outputPath: result.value?.path,
+    error: error.value ? technicalExportError(errorContext?.value ?? error.value) : undefined,
+  }),
 );
 
 const openFile = (path: string) => {
@@ -108,11 +133,20 @@ const run = async () => {
       },
     },
   };
-  if (!(await supportedVideoCodec(request))) {
-    availability.value = t('formatNotSupported', { format: format.value.toUpperCase() });
+  lastRequest.value = request;
+  await start(request);
+  if (error.value) {
+    const technical = exportReport.value;
+    toastStore.error(safeExportErrorMessage(error.value), 0, {
+      label: t('copyError'),
+      copiedLabel: t('copied'),
+      errorLabel: t('copyFailed'),
+      detail: technical,
+      dismissOnSuccess: false,
+      copyText: technical,
+    });
     return;
   }
-  await start(request);
   if (result.value?.path) {
     const exportedPath = result.value.path;
     const filename = exportedPath.split(/[/\\]/).pop() || t('video');
@@ -122,18 +156,10 @@ const run = async () => {
     });
   }
 };
-
-const formatMs = (ms: number) => {
-  const totalSeconds = Math.max(0, ms / 1000);
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = Math.floor(totalSeconds % 60);
-  const millis = Math.floor((totalSeconds % 1) * 10);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${millis}s`;
-};
 </script>
 
 <template>
-  <Popover align="right" :match-trigger-width="false">
+  <Popover align="right" :match-trigger-width="false" :close-on-window-blur="false">
     <template #trigger>
       <Button variant="primary" size="xs" :icon="Download" class="export-trigger">
         {{ isExporting ? `${Math.round(percentage)}%` : t('exportVideo') }}
@@ -143,19 +169,28 @@ const formatMs = (ms: number) => {
       <section class="export-popover" :aria-label="t('exportVideoAria')" @click.stop>
         <div v-if="isExporting" class="export-progress-card">
           <div class="progress-header">
-            <span class="stage-title">{{ progress?.stageLabel || t('exporting') }}</span>
-            <span class="percentage-badge">{{ Math.round(percentage) }}%</span>
+            <span class="progress-title">{{ t('exporting') }}</span>
+            <span class="percentage-badge" aria-live="polite">{{ Math.round(percentage) }}%</span>
           </div>
 
           <ProgressBar :value="percentage" class="main-progress-bar" />
 
-          <div class="progress-details">
-            <span class="detail-item">{{
-              t('frameCount', { completed: progress?.completed ?? 0, total: progress?.total ?? 0 })
-            }}</span>
-            <span class="detail-item time-item"
-              >{{ formatMs(progress?.currentTimeMs ?? 0) }} / {{ formatMs(progress?.totalTimeMs ?? 0) }}</span
-            >
+          <div class="progress-footer">
+            <div class="progress-actions">
+              <CopyButton
+                :text="exportReport"
+                display="text"
+                variant="ghost"
+                size="xs"
+                :label="t('copyReport')"
+                :copied-label="t('copied')"
+                :error-label="t('copyFailed')"
+                class="copy-progress-button"
+              />
+            </div>
+            <span class="progress-details">
+              {{ t('frameCount', { completed: progress?.completedImages ?? 0, total: progress?.totalImages ?? 0 }) }}
+            </span>
           </div>
 
           <div class="actions">
@@ -231,15 +266,29 @@ const formatMs = (ms: number) => {
             <span class="option-hint">{{ presetDescriptions[preset] }}</span>
           </div>
 
-          <p v-if="availability || error" class="error" role="alert">{{ availability || error }}</p>
+          <p v-if="displayError" class="error" role="alert">{{ displayError }}</p>
           <div v-if="result" class="result-box">
-            <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
-            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">{{
-              t('openFile')
-            }}</Button>
+            <div class="result-header">
+              <p class="success" role="status">{{ t('savedTo', { path: result.path }) }}</p>
+              <CopyButton
+                :text="exportReport"
+                display="icon"
+                variant="ghost"
+                size="sm"
+                :label="t('copyReport')"
+                :copied-label="t('copied')"
+                :error-label="t('copyFailed')"
+                class="copy-report-icon-btn"
+              />
+            </div>
+            <Button variant="secondary" size="sm" block :icon="FolderOpen" @click="openFile(result.path)">
+              {{ t('openFile') }}
+            </Button>
           </div>
           <div class="actions">
-            <Button variant="primary" size="sm" block :icon="Download" @click="run">{{ t('exportVideo') }}</Button>
+            <Button variant="primary" size="sm" block :icon="Download" :loading="isChoosingDestination" @click="run">{{
+              t('exportVideo')
+            }}</Button>
           </div>
         </template>
       </section>
@@ -306,11 +355,20 @@ const formatMs = (ms: number) => {
 .result-box {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding: 10px;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+}
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.copy-report-icon-btn {
+  flex-shrink: 0;
 }
 .actions {
   display: flex;
@@ -331,35 +389,57 @@ const formatMs = (ms: number) => {
   gap: 8px;
 }
 
-.stage-title {
+.progress-title {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
+.progress-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  gap: 12px;
+}
+
+.progress-actions {
+  display: flex;
+  align-items: center;
+}
+
+.progress-details {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .percentage-badge {
+  display: inline-block;
+  width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--color-primary);
 }
 
-.progress-details {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
 :deep(.export-trigger) {
   -webkit-app-region: no-drag;
-  height: 28px !important;
-  min-height: 28px !important;
-  max-height: 28px !important;
-  padding: 0 12px !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  display: inline-flex !important;
-  align-items: center !important;
+  width: auto;
+  min-width: 9rem;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 </style>

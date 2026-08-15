@@ -15,7 +15,7 @@ describe('DeleteItem.vue', () => {
     const wrapper = mount(DeleteItem, {
       props: { label: 'Delete Clip' },
     });
-    await wrapper.trigger('click');
+    await wrapper.find('button').trigger('click');
     expect(wrapper.emitted('click')).toHaveLength(1);
   });
 
@@ -23,11 +23,11 @@ describe('DeleteItem.vue', () => {
     const wrapper = mount(DeleteItem, {
       props: { label: 'Delete Clip', confirm: true, confirmLabel: 'Are you sure?' },
     });
-    await wrapper.trigger('click');
+    await wrapper.find('button').trigger('click');
     expect(wrapper.emitted('click')).toBeUndefined();
     expect(wrapper.text()).toBe('Are you sure?');
 
-    await wrapper.trigger('click');
+    await wrapper.find('button').trigger('click');
     expect(wrapper.emitted('click')).toHaveLength(1);
   });
 });

@@ -132,6 +132,11 @@ impl InputEventSidecar {
     rename_all_fields = "camelCase"
 )]
 pub enum NativeInputEvent {
+    MouseMotion {
+        monotonic_ns: u64,
+        delta_x: i32,
+        delta_y: i32,
+    },
     MouseButton {
         monotonic_ns: u64,
         button: u8,
@@ -149,9 +154,9 @@ impl NativeInputEvent {
     #[must_use]
     pub fn monotonic_ns(&self) -> u64 {
         match self {
-            Self::MouseButton { monotonic_ns, .. } | Self::Shortcut { monotonic_ns, .. } => {
-                *monotonic_ns
-            }
+            Self::MouseMotion { monotonic_ns, .. }
+            | Self::MouseButton { monotonic_ns, .. }
+            | Self::Shortcut { monotonic_ns, .. } => *monotonic_ns,
         }
     }
 }

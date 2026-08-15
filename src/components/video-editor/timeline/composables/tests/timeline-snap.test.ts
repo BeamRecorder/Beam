@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from '../timeline-snap';
-import type { ClipComposition } from '../../../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../../../zoom/zoom-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const mockComposition = (overrides: Partial<ClipComposition> = {}): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [],
   clips: [
     {
@@ -20,6 +22,9 @@ const mockComposition = (overrides: Partial<ClipComposition> = {}): ClipComposit
       order: 0,
       assetId: 'asset-1',
       transform: { x: 0, y: 0, width: 1, height: 1 },
+      appearance: createDefaultClipAppearance('video'),
+      isMirrored: false,
+      isMirroredY: false,
     },
     {
       id: 'clip-2',

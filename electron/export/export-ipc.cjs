@@ -22,11 +22,14 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
     if (!job || job.ownerId !== ownerId(event)) throw new Error('Export job introuvable ou non autorisé.');
     return job;
   };
-  const cleanup = (job) => {
-    if (job.handle) fsModule.closeSync(job.handle);
-    job.handle = null;
-    if (fsModule.existsSync(job.temporaryPath)) fsModule.unlinkSync(job.temporaryPath);
+  const cleanup = async (job) => {
     jobs.delete(job.id);
+    await job.queue.catch(() => undefined);
+    if (job.handle) await job.handle.close().catch(() => undefined);
+    job.handle = null;
+    await fsModule.promises.unlink(job.temporaryPath).catch((error) => {
+      if (error?.code !== 'ENOENT') throw error;
+    });
   };
 
   ipcMain.handle('export:begin', async (event, payload = {}) => {
@@ -45,11 +48,19 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
       throw new Error(`Le fichier doit utiliser l’extension .${format}.`);
     const id = crypto.randomUUID();
     const temporaryPath = `${targetPath}.${id}.partial`;
-    const handle = fsModule.openSync(temporaryPath, 'wx');
-    jobs.set(id, { id, ownerId: ownerId(event), targetPath, temporaryPath, handle, nextSequence: 0 });
+    const handle = await fsModule.promises.open(temporaryPath, 'wx');
+    jobs.set(id, {
+      id,
+      ownerId: ownerId(event),
+      targetPath,
+      temporaryPath,
+      handle,
+      nextSequence: 0,
+      queue: Promise.resolve(),
+    });
     return { canceled: false, jobId: id };
   });
-  ipcMain.handle('export:write', (event, payload = {}) => {
+  ipcMain.handle('export:write', async (event, payload = {}) => {
     const job = requireJob(event, payload.jobId);
     if (!Number.isSafeInteger(payload.sequence) || payload.sequence !== job.nextSequence)
       throw new Error('Ordre de chunk d’export invalide.');
@@ -57,21 +68,25 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
     const data = payload.data;
     if (!(data instanceof Uint8Array) || data.byteLength === 0 || data.byteLength > MAX_CHUNK_BYTES)
       throw new Error('Taille de chunk d’export invalide.');
-    fsModule.writeSync(
-      job.handle,
-      Buffer.from(data.buffer, data.byteOffset, data.byteLength),
-      0,
-      data.byteLength,
-      payload.position,
-    );
     job.nextSequence += 1;
+    const buffer = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+    job.queue = job.queue.then(async () => {
+      let offset = 0;
+      while (offset < buffer.byteLength) {
+        const result = await job.handle.write(buffer, offset, buffer.byteLength - offset, payload.position + offset);
+        if (!result || result.bytesWritten <= 0) throw new Error('Écriture de chunk d’export incomplète.');
+        offset += result.bytesWritten;
+      }
+    });
+    await job.queue;
   });
-  ipcMain.handle('export:finalize', (event, payload = {}) => {
+  ipcMain.handle('export:finalize', async (event, payload = {}) => {
     const job = requireJob(event, payload.jobId);
-    fsModule.fsyncSync(job.handle);
-    fsModule.closeSync(job.handle);
+    await job.queue;
+    await job.handle.sync();
+    await job.handle.close();
     job.handle = null;
-    fsModule.renameSync(job.temporaryPath, job.targetPath);
+    await fsModule.promises.rename(job.temporaryPath, job.targetPath);
     jobs.delete(job.id);
     return { path: job.targetPath };
   });
@@ -90,7 +105,7 @@ function registerExportIpc({ ipcMain, dialog, BrowserWindow, fsModule = fs, path
   });
   return {
     cleanupWindow: (webContents) => {
-      for (const job of jobs.values()) if (job.ownerId === webContents.id) cleanup(job);
+      for (const job of jobs.values()) if (job.ownerId === webContents.id) void cleanup(job);
     },
   };
 }

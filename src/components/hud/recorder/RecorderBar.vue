@@ -21,9 +21,7 @@ const props = defineProps<{
 }>();
 
 const isMicEnabled = computed(() => props.microphoneEnabled && props.phase !== 'finalizing');
-const isSystemAudioEnabled = computed(() => props.systemAudioEnabled && props.phase !== 'finalizing');
-const { level: micLevel } = useAudioLevelMeter(isMicEnabled, undefined, false);
-const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
+const { level: micLevel } = useAudioLevelMeter(isMicEnabled);
 
 const emit = defineEmits<{
   stop: [];
@@ -109,7 +107,7 @@ const emit = defineEmits<{
       @pointerdown.stop
       @click="emit('systemAudio')"
     >
-      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioLevel" size="sm" />
+      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="0" size="sm" />
     </button>
 
     <div class="cancel-slot">
@@ -131,12 +129,12 @@ const emit = defineEmits<{
 .recorder-bar {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   z-index: 999999;
   pointer-events: auto;
   width: 72px;
+  height: 344px;
   box-sizing: border-box;
-  min-height: 344px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -145,6 +143,8 @@ const emit = defineEmits<{
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
   -webkit-app-region: drag;
   cursor: grab;
   transition: opacity 0.18s ease;

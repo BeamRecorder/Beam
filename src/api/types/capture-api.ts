@@ -1,14 +1,14 @@
 import type { CaptureConfig, CreateProjectOptions, StartRecordingOptions } from './capture-config';
 import type { ScreenRegion, ScreenRegionBounds, ScreenRegionOverlayOptions } from './screen-region';
 import type { CaptureProject, CaptureSession, ProjectEditorData, ProjectZoomState } from './capture-session';
-import type { ClipComposition, MediaAsset } from '../../components/video-editor/composition/composition-types';
+import type { ClipComposition, MediaAsset } from '~/media/shared/composition-types';
 import type {
   BackgroundMedia,
   BackgroundValue,
   GradientBackground,
 } from '../../components/video-editor/composables/backgroundCatalog';
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas';
-import type { CursorClickEffects, CursorMotionSettings } from './cursor-settings';
+import type { CursorPresentationSettings } from './cursor-presentation';
 import type {
   TeleprompterDocument,
   TeleprompterSessionContext,
@@ -112,6 +112,7 @@ export interface DesktopCaptureApi extends CaptureApi {
   getProjectEditorState(projectId: string): Promise<ProjectEditorState>;
   saveProjectEditorState(projectId: string, state: ProjectEditorState): Promise<ProjectEditorState>;
   pickProjectMedia(projectId: string, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset | null>;
+  importDroppedProjectMedia(projectId: string, file: File, kind: 'video' | 'image' | 'audio'): Promise<MediaAsset>;
   listBackgroundLibrary(): Promise<BackgroundMedia[]>;
   pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>;
   onBackgroundLibraryChanged(listener: () => void): () => void;
@@ -124,6 +125,9 @@ export interface DesktopCaptureApi extends CaptureApi {
     Array<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>
   >;
   downloadWhisperModel(
+    modelId: string,
+  ): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>;
+  deleteWhisperModel(
     modelId: string,
   ): Promise<{ id: string; status: 'missing' | 'ready'; downloadedBytes: number; totalBytes: number | null }>;
   onWhisperProgress(
@@ -165,6 +169,10 @@ export interface DesktopCaptureApi extends CaptureApi {
   openUpdateChangelog(): Promise<void>;
   openDiscordInvite(): Promise<void>;
   openGithubRepository(): Promise<void>;
+  getGitHubStars(): Promise<{ stars: number }>;
+  openOnboarding(): Promise<void>;
+  closeOnboarding(): Promise<void>;
+  completeOnboarding(): Promise<void>;
   onUpdateState(listener: (state: AppUpdateState) => void): () => void;
   beginCameraSegment(payload: CameraSegmentStart): Promise<{ jobId: string }>;
   writeCameraSegment(payload: MediaSegmentChunk): Promise<void>;
@@ -208,6 +216,7 @@ export interface PreferenceSettings {
   theme: 'light' | 'dark' | 'system';
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
+  onboardingCompleted?: boolean;
   alwaysOnTop: boolean;
   devices: Record<string, unknown>;
   shortcuts: Record<string, PreferenceShortcut>;
@@ -225,12 +234,11 @@ export interface ProjectEditorPresentation {
   background?: BackgroundValue | null;
   blurPercent?: number;
   importedBackgrounds: BackgroundMedia[];
-  cursorEffects: CursorClickEffects;
-  cursorMotion?: CursorMotionSettings;
+  cursor: CursorPresentationSettings;
 }
 
 export interface ProjectEditorState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   composition: ClipComposition;
   zoom: ProjectZoomState;
   presentation: ProjectEditorPresentation;

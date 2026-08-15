@@ -1,7 +1,7 @@
 import { nextTick, ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
-import { emptyComposition } from '../../composition/composition-types';
+import { emptyComposition } from '~/media/shared/composition-types';
 import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
@@ -9,6 +9,7 @@ import {
 import type { CaptureProject, ProjectEditorState } from '../../../../api/types/capture-api';
 import type { BackgroundMedia, BackgroundValue } from '../backgroundCatalog';
 import type { ZoomElement } from '../../zoom/zoom-types';
+import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
 import {
   beginPropertyInteraction,
   endPropertyInteraction,
@@ -24,6 +25,7 @@ vi.mock('../../../../api/capture', () => ({ capture: mocks }));
 import { useProjectEditorState } from '../../composables/useProjectEditorState';
 
 const createState = () => {
+  const cursor = createDefaultCursorPresentation();
   return {
     project: ref<CaptureProject | null | undefined>({
       id: 'project',
@@ -42,6 +44,13 @@ const createState = () => {
     canvas: ref({ ...DEFAULT_OUTPUT_CANVAS }),
     cursorEffects: ref(createDefaultCursorClickEffects()),
     cursorMotion: ref(createDefaultCursorMotionSettings()),
+    selectedCursor: ref(cursor.selectedCursor),
+    cursorSize: ref(cursor.size),
+    cursorColor: ref(cursor.color),
+    cursorShadowEnabled: ref(cursor.shadow.enabled),
+    cursorShadowBlur: ref(cursor.shadow.blur),
+    cursorShadowColor: ref(cursor.shadow.color),
+    cursorShadowDirection: ref(cursor.shadow.direction),
     availableBackgrounds: ref<Array<{ items: BackgroundMedia[] }>>([]),
   };
 };
@@ -69,7 +78,9 @@ describe('useProjectEditorState property persistence', () => {
     await nextTick();
     await vi.advanceTimersByTimeAsync(250);
     expect(mocks.saveProjectEditorState).toHaveBeenCalledOnce();
-    expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.cursorEffects.left.springIntensity).toBe(80);
+    expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.cursor.clickEffects.left.springIntensity).toBe(
+      80,
+    );
     expect(editor.isSaving.value).toBe(false);
   });
 
@@ -87,7 +98,7 @@ describe('useProjectEditorState property persistence', () => {
       clips: [{ id: 'clip', kind: 'caption', name: 'Caption' } as never],
     };
     mocks.getProjectEditorState.mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       composition: loadedComposition,
       zoom: {
         elements: [
@@ -109,12 +120,9 @@ describe('useProjectEditorState property persistence', () => {
         background: null,
         blurPercent: 250,
         importedBackgrounds: [globalBackground],
-        cursorEffects: createDefaultCursorClickEffects(),
-        cursorMotion: {
-          preset: 'custom',
-          smoothing: 0.5,
-          springMassMultiplier: 1.1,
-          motionBlur: 0.2,
+        cursor: {
+          ...createDefaultCursorPresentation(),
+          motion: { preset: 'custom', smoothing: 0.5, springMassMultiplier: 1.1, motionBlur: 0.2 },
         },
       },
     } satisfies ProjectEditorState);
@@ -152,6 +160,7 @@ describe('useProjectEditorState property persistence', () => {
 
     await expect(editor.saveNow()).rejects.toThrow('disk full');
     expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.background).toEqual(custom);
+    expect(mocks.saveProjectEditorState.mock.calls[0][1].schemaVersion).toBe(3);
     await editor.saveNow();
     expect(mocks.saveProjectEditorState).toHaveBeenCalledTimes(2);
     expect(editor.isSaving.value).toBe(false);
@@ -174,7 +183,7 @@ describe('useProjectEditorState property persistence', () => {
     };
     const lateState = useProjectEditorState(state);
     mocks.getProjectEditorState.mockResolvedValue({
-      schemaVersion: 2,
+      schemaVersion: 3,
       composition: emptyComposition(),
       zoom: { elements: [], generatedSessions: [] },
       presentation: {
@@ -183,7 +192,7 @@ describe('useProjectEditorState property persistence', () => {
         background: null,
         blurPercent: 0,
         importedBackgrounds: [],
-        cursorEffects: createDefaultCursorClickEffects(),
+        cursor: createDefaultCursorPresentation(),
       },
     } satisfies ProjectEditorState);
     await lateState.load('project');

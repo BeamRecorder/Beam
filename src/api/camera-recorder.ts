@@ -62,15 +62,14 @@ export async function validateCameraAccess(sourceId: string): Promise<void> {
 export async function listBrowserCameras(): Promise<CaptureSource[]> {
   if (!navigator.mediaDevices?.enumerateDevices)
     throw new Error('Camera discovery is unavailable in this Chromium build.');
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  return devices
-    .filter((device) => device.kind === 'videoinput')
-    .map((device, index) => ({
-      id: `${CAMERA_PREFIX}${device.deviceId}`,
-      kind: 'camera' as const,
-      label: device.label || `Camera ${index + 1}`,
-      isDefault: index === 0,
-    }));
+  let devices = await navigator.mediaDevices.enumerateDevices();
+  const videoInputs = devices.filter((device) => device.kind === 'videoinput');
+  return videoInputs.map((device, index) => ({
+    id: `${CAMERA_PREFIX}${device.deviceId}`,
+    kind: 'camera' as const,
+    label: device.label || `Camera ${index + 1}`,
+    isDefault: index === 0,
+  }));
 }
 
 export class BrowserCameraRecorder {

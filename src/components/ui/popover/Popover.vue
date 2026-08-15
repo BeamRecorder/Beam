@@ -8,6 +8,7 @@ const props = withDefaults(
     block?: boolean;
     matchTriggerWidth?: boolean;
     flush?: boolean;
+    closeOnWindowBlur?: boolean;
   }>(),
   {
     align: 'left',
@@ -15,6 +16,7 @@ const props = withDefaults(
     block: false,
     matchTriggerWidth: true,
     flush: false,
+    closeOnWindowBlur: true,
   },
 );
 
@@ -116,7 +118,9 @@ watch(
 const repositionOpenPopover = () => {
   if (isOpen.value) void adjustPosition();
 };
-const closeOnWindowBlur = () => close();
+const closeOnWindowBlur = () => {
+  if (props.closeOnWindowBlur) close();
+};
 
 const isClickInsideThisOrChildPopover = (target: Element | null) => {
   if (!target) return false;

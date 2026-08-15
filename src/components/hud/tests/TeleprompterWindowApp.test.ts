@@ -6,7 +6,7 @@ const { capture } = vi.hoisted(() => ({
 }));
 vi.mock('~/api/capture', () => ({ capture }));
 
-import TeleprompterWindowApp from './TeleprompterWindowApp.vue';
+import TeleprompterWindowApp from '../teleprompter/TeleprompterWindowApp.vue';
 
 const Teleprompter = { template: '<div class="teleprompter-stub">Teleprompter</div>' };
 

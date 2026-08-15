@@ -3,8 +3,11 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorCanvas from '../EditorCanvas.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
-import type { ClipComposition, VisualClip } from '../../composition/composition-types';
+import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { MediaFrame } from '~/media/shared';
 import type { CursorClickEffects } from '../../../../api/types/cursor-settings';
+import ResizeHandle from '../../../ui/ResizeHandle/ResizeHandle.vue';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const { state } = vi.hoisted(() => ({
   state: {
@@ -15,7 +18,7 @@ const { state } = vi.hoisted(() => ({
     moveSelection: vi.fn(),
     endSelectionMove: vi.fn(),
     drawBackground: vi.fn(),
-    syncVideoPlayback: vi.fn(),
+    syncPlayback: vi.fn(),
     drawComposition: vi.fn(),
     drawWebcamClips: vi.fn(),
     updateCursor: vi.fn(),
@@ -27,26 +30,11 @@ const { state } = vi.hoisted(() => ({
     endCropDrag: vi.fn(),
     commitCrop: vi.fn(),
     transformDraft: undefined as { value: unknown } | undefined,
-    videoReady: undefined as { value: boolean } | undefined,
-    videoError: undefined as { value: string | null } | undefined,
+    transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
     renderVisualStack: undefined as ((...args: unknown[]) => void) | undefined,
   },
 }));
-
-vi.mock('../composables/useCanvasVideoElement', async () => {
-  const { ref } = await import('vue');
-  return {
-    useCanvasVideoElement: () => {
-      const video = document.createElement('video');
-      Object.defineProperty(video, 'videoWidth', { configurable: true, value: 1_280 });
-      Object.defineProperty(video, 'videoHeight', { configurable: true, value: 720 });
-      state.videoReady = ref(false);
-      state.videoError = ref<string | null>(null);
-      return { videoEl: video, videoError: state.videoError, isVideoFrameReady: state.videoReady };
-    },
-  };
-});
 
 vi.mock('../composables/useCanvasBackground', async () => {
   const { ref } = await import('vue');
@@ -55,7 +43,7 @@ vi.mock('../composables/useCanvasBackground', async () => {
       state.transition = ref(false);
       return {
         drawBackground: state.drawBackground,
-        syncVideoPlayback: state.syncVideoPlayback,
+        syncPlayback: state.syncPlayback,
         isTransitioningBackground: state.transition,
       };
     },
@@ -102,12 +90,14 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
   return {
     useLayerTransformAndCrop: () => {
       state.transformDraft = ref(null);
+      state.transformResizeCorners = ref(undefined);
       return {
         transformHandleStyle: ref({ left: '1px', top: '2px', width: '100px', height: '80px' }),
         cropContainerStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
         cropOverlayStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
         activeGuideLines: ref([]),
         transformDraft: state.transformDraft,
+        transformResizeCorners: state.transformResizeCorners,
         beginTransformDrag: state.beginTransformDrag,
         moveTransformDrag: state.moveTransformDrag,
         endTransformDrag: state.endTransformDrag,
@@ -139,6 +129,9 @@ const screen = (): VisualClip => ({
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('screen'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 
 const webcam = (): VisualClip => ({
@@ -154,6 +147,9 @@ const webcam = (): VisualClip => ({
   enabled: true,
   order: 1,
   transform: { x: 0.1, y: 0.1, width: 0.3, height: 0.3 },
+  appearance: createDefaultClipAppearance('webcam'),
+  isMirrored: false,
+  isMirroredY: false,
 });
 
 const image = (): VisualClip => ({
@@ -169,10 +165,25 @@ const image = (): VisualClip => ({
   enabled: true,
   order: 2,
   transform: { x: 0.5, y: 0.4, width: 0.2, height: 0.2 },
+  appearance: createDefaultClipAppearance('image'),
+  isMirrored: false,
+  isMirroredY: false,
+});
+
+const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
+  clipId,
+  bitmap: {} as ImageBitmap,
+  timestampSeconds: 0.5,
+  durationSeconds: 0.04,
+  width,
+  height,
+  byteSize: width * height * 4,
+  close: vi.fn(),
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 1,
+  schemaVersion: 3,
+  keyboardCaptionSessions: [],
   assets: [
     {
       id: 'screen-asset',
@@ -204,7 +215,10 @@ const props = () => ({
   motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
   selectedBackground: null,
   backgroundBlurPercent: 0,
-  videoSrc: null,
+  frameFor: (clipId: string) => (clipId === 'screen' ? frame('screen') : null),
+  frameVersion: 0,
+  playbackState: 'paused' as const,
+  playbackError: null,
   editorData: null,
   zoomElements: [],
   selectedZoom: null,
@@ -276,6 +290,8 @@ const mountEditor = (overrides: Record<string, unknown> = {}) => {
 describe('EditorCanvas', () => {
   it('renders the fallback stack, loading state, preview frame, and canvas pointer handlers', async () => {
     const mounted = mountEditor({
+      frameFor: () => null,
+      playbackState: 'loading',
       selectedZoom: { id: 'zoom', mode: 'manual', start: 0, end: 1, focus: { x: 0.5, y: 0.5 }, strength: 1 },
     });
     await flushPromises();
@@ -284,7 +300,7 @@ describe('EditorCanvas', () => {
     expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(true);
     expect(mounted.find('.preview-frame').attributes('style')).toContain('width: 800px');
     expect(state.drawBackground).toHaveBeenCalled();
-    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.any(Object), 'webcam');
+    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.any(Object));
     expect(state.drawComposition).toHaveBeenCalled();
     expect(mounted.find('.editor-canvas').classes()).toContain('is-selection-editable');
     expect(mounted.find('.zoom-selection-box').classes()).not.toContain('locked');
@@ -297,6 +313,25 @@ describe('EditorCanvas', () => {
     expect(state.endSelectionMove).toHaveBeenCalled();
   });
 
+  it('re-reads the playback frame when frameVersion advances', async () => {
+    const frameFor = vi.fn<(clipId: string) => MediaFrame | null>().mockReturnValue(null);
+    const mounted = mountEditor({ frameFor, playbackState: 'paused' });
+    await nextTick();
+
+    expect(frameFor).toHaveBeenCalledWith('screen');
+    const initialCallCount = frameFor.mock.calls.length;
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(true);
+
+    const nextFrame = frame('screen');
+    frameFor.mockReturnValue(nextFrame);
+    await mounted.setProps({ frameVersion: 1 });
+    await nextTick();
+
+    expect(frameFor.mock.calls.length).toBeGreaterThan(initialCallCount);
+    expect(frameFor).toHaveBeenLastCalledWith('screen');
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+  });
+
   it('draws through the camera window and exposes transform and crop interactions', async () => {
     const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1, focusX: 400, focusY: 225 };
     state.drawVideoWindow.mockReturnValue(bounds);
@@ -307,7 +342,7 @@ describe('EditorCanvas', () => {
     await flushPromises();
     runFrame();
 
-    expect(state.drawComposition).toHaveBeenCalledWith(expect.anything(), bounds, 1_280);
+    expect(state.drawComposition).toHaveBeenCalledWith(expect.anything(), bounds);
     expect(state.updateCursor).toHaveBeenCalled();
     expect(mounted.find('.webcam-selection').exists()).toBe(true);
     await mounted.find('.webcam-selection').trigger('pointerdown');
@@ -316,10 +351,13 @@ describe('EditorCanvas', () => {
     expect(state.beginTransformDrag).toHaveBeenCalledWith(expect.anything(), 'move');
     expect(state.moveTransformDrag).toHaveBeenCalled();
     expect(state.endTransformDrag).toHaveBeenCalled();
+    state.transformResizeCorners!.value = ['left', 'right'];
+    await nextTick();
+    expect(mounted.findComponent(ResizeHandle).props('corners')).toEqual(['left', 'right']);
 
     state.renderVisualStack?.(contextMock, bounds, vi.fn());
-    expect(state.drawWebcamClips).toHaveBeenCalledWith(contextMock, bounds, 'webcam');
-    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, bounds, 1_280, 'image');
+    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), bounds);
+    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, bounds, 'image');
 
     await mounted.setProps({ isCropping: true });
     await nextTick();
@@ -335,6 +373,28 @@ describe('EditorCanvas', () => {
     expect(mounted.emitted('done:crop')).toHaveLength(1);
   });
 
+  it('draws global visuals with the active camera bounds', async () => {
+    const cameraBounds = { dx: 20, dy: 30, dw: 400, dh: 300, scale: 2, focusX: 220, focusY: 180 };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+
+    mountEditor({ outputCanvas: { ...DEFAULT_OUTPUT_CANVAS, width: 600, height: 600 } });
+    await flushPromises();
+    runFrame();
+
+    expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds);
+  });
+
+  it('passes the sampled camera scale to the viewport-anchored webcam overlay', async () => {
+    const cameraBounds = { dx: 20, dy: 30, dw: 400, dh: 300, scale: 2, focusX: 220, focusY: 180 };
+    state.drawVideoWindow.mockReturnValue(cameraBounds);
+
+    mountEditor();
+    await flushPromises();
+    runFrame();
+
+    expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ scale: 2 }));
+  });
+
   it('reacts to playback, format, duration, and transition watchers', async () => {
     const mounted = mountEditor();
     runFrame();
@@ -347,26 +407,41 @@ describe('EditorCanvas', () => {
     expect(mounted.find('canvas').classes()).not.toContain('is-format-transitioning');
     vi.useRealTimers();
 
-    await mounted.setProps({ isPlaying: true, duration: 0 });
+    await mounted.setProps({ isPlaying: true, duration: 0, playbackState: 'playing' });
     await nextTick();
     runFrame();
-    expect(state.syncVideoPlayback).toHaveBeenCalledWith(true);
-    expect(mounted.emitted('update:isPlaying')).toContainEqual([false]);
-    expect(mounted.emitted('update:currentTime')).toContainEqual([0]);
+    expect(state.syncPlayback).toHaveBeenCalledWith(true);
+    expect(mounted.emitted('update:isPlaying')).toBeUndefined();
+    expect(mounted.emitted('update:currentTime')).toBeUndefined();
 
     vi.useFakeTimers();
-    await mounted.setProps({ isPlaying: true, duration: 2, currentTime: 1.5 });
+    await mounted.setProps({ isPlaying: true, duration: 2, currentTime: 1.5, playbackState: 'playing' });
     await nextTick();
     vi.advanceTimersByTime(600);
     runFrame();
-    const currentTimeEvents = mounted.emitted('update:currentTime') ?? [];
-    expect(currentTimeEvents.at(-1)).toEqual([0]);
-    expect(mounted.emitted('update:isPlaying')).toEqual([[false]]);
+    expect(mounted.emitted('update:currentTime')).toBeUndefined();
+    expect(mounted.emitted('update:isPlaying')).toBeUndefined();
     vi.useRealTimers();
 
-    await mounted.setProps({ isPlaying: false, duration: 3, currentTime: 1 });
+    await mounted.setProps({ isPlaying: false, duration: 3, currentTime: 1, playbackState: 'paused' });
     await nextTick();
-    expect(state.syncVideoPlayback).toHaveBeenLastCalledWith(false);
+    expect(state.syncPlayback).toHaveBeenLastCalledWith(false);
     expect(state.resetCamera).toHaveBeenCalled();
+  });
+
+  it('shows floating recenter button when zoomed and resets zoom on click', async () => {
+    const mounted = mountEditor();
+    expect(mounted.find('.recenter-button').exists()).toBe(false);
+
+    // Zooming the canvas
+    const island = mounted.get('.canvas-island');
+    await island.trigger('wheel', { deltaY: -100, preventDefault: vi.fn() });
+    await nextTick();
+
+    expect(mounted.find('.recenter-button').exists()).toBe(true);
+    await mounted.get('.recenter-button').trigger('click');
+    await nextTick();
+
+    expect(mounted.find('.recenter-button').exists()).toBe(false);
   });
 });

@@ -1,5 +1,44 @@
-import { describe, expect, it } from 'vitest';
-import { computeWebcamLayout, getWebcamZoomFactor, webcamSettingsForAppearance } from '../webcam/webcam-zoom';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  computeWebcamLayout,
+  drawWebcamOverlay,
+  getWebcamZoomFactor,
+  webcamSettingsForAppearance,
+} from '../webcam/webcam-zoom';
+
+const context = () =>
+  ({
+    save: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    roundRect: vi.fn(),
+    clip: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    drawImage: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    fillRect: vi.fn(),
+    strokeRect: vi.fn(),
+    fillText: vi.fn(),
+    arc: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    shadowColor: '',
+    shadowBlur: 0,
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
+    font: '',
+    textAlign: '',
+    textBaseline: '',
+    lineCap: 'round',
+    lineJoin: 'round',
+  }) as unknown as CanvasRenderingContext2D;
 
 describe('webcam zoom layout', () => {
   it('uses the inverse of the applied zoom scale', () => {
@@ -56,18 +95,48 @@ describe('webcam zoom layout', () => {
   });
 
   it('maps every recorded visual preset to deterministic canvas settings', () => {
-    expect(webcamSettingsForAppearance({ shadowSize: 'none', cornerRadius: 'none' })).toMatchObject({
+    expect(
+      webcamSettingsForAppearance({ shadowSize: 'none', shadowBlur: 0, shadowMode: 'solid', cornerRadius: 'none' }),
+    ).toMatchObject({
       shadowOpacity: 0,
       cornerRadius: 0,
     });
-    expect(webcamSettingsForAppearance({ shadowSize: 'md', cornerRadius: 'md' })).toMatchObject({
+    expect(
+      webcamSettingsForAppearance({ shadowSize: 'md', shadowBlur: 12, shadowMode: 'solid', cornerRadius: 'md' }),
+    ).toMatchObject({
       shadowOpacity: 0.42,
       cornerRadius: 14,
     });
-    const full = webcamSettingsForAppearance({ shadowSize: 'lg', cornerRadius: 'full' }, false, true);
+    const full = webcamSettingsForAppearance(
+      { shadowSize: 'lg', shadowBlur: 20, shadowMode: 'solid', cornerRadius: 'full' },
+      false,
+      true,
+    );
     expect(full.shadowOpacity).toBe(0.58);
     expect(full.cornerRadius).toBeGreaterThan(1_000_000);
     expect(full.mirror).toBe(false);
     expect(full.mirrorY).toBe(true);
+  });
+
+  it('uses frame dimensions for crop and preserves both mirror axes', () => {
+    const ctx = context();
+    const source = {} as CanvasImageSource;
+    drawWebcamOverlay(
+      ctx,
+      source,
+      { width: 320, height: 240 },
+      1000,
+      800,
+      1,
+      webcamSettingsForAppearance(
+        { shadowSize: 'none', shadowBlur: 0, shadowMode: 'solid', cornerRadius: 'none' },
+        true,
+        true,
+      ),
+      { x: 0.1, y: 0.2, width: 0.4, height: 0.3 },
+      { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+    );
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 32, 24, 256, 192, 100, 160, 400, 240);
+    expect(ctx.scale).toHaveBeenCalledWith(-1, -1);
   });
 });

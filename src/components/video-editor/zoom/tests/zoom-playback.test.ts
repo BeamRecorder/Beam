@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { clampFocusToScale, regionStrength, smoothedCursorFocusAt, zoomAtTime } from '../zoom-playback';
+import {
+  clampFocusToScale,
+  createZoomTimeEvaluator,
+  cursorFocusAt,
+  regionStrength,
+  smoothedCursorFocusAt,
+  zoomAtTime,
+} from '../zoom-playback';
 import type { ZoomElement } from '../zoom-types';
 
 const zoom: ZoomElement = {
@@ -36,6 +43,75 @@ describe('zoom playback', () => {
     expect(focus?.cx).toBeGreaterThan(0.2);
     expect(focus?.cx).toBeLessThan(0.8);
     expect(focus?.cy).toBe(0.5);
+  });
+  it('interpolates telemetry before, between, and after samples', () => {
+    const telemetry = [
+      { timeMs: 1_000, cx: 0.1, cy: 0.2 },
+      { timeMs: 2_000, cx: 0.5, cy: 0.6 },
+      { timeMs: 3_000, cx: 0.9, cy: 0.4 },
+    ];
+
+    expect(cursorFocusAt(telemetry, 500)).toEqual({ cx: 0.1, cy: 0.2 });
+    expect(cursorFocusAt(telemetry, 1_500)?.cx).toBeCloseTo(0.3, 12);
+    expect(cursorFocusAt(telemetry, 1_500)?.cy).toBeCloseTo(0.4, 12);
+    expect(cursorFocusAt(telemetry, 4_000)).toEqual({ cx: 0.9, cy: 0.4 });
+  });
+  it('sorts zooms and telemetry once when building an evaluator', () => {
+    const next: ZoomElement = {
+      ...zoom,
+      id: 'next',
+      startMs: 6_800,
+      endMs: 10_000,
+      focus: { cx: 0.7, cy: 0.3 },
+      depth: 4,
+    };
+    const autoZoom: ZoomElement = {
+      ...zoom,
+      id: 'auto',
+      startMs: 0,
+      endMs: 10_000,
+      mode: 'auto',
+    };
+    const telemetry = [
+      { timeMs: 3_000, cx: 0.9, cy: 0.4 },
+      { timeMs: 1_000, cx: 0.1, cy: 0.2 },
+      { timeMs: 2_000, cx: 0.5, cy: 0.6 },
+    ];
+    const evaluator = createZoomTimeEvaluator([next, zoom], []);
+    const autoEvaluator = createZoomTimeEvaluator([autoZoom], telemetry);
+
+    for (const timeMs of [0, 1_500, 4_000, 6_700, 7_500, 10_500]) {
+      expect(evaluator(timeMs)).toEqual(zoomAtTime([zoom, next], timeMs));
+    }
+    for (const timeMs of [500, 1_500, 2_500, 4_000, 9_000, 11_000]) {
+      expect(autoEvaluator(timeMs)).toEqual(
+        zoomAtTime(
+          [autoZoom],
+          timeMs,
+          [...telemetry].sort((a, b) => a.timeMs - b.timeMs),
+        ),
+      );
+    }
+  });
+  it('returns the same values as zoomAtTime for a complete time sequence', () => {
+    const next: ZoomElement = {
+      ...zoom,
+      id: 'next',
+      startMs: 6_800,
+      endMs: 10_000,
+      focus: { cx: 0.7, cy: 0.3 },
+      depth: 4,
+    };
+    const telemetry = [
+      { timeMs: 1_000, cx: 0.1, cy: 0.2 },
+      { timeMs: 2_000, cx: 0.5, cy: 0.6 },
+      { timeMs: 3_000, cx: 0.9, cy: 0.4 },
+    ];
+    const evaluator = createZoomTimeEvaluator([next, zoom], telemetry);
+
+    for (let timeMs = 0; timeMs <= 11_000; timeMs += 125) {
+      expect(evaluator(timeMs)).toEqual(zoomAtTime([next, zoom], timeMs, telemetry));
+    }
   });
   it('connects neighboring regions with an interpolated pan', () => {
     const next: ZoomElement = {

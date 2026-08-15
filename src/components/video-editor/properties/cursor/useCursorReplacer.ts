@@ -2,44 +2,10 @@ import { ref } from 'vue';
 import type { ShadowDirection } from '../cursor/shadow-types';
 import { createDefaultCursorClickEffects, type CursorClickEffects } from '../../../../api/types/cursor-settings';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import type { CursorType } from '../../../../api/types/cursor-presentation';
+export { cursorTypeForKind } from './cursor-kind';
 
-export type CursorType =
-  | 'automatic'
-  | 'default'
-  | 'beachball'
-  | 'busy'
-  | 'cell'
-  | 'contextualmenu'
-  | 'copy'
-  | 'cross'
-  | 'handgrabbing'
-  | 'handopen'
-  | 'handpointing'
-  | 'help'
-  | 'makealias'
-  | 'move'
-  | 'notallowed'
-  | 'poof'
-  | 'resizenorth'
-  | 'resizenortheast'
-  | 'resizenortheastsouthwest'
-  | 'resizenorthsouth'
-  | 'resizenorthwest'
-  | 'resizenorthwestsoutheast'
-  | 'resizeright'
-  | 'resizesouth'
-  | 'resizesoutheast'
-  | 'resizesouthwest'
-  | 'resizeup'
-  | 'resizeupdown'
-  | 'resizewest'
-  | 'resizewesteast'
-  | 'screenshotselection'
-  | 'screenshotwindow'
-  | 'textcursor'
-  | 'textcursorvertical'
-  | 'zoomin'
-  | 'zoomout';
+export type { CursorType } from '../../../../api/types/cursor-presentation';
 
 export const cursorUrls: Record<CursorType, string> = {
   automatic: '',
@@ -262,12 +228,6 @@ export const cursorOptions = [
     thumbnail: '/macOsSvgCursors/zoomout.svg',
   },
 ].map((option) => ({ ...option, thumbnail: resolvePublicAssetUrl(option.thumbnail) }));
-
-/** `custom` is intentionally rendered as the default pointer, never guessed. */
-export const cursorTypeForKind = (kind: string | null | undefined): CursorType => {
-  const candidate = kind === 'custom' ? 'default' : kind;
-  return candidate && candidate in cursorUrls && candidate !== 'automatic' ? (candidate as CursorType) : 'default';
-};
 
 export const svgAtRasterSize = (svgContent: string, rasterWidth: number) => {
   const viewBox = svgContent.match(/\bviewBox=["']\s*[-.\d]+\s+[-.\d]+\s+([-.\d]+)\s+([-.\d]+)\s*["']/i);

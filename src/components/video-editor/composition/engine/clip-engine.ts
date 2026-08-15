@@ -10,7 +10,7 @@ import {
   type MediaAsset,
   type NormalizedCrop,
   type NormalizedTransform,
-} from '../composition-types';
+} from '~/media/shared/composition-types';
 
 export const MIN_PLAYBACK_RATE = 0.25;
 export const MAX_PLAYBACK_RATE = 4;
@@ -52,11 +52,16 @@ const normalizeOrders = (clips: Clip[]) =>
     )
     .map((clip, order) => ({ ...clip, order }));
 
-export const createComposition = (assets: MediaAsset[] = [], clips: Clip[] = []): ClipComposition => {
+export const createComposition = (
+  assets: MediaAsset[] = [],
+  clips: Clip[] = [],
+  keyboardCaptionSessions: string[] = [],
+): ClipComposition => {
   const composition: ClipComposition = {
     schemaVersion: COMPOSITION_SCHEMA_VERSION,
     assets: cloneValue(assets),
     clips: normalizeOrders(normalizeGroups(cloneValue(clips))),
+    keyboardCaptionSessions: [...new Set(keyboardCaptionSessions)],
   };
   validateComposition(composition);
   return composition;
@@ -67,7 +72,9 @@ export function validateComposition(composition: ClipComposition): void {
     !composition ||
     composition.schemaVersion !== COMPOSITION_SCHEMA_VERSION ||
     !Array.isArray(composition.assets) ||
-    !Array.isArray(composition.clips)
+    !Array.isArray(composition.clips) ||
+    !Array.isArray(composition.keyboardCaptionSessions) ||
+    composition.keyboardCaptionSessions.some((sessionId) => typeof sessionId !== 'string' || !sessionId)
   ) {
     throw new CompositionEngineError('Invalid composition schema.');
   }
@@ -119,8 +126,17 @@ export function validateComposition(composition: ClipComposition): void {
     }
     if (clip.kind !== 'caption' && !assetIds.has(clip.assetId))
       throw new CompositionEngineError(`Missing asset for clip: ${clip.id}`);
-    if (clip.kind === 'caption' && (!clip.caption || !Array.isArray(clip.caption.sentences)))
-      throw new CompositionEngineError('Invalid caption clip.');
+    if (clip.kind === 'caption') {
+      const caption = clip.caption;
+      const textCaption = caption?.type === 'text' && Array.isArray(caption.sentences);
+      const keyboardCaption =
+        caption?.type === 'keyboard' &&
+        Array.isArray(caption.steps) &&
+        caption.steps.length > 0 &&
+        typeof caption.followCursor === 'boolean' &&
+        Boolean(caption.sourceSessionId);
+      if (!textCaption && !keyboardCaption) throw new CompositionEngineError('Invalid caption clip.');
+    }
     if (
       isVisualClip(clip) &&
       (![clip.transform.x, clip.transform.y, clip.transform.width, clip.transform.height].every(finite) ||
@@ -139,23 +155,6 @@ export function validateComposition(composition: ClipComposition): void {
     }
   }
 }
-
-export const compositionDurationMs = (composition: ClipComposition) =>
-  composition.clips.reduce((duration, clip) => Math.max(duration, clipEndMs(clip)), 0);
-
-export const assetForClip = (composition: ClipComposition, clip: Clip) =>
-  clip.kind === 'caption' ? null : (composition.assets.find((asset) => asset.id === clip.assetId) ?? null);
-
-export function sourceTimeAt(clip: Clip, timelineTimeMs: number): number | null {
-  if (!finite(timelineTimeMs) || timelineTimeMs < clip.timelineStartMs || timelineTimeMs >= clipEndMs(clip))
-    return null;
-  return integer(clip.sourceInMs + (timelineTimeMs - clip.timelineStartMs) * clip.playbackRate);
-}
-
-export const activeClipsAt = (composition: ClipComposition, timelineTimeMs: number) =>
-  composition.clips
-    .filter((clip) => clip.enabled && sourceTimeAt(clip, timelineTimeMs) !== null)
-    .sort((left, right) => left.order - right.order);
 
 export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipComposition {
   const next = clone(composition);
@@ -237,27 +236,52 @@ export function trimClip(
   const next = clone(composition);
   const source = byId(next, clipId);
   const target = integer(timelineTimeMs);
-  if (!finite(target) || target <= source.timelineStartMs || target >= clipEndMs(source))
-    throw new CompositionEngineError('Trim must be inside the clip.');
-  const startDelta = target - source.timelineStartMs;
-  const endDuration = target - source.timelineStartMs;
+  if (!finite(target)) throw new CompositionEngineError('Invalid trim target time.');
+  const originalEnd = clipEndMs(source);
+
+  if (edge === 'start') {
+    if (target < 0 || target > originalEnd - MIN_CLIP_DURATION_MS) {
+      throw new CompositionEngineError('Invalid start trim boundary.');
+    }
+  } else {
+    if (target < source.timelineStartMs + MIN_CLIP_DURATION_MS) {
+      throw new CompositionEngineError('Invalid end trim boundary.');
+    }
+  }
+
   const ids = new Set(targetIds(next, clipId));
   next.clips = next.clips.map((clip) => {
     if (!ids.has(clip.id)) return clip;
+    const rate = Math.max(0.01, clip.playbackRate);
     if (edge === 'start') {
-      const sourceDelta = integer(startDelta * clip.playbackRate);
+      const startDelta = target - clip.timelineStartMs;
+      const newTimelineDuration = clip.timelineStartMs + clip.timelineDurationMs - target;
+      const newSourceDuration = integer(newTimelineDuration * rate);
+      if (clip.kind === 'caption') {
+        return {
+          ...clip,
+          timelineStartMs: target,
+          timelineDurationMs: newTimelineDuration,
+          sourceInMs: 0,
+          sourceDurationMs: newSourceDuration,
+        };
+      }
+      const sourceDelta = integer(startDelta * rate);
+      const newSourceInMs = Math.max(0, clip.sourceInMs + sourceDelta);
       return {
         ...clip,
-        timelineStartMs: clip.timelineStartMs + startDelta,
-        timelineDurationMs: clip.timelineDurationMs - startDelta,
-        sourceInMs: clip.sourceInMs + sourceDelta,
-        sourceDurationMs: clip.sourceDurationMs - sourceDelta,
+        timelineStartMs: target,
+        timelineDurationMs: newTimelineDuration,
+        sourceInMs: newSourceInMs,
+        sourceDurationMs: newSourceDuration,
       };
     }
+    const newTimelineDuration = target - clip.timelineStartMs;
+    const newSourceDuration = integer(newTimelineDuration * rate);
     return {
       ...clip,
-      timelineDurationMs: endDuration,
-      sourceDurationMs: integer(endDuration * clip.playbackRate),
+      timelineDurationMs: newTimelineDuration,
+      sourceDurationMs: newSourceDuration,
     };
   });
   validateComposition(next);

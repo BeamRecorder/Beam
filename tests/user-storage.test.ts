@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const { createUserPaths } = require('../electron/storage/user-paths.cjs') as { createUserPaths: (videos: string) => Record<string, string> }
 const { createBackgroundLibrary } = require('../electron/backgrounds/background-library.cjs') as { createBackgroundLibrary: (paths: Record<string, string>) => { list: () => Array<{ kind: string; path: string; fileName: string }>; importFile: (source: string) => { kind: string; path: string; fileName: string } } }
-const { createProjectStore } = require('../electron/projects/project-store.cjs') as { createProjectStore: (root: string) => { create: (options: { name: string }) => { id: string }; list: () => Array<{ id: string; name: string }>; rename: (id: string, name: string) => { name: string }; saveEditorState: (id: string, state: unknown) => unknown } }
+const { createProjectStore } = require('../electron/projects/project-store.cjs') as { createProjectStore: (root: string) => { create: (options: { name: string }) => { id: string }; list: () => Array<{ id: string; name: string }>; rename: (id: string, name: string) => { name: string }; editorState: (id: string) => { presentation: Record<string, unknown> }; saveEditorState: (id: string, state: unknown) => unknown } }
 
 const roots: string[] = []
 const temporary = () => { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-user-')); roots.push(root); return root }
@@ -36,7 +36,7 @@ describe('global background library', () => {
   it('imports valid media globally and lists it', () => {
     const root = temporary(); const source = path.join(root, 'sky.PNG'); fs.writeFileSync(source, 'image')
     const library = createBackgroundLibrary(createUserPaths(root)); const item = library.importFile(source)
-    expect(item.kind).toBe('image'); expect(item.path).toMatch(/^file:/); expect(library.list()).toHaveLength(1)
+    expect(item.kind).toBe('image'); expect(item.path).toMatch(/^project-media:\/\/background\/image\//); expect(library.list()).toHaveLength(1)
   })
 
   it('rejects unsupported extensions', () => {
@@ -73,9 +73,10 @@ describe('slugged projects', () => {
 
   it('persists a global background reference without copying it into the project', () => {
     const root = temporary(); const store = createProjectStore(root); const project = store.create({ name: 'Background' })
+    const current = store.editorState(project.id)
     store.saveEditorState(project.id, {
-      schemaVersion: 2, composition: { schemaVersion: 1, assets: [], clips: [] }, zoom: { elements: [], generatedSessions: [] },
-      presentation: { canvas: { preset: '16:9', width: 1920, height: 1080, showBackground: true }, selectedBackgroundId: 'user-wallpaper:image:global.png', background: null, blurPercent: 0, importedBackgrounds: [] },
+      ...current,
+      presentation: { ...current.presentation, selectedBackgroundId: 'user-wallpaper:image:global.png' },
     })
     const manifest = JSON.parse(fs.readFileSync(path.join(root, 'project-background', 'project.json'), 'utf8'))
     expect(manifest.editor.presentation.selectedBackgroundId).toBe('user-wallpaper:image:global.png')

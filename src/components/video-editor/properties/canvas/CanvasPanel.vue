@@ -35,7 +35,6 @@ const emit = defineEmits<{
 }>();
 
 const activeKind = ref<'image' | 'video' | 'color' | 'gradient'>('image');
-const hoveredId = ref<string | null>(null);
 const INITIAL_MEDIA_COUNT = 15;
 const LOAD_MORE_FRAME_SIZE = 3;
 const visibleCount = ref(INITIAL_MEDIA_COUNT);
@@ -149,6 +148,50 @@ const loadMoreFrameStep = () => {
   isLoadingMore.value = false;
 };
 
+// Instant tab switch
+const switchKind = (kind: 'image' | 'video' | 'color' | 'gradient') => {
+  if (activeKind.value === kind) return;
+
+  cancelLoadMore();
+  activeKind.value = kind;
+  closeCustomEditor();
+
+  if (gridRef.value) {
+    gridRef.value.scrollTop = 0;
+  }
+};
+
+const loadMore = () => {
+  if (isLoadingMore.value || !hasMore.value) return;
+  isLoadingMore.value = true;
+  loadMoreTarget = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT);
+  loadMoreFrame = requestAnimationFrame(loadMoreFrameStep);
+};
+
+const selectMediaBackground = (item: BackgroundMedia) => {
+  emit('update:selectedBackground', item);
+};
+
+const isSelected = (entry: BackgroundValue) => props.selectedBackground?.id === entry.id;
+const selectedColorPreset = computed(() => colorPresets.value.find((item) => isSelected(item)) ?? null);
+const selectedGradientPreset = computed(() => gradientPresets.value.find((item) => isSelected(item)) ?? null);
+
+const triggerImport = async () => {
+  const kind = activeKind.value === 'image' || activeKind.value === 'video' ? activeKind.value : 'media';
+  const background = await capture.pickBackgroundLibraryMedia(kind);
+  if (background) {
+    emit('import:background', background);
+  }
+};
+
+const importLabel = computed(() =>
+  activeKind.value === 'image'
+    ? t('importCustomImage')
+    : activeKind.value === 'video'
+      ? t('importCustomVideo')
+      : t('importCustomBackground'),
+);
+
 onMounted(() => {
   previewObserver = new IntersectionObserver(
     (entries) => {
@@ -172,52 +215,6 @@ onUnmounted(() => {
   tileItemsByElement.clear();
   tileRefHandlers.clear();
 });
-
-// Instant tab switch
-const switchKind = (kind: 'image' | 'video' | 'color' | 'gradient') => {
-  if (activeKind.value === kind) return;
-
-  cancelLoadMore();
-  activeKind.value = kind;
-  visibleCount.value = INITIAL_MEDIA_COUNT;
-  closeCustomEditor();
-
-  if (gridRef.value) {
-    gridRef.value.scrollTop = 0;
-  }
-};
-
-const loadMore = () => {
-  if (isLoadingMore.value || !hasMore.value) return;
-  isLoadingMore.value = true;
-  loadMoreTarget = Math.min(items.value.length, visibleCount.value + INITIAL_MEDIA_COUNT);
-  loadMoreFrame = requestAnimationFrame(loadMoreFrameStep);
-};
-
-const selectMediaBackground = (item: BackgroundMedia) => {
-  hoveredId.value = null;
-  emit('update:selectedBackground', item);
-};
-
-const isSelected = (entry: BackgroundValue) => props.selectedBackground?.id === entry.id;
-const selectedColorPreset = computed(() => colorPresets.value.find((item) => isSelected(item)) ?? null);
-const selectedGradientPreset = computed(() => gradientPresets.value.find((item) => isSelected(item)) ?? null);
-
-const triggerImport = async () => {
-  const kind = activeKind.value === 'image' || activeKind.value === 'video' ? activeKind.value : 'media';
-  const background = await capture.pickBackgroundLibraryMedia(kind);
-  if (background) {
-    emit('import:background', background);
-  }
-};
-
-const importLabel = computed(() =>
-  activeKind.value === 'image'
-    ? t('importCustomImage')
-    : activeKind.value === 'video'
-      ? t('importCustomVideo')
-      : t('importCustomBackground'),
-);
 </script>
 
 <template>
@@ -256,7 +253,7 @@ const importLabel = computed(() =>
     <!-- Hardware-Accelerated Tab Content Container -->
     <div class="tab-content-panel">
       <!-- Image & Video Media Grid -->
-      <div v-if="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
+      <div v-show="activeKind === 'image' || activeKind === 'video'" ref="gridRef" class="media-scroll-grid">
         <div v-if="!items.length" class="empty-backgrounds">
           <span>{{ t('noBackgroundFound') }}</span>
           <Button variant="secondary" size="sm" block :icon="Upload" @click="triggerImport">
@@ -274,26 +271,19 @@ const importLabel = computed(() =>
           }"
           :aria-label="item.name"
           :aria-busy="!previews[item.id] && !failed[item.id]"
+          draggable="false"
+          @dragstart.prevent
           @click="selectMediaBackground(item)"
-          @mouseenter="hoveredId = item.id"
-          @mouseleave="hoveredId = null"
         >
-          <video
-            v-if="item.kind === 'video' && hoveredId === item.id"
-            :src="item.path"
-            muted
-            autoplay
-            loop
-            preload="none"
-            class="media-content"
-          />
           <img
-            v-else-if="previews[item.id]"
+            v-if="previews[item.id]"
             :src="previews[item.id]"
             :alt="item.name"
             class="media-content loaded"
             loading="lazy"
             decoding="async"
+            draggable="false"
+            @dragstart.prevent
           />
           <img
             v-else-if="item.kind === 'image' && failed[item.id]"
@@ -302,6 +292,8 @@ const importLabel = computed(() =>
             class="media-content loaded"
             loading="lazy"
             decoding="async"
+            draggable="false"
+            @dragstart.prevent
           />
           <span v-else-if="item.kind === 'video' && failed[item.id]" class="video-placeholder">
             <Video :size="16" />
@@ -316,7 +308,7 @@ const importLabel = computed(() =>
       </div>
 
       <!-- Color Swatches Grid -->
-      <div v-else-if="activeKind === 'color'" class="swatches-section">
+      <div v-show="activeKind === 'color'" class="swatches-section">
         <div class="swatches-grid">
           <Popover
             block
@@ -418,7 +410,7 @@ const importLabel = computed(() =>
       </div>
 
       <!-- Gradient Presets Grid -->
-      <div v-else class="gradients-section">
+      <div v-show="activeKind === 'gradient'" class="gradients-section">
         <div class="gradients-grid">
           <Popover
             block
@@ -598,6 +590,8 @@ const importLabel = computed(() =>
   cursor: pointer;
   overflow: hidden;
   box-sizing: border-box;
+  user-select: none;
+  -webkit-user-drag: none;
   transition:
     border-color var(--fast) ease,
     box-shadow var(--fast) ease;
@@ -626,14 +620,12 @@ const importLabel = computed(() =>
   object-fit: cover;
   display: block;
   border-radius: inherit;
-  transition: opacity 0.15s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 img.media-content {
-  opacity: 0;
-}
-
-img.media-content.loaded {
   opacity: 1;
 }
 

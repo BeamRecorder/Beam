@@ -7,7 +7,7 @@ import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
 import { cursorShadowOffset } from '../../properties/cursor/cursor-shadow';
 import type { ShadowDirection } from '../../properties/cursor/shadow-types';
 import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../../properties/cursor/cursor-rendering';
-import type { VisualClip } from '../../composition/composition-types';
+import type { VisualClip } from '~/media/shared/composition-types';
 import { createCursorMotionPlayer, motionBlurTrail } from '../../composables/cursor-motion';
 import {
   effectButtonForRecordedButton,
@@ -16,15 +16,7 @@ import {
   type CursorMotionSettings,
 } from '../../../../api/types/cursor-settings';
 import type { OutputCanvasSettings } from '../output-canvas';
-
-export interface Ripple {
-  x: number;
-  y: number;
-  radius: number;
-  alpha: number;
-  color: string;
-  size: number;
-}
+import { cursorRippleAt } from '../../composables/cursor-ripple';
 
 export interface UseCursorOverlayOptions {
   selectedCursor: () => CursorType;
@@ -58,7 +50,6 @@ export const getRippleStyleColor = (hex: string, alpha: number) => {
 export function useCursorOverlay(options: UseCursorOverlayOptions) {
   const { getCursorImage } = useCursorReplacer();
   const customCursorImage = ref<HTMLImageElement | null>(null);
-  const ripples = ref<Ripple[]>([]);
   let lastDrawTime = 0;
   let motionPlayer: ReturnType<typeof createCursorMotionPlayer> | null = null;
   let motionPlayerEvents: ProjectEditorData['cursor']['events'] | null = null;
@@ -83,8 +74,8 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
           options.cursorColor(),
         );
         options.onRenderOnce?.();
-      } catch (error) {
-        console.error('Failed to load custom cursor image:', error);
+      } catch {
+        console.error('Failed to load custom cursor image.');
         customCursorImage.value = null;
       }
     },
@@ -114,7 +105,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const screen = options.screenClip();
     return cursorPositionAt(
       state,
-      { width: videoWidth || 1920, height: videoHeight || 1080 },
+      { width: videoWidth, height: videoHeight },
       { x: videoWindow.dx, y: videoWindow.dy, width: videoWindow.dw, height: videoWindow.dh },
       options.showBackground(),
       screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 },
@@ -140,7 +131,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     const motion = options.motion();
     const key = `${events.length}:${events.at(-1)?.sessionNs ?? 0}:${videoWidth}:${videoHeight}:${motion.preset}:${motion.smoothing}:${motion.springMassMultiplier}:${motion.motionBlur}`;
     if (!motionPlayer || motionPlayerEvents !== events || motionPlayerKey !== key) {
-      motionPlayer = createCursorMotionPlayer(events, motion, videoWidth || 1920, videoHeight || 1080);
+      motionPlayer = createCursorMotionPlayer(events, motion, videoWidth, videoHeight);
       motionPlayerEvents = events;
       motionPlayerKey = key;
     }
@@ -161,51 +152,36 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         warning(ctx, 'Cursor data missing', logicalWidth);
       return;
     }
+    if (!(videoWidth > 0) || !(videoHeight > 0)) return;
     const time = options.currentTime();
-    const playing = options.isPlaying();
     const player = playerFor(cursorData.events, videoWidth, videoHeight);
     if (time < lastDrawTime) {
       player.reset();
-      ripples.value = [];
-    }
-    if (playing && time >= lastDrawTime) {
-      for (const button of buttonEventsBetween(cursorData.events, lastDrawTime, time)) {
-        const effect = settingsForButton(button.button);
-        if (!effect?.rippleEnabled) continue;
-        const state = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000);
-        if (!state) continue;
-        const target = player.timeline.targetAt(button.sessionNs / 1_000_000_000);
-        const position = positionAt(
-          target ? { ...state, x: target.x, y: target.y } : state,
-          videoWindow,
-          videoWidth,
-          videoHeight,
-        );
-        ripples.value.push({
-          x: position.x,
-          y: position.y,
-          radius: 2,
-          alpha: 1,
-          color: effect.rippleColor,
-          size: effect.rippleSize,
-        });
-      }
     }
     lastDrawTime = time;
     const state = cursorStateAt(cursorData.events, time);
     const motionState = player.sample(time, state);
     drawInCameraSpace(() => {
       const previewScale = previewScaleFor(videoWindow);
-      for (const ripple of ripples.value) {
-        ctx.strokeStyle = getRippleStyleColor(ripple.color, ripple.alpha);
+      for (const button of buttonEventsBetween(cursorData.events, Math.max(0, time - 0.5), time)) {
+        const effect = settingsForButton(button.button);
+        const ripple = effect?.rippleEnabled
+          ? cursorRippleAt(time - button.sessionNs / 1_000_000_000, effect.rippleSize)
+          : null;
+        const stateAtClick = cursorStateAt(cursorData.events, button.sessionNs / 1_000_000_000);
+        if (!effect || !ripple || !stateAtClick) continue;
+        const target = player.timeline.targetAt(button.sessionNs / 1_000_000_000);
+        const position = positionAt(
+          target ? { ...stateAtClick, x: target.x, y: target.y } : stateAtClick,
+          videoWindow,
+          videoWidth,
+          videoHeight,
+        );
+        ctx.strokeStyle = getRippleStyleColor(effect.rippleColor, ripple.opacity);
         ctx.lineWidth = Math.max(1, 3 * previewScale);
         ctx.beginPath();
-        ctx.arc(ripple.x, ripple.y, ripple.radius * previewScale, 0, Math.PI * 2);
+        ctx.arc(position.x, position.y, ripple.radius * previewScale, 0, Math.PI * 2);
         ctx.stroke();
-        if (playing) {
-          ripple.radius += ripple.size / 25;
-          ripple.alpha -= 0.04;
-        }
       }
       const image = customCursorImage.value;
       if (!state?.visible || !image?.complete || image.naturalWidth <= 0) return;
@@ -244,8 +220,28 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         ctx.restore();
       }
     });
-    ripples.value = ripples.value.filter((ripple) => ripple.alpha > 0);
   };
 
-  return { customCursorImage, ripples, updateAndDrawRipplesAndCursor };
+  const cursorPositionForKeyboardCaption = (
+    videoWindow: { dx: number; dy: number; dw: number; dh: number; focusX: number; focusY: number; scale: number },
+    videoWidth: number,
+    videoHeight: number,
+  ) => {
+    const cursorData = options.editorData()?.cursor;
+    const screen = options.screenClip();
+    const image = customCursorImage.value;
+    if (!cursorData?.available || !screen || !options.isScreenEnabled() || !image?.complete || image.naturalWidth <= 0)
+      return null;
+    const time = options.currentTime();
+    const state = cursorStateAt(cursorData.events, time);
+    const motionState = playerFor(cursorData.events, videoWidth, videoHeight).sample(time, state);
+    if (!state?.visible || !motionState?.visible) return null;
+    const raw = positionAt(motionState, videoWindow, videoWidth, videoHeight);
+    return {
+      x: videoWindow.dx + videoWindow.dw / 2 + videoWindow.scale * (raw.x - videoWindow.focusX),
+      y: videoWindow.dy + videoWindow.dh / 2 + videoWindow.scale * (raw.y - videoWindow.focusY),
+    };
+  };
+
+  return { customCursorImage, cursorPositionForKeyboardCaption, updateAndDrawRipplesAndCursor };
 }

@@ -36,6 +36,8 @@
     "zoom": "缩放",
     "cursor": "光标",
     "captions": "字幕",
+    "keyboardCaptions": "键盘快捷键",
+    "textCaptions": "文本字幕",
     "audio": "音频",
     "settings": "设置",
     "logo": "徽标"
@@ -99,7 +101,9 @@
     "zoomOut": "缩小",
     "zoomIn": "放大",
     "snappingOn": "磁性吸附已启用",
-    "snappingOff": "磁性吸附已禁用"
+    "snappingOff": "磁性吸附已禁用",
+    "zoom": "缩放",
+    "resetZoom": "重置缩放"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "点击切换视频轨道",
@@ -133,7 +137,9 @@
     "unlinkMicrophoneTrack": "取消麦克风轨道链接",
     "waveformUnavailable": "波形不可用",
     "trimStart": "裁剪开头",
-    "trimEnd": "裁剪结尾"
+    "trimEnd": "裁剪结尾",
+    "keyboardCaptions": "键盘快捷键",
+    "textCaptions": "文本字幕"
   },
   "TimelineVideoClip": {
     "trimStart": "裁剪开头",

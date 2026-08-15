@@ -31,6 +31,7 @@ Transparent pixels in an Electron window still intercept input unless `setIgnore
 
 - HUD: `App.vue` detects an interactive element under the pointer and calls `capture.setInteractive`. Do not make the whole transparent HUD window interactive.
 - Camera overlay: starts in pass-through mode. `CameraOverlayApp.vue` enables interaction only for the camera, controls, and open popover.
+- Wayland intentionally reports global window coordinates as `(0, 0)`, so absolute overlay placement cannot be persisted or restored there. Do not force XWayland globally: incompatible GPU/X11 stacks can prevent the HUD from rendering. The camera window is opaque and keeps its compositor shadow on Linux because Electron does not reliably expose native resize edges for fully transparent/decoration-free windows there.
 - Recorder: drag listeners are installed after mousedown and removed on mouseup. Never invoke `drag()` directly from `mousemove` in the template; it makes the bar flee the pointer.
 - Editor: use the native draggable titlebar region. Do not reintroduce renderer mousemove/IPC window dragging; it bypasses native edge snapping and window transitions.
 - Editor: keep `transparent: false`, `thickFrame: true`, and the native Window Controls Overlay. An HTML maximize button does not expose Windows 11 Snap Layouts.

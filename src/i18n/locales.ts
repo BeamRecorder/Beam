@@ -15,6 +15,7 @@ export const SUPPORTED_LOCALES = [
   'pl',
   'zh-TW',
   'hi',
+  'vi',
 ] as const satisfies readonly AppLocale[];
 
 export const localeOptions: Array<{ value: AppLocale; label: string }> = [
@@ -32,6 +33,7 @@ export const localeOptions: Array<{ value: AppLocale; label: string }> = [
   { value: 'pl', label: 'PL — Polski' },
   { value: 'zh-TW', label: 'ZH-TW — 繁體中文' },
   { value: 'hi', label: 'HI — हिन्दी' },
+  { value: 'vi', label: 'VI — Tiếng Việt' },
 ];
 
 export function isSupportedLocale(value: string): value is AppLocale {

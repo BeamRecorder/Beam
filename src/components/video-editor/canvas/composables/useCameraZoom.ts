@@ -1,9 +1,6 @@
 import { computed, ref } from 'vue';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import { clampFocusToScale, zoomAtTime } from '../../zoom/zoom-playback';
-import { createCursorFollowCameraState, updateCursorFollowCamera } from '../../zoom/zoom-camera';
-import { createCameraVelocity, stepCameraSpring } from '../../zoom/zoom-spring';
-import { cursorStateAt } from '../../composables/cursorPlayback';
+import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
 import {
   framedMediaRect,
   outputPoint,
@@ -12,8 +9,9 @@ import {
   type OutputCanvasSettings,
 } from '../output-canvas';
 import type { ProjectEditorData } from '~/api/types/capture-api';
-import { activeClipsAt } from '../../composition/engine/clip-engine';
-import type { ClipComposition, VisualClip } from '../../composition/composition-types';
+import { activeClipsAt } from '~/media/shared';
+import type { MediaFrame } from '~/media/shared';
+import type { ClipComposition, NormalizedTransform, VisualClip } from '~/media/shared/composition-types';
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 
 export interface VideoWindowBounds {
@@ -40,6 +38,7 @@ export interface UseCameraZoomOptions {
   editorData: () => ProjectEditorData | null | undefined;
   activeTab: () => string;
   composition: () => ClipComposition;
+  screenTransformDraft?: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
   drawBackground: (
     ctx: CanvasRenderingContext2D,
@@ -58,10 +57,8 @@ export interface UseCameraZoomOptions {
 }
 
 export function useCameraZoom(options: UseCameraZoomOptions) {
-  const velocity = createCameraVelocity();
-  const cursorFollow = createCursorFollowCameraState();
-  let renderedCamera: { focusX: number; focusY: number; scale: number } | null = null;
-  let lastUpdateMs = 0;
+  let cameraEvaluator: ReturnType<typeof createCompositionCameraEvaluator> | null = null;
+  let cameraEvaluatorKey = '';
   const videoWindowBounds = ref<VideoWindowBounds | null>(null);
   const screenHitBounds = ref<{ dx: number; dy: number; dw: number; dh: number } | null>(null);
   const overlayWindowBounds = ref<VideoWindowBounds | null>(null);
@@ -76,9 +73,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ) ?? null;
 
   const resetCamera = () => {
-    renderedCamera = null;
-    lastUpdateMs = 0;
-    Object.assign(velocity, createCameraVelocity());
+    cameraEvaluator?.invalidate();
   };
 
   const focusTargetStyle = computed(() => {
@@ -201,12 +196,15 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    video: HTMLVideoElement,
+    frame: MediaFrame | null,
   ): RenderedVideoWindow | null => {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
     const screen = screenClip();
-    if (!screen) {
+    const hasCameraVisual = activeClipsAt(options.composition(), options.currentTime() * 1_000).some(
+      (clip) => clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image',
+    );
+    if (!hasCameraVisual) {
       const hasEnabledScreenTrack = options.composition().clips.some((clip) => clip.kind === 'screen' && clip.enabled);
       if (!hasEnabledScreenTrack) {
         ctx.fillStyle = 'rgba(15,23,42,.85)';
@@ -221,10 +219,21 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       overlayWindowBounds.value = null;
       return null;
     }
-    const videoWidth = video.videoWidth || 1920;
-    const videoHeight = video.videoHeight || 1080;
+    const asset = screen ? options.composition().assets.find((entry) => entry.id === screen.assetId) : null;
+    const videoWidth = screen ? (frame?.width ?? asset?.width ?? 0) : output.width;
+    const videoHeight = screen ? (frame?.height ?? asset?.height ?? 0) : output.height;
+    if (screen && (videoWidth <= 0 || videoHeight <= 0)) {
+      ctx.fillStyle = 'rgba(15,23,42,.85)';
+      ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
+      ctx.fillStyle = '#fff';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(options.videoError() || 'Loading media metadata…', width / 2, height / 2);
+      videoWindowBounds.value = null;
+      return null;
+    }
     const { x: dx, y: dy, width: dw, height: dh } = preview;
-    const crop = options.isCropping?.() ? undefined : screen.crop;
+    const crop = screen && !options.isCropping?.() ? screen.crop : undefined;
     const cropX = crop ? crop.x * videoWidth : 0;
     const cropY = crop ? crop.y * videoHeight : 0;
     const cropW = crop ? crop.width * videoWidth : videoWidth;
@@ -237,11 +246,13 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       source.y += cropY;
     }
     const media = output.showBackground ? framedMediaRect(cropW, cropH, dw, dh) : { x: 0, y: 0, width: dw, height: dh };
+    const screenTransform = options.screenTransformDraft?.() ??
+      screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 };
     const positioned = {
-      x: media.x + screen.transform.x * media.width,
-      y: media.y + screen.transform.y * media.height,
-      width: media.width * screen.transform.width,
-      height: media.height * screen.transform.height,
+      x: media.x + screenTransform.x * media.width,
+      y: media.y + screenTransform.y * media.height,
+      width: media.width * screenTransform.width,
+      height: media.height * screenTransform.height,
     };
 
     ctx.save();
@@ -249,40 +260,26 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx.roundRect(dx, dy, dw, dh, 16);
     ctx.clip();
     const currentTime = options.currentTime();
-    const zoom = zoomAtTime(options.zoomElements(), currentTime * 1_000, options.editorData()?.cursor.telemetry ?? []);
-    const cursor = cursorStateAt(options.editorData()?.cursor.events ?? [], currentTime);
-    const sourceFocus =
-      zoom?.mode === 'auto'
-        ? updateCursorFollowCamera(
-            cursorFollow,
-            cursor ? { cx: cursor.x, cy: cursor.y } : null,
-            zoom.focus,
-            zoom.scale,
-            zoom.strength,
-            currentTime * 1_000,
-          )
-        : (zoom?.focus ?? { cx: 0.5, cy: 0.5 });
-    const targetScale = zoom?.scale ?? 1;
-    const trackedFocus =
-      zoom?.mode === 'auto'
-        ? outputPoint(sourceFocus.cx, sourceFocus.cy, videoWidth, videoHeight, dw, dh, output.showBackground)
-        : sourceFocus;
-    const cameraFocus = clampFocusToScale(trackedFocus, targetScale);
-    const target = { focusX: dx + cameraFocus.cx * dw, focusY: dy + cameraFocus.cy * dh, scale: targetScale };
-    const now = performance.now();
-    if (!renderedCamera || !options.isPlaying()) {
-      renderedCamera = target;
-      Object.assign(velocity, createCameraVelocity());
-    } else {
-      renderedCamera = stepCameraSpring(
-        renderedCamera,
-        target,
-        velocity,
-        Math.min(50, Math.max(1, now - lastUpdateMs)),
-      );
+    const telemetry = options.editorData()?.cursor.telemetry ?? [];
+    const key = JSON.stringify({
+      zooms: options.zoomElements(),
+      telemetry,
+      canvas: output,
+      source: screen ? [videoWidth, videoHeight] : null,
+    });
+    if (!cameraEvaluator || key !== cameraEvaluatorKey) {
+      cameraEvaluatorKey = key;
+      cameraEvaluator = createCompositionCameraEvaluator({
+        zooms: options.zoomElements(),
+        telemetry,
+        mapFocus: (focus, zoom) =>
+          screen && zoom.mode === 'auto'
+            ? outputPoint(focus.cx, focus.cy, videoWidth, videoHeight, dw, dh, output.showBackground)
+            : focus,
+      });
     }
-    lastUpdateMs = now;
-    const camera = renderedCamera;
+    const sample = cameraEvaluator.sample(currentTime * 1_000);
+    const camera = { focusX: dx + sample.focus.cx * dw, focusY: dy + sample.focus.cy * dh, scale: sample.scale };
     const renderedWindow: RenderedVideoWindow = {
       dx,
       dy,
@@ -293,14 +290,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusY: camera.focusY,
     };
     const drawScreen = () => {
-      ctx.save();
-      ctx.translate(dx + dw / 2, dy + dh / 2);
-      ctx.scale(camera.scale, camera.scale);
-      ctx.translate(-camera.focusX, -camera.focusY);
-      options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
-      if (video.readyState >= 1) {
+      if (!screen) return;
+      if (frame) {
         drawDecoratedMedia(ctx, {
-          source: video,
+          source: frame.bitmap,
           sourceRect: source,
           rect: { x: dx + positioned.x, y: dy + positioned.y, width: positioned.width, height: positioned.height },
           appearance: screen.appearance ?? {
@@ -331,10 +324,15 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         ctx.textAlign = 'center';
         ctx.fillText(options.videoError() || 'Loading video recording...', width / 2, height / 2);
       }
-      ctx.restore();
     };
+    ctx.save();
+    ctx.translate(dx + dw / 2, dy + dh / 2);
+    ctx.scale(camera.scale, camera.scale);
+    ctx.translate(-camera.focusX, -camera.focusY);
+    options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
     if (options.renderVisualStack) options.renderVisualStack(ctx, renderedWindow, drawScreen);
     else drawScreen();
+    ctx.restore();
     ctx.restore();
 
     videoWindowBounds.value = {
@@ -346,12 +344,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusX: camera.focusX,
       focusY: camera.focusY,
     };
-    screenHitBounds.value = {
-      dx: dx + positioned.x,
-      dy: dy + positioned.y,
-      dw: positioned.width,
-      dh: positioned.height,
-    };
+    screenHitBounds.value = screen
+      ? {
+          dx: dx + positioned.x,
+          dy: dy + positioned.y,
+          dw: positioned.width,
+          dh: positioned.height,
+        }
+      : null;
     overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale, focusX: camera.focusX, focusY: camera.focusY };
     return renderedWindow;
   };

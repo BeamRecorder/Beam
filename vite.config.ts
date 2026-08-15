@@ -73,6 +73,7 @@ export default defineConfig({
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         editor: fileURLToPath(new URL('./editor.html', import.meta.url)),
         teleprompter: fileURLToPath(new URL('./teleprompter.html', import.meta.url)),
+        onboarding: fileURLToPath(new URL('./onboarding.html', import.meta.url)),
       },
     },
   },

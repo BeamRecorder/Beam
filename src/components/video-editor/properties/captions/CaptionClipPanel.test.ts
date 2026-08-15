@@ -21,6 +21,13 @@ const Select = {
   emits: ['update:modelValue'],
   template: '<button class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button>',
 };
+const Switch = {
+  inheritAttrs: true,
+  props: ['modelValue'],
+  emits: ['update:modelValue'],
+  template:
+    '<button v-bind="$attrs" class="wrap-switch" role="switch" :aria-checked="String(modelValue)" @click="$emit(\'update:modelValue\', false)">Wrap</button>',
+};
 const Button = {
   emits: ['click'],
   template: '<button class="delete-caption" @click="$emit(\'click\')"><slot /></button>',
@@ -39,6 +46,7 @@ const clip = {
   order: 0,
   isAiGenerated: true,
   caption: {
+    type: 'text',
     sentences: [
       {
         id: 'sentence-1',
@@ -54,13 +62,15 @@ const clip = {
     style: {
       color: '#ffffff',
       fontSize: 36,
+      wrap: true,
       shadowColor: '#000000',
       shadowBlur: 8,
       shadowDirection: 'bottom-right',
       placement: 'bottom',
-      boxColor: '#000000',
-      boxPadding: 6,
-      boxRadius: 4,
+      backdropBlur: 0,
+      outlineColor: '#000000',
+      outlineWidth: 6,
+      extrusionDepth: 4,
     },
   },
 } as never;
@@ -69,11 +79,13 @@ describe('CaptionClipPanel', () => {
   it('renders AI metadata and updates text, style, timings and deletion', async () => {
     const wrapper = mount(CaptionClipPanel, {
       props: { clip },
-      global: { stubs: { Input, ColorPicker, BigSlider, Select, Button } },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button } },
     });
-    expect(wrapper.find('.ai-badge-header').exists()).toBe(true);
-    expect(wrapper.findAll('.caption-slider')).toHaveLength(4);
+    expect(wrapper.findAll('.caption-slider')).toHaveLength(5);
     expect(wrapper.findAll('.color-picker-stub')).toHaveLength(3);
+    expect(wrapper.get('.wrap-switch').attributes('aria-checked')).toBe('true');
+    expect(wrapper.find('.follow-cursor-setting').exists()).toBe(false);
+    await wrapper.get('.wrap-switch').trigger('click');
     await wrapper.find('input[placeholder="Type custom text..."]').setValue('Custom caption');
     await wrapper.find('input[placeholder="Type custom text..."]').trigger('blur');
     await wrapper.findAll('.color-picker-stub')[0].trigger('click');
@@ -87,6 +99,14 @@ describe('CaptionClipPanel', () => {
     await start.trigger('blur');
     await wrapper.get('.delete-caption').trigger('click');
     await vi.waitFor(() => expect(wrapper.emitted('update')).toBeTruthy());
+    expect(
+      wrapper
+        .emitted('update')!
+        .some(
+          ([updated]) =>
+            (updated as unknown as { caption: { style: { wrap?: boolean } } }).caption.style.wrap === false,
+        ),
+    ).toBe(true);
     expect(wrapper.emitted('delete')).toEqual([['caption-1']]);
     expect(wrapper.emitted('update')!.length).toBeGreaterThan(0);
   });
@@ -94,7 +114,7 @@ describe('CaptionClipPanel', () => {
   it('renders nothing without a selected caption clip', () => {
     const wrapper = mount(CaptionClipPanel, {
       props: { clip: null },
-      global: { stubs: { Input, ColorPicker, BigSlider, Select, Button } },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button } },
     });
     expect(wrapper.find('.caption-clip-panel').exists()).toBe(false);
   });

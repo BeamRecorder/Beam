@@ -257,12 +257,15 @@ const handleClick = (event: MouseEvent) => {
   width: 32px;
   height: 32px;
   padding: 0;
+  gap: 0;
+  justify-content: center;
 }
 
 .btn-icon-only.btn-xs {
   width: 20px;
   height: 20px;
   padding: 0;
+  gap: 0;
 }
 
 /* Tab/Segmented Variant */
@@ -319,6 +322,9 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

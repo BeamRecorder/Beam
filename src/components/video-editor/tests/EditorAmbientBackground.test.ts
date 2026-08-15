@@ -1,8 +1,21 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorAmbientBackground from '../EditorAmbientBackground.vue';
-import type { BackgroundValue } from '../composables/backgroundCatalog';
+import type { BackgroundMedia, BackgroundValue } from '../composables/backgroundCatalog';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+
+const runtime = vi.hoisted(() => ({
+  decodeVideoPoster: vi.fn(),
+  mediaSourceDescriptor: vi.fn((asset: { id: string; src: string; name: string }) => ({
+    assetId: asset.id,
+    kind: 'video',
+    url: asset.src,
+    label: asset.name,
+  })),
+}));
+
+vi.mock('~/media/playback', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
+vi.mock('~/media/shared', () => ({ mediaSourceDescriptor: runtime.mediaSourceDescriptor }));
 
 const color = (value = '#112233'): BackgroundValue => ({
   id: `color:${value}`,
@@ -41,13 +54,22 @@ const video = (): BackgroundValue => ({
   kind: 'video',
 });
 
+const posterFrame = () => ({
+  bitmap: {} as CanvasImageSource,
+  width: 640,
+  height: 360,
+  close: vi.fn(),
+});
+
 describe('EditorAmbientBackground', () => {
   beforeEach(() => {
-    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    runtime.decodeVideoPoster.mockResolvedValue(posterFrame());
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D);
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -60,6 +82,7 @@ describe('EditorAmbientBackground', () => {
     expect(root.find('.ambient-media').exists()).toBe(false);
     expect(root.find('.ambient-surface').exists()).toBe(false);
     expect(root.find('img').exists()).toBe(false);
+    expect(root.find('canvas').exists()).toBe(false);
     expect(root.find('video').exists()).toBe(false);
     expect(root.findAll('button, a, input, select, textarea')).toHaveLength(0);
   });
@@ -88,27 +111,42 @@ describe('EditorAmbientBackground', () => {
     expect(root.find('.ambient-media').exists()).toBe(true);
   });
 
-  it('uses a muted, inline video frame without ever animating it', () => {
-    const wrapper = mount(EditorAmbientBackground, { props: { background: video() } });
-    const videoElement = wrapper.get('video').element as HTMLVideoElement;
+  it('renders a decoded video poster on canvas without creating or animating HTML video', async () => {
+    const createElement = vi.spyOn(document, 'createElement');
+    const background = video() as BackgroundMedia;
+    const wrapper = mount(EditorAmbientBackground, { props: { background } });
+    await flushPromises();
 
-    expect(videoElement.src).toBe(resolvePublicAssetUrl('/wallpapers/video/test.mp4'));
-    expect(videoElement.muted).toBe(true);
-    expect(videoElement.playsInline).toBe(true);
-    expect(videoElement.autoplay).toBe(false);
-    expect(videoElement.loop).toBe(false);
-    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
-    expect(videoElement.paused).toBe(true);
+    const canvas = wrapper.get('canvas').element as HTMLCanvasElement;
+    expect(canvas.width).toBe(640);
+    expect(canvas.height).toBe(360);
+    expect(runtime.mediaSourceDescriptor).toHaveBeenCalledWith(
+      expect.objectContaining({ id: background.id, kind: 'video', src: resolvePublicAssetUrl(background.path) }),
+    );
+    expect(runtime.decodeVideoPoster).toHaveBeenCalledWith(
+      expect.objectContaining({ assetId: background.id, kind: 'video' }),
+      { position: 0.5, width: 640 },
+    );
+    expect(createElement.mock.calls.some(([tag]) => tag.toLowerCase() === 'video')).toBe(false);
+    expect(wrapper.find('video').exists()).toBe(false);
   });
 
-  it('shows the fallback when an image or video reports an error', async () => {
-    const wrapper = mount(EditorAmbientBackground, { props: { background: image() } });
-    await wrapper.get('img').trigger('error');
+  it('shows the fallback when poster decoding fails and closes stale frames', async () => {
+    const firstFrame = posterFrame();
+    runtime.decodeVideoPoster.mockResolvedValueOnce(firstFrame);
+    const wrapper = mount(EditorAmbientBackground, { props: { background: video() } });
+    await flushPromises();
+    await wrapper.setProps({ background: color() });
+    expect(firstFrame.close).toHaveBeenCalledOnce();
+
+    runtime.decodeVideoPoster.mockRejectedValueOnce(new Error('decode failed'));
+    await wrapper.setProps({ background: video() });
+    await flushPromises();
     expect(wrapper.find('.ambient-media').exists()).toBe(false);
     expect(wrapper.find('.ambient-veil').exists()).toBe(true);
 
-    await wrapper.setProps({ background: video() });
-    await wrapper.get('video').trigger('error');
+    await wrapper.setProps({ background: image() });
+    await wrapper.get('img').trigger('error');
     expect(wrapper.find('.ambient-media').exists()).toBe(false);
     expect(wrapper.find('.ambient-veil').exists()).toBe(true);
   });

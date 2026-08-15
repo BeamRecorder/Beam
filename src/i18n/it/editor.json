@@ -36,6 +36,8 @@
     "zoom": "Zoom",
     "cursor": "Cursore",
     "captions": "Didascalie",
+    "keyboardCaptions": "Scorciatoie da tastiera",
+    "textCaptions": "Didascalie di testo",
     "audio": "Audio",
     "settings": "Impostazioni",
     "logo": "Logo"
@@ -99,7 +101,9 @@
     "zoomOut": "Riduci zoom",
     "zoomIn": "Aumenta zoom",
     "snappingOn": "Aggancio magnetico attivato",
-    "snappingOff": "Aggancio magnetico disattivato"
+    "snappingOff": "Aggancio magnetico disattivato",
+    "zoom": "Zoom",
+    "resetZoom": "Reimposta zoom"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Fai clic per attivare/disattivare la traccia video",
@@ -133,7 +137,9 @@
     "unlinkMicrophoneTrack": "Scollega traccia microfono",
     "waveformUnavailable": "Forma d'onda non disponibile",
     "trimStart": "Taglia inizio",
-    "trimEnd": "Taglia fine"
+    "trimEnd": "Taglia fine",
+    "keyboardCaptions": "Scorciatoie da tastiera",
+    "textCaptions": "Didascalie di testo"
   },
   "TimelineVideoClip": {
     "trimStart": "Taglia inizio",

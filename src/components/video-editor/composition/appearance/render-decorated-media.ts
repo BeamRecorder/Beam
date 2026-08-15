@@ -1,7 +1,8 @@
-import type { ClipAppearance } from '../composition-types';
+import type { ClipAppearance } from '~/media/shared/composition-types';
 import type { DecoratedMediaOptions, MediaRect } from './appearance-types';
 import { drawFrameChrome, frameContentRect } from './frames';
 import { adaptiveShadowColor } from './adaptive-shadow';
+import type { Canvas2DContext } from '~/types/canvas';
 
 export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   cornerRadius: 'sm',
@@ -20,7 +21,7 @@ export const DEFAULT_CLIP_APPEARANCE: ClipAppearance = {
   frameShowScrollbars: true,
   frameChromeScale: 1,
 };
-const SHADOW_BLURS = { sm: 10, md: 20, lg: 32 } as const;
+const SHADOW_BLURS = { sm: 16, md: 24, lg: 32 } as const;
 
 export function shadowBlurForAppearance(appearance: ClipAppearance | undefined) {
   const style = { ...DEFAULT_CLIP_APPEARANCE, ...appearance };
@@ -41,9 +42,8 @@ export const radiusForAppearance = (appearance: ClipAppearance | undefined) => {
   return typeof value === 'number' ? value : (radii[value] ?? 16);
 };
 export function applyClipShadow(
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2DContext,
   appearance: ClipAppearance | undefined,
-  width: number,
   source?: CanvasImageSource,
   sourceRect?: MediaRect,
   shadowScale = 1,
@@ -56,21 +56,17 @@ export function applyClipShadow(
       : style.shadowColor;
   ctx.shadowColor = blur > 0 ? shadowColor : 'transparent';
   ctx.shadowBlur = blur;
+  const offset = blur * 0.5;
   ctx.shadowOffsetX =
-    style.shadowDirection === 'top-left'
-      ? -width * 0.018
-      : style.shadowDirection === 'bottom-right'
-        ? width * 0.018
-        : 0;
-  ctx.shadowOffsetY =
-    style.shadowDirection === 'top-left' ? -width * 0.018 : style.shadowDirection === 'all' ? 0 : width * 0.018;
+    style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'bottom-right' ? offset : 0;
+  ctx.shadowOffsetY = style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'all' ? 0 : offset;
 }
-const clipRect = (ctx: CanvasRenderingContext2D, rect: MediaRect, radius: number) => {
+const clipRect = (ctx: Canvas2DContext, rect: MediaRect, radius: number) => {
   ctx.beginPath();
   ctx.roundRect(rect.x, rect.y, rect.width, rect.height, Math.min(radius, rect.width / 2, rect.height / 2));
   ctx.clip();
 };
-export function drawDecoratedMedia(ctx: CanvasRenderingContext2D, options: DecoratedMediaOptions) {
+export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions) {
   const appearance = { ...DEFAULT_CLIP_APPEARANCE, ...options.appearance };
   const windowsOptions = {
     showMenu: appearance.frameShowMenu,
@@ -81,7 +77,7 @@ export function drawDecoratedMedia(ctx: CanvasRenderingContext2D, options: Decor
   const outerRadius = Math.min(radiusForAppearance(appearance), options.rect.width / 2, options.rect.height / 2);
   if (appearance.shadowSize !== 'none') {
     ctx.save();
-    applyClipShadow(ctx, appearance, options.rect.width, options.source, options.sourceRect, options.shadowScale);
+    applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
     ctx.fillStyle = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
     ctx.beginPath();
     ctx.roundRect(options.rect.x, options.rect.y, options.rect.width, options.rect.height, outerRadius);

@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import CursorClickEffectsPanel from './CursorClickEffectsPanel.vue';
+import CursorClickEffectsPanel from '../CursorClickEffectsPanel.vue';
 
 const BigSlider = {
   emits: ['update:modelValue'],

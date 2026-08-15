@@ -36,6 +36,8 @@
     "zoom": "Zoom",
     "cursor": "Cursor",
     "captions": "Untertitel",
+    "keyboardCaptions": "Tastaturkürzel",
+    "textCaptions": "Textuntertitel",
     "audio": "Audio",
     "settings": "Einstellungen",
     "logo": "Logo"
@@ -99,7 +101,9 @@
     "zoomOut": "Herauszoomen",
     "zoomIn": "Hineinzoomen",
     "snappingOn": "Magnetisches Einrasten aktiviert",
-    "snappingOff": "Magnetisches Einrasten deaktiviert"
+    "snappingOff": "Magnetisches Einrasten deaktiviert",
+    "zoom": "Zoom",
+    "resetZoom": "Zoom zurücksetzen"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Klicke, um die Videospur umzuschalten",
@@ -133,7 +137,9 @@
     "unlinkMicrophoneTrack": "Mikrofonspur lösen",
     "waveformUnavailable": "Wellenform nicht verfügbar",
     "trimStart": "Anfang zuschneiden",
-    "trimEnd": "Ende zuschneiden"
+    "trimEnd": "Ende zuschneiden",
+    "keyboardCaptions": "Tastaturkürzel",
+    "textCaptions": "Textuntertitel"
   },
   "TimelineVideoClip": {
     "trimStart": "Anfang zuschneiden",

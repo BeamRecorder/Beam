@@ -61,8 +61,25 @@ const moveEvents = (events: CursorEvent[]) =>
 
 const eventTime = (event: CursorEvent) => event.sessionNs / 1_000_000_000;
 
-const clickEvents = (events: CursorEvent[]) =>
-  events.filter((event): event is CursorButtonEvent => event.event === 'button' && event.pressed);
+const buttonEvents = (events: CursorEvent[]) =>
+  events.filter((event): event is CursorButtonEvent => event.event === 'button');
+
+const dragRanges = (events: CursorEvent[]) => {
+  const ranges: Array<{ startSeconds: number; endSeconds: number }> = [];
+  let startSeconds: number | null = null;
+  for (const event of buttonEvents(events)
+    .filter((event) => event.button === 1)
+    .sort((left, right) => left.sessionNs - right.sessionNs)) {
+    if (event.pressed) {
+      startSeconds = eventTime(event);
+    } else if (startSeconds !== null) {
+      ranges.push({ startSeconds, endSeconds: eventTime(event) });
+      startSeconds = null;
+    }
+  }
+  if (startSeconds !== null) ranges.push({ startSeconds, endSeconds: Number.POSITIVE_INFINITY });
+  return ranges;
+};
 
 const angleBetween = (
   before: { x: number; y: number },
@@ -93,6 +110,7 @@ export function extractCursorMotionAnchors(
     },
   ];
   const lastAnchor = () => anchors[anchors.length - 1];
+  let futureIndex = 1;
 
   for (let index = 1; index < moves.length - 1; index += 1) {
     const current = moves[index];
@@ -105,9 +123,11 @@ export function extractCursorMotionAnchors(
     const previousTime = eventTime(previous);
     const speed =
       distance(previousPoint, currentPoint, sourceWidth, sourceHeight) / Math.max(0.001, currentTime - previousTime);
-    const future = moves.find(
-      (candidate, candidateIndex) => candidateIndex > index && eventTime(candidate) - currentTime >= 0.08,
-    );
+    futureIndex = Math.max(futureIndex, index + 1);
+    while (futureIndex < moves.length && eventTime(moves[futureIndex]) - currentTime < 0.08) {
+      futureIndex += 1;
+    }
+    const future = moves[futureIndex];
     const stopped =
       speed <= 35 &&
       Boolean(future) &&
@@ -134,7 +154,7 @@ export function extractCursorMotionAnchors(
     }
   }
 
-  for (const click of clickEvents(events)) {
+  for (const click of buttonEvents(events)) {
     anchors.push({
       timeSeconds: eventTime(click),
       x: click.normalizedX,
@@ -322,6 +342,8 @@ export function createCursorMotionPlayer(
   sourceHeight = 1080,
 ) {
   const timeline = createCursorMotionTimeline(events, settings, sourceWidth, sourceHeight);
+  const buttonTimes = buttonEvents(events).map(eventTime);
+  const drags = dragRanges(events);
   const spring: CursorSpringState = {
     x: { position: 0, velocity: 0 },
     y: { position: 0, velocity: 0 },
@@ -334,12 +356,17 @@ export function createCursorMotionPlayer(
   };
   const sample = (timeSeconds: number, rawState: CursorPlaybackState | null): CursorMotionSample | null => {
     if (!rawState) return null;
-    const target = timeline.targetAt(timeSeconds) ?? { x: rawState.x, y: rawState.y };
+    const dragging = drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds);
+    const target = dragging
+      ? { x: rawState.x, y: rawState.y }
+      : (timeline.targetAt(timeSeconds) ?? { x: rawState.x, y: rawState.y });
     const previousX = spring.x.position;
     const previousY = spring.y.position;
     const previousTime = spring.lastTimeSeconds;
     const deltaSeconds = previousTime === null ? 0 : Math.max(0, timeSeconds - previousTime);
-    if (previousTime === null || timeSeconds < previousTime || deltaSeconds > 0.1) {
+    const crossedButton =
+      previousTime !== null && buttonTimes.some((time) => time > previousTime && time <= timeSeconds);
+    if (previousTime === null || timeSeconds < previousTime || deltaSeconds > 0.1 || crossedButton || dragging) {
       spring.x = { position: target.x, velocity: 0 };
       spring.y = { position: target.y, velocity: 0 };
     } else {

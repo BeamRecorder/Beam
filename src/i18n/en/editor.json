@@ -36,6 +36,8 @@
     "zoom": "Zoom",
     "cursor": "Cursor",
     "captions": "Captions",
+    "keyboardCaptions": "Keyboard Captions",
+    "textCaptions": "Text Captions",
     "audio": "Audio",
     "settings": "Settings",
     "logo": "Logo"
@@ -99,7 +101,9 @@
     "zoomOut": "Zoom Out",
     "zoomIn": "Zoom In",
     "snappingOn": "Magnet Snapping Enabled",
-    "snappingOff": "Magnet Snapping Disabled"
+    "snappingOff": "Magnet Snapping Disabled",
+    "zoom": "Zoom",
+    "resetZoom": "Reset Zoom"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Click to toggle Video track",
@@ -121,6 +125,8 @@
     "addZoom": "+ Add 1.5× Zoom",
     "zoomTitle": "Zoom {level}×",
     "captions": "Captions",
+    "keyboardCaptions": "Keyboard Captions",
+    "textCaptions": "Text Captions",
     "unlinkCaptionsTrack": "Unlink Captions track",
     "clickToAddCaption": "Click to add caption at position",
     "addCaption": "+ Add Caption",
@@ -184,7 +190,27 @@
     "showDetails": "Error details"
   },
   "VideoEditor": {
-    "exportBanner": "Export in progress. Live edits will not affect the file currently being exported."
+    "exportBanner": "Export in progress. Live edits will not affect the file currently being exported.",
+    "mediaDropTitle": "Drop media to add it",
+    "mediaDropDescription": "Videos, images and audio files will be added at the playhead.",
+    "mediaDropImporting": "Validating and importing media…",
+    "mediaDropSingleSuccess": "“{name}” was added at {time}.",
+    "mediaDropBatchSuccess": "{count} media files were added at {time}.",
+    "mediaDropRejected": "{count} file(s) could not be added: {reasons}",
+    "mediaDropAudioIgnored": "The audio from {count} video(s) was ignored because its codec is unsupported.",
+    "mediaDropAlreadyImporting": "A media import is already in progress.",
+    "mediaDropUnsupportedCodec": "unsupported codec ({codec})",
+    "mediaDropUnsupportedExtension": "unsupported file extension",
+    "mediaDropInvalidFormat": "invalid or unsupported format",
+    "mediaDropEmpty": "empty media or missing duration",
+    "mediaDropDecodeFailed": "media decoding failed",
+    "mediaDropNotLocal": "not a local file",
+    "mediaDropImportFailed": "project import failed",
+    "mediaPlaybackError": "Media playback error: {message}",
+    "mediaPlaybackAssetError": "{project} — “{name}” is unavailable (expected source: {path}). {message}",
+    "mediaPlaybackIncompleteRecording": "{project} — “{name}” is unavailable (expected source: {path}). The recording session was not finalized.",
+    "mediaPlaybackUnknownProject": "Current project",
+    "mediaPlaybackCopyError": "Copy error"
   },
   "VideoProjectEdition": {
     "untitledProject": "Untitled project",

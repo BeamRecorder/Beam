@@ -6,6 +6,17 @@ import type { AppUpdateState } from '~/api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
 import Button from '~/ui/button/Button.vue';
 
+const props = withDefaults(
+  defineProps<{
+    showIcon?: boolean;
+    center?: boolean;
+  }>(),
+  {
+    showIcon: false,
+    center: false,
+  },
+);
+
 const { t } = useTranslate('Updates');
 const { t: tHud } = useTranslate('HUD');
 const state = ref<AppUpdateState | null>(null);
@@ -64,8 +75,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="update-controls">
-    <div class="update-header">
+  <div class="update-controls" :class="{ 'update-centered': center }">
+    <div class="update-header" :class="{ 'header-centered': center }">
+      <div v-if="showIcon" class="update-icon-wrap">
+        <RefreshCw class="update-top-icon" :class="{ 'icon-spin': state?.status === 'checking' }" />
+      </div>
       <span class="update-title">{{ t('title') }}</span>
       <p class="update-description">
         <template v-if="state?.status === 'downloaded'">{{
@@ -143,34 +157,78 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
+.update-controls.update-centered {
+  align-items: center;
+  text-align: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
 .update-header {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
+.update-header.header-centered {
+  align-items: center;
+  text-align: center;
+  gap: 5px;
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.update-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-bg-element) 90%, transparent);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.update-top-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--color-primary);
+}
+
 .update-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .update-description {
-  margin: 0;
+  margin: 3px 0 0;
   font-size: 11px;
   color: var(--text-muted);
+  line-height: 14px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .update-actions {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
 }
 
 .update-btn {
-  flex: 1;
+  width: 100%;
   justify-content: center;
-  white-space: nowrap;
 }
 
 .button-icon {

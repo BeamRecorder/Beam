@@ -3,6 +3,7 @@ import { capture } from '../../api/capture';
 import VideoProjectEdition from './VideoProjectEdition.vue';
 import ExportPopover from '../export/ExportPopover.vue';
 import Button from '~/ui/button/Button.vue';
+import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import { ArrowLeft, Redo2, Undo2 } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
@@ -77,21 +78,11 @@ const openDiscordInvite = () => {
     <div class="titlebar-drag-region" aria-hidden="true" />
 
     <div class="right-actions">
-      <div class="discord-action">
-        <Button
-          variant="ghost"
-          size="sm"
-          icon-only
-          :tooltip="t('discordTooltip')"
-          tooltip-position="bottom"
-          :aria-label="t('discordAriaLabel')"
-          @click.stop="openDiscordInvite"
-        >
-          <template #icon>
-            <img :src="resolvePublicAssetUrl('/discord_svg.svg')" class="discord-icon" alt="" aria-hidden="true" />
-          </template>
-        </Button>
-      </div>
+      <Tooltip :content="t('discordTooltip')" position="bottom">
+        <button type="button" class="discord-btn" :aria-label="t('discordAriaLabel')" @click.stop="openDiscordInvite">
+          <img :src="resolvePublicAssetUrl('/discord_svg.svg')" class="discord-icon" alt="" aria-hidden="true" />
+        </button>
+      </Tooltip>
       <ExportPopover v-if="exportRequest" :request="exportRequest" />
     </div>
   </header>
@@ -155,24 +146,36 @@ const openDiscordInvite = () => {
   margin-right: 4px;
 }
 
-.discord-action {
-  display: flex;
+.discord-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
-.discord-action :deep(.btn-container) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+.discord-btn:hover {
+  background-color: var(--color-bg-surface-hover, #2a2a32);
+  border-color: var(--color-border-dark, #3f3f46);
+  transform: translateY(-1px);
+}
+
+.discord-btn:active {
+  transform: translateY(0);
 }
 
 .discord-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
-  transform: translateY(1px);
+  display: block;
 }
 </style>

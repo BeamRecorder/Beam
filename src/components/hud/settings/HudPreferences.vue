@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Monitor, Moon, Sun, Keyboard, Info } from '@lucide/vue';
+import { Monitor, Moon, Sun, Keyboard, Info, Sparkles } from '@lucide/vue';
 import { useThemeStore } from '~/stores/theme';
 import { useLocaleStore } from '~/stores/locale';
 import { useTranslate } from '~/i18n/useTranslate';
+import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
@@ -83,6 +84,11 @@ const recordingBarOptions = [
   { value: 'auto-fade', label: t('autoFade') },
   { value: 'hover-only', label: t('hiddenUntilHovered') },
 ];
+
+const openOnboarding = () => {
+  void capture.openOnboarding();
+  emit('close');
+};
 </script>
 
 <template>
@@ -264,6 +270,17 @@ const recordingBarOptions = [
             <Button variant="secondary" size="sm" class="preference-control">
               <template #icon><Info class="button-icon" /></template>
               {{ t('view') }}
+            </Button>
+          </div>
+
+          <div class="preference-item clickable" @click="openOnboarding">
+            <div class="preference-copy">
+              <p class="preference-title">{{ t('onboarding') }}</p>
+              <p class="preference-description">{{ t('onboardingDesc') }}</p>
+            </div>
+            <Button variant="secondary" size="sm" class="preference-control">
+              <template #icon><Sparkles class="button-icon" /></template>
+              {{ t('relaunchOnboarding') }}
             </Button>
           </div>
         </div>

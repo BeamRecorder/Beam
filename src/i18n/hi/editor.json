@@ -36,6 +36,8 @@
     "zoom": "ज़ूम",
     "cursor": "कर्सर",
     "captions": "कैप्शन",
+    "keyboardCaptions": "कीबोर्ड शॉर्टकट",
+    "textCaptions": "टेक्स्ट कैप्शन",
     "audio": "ऑडियो",
     "settings": "सेटिंग",
     "logo": "लोगो"
@@ -99,7 +101,9 @@
     "zoomOut": "ज़ूम आउट",
     "zoomIn": "ज़ूम इन",
     "snappingOn": "मैग्नेटिक स्नैपिंग चालू है",
-    "snappingOff": "मैग्नेटिक स्नैपिंग बंद है"
+    "snappingOff": "मैग्नेटिक स्नैपिंग बंद है",
+    "zoom": "ज़ूम",
+    "resetZoom": "ज़ूम रीसेट करें"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "वीडियो ट्रैक टॉगल करने के लिए क्लिक करें",
@@ -133,7 +137,9 @@
     "unlinkMicrophoneTrack": "माइक्रोफ़ोन ट्रैक का लिंक हटाएँ",
     "waveformUnavailable": "वेवफ़ॉर्म उपलब्ध नहीं है",
     "trimStart": "शुरुआत ट्रिम करें",
-    "trimEnd": "अंत ट्रिम करें"
+    "trimEnd": "अंत ट्रिम करें",
+    "keyboardCaptions": "कीबोर्ड शॉर्टकट",
+    "textCaptions": "टेक्स्ट कैप्शन"
   },
   "TimelineVideoClip": {
     "trimStart": "शुरुआत ट्रिम करें",

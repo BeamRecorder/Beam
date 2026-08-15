@@ -18,7 +18,6 @@ import {
   systemAudioSource,
 } from '../../api/system-audio-recorder';
 import type {
-  CaptureCatalog,
   CapturePreview,
   CaptureProject,
   CaptureSession,
@@ -33,27 +32,14 @@ import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import TopbarHUD from './TopbarHUD.vue';
 import SourceSelect from './SourceSelect.vue';
 import { matchScreenPreview } from './source-preview';
-import {
-  Monitor,
-  Layout,
-  ArrowUpRight,
-  Volume2,
-  VolumeX,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  Crop,
-  ScrollText,
-  Copy,
-  Check,
-} from '@lucide/vue';
+import { Monitor, Layout, ArrowUpRight, Video, VideoOff, Crop, ScrollText, Copy, Check } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useAudioLevelMeter } from './audio/useAudioLevelMeter';
 import AudioIconMeter from './audio/AudioIconMeter.vue';
 import EditorPreparingHud from './EditorPreparingHud.vue';
 import type { RecordingBarVisibility } from './recorder/recording-types';
 import { useInteractionAccess } from './interactions/useInteractionAccess';
+import { useHudNavigation } from './navigation/useHudNavigation';
 
 const { t } = useTranslate('HUD');
 const { t: tPrefs } = useTranslate('HudPreferences');
@@ -69,18 +55,20 @@ let savedDevices: SavedDevices | null = null;
 const props = withDefaults(
   defineProps<{
     embedded?: boolean;
+    showTopbar?: boolean;
     preparingEditor?: boolean;
     editorLoadingProgress?: EditorLoadingProgress;
     externalError?: string;
   }>(),
   {
     embedded: false,
+    showTopbar: false,
     preparingEditor: false,
     editorLoadingProgress: () => ({ stage: 'openingWindow', value: 10 }),
   },
 );
 
-const emit = defineEmits(['start-recording', 'stop-recording', 'open-project']);
+const emit = defineEmits(['start-recording', 'stop-recording', 'open-project', 'focus-feature']);
 const ProjectPicker = defineAsyncComponent(() => import('../projects/ProjectPicker.vue'));
 const HudPreferences = defineAsyncComponent(() => import('./settings/HudPreferences.vue'));
 
@@ -95,10 +83,11 @@ let copiedErrorTimeout: ReturnType<typeof setTimeout> | null = null;
 const sources = ref<CaptureSource[]>([]);
 const sourceDiscoveryCompleted = ref(false);
 
-// View State (Main vs Settings)
-const showSettings = ref(false);
-const settingsView = ref<'general' | 'shortcuts' | 'about'>('general');
-const showProjectPicker = ref(false);
+// Navigation & View State (Main vs Settings vs Project Picker)
+const navigation = useHudNavigation();
+const showSettings = navigation.showSettings;
+const settingsView = navigation.settingsView;
+const showProjectPicker = navigation.showProjectPicker;
 
 // Preference settings
 const countdownSeconds = ref(3); // 0 for Off, 3, 5, 10
@@ -145,11 +134,14 @@ let regionConfirmationTimeout: ReturnType<typeof setTimeout> | null = null;
 const systemAudioMode = ref<'on' | 'off'>('off');
 
 const isMicEnabled = computed(() => selectedMicId.value !== 'no-audio');
-const isSystemAudioEnabled = computed(() => systemAudioMode.value === 'on');
-const { level: micLevel } = useAudioLevelMeter(isMicEnabled, selectedMicId, false);
-const { level: systemAudioLevel } = useAudioLevelMeter(isSystemAudioEnabled, undefined, true);
+const { level: micLevel } = useAudioLevelMeter(
+  computed(() => !props.embedded && isMicEnabled.value),
+  selectedMicId,
+);
+const systemAudioLevel = 0;
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
+  if (props.embedded) return;
   void capture.updatePreferences({
     devices: { cameraId: selectedCameraId.value, micId: selectedMicId.value, systemAudioMode: systemAudioMode.value },
   });
@@ -157,6 +149,7 @@ watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
 watch(
   [selectedCameraId],
   async () => {
+    if (props.embedded) return;
     const camId = selectedCameraId.value;
     capture.configureCameraOverlay({
       cameraId: camId,
@@ -167,10 +160,8 @@ watch(
       } catch (err) {
         if (isCameraUnavailableError(err)) {
           selectedCameraId.value = 'off';
-          errorMessage.value = t(
-            'cameraUnavailableError',
-            'Camera is unavailable: hardware resources are locked by another application or Windows Media Foundation (0xC00D3704).',
-          );
+          errorMessage.value =
+            'Camera is unavailable: hardware resources are locked by another application or Windows Media Foundation (0xC00D3704).';
         }
       }
     }
@@ -300,6 +291,7 @@ const snapshotScreenBounds = (bounds: ScreenRegionBounds): ScreenRegionBounds =>
 });
 
 const selectScreenRegion = async () => {
+  if (props.embedded) return;
   if (isBusy.value || isRecording.value || isRegionSelectionLeaving.value || !selectedScreenBounds.value) return;
   const resolvedBounds = (await refreshSelectedScreenBounds()) ?? selectedScreenBounds.value;
   if (!resolvedBounds || isBusy.value || isRecording.value || isRegionSelectionLeaving.value) return;
@@ -472,10 +464,7 @@ watch(selectedScreenId, () => {
 });
 
 // Watch settings view toggle to update window size
-watch(showSettings, (val) => {
-  if (!val) {
-    settingsView.value = 'general';
-  }
+watch(showSettings, () => {
   updateWindowSize();
 });
 
@@ -769,11 +758,11 @@ const discoverSources = async () => {
   errorMessage.value = '';
   sourceDiscoveryCompleted.value = false;
   try {
-    const [catalog, cameras, microphones] = (await Promise.all([
-      capture.discover(),
-      listBrowserCameras(),
+    const [microphones, cameras, catalog] = await Promise.all([
       listBrowserMicrophones(),
-    ])) as [CaptureCatalog, CaptureSource[], CaptureSource[]];
+      listBrowserCameras(),
+      capture.discover(),
+    ]);
     sources.value = [
       ...(Array.isArray(catalog.sources) ? catalog.sources : []),
       ...cameras,
@@ -828,12 +817,14 @@ let unsubscribeShortcut: (() => void) | null = null;
 let unsubscribeTeleprompterVisibility: (() => void) | null = null;
 
 const toggleTeleprompter = () => {
+  if (props.embedded) return;
   isTeleprompterVisible.value = !isTeleprompterVisible.value;
   if (isTeleprompterVisible.value) capture.showTeleprompter();
   else capture.hideTeleprompter();
 };
 
 onMounted(async () => {
+  if (props.embedded) return;
   const preferences = await capture.getPreferences();
   savedDevices = preferences.devices as unknown as SavedDevices;
   const savedRegion = preferences.extras?.screenRegion;
@@ -884,7 +875,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   screenBoundsRequest++;
-  capture.hideScreenRegionOverlay();
+  if (!props.embedded) capture.hideScreenRegionOverlay();
   if (regionSelectionEnterTimeout) clearTimeout(regionSelectionEnterTimeout);
   if (regionConfirmationTimeout) clearTimeout(regionConfirmationTimeout);
   unsubscribeShortcut?.();
@@ -901,10 +892,12 @@ onBeforeUnmount(() => {
 });
 
 const closeApp = () => {
+  if (props.embedded) return;
   capture.quit();
 };
 
 const minimizeApp = () => {
+  if (props.embedded) return;
   document.body.classList.add('app-minimizing');
   setTimeout(() => {
     capture.minimize();
@@ -913,33 +906,22 @@ const minimizeApp = () => {
 };
 
 const openProjectPicker = () => {
-  showSettings.value = false;
-  showProjectPicker.value = true;
+  navigation.openProjects();
+  emit('focus-feature', 'projects');
 };
 
 const closeProjectPicker = () => {
-  showProjectPicker.value = false;
+  navigation.openHud();
 };
 
 const handleTopbarBack = () => {
-  if (showProjectPicker.value) {
-    closeProjectPicker();
-    return;
-  }
-  if (showSettings.value) {
-    if (settingsView.value !== 'general') {
-      settingsView.value = 'general';
-    } else {
-      showSettings.value = false;
-    }
-  }
+  navigation.handleTopbarBack();
 };
 
 const openProject = (project: CaptureProject) => {
+  if (props.embedded) return;
   closeProjectPicker();
-  if (props.currentProjectId !== project.id) {
-    emit('open-project', project);
-  }
+  emit('open-project', project);
 };
 </script>
 
@@ -959,7 +941,7 @@ const openProject = (project: CaptureProject) => {
     :style="embedded ? {} : { height: `${hudHeight}px` }"
   >
     <TopbarHUD
-      v-if="!embedded"
+      v-if="!embedded || showTopbar"
       :title="
         preparingEditor
           ? t('preparingEditor')
@@ -978,7 +960,10 @@ const openProject = (project: CaptureProject) => {
       :is-recording="isRecording"
       @back="handleTopbarBack"
       @minimize="minimizeApp"
-      @open-settings="showSettings = true"
+      @open-settings="
+        showSettings = true;
+        emit('focus-feature', 'topbar');
+      "
       @close="closeApp"
     />
 
@@ -1016,11 +1001,25 @@ const openProject = (project: CaptureProject) => {
       <div v-else key="hud" class="hud-body">
         <!-- Tabs (Screen / Window) -->
         <ButtonGroup class="mode-tabs">
-          <Button :class="{ active: activeTab === 'screen' }" variant="tab" @click="activeTab = 'screen'">
+          <Button
+            :class="{ active: activeTab === 'screen' }"
+            variant="tab"
+            @click="
+              activeTab = 'screen';
+              emit('focus-feature', 'tabs');
+            "
+          >
             <template #icon><Monitor class="btn-icon" /></template>
             {{ t('screen') }}
           </Button>
-          <Button :class="{ active: activeTab === 'window' }" variant="tab" @click="activeTab = 'window'">
+          <Button
+            :class="{ active: activeTab === 'window' }"
+            variant="tab"
+            @click="
+              activeTab = 'window';
+              emit('focus-feature', 'tabs');
+            "
+          >
             <template #icon><Layout class="btn-icon" /></template>
             {{ t('window') }}
           </Button>
@@ -1041,7 +1040,10 @@ const openProject = (project: CaptureProject) => {
                       :previews="windowPreviews"
                       :loading="windowPreviewsLoading"
                       :disabled="isRecording || isBusy"
-                      @toggle="handleDropdownToggle"
+                      @toggle="
+                        handleDropdownToggle($event);
+                        if ($event) emit('focus-feature', 'source');
+                      "
                     />
                   </div>
                 </template>
@@ -1056,7 +1058,10 @@ const openProject = (project: CaptureProject) => {
                       :previews="screenPreviews"
                       :loading="screenPreviewsLoading"
                       :disabled="isRecording || isBusy || displaySources.length === 0"
-                      @toggle="handleDropdownToggle"
+                      @toggle="
+                        handleDropdownToggle($event);
+                        if ($event) emit('focus-feature', 'source');
+                      "
                     />
                     <Button
                       :variant="selectedScreenRegion ? 'primary' : 'secondary'"
@@ -1070,7 +1075,10 @@ const openProject = (project: CaptureProject) => {
                         'screen-region-confirmed': Boolean(selectedScreenRegion),
                         'screen-region-checkmark': isRegionConfirmationAnimating,
                       }"
-                      @click="selectScreenRegion"
+                      @click="
+                        selectScreenRegion();
+                        emit('focus-feature', 'source');
+                      "
                     />
                   </div>
                 </div>
@@ -1089,7 +1097,10 @@ const openProject = (project: CaptureProject) => {
                     v-model="systemAudioMode"
                     :options="systemAudioOptions"
                     :disabled="isRecording || isBusy"
-                    @toggle="handleDropdownToggle"
+                    @toggle="
+                      handleDropdownToggle($event);
+                      if ($event) emit('focus-feature', 'systemAudio');
+                    "
                   />
                 </div>
 
@@ -1109,7 +1120,10 @@ const openProject = (project: CaptureProject) => {
                       v-model="selectedMicId"
                       :options="micOptions"
                       :disabled="isRecording || isBusy"
-                      @toggle="handleDropdownToggle"
+                      @toggle="
+                        handleDropdownToggle($event);
+                        if ($event) emit('focus-feature', 'mic');
+                      "
                     />
                     <Button
                       :variant="isTeleprompterVisible ? 'primary' : 'secondary'"
@@ -1120,7 +1134,10 @@ const openProject = (project: CaptureProject) => {
                       :tooltip="isTeleprompterVisible ? t('closeTeleprompter') : t('openTeleprompter')"
                       :disabled="isBusy"
                       :class="{ 'teleprompter-active': isTeleprompterVisible }"
-                      @click="toggleTeleprompter"
+                      @click="
+                        toggleTeleprompter();
+                        emit('focus-feature', 'teleprompter');
+                      "
                     />
                   </div>
                 </div>
@@ -1139,7 +1156,10 @@ const openProject = (project: CaptureProject) => {
                     v-model="selectedCameraId"
                     :options="cameraOptions"
                     :disabled="isRecording || isBusy"
-                    @toggle="handleDropdownToggle"
+                    @toggle="
+                      handleDropdownToggle($event);
+                      if ($event) emit('focus-feature', 'camera');
+                    "
                   />
                 </div>
               </div>
@@ -1169,7 +1189,10 @@ const openProject = (project: CaptureProject) => {
             class="record-btn-override"
             :class="{ recording: isRecording }"
             :disabled="isBusy || (!isRecording && sourceDiscoveryCompleted && !hasSelectedCaptureSource)"
-            @click="toggleRecording"
+            @click="
+              toggleRecording();
+              emit('focus-feature', 'record');
+            "
           >
             <template #icon>
               <span class="pulse-dot" v-if="isRecording"></span>
@@ -1187,7 +1210,10 @@ const openProject = (project: CaptureProject) => {
             size="sm"
             class="web-link-text project-btn"
             :icon="ArrowUpRight"
-            @click="openProjectPicker"
+            @click="
+              openProjectPicker();
+              emit('focus-feature', 'projects');
+            "
           >
             {{ t('openExistingProject') }}
           </Button>
@@ -1212,11 +1238,16 @@ const openProject = (project: CaptureProject) => {
 }
 
 .hud-wrapper.embedded {
-  width: 100% !important;
+  width: 320px !important;
+  max-width: 100%;
+  max-height: 440px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   margin: 0 !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  background: var(--color-bg-surface) !important;
+  border-radius: var(--radius-lg) !important;
   height: auto !important;
 }
 

@@ -7,7 +7,7 @@ describe('ZoomClickEmptyState.vue', () => {
     const wrapper = mount(ZoomClickEmptyState);
     expect(wrapper.find('.mini-timeline').exists()).toBe(true);
     expect(wrapper.find('.animated-cursor').exists()).toBe(true);
-    expect(wrapper.find('.target-zoom').exists()).toBe(true);
+    expect(wrapper.find('.real-zoom-indicator').exists()).toBe(true);
     expect(wrapper.find('.empty-title').exists()).toBe(true);
   });
 });

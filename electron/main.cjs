@@ -7,7 +7,6 @@ const {
   protocol,
   globalShortcut,
   screen,
-  net,
   shell,
   nativeTheme,
   powerMonitor,
@@ -15,16 +14,17 @@ const {
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 const { Readable } = require('stream');
 const { CaptureEngine } = require('./capture/capture-engine.cjs');
 const { registerCaptureIpc } = require('./capture/capture-ipc.cjs');
 const { registerProjectIpc } = require('./projects/project-ipc.cjs');
 const { createProjectStore } = require('./projects/project-store.cjs');
+const { createProjectMediaHandler } = require('./projects/project-media-protocol.cjs');
 const { WindowController } = require('./window/window-controller.cjs');
 const { registerWindowIpc } = require('./window/window-ipc.cjs');
 const { shouldAutoOpenDevTools } = require('./window/devtools-policy.cjs');
 const { createEditorWindowManager } = require('./window/editor-window.cjs');
+const { createOnboardingWindowManager } = require('./window/onboarding-window.cjs');
 const { registerExportIpc } = require('./export/export-ipc.cjs');
 const { createCameraOverlayWindow } = require('./camera/overlay-window.cjs');
 const { createCountdownWindow } = require('./countdown-window.cjs');
@@ -108,7 +108,8 @@ function isTrustedRenderer(url) {
   try {
     const target = new URL(url);
     return (
-      target.origin === 'http://localhost:6500' && ['/', '/editor.html', '/teleprompter.html'].includes(target.pathname)
+      target.origin === 'http://localhost:6500' &&
+      ['/', '/index.html', '/editor.html', '/teleprompter.html', '/onboarding.html'].includes(target.pathname)
     );
   } catch {
     return false;
@@ -117,12 +118,13 @@ function isTrustedRenderer(url) {
 
 function configureMediaPermission() {
   const trusted = (webContents) => Boolean(webContents) && isTrustedRenderer(webContents.getURL());
+  const allowed = new Set(['media', 'camera', 'microphone', 'display-capture', 'speaker-selection']);
   session.defaultSession.setPermissionCheckHandler(
-    (webContents, permission) => trusted(webContents) && (permission === 'media' || permission === 'display-capture'),
+    (webContents, permission) => trusted(webContents) && allowed.has(permission),
   );
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     if (!trusted(webContents)) return callback(false);
-    callback(permission === 'media' || permission === 'display-capture');
+    callback(allowed.has(permission));
   });
 }
 
@@ -182,7 +184,7 @@ function createWindow(preferencesStore) {
   // profileRendererRequests(win.webContents)
   win.once('ready-to-show', () => {
     logStartup('Window is ready to show (ready-to-show).');
-    controller.markReadyToShow();
+    if (preferencesStore.read().onboardingCompleted) controller.markReadyToShow();
   });
   win.webContents.once('did-start-loading', () => logStartup('Renderer navigation started.'));
   win.webContents.once('dom-ready', () => logStartup('Renderer DOM is ready.'));
@@ -262,45 +264,11 @@ function initializeApplication() {
     registerSystemAudioIpc({ ipcMain: applicationIpc, storage: systemAudioStorage });
     logStartup('Capture track IPC registered.');
     const projectStore = createProjectStore(userPaths.projects);
+    const backgroundLibrary = createBackgroundLibrary(userPaths);
     const teleprompterStorage = createTeleprompterStorage({ projectStore });
     registerTeleprompterIpc({ ipcMain: applicationIpc, teleprompterWindow, storage: teleprompterStorage });
-    registerProjectIpc(
-      applicationIpc,
-      projectStore,
-      createBackgroundLibrary(userPaths),
-      require('electron').dialog,
-      BrowserWindow,
-    );
-    protocol.handle('project-media', async (request) => {
-      try {
-        const file = projectStore.mediaFileForUrl(request.url);
-        if (!file || !fs.existsSync(file)) return new Response('Not found', { status: 404 });
-        const response = await net.fetch(pathToFileURL(file).href);
-        const ext = path.extname(file).toLowerCase();
-        const mimeTypes = {
-          '.mp4': 'video/mp4',
-          '.webm': 'video/webm',
-          '.mov': 'video/quicktime',
-          '.mkv': 'video/x-matroska',
-          '.png': 'image/png',
-          '.jpg': 'image/jpeg',
-          '.jpeg': 'image/jpeg',
-          '.webp': 'image/webp',
-        };
-        const contentType = mimeTypes[ext] || 'application/octet-stream';
-        const headers = new Headers(response.headers);
-        headers.set('content-type', contentType);
-        headers.set('access-control-allow-origin', '*');
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      } catch (e) {
-        console.error('[project-media] Error serving media:', e);
-        return new Response('Internal error', { status: 500 });
-      }
-    });
+    registerProjectIpc(applicationIpc, projectStore, backgroundLibrary, require('electron').dialog, BrowserWindow);
+    protocol.handle('project-media', createProjectMediaHandler({ projectStore, backgroundLibrary }));
     logStartup('Project IPC registered.');
     const whisperStore = createWhisperModelStore(userPaths.whisperModels);
     protocol.handle('whisper-model', (request) => {
@@ -319,7 +287,11 @@ function initializeApplication() {
       isPackaged: app.isPackaged,
       canAcceptWork: () => coordinator.canAcceptWork(),
     };
-    const cameraOverlay = createCameraOverlayWindow(lifecycleOptions);
+    const cameraOverlay = createCameraOverlayWindow({
+      ...lifecycleOptions,
+      preferencesStore,
+      platform: process.platform,
+    });
     const countdownOverlay = createCountdownWindow(lifecycleOptions);
     const screenRegionOverlay = createScreenRegionOverlayWindow(lifecycleOptions);
     applicationIpc.on('camera-overlay:configure', (_event, state) => cameraOverlay.configure(state));
@@ -366,6 +338,7 @@ function initializeApplication() {
       hudWindow: win,
       hudController: controllers.get(win),
       registerController: (target, controller) => controllers.set(target, controller),
+      preferencesStore,
       initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
       cleanupWindow: (contents) => {
         exportIpc.cleanupWindow(contents);
@@ -375,25 +348,37 @@ function initializeApplication() {
       },
       canAcceptWork: () => coordinator.canAcceptWork(),
     });
+    const onboardingWindow = createOnboardingWindowManager({
+      applicationRoot,
+      isPackaged: app.isPackaged,
+      ipcMain: applicationIpc,
+      hudWindow: win,
+      hudController: controllers.get(win),
+      registerController: (target, controller) => controllers.set(target, controller),
+      preferencesStore,
+      initialDark: selectedTheme === 'dark' || (selectedTheme === 'system' && nativeTheme.shouldUseDarkColors),
+    });
     showExistingHud = () => {
       if (!coordinator.canAcceptWork()) return false;
-      editorWindow.showHud();
-      return true;
+      onboardingWindow.destroy();
+      return editorWindow.showHud();
     };
     if (pendingHudRestore) restoreCanonicalHud();
     const trayManager = createTrayManager({
       applicationRoot,
       getWindow: () => win,
       getController: () => win && controllers.get(win),
-      onShowHud: () => editorWindow.showHud(),
+      onShowHud: showExistingHud,
     });
     trayManager.init();
+    if (!preferencesStore.read().onboardingCompleted) onboardingWindow.open();
 
     // Every owned resource must be released on shutdown. The eagerly preloaded
     // countdown window is the hidden window that previously prevented
     // `window-all-closed`, so it is registered alongside every other resource.
     coordinator.registerCleanup({ id: 'hud-window', cleanup: () => win.destroy() });
     coordinator.registerCleanup({ id: 'editor', cleanup: () => editorWindow.destroy() });
+    coordinator.registerCleanup({ id: 'onboarding', cleanup: () => onboardingWindow.destroy() });
     coordinator.registerCleanup({ id: 'tray', cleanup: () => trayManager.destroy() });
     coordinator.registerCleanup({ id: 'teleprompter', cleanup: () => teleprompterWindow.destroy() });
     coordinator.registerCleanup({ id: 'countdown', cleanup: () => countdownOverlay.destroy() });

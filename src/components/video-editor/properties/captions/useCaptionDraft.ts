@@ -1,17 +1,24 @@
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
-import type { CaptionClip } from '../../composition/composition-types';
+import type { CaptionClip } from '~/media/shared/composition-types';
 
 const cloneCaption = (clip: CaptionClip): CaptionClip => ({
   ...clip,
   transform: clip.transform ? { ...clip.transform } : undefined,
-  caption: {
-    ...clip.caption,
-    style: { ...clip.caption.style },
-    sentences: clip.caption.sentences.map((sentence) => ({
-      ...sentence,
-      words: sentence.words.map((word) => ({ ...word })),
-    })),
-  },
+  caption:
+    clip.caption.type === 'text'
+      ? {
+          ...clip.caption,
+          style: { ...clip.caption.style },
+          sentences: clip.caption.sentences.map((sentence) => ({
+            ...sentence,
+            words: sentence.words.map((word) => ({ ...word })),
+          })),
+        }
+      : {
+          ...clip.caption,
+          style: { ...clip.caption.style },
+          steps: clip.caption.steps.map((step) => ({ ...step, modifiers: [...step.modifiers] })),
+        },
 });
 
 export const useCaptionDraft = (

@@ -76,12 +76,7 @@ const gradientTypeOptions = [
     <div v-if="showAngle" class="gradient-options">
       <div class="option-row">
         <label>{{ uiText.type }}</label>
-        <Select
-          :model-value="gradientType"
-          :options="gradientTypeOptions"
-          variant="subtle"
-          @update:model-value="updateGradientType"
-        />
+        <Select :model-value="gradientType" :options="gradientTypeOptions" @update:model-value="updateGradientType" />
       </div>
       <div v-if="gradientType === 'linear'" class="angle-row">
         <BigSlider

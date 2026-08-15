@@ -2,18 +2,17 @@ import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
 import { useVideoPlayer } from './useVideoPlayer';
-import { useCompositionAudio } from './useCompositionAudio';
 import { useCursorReplacer } from '../properties/cursor/useCursorReplacer';
 import { useClipComposition } from './useClipComposition';
 import { useProjectZoom } from './useProjectZoom';
 import { useProjectEditorState } from './useProjectEditorState';
 import { createCompositionSnapshot } from '../../export/composition/snapshot';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
-import { compositionDurationMs } from '../composition/engine/clip-engine';
+import { compositionDurationMs } from '~/media/shared';
 import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-settings';
+import { compositionPlaybackSignature } from './composition-playback-signature';
 
 export function useVideoEditor(options: {
-  videoSrc: Ref<string | null | undefined>;
   project: Ref<CaptureProject | null | undefined>;
   editorData: Ref<ProjectEditorData | null | undefined>;
 }) {
@@ -21,32 +20,20 @@ export function useVideoEditor(options: {
   const activeTab = ref('canvas');
   const systemVolume = ref(100);
   const micVolume = ref(100);
-  const sourceSize = ref({ width: 1920, height: 1080 });
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
   const player = useVideoPlayer();
-  const durationMs = computed(() => Math.round(player.duration.value * 1_000));
   const cursor = useCursorReplacer();
   const cursorMotion = ref(createDefaultCursorMotionSettings());
 
-  watch(
-    options.videoSrc,
-    (source) => {
-      player.videoSrc.value = source ?? null;
-    },
-    { immediate: true },
-  );
   const compositionState = useClipComposition({
     project,
     editorData,
     currentTimeSec: player.currentTime,
     activeTab,
   });
-  useCompositionAudio({
-    composition: compositionState.composition,
-    currentTime: player.currentTime,
-    isPlaying: player.isPlaying,
-    volume: player.volume,
-  });
+  // Composition state is available before the asynchronous playback engine has
+  // decoded metadata, so it is the authoritative duration for zoom generation.
+  const durationMs = computed(() => compositionDurationMs(compositionState.composition.value));
   const zoomState = useProjectZoom({ editorData, durationMs, activeTab });
   const editorState = useProjectEditorState({
     project,
@@ -59,13 +46,20 @@ export function useVideoEditor(options: {
     canvas: outputCanvas,
     cursorEffects: cursor.clickEffects,
     cursorMotion,
+    selectedCursor: cursor.selectedCursor,
+    cursorSize: cursor.cursorSize,
+    cursorColor: cursor.cursorColor,
+    cursorShadowEnabled: cursor.enableShadow,
+    cursorShadowBlur: cursor.shadowBlur,
+    cursorShadowColor: cursor.shadowColor,
+    cursorShadowDirection: cursor.shadowDirection,
     availableBackgrounds: player.backgroundGroups,
   });
 
   const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
-  void refreshBackgroundLibrary().catch((error) => console.error('Failed to load background library:', error));
+  void refreshBackgroundLibrary().catch(() => console.error('Failed to load background library.'));
   const stopBackgroundSubscription = capture.onBackgroundLibraryChanged(() => {
-    void refreshBackgroundLibrary().catch((error) => console.error('Failed to refresh background library:', error));
+    void refreshBackgroundLibrary().catch(() => console.error('Failed to refresh background library.'));
   });
   onScopeDispose(stopBackgroundSubscription);
 
@@ -76,38 +70,32 @@ export function useVideoEditor(options: {
   });
   const exportRequest = computed(() => {
     if (!project.value) return null;
-    try {
-      return {
-        projectName: project.value.name,
-        snapshot: createCompositionSnapshot({
-          duration: compositionDurationMs(compositionState.composition.value) / 1_000,
-          width: sourceSize.value.width,
-          height: sourceSize.value.height,
-          canvas: outputCanvas.value,
-          fps: sourceFps.value,
-          background: player.selectedBackgroundMedia.value,
-          blurPercent: player.backgroundBlurPercent.value,
-          editorData: editorData.value,
-          zooms: zoomState.zoomElements.value,
-          composition: compositionState.composition.value,
-          cursorSettings: {
-            selectedCursor: cursor.selectedCursor.value,
-            size: cursor.cursorSize.value,
-            color: cursor.cursorColor.value,
-            shadow: {
-              enabled: cursor.enableShadow.value,
-              blur: cursor.shadowBlur.value,
-              color: cursor.shadowColor.value,
-              direction: cursor.shadowDirection.value,
-            },
-            clickEffects: cursor.clickEffects.value,
-            motion: cursorMotion.value,
+    return {
+      projectName: project.value.name,
+      snapshot: createCompositionSnapshot({
+        duration: compositionDurationMs(compositionState.composition.value) / 1_000,
+        canvas: outputCanvas.value,
+        fps: sourceFps.value,
+        background: player.selectedBackgroundMedia.value,
+        blurPercent: player.backgroundBlurPercent.value,
+        editorData: editorData.value,
+        zooms: zoomState.zoomElements.value,
+        composition: compositionState.composition.value,
+        cursorSettings: {
+          selectedCursor: cursor.selectedCursor.value,
+          size: cursor.cursorSize.value,
+          color: cursor.cursorColor.value,
+          shadow: {
+            enabled: cursor.enableShadow.value,
+            blur: cursor.shadowBlur.value,
+            color: cursor.shadowColor.value,
+            direction: cursor.shadowDirection.value,
           },
-        }),
-      };
-    } catch {
-      return null;
-    }
+          clickEffects: cursor.clickEffects.value,
+          motion: cursorMotion.value,
+        },
+      }),
+    };
   });
 
   watch(
@@ -117,11 +105,10 @@ export function useVideoEditor(options: {
       try {
         await editorState.load(id);
         compositionState.synchronizeRecording();
-        player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
         zoomState.ensureAutomaticZooms();
         editorState.scheduleSave();
-      } catch (error) {
-        console.error('Failed to load editor state:', error);
+      } catch {
+        console.error('Failed to load editor state.');
       }
     },
     { immediate: true },
@@ -130,24 +117,32 @@ export function useVideoEditor(options: {
     editorData,
     () => {
       compositionState.synchronizeRecording();
-      player.duration.value = compositionDurationMs(compositionState.composition.value) / 1_000;
+      zoomState.ensureAutomaticZooms();
     },
     { deep: true },
   );
+  let playbackLoad = 0;
   watch(
-    compositionState.composition,
-    (composition) => {
-      player.duration.value = compositionDurationMs(composition) / 1_000;
-      if (player.currentTime.value > player.duration.value) player.currentTime.value = player.duration.value;
+    () => compositionPlaybackSignature(compositionState.composition.value),
+    () => {
+      const request = ++playbackLoad;
+      const composition = compositionState.composition.value;
+      void player.loadComposition(composition).catch((error: unknown) => {
+        if (request !== playbackLoad) return;
+        console.error(
+          `[Beam media:editor] composition watcher load failed ${JSON.stringify({
+            request,
+            message: error instanceof Error ? error.message : 'Unknown playback error.',
+          })}`,
+        );
+      });
     },
-    { deep: true },
+    { immediate: true, flush: 'post' },
   );
-
   return {
     activeTab,
     systemVolume,
     micVolume,
-    sourceSize,
     outputCanvas,
     player,
     cursor,

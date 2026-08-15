@@ -20,6 +20,21 @@ test('writes durable generic preferences and merges patches', () => {
   assert.ok(fs.existsSync(path.join(directory, 'preferencesSettings.json')));
 });
 
+test('writes camera and teleprompter window coordinates to preferences.json', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-'));
+  const file = path.join(directory, 'preferences.json');
+  const store = createPreferencesStore(file);
+  const bounds = {
+    cameraOverlay: { x: 321, y: 222, width: 500, height: 300 },
+    teleprompterWindow: { x: 355, y: 277, width: 800, height: 500 },
+  };
+
+  store.patch({ extras: bounds });
+
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).extras, bounds);
+  assert.deepEqual(store.read().extras, bounds);
+});
+
 test('rejects duplicate global shortcuts', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-'));
   const store = createPreferencesStore(directory);
@@ -39,7 +54,10 @@ test('rejects duplicate global shortcuts', () => {
 test('accepts hover-only recorder visibility and falls back for invalid values', () => {
   assert.equal(normalize({ recordingBar: { visibility: 'hover-only' } }).recordingBar.visibility, 'hover-only');
   assert.equal(normalize({ recordingBar: { visibility: 'not-a-mode' } }, 'win32').recordingBar.visibility, 'always');
-  assert.equal(normalize({ recordingBar: { visibility: 'not-a-mode' } }, 'linux').recordingBar.visibility, 'hover-only');
+  assert.equal(
+    normalize({ recordingBar: { visibility: 'not-a-mode' } }, 'linux').recordingBar.visibility,
+    'hover-only',
+  );
 });
 
 test('uses hover-only defaults on Linux and always-visible defaults on desktop platforms', () => {
@@ -85,10 +103,10 @@ test('migrates interaction recording preferences and validates booleans', () => 
     recordingInteractions: { enabled: true, noticeDismissed: true },
   });
   assert.deepEqual(normalized.recordingInteractions, { enabled: true, noticeDismissed: true });
-  assert.deepEqual(
-    normalize({ recordingInteractions: { enabled: 'yes', noticeDismissed: 1 } }).recordingInteractions,
-    { enabled: false, noticeDismissed: false },
-  );
+  assert.deepEqual(normalize({ recordingInteractions: { enabled: 'yes', noticeDismissed: 1 } }).recordingInteractions, {
+    enabled: false,
+    noticeDismissed: false,
+  });
 });
 
 test('merges interaction preference patches without erasing sibling state', () => {

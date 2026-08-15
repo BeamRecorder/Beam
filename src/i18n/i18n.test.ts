@@ -24,6 +24,7 @@ describe('internationalization', () => {
       ['pl', 'Rozpocznij nagrywanie'],
       ['zh-TW', '開始錄影'],
       ['hi', 'रिकॉर्डिंग शुरू करें'],
+      ['vi', 'Bắt đầu ghi'],
     ] as const;
 
     for (const [locale, expected] of checks) {
@@ -33,7 +34,7 @@ describe('internationalization', () => {
   });
 
   it('keeps interpolation parameters intact in every added locale', () => {
-    for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW', 'hi'] as const) {
+    for (const locale of ['ru', 'bg', 'zh-CN', 'ko', 'pt-BR', 'ja', 'it', 'pl', 'zh-TW', 'hi', 'vi'] as const) {
       setCurrentLocale(locale);
       expect(i18n.global.t('HUD.stopRecording', { time: '00:03' })).toContain('00:03');
       expect(i18n.global.t('Updates.downloading', { percent: 42 })).toContain('42%');
@@ -45,6 +46,37 @@ describe('internationalization', () => {
       setCurrentLocale(locale);
       for (const stage of ['openingWindow', 'loadingEditor', 'loadingProject', 'loadingTimeline', 'renderingEditor']) {
         expect(i18n.global.te(`EditorPreparingHud.${stage}`, locale)).toBe(true);
+      }
+    }
+  });
+
+  it('keeps keyboard and text caption labels available in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of ['keyboardCaptions', 'textCaptions']) {
+        expect(i18n.global.te(`SidebarPanel.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`SidebarPanel.${key}`)).not.toBe(`SidebarPanel.${key}`);
+        expect(i18n.global.te(`TimelineTracks.${key}`, locale)).toBe(true);
+        expect(i18n.global.t(`TimelineTracks.${key}`)).not.toBe(`TimelineTracks.${key}`);
+      }
+      for (const captionKey of [
+        'aiAutoCaptioning',
+        'headerDesc',
+        'audioSource',
+        'whisperModel',
+        'modelReady',
+        'downloadModel',
+        'deleteModel',
+        'generateCaptions',
+        'regenerateAICaptions',
+        'processing',
+        'preparingAudio',
+        'cancel',
+      ]) {
+        expect(
+          i18n.global.te(`CaptionPanel.${captionKey}`, locale),
+          `${locale}: missing CaptionPanel.${captionKey}`,
+        ).toBe(true);
       }
     }
   });
@@ -67,6 +99,18 @@ describe('internationalization', () => {
         expect(i18n.global.t(`HudPreferences.${key}`)).not.toBe(`HudPreferences.${key}`);
       }
       expect(i18n.global.t('HudPreferences.version', { version: '9.9.9' })).toContain('9.9.9');
+    }
+  });
+
+  it('registers every live-HUD onboarding instruction in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of ['tourSubtitle', 'emptyStateDesc']) {
+        expect(i18n.global.te(`Onboarding.${key}`, locale), `${locale}: missing Onboarding.${key}`).toBe(true);
+        expect(i18n.global.t(`Onboarding.${key}`), `${locale}: unresolved Onboarding.${key}`).not.toBe(
+          `Onboarding.${key}`,
+        );
+      }
     }
   });
 

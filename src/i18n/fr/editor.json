@@ -36,6 +36,8 @@
     "zoom": "Zoom",
     "cursor": "Curseur",
     "captions": "Sous-titres",
+    "keyboardCaptions": "Raccourcis clavier",
+    "textCaptions": "Sous-titres texte",
     "audio": "Audio",
     "settings": "Paramètres",
     "logo": "Logo"
@@ -99,7 +101,9 @@
     "zoomOut": "Dézoomer",
     "zoomIn": "Zoomer",
     "snappingOn": "Aimantage magnétique actif",
-    "snappingOff": "Aimantage désactivé"
+    "snappingOff": "Aimantage désactivé",
+    "zoom": "Zoom",
+    "resetZoom": "Réinitialiser le zoom"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Cliquer pour activer/désactiver la piste vidéo",
@@ -121,6 +125,8 @@
     "addZoom": "+ Ajouter un zoom 1,5×",
     "zoomTitle": "Zoom {level}×",
     "captions": "Sous-titres",
+    "keyboardCaptions": "Raccourcis clavier",
+    "textCaptions": "Sous-titres texte",
     "unlinkCaptionsTrack": "Dissocier la piste des sous-titres",
     "clickToAddCaption": "Cliquer pour ajouter un sous-titre",
     "addCaption": "+ Ajouter un sous-titre",
@@ -184,7 +190,27 @@
     "showDetails": "Détails de l'erreur"
   },
   "VideoEditor": {
-    "exportBanner": "Exportation en cours. Les modifications effectuées en direct n'auront pas d'effet sur le fichier actuellement en cours d'exportation."
+    "exportBanner": "Exportation en cours. Les modifications effectuées en direct n'auront pas d'effet sur le fichier actuellement en cours d'exportation.",
+    "mediaDropTitle": "Déposez vos médias pour les ajouter",
+    "mediaDropDescription": "Les vidéos, images et fichiers audio seront ajoutés au niveau du playhead.",
+    "mediaDropImporting": "Validation et import des médias…",
+    "mediaDropSingleSuccess": "« {name} » a été ajouté à {time}.",
+    "mediaDropBatchSuccess": "{count} médias ont été ajoutés à {time}.",
+    "mediaDropRejected": "{count} fichier(s) n’ont pas pu être ajoutés : {reasons}",
+    "mediaDropAudioIgnored": "L’audio de {count} vidéo(s) a été ignoré car son codec n’est pas pris en charge.",
+    "mediaDropAlreadyImporting": "Un import de médias est déjà en cours.",
+    "mediaDropUnsupportedCodec": "codec non pris en charge ({codec})",
+    "mediaDropUnsupportedExtension": "extension de fichier non prise en charge",
+    "mediaDropInvalidFormat": "format invalide ou non pris en charge",
+    "mediaDropEmpty": "média vide ou durée manquante",
+    "mediaDropDecodeFailed": "échec du décodage du média",
+    "mediaDropNotLocal": "le fichier n’est pas local",
+    "mediaDropImportFailed": "échec de l’import dans le projet",
+    "mediaPlaybackError": "Erreur de lecture du média : {message}",
+    "mediaPlaybackAssetError": "{project} — « {name} » est indisponible (source attendue : {path}). {message}",
+    "mediaPlaybackIncompleteRecording": "{project} — « {name} » est indisponible (source attendue : {path}). La session d’enregistrement ne s’est pas finalisée.",
+    "mediaPlaybackUnknownProject": "Projet actuel",
+    "mediaPlaybackCopyError": "Copier l’erreur"
   },
   "VideoProjectEdition": {
     "untitledProject": "Projet sans titre",

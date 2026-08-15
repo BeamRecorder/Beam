@@ -19,6 +19,3 @@ export function resolvePublicAssetUrl(path: string): string {
   const prefix = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   return `${prefix}${cleanPath}`;
 }
-
-
-

@@ -2,12 +2,22 @@
 import { useToastStore } from './toastStore';
 import { X, CheckCircle, AlertCircle, Info } from '@lucide/vue';
 import Button from '../button/Button.vue';
+import CopyButton from '../button/CopyButton.vue';
 import type { Toast } from './toastStore';
 
 const toastStore = useToastStore();
-const handleToastAction = (toast: Toast) => {
-  toast.action?.onClick();
-  toastStore.remove(toast.id);
+const reportCopyError = (error: Error) => {
+  console.error('Unable to copy toast details.', error);
+};
+
+const handleToastAction = async (toast: Toast) => {
+  if (!toast.action?.onClick) return;
+  try {
+    await toast.action.onClick();
+    if (toast.action.dismissOnSuccess !== false) toastStore.remove(toast.id);
+  } catch (error) {
+    console.error('Unable to complete toast action.', error);
+  }
 };
 </script>
 
@@ -18,16 +28,35 @@ const handleToastAction = (toast: Toast) => {
         <span class="toast-icon-wrapper">
           <CheckCircle v-if="toast.type === 'success'" class="toast-icon success" />
           <AlertCircle v-else-if="toast.type === 'error'" class="toast-icon error" />
+          <AlertCircle v-else-if="toast.type === 'warning'" class="toast-icon warning" />
           <Info v-else class="toast-icon info" />
         </span>
 
-        <span class="toast-message">{{ toast.message }}</span>
+        <span class="toast-content">
+          <span class="toast-message">{{ toast.message }}</span>
+          <code v-if="toast.action?.detail" class="toast-detail">{{ toast.action.detail }}</code>
+        </span>
 
-        <Button
-          v-if="toast.action"
+        <CopyButton
+          v-if="toast.action?.copyText"
+          :text="toast.action.copyText"
+          display="icon"
           variant="secondary"
           size="sm"
           class="toast-action-btn"
+          :label="toast.action.label"
+          :copied-label="toast.action.copiedLabel"
+          :error-label="toast.action.errorLabel"
+          @copied="toast.action.dismissOnSuccess === true && toastStore.remove(toast.id)"
+          @error="reportCopyError"
+        />
+
+        <Button
+          v-else-if="toast.action"
+          variant="secondary"
+          size="sm"
+          class="toast-action-btn"
+          :aria-label="toast.action.label"
           @click="handleToastAction(toast)"
         >
           {{ toast.action.label }}
@@ -86,6 +115,9 @@ const handleToastAction = (toast: Toast) => {
 .toast-item.error::before {
   background-color: var(--color-error);
 }
+.toast-item.warning::before {
+  background-color: var(--color-warning);
+}
 .toast-item.info::before {
   background-color: var(--color-info);
 }
@@ -108,16 +140,39 @@ const handleToastAction = (toast: Toast) => {
 .toast-icon.error {
   color: var(--color-error);
 }
+.toast-icon.warning {
+  color: var(--color-warning);
+}
 .toast-icon.info {
   color: var(--color-info);
+}
+
+.toast-content {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .toast-message {
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-primary);
-  flex-grow: 1;
   line-height: 1.4;
+}
+
+.toast-detail {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  user-select: text;
 }
 
 .toast-close {

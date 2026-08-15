@@ -48,15 +48,34 @@ const createArtifactHash = (artifact) => {
 
 function createWhisperModelStore(root, fetchImpl = fetch) {
   const manifests = new Map();
+  const activeDownloads = new Map();
   const validModel = (id) => Object.hasOwn(REVISIONS, id);
   const manifestFile = (id) => path.join(root, id, 'manifest.json');
   const fetchManifest = async (id) => {
     if (!validModel(id)) throw new Error('Modèle Whisper invalide.');
     if (manifests.has(id)) return manifests.get(id);
 
-    // Check if we already have local downloaded metadata
     const directory = path.join(root, id);
     const metadata = readJson(manifestFile(id));
+    if (metadata?.revision === REVISIONS[id] && metadata.hashes) {
+      const artifacts = Object.entries(metadata.hashes).map(([filePath, hash]) => {
+        const file = safeTarget(directory, filePath);
+        return {
+          path: filePath,
+          size: file && fs.existsSync(file) ? fs.statSync(file).size : 0,
+          hash: hash.value,
+          hashAlgorithm: hash.algorithm,
+        };
+      });
+      const manifest = {
+        id,
+        revision: metadata.revision,
+        artifacts,
+        totalBytes: metadata.totalBytes || artifacts.reduce((total, item) => total + item.size, 0),
+      };
+      manifests.set(id, manifest);
+      return manifest;
+    }
 
     try {
       const response = await fetchImpl(
@@ -90,29 +109,6 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
       console.warn(`[WhisperStore] Failed to fetch remote manifest for ${id}:`, err);
     }
 
-    // Fallback: If local files exist or offline, construct fallback manifest from directory
-    if (metadata && metadata.hashes) {
-      const artifacts = Object.entries(metadata.hashes).map(([filePath, meta]) => {
-        const file = safeTarget(directory, filePath);
-        const size = file && fs.existsSync(file) ? fs.statSync(file).size : 0;
-        return {
-          path: filePath,
-          size,
-          hash: meta.value,
-          hashAlgorithm: meta.algorithm,
-        };
-      });
-      const manifest = {
-        id,
-        revision: metadata.revision || REVISIONS[id],
-        artifacts,
-        totalBytes: metadata.totalBytes || artifacts.reduce((total, item) => total + item.size, 0),
-      };
-      manifests.set(id, manifest);
-      return manifest;
-    }
-
-    // Default basic manifest if offline and no cache
     const defaultArtifacts = Array.from(REQUIRED_PATHS).map((p) => ({
       path: p,
       size: 0,
@@ -125,22 +121,32 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
       artifacts: defaultArtifacts,
       totalBytes: 0,
     };
-    manifests.set(id, defaultManifest);
     return defaultManifest;
   };
   const state = async (id) => {
     if (!validModel(id)) throw new Error('Modèle Whisper invalide.');
     try {
-      const manifest = await fetchManifest(id);
       const directory = path.join(root, id);
       const metadata = readJson(manifestFile(id));
+      if (!metadata?.hashes || metadata.revision !== REVISIONS[id]) {
+        return {
+          id,
+          status: 'missing',
+          downloadedBytes: 0,
+          totalBytes: metadata?.totalBytes || 0,
+          revision: REVISIONS[id],
+        };
+      }
+      const manifest = await fetchManifest(id);
       const downloadedBytes = manifest.artifacts.reduce((total, item) => {
         const file = safeTarget(directory, item.path);
         return total + (file && fs.existsSync(file) ? fs.statSync(file).size : 0);
       }, 0);
       const ready =
         metadata?.revision === manifest.revision &&
-        manifest.artifacts.length > 0 &&
+        manifest.artifacts.length === REQUIRED_PATHS.size &&
+        downloadedBytes === manifest.totalBytes &&
+        [...REQUIRED_PATHS].every((requiredPath) => metadata.hashes?.[requiredPath]) &&
         manifest.artifacts.every((item) => {
           const file = safeTarget(directory, item.path);
           const stored = metadata.hashes?.[item.path];
@@ -204,7 +210,7 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
     fs.renameSync(partial, target);
     completed.value += artifact.size;
   };
-  const download = async (id, notify = () => {}) => {
+  const performDownload = async (id, notify) => {
     const manifest = await fetchManifest(id);
     const directory = path.join(root, id);
     fs.mkdirSync(directory, { recursive: true });
@@ -230,12 +236,33 @@ function createWhisperModelStore(root, fetchImpl = fetch) {
     fs.renameSync(temporary, manifestFile(id));
     return state(id);
   };
+  const download = (id, notify = () => {}) => {
+    let active = activeDownloads.get(id);
+    if (!active) {
+      const listeners = new Set();
+      const promise = performDownload(id, (progress) => {
+        for (const listener of listeners) listener(progress);
+      }).finally(() => activeDownloads.delete(id));
+      active = { listeners, promise };
+      activeDownloads.set(id, active);
+    }
+    active.listeners.add(notify);
+    return active.promise.finally(() => active.listeners.delete(notify));
+  };
+  const deleteModel = async (id) => {
+    if (!validModel(id)) throw new Error('Modèle Whisper invalide.');
+    const directory = path.join(root, id);
+    if (fs.existsSync(directory)) {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+    return state(id);
+  };
   const fileForUrl = (url) => {
     const parsed = new URL(url);
     if (parsed.protocol !== 'whisper-model:' || parsed.hostname !== 'models') return null;
     const target = safeTarget(root, decodeURIComponent(parsed.pathname).replace(/^\//, ''));
     return target && fs.existsSync(target) ? target : null;
   };
-  return { state, download, fileForUrl, models: Object.keys(REVISIONS) };
+  return { state, download, delete: deleteModel, fileForUrl, models: Object.keys(REVISIONS) };
 }
 module.exports = { createWhisperModelStore, REQUIRED_PATHS, REVISIONS };

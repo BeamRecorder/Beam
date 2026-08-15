@@ -93,3 +93,12 @@ export const groupBackgroundMedia = (media: readonly BackgroundMedia[]): Backgro
 };
 
 export const BACKGROUND_MEDIA = createBackgroundMedia([...wallpapers.images, ...wallpapers.videos]);
+
+export const getRandomBackgroundImage = (
+  candidates: readonly BackgroundMedia[] = BACKGROUND_MEDIA,
+): BackgroundMedia | null => {
+  const images = candidates.filter((item) => item.kind === 'image');
+  if (images.length === 0) return null;
+  const randomIndex = Math.floor(Math.random() * images.length);
+  return images[randomIndex] ?? null;
+};

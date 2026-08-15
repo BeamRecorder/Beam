@@ -1,3 +1,46 @@
+export interface TimelineThumbnailSlot {
+  timelineSeconds: number;
+  durationSeconds: number;
+}
+
+export const TARGET_THUMBNAIL_WIDTH_PX = 96;
+export const THUMBNAIL_OVERSCAN_SLOTS = 2;
+
+const THUMBNAIL_STEPS_SECONDS = [0.25, 0.5, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 900, 1_200];
+
+const roundedSeconds = (value: number) => Math.round(value * 1_000) / 1_000;
+
+export const timelineThumbnailStep = (pixelsPerSecond: number, targetWidth = TARGET_THUMBNAIL_WIDTH_PX) => {
+  if (!Number.isFinite(pixelsPerSecond) || pixelsPerSecond <= 0) return 1;
+  const idealStep = Math.max(THUMBNAIL_STEPS_SECONDS[0]!, targetWidth / pixelsPerSecond);
+  return THUMBNAIL_STEPS_SECONDS.reduce((closest, candidate) =>
+    Math.abs(Math.log(candidate / idealStep)) < Math.abs(Math.log(closest / idealStep)) ? candidate : closest,
+  );
+};
+
+export const timelineThumbnailSlots = (
+  duration: number,
+  visibleStart: number,
+  visibleEnd: number,
+  pixelsPerSecond: number,
+  overscanSlots = THUMBNAIL_OVERSCAN_SLOTS,
+): TimelineThumbnailSlot[] => {
+  if (!Number.isFinite(duration) || duration <= 0) return [];
+  const step = timelineThumbnailStep(pixelsPerSecond);
+  const firstIndex = Math.max(0, Math.floor(Math.max(0, visibleStart) / step) - overscanSlots);
+  const lastIndex = Math.min(
+    Math.ceil(duration / step) - 1,
+    Math.ceil(Math.max(visibleStart, visibleEnd) / step) + overscanSlots,
+  );
+  return Array.from({ length: Math.max(0, lastIndex - firstIndex + 1) }, (_, offset) => {
+    const timelineSeconds = roundedSeconds((firstIndex + offset) * step);
+    return {
+      timelineSeconds,
+      durationSeconds: roundedSeconds(Math.min(step, duration - timelineSeconds)),
+    };
+  });
+};
+
 export const timelineSecondsInView = (
   duration: number,
   visibleStart: number,

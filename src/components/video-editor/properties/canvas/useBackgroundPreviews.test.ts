@@ -1,9 +1,22 @@
 import { defineComponent, nextTick } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useBackgroundPreviews } from './useBackgroundPreviews';
+import { clearBackgroundPreviewCache, useBackgroundPreviews } from './useBackgroundPreviews';
 import type { BackgroundMedia } from '../../composables/backgroundCatalog';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+
+const runtime = vi.hoisted(() => ({
+  decodeVideoPoster: vi.fn(),
+  mediaSourceDescriptor: vi.fn((asset: { id: string; src: string; name: string }) => ({
+    assetId: asset.id,
+    kind: 'video',
+    url: asset.src,
+    label: asset.name,
+  })),
+}));
+
+vi.mock('~/media/playback', () => ({ decodeVideoPoster: runtime.decodeVideoPoster }));
+vi.mock('~/media/shared', () => ({ mediaSourceDescriptor: runtime.mediaSourceDescriptor }));
 
 const workerState = vi.hoisted(() => {
   const instances: Array<{
@@ -39,34 +52,12 @@ const video = (id: string): BackgroundMedia => ({
   kind: 'video',
 });
 
-const mockVideoPreviewElements = () => {
-  const realCreateElement = document.createElement.bind(document);
-  const videos: HTMLVideoElement[] = [];
-  const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((
-    tagName: string,
-    options?: ElementCreationOptions,
-  ) => {
-    if (tagName.toLowerCase() !== 'video') return realCreateElement(tagName, options);
-    const fakeVideo = realCreateElement('video');
-    let currentTime = 0;
-    Object.defineProperty(fakeVideo, 'duration', { configurable: true, value: 10 });
-    Object.defineProperty(fakeVideo, 'currentTime', {
-      configurable: true,
-      get: () => currentTime,
-      set: (value: number) => {
-        currentTime = value;
-        fakeVideo.dispatchEvent(new Event('seeked'));
-      },
-    });
-    videos.push(fakeVideo);
-    return fakeVideo;
-  }) as typeof document.createElement);
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-    drawImage: vi.fn(),
-  } as unknown as CanvasRenderingContext2D);
-  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['frame'])));
-  return { videos, createElementSpy };
-};
+const frame = () => ({
+  bitmap: {} as CanvasImageSource,
+  width: 240,
+  height: 180,
+  close: vi.fn(),
+});
 
 describe('useBackgroundPreviews', () => {
   let api: ReturnType<typeof useBackgroundPreviews>;
@@ -76,11 +67,17 @@ describe('useBackgroundPreviews', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearBackgroundPreviewCache();
     workerState.instances.length = 0;
+    runtime.decodeVideoPoster.mockResolvedValue(frame());
     createObjectURL.mockImplementation(() => `blob:${createObjectURL.mock.calls.length}`);
     revokeObjectURL.mockImplementation(() => undefined);
     vi.spyOn(URL, 'createObjectURL').mockImplementation(createObjectURL);
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(revokeObjectURL);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['frame'])));
     const Harness = defineComponent({
       setup() {
         api = useBackgroundPreviews();
@@ -92,6 +89,7 @@ describe('useBackgroundPreviews', () => {
 
   afterEach(() => {
     wrapper.unmount();
+    clearBackgroundPreviewCache();
     vi.restoreAllMocks();
   });
 
@@ -113,8 +111,6 @@ describe('useBackgroundPreviews', () => {
 
     worker.onmessage?.({ data: { type: 'ready', id: 'first', preview: new Blob(['replacement']) } } as MessageEvent);
     expect(revokeObjectURL).toHaveBeenCalled();
-    worker.onmessage?.({ data: { type: 'ready', id: 'ignored' } } as MessageEvent);
-
     worker.onmessage?.({ data: { type: 'error', id: 'broken' } } as MessageEvent);
     expect(api.failed.broken).toBe(true);
     api.request(image('broken'));
@@ -129,98 +125,73 @@ describe('useBackgroundPreviews', () => {
     expect(api.previews.first).toBeUndefined();
   });
 
-  it('creates video previews from the middle frame and marks failed videos', async () => {
-    const realCreateElement = document.createElement.bind(document);
-    const fakeVideo = realCreateElement('video');
-    let currentTime = 0;
-    Object.defineProperty(fakeVideo, 'duration', { configurable: true, value: 10 });
-    Object.defineProperty(fakeVideo, 'currentTime', {
-      configurable: true,
-      get: () => currentTime,
-      set: (value: number) => {
-        currentTime = value;
-        fakeVideo.dispatchEvent(new Event('seeked'));
-      },
-    });
-    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
-      if (tagName.toLowerCase() === 'video') return fakeVideo;
-      return realCreateElement(tagName, options);
-    }) as typeof document.createElement);
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-      drawImage: vi.fn(),
-    } as unknown as CanvasRenderingContext2D);
-    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => callback(new Blob(['frame'])));
-
+  it('decodes video previews from a Mediabunny poster frame without creating a video element', async () => {
+    const createElement = vi.spyOn(document, 'createElement');
     api.request(video('movie'));
-    fakeVideo.dispatchEvent(new Event('loadedmetadata'));
     await flushPromises();
-    expect(api.previews.movie).toContain('blob:');
-    expect(currentTime).toBe(5);
 
-    const failingVideo = realCreateElement('video');
-    vi.mocked(document.createElement).mockImplementation(((tagName: string, options?: ElementCreationOptions) => {
-      if (tagName.toLowerCase() === 'video') return failingVideo;
-      return realCreateElement(tagName, options);
-    }) as typeof document.createElement);
-    api.request(video('broken-video'));
-    failingVideo.dispatchEvent(new Event('error'));
-    await nextTick();
-    await flushPromises();
-    expect(api.failed['broken-video']).toBe(true);
+    expect(runtime.mediaSourceDescriptor).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'movie', kind: 'video', src: resolvePublicAssetUrl('/media/movie.mp4') }),
+    );
+    expect(runtime.decodeVideoPoster).toHaveBeenCalledWith(
+      expect.objectContaining({ assetId: 'movie', kind: 'video' }),
+      { position: 0.5, width: 240, height: 180, fit: 'cover' },
+    );
+    expect(api.previews.movie).toContain('blob:');
+    expect(createElement.mock.calls.some(([tag]) => tag.toLowerCase() === 'video')).toBe(false);
+    expect(runtime.decodeVideoPoster.mock.results[0]!.value).toBeInstanceOf(Promise);
   });
 
   it('serializes video preview generation and starts queued work after success', async () => {
-    const { videos } = mockVideoPreviewElements();
+    let resolveFirst!: (value: ReturnType<typeof frame>) => void;
+    let resolveSecond!: (value: ReturnType<typeof frame>) => void;
+    const first = new Promise<ReturnType<typeof frame>>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<ReturnType<typeof frame>>((resolve) => {
+      resolveSecond = resolve;
+    });
+    runtime.decodeVideoPoster.mockReset();
+    runtime.decodeVideoPoster.mockReturnValueOnce(first).mockReturnValueOnce(second);
 
     api.request(video('first'));
     api.request(video('second'));
     api.request(video('second'));
-    expect(videos).toHaveLength(1);
-
-    videos[0]!.dispatchEvent(new Event('loadedmetadata'));
+    expect(runtime.decodeVideoPoster).toHaveBeenCalledTimes(1);
+    resolveFirst(frame());
     await flushPromises();
     expect(api.previews.first).toContain('blob:');
-    expect(videos).toHaveLength(2);
+    expect(runtime.decodeVideoPoster).toHaveBeenCalledTimes(2);
     expect(api.previews.second).toBeUndefined();
 
-    videos[1]!.dispatchEvent(new Event('loadedmetadata'));
+    resolveSecond(frame());
     await flushPromises();
     expect(api.previews.second).toContain('blob:');
   });
 
-  it('starts the next queued video after an error and cleans active work on unmount', async () => {
-    const { videos } = mockVideoPreviewElements();
-
+  it('starts the next queued video after an error and marks the failed item', async () => {
+    runtime.decodeVideoPoster.mockReset();
+    runtime.decodeVideoPoster.mockRejectedValueOnce(new Error('decode failed')).mockResolvedValueOnce(frame());
     api.request(video('broken'));
     api.request(video('queued'));
-    expect(videos).toHaveLength(1);
-
-    videos[0]!.dispatchEvent(new Event('error'));
     await flushPromises();
     expect(api.failed.broken).toBe(true);
-    expect(videos).toHaveLength(2);
-
-    videos[1]!.dispatchEvent(new Event('loadedmetadata'));
+    expect(runtime.decodeVideoPoster).toHaveBeenCalledTimes(2);
     await flushPromises();
     expect(api.previews.queued).toContain('blob:');
-
-    api.request(video('active'));
-    expect(videos).toHaveLength(3);
-    const removeActiveVideo = vi.spyOn(videos[2]!, 'remove');
-    wrapper.unmount();
-    await flushPromises();
-    expect(removeActiveVideo).toHaveBeenCalled();
-    expect(workerState.instances[0]!.terminate).toHaveBeenCalled();
   });
 
-  it('cleans previews and terminates its worker when unmounted', async () => {
+  it('terminates its worker when unmounted and persists cached previews across mounts', async () => {
     const worker = workerState.instances[0]!;
     api.request(image('cleanup'));
     worker.onmessage?.({ data: { type: 'ready', id: 'cleanup', preview: new Blob(['cleanup']) } } as MessageEvent);
     expect(api.previews.cleanup).toBeDefined();
     wrapper.unmount();
     await nextTick();
-    expect(revokeObjectURL).toHaveBeenCalled();
     expect(worker.terminate).toHaveBeenCalled();
+
+    // Remounting immediately re-uses the cached preview without needing another request
+    const api2 = useBackgroundPreviews();
+    expect(api2.previews.cleanup).toBeDefined();
   });
 });

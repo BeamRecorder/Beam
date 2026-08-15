@@ -3,7 +3,7 @@ import { onMounted, onUnmounted } from 'vue';
 import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
-import type { ClipComposition } from '../composition/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 
 const props = withDefaults(
   defineProps<{
@@ -81,6 +81,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 <style scoped>
 .timeline-island-container {
   width: 100%;
+  height: 100%;
+  max-height: 100%;
   background: var(--color-bg-element);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);

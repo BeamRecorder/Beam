@@ -1,4 +1,4 @@
-import type { CaptionSentence, CaptionWord } from '../composition/composition-types';
+import type { CaptionSentence, CaptionWord } from '~/media/shared/composition-types';
 import { tNamespace } from '~/i18n';
 
 const $t = tNamespace('whisperTypes');
@@ -21,10 +21,58 @@ export interface WhisperModel {
   warning?: string;
 }
 export interface WhisperProgress {
-  status: 'idle' | 'loading' | 'running' | 'error';
+  status: 'idle' | 'loading' | 'running' | 'completed' | 'error';
   message: string;
   progress?: number;
 }
+
+export type WhisperBackend = 'webgpu' | 'wasm';
+
+export interface WhisperGpuInfo {
+  vendor: string;
+  architecture: string;
+  device: string;
+  description: string;
+  features: string[];
+  limits: Record<string, number>;
+}
+
+export interface TranscriptionDiagnostics {
+  status: 'preparing' | 'loading-model' | 'transcribing' | 'completed' | 'failed';
+  startedAt: string;
+  finishedAt: string | null;
+  elapsedMs: number;
+  model: WhisperModelId;
+  locale: string;
+  requestedDurationMs: number | null;
+  audioDurationMs: number;
+  sampleRate: number;
+  sampleCount: number;
+  pcmBytes: number;
+  audioFetchMs: number;
+  audioDecodeMs: number;
+  audioResampleMs: number;
+  backend: WhisperBackend | null;
+  dtype: string;
+  transformersVersion: string | null;
+  gpu: WhisperGpuInfo | null;
+  hardwareConcurrency: number | null;
+  crossOriginIsolated: boolean;
+  wasmThreads: number | null;
+  userAgent: string;
+  chunkLengthSeconds: number;
+  strideLengthSeconds: number;
+  completedChunks: number;
+  totalChunks: number;
+  processedAudioMs: number;
+  modelLoadMs: number;
+  inferenceMs: number;
+  modelWasWarm: boolean;
+  wordCount: number;
+  sentenceCount: number;
+  error: string | null;
+}
+
 export interface WhisperResult {
   words: CaptionWord[];
   sentences: CaptionSentence[];

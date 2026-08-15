@@ -36,6 +36,8 @@
     "zoom": "Мащаб",
     "cursor": "Курсор",
     "captions": "Субтитри",
+    "keyboardCaptions": "Клавишни комбинации",
+    "textCaptions": "Текстови субтитри",
     "audio": "Аудио",
     "settings": "Настройки",
     "logo": "Лого"
@@ -99,7 +101,9 @@
     "zoomOut": "Намаляване",
     "zoomIn": "Увеличаване",
     "snappingOn": "Магнитното прилепване е включено",
-    "snappingOff": "Магнитното прилепване е изключено"
+    "snappingOff": "Магнитното прилепване е изключено",
+    "zoom": "Мащаб",
+    "resetZoom": "Нулиране на мащаба"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Щракнете за превключване на видеопистата",
@@ -133,7 +137,9 @@
     "unlinkMicrophoneTrack": "Премахване на връзката с пистата на микрофона",
     "waveformUnavailable": "Формата на вълната не е налична",
     "trimStart": "Изрязване на началото",
-    "trimEnd": "Изрязване на края"
+    "trimEnd": "Изрязване на края",
+    "keyboardCaptions": "Клавишни комбинации",
+    "textCaptions": "Текстови субтитри"
   },
   "TimelineVideoClip": {
     "trimStart": "Изрязване на началото",

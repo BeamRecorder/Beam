@@ -28,12 +28,13 @@ describe('Popover', () => {
     expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
     wrapper.unmount();
   });
-  it('closes when the containing window loses focus', async () => {
-    const wrapper = mountPopover();
+  it('stays open when the containing window loses focus to a native dialog', async () => {
+    const wrapper = mountPopover({ closeOnWindowBlur: false });
     await wrapper.get('.popover-trigger').trigger('click');
     window.dispatchEvent(new Event('blur'));
     await wrapper.vm.$nextTick();
-    expect(wrapper.emitted('toggle')?.at(-1)).toEqual([false]);
+    expect(wrapper.emitted('toggle')?.at(-1)).toEqual([true]);
+    expect(document.body.textContent).toContain('Content');
     wrapper.unmount();
   });
   it('positions upward and clamps inside the viewport when space requires it', async () => {

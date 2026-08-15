@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useReducedMotion } from '@vueuse/motion';
+import { useThrobberSync, THROBBER_BASE_PERIOD_MS } from './useThrobberSync';
 
 export type ThrobberVariant = 'wave' | 'breathe' | 'ripple' | 'glow' | 'bounce' | 'pulse';
 export type ThrobberColor = 'default' | 'primary' | 'muted' | 'secondary' | 'gradient' | 'white';
@@ -30,58 +32,89 @@ const props = withDefaults(
   },
 );
 
+const { globalTime } = useThrobberSync();
+const reducedMotion = useReducedMotion();
+
 const displayText = computed(() => props.text || '');
 const glyphs = computed(() => Array.from(displayText.value));
 
 const speedMultiplier = computed(() => {
   if (props.speed === 'slow') return 1.5;
-  if (props.speed === 'fast') return 0.7;
+  if (props.speed === 'fast') return 0.75;
   return 1.0;
 });
 
+const periodMs = computed(() => THROBBER_BASE_PERIOD_MS * speedMultiplier.value);
+
+const staggerMs = computed(() => {
+  switch (props.variant) {
+    case 'breathe':
+    case 'pulse':
+      return 25;
+    case 'ripple':
+      return 45;
+    case 'bounce':
+      return 40;
+    case 'glow':
+      return 55;
+    case 'wave':
+    default:
+      return 40;
+  }
+});
+
+const calculateWave = (offsetMs: number): number => {
+  if (reducedMotion.value) return 1;
+  const time = globalTime.value - offsetMs;
+  const period = periodMs.value;
+  const progress = (((time % period) + period) % period) / period;
+  return (Math.sin(progress * 2 * Math.PI - Math.PI / 2) + 1) / 2;
+};
+
 const glyphStyle = (index: number) => {
-  const mul = speedMultiplier.value;
-  let delay = 0;
-  let duration = 1.1;
+  const wave = calculateWave(index * staggerMs.value);
+  let opacity = 0.35 + 0.65 * wave;
+  let transform = 'translateY(0)';
+  let filter: string | undefined;
 
   switch (props.variant) {
     case 'breathe':
     case 'pulse':
-      duration = 1.8;
-      delay = index * 0.02;
+      opacity = 0.4 + 0.6 * wave;
+      transform = `scale(${(0.97 + 0.06 * wave).toFixed(3)})`;
       break;
     case 'ripple':
-      duration = 1.0;
-      delay = index * 0.045;
+      opacity = 0.38 + 0.62 * wave;
+      transform = `translateY(${(-4 * wave).toFixed(2)}px)`;
       break;
     case 'bounce':
-      duration = 0.9;
-      delay = index * 0.04;
+      opacity = 0.45 + 0.55 * wave;
+      transform = `translateY(${(-3.5 * wave).toFixed(2)}px) scale(${(1 + 0.08 * wave).toFixed(3)})`;
       break;
     case 'glow':
-    case 'shimmer':
-      duration = 1.3;
-      delay = index * 0.055;
+      opacity = 0.3 + 0.7 * wave;
+      filter = `brightness(${(0.8 + 0.8 * wave).toFixed(2)})`;
       break;
     case 'wave':
     default:
-      duration = 1.1;
-      delay = index * 0.035;
+      opacity = 0.35 + 0.65 * wave;
+      transform = `translateY(${(-1.5 * wave).toFixed(2)}px)`;
       break;
   }
 
   return {
-    animationDuration: `${duration * mul}s`,
-    animationDelay: `${delay * mul}s`,
+    opacity,
+    transform,
+    filter,
   };
 };
 
 const dotStyle = (dotIndex: number) => {
-  const mul = speedMultiplier.value;
-  const baseDelay = glyphs.value.length * 0.025;
+  const baseOffset = glyphs.value.length * staggerMs.value;
+  const wave = calculateWave(baseOffset + dotIndex * 140);
   return {
-    animationDuration: `${0.9 * mul}s`,
-    animationDelay: `${(baseDelay + dotIndex * 0.15) * mul}s`,
+    opacity: 0.25 + 0.75 * wave,
+    transform: `translateY(${(-3 * wave).toFixed(2)}px)`,
   };
 };
 </script>
@@ -110,13 +143,7 @@ const dotStyle = (dotIndex: number) => {
         >{{ glyph === ' ' ? '\u00a0' : glyph }}</span
       >
       <span v-if="dots" class="throbber-dots">
-        <span
-          v-for="d in 3"
-          :key="`dot-${d}`"
-          class="throbber-dot"
-          :style="dotStyle(d)"
-          >.</span
-        >
+        <span v-for="d in 3" :key="`dot-${d}`" class="throbber-dot" :style="dotStyle(d)">.</span>
       </span>
     </span>
   </component>
@@ -138,6 +165,7 @@ const dotStyle = (dotIndex: number) => {
 .throbber-glyph {
   display: inline-block;
   will-change: opacity, transform;
+  transition: none;
 }
 
 .throbber-dots {
@@ -148,100 +176,7 @@ const dotStyle = (dotIndex: number) => {
 .throbber-dot {
   display: inline-block;
   will-change: opacity, transform;
-  animation: throbber-dot-bounce 0.9s ease-in-out infinite;
-}
-
-/* Animations */
-.throbber-variant-wave .throbber-glyph {
-  animation: throbber-wave 1.1s ease-in-out infinite;
-}
-
-.throbber-variant-breathe .throbber-glyph,
-.throbber-variant-pulse .throbber-glyph {
-  animation: throbber-breathe 1.8s ease-in-out infinite;
-}
-
-.throbber-variant-ripple .throbber-glyph {
-  animation: throbber-ripple 1.0s ease-in-out infinite;
-}
-
-.throbber-variant-bounce .throbber-glyph {
-  animation: throbber-bounce 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
-}
-
-.throbber-variant-glow .throbber-glyph,
-.throbber-variant-shimmer .throbber-glyph {
-  animation: throbber-glow 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-@keyframes throbber-wave {
-  0%, 100% {
-    opacity: 0.35;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes throbber-breathe {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(0.97);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.03);
-  }
-}
-
-@keyframes throbber-ripple {
-  0%, 100% {
-    opacity: 0.38;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-4px);
-  }
-}
-
-@keyframes throbber-bounce {
-  0%, 100% {
-    opacity: 0.45;
-    transform: translateY(0) scale(1);
-  }
-  45% {
-    opacity: 1;
-    transform: translateY(-3.5px) scale(1.08);
-  }
-}
-
-@keyframes throbber-glow {
-  0% {
-    opacity: 0.25;
-    filter: brightness(0.75);
-  }
-  35% {
-    opacity: 1;
-    filter: brightness(1.6) contrast(1.08);
-  }
-  70%, 100% {
-    opacity: 0.25;
-    filter: brightness(0.75);
-  }
-}
-
-@keyframes throbber-dot-bounce {
-  0%, 100% {
-    opacity: 0.25;
-    transform: translateY(0);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(-3px);
-  }
+  transition: none;
 }
 
 /* Colors */

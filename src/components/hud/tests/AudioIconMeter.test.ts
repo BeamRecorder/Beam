@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import AudioIconMeter from './AudioIconMeter.vue';
+import AudioIconMeter from '../audio/AudioIconMeter.vue';
 
 describe('AudioIconMeter', () => {
   it('renders disabled state correctly', () => {

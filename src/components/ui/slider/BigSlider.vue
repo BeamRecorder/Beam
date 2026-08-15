@@ -99,7 +99,7 @@ onBeforeUnmount(endInteraction);
     :style="{
       background: isEditing
         ? 'var(--color-bg-surface)'
-        : `linear-gradient(to right, color-mix(in srgb, var(--accent) 20%, var(--surface)) ${percentage}%, var(--surface) ${percentage}%)`,
+        : `linear-gradient(to right, color-mix(in srgb, var(--color-primary) 22%, var(--color-bg-surface-hover)) 0%, color-mix(in srgb, var(--color-primary) 36%, var(--color-bg-surface-hover)) ${percentage}%, var(--color-bg-surface) ${percentage}%, var(--color-bg-surface) 100%)`,
     }"
   >
     <template v-if="isEditing">
@@ -316,7 +316,7 @@ onBeforeUnmount(endInteraction);
   width: 2px;
   height: 38px;
   background: var(--color-primary);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 6px rgba(255, 90, 31, 0.45);
   cursor: ew-resize;
   border: none;
 }
@@ -326,7 +326,7 @@ onBeforeUnmount(endInteraction);
   width: 2px;
   height: 38px;
   background: var(--color-primary);
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 6px rgba(255, 90, 31, 0.45);
   cursor: ew-resize;
   border: none;
   border-radius: 0;

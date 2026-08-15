@@ -10,7 +10,7 @@ const capture = vi.hoisted(() => ({
 vi.mock('../../../api/capture', () => ({ capture }));
 vi.mock('../../../stores/theme', () => ({ useThemeStore: () => ({ theme: 'dark' }) }));
 
-import CameraOverlayApp from './CameraOverlayApp.vue';
+import CameraOverlayApp from '../camera/CameraOverlayApp.vue';
 
 const CameraPreviewOverlay = {
   props: ['cameraId', 'isRecording', 'isHovered'],

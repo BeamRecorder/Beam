@@ -11,13 +11,8 @@ import Divider from '~/ui/divider/Divider.vue';
 import DeleteItem from '~/ui/button/DeleteItem.vue';
 import TimelineClickEmptyState from '~/components/video-editor/properties/clip/TimelineClickEmptyState.vue';
 import type { ShadowDirection } from '../cursor/shadow-types';
-import { Unlink, Trash2, RotateCcw, FlipHorizontal, FlipVertical } from '@lucide/vue';
-import type {
-  ClipFrame,
-  ClipShadowMode,
-  ClipShadowSize,
-  NormalizedTransform,
-} from '../../composition/composition-types';
+import { Unlink, RotateCcw, FlipHorizontal, FlipVertical } from '@lucide/vue';
+import type { ClipFrame, ClipShadowMode, ClipShadowSize, NormalizedTransform } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ClipPropertiesPanel');

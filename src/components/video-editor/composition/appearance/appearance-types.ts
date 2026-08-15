@@ -1,4 +1,4 @@
-import type { ClipAppearance } from '../composition-types';
+import type { ClipAppearance } from '~/media/shared/composition-types';
 
 export interface MediaRect {
   x: number;

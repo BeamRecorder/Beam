@@ -9,28 +9,34 @@ import EditorTimeline from '~/components/video-editor/timeline/EditorTimeline.vu
 import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.vue';
 import Topbar from '~/components/video-editor/Topbar.vue';
 import EditorAmbientBackground from '~/components/video-editor/EditorAmbientBackground.vue';
+import EditorMediaDropOverlay from '~/components/video-editor/EditorMediaDropOverlay.vue';
 import { useVideoEditor } from '~/components/video-editor/composables/useVideoEditor';
+import { useEditorMediaDrop } from '~/components/video-editor/composables/useEditorMediaDrop';
+import { usePlaybackErrorToast } from '~/components/video-editor/composables/usePlaybackErrorToast';
 import { useEditorUndoRedo, type EditorStateSnapshot } from '~/components/video-editor/composables/useEditorUndoRedo';
+import { useTimelineResize } from '~/components/video-editor/composables/useTimelineResize';
+import { useTimelineZoom } from '~/components/video-editor/timeline/composables/useTimelineZoom';
 import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from '~/components/video-editor/canvas/output-canvas';
-import { compositionDurationMs, setVolume } from '~/components/video-editor/composition/engine/clip-engine';
-import { isAudioClip, isCaptionClip, isVisualClip } from '~/components/video-editor/composition/composition-types';
+import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
+import {
+  isAudioClip,
+  isCaptionClip,
+  isVisualClip,
+  type NormalizedCrop,
+  type NormalizedTransform,
+} from '~/media/shared/composition-types';
+import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
 const { t } = useTranslate('VideoEditor');
-const logEditor = (message: string, details?: unknown) => {
-  if (!import.meta.env.DEV) return;
-  if (details === undefined) console.log(`[Beam editor] ${message}`);
-  else console.log(`[Beam editor] ${message}`, details);
-};
 const props = withDefaults(
   defineProps<{
-    videoSrc?: string | null;
     project?: CaptureProject | null;
     editorData?: ProjectEditorData | null;
   }>(),
-  { videoSrc: null, project: null, editorData: null },
+  { project: null, editorData: null },
 );
 const emit = defineEmits<{
   (event: 'ready'): void;
@@ -43,7 +49,6 @@ const {
   activeTab,
   systemVolume,
   micVolume,
-  sourceSize,
   player,
   cursor,
   cursorMotion,
@@ -54,7 +59,6 @@ const {
   outputCanvas,
   handleSelectTab,
 } = useVideoEditor({
-  videoSrc: toRef(props, 'videoSrc'),
   project: toRef(props, 'project'),
   editorData: toRef(props, 'editorData'),
 });
@@ -63,7 +67,9 @@ const {
   currentTime,
   duration,
   volume,
-  videoSrc: playerVideoSrc,
+  playbackState,
+  playbackError,
+  frameVersion,
   selectedBackground,
   selectedBackgroundMedia,
   backgroundBlurPercent,
@@ -86,12 +92,11 @@ const {
   selectedClip,
   selectedClipInfo,
   selectedCaptionClip,
-  isVideoEnabled,
-  isWebcamEnabled,
   isSystemAudioEnabled,
   isMicAudioEnabled,
   selectClip,
   addElement,
+  addImportedAsset,
   addCaptionAtTime,
   updateCaption,
   trimClipEdge,
@@ -101,7 +106,6 @@ const {
   reorderVisualClip,
   updateSelectedAppearance,
   updateSelectedTransform,
-  previewSelectedTransform,
   updateSelectedCrop,
   updateSelectedMirrored,
   updateSelectedMirroredY,
@@ -111,6 +115,17 @@ const {
   toggleClip,
   detachSelectedClip,
 } = compositionState;
+const mediaDrop = useEditorMediaDrop({
+  projectId: () => props.project?.id ?? null,
+  currentTimeSeconds: () => currentTime.value,
+  addImportedAsset,
+  t,
+});
+usePlaybackErrorToast(playbackError, t, () => ({
+  project: props.project ?? null,
+  editorData: props.editorData ?? null,
+  composition: composition.value,
+}));
 const {
   zoomElements,
   selectedZoomId,
@@ -132,7 +147,7 @@ const selectedTransformClip = computed(() => {
 });
 
 const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption') => {
-  void addElement(kind).catch((error) => console.error('Unable to add media:', error));
+  void addElement(kind).catch(() => console.error('Unable to add media.'));
 };
 const selectEditorClip = (clipId: string) => {
   selectedZoomId.value = null;
@@ -157,6 +172,11 @@ const replaceComposition = (value: typeof composition.value) => {
   composition.value = value;
   editorState.scheduleSave();
 };
+let skipNextCompositionHistory = false;
+const previewComposition = (value: typeof composition.value) => {
+  skipNextCompositionHistory = true;
+  composition.value = value;
+};
 const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
   let next = composition.value;
   for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
@@ -164,14 +184,12 @@ const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
 };
 watch(systemVolume, (value) => updateRoleVolume('system', value));
 watch(micVolume, (value) => updateRoleVolume('microphone', value));
-watch(
-  composition,
-  (value) => {
-    duration.value = compositionDurationMs(value) / 1_000;
-    if (currentTime.value > duration.value) currentTime.value = duration.value;
-  },
-  { deep: true, immediate: true },
-);
+const handlePlayingIntent = (playing: boolean) => {
+  void player.setPlaying(playing).catch(() => console.error('Unable to change playback state.'));
+};
+const handleSeekIntent = (time: number, mode: 'seek' | 'scrub' = 'seek') => {
+  void player.seek(time, mode).catch(() => console.error('Unable to seek media.'));
+};
 
 // Editor state only contains JSON data. Serializing first unwraps Vue proxies, so
 // history snapshots stay cloneable after any reactive edit.
@@ -229,7 +247,18 @@ watch(
   { immediate: true },
 );
 watch(
-  [composition, zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
+  composition,
+  () => {
+    if (skipNextCompositionHistory) {
+      skipNextCompositionHistory = false;
+      return;
+    }
+    if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
+  },
+  { deep: true },
+);
+watch(
+  [zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
   () => {
     if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
   },
@@ -237,49 +266,18 @@ watch(
 );
 
 onMounted(() => {
-  logEditor('VideoEditor mounted', { projectId: props.project?.id, hasEditorData: Boolean(props.editorData) });
-  playerVideoSrc.value = props.videoSrc ?? '';
   // requestAnimationFrame is paused while the native window is hidden. A
   // short timer lets the parent reveal it without waiting for a frame that
   // cannot run in a hidden Electron window.
   editorReadyTimer = setTimeout(() => {
     editorReadyTimer = null;
-    logEditor('VideoEditor ready signal emitted');
     emit('ready');
   }, 0);
 });
-watch(
-  () => props.videoSrc,
-  (src) => {
-    playerVideoSrc.value = src ?? '';
-  },
-);
-const screenSource = computed(() => {
-  const screen = composition.value.clips.find((clip) => clip.kind === 'screen');
-  return screen
-    ? (composition.value.assets.find((asset) => asset.id === screen.assetId)?.src ?? null)
-    : (props.editorData?.videoSrc ?? props.videoSrc);
-});
-watch(
-  screenSource,
-  (source) => {
-    if (!source) return;
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.onloadedmetadata = () => {
-      if (video.videoWidth > 0 && video.videoHeight > 0)
-        sourceSize.value = { width: video.videoWidth, height: video.videoHeight };
-      video.removeAttribute('src');
-      video.load();
-    };
-    video.src = source;
-  },
-  { immediate: true },
-);
 
 const isCropping = ref(false);
 const isGridVisible = ref(false);
-const timelineZoomLevel = ref(100);
+const { timelineZoomLevel } = useTimelineZoom();
 const isSnappingEnabled = ref(true);
 const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
 const toggleCrop = () => {
@@ -313,6 +311,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
     deleteSelectedZoom();
   }
 };
+
+const { timelineHeight, isResizingTimeline, startTimelineResize } = useTimelineResize();
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
 });
@@ -323,8 +324,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="editor-page">
+  <div
+    class="editor-page"
+    @dragenter="mediaDrop.onMediaDragEnter"
+    @dragover="mediaDrop.onMediaDragOver"
+    @dragleave="mediaDrop.onMediaDragLeave"
+    @drop="mediaDrop.onMediaDrop"
+  >
     <EditorAmbientBackground :background="selectedBackgroundMedia" />
+    <EditorMediaDropOverlay
+      :visible="mediaDrop.isDraggingMedia.value || mediaDrop.isImportingMedia.value"
+      :importing="mediaDrop.isImportingMedia.value"
+      :title="t('mediaDropTitle')"
+      :description="t('mediaDropDescription')"
+      :importing-label="t('mediaDropImporting')"
+    />
     <Topbar
       :export-request="exportRequest"
       :project="project"
@@ -380,6 +394,7 @@ onBeforeUnmount(() => {
           @generate:zooms="generateZooms()"
           @update:caption="updateCaption"
           @update:composition="replaceComposition"
+          @preview:composition="previewComposition"
           @select-caption="selectEditorClip"
           @delete-clip="deleteSelectedClip"
           @split-clip="splitSelectedClip"
@@ -429,9 +444,8 @@ onBeforeUnmount(() => {
           />
           <EditorCanvas
             ref="editorCanvasRef"
-            v-model:is-playing="isPlaying"
-            v-model:current-time="currentTime"
-            :duration="duration"
+            :is-playing="isPlaying"
+            :current-time="currentTime"
             :selected-cursor="selectedCursor"
             :cursor-size="cursorSize"
             :cursor-color="cursorColor"
@@ -443,7 +457,10 @@ onBeforeUnmount(() => {
             :motion="cursorMotion"
             :selected-background="selectedBackgroundMedia"
             :background-blur-percent="backgroundBlurPercent"
-            :video-src="playerVideoSrc || ''"
+            :frame-for="player.frameFor"
+            :frame-version="frameVersion"
+            :playback-state="playbackState"
+            :playback-error="playbackError"
             :editor-data="editorData"
             :zoom-elements="zoomElements"
             :selected-zoom="selectedZoom"
@@ -460,7 +477,6 @@ onBeforeUnmount(() => {
             @select:canvas="selectEditorCanvas"
             @deselect:transform-clip="deselectTransformClip"
             @update:clip-transform="commitSelectedTransform"
-            @preview:clip-transform="previewSelectedTransform"
             @update:clip-crop="commitSelectedCrop"
             @done:crop="isCropping = false"
             @deselect:zoom="selectedZoomId = null"
@@ -472,17 +488,26 @@ onBeforeUnmount(() => {
             :can-split="Boolean(selectedClipId)"
             v-model:zoom-level="timelineZoomLevel"
             v-model:is-snapping-enabled="isSnappingEnabled"
-            @update:is-playing="isPlaying = $event"
-            @update:current-time="currentTime = $event"
+            @update:is-playing="handlePlayingIntent"
+            @update:current-time="handleSeekIntent"
             @add:element="addTimelineElement"
             @split="splitSelectedClip"
           />
         </div>
       </div>
-      <div class="workspace-lower">
+      <div
+        class="timeline-resize-handle"
+        role="separator"
+        tabindex="0"
+        :class="{ 'is-resizing': isResizingTimeline }"
+        @pointerdown="startTimelineResize"
+      >
+        <div class="resize-handle-bar" />
+      </div>
+      <div class="workspace-lower" :style="{ height: `${timelineHeight}px` }">
         <EditorTimeline
-          v-model:current-time="currentTime"
-          v-model:is-playing="isPlaying"
+          :current-time="currentTime"
+          :is-playing="isPlaying"
           v-model:zoom-level="timelineZoomLevel"
           :is-snapping-enabled="isSnappingEnabled"
           :duration="duration"
@@ -501,6 +526,8 @@ onBeforeUnmount(() => {
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
           @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
+          @update:current-time="handleSeekIntent($event, 'scrub')"
+          @update:is-playing="handlePlayingIntent"
         />
       </div>
     </div>
@@ -538,7 +565,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   transition: background-color 0.3s ease;
 }
-.editor-page > :not(.editor-ambient-background) {
+.editor-page > :not(.editor-ambient-background, .media-drop-overlay) {
   position: relative;
 }
 .editor-workspace {
@@ -564,10 +591,37 @@ onBeforeUnmount(() => {
   gap: 12px;
   overflow: hidden;
 }
+.timeline-resize-handle {
+  height: 12px;
+  margin-block: -6px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 20;
+  user-select: none;
+  touch-action: none;
+}
+.resize-handle-bar {
+  width: 36px;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--color-border);
+  transition: all 0.15s ease;
+}
+.timeline-resize-handle:hover .resize-handle-bar,
+.timeline-resize-handle.is-resizing .resize-handle-bar {
+  width: 56px;
+  height: 4px;
+  background: var(--color-primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
 .workspace-lower {
-  height: auto;
   flex-shrink: 0;
   border-radius: var(--radius-lg);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>

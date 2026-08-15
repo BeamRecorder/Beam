@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const invoke = (command, payload) => ipcRenderer.invoke('capture:request', command, payload);
 
@@ -139,6 +139,16 @@ contextBridge.exposeInMainWorld(
     saveProjectEditorState: (projectId, state) =>
       ipcRenderer.invoke('projects:save-editor-state', { projectId, state }),
     pickProjectMedia: (projectId, kind) => ipcRenderer.invoke('projects:pick-media', { projectId, kind }),
+    importDroppedProjectMedia: (projectId, file, kind) => {
+      let source;
+      try {
+        source = webUtils.getPathForFile(file);
+      } catch {
+        return Promise.reject(new Error('Fichier déposé invalide'));
+      }
+      if (!source) return Promise.reject(new Error('Le fichier déposé ne provient pas du système de fichiers'));
+      return ipcRenderer.invoke('projects:import-dropped-media', { projectId, source, kind });
+    },
     listBackgroundLibrary: () => ipcRenderer.invoke('background-library:list'),
     pickBackgroundLibraryMedia: (kind = 'media') => ipcRenderer.invoke('background-library:pick-import', { kind }),
     onBackgroundLibraryChanged: (listener) => {
@@ -153,6 +163,7 @@ contextBridge.exposeInMainWorld(
     revealProject: (projectId) => ipcRenderer.invoke('projects:reveal', { projectId }),
     whisperModels: () => ipcRenderer.invoke('whisper:models'),
     downloadWhisperModel: (modelId) => ipcRenderer.invoke('whisper:download', { modelId }),
+    deleteWhisperModel: (modelId) => ipcRenderer.invoke('whisper:delete', { modelId }),
     onWhisperProgress: (listener) => {
       const callback = (_event, progress) => listener(progress);
       ipcRenderer.on('whisper:progress', callback);
@@ -190,6 +201,10 @@ contextBridge.exposeInMainWorld(
     openUpdateChangelog: () => ipcRenderer.invoke('app-update:open-changelog'),
     openDiscordInvite: () => ipcRenderer.invoke('community:open-discord'),
     openGithubRepository: () => ipcRenderer.invoke('community:open-github'),
+    getGitHubStars: () => ipcRenderer.invoke('community:get-github-stars'),
+    openOnboarding: () => ipcRenderer.invoke('onboarding:open'),
+    closeOnboarding: () => ipcRenderer.invoke('onboarding:close'),
+    completeOnboarding: () => ipcRenderer.invoke('onboarding:complete'),
     onUpdateState: (listener) => {
       const callback = (_event, state) => listener(state);
       ipcRenderer.on('app-update:state', callback);

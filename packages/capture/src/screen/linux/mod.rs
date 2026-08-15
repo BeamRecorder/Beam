@@ -1,4 +1,6 @@
 mod capabilities;
+mod cursor_buttons;
+mod cursor_fusion;
 mod ffmpeg;
 mod ffmpeg_encoder;
 mod ffmpeg_process;
@@ -8,6 +10,7 @@ mod ffmpeg_sink;
 mod input_monitor;
 #[cfg(test)]
 mod input_monitor_tests;
+mod input_timeline;
 mod owned_child;
 mod pipewire;
 mod portal;

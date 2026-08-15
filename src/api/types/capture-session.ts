@@ -245,5 +245,6 @@ export interface ProjectEditorData {
     missing: string[];
   };
   interactions?: InputEventSidecar;
+  recordedPlatform: 'windows' | 'macos' | 'linux' | null;
   zoom: ProjectZoomState;
 }

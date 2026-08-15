@@ -83,6 +83,31 @@ function registerCaptureIpc({
       throw wrapped;
     }
   };
+  let pendingDefaultPreparation = null;
+  const prepareDefaultRecording = (options) => {
+    const key = JSON.stringify(options || {});
+    if (pendingDefaultPreparation) {
+      if (pendingDefaultPreparation.key !== key)
+        throw new Error('A different native recording preparation is already in progress.');
+      return pendingDefaultPreparation.promise;
+    }
+    const promise = (async () => {
+      const catalog = await requestEngine('discover');
+      const config = buildDefaultCaptureConfig(catalog, options || {}, {
+        platform,
+        defaultOutputRoot: userPaths.projects,
+        excludedProcessId: process.pid,
+      });
+      return withProjectId(await requestEngine('prepare', { config }));
+    })();
+    const preparation = { key, promise };
+    pendingDefaultPreparation = preparation;
+    const clearPreparation = () => {
+      if (pendingDefaultPreparation === preparation) pendingDefaultPreparation = null;
+    };
+    void promise.then(clearPreparation, clearPreparation);
+    return promise;
+  };
   ipcMain.handle('capture:request', async (_event, command, payload = {}) => {
     if (!canAcceptWork()) {
       const error = new Error(`capture command "${command}" rejected during application shutdown`);
@@ -100,15 +125,7 @@ function registerCaptureIpc({
       const session = await requestEngine('start');
       return registerSession(session);
     }
-    if (command === 'prepare-default-recording') {
-      const catalog = await requestEngine('discover');
-      const config = buildDefaultCaptureConfig(catalog, payload.options || {}, {
-        platform,
-        defaultOutputRoot: userPaths.projects,
-        excludedProcessId: process.pid,
-      });
-      return withProjectId(await requestEngine('prepare', { config }));
-    }
+    if (command === 'prepare-default-recording') return prepareDefaultRecording(payload.options);
     if (command === 'start-prepared-recording') return registerSession(await requestEngine('start'));
     if (command === 'cancel-prepared-recording') {
       await requestEngine('cancel');

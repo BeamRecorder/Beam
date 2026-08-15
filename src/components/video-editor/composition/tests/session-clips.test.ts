@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../../api/types/capture-api';
-import { emptyComposition, type ClipComposition } from '../composition-types';
+import type { InputEventSidecar } from '../../../../api/types/capture-session';
+import { emptyComposition, type ClipComposition } from '~/media/shared/composition-types';
 import { synchronizeRecordingClips } from '../session-clips';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const segment = (overrides: Partial<SessionTrackAsset> = {}): SessionTrackAsset => ({
   path: 'segment.webm',
@@ -30,11 +32,18 @@ const track = (
   terminationReason: null,
 });
 
-const editorData = (tracks: SessionTrackData[], videoSrc: string | null = null): ProjectEditorData => ({
+const editorData = (
+  tracks: SessionTrackData[],
+  videoSrc: string | null = null,
+  options: {
+    interactions?: InputEventSidecar;
+    recordedPlatform?: ProjectEditorData['recordedPlatform'];
+  } = {},
+): ProjectEditorData => ({
   sessionId: 'session-1',
   videoSrc,
   manifest: {
-    schemaVersion: 1,
+    schemaVersion: 3,
     projectId: 'project',
     sessionId: 'session-1',
     createdAtUtc: '',
@@ -56,7 +65,17 @@ const editorData = (tracks: SessionTrackData[], videoSrc: string | null = null):
     catalog: {},
     missing: [],
   },
+  interactions: options.interactions ?? { version: 1, events: [] },
+  recordedPlatform: options.recordedPlatform ?? null,
   zoom: { elements: [], generatedSessions: [] },
+});
+
+const shortcut = (sessionNs: number, key: 'a' | 'b', pressed = true) => ({
+  event: 'shortcut' as const,
+  sessionNs,
+  pressed,
+  modifiers: ['control' as const],
+  key,
 });
 
 describe('synchronizeRecordingClips', () => {
@@ -170,6 +189,9 @@ describe('synchronizeRecordingClips', () => {
           enabled: true,
           order: 1,
           transform: { x: 0, y: 0, width: 1, height: 1 },
+          appearance: createDefaultClipAppearance('screen'),
+          isMirrored: false,
+          isMirroredY: false,
         },
       ],
     };
@@ -177,5 +199,124 @@ describe('synchronizeRecordingClips', () => {
     expect(result.clips.filter((clip) => clip.id === 'screen')).toHaveLength(1);
     expect(result.clips[0]!.name).toBe('Trimmed screen');
     expect(result.assets.some((asset) => asset.src === '/segment.webm')).toBe(true);
+  });
+
+  it('keeps an already materialized project-media recording composition unchanged', () => {
+    const assetId = 'session:session-1:screen:segment.webm';
+    const composition: ClipComposition = {
+      ...emptyComposition(),
+      assets: [
+        {
+          id: assetId,
+          kind: 'video',
+          name: 'Screen recording',
+          fileName: null,
+          durationMs: 2000,
+          width: 1920,
+          height: 1080,
+          src: 'project-media://project-1/session-1/screen/segment.webm',
+          origin: 'session',
+          sessionId: 'session-1',
+          sessionPath: 'segment.webm',
+        },
+      ],
+      clips: [
+        {
+          id: 'screen',
+          kind: 'screen',
+          name: 'Screen recording',
+          assetId,
+          timelineStartMs: 0,
+          timelineDurationMs: 2000,
+          sourceInMs: 0,
+          sourceDurationMs: 2000,
+          playbackRate: 1,
+          enabled: true,
+          order: 30000,
+          transform: { x: 0, y: 0, width: 1, height: 1 },
+          appearance: createDefaultClipAppearance('screen'),
+          isMirrored: false,
+          isMirroredY: false,
+        },
+      ],
+    };
+    const result = synchronizeRecordingClips(
+      composition,
+      editorData([track('screen', [segment({ src: '/editor-data/segment.webm' })])]),
+    );
+
+    expect(result).not.toBe(composition);
+    expect(result.keyboardCaptionSessions).toEqual(['session-1']);
+    expect(result.clips.filter((clip) => clip.kind === 'caption')).toHaveLength(0);
+    expect(result.assets[0]?.src).toBe('project-media://project-1/session-1/screen/segment.webm');
+  });
+
+  it('creates keyboard captions once, keeps schema v3, and does not recreate a deleted caption', () => {
+    const input: InputEventSidecar = {
+      version: 1,
+      events: [shortcut(1_500_000_000, 'b', false), shortcut(500_000_000, 'a')],
+    };
+    const data = editorData([track('screen', [segment()])], null, {
+      interactions: input,
+      recordedPlatform: 'macos',
+    });
+
+    const first = synchronizeRecordingClips(emptyComposition(), data);
+    const keyboardCaptions = first.clips.filter((clip) => clip.kind === 'caption');
+    expect(first.schemaVersion).toBe(3);
+    expect(first.keyboardCaptionSessions).toEqual(['session-1']);
+    expect(keyboardCaptions).toHaveLength(1);
+    expect(keyboardCaptions[0]).toMatchObject({
+      timelineStartMs: 500,
+      caption: {
+        type: 'keyboard',
+        recordedPlatform: 'macos',
+        sourceSessionId: 'session-1',
+      },
+    });
+
+    expect(synchronizeRecordingClips(first, data)).toBe(first);
+
+    const withoutCaption = {
+      ...first,
+      clips: first.clips.filter((clip) => clip.kind !== 'caption'),
+    };
+    expect(synchronizeRecordingClips(withoutCaption, data)).toBe(withoutCaption);
+  });
+
+  it('marks a materialized session as processed even when its input sidecar has no events', () => {
+    const data = editorData([track('screen', [segment()])], null, {
+      interactions: { version: 1, events: [] },
+      recordedPlatform: 'linux',
+    });
+
+    const result = synchronizeRecordingClips(emptyComposition(), data);
+
+    expect(result.keyboardCaptionSessions).toEqual(['session-1']);
+    expect(result.clips.some((clip) => clip.kind === 'caption')).toBe(false);
+  });
+
+  it('never groups a keyboard caption with media that has the same timing', () => {
+    const result = synchronizeRecordingClips(
+      emptyComposition(),
+      editorData(
+        [
+          track('screen', [segment({ path: 'screen.webm', src: '/screen.webm' })]),
+          track('camera', [segment({ path: 'camera.webm', src: '/camera.webm' })]),
+        ],
+        null,
+        {
+          interactions: { version: 1, events: [shortcut(0, 'a')] },
+          recordedPlatform: 'windows',
+        },
+      ),
+    );
+    const keyboardCaption = result.clips.find((clip) => clip.kind === 'caption');
+    const mediaClips = result.clips.filter((clip) => clip.kind !== 'caption');
+
+    expect(keyboardCaption).toMatchObject({ timelineStartMs: 0, timelineDurationMs: 1_200 });
+    expect(keyboardCaption?.groupId).toBeUndefined();
+    expect(mediaClips).toHaveLength(2);
+    expect(mediaClips.every((clip) => clip.groupId === 'recording:session-1:0:2000')).toBe(true);
   });
 });

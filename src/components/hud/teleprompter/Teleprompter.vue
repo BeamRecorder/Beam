@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { VNodeRef } from 'vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import {
   AlignCenter,
@@ -24,6 +25,9 @@ import { useTeleprompter } from './useTeleprompter';
 
 const { t } = useTranslate('Teleprompter');
 const state = useTeleprompter();
+const setDisplayElement: VNodeRef = (element) => {
+  state.setDisplayElement(element instanceof HTMLElement ? element : null);
+};
 const isSettingsOpen = ref(false);
 const modeOptions = computed(() => [
   { value: 'continuous', label: t('continuous') },
@@ -188,7 +192,7 @@ onBeforeUnmount(() => {
           />
         </section>
         <section
-          :ref="state.setDisplayElement"
+          :ref="setDisplayElement"
           class="teleprompter-display"
           :class="{ 'is-centered': state.document.value.textAlign === 'center' }"
           :style="{

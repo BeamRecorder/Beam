@@ -72,7 +72,7 @@ describe('useCursorReplacer', () => {
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
     const image = await useCursorReplacer().getCursorImage('default', 32, '#ff00ff');
     expect(image).toBeInstanceOf(LoadingImage);
-    expect(fetchMock).toHaveBeenCalledWith('/macOsSvgCursors/default.svg');
+    expect(fetchMock).toHaveBeenCalledWith(cursorUrls.default);
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:cursor');
   });
@@ -96,7 +96,7 @@ describe('useCursorReplacer', () => {
   it('fails on an unavailable asset and on an undecodable SVG', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
     await expect(useCursorReplacer().getCursorImage('busy', 24, '#000000')).rejects.toThrow(
-      'Unable to load cursor asset: /macOsSvgCursors/busy.svg (404)',
+      `Unable to load cursor asset: ${cursorUrls.busy} (404)`,
     );
     vi.stubGlobal(
       'fetch',
@@ -112,7 +112,7 @@ describe('useCursorReplacer', () => {
       revokeObjectURL,
     });
     await expect(useCursorReplacer().getCursorImage('busy', 24, '#000000')).rejects.toThrow(
-      'Unable to decode cursor asset: /macOsSvgCursors/busy.svg',
+      `Unable to decode cursor asset: ${cursorUrls.busy}`,
     );
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:bad');
   });
