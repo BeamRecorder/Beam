@@ -286,6 +286,23 @@ jobs:
           pattern: '*-release-assets'
           path: release-assets
           merge-multiple: true
+      - name: Flatten downloaded release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' asset; do
+            destination="release-assets/$(basename "$asset")"
+            if [[ -e "$destination" ]]; then
+              echo "Duplicate release asset: $(basename "$asset")" >&2
+              exit 1
+            fi
+            mv "$asset" "$destination"
+          done < <(find release-assets -mindepth 2 -type f -print0)
+          find release-assets -mindepth 1 -type d -empty -delete
+          if find release-assets -mindepth 2 -type f -print -quit | grep -q .; then
+            echo 'Nested release assets remain after flattening' >&2
+            exit 1
+          fi
       - name: Create or reuse the draft release
         env:
           GH_TOKEN: ${{ github.token }}
