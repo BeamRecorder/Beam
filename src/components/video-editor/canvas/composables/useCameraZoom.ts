@@ -201,7 +201,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const output = options.outputCanvas();
     const preview = outputPreviewRect(width, height, output);
     const screen = screenClip();
-    if (!screen) {
+    const hasCameraVisual = activeClipsAt(options.composition(), options.currentTime() * 1_000).some(
+      (clip) => clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image',
+    );
+    if (!hasCameraVisual) {
       const hasEnabledScreenTrack = options.composition().clips.some((clip) => clip.kind === 'screen' && clip.enabled);
       if (!hasEnabledScreenTrack) {
         ctx.fillStyle = 'rgba(15,23,42,.85)';
@@ -216,10 +219,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       overlayWindowBounds.value = null;
       return null;
     }
-    const asset = options.composition().assets.find((entry) => entry.id === screen.assetId);
-    const videoWidth = frame?.width ?? asset?.width ?? 0;
-    const videoHeight = frame?.height ?? asset?.height ?? 0;
-    if (videoWidth <= 0 || videoHeight <= 0) {
+    const asset = screen ? options.composition().assets.find((entry) => entry.id === screen.assetId) : null;
+    const videoWidth = screen ? (frame?.width ?? asset?.width ?? 0) : output.width;
+    const videoHeight = screen ? (frame?.height ?? asset?.height ?? 0) : output.height;
+    if (screen && (videoWidth <= 0 || videoHeight <= 0)) {
       ctx.fillStyle = 'rgba(15,23,42,.85)';
       ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
       ctx.fillStyle = '#fff';
@@ -230,7 +233,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       return null;
     }
     const { x: dx, y: dy, width: dw, height: dh } = preview;
-    const crop = options.isCropping?.() ? undefined : screen.crop;
+    const crop = screen && !options.isCropping?.() ? screen.crop : undefined;
     const cropX = crop ? crop.x * videoWidth : 0;
     const cropY = crop ? crop.y * videoHeight : 0;
     const cropW = crop ? crop.width * videoWidth : videoWidth;
@@ -243,7 +246,8 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       source.y += cropY;
     }
     const media = output.showBackground ? framedMediaRect(cropW, cropH, dw, dh) : { x: 0, y: 0, width: dw, height: dh };
-    const screenTransform = options.screenTransformDraft?.() ?? screen.transform;
+    const screenTransform = options.screenTransformDraft?.() ??
+      screen?.transform ?? { x: 0, y: 0, width: 1, height: 1 };
     const positioned = {
       x: media.x + screenTransform.x * media.width,
       y: media.y + screenTransform.y * media.height,
@@ -261,7 +265,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       zooms: options.zoomElements(),
       telemetry,
       canvas: output,
-      source: [videoWidth, videoHeight],
+      source: screen ? [videoWidth, videoHeight] : null,
     });
     if (!cameraEvaluator || key !== cameraEvaluatorKey) {
       cameraEvaluatorKey = key;
@@ -269,7 +273,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         zooms: options.zoomElements(),
         telemetry,
         mapFocus: (focus, zoom) =>
-          zoom.mode === 'auto'
+          screen && zoom.mode === 'auto'
             ? outputPoint(focus.cx, focus.cy, videoWidth, videoHeight, dw, dh, output.showBackground)
             : focus,
       });
@@ -286,6 +290,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusY: camera.focusY,
     };
     const drawScreen = () => {
+      if (!screen) return;
       if (frame) {
         drawDecoratedMedia(ctx, {
           source: frame.bitmap,
@@ -320,9 +325,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
         ctx.fillText(options.videoError() || 'Loading video recording...', width / 2, height / 2);
       }
     };
+    ctx.save();
+    ctx.translate(dx + dw / 2, dy + dh / 2);
+    ctx.scale(camera.scale, camera.scale);
+    ctx.translate(-camera.focusX, -camera.focusY);
     options.drawBackground(ctx, { x: dx, y: dy, width: dw, height: dh });
     if (options.renderVisualStack) options.renderVisualStack(ctx, renderedWindow, drawScreen);
     else drawScreen();
+    ctx.restore();
     ctx.restore();
 
     videoWindowBounds.value = {
@@ -334,12 +344,14 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       focusX: camera.focusX,
       focusY: camera.focusY,
     };
-    screenHitBounds.value = {
-      dx: dx + positioned.x,
-      dy: dy + positioned.y,
-      dw: positioned.width,
-      dh: positioned.height,
-    };
+    screenHitBounds.value = screen
+      ? {
+          dx: dx + positioned.x,
+          dy: dy + positioned.y,
+          dw: positioned.width,
+          dh: positioned.height,
+        }
+      : null;
     overlayWindowBounds.value = { dx, dy, dw, dh, scale: camera.scale, focusX: camera.focusX, focusY: camera.focusY };
     return renderedWindow;
   };

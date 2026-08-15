@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectEditorData } from '../../../../api/types/capture-api';
 import type { ZoomElement } from '../../zoom/zoom-types';
+import { ZOOM_ALGORITHM_VERSION } from '../../zoom/zoom-suggestions';
 import { useProjectZoom } from '../useProjectZoom';
 
 const zoom = (id: string, mode: ZoomElement['mode'] = 'manual', sessionId = 'session'): ZoomElement => ({
@@ -47,8 +48,11 @@ const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => 
 
 const create = (initialData: ProjectEditorData | null = data(), duration = 5_000) => {
   const activeTab = ref('canvas');
+  const editorData = ref(initialData);
+  const durationMs = ref(duration);
   return {
-    state: useProjectZoom({ editorData: ref(initialData), durationMs: ref(duration), activeTab }),
+    state: useProjectZoom({ editorData, durationMs, activeTab }),
+    durationMs,
     activeTab,
   };
 };
@@ -96,7 +100,9 @@ describe('useProjectZoom', () => {
       zoom('old-auto', 'auto'),
       zoom('other-auto', 'auto', 'other'),
     ];
-    state.generatedSessions.value = [{ sessionId: 'other', algorithmVersion: 4, generatedAt: 'old' }];
+    state.generatedSessions.value = [
+      { sessionId: 'other', algorithmVersion: ZOOM_ALGORITHM_VERSION, generatedAt: 'old' },
+    ];
     state.generateZooms();
     expect(state.zoomElements.value).toEqual(
       expect.arrayContaining([
@@ -108,7 +114,7 @@ describe('useProjectZoom', () => {
     expect(state.zoomElements.value.find((item) => item.id === 'old-auto')).toBeUndefined();
     expect(state.generatedSessions.value).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ sessionId: 'session', algorithmVersion: 4 }),
+        expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
         expect.objectContaining({ sessionId: 'other' }),
       ]),
     );
@@ -122,6 +128,25 @@ describe('useProjectZoom', () => {
     state.generateZooms();
     expect(state.zoomElements.value).toEqual([]);
     expect(state.generatedSessions.value).toEqual([]);
+  });
+
+  it('does not record a generation at zero duration, then generates once duration is ready', () => {
+    const { state, durationMs } = create(data(), 0);
+
+    state.ensureAutomaticZooms();
+
+    expect(state.zoomElements.value).toEqual([]);
+    expect(state.generatedSessions.value).toEqual([]);
+
+    durationMs.value = 5_000;
+    state.ensureAutomaticZooms();
+
+    expect(state.generatedSessions.value).toEqual([
+      expect.objectContaining({ sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION }),
+    ]);
+    expect(state.zoomElements.value).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'auto:session:2000', mode: 'auto' })]),
+    );
   });
 
   it('updates, trims, moves and deletes local zoom state', () => {
@@ -144,7 +169,9 @@ describe('useProjectZoom', () => {
   it('skips automatic generation after the current algorithm was recorded', () => {
     const { state } = create();
     state.zoomElements.value = [zoom('saved')];
-    state.generatedSessions.value = [{ sessionId: 'session', algorithmVersion: 4, generatedAt: 'now' }];
+    state.generatedSessions.value = [
+      { sessionId: 'session', algorithmVersion: ZOOM_ALGORITHM_VERSION, generatedAt: 'now' },
+    ];
     state.ensureAutomaticZooms();
     expect(state.zoomElements.value).toEqual([zoom('saved')]);
   });

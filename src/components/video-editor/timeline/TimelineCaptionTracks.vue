@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Keyboard, Sparkles, Type } from '@lucide/vue';
+import { Sparkles } from '@lucide/vue';
 import type { CaptionClip } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 

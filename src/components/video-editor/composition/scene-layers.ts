@@ -4,7 +4,6 @@ import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/co
 export interface CompositionSceneLayers {
   screen: VisualClip | null;
   cameraVisuals: VisualClip[];
-  viewportVisuals: VisualClip[];
   webcams: VisualClip[];
   captions: CaptionClip[];
 }
@@ -13,12 +12,12 @@ export function resolveCompositionSceneLayers(composition: ClipComposition, time
   const active = activeClipsAt(composition, timeMs);
   const byOrder = <T extends { order: number }>(left: T, right: T) => right.order - left.order;
   const screen = active.filter((clip): clip is VisualClip => clip.kind === 'screen').sort(byOrder);
+  const cameraVisuals = active
+    .filter((clip): clip is VisualClip => clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image')
+    .sort(byOrder);
   return {
     screen: screen[0] ?? null,
-    cameraVisuals: screen,
-    viewportVisuals: active
-      .filter((clip): clip is VisualClip => clip.kind === 'video' || clip.kind === 'image')
-      .sort(byOrder),
+    cameraVisuals,
     webcams: active.filter((clip): clip is VisualClip => clip.kind === 'webcam').sort(byOrder),
     captions: active.filter((clip): clip is CaptionClip => clip.kind === 'caption').sort(byOrder),
   };

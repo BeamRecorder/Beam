@@ -209,10 +209,11 @@ async function loadImages(request: ExportRequest, owned: Map<string, ImageBitmap
   const assets = request.snapshot.composition.assets.filter(
     (asset) => asset.kind === 'image' && activeImageIds.has(asset.id),
   );
+  const assetsBySource = new Map(assets.map((asset) => [asset.src, asset]));
   await Promise.all(
-    assets.map(async (asset) => {
-      if (owned.has(asset.src)) return;
-      owned.set(asset.src, await loadBitmap(asset.src, `image asset "${asset.name}"`));
+    [...assetsBySource].map(async ([source, asset]) => {
+      if (owned.has(source)) return;
+      owned.set(source, await loadBitmap(source, `image asset "${asset.name}"`));
     }),
   );
   for (const asset of assets) {
@@ -275,20 +276,23 @@ function recolorCursor(bitmap: ImageBitmap, color: string) {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const context = canvas.getContext('2d');
   if (!context) return bitmap;
-  context.drawImage(bitmap, 0, 0);
-  const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height);
-  const red = Number.parseInt(match[1]!, 16);
-  const green = Number.parseInt(match[2]!, 16);
-  const blue = Number.parseInt(match[3]!, 16);
-  for (let index = 0; index < pixels.data.length; index += 4) {
-    if (pixels.data[index]! > 8 || pixels.data[index + 1]! > 8 || pixels.data[index + 2]! > 8) continue;
-    pixels.data[index] = red;
-    pixels.data[index + 1] = green;
-    pixels.data[index + 2] = blue;
+  try {
+    context.drawImage(bitmap, 0, 0);
+    const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    const red = Number.parseInt(match[1]!, 16);
+    const green = Number.parseInt(match[2]!, 16);
+    const blue = Number.parseInt(match[3]!, 16);
+    for (let index = 0; index < pixels.data.length; index += 4) {
+      if (pixels.data[index]! > 8 || pixels.data[index + 1]! > 8 || pixels.data[index + 2]! > 8) continue;
+      pixels.data[index] = red;
+      pixels.data[index + 1] = green;
+      pixels.data[index + 2] = blue;
+    }
+    context.putImageData(pixels, 0, 0);
+    return canvas.transferToImageBitmap();
+  } finally {
+    bitmap.close();
   }
-  context.putImageData(pixels, 0, 0);
-  bitmap.close();
-  return canvas.transferToImageBitmap();
 }
 
 async function renderVideo(
@@ -331,9 +335,11 @@ async function renderVideo(
         assets.screenSize.height,
       )
     : undefined;
-  const camera = assets.screenSize
-    ? createSnapshotCameraEvaluator(request.snapshot, assets.screenSize.width, assets.screenSize.height)
-    : undefined;
+  const camera = createSnapshotCameraEvaluator(
+    request.snapshot,
+    assets.screenSize?.width ?? request.snapshot.canvas.width,
+    assets.screenSize?.height ?? request.snapshot.canvas.height,
+  );
   try {
     for (let frame = 0; frame < total; frame += 1) {
       if (signal.aborted) throw new DOMException('Export cancelled.', 'AbortError');
@@ -406,7 +412,7 @@ async function renderVideo(
       onFrame(frame + 1, { decodeMs, renderMs, encoderBackpressureMs });
     }
   } finally {
-    for (const consumer of consumers.values()) await consumer.return?.();
+    await Promise.allSettled([...consumers.values()].map((consumer) => consumer.return?.()));
   }
   mediaOutput.closeVideo();
   return { elapsedMs: performance.now() - started, decodeMs, renderMs, encoderBackpressureMs };
@@ -430,22 +436,26 @@ async function renderAudio(
   );
   const mixer = createProgressiveAudioMixer(clips, tracks, request.snapshot.duration);
   const started = performance.now();
-  for (let block = 0; block < mixer.blockCount; block += 1) {
-    await mediaOutput.addAudio(await mixer.mixBlock(block, signal));
+  try {
+    for (let block = 0; block < mixer.blockCount; block += 1) {
+      await mediaOutput.addAudio(await mixer.mixBlock(block, signal));
+      const elapsedMs = performance.now() - started;
+      onBlock(block + 1, mixer.blockCount, {
+        elapsedMs,
+        realtimeSpeed: request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000),
+      });
+    }
+    mediaOutput.closeAudio();
     const elapsedMs = performance.now() - started;
-    onBlock(block + 1, mixer.blockCount, {
-      elapsedMs,
-      realtimeSpeed: request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000),
+    const realtimeSpeed = request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000);
+    console.info('[Beam export] audio complete', {
+      elapsedMs: Math.round(elapsedMs),
+      realtimeSpeed: Number(realtimeSpeed.toFixed(2)),
     });
+    return { elapsedMs, realtimeSpeed };
+  } finally {
+    await mixer.dispose();
   }
-  mediaOutput.closeAudio();
-  const elapsedMs = performance.now() - started;
-  const realtimeSpeed = request.snapshot.duration / Math.max(0.001, elapsedMs / 1_000);
-  console.info('[Beam export] audio complete', {
-    elapsedMs: Math.round(elapsedMs),
-    realtimeSpeed: Number(realtimeSpeed.toFixed(2)),
-  });
-  return { elapsedMs, realtimeSpeed };
 }
 
 function audioClipsFor(request: ExportRequest) {

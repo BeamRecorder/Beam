@@ -508,6 +508,90 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('trim:zoom')).toContainEqual([expect.objectContaining({ id: 'zoom-1', edge: 'end' })]);
   });
 
+  it('releases the zoom trim preview when the trim ends so later props control the indicator', async () => {
+    const mounted = await mountTracks();
+    const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
+
+    await zoomButton.find('.trim-handle.start').trigger('pointerdown', { clientX: 400 });
+    window.dispatchEvent(pointerEvent('pointermove', 100));
+    window.dispatchEvent(pointerEvent('pointerup', 100));
+
+    await mounted!.setProps({ zoomElements: [zoom({ startMs: 7_000, endMs: 8_500 })] });
+    const updatedZoom = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
+    expect(updatedZoom.attributes('style')).toContain('left: 70%');
+    expect(updatedZoom.attributes('style')).toContain('width: 15%');
+  });
+
+  it('cleans a clip move preview and does not emit a move on pointercancel', async () => {
+    const mounted = await mountTracks();
+    const screenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
+
+    await screenClip.trigger('pointerdown', { clientX: 120 });
+    window.dispatchEvent(pointerEvent('pointermove', 500));
+    window.dispatchEvent(pointerEvent('pointercancel', 500));
+    expect(mounted!.emitted('move:clip') ?? []).toHaveLength(0);
+
+    const nextComposition = composition();
+    nextComposition.clips = nextComposition.clips.map((clip) =>
+      clip.id === 'screen-clip' ? { ...clip, timelineStartMs: 7_000 } : clip,
+    );
+    await mounted!.setProps({ composition: nextComposition });
+    const updatedScreenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    expect((updatedScreenClip?.props('clip') as VisualClip).timelineStartMs).toBe(7_000);
+  });
+
+  it('cleans a clip trim preview and does not emit a trim on pointercancel', async () => {
+    const mounted = await mountTracks();
+    const screenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
+
+    await screenClip.find('.trim-handle.start').trigger('pointerdown', { clientX: 200 });
+    window.dispatchEvent(pointerEvent('pointermove', 250));
+    window.dispatchEvent(pointerEvent('pointercancel', 250));
+    expect(mounted!.emitted('trim:clip') ?? []).toHaveLength(0);
+
+    const nextComposition = composition();
+    nextComposition.clips = nextComposition.clips.map((clip) =>
+      clip.id === 'screen-clip' ? { ...clip, timelineStartMs: 6_500, timelineDurationMs: 2_500 } : clip,
+    );
+    await mounted!.setProps({ composition: nextComposition });
+    const updatedScreenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    const updatedClip = updatedScreenClip?.props('clip') as VisualClip | undefined;
+    expect(updatedClip?.timelineStartMs).toBe(6_500);
+    expect(updatedClip?.timelineDurationMs).toBe(2_500);
+  });
+
+  it('cleans zoom move and trim previews on pointercancel without emitting either edit', async () => {
+    const mounted = await mountTracks();
+    const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
+
+    await zoomButton.trigger('pointerdown', { clientX: 400 });
+    window.dispatchEvent(pointerEvent('pointermove', 650));
+    window.dispatchEvent(pointerEvent('pointercancel', 650));
+    expect(mounted!.emitted('move:zoom') ?? []).toHaveLength(0);
+
+    await mounted!.setProps({ zoomElements: [zoom({ startMs: 6_000, endMs: 7_500 })] });
+    const updatedZoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
+    await updatedZoomButton.find('.trim-handle.end').trigger('pointerdown', { clientX: 700 });
+    window.dispatchEvent(pointerEvent('pointermove', 900));
+    window.dispatchEvent(pointerEvent('pointercancel', 900));
+    expect(mounted!.emitted('trim:zoom') ?? []).toHaveLength(0);
+
+    await mounted!.setProps({ zoomElements: [zoom({ startMs: 8_000, endMs: 9_500 })] });
+    const finalZoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
+    expect(finalZoomButton.attributes('style')).toContain('left: 80%');
+    expect(finalZoomButton.attributes('style')).toContain('width: 15%');
+  });
+
   it('reorders visual clips and cancels a reorder without changing the composition', async () => {
     const mounted = await mountTracks();
     const rows = mounted!.findAll('.sidebar-tracks-stack .visual-track');

@@ -176,7 +176,7 @@ describe('composition rendering invariants', () => {
     expect(ctx.drawImage).toHaveBeenCalledWith(visual.source, 10, 10, 30, 20);
   });
 
-  it('draws viewport visuals after restoring the camera transform', () => {
+  it('draws imported visuals inside the global camera transform', () => {
     const value = snapshot();
     value.zooms = [
       {
@@ -217,8 +217,8 @@ describe('composition rendering invariants', () => {
       isMirrored: false,
       isMirroredY: false,
     });
+    value.composition.clips = value.composition.clips.filter((clip) => clip.kind !== 'screen');
     const visual = image();
-    const cameraSource = {} as CanvasImageSource;
     const ctx = context();
     let cameraTransformActive = false;
     const transformStack: boolean[] = [];
@@ -236,18 +236,10 @@ describe('composition rendering invariants', () => {
       if (source === visual.source) visualDrawStates.push(cameraTransformActive);
     }) as CanvasRenderingContext2D['drawImage']);
 
-    renderCompositionFrame(
-      ctx,
-      { source: cameraSource, width: 100, height: 50 },
-      value,
-      0.2,
-      null,
-      undefined,
-      new Map([['logo', visual]]),
-    );
+    renderCompositionFrame(ctx, null, value, 0.2, null, undefined, new Map([['logo', visual]]));
 
     expect((ctx.scale as ReturnType<typeof vi.fn>).mock.calls.some(([scale]) => Number(scale) > 1)).toBe(true);
-    expect(visualDrawStates).toEqual([false]);
+    expect(visualDrawStates).toEqual([true]);
   });
 
   it('keeps captions above visuals when no screen is present regardless of clip order', () => {

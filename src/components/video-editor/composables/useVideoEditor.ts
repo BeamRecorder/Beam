@@ -22,7 +22,6 @@ export function useVideoEditor(options: {
   const micVolume = ref(100);
   const outputCanvas = ref<OutputCanvasSettings>({ ...DEFAULT_OUTPUT_CANVAS });
   const player = useVideoPlayer();
-  const durationMs = computed(() => Math.round(player.duration.value * 1_000));
   const cursor = useCursorReplacer();
   const cursorMotion = ref(createDefaultCursorMotionSettings());
 
@@ -32,6 +31,9 @@ export function useVideoEditor(options: {
     currentTimeSec: player.currentTime,
     activeTab,
   });
+  // Composition state is available before the asynchronous playback engine has
+  // decoded metadata, so it is the authoritative duration for zoom generation.
+  const durationMs = computed(() => compositionDurationMs(compositionState.composition.value));
   const zoomState = useProjectZoom({ editorData, durationMs, activeTab });
   const editorState = useProjectEditorState({
     project,
@@ -115,6 +117,7 @@ export function useVideoEditor(options: {
     editorData,
     () => {
       compositionState.synchronizeRecording();
+      zoomState.ensureAutomaticZooms();
     },
     { deep: true },
   );

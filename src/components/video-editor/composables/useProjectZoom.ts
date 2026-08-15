@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue';
+import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { ZoomElement } from '../zoom/zoom-types';
 import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
@@ -39,10 +39,12 @@ export function useProjectZoom(options: {
   const generateZooms = (selectPanel = false) => {
     const data = editorData.value;
     if (!data?.cursor.available) return;
+    const generationDurationMs = Math.min(durationMs.value, data.manifest.durationNs / 1_000_000);
+    if (generationDurationMs <= 0) return;
     const generated = buildAutomaticZoomElements({
       telemetry: data.cursor.telemetry,
       sessionId: data.sessionId,
-      durationMs: Math.min(durationMs.value, data.manifest.durationNs / 1_000_000),
+      durationMs: generationDurationMs,
       reserved: zoomElements.value.filter((element) => element.mode === 'manual'),
     });
     zoomElements.value = [
@@ -68,6 +70,11 @@ export function useProjectZoom(options: {
       return;
     generateZooms(false);
   };
+  watch(
+    [() => editorData.value?.sessionId, () => editorData.value?.cursor.available, durationMs],
+    () => ensureAutomaticZooms(),
+    { flush: 'post' },
+  );
   const updateZoom = (next: ZoomElement) => {
     if (next.startMs < 0 || next.endMs <= next.startMs) return;
     zoomElements.value = zoomElements.value.map((element) => (element.id === next.id ? next : element));

@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   player: undefined as any,
   compositionState: undefined as any,
   zoomState: undefined as any,
+  zoomOptions: undefined as any,
   editorState: undefined as any,
   cursor: undefined as any,
   initialComposition: undefined as ClipComposition | undefined,
@@ -66,7 +67,8 @@ vi.mock('../useClipComposition', async () => {
 vi.mock('../useProjectZoom', async () => {
   const { ref } = await import('vue');
   return {
-    useProjectZoom: () => {
+    useProjectZoom: (options: unknown) => {
+      state.zoomOptions = options;
       const value = {
         zoomElements: ref([]),
         generatedSessions: ref([]),
@@ -324,6 +326,7 @@ describe('useVideoEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     state.initialComposition = undefined;
+    state.zoomOptions = undefined;
     capture.listBackgroundLibrary.mockResolvedValue([{ id: 'background-1' }]);
     capture.onBackgroundLibraryChanged.mockReturnValue(() => undefined);
     state.compositionDurationMs.mockReturnValue(2000);
@@ -387,6 +390,41 @@ describe('useVideoEditor', () => {
     projectRef.value = null;
     await wrapper.vm.$nextTick();
     expect(api.exportRequest.value).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('passes composition duration to zoom generation before player metadata is ready', async () => {
+    state.initialComposition = createCompositionFixture();
+    const projectRef = ref(project);
+    const editorData = ref(makeEditorData());
+    const Harness = defineComponent({
+      setup: () => useVideoEditor({ project: projectRef, editorData }),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    await flushPromises();
+
+    expect(state.player.duration.value).toBe(0);
+    expect(state.zoomOptions.durationMs.value).toBe(5_000);
+    wrapper.unmount();
+  });
+
+  it('retries automatic zoom generation when editor data arrives after project loading', async () => {
+    const projectRef = ref(project);
+    const editorData = ref(null);
+    const Harness = defineComponent({
+      setup: () => useVideoEditor({ project: projectRef, editorData }),
+      template: '<div />',
+    });
+    const wrapper = mount(Harness);
+    await flushPromises();
+    state.zoomState.ensureAutomaticZooms.mockClear();
+
+    editorData.value = { ...makeEditorData(), sessionId: 'session-1', cursor: { available: true } } as any;
+    await wrapper.vm.$nextTick();
+    await flushPromises();
+
+    expect(state.zoomState.ensureAutomaticZooms).toHaveBeenCalledOnce();
     wrapper.unmount();
   });
 

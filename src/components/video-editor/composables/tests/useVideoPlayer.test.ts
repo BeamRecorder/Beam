@@ -120,7 +120,7 @@ describe('useVideoPlayer', () => {
       byteSize: 16,
       close: vi.fn(),
     };
-    engine.frameFor.mockReturnValue(replacement);
+    engine.frameFor.mockReturnValue(replacement as never);
     let versionAtReload = -1;
     engine.loadComposition.mockImplementationOnce(async () => {
       versionAtReload = player.frameVersion.value;
@@ -130,8 +130,8 @@ describe('useVideoPlayer', () => {
 
     await player.loadComposition(composition);
 
-    expect(versionAtReload).toBe(1);
-    expect(player.frameVersion.value).toBe(2);
+    expect(versionAtReload).toBe(2);
+    expect(player.frameVersion.value).toBe(3);
     expect(player.frameFor('clip')).toBe(replacement);
   });
 

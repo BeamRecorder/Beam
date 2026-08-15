@@ -40,7 +40,6 @@ const emit = defineEmits<{
 }>();
 
 const {
-  durationMs,
   visualClips,
   keyboardCaptionClips,
   textCaptionClips,

@@ -101,7 +101,7 @@ export function drawCompositionLayers(
 ) {
   const timeMs = time * 1_000;
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
-  for (const clip of [...layers.viewportVisuals, ...layers.webcams]) {
+  for (const clip of [...layers.cameraVisuals.filter((entry) => entry.kind !== 'screen'), ...layers.webcams]) {
     const media = visuals.get(clip.id);
     if (!media) continue;
     if (clip.kind === 'webcam') {
@@ -162,15 +162,9 @@ export function renderCompositionFrame(
   const timeMs = time * 1_000;
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
   const screen = layers.screen;
-  if (!screen || !video) {
-    drawSnapshotBackground(ctx, snapshot, background);
-    drawCompositionLayers(ctx, snapshot, time, visuals);
-    return;
-  }
-
-  const sourceWidth = video.width;
-  const sourceHeight = video.height;
-  const crop = screen.crop;
+  const sourceWidth = video?.width ?? width;
+  const sourceHeight = video?.height ?? height;
+  const crop = screen?.crop;
   const cropX = crop ? crop.x * sourceWidth : 0;
   const cropY = crop ? crop.y * sourceHeight : 0;
   const cropWidth = crop ? crop.width * sourceWidth : sourceWidth;
@@ -185,12 +179,14 @@ export function renderCompositionFrame(
   const media = snapshot.canvas.showBackground
     ? framedMediaRect(cropWidth, cropHeight, width, height)
     : { x: 0, y: 0, width, height };
-  const positionedMedia = {
-    x: media.x + screen.transform.x * media.width,
-    y: media.y + screen.transform.y * media.height,
-    width: media.width * screen.transform.width,
-    height: media.height * screen.transform.height,
-  };
+  const positionedMedia = screen
+    ? {
+        x: media.x + screen.transform.x * media.width,
+        y: media.y + screen.transform.y * media.height,
+        width: media.width * screen.transform.width,
+        height: media.height * screen.transform.height,
+      }
+    : null;
   const camera = (cameraEvaluator ?? createSnapshotCameraEvaluator(snapshot, sourceWidth, sourceHeight)).sample(timeMs);
   const scale = camera.scale;
   const cameraFocus = camera.focus;
@@ -208,6 +204,7 @@ export function renderCompositionFrame(
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
   for (const clip of layers.cameraVisuals) {
     if (clip.kind === 'screen') {
+      if (!video || clip.id !== screen?.id || !positionedMedia) continue;
       drawDecoratedMedia(ctx, {
         source: video.source,
         sourceRect: source,
@@ -224,12 +221,6 @@ export function renderCompositionFrame(
     drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
   }
   ctx.restore();
-
-  for (const clip of layers.viewportVisuals) {
-    const sourceVisual = visuals?.get(clip.id);
-    if (!sourceVisual) continue;
-    drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
-  }
 
   for (const clip of layers.webcams) {
     const sourceVisual = visuals?.get(clip.id);
@@ -248,38 +239,44 @@ export function renderCompositionFrame(
       clip.name,
     );
   }
-  const resolvedCursorMotionPlayer =
-    cursorMotionPlayer ??
-    createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight);
-  const keyboardCursorPosition = cursorPositionForKeyboardCaption(
-    snapshot,
-    time,
-    screen,
-    sourceWidth,
-    sourceHeight,
-    width,
-    height,
-    cursorImages,
-    resolvedCursorMotionPlayer,
-    camera,
-  );
+  const resolvedCursorMotionPlayer = screen
+    ? (cursorMotionPlayer ??
+      createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight))
+    : null;
+  const keyboardCursorPosition =
+    screen && resolvedCursorMotionPlayer
+      ? cursorPositionForKeyboardCaption(
+          snapshot,
+          time,
+          screen,
+          sourceWidth,
+          sourceHeight,
+          width,
+          height,
+          cursorImages,
+          resolvedCursorMotionPlayer,
+          camera,
+        )
+      : null;
   for (const clip of layers.captions) drawCaption(ctx, clip, timeMs, snapshot, keyboardCursorPosition);
 
-  ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  drawCursorLayer(
-    ctx,
-    snapshot,
-    time,
-    screen,
-    sourceWidth,
-    sourceHeight,
-    width,
-    height,
-    cursorImages,
-    resolvedCursorMotionPlayer,
-  );
-  ctx.restore();
+  if (screen && resolvedCursorMotionPlayer) {
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.scale(scale, scale);
+    ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
+    drawCursorLayer(
+      ctx,
+      snapshot,
+      time,
+      screen,
+      sourceWidth,
+      sourceHeight,
+      width,
+      height,
+      cursorImages,
+      resolvedCursorMotionPlayer,
+    );
+    ctx.restore();
+  }
 }

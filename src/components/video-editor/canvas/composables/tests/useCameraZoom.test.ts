@@ -283,6 +283,42 @@ describe('useCameraZoom', () => {
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
   });
 
+  it('renders camera-space content inside the sampled camera transform', () => {
+    mountComposable();
+    options.selected.value = null;
+    options.currentTime.value = 1.5;
+    const ctx = context();
+
+    state.drawVideoWindow(ctx, 800, 450, frame());
+
+    const cameraScaleCalls = vi
+      .mocked(ctx.scale)
+      .mock.calls.filter(
+        ([scaleX, scaleY]) =>
+          typeof scaleX === 'number' && typeof scaleY === 'number' && scaleX > 1 && scaleX === scaleY,
+      );
+    expect(cameraScaleCalls.length).toBeGreaterThan(0);
+    expect(drawDecoratedMedia).toHaveBeenCalled();
+  });
+
+  it('applies the global camera when the scene contains only imported media', () => {
+    mountComposable();
+    const imported = { ...screenClip(), id: 'imported', kind: 'image' as const, assetId: 'image-asset' };
+    options.compositionRef.value = {
+      ...composition(),
+      assets: [],
+      clips: [imported],
+    };
+    options.currentTime.value = 1.5;
+    const ctx = context();
+
+    const rendered = state.drawVideoWindow(ctx, 800, 450, null);
+
+    expect(rendered?.scale).toBeGreaterThan(1);
+    expect(vi.mocked(ctx.scale).mock.calls.some(([scale]) => Number(scale) > 1)).toBe(true);
+    expect(options.callbacks.drawBackground).toHaveBeenCalled();
+  });
+
   it('selects screen or canvas targets and exposes camera-space drawing/reset', () => {
     mountComposable();
     const ctx = context();

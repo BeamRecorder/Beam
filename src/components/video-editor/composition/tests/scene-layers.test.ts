@@ -29,7 +29,7 @@ const composition = (...clips: VisualClip[]): ClipComposition => ({
 });
 
 describe('resolveCompositionSceneLayers', () => {
-  it('keeps the screen in camera space and imported video/image clips in viewport space', () => {
+  it('keeps screen recordings and imported video/image clips in global camera space', () => {
     const layers = resolveCompositionSceneLayers(
       composition(
         visual('screen', 'screen', 0),
@@ -41,8 +41,7 @@ describe('resolveCompositionSceneLayers', () => {
     );
 
     expect(layers.screen?.id).toBe('screen');
-    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['screen']);
-    expect(layers.viewportVisuals.map((clip) => clip.id)).toEqual(['imported-video', 'imported-image']);
+    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['imported-video', 'imported-image', 'screen']);
     expect(layers.webcams.map((clip) => clip.id)).toEqual(['camera']);
   });
 
@@ -59,8 +58,13 @@ describe('resolveCompositionSceneLayers', () => {
     );
 
     expect(layers.screen?.id).toBe('screen-front');
-    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['screen-front', 'screen-back']);
-    expect(layers.viewportVisuals.map((clip) => clip.id)).toEqual(['video-front', 'image-front', 'video-back']);
+    expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual([
+      'video-front',
+      'screen-front',
+      'image-front',
+      'video-back',
+      'screen-back',
+    ]);
   });
 
   it('omits disabled and inactive clips from every scene layer', () => {
@@ -74,7 +78,6 @@ describe('resolveCompositionSceneLayers', () => {
     );
 
     expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['screen']);
-    expect(layers.viewportVisuals).toEqual([]);
     expect(layers.webcams.map((clip) => clip.id)).toEqual(['camera']);
   });
 });

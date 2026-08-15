@@ -15,6 +15,7 @@ import {
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from './timeline-snap';
 import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import { useTimelineViewport } from './useTimelineViewport';
+import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
@@ -189,21 +190,28 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
-    const end = () => {
+    const cleanup = () => {
       stopAutoScroll();
-      moveUpdates.flush();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
-      window.removeEventListener('pointercancel', end);
+      window.removeEventListener('pointercancel', cancel);
       clearLinkedPreview(ids);
       previewDurationMs.value = null;
       movingClipIds.value = [];
       activeSnapTimeMs.value = null;
+    };
+    const end = () => {
+      moveUpdates.flush();
+      cleanup();
       if (finalStartMs !== originalStartMs) emit('move:clip', { id: clip.id, startMs: finalStartMs });
+    };
+    const cancel = () => {
+      moveUpdates.cancel();
+      cleanup();
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end, { once: true });
-    window.addEventListener('pointercancel', end, { once: true });
+    window.addEventListener('pointercancel', cancel, { once: true });
   };
   const beginClipTrim = (event: PointerEvent, clip: Clip, edge: 'start' | 'end') => {
     event.preventDefault();
@@ -271,158 +279,43 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
-    const end = () => {
+    const cleanup = () => {
       stopAutoScroll();
-      moveUpdates.flush();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
-      window.removeEventListener('pointercancel', end);
+      window.removeEventListener('pointercancel', cancel);
       clearLinkedPreview(ids);
       activeTrimState.value = null;
       activeSnapTimeMs.value = null;
+    };
+    const end = () => {
+      moveUpdates.flush();
+      cleanup();
       const original = edge === 'start' ? originalStartMs : originalEndMs;
       if (finalTimeMs !== original) emit('trim:clip', { id: clip.id, edge, timeMs: finalTimeMs });
     };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', end, { once: true });
-    window.addEventListener('pointercancel', end, { once: true });
-  };
-
-  const beginZoomMove = (event: PointerEvent, zoom: ZoomElement) => {
-    if ((event.target as HTMLElement).closest('.trim-handle')) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const pointerStartX = event.clientX;
-    const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
-    const lengthMs = zoom.endMs - zoom.startMs;
-
-    const snapTargets = collectSnapTargets({
-      composition: props.composition,
-      zoomElements: props.zoomElements,
-      currentTime: displayedPlayheadTime.value,
-      duration: props.duration,
-      ignoreZoomIds: [zoom.id],
-    });
-    const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
-
-    let finalStartMs = zoom.startMs;
-    const applyMove = (next: PointerEvent) => {
-      updateAutoScroll(next.clientX);
-      const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
-      const deltaMs = Math.round(deltaPx * msPerPx);
-      const proposedStartMs = Math.max(0, zoom.startMs + deltaMs);
-      const snap =
-        props.isSnappingEnabled !== false ? snapSpan(proposedStartMs, lengthMs, snapTargets, snapThresholdMs) : null;
-      if (snap) {
-        finalStartMs = Math.max(0, snap.snappedStartMs);
-        activeSnapTimeMs.value = snap.targetMs;
-      } else {
-        finalStartMs = proposedStartMs;
-        activeSnapTimeMs.value = null;
-      }
-      if (finalStartMs + lengthMs > baseDurationMs) {
-        previewDurationMs.value = finalStartMs + lengthMs;
-      } else {
-        previewDurationMs.value = null;
-      }
-      zoomPreview.value = {
-        ...zoomPreview.value,
-        [zoom.id]: { startMs: finalStartMs, endMs: finalStartMs + lengthMs },
-      };
-    };
-    const moveUpdates = createAnimationFrameCoalescer(applyMove);
-    const move = moveUpdates.schedule;
-    const end = () => {
-      stopAutoScroll();
-      moveUpdates.flush();
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', end);
-      const next = { ...zoomPreview.value };
-      delete next[zoom.id];
-      zoomPreview.value = next;
-      previewDurationMs.value = null;
-      activeSnapTimeMs.value = null;
-      if (finalStartMs !== zoom.startMs)
-        emit('move:zoom', { id: zoom.id, startMs: finalStartMs, endMs: finalStartMs + lengthMs });
+    const cancel = () => {
+      moveUpdates.cancel();
+      cleanup();
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end, { once: true });
+    window.addEventListener('pointercancel', cancel, { once: true });
   };
-  const beginZoomTrim = (event: PointerEvent, zoom: ZoomElement, edge: 'start' | 'end') => {
-    event.preventDefault();
-    event.stopPropagation();
-    const pointerStartX = event.clientX;
-    const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-    const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
-    let finalTimeMs = edge === 'start' ? zoom.startMs : zoom.endMs;
-    const snapTargets = collectSnapTargets({
-      composition: props.composition,
-      zoomElements: props.zoomElements,
-      currentTime: displayedPlayheadTime.value,
-      duration: props.duration,
-      ignoreZoomIds: [zoom.id],
-    });
-    const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
-    const applyMove = (next: PointerEvent) => {
-      updateAutoScroll(next.clientX);
-      const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
-      const deltaPx = (next.clientX - pointerStartX) + (currentScrollLeft - initialScrollLeft);
-      const deltaMs = Math.round(deltaPx * msPerPx);
-      const raw = edge === 'start' ? zoom.startMs + deltaMs : zoom.endMs + deltaMs;
-      let proposedTimeMs =
-        edge === 'start'
-          ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, raw))
-          : Math.max(zoom.startMs + MIN_DURATION_MS, raw);
-
-      const snap = props.isSnappingEnabled !== false ? snapValue(proposedTimeMs, snapTargets, snapThresholdMs) : null;
-      if (snap) {
-        proposedTimeMs =
-          edge === 'start'
-            ? Math.max(0, Math.min(zoom.endMs - MIN_DURATION_MS, snap.snappedValueMs))
-            : Math.max(zoom.startMs + MIN_DURATION_MS, snap.snappedValueMs);
-        activeSnapTimeMs.value = snap.targetMs;
-      } else {
-        activeSnapTimeMs.value = null;
-      }
-
-      finalTimeMs = proposedTimeMs;
-      if (edge === 'end' && finalTimeMs > baseDurationMs) {
-        previewDurationMs.value = finalTimeMs;
-      } else {
-        previewDurationMs.value = null;
-      }
-      zoomPreview.value = {
-        ...zoomPreview.value,
-        [zoom.id]: {
-          startMs: edge === 'start' ? finalTimeMs : zoom.startMs,
-          endMs: edge === 'end' ? finalTimeMs : zoom.endMs,
-        },
-      };
-      activeTrimState.value = {
-        ids: [zoom.id],
-        edge,
-        durationMs: edge === 'start' ? zoom.endMs - finalTimeMs : finalTimeMs - zoom.startMs,
-      };
-    };
-    const moveUpdates = createAnimationFrameCoalescer(applyMove);
-    const move = moveUpdates.schedule;
-    const end = () => {
-      stopAutoScroll();
-      moveUpdates.flush();
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', end);
-      activeTrimState.value = null;
-      previewDurationMs.value = null;
-      activeSnapTimeMs.value = null;
-      const original = edge === 'start' ? zoom.startMs : zoom.endMs;
-      if (finalTimeMs !== original) emit('trim:zoom', { id: zoom.id, edge, timeMs: finalTimeMs });
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', end, { once: true });
-  };
+  const { beginZoomMove, beginZoomTrim } = useTimelineZoomInteractions({
+    props,
+    emit,
+    tracksScrollRef,
+    displayedPlayheadTime,
+    activeSnapTimeMs,
+    previewDurationMs,
+    zoomPreview,
+    activeTrimState,
+    resolveMsPerPx,
+    updateAutoScroll,
+    stopAutoScroll,
+  });
 
   const hoverZoomTimeMs = ref<number | null>(null);
   const hoverCaptionTimeMs = ref<number | null>(null);
