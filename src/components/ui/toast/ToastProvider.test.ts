@@ -49,4 +49,23 @@ describe('ToastProvider', () => {
     expect(store.toasts).toHaveLength(1);
     expect(wrapper.find('.toast-item').exists()).toBe(true);
   });
+
+  it('shows action details and a Check icon after a successful non-dismissing action', async () => {
+    const store = useToastStore();
+    const onClick = vi.fn().mockResolvedValue(undefined);
+    store.error('Playback failed', 0, {
+      label: 'Copy error',
+      detail: 'Copied to clipboard',
+      dismissOnSuccess: false,
+      onClick,
+    });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.text()).toContain('Copied to clipboard');
+    await wrapper.get('.toast-action-btn').trigger('click');
+    await vi.waitFor(() => expect(onClick).toHaveBeenCalledOnce());
+
+    expect(store.toasts).toHaveLength(1);
+    expect(wrapper.get('.toast-action-btn').find('svg').classes()).toEqual(expect.arrayContaining(['lucide-check']));
+  });
 });

@@ -17,7 +17,6 @@ import {
   Type,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
-import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import PopoverMenuButton from '~/ui/popover/PopoverMenuButton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -105,7 +104,7 @@ const handleZoomOut = () => {
         :items="addItems"
         @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')"
       />
-      <ButtonGroup>
+      <div class="tools-group">
         <Button
           variant="ghost"
           size="sm"
@@ -117,16 +116,15 @@ const handleZoomOut = () => {
           @click="emit('split')"
         />
         <Button
-          variant="ghost"
+          :variant="isSnappingEnabled ? 'primary' : 'ghost'"
           size="sm"
           icon-only
           :icon="Magnet"
-          :class="{ 'is-active': isSnappingEnabled }"
           :tooltip="isSnappingEnabled ? t('snappingOn') : t('snappingOff')"
           class="toolbar-snap-btn"
           @click="emit('update:isSnappingEnabled', !isSnappingEnabled)"
         />
-      </ButtonGroup>
+      </div>
     </div>
 
     <!-- Center Section: Playback Nav & Time Display -->
@@ -169,72 +167,72 @@ const handleZoomOut = () => {
     <!-- Right Section: Compact Segmented Zoom with Popover -->
     <div class="right-section">
       <div class="zoom-controls">
-        <ButtonGroup class="zoom-button-group">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon-only
-            :icon="ZoomOut"
-            :tooltip="t('zoomOut')"
-            :disabled="zoomLevel <= MIN_TIMELINE_ZOOM"
-            @click="handleZoomOut"
-          />
-          <Popover align="right" direction="up" :match-trigger-width="false">
-            <template #trigger>
-              <button
-                type="button"
-                class="zoom-percent-trigger"
-                :title="t('doubleClickResetZoom')"
-                @dblclick="handleZoomReset"
-              >
-                <span class="zoom-percent-text">{{ zoomPercentageText }}</span>
-              </button>
-            </template>
-            <div class="zoom-popover-content">
-              <div class="zoom-popover-header">
-                <span class="zoom-popover-title">{{ t('zoom') || 'Zoom' }}</span>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  icon-only
-                  :icon="RotateCcw"
-                  :tooltip="t('resetZoom') || 'Reset Zoom'"
-                  :disabled="zoomLevel === MIN_TIMELINE_ZOOM"
-                  class="zoom-reset-btn"
-                  @click="handleZoomReset"
-                />
-              </div>
-              <div class="zoom-popover-slider-row">
-                <ZoomOut :size="13" class="zoom-slider-icon" />
-                <input
-                  type="range"
-                  :min="MIN_TIMELINE_ZOOM"
-                  :max="MAX_TIMELINE_ZOOM"
-                  step="25"
-                  :value="zoomLevel"
-                  class="zoom-slider"
-                  :style="{
-                    background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`,
-                  }"
-                  @input="emit('update:zoomLevel', parseFloat(($event.target as HTMLInputElement).value))"
-                />
-                <ZoomIn :size="13" class="zoom-slider-icon" />
-              </div>
-              <div class="zoom-popover-footer">
-                <span class="zoom-popover-pct">{{ zoomPercentageText }}</span>
-              </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="ZoomOut"
+          :tooltip="t('zoomOut')"
+          :disabled="zoomLevel <= MIN_TIMELINE_ZOOM"
+          class="zoom-btn"
+          @click="handleZoomOut"
+        />
+        <Popover align="right" direction="up" :match-trigger-width="false">
+          <template #trigger>
+            <button
+              type="button"
+              class="zoom-percent-trigger"
+              :title="t('doubleClickResetZoom')"
+              @dblclick="handleZoomReset"
+            >
+              <span class="zoom-percent-text">{{ zoomPercentageText }}</span>
+            </button>
+          </template>
+          <div class="zoom-popover-content">
+            <div class="zoom-popover-header">
+              <span class="zoom-popover-title">{{ t('zoom') || 'Zoom' }}</span>
+              <Button
+                variant="ghost"
+                size="xs"
+                icon-only
+                :icon="RotateCcw"
+                :tooltip="t('resetZoom') || 'Reset Zoom'"
+                :disabled="zoomLevel === MIN_TIMELINE_ZOOM"
+                class="zoom-reset-btn"
+                @click="handleZoomReset"
+              />
             </div>
-          </Popover>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon-only
-            :icon="ZoomIn"
-            :tooltip="t('zoomIn')"
-            :disabled="zoomLevel >= MAX_TIMELINE_ZOOM"
-            @click="handleZoomIn"
-          />
-        </ButtonGroup>
+            <div class="zoom-popover-slider-row">
+              <ZoomOut :size="13" class="zoom-slider-icon" />
+              <input
+                type="range"
+                :min="MIN_TIMELINE_ZOOM"
+                :max="MAX_TIMELINE_ZOOM"
+                step="25"
+                :value="zoomLevel"
+                class="zoom-slider"
+                :style="{
+                  background: `linear-gradient(to right, var(--color-primary, #ff5a1f) ${zoomPercentage}%, var(--color-border, rgba(255, 255, 255, 0.12)) ${zoomPercentage}%)`,
+                }"
+                @input="emit('update:zoomLevel', parseFloat(($event.target as HTMLInputElement).value))"
+              />
+              <ZoomIn :size="13" class="zoom-slider-icon" />
+            </div>
+            <div class="zoom-popover-footer">
+              <span class="zoom-popover-pct">{{ zoomPercentageText }}</span>
+            </div>
+          </div>
+        </Popover>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-only
+          :icon="ZoomIn"
+          :tooltip="t('zoomIn')"
+          :disabled="zoomLevel >= MAX_TIMELINE_ZOOM"
+          class="zoom-btn"
+          @click="handleZoomIn"
+        />
       </div>
     </div>
   </div>
@@ -264,9 +262,10 @@ const handleZoomOut = () => {
   justify-content: flex-start;
 }
 
-.left-section :deep(.toolbar-snap-btn.is-active) {
-  color: var(--color-primary) !important;
-  background: var(--color-primary-light, rgba(255, 90, 31, 0.15)) !important;
+.tools-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .center-section {
@@ -328,11 +327,16 @@ const handleZoomOut = () => {
 .zoom-controls {
   display: flex;
   align-items: center;
+  gap: 2px;
+  background: var(--color-bg-surface-hover);
+  padding: 2px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
 }
 
 .zoom-percent-trigger {
   height: 28px;
-  padding: 0 10px;
+  padding: 0 8px;
   background: transparent;
   border: none;
   color: var(--text-secondary);
@@ -442,4 +446,5 @@ const handleZoomOut = () => {
   transform: scale(1.2);
 }
 </style>
+
 
