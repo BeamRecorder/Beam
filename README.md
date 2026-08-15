@@ -15,30 +15,37 @@
 
 ## 📸 Screenshots
 
-<p align="center">
-  <img src="./docs/assets/screenshot-1.png" alt="Beam Recording" width="100%" />
-  <br /><br />
-  <img src="./docs/assets/screenshot-2.png" alt="Beam Editor" width="100%" />
-</p>
+<img width="1672" height="941" alt="Beam-showcase" src="https://github.com/user-attachments/assets/f6695cf5-d05c-4cef-811b-554115702515" />
 
-## 🚀 Features
+# 🚀 Features
 
-### 🎬 Capture
-- 🖥️ **Display, Window, or Custom Crop** — Record an entire monitor, snap to a single app window, or drag a custom region.
-- 🎙️ **Separate Audio Tracks** — Record microphone voiceover and desktop system audio concurrently on independent tracks.
-- 🎥 **Webcam Overlay** — Configurable picture-in-picture camera bubble with live positioning and shapes.
-- 📖 **Floating Teleprompter** — Built-in, transparent script prompter so you never lose your flow while recording.
+## Capture
+* 🖥️ **Display, Window, or Custom Crop**
+  Record your full screen, a specific app window, or select any area you want to capture.
+* 🎙️ **Separate Audio Tracks**
+  Capture your microphone and system audio at the same time, each on its own track for easier editing.
+* 🎥 **Webcam Overlay**
+  Add your camera on top of the recording, move it anywhere on screen, and customize its size and shape.
+* 📖 **Floating Teleprompter**
+  Keep your script visible while recording with a lightweight transparent teleprompter that stays out of the final capture.
 
-### ✨ Editor & Styling
-- 🔍 **Smart Zooms** — Automatic focus on mouse clicks and keyboard shortcuts with smooth spring animations, or manual keyframing.
-- 🖱️ **Cursor Smoothing & Restyling** — Motion is tracked natively with sub-pixel precision; change cursor sizes, replace assets, add click rings, or smooth out jittery paths.
-- 📝 **Local AI Captions** — Speech-to-text powered by local on-device Whisper models—no cloud uploads, subscriptions, or API keys.
-- 🎨 **Canvas Backdrops** — Style recordings with wallpaper backgrounds, gradients, customizable padding, drop shadows, and window border radius.
-- ⏱️ **Multi-Track Timeline** — Non-destructive video, audio, and subtitle editing with precise playhead scrubbing and snapping.
+## Editing & Styling
+* 🔍 **Smart Zooms**
+  Automatically zoom in around clicks and keyboard actions, or add your own zooms with keyframes.
+* 🖱️ **Cursor Smoothing & Styling**
+  Get clean, fluid cursor movement with native high-precision tracking. Adjust the size, swap the cursor style, add click effects, or smooth out shaky movement.
+* 📝 **Local AI Captions**
+  Generate subtitles directly on your device using Whisper. No cloud uploads, API keys, or extra subscriptions.
+* 🎨 **Canvas Backdrops**
+  Give your recordings a polished look with backgrounds, gradients, padding, shadows, and rounded window corners.
+* ⏱️ **Multi-Track Timeline**
+  Edit video, audio, and subtitles independently with precise scrubbing, snapping, and non-destructive editing.
 
-### ⚡ Performance & Output
-- 🦀 **Rust Capture Engine** — Low-overhead native capture designed to stay out of the way of your CPU and GPU while recording 60 fps footage.
-- 📦 **Direct Export** — Fast rendering to WebM or MP4 up to 4K resolution with preset bitrate controls.
+## Performance & Export
+* 🦀 **Rust Capture Engine**
+  A lightweight native capture engine built for smooth 60 fps recording without putting unnecessary load on your CPU or GPU.
+* 📦 **Direct Export**
+  Export straight to MP4 or WebM, up to 4K, with simple bitrate presets and fast rendering.
 
 Have ideas or feature requests? Open an issue or join the discussion on [Discord](https://discord.gg/6Q6v2xUCB).
 
