@@ -36,7 +36,7 @@
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
-  z-index: 120;
+  z-index: 2;
 }
 .ruler-info-spacer {
   width: 120px;
@@ -45,7 +45,7 @@
   background: var(--color-bg-surface);
   position: sticky;
   left: 0;
-  z-index: 300;
+  z-index: 5;
 }
 .ruler-ticks-area {
   flex: 1;
@@ -54,6 +54,7 @@
   margin-left: 80px;
   margin-right: 150px;
   cursor: ew-resize;
+  z-index: 1;
 }
 .ruler-export-progress-bar {
   position: absolute;
@@ -61,7 +62,7 @@
   background: rgba(255, 90, 31, 0.25);
   border-right: 2px solid var(--color-primary);
   pointer-events: none;
-  z-index: 4;
+  z-index: 1;
 }
 .ruler-marker {
   position: absolute;
@@ -97,7 +98,7 @@
   margin-left: 80px;
   margin-right: 150px;
   pointer-events: none;
-  z-index: 200;
+  z-index: 3;
 }
 .timeline-playhead {
   position: absolute;
@@ -105,7 +106,7 @@
   bottom: 0;
   width: 2px;
   background: var(--color-primary);
-  z-index: 200;
+  z-index: 3;
   pointer-events: none;
 }
 .playhead-head {
@@ -116,7 +117,7 @@
   height: 15px;
   color: var(--color-primary);
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
-  z-index: 201;
+  z-index: 3;
 }
 .timeline-snap-guide {
   position: absolute;
@@ -125,7 +126,7 @@
   width: 2px;
   background: var(--color-primary);
   box-shadow: 0 0 10px var(--color-primary);
-  z-index: 210;
+  z-index: 3;
   pointer-events: none;
 }
 .snap-guide-badge {
@@ -142,13 +143,15 @@
   font-family: monospace;
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  z-index: 211;
+  z-index: 4;
 }
 .tracks-stack {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 6px 0;
+  position: relative;
+  z-index: 1;
 }
 .track-row {
   display: flex;
@@ -162,7 +165,9 @@
 .track-row.audio-track {
   height: 48px;
 }
-.track-row.disabled {
+.track-row.disabled .track-content,
+.track-row.disabled .track-title,
+.track-row.disabled .track-icon {
   opacity: 0.35;
 }
 .track-row.dragging {
@@ -184,7 +189,7 @@
   text-align: left;
   position: sticky;
   left: 0;
-  z-index: 300;
+  z-index: 5;
 }
 .track-info:hover {
   background: var(--color-bg-surface-hover);

@@ -19,7 +19,7 @@
   color: var(--text-secondary);
   position: sticky;
   left: 0;
-  z-index: 150;
+  z-index: 5;
 }
 .track-icon {
   width: 13px;
