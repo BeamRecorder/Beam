@@ -27,7 +27,7 @@ test('builds a one-call recording config from defaults', () => {
 
   assert.equal(config.screen.sourceId, 'display:1');
   assert.equal('microphone' in config, false);
-  assert.equal('systemAudio' in config, false);
+  assert.equal(config.systemAudio, null);
   assert.deepEqual(config.cursor, {
     mode: 'separate',
     captureClicks: true,
@@ -109,6 +109,24 @@ test('builds a Linux monitor Portal selection without a Chromium source id', () 
     captureShortcuts: false,
     captureShape: true,
   });
+});
+
+test('maps Linux system audio to the native default output only when requested', () => {
+  const linux = { ...environment, platform: 'linux' };
+  const linuxCatalog = {
+    capabilities: { portalSelection: true },
+    sources: [{ id: 'portal:monitor', kind: 'display', isDefault: true, selectionMode: 'portal' }],
+  };
+
+  assert.deepEqual(
+    buildDefaultCaptureConfig(linuxCatalog, { systemAudio: true }, linux).systemAudio,
+    { mode: 'default-output' },
+  );
+  assert.equal(buildDefaultCaptureConfig(linuxCatalog, { systemAudio: false }, linux).systemAudio, null);
+
+  for (const platform of ['win32', 'darwin']) {
+    assert.equal(buildDefaultCaptureConfig(catalog, { systemAudio: true }, { ...environment, platform }).systemAudio, null);
+  }
 });
 
 test('keeps mouse clicks on Windows and macOS when interaction recording is off', () => {

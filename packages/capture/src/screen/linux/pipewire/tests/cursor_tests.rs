@@ -376,3 +376,55 @@ fn cursor_coordinates_keep_signed_values_and_follow_crop_rotation() {
         }
     ));
 }
+
+#[test]
+fn frame_geometry_scales_cursor_crop_to_frame_and_ignores_later_cursor_crop_changes() {
+    let format = negotiated(NativePixelFormat::Bgra, 6, 4);
+    let frame = OwnedVideoFrame {
+        width: 6,
+        height: 4,
+        stride: 6 * 4,
+        pixel_format: PixelFormat::Bgra8,
+        pixels: Arc::from(vec![0_u8; 6 * 4 * 4]),
+    };
+    let cursor_crop = CropRect {
+        x: 0,
+        y: 0,
+        width: 3,
+        height: 2,
+    };
+    let geometry = FrameGeometry::from_frame(
+        format,
+        None,
+        Some(cursor_crop),
+        VideoTransform::None,
+        &frame,
+    );
+    let cursor = CursorMetadata {
+        id: 17,
+        shape_id: None,
+        cursor_kind: None,
+        x: 1,
+        y: 1,
+        hotspot: None,
+    };
+
+    let mapped = geometry
+        .map_cursor(Some(cursor), format)
+        .expect("mapped cursor");
+    assert_eq!((mapped.x, mapped.y), (2, 2));
+
+    // A cursor-only update may advertise a different crop, but it must keep
+    // using the last real frame's geometry rather than changing the scale.
+    let cursor_only_crop = CropRect {
+        x: 0,
+        y: 0,
+        width: 6,
+        height: 4,
+    };
+    assert_ne!(cursor_only_crop, cursor_crop);
+    let mapped_after_cursor_only = geometry
+        .map_cursor(Some(cursor), format)
+        .expect("mapped cursor after cursor-only update");
+    assert_eq!(mapped_after_cursor_only, mapped);
+}

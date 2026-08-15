@@ -20,6 +20,7 @@ use source_watches::source_watches;
 pub(super) struct ActiveRecordings {
     reporter: Option<PeriodicReporter>,
     screen: Option<crate::screen::ScreenRecording>,
+    system_audio: Option<crate::system_audio::SystemAudioRecording>,
     #[cfg(all(windows, feature = "cursor"))]
     cursor: Option<crate::cursor::win::WindowsCursorRecording>,
     #[cfg(all(target_os = "macos", feature = "cursor"))]
@@ -39,6 +40,12 @@ pub(super) struct OpenContext<'a> {
 impl ActiveRecordings {
     pub(super) fn has_screen(&self) -> bool {
         self.screen.is_some()
+    }
+
+    pub(super) fn system_audio_level(&self) -> Option<f32> {
+        self.system_audio
+            .as_ref()
+            .map(|recording| recording.metrics().take_peak())
     }
 
     pub(super) fn open(&mut self, context: OpenContext<'_>) -> Result<(), CaptureError> {
@@ -133,6 +140,7 @@ impl ActiveRecordings {
             track.status = TrackStatus::Recording;
         }
         self.open_screen(request, layout, generation, start_ns, tracks, start_gate)?;
+        self.open_system_audio(request, layout, generation, start_ns, tracks, start_gate)?;
         let _ = snapshot;
         let samplers = metrics::samplers(self, tracks);
         if !samplers.is_empty() {
@@ -145,6 +153,40 @@ impl ActiveRecordings {
                 source_watches(request, snapshot, tracks),
             )?);
         }
+        Ok(())
+    }
+
+    fn open_system_audio(
+        &mut self,
+        request: &CaptureRequest,
+        layout: &crate::storage::SessionLayout,
+        generation: u32,
+        start_ns: u64,
+        tracks: &mut Vec<TrackMetadata>,
+        start_gate: &Arc<super::StartGate>,
+    ) -> Result<(), CaptureError> {
+        let Some(selection) = request.system_audio else {
+            return Ok(());
+        };
+        let path = segment_path(layout, TrackKind::SystemAudio, generation, "wav");
+        let mut recording = crate::system_audio::SystemAudioRecording::open(
+            crate::system_audio::SystemAudioOpenRequest {
+                selection,
+                segment: crate::system_audio::SystemAudioSegment { path, start_ns },
+                start_gate: start_gate.clone(),
+                queue_capacity: request.recording.queue_capacity,
+            },
+        )?;
+        let format = recording.format();
+        add_system_audio_track(
+            tracks,
+            system_audio_source_id()?,
+            format.sample_rate,
+            format.channels,
+        );
+        add_segment(tracks, TrackKind::SystemAudio, generation, "wav", start_ns)?;
+        recording.start()?;
+        self.system_audio = Some(recording);
         Ok(())
     }
 
@@ -238,6 +280,20 @@ impl ActiveRecordings {
         if let Some(cursor) = track_mut(tracks, TrackKind::Cursor) {
             cursor.status = TrackStatus::Paused;
         }
+        if let Some(system_audio) = self.system_audio.as_mut() {
+            let result = system_audio.pause();
+            mark_track_failed(tracks, TrackKind::SystemAudio, &result);
+            result?;
+            let track = track_mut(tracks, TrackKind::SystemAudio).ok_or_else(|| {
+                CaptureError::Backend("missing system audio track metadata".into())
+            })?;
+            let segment = track
+                .segments
+                .last_mut()
+                .ok_or_else(|| CaptureError::Backend("missing system audio segment".into()))?;
+            finish_segment(segment, end_ns)?;
+            track.status = TrackStatus::Paused;
+        }
         Ok(())
     }
 
@@ -265,6 +321,14 @@ impl ActiveRecordings {
                 Some(crate::screen::ScreenSegment { path, start_ns }),
             )?;
         add_segment(tracks, TrackKind::Screen, generation, "mp4", start_ns)?;
+        if let Some(system_audio) = self.system_audio.as_mut() {
+            let path = segment_path(layout, TrackKind::SystemAudio, generation, "wav");
+            system_audio.resume(
+                crate::system_audio::SystemAudioSegment { path, start_ns },
+                start_gate.clone(),
+            )?;
+            add_segment(tracks, TrackKind::SystemAudio, generation, "wav", start_ns)?;
+        }
         if let Some(cursor) = track_mut(tracks, TrackKind::Cursor) {
             cursor.status = TrackStatus::Recording;
         }
@@ -296,6 +360,10 @@ impl ActiveRecordings {
             let metrics = recording.metrics();
             let mut recording = recording;
             let result = recording.stop();
+            #[cfg(target_os = "linux")]
+            if let Some(format) = recording.video_format() {
+                update_video_format(tracks, TrackKind::Screen, format);
+            }
             mark_track_failed(tracks, TrackKind::Screen, &result);
             record_result(result, &mut first_error);
             update_video_metrics(
@@ -308,6 +376,16 @@ impl ActiveRecordings {
             if let Some(track) = track_mut(tracks, TrackKind::Cursor) {
                 track.metrics.frames_received = metrics.cursor_samples();
                 track.metrics.interruptions = metrics.frames_dropped();
+            }
+        }
+        if let Some(mut recording) = self.system_audio.take() {
+            let metrics = recording.metrics();
+            let result = recording.stop();
+            mark_track_failed(tracks, TrackKind::SystemAudio, &result);
+            record_result(result, &mut first_error);
+            if let Some(track) = track_mut(tracks, TrackKind::SystemAudio) {
+                track.metrics.samples_received = metrics.samples_received();
+                track.metrics.samples_dropped = metrics.samples_dropped();
             }
         }
         #[cfg(all(windows, feature = "cursor"))]

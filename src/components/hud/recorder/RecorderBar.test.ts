@@ -32,6 +32,7 @@ const props = {
   cameraEnabled: true,
   microphoneEnabled: true,
   systemAudioEnabled: true,
+  systemAudioLevel: 0,
   visibility: 'always' as const,
 };
 
@@ -116,6 +117,20 @@ describe('RecorderBar', () => {
     expect(wrapper.get('.recorder-bar').classes()).toContain('hover-only');
     await wrapper.setProps({ hoverOnlyActive: false });
     expect(wrapper.get('.recorder-bar').classes()).not.toContain('hover-only');
+  });
+
+  it('propagates the native system audio level to the system meter', async () => {
+    const wrapper = mount(RecorderBar, {
+      props: { ...props, systemAudioLevel: 0.68 },
+    });
+
+    const meters = wrapper.findAll('.audio-icon-meter');
+    expect(meters).toHaveLength(2);
+    expect(meters[1]?.get('.level-bar-fill').element).toHaveProperty('style.height', '68%');
+
+    await wrapper.setProps({ systemAudioLevel: 0.12 });
+    expect(meters[1]?.get('.level-bar-fill').element).toHaveProperty('style.height', '12%');
+    wrapper.unmount();
   });
 
   it('does not request a second desktop stream for an already acquired system-audio recording', async () => {

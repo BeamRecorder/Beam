@@ -105,6 +105,23 @@ pub(super) fn add_portal_screen_track(
     ));
 }
 
+pub(super) fn add_system_audio_track(
+    tracks: &mut Vec<TrackMetadata>,
+    source_id: SourceId,
+    sample_rate: u32,
+    channels: u16,
+) {
+    tracks.push(new_track(
+        TrackKind::SystemAudio,
+        Some(source_id),
+        TrackFormat::Audio {
+            sample_format: "f32le".into(),
+            sample_rate,
+            channels,
+        },
+    ));
+}
+
 pub(super) fn source<'a>(
     snapshot: &'a CatalogSnapshot,
     id: &SourceId,
@@ -196,6 +213,20 @@ pub(super) fn update_video_metrics(
     }
 }
 
+pub(super) fn update_video_format(
+    tracks: &mut [TrackMetadata],
+    kind: TrackKind,
+    format: crate::screen::VideoFormat,
+) {
+    let Some(track) = track_mut(tracks, kind) else {
+        return;
+    };
+    if let TrackFormat::Video { width, height, .. } = &mut track.format {
+        *width = format.width;
+        *height = format.height;
+    }
+}
+
 pub(super) fn selected_sources(
     request: &CaptureRequest,
     _snapshot: &CatalogSnapshot,
@@ -206,12 +237,18 @@ pub(super) fn selected_sources(
             Some(ScreenSelection::Portal { kind, .. }) => portal_source_id(kind).ok(),
             _ => None,
         },
-        system_audio: None,
+        system_audio: request
+            .system_audio
+            .and_then(|_| system_audio_source_id().ok()),
         microphone: None,
         // Browser-owned camera capture merges its selected source after the native session
         // has finalized. Rust never opens a camera device.
         camera: None,
     }
+}
+
+pub(super) fn system_audio_source_id() -> Result<SourceId, CaptureError> {
+    SourceId::new("system-audio:default-output")
 }
 
 pub(super) fn platform_backend() -> &'static str {

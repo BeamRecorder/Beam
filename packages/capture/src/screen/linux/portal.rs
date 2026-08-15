@@ -22,6 +22,7 @@ pub(super) struct PreparedPortal {
     remote_fd: Option<OwnedFd>,
     pub node_id: u32,
     pub stream_id: Option<String>,
+    pub source_type: Option<SourceType>,
     control: PortalControl,
 }
 
@@ -48,6 +49,7 @@ struct PortalReady {
     remote_fd: OwnedFd,
     node_id: u32,
     stream_id: Option<String>,
+    source_type: Option<SourceType>,
 }
 
 struct PortalControl {
@@ -111,6 +113,7 @@ pub(super) fn prepare_portal(
         remote_fd: Some(ready.remote_fd),
         node_id: ready.node_id,
         stream_id: ready.stream_id,
+        source_type: ready.source_type,
         control: PortalControl {
             commands: Some(commands),
             thread: Some(thread),
@@ -235,6 +238,7 @@ async fn prepare_session(
         remote_fd,
         node_id: stream.pipe_wire_node_id(),
         stream_id: stream.id().map(ToOwned::to_owned),
+        source_type: stream.source_type(),
     })
 }
 

@@ -22,8 +22,9 @@ use crate::{
 };
 
 use super::{
-    BufferLayout, CursorState, NegotiatedFormat, TimestampMapper, copy_frame, has_fatal,
-    map_cursor_metadata, metadata, set_fatal, sink_error, video_format,
+    BufferLayout, CropRect, CursorState, NegotiatedFormat, TimestampMapper, VideoTransform,
+    copy_frame, expand_crop_to_content, has_fatal, map_cursor_metadata, metadata, set_fatal,
+    sink_error, video_format,
 };
 
 pub(super) enum SinkMessage {
@@ -49,6 +50,87 @@ pub(super) struct ProcessState {
     pub metrics: Arc<ScreenCaptureMetrics>,
     pub fatal: Arc<Mutex<Option<CaptureError>>>,
     pub pending_drops: u64,
+    pub last_frame_geometry: Option<FrameGeometry>,
+    pub repair_window_crop: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct FrameGeometry {
+    frame_crop: Option<CropRect>,
+    cursor_crop: Option<CropRect>,
+    transform: VideoTransform,
+    width: u32,
+    height: u32,
+}
+
+impl FrameGeometry {
+    pub(super) fn from_frame(
+        format: NegotiatedFormat,
+        frame_crop: Option<CropRect>,
+        cursor_crop: Option<CropRect>,
+        transform: VideoTransform,
+        frame: &crate::screen::OwnedVideoFrame,
+    ) -> Self {
+        debug_assert_eq!(
+            super::output_dimensions(format, frame_crop, transform).ok(),
+            Some((frame.width, frame.height))
+        );
+        Self {
+            frame_crop,
+            cursor_crop,
+            transform,
+            width: frame.width,
+            height: frame.height,
+        }
+    }
+
+    pub(super) fn map_cursor(
+        self,
+        cursor: Option<super::CursorMetadata>,
+        format: NegotiatedFormat,
+    ) -> Option<super::CursorMetadata> {
+        let mut cursor = map_cursor_metadata(
+            cursor,
+            format.width,
+            format.height,
+            self.cursor_crop,
+            self.transform,
+        )?;
+        let (cursor_width, cursor_height) =
+            super::output_dimensions(format, self.cursor_crop, self.transform).ok()?;
+        cursor.x = scale_coordinate(cursor.x, cursor_width, self.width);
+        cursor.y = scale_coordinate(cursor.y, cursor_height, self.height);
+        Some(cursor)
+    }
+}
+
+fn scale_coordinate(value: i32, source: u32, destination: u32) -> i32 {
+    if source == destination || source == 0 {
+        return value;
+    }
+    let scaled = i64::from(value)
+        .saturating_mul(i64::from(destination))
+        .checked_div(i64::from(source))
+        .unwrap_or_default();
+    i32::try_from(scaled).unwrap_or(if scaled < 0 { i32::MIN } else { i32::MAX })
+}
+
+pub(super) fn repaired_window_crop(
+    reported: Option<CropRect>,
+    content: Option<CropRect>,
+) -> Option<CropRect> {
+    let (Some(reported), Some(content)) = (reported, content) else {
+        return reported;
+    };
+    let width_scale = f64::from(content.width) / f64::from(reported.width.max(1));
+    let height_scale = f64::from(content.height) / f64::from(reported.height.max(1));
+    let uniform_scale = (width_scale - height_scale).abs() <= 0.05;
+    let materially_larger = width_scale >= 1.1 && height_scale >= 1.1;
+    if uniform_scale && materially_larger {
+        Some(content)
+    } else {
+        Some(reported)
+    }
 }
 
 pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<ProcessState>>) {
@@ -76,7 +158,7 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     let header = metadata::header(&buffer);
     let cursor = metadata::cursor(&buffer, state.cursor.classifier_mut());
     let has_cursor_metadata = cursor.as_ref().is_some_and(|cursor| cursor.id != 0);
-    let crop = metadata::crop(&buffer);
+    let reported_crop = metadata::crop(&buffer);
     let transform = metadata::transform(&buffer);
     let arrival_ns = u64::try_from(state.clock.elapsed().as_nanos()).unwrap_or(u64::MAX);
     let timestamp = match state.timestamp.map(header, arrival_ns) {
@@ -98,19 +180,17 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
     }
     let data = &mut datas[0];
     let chunk = data.chunk();
-    let cursor = map_cursor_metadata(cursor, format.width, format.height, crop, transform);
-    let (cursor_width, cursor_height) = match super::output_dimensions(format, crop, transform) {
-        Ok(dimensions) => dimensions,
-        Err(error) => {
-            invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
-            return;
-        }
-    };
-    let sample_cursor = state.cursor.resolve(cursor, cursor_width, cursor_height);
     // Mutter deliberately queues cursor-only updates with an empty video chunk
     // flagged CORRUPTED. The MetaCursor payload remains valid and must reach the
     // sidecar without duplicating the previous video frame.
     if chunk.flags().contains(ChunkFlags::CORRUPTED) || chunk.size() == 0 {
+        let Some(geometry) = state.last_frame_geometry else {
+            return;
+        };
+        let cursor = geometry.map_cursor(cursor, format);
+        let sample_cursor = state
+            .cursor
+            .resolve(cursor, geometry.width, geometry.height);
         if has_cursor_metadata && matches!(sample_cursor, CursorSampleState::Known { .. }) {
             try_cursor_sample(&mut state, timestamp.session_ns, sample_cursor);
         } else {
@@ -136,11 +216,14 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         );
         return;
     }
+    let mut frame_crop = reported_crop;
+    let mut cursor_crop = reported_crop;
+    let mut frame_transform = transform;
     let layout = BufferLayout {
         offset: usize::try_from(chunk.offset()).unwrap_or(usize::MAX),
         size: usize::try_from(chunk.size()).unwrap_or(usize::MAX),
         stride: chunk.stride(),
-        crop,
+        crop: reported_crop,
         transform,
     };
     let Some(memory) = data.data() else {
@@ -153,6 +236,25 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
         );
         return;
     };
+    if state.last_frame_geometry.is_none() && state.repair_window_crop {
+        let content_crop = match expand_crop_to_content(memory, format, layout) {
+            Ok(content_crop) => content_crop,
+            Err(error) => {
+                invalid_buffer(&mut state, timestamp.session_ns, &error.to_string());
+                return;
+            }
+        };
+        frame_crop = repaired_window_crop(reported_crop, content_crop);
+    } else if let Some(geometry) = state.last_frame_geometry {
+        frame_crop = geometry.frame_crop;
+        cursor_crop = geometry.cursor_crop;
+        frame_transform = geometry.transform;
+    }
+    let layout = BufferLayout {
+        crop: frame_crop,
+        transform: frame_transform,
+        ..layout
+    };
     let frame = match copy_frame(memory, format, layout) {
         Ok(frame) => frame,
         Err(error) => {
@@ -160,8 +262,13 @@ pub(super) fn process_buffer(stream: &pw::stream::Stream, state: &Rc<RefCell<Pro
             return;
         }
     };
-    debug_assert_eq!((frame.width, frame.height), (cursor_width, cursor_height));
+    let geometry =
+        FrameGeometry::from_frame(format, frame_crop, cursor_crop, frame_transform, &frame);
+    let cursor = geometry.map_cursor(cursor, format);
+    let sample_cursor = state.cursor.resolve(cursor, frame.width, frame.height);
+    state.last_frame_geometry = Some(geometry);
     let announced = video_format(&frame);
+    state.metrics.observe_video_format(announced);
     if state.last_announced != Some(announced) {
         if let Err(error) = state.sink.try_send(SinkMessage::Format(announced)) {
             match error {

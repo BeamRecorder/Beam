@@ -188,6 +188,7 @@ fn record_full_session() -> Result<(), capture::CaptureError> {
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen,
+        system_audio: None,
         cursor: CursorSelection::Separate {
             capture_clicks: snapshot.capabilities.cursor_clicks,
             capture_shortcuts: snapshot.capabilities.input_shortcuts,

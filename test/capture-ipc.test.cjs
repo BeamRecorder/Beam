@@ -113,6 +113,43 @@ test('wraps native errors with the failing command context', async () => {
   await assert.rejects(() => request({}, 'start-prepared-recording'), /capture-engine a échoué pour "start": boom/);
 });
 
+test('forwards system-audio preview commands and returns their engine responses', async () => {
+  const handlers = new Map();
+  const requests = [];
+  const responses = {
+    'start-system-audio-preview': { started: true },
+    'system-audio-preview-level': { level: 0.42 },
+    'stop-system-audio-preview': { stopped: true },
+  };
+  const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };
+  const captureEngine = {
+    request: async (command, payload) => {
+      requests.push({ command, payload });
+      return responses[command];
+    },
+  };
+
+  registerCaptureIpc({
+    ipcMain,
+    desktopCapturer: {},
+    screen: {},
+    captureEngine,
+    app: {},
+    userPaths: { projects: 'recordings' },
+    trackStorages: [],
+  });
+
+  const request = handlers.get('capture:request');
+  for (const [command, response] of Object.entries(responses)) {
+    assert.deepEqual(await request({}, command), response);
+  }
+
+  assert.deepEqual(
+    requests,
+    Object.keys(responses).map((command) => ({ command, payload: {} })),
+  );
+});
+
 test('invalidates the deferred session and rejects when the engine is poisoned', async () => {
   const handlers = new Map();
   const ipcMain = { handle: (channel, handler) => handlers.set(channel, handler) };

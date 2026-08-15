@@ -11,5 +11,6 @@ pub mod protocol;
 pub mod screen;
 pub mod session;
 pub mod storage;
+pub mod system_audio;
 
 pub use error::{CaptureError, NativeCaptureErrorCode};

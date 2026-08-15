@@ -1,7 +1,7 @@
 use std::{
     path::PathBuf,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicU64, Ordering},
     },
 };
@@ -47,6 +47,7 @@ pub struct ScreenCaptureMetrics {
     cursor_samples: AtomicU64,
     format_changes: AtomicU64,
     last_native_pts_ns: AtomicU64,
+    first_video_format: Mutex<Option<VideoFormat>>,
 }
 
 impl Default for ScreenCaptureMetrics {
@@ -57,6 +58,7 @@ impl Default for ScreenCaptureMetrics {
             cursor_samples: AtomicU64::new(0),
             format_changes: AtomicU64::new(0),
             last_native_pts_ns: AtomicU64::new(Self::NO_NATIVE_PTS),
+            first_video_format: Mutex::new(None),
         }
     }
 }
@@ -116,6 +118,22 @@ impl ScreenCaptureMetrics {
 
     pub(crate) fn changed_format(&self) {
         self.format_changes.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn observe_video_format(&self, format: VideoFormat) {
+        if let Ok(mut first) = self.first_video_format.lock()
+            && first.is_none()
+        {
+            *first = Some(format);
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn first_video_format(&self) -> Option<VideoFormat> {
+        self.first_video_format
+            .lock()
+            .ok()
+            .and_then(|format| *format)
     }
 }
 

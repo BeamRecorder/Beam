@@ -309,6 +309,7 @@ const dismissEditorLoadError = () => {
         :camera-enabled="recording.cameraEnabled.value"
         :microphone-enabled="recording.microphoneEnabled.value"
         :system-audio-enabled="recording.systemAudioEnabled.value"
+        :system-audio-level="recording.systemAudioLevel.value"
         :visibility="recordingBarVisibility"
         :hover-only-active="recording.recorderHoverOnlyActive.value"
         @stop="cancelOrStopRecording"

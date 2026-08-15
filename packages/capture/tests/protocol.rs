@@ -10,6 +10,19 @@ use capture::{
     protocol::{RequestEnvelope, ResponseEnvelope, read_json_line, write_json_line},
 };
 
+fn assert_command_roundtrip(command: &str) {
+    let expected = serde_json::json!({
+        "id": format!("{command}-request"),
+        "command": command,
+    });
+    let request: RequestEnvelope = serde_json::from_value(expected.clone())
+        .unwrap_or_else(|error| panic!("{command} must deserialize: {error}"));
+    assert_eq!(
+        serde_json::to_value(request).expect("serialize command"),
+        expected
+    );
+}
+
 #[test]
 fn json_lines_roundtrip_and_eof() {
     let request: RequestEnvelope =
@@ -27,12 +40,28 @@ fn json_lines_roundtrip_and_eof() {
 }
 
 #[test]
+fn start_system_audio_preview_command_roundtrips() {
+    assert_command_roundtrip("start-system-audio-preview");
+}
+
+#[test]
+fn system_audio_preview_level_command_roundtrips() {
+    assert_command_roundtrip("system-audio-preview-level");
+}
+
+#[test]
+fn stop_system_audio_preview_command_roundtrips() {
+    assert_command_roundtrip("stop-system-audio-preview");
+}
+
+#[test]
 fn engine_eof_finalizes_an_active_session() {
     let temporary = tempfile::tempdir().expect("temporary directory");
     let project_id = ProjectId::new();
     let request = CaptureRequest {
         project_id,
         screen: None,
+        system_audio: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings {
             output_root: temporary.path().to_owned(),

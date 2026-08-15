@@ -25,6 +25,13 @@ contextBridge.exposeInMainWorld(
     resume: () => invoke('resume'),
     stop: () => invoke('stop'),
     status: () => invoke('status'),
+    startSystemAudioPreview: async () => {
+      await invoke('start-system-audio-preview');
+    },
+    systemAudioPreviewLevel: async () => (await invoke('system-audio-preview-level')).level,
+    stopSystemAudioPreview: async () => {
+      await invoke('stop-system-audio-preview');
+    },
     beginCameraSegment: (payload) => ipcRenderer.invoke('camera:begin-segment', payload),
     writeCameraSegment: (payload) => ipcRenderer.invoke('camera:write-segment', payload),
     finalizeCameraSegment: (payload) => ipcRenderer.invoke('camera:finalize-segment', payload),

@@ -59,6 +59,7 @@ pub(crate) struct PipewireCaptureRequest {
     pub(crate) start_ns: u64,
     pub(crate) start_gate: Arc<StartGate>,
     pub(crate) metrics: Arc<ScreenCaptureMetrics>,
+    pub(crate) repair_window_crop: bool,
 }
 
 impl PipewireCapture {
@@ -72,6 +73,7 @@ impl PipewireCapture {
             start_ns,
             start_gate,
             metrics,
+            repair_window_crop,
         } = request;
         if queue_capacity == 0 {
             return Err(CaptureError::InvalidConfiguration(
@@ -107,6 +109,7 @@ impl PipewireCapture {
                     start_ns,
                     worker_gate,
                     ready_sender,
+                    repair_window_crop,
                 );
                 let _ = finish_sender.send(SinkMessage::Finish);
                 result
@@ -262,6 +265,7 @@ fn pipewire_worker(
     start_ns: u64,
     start_gate: Arc<StartGate>,
     ready: mpsc::SyncSender<Result<VideoFormat, CaptureError>>,
+    repair_window_crop: bool,
 ) -> Result<(), CaptureError> {
     pw::init();
     let mainloop = pw::main_loop::MainLoopRc::new(None).map_err(pipewire_error)?;
@@ -292,6 +296,8 @@ fn pipewire_worker(
         metrics,
         fatal,
         pending_drops: 0,
+        last_frame_geometry: None,
+        repair_window_crop,
     }));
     let ready = Rc::new(RefCell::new(Some(ready)));
     let negotiation_stopped = Rc::new(Cell::new(false));

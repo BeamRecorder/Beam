@@ -135,11 +135,29 @@ export function useTimelineViewport(
   };
   let autoScrollRaf: number | null = null;
   let autoScrollSpeed = 0;
-  const updateAutoScroll = (clientX: number) => {
+  let autoScrollUpdate: (() => void) | null = null;
+  const runAutoScroll = () => {
+    autoScrollRaf = null;
+    const scrollEl = tracksScrollRef.value;
+    if (!scrollEl || autoScrollSpeed === 0) return;
+    const previousScrollLeft = scrollEl.scrollLeft;
+    scrollEl.scrollLeft += autoScrollSpeed;
+    if (scrollEl.scrollLeft === previousScrollLeft) {
+      autoScrollSpeed = 0;
+      return;
+    }
+    updateVisibleRange();
+    autoScrollUpdate?.();
+    if (autoScrollUpdate && autoScrollSpeed !== 0) {
+      autoScrollRaf = requestAnimationFrame(runAutoScroll);
+    }
+  };
+  const updateAutoScroll = (clientX: number, onScroll: (() => void) | null = null) => {
     const scrollEl = tracksScrollRef.value;
     if (!scrollEl) return;
     const rect = scrollEl.getBoundingClientRect();
     if (!rect || rect.width <= 0) return;
+    autoScrollUpdate = onScroll;
     const rightZone = rect.right - 50;
     const leftZone = rect.left + 50;
     if (clientX > rightZone) {
@@ -151,18 +169,17 @@ export function useTimelineViewport(
     } else {
       autoScrollSpeed = 0;
     }
+    if (autoScrollSpeed === 0 && autoScrollRaf !== null) {
+      cancelAnimationFrame(autoScrollRaf);
+      autoScrollRaf = null;
+    }
     if (autoScrollSpeed !== 0 && autoScrollRaf === null) {
-      autoScrollRaf = requestAnimationFrame(() => {
-        autoScrollRaf = null;
-        if (scrollEl && autoScrollSpeed !== 0) {
-          scrollEl.scrollLeft += autoScrollSpeed;
-          updateVisibleRange();
-        }
-      });
+      autoScrollRaf = requestAnimationFrame(runAutoScroll);
     }
   };
   const stopAutoScroll = () => {
     autoScrollSpeed = 0;
+    autoScrollUpdate = null;
     if (autoScrollRaf !== null) {
       cancelAnimationFrame(autoScrollRaf);
       autoScrollRaf = null;
@@ -190,6 +207,7 @@ export function useTimelineViewport(
   watch(() => [props.currentTime, props.isPlaying], followPlayback, { flush: 'post' });
   onUnmounted(() => {
     resizeObserver?.disconnect();
+    stopAutoScroll();
     if (scrollFrame !== null) cancelAnimationFrame(scrollFrame);
     if (scrubFrame !== null) cancelAnimationFrame(scrubFrame);
     if (zoomFrame !== null) cancelAnimationFrame(zoomFrame);
@@ -268,12 +286,19 @@ export function useTimelineViewport(
       duration: props.duration,
       ignorePlayhead: true,
     });
-    scheduleScrubAt(event.clientX);
-    const move = (next: PointerEvent) => scheduleScrubAt(next.clientX);
+    let clientX = event.clientX;
+    const updateScrub = (nextClientX: number) => {
+      clientX = nextClientX;
+      scheduleScrubAt(clientX);
+      updateAutoScroll(clientX, () => scheduleScrubAt(clientX));
+    };
+    updateScrub(clientX);
+    const move = (next: PointerEvent) => updateScrub(next.clientX);
     const end = (next: PointerEvent) => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
+      stopAutoScroll();
       flushScrubAt(next.clientX);
     };
     window.addEventListener('pointermove', move);

@@ -41,6 +41,7 @@ export interface CaptureConfig {
         kind: 'monitor' | 'window' | 'monitor-or-window';
         restoreToken: string | null;
       };
+  systemAudio: null | { mode: 'default-output' };
   cursor:
     | { mode: 'disabled' | 'embedded' }
     | {

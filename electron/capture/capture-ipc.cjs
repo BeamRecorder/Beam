@@ -14,6 +14,9 @@ const ALLOWED_COMMANDS = new Set([
   'resume',
   'stop',
   'status',
+  'start-system-audio-preview',
+  'system-audio-preview-level',
+  'stop-system-audio-preview',
 ]);
 
 function completedVideoSource(session) {

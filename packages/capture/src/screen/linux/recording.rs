@@ -78,6 +78,10 @@ impl LinuxRecording {
         };
         let mut portal = super::portal::prepare_portal(kind.clone(), request.cursor)?;
         let remote_fd = portal.take_remote_fd()?;
+        let repair_window_crop = matches!(
+            portal.source_type,
+            Some(ashpd::desktop::screencast::SourceType::Window)
+        ) || matches!(kind, crate::model::PortalSourceKind::Window);
         let stream_scope = portal
             .stream_id
             .clone()
@@ -92,6 +96,7 @@ impl LinuxRecording {
             start_ns: request.start_ns,
             start_gate: request.start_gate,
             metrics: metrics.clone(),
+            repair_window_crop,
         })?;
         Ok(Self {
             portal: Some(portal),
@@ -156,14 +161,16 @@ impl LinuxRecording {
 
     #[must_use]
     pub fn video_format(&self) -> Option<VideoFormat> {
-        self.pipewire.as_ref().map(|capture| {
-            let format = capture.video_format();
-            if self.encoded_output {
-                super::encoded_video_format(format)
-            } else {
-                format
-            }
-        })
+        self.metrics
+            .first_video_format()
+            .or_else(|| self.pipewire.as_ref().map(PipewireCapture::video_format))
+            .map(|format| {
+                if self.encoded_output {
+                    super::encoded_video_format(format)
+                } else {
+                    format
+                }
+            })
     }
 
     pub fn encoded_codec(&self) -> Option<&str> {

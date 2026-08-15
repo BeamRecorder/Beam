@@ -1,9 +1,11 @@
 use std::io::{self, BufReader, Write};
 
 use capture::{
-    catalog::{NativeCatalog, SourceCatalog},
+    catalog::{CatalogSnapshot, NativeCatalog, SourceCatalog},
+    model::SystemAudioSelection,
     protocol::{Command, RequestEnvelope, ResponseEnvelope, read_json_line, write_json_line},
     session::{RecordingSession, SessionState},
+    system_audio::SystemAudioMonitor,
 };
 
 fn main() {
@@ -47,6 +49,10 @@ fn run() -> Result<(), capture::CaptureError> {
 #[derive(Default)]
 struct Engine {
     session: Option<RecordingSession>,
+    catalog: NativeCatalog,
+    system_audio_preview: Option<SystemAudioMonitor>,
+    #[cfg(target_os = "linux")]
+    last_portal_snapshot: Option<CatalogSnapshot>,
 }
 
 impl Engine {
@@ -55,20 +61,44 @@ impl Engine {
             .as_ref()
             .map_or(SessionState::Idle, RecordingSession::state)
     }
+
+    fn stop_system_audio_preview(&mut self) -> Result<(), capture::CaptureError> {
+        if let Some(mut preview) = self.system_audio_preview.take() {
+            preview.stop()?;
+        }
+        Ok(())
+    }
+}
+
+fn discover_snapshot(engine: &mut Engine) -> Result<CatalogSnapshot, capture::CaptureError> {
+    let snapshot = engine.catalog.snapshot()?;
+    #[cfg(target_os = "linux")]
+    if snapshot.capabilities.portal_selection {
+        engine.last_portal_snapshot = Some(snapshot.clone());
+    }
+    Ok(snapshot)
+}
+
+fn prepare_snapshot(engine: &mut Engine) -> Result<CatalogSnapshot, capture::CaptureError> {
+    #[cfg(target_os = "linux")]
+    if let Some(snapshot) = &engine.last_portal_snapshot {
+        // Linux Portal sources are user intents rather than enumerated objects.
+        // Reuse the successful discovery snapshot so a transient second
+        // PipeWire probe cannot reject the same selection before the Portal
+        // performs its own authoritative capability checks.
+        return Ok(snapshot.clone());
+    }
+    discover_snapshot(engine)
 }
 
 fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
     let result: Result<serde_json::Value, capture::CaptureError> = (|| match request.command {
-        Command::Discover => {
-            serde_json::to_value(NativeCatalog::default().snapshot()?).map_err(Into::into)
-        }
+        Command::Discover => serde_json::to_value(discover_snapshot(engine)?).map_err(Into::into),
         Command::Capabilities => {
-            serde_json::to_value(NativeCatalog::default().snapshot()?.capabilities)
-                .map_err(Into::into)
+            serde_json::to_value(discover_snapshot(engine)?.capabilities).map_err(Into::into)
         }
         Command::Permissions => {
-            serde_json::to_value(NativeCatalog::default().snapshot()?.permissions)
-                .map_err(Into::into)
+            serde_json::to_value(discover_snapshot(engine)?.permissions).map_err(Into::into)
         }
         Command::InputAccessStatus => {
             serde_json::to_value(capture::input::input_access_status()).map_err(Into::into)
@@ -77,7 +107,7 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             serde_json::to_value(capture::input::request_input_access()?).map_err(Into::into)
         }
         Command::Formats { source } => {
-            let snapshot = NativeCatalog::default().snapshot()?;
+            let snapshot = discover_snapshot(engine)?;
             serde_json::to_value(
                 &snapshot
                     .sources
@@ -90,6 +120,7 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             .map_err(Into::into)
         }
         Command::Prepare { config } => {
+            engine.stop_system_audio_preview()?;
             if engine.session.as_ref().is_some_and(|session| {
                 !matches!(
                     session.state(),
@@ -101,7 +132,7 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
                     to: "Preparing".into(),
                 });
             }
-            let snapshot = NativeCatalog::default().snapshot()?;
+            let snapshot = prepare_snapshot(engine)?;
             let session = RecordingSession::prepare(*config, snapshot)?;
             let value = serde_json::json!({
                 "state": session.state(),
@@ -164,7 +195,34 @@ fn handle(request: RequestEnvelope, engine: &mut Engine) -> ResponseEnvelope {
             "state": engine.state(),
             "sessionId": engine.session.as_ref().map(RecordingSession::session_id),
             "manifestPath": engine.session.as_ref().map(RecordingSession::manifest_path),
+            "systemAudioLevel": engine.session.as_ref().and_then(RecordingSession::system_audio_level),
         })),
+        Command::StartSystemAudioPreview => {
+            if !matches!(
+                engine.state(),
+                SessionState::Idle | SessionState::Completed | SessionState::Failed
+            ) {
+                return Err(capture::CaptureError::InvalidTransition {
+                    from: format!("{:?}", engine.state()),
+                    to: "SystemAudioPreview".into(),
+                });
+            }
+            engine.stop_system_audio_preview()?;
+            engine.system_audio_preview = Some(SystemAudioMonitor::open(
+                SystemAudioSelection::DefaultOutput,
+            )?);
+            Ok(serde_json::json!({ "level": 0.0 }))
+        }
+        Command::SystemAudioPreviewLevel => Ok(serde_json::json!({
+            "level": engine
+                .system_audio_preview
+                .as_ref()
+                .map_or(0.0, SystemAudioMonitor::level),
+        })),
+        Command::StopSystemAudioPreview => {
+            engine.stop_system_audio_preview()?;
+            Ok(serde_json::json!({ "level": 0.0 }))
+        }
     })();
     match result {
         Ok(value) => ResponseEnvelope::success(request.id, value),
@@ -189,3 +247,7 @@ fn session_value(session: &RecordingSession) -> Result<serde_json::Value, captur
         "manifestPath": session.manifest_path(),
     }))
 }
+
+#[cfg(test)]
+#[path = "capture_engine_tests/mod.rs"]
+mod tests;

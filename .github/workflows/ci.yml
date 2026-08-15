@@ -61,7 +61,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config
-      - run: npm ci
+      - run: node scripts/ci/npm-ci-retry.cjs
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run typecheck:vue
@@ -104,7 +104,7 @@ jobs:
             clang cpio ffmpeg libclang-dev libpipewire-0.3-dev \
             p7zip-full pipewire pkg-config rpm wireplumber \
             xdg-desktop-portal xdg-desktop-portal-gnome
-      - run: npm ci
+      - run: node scripts/ci/npm-ci-retry.cjs
       - run: npm run build
       - run: npx electron-builder --linux AppImage deb rpm --x64 --publish never
         env:
@@ -172,7 +172,7 @@ jobs:
         with:
           shared-key: cargo-package-windows-x64-arm64-release
           cache-on-failure: true
-      - run: npm ci
+      - run: node scripts/ci/npm-ci-retry.cjs
       - name: Build and stage both Windows engines
         shell: pwsh
         run: |
@@ -278,7 +278,7 @@ jobs:
         with:
           shared-key: cargo-package-macos-aarch64-apple-darwin-release
           cache-on-failure: true
-      - run: npm ci
+      - run: node scripts/ci/npm-ci-retry.cjs
       - name: Build the Apple Silicon engine and renderer
         run: |
           cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin

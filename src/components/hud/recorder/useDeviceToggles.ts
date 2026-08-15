@@ -29,6 +29,7 @@ export interface DeviceToggleContext {
   setCameraEnabled(enabled: boolean): void;
   setMicrophoneEnabled(enabled: boolean): void;
   setSystemAudioEnabled(enabled: boolean): void;
+  canToggleSystemAudio(): boolean;
   setError(message: string): void;
   cameraMetadata(): Promise<{ appearance?: CameraAppearance; placement?: CameraPlacement }>;
 }
@@ -129,6 +130,10 @@ export function useDeviceToggles(ctx: DeviceToggleContext) {
   const toggleSystemAudio = async () => {
     const sessionId = ctx.getSessionId();
     if (!sessionId) return;
+    if (!ctx.canToggleSystemAudio()) {
+      ctx.setError('System audio on Linux must be selected before recording starts.');
+      return;
+    }
     if (ctx.getSystemAudio()) {
       await stopRecorder(ctx.getSystemAudio());
       ctx.setSystemAudio(null);

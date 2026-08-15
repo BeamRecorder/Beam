@@ -75,6 +75,7 @@ const originalExecCommand = Object.getOwnPropertyDescriptor(document, 'execComma
 describe('HUD', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    capture.platform = 'darwin';
     getDisplayMedia.mockReset();
     getDisplayMedia.mockResolvedValue(emptyDisplayStream());
     if (!navigator.mediaDevices) {
@@ -254,6 +255,46 @@ describe('HUD', () => {
 
     expect(wrapper.find('.hud-wrapper.embedded').exists()).toBe(true);
     expect(getDisplayMedia).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('preserves restored system audio on Linux before emitting a recording config', async () => {
+    capture.platform = 'linux';
+    Object.defineProperty(window, 'capture', { configurable: true, value: capture });
+    capture.getPreferences.mockResolvedValueOnce({
+      schemaVersion: 3,
+      theme: 'system',
+      recordingBar: { visibility: 'always' },
+      recordingInteractions: { enabled: false, noticeDismissed: false },
+      alwaysOnTop: true,
+      devices: { systemAudioMode: 'on' },
+      shortcuts: {},
+      backgroundPresets: { colors: [], gradients: [] },
+      extras: {},
+    });
+    capture.discover.mockResolvedValueOnce({
+      sources: [
+        {
+          id: 'portal:monitor',
+          kind: 'display',
+          label: 'Choose a screen',
+          isDefault: true,
+          selectionMode: 'portal',
+        },
+      ],
+      capabilities: { portalSelection: true },
+    });
+    capture.getSources.mockResolvedValue([]);
+
+    const wrapper = mount(HUD, { global: { stubs } });
+    await ready();
+
+    const record = wrapper.findAll('button').find((button) => button.text().includes('Start Recording'));
+    await record?.trigger('click');
+    await ready();
+
+    expect(wrapper.emitted('start-recording')).toContainEqual([expect.objectContaining({ systemAudio: true })]);
+    expect(browserSystemAudioMock.request).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 

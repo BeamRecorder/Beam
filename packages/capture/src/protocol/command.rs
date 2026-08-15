@@ -27,4 +27,7 @@ pub enum Command {
     Discard,
     Stop,
     Status,
+    StartSystemAudioPreview,
+    SystemAudioPreviewLevel,
+    StopSystemAudioPreview,
 }

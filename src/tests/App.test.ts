@@ -47,6 +47,7 @@ vi.mock('../components/hud/recorder/useRecordingController', async () => {
         cameraEnabled: ref(false),
         microphoneEnabled: ref(false),
         systemAudioEnabled: ref(false),
+        systemAudioLevel: ref(0),
         recorderHoverOnlyActive: ref(false),
         start: vi.fn(async () => undefined),
         stop: vi.fn(async () => undefined),

@@ -42,6 +42,9 @@ export interface CaptureApi {
   resume(): Promise<CaptureSession>;
   stop(): Promise<CaptureSession>;
   status(): Promise<CaptureSession>;
+  startSystemAudioPreview(): Promise<void>;
+  systemAudioPreviewLevel(): Promise<number>;
+  stopSystemAudioPreview(): Promise<void>;
 }
 
 export interface DesktopCaptureApi extends CaptureApi {

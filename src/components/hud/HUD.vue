@@ -40,6 +40,7 @@ import EditorPreparingHud from './EditorPreparingHud.vue';
 import type { RecordingBarVisibility } from './recorder/recording-types';
 import { useInteractionAccess } from './interactions/useInteractionAccess';
 import { useHudNavigation } from './navigation/useHudNavigation';
+import { useNativeSystemAudioPreview } from './recorder/useNativeSystemAudioPreview';
 
 const { t } = useTranslate('HUD');
 const { t: tPrefs } = useTranslate('HudPreferences');
@@ -138,7 +139,16 @@ const { level: micLevel } = useAudioLevelMeter(
   computed(() => !props.embedded && isMicEnabled.value),
   selectedMicId,
 );
-const systemAudioLevel = 0;
+const { level: systemAudioLevel } = useNativeSystemAudioPreview(
+  computed(
+    () =>
+      desktopPlatform === 'linux' &&
+      !props.embedded &&
+      systemAudioMode.value === 'on' &&
+      !isRecording.value &&
+      !isBusy.value,
+  ),
+);
 
 watch([selectedCameraId, selectedMicId, systemAudioMode], () => {
   if (props.embedded) return;
@@ -1410,6 +1420,7 @@ const openProject = (project: CaptureProject) => {
 
 .hud-body {
   flex: 1;
+  min-height: 0;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1488,8 +1499,14 @@ const openProject = (project: CaptureProject) => {
 /* Previews Grid */
 .form-inputs-area {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+.hud-wrapper.dropdown-open .form-inputs-area {
   overflow: visible;
 }
 
@@ -1650,6 +1667,7 @@ const openProject = (project: CaptureProject) => {
 /* Record Button (Full-width Style) */
 .action-section {
   display: flex;
+  flex: 0 0 auto;
   width: 100%;
   margin-top: auto;
 }
@@ -1663,6 +1681,7 @@ const openProject = (project: CaptureProject) => {
 }
 
 .capture-error {
+  flex: 0 0 auto;
   margin: 0;
   max-height: 104px;
   overflow: auto;

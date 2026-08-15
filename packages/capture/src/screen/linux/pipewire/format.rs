@@ -215,6 +215,100 @@ pub(crate) fn copy_frame(
     })
 }
 
+/// Finds the non-transparent/non-zero content written by the compositor.
+/// Mutter zero-pads window streams to the fixed monitor-sized PipeWire buffer,
+/// which lets us detect fractional-scaling crop metadata expressed in a
+/// smaller coordinate space without changing monitor capture behavior.
+pub(crate) fn expand_crop_to_content(
+    memory: &[u8],
+    format: NegotiatedFormat,
+    layout: BufferLayout,
+) -> Result<Option<CropRect>, CaptureError> {
+    let Some(reported) = layout.crop else {
+        return Ok(None);
+    };
+    let chunk_end = layout
+        .offset
+        .checked_add(layout.size)
+        .ok_or_else(|| buffer_error("buffer chunk range overflows"))?;
+    let payload = memory
+        .get(layout.offset..chunk_end)
+        .ok_or_else(|| buffer_error("buffer chunk exceeds mapped memory"))?;
+    let row_bytes = usize::try_from(format.width)
+        .ok()
+        .and_then(|width| width.checked_mul(4))
+        .ok_or_else(|| buffer_error("video row size overflows"))?;
+    let stride = usize::try_from(layout.stride.unsigned_abs())
+        .map_err(|_| buffer_error("video stride is not representable"))?;
+    if stride < row_bytes {
+        return Err(buffer_error("video stride is smaller than the row width"));
+    }
+    let mut min_x = format.width;
+    let mut min_y = format.height;
+    let mut max_x = 0_u32;
+    let mut max_y = 0_u32;
+    let mut found = false;
+    for logical_y in 0..format.height {
+        let physical_y = if layout.stride < 0 {
+            format.height - 1 - logical_y
+        } else {
+            logical_y
+        };
+        let row_start = usize::try_from(physical_y)
+            .ok()
+            .and_then(|row| row.checked_mul(stride))
+            .ok_or_else(|| buffer_error("source row offset overflows"))?;
+        let row_end = row_start
+            .checked_add(row_bytes)
+            .ok_or_else(|| buffer_error("source row range overflows"))?;
+        let row = payload
+            .get(row_start..row_end)
+            .ok_or_else(|| buffer_error("source row exceeds payload"))?;
+        for (x, pixel) in row.chunks_exact(4).enumerate() {
+            if pixel == [0, 0, 0, 0] {
+                continue;
+            }
+            let x = u32::try_from(x).map_err(|_| buffer_error("pixel x exceeds limits"))?;
+            found = true;
+            min_x = min_x.min(x);
+            min_y = min_y.min(logical_y);
+            max_x = max_x.max(x);
+            max_y = max_y.max(logical_y);
+        }
+    }
+    if !found {
+        return Ok(Some(reported));
+    }
+    let content = CropRect {
+        x: min_x,
+        y: min_y,
+        width: max_x - min_x + 1,
+        height: max_y - min_y + 1,
+    };
+    Ok(Some(union_crop(reported, content, format)))
+}
+
+fn union_crop(left: CropRect, right: CropRect, format: NegotiatedFormat) -> CropRect {
+    let x = left.x.min(right.x);
+    let y = left.y.min(right.y);
+    let right_edge = left
+        .x
+        .saturating_add(left.width)
+        .max(right.x.saturating_add(right.width))
+        .min(format.width);
+    let bottom_edge = left
+        .y
+        .saturating_add(left.height)
+        .max(right.y.saturating_add(right.height))
+        .min(format.height);
+    CropRect {
+        x,
+        y,
+        width: right_edge.saturating_sub(x),
+        height: bottom_edge.saturating_sub(y),
+    }
+}
+
 #[must_use]
 pub(crate) fn video_format(frame: &OwnedVideoFrame) -> VideoFormat {
     VideoFormat {

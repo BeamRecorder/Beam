@@ -4,6 +4,7 @@ import type { RecordingConfiguration } from '../recorder/recording-types';
 
 const { capture, cameraApi, microphoneApi, systemApi } = vi.hoisted(() => ({
   capture: {
+    platform: 'darwin',
     getCameraOverlayState: vi.fn(),
     setCountdown: vi.fn().mockResolvedValue(undefined),
     prepareRecordingSurface: vi.fn().mockResolvedValue(undefined),
@@ -80,6 +81,7 @@ let systemAudio: ReturnType<typeof recorder>;
 
 beforeEach(() => {
   vi.useFakeTimers();
+  capture.platform = 'darwin';
   camera = recorder();
   microphone = recorder();
   systemAudio = recorder();
@@ -127,6 +129,22 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('useRecordingController branch behavior', () => {
+  it('uses native Linux system audio and blocks Chromium toggles during recording', async () => {
+    capture.platform = 'linux';
+    const controller = useRecordingController(vi.fn());
+
+    await controller.start(configuration({ systemAudio: true }));
+    await waitForRecording(controller);
+
+    expect(capture.prepareRecording).toHaveBeenCalledWith(expect.objectContaining({ systemAudio: true }));
+    expect(controller.systemAudioEnabled.value).toBe(true);
+    expect(systemApi.request).not.toHaveBeenCalled();
+
+    await controller.toggleSystemAudio();
+    expect(systemApi.request).not.toHaveBeenCalled();
+    expect(controller.error.value).toBe('System audio on Linux must be selected before recording starts.');
+  });
+
   it('starts sidecars, tracks elapsed time, pauses/resumes, and completes', async () => {
     const complete = vi.fn();
     const controller = useRecordingController(complete);

@@ -93,7 +93,7 @@
         "dmg",
         "zip"
       ],
-      "icon": "public/brand/BeamIcon.png",
+      "icon": "public/brand/BeamIcon.icns",
       "extraResources": [
         {
           "from": "build/native/${os}/${arch}",

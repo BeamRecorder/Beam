@@ -78,7 +78,7 @@ jobs:
         with:
           shared-key: cargo-package-windows-x64-arm64-release
           cache-on-failure: true
-      - run: npm ci
+      - run: node scripts/ci/npm-ci-retry.cjs
       - name: Build and stage x64 and ARM64 capture engines
         shell: pwsh
         run: |
@@ -173,7 +173,7 @@ jobs:
         with:
           shared-key: cargo-package-macos-aarch64-apple-darwin-release
           cache-on-failure: true
-      - run: npm ci
+      - run: node scripts/ci/npm-ci-retry.cjs
       - name: Build and stage the Apple Silicon engine
         run: |
           cargo build -p capture --bin capture-engine --release --target aarch64-apple-darwin
@@ -231,7 +231,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes clang libclang-dev libpipewire-0.3-dev pkg-config rpm
-      - run: npm ci
+      - run: node scripts/ci/npm-ci-retry.cjs
       - run: npm run build
       - run: npx electron-builder --linux AppImage deb rpm --x64 --publish never
         env:
@@ -276,7 +276,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - name: Install artifact inspection tools
         run: |
           sudo apt-get update

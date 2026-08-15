@@ -109,3 +109,104 @@ fn applies_crop_and_each_transform_without_borrowing_input() {
         );
     }
 }
+
+#[test]
+fn expands_reported_window_crop_to_non_zero_content_and_repairs_it() {
+    let format = negotiated(NativePixelFormat::Bgra, 6, 4);
+    let reported = CropRect {
+        x: 0,
+        y: 0,
+        width: 3,
+        height: 2,
+    };
+    let mut memory = vec![0_u8; 6 * 4 * 4];
+    for (x, y) in [(0, 0), (5, 3)] {
+        let offset = (y * 6 + x) * 4;
+        memory[offset..offset + 4].copy_from_slice(&[1, 2, 3, 255]);
+    }
+    let layout = BufferLayout {
+        crop: Some(reported),
+        ..layout(6 * 4, memory.len())
+    };
+
+    let expanded = expand_crop_to_content(&memory, format, layout).expect("content crop");
+    assert_eq!(
+        expanded,
+        Some(CropRect {
+            x: 0,
+            y: 0,
+            width: 6,
+            height: 4,
+        })
+    );
+    assert_eq!(
+        repaired_window_crop(Some(reported), expanded),
+        Some(CropRect {
+            x: 0,
+            y: 0,
+            width: 6,
+            height: 4,
+        })
+    );
+}
+
+#[test]
+fn keeps_reported_crop_when_padding_is_zero() {
+    let format = negotiated(NativePixelFormat::Bgra, 6, 4);
+    let reported = CropRect {
+        x: 0,
+        y: 0,
+        width: 3,
+        height: 2,
+    };
+    let mut memory = vec![0_u8; 6 * 4 * 4];
+    for y in 0..reported.height {
+        for x in 0..reported.width {
+            let offset = usize::try_from((y * 6 + x) * 4).expect("pixel offset");
+            memory[offset..offset + 4].copy_from_slice(&[1, 2, 3, 255]);
+        }
+    }
+    let layout = BufferLayout {
+        crop: Some(reported),
+        ..layout(6 * 4, memory.len())
+    };
+
+    let expanded = expand_crop_to_content(&memory, format, layout).expect("content crop");
+    assert_eq!(expanded, Some(reported));
+    assert_eq!(
+        repaired_window_crop(Some(reported), expanded),
+        Some(reported)
+    );
+}
+
+#[test]
+fn rejects_small_or_non_uniform_crop_expansions() {
+    let reported = CropRect {
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+    };
+    assert_eq!(
+        repaired_window_crop(
+            Some(reported),
+            Some(CropRect {
+                width: 105,
+                height: 105,
+                ..reported
+            }),
+        ),
+        Some(reported)
+    );
+    assert_eq!(
+        repaired_window_crop(
+            Some(reported),
+            Some(CropRect {
+                width: 120,
+                height: 100,
+                ..reported
+            }),
+        ),
+        Some(reported)
+    );
+}

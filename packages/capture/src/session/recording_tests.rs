@@ -17,6 +17,7 @@ fn cancelling_a_failed_session_removes_project_and_session_artifacts() {
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: None,
+        system_audio: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings {
             output_root: temporary.path().into(),

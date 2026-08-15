@@ -5,6 +5,9 @@ export type RecordingBarVisibility = 'always' | 'auto-fade' | 'hover-only';
 export type StartupSidecarState = 'disabled' | 'prepared' | 'started' | 'failed';
 export type RecordingStartStage = 'prepare-sources' | 'prepare-native' | 'start-native' | 'start-sidecars' | 'cleanup';
 
+export const isRecordingActivePhase = (phase: RecordingPhase): boolean =>
+  phase === 'countdown' || phase === 'starting' || phase === 'recording' || phase === 'paused';
+
 export interface RecordingStartFailure {
   stage: RecordingStartStage;
   message: string;
@@ -31,6 +34,11 @@ export const formatRecordingStartFailure = (failure: RecordingStartFailure): str
     lines.push(`Cleanup: ${failure.cleanupErrors.join(' | ')}`);
   }
   return lines.join('\n');
+};
+
+export const formatRecordingTime = (tenths: number): string => {
+  const seconds = Math.floor(tenths / 10);
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}.${tenths % 10}`;
 };
 
 export interface RecordingConfiguration {

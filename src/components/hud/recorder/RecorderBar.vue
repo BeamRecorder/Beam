@@ -16,6 +16,7 @@ const props = defineProps<{
   cameraEnabled: boolean;
   microphoneEnabled: boolean;
   systemAudioEnabled: boolean;
+  systemAudioLevel: number;
   visibility: RecordingBarVisibility;
   hoverOnlyActive?: boolean;
 }>();
@@ -107,7 +108,7 @@ const emit = defineEmits<{
       @pointerdown.stop
       @click="emit('systemAudio')"
     >
-      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="0" size="sm" />
+      <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioLevel" size="sm" />
     </button>
 
     <div class="cancel-slot">

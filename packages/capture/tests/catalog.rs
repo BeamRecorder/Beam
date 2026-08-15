@@ -33,6 +33,7 @@ fn incompatible_source_kinds_are_rejected() {
         screen: Some(ScreenSelection::Source {
             source_id: window.id,
         }),
+        system_audio: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,
@@ -80,6 +81,7 @@ fn unsupported_cursor_mode_is_rejected_by_runtime_capabilities() {
         screen: Some(ScreenSelection::Source {
             source_id: display.id,
         }),
+        system_audio: None,
         cursor: CursorSelection::Separate {
             capture_clicks: true,
             capture_shortcuts: true,
@@ -117,6 +119,7 @@ fn supported_cursor_shape_mode_is_accepted_by_runtime_capabilities() {
         screen: Some(ScreenSelection::Source {
             source_id: display.id,
         }),
+        system_audio: None,
         cursor: CursorSelection::Separate {
             capture_clicks: false,
             capture_shortcuts: false,
@@ -138,6 +141,7 @@ fn portal_request(kind: PortalSourceKind) -> CaptureRequest {
             kind,
             restore_token: None,
         }),
+        system_audio: None,
         cursor: CursorSelection::Disabled,
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,

@@ -20,6 +20,7 @@ fn request_json_roundtrip_and_defaults_are_stable() {
             kind: PortalSourceKind::MonitorOrWindow,
             restore_token: None,
         }),
+        system_audio: None,
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::ContinueWithoutOptionalTracks,
@@ -33,10 +34,22 @@ fn request_json_roundtrip_and_defaults_are_stable() {
 }
 
 #[test]
+fn system_audio_selection_serializes_as_default_output() {
+    let json =
+        serde_json::to_value(SystemAudioSelection::DefaultOutput).expect("serialize system audio");
+    assert_eq!(json, serde_json::json!({ "mode": "default-output" }));
+    assert_eq!(
+        serde_json::from_value::<SystemAudioSelection>(json).expect("deserialize system audio"),
+        SystemAudioSelection::DefaultOutput
+    );
+}
+
+#[test]
 fn cursor_without_screen_is_rejected() {
     let request = CaptureRequest {
         project_id: ProjectId::new(),
         screen: None,
+        system_audio: None,
         cursor: CursorSelection::default(),
         recording: RecordingSettings::default(),
         failure_policy: FailurePolicy::FailFast,

@@ -119,6 +119,7 @@ function buildDefaultCaptureConfig(catalog, options, environment) {
           restoreToken: null,
         }
       : { mode: 'source', sourceId: screen.id },
+    systemAudio: environment.platform === 'linux' && options.systemAudio === true ? { mode: 'default-output' } : null,
     cursor:
       options.cursor !== false && capabilities.separateCursor
         ? {

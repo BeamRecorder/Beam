@@ -1,6 +1,7 @@
 #![allow(clippy::expect_used)]
 
 use capture::cursor::*;
+use capture::model::ScreenRegion;
 
 #[test]
 fn coordinates_support_negative_origins_and_crop() {
@@ -17,6 +18,39 @@ fn coordinates_support_negative_origins_and_crop() {
     .expect("coordinates");
     assert_eq!((point.pixel_x, point.pixel_y), (50, 25));
     assert_eq!((point.normalized_x, point.normalized_y), (0.25, 0.25));
+    assert!(point.inside);
+}
+
+#[test]
+fn cropped_window_origin_is_preserved_before_cursor_normalization() {
+    let region = crop_region(
+        CaptureRegion {
+            x: -1920,
+            y: 100,
+            width: 1920,
+            height: 1080,
+        },
+        ScreenRegion {
+            x: 0.25,
+            y: 0.25,
+            width: 0.5,
+            height: 0.5,
+        },
+    )
+    .expect("window crop");
+    assert_eq!(
+        region,
+        CaptureRegion {
+            x: -1440,
+            y: 370,
+            width: 960,
+            height: 540,
+        }
+    );
+
+    let point = map_coordinates(-960, 640, region).expect("window cursor coordinates");
+    assert_eq!((point.pixel_x, point.pixel_y), (480, 270));
+    assert_eq!((point.normalized_x, point.normalized_y), (0.5, 0.5));
     assert!(point.inside);
 }
 

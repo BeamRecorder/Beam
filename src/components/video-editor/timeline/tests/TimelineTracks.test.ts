@@ -290,6 +290,44 @@ const setPlaybackViewportGeometry = (mounted: VueWrapper) => {
   return scroll;
 };
 
+const setScrubViewportGeometry = (mounted: VueWrapper) => {
+  const scroll = setPlaybackViewportGeometry(mounted);
+  const ticks = mounted.get('.ruler-ticks-area').element;
+  vi.mocked(ticks.getBoundingClientRect).mockImplementation(() => {
+    const left = 120 - scroll.scrollLeft;
+    return {
+      left,
+      top: 0,
+      width: 2_000,
+      height: 28,
+      right: left + 2_000,
+      bottom: 28,
+    } as DOMRect;
+  });
+  return scroll;
+};
+
+const queueAnimationFrames = () => {
+  const pendingFrames = new Map<number, FrameRequestCallback>();
+  let nextFrameId = 0;
+  vi.mocked(window.requestAnimationFrame).mockImplementation((callback) => {
+    const id = ++nextFrameId;
+    pendingFrames.set(id, callback);
+    return id;
+  });
+  vi.mocked(window.cancelAnimationFrame).mockImplementation((id) => {
+    pendingFrames.delete(id);
+  });
+  const flushNextFrame = () => {
+    const next = pendingFrames.entries().next();
+    if (next.done) throw new Error('Expected a queued animation frame.');
+    const [id, callback] = next.value;
+    pendingFrames.delete(id);
+    callback(0);
+  };
+  return { pendingFrames, flushNextFrame };
+};
+
 const pointerEvent = (type: string, clientX: number, clientY = 10) => {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperties(event, {
@@ -337,6 +375,79 @@ describe('TimelineTracks', () => {
     await mounted!.setProps({ currentTime: 8 });
 
     expect(scroll.scrollLeft).toBe(0);
+  });
+
+  it('keeps scrubbing at the right edge and advances time across animation frames without pointer movement', async () => {
+    const mounted = await mountTracks();
+    const scroll = setScrubViewportGeometry(mounted!);
+    const { flushNextFrame } = queueAnimationFrames();
+
+    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 615 });
+    flushNextFrame();
+    flushNextFrame();
+    const firstScrollLeft = scroll.scrollLeft;
+    flushNextFrame();
+    const firstTime = mounted!.emitted('update:currentTime')?.at(-1)?.[0] as number;
+    flushNextFrame();
+    flushNextFrame();
+    const secondTime = mounted!.emitted('update:currentTime')?.at(-1)?.[0] as number;
+
+    expect(scroll.scrollLeft).toBeGreaterThan(firstScrollLeft);
+    expect(secondTime).toBeGreaterThan(firstTime);
+
+    window.dispatchEvent(pointerEvent('pointerup', 615));
+  });
+
+  it('scrubs backward while held at the left edge', async () => {
+    const mounted = await mountTracks();
+    const scroll = setScrubViewportGeometry(mounted!);
+    scroll.scrollLeft = 400;
+    const { flushNextFrame } = queueAnimationFrames();
+
+    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 125 });
+    flushNextFrame();
+    flushNextFrame();
+    const firstScrollLeft = scroll.scrollLeft;
+    flushNextFrame();
+    flushNextFrame();
+
+    expect(scroll.scrollLeft).toBeLessThan(firstScrollLeft);
+
+    window.dispatchEvent(pointerEvent('pointercancel', 125));
+  });
+
+  it.each(['pointerup', 'pointercancel'] as const)('stops edge scrubbing after %s', async (endEvent) => {
+    const mounted = await mountTracks();
+    const scroll = setScrubViewportGeometry(mounted!);
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+
+    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 615 });
+    flushNextFrame();
+    flushNextFrame();
+    const stoppedScrollLeft = scroll.scrollLeft;
+    window.dispatchEvent(pointerEvent(endEvent, 615));
+    const emittedAtStop = mounted!.emitted('update:currentTime')?.length ?? 0;
+
+    expect(pendingFrames).toHaveLength(0);
+    expect(scroll.scrollLeft).toBe(stoppedScrollLeft);
+    expect(mounted!.emitted('update:currentTime')).toHaveLength(emittedAtStop);
+  });
+
+  it('does not auto-scroll while scrubbing in the center of the viewport', async () => {
+    const mounted = await mountTracks();
+    const scroll = setScrubViewportGeometry(mounted!);
+    const { pendingFrames, flushNextFrame } = queueAnimationFrames();
+
+    await mounted!.get('.ruler-ticks-area').trigger('pointerdown', { clientX: 370 });
+    flushNextFrame();
+    window.dispatchEvent(pointerEvent('pointermove', 370));
+
+    expect(scroll.scrollLeft).toBe(0);
+    expect(pendingFrames).toHaveLength(1);
+    flushNextFrame();
+    expect(scroll.scrollLeft).toBe(0);
+
+    window.dispatchEvent(pointerEvent('pointerup', 370));
   });
 
   it('virtualizes thumbnail requests to the viewport with two seconds of overscan and preserves the range on zoom', async () => {

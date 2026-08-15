@@ -26,6 +26,12 @@ pub enum ScreenSelection {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "mode", rename_all = "kebab-case")]
+pub enum SystemAudioSelection {
+    DefaultOutput,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenRegion {
@@ -139,6 +145,8 @@ impl Default for RecordingSettings {
 pub struct CaptureRequest {
     pub project_id: ProjectId,
     pub screen: Option<ScreenSelection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_audio: Option<SystemAudioSelection>,
     #[serde(default)]
     pub cursor: CursorSelection,
     #[serde(default)]
