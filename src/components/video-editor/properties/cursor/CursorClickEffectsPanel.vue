@@ -28,7 +28,7 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
 </script>
 
 <template>
-  <section class="click-effects" aria-label="Click effects">
+  <section class="click-effects" :aria-label="t('clicks')">
     <template v-for="(button, index) in buttons" :key="button.id">
       <Divider v-if="index > 0" spacing="xs" />
       <div class="click-card">
