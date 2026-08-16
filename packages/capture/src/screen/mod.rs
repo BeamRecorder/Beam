@@ -1,6 +1,9 @@
+mod crop;
 mod frame;
 mod recording;
 
+#[cfg(windows)]
+pub(crate) use crop::{PixelCrop, even_dimension, normalize_crop};
 pub use frame::*;
 pub use recording::*;
 

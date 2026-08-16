@@ -8,7 +8,7 @@ import UndoRedoToast from './UndoRedoToast.vue';
 import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { approximateCaptionTextWidth } from '~/media/shared/caption-text-layout';
-import { outputPreviewRect } from './output-canvas';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
 import { useCursorOverlay } from './composables/useCursorOverlay';
@@ -23,7 +23,6 @@ import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types
 const { t } = useTranslate('EditorCanvas');
 const props = defineProps<EditorCanvasProps>();
 const emit = defineEmits<EditorCanvasEmits>();
-
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const logicalSize = ref({ width: 0, height: 0 });
@@ -64,11 +63,25 @@ const screenFrame = computed(() => {
   void props.frameVersion;
   return liveScreenClip.value ? props.frameFor(liveScreenClip.value.id) : null;
 });
+const renderedScreenClipIds = ref<ReadonlySet<string>>(new Set());
+watch(
+  screenFrame,
+  (frame) => {
+    const clipId = liveScreenClip.value?.id;
+    if (!frame || !clipId || renderedScreenClipIds.value.has(clipId)) return;
+    renderedScreenClipIds.value = new Set([...renderedScreenClipIds.value, clipId]);
+  },
+  { immediate: true },
+);
+const showLoadingSkeleton = computed(() => {
+  const clip = liveScreenClip.value;
+  if (!clip || props.playbackError || renderedScreenClipIds.value.has(clip.id)) return false;
+  return props.playbackState === 'loading' || !screenFrame.value;
+});
 const previewFrameStyle = computed(() => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
   return { left: `${preview.x}px`, top: `${preview.y}px`, width: `${preview.width}px`, height: `${preview.height}px` };
 });
-
 function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
@@ -166,10 +179,15 @@ const drawNonScreenVisuals = (
   ctx: CanvasRenderingContext2D,
   window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
 ) => {
-  compositionMedia.drawWebcamClips(ctx, window);
+  if (compositionMedia.drawVisualStack) compositionMedia.drawVisualStack(ctx, window, () => undefined);
+  else compositionMedia.drawWebcamClips(ctx, window);
 };
 
 drawVisualStack = (ctx, window, drawScreen) => {
+  if (compositionMedia.drawVisualStack) {
+    compositionMedia.drawVisualStack(ctx, window, drawScreen);
+    return;
+  }
   const layers = resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000);
   for (const clip of layers.cameraVisuals) {
     if (clip.kind === 'screen') drawScreen();
@@ -256,7 +274,7 @@ const renderCanvas = () => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
     currentRenderWindow = window;
-    compositionMedia.drawWebcamClips(ctx, window);
+    if (!compositionMedia.drawVisualStack) compositionMedia.drawWebcamClips(ctx, window);
     compositionMedia.drawComposition(ctx, window);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
@@ -280,7 +298,7 @@ const renderCanvas = () => {
     };
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, 16);
+    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
     ctx.clip();
     drawBackground(ctx, preview);
     drawNonScreenVisuals(ctx, fallbackWindow);
@@ -299,8 +317,21 @@ function draw() {
 }
 
 const handleIslandPointerDown = (event: PointerEvent) => {
+  if (event.button === 0 && transformAndCrop.selectVisualAt(event, canvasRef.value)) return;
   if (viewportZoom.beginPan(event, containerRef.value)) return;
   cameraZoom.beginSelectionMove(event);
+};
+
+const handleTransformPointerDown = (event: PointerEvent) => {
+  if (event.button === 0) {
+    const clipId = transformAndCrop.clipIdAt(event, canvasRef.value);
+    if (clipId && clipId !== props.selectedTransformClip?.id) {
+      event.stopPropagation();
+      emit('select:clip', clipId);
+      return;
+    }
+  }
+  transformAndCrop.beginTransformDrag(event, 'move');
 };
 
 const handleIslandPointerMove = (event: PointerEvent) => {
@@ -392,7 +423,7 @@ defineExpose({
         :style="guide.style"
       ></div>
       <Skeleton
-        v-if="playbackState === 'loading' || (Boolean(liveScreenClip) && !screenFrame && !playbackError)"
+        v-if="showLoadingSkeleton"
         class="canvas-loading-skeleton"
         width="100%"
         height="100%"
@@ -401,19 +432,24 @@ defineExpose({
       />
       <div
         v-if="selectedTransformClip && !selectedCaptionFollowsCursor && !isCropping && selectedZoom?.mode !== 'manual'"
-        class="webcam-selection"
-        :style="transformAndCrop.transformHandleStyle.value"
-        @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')"
-        @pointermove="transformAndCrop.moveTransformDrag"
-        @pointerup="transformAndCrop.endTransformDrag"
-        @pointercancel="transformAndCrop.endTransformDrag"
+        class="transform-selection-viewport"
+        :style="transformAndCrop.transformSelectionViewportStyle.value"
       >
-        <ResizeHandle
-          :corners="transformAndCrop.transformResizeCorners.value"
-          @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
-          @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)"
-          @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)"
-        />
+        <div
+          class="webcam-selection"
+          :style="transformAndCrop.transformHandleStyle.value"
+          @pointerdown="handleTransformPointerDown"
+          @pointermove="transformAndCrop.moveTransformDrag"
+          @pointerup="transformAndCrop.endTransformDrag"
+          @pointercancel="transformAndCrop.endTransformDrag"
+        >
+          <ResizeHandle
+            :corners="transformAndCrop.transformResizeCorners.value"
+            @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
+            @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)"
+            @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)"
+          />
+        </div>
       </div>
       <div
         class="zoom-selection-box"

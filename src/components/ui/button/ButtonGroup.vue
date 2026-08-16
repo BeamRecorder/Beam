@@ -1,11 +1,16 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   full?: boolean;
+  columns?: 1 | 2 | 3;
 }>();
 </script>
 
 <template>
-  <div class="btn-group" :class="{ 'full-width': full }">
+  <div
+    class="btn-group"
+    :class="{ 'full-width': props.full, 'column-layout': props.columns }"
+    :style="props.columns ? { '--button-group-columns': props.columns } : undefined"
+  >
     <slot />
   </div>
 </template>
@@ -24,6 +29,12 @@ defineProps<{
 
 .btn-group.full-width {
   width: 100%;
+}
+
+.btn-group.column-layout {
+  display: grid;
+  grid-template-columns: repeat(var(--button-group-columns), minmax(0, 1fr));
+  gap: 4px;
 }
 
 .btn-group :deep(.btn-container) {

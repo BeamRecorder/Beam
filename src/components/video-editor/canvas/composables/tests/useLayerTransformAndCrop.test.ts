@@ -2,7 +2,7 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLayerTransformAndCrop, type UseLayerTransformAndCropOptions } from '../useLayerTransformAndCrop';
-import type { CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { BlurClip, CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { VideoWindowBounds } from '../useCameraZoom';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
@@ -60,6 +60,29 @@ const imageClip = (): VisualClip => ({
   appearance: createDefaultClipAppearance('image'),
   isMirrored: false,
   isMirroredY: false,
+});
+
+const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
+  id: 'blur',
+  kind: 'blur',
+  assetId: '',
+  name: 'Blur',
+  timelineStartMs: 0,
+  timelineDurationMs: 10_000,
+  sourceInMs: 0,
+  sourceDurationMs: 10_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  transform: { x: 0.2, y: 0.3, width: 0.4, height: 0.25 },
+  shape: 'rectangle',
+  mode: 'blur',
+  strength: 60,
+  feather: 0,
+  cornerRadius: 0,
+  tintOpacity: 0,
+  color: '#000000',
+  ...overrides,
 });
 
 const captionClip = (): CaptionClip => ({
@@ -139,19 +162,20 @@ const pointer = (target: HTMLElement, overrides: Partial<PointerEvent> = {}) =>
   }) as unknown as PointerEvent;
 
 const mountComposable = (
-  selected: VisualClip | CaptionClip | null,
+  selected: VisualClip | BlurClip | CaptionClip | null,
   cropping = false,
   initialComposition: ClipComposition = composition(),
 ) => {
-  const selectedRef = ref<VisualClip | CaptionClip | null>(selected);
+  const selectedRef = ref<VisualClip | BlurClip | CaptionClip | null>(selected);
   const croppingRef = ref(cropping);
   const compositionRef = ref(initialComposition);
+  const currentTime = ref(1);
   const selectedBounds = ref<VideoWindowBounds | null>(bounds());
   const overlayBounds = ref<VideoWindowBounds | null>(bounds());
   const outputCanvas = ref({ ...DEFAULT_OUTPUT_CANVAS, width: 800, height: 450 });
   const options: UseLayerTransformAndCropOptions = {
     composition: () => compositionRef.value,
-    currentTime: () => 1,
+    currentTime: () => currentTime.value,
     selectedTransformClip: () => selectedRef.value,
     videoWindowBounds: () => selectedBounds.value,
     overlayWindowBounds: () => overlayBounds.value,
@@ -172,6 +196,7 @@ const mountComposable = (
   return {
     selectedRef,
     compositionRef,
+    currentTime,
     croppingRef,
     selectedBounds,
     overlayBounds,
@@ -206,17 +231,28 @@ describe('useLayerTransformAndCrop', () => {
     mounted.selectedRef.value = imageClip();
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toMatchObject({
-      left: '10px',
-      top: '-25px',
+      left: '0px',
+      top: '-45px',
       width: '800px',
       height: '360px',
     });
+    expect(mounted.state.transformSelectionViewportStyle.value).toEqual({
+      left: '10px',
+      top: '20px',
+      width: '800px',
+      height: '450px',
+    });
 
-    mounted.selectedRef.value = { ...imageClip(), id: 'video', kind: 'video' };
+    const video = { ...imageClip(), id: 'video', kind: 'video' as const };
+    mounted.compositionRef.value = {
+      ...mounted.compositionRef.value,
+      clips: [...mounted.compositionRef.value.clips, video],
+    };
+    mounted.selectedRef.value = video;
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toMatchObject({
-      left: '10px',
-      top: '-25px',
+      left: '0px',
+      top: '-45px',
       width: '800px',
       height: '360px',
     });
@@ -246,6 +282,55 @@ describe('useLayerTransformAndCrop', () => {
     mounted.selectedBounds.value = null;
     await nextTick();
     expect(mounted.state.transformHandleStyle.value).toEqual({ display: 'none' });
+  });
+
+  it('projects blur handles through camera zoom and uses the visible circle bounds', async () => {
+    const clip = blurClip();
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, false, scene);
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '-80px',
+      top: '45px',
+      width: '640px',
+      height: '225px',
+    });
+
+    mounted.selectedRef.value = blurClip({ shape: 'circle' });
+    await nextTick();
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '127.5px',
+      top: '45px',
+      width: '225px',
+      height: '225px',
+    });
+  });
+
+  it('hides transform handles when the selected clip is inactive, disabled or fully outside the viewport', async () => {
+    const clip = blurClip({ order: -1 });
+    const scene = composition();
+    scene.clips = [screenClip(), clip];
+    const mounted = mountComposable(clip, false, scene);
+    expect(mounted.state.transformSelectionViewportStyle.value).not.toEqual({ display: 'none' });
+
+    mounted.currentTime.value = 11;
+    await nextTick();
+    expect(mounted.state.transformSelectionViewportStyle.value).toEqual({ display: 'none' });
+    expect(mounted.state.transformHandleStyle.value).toEqual({ display: 'none' });
+
+    const disabled = { ...clip, enabled: false };
+    mounted.currentTime.value = 1;
+    mounted.selectedRef.value = disabled;
+    mounted.compositionRef.value = { ...scene, clips: [screenClip(), disabled] };
+    await nextTick();
+    expect(mounted.state.transformSelectionViewportStyle.value).toEqual({ display: 'none' });
+
+    const outside = { ...clip, transform: { x: 2, y: 2, width: 0.2, height: 0.2 } };
+    mounted.selectedRef.value = outside;
+    mounted.compositionRef.value = { ...scene, clips: [screenClip(), outside] };
+    await nextTick();
+    expect(mounted.state.transformSelectionViewportStyle.value).toEqual({ display: 'none' });
+    expect(mounted.selectedRef.value?.id).toBe('blur');
   });
 
   it('moves and resizes crop selections, clamps them, and commits both previews and final values', () => {
@@ -305,6 +390,37 @@ describe('useLayerTransformAndCrop', () => {
     mounted.state.endTransformDrag(pointer(target));
     expect(setPointerCapture).toHaveBeenCalled();
     expect(mounted.options.onUpdateTransform).toHaveBeenCalledTimes(2);
+  });
+
+  it('resizes rectangular blur regions freely and locks square effects to a 1:1 ratio', () => {
+    const mounted = mountComposable(blurClip());
+    const target = document.createElement('div');
+    Object.assign(target, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn().mockReturnValue(true),
+      releasePointerCapture: vi.fn(),
+    });
+
+    mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 260, clientY: 280 }));
+    expect(mounted.state.transformDraft.value).toMatchObject({ width: 0.5, height: 0.45 });
+    mounted.state.endTransformDrag(pointer(target));
+
+    mounted.selectedRef.value = blurClip({
+      shape: 'square',
+      transform: { x: 0.2, y: 0.2, width: 0.25, height: 0.25 },
+    });
+    expect(mounted.state.transformResizeCorners.value).toEqual([
+      'top-left',
+      'top-right',
+      'bottom-right',
+      'bottom-left',
+    ]);
+    mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 260, clientY: 100 }));
+    const square = mounted.state.transformDraft.value!;
+    expect(square.width).toBeGreaterThan(0.14);
+    expect(square.width * 800).toBeCloseTo(square.height * 450);
   });
 
   it('keeps webcam transforms inside the output frame while moving and resizing', () => {
@@ -378,8 +494,12 @@ describe('useLayerTransformAndCrop', () => {
     expect(mounted.state.transformResizeCorners.value).toEqual(['left', 'right']);
   });
 
-  it('selects the topmost eligible visual or caption and ignores screen-only hits', () => {
-    const mounted = mountComposable(imageClip());
+  it('selects the topmost eligible visual or caption and leaves screen selection to the camera layer', () => {
+    const foregroundImage = imageClip();
+    foregroundImage.order = -1;
+    const scene = composition();
+    scene.clips = [screenClip(), foregroundImage];
+    const mounted = mountComposable(foregroundImage, false, scene);
     const canvas = document.createElement('canvas');
     Object.defineProperty(canvas, 'clientWidth', { configurable: true, value: 800 });
     vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 450 } as DOMRect);
@@ -395,18 +515,59 @@ describe('useLayerTransformAndCrop', () => {
     mounted.state.beginTransformDrag(pointer(canvas), 'move');
   });
 
+  it('raycasts blur rectangles and rejects points outside a circular blur', () => {
+    const canvas = document.createElement('canvas');
+    Object.defineProperty(canvas, 'clientWidth', { configurable: true, value: 800 });
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 450 } as DOMRect);
+
+    const rectangleScene = composition();
+    rectangleScene.clips = [screenClip(), blurClip({ order: -1 })];
+    const mounted = mountComposable(null, false, rectangleScene);
+    expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 200, clientY: 100 }), canvas)).toBe(true);
+    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('blur');
+
+    const circleScene = composition();
+    circleScene.clips = [blurClip({ shape: 'circle' })];
+    mounted.compositionRef.value = circleScene;
+    vi.mocked(mounted.options.onSelectTransformClip).mockClear();
+    expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 150, clientY: 70 }), canvas)).toBe(false);
+    expect(mounted.state.selectVisualAt(pointer(canvas, { clientX: 250, clientY: 150 }), canvas)).toBe(true);
+    expect(mounted.options.onSelectTransformClip).toHaveBeenCalledWith('blur');
+  });
+
+  it('raycasts only active visible layers at the current composition time', () => {
+    const canvas = document.createElement('canvas');
+    Object.defineProperties(canvas, {
+      clientWidth: { configurable: true, value: 800 },
+      clientHeight: { configurable: true, value: 450 },
+    });
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 800, height: 450 } as DOMRect);
+    const timedBlur = blurClip({ order: -1, timelineStartMs: 2_000 });
+    const scene = composition();
+    scene.clips = [screenClip(), timedBlur];
+    const mounted = mountComposable(screenClip(), false, scene);
+    const hit = pointer(canvas, { clientX: 200, clientY: 150 });
+
+    expect(mounted.state.clipIdAt(hit, canvas)).toBeNull();
+    mounted.currentTime.value = 2.5;
+    expect(mounted.state.clipIdAt(hit, canvas)).toBe('blur');
+
+    mounted.compositionRef.value = { ...scene, clips: [screenClip(), { ...timedBlur, order: 1 }] };
+    expect(mounted.state.clipIdAt(hit, canvas)).toBeNull();
+  });
+
   it('selects a foreground imported video before an overlapping background visual', () => {
     const importedVideo: VisualClip = {
       ...imageClip(),
       id: 'imported-video',
       kind: 'video',
       assetId: 'imported-video-asset',
-      order: 0,
+      order: -2,
     };
     const backgroundImage: VisualClip = {
       ...imageClip(),
       id: 'background-image',
-      order: 1,
+      order: -1,
     };
     const scene = composition();
     scene.clips = [screenClip(), importedVideo, backgroundImage];

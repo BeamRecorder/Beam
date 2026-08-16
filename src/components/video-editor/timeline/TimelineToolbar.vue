@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Volume2,
   Type,
+  CircleDashed,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -41,11 +42,11 @@ const emit = defineEmits<{
   (e: 'update:currentTime', value: number): void;
   (e: 'update:zoomLevel', value: number): void;
   (e: 'update:isSnappingEnabled', value: boolean): void;
-  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption'): void;
+  (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption' | 'blur'): void;
   (e: 'split'): void;
 }>();
 
-const handleAdd = (type: 'video' | 'image' | 'sound' | 'caption') => {
+const handleAdd = (type: 'video' | 'image' | 'sound' | 'caption' | 'blur') => {
   emit('add:element', type);
 };
 const addItems = computed(
@@ -55,6 +56,7 @@ const addItems = computed(
       { id: 'image', label: t('image'), icon: ImageIcon },
       { id: 'sound', label: t('sound'), icon: Volume2 },
       { id: 'caption', label: t('text'), icon: Type },
+      { id: 'blur', label: t('blur'), icon: CircleDashed },
     ] as const,
 );
 
@@ -95,7 +97,7 @@ const handleZoomOut = () => {
         :label="t('add')"
         :icon="Plus"
         :items="addItems"
-        @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption')"
+        @select="handleAdd($event as 'video' | 'image' | 'sound' | 'caption' | 'blur')"
       />
       <div class="tools-group">
         <Button

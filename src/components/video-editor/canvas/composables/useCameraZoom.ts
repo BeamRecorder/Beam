@@ -3,6 +3,7 @@ import type { ZoomElement } from '../../zoom/zoom-types';
 import { createCompositionCameraEvaluator } from '../../zoom/composition-camera';
 import {
   framedMediaRect,
+  OUTPUT_PREVIEW_RADIUS,
   outputPoint,
   coverSourceRect,
   outputPreviewRect,
@@ -207,12 +208,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (!hasCameraVisual) {
       const hasEnabledScreenTrack = options.composition().clips.some((clip) => clip.kind === 'screen' && clip.enabled);
       if (!hasEnabledScreenTrack) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
+        ctx.clip();
         ctx.fillStyle = 'rgba(15,23,42,.85)';
         ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
         ctx.fillStyle = '#fff';
         ctx.font = '16px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Video track disabled', preview.x + preview.width / 2, preview.y + preview.height / 2);
+        ctx.restore();
       }
       videoWindowBounds.value = null;
       screenHitBounds.value = null;
@@ -223,12 +229,17 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     const videoWidth = screen ? (frame?.width ?? asset?.width ?? 0) : output.width;
     const videoHeight = screen ? (frame?.height ?? asset?.height ?? 0) : output.height;
     if (screen && (videoWidth <= 0 || videoHeight <= 0)) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
+      ctx.clip();
       ctx.fillStyle = 'rgba(15,23,42,.85)';
       ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
       ctx.fillStyle = '#fff';
       ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(options.videoError() || 'Loading media metadata…', width / 2, height / 2);
+      ctx.restore();
       videoWindowBounds.value = null;
       return null;
     }
@@ -257,7 +268,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(dx, dy, dw, dh, 16);
+    ctx.roundRect(dx, dy, dw, dh, OUTPUT_PREVIEW_RADIUS);
     ctx.clip();
     const currentTime = options.currentTime();
     const telemetry = options.editorData()?.cursor.telemetry ?? [];
@@ -316,13 +327,13 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           mirrored: screen.isMirrored,
           mirroredY: screen.isMirroredY,
         });
-      } else {
+      } else if (options.videoError()) {
         ctx.fillStyle = '#334155';
         ctx.fillRect(dx, dy, dw, dh);
         ctx.fillStyle = '#fff';
         ctx.font = '14px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(options.videoError() || 'Loading video recording...', width / 2, height / 2);
+        ctx.fillText(options.videoError()!, width / 2, height / 2);
       }
     };
     ctx.save();

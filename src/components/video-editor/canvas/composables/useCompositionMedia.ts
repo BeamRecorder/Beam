@@ -1,7 +1,9 @@
 import { onUnmounted, watch } from 'vue';
 import { activeClipsAt, type MediaFrame } from '~/media/shared';
 import {
+  isBlurClip,
   isVisualClip,
+  type BlurClip,
   type CaptionClip,
   type ClipComposition,
   type NormalizedTransform,
@@ -12,12 +14,14 @@ import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../compositio
 import { drawDecoratedMedia } from '../../composition/appearance/render-decorated-media';
 import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
 import type { OutputCanvasSettings } from '../output-canvas';
+import { applyBlurEffect } from '../../composition/effects/blur-effect';
+import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
   currentTime: () => number;
   frameFor: (clipId: string) => MediaFrame | null;
-  selectedTransformClip: () => VisualClip | CaptionClip | null;
+  selectedTransformClip: () => VisualClip | BlurClip | CaptionClip | null;
   transformDraft: () => NormalizedTransform | null;
   isCropping?: () => boolean | undefined;
   outputCanvas: () => OutputCanvasSettings;
@@ -113,6 +117,78 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     });
   };
 
+  const drawBlur = (
+    ctx: CanvasRenderingContext2D,
+    clip: BlurClip,
+    window: { dx: number; dy: number; dw: number; dh: number },
+  ) => {
+    const selected = options.selectedTransformClip();
+    const transform = clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform;
+    applyBlurEffect(ctx, clip, {
+      x: window.dx + transform.x * window.dw,
+      y: window.dy + transform.y * window.dh,
+      width: transform.width * window.dw,
+      height: transform.height * window.dh,
+    });
+  };
+
+  const drawWebcam = (
+    ctx: CanvasRenderingContext2D,
+    clip: VisualClip,
+    window: {
+      dx: number;
+      dy: number;
+      dw: number;
+      dh: number;
+      scale: number;
+      focusX?: number;
+      focusY?: number;
+    },
+  ) => {
+    const frame = options.frameFor(clip.id);
+    if (!frame) return;
+    const selected = options.selectedTransformClip();
+    const scale = window.scale || 1;
+    const centerX = window.dx + window.dw / 2;
+    const centerY = window.dy + window.dh / 2;
+    ctx.save();
+    // The scene stack is rendered in camera space. Cancel that projection for
+    // webcam overlays so zoom keeps their existing screen-anchored behavior,
+    // while their position in the stack can still be blurred by higher layers.
+    ctx.translate(window.focusX ?? centerX, window.focusY ?? centerY);
+    ctx.scale(1 / scale, 1 / scale);
+    ctx.translate(-centerX, -centerY);
+    ctx.translate(window.dx, window.dy);
+    drawWebcamOverlay(
+      ctx,
+      frame.bitmap,
+      { width: frame.width, height: frame.height },
+      window.dw,
+      window.dh,
+      scale,
+      webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+      clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
+      options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
+      clip.appearance,
+      clip.name,
+    );
+    ctx.restore();
+  };
+
+  const drawVisualStack = (
+    ctx: CanvasRenderingContext2D,
+    window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX?: number; focusY?: number },
+    drawScreen: () => void,
+  ) => {
+    const layers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    for (const clip of layers.visualStack) {
+      if (clip.kind === 'screen') drawScreen();
+      else if (clip.kind === 'blur') drawBlur(ctx, clip, window);
+      else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
+      else drawVisual(ctx, clip, window);
+    }
+  };
+
   const drawComposition = (
     ctx: CanvasRenderingContext2D,
     window: { dx: number; dy: number; dw: number; dh: number },
@@ -120,12 +196,12 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   ) => {
     const timeMs = options.currentTime() * 1_000;
     const clips = activeClipsAt(options.composition(), timeMs)
-      .filter((clip) => clip.kind !== 'screen' && clip.kind !== 'webcam')
       .filter((clip) => (onlyClipId ? clip.id === onlyClipId : clip.kind === 'caption'))
       .sort((left, right) => right.order - left.order);
     for (const clip of clips) {
       if (clip.kind === 'caption') drawCaption(ctx, clip, timeMs);
-      else if (isVisualClip(clip)) drawVisual(ctx, clip, window);
+      else if (isBlurClip(clip)) drawBlur(ctx, clip, window);
+      else if (isVisualClip(clip) && clip.kind !== 'webcam') drawVisual(ctx, clip, window);
     }
   };
 
@@ -165,5 +241,5 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   };
 
   onUnmounted(dispose);
-  return { images, drawComposition, drawWebcamClips };
+  return { images, drawComposition, drawWebcamClips, drawVisualStack };
 }

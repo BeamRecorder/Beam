@@ -21,15 +21,6 @@ const BigSliderStub = defineComponent({
   },
 });
 
-const SwitchStub = defineComponent({
-  name: 'Switch',
-  props: { modelValue: { type: Boolean, default: false } },
-  emits: ['update:modelValue'],
-  setup(_, { emit }) {
-    return () => h('button', { class: 'switch-stub', onClick: () => emit('update:modelValue', true) }, 'switch');
-  },
-});
-
 const ColorPickerStub = defineComponent({
   name: 'ColorPicker',
   emits: ['update:modelValue'],
@@ -84,7 +75,6 @@ const mountPanel = (selectedClip: ReturnType<typeof clip> | null = clip()) =>
     global: {
       stubs: {
         BigSlider: BigSliderStub,
-        Switch: SwitchStub,
         ColorPicker: ColorPickerStub,
         ShadowDirectionGroup: ShadowDirectionStub,
         BorderAndFrameControls: FrameStub,
@@ -169,7 +159,7 @@ describe('ClipPropertiesPanel', () => {
     const wrapper = mountPanel(
       clip({ kind: 'audio', cornerRadius: 'full', clipTransform: undefined, isLinked: false }),
     );
-    expect(wrapper.find('.section-block').exists()).toBe(true);
+    expect(wrapper.find('.section-block').exists()).toBe(false);
     expect(wrapper.find('.preset-pill').exists()).toBe(false);
     expect(wrapper.findAll('.slider-stub')).toHaveLength(0);
     await wrapper.setProps({

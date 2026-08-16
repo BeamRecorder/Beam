@@ -94,6 +94,15 @@ const screenClip = {
   timelineDurationMs: 100,
 } as const;
 
+const webcamClip = {
+  id: 'webcam',
+  kind: 'webcam',
+  name: 'Webcam',
+  timelineStartMs: 0,
+  timelineDurationMs: 100,
+  enabled: false,
+} as const;
+
 const emptyBackgroundGroups: BackgroundMediaGroup[] = [];
 const composition: ClipComposition = createEmptyComposition();
 const noBackground: BackgroundValue | null = null;
@@ -182,6 +191,33 @@ describe('PropertiesPanel', () => {
       selectedClip: screenClip,
     });
     expect(wrapper.find('.clip-panel-stub').text()).toBe('video');
+  });
+
+  it('shows the selected item in the header and toggles it through the shared clip state', async () => {
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'clip', selectedClip: screenClip },
+      global,
+    });
+
+    expect(wrapper.get('.panel-title').text()).toBe('Video');
+    const toggle = wrapper.get('[role="switch"]');
+    expect(toggle.attributes('aria-label')).toBe('Video');
+    expect(toggle.attributes('aria-checked')).toBe('true');
+    await toggle.trigger('click');
+    expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);
+
+    await wrapper.setProps({ selectedClip: webcamClip });
+    expect(wrapper.get('.panel-title').text()).toBe('Webcam');
+    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('false');
+  });
+
+  it('uses the active tool name when no timeline clip is selected', async () => {
+    const wrapper = mount(PropertiesPanel, { props: baseProps, global });
+    expect(wrapper.get('.panel-title').text()).toBe('Canvas');
+    expect(wrapper.find('[role="switch"]').exists()).toBe(false);
+
+    await wrapper.setProps({ activeTab: 'cursor' });
+    expect(wrapper.get('.panel-title').text()).toBe('Cursor');
   });
 
   it('forwards child events through the parent contract', async () => {

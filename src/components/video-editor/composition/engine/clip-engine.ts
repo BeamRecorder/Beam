@@ -3,10 +3,12 @@ import {
   clipEndMs,
   emptyComposition,
   isAudioClip,
+  isBlurClip,
   isVisualClip,
   type Clip,
   type ClipAppearance,
   type ClipComposition,
+  type BlurClip,
   type MediaAsset,
   type NormalizedCrop,
   type NormalizedTransform,
@@ -97,7 +99,7 @@ export function validateComposition(composition: ClipComposition): void {
     if (
       !clip?.id ||
       clipIds.has(clip.id) ||
-      !['screen', 'video', 'image', 'webcam', 'audio', 'caption'].includes(clip.kind)
+      !['screen', 'video', 'image', 'webcam', 'blur', 'audio', 'caption'].includes(clip.kind)
     ) {
       throw new CompositionEngineError('Invalid clip identity.');
     }
@@ -124,7 +126,7 @@ export function validateComposition(composition: ClipComposition): void {
     if (Math.abs(expectedTimelineDuration - clip.timelineDurationMs) > 2) {
       throw new CompositionEngineError('Clip source and timeline durations disagree.');
     }
-    if (clip.kind !== 'caption' && !assetIds.has(clip.assetId))
+    if (clip.kind !== 'caption' && !isBlurClip(clip) && !assetIds.has(clip.assetId))
       throw new CompositionEngineError(`Missing asset for clip: ${clip.id}`);
     if (clip.kind === 'caption') {
       const caption = clip.caption;
@@ -138,12 +140,32 @@ export function validateComposition(composition: ClipComposition): void {
       if (!textCaption && !keyboardCaption) throw new CompositionEngineError('Invalid caption clip.');
     }
     if (
-      isVisualClip(clip) &&
+      (isVisualClip(clip) || isBlurClip(clip)) &&
       (![clip.transform.x, clip.transform.y, clip.transform.width, clip.transform.height].every(finite) ||
         clip.transform.width <= 0 ||
         clip.transform.height <= 0)
     ) {
       throw new CompositionEngineError('Invalid visual transform.');
+    }
+    if (isBlurClip(clip)) {
+      if (
+        !['rectangle', 'square', 'circle'].includes(clip.shape) ||
+        !['blur', 'frosted', 'pixelated', 'opaque'].includes(clip.mode)
+      )
+        throw new CompositionEngineError('Invalid blur effect.');
+      if (
+        ![clip.strength, clip.feather, clip.tintOpacity].every(finite) ||
+        clip.strength < 0 ||
+        clip.strength > 100 ||
+        clip.feather < 0 ||
+        clip.feather > 100 ||
+        (clip.cornerRadius !== undefined &&
+          (!finite(clip.cornerRadius) || clip.cornerRadius < 0 || clip.cornerRadius > 100)) ||
+        clip.tintOpacity < 0 ||
+        clip.tintOpacity > 100 ||
+        !/^#[\da-f]{6}$/i.test(clip.color)
+      )
+        throw new CompositionEngineError('Invalid blur effect settings.');
     }
     if (isAudioClip(clip) && (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200))
       throw new CompositionEngineError('Invalid clip volume.');
@@ -164,7 +186,7 @@ export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipC
   validateComposition({
     ...next,
     clips: next.clips.filter(
-      (clip) => clip.kind === 'caption' || next.assets.some((entry) => entry.id === clip.assetId),
+      (clip) => clip.kind === 'caption' || isBlurClip(clip) || next.assets.some((entry) => entry.id === clip.assetId),
     ),
   });
   return next;
@@ -341,7 +363,9 @@ export function deleteClip(composition: ClipComposition, clipId: string, grouped
   const ids = new Set(grouped ? targetIds(next, clipId) : [clipId]);
   byId(next, clipId);
   next.clips = normalizeOrders(normalizeGroups(next.clips.filter((clip) => !ids.has(clip.id))));
-  const usedAssets = new Set(next.clips.flatMap((clip) => (clip.kind === 'caption' ? [] : [clip.assetId])));
+  const usedAssets = new Set(
+    next.clips.flatMap((clip) => (clip.kind === 'caption' || isBlurClip(clip) ? [] : [clip.assetId])),
+  );
   next.assets = next.assets.filter((asset) => usedAssets.has(asset.id));
   validateComposition(next);
   return next;
@@ -362,6 +386,17 @@ export function setTransform(
   return updateClip(composition, clipId, (clip) => {
     if (clip.kind === 'audio') throw new CompositionEngineError('Audio clips do not have a transform.');
     return { ...clip, transform: { ...transform } };
+  });
+}
+
+export function setBlurEffect(
+  composition: ClipComposition,
+  clipId: string,
+  patch: Partial<Pick<BlurClip, 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'>>,
+): ClipComposition {
+  return updateClip(composition, clipId, (clip) => {
+    if (!isBlurClip(clip)) throw new CompositionEngineError('Only blur clips have blur settings.');
+    return { ...clip, ...patch };
   });
 }
 

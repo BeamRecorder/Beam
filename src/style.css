@@ -54,6 +54,8 @@
   --color-track-cursor-light: rgba(244, 63, 94, 0.15);
   --color-track-annotation: #f59e0b;
   --color-track-annotation-light: rgba(245, 158, 11, 0.15);
+  --color-track-blur: #0e7490;
+  --color-track-blur-highlight: #0891b2;
 
   /* Texts */
   --text-primary: #1e1e1e;
@@ -138,6 +140,10 @@
   --color-border: #2e2c28;
   --color-border-strong: #3d3a34;
   --color-border-dark: #3d3a34;
+
+  /* Track Colors */
+  --color-track-blur: #155e75;
+  --color-track-blur-highlight: #0e7490;
 
   /* Texts */
   --text-primary: #f4f4f5;

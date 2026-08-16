@@ -29,7 +29,10 @@ const { state } = vi.hoisted(() => ({
     moveCropDrag: vi.fn(),
     endCropDrag: vi.fn(),
     commitCrop: vi.fn(),
+    clipIdAt: vi.fn(),
+    selectVisualAt: vi.fn(),
     transformDraft: undefined as { value: unknown } | undefined,
+    transformSelectionViewportStyle: undefined as { value: unknown } | undefined,
     transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
     renderVisualStack: undefined as ((...args: unknown[]) => void) | undefined,
@@ -90,8 +93,10 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
   return {
     useLayerTransformAndCrop: () => {
       state.transformDraft = ref(null);
+      state.transformSelectionViewportStyle = ref({ left: '0px', top: '0px', width: '800px', height: '450px' });
       state.transformResizeCorners = ref(undefined);
       return {
+        transformSelectionViewportStyle: state.transformSelectionViewportStyle,
         transformHandleStyle: ref({ left: '1px', top: '2px', width: '100px', height: '80px' }),
         cropContainerStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
         cropOverlayStyle: ref({ left: '3px', top: '4px', width: '90px', height: '70px' }),
@@ -105,7 +110,8 @@ vi.mock('../composables/useLayerTransformAndCrop', async () => {
         moveCropDrag: state.moveCropDrag,
         endCropDrag: state.endCropDrag,
         commitCrop: state.commitCrop,
-        selectVisualAt: vi.fn(),
+        clipIdAt: state.clipIdAt,
+        selectVisualAt: state.selectVisualAt,
       };
     },
   };
@@ -332,6 +338,33 @@ describe('EditorCanvas', () => {
     expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
   });
 
+  it('does not flash a loading skeleton when an already rendered screen track is toggled', async () => {
+    let frameAvailable = true;
+    const mounted = mountEditor({
+      frameFor: (clipId: string) => (clipId === 'screen' && frameAvailable ? frame('screen') : null),
+    });
+    await nextTick();
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+
+    const disabledComposition = composition();
+    disabledComposition.clips = disabledComposition.clips.map((clip) =>
+      clip.kind === 'screen' ? { ...clip, enabled: false } : clip,
+    );
+    frameAvailable = false;
+    await mounted.setProps({
+      composition: disabledComposition,
+      playbackState: 'loading',
+      frameVersion: 1,
+    });
+    await nextTick();
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+    expect(mounted.find('.preview-frame').exists()).toBe(true);
+
+    await mounted.setProps({ composition: composition(), frameVersion: 2 });
+    await nextTick();
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+  });
+
   it('draws through the camera window and exposes transform and crop interactions', async () => {
     const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1, focusX: 400, focusY: 225 };
     state.drawVideoWindow.mockReturnValue(bounds);
@@ -371,6 +404,20 @@ describe('EditorCanvas', () => {
     expect(state.endCropDrag).toHaveBeenCalled();
     expect(state.commitCrop).toHaveBeenCalled();
     expect(mounted.emitted('done:crop')).toHaveLength(1);
+  });
+
+  it('raycasts layers above an already selected recording before starting its drag', async () => {
+    const mounted = mountEditor({ selectedTransformClip: screen() });
+    await flushPromises();
+    state.clipIdAt.mockReturnValueOnce('blur');
+
+    await mounted.find('.webcam-selection').trigger('pointerdown', { button: 0 });
+    expect(mounted.emitted('select:clip')).toContainEqual(['blur']);
+    expect(state.beginTransformDrag).not.toHaveBeenCalled();
+
+    state.clipIdAt.mockReturnValueOnce('screen');
+    await mounted.find('.webcam-selection').trigger('pointerdown', { button: 0 });
+    expect(state.beginTransformDrag).toHaveBeenCalledWith(expect.anything(), 'move');
   });
 
   it('draws global visuals with the active camera bounds', async () => {

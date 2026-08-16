@@ -4,6 +4,7 @@ const props = withDefaults(
     modelValue: boolean;
     disabled?: boolean;
     label?: string;
+    ariaLabel?: string;
   }>(),
   {
     disabled: false,
@@ -27,6 +28,7 @@ const toggle = () => {
       type="button"
       role="switch"
       :aria-checked="modelValue"
+      :aria-label="ariaLabel || undefined"
       :disabled="disabled"
       class="switch-button"
       :class="{ 'is-checked': modelValue }"

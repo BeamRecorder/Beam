@@ -235,6 +235,54 @@ test('round-trips text and keyboard captions in the canonical composition schema
   assert.deepEqual(normalized.clips[1].caption, keyboardCaption());
 });
 
+test('round-trips an assetless blur overlay with its effect settings', () => {
+  const normalized = normalizeComposition({
+    schemaVersion: 3,
+    assets: [],
+    keyboardCaptionSessions: [],
+    clips: [
+      {
+        id: 'blur',
+        kind: 'blur',
+        name: 'Blur',
+        timelineStartMs: 500,
+        timelineDurationMs: 5_000,
+        sourceInMs: 0,
+        sourceDurationMs: 5_000,
+        playbackRate: 1,
+        enabled: true,
+        order: 0,
+        transform: { x: 0.2, y: 0.3, width: 0.4, height: 0.25 },
+        shape: 'circle',
+        mode: 'pixelated',
+        strength: 80,
+        color: '#123456',
+      },
+    ],
+  });
+  assert.deepEqual(normalized.clips[0], {
+    id: 'blur',
+    kind: 'blur',
+    assetId: '',
+    name: 'Blur',
+    timelineStartMs: 500,
+    timelineDurationMs: 5_000,
+    sourceInMs: 0,
+    sourceDurationMs: 5_000,
+    playbackRate: 1,
+    enabled: true,
+    order: 0,
+    transform: { x: 0.2, y: 0.3, width: 0.4, height: 0.25 },
+    shape: 'circle',
+    mode: 'pixelated',
+    strength: 80,
+    feather: 0,
+    cornerRadius: 0,
+    tintOpacity: 0,
+    color: '#123456',
+  });
+});
+
 test('rejects malformed keyboard captions and invalid keyboard session markers', () => {
   const invalidCaptions = [
     keyboardCaption({ steps: [] }),

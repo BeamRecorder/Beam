@@ -2,7 +2,6 @@
 import { computed } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import DeleteItem from '~/ui/button/DeleteItem.vue';
-import Switch from '~/ui/switch/Switch.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('AudioClipPropertiesPanel');
@@ -13,7 +12,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:volume', value: number): void;
-  (e: 'update:enabled', value: boolean): void;
   (e: 'delete'): void;
 }>();
 
@@ -39,12 +37,6 @@ const volume = computed(() => props.clip?.volume ?? 100);
           :format-value="(value) => `${Math.round(value)}%`"
           @update:model-value="emit('update:volume', $event)"
         />
-      </div>
-      <div class="section-block">
-        <div class="prop-row">
-          <span class="prop-label">{{ t('enabled') }}</span>
-          <Switch :model-value="clip.enabled ?? true" @update:model-value="emit('update:enabled', $event)" />
-        </div>
       </div>
       <div class="danger-zone">
         <DeleteItem :label="t('deleteAudioClip')" @click="emit('delete')" />
@@ -75,12 +67,6 @@ const volume = computed(() => props.clip?.volume ?? 100);
   font-size: 12px;
   font-weight: 700;
 }
-.prop-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.prop-label,
 .empty-desc {
   color: var(--text-secondary);
   font-size: 12px;

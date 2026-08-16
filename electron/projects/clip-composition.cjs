@@ -7,7 +7,7 @@ const schemaVersion = 3;
 const previousSchemaVersion = 2;
 const legacySchemaVersion = 1;
 const mediaKinds = new Set(['video', 'image', 'audio']);
-const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'audio', 'caption']);
+const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'blur', 'audio', 'caption']);
 const keyboardModifiers = new Set(['control', 'shift', 'alt', 'meta']);
 const keyboardPlatforms = new Set(['windows', 'macos', 'linux']);
 const keyboardKeys = new Set([
@@ -305,6 +305,35 @@ function normalizeComposition(value) {
         ...(clip.transform ? { transform: rectangle(clip.transform, 'Transformation') } : {}),
         ...(typeof clip.isAiGenerated === 'boolean' ? { isAiGenerated: clip.isAiGenerated } : {}),
       };
+    if (clip.kind === 'blur') {
+      const effectColor = color(clip.color, null);
+      if (
+        !['rectangle', 'square', 'circle'].includes(clip.shape) ||
+        !['blur', 'frosted', 'pixelated', 'opaque'].includes(clip.mode) ||
+        !finite(clip.strength) ||
+        clip.strength < 0 ||
+        clip.strength > 100 ||
+        (clip.feather !== undefined && (!finite(clip.feather) || clip.feather < 0 || clip.feather > 100)) ||
+        (clip.cornerRadius !== undefined &&
+          (!finite(clip.cornerRadius) || clip.cornerRadius < 0 || clip.cornerRadius > 100)) ||
+        (clip.tintOpacity !== undefined &&
+          (!finite(clip.tintOpacity) || clip.tintOpacity < 0 || clip.tintOpacity > 100)) ||
+        effectColor === null
+      )
+        throw new Error('Effet de flou invalide');
+      return {
+        ...common,
+        assetId: '',
+        transform: rectangle(clip.transform, 'Transformation'),
+        shape: clip.shape,
+        mode: clip.mode,
+        strength: Math.max(0, Math.min(100, clip.strength)),
+        feather: clip.feather === undefined ? 0 : Math.max(0, Math.min(100, clip.feather)),
+        cornerRadius: clip.cornerRadius === undefined ? 0 : Math.max(0, Math.min(100, clip.cornerRadius)),
+        tintOpacity: clip.tintOpacity === undefined ? 0 : Math.max(0, Math.min(100, clip.tintOpacity)),
+        color: effectColor,
+      };
+    }
     if (!id(clip.assetId) || !assetIds.has(clip.assetId)) throw new Error('Média du clip introuvable');
     if (clip.kind === 'audio')
       return {

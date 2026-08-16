@@ -388,6 +388,7 @@ describe('HUD', () => {
     expect(wrapper.find('.hud-body').exists()).toBe(false);
     expect(wrapper.get('.editor-preparing-hud').text().replaceAll('\u00a0', ' ')).toContain('Loading the timeline');
     expect(wrapper.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('65');
+    expect(capture.setInteractive).toHaveBeenCalledWith(true);
   });
 
   it('switches to window capture, handles device choices and preference shortcuts', async () => {

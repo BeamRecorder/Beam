@@ -8,6 +8,7 @@ import type { ZoomElement } from '../zoom/zoom-types';
 import type { MediaError, MediaFrame } from '~/media/shared';
 import type {
   CaptionClip,
+  BlurClip,
   ClipComposition,
   NormalizedCrop,
   NormalizedTransform,
@@ -15,7 +16,7 @@ import type {
 } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from './output-canvas';
 
-export type TransformClip = VisualClip | CaptionClip;
+export type TransformClip = VisualClip | BlurClip | CaptionClip;
 
 export interface EditorCanvasProps {
   isPlaying: boolean;

@@ -1,15 +1,16 @@
 import { computed, ref } from 'vue';
-import { Camera, Image as ImageIcon, Video } from '@lucide/vue';
+import { Camera, CircleDashed, Image as ImageIcon, Video } from '@lucide/vue';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import {
   isAudioClip,
   isCaptionClip,
+  isCompositingClip,
   isKeyboardCaptionClip,
   isTextCaptionClip,
-  isVisualClip,
   type AudioClip,
   type Clip,
   type MediaAsset,
+  type BlurClip,
   type VisualClip,
 } from '~/media/shared/composition-types';
 import { calculateSnapThresholdMs, collectSnapTargets, snapSpan, snapValue } from './timeline-snap';
@@ -34,7 +35,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     return Math.max(1_000, Math.round(Math.max(raw, preview)));
   });
   const orderedClips = computed(() => [...props.composition.clips].sort((left, right) => left.order - right.order));
-  const baseVisualClips = computed(() => orderedClips.value.filter(isVisualClip));
+  const baseVisualClips = computed(() => orderedClips.value.filter(isCompositingClip));
   const visualOrderPreview = ref<string[] | null>(null);
   const visualClips = computed(() => {
     const clips = baseVisualClips.value;
@@ -62,7 +63,8 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     orderedClips.value.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.role === 'imported'),
   );
   const assets = computed(() => new Map(props.composition.assets.map((asset: MediaAsset) => [asset.id, asset])));
-  const assetFor = (clip: Clip) => (isCaptionClip(clip) ? null : (assets.value.get(clip.assetId) ?? null));
+  const assetFor = (clip: Clip) =>
+    isCaptionClip(clip) || clip.kind === 'blur' ? null : (assets.value.get(clip.assetId) ?? null);
 
   const activeSnapTimeMs = ref<number | null>(null);
   const {
@@ -360,10 +362,16 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const enabled = !clips.some((clip) => clip.enabled);
     for (const clip of clips) if (clip.enabled !== enabled) emit('toggle:clip', clip.id);
   };
-  const iconForVisual = (clip: VisualClip) =>
-    clip.kind === 'image' ? ImageIcon : clip.kind === 'webcam' ? Camera : Video;
-  const labelForVisual = (clip: VisualClip) =>
-    clip.kind === 'screen' ? t('video') : clip.kind === 'webcam' ? t('webcam') : clip.name;
+  const iconForVisual = (clip: VisualClip | BlurClip) =>
+    clip.kind === 'blur' ? CircleDashed : clip.kind === 'image' ? ImageIcon : clip.kind === 'webcam' ? Camera : Video;
+  const labelForVisual = (clip: VisualClip | BlurClip) =>
+    clip.kind === 'blur'
+      ? t('blur')
+      : clip.kind === 'screen'
+        ? t('video')
+        : clip.kind === 'webcam'
+          ? t('webcam')
+          : clip.name;
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
   const draggedClipId = ref<string | null>(null);

@@ -462,7 +462,17 @@ watch(activeTab, () => {
 
 watch(
   () => props.preparingEditor,
-  () => updateWindowSize(),
+  (preparing) => {
+    updateWindowSize();
+    if (!props.embedded && preparing) {
+      // The HUD is normally click-through until the renderer sees a pointer
+      // over a control. During editor loading the card changes underneath a
+      // stationary pointer, so no mousemove may arrive for the Close button.
+      // Make the temporary loading card interactive immediately.
+      capture.setInteractive(true);
+    }
+  },
+  { immediate: true },
 );
 
 watch(selectedScreenId, () => {

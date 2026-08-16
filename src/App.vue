@@ -165,6 +165,13 @@ onMounted(() => {
     void startRecordingFromEditor(configuration);
   });
   removeEditorLoadingListener = capture.onEditorLoadingProgress((progress) => {
+    if (progress.stage === 'ready') {
+      // The main process also hides the native HUD after presenting the
+      // editor. Let the HUD close itself from the same ready signal as a
+      // second idempotent safeguard if the native hide races the renderer.
+      capture.setWindowVisible(false);
+      return;
+    }
     if (isPreparingEditor.value) editorLoadingProgress.value = progress;
   });
   removeTrayStopListener =

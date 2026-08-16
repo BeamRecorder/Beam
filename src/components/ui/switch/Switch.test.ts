@@ -8,6 +8,11 @@ describe('Switch', () => {
     expect(wrapper.get('[role=switch]').attributes('aria-checked')).toBe('true');
     expect(wrapper.text()).toContain('System audio');
   });
+  it('supports an accessible name without rendering a visible label', () => {
+    const wrapper = mount(Switch, { props: { modelValue: false, ariaLabel: 'Blur' } });
+    expect(wrapper.get('[role=switch]').attributes('aria-label')).toBe('Blur');
+    expect(wrapper.text()).toBe('');
+  });
   it('toggles enabled switches', async () => {
     const wrapper = mount(Switch, { props: { modelValue: false } });
     await wrapper.get('.switch-container').trigger('click');

@@ -23,7 +23,10 @@ use super::compatibility::compatible_settings;
 use crate::{
     CaptureError,
     model::{ScreenRegion, SourceId},
-    screen::{ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest},
+    screen::{
+        PixelCrop, ScreenCaptureMetrics, ScreenConsumer, ScreenOpenRequest, even_dimension,
+        normalize_crop,
+    },
     session::StartGate,
 };
 
@@ -35,14 +38,14 @@ struct HandlerFlags {
     fps: u32,
     metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
-    region: Option<ScreenRegion>,
+    crop: Option<PixelCrop>,
 }
 
 struct CaptureHandler {
     encoder: Option<VideoEncoder>,
     metrics: Arc<ScreenCaptureMetrics>,
     start_gate: Arc<StartGate>,
-    region: Option<ScreenRegion>,
+    crop: Option<PixelCrop>,
 }
 
 impl CaptureHandler {
@@ -77,7 +80,7 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             encoder: Some(encoder),
             metrics: flags.metrics,
             start_gate: flags.start_gate,
-            region: flags.region,
+            crop: flags.crop,
         })
     }
 
@@ -93,18 +96,16 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             .encoder
             .as_mut()
             .ok_or_else(|| "video encoder was finalized".to_owned())?;
-        let result = if let Some(region) = self.region {
-            let (start_x, start_y, end_x, end_y) = region
-                .pixel_rect(frame.width(), frame.height())
-                .map_err(|error| error.to_string())?;
-            let crop_width = end_x - start_x;
-            let crop_height = end_y - start_y;
+        let result = if let Some(crop) = self.crop {
+            if crop.end_x > frame.width() || crop.end_y > frame.height() {
+                return Err("captured frame is smaller than the configured screen crop".into());
+            }
             let timestamp = frame
                 .timestamp()
                 .map_err(|error| error.to_string())?
                 .Duration;
             let cropped = frame
-                .buffer_crop(start_x, start_y, end_x, end_y)
+                .buffer_crop(crop.start_x, crop.start_y, crop.end_x, crop.end_y)
                 .map_err(|error| error.to_string())?;
             let mut compact = Vec::new();
             let bytes = cropped.as_nopadding_buffer(&mut compact);
@@ -112,7 +113,7 @@ impl GraphicsCaptureApiHandler for CaptureHandler {
             // Graphics Capture gives us the crop in the normal top-to-bottom
             // screen order. The direct-frame path performs this conversion
             // internally; do it explicitly for cropped frames as well.
-            let bottom_up = flip_bgra_rows(bytes, crop_width, crop_height);
+            let bottom_up = flip_bgra_rows(bytes, crop.width(), crop.height());
             encoder.send_frame_buffer(&bottom_up, timestamp)
         } else {
             encoder.send_frame(frame)
@@ -310,11 +311,10 @@ where
         start_gate,
     } = config;
     let metrics = Arc::new(ScreenCaptureMetrics::default());
-    let (width, height) = region.map_or(size, |crop| {
-        crop.pixel_rect(size.0, size.1)
-            .map(|(left, top, right, bottom)| (right - left, bottom - top))
-            .unwrap_or((0, 0))
-    });
+    let crop = region
+        .map(|region| normalize_crop(region, size.0, size.1))
+        .transpose()?;
+    let (width, height) = crop.map_or(size, |crop| (crop.width(), crop.height()));
     let width = even_dimension(width);
     let height = even_dimension(height);
     if width == 0 || height == 0 {
@@ -330,7 +330,7 @@ where
         fps,
         metrics: metrics.clone(),
         start_gate,
-        region,
+        crop,
     };
     let compatibility = compatible_settings(exclude_cursor, fps);
     let settings = Settings::new(
@@ -384,14 +384,13 @@ fn backend_error(error: impl std::fmt::Display) -> CaptureError {
     CaptureError::Backend(format!("Windows Graphics Capture failed: {error}"))
 }
 
-#[inline]
-pub(crate) fn even_dimension(val: u32) -> u32 {
-    (val & !1).max(2)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{even_dimension, flip_bgra_rows};
+    #![allow(clippy::expect_used)]
+
+    use super::flip_bgra_rows;
+    use crate::model::ScreenRegion;
+    use crate::screen::normalize_crop;
 
     #[test]
     fn flips_bgra_rows_from_top_to_bottom() {
@@ -403,10 +402,32 @@ mod tests {
     }
 
     #[test]
-    fn rounds_odd_dimensions_to_even() {
-        assert_eq!(even_dimension(1237), 1236);
-        assert_eq!(even_dimension(851), 850);
-        assert_eq!(even_dimension(1), 2);
-        assert_eq!(even_dimension(1920), 1920);
+    fn normalized_dimensions_are_the_row_dimensions_used_for_bgra_conversion() {
+        let crop = normalize_crop(
+            ScreenRegion {
+                x: 0.1,
+                y: 0.1,
+                width: 0.3,
+                height: 0.4,
+            },
+            10,
+            10,
+        )
+        .expect("valid crop");
+        let source = [
+            1, 2, 3, 4, 5, 6, 7, 8, // row 0
+            9, 10, 11, 12, 13, 14, 15, 16, // row 1
+            17, 18, 19, 20, 21, 22, 23, 24, // row 2
+            25, 26, 27, 28, 29, 30, 31, 32, // row 3
+        ];
+        assert_eq!(
+            flip_bgra_rows(&source, crop.width(), crop.height()),
+            [
+                25, 26, 27, 28, 29, 30, 31, 32, // row 3
+                17, 18, 19, 20, 21, 22, 23, 24, // row 2
+                9, 10, 11, 12, 13, 14, 15, 16, // row 1
+                1, 2, 3, 4, 5, 6, 7, 8, // row 0
+            ]
+        );
     }
 }
