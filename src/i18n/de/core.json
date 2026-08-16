@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "Erscheinungsbild",
     "subtitle": "Themes, Farben, Eckenradius und Oberflächen anpassen",
+    "customization": "Anpassung",
     "themeMode": "Design-Modus",
     "light": "Hell",
     "dark": "Dunkel",

@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "外觀",
     "subtitle": "自訂主題、色彩、圓角與面板風格",
+    "customization": "自訂",
     "themeMode": "主題模式",
     "light": "淺色",
     "dark": "深色",

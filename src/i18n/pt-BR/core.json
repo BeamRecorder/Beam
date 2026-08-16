@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "Aparência",
     "subtitle": "Personalize temas, cores, raio dos cantos e superfícies",
+    "customization": "Personalização",
     "themeMode": "Modo do tema",
     "light": "Claro",
     "dark": "Escuro",

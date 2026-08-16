@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "Wygląd",
     "subtitle": "Dostosuj motywy, kolory, promień zaokrąglenia i powierzchnie",
+    "customization": "Personalizacja",
     "themeMode": "Tryb motywu",
     "light": "Jasny",
     "dark": "Ciemny",

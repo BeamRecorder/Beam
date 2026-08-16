@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "外観",
     "subtitle": "テーマ、カラー、角丸、サーフェスをカスタマイズ",
+    "customization": "カスタマイズ",
     "themeMode": "テーマモード",
     "light": "ライト",
     "dark": "ダーク",

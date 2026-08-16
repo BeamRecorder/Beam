@@ -26,7 +26,10 @@ const props = withDefaults(
         'is-divided': props.divided,
       },
     ]"
-    :style="props.columns ? { '--button-group-columns': props.columns } : undefined"
+    :style="{
+      '--button-group-inner-radius': 'calc(var(--radius-lg) - 3px)',
+      ...(props.columns ? { '--button-group-columns': props.columns } : {}),
+    }"
   >
     <slot />
   </div>
@@ -77,13 +80,14 @@ const props = withDefaults(
   width: 100% !important;
   min-width: 0;
   overflow: hidden;
+  border-radius: var(--button-group-inner-radius) !important;
 }
 
 .btn-group.size-xs :deep(.btn.btn-icon-only) {
   width: 22px !important;
   height: 22px !important;
   min-width: 22px !important;
-  border-radius: 8px !important;
+  border-radius: var(--button-group-inner-radius) !important;
 }
 
 .btn-group.size-xs :deep(.btn-icon) {

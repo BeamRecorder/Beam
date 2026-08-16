@@ -11,6 +11,7 @@ describe('Button', () => {
     expect(wrapper.get('button').attributes('type')).toBe('submit');
     expect(wrapper.text()).toContain('Delete');
     expect(wrapper.classes()).toContain('btn-block');
+    expect(wrapper.get('button').classes()).toContain('btn-block');
     expect(wrapper.get('button').classes()).toContain('btn-danger');
   });
   it('emits clicks when it is enabled', async () => {

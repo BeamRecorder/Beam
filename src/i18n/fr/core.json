@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "Apparence",
     "subtitle": "Personnalisez thèmes, couleurs, rayon de courbure et surfaces",
+    "customization": "Personnalisation",
     "themeMode": "Mode du thème",
     "light": "Clair",
     "dark": "Sombre",

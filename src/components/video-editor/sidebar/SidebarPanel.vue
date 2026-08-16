@@ -41,20 +41,20 @@ const menuItems = computed(() => [
           <span class="nav-label">{{ item.label }}</span>
         </button>
       </nav>
-
-      <div class="sidebar-footer">
-        <button
-          class="nav-btn footer-btn"
-          :class="{ active: activeTab === 'settings' }"
-          @click="emit('select-tab', 'settings')"
-          :title="t('settings')"
-        >
-          <Settings class="nav-icon" />
-          <span class="nav-label">{{ t('settings') }}</span>
-          <UpdateAvailableBadge />
-        </button>
-      </div>
     </ScrollShadow>
+
+    <div class="sidebar-footer">
+      <button
+        class="nav-btn footer-btn"
+        :class="{ active: activeTab === 'settings' }"
+        @click="emit('select-tab', 'settings')"
+        :title="t('settings')"
+      >
+        <Settings class="nav-icon" />
+        <span class="nav-label">{{ t('settings') }}</span>
+        <UpdateAvailableBadge />
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -67,7 +67,7 @@ const menuItems = computed(() => [
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 12px 6px 0;
+  padding: 12px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -84,7 +84,7 @@ const menuItems = computed(() => [
   flex-direction: column;
 }
 
-.sidebar-viewport {
+:deep(.sidebar-viewport) {
   width: 100%;
   height: 100%;
   display: flex;
@@ -97,26 +97,22 @@ const menuItems = computed(() => [
   box-sizing: border-box;
 }
 
-.sidebar-viewport::-webkit-scrollbar {
+:deep(.sidebar-viewport::-webkit-scrollbar) {
   width: 5px;
 }
 
-.sidebar-viewport::-webkit-scrollbar-track {
+:deep(.sidebar-viewport::-webkit-scrollbar-track) {
   background: transparent;
   margin-block: 10px;
 }
 
-.sidebar-viewport::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+:deep(.sidebar-viewport::-webkit-scrollbar-thumb) {
+  background: var(--color-border-strong);
   border-radius: 9999px;
   transition: background 0.2s ease-in-out;
 }
 
-:root.dark .sidebar-viewport::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.sidebar-viewport::-webkit-scrollbar-thumb:hover {
+:deep(.sidebar-viewport::-webkit-scrollbar-thumb:hover) {
   background: var(--color-primary, #ff5a1f) !important;
 }
 
@@ -129,10 +125,9 @@ const menuItems = computed(() => [
 }
 
 .sidebar-footer {
-  margin-top: auto;
   width: 100%;
   flex-shrink: 0;
-  padding-top: 4px;
+  padding-top: 8px;
 }
 
 .nav-btn {

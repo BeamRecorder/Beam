@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "Appearance",
     "subtitle": "Customize themes, colors, radius, and surface styling",
+    "customization": "Customization",
     "themeMode": "Theme Mode",
     "light": "Light",
     "dark": "Dark",

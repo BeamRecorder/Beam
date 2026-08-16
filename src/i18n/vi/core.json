@@ -412,6 +412,7 @@
   "AppearanceSettings": {
     "title": "Giao diện",
     "subtitle": "Tùy chỉnh chủ đề, màu sắc, bo góc và bề mặt",
+    "customization": "Tùy chỉnh",
     "themeMode": "Chế độ giao diện",
     "light": "Sáng",
     "dark": "Tối",
