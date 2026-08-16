@@ -81,6 +81,14 @@ describe('internationalization', () => {
     }
   });
 
+  it('keeps the blur track label available in every supported locale', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      expect(i18n.global.te('TimelineTracks.blur', locale), `${locale}: missing TimelineTracks.blur`).toBe(true);
+      expect(i18n.global.t('TimelineTracks.blur')).not.toBe('TimelineTracks.blur');
+    }
+  });
+
   it('keeps the preferences About and Linux interaction catalog complete', () => {
     const keys = [
       'about',
