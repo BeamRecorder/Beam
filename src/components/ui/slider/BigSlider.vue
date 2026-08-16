@@ -198,11 +198,12 @@ onBeforeUnmount(endInteraction);
 }
 
 .big-slider-label {
+  font-family: var(--font-sans);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   pointer-events: none;
 }
 
@@ -248,10 +249,12 @@ onBeforeUnmount(endInteraction);
 }
 
 .big-slider-value {
+  font-family: var(--font-sans);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
   color: var(--text-primary);
-  font-family: monospace;
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;
@@ -282,18 +285,11 @@ onBeforeUnmount(endInteraction);
 
 .slider-inline-input {
   width: 80px !important;
-}
-
-:deep(.slider-inline-input .input-wrapper) {
-  height: 28px !important;
-  padding: 0 6px !important;
-}
-
-:deep(.slider-inline-input .input-element) {
+  font-family: var(--font-sans) !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: 'tnum' !important;
   font-size: 12px !important;
-  font-weight: 700 !important;
-  font-family: monospace !important;
-  text-align: right;
+  font-weight: 600 !important;
 }
 
 .big-slider-input {
