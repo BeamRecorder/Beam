@@ -8,6 +8,7 @@ import WelcomeStep from './components/onboarding/WelcomeStep.vue';
 import TourStep from './components/onboarding/TourStep.vue';
 import SetupStep from './components/onboarding/SetupStep.vue';
 import CommunityStep from './components/onboarding/CommunityStep.vue';
+import OnboardingBackdrop from './components/onboarding/OnboardingBackdrop.vue';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 
 const { t } = useTranslate('Onboarding');
@@ -98,11 +99,7 @@ onUnmounted(() => {
 
 <template>
   <div class="onboarding-app">
-    <!-- Ambient Background Themed Layer -->
-    <div class="onboarding-backdrop">
-      <div class="ambient-glow top-glow"></div>
-      <div class="ambient-glow bottom-glow"></div>
-    </div>
+    <OnboardingBackdrop />
 
     <!-- Custom Native Titlebar -->
     <header class="onboarding-titlebar">
@@ -182,40 +179,6 @@ onUnmounted(() => {
   user-select: none;
   background: var(--color-bg-app, #141310);
   color: var(--text-primary);
-}
-
-.onboarding-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  background: var(--color-bg-app);
-}
-
-.ambient-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  opacity: 0.14;
-}
-
-.top-glow {
-  top: -120px;
-  left: 20%;
-  width: 480px;
-  height: 360px;
-  background: var(--color-primary);
-}
-
-.bottom-glow {
-  bottom: -100px;
-  right: 15%;
-  width: 420px;
-  height: 300px;
-  background: var(--color-primary);
-  opacity: 0.08;
 }
 
 .onboarding-titlebar {

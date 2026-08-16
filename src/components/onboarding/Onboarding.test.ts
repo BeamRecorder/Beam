@@ -94,6 +94,7 @@ import WelcomeStep from './WelcomeStep.vue';
 import TourStep from './TourStep.vue';
 import SetupStep from './SetupStep.vue';
 import CommunityStep from './CommunityStep.vue';
+import OnboardingBackdrop from './OnboardingBackdrop.vue';
 import OnboardingApp from '../../OnboardingApp.vue';
 import { i18n, setCurrentLocale } from '../../i18n';
 
@@ -256,6 +257,9 @@ describe('Onboarding Components', () => {
     });
 
     expect(wrapper.findComponent(WelcomeStep).exists()).toBe(true);
+    expect(wrapper.findComponent(OnboardingBackdrop).exists()).toBe(true);
+    expect(wrapper.get('.onboarding-gradient').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.find('.ambient-glow').exists()).toBe(false);
     const dismissBtn = wrapper.find('.dismiss-btn');
     await dismissBtn.trigger('click');
     expect(mockCapture.closeOnboarding).toHaveBeenCalled();
