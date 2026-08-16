@@ -57,17 +57,14 @@ describe('SettingsPanel', () => {
     capture.getUpdateState.mockResolvedValue({ currentVersion: '1.2.3' });
   });
 
-  it('changes theme and locale through the stores', async () => {
+  it('renders appearance controls and changes locale through the store', async () => {
     const wrapper = mount(SettingsPanel, {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
     });
-    const themeButtons = wrapper.findAll('.theme-button-group button');
-    expect(themeButtons).toHaveLength(3);
-    await themeButtons[1].trigger('click');
-    await themeButtons[2].trigger('click');
-    await wrapper.get('.language-select').trigger('click');
+    expect(wrapper.find('.appearance-settings').exists()).toBe(true);
+    expect(wrapper.find('.theme-mode-select').exists()).toBe(true);
+    await wrapper.findAll('.language-select').at(-1)!.trigger('click');
 
-    expect(capture.updatePreferences).toHaveBeenLastCalledWith({ theme: 'system' });
     expect(localStorage.getItem('locale')).toBe('fr');
   });
 
@@ -76,7 +73,7 @@ describe('SettingsPanel', () => {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
     });
     expect(wrapper.find('.update-controls-stub').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Theme');
+    expect(wrapper.text()).toContain('Theme Mode');
   });
 
   it('opens the community links from the socials section', async () => {

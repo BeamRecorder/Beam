@@ -11,12 +11,14 @@ import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/outp
 import { compositionDurationMs } from '~/media/shared';
 import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-settings';
 import { compositionPlaybackSignature } from './composition-playback-signature';
+import { useToastStore } from '~/ui/toast/toastStore';
 
 export function useVideoEditor(options: {
   project: Ref<CaptureProject | null | undefined>;
   editorData: Ref<ProjectEditorData | null | undefined>;
 }) {
   const { project, editorData } = options;
+  const toastStore = useToastStore();
   const activeTab = ref('canvas');
   const systemVolume = ref(100);
   const micVolume = ref(100);
@@ -99,17 +101,28 @@ export function useVideoEditor(options: {
     };
   });
 
+  let editorLoad = 0;
   watch(
     () => project.value?.id,
     async (id) => {
       if (!id) return;
+      const request = ++editorLoad;
       try {
         await editorState.load(id);
+        if (request !== editorLoad) return;
         compositionState.synchronizeRecording();
         zoomState.ensureAutomaticZooms();
         editorState.scheduleSave();
-      } catch {
-        console.error('Failed to load editor state.');
+      } catch (err: unknown) {
+        if (request !== editorLoad) return;
+        console.error('Failed to load editor state.', err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        const errorStack = err instanceof Error && err.stack ? err.stack : errorMessage;
+        toastStore.error(`Failed to load editor state: ${errorMessage}`, 0, {
+          label: 'Copy error',
+          copyText: errorStack,
+          detail: errorMessage,
+        });
       }
     },
     { immediate: true },

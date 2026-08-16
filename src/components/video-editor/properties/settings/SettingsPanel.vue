@@ -1,22 +1,20 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue';
 import Button from '~/ui/button/Button.vue';
-import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import HUD from '~/components/hud/HUD.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import { Sun, Moon, Monitor, Code, Video, Copy, Check, Terminal } from '@lucide/vue';
-import { useThemeStore } from '~/stores/theme';
+import { Code, Video, Copy, Check, Terminal } from '@lucide/vue';
 import { useLocaleStore } from '~/stores/locale';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
+import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
 import { localeOptions } from '~/i18n/locales';
 
 const { t } = useTranslate('SettingsPanel');
-const themeStore = useThemeStore();
 const localeStore = useLocaleStore();
 
 const toggleDevTools = () => {
@@ -94,36 +92,7 @@ const copySystemInfo = async () => {
 <template>
   <div class="options-group">
     <div class="prop-item">
-      <span class="prop-label">{{ t('themeMode') }}</span>
-      <ButtonGroup class="theme-button-group">
-        <Button
-          :class="{ active: themeStore.theme === 'light' }"
-          variant="tab"
-          size="sm"
-          @click="themeStore.theme = 'light'"
-        >
-          <template #icon><Sun class="btn-icon" /></template>
-          {{ t('light') }}
-        </Button>
-        <Button
-          :class="{ active: themeStore.theme === 'dark' }"
-          variant="tab"
-          size="sm"
-          @click="themeStore.theme = 'dark'"
-        >
-          <template #icon><Moon class="btn-icon" /></template>
-          {{ t('dark') }}
-        </Button>
-        <Button
-          :class="{ active: themeStore.theme === 'system' }"
-          variant="tab"
-          size="sm"
-          @click="themeStore.theme = 'system'"
-        >
-          <template #icon><Monitor class="btn-icon" /></template>
-          {{ t('system') }}
-        </Button>
-      </ButtonGroup>
+      <AppearanceSettings :show-title="false" />
     </div>
 
     <Divider spacing="xs" />
