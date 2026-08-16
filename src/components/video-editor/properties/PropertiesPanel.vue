@@ -17,6 +17,7 @@ import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurP
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
+import Switch from '~/ui/switch/Switch.vue';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import type {
   BlurEffectMode,
@@ -34,6 +35,8 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
 
 const { t } = useTranslate('PropertiesPanel');
+const { t: tSidebar } = useTranslate('SidebarPanel');
+const { t: tTimeline } = useTranslate('TimelineTracks');
 export interface SelectedClipProperties {
   id: string;
   kind: string;
@@ -106,6 +109,24 @@ const normalizedSelectedClip = computed(() =>
       }
     : null,
 );
+const panelTitle = computed(() => {
+  if (props.activeTab === 'clip') {
+    const clip = props.selectedClip;
+    if (!clip) return tSidebar('clip');
+    if (clip.kind === 'screen') return tTimeline('video');
+    if (clip.kind === 'webcam') return tTimeline('webcam');
+    if (clip.kind === 'blur') return tTimeline('blur');
+    return clip.name?.trim() || (clip.kind === 'audio' ? tSidebar('audio') : tSidebar('clip'));
+  }
+
+  const titleKey =
+    props.activeTab === 'caption'
+      ? 'captions'
+      : ['canvas', 'zoom', 'cursor', 'audio', 'settings'].includes(props.activeTab)
+        ? props.activeTab
+        : null;
+  return titleKey ? tSidebar(titleKey) : t('properties');
+});
 const emit = defineEmits<{
   (event: 'update:selectedCursor', value: CursorType): void;
   (event: 'update:cursorSize', value: number): void;
@@ -178,9 +199,14 @@ const emit = defineEmits<{
 <template>
   <div class="properties-island">
     <div class="panel-header">
-      <h3 class="panel-title">
-        {{ activeTab === 'canvas' ? t('background') : t('properties') }}
-      </h3>
+      <h3 class="panel-title">{{ panelTitle }}</h3>
+      <Switch
+        v-if="activeTab === 'clip' && selectedClip"
+        class="panel-enable-switch"
+        :model-value="selectedClip.enabled ?? true"
+        :aria-label="panelTitle"
+        @update:model-value="emit('update:clip-enabled', $event)"
+      />
     </div>
     <div class="panel-content">
       <CanvasPanel
@@ -197,7 +223,6 @@ const emit = defineEmits<{
         v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
         :clip="normalizedSelectedClip"
         @update:volume="emit('update:clip-volume', $event)"
-        @update:enabled="emit('update:clip-enabled', $event)"
         @delete="emit('delete-clip')"
       />
       <BlurPropertiesPanel
@@ -210,10 +235,8 @@ const emit = defineEmits<{
           cornerRadius: normalizedSelectedClip.blurCornerRadius ?? 0,
           tintOpacity: normalizedSelectedClip.blurTintOpacity ?? 0,
           color: normalizedSelectedClip.blurColor ?? '#000000',
-          enabled: normalizedSelectedClip.enabled,
         }"
         @update="emit('update:blur', $event)"
-        @update:enabled="emit('update:clip-enabled', $event)"
         @delete="emit('delete-clip')"
       />
       <KeyboardCaptionClipPanel
@@ -232,7 +255,6 @@ const emit = defineEmits<{
         v-else-if="activeTab === 'clip'"
         :selected-clip="normalizedSelectedClip"
         @update:playback-rate="emit('update:clip-rate', $event)"
-        @update:enabled="emit('update:clip-enabled', $event)"
         @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
         @update:is-mirrored-y="emit('update:clip-is-mirrored-y', $event)"
         @update:corner-radius="emit('update:clip-corner-radius', $event)"
@@ -320,13 +342,26 @@ const emit = defineEmits<{
   box-sizing: border-box;
 }
 .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 28px;
   padding-bottom: 4px;
   padding-right: 20px;
 }
 .panel-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
   font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.panel-enable-switch {
+  flex: 0 0 auto;
 }
 .panel-content {
   flex: 1;

@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
-import Switch from '~/ui/switch/Switch.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import ShadowDirectionGroup from '~/components/video-editor/properties/cursor/ShadowDirectionGroup.vue';
 import BorderAndFrameControls from '~/components/video-editor/properties/clip/BorderAndFrameControls.vue';
@@ -50,7 +49,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:playbackRate', rate: number): void;
-  (e: 'update:enabled', enabled: boolean): void;
   (e: 'update:isMirrored', isMirrored: boolean): void;
   (e: 'update:isMirroredY', isMirroredY: boolean): void;
   (e: 'update:cornerRadius', radius: string): void;
@@ -450,16 +448,11 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
       </div>
 
       <!-- Divider -->
-      <Divider spacing="xs" />
+      <Divider v-if="selectedClip.isLinked" spacing="xs" />
 
       <!-- Controls & Link -->
-      <div class="section-block">
+      <div v-if="selectedClip.isLinked" class="section-block">
         <div class="prop-row">
-          <span class="prop-label">{{ t('enabled') }}</span>
-          <Switch :model-value="selectedClip.enabled ?? true" @update:modelValue="emit('update:enabled', $event)" />
-        </div>
-
-        <div v-if="selectedClip.isLinked" class="prop-row">
           <div class="link-label">
             <Unlink :size="14" />
             <span>{{ t('sidecarLink') }}</span>
@@ -476,172 +469,4 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
   </div>
 </template>
 
-<style scoped>
-.clip-properties {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 100%;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 16px;
-  text-align: center;
-  background: var(--color-bg-element);
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--color-border-strong);
-}
-
-.empty-icon {
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-
-.empty-title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.empty-desc {
-  margin: 6px 0 0;
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-.options-group {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-}
-
-.section-block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 20px;
-}
-
-.section-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.sub-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-
-.sub-group :deep(.color-picker-wrapper),
-.sub-group :deep(.popover-container),
-.sub-group :deep(.popover-trigger),
-.sub-group :deep(.color-picker-trigger-container) {
-  width: 100%;
-}
-
-.sub-label {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.shadow-hint {
-  font-size: 10px;
-  line-height: 1.35;
-  color: var(--text-muted);
-}
-
-.margin-top-sm {
-  margin-top: 4px;
-}
-
-.margin-top-md {
-  margin-top: 8px;
-}
-
-.sliders-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.preset-pills {
-  display: flex;
-  gap: 6px;
-}
-
-.preset-pill {
-  flex: 1;
-  height: 24px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-surface);
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all var(--fast) ease;
-}
-
-.preset-pill:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.preset-pill.active {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-}
-
-.prop-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.prop-label,
-.link-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.danger-zone {
-  margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  padding-top: 12px;
-  background: var(--color-bg-element);
-  z-index: 10;
-  width: 100%;
-}
-
-.danger-zone :deep(.btn-container),
-.danger-zone :deep(.delete-item-btn) {
-  width: 100%;
-}
-
-.sub-group :deep(.color-picker-trigger-container) {
-  width: 100%;
-}
-</style>
+<style scoped src="./ClipPropertiesPanel.css"></style>

@@ -51,7 +51,6 @@ const DeleteItem = defineComponent({
 
 type BlurPanelClip = Pick<BlurClip, 'mode' | 'shape' | 'strength' | 'feather' | 'tintOpacity' | 'color'> & {
   cornerRadius: number;
-  enabled?: boolean;
 };
 
 const defaultClip = (): BlurPanelClip => ({
@@ -62,7 +61,6 @@ const defaultClip = (): BlurPanelClip => ({
   cornerRadius: 0,
   tintOpacity: 0,
   color: '#000000',
-  enabled: true,
 });
 
 const mountPanel = (overrides: Partial<BlurPanelClip> = {}) =>
@@ -153,14 +151,13 @@ describe('BlurPropertiesPanel', () => {
     ).toBe(false);
   });
 
-  it('updates modes, geometry, color, enablement and deletion', async () => {
+  it('updates modes, geometry, color and deletion', async () => {
     const wrapper = mountPanel({ mode: 'frosted', tintOpacity: 10 });
     buttonWithText(wrapper.element, 'Frosted').click();
     buttonWithText(wrapper.element, 'Pixelated').click();
     buttonWithText(wrapper.element, 'Square').click();
     for (const slider of wrapper.findAll('.slider-stub')) await slider.trigger('click');
     await wrapper.get('.color-stub').trigger('click');
-    buttonWithText(wrapper.element, 'Disable').click();
     await wrapper.get('.delete-stub').trigger('click');
 
     expect(wrapper.emitted('update')).toContainEqual([{ mode: 'frosted', tintOpacity: 24 }]);
@@ -171,7 +168,6 @@ describe('BlurPropertiesPanel', () => {
     expect(wrapper.emitted('update')).toContainEqual([{ cornerRadius: 75 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ tintOpacity: 75 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ color: '#abcdef' }]);
-    expect(wrapper.emitted('update:enabled')).toEqual([[false]]);
     expect(wrapper.emitted('delete')).toHaveLength(1);
   });
 });

@@ -27,11 +27,10 @@ type BlurPatch = Partial<BlurSettings>;
 
 const { t } = useTranslate('BlurPropertiesPanel');
 const props = defineProps<{
-  clip: BlurSettings & { enabled?: boolean };
+  clip: BlurSettings;
 }>();
 const emit = defineEmits<{
   (event: 'update', patch: BlurPatch): void;
-  (event: 'update:enabled', value: boolean): void;
   (event: 'delete'): void;
 }>();
 
@@ -211,9 +210,6 @@ const presetIsActive = (patch: BlurPatch) =>
     <Divider spacing="xs" />
 
     <div class="panel-actions">
-      <Button variant="ghost" size="sm" block @click="emit('update:enabled', !clip.enabled)">
-        {{ clip.enabled === false ? t('enable') : t('disable') }}
-      </Button>
       <DeleteItem :label="t('delete')" @click="emit('delete')" />
     </div>
   </div>
@@ -229,11 +225,11 @@ const presetIsActive = (patch: BlurPatch) =>
 }
 
 .blur-properties {
-  gap: 2px;
+  gap: 10px;
 }
 
 .section-block {
-  gap: 10px;
+  gap: 12px;
 }
 
 .section-title {
@@ -247,7 +243,7 @@ const presetIsActive = (patch: BlurPatch) =>
 .control-stack,
 .panel-actions {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .privacy-hint {
