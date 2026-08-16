@@ -154,13 +154,13 @@ export function validateComposition(composition: ClipComposition): void {
       )
         throw new CompositionEngineError('Invalid blur effect.');
       if (
-        ![clip.strength, clip.feather, clip.cornerRadius, clip.tintOpacity].every(finite) ||
+        ![clip.strength, clip.feather, clip.tintOpacity].every(finite) ||
         clip.strength < 0 ||
         clip.strength > 100 ||
         clip.feather < 0 ||
         clip.feather > 100 ||
-        clip.cornerRadius < 0 ||
-        clip.cornerRadius > 100 ||
+        (clip.cornerRadius !== undefined &&
+          (!finite(clip.cornerRadius) || clip.cornerRadius < 0 || clip.cornerRadius > 100)) ||
         clip.tintOpacity < 0 ||
         clip.tintOpacity > 100 ||
         !/^#[\da-f]{6}$/i.test(clip.color)

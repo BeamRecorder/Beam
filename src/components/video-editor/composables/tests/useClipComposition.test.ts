@@ -350,6 +350,11 @@ describe('useClipComposition', () => {
     });
     expect(mounted.state.composition.value.assets).toHaveLength(0);
 
+    const legacyBlur = mounted.state.selectedClip.value;
+    if (!legacyBlur || legacyBlur.kind !== 'blur') throw new Error('Expected the selected blur clip.');
+    delete legacyBlur.cornerRadius;
+    expect(() => mounted.state.updateSelectedBlur({ mode: 'frosted', tintOpacity: 24 })).not.toThrow();
+
     mounted.state.updateSelectedBlur({
       shape: 'circle',
       mode: 'frosted',

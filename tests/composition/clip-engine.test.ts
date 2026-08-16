@@ -237,6 +237,16 @@ describe('clip composition engine', () => {
     expect(() => setBlurEffect(composition, 'missing', { mode: 'opaque' })).toThrow(/Unknown clip/);
   });
 
+  it('updates a blur clip loaded before rounded masks existed', () => {
+    const legacyClip = blurClip();
+    delete legacyClip.cornerRadius;
+    const composition = createComposition([], [legacyClip]);
+
+    const updated = setBlurEffect(composition, legacyClip.id, { mode: 'frosted', tintOpacity: 24 });
+
+    expect(updated.clips[0]).toMatchObject({ mode: 'frosted', tintOpacity: 24 });
+  });
+
   it('rejects invalid blur settings without affecting media assets', () => {
     expect(() => createComposition([], [blurClip({ strength: 101 })])).toThrow(/blur effect settings/);
     expect(() => createComposition([], [blurClip({ feather: -1 })])).toThrow(/blur effect settings/);

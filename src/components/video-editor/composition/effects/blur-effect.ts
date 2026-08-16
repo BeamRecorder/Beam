@@ -77,8 +77,8 @@ const shapePath = (ctx: Canvas2DContext, clip: BlurClip, rect: EffectRect) => {
   ctx.beginPath();
   if (clip.shape === 'circle')
     ctx.arc(target.x + target.width / 2, target.y + target.height / 2, target.width / 2, 0, Math.PI * 2);
-  else if (clip.cornerRadius > 0) {
-    const radius = (Math.min(target.width, target.height) * clip.cornerRadius) / 200;
+  else if ((clip.cornerRadius ?? 0) > 0) {
+    const radius = (Math.min(target.width, target.height) * (clip.cornerRadius ?? 0)) / 200;
     ctx.roundRect(target.x, target.y, target.width, target.height, radius);
   } else ctx.rect(target.x, target.y, target.width, target.height);
 };

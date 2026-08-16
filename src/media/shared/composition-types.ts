@@ -154,7 +154,8 @@ export interface BlurClip extends ClipBase {
   mode: BlurEffectMode;
   strength: number;
   feather: number;
-  cornerRadius: number;
+  /** Optional for blur clips saved before rounded masks were introduced. */
+  cornerRadius?: number;
   tintOpacity: number;
   color: string;
 }

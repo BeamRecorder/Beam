@@ -49,10 +49,10 @@ const DeleteItem = defineComponent({
   },
 });
 
-type BlurPanelClip = Pick<
-  BlurClip,
-  'mode' | 'shape' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'
-> & { enabled?: boolean };
+type BlurPanelClip = Pick<BlurClip, 'mode' | 'shape' | 'strength' | 'feather' | 'tintOpacity' | 'color'> & {
+  cornerRadius: number;
+  enabled?: boolean;
+};
 
 const defaultClip = (): BlurPanelClip => ({
   mode: 'blur',
@@ -92,8 +92,15 @@ describe('BlurPropertiesPanel', () => {
     expect(wrapper.findAll('[data-preset]').map((button) => button.text())).toEqual(['Light', 'Privacy', 'Strong']);
     expect(['Blur', 'Frosted', 'Pixelated', 'Opaque'].every((label) => wrapper.text().includes(label))).toBe(true);
     expect(['Rectangle', 'Square', 'Circle'].every((label) => wrapper.text().includes(label))).toBe(true);
-    expect(wrapper.find('.mode-grid').exists()).toBe(true);
-    expect(wrapper.find('.shape-grid').exists()).toBe(true);
+    const groups = wrapper.findAll('.btn-group');
+    expect(groups).toHaveLength(3);
+    expect(groups.map((group) => group.attributes('style'))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('--button-group-columns: 1'),
+        expect.stringContaining('--button-group-columns: 2'),
+        expect.stringContaining('--button-group-columns: 3'),
+      ]),
+    );
   });
 
   it('uses mode-specific labels and only shows color controls for color modes', async () => {

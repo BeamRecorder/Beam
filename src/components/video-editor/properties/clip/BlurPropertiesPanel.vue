@@ -13,16 +13,16 @@ import {
 } from '@lucide/vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import DeleteItem from '~/ui/button/DeleteItem.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { BlurClip, BlurEffectMode, BlurEffectShape } from '~/media/shared/composition-types';
 
-type BlurSettings = Pick<
-  BlurClip,
-  'mode' | 'shape' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'
->;
+type BlurSettings = Pick<BlurClip, 'mode' | 'shape' | 'strength' | 'feather' | 'tintOpacity' | 'color'> & {
+  cornerRadius: number;
+};
 type BlurPatch = Partial<BlurSettings>;
 
 const { t } = useTranslate('BlurPropertiesPanel');
@@ -95,7 +95,7 @@ const presetIsActive = (patch: BlurPatch) =>
   <div class="blur-properties">
     <section class="section-block" :aria-label="t('presets')">
       <span class="section-title">{{ t('presets') }}</span>
-      <div class="preset-list">
+      <ButtonGroup full :columns="1" class="preset-group">
         <Button
           v-for="preset in presets"
           :key="preset.value"
@@ -108,14 +108,14 @@ const presetIsActive = (patch: BlurPatch) =>
         >
           {{ preset.label }}
         </Button>
-      </div>
+      </ButtonGroup>
     </section>
 
     <Divider spacing="xs" />
 
     <section class="section-block" :aria-label="t('mode')">
       <span class="section-title">{{ t('mode') }}</span>
-      <div class="choice-grid mode-grid">
+      <ButtonGroup full :columns="2" class="mode-group">
         <Button
           v-for="item in modes"
           :key="item.value"
@@ -127,12 +127,12 @@ const presetIsActive = (patch: BlurPatch) =>
         >
           {{ item.label }}
         </Button>
-      </div>
+      </ButtonGroup>
     </section>
 
     <section class="section-block" :aria-label="t('shape')">
       <span class="section-title">{{ t('shape') }}</span>
-      <div class="choice-grid shape-grid">
+      <ButtonGroup full :columns="3" class="shape-group">
         <Button
           v-for="item in shapes"
           :key="item.value"
@@ -144,7 +144,7 @@ const presetIsActive = (patch: BlurPatch) =>
         >
           {{ item.label }}
         </Button>
-      </div>
+      </ButtonGroup>
     </section>
 
     <Divider spacing="xs" />
@@ -244,20 +244,6 @@ const presetIsActive = (patch: BlurPatch) =>
   text-transform: uppercase;
 }
 
-.choice-grid {
-  display: grid;
-  gap: 8px;
-}
-
-.mode-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.shape-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.preset-list,
 .control-stack,
 .panel-actions {
   display: grid;
