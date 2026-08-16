@@ -1,92 +1,192 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import EditorCanvas from '~/components/video-editor/canvas/EditorCanvas.vue';
+import CanvasToolbar from '~/components/video-editor/canvas/CanvasToolbar.vue';
 import EditorTimeline from '~/components/video-editor/timeline/EditorTimeline.vue';
 import TimelineToolbar from '~/components/video-editor/timeline/TimelineToolbar.vue';
-import type { Clip } from '~/media/shared/composition-types';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import {
-  addDemoCaption,
-  createDemoComposition,
-  createDemoZooms,
-  DEMO_DURATION_MS,
-  demoMedia,
-  updateClip,
-} from '@website/demo/website-demo-fixture';
+  DEFAULT_OUTPUT_CANVAS,
+  OUTPUT_CANVAS_PRESETS,
+  type OutputCanvasPreset,
+} from '~/components/video-editor/canvas/output-canvas';
+import {
+  moveClip,
+  reorderClip,
+  setClipEnabled,
+  splitClip,
+  trimClip,
+  updateClip as updateCompositionClip,
+} from '~/components/video-editor/composition/engine/clip-engine';
+import { compositionPlaybackSignature } from '~/components/video-editor/composables/composition-playback-signature';
+import { cursorUrls } from '~/components/video-editor/properties/cursor/useCursorReplacer';
+import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
+import {
+  emptyComposition,
+  isBlurClip,
+  isCaptionClip,
+  isVisualClip,
+  type NormalizedCrop,
+  type NormalizedTransform,
+} from '~/media/shared/composition-types';
+import { useWebsiteDemoPlayer } from '@website/composables/useWebsiteDemoPlayer';
+import { addDemoCaption, demoMedia } from '@website/demo/website-demo-fixture';
+import WebsiteDemoProjectMissing from '@website/components/WebsiteDemoProjectMissing.vue';
+import {
+  loadWebsiteDemoProject,
+  WEBSITE_DEMO_FILES,
+  type WebsiteDemoFileIssue,
+} from '@website/demo/website-demo-project';
+import type { ProjectEditorData } from '~/api/types/capture-session';
+import { useI18n } from 'vue-i18n';
 
-const videoRef = ref<HTMLVideoElement | null>(null);
-const currentTime = ref(0);
-const duration = ref(DEMO_DURATION_MS / 1_000);
-const isPlaying = ref(false);
-const zoomLevel = ref(100);
+const editorCanvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
+const { t } = useI18n();
+const fallbackVideoRef = ref<HTMLVideoElement | null>(null);
+const timelineZoomLevel = ref(100);
 const isSnappingEnabled = ref(true);
-const selectedClipId = ref<string | null>('beam-demo-screen');
+const isCropping = ref(false);
+const isGridVisible = ref(false);
+const selectedClipId = ref<string | null>(null);
 const selectedZoomId = ref<string | null>(null);
-const composition = ref(createDemoComposition());
-const zoomElements = ref(createDemoZooms());
-const notice = ref('The player and timeline use the repository’s real BeamDemo.webm file.');
+const composition = ref(emptyComposition());
+const zoomElements = ref<ZoomElement[]>([]);
+const editorData = ref<ProjectEditorData | null>(null);
+const demoDurationMs = ref(0);
+const projectStatus = ref<'loading' | 'incomplete' | 'ready'>('loading');
+const projectIssues = ref<WebsiteDemoFileIssue[]>([]);
+const outputCanvas = ref({ ...DEFAULT_OUTPUT_CANVAS });
+const cursorClickEffects = createDefaultCursorClickEffects();
+const cursorMotion = createDefaultCursorMotionSettings();
+const player = useWebsiteDemoPlayer();
+const notice = ref(t('Website.editor.checking'));
+let generatedId = 0;
 
+cursorUrls.default = demoMedia.defaultCursorUrl;
+
+const supportsEditorPlayback =
+  typeof globalThis.Worker !== 'undefined' &&
+  typeof globalThis.VideoDecoder !== 'undefined' &&
+  typeof globalThis.VideoFrame !== 'undefined';
+const duration = computed(() => player.duration.value || demoDurationMs.value / 1_000);
 const selectedClip = computed(() => composition.value.clips.find((clip) => clip.id === selectedClipId.value) ?? null);
+const selectedTransformClip = computed(() => {
+  const clip = selectedClip.value;
+  return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
+});
+const selectedZoom = computed(() => zoomElements.value.find((zoom) => zoom.id === selectedZoomId.value) ?? null);
+const activeTab = computed(() => (selectedZoom.value ? 'zoom' : selectedTransformClip.value ? 'clip' : 'canvas'));
+const playbackUnavailable = computed(() => !supportsEditorPlayback || Boolean(player.playbackError.value));
 
-const syncVideoTime = (value: number) => {
-  const video = videoRef.value;
-  if (!video || Math.abs(video.currentTime - value) < 0.08) return;
-  video.currentTime = value;
+const reportError = (message: string, error: unknown) => {
+  notice.value = message;
+  console.error(`[Beam homepage editor] ${message}`, error);
 };
 
-watch(currentTime, syncVideoTime);
-watch(isPlaying, async (playing) => {
-  const video = videoRef.value;
-  if (!video) return;
-  if (!playing) {
-    video.pause();
+watch(
+  () => compositionPlaybackSignature(composition.value),
+  async () => {
+    if (projectStatus.value !== 'ready') return;
+    if (!supportsEditorPlayback) {
+      notice.value = t('Website.editor.webCodecsUnavailable');
+      return;
+    }
+    try {
+      await player.loadComposition(composition.value);
+      notice.value = t('Website.editor.ready');
+    } catch (error) {
+      reportError(t('Website.editor.decodeFailed'), error);
+    }
+  },
+  { immediate: true },
+);
+
+onMounted(async () => {
+  const result = await loadWebsiteDemoProject();
+  if (result.status === 'incomplete') {
+    projectIssues.value = result.issues;
+    projectStatus.value = 'incomplete';
+    notice.value = t('Website.editor.filesMissing', { count: result.issues.length }, result.issues.length);
     return;
   }
-  try {
-    await video.play();
-  } catch {
-    isPlaying.value = false;
-    notice.value = 'Your browser prevented autoplay. Press play directly in the video.';
-  }
+  const demo = result.project;
+  composition.value = demo.composition;
+  zoomElements.value = demo.zoomElements;
+  editorData.value = demo.editorData;
+  demoDurationMs.value = demo.durationMs;
+  selectedClipId.value = demo.composition.clips.find((clip) => clip.kind === 'screen')?.id ?? null;
+  selectedZoomId.value = demo.zoomElements[0]?.id ?? null;
+  projectStatus.value = 'ready';
 });
 
-const onLoadedMetadata = () => {
-  const video = videoRef.value;
-  if (video?.duration && Number.isFinite(video.duration)) duration.value = video.duration;
+const updateComposition = (operation: () => typeof composition.value) => {
+  try {
+    composition.value = operation();
+  } catch (error) {
+    reportError(t('Website.editor.invalidEdit'), error);
+  }
 };
 
-const toggleClip = (clipId: string) => {
-  composition.value = updateClip(composition.value, clipId, (clip) => ({ ...clip, enabled: !clip.enabled }));
-};
-
-const moveClip = ({ id, startMs }: { id: string; startMs: number }) => {
-  composition.value = updateClip(composition.value, id, (clip) => ({ ...clip, timelineStartMs: startMs }));
-};
-
-const trimClip = ({ id, edge, timeMs }: { id: string; edge: 'start' | 'end'; timeMs: number }) => {
-  composition.value = updateClip(composition.value, id, (clip): Clip => {
-    const endMs = clip.timelineStartMs + clip.timelineDurationMs;
-    if (edge === 'start') {
-      const nextStart = Math.min(endMs - 100, Math.max(0, timeMs));
-      const delta = nextStart - clip.timelineStartMs;
-      return {
-        ...clip,
-        timelineStartMs: nextStart,
-        timelineDurationMs: clip.timelineDurationMs - delta,
-        sourceInMs: clip.sourceInMs + delta * clip.playbackRate,
-      };
+const handlePlayingIntent = async (playing: boolean) => {
+  try {
+    if (playbackUnavailable.value) {
+      const video = fallbackVideoRef.value;
+      if (!video) return;
+      if (playing) await video.play();
+      else video.pause();
+      return;
     }
-    return { ...clip, timelineDurationMs: Math.max(100, timeMs - clip.timelineStartMs) };
-  });
+    await player.setPlaying(playing);
+  } catch (error) {
+    reportError(t('Website.editor.playbackFailed'), error);
+  }
 };
 
-const updateZoom = (id: string, updater: (zoom: ZoomElement) => ZoomElement) => {
-  zoomElements.value = zoomElements.value.map((zoom) => (zoom.id === id ? updater(zoom) : zoom));
+const handleSeekIntent = async (time: number, mode: 'seek' | 'scrub' = 'seek') => {
+  try {
+    if (playbackUnavailable.value) {
+      const target = Math.max(0, Math.min(time, duration.value));
+      player.currentTime.value = target;
+      if (fallbackVideoRef.value) fallbackVideoRef.value.currentTime = target;
+      return;
+    }
+    await player.seek(time, mode);
+  } catch (error) {
+    reportError(t('Website.editor.frameFailed'), error);
+  }
+};
+
+const selectClip = (clipId: string) => {
+  selectedClipId.value = clipId;
+  selectedZoomId.value = null;
+  isCropping.value = false;
+};
+
+const selectZoom = (zoomId: string) => {
+  selectedZoomId.value = zoomId;
+  selectedClipId.value = null;
+  isCropping.value = false;
+};
+
+const selectCanvas = () => {
+  selectedClipId.value = null;
+  selectedZoomId.value = null;
+  isCropping.value = false;
+};
+
+const updateZoom = (value: ZoomElement) => {
+  zoomElements.value = zoomElements.value.map((zoom) => (zoom.id === value.id ? value : zoom));
+};
+
+const patchZoom = (id: string, patch: Partial<ZoomElement>) => {
+  const zoom = zoomElements.value.find((entry) => entry.id === id);
+  if (zoom) updateZoom({ ...zoom, ...patch });
 };
 
 const addZoom = (timeMs: number) => {
-  const startMs = Math.min(DEMO_DURATION_MS - 1_500, Math.max(0, timeMs));
+  const startMs = Math.min(Math.max(0, demoDurationMs.value - 1_500), Math.max(0, timeMs));
   const zoom: ZoomElement = {
-    id: `homepage-zoom-${zoomElements.value.length}`,
+    id: `homepage-zoom-${++generatedId}`,
     sessionId: 'homepage-demo',
     startMs,
     endMs: startMs + 1_500,
@@ -95,92 +195,202 @@ const addZoom = (timeMs: number) => {
     mode: 'manual',
   };
   zoomElements.value = [...zoomElements.value, zoom];
-  selectedZoomId.value = zoom.id;
+  selectZoom(zoom.id);
 };
 
 const addCaption = (timeMs: number) => {
-  composition.value = addDemoCaption(composition.value, timeMs);
-  selectedClipId.value = composition.value.clips.at(-1)?.id ?? null;
+  composition.value = addDemoCaption(composition.value, timeMs, demoDurationMs.value);
+  selectClip(composition.value.clips.at(-1)?.id ?? '');
 };
 
-const announceUnavailableAction = (type: string) => {
-  notice.value = `${type} is available in the desktop app; this browser demo keeps native file access disabled.`;
+const addTimelineElement = (type: 'video' | 'image' | 'sound' | 'caption' | 'blur') => {
+  if (type === 'caption') {
+    addCaption(Math.round(player.currentTime.value * 1_000));
+    return;
+  }
+  const typeLabel = t(`TimelineToolbar.${type}`);
+  notice.value = t('Website.editor.importDisabled', { type: typeLabel });
+};
+
+const splitSelectedClip = () => {
+  const clip = selectedClip.value;
+  const timeMs = Math.round(player.currentTime.value * 1_000);
+  if (!clip || timeMs <= clip.timelineStartMs || timeMs >= clip.timelineStartMs + clip.timelineDurationMs) {
+    notice.value = t('Website.editor.splitHint');
+    return;
+  }
+  updateComposition(() => splitClip(composition.value, clip.id, timeMs, () => `homepage-split-${++generatedId}`));
+};
+
+const updateSelectedTransform = (transform: NormalizedTransform) => {
+  const clipId = selectedClipId.value;
+  if (!clipId) return;
+  updateComposition(() =>
+    updateCompositionClip(composition.value, clipId, (clip) => (isVisualClip(clip) ? { ...clip, transform } : clip)),
+  );
+};
+
+const updateSelectedCrop = (crop: NormalizedCrop) => {
+  const clipId = selectedClipId.value;
+  if (!clipId) return;
+  updateComposition(() =>
+    updateCompositionClip(composition.value, clipId, (clip) => (isVisualClip(clip) ? { ...clip, crop } : clip)),
+  );
+};
+
+const selectOutputPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
+  outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset] };
 };
 
 const play = async () => {
   await nextTick();
-  isPlaying.value = true;
+  if (projectStatus.value !== 'ready') return;
+  if (playbackUnavailable.value) {
+    await fallbackVideoRef.value?.play();
+    return;
+  }
+  await handlePlayingIntent(true);
 };
 
 defineExpose({ play });
 </script>
 
 <template>
-  <section class="editor-preview" aria-label="Interactive Beam editor demo">
+  <section class="editor-preview" :aria-label="t('Website.editor.aria')">
     <header>
       <div>
-        <p class="eyebrow">Real Beam editor components · demo project data</p>
-        <h3>Try the playback and timeline controls</h3>
+        <h3>{{ t('Website.editor.title') }}</h3>
       </div>
       <p class="status" aria-live="polite">{{ notice }}</p>
     </header>
 
-    <div class="editor-shell">
-      <video
-        ref="videoRef"
-        :src="demoMedia.videoUrl"
-        :poster="demoMedia.thumbnailUrl"
-        controls
-        playsinline
-        preload="metadata"
-        @loadedmetadata="onLoadedMetadata"
-        @timeupdate="currentTime = videoRef?.currentTime ?? 0"
-        @play="isPlaying = true"
-        @pause="isPlaying = false"
-        @ended="isPlaying = false"
-      >
-        Your browser does not support WebM video playback.
-      </video>
+    <WebsiteDemoProjectMissing
+      v-if="projectStatus !== 'ready'"
+      :loading="projectStatus === 'loading'"
+      :issues="
+        projectStatus === 'loading' ? WEBSITE_DEMO_FILES.map((file) => ({ ...file, reason: 'missing' })) : projectIssues
+      "
+    />
+
+    <div v-else class="editor-shell">
+      <template v-if="!playbackUnavailable">
+        <CanvasToolbar
+          :preset="outputCanvas.preset"
+          :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
+          :is-cropping="isCropping"
+          :is-grid-visible="isGridVisible"
+          :zoom-percent="editorCanvasRef?.viewportZoom.zoomPercent.value ?? 100"
+          :is-zoomed-or-panned="editorCanvasRef?.viewportZoom.isZoomedOrPanned.value ?? false"
+          @select:preset="selectOutputPreset"
+          @toggle:crop="isCropping = !isCropping"
+          @toggle:grid="isGridVisible = !isGridVisible"
+          @zoom:in="editorCanvasRef?.viewportZoom.zoomIn()"
+          @zoom:out="editorCanvasRef?.viewportZoom.zoomOut()"
+          @reset:zoom="editorCanvasRef?.viewportZoom.resetZoom()"
+        />
+
+        <div class="canvas-shell">
+          <EditorCanvas
+            ref="editorCanvasRef"
+            :is-playing="player.isPlaying.value"
+            :current-time="player.currentTime.value"
+            selected-cursor="automatic"
+            :cursor-size="45"
+            cursor-color="#000000"
+            enable-shadow
+            :shadow-blur="6"
+            shadow-color="#000000"
+            shadow-direction="bottom"
+            :click-effects="cursorClickEffects"
+            :motion="cursorMotion"
+            :selected-background="null"
+            :background-blur-percent="0"
+            :frame-for="player.frameFor"
+            :frame-version="player.frameVersion.value"
+            :playback-state="player.playbackState.value"
+            :playback-error="player.playbackError.value"
+            :editor-data="editorData"
+            :zoom-elements="zoomElements"
+            :selected-zoom="selectedZoom"
+            :composition="composition"
+            :output-canvas="outputCanvas"
+            :active-tab="activeTab"
+            :selected-transform-clip="selectedTransformClip"
+            :is-cropping="isCropping"
+            :is-grid-visible="isGridVisible"
+            @update:zoom="updateZoom"
+            @preview:zoom="updateZoom"
+            @select:clip="selectClip"
+            @select:canvas="selectCanvas"
+            @deselect:transform-clip="selectedClipId = null"
+            @deselect:zoom="selectedZoomId = null"
+            @update:clip-transform="updateSelectedTransform"
+            @update:clip-crop="updateSelectedCrop"
+            @done:crop="isCropping = false"
+          />
+        </div>
+      </template>
+
+      <div v-else class="fallback-player">
+        <p>{{ t('Website.editor.fallback') }}</p>
+        <video
+          ref="fallbackVideoRef"
+          :src="WEBSITE_DEMO_FILES.find((file) => file.key === 'video')?.path"
+          :poster="demoMedia.thumbnailUrl"
+          controls
+          playsinline
+          @loadedmetadata="player.duration.value = fallbackVideoRef?.duration || demoDurationMs / 1_000"
+          @timeupdate="player.currentTime.value = fallbackVideoRef?.currentTime ?? 0"
+          @play="player.isPlaying.value = true"
+          @pause="player.isPlaying.value = false"
+          @ended="player.isPlaying.value = false"
+        >
+          {{ t('Website.editor.mp4Unsupported') }}
+        </video>
+      </div>
 
       <div class="toolbar-shell">
         <TimelineToolbar
-          v-model:current-time="currentTime"
-          v-model:is-playing="isPlaying"
-          v-model:zoom-level="zoomLevel"
-          v-model:is-snapping-enabled="isSnappingEnabled"
+          :current-time="player.currentTime.value"
           :duration="duration"
+          :is-playing="player.isPlaying.value"
+          v-model:zoom-level="timelineZoomLevel"
+          v-model:is-snapping-enabled="isSnappingEnabled"
           :can-split="Boolean(selectedClip)"
-          @add:element="announceUnavailableAction"
-          @split="announceUnavailableAction('Split')"
+          @update:is-playing="handlePlayingIntent"
+          @update:current-time="handleSeekIntent"
+          @add:element="addTimelineElement"
+          @split="splitSelectedClip"
         />
       </div>
 
       <div class="timeline-shell">
         <EditorTimeline
-          v-model:current-time="currentTime"
-          v-model:is-playing="isPlaying"
-          v-model:zoom-level="zoomLevel"
+          :current-time="player.currentTime.value"
           :duration="duration"
+          :is-playing="player.isPlaying.value"
+          v-model:zoom-level="timelineZoomLevel"
           :zoom-elements="zoomElements"
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
           :selected-clip-id="selectedClipId"
           :is-snapping-enabled="isSnappingEnabled"
-          @select:zoom="selectedZoomId = $event"
-          @select:clip="selectedClipId = $event"
-          @toggle:clip="toggleClip"
-          @trim:clip="trimClip"
-          @move:clip="moveClip"
-          @trim:zoom="
-            updateZoom($event.id, (zoom) => ({
-              ...zoom,
-              [$event.edge === 'start' ? 'startMs' : 'endMs']: $event.timeMs,
-            }))
+          @update:current-time="handleSeekIntent($event, 'scrub')"
+          @update:is-playing="handlePlayingIntent"
+          @select:zoom="selectZoom"
+          @select:clip="selectClip"
+          @toggle:clip="
+            updateComposition(() =>
+              setClipEnabled(composition, $event, !composition.clips.find((clip) => clip.id === $event)?.enabled),
+            )
           "
-          @move:zoom="updateZoom($event.id, (zoom) => ({ ...zoom, startMs: $event.startMs, endMs: $event.endMs }))"
+          @trim:clip="updateComposition(() => trimClip(composition, $event.id, $event.edge, $event.timeMs))"
+          @move:clip="updateComposition(() => moveClip(composition, $event.id, $event.startMs))"
+          @trim:zoom="patchZoom($event.id, { [$event.edge === 'start' ? 'startMs' : 'endMs']: $event.timeMs })"
+          @move:zoom="patchZoom($event.id, { startMs: $event.startMs, endMs: $event.endMs })"
           @add:zoom="addZoom"
           @add:caption="addCaption"
-          @reorder:clip="announceUnavailableAction('Track reordering')"
+          @reorder:clip="updateComposition(() => reorderClip(composition, $event.id, $event.targetIndex))"
         />
       </div>
     </div>
@@ -197,20 +407,17 @@ header {
   align-items: end;
   justify-content: space-between;
   gap: 24px;
-}
-.eyebrow {
-  color: var(--color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-element);
+  box-shadow: var(--shadow-sm);
 }
 h3 {
-  margin-top: 3px;
   font-size: 22px;
 }
 .status {
-  max-width: 460px;
+  max-width: 500px;
   color: var(--text-muted);
   font-size: 13px;
   text-align: right;
@@ -223,7 +430,20 @@ h3 {
   background: var(--color-bg-surface);
   box-shadow: var(--shadow-lg);
 }
-video {
+.canvas-shell {
+  height: clamp(360px, 54vw, 660px);
+  min-height: 0;
+  padding: 0 12px 12px;
+  background: #171612;
+}
+.fallback-player {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.fallback-player video {
   display: block;
   width: 100%;
   max-height: min(64vh, 680px);
@@ -247,6 +467,9 @@ video {
   }
   .status {
     text-align: left;
+  }
+  .canvas-shell {
+    height: 360px;
   }
   .timeline-shell {
     height: 260px;

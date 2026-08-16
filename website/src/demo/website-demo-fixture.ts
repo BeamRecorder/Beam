@@ -1,29 +1,23 @@
 import type { CapturePreview, CaptureSource } from '~/api/types/capture-api';
-import {
-  COMPOSITION_SCHEMA_VERSION,
-  type CaptionClip,
-  type Clip,
-  type ClipComposition,
-} from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
-import demoVideoUrl from '../../../docs/assets/BeamDemo.webm';
+import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
 import demoThumbnailUrl from '../../../docs/assets/Beam-showcase.png';
 import beamIconUrl from '../../../public/brand/BeamIcon.webp';
+import defaultCursorUrl from '../../../public/macOsSvgCursors/default.svg';
+import { websiteI18n } from '@website/i18n';
 
-export const DEMO_DURATION_MS = 10_809;
+const t = websiteI18n.global.t;
 
 export const demoMedia = {
-  videoUrl: demoVideoUrl,
   thumbnailUrl: demoThumbnailUrl,
   iconUrl: beamIconUrl,
+  defaultCursorUrl,
 } as const;
 
 export const demoCaptureSources: CaptureSource[] = [
   {
     id: 'beam-demo-display',
     kind: 'display',
-    label: 'Main display',
+    label: t('Website.hud.mainDisplay'),
     isDefault: true,
     displayId: '1',
     selectionMode: 'direct',
@@ -31,7 +25,7 @@ export const demoCaptureSources: CaptureSource[] = [
   {
     id: 'beam-demo-window',
     kind: 'window',
-    label: 'Choose a window',
+    label: t('Website.hud.chooseWindow'),
     isDefault: false,
     selectionMode: 'portal',
   },
@@ -40,7 +34,7 @@ export const demoCaptureSources: CaptureSource[] = [
 export const demoCapturePreviews: CapturePreview[] = [
   {
     id: 'beam-demo-display',
-    name: 'Beam demo — 1920 × 1080',
+    name: t('Website.hud.demoName'),
     thumbnail: demoThumbnailUrl,
     appIcon: null,
     displayId: '1',
@@ -48,70 +42,12 @@ export const demoCapturePreviews: CapturePreview[] = [
   },
 ];
 
-export const createDemoComposition = (): ClipComposition => ({
-  schemaVersion: COMPOSITION_SCHEMA_VERSION,
-  assets: [
-    {
-      id: 'beam-demo-video',
-      kind: 'video',
-      name: 'BeamDemo.webm',
-      fileName: 'BeamDemo.webm',
-      durationMs: DEMO_DURATION_MS,
-      width: 1920,
-      height: 1080,
-      src: demoVideoUrl,
-      origin: 'project',
-    },
-  ],
-  clips: [
-    {
-      id: 'beam-demo-screen',
-      kind: 'screen',
-      name: 'Beam demo',
-      assetId: 'beam-demo-video',
-      timelineStartMs: 0,
-      timelineDurationMs: DEMO_DURATION_MS,
-      sourceInMs: 0,
-      sourceDurationMs: DEMO_DURATION_MS,
-      playbackRate: 1,
-      enabled: true,
-      order: 0,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance: createDefaultClipAppearance('screen'),
-      isMirrored: false,
-      isMirroredY: false,
-    },
-  ],
-  keyboardCaptionSessions: [],
-});
-
-export const createDemoZooms = (): ZoomElement[] => [
-  {
-    id: 'beam-demo-zoom',
-    sessionId: 'homepage-demo',
-    startMs: 2_200,
-    endMs: 5_100,
-    focus: { cx: 0.56, cy: 0.45 },
-    depth: 2,
-    mode: 'manual',
-  },
-];
-
-export const updateClip = (
-  composition: ClipComposition,
-  clipId: string,
-  updater: (clip: Clip) => Clip,
-): ClipComposition => ({
-  ...composition,
-  clips: composition.clips.map((clip) => (clip.id === clipId ? updater(clip) : clip)),
-});
-
-export const addDemoCaption = (composition: ClipComposition, timeMs: number): ClipComposition => {
-  const startMs = Math.max(0, Math.min(DEMO_DURATION_MS - 1_500, timeMs));
+export const addDemoCaption = (composition: ClipComposition, timeMs: number, durationMs: number): ClipComposition => {
+  const startMs = Math.max(0, Math.min(Math.max(0, durationMs - 1_500), timeMs));
   const caption: CaptionClip = {
     id: `homepage-caption-${composition.clips.length}`,
     kind: 'caption',
-    name: 'Product demo caption',
+    name: t('Website.editor.captionName'),
     timelineStartMs: startMs,
     timelineDurationMs: 1_500,
     sourceInMs: 0,
@@ -124,7 +60,7 @@ export const addDemoCaption = (composition: ClipComposition, timeMs: number): Cl
       sentences: [
         {
           id: 'homepage-caption-sentence',
-          text: 'Record. Edit. Share.',
+          text: t('Website.editor.captionText'),
           startMs,
           endMs: startMs + 1_500,
           words: [],

@@ -5,8 +5,10 @@ import Button from '~/ui/button/Button.vue';
 import AudioIconMeter from '~/components/hud/audio/AudioIconMeter.vue';
 import SourceSelect from '~/components/hud/SourceSelect.vue';
 import { demoCapturePreviews, demoCaptureSources } from '@website/demo/website-demo-fixture';
+import { useI18n } from 'vue-i18n';
 
 const emit = defineEmits<{ play: [] }>();
+const { t } = useI18n();
 const sourceKind = ref<'screen' | 'window'>('screen');
 const selectedSource = ref<string | null>('beam-demo-display');
 const microphoneEnabled = ref(true);
@@ -16,18 +18,17 @@ const sourceIcon = computed(() => (sourceKind.value === 'screen' ? Monitor : Vid
 </script>
 
 <template>
-  <section class="hud-preview" aria-label="Beam capture controls demo">
+  <section class="hud-preview" :aria-label="t('Website.hud.aria')">
     <header>
       <div>
-        <p class="eyebrow">Real Beam HUD controls · demo data</p>
-        <h3>Choose what to record</h3>
+        <h3>{{ t('Website.hud.title') }}</h3>
       </div>
-      <div class="source-tabs" aria-label="Capture source type">
+      <div class="source-tabs" :aria-label="t('Website.hud.sourceType')">
         <Button size="sm" :variant="sourceKind === 'screen' ? 'primary' : 'ghost'" @click="sourceKind = 'screen'">
-          Screen
+          {{ t('Website.hud.screen') }}
         </Button>
         <Button size="sm" :variant="sourceKind === 'window' ? 'primary' : 'ghost'" @click="sourceKind = 'window'">
-          Window
+          {{ t('Website.hud.window') }}
         </Button>
       </div>
     </header>
@@ -50,7 +51,7 @@ const sourceIcon = computed(() => (sourceKind.value === 'screen' ? Monitor : Vid
         @click="microphoneEnabled = !microphoneEnabled"
       >
         <AudioIconMeter kind="mic" :enabled="microphoneEnabled" :level="microphoneEnabled ? 0.42 : 0" />
-        Microphone
+        {{ t('Website.hud.microphone') }}
       </button>
       <button
         type="button"
@@ -59,9 +60,9 @@ const sourceIcon = computed(() => (sourceKind.value === 'screen' ? Monitor : Vid
         @click="systemAudioEnabled = !systemAudioEnabled"
       >
         <AudioIconMeter kind="system" :enabled="systemAudioEnabled" :level="systemAudioEnabled ? 0.28 : 0" />
-        System audio
+        {{ t('Website.hud.systemAudio') }}
       </button>
-      <Button :disabled="!selectedSource" @click="emit('play')">Play the real recording</Button>
+      <Button :disabled="!selectedSource" @click="emit('play')">{{ t('Website.hud.playRecording') }}</Button>
     </div>
   </section>
 </template>
@@ -70,6 +71,8 @@ const sourceIcon = computed(() => (sourceKind.value === 'screen' ? Monitor : Vid
 .hud-preview {
   display: grid;
   gap: 18px;
+  width: min(100%, 320px);
+  margin: 0 auto;
   padding: 24px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -88,6 +91,11 @@ header,
 .capture-actions {
   justify-content: space-between;
   gap: 16px;
+}
+.hud-preview > header,
+.capture-actions {
+  align-items: stretch;
+  flex-direction: column;
 }
 .source-tabs,
 .source-row,
@@ -110,15 +118,7 @@ header,
   font: inherit;
   cursor: pointer;
 }
-.eyebrow {
-  color: var(--color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
 h3 {
-  margin-top: 3px;
   font-size: 20px;
 }
 @media (max-width: 700px) {

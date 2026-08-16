@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Beam - 記録。編集。共有。",
+    "description": "Beamは、洗練されたプロダクトデモを作成できるオープンソースの画面録画・動画編集アプリです。"
+  },
+  "home": {
+    "heroLine1": "瞬間を記録する。",
+    "heroLine2": "物語を磨く。",
+    "lede": "Beamはキャプチャと編集をひとつの集中型デスクトップアプリにまとめ、プロダクトデモをすばやく作り、見やすく仕上げます。",
+    "watchDemo": "実際のデモを見る",
+    "viewSource": "ソースを見る",
+    "playDemoAria": "Beamのデモを再生",
+    "demoAlt": "プロダクト録画を表示しているBeamの動画エディター",
+    "openDemo": "インタラクティブデモを開く",
+    "openSourceTitle": "Beamはコミュニティとともに作られています。",
+    "openSourceText": "コードを読み、バグを報告し、レコーダーの改善に協力できます。",
+    "viewGitHub": "GitHubで見る",
+    "joinDiscord": "Discordに参加",
+    "contributorsAlt": "GitHubのBeamコントリビューター",
+    "contributorsFallback": "Beamを作っている人たちに会う",
+    "contributors": "{count}人のコントリビューターがBeamを開発 | {count}人のコントリビューターがBeamを開発",
+    "footer": "オープンソースの画面レコーダー／エディター。"
+  },
+  "nav": {
+    "homeAria": "Beamホーム",
+    "mainAria": "メインナビゲーション",
+    "docs": "ドキュメント",
+    "starAria": "GitHubでBeamにスターを付ける",
+    "star": "スター",
+    "starsAria": "GitHubスター",
+    "install": "インストール"
+  },
+  "theme": { "switchTo": "テーマを{theme}に切り替える", "light": "ライト", "dark": "ダーク" },
+  "install": {
+    "downloadTitle": "Beam {version}を{platform}向けにダウンロード",
+    "preparingTitle": "Beam {version}（{platform}）を準備中",
+    "downloadingTitle": "Beam {version}（{platform}）をダウンロード中",
+    "automatic": "ダウンロードは自動的に開始されます。開始しない場合は下のボタンを使ってください。",
+    "githubUnavailable": "GitHubに接続できませんでした。リリースページを開いてパッケージを手動で選択してください。",
+    "checkingRelease": "GitHubで公開されている最新リリースを確認しています。",
+    "downloadAgain": "もう一度ダウンロード",
+    "startDownload": "ダウンロードを開始",
+    "checkingGitHub": "GitHubを確認中...",
+    "viewRelease": "リリースを見る",
+    "anotherVersion": "別のバージョンが必要ですか？",
+    "choosePackage": "Beamを使うコンピューターに合うパッケージを選択してください。",
+    "communityTitle": "Beamの最新情報",
+    "communityText": "リリースノート、トラブルシューティング、今後の先行プレビューはDiscordで確認できます。",
+    "joinDiscord": "Discordに参加"
+  },
+  "platform": {
+    "windowsSupport": "Windows 10/11、x64またはARM64",
+    "windowsFormat": "ユニバーサルインストーラー",
+    "macosSupport": "macOS 13以降、Apple Silicon",
+    "macosFormat": "DMGイメージ",
+    "linuxSupport": "AppImageに対応する64ビットディストリビューション",
+    "linuxFormat": "AppImage",
+    "sizeUnavailable": "サイズを取得できません",
+    "megabytes": "{count} MB"
+  },
+  "hud": {
+    "aria": "Beamキャプチャ操作のデモ",
+    "title": "録画する対象を選択",
+    "sourceType": "キャプチャソースの種類",
+    "screen": "画面",
+    "window": "ウィンドウ",
+    "microphone": "マイク",
+    "systemAudio": "システム音声",
+    "playRecording": "実際の録画を再生",
+    "mainDisplay": "メインディスプレイ",
+    "chooseWindow": "ウィンドウを選択",
+    "demoName": "Beamデモ - 1920 × 1080"
+  },
+  "editor": {
+    "aria": "インタラクティブなBeamエディターデモ",
+    "title": "実際のBeamエディターを試す",
+    "checking": "公開Beamデモプロジェクトを確認しています...",
+    "webCodecsUnavailable": "このブラウザーではWebCodecsを利用できません。元のMP4は下で再生できます。",
+    "ready": "実際のBeamキャンバス、音声、再生エンジン、編集可能なズーム、タイムライン。",
+    "decodeFailed": "このブラウザーでBeamはデモMP4をデコードできませんでした。元の録画は引き続き利用できます。",
+    "filesMissing": "{count}件の公開デモファイルが見つからないか無効です。 | {count}件の公開デモファイルが見つからないか無効です。",
+    "invalidEdit": "この編集は有効なメディア範囲外です。",
+    "playbackFailed": "再生を変更できませんでした。",
+    "frameFailed": "選択したフレームをデコードできませんでした。",
+    "importDisabled": "{type}のインポートにはネイティブなファイルアクセスが必要なため、ブラウザデモでは無効です。",
+    "splitHint": "分割する前に、選択したクリップ内へ再生ヘッドを移動してください。",
+    "fallback": "完全なキャンバスにはWebCodecsが必要です。これは未加工の元録画です。",
+    "mp4Unsupported": "お使いのブラウザーはMP4動画の再生に対応していません。",
+    "captionName": "プロダクトデモのキャプション",
+    "captionText": "記録。編集。共有。"
+  },
+  "missing": {
+    "checking": "プロジェクトファイルを確認しています...",
+    "title": "エディターは録画を待機しています",
+    "instructions": "以下の正確なパスで、これらのファイルをリポジトリに追加してください。完全なプロジェクトを読み込めるようになると、実際のプレーヤーとタイムラインが表示されます。",
+    "missing": "不足",
+    "invalid": "無効",
+    "project": "Beamエディターの状態とキャプション",
+    "manifest": "録画マニフェスト",
+    "video": "画面録画",
+    "cursor": "カーソルイベント",
+    "telemetry": "カーソルテレメトリ",
+    "shapes": "カーソル形状カタログ",
+    "invalidJson": "無効なJSON",
+    "emptyCursor": "空のカーソルイベントストリーム",
+    "requestFailed": "リクエストに失敗しました",
+    "expectedMp4": "MP4を想定しましたが、{type}を受け取りました"
+  },
+  "errors": {
+    "githubStatus": "GitHub APIが{status}を返しました。",
+    "githubUnavailable": "現在GitHubを利用できません。"
+  }
+}

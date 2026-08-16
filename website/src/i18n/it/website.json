@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Beam - Registra. Modifica. Condividi.",
+    "description": "Beam è un registratore dello schermo e un editor video open source per demo di prodotto curate e professionali."
+  },
+  "home": {
+    "heroLine1": "Cattura il momento.",
+    "heroLine2": "Rifinisci la storia.",
+    "lede": "Beam riunisce acquisizione e montaggio in un'unica app desktop essenziale, così le demo di prodotto sono rapide da creare e chiare da guardare.",
+    "watchDemo": "Guarda la demo reale",
+    "viewSource": "Vedi il codice sorgente",
+    "playDemoAria": "Riproduci la demo di Beam",
+    "demoAlt": "Editor video Beam che mostra una registrazione di prodotto",
+    "openDemo": "Apri la demo interattiva",
+    "openSourceTitle": "Beam nasce insieme alla sua community.",
+    "openSourceText": "Leggi il codice, segnala un bug o contribuisci a migliorare il registratore.",
+    "viewGitHub": "Vedi su GitHub",
+    "joinDiscord": "Unisciti a Discord",
+    "contributorsAlt": "Contributori di Beam su GitHub",
+    "contributorsFallback": "Scopri chi sta costruendo Beam",
+    "contributors": "{count} contributore sta costruendo Beam | {count} contributori stanno costruendo Beam",
+    "footer": "Registratore ed editor dello schermo open source."
+  },
+  "nav": {
+    "homeAria": "Home di Beam",
+    "mainAria": "Navigazione principale",
+    "docs": "Documentazione",
+    "starAria": "Metti una stella a Beam su GitHub",
+    "star": "Stella",
+    "starsAria": "Stelle GitHub",
+    "install": "Installa"
+  },
+  "theme": { "switchTo": "Passa al tema {theme}", "light": "chiaro", "dark": "scuro" },
+  "install": {
+    "downloadTitle": "Scarica Beam {version} per {platform}",
+    "preparingTitle": "Preparazione di Beam {version} per {platform}",
+    "downloadingTitle": "Download di Beam {version} per {platform}",
+    "automatic": "Il download dovrebbe iniziare automaticamente. In caso contrario, usa il pulsante qui sotto.",
+    "githubUnavailable": "Impossibile raggiungere GitHub. Apri la pagina delle release per scegliere manualmente un pacchetto.",
+    "checkingRelease": "Controllo dell'ultima release pubblicata su GitHub.",
+    "downloadAgain": "Scarica di nuovo",
+    "startDownload": "Avvia download",
+    "checkingGitHub": "Controllo di GitHub...",
+    "viewRelease": "Visualizza release",
+    "anotherVersion": "Ti serve un'altra versione?",
+    "choosePackage": "Scegli il pacchetto adatto al computer su cui userai Beam.",
+    "communityTitle": "Resta aggiornato su Beam",
+    "communityText": "Unisciti a Discord per note di rilascio, risoluzione dei problemi e anteprime di ciò che arriverà.",
+    "joinDiscord": "Unisciti a Discord"
+  },
+  "platform": {
+    "windowsSupport": "Windows 10 e 11, x64 o ARM64",
+    "windowsFormat": "Installer universale",
+    "macosSupport": "macOS 13 o versioni successive, Apple Silicon",
+    "macosFormat": "Immagine DMG",
+    "linuxSupport": "Distribuzioni a 64 bit con supporto AppImage",
+    "linuxFormat": "AppImage",
+    "sizeUnavailable": "Dimensione non disponibile",
+    "megabytes": "{count} MB"
+  },
+  "hud": {
+    "aria": "Demo dei controlli di acquisizione di Beam",
+    "title": "Scegli cosa registrare",
+    "sourceType": "Tipo di sorgente da acquisire",
+    "screen": "Schermo",
+    "window": "Finestra",
+    "microphone": "Microfono",
+    "systemAudio": "Audio di sistema",
+    "playRecording": "Riproduci la registrazione reale",
+    "mainDisplay": "Schermo principale",
+    "chooseWindow": "Scegli una finestra",
+    "demoName": "Demo Beam - 1920 × 1080"
+  },
+  "editor": {
+    "aria": "Demo interattiva dell'editor Beam",
+    "title": "Prova l'editor Beam reale",
+    "checking": "Controllo del progetto demo pubblico di Beam...",
+    "webCodecsUnavailable": "WebCodecs non è disponibile in questo browser. L'MP4 originale resta riproducibile qui sotto.",
+    "ready": "Canvas, audio, motore di riproduzione, zoom modificabili e timeline reali di Beam.",
+    "decodeFailed": "Beam non ha potuto decodificare l'MP4 demo nel tuo browser. La registrazione originale resta disponibile.",
+    "filesMissing": "{count} file demo pubblico manca o non è valido. | {count} file demo pubblici mancano o non sono validi.",
+    "invalidEdit": "Questa modifica è fuori dai limiti validi del contenuto multimediale.",
+    "playbackFailed": "Non è stato possibile modificare la riproduzione.",
+    "frameFailed": "Non è stato possibile decodificare il fotogramma selezionato.",
+    "importDisabled": "L'importazione di {type} richiede l'accesso nativo ai file e resta disabilitata nella demo del browser.",
+    "splitHint": "Sposta l'indicatore di riproduzione all'interno della clip selezionata prima di dividerla.",
+    "fallback": "Il canvas completo richiede WebCodecs. Questa è la registrazione sorgente non modificata.",
+    "mp4Unsupported": "Il tuo browser non supporta la riproduzione video MP4.",
+    "captionName": "Didascalia della demo di prodotto",
+    "captionText": "Registra. Modifica. Condividi."
+  },
+  "missing": {
+    "checking": "Controllo dei file del progetto...",
+    "title": "L'editor attende la registrazione",
+    "instructions": "Aggiungi questi file al repository nei percorsi esatti indicati qui sotto. Il player e la timeline reali appariranno solo quando sarà possibile caricare il progetto completo.",
+    "missing": "Mancante",
+    "invalid": "Non valido",
+    "project": "Stato dell'editor e didascalie di Beam",
+    "manifest": "manifest della registrazione",
+    "video": "registrazione dello schermo",
+    "cursor": "eventi del cursore",
+    "telemetry": "telemetria del cursore",
+    "shapes": "catalogo delle forme del cursore",
+    "invalidJson": "JSON non valido",
+    "emptyCursor": "Flusso di eventi del cursore vuoto",
+    "requestFailed": "Richiesta non riuscita",
+    "expectedMp4": "Era previsto un MP4, ricevuto {type}"
+  },
+  "errors": {
+    "githubStatus": "L'API di GitHub ha restituito {status}.",
+    "githubUnavailable": "GitHub non è al momento disponibile."
+  }
+}

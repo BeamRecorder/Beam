@@ -14,9 +14,9 @@ const mountPreview = () =>
   });
 
 describe('WebsiteHudPreview', () => {
-  it('mounts the real capture controls with an explicit demo-data label', () => {
+  it('mounts the real capture controls', () => {
     const wrapper = mountPreview();
-    expect(wrapper.text()).toContain('Real Beam HUD controls · demo data');
+    expect(wrapper.text()).toContain('Choose what to record');
     expect(wrapper.text()).toContain('Screen 1');
     expect(wrapper.get('.selected-thumbnail-wrapper img').attributes('src')).toMatch(/Beam-showcase.*\.png/);
     expect(wrapper.findAll('[aria-pressed="true"]')).toHaveLength(2);
