@@ -75,7 +75,12 @@ describe('theme store', () => {
     expect(capture.updatePreferences).not.toHaveBeenCalled();
     store.theme = 'dark';
     await nextTick();
-    expect(capture.updatePreferences).toHaveBeenCalledWith({ theme: 'dark' });
+    expect(capture.updatePreferences).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: 'dark',
+        appearance: expect.objectContaining({ theme: 'dark' }),
+      }),
+    );
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     store.theme = 'light';
     await nextTick();

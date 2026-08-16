@@ -116,3 +116,36 @@ test('merges interaction preference patches without erasing sibling state', () =
   const saved = store.patch({ recordingInteractions: { enabled: true } });
   assert.deepEqual(saved.recordingInteractions, { enabled: true, noticeDismissed: true });
 });
+
+test('normalizes and patches appearance customizer settings properly', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-preferences-appearance-'));
+  const store = createPreferencesStore(directory);
+  const initial = store.read();
+  assert.ok(initial.appearance);
+  assert.equal(initial.appearance.primaryColor, '#ff5a1f');
+  assert.equal(initial.appearance.radiusPx, 10);
+  assert.equal(initial.appearance.surfaceTone, 'default');
+
+  const patched = store.patch({
+    appearance: {
+      primaryColor: '#8b5cf6',
+      secondaryColor: '#06b6d4',
+      radiusPx: 16,
+      isPillRadius: false,
+      surfaceTone: 'slate',
+      activePresetId: 'cyber-violet',
+    },
+  });
+
+  assert.equal(patched.appearance.primaryColor, '#8b5cf6');
+  assert.equal(patched.appearance.secondaryColor, '#06b6d4');
+  assert.equal(patched.appearance.radiusPx, 16);
+  assert.equal(patched.appearance.surfaceTone, 'slate');
+  assert.equal(patched.appearance.activePresetId, 'cyber-violet');
+
+  // Verify sync when root theme changes
+  const themePatched = store.patch({ theme: 'dark' });
+  assert.equal(themePatched.theme, 'dark');
+  assert.equal(themePatched.appearance.theme, 'dark');
+  assert.equal(themePatched.appearance.primaryColor, '#8b5cf6');
+});

@@ -1,12 +1,15 @@
 import { defineComponent, ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { AudioClip, ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 
 const capture = vi.hoisted(() => ({
   listBackgroundLibrary: vi.fn(),
   onBackgroundLibraryChanged: vi.fn(),
+}));
+const toast = vi.hoisted(() => ({
+  error: vi.fn(),
 }));
 const state = vi.hoisted(() => ({
   player: undefined as any,
@@ -22,6 +25,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../../api/capture', () => ({ capture }));
+vi.mock('~/ui/toast/toastStore', () => ({ useToastStore: () => toast }));
 vi.mock('../useVideoPlayer', async () => {
   const { ref } = await import('vue');
   return {
@@ -332,6 +336,10 @@ describe('useVideoEditor', () => {
     state.compositionDurationMs.mockReturnValue(2000);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('initializes dependencies, synchronizes source/project changes and builds export data', async () => {
     let api!: ReturnType<typeof useVideoEditor>;
     const projectRef = ref(project);
@@ -390,6 +398,58 @@ describe('useVideoEditor', () => {
     projectRef.value = null;
     await wrapper.vm.$nextTick();
     expect(api.exportRequest.value).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('shows an actionable toast when loading the editor state fails with an Error', async () => {
+    const failure = new Error('project state is corrupt');
+    state.editorState = undefined;
+    const projectRef = ref(project);
+    const editorData = ref(makeEditorData());
+    const Harness = defineComponent({
+      setup: () => useVideoEditor({ project: projectRef, editorData }),
+      template: '<div />',
+    });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const wrapper = mount(Harness);
+    state.editorState.load.mockRejectedValueOnce(failure);
+
+    projectRef.value = { ...project, id: 'project-2' };
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith('Failed to load editor state.', failure);
+    expect(toast.error).toHaveBeenCalledWith(
+      'Failed to load editor state: project state is corrupt',
+      0,
+      expect.objectContaining({
+        label: 'Copy error',
+        copyText: expect.stringContaining('Error: project state is corrupt'),
+        detail: 'project state is corrupt',
+      }),
+    );
+    wrapper.unmount();
+  });
+
+  it('shows a copyable toast when editor state loading rejects with a non-Error value', async () => {
+    const projectRef = ref(project);
+    const editorData = ref(makeEditorData());
+    const Harness = defineComponent({
+      setup: () => useVideoEditor({ project: projectRef, editorData }),
+      template: '<div />',
+    });
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const wrapper = mount(Harness);
+    state.editorState.load.mockRejectedValueOnce('invalid editor payload');
+
+    projectRef.value = { ...project, id: 'project-3' };
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith('Failed to load editor state.', 'invalid editor payload');
+    expect(toast.error).toHaveBeenCalledWith('Failed to load editor state: invalid editor payload', 0, {
+      label: 'Copy error',
+      copyText: 'invalid editor payload',
+      detail: 'invalid editor payload',
+    });
     wrapper.unmount();
   });
 
