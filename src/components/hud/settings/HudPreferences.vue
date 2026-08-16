@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Monitor, Moon, Sun, Keyboard, Info, Sparkles } from '@lucide/vue';
-import { useThemeStore } from '~/stores/theme';
+import { Keyboard, Info, Sparkles } from '@lucide/vue';
 import { useLocaleStore } from '~/stores/locale';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
 import Button from '~/ui/button/Button.vue';
-import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import Select from '~/ui/select/Select.vue';
 import Badge from '~/ui/badge/Badge.vue';
 import Switch from '~/ui/switch/Switch.vue';
@@ -15,6 +13,7 @@ import ShortcutPreferences from './ShortcutPreferences.vue';
 import About from './About.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
+import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
 import { localeOptions } from '~/i18n/locales';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
@@ -59,7 +58,6 @@ const emit = defineEmits<{
   (event: 'close'): void;
 }>();
 
-const themeStore = useThemeStore();
 const localeStore = useLocaleStore();
 const currentView = computed({
   get: () => props.view,
@@ -216,37 +214,8 @@ const openOnboarding = () => {
             </div>
           </div>
 
-          <div class="preference-item">
-            <div class="preference-copy">
-              <p class="preference-title">{{ t('theme') }}</p>
-              <p class="preference-description">{{ t('chooseColorMode') }}</p>
-            </div>
-            <ButtonGroup class="theme-controls preference-control">
-              <Button
-                :class="{ active: themeStore.theme === 'light' }"
-                variant="tab"
-                size="sm"
-                @click="themeStore.theme = 'light'"
-              >
-                <template #icon><Sun class="button-icon" /></template>
-              </Button>
-              <Button
-                :class="{ active: themeStore.theme === 'dark' }"
-                variant="tab"
-                size="sm"
-                @click="themeStore.theme = 'dark'"
-              >
-                <template #icon><Moon class="button-icon" /></template>
-              </Button>
-              <Button
-                :class="{ active: themeStore.theme === 'system' }"
-                variant="tab"
-                size="sm"
-                @click="themeStore.theme = 'system'"
-              >
-                <template #icon><Monitor class="button-icon" /></template>
-              </Button>
-            </ButtonGroup>
+          <div class="preference-item preference-appearance-item">
+            <AppearanceSettings :show-title="false" :compact="true" />
           </div>
 
           <!-- Category: About -->
@@ -351,6 +320,10 @@ const openOnboarding = () => {
   box-sizing: border-box;
   width: 100%;
   transition: background-color 0.15s ease;
+}
+.preference-appearance-item {
+  flex-direction: column;
+  align-items: stretch;
 }
 .preference-copy {
   flex: 1 1 auto;

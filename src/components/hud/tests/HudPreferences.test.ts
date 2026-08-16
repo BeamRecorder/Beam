@@ -80,13 +80,10 @@ describe('HudPreferences', () => {
     expect(wrapper.emitted('update:recordInteractions')).toContainEqual([true]);
   });
 
-  it('persists user theme selections through the capture preferences API', async () => {
+  it('renders the shared appearance controls', () => {
     const wrapper = mountPreferences({ countdownSeconds: 0 });
-    const buttons = wrapper.findAll('.theme-controls button');
-    await buttons[0].trigger('click');
-    await buttons[1].trigger('click');
-    await buttons[2].trigger('click');
-    expect(capture.updatePreferences).toHaveBeenLastCalledWith({ theme: 'system' });
+    expect(wrapper.find('.appearance-settings').exists()).toBe(true);
+    expect(wrapper.find('.theme-mode-select').exists()).toBe(true);
   });
   it('shows the interaction switch only when input access is available', async () => {
     const wrapper = mountPreferences({ recordInteractions: true });

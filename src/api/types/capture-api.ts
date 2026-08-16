@@ -15,11 +15,13 @@ import type {
 } from '../../components/hud/teleprompter/teleprompter-types';
 import type { RecordingBarVisibility, RecordingConfiguration } from '../../components/hud/recorder/recording-types';
 import type { EditorLoadingProgress, EditorLoadingStage } from './editor-window';
+import type { AppearanceSettings } from '~/types/appearance';
 
 export type * from './capture-config';
 export type * from './screen-region';
 export type * from './capture-session';
 export type * from './editor-window';
+export type * from '~/types/appearance';
 
 export interface CaptureApi {
   readonly platform: string;
@@ -217,6 +219,7 @@ export interface PreferenceShortcut {
 export interface PreferenceSettings {
   schemaVersion: 3;
   theme: 'light' | 'dark' | 'system';
+  appearance?: AppearanceSettings;
   recordingBar: { visibility: RecordingBarVisibility };
   recordingInteractions: { enabled: boolean; noticeDismissed: boolean };
   onboardingCompleted?: boolean;
@@ -227,8 +230,9 @@ export interface PreferenceSettings {
   extras: Record<string, unknown>;
 }
 
-export type PreferencePatch = Partial<Omit<PreferenceSettings, 'recordingInteractions'>> & {
+export type PreferencePatch = Partial<Omit<PreferenceSettings, 'recordingInteractions' | 'appearance'>> & {
   recordingInteractions?: Partial<PreferenceSettings['recordingInteractions']>;
+  appearance?: Partial<AppearanceSettings>;
 };
 
 export interface ProjectEditorPresentation {

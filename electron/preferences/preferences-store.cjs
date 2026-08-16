@@ -1,9 +1,21 @@
 const fs = require('fs');
 const path = require('path');
 
+const defaultAppearance = () => ({
+  theme: 'light',
+  primaryColor: '#ff5a1f',
+  secondaryColor: '#6366f1',
+  radiusPx: 10,
+  isPillRadius: false,
+  surfaceTone: 'default',
+  activePresetId: 'beam-sunset',
+});
+const surfaceTones = new Set(['default', 'neutral', 'slate', 'deep']);
+
 const defaults = (platform = process.platform) => ({
   schemaVersion: 3,
   theme: 'light',
+  appearance: defaultAppearance(),
   recordingBar: { visibility: platform === 'linux' ? 'hover-only' : 'always' },
   recordingInteractions: { enabled: false, noticeDismissed: false },
   onboardingCompleted: false,
@@ -66,6 +78,30 @@ const presets = (value) => {
   const uniqueGradients = [...new Map(gradients.map((item) => [JSON.stringify(item), item])).values()];
   return { colors, gradients: uniqueGradients };
 };
+const normalizeAppearance = (value, fallbackTheme = 'light') => {
+  const base = defaultAppearance();
+  const raw = value && typeof value === 'object' ? value : {};
+  const theme = themes.has(raw.theme) ? raw.theme : (themes.has(fallbackTheme) ? fallbackTheme : base.theme);
+  const primaryColor = color(raw.primaryColor) ? raw.primaryColor.toLowerCase() : base.primaryColor;
+  const secondaryColor = color(raw.secondaryColor) ? raw.secondaryColor.toLowerCase() : base.secondaryColor;
+  const rawRadius = Number(raw.radiusPx);
+  const radiusPx = Number.isFinite(rawRadius) ? Math.max(0, Math.min(64, Math.round(rawRadius))) : base.radiusPx;
+  const isPillRadius = typeof raw.isPillRadius === 'boolean' ? raw.isPillRadius : base.isPillRadius;
+  const surfaceTone = surfaceTones.has(raw.surfaceTone) ? raw.surfaceTone : base.surfaceTone;
+  const activePresetId =
+    typeof raw.activePresetId === 'string' && raw.activePresetId.length > 0
+      ? raw.activePresetId.slice(0, 80)
+      : null;
+  return {
+    theme,
+    primaryColor,
+    secondaryColor,
+    radiusPx,
+    isPillRadius,
+    surfaceTone,
+    activePresetId,
+  };
+};
 const normalize = (value, platform = process.platform) => {
   const base = defaults(platform);
   const next = value && typeof value === 'object' ? value : {};
@@ -88,9 +124,18 @@ const normalize = (value, platform = process.platform) => {
       globalKeys.add(key);
     }
   }
+  const resolvedTheme = themes.has(next.theme)
+    ? next.theme
+    : themes.has(next.appearance?.theme)
+      ? next.appearance.theme
+      : base.theme;
+  const appearanceSettings = normalizeAppearance(next.appearance, resolvedTheme);
+  appearanceSettings.theme = resolvedTheme;
+
   return {
     schemaVersion: 3,
-    theme: themes.has(next.theme) ? next.theme : base.theme,
+    theme: resolvedTheme,
+    appearance: appearanceSettings,
     recordingBar: {
       visibility: ['always', 'auto-fade', 'hover-only'].includes(next.recordingBar?.visibility)
         ? next.recordingBar.visibility
@@ -134,9 +179,18 @@ function createPreferencesStore(file, { platform = process.platform } = {}) {
   };
   const patch = (value) => {
     const current = read();
+    const nextAppearance = value?.appearance
+      ? { ...current.appearance, ...value.appearance }
+      : current.appearance;
+    const nextTheme = value?.theme || value?.appearance?.theme || current.theme;
+    if (nextAppearance) {
+      nextAppearance.theme = nextTheme;
+    }
     return write({
       ...current,
       ...(value || {}),
+      theme: nextTheme,
+      appearance: nextAppearance,
       recordingBar: { ...current.recordingBar, ...(value?.recordingBar || {}) },
       recordingInteractions: {
         ...current.recordingInteractions,
