@@ -154,6 +154,7 @@ export interface BlurClip extends ClipBase {
   mode: BlurEffectMode;
   strength: number;
   feather: number;
+  cornerRadius: number;
   tintOpacity: number;
   color: string;
 }

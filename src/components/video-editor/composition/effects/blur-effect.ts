@@ -72,12 +72,15 @@ export const effectShapeRect = (shape: BlurClip['shape'], rect: EffectRect): Eff
   };
 };
 
-const shapePath = (ctx: Canvas2DContext, shape: BlurClip['shape'], rect: EffectRect) => {
-  const target = effectShapeRect(shape, rect);
+const shapePath = (ctx: Canvas2DContext, clip: BlurClip, rect: EffectRect) => {
+  const target = effectShapeRect(clip.shape, rect);
   ctx.beginPath();
-  if (shape === 'circle')
+  if (clip.shape === 'circle')
     ctx.arc(target.x + target.width / 2, target.y + target.height / 2, target.width / 2, 0, Math.PI * 2);
-  else ctx.rect(target.x, target.y, target.width, target.height);
+  else if (clip.cornerRadius > 0) {
+    const radius = (Math.min(target.width, target.height) * clip.cornerRadius) / 200;
+    ctx.roundRect(target.x, target.y, target.width, target.height, radius);
+  } else ctx.rect(target.x, target.y, target.width, target.height);
 };
 
 const deviceRect = (ctx: Canvas2DContext, rect: EffectRect): EffectRect => {
@@ -147,10 +150,9 @@ const drawFiltered = (pool: ScratchPool, clip: BlurClip, width: number, height: 
 };
 
 const applyTint = (pool: ScratchPool, clip: BlurClip, rect: EffectRect) => {
-  const opacity = clip.mode === 'frosted' ? Math.max(18, clip.tintOpacity) : clip.tintOpacity;
-  if (opacity <= 0 || clip.mode === 'opaque') return;
+  if (clip.mode !== 'frosted' || clip.tintOpacity <= 0) return;
   pool.effect.context.save();
-  pool.effect.context.globalAlpha = opacity / 100;
+  pool.effect.context.globalAlpha = clip.tintOpacity / 100;
   pool.effect.context.fillStyle = clip.color;
   pool.effect.context.fillRect(rect.x, rect.y, rect.width, rect.height);
   pool.effect.context.restore();
@@ -161,7 +163,7 @@ const applyShapeMask = (pool: ScratchPool, clip: BlurClip, rect: EffectRect) => 
   const featherPixels = Math.min(48, (Math.min(rect.width, rect.height) * clip.feather) / 500);
   pool.mask.context.filter = featherPixels > 0 ? `blur(${featherPixels}px)` : 'none';
   pool.mask.context.fillStyle = '#ffffff';
-  shapePath(pool.mask.context, clip.shape, rect);
+  shapePath(pool.mask.context, clip, rect);
   pool.mask.context.fill();
   pool.mask.context.filter = 'none';
   pool.effect.context.globalCompositeOperation = 'destination-in';
@@ -171,7 +173,7 @@ const applyShapeMask = (pool: ScratchPool, clip: BlurClip, rect: EffectRect) => 
 
 export function applyBlurEffect(ctx: Canvas2DContext, clip: BlurClip, rect: EffectRect): void {
   if (!ctx.canvas.width || !ctx.canvas.height || rect.width <= 0 || rect.height <= 0) return;
-  if (clip.mode === 'blur' && clip.strength <= 0 && clip.tintOpacity <= 0) return;
+  if (clip.mode === 'blur' && clip.strength <= 0) return;
   const target = deviceRect(ctx, effectShapeRect(clip.shape, rect));
   const radius = clip.mode === 'blur' || clip.mode === 'frosted' ? (clip.strength / 100) * 48 : 0;
   const feather = Math.min(48, (Math.min(target.width, target.height) * clip.feather) / 500);

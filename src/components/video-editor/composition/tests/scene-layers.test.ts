@@ -38,6 +38,7 @@ const blur = (order: number): BlurClip => ({
   mode: 'blur',
   strength: 60,
   feather: 0,
+  cornerRadius: 0,
   tintOpacity: 0,
   color: '#000000',
 });

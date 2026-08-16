@@ -91,6 +91,7 @@ export function useClipComposition(options: {
             blurMode: clip.mode,
             blurStrength: clip.strength,
             blurFeather: clip.feather,
+            blurCornerRadius: clip.cornerRadius,
             blurTintOpacity: clip.tintOpacity,
             blurColor: clip.color,
           }
@@ -231,6 +232,7 @@ export function useClipComposition(options: {
         mode: 'blur',
         strength: 60,
         feather: 0,
+        cornerRadius: 0,
         tintOpacity: 0,
         color: '#000000',
       };
@@ -385,7 +387,9 @@ export function useClipComposition(options: {
     if (selectedClipId.value) composition.value = setTransform(composition.value, selectedClipId.value, transform);
   };
   const updateSelectedBlur = (
-    patch: Partial<Pick<BlurClip, 'shape' | 'mode' | 'strength' | 'feather' | 'tintOpacity' | 'color'>>,
+    patch: Partial<
+      Pick<BlurClip, 'shape' | 'mode' | 'strength' | 'feather' | 'cornerRadius' | 'tintOpacity' | 'color'>
+    >,
   ) => {
     const clip = selectedClip.value;
     if (!clip || !isBlurClip(clip)) return;

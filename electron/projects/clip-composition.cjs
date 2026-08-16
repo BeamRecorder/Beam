@@ -314,6 +314,8 @@ function normalizeComposition(value) {
         clip.strength < 0 ||
         clip.strength > 100 ||
         (clip.feather !== undefined && (!finite(clip.feather) || clip.feather < 0 || clip.feather > 100)) ||
+        (clip.cornerRadius !== undefined &&
+          (!finite(clip.cornerRadius) || clip.cornerRadius < 0 || clip.cornerRadius > 100)) ||
         (clip.tintOpacity !== undefined &&
           (!finite(clip.tintOpacity) || clip.tintOpacity < 0 || clip.tintOpacity > 100)) ||
         effectColor === null
@@ -327,6 +329,7 @@ function normalizeComposition(value) {
         mode: clip.mode,
         strength: Math.max(0, Math.min(100, clip.strength)),
         feather: clip.feather === undefined ? 0 : Math.max(0, Math.min(100, clip.feather)),
+        cornerRadius: clip.cornerRadius === undefined ? 0 : Math.max(0, Math.min(100, clip.cornerRadius)),
         tintOpacity: clip.tintOpacity === undefined ? 0 : Math.max(0, Math.min(100, clip.tintOpacity)),
         color: effectColor,
       };

@@ -277,6 +277,7 @@ test('round-trips an assetless blur overlay with its effect settings', () => {
     mode: 'pixelated',
     strength: 80,
     feather: 0,
+    cornerRadius: 0,
     tintOpacity: 0,
     color: '#123456',
   });

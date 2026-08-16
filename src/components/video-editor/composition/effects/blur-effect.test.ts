@@ -20,6 +20,7 @@ const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
   mode: 'blur',
   strength: 60,
   feather: 0,
+  cornerRadius: 0,
   tintOpacity: 0,
   color: '#000000',
   ...overrides,
@@ -40,6 +41,7 @@ class FakeContext {
   beginPath = vi.fn();
   arc = vi.fn();
   rect = vi.fn();
+  roundRect = vi.fn();
   fill = vi.fn();
   fillRect = vi.fn();
 
@@ -64,8 +66,47 @@ describe('blur effect renderer', () => {
     expect(effectShapeRect('circle', rect)).toEqual({ x: 30, y: 20, width: 60, height: 60 });
   });
 
+  it('uses the configured corner radius for rectangular and square masks', () => {
+    const surfaces: FakeContext[] = [];
+    class FakeOffscreenCanvas {
+      width: number;
+      height: number;
+      private readonly context: FakeContext;
+
+      constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
+        this.context = new FakeContext(this);
+        surfaces.push(this.context);
+      }
+
+      getContext() {
+        return this.context;
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+
+    const output = new FakeContext({ width: 800, height: 450 }) as unknown as Canvas2DContext;
+    applyBlurEffect(output, blurClip({ cornerRadius: 50 }), { x: 100, y: 100, width: 200, height: 100 });
+
+    const mask = surfaces[2];
+    expect(mask.roundRect).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 200, 100, 25);
+    expect(mask.rect).not.toHaveBeenCalled();
+
+    mask.roundRect.mockClear();
+    applyBlurEffect(output, blurClip({ shape: 'circle', cornerRadius: 100 }), {
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+    });
+    expect(mask.arc).toHaveBeenCalled();
+    expect(mask.roundRect).not.toHaveBeenCalled();
+  });
+
   it('reuses region-sized scratch surfaces between frames and modes', () => {
     const surfaces: Array<{ width: number; height: number }> = [];
+    const contexts: FakeContext[] = [];
     class FakeOffscreenCanvas {
       width: number;
       height: number;
@@ -76,6 +117,7 @@ describe('blur effect renderer', () => {
         this.height = height;
         this.context = new FakeContext(this);
         surfaces.push(this);
+        contexts.push(this.context);
       }
 
       getContext() {
@@ -91,9 +133,13 @@ describe('blur effect renderer', () => {
     applyBlurEffect(output, blurClip({ mode: 'frosted', feather: 20, tintOpacity: 25 }), rect);
     expect(surfaces).toHaveLength(4);
     expect(surfaces.slice(0, 3).every((surface) => surface.width < outputCanvas.width)).toBe(true);
+    expect(contexts[1].fillRect).toHaveBeenCalled();
 
-    applyBlurEffect(output, blurClip({ mode: 'pixelated', strength: 90 }), rect);
+    contexts[1].fillRect.mockClear();
+    applyBlurEffect(output, blurClip({ mode: 'pixelated', strength: 90, tintOpacity: 100 }), rect);
+    expect(contexts[1].fillRect).not.toHaveBeenCalled();
     applyBlurEffect(output, blurClip({ mode: 'opaque', color: '#112233' }), rect);
+    expect(contexts[1].fillRect).toHaveBeenCalled();
     expect(surfaces).toHaveLength(4);
     expect(output.drawImage).toHaveBeenCalledTimes(3);
   });

@@ -114,6 +114,7 @@ const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
   mode: 'blur',
   strength: 60,
   feather: 0,
+  cornerRadius: 0,
   tintOpacity: 0,
   color: '#000000',
   ...overrides,
@@ -239,6 +240,7 @@ describe('clip composition engine', () => {
   it('rejects invalid blur settings without affecting media assets', () => {
     expect(() => createComposition([], [blurClip({ strength: 101 })])).toThrow(/blur effect settings/);
     expect(() => createComposition([], [blurClip({ feather: -1 })])).toThrow(/blur effect settings/);
+    expect(() => createComposition([], [blurClip({ cornerRadius: 101 })])).toThrow(/blur effect settings/);
     expect(() => createComposition([], [blurClip({ tintOpacity: 101 })])).toThrow(/blur effect settings/);
     expect(() => createComposition([], [blurClip({ color: 'red' })])).toThrow(/blur effect settings/);
     const deleted = deleteClip(createComposition([], [blurClip()]), 'blur');

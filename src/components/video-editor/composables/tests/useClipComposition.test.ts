@@ -345,6 +345,7 @@ describe('useClipComposition', () => {
       mode: 'blur',
       strength: 60,
       feather: 0,
+      cornerRadius: 0,
       tintOpacity: 0,
     });
     expect(mounted.state.composition.value.assets).toHaveLength(0);
@@ -354,6 +355,7 @@ describe('useClipComposition', () => {
       mode: 'frosted',
       strength: 80,
       feather: 20,
+      cornerRadius: 35,
       tintOpacity: 25,
       color: '#abcdef',
     });
@@ -362,6 +364,7 @@ describe('useClipComposition', () => {
       blurMode: 'frosted',
       blurStrength: 80,
       blurFeather: 20,
+      blurCornerRadius: 35,
       blurTintOpacity: 25,
       blurColor: '#abcdef',
     });

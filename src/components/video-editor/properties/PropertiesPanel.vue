@@ -64,6 +64,7 @@ export interface SelectedClipProperties {
   blurShape?: BlurEffectShape;
   blurStrength?: number;
   blurFeather?: number;
+  blurCornerRadius?: number;
   blurTintOpacity?: number;
   blurColor?: string;
 }
@@ -141,6 +142,7 @@ const emit = defineEmits<{
       shape: BlurEffectShape;
       strength: number;
       feather: number;
+      cornerRadius: number;
       tintOpacity: number;
       color: string;
     }>,
@@ -205,6 +207,7 @@ const emit = defineEmits<{
           shape: normalizedSelectedClip.blurShape ?? 'rectangle',
           strength: normalizedSelectedClip.blurStrength ?? 60,
           feather: normalizedSelectedClip.blurFeather ?? 0,
+          cornerRadius: normalizedSelectedClip.blurCornerRadius ?? 0,
           tintOpacity: normalizedSelectedClip.blurTintOpacity ?? 0,
           color: normalizedSelectedClip.blurColor ?? '#000000',
           enabled: normalizedSelectedClip.enabled,
