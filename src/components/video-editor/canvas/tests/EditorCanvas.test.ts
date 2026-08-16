@@ -338,6 +338,33 @@ describe('EditorCanvas', () => {
     expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
   });
 
+  it('does not flash a loading skeleton when an already rendered screen track is toggled', async () => {
+    let frameAvailable = true;
+    const mounted = mountEditor({
+      frameFor: (clipId: string) => (clipId === 'screen' && frameAvailable ? frame('screen') : null),
+    });
+    await nextTick();
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+
+    const disabledComposition = composition();
+    disabledComposition.clips = disabledComposition.clips.map((clip) =>
+      clip.kind === 'screen' ? { ...clip, enabled: false } : clip,
+    );
+    frameAvailable = false;
+    await mounted.setProps({
+      composition: disabledComposition,
+      playbackState: 'loading',
+      frameVersion: 1,
+    });
+    await nextTick();
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+    expect(mounted.find('.preview-frame').exists()).toBe(true);
+
+    await mounted.setProps({ composition: composition(), frameVersion: 2 });
+    await nextTick();
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+  });
+
   it('draws through the camera window and exposes transform and crop interactions', async () => {
     const bounds = { dx: 0, dy: 0, dw: 800, dh: 450, scale: 1, focusX: 400, focusY: 225 };
     state.drawVideoWindow.mockReturnValue(bounds);

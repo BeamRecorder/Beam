@@ -6,6 +6,8 @@ export interface OutputCanvasSettings {
   showBackground: boolean;
 }
 
+export const OUTPUT_PREVIEW_RADIUS = 16;
+
 export interface CanvasRect {
   x: number;
   y: number;

@@ -8,7 +8,7 @@ import UndoRedoToast from './UndoRedoToast.vue';
 import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { approximateCaptionTextWidth } from '~/media/shared/caption-text-layout';
-import { outputPreviewRect } from './output-canvas';
+import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
 import { useCursorOverlay } from './composables/useCursorOverlay';
@@ -23,7 +23,6 @@ import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types
 const { t } = useTranslate('EditorCanvas');
 const props = defineProps<EditorCanvasProps>();
 const emit = defineEmits<EditorCanvasEmits>();
-
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const logicalSize = ref({ width: 0, height: 0 });
@@ -64,11 +63,25 @@ const screenFrame = computed(() => {
   void props.frameVersion;
   return liveScreenClip.value ? props.frameFor(liveScreenClip.value.id) : null;
 });
+const renderedScreenClipIds = ref<ReadonlySet<string>>(new Set());
+watch(
+  screenFrame,
+  (frame) => {
+    const clipId = liveScreenClip.value?.id;
+    if (!frame || !clipId || renderedScreenClipIds.value.has(clipId)) return;
+    renderedScreenClipIds.value = new Set([...renderedScreenClipIds.value, clipId]);
+  },
+  { immediate: true },
+);
+const showLoadingSkeleton = computed(() => {
+  const clip = liveScreenClip.value;
+  if (!clip || props.playbackError || renderedScreenClipIds.value.has(clip.id)) return false;
+  return props.playbackState === 'loading' || !screenFrame.value;
+});
 const previewFrameStyle = computed(() => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
   return { left: `${preview.x}px`, top: `${preview.y}px`, width: `${preview.width}px`, height: `${preview.height}px` };
 });
-
 function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
@@ -285,7 +298,7 @@ const renderCanvas = () => {
     };
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, 16);
+    ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
     ctx.clip();
     drawBackground(ctx, preview);
     drawNonScreenVisuals(ctx, fallbackWindow);
@@ -410,7 +423,7 @@ defineExpose({
         :style="guide.style"
       ></div>
       <Skeleton
-        v-if="playbackState === 'loading' || (Boolean(liveScreenClip) && !screenFrame && !playbackError)"
+        v-if="showLoadingSkeleton"
         class="canvas-loading-skeleton"
         width="100%"
         height="100%"

@@ -91,6 +91,7 @@ let options!: {
   activeTab: ReturnType<typeof ref<string>>;
   output: ReturnType<typeof ref<{ preset: '16:9'; width: number; height: number; showBackground: boolean }>>;
   screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
+  videoError: ReturnType<typeof ref<string | null>>;
   canvas: HTMLCanvasElement;
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
 };
@@ -104,6 +105,7 @@ const mountComposable = () => {
   const zooms = ref<ZoomElement[]>([autoZoom]);
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
   const screenTransformDraft = ref<NormalizedTransform | null>(null);
+  const videoError = ref<string | null>('recording unavailable');
   const canvas = document.createElement('canvas');
   canvas.getBoundingClientRect = () => ({
     left: 0,
@@ -162,7 +164,7 @@ const mountComposable = () => {
         composition: () => compositionRef.value,
         screenTransformDraft: () => screenTransformDraft.value,
         isCropping: () => false,
-        videoError: () => 'recording unavailable',
+        videoError: () => videoError.value,
         renderVisualStack: (ctx, bounds, drawScreen) => {
           drawScreen();
           callbacks.onSelectCanvas(ctx, bounds);
@@ -182,6 +184,7 @@ const mountComposable = () => {
     activeTab,
     output,
     screenTransformDraft,
+    videoError,
     canvas,
     callbacks,
   };
@@ -208,18 +211,45 @@ afterEach(() => {
 describe('useCameraZoom', () => {
   it('renders disabled and loading screens, then draws a ready decorated window', () => {
     mountComposable();
-    const ctx = context();
+    const disabledContext = context();
     options.compositionRef.value = composition(false);
-    expect(state.drawVideoWindow(ctx, 800, 450, null)).toBeNull();
-    expect(ctx.fillText).toHaveBeenCalledWith('Video track disabled', expect.any(Number), expect.any(Number));
+    expect(state.drawVideoWindow(disabledContext, 800, 450, null)).toBeNull();
+    expect(disabledContext.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
+    expect(disabledContext.clip).toHaveBeenCalledOnce();
+    expect(disabledContext.fillText).toHaveBeenCalledWith(
+      'Video track disabled',
+      expect.any(Number),
+      expect.any(Number),
+    );
+    expect(disabledContext.restore).toHaveBeenCalledOnce();
+
+    const loadingComposition = composition();
+    loadingComposition.assets[0] = { ...loadingComposition.assets[0]!, width: null, height: null };
+    options.compositionRef.value = loadingComposition;
+    const loadingContext = context();
+    state.drawVideoWindow(loadingContext, 800, 450, null);
+    expect(loadingContext.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
+    expect(loadingContext.clip).toHaveBeenCalledOnce();
+    expect(loadingContext.fillText).toHaveBeenCalledWith('recording unavailable', 400, 225);
+    expect(loadingContext.restore).toHaveBeenCalledOnce();
 
     options.compositionRef.value = composition();
-    state.drawVideoWindow(ctx, 800, 450, null);
-    expect(ctx.fillText).toHaveBeenCalledWith('recording unavailable', 400, 225);
     options.output.value = { preset: '16:9', width: 800, height: 450, ...options.output.value, showBackground: true };
-    expect(state.drawVideoWindow(ctx, 800, 450, frame())).not.toBeNull();
+    expect(state.drawVideoWindow(context(), 800, 450, frame())).not.toBeNull();
     expect(drawDecoratedMedia).toHaveBeenCalled();
     expect(options.callbacks.drawBackground).toHaveBeenCalled();
+  });
+
+  it('keeps the canvas background visible while a known screen frame reloads', () => {
+    mountComposable();
+    options.videoError.value = null;
+    options.output.value = { preset: '16:9', width: 800, height: 450, showBackground: true };
+    const ctx = context();
+
+    expect(state.drawVideoWindow(ctx, 800, 450, null)).not.toBeNull();
+    expect(options.callbacks.drawBackground).toHaveBeenCalledOnce();
+    expect(ctx.fillRect).not.toHaveBeenCalled();
+    expect(ctx.fillText).not.toHaveBeenCalled();
   });
 
   it('returns to the background-only frame after the screen clip ends', () => {
