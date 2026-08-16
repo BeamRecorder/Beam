@@ -28,12 +28,7 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
 </script>
 
 <template>
-  <section class="click-effects" aria-labelledby="click-effects-title">
-    <div class="section-heading">
-      <span id="click-effects-title" class="section-title">{{ t('clicks') }}</span>
-      <span class="section-description">{{ t('clicksDescription') }}</span>
-    </div>
-
+  <section class="click-effects" aria-label="Click effects">
     <template v-for="(button, index) in buttons" :key="button.id">
       <Divider v-if="index > 0" spacing="xs" />
       <div class="click-card">
@@ -93,25 +88,6 @@ const updateEffect = (button: CursorClickButton, patch: Partial<CursorClickEffec
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.section-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.section-title {
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.section-description {
-  color: var(--text-muted);
-  font-size: 10px;
 }
 
 .click-card {
