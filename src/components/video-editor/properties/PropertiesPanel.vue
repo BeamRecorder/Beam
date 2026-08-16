@@ -17,11 +17,8 @@ import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurP
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
-import Button from '~/ui/button/Button.vue';
-import ButtonGroup from '~/ui/button/ButtonGroup.vue';
-import Divider from '~/ui/divider/Divider.vue';
+import ClipActionGroup from '~/components/video-editor/properties/clip/ClipActionGroup.vue';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
-import { Eye, EyeOff, Trash2 } from '@lucide/vue';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import type {
   BlurEffectMode,
@@ -40,7 +37,6 @@ import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
 
 const { t } = useTranslate('PropertiesPanel');
 const { t: tClip } = useTranslate('ClipPropertiesPanel');
-const { t: tAudio } = useTranslate('AudioClipPropertiesPanel');
 const { t: tCaption } = useTranslate('CaptionClipPanel');
 const { t: tZoom } = useTranslate('ZoomPanel');
 const { t: tBlur } = useTranslate('BlurPropertiesPanel');
@@ -80,36 +76,41 @@ export interface SelectedClipProperties {
   blurTintOpacity?: number;
   blurColor?: string;
 }
-const props = defineProps<{
-  activeTab: string;
-  selectedClip?: SelectedClipProperties | null;
-  selectedCaptionClip?: CaptionClip | null;
-  selectedCursor: CursorType;
-  cursorSize: number;
-  cursorColor: string;
-  enableShadow: boolean;
-  shadowBlur: number;
-  shadowColor: string;
-  shadowDirection: ShadowDirection;
-  clickEffects: CursorClickEffects;
-  motion: CursorMotionSettings;
-  volume: number;
-  isSystemAudioEnabled: boolean;
-  isMicAudioEnabled: boolean;
-  systemVolume?: number;
-  micVolume?: number;
-  selectedBackground: BackgroundValue | null;
-  blurPercent: number;
-  backgroundGroups: BackgroundMediaGroup[];
-  selectedZoom: ZoomElement | null;
-  canGenerateZooms: boolean;
-  hasAutomaticZooms: boolean;
-  composition: ClipComposition;
-  editorData?: ProjectEditorData | null;
-  timelineDurationMs: number;
-  projectId?: string | null;
-  canvas: OutputCanvasSettings;
-}>();
+const props = withDefaults(
+  defineProps<{
+    activeTab: string;
+    selectedClip?: SelectedClipProperties | null;
+    selectedCaptionClip?: CaptionClip | null;
+    selectedCursor: CursorType;
+    cursorSize: number;
+    cursorColor: string;
+    enableShadow: boolean;
+    shadowBlur: number;
+    shadowColor: string;
+    shadowDirection: ShadowDirection;
+    clickEffects: CursorClickEffects;
+    motion: CursorMotionSettings;
+    volume: number;
+    isSystemAudioEnabled: boolean;
+    isMicAudioEnabled: boolean;
+    hasSystemAudio?: boolean;
+    hasMicAudio?: boolean;
+    systemVolume?: number;
+    micVolume?: number;
+    selectedBackground: BackgroundValue | null;
+    blurPercent: number;
+    backgroundGroups: BackgroundMediaGroup[];
+    selectedZoom: ZoomElement | null;
+    canGenerateZooms: boolean;
+    hasAutomaticZooms: boolean;
+    composition: ClipComposition;
+    editorData?: ProjectEditorData | null;
+    timelineDurationMs: number;
+    projectId?: string | null;
+    canvas: OutputCanvasSettings;
+  }>(),
+  { hasSystemAudio: false, hasMicAudio: false },
+);
 const normalizedSelectedClip = computed(() =>
   props.selectedClip
     ? {
@@ -138,6 +139,7 @@ const panelTitle = computed(() => {
 });
 const emit = defineEmits<{
   (event: 'update:selectedCursor', value: CursorType): void;
+  (event: 'preview:selectedCursor', value: CursorType | null): void;
   (event: 'update:cursorSize', value: number): void;
   (event: 'update:cursorColor', value: string): void;
   (event: 'update:enableShadow', value: boolean): void;
@@ -160,7 +162,7 @@ const emit = defineEmits<{
   (event: 'generate:zooms'): void;
   (event: 'update:caption', value: CaptionClip): void;
   (event: 'update:composition', value: ClipComposition): void;
-  (event: 'preview:composition', value: ClipComposition): void;
+  (event: 'preview:composition', value: ClipComposition | null): void;
   (event: 'select-caption', clipId: string): void;
   (event: 'update:clip-rate', rate: number): void;
   (event: 'update:clip-enabled', enabled: boolean): void;
@@ -199,16 +201,19 @@ const emit = defineEmits<{
   (event: 'reset:clip-transform'): void;
   (event: 'unlink-clip'): void;
   (event: 'delete-clip'): void;
+  (event: 'delete:system-audio'): void;
+  (event: 'delete:mic-audio'): void;
   (event: 'split-clip'): void;
   (event: 'back-to-hud'): void;
   (event: 'start-recording', config: any): void;
 }>();
 const previewCaption = (clip: CaptionClip | null) => {
+  if (!clip) return emit('preview:composition', null);
   const original = props.selectedCaptionClip;
   if (!original) return;
   emit('preview:composition', {
     ...props.composition,
-    clips: props.composition.clips.map((item) => (item.id === original.id ? (clip ?? original) : item)),
+    clips: props.composition.clips.map((item) => (item.id === original.id ? clip : item)),
   });
 };
 
@@ -220,6 +225,7 @@ const isCurrentClipEnabled = computed(() => {
 
 const isDeletable = computed(() => {
   if (props.activeTab === 'zoom' && props.selectedZoom) return true;
+  if (props.activeTab === 'clip' && props.selectedClip?.kind === 'audio') return false;
   if (props.activeTab === 'clip' && (props.selectedClip || props.selectedCaptionClip)) return true;
   return false;
 });
@@ -236,9 +242,6 @@ const deleteTooltip = computed(() => {
     return tCaption('deleteCaptionClip') || 'Delete caption';
   }
   if (props.selectedClip) {
-    if (props.selectedClip.kind === 'audio') {
-      return tAudio('deleteAudioClip') || 'Delete audio';
-    }
     if (props.selectedClip.kind === 'blur') {
       return tBlur('delete') ? `${tBlur('delete')} (${panelTitle.value.toLowerCase()})` : 'Delete blur';
     }
@@ -274,32 +277,17 @@ const handleDelete = () => {
   <div class="properties-island">
     <div class="panel-header">
       <h3 class="panel-title">{{ panelTitle }}</h3>
-      <div v-if="isDeletable" class="panel-header-actions">
-        <ButtonGroup size="xs">
-          <Button
-            v-if="isToggleable"
-            variant="ghost"
-            size="xs"
-            :icon="isCurrentClipEnabled ? Eye : EyeOff"
-            icon-only
-            :tooltip="isCurrentClipEnabled ? tClip('enabled') || 'Enabled' : tClip('disabled') || 'Disabled'"
-            :aria-label="isCurrentClipEnabled ? 'Hide clip' : 'Show clip'"
-            :class="{ 'is-muted-clip': !isCurrentClipEnabled }"
-            @click="handleToggleClipEnabled"
-          />
-          <Divider v-if="isToggleable" orientation="vertical" spacing="none" />
-          <Button
-            variant="ghost"
-            size="xs"
-            :icon="Trash2"
-            icon-only
-            :tooltip="deleteTooltip"
-            :aria-label="deleteTooltip"
-            class="panel-delete-btn"
-            @click="handleDelete"
-          />
-        </ButtonGroup>
-      </div>
+      <ClipActionGroup
+        v-if="isDeletable"
+        class="panel-header-actions"
+        :enabled="isCurrentClipEnabled"
+        :toggleable="isToggleable"
+        :enabled-label="tClip('enabled') || 'Enabled'"
+        :disabled-label="tClip('disabled') || 'Disabled'"
+        :delete-label="deleteTooltip"
+        @toggle="handleToggleClipEnabled"
+        @delete="handleDelete"
+      />
     </div>
     <ScrollShadow class="panel-scroll-shadow">
       <div class="panel-body">
@@ -319,6 +307,7 @@ const handleDelete = () => {
           v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
           :clip="normalizedSelectedClip"
           @update:volume="emit('update:clip-volume', $event)"
+          @update:enabled="emit('update:clip-enabled', $event)"
           @delete="emit('delete-clip')"
         />
         <BlurPropertiesPanel
@@ -376,6 +365,7 @@ const handleDelete = () => {
           :click-effects="clickEffects"
           :motion="motion"
           @update:selected-cursor="emit('update:selectedCursor', $event)"
+          @preview:selected-cursor="emit('preview:selectedCursor', $event)"
           @update:cursor-size="emit('update:cursorSize', $event)"
           @update:cursor-color="emit('update:cursorColor', $event)"
           @update:enable-shadow="emit('update:enableShadow', $event)"
@@ -390,6 +380,8 @@ const handleDelete = () => {
           :volume="volume"
           :is-system-audio-enabled="isSystemAudioEnabled"
           :is-mic-audio-enabled="isMicAudioEnabled"
+          :has-system-audio="hasSystemAudio"
+          :has-mic-audio="hasMicAudio"
           :system-volume="systemVolume"
           :mic-volume="micVolume"
           @update:volume="emit('update:volume', $event)"
@@ -397,6 +389,8 @@ const handleDelete = () => {
           @update:is-mic-audio-enabled="emit('update:isMicAudioEnabled', $event)"
           @update:system-volume="emit('update:systemVolume', $event)"
           @update:mic-volume="emit('update:micVolume', $event)"
+          @delete:system="emit('delete:system-audio')"
+          @delete:microphone="emit('delete:mic-audio')"
         />
         <ZoomPanel
           v-else-if="activeTab === 'zoom'"
@@ -426,84 +420,4 @@ const handleDelete = () => {
   </div>
 </template>
 
-<style scoped>
-.properties-island {
-  width: 400px;
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
-  background: var(--color-bg-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 0;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 56px;
-  min-height: 56px;
-  max-height: 56px;
-  padding: 0 20px;
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
-.panel-title {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 24px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.panel-header-actions {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-.panel-delete-btn:hover {
-  color: var(--color-error) !important;
-  background: var(--color-error-light) !important;
-}
-.is-muted-clip {
-  color: var(--text-muted) !important;
-  opacity: 0.6;
-}
-.panel-scroll-shadow {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.panel-body {
-  display: flex;
-  flex-direction: column;
-  padding: 0 20px 48px;
-  box-sizing: border-box;
-  width: 100%;
-  flex: 0 0 auto;
-  min-height: 100%;
-}
-.panel-content::-webkit-scrollbar {
-  width: 5px;
-}
-.panel-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-.panel-content::-webkit-scrollbar-thumb {
-  background: var(--color-border-strong);
-  border-radius: 3px;
-}
-.panel-content::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-</style>
+<style scoped src="./PropertiesPanel.css"></style>

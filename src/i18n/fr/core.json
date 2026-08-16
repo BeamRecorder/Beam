@@ -12,7 +12,10 @@
     "systemSoundTrack": "Piste audio système",
     "systemVolume": "Volume système",
     "microphoneTrack": "Piste microphone",
-    "microphoneVolume": "Volume microphone"
+    "microphoneVolume": "Volume microphone",
+    "deleteSystemTrack": "Supprimer la piste audio système",
+    "deleteMicrophoneTrack": "Supprimer la piste microphone",
+    "noAudioTracksDetected": "Aucune piste microphone ou audio système n’a été détectée."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Ajouter une couleur personnalisée",
@@ -106,6 +109,16 @@
     "customTextDescription": "La modification remplace la transcription synchronisée par votre texte personnalisé.",
     "typography": "Typographie",
     "importFont": "Importer une police",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Alignement du texte",
+    "alignLeft": "Aligner à gauche",
+    "alignCenter": "Centrer",
+    "alignRight": "Aligner à droite",
+    "fontLibraryReadFailed": "Impossible de lire la bibliothèque de polices importées.",
+    "localFontsUnavailable": "L’accès aux polices locales est indisponible.",
+    "localFontsPermissionDenied": "L’accès aux polices installées a été refusé.",
+    "fontImportFailed": "Impossible d’importer cette police.",
+    "fontLoadFailed": "Impossible de charger cette police.",
     "textStyle": "Style du texte",
     "bold": "Gras",
     "italic": "Italique",

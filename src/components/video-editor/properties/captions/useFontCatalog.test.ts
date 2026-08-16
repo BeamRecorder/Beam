@@ -10,7 +10,8 @@ const capture = vi.hoisted(() => ({
 }));
 vi.mock('~/api/capture', () => ({ capture }));
 
-import { loadCaptionFont, useFontCatalog, type CaptionFontOption } from './useFontCatalog';
+import { loadCaptionFont, useFontCatalog } from './useFontCatalog';
+import type { CaptionFontOption } from './font-catalog-types';
 
 const fontId = (value: string) => value.padEnd(64, '0').slice(0, 64);
 const importedFont = (family: string, id = fontId(family.toLowerCase().replace(/[^a-z]/g, ''))) =>
@@ -23,6 +24,7 @@ const importedFont = (family: string, id = fontId(family.toLowerCase().replace(/
   }) satisfies ImportedFont;
 
 let fontFaces: Set<FakeFontFace>;
+let fontFaceConstructions = 0;
 let rejectFontLoad = false;
 let gateFontLoads = false;
 const pendingFontLoads = new Map<string, { resolve: () => void; reject: (error: Error) => void }>();
@@ -32,6 +34,7 @@ class FakeFontFace {
   readonly source: string;
 
   constructor(family: string, source: string) {
+    fontFaceConstructions += 1;
     this.family = family;
     this.source = source;
   }
@@ -48,6 +51,7 @@ class FakeFontFace {
 const setQueryLocalFonts = (query: (() => Promise<Array<{ family: string }>>) | undefined) => {
   Object.defineProperty(window, 'queryLocalFonts', { configurable: true, value: query });
 };
+const originalFontsDescriptor = Object.getOwnPropertyDescriptor(document, 'fonts');
 
 const mountCatalog = () => {
   let catalog!: ReturnType<typeof useFontCatalog>;
@@ -62,9 +66,18 @@ const mountCatalog = () => {
   return { wrapper, catalog };
 };
 
+const deferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((nextResolve) => {
+    resolve = nextResolve;
+  });
+  return { promise, resolve };
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   fontFaces = new Set();
+  fontFaceConstructions = 0;
   rejectFontLoad = false;
   gateFontLoads = false;
   pendingFontLoads.clear();
@@ -77,6 +90,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (originalFontsDescriptor) Object.defineProperty(document, 'fonts', originalFontsDescriptor);
+  else Reflect.deleteProperty(document, 'fonts');
   vi.unstubAllGlobals();
 });
 
@@ -88,13 +103,13 @@ describe('useFontCatalog', () => {
 
     await catalog.refreshSystem();
 
-    expect(catalog.error.value).toBe('Local font access is unavailable.');
+    expect(catalog.error.value).toBe('localFontsUnavailable');
     expect(catalog.loading.value).toBe(false);
     wrapper.unmount();
   });
 
   it('reports a denied Local Font Access permission without dropping imported fonts', async () => {
-    const installedQuery = vi.fn().mockRejectedValue(new Error('permission denied'));
+    const installedQuery = vi.fn().mockRejectedValue(new DOMException('permission denied', 'NotAllowedError'));
     setQueryLocalFonts(installedQuery);
     const imported = importedFont('Imported Sans');
     capture.listImportedFonts.mockResolvedValue([imported]);
@@ -104,11 +119,69 @@ describe('useFontCatalog', () => {
     await catalog.refreshSystem();
 
     expect(installedQuery).toHaveBeenCalledOnce();
-    expect(catalog.error.value).toBe('Permission to access installed fonts was denied.');
+    expect(catalog.error.value).toBe('localFontsPermissionDenied');
     expect(catalog.loading.value).toBe(false);
     expect(catalog.fonts.value).toContainEqual(
       expect.objectContaining({ value: imported.family, assetId: imported.id }),
     );
+    wrapper.unmount();
+  });
+
+  it('reports a non-permission Local Font Access failure separately', async () => {
+    const installedQuery = vi.fn().mockRejectedValue(new Error('font service unavailable'));
+    setQueryLocalFonts(installedQuery);
+    const { wrapper, catalog } = mountCatalog();
+    await flushPromises();
+
+    await catalog.refreshSystem();
+
+    expect(catalog.error.value).toBe('fontLoadFailed');
+    expect(catalog.loading.value).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('keeps the latest concurrent system refresh result', async () => {
+    const first = deferred<Array<{ family: string }>>();
+    const second = deferred<Array<{ family: string }>>();
+    const installedQuery = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    setQueryLocalFonts(installedQuery);
+    const { wrapper, catalog } = mountCatalog();
+    await flushPromises();
+
+    const firstRefresh = catalog.refreshSystem();
+    const secondRefresh = catalog.refreshSystem();
+    expect(installedQuery).toHaveBeenCalledTimes(2);
+
+    second.resolve([{ family: 'Latest Font' }]);
+    await secondRefresh;
+    expect(catalog.fonts.value.map((font) => font.value)).toContain('Latest Font');
+
+    first.resolve([{ family: 'Stale Font' }]);
+    await firstRefresh;
+    expect(catalog.fonts.value.map((font) => font.value)).toContain('Latest Font');
+    expect(catalog.fonts.value.map((font) => font.value)).not.toContain('Stale Font');
+    wrapper.unmount();
+  });
+
+  it('keeps loading true while overlapping system refreshes remain pending', async () => {
+    const first = deferred<Array<{ family: string }>>();
+    const second = deferred<Array<{ family: string }>>();
+    const installedQuery = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    setQueryLocalFonts(installedQuery);
+    const { wrapper, catalog } = mountCatalog();
+    await flushPromises();
+
+    const firstRefresh = catalog.refreshSystem();
+    const secondRefresh = catalog.refreshSystem();
+    expect(catalog.loading.value).toBe(true);
+
+    first.resolve([{ family: 'First Font' }]);
+    await firstRefresh;
+    expect(catalog.loading.value).toBe(true);
+
+    second.resolve([{ family: 'Second Font' }]);
+    await secondRefresh;
+    expect(catalog.loading.value).toBe(false);
     wrapper.unmount();
   });
 
@@ -205,15 +278,12 @@ describe('useFontCatalog', () => {
     wrapper.unmount();
   });
 
-  it.each([
-    { cause: new Error('font list failed'), message: 'font list failed' },
-    { cause: 'font list failed', message: 'Unable to read the imported font library.' },
-  ])('reports listImportedFonts failures ($message)', async ({ cause, message }) => {
+  it.each([new Error('font list failed'), 'font list failed'])('reports listImportedFonts failures', async (cause) => {
     capture.listImportedFonts.mockRejectedValue(cause);
     const { wrapper, catalog } = mountCatalog();
     await flushPromises();
 
-    expect(catalog.error.value).toBe(message);
+    expect(catalog.error.value).toBe('fontLibraryReadFailed');
     expect(catalog.loading.value).toBe(false);
     wrapper.unmount();
   });
@@ -225,7 +295,7 @@ describe('useFontCatalog', () => {
 
     await expect(catalog.importFont()).resolves.toBeNull();
 
-    expect(catalog.error.value).toBe('Unable to import this font.');
+    expect(catalog.error.value).toBe('fontImportFailed');
     expect(catalog.loading.value).toBe(false);
     wrapper.unmount();
   });
@@ -241,7 +311,7 @@ describe('useFontCatalog', () => {
 
     expect(catalog.error.value).toBeNull();
     expect(catalog.loading.value).toBe(false);
-    expect(fontFaces).toHaveLength(0);
+    expect(fontFaces.size).toBe(0);
     wrapper.unmount();
   });
 
@@ -281,14 +351,14 @@ describe('useFontCatalog', () => {
 
     await expect(catalog.importFont()).resolves.toBeNull();
 
-    expect(catalog.error.value).toBe('font load failed');
+    expect(catalog.error.value).toBe('fontImportFailed');
     expect(catalog.loading.value).toBe(false);
     wrapper.unmount();
   });
 
   it('does not load generic fonts and does not add an imported face twice', async () => {
     await loadCaptionFont({ value: 'sans-serif', label: 'Beam Sans' });
-    expect(fontFaces).toHaveLength(0);
+    expect(fontFaces.size).toBe(0);
 
     const imported: CaptionFontOption = {
       value: 'Imported Display',
@@ -299,7 +369,7 @@ describe('useFontCatalog', () => {
     await loadCaptionFont(imported);
     await loadCaptionFont(imported);
 
-    expect(fontFaces).toHaveLength(1);
+    expect(fontFaces.size).toBe(1);
   });
 
   it('keeps both faces when concurrent font loads finish out of order', async () => {
@@ -324,6 +394,25 @@ describe('useFontCatalog', () => {
     await Promise.all([firstLoad, secondLoad]);
 
     expect([...fontFaces].map((face) => face.family)).toEqual(expect.arrayContaining([first.label, second.label]));
+  });
+
+  it('uses the font value as the CSS family and shares concurrent loads for one asset', async () => {
+    gateFontLoads = true;
+    const imported: CaptionFontOption = {
+      value: 'CSS Family',
+      label: 'Display Label',
+      assetId: fontId('shared-load'),
+      url: 'project-media://font/shared-load',
+    };
+
+    const firstLoad = loadCaptionFont(imported);
+    const secondLoad = loadCaptionFont(imported);
+    expect(fontFaceConstructions).toBe(1);
+    pendingFontLoads.get(imported.value)?.resolve();
+    await Promise.all([firstLoad, secondLoad]);
+
+    expect(fontFaces.size).toBe(1);
+    expect([...fontFaces][0]?.family).toBe(imported.value);
   });
 
   it('removes focus and library listeners when unmounted', async () => {

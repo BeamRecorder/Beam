@@ -192,6 +192,20 @@ const canvasState = (value) => {
       typeof watermarkInput.renderedText === 'string' ? watermarkInput.renderedText.slice(0, 80) : undefined,
     position: watermarkPositions.has(watermarkInput.position) ? watermarkInput.position : 'bottom-right',
     size: finite(watermarkInput.size) ? clamp(Math.round(watermarkInput.size), 50, 200) : 100,
+    shadow: finite(watermarkInput.shadow) ? clamp(Math.round(watermarkInput.shadow), 0, 100) : 20,
+    backgroundColor:
+      typeof watermarkInput.backgroundColor === 'string' && /^#[0-9a-f]{6}$/i.test(watermarkInput.backgroundColor)
+        ? watermarkInput.backgroundColor
+        : '#111114',
+    backgroundOpacity: finite(watermarkInput.backgroundOpacity)
+      ? clamp(Math.round(watermarkInput.backgroundOpacity), 0, 100)
+      : 78,
+    backgroundRadius: finite(watermarkInput.backgroundRadius)
+      ? clamp(Math.round(watermarkInput.backgroundRadius), 0, 100)
+      : 100,
+    backgroundPadding: finite(watermarkInput.backgroundPadding)
+      ? clamp(Math.round(watermarkInput.backgroundPadding), 50, 150)
+      : 100,
   };
   return {
     preset: value.preset,
@@ -243,6 +257,7 @@ const migratePresentation = (value) => {
       width,
       height,
       showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : true,
+      watermark: canvasInput.watermark,
     },
     selectedBackgroundId: typeof input.selectedBackgroundId === 'string' ? input.selectedBackgroundId : null,
     background: input.background && typeof input.background === 'object' ? input.background : null,

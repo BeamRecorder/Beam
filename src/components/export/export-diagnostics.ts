@@ -119,7 +119,9 @@ export function buildBeamExportReport(options: {
   const clips = request.snapshot.composition?.clips ?? [];
   const visualClips = clips.filter((clip) => ['screen', 'video', 'image', 'webcam'].includes(clip.kind)).length;
   const audioEnabled = request.includeAudio !== false;
-  const audioClips = audioEnabled ? clips.filter((clip) => clip.kind === 'audio').length : 0;
+  const audioClips = audioEnabled
+    ? clips.filter((clip) => clip.kind === 'audio' && clip.enabled && clip.timelineDurationMs > 0).length
+    : 0;
   const audioProgress =
     progress?.audioProgress ?? (options.status === 'completed' ? (audioClips ? 1 : null) : undefined);
 

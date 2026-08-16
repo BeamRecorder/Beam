@@ -3,7 +3,7 @@ import { layoutCaptionText, type CaptionTextMeasurer } from '~/media/shared/capt
 import type { KeyboardCaptionRun } from '~/media/shared/keyboard-captions';
 import { keyboardCaptionTransformAtCursor } from '~/media/shared/keyboard-caption-position';
 import type { Canvas2DContext } from '~/types/canvas';
-import { applyCanvasCaptionFont, canvasCaptionFont } from '~/media/shared/caption-font';
+import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
 
 export interface CaptionViewport {
   x: number;
@@ -71,9 +71,8 @@ export function drawCaptionText(
 ) {
   if (!options.text) return;
   const style = options.clip.caption.style;
-  const canonicalFont = canvasCaptionFont(style);
   ctx.save();
-  ctx.font = canonicalFont;
+  applyCanvasCaptionFont(ctx, style);
   const measureText: CaptionTextMeasurer = (text) => ctx.measureText(text).width;
   const canonicalCursor = options.cursorPosition
     ? {
@@ -105,7 +104,7 @@ export function drawCaptionText(
           },
         })
       : undefined;
-  ctx.font = canonicalFont;
+  applyCanvasCaptionFont(ctx, style);
   const layout = layoutCaptionText({
     clip: options.clip,
     text: options.text,
@@ -145,22 +144,22 @@ export function drawCaptionText(
     const naturalWidth = measured.reduce((width, run) => width + run.width, 0);
     const fitScale = Math.min(1, maxTextWidth / Math.max(1, naturalWidth));
     const renderedWidth = naturalWidth * fitScale;
-    drawBackdropBlur(
-      ctx,
-      {
-        x: centerX - renderedWidth / 2 - strokeWidth,
-        y: centerY - fontSize / 2 - strokeWidth,
-        width: renderedWidth + strokeWidth * 2 + extrusion,
-        height: fontSize + strokeWidth * 2 + extrusion,
-      },
-      style.backdropBlur * scale,
-    );
     const alignedStart =
       style.textAlign === 'left'
         ? centerX - maxTextWidth / 2
         : style.textAlign === 'right'
           ? centerX + maxTextWidth / 2 - renderedWidth
           : centerX - renderedWidth / 2;
+    drawBackdropBlur(
+      ctx,
+      {
+        x: alignedStart - strokeWidth,
+        y: centerY - fontSize / 2 - strokeWidth,
+        width: renderedWidth + strokeWidth * 2 + extrusion,
+        height: fontSize + strokeWidth * 2 + extrusion,
+      },
+      style.backdropBlur * scale,
+    );
     let x = alignedStart;
     ctx.textAlign = 'left';
     for (const run of measured) {
@@ -212,7 +211,9 @@ export function drawCaptionText(
   drawBackdropBlur(
     ctx,
     {
-      x: centerX - textWidth / 2 - strokeWidth,
+      x:
+        (style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - textWidth : textX - textWidth / 2) -
+        strokeWidth,
       y: firstY - fontSize / 2 - strokeWidth,
       width: textWidth + strokeWidth * 2 + extrusion,
       height: Math.max(fontSize, layout.lines.length * lineHeight) + strokeWidth * 2 + extrusion,

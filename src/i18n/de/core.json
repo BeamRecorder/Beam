@@ -12,7 +12,10 @@
     "systemSoundTrack": "Systemtonspur",
     "systemVolume": "Systemlautstärke",
     "microphoneTrack": "Mikrofonspur",
-    "microphoneVolume": "Mikrofonlautstärke"
+    "microphoneVolume": "Mikrofonlautstärke",
+    "deleteSystemTrack": "Systemaudiospur löschen",
+    "deleteMicrophoneTrack": "Mikrofonspur löschen",
+    "noAudioTracksDetected": "Es wurde keine Mikrofon- oder Systemaudiospur erkannt."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Benutzerdefinierte Farbe hinzufügen",
@@ -106,6 +109,16 @@
     "customTextDescription": "Durch die Bearbeitung wird die zeitgesteuerte Transkription durch deinen eigenen Text ersetzt.",
     "typography": "Typografie",
     "importFont": "Schrift importieren",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Textausrichtung",
+    "alignLeft": "Linksbündig",
+    "alignCenter": "Zentriert",
+    "alignRight": "Rechtsbündig",
+    "fontLibraryReadFailed": "Die importierte Schriftbibliothek konnte nicht gelesen werden.",
+    "localFontsUnavailable": "Der Zugriff auf lokale Schriften ist nicht verfügbar.",
+    "localFontsPermissionDenied": "Der Zugriff auf installierte Schriften wurde verweigert.",
+    "fontImportFailed": "Diese Schrift konnte nicht importiert werden.",
+    "fontLoadFailed": "Diese Schrift konnte nicht geladen werden.",
     "textStyle": "Textstil",
     "bold": "Fett",
     "italic": "Kursiv",

@@ -119,6 +119,34 @@ describe('useCopySystemInformation', () => {
     wrapper.unmount();
   });
 
+  it('does not mark copy successful when both clipboard paths fail', async () => {
+    clipboardWriteText.mockRejectedValueOnce(new Error('clipboard unavailable'));
+    execCommand.mockReturnValueOnce(false);
+    const { wrapper, state } = mountCopySystemInformation();
+
+    await state.copy();
+
+    expect(clipboardWriteText).toHaveBeenCalledOnce();
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(state.copied.value).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('removes the fallback textarea when execCommand throws', async () => {
+    clipboardWriteText.mockRejectedValueOnce(new Error('clipboard unavailable'));
+    execCommand.mockImplementationOnce(() => {
+      throw new Error('copy command failed');
+    });
+    const { wrapper, state } = mountCopySystemInformation();
+
+    await expect(state.copy()).rejects.toThrow('copy command failed');
+
+    expect(execCommand).toHaveBeenCalledWith('copy');
+    expect(document.querySelector('textarea')).toBeNull();
+    expect(state.copied.value).toBe(false);
+    wrapper.unmount();
+  });
+
   it('clears the copied reset timer when the composable owner unmounts', async () => {
     const { wrapper, state } = mountCopySystemInformation();
 

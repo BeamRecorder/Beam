@@ -14,7 +14,7 @@ import About from './About.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
 import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
-import { localeOptions } from '~/i18n/locales';
+import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import type { RecordingBarVisibility } from '../recorder/recording-types';
 import type { InteractionAccessViewState } from '../interactions/interaction-access-types';
 
@@ -82,6 +82,15 @@ const recordingBarOptions = [
   { value: 'auto-fade', label: t('autoFade') },
   { value: 'hover-only', label: t('hiddenUntilHovered') },
 ];
+const updateRecordingBarVisibility = (value: string | number) => {
+  if (typeof value === 'string') emit('update:recordingBarVisibility', value as RecordingBarVisibility);
+};
+const updateCountdownSeconds = (value: string | number) => {
+  if (typeof value === 'number') emit('update:countdownSeconds', value);
+};
+const updateLocale = (value: string | number) => {
+  if (typeof value === 'string' && isSupportedLocale(value)) localeStore.setLocale(value);
+};
 
 const openOnboarding = () => {
   void capture.openOnboarding();
@@ -162,7 +171,7 @@ const openOnboarding = () => {
                 :options="recordingBarOptions"
                 size="sm"
                 direction="up"
-                @update:model-value="emit('update:recordingBarVisibility', $event)"
+                @update:model-value="updateRecordingBarVisibility"
               />
             </div>
           </div>
@@ -178,7 +187,7 @@ const openOnboarding = () => {
                 :options="countdownOptions"
                 size="sm"
                 direction="up"
-                @update:model-value="emit('update:countdownSeconds', $event)"
+                @update:model-value="updateCountdownSeconds"
               />
             </div>
           </div>
@@ -209,7 +218,7 @@ const openOnboarding = () => {
                 :options="localeOptions"
                 size="sm"
                 direction="up"
-                @update:model-value="localeStore.setLocale($event)"
+                @update:model-value="updateLocale"
               />
             </div>
           </div>

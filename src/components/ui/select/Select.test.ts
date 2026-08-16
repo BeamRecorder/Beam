@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import { h } from 'vue';
+import { h, nextTick } from 'vue';
 import Select from './Select.vue';
 
 const options = [
@@ -28,19 +28,26 @@ describe('Select', () => {
     const label = option.querySelector<HTMLElement>('.option-label')!;
     Object.defineProperty(label, 'scrollWidth', { configurable: true, value: 120 });
     Object.defineProperty(label, 'clientWidth', { configurable: true, value: 20 });
-    await option.dispatchEvent(new Event('pointerenter', { bubbles: true }));
-    expect(wrapper.emitted('preview:modelValue')).toContainEqual(['two']);
+    const beforePointerPreview = wrapper.emitted('preview:modelValue')?.length ?? 0;
+    option.dispatchEvent(new Event('pointerenter', { bubbles: true }));
+    await nextTick();
+    expect(wrapper.emitted('preview:modelValue')?.slice(beforePointerPreview)).toEqual([['two']]);
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
 
-    await option.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
-    expect(wrapper.emitted('preview:modelValue')).toContainEqual(['two']);
+    const beforeFocusPreview = wrapper.emitted('preview:modelValue')?.length ?? 0;
+    option.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
+    await nextTick();
+    expect(wrapper.emitted('preview:modelValue')?.slice(beforeFocusPreview)).toEqual([['two']]);
 
     const list = document.body.querySelector<HTMLElement>('.virtual-scroll-container')!;
-    await list.dispatchEvent(new Event('pointerleave', { bubbles: true }));
-    expect(wrapper.emitted('preview:modelValue')).toContainEqual([null]);
+    const beforeRestorePreview = wrapper.emitted('preview:modelValue')?.length ?? 0;
+    list.dispatchEvent(new Event('pointerleave', { bubbles: true }));
+    await nextTick();
+    expect(wrapper.emitted('preview:modelValue')?.slice(beforeRestorePreview)).toEqual([[null]]);
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
 
-    await option.click();
+    option.click();
+    await nextTick();
     expect(wrapper.emitted('update:modelValue')).toContainEqual(['two']);
     expect(wrapper.emitted('preview:modelValue')).toContainEqual([null]);
     wrapper.unmount();
@@ -71,11 +78,13 @@ describe('Select', () => {
 
     await wrapper.get('.select-trigger').trigger('click');
     const first = document.body.querySelectorAll<HTMLElement>('.select-option')[0];
+    const updatesBeforeEscape = wrapper.emitted('update:modelValue')?.length ?? 0;
+    const previewsBeforeEscape = wrapper.emitted('preview:modelValue')?.length ?? 0;
     first.focus();
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await wrapper.vm.$nextTick();
-    expect(wrapper.emitted('update:modelValue')).not.toContainEqual(['one']);
-    expect(wrapper.emitted('preview:modelValue')).toContainEqual([null]);
+    expect(wrapper.emitted('update:modelValue')?.length ?? 0).toBe(updatesBeforeEscape);
+    expect(wrapper.emitted('preview:modelValue')?.slice(previewsBeforeEscape)).toContainEqual([null]);
     expect(wrapper.get('.select-trigger').attributes('aria-expanded')).toBe('false');
     wrapper.unmount();
   });

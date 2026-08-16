@@ -12,7 +12,10 @@
     "systemSoundTrack": "सिस्टम साउंड ट्रैक",
     "systemVolume": "सिस्टम वॉल्यूम",
     "microphoneTrack": "माइक्रोफ़ोन ट्रैक",
-    "microphoneVolume": "माइक्रोफ़ोन वॉल्यूम"
+    "microphoneVolume": "माइक्रोफ़ोन वॉल्यूम",
+    "deleteSystemTrack": "सिस्टम ऑडियो ट्रैक हटाएँ",
+    "deleteMicrophoneTrack": "माइक्रोफ़ोन ट्रैक हटाएँ",
+    "noAudioTracksDetected": "कोई माइक्रोफ़ोन या सिस्टम ऑडियो ट्रैक नहीं मिला।"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "कस्टम रंग जोड़ें",
@@ -106,6 +109,16 @@
     "customTextDescription": "इसे एडिट करने पर टाइम्ड ट्रांसक्रिप्शन की जगह कस्टम टेक्स्ट आएगा।",
     "typography": "टाइपोग्राफ़ी",
     "importFont": "फ़ॉन्ट आयात करें",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "टेक्स्ट संरेखण",
+    "alignLeft": "बाएँ संरेखित करें",
+    "alignCenter": "बीच में करें",
+    "alignRight": "दाएँ संरेखित करें",
+    "fontLibraryReadFailed": "आयातित फ़ॉन्ट लाइब्रेरी पढ़ी नहीं जा सकी।",
+    "localFontsUnavailable": "स्थानीय फ़ॉन्ट एक्सेस उपलब्ध नहीं है।",
+    "localFontsPermissionDenied": "इंस्टॉल किए गए फ़ॉन्ट की अनुमति अस्वीकार कर दी गई।",
+    "fontImportFailed": "यह फ़ॉन्ट आयात नहीं किया जा सका।",
+    "fontLoadFailed": "यह फ़ॉन्ट लोड नहीं किया जा सका।",
     "textStyle": "टेक्स्ट शैली",
     "bold": "बोल्ड",
     "italic": "इटैलिक",

@@ -37,7 +37,7 @@ describe('About', () => {
     const wrapper = mount(About);
     await flushPromises();
 
-    expect(wrapper.get('.about-version').text()).toBe('Version 0.1.2');
+    expect(wrapper.get('.about-version').text()).toBe('Version 0.1.7');
     expect(consoleError).toHaveBeenCalledWith('Failed to resolve current app version:', expect.any(Error));
     consoleError.mockRestore();
     wrapper.unmount();

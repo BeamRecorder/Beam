@@ -12,7 +12,10 @@
     "systemSoundTrack": "Traccia audio di sistema",
     "systemVolume": "Volume di sistema",
     "microphoneTrack": "Traccia del microfono",
-    "microphoneVolume": "Volume del microfono"
+    "microphoneVolume": "Volume del microfono",
+    "deleteSystemTrack": "Elimina traccia audio di sistema",
+    "deleteMicrophoneTrack": "Elimina traccia microfono",
+    "noAudioTracksDetected": "Non è stata rilevata alcuna traccia del microfono o dell’audio di sistema."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Aggiungi colore personalizzato",
@@ -106,6 +109,16 @@
     "customTextDescription": "La modifica sostituisce la trascrizione sincronizzata con il testo personalizzato.",
     "typography": "Tipografia",
     "importFont": "Importa font",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Allineamento del testo",
+    "alignLeft": "Allinea a sinistra",
+    "alignCenter": "Centra",
+    "alignRight": "Allinea a destra",
+    "fontLibraryReadFailed": "Impossibile leggere la libreria dei font importati.",
+    "localFontsUnavailable": "L’accesso ai font locali non è disponibile.",
+    "localFontsPermissionDenied": "L’accesso ai font installati è stato negato.",
+    "fontImportFailed": "Impossibile importare questo font.",
+    "fontLoadFailed": "Impossibile caricare questo font.",
     "textStyle": "Stile testo",
     "bold": "Grassetto",
     "italic": "Corsivo",

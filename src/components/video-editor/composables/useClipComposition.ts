@@ -104,6 +104,8 @@ export function useClipComposition(options: {
   const webcamClips = clipsBy((clip) => clip.kind === 'webcam');
   const systemAudioClips = clipsBy((clip) => isAudioClip(clip) && clip.role === 'system');
   const microphoneClips = clipsBy((clip) => isAudioClip(clip) && clip.role === 'microphone');
+  const hasSystemAudio = computed(() => systemAudioClips.value.length > 0);
+  const hasMicAudio = computed(() => microphoneClips.value.length > 0);
   const everyEnabled = (clips: Ref<Clip[]>) =>
     computed({
       get: () => clips.value.length === 0 || clips.value.some((clip) => clip.enabled),
@@ -259,7 +261,7 @@ export function useClipComposition(options: {
         caption: {
           type: 'text',
           sentences: [],
-          style: createDefaultCaptionStyle(),
+          style: { ...createDefaultCaptionStyle(), customText: 'Hello' },
         },
       };
       composition.value = addClip(composition.value, clip);
@@ -430,6 +432,8 @@ export function useClipComposition(options: {
     isWebcamEnabled,
     isSystemAudioEnabled,
     isMicAudioEnabled,
+    hasSystemAudio,
+    hasMicAudio,
     synchronizeRecording,
     selectClip,
     addElement,

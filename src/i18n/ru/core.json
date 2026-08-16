@@ -12,7 +12,10 @@
     "systemSoundTrack": "Системная звуковая дорожка",
     "systemVolume": "Громкость системы",
     "microphoneTrack": "Дорожка микрофона",
-    "microphoneVolume": "Громкость микрофона"
+    "microphoneVolume": "Громкость микрофона",
+    "deleteSystemTrack": "Удалить дорожку системного звука",
+    "deleteMicrophoneTrack": "Удалить дорожку микрофона",
+    "noAudioTracksDetected": "Дорожки микрофона и системного звука не обнаружены."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Добавить собственный цвет",
@@ -106,6 +109,16 @@
     "customTextDescription": "Редактирование заменит синхронизированную расшифровку вашим текстом.",
     "typography": "Типографика",
     "importFont": "Импортировать шрифт",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Выравнивание текста",
+    "alignLeft": "По левому краю",
+    "alignCenter": "По центру",
+    "alignRight": "По правому краю",
+    "fontLibraryReadFailed": "Не удалось прочитать библиотеку импортированных шрифтов.",
+    "localFontsUnavailable": "Доступ к локальным шрифтам недоступен.",
+    "localFontsPermissionDenied": "Доступ к установленным шрифтам запрещён.",
+    "fontImportFailed": "Не удалось импортировать этот шрифт.",
+    "fontLoadFailed": "Не удалось загрузить этот шрифт.",
     "textStyle": "Стиль текста",
     "bold": "Жирный",
     "italic": "Курсив",

@@ -71,7 +71,7 @@
   height: 20px;
   border-radius: 4px;
   overflow: hidden;
-  background: #000;
+  background: var(--color-bg-surface-hover);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -212,7 +212,7 @@
   position: relative;
   width: 28px;
   height: 28px;
-  background: #0f172a;
+  background: var(--color-bg-surface-hover);
   border-radius: 4px;
   display: flex;
   align-items: center;

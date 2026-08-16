@@ -2,7 +2,7 @@
 import { computed, toRef } from 'vue';
 import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import type { CaptionClip, CaptionStyle, CaptionWord } from '~/media/shared/composition-types';
+import type { CaptionClip, CaptionStyle } from '~/media/shared/composition-types';
 import { useCaptionDraft } from './useCaptionDraft';
 import { useTranslate } from '~/i18n/useTranslate';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
@@ -39,35 +39,6 @@ const previewStyle = (patch: Partial<CaptionStyle> | null) => {
     patch ? { ...draft.value, caption: { ...draft.value.caption, style: { ...captionStyle.value, ...patch } } } : null,
   );
 };
-
-const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, value: string) => {
-  const parsed = key === 'text' ? value : Number(value);
-  if (key !== 'text' && (!Number.isFinite(parsed) || Number(parsed) < 0)) return;
-  update((clip) => {
-    if (clip.caption.type !== 'text') return clip;
-    const sentences = clip.caption.sentences.map((sentence) => {
-      if (sentence.id !== sentenceId) return sentence;
-      const words = sentence.words.map((word, wordIndex) => (wordIndex === index ? { ...word, [key]: parsed } : word));
-      return {
-        ...sentence,
-        words,
-        text: words.map((word) => word.text).join(' '),
-        startMs: words[0]?.startMs ?? sentence.startMs,
-        endMs: words.at(-1)?.endMs ?? sentence.endMs,
-      };
-    });
-    const startMs = sentences[0]?.startMs ?? clip.sourceInMs;
-    const endMs = sentences.at(-1)?.endMs ?? startMs + clip.sourceDurationMs;
-    const durationMs = Math.max(40, endMs - startMs);
-    return {
-      ...clip,
-      timelineDurationMs: durationMs / clip.playbackRate,
-      sourceInMs: startMs,
-      sourceDurationMs: durationMs,
-      caption: { ...clip.caption, sentences },
-    };
-  });
-};
 </script>
 
 <template>
@@ -96,47 +67,6 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
         @update="updateStyle"
         @preview="previewStyle"
       />
-
-      <Divider v-if="sentences.length" spacing="xs" />
-      <div v-if="sentences.length" class="section-block">
-        <span class="section-title">{{ t('wordTimings') }}</span>
-        <p class="section-desc">{{ t('wordTimingsDescription') }}</p>
-        <div class="word-labels" aria-hidden="true">
-          <span>{{ t('word') }}</span
-          ><span>{{ t('in') }}</span
-          ><span>{{ t('out') }}</span>
-        </div>
-        <div v-for="sentence in sentences" :key="sentence.id" class="sentence-box">
-          <p class="sentence-text">{{ sentence.text }}</p>
-          <div v-for="(word, index) in sentence.words" :key="`${sentence.id}-${index}`" class="word-row">
-            <Input
-              :model-value="word.text"
-              size="sm"
-              :aria-label="t('captionWordLabel')"
-              @update:model-value="updateWord(sentence.id, index, 'text', String($event))"
-              @blur="flush"
-            />
-            <Input
-              :model-value="word.startMs"
-              type="number"
-              size="sm"
-              :min="0"
-              :aria-label="t('wordStartTimeLabel')"
-              @update:model-value="updateWord(sentence.id, index, 'startMs', String($event))"
-              @blur="flush"
-            />
-            <Input
-              :model-value="word.endMs"
-              type="number"
-              size="sm"
-              :min="0"
-              :aria-label="t('wordEndTimeLabel')"
-              @update:model-value="updateWord(sentence.id, index, 'endMs', String($event))"
-              @blur="flush"
-            />
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -155,16 +85,14 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
   flex: 1;
 }
 .section-block,
-.sub-group,
-.sentence-box {
+.sub-group {
   display: flex;
   flex-direction: column;
 }
 .section-block {
   gap: 10px;
 }
-.sub-group,
-.sentence-box {
+.sub-group {
   gap: 6px;
   width: 100%;
 }
@@ -179,26 +107,10 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
   line-height: 1.4;
   margin: 0;
 }
-.sub-label,
-.word-labels {
+.sub-label {
   font-size: 10px;
   font-weight: 500;
   color: var(--text-muted);
-}
-.word-labels,
-.word-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 62px 62px;
-  gap: 6px;
-}
-.word-labels span:not(:first-child) {
-  text-align: center;
-}
-.sentence-text {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 11px;
-  font-weight: 600;
 }
 .danger-zone {
   margin-top: auto;

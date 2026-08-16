@@ -12,7 +12,10 @@
     "systemSoundTrack": "Ścieżka dźwięku systemowego",
     "systemVolume": "Głośność systemu",
     "microphoneTrack": "Ścieżka mikrofonu",
-    "microphoneVolume": "Głośność mikrofonu"
+    "microphoneVolume": "Głośność mikrofonu",
+    "deleteSystemTrack": "Usuń ścieżkę dźwięku systemowego",
+    "deleteMicrophoneTrack": "Usuń ścieżkę mikrofonu",
+    "noAudioTracksDetected": "Nie wykryto ścieżki mikrofonu ani dźwięku systemowego."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Dodaj niestandardowy kolor",
@@ -106,6 +109,16 @@
     "customTextDescription": "Edycja zastąpi transkrypcję z synchronizacją czasową własnym tekstem.",
     "typography": "Typografia",
     "importFont": "Importuj czcionkę",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Wyrównanie tekstu",
+    "alignLeft": "Wyrównaj do lewej",
+    "alignCenter": "Wyśrodkuj",
+    "alignRight": "Wyrównaj do prawej",
+    "fontLibraryReadFailed": "Nie można odczytać biblioteki importowanych czcionek.",
+    "localFontsUnavailable": "Dostęp do lokalnych czcionek jest niedostępny.",
+    "localFontsPermissionDenied": "Odmówiono dostępu do zainstalowanych czcionek.",
+    "fontImportFailed": "Nie można zaimportować tej czcionki.",
+    "fontLoadFailed": "Nie można załadować tej czcionki.",
     "textStyle": "Styl tekstu",
     "bold": "Pogrubienie",
     "italic": "Kursywa",

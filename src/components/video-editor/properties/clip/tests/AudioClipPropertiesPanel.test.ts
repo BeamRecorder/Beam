@@ -8,7 +8,7 @@ const BigSlider = {
 };
 const Button = {
   emits: ['click'],
-  template: '<button class="delete-button" @click="$emit(\'click\')"><slot /></button>',
+  template: '<button class="button-stub" @click="$emit(\'click\')"><slot /></button>',
 };
 
 describe('AudioClipPropertiesPanel', () => {
@@ -29,5 +29,21 @@ describe('AudioClipPropertiesPanel', () => {
     expect(wrapper.get('.section-title').text()).toBe('Voice track');
     await wrapper.get('.volume-slider').trigger('click');
     expect(wrapper.emitted('update:volume')).toEqual([[125]]);
+  });
+
+  it('emits enabled changes and deletes from the inline action group', async () => {
+    const wrapper = mount(AudioClipPropertiesPanel, {
+      props: { clip: { name: 'Voice track', enabled: true, volume: 80 } },
+      global: { stubs: { BigSlider, Button } },
+    });
+
+    const buttons = wrapper.findAll('.button-stub');
+    expect(buttons).toHaveLength(2);
+
+    await buttons[0]!.trigger('click');
+    expect(wrapper.emitted('update:enabled')).toEqual([[false]]);
+
+    await wrapper.get('.button-stub.delete-button').trigger('click');
+    expect(wrapper.emitted('delete')).toHaveLength(1);
   });
 });

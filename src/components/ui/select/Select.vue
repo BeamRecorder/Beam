@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
@@ -41,24 +41,13 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: any): void;
+  (e: 'update:modelValue', value: string | number): void;
   (e: 'preview:modelValue', value: string | number | null): void;
   (e: 'toggle', isOpen: boolean): void;
 }>();
 
-const actualValue = ref(props.modelValue);
 const hoveredValue = ref<string | number | null>(null);
 const listbox = ref<HTMLElement | null>(null);
-
-// Sync actualValue with modelValue when modelValue updates externally (not during preview)
-watch(
-  () => props.modelValue,
-  (newVal) => {
-    if (hoveredValue.value === null) {
-      actualValue.value = newVal;
-    }
-  },
-);
 
 const normalizedOptions = computed<Option[]>(() => {
   return props.options ?? props.items ?? [];
@@ -71,7 +60,6 @@ const selectedOption = computed(() => {
 const handleToggle = (isOpen: boolean) => {
   emit('toggle', isOpen);
   if (isOpen) {
-    actualValue.value = props.modelValue;
     void nextTick(() => listbox.value?.querySelector<HTMLElement>('[aria-selected="true"], [role="option"]')?.focus());
   } else {
     emit('preview:modelValue', null);
@@ -81,7 +69,6 @@ const handleToggle = (isOpen: boolean) => {
 
 const handleSelect = (option: Option, close: () => void) => {
   if (props.disabled) return;
-  actualValue.value = option.value;
   emit('update:modelValue', option.value);
   close();
 };

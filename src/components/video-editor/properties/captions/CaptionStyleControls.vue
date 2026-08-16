@@ -28,15 +28,26 @@ const previewFont = async (value: string | number | null) => {
   if (!font) return;
   try {
     await loadCaptionFont(font);
+    if (sequence === previewSequence && error.value === 'fontLoadFailed') error.value = null;
     if (sequence === previewSequence) emit('preview', { fontFamily: font.value, fontAssetId: font.assetId });
   } catch {
-    if (sequence === previewSequence) emit('preview', null);
+    if (sequence === previewSequence) {
+      error.value = 'fontLoadFailed';
+      emit('preview', null);
+    }
   }
 };
 const commitFont = async (value: string | number) => {
   const font = fonts.value.find((item) => item.value === value);
   if (!font) return;
-  await loadCaptionFont(font);
+  try {
+    await loadCaptionFont(font);
+  } catch {
+    emit('preview', null);
+    error.value = 'fontLoadFailed';
+    return;
+  }
+  if (error.value === 'fontLoadFailed') error.value = null;
   emit('update', 'fontFamily', font.value);
   emit('update', 'fontAssetId', font.assetId);
 };
@@ -69,9 +80,9 @@ const shadowDirectionOptions = computed(() => [
       >
         <template #option="{ option }">
           <span class="font-option">
-            <span>{{ option.label }}</span>
+            <span class="option-label">{{ option.label }}</span>
             <span class="font-sample" :style="{ fontFamily: String(option.value) }">{{
-              sampleText || 'Aa Bb Cc 123'
+              sampleText || t('fontSample')
             }}</span>
           </span>
         </template>
@@ -87,8 +98,8 @@ const shadowDirectionOptions = computed(() => [
         @click="pickFont"
       />
     </div>
-    <p v-if="error" class="font-error" role="status">{{ error }}</p>
-    <ButtonGroup full :columns="3" size="xs" :aria-label="t('textStyle')">
+    <p v-if="error" class="font-error" role="status">{{ t(error) }}</p>
+    <ButtonGroup full :aria-label="t('textStyle')">
       <Button
         :icon="Bold"
         icon-only
@@ -117,20 +128,20 @@ const shadowDirectionOptions = computed(() => [
         @click="emit('update', 'textDecoration', style.textDecoration === 'line-through' ? 'none' : 'line-through')"
       />
     </ButtonGroup>
-    <ButtonGroup full :columns="3" size="xs" aria-label="Text alignment">
+    <ButtonGroup full :aria-label="t('textAlignment')">
       <Button
         v-for="item in [
-          { value: 'left', icon: AlignLeft },
-          { value: 'center', icon: AlignCenter },
-          { value: 'right', icon: AlignRight },
+          { value: 'left', icon: AlignLeft, label: t('alignLeft') },
+          { value: 'center', icon: AlignCenter, label: t('alignCenter') },
+          { value: 'right', icon: AlignRight, label: t('alignRight') },
         ]"
         :key="item.value"
         :icon="item.icon"
         icon-only
         size="xs"
         :variant="style.textAlign === item.value ? 'primary' : 'ghost'"
-        :tooltip="`Align ${item.value}`"
-        :aria-label="`Align ${item.value}`"
+        :tooltip="item.label"
+        :aria-label="item.label"
         @click="emit('update', 'textAlign', item.value as CaptionStyle['textAlign'])"
       />
     </ButtonGroup>
@@ -316,7 +327,7 @@ const shadowDirectionOptions = computed(() => [
 }
 .font-error {
   margin: 0;
-  color: var(--color-danger);
+  color: var(--color-error);
   font-size: 10px;
 }
 </style>

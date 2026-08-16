@@ -31,7 +31,7 @@ const Select = {
   props: ['options', 'items'],
   emits: ['update:modelValue', 'preview:modelValue'],
   template:
-    '<div><button v-if="options" class="font-select" @pointerenter="$emit(\'preview:modelValue\', \'sans-serif\')" @click="$emit(\'update:modelValue\', \'sans-serif\')">Font</button><button v-else class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button></div>',
+    '<div><button v-if="options" class="font-select" @pointerenter="$emit(\'preview:modelValue\', \'serif\')" @click="$emit(\'update:modelValue\', \'serif\')">Font</button><button v-else class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button></div>',
 };
 const Switch = {
   inheritAttrs: true,
@@ -104,12 +104,12 @@ beforeEach(() => {
   (window as unknown as { capture: unknown }).capture = capture;
   Object.defineProperty(window, 'queryLocalFonts', {
     configurable: true,
-    value: vi.fn().mockResolvedValue([]),
+    value: vi.fn().mockResolvedValue([{ family: 'serif' }]),
   });
 });
 
 describe('CaptionClipPanel', () => {
-  it('renders AI metadata and commits text, style, timings and typography controls', async () => {
+  it('commits text and typography controls without exposing word timing fields', async () => {
     const wrapper = mount(CaptionClipPanel, {
       props: { clip },
       global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
@@ -126,24 +126,36 @@ describe('CaptionClipPanel', () => {
     await wrapper.get('.shadow-select').trigger('click');
     await wrapper.get('[aria-label="Bold"]').trigger('click');
     await wrapper.get('[aria-label="Align left"]').trigger('click');
+    window.dispatchEvent(new Event('focus'));
+    await vi.waitFor(() =>
+      expect(
+        (window as unknown as { queryLocalFonts: ReturnType<typeof vi.fn> }).queryLocalFonts,
+      ).toHaveBeenCalledOnce(),
+    );
     await wrapper.get('.font-select').trigger('pointerenter');
     await vi.waitFor(() =>
       expect(wrapper.emitted('preview')).toContainEqual([
         expect.objectContaining({
-          caption: expect.objectContaining({ style: expect.objectContaining({ fontFamily: 'sans-serif' }) }),
+          caption: expect.objectContaining({ style: expect.objectContaining({ fontFamily: 'serif' }) }),
         }),
       ]),
     );
     const updateCountBeforeFontCommit = wrapper.emitted('update')?.length ?? 0;
     await wrapper.get('.font-select').trigger('click');
-    const word = wrapper.find('input[aria-label="Caption word"]');
-    await word.setValue('Hi');
-    await word.trigger('blur');
-    const start = wrapper.find('input[aria-label="Word start time"]');
-    await start.setValue('-1');
-    await start.trigger('blur');
-    await vi.waitFor(() => expect(wrapper.emitted('update')).toBeTruthy());
     await vi.waitFor(() => expect(wrapper.emitted('update')!.length).toBeGreaterThan(updateCountBeforeFontCommit));
+    expect(
+      wrapper
+        .emitted('update')!
+        .slice(updateCountBeforeFontCommit)
+        .some(
+          ([updated]) =>
+            (updated as never as { caption: { style: { fontFamily?: string } } }).caption.style.fontFamily === 'serif',
+        ),
+    ).toBe(true);
+    expect(wrapper.find('input[aria-label="Caption word"]').exists()).toBe(false);
+    expect(wrapper.find('input[aria-label="Word start time"]').exists()).toBe(false);
+    expect(wrapper.find('input[aria-label="Word end time"]').exists()).toBe(false);
+    await vi.waitFor(() => expect(wrapper.emitted('update')).toBeTruthy());
     expect(
       wrapper
         .emitted('update')!
@@ -159,7 +171,7 @@ describe('CaptionClipPanel', () => {
             updated as never as {
               caption: { style: { fontFamily?: string; fontWeight?: number; textAlign?: string } };
             }
-          ).caption.style.fontFamily === 'sans-serif',
+          ).caption.style.fontFamily === 'serif',
       ),
     ).toBe(true);
     expect(

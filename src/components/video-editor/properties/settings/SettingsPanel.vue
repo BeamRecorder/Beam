@@ -12,13 +12,16 @@ import { capture } from '~/api/capture';
 import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
-import { localeOptions } from '~/i18n/locales';
+import { isSupportedLocale, localeOptions } from '~/i18n/locales';
 import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
 import Accordion from '~/ui/accordion/Accordion.vue';
 
 const { t } = useTranslate('SettingsPanel');
 const { t: tAppearance } = useTranslate('AppearanceSettings');
 const localeStore = useLocaleStore();
+const updateLocale = (value: string | number) => {
+  if (typeof value === 'string' && isSupportedLocale(value)) localeStore.setLocale(value);
+};
 
 const toggleDevTools = () => {
   capture.toggleDevTools?.();
@@ -58,7 +61,7 @@ const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformati
         :model-value="localeStore.locale"
         :options="localeOptions"
         direction="up"
-        @update:model-value="localeStore.setLocale($event)"
+        @update:model-value="updateLocale"
       />
     </div>
 

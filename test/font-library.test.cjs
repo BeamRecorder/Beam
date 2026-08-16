@@ -51,6 +51,13 @@ function copyFixture(source, destination) {
   fs.copyFileSync(source, destination);
 }
 
+function ttfFixtureOrSkip(t) {
+  const fixture = findFontFixture('.ttf');
+  if (fixture) return fixture;
+  t.skip('No .ttf fixture is available on this host.');
+  return null;
+}
+
 test('imports each valid font format available on the host and resolves its opaque URL', async (t) => {
   for (const extension of ['.ttf', '.otf', '.woff', '.woff2']) {
     await t.test(extension, (subtest) => {
@@ -75,9 +82,11 @@ test('imports each valid font format available on the host and resolves its opaq
 });
 
 test('imports a real TTF, reads its names, hashes it, and serves the expected MIME type', (t) => {
+  const fixture = ttfFixtureOrSkip(t);
+  if (!fixture) return;
   const { root, library } = libraryForTest(t);
   const source = path.join(root, 'source.ttf');
-  copyFixture(findFontFixture('.ttf'), source);
+  copyFixture(fixture, source);
 
   const item = library.importFile(source);
   assert.match(item.id, /^[a-f0-9]{64}$/);
@@ -116,8 +125,9 @@ test('rejects a font larger than 64 MiB before reading or parsing it', (t) => {
 });
 
 test('deduplicates identical font bytes regardless of the source filename', (t) => {
+  const fixture = ttfFixtureOrSkip(t);
+  if (!fixture) return;
   const { root, library } = libraryForTest(t);
-  const fixture = findFontFixture('.ttf');
   const first = path.join(root, 'first.ttf');
   const second = path.join(root, 'renamed.ttf');
   copyFixture(fixture, first);
@@ -130,9 +140,11 @@ test('deduplicates identical font bytes regardless of the source filename', (t) 
 });
 
 test('rejects traversal, malformed encoding, query, and hash suffixes in font URLs', (t) => {
+  const fixture = ttfFixtureOrSkip(t);
+  if (!fixture) return;
   const { root, library } = libraryForTest(t);
   const source = path.join(root, 'source.ttf');
-  copyFixture(findFontFixture('.ttf'), source);
+  copyFixture(fixture, source);
   const item = library.importFile(source);
   const invalidUrls = [
     `project-media://font/${item.id}/extra`,
@@ -148,9 +160,11 @@ test('rejects traversal, malformed encoding, query, and hash suffixes in font UR
 });
 
 test('does not resolve a stored symlink outside the font library', (t) => {
+  const fixture = ttfFixtureOrSkip(t);
+  if (!fixture) return;
   const { root, library } = libraryForTest(t);
   const source = path.join(root, 'source.ttf');
-  copyFixture(findFontFixture('.ttf'), source);
+  copyFixture(fixture, source);
   const item = library.importFile(source);
   const stored = path.join(root, `${item.id}.ttf`);
   const outside = path.join(root, 'outside.ttf');
@@ -160,4 +174,63 @@ test('does not resolve a stored symlink outside the font library', (t) => {
 
   assert.deepEqual(library.list(), []);
   assert.equal(library.fileForUrl(item.url), null);
+});
+
+test('rejects malformed metadata without replacing the existing index', (t) => {
+  const fixture = ttfFixtureOrSkip(t);
+  if (!fixture) return;
+  const { root, library } = libraryForTest(t);
+  const metadata = path.join(root, 'library.json');
+  fs.writeFileSync(metadata, '{ malformed');
+  const source = path.join(root, 'source.ttf');
+  copyFixture(fixture, source);
+
+  assert.throws(() => library.importFile(source), SyntaxError);
+  assert.equal(fs.readFileSync(metadata, 'utf8'), '{ malformed');
+  assert.deepEqual(
+    fs.readdirSync(root).filter((name) => name.includes('.tmp')),
+    [],
+  );
+});
+
+test('keeps the previous metadata index when atomic replacement fails', (t) => {
+  const ttfFixture = findFontFixture('.ttf');
+  const otfFixture = findFontFixture('.otf');
+  if (!ttfFixture || !otfFixture) {
+    t.skip('Distinct TTF and OTF fixtures are required for the atomic write test.');
+    return;
+  }
+
+  const { root, library } = libraryForTest(t);
+  const metadata = path.join(root, 'library.json');
+  const firstSource = path.join(root, 'first.ttf');
+  const secondSource = path.join(root, 'second.otf');
+  copyFixture(ttfFixture, firstSource);
+  copyFixture(otfFixture, secondSource);
+
+  const first = library.importFile(firstSource);
+  const before = fs.readFileSync(metadata, 'utf8');
+  const renameSync = fs.renameSync;
+  let attempted = false;
+  fs.renameSync = (source, destination) => {
+    if (destination === metadata) {
+      attempted = true;
+      throw new Error('atomic metadata rename failed');
+    }
+    return renameSync(source, destination);
+  };
+
+  try {
+    assert.throws(() => library.importFile(secondSource), /atomic metadata rename failed/);
+  } finally {
+    fs.renameSync = renameSync;
+  }
+
+  assert.equal(attempted, true);
+  assert.equal(fs.readFileSync(metadata, 'utf8'), before);
+  assert.deepEqual(library.list(), [first]);
+  assert.deepEqual(
+    fs.readdirSync(root).filter((name) => name.endsWith('.tmp')),
+    [],
+  );
 });

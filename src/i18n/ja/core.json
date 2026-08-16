@@ -12,7 +12,10 @@
     "systemSoundTrack": "システム音声トラック",
     "systemVolume": "システム音量",
     "microphoneTrack": "マイクトラック",
-    "microphoneVolume": "マイク音量"
+    "microphoneVolume": "マイク音量",
+    "deleteSystemTrack": "システム音声トラックを削除",
+    "deleteMicrophoneTrack": "マイクトラックを削除",
+    "noAudioTracksDetected": "マイクまたはシステム音声トラックが検出されませんでした。"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "カスタムカラーを追加",
@@ -106,6 +109,16 @@
     "customTextDescription": "編集すると、時間付きの文字起こしがカスタムテキストに置き換わります。",
     "typography": "タイポグラフィ",
     "importFont": "フォントを読み込む",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "テキストの配置",
+    "alignLeft": "左揃え",
+    "alignCenter": "中央揃え",
+    "alignRight": "右揃え",
+    "fontLibraryReadFailed": "読み込んだフォントライブラリを取得できませんでした。",
+    "localFontsUnavailable": "ローカルフォントへのアクセスを利用できません。",
+    "localFontsPermissionDenied": "インストール済みフォントへのアクセスが拒否されました。",
+    "fontImportFailed": "このフォントを読み込めませんでした。",
+    "fontLoadFailed": "このフォントをロードできませんでした。",
     "textStyle": "テキストスタイル",
     "bold": "太字",
     "italic": "斜体",

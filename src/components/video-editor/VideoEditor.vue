@@ -30,6 +30,7 @@ import {
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
 
 const { t } = useTranslate('VideoEditor');
 const props = withDefaults(
@@ -97,6 +98,8 @@ const {
   selectedCaptionClip,
   isSystemAudioEnabled,
   isMicAudioEnabled,
+  hasSystemAudio,
+  hasMicAudio,
   selectClip,
   addElement,
   addImportedAsset,
@@ -147,6 +150,7 @@ const {
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
+const cursorPreview = ref<CursorType | null>(null);
 const canvasComposition = computed(
   () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
 );
@@ -182,9 +186,13 @@ const replaceComposition = (value: typeof composition.value) => {
   composition.value = value;
   editorState.scheduleSave();
 };
-const previewComposition = (value: typeof composition.value) => {
+const previewComposition = (value: typeof composition.value | null) => {
   captionCompositionPreview.value = value;
 };
+watch([() => selectedCaptionClip.value?.id, activeTab], () => {
+  captionCompositionPreview.value = null;
+  cursorPreview.value = null;
+});
 const commitCaption = (clip: Parameters<typeof updateCaption>[0]) => {
   captionCompositionPreview.value = null;
   updateCaption(clip);
@@ -200,6 +208,11 @@ const deleteTimelineClips = (clipIds: string[]) => {
   for (const clipId of ids) next = deleteClip(next, clipId);
   if (selectedClipId.value && ids.has(selectedClipId.value)) selectedClipId.value = null;
   composition.value = next;
+};
+const deleteAudioRole = (role: 'system' | 'microphone') => {
+  deleteTimelineClips(
+    composition.value.clips.filter((clip) => isAudioClip(clip) && clip.role === role).map((clip) => clip.id),
+  );
 };
 watch(systemVolume, (value) => updateRoleVolume('system', value));
 watch(micVolume, (value) => updateRoleVolume('microphone', value));
@@ -409,6 +422,7 @@ onBeforeUnmount(() => {
           :selected-clip="selectedClipInfo"
           :selected-caption-clip="selectedCaptionClip"
           v-model:selected-cursor="selectedCursor"
+          @preview:selected-cursor="cursorPreview = $event"
           v-model:cursor-size="cursorSize"
           v-model:cursor-color="cursorColor"
           v-model:enable-shadow="enableShadow"
@@ -422,6 +436,8 @@ onBeforeUnmount(() => {
           v-model:mic-volume="micVolume"
           v-model:is-system-audio-enabled="isSystemAudioEnabled"
           v-model:is-mic-audio-enabled="isMicAudioEnabled"
+          :has-system-audio="hasSystemAudio"
+          :has-mic-audio="hasMicAudio"
           :selected-background="selectedBackground"
           :blur-percent="backgroundBlurPercent"
           :background-groups="backgroundGroups"
@@ -445,6 +461,8 @@ onBeforeUnmount(() => {
           @preview:composition="previewComposition"
           @select-caption="selectEditorClip"
           @delete-clip="deleteSelectedClip"
+          @delete:system-audio="deleteAudioRole('system')"
+          @delete:mic-audio="deleteAudioRole('microphone')"
           @split-clip="splitSelectedClip"
           @update:clip-rate="updateSelectedRate"
           @update:clip-volume="updateSelectedVolume"
@@ -496,7 +514,7 @@ onBeforeUnmount(() => {
             ref="editorCanvasRef"
             :is-playing="isPlaying"
             :current-time="currentTime"
-            :selected-cursor="selectedCursor"
+            :selected-cursor="cursorPreview ?? selectedCursor"
             :cursor-size="cursorSize"
             :cursor-color="cursorColor"
             :enable-shadow="enableShadow"

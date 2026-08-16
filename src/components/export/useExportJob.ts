@@ -44,7 +44,9 @@ export function useExportJob() {
             totalImages: Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps)),
             audioProgress:
               request.includeAudio !== false &&
-              request.snapshot.composition.clips.some((clip) => clip.kind === 'audio' && clip.enabled)
+              request.snapshot.composition.clips.some(
+                (clip) => clip.kind === 'audio' && clip.enabled && clip.timelineDurationMs > 0,
+              )
                 ? 0
                 : null,
             currentTimeMs: 0,

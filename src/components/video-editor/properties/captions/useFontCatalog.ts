@@ -1,33 +1,46 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { capture } from '~/api/capture';
 import type { ImportedFont } from '~/api/types/capture-api';
-
-export interface CaptionFontOption {
-  value: string;
-  label: string;
-  assetId?: string;
-  url?: string;
-}
-
-type LocalFontRecord = { family: string };
-type LocalFontWindow = Window & { queryLocalFonts?: () => Promise<LocalFontRecord[]> };
+import type { CaptionFontOption, FontCatalogErrorCode, LocalFontWindow } from './font-catalog-types';
 const loadedImportedFonts = new Set<string>();
+const loadingImportedFonts = new Map<string, Promise<void>>();
 
 export const loadCaptionFont = async (font: CaptionFontOption) => {
   if (!font.assetId || !font.url) return;
   if (loadedImportedFonts.has(font.assetId)) return;
-  const face = new FontFace(font.label, `url("${font.url}")`);
-  await face.load();
-  document.fonts.add(face);
-  loadedImportedFonts.add(font.assetId);
+  const existing = loadingImportedFonts.get(font.assetId);
+  if (existing) return existing;
+  const loading = (async () => {
+    const face = new FontFace(font.value, `url("${font.url}")`);
+    await face.load();
+    document.fonts.add(face);
+    loadedImportedFonts.add(font.assetId!);
+  })();
+  loadingImportedFonts.set(font.assetId, loading);
+  try {
+    await loading;
+  } finally {
+    loadingImportedFonts.delete(font.assetId);
+  }
 };
 
 export function useFontCatalog() {
   const fonts = ref<CaptionFontOption[]>([{ value: 'sans-serif', label: 'Beam Sans' }]);
   const loading = ref(false);
-  const error = ref<string | null>(null);
+  const error = ref<FontCatalogErrorCode | null>(null);
   let imported: ImportedFont[] = [];
   let systemFamilies: string[] = [];
+  let pendingRequests = 0;
+  let importedRequest = 0;
+  let systemRequest = 0;
+  const beginRequest = () => {
+    pendingRequests += 1;
+    loading.value = true;
+  };
+  const endRequest = () => {
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    loading.value = pendingRequests > 0;
+  };
   const rebuild = () => {
     const seen = new Set<string>();
     fonts.value = [
@@ -42,46 +55,61 @@ export function useFontCatalog() {
     });
   };
   const refreshImported = async () => {
+    const request = ++importedRequest;
+    beginRequest();
     try {
-      imported = await capture.listImportedFonts();
+      const nextImported = await capture.listImportedFonts();
+      if (request !== importedRequest) return false;
+      imported = nextImported;
+      if (error.value === 'fontLibraryReadFailed') error.value = null;
       rebuild();
-    } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Unable to read the imported font library.';
+      return true;
+    } catch {
+      if (request === importedRequest) error.value = 'fontLibraryReadFailed';
+      return false;
+    } finally {
+      endRequest();
     }
   };
   const refreshSystem = async () => {
     const query = (window as LocalFontWindow).queryLocalFonts;
     if (!query) {
-      error.value = 'Local font access is unavailable.';
+      error.value = 'localFontsUnavailable';
       return;
     }
-    loading.value = true;
+    const request = ++systemRequest;
+    beginRequest();
     try {
       const records = await query();
+      if (request !== systemRequest) return;
       systemFamilies = records.map((font) => font.family).sort((a, b) => a.localeCompare(b));
-      error.value = null;
+      if (error.value === 'localFontsUnavailable' || error.value === 'localFontsPermissionDenied') error.value = null;
       rebuild();
-    } catch {
-      error.value = 'Permission to access installed fonts was denied.';
+    } catch (cause) {
+      if (request !== systemRequest) return;
+      error.value =
+        cause instanceof DOMException && cause.name === 'NotAllowedError'
+          ? 'localFontsPermissionDenied'
+          : 'fontLoadFailed';
     } finally {
-      loading.value = false;
+      endRequest();
     }
   };
   const importFont = async () => {
-    loading.value = true;
+    beginRequest();
     try {
       const font = await capture.pickImportedFont();
       if (!font) return null;
-      await refreshImported();
+      if (!(await refreshImported())) return null;
       const option = fonts.value.find((item) => item.assetId === font.id) ?? null;
       if (option) await loadCaptionFont(option);
       error.value = null;
       return option;
-    } catch (cause) {
-      error.value = cause instanceof Error ? cause.message : 'Unable to import this font.';
+    } catch {
+      error.value = 'fontImportFailed';
       return null;
     } finally {
-      loading.value = false;
+      endRequest();
     }
   };
   const onFocus = () => void refreshSystem();

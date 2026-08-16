@@ -28,18 +28,24 @@ export function useCopySystemInformation() {
       // The remaining browser diagnostics are still useful without an app version.
     }
     const information = buildSystemInformation(appVersion);
+    let succeeded = false;
     try {
       await navigator.clipboard.writeText(information);
+      succeeded = true;
     } catch {
       const textarea = document.createElement('textarea');
       textarea.value = information;
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      textarea.remove();
+      try {
+        textarea.select();
+        succeeded = document.execCommand('copy');
+      } finally {
+        textarea.remove();
+      }
     }
+    if (!succeeded) return;
     copied.value = true;
     if (copyTimeout) clearTimeout(copyTimeout);
     copyTimeout = setTimeout(() => (copied.value = false), 2_000);

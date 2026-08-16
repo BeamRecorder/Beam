@@ -12,7 +12,10 @@
     "systemSoundTrack": "System Sound Track",
     "systemVolume": "System Volume",
     "microphoneTrack": "Microphone Track",
-    "microphoneVolume": "Microphone Volume"
+    "microphoneVolume": "Microphone Volume",
+    "deleteSystemTrack": "Delete system audio track",
+    "deleteMicrophoneTrack": "Delete microphone track",
+    "noAudioTracksDetected": "No microphone or system audio track was detected."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Add custom color",
@@ -106,6 +109,16 @@
     "customTextDescription": "Editing this replaces the timed transcription with your custom text.",
     "typography": "Typography",
     "importFont": "Import font",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Text alignment",
+    "alignLeft": "Align left",
+    "alignCenter": "Align center",
+    "alignRight": "Align right",
+    "fontLibraryReadFailed": "Unable to read the imported font library.",
+    "localFontsUnavailable": "Local font access is unavailable.",
+    "localFontsPermissionDenied": "Permission to access installed fonts was denied.",
+    "fontImportFailed": "Unable to import this font.",
+    "fontLoadFailed": "Unable to load this font.",
     "textStyle": "Text style",
     "bold": "Bold",
     "italic": "Italic",

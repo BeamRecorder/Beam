@@ -12,7 +12,10 @@
     "systemSoundTrack": "Системна звукова писта",
     "systemVolume": "Системен звук",
     "microphoneTrack": "Писта на микрофона",
-    "microphoneVolume": "Сила на звука на микрофона"
+    "microphoneVolume": "Сила на звука на микрофона",
+    "deleteSystemTrack": "Изтриване на системната аудиописта",
+    "deleteMicrophoneTrack": "Изтриване на микрофонната писта",
+    "noAudioTracksDetected": "Не е открита микрофонна или системна аудиописта."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Добавяне на персонализиран цвят",
@@ -106,6 +109,16 @@
     "customTextDescription": "Редактирането заменя синхронизирания транскрипт с вашия текст.",
     "typography": "Типография",
     "importFont": "Импортиране на шрифт",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Подравняване на текста",
+    "alignLeft": "Подравняване вляво",
+    "alignCenter": "Центриране",
+    "alignRight": "Подравняване вдясно",
+    "fontLibraryReadFailed": "Библиотеката с импортирани шрифтове не може да бъде прочетена.",
+    "localFontsUnavailable": "Достъпът до локални шрифтове не е наличен.",
+    "localFontsPermissionDenied": "Достъпът до инсталираните шрифтове е отказан.",
+    "fontImportFailed": "Този шрифт не може да бъде импортиран.",
+    "fontLoadFailed": "Този шрифт не може да бъде зареден.",
     "textStyle": "Стил на текста",
     "bold": "Получер",
     "italic": "Курсив",

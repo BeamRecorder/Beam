@@ -12,7 +12,10 @@
     "systemSoundTrack": "系統音效軌道",
     "systemVolume": "系統音量",
     "microphoneTrack": "麥克風軌道",
-    "microphoneVolume": "麥克風音量"
+    "microphoneVolume": "麥克風音量",
+    "deleteSystemTrack": "刪除系統音訊軌道",
+    "deleteMicrophoneTrack": "刪除麥克風軌道",
+    "noAudioTracksDetected": "未偵測到麥克風或系統音訊軌道。"
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "新增自訂色彩",
@@ -106,6 +109,16 @@
     "customTextDescription": "編輯此內容會以自訂文字取代定時轉錄內容。",
     "typography": "排版",
     "importFont": "匯入字型",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "文字對齊",
+    "alignLeft": "靠左對齊",
+    "alignCenter": "置中",
+    "alignRight": "靠右對齊",
+    "fontLibraryReadFailed": "無法讀取已匯入的字型庫。",
+    "localFontsUnavailable": "無法使用本機字型存取。",
+    "localFontsPermissionDenied": "存取已安裝字型的權限遭拒。",
+    "fontImportFailed": "無法匯入此字型。",
+    "fontLoadFailed": "無法載入此字型。",
     "textStyle": "文字樣式",
     "bold": "粗體",
     "italic": "斜體",

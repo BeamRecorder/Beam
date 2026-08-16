@@ -12,7 +12,10 @@
     "systemSoundTrack": "시스템 사운드 트랙",
     "systemVolume": "시스템 볼륨",
     "microphoneTrack": "마이크 트랙",
-    "microphoneVolume": "마이크 볼륨"
+    "microphoneVolume": "마이크 볼륨",
+    "deleteSystemTrack": "시스템 오디오 트랙 삭제",
+    "deleteMicrophoneTrack": "마이크 트랙 삭제",
+    "noAudioTracksDetected": "마이크 또는 시스템 오디오 트랙이 감지되지 않았습니다."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "사용자 지정 색상 추가",
@@ -106,6 +109,16 @@
     "customTextDescription": "편집하면 시간 지정된 전사가 사용자 지정 텍스트로 바뀝니다.",
     "typography": "타이포그래피",
     "importFont": "글꼴 가져오기",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "텍스트 정렬",
+    "alignLeft": "왼쪽 정렬",
+    "alignCenter": "가운데 정렬",
+    "alignRight": "오른쪽 정렬",
+    "fontLibraryReadFailed": "가져온 글꼴 라이브러리를 읽을 수 없습니다.",
+    "localFontsUnavailable": "로컬 글꼴 접근을 사용할 수 없습니다.",
+    "localFontsPermissionDenied": "설치된 글꼴 접근 권한이 거부되었습니다.",
+    "fontImportFailed": "이 글꼴을 가져올 수 없습니다.",
+    "fontLoadFailed": "이 글꼴을 불러올 수 없습니다.",
     "textStyle": "텍스트 스타일",
     "bold": "굵게",
     "italic": "기울임꼴",

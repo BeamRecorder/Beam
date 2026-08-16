@@ -14,8 +14,8 @@ const emit = defineEmits<{
 const { t } = useTranslate('Onboarding');
 const localeStore = useLocaleStore();
 
-const handleLocaleChange = (newLocale: string) => {
-  if (isSupportedLocale(newLocale)) localeStore.setLocale(newLocale);
+const handleLocaleChange = (newLocale: string | number) => {
+  if (typeof newLocale === 'string' && isSupportedLocale(newLocale)) localeStore.setLocale(newLocale);
 };
 
 const handleNext = () => {

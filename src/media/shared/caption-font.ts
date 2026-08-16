@@ -12,5 +12,6 @@ export const applyCanvasCaptionFont = (
   fontSize = style.fontSize,
 ) => {
   context.font = canvasCaptionFont(style, fontSize);
-  (context as typeof context & { letterSpacing: string }).letterSpacing = `${style.letterSpacing ?? 0}px`;
+  const scale = Math.max(1, fontSize) / Math.max(1, style.fontSize);
+  (context as typeof context & { letterSpacing: string }).letterSpacing = `${(style.letterSpacing ?? 0) * scale}px`;
 };

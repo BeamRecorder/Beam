@@ -15,16 +15,24 @@ const mimeTypes = Object.freeze({
 function createFontLibrary(directory) {
   const metadataFile = path.join(directory, 'library.json');
   const readMetadata = () => {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
+    if (!fs.existsSync(metadataFile)) return [];
+    const parsed = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
+    if (!Array.isArray(parsed)) throw new Error('Invalid font library metadata.');
+    return parsed;
   };
   const writeMetadata = (items) => {
     fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(metadataFile, `${JSON.stringify(items, null, 2)}\n`, { mode: 0o600 });
+    const temporaryFile = `${metadataFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    try {
+      fs.writeFileSync(temporaryFile, `${JSON.stringify(items, null, 2)}\n`, { mode: 0o600 });
+      fs.renameSync(temporaryFile, metadataFile);
+    } finally {
+      try {
+        fs.unlinkSync(temporaryFile);
+      } catch (error) {
+        if (error?.code !== 'ENOENT') throw error;
+      }
+    }
   };
   const fileFor = (item) => path.join(directory, `${item.id}${item.extension}`);
   const list = () =>

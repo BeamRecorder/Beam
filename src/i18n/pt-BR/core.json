@@ -12,7 +12,10 @@
     "systemSoundTrack": "Faixa de som do sistema",
     "systemVolume": "Volume do sistema",
     "microphoneTrack": "Faixa do microfone",
-    "microphoneVolume": "Volume do microfone"
+    "microphoneVolume": "Volume do microfone",
+    "deleteSystemTrack": "Excluir faixa de áudio do sistema",
+    "deleteMicrophoneTrack": "Excluir faixa do microfone",
+    "noAudioTracksDetected": "Nenhuma faixa de microfone ou áudio do sistema foi detectada."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Adicionar cor personalizada",
@@ -106,6 +109,16 @@
     "customTextDescription": "Editar isto substitui a transcrição sincronizada pelo seu texto personalizado.",
     "typography": "Tipografia",
     "importFont": "Importar fonte",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Alinhamento do texto",
+    "alignLeft": "Alinhar à esquerda",
+    "alignCenter": "Centralizar",
+    "alignRight": "Alinhar à direita",
+    "fontLibraryReadFailed": "Não foi possível ler a biblioteca de fontes importadas.",
+    "localFontsUnavailable": "O acesso às fontes locais não está disponível.",
+    "localFontsPermissionDenied": "O acesso às fontes instaladas foi negado.",
+    "fontImportFailed": "Não foi possível importar esta fonte.",
+    "fontLoadFailed": "Não foi possível carregar esta fonte.",
     "textStyle": "Estilo do texto",
     "bold": "Negrito",
     "italic": "Itálico",

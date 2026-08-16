@@ -12,7 +12,10 @@
     "systemSoundTrack": "Rãnh âm thanh hệ thống",
     "systemVolume": "Âm lượng hệ thống",
     "microphoneTrack": "Rãnh micro",
-    "microphoneVolume": "Âm lượng micro"
+    "microphoneVolume": "Âm lượng micro",
+    "deleteSystemTrack": "Xóa rãnh âm thanh hệ thống",
+    "deleteMicrophoneTrack": "Xóa rãnh micro",
+    "noAudioTracksDetected": "Không phát hiện rãnh micro hoặc âm thanh hệ thống."
   },
   "BackgroundPresetComposer": {
     "addCustomColor": "Thêm màu tùy chỉnh",
@@ -106,6 +109,16 @@
     "customTextDescription": "Chỉnh sửa ở đây sẽ thay thế bản phiên âm theo thời gian bằng văn bản tùy chỉnh của bạn.",
     "typography": "Kiểu chữ",
     "importFont": "Nhập phông chữ",
+    "fontSample": "Aa Bb Cc 123",
+    "textAlignment": "Căn chỉnh văn bản",
+    "alignLeft": "Căn trái",
+    "alignCenter": "Căn giữa",
+    "alignRight": "Căn phải",
+    "fontLibraryReadFailed": "Không thể đọc thư viện phông chữ đã nhập.",
+    "localFontsUnavailable": "Không thể truy cập phông chữ cục bộ.",
+    "localFontsPermissionDenied": "Quyền truy cập phông chữ đã cài đặt bị từ chối.",
+    "fontImportFailed": "Không thể nhập phông chữ này.",
+    "fontLoadFailed": "Không thể tải phông chữ này.",
     "textStyle": "Kiểu văn bản",
     "bold": "Đậm",
     "italic": "Nghiêng",
