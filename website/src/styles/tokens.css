@@ -1,0 +1,62 @@
+@font-face {
+  font-family: 'Stack Sans Text';
+  src: url('../../../public/font/StackSansText-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Stack Sans Headline';
+  src: url('../../../public/font/StackSansHeadline-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --color-primary: #ff5a1f;
+  --color-primary-hover: #e04810;
+  --color-primary-light: rgba(255, 90, 31, 0.1);
+  --color-primary-border: rgba(255, 90, 31, 0.3);
+  --color-bg-app: #f7f5f0;
+  --color-bg-surface: #f7f5f0;
+  --color-bg-surface-hover: #ebe8e0;
+  --color-bg-element: #ffffff;
+  --color-border: #e6e3dc;
+  --color-border-strong: #d3cfc5;
+  --color-border-dark: #334155;
+  --color-track-video: #6366f1;
+  --color-track-video-light: rgba(99, 102, 241, 0.15);
+  --color-track-audio: #10b981;
+  --color-track-audio-light: rgba(16, 185, 129, 0.15);
+  --color-track-cursor: #f43f5e;
+  --color-track-cursor-light: rgba(244, 63, 94, 0.15);
+  --color-track-annotation: #f59e0b;
+  --color-track-annotation-light: rgba(245, 158, 11, 0.15);
+  --color-track-blur: #0e7490;
+  --color-track-blur-highlight: #0891b2;
+  --text-primary: #1e1e1e;
+  --text-secondary: #555555;
+  --text-muted: #77736b;
+  --text-light: #f7f5f0;
+  --accent: var(--color-primary);
+  --surface: var(--color-bg-surface);
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --font-sans: 'Stack Sans Text', 'Segoe UI', system-ui, sans-serif;
+  --font-headline: 'Stack Sans Headline', 'Segoe UI', system-ui, sans-serif;
+  --shadow-sm: 0 1px 2px rgba(22, 21, 18, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(22, 21, 18, 0.08);
+  --shadow-lg: 0 16px 32px -4px rgba(22, 21, 18, 0.12);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}

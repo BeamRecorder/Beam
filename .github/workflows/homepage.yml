@@ -1,0 +1,44 @@
+name: Homepage
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homepage-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >-
+      github.actor == 'ExtraBinoss' &&
+      github.triggering_actor == 'ExtraBinoss' &&
+      startsWith(github.event.head_commit.message, '[HOMEPAGE]')
+    runs-on: ubuntu-latest
+    environment:
+      name: homepage-production
+      url: https://beam.plinka.eu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install repository dependencies
+        run: node scripts/ci/npm-ci-retry.cjs
+      - name: Verify homepage
+        run: |
+          npm run website:typecheck
+          npm run website:test
+          npm run website:build
+      - name: Install pinned Wrangler CLI
+        run: npm install --global wrangler@4.123.0
+      - name: Deploy homepage to Cloudflare Pages
+        working-directory: website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler pages deploy ./dist --project-name=beam-plinka --branch=master
