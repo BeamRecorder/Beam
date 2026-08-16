@@ -190,7 +190,22 @@ const handleMouseLeaveVideo = (projectId: string, event: MouseEvent) => {
   }
 };
 
+const isScrolling = ref(false);
+let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const handleScroll = () => {
+  if (hoveredProjectId.value) {
+    hoveredProjectId.value = null;
+  }
+  isScrolling.value = true;
+  if (scrollTimeout) clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(() => {
+    isScrolling.value = false;
+  }, 150);
+};
+
 const handleProjectMouseEnter = (project: CaptureProject, event: MouseEvent) => {
+  if (isScrolling.value) return;
   hoveredProjectId.value = project.id;
   if (project.previewSrc) {
     videoProgress.value[project.id] = { current: 0, total: 1 };
@@ -213,6 +228,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (scrollTimeout) clearTimeout(scrollTimeout);
   // Stop all video elements to prevent holding media resources/decoders when closing
   const container = document.querySelector('.projects-viewport');
   if (container) {
@@ -439,7 +455,14 @@ defineExpose({
       <span>{{ t('recordDemoFirst') }}</span>
     </div>
 
-    <div v-else v-bind="containerProps" class="projects-viewport" :style="maskStyle">
+    <div
+      v-else
+      v-bind="containerProps"
+      class="projects-viewport"
+      :class="{ 'is-scrolling': isScrolling }"
+      :style="maskStyle"
+      @scroll.passive="handleScroll"
+    >
       <div v-bind="wrapperProps" class="projects-list">
         <div v-for="row in list" :key="row.index" class="project-grid project-row">
           <div

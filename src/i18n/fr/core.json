@@ -165,6 +165,7 @@
     "speedBoost": "Accélération",
     "playbackSpeed": "Vitesse de lecture",
     "enabled": "Activé",
+    "disabled": "Désactivé",
     "sidecarLink": "Lien sidecar",
     "unlink": "Dissocier",
     "deleteClip": "Supprimer le clip",

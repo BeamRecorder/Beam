@@ -165,6 +165,7 @@
     "speedBoost": "加速",
     "playbackSpeed": "播放速度",
     "enabled": "已啟用",
+    "disabled": "已停用",
     "sidecarLink": "附加檔案連結",
     "unlink": "取消關聯",
     "deleteClip": "刪除片段",

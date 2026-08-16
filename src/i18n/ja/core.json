@@ -165,6 +165,7 @@
     "speedBoost": "速度ブースト",
     "playbackSpeed": "再生速度",
     "enabled": "有効",
+    "disabled": "無効",
     "sidecarLink": "サイドカーリンク",
     "unlink": "リンク解除",
     "deleteClip": "クリップを削除",
