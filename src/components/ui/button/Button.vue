@@ -11,7 +11,7 @@ import { Loader } from '@lucide/vue';
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card' | 'danger';
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'tab' | 'card' | 'danger' | 'frosted';
     size?: 'xs' | 'sm' | 'md' | 'lg';
     loading?: boolean;
     disabled?: boolean;
@@ -19,6 +19,7 @@ const props = withDefaults(
     tooltip?: string;
     tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
     tooltipVariant?: 'default' | 'error';
+    tooltipDelay?: number;
     type?: 'button' | 'submit' | 'reset';
     icon?: Component;
     iconOnly?: boolean;
@@ -32,6 +33,7 @@ const props = withDefaults(
     tooltip: '',
     tooltipPosition: 'top',
     tooltipVariant: 'default',
+    tooltipDelay: 100,
     type: 'button',
     iconOnly: false,
   },
@@ -66,7 +68,14 @@ const handleClick = (event: MouseEvent) => {
   <component
     :is="tooltip ? Tooltip : 'div'"
     v-bind="
-      tooltip ? { content: tooltip, position: tooltipPosition, variant: disabled ? 'error' : tooltipVariant } : {}
+      tooltip
+        ? {
+            content: tooltip,
+            position: tooltipPosition,
+            variant: disabled ? 'error' : tooltipVariant,
+            delay: tooltipDelay,
+          }
+        : {}
     "
     :class="['btn-container', { 'btn-block': block }]"
   >
@@ -202,6 +211,31 @@ const handleClick = (event: MouseEvent) => {
 .btn-ghost:hover:not(:disabled) {
   background-color: var(--color-bg-surface, #1e1e1e);
   border-color: transparent;
+}
+
+.btn-frosted {
+  background-color: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-color: var(--color-border);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+.btn-frosted:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--color-bg-surface-hover) 85%, transparent);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.4),
+    0 0 14px rgba(255, 90, 31, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+.btn-frosted:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .btn-link {

@@ -483,6 +483,8 @@ describe('EditorCanvas', () => {
     // Zooming the canvas
     const island = mounted.get('.canvas-island');
     await island.trigger('wheel', { deltaY: -100, preventDefault: vi.fn() });
+    await island.trigger('wheel', { deltaY: -100, preventDefault: vi.fn() });
+    await island.trigger('wheel', { deltaY: -100, preventDefault: vi.fn() });
     await nextTick();
 
     expect(mounted.find('.recenter-button').exists()).toBe(true);
