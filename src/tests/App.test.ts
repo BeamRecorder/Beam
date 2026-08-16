@@ -268,6 +268,9 @@ describe('App', () => {
     await nextTick();
     expect(wrapper.get('.mock-hud').attributes('data-editor-progress')).toBe('65');
 
+    mocks.controller.editorProgress?.({ stage: 'ready', value: 100 });
+    expect(mocks.capture.setWindowVisible).toHaveBeenCalledWith(false);
+
     finishOpening(true);
     await settle();
     expect(wrapper.get('.mock-hud').attributes('data-preparing-editor')).toBe('false');

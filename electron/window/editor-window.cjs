@@ -220,6 +220,10 @@ function createEditorWindowManager({
     if (!PROJECT_ID.test(projectId)) throw new Error('Identifiant de projet invalide');
     lastProgressValue = 0;
     sendProgress('openingWindow');
+    // The HUD changes from the project picker to the loading card while the
+    // pointer can remain stationary. Keep its Close action reachable even
+    // though normal HUD hit-testing waits for a mousemove.
+    hudController.setHudInteractive?.(true);
     currentProjectId = projectId;
     const target = ensure();
     if (rendererReady) {

@@ -95,7 +95,10 @@ test('editor window is opaque and routes native editor lifecycle without changin
       isMinimized: () => false,
       restore: () => calls.push(['hud-restore']),
     };
-    const hudController = { showHud: () => calls.push(['show-hud']) };
+    const hudController = {
+      showHud: () => calls.push(['show-hud']),
+      setHudInteractive: (value) => calls.push(['hud-interactive', value]),
+    };
     const ipcMain = {
       handle: (channel, listener) => ipcHandlers.set(channel, listener),
       on: (channel, listener) => ipcListeners.set(channel, listener),
@@ -135,6 +138,7 @@ test('editor window is opaque and routes native editor lifecycle without changin
       false,
       'the HUD loading state remains visible until the editor renderer is ready',
     );
+    assert.ok(calls.some((call) => call[0] === 'hud-interactive' && call[1] === true));
 
     const editor = windows[0];
     assert.deepEqual(

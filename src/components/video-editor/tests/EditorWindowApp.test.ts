@@ -72,6 +72,8 @@ describe('EditorWindowApp', () => {
   afterEach(() => {
     while (wrappers.length > 0) wrappers.pop()?.unmount();
     document.documentElement.classList.remove('dark');
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('loads the editor context and notifies the native window when ready', async () => {
@@ -87,6 +89,19 @@ describe('EditorWindowApp', () => {
       'loadingTimeline',
       'renderingEditor',
     ]);
+    expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
+  });
+
+  it('notifies native readiness when the hidden window never receives an animation frame', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn());
+
+    const wrapper = mountEditor();
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(100);
+    await flushPromises();
+
+    expect(wrapper.find('.mock-editor').exists()).toBe(true);
     expect(capture.notifyEditorReady).toHaveBeenCalledOnce();
   });
 

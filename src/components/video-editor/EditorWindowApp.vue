@@ -18,6 +18,7 @@ let removeContextListener: (() => void) | null = null;
 let themeObserver: MutationObserver | null = null;
 let editorReadyNotified = false;
 const { t } = useTranslate('EditorPreparingHud');
+const EDITOR_READY_PAINT_TIMEOUT_MS = 100;
 
 const syncTitlebarTheme = () => {
   const dark = document.documentElement.classList.contains('dark');
@@ -27,8 +28,21 @@ const syncTitlebarTheme = () => {
 const waitForEditorPaint = async () => {
   await nextTick();
   await new Promise<void>((resolve) => {
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => resolve());
-    else setTimeout(resolve, 0);
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      resolve();
+    };
+
+    // Hidden Electron windows may pause requestAnimationFrame indefinitely.
+    // Keep the paint opportunity when available, but never let native window
+    // presentation depend on a frame that cannot be scheduled.
+    timeout = setTimeout(finish, EDITOR_READY_PAINT_TIMEOUT_MS);
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(finish);
+    else finish();
   });
 };
 
