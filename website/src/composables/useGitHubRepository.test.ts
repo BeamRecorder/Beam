@@ -59,11 +59,7 @@ describe('useGitHubRepository', () => {
     expect(state.loading.value).toBe(false);
     expect(state.error.value).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
-      repositoryUrl,
-      releaseUrl,
-      contributorsUrl,
-    ]);
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([repositoryUrl, releaseUrl, contributorsUrl]);
   });
 
   it('exposes the GitHub API error and stops loading when a request fails', async () => {

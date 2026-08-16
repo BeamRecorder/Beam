@@ -26,19 +26,12 @@ const props = withDefaults(
 
 const viewportRef = ref<HTMLElement | null>(null);
 
-const {
-  hasTopShadow,
-  hasBottomShadow,
-  hasLeftShadow,
-  hasRightShadow,
-  isScrollableY,
-  isScrollableX,
-  updateShadows,
-} = useScrollShadow(viewportRef, {
-  offset: props.offset,
-  orientation: props.orientation,
-  isEnabled: toRef(props, 'isEnabled'),
-});
+const { hasTopShadow, hasBottomShadow, hasLeftShadow, hasRightShadow, isScrollableY, isScrollableX, updateShadows } =
+  useScrollShadow(viewportRef, {
+    offset: props.offset,
+    orientation: props.orientation,
+    isEnabled: toRef(props, 'isEnabled'),
+  });
 
 const maskStyle = computed(() => {
   const sizeStr = typeof props.size === 'number' ? `${props.size}px` : props.size;

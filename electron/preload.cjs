@@ -163,6 +163,13 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('background-library:changed', callback);
       return () => ipcRenderer.removeListener('background-library:changed', callback);
     },
+    listImportedFonts: () => ipcRenderer.invoke('font-library:list'),
+    pickImportedFont: () => ipcRenderer.invoke('font-library:pick-import'),
+    onFontLibraryChanged: (listener) => {
+      const callback = () => listener();
+      ipcRenderer.on('font-library:changed', callback);
+      return () => ipcRenderer.removeListener('font-library:changed', callback);
+    },
     createProject: (options = {}) => ipcRenderer.invoke('projects:create', options),
     renameProject: (projectId, name) => ipcRenderer.invoke('projects:rename', { projectId, name }),
     saveProjectThumbnail: (projectId, dataUrl) => ipcRenderer.invoke('projects:save-thumbnail', { projectId, dataUrl }),

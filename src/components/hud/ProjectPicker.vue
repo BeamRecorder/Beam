@@ -76,7 +76,8 @@ const maskStyle = computed(() => {
   if (top && bottom) {
     return {
       maskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%)',
-      WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%)',
+      WebkitMaskImage:
+        'linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%)',
     };
   }
   if (top) {

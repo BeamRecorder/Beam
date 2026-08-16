@@ -8,12 +8,42 @@ import Divider from '~/ui/divider/Divider.vue';
 import type { CaptionStyle } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
 import BackdropBlurControl from './BackdropBlurControl.vue';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Strikethrough, Upload } from '@lucide/vue';
+import { loadCaptionFont, useFontCatalog } from './useFontCatalog';
 
 const { t } = useTranslate('CaptionClipPanel');
-defineProps<{ style: CaptionStyle; defaultFontSize: number }>();
+const props = defineProps<{ style: CaptionStyle; defaultFontSize: number; sampleText?: string }>();
 const emit = defineEmits<{
   (event: 'update', key: keyof CaptionStyle, value: CaptionStyle[keyof CaptionStyle]): void;
+  (event: 'preview', patch: Partial<CaptionStyle> | null): void;
 }>();
+const { fonts, loading, error, refreshSystem, importFont } = useFontCatalog();
+let previewSequence = 0;
+const previewFont = async (value: string | number | null) => {
+  const sequence = ++previewSequence;
+  if (value === null) return emit('preview', null);
+  const font = fonts.value.find((item) => item.value === value);
+  if (!font) return;
+  try {
+    await loadCaptionFont(font);
+    if (sequence === previewSequence) emit('preview', { fontFamily: font.value, fontAssetId: font.assetId });
+  } catch {
+    if (sequence === previewSequence) emit('preview', null);
+  }
+};
+const commitFont = async (value: string | number) => {
+  const font = fonts.value.find((item) => item.value === value);
+  if (!font) return;
+  await loadCaptionFont(font);
+  emit('update', 'fontFamily', font.value);
+  emit('update', 'fontAssetId', font.assetId);
+};
+const pickFont = async () => {
+  const font = await importFont();
+  if (font) await commitFont(font.value);
+};
 
 const shadowDirectionOptions = computed(() => [
   { value: 'all', label: t('shadowAllAround') },
@@ -26,6 +56,84 @@ const shadowDirectionOptions = computed(() => [
 <template>
   <div class="section-block">
     <span class="section-title">{{ t('typography') }}</span>
+    <div class="font-row">
+      <Select
+        :model-value="style.fontFamily ?? 'sans-serif'"
+        :options="fonts"
+        :loading="loading"
+        :option-height="58"
+        size="sm"
+        @toggle="$event && refreshSystem()"
+        @preview:model-value="previewFont"
+        @update:model-value="commitFont"
+      >
+        <template #option="{ option }">
+          <span class="font-option">
+            <span>{{ option.label }}</span>
+            <span class="font-sample" :style="{ fontFamily: String(option.value) }">{{
+              sampleText || 'Aa Bb Cc 123'
+            }}</span>
+          </span>
+        </template>
+      </Select>
+      <Button
+        :icon="Upload"
+        icon-only
+        size="sm"
+        variant="outline"
+        :loading="loading"
+        :tooltip="t('importFont')"
+        :aria-label="t('importFont')"
+        @click="pickFont"
+      />
+    </div>
+    <p v-if="error" class="font-error" role="status">{{ error }}</p>
+    <ButtonGroup full :columns="3" size="xs" :aria-label="t('textStyle')">
+      <Button
+        :icon="Bold"
+        icon-only
+        size="xs"
+        :variant="style.fontWeight === 800 ? 'primary' : 'ghost'"
+        :tooltip="t('bold')"
+        :aria-label="t('bold')"
+        @click="emit('update', 'fontWeight', style.fontWeight === 800 ? 400 : 800)"
+      />
+      <Button
+        :icon="Italic"
+        icon-only
+        size="xs"
+        :variant="style.fontStyle === 'italic' ? 'primary' : 'ghost'"
+        :tooltip="t('italic')"
+        :aria-label="t('italic')"
+        @click="emit('update', 'fontStyle', style.fontStyle === 'italic' ? 'normal' : 'italic')"
+      />
+      <Button
+        :icon="Strikethrough"
+        icon-only
+        size="xs"
+        :variant="style.textDecoration === 'line-through' ? 'primary' : 'ghost'"
+        :tooltip="t('strikethrough')"
+        :aria-label="t('strikethrough')"
+        @click="emit('update', 'textDecoration', style.textDecoration === 'line-through' ? 'none' : 'line-through')"
+      />
+    </ButtonGroup>
+    <ButtonGroup full :columns="3" size="xs" aria-label="Text alignment">
+      <Button
+        v-for="item in [
+          { value: 'left', icon: AlignLeft },
+          { value: 'center', icon: AlignCenter },
+          { value: 'right', icon: AlignRight },
+        ]"
+        :key="item.value"
+        :icon="item.icon"
+        icon-only
+        size="xs"
+        :variant="style.textAlign === item.value ? 'primary' : 'ghost'"
+        :tooltip="`Align ${item.value}`"
+        :aria-label="`Align ${item.value}`"
+        @click="emit('update', 'textAlign', item.value as CaptionStyle['textAlign'])"
+      />
+    </ButtonGroup>
     <div class="sub-group">
       <span class="sub-label">{{ t('textColor') }}</span>
       <ColorPicker
@@ -34,6 +142,26 @@ const shadowDirectionOptions = computed(() => [
         @update:model-value="emit('update', 'color', $event)"
       />
     </div>
+    <BigSlider
+      :label="t('lineHeight')"
+      :model-value="style.lineHeight ?? 1.2"
+      :min="0.8"
+      :max="2"
+      :step="0.05"
+      :default-value="1.2"
+      :format-value="(value) => value.toFixed(2)"
+      @update:model-value="emit('update', 'lineHeight', $event)"
+    />
+    <BigSlider
+      :label="t('letterSpacing')"
+      :model-value="style.letterSpacing ?? 0"
+      :min="-5"
+      :max="20"
+      :step="0.5"
+      :default-value="0"
+      :format-value="(value) => `${value}px`"
+      @update:model-value="emit('update', 'letterSpacing', $event)"
+    />
     <BigSlider
       :label="t('fontSize')"
       :model-value="style.fontSize"
@@ -167,5 +295,28 @@ const shadowDirectionOptions = computed(() => [
   font-size: 10px;
   font-weight: 500;
   color: var(--text-muted);
+}
+.font-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+.font-option {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.font-sample {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.font-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 10px;
 }
 </style>

@@ -68,7 +68,7 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
       <Select
         :model-value="selectedCursor"
         :options="cursorOptions"
-        :preview-on-hover="true"
+        @preview:model-value="(value) => emit('update:selectedCursor', (value ?? selectedCursor) as CursorType)"
         @update:modelValue="emit('update:selectedCursor', $event)"
       />
     </div>

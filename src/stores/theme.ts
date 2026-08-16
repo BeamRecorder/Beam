@@ -31,7 +31,8 @@ export const useThemeStore = defineStore('theme', () => {
   let synchronizedAppearance: string | null = null;
   let radiusPersistenceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const mediaQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  const mediaQuery =
+    typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   const systemDark = ref(Boolean(mediaQuery?.matches));
 
   const appearance = computed<AppearanceSettings>(() => ({

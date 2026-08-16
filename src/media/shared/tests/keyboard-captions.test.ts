@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InputEvent, InputEventSidecar, InputKey } from '~/api/types/capture-session';
+import { createDefaultCaptionStyle } from '../composition-defaults';
 import {
   keyboardCaptionClipsFromInput,
   keyboardCaptionRuns,
@@ -43,6 +44,7 @@ const keyboardClip = (): CaptionClip => ({
     recordedPlatform: 'windows',
     sourceSessionId: 'session-1',
     style: {
+      ...createDefaultCaptionStyle(28),
       color: '#fff',
       fontSize: 28,
       wrap: true,

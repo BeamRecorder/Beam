@@ -6,7 +6,7 @@ export const CAPTION_LINE_HEIGHT = 1.2;
 export const CAPTION_HORIZONTAL_INSET = 8;
 export const CAPTION_VERTICAL_INSET = 4;
 
-export type CaptionTextMeasurer = (text: string, fontSize: number) => number;
+export type CaptionTextMeasurer = (text: string, fontSize: number, style?: CaptionStyle) => number;
 
 export interface CaptionTextLayout {
   fontSize: number;
@@ -37,8 +37,9 @@ export function captionContentAt(
   return { text: runs.map((run) => run.text).join(''), runs };
 }
 
-export const approximateCaptionTextWidth: CaptionTextMeasurer = (text, fontSize) =>
-  Array.from(text).reduce((width, character) => width + (character === ' ' ? 0.33 : 0.6) * fontSize, 0);
+export const approximateCaptionTextWidth: CaptionTextMeasurer = (text, fontSize, style) =>
+  Array.from(text).reduce((width, character) => width + (character === ' ' ? 0.33 : 0.6) * fontSize, 0) +
+  Math.max(0, Array.from(text).length - 1) * (style?.letterSpacing ?? 0);
 
 const splitLongWord = (word: string, maxWidth: number, measure: (text: string) => number) => {
   const chunks: string[] = [];
@@ -98,11 +99,11 @@ export function layoutCaptionText(options: {
   const maxTextWidth = Math.max(1, transform.width * Math.max(1, options.canvasWidth) - CAPTION_HORIZONTAL_INSET * 2);
   const measureText = options.measureText ?? approximateCaptionTextWidth;
   const lines = wrap
-    ? wrapCaptionLines(options.text, maxTextWidth, (text) => measureText(text, fontSize))
+    ? wrapCaptionLines(options.text, maxTextWidth, (text) => measureText(text, fontSize, options.clip.caption.style))
     : options.text
       ? [options.text]
       : [];
-  const lineHeight = fontSize * CAPTION_LINE_HEIGHT;
+  const lineHeight = fontSize * (options.clip.caption.style.lineHeight ?? CAPTION_LINE_HEIGHT);
   if (!wrap || !lines.length) return { fontSize, lineHeight, lines, maxTextWidth, transform, wrap };
   const height = Math.min(
     4,

@@ -23,7 +23,7 @@ vi.mock('../composables/useVideoEditor', async () => {
     useVideoEditor: vi.fn(() => {
       const activeTab = ref('canvas');
       const composition = ref<ClipComposition>({
-        schemaVersion: 5,
+        schemaVersion: 6,
         keyboardCaptionSessions: [],
         assets: [
           {
@@ -352,7 +352,10 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockEditorCanvas',
-      props: { isGridVisible: { type: Boolean, default: false } },
+      props: {
+        isGridVisible: { type: Boolean, default: false },
+        composition: { type: Object, default: null },
+      },
       emits: [
         'update:zoom',
         'preview:zoom',
@@ -377,36 +380,47 @@ vi.mock('../canvas/EditorCanvas.vue', async () => {
             resetZoom: vi.fn(),
           },
         });
-        return () =>
-          h('div', { class: 'mock-canvas' }, [
-            props.isGridVisible ? h('div', { class: 'canvas-3x3-grid' }) : null,
-            h('button', { class: 'select-audio', onClick: () => emit('select:clip', 'audio') }),
-            h('button', { class: 'select-canvas', onClick: () => emit('select:canvas') }),
-            h('button', {
-              class: 'update-zoom',
-              onClick: () =>
-                emit('update:zoom', {
-                  id: 'z',
-                  sessionId: 's',
-                  startMs: 0,
-                  endMs: 1000,
-                  focus: { cx: 0.5, cy: 0.5 },
-                  depth: 2,
-                  mode: 'manual',
-                }),
-            }),
-            h('button', { class: 'preview-zoom', onClick: () => emit('preview:zoom', { id: 'z' }) }),
-            h('button', {
-              class: 'transform',
-              onClick: () => emit('update:clip-transform', { x: 0.1, y: 0.1, width: 0.5, height: 0.5 }),
-            }),
-            h('button', {
-              class: 'crop',
-              onClick: () => emit('update:clip-crop', { x: 0, y: 0, width: 1, height: 1 }),
-            }),
-            h('button', { class: 'done-crop', onClick: () => emit('done:crop') }),
-            h('button', { class: 'pause', onClick: () => emit('update:is-playing', false) }),
-          ]);
+        return () => {
+          const previewComposition = props.composition as ClipComposition | null;
+          const previewClip = previewComposition?.clips.find((clip) => clip.id === 'screen');
+          const previewTransformX = previewClip?.kind === 'screen' ? previewClip.transform.x : undefined;
+          return h(
+            'div',
+            {
+              class: 'mock-canvas',
+              'data-composition-transform-x': String(previewTransformX ?? ''),
+            },
+            [
+              props.isGridVisible ? h('div', { class: 'canvas-3x3-grid' }) : null,
+              h('button', { class: 'select-audio', onClick: () => emit('select:clip', 'audio') }),
+              h('button', { class: 'select-canvas', onClick: () => emit('select:canvas') }),
+              h('button', {
+                class: 'update-zoom',
+                onClick: () =>
+                  emit('update:zoom', {
+                    id: 'z',
+                    sessionId: 's',
+                    startMs: 0,
+                    endMs: 1000,
+                    focus: { cx: 0.5, cy: 0.5 },
+                    depth: 2,
+                    mode: 'manual',
+                  }),
+              }),
+              h('button', { class: 'preview-zoom', onClick: () => emit('preview:zoom', { id: 'z' }) }),
+              h('button', {
+                class: 'transform',
+                onClick: () => emit('update:clip-transform', { x: 0.1, y: 0.1, width: 0.5, height: 0.5 }),
+              }),
+              h('button', {
+                class: 'crop',
+                onClick: () => emit('update:clip-crop', { x: 0, y: 0, width: 1, height: 1 }),
+              }),
+              h('button', { class: 'done-crop', onClick: () => emit('done:crop') }),
+              h('button', { class: 'pause', onClick: () => emit('update:is-playing', false) }),
+            ],
+          );
+        };
       },
     }),
   };
@@ -463,6 +477,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'move:zoom',
         'add:zoom',
         'add:caption',
+        'delete:clips',
         'reorder:clip',
       ],
       setup(_, { emit }) {
@@ -472,6 +487,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
             h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
             h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
             h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
+            h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
           ]);
       },
     }),
@@ -552,6 +568,7 @@ describe('VideoEditor', () => {
     await mounted.find('.crop').trigger('click');
     await mounted.find('.done-crop').trigger('click');
     await mounted.find('.select-audio').trigger('click');
+    expect(editorState.store.activeTab.value).toBe('clip');
     await mounted.find('.select-canvas').trigger('click');
     await mounted.find('.add-sound').trigger('click');
     await mounted.find('.timeline-play').trigger('click');
@@ -563,6 +580,7 @@ describe('VideoEditor', () => {
     await mounted.find('.mirrored').trigger('click');
     await mounted.find('.appearance').trigger('click');
     await mounted.find('.reset-transform').trigger('click');
+    await mounted.find('.timeline-delete-clips').trigger('click');
     await flushPromises();
 
     expect(editorState.store.handleSelectTab).toHaveBeenCalledWith('zoom');
@@ -573,6 +591,9 @@ describe('VideoEditor', () => {
     expect(editorState.store.compositionState.addElement).toHaveBeenCalledWith('sound');
     expect(editorState.store.compositionState.updateSelectedTransform).toHaveBeenCalled();
     expect(editorState.store.compositionState.updateSelectedVolume).toHaveBeenCalledWith(80);
+    expect(editorState.store.compositionState.composition.value.clips).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'audio' })]),
+    );
     expect(editorState.store.outputCanvas.value.preset).toBe('1:1');
   });
 
@@ -585,7 +606,8 @@ describe('VideoEditor', () => {
     await mounted.get('.preview-composition').trigger('click');
     await mounted.vm.$nextTick();
 
-    expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0.25);
+    expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0);
+    expect(mounted.get('.mock-canvas').attributes('data-composition-transform-x')).toBe('0.25');
     expect(scheduleSave).not.toHaveBeenCalled();
     expect(historyState.recordSnapshot).toHaveBeenCalledTimes(initialSnapshotCount);
 
@@ -593,6 +615,7 @@ describe('VideoEditor', () => {
     await mounted.vm.$nextTick();
 
     expect(editorState.store.compositionState.composition.value.clips[0].transform.x).toBe(0.5);
+    expect(mounted.get('.mock-canvas').attributes('data-composition-transform-x')).toBe('0.5');
     expect(scheduleSave).toHaveBeenCalledOnce();
   });
 

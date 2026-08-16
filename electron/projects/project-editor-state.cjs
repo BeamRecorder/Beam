@@ -181,11 +181,24 @@ const canvasState = (value) => {
   const dimensions = value.preset === 'custom' ? [value.width, value.height] : PRESETS[value.preset];
   if (!dimensions.every(finite) || dimensions.some((dimension) => dimension <= 0))
     throw new Error('Dimensions du canvas invalides');
+  const watermarkInput = value.watermark && typeof value.watermark === 'object' ? value.watermark : {};
+  const watermarkPositions = new Set(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
+  const watermark = {
+    enabled: watermarkInput.enabled === true,
+    text: watermarkInput.text === 'none' || watermarkInput.text === 'beam' ? watermarkInput.text : 'made-with-beam',
+    showLogo: watermarkInput.showLogo !== false,
+    localized: watermarkInput.localized === true,
+    renderedText:
+      typeof watermarkInput.renderedText === 'string' ? watermarkInput.renderedText.slice(0, 80) : undefined,
+    position: watermarkPositions.has(watermarkInput.position) ? watermarkInput.position : 'bottom-right',
+    size: finite(watermarkInput.size) ? clamp(Math.round(watermarkInput.size), 50, 200) : 100,
+  };
   return {
     preset: value.preset,
     width: Math.round(dimensions[0]),
     height: Math.round(dimensions[1]),
     showBackground: value.showBackground,
+    ...(value.watermark && typeof value.watermark === 'object' ? { watermark } : {}),
   };
 };
 

@@ -127,9 +127,9 @@ describe('AppearanceSettings.vue', () => {
     expect(customButton.attributes('aria-label')).toBe('Custom');
     expect(customButton.find('.lucide-sliders-horizontal').exists()).toBe(true);
     expect(radiusButtons[2]!.classes()).toContain('btn-primary');
-    expect(radiusButtons.filter((_, index) => index !== 2).every((button) => button.classes().includes('btn-ghost'))).toBe(
-      true,
-    );
+    expect(
+      radiusButtons.filter((_, index) => index !== 2).every((button) => button.classes().includes('btn-ghost')),
+    ).toBe(true);
 
     // Sharp (0px)
     await radiusButtons[0].trigger('click');

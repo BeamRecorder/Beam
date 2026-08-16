@@ -38,7 +38,9 @@ export async function openExportAssets(
   signal: AbortSignal,
   onValidated: (count: number, total: number) => void,
 ): Promise<ExportAssets> {
-  const active = request.snapshot.composition.clips.filter((clip) => clip.enabled && clip.timelineDurationMs > 0);
+  const active = request.snapshot.composition.clips.filter(
+    (clip) => clip.enabled && clip.timelineDurationMs > 0 && (request.includeAudio !== false || !isAudioClip(clip)),
+  );
   const catalog = new Map(request.snapshot.composition.assets.map((asset) => [asset.id, asset]));
   const required = new Map<string, { asset: MediaAsset; video: boolean; audio: boolean }>();
   for (const clip of active) {

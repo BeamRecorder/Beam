@@ -4,6 +4,7 @@ import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } fr
 import type { CursorType } from '~/api/types/cursor-presentation';
 import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import {
   emptyComposition as createEmptyComposition,
   type CaptionClip,
@@ -64,6 +65,7 @@ const captionClip: CaptionClip = {
     type: 'text',
     sentences: [],
     style: {
+      ...createDefaultCaptionStyle(36),
       color: '#ffffff',
       fontSize: 24,
       wrap: true,

@@ -78,7 +78,7 @@ const videoClip = (id: string, assetId = 'asset-1', overrides: Partial<Record<st
 });
 
 const composition = (clips = [videoClip('clip-1')]): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [asset(), asset('unused')],
   clips,
@@ -580,7 +580,7 @@ describe('MediaPlaybackEngine', () => {
     engine.on('error', (error) => errors.push(error));
 
     const invalid: ClipComposition = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       keyboardCaptionSessions: [],
       assets: [{ ...asset(), src: 'file:///recording.mp4' }, asset('valid-video')],
       clips: [videoClip('invalid-clip'), videoClip('valid-clip', 'valid-video')],
@@ -604,7 +604,7 @@ describe('MediaPlaybackEngine', () => {
     engine.on('error', (error) => issues.push(error));
     const invalidAsset = { ...asset('missing-video'), src: '' };
     const value: ClipComposition = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       keyboardCaptionSessions: [],
       assets: [asset(), invalidAsset],
       clips: [videoClip('valid-clip'), videoClip('skipped-clip', 'missing-video')],

@@ -28,6 +28,7 @@ const runtime = vi.hoisted(() => ({
     cancel: vi.fn(),
     diagnostics: vi.fn(),
   },
+  outputCreate: vi.fn(),
 }));
 
 vi.mock('../export-worker-assets', () => ({
@@ -36,7 +37,10 @@ vi.mock('../export-worker-assets', () => ({
 }));
 vi.mock('../export-worker-output', () => ({
   ExportWorkerOutput: {
-    create: vi.fn(async () => runtime.output),
+    create: vi.fn(async (...args: unknown[]) => {
+      runtime.outputCreate(...args);
+      return runtime.output;
+    }),
   },
 }));
 vi.mock('../../composition/render', () => ({
@@ -70,6 +74,7 @@ const request = (overrides: Record<string, unknown> = {}) =>
     projectName: 'Worker test',
     format: 'webm',
     preset: 'medium',
+    includeAudio: true,
     snapshot: {
       duration: 1,
       render: { fps: 30, sourceWidth: null, sourceHeight: null },
@@ -122,6 +127,7 @@ const startWorker = (worker: Awaited<ReturnType<typeof importWorker>>, value = r
 beforeEach(() => {
   runtime.openExportAssets.mockReset();
   runtime.loadBitmap.mockReset();
+  runtime.outputCreate.mockReset();
   runtime.videoSinks.length = 0;
   runtime.videoSample = vi.fn(() => ({
     displayWidth: 2,
@@ -252,10 +258,11 @@ describe('export worker', () => {
       }),
     );
 
-    expect(runtime.openExportAssets).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(runtime.openExportAssets).toHaveBeenCalledOnce());
     await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
     expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('macOsSvgCursors'));
     expect(createImageBitmap).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
   });
 
   it('loads raster cursor assets instead of decoding SVG inside the worker', async () => {
@@ -285,6 +292,7 @@ describe('export worker', () => {
       expect.any(Blob),
       expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),
     );
+    await vi.waitFor(() => expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
   });
 
   it('uses one persistent timestamp/sample iterator instead of getSample for every video image', async () => {
@@ -338,6 +346,46 @@ describe('export worker', () => {
       type: 'progress',
       progress: expect.objectContaining({ stage: 'finalizing', completedImages: 30, totalImages: 30 }),
     });
+  });
+
+  it('skips audio setup and encoding when includeAudio is false', async () => {
+    installCanvasRuntime();
+    vi.stubGlobal('AudioEncoder', undefined);
+    vi.stubGlobal('AudioDecoder', undefined);
+    const audioClip = {
+      id: 'audio-clip',
+      kind: 'audio',
+      name: 'Audio clip',
+      assetId: 'missing-audio-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      volume: 1,
+      enabled: true,
+      order: 0,
+    };
+    const worker = await importWorker();
+    startWorker(
+      worker,
+      request({
+        includeAudio: false,
+        snapshot: { ...request().snapshot, composition: { assets: [], clips: [audioClip] } },
+      }),
+    );
+
+    await vi.waitFor(() => expect(runtime.output.finalize).toHaveBeenCalledOnce());
+
+    expect(runtime.outputCreate).toHaveBeenCalledWith(expect.anything(), expect.anything(), false);
+    expect(runtime.createProgressiveAudioMixer).not.toHaveBeenCalled();
+    expect(runtime.output.addAudio).not.toHaveBeenCalled();
+    expect(runtime.output.closeAudio).not.toHaveBeenCalled();
+    const progressMessages = worker.postMessage.mock.calls
+      .map(([message]) => message)
+      .filter((message) => message.type === 'progress');
+    expect(progressMessages.length).toBeGreaterThan(0);
+    expect(progressMessages.every((message) => message.progress.audioProgress === null)).toBe(true);
   });
 
   it('weights overall encoding progress with 85% video and 15% audio', async () => {

@@ -162,7 +162,9 @@ onBeforeUnmount(() => {
   word-break: normal;
   line-height: 1.35;
   z-index: 20000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.2);
   pointer-events: none;
 }
 

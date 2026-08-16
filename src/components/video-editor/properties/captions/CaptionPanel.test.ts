@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CaptionClip, CaptionSentence, ClipComposition } from '~/media/shared/composition-types';
 import type { TranscriptionDiagnostics, WhisperResult } from '../../captions/whisper-types';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 type MockWhisperProgress = {
   status: 'idle' | 'loading' | 'running' | 'completed' | 'error';
@@ -23,7 +24,7 @@ const whisper = vi.hoisted(() => ({
 }));
 const createComposition = vi.hoisted(() =>
   vi.fn((assets: ClipComposition['assets'], clips: ClipComposition['clips']): ClipComposition => ({
-    schemaVersion: 5,
+    schemaVersion: 6,
     keyboardCaptionSessions: [],
     assets,
     clips,
@@ -73,7 +74,7 @@ const CopyButton = {
 const stubs = { Button, Select, ProgressBar, Throbber, CopyButton };
 
 const audioComposition: ClipComposition = {
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -124,6 +125,7 @@ const aiCaption: CaptionClip = {
     type: 'text',
     sentences: [],
     style: {
+      ...createDefaultCaptionStyle(36),
       color: '#fff',
       fontSize: 36,
       wrap: true,

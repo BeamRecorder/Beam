@@ -67,6 +67,7 @@ export function isExportWorkerRequest(value: unknown): value is ExportWorkerRequ
       typeof value.request.projectName === 'string' &&
       (value.request.format === 'webm' || value.request.format === 'mp4') &&
       ['low', 'medium', 'high'].includes(value.request.preset as string) &&
+      (value.request.includeAudio === undefined || typeof value.request.includeAudio === 'boolean') &&
       finite(value.request.snapshot.duration) &&
       value.request.snapshot.duration > 0
     );

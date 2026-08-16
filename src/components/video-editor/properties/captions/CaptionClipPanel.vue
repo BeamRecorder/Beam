@@ -13,6 +13,7 @@ const props = defineProps<{ clip: CaptionClip | null }>();
 const emit = defineEmits<{
   (event: 'update', clip: CaptionClip): void;
   (event: 'delete', clipId: string): void;
+  (event: 'preview', clip: CaptionClip | null): void;
 }>();
 
 const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
@@ -31,6 +32,13 @@ const updateStyle = (key: keyof CaptionStyle, value: CaptionStyle[keyof CaptionS
     ...clip,
     caption: { ...clip.caption, style: { ...clip.caption.style, [key]: value } },
   }));
+const previewStyle = (patch: Partial<CaptionStyle> | null) => {
+  if (!draft.value) return;
+  emit(
+    'preview',
+    patch ? { ...draft.value, caption: { ...draft.value.caption, style: { ...captionStyle.value, ...patch } } } : null,
+  );
+};
 
 const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, value: string) => {
   const parsed = key === 'text' ? value : Number(value);
@@ -81,7 +89,13 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
       </div>
 
       <Divider spacing="xs" />
-      <CaptionStyleControls :style="captionStyle" :default-font-size="36" @update="updateStyle" />
+      <CaptionStyleControls
+        :style="captionStyle"
+        :default-font-size="36"
+        :sample-text="displayText"
+        @update="updateStyle"
+        @preview="previewStyle"
+      />
 
       <Divider v-if="sentences.length" spacing="xs" />
       <div v-if="sentences.length" class="section-block">

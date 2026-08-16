@@ -20,7 +20,7 @@ import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from '~/components/video-editor/canvas/output-canvas';
-import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
+import { deleteClip, setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import {
   isAudioClip,
   isBlurClip,
@@ -57,6 +57,7 @@ const {
   editorState,
   zoomState,
   exportRequest,
+  includeAudioInExport,
   outputCanvas,
   handleSelectTab,
   initialPlaybackSettled,
@@ -145,7 +146,10 @@ const {
 } = zoomState;
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
-const canvasComposition = computed(() => timelineCompositionPreview.value ?? composition.value);
+const captionCompositionPreview = ref<typeof composition.value | null>(null);
+const canvasComposition = computed(
+  () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
+);
 const selectedTransformClip = computed(() => {
   const clip = selectedClip.value;
   return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
@@ -157,7 +161,7 @@ const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'blu
 const selectEditorClip = (clipId: string) => {
   selectedZoomId.value = null;
   selectClip(clipId);
-  activeTab.value = isAudioClip(composition.value.clips.find((clip) => clip.id === clipId)!) ? 'audio' : 'clip';
+  activeTab.value = 'clip';
 };
 const selectEditorZoom = (zoomId: string) => {
   selectedClipId.value = null;
@@ -174,17 +178,27 @@ const deselectTransformClip = () => {
   isCropping.value = false;
 };
 const replaceComposition = (value: typeof composition.value) => {
+  captionCompositionPreview.value = null;
   composition.value = value;
   editorState.scheduleSave();
 };
-let skipNextCompositionHistory = false;
 const previewComposition = (value: typeof composition.value) => {
-  skipNextCompositionHistory = true;
-  composition.value = value;
+  captionCompositionPreview.value = value;
+};
+const commitCaption = (clip: Parameters<typeof updateCaption>[0]) => {
+  captionCompositionPreview.value = null;
+  updateCaption(clip);
 };
 const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
   let next = composition.value;
   for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
+  composition.value = next;
+};
+const deleteTimelineClips = (clipIds: string[]) => {
+  const ids = new Set(clipIds);
+  let next = composition.value;
+  for (const clipId of ids) next = deleteClip(next, clipId);
+  if (selectedClipId.value && ids.has(selectedClipId.value)) selectedClipId.value = null;
   composition.value = next;
 };
 watch(systemVolume, (value) => updateRoleVolume('system', value));
@@ -275,10 +289,6 @@ watch(
 watch(
   composition,
   () => {
-    if (skipNextCompositionHistory) {
-      skipNextCompositionHistory = false;
-      return;
-    }
     if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
   },
   { deep: true },
@@ -315,7 +325,11 @@ const toggleCrop = () => {
   if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value;
 };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
-  outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: outputCanvas.value.showBackground };
+  outputCanvas.value = {
+    ...OUTPUT_CANVAS_PRESETS[preset],
+    showBackground: outputCanvas.value.showBackground,
+    watermark: outputCanvas.value.watermark,
+  };
 };
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
@@ -382,6 +396,7 @@ onBeforeUnmount(() => {
       @open-project="emit('open-project', $event)"
       @undo="undo"
       @redo="redo"
+      @update:export-audio="includeAudioInExport = $event"
     />
     <div v-if="isExporting" class="export-notice-banner">
       <Sparkles :size="14" class="banner-icon" /><span>{{ t('exportBanner') }}</span>
@@ -425,7 +440,7 @@ onBeforeUnmount(() => {
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
-          @update:caption="updateCaption"
+          @update:caption="commitCaption"
           @update:composition="replaceComposition"
           @preview:composition="previewComposition"
           @select-caption="selectEditorClip"
@@ -548,6 +563,7 @@ onBeforeUnmount(() => {
           :is-snapping-enabled="isSnappingEnabled"
           :duration="duration"
           :export-progress="exportProgress"
+          :include-audio-in-export="includeAudioInExport"
           :zoom-elements="zoomElements"
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
@@ -555,6 +571,7 @@ onBeforeUnmount(() => {
           @select:zoom="selectEditorZoom"
           @select:clip="selectEditorClip"
           @toggle:clip="toggleClip"
+          @delete:clips="deleteTimelineClips"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
           @move:clip="moveClipTo($event.id, $event.startMs)"
           @preview:composition="timelineCompositionPreview = $event"

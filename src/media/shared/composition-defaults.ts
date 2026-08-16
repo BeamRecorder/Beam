@@ -19,6 +19,13 @@ export const createDefaultClipAppearance = (kind: VisualClip['kind'], showBackgr
 });
 
 export const createDefaultCaptionStyle = (fontSize = 42): CaptionStyle => ({
+  fontFamily: 'sans-serif',
+  fontWeight: 800,
+  fontStyle: 'normal',
+  textDecoration: 'none',
+  textAlign: 'center',
+  lineHeight: 1.2,
+  letterSpacing: 0,
   color: '#ffffff',
   fontSize,
   wrap: true,

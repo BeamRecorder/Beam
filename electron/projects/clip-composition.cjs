@@ -10,7 +10,8 @@ const {
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
 
-const schemaVersion = 5;
+const schemaVersion = 6;
+const typographySchemaVersion = 5;
 const visualTrackSchemaVersion = 4;
 const previousSchemaVersion = 3;
 const captionTypeSchemaVersion = 2;
@@ -28,6 +29,25 @@ const id = (value) => typeof value === 'string' && value.length > 0 && value.len
 const color = (value, fallback) =>
   typeof value === 'string' && /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(value) ? value : fallback;
 const emptyComposition = () => ({ schemaVersion, assets: [], clips: [], keyboardCaptionSessions: [] });
+const withHistoricalTypography = (clip) =>
+  clip.kind === 'caption'
+    ? {
+        ...clip,
+        caption: {
+          ...clip.caption,
+          style: {
+            ...clip.caption.style,
+            fontFamily: 'sans-serif',
+            fontWeight: 800,
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            textAlign: 'center',
+            lineHeight: 1.2,
+            letterSpacing: 0,
+          },
+        },
+      }
+    : clip;
 
 const historicalAppearance = (kind, showBackground) => ({
   cornerRadius: kind === 'screen' ? (showBackground ? 'md' : 'none') : 'sm',
@@ -266,21 +286,25 @@ function normalizeComposition(value) {
 function migrateComposition(value, showBackground, historicalSessionIds = []) {
   if (
     !value ||
-    ![legacySchemaVersion, captionTypeSchemaVersion, previousSchemaVersion, visualTrackSchemaVersion].includes(
-      value.schemaVersion,
-    ) ||
+    ![
+      legacySchemaVersion,
+      captionTypeSchemaVersion,
+      previousSchemaVersion,
+      visualTrackSchemaVersion,
+      typographySchemaVersion,
+    ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
   )
     throw new Error(`Version de composition inconnue: ${String(value?.schemaVersion)}`);
-  if (value.schemaVersion === visualTrackSchemaVersion) {
+  if ([visualTrackSchemaVersion, typographySchemaVersion].includes(value.schemaVersion)) {
     return normalizeComposition({
       ...value,
       schemaVersion,
       keyboardCaptionSessions: Array.isArray(value.keyboardCaptionSessions)
         ? value.keyboardCaptionSessions
         : historicalSessionIds,
-      clips: repairMigratedTrackIds(value.clips),
+      clips: repairMigratedTrackIds(value.clips).map(withHistoricalTypography),
     });
   }
   return normalizeComposition({
@@ -292,8 +316,8 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
         value.clips.map((clip) => {
           if (clip.kind === 'caption') {
             if (value.schemaVersion === captionTypeSchemaVersion)
-              return { ...clip, caption: { ...clip.caption, type: 'text' } };
-            if (value.schemaVersion === previousSchemaVersion) return clip;
+              return withHistoricalTypography({ ...clip, caption: { ...clip.caption, type: 'text' } });
+            if (value.schemaVersion === previousSchemaVersion) return withHistoricalTypography(clip);
             const style = clip.caption?.style || {};
             return {
               ...clip,
@@ -301,6 +325,13 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
                 ...clip.caption,
                 type: 'text',
                 style: {
+                  fontFamily: 'sans-serif',
+                  fontWeight: 800,
+                  fontStyle: 'normal',
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  letterSpacing: 0,
                   color: typeof style.color === 'string' ? style.color : '#ffffff',
                   fontSize: finite(style.fontSize) ? style.fontSize : 42,
                   wrap: typeof style.wrap === 'boolean' ? style.wrap : true,

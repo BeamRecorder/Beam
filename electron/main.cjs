@@ -41,6 +41,7 @@ const { registerTeleprompterIpc } = require('./teleprompter/teleprompter-ipc.cjs
 const { createTeleprompterStorage } = require('./teleprompter/teleprompter-storage.cjs');
 const { createUserPaths } = require('./storage/user-paths.cjs');
 const { createBackgroundLibrary } = require('./backgrounds/background-library.cjs');
+const { createFontLibrary } = require('./fonts/font-library.cjs');
 const { createAutoUpdater, registerUpdateIpc } = require('./updates/auto-updater.cjs');
 const { createUpdateCache, updaterCacheDirectory } = require('./updates/update-cache.cjs');
 const { createTrayManager } = require('./tray/tray-manager.cjs');
@@ -105,7 +106,16 @@ function profileRendererRequests(webContents) {
 }
 
 function isTrustedRenderer(url) {
-  if (url.startsWith('file://')) return true;
+  if (url.startsWith('file://')) {
+    try {
+      const file = require('url').fileURLToPath(url);
+      const root = path.resolve(applicationRoot);
+      const target = path.resolve(file);
+      return target === root || target.startsWith(`${root}${path.sep}`);
+    } catch {
+      return false;
+    }
+  }
   try {
     const target = new URL(url);
     return (
@@ -119,7 +129,7 @@ function isTrustedRenderer(url) {
 
 function configureMediaPermission() {
   const trusted = (webContents) => Boolean(webContents) && isTrustedRenderer(webContents.getURL());
-  const allowed = new Set(['media', 'camera', 'microphone', 'display-capture', 'speaker-selection']);
+  const allowed = new Set(['media', 'camera', 'microphone', 'display-capture', 'speaker-selection', 'local-fonts']);
   session.defaultSession.setPermissionCheckHandler(
     (webContents, permission) => trusted(webContents) && allowed.has(permission),
   );
@@ -270,10 +280,19 @@ function initializeApplication() {
     logStartup('Capture track IPC registered.');
     const projectStore = createProjectStore(userPaths.projects);
     const backgroundLibrary = createBackgroundLibrary(userPaths);
+    const fontLibrary = createFontLibrary(userPaths.fonts);
     const teleprompterStorage = createTeleprompterStorage({ projectStore });
     registerTeleprompterIpc({ ipcMain: applicationIpc, teleprompterWindow, storage: teleprompterStorage });
-    registerProjectIpc(applicationIpc, projectStore, backgroundLibrary, require('electron').dialog, BrowserWindow);
-    protocol.handle('project-media', createProjectMediaHandler({ projectStore, backgroundLibrary }));
+    registerProjectIpc(
+      applicationIpc,
+      projectStore,
+      backgroundLibrary,
+      fontLibrary,
+      require('electron').dialog,
+      BrowserWindow,
+      isTrustedRenderer,
+    );
+    protocol.handle('project-media', createProjectMediaHandler({ projectStore, backgroundLibrary, fontLibrary }));
     logStartup('Project IPC registered.');
     const whisperStore = createWhisperModelStore(userPaths.whisperModels);
     protocol.handle('whisper-model', (request) => {

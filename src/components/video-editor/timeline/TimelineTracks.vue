@@ -17,13 +17,14 @@ const props = withDefaults(
     isPlaying: boolean;
     zoomLevel: number;
     exportProgress?: ExportProgress | null;
+    includeAudioInExport?: boolean;
     zoomElements: ZoomElement[];
     selectedZoomId: string | null;
     composition: ClipComposition;
     selectedClipId: string | null;
     isSnappingEnabled?: boolean;
   }>(),
-  { isSnappingEnabled: true },
+  { isSnappingEnabled: true, includeAudioInExport: true },
 );
 const emit = defineEmits<{
   (event: 'update:currentTime', value: number): void;
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   (event: 'select:zoom', zoomId: string): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'toggle:clip', clipId: string): void;
+  (event: 'delete:clips', clipIds: string[]): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
@@ -123,10 +125,7 @@ const exportProgressPercent = computed(() => {
                 @click="toggleGroup(track.clips)"
                 @pointerdown="beginReorder($event, track.id, track.representative.id)"
               >
-                <span
-                  class="track-drag-handle"
-                  @click.stop
-                >
+                <span class="track-drag-handle" @click.stop>
                   <GripVertical class="track-grip" />
                 </span>
                 <component :is="iconForVisual(track.representative)" class="track-icon" />
@@ -155,32 +154,41 @@ const exportProgressPercent = computed(() => {
           <div
             v-if="systemAudioClips.length"
             class="sidebar-track-item audio-track"
-            :class="{ disabled: !systemAudioClips.some((clip) => clip.enabled) }"
+            :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
           >
-            <button type="button" class="track-info" @click="toggleGroup(systemAudioClips)">
+            <div class="track-info">
               <Volume2 class="track-icon" /><span class="track-title">{{ t('system') }}</span>
-            </button>
+              <span v-if="!includeAudioInExport" class="export-disabled-status">{{
+                t('audioDisabledFromExport')
+              }}</span>
+            </div>
           </div>
 
           <div
             v-if="microphoneClips.length"
             class="sidebar-track-item audio-track"
-            :class="{ disabled: !microphoneClips.some((clip) => clip.enabled) }"
+            :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
           >
-            <button type="button" class="track-info" @click="toggleGroup(microphoneClips)">
+            <div class="track-info">
               <Mic class="track-icon" /><span class="track-title">{{ t('mic') }}</span>
-            </button>
+              <span v-if="!includeAudioInExport" class="export-disabled-status">{{
+                t('audioDisabledFromExport')
+              }}</span>
+            </div>
           </div>
 
           <div
             v-for="clip in importedAudioClips"
             :key="clip.id"
             class="sidebar-track-item audio-track"
-            :class="{ disabled: !clip.enabled }"
+            :class="{ disabled: !includeAudioInExport || !clip.enabled }"
           >
-            <button type="button" class="track-info" @click="emit('toggle:clip', clip.id)">
+            <div class="track-info">
               <Volume2 class="track-icon" /><span class="track-title">{{ clip.name }}</span>
-            </button>
+              <span v-if="!includeAudioInExport" class="export-disabled-status">{{
+                t('audioDisabledFromExport')
+              }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -328,9 +336,10 @@ const exportProgressPercent = computed(() => {
           <div
             v-if="systemAudioClips.length"
             class="track-row audio-track"
-            :class="{ disabled: !systemAudioClips.some((clip) => clip.enabled) }"
+            :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
           >
             <div class="track-content audio-content">
+              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
               <TimelineClip
                 v-for="clip in systemAudioClips"
                 :key="clip.id"
@@ -356,9 +365,10 @@ const exportProgressPercent = computed(() => {
           <div
             v-if="microphoneClips.length"
             class="track-row audio-track"
-            :class="{ disabled: !microphoneClips.some((clip) => clip.enabled) }"
+            :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
           >
             <div class="track-content audio-content">
+              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
               <TimelineClip
                 v-for="clip in microphoneClips"
                 :key="clip.id"
@@ -385,9 +395,10 @@ const exportProgressPercent = computed(() => {
             v-for="clip in importedAudioClips"
             :key="clip.id"
             class="track-row audio-track"
-            :class="{ disabled: !clip.enabled }"
+            :class="{ disabled: !includeAudioInExport || !clip.enabled }"
           >
             <div class="track-content audio-content">
+              <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
               <TimelineClip
                 :clip="displayedClip(clip)"
                 :asset="assetFor(clip)"

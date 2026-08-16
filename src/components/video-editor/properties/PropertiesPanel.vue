@@ -203,6 +203,14 @@ const emit = defineEmits<{
   (event: 'back-to-hud'): void;
   (event: 'start-recording', config: any): void;
 }>();
+const previewCaption = (clip: CaptionClip | null) => {
+  const original = props.selectedCaptionClip;
+  if (!original) return;
+  emit('preview:composition', {
+    ...props.composition,
+    clips: props.composition.clips.map((item) => (item.id === original.id ? (clip ?? original) : item)),
+  });
+};
 
 const isCurrentClipEnabled = computed(() => {
   if (props.selectedClip) return props.selectedClip.enabled ?? true;
@@ -274,7 +282,7 @@ const handleDelete = () => {
             size="xs"
             :icon="isCurrentClipEnabled ? Eye : EyeOff"
             icon-only
-            :tooltip="isCurrentClipEnabled ? (tClip('enabled') || 'Enabled') : (tClip('disabled') || 'Disabled')"
+            :tooltip="isCurrentClipEnabled ? tClip('enabled') || 'Enabled' : tClip('disabled') || 'Disabled'"
             :aria-label="isCurrentClipEnabled ? 'Hide clip' : 'Show clip'"
             :class="{ 'is-muted-clip': !isCurrentClipEnabled }"
             @click="handleToggleClipEnabled"
@@ -299,10 +307,12 @@ const handleDelete = () => {
           v-if="activeTab === 'canvas'"
           :selected-background="selectedBackground"
           :blur-percent="blurPercent"
+          :watermark="canvas.watermark"
           :background-groups="backgroundGroups"
           :project-id="projectId"
           @update:selected-background="emit('update:selectedBackground', $event)"
           @update:blur-percent="emit('update:blurPercent', $event)"
+          @update:watermark="emit('update:canvas', { ...canvas, watermark: $event })"
           @import:background="emit('import:background', $event)"
         />
         <AudioClipPropertiesPanel
@@ -329,12 +339,14 @@ const handleDelete = () => {
           v-else-if="activeTab === 'clip' && selectedCaptionClip && isKeyboardCaptionClip(selectedCaptionClip)"
           :clip="selectedCaptionClip"
           @update="emit('update:caption', $event)"
+          @preview="previewCaption"
           @delete="emit('delete-clip')"
         />
         <CaptionClipPanel
           v-else-if="activeTab === 'clip' && selectedCaptionClip"
           :clip="selectedCaptionClip"
           @update="emit('update:caption', $event)"
+          @preview="previewCaption"
           @delete="emit('delete-clip')"
         />
         <ClipPropertiesPanel
@@ -417,6 +429,9 @@ const handleDelete = () => {
 <style scoped>
 .properties-island {
   width: 400px;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -472,10 +487,10 @@ const handleDelete = () => {
 .panel-body {
   display: flex;
   flex-direction: column;
-  padding: 0 20px 24px 20px;
+  padding: 0 20px 48px;
   box-sizing: border-box;
   width: 100%;
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 100%;
 }
 .panel-content::-webkit-scrollbar {

@@ -60,7 +60,7 @@ type WaveformWorkerResponse =
   | { type: 'error'; generation: number; clipId: string; error: MediaError };
 
 const composition = (volume = 100, source = 'https://media.test/sound.mp4'): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -493,7 +493,7 @@ describe('useCompositionAudioWaveforms', () => {
   });
 
   it('keeps empty compositions inert and disposes all workers on unmount', async () => {
-    mountComposable({ schemaVersion: 5, assets: [], clips: [], keyboardCaptionSessions: [] });
+    mountComposable({ schemaVersion: 6, assets: [], clips: [], keyboardCaptionSessions: [] });
     await flushPromises();
     expect(state.slices.value).toEqual({});
     expect(waveformWorkerState.instances).toHaveLength(0);

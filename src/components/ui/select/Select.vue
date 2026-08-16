@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import Popover from '../popover/Popover.vue';
 import Skeleton from '../skeleton/Skeleton.vue';
@@ -22,7 +22,7 @@ const props = withDefaults(
     placeholder?: string;
     disabled?: boolean;
     direction?: 'up' | 'down';
-    previewOnHover?: boolean;
+    optionHeight?: number;
     loading?: boolean;
     emptyLabel?: string;
     variant?: 'default' | 'source';
@@ -32,7 +32,7 @@ const props = withDefaults(
     placeholder: 'Select an option',
     disabled: false,
     direction: 'down',
-    previewOnHover: false,
+    optionHeight: 38,
     loading: false,
     emptyLabel: '',
     variant: 'default',
@@ -42,11 +42,13 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: any): void;
+  (e: 'preview:modelValue', value: string | number | null): void;
   (e: 'toggle', isOpen: boolean): void;
 }>();
 
 const actualValue = ref(props.modelValue);
 const hoveredValue = ref<string | number | null>(null);
+const listbox = ref<HTMLElement | null>(null);
 
 // Sync actualValue with modelValue when modelValue updates externally (not during preview)
 watch(
@@ -70,11 +72,9 @@ const handleToggle = (isOpen: boolean) => {
   emit('toggle', isOpen);
   if (isOpen) {
     actualValue.value = props.modelValue;
+    void nextTick(() => listbox.value?.querySelector<HTMLElement>('[aria-selected="true"], [role="option"]')?.focus());
   } else {
-    // If popover is closed and we are still previewing, reset
-    if (props.previewOnHover && props.modelValue !== actualValue.value) {
-      emit('update:modelValue', actualValue.value);
-    }
+    emit('preview:modelValue', null);
     hoveredValue.value = null;
   }
 };
@@ -88,29 +88,50 @@ const handleSelect = (option: Option, close: () => void) => {
 
 const handleMouseEnterOption = (option: Option, event: PointerEvent) => {
   hoveredValue.value = option.value;
-  if (props.previewOnHover && props.modelValue !== option.value) {
-    emit('update:modelValue', option.value);
-  }
+  emit('preview:modelValue', option.value);
   startMarquee(event);
 };
 
 const handleMouseLeaveOption = (event: PointerEvent) => {
   stopMarquee(event);
+  hoveredValue.value = null;
+  emit('preview:modelValue', null);
 };
 
 const handleMouseLeaveList = () => {
   hoveredValue.value = null;
-  if (props.previewOnHover && props.modelValue !== actualValue.value) {
-    emit('update:modelValue', actualValue.value);
-  }
+  emit('preview:modelValue', null);
 };
 
 const itemHeight = computed(() => {
+  if (props.optionHeight !== 38) return props.optionHeight;
   if (normalizedOptions.value.some((opt) => opt.thumbnail || opt.loading)) {
     return 52;
   }
-  return 38;
+  return props.optionHeight;
 });
+
+const handleOptionFocus = (option: Option) => {
+  hoveredValue.value = option.value;
+  emit('preview:modelValue', option.value);
+};
+
+const handleOptionKeydown = (event: KeyboardEvent, option: Option, close: () => void) => {
+  const current = event.currentTarget as HTMLElement;
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    handleSelect(option, close);
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    emit('preview:modelValue', null);
+    close();
+  } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    const options = Array.from(current.parentElement?.querySelectorAll<HTMLElement>('[role="option"]') ?? []);
+    const index = options.indexOf(current);
+    options[(index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length]?.focus();
+  }
+};
 
 const { list, containerProps, wrapperProps } = useVirtualList(normalizedOptions, {
   itemHeight: () => itemHeight.value,
@@ -200,12 +221,19 @@ const stopMarquee = (event: PointerEvent) => {
           { 'is-open': isOpen, 'is-disabled': disabled, 'is-source': variant === 'source' },
         ]"
         :disabled="disabled"
+        aria-haspopup="listbox"
+        :aria-expanded="isOpen"
       >
         <div class="trigger-content-wrapper">
           <!-- Thumbnail preview -->
           <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
             <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" draggable="false" />
-            <img v-if="selectedOption.appIcon" :src="selectedOption.appIcon" class="trigger-app-icon" draggable="false" />
+            <img
+              v-if="selectedOption.appIcon"
+              :src="selectedOption.appIcon"
+              class="trigger-app-icon"
+              draggable="false"
+            />
           </div>
 
           <!-- Color preview -->
@@ -237,7 +265,7 @@ const stopMarquee = (event: PointerEvent) => {
         :class="{ 'is-source': variant === 'source' }"
         @pointerleave="handleMouseLeaveList"
       >
-        <ul v-bind="wrapperProps" class="select-options">
+        <ul ref="listbox" v-bind="wrapperProps" class="select-options" role="listbox">
           <li
             v-for="item in list"
             :key="item.data.value"
@@ -249,6 +277,11 @@ const stopMarquee = (event: PointerEvent) => {
             @click="handleSelect(item.data, close)"
             @pointerenter="handleMouseEnterOption(item.data, $event)"
             @pointerleave="handleMouseLeaveOption"
+            role="option"
+            :aria-selected="item.data.value === modelValue"
+            :tabindex="item.data.value === modelValue ? 0 : -1"
+            @focus="handleOptionFocus(item.data)"
+            @keydown="handleOptionKeydown($event, item.data, close)"
             :style="{ height: `${itemHeight}px` }"
           >
             <div class="option-content">
@@ -266,10 +299,12 @@ const stopMarquee = (event: PointerEvent) => {
                 <Skeleton variant="linear" width="100%" height="100%" />
               </div>
 
-              <span class="option-label">{{ item.data.label }}</span>
+              <slot name="option" :option="item.data" :previewing="item.data.value === hoveredValue">
+                <span class="option-label">{{ item.data.label }}</span>
+              </slot>
             </div>
 
-            <template v-if="previewOnHover && item.data.value === hoveredValue">
+            <template v-if="item.data.value === hoveredValue && item.data.value !== modelValue">
               <Eye class="option-check option-eye" />
             </template>
             <template v-else-if="item.data.value === modelValue">
@@ -282,333 +317,4 @@ const stopMarquee = (event: PointerEvent) => {
   </Popover>
 </template>
 
-<style scoped>
-.select-popover {
-  width: 100%;
-}
-
-.select-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-width: 80px;
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-/* Sizes */
-.select-trigger.select-sm {
-  height: 2.125rem;
-  padding: 0.25rem 0.625rem;
-  font-size: 0.8125rem;
-}
-
-.select-trigger.select-md {
-  height: 2.5rem;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.9rem;
-}
-
-.select-trigger.select-lg {
-  height: 2.75rem;
-  padding: 0.4rem 0.8rem;
-  font-size: 1rem;
-}
-
-.select-trigger.is-source {
-  height: 2.75rem;
-}
-
-.select-trigger:hover:not(.is-disabled) {
-  border-color: var(--color-border-strong);
-}
-
-.select-trigger.is-open {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-.select-trigger.is-disabled {
-  background-color: var(--color-bg-surface);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-.trigger-content-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow: hidden;
-  flex: 1;
-  min-width: 0;
-}
-
-.selected-thumbnail-wrapper {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-border);
-  flex-shrink: 0;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-}
-
-.trigger-thumbnail-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 1px;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
-
-.trigger-app-icon {
-  position: absolute;
-  right: 1px;
-  bottom: 1px;
-  width: 8px;
-  height: 8px;
-  padding: 1px;
-  border-radius: 3px;
-  background: var(--color-bg-element);
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
-
-.select-trigger.is-source .selected-thumbnail-wrapper {
-  width: 38px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-surface-hover);
-}
-
-.select-trigger.is-source .trigger-thumbnail-img {
-  object-fit: cover;
-  padding: 0;
-}
-
-.selected-color-badge {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border-strong);
-  flex-shrink: 0;
-}
-
-.select-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.select-label.is-placeholder {
-  color: var(--text-muted);
-}
-
-.select-chevron {
-  color: var(--text-secondary);
-  transition: transform 0.2s ease;
-  flex-shrink: 0;
-}
-
-.select-trigger.select-sm .select-chevron {
-  width: 0.95rem;
-  height: 0.95rem;
-}
-
-.select-trigger.select-md .select-chevron {
-  width: 1rem;
-  height: 1rem;
-}
-
-.select-trigger.select-lg .select-chevron {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-
-.select-chevron.rotate {
-  transform: rotate(180deg);
-}
-
-.virtual-scroll-container {
-  max-height: 200px;
-  overflow-y: auto;
-  width: 100%;
-  overflow-x: hidden;
-}
-
-.select-options {
-  list-style: none;
-  padding: 0 4px;
-  margin: 0;
-}
-
-.select-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  position: relative;
-}
-
-.select-option:hover {
-  background-color: var(--color-bg-surface-hover);
-  color: var(--text-primary);
-}
-
-.select-option.is-selected {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
-.option-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow: hidden;
-  flex: 1;
-  min-width: 0;
-}
-
-.thumbnail-wrapper {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  background: #0f172a;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-  flex-shrink: 0;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-}
-
-.thumbnail-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 2px;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
-
-.app-icon {
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 12px;
-  height: 12px;
-  padding: 1px;
-  border-radius: 3px;
-  background: var(--color-bg-element);
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
-
-.virtual-scroll-container.is-source .thumbnail-wrapper {
-  width: 60px;
-  height: 38px;
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-surface-hover);
-}
-
-.virtual-scroll-container.is-source .thumbnail-img {
-  object-fit: cover;
-  padding: 0;
-}
-
-.color-badge {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border-strong);
-  flex-shrink: 0;
-}
-
-.option-label {
-  font-size: 0.85rem;
-  flex: 1;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.select-option.has-right-overflow::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 24px;
-  pointer-events: none;
-  background: linear-gradient(to right, transparent, var(--color-bg-element));
-  box-shadow: inset -10px 0 12px -11px var(--marquee-fade-shadow);
-}
-
-.select-option.has-left-overflow::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 24px;
-  pointer-events: none;
-  z-index: 1;
-  background: linear-gradient(to right, var(--color-bg-surface-hover), transparent);
-  box-shadow: inset 10px 0 12px -11px var(--marquee-fade-shadow);
-}
-
-.select-option:hover::after {
-  background: linear-gradient(to right, transparent, var(--color-bg-surface-hover));
-}
-
-.option-check {
-  width: 1rem;
-  height: 1rem;
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.option-eye {
-  color: var(--text-primary);
-}
-
-.options-empty {
-  padding: 16px;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-</style>
+<style scoped src="./Select.css"></style>
