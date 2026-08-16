@@ -21,15 +21,13 @@ describe('AudioClipPropertiesPanel', () => {
     expect(wrapper.find('.options-group').exists()).toBe(false);
   });
 
-  it('emits volume and delete changes for a clip', async () => {
+  it('emits volume changes for a clip', async () => {
     const wrapper = mount(AudioClipPropertiesPanel, {
       props: { clip: { name: 'Voice track', enabled: true, volume: 80 } },
       global: { stubs: { BigSlider, Button } },
     });
     expect(wrapper.get('.section-title').text()).toBe('Voice track');
     await wrapper.get('.volume-slider').trigger('click');
-    await wrapper.get('.delete-button').trigger('click');
     expect(wrapper.emitted('update:volume')).toEqual([[125]]);
-    expect(wrapper.emitted('delete')).toHaveLength(1);
   });
 });

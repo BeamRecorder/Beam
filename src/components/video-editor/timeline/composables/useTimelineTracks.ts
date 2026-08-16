@@ -150,6 +150,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     event.stopPropagation();
     const ids = linkedIdsFor(clip);
     movingClipIds.value = ids;
+    const isVisual = baseVisualClips.value.some((c) => c.id === clip.id);
+    const initialVisualIndex = isVisual ? baseVisualClips.value.findIndex((c) => c.id === clip.id) : -1;
+    const initialVisualOrder = isVisual ? baseVisualClips.value.map((c) => c.id) : null;
     const pointerStartX = event.clientX;
     const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
     const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
@@ -166,6 +169,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
     let finalStartMs = originalStartMs;
+    let lastVisualSwapTime = 0;
     const applyMove = (next: PointerEvent) => {
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
@@ -189,6 +193,39 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
         previewDurationMs.value = null;
       }
       previewLinked(ids, finalStartMs, clipLengthMs);
+
+      if (isVisual && initialVisualOrder) {
+        const row =
+          typeof document.elementFromPoint === 'function'
+            ? document.elementFromPoint(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track')
+            : null;
+        const targetId = row?.dataset.clipId;
+        if (targetId && targetId !== clip.id) {
+          const currentOrder = visualOrderPreview.value ?? initialVisualOrder;
+          const from = currentOrder.indexOf(clip.id);
+          const to = currentOrder.indexOf(targetId);
+          if (from >= 0 && to >= 0 && from !== to) {
+            const now = Date.now();
+            if (now - lastVisualSwapTime >= 150) {
+              const rect = row.getBoundingClientRect?.();
+              let canSwap = true;
+              if (rect && rect.height > 0 && typeof next.clientY === 'number') {
+                const relY = (next.clientY - rect.top) / rect.height;
+                if (from < to && relY < 0.35) canSwap = false;
+                if (from > to && relY > 0.65) canSwap = false;
+              }
+              if (canSwap) {
+                const nextOrder = [...currentOrder];
+                nextOrder.splice(from, 1);
+                nextOrder.splice(to, 0, clip.id);
+                visualOrderPreview.value = nextOrder;
+                draggedClipId.value = clip.id;
+                lastVisualSwapTime = now;
+              }
+            }
+          }
+        }
+      }
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
@@ -201,9 +238,21 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       previewDurationMs.value = null;
       movingClipIds.value = [];
       activeSnapTimeMs.value = null;
+      if (isVisual) {
+        requestAnimationFrame(() => {
+          visualOrderPreview.value = null;
+          draggedClipId.value = null;
+        });
+      }
     };
     const end = () => {
       moveUpdates.flush();
+      if (isVisual && visualOrderPreview.value) {
+        const finalVisualIndex = visualOrderPreview.value.indexOf(clip.id);
+        if (finalVisualIndex >= 0 && finalVisualIndex !== initialVisualIndex) {
+          emit('reorder:clip', { id: clip.id, targetIndex: finalVisualIndex });
+        }
+      }
       cleanup();
       if (finalStartMs !== originalStartMs) emit('move:clip', { id: clip.id, startMs: finalStartMs });
     };
@@ -376,25 +425,55 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
 
   const draggedClipId = ref<string | null>(null);
   const beginReorder = (event: PointerEvent, clipId: string) => {
-    event.preventDefault();
-    event.stopPropagation();
+    if (event.button !== 0 && event.button !== undefined) return;
+    const startX = event.clientX ?? 0;
+    const startY = event.clientY ?? 0;
+    let isDragging = false;
+    let lastSwapTime = 0;
+
     const initialOrder = baseVisualClips.value.map((clip) => clip.id);
     const initialIndex = initialOrder.indexOf(clipId);
     if (initialIndex < 0) return;
-    draggedClipId.value = clipId;
-    visualOrderPreview.value = [...initialOrder];
 
     const applyMove = (next: PointerEvent) => {
-      const row = document.elementFromPoint(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
+      if (!isDragging) {
+        const nextX = next.clientX ?? 0;
+        const nextY = next.clientY ?? 0;
+        const dist = Math.hypot(nextX - startX, nextY - startY);
+        if (dist >= 4 || Number.isNaN(dist)) {
+          isDragging = true;
+          draggedClipId.value = clipId;
+          visualOrderPreview.value = [...initialOrder];
+        } else {
+          return;
+        }
+      }
+
+      const row =
+        typeof document.elementFromPoint === 'function'
+          ? document.elementFromPoint(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track')
+          : null;
       const targetId = row?.dataset.clipId;
       if (!targetId || targetId === clipId) return;
       const order = [...(visualOrderPreview.value ?? initialOrder)];
       const from = order.indexOf(clipId);
       const to = order.indexOf(targetId);
       if (from < 0 || to < 0 || from === to) return;
+
+      const now = Date.now();
+      if (now - lastSwapTime < 150) return;
+
+      const rect = row.getBoundingClientRect?.();
+      if (rect && rect.height > 0 && typeof next.clientY === 'number') {
+        const relY = (next.clientY - rect.top) / rect.height;
+        if (from < to && relY < 0.35) return;
+        if (from > to && relY > 0.65) return;
+      }
+
       order.splice(from, 1);
       order.splice(to, 0, clipId);
       visualOrderPreview.value = order;
+      lastSwapTime = now;
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
@@ -403,12 +482,14 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
-      const finalIndex = visualOrderPreview.value?.indexOf(clipId) ?? initialIndex;
-      if (finalIndex !== initialIndex) emit('reorder:clip', { id: clipId, targetIndex: finalIndex });
-      requestAnimationFrame(() => {
-        visualOrderPreview.value = null;
-        draggedClipId.value = null;
-      });
+      if (isDragging) {
+        const finalIndex = visualOrderPreview.value?.indexOf(clipId) ?? initialIndex;
+        if (finalIndex !== initialIndex) emit('reorder:clip', { id: clipId, targetIndex: finalIndex });
+        requestAnimationFrame(() => {
+          visualOrderPreview.value = null;
+          draggedClipId.value = null;
+        });
+      }
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end, { once: true });

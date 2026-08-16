@@ -23,7 +23,6 @@ const CaptionStyleControls = {
   template: '<div class="caption-style-controls" />',
 };
 const Divider = { template: '<div class="divider-stub" />' };
-const DeleteItem = { template: '<button class="delete-caption" />' };
 
 const keyboardClip: CaptionClip = {
   id: 'keyboard-caption',
@@ -49,7 +48,7 @@ const keyboardClip: CaptionClip = {
   },
 };
 
-const stubs = { Input, Switch, CaptionStyleControls, Divider, DeleteItem };
+const stubs = { Input, Switch, CaptionStyleControls, Divider };
 
 describe('KeyboardCaptionClipPanel', () => {
   it('shares caption styles and edits custom text and follow-cursor independently', async () => {

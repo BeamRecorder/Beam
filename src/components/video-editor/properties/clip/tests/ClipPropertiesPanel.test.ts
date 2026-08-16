@@ -105,7 +105,9 @@ describe('ClipPropertiesPanel', () => {
     await reset!.trigger('click');
     expect(wrapper.emitted('reset:clipTransform')).toHaveLength(1);
 
-    const custom = wrapper.findAll('button').find((button) => button.text().toLowerCase() === 'custom');
+    const custom = wrapper
+      .findAll('button')
+      .find((button) => button.text().toLowerCase() === 'custom' || button.attributes('aria-label')?.toLowerCase() === 'custom');
     await custom!.trigger('click');
     expect(wrapper.emitted('update:cornerRadius')).toContainEqual(['32']);
     await wrapper
@@ -147,12 +149,7 @@ describe('ClipPropertiesPanel', () => {
       .findAll('button')
       .find((button) => button.text() === 'Unlink')!
       .trigger('click');
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('Delete Clip'))!
-      .trigger('click');
     expect(wrapper.emitted('unlink')).toHaveLength(1);
-    expect(wrapper.emitted('delete')).toHaveLength(1);
   });
 
   it('normalizes old radius values and renders only applicable control groups', async () => {

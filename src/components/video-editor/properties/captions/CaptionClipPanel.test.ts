@@ -97,7 +97,6 @@ describe('CaptionClipPanel', () => {
     const start = wrapper.find('input[aria-label="Word start time"]');
     await start.setValue('-1');
     await start.trigger('blur');
-    await wrapper.get('.delete-caption').trigger('click');
     await vi.waitFor(() => expect(wrapper.emitted('update')).toBeTruthy());
     expect(
       wrapper
@@ -107,7 +106,6 @@ describe('CaptionClipPanel', () => {
             (updated as unknown as { caption: { style: { wrap?: boolean } } }).caption.style.wrap === false,
         ),
     ).toBe(true);
-    expect(wrapper.emitted('delete')).toEqual([['caption-1']]);
     expect(wrapper.emitted('update')!.length).toBeGreaterThan(0);
   });
 

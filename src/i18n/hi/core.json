@@ -165,9 +165,12 @@
     "speedBoost": "स्पीड बूस्ट",
     "playbackSpeed": "प्लेबैक गति",
     "enabled": "सक्षम",
+    "disabled": "अक्षम",
     "sidecarLink": "साइडकार लिंक",
-    "unlink": "लिंक हटाएँ",
-    "deleteClip": "क्लिप हटाएँ"
+    "unlink": "अनलिंक करें",
+    "deleteClip": "क्लिप हटाएँ",
+    "deleteVideo": "वीडियो हटाएँ",
+    "deleteWebcam": "वेबकैम हटाएँ"
   },
   "CursorPanel": {
     "cursorStyle": "कर्सर शैली",

@@ -165,9 +165,12 @@
     "speedBoost": "Speed Boost",
     "playbackSpeed": "Playback Speed",
     "enabled": "Enabled",
+    "disabled": "Disabled",
     "sidecarLink": "Sidecar Link",
     "unlink": "Unlink",
-    "deleteClip": "Delete Clip"
+    "deleteClip": "Delete Clip",
+    "deleteVideo": "Delete video",
+    "deleteWebcam": "Delete webcam"
   },
   "CursorPanel": {
     "cursorStyle": "Cursor Style",

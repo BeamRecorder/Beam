@@ -107,21 +107,29 @@ const exportProgressPercent = computed(() => {
       <div class="sidebar-ruler-spacer" />
       <div ref="sidebarScrollRef" class="sidebar-tracks-viewport">
         <div class="sidebar-tracks-stack">
-          <div
-            v-for="clip in visualClips"
-            :key="clip.id"
-            class="sidebar-track-item visual-track"
-            :data-clip-id="clip.id"
-            :class="{ disabled: !clip.enabled, dragging: draggedClipId === clip.id }"
-          >
-            <button type="button" class="track-info" :title="clip.name" @click="emit('toggle:clip', clip.id)">
-              <span class="track-drag-handle" @click.stop @pointerdown.stop="beginReorder($event, clip.id)">
-                <GripVertical class="track-grip" />
-              </span>
-              <component :is="iconForVisual(clip)" class="track-icon" />
-              <span class="track-title">{{ labelForVisual(clip) }}</span>
-            </button>
-          </div>
+          <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
+            <div
+              v-for="clip in visualClips"
+              :key="clip.id"
+              class="sidebar-track-item visual-track"
+              :data-clip-id="clip.id"
+              :class="{ disabled: !clip.enabled, dragging: draggedClipId === clip.id }"
+            >
+              <button
+                type="button"
+                class="track-info"
+                :title="clip.name"
+                @click="emit('toggle:clip', clip.id)"
+                @pointerdown="beginReorder($event, clip.id)"
+              >
+                <span class="track-drag-handle">
+                  <GripVertical class="track-grip" />
+                </span>
+                <component :is="iconForVisual(clip)" class="track-icon" />
+                <span class="track-title">{{ labelForVisual(clip) }}</span>
+              </button>
+            </div>
+          </TransitionGroup>
 
           <div class="sidebar-track-item cursor-track">
             <div class="track-info static-info">
@@ -218,28 +226,30 @@ const exportProgressPercent = computed(() => {
         </div>
 
         <div class="tracks-stack">
-          <div
-            v-for="clip in visualClips"
-            :key="clip.id"
-            class="track-row visual-track"
-            :data-clip-id="clip.id"
-            :class="{ disabled: !clip.enabled, dragging: draggedClipId === clip.id }"
-          >
-            <div class="track-content visual-content">
-              <TimelineClip
-                :clip="displayedClip(clip)"
-                :asset="assetFor(clip)"
-                :duration="duration"
-                :thumbnail-slots="thumbnailSlots"
-                :selected="selectedClipId === clip.id"
-                :trim-state="trimStateFor(clip.id)"
-                :defer-thumbnail-requests="movingClipIds.includes(clip.id)"
-                @select="emit('select:clip', clip.id)"
-                @move="beginClipMove($event, clip)"
-                @trim="beginClipTrim($event.event, clip, $event.edge)"
-              />
+          <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
+            <div
+              v-for="clip in visualClips"
+              :key="clip.id"
+              class="track-row visual-track"
+              :data-clip-id="clip.id"
+              :class="{ disabled: !clip.enabled, dragging: draggedClipId === clip.id }"
+            >
+              <div class="track-content visual-content">
+                <TimelineClip
+                  :clip="displayedClip(clip)"
+                  :asset="assetFor(clip)"
+                  :duration="duration"
+                  :thumbnail-slots="thumbnailSlots"
+                  :selected="selectedClipId === clip.id"
+                  :trim-state="trimStateFor(clip.id)"
+                  :defer-thumbnail-requests="movingClipIds.includes(clip.id)"
+                  @select="emit('select:clip', clip.id)"
+                  @move="beginClipMove($event, clip)"
+                  @trim="beginClipTrim($event.event, clip, $event.edge)"
+                />
+              </div>
             </div>
-          </div>
+          </TransitionGroup>
 
           <div class="track-row cursor-track">
             <div

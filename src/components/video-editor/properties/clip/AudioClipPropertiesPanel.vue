@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
-import DeleteItem from '~/ui/button/DeleteItem.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('AudioClipPropertiesPanel');
@@ -37,9 +36,6 @@ const volume = computed(() => props.clip?.volume ?? 100);
           :format-value="(value) => `${Math.round(value)}%`"
           @update:model-value="emit('update:volume', $event)"
         />
-      </div>
-      <div class="danger-zone">
-        <DeleteItem :label="t('deleteAudioClip')" @click="emit('delete')" />
       </div>
     </div>
   </div>
@@ -78,19 +74,5 @@ const volume = computed(() => props.clip?.volume ?? 100);
 }
 .empty-desc {
   margin: 0;
-}
-.danger-zone {
-  margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  padding-top: 12px;
-  background: var(--color-bg-element);
-  z-index: 10;
-  width: 100%;
-}
-
-.danger-zone :deep(.btn-container),
-.danger-zone :deep(.delete-item-btn) {
-  width: 100%;
 }
 </style>
