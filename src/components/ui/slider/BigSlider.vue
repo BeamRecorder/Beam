@@ -113,6 +113,8 @@ onBeforeUnmount(endInteraction);
           :min="min"
           :max="max"
           :step="step"
+          autofocus
+          select-on-focus
           class="slider-inline-input"
           @keydown.enter="finishEditing"
           @keydown.esc="isEditing = false"
