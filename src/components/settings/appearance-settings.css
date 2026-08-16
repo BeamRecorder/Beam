@@ -30,11 +30,10 @@
   color: var(--text-muted);
 }
 
-.setting-row {
+.theme-mode-setting {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .setting-section {
@@ -70,9 +69,83 @@
   height: 14px;
 }
 
-.theme-mode-select {
-  width: min(180px, 52%);
-  flex-shrink: 0;
+.customization-accordion {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg-element) 70%, transparent);
+}
+
+.customization-header {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+}
+
+.customization-trigger {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.45rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.customization-trigger:focus-visible {
+  border-radius: var(--radius-sm);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.customization-chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.customization-accordion.is-open .customization-chevron {
+  transform: rotate(180deg);
+}
+
+.appearance-reset-button {
+  flex: none;
+}
+
+.customization-actions {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.customization-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 0.7rem 0.7rem;
+}
+
+.customization-reveal-enter-active,
+.customization-reveal-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.customization-reveal-enter-from,
+.customization-reveal-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .presets-grid {
@@ -136,10 +209,9 @@
 }
 
 .color-controls-row {
-  display: flex;
-  align-items: center;
+  display: grid;
+  justify-items: start;
   gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .swatches-wrap {
@@ -179,8 +251,8 @@
 }
 
 .custom-picker-wrap {
-  margin-left: auto;
   display: flex;
+  width: 100%;
   align-items: center;
 }
 
@@ -193,12 +265,10 @@
   border-radius: var(--radius-sm);
 }
 
-.radius-presets-group,
-.surface-tones-group {
-  width: 100%;
-  display: flex;
-}
-
 .radius-slider-wrap {
   padding: 0.25rem 0.2rem 0;
+}
+
+.surface-tone-select {
+  width: 100%;
 }

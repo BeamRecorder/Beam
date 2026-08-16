@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "दिखावट",
     "subtitle": "थीम, रंग, कोने की गोলাই और सतह शैलियों को अनुकूलित करें",
+    "customization": "कस्टमाइज़ेशन",
     "themeMode": "थीम मोड",
     "light": "लाइट",
     "dark": "डार्क",

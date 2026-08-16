@@ -413,6 +413,7 @@
   "AppearanceSettings": {
     "title": "Aspetto",
     "subtitle": "Personalizza temi, colori, raggio degli angoli e superfici",
+    "customization": "Personalizzazione",
     "themeMode": "Modalità tema",
     "light": "Chiaro",
     "dark": "Scuro",

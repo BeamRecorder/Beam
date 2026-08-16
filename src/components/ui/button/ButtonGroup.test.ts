@@ -17,4 +17,14 @@ describe('ButtonGroup', () => {
     expect(wrapper.classes()).toEqual(expect.arrayContaining(['btn-group', 'full-width', 'column-layout']));
     expect(wrapper.attributes('style')).toContain('--button-group-columns: 2');
   });
+
+  it('keeps slotted button corners inside the group radius', () => {
+    const wrapper = mount(ButtonGroup, {
+      slots: { default: '<button class="btn">One</button><button class="btn">Two</button>' },
+    });
+
+    expect(wrapper.attributes('style')).toContain('--button-group-inner-radius: calc(var(--radius-lg) - 3px)');
+    expect(wrapper.findAll('.btn')).toHaveLength(2);
+    expect(wrapper.findAll('.btn').every((button) => button.classes().includes('btn'))).toBe(true);
+  });
 });

@@ -62,7 +62,11 @@ describe('SettingsPanel', () => {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
-    expect(wrapper.find('.theme-mode-select').exists()).toBe(true);
+    expect(wrapper.findAll('.theme-mode-group button').map((button) => button.text())).toEqual(['Light', 'Dark', 'System']);
+    expect(wrapper.get('.customization-trigger').attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('.customization-panel').exists()).toBe(false);
+    await wrapper.get('.customization-trigger').trigger('click');
+    wrapper.get('.customization-panel');
     await wrapper.findAll('.language-select').at(-1)!.trigger('click');
 
     expect(localStorage.getItem('locale')).toBe('fr');
