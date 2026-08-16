@@ -20,6 +20,7 @@ import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import PopoverMenuButton from '~/ui/popover/PopoverMenuButton.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
+import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
 
@@ -33,8 +34,9 @@ const props = withDefaults(
     zoomLevel: number;
     canSplit?: boolean;
     isSnappingEnabled?: boolean;
+    loading?: boolean;
   }>(),
-  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true },
+  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false },
 );
 
 const emit = defineEmits<{
@@ -90,7 +92,16 @@ const handleZoomOut = () => {
 </script>
 
 <template>
-  <div class="timeline-toolbar">
+  <div class="timeline-toolbar" :class="{ 'is-loading': loading }">
+    <Skeleton
+      v-if="loading"
+      class="timeline-toolbar-loading-skeleton"
+      variant="animated-gradient"
+      width="min(560px, calc(100% - 32px))"
+      height="36px"
+      radius="var(--radius-md)"
+      aria-hidden="true"
+    />
     <!-- Left Section: Add Popover & Tool Group -->
     <div class="left-section">
       <PopoverMenuButton
@@ -225,6 +236,18 @@ const handleZoomOut = () => {
   height: 48px;
   user-select: none;
   gap: 12px;
+}
+
+.timeline-toolbar-loading-skeleton {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+}
+
+.timeline-toolbar.is-loading > :not(.timeline-toolbar-loading-skeleton) {
+  visibility: hidden;
 }
 
 .left-section {

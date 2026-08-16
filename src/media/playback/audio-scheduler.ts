@@ -52,6 +52,10 @@ export class AudioPlaybackScheduler {
   }
 
   async loadComposition(composition: ClipComposition): Promise<MediaError[]> {
+    if (this.canUpdateComposition(composition)) {
+      this.updateComposition(composition);
+      return [];
+    }
     const loadGeneration = ++this.loadGeneration;
     this.stopPlayback();
     this.disposeDecoders();
@@ -119,6 +123,47 @@ export class AudioPlaybackScheduler {
     }
     for (const [assetId, decoder] of loadedDecoders) this.decoders.set(assetId, decoder);
     return issues;
+  }
+
+  updateComposition(composition: ClipComposition): void {
+    const assetIds = new Set(
+      composition.clips
+        .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
+        .map((clip) => clip.assetId),
+    );
+    if (assetIds.size !== this.decoders.size || [...assetIds].some((assetId) => !this.decoders.has(assetId))) {
+      throw new Error('Audio assets changed during a timing-only composition update.');
+    }
+    this.stopPlayback();
+    this.composition = composition;
+  }
+
+  private canUpdateComposition(composition: ClipComposition): boolean {
+    if (!this.composition) return false;
+    const nextAssetIds = new Set(
+      composition.clips
+        .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
+        .map((clip) => clip.assetId),
+    );
+    if (nextAssetIds.size !== this.decoders.size || [...nextAssetIds].some((assetId) => !this.decoders.has(assetId))) {
+      return false;
+    }
+    const topology = (value: ClipComposition) => {
+      const assetIds = [
+        ...new Set(
+          value.clips
+            .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
+            .map((clip) => clip.assetId),
+        ),
+      ].sort();
+      return JSON.stringify(
+        assetIds.map((assetId) => {
+          const asset = value.assets.find((entry) => entry.id === assetId);
+          return { assetId, kind: asset?.kind, src: asset?.src };
+        }),
+      );
+    };
+    return topology(this.composition) === topology(composition);
   }
 
   async play(timelineSeconds: number, generation: number): Promise<void> {

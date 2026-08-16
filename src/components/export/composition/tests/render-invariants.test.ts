@@ -23,7 +23,7 @@ const appearance: ClipAppearance = {
 };
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [
     {

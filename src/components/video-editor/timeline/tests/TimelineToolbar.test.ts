@@ -53,6 +53,25 @@ describe('TimelineToolbar', () => {
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([275]);
   });
 
+  it('keeps the toolbar height while loading and swaps controls for an animated skeleton', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, loading: true },
+      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
+    });
+
+    expect(wrapper.find('.timeline-toolbar').exists()).toBe(true);
+    expect(wrapper.find('.shimmer-animated-gradient').exists()).toBe(true);
+    expect(wrapper.get('.timeline-toolbar-loading-skeleton').attributes('style')).toContain('height: 36px');
+    expect(wrapper.classes()).toContain('is-loading');
+    expect(wrapper.find('.nav-controls').exists()).toBe(true);
+
+    await wrapper.setProps({ loading: false });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.classes()).not.toContain('is-loading');
+    expect(wrapper.find('.shimmer-animated-gradient').exists()).toBe(false);
+    expect(wrapper.find('.nav-controls').exists()).toBe(true);
+  });
+
   it('formats hours properly when video is over 1 hour', async () => {
     const wrapper = mount(TimelineToolbar, {
       props: { currentTime: 3665, duration: 7200, isPlaying: false, zoomLevel: 100 },

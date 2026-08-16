@@ -14,6 +14,23 @@ const Button = {
 };
 
 describe('CanvasToolbar', () => {
+  it('keeps a stable toolbar height with an animated skeleton while loading', async () => {
+    const wrapper = mount(CanvasToolbar, {
+      props: { preset: '16:9', canCrop: true, isCropping: false, loading: true },
+      global: { stubs: { PopoverMenuButton, Button } },
+    });
+
+    expect(wrapper.classes()).toContain('canvas-toolbar');
+    expect(wrapper.find('.shimmer-animated-gradient').exists()).toBe(true);
+    expect(wrapper.get('.toolbar-loading-skeleton').attributes('style')).toContain('height: 28px');
+    expect(wrapper.find('.preset-menu-stub').exists()).toBe(false);
+
+    await wrapper.setProps({ loading: false });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.preset-menu-stub').exists()).toBe(true);
+    expect(wrapper.find('.shimmer-animated-gradient').exists()).toBe(false);
+  });
+
   it('selects a preset and toggles crop mode', async () => {
     const wrapper = mount(CanvasToolbar, {
       props: { preset: '16:9', canCrop: true, isCropping: false },

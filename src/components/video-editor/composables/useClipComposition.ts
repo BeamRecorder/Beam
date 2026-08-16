@@ -23,11 +23,11 @@ import {
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   addClip,
-  createComposition,
   deleteClip,
   detachClip,
   MIN_CLIP_DURATION_MS,
   moveClip,
+  reorderClip,
   setAppearance,
   setBlurEffect,
   setClipEnabled,
@@ -169,8 +169,10 @@ export function useClipComposition(options: {
       asset.kind === 'video' && inspection.hasAudio && inspection.canDecodeAudio ? crypto.randomUUID() : undefined;
     const topVisualOrder =
       Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1;
+    const visualId = crypto.randomUUID();
     const visual: VisualClip = {
-      id: crypto.randomUUID(),
+      id: visualId,
+      trackId: visualId,
       kind: asset.kind,
       name: asset.name,
       assetId: asset.id,
@@ -215,8 +217,10 @@ export function useClipComposition(options: {
   const addElement = async (kind: 'video' | 'image' | 'sound' | 'caption' | 'blur', requestedStartMs?: number) => {
     const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
     if (kind === 'blur') {
+      const clipId = crypto.randomUUID();
       const clip: BlurClip = {
-        id: crypto.randomUUID(),
+        id: clipId,
+        trackId: clipId,
         kind: 'blur',
         assetId: '',
         name: t('blur'),
@@ -360,18 +364,10 @@ export function useClipComposition(options: {
     selectedClipId.value = null;
   };
   const reorderVisualClip = (clipId: string, targetIndex: number) => {
-    const ordered = [...composition.value.clips].sort((left, right) => left.order - right.order);
-    const visuals = ordered.filter(isCompositingClip);
-    const sourceIndex = visuals.findIndex((clip) => clip.id === clipId);
-    if (sourceIndex < 0 || !Number.isInteger(targetIndex)) return;
-    const [moved] = visuals.splice(sourceIndex, 1);
-    visuals.splice(Math.max(0, Math.min(visuals.length, targetIndex)), 0, moved);
-    let visualIndex = 0;
-    const clips = ordered.map((clip, order) => ({
-      ...(isCompositingClip(clip) ? visuals[visualIndex++] : clip),
-      order,
-    }));
-    composition.value = createComposition(composition.value.assets, clips);
+    if (!Number.isInteger(targetIndex)) return;
+    const clip = composition.value.clips.find((entry) => entry.id === clipId);
+    if (!clip || !isCompositingClip(clip)) return;
+    composition.value = reorderClip(composition.value, clipId, targetIndex);
   };
 
   const updateSelectedAppearance = (patch: Partial<ClipAppearance>) => {

@@ -28,6 +28,7 @@ const backgroundComposition = (asset: MediaAsset, durationMs: number): ClipCompo
   clips: [
     {
       id: BACKGROUND_CLIP_ID,
+      trackId: BACKGROUND_CLIP_ID,
       kind: 'video',
       name: asset.name,
       assetId: asset.id,

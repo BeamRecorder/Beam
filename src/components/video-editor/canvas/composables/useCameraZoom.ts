@@ -206,20 +206,6 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
       (clip) => clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image',
     );
     if (!hasCameraVisual) {
-      const hasEnabledScreenTrack = options.composition().clips.some((clip) => clip.kind === 'screen' && clip.enabled);
-      if (!hasEnabledScreenTrack) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(preview.x, preview.y, preview.width, preview.height, OUTPUT_PREVIEW_RADIUS);
-        ctx.clip();
-        ctx.fillStyle = 'rgba(15,23,42,.85)';
-        ctx.fillRect(preview.x, preview.y, preview.width, preview.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Video track disabled', preview.x + preview.width / 2, preview.y + preview.height / 2);
-        ctx.restore();
-      }
       videoWindowBounds.value = null;
       screenHitBounds.value = null;
       overlayWindowBounds.value = null;

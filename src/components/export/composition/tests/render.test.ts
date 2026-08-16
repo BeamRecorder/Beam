@@ -23,7 +23,7 @@ const screenAppearance: ClipAppearance = {
   frameChromeScale: 1,
 };
 const composition = (): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [
     {

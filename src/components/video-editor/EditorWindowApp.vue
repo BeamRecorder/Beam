@@ -1,28 +1,39 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { capture } from '~/api/capture';
-import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
+import type { CaptureProject, PreferenceSettings, ProjectEditorData } from '~/api/types/capture-api';
 import type { RecordingConfiguration } from '~/components/hud/recorder/recording-types';
 import Button from '~/components/ui/button/Button.vue';
 import ToastProvider from '~/components/ui/toast/ToastProvider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import EditorLoadingThrobber from './EditorLoadingThrobber.vue';
+import { clampTimelineHeight, DEFAULT_TIMELINE_HEIGHT } from './composables/useTimelineResize';
+import EditorProjectLoadingOverlay from './EditorProjectLoadingOverlay.vue';
 import VideoEditor from './VideoEditor.vue';
 
 const project = ref<CaptureProject | null>(null);
 const editorData = ref<ProjectEditorData | null>(null);
 const loading = ref(true);
 const error = ref('');
+const editorGeneration = ref(0);
+const loadingTimelineHeight = ref(DEFAULT_TIMELINE_HEIGHT);
 let loadGeneration = 0;
 let removeContextListener: (() => void) | null = null;
+let removePreferencesListener: (() => void) | null = null;
 let themeObserver: MutationObserver | null = null;
-let editorReadyNotified = false;
+let nativeEditorReadyNotified = false;
 const { t } = useTranslate('EditorPreparingHud');
 const EDITOR_READY_PAINT_TIMEOUT_MS = 100;
 
 const syncTitlebarTheme = () => {
   const dark = document.documentElement.classList.contains('dark');
   capture.setEditorTitlebarTheme(dark);
+};
+
+const syncTimelineHeight = (preferences: PreferenceSettings) => {
+  const savedHeight = Number(preferences.extras?.timelineHeight);
+  if (Number.isFinite(savedHeight) && savedHeight > 0) {
+    loadingTimelineHeight.value = clampTimelineHeight(savedHeight);
+  }
 };
 
 const waitForEditorPaint = async () => {
@@ -60,13 +71,13 @@ const loadProject = async (projectId: string) => {
     if (generation !== loadGeneration) return;
     project.value = nextProject;
     editorData.value = nextEditorData;
+    editorGeneration.value = generation;
+    loading.value = false;
   } catch (reason) {
     if (generation !== loadGeneration) return;
-    project.value = null;
-    editorData.value = null;
     error.value = reason instanceof Error ? reason.message : String(reason);
-  } finally {
-    if (generation === loadGeneration) loading.value = false;
+    if (!project.value) editorData.value = null;
+    loading.value = false;
   }
 };
 
@@ -76,17 +87,22 @@ const handleBackToHud = () => {
 };
 
 const handleOpenProject = (nextProject: CaptureProject) => {
-  void loadProject(nextProject.id);
+  loading.value = true;
+  void capture.openEditor(nextProject.id).catch((reason) => {
+    loading.value = false;
+    console.error('Unable to switch editor project.', reason);
+  });
 };
 
 const handleStartRecording = (configuration: RecordingConfiguration) => {
   capture.startRecordingFromEditor(configuration);
 };
 
-const notifyEditorReady = async () => {
-  if (editorReadyNotified || loading.value || !project.value) return;
-  editorReadyNotified = true;
+const notifyEditorReady = async (generation: number) => {
+  if (generation !== loadGeneration || generation !== editorGeneration.value || !project.value) return;
   capture.reportEditorLoadingStage('renderingEditor');
+  if (nativeEditorReadyNotified) return;
+  nativeEditorReadyNotified = true;
   await waitForEditorPaint();
   capture.notifyEditorReady();
 };
@@ -98,6 +114,12 @@ onMounted(async () => {
   themeObserver = new MutationObserver(syncTitlebarTheme);
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   removeContextListener = capture.onEditorContext(({ projectId }) => void loadProject(projectId));
+  try {
+    removePreferencesListener = capture.onPreferencesChanged(syncTimelineHeight);
+    void capture.getPreferences().then(syncTimelineHeight).catch(() => undefined);
+  } catch {
+    // The editor remains usable with the default timeline height.
+  }
   const context = await capture.getEditorContext();
   if (context) await loadProject(context.projectId);
   else {
@@ -105,7 +127,7 @@ onMounted(async () => {
     error.value = 'No project selected';
   }
   if (error.value || !project.value) {
-    editorReadyNotified = true;
+    nativeEditorReadyNotified = true;
     capture.reportEditorLoadingStage('renderingEditor');
     await waitForEditorPaint();
     capture.notifyEditorReady();
@@ -115,28 +137,33 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   loadGeneration += 1;
   removeContextListener?.();
+  removePreferencesListener?.();
   themeObserver?.disconnect();
 });
 </script>
 
 <template>
   <ToastProvider />
-  <main v-if="loading" class="editor-window-state" aria-busy="true">
-    <EditorLoadingThrobber :text="t('title')" />
-  </main>
-  <main v-else-if="error || !project" class="editor-window-state" role="alert">
+  <main v-if="error && !project" class="editor-window-state" role="alert">
     <p class="state-title">Unable to open this project</p>
     <p>{{ error }}</p>
     <Button variant="secondary" size="sm" @click="handleBackToHud">Back to projects</Button>
   </main>
   <VideoEditor
-    v-else
+    v-if="project"
+    :key="`${project.id}:${editorGeneration}`"
     :editor-data="editorData"
     :project="project"
     @back-to-hud="handleBackToHud"
     @open-project="handleOpenProject"
     @start-recording="handleStartRecording"
-    @ready="notifyEditorReady"
+    @ready="notifyEditorReady(editorGeneration)"
+  />
+  <EditorProjectLoadingOverlay
+    :visible="loading"
+    :label="t('title')"
+    :show-topbar-skeleton="!project"
+    :timeline-height="loadingTimelineHeight"
   />
 </template>
 

@@ -143,7 +143,7 @@ const clip = (id: string, overrides: Partial<AudioClip> = {}): AudioClip => ({
 });
 
 const composition = (clips: AudioClip[] = [clip('clip-1')], assets = [asset()]): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets,
   clips,
@@ -233,6 +233,23 @@ describe('AudioPlaybackScheduler', () => {
     expect(context.sources[3]!.start.mock.calls[0]![1]).toBe(0);
     expect(context.sources[3]!.start.mock.calls[0]![2]).toBeCloseTo(0.4);
     scheduler.dispose();
+  });
+
+  it('keeps audio decoders when only clip timing changes', async () => {
+    const opened = openedInput();
+    runtime.openMediaInput.mockResolvedValue(opened);
+    const scheduler = new AudioPlaybackScheduler();
+    const initial = composition();
+    await scheduler.loadComposition(initial);
+    runtime.openMediaInput.mockClear();
+
+    const retimed = composition([clip('clip-1', { timelineStartMs: 500, timelineDurationMs: 2_000 })]);
+    await scheduler.loadComposition(retimed);
+
+    expect(runtime.openMediaInput).not.toHaveBeenCalled();
+    expect(opened.dispose).not.toHaveBeenCalled();
+    scheduler.dispose();
+    expect(opened.dispose).toHaveBeenCalledOnce();
   });
 
   it('keeps timer scheduling single-flight when a decoder is slower than the timer cadence', async () => {

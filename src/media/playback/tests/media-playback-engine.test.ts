@@ -35,6 +35,7 @@ class FakeWorker {
 
 class FakeAudio {
   readonly loadComposition = vi.fn(async () => []);
+  readonly updateComposition = vi.fn();
   readonly play = vi.fn(async () => undefined);
   readonly pause = vi.fn();
   readonly seek = vi.fn(async () => undefined);
@@ -77,7 +78,7 @@ const videoClip = (id: string, assetId = 'asset-1', overrides: Partial<Record<st
 });
 
 const composition = (clips = [videoClip('clip-1')]): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [asset(), asset('unused')],
   clips,
@@ -102,6 +103,11 @@ const seekRequest = (worker: FakeWorker) =>
   worker.requests.find(
     (request): request is Extract<PlaybackWorkerRequest, { type: 'seek' }> => request.type === 'seek',
   );
+
+const latestSeekRequest = (worker: FakeWorker) =>
+  [...worker.requests]
+    .reverse()
+    .find((request): request is Extract<PlaybackWorkerRequest, { type: 'seek' }> => request.type === 'seek');
 
 let rafCallbacks: FrameRequestCallback[] = [];
 
@@ -175,6 +181,116 @@ describe('MediaPlaybackEngine', () => {
     expect(engine.state).toBe('paused');
     expect(states).toEqual(['loading', 'paused', 'playing', 'paused']);
     expect(times).toEqual([0, 0.75]);
+  });
+
+  it('reloads at the current non-zero time without emitting a transient zero', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const times: number[] = [];
+    engine.on('time', (time) => times.push(time));
+
+    await load(engine, worker);
+    await engine.play(1.25);
+    audio.now = 1.25;
+    times.length = 0;
+
+    const reload = engine.loadComposition(composition([videoClip('split-left'), videoClip('split-right')]), 1.25);
+    const loadRequest = [...worker.requests]
+      .reverse()
+      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load')!;
+    worker.emit({ type: 'ready', generation: loadRequest.generation });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+    const reloadSeek = latestSeekRequest(worker)!;
+    expect(reloadSeek.timelineSeconds).toBe(1.25);
+    worker.emit({
+      type: 'seek-result',
+      generation: reloadSeek.generation,
+      requestId: reloadSeek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await reload;
+
+    expect(times).not.toContain(0);
+    expect(times).toEqual([1.25]);
+    expect(engine.currentTime).toBe(1.25);
+    engine.dispose();
+  });
+
+  it('retimes unchanged clip topology without reloading assets, audio, or cached frames', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    const initialGeneration = latestSeekRequest(worker)!.generation;
+    const cached = new FakeImageBitmap();
+    worker.emit(frameResponse(initialGeneration, 'clip-1', 0.5, cached));
+    expect(engine.frameFor('clip-1')).not.toBeNull();
+    audio.loadComposition.mockClear();
+    worker.requests.length = 0;
+
+    const retimed = composition([videoClip('clip-1', 'asset-1', { timelineStartMs: 500, timelineDurationMs: 1_500 })]);
+    const pending = engine.loadComposition(retimed, 0.75);
+    await Promise.resolve();
+    const request = worker.requests.at(-1) as { type?: string; generation?: number } | undefined;
+    const usedRetime = request?.type === 'retime';
+    worker.emit({ type: 'ready', generation: request!.generation! });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+    const seek = latestSeekRequest(worker)!;
+    worker.emit({
+      type: 'seek-result',
+      generation: seek.generation,
+      requestId: seek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await pending;
+
+    expect(usedRetime).toBe(true);
+    expect(worker.requests.filter((entry) => entry.type === 'load')).toHaveLength(0);
+    expect(audio.loadComposition).not.toHaveBeenCalled();
+    expect(engine.frameFor('clip-1')).not.toBeNull();
+    expect(cached.close).not.toHaveBeenCalled();
+    engine.dispose();
+  });
+
+  it('uses a full load when retiming changes clip topology', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    audio.loadComposition.mockClear();
+    worker.requests.length = 0;
+
+    const pending = engine.loadComposition(composition([videoClip('new-clip')]), 0.75);
+    await Promise.resolve();
+    const request = worker.requests.at(-1) as { type?: string; generation?: number } | undefined;
+    expect(request?.type).toBe('load');
+    worker.emit({ type: 'ready', generation: request!.generation! });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+    const seek = latestSeekRequest(worker)!;
+    worker.emit({
+      type: 'seek-result',
+      generation: seek.generation,
+      requestId: seek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await pending;
+
+    expect(audio.loadComposition).toHaveBeenCalledOnce();
+    expect(worker.requests.filter((entry) => entry.type === 'load')).toHaveLength(1);
+    engine.dispose();
   });
 
   it('surfaces an audio scheduling failure through the existing error state', async () => {
@@ -464,7 +580,7 @@ describe('MediaPlaybackEngine', () => {
     engine.on('error', (error) => errors.push(error));
 
     const invalid: ClipComposition = {
-      schemaVersion: 3,
+      schemaVersion: 5,
       keyboardCaptionSessions: [],
       assets: [{ ...asset(), src: 'file:///recording.mp4' }, asset('valid-video')],
       clips: [videoClip('invalid-clip'), videoClip('valid-clip', 'valid-video')],
@@ -488,7 +604,7 @@ describe('MediaPlaybackEngine', () => {
     engine.on('error', (error) => issues.push(error));
     const invalidAsset = { ...asset('missing-video'), src: '' };
     const value: ClipComposition = {
-      schemaVersion: 3,
+      schemaVersion: 5,
       keyboardCaptionSessions: [],
       assets: [asset(), invalidAsset],
       clips: [videoClip('valid-clip'), videoClip('skipped-clip', 'missing-video')],

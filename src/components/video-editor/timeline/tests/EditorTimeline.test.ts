@@ -10,7 +10,7 @@ const TimelineTracks = {
 };
 
 const composition: ClipComposition = {
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [],
   clips: [],

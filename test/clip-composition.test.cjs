@@ -51,6 +51,7 @@ const visualClip = (assetId, overrides = {}) => ({
   isMirrored: false,
   isMirroredY: false,
   ...overrides,
+  trackId: overrides.trackId ?? overrides.id ?? 'clip-video',
 });
 
 const cursorPresentation = (
@@ -168,7 +169,7 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   };
   const groupId = 'recording';
   const normalized = normalizeComposition({
-    schemaVersion: 3,
+    schemaVersion: 5,
     assets: [asset],
     keyboardCaptionSessions: [],
     clips: [
@@ -223,13 +224,13 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
 
 test('round-trips text and keyboard captions in the canonical composition schema', () => {
   const normalized = normalizeComposition({
-    schemaVersion: 3,
+    schemaVersion: 5,
     assets: [],
     keyboardCaptionSessions: ['session-keyboard', 'session-keyboard'],
     clips: [captionClip(textCaption()), captionClip(keyboardCaption(), { id: 'clip-keyboard', order: 1 })],
   });
 
-  assert.equal(normalized.schemaVersion, 3);
+  assert.equal(normalized.schemaVersion, 5);
   assert.deepEqual(normalized.keyboardCaptionSessions, ['session-keyboard']);
   assert.equal(normalized.clips[0].caption.type, 'text');
   assert.deepEqual(normalized.clips[1].caption, keyboardCaption());
@@ -237,12 +238,13 @@ test('round-trips text and keyboard captions in the canonical composition schema
 
 test('round-trips an assetless blur overlay with its effect settings', () => {
   const normalized = normalizeComposition({
-    schemaVersion: 3,
+    schemaVersion: 5,
     assets: [],
     keyboardCaptionSessions: [],
     clips: [
       {
         id: 'blur',
+        trackId: 'blur',
         kind: 'blur',
         name: 'Blur',
         timelineStartMs: 500,
@@ -262,6 +264,7 @@ test('round-trips an assetless blur overlay with its effect settings', () => {
   });
   assert.deepEqual(normalized.clips[0], {
     id: 'blur',
+    trackId: 'blur',
     kind: 'blur',
     assetId: '',
     name: 'Blur',
@@ -304,7 +307,7 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
     assert.throws(
       () =>
         normalizeComposition({
-          schemaVersion: 3,
+          schemaVersion: 5,
           assets: [],
           keyboardCaptionSessions: [],
           clips: [captionClip(caption)],
@@ -313,7 +316,7 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
     );
 
   assert.throws(
-    () => normalizeComposition({ schemaVersion: 3, assets: [], keyboardCaptionSessions: [null], clips: [] }),
+    () => normalizeComposition({ schemaVersion: 5, assets: [], keyboardCaptionSessions: [null], clips: [] }),
     /session|caption/i,
   );
 });
@@ -414,7 +417,7 @@ test('migrates legacy composition fields and atomically persists the canonical e
 
   const migrated = store.editorState(project.id);
   assert.equal(migrated.schemaVersion, 3);
-  assert.equal(migrated.composition.schemaVersion, 3);
+  assert.equal(migrated.composition.schemaVersion, 5);
   assert.deepEqual(migrated.composition.keyboardCaptionSessions, []);
   assert.deepEqual(migrated.presentation.canvas, {
     preset: '21:9',
@@ -443,13 +446,13 @@ test('migrates legacy composition fields and atomically persists the canonical e
 
   const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(rewritten.editor.schemaVersion, 3);
-  assert.equal(rewritten.editor.composition.schemaVersion, 3);
+  assert.equal(rewritten.editor.composition.schemaVersion, 5);
   assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, []);
   assert.equal(rewritten.editor.composition.clips[0].isMirroredY, false);
   assert.equal(fs.existsSync(`${manifestPath}.tmp`), false);
 });
 
-test('migrates v2 composition to v3 and records historical project sessions once', () => {
+test('migrates v2 composition to v5 and records historical project sessions once', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-v2-migration-'));
   const store = createProjectStore(root);
   const project = store.create({ name: 'V2 migration' });
@@ -471,13 +474,13 @@ test('migrates v2 composition to v3 and records historical project sessions once
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   const migrated = store.editorState(project.id);
-  assert.equal(migrated.composition.schemaVersion, 3);
+  assert.equal(migrated.composition.schemaVersion, 5);
   assert.deepEqual(migrated.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
   assert.equal(migrated.composition.clips[0].caption.type, 'text');
 
   const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(rewritten.editor.schemaVersion, 3);
-  assert.equal(rewritten.editor.composition.schemaVersion, 3);
+  assert.equal(rewritten.editor.composition.schemaVersion, 5);
   assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
   assert.deepEqual(store.editorState(project.id).composition.keyboardCaptionSessions, ['session-old', 'session-new']);
 
@@ -486,7 +489,7 @@ test('migrates v2 composition to v3 and records historical project sessions once
     true,
     ['session-old'],
   );
-  assert.equal(direct.schemaVersion, 3);
+  assert.equal(direct.schemaVersion, 5);
   assert.deepEqual(direct.keyboardCaptionSessions, ['session-old']);
 });
 
@@ -530,7 +533,7 @@ test('materializes project and recording assets without persisting runtime URLs'
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'video.mp4'), 'video');
   const composition = normalizeComposition({
-    schemaVersion: 3,
+    schemaVersion: 5,
     keyboardCaptionSessions: [],
     assets: [
       {
@@ -561,7 +564,7 @@ test('prunes only project media that is no longer referenced', () => {
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'unused.mp4'), 'video');
   const previous = {
-    schemaVersion: 3,
+    schemaVersion: 5,
     keyboardCaptionSessions: [],
     assets: [
       {
@@ -589,7 +592,7 @@ test('persists and reads one atomic editor state', () => {
   fs.writeFileSync(source, 'video');
   const asset = store.importEditorMedia(project.id, { kind: 'video', source });
   const composition = {
-    schemaVersion: 3,
+    schemaVersion: 5,
     keyboardCaptionSessions: [],
     assets: [{ ...asset, durationMs: 1_000 }],
     clips: [visualClip(asset.id)],
@@ -699,4 +702,257 @@ test('imports dropped project media safely and never returns a local path', () =
     /invalide|fichier|directory/i,
   );
   assert.throws(() => store.importDroppedProjectMedia(project.id, { kind: 'video', source: '' }), /invalide|chemin/i);
+});
+
+test('normalizes the v5 visual track identity and preserves it through editor-state round trips', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-track-id-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Track identity' });
+  const source = path.join(root, 'clip.mp4');
+  fs.writeFileSync(source, 'video');
+  const asset = store.importEditorMedia(project.id, { kind: 'video', source });
+  const trackId = 'visual-track-1';
+  const state = store.editorState(project.id);
+  state.composition = {
+    schemaVersion: 5,
+    keyboardCaptionSessions: [],
+    assets: [{ ...asset, durationMs: 2_000 }],
+    clips: [
+      visualClip(asset.id, { id: 'left', trackId, timelineDurationMs: 1_000, sourceDurationMs: 1_000 }),
+      visualClip(asset.id, {
+        id: 'right',
+        trackId,
+        timelineStartMs: 1_000,
+        timelineDurationMs: 1_000,
+        sourceInMs: 1_000,
+        sourceDurationMs: 1_000,
+        order: 1,
+      }),
+    ],
+  };
+
+  const saved = store.saveEditorState(project.id, state);
+  assert.equal(saved.composition.schemaVersion, 5);
+  assert.deepEqual(
+    saved.composition.clips.map((clip) => clip.trackId),
+    [trackId, trackId],
+  );
+  assert.deepEqual(
+    store.editorState(project.id).composition.clips.map((clip) => clip.trackId),
+    [trackId, trackId],
+  );
+});
+
+test('migrates only certain contiguous v3 visual fragments into one track', () => {
+  const asset = {
+    id: 'asset-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 3_000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  const migrated = migrateComposition(
+    {
+      schemaVersion: 3,
+      assets: [asset],
+      clips: [
+        visualClip(asset.id, { id: 'certain-left', timelineDurationMs: 1_000, sourceDurationMs: 1_000 }),
+        visualClip(asset.id, {
+          id: 'certain-right',
+          timelineStartMs: 1_000,
+          timelineDurationMs: 1_000,
+          sourceInMs: 1_000,
+          sourceDurationMs: 1_000,
+        }),
+        visualClip(asset.id, {
+          id: 'ambiguous',
+          timelineStartMs: 1_500,
+          timelineDurationMs: 1_000,
+          sourceInMs: 1_500,
+          sourceDurationMs: 1_000,
+        }),
+      ],
+    },
+    true,
+    [],
+  );
+
+  assert.equal(migrated.schemaVersion, 5);
+  const certain = migrated.clips.filter((clip) => clip.id.startsWith('certain-'));
+  assert.equal(certain.length, 2);
+  assert.ok(certain[0].trackId);
+  assert.equal(certain[0].trackId, certain[1].trackId);
+  assert.notEqual(migrated.clips.find((clip) => clip.id === 'ambiguous').trackId, certain[0].trackId);
+});
+
+test('rejects invalid visual track identities and overlapping clips assigned to one track', () => {
+  const asset = {
+    id: 'asset-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 2_000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  const base = { schemaVersion: 5, assets: [asset], keyboardCaptionSessions: [] };
+  assert.throws(
+    () => normalizeComposition({ ...base, clips: [visualClip(asset.id, { trackId: '' })] }),
+    /track|piste|identit/i,
+  );
+  assert.throws(
+    () =>
+      normalizeComposition({
+        ...base,
+        clips: [
+          visualClip(asset.id, { id: 'first', trackId: 'same-track' }),
+          visualClip(asset.id, { id: 'second', trackId: 'same-track', timelineStartMs: 500 }),
+        ],
+      }),
+    /overlap|chevauch|track|piste/i,
+  );
+});
+
+test('migration groups a mixed-order chain of certain v3 split fragments and keeps another track separate', () => {
+  const asset = {
+    id: 'asset-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 4_000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  const legacyVisual = (id, overrides) => {
+    const clip = visualClip(asset.id, { id, ...overrides });
+    delete clip.trackId;
+    return clip;
+  };
+  const migrated = migrateComposition(
+    {
+      schemaVersion: 3,
+      assets: [asset],
+      clips: [
+        legacyVisual('chain-middle', {
+          timelineStartMs: 1_000,
+          timelineDurationMs: 1_000,
+          sourceInMs: 1_000,
+          sourceDurationMs: 1_000,
+          order: 4,
+        }),
+        legacyVisual('other-track', {
+          timelineStartMs: 500,
+          timelineDurationMs: 500,
+          sourceInMs: 0,
+          sourceDurationMs: 500,
+          order: 1,
+          transform: { x: 0.2, y: 0.2, width: 0.5, height: 0.5 },
+        }),
+        legacyVisual('chain-right', {
+          timelineStartMs: 2_000,
+          timelineDurationMs: 1_000,
+          sourceInMs: 2_000,
+          sourceDurationMs: 1_000,
+          order: 2,
+        }),
+        legacyVisual('chain-left', {
+          timelineStartMs: 0,
+          timelineDurationMs: 1_000,
+          sourceInMs: 0,
+          sourceDurationMs: 1_000,
+          order: 3,
+        }),
+      ],
+    },
+    true,
+    [],
+  );
+
+  const chain = migrated.clips.filter((clip) => clip.id.startsWith('chain-'));
+  assert.equal(chain.length, 3);
+  assert.equal(new Set(chain.map((clip) => clip.trackId)).size, 1);
+  assert.notEqual(migrated.clips.find((clip) => clip.id === 'other-track').trackId, chain[0].trackId);
+});
+
+test('migrates Golden Canvas 2 v4 screen fragments to v5 without losing visual properties', () => {
+  const asset = {
+    id: 'session:golden-canvas:screen:segment-0001.mp4',
+    kind: 'video',
+    name: 'Screen recording',
+    fileName: null,
+    durationMs: 7_513,
+    width: 1920,
+    height: 1080,
+    origin: 'session',
+    sessionId: 'golden-canvas',
+    sessionPath: 'screen/segment-0001.mp4',
+  };
+  const first = visualClip(asset.id, {
+    id: 'screen',
+    trackId: 'screen',
+    timelineStartMs: 0,
+    timelineDurationMs: 580,
+    sourceInMs: 0,
+    sourceDurationMs: 580,
+    transform: {
+      x: 0.16828039203811374,
+      y: 0.16828039203811374,
+      width: 0.8317196079618863,
+      height: 0.8317196079618863,
+    },
+    appearance: { ...visualClip(asset.id).appearance, shadowSize: 'md' },
+  });
+  const second = visualClip(asset.id, {
+    id: '64527578-9583-414d-ba72-9de1643c45eb',
+    trackId: '64527578-9583-414d-ba72-9de1643c45eb',
+    timelineStartMs: 580,
+    timelineDurationMs: 6_933,
+    sourceInMs: 580,
+    sourceDurationMs: 6_933,
+    transform: { x: 0, y: 0, width: 1, height: 1 },
+    appearance: { ...visualClip(asset.id).appearance, shadowSize: 'custom' },
+  });
+  const third = visualClip(asset.id, {
+    id: 'non-continuous',
+    trackId: 'non-continuous',
+    timelineStartMs: 8_000,
+    timelineDurationMs: 500,
+    sourceInMs: 8_000,
+    sourceDurationMs: 500,
+  });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-golden-canvas-migration-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Golden Canvas 2' });
+  const directory = store.directoryFor(project.id);
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.editor.composition = { schemaVersion: 4, assets: [asset], clips: [first, second, third] };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const migrated = store.editorState(project.id);
+
+  assert.equal(migrated.schemaVersion, 3);
+  assert.equal(migrated.composition.schemaVersion, 5);
+  const migratedFirst = migrated.composition.clips.find((clip) => clip.id === first.id);
+  const migratedSecond = migrated.composition.clips.find((clip) => clip.id === second.id);
+  const migratedThird = migrated.composition.clips.find((clip) => clip.id === third.id);
+  assert.equal(migratedFirst.trackId, migratedSecond.trackId);
+  assert.notEqual(migratedThird.trackId, migratedFirst.trackId);
+  assert.deepEqual(migratedFirst.transform, first.transform);
+  assert.deepEqual(migratedSecond.transform, second.transform);
+  assert.equal(migratedFirst.appearance.shadowSize, 'md');
+  assert.equal(migratedSecond.appearance.shadowSize, 'custom');
+
+  const persisted = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.equal(persisted.editor.composition.schemaVersion, 5);
+  assert.deepEqual(
+    persisted.editor.composition.clips.map((clip) => clip.trackId),
+    migrated.composition.clips.map((clip) => clip.trackId),
+  );
+  assert.deepEqual(store.editorState(project.id), migrated);
 });

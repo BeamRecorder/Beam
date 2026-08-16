@@ -30,7 +30,7 @@ const screenClip = (enabled = true): VisualClip => ({
   isMirroredY: false,
 });
 const composition = (enabled = true): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -214,14 +214,12 @@ describe('useCameraZoom', () => {
     const disabledContext = context();
     options.compositionRef.value = composition(false);
     expect(state.drawVideoWindow(disabledContext, 800, 450, null)).toBeNull();
-    expect(disabledContext.roundRect).toHaveBeenCalledWith(0, 0, 800, 450, 16);
-    expect(disabledContext.clip).toHaveBeenCalledOnce();
-    expect(disabledContext.fillText).toHaveBeenCalledWith(
+    expect(disabledContext.fillRect).not.toHaveBeenCalled();
+    expect(disabledContext.fillText).not.toHaveBeenCalledWith(
       'Video track disabled',
       expect.any(Number),
       expect.any(Number),
     );
-    expect(disabledContext.restore).toHaveBeenCalledOnce();
 
     const loadingComposition = composition();
     loadingComposition.assets[0] = { ...loadingComposition.assets[0]!, width: null, height: null };

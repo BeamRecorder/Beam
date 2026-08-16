@@ -93,6 +93,7 @@ const visual = (overrides: Partial<VisualClip>): VisualClip => ({
   playbackRate: 1,
   enabled: true,
   order: 0,
+  trackId: 'screen-track',
   transform: { x: 0, y: 0, width: 1, height: 1 },
   appearance: createDefaultClipAppearance('screen'),
   isMirrored: false,
@@ -122,7 +123,7 @@ const keyboardCaption = (): CaptionClip => ({
 });
 
 const composition = (extraClips: ClipComposition['clips'] = []): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [
     asset('screen-asset', 'video'),
@@ -133,9 +134,25 @@ const composition = (extraClips: ClipComposition['clips'] = []): ClipComposition
     asset('imported-asset', 'audio'),
   ],
   clips: [
-    visual({ id: 'screen-clip', order: 2, groupId: 'linked', name: 'Main screen' }),
-    visual({ id: 'webcam-clip', kind: 'webcam', order: 1, groupId: 'linked', assetId: 'webcam-asset', name: 'Camera' }),
-    visual({ id: 'image-clip', kind: 'image', order: 0, assetId: 'image-asset', name: 'Poster', enabled: false }),
+    visual({ id: 'screen-clip', order: 2, groupId: 'linked', trackId: 'screen-track', name: 'Main screen' }),
+    visual({
+      id: 'webcam-clip',
+      kind: 'webcam',
+      order: 1,
+      groupId: 'linked',
+      trackId: 'webcam-track',
+      assetId: 'webcam-asset',
+      name: 'Camera',
+    }),
+    visual({
+      id: 'image-clip',
+      kind: 'image',
+      order: 0,
+      trackId: 'image-track',
+      assetId: 'image-asset',
+      name: 'Poster',
+      enabled: false,
+    }),
     {
       id: 'caption-clip',
       kind: 'caption',
@@ -547,6 +564,47 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
   });
 
+  it('renders split segments from one track in one visual row while preserving separate tracks', async () => {
+    const segmented = composition();
+    segmented.clips = segmented.clips.flatMap((clip) => {
+      if (clip.id !== 'screen-clip') return [clip];
+      return [
+        visual({
+          ...(clip as VisualClip),
+          id: 'screen-left',
+          name: 'Main screen (left)',
+          timelineDurationMs: 1_000,
+          sourceDurationMs: 1_000,
+          trackId: 'screen-track',
+        }),
+        visual({
+          ...(clip as VisualClip),
+          id: 'screen-right',
+          name: 'Main screen (right)',
+          timelineStartMs: 1_000,
+          timelineDurationMs: 3_000,
+          sourceInMs: 1_000,
+          sourceDurationMs: 3_000,
+          trackId: 'screen-track',
+        }),
+      ];
+    });
+
+    const mounted = await mountTracks({ composition: segmented });
+    const rows = mounted!.findAll('.tracks-stack > .visual-track');
+    expect(rows).toHaveLength(3);
+    expect(rows.filter((row) => row.findAll('.timeline-clip').length === 2)).toHaveLength(1);
+    const segmentedRow = rows.find((row) => row.findAll('.timeline-clip').length === 2)!;
+    expect(segmentedRow.text()).toContain('Main screen (left)');
+    expect(segmentedRow.text()).toContain('Main screen (right)');
+    expect(rows.filter((row) => row.findAll('.timeline-clip').length === 1)).toHaveLength(2);
+
+    const sidebarRows = mounted!.findAll('.sidebar-tracks-stack .visual-track');
+    expect(sidebarRows).toHaveLength(3);
+    await sidebarRows[0]!.get('.track-info').trigger('click');
+    expect(mounted!.emitted('toggle:clip')).toHaveLength(1);
+  });
+
   it('keeps the keyboard track above text, uses Lucide icons, and reserves manual additions for text', async () => {
     const mounted = await mountTracks({ composition: composition([keyboardCaption()]) });
     const rows = mounted!.findAll('.tracks-stack > .track-row');
@@ -663,6 +721,42 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('trim:zoom')).toContainEqual([expect.objectContaining({ id: 'zoom-1', edge: 'end' })]);
   });
 
+  it('keeps move and trim edits as local clip previews until pointerup commits them', async () => {
+    const mounted = await mountTracks();
+    const screenClip = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screenClip) throw new Error('Expected the screen timeline clip stub.');
+
+    const originalStart = (screenClip.props('clip') as VisualClip).timelineStartMs;
+    await screenClip.trigger('pointerdown', { clientX: 120 });
+    window.dispatchEvent(pointerEvent('pointermove', 500));
+    await flushPromises();
+    expect((screenClip.props('clip') as VisualClip).timelineStartMs).toBeGreaterThan(originalStart);
+    expect(mounted!.emitted('preview:composition')).toContainEqual([
+      expect.objectContaining({ clips: expect.any(Array) }),
+    ]);
+    expect(mounted!.emitted('move:clip') ?? []).toHaveLength(0);
+
+    window.dispatchEvent(pointerEvent('pointerup', 500));
+    expect(mounted!.emitted('preview:composition')?.at(-1)).toEqual([null]);
+    expect(mounted!.emitted('move:clip')).toContainEqual([expect.objectContaining({ id: 'screen-clip' })]);
+
+    const originalDuration = (screenClip.props('clip') as VisualClip).timelineDurationMs;
+    await screenClip.find('.trim-handle.end').trigger('pointerdown', { clientX: 500 });
+    window.dispatchEvent(pointerEvent('pointermove', 900));
+    await flushPromises();
+    expect((screenClip.props('clip') as VisualClip).timelineDurationMs).toBeGreaterThan(originalDuration);
+    expect(mounted!.emitted('preview:composition')).toContainEqual([
+      expect.objectContaining({ clips: expect.any(Array) }),
+    ]);
+    expect(mounted!.emitted('trim:clip') ?? []).toHaveLength(0);
+
+    window.dispatchEvent(pointerEvent('pointerup', 900));
+    expect(mounted!.emitted('preview:composition')?.at(-1)).toEqual([null]);
+    expect(mounted!.emitted('trim:clip')).toContainEqual([expect.objectContaining({ id: 'screen-clip', edge: 'end' })]);
+  });
+
   it('releases the zoom trim preview when the trim ends so later props control the indicator', async () => {
     const mounted = await mountTracks();
     const zoomButton = mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)');
@@ -686,8 +780,13 @@ describe('TimelineTracks', () => {
 
     await screenClip.trigger('pointerdown', { clientX: 120 });
     window.dispatchEvent(pointerEvent('pointermove', 500));
+    await flushPromises();
+    expect((screenClip.props('clip') as VisualClip).timelineStartMs).toBeGreaterThan(0);
     window.dispatchEvent(pointerEvent('pointercancel', 500));
+    await flushPromises();
     expect(mounted!.emitted('move:clip') ?? []).toHaveLength(0);
+    expect(mounted!.emitted('preview:composition')?.at(-1)).toEqual([null]);
+    expect((screenClip.props('clip') as VisualClip).timelineStartMs).toBe(0);
 
     const nextComposition = composition();
     nextComposition.clips = nextComposition.clips.map((clip) =>
@@ -709,8 +808,13 @@ describe('TimelineTracks', () => {
 
     await screenClip.find('.trim-handle.start').trigger('pointerdown', { clientX: 200 });
     window.dispatchEvent(pointerEvent('pointermove', 250));
+    await flushPromises();
+    expect((screenClip.props('clip') as VisualClip).timelineStartMs).toBeGreaterThan(0);
     window.dispatchEvent(pointerEvent('pointercancel', 250));
+    await flushPromises();
     expect(mounted!.emitted('trim:clip') ?? []).toHaveLength(0);
+    expect(mounted!.emitted('preview:composition')?.at(-1)).toEqual([null]);
+    expect((screenClip.props('clip') as VisualClip).timelineStartMs).toBe(0);
 
     const nextComposition = composition();
     nextComposition.clips = nextComposition.clips.map((clip) =>

@@ -396,6 +396,7 @@ describe('useClipComposition', () => {
     const mounted = mountComposable();
     const existingVisual: VisualClip = {
       id: 'existing-image',
+      trackId: 'existing-image',
       kind: 'image',
       name: 'Existing image',
       assetId: 'image-asset',

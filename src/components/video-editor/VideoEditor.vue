@@ -144,6 +144,8 @@ const {
   deleteSelectedZoom,
 } = zoomState;
 const { isExporting, progress: exportProgress } = useExportJob();
+const timelineCompositionPreview = ref<typeof composition.value | null>(null);
+const canvasComposition = computed(() => timelineCompositionPreview.value ?? composition.value);
 const selectedTransformClip = computed(() => {
   const clip = selectedClip.value;
   return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
@@ -462,6 +464,7 @@ onBeforeUnmount(() => {
         <div class="canvas-column">
           <CanvasToolbar
             :preset="outputCanvas.preset"
+            :loading="!initialPlaybackSettled"
             :can-crop="Boolean(selectedTransformClip && isVisualClip(selectedTransformClip))"
             :is-cropping="isCropping"
             :is-grid-visible="isGridVisible"
@@ -496,7 +499,7 @@ onBeforeUnmount(() => {
             :editor-data="editorData"
             :zoom-elements="zoomElements"
             :selected-zoom="selectedZoom"
-            :composition="composition"
+            :composition="canvasComposition"
             :output-canvas="outputCanvas"
             :active-tab="activeTab"
             :selected-transform-clip="selectedTransformClip"
@@ -517,6 +520,7 @@ onBeforeUnmount(() => {
             :current-time="currentTime"
             :duration="duration"
             :is-playing="isPlaying"
+            :loading="!initialPlaybackSettled"
             :can-split="Boolean(selectedClipId)"
             v-model:zoom-level="timelineZoomLevel"
             v-model:is-snapping-enabled="isSnappingEnabled"
@@ -553,6 +557,7 @@ onBeforeUnmount(() => {
           @toggle:clip="toggleClip"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
           @move:clip="moveClipTo($event.id, $event.startMs)"
+          @preview:composition="timelineCompositionPreview = $event"
           @trim:zoom="trimZoomEdge($event.id, $event.edge, $event.timeMs)"
           @move:zoom="moveZoom($event.id, $event.startMs, $event.endMs)"
           @add:zoom="addZoomAtTime"

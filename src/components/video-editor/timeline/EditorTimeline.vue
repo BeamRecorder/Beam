@@ -29,6 +29,7 @@ const emit = defineEmits<{
   (event: 'toggle:clip', clipId: string): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
+  (event: 'preview:composition', value: ClipComposition | null): void;
   (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'add:zoom', timeMs: number): void;
@@ -70,6 +71,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       @toggle:clip="emit('toggle:clip', $event)"
       @trim:clip="emit('trim:clip', $event)"
       @move:clip="emit('move:clip', $event)"
+      @preview:composition="emit('preview:composition', $event)"
       @trim:zoom="emit('trim:zoom', $event)"
       @move:zoom="emit('move:zoom', $event)"
       @add:zoom="emit('add:zoom', $event)"

@@ -20,6 +20,7 @@ export type PlaybackWorkerRequest =
       assets: MediaSourceDescriptor[];
       clips: PlaybackClipDescriptor[];
     }
+  | { type: 'retime'; generation: number; clips: PlaybackClipDescriptor[] }
   | { type: 'play'; generation: number; timelineSeconds: number }
   | { type: 'tick'; generation: number; timelineSeconds: number }
   | { type: 'pause'; generation: number }
