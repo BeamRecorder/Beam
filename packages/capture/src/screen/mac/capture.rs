@@ -192,11 +192,13 @@ pub(crate) fn resolve_filter(
         };
         let (left, top, right, bottom) = region.pixel_rect(width, height)?;
         let frame = display.frame();
+        let scale_x = frame.size.width / f64::from(width);
+        let scale_y = frame.size.height / f64::from(height);
         let source_rect = screencapturekit::cg::CGRect::new(
-            frame.size.width * region.x,
-            frame.size.height * region.y,
-            frame.size.width * region.width,
-            frame.size.height * region.height,
+            scale_x * f64::from(left),
+            scale_y * f64::from(top),
+            scale_x * f64::from(right - left),
+            scale_y * f64::from(bottom - top),
         );
         return Ok((
             filter,
