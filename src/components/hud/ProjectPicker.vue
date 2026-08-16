@@ -20,6 +20,7 @@ import Popover from '~/ui/popover/Popover.vue';
 import Input from '~/ui/input/Input.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import ProgressBar from '../ui/progressbar/ProgressBar.vue';
+import { useScrollShadow } from '../ui/scroll-shadow/useScrollShadow';
 import { capture } from '../../api/capture';
 import type { CaptureProject } from '../../api/types/capture-api';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -62,6 +63,35 @@ const projectRows = computed(() => {
 const { list, containerProps, wrapperProps } = useVirtualList(projectRows, {
   itemHeight: () => (props.compact ? 128 : 144),
   overscan: 3,
+});
+
+const { hasTopShadow, hasBottomShadow } = useScrollShadow(containerProps.ref, {
+  offset: 2,
+  orientation: 'vertical',
+});
+
+const maskStyle = computed(() => {
+  const top = hasTopShadow.value;
+  const bottom = hasBottomShadow.value;
+  if (top && bottom) {
+    return {
+      maskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%)',
+      WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black calc(100% - 24px), transparent 100%)',
+    };
+  }
+  if (top) {
+    return {
+      maskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black 100%)',
+      WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 24px, black 100%)',
+    };
+  }
+  if (bottom) {
+    return {
+      maskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%)',
+      WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 24px), transparent 100%)',
+    };
+  }
+  return {};
 });
 
 const selectedProject = computed(
@@ -409,7 +439,7 @@ defineExpose({
       <span>{{ t('recordDemoFirst') }}</span>
     </div>
 
-    <div v-else v-bind="containerProps" class="projects-viewport">
+    <div v-else v-bind="containerProps" class="projects-viewport" :style="maskStyle">
       <div v-bind="wrapperProps" class="projects-list">
         <div v-for="row in list" :key="row.index" class="project-grid project-row">
           <div
