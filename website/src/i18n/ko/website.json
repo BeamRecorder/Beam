@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Beam - 기록하세요. 편집하세요. 공유하세요.",
+    "description": "Beam은 완성도 높은 제품 데모를 위한 오픈 소스 화면 녹화기이자 동영상 편집기입니다."
+  },
+  "home": {
+    "heroLine1": "순간을 기록하세요.",
+    "heroLine2": "이야기를 다듬으세요.",
+    "lede": "Beam은 녹화와 편집을 하나의 집중된 데스크톱 앱으로 결합해, 제품 데모를 빠르게 만들고 명확하게 보여 줍니다.",
+    "watchDemo": "실제 데모 보기",
+    "viewSource": "소스 코드 보기",
+    "playDemoAria": "Beam 데모 재생",
+    "demoAlt": "제품 녹화 화면을 보여 주는 Beam 동영상 편집기",
+    "openDemo": "인터랙티브 데모 열기",
+    "openSourceTitle": "Beam은 커뮤니티와 함께 만들어집니다.",
+    "openSourceText": "코드를 읽고 버그를 신고하거나 녹화기 개선에 참여해 주세요.",
+    "viewGitHub": "GitHub에서 보기",
+    "joinDiscord": "Discord 참여",
+    "contributorsAlt": "GitHub의 Beam 기여자",
+    "contributorsFallback": "Beam을 만드는 사람들을 만나 보세요",
+    "contributors": "{count}명의 기여자가 Beam을 만들고 있습니다 | {count}명의 기여자가 Beam을 만들고 있습니다",
+    "footer": "오픈 소스 화면 녹화기 및 동영상 편집기."
+  },
+  "nav": {
+    "homeAria": "Beam 홈",
+    "mainAria": "주요 탐색",
+    "docs": "문서",
+    "starAria": "GitHub에서 Beam에 별표 추가",
+    "star": "별표 추가",
+    "starsAria": "GitHub 별표 수",
+    "install": "설치"
+  },
+  "theme": { "switchTo": "{theme} 테마로 전환", "light": "밝은", "dark": "어두운" },
+  "install": {
+    "downloadTitle": "{platform}용 Beam {version} 다운로드",
+    "preparingTitle": "{platform}용 Beam {version} 준비 중",
+    "downloadingTitle": "{platform}용 Beam {version} 다운로드 중",
+    "automatic": "다운로드가 자동으로 시작됩니다. 시작되지 않으면 아래 버튼을 사용하세요.",
+    "githubUnavailable": "GitHub에 연결할 수 없습니다. 릴리스 페이지를 열어 패키지를 직접 선택하세요.",
+    "checkingRelease": "GitHub에서 최신 게시 버전을 확인하는 중입니다.",
+    "downloadAgain": "다시 다운로드",
+    "startDownload": "다운로드 시작",
+    "checkingGitHub": "GitHub 확인 중...",
+    "viewRelease": "릴리스 보기",
+    "anotherVersion": "다른 버전이 필요하신가요?",
+    "choosePackage": "Beam을 사용할 컴퓨터에 맞는 패키지를 선택하세요.",
+    "communityTitle": "Beam 소식 받기",
+    "communityText": "Discord에서 릴리스 소식, 문제 해결 도움말, 앞으로 추가될 기능을 확인하세요.",
+    "joinDiscord": "Discord 참여"
+  },
+  "platform": {
+    "windowsSupport": "Windows 10 및 11, x64 또는 ARM64",
+    "windowsFormat": "범용 설치 프로그램",
+    "macosSupport": "macOS 13 이상, Apple Silicon",
+    "macosFormat": "DMG 이미지",
+    "linuxSupport": "AppImage를 지원하는 64비트 배포판",
+    "linuxFormat": "AppImage",
+    "sizeUnavailable": "크기를 알 수 없음",
+    "megabytes": "{count} MB"
+  },
+  "hud": {
+    "aria": "Beam 녹화 제어 데모",
+    "title": "녹화할 대상을 선택하세요",
+    "sourceType": "캡처할 소스 유형",
+    "screen": "화면",
+    "window": "창",
+    "microphone": "마이크",
+    "systemAudio": "시스템 오디오",
+    "playRecording": "실제 녹화 재생",
+    "mainDisplay": "주 디스플레이",
+    "chooseWindow": "창 선택",
+    "demoName": "Beam 데모 - 1920 × 1080"
+  },
+  "editor": {
+    "aria": "Beam 편집기 인터랙티브 데모",
+    "title": "실제 Beam 편집기를 사용해 보세요",
+    "checking": "공개 Beam 데모 프로젝트 확인 중...",
+    "webCodecsUnavailable": "이 브라우저에서는 WebCodecs를 사용할 수 없습니다. 아래에서 원본 MP4를 재생할 수 있습니다.",
+    "ready": "실제 Beam 캔버스, 오디오, 재생 엔진, 편집 가능한 확대/축소와 타임라인.",
+    "decodeFailed": "브라우저에서 Beam 데모 MP4를 디코딩하지 못했습니다. 원본 녹화는 계속 사용할 수 있습니다.",
+    "filesMissing": "공개 데모 파일 {count}개가 누락되었거나 유효하지 않습니다. | 공개 데모 파일 {count}개가 누락되었거나 유효하지 않습니다.",
+    "invalidEdit": "이 편집은 미디어의 유효한 범위를 벗어납니다.",
+    "playbackFailed": "재생 상태를 변경하지 못했습니다.",
+    "frameFailed": "선택한 프레임을 디코딩하지 못했습니다.",
+    "importDisabled": "{type} 가져오기는 네이티브 파일 접근이 필요하므로 브라우저 데모에서는 비활성화되어 있습니다.",
+    "splitHint": "분할하기 전에 재생 헤드를 선택한 클립 안으로 이동하세요.",
+    "fallback": "전체 캔버스에는 WebCodecs가 필요합니다. 수정되지 않은 원본 녹화입니다.",
+    "mp4Unsupported": "이 브라우저는 MP4 동영상 재생을 지원하지 않습니다.",
+    "captionName": "제품 데모 자막",
+    "captionText": "기록하세요. 편집하세요. 공유하세요."
+  },
+  "missing": {
+    "checking": "프로젝트 파일 확인 중...",
+    "title": "편집기가 녹화를 기다리고 있습니다",
+    "instructions": "아래에 표시된 정확한 경로로 이 파일들을 저장소에 추가하세요. 전체 프로젝트를 불러온 후에만 실제 플레이어와 타임라인이 표시됩니다.",
+    "missing": "누락됨",
+    "invalid": "유효하지 않음",
+    "project": "Beam 편집기 상태 및 자막",
+    "manifest": "녹화 매니페스트",
+    "video": "화면 녹화",
+    "cursor": "커서 이벤트",
+    "telemetry": "커서 텔레메트리",
+    "shapes": "커서 모양 카탈로그",
+    "invalidJson": "잘못된 JSON",
+    "emptyCursor": "빈 커서 이벤트 스트림",
+    "requestFailed": "요청 실패",
+    "expectedMp4": "MP4가 필요하지만 {type}을 받았습니다."
+  },
+  "errors": {
+    "githubStatus": "GitHub API가 {status}를 반환했습니다.",
+    "githubUnavailable": "현재 GitHub를 사용할 수 없습니다."
+  }
+}

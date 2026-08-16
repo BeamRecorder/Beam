@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "title": "Beam — Nagrywaj. Edytuj. Udostępniaj.",
+    "description": "Beam to otwartoźródłowy rejestrator ekranu i edytor wideo do dopracowanych prezentacji produktów."
+  },
+  "home": {
+    "heroLine1": "Uchwyć chwilę.",
+    "heroLine2": "Dopracuj historię.",
+    "lede": "Beam łączy przechwytywanie obrazu i edycję w jednej, skoncentrowanej aplikacji desktopowej, dzięki czemu prezentacje produktów można szybko tworzyć i łatwo oglądać.",
+    "watchDemo": "Obejrzyj prawdziwą prezentację",
+    "viewSource": "Zobacz kod źródłowy",
+    "playDemoAria": "Odtwórz prezentację Beam",
+    "demoAlt": "Edytor wideo Beam wyświetlający nagranie produktu",
+    "openDemo": "Otwórz interaktywną prezentację",
+    "openSourceTitle": "Beam powstaje razem ze społecznością.",
+    "openSourceText": "Przeczytaj kod, zgłoś błąd lub pomóż ulepszać rejestrator.",
+    "viewGitHub": "Zobacz na GitHubie",
+    "joinDiscord": "Dołącz do Discorda",
+    "contributorsAlt": "Współtwórcy Beam na GitHubie",
+    "contributorsFallback": "Poznaj osoby tworzące Beam",
+    "contributors": "{count} współtwórca tworzy Beam | {count} współtwórców tworzy Beam",
+    "footer": "Otwartoźródłowy rejestrator i edytor ekranu."
+  },
+  "nav": {
+    "homeAria": "Strona główna Beam",
+    "mainAria": "Nawigacja główna",
+    "docs": "Dokumentacja",
+    "starAria": "Dodaj Beam do ulubionych na GitHubie",
+    "star": "Dodaj gwiazdkę",
+    "starsAria": "Gwiazdki GitHuba",
+    "install": "Zainstaluj"
+  },
+  "theme": { "switchTo": "Przełącz na motyw {theme}", "light": "jasny", "dark": "ciemny" },
+  "install": {
+    "downloadTitle": "Pobierz Beam {version} dla {platform}",
+    "preparingTitle": "Przygotowywanie Beam {version} dla {platform}",
+    "downloadingTitle": "Pobieranie Beam {version} dla {platform}",
+    "automatic": "Pobieranie powinno rozpocząć się automatycznie. Jeśli tak się nie stanie, użyj przycisku poniżej.",
+    "githubUnavailable": "Nie udało się połączyć z GitHubem. Otwórz stronę wydań, aby ręcznie wybrać pakiet.",
+    "checkingRelease": "Sprawdzanie najnowszego wydania opublikowanego na GitHubie.",
+    "downloadAgain": "Pobierz ponownie",
+    "startDownload": "Rozpocznij pobieranie",
+    "checkingGitHub": "Sprawdzanie GitHuba...",
+    "viewRelease": "Wyświetl wydanie",
+    "anotherVersion": "Potrzebujesz innej wersji?",
+    "choosePackage": "Wybierz pakiet pasujący do komputera, na którym będziesz używać Beam.",
+    "communityTitle": "Bądź na bieżąco z Beam",
+    "communityText": "Dołącz do Discorda, aby otrzymywać informacje o wydaniach, pomoc w rozwiązywaniu problemów i zapowiedzi nadchodzących funkcji.",
+    "joinDiscord": "Dołącz do Discorda"
+  },
+  "platform": {
+    "windowsSupport": "Windows 10 i 11, x64 lub ARM64",
+    "windowsFormat": "Uniwersalny instalator",
+    "macosSupport": "macOS 13 lub nowszy, Apple Silicon",
+    "macosFormat": "Obraz DMG",
+    "linuxSupport": "Dystrybucje 64-bitowe z obsługą AppImage",
+    "linuxFormat": "AppImage",
+    "sizeUnavailable": "Rozmiar niedostępny",
+    "megabytes": "{count} MB"
+  },
+  "hud": {
+    "aria": "Prezentacja elementów sterujących przechwytywaniem w Beam",
+    "title": "Wybierz, co nagrać",
+    "sourceType": "Typ źródła przechwytywania",
+    "screen": "Ekran",
+    "window": "Okno",
+    "microphone": "Mikrofon",
+    "systemAudio": "Dźwięk systemowy",
+    "playRecording": "Odtwórz prawdziwe nagranie",
+    "mainDisplay": "Główny ekran",
+    "chooseWindow": "Wybierz okno",
+    "demoName": "Prezentacja Beam — 1920 × 1080"
+  },
+  "editor": {
+    "aria": "Interaktywna prezentacja edytora Beam",
+    "title": "Wypróbuj prawdziwy edytor Beam",
+    "checking": "Sprawdzanie publicznego projektu demonstracyjnego Beam...",
+    "webCodecsUnavailable": "WebCodecs nie jest dostępne w tej przeglądarce. Oryginalny plik MP4 można nadal odtworzyć poniżej.",
+    "ready": "Prawdziwy obszar roboczy Beam, dźwięk, silnik odtwarzania, edytowalne powiększenia i oś czasu.",
+    "decodeFailed": "Beam nie może zdekodować demonstracyjnego pliku MP4 w tej przeglądarce. Oryginalne nagranie jest nadal dostępne.",
+    "filesMissing": "Brakuje {count} publicznego pliku demonstracyjnego lub jest on nieprawidłowy. | Brakuje {count} publicznych plików demonstracyjnych lub są one nieprawidłowe.",
+    "invalidEdit": "Ta edycja wykracza poza prawidłowe granice materiału.",
+    "playbackFailed": "Nie można zmienić odtwarzania.",
+    "frameFailed": "Nie można zdekodować wybranej klatki.",
+    "importDisabled": "Importowanie typu {type} wymaga natywnego dostępu do plików i pozostaje wyłączone w demonstracji przeglądarkowej.",
+    "splitHint": "Przed podzieleniem przesuń głowicę odtwarzania wewnątrz wybranego klipu.",
+    "fallback": "Pełny obszar roboczy wymaga WebCodecs. To niezmodyfikowane nagranie źródłowe.",
+    "mp4Unsupported": "Twoja przeglądarka nie obsługuje odtwarzania wideo MP4.",
+    "captionName": "Podpis prezentacji produktu",
+    "captionText": "Nagrywaj. Edytuj. Udostępniaj."
+  },
+  "missing": {
+    "checking": "Sprawdzanie plików projektu...",
+    "title": "Edytor czeka na nagranie",
+    "instructions": "Dodaj te pliki do repozytorium, korzystając z dokładnych ścieżek podanych poniżej. Prawdziwy odtwarzacz i oś czasu pojawią się dopiero po załadowaniu kompletnego projektu.",
+    "missing": "Brak",
+    "invalid": "Nieprawidłowy",
+    "project": "Stan edytora Beam i podpisy",
+    "manifest": "manifest nagrania",
+    "video": "nagranie ekranu",
+    "cursor": "zdarzenia kursora",
+    "telemetry": "telemetria kursora",
+    "shapes": "katalog kształtów kursora",
+    "invalidJson": "Nieprawidłowy JSON",
+    "emptyCursor": "Pusty strumień zdarzeń kursora",
+    "requestFailed": "Żądanie nie powiodło się",
+    "expectedMp4": "Oczekiwano MP4, otrzymano {type}"
+  },
+  "errors": {
+    "githubStatus": "API GitHuba zwróciło {status}.",
+    "githubUnavailable": "GitHub jest obecnie niedostępny."
+  }
+}
