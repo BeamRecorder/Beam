@@ -93,6 +93,7 @@
     "image": "图片",
     "sound": "声音",
     "text": "文字",
+    "blur": "模糊",
     "goToStart": "转到开头",
     "goToEnd": "转到结尾",
     "play": "播放",
@@ -191,6 +192,25 @@
   },
   "VideoEditor": {
     "exportBanner": "正在导出。实时编辑不会影响当前正在导出的文件。"
+  },
+  "BlurPropertiesPanel": {
+    "mode": "效果",
+    "blur": "模糊",
+    "frosted": "磨砂",
+    "pixelated": "像素化",
+    "opaque": "纯色遮罩",
+    "shape": "形状",
+    "rectangle": "矩形",
+    "square": "正方形",
+    "circle": "圆形",
+    "strength": "强度",
+    "feather": "边缘柔化",
+    "tintOpacity": "色调",
+    "color": "颜色",
+    "enable": "启用",
+    "disable": "停用",
+    "delete": "删除",
+    "privacyHint": "效果会写入导出视频。对于敏感数据，请提高强度或使用纯色遮罩。"
   },
   "VideoProjectEdition": {
     "untitledProject": "未命名项目",

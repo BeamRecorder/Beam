@@ -93,6 +93,7 @@
     "image": "Obraz",
     "sound": "Dźwięk",
     "text": "Tekst",
+    "blur": "Rozmycie",
     "goToStart": "Przejdź na początek",
     "goToEnd": "Przejdź na koniec",
     "play": "Odtwórz",
@@ -191,6 +192,25 @@
   },
   "VideoEditor": {
     "exportBanner": "Eksportowanie w toku. Bieżące zmiany nie wpłyną na aktualnie eksportowany plik."
+  },
+  "BlurPropertiesPanel": {
+    "mode": "Efekt",
+    "blur": "Rozmycie",
+    "frosted": "Matowe szkło",
+    "pixelated": "Pikselizacja",
+    "opaque": "Nieprzezroczysty",
+    "shape": "Kształt",
+    "rectangle": "Prostokąt",
+    "square": "Kwadrat",
+    "circle": "Koło",
+    "strength": "Intensywność",
+    "feather": "Miękkość krawędzi",
+    "tintOpacity": "Odcień",
+    "color": "Kolor",
+    "enable": "Włącz",
+    "disable": "Wyłącz",
+    "delete": "Usuń",
+    "privacyHint": "Efekt jest zapisywany w eksportowanym wideo. Dla danych wrażliwych zwiększ intensywność lub użyj trybu nieprzezroczystego."
   },
   "VideoProjectEdition": {
     "untitledProject": "Projekt bez tytułu",

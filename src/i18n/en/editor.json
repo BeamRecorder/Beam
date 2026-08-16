@@ -93,6 +93,7 @@
     "image": "Image",
     "sound": "Sound",
     "text": "Text",
+    "blur": "Blur",
     "goToStart": "Go to Start",
     "goToEnd": "Go to End",
     "play": "Play",
@@ -211,6 +212,25 @@
     "mediaPlaybackIncompleteRecording": "{project} — “{name}” is unavailable (expected source: {path}). The recording session was not finalized.",
     "mediaPlaybackUnknownProject": "Current project",
     "mediaPlaybackCopyError": "Copy error"
+  },
+  "BlurPropertiesPanel": {
+    "mode": "Effect",
+    "blur": "Blur",
+    "frosted": "Frosted",
+    "pixelated": "Pixelated",
+    "opaque": "Opaque",
+    "shape": "Shape",
+    "rectangle": "Rectangle",
+    "square": "Square",
+    "circle": "Circle",
+    "strength": "Strength",
+    "feather": "Edge softness",
+    "tintOpacity": "Tint",
+    "color": "Color",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "privacyHint": "The effect is baked into the exported video. Increase strength or use Opaque for sensitive data."
   },
   "VideoProjectEdition": {
     "untitledProject": "Untitled project",

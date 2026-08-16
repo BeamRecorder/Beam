@@ -330,6 +330,43 @@ describe('useClipComposition', () => {
     expect(mounted.state.composition.value.clips.find((clip) => clip.kind === 'audio')?.timelineDurationMs).toBe(2_500);
   });
 
+  it('adds and updates an assetless blur overlay at the playhead', async () => {
+    const mounted = mountComposable();
+    mounted.currentTimeSec.value = 2;
+
+    await mounted.state.addElement('blur');
+    expect(mounted.state.selectedClip.value).toMatchObject({
+      kind: 'blur',
+      assetId: '',
+      name: 'Blur',
+      timelineStartMs: 2_000,
+      timelineDurationMs: 5_000,
+      shape: 'rectangle',
+      mode: 'blur',
+      strength: 60,
+      feather: 0,
+      tintOpacity: 0,
+    });
+    expect(mounted.state.composition.value.assets).toHaveLength(0);
+
+    mounted.state.updateSelectedBlur({
+      shape: 'circle',
+      mode: 'frosted',
+      strength: 80,
+      feather: 20,
+      tintOpacity: 25,
+      color: '#abcdef',
+    });
+    expect(mounted.state.selectedClipInfo.value).toMatchObject({
+      blurShape: 'circle',
+      blurMode: 'frosted',
+      blurStrength: 80,
+      blurFeather: 20,
+      blurTintOpacity: 25,
+      blurColor: '#abcdef',
+    });
+  });
+
   it('adds a video with or without a linked imported audio clip', async () => {
     const mounted = mountComposable();
     mockMediaMetadata();

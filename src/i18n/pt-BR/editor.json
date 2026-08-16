@@ -93,6 +93,7 @@
     "image": "Imagem",
     "sound": "Som",
     "text": "Texto",
+    "blur": "Desfoque",
     "goToStart": "Ir para o início",
     "goToEnd": "Ir para o fim",
     "play": "Reproduzir",
@@ -191,6 +192,25 @@
   },
   "VideoEditor": {
     "exportBanner": "Exportação em andamento. As edições ao vivo não afetarão o arquivo que está sendo exportado."
+  },
+  "BlurPropertiesPanel": {
+    "mode": "Efeito",
+    "blur": "Desfoque",
+    "frosted": "Fosco",
+    "pixelated": "Pixelizado",
+    "opaque": "Opaco",
+    "shape": "Forma",
+    "rectangle": "Retângulo",
+    "square": "Quadrado",
+    "circle": "Círculo",
+    "strength": "Intensidade",
+    "feather": "Suavidade das bordas",
+    "tintOpacity": "Tonalidade",
+    "color": "Cor",
+    "enable": "Ativar",
+    "disable": "Desativar",
+    "delete": "Excluir",
+    "privacyHint": "O efeito é incorporado ao vídeo exportado. Aumente a intensidade ou use Opaco para dados sensíveis."
   },
   "VideoProjectEdition": {
     "untitledProject": "Projeto sem título",

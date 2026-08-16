@@ -3,13 +3,18 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCompositionMedia } from '../useCompositionMedia';
 import type { MediaFrame } from '~/media/shared';
-import type { ClipComposition, CaptionClip, VisualClip } from '~/media/shared/composition-types';
+import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '~/media/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
+const applyBlurEffect = vi.hoisted(() => vi.fn());
 vi.mock('../../../composition/appearance/render-decorated-media', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../composition/appearance/render-decorated-media')>()),
   drawDecoratedMedia,
+}));
+vi.mock('../../../composition/effects/blur-effect', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../composition/effects/blur-effect')>()),
+  applyBlurEffect,
 }));
 
 const appearance = {
@@ -77,6 +82,27 @@ const caption = (): CaptionClip => ({
       extrusionDepth: 0,
     },
   },
+});
+
+const blur = (): BlurClip => ({
+  id: 'blur',
+  kind: 'blur',
+  assetId: '',
+  name: 'Blur',
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  transform: { x: 0.2, y: 0.3, width: 0.3, height: 0.2 },
+  shape: 'rectangle',
+  mode: 'blur',
+  strength: 60,
+  feather: 0,
+  tintOpacity: 0,
+  color: '#000000',
 });
 
 const keyboardCaption = (): CaptionClip => ({
@@ -274,6 +300,30 @@ describe('useCompositionMedia', () => {
         mirroredY: true,
       }),
     );
+  });
+
+  it('keeps webcam overlays screen-anchored while a higher blur affects the composed pixels below it', () => {
+    const base = composition();
+    const mounted = mountComposable({ ...base, clips: [...base.clips, blur()] });
+    const ctx = context();
+    const bounds = { dx: 10, dy: 20, dw: 800, dh: 400, scale: 2, focusX: 330, focusY: 170 };
+
+    state.drawVisualStack(ctx, bounds, vi.fn());
+
+    expect(ctx.translate).toHaveBeenNthCalledWith(1, 330, 170);
+    expect(ctx.scale).toHaveBeenCalledWith(0.5, 0.5);
+    expect(ctx.translate).toHaveBeenNthCalledWith(2, -410, -220);
+    expect(ctx.translate).toHaveBeenNthCalledWith(3, 10, 20);
+    expect(applyBlurEffect).toHaveBeenCalledWith(ctx, expect.objectContaining({ id: 'blur' }), {
+      x: 170,
+      y: 140,
+      width: 240,
+      height: 80,
+    });
+    expect(drawDecoratedMedia.mock.invocationCallOrder.at(-1)).toBeLessThan(
+      applyBlurEffect.mock.invocationCallOrder[0],
+    );
+    expect(mounted.frameFor).toHaveBeenCalledWith('webcam');
   });
 
   it('keeps loading frames absent and renders captions and loaded images', () => {

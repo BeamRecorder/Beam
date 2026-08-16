@@ -253,6 +253,10 @@ onUnmounted(() => stopMarquee());
   background: var(--color-track-annotation);
   color: #fff;
 }
+.timeline-clip.kind-blur {
+  background: linear-gradient(110deg, var(--color-track-blur), var(--color-track-blur-highlight));
+  color: #fff;
+}
 .timeline-clip.kind-audio {
   background: var(--color-track-audio-light);
 }

@@ -2,7 +2,9 @@ export const COMPOSITION_SCHEMA_VERSION = 3 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
-export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'audio' | 'caption';
+export type BlurEffectShape = 'rectangle' | 'square' | 'circle';
+export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque';
+export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'blur' | 'audio' | 'caption';
 export type AudioRole = 'system' | 'microphone' | 'imported';
 
 export interface NormalizedTransform {
@@ -143,6 +145,19 @@ export interface VisualClip extends ClipBase {
   isMirroredY: boolean;
 }
 
+export interface BlurClip extends ClipBase {
+  kind: 'blur';
+  /** Kept empty by construction so generic clip consumers can safely inspect assetId. */
+  assetId: string;
+  transform: NormalizedTransform;
+  shape: BlurEffectShape;
+  mode: BlurEffectMode;
+  strength: number;
+  feather: number;
+  tintOpacity: number;
+  color: string;
+}
+
 export interface AudioClip extends ClipBase {
   kind: 'audio';
   assetId: string;
@@ -157,7 +172,7 @@ export interface CaptionClip extends ClipBase {
   isAiGenerated?: boolean;
 }
 
-export type Clip = VisualClip | AudioClip | CaptionClip;
+export type Clip = VisualClip | BlurClip | AudioClip | CaptionClip;
 
 export interface ClipComposition {
   schemaVersion: typeof COMPOSITION_SCHEMA_VERSION;
@@ -178,6 +193,9 @@ export const clipEndMs = (clip: Pick<ClipBase, 'timelineStartMs' | 'timelineDura
 
 export const isVisualClip = (clip: Clip): clip is VisualClip =>
   clip.kind === 'screen' || clip.kind === 'video' || clip.kind === 'image' || clip.kind === 'webcam';
+
+export const isBlurClip = (clip: Clip): clip is BlurClip => clip.kind === 'blur';
+export const isCompositingClip = (clip: Clip): clip is VisualClip | BlurClip => isVisualClip(clip) || isBlurClip(clip);
 
 export const isAudioClip = (clip: Clip): clip is AudioClip => clip.kind === 'audio';
 export const isCaptionClip = (clip: Clip): clip is CaptionClip => clip.kind === 'caption';

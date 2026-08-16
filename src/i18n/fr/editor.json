@@ -93,6 +93,7 @@
     "image": "Image",
     "sound": "Son",
     "text": "Texte",
+    "blur": "Flou",
     "goToStart": "Aller au début",
     "goToEnd": "Aller à la fin",
     "play": "Lire",
@@ -211,6 +212,25 @@
     "mediaPlaybackIncompleteRecording": "{project} — « {name} » est indisponible (source attendue : {path}). La session d’enregistrement ne s’est pas finalisée.",
     "mediaPlaybackUnknownProject": "Projet actuel",
     "mediaPlaybackCopyError": "Copier l’erreur"
+  },
+  "BlurPropertiesPanel": {
+    "mode": "Effet",
+    "blur": "Flou",
+    "frosted": "Dépoli",
+    "pixelated": "Pixelisé",
+    "opaque": "Opaque",
+    "shape": "Forme",
+    "rectangle": "Rectangle",
+    "square": "Carré",
+    "circle": "Cercle",
+    "strength": "Intensité",
+    "feather": "Douceur des bords",
+    "tintOpacity": "Teinte",
+    "color": "Couleur",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "delete": "Supprimer",
+    "privacyHint": "L'effet est intégré à la vidéo exportée. Augmentez l'intensité ou utilisez Opaque pour les données sensibles."
   },
   "VideoProjectEdition": {
     "untitledProject": "Projet sans titre",

@@ -93,6 +93,7 @@
     "image": "이미지",
     "sound": "사운드",
     "text": "텍스트",
+    "blur": "흐림",
     "goToStart": "처음으로 이동",
     "goToEnd": "끝으로 이동",
     "play": "재생",
@@ -191,6 +192,25 @@
   },
   "VideoEditor": {
     "exportBanner": "내보내는 중입니다. 현재 내보내는 파일에는 실시간 편집 내용이 적용되지 않습니다."
+  },
+  "BlurPropertiesPanel": {
+    "mode": "효과",
+    "blur": "흐림",
+    "frosted": "반투명 유리",
+    "pixelated": "픽셀화",
+    "opaque": "불투명",
+    "shape": "모양",
+    "rectangle": "직사각형",
+    "square": "정사각형",
+    "circle": "원",
+    "strength": "강도",
+    "feather": "가장자리 부드러움",
+    "tintOpacity": "색조",
+    "color": "색상",
+    "enable": "사용",
+    "disable": "사용 안 함",
+    "delete": "삭제",
+    "privacyHint": "효과는 내보낸 동영상에 적용됩니다. 민감한 데이터에는 강도를 높이거나 불투명 모드를 사용하세요."
   },
   "VideoProjectEdition": {
     "untitledProject": "제목 없는 프로젝트",

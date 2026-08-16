@@ -13,11 +13,19 @@ import ZoomPanel from '~/components/video-editor/properties/zoom/ZoomPanel.vue';
 import SettingsPanel from '~/components/video-editor/properties/settings/SettingsPanel.vue';
 import ClipPropertiesPanel from '~/components/video-editor/properties/clip/ClipPropertiesPanel.vue';
 import AudioClipPropertiesPanel from '~/components/video-editor/properties/clip/AudioClipPropertiesPanel.vue';
+import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurPropertiesPanel.vue';
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
-import type { CaptionClip, ClipComposition, ClipFrame, NormalizedTransform } from '~/media/shared/composition-types';
+import type {
+  BlurEffectMode,
+  BlurEffectShape,
+  CaptionClip,
+  ClipComposition,
+  ClipFrame,
+  NormalizedTransform,
+} from '~/media/shared/composition-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import type { ShadowDirection } from './cursor/shadow-types';
@@ -52,6 +60,12 @@ export interface SelectedClipProperties {
   isMirrored?: boolean;
   isMirroredY?: boolean;
   volume?: number;
+  blurMode?: BlurEffectMode;
+  blurShape?: BlurEffectShape;
+  blurStrength?: number;
+  blurFeather?: number;
+  blurTintOpacity?: number;
+  blurColor?: string;
 }
 const props = defineProps<{
   activeTab: string;
@@ -120,6 +134,17 @@ const emit = defineEmits<{
   (event: 'update:clip-rate', rate: number): void;
   (event: 'update:clip-enabled', enabled: boolean): void;
   (event: 'update:clip-volume', volume: number): void;
+  (
+    event: 'update:blur',
+    patch: Partial<{
+      mode: BlurEffectMode;
+      shape: BlurEffectShape;
+      strength: number;
+      feather: number;
+      tintOpacity: number;
+      color: string;
+    }>,
+  ): void;
   (event: 'update:clip-is-mirrored', isMirrored: boolean): void;
   (event: 'update:clip-is-mirrored-y', isMirroredY: boolean): void;
   (event: 'update:clip-corner-radius', radius: string): void;
@@ -170,6 +195,21 @@ const emit = defineEmits<{
         v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
         :clip="normalizedSelectedClip"
         @update:volume="emit('update:clip-volume', $event)"
+        @update:enabled="emit('update:clip-enabled', $event)"
+        @delete="emit('delete-clip')"
+      />
+      <BlurPropertiesPanel
+        v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"
+        :clip="{
+          mode: normalizedSelectedClip.blurMode ?? 'blur',
+          shape: normalizedSelectedClip.blurShape ?? 'rectangle',
+          strength: normalizedSelectedClip.blurStrength ?? 60,
+          feather: normalizedSelectedClip.blurFeather ?? 0,
+          tintOpacity: normalizedSelectedClip.blurTintOpacity ?? 0,
+          color: normalizedSelectedClip.blurColor ?? '#000000',
+          enabled: normalizedSelectedClip.enabled,
+        }"
+        @update="emit('update:blur', $event)"
         @update:enabled="emit('update:clip-enabled', $event)"
         @delete="emit('delete-clip')"
       />

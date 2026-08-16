@@ -9,6 +9,7 @@ import {
   linkClips,
   moveClip,
   setClipEnabled,
+  setBlurEffect,
   setPlaybackRate,
   setTransform,
   splitClip,
@@ -17,6 +18,7 @@ import {
 import { activeClipsAt, sourceTimeAt } from '../../src/media/shared/timeline-mapping';
 import type {
   AudioClip,
+  BlurClip,
   Clip,
   ClipComposition,
   MediaAsset,
@@ -94,6 +96,28 @@ const linked = (): ClipComposition => {
     audioClip('audio', { groupId }),
   ]);
 };
+
+const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
+  id: 'blur',
+  kind: 'blur',
+  assetId: '',
+  name: 'Blur',
+  timelineStartMs: 1_000,
+  timelineDurationMs: 5_000,
+  sourceInMs: 0,
+  sourceDurationMs: 5_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 0,
+  transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+  shape: 'rectangle',
+  mode: 'blur',
+  strength: 60,
+  feather: 0,
+  tintOpacity: 0,
+  color: '#000000',
+  ...overrides,
+});
 
 describe('clip composition engine', () => {
   it('maps timeline times to source times and excludes times outside a clip', () => {
@@ -202,6 +226,23 @@ describe('clip composition engine', () => {
     ).toEqual(['camera', 'screen']);
     const incompatible = moveClip(detached, 'camera', 2_000);
     expect(() => linkClips(incompatible, ['screen', 'camera'])).toThrow(/share timeline timing/);
+  });
+
+  it('validates and updates an assetless blur clip', () => {
+    const composition = createComposition([], [blurClip()]);
+    expect(activeClipsAt(composition, 1_500).map((clip) => clip.kind)).toEqual(['blur']);
+    const updated = setBlurEffect(composition, 'blur', { mode: 'pixelated', shape: 'circle', strength: 85 });
+    expect(updated.clips[0]).toMatchObject({ mode: 'pixelated', shape: 'circle', strength: 85 });
+    expect(() => setBlurEffect(composition, 'missing', { mode: 'opaque' })).toThrow(/Unknown clip/);
+  });
+
+  it('rejects invalid blur settings without affecting media assets', () => {
+    expect(() => createComposition([], [blurClip({ strength: 101 })])).toThrow(/blur effect settings/);
+    expect(() => createComposition([], [blurClip({ feather: -1 })])).toThrow(/blur effect settings/);
+    expect(() => createComposition([], [blurClip({ tintOpacity: 101 })])).toThrow(/blur effect settings/);
+    expect(() => createComposition([], [blurClip({ color: 'red' })])).toThrow(/blur effect settings/);
+    const deleted = deleteClip(createComposition([], [blurClip()]), 'blur');
+    expect(deleted).toMatchObject({ assets: [], clips: [] });
   });
 
   it('supports enable, delete and visual transforms while pruning unused media', () => {

@@ -93,6 +93,7 @@
     "image": "Bild",
     "sound": "Ton",
     "text": "Text",
+    "blur": "Unschärfe",
     "goToStart": "Zum Anfang",
     "goToEnd": "Zum Ende",
     "play": "Wiedergabe",
@@ -191,6 +192,25 @@
   },
   "VideoEditor": {
     "exportBanner": "Export läuft. Live-Änderungen wirken sich nicht auf die gerade exportierte Datei aus."
+  },
+  "BlurPropertiesPanel": {
+    "mode": "Effekt",
+    "blur": "Unschärfe",
+    "frosted": "Milchglas",
+    "pixelated": "Pixelig",
+    "opaque": "Deckend",
+    "shape": "Form",
+    "rectangle": "Rechteck",
+    "square": "Quadrat",
+    "circle": "Kreis",
+    "strength": "Stärke",
+    "feather": "Weiche Kante",
+    "tintOpacity": "Tönung",
+    "color": "Farbe",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "delete": "Löschen",
+    "privacyHint": "Der Effekt wird fest in das exportierte Video gerendert. Für sensible Daten Stärke erhöhen oder Deckend verwenden."
   },
   "VideoProjectEdition": {
     "untitledProject": "Unbenanntes Projekt",

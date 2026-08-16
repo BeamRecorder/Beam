@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type { BlurClip, Clip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { resolveCompositionSceneLayers } from '../scene-layers';
 
@@ -21,7 +21,28 @@ const visual = (kind: VisualClip['kind'], id: string, order: number, enabled = t
   isMirroredY: false,
 });
 
-const composition = (...clips: VisualClip[]): ClipComposition => ({
+const blur = (order: number): BlurClip => ({
+  id: 'blur',
+  kind: 'blur',
+  assetId: '',
+  name: 'Blur',
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order,
+  transform: { x: 0.2, y: 0.2, width: 0.3, height: 0.2 },
+  shape: 'rectangle',
+  mode: 'blur',
+  strength: 60,
+  feather: 0,
+  tintOpacity: 0,
+  color: '#000000',
+});
+
+const composition = (...clips: Clip[]): ClipComposition => ({
   schemaVersion: 3,
   keyboardCaptionSessions: [],
   assets: [],
@@ -65,6 +86,15 @@ describe('resolveCompositionSceneLayers', () => {
       'video-back',
       'screen-back',
     ]);
+  });
+
+  it('places blur between the layers it affects and the layers that stay above it', () => {
+    const layers = resolveCompositionSceneLayers(
+      composition(visual('screen', 'screen', 3), visual('image', 'below', 2), blur(1), visual('webcam', 'above', 0)),
+      500,
+    );
+
+    expect(layers.visualStack.map((clip) => clip.id)).toEqual(['screen', 'below', 'blur', 'above']);
   });
 
   it('omits disabled and inactive clips from every scene layer', () => {

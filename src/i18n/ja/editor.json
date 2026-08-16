@@ -93,6 +93,7 @@
     "image": "画像",
     "sound": "サウンド",
     "text": "テキスト",
+    "blur": "ぼかし",
     "goToStart": "先頭へ移動",
     "goToEnd": "末尾へ移動",
     "play": "再生",
@@ -191,6 +192,25 @@
   },
   "VideoEditor": {
     "exportBanner": "書き出し中です。書き出し中のファイルにはライブ編集は反映されません。"
+  },
+  "BlurPropertiesPanel": {
+    "mode": "効果",
+    "blur": "ぼかし",
+    "frosted": "すりガラス",
+    "pixelated": "ピクセル化",
+    "opaque": "不透明",
+    "shape": "形状",
+    "rectangle": "長方形",
+    "square": "正方形",
+    "circle": "円形",
+    "strength": "強度",
+    "feather": "境界のぼかし",
+    "tintOpacity": "色合い",
+    "color": "色",
+    "enable": "有効化",
+    "disable": "無効化",
+    "delete": "削除",
+    "privacyHint": "効果は書き出した動画に焼き込まれます。機密データには強度を上げるか不透明を使用してください。"
   },
   "VideoProjectEdition": {
     "untitledProject": "無題のプロジェクト",

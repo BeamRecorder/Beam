@@ -93,6 +93,7 @@
     "image": "Hình ảnh",
     "sound": "Âm thanh",
     "text": "Văn bản",
+    "blur": "Làm mờ",
     "goToStart": "Về đầu dòng thời gian",
     "goToEnd": "Đến cuối dòng thời gian",
     "play": "Phát",
@@ -211,6 +212,25 @@
     "mediaPlaybackIncompleteRecording": "{project} — “{name}” không khả dụng (nguồn dự kiến: {path}). Phiên ghi hình chưa được hoàn tất.",
     "mediaPlaybackUnknownProject": "Dự án hiện tại",
     "mediaPlaybackCopyError": "Sao chép lỗi"
+  },
+  "BlurPropertiesPanel": {
+    "mode": "Hiệu ứng",
+    "blur": "Làm mờ",
+    "frosted": "Kính mờ",
+    "pixelated": "Pixel hóa",
+    "opaque": "Đục",
+    "shape": "Hình dạng",
+    "rectangle": "Chữ nhật",
+    "square": "Vuông",
+    "circle": "Tròn",
+    "strength": "Cường độ",
+    "feather": "Độ mềm viền",
+    "tintOpacity": "Sắc màu",
+    "color": "Màu",
+    "enable": "Bật",
+    "disable": "Tắt",
+    "delete": "Xóa",
+    "privacyHint": "Hiệu ứng được ghi vào video xuất. Hãy tăng cường độ hoặc dùng chế độ Đục cho dữ liệu nhạy cảm."
   },
   "VideoProjectEdition": {
     "untitledProject": "Dự án chưa đặt tên",

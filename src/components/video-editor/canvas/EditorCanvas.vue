@@ -166,10 +166,15 @@ const drawNonScreenVisuals = (
   ctx: CanvasRenderingContext2D,
   window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX: number; focusY: number },
 ) => {
-  compositionMedia.drawWebcamClips(ctx, window);
+  if (compositionMedia.drawVisualStack) compositionMedia.drawVisualStack(ctx, window, () => undefined);
+  else compositionMedia.drawWebcamClips(ctx, window);
 };
 
 drawVisualStack = (ctx, window, drawScreen) => {
+  if (compositionMedia.drawVisualStack) {
+    compositionMedia.drawVisualStack(ctx, window, drawScreen);
+    return;
+  }
   const layers = resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000);
   for (const clip of layers.cameraVisuals) {
     if (clip.kind === 'screen') drawScreen();
@@ -256,7 +261,7 @@ const renderCanvas = () => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
     currentRenderWindow = window;
-    compositionMedia.drawWebcamClips(ctx, window);
+    if (!compositionMedia.drawVisualStack) compositionMedia.drawWebcamClips(ctx, window);
     compositionMedia.drawComposition(ctx, window);
     cursorOverlay.updateAndDrawRipplesAndCursor(
       ctx,
@@ -299,8 +304,21 @@ function draw() {
 }
 
 const handleIslandPointerDown = (event: PointerEvent) => {
+  if (event.button === 0 && transformAndCrop.selectVisualAt(event, canvasRef.value)) return;
   if (viewportZoom.beginPan(event, containerRef.value)) return;
   cameraZoom.beginSelectionMove(event);
+};
+
+const handleTransformPointerDown = (event: PointerEvent) => {
+  if (event.button === 0) {
+    const clipId = transformAndCrop.clipIdAt(event, canvasRef.value);
+    if (clipId && clipId !== props.selectedTransformClip?.id) {
+      event.stopPropagation();
+      emit('select:clip', clipId);
+      return;
+    }
+  }
+  transformAndCrop.beginTransformDrag(event, 'move');
 };
 
 const handleIslandPointerMove = (event: PointerEvent) => {
@@ -401,19 +419,24 @@ defineExpose({
       />
       <div
         v-if="selectedTransformClip && !selectedCaptionFollowsCursor && !isCropping && selectedZoom?.mode !== 'manual'"
-        class="webcam-selection"
-        :style="transformAndCrop.transformHandleStyle.value"
-        @pointerdown="transformAndCrop.beginTransformDrag($event, 'move')"
-        @pointermove="transformAndCrop.moveTransformDrag"
-        @pointerup="transformAndCrop.endTransformDrag"
-        @pointercancel="transformAndCrop.endTransformDrag"
+        class="transform-selection-viewport"
+        :style="transformAndCrop.transformSelectionViewportStyle.value"
       >
-        <ResizeHandle
-          :corners="transformAndCrop.transformResizeCorners.value"
-          @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
-          @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)"
-          @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)"
-        />
+        <div
+          class="webcam-selection"
+          :style="transformAndCrop.transformHandleStyle.value"
+          @pointerdown="handleTransformPointerDown"
+          @pointermove="transformAndCrop.moveTransformDrag"
+          @pointerup="transformAndCrop.endTransformDrag"
+          @pointercancel="transformAndCrop.endTransformDrag"
+        >
+          <ResizeHandle
+            :corners="transformAndCrop.transformResizeCorners.value"
+            @resize-start="(corner, event) => transformAndCrop.beginTransformDrag(event, 'resize', corner)"
+            @resize-move="(_corner, event) => transformAndCrop.moveTransformDrag(event)"
+            @resize-end="(_corner, event) => transformAndCrop.endTransformDrag(event)"
+          />
+        </div>
       </div>
       <div
         class="zoom-selection-box"

@@ -1,5 +1,5 @@
 import type { CompositionSnapshot } from '../export-types';
-import type { CaptionClip, VisualClip } from '~/media/shared/composition-types';
+import { isBlurClip, type BlurClip, type CaptionClip, type VisualClip } from '~/media/shared/composition-types';
 import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../video-editor/composition/webcam/webcam-zoom';
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
@@ -17,6 +17,7 @@ import {
   type CompositionSceneLayers,
 } from '../../video-editor/composition/scene-layers';
 import type { Canvas2DContext } from '~/types/canvas';
+import { applyBlurEffect } from '../../video-editor/composition/effects/blur-effect';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -101,6 +102,45 @@ function drawVisualClip(
   });
 }
 
+function drawBlurClip(ctx: Canvas2DContext, clip: BlurClip, canvas: { width: number; height: number }) {
+  applyBlurEffect(ctx, clip, {
+    x: clip.transform.x * canvas.width,
+    y: clip.transform.y * canvas.height,
+    width: clip.transform.width * canvas.width,
+    height: clip.transform.height * canvas.height,
+  });
+}
+
+function drawWebcamClip(
+  ctx: Canvas2DContext,
+  clip: VisualClip,
+  media: RenderableMedia,
+  canvas: { width: number; height: number },
+  camera?: { scale: number; focusX: number; focusY: number },
+) {
+  const scale = camera?.scale || 1;
+  ctx.save();
+  if (camera) {
+    ctx.translate(camera.focusX, camera.focusY);
+    ctx.scale(1 / scale, 1 / scale);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+  }
+  drawWebcamOverlay(
+    ctx,
+    media.source,
+    { width: media.width, height: media.height },
+    canvas.width,
+    canvas.height,
+    scale,
+    webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+    clip.transform,
+    clip.crop,
+    clip.appearance,
+    clip.name,
+  );
+  ctx.restore();
+}
+
 export function drawCompositionLayers(
   ctx: Canvas2DContext,
   snapshot: CompositionSnapshot,
@@ -109,23 +149,16 @@ export function drawCompositionLayers(
 ) {
   const timeMs = time * 1_000;
   const layers = resolveCompositionSceneLayers(snapshot.composition, timeMs);
-  for (const clip of [...layers.cameraVisuals.filter((entry) => entry.kind !== 'screen'), ...layers.webcams]) {
+  for (const clip of layers.visualStack) {
+    if (clip.kind === 'screen') continue;
+    if (isBlurClip(clip)) {
+      drawBlurClip(ctx, clip, snapshot.canvas);
+      continue;
+    }
     const media = visuals.get(clip.id);
     if (!media) continue;
     if (clip.kind === 'webcam') {
-      drawWebcamOverlay(
-        ctx,
-        media.source,
-        { width: media.width, height: media.height },
-        snapshot.canvas.width,
-        snapshot.canvas.height,
-        1,
-        webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-        clip.transform,
-        clip.crop,
-        clip.appearance,
-        clip.name,
-      );
+      drawWebcamClip(ctx, clip, media, snapshot.canvas);
     } else drawVisualClip(ctx, clip, media, snapshot.canvas);
   }
   for (const clip of layers.captions) drawCaption(ctx, clip, timeMs, snapshot);
@@ -211,7 +244,7 @@ export function renderCompositionFrame(
   ctx.translate(width / 2, height / 2);
   ctx.scale(scale, scale);
   ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  for (const clip of layers.cameraVisuals) {
+  for (const clip of layers.visualStack) {
     if (clip.kind === 'screen') {
       if (!video || clip.id !== screen?.id || !positionedMedia) continue;
       drawDecoratedMedia(ctx, {
@@ -225,29 +258,21 @@ export function renderCompositionFrame(
       });
       continue;
     }
+    if (isBlurClip(clip)) {
+      drawBlurClip(ctx, clip, snapshot.canvas);
+      continue;
+    }
     const sourceVisual = visuals?.get(clip.id);
     if (!sourceVisual) continue;
-    drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
+    if (clip.kind === 'webcam')
+      drawWebcamClip(ctx, clip, sourceVisual, snapshot.canvas, {
+        scale,
+        focusX: cameraFocus.cx * width,
+        focusY: cameraFocus.cy * height,
+      });
+    else drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
   }
   ctx.restore();
-
-  for (const clip of layers.webcams) {
-    const sourceVisual = visuals?.get(clip.id);
-    if (!sourceVisual) continue;
-    drawWebcamOverlay(
-      ctx,
-      sourceVisual.source,
-      { width: sourceVisual.width, height: sourceVisual.height },
-      width,
-      height,
-      scale,
-      webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-      clip.transform,
-      clip.crop,
-      clip.appearance,
-      clip.name,
-    );
-  }
   const resolvedCursorMotionPlayer = screen
     ? (cursorMotionPlayer ??
       createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight))

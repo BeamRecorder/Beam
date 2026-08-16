@@ -23,6 +23,7 @@ import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from '~/components/vid
 import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import {
   isAudioClip,
+  isBlurClip,
   isCaptionClip,
   isVisualClip,
   type NormalizedCrop,
@@ -107,6 +108,7 @@ const {
   reorderVisualClip,
   updateSelectedAppearance,
   updateSelectedTransform,
+  updateSelectedBlur,
   updateSelectedCrop,
   updateSelectedMirrored,
   updateSelectedMirroredY,
@@ -144,10 +146,10 @@ const {
 const { isExporting, progress: exportProgress } = useExportJob();
 const selectedTransformClip = computed(() => {
   const clip = selectedClip.value;
-  return clip && (isVisualClip(clip) || isCaptionClip(clip)) ? clip : null;
+  return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
 });
 
-const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption') => {
+const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'blur') => {
   void addElement(kind).catch(() => console.error('Unable to add media.'));
 };
 const selectEditorClip = (clipId: string) => {
@@ -429,6 +431,7 @@ onBeforeUnmount(() => {
           @split-clip="splitSelectedClip"
           @update:clip-rate="updateSelectedRate"
           @update:clip-volume="updateSelectedVolume"
+          @update:blur="updateSelectedBlur"
           @update:clip-enabled="updateSelectedEnabled"
           @unlink-clip="detachSelectedClip"
           @update:clip-is-mirrored="updateSelectedMirrored"

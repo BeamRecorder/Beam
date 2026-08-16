@@ -5,9 +5,12 @@ import { inspectMedia, mediaSourceDescriptor, type DroppedMediaInspection } from
 import {
   emptyComposition,
   isAudioClip,
+  isBlurClip,
+  isCompositingClip,
   isCaptionClip,
   isVisualClip,
   type AudioClip,
+  type BlurClip,
   type CaptionClip,
   type Clip,
   type ClipAppearance,
@@ -26,6 +29,7 @@ import {
   MIN_CLIP_DURATION_MS,
   moveClip,
   setAppearance,
+  setBlurEffect,
   setClipEnabled,
   setCrop,
   setMirrored,
@@ -38,6 +42,7 @@ import {
   updateClip,
 } from '../composition/engine/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
+import { useTranslate } from '~/i18n/useTranslate';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
@@ -48,6 +53,7 @@ export function useClipComposition(options: {
   currentTimeSec: Ref<number>;
   activeTab: Ref<string>;
 }) {
+  const { t } = useTranslate('TimelineToolbar');
   const composition = ref<ClipComposition>(emptyComposition());
   const selectedClipId = ref<string | null>(null);
 
@@ -76,6 +82,17 @@ export function useClipComposition(options: {
             isMirroredY: clip.isMirroredY,
             clipTransform: clip.transform,
             ...clip.appearance,
+          }
+        : {}),
+      ...(isBlurClip(clip)
+        ? {
+            clipTransform: clip.transform,
+            blurShape: clip.shape,
+            blurMode: clip.mode,
+            blurStrength: clip.strength,
+            blurFeather: clip.feather,
+            blurTintOpacity: clip.tintOpacity,
+            blurColor: clip.color,
           }
         : {}),
     };
@@ -149,7 +166,8 @@ export function useClipComposition(options: {
 
     const groupId =
       asset.kind === 'video' && inspection.hasAudio && inspection.canDecodeAudio ? crypto.randomUUID() : undefined;
-    const topVisualOrder = Math.min(0, ...composition.value.clips.filter(isVisualClip).map((clip) => clip.order)) - 1;
+    const topVisualOrder =
+      Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1;
     const visual: VisualClip = {
       id: crypto.randomUUID(),
       kind: asset.kind,
@@ -193,8 +211,33 @@ export function useClipComposition(options: {
     return visual.id;
   };
 
-  const addElement = async (kind: 'video' | 'image' | 'sound' | 'caption', requestedStartMs?: number) => {
+  const addElement = async (kind: 'video' | 'image' | 'sound' | 'caption' | 'blur', requestedStartMs?: number) => {
     const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
+    if (kind === 'blur') {
+      const clip: BlurClip = {
+        id: crypto.randomUUID(),
+        kind: 'blur',
+        assetId: '',
+        name: t('blur'),
+        timelineStartMs: startMs,
+        timelineDurationMs: 5_000,
+        sourceInMs: 0,
+        sourceDurationMs: 5_000,
+        playbackRate: 1,
+        enabled: true,
+        order: Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1,
+        transform: { x: 0.35, y: 0.35, width: 0.3, height: 0.3 },
+        shape: 'rectangle',
+        mode: 'blur',
+        strength: 60,
+        feather: 0,
+        tintOpacity: 0,
+        color: '#000000',
+      };
+      composition.value = addClip(composition.value, clip);
+      selectClip(clip.id);
+      return;
+    }
     if (kind === 'caption') {
       const clip: CaptionClip = {
         id: crypto.randomUUID(),
@@ -264,7 +307,9 @@ export function useClipComposition(options: {
     const clip = composition.value.clips.find((entry) => entry.id === clipId);
     if (!clip) return;
     const asset =
-      clip.kind === 'caption' ? undefined : composition.value.assets.find((entry) => entry.id === clip.assetId);
+      clip.kind === 'caption' || isBlurClip(clip)
+        ? undefined
+        : composition.value.assets.find((entry) => entry.id === clip.assetId);
     const originalStartMs = clip.timelineStartMs;
     const originalEndMs = endMs(clip);
 
@@ -314,14 +359,14 @@ export function useClipComposition(options: {
   };
   const reorderVisualClip = (clipId: string, targetIndex: number) => {
     const ordered = [...composition.value.clips].sort((left, right) => left.order - right.order);
-    const visuals = ordered.filter(isVisualClip);
+    const visuals = ordered.filter(isCompositingClip);
     const sourceIndex = visuals.findIndex((clip) => clip.id === clipId);
     if (sourceIndex < 0 || !Number.isInteger(targetIndex)) return;
     const [moved] = visuals.splice(sourceIndex, 1);
     visuals.splice(Math.max(0, Math.min(visuals.length, targetIndex)), 0, moved);
     let visualIndex = 0;
     const clips = ordered.map((clip, order) => ({
-      ...(isVisualClip(clip) ? visuals[visualIndex++] : clip),
+      ...(isCompositingClip(clip) ? visuals[visualIndex++] : clip),
       order,
     }));
     composition.value = createComposition(composition.value.assets, clips);
@@ -338,6 +383,13 @@ export function useClipComposition(options: {
   };
   const updateSelectedTransform = (transform: NormalizedTransform) => {
     if (selectedClipId.value) composition.value = setTransform(composition.value, selectedClipId.value, transform);
+  };
+  const updateSelectedBlur = (
+    patch: Partial<Pick<BlurClip, 'shape' | 'mode' | 'strength' | 'feather' | 'tintOpacity' | 'color'>>,
+  ) => {
+    const clip = selectedClip.value;
+    if (!clip || !isBlurClip(clip)) return;
+    composition.value = setBlurEffect(composition.value, clip.id, patch);
   };
   const updateSelectedCrop = (crop: NormalizedCrop) => {
     if (selectedClipId.value) composition.value = setCrop(composition.value, selectedClipId.value, crop);
@@ -393,6 +445,7 @@ export function useClipComposition(options: {
     reorderVisualClip,
     updateSelectedAppearance,
     updateSelectedTransform,
+    updateSelectedBlur,
     updateSelectedCrop,
     updateSelectedMirrored,
     updateSelectedMirroredY,
