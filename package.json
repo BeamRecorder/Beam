@@ -22,6 +22,7 @@
     "dev": "vite",
     "build": "node scripts/native/artifacts.cjs build && vite build",
     "electron:dev": "node scripts/dev/electron.cjs",
+    "electron:dev:no-rust": "node scripts/dev/electron.cjs --force-no-rust",
     "electron:build": "npm run build && electron-builder --publish never"
   },
   "dependencies": {

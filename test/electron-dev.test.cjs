@@ -9,6 +9,7 @@ const {
   askDownload,
   cargoAvailable,
   cargoBuildArguments,
+  parseDevelopmentArguments,
   resolveDevelopmentEngine,
 } = require('../scripts/dev/electron.cjs');
 const { requiredNativeFiles } = require('../scripts/native/download.cjs');
@@ -70,6 +71,16 @@ test('build arguments compile the engine and the Linux helper, with release and 
     '--target',
     'aarch64-pc-windows-msvc',
   ]);
+});
+
+test('development arguments enable the forced no-Rust path only when requested', () => {
+  assert.deepEqual(parseDevelopmentArguments(), { forceNoRust: false });
+  assert.deepEqual(parseDevelopmentArguments([]), { forceNoRust: false });
+  assert.deepEqual(parseDevelopmentArguments(['--force-no-rust']), { forceNoRust: true });
+});
+
+test('development arguments reject unsupported options', () => {
+  assert.throws(() => parseDevelopmentArguments(['--skip-build']), /Unknown electron:dev option: --skip-build/);
 });
 
 test('Cargo-present development builds are used directly', async () => {

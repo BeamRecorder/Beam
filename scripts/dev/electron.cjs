@@ -21,6 +21,12 @@ function missingFiles(files, existsSync = fs.existsSync) {
   return files.filter((file) => !existsSync(file.destination));
 }
 
+function parseDevelopmentArguments(args = []) {
+  const unsupported = args.filter((argument) => argument !== '--force-no-rust');
+  if (unsupported.length > 0) throw new Error(`Unknown electron:dev option: ${unsupported[0]}`);
+  return { forceNoRust: args.includes('--force-no-rust') };
+}
+
 async function resolveDevelopmentEngine({
   applicationRoot: root = applicationRoot,
   version,
@@ -69,7 +75,11 @@ async function startElectron(executable, { root = applicationRoot, spawnImpl = s
 
 async function main() {
   const { version } = require('../../package.json');
-  const executable = await resolveDevelopmentEngine({ version });
+  const { forceNoRust } = parseDevelopmentArguments(process.argv.slice(2));
+  const executable = await resolveDevelopmentEngine({
+    version,
+    ...(forceNoRust ? { hasCargo: () => false } : {}),
+  });
   console.log(`[electron:dev] Using ${executable}`);
   await startElectron(executable);
 }
@@ -87,6 +97,7 @@ module.exports = {
   cargoAvailable,
   cargoBuildArguments,
   missingFiles,
+  parseDevelopmentArguments,
   resolveDevelopmentEngine,
   runCommand,
   startElectron,
