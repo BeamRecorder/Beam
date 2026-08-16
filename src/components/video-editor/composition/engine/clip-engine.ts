@@ -13,6 +13,14 @@ import {
   type NormalizedCrop,
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
+import {
+  assertValidVisualTracks,
+  maximumVisualTrackDuration,
+  normalizeClipOrders,
+  reorderClipOrders,
+  visualMoveDeltaBounds,
+  visualTrimBounds,
+} from './visual-track-layout';
 
 export const MIN_PLAYBACK_RATE = 0.25;
 export const MAX_PLAYBACK_RATE = 4;
@@ -46,14 +54,6 @@ const normalizeGroups = (clips: Clip[]) => {
   return clips.map((clip) => (clip.groupId && counts.get(clip.groupId) === 1 ? { ...clip, groupId: undefined } : clip));
 };
 
-const normalizeOrders = (clips: Clip[]) =>
-  [...clips]
-    .sort(
-      (left, right) =>
-        left.order - right.order || left.timelineStartMs - right.timelineStartMs || left.id.localeCompare(right.id),
-    )
-    .map((clip, order) => ({ ...clip, order }));
-
 export const createComposition = (
   assets: MediaAsset[] = [],
   clips: Clip[] = [],
@@ -62,7 +62,7 @@ export const createComposition = (
   const composition: ClipComposition = {
     schemaVersion: COMPOSITION_SCHEMA_VERSION,
     assets: cloneValue(assets),
-    clips: normalizeOrders(normalizeGroups(cloneValue(clips))),
+    clips: normalizeClipOrders(normalizeGroups(cloneValue(clips))),
     keyboardCaptionSessions: [...new Set(keyboardCaptionSessions)],
   };
   validateComposition(composition);
@@ -176,6 +176,9 @@ export function validateComposition(composition: ClipComposition): void {
       groupTiming.set(clip.groupId, timing);
     }
   }
+  assertValidVisualTracks(composition.clips, (message) => {
+    throw new CompositionEngineError(message);
+  });
 }
 
 export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipComposition {
@@ -195,7 +198,7 @@ export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipC
 export function addClip(composition: ClipComposition, clip: Clip, asset?: MediaAsset): ClipComposition {
   const next = asset ? addAsset(composition, asset) : clone(composition);
   if (next.clips.some((entry) => entry.id === clip.id)) throw new CompositionEngineError(`Duplicate clip: ${clip.id}`);
-  next.clips = normalizeOrders([...next.clips, cloneValue(clip)]);
+  next.clips = normalizeClipOrders([...next.clips, cloneValue(clip)]);
   validateComposition(next);
   return next;
 }
@@ -208,7 +211,7 @@ export function updateClip(
   const next = clone(composition);
   next.clips = next.clips.map((clip) => (clip.id === clipId ? update(clip) : clip));
   byId(next, clipId);
-  next.clips = normalizeOrders(normalizeGroups(next.clips));
+  next.clips = normalizeClipOrders(normalizeGroups(next.clips));
   validateComposition(next);
   return next;
 }
@@ -219,10 +222,12 @@ export function moveClip(composition: ClipComposition, clipId: string, timelineS
   const source = byId(next, clipId);
   const delta = integer(timelineStartMs) - source.timelineStartMs;
   const ids = new Set(targetIds(next, clipId));
-  const minimum = Math.min(
-    ...next.clips.filter((clip) => ids.has(clip.id)).map((clip) => clip.timelineStartMs + delta),
-  );
-  const adjustedDelta = delta - Math.min(0, minimum);
+  const { min, max } = visualMoveDeltaBounds(next.clips, ids);
+  const minimum = Math.min(...next.clips.filter((clip) => ids.has(clip.id)).map((clip) => clip.timelineStartMs));
+  const adjustedDelta = Math.max(-minimum, delta);
+  if (adjustedDelta < min || adjustedDelta > max) {
+    throw new CompositionEngineError('Clip move would overlap another fragment on the same visual track.');
+  }
   next.clips = next.clips.map((clip) =>
     ids.has(clip.id) ? { ...clip, timelineStartMs: clip.timelineStartMs + adjustedDelta } : clip,
   );
@@ -236,12 +241,19 @@ export function setPlaybackRate(composition: ClipComposition, clipId: string, pl
   }
   const next = clone(composition);
   const ids = new Set(targetIds(next, clipId));
+  const source = byId(next, clipId);
+  const desiredDuration = Math.max(MIN_CLIP_DURATION_MS, integer(source.sourceDurationMs / playbackRate));
+  const maximumDuration = maximumVisualTrackDuration(next.clips, ids);
+  const effectiveRate =
+    desiredDuration > maximumDuration
+      ? Math.max(playbackRate, source.sourceDurationMs / maximumDuration)
+      : playbackRate;
   next.clips = next.clips.map((clip) =>
     ids.has(clip.id)
       ? {
           ...clip,
-          playbackRate,
-          timelineDurationMs: Math.max(MIN_CLIP_DURATION_MS, integer(clip.sourceDurationMs / playbackRate)),
+          playbackRate: effectiveRate,
+          timelineDurationMs: Math.max(MIN_CLIP_DURATION_MS, integer(clip.sourceDurationMs / effectiveRate)),
         }
       : clip,
   );
@@ -272,6 +284,10 @@ export function trimClip(
   }
 
   const ids = new Set(targetIds(next, clipId));
+  const trackBounds = visualTrimBounds(next.clips, ids, edge);
+  if ((edge === 'start' && target < trackBounds.min) || (edge === 'end' && target > trackBounds.max)) {
+    throw new CompositionEngineError('Trim would overlap another fragment on the same visual track.');
+  }
   next.clips = next.clips.map((clip) => {
     if (!ids.has(clip.id)) return clip;
     const rate = Math.max(0.01, clip.playbackRate);
@@ -340,7 +356,7 @@ export function splitClip(
     additions.push(right);
     return { ...clip, timelineDurationMs: offset, sourceDurationMs: leftSourceDuration };
   });
-  next.clips = normalizeOrders([...next.clips, ...additions]);
+  next.clips = normalizeClipOrders([...next.clips, ...additions]);
   validateComposition(next);
   return next;
 }
@@ -362,7 +378,7 @@ export function deleteClip(composition: ClipComposition, clipId: string, grouped
   const next = clone(composition);
   const ids = new Set(grouped ? targetIds(next, clipId) : [clipId]);
   byId(next, clipId);
-  next.clips = normalizeOrders(normalizeGroups(next.clips.filter((clip) => !ids.has(clip.id))));
+  next.clips = normalizeClipOrders(normalizeGroups(next.clips.filter((clip) => !ids.has(clip.id))));
   const usedAssets = new Set(
     next.clips.flatMap((clip) => (clip.kind === 'caption' || isBlurClip(clip) ? [] : [clip.assetId])),
   );
@@ -439,12 +455,10 @@ export const setVolume = (composition: ClipComposition, clipId: string, volume: 
 
 export function reorderClip(composition: ClipComposition, clipId: string, targetIndex: number): ClipComposition {
   const next = clone(composition);
-  const ordered = normalizeOrders(next.clips);
-  const index = ordered.findIndex((clip) => clip.id === clipId);
-  if (index < 0 || !Number.isInteger(targetIndex)) throw new CompositionEngineError('Invalid clip reorder.');
-  const [clip] = ordered.splice(index, 1);
-  ordered.splice(Math.max(0, Math.min(ordered.length, targetIndex)), 0, clip);
-  next.clips = ordered.map((entry, order) => ({ ...entry, order }));
+  const reordered = reorderClipOrders(next.clips, clipId, targetIndex);
+  if (!reordered) throw new CompositionEngineError('Invalid clip reorder.');
+  next.clips = reordered;
+  validateComposition(next);
   return next;
 }
 

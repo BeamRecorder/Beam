@@ -9,7 +9,11 @@ const playback = vi.hoisted(() => {
   const instances: FakePlayback[] = [];
   class FakePlayback {
     readonly listeners = new Map<string, (value: never) => void>();
-    readonly loadComposition = vi.fn(async (_composition: ClipComposition) => {
+    readonly loadComposition = vi.fn(async (_composition: ClipComposition, _timelineSeconds?: number) => {
+      this.emit('state', 'paused');
+    });
+    readonly canRetimeComposition = vi.fn(() => false);
+    readonly retimeComposition = vi.fn(async (_composition: ClipComposition, _timelineSeconds?: number) => {
       this.emit('state', 'paused');
     });
     readonly play = vi.fn(async (time: number) => {
@@ -42,7 +46,7 @@ vi.mock('~/media/playback', () => ({ MediaPlaybackEngine: playback.FakePlayback 
 
 const backgrounds = createBackgroundMedia(['/built-in.png', '/clip.mp4']);
 const composition: ClipComposition = {
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [],
   clips: [
@@ -136,6 +140,75 @@ describe('useVideoPlayer', () => {
     expect(player.frameFor('clip')).toBe(replacement);
   });
 
+  it('preserves a non-zero time and resumes playback after reloading while playing', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    await player.seek(1.25, 'seek');
+    await player.setPlaying(true);
+    expect(player.currentTime.value).toBe(1.25);
+
+    engine.loadComposition.mockClear();
+    engine.seek.mockClear();
+    engine.play.mockClear();
+    const replacement = {
+      ...composition,
+      clips: [{ ...composition.clips[0]!, id: 'reloaded-clip', timelineDurationMs: 1_500, sourceDurationMs: 1_500 }],
+    };
+
+    await player.loadComposition(replacement);
+
+    expect(player.currentTime.value).toBe(1.25);
+    expect(engine.loadComposition).toHaveBeenCalledWith(replacement, 1.25);
+    expect(engine.play).toHaveBeenCalledWith(1.25);
+    expect(player.isPlaying.value).toBe(true);
+    expect(player.playbackState.value).toBe('playing');
+  });
+
+  it('resumes the last concurrent reload even when the first reload pauses the engine', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    await player.seek(1.25, 'seek');
+    await player.setPlaying(true);
+    engine.loadComposition.mockClear();
+    engine.play.mockClear();
+
+    let finishFirst!: () => void;
+    let loadCount = 0;
+    engine.loadComposition.mockImplementation(async (_value, _time) => {
+      loadCount += 1;
+      engine.listeners.get('state')?.('paused' as never);
+      if (loadCount === 1) {
+        await new Promise<void>((resolve) => {
+          finishFirst = resolve;
+        });
+      }
+    });
+
+    const firstReplacement = {
+      ...composition,
+      clips: [{ ...composition.clips[0]!, id: 'first-reload' }],
+    };
+    const secondReplacement = {
+      ...composition,
+      clips: [{ ...composition.clips[0]!, id: 'second-reload' }],
+    };
+    const firstLoad = player.loadComposition(firstReplacement);
+    await Promise.resolve();
+    expect(player.isPlaying.value).toBe(false);
+
+    const secondLoad = player.loadComposition(secondReplacement);
+    await secondLoad;
+    expect(engine.loadComposition).toHaveBeenLastCalledWith(secondReplacement, 1.25);
+    expect(engine.play).toHaveBeenCalledOnce();
+    expect(engine.play).toHaveBeenCalledWith(1.25);
+
+    finishFirst();
+    await firstLoad;
+    expect(engine.play).toHaveBeenCalledOnce();
+  });
+
   it('does not let an older project load seek after a newer project has finished loading', async () => {
     const scope = effectScope();
     let player!: ReturnType<typeof useVideoPlayer>;
@@ -165,11 +238,12 @@ describe('useVideoPlayer', () => {
     const secondLoad = player.loadComposition(replacement);
     await secondLoad;
     expect(player.duration.value).toBe(5.5);
-    expect(engine.seek).toHaveBeenCalledOnce();
+    expect(engine.loadComposition).toHaveBeenCalledTimes(2);
+    expect(engine.loadComposition).toHaveBeenLastCalledWith(replacement, 1);
 
     finishFirstLoad();
     await firstLoad;
-    expect(engine.seek).toHaveBeenCalledOnce();
+    expect(engine.loadComposition).toHaveBeenCalledTimes(2);
     scope.stop();
   });
 

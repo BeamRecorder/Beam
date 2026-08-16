@@ -202,7 +202,7 @@ describe('PropertiesPanel', () => {
     expect(wrapper.get('.panel-title').text()).toBe('Video');
     const buttons = wrapper.findAll('.panel-header-actions button');
     expect(buttons).toHaveLength(2);
-    
+
     // Toggle visibility
     await buttons[0].trigger('click');
     expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);

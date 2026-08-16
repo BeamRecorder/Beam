@@ -112,6 +112,7 @@ const sessionClip = (
   return {
     ...common,
     kind: track.kind === 'camera' ? 'webcam' : 'screen',
+    trackId: `session:${editorData.sessionId}:track:${track.trackId}`,
     assetId: id,
     transform: track.kind === 'camera' ? placement(track) : { x: 0, y: 0, width: 1, height: 1 },
     appearance: createDefaultClipAppearance(track.kind === 'camera' ? 'webcam' : 'screen'),
@@ -184,6 +185,7 @@ export function synchronizeRecordingClips(
     assetsChanged = true;
     candidates.push({
       id: SCREEN_CLIP_ID,
+      trackId: `session:${editorData.sessionId}:track:screen`,
       kind: 'screen',
       name: 'Screen recording',
       assetId: asset.id,

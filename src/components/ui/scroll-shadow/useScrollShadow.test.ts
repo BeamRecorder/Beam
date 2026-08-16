@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ref, nextTick } from 'vue';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { ref } from 'vue';
 import { useScrollShadow } from './useScrollShadow';
 
 describe('useScrollShadow', () => {

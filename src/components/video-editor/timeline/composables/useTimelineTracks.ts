@@ -18,6 +18,10 @@ import { createAnimationFrameCoalescer } from './animation-frame-coalescer';
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineZoomInteractions } from './useTimelineZoomInteractions';
 import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
+import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
+import { visualMoveDeltaBounds, visualTrimBounds } from '../../composition/engine/visual-track-layout';
+import { previewClipMove, previewClipTrim } from './timeline-composition-preview';
+import { useVisualTrackReorder } from './useVisualTrackReorder';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export const DEFAULT_ZOOM_DURATION_MS = 1_200;
@@ -36,20 +40,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
   });
   const orderedClips = computed(() => [...props.composition.clips].sort((left, right) => left.order - right.order));
   const baseVisualClips = computed(() => orderedClips.value.filter(isCompositingClip));
+  const baseVisualTracks = computed(() => groupVisualTimelineTracks(baseVisualClips.value));
   const visualOrderPreview = ref<string[] | null>(null);
-  const visualClips = computed(() => {
-    const clips = baseVisualClips.value;
-    const preview = visualOrderPreview.value;
-    if (!preview) return clips;
-    const byId = new Map(clips.map((clip) => [clip.id, clip]));
-    return [
-      ...preview.flatMap((id) => {
-        const clip = byId.get(id);
-        return clip ? [clip] : [];
-      }),
-      ...clips.filter((clip) => !preview.includes(clip.id)),
-    ];
-  });
+  const visualTracks = computed(() => previewVisualTrackOrder(baseVisualTracks.value, visualOrderPreview.value));
   const captionClips = computed(() => orderedClips.value.filter(isCaptionClip));
   const keyboardCaptionClips = computed(() => orderedClips.value.filter(isKeyboardCaptionClip));
   const textCaptionClips = computed(() => orderedClips.value.filter(isTextCaptionClip));
@@ -150,14 +143,15 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     event.stopPropagation();
     const ids = linkedIdsFor(clip);
     movingClipIds.value = ids;
-    const isVisual = baseVisualClips.value.some((c) => c.id === clip.id);
-    const initialVisualIndex = isVisual ? baseVisualClips.value.findIndex((c) => c.id === clip.id) : -1;
-    const initialVisualOrder = isVisual ? baseVisualClips.value.map((c) => c.id) : null;
+    const initialVisualTrack = baseVisualTracks.value.find((track) => track.clips.some((entry) => entry.id === clip.id));
+    const initialVisualTrackOrder = initialVisualTrack ? baseVisualTracks.value.map((track) => track.id) : null;
+    const initialVisualTrackIndex = initialVisualTrack ? initialVisualTrackOrder!.indexOf(initialVisualTrack.id) : -1;
     const pointerStartX = event.clientX;
     const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
     const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
     const originalStartMs = clip.timelineStartMs;
     const clipLengthMs = clip.timelineDurationMs;
+    const moveBounds = visualMoveDeltaBounds(props.composition.clips, new Set(ids));
 
     const snapTargets = collectSnapTargets({
       composition: props.composition,
@@ -174,14 +168,17 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
       const deltaPx = next.clientX - pointerStartX + (currentScrollLeft - initialScrollLeft);
-      const deltaMs = Math.round(deltaPx * msPerPx);
+      const deltaMs = Math.max(moveBounds.min, Math.min(moveBounds.max, Math.round(deltaPx * msPerPx)));
       const proposedStartMs = Math.max(0, originalStartMs + deltaMs);
       const snap =
         props.isSnappingEnabled !== false
           ? snapSpan(proposedStartMs, clipLengthMs, snapTargets, snapThresholdMs)
           : null;
       if (snap) {
-        finalStartMs = Math.max(0, snap.snappedStartMs);
+        finalStartMs = Math.max(
+          originalStartMs + moveBounds.min,
+          Math.min(originalStartMs + moveBounds.max, Math.max(0, snap.snappedStartMs)),
+        );
         activeSnapTimeMs.value = snap.targetMs;
       } else {
         finalStartMs = proposedStartMs;
@@ -193,36 +190,21 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
         previewDurationMs.value = null;
       }
       previewLinked(ids, finalStartMs, clipLengthMs);
-
-      if (isVisual && initialVisualOrder) {
-        const row =
-          typeof document.elementFromPoint === 'function'
-            ? document.elementFromPoint(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track')
-            : null;
-        const targetId = row?.dataset.clipId;
-        if (targetId && targetId !== clip.id) {
-          const currentOrder = visualOrderPreview.value ?? initialVisualOrder;
-          const from = currentOrder.indexOf(clip.id);
-          const to = currentOrder.indexOf(targetId);
-          if (from >= 0 && to >= 0 && from !== to) {
-            const now = Date.now();
-            if (now - lastVisualSwapTime >= 150) {
-              const rect = row.getBoundingClientRect?.();
-              let canSwap = true;
-              if (rect && rect.height > 0 && typeof next.clientY === 'number') {
-                const relY = (next.clientY - rect.top) / rect.height;
-                if (from < to && relY < 0.35) canSwap = false;
-                if (from > to && relY > 0.65) canSwap = false;
-              }
-              if (canSwap) {
-                const nextOrder = [...currentOrder];
-                nextOrder.splice(from, 1);
-                nextOrder.splice(to, 0, clip.id);
-                visualOrderPreview.value = nextOrder;
-                draggedClipId.value = clip.id;
-                lastVisualSwapTime = now;
-              }
-            }
+      emit('preview:composition', previewClipMove(props.composition, clip, finalStartMs));
+      if (initialVisualTrack && initialVisualTrackOrder) {
+        const row = document.elementFromPoint?.(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
+        const targetTrackId = row?.dataset.trackId;
+        if (targetTrackId && targetTrackId !== initialVisualTrack.id) {
+          const order = [...(visualOrderPreview.value ?? initialVisualTrackOrder)];
+          const from = order.indexOf(initialVisualTrack.id);
+          const to = order.indexOf(targetTrackId);
+          const now = Date.now();
+          if (from >= 0 && to >= 0 && from !== to && now - lastVisualSwapTime >= 150) {
+            order.splice(from, 1);
+            order.splice(to, 0, initialVisualTrack.id);
+            visualOrderPreview.value = order;
+            draggedTrackId.value = initialVisualTrack.id;
+            lastVisualSwapTime = now;
           }
         }
       }
@@ -238,18 +220,19 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       previewDurationMs.value = null;
       movingClipIds.value = [];
       activeSnapTimeMs.value = null;
-      if (isVisual) {
+      emit('preview:composition', null);
+      if (initialVisualTrack) {
         requestAnimationFrame(() => {
           visualOrderPreview.value = null;
-          draggedClipId.value = null;
+          draggedTrackId.value = null;
         });
       }
     };
     const end = () => {
       moveUpdates.flush();
-      if (isVisual && visualOrderPreview.value) {
-        const finalVisualIndex = visualOrderPreview.value.indexOf(clip.id);
-        if (finalVisualIndex >= 0 && finalVisualIndex !== initialVisualIndex) {
+      if (initialVisualTrack && visualOrderPreview.value) {
+        const finalVisualIndex = visualOrderPreview.value.indexOf(initialVisualTrack.id);
+        if (finalVisualIndex >= 0 && finalVisualIndex !== initialVisualTrackIndex) {
           emit('reorder:clip', { id: clip.id, targetIndex: finalVisualIndex });
         }
       }
@@ -276,13 +259,14 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const asset = assetFor(clip);
     const maxLeftExpansionMs =
       asset?.durationMs != null ? Math.round(clip.sourceInMs / Math.max(0.01, clip.playbackRate)) : Infinity;
-    const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs);
+    const trackBounds = visualTrimBounds(props.composition.clips, new Set(ids), edge);
+    const minStartMs = Math.max(0, originalStartMs - maxLeftExpansionMs, trackBounds.min);
 
     const remainingSourceMs =
       asset?.durationMs != null ? Math.max(0, asset.durationMs - (clip.sourceInMs + clip.sourceDurationMs)) : Infinity;
     const maxRightExpansionMs =
       asset?.durationMs != null ? Math.round(remainingSourceMs / Math.max(0.01, clip.playbackRate)) : Infinity;
-    const maxEndMs = originalEndMs + maxRightExpansionMs;
+    const maxEndMs = Math.min(originalEndMs + maxRightExpansionMs, trackBounds.max);
 
     const snapTargets = collectSnapTargets({
       composition: props.composition,
@@ -325,6 +309,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       const endMs = edge === 'end' ? finalTimeMs : originalEndMs;
       previewDurationMs.value = endMs > baseDurationMs ? endMs : null;
       previewLinked(ids, startMs, endMs - startMs);
+      emit('preview:composition', previewClipTrim(props.composition, clip, edge, finalTimeMs));
       activeTrimState.value = { ids, edge, durationMs: endMs - startMs, atLimit: isAtLimit };
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
@@ -338,6 +323,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       previewDurationMs.value = null;
       activeTrimState.value = null;
       activeSnapTimeMs.value = null;
+      emit('preview:composition', null);
     };
     const end = () => {
       moveUpdates.flush();
@@ -423,85 +409,15 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
           : clip.name;
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
-  const draggedClipId = ref<string | null>(null);
-  const beginReorder = (event: PointerEvent, clipId: string) => {
-    if (event.button !== 0 && event.button !== undefined) return;
-    const startX = event.clientX ?? 0;
-    const startY = event.clientY ?? 0;
-    let isDragging = false;
-    let lastSwapTime = 0;
-
-    const initialOrder = baseVisualClips.value.map((clip) => clip.id);
-    const initialIndex = initialOrder.indexOf(clipId);
-    if (initialIndex < 0) return;
-
-    const applyMove = (next: PointerEvent) => {
-      if (!isDragging) {
-        const nextX = next.clientX ?? 0;
-        const nextY = next.clientY ?? 0;
-        const dist = Math.hypot(nextX - startX, nextY - startY);
-        if (dist >= 4 || Number.isNaN(dist)) {
-          isDragging = true;
-          draggedClipId.value = clipId;
-          visualOrderPreview.value = [...initialOrder];
-        } else {
-          return;
-        }
-      }
-
-      const row =
-        typeof document.elementFromPoint === 'function'
-          ? document.elementFromPoint(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track')
-          : null;
-      const targetId = row?.dataset.clipId;
-      if (!targetId || targetId === clipId) return;
-      const order = [...(visualOrderPreview.value ?? initialOrder)];
-      const from = order.indexOf(clipId);
-      const to = order.indexOf(targetId);
-      if (from < 0 || to < 0 || from === to) return;
-
-      const now = Date.now();
-      if (now - lastSwapTime < 150) return;
-
-      const rect = row.getBoundingClientRect?.();
-      if (rect && rect.height > 0 && typeof next.clientY === 'number') {
-        const relY = (next.clientY - rect.top) / rect.height;
-        if (from < to && relY < 0.35) return;
-        if (from > to && relY > 0.65) return;
-      }
-
-      order.splice(from, 1);
-      order.splice(to, 0, clipId);
-      visualOrderPreview.value = order;
-      lastSwapTime = now;
-    };
-    const moveUpdates = createAnimationFrameCoalescer(applyMove);
-    const move = moveUpdates.schedule;
-    const end = () => {
-      moveUpdates.flush();
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', end);
-      window.removeEventListener('pointercancel', end);
-      if (isDragging) {
-        const finalIndex = visualOrderPreview.value?.indexOf(clipId) ?? initialIndex;
-        if (finalIndex !== initialIndex) emit('reorder:clip', { id: clipId, targetIndex: finalIndex });
-        requestAnimationFrame(() => {
-          visualOrderPreview.value = null;
-          draggedClipId.value = null;
-        });
-      }
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', end, { once: true });
-    window.addEventListener('pointercancel', end, { once: true });
-  };
+  const { draggedTrackId, beginReorder } = useVisualTrackReorder({ baseVisualTracks, visualOrderPreview, emit });
 
   return {
     durationMs,
     orderedClips,
     baseVisualClips,
+    baseVisualTracks,
     visualOrderPreview,
-    visualClips,
+    visualTracks,
     captionClips,
     keyboardCaptionClips,
     textCaptionClips,
@@ -557,7 +473,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     iconForVisual,
     labelForVisual,
     zoomScale,
-    draggedClipId,
+    draggedTrackId,
     beginReorder,
     DEFAULT_ZOOM_DURATION_MS,
     DEFAULT_CAPTION_DURATION_MS,

@@ -3,7 +3,7 @@ import type { BlurClip, Clip, ClipComposition, VisualClip } from '~/media/shared
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import { resolveCompositionSceneLayers } from '../scene-layers';
 
-const visual = (kind: VisualClip['kind'], id: string, order: number, enabled = true): VisualClip => ({
+const visual = (kind: VisualClip['kind'], id: string, order: number, enabled = true, trackId = id): VisualClip => ({
   id,
   kind,
   name: id,
@@ -15,6 +15,7 @@ const visual = (kind: VisualClip['kind'], id: string, order: number, enabled = t
   playbackRate: 1,
   enabled,
   order,
+  trackId,
   transform: { x: 0, y: 0, width: 1, height: 1 },
   appearance: createDefaultClipAppearance(kind),
   isMirrored: false,
@@ -44,7 +45,7 @@ const blur = (order: number): BlurClip => ({
 });
 
 const composition = (...clips: Clip[]): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [],
   clips,
@@ -110,5 +111,33 @@ describe('resolveCompositionSceneLayers', () => {
 
     expect(layers.cameraVisuals.map((clip) => clip.id)).toEqual(['screen']);
     expect(layers.webcams.map((clip) => clip.id)).toEqual(['camera']);
+  });
+
+  it('keeps a split track in the same z-order when playback crosses the cut', () => {
+    const layers = composition(
+      visual('video', 'background', 1, true, 'background-track'),
+      visual('video', 'foreground-left', 3, true, 'foreground-track'),
+      visual('video', 'foreground-right', 3, true, 'foreground-track'),
+    );
+    const foregroundLeft = layers.clips.find((clip) => clip.id === 'foreground-left')!;
+    const foregroundRight = layers.clips.find((clip) => clip.id === 'foreground-right')!;
+    const background = layers.clips.find((clip) => clip.id === 'background')!;
+    background.timelineDurationMs = 2_000;
+    background.sourceDurationMs = 2_000;
+    foregroundLeft.timelineDurationMs = 1_000;
+    foregroundRight.timelineStartMs = 1_000;
+    foregroundRight.sourceInMs = 1_000;
+    foregroundRight.sourceDurationMs = 1_000;
+    foregroundRight.timelineDurationMs = 1_000;
+
+    expect(resolveCompositionSceneLayers(layers, 500).cameraVisuals.map((clip) => clip.id)).toEqual([
+      'foreground-left',
+      'background',
+    ]);
+    expect(resolveCompositionSceneLayers(layers, 1_500).cameraVisuals.map((clip) => clip.id)).toEqual([
+      'foreground-right',
+      'background',
+    ]);
+    expect(foregroundLeft.trackId).toBe(foregroundRight.trackId);
   });
 });

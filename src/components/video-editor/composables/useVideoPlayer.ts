@@ -20,6 +20,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const frameVersion = ref(0);
   let engine: MediaPlaybackEngine | null = null;
   let loadGeneration = 0;
+  let playingIntent = false;
   let disposed = false;
   const ensureEngine = () => {
     if (disposed) throw new Error('Video player is disposed.');
@@ -36,6 +37,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
       isPlaying.value = value === 'playing';
     });
     engine.on('error', (value) => {
+      playingIntent = false;
       playbackError.value = value;
     });
     engine.setVolume(volume.value);
@@ -82,26 +84,38 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const loadComposition = async (composition: ClipComposition) => {
     const generation = ++loadGeneration;
     const previousTime = currentTime.value;
+    const wasPlaying = playingIntent;
     duration.value = composition.clips.reduce(
       (end, clip) => Math.max(end, (clip.timelineStartMs + clip.timelineDurationMs) / 1_000),
       0,
     );
     playbackError.value = null;
-    // The engine closes its cached frames synchronously when it reloads.
-    // Invalidate Vue consumers before they can render one of those closed bitmaps.
-    frameVersion.value += 1;
     const playback = ensureEngine();
-    await playback.loadComposition(composition);
+    const targetTime = Math.min(previousTime, duration.value);
+    if (playback.canRetimeComposition(composition)) {
+      await playback.retimeComposition(composition, targetTime);
+    } else {
+      // A full reload closes cached frames synchronously. Invalidate Vue
+      // consumers before they can render one of those closed bitmaps.
+      frameVersion.value += 1;
+      await playback.loadComposition(composition, targetTime);
+    }
     if (disposed || generation !== loadGeneration || playback !== engine) return;
-    if (previousTime > 0) await playback.seek(Math.min(previousTime, duration.value), 'seek');
+    if (wasPlaying) await playback.play(targetTime);
   };
 
   const setPlaying = async (playing: boolean) => {
+    playingIntent = playing;
     const playback = ensureEngine();
-    if (playing) await playback.play(currentTime.value);
-    else playback.pause();
+    try {
+      if (playing) await playback.play(currentTime.value);
+      else playback.pause();
+    } catch (error) {
+      if (playing) playingIntent = false;
+      throw error;
+    }
   };
-  const togglePlay = () => setPlaying(!isPlaying.value);
+  const togglePlay = () => setPlaying(!playingIntent);
   const seek = async (time: number, mode: 'seek' | 'scrub' = 'seek') => {
     if (!Number.isFinite(time)) throw new RangeError('Playback time must be finite.');
     const target = Math.max(0, Math.min(time, duration.value));
@@ -146,6 +160,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   watch(volume, (value) => engine?.setVolume(value));
   onScopeDispose(() => {
     disposed = true;
+    playingIntent = false;
     loadGeneration += 1;
     const playback = engine;
     engine = null;

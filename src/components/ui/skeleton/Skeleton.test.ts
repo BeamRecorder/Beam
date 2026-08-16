@@ -13,4 +13,17 @@ describe('Skeleton', () => {
     expect(wrapper.classes()).toContain('shimmer-radial');
     expect(wrapper.attributes('style')).toContain('border-radius: 50%');
   });
+
+  it('renders the animated gradient surface and keeps loading semantics accessible', () => {
+    const wrapper = mount(Skeleton, {
+      props: { variant: 'animated-gradient' },
+      attrs: { 'aria-label': 'Loading preview', role: 'status' },
+    });
+
+    expect(wrapper.classes()).toContain('shimmer-animated-gradient');
+    expect(wrapper.get('.skeleton-surface').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.get('.skeleton-aurora').attributes('aria-hidden')).toBe('true');
+    expect(wrapper.attributes('aria-label')).toBe('Loading preview');
+    expect(wrapper.attributes('role')).toBe('status');
+  });
 });

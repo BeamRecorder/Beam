@@ -1,7 +1,9 @@
 import { nextTick } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { MotionPlugin } from '@vueuse/motion';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import EditorCanvas from '../EditorCanvas.vue';
+import CanvasLoadingSkeleton from '../CanvasLoadingSkeleton.vue';
 import { DEFAULT_OUTPUT_CANVAS } from '../output-canvas';
 import type { ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { MediaFrame } from '~/media/shared';
@@ -188,7 +190,7 @@ const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -271,6 +273,7 @@ beforeEach(() => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
+      constructor() {}
       observe = vi.fn();
       disconnect = vi.fn();
     },
@@ -284,12 +287,13 @@ beforeEach(() => {
 afterEach(() => {
   wrapper?.unmount();
   wrapper = undefined;
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 const mountEditor = (overrides: Record<string, unknown> = {}) => {
-  wrapper = mount(EditorCanvas, { props: { ...props(), ...overrides } });
+  wrapper = mount(EditorCanvas, { props: { ...props(), ...overrides }, global: { plugins: [MotionPlugin] } });
   return wrapper;
 };
 
@@ -304,7 +308,9 @@ describe('EditorCanvas', () => {
     runFrame();
 
     expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(true);
-    expect(mounted.find('.preview-frame').attributes('style')).toContain('width: 800px');
+    expect(mounted.find('.editor-canvas').classes()).toContain('is-loading-covered');
+    expect(mounted.findComponent(CanvasLoadingSkeleton).props('aspectRatio')).toBe(16 / 9);
+    expect(mounted.find('.preview-frame').attributes('style')).toContain('--preview-aspect-ratio: 1.7777777777777777');
     expect(state.drawBackground).toHaveBeenCalled();
     expect(state.drawWebcamClips).toHaveBeenCalledWith(expect.anything(), expect.any(Object));
     expect(state.drawComposition).toHaveBeenCalled();
@@ -320,6 +326,7 @@ describe('EditorCanvas', () => {
   });
 
   it('re-reads the playback frame when frameVersion advances', async () => {
+    vi.useFakeTimers();
     const frameFor = vi.fn<(clipId: string) => MediaFrame | null>().mockReturnValue(null);
     const mounted = mountEditor({ frameFor, playbackState: 'paused' });
     await nextTick();
@@ -335,7 +342,9 @@ describe('EditorCanvas', () => {
 
     expect(frameFor.mock.calls.length).toBeGreaterThan(initialCallCount);
     expect(frameFor).toHaveBeenLastCalledWith('screen');
-    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(false);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await flushPromises();
+    expect(mounted.find('.canvas-loading-skeleton').exists()).toBe(true);
   });
 
   it('does not flash a loading skeleton when an already rendered screen track is toggled', async () => {

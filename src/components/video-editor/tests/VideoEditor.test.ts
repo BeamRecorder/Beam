@@ -23,7 +23,7 @@ vi.mock('../composables/useVideoEditor', async () => {
     useVideoEditor: vi.fn(() => {
       const activeTab = ref('canvas');
       const composition = ref<ClipComposition>({
-        schemaVersion: 3,
+        schemaVersion: 5,
         keyboardCaptionSessions: [],
         assets: [
           {
@@ -62,6 +62,7 @@ vi.mock('../composables/useVideoEditor', async () => {
             playbackRate: 1,
             enabled: true,
             order: 0,
+            trackId: 'screen-track',
             transform: { x: 0, y: 0, width: 1, height: 1 },
           },
           {
@@ -615,8 +616,6 @@ describe('VideoEditor', () => {
 
   it('shows one copyable playback error toast per error instead of one per seek', async () => {
     const mounted = mountEditor();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
     const playbackError = {
       kind: 'decode-failure' as const,
       sourceId: 'screen-asset',
@@ -629,12 +628,10 @@ describe('VideoEditor', () => {
     expect(toast.error).toHaveBeenCalledWith(
       expect.stringContaining(playbackError.message),
       expect.any(Number),
-      expect.objectContaining({ label: expect.stringMatching(/copy/i), onClick: expect.any(Function) }),
+      expect.objectContaining({ label: expect.stringMatching(/copy/i), copyText: expect.any(String) }),
     );
-    const copyAction = toast.error.mock.calls[0]?.[2] as { onClick: () => void };
-    copyAction.onClick();
-    await flushPromises();
-    const copied = JSON.parse(writeText.mock.calls[0]?.[0] as string) as { error: { kind: string } };
+    const copyAction = toast.error.mock.calls[0]?.[2] as { copyText: string };
+    const copied = JSON.parse(copyAction.copyText) as { error: { kind: string } };
     expect(copied.error.kind).toBe('decode-failure');
 
     await mounted.get('.timeline-time').trigger('click');
@@ -654,8 +651,6 @@ describe('VideoEditor', () => {
         manifest: { completed: false },
       } as any,
     });
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
     const screenAsset = editorState.store.compositionState.composition.value.assets.find(
       (asset: any) => asset.id === 'screen-asset',
     );
@@ -672,15 +667,13 @@ describe('VideoEditor', () => {
     await mounted.vm.$nextTick();
 
     expect(toast.error).toHaveBeenCalledOnce();
-    const [message, , action] = toast.error.mock.calls[0] as [string, number, { onClick: () => void }];
+    const [message, , action] = toast.error.mock.calls[0] as [string, number, { copyText: string }];
     expect(message).toContain('Project');
     expect(message).toContain('Screen recording');
     expect(message).toContain('session-session-42/screen/segment.webm');
     expect(message).toMatch(/not finalized/i);
 
-    action.onClick();
-    await flushPromises();
-    const copied = JSON.parse(writeText.mock.calls[0]?.[0] as string) as {
+    const copied = JSON.parse(action.copyText) as {
       project: { id: string; name: string };
       recordingSession: { id: string; completed: boolean };
       media: { id: string; name: string; expectedProjectPath: string };

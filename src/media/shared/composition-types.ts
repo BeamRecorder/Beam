@@ -1,4 +1,4 @@
-export const COMPOSITION_SCHEMA_VERSION = 3 as const;
+export const COMPOSITION_SCHEMA_VERSION = 5 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -133,6 +133,8 @@ export interface ClipBase {
   order: number;
   /** Clips sharing a group are edited by the same engine operation until detached. */
   groupId?: string;
+  /** Persisted timeline lane for compositing clips; absent on non-visual clips and pre-v4 data. */
+  trackId?: string;
 }
 
 export interface VisualClip extends ClipBase {

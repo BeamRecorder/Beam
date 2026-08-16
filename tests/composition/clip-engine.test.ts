@@ -8,6 +8,7 @@ import {
   detachClip,
   linkClips,
   moveClip,
+  reorderClip,
   setClipEnabled,
   setBlurEffect,
   setPlaybackRate,
@@ -59,6 +60,7 @@ const visualClip = (
   isMirrored: false,
   isMirroredY: false,
   ...overrides,
+  trackId: overrides.trackId ?? id,
 });
 
 const audioClip = (id: string, overrides: Partial<AudioClip> = {}): AudioClip => ({
@@ -118,6 +120,7 @@ const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
   tintOpacity: 0,
   color: '#000000',
   ...overrides,
+  trackId: overrides.trackId ?? 'blur',
 });
 
 describe('clip composition engine', () => {
@@ -200,6 +203,69 @@ describe('clip composition engine', () => {
       sourceInMs: 2_200,
       timelineDurationMs: 2_000,
     });
+
+    const leftScreen = split.clips.find((entry): entry is VisualClip => entry.id === 'screen')!;
+    const rightScreen = split.clips.find(
+      (entry): entry is VisualClip => entry.kind === 'screen' && entry.timelineStartMs === 3_000,
+    )!;
+    const leftCamera = split.clips.find((entry): entry is VisualClip => entry.id === 'camera')!;
+    const rightCamera = split.clips.find(
+      (entry): entry is VisualClip => entry.kind === 'webcam' && entry.timelineStartMs === 3_000,
+    )!;
+    expect(rightScreen.trackId).toBe(leftScreen.trackId);
+    expect(rightCamera.trackId).toBe(leftCamera.trackId);
+    expect(rightScreen.order).toBe(leftScreen.order);
+    expect(rightCamera.order).toBe(leftCamera.order);
+    expect(rightScreen.trackId).not.toBe(rightCamera.trackId);
+  });
+
+  it('keeps repeated split segments on one track and one compositing order', () => {
+    const source = compositionFor([visualClip('source', 'video', { trackId: 'video-track', order: 7 })]);
+    const first = splitClip(source, 'source', 2_000, () => 'source-middle');
+    const second = splitClip(first, 'source-middle', 4_000, () => 'source-right');
+    const segments = second.clips
+      .filter((clip): clip is VisualClip => clip.kind === 'video' && clip.trackId === 'video-track')
+      .sort((left, right) => left.timelineStartMs - right.timelineStartMs);
+
+    expect(segments.map((clip) => [clip.timelineStartMs, clip.timelineDurationMs])).toEqual([
+      [1_000, 1_000],
+      [2_000, 2_000],
+      [4_000, 1_000],
+    ]);
+    expect(new Set(segments.map((clip) => clip.trackId))).toEqual(new Set(['video-track']));
+    expect(new Set(segments.map((clip) => clip.order))).toEqual(new Set([0]));
+  });
+
+  it('blocks moving or trimming a split segment across its sibling on the same track', () => {
+    const source = compositionFor([visualClip('source', 'video', { trackId: 'video-track' })]);
+    const split = splitClip(source, 'source', 3_000, () => 'source-right');
+
+    expect(() => moveClip(split, 'source-right', 2_000)).toThrow(CompositionEngineError);
+    expect(() => trimClip(split, 'source', 'end', 3_500)).toThrow(CompositionEngineError);
+  });
+
+  it('limits a slower playback rate at the next fragment boundary', () => {
+    const source = compositionFor([visualClip('source', 'video', { trackId: 'video-track' })]);
+    const split = splitClip(source, 'source', 3_000, () => 'source-right');
+    const slowed = setPlaybackRate(split, 'source', 0.5);
+    const left = slowed.clips.find((clip) => clip.id === 'source')!;
+
+    expect(left.timelineDurationMs).toBe(2_000);
+    expect(left.playbackRate).toBe(1);
+  });
+
+  it('reorders every fragment of a visual track as one layer', () => {
+    const source = compositionFor([
+      visualClip('front', 'video', { trackId: 'front-track', order: 0 }),
+      visualClip('back', 'image', { trackId: 'back-track', order: 1 }),
+    ]);
+    const split = splitClip(source, 'front', 3_000, () => 'front-right');
+    const reordered = reorderClip(split, 'front', 1);
+    const frontOrders = reordered.clips.filter((clip) => clip.trackId === 'front-track').map((clip) => clip.order);
+    const backOrder = reordered.clips.find((clip) => clip.trackId === 'back-track')!.order;
+
+    expect(new Set(frontOrders).size).toBe(1);
+    expect(frontOrders[0]).toBeGreaterThan(backOrder);
   });
 
   it('lets a detached sidecar move and change speed alone', () => {

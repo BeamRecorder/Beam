@@ -1,47 +1,26 @@
-import { CanvasSink, type WrappedCanvas } from 'mediabunny';
-import { MediaInputError, openMediaInput, type MediaError, type OpenedMediaInput } from '../shared';
+import type { WrappedCanvas } from 'mediabunny';
+import { MediaInputError, openMediaInput, type MediaError } from '../shared';
 import { assertPlaybackWorkerRequest, assertPlaybackWorkerResponse } from './playback-protocol';
 import { playbackPreviewDimensions } from './playback-preview';
 import type {
-  PlaybackClipDescriptor,
   PlaybackFrameMessage,
   PlaybackMetrics,
   PlaybackWorkerRequest,
   PlaybackWorkerResponse,
 } from './playback-types';
+import {
+  PLAYBACK_DECODER_OPTIONS,
+  activeAt,
+  createPlaybackConsumer,
+  disposeLoadedAssets,
+  sourceTime,
+  type AssetDecoder,
+  type ClipConsumer,
+  type QueuedFrame,
+} from './playback-worker-consumers';
 
 const reportPlaybackWorkerError = (message: string, error?: unknown) =>
   console.error(`[Beam media:playback-worker] ${message}`, error ?? '');
-
-const PLAYBACK_DECODER_OPTIONS = {
-  hardwareAcceleration: 'prefer-hardware' as const,
-  optimizeForLatency: true,
-};
-
-type QueuedFrame = {
-  bitmap: ImageBitmap;
-  timestampSeconds: number;
-  durationSeconds: number;
-};
-
-type AssetDecoder = {
-  assetId: string;
-  opened: OpenedMediaInput;
-  sinkTrack: Awaited<ReturnType<OpenedMediaInput['input']['getPrimaryVideoTrack']>>;
-  previewWidth: number;
-  previewHeight: number;
-  decoderOptions?: typeof PLAYBACK_DECODER_OPTIONS;
-};
-
-type ClipConsumer = {
-  clip: PlaybackClipDescriptor;
-  asset: AssetDecoder;
-  sink: CanvasSink;
-  iterator: AsyncIterator<WrappedCanvas> | null;
-  queue: QueuedFrame[];
-  iteratorGeneration: number;
-  lastTargetSeconds: number | null;
-};
 
 const assets = new Map<string, AssetDecoder>();
 const consumers = new Map<string, ClipConsumer>();
@@ -88,6 +67,10 @@ function receive(message: PlaybackWorkerRequest) {
     const task = load(message);
     loadTasks.add(task);
     void task.finally(() => loadTasks.delete(task));
+  } else if (message.type === 'retime') {
+    const task = retime(message);
+    loadTasks.add(task);
+    void task.finally(() => loadTasks.delete(task));
   } else if (message.type === 'seek') {
     if (pendingSeek) supersede(pendingSeek);
     pendingSeek = message;
@@ -100,6 +83,39 @@ function receive(message: PlaybackWorkerRequest) {
     void processTicks();
   } else if (message.type === 'pause') {
     pendingTick = null;
+  }
+}
+
+async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }>) {
+  const version = ++loadVersion;
+  pendingSeek = null;
+  pendingTick = null;
+  await waitForProcessingIdle();
+  if (isStaleLoad(version)) return;
+  try {
+    if (
+      message.clips.length !== consumers.size ||
+      message.clips.some((clip) => consumers.get(clip.clipId)?.asset.assetId !== clip.assetId)
+    ) {
+      throw new Error('Playback topology changed during a timing-only update.');
+    }
+    await Promise.all(
+      message.clips.map(async (clip) => {
+        const consumer = consumers.get(clip.clipId)!;
+        await closeIterator(consumer.iterator);
+        consumer.iteratorGeneration += 1;
+        consumer.iterator = null;
+        consumer.lastTargetSeconds = null;
+        for (const frame of consumer.queue) closeFrame(frame);
+        consumer.queue.length = 0;
+        consumer.clip = clip;
+      }),
+    );
+    updateQueueMetric();
+    post({ type: 'ready', generation: message.generation });
+  } catch (error) {
+    if (isStaleLoad(version)) return;
+    postError(mediaError(error, 'playback'), message.generation);
   }
 }
 
@@ -184,21 +200,7 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
           message: 'A playback clip references an unavailable asset.',
         });
       }
-      consumers.set(clip.clipId, {
-        clip,
-        asset,
-        sink: new CanvasSink(asset.sinkTrack, {
-          width: asset.previewWidth,
-          height: asset.previewHeight,
-          fit: 'contain',
-          poolSize: 3,
-          ...(asset.decoderOptions ? { decoderOptions: asset.decoderOptions } : {}),
-        }),
-        iterator: null,
-        queue: [],
-        iteratorGeneration: 0,
-        lastTargetSeconds: null,
-      });
+      consumers.set(clip.clipId, createPlaybackConsumer(clip, asset));
     }
     post({ type: 'ready', generation: message.generation });
   } catch (error) {
@@ -212,23 +214,6 @@ async function load(message: Extract<PlaybackWorkerRequest, { type: 'load' }>) {
 
 function isStaleLoad(version: number) {
   return version !== loadVersion || disposed;
-}
-
-function disposeLoadedAssets(loadedAssets: Map<string, AssetDecoder>, current?: OpenedMediaInput) {
-  current?.dispose();
-  for (const asset of loadedAssets.values()) asset.opened.dispose();
-  loadedAssets.clear();
-}
-
-function activeAt(clip: PlaybackClipDescriptor, timelineSeconds: number) {
-  return (
-    timelineSeconds >= clip.timelineStartSeconds &&
-    timelineSeconds < clip.timelineStartSeconds + clip.timelineDurationSeconds
-  );
-}
-
-function sourceTime(clip: PlaybackClipDescriptor, timelineSeconds: number) {
-  return clip.sourceInSeconds + (timelineSeconds - clip.timelineStartSeconds) * clip.playbackRate;
 }
 
 async function bitmapFor(wrapped: WrappedCanvas): Promise<QueuedFrame> {

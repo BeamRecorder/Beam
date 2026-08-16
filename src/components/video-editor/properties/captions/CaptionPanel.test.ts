@@ -23,7 +23,7 @@ const whisper = vi.hoisted(() => ({
 }));
 const createComposition = vi.hoisted(() =>
   vi.fn((assets: ClipComposition['assets'], clips: ClipComposition['clips']): ClipComposition => ({
-    schemaVersion: 3,
+    schemaVersion: 5,
     keyboardCaptionSessions: [],
     assets,
     clips,
@@ -73,7 +73,7 @@ const CopyButton = {
 const stubs = { Button, Select, ProgressBar, Throbber, CopyButton };
 
 const audioComposition: ClipComposition = {
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [
     {

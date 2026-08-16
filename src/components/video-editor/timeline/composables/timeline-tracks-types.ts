@@ -1,6 +1,13 @@
 import type { ExportProgress } from '../../../export/export-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { BlurClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+
+export interface VisualTimelineTrack {
+  id: string;
+  clips: Array<VisualClip | BlurClip>;
+  representative: VisualClip | BlurClip;
+  order: number;
+}
 
 export interface TimelineTracksProps {
   currentTime: number;
@@ -23,6 +30,7 @@ export interface TimelineTracksEmits {
   (event: 'toggle:clip', clipId: string): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
+  (event: 'preview:composition', value: ClipComposition | null): void;
   (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'add:zoom', timeMs: number): void;

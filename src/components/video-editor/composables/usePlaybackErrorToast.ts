@@ -19,26 +19,6 @@ const errorSignature = (error: MediaError) =>
     ...('codec' in error ? { codec: error.codec } : {}),
   });
 
-const copyText = async (value: string) => {
-  try {
-    await navigator.clipboard.writeText(value);
-    return;
-  } catch {
-    const textarea = document.createElement('textarea');
-    textarea.value = value;
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.append(textarea);
-    try {
-      textarea.select();
-      if (!document.execCommand('copy')) throw new Error('Unable to copy the playback error.');
-    } finally {
-      textarea.remove();
-    }
-  }
-};
-
 const sourcePath = (asset: ClipComposition['assets'][number] | undefined) => {
   if (!asset) return null;
   if (asset.origin === 'session' && asset.sessionId && asset.sessionPath)
@@ -91,8 +71,7 @@ export function usePlaybackErrorToast(
     );
     toast.error(message, 12_000, {
       label: t('mediaPlaybackCopyError'),
-      onClick: () =>
-        void copyText(copyDetail).catch((copyError) => console.error('Unable to copy playback error.', copyError)),
+      copyText: copyDetail,
     });
   });
 }

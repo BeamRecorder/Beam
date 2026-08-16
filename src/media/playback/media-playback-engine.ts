@@ -80,11 +80,13 @@ export class MediaPlaybackEngine {
     };
   }
 
-  async loadComposition(composition: ClipComposition): Promise<void> {
+  async loadComposition(composition: ClipComposition, timelineSeconds = this.currentSeconds): Promise<void> {
     this.assertActive();
+    if (!Number.isFinite(timelineSeconds)) throw new RangeError('Playback time must be finite.');
+    if (this.canRetimeComposition(composition)) return this.retimeComposition(composition, timelineSeconds);
     this.pause();
     this.composition = composition;
-    this.currentSeconds = 0;
+    this.currentSeconds = this.clampTime(timelineSeconds);
     this.cache.clear();
     this.currentFrameKeys.clear();
     this.setState('loading');
@@ -101,7 +103,47 @@ export class MediaPlaybackEngine {
       if (requestGeneration !== this.generation) return;
       this.setState('paused');
       for (const issue of [...issues, ...audioIssues]) this.reportIssue(issue);
-      await this.seek(0, 'seek');
+      await this.seek(this.currentSeconds, 'seek');
+    } catch (error) {
+      if (requestGeneration !== this.generation) return;
+      const detail = this.toMediaError(error, 'composition');
+      this.fail(detail);
+      throw error;
+    } finally {
+      this.pendingLoads.delete(requestGeneration);
+    }
+  }
+
+  canRetimeComposition(composition: ClipComposition): boolean {
+    return (
+      this.composition !== null &&
+      this.playbackState !== 'idle' &&
+      this.playbackState !== 'loading' &&
+      this.playbackTopology(this.composition) === this.playbackTopology(composition)
+    );
+  }
+
+  async retimeComposition(composition: ClipComposition, timelineSeconds = this.currentSeconds): Promise<void> {
+    this.assertActive();
+    if (!this.canRetimeComposition(composition)) throw new Error('Playback topology changed during retiming.');
+    if (!Number.isFinite(timelineSeconds)) throw new RangeError('Playback time must be finite.');
+    this.pause();
+    this.composition = composition;
+    this.currentSeconds = this.clampTime(timelineSeconds);
+    const requestGeneration = ++this.generation;
+    for (const pending of this.pendingLoads.values()) pending.resolve();
+    this.pendingLoads.clear();
+    try {
+      const { clips, issues } = this.videoPlaybackPlan(composition);
+      const workerReady = new Promise<void>((resolve, reject) => {
+        this.pendingLoads.set(requestGeneration, { resolve, reject });
+      });
+      this.audio.updateComposition(composition);
+      this.post({ type: 'retime', generation: requestGeneration, clips });
+      await workerReady;
+      if (requestGeneration !== this.generation) return;
+      for (const issue of issues) this.reportIssue(issue);
+      await this.seek(this.currentSeconds, 'seek');
     } catch (error) {
       if (requestGeneration !== this.generation) return;
       const detail = this.toMediaError(error, 'composition');
@@ -323,6 +365,23 @@ export class MediaPlaybackEngine {
         },
       ];
     });
+  }
+
+  private playbackTopology(composition: ClipComposition): string {
+    const clips = composition.clips
+      .flatMap((clip) => {
+        if (!clip.enabled) return [];
+        if (isVisualClip(clip) && clip.kind !== 'image') return [{ id: clip.id, assetId: clip.assetId, type: 'video' }];
+        if (clip.kind === 'audio') return [{ id: clip.id, assetId: clip.assetId, type: 'audio' }];
+        return [];
+      })
+      .sort((left, right) => left.id.localeCompare(right.id));
+    const assetIds = new Set(clips.map((clip) => clip.assetId));
+    const assets = composition.assets
+      .filter((asset) => assetIds.has(asset.id))
+      .map((asset) => ({ id: asset.id, kind: asset.kind, src: asset.src }))
+      .sort((left, right) => left.id.localeCompare(right.id));
+    return JSON.stringify({ clips, assets });
   }
 
   private videoPlaybackPlan(composition: ClipComposition): {

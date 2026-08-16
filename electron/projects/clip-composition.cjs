@@ -2,34 +2,21 @@ const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
+const { normalizeCaption } = require('./composition-captions.cjs');
+const {
+  assignMigratedTrackIds,
+  repairMigratedTrackIds,
+  normalizeTrackOrders,
+  validateTrackLayout,
+} = require('./composition-tracks.cjs');
 
-const schemaVersion = 3;
-const previousSchemaVersion = 2;
+const schemaVersion = 5;
+const visualTrackSchemaVersion = 4;
+const previousSchemaVersion = 3;
+const captionTypeSchemaVersion = 2;
 const legacySchemaVersion = 1;
 const mediaKinds = new Set(['video', 'image', 'audio']);
 const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'blur', 'audio', 'caption']);
-const keyboardModifiers = new Set(['control', 'shift', 'alt', 'meta']);
-const keyboardPlatforms = new Set(['windows', 'macos', 'linux']);
-const keyboardKeys = new Set([
-  ...'abcdefghijklmnopqrstuvwxyz',
-  ...Array.from({ length: 10 }, (_, index) => `digit${index}`),
-  'arrow-up',
-  'arrow-down',
-  'arrow-left',
-  'arrow-right',
-  'escape',
-  'enter',
-  'tab',
-  'backspace',
-  'delete',
-  'insert',
-  'home',
-  'end',
-  'page-up',
-  'page-down',
-  'space',
-  ...Array.from({ length: 12 }, (_, index) => `f${index + 1}`),
-]);
 const extensions = {
   video: new Set(['.mp4', '.webm', '.mov', '.mkv']),
   image: new Set(['.png', '.jpg', '.jpeg', '.webp']),
@@ -110,111 +97,6 @@ const appearance = (value) => {
   };
 };
 
-const captionStyle = (value) => {
-  const style = value || {};
-  if (
-    typeof style.color !== 'string' ||
-    !finite(style.fontSize) ||
-    typeof style.wrap !== 'boolean' ||
-    typeof style.shadowColor !== 'string' ||
-    !finite(style.shadowBlur) ||
-    !finite(style.backdropBlur) ||
-    typeof style.outlineColor !== 'string' ||
-    !finite(style.outlineWidth) ||
-    !finite(style.extrusionDepth) ||
-    !['top', 'center', 'bottom'].includes(style.placement)
-  )
-    throw new Error('Style de caption invalide');
-  return {
-    color: style.color,
-    fontSize: Math.max(1, style.fontSize),
-    wrap: style.wrap,
-    shadowColor: style.shadowColor,
-    shadowBlur: Math.max(0, style.shadowBlur),
-    backdropBlur: Math.max(0, Math.min(48, style.backdropBlur)),
-    outlineColor: style.outlineColor,
-    outlineWidth: Math.max(0, Math.min(30, style.outlineWidth)),
-    extrusionDepth: Math.max(0, Math.min(20, style.extrusionDepth)),
-    placement: style.placement,
-    ...(typeof style.shadowDirection === 'string' ? { shadowDirection: style.shadowDirection } : {}),
-    ...(finite(style.shadowOffsetX) ? { shadowOffsetX: style.shadowOffsetX } : {}),
-    ...(finite(style.shadowOffsetY) ? { shadowOffsetY: style.shadowOffsetY } : {}),
-    ...(typeof style.customText === 'string' ? { customText: style.customText } : {}),
-  };
-};
-
-const textCaption = (value) => {
-  if (!Array.isArray(value.sentences)) throw new Error('Caption texte invalide');
-  const sentences = value.sentences.map((sentence) => {
-    if (!sentence || !id(sentence.id) || !Array.isArray(sentence.words)) throw new Error('Phrase de caption invalide');
-    const words = sentence.words.map((word) => {
-      if (
-        !word ||
-        typeof word.text !== 'string' ||
-        !finite(word.startMs) ||
-        !finite(word.endMs) ||
-        word.endMs < word.startMs
-      )
-        throw new Error('Mot de caption invalide');
-      return {
-        text: word.text,
-        startMs: Math.max(0, Math.round(word.startMs)),
-        endMs: Math.max(0, Math.round(word.endMs)),
-      };
-    });
-    return {
-      id: sentence.id,
-      text: typeof sentence.text === 'string' ? sentence.text : words.map((word) => word.text).join(' '),
-      startMs: finite(sentence.startMs) ? Math.max(0, Math.round(sentence.startMs)) : (words[0]?.startMs ?? 0),
-      endMs: finite(sentence.endMs) ? Math.max(0, Math.round(sentence.endMs)) : (words.at(-1)?.endMs ?? 0),
-      words,
-    };
-  });
-  return { type: 'text', sentences, style: captionStyle(value.style) };
-};
-
-const keyboardCaption = (value) => {
-  if (
-    !Array.isArray(value.steps) ||
-    typeof value.followCursor !== 'boolean' ||
-    !keyboardPlatforms.has(value.recordedPlatform) ||
-    !id(value.sourceSessionId)
-  )
-    throw new Error('Caption clavier invalide');
-  let previousOffset = -1;
-  const steps = value.steps.map((step) => {
-    if (
-      !step ||
-      !finite(step.offsetMs) ||
-      step.offsetMs < 0 ||
-      step.offsetMs < previousOffset ||
-      !Array.isArray(step.modifiers) ||
-      step.modifiers.some((modifier) => !keyboardModifiers.has(modifier)) ||
-      new Set(step.modifiers).size !== step.modifiers.length ||
-      !keyboardKeys.has(step.key)
-    )
-      throw new Error('Étape de caption clavier invalide');
-    previousOffset = Math.round(step.offsetMs);
-    return { offsetMs: previousOffset, modifiers: [...step.modifiers], key: step.key };
-  });
-  if (!steps.length) throw new Error('Caption clavier vide');
-  return {
-    type: 'keyboard',
-    steps,
-    followCursor: value.followCursor,
-    recordedPlatform: value.recordedPlatform,
-    sourceSessionId: value.sourceSessionId,
-    style: captionStyle(value.style),
-  };
-};
-
-const caption = (value) => {
-  if (!value || typeof value !== 'object') throw new Error('Caption invalide');
-  if (value.type === 'text') return textCaption(value);
-  if (value.type === 'keyboard') return keyboardCaption(value);
-  throw new Error('Type de caption invalide');
-};
-
 function normalizeComposition(value) {
   if (!value) throw new Error('Composition absente');
   if (
@@ -258,7 +140,7 @@ function normalizeComposition(value) {
   });
   const clipIds = new Set();
   const groups = new Map();
-  const clips = value.clips.map((clip, order) => {
+  const clips = value.clips.map((clip) => {
     if (!clip || !id(clip.id) || clipIds.has(clip.id) || !clipKinds.has(clip.kind) || typeof clip.enabled !== 'boolean')
       throw new Error('Clip invalide');
     clipIds.add(clip.id);
@@ -268,6 +150,7 @@ function normalizeComposition(value) {
       clip.sourceInMs,
       clip.sourceDurationMs,
       clip.playbackRate,
+      clip.order,
     ];
     if (
       !numbers.every(finite) ||
@@ -290,7 +173,7 @@ function normalizeComposition(value) {
       sourceDurationMs: Math.round(clip.sourceDurationMs),
       playbackRate: clip.playbackRate,
       enabled: clip.enabled,
-      order,
+      order: clip.order,
       ...(id(clip.groupId) ? { groupId: clip.groupId } : {}),
     };
     if (common.groupId) {
@@ -301,11 +184,12 @@ function normalizeComposition(value) {
     if (clip.kind === 'caption')
       return {
         ...common,
-        caption: caption(clip.caption),
+        caption: normalizeCaption(clip.caption),
         ...(clip.transform ? { transform: rectangle(clip.transform, 'Transformation') } : {}),
         ...(typeof clip.isAiGenerated === 'boolean' ? { isAiGenerated: clip.isAiGenerated } : {}),
       };
     if (clip.kind === 'blur') {
+      if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
       const effectColor = color(clip.color, null);
       if (
         !['rectangle', 'square', 'circle'].includes(clip.shape) ||
@@ -323,6 +207,7 @@ function normalizeComposition(value) {
         throw new Error('Effet de flou invalide');
       return {
         ...common,
+        trackId: clip.trackId,
         assetId: '',
         transform: rectangle(clip.transform, 'Transformation'),
         shape: clip.shape,
@@ -342,8 +227,10 @@ function normalizeComposition(value) {
         role: ['system', 'microphone', 'imported'].includes(clip.role) ? clip.role : 'imported',
         volume: finite(clip.volume) ? Math.max(0, Math.min(200, clip.volume)) : 100,
       };
+    if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
     return {
       ...common,
+      trackId: clip.trackId,
       assetId: clip.assetId,
       transform: rectangle(clip.transform, 'Transformation'),
       ...(clip.crop ? { crop: rectangle(clip.crop, 'Recadrage') } : {}),
@@ -357,6 +244,10 @@ function normalizeComposition(value) {
   });
   const groupCounts = new Map();
   for (const clip of clips) if (clip.groupId) groupCounts.set(clip.groupId, (groupCounts.get(clip.groupId) || 0) + 1);
+  const normalizedClips = normalizeTrackOrders(
+    clips.map((clip) => (clip.groupId && groupCounts.get(clip.groupId) < 2 ? { ...clip, groupId: undefined } : clip)),
+  );
+  validateTrackLayout(normalizedClips);
   return {
     schemaVersion,
     assets,
@@ -368,61 +259,76 @@ function normalizeComposition(value) {
         }),
       ),
     ],
-    clips: clips.map((clip) =>
-      clip.groupId && groupCounts.get(clip.groupId) < 2 ? { ...clip, groupId: undefined } : clip,
-    ),
+    clips: normalizedClips,
   };
 }
 
 function migrateComposition(value, showBackground, historicalSessionIds = []) {
   if (
     !value ||
-    ![legacySchemaVersion, previousSchemaVersion].includes(value.schemaVersion) ||
+    ![legacySchemaVersion, captionTypeSchemaVersion, previousSchemaVersion, visualTrackSchemaVersion].includes(
+      value.schemaVersion,
+    ) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
   )
     throw new Error(`Version de composition inconnue: ${String(value?.schemaVersion)}`);
+  if (value.schemaVersion === visualTrackSchemaVersion) {
+    return normalizeComposition({
+      ...value,
+      schemaVersion,
+      keyboardCaptionSessions: Array.isArray(value.keyboardCaptionSessions)
+        ? value.keyboardCaptionSessions
+        : historicalSessionIds,
+      clips: repairMigratedTrackIds(value.clips),
+    });
+  }
   return normalizeComposition({
     schemaVersion,
     assets: value.assets,
     keyboardCaptionSessions: historicalSessionIds,
-    clips: value.clips.map((clip) => {
-      if (clip.kind === 'caption') {
-        if (value.schemaVersion === previousSchemaVersion)
-          return { ...clip, caption: { ...clip.caption, type: 'text' } };
-        const style = clip.caption?.style || {};
-        return {
-          ...clip,
-          caption: {
-            ...clip.caption,
-            type: 'text',
-            style: {
-              color: typeof style.color === 'string' ? style.color : '#ffffff',
-              fontSize: finite(style.fontSize) ? style.fontSize : 42,
-              wrap: typeof style.wrap === 'boolean' ? style.wrap : true,
-              shadowColor: typeof style.shadowColor === 'string' ? style.shadowColor : '#000000',
-              shadowBlur: finite(style.shadowBlur) ? style.shadowBlur : 4,
-              backdropBlur: finite(style.backdropBlur) ? style.backdropBlur : 0,
-              outlineColor: typeof style.boxColor === 'string' ? style.boxColor : '#000000',
-              outlineWidth: finite(style.boxPadding) ? style.boxPadding : 6,
-              extrusionDepth: finite(style.boxRadius) ? style.boxRadius : 4,
-              placement: ['top', 'center', 'bottom'].includes(style.placement) ? style.placement : 'bottom',
-              ...(typeof style.shadowDirection === 'string' ? { shadowDirection: style.shadowDirection } : {}),
-              ...(finite(style.shadowOffsetX) ? { shadowOffsetX: style.shadowOffsetX } : {}),
-              ...(finite(style.shadowOffsetY) ? { shadowOffsetY: style.shadowOffsetY } : {}),
-              ...(typeof style.customText === 'string' ? { customText: style.customText } : {}),
-            },
-          },
-        };
-      }
-      if (!['screen', 'video', 'image', 'webcam'].includes(clip.kind)) return clip;
-      return {
-        ...clip,
-        appearance: { ...historicalAppearance(clip.kind, showBackground), ...(clip.appearance || {}) },
-        isMirrored: typeof clip.isMirrored === 'boolean' ? clip.isMirrored : false,
-        isMirroredY: typeof clip.isMirroredY === 'boolean' ? clip.isMirroredY : false,
-      };
-    }),
+    clips: repairMigratedTrackIds(
+      assignMigratedTrackIds(
+        value.clips.map((clip) => {
+          if (clip.kind === 'caption') {
+            if (value.schemaVersion === captionTypeSchemaVersion)
+              return { ...clip, caption: { ...clip.caption, type: 'text' } };
+            if (value.schemaVersion === previousSchemaVersion) return clip;
+            const style = clip.caption?.style || {};
+            return {
+              ...clip,
+              caption: {
+                ...clip.caption,
+                type: 'text',
+                style: {
+                  color: typeof style.color === 'string' ? style.color : '#ffffff',
+                  fontSize: finite(style.fontSize) ? style.fontSize : 42,
+                  wrap: typeof style.wrap === 'boolean' ? style.wrap : true,
+                  shadowColor: typeof style.shadowColor === 'string' ? style.shadowColor : '#000000',
+                  shadowBlur: finite(style.shadowBlur) ? style.shadowBlur : 4,
+                  backdropBlur: finite(style.backdropBlur) ? style.backdropBlur : 0,
+                  outlineColor: typeof style.boxColor === 'string' ? style.boxColor : '#000000',
+                  outlineWidth: finite(style.boxPadding) ? style.boxPadding : 6,
+                  extrusionDepth: finite(style.boxRadius) ? style.boxRadius : 4,
+                  placement: ['top', 'center', 'bottom'].includes(style.placement) ? style.placement : 'bottom',
+                  ...(typeof style.shadowDirection === 'string' ? { shadowDirection: style.shadowDirection } : {}),
+                  ...(finite(style.shadowOffsetX) ? { shadowOffsetX: style.shadowOffsetX } : {}),
+                  ...(finite(style.shadowOffsetY) ? { shadowOffsetY: style.shadowOffsetY } : {}),
+                  ...(typeof style.customText === 'string' ? { customText: style.customText } : {}),
+                },
+              },
+            };
+          }
+          if (!['screen', 'video', 'image', 'webcam'].includes(clip.kind)) return clip;
+          return {
+            ...clip,
+            appearance: { ...historicalAppearance(clip.kind, showBackground), ...(clip.appearance || {}) },
+            isMirrored: typeof clip.isMirrored === 'boolean' ? clip.isMirrored : false,
+            isMirroredY: typeof clip.isMirroredY === 'boolean' ? clip.isMirroredY : false,
+          };
+        }),
+      ),
+    ),
   });
 }
 

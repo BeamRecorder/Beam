@@ -22,6 +22,7 @@
   position: absolute;
   top: 0;
   left: 0;
+  container-type: size;
   will-change: transform;
 }
 .canvas-3x3-grid {
@@ -76,19 +77,20 @@
   position: relative;
   z-index: 1;
 }
-.canvas-loading-skeleton {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
+.editor-canvas.is-loading-covered {
+  opacity: 0;
 }
 .preview-frame {
   position: absolute;
+  inset: 0;
   z-index: 0;
+  width: min(100cqw, calc(100cqh * var(--preview-aspect-ratio)));
+  height: min(100cqh, calc(100cqw / var(--preview-aspect-ratio)));
+  margin: auto;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   box-sizing: border-box;
-  background: var(--color-bg-element);
+  background: transparent;
   box-shadow: none;
   pointer-events: none;
 }

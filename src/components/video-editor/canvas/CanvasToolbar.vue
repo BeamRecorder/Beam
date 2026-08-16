@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Crop, Check, ZoomIn, ZoomOut, Grid } from '@lucide/vue';
 import PopoverMenuButton from '../../ui/popover/PopoverMenuButton.vue';
 import Button from '../../ui/button/Button.vue';
+import Skeleton from '../../ui/skeleton/Skeleton.vue';
 import type { OutputCanvasPreset } from './output-canvas';
 import { useTranslate } from '~/i18n/useTranslate';
 
@@ -16,11 +17,13 @@ const props = withDefaults(
     isGridVisible?: boolean;
     zoomPercent?: number;
     isZoomedOrPanned?: boolean;
+    loading?: boolean;
   }>(),
   {
     isGridVisible: false,
     zoomPercent: 100,
     isZoomedOrPanned: false,
+    loading: false,
   },
 );
 
@@ -39,66 +42,79 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
 
 <template>
   <div class="canvas-toolbar">
-    <PopoverMenuButton
-      transparent
-      :label="preset"
-      :aria-label="t('formatPreset', { preset })"
-      :items="items"
-      @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)"
-    />
-    <Button
-      class="crop-button"
-      :variant="isCropping ? 'primary' : 'outline'"
-      size="xs"
-      :icon="isCropping ? Check : Crop"
-      :disabled="!canCrop"
-      :tooltip="canCrop ? (isCropping ? t('confirmCrop') : t('cropSelected')) : t('selectElementToCrop')"
-      @click="emit('toggle:crop')"
-    >
-      {{ isCropping ? t('ok') : t('crop') }}
-    </Button>
-
-    <div class="toolbar-divider"></div>
-
-    <Button
-      variant="ghost"
-      size="xs"
-      :icon="Grid"
-      :aria-label="t('toggleGrid')"
-      :tooltip="t('toggleGrid')"
-      class="grid-toggle-btn"
-      :class="{ 'is-active': isGridVisible }"
-      @click="emit('toggle:grid')"
-    />
-
-    <div class="zoom-controls">
-      <Button
-        variant="ghost"
-        size="xs"
-        :icon="ZoomOut"
-        :aria-label="t('zoomOut')"
-        :tooltip="t('zoomOut')"
-        class="zoom-btn"
-        @click="emit('zoom:out')"
+    <Transition name="toolbar-ready" mode="out-in">
+      <Skeleton
+        v-if="loading"
+        class="toolbar-loading-skeleton"
+        variant="animated-gradient"
+        width="280px"
+        height="28px"
+        radius="var(--radius-md)"
+        aria-hidden="true"
       />
-      <span
-        class="zoom-indicator"
-        :class="{ 'is-active': isZoomedOrPanned }"
-        :title="t('canvasZoom')"
-        @click="emit('reset:zoom')"
-      >
-        {{ zoomPercent }}%
-      </span>
-      <Button
-        variant="ghost"
-        size="xs"
-        :icon="ZoomIn"
-        :aria-label="t('zoomIn')"
-        :tooltip="t('zoomIn')"
-        class="zoom-btn"
-        @click="emit('zoom:in')"
-      />
-    </div>
+      <div v-else class="toolbar-controls">
+        <PopoverMenuButton
+          transparent
+          :label="preset"
+          :aria-label="t('formatPreset', { preset })"
+          :items="items"
+          @select="emit('select:preset', $event as Exclude<OutputCanvasPreset, 'custom'>)"
+        />
+        <Button
+          class="crop-button"
+          :variant="isCropping ? 'primary' : 'outline'"
+          size="xs"
+          :icon="isCropping ? Check : Crop"
+          :disabled="!canCrop"
+          :tooltip="canCrop ? (isCropping ? t('confirmCrop') : t('cropSelected')) : t('selectElementToCrop')"
+          @click="emit('toggle:crop')"
+        >
+          {{ isCropping ? t('ok') : t('crop') }}
+        </Button>
+
+        <div class="toolbar-divider"></div>
+
+        <Button
+          variant="ghost"
+          size="xs"
+          :icon="Grid"
+          :aria-label="t('toggleGrid')"
+          :tooltip="t('toggleGrid')"
+          class="grid-toggle-btn"
+          :class="{ 'is-active': isGridVisible }"
+          @click="emit('toggle:grid')"
+        />
+
+        <div class="zoom-controls">
+          <Button
+            variant="ghost"
+            size="xs"
+            :icon="ZoomOut"
+            :aria-label="t('zoomOut')"
+            :tooltip="t('zoomOut')"
+            class="zoom-btn"
+            @click="emit('zoom:out')"
+          />
+          <span
+            class="zoom-indicator"
+            :class="{ 'is-active': isZoomedOrPanned }"
+            :title="t('canvasZoom')"
+            @click="emit('reset:zoom')"
+          >
+            {{ zoomPercent }}%
+          </span>
+          <Button
+            variant="ghost"
+            size="xs"
+            :icon="ZoomIn"
+            :aria-label="t('zoomIn')"
+            :tooltip="t('zoomIn')"
+            class="zoom-btn"
+            @click="emit('zoom:in')"
+          />
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -114,6 +130,28 @@ const items = computed(() => presets.map((id) => ({ id, label: id, active: props
   gap: 8px;
   padding: 6px 12px;
   background: transparent;
+}
+
+.toolbar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 28px;
+}
+
+.toolbar-loading-skeleton {
+  flex: none;
+}
+
+.toolbar-ready-enter-active,
+.toolbar-ready-leave-active {
+  transition: opacity 220ms ease;
+}
+
+.toolbar-ready-enter-from,
+.toolbar-ready-leave-to {
+  opacity: 0;
 }
 
 .canvas-toolbar :deep(.btn-container) {

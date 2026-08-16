@@ -3,6 +3,7 @@ import { onMounted } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '../../../i18n';
 import EditorWindowApp from '../EditorWindowApp.vue';
+import EditorProjectLoadingOverlay from '../EditorProjectLoadingOverlay.vue';
 
 const state = vi.hoisted(() => ({
   contextListener: null as ((context: { projectId: string }) => void) | null,
@@ -23,6 +24,7 @@ const capture = vi.hoisted(() => ({
   setEditorTitlebarTheme: vi.fn(),
   showHud: vi.fn(),
   startRecordingFromEditor: vi.fn(),
+  openEditor: vi.fn(),
 }));
 
 vi.mock('../../../api/capture', () => ({ capture }));
@@ -33,12 +35,14 @@ vi.mock('../VideoEditor.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockVideoEditor',
+      props: { project: { type: Object, required: true } },
       emits: ['ready', 'back-to-hud', 'open-project', 'start-recording'],
-      setup(_, { emit }) {
+      setup(props: { project: { id: string } }, { emit }) {
         onMounted(() => emit('ready'));
         return () =>
-          h('div', { class: 'mock-editor' }, [
+          h('div', { class: 'mock-editor', 'data-project-id': props.project.id }, [
             h('button', { class: 'ready', onClick: () => emit('ready') }),
+            h('button', { class: 'open-project', onClick: () => emit('open-project', { id: 'project-2' }) }),
             h('button', { class: 'back', onClick: () => emit('back-to-hud') }),
             h('button', {
               class: 'record',
@@ -67,6 +71,7 @@ describe('EditorWindowApp', () => {
     capture.getEditorContext.mockResolvedValue({ projectId: project.id });
     capture.listProjects.mockResolvedValue([project]);
     capture.getProjectEditorData.mockResolvedValue({ composition: {}, zoom: {}, presentation: {} });
+    capture.openEditor.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -109,8 +114,7 @@ describe('EditorWindowApp', () => {
     setCurrentLocale('fr');
     const wrapper = mountEditor();
 
-    expect(wrapper.get('.editor-loading-throbber').attributes('aria-label')).toBe('Préparation de l’éditeur');
-    expect(wrapper.find('.state-spinner').exists()).toBe(false);
+    expect(wrapper.get('.editor-project-loading-overlay').attributes('aria-label')).toBe('Préparation de l’éditeur');
   });
 
   it('returns to the HUD and forwards recording requests', async () => {
@@ -147,5 +151,43 @@ describe('EditorWindowApp', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('Project not found');
     await wrapper.get('[role="alert"] button').trigger('click');
     expect(capture.showHud).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the current editor under a loading overlay and keys the replacement project', async () => {
+    vi.useFakeTimers();
+    const nextProject = { id: 'project-2', name: 'Next project', previewSrc: 'next.mp4' };
+    let resolveNextData!: (value: unknown) => void;
+    capture.listProjects.mockResolvedValue([project, nextProject]);
+    capture.getProjectEditorData.mockResolvedValueOnce({ composition: {}, zoom: {}, presentation: {} });
+    capture.getProjectEditorData.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveNextData = resolve;
+      }),
+    );
+
+    const wrapper = mountEditor();
+    expect(wrapper.findComponent(EditorProjectLoadingOverlay).props('showTopbarSkeleton')).toBe(true);
+    await flushPromises();
+    expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(true);
+
+    capture.openEditor.mockImplementation(async (projectId: string) => {
+      state.contextListener?.({ projectId });
+      return true;
+    });
+    await wrapper.get('.open-project').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(true);
+    expect(capture.openEditor).toHaveBeenCalledWith(nextProject.id);
+    expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
+    expect(wrapper.findComponent(EditorProjectLoadingOverlay).props('showTopbarSkeleton')).toBe(false);
+
+    resolveNextData({ composition: {}, zoom: {}, presentation: {} });
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.mock-editor[data-project-id="project-2"]').exists()).toBe(true);
+    expect(wrapper.find('.mock-editor[data-project-id="project-1"]').exists()).toBe(false);
+    expect(wrapper.find('.editor-project-loading-overlay').exists()).toBe(true);
   });
 });

@@ -5,7 +5,7 @@ import type { ZoomElement } from '../../../zoom/zoom-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const mockComposition = (overrides: Partial<ClipComposition> = {}): ClipComposition => ({
-  schemaVersion: 3,
+  schemaVersion: 5,
   keyboardCaptionSessions: [],
   assets: [],
   clips: [

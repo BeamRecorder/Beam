@@ -178,6 +178,7 @@ describe('synchronizeRecordingClips', () => {
       clips: [
         {
           id: 'screen',
+          trackId: 'screen-track',
           kind: 'screen',
           name: 'Trimmed screen',
           assetId: 'old',
@@ -223,6 +224,7 @@ describe('synchronizeRecordingClips', () => {
       clips: [
         {
           id: 'screen',
+          trackId: 'screen-track',
           kind: 'screen',
           name: 'Screen recording',
           assetId,
@@ -263,7 +265,7 @@ describe('synchronizeRecordingClips', () => {
 
     const first = synchronizeRecordingClips(emptyComposition(), data);
     const keyboardCaptions = first.clips.filter((clip) => clip.kind === 'caption');
-    expect(first.schemaVersion).toBe(3);
+    expect(first.schemaVersion).toBe(4);
     expect(first.keyboardCaptionSessions).toEqual(['session-1']);
     expect(keyboardCaptions).toHaveLength(1);
     expect(keyboardCaptions[0]).toMatchObject({

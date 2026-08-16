@@ -56,6 +56,7 @@ export function isPlaybackWorkerRequest(value: unknown): value is PlaybackWorker
       value.clips.every(isClip)
     );
   }
+  if (value.type === 'retime') return Array.isArray(value.clips) && value.clips.every(isClip);
   if (value.type === 'pause') return true;
   if (value.type === 'play' || value.type === 'tick')
     return finite(value.timelineSeconds) && value.timelineSeconds >= 0;

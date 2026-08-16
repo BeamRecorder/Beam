@@ -2,8 +2,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { Check, RotateCcw } from '@lucide/vue';
 import Button from '../../ui/button/Button.vue';
-import Skeleton from '../../ui/skeleton/Skeleton.vue';
 import ResizeHandle from '~/ui/ResizeHandle/ResizeHandle.vue';
+import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
@@ -19,7 +19,6 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { resolveCompositionSceneLayers } from '../composition/scene-layers';
 import { canvasGuideLines } from './canvas-guides';
 import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
-
 const { t } = useTranslate('EditorCanvas');
 const props = defineProps<EditorCanvasProps>();
 const emit = defineEmits<EditorCanvasEmits>();
@@ -33,7 +32,6 @@ let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
 let drawVisualStack:
   ((ctx: CanvasRenderingContext2D, videoWindow: RenderedVideoWindow, drawScreen: () => void) => void) | null = null;
-
 const viewportZoom = useViewportZoom();
 const measureCaptionText = (text: string, fontSize: number) => {
   const context = canvasRef.value?.getContext('2d');
@@ -44,7 +42,6 @@ const measureCaptionText = (text: string, fontSize: number) => {
   context.restore();
   return width;
 };
-
 const liveScreenClip = computed<VisualClip | null>(
   () =>
     activeClipsAt(props.composition, props.currentTime * 1_000).find(
@@ -78,10 +75,15 @@ const showLoadingSkeleton = computed(() => {
   if (!clip || props.playbackError || renderedScreenClipIds.value.has(clip.id)) return false;
   return props.playbackState === 'loading' || !screenFrame.value;
 });
+const isCanvasCovered = ref(showLoadingSkeleton.value);
+watch(showLoadingSkeleton, (isLoading) => {
+  if (isLoading) isCanvasCovered.value = true;
+});
 const previewFrameStyle = computed(() => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
   return { left: `${preview.x}px`, top: `${preview.y}px`, width: `${preview.width}px`, height: `${preview.height}px` };
 });
+const outputAspectRatio = computed(() => props.outputCanvas.width / props.outputCanvas.height);
 function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
@@ -400,13 +402,14 @@ defineExpose({
       </div>
     </Transition>
     <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
-      <div class="preview-frame" :style="previewFrameStyle" aria-hidden="true"></div>
+      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }"></div>
       <canvas
         ref="canvasRef"
         class="editor-canvas"
         :class="{
           'is-selection-editable': selectedZoom?.mode === 'manual',
           'is-format-transitioning': isFormatTransitioning,
+          'is-loading-covered': isCanvasCovered,
         }"
       ></canvas>
       <div v-if="isGridVisible" class="canvas-3x3-grid" :style="previewFrameStyle">
@@ -422,13 +425,11 @@ defineExpose({
         :class="guide.type"
         :style="guide.style"
       ></div>
-      <Skeleton
-        v-if="showLoadingSkeleton"
-        class="canvas-loading-skeleton"
-        width="100%"
-        height="100%"
-        radius="var(--radius-lg)"
-        :aria-label="t('videoPreviewLoading')"
+      <CanvasLoadingSkeleton
+        :visible="showLoadingSkeleton"
+        :label="t('videoPreviewLoading')"
+        :aspect-ratio="outputCanvas.width / outputCanvas.height"
+        @reveal="isCanvasCovered = false"
       />
       <div
         v-if="selectedTransformClip && !selectedCaptionFollowsCursor && !isCropping && selectedZoom?.mode !== 'manual'"

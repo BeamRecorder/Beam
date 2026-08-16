@@ -33,6 +33,7 @@ const emit = defineEmits<{
   (event: 'toggle:clip', clipId: string): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
+  (event: 'preview:composition', value: ClipComposition | null): void;
   (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
   (event: 'add:zoom', timeMs: number): void;
@@ -41,7 +42,7 @@ const emit = defineEmits<{
 }>();
 
 const {
-  visualClips,
+  visualTracks,
   keyboardCaptionClips,
   textCaptionClips,
   systemAudioClips,
@@ -84,7 +85,7 @@ const {
   iconForVisual,
   labelForVisual,
   zoomScale,
-  draggedClipId,
+  draggedTrackId,
   beginReorder,
   DEFAULT_ZOOM_DURATION_MS,
   DEFAULT_CAPTION_DURATION_MS,
@@ -109,24 +110,27 @@ const exportProgressPercent = computed(() => {
         <div class="sidebar-tracks-stack">
           <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
             <div
-              v-for="clip in visualClips"
-              :key="clip.id"
+              v-for="track in visualTracks"
+              :key="track.id"
               class="sidebar-track-item visual-track"
-              :data-clip-id="clip.id"
-              :class="{ disabled: !clip.enabled, dragging: draggedClipId === clip.id }"
+              :data-track-id="track.id"
+              :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
             >
               <button
                 type="button"
                 class="track-info"
-                :title="clip.name"
-                @click="emit('toggle:clip', clip.id)"
-                @pointerdown="beginReorder($event, clip.id)"
+                :title="track.representative.name"
+                @click="toggleGroup(track.clips)"
+                @pointerdown="beginReorder($event, track.id, track.representative.id)"
               >
-                <span class="track-drag-handle">
+                <span
+                  class="track-drag-handle"
+                  @click.stop
+                >
                   <GripVertical class="track-grip" />
                 </span>
-                <component :is="iconForVisual(clip)" class="track-icon" />
-                <span class="track-title">{{ labelForVisual(clip) }}</span>
+                <component :is="iconForVisual(track.representative)" class="track-icon" />
+                <span class="track-title">{{ labelForVisual(track.representative) }}</span>
               </button>
             </div>
           </TransitionGroup>
@@ -228,14 +232,16 @@ const exportProgressPercent = computed(() => {
         <div class="tracks-stack">
           <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
             <div
-              v-for="clip in visualClips"
-              :key="clip.id"
+              v-for="track in visualTracks"
+              :key="track.id"
               class="track-row visual-track"
-              :data-clip-id="clip.id"
-              :class="{ disabled: !clip.enabled, dragging: draggedClipId === clip.id }"
+              :data-track-id="track.id"
+              :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
             >
               <div class="track-content visual-content">
                 <TimelineClip
+                  v-for="clip in track.clips"
+                  :key="clip.id"
                   :clip="displayedClip(clip)"
                   :asset="assetFor(clip)"
                   :duration="duration"
