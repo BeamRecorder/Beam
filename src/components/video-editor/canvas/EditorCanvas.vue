@@ -391,7 +391,7 @@ defineExpose({
     <Transition name="fade-slide">
       <div v-if="viewportZoom.isOutOfBounds.value" class="canvas-recenter-float">
         <Button
-          variant="outline"
+          variant="frosted"
           size="xs"
           :icon="RotateCcw"
           class="recenter-button"

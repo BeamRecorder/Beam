@@ -87,18 +87,23 @@
 .trim-handle {
   position: absolute;
   inset-block: 0;
-  width: 6px;
+  width: 10px;
+  max-width: 28%;
   cursor: col-resize;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.28);
 }
 .trim-handle:hover {
   background: var(--color-primary);
 }
 .trim-handle.start {
   left: 0;
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
 }
 .trim-handle.end {
   right: 0;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
 }
 .trim-side-badge {
   position: absolute;

@@ -38,8 +38,8 @@ withDefaults(
 
 /* Plain dividers without label */
 .divider:not(.has-label) {
-  background: var(--color-border);
-  opacity: 0.5;
+  background: var(--color-border-strong);
+  opacity: 1;
 }
 
 .divider-horizontal:not(.has-label) {
@@ -50,6 +50,7 @@ withDefaults(
 .divider-vertical:not(.has-label) {
   width: 1px;
   height: 100%;
+  min-height: 14px;
 }
 
 /* Dividers with label: [ Line ] [ Label ] [ Line ] */

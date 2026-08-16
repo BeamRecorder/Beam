@@ -3,7 +3,6 @@ import { computed, toRef } from 'vue';
 import Input from '~/ui/input/Input.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import DeleteItem from '~/ui/button/DeleteItem.vue';
 import type { CaptionClip, CaptionStyle } from '~/media/shared/composition-types';
 import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
 import { keyboardCaptionText } from '~/media/shared/keyboard-captions';
@@ -63,9 +62,6 @@ const updateFollowCursor = (followCursor: boolean) =>
       </div>
       <Divider spacing="xs" />
       <CaptionStyleControls :style="style" :default-font-size="28" @update="updateStyle" />
-      <div class="danger-zone">
-        <DeleteItem :label="t('deleteCaptionClip')" @click="emit('delete', keyboardDraft.id)" />
-      </div>
     </div>
   </div>
 </template>
@@ -117,13 +113,7 @@ const updateFollowCursor = (followCursor: boolean) =>
 }
 .danger-zone {
   margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  padding-top: 14px;
-  padding-bottom: 2px;
-  background: var(--color-bg-element);
-  z-index: 10;
+  padding-top: 16px;
   width: 100%;
-  box-shadow: 0 -8px 16px var(--color-bg-element);
 }
 </style>

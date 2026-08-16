@@ -21,6 +21,7 @@ import type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks
 import { groupVisualTimelineTracks, previewVisualTrackOrder } from './visual-timeline-tracks';
 import { visualMoveDeltaBounds, visualTrimBounds } from '../../composition/engine/visual-track-layout';
 import { previewClipMove, previewClipTrim } from './timeline-composition-preview';
+import { useVisualTrackReorder } from './useVisualTrackReorder';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
 export const DEFAULT_ZOOM_DURATION_MS = 1_200;
@@ -142,6 +143,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     event.stopPropagation();
     const ids = linkedIdsFor(clip);
     movingClipIds.value = ids;
+    const initialVisualTrack = baseVisualTracks.value.find((track) => track.clips.some((entry) => entry.id === clip.id));
+    const initialVisualTrackOrder = initialVisualTrack ? baseVisualTracks.value.map((track) => track.id) : null;
+    const initialVisualTrackIndex = initialVisualTrack ? initialVisualTrackOrder!.indexOf(initialVisualTrack.id) : -1;
     const pointerStartX = event.clientX;
     const initialScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
     const { baseDurationMs, width: baseRulerWidth, msPerPx } = resolveMsPerPx();
@@ -159,6 +163,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     const snapThresholdMs = calculateSnapThresholdMs(baseDurationMs, baseRulerWidth);
 
     let finalStartMs = originalStartMs;
+    let lastVisualSwapTime = 0;
     const applyMove = (next: PointerEvent) => {
       updateAutoScroll(next.clientX);
       const currentScrollLeft = tracksScrollRef.value?.scrollLeft ?? 0;
@@ -186,6 +191,23 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       }
       previewLinked(ids, finalStartMs, clipLengthMs);
       emit('preview:composition', previewClipMove(props.composition, clip, finalStartMs));
+      if (initialVisualTrack && initialVisualTrackOrder) {
+        const row = document.elementFromPoint?.(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
+        const targetTrackId = row?.dataset.trackId;
+        if (targetTrackId && targetTrackId !== initialVisualTrack.id) {
+          const order = [...(visualOrderPreview.value ?? initialVisualTrackOrder)];
+          const from = order.indexOf(initialVisualTrack.id);
+          const to = order.indexOf(targetTrackId);
+          const now = Date.now();
+          if (from >= 0 && to >= 0 && from !== to && now - lastVisualSwapTime >= 150) {
+            order.splice(from, 1);
+            order.splice(to, 0, initialVisualTrack.id);
+            visualOrderPreview.value = order;
+            draggedTrackId.value = initialVisualTrack.id;
+            lastVisualSwapTime = now;
+          }
+        }
+      }
     };
     const moveUpdates = createAnimationFrameCoalescer(applyMove);
     const move = moveUpdates.schedule;
@@ -199,9 +221,21 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
       movingClipIds.value = [];
       activeSnapTimeMs.value = null;
       emit('preview:composition', null);
+      if (initialVisualTrack) {
+        requestAnimationFrame(() => {
+          visualOrderPreview.value = null;
+          draggedTrackId.value = null;
+        });
+      }
     };
     const end = () => {
       moveUpdates.flush();
+      if (initialVisualTrack && visualOrderPreview.value) {
+        const finalVisualIndex = visualOrderPreview.value.indexOf(initialVisualTrack.id);
+        if (finalVisualIndex >= 0 && finalVisualIndex !== initialVisualTrackIndex) {
+          emit('reorder:clip', { id: clip.id, targetIndex: finalVisualIndex });
+        }
+      }
       cleanup();
       if (finalStartMs !== originalStartMs) emit('move:clip', { id: clip.id, startMs: finalStartMs });
     };
@@ -375,46 +409,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
           : clip.name;
   const zoomScale = (depth: number) => [1.25, 1.5, 1.8, 2.2, 3.5, 5][Math.max(0, Math.min(5, depth - 1))] ?? 1.25;
 
-  const draggedTrackId = ref<string | null>(null);
-  const beginReorder = (event: PointerEvent, trackId: string, representativeClipId: string) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const initialOrder = baseVisualTracks.value.map((track) => track.id);
-    const initialIndex = initialOrder.indexOf(trackId);
-    if (initialIndex < 0) return;
-    draggedTrackId.value = trackId;
-    visualOrderPreview.value = [...initialOrder];
-
-    const applyMove = (next: PointerEvent) => {
-      const row = document.elementFromPoint(next.clientX, next.clientY)?.closest<HTMLElement>('.visual-track');
-      const targetId = row?.dataset.trackId;
-      if (!targetId || targetId === trackId) return;
-      const order = [...(visualOrderPreview.value ?? initialOrder)];
-      const from = order.indexOf(trackId);
-      const to = order.indexOf(targetId);
-      if (from < 0 || to < 0 || from === to) return;
-      order.splice(from, 1);
-      order.splice(to, 0, trackId);
-      visualOrderPreview.value = order;
-    };
-    const moveUpdates = createAnimationFrameCoalescer(applyMove);
-    const move = moveUpdates.schedule;
-    const end = () => {
-      moveUpdates.flush();
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', end);
-      window.removeEventListener('pointercancel', end);
-      const finalIndex = visualOrderPreview.value?.indexOf(trackId) ?? initialIndex;
-      if (finalIndex !== initialIndex) emit('reorder:clip', { id: representativeClipId, targetIndex: finalIndex });
-      requestAnimationFrame(() => {
-        visualOrderPreview.value = null;
-        draggedTrackId.value = null;
-      });
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', end, { once: true });
-    window.addEventListener('pointercancel', end, { once: true });
-  };
+  const { draggedTrackId, beginReorder } = useVisualTrackReorder({ baseVisualTracks, visualOrderPreview, emit });
 
   return {
     durationMs,

@@ -13,6 +13,8 @@ describe('SidebarPanel', () => {
     expect(wrapper.findAll('.nav-btn')).toHaveLength(7);
     expect(wrapper.findAll('.nav-btn.active')).toHaveLength(1);
     expect(wrapper.find('.nav-btn.active').attributes('title')).toBe('Zoom');
+    expect(wrapper.findComponent({ name: 'ScrollShadow' }).exists()).toBe(true);
+    expect(wrapper.find('.sidebar-viewport').exists()).toBe(true);
     await wrapper.findAll('.nav-btn')[0].trigger('click');
     await wrapper.find('.footer-btn').trigger('click');
     expect(wrapper.emitted('select-tab')).toEqual([['canvas'], ['settings']]);

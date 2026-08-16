@@ -162,12 +162,15 @@
     "mirroring": "Spiegelung",
     "mirrorHorizontally": "Horizontal spiegeln",
     "mirrorVertically": "Vertikal spiegeln",
-    "speedBoost": "Geschwindigkeitsboost",
+    "speedBoost": "Geschwindigkeitsschub",
     "playbackSpeed": "Wiedergabegeschwindigkeit",
     "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
     "sidecarLink": "Sidecar-Verknüpfung",
-    "unlink": "Verknüpfung lösen",
-    "deleteClip": "Clip löschen"
+    "unlink": "Trennen",
+    "deleteClip": "Clip löschen",
+    "deleteVideo": "Video löschen",
+    "deleteWebcam": "Webcam löschen"
   },
   "CursorPanel": {
     "cursorStyle": "Cursorstil",

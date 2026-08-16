@@ -141,7 +141,9 @@ const handleInput = (event: Event) => {
 .slider-value {
   font-family: var(--font-sans);
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
   color: var(--text-primary);
   min-width: 2.5rem;
   text-align: right;

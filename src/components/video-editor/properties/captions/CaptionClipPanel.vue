@@ -2,7 +2,6 @@
 import { computed, toRef } from 'vue';
 import Input from '~/ui/input/Input.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import DeleteItem from '~/ui/button/DeleteItem.vue';
 import type { CaptionClip, CaptionStyle, CaptionWord } from '~/media/shared/composition-types';
 import { useCaptionDraft } from './useCaptionDraft';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -124,10 +123,6 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
           </div>
         </div>
       </div>
-
-      <div class="danger-zone">
-        <DeleteItem :label="t('deleteCaptionClip')" @click="emit('delete', draft.id)" />
-      </div>
     </div>
   </div>
 </template>
@@ -193,13 +188,7 @@ const updateWord = (sentenceId: string, index: number, key: keyof CaptionWord, v
 }
 .danger-zone {
   margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  padding-top: 14px;
-  padding-bottom: 2px;
-  background: var(--color-bg-element);
-  z-index: 10;
+  padding-top: 16px;
   width: 100%;
-  box-shadow: 0 -8px 16px var(--color-bg-element);
 }
 </style>

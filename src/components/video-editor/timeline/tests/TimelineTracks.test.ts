@@ -507,7 +507,7 @@ describe('TimelineTracks', () => {
 
   it('renders ordered visual/audio/caption tracks and scrubs, zooms, selects, and toggles them', async () => {
     const mounted = await mountTracks();
-    expect(mounted!.findAll('.tracks-stack > .visual-track')).toHaveLength(3);
+    expect(mounted!.findAll('.tracks-stack .visual-track')).toHaveLength(3);
     expect(mounted!.find('.ruler-export-progress-bar').attributes('style')).toContain('25%');
     expect(mounted!.find('.cursor-zoom-indicator').text()).toContain('5.00×');
     expect(mounted!.findAll('.tracks-stack > .audio-track')).toHaveLength(3);
@@ -591,7 +591,7 @@ describe('TimelineTracks', () => {
     });
 
     const mounted = await mountTracks({ composition: segmented });
-    const rows = mounted!.findAll('.tracks-stack > .visual-track');
+    const rows = mounted!.findAll('.tracks-stack .visual-tracks-group > .visual-track');
     expect(rows).toHaveLength(3);
     expect(rows.filter((row) => row.findAll('.timeline-clip').length === 2)).toHaveLength(1);
     const segmentedRow = rows.find((row) => row.findAll('.timeline-clip').length === 2)!;
@@ -867,5 +867,33 @@ describe('TimelineTracks', () => {
     window.dispatchEvent(pointerEvent('pointercancel', 10, 10));
     expect(mounted!.emitted('reorder:clip')).toHaveLength(1);
     await mounted!.findAll('.sidebar-tracks-stack .audio-track')[1]!.get('.track-info').trigger('click');
+  });
+
+  it('reorders visual tracks when dragging directly anywhere on the sidebar track-info button', async () => {
+    const mounted = await mountTracks();
+    const rows = mounted!.findAll('.sidebar-tracks-stack .visual-track');
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(rows[1]!.element),
+    });
+    // Drag on the .track-info button directly without aiming at grip
+    await rows[0]!.get('.track-info').trigger('pointerdown', { clientX: 10, clientY: 10 });
+    window.dispatchEvent(pointerEvent('pointermove', 30, 80));
+    window.dispatchEvent(pointerEvent('pointerup', 30, 80));
+    expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
+  });
+
+  it('reorders visual tracks when moving a visual clip vertically across tracks in the timeline', async () => {
+    const mounted = await mountTracks();
+    const timelineRows = mounted!.findAll('.tracks-stack .visual-track');
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn().mockReturnValue(timelineRows[1]!.element),
+    });
+    const clipEl = timelineRows[0]!.get('.timeline-clip');
+    await clipEl.trigger('pointerdown', { clientX: 50, clientY: 50 });
+    window.dispatchEvent(pointerEvent('pointermove', 50, 120));
+    window.dispatchEvent(pointerEvent('pointerup', 50, 120));
+    expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
   });
 });

@@ -165,9 +165,12 @@
     "speedBoost": "Aceleração",
     "playbackSpeed": "Velocidade de reprodução",
     "enabled": "Ativado",
+    "disabled": "Desativado",
     "sidecarLink": "Link do arquivo auxiliar",
     "unlink": "Desvincular",
-    "deleteClip": "Excluir clipe"
+    "deleteClip": "Excluir clipe",
+    "deleteVideo": "Excluir vídeo",
+    "deleteWebcam": "Excluir webcam"
   },
   "CursorPanel": {
     "cursorStyle": "Estilo do cursor",

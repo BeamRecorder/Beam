@@ -165,9 +165,12 @@
     "speedBoost": "Ускоряване",
     "playbackSpeed": "Скорост на възпроизвеждане",
     "enabled": "Включено",
+    "disabled": "Деактивиран",
     "sidecarLink": "Връзка със страничен файл",
     "unlink": "Премахване на връзката",
-    "deleteClip": "Изтриване на клипа"
+    "deleteClip": "Изтриване на клипа",
+    "deleteVideo": "Изтриване на видеото",
+    "deleteWebcam": "Изтриване на уебкамерата"
   },
   "CursorPanel": {
     "cursorStyle": "Стил на курсора",

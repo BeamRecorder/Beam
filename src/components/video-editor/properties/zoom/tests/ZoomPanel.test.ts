@@ -48,13 +48,9 @@ describe('ZoomPanel', () => {
     await wrapper.get('.depth-slider').trigger('click');
     await wrapper.get('.preset-pill').trigger('click');
     await wrapper.findAll('.button-group button')[1].trigger('click');
-    await wrapper.findAll('.button-group button')[0].trigger('click');
-    await wrapper.get('.danger-zone button').trigger('click');
-
     expect(wrapper.emitted('update')).toContainEqual([{ ...selectedZoom, depth: 4 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ ...selectedZoom, depth: 1 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ ...selectedZoom, mode: 'manual' }]);
-    expect(wrapper.emitted('delete')).toHaveLength(1);
   });
 
   it('offers a confirmation before regenerating existing automatic zooms', async () => {

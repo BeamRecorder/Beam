@@ -148,11 +148,7 @@
 
 .danger-zone {
   margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  padding-top: 12px;
-  background: var(--color-bg-element);
-  z-index: 10;
+  padding-top: 16px;
   width: 100%;
 }
 

@@ -372,8 +372,9 @@ onUnmounted(() => stopMarquee());
   top: 0;
   bottom: 0;
   z-index: 40;
-  width: 6px;
-  background: rgba(255, 255, 255, 0.25);
+  width: 10px;
+  max-width: 28%;
+  background: rgba(255, 255, 255, 0.28);
   cursor: col-resize;
   transition: background var(--fast) ease;
 }
@@ -387,9 +388,13 @@ onUnmounted(() => stopMarquee());
 }
 .trim-handle.start {
   left: 0;
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
 }
 .trim-handle.end {
   right: 0;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
 }
 .trim-side-badge {
   position: absolute;
