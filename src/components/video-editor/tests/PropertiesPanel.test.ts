@@ -193,28 +193,44 @@ describe('PropertiesPanel', () => {
     expect(wrapper.find('.clip-panel-stub').text()).toBe('video');
   });
 
-  it('shows the selected item in the header and toggles it through the shared clip state', async () => {
+  it('shows the selected item in the header and toggles/deletes it through header actions', async () => {
     const wrapper = mount(PropertiesPanel, {
       props: { ...baseProps, activeTab: 'clip', selectedClip: screenClip },
       global,
     });
 
     expect(wrapper.get('.panel-title').text()).toBe('Video');
-    const toggle = wrapper.get('[role="switch"]');
-    expect(toggle.attributes('aria-label')).toBe('Video');
-    expect(toggle.attributes('aria-checked')).toBe('true');
-    await toggle.trigger('click');
+    const buttons = wrapper.findAll('.panel-header-actions button');
+    expect(buttons).toHaveLength(2);
+    
+    // Toggle visibility
+    await buttons[0].trigger('click');
     expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);
+
+    // Delete clip with dynamic video tooltip
+    await buttons[1].trigger('click');
+    expect(wrapper.emitted('delete-clip')).toHaveLength(1);
 
     await wrapper.setProps({ selectedClip: webcamClip });
     expect(wrapper.get('.panel-title').text()).toBe('Webcam');
-    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('false');
+
+    // Zoom deletion in header
+    await wrapper.setProps({
+      activeTab: 'zoom',
+      selectedClip: null,
+      selectedZoom: { id: 'zoom-1', startMs: 0, durationMs: 1000, depth: 2, mode: 'auto' } as any,
+    });
+    expect(wrapper.get('.panel-title').text()).toBe('Zoom');
+    const zoomButtons = wrapper.findAll('.panel-header-actions button');
+    expect(zoomButtons).toHaveLength(1);
+    await zoomButtons[0].trigger('click');
+    expect(wrapper.emitted('delete:zoom')).toHaveLength(1);
   });
 
   it('uses the active tool name when no timeline clip is selected', async () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     expect(wrapper.get('.panel-title').text()).toBe('Canvas');
-    expect(wrapper.find('[role="switch"]').exists()).toBe(false);
+    expect(wrapper.find('.panel-header-actions').exists()).toBe(false);
 
     await wrapper.setProps({ activeTab: 'cursor' });
     expect(wrapper.get('.panel-title').text()).toBe('Cursor');
@@ -234,5 +250,11 @@ describe('PropertiesPanel', () => {
 
     expect(wrapper.emitted('preview:composition')).toEqual([[{ assets: [], clips: [] }]]);
     expect(wrapper.emitted('update:composition')).toEqual([[{ assets: [], clips: [] }]]);
+  });
+
+  it('renders a ScrollShadow container for panel content', () => {
+    const wrapper = mount(PropertiesPanel, { props: baseProps, global });
+    expect(wrapper.findComponent({ name: 'ScrollShadow' }).exists()).toBe(true);
+    expect(wrapper.find('.panel-body').exists()).toBe(true);
   });
 });

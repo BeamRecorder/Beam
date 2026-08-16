@@ -17,7 +17,11 @@ import BlurPropertiesPanel from '~/components/video-editor/properties/clip/BlurP
 import CaptionPanel from '~/components/video-editor/properties/captions/CaptionPanel.vue';
 import CaptionClipPanel from '~/components/video-editor/properties/captions/CaptionClipPanel.vue';
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
-import Switch from '~/ui/switch/Switch.vue';
+import Button from '~/ui/button/Button.vue';
+import ButtonGroup from '~/ui/button/ButtonGroup.vue';
+import Divider from '~/ui/divider/Divider.vue';
+import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
+import { Eye, EyeOff, Trash2 } from '@lucide/vue';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import type {
   BlurEffectMode,
@@ -35,6 +39,11 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { isKeyboardCaptionClip } from '~/media/shared/composition-types';
 
 const { t } = useTranslate('PropertiesPanel');
+const { t: tClip } = useTranslate('ClipPropertiesPanel');
+const { t: tAudio } = useTranslate('AudioClipPropertiesPanel');
+const { t: tCaption } = useTranslate('CaptionClipPanel');
+const { t: tZoom } = useTranslate('ZoomPanel');
+const { t: tBlur } = useTranslate('BlurPropertiesPanel');
 const { t: tSidebar } = useTranslate('SidebarPanel');
 const { t: tTimeline } = useTranslate('TimelineTracks');
 export interface SelectedClipProperties {
@@ -194,136 +203,214 @@ const emit = defineEmits<{
   (event: 'back-to-hud'): void;
   (event: 'start-recording', config: any): void;
 }>();
+
+const isCurrentClipEnabled = computed(() => {
+  if (props.selectedClip) return props.selectedClip.enabled ?? true;
+  if (props.selectedCaptionClip) return props.selectedCaptionClip.enabled ?? true;
+  return true;
+});
+
+const isDeletable = computed(() => {
+  if (props.activeTab === 'zoom' && props.selectedZoom) return true;
+  if (props.activeTab === 'clip' && (props.selectedClip || props.selectedCaptionClip)) return true;
+  return false;
+});
+
+const isToggleable = computed(() => {
+  return props.activeTab === 'clip' && Boolean(props.selectedClip || props.selectedCaptionClip);
+});
+
+const deleteTooltip = computed(() => {
+  if (props.activeTab === 'zoom') {
+    return tZoom('deleteZoom') || 'Delete zoom';
+  }
+  if (props.selectedCaptionClip) {
+    return tCaption('deleteCaptionClip') || 'Delete caption';
+  }
+  if (props.selectedClip) {
+    if (props.selectedClip.kind === 'audio') {
+      return tAudio('deleteAudioClip') || 'Delete audio';
+    }
+    if (props.selectedClip.kind === 'blur') {
+      return tBlur('delete') ? `${tBlur('delete')} (${panelTitle.value.toLowerCase()})` : 'Delete blur';
+    }
+    if (props.selectedClip.kind === 'screen' || props.selectedClip.kind === 'video') {
+      return tClip('deleteVideo') || tClip('deleteClip') || 'Delete video';
+    }
+    if (props.selectedClip.kind === 'webcam') {
+      return tClip('deleteWebcam') || tClip('deleteClip') || 'Delete webcam';
+    }
+  }
+  return tClip('deleteClip') || 'Delete clip';
+});
+
+const handleToggleClipEnabled = () => {
+  const nextValue = !isCurrentClipEnabled.value;
+  if (props.selectedClip) {
+    emit('update:clip-enabled', nextValue);
+  } else if (props.selectedCaptionClip) {
+    emit('update:caption', { ...props.selectedCaptionClip, enabled: nextValue });
+  }
+};
+
+const handleDelete = () => {
+  if (props.activeTab === 'zoom') {
+    emit('delete:zoom');
+  } else {
+    emit('delete-clip');
+  }
+};
 </script>
 
 <template>
   <div class="properties-island">
     <div class="panel-header">
       <h3 class="panel-title">{{ panelTitle }}</h3>
-      <Switch
-        v-if="activeTab === 'clip' && selectedClip"
-        class="panel-enable-switch"
-        :model-value="selectedClip.enabled ?? true"
-        :aria-label="panelTitle"
-        @update:model-value="emit('update:clip-enabled', $event)"
-      />
+      <div v-if="isDeletable" class="panel-header-actions">
+        <ButtonGroup size="xs">
+          <Button
+            v-if="isToggleable"
+            variant="ghost"
+            size="xs"
+            :icon="isCurrentClipEnabled ? Eye : EyeOff"
+            icon-only
+            :tooltip="isCurrentClipEnabled ? (tClip('enabled') || 'Enabled') : (tClip('disabled') || 'Disabled')"
+            :aria-label="isCurrentClipEnabled ? 'Hide clip' : 'Show clip'"
+            :class="{ 'is-muted-clip': !isCurrentClipEnabled }"
+            @click="handleToggleClipEnabled"
+          />
+          <Divider v-if="isToggleable" orientation="vertical" spacing="none" />
+          <Button
+            variant="ghost"
+            size="xs"
+            :icon="Trash2"
+            icon-only
+            :tooltip="deleteTooltip"
+            :aria-label="deleteTooltip"
+            class="panel-delete-btn"
+            @click="handleDelete"
+          />
+        </ButtonGroup>
+      </div>
     </div>
-    <div class="panel-content">
-      <CanvasPanel
-        v-if="activeTab === 'canvas'"
-        :selected-background="selectedBackground"
-        :blur-percent="blurPercent"
-        :background-groups="backgroundGroups"
-        :project-id="projectId"
-        @update:selected-background="emit('update:selectedBackground', $event)"
-        @update:blur-percent="emit('update:blurPercent', $event)"
-        @import:background="emit('import:background', $event)"
-      />
-      <AudioClipPropertiesPanel
-        v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
-        :clip="normalizedSelectedClip"
-        @update:volume="emit('update:clip-volume', $event)"
-        @delete="emit('delete-clip')"
-      />
-      <BlurPropertiesPanel
-        v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"
-        :clip="{
-          mode: normalizedSelectedClip.blurMode ?? 'blur',
-          shape: normalizedSelectedClip.blurShape ?? 'rectangle',
-          strength: normalizedSelectedClip.blurStrength ?? 60,
-          feather: normalizedSelectedClip.blurFeather ?? 0,
-          cornerRadius: normalizedSelectedClip.blurCornerRadius ?? 0,
-          tintOpacity: normalizedSelectedClip.blurTintOpacity ?? 0,
-          color: normalizedSelectedClip.blurColor ?? '#000000',
-        }"
-        @update="emit('update:blur', $event)"
-        @delete="emit('delete-clip')"
-      />
-      <KeyboardCaptionClipPanel
-        v-else-if="activeTab === 'clip' && selectedCaptionClip && isKeyboardCaptionClip(selectedCaptionClip)"
-        :clip="selectedCaptionClip"
-        @update="emit('update:caption', $event)"
-        @delete="emit('delete-clip')"
-      />
-      <CaptionClipPanel
-        v-else-if="activeTab === 'clip' && selectedCaptionClip"
-        :clip="selectedCaptionClip"
-        @update="emit('update:caption', $event)"
-        @delete="emit('delete-clip')"
-      />
-      <ClipPropertiesPanel
-        v-else-if="activeTab === 'clip'"
-        :selected-clip="normalizedSelectedClip"
-        @update:playback-rate="emit('update:clip-rate', $event)"
-        @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
-        @update:is-mirrored-y="emit('update:clip-is-mirrored-y', $event)"
-        @update:corner-radius="emit('update:clip-corner-radius', $event)"
-        @update:shadow="emit('update:clip-shadow', $event)"
-        @update:appearance="emit('update:clip-appearance', $event)"
-        @update:clip-transform="emit('update:clip-transform', $event)"
-        @reset:clip-transform="emit('reset:clip-transform')"
-        @unlink="emit('unlink-clip')"
-        @delete="emit('delete-clip')"
-        @split="emit('split-clip')"
-      />
-      <CursorPanel
-        v-else-if="activeTab === 'cursor'"
-        :selected-cursor="selectedCursor"
-        :cursor-size="cursorSize"
-        :cursor-color="cursorColor"
-        :enable-shadow="enableShadow"
-        :shadow-blur="shadowBlur"
-        :shadow-color="shadowColor"
-        :shadow-direction="shadowDirection"
-        :click-effects="clickEffects"
-        :motion="motion"
-        @update:selected-cursor="emit('update:selectedCursor', $event)"
-        @update:cursor-size="emit('update:cursorSize', $event)"
-        @update:cursor-color="emit('update:cursorColor', $event)"
-        @update:enable-shadow="emit('update:enableShadow', $event)"
-        @update:shadow-blur="emit('update:shadowBlur', $event)"
-        @update:shadow-color="emit('update:shadowColor', $event)"
-        @update:shadow-direction="emit('update:shadowDirection', $event)"
-        @update:click-effects="emit('update:clickEffects', $event)"
-        @update:motion="emit('update:motion', $event)"
-      />
-      <AudioPanel
-        v-else-if="activeTab === 'audio'"
-        :volume="volume"
-        :is-system-audio-enabled="isSystemAudioEnabled"
-        :is-mic-audio-enabled="isMicAudioEnabled"
-        :system-volume="systemVolume"
-        :mic-volume="micVolume"
-        @update:volume="emit('update:volume', $event)"
-        @update:is-system-audio-enabled="emit('update:isSystemAudioEnabled', $event)"
-        @update:is-mic-audio-enabled="emit('update:isMicAudioEnabled', $event)"
-        @update:system-volume="emit('update:systemVolume', $event)"
-        @update:mic-volume="emit('update:micVolume', $event)"
-      />
-      <ZoomPanel
-        v-else-if="activeTab === 'zoom'"
-        :selected-zoom="selectedZoom"
-        :can-generate="canGenerateZooms"
-        :has-automatic-zooms="hasAutomaticZooms"
-        @update="emit('update:zoom', $event)"
-        @delete="emit('delete:zoom')"
-        @generate="emit('generate:zooms')"
-      />
-      <SettingsPanel
-        v-else-if="activeTab === 'settings'"
-        @back-to-hud="emit('back-to-hud')"
-        @start-recording="emit('start-recording', $event)"
-      />
-      <CaptionPanel
-        v-show="activeTab === 'caption'"
-        :composition="composition"
-        :editor-data="editorData"
-        :timeline-duration-ms="timelineDurationMs"
-        @update:composition="emit('update:composition', $event)"
-        @preview:composition="emit('preview:composition', $event)"
-        @select-caption="emit('select-caption', $event)"
-      />
-    </div>
+    <ScrollShadow class="panel-scroll-shadow">
+      <div class="panel-body">
+        <CanvasPanel
+          v-if="activeTab === 'canvas'"
+          :selected-background="selectedBackground"
+          :blur-percent="blurPercent"
+          :background-groups="backgroundGroups"
+          :project-id="projectId"
+          @update:selected-background="emit('update:selectedBackground', $event)"
+          @update:blur-percent="emit('update:blurPercent', $event)"
+          @import:background="emit('import:background', $event)"
+        />
+        <AudioClipPropertiesPanel
+          v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'audio'"
+          :clip="normalizedSelectedClip"
+          @update:volume="emit('update:clip-volume', $event)"
+          @delete="emit('delete-clip')"
+        />
+        <BlurPropertiesPanel
+          v-else-if="activeTab === 'clip' && normalizedSelectedClip?.kind === 'blur'"
+          :clip="{
+            mode: normalizedSelectedClip.blurMode ?? 'blur',
+            shape: normalizedSelectedClip.blurShape ?? 'rectangle',
+            strength: normalizedSelectedClip.blurStrength ?? 60,
+            feather: normalizedSelectedClip.blurFeather ?? 0,
+            cornerRadius: normalizedSelectedClip.blurCornerRadius ?? 0,
+            tintOpacity: normalizedSelectedClip.blurTintOpacity ?? 0,
+            color: normalizedSelectedClip.blurColor ?? '#000000',
+          }"
+          @update="emit('update:blur', $event)"
+          @delete="emit('delete-clip')"
+        />
+        <KeyboardCaptionClipPanel
+          v-else-if="activeTab === 'clip' && selectedCaptionClip && isKeyboardCaptionClip(selectedCaptionClip)"
+          :clip="selectedCaptionClip"
+          @update="emit('update:caption', $event)"
+          @delete="emit('delete-clip')"
+        />
+        <CaptionClipPanel
+          v-else-if="activeTab === 'clip' && selectedCaptionClip"
+          :clip="selectedCaptionClip"
+          @update="emit('update:caption', $event)"
+          @delete="emit('delete-clip')"
+        />
+        <ClipPropertiesPanel
+          v-else-if="activeTab === 'clip'"
+          :selected-clip="normalizedSelectedClip"
+          @update:playback-rate="emit('update:clip-rate', $event)"
+          @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
+          @update:is-mirrored-y="emit('update:clip-is-mirrored-y', $event)"
+          @update:corner-radius="emit('update:clip-corner-radius', $event)"
+          @update:shadow="emit('update:clip-shadow', $event)"
+          @update:appearance="emit('update:clip-appearance', $event)"
+          @update:clip-transform="emit('update:clip-transform', $event)"
+          @reset:clip-transform="emit('reset:clip-transform')"
+          @unlink="emit('unlink-clip')"
+          @delete="emit('delete-clip')"
+          @split="emit('split-clip')"
+        />
+        <CursorPanel
+          v-else-if="activeTab === 'cursor'"
+          :selected-cursor="selectedCursor"
+          :cursor-size="cursorSize"
+          :cursor-color="cursorColor"
+          :enable-shadow="enableShadow"
+          :shadow-blur="shadowBlur"
+          :shadow-color="shadowColor"
+          :shadow-direction="shadowDirection"
+          :click-effects="clickEffects"
+          :motion="motion"
+          @update:selected-cursor="emit('update:selectedCursor', $event)"
+          @update:cursor-size="emit('update:cursorSize', $event)"
+          @update:cursor-color="emit('update:cursorColor', $event)"
+          @update:enable-shadow="emit('update:enableShadow', $event)"
+          @update:shadow-blur="emit('update:shadowBlur', $event)"
+          @update:shadow-color="emit('update:shadowColor', $event)"
+          @update:shadow-direction="emit('update:shadowDirection', $event)"
+          @update:click-effects="emit('update:clickEffects', $event)"
+          @update:motion="emit('update:motion', $event)"
+        />
+        <AudioPanel
+          v-else-if="activeTab === 'audio'"
+          :volume="volume"
+          :is-system-audio-enabled="isSystemAudioEnabled"
+          :is-mic-audio-enabled="isMicAudioEnabled"
+          :system-volume="systemVolume"
+          :mic-volume="micVolume"
+          @update:volume="emit('update:volume', $event)"
+          @update:is-system-audio-enabled="emit('update:isSystemAudioEnabled', $event)"
+          @update:is-mic-audio-enabled="emit('update:isMicAudioEnabled', $event)"
+          @update:system-volume="emit('update:systemVolume', $event)"
+          @update:mic-volume="emit('update:micVolume', $event)"
+        />
+        <ZoomPanel
+          v-else-if="activeTab === 'zoom'"
+          :selected-zoom="selectedZoom"
+          :can-generate="canGenerateZooms"
+          :has-automatic-zooms="hasAutomaticZooms"
+          @update="emit('update:zoom', $event)"
+          @delete="emit('delete:zoom')"
+          @generate="emit('generate:zooms')"
+        />
+        <SettingsPanel
+          v-else-if="activeTab === 'settings'"
+          @back-to-hud="emit('back-to-hud')"
+          @start-recording="emit('start-recording', $event)"
+        />
+        <CaptionPanel
+          v-show="activeTab === 'caption'"
+          :composition="composition"
+          :editor-data="editorData"
+          :timeline-duration-ms="timelineDurationMs"
+          @update:composition="emit('update:composition', $event)"
+          @preview:composition="emit('preview:composition', $event)"
+          @select-caption="emit('select-caption', $event)"
+        />
+      </div>
+    </ScrollShadow>
   </div>
 </template>
 
@@ -333,11 +420,10 @@ const emit = defineEmits<{
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 20px 0 20px 20px;
+  padding: 0;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 20px;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -345,9 +431,12 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 28px;
-  padding-bottom: 4px;
-  padding-right: 20px;
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 .panel-title {
   min-width: 0;
@@ -360,18 +449,34 @@ const emit = defineEmits<{
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.panel-enable-switch {
-  flex: 0 0 auto;
+.panel-header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
-.panel-content {
+.panel-delete-btn:hover {
+  color: var(--color-error) !important;
+  background: var(--color-error-light) !important;
+}
+.is-muted-clip {
+  color: var(--text-muted) !important;
+  opacity: 0.6;
+}
+.panel-scroll-shadow {
   flex: 1;
+  min-height: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 14px;
+}
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px 24px 20px;
   box-sizing: border-box;
-  scrollbar-gutter: stable;
+  width: 100%;
+  flex: 1;
+  min-height: 100%;
 }
 .panel-content::-webkit-scrollbar {
   width: 5px;

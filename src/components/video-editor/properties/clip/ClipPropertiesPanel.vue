@@ -7,7 +7,6 @@ import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
 import ShadowDirectionGroup from '~/components/video-editor/properties/cursor/ShadowDirectionGroup.vue';
 import BorderAndFrameControls from '~/components/video-editor/properties/clip/BorderAndFrameControls.vue';
 import Divider from '~/ui/divider/Divider.vue';
-import DeleteItem from '~/ui/button/DeleteItem.vue';
 import TimelineClickEmptyState from '~/components/video-editor/properties/clip/TimelineClickEmptyState.vue';
 import type { ShadowDirection } from '../cursor/shadow-types';
 import { Unlink, RotateCcw, FlipHorizontal, FlipVertical } from '@lucide/vue';
@@ -459,11 +458,6 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           </div>
           <Button variant="outline" size="sm" @click="emit('unlink')"> Unlink </Button>
         </div>
-      </div>
-
-      <!-- Danger Delete Button -->
-      <div class="danger-zone">
-        <DeleteItem :label="t('deleteClip')" @click="emit('delete')" />
       </div>
     </div>
   </div>

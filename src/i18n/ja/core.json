@@ -166,8 +166,10 @@
     "playbackSpeed": "再生速度",
     "enabled": "有効",
     "sidecarLink": "サイドカーリンク",
-    "unlink": "リンクを解除",
-    "deleteClip": "クリップを削除"
+    "unlink": "リンク解除",
+    "deleteClip": "クリップを削除",
+    "deleteVideo": "ビデオを削除",
+    "deleteWebcam": "ウェブカメラを削除"
   },
   "CursorPanel": {
     "cursorStyle": "カーソルスタイル",

@@ -147,12 +147,7 @@ describe('ClipPropertiesPanel', () => {
       .findAll('button')
       .find((button) => button.text() === 'Unlink')!
       .trigger('click');
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text().includes('Delete Clip'))!
-      .trigger('click');
     expect(wrapper.emitted('unlink')).toHaveLength(1);
-    expect(wrapper.emitted('delete')).toHaveLength(1);
   });
 
   it('normalizes old radius values and renders only applicable control groups', async () => {

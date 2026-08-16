@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Monitor, Film, ZoomIn, MousePointer, Type, Volume2, Settings } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
+import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
 
 const { t } = useTranslate('SidebarPanel');
 
@@ -26,73 +27,96 @@ const menuItems = computed(() => [
 
 <template>
   <aside class="sidebar-island">
-    <nav class="nav-menu">
-      <button
-        v-for="item in menuItems"
-        :key="item.id"
-        class="nav-btn"
-        :class="{ active: activeTab === item.id }"
-        @click="emit('select-tab', item.id)"
-        :title="item.label"
-      >
-        <component :is="item.icon" class="nav-icon" />
-        <span class="nav-label">{{ item.label }}</span>
-      </button>
-    </nav>
+    <ScrollShadow class="sidebar-scroll-wrapper" viewport-class="sidebar-viewport">
+      <nav class="nav-menu">
+        <button
+          v-for="item in menuItems"
+          :key="item.id"
+          class="nav-btn"
+          :class="{ active: activeTab === item.id }"
+          @click="emit('select-tab', item.id)"
+          :title="item.label"
+        >
+          <component :is="item.icon" class="nav-icon" />
+          <span class="nav-label">{{ item.label }}</span>
+        </button>
+      </nav>
 
-    <div class="sidebar-footer">
-      <button
-        class="nav-btn footer-btn"
-        :class="{ active: activeTab === 'settings' }"
-        @click="emit('select-tab', 'settings')"
-        :title="t('settings')"
-      >
-        <Settings class="nav-icon" />
-        <span class="nav-label">{{ t('settings') }}</span>
-        <UpdateAvailableBadge />
-      </button>
-    </div>
+      <div class="sidebar-footer">
+        <button
+          class="nav-btn footer-btn"
+          :class="{ active: activeTab === 'settings' }"
+          @click="emit('select-tab', 'settings')"
+          :title="t('settings')"
+        >
+          <Settings class="nav-icon" />
+          <span class="nav-label">{{ t('settings') }}</span>
+          <UpdateAvailableBadge />
+        </button>
+      </div>
+    </ScrollShadow>
   </aside>
 </template>
 
 <style scoped>
 .sidebar-island {
   width: 92px;
+  height: 100%;
   max-height: 100%;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 12px 6px;
+  padding: 12px 6px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.sidebar-scroll-wrapper {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-viewport {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  padding-bottom: 12px;
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
 }
 
-.sidebar-island::-webkit-scrollbar {
+.sidebar-viewport::-webkit-scrollbar {
   width: 5px;
 }
 
-.sidebar-island::-webkit-scrollbar-track {
+.sidebar-viewport::-webkit-scrollbar-track {
   background: transparent;
   margin-block: 10px;
 }
 
-.sidebar-island::-webkit-scrollbar-thumb {
+.sidebar-viewport::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 9999px;
   transition: background 0.2s ease-in-out;
 }
 
-:root.dark .sidebar-island::-webkit-scrollbar-thumb {
+:root.dark .sidebar-viewport::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.16);
 }
 
-.sidebar-island::-webkit-scrollbar-thumb:hover {
+.sidebar-viewport::-webkit-scrollbar-thumb:hover {
   background: var(--color-primary, #ff5a1f) !important;
 }
 

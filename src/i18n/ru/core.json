@@ -167,7 +167,9 @@
     "enabled": "Включено",
     "sidecarLink": "Связь с дополнительным файлом",
     "unlink": "Отвязать",
-    "deleteClip": "Удалить клип"
+    "deleteClip": "Удалить клип",
+    "deleteVideo": "Удалить видео",
+    "deleteWebcam": "Удалить веб-камеру"
   },
   "CursorPanel": {
     "cursorStyle": "Стиль курсора",

@@ -167,7 +167,9 @@
     "enabled": "Włączone",
     "sidecarLink": "Łącze pliku pomocniczego",
     "unlink": "Odłącz",
-    "deleteClip": "Usuń klip"
+    "deleteClip": "Usuń klip",
+    "deleteVideo": "Usuń wideo",
+    "deleteWebcam": "Usuń kamerę"
   },
   "CursorPanel": {
     "cursorStyle": "Styl kursora",

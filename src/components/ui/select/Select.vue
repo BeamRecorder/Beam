@@ -204,8 +204,8 @@ const stopMarquee = (event: PointerEvent) => {
         <div class="trigger-content-wrapper">
           <!-- Thumbnail preview -->
           <div v-if="selectedOption?.thumbnail" class="selected-thumbnail-wrapper">
-            <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" />
-            <img v-if="selectedOption.appIcon" :src="selectedOption.appIcon" class="trigger-app-icon" />
+            <img :src="selectedOption.thumbnail" class="trigger-thumbnail-img" draggable="false" />
+            <img v-if="selectedOption.appIcon" :src="selectedOption.appIcon" class="trigger-app-icon" draggable="false" />
           </div>
 
           <!-- Color preview -->
@@ -254,8 +254,8 @@ const stopMarquee = (event: PointerEvent) => {
             <div class="option-content">
               <!-- Thumbnail preview -->
               <div v-if="item.data.thumbnail" class="thumbnail-wrapper">
-                <img :src="item.data.thumbnail" class="thumbnail-img" />
-                <img v-if="item.data.appIcon" :src="item.data.appIcon" class="app-icon" />
+                <img :src="item.data.thumbnail" class="thumbnail-img" draggable="false" />
+                <img v-if="item.data.appIcon" :src="item.data.appIcon" class="app-icon" draggable="false" />
               </div>
 
               <!-- Color preview -->
@@ -362,6 +362,9 @@ const stopMarquee = (event: PointerEvent) => {
   justify-content: center;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .trigger-thumbnail-img {
@@ -369,6 +372,10 @@ const stopMarquee = (event: PointerEvent) => {
   height: 100%;
   object-fit: contain;
   padding: 1px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .trigger-app-icon {
@@ -380,6 +387,10 @@ const stopMarquee = (event: PointerEvent) => {
   padding: 1px;
   border-radius: 3px;
   background: var(--color-bg-element);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .select-trigger.is-source .selected-thumbnail-wrapper {
@@ -494,6 +505,9 @@ const stopMarquee = (event: PointerEvent) => {
   overflow: hidden;
   border: 1px solid var(--color-border);
   flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .thumbnail-img {
@@ -501,6 +515,10 @@ const stopMarquee = (event: PointerEvent) => {
   height: 100%;
   object-fit: contain;
   padding: 2px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .app-icon {
@@ -512,6 +530,10 @@ const stopMarquee = (event: PointerEvent) => {
   padding: 1px;
   border-radius: 3px;
   background: var(--color-bg-element);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .virtual-scroll-container.is-source .thumbnail-wrapper {

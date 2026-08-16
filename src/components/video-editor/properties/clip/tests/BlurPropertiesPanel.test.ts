@@ -151,14 +151,13 @@ describe('BlurPropertiesPanel', () => {
     ).toBe(false);
   });
 
-  it('updates modes, geometry, color and deletion', async () => {
+  it('updates modes, geometry and color', async () => {
     const wrapper = mountPanel({ mode: 'frosted', tintOpacity: 10 });
     buttonWithText(wrapper.element, 'Frosted').click();
     buttonWithText(wrapper.element, 'Pixelated').click();
     buttonWithText(wrapper.element, 'Square').click();
     for (const slider of wrapper.findAll('.slider-stub')) await slider.trigger('click');
     await wrapper.get('.color-stub').trigger('click');
-    await wrapper.get('.delete-stub').trigger('click');
 
     expect(wrapper.emitted('update')).toContainEqual([{ mode: 'frosted', tintOpacity: 24 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ mode: 'pixelated', tintOpacity: 0 }]);
@@ -168,6 +167,5 @@ describe('BlurPropertiesPanel', () => {
     expect(wrapper.emitted('update')).toContainEqual([{ cornerRadius: 75 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ tintOpacity: 75 }]);
     expect(wrapper.emitted('update')).toContainEqual([{ color: '#abcdef' }]);
-    expect(wrapper.emitted('delete')).toHaveLength(1);
   });
 });

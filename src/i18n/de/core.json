@@ -166,8 +166,10 @@
     "playbackSpeed": "Wiedergabegeschwindigkeit",
     "enabled": "Aktiviert",
     "sidecarLink": "Sidecar-Verknüpfung",
-    "unlink": "Verknüpfung lösen",
-    "deleteClip": "Clip löschen"
+    "unlink": "Trennen",
+    "deleteClip": "Clip löschen",
+    "deleteVideo": "Video löschen",
+    "deleteWebcam": "Webcam löschen"
   },
   "CursorPanel": {
     "cursorStyle": "Cursorstil",

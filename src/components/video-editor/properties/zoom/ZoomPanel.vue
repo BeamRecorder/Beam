@@ -3,7 +3,6 @@ import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import Popover from '~/ui/popover/Popover.vue';
-import DeleteItem from '~/ui/button/DeleteItem.vue';
 import ZoomClickEmptyState from '~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue';
 import { MousePointer, Sparkles } from '@lucide/vue';
 import type { ZoomDepth, ZoomElement } from '~/components/video-editor/zoom/zoom-types';
@@ -134,11 +133,6 @@ const setMode = (mode: ZoomElement['mode']) => {
           </button>
         </div>
       </div>
-
-      <!-- Danger Zone -->
-      <div class="danger-zone">
-        <DeleteItem :label="t('deleteZoom')" @click="emit('delete')" />
-      </div>
     </div>
 
     <!-- Empty Selection State -->
@@ -237,11 +231,7 @@ const setMode = (mode: ZoomElement['mode']) => {
 
 .danger-zone {
   margin-top: auto;
-  position: sticky;
-  bottom: 0;
-  padding-top: 12px;
-  background: var(--color-bg-element);
-  z-index: 10;
+  padding-top: 16px;
   width: 100%;
 }
 

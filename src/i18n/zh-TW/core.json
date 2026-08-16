@@ -166,8 +166,10 @@
     "playbackSpeed": "播放速度",
     "enabled": "已啟用",
     "sidecarLink": "附加檔案連結",
-    "unlink": "解除連結",
-    "deleteClip": "刪除片段"
+    "unlink": "取消關聯",
+    "deleteClip": "刪除片段",
+    "deleteVideo": "刪除影片",
+    "deleteWebcam": "刪除視訊鏡頭"
   },
   "CursorPanel": {
     "cursorStyle": "游標樣式",

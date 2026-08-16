@@ -15,7 +15,6 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
-import DeleteItem from '~/ui/button/DeleteItem.vue';
 import Divider from '~/ui/divider/Divider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import type { BlurClip, BlurEffectMode, BlurEffectShape } from '~/media/shared/composition-types';
@@ -206,12 +205,6 @@ const presetIsActive = (patch: BlurPatch) =>
         <span>{{ t('privacyHint') }}</span>
       </p>
     </section>
-
-    <Divider spacing="xs" />
-
-    <div class="panel-actions">
-      <DeleteItem :label="t('delete')" @click="emit('delete')" />
-    </div>
   </div>
 </template>
 

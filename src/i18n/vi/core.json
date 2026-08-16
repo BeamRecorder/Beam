@@ -167,7 +167,9 @@
     "enabled": "Đã bật",
     "sidecarLink": "Liên kết tệp đính kèm",
     "unlink": "Hủy liên kết",
-    "deleteClip": "Xóa đoạn"
+    "deleteClip": "Xóa đoạn",
+    "deleteVideo": "Xóa video",
+    "deleteWebcam": "Xóa webcam"
   },
   "CursorPanel": {
     "cursorStyle": "Kiểu con trỏ",

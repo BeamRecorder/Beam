@@ -167,7 +167,9 @@
     "enabled": "Activado",
     "sidecarLink": "Enlace al archivo adicional",
     "unlink": "Desvincular",
-    "deleteClip": "Eliminar clip"
+    "deleteClip": "Eliminar clip",
+    "deleteVideo": "Eliminar vídeo",
+    "deleteWebcam": "Eliminar cámara web"
   },
   "CursorPanel": {
     "cursorStyle": "Estilo del cursor",

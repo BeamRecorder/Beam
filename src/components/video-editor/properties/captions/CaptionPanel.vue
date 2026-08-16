@@ -196,12 +196,11 @@ const runTranscription = async () => {
 <template>
   <div class="caption-sidebar-panel">
     <div class="options-group">
-      <!-- Main Config Block -->
+      <!-- AI Generation Configuration Block -->
       <div class="section-block">
-        <div class="section-header">
-          <span class="section-title">{{ t('aiAutoCaptioning') }}</span>
-        </div>
         <p class="section-desc">{{ t('headerDesc') }}</p>
+
+        <Divider spacing="xs" />
 
         <div v-if="sources.length" class="sub-group">
           <span class="sub-label">{{ t('audioSource') }}</span>
