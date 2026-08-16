@@ -1,5 +1,6 @@
 import type { CapturePreview, CaptureSource } from '~/api/types/capture-api';
 import type { CaptionClip, ClipComposition } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import demoThumbnailUrl from '../../../docs/assets/Beam-showcase.png';
 import beamIconUrl from '../../../public/brand/BeamIcon.webp';
 import defaultCursorUrl from '../../../public/macOsSvgCursors/default.svg';
@@ -67,6 +68,7 @@ export const addDemoCaption = (composition: ClipComposition, timeMs: number, dur
         },
       ],
       style: {
+        ...createDefaultCaptionStyle(42),
         color: '#ffffff',
         fontSize: 48,
         wrap: true,

@@ -190,7 +190,7 @@ const frame = (clipId: string, width = 1_280, height = 720): MediaFrame => ({
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -248,6 +248,10 @@ const context = () =>
     beginPath: vi.fn(),
     roundRect: vi.fn(),
     clip: vi.fn(),
+    fill: vi.fn(),
+    fillText: vi.fn(),
+    measureText: vi.fn(() => ({ width: 80 })),
+    drawImage: vi.fn(),
     imageSmoothingEnabled: true,
     imageSmoothingQuality: 'low',
   }) as unknown as CanvasRenderingContext2D;
@@ -438,6 +442,38 @@ describe('EditorCanvas', () => {
     runFrame();
 
     expect(state.drawComposition).toHaveBeenCalledWith(contextMock, cameraBounds);
+  });
+
+  it('renders watermark-only output changes immediately without playback or seeking', async () => {
+    const mounted = mountEditor();
+    await flushPromises();
+    while (frames.length) runFrame();
+    state.drawComposition.mockClear();
+    state.syncPlayback.mockClear();
+
+    await mounted.setProps({
+      outputCanvas: {
+        ...DEFAULT_OUTPUT_CANVAS,
+        width: 800,
+        height: 450,
+        watermark: {
+          ...DEFAULT_OUTPUT_CANVAS.watermark!,
+          enabled: true,
+          text: 'beam',
+          showLogo: false,
+        },
+      },
+    });
+    await nextTick();
+
+    expect(frames.length).toBeGreaterThan(0);
+    expect(state.syncPlayback).not.toHaveBeenCalled();
+    expect(mounted.emitted('update:currentTime')).toBeUndefined();
+    expect(mounted.emitted('update:isPlaying')).toBeUndefined();
+
+    runFrame();
+    expect(state.drawComposition).toHaveBeenCalled();
+    expect(contextMock.fillText).toHaveBeenCalledWith('Beam', expect.any(Number), expect.any(Number));
   });
 
   it('passes the sampled camera scale to the viewport-anchored webcam overlay', async () => {

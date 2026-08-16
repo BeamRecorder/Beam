@@ -7,6 +7,8 @@ import { loadBitmap, openExportAssets, type ExportAssets } from './export-worker
 import { ExportWorkerOutput } from './export-worker-output';
 import { cursorTypeForKind } from '../../video-editor/properties/cursor/cursor-kind';
 import { renderExportAudio, renderExportVideo } from './export-worker-pipelines';
+import { loadExportFonts } from './export-worker-fonts';
+import { WATERMARK_LOGO_KEY, WATERMARK_LOGO_PATH } from '../../video-editor/canvas/watermark-render';
 
 let controller: AbortController | null = null;
 let output: ExportWorkerOutput | null = null;
@@ -60,9 +62,12 @@ async function run(request: ExportRequest, signal: AbortSignal) {
     throw new Error('WebCodecs is required for export.');
   const started = performance.now();
   const totalTimeMs = Math.round(request.snapshot.duration * 1_000);
-  const audioClips = request.snapshot.composition.clips.filter(
-    (clip): clip is AudioClip => isAudioClip(clip) && clip.enabled && clip.timelineDurationMs > 0,
-  );
+  const audioClips =
+    request.includeAudio !== false
+      ? request.snapshot.composition.clips.filter(
+          (clip): clip is AudioClip => isAudioClip(clip) && clip.enabled && clip.timelineDurationMs > 0,
+        )
+      : [];
   if (audioClips.length && (typeof AudioEncoder === 'undefined' || typeof AudioDecoder === 'undefined'))
     throw new Error('WebCodecs audio support is required for export.');
   const totalFrames = Math.max(1, Math.ceil(request.snapshot.duration * request.snapshot.render.fps));
@@ -99,6 +104,7 @@ async function run(request: ExportRequest, signal: AbortSignal) {
     progress({ ...value, diagnostics: diagnostics(value.stage) }, force);
   try {
     report(baseProgress('validating_assets', 0, totalFrames, audioClips.length > 0, totalTimeMs), true);
+    await loadExportFonts(request.snapshot.composition);
     assets = await openExportAssets(request, signal, (completed, total) => {
       const ratio = total ? completed / total : 1;
       report({ ...baseProgress('validating_assets', 0.05 * ratio, totalFrames, audioClips.length > 0, totalTimeMs) });
@@ -260,6 +266,16 @@ const baseProgress = (
 
 async function loadImages(request: ExportRequest, owned: Map<string, ImageBitmap>) {
   const images = new Map<string, RenderableMedia>();
+  const watermark = request.snapshot.canvas.watermark;
+  if (watermark?.enabled && watermark.showLogo) {
+    const path = WATERMARK_LOGO_PATH.replace(/^\//, '');
+    const source = import.meta.env.DEV
+      ? new URL(`/${path}`, self.location.href).href
+      : new URL(`../${path}`, self.location.href).href;
+    if (!owned.has(source)) owned.set(source, await loadBitmap(source, 'Beam watermark logo'));
+    const bitmap = owned.get(source)!;
+    images.set(WATERMARK_LOGO_KEY, { source: bitmap, width: bitmap.width, height: bitmap.height });
+  }
   const activeImageIds = new Set(
     request.snapshot.composition.clips
       .filter((clip): clip is VisualClip => clip.kind === 'image' && clip.enabled && clip.timelineDurationMs > 0)

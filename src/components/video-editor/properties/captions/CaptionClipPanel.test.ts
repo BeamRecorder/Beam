@@ -1,5 +1,13 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const capture = vi.hoisted(() => ({
+  listImportedFonts: vi.fn(),
+  pickImportedFont: vi.fn(),
+  onFontLibraryChanged: vi.fn(),
+}));
+vi.mock('~/api/capture', () => ({ capture }));
+
 import CaptionClipPanel from './CaptionClipPanel.vue';
 
 const Input = {
@@ -14,12 +22,16 @@ const ColorPicker = {
   template: '<button class="color-picker-stub" @click="$emit(\'update:modelValue\', \'#abcdef\')">Color</button>',
 };
 const BigSlider = {
+  props: ['label'],
   emits: ['update:modelValue'],
-  template: '<button class="caption-slider" @click="$emit(\'update:modelValue\', 42)">Slider</button>',
+  template:
+    '<button class="caption-slider" :data-label="label" @click="$emit(\'update:modelValue\', 42)">Slider</button>',
 };
 const Select = {
-  emits: ['update:modelValue'],
-  template: '<button class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button>',
+  props: ['options', 'items'],
+  emits: ['update:modelValue', 'preview:modelValue'],
+  template:
+    '<div><button v-if="options" class="font-select" @pointerenter="$emit(\'preview:modelValue\', \'serif\')" @click="$emit(\'update:modelValue\', \'serif\')">Font</button><button v-else class="shadow-select" @click="$emit(\'update:modelValue\', \'top-left\')">Select</button></div>',
 };
 const Switch = {
   inheritAttrs: true,
@@ -29,9 +41,12 @@ const Switch = {
     '<button v-bind="$attrs" class="wrap-switch" role="switch" :aria-checked="String(modelValue)" @click="$emit(\'update:modelValue\', false)">Wrap</button>',
 };
 const Button = {
+  inheritAttrs: false,
   emits: ['click'],
-  template: '<button class="delete-caption" @click="$emit(\'click\')"><slot /></button>',
+  template: '<button v-bind="$attrs" class="caption-action" @click="$emit(\'click\')"><slot /></button>',
 };
+const ButtonGroup = { template: '<div class="button-group-stub"><slot /></div>' };
+const Divider = { template: '<div class="divider-stub" />' };
 
 const clip = {
   id: 'caption-1',
@@ -71,17 +86,35 @@ const clip = {
       outlineColor: '#000000',
       outlineWidth: 6,
       extrusionDepth: 4,
+      fontFamily: 'sans-serif',
+      fontWeight: 800,
+      fontStyle: 'normal',
+      textAlign: 'center',
+      lineHeight: 1.2,
+      letterSpacing: 0,
     },
   },
 } as never;
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  capture.listImportedFonts.mockResolvedValue([]);
+  capture.pickImportedFont.mockResolvedValue(null);
+  capture.onFontLibraryChanged.mockReturnValue(() => undefined);
+  (window as unknown as { capture: unknown }).capture = capture;
+  Object.defineProperty(window, 'queryLocalFonts', {
+    configurable: true,
+    value: vi.fn().mockResolvedValue([{ family: 'serif' }]),
+  });
+});
+
 describe('CaptionClipPanel', () => {
-  it('renders AI metadata and updates text, style, timings and deletion', async () => {
+  it('commits text and typography controls without exposing word timing fields', async () => {
     const wrapper = mount(CaptionClipPanel, {
       props: { clip },
-      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button } },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
     });
-    expect(wrapper.findAll('.caption-slider')).toHaveLength(5);
+    expect(wrapper.findAll('.caption-slider')).toHaveLength(7);
     expect(wrapper.findAll('.color-picker-stub')).toHaveLength(3);
     expect(wrapper.get('.wrap-switch').attributes('aria-checked')).toBe('true');
     expect(wrapper.find('.follow-cursor-setting').exists()).toBe(false);
@@ -91,12 +124,37 @@ describe('CaptionClipPanel', () => {
     await wrapper.findAll('.color-picker-stub')[0].trigger('click');
     await wrapper.find('.caption-slider').trigger('click');
     await wrapper.get('.shadow-select').trigger('click');
-    const word = wrapper.find('input[aria-label="Caption word"]');
-    await word.setValue('Hi');
-    await word.trigger('blur');
-    const start = wrapper.find('input[aria-label="Word start time"]');
-    await start.setValue('-1');
-    await start.trigger('blur');
+    await wrapper.get('[aria-label="Bold"]').trigger('click');
+    await wrapper.get('[aria-label="Align left"]').trigger('click');
+    window.dispatchEvent(new Event('focus'));
+    await vi.waitFor(() =>
+      expect(
+        (window as unknown as { queryLocalFonts: ReturnType<typeof vi.fn> }).queryLocalFonts,
+      ).toHaveBeenCalledOnce(),
+    );
+    await wrapper.get('.font-select').trigger('pointerenter');
+    await vi.waitFor(() =>
+      expect(wrapper.emitted('preview')).toContainEqual([
+        expect.objectContaining({
+          caption: expect.objectContaining({ style: expect.objectContaining({ fontFamily: 'serif' }) }),
+        }),
+      ]),
+    );
+    const updateCountBeforeFontCommit = wrapper.emitted('update')?.length ?? 0;
+    await wrapper.get('.font-select').trigger('click');
+    await vi.waitFor(() => expect(wrapper.emitted('update')!.length).toBeGreaterThan(updateCountBeforeFontCommit));
+    expect(
+      wrapper
+        .emitted('update')!
+        .slice(updateCountBeforeFontCommit)
+        .some(
+          ([updated]) =>
+            (updated as never as { caption: { style: { fontFamily?: string } } }).caption.style.fontFamily === 'serif',
+        ),
+    ).toBe(true);
+    expect(wrapper.find('input[aria-label="Caption word"]').exists()).toBe(false);
+    expect(wrapper.find('input[aria-label="Word start time"]').exists()).toBe(false);
+    expect(wrapper.find('input[aria-label="Word end time"]').exists()).toBe(false);
     await vi.waitFor(() => expect(wrapper.emitted('update')).toBeTruthy());
     expect(
       wrapper
@@ -106,13 +164,40 @@ describe('CaptionClipPanel', () => {
             (updated as unknown as { caption: { style: { wrap?: boolean } } }).caption.style.wrap === false,
         ),
     ).toBe(true);
+    expect(
+      wrapper.emitted('update')!.some(
+        ([updated]) =>
+          (
+            updated as never as {
+              caption: { style: { fontFamily?: string; fontWeight?: number; textAlign?: string } };
+            }
+          ).caption.style.fontFamily === 'serif',
+      ),
+    ).toBe(true);
+    expect(
+      wrapper
+        .emitted('update')!
+        .some(
+          ([updated]) =>
+            (updated as never as { caption: { style: { fontWeight?: number } } }).caption.style.fontWeight === 400,
+        ),
+    ).toBe(true);
+    expect(
+      wrapper
+        .emitted('update')!
+        .some(
+          ([updated]) =>
+            (updated as never as { caption: { style: { textAlign?: string } } }).caption.style.textAlign === 'left',
+        ),
+    ).toBe(true);
     expect(wrapper.emitted('update')!.length).toBeGreaterThan(0);
+    wrapper.unmount();
   });
 
   it('renders nothing without a selected caption clip', () => {
     const wrapper = mount(CaptionClipPanel, {
       props: { clip: null },
-      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button } },
+      global: { stubs: { Input, ColorPicker, BigSlider, Select, Switch, Button, ButtonGroup, Divider } },
     });
     expect(wrapper.find('.caption-clip-panel').exists()).toBe(false);
   });

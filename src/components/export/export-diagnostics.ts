@@ -118,7 +118,10 @@ export function buildBeamExportReport(options: {
   const videoBitrate = bitrateFor(options.preset, width, height, fps);
   const clips = request.snapshot.composition?.clips ?? [];
   const visualClips = clips.filter((clip) => ['screen', 'video', 'image', 'webcam'].includes(clip.kind)).length;
-  const audioClips = clips.filter((clip) => clip.kind === 'audio').length;
+  const audioEnabled = request.includeAudio !== false;
+  const audioClips = audioEnabled
+    ? clips.filter((clip) => clip.kind === 'audio' && clip.enabled && clip.timelineDurationMs > 0).length
+    : 0;
   const audioProgress =
     progress?.audioProgress ?? (options.status === 'completed' ? (audioClips ? 1 : null) : undefined);
 
@@ -156,7 +159,7 @@ export function buildBeamExportReport(options: {
     `Resolution: ${width}x${height}`,
     `Frame Rate: ${fps} fps`,
     `Video Bitrate Target: ${(videoBitrate / 1_000_000).toFixed(2)} Mbps`,
-    `Audio: ${audioClips ? '48 kHz stereo, 128 kbps' : 'None'}`,
+    `Audio: ${audioEnabled ? (audioClips ? '48 kHz stereo, 128 kbps' : 'None') : 'Disabled from export'}`,
     `Timeline Duration: ${duration(timelineMs)}`,
     `Visual Clips: ${visualClips}`,
     `Audio Clips: ${audioClips}`,

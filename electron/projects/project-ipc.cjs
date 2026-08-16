@@ -1,6 +1,14 @@
 const fs = require('fs');
 
-function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, BrowserWindow) {
+function registerProjectIpc(
+  ipcMain,
+  projectStore,
+  backgroundLibrary,
+  fontLibrary,
+  dialog,
+  BrowserWindow,
+  trustedRenderer,
+) {
   ipcMain.handle('projects:list', () => projectStore.list());
   ipcMain.handle('projects:media-url', (_event, payload = {}) => projectStore.mediaUrlFor(payload.source));
   ipcMain.handle('projects:editor-data', (_event, payload = {}) => projectStore.editorData(payload.projectId));
@@ -46,6 +54,27 @@ function registerProjectIpc(ipcMain, projectStore, backgroundLibrary, dialog, Br
     const background = backgroundLibrary.importFile(selected.filePaths[0]);
     notifyBackgroundLibraryChanged();
     return background;
+  });
+  const notifyFontLibraryChanged = () => {
+    for (const window of BrowserWindow.getAllWindows()) window.webContents.send('font-library:changed');
+  };
+  const requireTrustedFontSender = (event) => {
+    if (!trustedRenderer?.(event.sender.getURL())) throw new Error('Renderer non autorisé');
+  };
+  ipcMain.handle('font-library:list', (event) => {
+    requireTrustedFontSender(event);
+    return fontLibrary.list();
+  });
+  ipcMain.handle('font-library:pick-import', async (event) => {
+    requireTrustedFontSender(event);
+    const selected = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'Polices', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],
+    });
+    if (selected.canceled || !selected.filePaths[0]) return null;
+    const font = fontLibrary.importFile(selected.filePaths[0]);
+    notifyFontLibraryChanged();
+    return font;
   });
   ipcMain.handle('projects:delete', (_event, payload = {}) => projectStore.delete(payload.projectId));
   ipcMain.handle('projects:reveal', (_event, payload = {}) => {

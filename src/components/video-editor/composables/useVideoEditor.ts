@@ -27,6 +27,7 @@ export function useVideoEditor(options: {
   const initialPlaybackSettled = ref(false);
   const cursor = useCursorReplacer();
   const cursorMotion = ref(createDefaultCursorMotionSettings());
+  const includeAudioInExport = ref(true);
 
   const compositionState = useClipComposition({
     project,
@@ -75,6 +76,7 @@ export function useVideoEditor(options: {
     if (!project.value) return null;
     return {
       projectName: project.value.name,
+      includeAudio: includeAudioInExport.value,
       snapshot: createCompositionSnapshot({
         duration: compositionDurationMs(compositionState.composition.value) / 1_000,
         canvas: outputCanvas.value,
@@ -173,6 +175,7 @@ export function useVideoEditor(options: {
     editorState,
     zoomState,
     exportRequest,
+    includeAudioInExport,
     handleSelectTab: (tab: string) => {
       activeTab.value = tab;
     },

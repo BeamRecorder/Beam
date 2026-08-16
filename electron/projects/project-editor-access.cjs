@@ -9,7 +9,7 @@ const { migratePresentation, presentationState, zoomState } = require('./project
 function createProjectEditorAccess(options) {
   const migrateEditor = (directory, manifest) => {
     const current = manifest.editor;
-    if (current?.schemaVersion === 3 && current.composition?.schemaVersion === 5) return current;
+    if (current?.schemaVersion === 3 && current.composition?.schemaVersion === 6) return current;
     if (current?.schemaVersion !== undefined && ![2, 3].includes(current.schemaVersion))
       throw new Error(`Version d’état éditeur inconnue: ${String(current.schemaVersion)}`);
     const legacyComposition = current?.composition ?? { schemaVersion: 1, assets: [], clips: [] };
@@ -17,7 +17,7 @@ function createProjectEditorAccess(options) {
     const editor = {
       schemaVersion: 3,
       composition:
-        legacyComposition.schemaVersion === 5
+        legacyComposition.schemaVersion === 6
           ? normalizeComposition(legacyComposition)
           : migrateComposition(
               legacyComposition,

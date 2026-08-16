@@ -14,7 +14,7 @@ const request = {
     composition: {
       clips: [
         { kind: 'screen', enabled: true },
-        { kind: 'audio', enabled: true },
+        { kind: 'audio', enabled: true, timelineDurationMs: 10_000 },
       ],
     },
   },
@@ -136,5 +136,32 @@ describe('buildBeamExportReport', () => {
     });
 
     expect(report).toContain('Audio Progress: 100.0%');
+  });
+
+  it('does not count disabled or zero-duration audio clips in diagnostics', () => {
+    const report = buildBeamExportReport({
+      request: {
+        ...request,
+        snapshot: {
+          ...request.snapshot,
+          composition: {
+            ...request.snapshot.composition,
+            clips: [
+              { kind: 'audio', enabled: true, timelineDurationMs: 0 },
+              { kind: 'audio', enabled: false, timelineDurationMs: 10_000 },
+            ] as unknown as ExportRequest['snapshot']['composition']['clips'],
+          },
+        },
+      },
+      format: 'webm',
+      preset: 'high',
+      status: 'completed',
+      progress: null,
+      diagnostics,
+    });
+
+    expect(report).toContain('Audio: None');
+    expect(report).toContain('Audio Clips: 0');
+    expect(report).toContain('Audio Progress: None');
   });
 });

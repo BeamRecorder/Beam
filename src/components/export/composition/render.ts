@@ -18,6 +18,7 @@ import {
 } from '../../video-editor/composition/scene-layers';
 import type { Canvas2DContext } from '~/types/canvas';
 import { applyBlurEffect } from '../../video-editor/composition/effects/blur-effect';
+import { drawBeamWatermark, WATERMARK_LOGO_KEY } from '../../video-editor/canvas/watermark-render';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -313,4 +314,10 @@ export function renderCompositionFrame(
     );
     ctx.restore();
   }
+  drawBeamWatermark(
+    ctx,
+    snapshot.canvas,
+    { x: 0, y: 0, width: snapshot.canvas.width, height: snapshot.canvas.height },
+    visuals?.get(WATERMARK_LOGO_KEY)?.source,
+  );
 }

@@ -5,6 +5,7 @@ import { useCompositionMedia } from '../useCompositionMedia';
 import type { MediaFrame } from '~/media/shared';
 import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '~/media/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const applyBlurEffect = vi.hoisted(() => vi.fn());
@@ -70,6 +71,7 @@ const caption = (): CaptionClip => ({
     type: 'text',
     sentences: [{ id: 'sentence', text: 'Hello', startMs: 200, endMs: 900, words: [] }],
     style: {
+      ...createDefaultCaptionStyle(42),
       color: '#fff',
       fontSize: 32,
       shadowColor: '#000',
@@ -120,7 +122,7 @@ const keyboardCaption = (): CaptionClip => ({
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -371,7 +373,7 @@ describe('useCompositionMedia', () => {
     state.drawComposition(ctx, { dx: 0, dy: 0, dw: 800, dh: 400 }, 'caption');
     expect(fillText.mock.calls.length).toBeGreaterThan(1);
     expect(fillText.mock.calls.every((call: unknown[]) => call.length === 3)).toBe(true);
-    expect(ctx.font).toBe('800 16px sans-serif');
+    expect(ctx.font).toBe('normal 800 16px sans-serif');
   });
 
   it('keeps a single constrained fillText call when wrapping is disabled', () => {

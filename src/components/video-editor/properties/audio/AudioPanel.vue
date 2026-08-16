@@ -1,22 +1,27 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
-import Switch from '~/ui/switch/Switch.vue';
 import { useTranslate } from '~/i18n/useTranslate';
+import ClipActionGroup from '~/components/video-editor/properties/clip/ClipActionGroup.vue';
 
 const { t } = useTranslate('AudioPanel');
+const { t: tClip } = useTranslate('ClipPropertiesPanel');
 
 const props = withDefaults(
   defineProps<{
     volume: number;
     isSystemAudioEnabled: boolean;
     isMicAudioEnabled: boolean;
+    hasSystemAudio?: boolean;
+    hasMicAudio?: boolean;
     systemVolume?: number;
     micVolume?: number;
   }>(),
   {
     systemVolume: 100,
     micVolume: 100,
+    hasSystemAudio: false,
+    hasMicAudio: false,
   },
 );
 
@@ -26,6 +31,8 @@ const emit = defineEmits<{
   (e: 'update:isMicAudioEnabled', value: boolean): void;
   (e: 'update:systemVolume', value: number): void;
   (e: 'update:micVolume', value: number): void;
+  (e: 'delete:system'): void;
+  (e: 'delete:microphone'): void;
 }>();
 
 const localSystemVolume = ref(props.systemVolume);
@@ -56,10 +63,17 @@ const handleMicVolChange = (val: number) => {
       />
     </div>
 
-    <div class="audio-section">
+    <div v-if="hasSystemAudio" class="audio-section">
       <div class="prop-row">
         <span class="prop-label">{{ t('systemSoundTrack') }}</span>
-        <Switch :model-value="isSystemAudioEnabled" @update:modelValue="emit('update:isSystemAudioEnabled', $event)" />
+        <ClipActionGroup
+          :enabled="isSystemAudioEnabled"
+          :enabled-label="tClip('enabled')"
+          :disabled-label="tClip('disabled')"
+          :delete-label="t('deleteSystemTrack')"
+          @toggle="emit('update:isSystemAudioEnabled', !isSystemAudioEnabled)"
+          @delete="emit('delete:system')"
+        />
       </div>
       <div v-if="isSystemAudioEnabled" class="prop-item sub-slider">
         <BigSlider
@@ -74,10 +88,17 @@ const handleMicVolChange = (val: number) => {
       </div>
     </div>
 
-    <div class="audio-section">
+    <div v-if="hasMicAudio" class="audio-section">
       <div class="prop-row">
         <span class="prop-label">{{ t('microphoneTrack') }}</span>
-        <Switch :model-value="isMicAudioEnabled" @update:modelValue="emit('update:isMicAudioEnabled', $event)" />
+        <ClipActionGroup
+          :enabled="isMicAudioEnabled"
+          :enabled-label="tClip('enabled')"
+          :disabled-label="tClip('disabled')"
+          :delete-label="t('deleteMicrophoneTrack')"
+          @toggle="emit('update:isMicAudioEnabled', !isMicAudioEnabled)"
+          @delete="emit('delete:microphone')"
+        />
       </div>
       <div v-if="isMicAudioEnabled" class="prop-item sub-slider">
         <BigSlider
@@ -90,6 +111,10 @@ const handleMicVolChange = (val: number) => {
           @update:modelValue="handleMicVolChange"
         />
       </div>
+    </div>
+
+    <div v-if="!hasSystemAudio && !hasMicAudio" class="empty-state" role="status">
+      <p>{{ t('noAudioTracksDetected') }}</p>
     </div>
   </div>
 </template>
@@ -132,5 +157,17 @@ const handleMicVolChange = (val: number) => {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
+}
+.empty-state {
+  padding: 18px 14px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+.empty-state p {
+  margin: 0;
 }
 </style>

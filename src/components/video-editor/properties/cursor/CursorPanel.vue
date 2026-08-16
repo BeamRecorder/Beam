@@ -32,6 +32,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:selectedCursor', value: CursorType): void;
+  (e: 'preview:selectedCursor', value: CursorType | null): void;
   (e: 'update:cursorSize', value: number): void;
   (e: 'update:cursorColor', value: string): void;
   (e: 'update:enableShadow', value: boolean): void;
@@ -59,6 +60,11 @@ const updateMotion = (patch: Partial<CursorMotionSettings>) => {
 const selectMotionPreset = (preset: CursorMotionPreset) => {
   emit('update:motion', preset === 'custom' ? { ...props.motion, preset } : cursorMotionPreset(preset));
 };
+const commitCursor = (value: string | number) => {
+  if (typeof value !== 'string') return;
+  emit('preview:selectedCursor', null);
+  emit('update:selectedCursor', value as CursorType);
+};
 </script>
 
 <template>
@@ -68,8 +74,8 @@ const selectMotionPreset = (preset: CursorMotionPreset) => {
       <Select
         :model-value="selectedCursor"
         :options="cursorOptions"
-        :preview-on-hover="true"
-        @update:modelValue="emit('update:selectedCursor', $event)"
+        @preview:model-value="(value) => emit('preview:selectedCursor', value as CursorType | null)"
+        @update:modelValue="commitCursor"
       />
     </div>
 

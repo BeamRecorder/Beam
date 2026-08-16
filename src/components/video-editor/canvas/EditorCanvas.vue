@@ -7,6 +7,8 @@ import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
+import type { CaptionStyle } from '~/media/shared/composition-types';
+import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
 import { approximateCaptionTextWidth } from '~/media/shared/caption-text-layout';
 import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
@@ -19,6 +21,8 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { resolveCompositionSceneLayers } from '../composition/scene-layers';
 import { canvasGuideLines } from './canvas-guides';
 import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
+import { drawBeamWatermark, WATERMARK_LOGO_PATH } from './watermark-render';
+import { resolvePublicAssetUrl } from '~/utils/public-asset';
 const { t } = useTranslate('EditorCanvas');
 const props = defineProps<EditorCanvasProps>();
 const emit = defineEmits<EditorCanvasEmits>();
@@ -30,14 +34,15 @@ const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
+let watermarkLogo: HTMLImageElement | null = null;
 let drawVisualStack:
   ((ctx: CanvasRenderingContext2D, videoWindow: RenderedVideoWindow, drawScreen: () => void) => void) | null = null;
 const viewportZoom = useViewportZoom();
-const measureCaptionText = (text: string, fontSize: number) => {
+const measureCaptionText = (text: string, fontSize: number, style?: CaptionStyle) => {
   const context = canvasRef.value?.getContext('2d');
   if (!context) return approximateCaptionTextWidth(text, fontSize);
   context.save();
-  context.font = `800 ${fontSize}px sans-serif`;
+  applyCanvasCaptionFont(context, style ?? { ...({} as CaptionStyle), fontSize }, fontSize);
   const width = context.measureText(text).width;
   context.restore();
   return width;
@@ -229,6 +234,7 @@ watch(
     renderOnce();
   },
 );
+watch(() => props.outputCanvas, renderOnce, { deep: true });
 watch(() => [props.composition, props.currentTime, props.frameVersion, props.isCropping] as const, renderOnce, {
   deep: true,
 });
@@ -307,6 +313,13 @@ const renderCanvas = () => {
     compositionMedia.drawComposition(ctx, fallbackWindow);
     ctx.restore();
   }
+  const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
+  drawBeamWatermark(
+    ctx,
+    props.outputCanvas,
+    { x: preview.x, y: preview.y, width: preview.width, height: preview.height },
+    watermarkLogo,
+  );
 };
 const commitCrop = () => {
   transformAndCrop.commitCrop();
@@ -357,6 +370,9 @@ const handleIslandWheel = (event: WheelEvent) => {
 };
 
 onMounted(() => {
+  watermarkLogo = new Image();
+  watermarkLogo.onload = renderOnce;
+  watermarkLogo.src = resolvePublicAssetUrl(WATERMARK_LOGO_PATH);
   resizeCanvas();
   resizeObserver = new ResizeObserver(resizeCanvas);
   if (containerRef.value) resizeObserver.observe(containerRef.value);

@@ -9,6 +9,7 @@ import { createSnapshotCameraEvaluator, renderCompositionFrame, type RenderableM
 import type { ExportRequest } from '../export-types';
 import type { ExportAssets } from './export-worker-assets';
 import { ExportWorkerOutput } from './export-worker-output';
+import { WATERMARK_LOGO_KEY } from '../../video-editor/canvas/watermark-render';
 
 export type VideoPipelineStats = {
   elapsedMs: number;
@@ -148,6 +149,8 @@ export async function renderExportVideo(
       const samples: VideoSample[] = [];
       const decoded: Array<{ clip: VisualClip; sample: VideoSample }> = [];
       const visuals = new Map<string, RenderableMedia>();
+      const watermarkLogo = images.get(WATERMARK_LOGO_KEY);
+      if (watermarkLogo) visuals.set(WATERMARK_LOGO_KEY, watermarkLogo);
       let screen: RenderableMedia | null = null;
       const decodeStarted = performance.now();
       try {

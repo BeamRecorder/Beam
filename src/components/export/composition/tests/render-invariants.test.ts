@@ -3,6 +3,7 @@ import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canva
 import type { ClipAppearance, ClipComposition } from '~/media/shared/composition-types';
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import type { CompositionSnapshot } from '../../export-types';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 
 const appearance: ClipAppearance = {
   cornerRadius: 'none',
@@ -23,7 +24,7 @@ const appearance: ClipAppearance = {
 };
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -289,6 +290,7 @@ describe('composition rendering invariants', () => {
           type: 'text',
           sentences: [{ id: 's', text: 'Foreground', startMs: 0, endMs: 1_000, words: [] }],
           style: {
+            ...createDefaultCaptionStyle(20),
             color: '#fff',
             fontSize: 20,
             shadowColor: '#000',

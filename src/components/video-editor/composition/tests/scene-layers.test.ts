@@ -45,7 +45,7 @@ const blur = (order: number): BlurClip => ({
 });
 
 const composition = (...clips: Clip[]): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [],
   clips,

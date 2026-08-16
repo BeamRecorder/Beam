@@ -23,7 +23,7 @@ const screenAppearance: ClipAppearance = {
   frameChromeScale: 1,
 };
 const composition = (): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     {
@@ -372,7 +372,7 @@ describe('canonical composition rendering', () => {
     drawCompositionLayers(ctx, value, 0.2);
     expect(fillText.mock.calls.length).toBeGreaterThan(1);
     expect(fillText.mock.calls.every((call: unknown[]) => call.length === 3)).toBe(true);
-    expect(ctx.font).toBe('800 20px sans-serif');
+    expect(ctx.font).toBe('normal 800 20px sans-serif');
   });
 
   it('keeps constrained rendering when wrapping is disabled', () => {

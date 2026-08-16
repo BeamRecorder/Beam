@@ -1,5 +1,6 @@
 import type { ProjectEditorData, SessionTrackAsset, SessionTrackData } from '../../../api/types/capture-api';
 import {
+  COMPOSITION_SCHEMA_VERSION,
   SCREEN_CLIP_ID,
   type AudioClip,
   type Clip,
@@ -130,13 +131,30 @@ export function synchronizeRecordingClips(
   composition: ClipComposition,
   editorData: ProjectEditorData | null | undefined,
 ): ClipComposition {
-  if (!editorData) return composition;
-  const assets = new Map(composition.assets.map((asset) => [asset.id, asset]));
-  const clips = [...composition.clips];
+  const input = composition as ClipComposition & {
+    schemaVersion?: number;
+    assets?: MediaAsset[];
+    clips?: Clip[];
+    keyboardCaptionSessions?: string[];
+  };
+  const canonicalComposition =
+    input.schemaVersion === COMPOSITION_SCHEMA_VERSION &&
+    Array.isArray(input.assets) &&
+    Array.isArray(input.clips) &&
+    Array.isArray(input.keyboardCaptionSessions)
+      ? composition
+      : createComposition(
+          Array.isArray(input.assets) ? input.assets : [],
+          Array.isArray(input.clips) ? input.clips : [],
+          Array.isArray(input.keyboardCaptionSessions) ? input.keyboardCaptionSessions : [],
+        );
+  if (!editorData) return canonicalComposition;
+  const assets = new Map(canonicalComposition.assets.map((asset) => [asset.id, asset]));
+  const clips = [...canonicalComposition.clips];
   const existingIds = new Set(clips.map((clip) => clip.id));
   const fallbackEndNs = editorData.manifest.durationNs;
   const candidates: Clip[] = [];
-  const keyboardCaptionSessions = [...composition.keyboardCaptionSessions];
+  const keyboardCaptionSessions = [...canonicalComposition.keyboardCaptionSessions];
   let assetsChanged = false;
 
   for (const track of editorData.tracks) {
@@ -240,8 +258,8 @@ export function synchronizeRecordingClips(
   if (
     !assetsChanged &&
     candidates.length === 0 &&
-    keyboardCaptionSessions.length === composition.keyboardCaptionSessions.length
+    keyboardCaptionSessions.length === canonicalComposition.keyboardCaptionSessions.length
   )
-    return composition;
+    return canonicalComposition;
   return createComposition([...assets.values()], [...clips, ...candidates], keyboardCaptionSessions);
 }

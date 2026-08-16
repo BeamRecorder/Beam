@@ -3,6 +3,7 @@ import { layoutCaptionText, type CaptionTextMeasurer } from '~/media/shared/capt
 import type { KeyboardCaptionRun } from '~/media/shared/keyboard-captions';
 import { keyboardCaptionTransformAtCursor } from '~/media/shared/keyboard-caption-position';
 import type { Canvas2DContext } from '~/types/canvas';
+import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
 
 export interface CaptionViewport {
   x: number;
@@ -70,9 +71,8 @@ export function drawCaptionText(
 ) {
   if (!options.text) return;
   const style = options.clip.caption.style;
-  const canonicalFont = `800 ${Math.max(1, style.fontSize)}px sans-serif`;
   ctx.save();
-  ctx.font = canonicalFont;
+  applyCanvasCaptionFont(ctx, style);
   const measureText: CaptionTextMeasurer = (text) => ctx.measureText(text).width;
   const canonicalCursor = options.cursorPosition
     ? {
@@ -95,16 +95,16 @@ export function drawCaptionText(
           content: {
             width:
               options.runs.reduce((width, run) => {
-                ctx.font = `800 ${Math.max(1, style.fontSize * run.fontScale)}px sans-serif`;
+                applyCanvasCaptionFont(ctx, style, style.fontSize * run.fontScale);
                 return width + ctx.measureText(run.text).width;
               }, 0) +
               style.outlineWidth * 2 +
               style.extrusionDepth,
-            height: style.fontSize * 1.2 + style.outlineWidth * 2 + style.extrusionDepth,
+            height: style.fontSize * (style.lineHeight ?? 1.2) + style.outlineWidth * 2 + style.extrusionDepth,
           },
         })
       : undefined;
-  ctx.font = canonicalFont;
+  applyCanvasCaptionFont(ctx, style);
   const layout = layoutCaptionText({
     clip: options.clip,
     text: options.text,
@@ -124,8 +124,8 @@ export function drawCaptionText(
   const extrusion = Math.max(0, style.extrusionDepth) * scale;
   const shadowBlur = Math.max(0, style.shadowBlur) * scale;
   const offsets = shadowOffsets(shadowBlur, style.shadowDirection);
-  ctx.font = `800 ${fontSize}px sans-serif`;
-  ctx.textAlign = 'center';
+  applyCanvasCaptionFont(ctx, style, fontSize);
+  ctx.textAlign = style.textAlign ?? 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   if (shadowBlur > 0) {
@@ -138,28 +138,34 @@ export function drawCaptionText(
   if (options.runs?.length) {
     const measured = options.runs.map((run) => {
       const runFontSize = fontSize * run.fontScale;
-      ctx.font = `800 ${runFontSize}px sans-serif`;
+      applyCanvasCaptionFont(ctx, style, runFontSize);
       return { ...run, fontSize: runFontSize, width: ctx.measureText(run.text).width };
     });
     const naturalWidth = measured.reduce((width, run) => width + run.width, 0);
     const fitScale = Math.min(1, maxTextWidth / Math.max(1, naturalWidth));
     const renderedWidth = naturalWidth * fitScale;
+    const alignedStart =
+      style.textAlign === 'left'
+        ? centerX - maxTextWidth / 2
+        : style.textAlign === 'right'
+          ? centerX + maxTextWidth / 2 - renderedWidth
+          : centerX - renderedWidth / 2;
     drawBackdropBlur(
       ctx,
       {
-        x: centerX - renderedWidth / 2 - strokeWidth,
+        x: alignedStart - strokeWidth,
         y: centerY - fontSize / 2 - strokeWidth,
         width: renderedWidth + strokeWidth * 2 + extrusion,
         height: fontSize + strokeWidth * 2 + extrusion,
       },
       style.backdropBlur * scale,
     );
-    let x = centerX - renderedWidth / 2;
+    let x = alignedStart;
+    ctx.textAlign = 'left';
     for (const run of measured) {
       const runFontSize = run.fontSize * fitScale;
       const runWidth = run.width * fitScale;
-      const runCenter = x + runWidth / 2;
-      ctx.font = `800 ${runFontSize}px sans-serif`;
+      applyCanvasCaptionFont(ctx, style, runFontSize);
       ctx.globalAlpha = run.opacity;
       if (extrusion > 0) {
         ctx.strokeStyle = style.shadowColor || 'rgba(0,0,0,.85)';
@@ -167,19 +173,22 @@ export function drawCaptionText(
         ctx.lineWidth = strokeWidth * 2;
         for (let step = Math.ceil(extrusion); step >= 1; step -= 1) {
           const offset = Math.min(step, extrusion);
-          ctx.strokeText(run.text, runCenter + offset, centerY + offset);
-          ctx.fillText(run.text, runCenter + offset, centerY + offset);
+          ctx.strokeText(run.text, x + offset, centerY + offset);
+          ctx.fillText(run.text, x + offset, centerY + offset);
           ctx.shadowColor = 'transparent';
         }
       }
       if (style.outlineColor !== 'transparent' && strokeWidth > 0) {
         ctx.strokeStyle = style.outlineColor;
         ctx.lineWidth = strokeWidth * 2;
-        ctx.strokeText(run.text, runCenter, centerY);
+        ctx.strokeText(run.text, x, centerY);
         ctx.shadowColor = 'transparent';
       }
       ctx.fillStyle = style.color || '#ffffff';
-      ctx.fillText(run.text, runCenter, centerY);
+      ctx.fillText(run.text, x, centerY);
+      if (style.textDecoration === 'line-through') {
+        ctx.fillRect(x, centerY - runFontSize * 0.08, runWidth, Math.max(1, runFontSize * 0.07));
+      }
       x += runWidth;
     }
     ctx.restore();
@@ -187,6 +196,12 @@ export function drawCaptionText(
   }
 
   const firstY = centerY - ((layout.lines.length - 1) * lineHeight) / 2;
+  const textX =
+    style.textAlign === 'left'
+      ? centerX - maxTextWidth / 2
+      : style.textAlign === 'right'
+        ? centerX + maxTextWidth / 2
+        : centerX;
   const textWidth = Math.max(
     1,
     ...layout.lines.map((line) =>
@@ -196,7 +211,9 @@ export function drawCaptionText(
   drawBackdropBlur(
     ctx,
     {
-      x: centerX - textWidth / 2 - strokeWidth,
+      x:
+        (style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - textWidth : textX - textWidth / 2) -
+        strokeWidth,
       y: firstY - fontSize / 2 - strokeWidth,
       width: textWidth + strokeWidth * 2 + extrusion,
       height: Math.max(fontSize, layout.lines.length * lineHeight) + strokeWidth * 2 + extrusion,
@@ -212,11 +229,11 @@ export function drawCaptionText(
       for (let step = Math.ceil(extrusion); step >= 1; step -= 1) {
         const offset = Math.min(step, extrusion);
         if (layout.wrap) {
-          ctx.strokeText(line, centerX + offset, y + offset);
-          ctx.fillText(line, centerX + offset, y + offset);
+          ctx.strokeText(line, textX + offset, y + offset);
+          ctx.fillText(line, textX + offset, y + offset);
         } else {
-          ctx.strokeText(line, centerX + offset, y + offset, maxTextWidth);
-          ctx.fillText(line, centerX + offset, y + offset, maxTextWidth);
+          ctx.strokeText(line, textX + offset, y + offset, maxTextWidth);
+          ctx.fillText(line, textX + offset, y + offset, maxTextWidth);
         }
         ctx.shadowColor = 'transparent';
       }
@@ -227,13 +244,19 @@ export function drawCaptionText(
     if (outline !== 'transparent' && strokeWidth > 0) {
       ctx.strokeStyle = outline;
       ctx.lineWidth = strokeWidth * 2;
-      if (layout.wrap) ctx.strokeText(line, centerX, y);
-      else ctx.strokeText(line, centerX, y, maxTextWidth);
+      if (layout.wrap) ctx.strokeText(line, textX, y);
+      else ctx.strokeText(line, textX, y, maxTextWidth);
       ctx.shadowColor = 'transparent';
     }
     ctx.fillStyle = style.color || '#ffffff';
-    if (layout.wrap) ctx.fillText(line, centerX, y);
-    else ctx.fillText(line, centerX, y, maxTextWidth);
+    if (layout.wrap) ctx.fillText(line, textX, y);
+    else ctx.fillText(line, textX, y, maxTextWidth);
+    if (style.textDecoration === 'line-through') {
+      const width = Math.min(maxTextWidth, ctx.measureText(line).width);
+      const startX =
+        style.textAlign === 'left' ? textX : style.textAlign === 'right' ? textX - width : textX - width / 2;
+      ctx.fillRect(startX, y - fontSize * 0.08, width, Math.max(1, fontSize * 0.07));
+    }
   };
   layout.lines.forEach((line, index) => drawLine(line, firstY + index * lineHeight));
   ctx.restore();

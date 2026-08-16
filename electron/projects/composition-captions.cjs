@@ -40,6 +40,17 @@ const normalizeCaptionStyle = (value) => {
   )
     throw new Error('Style de caption invalide');
   return {
+    fontFamily:
+      typeof style.fontFamily === 'string' && style.fontFamily.trim() ? style.fontFamily.slice(0, 200) : 'sans-serif',
+    ...(typeof style.fontAssetId === 'string' && /^[a-f0-9]{64}$/.test(style.fontAssetId)
+      ? { fontAssetId: style.fontAssetId }
+      : {}),
+    fontWeight: style.fontWeight === 400 ? 400 : 800,
+    fontStyle: style.fontStyle === 'italic' ? 'italic' : 'normal',
+    textDecoration: style.textDecoration === 'line-through' ? 'line-through' : 'none',
+    textAlign: ['left', 'center', 'right'].includes(style.textAlign) ? style.textAlign : 'center',
+    lineHeight: finite(style.lineHeight) ? Math.max(0.8, Math.min(2, style.lineHeight)) : 1.2,
+    letterSpacing: finite(style.letterSpacing) ? Math.max(-5, Math.min(20, style.letterSpacing)) : 0,
     color: style.color,
     fontSize: Math.max(1, style.fontSize),
     wrap: style.wrap,

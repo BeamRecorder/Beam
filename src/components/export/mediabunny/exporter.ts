@@ -116,9 +116,13 @@ export async function exportWithMediabunny(
             overallProgress: 1,
             completedImages: totalImages,
             totalImages,
-            audioProgress: request.snapshot.composition.clips.some((clip) => clip.kind === 'audio' && clip.enabled)
-              ? 1
-              : null,
+            audioProgress:
+              request.includeAudio !== false &&
+              request.snapshot.composition.clips.some(
+                (clip) => clip.kind === 'audio' && clip.enabled && clip.timelineDurationMs > 0,
+              )
+                ? 1
+                : null,
             currentTimeMs: Math.round(request.snapshot.duration * 1_000),
             totalTimeMs: Math.round(request.snapshot.duration * 1_000),
             diagnostics: diagnostics.runtime,

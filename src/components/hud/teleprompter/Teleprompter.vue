@@ -22,6 +22,7 @@ import Textarea from '~/ui/textarea/Textarea.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { capture } from '~/api/capture';
 import { useTeleprompter } from './useTeleprompter';
+import type { TeleprompterMode } from './teleprompter-types';
 
 const { t } = useTranslate('Teleprompter');
 const state = useTeleprompter();
@@ -35,6 +36,9 @@ const modeOptions = computed(() => [
 ]);
 const isAutoscrolling = computed(() => state.document.value.autoscroll && !state.isPaused.value);
 const updateText = (text: string) => state.updateDocument({ text });
+const updateMode = (value: string | number) => {
+  if (typeof value === 'string') state.updateDocument({ mode: value as TeleprompterMode });
+};
 const hide = () => capture.hideTeleprompter();
 const onSession = (event: Event) => {
   const context = (event as CustomEvent).detail ?? null;
@@ -112,11 +116,7 @@ onBeforeUnmount(() => {
         <div class="settings-form">
           <div class="setting-row">
             <span>{{ t('mode') }}</span
-            ><Select
-              :model-value="state.document.value.mode"
-              :options="modeOptions"
-              @update:model-value="state.updateDocument({ mode: $event })"
-            />
+            ><Select :model-value="state.document.value.mode" :options="modeOptions" @update:model-value="updateMode" />
           </div>
           <div class="setting-row">
             <span>{{ t('autoscroll') }}</span

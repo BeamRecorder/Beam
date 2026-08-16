@@ -1,4 +1,4 @@
-export const COMPOSITION_SCHEMA_VERSION = 5 as const;
+export const COMPOSITION_SCHEMA_VERSION = 6 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -37,6 +37,14 @@ export interface CaptionSentence {
 }
 
 export interface CaptionStyle {
+  fontFamily: string;
+  fontAssetId?: string;
+  fontWeight: 400 | 800;
+  fontStyle: 'normal' | 'italic';
+  textDecoration: 'none' | 'line-through';
+  textAlign: 'left' | 'center' | 'right';
+  lineHeight: number;
+  letterSpacing: number;
   color: string;
   fontSize: number;
   wrap: boolean;

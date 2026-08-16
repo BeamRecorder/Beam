@@ -52,19 +52,23 @@ fn forbidden_macros_are_absent_from_sources() {
 #[test]
 fn native_imports_remain_inside_platform_directories() {
     let rules = [
-        ("windows::", "/win/"),
-        ("windows_capture::", "/win/"),
-        ("screencapturekit::", "/mac/"),
-        ("ashpd::", "/linux/"),
-        ("pipewire::", "/linux/"),
-        ("use pipewire", "/linux/"),
+        ("windows::", ["/win/", "/windows.rs"]),
+        ("windows_capture::", ["/win/", "/windows.rs"]),
+        ("screencapturekit::", ["/mac/", "/macos.rs"]),
+        ("ashpd::", ["/linux/", "/linux.rs"]),
+        ("pipewire::", ["/linux/", "/linux.rs"]),
+        ("use pipewire", ["/linux/", "/linux.rs"]),
     ];
     let mut violations = Vec::new();
     for entry in rust_sources() {
         let path = entry.path().to_string_lossy().replace('\\', "/");
         let contents = std::fs::read_to_string(entry.path()).unwrap_or_default();
-        for (needle, directory) in rules {
-            if contents.contains(needle) && !path.contains(directory) {
+        for (needle, platform_paths) in rules {
+            if contents.contains(needle)
+                && !platform_paths
+                    .iter()
+                    .any(|platform_path| path.contains(platform_path))
+            {
                 violations.push(format!("{path}: {needle}"));
             }
         }

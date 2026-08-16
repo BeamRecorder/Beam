@@ -6,7 +6,7 @@ use std::{
     os::unix::fs::PermissionsExt,
     path::Path,
     process::{Command, Stdio},
-    sync::{Arc, Mutex, OnceLock},
+    sync::Arc,
     thread,
     time::{Duration, Instant},
 };
@@ -25,16 +25,9 @@ use super::{
     owned_child,
 };
 
-fn child_test_lock() -> std::sync::MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .expect("child test lock")
-}
-
 #[test]
 fn kill_and_wait_terminates_a_descendant_in_the_owned_process_group() {
-    let _lock = child_test_lock();
+    let _lock = owned_child::test_lock();
     let mut command = Command::new("sh");
     command
         .args(["-c", "sleep 30 & printf '%s\\n' \"$!\"; wait"])
@@ -62,7 +55,7 @@ fn kill_and_wait_terminates_a_descendant_in_the_owned_process_group() {
 
 #[test]
 fn terminate_all_kills_registered_child_and_descendant_before_test_reaps_child() {
-    let _lock = child_test_lock();
+    let _lock = owned_child::test_lock();
     let mut command = Command::new("sh");
     command
         .args(["-c", "sleep 30 & printf '%s\\n' \"$!\"; wait"])
@@ -195,7 +188,7 @@ fn frame(stride: usize, bytes: Vec<u8>) -> OwnedVideoFrame {
 
 #[test]
 fn process_writes_compact_rows_and_atomically_publishes_output() {
-    let _lock = child_test_lock();
+    let _lock = owned_child::test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nbytes=$(wc -c)\n[ \"$bytes\" -eq 16 ] || exit 9\nprintf 'fake-mp4' > \"$output\"\n",
     );
@@ -232,7 +225,7 @@ fn process_writes_compact_rows_and_atomically_publishes_output() {
 
 #[test]
 fn process_propagates_non_zero_exit_and_removes_partial_output() {
-    let _lock = child_test_lock();
+    let _lock = owned_child::test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'broken' > \"$output\"\nprintf 'encoder exploded' >&2\nexit 7\n",
     );
@@ -264,7 +257,7 @@ fn process_propagates_non_zero_exit_and_removes_partial_output() {
 
 #[test]
 fn process_rejects_a_segment_without_frames() {
-    let _lock = child_test_lock();
+    let _lock = owned_child::test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nwc -c >/dev/null\nprintf 'header-only' > \"$output\"\n",
     );
@@ -287,7 +280,7 @@ fn process_rejects_a_segment_without_frames() {
 
 #[test]
 fn sink_accepts_the_initial_segment_when_format_arrives_before_frames_and_stop() {
-    let _lock = child_test_lock();
+    let _lock = owned_child::test_lock();
     let (_fake, capabilities) = fake_ffmpeg(
         "#!/bin/sh\nfor output do :; done\nbytes=$(wc -c)\n[ \"$bytes\" -eq 16 ] || exit 9\nprintf 'fake-mp4' > \"$output\"\n",
     );
@@ -341,7 +334,7 @@ fn sink_accepts_the_initial_segment_when_format_arrives_before_frames_and_stop()
 #[test]
 #[ignore = "requires the system FFmpeg runtime"]
 fn system_ffmpeg_encodes_a_playable_mp4_segment() {
-    let _lock = child_test_lock();
+    let _lock = owned_child::test_lock();
     let capabilities = super::probe_ffmpeg().expect("system FFmpeg capabilities");
     let output_directory = tempfile::tempdir().expect("temporary output");
     let output = output_directory.path().join("segment-0001.mp4");

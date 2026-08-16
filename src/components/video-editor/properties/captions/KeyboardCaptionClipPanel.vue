@@ -16,6 +16,7 @@ const props = defineProps<{ clip: CaptionClip | null }>();
 const emit = defineEmits<{
   (event: 'update', clip: CaptionClip): void;
   (event: 'delete', clipId: string): void;
+  (event: 'preview', clip: CaptionClip | null): void;
 }>();
 const { draft, flush, update } = useCaptionDraft(toRef(props, 'clip'), (clip) => emit('update', clip));
 const keyboardDraft = computed(() => (draft.value && isKeyboardCaptionClip(draft.value) ? draft.value : null));
@@ -33,6 +34,15 @@ const updateStyle = (key: keyof CaptionStyle, value: CaptionStyle[keyof CaptionS
   update((clip) => ({ ...clip, caption: { ...clip.caption, style: { ...clip.caption.style, [key]: value } } }));
 const updateFollowCursor = (followCursor: boolean) =>
   update((clip) => (isKeyboardCaptionClip(clip) ? { ...clip, caption: { ...clip.caption, followCursor } } : clip));
+const previewStyle = (patch: Partial<CaptionStyle> | null) => {
+  if (!keyboardDraft.value) return;
+  emit(
+    'preview',
+    patch
+      ? { ...keyboardDraft.value, caption: { ...keyboardDraft.value.caption, style: { ...style.value, ...patch } } }
+      : null,
+  );
+};
 </script>
 
 <template>
@@ -61,7 +71,13 @@ const updateFollowCursor = (followCursor: boolean) =>
         </div>
       </div>
       <Divider spacing="xs" />
-      <CaptionStyleControls :style="style" :default-font-size="28" @update="updateStyle" />
+      <CaptionStyleControls
+        :style="style"
+        :default-font-size="28"
+        :sample-text="displayText"
+        @update="updateStyle"
+        @preview="previewStyle"
+      />
     </div>
   </div>
 </template>

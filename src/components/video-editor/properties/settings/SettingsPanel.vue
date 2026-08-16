@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import Button from '~/ui/button/Button.vue';
 import Select from '~/ui/select/Select.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -12,10 +12,16 @@ import { capture } from '~/api/capture';
 import AppearanceSettings from '~/components/settings/AppearanceSettings.vue';
 import UpdateControls from '~/components/updates/UpdateControls.vue';
 import SocialLinks from '~/components/socials/SocialLinks.vue';
-import { localeOptions } from '~/i18n/locales';
+import { isSupportedLocale, localeOptions } from '~/i18n/locales';
+import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
+import Accordion from '~/ui/accordion/Accordion.vue';
 
 const { t } = useTranslate('SettingsPanel');
+const { t: tAppearance } = useTranslate('AppearanceSettings');
 const localeStore = useLocaleStore();
+const updateLocale = (value: string | number) => {
+  if (typeof value === 'string' && isSupportedLocale(value)) localeStore.setLocale(value);
+};
 
 const toggleDevTools = () => {
   capture.toggleDevTools?.();
@@ -28,6 +34,7 @@ const emit = defineEmits<{
 }>();
 
 const isDevModeEnabled = ref(localStorage.getItem('dev_mode_enabled') === 'true');
+const appearanceOpen = ref(true);
 watch(isDevModeEnabled, (value) => {
   localStorage.setItem('dev_mode_enabled', String(value));
 });
@@ -37,63 +44,14 @@ const handleStartRecordingFromPopover = (config: any, closePopover: () => void) 
   emit('start-recording', config);
 };
 
-const isCopiedSysInfo = ref(false);
-let copyTimeout: ReturnType<typeof setTimeout> | null = null;
-
-onBeforeUnmount(() => {
-  if (copyTimeout) clearTimeout(copyTimeout);
-});
-
-const copySystemInfo = async () => {
-  let appVersion = 'Inconnue';
-  try {
-    const updateState = await capture.getUpdateState();
-    if (updateState?.currentVersion) {
-      appVersion = updateState.currentVersion;
-    }
-  } catch {
-    // Fail-safe if capture API is not available
-  }
-
-  const infoLines = [
-    `=== Beam System Info ===`,
-    `App Version: ${appVersion}`,
-    `Platform: ${navigator.platform || 'Unknown'}`,
-    `User Agent: ${navigator.userAgent}`,
-    `Language: ${navigator.language}`,
-    `Screen Resolution: ${window.screen.width}x${window.screen.height} (DPR: ${window.devicePixelRatio})`,
-    `Viewport: ${window.innerWidth}x${window.innerHeight}`,
-    `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
-    `Date: ${new Date().toISOString()}`,
-    `================================`,
-  ].join('\n');
-
-  try {
-    await navigator.clipboard.writeText(infoLines);
-  } catch {
-    const textarea = document.createElement('textarea');
-    textarea.value = infoLines;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    textarea.remove();
-  }
-
-  isCopiedSysInfo.value = true;
-  if (copyTimeout) clearTimeout(copyTimeout);
-  copyTimeout = setTimeout(() => {
-    isCopiedSysInfo.value = false;
-  }, 2000);
-};
+const { copied: isCopiedSysInfo, copy: copySystemInfo } = useCopySystemInformation();
 </script>
 
 <template>
   <div class="options-group">
-    <div class="prop-item">
+    <Accordion v-model="appearanceOpen" :title="tAppearance('title')" :bordered="false" class="prop-item">
       <AppearanceSettings :show-title="false" />
-    </div>
+    </Accordion>
 
     <Divider spacing="xs" />
 
@@ -103,7 +61,7 @@ const copySystemInfo = async () => {
         :model-value="localeStore.locale"
         :options="localeOptions"
         direction="up"
-        @update:model-value="localeStore.setLocale($event)"
+        @update:model-value="updateLocale"
       />
     </div>
 

@@ -11,9 +11,11 @@ use crate::{
 
 use super::super::{FfmpegCapabilities, FfmpegScreenSink};
 use crate::screen::linux::FfmpegEncoder;
+use crate::screen::linux::owned_child;
 
 #[test]
 fn sink_rotates_atomic_segments_and_finalizes_cursor_sidecars() {
+    let _lock = owned_child::test_lock();
     let temporary = tempfile::tempdir().expect("temporary sink directory");
     let executable = fake_ffmpeg(&temporary);
     let screen = temporary.path().join("screen");
@@ -63,6 +65,7 @@ fn sink_rotates_atomic_segments_and_finalizes_cursor_sidecars() {
 
 #[test]
 fn sink_without_an_active_input_broker_keeps_video_and_cursor_sidecars_without_input_json() {
+    let _lock = owned_child::test_lock();
     crate::screen::linux::shutdown_linux_input_access();
 
     let temporary = tempfile::tempdir().expect("temporary sink directory");

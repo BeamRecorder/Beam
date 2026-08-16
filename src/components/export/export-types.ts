@@ -50,6 +50,8 @@ export interface ExportRequest {
   projectName: string;
   format: ExportFormat;
   preset: ExportPreset;
+  /** Defaults to true for requests created before this option existed. */
+  includeAudio?: boolean;
   snapshot: CompositionSnapshot;
 }
 

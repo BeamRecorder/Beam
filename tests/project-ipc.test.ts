@@ -5,29 +5,51 @@ const { registerProjectIpc } = require('../electron/projects/project-ipc.cjs') a
     ipcMain: { handle: (channel: string, handler: Function) => void },
     projectStore: object,
     backgroundLibrary: object,
+    fontLibrary: object,
     dialog: object,
     BrowserWindow: object,
+    trustedRenderer: (url: string) => boolean,
   ) => void
 }
 
-const setup = () => {
+const importedFont = {
+  id: 'a'.repeat(64),
+  family: 'Imported Sans',
+  fullName: 'Imported Sans Regular',
+  extension: '.ttf',
+  url: 'project-media://font/' + 'a'.repeat(64),
+}
+
+const setup = (options: { trusted?: boolean; rendererUrl?: string } = {}) => {
   const handlers = new Map<string, Function>()
   const ipcMain = { handle: (channel: string, handler: Function) => handlers.set(channel, handler) }
   const importFile = vi.fn((source) => ({ source }))
+  const fontImportFile = vi.fn(() => importedFont)
+  const fontList = vi.fn(() => [importedFont])
   const dialog = { showOpenDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['C:/wallpaper.png'] }) }
   const window = { webContents: { send: vi.fn() } }
   const windows = { getAllWindows: () => [window] }
+  const event = { sender: { getURL: vi.fn(() => options.rendererUrl ?? 'file:///editor.html') } }
+  const trustedRenderer = vi.fn(() => options.trusted ?? true)
   const projectStore = {
     importDroppedProjectMedia: vi.fn((projectId, input) => ({ projectId, ...input })),
   }
-  registerProjectIpc(ipcMain, projectStore, { importFile, list: vi.fn() }, dialog, windows)
+  const backgroundLibrary = { importFile, list: vi.fn() }
+  const fontLibrary = { importFile: fontImportFile, list: fontList }
+  registerProjectIpc(ipcMain, projectStore, backgroundLibrary, fontLibrary, dialog, windows, trustedRenderer)
   return {
     handler: handlers.get('background-library:pick-import')!,
     droppedHandler: handlers.get('projects:import-dropped-media')!,
+    fontListHandler: handlers.get('font-library:list')!,
+    fontImportHandler: handlers.get('font-library:pick-import')!,
     dialog,
     importFile,
+    fontImportFile,
+    fontList,
     projectStore,
     window,
+    event,
+    trustedRenderer,
   }
 }
 
@@ -73,5 +95,44 @@ describe('background import IPC', () => {
     })
     expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledOnce()
     expect(projectStore.importDroppedProjectMedia).toHaveBeenCalledWith('project-42', { source, kind: 'video' })
+  })
+
+  it('lists imported fonts for a trusted renderer', async () => {
+    const { fontListHandler, fontList, event, trustedRenderer } = setup({ rendererUrl: 'file:///editor.html' })
+
+    expect(fontListHandler(event)).toEqual([importedFont])
+    expect(fontList).toHaveBeenCalledOnce()
+    expect(trustedRenderer).toHaveBeenCalledWith('file:///editor.html')
+  })
+
+  it('imports a font for a trusted renderer and notifies every renderer', async () => {
+    const { fontImportHandler, fontImportFile, dialog, event, window, trustedRenderer } = setup({
+      rendererUrl: 'http://localhost:6500/editor.html',
+    })
+    dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['C:/fonts/ImportedSans.ttf'] })
+
+    await expect(fontImportHandler(event)).resolves.toEqual(importedFont)
+    expect(trustedRenderer).toHaveBeenCalledWith('http://localhost:6500/editor.html')
+    expect(dialog.showOpenDialog).toHaveBeenCalledWith({
+      properties: ['openFile'],
+      filters: [{ name: 'Polices', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],
+    })
+    expect(fontImportFile).toHaveBeenCalledWith('C:/fonts/ImportedSans.ttf')
+    expect(window.webContents.send).toHaveBeenCalledWith('font-library:changed')
+  })
+
+  it.each(['font-library:list', 'font-library:pick-import'])('rejects %s for an untrusted renderer', async (channel) => {
+    const { fontListHandler, fontImportHandler, fontList, fontImportFile, dialog, event, trustedRenderer } = setup({
+      trusted: false,
+      rendererUrl: 'https://example.invalid/evil.html',
+    })
+    const handler = channel === 'font-library:list' ? fontListHandler : fontImportHandler
+
+    if (channel === 'font-library:list') expect(() => handler(event)).toThrow('Renderer non autorisé')
+    else await expect(handler(event)).rejects.toThrow('Renderer non autorisé')
+    expect(trustedRenderer).toHaveBeenCalledWith('https://example.invalid/evil.html')
+    expect(fontList).not.toHaveBeenCalled()
+    expect(fontImportFile).not.toHaveBeenCalled()
+    expect(dialog.showOpenDialog).not.toHaveBeenCalled()
   })
 })

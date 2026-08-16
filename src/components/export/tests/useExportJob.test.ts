@@ -82,6 +82,35 @@ describe('useExportJob', () => {
     expect(job.isExporting.value).toBe(false);
   });
 
+  it('does not publish audio preparation progress for zero-duration audio clips', async () => {
+    let preparationAudioProgress: number | null | undefined;
+    let job!: ReturnType<typeof useExportJob>;
+    exportWithMediabunny.mockImplementation(async (...args: unknown[]) => {
+      const onStarted = args[3];
+      if (typeof onStarted === 'function') {
+        onStarted({ schemaVersion: 1 } as never);
+        preparationAudioProgress = job.progress.value?.audioProgress;
+      }
+      return { path: '/tmp/demo.webm', format: 'webm', diagnostics: null };
+    });
+    job = useExportJob();
+
+    await job.start({
+      ...request,
+      snapshot: {
+        ...request.snapshot,
+        composition: {
+          ...request.snapshot.composition,
+          clips: [
+            { kind: 'audio', enabled: true, timelineDurationMs: 0 },
+          ] as unknown as ExportRequest['snapshot']['composition']['clips'],
+        },
+      },
+    });
+
+    expect(preparationAudioProgress).toBeNull();
+  });
+
   it('prevents concurrent submissions', async () => {
     let release!: () => void;
     exportWithMediabunny.mockReturnValue(
