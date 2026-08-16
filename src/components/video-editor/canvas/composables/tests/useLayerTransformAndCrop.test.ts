@@ -104,7 +104,7 @@ const captionClip = (): CaptionClip => ({
 });
 
 const composition = (): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     {

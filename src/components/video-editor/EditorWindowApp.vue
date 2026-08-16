@@ -116,7 +116,10 @@ onMounted(async () => {
   removeContextListener = capture.onEditorContext(({ projectId }) => void loadProject(projectId));
   try {
     removePreferencesListener = capture.onPreferencesChanged(syncTimelineHeight);
-    void capture.getPreferences().then(syncTimelineHeight).catch(() => undefined);
+    void capture
+      .getPreferences()
+      .then(syncTimelineHeight)
+      .catch(() => undefined);
   } catch {
     // The editor remains usable with the default timeline height.
   }

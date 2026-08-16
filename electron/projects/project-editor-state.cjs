@@ -181,11 +181,38 @@ const canvasState = (value) => {
   const dimensions = value.preset === 'custom' ? [value.width, value.height] : PRESETS[value.preset];
   if (!dimensions.every(finite) || dimensions.some((dimension) => dimension <= 0))
     throw new Error('Dimensions du canvas invalides');
+  const watermarkInput = value.watermark && typeof value.watermark === 'object' ? value.watermark : {};
+  const watermarkPositions = new Set(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
+  const watermark = {
+    enabled: watermarkInput.enabled === true,
+    text: watermarkInput.text === 'none' || watermarkInput.text === 'beam' ? watermarkInput.text : 'made-with-beam',
+    showLogo: watermarkInput.showLogo !== false,
+    localized: watermarkInput.localized === true,
+    renderedText:
+      typeof watermarkInput.renderedText === 'string' ? watermarkInput.renderedText.slice(0, 80) : undefined,
+    position: watermarkPositions.has(watermarkInput.position) ? watermarkInput.position : 'bottom-right',
+    size: finite(watermarkInput.size) ? clamp(Math.round(watermarkInput.size), 50, 200) : 100,
+    shadow: finite(watermarkInput.shadow) ? clamp(Math.round(watermarkInput.shadow), 0, 100) : 20,
+    backgroundColor:
+      typeof watermarkInput.backgroundColor === 'string' && /^#[0-9a-f]{6}$/i.test(watermarkInput.backgroundColor)
+        ? watermarkInput.backgroundColor
+        : '#111114',
+    backgroundOpacity: finite(watermarkInput.backgroundOpacity)
+      ? clamp(Math.round(watermarkInput.backgroundOpacity), 0, 100)
+      : 78,
+    backgroundRadius: finite(watermarkInput.backgroundRadius)
+      ? clamp(Math.round(watermarkInput.backgroundRadius), 0, 100)
+      : 100,
+    backgroundPadding: finite(watermarkInput.backgroundPadding)
+      ? clamp(Math.round(watermarkInput.backgroundPadding), 50, 150)
+      : 100,
+  };
   return {
     preset: value.preset,
     width: Math.round(dimensions[0]),
     height: Math.round(dimensions[1]),
     showBackground: value.showBackground,
+    ...(value.watermark && typeof value.watermark === 'object' ? { watermark } : {}),
   };
 };
 
@@ -230,6 +257,7 @@ const migratePresentation = (value) => {
       width,
       height,
       showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : true,
+      watermark: canvasInput.watermark,
     },
     selectedBackgroundId: typeof input.selectedBackgroundId === 'string' ? input.selectedBackgroundId : null,
     background: input.background && typeof input.background === 'object' ? input.background : null,

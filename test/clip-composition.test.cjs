@@ -99,6 +99,18 @@ const captionStyle = (overrides = {}) => ({
   ...overrides,
 });
 
+const canonicalCaptionStyle = (overrides = {}) => ({
+  ...captionStyle(),
+  fontFamily: 'sans-serif',
+  fontWeight: 800,
+  fontStyle: 'normal',
+  textDecoration: 'none',
+  textAlign: 'center',
+  lineHeight: 1.2,
+  letterSpacing: 0,
+  ...overrides,
+});
+
 const textCaption = (overrides = {}) => ({
   type: 'text',
   sentences: [{ id: 'sentence', text: 'Caption', startMs: 0, endMs: 1_000, words: [] }],
@@ -169,7 +181,7 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   };
   const groupId = 'recording';
   const normalized = normalizeComposition({
-    schemaVersion: 5,
+    schemaVersion: 6,
     assets: [asset],
     keyboardCaptionSessions: [],
     clips: [
@@ -224,21 +236,24 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
 
 test('round-trips text and keyboard captions in the canonical composition schema', () => {
   const normalized = normalizeComposition({
-    schemaVersion: 5,
+    schemaVersion: 6,
     assets: [],
     keyboardCaptionSessions: ['session-keyboard', 'session-keyboard'],
-    clips: [captionClip(textCaption()), captionClip(keyboardCaption(), { id: 'clip-keyboard', order: 1 })],
+    clips: [
+      captionClip(textCaption({ style: canonicalCaptionStyle() })),
+      captionClip(keyboardCaption({ style: canonicalCaptionStyle() }), { id: 'clip-keyboard', order: 1 }),
+    ],
   });
 
-  assert.equal(normalized.schemaVersion, 5);
+  assert.equal(normalized.schemaVersion, 6);
   assert.deepEqual(normalized.keyboardCaptionSessions, ['session-keyboard']);
   assert.equal(normalized.clips[0].caption.type, 'text');
-  assert.deepEqual(normalized.clips[1].caption, keyboardCaption());
+  assert.deepEqual(normalized.clips[1].caption, keyboardCaption({ style: canonicalCaptionStyle() }));
 });
 
 test('round-trips an assetless blur overlay with its effect settings', () => {
   const normalized = normalizeComposition({
-    schemaVersion: 5,
+    schemaVersion: 6,
     assets: [],
     keyboardCaptionSessions: [],
     clips: [
@@ -307,7 +322,7 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
     assert.throws(
       () =>
         normalizeComposition({
-          schemaVersion: 5,
+          schemaVersion: 6,
           assets: [],
           keyboardCaptionSessions: [],
           clips: [captionClip(caption)],
@@ -316,7 +331,7 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
     );
 
   assert.throws(
-    () => normalizeComposition({ schemaVersion: 5, assets: [], keyboardCaptionSessions: [null], clips: [] }),
+    () => normalizeComposition({ schemaVersion: 6, assets: [], keyboardCaptionSessions: [null], clips: [] }),
     /session|caption/i,
   );
 });
@@ -417,7 +432,7 @@ test('migrates legacy composition fields and atomically persists the canonical e
 
   const migrated = store.editorState(project.id);
   assert.equal(migrated.schemaVersion, 3);
-  assert.equal(migrated.composition.schemaVersion, 5);
+  assert.equal(migrated.composition.schemaVersion, 6);
   assert.deepEqual(migrated.composition.keyboardCaptionSessions, []);
   assert.deepEqual(migrated.presentation.canvas, {
     preset: '21:9',
@@ -446,13 +461,13 @@ test('migrates legacy composition fields and atomically persists the canonical e
 
   const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(rewritten.editor.schemaVersion, 3);
-  assert.equal(rewritten.editor.composition.schemaVersion, 5);
+  assert.equal(rewritten.editor.composition.schemaVersion, 6);
   assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, []);
   assert.equal(rewritten.editor.composition.clips[0].isMirroredY, false);
   assert.equal(fs.existsSync(`${manifestPath}.tmp`), false);
 });
 
-test('migrates v2 composition to v5 and records historical project sessions once', () => {
+test('migrates v2 composition to v6 and records historical project sessions once', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-v2-migration-'));
   const store = createProjectStore(root);
   const project = store.create({ name: 'V2 migration' });
@@ -474,13 +489,13 @@ test('migrates v2 composition to v5 and records historical project sessions once
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   const migrated = store.editorState(project.id);
-  assert.equal(migrated.composition.schemaVersion, 5);
+  assert.equal(migrated.composition.schemaVersion, 6);
   assert.deepEqual(migrated.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
   assert.equal(migrated.composition.clips[0].caption.type, 'text');
 
   const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(rewritten.editor.schemaVersion, 3);
-  assert.equal(rewritten.editor.composition.schemaVersion, 5);
+  assert.equal(rewritten.editor.composition.schemaVersion, 6);
   assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
   assert.deepEqual(store.editorState(project.id).composition.keyboardCaptionSessions, ['session-old', 'session-new']);
 
@@ -489,8 +504,42 @@ test('migrates v2 composition to v5 and records historical project sessions once
     true,
     ['session-old'],
   );
-  assert.equal(direct.schemaVersion, 5);
+  assert.equal(direct.schemaVersion, 6);
   assert.deepEqual(direct.keyboardCaptionSessions, ['session-old']);
+});
+
+test('migrates v5 captions to v6 with the historical typography defaults', () => {
+  const migrated = migrateComposition(
+    {
+      schemaVersion: 5,
+      assets: [],
+      keyboardCaptionSessions: [],
+      clips: [captionClip(textCaption())],
+    },
+    true,
+    [],
+  );
+
+  assert.equal(migrated.schemaVersion, 6);
+  assert.deepEqual(migrated.clips[0].caption.style, {
+    fontFamily: 'sans-serif',
+    fontWeight: 800,
+    fontStyle: 'normal',
+    textDecoration: 'none',
+    textAlign: 'center',
+    lineHeight: 1.2,
+    letterSpacing: 0,
+    color: '#ffffff',
+    fontSize: 42,
+    wrap: true,
+    shadowColor: '#000000',
+    shadowBlur: 4,
+    backdropBlur: 0,
+    outlineColor: '#000000',
+    outlineWidth: 6,
+    extrusionDepth: 4,
+    placement: 'bottom',
+  });
 });
 
 test('preserves every supported non-custom canvas preset through editor-state persistence', () => {
@@ -533,7 +582,7 @@ test('materializes project and recording assets without persisting runtime URLs'
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'video.mp4'), 'video');
   const composition = normalizeComposition({
-    schemaVersion: 5,
+    schemaVersion: 6,
     keyboardCaptionSessions: [],
     assets: [
       {
@@ -564,7 +613,7 @@ test('prunes only project media that is no longer referenced', () => {
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'unused.mp4'), 'video');
   const previous = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     keyboardCaptionSessions: [],
     assets: [
       {
@@ -592,7 +641,7 @@ test('persists and reads one atomic editor state', () => {
   fs.writeFileSync(source, 'video');
   const asset = store.importEditorMedia(project.id, { kind: 'video', source });
   const composition = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     keyboardCaptionSessions: [],
     assets: [{ ...asset, durationMs: 1_000 }],
     clips: [visualClip(asset.id)],
@@ -704,7 +753,7 @@ test('imports dropped project media safely and never returns a local path', () =
   assert.throws(() => store.importDroppedProjectMedia(project.id, { kind: 'video', source: '' }), /invalide|chemin/i);
 });
 
-test('normalizes the v5 visual track identity and preserves it through editor-state round trips', () => {
+test('normalizes the v6 visual track identity and preserves it through editor-state round trips', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-track-id-'));
   const store = createProjectStore(root);
   const project = store.create({ name: 'Track identity' });
@@ -714,7 +763,7 @@ test('normalizes the v5 visual track identity and preserves it through editor-st
   const trackId = 'visual-track-1';
   const state = store.editorState(project.id);
   state.composition = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     keyboardCaptionSessions: [],
     assets: [{ ...asset, durationMs: 2_000 }],
     clips: [
@@ -732,7 +781,7 @@ test('normalizes the v5 visual track identity and preserves it through editor-st
   };
 
   const saved = store.saveEditorState(project.id, state);
-  assert.equal(saved.composition.schemaVersion, 5);
+  assert.equal(saved.composition.schemaVersion, 6);
   assert.deepEqual(
     saved.composition.clips.map((clip) => clip.trackId),
     [trackId, trackId],
@@ -780,7 +829,7 @@ test('migrates only certain contiguous v3 visual fragments into one track', () =
     [],
   );
 
-  assert.equal(migrated.schemaVersion, 5);
+  assert.equal(migrated.schemaVersion, 6);
   const certain = migrated.clips.filter((clip) => clip.id.startsWith('certain-'));
   assert.equal(certain.length, 2);
   assert.ok(certain[0].trackId);
@@ -799,7 +848,7 @@ test('rejects invalid visual track identities and overlapping clips assigned to 
     height: 1080,
     origin: 'project',
   };
-  const base = { schemaVersion: 5, assets: [asset], keyboardCaptionSessions: [] };
+  const base = { schemaVersion: 6, assets: [asset], keyboardCaptionSessions: [] };
   assert.throws(
     () => normalizeComposition({ ...base, clips: [visualClip(asset.id, { trackId: '' })] }),
     /track|piste|identit/i,
@@ -879,7 +928,7 @@ test('migration groups a mixed-order chain of certain v3 split fragments and kee
   assert.notEqual(migrated.clips.find((clip) => clip.id === 'other-track').trackId, chain[0].trackId);
 });
 
-test('migrates Golden Canvas 2 v4 screen fragments to v5 without losing visual properties', () => {
+test('migrates Golden Canvas 2 v4 screen fragments to v6 without losing visual properties', () => {
   const asset = {
     id: 'session:golden-canvas:screen:segment-0001.mp4',
     kind: 'video',
@@ -937,7 +986,7 @@ test('migrates Golden Canvas 2 v4 screen fragments to v5 without losing visual p
   const migrated = store.editorState(project.id);
 
   assert.equal(migrated.schemaVersion, 3);
-  assert.equal(migrated.composition.schemaVersion, 5);
+  assert.equal(migrated.composition.schemaVersion, 6);
   const migratedFirst = migrated.composition.clips.find((clip) => clip.id === first.id);
   const migratedSecond = migrated.composition.clips.find((clip) => clip.id === second.id);
   const migratedThird = migrated.composition.clips.find((clip) => clip.id === third.id);
@@ -949,7 +998,7 @@ test('migrates Golden Canvas 2 v4 screen fragments to v5 without losing visual p
   assert.equal(migratedSecond.appearance.shadowSize, 'custom');
 
   const persisted = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  assert.equal(persisted.editor.composition.schemaVersion, 5);
+  assert.equal(persisted.editor.composition.schemaVersion, 6);
   assert.deepEqual(
     persisted.editor.composition.clips.map((clip) => clip.trackId),
     migrated.composition.clips.map((clip) => clip.trackId),

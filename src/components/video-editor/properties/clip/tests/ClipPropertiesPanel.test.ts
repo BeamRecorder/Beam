@@ -107,7 +107,10 @@ describe('ClipPropertiesPanel', () => {
 
     const custom = wrapper
       .findAll('button')
-      .find((button) => button.text().toLowerCase() === 'custom' || button.attributes('aria-label')?.toLowerCase() === 'custom');
+      .find(
+        (button) =>
+          button.text().toLowerCase() === 'custom' || button.attributes('aria-label')?.toLowerCase() === 'custom',
+      );
     await custom!.trigger('click');
     expect(wrapper.emitted('update:cornerRadius')).toContainEqual(['32']);
     await wrapper

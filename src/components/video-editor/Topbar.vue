@@ -34,6 +34,7 @@ const emit = defineEmits<{
   (e: 'open-project', project: any): void;
   (e: 'undo'): void;
   (e: 'redo'): void;
+  (e: 'update:exportAudio', value: boolean): void;
 }>();
 
 const handleExit = () => {
@@ -83,7 +84,11 @@ const openDiscordInvite = () => {
           <img :src="resolvePublicAssetUrl('/discord_svg.svg')" class="discord-icon" alt="" aria-hidden="true" />
         </button>
       </Tooltip>
-      <ExportPopover v-if="exportRequest" :request="exportRequest" />
+      <ExportPopover
+        v-if="exportRequest"
+        :request="exportRequest"
+        @update:include-audio="emit('update:exportAudio', $event)"
+      />
     </div>
   </header>
 </template>

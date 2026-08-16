@@ -11,6 +11,7 @@ const props = withDefaults(
     duration: number;
     isPlaying: boolean;
     exportProgress?: ExportProgress | null;
+    includeAudioInExport?: boolean;
     zoomElements: ZoomElement[];
     selectedZoomId: string | null;
     composition: ClipComposition;
@@ -18,7 +19,7 @@ const props = withDefaults(
     zoomLevel: number;
     isSnappingEnabled?: boolean;
   }>(),
-  { isSnappingEnabled: true },
+  { isSnappingEnabled: true, includeAudioInExport: true },
 );
 const emit = defineEmits<{
   (event: 'update:currentTime', value: number): void;
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   (event: 'select:zoom', zoomId: string): void;
   (event: 'select:clip', clipId: string): void;
   (event: 'toggle:clip', clipId: string): void;
+  (event: 'delete:clips', clipIds: string[]): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
@@ -59,6 +61,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       :is-playing="isPlaying"
       :zoom-level="zoomLevel"
       :export-progress="exportProgress"
+      :include-audio-in-export="includeAudioInExport"
       :zoom-elements="zoomElements"
       :selected-zoom-id="selectedZoomId"
       :composition="composition"
@@ -69,6 +72,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
       @select:zoom="emit('select:zoom', $event)"
       @select:clip="emit('select:clip', $event)"
       @toggle:clip="emit('toggle:clip', $event)"
+      @delete:clips="emit('delete:clips', $event)"
       @trim:clip="emit('trim:clip', $event)"
       @move:clip="emit('move:clip', $event)"
       @preview:composition="emit('preview:composition', $event)"

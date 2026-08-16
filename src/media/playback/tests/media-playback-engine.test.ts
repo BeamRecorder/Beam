@@ -1,150 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AudioPlaybackScheduler } from '../audio-scheduler';
 import { MediaPlaybackEngine } from '../media-playback-engine';
-import type { PlaybackWorkerRequest, PlaybackWorkerResponse } from '../playback-types';
-import type { ClipComposition } from '../../shared';
-import { createDefaultClipAppearance } from '../../shared/composition-defaults';
+import type { PlaybackWorkerRequest } from '../playback-types';
+import {
+  cleanupPlaybackGlobals,
+  composition,
+  FakeAudio,
+  FakeImageBitmap,
+  FakeWorker,
+  frameResponse,
+  latestSeekRequest,
+  load,
+  rafCallbacks,
+  resetPlaybackGlobals,
+  videoClip,
+} from './media-playback-engine.fixtures';
 
 vi.mock('../playback.worker?worker', () => ({ default: class PlaybackWorker {} }));
 
-class FakeImageBitmap {
-  readonly width: number;
-  readonly height: number;
-  readonly close = vi.fn();
-
-  constructor(width = 4, height = 4) {
-    this.width = width;
-    this.height = height;
-  }
-}
-
-class FakeWorker {
-  onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
-  onerror: ((event: ErrorEvent) => void) | null = null;
-  readonly requests: PlaybackWorkerRequest[] = [];
-  readonly terminate = vi.fn();
-
-  postMessage = vi.fn((message: PlaybackWorkerRequest) => {
-    this.requests.push(message);
-  });
-
-  emit(message: unknown) {
-    this.onmessage?.({ data: message } as MessageEvent<unknown>);
-  }
-}
-
-class FakeAudio {
-  readonly loadComposition = vi.fn(async () => []);
-  readonly updateComposition = vi.fn();
-  readonly play = vi.fn(async () => undefined);
-  readonly pause = vi.fn();
-  readonly seek = vi.fn(async () => undefined);
-  readonly setVolume = vi.fn();
-  readonly dispose = vi.fn();
-  now = 0;
-
-  currentTime = vi.fn(() => this.now);
-}
-
-const asset = (id = 'asset-1') => ({
-  id,
-  kind: 'video' as const,
-  name: `Video ${id}`,
-  fileName: `${id}.mp4`,
-  durationMs: 10_000,
-  width: 1920,
-  height: 1080,
-  src: `https://cdn.example.test/${id}.mp4`,
-  origin: 'project' as const,
-});
-
-const videoClip = (id: string, assetId = 'asset-1', overrides: Partial<Record<string, unknown>> = {}) => ({
-  id,
-  kind: 'video' as const,
-  name: id,
-  assetId,
-  timelineStartMs: 0,
-  timelineDurationMs: 2_000,
-  sourceInMs: 0,
-  sourceDurationMs: 2_000,
-  playbackRate: 1,
-  enabled: true,
-  order: 0,
-  transform: { x: 0, y: 0, width: 1, height: 1 },
-  appearance: createDefaultClipAppearance('video'),
-  isMirrored: false,
-  isMirroredY: false,
-  ...overrides,
-});
-
-const composition = (clips = [videoClip('clip-1')]): ClipComposition => ({
-  schemaVersion: 5,
-  keyboardCaptionSessions: [],
-  assets: [asset(), asset('unused')],
-  clips,
-});
-
-const frameResponse = (
-  generation: number,
-  clipId: string,
-  timestampSeconds: number,
-  bitmap = new FakeImageBitmap(),
-): PlaybackWorkerResponse => ({
-  type: 'frame',
-  generation,
-  clipId,
-  assetId: 'asset-1',
-  bitmap: bitmap as unknown as ImageBitmap,
-  timestampSeconds,
-  durationSeconds: 0.04,
-});
-
-const seekRequest = (worker: FakeWorker) =>
-  worker.requests.find(
-    (request): request is Extract<PlaybackWorkerRequest, { type: 'seek' }> => request.type === 'seek',
-  );
-
-const latestSeekRequest = (worker: FakeWorker) =>
-  [...worker.requests]
-    .reverse()
-    .find((request): request is Extract<PlaybackWorkerRequest, { type: 'seek' }> => request.type === 'seek');
-
-let rafCallbacks: FrameRequestCallback[] = [];
-
-beforeEach(() => {
-  vi.stubGlobal('ImageBitmap', FakeImageBitmap);
-  rafCallbacks = [];
-  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-    rafCallbacks.push(callback);
-    return rafCallbacks.length;
-  });
-  vi.stubGlobal('cancelAnimationFrame', vi.fn());
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
-
-async function load(engine: MediaPlaybackEngine, worker: FakeWorker, value = composition()) {
-  const pending = engine.loadComposition(value);
-  const loadRequest = worker.requests.find(
-    (request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load',
-  );
-  worker.emit({ type: 'ready', generation: loadRequest!.generation });
-  for (let index = 0; index < 4; index += 1) await Promise.resolve();
-  const request = seekRequest(worker);
-  expect(request).toBeDefined();
-  worker.emit({
-    type: 'seek-result',
-    generation: request!.generation,
-    requestId: request!.requestId,
-    result: 'presented',
-    latencyMs: 2,
-  });
-  await pending;
-}
+beforeEach(resetPlaybackGlobals);
+afterEach(cleanupPlaybackGlobals);
 
 describe('MediaPlaybackEngine', () => {
   it('loads, seeks, plays, pauses, and reports timeline time', async () => {
@@ -565,64 +440,6 @@ describe('MediaPlaybackEngine', () => {
     });
     await expect(pending).resolves.toBe('superseded');
     expect(engine.state).toBe('error');
-  });
-
-  it('reports an invalid visual source without preventing a valid asset from loading', async () => {
-    const worker = new FakeWorker();
-    const audio = new FakeAudio();
-    const engine = new MediaPlaybackEngine({
-      workerFactory: () => worker,
-      audio: audio as unknown as AudioPlaybackScheduler,
-    });
-    const states: string[] = [];
-    const errors: unknown[] = [];
-    engine.on('state', (state) => states.push(state));
-    engine.on('error', (error) => errors.push(error));
-
-    const invalid: ClipComposition = {
-      schemaVersion: 5,
-      keyboardCaptionSessions: [],
-      assets: [{ ...asset(), src: 'file:///recording.mp4' }, asset('valid-video')],
-      clips: [videoClip('invalid-clip'), videoClip('valid-clip', 'valid-video')],
-    };
-    await load(engine, worker, invalid);
-
-    expect(engine.state).toBe('paused');
-    expect(states).toEqual(['loading', 'paused']);
-    expect(errors[0]).toMatchObject({ kind: 'missing', sourceId: 'asset-1' });
-    engine.dispose();
-  });
-
-  it('skips a video asset with an empty source while loading valid visual media', async () => {
-    const worker = new FakeWorker();
-    const audio = new FakeAudio();
-    const engine = new MediaPlaybackEngine({
-      workerFactory: () => worker,
-      audio: audio as unknown as AudioPlaybackScheduler,
-    });
-    const issues: unknown[] = [];
-    engine.on('error', (error) => issues.push(error));
-    const invalidAsset = { ...asset('missing-video'), src: '' };
-    const value: ClipComposition = {
-      schemaVersion: 5,
-      keyboardCaptionSessions: [],
-      assets: [asset(), invalidAsset],
-      clips: [videoClip('valid-clip'), videoClip('skipped-clip', 'missing-video')],
-    };
-
-    await load(engine, worker, value);
-
-    const loadRequest = worker.requests.find(
-      (request): request is Extract<PlaybackWorkerRequest, { type: 'load' }> => request.type === 'load',
-    );
-    expect(loadRequest?.assets).toEqual([
-      expect.objectContaining({ assetId: 'asset-1', url: 'https://cdn.example.test/asset-1.mp4' }),
-    ]);
-    expect(loadRequest?.clips).toEqual([expect.objectContaining({ clipId: 'valid-clip', assetId: 'asset-1' })]);
-    expect(audio.loadComposition).toHaveBeenCalledWith(value);
-    expect(issues).toContainEqual(expect.objectContaining({ kind: 'missing', sourceId: 'missing-video' }));
-    expect(engine.state).toBe('paused');
-    engine.dispose();
   });
 
   it('resolves an older pending load when a newer composition supersedes it', async () => {

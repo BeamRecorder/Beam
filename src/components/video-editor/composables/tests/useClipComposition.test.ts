@@ -286,6 +286,11 @@ describe('useClipComposition', () => {
     });
 
     const caption = mounted.state.selectedCaptionClip.value!;
+    expect(caption.caption).toMatchObject({
+      type: 'text',
+      sentences: [],
+      style: { customText: 'Hello' },
+    });
     mounted.state.updateCaption({ ...caption, name: 'Edited caption' });
     expect(mounted.state.selectedClip.value?.name).toBe('Edited caption');
     mounted.state.selectClip('missing');

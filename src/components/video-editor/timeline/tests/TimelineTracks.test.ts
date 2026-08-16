@@ -123,7 +123,7 @@ const keyboardCaption = (): CaptionClip => ({
 });
 
 const composition = (extraClips: ClipComposition['clips'] = []): ClipComposition => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets: [
     asset('screen-asset', 'video'),
@@ -552,10 +552,8 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('update:zoomLevel')).toContainEqual([3_200]);
     await mounted!.get('.sidebar-tracks-stack .visual-track .track-info').trigger('click');
     expect(mounted!.emitted('toggle:clip')).toContainEqual(['image-clip']);
-    await mounted!.get('.sidebar-tracks-stack .audio-track .track-info').trigger('click');
-    expect(mounted!.emitted('toggle:clip')).toContainEqual(['system-audio']);
-    await mounted!.findAll('.sidebar-tracks-stack .audio-track')[1]!.get('.track-info').trigger('click');
-    expect(mounted!.emitted('toggle:clip')).toContainEqual(['microphone-audio']);
+
+    expect(mounted!.find('.audio-track-actions').exists()).toBe(false);
 
     const clip = mounted!.findAll('.visual-track .timeline-clip')[2]!;
     await clip.trigger('click');
@@ -867,6 +865,21 @@ describe('TimelineTracks', () => {
     window.dispatchEvent(pointerEvent('pointercancel', 10, 10));
     expect(mounted!.emitted('reorder:clip')).toHaveLength(1);
     await mounted!.findAll('.sidebar-tracks-stack .audio-track')[1]!.get('.track-info').trigger('click');
+  });
+
+  it('marks every audio timeline row when audio is excluded from export', async () => {
+    const mounted = await mountTracks({ includeAudioInExport: false });
+    const indicators = mounted!.findAll('.export-audio-disabled');
+    const sidebarStatuses = mounted!.findAll('.export-disabled-status');
+
+    expect(indicators).toHaveLength(3);
+    expect(indicators.every((indicator) => indicator.text() === 'Audio disabled from export')).toBe(true);
+    expect(sidebarStatuses).toHaveLength(3);
+    expect(mounted!.findAll('.audio-track.disabled')).toHaveLength(6);
+
+    await mounted!.setProps({ includeAudioInExport: true });
+    expect(mounted!.find('.export-audio-disabled').exists()).toBe(false);
+    expect(mounted!.find('.export-disabled-status').exists()).toBe(false);
   });
 
   it('reorders visual tracks when dragging directly anywhere on the sidebar track-info button', async () => {

@@ -18,6 +18,8 @@ import {
 import { useBackgroundPreviews } from './useBackgroundPreviews';
 import { useBackgroundPresets } from './useBackgroundPresets';
 import { useTranslate } from '~/i18n/useTranslate';
+import type { WatermarkSettings } from '../../canvas/output-canvas';
+import WatermarkControls from './WatermarkControls.vue';
 
 const { t } = useTranslate('CanvasPanel');
 
@@ -26,11 +28,13 @@ const props = defineProps<{
   backgroundGroups: BackgroundMediaGroup[];
   projectId?: string | null;
   blurPercent: number;
+  watermark?: WatermarkSettings;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:selectedBackground', value: BackgroundValue): void;
   (e: 'update:blurPercent', value: number): void;
+  (e: 'update:watermark', value: WatermarkSettings): void;
   (e: 'import:background', value: BackgroundMedia): void;
 }>();
 
@@ -527,6 +531,8 @@ onUnmounted(() => {
         @interaction-end="emit('update:blurPercent', blurDraft)"
       />
     </div>
+
+    <WatermarkControls :model-value="watermark" @update:model-value="emit('update:watermark', $event)" />
   </div>
 </template>
 
@@ -556,7 +562,6 @@ onUnmounted(() => {
 .import-btn {
   width: 100%;
 }
-
 /* Content Panel */
 .tab-content-panel {
   display: flex;

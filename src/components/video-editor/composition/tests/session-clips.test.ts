@@ -85,6 +85,21 @@ describe('synchronizeRecordingClips', () => {
     expect(synchronizeRecordingClips(composition, undefined)).toBe(composition);
   });
 
+  it('canonicalizes a legacy runtime composition before timeline actions use it', () => {
+    const legacy = {
+      ...emptyComposition(),
+      schemaVersion: 5,
+      keyboardCaptionSessions: undefined,
+    } as unknown as ClipComposition;
+
+    expect(synchronizeRecordingClips(legacy, null)).toEqual({
+      schemaVersion: 6,
+      assets: [],
+      clips: [],
+      keyboardCaptionSessions: [],
+    });
+  });
+
   it('creates visual and audio clips, normalizes durations and groups synchronized tracks', () => {
     const screen = segment({ path: 'screen.webm', src: '/screen.webm' });
     const camera = segment({ path: 'camera.webm', src: '/camera.webm' });
@@ -253,7 +268,7 @@ describe('synchronizeRecordingClips', () => {
     expect(result.assets[0]?.src).toBe('project-media://project-1/session-1/screen/segment.webm');
   });
 
-  it('creates keyboard captions once, keeps schema v3, and does not recreate a deleted caption', () => {
+  it('creates keyboard captions once, keeps the current schema, and does not recreate a deleted caption', () => {
     const input: InputEventSidecar = {
       version: 1,
       events: [shortcut(1_500_000_000, 'b', false), shortcut(500_000_000, 'a')],
@@ -265,7 +280,7 @@ describe('synchronizeRecordingClips', () => {
 
     const first = synchronizeRecordingClips(emptyComposition(), data);
     const keyboardCaptions = first.clips.filter((clip) => clip.kind === 'caption');
-    expect(first.schemaVersion).toBe(4);
+    expect(first.schemaVersion).toBe(6);
     expect(first.keyboardCaptionSessions).toEqual(['session-1']);
     expect(keyboardCaptions).toHaveLength(1);
     expect(keyboardCaptions[0]).toMatchObject({

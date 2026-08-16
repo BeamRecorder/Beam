@@ -23,6 +23,14 @@ export type * from './capture-session';
 export type * from './editor-window';
 export type * from '~/types/appearance';
 
+export interface ImportedFont {
+  id: string;
+  family: string;
+  fullName: string;
+  extension: '.ttf' | '.otf' | '.woff' | '.woff2';
+  url: string;
+}
+
 export interface CaptureApi {
   readonly platform: string;
   discover(): Promise<CaptureCatalog>;
@@ -121,6 +129,9 @@ export interface DesktopCaptureApi extends CaptureApi {
   listBackgroundLibrary(): Promise<BackgroundMedia[]>;
   pickBackgroundLibraryMedia(kind?: 'image' | 'video' | 'media'): Promise<BackgroundMedia | null>;
   onBackgroundLibraryChanged(listener: () => void): () => void;
+  listImportedFonts(): Promise<ImportedFont[]>;
+  pickImportedFont(): Promise<ImportedFont | null>;
+  onFontLibraryChanged(listener: () => void): () => void;
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>;
   renameProject(projectId: string, name: string): Promise<CaptureProject>;
   deleteProject(projectId: string): Promise<void>;

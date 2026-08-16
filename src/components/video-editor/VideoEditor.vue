@@ -20,7 +20,7 @@ import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
 import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from '~/components/video-editor/canvas/output-canvas';
-import { setVolume } from '~/components/video-editor/composition/engine/clip-engine';
+import { deleteClip, setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import {
   isAudioClip,
   isBlurClip,
@@ -30,6 +30,7 @@ import {
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
 
 const { t } = useTranslate('VideoEditor');
 const props = withDefaults(
@@ -57,6 +58,7 @@ const {
   editorState,
   zoomState,
   exportRequest,
+  includeAudioInExport,
   outputCanvas,
   handleSelectTab,
   initialPlaybackSettled,
@@ -96,6 +98,8 @@ const {
   selectedCaptionClip,
   isSystemAudioEnabled,
   isMicAudioEnabled,
+  hasSystemAudio,
+  hasMicAudio,
   selectClip,
   addElement,
   addImportedAsset,
@@ -145,7 +149,11 @@ const {
 } = zoomState;
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
-const canvasComposition = computed(() => timelineCompositionPreview.value ?? composition.value);
+const captionCompositionPreview = ref<typeof composition.value | null>(null);
+const cursorPreview = ref<CursorType | null>(null);
+const canvasComposition = computed(
+  () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
+);
 const selectedTransformClip = computed(() => {
   const clip = selectedClip.value;
   return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
@@ -157,7 +165,7 @@ const addTimelineElement = (kind: 'video' | 'image' | 'sound' | 'caption' | 'blu
 const selectEditorClip = (clipId: string) => {
   selectedZoomId.value = null;
   selectClip(clipId);
-  activeTab.value = isAudioClip(composition.value.clips.find((clip) => clip.id === clipId)!) ? 'audio' : 'clip';
+  activeTab.value = 'clip';
 };
 const selectEditorZoom = (zoomId: string) => {
   selectedClipId.value = null;
@@ -174,18 +182,37 @@ const deselectTransformClip = () => {
   isCropping.value = false;
 };
 const replaceComposition = (value: typeof composition.value) => {
+  captionCompositionPreview.value = null;
   composition.value = value;
   editorState.scheduleSave();
 };
-let skipNextCompositionHistory = false;
-const previewComposition = (value: typeof composition.value) => {
-  skipNextCompositionHistory = true;
-  composition.value = value;
+const previewComposition = (value: typeof composition.value | null) => {
+  captionCompositionPreview.value = value;
+};
+watch([() => selectedCaptionClip.value?.id, activeTab], () => {
+  captionCompositionPreview.value = null;
+  cursorPreview.value = null;
+});
+const commitCaption = (clip: Parameters<typeof updateCaption>[0]) => {
+  captionCompositionPreview.value = null;
+  updateCaption(clip);
 };
 const updateRoleVolume = (role: 'system' | 'microphone', value: number) => {
   let next = composition.value;
   for (const clip of next.clips) if (isAudioClip(clip) && clip.role === role) next = setVolume(next, clip.id, value);
   composition.value = next;
+};
+const deleteTimelineClips = (clipIds: string[]) => {
+  const ids = new Set(clipIds);
+  let next = composition.value;
+  for (const clipId of ids) next = deleteClip(next, clipId);
+  if (selectedClipId.value && ids.has(selectedClipId.value)) selectedClipId.value = null;
+  composition.value = next;
+};
+const deleteAudioRole = (role: 'system' | 'microphone') => {
+  deleteTimelineClips(
+    composition.value.clips.filter((clip) => isAudioClip(clip) && clip.role === role).map((clip) => clip.id),
+  );
 };
 watch(systemVolume, (value) => updateRoleVolume('system', value));
 watch(micVolume, (value) => updateRoleVolume('microphone', value));
@@ -275,10 +302,6 @@ watch(
 watch(
   composition,
   () => {
-    if (skipNextCompositionHistory) {
-      skipNextCompositionHistory = false;
-      return;
-    }
     if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
   },
   { deep: true },
@@ -315,7 +338,11 @@ const toggleCrop = () => {
   if (selectedTransformClip.value && isVisualClip(selectedTransformClip.value)) isCropping.value = !isCropping.value;
 };
 const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
-  outputCanvas.value = { ...OUTPUT_CANVAS_PRESETS[preset], showBackground: outputCanvas.value.showBackground };
+  outputCanvas.value = {
+    ...OUTPUT_CANVAS_PRESETS[preset],
+    showBackground: outputCanvas.value.showBackground,
+    watermark: outputCanvas.value.watermark,
+  };
 };
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
@@ -382,6 +409,7 @@ onBeforeUnmount(() => {
       @open-project="emit('open-project', $event)"
       @undo="undo"
       @redo="redo"
+      @update:export-audio="includeAudioInExport = $event"
     />
     <div v-if="isExporting" class="export-notice-banner">
       <Sparkles :size="14" class="banner-icon" /><span>{{ t('exportBanner') }}</span>
@@ -394,6 +422,7 @@ onBeforeUnmount(() => {
           :selected-clip="selectedClipInfo"
           :selected-caption-clip="selectedCaptionClip"
           v-model:selected-cursor="selectedCursor"
+          @preview:selected-cursor="cursorPreview = $event"
           v-model:cursor-size="cursorSize"
           v-model:cursor-color="cursorColor"
           v-model:enable-shadow="enableShadow"
@@ -407,6 +436,8 @@ onBeforeUnmount(() => {
           v-model:mic-volume="micVolume"
           v-model:is-system-audio-enabled="isSystemAudioEnabled"
           v-model:is-mic-audio-enabled="isMicAudioEnabled"
+          :has-system-audio="hasSystemAudio"
+          :has-mic-audio="hasMicAudio"
           :selected-background="selectedBackground"
           :blur-percent="backgroundBlurPercent"
           :background-groups="backgroundGroups"
@@ -425,11 +456,13 @@ onBeforeUnmount(() => {
           @update:zoom="updateZoom"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
-          @update:caption="updateCaption"
+          @update:caption="commitCaption"
           @update:composition="replaceComposition"
           @preview:composition="previewComposition"
           @select-caption="selectEditorClip"
           @delete-clip="deleteSelectedClip"
+          @delete:system-audio="deleteAudioRole('system')"
+          @delete:mic-audio="deleteAudioRole('microphone')"
           @split-clip="splitSelectedClip"
           @update:clip-rate="updateSelectedRate"
           @update:clip-volume="updateSelectedVolume"
@@ -481,7 +514,7 @@ onBeforeUnmount(() => {
             ref="editorCanvasRef"
             :is-playing="isPlaying"
             :current-time="currentTime"
-            :selected-cursor="selectedCursor"
+            :selected-cursor="cursorPreview ?? selectedCursor"
             :cursor-size="cursorSize"
             :cursor-color="cursorColor"
             :enable-shadow="enableShadow"
@@ -548,6 +581,7 @@ onBeforeUnmount(() => {
           :is-snapping-enabled="isSnappingEnabled"
           :duration="duration"
           :export-progress="exportProgress"
+          :include-audio-in-export="includeAudioInExport"
           :zoom-elements="zoomElements"
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
@@ -555,6 +589,7 @@ onBeforeUnmount(() => {
           @select:zoom="selectEditorZoom"
           @select:clip="selectEditorClip"
           @toggle:clip="toggleClip"
+          @delete:clips="deleteTimelineClips"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
           @move:clip="moveClipTo($event.id, $event.startMs)"
           @preview:composition="timelineCompositionPreview = $event"

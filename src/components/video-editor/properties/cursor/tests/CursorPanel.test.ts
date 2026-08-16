@@ -3,8 +3,17 @@ import { describe, expect, it } from 'vitest';
 import CursorPanel from '../CursorPanel.vue';
 
 const Select = {
-  emits: ['update:modelValue'],
-  template: '<button class="cursor-select" @click="$emit(\'update:modelValue\', \'pointer\')">Select</button>',
+  emits: ['update:modelValue', 'preview:modelValue'],
+  template: `
+    <button
+      class="cursor-select"
+      @mouseenter="$emit('preview:modelValue', 'pointer')"
+      @mouseleave="$emit('preview:modelValue', null)"
+      @focus="$emit('preview:modelValue', 'pointer')"
+      @blur="$emit('preview:modelValue', null)"
+      @click="$emit('update:modelValue', 'pointer')"
+    >Select</button>
+  `,
 };
 const BigSlider = {
   emits: ['update:modelValue'],
@@ -29,6 +38,46 @@ const CursorClickEffectsPanel = {
 };
 
 describe('CursorPanel', () => {
+  it('previews cursor choices on hover and focus, restores on exit, and commits only on click', async () => {
+    const wrapper = mount(CursorPanel, {
+      props: {
+        selectedCursor: 'default',
+        cursorSize: 24,
+        cursorColor: '#000',
+        enableShadow: false,
+        shadowBlur: 8,
+        shadowColor: '#111',
+        shadowDirection: 'bottom-right',
+        motion: { preset: 'smooth' as const, smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
+        clickEffects: {
+          left: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#000' },
+          right: {
+            springEnabled: false,
+            springIntensity: 0,
+            rippleEnabled: false,
+            rippleSize: 20,
+            rippleColor: '#000',
+          },
+        },
+      },
+      global: { stubs: { Select, BigSlider, ColorInput, Switch, ShadowDirectionGroup, CursorClickEffectsPanel } },
+    });
+    const select = wrapper.get('.cursor-select');
+
+    await select.trigger('mouseenter');
+    await select.trigger('mouseleave');
+    await select.trigger('focus');
+    await select.trigger('blur');
+
+    expect(wrapper.emitted('preview:selectedCursor')).toEqual([['pointer'], [null], ['pointer'], [null]]);
+    expect(wrapper.emitted('update:selectedCursor')).toBeUndefined();
+
+    await select.trigger('click');
+
+    expect(wrapper.emitted('preview:selectedCursor')).toEqual([['pointer'], [null], ['pointer'], [null], [null]]);
+    expect(wrapper.emitted('update:selectedCursor')).toEqual([['pointer']]);
+  });
+
   it('emits cursor and shadow property updates', async () => {
     const wrapper = mount(CursorPanel, {
       props: {

@@ -71,6 +71,7 @@ const CopyButton = {
 
 const request = {
   projectName: 'Demo project',
+  includeAudio: true,
   snapshot: {
     duration: 12,
     canvas: { width: 1920, height: 1080 },
@@ -104,6 +105,31 @@ describe('ExportPopover', () => {
       props: { request },
       global: { stubs: { Popover, Button, ButtonGroup, ProgressBar, CopyButton } },
     });
+
+  it('keeps audio enabled by default and includes it in the export request', async () => {
+    const wrapper = mountExport();
+
+    await wrapper.get('.accordion-trigger').trigger('click');
+    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('true');
+
+    await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
+
+    expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ includeAudio: true }));
+  });
+
+  it('emits the disabled audio choice and exports without audio when the parent applies it', async () => {
+    const wrapper = mountExport();
+
+    await wrapper.get('.accordion-trigger').trigger('click');
+    await wrapper.get('[role="switch"]').trigger('click');
+    expect(wrapper.emitted('update:includeAudio')).toEqual([[false]]);
+
+    await wrapper.setProps({ request: { ...request, includeAudio: false } });
+    expect(wrapper.get('[role="switch"]').attributes('aria-checked')).toBe('false');
+    await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
+
+    expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ includeAudio: false }));
+  });
 
   it('passes format and quality to the export job so validation errors stay visible', async () => {
     mockJob.start.mockImplementationOnce(async (value: ExportRequest) => {

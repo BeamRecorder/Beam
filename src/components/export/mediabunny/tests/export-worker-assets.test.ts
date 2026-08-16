@@ -128,6 +128,16 @@ describe('openExportAssets', () => {
     vi.restoreAllMocks();
   });
 
+  it('does not require or open audio-only assets when audio is excluded', async () => {
+    const withoutAudio = { ...request([], [audioClip('missing')]), includeAudio: false };
+
+    const result = await openExportAssets(withoutAudio, new AbortController().signal, vi.fn());
+
+    expect(runtime.openMediaInput).not.toHaveBeenCalled();
+    expect(result.assets.size).toBe(0);
+    result.dispose();
+  });
+
   it('opens each required asset once and reuses its video/audio tracks', async () => {
     const shared = asset('shared');
     const opened = openedInput({ metadata: 4.5 });

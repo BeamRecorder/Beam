@@ -3,9 +3,14 @@ import { onMounted, ref } from 'vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 import { capture } from '~/api/capture';
+import Button from '~/ui/button/Button.vue';
+import { Check, Copy } from '@lucide/vue';
+import { useCopySystemInformation } from '~/composables/useCopySystemInformation';
 
 const { t } = useTranslate('HudPreferences');
-const currentVersion = ref('0.1.2');
+const { t: tSettings } = useTranslate('SettingsPanel');
+const { copied, copy } = useCopySystemInformation();
+const currentVersion = ref('0.1.7');
 
 onMounted(async () => {
   try {
@@ -26,9 +31,14 @@ onMounted(async () => {
       <h2 class="about-name">Beam</h2>
       <p class="about-version">{{ t('version', { version: currentVersion }) }}</p>
 
+      <p class="about-description about-description-title">{{ t('aboutDescriptionTitle') }}</p>
       <p class="about-description">
         {{ t('aboutDescriptionText') }}
       </p>
+      <Button variant="secondary" size="sm" class="system-info-button" @click="copy">
+        <template #icon><Check v-if="copied" /><Copy v-else /></template>
+        {{ copied ? tSettings('copied') : tSettings('copySysInfo') }}
+      </Button>
     </div>
   </div>
 </template>
@@ -90,5 +100,13 @@ onMounted(async () => {
   margin: 0;
   margin-top: 12px;
   font-weight: 450;
+}
+.about-description-title {
+  margin-bottom: -8px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.system-info-button {
+  margin-top: 4px;
 }
 </style>

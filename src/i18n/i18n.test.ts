@@ -95,6 +95,7 @@ describe('internationalization', () => {
       'aboutDesc',
       'view',
       'version',
+      'aboutDescriptionTitle',
       'aboutDescriptionText',
       'interactionAccessDescriptionLinux',
       'recordInteractionsDescriptionLinux',

@@ -143,7 +143,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     event.stopPropagation();
     const ids = linkedIdsFor(clip);
     movingClipIds.value = ids;
-    const initialVisualTrack = baseVisualTracks.value.find((track) => track.clips.some((entry) => entry.id === clip.id));
+    const initialVisualTrack = baseVisualTracks.value.find((track) =>
+      track.clips.some((entry) => entry.id === clip.id),
+    );
     const initialVisualTrackOrder = initialVisualTrack ? baseVisualTracks.value.map((track) => track.id) : null;
     const initialVisualTrackIndex = initialVisualTrack ? initialVisualTrackOrder!.indexOf(initialVisualTrack.id) : -1;
     const pointerStartX = event.clientX;

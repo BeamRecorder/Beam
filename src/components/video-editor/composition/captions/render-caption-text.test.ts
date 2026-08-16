@@ -17,6 +17,13 @@ const caption = (): CaptionClip => ({
     type: 'text',
     sentences: [],
     style: {
+      fontFamily: 'sans-serif',
+      fontWeight: 800,
+      fontStyle: 'normal',
+      textDecoration: 'none',
+      textAlign: 'center',
+      lineHeight: 1.2,
+      letterSpacing: 0,
       color: '#ffffff',
       fontSize: 40,
       shadowColor: '#000000',
@@ -73,6 +80,7 @@ const context = () => {
     strokeStyle: '',
     fillStyle: '',
     lineWidth: 0,
+    letterSpacing: '',
     shadowColor: '',
     shadowBlur: 0,
     shadowOffsetX: 0,
@@ -161,7 +169,7 @@ describe('caption backdrop blur', () => {
       viewport: { x: 0, y: 0, width: 1_000, height: 500 },
     });
 
-    expect(ctx.value.fillText).toHaveBeenCalledWith('Ctrl', 500, 250);
+    expect(ctx.value.fillText).toHaveBeenCalledWith('Ctrl', 460, 250);
   });
 
   it('moves a keyboard caption next to the supplied cursor position', () => {
@@ -177,5 +185,163 @@ describe('caption backdrop blur', () => {
 
     const x = (ctx.value.fillText as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as number;
     expect(x).toBeGreaterThan(500);
+  });
+
+  it('uses the configured family, weight, style, and tracking', () => {
+    const ctx = context();
+    const clip = caption();
+    clip.caption.style = {
+      ...clip.caption.style,
+      fontFamily: 'Aptos Display',
+      fontWeight: 400,
+      fontStyle: 'italic',
+      letterSpacing: 2.5,
+      backdropBlur: 0,
+      outlineWidth: 0,
+      extrusionDepth: 0,
+    };
+
+    drawCaptionText(ctx.value, {
+      clip,
+      text: 'A caption',
+      canvas: { width: 1_000, height: 500 },
+      viewport: { x: 0, y: 0, width: 1_000, height: 500 },
+    });
+
+    expect(ctx.value.font).toBe('italic 400 40px "Aptos Display"');
+    expect(ctx.value.letterSpacing).toBe('2.5px');
+  });
+
+  it('applies tracking before measuring wrapped lines', () => {
+    const ctx = context();
+    const measuredSpacing: string[] = [];
+    const measureText = ctx.value.measureText as unknown as ReturnType<typeof vi.fn>;
+    measureText.mockImplementation((text: string) => {
+      measuredSpacing.push(ctx.value.letterSpacing);
+      const letterSpacing = Number.parseFloat(ctx.value.letterSpacing) || 0;
+      return { width: text.length * 20 + Math.max(0, text.length - 1) * letterSpacing };
+    });
+    const clip = caption();
+    clip.transform = { x: 0.1, y: 0.1, width: 0.2, height: 0.14 };
+    clip.caption.style = {
+      ...clip.caption.style,
+      letterSpacing: 10,
+      backdropBlur: 0,
+      outlineWidth: 0,
+      extrusionDepth: 0,
+    };
+
+    drawCaptionText(ctx.value, {
+      clip,
+      text: 'AAAA BBBB',
+      canvas: { width: 1_000, height: 500 },
+      viewport: { x: 0, y: 0, width: 1_000, height: 500 },
+    });
+
+    expect(measuredSpacing[0]).toBe('10px');
+    expect(ctx.value.fillText).toHaveBeenCalledTimes(2);
+  });
+
+  it('aligns the backdrop bounds with left and right text anchors', () => {
+    const scratchContext = { drawImage: vi.fn() };
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class OffscreenCanvas {
+        readonly width: number;
+        readonly height: number;
+        constructor(width: number, height: number) {
+          this.width = width;
+          this.height = height;
+        }
+        getContext() {
+          return scratchContext;
+        }
+      },
+    );
+
+    for (const [textAlign, expectedX] of [
+      ['left', 108],
+      ['right', 852],
+    ] as const) {
+      const ctx = context();
+      const clip = caption();
+      clip.caption.style = {
+        ...clip.caption.style,
+        textAlign,
+        backdropBlur: 4,
+        outlineWidth: 0,
+        extrusionDepth: 0,
+      };
+
+      drawCaptionText(ctx.value, {
+        clip,
+        text: 'AA',
+        canvas: { width: 1_000, height: 500 },
+        viewport: { x: 0, y: 0, width: 1_000, height: 500 },
+      });
+
+      expect(ctx.value.rect).toHaveBeenCalledWith(expectedX, expect.any(Number), 40, expect.any(Number));
+    }
+
+    vi.unstubAllGlobals();
+  });
+
+  it('uses the configured alignment and line height for wrapped lines', () => {
+    const ctx = context();
+    const clip = caption();
+    clip.caption.style = {
+      ...clip.caption.style,
+      textAlign: 'right',
+      lineHeight: 1.5,
+      backdropBlur: 0,
+      outlineWidth: 0,
+      extrusionDepth: 0,
+    };
+
+    drawCaptionText(ctx.value, {
+      clip,
+      text: 'first\nsecond',
+      canvas: { width: 1_000, height: 500 },
+      viewport: { x: 0, y: 0, width: 1_000, height: 500 },
+    });
+
+    const calls = (ctx.value.fillText as ReturnType<typeof vi.fn>).mock.calls;
+    expect(ctx.value.textAlign).toBe('right');
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.[1]).toBe(892);
+    expect(calls[1]?.[1]).toBe(892);
+    expect((calls[1]?.[2] as number) - (calls[0]?.[2] as number)).toBeCloseTo(60);
+  });
+
+  it('draws a strikethrough using the rendered line width and alignment', () => {
+    const ctx = context();
+    const clip = caption();
+    clip.caption.style = {
+      ...clip.caption.style,
+      textAlign: 'left',
+      textDecoration: 'line-through',
+      wrap: false,
+      backdropBlur: 0,
+      outlineWidth: 0,
+      extrusionDepth: 0,
+    };
+
+    drawCaptionText(ctx.value, {
+      clip,
+      text: 'Strike',
+      canvas: { width: 1_000, height: 500 },
+      viewport: { x: 0, y: 0, width: 1_000, height: 500 },
+    });
+
+    expect(ctx.value.fillRect).toHaveBeenCalledTimes(1);
+    const [x, , width, height] = (ctx.value.fillRect as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      number,
+      number,
+      number,
+      number,
+    ];
+    expect(x).toBe(108);
+    expect(width).toBe(120);
+    expect(height).toBeGreaterThan(0);
   });
 });

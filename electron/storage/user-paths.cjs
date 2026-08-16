@@ -10,6 +10,7 @@ function createUserPaths(videosDirectory) {
     wallpapers: path.join(user, 'media', 'wallpapers'),
     wallpaperImages: path.join(user, 'media', 'wallpapers', 'image'),
     wallpaperVideos: path.join(user, 'media', 'wallpapers', 'video'),
+    fonts: path.join(user, 'media', 'fonts'),
     whisperModels: path.join(user, 'models', 'whisper'),
   });
 }

@@ -46,11 +46,7 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
             </span>
           </span>
           <span class="clip-center-title">{{ clip.name }}</span>
-          <span
-            class="trim-handle end"
-            :title="t('trimEnd')"
-            @pointerdown.stop="beginClipTrim($event, clip, 'end')"
-          >
+          <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>
@@ -97,11 +93,7 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
             </span>
           </span>
           <span class="clip-center-title"><Sparkles v-if="clip.isAiGenerated" :size="11" />{{ clip.name }}</span>
-          <span
-            class="trim-handle end"
-            :title="t('trimEnd')"
-            @pointerdown.stop="beginClipTrim($event, clip, 'end')"
-          >
+          <span class="trim-handle end" :title="t('trimEnd')" @pointerdown.stop="beginClipTrim($event, clip, 'end')">
             <span v-if="trimStateFor(clip.id)?.edge === 'end'" class="trim-side-badge">
               {{ (trimStateFor(clip.id)!.durationMs / 1000).toFixed(1) }}s
             </span>

@@ -75,7 +75,7 @@ function rangeNotSatisfiable(size) {
   });
 }
 
-function createProjectMediaHandler({ projectStore, backgroundLibrary }) {
+function createProjectMediaHandler({ projectStore, backgroundLibrary, fontLibrary }) {
   if (!projectStore || typeof projectStore.mediaFileForUrl !== 'function') {
     throw new TypeError('projectStore.mediaFileForUrl must be a function.');
   }
@@ -85,7 +85,10 @@ function createProjectMediaHandler({ projectStore, backgroundLibrary }) {
 
   return async function handleProjectMedia(request) {
     try {
-      const file = projectStore.mediaFileForUrl(request.url) ?? backgroundLibrary?.fileForUrl(request.url);
+      const file =
+        projectStore.mediaFileForUrl(request.url) ??
+        backgroundLibrary?.fileForUrl(request.url) ??
+        fontLibrary?.fileForUrl(request.url);
       if (!file) return new Response('Not found', { status: 404 });
       const stat = await fs.promises.stat(file);
       if (!stat.isFile()) return new Response('Not found', { status: 404 });
@@ -95,12 +98,16 @@ function createProjectMediaHandler({ projectStore, backgroundLibrary }) {
         const range = parseSingleRange(rangeHeader, stat.size);
         if (!range) return rangeNotSatisfiable(stat.size);
         const headers = responseHeaders(file, range.length);
+        const fontMime = fontLibrary?.mimeTypeForUrl(request.url);
+        if (fontMime) headers.set('Content-Type', fontMime);
         headers.set('Content-Range', `bytes ${range.start}-${range.end}/${stat.size}`);
         const body = request.method === 'HEAD' ? null : Readable.toWeb(fs.createReadStream(file, range));
         return new Response(body, { status: 206, headers });
       }
 
       const headers = responseHeaders(file, stat.size);
+      const fontMime = fontLibrary?.mimeTypeForUrl(request.url);
+      if (fontMime) headers.set('Content-Type', fontMime);
       const body = request.method === 'HEAD' ? null : Readable.toWeb(fs.createReadStream(file));
       return new Response(body, { status: 200, headers });
     } catch {

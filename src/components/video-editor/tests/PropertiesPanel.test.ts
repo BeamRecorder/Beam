@@ -4,6 +4,7 @@ import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } fr
 import type { CursorType } from '~/api/types/cursor-presentation';
 import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
+import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
 import {
   emptyComposition as createEmptyComposition,
   type CaptionClip,
@@ -22,12 +23,33 @@ const CanvasPanel = {
   template:
     '<button class="canvas-panel-stub" @click="$emit(\'update:selectedBackground\', { id: \'background\' })">Canvas</button>',
 };
-const AudioPanel = { template: '<div class="audio-panel-stub">Audio</div>' };
+const AudioPanel = {
+  props: ['hasSystemAudio', 'hasMicAudio'],
+  emits: ['delete:system', 'delete:microphone'],
+  template: `
+    <div
+      class="audio-panel-stub"
+      :data-has-system-audio="hasSystemAudio"
+      :data-has-mic-audio="hasMicAudio"
+    >
+      Audio
+      <button class="delete-system-audio" @click="$emit('delete:system')">Delete system</button>
+      <button class="delete-microphone-audio" @click="$emit('delete:microphone')">Delete microphone</button>
+    </div>
+  `,
+};
 const ZoomPanel = { template: '<div class="zoom-panel-stub">Zoom</div>' };
 const SettingsPanel = { template: '<div class="settings-panel-stub">Settings</div>' };
 const AudioClipPropertiesPanel = {
   props: ['clip'],
-  template: '<div class="audio-clip-stub">{{ clip?.kind || "audio" }}</div>',
+  emits: ['update:enabled', 'delete'],
+  template: `
+    <div class="audio-clip-stub">
+      {{ clip?.kind || "audio" }}
+      <button class="audio-toggle" @click="$emit('update:enabled', false)">Toggle</button>
+      <button class="audio-delete" @click="$emit('delete')">Delete</button>
+    </div>
+  `,
 };
 const CaptionClipPanel = { template: '<div class="caption-clip-stub">Caption clip</div>' };
 const CaptionPanel = {
@@ -64,6 +86,7 @@ const captionClip: CaptionClip = {
     type: 'text',
     sentences: [],
     style: {
+      ...createDefaultCaptionStyle(36),
       color: '#ffffff',
       fontSize: 24,
       wrap: true,
@@ -177,6 +200,25 @@ describe('PropertiesPanel', () => {
     }
   });
 
+  it('passes audio track presence to the audio panel and forwards role deletions', async () => {
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'audio', hasSystemAudio: true, hasMicAudio: false },
+      global,
+    });
+    const audio = wrapper.get('.audio-panel-stub');
+
+    expect(audio.attributes('data-has-system-audio')).toBe('true');
+    expect(audio.attributes('data-has-mic-audio')).toBe('false');
+    await wrapper.get('.delete-system-audio').trigger('click');
+    expect(wrapper.emitted('delete:system-audio')).toEqual([[]]);
+
+    await wrapper.setProps({ hasSystemAudio: false, hasMicAudio: true });
+    expect(audio.attributes('data-has-system-audio')).toBe('false');
+    expect(audio.attributes('data-has-mic-audio')).toBe('true');
+    await wrapper.get('.delete-microphone-audio').trigger('click');
+    expect(wrapper.emitted('delete:mic-audio')).toEqual([[]]);
+  });
+
   it('selects audio, caption and regular clip property editors', async () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     await wrapper.setProps({
@@ -184,6 +226,13 @@ describe('PropertiesPanel', () => {
       selectedClip: audioClip,
     });
     expect(wrapper.find('.audio-clip-stub').exists()).toBe(true);
+    expect(wrapper.find('.panel-header-actions').exists()).toBe(false);
+
+    await wrapper.get('.audio-toggle').trigger('click');
+    expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);
+    await wrapper.get('.audio-delete').trigger('click');
+    expect(wrapper.emitted('delete-clip')).toHaveLength(1);
+
     await wrapper.setProps({ selectedClip: null, selectedCaptionClip: captionClip });
     expect(wrapper.find('.caption-clip-stub').exists()).toBe(true);
     await wrapper.setProps({
@@ -193,7 +242,7 @@ describe('PropertiesPanel', () => {
     expect(wrapper.find('.clip-panel-stub').text()).toBe('video');
   });
 
-  it('shows the selected item in the header and toggles/deletes it through header actions', async () => {
+  it('keeps non-audio clip actions in the header and toggles/deletes them', async () => {
     const wrapper = mount(PropertiesPanel, {
       props: { ...baseProps, activeTab: 'clip', selectedClip: screenClip },
       global,

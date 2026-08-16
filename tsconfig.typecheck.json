@@ -5,6 +5,11 @@
     "allowJs": false,
     "checkJs": false,
     "types": ["vite/client", "node"],
+    "paths": {
+      "~/ui/*": ["./src/components/ui/*"],
+      "~/*": ["./src/*"],
+      "@website/*": ["./website/src/*"]
+    },
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.typecheck.tsbuildinfo"
   },
   "include": ["**/*.ts", "**/*.tsx"],

@@ -10,6 +10,15 @@ fn process_groups() -> &'static Mutex<Vec<libc::pid_t>> {
     GROUPS.get_or_init(|| Mutex::new(Vec::new()))
 }
 
+#[cfg(test)]
+pub(super) fn test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    match LOCK.get_or_init(|| Mutex::new(())).lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
+
 /// Put a native helper in its own process group and bind it to the capture
 /// engine. The parent check closes the fork/exec race after `PR_SET_PDEATHSIG`.
 pub(super) fn configure(command: &mut Command) {

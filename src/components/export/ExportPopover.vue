@@ -6,6 +6,8 @@ import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import CopyButton from '~/ui/button/CopyButton.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
+import Switch from '~/ui/switch/Switch.vue';
+import Accordion from '~/ui/accordion/Accordion.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { useExportJob } from './useExportJob';
 import { bitrateFor } from './export-presets';
@@ -19,10 +21,16 @@ const { t } = useTranslate('ExportPopover');
 export type ExportResolutionOption = '720p' | '1080p' | 'max';
 
 const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>();
+const emit = defineEmits<{ (event: 'update:includeAudio', value: boolean): void }>();
 const format = ref<ExportFormat>('webm');
 const preset = ref<ExportPreset>('medium');
 const resolution = ref<ExportResolutionOption>('max');
 const presets: ExportPreset[] = ['low', 'medium', 'high'];
+const moreOptionsOpen = ref(false);
+const includeAudio = computed({
+  get: () => props.request.includeAudio !== false,
+  set: (value: boolean) => emit('update:includeAudio', value),
+});
 
 const formatDescriptions: Record<ExportFormat, string> = {
   webm: t('webmDesc'),
@@ -248,6 +256,16 @@ const run = async () => {
             <span class="option-hint">{{ resolutionDescriptions[resolution] }}</span>
           </div>
 
+          <Accordion v-model="moreOptionsOpen" :title="t('moreOptions')" class="more-options">
+            <div class="more-options-content">
+              <div class="audio-option-copy">
+                <span class="audio-option-title">{{ t('includeAudio') }}</span>
+                <span class="option-hint">{{ t('includeAudioDesc') }}</span>
+              </div>
+              <Switch v-model="includeAudio" :aria-label="t('includeAudio')" />
+            </div>
+          </Accordion>
+
           <div class="field">
             <span class="field-label">{{ t('qualityAndBitrate') }}</span>
             <ButtonGroup full>
@@ -299,9 +317,14 @@ const run = async () => {
 <style scoped>
 .export-popover {
   width: 320px;
+  max-height: calc(100vh - 24px);
   padding: 16px;
+  box-sizing: border-box;
   display: grid;
   gap: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .field {
   display: grid;
@@ -374,6 +397,24 @@ const run = async () => {
   display: flex;
   width: 100%;
   margin-top: 4px;
+}
+.more-options {
+  display: grid;
+}
+.more-options-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.audio-option-copy {
+  display: grid;
+  gap: 2px;
+}
+.audio-option-title {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 .export-progress-card {
   display: flex;
