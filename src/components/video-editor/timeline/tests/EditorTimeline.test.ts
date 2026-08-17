@@ -2,11 +2,15 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import EditorTimeline from '../EditorTimeline.vue';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import type { TimelineClipboardItem } from '../composables/timeline-clipboard-types';
+
+const copiedItem = { descriptor: { kind: 'item', name: 'recording.mp4' } } as TimelineClipboardItem;
 
 const TimelineTracks = {
   emits: ['update:currentTime', 'select:clip', 'clipboard:copied'],
   template:
-    '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button><button class="copy-feedback" @click="$emit(\'clipboard:copied\')">Copy</button></div>',
+    '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button><button class="copy-feedback" @click="$emit(\'clipboard:copied\', copiedItem)">Copy</button></div>',
+  setup: () => ({ copiedItem }),
 };
 
 const composition: ClipComposition = {
@@ -55,7 +59,7 @@ describe('EditorTimeline', () => {
 
     await wrapper.get('.copy-feedback').trigger('click');
 
-    expect(wrapper.emitted('clipboard:copied')).toEqual([[]]);
+    expect(wrapper.emitted('clipboard:copied')).toEqual([[copiedItem]]);
     wrapper.unmount();
   });
 });

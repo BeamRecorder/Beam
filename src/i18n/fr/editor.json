@@ -249,7 +249,11 @@
     "timelinePasteFailed": "Impossible de coller : {message}",
     "timelineClipboardDifferentProject": "L’élément copié appartient à un autre projet.",
     "timelineCopied": "Copié",
-    "timelinePasted": "Collé"
+    "timelinePasted": "Collé",
+    "timelineCopiedItem": "Copié : {item}",
+    "timelinePastedItem": "Collé : {item}",
+    "timelineClipboardCaption": "Sous-titre « {text} »",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Préréglages",

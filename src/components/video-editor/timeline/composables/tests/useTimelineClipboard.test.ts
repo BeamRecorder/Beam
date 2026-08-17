@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { MediaAsset, VisualClip } from '~/media/shared/composition-types';
-import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { CaptionClip, MediaAsset, VisualClip } from '~/media/shared/composition-types';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import type { ZoomElement } from '../../../zoom/zoom-types';
 import { getClipCategory, useTimelineClipboard } from '../useTimelineClipboard';
 
@@ -43,6 +43,39 @@ const zoom = (): ZoomElement => ({
   focus: { cx: 0.5, cy: 0.5 },
   depth: 5,
   mode: 'manual',
+});
+
+const textCaption = (overrides: Partial<Extract<CaptionClip['caption'], { type: 'text' }>> = {}): CaptionClip => ({
+  id: 'caption-clip',
+  kind: 'caption',
+  name: 'Caption',
+  timelineStartMs: 0,
+  timelineDurationMs: 1_000,
+  sourceInMs: 0,
+  sourceDurationMs: 1_000,
+  playbackRate: 1,
+  enabled: true,
+  order: 1,
+  caption: {
+    type: 'text',
+    sentences: [],
+    style: createDefaultCaptionStyle(),
+    ...overrides,
+  },
+});
+
+const keyboardCaption = (): CaptionClip => ({
+  ...textCaption(),
+  id: 'keyboard-caption',
+  name: 'Keyboard Captions',
+  caption: {
+    type: 'keyboard',
+    steps: [{ offsetMs: 0, modifiers: ['control', 'shift'], key: 'k' }],
+    followCursor: true,
+    recordedPlatform: 'linux',
+    sourceSessionId: 'session-1',
+    style: createDefaultCaptionStyle(),
+  },
 });
 
 afterEach(() => {
@@ -91,13 +124,60 @@ describe('useTimelineClipboard', () => {
     expect(copied.asset?.name).toBe('Original video');
     expect(copied.clip).not.toBe(sourceClip);
     expect(copied.asset).not.toBe(sourceAsset);
+    expect(copied.descriptor).toEqual({ kind: 'item', name: 'original.mp4' });
+  });
+
+  it('falls back from an empty asset filename to the track name and then the asset name', () => {
+    const clipboard = useTimelineClipboard();
+
+    clipboard.copyClip('project-a', clip(), { ...asset, fileName: '' });
+    expect(clipboard.getClipboardItem()).toEqual(
+      expect.objectContaining({ descriptor: { kind: 'item', name: 'Camera' } }),
+    );
+
+    clipboard.copyClip('project-a', clip(), null);
+    expect(clipboard.getClipboardItem()).toEqual(
+      expect.objectContaining({ descriptor: { kind: 'item', name: 'Camera' } }),
+    );
+
+    clipboard.copyClip('project-a', { ...clip(), name: '' }, { ...asset, fileName: '' });
+    expect(clipboard.getClipboardItem()).toEqual(
+      expect.objectContaining({ descriptor: { kind: 'item', name: 'Original video' } }),
+    );
+  });
+
+  it('describes custom, sentence, keyboard, and truncated caption text', () => {
+    const clipboard = useTimelineClipboard();
+    const longText = 'A'.repeat(80);
+
+    clipboard.copyClip('project-a', textCaption({ style: { ...createDefaultCaptionStyle(), customText: longText } }));
+    let copied = clipboard.getClipboardItem();
+    expect(copied?.descriptor).toEqual({ kind: 'caption', text: `${'A'.repeat(71)}…` });
+
+    clipboard.copyClip(
+      'project-a',
+      textCaption({
+        sentences: [{ id: 'sentence', text: '  First line  ', startMs: 0, endMs: 500, words: [] }],
+        style: createDefaultCaptionStyle(),
+      }),
+    );
+    copied = clipboard.getClipboardItem();
+    expect(copied?.descriptor).toEqual({ kind: 'caption', text: 'First line' });
+
+    clipboard.copyClip('project-a', keyboardCaption());
+    copied = clipboard.getClipboardItem();
+    expect(copied?.descriptor).toEqual({ kind: 'caption', text: 'control+shift+k' });
   });
 
   it('copies zooms as isolated snapshots and replaces the previous clipboard item', () => {
     const sourceZoom = zoom();
     const clipboard = useTimelineClipboard();
 
-    clipboard.copyZoom('project-a', sourceZoom);
+    clipboard.copyZoom('project-a', sourceZoom, [
+      { ...sourceZoom, id: 'zoom-before', startMs: 0, endMs: 1_000 },
+      sourceZoom,
+      { ...sourceZoom, id: 'zoom-after', startMs: 5_000, endMs: 6_000 },
+    ]);
     sourceZoom.startMs = 8_000;
 
     const copied = clipboard.getClipboardItem();
@@ -106,6 +186,7 @@ describe('useTimelineClipboard', () => {
       scopeId: 'project-a',
       category: 'zoom',
       zoom: expect.objectContaining({ id: 'zoom-1', startMs: 2_000, endMs: 4_000 }),
+      descriptor: { kind: 'zoom', number: 2 },
     });
     expect(copied).not.toBe(null);
     if (copied?.type === 'zoom') expect(copied.zoom).not.toBe(sourceZoom);
@@ -121,7 +202,7 @@ describe('useTimelineClipboard', () => {
     expect(clipboard.hasClipboardItem.value).toBe(false);
     expect(clipboard.canPaste('project-a')).toBe(false);
 
-    clipboard.copyZoom('project-a', zoom());
+    clipboard.copyZoom('project-a', zoom(), [zoom()]);
     expect(clipboard.hasClipboardItem.value).toBe(true);
     expect(clipboard.canPaste('project-a')).toBe(true);
     expect(clipboard.canPaste('project-b')).toBe(false);

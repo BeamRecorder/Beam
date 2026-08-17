@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "書き出し中です。書き出し中のファイルにはライブ編集は反映されません。",
     "timelineCopied": "コピーしました",
-    "timelinePasted": "貼り付けました"
+    "timelinePasted": "貼り付けました",
+    "timelineCopiedItem": "コピーしました：{item}",
+    "timelinePastedItem": "貼り付けました：{item}",
+    "timelineClipboardCaption": "キャプション「{text}」",
+    "timelineClipboardZoom": "ズーム {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "プリセット",

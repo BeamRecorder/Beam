@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "Експортирането е в ход. Промените на живо няма да засегнат текущо експортирания файл.",
     "timelineCopied": "Копирано",
-    "timelinePasted": "Поставено"
+    "timelinePasted": "Поставено",
+    "timelineCopiedItem": "Копирано: {item}",
+    "timelinePastedItem": "Поставено: {item}",
+    "timelineClipboardCaption": "Надпис „{text}“",
+    "timelineClipboardZoom": "Мащабиране {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Предварителни настройки",

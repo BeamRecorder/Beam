@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "내보내는 중입니다. 현재 내보내는 파일에는 실시간 편집 내용이 적용되지 않습니다.",
     "timelineCopied": "복사됨",
-    "timelinePasted": "붙여넣음"
+    "timelinePasted": "붙여넣음",
+    "timelineCopiedItem": "복사됨: {item}",
+    "timelinePastedItem": "붙여넣음: {item}",
+    "timelineClipboardCaption": "캡션 “{text}”",
+    "timelineClipboardZoom": "줌 {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "프리셋",

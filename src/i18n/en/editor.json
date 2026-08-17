@@ -249,7 +249,11 @@
     "timelinePasteFailed": "Unable to paste: {message}",
     "timelineClipboardDifferentProject": "The copied item belongs to another project.",
     "timelineCopied": "Copied",
-    "timelinePasted": "Pasted"
+    "timelinePasted": "Pasted",
+    "timelineCopiedItem": "Copied: {item}",
+    "timelinePastedItem": "Pasted: {item}",
+    "timelineClipboardCaption": "Caption “{text}”",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Presets",

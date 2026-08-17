@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "Exportación en curso. Los cambios en directo no afectarán al archivo que se está exportando.",
     "timelineCopied": "Copiado",
-    "timelinePasted": "Pegado"
+    "timelinePasted": "Pegado",
+    "timelineCopiedItem": "Copiado: {item}",
+    "timelinePastedItem": "Pegado: {item}",
+    "timelineClipboardCaption": "Subtítulo «{text}»",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Preajustes",

@@ -4,7 +4,7 @@ import type { Clip, ClipComposition, MediaAsset } from '~/media/shared/compositi
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { ContextMenuItemOrDivider } from '~/components/ui/context-menu';
 import { getClipCategory, useTimelineClipboard } from './useTimelineClipboard';
-import type { TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
+import type { TimelineClipboardItem, TimelineItemCategory, TimelinePasteTarget } from './timeline-clipboard-types';
 import type { TimelineTracksEmits } from './timeline-tracks-types';
 
 export interface TimelineContextMenuState {
@@ -100,10 +100,11 @@ export function useTimelineContextMenu(options: {
   const copyItem = (clip: Clip | null, zoom: ZoomElement | null): boolean => {
     const scopeId = options.scopeId.value;
     if (!scopeId) return false;
-    if (zoom) clipboard.copyZoom(scopeId, zoom);
-    else if (clip) clipboard.copyClip(scopeId, clip, options.assetFor(clip));
+    let item: TimelineClipboardItem;
+    if (zoom) item = clipboard.copyZoom(scopeId, zoom, options.zoomElements.value);
+    else if (clip) item = clipboard.copyClip(scopeId, clip, options.assetFor(clip));
     else return false;
-    options.emit('clipboard:copied');
+    options.emit('clipboard:copied', item);
     return true;
   };
 

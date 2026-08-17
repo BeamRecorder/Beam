@@ -533,6 +533,21 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
           depth: 2,
           mode: 'manual',
         };
+        const copiedClipItem = {
+          type: 'clip' as const,
+          scopeId: 'project-1',
+          category: 'visual' as const,
+          clip: copiedClip,
+          asset: copiedAsset,
+          descriptor: { kind: 'item' as const, name: copiedAsset?.fileName ?? 'screen.mp4' },
+        };
+        const copiedZoomItem = {
+          type: 'zoom' as const,
+          scopeId: 'project-1',
+          category: 'zoom' as const,
+          zoom: copiedZoom,
+          descriptor: { kind: 'zoom' as const, number: 1 },
+        };
         return () =>
           h('div', [
             h('span', {
@@ -545,19 +560,13 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
             h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
             h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
             h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
-            h('button', { class: 'timeline-copy', onClick: () => emit('clipboard:copied') }),
+            h('button', { class: 'timeline-copy', onClick: () => emit('clipboard:copied', copiedClipItem) }),
             h('button', {
               class: 'timeline-paste-invalid',
               onClick: () =>
                 emit('paste:item', {
                   timeMs: 1_000,
-                  item: {
-                    type: 'clip',
-                    scopeId: 'other-project',
-                    category: 'visual',
-                    clip: copiedClip,
-                    asset: copiedAsset,
-                  },
+                  item: { ...copiedClipItem, scopeId: 'other-project' },
                 }),
             }),
             h('button', {
@@ -565,13 +574,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
               onClick: () =>
                 emit('paste:item', {
                   timeMs: 1_000,
-                  item: {
-                    type: 'clip',
-                    scopeId: 'project-1',
-                    category: 'visual',
-                    clip: copiedClip,
-                    asset: copiedAsset,
-                  },
+                  item: copiedClipItem,
                 }),
             }),
             h('button', {
@@ -579,7 +582,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
               onClick: () =>
                 emit('paste:item', {
                   timeMs: 1_000,
-                  item: { type: 'zoom', scopeId: 'project-1', category: 'zoom', zoom: copiedZoom },
+                  item: copiedZoomItem,
                 }),
             }),
           ]);

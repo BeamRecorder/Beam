@@ -163,7 +163,7 @@ describe('VideoEditor', () => {
     await mounted.vm.$nextTick();
 
     expect(toast.success).toHaveBeenCalledTimes(1);
-    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/copied/i), expect.any(Number));
+    expect(toast.success).toHaveBeenCalledWith('Copied: screen.mp4', 1_500, undefined, { leadingIcon: 'copy' });
   });
 
   it('rejects a pasted item from another project without mutating the timeline', async () => {
@@ -197,7 +197,7 @@ describe('VideoEditor', () => {
     expect(editorState.store.activeTab.value).toBe('clip');
     expect(editorState.store.editorState.scheduleSave).toHaveBeenCalled();
     expect(historyState.commitNow).toHaveBeenCalledWith(expect.objectContaining({ composition }));
-    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/pasted/i), expect.any(Number));
+    expect(toast.success).toHaveBeenCalledWith('Pasted: screen.mp4', 1_500, undefined, { leadingIcon: 'paste' });
   });
 
   it('delegates zoom pasting and keeps the pasted zoom selected', async () => {
@@ -214,7 +214,7 @@ describe('VideoEditor', () => {
     expect(editorState.store.activeTab.value).toBe('zoom');
     expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
     expect(historyState.commitNow).toHaveBeenCalled();
-    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/pasted/i), expect.any(Number));
+    expect(toast.success).toHaveBeenCalledWith('Pasted: Zoom 1', 1_500, undefined, { leadingIcon: 'paste' });
   });
 
   it('keeps the latest paste highlight alive and expires it 900ms after the latest paste', async () => {

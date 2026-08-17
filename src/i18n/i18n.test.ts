@@ -117,6 +117,23 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides detailed timeline clipboard labels and interpolation in every supported locale', () => {
+    const keys = ['timelineCopiedItem', 'timelinePastedItem', 'timelineClipboardCaption', 'timelineClipboardZoom'];
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(i18n.global.te(`VideoEditor.${key}`, locale), `${locale}: missing VideoEditor.${key}`).toBe(true);
+        expect(i18n.global.t(`VideoEditor.${key}`)).not.toBe(`VideoEditor.${key}`);
+      }
+      expect(i18n.global.t('VideoEditor.timelineCopiedItem', { item: 'capture.mp4' })).toContain('capture.mp4');
+      expect(i18n.global.t('VideoEditor.timelinePastedItem', { item: 'capture.mp4' })).toContain('capture.mp4');
+      expect(i18n.global.t('VideoEditor.timelineClipboardCaption', { text: 'Hello timeline' })).toContain(
+        'Hello timeline',
+      );
+      expect(i18n.global.t('VideoEditor.timelineClipboardZoom', { number: 2 })).toContain('2');
+    }
+  });
+
   it('keeps the preferences About and Linux interaction catalog complete', () => {
     const keys = [
       'about',

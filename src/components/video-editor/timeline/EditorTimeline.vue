@@ -4,7 +4,11 @@ import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
-import type { TimelinePasteHighlight, TimelinePasteRequest } from './composables/timeline-clipboard-types';
+import type {
+  TimelineClipboardItem,
+  TimelinePasteHighlight,
+  TimelinePasteRequest,
+} from './composables/timeline-clipboard-types';
 
 const props = withDefaults(
   defineProps<{
@@ -43,7 +47,7 @@ const emit = defineEmits<{
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
-  (event: 'clipboard:copied'): void;
+  (event: 'clipboard:copied', item: TimelineClipboardItem): void;
 }>();
 
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -94,7 +98,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @reorder:clip="emit('reorder:clip', $event)"
         @paste:item="emit('paste:item', $event)"
         @paste:error="emit('paste:error', $event)"
-        @clipboard:copied="emit('clipboard:copied')"
+        @clipboard:copied="emit('clipboard:copied', $event)"
       />
     </div>
   </div>

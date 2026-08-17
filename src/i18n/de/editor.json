@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "Export läuft. Live-Änderungen wirken sich nicht auf die gerade exportierte Datei aus.",
     "timelineCopied": "Kopiert",
-    "timelinePasted": "Eingefügt"
+    "timelinePasted": "Eingefügt",
+    "timelineCopiedItem": "Kopiert: {item}",
+    "timelinePastedItem": "Eingefügt: {item}",
+    "timelineClipboardCaption": "Untertitel „{text}“",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Voreinstellungen",

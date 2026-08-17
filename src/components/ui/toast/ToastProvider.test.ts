@@ -71,4 +71,43 @@ describe('ToastProvider', () => {
     expect(store.toasts).toHaveLength(1);
     expect(wrapper.get('.toast-action-btn').find('svg').classes()).toEqual(expect.arrayContaining(['lucide-check']));
   });
+
+  it('renders a duration bar for expiring toasts and no bar for persistent toasts', () => {
+    const store = useToastStore();
+    store.success('Expiring', 1200);
+    store.info('Persistent', 0);
+    const wrapper = mount(ToastProvider);
+
+    const expiring = wrapper.findAll('.toast-item').find((item) => item.text().includes('Expiring'));
+    const persistent = wrapper.findAll('.toast-item').find((item) => item.text().includes('Persistent'));
+    expect(expiring?.find('.toast-progress').exists()).toBe(true);
+    expect(expiring?.find('.toast-progress').attributes('style')).toContain('--toast-duration: 1200ms');
+    expect(persistent?.find('.toast-progress').exists()).toBe(false);
+  });
+
+  it('renders one toast with an xN count after strict deduplication', async () => {
+    const store = useToastStore();
+    store.success('Copied', 0, undefined, { leadingIcon: 'copy' });
+    store.success('Copied', 0, undefined, { leadingIcon: 'copy' });
+    const wrapper = mount(ToastProvider);
+
+    expect(wrapper.findAll('.toast-item')).toHaveLength(1);
+    expect(wrapper.get('.toast-count').text()).toBe('×2');
+    expect(wrapper.find('.toast-icon-morph').exists()).toBe(true);
+  });
+
+  it.each([
+    ['copy', 'lucide-copy'],
+    ['paste', 'lucide-clipboard-paste'],
+  ] as const)(
+    'shows the %s source icon and a check icon for a successful clipboard toast',
+    (leadingIcon, sourceIcon) => {
+      const store = useToastStore();
+      store.success('Done', 0, undefined, { leadingIcon });
+      const wrapper = mount(ToastProvider);
+
+      expect(wrapper.get('.toast-icon-source').classes()).toContain(sourceIcon);
+      expect(wrapper.find('.toast-icon-confirmed').exists()).toBe(true);
+    },
+  );
 });

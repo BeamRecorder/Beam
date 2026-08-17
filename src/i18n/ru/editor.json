@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "Идёт экспорт. Изменения в реальном времени не повлияют на экспортируемый файл.",
     "timelineCopied": "Скопировано",
-    "timelinePasted": "Вставлено"
+    "timelinePasted": "Вставлено",
+    "timelineCopiedItem": "Скопировано: {item}",
+    "timelinePastedItem": "Вставлено: {item}",
+    "timelineClipboardCaption": "Субтитр «{text}»",
+    "timelineClipboardZoom": "Масштабирование {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Предустановки",

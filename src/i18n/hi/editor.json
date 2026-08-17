@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "एक्सपोर्ट हो रहा है। लाइव एडिटिंग से वर्तमान एक्सपोर्ट प्रभावित नहीं होगा।",
     "timelineCopied": "कॉपी किया गया",
-    "timelinePasted": "पेस्ट किया गया"
+    "timelinePasted": "पेस्ट किया गया",
+    "timelineCopiedItem": "कॉपी किया गया: {item}",
+    "timelinePastedItem": "पेस्ट किया गया: {item}",
+    "timelineClipboardCaption": "कैप्शन “{text}”",
+    "timelineClipboardZoom": "ज़ूम {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "प्रीसेट",

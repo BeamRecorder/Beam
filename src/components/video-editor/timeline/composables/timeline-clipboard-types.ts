@@ -3,6 +3,9 @@ import type { ZoomElement } from '../../zoom/zoom-types';
 
 export type TimelineItemCategory = 'visual' | 'audio' | 'caption' | 'zoom';
 
+export type TimelineClipboardDescriptor =
+  { kind: 'item'; name: string } | { kind: 'caption'; text: string } | { kind: 'zoom'; number: number };
+
 export type TimelineClipboardItem =
   | {
       type: 'clip';
@@ -10,8 +13,15 @@ export type TimelineClipboardItem =
       category: Exclude<TimelineItemCategory, 'zoom'>;
       clip: Clip;
       asset: MediaAsset | null;
+      descriptor: Exclude<TimelineClipboardDescriptor, { kind: 'zoom' }>;
     }
-  | { type: 'zoom'; scopeId: string; category: 'zoom'; zoom: ZoomElement };
+  | {
+      type: 'zoom';
+      scopeId: string;
+      category: 'zoom';
+      zoom: ZoomElement;
+      descriptor: Extract<TimelineClipboardDescriptor, { kind: 'zoom' }>;
+    };
 
 export interface TimelinePasteTarget {
   category: TimelineItemCategory;

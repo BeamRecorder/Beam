@@ -202,7 +202,11 @@
   "VideoEditor": {
     "exportBanner": "正在导出。实时编辑不会影响当前正在导出的文件。",
     "timelineCopied": "已复制",
-    "timelinePasted": "已粘贴"
+    "timelinePasted": "已粘贴",
+    "timelineCopiedItem": "已复制：{item}",
+    "timelinePastedItem": "已粘贴：{item}",
+    "timelineClipboardCaption": "字幕“{text}”",
+    "timelineClipboardZoom": "缩放 {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "预设",
