@@ -441,6 +441,7 @@ defineExpose({
       >
         <div
           class="webcam-selection"
+          :class="{ 'is-muted': transformHandlesMuted }"
           :style="transformAndCrop.transformHandleStyle.value"
           @pointerdown="handleTransformPointerDown"
           @pointermove="transformAndCrop.moveTransformDrag"

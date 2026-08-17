@@ -43,6 +43,7 @@ export interface EditorCanvasProps {
   outputCanvas: OutputCanvasSettings;
   activeTab: string;
   selectedTransformClip: TransformClip | null;
+  transformHandlesMuted?: boolean;
   loopProgress?: number;
   isCropping?: boolean;
   isGridVisible?: boolean;

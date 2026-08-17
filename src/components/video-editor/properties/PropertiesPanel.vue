@@ -220,6 +220,7 @@ const emit = defineEmits<{
   (event: 'update:clip-is-mirrored', isMirrored: boolean): void;
   (event: 'update:clip-is-mirrored-y', isMirroredY: boolean): void;
   (event: 'update:clip-corner-radius', radius: string): void;
+  (event: 'corner-radius-interaction', interacting: boolean): void;
   (event: 'update:clip-shadow', shadow: { size: string; color?: string; direction?: string }): void;
   (
     event: 'update:clip-appearance',
@@ -404,6 +405,7 @@ const handleDelete = () => {
             @update:is-mirrored="emit('update:clip-is-mirrored', $event)"
             @update:is-mirrored-y="emit('update:clip-is-mirrored-y', $event)"
             @update:corner-radius="emit('update:clip-corner-radius', $event)"
+            @corner-radius-interaction="emit('corner-radius-interaction', $event)"
             @update:shadow="emit('update:clip-shadow', $event)"
             @update:appearance="emit('update:clip-appearance', $event)"
             @update:clip-transform="emit('update:clip-transform', $event)"

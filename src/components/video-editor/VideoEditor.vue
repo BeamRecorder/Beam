@@ -155,6 +155,7 @@ const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
 const cursorPreview = ref<CursorType | null>(null);
+const transformHandlesMuted = ref(false);
 const canvasComposition = computed(
   () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
 );
@@ -482,6 +483,7 @@ onBeforeUnmount(() => {
                 : Number($event),
             })
           "
+          @corner-radius-interaction="transformHandlesMuted = $event"
           @update:clip-shadow="
             updateSelectedAppearance({
               shadowSize: $event.size as 'none' | 'sm' | 'md' | 'lg' | 'custom',
@@ -544,6 +546,7 @@ onBeforeUnmount(() => {
             :output-canvas="outputCanvas"
             :active-tab="activeTab"
             :selected-transform-clip="selectedTransformClip"
+            :transform-handles-muted="transformHandlesMuted"
             :is-cropping="isCropping"
             :is-grid-visible="isGridVisible"
             :history-action="historyAction"

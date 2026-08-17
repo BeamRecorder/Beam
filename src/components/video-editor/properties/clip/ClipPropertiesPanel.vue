@@ -18,6 +18,7 @@ import {
   type CameraFramingPreset,
   type CameraLayoutPreset,
 } from '~/media/shared/camera-layout-types';
+import { useClipCornerRadius } from './useClipCornerRadius';
 
 const { t } = useTranslate('ClipPropertiesPanel');
 
@@ -62,6 +63,7 @@ const emit = defineEmits<{
   (e: 'update:isMirrored', isMirrored: boolean): void;
   (e: 'update:isMirroredY', isMirroredY: boolean): void;
   (e: 'update:cornerRadius', radius: string): void;
+  (e: 'corner-radius-interaction', interacting: boolean): void;
   (
     e: 'update:shadow',
     shadow: { size: ClipShadowSize; blur?: number; mode?: ClipShadowMode; color?: string; direction?: string },
@@ -109,10 +111,6 @@ const shadowPresets = computed(() => [
   { id: 'custom', icon: SlidersHorizontal, tooltip: t('custom') },
 ]);
 
-const NAMED_RADII = ['none', 'sm', 'md', 'lg', 'full'];
-
-const selectedRadius = ref<string>('md');
-const customRadiusValue = ref<number>(32);
 const selectedShadowSize = ref<ClipShadowSize>((props.selectedClip?.shadowSize as ClipShadowSize | undefined) ?? 'md');
 const customShadowBlur = ref(props.selectedClip?.shadowBlur ?? 40);
 const selectedShadowMode = ref<ClipShadowMode>(props.selectedClip?.shadowMode ?? 'solid');
@@ -124,22 +122,6 @@ const selectedShadowDirection = ref<ShadowDirection>(
 watch(
   () => props.selectedClip,
   (clip) => {
-    const r = clip?.cornerRadius ?? 'sm';
-    if (typeof r === 'number') {
-      selectedRadius.value = 'custom';
-      customRadiusValue.value = r;
-    } else if (NAMED_RADII.includes(String(r))) {
-      // map "full" (old data) -> "custom" at 9999
-      if (r === 'full') {
-        selectedRadius.value = 'custom';
-        customRadiusValue.value = 9999;
-      } else {
-        selectedRadius.value = String(r);
-      }
-    } else {
-      selectedRadius.value = 'custom';
-      customRadiusValue.value = parseFloat(String(r)) || 32;
-    }
     selectedShadowSize.value = (clip?.shadowSize as ClipShadowSize | undefined) ?? 'md';
     customShadowBlur.value = clip?.shadowBlur ?? 40;
     selectedShadowMode.value = clip?.shadowMode ?? 'solid';
@@ -149,20 +131,18 @@ watch(
   { immediate: true },
 );
 
-const handleRadiusChange = (radiusId: string) => {
-  selectedRadius.value = radiusId;
-  if (radiusId === 'custom') {
-    // emit the numeric value in px when switching to custom
-    emit('update:cornerRadius', String(customRadiusValue.value));
-  } else {
-    emit('update:cornerRadius', radiusId);
-  }
-};
-
-const handleCustomRadiusChange = (value: number) => {
-  customRadiusValue.value = value;
-  emit('update:cornerRadius', String(value));
-};
+const {
+  selectedRadius,
+  customRadiusValue,
+  handleRadiusChange,
+  handleCustomRadiusChange,
+  beginRadiusInteraction,
+  endRadiusInteraction,
+} = useClipCornerRadius({
+  selectedClip: () => props.selectedClip,
+  onUpdate: (radius) => emit('update:cornerRadius', radius),
+  onInteractionChange: (interacting) => emit('corner-radius-interaction', interacting),
+});
 
 const handleShadowPresetChange = (sizeId: string) => {
   selectedShadowSize.value = sizeId as ClipShadowSize;
@@ -342,6 +322,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           :default-value="32"
           :format-value="(v) => `${Math.round(v)}px`"
           @update:modelValue="handleCustomRadiusChange"
+          @interaction-start="beginRadiusInteraction"
+          @interaction-end="endRadiusInteraction"
         />
 
         <Divider spacing="xs" />
