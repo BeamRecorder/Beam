@@ -74,5 +74,8 @@ const emit = defineEmits<{
   color: var(--text-muted) !important;
   opacity: 0.6;
 }
-.is-active { color: var(--text-primary) !important; background: var(--surface-active) !important; }
+.is-active {
+  color: var(--text-primary) !important;
+  background: var(--surface-active) !important;
+}
 </style>

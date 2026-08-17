@@ -97,12 +97,34 @@ test('hidden window ignores mouse events before it is ready', () => {
 
 test('ready HUD forwards pointer movement over transparent areas and stays on top', () => {
   const win = fakeWindow();
-  const controller = new WindowController(win);
+  const controller = new WindowController(win, { platform: 'darwin' });
   controller.markReadyToShow();
   assert.ok(win.calls.some((call) => call[0] === 'mouse' && call[1] === true && call[2]?.forward === true));
   const top = topCalls(win).at(-1);
   assert.equal(top[1], true);
   assert.equal(top[2], expectedAlwaysOnTopLevel());
+});
+
+test('linux HUD and recorder stay interactive so the renderer can classify the pointer', () => {
+  const display = {
+    id: 1,
+    bounds: { x: 0, y: 0, width: 1000, height: 800 },
+    workArea: { x: 0, y: 0, width: 1000, height: 800 },
+  };
+  const screenModule = {
+    getCursorScreenPoint: () => ({ x: 500, y: 400 }),
+    getDisplayNearestPoint: () => display,
+  };
+  const win = fakeWindow();
+  const controller = new WindowController(win, { screenModule, platform: 'linux' });
+  controller.markReadyToShow();
+  controller.setHudInteractive(true);
+  controller.setHudInteractive(false);
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
+  controller.setMode('recorder');
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
+  controller.setMode('hud');
+  assert.deepEqual(win.calls.filter((call) => call[0] === 'mouse').at(-1), ['mouse', false]);
 });
 
 test('recorder constraints are applied before its compact bounds', () => {
@@ -192,7 +214,7 @@ test('recorder mode keeps its compact native hit target interactive', () => {
     getDisplayNearestPoint: () => display,
   };
   const win = fakeWindow();
-  const controller = new WindowController(win, { screenModule });
+  const controller = new WindowController(win, { screenModule, platform: 'darwin' });
   controller.setMode('recorder');
   controller.markReadyToShow();
 

@@ -11,8 +11,10 @@ function clampToDisplayBounds(x, y, width, height, displayBounds) {
 }
 
 class WindowController {
-  constructor(window, { preferencesStore = null, screenModule = null } = {}) {
+  constructor(window, { preferencesStore = null, screenModule = null, platform = process.platform } = {}) {
     this.window = window;
+    this.platform = platform;
+    this.isLinux = platform === 'linux';
     this.preferencesStore = preferencesStore;
     this.screen = screenModule || require('electron').screen;
     this.mode = 'hud';
@@ -20,6 +22,8 @@ class WindowController {
     this.interactive = false;
     // Start click-through so the renderer can classify the pointer from the
     // first forwarded mousemove, including when it starts over transparent HUD.
+    // Electron only forwards mousemove to click-through windows on macOS and
+    // Windows; on Linux the HUD stays interactive instead (applyInteractionPolicy).
     this.hudOverInteractive = false;
     this.recorderPositions = this.readRecorderPositions();
     this.recorderPositionSaveTimer = null;
@@ -269,6 +273,7 @@ class WindowController {
   setHudInteractive(overInteractive) {
     if (this.mode !== 'hud' || this.window.isDestroyed()) return;
     this.hudOverInteractive = overInteractive;
+    if (this.isLinux) return; // The window stays interactive; nothing to toggle.
     if (overInteractive) {
       this.window.setIgnoreMouseEvents(false);
     } else {
@@ -296,10 +301,18 @@ class WindowController {
       return;
     }
     if (this.mode === 'hud') {
-      // In HUD mode use forward:true so the renderer still gets mousemove
-      // events even over transparent areas.
-      if (this.hudOverInteractive) this.window.setIgnoreMouseEvents(false);
-      else this.window.setIgnoreMouseEvents(true, { forward: true });
+      if (this.isLinux) {
+        // Electron only forwards mousemove to click-through windows on macOS
+        // and Windows (`{ forward: true }`), so a click-through HUD could never
+        // regain pointer input on Linux. Keep the whole window interactive; the
+        // 16 px transparent margin then also captures clicks, which is the
+        // accepted Linux trade-off for overlay windows.
+        this.window.setIgnoreMouseEvents(false);
+      } else if (this.hudOverInteractive) {
+        this.window.setIgnoreMouseEvents(false);
+      } else {
+        this.window.setIgnoreMouseEvents(true, { forward: true });
+      }
     } else if (this.mode === 'recorder') {
       // The compact Recorder window is itself the interactive hit target.
       // Global pointer polling is unreliable on Wayland once a window is
