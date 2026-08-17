@@ -1,6 +1,97 @@
 {
   "pages": [
-    { "slug": "getting-started", "title": "Pierwsze kroki", "description": "Zainstaluj Beam, nadaj wymagane uprawnienia i utwórz swoje pierwsze nagranie.", "lead": "Beam łączy skoncentrowany rejestrator i niedestrukcyjny edytor wideo w jednej aplikacji desktopowej.", "sections": [ { "title": "Zainstaluj Beam", "paragraphs": ["Pobierz najnowsze wydanie ze [strony wydań Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Wybierz pakiet dla swojego systemu operacyjnego."], "bullets": ["Windows korzysta z natywnego instalatora.", "macOS korzysta z obrazu DMG dla komputerów Mac z Apple Silicon i macOS 13 lub nowszym.", "Linux oferuje pakiety AppImage, DEB i RPM."] }, { "title": "Utwórz pierwsze nagranie", "steps": ["Otwórz Beam i wybierz Ekran lub Okno w HUD-zie rejestratora.", "Wybierz ekran, okno aplikacji lub niestandardowy obszar.", "Wybierz potrzebne źródła mikrofonu, dźwięku systemowego i kamery.", "Rozpocznij nagrywanie, a następnie użyj paska rejestratora, aby wstrzymać, wznowić lub zatrzymać nagrywanie.", "Zatrzymaj nagrywanie i poczekaj, aż Beam otworzy projekt w edytorze wideo."], "screenshot": { "path": "getting-started/first-recording.webp", "alt": "Rejestrator Beam przygotowany do pierwszego nagrania", "caption": "Przed rozpoczęciem wybierz źródła przechwytywania i multimediów." } }, { "title": "Nadaj uprawnienia po wyświetleniu prośby", "paragraphs": ["System operacyjny może poprosić o uprawnienia do nagrywania ekranu, mikrofonu, kamery lub interakcji. Beam prosi o dostęp tylko wtedy, gdy wymaga go powiązana funkcja."], "notice": { "kind": "info", "title": "Różnice między platformami", "text": "Wybór źródeł i monity o uprawnienia różnią się w systemach Windows, macOS, Linux, X11 i Wayland. Przed ważnym nagraniem zapoznaj się z informacjami o [obsługiwanych platformach](/platforms)." } }, { "title": "Ucz się dalej", "bullets": ["Poznaj [interfejs rejestratora](/recorder/interface).", "Przejrzyj wszystkie [możliwości rejestratora](/recorder/capabilities).", "Poznaj [interfejs edytora wideo](/editor/interface).", "Przygotuj końcowy plik za pomocą funkcji [eksportu i udostępniania](/export)."] } ] },
-    { "slug": "updates", "title": "Aktualizowanie Beam", "description": "Sprawdzaj, pobieraj i instaluj aktualizacje Beam z poziomu rejestratora lub edytora wideo.", "lead": "Zainstalowane wersje Beam mogą sprawdzać GitHub Releases pod kątem nowej wersji, ale nie pobierają jej ani nie instalują automatycznie.", "sections": [ { "title": "Otwórz ustawienia aktualizacji", "paragraphs": ["W HUD-zie rejestratora otwórz Ustawienia i znajdź sekcję Aktualizacje. Te same ustawienia są dostępne w Ustawieniach edytora wideo. Wersje deweloperskie informują, że aktualizacje są dostępne tylko w zainstalowanej aplikacji."], "screenshot": { "path": "getting-started/update-controls.webp", "alt": "Ustawienia Beam wyświetlające ustawienia aktualizacji", "caption": "Panel aktualizacji pokazuje zainstalowaną wersję i dostępne działania." } }, { "title": "Zainstaluj aktualizację", "steps": ["Wybierz Sprawdź dostępność aktualizacji.", "Gdy wersja jest dostępna, przejrzyj dziennik zmian i wybierz Pobierz.", "Pozostaw Beam otwarte, gdy wskaźnik postępu pobiera aktualizację.", "Gdy aktualizacja będzie gotowa, zapisz pracę i wybierz Uruchom ponownie, aby zamknąć Beam i uruchomić instalator."], "notice": { "kind": "info", "title": "Aktualizacje pozostają pod Twoją kontrolą", "text": "Beam nie pobiera automatycznie dostępnej aktualizacji ani nie instaluje jej podczas normalnego zamykania. Instalacja rozpoczyna się dopiero po wybraniu Uruchom ponownie w stanie po pobraniu." } }, { "title": "Jeśli aktualizator zawiedzie", "paragraphs": ["Użyj funkcji Kopiuj błąd, aby zachować komunikat diagnostyczny, a następnie ręcznie pobierz właściwy pakiet z [najnowszego wydania Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Projekty są przechowywane osobno od instalacji aplikacji."] } ] }
+    {
+      "slug": "getting-started",
+      "title": "Pierwsze kroki",
+      "description": "Zainstaluj Beam, nadaj wymagane uprawnienia i utwórz swoje pierwsze nagranie.",
+      "lead": "Beam łączy skoncentrowany rejestrator i niedestrukcyjny edytor wideo w jednej aplikacji desktopowej.",
+      "sections": [
+        {
+          "title": "Zainstaluj Beam",
+          "paragraphs": [
+            "Pobierz najnowsze wydanie ze [strony wydań Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Wybierz pakiet dla swojego systemu operacyjnego."
+          ],
+          "bullets": [
+            "Windows korzysta z natywnego instalatora.",
+            "macOS korzysta z obrazu DMG dla komputerów Mac z Apple Silicon i macOS 13 lub nowszym.",
+            "Linux oferuje pakiety AppImage, DEB i RPM."
+          ]
+        },
+        {
+          "title": "Utwórz pierwsze nagranie",
+          "steps": [
+            "Otwórz Beam i wybierz Ekran lub Okno w HUD-zie rejestratora.",
+            "Wybierz ekran, okno aplikacji lub niestandardowy obszar.",
+            "Wybierz potrzebne źródła mikrofonu, dźwięku systemowego i kamery.",
+            "Rozpocznij nagrywanie, a następnie użyj paska rejestratora, aby wstrzymać, wznowić lub zatrzymać nagrywanie.",
+            "Zatrzymaj nagrywanie i poczekaj, aż Beam otworzy projekt w edytorze wideo."
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Rejestrator Beam przygotowany do pierwszego nagrania",
+            "caption": "Przed rozpoczęciem wybierz źródła przechwytywania i multimediów."
+          }
+        },
+        {
+          "title": "Nadaj uprawnienia po wyświetleniu prośby",
+          "paragraphs": [
+            "System operacyjny może poprosić o uprawnienia do nagrywania ekranu, mikrofonu, kamery lub interakcji. Beam prosi o dostęp tylko wtedy, gdy wymaga go powiązana funkcja."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Różnice między platformami",
+            "text": "Wybór źródeł i monity o uprawnienia różnią się w systemach Windows, macOS, Linux, X11 i Wayland. Przed ważnym nagraniem zapoznaj się z informacjami o [obsługiwanych platformach](/platforms)."
+          }
+        },
+        {
+          "title": "Ucz się dalej",
+          "bullets": [
+            "Poznaj [interfejs rejestratora](/recorder/interface).",
+            "Przejrzyj wszystkie [możliwości rejestratora](/recorder/capabilities).",
+            "Poznaj [interfejs edytora wideo](/editor/interface).",
+            "Przygotuj końcowy plik za pomocą funkcji [eksportu i udostępniania](/export)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "updates",
+      "title": "Aktualizowanie Beam",
+      "description": "Sprawdzaj, pobieraj i instaluj aktualizacje Beam z poziomu rejestratora lub edytora wideo.",
+      "lead": "Zainstalowane wersje Beam mogą sprawdzać GitHub Releases pod kątem nowej wersji, ale nie pobierają jej ani nie instalują automatycznie.",
+      "sections": [
+        {
+          "title": "Otwórz ustawienia aktualizacji",
+          "paragraphs": [
+            "W HUD-zie rejestratora otwórz Ustawienia i znajdź sekcję Aktualizacje. Te same ustawienia są dostępne w Ustawieniach edytora wideo. Wersje deweloperskie informują, że aktualizacje są dostępne tylko w zainstalowanej aplikacji."
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "Ustawienia Beam wyświetlające ustawienia aktualizacji",
+            "caption": "Panel aktualizacji pokazuje zainstalowaną wersję i dostępne działania."
+          }
+        },
+        {
+          "title": "Zainstaluj aktualizację",
+          "steps": [
+            "Wybierz Sprawdź dostępność aktualizacji.",
+            "Gdy wersja jest dostępna, przejrzyj dziennik zmian i wybierz Pobierz.",
+            "Pozostaw Beam otwarte, gdy wskaźnik postępu pobiera aktualizację.",
+            "Gdy aktualizacja będzie gotowa, zapisz pracę i wybierz Uruchom ponownie, aby zamknąć Beam i uruchomić instalator."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Aktualizacje pozostają pod Twoją kontrolą",
+            "text": "Beam nie pobiera automatycznie dostępnej aktualizacji ani nie instaluje jej podczas normalnego zamykania. Instalacja rozpoczyna się dopiero po wybraniu Uruchom ponownie w stanie po pobraniu."
+          }
+        },
+        {
+          "title": "Jeśli aktualizator zawiedzie",
+          "paragraphs": [
+            "Użyj funkcji Kopiuj błąd, aby zachować komunikat diagnostyczny, a następnie ręcznie pobierz właściwy pakiet z [najnowszego wydania Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Projekty są przechowywane osobno od instalacji aplikacji."
+          ]
+        }
+      ]
+    }
   ]
 }

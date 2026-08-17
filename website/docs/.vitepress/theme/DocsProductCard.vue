@@ -13,11 +13,7 @@ const props = defineProps<{
 const href = computed(() => withBase(props.link));
 const backdropUrl = withBase('/showcase/amber-l.jpg');
 const screenshotUrl = computed(() =>
-  withBase(
-    props.visual === 'recorder'
-      ? '/showcase/Beam-showcase-hud.png'
-      : '/showcase/Beam-showcase-editor.png',
-  ),
+  withBase(props.visual === 'recorder' ? '/showcase/Beam-showcase-hud.png' : '/showcase/Beam-showcase-editor.png'),
 );
 </script>
 

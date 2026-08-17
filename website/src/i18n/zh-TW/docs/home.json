@@ -13,7 +13,17 @@
     ]
   },
   "categories": [
-    { "title": "錄影工具", "details": "選擇來源、準備音訊和攝影機軌道，然後從精簡的 HUD 控制錄影。", "link": "/recorder/", "visual": "recorder" },
-    { "title": "影片編輯器", "details": "在一個工作區中調整時間、構圖、縮放、游標動態、字幕、聲音和匯出。", "link": "/editor/", "visual": "editor" }
+    {
+      "title": "錄影工具",
+      "details": "選擇來源、準備音訊和攝影機軌道，然後從精簡的 HUD 控制錄影。",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "影片編輯器",
+      "details": "在一個工作區中調整時間、構圖、縮放、游標動態、字幕、聲音和匯出。",
+      "link": "/editor/",
+      "visual": "editor"
+    }
   ]
 }

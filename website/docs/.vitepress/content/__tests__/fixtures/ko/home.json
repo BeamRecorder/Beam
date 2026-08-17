@@ -13,7 +13,17 @@
     ]
   },
   "categories": [
-    { "title": "녹화기 앱", "details": "소스를 선택하고 오디오 및 카메라 트랙을 준비한 다음 간결한 HUD에서 녹화를 제어하세요.", "link": "/recorder/", "visual": "recorder" },
-    { "title": "동영상 편집기", "details": "하나의 작업 공간에서 타이밍, 프레이밍, 확대/축소, 커서 움직임, 자막, 사운드 및 내보내기를 다듬으세요.", "link": "/editor/", "visual": "editor" }
+    {
+      "title": "녹화기 앱",
+      "details": "소스를 선택하고 오디오 및 카메라 트랙을 준비한 다음 간결한 HUD에서 녹화를 제어하세요.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "동영상 편집기",
+      "details": "하나의 작업 공간에서 타이밍, 프레이밍, 확대/축소, 커서 움직임, 자막, 사운드 및 내보내기를 다듬으세요.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
   ]
 }

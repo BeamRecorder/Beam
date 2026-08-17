@@ -6,10 +6,50 @@
       "description": "安裝 Beam、授予必要權限並建立你的第一段錄影。",
       "lead": "Beam 將專注的錄影工具與非破壞性影片編輯器整合在一個桌面應用程式中。",
       "sections": [
-        { "title": "安裝 Beam", "paragraphs": ["從 [Beam 發布頁面](https://github.com/ExtraBinoss/Beam/releases/latest) 下載最新版本。選擇適合你作業系統的套件。"], "bullets": ["Windows 使用原生安裝程式。", "macOS 使用 DMG，適用於執行 macOS 13 或更新版本的 Apple Silicon Mac。", "Linux 提供 AppImage、DEB 和 RPM 套件。"] },
-        { "title": "建立你的第一段錄影", "steps": ["開啟 Beam，在錄影工具 HUD 中選擇「螢幕」或「視窗」。", "選擇顯示器、應用程式視窗或自訂區域。", "選擇需要的麥克風、系統音訊和攝影機來源。", "開始錄影，然後使用錄影列暫停、繼續或停止。", "停止錄影，等待 Beam 在影片編輯器中開啟專案。"], "screenshot": { "path": "getting-started/first-recording.webp", "alt": "Beam 錄影工具已準備好進行第一次錄影", "caption": "開始錄影前選擇擷取來源和媒體來源。" } },
-        { "title": "出現提示時授予權限", "paragraphs": ["作業系統可能會要求螢幕錄影、麥克風、相機或互動權限。Beam 只會在相關功能需要時請求存取權限。"], "notice": { "kind": "info", "title": "平台差異", "text": "Windows、macOS、Linux、X11 和 Wayland 的來源選擇與權限提示有所不同。進行重要錄影前，請查看[平台支援](/platforms)。" } },
-        { "title": "繼續了解", "bullets": ["了解[錄影工具介面](/recorder/interface)。", "查看所有[錄影工具功能](/recorder/capabilities)。", "了解[影片編輯器介面](/editor/interface)。", "使用[匯出與分享](/export)準備最終檔案。"] }
+        {
+          "title": "安裝 Beam",
+          "paragraphs": [
+            "從 [Beam 發布頁面](https://github.com/ExtraBinoss/Beam/releases/latest) 下載最新版本。選擇適合你作業系統的套件。"
+          ],
+          "bullets": [
+            "Windows 使用原生安裝程式。",
+            "macOS 使用 DMG，適用於執行 macOS 13 或更新版本的 Apple Silicon Mac。",
+            "Linux 提供 AppImage、DEB 和 RPM 套件。"
+          ]
+        },
+        {
+          "title": "建立你的第一段錄影",
+          "steps": [
+            "開啟 Beam，在錄影工具 HUD 中選擇「螢幕」或「視窗」。",
+            "選擇顯示器、應用程式視窗或自訂區域。",
+            "選擇需要的麥克風、系統音訊和攝影機來源。",
+            "開始錄影，然後使用錄影列暫停、繼續或停止。",
+            "停止錄影，等待 Beam 在影片編輯器中開啟專案。"
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Beam 錄影工具已準備好進行第一次錄影",
+            "caption": "開始錄影前選擇擷取來源和媒體來源。"
+          }
+        },
+        {
+          "title": "出現提示時授予權限",
+          "paragraphs": ["作業系統可能會要求螢幕錄影、麥克風、相機或互動權限。Beam 只會在相關功能需要時請求存取權限。"],
+          "notice": {
+            "kind": "info",
+            "title": "平台差異",
+            "text": "Windows、macOS、Linux、X11 和 Wayland 的來源選擇與權限提示有所不同。進行重要錄影前，請查看[平台支援](/platforms)。"
+          }
+        },
+        {
+          "title": "繼續了解",
+          "bullets": [
+            "了解[錄影工具介面](/recorder/interface)。",
+            "查看所有[錄影工具功能](/recorder/capabilities)。",
+            "了解[影片編輯器介面](/editor/interface)。",
+            "使用[匯出與分享](/export)準備最終檔案。"
+          ]
+        }
       ]
     },
     {
@@ -18,9 +58,37 @@
       "description": "從錄影工具或影片編輯器檢查、下載並安裝 Beam 更新。",
       "lead": "已安裝的 Beam 版本可以檢查 GitHub Releases 是否有新版本，但不會自動下載或安裝。",
       "sections": [
-        { "title": "開啟更新控制項", "paragraphs": ["在錄影工具 HUD 中開啟「設定」，找到「更新」區段。影片編輯器的「設定」中也提供相同控制項。開發版本會顯示更新僅能在已安裝的應用程式中取得。"], "screenshot": { "path": "getting-started/update-controls.webp", "alt": "顯示更新控制項的 Beam 設定", "caption": "更新面板會顯示已安裝版本和可用的更新操作。" } },
-        { "title": "安裝更新", "steps": ["選擇「檢查更新」。", "有可用版本時，查看其變更記錄並選擇「下載」。", "下載更新時保持 Beam 開啟，並查看進度指示器。", "更新準備就緒後儲存工作，選擇「重新啟動」關閉 Beam 並執行安裝程式。"], "notice": { "kind": "info", "title": "更新由你控制", "text": "Beam 不會自動下載可用更新，也不會在正常結束時安裝更新。只有在下載完成的狀態下選擇「重新啟動」後，才會開始安裝。" } },
-        { "title": "更新工具失敗時", "paragraphs": ["使用「複製錯誤」保留診斷訊息，然後從[最新 Beam 發布頁面](https://github.com/ExtraBinoss/Beam/releases/latest)手動下載正確的套件。你的專案與應用程式安裝位置分開儲存。"] }
+        {
+          "title": "開啟更新控制項",
+          "paragraphs": [
+            "在錄影工具 HUD 中開啟「設定」，找到「更新」區段。影片編輯器的「設定」中也提供相同控制項。開發版本會顯示更新僅能在已安裝的應用程式中取得。"
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "顯示更新控制項的 Beam 設定",
+            "caption": "更新面板會顯示已安裝版本和可用的更新操作。"
+          }
+        },
+        {
+          "title": "安裝更新",
+          "steps": [
+            "選擇「檢查更新」。",
+            "有可用版本時，查看其變更記錄並選擇「下載」。",
+            "下載更新時保持 Beam 開啟，並查看進度指示器。",
+            "更新準備就緒後儲存工作，選擇「重新啟動」關閉 Beam 並執行安裝程式。"
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "更新由你控制",
+            "text": "Beam 不會自動下載可用更新，也不會在正常結束時安裝更新。只有在下載完成的狀態下選擇「重新啟動」後，才會開始安裝。"
+          }
+        },
+        {
+          "title": "更新工具失敗時",
+          "paragraphs": [
+            "使用「複製錯誤」保留診斷訊息，然後從[最新 Beam 發布頁面](https://github.com/ExtraBinoss/Beam/releases/latest)手動下載正確的套件。你的專案與應用程式安裝位置分開儲存。"
+          ]
+        }
       ]
     }
   ]

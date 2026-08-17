@@ -1,7 +1,152 @@
 {
   "pages": [
-    { "slug": "recorder/index", "title": "Przegląd aplikacji do nagrywania", "description": "Poznaj przepływ pracy rejestratora Beam — od wyboru źródła po przekazanie projektu do edytora.", "lead": "Aplikacja do nagrywania to kompaktowy HUD do przygotowywania, uruchamiania i sterowania przechwytywaniem bez zasłaniania prezentowanego obszaru roboczego.", "sections": [ { "title": "Przebieg nagrywania", "steps": ["Wybierz ekran, okno lub niestandardowy obszar ekranu.", "Przygotuj mikrofon, dźwięk systemowy, kamerę, odliczanie i opcje telepromptera.", "Rozpocznij nagrywanie i użyj pływającego paska rejestratora do sterowania na żywo.", "Zatrzymaj przechwytywanie, aby sfinalizować ścieżki i otworzyć projekt w edytorze."], "screenshot": { "path": "recorder/hud-overview.webp", "alt": "Przegląd HUD-u rejestratora Beam", "caption": "HUD łączy źródła przechwytywania i elementy sterujące nagrywaniem w jednym kompaktowym oknie." } }, { "title": "Oddzielne ścieżki multimediów", "paragraphs": ["Beam nagrywa ekran, kamerę internetową, mikrofon i dźwięk systemowy jako osobne dostępne ścieżki. Edytor może następnie dostosować lub wyłączyć obsługiwane ścieżki bez zmieniania oryginalnego przechwytywania."] }, { "title": "Projekty", "paragraphs": ["Użyj opcji Otwórz projekt, aby wrócić do istniejącego projektu Beam lub utworzyć nowy projekt przed nagrywaniem. Ukończone sesje pozostają powiązane z projektem do późniejszej edycji."] } ] },
-    { "slug": "recorder/interface", "title": "Interfejs rejestratora", "description": "Poznaj wszystkie elementy sterujące HUD-u i paska nagrywania Beam.", "lead": "Interfejs rejestratora oddziela wybór źródła, ustawienia urządzeń, preferencje i działania nagrywania, dzięki czemu bieżący stan pozostaje widoczny.", "sections": [ { "title": "Górny pasek", "bullets": ["Tożsamość Beam pokazuje bieżące okno rejestratora.", "Preferencje otwierają ustawienia nagrywania, ogólne, skrótów i aplikacji.", "Działania okna minimalizują lub zamykają rejestrator."] }, { "title": "Źródło przechwytywania", "paragraphs": ["Użyj kart Ekran i Okno, aby zmienić typ źródła. Selektor źródła pokazuje ekrany lub okna aplikacji dostępne na bieżącej platformie. Przechwytywanie ekranu można też ograniczyć do niestandardowego obszaru."], "screenshot": { "path": "recorder/source-selection.webp", "alt": "Elementy sterujące źródłem ekranu i okna w Beam", "caption": "Wybierz typ źródła, a następnie ekran, okno lub obszar ekranu." } }, { "title": "Elementy sterujące multimediami", "bullets": ["Mikrofon wybiera urządzenie wejściowe lub wyłącza dźwięk mikrofonu.", "Dźwięk systemowy włącza lub wyłącza dźwięk generowany przez komputer.", "Kamera wybiera kamerę internetową i otwiera jej osobną nakładkę.", "Mierniki dźwięku pokazują podgląd poziomu na żywo, jeśli platforma to obsługuje.", "Teleprompter otwiera lub ukrywa osobne okno skryptu."] }, { "title": "Pasek nagrywania", "paragraphs": ["Podczas przechwytywania pasek rejestratora wyświetla czas trwania i bieżący stan nagrywania. Jego elementy sterujące pozwalają wstrzymać, wznowić, zatrzymać i anulować nagrywanie oraz przełączać obsługiwane urządzenia."], "screenshot": { "path": "recorder/recording-bar.webp", "alt": "Pasek nagrywania Beam podczas aktywnego przechwytywania", "caption": "Pasek nagrywania zapewnia dostęp do najważniejszych elementów sterujących podczas nagrywania." } }, { "title": "Preferencje", "bullets": ["Odliczanie może być wyłączone lub ustawione na 3, 5 albo 10 sekund.", "Widoczność paska rejestratora może być stała, automatycznie wygaszana lub ukryta do momentu najechania kursorem.", "Zawsze na wierzchu utrzymuje HUD nad innymi oknami.", "Motyw i język sterują wyglądem aplikacji.", "Ustawienia skrótów konfigurują działania nagrywania i telepromptera."] } ] },
-    { "slug": "recorder/capabilities", "title": "Możliwości rejestratora", "description": "Korzystaj z obszarów ekranu, oddzielnego dźwięku, kamery internetowej, telepromptera, skrótów i metadanych interakcji w Beam.", "lead": "Możliwości rejestratora można łączyć, tworząc lekkie przechwytywanie lub w pełni przygotowaną prezentację produktu.", "sections": [ { "title": "Przechwytywanie ekranu, okna i obszaru", "paragraphs": ["Nagrywaj cały ekran, konkretne okno aplikacji lub znormalizowany obszar wybranego ekranu. Przed nagrywaniem możesz ponownie otworzyć selektor obszaru, aby dostosować zapisane przycięcie."] }, { "title": "Mikrofon i dźwięk systemowy", "paragraphs": ["Mikrofon i dźwięk systemowy są przechwytywane niezależnie, gdy oba źródła są dostępne. Oddzielne ścieżki pozwalają edytorowi niezależnie zmieniać ich stan i głośność."] }, { "title": "Nakładka kamery internetowej", "paragraphs": ["Wybrana kamera otwiera osobną nakładkę, którą można ustawić na potrzeby prezentacji. Dostęp do kamery zależy od uprawnień systemu operacyjnego i dostępności urządzenia."] }, { "title": "Teleprompter", "paragraphs": ["Napisz skrypt, przełączaj między czytaniem ciągłym i wiersz po wierszu oraz dostosuj automatyczne przewijanie, szybkość, rozmiar tekstu, odstępy między wierszami, wyrównanie i motyw. Globalne skróty mogą wyświetlić teleprompter, wstrzymać automatyczne przewijanie lub przełączać wiersze."], "screenshot": { "path": "recorder/teleprompter.webp", "alt": "Teleprompter Beam ze skryptem i elementami sterującymi odtwarzaniem", "caption": "Teleprompter jest sterowany niezależnie od HUD-u rejestratora." } }, { "title": "Elementy sterujące nagrywaniem na żywo", "bullets": ["Wstrzymuj i wznawiaj aktywne nagrywanie.", "Przełączaj mikrofon, kamerę i dźwięk systemowy, jeśli aktywna sesja je obsługuje.", "Zatrzymaj i sfinalizuj nagranie albo anuluj i usuń aktywne przechwytywanie."] }, { "title": "Metadane interakcji i prywatność", "paragraphs": ["Za wyraźną zgodą Beam rejestruje bezpieczne tokeny skrótów klawiaturowych. Dostęp do interakcji w systemie Linux może też włączyć metadane kliknięć myszy. Wpisywany tekst nigdy nie jest zapisywany."], "notice": { "kind": "info", "title": "Wymagane uprawnienie", "text": "Nagrywanie interakcji jest opcjonalne i można je włączyć lub wyłączyć w Preferencjach. Dostępność zależy od systemu operacyjnego." } } ] }
+    {
+      "slug": "recorder/index",
+      "title": "Przegląd aplikacji do nagrywania",
+      "description": "Poznaj przepływ pracy rejestratora Beam — od wyboru źródła po przekazanie projektu do edytora.",
+      "lead": "Aplikacja do nagrywania to kompaktowy HUD do przygotowywania, uruchamiania i sterowania przechwytywaniem bez zasłaniania prezentowanego obszaru roboczego.",
+      "sections": [
+        {
+          "title": "Przebieg nagrywania",
+          "steps": [
+            "Wybierz ekran, okno lub niestandardowy obszar ekranu.",
+            "Przygotuj mikrofon, dźwięk systemowy, kamerę, odliczanie i opcje telepromptera.",
+            "Rozpocznij nagrywanie i użyj pływającego paska rejestratora do sterowania na żywo.",
+            "Zatrzymaj przechwytywanie, aby sfinalizować ścieżki i otworzyć projekt w edytorze."
+          ],
+          "screenshot": {
+            "path": "recorder/hud-overview.webp",
+            "alt": "Przegląd HUD-u rejestratora Beam",
+            "caption": "HUD łączy źródła przechwytywania i elementy sterujące nagrywaniem w jednym kompaktowym oknie."
+          }
+        },
+        {
+          "title": "Oddzielne ścieżki multimediów",
+          "paragraphs": [
+            "Beam nagrywa ekran, kamerę internetową, mikrofon i dźwięk systemowy jako osobne dostępne ścieżki. Edytor może następnie dostosować lub wyłączyć obsługiwane ścieżki bez zmieniania oryginalnego przechwytywania."
+          ]
+        },
+        {
+          "title": "Projekty",
+          "paragraphs": [
+            "Użyj opcji Otwórz projekt, aby wrócić do istniejącego projektu Beam lub utworzyć nowy projekt przed nagrywaniem. Ukończone sesje pozostają powiązane z projektem do późniejszej edycji."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/interface",
+      "title": "Interfejs rejestratora",
+      "description": "Poznaj wszystkie elementy sterujące HUD-u i paska nagrywania Beam.",
+      "lead": "Interfejs rejestratora oddziela wybór źródła, ustawienia urządzeń, preferencje i działania nagrywania, dzięki czemu bieżący stan pozostaje widoczny.",
+      "sections": [
+        {
+          "title": "Górny pasek",
+          "bullets": [
+            "Tożsamość Beam pokazuje bieżące okno rejestratora.",
+            "Preferencje otwierają ustawienia nagrywania, ogólne, skrótów i aplikacji.",
+            "Działania okna minimalizują lub zamykają rejestrator."
+          ]
+        },
+        {
+          "title": "Źródło przechwytywania",
+          "paragraphs": [
+            "Użyj kart Ekran i Okno, aby zmienić typ źródła. Selektor źródła pokazuje ekrany lub okna aplikacji dostępne na bieżącej platformie. Przechwytywanie ekranu można też ograniczyć do niestandardowego obszaru."
+          ],
+          "screenshot": {
+            "path": "recorder/source-selection.webp",
+            "alt": "Elementy sterujące źródłem ekranu i okna w Beam",
+            "caption": "Wybierz typ źródła, a następnie ekran, okno lub obszar ekranu."
+          }
+        },
+        {
+          "title": "Elementy sterujące multimediami",
+          "bullets": [
+            "Mikrofon wybiera urządzenie wejściowe lub wyłącza dźwięk mikrofonu.",
+            "Dźwięk systemowy włącza lub wyłącza dźwięk generowany przez komputer.",
+            "Kamera wybiera kamerę internetową i otwiera jej osobną nakładkę.",
+            "Mierniki dźwięku pokazują podgląd poziomu na żywo, jeśli platforma to obsługuje.",
+            "Teleprompter otwiera lub ukrywa osobne okno skryptu."
+          ]
+        },
+        {
+          "title": "Pasek nagrywania",
+          "paragraphs": [
+            "Podczas przechwytywania pasek rejestratora wyświetla czas trwania i bieżący stan nagrywania. Jego elementy sterujące pozwalają wstrzymać, wznowić, zatrzymać i anulować nagrywanie oraz przełączać obsługiwane urządzenia."
+          ],
+          "screenshot": {
+            "path": "recorder/recording-bar.webp",
+            "alt": "Pasek nagrywania Beam podczas aktywnego przechwytywania",
+            "caption": "Pasek nagrywania zapewnia dostęp do najważniejszych elementów sterujących podczas nagrywania."
+          }
+        },
+        {
+          "title": "Preferencje",
+          "bullets": [
+            "Odliczanie może być wyłączone lub ustawione na 3, 5 albo 10 sekund.",
+            "Widoczność paska rejestratora może być stała, automatycznie wygaszana lub ukryta do momentu najechania kursorem.",
+            "Zawsze na wierzchu utrzymuje HUD nad innymi oknami.",
+            "Motyw i język sterują wyglądem aplikacji.",
+            "Ustawienia skrótów konfigurują działania nagrywania i telepromptera."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities",
+      "title": "Możliwości rejestratora",
+      "description": "Korzystaj z obszarów ekranu, oddzielnego dźwięku, kamery internetowej, telepromptera, skrótów i metadanych interakcji w Beam.",
+      "lead": "Możliwości rejestratora można łączyć, tworząc lekkie przechwytywanie lub w pełni przygotowaną prezentację produktu.",
+      "sections": [
+        {
+          "title": "Przechwytywanie ekranu, okna i obszaru",
+          "paragraphs": [
+            "Nagrywaj cały ekran, konkretne okno aplikacji lub znormalizowany obszar wybranego ekranu. Przed nagrywaniem możesz ponownie otworzyć selektor obszaru, aby dostosować zapisane przycięcie."
+          ]
+        },
+        {
+          "title": "Mikrofon i dźwięk systemowy",
+          "paragraphs": [
+            "Mikrofon i dźwięk systemowy są przechwytywane niezależnie, gdy oba źródła są dostępne. Oddzielne ścieżki pozwalają edytorowi niezależnie zmieniać ich stan i głośność."
+          ]
+        },
+        {
+          "title": "Nakładka kamery internetowej",
+          "paragraphs": [
+            "Wybrana kamera otwiera osobną nakładkę, którą można ustawić na potrzeby prezentacji. Dostęp do kamery zależy od uprawnień systemu operacyjnego i dostępności urządzenia."
+          ]
+        },
+        {
+          "title": "Teleprompter",
+          "paragraphs": [
+            "Napisz skrypt, przełączaj między czytaniem ciągłym i wiersz po wierszu oraz dostosuj automatyczne przewijanie, szybkość, rozmiar tekstu, odstępy między wierszami, wyrównanie i motyw. Globalne skróty mogą wyświetlić teleprompter, wstrzymać automatyczne przewijanie lub przełączać wiersze."
+          ],
+          "screenshot": {
+            "path": "recorder/teleprompter.webp",
+            "alt": "Teleprompter Beam ze skryptem i elementami sterującymi odtwarzaniem",
+            "caption": "Teleprompter jest sterowany niezależnie od HUD-u rejestratora."
+          }
+        },
+        {
+          "title": "Elementy sterujące nagrywaniem na żywo",
+          "bullets": [
+            "Wstrzymuj i wznawiaj aktywne nagrywanie.",
+            "Przełączaj mikrofon, kamerę i dźwięk systemowy, jeśli aktywna sesja je obsługuje.",
+            "Zatrzymaj i sfinalizuj nagranie albo anuluj i usuń aktywne przechwytywanie."
+          ]
+        },
+        {
+          "title": "Metadane interakcji i prywatność",
+          "paragraphs": [
+            "Za wyraźną zgodą Beam rejestruje bezpieczne tokeny skrótów klawiaturowych. Dostęp do interakcji w systemie Linux może też włączyć metadane kliknięć myszy. Wpisywany tekst nigdy nie jest zapisywany."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Wymagane uprawnienie",
+            "text": "Nagrywanie interakcji jest opcjonalne i można je włączyć lub wyłączyć w Preferencjach. Dostępność zależy od systemu operacyjnego."
+          }
+        }
+      ]
+    }
   ]
 }

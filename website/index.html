@@ -12,8 +12,7 @@
           const stored = localStorage.getItem('beam-website-theme');
           const preference = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
           const dark =
-            preference === 'dark' ||
-            (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+            preference === 'dark' || (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
           root.dataset.theme = preference;
           root.classList.toggle('dark', dark);
           root.style.colorScheme = dark ? 'dark' : 'light';

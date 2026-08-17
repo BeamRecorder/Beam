@@ -4,26 +4,38 @@
   "siteTitle": "Beam 文档",
   "nav": { "website": "Beam 网站" },
   "sidebar": [
-    { "text": "从这里开始", "items": [
-      { "text": "简介", "link": "/" },
-      { "text": "入门", "link": "/getting-started" },
-      { "text": "更新 Beam", "link": "/updates" }
-    ] },
-    { "text": "录制器应用", "items": [
-      { "text": "概览", "link": "/recorder/" },
-      { "text": "界面", "link": "/recorder/interface" },
-      { "text": "功能", "link": "/recorder/capabilities" }
-    ] },
-    { "text": "视频编辑器", "items": [
-      { "text": "概览", "link": "/editor/" },
-      { "text": "界面", "link": "/editor/interface" },
-      { "text": "功能", "link": "/editor/capabilities" }
-    ] },
-    { "text": "参考", "items": [
-      { "text": "导出与分享", "link": "/export" },
-      { "text": "平台支持", "link": "/platforms" },
-      { "text": "文件系统", "link": "/filesystem" }
-    ] }
+    {
+      "text": "从这里开始",
+      "items": [
+        { "text": "简介", "link": "/" },
+        { "text": "入门", "link": "/getting-started" },
+        { "text": "更新 Beam", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "录制器应用",
+      "items": [
+        { "text": "概览", "link": "/recorder/" },
+        { "text": "界面", "link": "/recorder/interface" },
+        { "text": "功能", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "视频编辑器",
+      "items": [
+        { "text": "概览", "link": "/editor/" },
+        { "text": "界面", "link": "/editor/interface" },
+        { "text": "功能", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "参考",
+      "items": [
+        { "text": "导出与分享", "link": "/export" },
+        { "text": "平台支持", "link": "/platforms" },
+        { "text": "文件系统", "link": "/filesystem" }
+      ]
+    }
   ],
   "social": { "github": "在 GitHub 上查看 Beam", "discord": "加入 Beam Discord" },
   "theme": { "switchToLight": "切换到浅色主题", "switchToDark": "切换到深色主题" },

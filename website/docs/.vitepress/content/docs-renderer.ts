@@ -102,7 +102,11 @@ export const renderDocsHome = (home: DocsHomeContent): string => {
     '  actions:',
   ];
   for (const action of home.hero.actions) {
-    lines.push(`    - theme: ${action.theme}`, `      text: ${quote(action.text)}`, `      link: ${quote(action.link)}`);
+    lines.push(
+      `    - theme: ${action.theme}`,
+      `      text: ${quote(action.text)}`,
+      `      link: ${quote(action.link)}`,
+    );
   }
   lines.push('---', '', '<div class="docs-product-grid">');
   for (const category of home.categories) {

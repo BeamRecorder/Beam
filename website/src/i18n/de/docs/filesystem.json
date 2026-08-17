@@ -8,36 +8,135 @@
       "sections": [
         {
           "title": "Wo Beam Benutzerdaten speichert",
-          "paragraphs": ["Beam ermittelt den Videos-Ordner des Betriebssystems und erstellt darin `Beam/user`. Ein umgeleiteter oder lokalisierter Videos-Ordner verändert den ermittelten Speicherort. Die folgenden Pfade sind daher übliche Standardwerte und keine fest codierten Speicherorte."],
-          "bullets": ["Windows: `%USERPROFILE%\\Videos\\Beam\\user`", "macOS: `~/Movies/Beam/user`", "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"],
+          "paragraphs": [
+            "Beam ermittelt den Videos-Ordner des Betriebssystems und erstellt darin `Beam/user`. Ein umgeleiteter oder lokalisierter Videos-Ordner verändert den ermittelten Speicherort. Die folgenden Pfade sind daher übliche Standardwerte und keine fest codierten Speicherorte."
+          ],
+          "bullets": [
+            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "macOS: `~/Movies/Beam/user`",
+            "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
+          ],
           "subsections": [
-            { "title": "Ordner unter Windows öffnen", "paragraphs": ["Drücke <KeyboardChip shortcut=\"Win+R\" />, füge `%USERPROFILE%\\Videos\\Beam\\user` ein und drücke <KeyboardChip shortcut=\"Enter\" />. Windows erweitert `%USERPROFILE%` und öffnet den Ordner im Datei-Explorer."] },
-            { "title": "Ordner unter macOS öffnen", "paragraphs": ["Öffne den Finder, drücke <KeyboardChip shortcut=\"Command+Shift+G\" />, füge `~/Movies/Beam/user` ein und drücke <KeyboardChip shortcut=\"Enter\" />. Der Finder erweitert `~` zu deinem Benutzerordner."] },
-            { "title": "Ordner unter Linux öffnen", "paragraphs": ["Öffne deinen Dateimanager, drücke <KeyboardChip shortcut=\"Ctrl+L\" />, gib `~/Videos/Beam/user` ein und drücke <KeyboardChip shortcut=\"Enter\" />. Bei einem umgeleiteten Videos-Ordner führe `xdg-open \"$(xdg-user-dir VIDEOS)/Beam/user\"` in einem Terminal aus."], "notice": { "kind": "tip", "title": "Der Ordner wird bei Bedarf erstellt", "text": "Einige Verzeichnisse erscheinen erst, nachdem ihre Funktion erstmals verwendet wurde. Nimm einmal auf, bevor du nach `projects/` suchst, oder importiere einen Hintergrund, bevor du die Hintergrundbibliothek suchst." } }
+            {
+              "title": "Ordner unter Windows öffnen",
+              "paragraphs": [
+                "Drücke <KeyboardChip shortcut=\"Win+R\" />, füge `%USERPROFILE%\\Videos\\Beam\\user` ein und drücke <KeyboardChip shortcut=\"Enter\" />. Windows erweitert `%USERPROFILE%` und öffnet den Ordner im Datei-Explorer."
+              ]
+            },
+            {
+              "title": "Ordner unter macOS öffnen",
+              "paragraphs": [
+                "Öffne den Finder, drücke <KeyboardChip shortcut=\"Command+Shift+G\" />, füge `~/Movies/Beam/user` ein und drücke <KeyboardChip shortcut=\"Enter\" />. Der Finder erweitert `~` zu deinem Benutzerordner."
+              ]
+            },
+            {
+              "title": "Ordner unter Linux öffnen",
+              "paragraphs": [
+                "Öffne deinen Dateimanager, drücke <KeyboardChip shortcut=\"Ctrl+L\" />, gib `~/Videos/Beam/user` ein und drücke <KeyboardChip shortcut=\"Enter\" />. Bei einem umgeleiteten Videos-Ordner führe `xdg-open \"$(xdg-user-dir VIDEOS)/Beam/user\"` in einem Terminal aus."
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "Der Ordner wird bei Bedarf erstellt",
+                "text": "Einige Verzeichnisse erscheinen erst, nachdem ihre Funktion erstmals verwendet wurde. Nimm einmal auf, bevor du nach `projects/` suchst, oder importiere einen Hintergrund, bevor du die Hintergrundbibliothek suchst."
+              }
+            }
           ]
         },
         {
           "title": "Aufbau der Benutzerdaten",
-          "paragraphs": ["Das Verzeichnis `Beam/user` kann die folgenden dauerhaften Daten enthalten:\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"],
-          "bullets": ["`preferences.json` speichert Erscheinungsbild, Rekorderverhalten, ausgewählte Geräte, Tastenkürzel, Onboarding-Status, Profile und gespeicherte Fensterposition. Bei Bedarf wird es mit normalisierten Standardwerten erstellt oder ersetzt.", "`projects/` speichert jedes Beam-Projekt und seine Aufnahmesitzungen. Dies ist das wichtigste Verzeichnis für Backups.", "`media/wallpapers/image/` und `media/wallpapers/video/` speichern Kopien der in die gemeinsamen Hintergrundbibliothek importierten Hintergründe. Sie sind optional.", "`models/whisper/` speichert heruntergeladene lokale Transkriptionsmodelle, ihre Manifeste und temporäre `.partial`-Downloads. Modelle sind optional und können erneut heruntergeladen werden."]
+          "paragraphs": [
+            "Das Verzeichnis `Beam/user` kann die folgenden dauerhaften Daten enthalten:\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"
+          ],
+          "bullets": [
+            "`preferences.json` speichert Erscheinungsbild, Rekorderverhalten, ausgewählte Geräte, Tastenkürzel, Onboarding-Status, Profile und gespeicherte Fensterposition. Bei Bedarf wird es mit normalisierten Standardwerten erstellt oder ersetzt.",
+            "`projects/` speichert jedes Beam-Projekt und seine Aufnahmesitzungen. Dies ist das wichtigste Verzeichnis für Backups.",
+            "`media/wallpapers/image/` und `media/wallpapers/video/` speichern Kopien der in die gemeinsamen Hintergrundbibliothek importierten Hintergründe. Sie sind optional.",
+            "`models/whisper/` speichert heruntergeladene lokale Transkriptionsmodelle, ihre Manifeste und temporäre `.partial`-Downloads. Modelle sind optional und können erneut heruntergeladen werden."
+          ]
         },
         {
           "title": "Aufnahmen und Projekte",
-          "paragraphs": ["Jedes Projekt verwendet einen lesbaren Verzeichnisnamen wie `project-vivid-cosmic`. Die stabile Projekt-UUID befindet sich in `project.json`; der Verzeichnisname ist daher nicht die Identität des Projekts. Das Umbenennen eines Projekts kann auch sein Verzeichnis umbenennen."],
+          "paragraphs": [
+            "Jedes Projekt verwendet einen lesbaren Verzeichnisnamen wie `project-vivid-cosmic`. Die stabile Projekt-UUID befindet sich in `project.json`; der Verzeichnisname ist daher nicht die Identität des Projekts. Das Umbenennen eines Projekts kann auch sein Verzeichnis umbenennen."
+          ],
           "subsections": [
-            { "title": "Projektverzeichnis", "paragraphs": ["Ein entwickeltes Projekt kann so aussehen:\n\n```text\nproject-<name>/\n├── project.json                         required\n├── thumbnail.webp                       optional\n├── media/                               optional imported editor media\n├── backgrounds/                         optional project backgrounds\n└── session-<uuid>/                      one or more recording sessions\n    ├── manifest.json                    completed session\n    ├── manifest.partial.json            interrupted/in-progress recovery state\n    ├── health.jsonl                     capture diagnostics\n    ├── timing.jsonl                     clock synchronization anchors\n    ├── screen/                          screen video segments\n    ├── system-audio/                    optional system-audio segments\n    ├── microphone/                      optional microphone segments\n    ├── camera/                          optional camera segments\n    ├── cursor/                          optional cursor and interaction data\n    └── session/teleprompter.json        optional teleprompter document\n```"] },
-            { "title": "Erforderliche Projektmetadaten", "bullets": ["`project.json` ist das Projektmanifest und die maßgebliche Quelle. Es enthält Schema-Version, stabile Projekt-ID, Anzeigenamen, Zeitstempel, Sitzungsreferenzen, Komposition, Präsentationseinstellungen, Untertitel, Zoomstatus und Verweise auf importierte Ressourcen.", "Jede abgeschlossene Sitzung besitzt normalerweise `manifest.json`. Es beschreibt Plattform, ausgewählte Quellen, Berechtigungen, Warnungen, Spurformate, Segmente, Metriken und Abschlussstatus.", "`manifest.partial.json` bewahrt wiederherstellbare Metadaten, während die Aufnahme aktiv ist oder eine Sitzung nicht finalisiert wurde. Eine wiederhergestellte Sitzung kann dieses Dokument rechtmäßig statt `manifest.json` verwenden."], "notice": { "kind": "warning", "title": "Manifeste nicht manuell bearbeiten", "text": "Manifeste sind versionierte Anwendungsdaten mit dateiübergreifenden Referenzen. Manuelle Änderungen, das Verschieben einzelner Sitzungsdateien oder das Umbenennen von Dateien innerhalb eines Projekts kann Medien im Editor unzugänglich machen." } },
-            { "title": "Spur- und Medienverzeichnisse", "bullets": ["`screen/` enthält nummerierte MP4-Bildschirmsegmente, wenn die Bildschirmaufnahme erfolgreich war.", "`system-audio/`, `microphone/` und `camera/` enthalten nummerierte WebM-Segmente für die entsprechenden aktivierten Quellen.", "Die fünf Spurverzeichnisse können auch existieren, wenn eine Quelle nicht ausgewählt wurde. Verwende die `tracks`-Einträge und Statuswerte des Sitzungsmanifests – nicht das Vorhandensein eines leeren Verzeichnisses –, um festzustellen, was aufgenommen wurde.", "Während eines aktiven oder unterbrochenen Browser-Medien-Schreibvorgangs können temporäre `.partial`-Mediendateien vorhanden sein. Fertige Segmente werden atomar umbenannt.", "`media/` enthält Kopien von Videos, Bildern oder Audio, die in den Editor importiert wurden. Das Entfernen eines nicht mehr verwendeten importierten Assets über Beam kann seine kopierte Datei entfernen.", "`backgrounds/` enthält Kopien von Hintergründen, die speziell in dieses Projekt importiert wurden."] },
-            { "title": "Cursor, Interaktionen und Diagnosen", "bullets": ["`cursor/cursor.json` enthält aufgezeichnete Cursorereignisse, wenn Cursoraufnahme verfügbar ist.", "`cursor/telemetry.json` enthält normalisierte Cursorbewegungsproben für Editorfunktionen wie Cursorverfolgung.", "`cursor/shapes.json` beschreibt native Cursorformen; `cursor/shapes/*.png` kann erfasste Bitmapformen enthalten, wenn Plattform oder Kompatibilitätspfad dies erfordern.", "`cursor/input.json` enthält erlaubte Metadaten für Tastenkürzel und Klicks. Eingegebener Text wird nicht gespeichert.", "`health.jsonl` protokolliert Aufnahmezustand und Unterbrechungen; `timing.jsonl` protokolliert Zeitanker zur Ausrichtung der Spuren. Bewahre beide Dateien mit der Sitzung auf, wenn du ein Projekt verschiebst oder diagnostizierst."] },
-            { "title": "Optionale Präsentationsdateien", "bullets": ["`thumbnail.webp` ist eine erzeugte Vorschau der Projektkarte und kann neu erstellt werden.", "`session/teleprompter.json` existiert erst, nachdem ein Teleprompter-Dokument für diese Sitzung gespeichert wurde.", "Erzeugte Untertitel und die Editorkonfiguration werden in `project.json` gespeichert; sie sind keine separaten Untertiteldateien im Projekt."], "notice": { "kind": "tip", "title": "Das vollständige Projektverzeichnis sichern", "text": "Kopiere `project-<name>/` als Einheit, während Beam nicht aufnimmt. Ein einzelnes Bildschirm-MP4 enthält nicht die Editor-Komposition, optionalen Spuren, Cursordaten, Untertitel oder Diagnosen." } }
+            {
+              "title": "Projektverzeichnis",
+              "paragraphs": [
+                "Ein entwickeltes Projekt kann so aussehen:\n\n```text\nproject-<name>/\n├── project.json                         required\n├── thumbnail.webp                       optional\n├── media/                               optional imported editor media\n├── backgrounds/                         optional project backgrounds\n└── session-<uuid>/                      one or more recording sessions\n    ├── manifest.json                    completed session\n    ├── manifest.partial.json            interrupted/in-progress recovery state\n    ├── health.jsonl                     capture diagnostics\n    ├── timing.jsonl                     clock synchronization anchors\n    ├── screen/                          screen video segments\n    ├── system-audio/                    optional system-audio segments\n    ├── microphone/                      optional microphone segments\n    ├── camera/                          optional camera segments\n    ├── cursor/                          optional cursor and interaction data\n    └── session/teleprompter.json        optional teleprompter document\n```"
+              ]
+            },
+            {
+              "title": "Erforderliche Projektmetadaten",
+              "bullets": [
+                "`project.json` ist das Projektmanifest und die maßgebliche Quelle. Es enthält Schema-Version, stabile Projekt-ID, Anzeigenamen, Zeitstempel, Sitzungsreferenzen, Komposition, Präsentationseinstellungen, Untertitel, Zoomstatus und Verweise auf importierte Ressourcen.",
+                "Jede abgeschlossene Sitzung besitzt normalerweise `manifest.json`. Es beschreibt Plattform, ausgewählte Quellen, Berechtigungen, Warnungen, Spurformate, Segmente, Metriken und Abschlussstatus.",
+                "`manifest.partial.json` bewahrt wiederherstellbare Metadaten, während die Aufnahme aktiv ist oder eine Sitzung nicht finalisiert wurde. Eine wiederhergestellte Sitzung kann dieses Dokument rechtmäßig statt `manifest.json` verwenden."
+              ],
+              "notice": {
+                "kind": "warning",
+                "title": "Manifeste nicht manuell bearbeiten",
+                "text": "Manifeste sind versionierte Anwendungsdaten mit dateiübergreifenden Referenzen. Manuelle Änderungen, das Verschieben einzelner Sitzungsdateien oder das Umbenennen von Dateien innerhalb eines Projekts kann Medien im Editor unzugänglich machen."
+              }
+            },
+            {
+              "title": "Spur- und Medienverzeichnisse",
+              "bullets": [
+                "`screen/` enthält nummerierte MP4-Bildschirmsegmente, wenn die Bildschirmaufnahme erfolgreich war.",
+                "`system-audio/`, `microphone/` und `camera/` enthalten nummerierte WebM-Segmente für die entsprechenden aktivierten Quellen.",
+                "Die fünf Spurverzeichnisse können auch existieren, wenn eine Quelle nicht ausgewählt wurde. Verwende die `tracks`-Einträge und Statuswerte des Sitzungsmanifests – nicht das Vorhandensein eines leeren Verzeichnisses –, um festzustellen, was aufgenommen wurde.",
+                "Während eines aktiven oder unterbrochenen Browser-Medien-Schreibvorgangs können temporäre `.partial`-Mediendateien vorhanden sein. Fertige Segmente werden atomar umbenannt.",
+                "`media/` enthält Kopien von Videos, Bildern oder Audio, die in den Editor importiert wurden. Das Entfernen eines nicht mehr verwendeten importierten Assets über Beam kann seine kopierte Datei entfernen.",
+                "`backgrounds/` enthält Kopien von Hintergründen, die speziell in dieses Projekt importiert wurden."
+              ]
+            },
+            {
+              "title": "Cursor, Interaktionen und Diagnosen",
+              "bullets": [
+                "`cursor/cursor.json` enthält aufgezeichnete Cursorereignisse, wenn Cursoraufnahme verfügbar ist.",
+                "`cursor/telemetry.json` enthält normalisierte Cursorbewegungsproben für Editorfunktionen wie Cursorverfolgung.",
+                "`cursor/shapes.json` beschreibt native Cursorformen; `cursor/shapes/*.png` kann erfasste Bitmapformen enthalten, wenn Plattform oder Kompatibilitätspfad dies erfordern.",
+                "`cursor/input.json` enthält erlaubte Metadaten für Tastenkürzel und Klicks. Eingegebener Text wird nicht gespeichert.",
+                "`health.jsonl` protokolliert Aufnahmezustand und Unterbrechungen; `timing.jsonl` protokolliert Zeitanker zur Ausrichtung der Spuren. Bewahre beide Dateien mit der Sitzung auf, wenn du ein Projekt verschiebst oder diagnostizierst."
+              ]
+            },
+            {
+              "title": "Optionale Präsentationsdateien",
+              "bullets": [
+                "`thumbnail.webp` ist eine erzeugte Vorschau der Projektkarte und kann neu erstellt werden.",
+                "`session/teleprompter.json` existiert erst, nachdem ein Teleprompter-Dokument für diese Sitzung gespeichert wurde.",
+                "Erzeugte Untertitel und die Editorkonfiguration werden in `project.json` gespeichert; sie sind keine separaten Untertiteldateien im Projekt."
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "Das vollständige Projektverzeichnis sichern",
+                "text": "Kopiere `project-<name>/` als Einheit, während Beam nicht aufnimmt. Ein einzelnes Bildschirm-MP4 enthält nicht die Editor-Komposition, optionalen Spuren, Cursordaten, Untertitel oder Diagnosen."
+              }
+            }
           ]
         },
         {
           "title": "Updates",
-          "paragraphs": ["Heruntergeladene Updates werden getrennt von Projekten im Cache des Betriebssystems gespeichert. Das Verzeichnis `pending/` kann den Installer oder das Update-Archiv sowie `update-info.json` enthalten. Beam löscht den Updater-Cache, nachdem die neue Version erfolgreich gestartet ist, und bewahrt ein Update auf, das noch auf die Installation wartet."],
-          "bullets": ["Windows: `%LOCALAPPDATA%\\beam-updater\\pending`", "macOS: `~/Library/Caches/beam-updater/pending`", "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"],
+          "paragraphs": [
+            "Heruntergeladene Updates werden getrennt von Projekten im Cache des Betriebssystems gespeichert. Das Verzeichnis `pending/` kann den Installer oder das Update-Archiv sowie `update-info.json` enthalten. Beam löscht den Updater-Cache, nachdem die neue Version erfolgreich gestartet ist, und bewahrt ein Update auf, das noch auf die Installation wartet."
+          ],
+          "bullets": [
+            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "macOS: `~/Library/Caches/beam-updater/pending`",
+            "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
+          ],
           "subsections": [
-            { "title": "Update-Status", "paragraphs": ["Beam speichert außerdem `update-cache-state.json` im Anwendungsdatenverzeichnis von Electron, um ein installiertes von einem noch ausstehenden Update zu unterscheiden. Die üblichen übergeordneten Verzeichnisse sind `%APPDATA%\\Beam` unter Windows, `~/Library/Application Support/Beam` unter macOS und `${XDG_CONFIG_HOME:-~/.config}/Beam` unter Linux."], "notice": { "kind": "info", "title": "Updater-Dateien sind entbehrlich", "text": "Sichere oder verschiebe den Updater-Cache nicht. Wenn kein Update aktiv heruntergeladen wird oder auf einen Neustart wartet, kann er entfernt werden; Beam lädt ein künftiges Update erneut herunter. Lösche ihn niemals, während ein Update heruntergeladen wird oder zur Installation bereit ist." } }
+            {
+              "title": "Update-Status",
+              "paragraphs": [
+                "Beam speichert außerdem `update-cache-state.json` im Anwendungsdatenverzeichnis von Electron, um ein installiertes von einem noch ausstehenden Update zu unterscheiden. Die üblichen übergeordneten Verzeichnisse sind `%APPDATA%\\Beam` unter Windows, `~/Library/Application Support/Beam` unter macOS und `${XDG_CONFIG_HOME:-~/.config}/Beam` unter Linux."
+              ],
+              "notice": {
+                "kind": "info",
+                "title": "Updater-Dateien sind entbehrlich",
+                "text": "Sichere oder verschiebe den Updater-Cache nicht. Wenn kein Update aktiv heruntergeladen wird oder auf einen Neustart wartet, kann er entfernt werden; Beam lädt ein künftiges Update erneut herunter. Lösche ihn niemals, während ein Update heruntergeladen wird oder zur Installation bereit ist."
+              }
+            }
           ]
         }
       ]

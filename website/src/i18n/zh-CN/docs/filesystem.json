@@ -8,36 +8,135 @@
       "sections": [
         {
           "title": "Beam 存储用户文件的位置",
-          "paragraphs": ["Beam 会解析操作系统的“视频”文件夹，并在其中创建 `Beam/user`。重定向或本地化的“视频”文件夹会改变解析后的位置，因此下面的路径是通常的默认值，而不是硬编码位置。"],
-          "bullets": ["Windows: `%USERPROFILE%\\Videos\\Beam\\user`", "macOS: `~/Movies/Beam/user`", "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"],
+          "paragraphs": [
+            "Beam 会解析操作系统的“视频”文件夹，并在其中创建 `Beam/user`。重定向或本地化的“视频”文件夹会改变解析后的位置，因此下面的路径是通常的默认值，而不是硬编码位置。"
+          ],
+          "bullets": [
+            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "macOS: `~/Movies/Beam/user`",
+            "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
+          ],
           "subsections": [
-            { "title": "在 Windows 上打开文件夹", "paragraphs": ["按 <KeyboardChip shortcut=\"Win+R\" />，粘贴 `%USERPROFILE%\\Videos\\Beam\\user`，然后按 <KeyboardChip shortcut=\"Enter\" />。Windows 会展开 `%USERPROFILE%`，并在文件资源管理器中打开该文件夹。"] },
-            { "title": "在 macOS 上打开文件夹", "paragraphs": ["打开 Finder，按 <KeyboardChip shortcut=\"Command+Shift+G\" />，粘贴 `~/Movies/Beam/user`，然后按 <KeyboardChip shortcut=\"Enter\" />。Finder 会将 `~` 展开为你的主文件夹。"] },
-            { "title": "在 Linux 上打开文件夹", "paragraphs": ["打开文件管理器，按 <KeyboardChip shortcut=\"Ctrl+L\" />，输入 `~/Videos/Beam/user`，然后按 <KeyboardChip shortcut=\"Enter\" />。如果“视频”目录被重定向，请在终端中运行 `xdg-open \"$(xdg-user-dir VIDEOS)/Beam/user\"`。"], "notice": { "kind": "tip", "title": "文件夹会按需创建", "text": "有些目录只有在首次使用相关功能后才会出现。查找 `projects/` 前先录制一次；查找壁纸库前先导入一个背景。" } }
+            {
+              "title": "在 Windows 上打开文件夹",
+              "paragraphs": [
+                "按 <KeyboardChip shortcut=\"Win+R\" />，粘贴 `%USERPROFILE%\\Videos\\Beam\\user`，然后按 <KeyboardChip shortcut=\"Enter\" />。Windows 会展开 `%USERPROFILE%`，并在文件资源管理器中打开该文件夹。"
+              ]
+            },
+            {
+              "title": "在 macOS 上打开文件夹",
+              "paragraphs": [
+                "打开 Finder，按 <KeyboardChip shortcut=\"Command+Shift+G\" />，粘贴 `~/Movies/Beam/user`，然后按 <KeyboardChip shortcut=\"Enter\" />。Finder 会将 `~` 展开为你的主文件夹。"
+              ]
+            },
+            {
+              "title": "在 Linux 上打开文件夹",
+              "paragraphs": [
+                "打开文件管理器，按 <KeyboardChip shortcut=\"Ctrl+L\" />，输入 `~/Videos/Beam/user`，然后按 <KeyboardChip shortcut=\"Enter\" />。如果“视频”目录被重定向，请在终端中运行 `xdg-open \"$(xdg-user-dir VIDEOS)/Beam/user\"`。"
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "文件夹会按需创建",
+                "text": "有些目录只有在首次使用相关功能后才会出现。查找 `projects/` 前先录制一次；查找壁纸库前先导入一个背景。"
+              }
+            }
           ]
         },
         {
           "title": "用户数据布局",
-          "paragraphs": ["`Beam/user` 目录可能包含以下持久数据：\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"],
-          "bullets": ["`preferences.json` 存储外观、录制器行为、所选设备、快捷键、引导状态、预设和保存的窗口位置。需要时，它会使用规范化的默认值创建或替换。", "`projects/` 存储每个 Beam 项目及其录制会话。这是最重要的备份目录。", "`media/wallpapers/image/` 和 `media/wallpapers/video/` 存储导入共享壁纸库的背景副本。这些目录是可选的。", "`models/whisper/` 存储已下载的本地转录模型、模型清单和临时 `.partial` 下载文件。模型是可选的，可以重新下载。"]
+          "paragraphs": [
+            "`Beam/user` 目录可能包含以下持久数据：\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"
+          ],
+          "bullets": [
+            "`preferences.json` 存储外观、录制器行为、所选设备、快捷键、引导状态、预设和保存的窗口位置。需要时，它会使用规范化的默认值创建或替换。",
+            "`projects/` 存储每个 Beam 项目及其录制会话。这是最重要的备份目录。",
+            "`media/wallpapers/image/` 和 `media/wallpapers/video/` 存储导入共享壁纸库的背景副本。这些目录是可选的。",
+            "`models/whisper/` 存储已下载的本地转录模型、模型清单和临时 `.partial` 下载文件。模型是可选的，可以重新下载。"
+          ]
         },
         {
           "title": "录制和项目",
-          "paragraphs": ["每个项目使用一个易读的目录名称，例如 `project-vivid-cosmic`。稳定的项目 UUID 位于 `project.json` 中，因此目录名称不是项目的身份。重命名项目也可能重命名其目录。"],
+          "paragraphs": [
+            "每个项目使用一个易读的目录名称，例如 `project-vivid-cosmic`。稳定的项目 UUID 位于 `project.json` 中，因此目录名称不是项目的身份。重命名项目也可能重命名其目录。"
+          ],
           "subsections": [
-            { "title": "项目目录", "paragraphs": ["一个已开发的项目可能如下所示：\n\n```text\nproject-<name>/\n├── project.json                         required\n├── thumbnail.webp                       optional\n├── media/                               optional imported editor media\n├── backgrounds/                         optional project backgrounds\n└── session-<uuid>/                      one or more recording sessions\n    ├── manifest.json                    completed session\n    ├── manifest.partial.json            interrupted/in-progress recovery state\n    ├── health.jsonl                     capture diagnostics\n    ├── timing.jsonl                     clock synchronization anchors\n    ├── screen/                          screen video segments\n    ├── system-audio/                    optional system-audio segments\n    ├── microphone/                      optional microphone segments\n    ├── camera/                          optional camera segments\n    ├── cursor/                          optional cursor and interaction data\n    └── session/teleprompter.json        optional teleprompter document\n```"] },
-            { "title": "必需的项目元数据", "bullets": ["`project.json` 是项目清单和事实来源。其中包含架构版本、稳定项目 ID、显示名称、时间戳、会话引用、编排、演示设置、字幕、缩放状态和导入资源引用。", "每个完成的会话通常都有 `manifest.json`，用于描述平台、所选来源、权限、警告、轨道格式、片段、指标和完成状态。", "`manifest.partial.json` 会在捕获进行中或会话未完成时保留可恢复的元数据。恢复的会话可以合法地使用它，而不是 `manifest.json`。"], "notice": { "kind": "warning", "title": "不要手动编辑清单", "text": "清单是带有跨文件引用的版本化应用数据。手动编辑、移动单个会话文件或重命名项目内的文件，可能导致编辑器无法使用媒体。" } },
-            { "title": "轨道和媒体目录", "bullets": ["`screen/` 在屏幕捕获成功时包含编号的 MP4 屏幕片段。", "`system-audio/`、`microphone/` 和 `camera/` 包含为相应启用来源写入的编号 WebM 片段。", "即使没有选择某个来源，五个轨道目录也可能存在。应使用会话清单中的 `tracks` 条目和状态，而不是根据空目录是否存在来判断录制了什么。", "活动或中断的浏览器媒体写入期间可能存在临时 `.partial` 媒体文件。已完成的片段会以原子方式重命名。", "`media/` 包含导入编辑器的视频、图像或音频副本。通过 Beam 移除未使用的导入资源时，可能会删除其副本文件。", "`backgrounds/` 包含专门导入该项目的背景副本。"] },
-            { "title": "光标、交互和诊断", "bullets": ["`cursor/cursor.json` 在光标捕获可用时包含录制的光标事件。", "`cursor/telemetry.json` 包含规范化的光标移动样本，用于光标跟随等编辑器行为。", "`cursor/shapes.json` 描述原生光标形状；在平台或兼容性路径需要时，`cursor/shapes/*.png` 可能包含捕获的位图形状。", "`cursor/input.json` 包含获得许可的快捷键和点击交互元数据。不会存储输入的文字。", "`health.jsonl` 记录捕获健康状态和中断；`timing.jsonl` 记录用于对齐轨道的时间锚点。移动或诊断项目时，请将两者与会话一起保留。"] },
-            { "title": "可选的演示文件", "bullets": ["`thumbnail.webp` 是生成的项目卡片预览，可以重新创建。", "只有在为该会话保存提词器文档后，才会存在 `session/teleprompter.json`。", "生成的字幕和编辑器配置存储在 `project.json` 中；项目内不会有单独的字幕文件。"], "notice": { "kind": "tip", "title": "备份完整的项目目录", "text": "Beam 未在录制时，将 `project-<name>/` 作为一个整体复制。单独的屏幕 MP4 不包含编辑器编排、可选轨道、光标数据、字幕或诊断信息。" } }
+            {
+              "title": "项目目录",
+              "paragraphs": [
+                "一个已开发的项目可能如下所示：\n\n```text\nproject-<name>/\n├── project.json                         required\n├── thumbnail.webp                       optional\n├── media/                               optional imported editor media\n├── backgrounds/                         optional project backgrounds\n└── session-<uuid>/                      one or more recording sessions\n    ├── manifest.json                    completed session\n    ├── manifest.partial.json            interrupted/in-progress recovery state\n    ├── health.jsonl                     capture diagnostics\n    ├── timing.jsonl                     clock synchronization anchors\n    ├── screen/                          screen video segments\n    ├── system-audio/                    optional system-audio segments\n    ├── microphone/                      optional microphone segments\n    ├── camera/                          optional camera segments\n    ├── cursor/                          optional cursor and interaction data\n    └── session/teleprompter.json        optional teleprompter document\n```"
+              ]
+            },
+            {
+              "title": "必需的项目元数据",
+              "bullets": [
+                "`project.json` 是项目清单和事实来源。其中包含架构版本、稳定项目 ID、显示名称、时间戳、会话引用、编排、演示设置、字幕、缩放状态和导入资源引用。",
+                "每个完成的会话通常都有 `manifest.json`，用于描述平台、所选来源、权限、警告、轨道格式、片段、指标和完成状态。",
+                "`manifest.partial.json` 会在捕获进行中或会话未完成时保留可恢复的元数据。恢复的会话可以合法地使用它，而不是 `manifest.json`。"
+              ],
+              "notice": {
+                "kind": "warning",
+                "title": "不要手动编辑清单",
+                "text": "清单是带有跨文件引用的版本化应用数据。手动编辑、移动单个会话文件或重命名项目内的文件，可能导致编辑器无法使用媒体。"
+              }
+            },
+            {
+              "title": "轨道和媒体目录",
+              "bullets": [
+                "`screen/` 在屏幕捕获成功时包含编号的 MP4 屏幕片段。",
+                "`system-audio/`、`microphone/` 和 `camera/` 包含为相应启用来源写入的编号 WebM 片段。",
+                "即使没有选择某个来源，五个轨道目录也可能存在。应使用会话清单中的 `tracks` 条目和状态，而不是根据空目录是否存在来判断录制了什么。",
+                "活动或中断的浏览器媒体写入期间可能存在临时 `.partial` 媒体文件。已完成的片段会以原子方式重命名。",
+                "`media/` 包含导入编辑器的视频、图像或音频副本。通过 Beam 移除未使用的导入资源时，可能会删除其副本文件。",
+                "`backgrounds/` 包含专门导入该项目的背景副本。"
+              ]
+            },
+            {
+              "title": "光标、交互和诊断",
+              "bullets": [
+                "`cursor/cursor.json` 在光标捕获可用时包含录制的光标事件。",
+                "`cursor/telemetry.json` 包含规范化的光标移动样本，用于光标跟随等编辑器行为。",
+                "`cursor/shapes.json` 描述原生光标形状；在平台或兼容性路径需要时，`cursor/shapes/*.png` 可能包含捕获的位图形状。",
+                "`cursor/input.json` 包含获得许可的快捷键和点击交互元数据。不会存储输入的文字。",
+                "`health.jsonl` 记录捕获健康状态和中断；`timing.jsonl` 记录用于对齐轨道的时间锚点。移动或诊断项目时，请将两者与会话一起保留。"
+              ]
+            },
+            {
+              "title": "可选的演示文件",
+              "bullets": [
+                "`thumbnail.webp` 是生成的项目卡片预览，可以重新创建。",
+                "只有在为该会话保存提词器文档后，才会存在 `session/teleprompter.json`。",
+                "生成的字幕和编辑器配置存储在 `project.json` 中；项目内不会有单独的字幕文件。"
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "备份完整的项目目录",
+                "text": "Beam 未在录制时，将 `project-<name>/` 作为一个整体复制。单独的屏幕 MP4 不包含编辑器编排、可选轨道、光标数据、字幕或诊断信息。"
+              }
+            }
           ]
         },
         {
           "title": "更新",
-          "paragraphs": ["下载的更新存储在操作系统缓存中，与项目分开。`pending/` 目录可能包含安装程序或更新存档以及 `update-info.json`。新版本成功启动后，Beam 会清理更新器缓存，同时保留仍在等待安装的更新。"],
-          "bullets": ["Windows: `%LOCALAPPDATA%\\beam-updater\\pending`", "macOS: `~/Library/Caches/beam-updater/pending`", "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"],
+          "paragraphs": [
+            "下载的更新存储在操作系统缓存中，与项目分开。`pending/` 目录可能包含安装程序或更新存档以及 `update-info.json`。新版本成功启动后，Beam 会清理更新器缓存，同时保留仍在等待安装的更新。"
+          ],
+          "bullets": [
+            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "macOS: `~/Library/Caches/beam-updater/pending`",
+            "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
+          ],
           "subsections": [
-            { "title": "更新状态", "paragraphs": ["Beam 还会将 `update-cache-state.json` 存储在 Electron 的应用数据目录中，以区分已安装的更新和仍在等待的更新。通常的父目录是 Windows 上的 `%APPDATA%\\Beam`、macOS 上的 `~/Library/Application Support/Beam`，以及 Linux 上的 `${XDG_CONFIG_HOME:-~/.config}/Beam`。"], "notice": { "kind": "info", "title": "更新器文件可以删除", "text": "不要备份或移动更新器缓存。如果当前没有正在下载或等待重启的更新，可以删除它，Beam 会在未来重新下载更新。更新正在下载或已准备安装时，切勿删除它。" } }
+            {
+              "title": "更新状态",
+              "paragraphs": [
+                "Beam 还会将 `update-cache-state.json` 存储在 Electron 的应用数据目录中，以区分已安装的更新和仍在等待的更新。通常的父目录是 Windows 上的 `%APPDATA%\\Beam`、macOS 上的 `~/Library/Application Support/Beam`，以及 Linux 上的 `${XDG_CONFIG_HOME:-~/.config}/Beam`。"
+              ],
+              "notice": {
+                "kind": "info",
+                "title": "更新器文件可以删除",
+                "text": "不要备份或移动更新器缓存。如果当前没有正在下载或等待重启的更新，可以删除它，Beam 会在未来重新下载更新。更新正在下载或已准备安装时，切勿删除它。"
+              }
+            }
           ]
         }
       ]

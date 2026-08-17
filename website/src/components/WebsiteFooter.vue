@@ -31,14 +31,12 @@ const comparisonLinks = [
         <a href="/install">{{ isFrench ? 'Télécharger Beam' : 'Download Beam' }}</a>
         <a href="/docs/">{{ isFrench ? 'Documentation' : 'Documentation' }}</a>
         <a href="/faq">FAQ</a>
-        <a :href="REPOSITORY_URL" target="_blank" rel="noreferrer">
-          GitHub <ExternalLink aria-hidden="true" />
-        </a>
+        <a :href="REPOSITORY_URL" target="_blank" rel="noreferrer"> GitHub <ExternalLink aria-hidden="true" /> </a>
       </nav>
 
       <nav :aria-label="isFrench ? 'Comparatifs Beam' : 'Compare Beam'">
         <strong>{{ isFrench ? 'Comparer Beam' : 'Compare Beam' }}</strong>
-        <a v-for="([name, id]) in comparisonLinks" :key="id" :href="`/faq#${id}`">Beam vs {{ name }}</a>
+        <a v-for="[name, id] in comparisonLinks" :key="id" :href="`/faq#${id}`">Beam vs {{ name }}</a>
       </nav>
 
       <nav :aria-label="isFrench ? 'Communauté Beam' : 'Beam community'">

@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  DocsLocaleCatalogs,
-  DocsPageContent,
-  DocsSectionContent,
-} from './docs-content-types';
+import type { DocsLocaleCatalogs, DocsPageContent, DocsSectionContent } from './docs-content-types';
 import { createDocsRoutes, docsRoutePaths, getDocsCatalogs } from './docs-routes';
 import { renderDocsHome, renderDocsPage, validateDocsCatalogs } from './docs-renderer';
 
@@ -103,12 +99,16 @@ describe('docs content renderer', () => {
     );
     expect(() =>
       validateDocsCatalogs(
-        catalog({ catalogs: [{ pages: [page({ sections: [section({ screenshot: { path: '../secret.webp', alt: 'x' } })] })] }] }),
+        catalog({
+          catalogs: [{ pages: [page({ sections: [section({ screenshot: { path: '../secret.webp', alt: 'x' } })] })] }],
+        }),
       ),
     ).toThrow('must be relative to the docs screenshots directory');
     expect(() =>
       validateDocsCatalogs(
-        catalog({ catalogs: [{ pages: [page({ sections: [section({ screenshot: { path: 'x.webp', alt: '' } })] })] }] }),
+        catalog({
+          catalogs: [{ pages: [page({ sections: [section({ screenshot: { path: 'x.webp', alt: '' } })] })] }],
+        }),
       ),
     ).toThrow('screenshot.alt');
   });

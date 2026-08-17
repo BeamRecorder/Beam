@@ -1,9 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const withBase = vi.hoisted(() =>
-  vi.fn((path: string) => (path.startsWith('/') ? `/docs${path}` : path)),
-);
+const withBase = vi.hoisted(() => vi.fn((path: string) => (path.startsWith('/') ? `/docs${path}` : path)));
 
 vi.mock('vitepress', () => ({ withBase }));
 
@@ -68,16 +66,19 @@ describe('DocsProductCard', () => {
   it.each([
     ['recorder', 'Recorder app', '/showcase/Beam-showcase-hud.png'],
     ['editor', 'Video editor', '/showcase/Beam-showcase-editor.png'],
-  ] as const)('renders the %s product visual with its accessible label and base-aware image', (visual, title, imagePath) => {
-    const wrapper = mountCard({ visual, title });
-    const visualElement = wrapper.get('.docs-product-card__visual');
+  ] as const)(
+    'renders the %s product visual with its accessible label and base-aware image',
+    (visual, title, imagePath) => {
+      const wrapper = mountCard({ visual, title });
+      const visualElement = wrapper.get('.docs-product-card__visual');
 
-    expect(visualElement.classes()).toContain(`is-${visual}`);
-    expect(visualElement.attributes('role')).toBe('img');
-    expect(visualElement.attributes('aria-label')).toBe(`${title} interface in Beam`);
-    expect(visualElement.get('img').attributes('src')).toBe(`/docs${imagePath}`);
-    expect(withBase).toHaveBeenCalledWith(imagePath);
-  });
+      expect(visualElement.classes()).toContain(`is-${visual}`);
+      expect(visualElement.attributes('role')).toBe('img');
+      expect(visualElement.attributes('aria-label')).toBe(`${title} interface in Beam`);
+      expect(visualElement.get('img').attributes('src')).toBe(`/docs${imagePath}`);
+      expect(withBase).toHaveBeenCalledWith(imagePath);
+    },
+  );
 
   it('renders the product title, details, and explore action as card content', () => {
     const wrapper = mountCard({ title: 'Video editor', details: 'Shape timing, captions, and export.' });

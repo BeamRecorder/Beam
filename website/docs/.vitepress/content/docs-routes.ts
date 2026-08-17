@@ -107,11 +107,8 @@ import type { WebsiteLocale } from '../../../src/i18n';
 import type { DocsLocaleCatalogs } from './docs-content-types';
 import { renderDocsHome, renderDocsPage, validateDocsCatalogs } from './docs-renderer';
 
-const createCatalogs = (
-  common: unknown,
-  home: unknown,
-  catalogs: readonly unknown[],
-): DocsLocaleCatalogs => ({ common, home, catalogs }) as DocsLocaleCatalogs;
+const createCatalogs = (common: unknown, home: unknown, catalogs: readonly unknown[]): DocsLocaleCatalogs =>
+  ({ common, home, catalogs }) as DocsLocaleCatalogs;
 
 const locales: Partial<Record<WebsiteLocale, DocsLocaleCatalogs>> = {
   en: createCatalogs(commonEn, homeEn, [gettingStartedEn, recorderEn, editorEn, referenceEn, filesystemEn]),

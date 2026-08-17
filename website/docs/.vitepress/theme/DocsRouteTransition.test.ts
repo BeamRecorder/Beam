@@ -80,20 +80,18 @@ describe('DocsRouteTransition', () => {
   });
 
   it('defines the Beam scrollbar treatment for Firefox, WebKit, dark mode, and hover accent', () => {
-    expect(themeStylesheet).toMatch(/html,\s*\.VPSidebar\s*\{[\s\S]*scrollbar-color:[^;]+;[\s\S]*scrollbar-width:\s*thin;/);
+    expect(themeStylesheet).toMatch(
+      /html,\s*\.VPSidebar\s*\{[\s\S]*scrollbar-color:[^;]+;[\s\S]*scrollbar-width:\s*thin;/,
+    );
     expect(themeStylesheet).toMatch(/::-webkit-scrollbar\s*\{[\s\S]*width:\s*6px;[\s\S]*height:\s*6px;/);
     expect(themeStylesheet).toMatch(/::-webkit-scrollbar-track\s*\{[\s\S]*background:\s*transparent;/);
-    expect(themeStylesheet).toMatch(
-      /::-webkit-scrollbar-thumb\s*\{[\s\S]*background:\s*rgba\(0,\s*0,\s*0,\s*0\.15\)/,
-    );
+    expect(themeStylesheet).toMatch(/::-webkit-scrollbar-thumb\s*\{[\s\S]*background:\s*rgba\(0,\s*0,\s*0,\s*0\.15\)/);
     expect(themeStylesheet).toMatch(
       /html\.dark,\s*html\.dark \.VPSidebar\s*\{[\s\S]*scrollbar-color:\s*rgba\(255,\s*255,\s*255,\s*0\.16\)/,
     );
     expect(themeStylesheet).toMatch(
       /html\.dark\s+::-webkit-scrollbar-thumb\s*\{[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.16\)/,
     );
-    expect(themeStylesheet).toMatch(
-      /::-webkit-scrollbar-thumb:hover\s*\{[\s\S]*background:\s*var\(--color-primary\)/,
-    );
+    expect(themeStylesheet).toMatch(/::-webkit-scrollbar-thumb:hover\s*\{[\s\S]*background:\s*var\(--color-primary\)/);
   });
 });

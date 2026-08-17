@@ -22,9 +22,7 @@ const faqGroups = computed(() =>
   categoryOrder.map((category) => ({
     category,
     label: catalog.value.categories[category],
-    entries: faqItems.value
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) => item.category === category),
+    entries: faqItems.value.map((item, index) => ({ item, index })).filter(({ item }) => item.category === category),
   })),
 );
 
@@ -44,10 +42,7 @@ usePageSeo({
       <p class="lede">{{ catalog.intro.lede }}</p>
     </header>
 
-    <section
-      class="faq-list"
-      :aria-label="catalog.intro.ariaLabel"
-    >
+    <section class="faq-list" :aria-label="catalog.intro.ariaLabel">
       <section v-for="group in faqGroups" :key="group.category" class="faq-group">
         <h2>{{ group.label }}</h2>
         <div class="faq-group__items">
@@ -58,15 +53,11 @@ usePageSeo({
             v-model="openItems[index]"
             class="faq-item"
           >
-            <template #title><span class="faq-question">{{ item.question }}</span></template>
-            <p class="faq-answer">{{ item.answer }}</p>
-            <a
-              v-if="item.sourceUrl"
-              class="faq-source"
-              :href="item.sourceUrl"
-              target="_blank"
-              rel="noreferrer"
+            <template #title
+              ><span class="faq-question">{{ item.question }}</span></template
             >
+            <p class="faq-answer">{{ item.answer }}</p>
+            <a v-if="item.sourceUrl" class="faq-source" :href="item.sourceUrl" target="_blank" rel="noreferrer">
               {{ item.sourceLabel }} <ExternalLink aria-hidden="true" />
             </a>
           </Accordion>

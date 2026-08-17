@@ -1,6 +1,97 @@
 {
   "pages": [
-    { "slug": "getting-started", "title": "Primeiros passos", "description": "Instale o Beam, conceda as permissões necessárias e crie sua primeira gravação.", "lead": "O Beam combina um gravador focado e um editor de vídeo não destrutivo em um único aplicativo de desktop.", "sections": [ { "title": "Instalar o Beam", "paragraphs": ["Baixe a versão mais recente na [página de releases do Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Escolha o pacote para o seu sistema operacional."], "bullets": ["O Windows usa o instalador nativo.", "O macOS usa um DMG para Macs com Apple Silicon que executam o macOS 13 ou mais recente.", "O Linux oferece pacotes AppImage, DEB e RPM."] }, { "title": "Criar sua primeira gravação", "steps": ["Abra o Beam e escolha Tela ou Janela no HUD do gravador.", "Selecione uma tela, uma janela de aplicativo ou uma região personalizada.", "Escolha as fontes de microfone, áudio do sistema e câmera necessárias.", "Inicie a gravação e use a barra do gravador para pausar, retomar ou parar.", "Pare a gravação e aguarde o Beam abrir o projeto no editor de vídeo."], "screenshot": { "path": "getting-started/first-recording.webp", "alt": "Gravador do Beam preparado para a primeira gravação", "caption": "Selecione as fontes de captura e mídia antes de começar." } }, { "title": "Conceder permissões quando solicitado", "paragraphs": ["O sistema operacional pode solicitar permissões de gravação de tela, microfone, câmera ou interação. O Beam só solicita acesso quando o recurso relacionado precisa dele."], "notice": { "kind": "info", "title": "Diferenças entre plataformas", "text": "A seleção de fontes e os avisos de permissão variam entre Windows, macOS, Linux, X11 e Wayland. Consulte o [suporte a plataformas](/platforms) antes de uma gravação importante." } }, { "title": "Continue aprendendo", "bullets": ["Conheça a [interface do gravador](/recorder/interface).", "Confira todos os [recursos do gravador](/recorder/capabilities).", "Entenda a [interface do editor de vídeo](/editor/interface).", "Prepare o arquivo final com [exportação e compartilhamento](/export)."] } ] },
-    { "slug": "updates", "title": "Atualizar o Beam", "description": "Verifique, baixe e instale atualizações do Beam pelo gravador ou editor de vídeo.", "lead": "As versões instaladas do Beam podem verificar no GitHub Releases se há uma nova versão sem baixá-la ou instalá-la automaticamente.", "sections": [ { "title": "Abrir os controles de atualização", "paragraphs": ["No HUD do gravador, abra Configurações e localize a seção Atualizações. Os mesmos controles estão disponíveis em Configurações no editor de vídeo. As versões de desenvolvimento informam que as atualizações só estão disponíveis no aplicativo instalado."], "screenshot": { "path": "getting-started/update-controls.webp", "alt": "Configurações do Beam mostrando os controles de atualização", "caption": "O painel de atualização exibe a versão instalada e as ações disponíveis." } }, { "title": "Instalar uma atualização", "steps": ["Escolha Verificar atualizações.", "Quando houver uma versão disponível, consulte o changelog e escolha Baixar.", "Mantenha o Beam aberto enquanto o indicador de progresso baixa a atualização.", "Quando a atualização estiver pronta, salve seu trabalho e escolha Reiniciar para fechar o Beam e executar o instalador."], "notice": { "kind": "info", "title": "As atualizações continuam sob seu controle", "text": "O Beam não baixa automaticamente uma atualização disponível nem a instala quando você sai normalmente. A instalação começa somente depois que você escolhe Reiniciar no estado baixado." } }, { "title": "Se o atualizador falhar", "paragraphs": ["Use Copiar erro para guardar a mensagem de diagnóstico e baixe manualmente o pacote correto na [versão mais recente do Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Seus projetos ficam armazenados separadamente da instalação do aplicativo."] } ] }
+    {
+      "slug": "getting-started",
+      "title": "Primeiros passos",
+      "description": "Instale o Beam, conceda as permissões necessárias e crie sua primeira gravação.",
+      "lead": "O Beam combina um gravador focado e um editor de vídeo não destrutivo em um único aplicativo de desktop.",
+      "sections": [
+        {
+          "title": "Instalar o Beam",
+          "paragraphs": [
+            "Baixe a versão mais recente na [página de releases do Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Escolha o pacote para o seu sistema operacional."
+          ],
+          "bullets": [
+            "O Windows usa o instalador nativo.",
+            "O macOS usa um DMG para Macs com Apple Silicon que executam o macOS 13 ou mais recente.",
+            "O Linux oferece pacotes AppImage, DEB e RPM."
+          ]
+        },
+        {
+          "title": "Criar sua primeira gravação",
+          "steps": [
+            "Abra o Beam e escolha Tela ou Janela no HUD do gravador.",
+            "Selecione uma tela, uma janela de aplicativo ou uma região personalizada.",
+            "Escolha as fontes de microfone, áudio do sistema e câmera necessárias.",
+            "Inicie a gravação e use a barra do gravador para pausar, retomar ou parar.",
+            "Pare a gravação e aguarde o Beam abrir o projeto no editor de vídeo."
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Gravador do Beam preparado para a primeira gravação",
+            "caption": "Selecione as fontes de captura e mídia antes de começar."
+          }
+        },
+        {
+          "title": "Conceder permissões quando solicitado",
+          "paragraphs": [
+            "O sistema operacional pode solicitar permissões de gravação de tela, microfone, câmera ou interação. O Beam só solicita acesso quando o recurso relacionado precisa dele."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Diferenças entre plataformas",
+            "text": "A seleção de fontes e os avisos de permissão variam entre Windows, macOS, Linux, X11 e Wayland. Consulte o [suporte a plataformas](/platforms) antes de uma gravação importante."
+          }
+        },
+        {
+          "title": "Continue aprendendo",
+          "bullets": [
+            "Conheça a [interface do gravador](/recorder/interface).",
+            "Confira todos os [recursos do gravador](/recorder/capabilities).",
+            "Entenda a [interface do editor de vídeo](/editor/interface).",
+            "Prepare o arquivo final com [exportação e compartilhamento](/export)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "updates",
+      "title": "Atualizar o Beam",
+      "description": "Verifique, baixe e instale atualizações do Beam pelo gravador ou editor de vídeo.",
+      "lead": "As versões instaladas do Beam podem verificar no GitHub Releases se há uma nova versão sem baixá-la ou instalá-la automaticamente.",
+      "sections": [
+        {
+          "title": "Abrir os controles de atualização",
+          "paragraphs": [
+            "No HUD do gravador, abra Configurações e localize a seção Atualizações. Os mesmos controles estão disponíveis em Configurações no editor de vídeo. As versões de desenvolvimento informam que as atualizações só estão disponíveis no aplicativo instalado."
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "Configurações do Beam mostrando os controles de atualização",
+            "caption": "O painel de atualização exibe a versão instalada e as ações disponíveis."
+          }
+        },
+        {
+          "title": "Instalar uma atualização",
+          "steps": [
+            "Escolha Verificar atualizações.",
+            "Quando houver uma versão disponível, consulte o changelog e escolha Baixar.",
+            "Mantenha o Beam aberto enquanto o indicador de progresso baixa a atualização.",
+            "Quando a atualização estiver pronta, salve seu trabalho e escolha Reiniciar para fechar o Beam e executar o instalador."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "As atualizações continuam sob seu controle",
+            "text": "O Beam não baixa automaticamente uma atualização disponível nem a instala quando você sai normalmente. A instalação começa somente depois que você escolhe Reiniciar no estado baixado."
+          }
+        },
+        {
+          "title": "Se o atualizador falhar",
+          "paragraphs": [
+            "Use Copiar erro para guardar a mensagem de diagnóstico e baixe manualmente o pacote correto na [versão mais recente do Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Seus projetos ficam armazenados separadamente da instalação do aplicativo."
+          ]
+        }
+      ]
+    }
   ]
 }

@@ -13,7 +13,17 @@
     ]
   },
   "categories": [
-    { "title": "Rekorder-App", "details": "Wähle eine Quelle, bereite Audio- und Kameraspuren vor und steuere die Aufnahme über das kompakte HUD.", "link": "/recorder/", "visual": "recorder" },
-    { "title": "Videoeditor", "details": "Gestalte Timing, Bildausschnitt, Zooms, Cursorbewegung, Untertitel, Ton und Export in einem Arbeitsbereich.", "link": "/editor/", "visual": "editor" }
+    {
+      "title": "Rekorder-App",
+      "details": "Wähle eine Quelle, bereite Audio- und Kameraspuren vor und steuere die Aufnahme über das kompakte HUD.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "Videoeditor",
+      "details": "Gestalte Timing, Bildausschnitt, Zooms, Cursorbewegung, Untertitel, Ton und Export in einem Arbeitsbereich.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
   ]
 }

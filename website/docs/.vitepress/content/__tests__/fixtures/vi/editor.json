@@ -6,9 +6,33 @@
       "description": "Tìm hiểu không gian làm việc và quy trình chỉnh sửa không phá hủy của trình chỉnh sửa video Beam.",
       "lead": "Trình chỉnh sửa video biến các phiên đã ghi và phương tiện nhập vào thành demo sản phẩm được dàn dựng trong khi vẫn giữ nguyên tài liệu nguồn ban đầu.",
       "sections": [
-        { "title": "Một không gian làm việc", "paragraphs": ["Trình chỉnh sửa kết hợp canvas xem trước, timeline nhiều track, bảng thuộc tính, điều khiển phát, thao tác dự án và xuất. Chọn một mục sẽ hiển thị các điều khiển phù hợp với mục đó."], "screenshot": { "path": "editor/editor-overview.webp", "alt": "Tổng quan không gian làm việc của trình chỉnh sửa video Beam", "caption": "Canvas, thuộc tính, phát và timeline luôn hiện trong không gian chỉnh sửa." } },
-        { "title": "Dàn dựng không phá hủy", "paragraphs": ["Các chỉnh sửa trên timeline mô tả cách sắp xếp và trình bày clip nguồn. Cắt, tách, biến đổi, thu phóng, chú thích và kiểu hiển thị không ghi đè các tệp bản ghi gốc."] },
-        { "title": "Từ ghi hình đến xuất", "steps": ["Mở trình chỉnh sửa sau khi ghi hoặc chọn một dự án hiện có.", "Sắp xếp clip và thời gian trên timeline.", "Tạo kiểu cho canvas, clip, con trỏ, mức thu phóng, chú thích và âm thanh.", "Xem trước toàn bộ dàn dựng.", "Chọn định dạng xuất, độ phân giải và cài đặt chất lượng."] }
+        {
+          "title": "Một không gian làm việc",
+          "paragraphs": [
+            "Trình chỉnh sửa kết hợp canvas xem trước, timeline nhiều track, bảng thuộc tính, điều khiển phát, thao tác dự án và xuất. Chọn một mục sẽ hiển thị các điều khiển phù hợp với mục đó."
+          ],
+          "screenshot": {
+            "path": "editor/editor-overview.webp",
+            "alt": "Tổng quan không gian làm việc của trình chỉnh sửa video Beam",
+            "caption": "Canvas, thuộc tính, phát và timeline luôn hiện trong không gian chỉnh sửa."
+          }
+        },
+        {
+          "title": "Dàn dựng không phá hủy",
+          "paragraphs": [
+            "Các chỉnh sửa trên timeline mô tả cách sắp xếp và trình bày clip nguồn. Cắt, tách, biến đổi, thu phóng, chú thích và kiểu hiển thị không ghi đè các tệp bản ghi gốc."
+          ]
+        },
+        {
+          "title": "Từ ghi hình đến xuất",
+          "steps": [
+            "Mở trình chỉnh sửa sau khi ghi hoặc chọn một dự án hiện có.",
+            "Sắp xếp clip và thời gian trên timeline.",
+            "Tạo kiểu cho canvas, clip, con trỏ, mức thu phóng, chú thích và âm thanh.",
+            "Xem trước toàn bộ dàn dựng.",
+            "Chọn định dạng xuất, độ phân giải và cài đặt chất lượng."
+          ]
+        }
       ]
     },
     {
@@ -17,11 +41,60 @@
       "description": "Tìm hiểu canvas, thanh bên, thuộc tính, timeline, phát và điều khiển xuất trong Beam.",
       "lead": "Trình chỉnh sửa đặt điều khiển dự án chung ở trên cùng, phần hình ảnh ở giữa, thuộc tính ở bên cạnh và thời gian ở phía dưới.",
       "sections": [
-        { "title": "Thanh trên cùng", "bullets": ["Thoát về HUD đưa bạn trở lại trình quay.", "Hoàn tác và làm lại di chuyển qua các thao tác chỉnh sửa được hỗ trợ.", "Tiêu đề dự án và trạng thái lưu xác định dự án hiện tại.", "Discord mở cộng đồng Beam.", "Xuất video mở các điều khiển xuất."] },
-        { "title": "Canvas và thanh công cụ", "paragraphs": ["Canvas xem trước khung hình đã dàn dựng. Thanh công cụ thay đổi tỷ lệ khung hình đầu ra, vào chế độ cắt, bật tắt lưới căn chỉnh và điều khiển mức thu phóng khung nhìn mà không thay đổi bản dàn dựng được xuất."], "screenshot": { "path": "editor/canvas-properties.webp", "alt": "Canvas Beam bên cạnh bảng thuộc tính đang hoạt động", "caption": "Chọn canvas hoặc một mục timeline để hiển thị các điều khiển chỉnh sửa." } },
-        { "title": "Thanh bên và thuộc tính", "bullets": ["Canvas điều khiển nền đầu ra và bề mặt trình bày.", "Clip điều khiển clip video, webcam, âm thanh, làm mờ, hình ảnh hoặc chú thích đã chọn.", "Thu phóng chỉnh sửa khối thu phóng đã chọn hoặc tạo thu phóng tự động.", "Con trỏ điều khiển giao diện, phản hồi nhấp chuột và chuyển động.", "Chú thích tạo hoặc tạo kiểu cho chú thích văn bản và bàn phím.", "Âm thanh điều khiển mức âm thanh chung, hệ thống và micrô.", "Cài đặt điều khiển tùy chọn ứng dụng và quyền truy cập trình quay."] },
-        { "title": "Thanh công cụ timeline", "bullets": ["Thêm nhập video, hình ảnh, âm thanh, văn bản hoặc mục làm mờ.", "Tách chia clip đã chọn tại đầu phát.", "Hút nam châm căn chỉnh chỉnh sửa với các ranh giới gần đó.", "Điều khiển phát chuyển đến đầu hoặc cuối rồi phát hoặc tạm dừng.", "Thu phóng timeline thay đổi thang thời gian hiển thị."] },
-        { "title": "Các track trên timeline", "paragraphs": ["Khi có các nguồn tương ứng, track đại diện cho video, webcam, làm mờ, thu phóng, chú thích văn bản, chú thích bàn phím, âm thanh hệ thống và âm thanh micrô. Chọn, di chuyển, sắp xếp, cắt, tách, bật hoặc hủy liên kết các mục được hỗ trợ khỏi bản dàn dựng."], "screenshot": { "path": "editor/timeline.webp", "alt": "Timeline nhiều track của Beam với track hình ảnh, thu phóng, chú thích và âm thanh", "caption": "Timeline giữ phần trình bày, chú thích và âm thanh thẳng hàng với một đầu phát." } }
+        {
+          "title": "Thanh trên cùng",
+          "bullets": [
+            "Thoát về HUD đưa bạn trở lại trình quay.",
+            "Hoàn tác và làm lại di chuyển qua các thao tác chỉnh sửa được hỗ trợ.",
+            "Tiêu đề dự án và trạng thái lưu xác định dự án hiện tại.",
+            "Discord mở cộng đồng Beam.",
+            "Xuất video mở các điều khiển xuất."
+          ]
+        },
+        {
+          "title": "Canvas và thanh công cụ",
+          "paragraphs": [
+            "Canvas xem trước khung hình đã dàn dựng. Thanh công cụ thay đổi tỷ lệ khung hình đầu ra, vào chế độ cắt, bật tắt lưới căn chỉnh và điều khiển mức thu phóng khung nhìn mà không thay đổi bản dàn dựng được xuất."
+          ],
+          "screenshot": {
+            "path": "editor/canvas-properties.webp",
+            "alt": "Canvas Beam bên cạnh bảng thuộc tính đang hoạt động",
+            "caption": "Chọn canvas hoặc một mục timeline để hiển thị các điều khiển chỉnh sửa."
+          }
+        },
+        {
+          "title": "Thanh bên và thuộc tính",
+          "bullets": [
+            "Canvas điều khiển nền đầu ra và bề mặt trình bày.",
+            "Clip điều khiển clip video, webcam, âm thanh, làm mờ, hình ảnh hoặc chú thích đã chọn.",
+            "Thu phóng chỉnh sửa khối thu phóng đã chọn hoặc tạo thu phóng tự động.",
+            "Con trỏ điều khiển giao diện, phản hồi nhấp chuột và chuyển động.",
+            "Chú thích tạo hoặc tạo kiểu cho chú thích văn bản và bàn phím.",
+            "Âm thanh điều khiển mức âm thanh chung, hệ thống và micrô.",
+            "Cài đặt điều khiển tùy chọn ứng dụng và quyền truy cập trình quay."
+          ]
+        },
+        {
+          "title": "Thanh công cụ timeline",
+          "bullets": [
+            "Thêm nhập video, hình ảnh, âm thanh, văn bản hoặc mục làm mờ.",
+            "Tách chia clip đã chọn tại đầu phát.",
+            "Hút nam châm căn chỉnh chỉnh sửa với các ranh giới gần đó.",
+            "Điều khiển phát chuyển đến đầu hoặc cuối rồi phát hoặc tạm dừng.",
+            "Thu phóng timeline thay đổi thang thời gian hiển thị."
+          ]
+        },
+        {
+          "title": "Các track trên timeline",
+          "paragraphs": [
+            "Khi có các nguồn tương ứng, track đại diện cho video, webcam, làm mờ, thu phóng, chú thích văn bản, chú thích bàn phím, âm thanh hệ thống và âm thanh micrô. Chọn, di chuyển, sắp xếp, cắt, tách, bật hoặc hủy liên kết các mục được hỗ trợ khỏi bản dàn dựng."
+          ],
+          "screenshot": {
+            "path": "editor/timeline.webp",
+            "alt": "Timeline nhiều track của Beam với track hình ảnh, thu phóng, chú thích và âm thanh",
+            "caption": "Timeline giữ phần trình bày, chú thích và âm thanh thẳng hàng với một đầu phát."
+          }
+        }
       ]
     },
     {
@@ -30,13 +103,71 @@
       "description": "Chỉnh sửa thời gian, kiểu canvas, mức thu phóng, chuyển động con trỏ, chú thích, âm thanh, làm mờ và phương tiện đã nhập trong Beam.",
       "lead": "Beam kết hợp các thao tác timeline chính xác với điều khiển trình bày dành cho demo sản phẩm.",
       "sections": [
-        { "title": "Chỉnh sửa timeline", "bullets": ["Di chuyển và sắp xếp lại các clip hình ảnh được hỗ trợ.", "Cắt ranh giới clip và tách tại đầu phát.", "Bật tính năng hút để căn chỉnh chính xác.", "Thu phóng timeline mà không thay đổi đầu ra.", "Bật, tắt, hủy liên kết hoặc xóa các mục dàn dựng được hỗ trợ."] },
-        { "title": "Phương tiện đã nhập", "paragraphs": ["Thêm tệp video, hình ảnh và âm thanh được hỗ trợ từ menu Thêm trên timeline hoặc kéo phương tiện cục bộ vào trình chỉnh sửa. Mục đã nhập được chèn tại đầu phát sau khi xác thực."], "notice": { "kind": "info", "title": "Hỗ trợ codec", "text": "Việc nhập và phát phương tiện phụ thuộc vào codec có sẵn cho Beam. Tệp không được hỗ trợ hoặc không hợp lệ sẽ bị từ chối cùng lý do." } },
-        { "title": "Giao diện canvas và clip", "bullets": ["Chọn nền hình ảnh, video, màu hoặc chuyển màu và nhập phương tiện nền tùy chỉnh.", "Điều chỉnh độ mờ nền và cách trình bày canvas đầu ra.", "Định vị, đổi kích thước, cắt và lật các clip hình ảnh được hỗ trợ.", "Áp dụng bán kính góc, bóng đặc hoặc thích ứng, đường viền và khung kiểu cửa sổ.", "Điều chỉnh tốc độ phát cho các clip được hỗ trợ."] },
-        { "title": "Thu phóng và trình bày con trỏ", "paragraphs": ["Tạo các khối thu phóng tự động từ sự kiện nhấp chuột đã ghi hoặc thêm điểm tập trung thủ công. Chế độ tự động đi theo con trỏ đã ghi khi thu phóng hoạt động. Mỗi khối thu phóng điều khiển thời gian, chế độ tập trung, vị trí và độ phóng đại. Điều khiển con trỏ thay đổi kiểu, kích thước, màu, bóng, nảy khi nhấp, hiệu ứng gợn trái phải, làm mượt, khối lượng lò xo và làm mờ chuyển động."], "screenshot": { "path": "editor/zoom-cursor-captions.webp", "alt": "Điều khiển chỉnh sửa thu phóng, con trỏ và chú thích của Beam", "caption": "Điều khiển tập trung và trình bày giúp hướng sự chú ý mà không thay đổi bản ghi nguồn." } },
-        { "title": "Chú thích", "paragraphs": ["Tạo phụ đề chuyển giọng nói thành văn bản cục bộ bằng Whisper từ âm thanh micrô hoặc hệ thống. Tải xuống và xác minh mô hình được hỗ trợ, tạo chú thích rồi chỉnh sửa các clip chú thích và kiểu hiển thị. Chú thích phím tắt sử dụng siêu dữ liệu tương tác an toàn được ghi khi có quyền."], "notice": { "kind": "tip", "title": "Chuyển lời cục bộ", "text": "Chuyển lời Whisper chạy trên thiết bị. Không cần tải lên đám mây hoặc khóa API." } },
-        { "title": "Âm thanh và làm mờ", "paragraphs": ["Điều khiển âm lượng đầu ra chung và trạng thái bật hoặc mức của track hệ thống và micrô. Thêm clip làm mờ để che hoặc làm mềm một phần bản dàn dựng bằng các điều khiển hình dạng, cường độ, làm mềm biên, bán kính góc, màu phủ và màu sắc."] },
-        { "title": "Xuất", "paragraphs": ["Kết xuất bản dàn dựng hiện tại thành MP4 hoặc WebM với điều khiển độ phân giải và chất lượng. Xem [xuất và chia sẻ](/export) để biết toàn bộ quy trình."] }
+        {
+          "title": "Chỉnh sửa timeline",
+          "bullets": [
+            "Di chuyển và sắp xếp lại các clip hình ảnh được hỗ trợ.",
+            "Cắt ranh giới clip và tách tại đầu phát.",
+            "Bật tính năng hút để căn chỉnh chính xác.",
+            "Thu phóng timeline mà không thay đổi đầu ra.",
+            "Bật, tắt, hủy liên kết hoặc xóa các mục dàn dựng được hỗ trợ."
+          ]
+        },
+        {
+          "title": "Phương tiện đã nhập",
+          "paragraphs": [
+            "Thêm tệp video, hình ảnh và âm thanh được hỗ trợ từ menu Thêm trên timeline hoặc kéo phương tiện cục bộ vào trình chỉnh sửa. Mục đã nhập được chèn tại đầu phát sau khi xác thực."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Hỗ trợ codec",
+            "text": "Việc nhập và phát phương tiện phụ thuộc vào codec có sẵn cho Beam. Tệp không được hỗ trợ hoặc không hợp lệ sẽ bị từ chối cùng lý do."
+          }
+        },
+        {
+          "title": "Giao diện canvas và clip",
+          "bullets": [
+            "Chọn nền hình ảnh, video, màu hoặc chuyển màu và nhập phương tiện nền tùy chỉnh.",
+            "Điều chỉnh độ mờ nền và cách trình bày canvas đầu ra.",
+            "Định vị, đổi kích thước, cắt và lật các clip hình ảnh được hỗ trợ.",
+            "Áp dụng bán kính góc, bóng đặc hoặc thích ứng, đường viền và khung kiểu cửa sổ.",
+            "Điều chỉnh tốc độ phát cho các clip được hỗ trợ."
+          ]
+        },
+        {
+          "title": "Thu phóng và trình bày con trỏ",
+          "paragraphs": [
+            "Tạo các khối thu phóng tự động từ sự kiện nhấp chuột đã ghi hoặc thêm điểm tập trung thủ công. Chế độ tự động đi theo con trỏ đã ghi khi thu phóng hoạt động. Mỗi khối thu phóng điều khiển thời gian, chế độ tập trung, vị trí và độ phóng đại. Điều khiển con trỏ thay đổi kiểu, kích thước, màu, bóng, nảy khi nhấp, hiệu ứng gợn trái phải, làm mượt, khối lượng lò xo và làm mờ chuyển động."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-cursor-captions.webp",
+            "alt": "Điều khiển chỉnh sửa thu phóng, con trỏ và chú thích của Beam",
+            "caption": "Điều khiển tập trung và trình bày giúp hướng sự chú ý mà không thay đổi bản ghi nguồn."
+          }
+        },
+        {
+          "title": "Chú thích",
+          "paragraphs": [
+            "Tạo phụ đề chuyển giọng nói thành văn bản cục bộ bằng Whisper từ âm thanh micrô hoặc hệ thống. Tải xuống và xác minh mô hình được hỗ trợ, tạo chú thích rồi chỉnh sửa các clip chú thích và kiểu hiển thị. Chú thích phím tắt sử dụng siêu dữ liệu tương tác an toàn được ghi khi có quyền."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Chuyển lời cục bộ",
+            "text": "Chuyển lời Whisper chạy trên thiết bị. Không cần tải lên đám mây hoặc khóa API."
+          }
+        },
+        {
+          "title": "Âm thanh và làm mờ",
+          "paragraphs": [
+            "Điều khiển âm lượng đầu ra chung và trạng thái bật hoặc mức của track hệ thống và micrô. Thêm clip làm mờ để che hoặc làm mềm một phần bản dàn dựng bằng các điều khiển hình dạng, cường độ, làm mềm biên, bán kính góc, màu phủ và màu sắc."
+          ]
+        },
+        {
+          "title": "Xuất",
+          "paragraphs": [
+            "Kết xuất bản dàn dựng hiện tại thành MP4 hoặc WebM với điều khiển độ phân giải và chất lượng. Xem [xuất và chia sẻ](/export) để biết toàn bộ quy trình."
+          ]
+        }
       ]
     }
   ]

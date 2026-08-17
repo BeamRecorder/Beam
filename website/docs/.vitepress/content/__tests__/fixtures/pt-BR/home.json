@@ -1,6 +1,29 @@
 {
   "title": "Documentação do Beam",
   "description": "Aprenda a gravar, editar e compartilhar demonstrações de produtos refinadas com o Beam.",
-  "hero": { "name": "Documentação do Beam", "text": "Grave. Edite. Compartilhe.", "tagline": "Guias práticos para capturar e aprimorar demonstrações de produtos com o Beam.", "imageAlt": "Ícone do aplicativo Beam", "actions": [ { "theme": "brand", "text": "Primeiros passos", "link": "/getting-started" }, { "theme": "alt", "text": "Ver no GitHub", "link": "https://github.com/ExtraBinoss/Beam" }, { "theme": "alt", "text": "Entrar no Discord", "link": "https://discord.gg/6Q6v2xUCB" } ] },
-  "categories": [ { "title": "Aplicativo de gravação", "details": "Escolha uma fonte, prepare as faixas de áudio e câmera e controle a gravação pelo HUD compacto.", "link": "/recorder/", "visual": "recorder" }, { "title": "Editor de vídeo", "details": "Ajuste tempo, enquadramento, zooms, movimento do cursor, legendas, som e exportação em um só espaço de trabalho.", "link": "/editor/", "visual": "editor" } ]
+  "hero": {
+    "name": "Documentação do Beam",
+    "text": "Grave. Edite. Compartilhe.",
+    "tagline": "Guias práticos para capturar e aprimorar demonstrações de produtos com o Beam.",
+    "imageAlt": "Ícone do aplicativo Beam",
+    "actions": [
+      { "theme": "brand", "text": "Primeiros passos", "link": "/getting-started" },
+      { "theme": "alt", "text": "Ver no GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Entrar no Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    {
+      "title": "Aplicativo de gravação",
+      "details": "Escolha uma fonte, prepare as faixas de áudio e câmera e controle a gravação pelo HUD compacto.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "Editor de vídeo",
+      "details": "Ajuste tempo, enquadramento, zooms, movimento do cursor, legendas, som e exportação em um só espaço de trabalho.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
+  ]
 }

@@ -6,10 +6,52 @@
       "description": "Installiere Beam, erteile die erforderlichen Berechtigungen und erstelle deine erste Aufnahme.",
       "lead": "Beam vereint einen fokussierten Rekorder und einen nicht-destruktiven Videoeditor in einer Desktop-Anwendung.",
       "sections": [
-        { "title": "Beam installieren", "paragraphs": ["Lade die neueste Version von der [Beam-Release-Seite](https://github.com/ExtraBinoss/Beam/releases/latest) herunter. Wähle das Paket für dein Betriebssystem."], "bullets": ["Windows verwendet den nativen Installer.", "macOS verwendet ein DMG für Apple-Silicon-Macs mit macOS 13 oder neuer.", "Linux bietet AppImage-, DEB- und RPM-Pakete."] },
-        { "title": "Deine erste Aufnahme erstellen", "steps": ["Öffne Beam und wähle im Rekorder-HUD Bildschirm oder Fenster.", "Wähle einen Bildschirm, ein Anwendungsfenster oder einen benutzerdefinierten Bereich.", "Wähle die benötigten Mikrofon-, Systemaudio- und Kameraquellen.", "Starte die Aufnahme und verwende die Rekorderleiste zum Pausieren, Fortsetzen oder Stoppen.", "Stoppe die Aufnahme und warte, bis Beam das Projekt im Videoeditor öffnet."], "screenshot": { "path": "getting-started/first-recording.webp", "alt": "Beam-Rekorder für eine erste Aufnahme vorbereitet", "caption": "Wähle die Aufnahme- und Medienquellen vor dem Start aus." } },
-        { "title": "Berechtigungen erteilen, wenn du dazu aufgefordert wirst", "paragraphs": ["Das Betriebssystem kann Berechtigungen für Bildschirmaufnahme, Mikrofon, Kamera oder Interaktionen anfordern. Beam fordert Zugriff nur an, wenn die jeweilige Funktion ihn benötigt."], "notice": { "kind": "info", "title": "Plattformunterschiede", "text": "Quellenauswahl und Berechtigungsdialoge unterscheiden sich zwischen Windows, macOS, Linux, X11 und Wayland. Lies vor einer wichtigen Aufnahme die [Plattformunterstützung](/platforms)." } },
-        { "title": "Weiterlernen", "bullets": ["Lerne die [Rekorder-Oberfläche](/recorder/interface) kennen.", "Sieh dir alle [Rekorder-Funktionen](/recorder/capabilities) an.", "Verstehe die [Videoeditor-Oberfläche](/editor/interface).", "Bereite die endgültige Datei mit [Export und Teilen](/export) vor."] }
+        {
+          "title": "Beam installieren",
+          "paragraphs": [
+            "Lade die neueste Version von der [Beam-Release-Seite](https://github.com/ExtraBinoss/Beam/releases/latest) herunter. Wähle das Paket für dein Betriebssystem."
+          ],
+          "bullets": [
+            "Windows verwendet den nativen Installer.",
+            "macOS verwendet ein DMG für Apple-Silicon-Macs mit macOS 13 oder neuer.",
+            "Linux bietet AppImage-, DEB- und RPM-Pakete."
+          ]
+        },
+        {
+          "title": "Deine erste Aufnahme erstellen",
+          "steps": [
+            "Öffne Beam und wähle im Rekorder-HUD Bildschirm oder Fenster.",
+            "Wähle einen Bildschirm, ein Anwendungsfenster oder einen benutzerdefinierten Bereich.",
+            "Wähle die benötigten Mikrofon-, Systemaudio- und Kameraquellen.",
+            "Starte die Aufnahme und verwende die Rekorderleiste zum Pausieren, Fortsetzen oder Stoppen.",
+            "Stoppe die Aufnahme und warte, bis Beam das Projekt im Videoeditor öffnet."
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Beam-Rekorder für eine erste Aufnahme vorbereitet",
+            "caption": "Wähle die Aufnahme- und Medienquellen vor dem Start aus."
+          }
+        },
+        {
+          "title": "Berechtigungen erteilen, wenn du dazu aufgefordert wirst",
+          "paragraphs": [
+            "Das Betriebssystem kann Berechtigungen für Bildschirmaufnahme, Mikrofon, Kamera oder Interaktionen anfordern. Beam fordert Zugriff nur an, wenn die jeweilige Funktion ihn benötigt."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Plattformunterschiede",
+            "text": "Quellenauswahl und Berechtigungsdialoge unterscheiden sich zwischen Windows, macOS, Linux, X11 und Wayland. Lies vor einer wichtigen Aufnahme die [Plattformunterstützung](/platforms)."
+          }
+        },
+        {
+          "title": "Weiterlernen",
+          "bullets": [
+            "Lerne die [Rekorder-Oberfläche](/recorder/interface) kennen.",
+            "Sieh dir alle [Rekorder-Funktionen](/recorder/capabilities) an.",
+            "Verstehe die [Videoeditor-Oberfläche](/editor/interface).",
+            "Bereite die endgültige Datei mit [Export und Teilen](/export) vor."
+          ]
+        }
       ]
     },
     {
@@ -18,9 +60,37 @@
       "description": "Prüfe, lade herunter und installiere Beam-Updates aus dem Rekorder oder Videoeditor.",
       "lead": "Installierte Beam-Versionen können GitHub Releases auf eine neue Version prüfen, ohne sie automatisch herunterzuladen oder zu installieren.",
       "sections": [
-        { "title": "Update-Steuerung öffnen", "paragraphs": ["Öffne im Rekorder-HUD die Einstellungen und suche den Bereich Updates. Dieselben Steuerelemente sind auch in den Einstellungen des Videoeditors verfügbar. Entwicklungs-Builds melden, dass Updates nur in der installierten App verfügbar sind."], "screenshot": { "path": "getting-started/update-controls.webp", "alt": "Beam-Einstellungen mit Update-Steuerung", "caption": "Das Update-Panel zeigt die installierte Version und die verfügbaren Update-Aktionen." } },
-        { "title": "Ein Update installieren", "steps": ["Wähle Nach Updates suchen.", "Wenn eine Version verfügbar ist, lies das Änderungsprotokoll und wähle Herunterladen.", "Lass Beam geöffnet, während der Fortschrittsindikator das Update herunterlädt.", "Wenn das Update bereit ist, speichere deine Arbeit und wähle Neustart, um Beam zu schließen und den Installer auszuführen."], "notice": { "kind": "info", "title": "Updates bleiben unter deiner Kontrolle", "text": "Beam lädt ein verfügbares Update nicht automatisch herunter und installiert es nicht beim normalen Beenden. Die Installation beginnt erst, wenn du im heruntergeladenen Zustand Neustart wählst." } },
-        { "title": "Wenn der Updater fehlschlägt", "paragraphs": ["Verwende Fehler kopieren, um die Diagnose zu sichern, und lade das richtige Paket manuell vom [neuesten Beam-Release](https://github.com/ExtraBinoss/Beam/releases/latest) herunter. Deine Projekte werden getrennt von der App-Installation gespeichert."] }
+        {
+          "title": "Update-Steuerung öffnen",
+          "paragraphs": [
+            "Öffne im Rekorder-HUD die Einstellungen und suche den Bereich Updates. Dieselben Steuerelemente sind auch in den Einstellungen des Videoeditors verfügbar. Entwicklungs-Builds melden, dass Updates nur in der installierten App verfügbar sind."
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "Beam-Einstellungen mit Update-Steuerung",
+            "caption": "Das Update-Panel zeigt die installierte Version und die verfügbaren Update-Aktionen."
+          }
+        },
+        {
+          "title": "Ein Update installieren",
+          "steps": [
+            "Wähle Nach Updates suchen.",
+            "Wenn eine Version verfügbar ist, lies das Änderungsprotokoll und wähle Herunterladen.",
+            "Lass Beam geöffnet, während der Fortschrittsindikator das Update herunterlädt.",
+            "Wenn das Update bereit ist, speichere deine Arbeit und wähle Neustart, um Beam zu schließen und den Installer auszuführen."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Updates bleiben unter deiner Kontrolle",
+            "text": "Beam lädt ein verfügbares Update nicht automatisch herunter und installiert es nicht beim normalen Beenden. Die Installation beginnt erst, wenn du im heruntergeladenen Zustand Neustart wählst."
+          }
+        },
+        {
+          "title": "Wenn der Updater fehlschlägt",
+          "paragraphs": [
+            "Verwende Fehler kopieren, um die Diagnose zu sichern, und lade das richtige Paket manuell vom [neuesten Beam-Release](https://github.com/ExtraBinoss/Beam/releases/latest) herunter. Deine Projekte werden getrennt von der App-Installation gespeichert."
+          ]
+        }
       ]
     }
   ]

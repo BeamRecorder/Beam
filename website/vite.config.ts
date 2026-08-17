@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from 'node:url';
 import vue from '@vitejs/plugin-vue';
+import type { ViteSSGOptions } from 'vite-ssg';
 import { defineConfig } from 'vitest/config';
 import Sitemap from 'vite-plugin-sitemap';
 
@@ -33,7 +34,7 @@ export default defineConfig({
   ssgOptions: {
     dirStyle: 'flat',
     formatting: 'prettify',
-  },
+  } satisfies ViteSSGOptions,
   server: {
     host: '127.0.0.1',
     port: 7000,

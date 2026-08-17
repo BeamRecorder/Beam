@@ -161,7 +161,11 @@ export default defineConfig({
     ]);
     languageLinks.push([
       'link',
-      { rel: 'alternate', hreflang: 'x-default', href: new URL(localizedDocsPath(pageData.relativePath, 'en'), siteUrl).toString() },
+      {
+        rel: 'alternate',
+        hreflang: 'x-default',
+        href: new URL(localizedDocsPath(pageData.relativePath, 'en'), siteUrl).toString(),
+      },
     ]);
 
     return [

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
 import { loadWebsiteDemoProject, WEBSITE_DEMO_FILES, type WebsiteDemoFileKey } from './website-demo-project';
 
 const SESSION_ID = 'homepage-session';
@@ -153,7 +154,7 @@ const createBundleResponses = (): ResponseMap => {
     sessions: [{ sessionId: SESSION_ID }],
     editor: {
       composition: {
-        schemaVersion: 3,
+        schemaVersion: COMPOSITION_SCHEMA_VERSION,
         assets: [
           {
             id: 'original-screen-asset',

@@ -1,7 +1,174 @@
 {
   "pages": [
-    { "slug": "editor/index", "title": "Przegląd edytora wideo", "description": "Poznaj obszar roboczy edytora wideo Beam i niedestrukcyjny sposób edycji.", "lead": "Edytor przekształca nagrane sesje i zaimportowane multimedia w złożoną prezentację produktu, zachowując oryginalny materiał źródłowy.", "sections": [ { "title": "Jeden obszar roboczy", "paragraphs": ["Edytor łączy obszar podglądu, wielościeżkową oś czasu, skoncentrowany panel właściwości, elementy sterujące odtwarzaniem, działania projektu i eksport. Wybranie elementu odsłania właściwe dla niego elementy sterujące."], "screenshot": { "path": "editor/editor-overview.webp", "alt": "Przegląd obszaru roboczego edytora wideo Beam", "caption": "Obszar roboczy, właściwości, odtwarzanie i oś czasu pozostają widoczne podczas edycji." } }, { "title": "Niedestrukcyjna kompozycja", "paragraphs": ["Edycje osi czasu opisują sposób ułożenia i prezentacji klipów źródłowych. Przycinanie, dzielenie, transformacje, powiększenia, napisy i styl wizualny nie nadpisują oryginalnych plików nagrań."] }, { "title": "Od nagrania do eksportu", "steps": ["Otwórz edytor po nagraniu lub wybierz istniejący projekt.", "Ułóż klipy i czas na osi czasu.", "Nadaj styl obszarowi roboczemu, klipom, kursorowi, powiększeniom, napisom i dźwiękowi.", "Wyświetl podgląd pełnej kompozycji.", "Wybierz format eksportu, rozdzielczość i ustawienie jakości."] } ] },
-    { "slug": "editor/interface", "title": "Interfejs edytora wideo", "description": "Poznaj obszar roboczy, pasek boczny, właściwości, oś czasu, odtwarzanie i elementy sterujące eksportem w Beam.", "lead": "Edytor trzyma globalne elementy sterujące projektu u góry, pracę wizualną pośrodku, właściwości z boku, a czas na dole.", "sections": [ { "title": "Górny pasek", "bullets": ["Wyjście do HUD-u wraca do rejestratora.", "Cofnij i Ponów przechodzą przez obsługiwane działania edycji.", "Tytuł projektu i stan zapisu identyfikują bieżący projekt.", "Discord otwiera społeczność Beam.", "Eksportuj wideo otwiera elementy sterujące eksportem."] }, { "title": "Obszar roboczy i pasek narzędzi", "paragraphs": ["Obszar roboczy wyświetla podgląd złożonej klatki. Jego pasek narzędzi zmienia proporcje wyjściowe, uruchamia tryb przycinania, przełącza siatkę wyrównania i steruje powiększeniem widoku bez zmiany eksportowanej kompozycji."], "screenshot": { "path": "editor/canvas-properties.webp", "alt": "Obszar roboczy Beam obok aktywnego panelu właściwości", "caption": "Wybierz obszar roboczy lub element osi czasu, aby wyświetlić elementy sterujące edycją." } }, { "title": "Pasek boczny i właściwości", "bullets": ["Obszar roboczy steruje tłem wyjściowym i powierzchnią prezentacji.", "Klip steruje wybranym klipem wideo, kamery internetowej, dźwięku, rozmycia, obrazu lub napisów.", "Powiększenie edytuje wybrany blok powiększenia albo generuje powiększenia automatyczne.", "Kursor steruje wyglądem, reakcją na kliknięcia i ruchem.", "Napisy generują lub stylizują tekst i napisy klawiaturowe.", "Dźwięk steruje poziomami globalnym, systemowym i mikrofonu.", "Ustawienia sterują preferencjami aplikacji i dostępem rejestratora."] }, { "title": "Pasek narzędzi osi czasu", "bullets": ["Dodaj importuje elementy wideo, obrazu, dźwięku, tekstu lub rozmycia.", "Podziel dzieli wybrany klip w miejscu głowicy odtwarzania.", "Przyciąganie magnetyczne wyrównuje edycje z pobliskimi granicami.", "Elementy sterujące odtwarzaniem przechodzą na początek lub koniec oraz odtwarzają i wstrzymują materiał.", "Powiększenie osi czasu zmienia widoczną skalę czasu."] }, { "title": "Ścieżki osi czasu", "paragraphs": ["Ścieżki reprezentują wideo, kamerę internetową, rozmycie, powiększenie, napisy tekstowe, napisy klawiaturowe, dźwięk systemowy i dźwięk mikrofonu, gdy te źródła istnieją. Obsługiwane elementy kompozycji można wybierać, przesuwać, zmieniać kolejność, przycinać, dzielić, włączać, wyłączać lub odłączać."], "screenshot": { "path": "editor/timeline.webp", "alt": "Wielościeżkowa oś czasu Beam ze ścieżkami wizualnymi, powiększenia, napisów i dźwięku", "caption": "Oś czasu utrzymuje prezentację, napisy i dźwięk wyrównane względem jednej głowicy odtwarzania." } } ] },
-    { "slug": "editor/capabilities", "title": "Możliwości edytora wideo", "description": "Edytuj czas, styl obszaru roboczego, powiększenia, ruch kursora, napisy, dźwięk, rozmycie i zaimportowane multimedia w Beam.", "lead": "Beam łączy precyzyjne operacje osi czasu z elementami sterującymi prezentacją zaprojektowanymi dla prezentacji produktów.", "sections": [ { "title": "Edycja osi czasu", "bullets": ["Przesuwaj i zmieniaj kolejność obsługiwanych klipów wizualnych.", "Przycinaj granice klipów i dziel je w miejscu głowicy odtwarzania.", "Włącz przyciąganie, aby uzyskać precyzyjne wyrównanie.", "Powiększaj oś czasu bez zmiany wyjścia.", "Włączaj, wyłączaj, odłączaj lub usuwaj obsługiwane elementy kompozycji."] }, { "title": "Zaimportowane multimedia", "paragraphs": ["Dodawaj obsługiwane pliki wideo, obrazów i dźwięku z menu Dodaj osi czasu albo przeciągając lokalne multimedia do edytora. Zaimportowane elementy są wstawiane w miejscu głowicy po sprawdzeniu."], "notice": { "kind": "info", "title": "Obsługa kodeków", "text": "Import i odtwarzanie multimediów zależą od kodeków dostępnych dla Beam. Nieobsługiwane lub nieprawidłowe pliki są odrzucane z podaniem przyczyny." } }, { "title": "Wygląd obszaru roboczego i klipu", "bullets": ["Wybieraj tła obrazów, wideo, kolorów lub gradientów i importuj niestandardowe multimedia tła.", "Dostosuj rozmycie tła i prezentację wyjściowego obszaru roboczego.", "Pozycjonuj, zmieniaj rozmiar, przycinaj i odbijaj obsługiwane klipy wizualne.", "Stosuj promień narożników, cienie jednolite lub adaptacyjne, obramowania i ramki w stylu okna.", "Dostosuj prędkość odtwarzania obsługiwanych klipów."] }, { "title": "Powiększenia i prezentacja kursora", "paragraphs": ["Generuj automatyczne bloki powiększenia ze zarejestrowanych kliknięć albo dodawaj ręczne punkty skupienia. Tryb automatyczny śledzi zarejestrowany kursor, gdy powiększenie jest aktywne. Każdy blok steruje czasem, trybem skupienia, położeniem i powiększeniem. Elementy sterujące kursora zmieniają styl, rozmiar, kolor, cień, odbicie po kliknięciu, lewy i prawy efekt fali, wygładzanie, masę sprężyny i rozmycie ruchu."], "screenshot": { "path": "editor/zoom-cursor-captions.webp", "alt": "Elementy sterujące edycją powiększenia, kursora i napisów w Beam", "caption": "Elementy skupienia i prezentacji pomagają kierować uwagę bez zmiany przechwyconego źródła." } }, { "title": "Napisy", "paragraphs": ["Generuj lokalnie napisy z mowy za pomocą Whispera na podstawie mikrofonu lub dźwięku systemowego. Pobierz i zweryfikuj obsługiwany model, wygeneruj napisy, a następnie edytuj wynikowe klipy i ich styl wizualny. Napisy skrótów klawiaturowych korzystają z bezpiecznych metadanych interakcji zarejestrowanych za zgodą."], "notice": { "kind": "tip", "title": "Transkrypcja lokalna", "text": "Transkrypcja Whisper działa na urządzeniu. Nie wymaga wysyłania danych do chmury ani klucza API." } }, { "title": "Dźwięk i rozmycie", "paragraphs": ["Steruj globalną głośnością wyjściową oraz stanem i poziomem ścieżek systemowych i mikrofonu. Dodaj klipy rozmycia, aby zasłonić lub zmiękczyć część kompozycji za pomocą ustawień kształtu, siły, wtapiania, promienia narożników, odcienia i koloru."] }, { "title": "Eksport", "paragraphs": ["Renderuj bieżącą kompozycję do MP4 lub WebM z ustawieniami rozdzielczości i jakości. Pełny przebieg znajdziesz w sekcji [eksport i udostępnianie](/export)."] } ] }
+    {
+      "slug": "editor/index",
+      "title": "Przegląd edytora wideo",
+      "description": "Poznaj obszar roboczy edytora wideo Beam i niedestrukcyjny sposób edycji.",
+      "lead": "Edytor przekształca nagrane sesje i zaimportowane multimedia w złożoną prezentację produktu, zachowując oryginalny materiał źródłowy.",
+      "sections": [
+        {
+          "title": "Jeden obszar roboczy",
+          "paragraphs": [
+            "Edytor łączy obszar podglądu, wielościeżkową oś czasu, skoncentrowany panel właściwości, elementy sterujące odtwarzaniem, działania projektu i eksport. Wybranie elementu odsłania właściwe dla niego elementy sterujące."
+          ],
+          "screenshot": {
+            "path": "editor/editor-overview.webp",
+            "alt": "Przegląd obszaru roboczego edytora wideo Beam",
+            "caption": "Obszar roboczy, właściwości, odtwarzanie i oś czasu pozostają widoczne podczas edycji."
+          }
+        },
+        {
+          "title": "Niedestrukcyjna kompozycja",
+          "paragraphs": [
+            "Edycje osi czasu opisują sposób ułożenia i prezentacji klipów źródłowych. Przycinanie, dzielenie, transformacje, powiększenia, napisy i styl wizualny nie nadpisują oryginalnych plików nagrań."
+          ]
+        },
+        {
+          "title": "Od nagrania do eksportu",
+          "steps": [
+            "Otwórz edytor po nagraniu lub wybierz istniejący projekt.",
+            "Ułóż klipy i czas na osi czasu.",
+            "Nadaj styl obszarowi roboczemu, klipom, kursorowi, powiększeniom, napisom i dźwiękowi.",
+            "Wyświetl podgląd pełnej kompozycji.",
+            "Wybierz format eksportu, rozdzielczość i ustawienie jakości."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/interface",
+      "title": "Interfejs edytora wideo",
+      "description": "Poznaj obszar roboczy, pasek boczny, właściwości, oś czasu, odtwarzanie i elementy sterujące eksportem w Beam.",
+      "lead": "Edytor trzyma globalne elementy sterujące projektu u góry, pracę wizualną pośrodku, właściwości z boku, a czas na dole.",
+      "sections": [
+        {
+          "title": "Górny pasek",
+          "bullets": [
+            "Wyjście do HUD-u wraca do rejestratora.",
+            "Cofnij i Ponów przechodzą przez obsługiwane działania edycji.",
+            "Tytuł projektu i stan zapisu identyfikują bieżący projekt.",
+            "Discord otwiera społeczność Beam.",
+            "Eksportuj wideo otwiera elementy sterujące eksportem."
+          ]
+        },
+        {
+          "title": "Obszar roboczy i pasek narzędzi",
+          "paragraphs": [
+            "Obszar roboczy wyświetla podgląd złożonej klatki. Jego pasek narzędzi zmienia proporcje wyjściowe, uruchamia tryb przycinania, przełącza siatkę wyrównania i steruje powiększeniem widoku bez zmiany eksportowanej kompozycji."
+          ],
+          "screenshot": {
+            "path": "editor/canvas-properties.webp",
+            "alt": "Obszar roboczy Beam obok aktywnego panelu właściwości",
+            "caption": "Wybierz obszar roboczy lub element osi czasu, aby wyświetlić elementy sterujące edycją."
+          }
+        },
+        {
+          "title": "Pasek boczny i właściwości",
+          "bullets": [
+            "Obszar roboczy steruje tłem wyjściowym i powierzchnią prezentacji.",
+            "Klip steruje wybranym klipem wideo, kamery internetowej, dźwięku, rozmycia, obrazu lub napisów.",
+            "Powiększenie edytuje wybrany blok powiększenia albo generuje powiększenia automatyczne.",
+            "Kursor steruje wyglądem, reakcją na kliknięcia i ruchem.",
+            "Napisy generują lub stylizują tekst i napisy klawiaturowe.",
+            "Dźwięk steruje poziomami globalnym, systemowym i mikrofonu.",
+            "Ustawienia sterują preferencjami aplikacji i dostępem rejestratora."
+          ]
+        },
+        {
+          "title": "Pasek narzędzi osi czasu",
+          "bullets": [
+            "Dodaj importuje elementy wideo, obrazu, dźwięku, tekstu lub rozmycia.",
+            "Podziel dzieli wybrany klip w miejscu głowicy odtwarzania.",
+            "Przyciąganie magnetyczne wyrównuje edycje z pobliskimi granicami.",
+            "Elementy sterujące odtwarzaniem przechodzą na początek lub koniec oraz odtwarzają i wstrzymują materiał.",
+            "Powiększenie osi czasu zmienia widoczną skalę czasu."
+          ]
+        },
+        {
+          "title": "Ścieżki osi czasu",
+          "paragraphs": [
+            "Ścieżki reprezentują wideo, kamerę internetową, rozmycie, powiększenie, napisy tekstowe, napisy klawiaturowe, dźwięk systemowy i dźwięk mikrofonu, gdy te źródła istnieją. Obsługiwane elementy kompozycji można wybierać, przesuwać, zmieniać kolejność, przycinać, dzielić, włączać, wyłączać lub odłączać."
+          ],
+          "screenshot": {
+            "path": "editor/timeline.webp",
+            "alt": "Wielościeżkowa oś czasu Beam ze ścieżkami wizualnymi, powiększenia, napisów i dźwięku",
+            "caption": "Oś czasu utrzymuje prezentację, napisy i dźwięk wyrównane względem jednej głowicy odtwarzania."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities",
+      "title": "Możliwości edytora wideo",
+      "description": "Edytuj czas, styl obszaru roboczego, powiększenia, ruch kursora, napisy, dźwięk, rozmycie i zaimportowane multimedia w Beam.",
+      "lead": "Beam łączy precyzyjne operacje osi czasu z elementami sterującymi prezentacją zaprojektowanymi dla prezentacji produktów.",
+      "sections": [
+        {
+          "title": "Edycja osi czasu",
+          "bullets": [
+            "Przesuwaj i zmieniaj kolejność obsługiwanych klipów wizualnych.",
+            "Przycinaj granice klipów i dziel je w miejscu głowicy odtwarzania.",
+            "Włącz przyciąganie, aby uzyskać precyzyjne wyrównanie.",
+            "Powiększaj oś czasu bez zmiany wyjścia.",
+            "Włączaj, wyłączaj, odłączaj lub usuwaj obsługiwane elementy kompozycji."
+          ]
+        },
+        {
+          "title": "Zaimportowane multimedia",
+          "paragraphs": [
+            "Dodawaj obsługiwane pliki wideo, obrazów i dźwięku z menu Dodaj osi czasu albo przeciągając lokalne multimedia do edytora. Zaimportowane elementy są wstawiane w miejscu głowicy po sprawdzeniu."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Obsługa kodeków",
+            "text": "Import i odtwarzanie multimediów zależą od kodeków dostępnych dla Beam. Nieobsługiwane lub nieprawidłowe pliki są odrzucane z podaniem przyczyny."
+          }
+        },
+        {
+          "title": "Wygląd obszaru roboczego i klipu",
+          "bullets": [
+            "Wybieraj tła obrazów, wideo, kolorów lub gradientów i importuj niestandardowe multimedia tła.",
+            "Dostosuj rozmycie tła i prezentację wyjściowego obszaru roboczego.",
+            "Pozycjonuj, zmieniaj rozmiar, przycinaj i odbijaj obsługiwane klipy wizualne.",
+            "Stosuj promień narożników, cienie jednolite lub adaptacyjne, obramowania i ramki w stylu okna.",
+            "Dostosuj prędkość odtwarzania obsługiwanych klipów."
+          ]
+        },
+        {
+          "title": "Powiększenia i prezentacja kursora",
+          "paragraphs": [
+            "Generuj automatyczne bloki powiększenia ze zarejestrowanych kliknięć albo dodawaj ręczne punkty skupienia. Tryb automatyczny śledzi zarejestrowany kursor, gdy powiększenie jest aktywne. Każdy blok steruje czasem, trybem skupienia, położeniem i powiększeniem. Elementy sterujące kursora zmieniają styl, rozmiar, kolor, cień, odbicie po kliknięciu, lewy i prawy efekt fali, wygładzanie, masę sprężyny i rozmycie ruchu."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-cursor-captions.webp",
+            "alt": "Elementy sterujące edycją powiększenia, kursora i napisów w Beam",
+            "caption": "Elementy skupienia i prezentacji pomagają kierować uwagę bez zmiany przechwyconego źródła."
+          }
+        },
+        {
+          "title": "Napisy",
+          "paragraphs": [
+            "Generuj lokalnie napisy z mowy za pomocą Whispera na podstawie mikrofonu lub dźwięku systemowego. Pobierz i zweryfikuj obsługiwany model, wygeneruj napisy, a następnie edytuj wynikowe klipy i ich styl wizualny. Napisy skrótów klawiaturowych korzystają z bezpiecznych metadanych interakcji zarejestrowanych za zgodą."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Transkrypcja lokalna",
+            "text": "Transkrypcja Whisper działa na urządzeniu. Nie wymaga wysyłania danych do chmury ani klucza API."
+          }
+        },
+        {
+          "title": "Dźwięk i rozmycie",
+          "paragraphs": [
+            "Steruj globalną głośnością wyjściową oraz stanem i poziomem ścieżek systemowych i mikrofonu. Dodaj klipy rozmycia, aby zasłonić lub zmiękczyć część kompozycji za pomocą ustawień kształtu, siły, wtapiania, promienia narożników, odcienia i koloru."
+          ]
+        },
+        {
+          "title": "Eksport",
+          "paragraphs": [
+            "Renderuj bieżącą kompozycję do MP4 lub WebM z ustawieniami rozdzielczości i jakości. Pełny przebieg znajdziesz w sekcji [eksport i udostępnianie](/export)."
+          ]
+        }
+      ]
+    }
   ]
 }

@@ -88,7 +88,13 @@ describe('FaqPage', () => {
 
   it('exposes comparison anchors for every named alternative', () => {
     const wrapper = mountFaq();
-    const comparisonIds = ['beam-vs-screen-studio', 'beam-vs-tella', 'beam-vs-openscreen', 'beam-vs-obs', 'beam-vs-loom'];
+    const comparisonIds = [
+      'beam-vs-screen-studio',
+      'beam-vs-tella',
+      'beam-vs-openscreen',
+      'beam-vs-obs',
+      'beam-vs-loom',
+    ];
 
     for (const id of comparisonIds) {
       wrapper.get(`#${id}`);
@@ -121,7 +127,9 @@ describe('FaqPage', () => {
     const items = localizedFaqItems('fr');
 
     expect(wrapper.get('h1').text()).toBe('Tout ce qu’il faut savoir sur Beam.');
-    expect(wrapper.text()).toContain('Des réponses factuelles sur Beam, ses fonctionnalités et les autres enregistreurs d’écran.');
+    expect(wrapper.text()).toContain(
+      'Des réponses factuelles sur Beam, ses fonctionnalités et les autres enregistreurs d’écran.',
+    );
     expect(wrapper.text()).toContain('Beam vs Screen Studio : quel enregistreur d’écran choisir ?');
     expect(wrapper.text()).not.toContain('Everything you need to know about Beam.');
 
