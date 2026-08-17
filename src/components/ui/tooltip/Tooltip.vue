@@ -16,6 +16,7 @@ const props = withDefaults(
     maxWidth?: number;
     delay?: number;
     as?: string;
+    interactive?: boolean;
   }>(),
   {
     position: 'top',
@@ -31,6 +32,7 @@ const contentRef = ref<HTMLElement | null>(null);
 const tooltipStyle = ref<Record<string, string>>({});
 const resolvedPosition = ref<'top' | 'bottom' | 'left' | 'right'>(props.position);
 let showTimer: ReturnType<typeof setTimeout> | null = null;
+let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
 const updatePosition = () => {
   const wrapper = wrapperRef.value;
@@ -73,6 +75,7 @@ const updatePosition = () => {
 const show = () => {
   if (props.disabled) return;
   if (showTimer) clearTimeout(showTimer);
+  if (hideTimer) clearTimeout(hideTimer);
   const delayMs = props.delay ?? 100;
   if (delayMs > 0) {
     showTimer = setTimeout(async () => {
@@ -91,7 +94,30 @@ const hide = () => {
     clearTimeout(showTimer);
     showTimer = null;
   }
+  if (props.interactive) {
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      visible.value = false;
+      hideTimer = null;
+    }, 80);
+    return;
+  }
   visible.value = false;
+};
+
+const keepOpen = () => {
+  if (hideTimer) clearTimeout(hideTimer);
+  hideTimer = null;
+  visible.value = true;
+};
+
+const closeInteractive = () => {
+  if (!props.interactive) return;
+  if (hideTimer) clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => {
+    visible.value = false;
+    hideTimer = null;
+  }, 80);
 };
 
 watch(
@@ -112,6 +138,7 @@ window.addEventListener('resize', updatePosition);
 window.addEventListener('scroll', updatePosition, true);
 onBeforeUnmount(() => {
   if (showTimer) clearTimeout(showTimer);
+  if (hideTimer) clearTimeout(hideTimer);
   window.removeEventListener('resize', updatePosition);
   window.removeEventListener('scroll', updatePosition, true);
 });
@@ -136,9 +163,11 @@ onBeforeUnmount(() => {
         v-if="visible && (content || $slots.content)"
         ref="contentRef"
         class="tooltip-content"
-        :class="[resolvedPosition, `tooltip-${variant}`]"
+        :class="[resolvedPosition, `tooltip-${variant}`, { 'tooltip-interactive': interactive }]"
         :style="{ ...tooltipStyle, ...(maxWidth ? { maxWidth: `${maxWidth}px` } : {}) }"
         role="tooltip"
+        @mouseenter="keepOpen"
+        @mouseleave="closeInteractive"
       >
         <slot name="content">{{ content }}</slot>
         <div class="tooltip-arrow" />
@@ -175,6 +204,45 @@ onBeforeUnmount(() => {
     0 8px 24px rgba(0, 0, 0, 0.35),
     0 2px 6px rgba(0, 0, 0, 0.2);
   pointer-events: none;
+}
+
+.tooltip-content.tooltip-interactive {
+  pointer-events: auto;
+}
+
+/* Safe-zone bridge so mouse can seamlessly traverse the offset gap between trigger and content */
+.tooltip-content.tooltip-interactive::before {
+  content: '';
+  position: absolute;
+  pointer-events: auto;
+}
+
+.tooltip-content.tooltip-interactive.bottom::before {
+  top: -12px;
+  left: -8px;
+  right: -8px;
+  height: 14px;
+}
+
+.tooltip-content.tooltip-interactive.top::before {
+  bottom: -12px;
+  left: -8px;
+  right: -8px;
+  height: 14px;
+}
+
+.tooltip-content.tooltip-interactive.left::before {
+  right: -12px;
+  top: -8px;
+  bottom: -8px;
+  width: 14px;
+}
+
+.tooltip-content.tooltip-interactive.right::before {
+  left: -12px;
+  top: -8px;
+  bottom: -8px;
+  width: 14px;
 }
 
 .tooltip-content.tooltip-error {

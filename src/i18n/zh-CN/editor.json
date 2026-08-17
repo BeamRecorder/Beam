@@ -39,6 +39,7 @@
     "keyboardCaptions": "键盘快捷键",
     "textCaptions": "文本字幕",
     "audio": "音频",
+    "media": "媒体",
     "settings": "设置",
     "logo": "徽标"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "完整",
     "previewQualityHalf": "二分之一分辨率",
     "previewQualityQuarter": "四分之一分辨率",
-    "previewQualityExportHint": "仅影响预览，导出仍保持完整质量。"
+    "previewQualityExportHint": "仅影响预览，导出仍保持完整质量。",
+    "previewQualitySuggestion": "预览出现卡顿。请尝试更轻量的代理。",
+    "previewQualityCriticalSuggestion": "预览仍然卡顿。请降低代理质量。"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "点击切换视频轨道",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "裁剪开头",
     "trimEnd": "裁剪结尾"
+  },
+  "PreviewPerformance": {
+    "title": "性能",
+    "ui": "界面",
+    "worker": "播放",
+    "audio": "音频",
+    "media": "媒体",
+    "warning": "预览可能会卡顿。",
+    "criticalWarning": "预览性能仍然受限。",
+    "reduceQuality": "切换到 {quality}",
+    "higherIsWorse": "曲线越高，负载越大",
+    "good": "正常",
+    "high": "较高",
+    "critical": "严重"
   },
   "Topbar": {
     "exitToHUD": "退出到 HUD",

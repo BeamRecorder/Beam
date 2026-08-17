@@ -31,8 +31,38 @@ const Button = {
   template:
     '<button v-bind="$attrs" :disabled="disabled" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" :data-tooltip-disabled="tooltipDisabled ? \'true\' : undefined" @click="$emit(\'click\')"><component v-if="icon" :is="icon" class="stub-icon" /><slot name="icon" /><slot /></button>',
 };
+const PreviewQualityPopover = {
+  props: ['modelValue', 'performanceSnapshot'],
+  emits: ['update:modelValue'],
+  template:
+    '<div class="preview-quality-popover-stub" :data-quality="modelValue" :data-status="performanceSnapshot?.status || \'idle\'" />',
+};
 
 describe('TimelineToolbar', () => {
+  it('passes the live performance snapshot to the preview quality control', () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: {
+        currentTime: 0,
+        duration: 100,
+        isPlaying: true,
+        zoomLevel: 100,
+        previewQuality: 'auto',
+        performanceSnapshot: {
+          status: 'warning',
+          scores: { ui: 0.7, worker: 0.2, audio: 0.2, media: 0.2 },
+          activity: { playback: true, media: true },
+          samples: [],
+          issues: ['ui'],
+          recommendation: 'half',
+        },
+      },
+      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button, PreviewQualityPopover } },
+    });
+
+    expect(wrapper.get('.preview-quality-popover-stub').attributes('data-status')).toBe('warning');
+    expect(wrapper.get('.preview-quality-popover-stub').attributes('data-quality')).toBe('auto');
+  });
+
   it('formats time cleanly, controls playback, adds elements and adjusts zoom', async () => {
     const wrapper = mount(TimelineToolbar, {
       props: { currentTime: 65.12, duration: 125.5, isPlaying: false, zoomLevel: 200 },

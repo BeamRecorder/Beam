@@ -39,6 +39,7 @@
     "keyboardCaptions": "鍵盤快速鍵",
     "textCaptions": "文字字幕",
     "audio": "音訊",
+    "media": "媒體",
     "settings": "設定",
     "logo": "標誌"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "完整",
     "previewQualityHalf": "二分之一解析度",
     "previewQualityQuarter": "四分之一解析度",
-    "previewQualityExportHint": "僅影響預覽，匯出仍維持完整品質。"
+    "previewQualityExportHint": "僅影響預覽，匯出仍維持完整品質。",
+    "previewQualitySuggestion": "預覽出現卡頓。請嘗試較輕量的代理。",
+    "previewQualityCriticalSuggestion": "預覽仍然卡頓。請降低代理品質。"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "點擊切換影片軌道",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "裁切開頭",
     "trimEnd": "裁切結尾"
+  },
+  "PreviewPerformance": {
+    "title": "效能",
+    "ui": "介面",
+    "worker": "播放",
+    "audio": "音訊",
+    "media": "媒體",
+    "warning": "預覽可能會卡頓。",
+    "criticalWarning": "預覽效能仍然受限。",
+    "reduceQuality": "切換至 {quality}",
+    "higherIsWorse": "曲線越高，負載越大",
+    "good": "正常",
+    "high": "較高",
+    "critical": "嚴重"
   },
   "Topbar": {
     "exitToHUD": "退出至 HUD",

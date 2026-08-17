@@ -112,6 +112,36 @@ describe('useVideoPlayer', () => {
     expect(player.isPlaying.value).toBe(false);
   });
 
+  it('exposes playback and audio performance metrics as reactive refs', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    const playbackMetrics = {
+      decodedFrames: 8,
+      presentedFrames: 7,
+      droppedFrames: 1,
+      supersededRequests: 0,
+      queueSize: 1,
+      cacheBytes: 128,
+      disposedBitmaps: 0,
+      seekLatencyMs: [6],
+    };
+    const audioMetrics = {
+      schedulePasses: 3,
+      scheduledBuffers: 9,
+      lateBuffers: 1,
+      scheduleErrors: 0,
+      maxLatenessMs: 24,
+      contextState: 'running',
+    };
+
+    engine.listeners.get('metrics')?.(playbackMetrics as never);
+    engine.listeners.get('audio-metrics')?.(audioMetrics as never);
+
+    expect(player.playbackMetrics.value).toEqual(playbackMetrics);
+    expect(player.audioMetrics.value).toEqual(audioMetrics);
+  });
+
   it('propagates preview quality to playback loads without adding it to export state', async () => {
     const player = useVideoPlayer([]);
     await player.loadComposition(composition);

@@ -39,6 +39,7 @@
     "keyboardCaptions": "Phụ đề phím tắt",
     "textCaptions": "Phụ đề văn bản",
     "audio": "Âm thanh",
+    "media": "Đa phương tiện",
     "settings": "Cài đặt",
     "logo": "Logo"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "Đầy đủ",
     "previewQualityHalf": "Nửa độ phân giải",
     "previewQualityQuarter": "Một phần tư độ phân giải",
-    "previewQualityExportHint": "Chỉ ảnh hưởng bản xem trước. Bản xuất vẫn giữ chất lượng đầy đủ."
+    "previewQualityExportHint": "Chỉ ảnh hưởng bản xem trước. Bản xuất vẫn giữ chất lượng đầy đủ.",
+    "previewQualitySuggestion": "Bản xem trước đang giật. Hãy thử proxy nhẹ hơn.",
+    "previewQualityCriticalSuggestion": "Bản xem trước vẫn giật. Hãy giảm chất lượng proxy."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Nhấp để bật/tắt rãnh Video",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "Cắt đầu đoạn",
     "trimEnd": "Cắt đuôi đoạn"
+  },
+  "PreviewPerformance": {
+    "title": "Hiệu năng",
+    "ui": "Giao diện",
+    "worker": "Phát lại",
+    "audio": "Âm thanh",
+    "media": "Đa phương tiện",
+    "warning": "Bản xem trước có thể bị giật.",
+    "criticalWarning": "Hiệu năng xem trước vẫn bị giới hạn.",
+    "reduceQuality": "Chuyển sang {quality}",
+    "higherIsWorse": "Đường biểu đồ cao hơn nghĩa là tải lớn hơn",
+    "good": "Ổn",
+    "high": "Cao",
+    "critical": "Nghiêm trọng"
   },
   "Topbar": {
     "exitToHUD": "Về màn hình chính",

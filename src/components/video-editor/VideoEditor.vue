@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, toRef, watch } from 'vue';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import SidebarPanel from '~/components/video-editor/sidebar/SidebarPanel.vue';
 import PropertiesPanel from '~/components/video-editor/properties/PropertiesPanel.vue';
@@ -43,6 +43,8 @@ import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-p
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
+import { usePreviewPerformanceMonitor } from './performance/usePreviewPerformanceMonitor';
+import { createMediaProcessingCollector, MEDIA_PROCESSING_COLLECTOR } from './performance/media-processing-pressure';
 
 const { t } = useTranslate('VideoEditor');
 const props = withDefaults(
@@ -58,6 +60,8 @@ const emit = defineEmits<{
   (event: 'open-project', project: CaptureProject): void;
   (event: 'start-recording', config: any): void;
 }>();
+const mediaProcessing = createMediaProcessingCollector();
+provide(MEDIA_PROCESSING_COLLECTOR, mediaProcessing);
 
 const {
   activeTab,
@@ -88,12 +92,23 @@ const {
   playbackError,
   frameVersion,
   previewQuality,
+  playbackMetrics,
+  audioMetrics,
   selectedBackground,
   selectedBackgroundMedia,
   backgroundBlurPercent,
   backgroundGroups,
   addBackground,
 } = player;
+const { snapshot: performanceSnapshot } = usePreviewPerformanceMonitor({
+  isPlaying,
+  playbackState,
+  previewQuality,
+  playbackMetrics,
+  audioMetrics,
+  mediaMetrics: mediaProcessing.metrics,
+  isReady: initialPlaybackSettled,
+});
 const {
   selectedCursor,
   cursorSize,
@@ -478,6 +493,7 @@ onBeforeUnmount(() => {
       :is-saving="editorState.isSaving.value"
       :can-undo="canUndo"
       :can-redo="canRedo"
+      :performance-snapshot="performanceSnapshot"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
       @undo="undo"
@@ -643,6 +659,7 @@ onBeforeUnmount(() => {
             v-model:zoom-level="timelineZoomLevel"
             v-model:is-snapping-enabled="isSnappingEnabled"
             v-model:preview-quality="previewQuality"
+            :performance-snapshot="performanceSnapshot"
             @update:is-playing="handlePlayingIntent"
             @update:current-time="handleSeekIntent"
             @add:element="addTimelineElement"
@@ -762,6 +779,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
   overflow: hidden;
+  position: relative;
 }
 .timeline-resize-handle {
   height: 12px;

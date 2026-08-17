@@ -209,6 +209,21 @@ afterEach(() => {
 });
 
 describe('AudioPlaybackScheduler', () => {
+  it('starts with an unavailable context and zero scheduling counters', () => {
+    const scheduler = new AudioPlaybackScheduler();
+
+    expect(scheduler.performanceMetrics).toEqual({
+      schedulePasses: 0,
+      scheduledBuffers: 0,
+      lateBuffers: 0,
+      scheduleErrors: 0,
+      maxLatenessMs: 0,
+      contextState: 'unavailable',
+    });
+
+    scheduler.dispose();
+  });
+
   it('decodes chunks sequentially and never schedules past the one-second horizon', async () => {
     const chunks = [
       { timestamp: 0, duration: 0.4 },
@@ -232,6 +247,63 @@ describe('AudioPlaybackScheduler', () => {
     expect(context.sources[3]!.start.mock.calls[0]![0]).toBeCloseTo(1.1);
     expect(context.sources[3]!.start.mock.calls[0]![1]).toBe(0);
     expect(context.sources[3]!.start.mock.calls[0]![2]).toBeCloseTo(0.4);
+    expect(scheduler.performanceMetrics).toMatchObject({
+      schedulePasses: 2,
+      scheduledBuffers: 4,
+      lateBuffers: 0,
+      scheduleErrors: 0,
+      contextState: 'running',
+    });
+    scheduler.dispose();
+  });
+
+  it('records late buffers when a queued chunk misses its scheduled context time', async () => {
+    runtime.buffersFactory.mockImplementation(() =>
+      iterator([
+        { timestamp: 0, duration: 0.1 },
+        { timestamp: 1.1, duration: 0.1 },
+      ]),
+    );
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(composition());
+    await scheduler.play(0, 1);
+
+    const context = FakeAudioContext.instances[0]!;
+    context.now = 2;
+    vi.advanceTimersByTime(100);
+    await flushMicrotasks();
+
+    expect(scheduler.performanceMetrics.lateBuffers).toBe(1);
+    expect(scheduler.performanceMetrics.maxLatenessMs).toBeCloseTo(900);
+    scheduler.dispose();
+  });
+
+  it('counts scheduling errors from a timer pass and exposes the current context state', async () => {
+    let nextCall = 0;
+    const scheduleIterator = {
+      next: vi.fn(async () => {
+        nextCall += 1;
+        if (nextCall === 1) return { done: false as const, value: { timestamp: 0, duration: 0.1, buffer: {} } };
+        if (nextCall === 2) return { done: false as const, value: { timestamp: 1.1, duration: 0.1, buffer: {} } };
+        throw new Error('audio iterator failed');
+      }),
+      return: vi.fn(async () => ({ done: true, value: undefined })),
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+    runtime.buffersFactory.mockImplementation(() => scheduleIterator);
+    const scheduler = new AudioPlaybackScheduler();
+    await scheduler.loadComposition(composition());
+    await scheduler.play(0, 1);
+
+    const context = FakeAudioContext.instances[0]!;
+    context.now = 0.2;
+    context.state = 'suspended';
+    vi.advanceTimersByTime(100);
+    await flushMicrotasks();
+
+    expect(scheduler.performanceMetrics).toMatchObject({ scheduleErrors: 1, contextState: 'suspended' });
     scheduler.dispose();
   });
 

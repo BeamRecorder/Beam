@@ -350,6 +350,7 @@ export class MediaPlaybackEngine {
       if (message.generation !== this.generation) return;
       this.metrics = { ...message.metrics, cacheBytes: this.cache.byteSize };
       this.emit('metrics', this.developmentMetrics);
+      this.emit('audio-metrics', this.audio.performanceMetrics);
       return;
     }
     const pendingSeek = message.requestId === undefined ? null : this.pendingSeeks.get(message.requestId);

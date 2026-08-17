@@ -561,6 +561,46 @@ describe('MediaPlaybackEngine', () => {
     expect(engine.state).toBe('error');
   });
 
+  it('emits audio metrics alongside current-generation worker metrics', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const audioMetrics = {
+      schedulePasses: 4,
+      scheduledBuffers: 12,
+      lateBuffers: 2,
+      scheduleErrors: 0,
+      maxLatenessMs: 38,
+      contextState: 'running' as const,
+    };
+    (audio as unknown as { performanceMetrics: typeof audioMetrics }).performanceMetrics = audioMetrics;
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const received: unknown[] = [];
+    engine.on('audio-metrics', (value) => received.push(value));
+
+    await load(engine, worker);
+    const currentSeek = worker.requests.at(-1) as Extract<PlaybackWorkerRequest, { type: 'seek' }>;
+    worker.emit({
+      type: 'metrics',
+      generation: currentSeek.generation,
+      metrics: {
+        decodedFrames: 3,
+        presentedFrames: 3,
+        droppedFrames: 0,
+        supersededRequests: 0,
+        queueSize: 1,
+        cacheBytes: 64,
+        disposedBitmaps: 0,
+        seekLatencyMs: [4],
+      },
+    });
+
+    expect(received).toEqual([audioMetrics]);
+    engine.dispose();
+  });
+
   it('closes a bitmap carried by an invalid worker response', async () => {
     const worker = new FakeWorker();
     const audio = new FakeAudio();

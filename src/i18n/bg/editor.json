@@ -39,6 +39,7 @@
     "keyboardCaptions": "Клавишни комбинации",
     "textCaptions": "Текстови субтитри",
     "audio": "Аудио",
+    "media": "Медия",
     "settings": "Настройки",
     "logo": "Лого"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "Пълна",
     "previewQualityHalf": "Половин разделителна способност",
     "previewQualityQuarter": "Четвърт разделителна способност",
-    "previewQualityExportHint": "Само за визуализацията. Експортът остава с пълно качество."
+    "previewQualityExportHint": "Само за визуализацията. Експортът остава с пълно качество.",
+    "previewQualitySuggestion": "Прегледът насича. Опитайте по-леко прокси.",
+    "previewQualityCriticalSuggestion": "Прегледът продължава да насича. Намалете качеството на проксито."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Щракнете за превключване на видеопистата",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "Изрязване на началото",
     "trimEnd": "Изрязване на края"
+  },
+  "PreviewPerformance": {
+    "title": "Производителност",
+    "ui": "Интерфейс",
+    "worker": "Възпроизвеждане",
+    "audio": "Аудио",
+    "media": "Медия",
+    "warning": "Прегледът може да насича.",
+    "criticalWarning": "Производителността на прегледа остава ограничена.",
+    "reduceQuality": "Превключване към {quality}",
+    "higherIsWorse": "По-високата крива означава повече натоварване",
+    "good": "Добре",
+    "high": "Високо",
+    "critical": "Критично"
   },
   "Topbar": {
     "exitToHUD": "Изход към HUD",

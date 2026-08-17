@@ -65,6 +65,7 @@
     "keyboardCaptions": "Raccourcis clavier",
     "textCaptions": "Sous-titres texte",
     "audio": "Audio",
+    "media": "Médias",
     "settings": "Paramètres",
     "logo": "Logo"
   },
@@ -137,7 +138,9 @@
     "previewQualityFullShort": "Pleine",
     "previewQualityHalf": "Demi-résolution",
     "previewQualityQuarter": "Quart de résolution",
-    "previewQualityExportHint": "Prévisualisation uniquement. L’export reste en pleine qualité."
+    "previewQualityExportHint": "Prévisualisation uniquement. L’export reste en pleine qualité.",
+    "previewQualitySuggestion": "La prévisualisation saccade. Essayez un proxy plus léger.",
+    "previewQualityCriticalSuggestion": "La prévisualisation saccade encore. Réduisez la qualité du proxy."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Cliquer pour activer/désactiver la piste vidéo",
@@ -189,6 +192,20 @@
   "TimelineVideoClip": {
     "trimStart": "Élaguer le début",
     "trimEnd": "Élaguer la fin"
+  },
+  "PreviewPerformance": {
+    "title": "Performances",
+    "ui": "Interface",
+    "worker": "Lecture",
+    "audio": "Audio",
+    "media": "Médias",
+    "warning": "La prévisualisation risque de saccader.",
+    "criticalWarning": "Les performances de prévisualisation restent limitées.",
+    "reduceQuality": "Passer en {quality}",
+    "higherIsWorse": "Une courbe haute indique plus de charge",
+    "good": "OK",
+    "high": "Élevé",
+    "critical": "Critique"
   },
   "Topbar": {
     "exitToHUD": "Quitter vers le HUD",

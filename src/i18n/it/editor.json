@@ -39,6 +39,7 @@
     "keyboardCaptions": "Scorciatoie da tastiera",
     "textCaptions": "Didascalie di testo",
     "audio": "Audio",
+    "media": "Media",
     "settings": "Impostazioni",
     "logo": "Logo"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "Completa",
     "previewQualityHalf": "Metà risoluzione",
     "previewQualityQuarter": "Un quarto di risoluzione",
-    "previewQualityExportHint": "Solo anteprima. L’esportazione resta a piena qualità."
+    "previewQualityExportHint": "Solo anteprima. L’esportazione resta a piena qualità.",
+    "previewQualitySuggestion": "L’anteprima rallenta. Prova un proxy più leggero.",
+    "previewQualityCriticalSuggestion": "L’anteprima rallenta ancora. Riduci la qualità del proxy."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Fai clic per attivare/disattivare la traccia video",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "Taglia inizio",
     "trimEnd": "Taglia fine"
+  },
+  "PreviewPerformance": {
+    "title": "Prestazioni",
+    "ui": "Interfaccia",
+    "worker": "Riproduzione",
+    "audio": "Audio",
+    "media": "Media",
+    "warning": "L’anteprima potrebbe scattare.",
+    "criticalWarning": "Le prestazioni dell’anteprima restano limitate.",
+    "reduceQuality": "Passa a {quality}",
+    "higherIsWorse": "Una curva più alta indica più carico",
+    "good": "OK",
+    "high": "Alto",
+    "critical": "Critico"
   },
   "Topbar": {
     "exitToHUD": "Esci dall'HUD",

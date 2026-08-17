@@ -1,5 +1,11 @@
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import { MediaPlaybackEngine, type PlaybackState, type PreviewQuality } from '~/media/playback';
+import {
+  MediaPlaybackEngine,
+  type AudioPlaybackMetrics,
+  type PlaybackMetrics,
+  type PlaybackState,
+  type PreviewQuality,
+} from '~/media/playback';
 import type { ClipComposition, MediaError } from '~/media/shared';
 import {
   BACKGROUND_MEDIA,
@@ -19,6 +25,8 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const playbackError = ref<MediaError | null>(null);
   const frameVersion = ref(0);
   const previewQuality = ref<PreviewQuality>('auto');
+  const playbackMetrics = ref<PlaybackMetrics | null>(null);
+  const audioMetrics = ref<AudioPlaybackMetrics | null>(null);
   let engine: MediaPlaybackEngine | null = null;
   let loadGeneration = 0;
   let playingIntent = false;
@@ -40,6 +48,12 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     engine.on('error', (value) => {
       playingIntent = false;
       playbackError.value = value;
+    });
+    engine.on('metrics', (value) => {
+      playbackMetrics.value = value;
+    });
+    engine.on('audio-metrics', (value) => {
+      audioMetrics.value = value;
     });
     engine.setVolume(volume.value);
     return engine;
@@ -141,6 +155,8 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
     playbackError,
     frameVersion,
     previewQuality,
+    playbackMetrics,
+    audioMetrics,
     selectedBackground,
     backgroundBlurPercent,
     selectedBackgroundMedia,

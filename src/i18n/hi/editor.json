@@ -39,6 +39,7 @@
     "keyboardCaptions": "कीबोर्ड शॉर्टकट",
     "textCaptions": "टेक्स्ट कैप्शन",
     "audio": "ऑडियो",
+    "media": "मीडिया",
     "settings": "सेटिंग",
     "logo": "लोगो"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "पूर्ण",
     "previewQualityHalf": "आधा रिज़ॉल्यूशन",
     "previewQualityQuarter": "चौथाई रिज़ॉल्यूशन",
-    "previewQualityExportHint": "केवल प्रीव्यू पर लागू। एक्सपोर्ट पूर्ण गुणवत्ता में रहेगा।"
+    "previewQualityExportHint": "केवल प्रीव्यू पर लागू। एक्सपोर्ट पूर्ण गुणवत्ता में रहेगा।",
+    "previewQualitySuggestion": "पूर्वावलोकन धीमा है। हल्का प्रॉक्सी आज़माएँ।",
+    "previewQualityCriticalSuggestion": "पूर्वावलोकन अभी भी धीमा है। प्रॉक्सी गुणवत्ता घटाएँ।"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "वीडियो ट्रैक टॉगल करने के लिए क्लिक करें",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "शुरुआत ट्रिम करें",
     "trimEnd": "अंत ट्रिम करें"
+  },
+  "PreviewPerformance": {
+    "title": "प्रदर्शन",
+    "ui": "यूआई",
+    "worker": "प्लेबैक",
+    "audio": "ऑडियो",
+    "media": "मीडिया",
+    "warning": "पूर्वावलोकन रुक-रुक कर चल सकता है।",
+    "criticalWarning": "पूर्वावलोकन प्रदर्शन अभी भी सीमित है।",
+    "reduceQuality": "{quality} पर जाएँ",
+    "higherIsWorse": "ऊँचा ग्राफ़ अधिक लोड दिखाता है",
+    "good": "ठीक",
+    "high": "अधिक",
+    "critical": "गंभीर"
   },
   "Topbar": {
     "exitToHUD": "HUD पर जाएँ",

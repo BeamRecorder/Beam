@@ -25,6 +25,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
 import type { PreviewQuality } from '~/media/playback';
 import PreviewQualityPopover from './PreviewQualityPopover.vue';
+import type { PreviewPerformanceSnapshot } from '../performance/preview-performance-types';
 
 const { t } = useTranslate('TimelineToolbar');
 
@@ -38,6 +39,7 @@ const props = withDefaults(
     isSnappingEnabled?: boolean;
     loading?: boolean;
     previewQuality?: PreviewQuality;
+    performanceSnapshot?: PreviewPerformanceSnapshot | null;
   }>(),
   { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false, previewQuality: 'auto' },
 );
@@ -178,6 +180,7 @@ const handleZoomOut = () => {
       <div class="right-section">
         <PreviewQualityPopover
           :model-value="previewQuality"
+          :performance-snapshot="performanceSnapshot"
           @update:model-value="emit('update:previewQuality', $event)"
         />
         <div class="zoom-controls">

@@ -65,6 +65,7 @@
     "keyboardCaptions": "Keyboard Captions",
     "textCaptions": "Text Captions",
     "audio": "Audio",
+    "media": "Media",
     "settings": "Settings",
     "logo": "Logo"
   },
@@ -137,7 +138,9 @@
     "previewQualityFullShort": "Full",
     "previewQualityHalf": "Half resolution",
     "previewQualityQuarter": "Quarter resolution",
-    "previewQualityExportHint": "Preview only. Export stays full quality."
+    "previewQualityExportHint": "Preview only. Export stays full quality.",
+    "previewQualitySuggestion": "Preview is struggling. Try a lighter proxy.",
+    "previewQualityCriticalSuggestion": "Preview is still struggling. Reduce proxy quality."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Click to toggle Video track",
@@ -189,6 +192,20 @@
   "TimelineVideoClip": {
     "trimStart": "Trim start",
     "trimEnd": "Trim end"
+  },
+  "PreviewPerformance": {
+    "title": "Performance",
+    "ui": "UI",
+    "worker": "Playback",
+    "audio": "Audio",
+    "media": "Media",
+    "warning": "Preview may stutter.",
+    "criticalWarning": "Preview performance is still limited.",
+    "reduceQuality": "Switch to {quality}",
+    "higherIsWorse": "Higher curve means more load",
+    "good": "OK",
+    "high": "High",
+    "critical": "Critical"
   },
   "Topbar": {
     "exitToHUD": "Exit to HUD",

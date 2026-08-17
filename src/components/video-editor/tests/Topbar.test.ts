@@ -42,4 +42,33 @@ describe('VideoEditor Topbar', () => {
     expect(wrapper.find('.window-controls').exists()).toBe(false);
     expect(wrapper.find('[aria-label="Maximize"]').exists()).toBe(false);
   });
+
+  it('renders the preview performance widget only when a snapshot is available', () => {
+    const PerformanceWidgetStub = {
+      props: ['snapshot'],
+      template: '<div class="preview-performance-widget-stub" :data-status="snapshot.status" />',
+    };
+    const snapshot = {
+      status: 'warning',
+      scores: { ui: 0.6, worker: 0.2, audio: 0.1, media: 0.2 },
+      activity: { playback: true, media: true },
+      samples: [],
+      issues: ['ui'],
+      recommendation: 'half',
+    };
+
+    const idleWrapper = mount(Topbar, {
+      props: {
+        performanceSnapshot: { ...snapshot, status: 'idle' },
+      },
+      global: { stubs: { PreviewPerformanceWidget: PerformanceWidgetStub } },
+    });
+    expect(idleWrapper.find('.preview-performance-widget-stub').exists()).toBe(true);
+
+    const activeWrapper = mount(Topbar, {
+      props: { performanceSnapshot: { ...snapshot, status: 'good' } },
+      global: { stubs: { PreviewPerformanceWidget: PerformanceWidgetStub } },
+    });
+    expect(activeWrapper.get('.preview-performance-widget-stub').attributes('data-status')).toBe('good');
+  });
 });

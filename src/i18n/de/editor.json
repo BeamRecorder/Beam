@@ -39,6 +39,7 @@
     "keyboardCaptions": "Tastaturkürzel",
     "textCaptions": "Textuntertitel",
     "audio": "Audio",
+    "media": "Medien",
     "settings": "Einstellungen",
     "logo": "Logo"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "Voll",
     "previewQualityHalf": "Halbe Auflösung",
     "previewQualityQuarter": "Viertelauflösung",
-    "previewQualityExportHint": "Nur für die Vorschau. Der Export bleibt in voller Qualität."
+    "previewQualityExportHint": "Nur für die Vorschau. Der Export bleibt in voller Qualität.",
+    "previewQualitySuggestion": "Die Vorschau ruckelt. Versuche einen leichteren Proxy.",
+    "previewQualityCriticalSuggestion": "Die Vorschau ruckelt weiter. Reduziere die Proxy-Qualität."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Klicke, um die Videospur umzuschalten",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "Anfang zuschneiden",
     "trimEnd": "Ende zuschneiden"
+  },
+  "PreviewPerformance": {
+    "title": "Leistung",
+    "ui": "UI",
+    "worker": "Wiedergabe",
+    "audio": "Audio",
+    "media": "Medien",
+    "warning": "Die Vorschau könnte ruckeln.",
+    "criticalWarning": "Die Vorschauleistung bleibt eingeschränkt.",
+    "reduceQuality": "Auf {quality} wechseln",
+    "higherIsWorse": "Eine höhere Kurve bedeutet mehr Last",
+    "good": "OK",
+    "high": "Hoch",
+    "critical": "Kritisch"
   },
   "Topbar": {
     "exitToHUD": "Zum HUD zurück",

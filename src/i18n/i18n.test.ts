@@ -98,6 +98,8 @@ describe('internationalization', () => {
       'previewQualityHalf',
       'previewQualityQuarter',
       'previewQualityExportHint',
+      'previewQualitySuggestion',
+      'previewQualityCriticalSuggestion',
     ];
 
     for (const locale of SUPPORTED_LOCALES) {
@@ -109,6 +111,39 @@ describe('internationalization', () => {
         expect(i18n.global.t(`TimelineToolbar.${key}`)).not.toBe(`TimelineToolbar.${key}`);
       }
     }
+  });
+
+  it('provides every preview performance label in every supported locale', () => {
+    const keys = [
+      'title',
+      'ui',
+      'worker',
+      'audio',
+      'media',
+      'warning',
+      'criticalWarning',
+      'reduceQuality',
+      'higherIsWorse',
+      'good',
+      'high',
+      'critical',
+    ];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(
+          i18n.global.te(`PreviewPerformance.${key}`, locale),
+          `${locale}: missing PreviewPerformance.${key}`,
+        ).toBe(true);
+        expect(i18n.global.t(`PreviewPerformance.${key}`)).not.toBe(`PreviewPerformance.${key}`);
+      }
+    }
+  });
+
+  it('uses the compact Performance title in the default locale', () => {
+    setCurrentLocale('en');
+    expect(i18n.global.t('PreviewPerformance.title')).toBe('Performance');
   });
 
   it('provides translated timeline clipboard feedback in every supported locale', () => {

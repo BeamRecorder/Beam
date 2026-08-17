@@ -39,6 +39,7 @@
     "keyboardCaptions": "Сочетания клавиш",
     "textCaptions": "Текстовые субтитры",
     "audio": "Аудио",
+    "media": "Медиа",
     "settings": "Настройки",
     "logo": "Логотип"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "Полное",
     "previewQualityHalf": "Половина разрешения",
     "previewQualityQuarter": "Четверть разрешения",
-    "previewQualityExportHint": "Только для предпросмотра. Экспорт остаётся в полном качестве."
+    "previewQualityExportHint": "Только для предпросмотра. Экспорт остаётся в полном качестве.",
+    "previewQualitySuggestion": "Предпросмотр тормозит. Попробуйте более лёгкий прокси.",
+    "previewQualityCriticalSuggestion": "Предпросмотр всё ещё тормозит. Снизьте качество прокси."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Нажмите, чтобы переключить видеодорожку",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "Обрезать начало",
     "trimEnd": "Обрезать конец"
+  },
+  "PreviewPerformance": {
+    "title": "Производительность",
+    "ui": "Интерфейс",
+    "worker": "Воспроизведение",
+    "audio": "Аудио",
+    "media": "Медиа",
+    "warning": "Предпросмотр может воспроизводиться рывками.",
+    "criticalWarning": "Производительность предпросмотра всё ещё ограничена.",
+    "reduceQuality": "Переключить на {quality}",
+    "higherIsWorse": "Чем выше график, тем больше нагрузка",
+    "good": "Норма",
+    "high": "Высокая",
+    "critical": "Критическая"
   },
   "Topbar": {
     "exitToHUD": "Выйти в HUD",

@@ -39,6 +39,7 @@
     "keyboardCaptions": "키보드 단축키",
     "textCaptions": "텍스트 자막",
     "audio": "오디오",
+    "media": "미디어",
     "settings": "설정",
     "logo": "로고"
   },
@@ -111,7 +112,9 @@
     "previewQualityFullShort": "전체",
     "previewQualityHalf": "절반 해상도",
     "previewQualityQuarter": "1/4 해상도",
-    "previewQualityExportHint": "미리보기에만 적용됩니다. 내보내기는 전체 품질을 유지합니다."
+    "previewQualityExportHint": "미리보기에만 적용됩니다. 내보내기는 전체 품질을 유지합니다.",
+    "previewQualitySuggestion": "미리보기가 끊깁니다. 더 가벼운 프록시를 사용해 보세요.",
+    "previewQualityCriticalSuggestion": "미리보기가 계속 끊깁니다. 프록시 품질을 낮추세요."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "클릭하여 동영상 트랙 전환",
@@ -161,6 +164,20 @@
   "TimelineVideoClip": {
     "trimStart": "시작 부분 자르기",
     "trimEnd": "끝 부분 자르기"
+  },
+  "PreviewPerformance": {
+    "title": "성능",
+    "ui": "UI",
+    "worker": "재생",
+    "audio": "오디오",
+    "media": "미디어",
+    "warning": "미리보기가 끊길 수 있습니다.",
+    "criticalWarning": "미리보기 성능이 계속 제한됩니다.",
+    "reduceQuality": "{quality}(으)로 전환",
+    "higherIsWorse": "그래프가 높을수록 부하가 큽니다",
+    "good": "정상",
+    "high": "높음",
+    "critical": "심각"
   },
   "Topbar": {
     "exitToHUD": "HUD로 나가기",
