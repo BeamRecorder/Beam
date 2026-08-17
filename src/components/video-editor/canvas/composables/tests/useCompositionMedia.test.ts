@@ -211,6 +211,7 @@ const context = () =>
     textAlign: '',
     textBaseline: '',
     lineJoin: '',
+    globalAlpha: 1,
   }) as unknown as CanvasRenderingContext2D;
 
 let wrapper: VueWrapper | undefined;
@@ -327,6 +328,29 @@ describe('useCompositionMedia', () => {
       applyBlurEffect.mock.invocationCallOrder[0],
     );
     expect(mounted.frameFor).toHaveBeenCalledWith('webcam');
+  });
+
+  it('plays the same preview entry transition at timeline zero and after a small offset', () => {
+    const zeroStart = visual('video', 'zero-start', 'video-asset', 0);
+    zeroStart.transitions = { entry: { preset: { kind: 'fade' }, durationMs: 1_000 }, exit: null };
+    mountComposable({ ...composition(), clips: [zeroStart] });
+    const zeroContext = context();
+    state.drawVisualStack(zeroContext, { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+
+    wrapper?.unmount();
+    wrapper = undefined;
+
+    const offsetStart = visual('video', 'offset-start', 'video-asset', 0);
+    offsetStart.timelineStartMs = 1;
+    offsetStart.transitions = { entry: { preset: { kind: 'fade' }, durationMs: 1_000 }, exit: null };
+    mountComposable({ ...composition(), clips: [offsetStart] });
+    const offsetContext = context();
+    state.drawVisualStack(offsetContext, { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+
+    expect(zeroContext.globalAlpha).toBeCloseTo(0.875, 6);
+    expect(offsetContext.globalAlpha).toBeCloseTo(0.874248499, 6);
+    wrapper?.unmount();
+    wrapper = undefined;
   });
 
   it('keeps loading frames absent and renders captions and loaded images', () => {

@@ -17,7 +17,6 @@ import type { OutputCanvasSettings } from '../output-canvas';
 import { applyBlurEffect } from '../../composition/effects/blur-effect';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
 import { drawWithClipTransition } from '../../composition/transitions/render-transition';
-import { resolveFrameIntroTransition } from '~/media/shared/clip-transitions';
 import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 
 export interface UseCompositionMediaOptions {
@@ -190,7 +189,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
   ) => {
     const layers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
     const timeMs = options.currentTime() * 1_000;
-    const intro = resolveFrameIntroTransition(layers.visualStack, timeMs);
     for (const clip of layers.visualStack) {
       drawWithClipTransition(
         ctx,
@@ -203,7 +201,6 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
           else if (clip.kind === 'webcam') drawWebcam(ctx, clip, window);
           else drawVisual(ctx, clip, window);
         },
-        intro?.clipId === clip.id,
       );
     }
   };
