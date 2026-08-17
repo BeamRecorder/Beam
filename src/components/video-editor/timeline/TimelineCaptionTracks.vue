@@ -19,11 +19,19 @@ defineProps<{
   leaveTrack: (kind: 'caption') => void;
   addAt: (event: MouseEvent, kind: 'caption') => void;
 }>();
-const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
+const emit = defineEmits<{
+  (event: 'select', clipId: string): void;
+  (event: 'contextmenu:clip', payload: { event: MouseEvent; clip: CaptionClip }): void;
+  (event: 'contextmenu:track', mouseEvent: MouseEvent): void;
+}>();
 </script>
 
 <template>
-  <div v-if="keyboardClips.length" class="track-row annotation-track keyboard-caption-track">
+  <div
+    v-if="keyboardClips.length"
+    class="track-row annotation-track keyboard-caption-track"
+    @contextmenu="emit('contextmenu:track', $event)"
+  >
     <div class="track-content annotation-content">
       <TransitionGroup name="caption-item">
         <button
@@ -34,6 +42,7 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
           :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
           @click.stop="emit('select', clip.id)"
+          @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
         >
           <span
@@ -56,7 +65,10 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
     </div>
   </div>
 
-  <div class="track-row annotation-track text-caption-track">
+  <div
+    class="track-row annotation-track text-caption-track"
+    @contextmenu="emit('contextmenu:track', $event)"
+  >
     <div
       class="track-content annotation-content"
       :title="t('clickToAddCaption')"
@@ -81,6 +93,7 @@ const emit = defineEmits<{ (event: 'select', clipId: string): void }>();
           :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
           @click.stop="emit('select', clip.id)"
+          @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
           @pointerdown="beginClipMove($event, clip)"
         >
           <span

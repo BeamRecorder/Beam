@@ -1,6 +1,7 @@
 import './VideoEditor.test.setup';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import { editorState, historyState, mountEditor, setEditorComponent, toast } from './VideoEditor.test.setup';
 
 const { default: VideoEditor } = await import('../VideoEditor.vue');
@@ -153,5 +154,53 @@ describe('VideoEditor', () => {
     editorState.store.player.playbackError.value = { ...playbackError, message: 'A different decode failure.' };
     await mounted.vm.$nextTick();
     expect(toast.error).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a pasted item from another project without mutating the timeline', async () => {
+    const mounted = mountEditor();
+    const compositionBefore = JSON.stringify(editorState.store.compositionState.composition.value);
+
+    await mounted.get('.timeline-paste-invalid').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(JSON.stringify(editorState.store.compositionState.composition.value)).toBe(compositionBefore);
+    expect(editorState.store.editorState.scheduleSave).not.toHaveBeenCalled();
+    expect(historyState.commitNow).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('project'), expect.any(Number));
+  });
+
+  it('pastes a clip at the playhead, overwrites its destination range, selects it and saves', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-paste-clip').trigger('click');
+    await mounted.vm.$nextTick();
+
+    const composition = editorState.store.compositionState.composition.value as ClipComposition;
+    const pasted = composition.clips.find(
+      (clip) => clip.kind === 'screen' && clip.timelineStartMs === 1_000 && clip.timelineDurationMs === 1_000,
+    );
+    expect(pasted).toBeDefined();
+    expect(composition.clips.filter((clip) => clip.kind === 'screen')).toHaveLength(2);
+    expect(editorState.store.compositionState.selectClip).toHaveBeenCalledWith(pasted!.id);
+    expect(editorState.store.compositionState.selectedClipId.value).toBe(pasted!.id);
+    expect(editorState.store.activeTab.value).toBe('clip');
+    expect(editorState.store.editorState.scheduleSave).toHaveBeenCalled();
+    expect(historyState.commitNow).toHaveBeenCalledWith(expect.objectContaining({ composition }));
+  });
+
+  it('delegates zoom pasting and keeps the pasted zoom selected', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-paste-zoom').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.zoomState.pasteZoomAtTime).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'copied-zoom', startMs: 0, endMs: 500 }),
+      1_000,
+    );
+    expect(editorState.store.zoomState.selectedZoomId.value).toBe('pasted-zoom');
+    expect(editorState.store.activeTab.value).toBe('zoom');
+    expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
+    expect(historyState.commitNow).toHaveBeenCalled();
   });
 });

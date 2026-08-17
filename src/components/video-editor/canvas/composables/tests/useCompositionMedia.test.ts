@@ -349,8 +349,6 @@ describe('useCompositionMedia', () => {
 
     expect(zeroContext.globalAlpha).toBeCloseTo(0.875, 6);
     expect(offsetContext.globalAlpha).toBeCloseTo(0.874248499, 6);
-    wrapper?.unmount();
-    wrapper = undefined;
   });
 
   it('keeps loading frames absent and renders captions and loaded images', () => {

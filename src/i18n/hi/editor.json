@@ -144,6 +144,10 @@
     "waveformUnavailable": "वेवफ़ॉर्म उपलब्ध नहीं है",
     "trimStart": "शुरुआत ट्रिम करें",
     "trimEnd": "अंत ट्रिम करें",
+    "holdSegment": "सेगमेंट रोकें",
+    "copy": "कॉपी करें",
+    "paste": "पेस्ट करें",
+    "delete": "हटाएं",
     "keyboardCaptions": "कीबोर्ड शॉर्टकट",
     "textCaptions": "टेक्स्ट कैप्शन"
   },

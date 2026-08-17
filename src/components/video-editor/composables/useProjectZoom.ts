@@ -2,6 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { ZoomElement } from '../zoom/zoom-types';
 import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
+import { pasteZoomAt } from '../zoom/zoom-paste';
 
 export function useProjectZoom(options: {
   editorData: Ref<ProjectEditorData | null | undefined>;
@@ -91,8 +92,13 @@ export function useProjectZoom(options: {
   const previewZoom = updateZoom;
   const deleteSelectedZoom = () => {
     if (!selectedZoomId.value) return;
-    zoomElements.value = zoomElements.value.filter((element) => element.id !== selectedZoomId.value);
-    selectedZoomId.value = null;
+    deleteZoomById(selectedZoomId.value);
+  };
+  const deleteZoomById = (id: string) => {
+    zoomElements.value = zoomElements.value.filter((element) => element.id !== id);
+    if (selectedZoomId.value === id) {
+      selectedZoomId.value = null;
+    }
   };
   const previewMoveZoom = (id: string, startMs: number, endMs: number) => {
     zoomElements.value = zoomElements.value.map((element) =>
@@ -100,6 +106,13 @@ export function useProjectZoom(options: {
     );
   };
   const moveZoom = previewMoveZoom;
+  const pasteZoomAtTime = (copiedZoom: ZoomElement, startMs: number) => {
+    const pasted = pasteZoomAt(zoomElements.value, copiedZoom, startMs, durationMs.value);
+    zoomElements.value = pasted.elements;
+    selectedZoomId.value = pasted.zoomId;
+    activeTab.value = 'zoom';
+    return zoomElements.value.find((zoom) => zoom.id === pasted.zoomId)!;
+  };
 
   return {
     zoomElements,
@@ -116,7 +129,9 @@ export function useProjectZoom(options: {
     trimZoomEdge,
     previewMoveZoom,
     moveZoom,
+    pasteZoomAtTime,
     previewZoom,
     deleteSelectedZoom,
+    deleteZoomById,
   };
 }

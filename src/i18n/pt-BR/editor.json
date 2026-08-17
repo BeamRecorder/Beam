@@ -144,6 +144,10 @@
     "waveformUnavailable": "Forma de onda indisponível",
     "trimStart": "Cortar início",
     "trimEnd": "Cortar fim",
+    "holdSegment": "Fixar segmento",
+    "copy": "Copiar",
+    "paste": "Colar",
+    "delete": "Excluir",
     "keyboardCaptions": "Atalhos do teclado",
     "textCaptions": "Legendas de texto"
   },

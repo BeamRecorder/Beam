@@ -1,47 +1,22 @@
 <script setup lang="ts">
 import { GripVertical, Keyboard, Mic, MousePointer, Type, Volume2 } from '@lucide/vue';
-import type { ExportProgress } from '../../export/export-types';
-import type { ZoomElement } from '../zoom/zoom-types';
-import type { ClipComposition } from '~/media/shared/composition-types';
 import TimelineClip from './TimelineClip.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
-import { computed } from 'vue';
+import { useTimelineContextMenu } from './composables/useTimelineContextMenu';
+import ContextMenu from '~/components/ui/context-menu/ContextMenu.vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
+import { getClipCategory } from './composables/useTimelineClipboard';
+import type { TimelineTracksEmits, TimelineTracksProps } from './composables/timeline-tracks-types';
 
 const { t } = useTranslate('TimelineTracks');
-const props = withDefaults(
-  defineProps<{
-    currentTime: number;
-    duration: number;
-    isPlaying: boolean;
-    zoomLevel: number;
-    exportProgress?: ExportProgress | null;
-    includeAudioInExport?: boolean;
-    zoomElements: ZoomElement[];
-    selectedZoomId: string | null;
-    composition: ClipComposition;
-    selectedClipId: string | null;
-    isSnappingEnabled?: boolean;
-  }>(),
-  { isSnappingEnabled: true, includeAudioInExport: true },
-);
-const emit = defineEmits<{
-  (event: 'update:currentTime', value: number): void;
-  (event: 'update:zoomLevel', value: number): void;
-  (event: 'select:zoom', zoomId: string): void;
-  (event: 'select:clip', clipId: string): void;
-  (event: 'toggle:clip', clipId: string): void;
-  (event: 'delete:clips', clipIds: string[]): void;
-  (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
-  (event: 'move:clip', payload: { id: string; startMs: number }): void;
-  (event: 'preview:composition', value: ClipComposition | null): void;
-  (event: 'trim:zoom', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
-  (event: 'move:zoom', payload: { id: string; startMs: number; endMs: number }): void;
-  (event: 'add:zoom', timeMs: number): void;
-  (event: 'add:caption', timeMs: number): void;
-  (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
-}>();
+const props = withDefaults(defineProps<TimelineTracksProps>(), {
+  isSnappingEnabled: true,
+  includeAudioInExport: true,
+  projectId: null,
+});
+const emit = defineEmits<TimelineTracksEmits>();
 
 const {
   visualTracks,
@@ -96,6 +71,58 @@ void tracksScrollRef;
 void sidebarScrollRef;
 void tracksViewportRef;
 void ticksAreaRef;
+
+const {
+  contextMenuState,
+  contextMenuItems,
+  openClipContextMenu,
+  openZoomContextMenu,
+  openTrackContextMenu,
+  closeContextMenu,
+  handleContextMenuSelect,
+  copySelected,
+  pasteClipboard,
+} = useTimelineContextMenu({
+  scopeId: computed(() => props.projectId ?? null),
+  currentTimeMs: computed(() => Math.round(props.currentTime * 1_000)),
+  composition: computed(() => props.composition),
+  zoomElements: computed(() => props.zoomElements),
+  selectedClipId: computed(() => props.selectedClipId),
+  selectedZoomId: computed(() => props.selectedZoomId),
+  assetFor,
+  emit,
+  t,
+});
+
+const selectedPasteTarget = computed(() => {
+  const clip = props.selectedClipId
+    ? (props.composition.clips.find((item) => item.id === props.selectedClipId) ?? null)
+    : null;
+  if (clip) return { category: getClipCategory(clip), trackId: clip.trackId ?? null } as const;
+  if (props.selectedZoomId) return { category: 'zoom' as const };
+  return null;
+});
+const isEditableTarget = (target: EventTarget | null) => {
+  const element = target instanceof Element ? target : document.activeElement;
+  if (!(element instanceof Element)) return false;
+  const tag = element.tagName.toLowerCase();
+  return ['input', 'textarea', 'select'].includes(tag) || element.getAttribute('contenteditable') === 'true';
+};
+const handleClipboardKeyDown = (event: KeyboardEvent) => {
+  if (!(event.ctrlKey || event.metaKey) || isEditableTarget(event.target)) return;
+  const key = event.key.toLowerCase();
+  if (key === 'c') {
+    if (!props.selectedClipId && !props.selectedZoomId) return;
+    event.preventDefault();
+    copySelected();
+  } else if (key === 'v') {
+    event.preventDefault();
+    pasteClipboard(selectedPasteTarget.value);
+  }
+};
+onMounted(() => window.addEventListener('keydown', handleClipboardKeyDown));
+onUnmounted(() => window.removeEventListener('keydown', handleClipboardKeyDown));
+
 const exportProgressPercent = computed(() => {
   const current = props.exportProgress?.currentTimeMs;
   const total = props.exportProgress?.totalTimeMs;
@@ -117,6 +144,7 @@ const exportProgressPercent = computed(() => {
               class="sidebar-track-item visual-track"
               :data-track-id="track.id"
               :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
+              @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
             >
               <button
                 type="button"
@@ -134,18 +162,25 @@ const exportProgressPercent = computed(() => {
             </div>
           </TransitionGroup>
 
-          <div class="sidebar-track-item cursor-track">
+          <div class="sidebar-track-item cursor-track" @contextmenu="openTrackContextMenu($event, 'zoom')">
             <div class="track-info static-info">
               <MousePointer class="track-icon" /><span class="track-title">{{ t('zooms') }}</span>
             </div>
           </div>
 
-          <div v-if="keyboardCaptionClips.length" class="sidebar-track-item annotation-track keyboard-caption-track">
+          <div
+            v-if="keyboardCaptionClips.length"
+            class="sidebar-track-item annotation-track keyboard-caption-track"
+            @contextmenu="openTrackContextMenu($event, 'caption')"
+          >
             <div class="track-info static-info">
               <Keyboard class="track-icon" /><span class="track-title">{{ t('keyboardCaptions') }}</span>
             </div>
           </div>
-          <div class="sidebar-track-item annotation-track text-caption-track">
+          <div
+            class="sidebar-track-item annotation-track text-caption-track"
+            @contextmenu="openTrackContextMenu($event, 'caption')"
+          >
             <div class="track-info static-info">
               <Type class="track-icon" /><span class="track-title">{{ t('textCaptions') }}</span>
             </div>
@@ -155,6 +190,7 @@ const exportProgressPercent = computed(() => {
             v-if="systemAudioClips.length"
             class="sidebar-track-item audio-track"
             :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
           >
             <div class="track-info">
               <Volume2 class="track-icon" /><span class="track-title">{{ t('system') }}</span>
@@ -168,6 +204,7 @@ const exportProgressPercent = computed(() => {
             v-if="microphoneClips.length"
             class="sidebar-track-item audio-track"
             :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
           >
             <div class="track-info">
               <Mic class="track-icon" /><span class="track-title">{{ t('mic') }}</span>
@@ -182,6 +219,7 @@ const exportProgressPercent = computed(() => {
             :key="clip.id"
             class="sidebar-track-item audio-track"
             :class="{ disabled: !includeAudioInExport || !clip.enabled }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
           >
             <div class="track-info">
               <Volume2 class="track-icon" /><span class="track-title">{{ clip.name }}</span>
@@ -245,6 +283,7 @@ const exportProgressPercent = computed(() => {
               class="track-row visual-track"
               :data-track-id="track.id"
               :class="{ disabled: !track.clips.some((clip) => clip.enabled), dragging: draggedTrackId === track.id }"
+              @contextmenu="openTrackContextMenu($event, 'visual', track.id)"
             >
               <div class="track-content visual-content">
                 <TimelineClip
@@ -258,6 +297,7 @@ const exportProgressPercent = computed(() => {
                   :trim-state="trimStateFor(clip.id)"
                   :defer-thumbnail-requests="movingClipIds.includes(clip.id)"
                   @select="emit('select:clip', clip.id)"
+                  @contextmenu="openClipContextMenu($event, clip)"
                   @move="beginClipMove($event, clip)"
                   @trim="beginClipTrim($event.event, clip, $event.edge)"
                 />
@@ -265,7 +305,7 @@ const exportProgressPercent = computed(() => {
             </div>
           </TransitionGroup>
 
-          <div class="track-row cursor-track">
+          <div class="track-row cursor-track" @contextmenu="openTrackContextMenu($event, 'zoom')">
             <div
               class="track-content cursor-content"
               :title="t('clickToAddZoom')"
@@ -291,6 +331,7 @@ const exportProgressPercent = computed(() => {
                   percentageStyle(displayedZoom(zoom).startMs, displayedZoom(zoom).endMs - displayedZoom(zoom).startMs)
                 "
                 @click.stop="emit('select:zoom', zoom.id)"
+                @contextmenu.prevent.stop="openZoomContextMenu($event, zoom)"
                 @pointerdown="beginZoomMove($event, zoom)"
               >
                 <span
@@ -331,12 +372,15 @@ const exportProgressPercent = computed(() => {
             :leave-track="leaveTrack"
             :add-at="addAt"
             @select="emit('select:clip', $event)"
+            @contextmenu:clip="openClipContextMenu($event.event, $event.clip)"
+            @contextmenu:track="openTrackContextMenu($event, 'caption')"
           />
 
           <div
             v-if="systemAudioClips.length"
             class="track-row audio-track"
             :class="{ disabled: !includeAudioInExport || !systemAudioClips.some((clip) => clip.enabled) }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
           >
             <div class="track-content audio-content">
               <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
@@ -356,6 +400,7 @@ const exportProgressPercent = computed(() => {
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
                 @select="emit('select:clip', clip.id)"
+                @contextmenu="openClipContextMenu($event, clip)"
                 @move="beginClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
@@ -366,6 +411,7 @@ const exportProgressPercent = computed(() => {
             v-if="microphoneClips.length"
             class="track-row audio-track"
             :class="{ disabled: !includeAudioInExport || !microphoneClips.some((clip) => clip.enabled) }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
           >
             <div class="track-content audio-content">
               <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
@@ -385,6 +431,7 @@ const exportProgressPercent = computed(() => {
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
                 @select="emit('select:clip', clip.id)"
+                @contextmenu="openClipContextMenu($event, clip)"
                 @move="beginClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
@@ -396,6 +443,7 @@ const exportProgressPercent = computed(() => {
             :key="clip.id"
             class="track-row audio-track"
             :class="{ disabled: !includeAudioInExport || !clip.enabled }"
+            @contextmenu="openTrackContextMenu($event, 'audio')"
           >
             <div class="track-content audio-content">
               <span v-if="!includeAudioInExport" class="export-audio-disabled">{{ t('audioDisabledFromExport') }}</span>
@@ -413,6 +461,7 @@ const exportProgressPercent = computed(() => {
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
                 @select="emit('select:clip', clip.id)"
+                @contextmenu="openClipContextMenu($event, clip)"
                 @move="beginClipMove($event, clip)"
                 @trim="beginClipTrim($event.event, clip, $event.edge)"
               />
@@ -421,6 +470,16 @@ const exportProgressPercent = computed(() => {
         </div>
       </div>
     </div>
+
+    <!-- Track & Clip Context Menu -->
+    <ContextMenu
+      :is-open="contextMenuState.isOpen"
+      :x="contextMenuState.x"
+      :y="contextMenuState.y"
+      :items="contextMenuItems"
+      @select="handleContextMenuSelect"
+      @close="closeContextMenu"
+    />
   </div>
 </template>
 

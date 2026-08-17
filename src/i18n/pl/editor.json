@@ -144,6 +144,10 @@
     "waveformUnavailable": "Przebieg fali niedostępny",
     "trimStart": "Przytnij początek",
     "trimEnd": "Przytnij koniec",
+    "holdSegment": "Zatrzymaj segment",
+    "copy": "Kopiuj",
+    "paste": "Wklej",
+    "delete": "Usuń",
     "keyboardCaptions": "Skróty klawiaturowe",
     "textCaptions": "Napisy tekstowe"
   },

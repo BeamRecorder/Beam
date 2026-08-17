@@ -144,6 +144,10 @@
     "waveformUnavailable": "Форма волны недоступна",
     "trimStart": "Обрезать начало",
     "trimEnd": "Обрезать конец",
+    "holdSegment": "Удерживать сегмент",
+    "copy": "Копировать",
+    "paste": "Вставить",
+    "delete": "Удалить",
     "keyboardCaptions": "Сочетания клавиш",
     "textCaptions": "Текстовые субтитры"
   },

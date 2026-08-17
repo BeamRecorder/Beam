@@ -168,7 +168,13 @@
     "unlinkMicrophoneTrack": "Unlink Microphone track",
     "waveformUnavailable": "Waveform unavailable",
     "trimStart": "Trim start",
-    "trimEnd": "Trim end"
+    "trimEnd": "Trim end",
+    "holdSegment": "Hold segment",
+    "copy": "Copy",
+    "paste": "Paste",
+    "delete": "Delete",
+    "copyUnavailable": "Select a timeline item before copying.",
+    "clipboardEmpty": "Copy a timeline item before pasting."
   },
   "TimelineVideoClip": {
     "trimStart": "Trim start",
@@ -239,7 +245,9 @@
     "mediaPlaybackAssetError": "{project} — “{name}” is unavailable (expected source: {path}). {message}",
     "mediaPlaybackIncompleteRecording": "{project} — “{name}” is unavailable (expected source: {path}). The recording session was not finalized.",
     "mediaPlaybackUnknownProject": "Current project",
-    "mediaPlaybackCopyError": "Copy error"
+    "mediaPlaybackCopyError": "Copy error",
+    "timelinePasteFailed": "Unable to paste: {message}",
+    "timelineClipboardDifferentProject": "The copied item belongs to another project."
   },
   "BlurPropertiesPanel": {
     "presets": "Presets",

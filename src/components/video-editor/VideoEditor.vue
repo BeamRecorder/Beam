@@ -31,8 +31,12 @@ import {
 } from '~/media/shared/composition-types';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
+import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
+import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
+import { useToastStore } from '~/ui/toast/toastStore';
 
 const { t } = useTranslate('VideoEditor');
+const toast = useToastStore();
 const props = withDefaults(
   defineProps<{
     project?: CaptureProject | null;
@@ -148,8 +152,10 @@ const {
   updateZoom,
   trimZoomEdge,
   moveZoom,
+  pasteZoomAtTime,
   previewZoom,
   deleteSelectedZoom,
+  deleteZoomById,
 } = zoomState;
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
@@ -256,6 +262,36 @@ const {
     await editorState.saveNow();
   },
 });
+
+const reportTimelinePasteError = (message: string) => toast.error(t('timelinePasteFailed', { message }), 5_000);
+const pasteTimelineItem = (request: TimelinePasteRequest) => {
+  try {
+    const projectId = props.project?.id;
+    if (!projectId || request.item.scopeId !== projectId) throw new Error(t('timelineClipboardDifferentProject'));
+    const timelineDurationMs = Math.round(duration.value * 1_000);
+    if (request.item.type === 'zoom') {
+      pasteZoomAtTime(request.item.zoom, request.timeMs);
+      selectedClipId.value = null;
+    } else {
+      const targetTrackId =
+        request.target?.category === 'visual' && (isVisualClip(request.item.clip) || isBlurClip(request.item.clip))
+          ? request.target.trackId
+          : null;
+      const pasted = pasteClipAt(composition.value, request.item.clip, {
+        timelineStartMs: request.timeMs,
+        timelineDurationMs,
+        targetTrackId,
+        asset: request.item.asset,
+      });
+      composition.value = pasted.composition;
+      selectEditorClip(pasted.clipId);
+      editorState.scheduleSave();
+    }
+    commitNow(createEditorSnapshot());
+  } catch (error) {
+    reportTimelinePasteError(error instanceof Error ? error.message : String(error));
+  }
+};
 
 const commitSelectedTransform = (transform: NormalizedTransform) => {
   updateSelectedTransform(transform);
@@ -590,6 +626,7 @@ onBeforeUnmount(() => {
           :is-playing="isPlaying"
           v-model:zoom-level="timelineZoomLevel"
           :is-snapping-enabled="isSnappingEnabled"
+          :project-id="project?.id"
           :duration="duration"
           :export-progress="exportProgress"
           :include-audio-in-export="includeAudioInExport"
@@ -601,6 +638,7 @@ onBeforeUnmount(() => {
           @select:clip="selectEditorClip"
           @toggle:clip="toggleClip"
           @delete:clips="deleteTimelineClips"
+          @delete:zoom="deleteZoomById"
           @trim:clip="trimClipEdge($event.id, $event.edge, $event.timeMs)"
           @move:clip="moveClipTo($event.id, $event.startMs)"
           @preview:composition="timelineCompositionPreview = $event"
@@ -609,6 +647,8 @@ onBeforeUnmount(() => {
           @add:zoom="addZoomAtTime"
           @add:caption="addCaptionAtTime"
           @reorder:clip="reorderVisualClip($event.id, $event.targetIndex)"
+          @paste:item="pasteTimelineItem"
+          @paste:error="reportTimelinePasteError"
           @update:current-time="handleSeekIntent($event, 'scrub')"
           @update:is-playing="handlePlayingIntent"
         />

@@ -167,8 +167,14 @@
     "audioDisabledFromExport": "Audio désactivé pour l’export",
     "unlinkMicrophoneTrack": "Dissocier la piste micro",
     "waveformUnavailable": "Forme d'onde indisponible",
-    "trimStart": "Élaguer le début",
-    "trimEnd": "Élaguer la fin"
+    "trimStart": "Rogner le début",
+    "trimEnd": "Rogner la fin",
+    "holdSegment": "Figer le segment",
+    "copy": "Copier",
+    "paste": "Coller",
+    "delete": "Supprimer",
+    "copyUnavailable": "Sélectionnez un élément de la timeline avant de le copier.",
+    "clipboardEmpty": "Copiez un élément de la timeline avant de le coller."
   },
   "TimelineVideoClip": {
     "trimStart": "Élaguer le début",
@@ -239,7 +245,9 @@
     "mediaPlaybackAssetError": "{project} — « {name} » est indisponible (source attendue : {path}). {message}",
     "mediaPlaybackIncompleteRecording": "{project} — « {name} » est indisponible (source attendue : {path}). La session d’enregistrement ne s’est pas finalisée.",
     "mediaPlaybackUnknownProject": "Projet actuel",
-    "mediaPlaybackCopyError": "Copier l’erreur"
+    "mediaPlaybackCopyError": "Copier l’erreur",
+    "timelinePasteFailed": "Impossible de coller : {message}",
+    "timelineClipboardDifferentProject": "L’élément copié appartient à un autre projet."
   },
   "BlurPropertiesPanel": {
     "presets": "Préréglages",

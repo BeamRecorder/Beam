@@ -6,6 +6,7 @@ import type { CaptionClip, ClipComposition, MediaAsset, VisualClip } from '~/med
 import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { useTimelineClipboard } from '../composables/useTimelineClipboard';
 
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
   useCompositionAudioWaveforms: () => ({
@@ -42,13 +43,14 @@ const TimelineClipStub = defineComponent({
     waveformStatus: { type: String, default: undefined },
     waveformError: { type: Object, default: undefined },
   },
-  emits: ['select', 'move', 'trim'],
+  emits: ['select', 'move', 'trim', 'contextmenu'],
   template: `
     <button
       type="button"
       class="timeline-clip"
       :class="{ selected, disabled: !clip.enabled }"
       @click.stop="$emit('select')"
+      @contextmenu.prevent="$emit('contextmenu', $event)"
       @pointerdown="$emit('move', $event)"
     >
       <span class="clip-label-text">{{ clip.name }}</span>
@@ -297,6 +299,7 @@ const mountTracks = async (overrides: Record<string, unknown> = {}) => {
       selectedZoomId: 'zoom-1',
       composition: composition(),
       selectedClipId: 'screen-clip',
+      projectId: 'project-a',
       ...overrides,
     },
     global: { stubs: { TimelineClip: TimelineClipStub } },
@@ -390,12 +393,20 @@ const pointerEvent = (type: string, clientX: number, clientY = 10) => {
   return event;
 };
 
+const contextMenuButton = (label: string): HTMLButtonElement | undefined =>
+  Array.from(document.body.querySelectorAll<HTMLButtonElement>('.context-menu-item')).find((element) =>
+    element.textContent?.includes(label),
+  );
+
 beforeEach(() => {
   vi.clearAllMocks();
+  useTimelineClipboard().clearClipboard();
   globalThis.ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+  let nextRafId = 1;
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-    callback(performance.now());
-    return 1;
+    const id = nextRafId++;
+    queueMicrotask(() => callback(performance.now()));
+    return id;
   });
   vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
 });
@@ -966,4 +977,135 @@ describe('TimelineTracks', () => {
     window.dispatchEvent(pointerEvent('pointerup', 50, 120));
     expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
   });
+
+  it('opens context menu on right click, pastes at the playhead, and handles delete', async () => {
+    const mounted = await mountTracks();
+    const clipEl = mounted!.find('.tracks-stack .timeline-clip');
+    expect(clipEl.exists()).toBe(true);
+
+    await clipEl.trigger('contextmenu', { clientX: 200, clientY: 300 });
+    await flushPromises();
+
+    expect(mounted!.emitted('select:clip')).toContainEqual(['image-clip']);
+
+    const menuItems = document.body.querySelectorAll('.context-menu-item');
+    expect(menuItems.length).toBeGreaterThanOrEqual(3);
+    const itemTexts = Array.from(menuItems).map((el) => el.textContent?.trim());
+    expect(itemTexts.some((text) => text?.includes('Copy'))).toBe(true);
+    expect(itemTexts.some((text) => text?.includes('Paste'))).toBe(true);
+    expect(itemTexts.some((text) => text?.includes('Delete'))).toBe(true);
+
+    expect(contextMenuButton('Paste')?.disabled).toBe(true);
+
+    contextMenuButton('Copy')?.click();
+    await flushPromises();
+
+    const cursorTrack = mounted!.find('.tracks-stack .cursor-track');
+    await cursorTrack.trigger('contextmenu', { clientX: 999, clientY: 350 });
+    await flushPromises();
+
+    const pasteBtn = contextMenuButton('Paste');
+    expect(pasteBtn?.disabled).toBe(false);
+    pasteBtn?.click();
+    await flushPromises();
+
+    const pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string; clip?: { id: string } }; timeMs: number; target?: { category: string } } | undefined;
+    expect(pastePayload?.timeMs).toBe(2_000);
+    expect(pastePayload?.item).toEqual(expect.objectContaining({ type: 'clip' }));
+    expect(pastePayload?.item.clip?.id).toBe('image-clip');
+    expect(pastePayload?.target?.category).toBe('zoom');
+
+    await clipEl.trigger('contextmenu', { clientX: 250, clientY: 350 });
+    await flushPromises();
+    contextMenuButton('Delete')?.click();
+    await flushPromises();
+
+    expect(mounted!.emitted('delete:clips')).toContainEqual([['image-clip']]);
+  });
+
+  it('allows cross-category pasting from the context menu', async () => {
+    const mounted = await mountTracks();
+    const clipEl = mounted!.find('.tracks-stack .timeline-clip');
+    const zoomButton = mounted!.find('.cursor-zoom-indicator:not(.preview-ghost)');
+
+    expect(zoomButton.exists()).toBe(true);
+
+    await clipEl.trigger('contextmenu', { clientX: 100, clientY: 100 });
+    await flushPromises();
+    contextMenuButton('Copy')?.click();
+    await flushPromises();
+
+    const captionTrack = mounted!.find('.tracks-stack .text-caption-track');
+    await captionTrack.trigger('contextmenu', { clientX: 300, clientY: 300 });
+    await flushPromises();
+    let pasteBtn = contextMenuButton('Paste');
+    expect(pasteBtn?.disabled).toBe(false);
+    pasteBtn?.click();
+    await flushPromises();
+    let pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string }; target?: { category: string } } | undefined;
+    expect(pastePayload?.item.type).toBe('clip');
+    expect(pastePayload?.target?.category).toBe('caption');
+
+    await zoomButton.trigger('contextmenu', { clientX: 150, clientY: 150 });
+    await flushPromises();
+    expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+
+    contextMenuButton('Copy')?.click();
+    await flushPromises();
+
+    const visualTrack = mounted!.find('.tracks-stack .visual-track[data-track-id="screen-track"]');
+    await visualTrack.trigger('contextmenu', { clientX: 100, clientY: 100 });
+    await flushPromises();
+    pasteBtn = contextMenuButton('Paste');
+    expect(pasteBtn?.disabled).toBe(false);
+    pasteBtn?.click();
+    await flushPromises();
+    pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string }; target?: { category: string; trackId?: string | null } } | undefined;
+    expect(pastePayload?.item.type).toBe('zoom');
+    expect(pastePayload?.target).toEqual({ category: 'visual', trackId: 'screen-track' });
+
+    await zoomButton.trigger('contextmenu', { clientX: 150, clientY: 150 });
+    await flushPromises();
+    contextMenuButton('Delete')?.click();
+    await flushPromises();
+
+    expect(mounted!.emitted('delete:zoom')).toContainEqual(['zoom-1']);
+  });
+
+  it('supports Ctrl/Cmd copy and paste, ignores editable fields, and reports an empty clipboard', async () => {
+    const mounted = await mountTracks({ selectedZoomId: null });
+    const dispatchShortcut = (key: string, modifiers: Pick<KeyboardEventInit, 'ctrlKey' | 'metaKey'>) => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...modifiers }));
+    };
+
+    dispatchShortcut('c', { ctrlKey: true });
+    await mounted!.setProps({ currentTime: 6 });
+    dispatchShortcut('v', { metaKey: true });
+    await flushPromises();
+
+    let pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string; clip?: { id: string } }; timeMs: number } | undefined;
+    expect(pastePayload?.timeMs).toBe(6_000);
+    expect(pastePayload?.item).toEqual(expect.objectContaining({ type: 'clip' }));
+    expect(pastePayload?.item.clip?.id).toBe('screen-clip');
+
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    const pasteCountBeforeEditableShortcuts = mounted!.emitted('paste:item')?.length ?? 0;
+    dispatchShortcut('c', { ctrlKey: true });
+    dispatchShortcut('v', { ctrlKey: true });
+    await flushPromises();
+    expect(mounted!.emitted('paste:item')?.length ?? 0).toBe(pasteCountBeforeEditableShortcuts);
+    input.remove();
+
+    useTimelineClipboard().clearClipboard();
+    dispatchShortcut('v', { ctrlKey: true });
+    await flushPromises();
+    expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
+  });
+
 });
