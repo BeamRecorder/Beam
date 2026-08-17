@@ -1,0 +1,97 @@
+{
+  "pages": [
+    {
+      "slug": "getting-started",
+      "title": "Getting started",
+      "description": "Install Beam, grant the required permissions, and create your first recording.",
+      "lead": "Beam combines a focused recorder and a non-destructive video editor in one desktop application.",
+      "sections": [
+        {
+          "title": "Install Beam",
+          "paragraphs": [
+            "Download the latest release from the [Beam releases page](https://github.com/ExtraBinoss/Beam/releases/latest). Choose the package for your operating system."
+          ],
+          "bullets": [
+            "Windows uses the native installer.",
+            "macOS uses a DMG for Apple Silicon Macs running macOS 13 or newer.",
+            "Linux provides AppImage, DEB, and RPM packages."
+          ]
+        },
+        {
+          "title": "Create your first recording",
+          "steps": [
+            "Open Beam and choose Screen or Window in the recorder HUD.",
+            "Select a display, an application window, or a custom region.",
+            "Choose the microphone, system audio, and camera sources you need.",
+            "Start the recording, then use the recorder bar to pause, resume, or stop.",
+            "Stop the recording and wait for Beam to open the project in the video editor."
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Beam recorder prepared for a first recording",
+            "caption": "Select the capture and media sources before starting."
+          }
+        },
+        {
+          "title": "Grant permissions when requested",
+          "paragraphs": [
+            "The operating system may request screen-recording, microphone, camera, or interaction permissions. Beam only requests access when the related feature needs it."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Platform differences",
+            "text": "Source selection and permission prompts differ across Windows, macOS, Linux, X11, and Wayland. Review [platform support](/platforms) before an important recording."
+          }
+        },
+        {
+          "title": "Continue learning",
+          "bullets": [
+            "Learn the [recorder interface](/recorder/interface).",
+            "Review all [recorder capabilities](/recorder/capabilities).",
+            "Understand the [video editor interface](/editor/interface).",
+            "Prepare the final file with [export and sharing](/export)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "updates",
+      "title": "Updating Beam",
+      "description": "Check for, download, and install Beam updates from the recorder or video editor.",
+      "lead": "Installed Beam builds can check GitHub Releases for a new version without automatically downloading or installing it.",
+      "sections": [
+        {
+          "title": "Open the update controls",
+          "paragraphs": [
+            "From the recorder HUD, open Settings and find the Updates section. The same controls are available from Settings in the video editor. Development builds report that updates are only available in the installed app."
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "Beam settings showing the update controls",
+            "caption": "The update panel displays the installed version and the available update actions."
+          }
+        },
+        {
+          "title": "Install an update",
+          "steps": [
+            "Choose Check for updates.",
+            "When a version is available, review its changelog and choose Download.",
+            "Keep Beam open while the progress indicator downloads the update.",
+            "When the update is ready, save your work and choose Restart to close Beam and run the installer."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Updates remain under your control",
+            "text": "Beam does not automatically download an available update and does not install it when you quit normally. Installation begins only after you choose Restart from the downloaded state."
+          }
+        },
+        {
+          "title": "If the updater fails",
+          "paragraphs": [
+            "Use Copy error to keep the diagnostic message, then download the correct package manually from the [latest Beam release](https://github.com/ExtraBinoss/Beam/releases/latest). Your projects are stored separately from the application installation."
+          ]
+        }
+      ]
+    }
+  ]
+}

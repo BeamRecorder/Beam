@@ -1,0 +1,19 @@
+{
+  "title": "Tài liệu Beam",
+  "description": "Tìm hiểu cách ghi hình, chỉnh sửa và chia sẻ demo sản phẩm chỉn chu bằng Beam.",
+  "hero": {
+    "name": "Beam Docs",
+    "text": "Ghi lại. Chỉnh sửa. Chia sẻ.",
+    "tagline": "Hướng dẫn thực tế để ghi hình và trau chuốt demo sản phẩm bằng Beam.",
+    "imageAlt": "Biểu tượng ứng dụng Beam",
+    "actions": [
+      { "theme": "brand", "text": "Bắt đầu sử dụng", "link": "/getting-started" },
+      { "theme": "alt", "text": "Xem trên GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Tham gia Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    { "title": "Ứng dụng quay", "details": "Chọn nguồn, chuẩn bị các track âm thanh và camera, rồi điều khiển việc ghi hình từ HUD gọn nhẹ.", "link": "/recorder/", "visual": "recorder" },
+    { "title": "Trình chỉnh sửa video", "details": "Điều chỉnh thời gian, khung hình, mức thu phóng, chuyển động con trỏ, chú thích, âm thanh và xuất trong một không gian làm việc.", "link": "/editor/", "visual": "editor" }
+  ]
+}

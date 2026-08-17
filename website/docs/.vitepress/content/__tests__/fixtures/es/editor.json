@@ -1,0 +1,174 @@
+{
+  "pages": [
+    {
+      "slug": "editor/index",
+      "title": "Descripción general del editor de vídeo",
+      "description": "Conoce el espacio de trabajo del editor de vídeo de Beam y su flujo de edición no destructiva.",
+      "lead": "El editor convierte sesiones grabadas y contenido multimedia importado en una demostración de producto compuesta, manteniendo intacto el material de origen.",
+      "sections": [
+        {
+          "title": "Un único espacio de trabajo",
+          "paragraphs": [
+            "El editor combina un lienzo de vista previa, una línea de tiempo multipista, un panel de propiedades enfocado, controles de reproducción, acciones del proyecto y exportación. Al seleccionar un elemento se muestran los controles relevantes para ese elemento."
+          ],
+          "screenshot": {
+            "path": "editor/editor-overview.webp",
+            "alt": "Descripción general del espacio de trabajo del editor de vídeo de Beam",
+            "caption": "El lienzo, las propiedades, la reproducción y la línea de tiempo permanecen visibles en el espacio de trabajo de edición."
+          }
+        },
+        {
+          "title": "Composición no destructiva",
+          "paragraphs": [
+            "Las ediciones de la línea de tiempo describen cómo se organizan y presentan los clips de origen. Recortar, dividir, transformar, aplicar zooms, añadir subtítulos y dar estilo visual no sobrescribe los archivos de grabación originales."
+          ]
+        },
+        {
+          "title": "De la grabación a la exportación",
+          "steps": [
+            "Abre el editor después de una grabación o selecciona un proyecto existente.",
+            "Organiza los clips y la temporización en la línea de tiempo.",
+            "Da estilo al lienzo, los clips, el cursor, los zooms, los subtítulos y el audio.",
+            "Previsualiza la composición completa.",
+            "Elige un formato de exportación, una resolución y un ajuste preestablecido de calidad."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/interface",
+      "title": "Interfaz del editor de vídeo",
+      "description": "Aprende a usar el lienzo, la barra lateral, las propiedades, la línea de tiempo, la reproducción y los controles de exportación de Beam.",
+      "lead": "El editor mantiene los controles globales del proyecto en la parte superior, el trabajo visual en el centro, las propiedades al lado y la temporización en la parte inferior.",
+      "sections": [
+        {
+          "title": "Barra superior",
+          "bullets": [
+            "Salir al HUD vuelve al grabador.",
+            "Deshacer y rehacer recorren las acciones de edición compatibles.",
+            "El título del proyecto y el estado de guardado identifican el proyecto actual.",
+            "Discord abre la comunidad de Beam.",
+            "Exportar vídeo abre los controles de exportación."
+          ]
+        },
+        {
+          "title": "Lienzo y barra de herramientas",
+          "paragraphs": [
+            "El lienzo previsualiza el fotograma compuesto. Su barra de herramientas cambia la relación de aspecto de salida, activa el modo de recorte, muestra u oculta la cuadrícula de alineación y controla el zoom de la ventana gráfica sin cambiar la composición exportada."
+          ],
+          "screenshot": {
+            "path": "editor/canvas-properties.webp",
+            "alt": "Lienzo de Beam junto al panel de propiedades activo",
+            "caption": "Selecciona el lienzo o un elemento de la línea de tiempo para mostrar sus controles de edición."
+          }
+        },
+        {
+          "title": "Barra lateral y propiedades",
+          "bullets": [
+            "Lienzo controla el fondo de salida y la superficie de presentación.",
+            "Clip controla el clip de vídeo, cámara web, audio, desenfoque, imagen o subtítulo seleccionado.",
+            "Zoom edita un bloque de zoom seleccionado o genera zooms automáticos.",
+            "Cursor controla el aspecto, la respuesta a los clics y el movimiento.",
+            "Subtítulos genera o aplica estilo al texto y a los subtítulos de teclado.",
+            "Audio controla los niveles globales, del sistema y del micrófono.",
+            "Ajustes controla las preferencias de la aplicación y el acceso del grabador."
+          ]
+        },
+        {
+          "title": "Barra de herramientas de la línea de tiempo",
+          "bullets": [
+            "Añadir importa elementos de vídeo, imagen, sonido, texto o desenfoque.",
+            "Dividir separa el clip seleccionado en la posición del cabezal de reproducción.",
+            "El ajuste magnético alinea las ediciones con los límites cercanos.",
+            "Los controles de reproducción saltan al principio o al final y reproducen o pausan.",
+            "El zoom de la línea de tiempo cambia la escala temporal visible."
+          ]
+        },
+        {
+          "title": "Pistas de la línea de tiempo",
+          "paragraphs": [
+            "Las pistas representan vídeo, cámara web, desenfoque, zoom, subtítulos de texto, subtítulos de teclado, audio del sistema y audio del micrófono cuando esas fuentes existen. Selecciona, mueve, reordena, recorta, divide, activa o desactiva, o desvincula los elementos compatibles de la composición."
+          ],
+          "screenshot": {
+            "path": "editor/timeline.webp",
+            "alt": "Línea de tiempo multipista de Beam con pistas visuales, de zoom, subtítulos y audio",
+            "caption": "La línea de tiempo mantiene la presentación, los subtítulos y el sonido alineados con un único cabezal de reproducción."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities",
+      "title": "Funciones del editor de vídeo",
+      "description": "Edita la temporización, el estilo del lienzo, los zooms, el movimiento del cursor, los subtítulos, el audio, el desenfoque y el contenido multimedia importado en Beam.",
+      "lead": "Beam combina operaciones precisas de la línea de tiempo con controles de presentación diseñados para demostraciones de producto.",
+      "sections": [
+        {
+          "title": "Edición de la línea de tiempo",
+          "bullets": [
+            "Mueve y reordena los clips visuales compatibles.",
+            "Recorta los límites de los clips y divídelos en la posición del cabezal de reproducción.",
+            "Activa el ajuste magnético para una alineación precisa.",
+            "Amplía la línea de tiempo sin cambiar la salida.",
+            "Activa, desactiva, desvincula o elimina los elementos compatibles de la composición."
+          ]
+        },
+        {
+          "title": "Contenido multimedia importado",
+          "paragraphs": [
+            "Añade archivos de vídeo, imagen y audio compatibles desde el menú Añadir de la línea de tiempo o arrastrando contenido multimedia local al editor. Los elementos importados se insertan en la posición del cabezal de reproducción después de validarse."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Compatibilidad de códecs",
+            "text": "La importación y reproducción de contenido multimedia dependen de los códecs disponibles para Beam. Los archivos incompatibles o no válidos se rechazan indicando el motivo."
+          }
+        },
+        {
+          "title": "Aspecto del lienzo y los clips",
+          "bullets": [
+            "Elige fondos de imagen, vídeo, color o degradado e importa contenido multimedia de fondo personalizado.",
+            "Ajusta el desenfoque del fondo y la presentación del lienzo de salida.",
+            "Coloca, cambia el tamaño, recorta y refleja los clips visuales compatibles.",
+            "Aplica radio de esquina, sombras sólidas o adaptativas, bordes y marcos con estilo de ventana.",
+            "Ajusta la velocidad de reproducción de los clips compatibles."
+          ]
+        },
+        {
+          "title": "Zooms y presentación del cursor",
+          "paragraphs": [
+            "Genera bloques de zoom automáticos a partir de eventos de clic grabados o añade puntos de enfoque manuales. El modo automático sigue el cursor grabado mientras un zoom está activo. Cada bloque de zoom controla la temporización, el modo de enfoque, la posición y la ampliación. Los controles del cursor cambian el estilo, el tamaño, el color, la sombra, el rebote al hacer clic, los efectos de onda izquierdo y derecho, el suavizado, la masa del resorte y el desenfoque de movimiento."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-cursor-captions.webp",
+            "alt": "Controles de edición de zoom, cursor y subtítulos de Beam",
+            "caption": "Los controles de enfoque y presentación ayudan a dirigir la atención sin cambiar la captura de origen."
+          }
+        },
+        {
+          "title": "Subtítulos",
+          "paragraphs": [
+            "Genera subtítulos de voz a texto localmente con Whisper a partir del micrófono o el audio del sistema. Descarga y verifica un modelo compatible, genera los subtítulos y edita los clips de subtítulos resultantes y su estilo visual. Los subtítulos de accesos directos de teclado utilizan metadatos de interacción seguros grabados con permiso."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Transcripción local",
+            "text": "La transcripción de Whisper se ejecuta en el dispositivo. No requiere una subida a la nube ni una clave de API."
+          }
+        },
+        {
+          "title": "Audio y desenfoque",
+          "paragraphs": [
+            "Controla el volumen de salida global y el estado de activación o el nivel de las pistas del sistema y del micrófono. Añade clips de desenfoque para ocultar o suavizar una parte de la composición con controles de forma, intensidad, difuminado, radio de esquina, matiz y color."
+          ]
+        },
+        {
+          "title": "Exportación",
+          "paragraphs": [
+            "Renderiza la composición actual a MP4 o WebM con controles de resolución y calidad. Consulta [exportación y uso compartido](/export) para conocer el flujo completo."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Beam दस्तावेज़",
+  "description": "Beam से बेहतर प्रोडक्ट डेमो रिकॉर्ड, एडिट और शेयर करना सीखें।",
+  "hero": {
+    "name": "Beam Docs",
+    "text": "रिकॉर्ड करें। एडिट करें। शेयर करें।",
+    "tagline": "Beam से प्रोडक्ट डेमो कैप्चर और बेहतर बनाने के व्यावहारिक गाइड।",
+    "imageAlt": "Beam ऐप आइकन",
+    "actions": [
+      { "theme": "brand", "text": "शुरुआत करें", "link": "/getting-started" },
+      { "theme": "alt", "text": "GitHub पर देखें", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Discord से जुड़ें", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    { "title": "रिकॉर्डर ऐप", "details": "सोर्स चुनें, ऑडियो और कैमरा ट्रैक तैयार करें, फिर कॉम्पैक्ट HUD से रिकॉर्डिंग नियंत्रित करें।", "link": "/recorder/", "visual": "recorder" },
+    { "title": "वीडियो एडिटर", "details": "एक ही वर्कस्पेस में टाइमिंग, फ़्रेमिंग, ज़ूम, कर्सर मूवमेंट, कैप्शन, साउंड और एक्सपोर्ट को आकार दें।", "link": "/editor/", "visual": "editor" }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "locale": "de-DE",
+  "label": "Deutsch",
+  "siteTitle": "Beam-Dokumentation",
+  "nav": { "website": "Beam-Website" },
+  "sidebar": [
+    { "text": "Hier beginnen", "items": [
+      { "text": "Einführung", "link": "/" },
+      { "text": "Erste Schritte", "link": "/getting-started" },
+      { "text": "Beam aktualisieren", "link": "/updates" }
+    ] },
+    { "text": "Rekorder-App", "items": [
+      { "text": "Übersicht", "link": "/recorder/" },
+      { "text": "Oberfläche", "link": "/recorder/interface" },
+      { "text": "Funktionen", "link": "/recorder/capabilities" }
+    ] },
+    { "text": "Videoeditor", "items": [
+      { "text": "Übersicht", "link": "/editor/" },
+      { "text": "Oberfläche", "link": "/editor/interface" },
+      { "text": "Funktionen", "link": "/editor/capabilities" }
+    ] },
+    { "text": "Referenz", "items": [
+      { "text": "Export und Teilen", "link": "/export" },
+      { "text": "Plattformunterstützung", "link": "/platforms" },
+      { "text": "Dateisystem", "link": "/filesystem" }
+    ] }
+  ],
+  "social": { "github": "Beam auf GitHub ansehen", "discord": "Der Beam-Discord-Community beitreten" },
+  "theme": { "switchToLight": "Zum hellen Design wechseln", "switchToDark": "Zum dunklen Design wechseln" },
+  "footer": { "message": "Open-Source-Bildschirmaufnahme und -bearbeitung.", "copyright": "Unter der MIT-Lizenz veröffentlicht." }
+}

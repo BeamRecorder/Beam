@@ -83,28 +83,18 @@ export const detectWebsiteLocale = (): WebsiteLocale => {
 
 const initialLocale = detectWebsiteLocale();
 
-export const websiteI18n = createI18n({
-  legacy: false,
-  locale: initialLocale,
-  fallbackLocale: 'en',
-  messages,
-});
+export const createWebsiteI18n = (locale: WebsiteLocale = 'en') =>
+  createI18n({
+    legacy: false,
+    locale,
+    fallbackLocale: 'en',
+    messages,
+  });
 
-const syncWebsiteMetadata = () => {
-  const title = websiteI18n.global.t('Website.meta.title');
-  const description = websiteI18n.global.t('Website.meta.description');
-  document.title = title;
-  document.querySelector('meta[name="description"]')?.setAttribute('content', description);
-  document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
-  document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
-};
+export const websiteI18n = createWebsiteI18n(initialLocale);
 
 export const syncWebsiteLocale = (locale: WebsiteLocale) => {
   websiteI18n.global.locale.value = locale;
   document.documentElement.lang = locale;
   localStorage.setItem('locale', locale);
-  syncWebsiteMetadata();
 };
-
-document.documentElement.lang = initialLocale;
-syncWebsiteMetadata();

@@ -1,0 +1,29 @@
+{
+  "title": "Documentación de Beam",
+  "description": "Aprende a grabar, editar y compartir demostraciones de producto cuidadas con Beam.",
+  "hero": {
+    "name": "Documentación de Beam",
+    "text": "Graba. Edita. Comparte.",
+    "tagline": "Guías prácticas para capturar y perfeccionar demostraciones de producto con Beam.",
+    "imageAlt": "Icono de la aplicación Beam",
+    "actions": [
+      { "theme": "brand", "text": "Primeros pasos", "link": "/getting-started" },
+      { "theme": "alt", "text": "Ver en GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Unirse a Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    {
+      "title": "Aplicación de grabación",
+      "details": "Elige una fuente, prepara las pistas de audio y cámara y controla la grabación desde el HUD compacto.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "Editor de vídeo",
+      "details": "Ajusta el ritmo, el encuadre, los zooms, el movimiento del cursor, los subtítulos, el sonido y la exportación desde un único espacio de trabajo.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "title": "Documentazione di Beam",
+  "description": "Scopri come registrare, modificare e condividere demo di prodotto curate con Beam.",
+  "hero": { "name": "Documentazione di Beam", "text": "Registra. Modifica. Condividi.", "tagline": "Guide pratiche per acquisire e rifinire demo di prodotto con Beam.", "imageAlt": "Icona dell'app Beam", "actions": [ { "theme": "brand", "text": "Primi passi", "link": "/getting-started" }, { "theme": "alt", "text": "Vedi su GitHub", "link": "https://github.com/ExtraBinoss/Beam" }, { "theme": "alt", "text": "Unisciti a Discord", "link": "https://discord.gg/6Q6v2xUCB" } ] },
+  "categories": [ { "title": "App di registrazione", "details": "Scegli una sorgente, prepara le tracce audio e video, poi controlla la registrazione dall'HUD compatto.", "link": "/recorder/", "visual": "recorder" }, { "title": "Editor video", "details": "Gestisci tempi, inquadratura, zoom, movimento del cursore, sottotitoli, audio ed esportazione da un unico spazio di lavoro.", "link": "/editor/", "visual": "editor" } ]
+}

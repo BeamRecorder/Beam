@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "Exportação e compartilhamento",
+      "description": "Exporte uma composição do Beam para MP4 ou WebM com a resolução e o preset de qualidade adequados.",
+      "lead": "A exportação renderiza a composição atual diretamente em um arquivo local usando as configurações compatíveis com a máquina.",
+      "sections": [
+        {
+          "title": "Escolha um formato",
+          "bullets": [
+            "O WebM usa o contêiner WebM com um codificador disponível na máquina atual.",
+            "O MP4 usa o contêiner MP4 quando o Beam encontra um codificador de hardware ou software compatível."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Disponibilidade do codificador",
+            "text": "Um formato pode ficar indisponível quando a máquina não oferece um codificador compatível. O Beam informa isso antes ou durante a exportação."
+          }
+        },
+        {
+          "title": "Escolha uma resolução",
+          "bullets": [
+            "720p reduz a escala para uma saída HD quando o canvas nativo é grande o suficiente.",
+            "1080p reduz a escala para Full HD quando o canvas nativo é grande o suficiente.",
+            "Máxima mantém as dimensões do canvas de saída nativo."
+          ]
+        },
+        {
+          "title": "Escolha qualidade e taxa de bits",
+          "paragraphs": [
+            "Os presets baixo, médio e alto calculam uma taxa de bits a partir das dimensões de saída e da taxa de quadros. Médio equilibra nitidez e tamanho do arquivo, enquanto alto prioriza a fidelidade visual."
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "Configurações de exportação do Beam para formato, resolução e qualidade",
+            "caption": "Selecione formato, resolução e qualidade antes de escolher o arquivo de destino."
+          }
+        },
+        {
+          "title": "Acompanhe a exportação",
+          "paragraphs": [
+            "O Beam exibe o progresso dos quadros durante a renderização. Você pode cancelar uma exportação ativa ou copiar seu relatório de diagnóstico. Alterações ao vivo no editor não modificam um arquivo que já está sendo renderizado."
+          ]
+        },
+        {
+          "title": "Abra o resultado",
+          "paragraphs": [
+            "Após uma exportação bem-sucedida, o Beam informa o nome do arquivo salvo e oferece uma ação para abri-lo. Se a exportação falhar, copie o relatório técnico antes de pedir ajuda no [Discord](https://discord.gg/6Q6v2xUCB) ou no [GitHub](https://github.com/ExtraBinoss/Beam/issues)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "Compatibilidade com plataformas",
+      "description": "Consulte o suporte do Beam e o comportamento específico do sistema operacional no Windows, macOS e Linux.",
+      "lead": "O Beam está disponível no Windows, macOS e Linux. Permissões nativas e recursos do sistema de janelas criam algumas diferenças entre as plataformas.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "O Beam é distribuído como instalador nativo do Windows.",
+            "A gravação de tela, janela, região, câmera, microfone e áudio do sistema é compatível.",
+            "As posições e os tamanhos das sobreposições podem ser salvos e restaurados."
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "O Beam é distribuído como DMG para Macs com Apple Silicon executando macOS 13 ou mais recente.",
+            "As permissões Gravação de Tela, Microfone e Câmera são solicitadas quando essas fontes são usadas.",
+            "As posições e os tamanhos das sobreposições podem ser salvos e restaurados."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "O Beam está danificado e não pode ser aberto",
+            "text": "Depois de mover o Beam para `/Applications`, execute `xattr -cr /Applications/Beam.app` ou escolha Abrir mesmo assim em Ajustes do Sistema > Privacidade e Segurança."
+          },
+          "subsections": [
+            {
+              "title": "Permitir gravação de tela e áudio do sistema",
+              "paragraphs": [
+                "Abra o menu Apple > Ajustes do Sistema > Privacidade e Segurança > Gravação de Tela e Áudio do Sistema e ative o Beam. Se o Beam não estiver listado, use o botão de adicionar e selecione `/Applications/Beam.app`. Feche e reabra o Beam depois de alterar essa permissão."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-screen-system-audio.webp",
+                "alt": "Configurações de privacidade do macOS para Gravação de Tela e Áudio do Sistema com o Beam ativado",
+                "caption": "Ative o Beam em Gravação de Tela e Áudio do Sistema."
+              }
+            },
+            {
+              "title": "Permitir acesso ao microfone e à câmera",
+              "paragraphs": [
+                "Em Ajustes do Sistema > Privacidade e Segurança, abra Microfone e ative o Beam ao gravar voz. Abra Câmera e ative o Beam ao usar a sobreposição da câmera."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-microphone-camera.webp",
+                "alt": "Configurações de privacidade do macOS para Microfone e Câmera do Beam",
+                "caption": "O Beam precisa estar ativado na lista de privacidade para cada fonte que você deseja capturar."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "bullets": [
+            "O Beam é distribuído como pacotes AppImage, DEB e RPM.",
+            "A captura de tela e janela usa XDG Desktop Portal, PipeWire e FFmpeg.",
+            "O seletor do sistema solicita permissão quando uma captura começa.",
+            "Metadados de atalhos de teclado e cliques do mouse exigem consentimento explícito do Polkit.",
+            "O X11 pode restaurar posições e tamanhos das sobreposições.",
+            "O Wayland nativo pode restaurar tamanhos das sobreposições, mas não posições globais."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Posicionamento no Wayland",
+            "text": "O Wayland não expõe coordenadas globais das janelas. O Beam não força o XWayland porque essa alternativa pode ser incompatível com algumas configurações de GPU e X11."
+          }
+        }
+      ]
+    }
+  ]
+}

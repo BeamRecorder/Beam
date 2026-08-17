@@ -1,0 +1,174 @@
+{
+  "pages": [
+    {
+      "slug": "editor/index",
+      "title": "Vue d'ensemble de l'éditeur vidéo",
+      "description": "Découvrez l'espace de travail de l'éditeur vidéo Beam et son flux de montage non destructif.",
+      "lead": "L'éditeur vidéo transforme des sessions enregistrées et des médias importés en une démonstration produit composée, tout en conservant intactes les sources originales.",
+      "sections": [
+        {
+          "title": "Un seul espace de travail",
+          "paragraphs": [
+            "L'éditeur réunit un canevas d'aperçu, une timeline multipiste, un panneau de propriétés ciblé, des commandes de lecture, des actions de projet et l'export. La sélection d'un élément affiche les contrôles qui lui sont associés."
+          ],
+          "screenshot": {
+            "path": "editor/editor-overview.webp",
+            "alt": "Vue d'ensemble de l'espace de travail de l'éditeur vidéo Beam",
+            "caption": "Le canevas, les propriétés, la lecture et la timeline restent visibles dans l'espace de montage."
+          }
+        },
+        {
+          "title": "Composition non destructive",
+          "paragraphs": [
+            "Les modifications de la timeline décrivent comment les clips sources sont organisés et présentés. Le rognage, le découpage, les transformations, les zooms, les sous-titres et le style visuel ne remplacent pas les fichiers d'enregistrement originaux."
+          ]
+        },
+        {
+          "title": "De l'enregistrement à l'export",
+          "steps": [
+            "Ouvrez l'éditeur après un enregistrement ou sélectionnez un projet existant.",
+            "Organisez les clips et le timing dans la timeline.",
+            "Personnalisez le canevas, les clips, le curseur, les zooms, les sous-titres et l'audio.",
+            "Prévisualisez la composition complète.",
+            "Choisissez un format d'export, une résolution et un profil de qualité."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/interface",
+      "title": "Interface de l'éditeur vidéo",
+      "description": "Découvrez le canevas, la barre latérale, les propriétés, la timeline, la lecture et les contrôles d'export de Beam.",
+      "lead": "L'éditeur garde les contrôles globaux du projet en haut, le travail visuel au centre, les propriétés sur le côté et le timing en bas.",
+      "sections": [
+        {
+          "title": "Barre supérieure",
+          "bullets": [
+            "Retourner au HUD vous ramène à l'enregistreur.",
+            "Annuler et Rétablir permettent de parcourir les actions de montage prises en charge.",
+            "Le titre du projet et son état d'enregistrement identifient le projet actuel.",
+            "Discord ouvre la communauté Beam.",
+            "Exporter la vidéo ouvre les contrôles d'export."
+          ]
+        },
+        {
+          "title": "Canevas et barre d'outils",
+          "paragraphs": [
+            "Le canevas prévisualise l'image composée. Sa barre d'outils modifie le rapport d'aspect de sortie, active le mode recadrage, affiche ou masque la grille d'alignement et contrôle le zoom de la zone d'affichage sans modifier la composition exportée."
+          ],
+          "screenshot": {
+            "path": "editor/canvas-properties.webp",
+            "alt": "Canevas Beam à côté du panneau de propriétés actif",
+            "caption": "Sélectionnez le canevas ou un élément de la timeline pour afficher ses contrôles de montage."
+          }
+        },
+        {
+          "title": "Barre latérale et propriétés",
+          "bullets": [
+            "Canevas contrôle l'arrière-plan de sortie et la surface de présentation.",
+            "Clip contrôle le clip vidéo, webcam, audio, flou, image ou sous-titre sélectionné.",
+            "Zoom modifie un bloc de zoom sélectionné ou génère des zooms automatiques.",
+            "Curseur contrôle l'apparence, le retour de clic et le mouvement.",
+            "Sous-titres génère ou met en forme les textes et les sous-titres de clavier.",
+            "Audio contrôle les niveaux globaux, système et microphone.",
+            "Paramètres contrôle les préférences de l'application et l'accès à l'enregistreur."
+          ]
+        },
+        {
+          "title": "Barre d'outils de la timeline",
+          "bullets": [
+            "Ajouter importe des éléments vidéo, image, son, texte ou flou.",
+            "Découper divise le clip sélectionné à la tête de lecture.",
+            "L'aimant aligne les modifications sur les limites proches.",
+            "Les commandes de lecture vont au début ou à la fin et lancent ou mettent en pause la lecture.",
+            "Le zoom de la timeline modifie l'échelle de temps visible."
+          ]
+        },
+        {
+          "title": "Pistes de la timeline",
+          "paragraphs": [
+            "Les pistes représentent la vidéo, la webcam, le flou, les zooms, les sous-titres textuels, les sous-titres clavier, l'audio système et l'audio du microphone lorsque ces sources existent. Sélectionnez, déplacez, réorganisez, rognez, découpez, activez ou dissociez les éléments pris en charge de la composition."
+          ],
+          "screenshot": {
+            "path": "editor/timeline.webp",
+            "alt": "Timeline multipiste Beam avec pistes visuelles, de zoom, de sous-titres et audio",
+            "caption": "La timeline aligne la présentation, les sous-titres et le son sur une même tête de lecture."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities",
+      "title": "Fonctionnalités de l'éditeur vidéo",
+      "description": "Montez le timing, le style du canevas, les zooms, les mouvements du curseur, les sous-titres, l'audio, le flou et les médias importés dans Beam.",
+      "lead": "Beam associe des opérations précises sur la timeline à des contrôles de présentation conçus pour les démonstrations produit.",
+      "sections": [
+        {
+          "title": "Montage sur la timeline",
+          "bullets": [
+            "Déplacez et réorganisez les clips visuels pris en charge.",
+            "Rognez les limites d'un clip et découpez-le à la tête de lecture.",
+            "Activez l'aimant pour un alignement précis.",
+            "Zoomez la timeline sans modifier la sortie.",
+            "Activez, désactivez, dissociez ou supprimez les éléments de composition pris en charge."
+          ]
+        },
+        {
+          "title": "Médias importés",
+          "paragraphs": [
+            "Ajoutez des fichiers vidéo, image et audio pris en charge depuis le menu Ajouter de la timeline, ou déposez des médias locaux dans l'éditeur. Après validation, les éléments importés sont insérés à la position de la tête de lecture."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Prise en charge des codecs",
+            "text": "L'importation et la lecture des médias dépendent des codecs disponibles pour Beam. Les fichiers non pris en charge ou invalides sont refusés avec une explication."
+          }
+        },
+        {
+          "title": "Apparence du canevas et des clips",
+          "bullets": [
+            "Choisissez des arrière-plans image, vidéo, couleur ou dégradé et importez vos propres médias d'arrière-plan.",
+            "Ajustez le flou de l'arrière-plan et la présentation du canevas de sortie.",
+            "Positionnez, redimensionnez, recadrez et mettez en miroir les clips visuels pris en charge.",
+            "Appliquez un rayon aux angles, des ombres unies ou adaptatives, des bordures et des cadres de style fenêtre.",
+            "Ajustez la vitesse de lecture des clips pris en charge."
+          ]
+        },
+        {
+          "title": "Zooms et présentation du curseur",
+          "paragraphs": [
+            "Générez des blocs de zoom automatiques à partir des clics enregistrés ou ajoutez des points de focus manuels. Le mode automatique suit le curseur enregistré lorsqu'un zoom est actif. Chaque bloc de zoom contrôle le timing, le mode de focus, la position et le grossissement. Les contrôles du curseur modifient le style, la taille, la couleur, l'ombre, le rebond au clic, les effets d'ondulation gauche et droit, le lissage, la masse du ressort et le flou de mouvement."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-cursor-captions.webp",
+            "alt": "Contrôles de montage Beam pour le zoom, le curseur et les sous-titres",
+            "caption": "Les contrôles de focus et de présentation attirent l'attention sans modifier la capture source."
+          }
+        },
+        {
+          "title": "Sous-titres",
+          "paragraphs": [
+            "Générez localement des sous-titres par reconnaissance vocale avec Whisper à partir du microphone ou de l'audio système. Téléchargez et vérifiez un modèle pris en charge, générez les sous-titres, puis modifiez les clips de sous-titres obtenus et leur style visuel. Les sous-titres de raccourcis clavier utilisent des métadonnées d'interaction sûres enregistrées avec autorisation."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Transcription locale",
+            "text": "La transcription Whisper s'exécute sur l'appareil. Elle ne nécessite ni envoi vers le cloud ni clé API."
+          }
+        },
+        {
+          "title": "Audio et flou",
+          "paragraphs": [
+            "Contrôlez le volume de sortie global ainsi que l'activation et le niveau des pistes système et microphone. Ajoutez des clips de flou pour masquer ou adoucir une partie de la composition grâce aux contrôles de forme, d'intensité, d'adoucissement, de rayon des angles, de teinte et de couleur."
+          ]
+        },
+        {
+          "title": "Export",
+          "paragraphs": [
+            "Rendez la composition actuelle en MP4 ou WebM avec des contrôles de résolution et de qualité. Consultez [l'export et le partage](/export) pour connaître le flux complet."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "Beam 常见问题 — Screen Studio、Tella、OpenScreen、OBS 和 Loom 的替代方案",
+    "description": "将 Beam 与 Screen Studio、Tella、OpenScreen、OBS Studio 和 Loom 进行比较。了解这款免费、开源、跨平台的屏幕录制器和编辑器。"
+  },
+  "intro": {
+    "eyebrow": "常见问题",
+    "title": "关于 Beam，你需要了解的一切。",
+    "lede": "关于 Beam、其功能和其他屏幕录制器的事实解答。",
+    "ariaLabel": "Beam 常见问题"
+  },
+  "categories": { "application": "Beam 应用", "creation": "录制与编辑", "comparisons": "对比", "community": "社区" },
+  "callout": { "eyebrow": "还有疑问？", "title": "阅读文档或向社区提问。", "docs": "阅读文档", "github": "打开 GitHub" },
+  "items": [
+    ["Beam 是什么？", "Beam 是一款免费、开源的屏幕录制器和视频编辑器，可在 Windows、macOS 和 Linux 上制作精致的产品演示。", null],
+    ["Beam 真的免费且开源吗？", "是。Beam 以 MIT 许可证发布，不需要订阅。公开的 GitHub 仓库让社区可以查看代码、报告错误、请求功能并贡献改进。", "在 GitHub 上查看 Beam"],
+    ["Beam 支持 Windows、macOS 和 Linux 吗？", "支持。Beam 面向 Windows、macOS 和 Linux 发布。它的 Rust 捕获引擎针对不同平台分别实现屏幕、光标、音频、时序和编码后端，而不是让所有操作系统都依赖同一个通用浏览器录制器。", null],
+    ["我可以用 Beam 录制什么？", "Beam 可以录制整个显示器、应用窗口或自定义区域，并可选择添加摄像头、麦克风和系统音频轨道。", null],
+    ["AI 字幕生成会将音频上传到云端吗？", "不会。Beam 使用 Whisper 在本地生成字幕，不会上传到云端，也不需要 API 密钥或额外订阅。", null],
+    ["Beam 包含哪些编辑工具？", "Beam 包含可编辑的缩放、光标平滑与样式、本地字幕、画布背景、模糊、音频控制，以及为产品演示和教程打造的多轨时间线。", null],
+    ["Beam 支持哪些导出格式？", "Beam 可将录制内容导出为 MP4 或 WebM，分辨率最高可达 4K。", null],
+    ["Beam 与 Screen Studio 对比：该选择哪款屏幕录制器？", "Screen Studio 是一款专为 macOS 设计的精致商业录制器。如果你想在 Windows、macOS 或 Linux 上使用免费的开源 Screen Studio 替代方案，并需要原生捕获、可编辑缩放、光标效果、本地字幕和无需订阅的完整时间线，那么 Beam 更适合。", "查看 Screen Studio 官方产品与价格信息"],
+    ["Beam 与 Tella 对比：有什么区别？", "Tella 专注于通过付费方案提供托管录制、分享、嵌入和团队工作流。Beam 是免费的本地桌面录制器和编辑器：项目保留在电脑上，字幕在本地运行，源代码向社区开放。需要托管云端分享时选择 Tella；需要本地控制和无需订阅的编辑时选择 Beam。", "查看 Tella 官方方案信息"],
+    ["Beam 与 OpenScreen 对比：这些开源录制器有何不同？", "Beam 与 OpenScreen 都致力于在无需订阅的情况下制作精致录制内容。Beam 的不同之处在于：项目社区仍在积极开发，拥有带平台专用后端的 Rust 捕获引擎、本地 Whisper 字幕以及集成式多轨编辑器。原始 OpenScreen 仓库宣布最终版本，并于 2026 年 6 月归档。", "查看原始 OpenScreen 的版本发布历史"],
+    ["Beam 与 OBS Studio 对比：哪款更适合录制产品演示？", "OBS Studio 是一款功能强大的免费开源工具，适合直播、实时场景混合、采集卡和可配置的广播工作流。Beam 则更专注于录制和打磨产品演示，提供可编辑缩放、光标移动、字幕、背景和视频时间线等自动演示工具。直播和复杂的实时场景选择 OBS；需要专注的录制、编辑、导出流程时选择 Beam。", "查看 OBS Studio 官方功能列表"],
+    ["Beam 与 Loom 对比：应该使用本地录制器还是云端视频消息？", "Loom 的设计重点是快速录制、托管、分享和协作处理云端视频消息，不同方案有功能限制，协作或 AI 功能需要付费。Beam 是免费的开源桌面录制器和编辑器，用于在本地控制文件并导出精致视频。需要托管的异步团队沟通时选择 Loom；最看重本地所有权和细致编辑时选择 Beam。", "查看 Loom 官方方案与限制"],
+    ["如何为 Beam 做贡献？", "你可以查看源代码、报告问题、提出功能建议、通过 GitHub 贡献代码，并加入 Beam Discord 社区获取帮助和项目更新。", "在 GitHub 上为 Beam 做贡献"]
+  ]
+}

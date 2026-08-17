@@ -5,20 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#111110" />
     <link rel="icon" type="image/webp" href="/favicon.webp" />
-    <meta
-      name="description"
-      content="Beam is an open-source screen recorder and video editor for polished product demos."
-    />
-    <link rel="canonical" href="https://beam.plinka.eu/" />
-    <meta property="og:title" content="Beam - Record. Edit. Share." />
-    <meta
-      property="og:description"
-      content="Beam is an open-source screen recorder and video editor for polished product demos."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://beam.plinka.eu/" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <title>Beam - Record. Edit. Share.</title>
+    <script>
+      (() => {
+        try {
+          const root = document.documentElement;
+          const stored = localStorage.getItem('beam-website-theme');
+          const preference = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+          const dark =
+            preference === 'dark' ||
+            (preference === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+          root.dataset.theme = preference;
+          root.classList.toggle('dark', dark);
+          root.style.colorScheme = dark ? 'dark' : 'light';
+        } catch {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

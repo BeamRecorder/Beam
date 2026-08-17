@@ -1,0 +1,145 @@
+{
+  "pages": [
+    {
+      "slug": "filesystem",
+      "title": "Filesystem",
+      "description": "Understand where Beam stores projects, recordings, preferences, models, backgrounds, and downloaded updates.",
+      "lead": "Beam keeps durable user content separate from replaceable application caches. Use this reference when backing up, moving, inspecting, or troubleshooting a Beam installation.",
+      "sections": [
+        {
+          "title": "Where Beam stores user files",
+          "paragraphs": [
+            "Beam resolves the operating system's Videos folder and creates `Beam/user` inside it. A redirected or localized Videos folder changes the resolved location, so the paths below are the usual defaults rather than hard-coded locations."
+          ],
+          "bullets": [
+            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "macOS: `~/Movies/Beam/user`",
+            "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
+          ],
+          "subsections": [
+            {
+              "title": "Open the folder on Windows",
+              "paragraphs": [
+                "Press <KeyboardChip shortcut=\"Win+R\" />, paste `%USERPROFILE%\\Videos\\Beam\\user`, then press <KeyboardChip shortcut=\"Enter\" />. Windows expands `%USERPROFILE%` and opens the folder in File Explorer."
+              ]
+            },
+            {
+              "title": "Open the folder on macOS",
+              "paragraphs": [
+                "Open Finder, press <KeyboardChip shortcut=\"Command+Shift+G\" />, paste `~/Movies/Beam/user`, then press <KeyboardChip shortcut=\"Enter\" />. Finder expands `~` to your home folder."
+              ]
+            },
+            {
+              "title": "Open the folder on Linux",
+              "paragraphs": [
+                "Open your file manager, press <KeyboardChip shortcut=\"Ctrl+L\" />, enter `~/Videos/Beam/user`, then press <KeyboardChip shortcut=\"Enter\" />. For a redirected Videos directory, run `xdg-open \"$(xdg-user-dir VIDEOS)/Beam/user\"` in a terminal."
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "The folder is created on demand",
+                "text": "Some directories appear only after their feature is first used. Record once before looking for `projects/`, or import a background before looking for the wallpaper library."
+              }
+            }
+          ]
+        },
+        {
+          "title": "User-data layout",
+          "paragraphs": [
+            "The `Beam/user` directory can contain the following durable data:\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"
+          ],
+          "bullets": [
+            "`preferences.json` stores appearance, recorder behavior, selected devices, shortcuts, onboarding state, presets, and saved window placement. It is created or replaced with normalized defaults when needed.",
+            "`projects/` stores every Beam project and its recording sessions. This is the most important directory to back up.",
+            "`media/wallpapers/image/` and `media/wallpapers/video/` store copies of backgrounds imported into the shared wallpaper library. They are optional.",
+            "`models/whisper/` stores downloaded local transcription models, their manifests, and temporary `.partial` downloads. Models are optional and can be downloaded again."
+          ]
+        },
+        {
+          "title": "Recordings and projects",
+          "paragraphs": [
+            "Each project uses a readable directory name such as `project-vivid-cosmic`. The stable project UUID lives inside `project.json`, so the directory name is not the project's identity. Renaming a project can also rename its directory."
+          ],
+          "subsections": [
+            {
+              "title": "Project directory",
+              "paragraphs": [
+                "A developed project can look like this:\n\n```text\nproject-<name>/\n├── project.json                         required\n├── thumbnail.webp                       optional\n├── media/                               optional imported editor media\n├── backgrounds/                         optional project backgrounds\n└── session-<uuid>/                      one or more recording sessions\n    ├── manifest.json                    completed session\n    ├── manifest.partial.json            interrupted/in-progress recovery state\n    ├── health.jsonl                     capture diagnostics\n    ├── timing.jsonl                     clock synchronization anchors\n    ├── screen/                          screen video segments\n    ├── system-audio/                    optional system-audio segments\n    ├── microphone/                      optional microphone segments\n    ├── camera/                          optional camera segments\n    ├── cursor/                          optional cursor and interaction data\n    └── session/teleprompter.json        optional teleprompter document\n```"
+              ]
+            },
+            {
+              "title": "Required project metadata",
+              "bullets": [
+                "`project.json` is the project manifest and source of truth. It contains the schema version, stable project ID, display name, timestamps, session references, composition, presentation settings, captions, zoom state, and imported-asset references.",
+                "Each completed session normally has `manifest.json`, which describes the platform, selected sources, permissions, warnings, track formats, segments, metrics, and completion state.",
+                "`manifest.partial.json` preserves recoverable metadata while capture is active or when a session did not finalize. A recovered session may legitimately use it instead of `manifest.json`."
+              ],
+              "notice": {
+                "kind": "warning",
+                "title": "Do not edit manifests by hand",
+                "text": "The manifests are versioned application data with cross-file references. Manual edits, moving individual session files, or renaming files inside a project can make media unavailable in the editor."
+              }
+            },
+            {
+              "title": "Track and media directories",
+              "bullets": [
+                "`screen/` contains numbered MP4 screen segments when screen capture succeeded.",
+                "`system-audio/`, `microphone/`, and `camera/` contain numbered WebM segments written for the corresponding enabled sources.",
+                "The five track directories can exist even when a source was not selected. Use the session manifest's `tracks` entries and statuses—not the presence of an empty directory—to determine what was recorded.",
+                "Temporary `.partial` media files can exist during an active or interrupted browser-media write. Finalized segments are renamed atomically.",
+                "`media/` contains copies of videos, images, or audio imported into the editor. Removing an unused imported asset through Beam can remove its copied file.",
+                "`backgrounds/` contains copies of backgrounds imported specifically into that project."
+              ]
+            },
+            {
+              "title": "Cursor, interactions, and diagnostics",
+              "bullets": [
+                "`cursor/cursor.json` contains recorded cursor events when cursor capture is available.",
+                "`cursor/telemetry.json` contains normalized cursor movement samples used by editor behavior such as cursor following.",
+                "`cursor/shapes.json` describes native cursor shapes; `cursor/shapes/*.png` can contain captured bitmap shapes when required by the platform or compatibility path.",
+                "`cursor/input.json` contains permitted shortcut and click interaction metadata. Typed text is not stored.",
+                "`health.jsonl` records capture health and interruptions; `timing.jsonl` records timing anchors used to align tracks. Keep both with the session when moving or diagnosing a project."
+              ]
+            },
+            {
+              "title": "Optional presentation files",
+              "bullets": [
+                "`thumbnail.webp` is a generated project-card preview and can be recreated.",
+                "`session/teleprompter.json` exists only after a teleprompter document is saved for that session.",
+                "Generated captions and editor configuration are stored in `project.json`; they are not separate subtitle files inside the project."
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "Back up the complete project directory",
+                "text": "Copy `project-<name>/` as one unit while Beam is not recording. A lone screen MP4 does not include the editor composition, optional tracks, cursor data, captions, or diagnostics."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Updates",
+          "paragraphs": [
+            "Downloaded updates are stored in the operating system's cache, separately from projects. The `pending/` directory can contain the installer or update archive and `update-info.json`. Beam clears the updater cache after the new version starts successfully, while preserving an update that is still awaiting installation."
+          ],
+          "bullets": [
+            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "macOS: `~/Library/Caches/beam-updater/pending`",
+            "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
+          ],
+          "subsections": [
+            {
+              "title": "Update state",
+              "paragraphs": [
+                "Beam also stores `update-cache-state.json` in Electron's application-data directory so it can distinguish an installed update from one still pending. The usual parent directories are `%APPDATA%\\Beam` on Windows, `~/Library/Application Support/Beam` on macOS, and `${XDG_CONFIG_HOME:-~/.config}/Beam` on Linux."
+              ],
+              "notice": {
+                "kind": "info",
+                "title": "Updater files are disposable",
+                "text": "Do not back up or move the updater cache. If no update is actively downloading or waiting to restart, it can be removed and Beam will download a future update again. Never delete it while an update is downloading or ready to install."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

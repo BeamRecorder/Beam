@@ -1,0 +1,15 @@
+{
+  "locale": "pl-PL",
+  "label": "Polski",
+  "siteTitle": "Dokumentacja Beam",
+  "nav": { "website": "Witryna Beam" },
+  "sidebar": [
+    { "text": "Zacznij tutaj", "items": [ { "text": "Wprowadzenie", "link": "/" }, { "text": "Pierwsze kroki", "link": "/getting-started" }, { "text": "Aktualizowanie Beam", "link": "/updates" } ] },
+    { "text": "Aplikacja do nagrywania", "items": [ { "text": "Przegląd", "link": "/recorder/" }, { "text": "Interfejs", "link": "/recorder/interface" }, { "text": "Możliwości", "link": "/recorder/capabilities" } ] },
+    { "text": "Edytor wideo", "items": [ { "text": "Przegląd", "link": "/editor/" }, { "text": "Interfejs", "link": "/editor/interface" }, { "text": "Możliwości", "link": "/editor/capabilities" } ] },
+    { "text": "Materiały referencyjne", "items": [ { "text": "Eksport i udostępnianie", "link": "/export" }, { "text": "Obsługiwane platformy", "link": "/platforms" }, { "text": "System plików", "link": "/filesystem" } ] }
+  ],
+  "social": { "github": "Zobacz Beam na GitHubie", "discord": "Dołącz do Discorda Beam" },
+  "theme": { "switchToLight": "Przełącz na jasny motyw", "switchToDark": "Przełącz na ciemny motyw" },
+  "footer": { "message": "Otwartoźródłowe nagrywanie i edycja ekranu.", "copyright": "Wydano na licencji MIT." }
+}

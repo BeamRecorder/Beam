@@ -1,0 +1,31 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "Xuất và chia sẻ",
+      "description": "Xuất bản dàn dựng Beam sang MP4 hoặc WebM với cài đặt độ phân giải và chất lượng phù hợp.",
+      "lead": "Xuất kết xuất bản dàn dựng hiện tại trực tiếp thành tệp cục bộ bằng các cài đặt được máy hỗ trợ.",
+      "sections": [
+        { "title": "Chọn định dạng", "bullets": ["WebM sử dụng container WebM với một encoder có trên máy hiện tại.", "MP4 sử dụng container MP4 khi Beam tìm thấy encoder phần cứng hoặc phần mềm tương thích."], "notice": { "kind": "info", "title": "Tính khả dụng của encoder", "text": "Một định dạng có thể không khả dụng khi máy không cung cấp encoder tương thích. Beam báo điều này trước hoặc trong khi xuất." } },
+        { "title": "Chọn độ phân giải", "bullets": ["720p thu nhỏ thành đầu ra HD khi canvas gốc đủ lớn.", "1080p thu nhỏ thành Full HD khi canvas gốc đủ lớn.", "Tối đa giữ nguyên kích thước canvas đầu ra gốc."] },
+        { "title": "Chọn chất lượng và bitrate", "paragraphs": ["Các cài đặt thấp, trung bình và cao tính bitrate từ kích thước đầu ra và tốc độ khung hình. Trung bình cân bằng độ rõ và kích thước tệp, còn cao ưu tiên độ trung thực hình ảnh."], "screenshot": { "path": "reference/export-settings.webp", "alt": "Cài đặt xuất Beam cho định dạng, độ phân giải và chất lượng", "caption": "Chọn định dạng, độ phân giải và chất lượng trước khi chọn tệp đích." } },
+        { "title": "Theo dõi quá trình xuất", "paragraphs": ["Beam hiển thị tiến trình khung hình trong khi kết xuất. Bạn có thể hủy bản xuất đang hoạt động hoặc sao chép báo cáo chẩn đoán. Thay đổi trực tiếp trong trình chỉnh sửa không sửa tệp đang kết xuất."] },
+        { "title": "Mở kết quả", "paragraphs": ["Sau khi xuất thành công, Beam báo tên tệp đã lưu và cung cấp thao tác mở tệp. Nếu xuất thất bại, hãy sao chép báo cáo kỹ thuật trước khi nhờ trợ giúp trên [Discord](https://discord.gg/6Q6v2xUCB) hoặc [GitHub](https://github.com/ExtraBinoss/Beam/issues)."] }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "Hỗ trợ nền tảng",
+      "description": "Xem hỗ trợ Beam và hành vi riêng của hệ điều hành trên Windows, macOS và Linux.",
+      "lead": "Beam có trên Windows, macOS và Linux. Quyền gốc và khả năng của hệ thống cửa sổ tạo ra một số khác biệt giữa các nền tảng.",
+      "sections": [
+        { "title": "Windows", "bullets": ["Beam được phân phối dưới dạng trình cài đặt Windows gốc.", "Hỗ trợ ghi màn hình, cửa sổ, vùng, camera, micrô và âm thanh hệ thống.", "Có thể lưu và khôi phục vị trí cũng như kích thước lớp phủ."] },
+        { "title": "macOS", "bullets": ["Beam được phân phối dưới dạng DMG cho máy Mac Apple Silicon chạy macOS 13 trở lên.", "Quyền Ghi màn hình, Micrô và Camera được yêu cầu khi dùng các nguồn đó.", "Có thể lưu và khôi phục vị trí cũng như kích thước lớp phủ."], "notice": { "kind": "warning", "title": "Beam bị hỏng và không thể mở", "text": "Sau khi chuyển Beam vào `/Applications`, chạy `xattr -cr /Applications/Beam.app`, hoặc chọn Mở vẫn trong Cài đặt hệ thống > Quyền riêng tư & Bảo mật." }, "subsections": [
+          { "title": "Cho phép ghi màn hình và âm thanh hệ thống", "paragraphs": ["Mở menu Apple > Cài đặt hệ thống > Quyền riêng tư & Bảo mật > Ghi màn hình & âm thanh hệ thống, sau đó bật Beam. Nếu Beam không có trong danh sách, dùng nút thêm và chọn `/Applications/Beam.app`. Thoát rồi mở lại Beam sau khi đổi quyền."], "screenshot": { "path": "platforms/macos-screen-system-audio.webp", "alt": "Cài đặt quyền riêng tư Ghi màn hình và âm thanh hệ thống trên macOS với Beam được bật", "caption": "Bật Beam trong phần Ghi màn hình & âm thanh hệ thống." } },
+          { "title": "Cho phép truy cập micrô và camera", "paragraphs": ["Trong Cài đặt hệ thống > Quyền riêng tư & Bảo mật, mở Micrô và bật Beam khi ghi giọng nói. Mở Camera và bật Beam khi dùng lớp phủ camera."], "screenshot": { "path": "platforms/macos-microphone-camera.webp", "alt": "Cài đặt quyền riêng tư Micrô và Camera trên macOS cho Beam", "caption": "Beam phải được bật trong danh sách quyền riêng tư cho từng nguồn bạn muốn ghi." } }
+        ] },
+        { "title": "Linux", "bullets": ["Beam được phân phối dưới dạng gói AppImage, DEB và RPM.", "Ghi màn hình và cửa sổ dùng XDG Desktop Portal, PipeWire và FFmpeg.", "Bộ chọn hệ thống yêu cầu quyền khi bắt đầu ghi.", "Siêu dữ liệu phím tắt và nhấp chuột cần sự chấp thuận Polkit rõ ràng.", "X11 có thể khôi phục vị trí và kích thước lớp phủ.", "Wayland gốc có thể khôi phục kích thước lớp phủ nhưng không khôi phục vị trí toàn cục."], "notice": { "kind": "info", "title": "Định vị trên Wayland", "text": "Wayland không cung cấp tọa độ cửa sổ toàn cục. Beam không ép dùng XWayland vì giải pháp này có thể không tương thích với một số cấu hình GPU và X11." } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "locale": "pt-BR",
+  "label": "Português (Brasil)",
+  "siteTitle": "Documentação do Beam",
+  "nav": { "website": "Site do Beam" },
+  "sidebar": [
+    { "text": "Comece aqui", "items": [ { "text": "Introdução", "link": "/" }, { "text": "Primeiros passos", "link": "/getting-started" }, { "text": "Atualizar o Beam", "link": "/updates" } ] },
+    { "text": "Aplicativo de gravação", "items": [ { "text": "Visão geral", "link": "/recorder/" }, { "text": "Interface", "link": "/recorder/interface" }, { "text": "Recursos", "link": "/recorder/capabilities" } ] },
+    { "text": "Editor de vídeo", "items": [ { "text": "Visão geral", "link": "/editor/" }, { "text": "Interface", "link": "/editor/interface" }, { "text": "Recursos", "link": "/editor/capabilities" } ] },
+    { "text": "Referência", "items": [ { "text": "Exportação e compartilhamento", "link": "/export" }, { "text": "Compatibilidade com plataformas", "link": "/platforms" }, { "text": "Sistema de arquivos", "link": "/filesystem" } ] }
+  ],
+  "social": { "github": "Ver o Beam no GitHub", "discord": "Entrar no Discord do Beam" },
+  "theme": { "switchToLight": "Mudar para o tema claro", "switchToDark": "Mudar para o tema escuro" },
+  "footer": { "message": "Gravação e edição de tela de código aberto.", "copyright": "Distribuído sob a licença MIT." }
+}
