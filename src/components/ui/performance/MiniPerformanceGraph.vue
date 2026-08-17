@@ -12,27 +12,51 @@ const props = withDefaults(
     animationMs?: number;
     sampleCapacity?: number;
   }>(),
-  { width: 82, height: 20, animationMs: 480, sampleCapacity: 48, fill: true },
+  { width: 82, height: 20, animationMs: 320, sampleCapacity: 48, fill: true },
 );
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
-let currentWindow: number[] = [];
-let targetWindow: number[] = [];
-let slideProgress = 1;
+let renderedValues: number[] = [];
+let targetValues: number[] = [];
+let startValues: number[] = [];
 let animationFrame: number | null = null;
 let animationStartTime = 0;
 let mounted = false;
 
 const colorCache = new Map<string, string>();
 
-function normalizeValues(values: readonly number[]): number[] {
-  const result: number[] = [];
+function cleanValues(values: readonly number[], sampleCapacity?: number): number[] {
+  const normalized: number[] = [];
   for (let i = 0; i < values.length; i++) {
     const val = values[i];
     if (typeof val === 'number' && Number.isFinite(val)) {
-      result.push(Math.max(0, Math.min(1, val)));
+      normalized.push(Math.max(0, Math.min(1, val)));
     }
+  }
+  if (normalized.length === 0) return [];
+
+  const capacity =
+    sampleCapacity !== undefined && sampleCapacity > 0 ? Math.max(2, Math.round(sampleCapacity)) : normalized.length;
+
+  return normalized.length > capacity ? normalized.slice(-capacity) : normalized;
+}
+
+function resampleValues(source: readonly number[], targetLength: number): number[] {
+  if (targetLength <= 0) return [];
+  if (source.length === 0) return new Array(targetLength).fill(0);
+  if (source.length === targetLength) return source.slice();
+
+  const result = new Array<number>(targetLength);
+  const maxSourceIndex = source.length - 1;
+  const maxTargetIndex = Math.max(1, targetLength - 1);
+
+  for (let i = 0; i < targetLength; i++) {
+    const sourcePos = (i / maxTargetIndex) * maxSourceIndex;
+    const left = Math.floor(sourcePos);
+    const right = Math.min(maxSourceIndex, Math.ceil(sourcePos));
+    const progress = sourcePos - left;
+    result[i] = (source[left] ?? 0) * (1 - progress) + (source[right] ?? 0) * progress;
   }
   return result;
 }
@@ -57,77 +81,39 @@ function getPointY(value: number, height: number): number {
   return height - value * Math.max(1, height - 3) - 1.5;
 }
 
-function traceSlidingCurve(
-  context: CanvasRenderingContext2D,
-  samples: readonly number[],
-  progress: number,
-  capacity: number,
-  width: number,
-  height: number,
-) {
-  const count = samples.length;
+function getPointX(index: number, total: number, width: number): number {
+  return total <= 1 ? width / 2 : (index / (total - 1)) * width;
+}
+
+function traceCurve(context: CanvasRenderingContext2D, values: readonly number[], width: number, height: number) {
+  const count = values.length;
   if (count === 0) return;
 
   if (count === 1) {
-    const y = getPointY(samples[0] ?? 0, height);
+    const y = getPointY(values[0] ?? 0, height);
     context.beginPath();
     context.moveTo(0, y);
     context.lineTo(width, y);
     return;
   }
 
-  const dx = width / Math.max(1, capacity - 1);
-  const pointsX: number[] = new Array(count);
-  const pointsY: number[] = new Array(count);
-
-  if (progress >= 1 || count <= capacity) {
-    for (let i = 0; i < count; i++) {
-      pointsX[i] = count <= capacity ? (i / (count - 1)) * width : (i - (count - capacity)) * dx;
-      pointsY[i] = getPointY(samples[i] ?? 0, height);
-    }
-  } else {
-    // During slide transition (count = capacity + 1)
-    for (let i = 0; i < count; i++) {
-      pointsX[i] = (i - 1 + progress) * dx;
-      pointsY[i] = getPointY(samples[i] ?? 0, height);
-    }
-  }
+  const firstY = getPointY(values[0] ?? 0, height);
+  const firstX = getPointX(0, count, width);
 
   context.beginPath();
-  context.moveTo(pointsX[0]!, pointsY[0]!);
+  context.moveTo(firstX, firstY);
 
-  if (count === 2) {
-    const midX = (pointsX[0]! + pointsX[1]!) / 2;
-    context.bezierCurveTo(midX, pointsY[0]!, midX, pointsY[1]!, pointsX[1]!, pointsY[1]!);
-    return;
-  }
-
-  // Smooth Catmull-Rom to Cubic Bezier curve without intermediate object allocations
-  const tension = 0.22;
-  for (let i = 0; i < count - 1; i++) {
-    const x0 = pointsX[Math.max(0, i - 1)]!;
-    const y0 = pointsY[Math.max(0, i - 1)]!;
-
-    const x1 = pointsX[i]!;
-    const y1 = pointsY[i]!;
-
-    const x2 = pointsX[i + 1]!;
-    const y2 = pointsY[i + 1]!;
-
-    const x3 = pointsX[Math.min(count - 1, i + 2)]!;
-    const y3 = pointsY[Math.min(count - 1, i + 2)]!;
-
-    const cp1x = x1 + ((x2 - x0) * tension) / 3;
-    const cp1y = y1 + ((y2 - y0) * tension) / 3;
-
-    const cp2x = x2 - ((x3 - x1) * tension) / 3;
-    const cp2y = y2 - ((y3 - y1) * tension) / 3;
-
-    context.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2, y2);
+  for (let i = 1; i < count; i++) {
+    const prevX = getPointX(i - 1, count, width);
+    const prevY = getPointY(values[i - 1] ?? 0, height);
+    const currX = getPointX(i, count, width);
+    const currY = getPointY(values[i] ?? 0, height);
+    const midX = (prevX + currX) / 2;
+    context.bezierCurveTo(midX, prevY, midX, currY, currX, currY);
   }
 }
 
-function draw(samples: readonly number[], progress: number) {
+function draw(values: readonly number[]) {
   const canvas = canvasRef.value;
   if (!canvas) return;
 
@@ -150,21 +136,16 @@ function draw(samples: readonly number[], progress: number) {
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
 
-  if (samples.length === 0 || width <= 0 || height <= 0) return;
-
-  const capacity =
-    props.sampleCapacity !== undefined && props.sampleCapacity > 0
-      ? Math.max(2, Math.round(props.sampleCapacity))
-      : Math.max(2, samples.length);
+  if (values.length === 0 || width <= 0 || height <= 0) return;
 
   const color = resolveColor(canvas, props.color);
 
   context.lineCap = 'round';
   context.lineJoin = 'round';
 
-  traceSlidingCurve(context, samples, progress, capacity, width, height);
+  traceCurve(context, values, width, height);
 
-  // Stroke the continuous curve
+  // Stroke the curve
   context.strokeStyle = color;
   context.lineWidth = 1.5;
   context.globalAlpha = 0.95;
@@ -193,19 +174,28 @@ function draw(samples: readonly number[], progress: number) {
 }
 
 function stepAnimation(timestamp: number) {
-  const duration = Math.max(1, props.animationMs ?? 480);
+  const duration = Math.max(1, props.animationMs ?? 320);
   const elapsed = timestamp - animationStartTime;
   const linear = Math.min(1, Math.max(0, elapsed / duration));
-  slideProgress = linear;
+  const progress = 1 - Math.pow(1 - linear, 3);
+
+  const len = targetValues.length;
+  if (renderedValues.length !== len) {
+    renderedValues = new Array(len);
+  }
+
+  for (let i = 0; i < len; i++) {
+    const s = startValues[i] ?? targetValues[i] ?? 0;
+    const t = targetValues[i] ?? 0;
+    renderedValues[i] = s + (t - s) * progress;
+  }
+
+  draw(renderedValues);
 
   if (linear < 1) {
-    draw(targetWindow, slideProgress);
     animationFrame = requestAnimationFrame(stepAnimation);
   } else {
     animationFrame = null;
-    currentWindow = targetWindow.slice(-props.sampleCapacity!);
-    slideProgress = 1;
-    draw(currentWindow, 1);
   }
 }
 
@@ -215,34 +205,15 @@ function update() {
     animationFrame = null;
   }
 
-  const raw = normalizeValues(props.values);
-  const capacity =
-    props.sampleCapacity !== undefined && props.sampleCapacity > 0
-      ? Math.max(2, Math.round(props.sampleCapacity))
-      : raw.length;
+  targetValues = cleanValues(props.values, props.sampleCapacity);
 
-  if (raw.length === 0) {
-    currentWindow = [];
-    targetWindow = [];
-    slideProgress = 1;
-    draw([], 1);
+  if (!mounted || (props.animationMs ?? 0) <= 0 || renderedValues.length === 0) {
+    renderedValues = targetValues.slice();
+    draw(renderedValues);
     return;
   }
 
-  const windowed = raw.slice(-capacity);
-
-  if (!mounted || (props.animationMs ?? 0) <= 0 || currentWindow.length === 0) {
-    currentWindow = windowed;
-    targetWindow = windowed;
-    slideProgress = 1;
-    draw(targetWindow, 1);
-    return;
-  }
-
-  // Combine previous tail and new window for a continuous 1-sample slide
-  const slidingWindow = currentWindow.length >= capacity ? [currentWindow[0]!, ...windowed] : windowed;
-  targetWindow = slidingWindow;
-  slideProgress = 0;
+  startValues = resampleValues(renderedValues, targetValues.length);
   animationStartTime = performance.now();
   animationFrame = requestAnimationFrame(stepAnimation);
 }
