@@ -83,5 +83,9 @@ onUnmounted(() => {
 <template><canvas ref="canvas" aria-hidden="true" /></template>
 
 <style scoped>
-canvas { display: block; width: 100%; height: 54px; }
+canvas {
+  display: block;
+  width: 100%;
+  height: 54px;
+}
 </style>

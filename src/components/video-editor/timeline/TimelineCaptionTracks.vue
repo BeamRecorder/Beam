@@ -36,7 +36,11 @@ const getCaptionText = (clip: CaptionClip): string => {
     if (custom) return custom;
     const sentences = clip.caption.sentences;
     if (Array.isArray(sentences) && sentences.length > 0) {
-      const text = sentences.map((s) => s.text).filter(Boolean).join(' ').trim();
+      const text = sentences
+        .map((s) => s.text)
+        .filter(Boolean)
+        .join(' ')
+        .trim();
       if (text) return text;
     }
     if (clip.name && clip.name !== 'Caption' && clip.name !== 'Text Captions') {
@@ -49,9 +53,7 @@ const getCaptionText = (clip: CaptionClip): string => {
     return clip.name;
   }
   if (clip.caption.type === 'keyboard' && Array.isArray(clip.caption.steps) && clip.caption.steps.length > 0) {
-    return clip.caption.steps
-      .map((s) => (s.modifiers.length ? `${s.modifiers.join('+')}+${s.key}` : s.key))
-      .join(' ');
+    return clip.caption.steps.map((s) => (s.modifiers.length ? `${s.modifiers.join('+')}+${s.key}` : s.key)).join(' ');
   }
   return t('keyboardCaptions') || 'Keyboard';
 };
@@ -179,10 +181,7 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <div
-    class="track-row annotation-track text-caption-track"
-    @contextmenu="emit('contextmenu:track', $event)"
-  >
+  <div class="track-row annotation-track text-caption-track" @contextmenu="emit('contextmenu:track', $event)">
     <div
       class="track-content annotation-content"
       :title="t('clickToAddCaption')"

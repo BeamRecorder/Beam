@@ -6,7 +6,8 @@ import ClipTransitionsPanel from '../ClipTransitionsPanel.vue';
 const BigSlider = {
   props: { modelValue: { type: Number, default: 0 }, max: { type: Number, default: 0 } },
   emits: ['update:modelValue'],
-  template: '<button class="duration-slider" :data-max="max" @click="$emit(\'update:modelValue\', max)">Duration</button>',
+  template:
+    '<button class="duration-slider" :data-max="max" @click="$emit(\'update:modelValue\', max)">Duration</button>',
 };
 
 const clip = (kind: Clip['kind'], overrides: Record<string, unknown> = {}) =>
@@ -33,9 +34,9 @@ describe('ClipTransitionsPanel', () => {
     });
 
     expect(wrapper.find('.transitions-header').exists()).toBe(false);
-    expect(wrapper.find('.duration-control').element.compareDocumentPosition(wrapper.get('.preset-gallery').element)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
+    expect(
+      wrapper.find('.duration-control').element.compareDocumentPosition(wrapper.get('.preset-gallery').element),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(wrapper.findAll('.preset-card-info strong').map((label) => label.text())).toEqual([
       'None',
       'Fade',
@@ -69,24 +70,24 @@ describe('ClipTransitionsPanel', () => {
     await wrapper.setProps({
       clip: clip('audio', {
         timelineDurationMs: 300,
-        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 200 }, exit: { preset: { kind: 'fade' }, durationMs: 100 } },
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200 },
+          exit: { preset: { kind: 'fade' }, durationMs: 100 },
+        },
       }),
     });
     expect(wrapper.get('.duration-slider').attributes('data-max')).toBe('200');
   });
 
   it('switches between entry and exit and supports removing a transition', async () => {
-    const wrapper = mount(
-      ClipTransitionsPanel,
-      {
-        props: {
-          clip: clip('video', {
-            transitions: { entry: { preset: { kind: 'fade' }, durationMs: 300 }, exit: null },
-          }),
-        },
-        global: { stubs: { BigSlider } },
+    const wrapper = mount(ClipTransitionsPanel, {
+      props: {
+        clip: clip('video', {
+          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 300 }, exit: null },
+        }),
       },
-    );
+      global: { stubs: { BigSlider } },
+    });
 
     expect(wrapper.find('.duration-slider').exists()).toBe(true);
     await wrapper.find('.edge-selector .btn-container:nth-child(2) button').trigger('click');
