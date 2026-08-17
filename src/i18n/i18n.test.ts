@@ -89,6 +89,16 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides translated timeline clipboard feedback in English and French', () => {
+    for (const locale of ['en', 'fr'] as const) {
+      setCurrentLocale(locale);
+      for (const key of ['timelineCopied', 'timelinePasted']) {
+        expect(i18n.global.te(`VideoEditor.${key}`, locale), `${locale}: missing VideoEditor.${key}`).toBe(true);
+        expect(i18n.global.t(`VideoEditor.${key}`)).not.toBe(`VideoEditor.${key}`);
+      }
+    }
+  });
+
   it('keeps the preferences About and Linux interaction catalog complete', () => {
     const keys = [
       'about',

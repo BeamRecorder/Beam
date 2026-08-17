@@ -1,0 +1,26 @@
+.paste-arrival,
+.timeline-clip[data-paste-highlight='true'] {
+  animation: timeline-paste-arrival 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes timeline-paste-arrival {
+  0% {
+    filter: brightness(1.5);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 70%, transparent);
+  }
+  45% {
+    filter: brightness(1.15);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+  100% {
+    filter: brightness(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paste-arrival,
+  .timeline-clip[data-paste-highlight='true'] {
+    animation-duration: 1ms;
+  }
+}

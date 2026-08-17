@@ -1,6 +1,6 @@
 import './VideoEditor.test.setup';
 import { flushPromises } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { editorState, historyState, mountEditor, setEditorComponent, toast } from './VideoEditor.test.setup';
 
@@ -156,6 +156,16 @@ describe('VideoEditor', () => {
     expect(toast.error).toHaveBeenCalledTimes(2);
   });
 
+  it('confirms a timeline copy with a translated success toast', async () => {
+    const mounted = mountEditor();
+
+    await mounted.get('.timeline-copy').trigger('click');
+    await mounted.vm.$nextTick();
+
+    expect(toast.success).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/copied/i), expect.any(Number));
+  });
+
   it('rejects a pasted item from another project without mutating the timeline', async () => {
     const mounted = mountEditor();
     const compositionBefore = JSON.stringify(editorState.store.compositionState.composition.value);
@@ -167,6 +177,7 @@ describe('VideoEditor', () => {
     expect(editorState.store.editorState.scheduleSave).not.toHaveBeenCalled();
     expect(historyState.commitNow).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('project'), expect.any(Number));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('pastes a clip at the playhead, overwrites its destination range, selects it and saves', async () => {
@@ -186,6 +197,7 @@ describe('VideoEditor', () => {
     expect(editorState.store.activeTab.value).toBe('clip');
     expect(editorState.store.editorState.scheduleSave).toHaveBeenCalled();
     expect(historyState.commitNow).toHaveBeenCalledWith(expect.objectContaining({ composition }));
+    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/pasted/i), expect.any(Number));
   });
 
   it('delegates zoom pasting and keeps the pasted zoom selected', async () => {
@@ -202,5 +214,36 @@ describe('VideoEditor', () => {
     expect(editorState.store.activeTab.value).toBe('zoom');
     expect(editorState.store.compositionState.selectedClipId.value).toBeNull();
     expect(historyState.commitNow).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/pasted/i), expect.any(Number));
+  });
+
+  it('keeps the latest paste highlight alive and expires it 900ms after the latest paste', async () => {
+    vi.useFakeTimers();
+    try {
+      const mounted = mountEditor();
+      const timeline = () => mounted.get('.mock-editor-timeline');
+
+      await mounted.get('.timeline-paste-clip').trigger('click');
+      const firstPasteId = timeline().attributes('data-recent-paste-id');
+      expect(timeline().attributes('data-recent-paste-type')).toBe('clip');
+      expect(firstPasteId).toBeTruthy();
+
+      vi.advanceTimersByTime(450);
+      await mounted.get('.timeline-paste-zoom').trigger('click');
+      expect(timeline().attributes('data-recent-paste-type')).toBe('zoom');
+      expect(timeline().attributes('data-recent-paste-id')).toBe('pasted-zoom');
+
+      // The first timer would have expired by now if the second paste had not replaced it.
+      vi.advanceTimersByTime(899);
+      await mounted.vm.$nextTick();
+      expect(timeline().attributes('data-recent-paste-type')).toBe('zoom');
+
+      vi.advanceTimersByTime(1);
+      await mounted.vm.$nextTick();
+      expect(timeline().attributes('data-recent-paste-type')).toBe('');
+      expect(timeline().attributes('data-recent-paste-id')).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

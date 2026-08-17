@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<TimelineTracksProps>(), {
   isSnappingEnabled: true,
   includeAudioInExport: true,
   projectId: null,
+  recentPaste: null,
 });
 const emit = defineEmits<TimelineTracksEmits>();
 
@@ -296,6 +297,7 @@ const exportProgressPercent = computed(() => {
                   :selected="selectedClipId === clip.id"
                   :trim-state="trimStateFor(clip.id)"
                   :defer-thumbnail-requests="movingClipIds.includes(clip.id)"
+                  :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
                   @select="emit('select:clip', clip.id)"
                   @contextmenu="openClipContextMenu($event, clip)"
                   @move="beginClipMove($event, clip)"
@@ -326,7 +328,10 @@ const exportProgressPercent = computed(() => {
                 :key="zoom.id"
                 type="button"
                 class="cursor-zoom-indicator"
-                :class="{ selected: selectedZoomId === zoom.id }"
+                :class="{
+                  selected: selectedZoomId === zoom.id,
+                  'paste-arrival': recentPaste?.type === 'zoom' && recentPaste.id === zoom.id,
+                }"
                 :style="
                   percentageStyle(displayedZoom(zoom).startMs, displayedZoom(zoom).endMs - displayedZoom(zoom).startMs)
                 "
@@ -371,6 +376,7 @@ const exportProgressPercent = computed(() => {
             :hover-at="hoverAt"
             :leave-track="leaveTrack"
             :add-at="addAt"
+            :recent-paste="recentPaste"
             @select="emit('select:clip', $event)"
             @contextmenu:clip="openClipContextMenu($event.event, $event.clip)"
             @contextmenu:track="openTrackContextMenu($event, 'caption')"
@@ -399,6 +405,7 @@ const exportProgressPercent = computed(() => {
                 :waveform-status="audioWaveformStatus[clip.id]"
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
+                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
                 @select="emit('select:clip', clip.id)"
                 @contextmenu="openClipContextMenu($event, clip)"
                 @move="beginClipMove($event, clip)"
@@ -430,6 +437,7 @@ const exportProgressPercent = computed(() => {
                 :waveform-status="audioWaveformStatus[clip.id]"
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
+                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
                 @select="emit('select:clip', clip.id)"
                 @contextmenu="openClipContextMenu($event, clip)"
                 @move="beginClipMove($event, clip)"
@@ -460,6 +468,7 @@ const exportProgressPercent = computed(() => {
                 :waveform-status="audioWaveformStatus[clip.id]"
                 :waveform-error="audioWaveformErrors[clip.id]"
                 :trim-state="trimStateFor(clip.id)"
+                :paste-highlight="recentPaste?.type === 'clip' && recentPaste.id === clip.id"
                 @select="emit('select:clip', clip.id)"
                 @contextmenu="openClipContextMenu($event, clip)"
                 @move="beginClipMove($event, clip)"
@@ -484,3 +493,4 @@ const exportProgressPercent = computed(() => {
 </template>
 
 <style scoped src="./timeline-tracks.css"></style>
+<style src="./timeline-paste-feedback.css"></style>

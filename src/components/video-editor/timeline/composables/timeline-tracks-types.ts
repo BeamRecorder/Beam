@@ -1,7 +1,7 @@
 import type { ExportProgress } from '../../../export/export-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { BlurClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
-import type { TimelinePasteRequest } from './timeline-clipboard-types';
+import type { TimelinePasteHighlight, TimelinePasteRequest } from './timeline-clipboard-types';
 
 export interface VisualTimelineTrack {
   id: string;
@@ -23,6 +23,7 @@ export interface TimelineTracksProps {
   selectedClipId: string | null;
   isSnappingEnabled?: boolean;
   projectId?: string | null;
+  recentPaste?: TimelinePasteHighlight | null;
 }
 
 export interface TimelineTracksEmits {
@@ -43,4 +44,5 @@ export interface TimelineTracksEmits {
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
+  (event: 'clipboard:copied'): void;
 }

@@ -23,3 +23,9 @@ export interface TimelinePasteRequest {
   timeMs: number;
   target?: TimelinePasteTarget | null;
 }
+
+export interface TimelinePasteHighlight {
+  type: TimelineClipboardItem['type'];
+  id: string;
+  timestamp: number;
+}

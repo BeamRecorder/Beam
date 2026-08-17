@@ -103,6 +103,7 @@ export function useTimelineContextMenu(options: {
     if (zoom) clipboard.copyZoom(scopeId, zoom);
     else if (clip) clipboard.copyClip(scopeId, clip, options.assetFor(clip));
     else return false;
+    options.emit('clipboard:copied');
     return true;
   };
 

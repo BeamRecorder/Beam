@@ -247,7 +247,9 @@
     "mediaPlaybackUnknownProject": "Projet actuel",
     "mediaPlaybackCopyError": "Copier l’erreur",
     "timelinePasteFailed": "Impossible de coller : {message}",
-    "timelineClipboardDifferentProject": "L’élément copié appartient à un autre projet."
+    "timelineClipboardDifferentProject": "L’élément copié appartient à un autre projet.",
+    "timelineCopied": "Copié",
+    "timelinePasted": "Collé"
   },
   "BlurPropertiesPanel": {
     "presets": "Préréglages",

@@ -4,7 +4,7 @@ import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
-import type { TimelinePasteRequest } from './composables/timeline-clipboard-types';
+import type { TimelinePasteHighlight, TimelinePasteRequest } from './composables/timeline-clipboard-types';
 
 const props = withDefaults(
   defineProps<{
@@ -20,6 +20,7 @@ const props = withDefaults(
     zoomLevel: number;
     isSnappingEnabled?: boolean;
     projectId?: string | null;
+    recentPaste?: TimelinePasteHighlight | null;
   }>(),
   { isSnappingEnabled: true, includeAudioInExport: true },
 );
@@ -42,6 +43,7 @@ const emit = defineEmits<{
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
+  (event: 'clipboard:copied'): void;
 }>();
 
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -74,6 +76,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :selected-clip-id="selectedClipId"
         :is-snapping-enabled="isSnappingEnabled"
         :project-id="projectId"
+        :recent-paste="recentPaste"
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"
@@ -91,6 +94,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @reorder:clip="emit('reorder:clip', $event)"
         @paste:item="emit('paste:item', $event)"
         @paste:error="emit('paste:error', $event)"
+        @clipboard:copied="emit('clipboard:copied')"
       />
     </div>
   </div>

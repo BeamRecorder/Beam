@@ -2,12 +2,14 @@
 import { Sparkles } from '@lucide/vue';
 import type { CaptionClip } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import type { TimelinePasteHighlight } from './composables/timeline-clipboard-types';
 
 const { t } = useTranslate('TimelineTracks');
 defineProps<{
   keyboardClips: CaptionClip[];
   textClips: CaptionClip[];
   selectedClipId: string | null;
+  recentPaste?: TimelinePasteHighlight | null;
   hoverCaptionTimeMs: number | null;
   defaultCaptionDurationMs: number;
   percentageStyle: (startMs: number, durationMs: number) => Record<string, string>;
@@ -39,7 +41,11 @@ const emit = defineEmits<{
           :key="clip.id"
           type="button"
           class="annotation-indicator"
-          :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
+          :class="{
+            selected: selectedClipId === clip.id,
+            disabled: !clip.enabled,
+            'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
+          }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
           @click.stop="emit('select', clip.id)"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"
@@ -90,7 +96,11 @@ const emit = defineEmits<{
           :key="clip.id"
           type="button"
           class="annotation-indicator"
-          :class="{ selected: selectedClipId === clip.id, disabled: !clip.enabled }"
+          :class="{
+            selected: selectedClipId === clip.id,
+            disabled: !clip.enabled,
+            'paste-arrival': recentPaste?.type === 'clip' && recentPaste.id === clip.id,
+          }"
           :style="percentageStyle(displayedClip(clip).timelineStartMs, displayedClip(clip).timelineDurationMs)"
           @click.stop="emit('select', clip.id)"
           @contextmenu.prevent.stop="emit('contextmenu:clip', { event: $event, clip })"

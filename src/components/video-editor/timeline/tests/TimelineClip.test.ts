@@ -100,6 +100,18 @@ describe('TimelineClip', () => {
     expect(exit.attributes('style')).toContain('width: 30%');
   });
 
+  it('marks a newly pasted clip with the arrival highlight and clears it when the prop is removed', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, pasteHighlight: true },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.timeline-clip').attributes('data-paste-highlight')).toBe('true');
+
+    await wrapper.setProps({ pasteHighlight: false });
+    expect(wrapper.get('.timeline-clip').attributes('data-paste-highlight')).toBeUndefined();
+  });
+
   it('renders video frames, speed and trim state, then emits clip interactions', async () => {
     const wrapper = mount(TimelineClip, {
       attachTo: document.body,

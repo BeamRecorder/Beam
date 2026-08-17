@@ -4,9 +4,9 @@ import EditorTimeline from '../EditorTimeline.vue';
 import type { ClipComposition } from '~/media/shared/composition-types';
 
 const TimelineTracks = {
-  emits: ['update:currentTime', 'select:clip'],
+  emits: ['update:currentTime', 'select:clip', 'clipboard:copied'],
   template:
-    '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button></div>',
+    '<div class="timeline-tracks-stub"><button @click="$emit(\'update:currentTime\', 250)">Scrub</button><button @click="$emit(\'select:clip\', \'clip-1\')">Select</button><button class="copy-feedback" @click="$emit(\'clipboard:copied\')">Copy</button></div>',
 };
 
 const composition: ClipComposition = {
@@ -47,6 +47,15 @@ describe('EditorTimeline', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
     expect(wrapper.emitted('update:isPlaying')).toBeUndefined();
     input.remove();
+    wrapper.unmount();
+  });
+
+  it('relays clipboard copy feedback from the tracks to the editor timeline', async () => {
+    const wrapper = mount(EditorTimeline, { props, global: { stubs: { TimelineTracks } } });
+
+    await wrapper.get('.copy-feedback').trigger('click');
+
+    expect(wrapper.emitted('clipboard:copied')).toEqual([[]]);
     wrapper.unmount();
   });
 });

@@ -23,6 +23,7 @@ const props = defineProps<{
   waveformError?: MediaError;
   trimState?: { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
   deferThumbnailRequests?: boolean;
+  pasteHighlight?: boolean;
 }>();
 const emit = defineEmits<{
   (event: 'select'): void;
@@ -145,6 +146,7 @@ onUnmounted(() => stopMarquee());
     type="button"
     class="timeline-clip"
     :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
+    :data-paste-highlight="pasteHighlight || undefined"
     :style="clipStyle"
     @click.stop="emit('select')"
     @contextmenu.prevent.stop="emit('contextmenu', $event)"

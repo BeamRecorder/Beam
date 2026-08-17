@@ -42,13 +42,14 @@ const TimelineClipStub = defineComponent({
     waveformWidthPercent: { type: Number, default: 100 },
     waveformStatus: { type: String, default: undefined },
     waveformError: { type: Object, default: undefined },
+    pasteHighlight: { type: Boolean, default: false },
   },
   emits: ['select', 'move', 'trim', 'contextmenu'],
   template: `
     <button
       type="button"
       class="timeline-clip"
-      :class="{ selected, disabled: !clip.enabled }"
+      :class="{ selected, disabled: !clip.enabled, 'paste-arrival': pasteHighlight }"
       @click.stop="$emit('select')"
       @contextmenu.prevent="$emit('contextmenu', $event)"
       @pointerdown="$emit('move', $event)"
@@ -724,6 +725,28 @@ describe('TimelineTracks', () => {
     });
   });
 
+  it('highlights the recently pasted clip, zoom, and caption only for the matching item', async () => {
+    const mounted = await mountTracks({
+      recentPaste: { type: 'clip', id: 'screen-clip', timestamp: 1 },
+    });
+    const screen = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screen) throw new Error('Expected the screen timeline clip stub.');
+    expect(screen.props('pasteHighlight')).toBe(true);
+    expect(screen.get('.timeline-clip').classes()).toContain('paste-arrival');
+
+    await mounted!.setProps({ recentPaste: { type: 'zoom', id: 'zoom-1', timestamp: 2 } });
+    expect(screen.props('pasteHighlight')).toBe(false);
+    expect(mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').classes()).toContain('paste-arrival');
+
+    await mounted!.setProps({ recentPaste: { type: 'clip', id: 'caption-clip', timestamp: 3 } });
+    expect(mounted!.get('.text-caption-track .annotation-indicator:not(.preview-ghost)').classes()).toContain(
+      'paste-arrival',
+    );
+    expect(mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').classes()).not.toContain('paste-arrival');
+  });
+
   it('previews and adds zooms/captions only in available gaps', async () => {
     const mounted = await mountTracks();
     const cursor = mounted!.get('.cursor-content');
@@ -999,6 +1022,7 @@ describe('TimelineTracks', () => {
 
     contextMenuButton('Copy')?.click();
     await flushPromises();
+    expect(mounted!.emitted('clipboard:copied')).toHaveLength(1);
 
     const cursorTrack = mounted!.find('.tracks-stack .cursor-track');
     await cursorTrack.trigger('contextmenu', { clientX: 999, clientY: 350 });
@@ -1082,6 +1106,9 @@ describe('TimelineTracks', () => {
     };
 
     dispatchShortcut('c', { ctrlKey: true });
+    expect(mounted!.emitted('clipboard:copied')).toHaveLength(1);
+    dispatchShortcut('c', { metaKey: true });
+    expect(mounted!.emitted('clipboard:copied')).toHaveLength(2);
     await mounted!.setProps({ currentTime: 6 });
     dispatchShortcut('v', { metaKey: true });
     await flushPromises();

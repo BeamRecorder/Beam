@@ -7,7 +7,7 @@ import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
 const capture = vi.hoisted(() => ({}));
 const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
-const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const historyState = vi.hoisted(() => ({
   recordSnapshot: vi.fn(),
   commitNow: vi.fn(),
@@ -493,6 +493,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
       name: 'MockEditorTimeline',
       props: {
         composition: { type: Object, required: true },
+        recentPaste: { type: Object, default: null },
       },
       emits: [
         'select:zoom',
@@ -507,6 +508,7 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'delete:clips',
         'reorder:clip',
         'paste:item',
+        'clipboard:copied',
       ],
       setup(props, { emit }) {
         const composition = props.composition as ClipComposition;
@@ -533,11 +535,17 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         };
         return () =>
           h('div', [
+            h('span', {
+              class: 'mock-editor-timeline',
+              'data-recent-paste-type': props.recentPaste?.type ?? '',
+              'data-recent-paste-id': props.recentPaste?.id ?? '',
+            }),
             h('button', { class: 'timeline-select-zoom', onClick: () => emit('select:zoom', 'z') }),
             h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
             h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
             h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
             h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
+            h('button', { class: 'timeline-copy', onClick: () => emit('clipboard:copied') }),
             h('button', {
               class: 'timeline-paste-invalid',
               onClick: () =>
