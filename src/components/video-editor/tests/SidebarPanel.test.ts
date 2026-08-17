@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('~/api/capture', () => ({ capture: {} }));
 
 import SidebarPanel from '../sidebar/SidebarPanel.vue';
+import { getCurrentLocale, setCurrentLocale } from '~/i18n';
 
 const UpdateAvailableBadge = { template: '<span class="update-badge-stub" />' };
 
@@ -27,5 +28,27 @@ describe('SidebarPanel', () => {
     await navMenu.findAll('.nav-btn')[0].trigger('click');
     await wrapper.find('.footer-btn').trigger('click');
     expect(wrapper.emitted('select-tab')).toEqual([['canvas'], ['settings']]);
+  });
+
+  it('preserves Vietnamese diacritics in every sidebar label', () => {
+    const previousLocale = getCurrentLocale();
+    setCurrentLocale('vi');
+    try {
+      const wrapper = mount(SidebarPanel, {
+        props: { activeTab: 'canvas' },
+        global: { stubs: { UpdateAvailableBadge } },
+      });
+      expect(wrapper.findAll('.nav-label').map((label) => label.text())).toEqual([
+        'Khung vẽ',
+        'Đoạn clip',
+        'Thu phóng',
+        'Con trỏ',
+        'Phụ đề',
+        'Âm thanh',
+        'Cài đặt',
+      ]);
+    } finally {
+      setCurrentLocale(previousLocale as Parameters<typeof setCurrentLocale>[0]);
+    }
   });
 });

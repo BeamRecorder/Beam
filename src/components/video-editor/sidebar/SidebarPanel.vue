@@ -139,10 +139,10 @@ const menuItems = computed(() => [
   background: transparent;
   border-radius: var(--radius-md);
   display: grid;
-  grid-template-rows: 18px 11px;
+  grid-template-rows: 18px minmax(15px, auto);
   place-content: center;
   justify-items: center;
-  row-gap: 4px;
+  row-gap: 3px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -171,7 +171,9 @@ const menuItems = computed(() => [
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 11px;
+  padding-block: 1px;
+  line-height: 1.4;
+  box-sizing: border-box;
   font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
