@@ -65,6 +65,9 @@
 .sidebar-track-item.disabled .track-info {
   opacity: 0.35;
 }
+.sidebar-track-item .track-info {
+  transition: opacity var(--fast) ease;
+}
 .sidebar-track-item.dragging {
   opacity: 0.55;
 }
@@ -247,6 +250,9 @@
 }
 .track-row.disabled .track-content {
   opacity: 0.35;
+}
+.track-row .track-content {
+  transition: opacity var(--fast) ease;
 }
 .track-row.dragging {
   opacity: 0.7;
@@ -474,4 +480,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-clip,
+  .sidebar-track-item .track-info,
+  .track-row .track-content {
+    transition: none;
+  }
 }

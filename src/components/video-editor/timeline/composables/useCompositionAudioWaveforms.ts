@@ -3,6 +3,7 @@ import WaveformWorker from '~/media/playback/waveform.worker?worker';
 import { isAudioClip, type AudioClip, type ClipComposition, type MediaAsset } from '~/media/shared/composition-types';
 import { MediaInputError, mediaSourceDescriptor, type MediaError } from '~/media/shared';
 import { assertWaveformWorkerResponse, type WaveformWorkerRequest } from '~/media/playback/waveform-protocol';
+import { useMediaProcessingReporter } from '../../performance/media-processing-pressure';
 
 const MAX_BAR_HEIGHT = 38;
 const MAX_POINTS = 1_200;
@@ -129,6 +130,7 @@ export function useCompositionAudioWaveforms(
   composition: () => ClipComposition,
   viewport: () => AudioWaveformViewport,
 ) {
+  const pressure = useMediaProcessingReporter('waveforms', WAVEFORM_WORKER_COUNT);
   const rawSlices = ref<Record<string, StoredWaveformSlice>>({});
   const errors = ref<Record<string, MediaError>>({});
   const status = ref<Record<string, AudioWaveformStatus>>({});
@@ -143,6 +145,11 @@ export function useCompositionAudioWaveforms(
   let nextWorkerStart = 0;
   let publishFrame = 0;
   let currentRequests = new Map<string, WaveformRequest>();
+
+  const updatePressure = () => {
+    const pendingSegments = [...refinementBatches.values()].reduce((total, batch) => total + batch.pending.size, 0);
+    pressure.update(refinementBatches.size, pendingSegments + pendingPublishes.size);
+  };
 
   const slices = computed<Record<string, AudioWaveformSlice>>(() => {
     const volumes = new Map(
@@ -232,6 +239,7 @@ export function useCompositionAudioWaveforms(
       }
       pendingPublishes.clear();
       rawSlices.value = next;
+      updatePressure();
     });
   };
 
@@ -241,6 +249,8 @@ export function useCompositionAudioWaveforms(
     rawSlices.value = Object.fromEntries(Object.entries(rawSlices.value).filter(([id]) => id !== clipId));
     errors.value = { ...errors.value, [clipId]: error };
     status.value = { ...status.value, [clipId]: 'error' };
+    pressure.error();
+    updatePressure();
   };
 
   const failLoading = (message: string) => {
@@ -294,6 +304,7 @@ export function useCompositionAudioWaveforms(
       receivedPoints: new Map(segments.map(({ index }) => [index, 0])),
     };
     refinementBatches.set(request.clip.id, batch);
+    updatePressure();
     const workerStart = nextWorkerStart++ % workers.length;
     for (const segment of segments) postSegment(request, segment, workerStart);
   };
@@ -338,10 +349,12 @@ export function useCompositionAudioWaveforms(
     if (message.segmentComplete) batch.pending.delete(segment.index);
     const complete = batch.pending.size === 0;
     publish(message.clipId, request, batch.peaks, loadingSegmentsFor(batch));
+    updatePressure();
     if (!complete) return;
     cacheSlice(request, sliceFrom(request, batch.peaks, []));
     refinementBatches.delete(message.clipId);
     status.value = { ...status.value, [message.clipId]: 'ready' };
+    updatePressure();
   };
 
   const initWorkers = () => {
@@ -365,6 +378,7 @@ export function useCompositionAudioWaveforms(
       generation += 1;
       refinementBatches.clear();
       pendingPublishes.clear();
+      updatePressure();
       cancelAnimationFrame(publishFrame);
       publishFrame = 0;
       const active = requests.value;
@@ -407,6 +421,7 @@ export function useCompositionAudioWaveforms(
       }
       rawSlices.value = nextSlices;
       status.value = nextStatus;
+      updatePressure();
     },
     { immediate: true },
   );
@@ -425,6 +440,7 @@ export function useCompositionAudioWaveforms(
       worker.terminate();
     }
     workers.length = 0;
+    pressure.dispose();
   });
 
   return { slices, errors, status };

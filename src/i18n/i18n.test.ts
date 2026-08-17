@@ -89,6 +89,73 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides every preview quality label in every supported locale', () => {
+    const keys = [
+      'previewQuality',
+      'previewQualityFull',
+      'previewQualityHalf',
+      'previewQualityQuarter',
+      'previewQualityExportHint',
+      'previewQualitySuggestion',
+      'previewQualityCriticalSuggestion',
+    ];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(i18n.global.te(`TimelineToolbar.${key}`, locale), `${locale}: missing TimelineToolbar.${key}`).toBe(
+          true,
+        );
+        expect(i18n.global.t(`TimelineToolbar.${key}`)).not.toBe(`TimelineToolbar.${key}`);
+      }
+    }
+  });
+
+  it('provides every preview performance label in every supported locale', () => {
+    const keys = [
+      'title',
+      'ui',
+      'worker',
+      'audio',
+      'media',
+      'warning',
+      'criticalWarning',
+      'reduceQuality',
+      'higherIsWorse',
+      'good',
+      'high',
+      'critical',
+    ];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(
+          i18n.global.te(`PreviewPerformance.${key}`, locale),
+          `${locale}: missing PreviewPerformance.${key}`,
+        ).toBe(true);
+        expect(i18n.global.t(`PreviewPerformance.${key}`)).not.toBe(`PreviewPerformance.${key}`);
+      }
+    }
+  });
+
+  it('provides distinct export help for each selectable frame rate in every supported locale', () => {
+    const keys = ['frameRate24Desc', 'frameRate30Desc', 'frameRate60Desc'];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(i18n.global.te(`ExportPopover.${key}`, locale), `${locale}: missing ExportPopover.${key}`).toBe(true);
+        expect(i18n.global.t(`ExportPopover.${key}`)).not.toBe(`ExportPopover.${key}`);
+      }
+    }
+  });
+
+  it('uses the compact Performance title in the default locale', () => {
+    setCurrentLocale('en');
+    expect(i18n.global.t('PreviewPerformance.title')).toBe('Performance');
+  });
+
   it('provides translated timeline clipboard feedback in every supported locale', () => {
     const expected = {
       en: ['Copied', 'Pasted'],

@@ -93,6 +93,10 @@
   background: transparent;
   box-shadow: none;
   pointer-events: none;
+  overflow: hidden;
+}
+.canvas-island.is-selection-editable .preview-frame {
+  z-index: 2;
 }
 .canvas-island.is-selection-editable,
 .canvas-island.is-selection-editable *,
@@ -121,8 +125,8 @@
   top: 0;
   left: 0;
   z-index: 2;
-  border: 2px dashed rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.08);
+  border: 2px dashed var(--color-primary);
+  background: rgba(255, 255, 255, 0.04);
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
   pointer-events: none;
   border-radius: var(--radius-md);

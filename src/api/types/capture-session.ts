@@ -197,6 +197,8 @@ export interface ProjectZoomState {
     algorithmVersion: number;
     generatedAt: string;
   }>;
+  /** Missing only in projects saved before zoom motion blur was introduced. */
+  motionBlur?: { enabled: boolean; intensity: number };
 }
 
 export interface SessionTrackAsset {

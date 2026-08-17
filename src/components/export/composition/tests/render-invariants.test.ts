@@ -107,13 +107,16 @@ const context = () =>
     lineWidth: 0,
     fillRect: vi.fn(),
     fill: vi.fn(),
+    clearRect: vi.fn(),
     fillText: vi.fn(),
     strokeText: vi.fn(),
     measureText: vi.fn((value: string) => ({ width: value.length * 10 })),
     drawImage: vi.fn(),
     save: vi.fn(),
+    setTransform: vi.fn(),
     translate: vi.fn(),
     scale: vi.fn(),
+    globalCompositeOperation: 'source-over',
     restore: vi.fn(),
     beginPath: vi.fn(),
     roundRect: vi.fn(),
@@ -243,7 +246,108 @@ describe('composition rendering invariants', () => {
     renderCompositionFrame(ctx, null, value, 0.2, null, undefined, new Map([['logo', visual]]));
 
     expect((ctx.scale as ReturnType<typeof vi.fn>).mock.calls.some(([scale]) => Number(scale) > 1)).toBe(true);
-    expect(visualDrawStates).toEqual([true]);
+    expect(visualDrawStates.length).toBeGreaterThanOrEqual(1);
+    expect(visualDrawStates.every(Boolean)).toBe(true);
+  });
+
+  it('composites each motion-blur sample as an isolated scene before drawing clip shadows', () => {
+    const value = snapshot();
+    value.zoomMotionBlur = { enabled: true, intensity: 1 };
+    const screen = value.composition.clips[0];
+    if (screen.kind !== 'screen') throw new Error('screen fixture missing');
+    screen.appearance = {
+      ...appearance,
+      shadowSize: 'custom',
+      shadowBlur: 12,
+      shadowColor: '#000000',
+    };
+
+    const source = { source: {} as CanvasImageSource, width: 100, height: 50 };
+    const operations: Array<{ kind: 'shadow' | 'video' | 'composite'; context: string }> = [];
+    const surfaces: FakeOffscreenCanvas[] = [];
+    const trackedContext = (name: string) => {
+      const tracked = context();
+      let shadowColor = 'transparent';
+      let shadowBlur = 0;
+      const stateStack: Array<{ shadowColor: string; shadowBlur: number }> = [];
+      Object.defineProperties(tracked, {
+        shadowColor: {
+          configurable: true,
+          get: () => shadowColor,
+          set: (value: string) => {
+            shadowColor = value;
+          },
+        },
+        shadowBlur: {
+          configurable: true,
+          get: () => shadowBlur,
+          set: (value: number) => {
+            shadowBlur = value;
+          },
+        },
+      });
+      vi.mocked(tracked.save).mockImplementation(() => {
+        stateStack.push({ shadowColor, shadowBlur });
+      });
+      vi.mocked(tracked.restore).mockImplementation(() => {
+        const previous = stateStack.pop();
+        if (previous) {
+          shadowColor = previous.shadowColor;
+          shadowBlur = previous.shadowBlur;
+        }
+      });
+      vi.mocked(tracked.fill).mockImplementation(() => {
+        if (shadowBlur > 0 && shadowColor !== 'transparent') operations.push({ kind: 'shadow', context: name });
+      });
+      vi.mocked(tracked.drawImage).mockImplementation(((drawn) => {
+        if (drawn === source.source) operations.push({ kind: 'video', context: name });
+        else if (name === 'target' && drawn) operations.push({ kind: 'composite', context: name });
+      }) as CanvasRenderingContext2D['drawImage']);
+      return tracked;
+    };
+    const target = trackedContext('target');
+    class FakeOffscreenCanvas {
+      width = 100;
+      height = 50;
+      readonly context = trackedContext(`sample-${surfaces.length}`);
+
+      constructor() {
+        surfaces.push(this);
+      }
+
+      getContext = vi.fn(() => this.context);
+    }
+    const cameraEvaluator = {
+      sample: vi.fn((timeMs: number) => ({
+        focus: { cx: timeMs < 500 ? 0.2 : 0.8, cy: 0.5 },
+        scale: 1.5,
+      })),
+      invalidate: vi.fn(),
+    };
+
+    vi.stubGlobal('document', undefined);
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+    try {
+      renderCompositionFrame(target, source, value, 0.5, null, undefined, undefined, undefined, cameraEvaluator);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    const compositeIndexes = operations
+      .map((operation, index) => (operation.kind === 'composite' ? index : -1))
+      .filter((index) => index >= 0);
+    expect(compositeIndexes.length).toBeGreaterThanOrEqual(3);
+    expect(operations.filter(({ kind }) => kind === 'shadow').every(({ context }) => context !== 'target')).toBe(true);
+    expect(operations.filter(({ kind }) => kind === 'video').every(({ context }) => context !== 'target')).toBe(true);
+    let previousComposite = -1;
+    for (const compositeIndex of compositeIndexes) {
+      const sampleOperations = operations.slice(previousComposite + 1, compositeIndex);
+      expect(sampleOperations.map(({ kind }) => kind)).toEqual(expect.arrayContaining(['shadow', 'video']));
+      expect(sampleOperations.findIndex(({ kind }) => kind === 'shadow')).toBeLessThan(
+        sampleOperations.findIndex(({ kind }) => kind === 'video'),
+      );
+      previousComposite = compositeIndex;
+    }
   });
 
   it('exports fit, portrait and circle framing consistently for screen, video and image media', () => {

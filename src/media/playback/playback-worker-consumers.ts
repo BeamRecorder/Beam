@@ -1,6 +1,7 @@
 import { CanvasSink, type WrappedCanvas } from 'mediabunny';
 import type { OpenedMediaInput } from '../shared';
 import type { PlaybackClipDescriptor } from './playback-types';
+import { playbackPreviewDimensions, type PreviewQuality } from './playback-preview';
 
 export const PLAYBACK_DECODER_OPTIONS = {
   hardwareAcceleration: 'prefer-hardware' as const,
@@ -17,8 +18,8 @@ export type AssetDecoder = {
   assetId: string;
   opened: OpenedMediaInput;
   sinkTrack: Awaited<ReturnType<OpenedMediaInput['input']['getPrimaryVideoTrack']>>;
-  previewWidth: number;
-  previewHeight: number;
+  displayWidth: number;
+  displayHeight: number;
   decoderOptions?: typeof PLAYBACK_DECODER_OPTIONS;
 };
 
@@ -32,16 +33,25 @@ export type ClipConsumer = {
   lastTargetSeconds: number | null;
 };
 
-export const createPlaybackConsumer = (clip: PlaybackClipDescriptor, asset: AssetDecoder): ClipConsumer => ({
-  clip,
-  asset,
-  sink: new CanvasSink(asset.sinkTrack!, {
-    width: asset.previewWidth,
-    height: asset.previewHeight,
+export const createPlaybackSink = (asset: AssetDecoder, quality: PreviewQuality) => {
+  const preview = playbackPreviewDimensions(asset.displayWidth, asset.displayHeight, quality);
+  return new CanvasSink(asset.sinkTrack!, {
+    width: preview.width,
+    height: preview.height,
     fit: 'contain',
     poolSize: 3,
     ...(asset.decoderOptions ? { decoderOptions: asset.decoderOptions } : {}),
-  }),
+  });
+};
+
+export const createPlaybackConsumer = (
+  clip: PlaybackClipDescriptor,
+  asset: AssetDecoder,
+  quality: PreviewQuality,
+): ClipConsumer => ({
+  clip,
+  asset,
+  sink: createPlaybackSink(asset, quality),
   iterator: null,
   queue: [],
   iteratorGeneration: 0,

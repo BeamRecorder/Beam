@@ -338,7 +338,12 @@ function initializeApplication() {
     applicationIpc.on('screen-region:cancel', () => screenRegionOverlay.cancel());
     applicationIpc.handle('camera-overlay:state', () => cameraOverlay.state());
     logStartup('Window IPC registered.');
-    const exportIpc = registerExportIpc({ ipcMain: applicationIpc, dialog: require('electron').dialog, BrowserWindow });
+    const exportIpc = registerExportIpc({
+      ipcMain: applicationIpc,
+      dialog: require('electron').dialog,
+      BrowserWindow,
+      defaultExportDirectory: app.getPath('videos'),
+    });
     logStartup('Export IPC registered.');
     const updateCache = app.isPackaged
       ? createUpdateCache({

@@ -65,6 +65,7 @@
     "keyboardCaptions": "Raccourcis clavier",
     "textCaptions": "Sous-titres texte",
     "audio": "Audio",
+    "media": "Médias",
     "settings": "Paramètres",
     "logo": "Logo"
   },
@@ -130,7 +131,14 @@
     "snappingOn": "Aimantage magnétique actif",
     "snappingOff": "Aimantage désactivé",
     "zoom": "Zoom",
-    "resetZoom": "Réinitialiser le zoom"
+    "resetZoom": "Réinitialiser le zoom",
+    "previewQuality": "Qualité de prévisualisation",
+    "previewQualityFull": "Pleine résolution",
+    "previewQualityHalf": "Demi-résolution",
+    "previewQualityQuarter": "Quart de résolution",
+    "previewQualityExportHint": "Prévisualisation uniquement. L’export reste en pleine qualité.",
+    "previewQualitySuggestion": "La prévisualisation saccade. Essayez un proxy plus léger.",
+    "previewQualityCriticalSuggestion": "La prévisualisation saccade encore. Réduisez la qualité du proxy."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Cliquer pour activer/désactiver la piste vidéo",
@@ -182,6 +190,20 @@
   "TimelineVideoClip": {
     "trimStart": "Élaguer le début",
     "trimEnd": "Élaguer la fin"
+  },
+  "PreviewPerformance": {
+    "title": "Performances",
+    "ui": "Interface",
+    "worker": "Lecture",
+    "audio": "Audio",
+    "media": "Médias",
+    "warning": "La prévisualisation risque de saccader.",
+    "criticalWarning": "Les performances de prévisualisation restent limitées.",
+    "reduceQuality": "Passer en {quality}",
+    "higherIsWorse": "Une courbe haute indique plus de charge",
+    "good": "OK",
+    "high": "Élevé",
+    "critical": "Critique"
   },
   "Topbar": {
     "exitToHUD": "Quitter vers le HUD",
@@ -303,6 +325,9 @@
     "autoHint": "Le mode auto suit en continu le mouvement du curseur enregistré.",
     "magnification": "Grossissement",
     "zoomLevel": "Niveau de zoom",
+    "motionBlur": "Flou de mouvement du zoom",
+    "motionBlurDesc": "Ajoute un flou d’obturation cinématique pendant les zooms et panoramiques, identique dans l’aperçu et l’export.",
+    "motionBlurIntensity": "Intensité du flou de mouvement",
     "deleteZoom": "Supprimer le zoom",
     "noZoomSelected": "Aucun zoom sélectionné",
     "noZoomSelectedDesc": "Cliquez sur un bloc de zoom dans la timeline pour ajuster sa profondeur, son mode ou sa position."

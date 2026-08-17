@@ -1,6 +1,12 @@
 import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
-import type { ZoomElement } from '../zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_DURATION_MS,
+  DEFAULT_ZOOM_MOTION_BLUR,
+  normalizeZoomMotionBlur,
+  type ZoomElement,
+  type ZoomMotionBlurSettings,
+} from '../zoom/zoom-types';
 import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
 import { pasteZoomAt } from '../zoom/zoom-paste';
 import type { EditorPreferenceDefaults } from './editor-default-types';
@@ -14,6 +20,7 @@ export function useProjectZoom(options: {
   const { editorData, durationMs, activeTab } = options;
   const zoomElements = ref<ZoomElement[]>([]);
   const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([]);
+  const zoomMotionBlur = ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
   const selectedZoomId = ref<string | null>(null);
   const selectedZoom = computed(
     () => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null,
@@ -30,7 +37,10 @@ export function useProjectZoom(options: {
       id: crypto.randomUUID(),
       sessionId: editorData.value?.sessionId ?? 'manual',
       startMs: clampedStartMs,
-      endMs: Math.min(durationMs.value, clampedStartMs + Math.max(200, defaults?.durationMs ?? 1_200)),
+      endMs: Math.min(
+        durationMs.value,
+        clampedStartMs + Math.max(200, defaults?.durationMs ?? DEFAULT_ZOOM_DURATION_MS),
+      ),
       depth: defaults?.depth ?? 2,
       mode: defaults?.mode ?? 'manual',
       focus: { cx: 0.5, cy: 0.5 },
@@ -109,6 +119,9 @@ export function useProjectZoom(options: {
     );
   };
   const moveZoom = previewMoveZoom;
+  const updateZoomMotionBlur = (value: ZoomMotionBlurSettings) => {
+    zoomMotionBlur.value = normalizeZoomMotionBlur(value);
+  };
   const pasteZoomAtTime = (copiedZoom: ZoomElement, startMs: number) => {
     const pasted = pasteZoomAt(zoomElements.value, copiedZoom, startMs, durationMs.value);
     zoomElements.value = pasted.elements;
@@ -120,6 +133,7 @@ export function useProjectZoom(options: {
   return {
     zoomElements,
     generatedSessions,
+    zoomMotionBlur,
     selectedZoomId,
     selectedZoom,
     canGenerateZooms,
@@ -132,6 +146,7 @@ export function useProjectZoom(options: {
     trimZoomEdge,
     previewMoveZoom,
     moveZoom,
+    updateZoomMotionBlur,
     pasteZoomAtTime,
     previewZoom,
     deleteSelectedZoom,

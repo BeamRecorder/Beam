@@ -2,11 +2,13 @@ import { onUnmounted, reactive, ref, watch, type Ref } from 'vue';
 import ThumbnailWorker from '~/media/playback/thumbnail.worker?worker';
 import type { ThumbnailWorkerResponse } from '~/media/playback/thumbnail-protocol';
 import { mediaSourceDescriptor, type MediaAsset } from '~/media/shared';
+import { useMediaProcessingReporter } from '../../performance/media-processing-pressure';
 
 const CACHE_LIMIT = 96;
 const THUMBNAIL_WORKER_COUNT = 2;
 
 export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
+  const pressure = useMediaProcessingReporter('thumbnails', THUMBNAIL_WORKER_COUNT);
   const thumbnails = reactive<Record<number, string>>({});
   const isExtracting = ref(false);
   const error = ref<string | null>(null);
@@ -19,6 +21,10 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
   let thumbnailFrame = 0;
   let requestQueued = false;
   let queuedTimes: number[] = [];
+  let remainingFrames = 0;
+
+  const updatePressure = () =>
+    pressure.update(activeWorkers.size, remainingFrames + queuedTimes.length + pendingFrames.size);
 
   const clearCache = () => {
     generation += 1;
@@ -34,9 +40,11 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
     isExtracting.value = false;
     activeWorkers.clear();
     pendingFrames.clear();
+    remainingFrames = 0;
     cancelAnimationFrame(thumbnailFrame);
     thumbnailFrame = 0;
     error.value = null;
+    updatePressure();
   };
 
   const touchThumbnail = (time: number) => {
@@ -71,6 +79,7 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
       thumbnailFrame = 0;
       for (const [pendingTime, pendingBlob] of pendingFrames) cacheThumbnail(pendingTime, pendingBlob);
       pendingFrames.clear();
+      updatePressure();
     });
   };
 
@@ -80,15 +89,21 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
       activeWorkers.add(workerIndex);
       isExtracting.value = true;
       error.value = null;
+      updatePressure();
       return;
     }
     if (message.type === 'batch-finished' || message.type === 'error') {
       activeWorkers.delete(workerIndex);
       isExtracting.value = activeWorkers.size > 0;
       if (message.type === 'error') error.value = message.message;
+      if (message.type === 'error') pressure.error();
+      if (activeWorkers.size === 0) remainingFrames = 0;
+      updatePressure();
       return;
     }
+    remainingFrames = Math.max(0, remainingFrames - 1);
     queueThumbnail(message.time, message.blob);
+    updatePressure();
   };
 
   const initWorkers = () => {
@@ -103,6 +118,9 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
         activeWorkers.clear();
         isExtracting.value = false;
         error.value = 'Timeline thumbnail decoding failed.';
+        remainingFrames = 0;
+        pressure.error();
+        updatePressure();
       };
       workers.push(worker);
     }
@@ -118,12 +136,14 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
       if (thumbnails[time]) touchThumbnail(time);
     });
     pruneCache();
+    updatePressure();
     if (requestQueued) return;
     requestQueued = true;
     queueMicrotask(() => {
       requestQueued = false;
       const times = queuedTimes;
       queuedTimes = [];
+      updatePressure();
       void requestMissingFrames(times);
     });
   };
@@ -135,6 +155,7 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
     if (missingTimes.length === 0) return;
     initWorkers();
     const requestGeneration = ++generation;
+    remainingFrames = missingTimes.length;
     activeWorkers.clear();
     isExtracting.value = true;
     error.value = null;
@@ -152,12 +173,16 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
           visibleTimes,
         });
       }
+      updatePressure();
     } catch (postError) {
       console.error('[Beam media:thumbnails] Thumbnail request failed.', postError);
       if (requestGeneration === generation) {
         activeWorkers.clear();
         isExtracting.value = false;
         error.value = 'Timeline thumbnail decoding failed.';
+        remainingFrames = 0;
+        pressure.error();
+        updatePressure();
       }
     }
   };
@@ -171,6 +196,7 @@ export function useThumbnails(videoAssetRef: Ref<MediaAsset | null>) {
     clearCache();
     for (const worker of workers) worker.terminate();
     workers.length = 0;
+    pressure.dispose();
   });
 
   return { thumbnails, isExtracting, error, requestVisibleFrames, clearCache };

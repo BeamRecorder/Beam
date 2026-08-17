@@ -46,7 +46,11 @@ const visualDefaults = (kind: VisualClip['kind'], value: unknown): VisualClipDef
         ? clone(input.transitions as VisualClipDefaults['transitions'])
         : { entry: null, exit: null },
     cameraLayoutPreset: kind !== 'webcam' && layout.startsWith('split-') ? 'custom' : layout,
-    cameraFramingPreset: isCameraFramingPreset(input.cameraFramingPreset) ? input.cameraFramingPreset : 'custom',
+    cameraFramingPreset: isCameraFramingPreset(input.cameraFramingPreset)
+      ? input.cameraFramingPreset
+      : kind === 'webcam' && value === undefined
+        ? 'squircle'
+        : 'custom',
     ...(kind === 'webcam'
       ? {
           cameraSplitRatio: Math.min(0.8, Math.max(0.2, finite(input.cameraSplitRatio, 0.5))),
@@ -166,7 +170,7 @@ export const audioDefaultsFor = (defaults: EditorPreferenceDefaults) => ({
   playbackRate: Math.min(4, Math.max(0.25, defaults.audio?.playbackRate ?? 1)),
 });
 
-export const blurDefaultsFor = (defaults: EditorPreferenceDefaults) =>
+export const blurDefaultsFor = (defaults: EditorPreferenceDefaults): NonNullable<EditorPreferenceDefaults['blur']> =>
   clone(
     defaults.blur ?? {
       transform: { x: 0.35, y: 0.35, width: 0.3, height: 0.3 },

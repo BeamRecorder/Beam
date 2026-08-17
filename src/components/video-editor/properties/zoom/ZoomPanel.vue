@@ -2,10 +2,11 @@
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
+import Switch from '~/ui/switch/Switch.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import ZoomClickEmptyState from '~/components/video-editor/properties/zoom/ZoomClickEmptyState.vue';
 import { MousePointer, Sparkles } from '@lucide/vue';
-import type { ZoomDepth, ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import type { ZoomDepth, ZoomElement, ZoomMotionBlurSettings } from '~/components/video-editor/zoom/zoom-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
 const { t } = useTranslate('ZoomPanel');
@@ -14,12 +15,14 @@ const props = defineProps<{
   selectedZoom: ZoomElement | null;
   canGenerate: boolean;
   hasAutomaticZooms: boolean;
+  motionBlur: ZoomMotionBlurSettings;
 }>();
 
 const emit = defineEmits<{
   (event: 'update', value: ZoomElement): void;
   (event: 'delete'): void;
   (event: 'generate'): void;
+  (event: 'update:motionBlur', value: ZoomMotionBlurSettings): void;
 }>();
 
 const magnificationValues = [1.25, 1.5, 1.8, 2.2, 3.5, 5.0];
@@ -37,6 +40,10 @@ const setMode = (mode: ZoomElement['mode']) => {
     mode,
   });
 };
+
+const updateMotionBlur = (patch: Partial<ZoomMotionBlurSettings>) => {
+  emit('update:motionBlur', { ...props.motionBlur, ...patch });
+};
 </script>
 
 <template>
@@ -52,12 +59,12 @@ const setMode = (mode: ZoomElement['mode']) => {
         block
         @click="emit('generate')"
       >
-        Generate Auto Zooms
+        {{ t('generateAutoZooms') }}
       </Button>
       <Popover v-else block>
         <template #trigger>
           <Button variant="outline" size="sm" :icon="Sparkles" :disabled="!canGenerate" block>
-            Regenerate Auto Zooms
+            {{ t('regenerateAutoZooms') }}
           </Button>
         </template>
         <template #default="{ close }">
@@ -73,12 +80,37 @@ const setMode = (mode: ZoomElement['mode']) => {
                   close();
                 "
               >
-                Regenerate
+                {{ t('regenerate') }}
               </Button>
             </div>
           </div>
         </template>
       </Popover>
+    </div>
+
+    <div class="section-block motion-blur-settings">
+      <div class="section-header">
+        <div class="motion-blur-copy">
+          <span class="section-title">{{ t('motionBlur') }}</span>
+          <span class="section-description">{{ t('motionBlurDesc') }}</span>
+        </div>
+        <Switch
+          :model-value="motionBlur.enabled"
+          :aria-label="t('motionBlur')"
+          @update:model-value="updateMotionBlur({ enabled: $event })"
+        />
+      </div>
+      <BigSlider
+        v-if="motionBlur.enabled"
+        :model-value="motionBlur.intensity * 100"
+        :min="0"
+        :max="100"
+        :step="1"
+        :default-value="55"
+        :label="t('motionBlurIntensity')"
+        :format-value="(value) => `${Math.round(value)}%`"
+        @update:model-value="updateMotionBlur({ intensity: $event / 100 })"
+      />
     </div>
 
     <!-- Active Zoom Block Inspector -->
@@ -88,10 +120,10 @@ const setMode = (mode: ZoomElement['mode']) => {
         <span class="section-title">{{ t('mode') }}</span>
         <ButtonGroup full>
           <Button size="xs" :variant="selectedZoom.mode === 'auto' ? 'primary' : 'ghost'" @click="setMode('auto')">
-            Auto (Cursor)
+            {{ t('autoCursor') }}
           </Button>
           <Button size="xs" :variant="selectedZoom.mode === 'manual' ? 'primary' : 'ghost'" @click="setMode('manual')">
-            Manual Focus
+            {{ t('manualFocus') }}
           </Button>
         </ButtonGroup>
         <div class="hint-card">
@@ -173,6 +205,18 @@ const setMode = (mode: ZoomElement['mode']) => {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.motion-blur-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.section-description {
+  max-width: 220px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .depth-badge {

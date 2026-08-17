@@ -1,7 +1,7 @@
 import { nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
-import { emptyComposition, type Clip } from '~/media/shared/composition-types';
+import { emptyComposition, type Clip, type VisualClip } from '~/media/shared/composition-types';
 import {
   createDefaultCursorClickEffects,
   createDefaultCursorMotionSettings,
@@ -314,7 +314,7 @@ describe('useProjectEditorState property persistence', () => {
 
   it('persists editor defaults alongside the first successful editor save', async () => {
     const state = createState();
-    const selectedClip = {
+    const selectedClip: VisualClip = {
       id: 'image-clip',
       kind: 'image',
       name: 'Image',
@@ -330,7 +330,7 @@ describe('useProjectEditorState property persistence', () => {
       appearance: { ...state.editorDefaults.value.visual?.image?.appearance },
       isMirrored: false,
       isMirroredY: false,
-    } as Clip;
+    } as VisualClip;
     const selectedZoom: ZoomElement = {
       id: 'zoom',
       sessionId: 'session',

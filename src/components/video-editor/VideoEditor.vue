@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, toRef, watch } from 'vue';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import SidebarPanel from '~/components/video-editor/sidebar/SidebarPanel.vue';
 import PropertiesPanel from '~/components/video-editor/properties/PropertiesPanel.vue';
@@ -33,12 +33,18 @@ import {
   type NormalizedCrop,
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_DURATION_MS,
+  DEFAULT_ZOOM_MOTION_BLUR,
+  type ZoomElement,
+} from '~/components/video-editor/zoom/zoom-types';
 import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
 import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
+import { usePreviewPerformanceMonitor } from './performance/usePreviewPerformanceMonitor';
+import { createMediaProcessingCollector, MEDIA_PROCESSING_COLLECTOR } from './performance/media-processing-pressure';
 
 const { t } = useTranslate('VideoEditor');
 const props = withDefaults(
@@ -54,6 +60,8 @@ const emit = defineEmits<{
   (event: 'open-project', project: CaptureProject): void;
   (event: 'start-recording', config: any): void;
 }>();
+const mediaProcessing = createMediaProcessingCollector();
+provide(MEDIA_PROCESSING_COLLECTOR, mediaProcessing);
 
 const {
   activeTab,
@@ -67,6 +75,7 @@ const {
   zoomState,
   exportRequest,
   includeAudioInExport,
+  editorDefaults,
   outputCanvas,
   handleSelectTab,
   initialPlaybackSettled,
@@ -82,12 +91,24 @@ const {
   playbackState,
   playbackError,
   frameVersion,
+  previewQuality,
+  playbackMetrics,
+  audioMetrics,
   selectedBackground,
   selectedBackgroundMedia,
   backgroundBlurPercent,
   backgroundGroups,
   addBackground,
 } = player;
+const { snapshot: performanceSnapshot } = usePreviewPerformanceMonitor({
+  isPlaying,
+  playbackState,
+  previewQuality,
+  playbackMetrics,
+  audioMetrics,
+  mediaMetrics: mediaProcessing.metrics,
+  isReady: initialPlaybackSettled,
+});
 const {
   selectedCursor,
   cursorSize,
@@ -162,6 +183,8 @@ const {
   deleteSelectedZoom,
   deleteZoomById,
 } = zoomState;
+const zoomMotionBlur = zoomState.zoomMotionBlur ?? ref({ ...DEFAULT_ZOOM_MOTION_BLUR });
+const newZoomDurationMs = computed(() => editorDefaults.value.zoom?.durationMs ?? DEFAULT_ZOOM_DURATION_MS);
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
 const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
@@ -252,6 +275,7 @@ const cloneSerializable = <T,>(value: T): T => JSON.parse(JSON.stringify(value))
 const createEditorSnapshot = (): EditorStateSnapshot => ({
   composition: cloneSerializable(composition.value),
   zoomElements: cloneSerializable(zoomElements.value),
+  zoomMotionBlur: cloneSerializable(zoomMotionBlur.value),
   outputCanvas: cloneSerializable(outputCanvas.value),
   selectedBackground: selectedBackground.value ? cloneSerializable(selectedBackground.value) : null,
   backgroundBlurPercent: backgroundBlurPercent.value,
@@ -268,6 +292,7 @@ const {
   onRestoreSnapshot: async (snapshot) => {
     composition.value = snapshot.composition;
     zoomElements.value = snapshot.zoomElements;
+    if (snapshot.zoomMotionBlur) zoomMotionBlur.value = snapshot.zoomMotionBlur;
     outputCanvas.value = snapshot.outputCanvas;
     selectedBackground.value = snapshot.selectedBackground;
     backgroundBlurPercent.value = snapshot.backgroundBlurPercent;
@@ -369,7 +394,7 @@ watch(
   { deep: true },
 );
 watch(
-  [zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
+  [zoomElements, zoomMotionBlur, outputCanvas, selectedBackground, backgroundBlurPercent],
   () => {
     if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
   },
@@ -468,6 +493,7 @@ onBeforeUnmount(() => {
       :is-saving="editorState.isSaving.value"
       :can-undo="canUndo"
       :can-redo="canRedo"
+      :performance-snapshot="performanceSnapshot"
       @back-to-hud="emit('back-to-hud')"
       @open-project="emit('open-project', $event)"
       @undo="undo"
@@ -508,6 +534,7 @@ onBeforeUnmount(() => {
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
+          :zoom-motion-blur="zoomMotionBlur"
           :composition="composition"
           :editor-data="editorData"
           :timeline-duration-ms="Math.round(duration * 1000)"
@@ -518,6 +545,7 @@ onBeforeUnmount(() => {
           @update:blur-percent="backgroundBlurPercent = $event"
           @update:canvas="outputCanvas = $event"
           @update:zoom="updateZoom"
+          @update:zoom-motion-blur="zoomState.updateZoomMotionBlur"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
           @update:caption="commitCaption"
@@ -597,10 +625,12 @@ onBeforeUnmount(() => {
             :background-blur-percent="backgroundBlurPercent"
             :frame-for="player.frameFor"
             :frame-version="frameVersion"
+            :preview-quality="previewQuality"
             :playback-state="playbackState"
             :playback-error="playbackError"
             :editor-data="editorData"
             :zoom-elements="zoomElements"
+            :zoom-motion-blur="zoomMotionBlur"
             :selected-zoom="selectedZoom"
             :composition="canvasComposition"
             :output-canvas="renderedOutputCanvas"
@@ -628,6 +658,8 @@ onBeforeUnmount(() => {
             :can-split="Boolean(selectedClipId)"
             v-model:zoom-level="timelineZoomLevel"
             v-model:is-snapping-enabled="isSnappingEnabled"
+            v-model:preview-quality="previewQuality"
+            :performance-snapshot="performanceSnapshot"
             @update:is-playing="handlePlayingIntent"
             @update:current-time="handleSeekIntent"
             @add:element="addTimelineElement"
@@ -655,6 +687,7 @@ onBeforeUnmount(() => {
           :export-progress="exportProgress"
           :include-audio-in-export="includeAudioInExport"
           :zoom-elements="zoomElements"
+          :new-zoom-duration-ms="newZoomDurationMs"
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
           :selected-clip-id="selectedClipId"
@@ -746,6 +779,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 12px;
   overflow: hidden;
+  position: relative;
 }
 .timeline-resize-handle {
   height: 12px;

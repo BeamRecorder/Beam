@@ -254,6 +254,7 @@ onUnmounted(() => stopMarquee());
   cursor: grab;
   isolation: isolate;
   box-sizing: border-box;
+  transition: opacity var(--fast) ease;
 }
 .timeline-clip:active {
   cursor: grabbing;

@@ -39,6 +39,7 @@
     "keyboardCaptions": "Atalhos do teclado",
     "textCaptions": "Legendas de texto",
     "audio": "Áudio",
+    "media": "Mídia",
     "settings": "Configurações",
     "logo": "Logotipo"
   },
@@ -104,7 +105,14 @@
     "snappingOn": "Ajuste magnético ativado",
     "snappingOff": "Ajuste magnético desativado",
     "zoom": "Zoom",
-    "resetZoom": "Redefinir zoom"
+    "resetZoom": "Redefinir zoom",
+    "previewQuality": "Qualidade da prévia",
+    "previewQualityFull": "Resolução completa",
+    "previewQualityHalf": "Meia resolução",
+    "previewQualityQuarter": "Um quarto da resolução",
+    "previewQualityExportHint": "Apenas a prévia é afetada. A exportação mantém a qualidade total.",
+    "previewQualitySuggestion": "A prévia está travando. Tente um proxy mais leve.",
+    "previewQualityCriticalSuggestion": "A prévia continua travando. Reduza a qualidade do proxy."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Clique para alternar a faixa de vídeo",
@@ -154,6 +162,20 @@
   "TimelineVideoClip": {
     "trimStart": "Cortar início",
     "trimEnd": "Cortar fim"
+  },
+  "PreviewPerformance": {
+    "title": "Desempenho",
+    "ui": "Interface",
+    "worker": "Reprodução",
+    "audio": "Áudio",
+    "media": "Mídia",
+    "warning": "A prévia pode apresentar travamentos.",
+    "criticalWarning": "O desempenho da prévia continua limitado.",
+    "reduceQuality": "Mudar para {quality}",
+    "higherIsWorse": "Uma curva mais alta indica mais carga",
+    "good": "OK",
+    "high": "Alto",
+    "critical": "Crítico"
   },
   "Topbar": {
     "exitToHUD": "Sair para o HUD",
@@ -253,6 +275,9 @@
     "autoHint": "O modo automático acompanha continuamente o movimento gravado do cursor.",
     "magnification": "Ampliação",
     "zoomLevel": "Nível de zoom",
+    "motionBlur": "Desfoque de movimento do zoom",
+    "motionBlurDesc": "Adiciona desfoque cinematográfico durante zoom e panorâmica, idêntico na prévia e na exportação.",
+    "motionBlurIntensity": "Intensidade do desfoque",
     "deleteZoom": "Excluir zoom",
     "noZoomSelected": "Nenhum zoom selecionado",
     "noZoomSelectedDesc": "Clique em um bloco de zoom na faixa para ajustar profundidade, modo ou posição."

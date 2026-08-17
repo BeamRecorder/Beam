@@ -19,6 +19,7 @@ export interface TimelineTracksProps {
   exportProgress?: ExportProgress | null;
   includeAudioInExport?: boolean;
   zoomElements: ZoomElement[];
+  newZoomDurationMs?: number;
   selectedZoomId: string | null;
   composition: ClipComposition;
   selectedClipId: string | null;

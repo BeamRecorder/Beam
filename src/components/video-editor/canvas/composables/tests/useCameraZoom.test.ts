@@ -9,7 +9,13 @@ import type { ZoomElement } from '../../../zoom/zoom-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
+const motionBlurCompositor = vi.hoisted(() => ({
+  createMotionBlurSurface: vi.fn((width: number, height: number) => ({ width, height })),
+  resizeMotionBlurSurface: vi.fn(),
+  compositeIsolatedMotionBlurSample: vi.fn(() => true),
+}));
 vi.mock('../../../composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
+vi.mock('../../../zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
 
 const screenClip = (enabled = true): VisualClip => ({
   id: 'screen',
@@ -90,18 +96,21 @@ let options!: {
   selected: ReturnType<typeof ref<ZoomElement | null>>;
   activeTab: ReturnType<typeof ref<string>>;
   output: ReturnType<typeof ref<{ preset: '16:9'; width: number; height: number; showBackground: boolean }>>;
+  motionBlur: ReturnType<typeof ref<{ enabled: boolean; intensity: number }>>;
+  zooms: ReturnType<typeof ref<ZoomElement[]>>;
   screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
   videoError: ReturnType<typeof ref<string | null>>;
   canvas: HTMLCanvasElement;
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
 };
 
-const mountComposable = () => {
+const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 }) => {
   const compositionRef = ref(composition());
   const currentTime = ref(0.5);
   const playing = ref(false);
   const selected = ref<ZoomElement | null>(manualZoom);
   const activeTab = ref('zoom');
+  const motionBlur = ref(motionBlurSettings);
   const zooms = ref<ZoomElement[]>([autoZoom]);
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
   const screenTransformDraft = ref<NormalizedTransform | null>(null);
@@ -138,6 +147,7 @@ const mountComposable = () => {
         outputCanvas: () => output.value,
         zoomElements: () => zooms.value,
         selectedZoom: () => selected.value,
+        zoomMotionBlur: () => motionBlur.value,
         currentTime: () => currentTime.value,
         isPlaying: () => playing.value,
         editorData: () =>
@@ -183,6 +193,8 @@ const mountComposable = () => {
     selected,
     activeTab,
     output,
+    motionBlur,
+    zooms,
     screenTransformDraft,
     videoError,
     canvas,
@@ -274,7 +286,7 @@ describe('useCameraZoom', () => {
 
   it('applies fit, portrait and circle framing consistently to screen recordings', () => {
     mountComposable();
-    const screen = options.compositionRef.value.clips[0] as VisualClip;
+    const screen = options.compositionRef.value!.clips[0] as VisualClip;
     screen.crop = undefined;
     const presets = ['fit', 'portrait', 'circle'] as const;
     const source = { width: 1_280, height: 720 };
@@ -341,6 +353,76 @@ describe('useCameraZoom', () => {
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
   });
 
+  it('keeps the selected manual zoom inactive while paused so its full target is visible', () => {
+    mountComposable();
+    options.zooms.value = [manualZoom];
+    options.selected.value = manualZoom;
+    options.currentTime.value = 1.5;
+
+    const pausedWindow = state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(pausedWindow).not.toBeNull();
+    expect(pausedWindow?.scale).toBeCloseTo(1, 6);
+
+    options.playing.value = true;
+    const playingWindow = state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(playingWindow?.scale).toBeGreaterThan(1);
+  });
+
+  it('clamps a manual focus near the output edge when the preview has an inset background frame', () => {
+    mountComposable();
+    options.playing.value = true;
+    options.output.value = { preset: '16:9', width: 450, height: 800, showBackground: true };
+    options.zooms.value = [
+      {
+        ...manualZoom,
+        focus: { cx: 1, cy: 0 },
+      },
+    ];
+    options.selected.value = options.zooms.value[0]!;
+    options.currentTime.value = 1.5;
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    const preview = { x: 273.4375, y: 0, width: 253.125, height: 450 };
+    const expectedMargin = 1 / (2 * 1.5);
+    expect(state.videoWindowBounds.value?.focusX).toBeCloseTo(preview.x + (1 - expectedMargin) * preview.width, 1);
+    expect(state.videoWindowBounds.value?.focusY).toBeCloseTo(preview.y + expectedMargin * preview.height, 1);
+  });
+
+  it('maps manual pointer focus to the full output preview instead of the inset media bounds', () => {
+    mountComposable();
+    options.output.value = { preset: '16:9', width: 450, height: 800, showBackground: true };
+    options.zooms.value = [{ ...manualZoom, focus: { cx: 0.5, cy: 0.5 } }];
+    options.selected.value = options.zooms.value[0]!;
+    options.currentTime.value = 1.5;
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    const rendered = state.overlayWindowBounds.value;
+    expect(rendered).not.toBeNull();
+    Object.defineProperty(options.canvas, 'clientWidth', { configurable: true, value: 800 });
+    Object.defineProperty(options.canvas, 'clientHeight', { configurable: true, value: 450 });
+    const targetFocus = { cx: 0.6, cy: 0.4 };
+    const targetX = rendered!.dx + targetFocus.cx * rendered!.dw;
+    const targetY = rendered!.dy + targetFocus.cy * rendered!.dh;
+    const canvasX = rendered!.dx + rendered!.dw / 2 + rendered!.scale * (targetX - rendered!.focusX!);
+    const canvasY = rendered!.dy + rendered!.dh / 2 + rendered!.scale * (targetY - rendered!.focusY!);
+    const pointer = (type: string) =>
+      Object.assign(new MouseEvent(type, { clientX: canvasX, clientY: canvasY, button: 0 }), {
+        pointerId: 8,
+      }) as unknown as PointerEvent;
+
+    state.beginSelectionMove(pointer('pointerdown'));
+    state.endSelectionMove(pointer('pointerup'));
+
+    expect(options.callbacks.onUpdateZoom).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        focus: { cx: expect.closeTo(targetFocus.cx, 6), cy: expect.closeTo(targetFocus.cy, 6) },
+      }),
+    );
+  });
+
   it('renders camera-space content inside the sampled camera transform', () => {
     mountComposable();
     options.selected.value = null;
@@ -357,6 +439,37 @@ describe('useCameraZoom', () => {
       );
     expect(cameraScaleCalls.length).toBeGreaterThan(0);
     expect(drawDecoratedMedia).toHaveBeenCalled();
+  });
+
+  it('caps the preview motion-blur surface at 1.25x when the canvas DPR is 2', () => {
+    mountComposable({ enabled: true, intensity: 1 });
+    options.canvas.width = 1_600;
+    options.canvas.height = 900;
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(motionBlurCompositor.createMotionBlurSurface).toHaveBeenCalledWith(1_000, 563);
+    expect(motionBlurCompositor.resizeMotionBlurSurface).toHaveBeenCalledWith(expect.anything(), 1_000, 563);
+  });
+
+  it('does not sample shutter endpoints when zoom motion blur is disabled', () => {
+    const createEvaluator = compositionCamera.createCompositionCameraEvaluator;
+    const samples = vi.fn();
+    vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator').mockImplementation((inputs) => {
+      const evaluator = createEvaluator(inputs);
+      return {
+        ...evaluator,
+        sample: (timeMs) => {
+          samples(timeMs);
+          return evaluator.sample(timeMs);
+        },
+      };
+    });
+    mountComposable({ enabled: false, intensity: 0.55 });
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(samples).toHaveBeenCalledOnce();
   });
 
   it('applies the global camera when the scene contains only imported media', () => {

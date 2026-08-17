@@ -4,7 +4,12 @@ const {
   materializeComposition,
   pruneProjectMedia,
 } = require('./clip-composition.cjs');
-const { migratePresentation, presentationState, zoomState } = require('./project-editor-state.cjs');
+const {
+  defaultZoomMotionBlur,
+  migratePresentation,
+  presentationState,
+  zoomState,
+} = require('./project-editor-state.cjs');
 
 function createProjectEditorAccess(options) {
   const migrateEditor = (directory, manifest) => {
@@ -30,7 +35,9 @@ function createProjectEditorAccess(options) {
               presentation.canvas.showBackground,
               Array.isArray(manifest.sessions) ? manifest.sessions.map((session) => session.sessionId) : [],
             ),
-      zoom: current?.zoom ? zoomState(current.zoom) : { elements: [], generatedSessions: [] },
+      zoom: current?.zoom
+        ? zoomState(current.zoom)
+        : { elements: [], generatedSessions: [], motionBlur: defaultZoomMotionBlur() },
       presentation,
     };
     manifest.editor = editor;

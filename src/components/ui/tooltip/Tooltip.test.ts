@@ -1,9 +1,17 @@
 import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Tooltip from './Tooltip.vue';
 
 describe('Tooltip', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('positions a tooltip for every direction and applies variant and max width', async () => {
     const wrapper = mount(Tooltip, {
       attachTo: document.body,
@@ -118,6 +126,43 @@ describe('Tooltip', () => {
     await nextTick();
     expect(tooltip?.classList).toContain('left');
     expect(tooltip?.style.left).toBe('792px');
+    wrapper.unmount();
+  });
+
+  it('keeps an interactive tooltip open while crossing from the trigger to its content', async () => {
+    const wrapper = mount(Tooltip, {
+      attachTo: document.body,
+      props: { content: 'Interactive hint', interactive: true, delay: 120 },
+      slots: { default: '<button>Trigger</button>' },
+    });
+    const trigger = wrapper.get('.tooltip-wrapper');
+
+    await trigger.trigger('mouseenter');
+    vi.advanceTimersByTime(119);
+    await nextTick();
+    expect(document.body.querySelector('.tooltip-content')).toBeNull();
+
+    vi.advanceTimersByTime(1);
+    await nextTick();
+    const content = document.body.querySelector<HTMLElement>('.tooltip-content');
+    expect(content).not.toBeNull();
+    expect(content?.classList).toContain('tooltip-interactive');
+    expect(getComputedStyle(content!).pointerEvents).toBe('auto');
+
+    await trigger.trigger('mouseleave');
+    vi.advanceTimersByTime(79);
+    await nextTick();
+    expect(document.body.querySelector('.tooltip-content')).not.toBeNull();
+
+    await content!.dispatchEvent(new MouseEvent('mouseenter'));
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    expect(document.body.querySelector('.tooltip-content')).not.toBeNull();
+
+    await content!.dispatchEvent(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(80);
+    await nextTick();
+    expect(document.body.querySelector('.tooltip-content')).toBeNull();
     wrapper.unmount();
   });
 });

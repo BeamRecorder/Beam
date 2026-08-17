@@ -4,6 +4,7 @@ import type {
   PlaybackWorkerRequest,
   PlaybackWorkerResponse,
 } from './playback-types';
+import { isPreviewQuality } from './playback-preview';
 
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object');
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -53,10 +54,12 @@ export function isPlaybackWorkerRequest(value: unknown): value is PlaybackWorker
       Array.isArray(value.assets) &&
       value.assets.every(isSource) &&
       Array.isArray(value.clips) &&
-      value.clips.every(isClip)
+      value.clips.every(isClip) &&
+      isPreviewQuality(value.previewQuality)
     );
   }
   if (value.type === 'retime') return Array.isArray(value.clips) && value.clips.every(isClip);
+  if (value.type === 'configure-preview') return isPreviewQuality(value.previewQuality);
   if (value.type === 'pause') return true;
   if (value.type === 'play' || value.type === 'tick')
     return finite(value.timelineSeconds) && value.timelineSeconds >= 0;

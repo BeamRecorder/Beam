@@ -2,6 +2,9 @@ import type { CursorButtonEvent, CursorEvent } from '../../../api/types/capture-
 import type { CursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { CursorPlaybackState } from './cursorPlayback';
 import { cursorStateAt } from './cursorPlayback';
+import { createDeterministicCursorMotionEvaluator } from './cursor-motion-evaluator';
+
+export { stepSpringAxis } from './cursor-motion-evaluator';
 
 export interface CursorMotionAnchor {
   timeSeconds: number;
@@ -33,17 +36,6 @@ export interface CursorMotionSample extends CursorPlaybackState {
   previousX: number;
   previousY: number;
   deltaSeconds: number;
-}
-
-interface SpringAxisState {
-  position: number;
-  velocity: number;
-}
-
-interface CursorSpringState {
-  x: SpringAxisState;
-  y: SpringAxisState;
-  lastTimeSeconds: number | null;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -285,56 +277,6 @@ export function createCursorMotionTimeline(
   };
 }
 
-const springParameters = (settings: CursorMotionSettings) => {
-  const mass = clamp(settings.springMassMultiplier, 0.5, 2);
-  const stiffness = 420 - 300 * clamp(settings.smoothing, 0, 1);
-  const dampingRatio = 0.82 + clamp(settings.smoothing, 0, 1) * 0.42;
-  return { mass, stiffness, damping: 2 * Math.sqrt(stiffness * mass) * dampingRatio };
-};
-
-export function stepSpringAxis(
-  state: SpringAxisState,
-  target: number,
-  deltaSeconds: number,
-  settings: CursorMotionSettings,
-): SpringAxisState {
-  const dt = clamp(deltaSeconds, 0, 0.1);
-  if (dt <= 0) return state;
-  const { mass, stiffness, damping } = springParameters(settings);
-  const omega0 = Math.sqrt(stiffness / mass);
-  const zeta = damping / (2 * Math.sqrt(stiffness * mass));
-  const displacement = state.position - target;
-  let nextDisplacement: number;
-  let nextVelocity: number;
-  if (zeta < 1 - 0.0001) {
-    const omegaD = omega0 * Math.sqrt(1 - zeta * zeta);
-    const a = displacement;
-    const b = (state.velocity + zeta * omega0 * displacement) / omegaD;
-    const decay = Math.exp(-zeta * omega0 * dt);
-    const cosine = Math.cos(omegaD * dt);
-    const sine = Math.sin(omegaD * dt);
-    nextDisplacement = decay * (a * cosine + b * sine);
-    nextVelocity = decay * (-a * omegaD * sine + b * omegaD * cosine - omega0 * zeta * (a * cosine + b * sine));
-  } else if (Math.abs(zeta - 1) <= 0.0001) {
-    const decay = Math.exp(-omega0 * dt);
-    const b = state.velocity + omega0 * displacement;
-    nextDisplacement = decay * (displacement + b * dt);
-    nextVelocity = decay * (state.velocity - omega0 * b * dt);
-  } else {
-    const root = Math.sqrt(zeta * zeta - 1);
-    const firstRoot = -omega0 * (zeta - root);
-    const secondRoot = -omega0 * (zeta + root);
-    const firstCoefficient = (state.velocity - secondRoot * displacement) / (firstRoot - secondRoot);
-    const secondCoefficient = displacement - firstCoefficient;
-    const first = firstCoefficient * Math.exp(firstRoot * dt);
-    const second = secondCoefficient * Math.exp(secondRoot * dt);
-    nextDisplacement = first + second;
-    nextVelocity = firstRoot * first + secondRoot * second;
-  }
-  const position = clamp01(target + nextDisplacement);
-  return { position, velocity: position === target + nextDisplacement ? nextVelocity : 0 };
-}
-
 export function createCursorMotionPlayer(
   events: CursorEvent[],
   settings: CursorMotionSettings,
@@ -344,46 +286,26 @@ export function createCursorMotionPlayer(
   const timeline = createCursorMotionTimeline(events, settings, sourceWidth, sourceHeight);
   const buttonTimes = buttonEvents(events).map(eventTime);
   const drags = dragRanges(events);
-  const spring: CursorSpringState = {
-    x: { position: 0, velocity: 0 },
-    y: { position: 0, velocity: 0 },
-    lastTimeSeconds: null,
-  };
-  const reset = () => {
-    spring.x = { position: 0, velocity: 0 };
-    spring.y = { position: 0, velocity: 0 };
-    spring.lastTimeSeconds = null;
-  };
+  const evaluator = createDeterministicCursorMotionEvaluator({
+    settings,
+    targetAt: timeline.targetAt,
+    directTargetAt: (timeSeconds) => {
+      const state = cursorStateAt(events, timeSeconds);
+      return state ? { x: state.x, y: state.y } : null;
+    },
+    isDraggingAt: (timeSeconds) =>
+      drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds),
+    buttonTimes,
+  });
   const sample = (timeSeconds: number, rawState: CursorPlaybackState | null): CursorMotionSample | null => {
     if (!rawState) return null;
-    const dragging = drags.some((range) => timeSeconds >= range.startSeconds && timeSeconds <= range.endSeconds);
-    const target = dragging
-      ? { x: rawState.x, y: rawState.y }
-      : (timeline.targetAt(timeSeconds) ?? { x: rawState.x, y: rawState.y });
-    const previousX = spring.x.position;
-    const previousY = spring.y.position;
-    const previousTime = spring.lastTimeSeconds;
-    const deltaSeconds = previousTime === null ? 0 : Math.max(0, timeSeconds - previousTime);
-    const crossedButton =
-      previousTime !== null && buttonTimes.some((time) => time > previousTime && time <= timeSeconds);
-    if (previousTime === null || timeSeconds < previousTime || deltaSeconds > 0.1 || crossedButton || dragging) {
-      spring.x = { position: target.x, velocity: 0 };
-      spring.y = { position: target.y, velocity: 0 };
-    } else {
-      spring.x = stepSpringAxis(spring.x, target.x, deltaSeconds, settings);
-      spring.y = stepSpringAxis(spring.y, target.y, deltaSeconds, settings);
-    }
-    spring.lastTimeSeconds = timeSeconds;
+    const motion = evaluator.sample(timeSeconds);
     return {
       ...rawState,
-      x: spring.x.position,
-      y: spring.y.position,
-      previousX: previousTime === null ? spring.x.position : previousX,
-      previousY: previousTime === null ? spring.y.position : previousY,
-      deltaSeconds,
+      ...motion,
     };
   };
-  return { timeline, sample, reset };
+  return { timeline, sample, reset: evaluator.reset };
 }
 
 export function motionBlurTrail(

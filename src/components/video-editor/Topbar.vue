@@ -7,6 +7,8 @@ import Tooltip from '~/ui/tooltip/Tooltip.vue';
 import { ArrowLeft, Redo2, Undo2 } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import PreviewPerformanceWidget from './performance/PreviewPerformanceWidget.vue';
+import type { PreviewPerformanceSnapshot } from './performance/preview-performance-types';
 
 const { t } = useTranslate('Topbar');
 
@@ -18,6 +20,7 @@ withDefaults(
     canUndo?: boolean;
     canRedo?: boolean;
     historyTooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
+    performanceSnapshot?: PreviewPerformanceSnapshot | null;
   }>(),
   {
     exportRequest: null,
@@ -26,6 +29,7 @@ withDefaults(
     canUndo: false,
     canRedo: false,
     historyTooltipPosition: 'bottom',
+    performanceSnapshot: null,
   },
 );
 
@@ -79,6 +83,7 @@ const openDiscordInvite = () => {
     <div class="titlebar-drag-region" aria-hidden="true" />
 
     <div class="right-actions">
+      <PreviewPerformanceWidget v-if="performanceSnapshot" :snapshot="performanceSnapshot" />
       <Tooltip :content="t('discordTooltip')" position="bottom">
         <button type="button" class="discord-btn" :aria-label="t('discordAriaLabel')" @click.stop="openDiscordInvite">
           <img :src="resolvePublicAssetUrl('/discord_svg.svg')" class="discord-icon" alt="" aria-hidden="true" />

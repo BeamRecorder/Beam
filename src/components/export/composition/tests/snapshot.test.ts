@@ -50,6 +50,7 @@ const base = () => ({
   blurPercent: 0,
   editorData: null,
   zooms: [],
+  zoomMotionBlur: { enabled: true, intensity: 0.55 },
   composition: composition(),
   cursorSettings: {
     selectedCursor: 'automatic' as const,
@@ -181,6 +182,18 @@ describe('createCompositionSnapshot', () => {
     input.composition.clips[0].timelineDurationMs = 1_000;
     expect(snapshot.zooms[0].focus.cx).toBe(0.5);
     expect(snapshot.composition.clips[0].timelineDurationMs).toBe(4_000);
+  });
+
+  it('copies the dedicated zoom motion blur settings into the export snapshot', () => {
+    const input = {
+      ...base(),
+      zoomMotionBlur: { enabled: false, intensity: 0.8 },
+    };
+
+    const snapshot = createCompositionSnapshot(input);
+    input.zoomMotionBlur.intensity = 0.1;
+
+    expect(snapshot.zoomMotionBlur).toEqual({ enabled: false, intensity: 0.8 });
   });
 
   it('copies reactive editor data and composition without retaining Vue proxies', () => {

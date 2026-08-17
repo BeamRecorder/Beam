@@ -4,6 +4,7 @@ import type { CompositionSnapshot } from '../../export-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
 import type { ClipComposition, ClipAppearance } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { createCursorMotionPlayer } from '../../../video-editor/composables/cursor-motion';
 
 const screenAppearance: ClipAppearance = {
   cornerRadius: 'none',
@@ -583,5 +584,47 @@ describe('canonical composition rendering', () => {
     );
 
     expect(ctx.drawImage).toHaveBeenLastCalledWith(image, expect.any(Number), expect.any(Number), 50, 50);
+  });
+
+  it('samples cursor motion once per exported frame', () => {
+    const value = snapshot();
+    value.cursor = {
+      available: true,
+      telemetry: [],
+      missing: [],
+      shapes: {},
+      catalog: {},
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 25,
+          pixelY: 25,
+          normalizedX: 0.25,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    const motion = createCursorMotionPlayer(value.cursor.events, value.cursorSettings.motion, 100, 50);
+    const sample = vi.spyOn(motion, 'sample');
+    const image = { complete: true, naturalWidth: 24 } as HTMLImageElement;
+    const frames = [0, 1 / 30, 2 / 30];
+
+    for (const time of frames) {
+      renderCompositionFrame(
+        context(),
+        { source: {} as CanvasImageSource, width: 100, height: 50 },
+        value,
+        time,
+        null,
+        new Map([['default', image]]),
+        undefined,
+        motion,
+      );
+    }
+
+    expect(sample).toHaveBeenCalledTimes(frames.length);
+    expect(sample.mock.calls.map(([time]) => time)).toEqual(frames);
   });
 });

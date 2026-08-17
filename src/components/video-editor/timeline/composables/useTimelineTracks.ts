@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue';
 import { Camera, CircleDashed, Image as ImageIcon, Video } from '@lucide/vue';
-import type { ZoomElement } from '../../zoom/zoom-types';
+import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../../zoom/zoom-types';
 import {
   isAudioClip,
   isCaptionClip,
@@ -24,11 +24,16 @@ import { previewClipMove, previewClipTrim } from './timeline-composition-preview
 import { useVisualTrackReorder } from './useVisualTrackReorder';
 export type { TimelineTracksEmits, TimelineTracksProps } from './timeline-tracks-types';
 
-export const DEFAULT_ZOOM_DURATION_MS = 1_200;
+export { DEFAULT_ZOOM_DURATION_MS } from '../../zoom/zoom-types';
 export const DEFAULT_CAPTION_DURATION_MS = 2_000;
 export const MIN_DURATION_MS = 40;
 
 export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTracksEmits, t: (key: string) => string) {
+  const newZoomDurationMs = computed(() =>
+    Number.isFinite(props.newZoomDurationMs)
+      ? Math.max(200, Math.round(props.newZoomDurationMs ?? DEFAULT_ZOOM_DURATION_MS))
+      : DEFAULT_ZOOM_DURATION_MS,
+  );
   const previewDurationMs = ref<number | null>(null);
   const durationMs = computed(() => {
     const raw = typeof props.duration === 'number' && Number.isFinite(props.duration) ? props.duration * 1_000 : 0;
@@ -362,10 +367,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     intervals.some((interval) => interval.startMs < endMs && interval.endMs > startMs);
   const hoverAt = (event: MouseEvent, kind: 'zoom' | 'caption') => {
     if (kind === 'zoom') {
-      const startMs = centeredStartAt(event.clientX, DEFAULT_ZOOM_DURATION_MS);
-      hoverZoomTimeMs.value = occupied(startMs, startMs + DEFAULT_ZOOM_DURATION_MS, props.zoomElements)
-        ? null
-        : startMs;
+      const duration = newZoomDurationMs.value;
+      const startMs = centeredStartAt(event.clientX, duration);
+      hoverZoomTimeMs.value = occupied(startMs, startMs + duration, props.zoomElements) ? null : startMs;
       return;
     }
     const startMs = centeredStartAt(event.clientX, DEFAULT_CAPTION_DURATION_MS);
@@ -383,8 +387,9 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     event.preventDefault();
     event.stopPropagation();
     if (kind === 'zoom') {
-      const startMs = centeredStartAt(event.clientX, DEFAULT_ZOOM_DURATION_MS);
-      if (!occupied(startMs, startMs + DEFAULT_ZOOM_DURATION_MS, props.zoomElements)) emit('add:zoom', startMs);
+      const duration = newZoomDurationMs.value;
+      const startMs = centeredStartAt(event.clientX, duration);
+      if (!occupied(startMs, startMs + duration, props.zoomElements)) emit('add:zoom', startMs);
       return;
     }
     const startMs = centeredStartAt(event.clientX, DEFAULT_CAPTION_DURATION_MS);
@@ -496,7 +501,7 @@ export function useTimelineTracks(props: TimelineTracksProps, emit: TimelineTrac
     zoomScale,
     draggedTrackId,
     beginReorder,
-    DEFAULT_ZOOM_DURATION_MS,
+    newZoomDurationMs,
     DEFAULT_CAPTION_DURATION_MS,
   };
 }

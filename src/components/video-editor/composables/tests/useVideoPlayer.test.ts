@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { effectScope } from 'vue';
+import { effectScope, nextTick } from 'vue';
 import { createBackgroundMedia } from '../backgroundCatalog';
 import { useVideoPlayer } from '../useVideoPlayer';
 import type { ClipComposition } from '~/media/shared';
@@ -8,6 +8,7 @@ import { createDefaultClipAppearance } from '~/media/shared/composition-defaults
 const playback = vi.hoisted(() => {
   const instances: FakePlayback[] = [];
   class FakePlayback {
+    readonly previewQuality: string;
     readonly listeners = new Map<string, (value: never) => void>();
     readonly loadComposition = vi.fn(async (_composition: ClipComposition, _timelineSeconds?: number) => {
       this.emit('state', 'paused');
@@ -26,10 +27,12 @@ const playback = vi.hoisted(() => {
       return 'presented' as const;
     });
     readonly setVolume = vi.fn();
+    readonly setPreviewQuality = vi.fn(async (_quality: string) => undefined);
     readonly dispose = vi.fn();
     readonly frameFor = vi.fn(() => null);
 
-    constructor() {
+    constructor(options: { previewQuality?: string } = {}) {
+      this.previewQuality = options.previewQuality ?? 'full';
       instances.push(this);
     }
     on(event: string, listener: (value: never) => void) {
@@ -99,6 +102,7 @@ describe('useVideoPlayer', () => {
     const player = useVideoPlayer([]);
     await player.loadComposition(composition);
     const engine = playback.instances.at(-1)!;
+    expect(engine.previewQuality).toBe('full');
     expect(player.duration.value).toBe(2.5);
     await player.setPlaying(true);
     expect(engine.play).toHaveBeenCalledWith(0);
@@ -109,6 +113,47 @@ describe('useVideoPlayer', () => {
     await player.setPlaying(false);
     expect(engine.pause).toHaveBeenCalled();
     expect(player.isPlaying.value).toBe(false);
+  });
+
+  it('exposes playback and audio performance metrics as reactive refs', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    const engine = playback.instances.at(-1)!;
+    const playbackMetrics = {
+      decodedFrames: 8,
+      presentedFrames: 7,
+      droppedFrames: 1,
+      supersededRequests: 0,
+      queueSize: 1,
+      cacheBytes: 128,
+      disposedBitmaps: 0,
+      seekLatencyMs: [6],
+    };
+    const audioMetrics = {
+      schedulePasses: 3,
+      scheduledBuffers: 9,
+      lateBuffers: 1,
+      scheduleErrors: 0,
+      maxLatenessMs: 24,
+      contextState: 'running',
+    };
+
+    engine.listeners.get('metrics')?.(playbackMetrics as never);
+    engine.listeners.get('audio-metrics')?.(audioMetrics as never);
+
+    expect(player.playbackMetrics.value).toEqual(playbackMetrics);
+    expect(player.audioMetrics.value).toEqual(audioMetrics);
+  });
+
+  it('propagates preview quality to playback loads without adding it to export state', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    player.previewQuality.value = 'half';
+    await nextTick();
+
+    const engine = playback.instances.at(-1)!;
+    expect(engine.setPreviewQuality).toHaveBeenCalledWith('half');
+    expect(player).not.toHaveProperty('exportRequest');
   });
 
   it('invalidates the cached frame before reloading and exposes the replacement frame', async () => {

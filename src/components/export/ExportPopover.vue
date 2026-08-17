@@ -8,6 +8,7 @@ import Popover from '~/ui/popover/Popover.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Accordion from '~/ui/accordion/Accordion.vue';
+import InfoTooltip from '~/ui/tooltip/InfoTooltip.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { useExportJob } from './useExportJob';
 import { bitrateFor } from './export-presets';
@@ -19,13 +20,22 @@ import { buildBeamExportReport } from './export-diagnostics';
 const { t } = useTranslate('ExportPopover');
 
 export type ExportResolutionOption = '720p' | '1080p' | 'max';
+export type ExportFrameRate = 24 | 30 | 60;
+
+const recommendedFrameRate = (sourceFps: number): ExportFrameRate => {
+  if (sourceFps >= 50) return 60;
+  if (sourceFps <= 27) return 24;
+  return 30;
+};
 
 const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>();
 const emit = defineEmits<{ (event: 'update:includeAudio', value: boolean): void }>();
 const format = ref<ExportFormat>('webm');
 const preset = ref<ExportPreset>('medium');
 const resolution = ref<ExportResolutionOption>('max');
+const frameRate = ref<ExportFrameRate>(recommendedFrameRate(props.request.snapshot.render.fps));
 const presets: ExportPreset[] = ['low', 'medium', 'high'];
+const frameRates: ExportFrameRate[] = [24, 30, 60];
 const moreOptionsOpen = ref(false);
 const includeAudio = computed({
   get: () => props.request.includeAudio !== false,
@@ -74,8 +84,7 @@ const resolutionDescriptions = computed<Record<ExportResolutionOption, string>>(
 
 const getMb = (p: ExportPreset) => {
   const { width, height } = activeDimensions.value;
-  const { fps } = props.request.snapshot.render;
-  const bps = bitrateFor(p, width, height, fps);
+  const bps = bitrateFor(p, width, height, frameRate.value);
   return (bps / 1_000_000).toFixed(1);
 };
 
@@ -83,6 +92,12 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
   low: t('lowDesc', { mbps: getMb('low') }),
   medium: t('mediumDesc', { mbps: getMb('medium') }),
   high: t('highDesc', { mbps: getMb('high') }),
+}));
+
+const frameRateDescriptions = computed<Record<ExportFrameRate, string>>(() => ({
+  24: t('frameRate24Desc'),
+  30: t('frameRate30Desc'),
+  60: t('frameRate60Desc'),
 }));
 
 const availability = ref<string | null>(null);
@@ -103,7 +118,11 @@ const reportRequest = computed<ExportRequest>(() => {
     ...props.request,
     format: format.value,
     preset: preset.value,
-    snapshot: { ...props.request.snapshot, canvas: { ...props.request.snapshot.canvas, width, height } },
+    snapshot: {
+      ...props.request.snapshot,
+      render: { ...props.request.snapshot.render, fps: frameRate.value },
+      canvas: { ...props.request.snapshot.canvas, width, height },
+    },
   };
 });
 const exportReport = computed(() =>
@@ -134,6 +153,7 @@ const run = async () => {
     preset: preset.value,
     snapshot: {
       ...props.request.snapshot,
+      render: { ...props.request.snapshot.render, fps: frameRate.value },
       canvas: {
         ...props.request.snapshot.canvas,
         width,
@@ -221,7 +241,10 @@ const run = async () => {
           </div>
 
           <div class="field">
-            <span class="field-label">{{ t('resolution') }}</span>
+            <div class="field-heading">
+              <span class="field-label">{{ t('resolution') }}</span>
+              <InfoTooltip :content="resolutionDescriptions[resolution]" position="left" />
+            </div>
             <ButtonGroup full>
               <Button
                 variant="tab"
@@ -253,7 +276,26 @@ const run = async () => {
                 {{ t('resMax') }}
               </Button>
             </ButtonGroup>
-            <span class="option-hint">{{ resolutionDescriptions[resolution] }}</span>
+          </div>
+
+          <div class="field">
+            <div class="field-heading">
+              <span class="field-label">{{ t('frameRate') }}</span>
+              <InfoTooltip :content="frameRateDescriptions[frameRate]" position="left" />
+            </div>
+            <ButtonGroup full>
+              <Button
+                v-for="value in frameRates"
+                :key="value"
+                variant="tab"
+                size="sm"
+                block
+                :class="{ active: frameRate === value }"
+                @click="frameRate = value"
+              >
+                {{ value }} fps
+              </Button>
+            </ButtonGroup>
           </div>
 
           <Accordion v-model="moreOptionsOpen" :title="t('moreOptions')" class="more-options">
@@ -267,7 +309,10 @@ const run = async () => {
           </Accordion>
 
           <div class="field">
-            <span class="field-label">{{ t('qualityAndBitrate') }}</span>
+            <div class="field-heading">
+              <span class="field-label">{{ t('qualityAndBitrate') }}</span>
+              <InfoTooltip :content="presetDescriptions[preset]" position="left" />
+            </div>
             <ButtonGroup full>
               <Button
                 v-for="value in presets"
@@ -278,10 +323,9 @@ const run = async () => {
                 :class="{ active: preset === value }"
                 @click="preset = value"
               >
-                {{ value }}
+                {{ t(value) }}
               </Button>
             </ButtonGroup>
-            <span class="option-hint">{{ presetDescriptions[preset] }}</span>
           </div>
 
           <p v-if="displayError" class="error" role="alert">{{ displayError }}</p>
@@ -330,6 +374,13 @@ const run = async () => {
   display: grid;
   gap: 6px;
   width: 100%;
+}
+.field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  gap: 8px;
 }
 .field :deep(.btn-group) {
   width: 100% !important;

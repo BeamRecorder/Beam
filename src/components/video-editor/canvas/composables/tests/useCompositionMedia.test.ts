@@ -6,6 +6,7 @@ import type { MediaFrame } from '~/media/shared';
 import type { BlurClip, ClipComposition, CaptionClip, VisualClip } from '~/media/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import * as sceneLayers from '../../../composition/scene-layers';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
 const applyBlurEffect = vi.hoisted(() => vi.fn());
@@ -328,6 +329,26 @@ describe('useCompositionMedia', () => {
       applyBlurEffect.mock.invocationCallOrder[0],
     );
     expect(mounted.frameFor).toHaveBeenCalledWith('webcam');
+  });
+
+  it('uses supplied resolved layers without resolving the scene again', () => {
+    const mounted = mountComposable();
+    const video = mounted.compositionRef.value.clips.find((clip) => clip.id === 'video') as VisualClip;
+    const resolvedLayers = {
+      screen: null,
+      cameraVisuals: [],
+      webcams: [],
+      visualStack: [video],
+      captions: [],
+    };
+    const resolveLayers = vi.spyOn(sceneLayers, 'resolveCompositionSceneLayers').mockImplementation(() => {
+      throw new Error('drawVisualStack should reuse the supplied scene layers');
+    });
+
+    state.drawVisualStack(context(), { dx: 10, dy: 20, dw: 800, dh: 400, scale: 1 }, vi.fn(), resolvedLayers);
+
+    expect(resolveLayers).not.toHaveBeenCalled();
+    expect(drawDecoratedMedia).toHaveBeenCalled();
   });
 
   it('plays the same preview entry transition at timeline zero and after a small offset', () => {

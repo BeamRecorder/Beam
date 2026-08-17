@@ -16,6 +16,7 @@ type PlaybackClipSignature = {
   sourceInMs: number;
   sourceDurationMs: number;
   playbackRate: number;
+  enabled: boolean;
   transitions: Clip['transitions'];
   volume?: number;
 };
@@ -28,7 +29,6 @@ const playbackAsset = (asset: MediaAsset) => ({
 });
 
 const playbackClip = (clip: Clip): PlaybackClipSignature | null => {
-  if (!clip.enabled) return null;
   if (!isAudioClip(clip) && (!isVisualClip(clip) || clip.kind === 'image')) return null;
   return {
     id: clip.id,
@@ -39,6 +39,7 @@ const playbackClip = (clip: Clip): PlaybackClipSignature | null => {
     sourceInMs: clip.sourceInMs,
     sourceDurationMs: clip.sourceDurationMs,
     playbackRate: clip.playbackRate,
+    enabled: clip.enabled,
     transitions: clip.transitions,
     ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
   };

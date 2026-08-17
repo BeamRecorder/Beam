@@ -5,15 +5,24 @@ const path = require('node:path');
 const test = require('node:test');
 const { registerExportIpc, safeExportName } = require('../electron/export/export-ipc.cjs');
 
-function setup(filePath) {
+function setup(filePath, { defaultExportDirectory, dialogCalls = [] } = {}) {
   const handlers = new Map();
-  registerExportIpc({
+  const registration = {
     ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
-    dialog: { showSaveDialog: async () => ({ canceled: false, filePath }) },
+    dialog: {
+      showSaveDialog: async (_window, options) => {
+        dialogCalls.push(options);
+        return { canceled: false, filePath };
+      },
+    },
     BrowserWindow: { fromWebContents: () => ({}) },
+  };
+  if (defaultExportDirectory !== undefined) registration.defaultExportDirectory = defaultExportDirectory;
+  registerExportIpc({
+    ...registration,
   });
   const event = { sender: { id: 7 } };
-  return { event, invoke: (name, payload) => handlers.get(name)(event, payload) };
+  return { event, dialogCalls, invoke: (name, payload) => handlers.get(name)(event, payload) };
 }
 
 function asyncFsFixture({ writeGate = null, writeFailure = null } = {}) {
@@ -116,6 +125,42 @@ function asyncSetup(filePath, fsFixture) {
 test('sanitizes an export filename and keeps its extension', () => {
   assert.equal(safeExportName(' demo:/recording. ', 'webm'), 'demo recording.webm');
   assert.equal(safeExportName('', 'mp4'), 'Beam export.mp4');
+});
+
+test('uses the absolute default export directory for sanitized mp4 and webm names', async () => {
+  for (const format of ['mp4', 'webm']) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), `beam-export-default-${format}-`));
+    const target = path.join(root, `selected.${format}`);
+    const dialogCalls = [];
+    const defaultExportDirectory = path.relative(process.cwd(), root);
+    const api = setup(target, { defaultExportDirectory, dialogCalls });
+    try {
+      const opened = await api.invoke('export:begin', { projectName: '  demo:/recording<>.  ', format });
+      assert.equal(dialogCalls.length, 1);
+      assert.equal(
+        dialogCalls[0].defaultPath,
+        path.join(path.resolve(root), safeExportName('  demo:/recording<>.  ', format)),
+      );
+      assert.equal(path.isAbsolute(dialogCalls[0].defaultPath), true);
+      await api.invoke('export:abort', { jobId: opened.jobId });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test('keeps the existing basename fallback when no default export directory is provided', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-export-default-fallback-'));
+  const target = path.join(root, 'selected.webm');
+  const dialogCalls = [];
+  const api = setup(target, { dialogCalls });
+  try {
+    const opened = await api.invoke('export:begin', { projectName: ' demo:/recording. ', format: 'webm' });
+    assert.equal(dialogCalls[0].defaultPath, safeExportName(' demo:/recording. ', 'webm'));
+    await api.invoke('export:abort', { jobId: opened.jobId });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('rejects unsupported output formats before opening a destination file', async () => {

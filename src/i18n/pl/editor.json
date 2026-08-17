@@ -104,7 +104,14 @@
     "snappingOn": "Magnetyczne przyciąganie włączone",
     "snappingOff": "Magnetyczne przyciąganie wyłączone",
     "zoom": "Powiększenie",
-    "resetZoom": "Zresetuj powiększenie"
+    "resetZoom": "Zresetuj powiększenie",
+    "previewQuality": "Jakość podglądu",
+    "previewQualityFull": "Pełna rozdzielczość",
+    "previewQualityHalf": "Połowa rozdzielczości",
+    "previewQualityQuarter": "Ćwierć rozdzielczości",
+    "previewQualityExportHint": "Dotyczy tylko podglądu. Eksport pozostaje w pełnej jakości.",
+    "previewQualitySuggestion": "Podgląd się zacina. Spróbuj lżejszego proxy.",
+    "previewQualityCriticalSuggestion": "Podgląd nadal się zacina. Obniż jakość proxy."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Kliknij, aby przełączyć ścieżkę wideo",
@@ -154,6 +161,20 @@
   "TimelineVideoClip": {
     "trimStart": "Przytnij początek",
     "trimEnd": "Przytnij koniec"
+  },
+  "PreviewPerformance": {
+    "title": "Wydajność",
+    "ui": "Interfejs",
+    "worker": "Odtwarzanie",
+    "audio": "Dźwięk",
+    "media": "Media",
+    "warning": "Podgląd może się zacinać.",
+    "criticalWarning": "Wydajność podglądu nadal jest ograniczona.",
+    "reduceQuality": "Przełącz na {quality}",
+    "higherIsWorse": "Wyższy wykres oznacza większe obciążenie",
+    "good": "OK",
+    "high": "Wysokie",
+    "critical": "Krytyczne"
   },
   "Topbar": {
     "exitToHUD": "Wyjdź do HUD",
@@ -253,6 +274,9 @@
     "autoHint": "Tryb automatyczny stale podąża za nagranym ruchem kursora.",
     "magnification": "Powiększenie",
     "zoomLevel": "Poziom powiększenia",
+    "motionBlur": "Rozmycie ruchu zoomu",
+    "motionBlurDesc": "Dodaje filmowe rozmycie migawki podczas zbliżania i panoramowania, identyczne w podglądzie i eksporcie.",
+    "motionBlurIntensity": "Intensywność rozmycia ruchu",
     "deleteZoom": "Usuń powiększenie",
     "noZoomSelected": "Nie wybrano powiększenia",
     "noZoomSelectedDesc": "Kliknij blok powiększenia na ścieżce, aby dostosować głębię, tryb lub położenie."

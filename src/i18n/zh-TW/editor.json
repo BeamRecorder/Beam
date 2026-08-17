@@ -39,6 +39,7 @@
     "keyboardCaptions": "鍵盤快速鍵",
     "textCaptions": "文字字幕",
     "audio": "音訊",
+    "media": "媒體",
     "settings": "設定",
     "logo": "標誌"
   },
@@ -104,7 +105,14 @@
     "snappingOn": "磁性吸附已啟用",
     "snappingOff": "磁性吸附已停用",
     "zoom": "縮放",
-    "resetZoom": "重設縮放"
+    "resetZoom": "重設縮放",
+    "previewQuality": "預覽品質",
+    "previewQualityFull": "完整解析度",
+    "previewQualityHalf": "二分之一解析度",
+    "previewQualityQuarter": "四分之一解析度",
+    "previewQualityExportHint": "僅影響預覽，匯出仍維持完整品質。",
+    "previewQualitySuggestion": "預覽出現卡頓。請嘗試較輕量的代理。",
+    "previewQualityCriticalSuggestion": "預覽仍然卡頓。請降低代理品質。"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "點擊切換影片軌道",
@@ -154,6 +162,20 @@
   "TimelineVideoClip": {
     "trimStart": "裁切開頭",
     "trimEnd": "裁切結尾"
+  },
+  "PreviewPerformance": {
+    "title": "效能",
+    "ui": "介面",
+    "worker": "播放",
+    "audio": "音訊",
+    "media": "媒體",
+    "warning": "預覽可能會卡頓。",
+    "criticalWarning": "預覽效能仍然受限。",
+    "reduceQuality": "切換至 {quality}",
+    "higherIsWorse": "曲線越高，負載越大",
+    "good": "正常",
+    "high": "較高",
+    "critical": "嚴重"
   },
   "Topbar": {
     "exitToHUD": "退出至 HUD",
@@ -253,6 +275,9 @@
     "autoHint": "自動模式會持續跟隨錄製的游標移動。",
     "magnification": "放大倍率",
     "zoomLevel": "縮放等級",
+    "motionBlur": "縮放動態模糊",
+    "motionBlurDesc": "在鏡頭縮放或平移時加入電影感快門模糊，並在預覽與匯出中保持一致。",
+    "motionBlurIntensity": "動態模糊強度",
     "deleteZoom": "刪除縮放",
     "noZoomSelected": "未選取縮放",
     "noZoomSelectedDesc": "點擊軌道上的縮放區塊，以調整深度、模式或位置。"

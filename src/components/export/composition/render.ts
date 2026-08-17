@@ -3,6 +3,7 @@ import { isBlurClip, type BlurClip, type CaptionClip, type VisualClip } from '~/
 import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../video-editor/composition/webcam/webcam-zoom';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
+import { cursorStateAt } from '../../video-editor/composables/cursorPlayback';
 import { cursorPositionForKeyboardCaption, drawCursorLayer } from './cursor-render';
 import { captionContentAt } from '~/media/shared/caption-text-layout';
 import { drawCaptionText } from '../../video-editor/composition/captions/render-caption-text';
@@ -25,6 +26,14 @@ import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { mapSourcePointToScreen, resolveScreenRenderGeometry } from '../../video-editor/composition/camera-layout';
 import { resolveVisualClipFraming } from '../../video-editor/composition/visual-framing';
 import { OUTPUT_FALLBACK_COLOR } from '../../video-editor/canvas/output-canvas';
+import { createZoomMotionBlurSamplePlan, ZOOM_MOTION_BLUR_SHUTTER_MS } from '../../video-editor/zoom/zoom-motion-blur';
+import {
+  compositeIsolatedMotionBlurSample,
+  createMotionBlurSurface,
+  resizeMotionBlurSurface,
+  type MotionBlurSurface,
+} from '../../video-editor/zoom/zoom-motion-blur-compositor';
+import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -35,6 +44,14 @@ export interface RenderableMedia {
 
 export type CompositionVisuals = ReadonlyMap<string, RenderableMedia>;
 export { OUTPUT_FALLBACK_COLOR } from '../../video-editor/canvas/output-canvas';
+
+let zoomMotionBlurSurface: MotionBlurSurface | null = null;
+
+const getZoomMotionBlurSurface = (width: number, height: number) => {
+  zoomMotionBlurSurface ??= createMotionBlurSurface(width, height);
+  if (zoomMotionBlurSurface) resizeMotionBlurSurface(zoomMotionBlurSurface, width, height);
+  return zoomMotionBlurSurface;
+};
 
 function drawSnapshotBackground(
   ctx: Canvas2DContext,
@@ -231,61 +248,115 @@ function renderCompositionFrameContent(
     : null;
   const source = screenGeometry?.source;
   const positionedMedia = screenGeometry?.positioned ?? null;
-  const camera = (cameraEvaluator ?? createSnapshotCameraEvaluator(snapshot, sourceWidth, sourceHeight)).sample(timeMs);
+  const resolvedCameraEvaluator = cameraEvaluator ?? createSnapshotCameraEvaluator(snapshot, sourceWidth, sourceHeight);
+  const camera = resolvedCameraEvaluator.sample(timeMs);
   const scale = camera.scale;
   const cameraFocus = camera.focus;
-
-  ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  drawSnapshotBackground(ctx, snapshot, background);
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  for (const clip of layers.visualStack) {
-    if (clip.kind === 'screen') {
-      if (!video || clip.id !== screen?.id || !positionedMedia || !source) continue;
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawDecoratedMedia(ctx, {
-          source: video.source,
-          sourceRect: source,
-          rect: positionedMedia,
-          appearance: screen.appearance,
-          title: screen.name,
-          mirrored: screen.isMirrored,
-          mirroredY: screen.isMirroredY,
-          mask: screenGeometry?.mask,
-        }),
-      );
-      continue;
+  const blurSettings = normalizeZoomMotionBlur(snapshot.zoomMotionBlur);
+  const centerCamera = { focusX: cameraFocus.cx, focusY: cameraFocus.cy, scale };
+  const blurIntensity = blurSettings.enabled ? blurSettings.intensity : 0;
+  const blurPlan = (() => {
+    if (!(blurIntensity > 0)) return [{ camera: centerCamera, weight: 1 }];
+    const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
+    const cameraAt = (sampleTimeMs: number) => {
+      const value = resolvedCameraEvaluator.sample(Math.max(0, sampleTimeMs));
+      return { focusX: value.focus.cx, focusY: value.focus.cy, scale: value.scale };
+    };
+    return createZoomMotionBlurSamplePlan({
+      previous: cameraAt(timeMs - halfShutterMs),
+      center: centerCamera,
+      current: cameraAt(timeMs + halfShutterMs),
+      intensity: blurIntensity,
+      deltaMs: halfShutterMs * 2,
+      viewportWidth: width,
+      viewportHeight: height,
+    });
+  })();
+  const drawCameraSample = (target: Canvas2DContext, blurSample: (typeof blurPlan)[number], fillFallback = false) => {
+    const sampleCamera = blurSample.camera;
+    if (fillFallback) {
+      target.fillStyle = OUTPUT_FALLBACK_COLOR;
+      target.fillRect(0, 0, width, height);
     }
-    if (isBlurClip(clip)) {
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () => drawBlurClip(ctx, clip, snapshot.canvas));
-      continue;
+    target.save();
+    target.translate(width / 2, height / 2);
+    target.scale(sampleCamera.scale, sampleCamera.scale);
+    target.translate(-sampleCamera.focusX * width, -sampleCamera.focusY * height);
+    drawSnapshotBackground(target, snapshot, background);
+    for (const clip of layers.visualStack) {
+      if (clip.kind === 'screen') {
+        if (!video || clip.id !== screen?.id || !positionedMedia || !source) continue;
+        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+          drawDecoratedMedia(target, {
+            source: video.source,
+            sourceRect: source,
+            rect: positionedMedia,
+            appearance: screen.appearance,
+            title: screen.name,
+            mirrored: screen.isMirrored,
+            mirroredY: screen.isMirroredY,
+            mask: screenGeometry?.mask,
+          }),
+        );
+        continue;
+      }
+      if (isBlurClip(clip)) {
+        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+          drawBlurClip(target, clip, snapshot.canvas),
+        );
+        continue;
+      }
+      const sourceVisual = visuals?.get(clip.id);
+      if (!sourceVisual) continue;
+      if (clip.kind === 'webcam')
+        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+          drawWebcamClip(target, clip, sourceVisual, snapshot.canvas, {
+            scale: sampleCamera.scale,
+            focusX: sampleCamera.focusX * width,
+            focusY: sampleCamera.focusY * height,
+          }),
+        );
+      else
+        drawWithClipTransition(target, clip, timeMs, snapshot.canvas, () =>
+          drawVisualClip(target, clip, sourceVisual, snapshot.canvas),
+        );
     }
-    const sourceVisual = visuals?.get(clip.id);
-    if (!sourceVisual) continue;
-    if (clip.kind === 'webcam')
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawWebcamClip(ctx, clip, sourceVisual, snapshot.canvas, {
-          scale,
-          focusX: cameraFocus.cx * width,
-          focusY: cameraFocus.cy * height,
-        }),
-      );
-    else
-      drawWithClipTransition(ctx, clip, timeMs, snapshot.canvas, () =>
-        drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas),
-      );
+    target.restore();
+  };
+  if (blurPlan.length === 1) {
+    drawCameraSample(ctx, blurPlan[0]!);
+  } else {
+    const surface = getZoomMotionBlurSurface(width, height);
+    if (!surface) {
+      drawCameraSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+    } else {
+      let accumulatedWeight = 0;
+      let composited = false;
+      for (const blurSample of blurPlan) {
+        const rendered = compositeIsolatedMotionBlurSample({
+          target: ctx,
+          surface,
+          logicalWidth: width,
+          logicalHeight: height,
+          pixelScale: 1,
+          sample: blurSample,
+          accumulatedWeight,
+          draw: (target, sampleToDraw) => drawCameraSample(target, sampleToDraw, true),
+        });
+        if (rendered) {
+          composited = true;
+          accumulatedWeight += blurSample.weight;
+        }
+      }
+      if (!composited) drawCameraSample(ctx, blurPlan[Math.floor(blurPlan.length / 2)]!);
+    }
   }
-  ctx.restore();
   const resolvedCursorMotionPlayer = screen
     ? (cursorMotionPlayer ??
       createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight))
+    : null;
+  const cursorMotion = resolvedCursorMotionPlayer
+    ? resolvedCursorMotionPlayer.sample(time, cursorStateAt(snapshot.cursor.events, time))
     : null;
   const keyboardCursorPosition =
     screen && resolvedCursorMotionPlayer
@@ -298,7 +369,7 @@ function renderCompositionFrameContent(
           width,
           height,
           cursorImages,
-          resolvedCursorMotionPlayer,
+          cursorMotion,
           camera,
         )
       : null;
@@ -323,6 +394,7 @@ function renderCompositionFrameContent(
       height,
       cursorImages,
       resolvedCursorMotionPlayer,
+      cursorMotion,
     );
     ctx.restore();
   }

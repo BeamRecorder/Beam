@@ -851,6 +851,36 @@ describe('TimelineTracks', () => {
     await annotation.trigger('mouseleave');
   });
 
+  it('uses the configured zoom duration when centering the hover ghost', async () => {
+    const mounted = await mountTracks({ newZoomDurationMs: 5_000, zoomElements: [] });
+    const cursor = mounted!.get('.cursor-content');
+
+    await cursor.trigger('mousemove', { clientX: 700 });
+
+    const ghost = mounted!.get('.cursor-zoom-indicator.preview-ghost');
+    expect(ghost.element.style.left).toBe('33%');
+    expect(ghost.element.style.width).toBe('50%');
+  });
+
+  it('uses the configured zoom duration when checking hover collisions', async () => {
+    const mounted = await mountTracks({ newZoomDurationMs: 5_000 });
+    const cursor = mounted!.get('.cursor-content');
+
+    await cursor.trigger('mousemove', { clientX: 700 });
+    expect(mounted!.find('.cursor-zoom-indicator.preview-ghost').exists()).toBe(false);
+    await cursor.trigger('click', { clientX: 700 });
+    expect(mounted!.emitted('add:zoom') ?? []).toHaveLength(0);
+  });
+
+  it('emits the centered start for the configured zoom duration', async () => {
+    const mounted = await mountTracks({ newZoomDurationMs: 5_000, zoomElements: [] });
+    const cursor = mounted!.get('.cursor-content');
+
+    await cursor.trigger('click', { clientX: 700 });
+
+    expect(mounted!.emitted('add:zoom')).toContainEqual([3_300]);
+  });
+
   it('moves and trims linked clips and zooms with clamped timeline bounds', async () => {
     const mounted = await mountTracks();
     const clips = mounted!.findAll('.visual-track .timeline-clip');

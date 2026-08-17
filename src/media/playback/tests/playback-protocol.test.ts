@@ -54,7 +54,9 @@ afterAll(() => vi.unstubAllGlobals());
 
 describe('isPlaybackWorkerRequest', () => {
   it('accepts the lifecycle request variants', () => {
-    expect(isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [] })).toBe(true);
+    expect(
+      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [], previewQuality: 'full' }),
+    ).toBe(true);
     expect(isPlaybackWorkerRequest({ type: 'pause', generation: 3 })).toBe(true);
     expect(isPlaybackWorkerRequest({ type: 'dispose' })).toBe(true);
   });
@@ -86,13 +88,20 @@ describe('isPlaybackWorkerRequest', () => {
         generation: 1,
         assets: [source(), source({ assetId: 'asset-2', url: 'https://example.test/video.mp4' })],
         clips: [clip(), clip({ clipId: 'clip-2', playbackRate: 4 })],
+        previewQuality: 'full',
       }),
     ).toBe(true);
   });
 
   it('accepts the inclusive playback-rate and non-negative time boundaries', () => {
     const boundaryClip = (overrides: Record<string, unknown>) =>
-      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [source()], clips: [clip(overrides)] });
+      isPlaybackWorkerRequest({
+        type: 'load',
+        generation: 0,
+        assets: [source()],
+        clips: [clip(overrides)],
+        previewQuality: 'full',
+      });
 
     expect(boundaryClip({ playbackRate: 0.25, timelineStartSeconds: 0, sourceInSeconds: 0 })).toBe(true);
     expect(boundaryClip({ playbackRate: 4, timelineDurationSeconds: Number.MIN_VALUE })).toBe(true);
@@ -122,9 +131,21 @@ describe('isPlaybackWorkerRequest', () => {
 
   it('rejects malformed clips, sources, and seek modes', () => {
     const invalidClip = (overrides: Record<string, unknown>) =>
-      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [source()], clips: [clip(overrides)] });
+      isPlaybackWorkerRequest({
+        type: 'load',
+        generation: 0,
+        assets: [source()],
+        clips: [clip(overrides)],
+        previewQuality: 'full',
+      });
     const invalidSource = (overrides: Record<string, unknown>) =>
-      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [source(overrides)], clips: [clip()] });
+      isPlaybackWorkerRequest({
+        type: 'load',
+        generation: 0,
+        assets: [source(overrides)],
+        clips: [clip()],
+        previewQuality: 'full',
+      });
 
     expect(invalidClip({ playbackRate: 0.249 })).toBe(false);
     expect(invalidClip({ playbackRate: 4.001, timelineDurationSeconds: 1 })).toBe(false);
@@ -139,9 +160,26 @@ describe('isPlaybackWorkerRequest', () => {
     expect(invalidSource({ url: 42 })).toBe(false);
     expect(invalidSource({ label: undefined })).toBe(false);
     expect(invalidSource({ label: '' })).toBe(false);
-    expect(isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [] })).toBe(false);
+    expect(
+      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [], previewQuality: 'full' }),
+    ).toBe(false);
     expect(
       isPlaybackWorkerRequest({ type: 'seek', generation: 0, requestId: 0, timelineSeconds: 0, mode: 'jump' }),
+    ).toBe(false);
+  });
+  it('accepts configure-preview for every supported quality', () => {
+    for (const previewQuality of ['full', 'half', 'quarter']) {
+      expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality })).toBe(true);
+    }
+  });
+
+  it('rejects missing and invalid preview qualities', () => {
+    expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2 })).toBe(false);
+    expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality: '720p' })).toBe(false);
+    expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality: 'auto' })).toBe(false);
+    expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality: null })).toBe(false);
+    expect(
+      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [], previewQuality: '720p' }),
     ).toBe(false);
   });
 });
@@ -379,11 +417,17 @@ describe('assertPlaybackWorkerRequest', () => {
   });
 
   it('throws consistently for malformed load and seek payloads', () => {
-    expect(() => assertPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [] })).toThrowError(
-      TypeError,
-    );
     expect(() =>
-      assertPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [{ ...clip(), playbackRate: 5 }] }),
+      assertPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [], previewQuality: 'full' }),
+    ).toThrowError(TypeError);
+    expect(() =>
+      assertPlaybackWorkerRequest({
+        type: 'load',
+        generation: 0,
+        assets: [],
+        clips: [{ ...clip(), playbackRate: 5 }],
+        previewQuality: 'full',
+      }),
     ).toThrowError(TypeError);
     expect(() =>
       assertPlaybackWorkerRequest({ type: 'seek', generation: 0, requestId: 0.5, timelineSeconds: 0, mode: 'seek' }),

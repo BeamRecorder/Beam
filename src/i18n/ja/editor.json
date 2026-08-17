@@ -39,6 +39,7 @@
     "keyboardCaptions": "キーボードショートカット",
     "textCaptions": "テキストキャプション",
     "audio": "オーディオ",
+    "media": "メディア",
     "settings": "設定",
     "logo": "ロゴ"
   },
@@ -104,7 +105,14 @@
     "snappingOn": "マグネットスナップを有効化",
     "snappingOff": "マグネットスナップを無効化",
     "zoom": "ズーム",
-    "resetZoom": "ズームをリセット"
+    "resetZoom": "ズームをリセット",
+    "previewQuality": "プレビュー品質",
+    "previewQualityFull": "フル解像度",
+    "previewQualityHalf": "1/2 解像度",
+    "previewQualityQuarter": "1/4 解像度",
+    "previewQualityExportHint": "プレビューのみに適用されます。書き出しはフル品質のままです。",
+    "previewQualitySuggestion": "プレビューが重くなっています。軽いプロキシを試してください。",
+    "previewQualityCriticalSuggestion": "プレビューがまだ重い状態です。プロキシ品質を下げてください。"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "クリックして動画トラックを切り替え",
@@ -154,6 +162,20 @@
   "TimelineVideoClip": {
     "trimStart": "先頭をトリミング",
     "trimEnd": "末尾をトリミング"
+  },
+  "PreviewPerformance": {
+    "title": "パフォーマンス",
+    "ui": "UI",
+    "worker": "再生",
+    "audio": "オーディオ",
+    "media": "メディア",
+    "warning": "プレビューが途切れる可能性があります。",
+    "criticalWarning": "プレビュー性能がまだ制限されています。",
+    "reduceQuality": "{quality} に変更",
+    "higherIsWorse": "グラフが高いほど負荷が大きい状態です",
+    "good": "正常",
+    "high": "高負荷",
+    "critical": "重大"
   },
   "Topbar": {
     "exitToHUD": "HUDに戻る",
@@ -253,6 +275,9 @@
     "autoHint": "自動モードは録画されたカーソルの動きを継続的に追従します。",
     "magnification": "拡大率",
     "zoomLevel": "ズームレベル",
+    "motionBlur": "ズームのモーションブラー",
+    "motionBlurDesc": "カメラのズームやパンに映画的なシャッターブラーを加え、プレビューと書き出しで同じ結果にします。",
+    "motionBlurIntensity": "モーションブラーの強さ",
     "deleteZoom": "ズームを削除",
     "noZoomSelected": "ズームが選択されていません",
     "noZoomSelectedDesc": "トラック上のズームブロックをクリックして、深さ、モード、位置を調整してください。"

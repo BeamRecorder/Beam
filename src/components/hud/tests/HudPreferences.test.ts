@@ -83,7 +83,7 @@ describe('HudPreferences', () => {
   it('renders the shared appearance controls', () => {
     const wrapper = mountPreferences({ countdownSeconds: 0 });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
-    expect(wrapper.find('.theme-mode-select').exists()).toBe(true);
+    expect(wrapper.find('.theme-mode-group').exists()).toBe(true);
   });
   it('shows the interaction switch only when input access is available', async () => {
     const wrapper = mountPreferences({ recordInteractions: true });
