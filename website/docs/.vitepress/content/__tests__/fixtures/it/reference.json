@@ -1,0 +1,85 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "Esportazione e condivisione",
+      "description": "Esporta una composizione Beam in MP4 o WebM con la risoluzione e il preset di qualità adatti.",
+      "lead": "L'esportazione esegue il rendering della composizione corrente direttamente in un file locale usando le impostazioni supportate dal computer.",
+      "sections": [
+        {
+          "title": "Scegli un formato",
+          "bullets": [
+            "WebM usa il contenitore WebM con un encoder disponibile sul computer corrente.",
+            "MP4 usa il contenitore MP4 quando Beam trova un encoder hardware o software compatibile."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Disponibilità dell'encoder",
+            "text": "Un formato può non essere disponibile quando il computer non offre un encoder compatibile. Beam lo segnala prima o durante l'esportazione."
+          }
+        },
+        {
+          "title": "Scegli una risoluzione",
+          "bullets": [
+            "720p riduce la scala a un'uscita HD quando il canvas nativo è abbastanza grande.",
+            "1080p riduce la scala a Full HD quando il canvas nativo è abbastanza grande.",
+            "Max mantiene le dimensioni del canvas di output nativo."
+          ]
+        },
+        {
+          "title": "Scegli qualità e bitrate",
+          "paragraphs": [
+            "I preset basso, medio e alto calcolano il bitrate dalle dimensioni di output e dalla frequenza dei fotogrammi. Medio bilancia nitidezza e dimensione del file, mentre alto privilegia la fedeltà visiva."
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "Impostazioni di esportazione Beam per formato, risoluzione e qualità",
+            "caption": "Seleziona formato, risoluzione e qualità prima di scegliere il file di destinazione."
+          }
+        },
+        {
+          "title": "Monitora l'esportazione",
+          "paragraphs": [
+            "Beam mostra l'avanzamento dei fotogrammi durante il rendering. Puoi annullare un'esportazione attiva o copiare il relativo rapporto diagnostico. Le modifiche live dell'editor non modificano un file già in fase di rendering."
+          ]
+        },
+        {
+          "title": "Apri il risultato",
+          "paragraphs": [
+            "Dopo un'esportazione riuscita, Beam mostra il nome del file salvato e offre un'azione per aprirlo. Se l'esportazione non riesce, copia il rapporto tecnico prima di chiedere aiuto su [Discord](https://discord.gg/6Q6v2xUCB) o [GitHub](https://github.com/ExtraBinoss/Beam/issues)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "Supporto delle piattaforme",
+      "description": "Consulta il supporto di Beam e il comportamento specifico del sistema operativo su Windows, macOS e Linux.",
+      "lead": "Beam è disponibile su Windows, macOS e Linux. I permessi nativi e le capacità del sistema delle finestre creano alcune differenze tra le piattaforme.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Beam è distribuito come installer nativo per Windows.",
+            "Sono supportate le registrazioni di schermo, finestra, area, fotocamera, microfono e audio di sistema.",
+            "Posizioni e dimensioni degli overlay possono essere salvate e ripristinate."
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "Beam è distribuito come DMG per Mac Apple Silicon con macOS 13 o versioni successive.",
+            "I permessi Registrazione schermo, Microfono e Fotocamera vengono richiesti quando si usano queste sorgenti.",
+            "Posizioni e dimensioni degli overlay possono essere salvate e ripristinate."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Posizionamento su Wayland",
+            "text": "Wayland non espone le coordinate globali delle finestre. Beam non forza XWayland perché questa soluzione può essere incompatibile con alcune configurazioni GPU e X11."
+          },
+          "subsections": null
+        }
+      ]
+    }
+  ]
+}

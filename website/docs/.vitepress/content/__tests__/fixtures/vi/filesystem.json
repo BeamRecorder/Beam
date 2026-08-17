@@ -1,0 +1,145 @@
+{
+  "pages": [
+    {
+      "slug": "filesystem",
+      "title": "Hệ thống tệp",
+      "description": "Tìm hiểu nơi Beam lưu dự án, bản ghi, tùy chọn, mô hình, nền và các bản cập nhật đã tải xuống.",
+      "lead": "Beam tách nội dung người dùng bền vững khỏi bộ nhớ đệm ứng dụng có thể thay thế. Dùng tài liệu này khi sao lưu, di chuyển, kiểm tra hoặc xử lý sự cố cài đặt Beam.",
+      "sections": [
+        {
+          "title": "Nơi Beam lưu tệp người dùng",
+          "paragraphs": [
+            "Beam xác định thư mục Videos của hệ điều hành và tạo `Beam/user` bên trong. Thư mục Videos được chuyển hướng hoặc bản địa hóa sẽ làm thay đổi vị trí thực tế, vì vậy các đường dẫn dưới đây là mặc định thường dùng chứ không phải vị trí cố định."
+          ],
+          "bullets": [
+            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "macOS: `~/Movies/Beam/user`",
+            "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
+          ],
+          "subsections": [
+            {
+              "title": "Mở thư mục trên Windows",
+              "paragraphs": [
+                "Nhấn <KeyboardChip shortcut=\"Win+R\" />, dán `%USERPROFILE%\\Videos\\Beam\\user`, rồi nhấn <KeyboardChip shortcut=\"Enter\" />. Windows mở rộng `%USERPROFILE%` và mở thư mục trong File Explorer."
+              ]
+            },
+            {
+              "title": "Mở thư mục trên macOS",
+              "paragraphs": [
+                "Mở Finder, nhấn <KeyboardChip shortcut=\"Command+Shift+G\" />, dán `~/Movies/Beam/user`, rồi nhấn <KeyboardChip shortcut=\"Enter\" />. Finder mở rộng `~` thành thư mục nhà của bạn."
+              ]
+            },
+            {
+              "title": "Mở thư mục trên Linux",
+              "paragraphs": [
+                "Mở trình quản lý tệp, nhấn <KeyboardChip shortcut=\"Ctrl+L\" />, nhập `~/Videos/Beam/user`, rồi nhấn <KeyboardChip shortcut=\"Enter\" />. Với thư mục Videos được chuyển hướng, chạy `xdg-open \"$(xdg-user-dir VIDEOS)/Beam/user\"` trong terminal."
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "Thư mục được tạo theo nhu cầu",
+                "text": "Một số thư mục chỉ xuất hiện sau khi tính năng tương ứng được dùng lần đầu. Hãy ghi một lần trước khi tìm `projects/`, hoặc nhập nền trước khi tìm thư viện hình nền."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Bố cục dữ liệu người dùng",
+          "paragraphs": [
+            "Thư mục `Beam/user` có thể chứa dữ liệu bền vững sau:\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"
+          ],
+          "bullets": [
+            "`preferences.json` lưu giao diện, hành vi trình quay, thiết bị đã chọn, phím tắt, trạng thái bắt đầu, cài đặt sẵn và vị trí cửa sổ đã lưu. Tệp được tạo hoặc thay thế bằng giá trị mặc định đã chuẩn hóa khi cần.",
+            "`projects/` lưu mọi dự án Beam và phiên ghi hình. Đây là thư mục quan trọng nhất cần sao lưu.",
+            "`media/wallpapers/image/` và `media/wallpapers/video/` lưu bản sao nền được nhập vào thư viện hình nền chung. Chúng là tùy chọn.",
+            "`models/whisper/` lưu các mô hình chuyển lời cục bộ đã tải, manifest và các lượt tải `.partial` tạm thời. Mô hình là tùy chọn và có thể tải lại."
+          ]
+        },
+        {
+          "title": "Bản ghi và dự án",
+          "paragraphs": [
+            "Mỗi dự án dùng tên thư mục dễ đọc như `project-vivid-cosmic`. UUID dự án ổn định nằm trong `project.json`, nên tên thư mục không phải danh tính dự án. Đổi tên dự án cũng có thể đổi tên thư mục."
+          ],
+          "subsections": [
+            {
+              "title": "Thư mục dự án",
+              "paragraphs": [
+                "Một dự án đã phát triển có thể trông như sau:\n\n```text\nproject-<name>/\n├── project.json                         required\n├── thumbnail.webp                       optional\n├── media/                               optional imported editor media\n├── backgrounds/                         optional project backgrounds\n└── session-<uuid>/                      one or more recording sessions\n    ├── manifest.json                    completed session\n    ├── manifest.partial.json            interrupted/in-progress recovery state\n    ├── health.jsonl                     capture diagnostics\n    ├── timing.jsonl                     clock synchronization anchors\n    ├── screen/                          screen video segments\n    ├── system-audio/                    optional system-audio segments\n    ├── microphone/                      optional microphone segments\n    ├── camera/                          optional camera segments\n    ├── cursor/                          optional cursor and interaction data\n    └── session/teleprompter.json        optional teleprompter document\n```"
+              ]
+            },
+            {
+              "title": "Siêu dữ liệu dự án bắt buộc",
+              "bullets": [
+                "`project.json` là manifest dự án và nguồn sự thật. Tệp chứa phiên bản schema, ID dự án ổn định, tên hiển thị, dấu thời gian, tham chiếu phiên, bản dàn dựng, cài đặt trình bày, chú thích, trạng thái thu phóng và tham chiếu tài sản đã nhập.",
+                "Mỗi phiên hoàn tất thường có `manifest.json`, mô tả nền tảng, nguồn đã chọn, quyền, cảnh báo, định dạng track, phân đoạn, số liệu và trạng thái hoàn thành.",
+                "`manifest.partial.json` giữ siêu dữ liệu có thể khôi phục khi việc ghi đang hoạt động hoặc phiên chưa hoàn tất. Phiên khôi phục có thể dùng tệp này thay cho `manifest.json`."
+              ],
+              "notice": {
+                "kind": "warning",
+                "title": "Không chỉnh sửa manifest thủ công",
+                "text": "Manifest là dữ liệu ứng dụng có phiên bản và tham chiếu giữa các tệp. Chỉnh sửa thủ công, di chuyển tệp phiên riêng lẻ hoặc đổi tên tệp trong dự án có thể khiến trình chỉnh sửa không dùng được phương tiện."
+              }
+            },
+            {
+              "title": "Thư mục track và phương tiện",
+              "bullets": [
+                "`screen/` chứa các phân đoạn màn hình MP4 được đánh số khi ghi màn hình thành công.",
+                "`system-audio/`, `microphone/` và `camera/` chứa các phân đoạn WebM được đánh số cho nguồn tương ứng đã bật.",
+                "Cả năm thư mục track có thể tồn tại ngay cả khi nguồn chưa được chọn. Hãy dùng các mục và trạng thái `tracks` trong manifest phiên, không dựa vào sự tồn tại của thư mục trống để xác định nội dung đã ghi.",
+                "Các tệp phương tiện `.partial` tạm thời có thể tồn tại trong lúc ghi phương tiện trình duyệt đang hoạt động hoặc bị gián đoạn. Phân đoạn hoàn tất được đổi tên nguyên tử.",
+                "`media/` chứa bản sao video, hình ảnh hoặc âm thanh được nhập vào trình chỉnh sửa. Xóa tài sản đã nhập không dùng qua Beam có thể xóa tệp bản sao.",
+                "`backgrounds/` chứa bản sao nền được nhập riêng cho dự án đó."
+              ]
+            },
+            {
+              "title": "Con trỏ, tương tác và chẩn đoán",
+              "bullets": [
+                "`cursor/cursor.json` chứa các sự kiện con trỏ đã ghi khi tính năng ghi con trỏ khả dụng.",
+                "`cursor/telemetry.json` chứa mẫu chuyển động con trỏ đã chuẩn hóa, dùng cho hành vi trình chỉnh sửa như theo con trỏ.",
+                "`cursor/shapes.json` mô tả hình dạng con trỏ gốc; `cursor/shapes/*.png` có thể chứa hình dạng bitmap được ghi khi nền tảng hoặc đường tương thích yêu cầu.",
+                "`cursor/input.json` chứa siêu dữ liệu phím tắt và tương tác nhấp được cho phép. Văn bản đã nhập không được lưu.",
+                "`health.jsonl` ghi lại tình trạng và gián đoạn khi ghi; `timing.jsonl` ghi các mốc thời gian dùng để căn chỉnh track. Giữ cả hai cùng phiên khi di chuyển hoặc chẩn đoán dự án."
+              ]
+            },
+            {
+              "title": "Tệp trình bày tùy chọn",
+              "bullets": [
+                "`thumbnail.webp` là bản xem trước thẻ dự án được tạo tự động và có thể tạo lại.",
+                "`session/teleprompter.json` chỉ tồn tại sau khi lưu tài liệu máy nhắc chữ cho phiên đó.",
+                "Chú thích được tạo và cấu hình trình chỉnh sửa lưu trong `project.json`; dự án không có tệp phụ đề riêng bên trong."
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "Sao lưu toàn bộ thư mục dự án",
+                "text": "Sao chép `project-<name>/` như một đơn vị khi Beam không ghi. Một MP4 màn hình riêng lẻ không bao gồm bản dàn dựng, track tùy chọn, dữ liệu con trỏ, chú thích hoặc chẩn đoán của trình chỉnh sửa."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Cập nhật",
+          "paragraphs": [
+            "Các bản cập nhật đã tải được lưu trong bộ nhớ đệm của hệ điều hành, tách khỏi dự án. Thư mục `pending/` có thể chứa trình cài đặt hoặc kho lưu trữ cập nhật và `update-info.json`. Beam xóa bộ nhớ đệm cập nhật sau khi phiên bản mới khởi động thành công nhưng giữ lại bản cập nhật đang chờ cài đặt."
+          ],
+          "bullets": [
+            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "macOS: `~/Library/Caches/beam-updater/pending`",
+            "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
+          ],
+          "subsections": [
+            {
+              "title": "Trạng thái cập nhật",
+              "paragraphs": [
+                "Beam cũng lưu `update-cache-state.json` trong thư mục dữ liệu ứng dụng của Electron để phân biệt bản cập nhật đã cài với bản còn chờ. Các thư mục cha thường là `%APPDATA%\\Beam` trên Windows, `~/Library/Application Support/Beam` trên macOS và `${XDG_CONFIG_HOME:-~/.config}/Beam` trên Linux."
+              ],
+              "notice": {
+                "kind": "info",
+                "title": "Có thể xóa tệp cập nhật",
+                "text": "Không sao lưu hoặc di chuyển bộ nhớ đệm cập nhật. Nếu không có bản cập nhật đang tải hoặc chờ khởi động lại, có thể xóa bộ nhớ đệm và Beam sẽ tải lại bản cập nhật sau. Không bao giờ xóa khi bản cập nhật đang tải hoặc sẵn sàng cài đặt."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

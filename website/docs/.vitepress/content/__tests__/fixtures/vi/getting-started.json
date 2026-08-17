@@ -1,0 +1,97 @@
+{
+  "pages": [
+    {
+      "slug": "getting-started",
+      "title": "Bắt đầu sử dụng",
+      "description": "Cài đặt Beam, cấp các quyền cần thiết và tạo bản ghi đầu tiên.",
+      "lead": "Beam kết hợp trình quay tập trung và trình chỉnh sửa video không phá hủy trong một ứng dụng máy tính để bàn.",
+      "sections": [
+        {
+          "title": "Cài đặt Beam",
+          "paragraphs": [
+            "Tải bản phát hành mới nhất từ [trang phát hành Beam](https://github.com/ExtraBinoss/Beam/releases/latest). Chọn gói dành cho hệ điều hành của bạn."
+          ],
+          "bullets": [
+            "Windows sử dụng trình cài đặt gốc.",
+            "macOS sử dụng DMG cho máy Mac Apple Silicon chạy macOS 13 trở lên.",
+            "Linux cung cấp các gói AppImage, DEB và RPM."
+          ]
+        },
+        {
+          "title": "Tạo bản ghi đầu tiên",
+          "steps": [
+            "Mở Beam và chọn Màn hình hoặc Cửa sổ trong HUD của trình quay.",
+            "Chọn màn hình, cửa sổ ứng dụng hoặc vùng tùy chỉnh.",
+            "Chọn nguồn micrô, âm thanh hệ thống và camera cần dùng.",
+            "Bắt đầu ghi, sau đó dùng thanh ghi để tạm dừng, tiếp tục hoặc dừng.",
+            "Dừng bản ghi và chờ Beam mở dự án trong trình chỉnh sửa video."
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Trình quay Beam đã sẵn sàng cho bản ghi đầu tiên",
+            "caption": "Chọn nguồn ghi hình và nguồn phương tiện trước khi bắt đầu."
+          }
+        },
+        {
+          "title": "Cấp quyền khi được yêu cầu",
+          "paragraphs": [
+            "Hệ điều hành có thể yêu cầu quyền ghi màn hình, micrô, camera hoặc tương tác. Beam chỉ yêu cầu quyền truy cập khi tính năng liên quan cần đến nó."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Khác biệt giữa các nền tảng",
+            "text": "Việc chọn nguồn và lời nhắc cấp quyền khác nhau trên Windows, macOS, Linux, X11 và Wayland. Hãy xem [hỗ trợ nền tảng](/platforms) trước một bản ghi quan trọng."
+          }
+        },
+        {
+          "title": "Tiếp tục tìm hiểu",
+          "bullets": [
+            "Tìm hiểu [giao diện trình quay](/recorder/interface).",
+            "Xem tất cả [tính năng của trình quay](/recorder/capabilities).",
+            "Tìm hiểu [giao diện trình chỉnh sửa video](/editor/interface).",
+            "Chuẩn bị tệp cuối bằng [xuất và chia sẻ](/export)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "updates",
+      "title": "Cập nhật Beam",
+      "description": "Kiểm tra, tải xuống và cài đặt các bản cập nhật Beam từ trình quay hoặc trình chỉnh sửa video.",
+      "lead": "Các bản Beam đã cài đặt có thể kiểm tra phiên bản mới trên GitHub Releases mà không tự động tải xuống hoặc cài đặt.",
+      "sections": [
+        {
+          "title": "Mở các điều khiển cập nhật",
+          "paragraphs": [
+            "Từ HUD của trình quay, mở Cài đặt và tìm phần Cập nhật. Các điều khiển tương tự cũng có trong Cài đặt của trình chỉnh sửa video. Bản dựng phát triển sẽ cho biết cập nhật chỉ có trong ứng dụng đã cài đặt."
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "Cài đặt Beam hiển thị các điều khiển cập nhật",
+            "caption": "Bảng cập nhật hiển thị phiên bản đã cài đặt và các thao tác cập nhật khả dụng."
+          }
+        },
+        {
+          "title": "Cài đặt bản cập nhật",
+          "steps": [
+            "Chọn Kiểm tra cập nhật.",
+            "Khi có phiên bản mới, xem nhật ký thay đổi rồi chọn Tải xuống.",
+            "Giữ Beam mở trong khi chỉ báo tiến trình tải bản cập nhật.",
+            "Khi cập nhật sẵn sàng, lưu công việc và chọn Khởi động lại để đóng Beam và chạy trình cài đặt."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Bạn kiểm soát các bản cập nhật",
+            "text": "Beam không tự động tải bản cập nhật khả dụng và cũng không cài đặt khi bạn thoát bình thường. Việc cài đặt chỉ bắt đầu sau khi bạn chọn Khởi động lại ở trạng thái đã tải xuống."
+          }
+        },
+        {
+          "title": "Nếu trình cập nhật thất bại",
+          "paragraphs": [
+            "Dùng Sao chép lỗi để lưu thông báo chẩn đoán, sau đó tải thủ công gói chính xác từ [bản phát hành Beam mới nhất](https://github.com/ExtraBinoss/Beam/releases/latest). Các dự án được lưu riêng với nơi cài đặt ứng dụng."
+          ]
+        }
+      ]
+    }
+  ]
+}

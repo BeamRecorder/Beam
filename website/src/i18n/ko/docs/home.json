@@ -1,0 +1,29 @@
+{
+  "title": "Beam 문서",
+  "description": "Beam으로 완성도 높은 제품 데모를 녹화하고 편집하고 공유하는 방법을 알아보세요.",
+  "hero": {
+    "name": "Beam Docs",
+    "text": "기록하세요. 편집하세요. 공유하세요.",
+    "tagline": "Beam으로 제품 데모를 캡처하고 다듬기 위한 실용 가이드입니다.",
+    "imageAlt": "Beam 앱 아이콘",
+    "actions": [
+      { "theme": "brand", "text": "시작하기", "link": "/getting-started" },
+      { "theme": "alt", "text": "GitHub에서 보기", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Discord 참여", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    {
+      "title": "녹화기 앱",
+      "details": "소스를 선택하고 오디오 및 카메라 트랙을 준비한 다음 간결한 HUD에서 녹화를 제어하세요.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "동영상 편집기",
+      "details": "하나의 작업 공간에서 타이밍, 프레이밍, 확대/축소, 커서 움직임, 자막, 사운드 및 내보내기를 다듬으세요.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
+  ]
+}

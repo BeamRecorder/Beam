@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WEBSITE_LOCALES, normalizeWebsiteLocale, websiteI18n, type WebsiteLocale } from './i18n';
+import { createWebsiteI18n, WEBSITE_LOCALES, normalizeWebsiteLocale, websiteI18n, type WebsiteLocale } from './i18n';
 
 const EXPECTED_LOCALES = [
   'en',
@@ -44,6 +44,14 @@ const leafValues = (value: unknown, prefix = ''): Array<{ path: string; value: u
 };
 
 describe('website i18n', () => {
+  it('creates independent English instances for server renders', () => {
+    const first = createWebsiteI18n();
+    const second = createWebsiteI18n();
+    expect(first).not.toBe(second);
+    expect(first.global).not.toBe(second.global);
+    expect(first.global.locale.value).toBe('en');
+  });
+
   it('registers exactly the fifteen supported locales', () => {
     expect(WEBSITE_LOCALES).toEqual(EXPECTED_LOCALES);
     expect([...websiteI18n.global.availableLocales].sort()).toEqual([...EXPECTED_LOCALES].sort());

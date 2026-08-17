@@ -1,0 +1,152 @@
+{
+  "pages": [
+    {
+      "slug": "recorder/index",
+      "title": "Recorder app overview",
+      "description": "Understand the Beam recorder workflow from source selection to the editor handoff.",
+      "lead": "The recorder app is a compact HUD for preparing, starting, and controlling a capture without covering the workspace you are presenting.",
+      "sections": [
+        {
+          "title": "Recording workflow",
+          "steps": [
+            "Choose a screen, window, or custom screen region.",
+            "Prepare microphone, system audio, camera, countdown, and teleprompter options.",
+            "Start recording and use the floating recorder bar for live controls.",
+            "Stop the capture to finalize its tracks and open the project in the editor."
+          ],
+          "screenshot": {
+            "path": "recorder/hud-overview.webp",
+            "alt": "Overview of the Beam recorder HUD",
+            "caption": "The HUD keeps capture sources and recording controls in one compact window."
+          }
+        },
+        {
+          "title": "Separate media tracks",
+          "paragraphs": [
+            "Beam records the screen, webcam, microphone, and system audio as separate available tracks. The editor can then adjust or disable supported tracks without modifying the original capture."
+          ]
+        },
+        {
+          "title": "Projects",
+          "paragraphs": [
+            "Use Open a project to return to an existing Beam project or create a new project before recording. Finished sessions remain associated with their project for later editing."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/interface",
+      "title": "Recorder interface",
+      "description": "Learn every control in the Beam recorder HUD and recording bar.",
+      "lead": "The recorder interface separates source selection, device controls, preferences, and recording actions so the current state stays visible.",
+      "sections": [
+        {
+          "title": "Top bar",
+          "bullets": [
+            "The Beam identity shows the current recorder window.",
+            "Preferences opens recording, general, shortcut, and application settings.",
+            "The window actions minimize or close the recorder."
+          ]
+        },
+        {
+          "title": "Capture source",
+          "paragraphs": [
+            "Use the Screen and Window tabs to change the source type. The source picker shows the displays or application windows available on the current platform. Screen capture can also be limited to a custom region."
+          ],
+          "screenshot": {
+            "path": "recorder/source-selection.webp",
+            "alt": "Screen and window source controls in Beam",
+            "caption": "Choose a source type, then select the display, window, or screen region."
+          }
+        },
+        {
+          "title": "Media controls",
+          "bullets": [
+            "Microphone selects an input device or disables microphone audio.",
+            "System audio enables or disables the sound produced by the computer.",
+            "Camera selects a webcam and opens its separate overlay.",
+            "Audio meters provide a live level preview when the platform supports it.",
+            "Teleprompter opens or hides the separate script window."
+          ]
+        },
+        {
+          "title": "Recording bar",
+          "paragraphs": [
+            "During a capture, the recorder bar displays elapsed time and the current recording state. Its controls pause or resume, stop, cancel, and toggle supported devices."
+          ],
+          "screenshot": {
+            "path": "recorder/recording-bar.webp",
+            "alt": "Beam recording bar during an active capture",
+            "caption": "The recording bar keeps essential controls available while recording."
+          }
+        },
+        {
+          "title": "Preferences",
+          "bullets": [
+            "Countdown can be off, 3 seconds, 5 seconds, or 10 seconds.",
+            "Recorder bar visibility can be always visible, auto-fade, or hidden until hovered.",
+            "Always on top keeps the HUD above other windows.",
+            "Theme and language control the application appearance.",
+            "Shortcut settings configure recording and teleprompter actions."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "recorder/capabilities",
+      "title": "Recorder capabilities",
+      "description": "Use screen regions, separate audio, webcam, teleprompter, shortcuts, and interaction metadata in Beam.",
+      "lead": "Recorder capabilities can be combined for a lightweight capture or a fully prepared product presentation.",
+      "sections": [
+        {
+          "title": "Display, window, and region capture",
+          "paragraphs": [
+            "Record an entire display, a specific application window, or a normalized region of a selected screen. You can reopen the region selector to adjust a saved crop before recording."
+          ]
+        },
+        {
+          "title": "Microphone and system audio",
+          "paragraphs": [
+            "Microphone and system audio are captured independently when both are available. Separate tracks let the editor change their enabled state and volume individually."
+          ]
+        },
+        {
+          "title": "Webcam overlay",
+          "paragraphs": [
+            "A selected camera opens a separate overlay that can be positioned for the presentation. Camera access depends on operating-system permission and device availability."
+          ]
+        },
+        {
+          "title": "Teleprompter",
+          "paragraphs": [
+            "Write a script, switch between continuous and line-by-line reading, and adjust autoscroll, speed, text size, line spacing, alignment, and theme. Global shortcuts can show the teleprompter, pause autoscroll, or move between lines."
+          ],
+          "screenshot": {
+            "path": "recorder/teleprompter.webp",
+            "alt": "Beam teleprompter with script and playback controls",
+            "caption": "The teleprompter is controlled independently from the recorder HUD."
+          }
+        },
+        {
+          "title": "Live recording controls",
+          "bullets": [
+            "Pause and resume the active recording.",
+            "Toggle microphone, camera, and system audio when the active session supports them.",
+            "Stop and finalize the recording, or cancel and delete the active capture."
+          ]
+        },
+        {
+          "title": "Interaction metadata and privacy",
+          "paragraphs": [
+            "With explicit permission, Beam records safe keyboard shortcut tokens. Linux interaction access can also enable mouse click metadata. Typed text is never stored."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Permission required",
+            "text": "Interaction recording is optional and can be enabled or disabled in Preferences. Availability depends on the operating system."
+          }
+        }
+      ]
+    }
+  ]
+}

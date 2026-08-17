@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { BookOpen, Download, Star } from '@lucide/vue';
+import { BookOpen, CircleHelp, Download, Star } from '@lucide/vue';
 import { useGitHubRepository } from '@website/composables/useGitHubRepository';
 import { detectPlatform, type WebsitePlatform } from '@website/lib/platform-downloads';
 import { demoMedia } from '@website/demo/website-demo-fixture';
 import discordIconUrl from '../../../public/discord_svg.svg';
 import githubIconUrl from '../../../public/github.svg';
 import WebsiteThemeSelector from '@website/components/WebsiteThemeSelector.vue';
+import WebsiteLanguageSelector from '@website/components/WebsiteLanguageSelector.vue';
 import WebsitePlatformIcon from '@website/components/WebsitePlatformIcon.vue';
 import { useI18n } from 'vue-i18n';
 
@@ -27,9 +28,13 @@ onMounted(() => void github.load());
       </a>
 
       <nav class="site-nav" :aria-label="t('Website.nav.mainAria')">
-        <a href="https://github.com/ExtraBinoss/Beam/tree/master/docs" target="_blank" rel="noreferrer">
+        <a href="/docs/">
           <BookOpen aria-hidden="true" />
           <span>{{ t('Website.nav.docs') }}</span>
+        </a>
+        <a href="/faq">
+          <CircleHelp aria-hidden="true" />
+          <span>FAQ</span>
         </a>
         <a
           class="github-stars"
@@ -50,7 +55,11 @@ onMounted(() => void github.load());
       </nav>
 
       <div class="header-actions">
-        <WebsiteThemeSelector />
+        <ClientOnly>
+          <WebsiteLanguageSelector />
+          <WebsiteThemeSelector />
+          <template #placeholder><span class="selector-placeholder" aria-hidden="true" /></template>
+        </ClientOnly>
         <a
           class="install-button"
           :href="platform ? `/install?os=${platform}` : '/install'"
@@ -96,6 +105,10 @@ onMounted(() => void github.load());
 .header-actions {
   justify-self: end;
   gap: 8px;
+}
+.selector-placeholder {
+  width: 92px;
+  height: 42px;
 }
 .brand {
   gap: 10px;

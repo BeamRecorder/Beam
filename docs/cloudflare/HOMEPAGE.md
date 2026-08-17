@@ -1,15 +1,28 @@
 # Homepage Beam sur Cloudflare Pages
 
-La homepage vit dans `website/` et utilise les dependances du `package.json`
-racine. Elle est publiee sur le projet Cloudflare Pages `beam-plinka`, avec
-`master` comme branche de production et `https://beam.plinka.eu` comme domaine
-canonique.
+Le site public vit dans le workspace npm `website/`. Son `package.json` isole
+les dependances SEO et documentation de l'application Electron, tandis que le
+depot conserve un unique `package-lock.json` racine. Le site est publie sur le
+projet Cloudflare Pages `beam-plinka`, avec `master` comme branche de production
+et `https://beam.plinka.eu` comme domaine canonique.
 
 ## Developpement local
 
 ```bash
 npm ci
 npm run website:dev
+```
+
+Cette commande demarre le site Vite et la documentation VitePress en parallele,
+avec hot reload pour les composants Vue, les styles et les fichiers Markdown. Le
+site est disponible sur `http://localhost:7000/` et la documentation sur
+`http://localhost:7000/docs/` via le meme serveur public. VitePress utilise
+le port interne `7001`, tandis que la preview de production utilise `7002`.
+
+Pour ne lancer que le serveur VitePress :
+
+```bash
+npm run website:docs:dev
 ```
 
 Validations ciblees :
@@ -21,7 +34,10 @@ npm run website:build
 npm run website:preview
 ```
 
-Le build est ecrit dans `website/dist/`. Il ne doit pas etre commite.
+Le build marketing Vite SSG et le build VitePress `/docs/` sont assembles dans
+`website/dist/`. Le finalizer valide les metadonnees, sitemaps et pages statiques,
+puis genere la CSP de `website/dist/_headers` a partir des scripts inline reels.
+Le dossier de sortie ne doit pas etre commite.
 
 ## Publication
 

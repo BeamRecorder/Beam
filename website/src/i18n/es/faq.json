@@ -1,0 +1,85 @@
+{
+  "meta": {
+    "title": "FAQ de Beam — Alternativa a Screen Studio, Tella, OpenScreen, OBS y Loom",
+    "description": "Compara Beam con Screen Studio, Tella, OpenScreen, OBS Studio y Loom. Descubre un grabador y editor de pantalla gratuito, de código abierto y multiplataforma."
+  },
+  "intro": {
+    "eyebrow": "Preguntas frecuentes",
+    "title": "Todo lo que necesitas saber sobre Beam.",
+    "lede": "Respuestas factuales sobre Beam, sus funciones y otros grabadores de pantalla.",
+    "ariaLabel": "Preguntas frecuentes sobre Beam"
+  },
+  "categories": {
+    "application": "Aplicación Beam",
+    "creation": "Grabación y edición",
+    "comparisons": "Comparativas",
+    "community": "Comunidad"
+  },
+  "callout": {
+    "eyebrow": "¿Aún tienes preguntas?",
+    "title": "Consulta la documentación o pregunta a la comunidad.",
+    "docs": "Leer la documentación",
+    "github": "Abrir GitHub"
+  },
+  "items": [
+    [
+      "¿Qué es Beam?",
+      "Beam es un grabador de pantalla y editor de vídeo gratuito y de código abierto para crear demostraciones de producto cuidadas en Windows, macOS y Linux."
+    ],
+    [
+      "¿Beam es realmente gratuito y de código abierto?",
+      "Sí. Beam se distribuye bajo la licencia MIT y no requiere ninguna suscripción. Su repositorio público en GitHub permite a la comunidad inspeccionar el código, informar de errores, solicitar funciones y contribuir con mejoras.",
+      "Ver Beam en GitHub"
+    ],
+    [
+      "¿Beam funciona en Windows, macOS y Linux?",
+      "Sí. Beam está disponible para Windows, macOS y Linux. Su motor de captura en Rust gestiona backends específicos de cada plataforma para la pantalla, el cursor, el audio, la sincronización y la codificación, en lugar de depender de un único grabador de navegador genérico para todos los sistemas operativos."
+    ],
+    [
+      "¿Qué puedo grabar con Beam?",
+      "Beam puede grabar una pantalla completa, una ventana de aplicación o una región personalizada, con pistas opcionales de cámara web, micrófono y audio del sistema."
+    ],
+    [
+      "¿La generación de subtítulos con IA sube el audio a la nube?",
+      "No. Beam genera los subtítulos localmente con Whisper, sin subir nada a la nube, sin claves de API y sin una suscripción adicional."
+    ],
+    [
+      "¿Qué herramientas de edición incluye?",
+      "Beam incluye zooms editables, suavizado y estilos del cursor, subtítulos locales, fondos de lienzo, desenfoque, controles de audio y una línea de tiempo multipista diseñada para demostraciones de producto y tutoriales."
+    ],
+    [
+      "¿Qué formatos de exportación admite Beam?",
+      "Beam exporta las grabaciones a MP4 o WebM, con resoluciones de hasta 4K."
+    ],
+    [
+      "Beam vs Screen Studio: ¿qué grabador de pantalla debería elegir?",
+      "Screen Studio es un grabador comercial pulido diseñado para macOS. Beam es la opción más adecuada si buscas una alternativa gratuita y de código abierto a Screen Studio para Windows, macOS o Linux, con captura nativa, zooms editables, efectos de cursor, subtítulos locales y una línea de tiempo completa sin suscripción.",
+      "Consultar la información oficial sobre el producto y los precios de Screen Studio"
+    ],
+    [
+      "Beam vs Tella: ¿cuál es la diferencia?",
+      "Tella se centra en la grabación alojada, el uso compartido, la inserción y los flujos de trabajo para equipos mediante planes de pago. Beam es un grabador y editor de escritorio local y gratuito: los proyectos permanecen en tu ordenador, los subtítulos se ejecutan localmente y el código fuente está abierto a la comunidad. Elige Tella para compartir en la nube de forma gestionada; elige Beam para tener control local y editar sin suscripción.",
+      "Consultar la información oficial sobre los planes de Tella"
+    ],
+    [
+      "Beam vs OpenScreen: ¿cómo se comparan estos grabadores de código abierto?",
+      "Tanto Beam como OpenScreen buscan ofrecer grabaciones cuidadas sin suscripción. Beam se diferencia por ser un proyecto comunitario en desarrollo activo, contar con un motor de captura en Rust con backends específicos para cada plataforma, subtítulos locales con Whisper y un editor multipista integrado. El repositorio original de OpenScreen anunció su lanzamiento final y fue archivado en junio de 2026.",
+      "Consultar el historial de lanzamientos del OpenScreen original"
+    ],
+    [
+      "Beam vs OBS Studio: ¿cuál es mejor para grabar demostraciones de producto?",
+      "OBS Studio es una potente herramienta gratuita y de código abierto para emitir en directo, mezclar escenas en tiempo real, usar tarjetas de captura y configurar flujos de trabajo de emisión. Beam está más centrado en grabar y perfeccionar demostraciones de producto con herramientas de presentación automáticas, como zooms editables, movimiento del cursor, subtítulos, fondos y una línea de tiempo de vídeo. Elige OBS para emitir y trabajar con escenas en directo complejas; elige Beam para un flujo enfocado de grabar, editar y exportar.",
+      "Consultar la lista oficial de funciones de OBS Studio"
+    ],
+    [
+      "Beam vs Loom: ¿debería usar un grabador local o mensajería de vídeo en la nube?",
+      "Loom está diseñado para grabar, alojar, compartir y colaborar rápidamente mediante mensajes de vídeo en la nube, con límites según el plan y funciones de colaboración o IA de pago. Beam es un grabador y editor de escritorio gratuito y de código abierto para mantener los archivos bajo control local y crear exportaciones cuidadas. Elige Loom para la comunicación asíncrona de equipos alojada en la nube; elige Beam cuando la propiedad local y la edición detallada sean lo más importante.",
+      "Consultar los planes y límites oficiales de Loom"
+    ],
+    [
+      "¿Cómo puedo contribuir a Beam?",
+      "Puedes inspeccionar el código fuente, informar de problemas, proponer funciones, contribuir con código a través de GitHub y unirte a la comunidad de Beam en Discord para obtener ayuda y novedades del proyecto.",
+      "Contribuir a Beam en GitHub"
+    ]
+  ]
+}

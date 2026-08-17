@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "Exporter et partager",
+      "description": "Exportez une composition Beam en MP4 ou WebM avec la résolution et le profil de qualité adaptés.",
+      "lead": "L'export génère la composition actuelle directement dans un fichier local en utilisant les réglages pris en charge par la machine.",
+      "sections": [
+        {
+          "title": "Choisir un format",
+          "bullets": [
+            "WebM utilise le conteneur WebM avec un encodeur disponible sur la machine actuelle.",
+            "MP4 utilise le conteneur MP4 lorsque Beam trouve un encodeur matériel ou logiciel compatible."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Disponibilité des encodeurs",
+            "text": "Un format peut être indisponible lorsque la machine ne fournit pas d'encodeur compatible. Beam l'indique avant ou pendant l'export."
+          }
+        },
+        {
+          "title": "Choisir une résolution",
+          "bullets": [
+            "720p réduit l'image vers une sortie HD lorsque le canevas natif est suffisamment grand.",
+            "1080p réduit l'image vers une sortie Full HD lorsque le canevas natif est suffisamment grand.",
+            "Max conserve les dimensions du canevas de sortie natif."
+          ]
+        },
+        {
+          "title": "Choisir la qualité et le débit",
+          "paragraphs": [
+            "Les profils Faible, Moyen et Élevé calculent un débit à partir des dimensions de sortie et de la fréquence d'images. Moyen équilibre la netteté et la taille du fichier, tandis qu'Élevé privilégie la fidélité visuelle."
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "Réglages d'export Beam pour le format, la résolution et la qualité",
+            "caption": "Sélectionnez le format, la résolution et la qualité avant de choisir le fichier de destination."
+          }
+        },
+        {
+          "title": "Suivre l'export",
+          "paragraphs": [
+            "Beam affiche la progression image par image pendant le rendu. Vous pouvez annuler un export en cours ou copier son rapport de diagnostic. Les changements effectués dans l'éditeur ne modifient pas un fichier déjà en cours de rendu."
+          ]
+        },
+        {
+          "title": "Ouvrir le résultat",
+          "paragraphs": [
+            "Après un export réussi, Beam indique le nom du fichier enregistré et propose une action pour l'ouvrir. Si l'export échoue, copiez le rapport technique avant de demander de l'aide sur [Discord](https://discord.gg/6Q6v2xUCB) ou [GitHub](https://github.com/ExtraBinoss/Beam/issues)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "Prise en charge des plateformes",
+      "description": "Consultez la prise en charge de Beam et les comportements propres à Windows, macOS et Linux.",
+      "lead": "Beam est disponible sur Windows, macOS et Linux. Les autorisations natives et les capacités du système de fenêtres entraînent quelques différences entre les plateformes.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Beam est distribué sous la forme d'un installateur Windows natif.",
+            "La capture d'écran, de fenêtre, de zone, de caméra, de microphone et d'audio système est prise en charge.",
+            "La position et la taille des superpositions peuvent être enregistrées et restaurées."
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "Beam est distribué sous la forme d'un DMG pour les Mac Apple Silicon sous macOS 13 ou version ultérieure.",
+            "Les autorisations Enregistrement de l'écran, Microphone et Caméra sont demandées lorsque ces sources sont utilisées.",
+            "La position et la taille des superpositions peuvent être enregistrées et restaurées."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam est endommagé et ne peut pas être ouvert",
+            "text": "Après avoir déplacé Beam vers `/Applications`, exécutez `xattr -cr /Applications/Beam.app`, ou choisissez Ouvrir quand même dans Réglages Système > Confidentialité et sécurité."
+          },
+          "subsections": [
+            {
+              "title": "Autoriser l'enregistrement de l'écran et de l'audio système",
+              "paragraphs": [
+                "Ouvrez le menu Apple > Réglages Système > Confidentialité et sécurité > Enregistrement de l'écran et de l'audio système, puis activez Beam. Si Beam n'est pas dans la liste, utilisez le bouton Ajouter et sélectionnez `/Applications/Beam.app`. Quittez Beam et rouvrez-le après avoir modifié cette autorisation."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-screen-system-audio.webp",
+                "alt": "Réglages de confidentialité macOS pour l'enregistrement de l'écran et de l'audio système avec Beam activé",
+                "caption": "Activez Beam dans Enregistrement de l'écran et de l'audio système."
+              }
+            },
+            {
+              "title": "Autoriser l'accès au microphone et à la caméra",
+              "paragraphs": [
+                "Dans Réglages Système > Confidentialité et sécurité, ouvrez Microphone et activez Beam lorsque vous enregistrez votre voix. Ouvrez Caméra et activez Beam lorsque vous utilisez la superposition caméra."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-microphone-camera.webp",
+                "alt": "Réglages de confidentialité macOS du microphone et de la caméra pour Beam",
+                "caption": "Beam doit être activé dans la liste de confidentialité pour chaque source que vous souhaitez capturer."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "bullets": [
+            "Beam est distribué sous forme de paquets AppImage, DEB et RPM.",
+            "La capture d'écran et de fenêtre utilise XDG Desktop Portal, PipeWire et FFmpeg.",
+            "Le sélecteur système demande une autorisation au début d'une capture.",
+            "Les métadonnées de raccourcis clavier et de clics de souris nécessitent un consentement explicite de Polkit.",
+            "X11 peut restaurer la position et la taille des superpositions.",
+            "Wayland natif peut restaurer la taille des superpositions, mais pas leur position globale."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Positionnement sous Wayland",
+            "text": "Wayland n'expose pas les coordonnées globales des fenêtres. Beam ne force pas XWayland, car cette solution de contournement peut être incompatible avec certaines configurations GPU et X11."
+          }
+        }
+      ]
+    }
+  ]
+}

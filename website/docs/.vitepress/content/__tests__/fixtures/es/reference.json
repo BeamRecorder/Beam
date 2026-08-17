@@ -1,0 +1,85 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "Exportación y uso compartido",
+      "description": "Exporta una composición de Beam a MP4 o WebM con la resolución y el ajuste preestablecido de calidad adecuados.",
+      "lead": "La exportación renderiza la composición actual directamente en un archivo local utilizando los ajustes compatibles con el equipo.",
+      "sections": [
+        {
+          "title": "Elegir un formato",
+          "bullets": [
+            "WebM utiliza el contenedor WebM con un codificador disponible en el equipo actual.",
+            "MP4 utiliza el contenedor MP4 cuando Beam encuentra un codificador de hardware o software compatible."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Disponibilidad del codificador",
+            "text": "Un formato puede no estar disponible cuando el equipo no proporciona un codificador compatible. Beam lo indica antes o durante la exportación."
+          }
+        },
+        {
+          "title": "Elegir una resolución",
+          "bullets": [
+            "720p reduce la escala a una salida HD cuando el lienzo nativo es suficientemente grande.",
+            "1080p reduce la escala a Full HD cuando el lienzo nativo es suficientemente grande.",
+            "Máxima mantiene las dimensiones del lienzo de salida nativo."
+          ]
+        },
+        {
+          "title": "Elegir la calidad y la tasa de bits",
+          "paragraphs": [
+            "Los ajustes preestablecidos bajo, medio y alto calculan una tasa de bits a partir de las dimensiones de salida y la frecuencia de fotogramas. Medio equilibra la nitidez y el tamaño del archivo, mientras que alto prioriza la fidelidad visual."
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "Ajustes de exportación de Beam para formato, resolución y calidad",
+            "caption": "Selecciona el formato, la resolución y la calidad antes de elegir el archivo de destino."
+          }
+        },
+        {
+          "title": "Supervisar la exportación",
+          "paragraphs": [
+            "Beam muestra el progreso de los fotogramas durante el renderizado. Puedes cancelar una exportación activa o copiar su informe de diagnóstico. Los cambios realizados en directo en el editor no modifican un archivo que ya se está renderizando."
+          ]
+        },
+        {
+          "title": "Abrir el resultado",
+          "paragraphs": [
+            "Después de una exportación correcta, Beam muestra el nombre del archivo guardado y ofrece una acción para abrirlo. Si la exportación falla, copia el informe técnico antes de pedir ayuda en [Discord](https://discord.gg/6Q6v2xUCB) o [GitHub](https://github.com/ExtraBinoss/Beam/issues)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "Compatibilidad con plataformas",
+      "description": "Consulta la compatibilidad de Beam y el comportamiento específico del sistema operativo en Windows, macOS y Linux.",
+      "lead": "Beam está disponible en Windows, macOS y Linux. Los permisos nativos y las capacidades del sistema de ventanas crean algunas diferencias entre plataformas.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Beam se distribuye como instalador nativo de Windows.",
+            "La grabación de pantalla, ventana, región, cámara, micrófono y audio del sistema es compatible.",
+            "Las posiciones y los tamaños de las superposiciones se pueden guardar y restaurar."
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "Beam se distribuye como DMG para los Mac con Apple Silicon que ejecutan macOS 13 o posterior.",
+            "Los permisos de Grabación de pantalla, Micrófono y Cámara se solicitan cuando se utilizan esas fuentes.",
+            "Las posiciones y los tamaños de las superposiciones se pueden guardar y restaurar."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Posicionamiento en Wayland",
+            "text": "Wayland no expone las coordenadas globales de las ventanas. Beam no fuerza XWayland porque esa solución alternativa puede ser incompatible con algunas configuraciones de GPU y X11."
+          },
+          "subsections": null
+        }
+      ]
+    }
+  ]
+}
