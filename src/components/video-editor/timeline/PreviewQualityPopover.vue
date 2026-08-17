@@ -20,8 +20,14 @@ const options = computed(() => [
 ]);
 const activeOption = computed(() => options.value.find((option) => option.id === props.modelValue)!);
 const warningLevel = computed<'warning' | 'critical' | null>(() => {
-  const status = props.performanceSnapshot?.status;
-  return status === 'warning' || status === 'critical' ? status : null;
+  if (!props.performanceSnapshot) return null;
+  const { status, scores } = props.performanceSnapshot;
+  if (status === 'critical') {
+    const currentMax = Math.max(scores.ui, scores.worker, scores.audio, scores.media);
+    return currentMax >= 0.55 ? 'critical' : 'warning';
+  }
+  if (status === 'warning') return 'warning';
+  return null;
 });
 const showSuggestion = ref(false);
 let suggestionShown = false;
