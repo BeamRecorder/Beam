@@ -12,6 +12,13 @@ import type { ShadowDirection } from '../cursor/shadow-types';
 import { Unlink, RotateCcw, FlipHorizontal, FlipVertical, SlidersHorizontal } from '@lucide/vue';
 import type { ClipFrame, ClipShadowMode, ClipShadowSize, NormalizedTransform } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import CameraLayoutPanel from '../camera/CameraLayoutPanel.vue';
+import {
+  isSplitCameraLayout,
+  type CameraFramingPreset,
+  type CameraLayoutPreset,
+} from '~/media/shared/camera-layout-types';
+import { useClipCornerRadius } from './useClipCornerRadius';
 
 const { t } = useTranslate('ClipPropertiesPanel');
 
@@ -43,6 +50,11 @@ const props = defineProps<{
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
     isMirroredY?: boolean;
+    cameraLayoutPreset?: CameraLayoutPreset;
+    cameraFramingPreset?: CameraFramingPreset;
+    cameraSplitRatio?: number;
+    cameraSplitPadding?: number;
+    hasLinkedScreen?: boolean;
   } | null;
 }>();
 
@@ -51,6 +63,7 @@ const emit = defineEmits<{
   (e: 'update:isMirrored', isMirrored: boolean): void;
   (e: 'update:isMirroredY', isMirroredY: boolean): void;
   (e: 'update:cornerRadius', radius: string): void;
+  (e: 'corner-radius-interaction', interacting: boolean): void;
   (
     e: 'update:shadow',
     shadow: { size: ClipShadowSize; blur?: number; mode?: ClipShadowMode; color?: string; direction?: string },
@@ -70,6 +83,10 @@ const emit = defineEmits<{
     },
   ): void;
   (e: 'update:clipTransform', transform: NormalizedTransform): void;
+  (e: 'update:cameraLayout', preset: Exclude<CameraLayoutPreset, 'custom'>): void;
+  (e: 'update:cameraFraming', preset: Exclude<CameraFramingPreset, 'custom'>): void;
+  (e: 'update:cameraSplitRatio', ratio: number): void;
+  (e: 'update:cameraSplitPadding', padding: number): void;
   (e: 'reset:clipTransform'): void;
   (e: 'unlink'): void;
   (e: 'delete'): void;
@@ -94,10 +111,6 @@ const shadowPresets = computed(() => [
   { id: 'custom', icon: SlidersHorizontal, tooltip: t('custom') },
 ]);
 
-const NAMED_RADII = ['none', 'sm', 'md', 'lg', 'full'];
-
-const selectedRadius = ref<string>('md');
-const customRadiusValue = ref<number>(32);
 const selectedShadowSize = ref<ClipShadowSize>((props.selectedClip?.shadowSize as ClipShadowSize | undefined) ?? 'md');
 const customShadowBlur = ref(props.selectedClip?.shadowBlur ?? 40);
 const selectedShadowMode = ref<ClipShadowMode>(props.selectedClip?.shadowMode ?? 'solid');
@@ -109,22 +122,6 @@ const selectedShadowDirection = ref<ShadowDirection>(
 watch(
   () => props.selectedClip,
   (clip) => {
-    const r = clip?.cornerRadius ?? 'sm';
-    if (typeof r === 'number') {
-      selectedRadius.value = 'custom';
-      customRadiusValue.value = r;
-    } else if (NAMED_RADII.includes(String(r))) {
-      // map "full" (old data) -> "custom" at 9999
-      if (r === 'full') {
-        selectedRadius.value = 'custom';
-        customRadiusValue.value = 9999;
-      } else {
-        selectedRadius.value = String(r);
-      }
-    } else {
-      selectedRadius.value = 'custom';
-      customRadiusValue.value = parseFloat(String(r)) || 32;
-    }
     selectedShadowSize.value = (clip?.shadowSize as ClipShadowSize | undefined) ?? 'md';
     customShadowBlur.value = clip?.shadowBlur ?? 40;
     selectedShadowMode.value = clip?.shadowMode ?? 'solid';
@@ -134,20 +131,18 @@ watch(
   { immediate: true },
 );
 
-const handleRadiusChange = (radiusId: string) => {
-  selectedRadius.value = radiusId;
-  if (radiusId === 'custom') {
-    // emit the numeric value in px when switching to custom
-    emit('update:cornerRadius', String(customRadiusValue.value));
-  } else {
-    emit('update:cornerRadius', radiusId);
-  }
-};
-
-const handleCustomRadiusChange = (value: number) => {
-  customRadiusValue.value = value;
-  emit('update:cornerRadius', String(value));
-};
+const {
+  selectedRadius,
+  customRadiusValue,
+  handleRadiusChange,
+  handleCustomRadiusChange,
+  beginRadiusInteraction,
+  endRadiusInteraction,
+} = useClipCornerRadius({
+  selectedClip: () => props.selectedClip,
+  onUpdate: (radius) => emit('update:cornerRadius', radius),
+  onInteractionChange: (interacting) => emit('corner-radius-interaction', interacting),
+});
 
 const handleShadowPresetChange = (sizeId: string) => {
   selectedShadowSize.value = sizeId as ClipShadowSize;
@@ -230,8 +225,26 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
     <TimelineClickEmptyState v-if="!selectedClip" />
 
     <div v-else class="options-group">
+      <CameraLayoutPanel
+        v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
+        :layout="selectedClip.cameraLayoutPreset ?? 'custom'"
+        :framing="selectedClip.cameraFramingPreset ?? 'custom'"
+        :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
+        :split-ratio="selectedClip.cameraSplitRatio ?? 0.5"
+        :split-padding="selectedClip.cameraSplitPadding ?? 0"
+        :supports-split-layouts="selectedClip.kind === 'webcam'"
+        @update:layout="emit('update:cameraLayout', $event)"
+        @update:framing="emit('update:cameraFraming', $event)"
+        @update:split-ratio="emit('update:cameraSplitRatio', $event)"
+        @update:split-padding="emit('update:cameraSplitPadding', $event)"
+      />
+      <Divider v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
+
       <!-- Placement Section -->
-      <div v-if="clipTransform" class="section-block">
+      <div
+        v-if="clipTransform && !isSplitCameraLayout(selectedClip.cameraLayoutPreset ?? 'custom')"
+        class="section-block"
+      >
         <div class="section-header">
           <span class="section-title">{{ t('placement') }}</span>
           <Button
@@ -310,6 +323,8 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
           :default-value="32"
           :format-value="(v) => `${Math.round(v)}px`"
           @update:modelValue="handleCustomRadiusChange"
+          @interaction-start="beginRadiusInteraction"
+          @interaction-end="endRadiusInteraction"
         />
 
         <Divider spacing="xs" />

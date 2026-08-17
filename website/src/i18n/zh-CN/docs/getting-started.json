@@ -1,0 +1,97 @@
+{
+  "pages": [
+    {
+      "slug": "getting-started",
+      "title": "入门",
+      "description": "安装 Beam、授予所需权限并创建你的第一段录制。",
+      "lead": "Beam 将专注的录制器和非破坏性视频编辑器整合在一个桌面应用中。",
+      "sections": [
+        {
+          "title": "安装 Beam",
+          "paragraphs": [
+            "从 [Beam 发布页面](https://github.com/ExtraBinoss/Beam/releases/latest) 下载最新版本。选择适合你操作系统的软件包。"
+          ],
+          "bullets": [
+            "Windows 使用原生安装程序。",
+            "macOS 使用 DMG，适用于运行 macOS 13 或更高版本的 Apple Silicon Mac。",
+            "Linux 提供 AppImage、DEB 和 RPM 软件包。"
+          ]
+        },
+        {
+          "title": "创建你的第一段录制",
+          "steps": [
+            "打开 Beam，在录制器 HUD 中选择“屏幕”或“窗口”。",
+            "选择显示器、应用窗口或自定义区域。",
+            "选择需要的麦克风、系统音频和摄像头来源。",
+            "开始录制，然后使用录制栏暂停、继续或停止。",
+            "停止录制并等待 Beam 在视频编辑器中打开项目。"
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "Beam 录制器已准备好进行第一次录制",
+            "caption": "开始录制前选择捕获来源和媒体来源。"
+          }
+        },
+        {
+          "title": "出现提示时授予权限",
+          "paragraphs": [
+            "操作系统可能会请求屏幕录制、麦克风、摄像头或交互权限。Beam 只会在相关功能需要时请求访问权限。"
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "平台差异",
+            "text": "Windows、macOS、Linux、X11 和 Wayland 上的来源选择和权限提示有所不同。进行重要录制前，请查看[平台支持](/platforms)。"
+          }
+        },
+        {
+          "title": "继续了解",
+          "bullets": [
+            "了解[录制器界面](/recorder/interface)。",
+            "查看全部[录制器功能](/recorder/capabilities)。",
+            "了解[视频编辑器界面](/editor/interface)。",
+            "使用[导出与分享](/export)准备最终文件。"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "updates",
+      "title": "更新 Beam",
+      "description": "从录制器或视频编辑器中检查、下载并安装 Beam 更新。",
+      "lead": "已安装的 Beam 版本可以检查 GitHub Releases 中是否有新版本，但不会自动下载或安装。",
+      "sections": [
+        {
+          "title": "打开更新控制",
+          "paragraphs": [
+            "在录制器 HUD 中打开“设置”，找到“更新”部分。视频编辑器的“设置”中也提供相同的控制项。开发版本会提示更新仅在已安装的应用中可用。"
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "显示更新控制项的 Beam 设置",
+            "caption": "更新面板会显示已安装版本和可用的更新操作。"
+          }
+        },
+        {
+          "title": "安装更新",
+          "steps": [
+            "选择“检查更新”。",
+            "有可用版本时，查看其更新日志并选择“下载”。",
+            "下载更新时保持 Beam 处于打开状态，并查看进度指示器。",
+            "更新准备就绪后保存工作，选择“重启”关闭 Beam 并运行安装程序。"
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "更新由你控制",
+            "text": "Beam 不会自动下载可用更新，也不会在正常退出时安装更新。只有在下载完成的状态下选择“重启”后，才会开始安装。"
+          }
+        },
+        {
+          "title": "更新器失败时",
+          "paragraphs": [
+            "使用“复制错误”保留诊断消息，然后从[最新 Beam 发布页面](https://github.com/ExtraBinoss/Beam/releases/latest)手动下载正确的软件包。你的项目与应用安装位置分开存储。"
+          ]
+        }
+      ]
+    }
+  ]
+}

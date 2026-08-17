@@ -1,25 +1,35 @@
 {
   "meta": {
-    "title": "Beam - Ghi lại. Chỉnh sửa. Chia sẻ.",
-    "description": "Beam là trình quay màn hình và chỉnh sửa video mã nguồn mở để tạo các bản demo sản phẩm chỉn chu."
+    "title": "Beam — Trình quay màn hình và chỉnh sửa video miễn phí",
+    "description": "Beam là trình quay màn hình và chỉnh sửa video miễn phí, mã nguồn mở để tạo các bản demo sản phẩm chỉn chu trên Windows, macOS và Linux."
   },
   "home": {
-    "heroLine1": "Ghi lại khoảnh khắc.",
-    "heroLine2": "Trau chuốt câu chuyện.",
-    "lede": "Beam kết hợp việc ghi hình và chỉnh sửa trong một ứng dụng máy tính để bàn tập trung, giúp tạo demo sản phẩm nhanh chóng và dễ xem.",
+    "heroLine1": "Quay. Chỉnh sửa. Chia sẻ.",
+    "lede": "Beam tạo ra các bản quay màn hình chỉn chu, giúp bạn dễ dàng thực hiện demo sản phẩm và khiến chúng đáng xem hơn.",
     "watchDemo": "Xem bản demo thực tế",
     "viewSource": "Xem mã nguồn",
     "playDemoAria": "Phát bản demo Beam",
     "demoAlt": "Trình chỉnh sửa video Beam hiển thị bản ghi sản phẩm",
-    "openDemo": "Mở bản demo tương tác",
-    "openSourceTitle": "Beam được xây dựng cùng cộng đồng.",
-    "openSourceText": "Đọc mã nguồn, báo lỗi hoặc góp sức cải thiện trình quay.",
+    "openDemo": "Khám phá trình chỉnh sửa",
+    "openSourceTitle": "Được xây dựng công khai.",
+    "openSourceText": "Beam phát triển nhờ những người sử dụng nó. Theo dõi quá trình phát triển trên GitHub, đóng góp cho dự án hoặc tham gia cộng đồng trên Discord.",
     "viewGitHub": "Xem trên GitHub",
     "joinDiscord": "Tham gia Discord",
     "contributorsAlt": "Những người đóng góp cho Beam trên GitHub",
-    "contributorsFallback": "Gặp gỡ những người đang xây dựng Beam",
-    "contributors": "{count} người đóng góp đang xây dựng Beam | {count} người đóng góp đang xây dựng Beam",
-    "footer": "Trình quay và chỉnh sửa màn hình mã nguồn mở."
+    "contributorsFallback": "Được cộng đồng Beam xây dựng — và đang tiếp tục phát triển.",
+    "contributors": "Được {count} người đóng góp xây dựng — và đang tiếp tục phát triển.",
+    "footer": "Trình quay màn hình và chỉnh sửa video miễn phí, mã nguồn mở.",
+    "heroEyebrow": "Miễn phí và mã nguồn mở",
+    "downloadFree": "Tải Beam — Miễn phí",
+    "availabilityTitle": "Miễn phí trên mọi máy tính.",
+    "availabilityPlatforms": "Có sẵn cho Windows, macOS và Linux.",
+    "editorTitle": "Biến mọi bản quay thành nội dung đáng xem.",
+    "editorText": "Cắt bỏ phần thừa, tinh chỉnh nhịp điệu, thêm hiệu ứng thu phóng mượt mà và phụ đề, rồi xuất bản demo sản phẩm chỉn chu.",
+    "freeTitle": "Kết quả chuyên nghiệp. Không cần đăng ký.",
+    "freeText": "Beam là lựa chọn thay thế miễn phí, mã nguồn mở cho các công cụ quay màn hình trả phí trên Windows, macOS và Linux.",
+    "freeSubscription": "Không cần đăng ký",
+    "freeOpenSource": "Mã nguồn mở",
+    "freePlatforms": "Đa nền tảng"
   },
   "nav": {
     "homeAria": "Trang chủ Beam",
@@ -30,7 +40,11 @@
     "starsAria": "Số sao trên GitHub",
     "install": "Cài đặt"
   },
-  "theme": { "switchTo": "Chuyển sang giao diện {theme}", "light": "sáng", "dark": "tối" },
+  "theme": {
+    "switchTo": "Chuyển sang giao diện {theme}",
+    "light": "sáng",
+    "dark": "tối"
+  },
   "install": {
     "downloadTitle": "Tải Beam {version} cho {platform}",
     "preparingTitle": "Đang chuẩn bị Beam {version} cho {platform}",
@@ -73,10 +87,10 @@
   },
   "editor": {
     "aria": "Bản demo trình chỉnh sửa Beam tương tác",
-    "title": "Dùng thử trình chỉnh sửa Beam thực tế",
+    "title": "Khám phá trình chỉnh sửa Beam",
     "checking": "Đang kiểm tra dự án demo Beam công khai...",
     "webCodecsUnavailable": "WebCodecs không khả dụng trong trình duyệt này. Bạn vẫn có thể phát MP4 gốc bên dưới.",
-    "ready": "Canvas, âm thanh, engine phát, mức thu phóng có thể chỉnh sửa và timeline thực của Beam.",
+    "ready": "Chỉnh sửa một dự án Beam thực tế ngay trong trình duyệt.",
     "decodeFailed": "Beam không thể giải mã MP4 demo trong trình duyệt của bạn. Bản ghi gốc vẫn khả dụng.",
     "filesMissing": "Thiếu hoặc không hợp lệ {count} tệp demo công khai. | Thiếu hoặc không hợp lệ {count} tệp demo công khai.",
     "invalidEdit": "Thao tác chỉnh sửa này nằm ngoài giới hạn phương tiện hợp lệ.",
@@ -106,5 +120,8 @@
     "requestFailed": "Yêu cầu thất bại",
     "expectedMp4": "Mong đợi MP4 nhưng nhận được {type}"
   },
-  "errors": { "githubStatus": "GitHub API trả về {status}.", "githubUnavailable": "GitHub hiện không khả dụng." }
+  "errors": {
+    "githubStatus": "GitHub API trả về {status}.",
+    "githubUnavailable": "GitHub hiện không khả dụng."
+  }
 }

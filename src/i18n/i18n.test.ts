@@ -89,6 +89,51 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides translated timeline clipboard feedback in every supported locale', () => {
+    const expected = {
+      en: ['Copied', 'Pasted'],
+      fr: ['Copié', 'Collé'],
+      es: ['Copiado', 'Pegado'],
+      de: ['Kopiert', 'Eingefügt'],
+      ru: ['Скопировано', 'Вставлено'],
+      bg: ['Копирано', 'Поставено'],
+      'zh-CN': ['已复制', '已粘贴'],
+      ko: ['복사됨', '붙여넣음'],
+      'pt-BR': ['Copiado', 'Colado'],
+      ja: ['コピーしました', '貼り付けました'],
+      it: ['Copiato', 'Incollato'],
+      pl: ['Skopiowano', 'Wklejono'],
+      'zh-TW': ['已複製', '已貼上'],
+      hi: ['कॉपी किया गया', 'पेस्ट किया गया'],
+      vi: ['Đã sao chép', 'Đã dán'],
+    } as const;
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const [index, key] of ['timelineCopied', 'timelinePasted'].entries()) {
+        expect(i18n.global.te(`VideoEditor.${key}`, locale), `${locale}: missing VideoEditor.${key}`).toBe(true);
+        expect(i18n.global.t(`VideoEditor.${key}`)).toBe(expected[locale][index]);
+      }
+    }
+  });
+
+  it('provides detailed timeline clipboard labels and interpolation in every supported locale', () => {
+    const keys = ['timelineCopiedItem', 'timelinePastedItem', 'timelineClipboardCaption', 'timelineClipboardZoom'];
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(i18n.global.te(`VideoEditor.${key}`, locale), `${locale}: missing VideoEditor.${key}`).toBe(true);
+        expect(i18n.global.t(`VideoEditor.${key}`)).not.toBe(`VideoEditor.${key}`);
+      }
+      expect(i18n.global.t('VideoEditor.timelineCopiedItem', { item: 'capture.mp4' })).toContain('capture.mp4');
+      expect(i18n.global.t('VideoEditor.timelinePastedItem', { item: 'capture.mp4' })).toContain('capture.mp4');
+      expect(i18n.global.t('VideoEditor.timelineClipboardCaption', { text: 'Hello timeline' })).toContain(
+        'Hello timeline',
+      );
+      expect(i18n.global.t('VideoEditor.timelineClipboardZoom', { number: 2 })).toContain('2');
+    }
+  });
+
   it('keeps the preferences About and Linux interaction catalog complete', () => {
     const keys = [
       'about',

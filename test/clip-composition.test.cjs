@@ -28,6 +28,7 @@ const visualClip = (assetId, overrides = {}) => ({
   sourceInMs: 0,
   sourceDurationMs: 1_000,
   playbackRate: 1,
+  transitions: { entry: null, exit: null },
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
@@ -53,6 +54,22 @@ const visualClip = (assetId, overrides = {}) => ({
   ...overrides,
   trackId: overrides.trackId ?? overrides.id ?? 'clip-video',
 });
+
+const webcamClip = (assetId, overrides = {}) => {
+  const clip = visualClip(assetId, {
+    id: 'clip-webcam',
+    kind: 'webcam',
+    trackId: 'camera-track',
+    transform: { x: 0.17, y: 0.23, width: 0.31, height: 0.27 },
+    crop: { x: 0.11, y: 0.07, width: 0.73, height: 0.81 },
+    isMirrored: true,
+    isMirroredY: true,
+    ...overrides,
+  });
+  if (!Object.hasOwn(overrides, 'cameraLayoutPreset')) delete clip.cameraLayoutPreset;
+  if (!Object.hasOwn(overrides, 'cameraFramingPreset')) delete clip.cameraFramingPreset;
+  return clip;
+};
 
 const cursorPresentation = (
   motion = { preset: 'smooth', smoothing: 0.67, springMassMultiplier: 1.29, motionBlur: 0.4 },
@@ -80,6 +97,7 @@ const audioClip = (assetId, overrides = {}) => ({
   sourceInMs: 0,
   sourceDurationMs: 1_000,
   playbackRate: 1,
+  transitions: { entry: null, exit: null },
   enabled: true,
   order: 1,
   ...overrides,
@@ -140,6 +158,7 @@ const captionClip = (caption, overrides = {}) => ({
   sourceInMs: 0,
   sourceDurationMs: 1_000,
   playbackRate: 1,
+  transitions: { entry: null, exit: null },
   enabled: true,
   order: 0,
   caption,
@@ -181,7 +200,7 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
   };
   const groupId = 'recording';
   const normalized = normalizeComposition({
-    schemaVersion: 6,
+    schemaVersion: 8,
     assets: [asset],
     keyboardCaptionSessions: [],
     clips: [
@@ -236,7 +255,7 @@ test('normalizes canonical clip timing, linked groups and appearance', () => {
 
 test('round-trips text and keyboard captions in the canonical composition schema', () => {
   const normalized = normalizeComposition({
-    schemaVersion: 6,
+    schemaVersion: 8,
     assets: [],
     keyboardCaptionSessions: ['session-keyboard', 'session-keyboard'],
     clips: [
@@ -245,7 +264,7 @@ test('round-trips text and keyboard captions in the canonical composition schema
     ],
   });
 
-  assert.equal(normalized.schemaVersion, 6);
+  assert.equal(normalized.schemaVersion, 8);
   assert.deepEqual(normalized.keyboardCaptionSessions, ['session-keyboard']);
   assert.equal(normalized.clips[0].caption.type, 'text');
   assert.deepEqual(normalized.clips[1].caption, keyboardCaption({ style: canonicalCaptionStyle() }));
@@ -253,7 +272,7 @@ test('round-trips text and keyboard captions in the canonical composition schema
 
 test('round-trips an assetless blur overlay with its effect settings', () => {
   const normalized = normalizeComposition({
-    schemaVersion: 6,
+    schemaVersion: 8,
     assets: [],
     keyboardCaptionSessions: [],
     clips: [
@@ -267,6 +286,7 @@ test('round-trips an assetless blur overlay with its effect settings', () => {
         sourceInMs: 0,
         sourceDurationMs: 5_000,
         playbackRate: 1,
+        transitions: { entry: null, exit: null },
         enabled: true,
         order: 0,
         transform: { x: 0.2, y: 0.3, width: 0.4, height: 0.25 },
@@ -288,6 +308,7 @@ test('round-trips an assetless blur overlay with its effect settings', () => {
     sourceInMs: 0,
     sourceDurationMs: 5_000,
     playbackRate: 1,
+    transitions: { entry: null, exit: null },
     enabled: true,
     order: 0,
     transform: { x: 0.2, y: 0.3, width: 0.4, height: 0.25 },
@@ -322,7 +343,7 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
     assert.throws(
       () =>
         normalizeComposition({
-          schemaVersion: 6,
+          schemaVersion: 8,
           assets: [],
           keyboardCaptionSessions: [],
           clips: [captionClip(caption)],
@@ -331,7 +352,7 @@ test('rejects malformed keyboard captions and invalid keyboard session markers',
     );
 
   assert.throws(
-    () => normalizeComposition({ schemaVersion: 6, assets: [], keyboardCaptionSessions: [null], clips: [] }),
+    () => normalizeComposition({ schemaVersion: 8, assets: [], keyboardCaptionSessions: [null], clips: [] }),
     /session|caption/i,
   );
 });
@@ -432,13 +453,14 @@ test('migrates legacy composition fields and atomically persists the canonical e
 
   const migrated = store.editorState(project.id);
   assert.equal(migrated.schemaVersion, 3);
-  assert.equal(migrated.composition.schemaVersion, 6);
+  assert.equal(migrated.composition.schemaVersion, 8);
   assert.deepEqual(migrated.composition.keyboardCaptionSessions, []);
   assert.deepEqual(migrated.presentation.canvas, {
     preset: '21:9',
     width: 2520,
     height: 1080,
     showBackground: true,
+    transitions: { entry: null, exit: null },
   });
 
   const screen = migrated.composition.clips.find((clip) => clip.id === 'legacy-screen');
@@ -461,13 +483,13 @@ test('migrates legacy composition fields and atomically persists the canonical e
 
   const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(rewritten.editor.schemaVersion, 3);
-  assert.equal(rewritten.editor.composition.schemaVersion, 6);
+  assert.equal(rewritten.editor.composition.schemaVersion, 8);
   assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, []);
   assert.equal(rewritten.editor.composition.clips[0].isMirroredY, false);
   assert.equal(fs.existsSync(`${manifestPath}.tmp`), false);
 });
 
-test('migrates v2 composition to v6 and records historical project sessions once', () => {
+test('migrates v2 composition to v8 and records historical project sessions once', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-v2-migration-'));
   const store = createProjectStore(root);
   const project = store.create({ name: 'V2 migration' });
@@ -489,13 +511,13 @@ test('migrates v2 composition to v6 and records historical project sessions once
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   const migrated = store.editorState(project.id);
-  assert.equal(migrated.composition.schemaVersion, 6);
+  assert.equal(migrated.composition.schemaVersion, 8);
   assert.deepEqual(migrated.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
   assert.equal(migrated.composition.clips[0].caption.type, 'text');
 
   const rewritten = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   assert.equal(rewritten.editor.schemaVersion, 3);
-  assert.equal(rewritten.editor.composition.schemaVersion, 6);
+  assert.equal(rewritten.editor.composition.schemaVersion, 8);
   assert.deepEqual(rewritten.editor.composition.keyboardCaptionSessions, ['session-old', 'session-new']);
   assert.deepEqual(store.editorState(project.id).composition.keyboardCaptionSessions, ['session-old', 'session-new']);
 
@@ -504,11 +526,11 @@ test('migrates v2 composition to v6 and records historical project sessions once
     true,
     ['session-old'],
   );
-  assert.equal(direct.schemaVersion, 6);
+  assert.equal(direct.schemaVersion, 8);
   assert.deepEqual(direct.keyboardCaptionSessions, ['session-old']);
 });
 
-test('migrates v5 captions to v6 with the historical typography defaults', () => {
+test('migrates v5 captions to v8 with the historical typography defaults', () => {
   const migrated = migrateComposition(
     {
       schemaVersion: 5,
@@ -520,7 +542,7 @@ test('migrates v5 captions to v6 with the historical typography defaults', () =>
     [],
   );
 
-  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.schemaVersion, 8);
   assert.deepEqual(migrated.clips[0].caption.style, {
     fontFamily: 'sans-serif',
     fontWeight: 800,
@@ -542,6 +564,290 @@ test('migrates v5 captions to v6 with the historical typography defaults', () =>
   });
 });
 
+test('migrates v6 compositions by adding empty transitions before writing v8', () => {
+  const asset = {
+    id: 'asset-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 1_000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  const legacyClip = visualClip(asset.id);
+  delete legacyClip.transitions;
+  const migrated = migrateComposition({ schemaVersion: 6, assets: [asset], clips: [legacyClip] }, true, []);
+  assert.equal(migrated.schemaVersion, 8);
+  assert.deepEqual(migrated.clips[0].transitions, { entry: null, exit: null });
+});
+
+test('migrates v7 webcam clips to v8 custom presets without changing their render fields', () => {
+  const asset = {
+    id: 'asset-camera',
+    kind: 'video',
+    name: 'Camera recording',
+    fileName: 'camera.mp4',
+    durationMs: 1_000,
+    width: 1_280,
+    height: 720,
+    origin: 'project',
+  };
+  const camera = webcamClip(asset.id, {
+    groupId: 'recording-segment',
+    appearance: {
+      ...visualClip(asset.id).appearance,
+      cornerRadius: 27,
+      shadowSize: 'custom',
+      shadowBlur: 33,
+      shadowMode: 'adaptive',
+      shadowColor: '#102030',
+      shadowDirection: 'top-left',
+      borderEnabled: true,
+      borderColor: '#405060',
+      borderWidth: 3,
+      frame: 'safari',
+      frameTitle: 'Camera',
+      frameColor: '#708090',
+      frameShowMenu: false,
+      frameShowScrollbars: false,
+      frameChromeScale: 1.2,
+    },
+  });
+  const screen = visualClip(asset.id, {
+    id: 'screen',
+    kind: 'screen',
+    trackId: 'screen-track',
+    groupId: 'recording-segment',
+  });
+  const migrated = migrateComposition(
+    { schemaVersion: 7, assets: [asset], keyboardCaptionSessions: [], clips: [screen, camera] },
+    true,
+    [],
+  );
+  const migratedCamera = migrated.clips.find((clip) => clip.kind === 'webcam');
+
+  assert.equal(migrated.schemaVersion, 8);
+  assert.equal(migratedCamera.cameraLayoutPreset, 'custom');
+  assert.equal(migratedCamera.cameraFramingPreset, 'custom');
+  assert.equal(migratedCamera.cameraSplitRatio, 0.5);
+  assert.equal(migratedCamera.cameraSplitPadding, 0);
+  assert.deepEqual(migratedCamera.transform, camera.transform);
+  assert.deepEqual(migratedCamera.crop, camera.crop);
+  assert.deepEqual(migratedCamera.appearance, camera.appearance);
+  assert.equal(migratedCamera.isMirrored, true);
+  assert.equal(migratedCamera.isMirroredY, true);
+  assert.deepEqual(migratedCamera.transitions, camera.transitions);
+  assert.deepEqual(migrated.clips.find((clip) => clip.id === 'screen').transform, screen.transform);
+});
+
+test('normalizes a v8 webcam with omitted presets to custom while rejecting explicit invalid values', () => {
+  const asset = {
+    id: 'asset-camera',
+    kind: 'video',
+    name: 'Camera recording',
+    fileName: 'camera.mp4',
+    durationMs: 1_000,
+    width: 1_280,
+    height: 720,
+    origin: 'project',
+  };
+  const normalized = normalizeComposition({
+    schemaVersion: 8,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [webcamClip(asset.id)],
+  });
+  const camera = normalized.clips.find((clip) => clip.kind === 'webcam');
+
+  assert.equal(camera.cameraLayoutPreset, 'custom');
+  assert.equal(camera.cameraFramingPreset, 'custom');
+  assert.equal(camera.cameraSplitRatio, 0.5);
+  assert.equal(camera.cameraSplitPadding, 0);
+  assert.deepEqual(camera.transform, { x: 0.17, y: 0.23, width: 0.31, height: 0.27 });
+  assert.deepEqual(camera.crop, { x: 0.11, y: 0.07, width: 0.73, height: 0.81 });
+
+  assert.throws(
+    () =>
+      normalizeComposition({
+        schemaVersion: 8,
+        assets: [asset],
+        keyboardCaptionSessions: [],
+        clips: [webcamClip(asset.id, { cameraLayoutPreset: 'invalid', cameraFramingPreset: 'fill' })],
+      }),
+    /preset|caméra/i,
+  );
+  assert.throws(
+    () =>
+      normalizeComposition({
+        schemaVersion: 8,
+        assets: [asset],
+        keyboardCaptionSessions: [],
+        clips: [
+          webcamClip(asset.id, { cameraLayoutPreset: 'split-left', cameraFramingPreset: 'fill', cameraSplitRatio: 1 }),
+        ],
+      }),
+    /répartition|caméra/i,
+  );
+  assert.throws(
+    () =>
+      normalizeComposition({
+        schemaVersion: 8,
+        assets: [asset],
+        keyboardCaptionSessions: [],
+        clips: [
+          webcamClip(asset.id, {
+            cameraLayoutPreset: 'split-left',
+            cameraFramingPreset: 'fill',
+            cameraSplitPadding: 0.2,
+          }),
+        ],
+      }),
+    /espacement|caméra/i,
+  );
+  assert.throws(
+    () =>
+      normalizeComposition({
+        schemaVersion: 8,
+        assets: [asset],
+        keyboardCaptionSessions: [],
+        clips: [webcamClip(asset.id, { cameraLayoutPreset: 'fullscreen', cameraFramingPreset: 'invalid' })],
+      }),
+    /preset|caméra/i,
+  );
+});
+
+test('repairs and persists omitted camera presets when opening an already-v8 project', () => {
+  const { directory: root } = setup();
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Incomplete v8 camera presets' });
+  const source = path.join(root, 'camera.mp4');
+  fs.writeFileSync(source, 'camera');
+  const imported = store.importEditorMedia(project.id, { kind: 'video', source });
+  const projectDirectory = store.directoryFor(project.id);
+  const manifestPath = path.join(projectDirectory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const asset = { ...imported, durationMs: 1_000, width: 1_280, height: 720 };
+  manifest.editor.composition = {
+    schemaVersion: 8,
+    assets: [asset],
+    keyboardCaptionSessions: [],
+    clips: [webcamClip(asset.id)],
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const opened = store.editorState(project.id);
+  const openedCamera = opened.composition.clips.find((clip) => clip.kind === 'webcam');
+  assert.equal(openedCamera.cameraLayoutPreset, 'custom');
+  assert.equal(openedCamera.cameraFramingPreset, 'custom');
+
+  const persisted = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const persistedCamera = persisted.editor.composition.clips.find((clip) => clip.kind === 'webcam');
+  assert.equal(persistedCamera.cameraLayoutPreset, 'custom');
+  assert.equal(persistedCamera.cameraFramingPreset, 'custom');
+});
+
+test('rejects unknown camera presets in a canonical v8 webcam clip', () => {
+  const asset = {
+    id: 'asset-camera',
+    kind: 'video',
+    name: 'Camera recording',
+    fileName: 'camera.mp4',
+    durationMs: 1_000,
+    width: 1_280,
+    height: 720,
+    origin: 'project',
+  };
+  assert.throws(
+    () =>
+      normalizeComposition({
+        schemaVersion: 8,
+        assets: [asset],
+        keyboardCaptionSessions: [],
+        clips: [webcamClip(asset.id, { cameraLayoutPreset: 'invalid', cameraFramingPreset: 'fill' })],
+      }),
+    /preset|caméra/i,
+  );
+});
+
+test('validates canonical transition presets, durations, domains, and edge budget', () => {
+  const asset = {
+    id: 'asset-video',
+    kind: 'video',
+    name: 'Video',
+    fileName: 'video.mp4',
+    durationMs: 1_000,
+    width: 1920,
+    height: 1080,
+    origin: 'project',
+  };
+  const canonical = (clip) =>
+    normalizeComposition({ schemaVersion: 8, assets: [asset], clips: [clip], keyboardCaptionSessions: [] });
+  const valid = visualClip(asset.id, {
+    transitions: {
+      entry: { preset: { kind: 'slide', direction: 'left' }, durationMs: 250 },
+      exit: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 250 },
+    },
+  });
+  assert.deepEqual(canonical(valid).clips[0].transitions, valid.transitions);
+  assert.throws(
+    () =>
+      canonical(
+        visualClip(asset.id, {
+          transitions: { entry: { preset: { kind: 'slide', direction: 'diagonal' }, durationMs: 100 }, exit: null },
+        }),
+      ),
+    /Direction|transition/i,
+  );
+  assert.throws(
+    () =>
+      canonical(
+        visualClip(asset.id, {
+          transitions: { entry: { preset: { kind: 'fade', extra: true }, durationMs: 100 }, exit: null },
+        }),
+      ),
+    /paramètres|preset|transition/i,
+  );
+  assert.throws(
+    () =>
+      canonical(
+        visualClip(asset.id, {
+          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 101.5 }, exit: null },
+        }),
+      ),
+    /transition|durée/i,
+  );
+  assert.throws(
+    () =>
+      normalizeComposition({
+        schemaVersion: 8,
+        assets: [
+          asset,
+          { ...asset, id: 'asset-audio', kind: 'audio', fileName: 'audio.wav', width: null, height: null },
+        ],
+        clips: [
+          audioClip('asset-audio', {
+            transitions: { entry: { preset: { kind: 'slide', direction: 'left' }, durationMs: 100 }, exit: null },
+          }),
+        ],
+        keyboardCaptionSessions: [],
+      }),
+    /preset|transition/i,
+  );
+  assert.throws(
+    () =>
+      canonical(
+        visualClip(asset.id, {
+          transitions: {
+            entry: { preset: { kind: 'fade' }, durationMs: 600 },
+            exit: { preset: { kind: 'blur' }, durationMs: 600 },
+          },
+        }),
+      ),
+    /durée|transition/i,
+  );
+});
+
 test('preserves every supported non-custom canvas preset through editor-state persistence', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-canvas-presets-'));
   const store = createProjectStore(root);
@@ -558,8 +864,67 @@ test('preserves every supported non-custom canvas preset through editor-state pe
     const saved = store.saveEditorState(project.id, state);
     const loaded = store.editorState(project.id);
     assert.equal(saved.presentation.canvas.preset, preset);
-    assert.deepEqual(loaded.presentation.canvas, { preset, width, height, showBackground: true });
+    assert.deepEqual(loaded.presentation.canvas, {
+      preset,
+      width,
+      height,
+      showBackground: true,
+      transitions: { entry: null, exit: null },
+    });
   }
+});
+
+test('persists and normalizes global canvas transitions without changing legacy canvas fields', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-canvas-transitions-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Canvas transitions' });
+  const state = store.editorState(project.id);
+  const transitions = {
+    entry: { preset: { kind: 'fade' }, durationMs: 750 },
+    exit: { preset: { kind: 'slide', direction: 'left' }, durationMs: 1_250 },
+  };
+  state.presentation.canvas = {
+    ...state.presentation.canvas,
+    preset: 'custom',
+    width: 1280,
+    height: 720,
+    showBackground: true,
+    transitions,
+  };
+
+  const saved = store.saveEditorState(project.id, state);
+  assert.deepEqual(saved.presentation.canvas, {
+    preset: 'custom',
+    width: 1280,
+    height: 720,
+    showBackground: true,
+    transitions,
+  });
+  assert.deepEqual(store.editorState(project.id).presentation.canvas, saved.presentation.canvas);
+
+  const manifestPath = path.join(store.directoryFor(project.id), 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.editor.presentation.canvas.transitions = {
+    entry: { preset: { kind: 'slide', direction: 'diagonal' }, durationMs: 300 },
+    exit: { preset: { kind: 'fade' }, durationMs: 6_000 },
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const normalized = store.editorState(project.id);
+  assert.deepEqual(normalized.presentation.canvas.transitions, {
+    entry: null,
+    exit: { preset: { kind: 'fade' }, durationMs: 5_000 },
+  });
+  assert.deepEqual(normalized.presentation.canvas, {
+    preset: 'custom',
+    width: 1280,
+    height: 720,
+    showBackground: true,
+    transitions: {
+      entry: null,
+      exit: { preset: { kind: 'fade' }, durationMs: 5_000 },
+    },
+  });
 });
 
 test('rejects an unknown persisted composition version without replacing it with an empty composition', () => {
@@ -582,7 +947,7 @@ test('materializes project and recording assets without persisting runtime URLs'
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'video.mp4'), 'video');
   const composition = normalizeComposition({
-    schemaVersion: 6,
+    schemaVersion: 8,
     keyboardCaptionSessions: [],
     assets: [
       {
@@ -613,7 +978,7 @@ test('prunes only project media that is no longer referenced', () => {
   fs.mkdirSync(path.join(directory, 'media'));
   fs.writeFileSync(path.join(directory, 'media', 'unused.mp4'), 'video');
   const previous = {
-    schemaVersion: 6,
+    schemaVersion: 8,
     keyboardCaptionSessions: [],
     assets: [
       {
@@ -641,7 +1006,7 @@ test('persists and reads one atomic editor state', () => {
   fs.writeFileSync(source, 'video');
   const asset = store.importEditorMedia(project.id, { kind: 'video', source });
   const composition = {
-    schemaVersion: 6,
+    schemaVersion: 8,
     keyboardCaptionSessions: [],
     assets: [{ ...asset, durationMs: 1_000 }],
     clips: [visualClip(asset.id)],
@@ -662,7 +1027,13 @@ test('persists and reads one atomic editor state', () => {
   assert.equal(saved.schemaVersion, 3);
   assert.equal(saved.composition.clips[0].id, 'clip-video');
   assert.match(saved.composition.assets[0].src, /^project-media:/);
-  assert.deepEqual(saved.presentation.canvas, { preset: '16:9', width: 1920, height: 1080, showBackground: true });
+  assert.deepEqual(saved.presentation.canvas, {
+    preset: '16:9',
+    width: 1920,
+    height: 1080,
+    showBackground: true,
+    transitions: { entry: null, exit: null },
+  });
   assert.deepEqual(saved.presentation.cursor.motion, {
     preset: 'custom',
     smoothing: 0.55,
@@ -753,7 +1124,7 @@ test('imports dropped project media safely and never returns a local path', () =
   assert.throws(() => store.importDroppedProjectMedia(project.id, { kind: 'video', source: '' }), /invalide|chemin/i);
 });
 
-test('normalizes the v6 visual track identity and preserves it through editor-state round trips', () => {
+test('normalizes the v7 visual track identity and preserves it through editor-state round trips', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-track-id-'));
   const store = createProjectStore(root);
   const project = store.create({ name: 'Track identity' });
@@ -763,7 +1134,7 @@ test('normalizes the v6 visual track identity and preserves it through editor-st
   const trackId = 'visual-track-1';
   const state = store.editorState(project.id);
   state.composition = {
-    schemaVersion: 6,
+    schemaVersion: 8,
     keyboardCaptionSessions: [],
     assets: [{ ...asset, durationMs: 2_000 }],
     clips: [
@@ -781,7 +1152,7 @@ test('normalizes the v6 visual track identity and preserves it through editor-st
   };
 
   const saved = store.saveEditorState(project.id, state);
-  assert.equal(saved.composition.schemaVersion, 6);
+  assert.equal(saved.composition.schemaVersion, 8);
   assert.deepEqual(
     saved.composition.clips.map((clip) => clip.trackId),
     [trackId, trackId],
@@ -829,7 +1200,7 @@ test('migrates only certain contiguous v3 visual fragments into one track', () =
     [],
   );
 
-  assert.equal(migrated.schemaVersion, 6);
+  assert.equal(migrated.schemaVersion, 8);
   const certain = migrated.clips.filter((clip) => clip.id.startsWith('certain-'));
   assert.equal(certain.length, 2);
   assert.ok(certain[0].trackId);
@@ -848,7 +1219,7 @@ test('rejects invalid visual track identities and overlapping clips assigned to 
     height: 1080,
     origin: 'project',
   };
-  const base = { schemaVersion: 6, assets: [asset], keyboardCaptionSessions: [] };
+  const base = { schemaVersion: 8, assets: [asset], keyboardCaptionSessions: [] };
   assert.throws(
     () => normalizeComposition({ ...base, clips: [visualClip(asset.id, { trackId: '' })] }),
     /track|piste|identit/i,
@@ -928,7 +1299,7 @@ test('migration groups a mixed-order chain of certain v3 split fragments and kee
   assert.notEqual(migrated.clips.find((clip) => clip.id === 'other-track').trackId, chain[0].trackId);
 });
 
-test('migrates Golden Canvas 2 v4 screen fragments to v6 without losing visual properties', () => {
+test('migrates Golden Canvas 2 v4 screen fragments to v8 without losing visual properties', () => {
   const asset = {
     id: 'session:golden-canvas:screen:segment-0001.mp4',
     kind: 'video',
@@ -986,7 +1357,7 @@ test('migrates Golden Canvas 2 v4 screen fragments to v6 without losing visual p
   const migrated = store.editorState(project.id);
 
   assert.equal(migrated.schemaVersion, 3);
-  assert.equal(migrated.composition.schemaVersion, 6);
+  assert.equal(migrated.composition.schemaVersion, 8);
   const migratedFirst = migrated.composition.clips.find((clip) => clip.id === first.id);
   const migratedSecond = migrated.composition.clips.find((clip) => clip.id === second.id);
   const migratedThird = migrated.composition.clips.find((clip) => clip.id === third.id);
@@ -998,10 +1369,181 @@ test('migrates Golden Canvas 2 v4 screen fragments to v6 without losing visual p
   assert.equal(migratedSecond.appearance.shadowSize, 'custom');
 
   const persisted = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  assert.equal(persisted.editor.composition.schemaVersion, 6);
+  assert.equal(persisted.editor.composition.schemaVersion, 8);
   assert.deepEqual(
     persisted.editor.composition.clips.map((clip) => clip.trackId),
     migrated.composition.clips.map((clip) => clip.trackId),
   );
   assert.deepEqual(store.editorState(project.id), migrated);
+});
+
+test('project store reports hasScreen, hasCamera, and hasCaption only when actual files exist', () => {
+  const { directory: root } = setup();
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Feature Detection' });
+  const directory = store.directoryFor(project.id);
+  const mediaDir = path.join(directory, 'media');
+  fs.mkdirSync(mediaDir, { recursive: true });
+  fs.writeFileSync(path.join(mediaDir, 'screen.mp4'), 'dummy-screen-data');
+  fs.writeFileSync(path.join(mediaDir, 'webcam.mp4'), 'dummy-webcam-data');
+
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  manifest.editor.composition = {
+    schemaVersion: 8,
+    assets: [
+      { id: 'screen-asset', kind: 'video', name: 'Screen', fileName: 'screen.mp4', origin: 'project' },
+      { id: 'webcam-asset', kind: 'video', name: 'Webcam', fileName: 'webcam.mp4', origin: 'project' },
+      { id: 'missing-asset', kind: 'video', name: 'Missing', fileName: 'missing.mp4', origin: 'project' },
+    ],
+    keyboardCaptionSessions: [],
+    clips: [
+      {
+        id: 'screen-clip',
+        trackId: 'track-1',
+        kind: 'screen',
+        timeRange: { startMs: 0, endMs: 1000 },
+        sourceTimeRange: { startMs: 0, endMs: 1000 },
+        assetId: 'screen-asset',
+        crop: { top: 0, right: 0, bottom: 0, left: 0 },
+        order: 1,
+        volume: 1,
+        isMuted: false,
+        transitions: { entry: null, exit: null },
+      },
+      {
+        id: 'webcam-clip',
+        trackId: 'track-2',
+        kind: 'webcam',
+        timeRange: { startMs: 0, endMs: 1000 },
+        sourceTimeRange: { startMs: 0, endMs: 1000 },
+        assetId: 'webcam-asset',
+        crop: { top: 0, right: 0, bottom: 0, left: 0 },
+        order: 2,
+        volume: 1,
+        isMuted: false,
+        cameraLayoutPreset: 'custom',
+        cameraFramingPreset: 'custom',
+        transitions: { entry: null, exit: null },
+      },
+      {
+        id: 'caption-clip',
+        trackId: 'track-3',
+        kind: 'caption',
+        timeRange: { startMs: 0, endMs: 1000 },
+        caption: {
+          type: 'text',
+          sentences: [
+            { id: 's1', text: 'Hello', startMs: 0, endMs: 1000, words: [{ text: 'Hello', startMs: 0, endMs: 1000 }] },
+          ],
+          style: {
+            fontFamily: 'sans-serif',
+            fontWeight: 800,
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            textAlign: 'center',
+            lineHeight: 1.2,
+            letterSpacing: 0,
+            color: '#ffffff',
+            fontSize: 24,
+            wrap: true,
+            shadowColor: '#000000',
+            shadowBlur: 4,
+            backdropBlur: 0,
+            outlineColor: '#000000',
+            outlineWidth: 0,
+            extrusionDepth: 0,
+            placement: 'bottom',
+          },
+        },
+        order: 3,
+        transitions: { entry: null, exit: null },
+      },
+    ],
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const list = store.list();
+  const summary = list.find((p) => p.id === project.id);
+  assert(summary);
+  assert.equal(summary.hasScreen, true);
+  assert.equal(summary.hasCamera, true);
+  assert.equal(summary.hasCaption, true);
+
+  // When webcam asset file is removed, hasCamera becomes false
+  fs.rmSync(path.join(mediaDir, 'webcam.mp4'));
+  const listAfterRemoval = store.list();
+  const summaryAfterRemoval = listAfterRemoval.find((p) => p.id === project.id);
+  assert.equal(summaryAfterRemoval.hasCamera, false);
+  assert.equal(summaryAfterRemoval.hasScreen, true);
+  assert.equal(summaryAfterRemoval.hasCaption, true);
+});
+
+test('marks a newly created project editor state as fresh', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-fresh-project-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Fresh project' });
+
+  assert.equal(store.editorState(project.id).isFresh, true);
+});
+
+test('preserves the fresh marker while migrating a legacy cursor selection', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-fresh-cursor-migration-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Fresh cursor migration' });
+  const manifestPath = path.join(store.directoryFor(project.id), 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  delete manifest.editor.presentation.cursor.selection;
+  manifest.editor.presentation.cursor.selectedCursor = 'automatic';
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const state = store.editorState(project.id);
+
+  assert.equal(state.isFresh, true);
+  assert.deepEqual(state.presentation.cursor.selection, {
+    packId: 'builtin:macos',
+    mode: 'automatic',
+    cursorId: null,
+  });
+});
+
+test('clears the fresh marker after the first editor-state save', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-fresh-save-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Fresh save' });
+  const state = store.editorState(project.id);
+
+  assert.equal(state.isFresh, true);
+  const saved = store.saveEditorState(project.id, state);
+
+  assert.equal(saved.isFresh, false);
+  assert.equal(store.editorState(project.id).isFresh, false);
+});
+
+test('does not mark existing or migrated projects without the marker as fresh', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-existing-project-'));
+  const store = createProjectStore(root);
+  const existing = store.create({ name: 'Existing project' });
+  const existingDirectory = store.directoryFor(existing.id);
+  const existingManifestPath = path.join(existingDirectory, 'project.json');
+  const existingManifest = JSON.parse(fs.readFileSync(existingManifestPath, 'utf8'));
+  delete existingManifest.editor.applyGlobalDefaults;
+  fs.writeFileSync(existingManifestPath, `${JSON.stringify(existingManifest, null, 2)}\n`);
+
+  assert.equal(store.editorState(existing.id).isFresh, false);
+
+  const migrated = store.create({ name: 'Migrated project' });
+  const migratedDirectory = store.directoryFor(migrated.id);
+  const migratedManifestPath = path.join(migratedDirectory, 'project.json');
+  const migratedManifest = JSON.parse(fs.readFileSync(migratedManifestPath, 'utf8'));
+  migratedManifest.editor = {
+    schemaVersion: 2,
+    composition: { schemaVersion: 1, assets: [], clips: [] },
+    zoom: { elements: [], generatedSessions: [] },
+    presentation: migratedManifest.editor.presentation,
+  };
+  fs.writeFileSync(migratedManifestPath, `${JSON.stringify(migratedManifest, null, 2)}\n`);
+
+  assert.equal(store.editorState(migrated.id).isFresh, false);
 });

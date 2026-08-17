@@ -1,0 +1,29 @@
+{
+  "title": "Beam 文档",
+  "description": "了解如何使用 Beam 录制、编辑和分享精致的产品演示。",
+  "hero": {
+    "name": "Beam 文档",
+    "text": "记录。编辑。分享。",
+    "tagline": "使用 Beam 捕获并打磨产品演示的实用指南。",
+    "imageAlt": "Beam 应用图标",
+    "actions": [
+      { "theme": "brand", "text": "开始使用", "link": "/getting-started" },
+      { "theme": "alt", "text": "在 GitHub 上查看", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "加入 Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    {
+      "title": "录制器应用",
+      "details": "选择来源，准备音频和摄像头轨道，然后从紧凑的 HUD 控制录制。",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "视频编辑器",
+      "details": "在一个工作区中调整时序、构图、缩放、光标移动、字幕、声音和导出。",
+      "link": "/editor/",
+      "visual": "editor"
+    }
+  ]
+}

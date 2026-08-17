@@ -20,29 +20,31 @@ import {
   layoutCaptionText,
   type CaptionTextMeasurer,
 } from '~/media/shared/caption-text-layout';
-import { computeWebcamLayout, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
 import type { OutputCanvasSettings } from '../output-canvas';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
 import { effectShapeRect } from '../../composition/effects/blur-effect';
-import { pointInsideEllipse, pointInsideRect, projectCameraRect } from './layer-transform-geometry';
+import {
+  pointInsideEllipse,
+  pointInsideRect,
+  pointInsideSquircle,
+  projectCameraRect,
+  clampNormalizedCrop,
+  mirrorCrop,
+} from './layer-transform-geometry';
+import { editableVisualClipTransform, visualClipDisplayLayout } from '../../composition/visual-framing';
+import {
+  clampEditedWebcamTransform,
+  editableWebcamTransform,
+  webcamDisplayLayout,
+  webcamResizePointerScale,
+} from './webcam-transform-editing';
 
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
 const SIZE_MAX = 4;
 const RAYCAST_SLOP_PX = 4;
 type TransformClip = VisualClip | BlurClip | CaptionClip;
-
-const clampWebcamTransform = (value: NormalizedTransform): NormalizedTransform => {
-  const width = Math.min(1, Math.max(0.02, value.width));
-  const height = Math.min(1, Math.max(0.02, value.height));
-  return {
-    x: Math.min(1 - width, Math.max(0, value.x)),
-    y: Math.min(1 - height, Math.max(0, value.y)),
-    width,
-    height,
-  };
-};
 
 export interface UseLayerTransformAndCropOptions {
   composition: () => ClipComposition;
@@ -118,14 +120,25 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const bounds = boundsFor(clip);
     if (!bounds) return null;
     if (clip.kind === 'webcam') {
-      const layout = computeWebcamLayout(
-        bounds.dw,
-        bounds.dh,
-        bounds.scale,
-        webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+      return webcamDisplayLayout(
+        options.composition(),
+        clip,
+        bounds,
         transform,
+        options.isCropping() ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
       );
-      return { left: bounds.dx + layout.x, top: bounds.dy + layout.y, width: layout.width, height: layout.height };
+    }
+    if (isVisualClip(clip)) {
+      const asset = options.composition().assets.find((entry) => entry.id === clip.assetId);
+      const visible = visualClipDisplayLayout(
+        clip,
+        transform,
+        { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh },
+        asset?.width ?? bounds.dw,
+        asset?.height ?? bounds.dh,
+        options.isCropping() ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+      );
+      return usesGlobalCamera(clip) ? projectCameraRect(bounds, visible) : visible;
     }
     const rect = {
       left: bounds.dx + transform.x * bounds.dw,
@@ -203,28 +216,20 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       cropDraft.value ?? (clip && isVisualClip(clip) ? clip.crop : undefined) ?? { x: 0, y: 0, width: 1, height: 1 }
     );
   });
-  const mirrored = () => {
-    const clip = options.selectedTransformClip();
-    return Boolean(clip && isVisualClip(clip) && clip.isMirrored);
-  };
-  const mirroredY = () => {
-    const clip = options.selectedTransformClip();
-    return Boolean(clip && isVisualClip(clip) && clip.isMirroredY);
-  };
   const displayCrop = (crop: NormalizedCrop) => {
-    let c = crop;
-    if (mirrored()) c = { ...c, x: 1 - c.x - c.width };
-    if (mirroredY()) c = { ...c, y: 1 - c.y - c.height };
-    return c;
+    const clip = options.selectedTransformClip();
+    return mirrorCrop(
+      crop,
+      Boolean(clip && isVisualClip(clip) && clip.isMirrored),
+      Boolean(clip && isVisualClip(clip) && clip.isMirroredY),
+    );
   };
   const sourceCrop = displayCrop;
-
   const visualLayout = () => {
     const clip = options.selectedTransformClip();
     if (!clip || clip.kind === 'caption') return null;
     return displayLayoutFor(clip);
   };
-
   const cropContainerStyle = computed(() => {
     if (!options.isCropping()) return { display: 'none' };
     const layout = visualLayout();
@@ -236,7 +241,6 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       height: `${layout.height}px`,
     };
   });
-
   const cropOverlayStyle = computed(() => {
     if (!options.isCropping()) return { display: 'none' };
     const layout = visualLayout();
@@ -249,18 +253,6 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       height: `${crop.height * 100}%`,
     };
   });
-
-  const clampCrop = (value: NormalizedCrop): NormalizedCrop => {
-    const width = Math.min(1, Math.max(0.05, value.width));
-    const height = Math.min(1, Math.max(0.05, value.height));
-    return {
-      x: Math.min(1 - width, Math.max(0, value.x)),
-      y: Math.min(1 - height, Math.max(0, value.y)),
-      width,
-      height,
-    };
-  };
-
   const beginCropDrag = (event: PointerEvent, kind: 'move' | 'resize', corner?: ResizeCorner) => {
     if (event.button !== 0) return;
     cropDrag = { kind, corner, startX: event.clientX, startY: event.clientY, value: displayCrop(cropValue.value) };
@@ -275,7 +267,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const dy = (event.clientY - cropDrag.startY) / Math.max(1, layout.height * vScale);
     if (cropDrag.kind === 'move') {
       cropDraft.value = sourceCrop(
-        clampCrop({ ...cropDrag.value, x: cropDrag.value.x + dx, y: cropDrag.value.y + dy }),
+        clampNormalizedCrop({ ...cropDrag.value, x: cropDrag.value.x + dx, y: cropDrag.value.y + dy }),
       );
       return;
     }
@@ -286,7 +278,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const width = cropDrag.value.width + (horizontal ? (left ? -dx : dx) : 0);
     const height = cropDrag.value.height + (vertical ? (top ? -dy : dy) : 0);
     cropDraft.value = sourceCrop(
-      clampCrop({
+      clampNormalizedCrop({
         x: left ? cropDrag.value.x + cropDrag.value.width - width : cropDrag.value.x,
         y: top ? cropDrag.value.y + cropDrag.value.height - height : cropDrag.value.y,
         width,
@@ -301,7 +293,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
   };
   const commitCrop = () => {
-    options.onUpdateCrop(clampCrop(cropDraft.value ?? cropValue.value));
+    options.onUpdateCrop(clampNormalizedCrop(cropDraft.value ?? cropValue.value));
     cropDraft.value = null;
   };
 
@@ -309,7 +301,12 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (event.button !== 0) return;
     const clip = options.selectedTransformClip();
     if (!clip) return;
-    const transform = transformDraft.value ?? transformFor(clip);
+    let transform = transformDraft.value ?? transformFor(clip);
+    const bounds = boundsFor(clip);
+    if (clip.kind === 'webcam' && bounds)
+      transform = editableWebcamTransform(options.composition(), clip, bounds, transform);
+    else if (isVisualClip(clip) && bounds)
+      transform = editableVisualClipTransform(options.composition(), clip, transform, bounds);
     event.stopPropagation();
     transformDraft.value = { ...transform };
     transformDrag = {
@@ -330,7 +327,9 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     if (!clip || !bounds || !transformDrag) return;
     transformDrag.lastX = clientX;
     transformDrag.lastY = clientY;
-    const scale = usesGlobalCamera(clip) ? bounds.scale || 1 : 1;
+    const webcamResizeScale =
+      clip.kind === 'webcam' && transformDrag.kind === 'resize' ? webcamResizePointerScale(clip, bounds.scale) : 1;
+    const scale = usesGlobalCamera(clip) ? bounds.scale || 1 : webcamResizeScale;
     const vScale = options.zoomScale?.() ?? 1;
     const dx = (clientX - transformDrag.startX) / Math.max(1, bounds.dw * scale * vScale);
     const dy = (clientY - transformDrag.startY) / Math.max(1, bounds.dh * scale * vScale);
@@ -358,7 +357,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       moved.y = snapResult.y;
       activeGuideLines.value = snapResult.guides;
 
-      transformDraft.value = clip.kind === 'webcam' ? clampWebcamTransform(moved) : moved;
+      transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, moved, bounds.scale) : moved;
       return;
     }
     const left = transformDrag.corner?.includes('left');
@@ -396,7 +395,7 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       width,
       height,
     };
-    transformDraft.value = clip.kind === 'webcam' ? clampWebcamTransform(resized) : resized;
+    transformDraft.value = clip.kind === 'webcam' ? clampEditedWebcamTransform(clip, resized, bounds.scale) : resized;
   };
 
   const moveTransformDrag = (event: PointerEvent) => {
@@ -446,9 +445,12 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       const layout = displayLayoutFor(clip);
       if (!layout) continue;
       const insideShape =
-        clip.kind === 'blur' && clip.shape === 'circle'
-          ? pointInsideEllipse(x, y, layout, RAYCAST_SLOP_PX)
-          : pointInsideRect(x, y, layout, RAYCAST_SLOP_PX);
+        isVisualClip(clip) && clip.cameraFramingPreset === 'squircle'
+          ? pointInsideSquircle(x, y, layout, RAYCAST_SLOP_PX)
+          : (clip.kind === 'blur' && clip.shape === 'circle') ||
+              (isVisualClip(clip) && clip.cameraFramingPreset === 'circle')
+            ? pointInsideEllipse(x, y, layout, RAYCAST_SLOP_PX)
+            : pointInsideRect(x, y, layout, RAYCAST_SLOP_PX);
       // The screen layer participates in occlusion, but its existing dedicated
       // selection path owns the actual screen selection.
       if (insideShape) return clip.kind === 'screen' ? null : clip.id;

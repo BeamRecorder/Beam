@@ -1,0 +1,54 @@
+{
+  "locale": "bg-BG",
+  "label": "Български",
+  "siteTitle": "Документация на Beam",
+  "nav": {
+    "website": "Уебсайтът на Beam"
+  },
+  "sidebar": [
+    {
+      "text": "Начало",
+      "items": [
+        { "text": "Въведение", "link": "/" },
+        { "text": "Първи стъпки", "link": "/getting-started" },
+        { "text": "Актуализиране на Beam", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "Приложение за запис",
+      "items": [
+        { "text": "Общ преглед", "link": "/recorder/" },
+        { "text": "Интерфейс", "link": "/recorder/interface" },
+        { "text": "Възможности", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "Видео редактор",
+      "items": [
+        { "text": "Общ преглед", "link": "/editor/" },
+        { "text": "Интерфейс", "link": "/editor/interface" },
+        { "text": "Възможности", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "Справочник",
+      "items": [
+        { "text": "Експортиране и споделяне", "link": "/export" },
+        { "text": "Поддръжка на платформи", "link": "/platforms" },
+        { "text": "Файлова система", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": {
+    "github": "Вижте Beam в GitHub",
+    "discord": "Присъединете се към Discord на Beam"
+  },
+  "theme": {
+    "switchToLight": "Преминаване към светла тема",
+    "switchToDark": "Преминаване към тъмна тема"
+  },
+  "footer": {
+    "message": "Записване и редактиране с отворен код.",
+    "copyright": "Издадено под лиценза MIT."
+  }
+}

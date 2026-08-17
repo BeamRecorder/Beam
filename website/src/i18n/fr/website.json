@@ -1,25 +1,35 @@
 {
   "meta": {
-    "title": "Beam - Capturez. Éditez. Partagez.",
-    "description": "Beam est un enregistreur d’écran et un éditeur vidéo open source pour créer des démonstrations produit soignées."
+    "title": "Beam — Enregistreur d’écran et éditeur vidéo gratuit",
+    "description": "Beam est un enregistreur d’écran et un éditeur vidéo gratuits et open source pour créer des démonstrations produit soignées sur Windows, macOS et Linux."
   },
   "home": {
-    "heroLine1": "Capturez l’instant.",
-    "heroLine2": "Peaufinez le récit.",
-    "lede": "Beam réunit la capture et le montage dans une application claire et concentrée, pour créer rapidement des démonstrations faciles à suivre.",
+    "heroLine1": "Enregistrez. Éditez. Partagez.",
+    "lede": "Beam crée des enregistrements d’écran soignés pour des démonstrations produit plus simples à réaliser et plus agréables à regarder.",
     "watchDemo": "Voir la vraie démo",
     "viewSource": "Voir le code source",
     "playDemoAria": "Lire la démonstration de Beam",
     "demoAlt": "Éditeur vidéo Beam affichant un enregistrement produit",
-    "openDemo": "Ouvrir la démo interactive",
-    "openSourceTitle": "Beam se construit avec sa communauté.",
-    "openSourceText": "Consultez le code, signalez un bug ou contribuez à améliorer l’enregistreur.",
+    "openDemo": "Explorer l’éditeur",
+    "openSourceTitle": "Construit au grand jour.",
+    "openSourceText": "Beam évolue avec les personnes qui l’utilisent. Suivez le développement sur GitHub, contribuez au projet ou rejoignez la communauté sur Discord.",
     "viewGitHub": "Voir sur GitHub",
     "joinDiscord": "Rejoindre Discord",
     "contributorsAlt": "Contributeurs de Beam sur GitHub",
-    "contributorsFallback": "Découvrez les personnes qui construisent Beam",
-    "contributors": "{count} contributeur participe à Beam | {count} contributeurs participent à Beam",
-    "footer": "Enregistreur d’écran et éditeur open source."
+    "contributorsFallback": "Créé par la communauté Beam — et en pleine croissance.",
+    "contributors": "Créé par {count} contributeur — et en pleine croissance. | Créé par {count} contributeurs — et en pleine croissance.",
+    "footer": "Enregistreur d’écran et éditeur vidéo gratuits et open source.",
+    "heroEyebrow": "Gratuit et open source",
+    "downloadFree": "Télécharger Beam — Gratuit",
+    "availabilityTitle": "Gratuit sur tous vos ordinateurs.",
+    "availabilityPlatforms": "Disponible sur Windows, macOS et Linux.",
+    "editorTitle": "Rendez chaque enregistrement agréable à regarder.",
+    "editorText": "Supprimez le superflu, ajustez le rythme, ajoutez des zooms fluides et des sous-titres, puis exportez une démonstration produit soignée.",
+    "freeTitle": "Un résultat professionnel. Aucun abonnement.",
+    "freeText": "Beam est une alternative gratuite et open source aux outils d’enregistrement d’écran payants, conçue pour Windows, macOS et Linux.",
+    "freeSubscription": "Sans abonnement",
+    "freeOpenSource": "Open source",
+    "freePlatforms": "Multiplateforme"
   },
   "nav": {
     "homeAria": "Accueil de Beam",
@@ -30,7 +40,11 @@
     "starsAria": "Favoris GitHub",
     "install": "Installer"
   },
-  "theme": { "switchTo": "Passer au thème {theme}", "light": "clair", "dark": "sombre" },
+  "theme": {
+    "switchTo": "Passer au thème {theme}",
+    "light": "clair",
+    "dark": "sombre"
+  },
   "install": {
     "downloadTitle": "Télécharger Beam {version} pour {platform}",
     "preparingTitle": "Préparation de Beam {version} pour {platform}",
@@ -73,10 +87,10 @@
   },
   "editor": {
     "aria": "Démonstration interactive de l’éditeur Beam",
-    "title": "Essayez le véritable éditeur Beam",
+    "title": "Explorez l’éditeur Beam",
     "checking": "Vérification du projet public de démonstration Beam...",
     "webCodecsUnavailable": "WebCodecs n’est pas disponible dans ce navigateur. Le MP4 original reste lisible ci-dessous.",
-    "ready": "Véritable canevas Beam, audio, moteur de lecture, zooms modifiables et timeline.",
+    "ready": "Modifiez un véritable projet Beam directement dans votre navigateur.",
     "decodeFailed": "Beam n’a pas pu décoder le MP4 de démonstration dans votre navigateur. L’enregistrement original reste disponible.",
     "filesMissing": "{count} fichier public de démonstration manquant ou invalide. | {count} fichiers publics de démonstration manquants ou invalides.",
     "invalidEdit": "Cette modification dépasse les limites valides du média.",

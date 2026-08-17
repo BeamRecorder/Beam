@@ -1,12 +1,12 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import { websiteI18n } from '../i18n';
+import { createWebsiteI18n } from '../i18n';
 import WebsiteHudPreview from './WebsiteHudPreview.vue';
 
 const mountPreview = () =>
   mount(WebsiteHudPreview, {
     global: {
-      plugins: [websiteI18n],
+      plugins: [createWebsiteI18n()],
       stubs: {
         Teleport: true,
       },

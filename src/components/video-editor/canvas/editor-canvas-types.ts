@@ -21,6 +21,7 @@ export type TransformClip = VisualClip | BlurClip | CaptionClip;
 export interface EditorCanvasProps {
   isPlaying: boolean;
   currentTime: number;
+  duration?: number;
   cursorSelection: CursorSelection;
   cursorPack: CursorPackDescriptor | null;
   cursorSize: number;
@@ -44,6 +45,7 @@ export interface EditorCanvasProps {
   outputCanvas: OutputCanvasSettings;
   activeTab: string;
   selectedTransformClip: TransformClip | null;
+  transformHandlesMuted?: boolean;
   loopProgress?: number;
   isCropping?: boolean;
   isGridVisible?: boolean;

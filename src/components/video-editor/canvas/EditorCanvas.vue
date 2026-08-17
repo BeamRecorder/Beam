@@ -7,10 +7,7 @@ import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
-import type { CaptionStyle } from '~/media/shared/composition-types';
-import { applyCanvasCaptionFont } from '~/media/shared/caption-font';
-import { approximateCaptionTextWidth } from '~/media/shared/caption-text-layout';
-import { OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
+import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
 import { useCursorOverlay } from './composables/useCursorOverlay';
@@ -23,6 +20,9 @@ import { canvasGuideLines } from './canvas-guides';
 import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
 import { drawBeamWatermark, WATERMARK_LOGO_PATH } from './watermark-render';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
+import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRenderer';
+import { measureCanvasCaptionText } from './canvas-text-measure';
+import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
 const { t } = useTranslate('EditorCanvas');
 const props = defineProps<EditorCanvasProps>();
 const emit = defineEmits<EditorCanvasEmits>();
@@ -30,6 +30,14 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
 const logicalSize = ref({ width: 0, height: 0 });
 const deviceScale = ref(1);
+const canvasTransitionRenderer = useCanvasTransitionRenderer({
+  outputCanvas: () => props.outputCanvas,
+  currentTime: () => props.currentTime,
+  duration: () => props.duration ?? 0,
+  logicalSize: () => logicalSize.value,
+  deviceScale: () => deviceScale.value,
+  fallbackColor: OUTPUT_FALLBACK_COLOR,
+});
 const isFormatTransitioning = ref(false);
 let formatTransitionTimer: ReturnType<typeof setTimeout> | null = null;
 let resizeObserver: ResizeObserver | null = null;
@@ -38,15 +46,6 @@ let watermarkLogo: HTMLImageElement | null = null;
 let drawVisualStack:
   ((ctx: CanvasRenderingContext2D, videoWindow: RenderedVideoWindow, drawScreen: () => void) => void) | null = null;
 const viewportZoom = useViewportZoom();
-const measureCaptionText = (text: string, fontSize: number, style?: CaptionStyle) => {
-  const context = canvasRef.value?.getContext('2d');
-  if (!context) return approximateCaptionTextWidth(text, fontSize);
-  context.save();
-  applyCanvasCaptionFont(context, style ?? { ...({} as CaptionStyle), fontSize }, fontSize);
-  const width = context.measureText(text).width;
-  context.restore();
-  return width;
-};
 const liveScreenClip = computed<VisualClip | null>(
   () =>
     activeClipsAt(props.composition, props.currentTime * 1_000).find(
@@ -60,29 +59,14 @@ const selectedCaptionFollowsCursor = computed(
     props.selectedTransformClip.caption.followCursor,
 );
 const screenFrame = computed(() => {
-  // frameFor reads the playback engine's non-reactive cache. frameVersion is
-  // the explicit invalidation signal emitted whenever that cache changes.
   void props.frameVersion;
   return liveScreenClip.value ? props.frameFor(liveScreenClip.value.id) : null;
 });
-const renderedScreenClipIds = ref<ReadonlySet<string>>(new Set());
-watch(
-  screenFrame,
-  (frame) => {
-    const clipId = liveScreenClip.value?.id;
-    if (!frame || !clipId || renderedScreenClipIds.value.has(clipId)) return;
-    renderedScreenClipIds.value = new Set([...renderedScreenClipIds.value, clipId]);
-  },
-  { immediate: true },
-);
-const showLoadingSkeleton = computed(() => {
-  const clip = liveScreenClip.value;
-  if (!clip || props.playbackError || renderedScreenClipIds.value.has(clip.id)) return false;
-  return props.playbackState === 'loading' || !screenFrame.value;
-});
-const isCanvasCovered = ref(showLoadingSkeleton.value);
-watch(showLoadingSkeleton, (isLoading) => {
-  if (isLoading) isCanvasCovered.value = true;
+const { showLoadingSkeleton, isCanvasCovered } = useCanvasLoadingState({
+  clip: liveScreenClip,
+  frame: screenFrame,
+  playbackError: () => props.playbackError,
+  playbackState: () => props.playbackState,
 });
 const previewFrameStyle = computed(() => {
   const preview = outputPreviewRect(logicalSize.value.width, logicalSize.value.height, props.outputCanvas);
@@ -92,13 +76,11 @@ const outputAspectRatio = computed(() => props.outputCanvas.width / props.output
 function renderOnce() {
   if (animationFrameId === null) animationFrameId = requestAnimationFrame(draw);
 }
-
 const { drawBackground, syncPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
   renderOnce,
 );
-
 let cameraZoom: ReturnType<typeof useCameraZoom>;
 const transformAndCrop = useLayerTransformAndCrop({
   composition: () => props.composition,
@@ -112,17 +94,15 @@ const transformAndCrop = useLayerTransformAndCrop({
   },
   isCropping: () => props.isCropping,
   outputCanvas: () => props.outputCanvas,
-  measureCaptionText,
+  measureCaptionText: (text, fontSize, style) => measureCanvasCaptionText(canvasRef.value, text, fontSize, style),
   zoomScale: () => viewportZoom.zoomScale.value,
   onUpdateTransform: (transform) => emit('update:clip-transform', transform),
   onUpdateCrop: (crop) => emit('update:clip-crop', crop),
   onSelectTransformClip: (clipId) => emit('select:clip', clipId),
 });
-
 const renderGuideLines = computed(() =>
   canvasGuideLines(logicalSize.value, props.outputCanvas, transformAndCrop.activeGuideLines.value),
 );
-
 cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
   outputCanvas: () => props.outputCanvas,
@@ -148,7 +128,6 @@ cameraZoom = useCameraZoom({
   selectVisualAt: (event) => transformAndCrop.selectVisualAt(event, canvasRef.value),
   selectedTransformClipExists: () => Boolean(props.selectedTransformClip),
 });
-
 watch(
   () => props.isPlaying,
   (playing) => {
@@ -156,7 +135,6 @@ watch(
     if (!playing) cameraZoom.resetCamera();
   },
 );
-
 const isMasterPlaying = () => props.isPlaying;
 let currentRenderWindow: RenderedVideoWindow | null = null;
 const compositionMedia = useCompositionMedia({
@@ -273,14 +251,7 @@ const resizeCanvas = () => {
   renderCanvas();
 };
 
-const renderCanvas = () => {
-  const canvas = canvasRef.value;
-  const ctx = canvas?.getContext('2d');
-  if (!canvas || !ctx || !logicalSize.value.width || !logicalSize.value.height) return;
-  ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
+const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
     currentRenderWindow = window;
@@ -323,6 +294,16 @@ const renderCanvas = () => {
     watermarkLogo,
   );
 };
+const renderCanvas = () => {
+  const canvas = canvasRef.value;
+  const ctx = canvas?.getContext('2d');
+  if (!canvas || !ctx || !logicalSize.value.width || !logicalSize.value.height) return;
+  ctx.setTransform(deviceScale.value, 0, 0, deviceScale.value, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.clearRect(0, 0, logicalSize.value.width, logicalSize.value.height);
+  canvasTransitionRenderer.render(ctx, drawCanvasScene);
+};
 const commitCrop = () => {
   transformAndCrop.commitCrop();
   emit('done:crop');
@@ -338,7 +319,6 @@ const handleIslandPointerDown = (event: PointerEvent) => {
   if (viewportZoom.beginPan(event, containerRef.value)) return;
   cameraZoom.beginSelectionMove(event);
 };
-
 const handleTransformPointerDown = (event: PointerEvent) => {
   if (event.button === 0) {
     const clipId = transformAndCrop.clipIdAt(event, canvasRef.value);
@@ -350,7 +330,6 @@ const handleTransformPointerDown = (event: PointerEvent) => {
   }
   transformAndCrop.beginTransformDrag(event, 'move');
 };
-
 const handleIslandPointerMove = (event: PointerEvent) => {
   if (viewportZoom.isPanning.value) {
     viewportZoom.movePan(event);
@@ -358,7 +337,6 @@ const handleIslandPointerMove = (event: PointerEvent) => {
   }
   cameraZoom.moveSelection(event);
 };
-
 const handleIslandPointerUp = (event: PointerEvent) => {
   if (viewportZoom.isPanning.value) {
     viewportZoom.endPan(event, containerRef.value);
@@ -420,7 +398,7 @@ defineExpose({
       </div>
     </Transition>
     <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
-      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }"></div>
+      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }" />
       <canvas
         ref="canvasRef"
         class="editor-canvas"
@@ -431,10 +409,10 @@ defineExpose({
         }"
       ></canvas>
       <div v-if="isGridVisible" class="canvas-3x3-grid" :style="previewFrameStyle">
-        <div class="grid-line vertical line-1"></div>
-        <div class="grid-line vertical line-2"></div>
-        <div class="grid-line horizontal line-1"></div>
-        <div class="grid-line horizontal line-2"></div>
+        <div class="grid-line vertical line-1" />
+        <div class="grid-line vertical line-2" />
+        <div class="grid-line horizontal line-1" />
+        <div class="grid-line horizontal line-2" />
       </div>
       <div
         v-for="(guide, index) in renderGuideLines"
@@ -442,7 +420,7 @@ defineExpose({
         class="canvas-guide-line"
         :class="guide.type"
         :style="guide.style"
-      ></div>
+      />
       <CanvasLoadingSkeleton
         :visible="showLoadingSkeleton"
         :label="t('videoPreviewLoading')"
@@ -456,6 +434,7 @@ defineExpose({
       >
         <div
           class="webcam-selection"
+          :class="{ 'is-muted': transformHandlesMuted }"
           :style="transformAndCrop.transformHandleStyle.value"
           @pointerdown="handleTransformPointerDown"
           @pointermove="transformAndCrop.moveTransformDrag"
@@ -475,14 +454,14 @@ defineExpose({
         :class="{ locked: selectedZoom?.mode !== 'manual' }"
         :style="cameraZoom.focusTargetStyle.value"
         aria-hidden="true"
-      ></div>
+      />
       <div
         v-if="isCropping && selectedTransformClip"
         class="crop-container"
         :style="transformAndCrop.cropContainerStyle.value"
       >
         <div class="crop-mask-wrapper">
-          <div class="crop-mask-hole" :style="transformAndCrop.cropOverlayStyle.value"></div>
+          <div class="crop-mask-hole" :style="transformAndCrop.cropOverlayStyle.value" />
         </div>
         <div
           class="crop-overlay-box"
@@ -493,10 +472,10 @@ defineExpose({
           @pointercancel="transformAndCrop.endCropDrag"
         >
           <div class="crop-grid">
-            <div class="grid-line vertical line-1"></div>
-            <div class="grid-line vertical line-2"></div>
-            <div class="grid-line horizontal line-1"></div>
-            <div class="grid-line horizontal line-2"></div>
+            <div class="grid-line vertical line-1" />
+            <div class="grid-line vertical line-2" />
+            <div class="grid-line horizontal line-1" />
+            <div class="grid-line horizontal line-2" />
           </div>
           <div class="crop-done-wrapper" @pointerdown.stop @mousedown.stop>
             <Button variant="primary" size="xs" :icon="Check" class="crop-ok-button" @click.stop="commitCrop">{{

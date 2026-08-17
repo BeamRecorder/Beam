@@ -1,25 +1,35 @@
 {
   "meta": {
-    "title": "Beam - Aufnehmen. Bearbeiten. Teilen.",
-    "description": "Beam ist ein Open-Source-Bildschirmrekorder und Videoeditor für hochwertige Produktdemos."
+    "title": "Beam — Kostenloser Bildschirmrekorder und Videoeditor",
+    "description": "Beam ist ein kostenloser Open-Source-Bildschirmrekorder und Videoeditor für hochwertige Produktdemos auf Windows, macOS und Linux."
   },
   "home": {
-    "heroLine1": "Halte den Moment fest.",
-    "heroLine2": "Verfeinere die Geschichte.",
-    "lede": "Beam vereint Aufnahme und Schnitt in einer fokussierten Desktop-App, damit Produktdemos schnell erstellt und klar anzusehen sind.",
+    "heroLine1": "Aufnehmen. Bearbeiten. Teilen.",
+    "lede": "Beam erstellt hochwertige Bildschirmaufnahmen, damit deine Produktdemos einfacher entstehen und besser anzusehen sind.",
     "watchDemo": "Die echte Demo ansehen",
     "viewSource": "Quellcode ansehen",
     "playDemoAria": "Beam-Demo abspielen",
     "demoAlt": "Beam-Videoeditor mit einer Produktaufnahme",
-    "openDemo": "Interaktive Demo öffnen",
-    "openSourceTitle": "Beam entsteht mit seiner Community.",
-    "openSourceText": "Lies den Code, melde einen Fehler oder hilf, den Recorder zu verbessern.",
+    "openDemo": "Editor erkunden",
+    "openSourceTitle": "Offen entwickelt.",
+    "openSourceText": "Beam wird von den Menschen geprägt, die es nutzen. Folge der Entwicklung auf GitHub, trage zum Projekt bei oder werde Teil der Community auf Discord.",
     "viewGitHub": "Auf GitHub ansehen",
     "joinDiscord": "Discord beitreten",
     "contributorsAlt": "Beam-Mitwirkende auf GitHub",
-    "contributorsFallback": "Entdecke die Menschen hinter Beam",
-    "contributors": "{count} Mitwirkender arbeitet an Beam | {count} Mitwirkende arbeiten an Beam",
-    "footer": "Open-Source-Bildschirmrekorder und -editor."
+    "contributorsFallback": "Von der Beam-Community entwickelt — und sie wächst weiter.",
+    "contributors": "Von {count} Mitwirkendem entwickelt — und sie wächst weiter. | Von {count} Mitwirkenden entwickelt — und sie wächst weiter.",
+    "footer": "Kostenloser Open-Source-Bildschirmrekorder und Videoeditor.",
+    "heroEyebrow": "Kostenlos und Open Source",
+    "downloadFree": "Beam herunterladen — Kostenlos",
+    "availabilityTitle": "Kostenlos auf jedem Desktop.",
+    "availabilityPlatforms": "Verfügbar für Windows, macOS und Linux.",
+    "editorTitle": "Mach jede Aufnahme sehenswert.",
+    "editorText": "Entferne Überflüssiges, verfeinere das Tempo, füge sanfte Zooms und Untertitel hinzu und exportiere eine hochwertige Produktdemo.",
+    "freeTitle": "Professionelle Ergebnisse. Kein Abo.",
+    "freeText": "Beam ist eine kostenlose Open-Source-Alternative zu kostenpflichtigen Bildschirmaufnahme-Tools — für Windows, macOS und Linux.",
+    "freeSubscription": "Kein Abo",
+    "freeOpenSource": "Open Source",
+    "freePlatforms": "Plattformübergreifend"
   },
   "nav": {
     "homeAria": "Beam-Startseite",
@@ -30,7 +40,11 @@
     "starsAria": "GitHub-Sterne",
     "install": "Installieren"
   },
-  "theme": { "switchTo": "Zum {theme} Design wechseln", "light": "hellen", "dark": "dunklen" },
+  "theme": {
+    "switchTo": "Zum {theme} Design wechseln",
+    "light": "hellen",
+    "dark": "dunklen"
+  },
   "install": {
     "downloadTitle": "Beam {version} für {platform} herunterladen",
     "preparingTitle": "Beam {version} für {platform} wird vorbereitet",
@@ -73,10 +87,10 @@
   },
   "editor": {
     "aria": "Interaktive Beam-Editor-Demo",
-    "title": "Probiere den echten Beam-Editor aus",
+    "title": "Beam-Editor erkunden",
     "checking": "Öffentliches Beam-Demoprojekt wird geprüft...",
     "webCodecsUnavailable": "WebCodecs ist in diesem Browser nicht verfügbar. Die originale MP4-Datei kann unten abgespielt werden.",
-    "ready": "Echter Beam-Canvas, Audio, Wiedergabe-Engine, bearbeitbare Zooms und Timeline.",
+    "ready": "Bearbeite ein echtes Beam-Projekt direkt in deinem Browser.",
     "decodeFailed": "Beam konnte die Demo-MP4-Datei in deinem Browser nicht dekodieren. Die originale Aufnahme bleibt verfügbar.",
     "filesMissing": "{count} öffentliche Demodatei fehlt oder ist ungültig. | {count} öffentliche Demodateien fehlen oder sind ungültig.",
     "invalidEdit": "Diese Bearbeitung liegt außerhalb der gültigen Mediengrenzen.",

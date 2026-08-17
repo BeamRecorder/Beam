@@ -77,6 +77,41 @@ afterEach(() => {
 });
 
 describe('TimelineClip', () => {
+  it('renders transition indicators proportional to each edge duration', () => {
+    const wrapper = mount(TimelineClip, {
+      props: {
+        ...baseProps,
+        clip: clip({
+          timelineDurationMs: 1_000,
+          transitions: {
+            entry: { preset: { kind: 'fade' }, durationMs: 200 },
+            exit: { preset: { kind: 'blur' }, durationMs: 300 },
+          },
+        }),
+      },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    const entry = wrapper.get('.transition-zone.entry');
+    const exit = wrapper.get('.transition-zone.exit');
+    expect(entry.attributes('aria-hidden')).toBe('true');
+    expect(exit.attributes('aria-hidden')).toBe('true');
+    expect(entry.attributes('style')).toContain('width: 20%');
+    expect(exit.attributes('style')).toContain('width: 30%');
+  });
+
+  it('marks a newly pasted clip with the arrival highlight and clears it when the prop is removed', async () => {
+    const wrapper = mount(TimelineClip, {
+      props: { ...baseProps, pasteHighlight: true },
+      global: { stubs: { Skeleton, WaveformCanvas } },
+    });
+
+    expect(wrapper.get('.timeline-clip').attributes('data-paste-highlight')).toBe('true');
+
+    await wrapper.setProps({ pasteHighlight: false });
+    expect(wrapper.get('.timeline-clip').attributes('data-paste-highlight')).toBeUndefined();
+  });
+
   it('renders video frames, speed and trim state, then emits clip interactions', async () => {
     const wrapper = mount(TimelineClip, {
       attachTo: document.body,

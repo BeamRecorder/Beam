@@ -111,10 +111,42 @@ const props = withDefaults(
 }
 
 .btn-group :deep(.btn-content) {
+  display: block;
+  position: relative;
+  flex: 0 1 auto;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
   justify-content: center;
+}
+
+.btn-group :deep(.btn-content-label) {
+  display: inline-block;
+  min-width: 100%;
+  max-width: none;
+  text-align: center;
+  vertical-align: top;
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn-group :deep(.btn:hover:not(:disabled) .btn-content.is-overflowing .btn-content-label),
+  .btn-group :deep(.btn:focus-visible .btn-content.is-overflowing .btn-content-label) {
+    animation: button-group-label-marquee var(--button-marquee-duration) 0.35s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+}
+
+@keyframes button-group-label-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  88%,
+  100% {
+    transform: translateX(calc(-1 * var(--button-marquee-distance)));
+  }
 }
 
 .btn-group.is-divided > :deep(.btn-container:not(:last-child)) {

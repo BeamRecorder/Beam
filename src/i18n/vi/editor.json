@@ -31,7 +31,7 @@
     "failedToUpdate": "Cập nhật phím tắt thất bại"
   },
   "SidebarPanel": {
-    "canvas": "Khung vẽ",
+    "canvas": "Khung nền",
     "clip": "Đoạn clip",
     "zoom": "Thu phóng",
     "cursor": "Con trỏ",
@@ -143,16 +143,20 @@
     "deleteAudio": "Xóa rãnh âm thanh",
     "audioDisabledFromExport": "Đã tắt âm thanh khi xuất",
     "unlinkMicrophoneTrack": "Hủy liên kết rãnh Micro",
-    "waveformUnavailable": "Dạng sóng âm không khả dụng",
-    "trimStart": "Cắt đầu đoạn",
-    "trimEnd": "Cắt đuôi đoạn"
+    "waveformUnavailable": "Dạng sóng không khả dụng",
+    "trimStart": "Cắt phần đầu",
+    "trimEnd": "Cắt phần cuối",
+    "holdSegment": "Giữ đoạn",
+    "copy": "Sao chép",
+    "paste": "Dán",
+    "delete": "Xóa"
   },
   "TimelineVideoClip": {
     "trimStart": "Cắt đầu đoạn",
     "trimEnd": "Cắt đuôi đoạn"
   },
   "Topbar": {
-    "exitToHUD": "Thoát về HUD",
+    "exitToHUD": "Về màn hình chính",
     "undoTooltip": "Hoàn tác (Ctrl+Z)",
     "redoTooltip": "Làm lại (Ctrl+Y)",
     "discordTooltip": "Tham gia Discord của Beam",
@@ -197,6 +201,12 @@
   },
   "VideoEditor": {
     "exportBanner": "Đang trong quá trình xuất video. Các chỉnh sửa trực tiếp sẽ không ảnh hưởng đến tệp đang được xuất.",
+    "timelineCopied": "Đã sao chép",
+    "timelinePasted": "Đã dán",
+    "timelineCopiedItem": "Đã sao chép: {item}",
+    "timelinePastedItem": "Đã dán: {item}",
+    "timelineClipboardCaption": "Phụ đề “{text}”",
+    "timelineClipboardZoom": "Thu phóng {number}",
     "mediaDropTitle": "Thả tệp đa phương tiện để thêm vào",
     "mediaDropDescription": "Video, hình ảnh và tệp âm thanh sẽ được thêm tại vị trí con trỏ phát.",
     "mediaDropImporting": "Đang xác thực và nhập phương tiện…",

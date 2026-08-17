@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Check, ChevronDown, Palette, RotateCcw, Shapes, SlidersHorizontal, Sparkles } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
+import { Check, Maximize2, Palette, RotateCcw, Shapes, SlidersHorizontal, Sparkles } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
 import ColorPicker from '~/ui/ColorPicker/ColorPicker.vue';
@@ -14,8 +14,11 @@ import {
   RADIUS_PRESETS,
   SECONDARY_COLOR_PRESETS,
   THEME_PRESETS,
+  UI_SCALE_PRESETS,
   type SurfaceTone,
   type ThemePreset,
+  type UiScalePercent,
+  type UiScaleRegion,
 } from '~/types/appearance';
 
 const { t, locale } = useTranslate('AppearanceSettings');
@@ -86,7 +89,50 @@ const themeModeOptions = computed(() => [
   { value: 'system', label: t('system') },
 ]);
 const customRadiusSelected = ref(themeStore.isPillRadius);
-const customizationOpen = ref(false);
+const advancedOpen = ref(false);
+const uiScaleDraft = ref<number>(themeStore.uiScaleGlobal);
+const uiScaleOverrideDrafts = ref<Record<UiScaleRegion, number>>({
+  topbar: themeStore.resolvedUiScale('topbar'),
+  sidebar: themeStore.resolvedUiScale('sidebar'),
+  properties: themeStore.resolvedUiScale('properties'),
+  canvasControls: themeStore.resolvedUiScale('canvasControls'),
+  timeline: themeStore.resolvedUiScale('timeline'),
+});
+
+const uiScaleRegions = computed<Array<{ id: UiScaleRegion; label: string }>>(() => [
+  { id: 'topbar', label: t('scaleTopbar') },
+  { id: 'sidebar', label: t('scaleSidebar') },
+  { id: 'properties', label: t('scaleProperties') },
+  { id: 'canvasControls', label: t('scaleCanvasControls') },
+  { id: 'timeline', label: t('scaleTimeline') },
+]);
+
+const commitUiScale = (value: number) => {
+  if (UI_SCALE_PRESETS.includes(value as UiScalePercent)) themeStore.setUiScale(value as UiScalePercent);
+};
+
+const commitUiScaleOverride = (region: UiScaleRegion, value: number) => {
+  if (UI_SCALE_PRESETS.includes(value as UiScalePercent)) {
+    themeStore.setUiScaleOverride(region, value as UiScalePercent);
+  }
+};
+
+const toggleUiScaleOverride = (region: UiScaleRegion) => {
+  const current = themeStore.uiScaleOverrides[region];
+  themeStore.setUiScaleOverride(region, current === null ? themeStore.uiScaleGlobal : null);
+  uiScaleOverrideDrafts.value[region] = current === null ? themeStore.uiScaleGlobal : themeStore.uiScaleGlobal;
+};
+
+watch(
+  [() => themeStore.uiScaleGlobal, () => themeStore.uiScaleOverrides],
+  () => {
+    uiScaleDraft.value = themeStore.uiScaleGlobal;
+    for (const region of Object.keys(uiScaleOverrideDrafts.value) as UiScaleRegion[]) {
+      uiScaleOverrideDrafts.value[region] = themeStore.resolvedUiScale(region);
+    }
+  },
+  { deep: true },
+);
 
 const handleThemeMode = (value: string | number) => {
   if (value === 'light' || value === 'dark' || value === 'system') themeStore.theme = value;
@@ -131,24 +177,83 @@ const isCustomSecondaryColor = computed(() => {
           {{ mode.label }}
         </Button>
       </ButtonGroup>
+      <div class="advanced-toggle-row">
+        <Button
+          class="advanced-toggle"
+          variant="ghost"
+          size="xs"
+          :icon="SlidersHorizontal"
+          :aria-expanded="advancedOpen"
+          aria-controls="appearance-advanced-panel"
+          @click="advancedOpen = !advancedOpen"
+        >
+          {{ t('advanced') }}
+        </Button>
+      </div>
     </div>
 
-    <div class="customization-accordion" :class="{ 'is-open': customizationOpen }">
-      <div class="customization-header">
-        <button
-          type="button"
-          class="customization-trigger"
-          :aria-expanded="customizationOpen"
-          aria-controls="appearance-customization-panel"
-          @click="customizationOpen = !customizationOpen"
-        >
-          <span>{{ t('customization') }}</span>
-          <ChevronDown class="customization-chevron" :size="16" />
-        </button>
-      </div>
+    <div v-if="advancedOpen" id="appearance-advanced-panel" class="appearance-advanced-panel">
+      <section class="advanced-category ui-scale-setting setting-section">
+        <h4 class="advanced-category-title">{{ t('scalingCategory') }}</h4>
+        <div class="section-title-row">
+          <div class="title-with-icon">
+            <Maximize2 class="section-icon" :size="15" />
+            <span class="row-label">{{ t('uiScale') }}</span>
+          </div>
+          <span class="scale-live-badge">{{ themeStore.uiScaleGlobal }}%</span>
+        </div>
+        <p class="setting-hint">{{ t('uiScaleHint') }}</p>
+        <div class="ui-scale-slider-wrap">
+          <Slider
+            class="ui-scale-slider"
+            :model-value="uiScaleDraft"
+            :min="50"
+            :max="125"
+            :step="25"
+            value-suffix="%"
+            @update:model-value="uiScaleDraft = $event"
+            @commit="commitUiScale"
+          />
+          <div class="ui-scale-ticks" aria-hidden="true">
+            <span v-for="scale in UI_SCALE_PRESETS" :key="scale">{{ scale }}%</span>
+          </div>
+        </div>
 
-      <Transition name="customization-reveal">
-        <div v-if="customizationOpen" id="appearance-customization-panel" class="customization-panel">
+        <div class="ui-scale-advanced">
+          <div class="scale-overrides">
+            <div v-for="region in uiScaleRegions" :key="region.id" class="scale-override-row">
+              <div class="scale-override-heading">
+                <span>{{ region.label }}</span>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  :class="{ active: themeStore.uiScaleOverrides[region.id] === null }"
+                  :aria-pressed="themeStore.uiScaleOverrides[region.id] === null"
+                  @click="toggleUiScaleOverride(region.id)"
+                >
+                  {{ t('useGlobal') }}
+                </Button>
+              </div>
+              <Slider
+                class="scale-override-slider"
+                :model-value="uiScaleOverrideDrafts[region.id]"
+                :min="50"
+                :max="125"
+                :step="25"
+                size="compact"
+                value-suffix="%"
+                :disabled="themeStore.uiScaleOverrides[region.id] === null"
+                @update:model-value="uiScaleOverrideDrafts[region.id] = $event"
+                @commit="commitUiScaleOverride(region.id, $event)"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="advanced-category theme-customization-section">
+        <h4 class="advanced-category-title">{{ t('themeCustomization') }}</h4>
+        <div id="appearance-customization-panel" class="customization-panel">
           <div class="customization-actions">
             <Button
               class="appearance-reset-button"
@@ -317,7 +422,7 @@ const isCustomSecondaryColor = computed(() => {
             />
           </div>
         </div>
-      </Transition>
+      </section>
     </div>
   </div>
 </template>

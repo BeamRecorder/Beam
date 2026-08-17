@@ -23,11 +23,13 @@ const props = defineProps<{
   waveformError?: MediaError;
   trimState?: { edge: 'start' | 'end'; durationMs: number; atLimit?: boolean } | null;
   deferThumbnailRequests?: boolean;
+  pasteHighlight?: boolean;
 }>();
 const emit = defineEmits<{
   (event: 'select'): void;
   (event: 'move', value: PointerEvent): void;
   (event: 'trim', value: { event: PointerEvent; edge: 'start' | 'end' }): void;
+  (event: 'contextmenu', value: MouseEvent): void;
 }>();
 
 const videoAsset = computed(() => (props.clip.kind !== 'audio' && props.asset?.kind === 'video' ? props.asset : null));
@@ -86,6 +88,9 @@ const frameStyle = (frame: TimelineFrame) => ({
   left: `${(frame.relativeMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
   width: `${(frame.durationMs / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
 });
+const transitionStyle = (edge: 'entry' | 'exit') => ({
+  width: `${((props.clip.transitions?.[edge]?.durationMs ?? 0) / Math.max(1, props.clip.timelineDurationMs)) * 100}%`,
+});
 const thumbnailFor = (frame: TimelineFrame) => {
   const exact = thumbnails[frame.mediaSecond];
   if (exact) return exact;
@@ -141,12 +146,26 @@ onUnmounted(() => stopMarquee());
     type="button"
     class="timeline-clip"
     :class="[`kind-${clip.kind}`, { selected, disabled: !clip.enabled, 'trim-at-limit': trimState?.atLimit }]"
+    :data-paste-highlight="pasteHighlight || undefined"
     :style="clipStyle"
     @click.stop="emit('select')"
+    @contextmenu.prevent.stop="emit('contextmenu', $event)"
     @pointerdown="emit('move', $event)"
     @pointerenter="startMarquee"
     @pointerleave="stopMarqueeForEvent"
   >
+    <span
+      v-if="clip.transitions?.entry"
+      class="transition-zone entry"
+      :style="transitionStyle('entry')"
+      aria-hidden="true"
+    />
+    <span
+      v-if="clip.transitions?.exit"
+      class="transition-zone exit"
+      :style="transitionStyle('exit')"
+      aria-hidden="true"
+    />
     <div v-if="clip.kind === 'audio'" class="waveform" aria-hidden="true">
       <div
         v-if="waveformBars?.length"
@@ -248,6 +267,26 @@ onUnmounted(() => stopMarquee());
 .timeline-clip.selected {
   border-color: var(--color-primary);
   box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.transition-zone {
+  position: absolute;
+  inset-block: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary) 34%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+}
+.transition-zone.entry {
+  left: 0;
+}
+.transition-zone.exit {
+  right: 0;
+}
+.timeline-clip.disabled .transition-zone {
+  opacity: 0.65;
 }
 .timeline-clip.kind-caption {
   background: var(--color-track-annotation);

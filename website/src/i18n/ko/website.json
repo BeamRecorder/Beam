@@ -1,25 +1,35 @@
 {
   "meta": {
-    "title": "Beam - 기록하세요. 편집하세요. 공유하세요.",
-    "description": "Beam은 완성도 높은 제품 데모를 위한 오픈 소스 화면 녹화기이자 동영상 편집기입니다."
+    "title": "Beam — 무료 화면 녹화 및 동영상 편집기",
+    "description": "Beam은 Windows, macOS, Linux에서 완성도 높은 제품 데모를 만들 수 있는 무료 오픈 소스 화면 녹화 및 동영상 편집기입니다."
   },
   "home": {
-    "heroLine1": "순간을 기록하세요.",
-    "heroLine2": "이야기를 다듬으세요.",
-    "lede": "Beam은 녹화와 편집을 하나의 집중된 데스크톱 앱으로 결합해, 제품 데모를 빠르게 만들고 명확하게 보여 줍니다.",
+    "heroLine1": "녹화하세요. 편집하세요. 공유하세요.",
+    "lede": "Beam은 완성도 높은 화면 녹화를 만들어 제품 데모를 더 쉽게 제작하고 더 보기 좋게 만들어 줍니다.",
     "watchDemo": "실제 데모 보기",
     "viewSource": "소스 코드 보기",
     "playDemoAria": "Beam 데모 재생",
     "demoAlt": "제품 녹화 화면을 보여 주는 Beam 동영상 편집기",
-    "openDemo": "인터랙티브 데모 열기",
-    "openSourceTitle": "Beam은 커뮤니티와 함께 만들어집니다.",
-    "openSourceText": "코드를 읽고 버그를 신고하거나 녹화기 개선에 참여해 주세요.",
+    "openDemo": "편집기 살펴보기",
+    "openSourceTitle": "열린 방식으로 함께 만듭니다.",
+    "openSourceText": "Beam은 실제 사용자의 의견을 바탕으로 발전합니다. GitHub에서 개발 과정을 확인하고 프로젝트에 기여하거나 Discord 커뮤니티에 참여하세요.",
     "viewGitHub": "GitHub에서 보기",
     "joinDiscord": "Discord 참여",
     "contributorsAlt": "GitHub의 Beam 기여자",
-    "contributorsFallback": "Beam을 만드는 사람들을 만나 보세요",
-    "contributors": "{count}명의 기여자가 Beam을 만들고 있습니다 | {count}명의 기여자가 Beam을 만들고 있습니다",
-    "footer": "오픈 소스 화면 녹화기 및 동영상 편집기."
+    "contributorsFallback": "Beam 커뮤니티가 만들고 있으며 계속 성장하고 있습니다.",
+    "contributors": "{count}명의 기여자가 만들고 있으며 계속 성장하고 있습니다.",
+    "footer": "무료 오픈 소스 화면 녹화 및 동영상 편집기.",
+    "heroEyebrow": "무료 오픈 소스",
+    "downloadFree": "Beam 무료 다운로드",
+    "availabilityTitle": "모든 데스크톱에서 무료.",
+    "availabilityPlatforms": "Windows, macOS, Linux에서 사용할 수 있습니다.",
+    "editorTitle": "모든 녹화를 볼 만한 작품으로.",
+    "editorText": "불필요한 부분을 잘라내고, 흐름을 다듬고, 부드러운 확대와 자막을 추가한 다음 완성도 높은 제품 데모로 내보내세요.",
+    "freeTitle": "전문적인 결과. 구독료 없음.",
+    "freeText": "Beam은 Windows, macOS, Linux를 위한 유료 화면 녹화 도구의 무료 오픈 소스 대안입니다.",
+    "freeSubscription": "구독 없음",
+    "freeOpenSource": "오픈 소스",
+    "freePlatforms": "크로스 플랫폼"
   },
   "nav": {
     "homeAria": "Beam 홈",
@@ -30,7 +40,11 @@
     "starsAria": "GitHub 별표 수",
     "install": "설치"
   },
-  "theme": { "switchTo": "{theme} 테마로 전환", "light": "밝은", "dark": "어두운" },
+  "theme": {
+    "switchTo": "{theme} 테마로 전환",
+    "light": "밝은",
+    "dark": "어두운"
+  },
   "install": {
     "downloadTitle": "{platform}용 Beam {version} 다운로드",
     "preparingTitle": "{platform}용 Beam {version} 준비 중",
@@ -73,10 +87,10 @@
   },
   "editor": {
     "aria": "Beam 편집기 인터랙티브 데모",
-    "title": "실제 Beam 편집기를 사용해 보세요",
+    "title": "Beam 편집기 살펴보기",
     "checking": "공개 Beam 데모 프로젝트 확인 중...",
     "webCodecsUnavailable": "이 브라우저에서는 WebCodecs를 사용할 수 없습니다. 아래에서 원본 MP4를 재생할 수 있습니다.",
-    "ready": "실제 Beam 캔버스, 오디오, 재생 엔진, 편집 가능한 확대/축소와 타임라인.",
+    "ready": "브라우저에서 실제 Beam 프로젝트를 바로 편집해 보세요.",
     "decodeFailed": "브라우저에서 Beam 데모 MP4를 디코딩하지 못했습니다. 원본 녹화는 계속 사용할 수 있습니다.",
     "filesMissing": "공개 데모 파일 {count}개가 누락되었거나 유효하지 않습니다. | 공개 데모 파일 {count}개가 누락되었거나 유효하지 않습니다.",
     "invalidEdit": "이 편집은 미디어의 유효한 범위를 벗어납니다.",

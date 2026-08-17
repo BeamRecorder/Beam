@@ -1,10 +1,13 @@
 import { vi } from 'vitest';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
 const capture = vi.hoisted(() => ({}));
 const exportState = vi.hoisted(() => ({ isExporting: undefined as any, progress: undefined as any }));
-const toast = vi.hoisted(() => ({ error: vi.fn() }));
+const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const historyState = vi.hoisted(() => ({
   recordSnapshot: vi.fn(),
   commitNow: vi.fn(),
@@ -21,7 +24,7 @@ vi.mock('../composables/useVideoEditor', async () => {
     useVideoEditor: vi.fn(() => {
       const activeTab = ref('canvas');
       const composition = ref<ClipComposition>({
-        schemaVersion: 6,
+        schemaVersion: COMPOSITION_SCHEMA_VERSION,
         keyboardCaptionSessions: [],
         assets: [
           {
@@ -58,10 +61,14 @@ vi.mock('../composables/useVideoEditor', async () => {
             sourceInMs: 0,
             sourceDurationMs: 2_000,
             playbackRate: 1,
+            transitions: { entry: null, exit: null },
             enabled: true,
             order: 0,
             trackId: 'screen-track',
             transform: { x: 0, y: 0, width: 1, height: 1 },
+            appearance: createDefaultClipAppearance('screen'),
+            isMirrored: false,
+            isMirroredY: false,
           },
           {
             id: 'audio',
@@ -74,6 +81,7 @@ vi.mock('../composables/useVideoEditor', async () => {
             sourceInMs: 0,
             sourceDurationMs: 2_000,
             playbackRate: 1,
+            transitions: { entry: null, exit: null },
             enabled: true,
             order: 1,
             volume: 100,
@@ -142,16 +150,33 @@ vi.mock('../composables/useVideoEditor', async () => {
         updateSelectedTransform: vi.fn(),
         previewSelectedTransform: vi.fn(),
         updateSelectedCrop: vi.fn(),
+        updateSelectedCameraLayout: vi.fn(),
+        updateSelectedCameraFraming: vi.fn(),
         updateSelectedMirrored: vi.fn(),
+        updateSelectedMirroredY: vi.fn(),
         updateSelectedRate: vi.fn(),
         updateSelectedVolume: vi.fn(),
         updateSelectedEnabled: vi.fn(),
         toggleClip: vi.fn(),
         detachSelectedClip: vi.fn(),
       };
+      const zoomElements = ref<ZoomElement[]>([]);
+      const selectedZoomId = ref<string | null>(null);
+      const pasteZoomAtTime = vi.fn((copiedZoom: ZoomElement, startMs: number) => {
+        const pasted = {
+          ...copiedZoom,
+          id: 'pasted-zoom',
+          startMs,
+          endMs: startMs + copiedZoom.endMs - copiedZoom.startMs,
+        };
+        zoomElements.value = [pasted];
+        selectedZoomId.value = pasted.id;
+        activeTab.value = 'zoom';
+        return pasted;
+      });
       const zoomState = {
-        zoomElements: ref([]),
-        selectedZoomId: ref<string | null>(null),
+        zoomElements,
+        selectedZoomId,
         selectedZoom: ref(null),
         canGenerateZooms: ref(true),
         hasAutomaticZooms: ref(false),
@@ -160,6 +185,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         updateZoom: vi.fn(),
         trimZoomEdge: vi.fn(),
         moveZoom: vi.fn(),
+        pasteZoomAtTime,
         previewZoom: vi.fn(),
         deleteSelectedZoom: vi.fn(),
       };
@@ -467,6 +493,10 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
   return {
     default: defineComponent({
       name: 'MockEditorTimeline',
+      props: {
+        composition: { type: Object, required: true },
+        recentPaste: { type: Object, default: null },
+      },
       emits: [
         'select:zoom',
         'select:clip',
@@ -479,16 +509,104 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
         'add:caption',
         'delete:clips',
         'reorder:clip',
+        'paste:item',
+        'clipboard:copied',
       ],
-      setup(_, { emit }) {
+      setup(props, { emit }) {
+        const composition = props.composition as ClipComposition;
+        const sourceClip = composition.clips.find((clip) => clip.id === 'screen');
+        const copiedClip = sourceClip
+          ? {
+              ...sourceClip,
+              id: 'copied-screen',
+              timelineStartMs: 0,
+              timelineDurationMs: 1_000,
+              sourceDurationMs: 1_000,
+              transitions: { entry: null, exit: null },
+            }
+          : null;
+        const copiedAsset = composition.assets.find((asset) => asset.id === 'screen-asset');
+        const copiedZoom: ZoomElement = {
+          id: 'copied-zoom',
+          sessionId: 'session',
+          startMs: 0,
+          endMs: 500,
+          focus: { cx: 0.5, cy: 0.5 },
+          depth: 2,
+          mode: 'manual',
+        };
         return () =>
-          h('div', [
-            h('button', { class: 'timeline-select-zoom', onClick: () => emit('select:zoom', 'z') }),
-            h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
-            h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
-            h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
-            h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
-          ]);
+          h(
+            'div',
+            {
+              class: 'mock-editor-timeline',
+              'data-recent-paste-type': props.recentPaste?.type ?? '',
+              'data-recent-paste-id': props.recentPaste?.id ?? '',
+            },
+            [
+              h('button', { class: 'timeline-select-zoom', onClick: () => emit('select:zoom', 'z') }),
+              h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
+              h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
+              h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
+              h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
+              h('button', {
+                class: 'timeline-copy',
+                onClick: () =>
+                  emit('clipboard:copied', {
+                    type: 'clip',
+                    scopeId: 'project-1',
+                    category: 'visual',
+                    clip: copiedClip,
+                    asset: copiedAsset,
+                    descriptor: { kind: 'item', name: copiedAsset?.fileName ?? 'screen.mp4' },
+                  }),
+              }),
+              h('button', {
+                class: 'timeline-paste-invalid',
+                onClick: () =>
+                  emit('paste:item', {
+                    timeMs: 1_000,
+                    item: {
+                      type: 'clip',
+                      scopeId: 'other-project',
+                      category: 'visual',
+                      clip: copiedClip,
+                      asset: copiedAsset,
+                      descriptor: { kind: 'item', name: copiedAsset?.fileName ?? 'screen.mp4' },
+                    },
+                  }),
+              }),
+              h('button', {
+                class: 'timeline-paste-clip',
+                onClick: () =>
+                  emit('paste:item', {
+                    timeMs: 1_000,
+                    item: {
+                      type: 'clip',
+                      scopeId: 'project-1',
+                      category: 'visual',
+                      clip: copiedClip,
+                      asset: copiedAsset,
+                      descriptor: { kind: 'item', name: copiedAsset?.fileName ?? 'screen.mp4' },
+                    },
+                  }),
+              }),
+              h('button', {
+                class: 'timeline-paste-zoom',
+                onClick: () =>
+                  emit('paste:item', {
+                    timeMs: 1_000,
+                    item: {
+                      type: 'zoom',
+                      scopeId: 'project-1',
+                      category: 'zoom',
+                      zoom: copiedZoom,
+                      descriptor: { kind: 'zoom', number: 1 },
+                    },
+                  }),
+              }),
+            ],
+          );
       },
     }),
   };

@@ -1,25 +1,35 @@
 {
   "meta": {
-    "title": "Beam - 記録。編集。共有。",
-    "description": "Beamは、洗練されたプロダクトデモを作成できるオープンソースの画面録画・動画編集アプリです。"
+    "title": "Beam — 無料の画面録画・動画編集ソフト",
+    "description": "Beamは、Windows、macOS、Linuxで洗練された製品デモを作れる無料オープンソースの画面録画・動画編集ソフトです。"
   },
   "home": {
-    "heroLine1": "瞬間を記録する。",
-    "heroLine2": "物語を磨く。",
-    "lede": "Beamはキャプチャと編集をひとつの集中型デスクトップアプリにまとめ、プロダクトデモをすばやく作り、見やすく仕上げます。",
+    "heroLine1": "録画。編集。共有。",
+    "lede": "Beamなら洗練された画面録画を作成でき、製品デモをより簡単に、より見やすく仕上げられます。",
     "watchDemo": "実際のデモを見る",
     "viewSource": "ソースを見る",
     "playDemoAria": "Beamのデモを再生",
     "demoAlt": "プロダクト録画を表示しているBeamの動画エディター",
-    "openDemo": "インタラクティブデモを開く",
-    "openSourceTitle": "Beamはコミュニティとともに作られています。",
-    "openSourceText": "コードを読み、バグを報告し、レコーダーの改善に協力できます。",
+    "openDemo": "エディターを見る",
+    "openSourceTitle": "オープンに開発。",
+    "openSourceText": "Beamは利用する人たちとともに進化します。GitHubで開発を追い、プロジェクトに貢献するか、Discordのコミュニティに参加してください。",
     "viewGitHub": "GitHubで見る",
     "joinDiscord": "Discordに参加",
     "contributorsAlt": "GitHubのBeamコントリビューター",
-    "contributorsFallback": "Beamを作っている人たちに会う",
-    "contributors": "{count}人のコントリビューターがBeamを開発 | {count}人のコントリビューターがBeamを開発",
-    "footer": "オープンソースの画面レコーダー／エディター。"
+    "contributorsFallback": "Beamコミュニティが開発し、成長を続けています。",
+    "contributors": "{count}人のコントリビューターが開発し、成長を続けています。",
+    "footer": "無料オープンソースの画面録画・動画編集ソフト。",
+    "heroEyebrow": "無料・オープンソース",
+    "downloadFree": "Beamを無料でダウンロード",
+    "availabilityTitle": "どのデスクトップでも無料。",
+    "availabilityPlatforms": "Windows、macOS、Linuxに対応。",
+    "editorTitle": "すべての録画を見ごたえのある作品に。",
+    "editorText": "不要な部分を削り、テンポを整え、滑らかなズームと字幕を加えて、洗練された製品デモを書き出せます。",
+    "freeTitle": "プロ品質の仕上がり。サブスク不要。",
+    "freeText": "Beamは、Windows、macOS、Linux向けの有料画面録画ツールに代わる、無料のオープンソースソフトです。",
+    "freeSubscription": "サブスク不要",
+    "freeOpenSource": "オープンソース",
+    "freePlatforms": "クロスプラットフォーム"
   },
   "nav": {
     "homeAria": "Beamホーム",
@@ -30,7 +40,11 @@
     "starsAria": "GitHubスター",
     "install": "インストール"
   },
-  "theme": { "switchTo": "テーマを{theme}に切り替える", "light": "ライト", "dark": "ダーク" },
+  "theme": {
+    "switchTo": "テーマを{theme}に切り替える",
+    "light": "ライト",
+    "dark": "ダーク"
+  },
   "install": {
     "downloadTitle": "Beam {version}を{platform}向けにダウンロード",
     "preparingTitle": "Beam {version}（{platform}）を準備中",
@@ -73,10 +87,10 @@
   },
   "editor": {
     "aria": "インタラクティブなBeamエディターデモ",
-    "title": "実際のBeamエディターを試す",
+    "title": "Beamエディターを見る",
     "checking": "公開Beamデモプロジェクトを確認しています...",
     "webCodecsUnavailable": "このブラウザーではWebCodecsを利用できません。元のMP4は下で再生できます。",
-    "ready": "実際のBeamキャンバス、音声、再生エンジン、編集可能なズーム、タイムライン。",
+    "ready": "ブラウザーで本物のBeamプロジェクトを直接編集できます。",
     "decodeFailed": "このブラウザーでBeamはデモMP4をデコードできませんでした。元の録画は引き続き利用できます。",
     "filesMissing": "{count}件の公開デモファイルが見つからないか無効です。 | {count}件の公開デモファイルが見つからないか無効です。",
     "invalidEdit": "この編集は有効なメディア範囲外です。",

@@ -4,6 +4,13 @@ import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
+import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
+import type {
+  TimelineClipboardItem,
+  TimelinePasteHighlight,
+  TimelinePasteRequest,
+} from './composables/timeline-clipboard-types';
 
 const props = withDefaults(
   defineProps<{
@@ -18,8 +25,15 @@ const props = withDefaults(
     selectedClipId: string | null;
     zoomLevel: number;
     isSnappingEnabled?: boolean;
+    projectId?: string | null;
+    recentPaste?: TimelinePasteHighlight | null;
+    canvas?: OutputCanvasSettings;
   }>(),
-  { isSnappingEnabled: true, includeAudioInExport: true },
+  {
+    isSnappingEnabled: true,
+    includeAudioInExport: true,
+    canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
+  },
 );
 const emit = defineEmits<{
   (event: 'update:currentTime', value: number): void;
@@ -29,6 +43,7 @@ const emit = defineEmits<{
   (event: 'select:clip', clipId: string): void;
   (event: 'toggle:clip', clipId: string): void;
   (event: 'delete:clips', clipIds: string[]): void;
+  (event: 'delete:zoom', zoomId: string): void;
   (event: 'trim:clip', payload: { id: string; edge: 'start' | 'end'; timeMs: number }): void;
   (event: 'move:clip', payload: { id: string; startMs: number }): void;
   (event: 'preview:composition', value: ClipComposition | null): void;
@@ -37,6 +52,12 @@ const emit = defineEmits<{
   (event: 'add:zoom', timeMs: number): void;
   (event: 'add:caption', timeMs: number): void;
   (event: 'reorder:clip', payload: { id: string; targetIndex: number }): void;
+  (event: 'paste:item', payload: TimelinePasteRequest): void;
+  (event: 'paste:error', message: string): void;
+  (event: 'clipboard:copied', item: TimelineClipboardItem): void;
+  (event: 'preview:canvas', value: OutputCanvasSettings | null): void;
+  (event: 'update:canvas', value: OutputCanvasSettings): void;
+  (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
 }>();
 
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -55,33 +76,45 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
 <template>
   <div class="timeline-island-container">
-    <TimelineTracks
-      :current-time="currentTime"
-      :duration="duration"
-      :is-playing="isPlaying"
-      :zoom-level="zoomLevel"
-      :export-progress="exportProgress"
-      :include-audio-in-export="includeAudioInExport"
-      :zoom-elements="zoomElements"
-      :selected-zoom-id="selectedZoomId"
-      :composition="composition"
-      :selected-clip-id="selectedClipId"
-      :is-snapping-enabled="isSnappingEnabled"
-      @update:current-time="emit('update:currentTime', $event)"
-      @update:zoom-level="emit('update:zoomLevel', $event)"
-      @select:zoom="emit('select:zoom', $event)"
-      @select:clip="emit('select:clip', $event)"
-      @toggle:clip="emit('toggle:clip', $event)"
-      @delete:clips="emit('delete:clips', $event)"
-      @trim:clip="emit('trim:clip', $event)"
-      @move:clip="emit('move:clip', $event)"
-      @preview:composition="emit('preview:composition', $event)"
-      @trim:zoom="emit('trim:zoom', $event)"
-      @move:zoom="emit('move:zoom', $event)"
-      @add:zoom="emit('add:zoom', $event)"
-      @add:caption="emit('add:caption', $event)"
-      @reorder:clip="emit('reorder:clip', $event)"
-    />
+    <div class="timeline-scale-content">
+      <TimelineTracks
+        :current-time="currentTime"
+        :duration="duration"
+        :is-playing="isPlaying"
+        :zoom-level="zoomLevel"
+        :export-progress="exportProgress"
+        :include-audio-in-export="includeAudioInExport"
+        :zoom-elements="zoomElements"
+        :selected-zoom-id="selectedZoomId"
+        :composition="composition"
+        :selected-clip-id="selectedClipId"
+        :is-snapping-enabled="isSnappingEnabled"
+        :project-id="projectId"
+        :recent-paste="recentPaste"
+        :canvas="canvas"
+        @update:current-time="emit('update:currentTime', $event)"
+        @update:zoom-level="emit('update:zoomLevel', $event)"
+        @select:zoom="emit('select:zoom', $event)"
+        @select:clip="emit('select:clip', $event)"
+        @toggle:clip="emit('toggle:clip', $event)"
+        @delete:clips="emit('delete:clips', $event)"
+        @delete:zoom="emit('delete:zoom', $event)"
+        @trim:clip="emit('trim:clip', $event)"
+        @move:clip="emit('move:clip', $event)"
+        @preview:composition="emit('preview:composition', $event)"
+        @trim:zoom="emit('trim:zoom', $event)"
+        @move:zoom="emit('move:zoom', $event)"
+        @add:zoom="emit('add:zoom', $event)"
+        @add:caption="emit('add:caption', $event)"
+        @reorder:clip="emit('reorder:clip', $event)"
+        @paste:item="emit('paste:item', $event)"
+        @paste:error="emit('paste:error', $event)"
+        @clipboard:copied="emit('clipboard:copied', $event)"
+        @preview:canvas="emit('preview:canvas', $event)"
+        @update:canvas="emit('update:canvas', $event)"
+        @open:canvas-transition="emit('open:canvas-transition', $event)"
+      />
+    </div>
   </div>
 </template>
 
@@ -97,5 +130,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.timeline-scale-content {
+  zoom: var(--ui-scale-timeline, 1);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 </style>

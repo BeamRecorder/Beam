@@ -4,9 +4,11 @@ import type {
   NormalizedTransform,
   WebcamAppearance,
 } from '~/media/shared/composition-types';
+import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import { DEFAULT_CLIP_APPEARANCE, drawDecoratedMedia } from '../appearance/render-decorated-media';
 import type { MediaRect } from '../appearance/appearance-types';
 import type { Canvas2DContext } from '~/types/canvas';
+import { resolveCameraFraming } from '../camera-layout';
 
 export interface WebcamOverlaySettings {
   widthPercent: number;
@@ -85,6 +87,26 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 export const getWebcamZoomFactor = (appliedZoomScale: number, reactToZoom: boolean) =>
   reactToZoom ? 1 / (Number.isFinite(appliedZoomScale) && appliedZoomScale > 0 ? appliedZoomScale : 1) : 1;
 
+export const clampWebcamTransformToVisibleBounds = (
+  value: NormalizedTransform,
+  appliedZoomScale: number,
+  reactToZoom: boolean,
+): NormalizedTransform => {
+  const width = clamp(value.width, 0.02, 1);
+  const height = clamp(value.height, 0.02, 1);
+  const factor = getWebcamZoomFactor(appliedZoomScale, reactToZoom);
+  const zoomInset = 1 - factor;
+  return {
+    x: clamp(value.x, zoomInset > 0 ? -width * zoomInset : 0, 1 - width),
+    y: clamp(value.y, zoomInset > 0 ? -height * zoomInset : 0, 1 - height),
+    width,
+    height,
+  };
+};
+
+export const clampWebcamTransform = (value: NormalizedTransform): NormalizedTransform =>
+  clampWebcamTransformToVisibleBounds(value, 1, false);
+
 export function computeWebcamLayout(
   canvasWidth: number,
   canvasHeight: number,
@@ -120,6 +142,33 @@ export function computeWebcamLayout(
   };
 }
 
+export function normalizeWebcamTransformToVisibleFraming(
+  canvasWidth: number,
+  canvasHeight: number,
+  appliedZoomScale: number,
+  settings: WebcamOverlaySettings,
+  transform: NormalizedTransform,
+  framingPreset: CameraFramingPreset,
+  sourceWidth: number,
+  sourceHeight: number,
+): NormalizedTransform {
+  if (framingPreset === 'custom' || framingPreset === 'fill') return clampWebcamTransform(transform);
+
+  const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform);
+  const visible = resolveCameraFraming(framingPreset, layout, sourceWidth, sourceHeight).rect;
+  const zoomFactor = getWebcamZoomFactor(appliedZoomScale, settings.reactToZoom);
+  const width = visible.width / Math.max(1, canvasWidth) / zoomFactor;
+  const height = visible.height / Math.max(1, canvasHeight) / zoomFactor;
+  const right = (visible.x + visible.width) / Math.max(1, canvasWidth);
+  const bottom = (visible.y + visible.height) / Math.max(1, canvasHeight);
+
+  return clampWebcamTransformToVisibleBounds(
+    { x: right - width, y: bottom - height, width, height },
+    appliedZoomScale,
+    settings.reactToZoom,
+  );
+}
+
 export function drawWebcamOverlay(
   ctx: Canvas2DContext,
   source: CanvasImageSource,
@@ -133,27 +182,22 @@ export function drawWebcamOverlay(
   appearance?: ClipAppearance,
   title = 'Camera',
   shadowScale = 1,
+  framingPreset: CameraFramingPreset = 'custom',
 ) {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform);
   const sourceWidth = sourceDimensions.width;
   const sourceHeight = sourceDimensions.height;
-  const sourceRect: MediaRect | undefined =
-    crop && sourceWidth > 0 && sourceHeight > 0
-      ? {
-          x: crop.x * sourceWidth,
-          y: crop.y * sourceHeight,
-          width: crop.width * sourceWidth,
-          height: crop.height * sourceHeight,
-        }
-      : undefined;
+  const framing = resolveCameraFraming(framingPreset, layout, sourceWidth, sourceHeight, crop);
+  const sourceRect: MediaRect | undefined = framing.sourceRect;
   drawDecoratedMedia(ctx, {
     source,
     sourceRect,
-    rect: layout,
+    rect: framing.rect,
     appearance: { ...DEFAULT_CLIP_APPEARANCE, ...appearance },
     shadowScale,
     title,
     mirrored: settings.mirror,
     mirroredY: settings.mirrorY,
+    mask: framing.mask,
   });
 }

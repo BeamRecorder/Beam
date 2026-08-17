@@ -1,10 +1,11 @@
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
 import { MACOS_CURSOR_PACK } from '../properties/cursor/cursor-packs';
 import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
-import type { OutputCanvasSettings } from '../canvas/output-canvas';
-import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { DEFAULT_WATERMARK, type OutputCanvasSettings } from '../canvas/output-canvas';
+import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   emptyComposition as createEmptyComposition,
   type CaptionClip,
@@ -17,11 +18,28 @@ import type { ProjectEditorData } from '../../../api/types/capture-api';
 vi.mock('../../../api/capture', () => ({ capture: {} }));
 
 import PropertiesPanel from '../properties/PropertiesPanel.vue';
+import RealClipPropertiesPanel from '../properties/clip/ClipPropertiesPanel.vue';
 
 const CanvasPanel = {
-  emits: ['update:selectedBackground'],
-  template:
-    '<button class="canvas-panel-stub" @click="$emit(\'update:selectedBackground\', { id: \'background\' })">Canvas</button>',
+  props: ['showBackground', 'selectedBackground'],
+  emits: ['update:selectedBackground', 'update:showBackground'],
+  template: `
+    <div
+      class="canvas-panel-stub"
+      :data-show-background="String(showBackground)"
+      :data-selected-background="selectedBackground?.id || 'none'"
+      @click="$emit('update:selectedBackground', { id: 'background' })"
+    >
+      Canvas
+      <button
+        class="remove-background-toggle"
+        type="button"
+        @click.stop="$emit('update:showBackground', !showBackground)"
+      >
+        Remove background
+      </button>
+    </div>
+  `,
 };
 const AudioPanel = {
   props: ['hasSystemAudio', 'hasMicAudio'],
@@ -116,6 +134,22 @@ const screenClip = {
   timelineStartMs: 0,
   timelineDurationMs: 100,
 } as const;
+const transitionScreenClip = {
+  ...screenClip,
+  name: 'Video',
+  sourceInMs: 0,
+  sourceDurationMs: 100,
+  playbackRate: 1,
+  transitions: { entry: null, exit: null },
+  enabled: true,
+  order: 0,
+  trackId: 'screen-track',
+  assetId: 'screen-asset',
+  transform: { x: 0, y: 0, width: 1, height: 1 },
+  appearance: createDefaultClipAppearance('screen'),
+  isMirrored: false,
+  isMirroredY: false,
+} as const;
 
 const webcamClip = {
   id: 'webcam',
@@ -183,7 +217,111 @@ const global = {
   },
 };
 
+const layoutClip = (kind: 'screen' | 'video' | 'image' | 'webcam', overrides: Record<string, unknown> = {}) => ({
+  id: `${kind}-layout`,
+  kind,
+  name: kind,
+  timelineStartMs: 0,
+  timelineDurationMs: 100,
+  playbackRate: 1,
+  enabled: true,
+  isLinked: false,
+  shadowSize: 'md',
+  shadowColor: '#000000',
+  shadowDirection: 'all',
+  cornerRadius: 'sm',
+  borderEnabled: false,
+  clipTransform: { x: 0, y: 0, width: 1, height: 0.5 },
+  isMirrored: false,
+  isMirroredY: false,
+  cameraLayoutPreset: 'custom' as const,
+  cameraFramingPreset: 'custom' as const,
+  cameraSplitRatio: 0.5,
+  cameraSplitPadding: 0,
+  hasLinkedScreen: true,
+  ...overrides,
+});
+
+const mountRealClipPropertiesPanel = (selectedClip: ReturnType<typeof layoutClip>) =>
+  mount(RealClipPropertiesPanel, {
+    props: { selectedClip },
+    global: {
+      stubs: {
+        BigSlider: true,
+        ColorPicker: true,
+        ShadowDirectionGroup: true,
+        BorderAndFrameControls: true,
+      },
+    },
+  });
+
+const transitionComposition: ClipComposition = {
+  ...createEmptyComposition(),
+  assets: [
+    {
+      id: 'screen-asset',
+      kind: 'video',
+      name: 'Video',
+      fileName: null,
+      durationMs: 100,
+      width: 1920,
+      height: 1080,
+      src: '',
+      origin: 'session',
+    },
+  ],
+  clips: [transitionScreenClip],
+};
+
+const mountTransitionPropertiesPanel = (overrides: Record<string, unknown> = {}, useRealTransitions = false) =>
+  mount(PropertiesPanel, {
+    props: {
+      ...baseProps,
+      activeTab: 'clip',
+      selectedClip: transitionScreenClip,
+      composition: transitionComposition,
+      ...overrides,
+    },
+    global: useRealTransitions ? { ...global, stubs: { ...global.stubs, transition: false } } : global,
+  });
+
 describe('PropertiesPanel', () => {
+  it.each(['screen', 'video', 'image'] as const)(
+    'shows six non-split layouts and seven framings for %s clips',
+    (kind) => {
+      const wrapper = mountRealClipPropertiesPanel(layoutClip(kind));
+      const panel = wrapper.get('.camera-layout-panel');
+      const layoutIds = panel
+        .findAll('.layout-preview')
+        .map((preview) =>
+          preview.classes().find((className) => className.startsWith('layout-') && className !== 'layout-preview'),
+        );
+
+      expect(layoutIds).toEqual([
+        'layout-floating-top-left',
+        'layout-floating-top-right',
+        'layout-floating-bottom-left',
+        'layout-floating-bottom-right',
+        'layout-floating-center',
+        'layout-fullscreen',
+      ]);
+      expect(panel.findAll('.btn-group button')).toHaveLength(7);
+      expect(panel.find('.split-adjustment').exists()).toBe(false);
+    },
+  );
+
+  it('keeps all ten layouts and split adjustments for webcam clips', () => {
+    const wrapper = mountRealClipPropertiesPanel(
+      layoutClip('webcam', { cameraLayoutPreset: 'split-left', hasLinkedScreen: true }),
+    );
+    const panel = wrapper.get('.camera-layout-panel');
+
+    expect(panel.findAll('.layout-button')).toHaveLength(10);
+    expect(panel.findAll('.btn-group button')).toHaveLength(7);
+    expect(panel.find('.split-adjustment').exists()).toBe(true);
+    expect(panel.findAll('input[type="range"]')).toHaveLength(2);
+  });
+
   it('selects the correct child panel for every editor tab', async () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     const cases = [
@@ -198,6 +336,86 @@ describe('PropertiesPanel', () => {
       await wrapper.setProps({ activeTab: tab });
       expect(wrapper.find(selector).exists()).toBe(true);
     }
+  });
+
+  it('shows one standalone Canvas transition button and updates canvas transitions through the shared panel', async () => {
+    const wrapper = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'canvas',
+        canvas: { ...canvas, transitions: { entry: null, exit: null } },
+      },
+      global,
+    });
+
+    const headerButtons = wrapper.findAll('.panel-header-view > .btn-group button');
+    expect(headerButtons).toHaveLength(1);
+    expect(headerButtons[0]!.attributes('aria-label')).toBe('Canvas transitions');
+
+    await headerButtons[0]!.trigger('click');
+    expect(wrapper.get('.panel-title').text()).toBe('Canvas transitions');
+    expect(wrapper.find('.transitions-panel').exists()).toBe(true);
+
+    await wrapper.findAll('.preset-card')[1]!.trigger('click');
+    expect(wrapper.emitted('update:canvas')).toContainEqual([
+      expect.objectContaining({
+        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
+      }),
+    ]);
+  });
+
+  it('opens the shared Canvas transition panel on entry and preserves it when editing exit', async () => {
+    const wrapper = mount(PropertiesPanel, {
+      props: {
+        ...baseProps,
+        activeTab: 'canvas',
+        canvas: {
+          ...canvas,
+          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 200 }, exit: null },
+        },
+      },
+      global,
+    });
+
+    await wrapper.get('[aria-label="Canvas transitions"]').trigger('click');
+    const edgeButtons = wrapper.findAll('.edge-selector button');
+    expect(edgeButtons[0]!.attributes('aria-pressed')).toBe('true');
+
+    await edgeButtons[1]!.trigger('click');
+    expect(edgeButtons[1]!.attributes('aria-pressed')).toBe('true');
+    await wrapper.findAll('.preset-card')[1]!.trigger('click');
+
+    expect(wrapper.emitted('update:canvas')).toContainEqual([
+      expect.objectContaining({
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200 },
+          exit: { preset: { kind: 'fade' }, durationMs: 500 },
+        },
+      }),
+    ]);
+  });
+
+  it('reflects an incoming Canvas transition preview in the shared duration slider without committing it', async () => {
+    const initialCanvas: OutputCanvasSettings = {
+      ...canvas,
+      transitions: { entry: { preset: { kind: 'fade' }, durationMs: 200 }, exit: null },
+    };
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, activeTab: 'canvas', canvas: initialCanvas },
+      global,
+    });
+
+    await wrapper.get('[aria-label="Canvas transitions"]').trigger('click');
+    expect(wrapper.get('.big-slider-value').text()).toBe('200 ms');
+
+    await wrapper.setProps({
+      canvas: {
+        ...initialCanvas,
+        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 600 }, exit: null },
+      },
+    });
+    expect(wrapper.get('.big-slider-value').text()).toBe('600 ms');
+    expect(wrapper.emitted('update:canvas')).toBeUndefined();
   });
 
   it('passes audio track presence to the audio panel and forwards role deletions', async () => {
@@ -250,14 +468,14 @@ describe('PropertiesPanel', () => {
 
     expect(wrapper.get('.panel-title').text()).toBe('Video');
     const buttons = wrapper.findAll('.panel-header-actions button');
-    expect(buttons).toHaveLength(2);
+    expect(buttons).toHaveLength(3);
 
     // Toggle visibility
     await buttons[0].trigger('click');
     expect(wrapper.emitted('update:clip-enabled')).toEqual([[false]]);
 
     // Delete clip with dynamic video tooltip
-    await buttons[1].trigger('click');
+    await buttons[2].trigger('click');
     expect(wrapper.emitted('delete-clip')).toHaveLength(1);
 
     await wrapper.setProps({ selectedClip: webcamClip });
@@ -276,6 +494,94 @@ describe('PropertiesPanel', () => {
     expect(wrapper.emitted('delete:zoom')).toHaveLength(1);
   });
 
+  it('uses the real top bar for transitions and stays open when the selected clip object refreshes', async () => {
+    const wrapper = mountTransitionPropertiesPanel();
+
+    await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
+    expect(wrapper.get('.panel-title').text()).toBe('Video Transitions');
+    expect(wrapper.find('.transitions-header').exists()).toBe(false);
+    await wrapper.setProps({ selectedClip: { ...transitionScreenClip, name: 'Video refreshed' } });
+    expect(wrapper.get('.panel-title').text()).toBe('Video Transitions');
+    expect(wrapper.find('.transitions-panel').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('opens Clip Transitions forward and closes with Backward navigation', async () => {
+    const wrapper = mountTransitionPropertiesPanel();
+
+    await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
+    expect(wrapper.get('.panel-title').text()).toBe('Video Transitions');
+    expect(wrapper.find('.transitions-panel').exists()).toBe(true);
+
+    await wrapper.get('[aria-label="Back"]').trigger('click');
+    expect(wrapper.get('.panel-title').text()).toBe('Video');
+    expect(wrapper.find('.transitions-panel').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('uses directional transition classes when the panel view changes', async () => {
+    const wrapper = mountTransitionPropertiesPanel({}, true);
+
+    await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
+    expect(wrapper.find('.properties-panel-forward-leave-active').exists()).toBe(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    await nextTick();
+    await wrapper.get('[aria-label="Back"]').trigger('click');
+    expect(wrapper.find('.properties-panel-backward-leave-active').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('maps mouse back and forward buttons to transition history and prevents browser navigation', async () => {
+    const wrapper = mountTransitionPropertiesPanel();
+
+    await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
+    await wrapper.get('[aria-label="Back"]').trigger('click');
+
+    const forward = new MouseEvent('mouseup', { button: 4, bubbles: true, cancelable: true });
+    window.dispatchEvent(forward);
+    await nextTick();
+    expect(forward.defaultPrevented).toBe(true);
+    expect(wrapper.find('.transitions-panel').exists()).toBe(true);
+
+    const back = new MouseEvent('mouseup', { button: 3, bubbles: true, cancelable: true });
+    window.dispatchEvent(back);
+    await nextTick();
+    expect(back.defaultPrevented).toBe(true);
+    expect(wrapper.find('.transitions-panel').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each([
+    ['active tab', { activeTab: 'canvas' }],
+    ['selected clip', { selectedClip: { ...transitionScreenClip, id: 'other-clip', name: 'Other' } }],
+  ])('invalidates forward transition history when the %s changes', async (_label, overrides) => {
+    const wrapper = mountTransitionPropertiesPanel();
+
+    await wrapper.get('[aria-label="Clip transitions"]').trigger('click');
+    await wrapper.get('[aria-label="Back"]').trigger('click');
+    await wrapper.setProps(overrides);
+    await nextTick();
+
+    const forward = new MouseEvent('mouseup', { button: 4, bubbles: true, cancelable: true });
+    window.dispatchEvent(forward);
+    await nextTick();
+
+    expect(forward.defaultPrevented).toBe(true);
+    expect(wrapper.find('.transitions-panel').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it.each([3, 4])('prevents default for auxiliary mouse button %s events', (button) => {
+    const wrapper = mountTransitionPropertiesPanel();
+    const event = new MouseEvent('auxclick', { button, bubbles: true, cancelable: true });
+
+    window.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    wrapper.unmount();
+  });
+
   it('uses the active tool name when no timeline clip is selected', async () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     expect(wrapper.get('.panel-title').text()).toBe('Canvas');
@@ -289,6 +595,24 @@ describe('PropertiesPanel', () => {
     const wrapper = mount(PropertiesPanel, { props: baseProps, global });
     await wrapper.get('.canvas-panel-stub').trigger('click');
     expect(wrapper.emitted('update:selectedBackground')).toEqual([[{ id: 'background' }]]);
+  });
+
+  it('forwards Remove Background while preserving the rest of the canvas settings', async () => {
+    const canvasWithWatermark: OutputCanvasSettings = {
+      ...canvas,
+      showBackground: true,
+      watermark: { ...DEFAULT_WATERMARK, enabled: true },
+    };
+    const wrapper = mount(PropertiesPanel, {
+      props: { ...baseProps, canvas: canvasWithWatermark },
+      global,
+    });
+    const canvasPanel = wrapper.get('.canvas-panel-stub');
+
+    expect(canvasPanel.attributes('data-show-background')).toBe('true');
+    await canvasPanel.get('.remove-background-toggle').trigger('click');
+
+    expect(wrapper.emitted('update:canvas')).toEqual([[{ ...canvasWithWatermark, showBackground: false }]]);
   });
 
   it('forwards composition previews separately from final composition updates', async () => {

@@ -1,4 +1,6 @@
-export const COMPOSITION_SCHEMA_VERSION = 6 as const;
+import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
+
+export const COMPOSITION_SCHEMA_VERSION = 8 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -6,6 +8,25 @@ export type BlurEffectShape = 'rectangle' | 'square' | 'circle';
 export type BlurEffectMode = 'blur' | 'frosted' | 'pixelated' | 'opaque';
 export type ClipKind = 'screen' | 'video' | 'image' | 'webcam' | 'blur' | 'audio' | 'caption';
 export type AudioRole = 'system' | 'microphone' | 'imported';
+
+export type TransitionPreset =
+  | { kind: 'fade' }
+  | { kind: 'slide'; direction: 'left' | 'right' | 'up' | 'down' }
+  | { kind: 'zoom'; direction: 'in' | 'out' }
+  | { kind: 'blur' };
+
+export interface ClipTransition {
+  preset: TransitionPreset;
+  durationMs: number;
+}
+
+export interface ClipTransitions {
+  entry: ClipTransition | null;
+  exit: ClipTransition | null;
+}
+
+/** Global visual transitions applied to the fully composited output frame. */
+export type CanvasTransitions = ClipTransitions;
 
 export interface NormalizedTransform {
   x: number;
@@ -136,6 +157,8 @@ export interface ClipBase {
   sourceInMs: number;
   sourceDurationMs: number;
   playbackRate: number;
+  /** Required in persisted v8 compositions; optional while constructing legacy/test input before normalization. */
+  transitions?: ClipTransitions;
   enabled: boolean;
   /** Lower values are nearer the foreground. */
   order: number;
@@ -153,6 +176,14 @@ export interface VisualClip extends ClipBase {
   appearance: ClipAppearance;
   isMirrored: boolean;
   isMirroredY: boolean;
+  /** Persisted layout preset for visual clips; legacy clips default to custom. */
+  cameraLayoutPreset?: CameraLayoutPreset;
+  /** Persisted framing preset for visual clips; legacy clips default to custom. */
+  cameraFramingPreset?: CameraFramingPreset;
+  /** Camera share of the canvas for split layouts, from 0.2 to 0.8. */
+  cameraSplitRatio?: number;
+  /** Inset around both split regions, normalized against the canvas. */
+  cameraSplitPadding?: number;
 }
 
 export interface BlurClip extends ClipBase {
@@ -187,7 +218,7 @@ export interface CaptionClip extends ClipBase {
 export type Clip = VisualClip | BlurClip | AudioClip | CaptionClip;
 
 export interface ClipComposition {
-  schemaVersion: typeof COMPOSITION_SCHEMA_VERSION;
+  schemaVersion: number;
   assets: MediaAsset[];
   clips: Clip[];
   keyboardCaptionSessions: string[];

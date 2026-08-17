@@ -1,0 +1,42 @@
+import type { BlurEffectMode, BlurEffectShape, ClipFrame, NormalizedTransform } from '~/media/shared/composition-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
+
+export interface SelectedClipProperties {
+  id: string;
+  kind: string;
+  name?: string;
+  timelineStartMs: number;
+  timelineDurationMs: number;
+  playbackRate?: number;
+  enabled?: boolean;
+  isLinked?: boolean;
+  shadowSize?: string;
+  shadowColor?: string;
+  shadowDirection?: string;
+  cornerRadius?: string | number;
+  borderEnabled?: boolean;
+  borderColor?: string;
+  borderWidth?: number;
+  frame?: ClipFrame;
+  frameTitle?: string;
+  frameColor?: string;
+  frameShowMenu?: boolean;
+  frameShowScrollbars?: boolean;
+  frameChromeScale?: number;
+  clipTransform?: NormalizedTransform;
+  isMirrored?: boolean;
+  isMirroredY?: boolean;
+  cameraLayoutPreset?: CameraLayoutPreset;
+  cameraFramingPreset?: CameraFramingPreset;
+  cameraSplitRatio?: number;
+  cameraSplitPadding?: number;
+  hasLinkedScreen?: boolean;
+  volume?: number;
+  blurMode?: BlurEffectMode;
+  blurShape?: BlurEffectShape;
+  blurStrength?: number;
+  blurFeather?: number;
+  blurCornerRadius?: number;
+  blurTintOpacity?: number;
+  blurColor?: string;
+}

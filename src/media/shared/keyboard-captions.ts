@@ -134,6 +134,7 @@ export function keyboardCaptionClipsFromInput(
       sourceInMs: 0,
       sourceDurationMs: durationMs,
       playbackRate: 1,
+      transitions: { entry: null, exit: null },
       enabled: true,
       order: -10_000 + index,
       caption: {

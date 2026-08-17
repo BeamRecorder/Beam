@@ -263,6 +263,8 @@ export interface ProjectEditorPresentation {
 
 export interface ProjectEditorState {
   schemaVersion: 3;
+  /** Runtime-only marker: true until a newly created project has saved its first editor state. */
+  isFresh?: boolean;
   composition: ClipComposition;
   zoom: ProjectZoomState;
   presentation: ProjectEditorPresentation;

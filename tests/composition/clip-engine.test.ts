@@ -11,6 +11,7 @@ import {
   reorderClip,
   setClipEnabled,
   setBlurEffect,
+  setClipTransition,
   setPlaybackRate,
   setTransform,
   splitClip,
@@ -26,6 +27,7 @@ import type {
   VisualClip,
 } from '../../src/media/shared/composition-types';
 import { createDefaultClipAppearance } from '../../src/media/shared/composition-defaults';
+import { normalizeClipTransitions } from '../../src/media/shared/clip-transitions';
 
 const asset = (id: string, kind: MediaAsset['kind'] = 'video'): MediaAsset => ({
   id,
@@ -53,6 +55,7 @@ const visualClip = (
   sourceInMs: 200,
   sourceDurationMs: 4_000,
   playbackRate: 1,
+  transitions: { entry: null, exit: null },
   enabled: true,
   order: 0,
   transform: { x: 0, y: 0, width: 1, height: 1 },
@@ -75,6 +78,7 @@ const audioClip = (id: string, overrides: Partial<AudioClip> = {}): AudioClip =>
   sourceInMs: 200,
   sourceDurationMs: 4_000,
   playbackRate: 1,
+  transitions: { entry: null, exit: null },
   enabled: true,
   order: 0,
   ...overrides,
@@ -109,6 +113,7 @@ const blurClip = (overrides: Partial<BlurClip> = {}): BlurClip => ({
   sourceInMs: 0,
   sourceDurationMs: 5_000,
   playbackRate: 1,
+  transitions: { entry: null, exit: null },
   enabled: true,
   order: 0,
   transform: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
@@ -148,6 +153,101 @@ describe('clip composition engine', () => {
   it('moves every linked sidecar by the same delta', () => {
     const moved = moveClip(linked(), 'screen', 2_500);
     expect(moved.clips.map((entry) => entry.timelineStartMs)).toEqual([2_500, 2_500, 2_500]);
+  });
+
+  it('edits transitions on only the selected clip and preserves them when moving', () => {
+    const composition = linked();
+    const configured = setClipTransition(composition, 'screen', 'entry', {
+      preset: { kind: 'slide', direction: 'left' },
+      durationMs: 500,
+    });
+    expect(configured.clips.find((clip) => clip.id === 'screen')?.transitions?.entry).toEqual({
+      preset: { kind: 'slide', direction: 'left' },
+      durationMs: 500,
+    });
+    expect(configured.clips.find((clip) => clip.id === 'camera')?.transitions).toEqual({ entry: null, exit: null });
+    expect(configured.clips.find((clip) => clip.id === 'audio')?.transitions).toEqual({ entry: null, exit: null });
+
+    const moved = moveClip(configured, 'screen', 2_500);
+    expect(moved.clips.find((clip) => clip.id === 'screen')?.transitions?.entry).toEqual(
+      configured.clips.find((clip) => clip.id === 'screen')?.transitions?.entry,
+    );
+  });
+
+  it('re-bounds both transition edges after trim and speed changes', () => {
+    const composition = compositionFor([
+      visualClip('source', 'video', {
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 1_800 },
+          exit: { preset: { kind: 'blur' }, durationMs: 1_800 },
+        },
+      }),
+    ]);
+    const trimmed = trimClip(composition, 'source', 'end', 3_000);
+    const trimmedClip = trimmed.clips[0]!;
+    expect(trimmedClip.timelineDurationMs).toBe(2_000);
+    expect((trimmedClip.transitions?.entry?.durationMs ?? 0) + (trimmedClip.transitions?.exit?.durationMs ?? 0)).toBe(
+      2_000,
+    );
+    expect(trimmedClip.transitions?.entry?.preset).toEqual({ kind: 'fade' });
+    expect(trimmedClip.transitions?.exit?.preset).toEqual({ kind: 'blur' });
+
+    const retimed = setPlaybackRate(composition, 'source', 2);
+    const retimedClip = retimed.clips[0]!;
+    expect(retimedClip.timelineDurationMs).toBe(2_000);
+    expect((retimedClip.transitions?.entry?.durationMs ?? 0) + (retimedClip.transitions?.exit?.durationMs ?? 0)).toBe(
+      2_000,
+    );
+  });
+
+  it('keeps only the left entry and right exit transition when splitting', () => {
+    const composition = compositionFor([
+      visualClip('source', 'video', {
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 600 },
+          exit: { preset: { kind: 'blur' }, durationMs: 400 },
+        },
+      }),
+    ]);
+    const split = splitClip(composition, 'source', 3_000, () => 'source-right');
+    const left = split.clips.find((clip) => clip.id === 'source')!;
+    const right = split.clips.find((clip) => clip.id === 'source-right')!;
+    expect(left.transitions?.entry?.preset).toEqual({ kind: 'fade' });
+    expect(left.transitions?.exit).toBeNull();
+    expect(right.transitions?.entry).toBeNull();
+    expect(right.transitions?.exit?.preset).toEqual({ kind: 'blur' });
+  });
+
+  it('keeps transition settings independent across linked clips during retiming', () => {
+    const composition = compositionFor([
+      visualClip('screen', 'screen', {
+        groupId: 'linked',
+        transitions: { entry: { preset: { kind: 'fade' }, durationMs: 400 }, exit: null },
+      }),
+      visualClip('camera', 'webcam', {
+        groupId: 'linked',
+        transitions: { entry: null, exit: { preset: { kind: 'blur' }, durationMs: 700 } },
+      }),
+    ]);
+    const retimed = setPlaybackRate(composition, 'screen', 2);
+    expect(retimed.clips.find((clip) => clip.id === 'screen')?.transitions?.entry?.preset).toEqual({ kind: 'fade' });
+    expect(retimed.clips.find((clip) => clip.id === 'camera')?.transitions?.exit?.preset).toEqual({ kind: 'blur' });
+    expect(retimed.clips.find((clip) => clip.id === 'screen')?.transitions?.exit).toBeNull();
+    expect(retimed.clips.find((clip) => clip.id === 'camera')?.transitions?.entry).toBeNull();
+  });
+
+  it('normalizes two transitions on a 40ms clip without exceeding its duration', () => {
+    const normalized = normalizeClipTransitions(
+      {
+        entry: { preset: { kind: 'fade' }, durationMs: 30 },
+        exit: { preset: { kind: 'fade' }, durationMs: 30 },
+      },
+      40,
+      'video',
+    );
+    expect(normalized.entry?.durationMs).toBe(20);
+    expect(normalized.exit?.durationMs).toBe(20);
+    expect((normalized.entry?.durationMs ?? 0) + (normalized.exit?.durationMs ?? 0)).toBe(40);
   });
 
   it('changes speed for every linked sidecar and accepts a custom value', () => {

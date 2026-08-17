@@ -144,6 +144,10 @@
     "waveformUnavailable": "Формата на вълната не е налична",
     "trimStart": "Изрязване на началото",
     "trimEnd": "Изрязване на края",
+    "holdSegment": "Задържане на сегмент",
+    "copy": "Копиране",
+    "paste": "Поставяне",
+    "delete": "Изтриване",
     "keyboardCaptions": "Клавишни комбинации",
     "textCaptions": "Текстови субтитри"
   },
@@ -196,7 +200,13 @@
     "showDetails": "Подробности за грешката"
   },
   "VideoEditor": {
-    "exportBanner": "Експортирането е в ход. Промените на живо няма да засегнат текущо експортирания файл."
+    "exportBanner": "Експортирането е в ход. Промените на живо няма да засегнат текущо експортирания файл.",
+    "timelineCopied": "Копирано",
+    "timelinePasted": "Поставено",
+    "timelineCopiedItem": "Копирано: {item}",
+    "timelinePastedItem": "Поставено: {item}",
+    "timelineClipboardCaption": "Надпис „{text}“",
+    "timelineClipboardZoom": "Мащабиране {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Предварителни настройки",

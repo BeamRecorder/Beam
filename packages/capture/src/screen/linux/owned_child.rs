@@ -13,10 +13,9 @@ fn process_groups() -> &'static Mutex<Vec<libc::pid_t>> {
 #[cfg(test)]
 pub(super) fn test_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    match LOCK.get_or_init(|| Mutex::new(())).lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
-    }
+    LOCK.get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("owned child test lock")
 }
 
 /// Put a native helper in its own process group and bind it to the capture

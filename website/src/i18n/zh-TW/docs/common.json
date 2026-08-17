@@ -1,0 +1,43 @@
+{
+  "locale": "zh-TW",
+  "label": "繁體中文",
+  "siteTitle": "Beam 文件",
+  "nav": { "website": "Beam 網站" },
+  "sidebar": [
+    {
+      "text": "從這裡開始",
+      "items": [
+        { "text": "簡介", "link": "/" },
+        { "text": "開始使用", "link": "/getting-started" },
+        { "text": "更新 Beam", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "錄影工具",
+      "items": [
+        { "text": "概覽", "link": "/recorder/" },
+        { "text": "介面", "link": "/recorder/interface" },
+        { "text": "功能", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "影片編輯器",
+      "items": [
+        { "text": "概覽", "link": "/editor/" },
+        { "text": "介面", "link": "/editor/interface" },
+        { "text": "功能", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "參考",
+      "items": [
+        { "text": "匯出與分享", "link": "/export" },
+        { "text": "平台支援", "link": "/platforms" },
+        { "text": "檔案系統", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": { "github": "在 GitHub 上查看 Beam", "discord": "加入 Beam Discord" },
+  "theme": { "switchToLight": "切換至淺色主題", "switchToDark": "切換至深色主題" },
+  "footer": { "message": "開源螢幕錄影與編輯工具。", "copyright": "依 MIT 授權條款發布。" }
+}

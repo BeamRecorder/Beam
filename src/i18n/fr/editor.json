@@ -1,4 +1,30 @@
 {
+  "CameraLayoutPanel": {
+    "title": "Camera Layout",
+    "visualTitle": "Mise en page du clip",
+    "custom": "Personnalisé",
+    "topLeft": "Flottant en haut à gauche",
+    "topRight": "Flottant en haut à droite",
+    "bottomLeft": "Flottant en bas à gauche",
+    "bottomRight": "Flottant en bas à droite",
+    "largeCenter": "Grande caméra centrée",
+    "visualLargeCenter": "Grand clip centré",
+    "fullscreen": "Caméra plein écran",
+    "visualFullscreen": "Clip plein écran",
+    "splitLeft": "Caméra à gauche",
+    "splitRight": "Caméra à droite",
+    "splitTop": "Caméra en haut",
+    "splitBottom": "Caméra en bas",
+    "splitRequiresScreen": "Aucun enregistrement d’écran correspondant n’est disponible à cet endroit de la timeline.",
+    "splitRatio": "Part de la caméra",
+    "splitPadding": "Espacement du fond",
+    "framing": "Cadrage",
+    "fill": "Fill",
+    "fit": "Fit",
+    "square": "Carré",
+    "squircle": "Squircle",
+    "circle": "Cercle"
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Direction de l'ombre",
     "around": "Autour",
@@ -144,8 +170,14 @@
     "audioDisabledFromExport": "Audio désactivé pour l’export",
     "unlinkMicrophoneTrack": "Dissocier la piste micro",
     "waveformUnavailable": "Forme d'onde indisponible",
-    "trimStart": "Élaguer le début",
-    "trimEnd": "Élaguer la fin"
+    "trimStart": "Rogner le début",
+    "trimEnd": "Rogner la fin",
+    "holdSegment": "Figer le segment",
+    "copy": "Copier",
+    "paste": "Coller",
+    "delete": "Supprimer",
+    "copyUnavailable": "Sélectionnez un élément de la timeline avant de le copier.",
+    "clipboardEmpty": "Copiez un élément de la timeline avant de le coller."
   },
   "TimelineVideoClip": {
     "trimStart": "Élaguer le début",
@@ -216,7 +248,15 @@
     "mediaPlaybackAssetError": "{project} — « {name} » est indisponible (source attendue : {path}). {message}",
     "mediaPlaybackIncompleteRecording": "{project} — « {name} » est indisponible (source attendue : {path}). La session d’enregistrement ne s’est pas finalisée.",
     "mediaPlaybackUnknownProject": "Projet actuel",
-    "mediaPlaybackCopyError": "Copier l’erreur"
+    "mediaPlaybackCopyError": "Copier l’erreur",
+    "timelinePasteFailed": "Impossible de coller : {message}",
+    "timelineClipboardDifferentProject": "L’élément copié appartient à un autre projet.",
+    "timelineCopied": "Copié",
+    "timelinePasted": "Collé",
+    "timelineCopiedItem": "Copié : {item}",
+    "timelinePastedItem": "Collé : {item}",
+    "timelineClipboardCaption": "Sous-titre « {text} »",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Préréglages",

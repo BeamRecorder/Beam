@@ -62,18 +62,23 @@ describe('SettingsPanel', () => {
       global: { stubs: { Button, ButtonGroup, Select, UpdateControls, Popover, HUD } },
     });
     expect(wrapper.find('.appearance-settings').exists()).toBe(true);
+    const languageSetting = wrapper.get('.language-setting');
+    const themeModeSetting = wrapper.get('.theme-mode-setting');
+    expect(
+      languageSetting.element.compareDocumentPosition(themeModeSetting.element) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(wrapper.findAll('.theme-mode-group button').map((button) => button.text())).toEqual([
       'Light',
       'Dark',
       'System',
     ]);
-    expect(wrapper.get('.customization-trigger').attributes('aria-expanded')).toBe('false');
-    expect(wrapper.find('.customization-panel').exists()).toBe(false);
-    await wrapper.get('.customization-trigger').trigger('click');
-    wrapper.get('.customization-panel');
-    await wrapper.findAll('.language-select').at(-1)!.trigger('click');
-
-    expect(localStorage.getItem('locale')).toBe('fr');
+    const advanced = wrapper.get('.advanced-toggle');
+    expect(advanced.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(false);
+    await advanced.trigger('click');
+    wrapper.get('.appearance-advanced-panel .ui-scale-setting');
+    wrapper.get('.appearance-advanced-panel .theme-customization-section');
+    expect(wrapper.find('.appearance-advanced-panel .accordion').exists()).toBe(false);
   });
 
   it('renders the update controls section', () => {

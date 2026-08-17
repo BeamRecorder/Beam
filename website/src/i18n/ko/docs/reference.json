@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "내보내기 및 공유",
+      "description": "적절한 해상도와 품질 프리셋으로 Beam 구성을 MP4 또는 WebM으로 내보내세요.",
+      "lead": "내보내기는 컴퓨터에서 지원하는 설정을 사용해 현재 구성을 로컬 파일로 직접 렌더링합니다.",
+      "sections": [
+        {
+          "title": "형식 선택",
+          "bullets": [
+            "WebM은 현재 컴퓨터에서 사용할 수 있는 인코더와 함께 WebM 컨테이너를 사용합니다.",
+            "Beam이 호환되는 하드웨어 또는 소프트웨어 인코더를 찾으면 MP4는 MP4 컨테이너를 사용합니다."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "인코더 사용 가능 여부",
+            "text": "컴퓨터에서 호환되는 인코더를 제공하지 않으면 형식을 사용할 수 없습니다. Beam은 내보내기 전이나 내보내기 중에 이를 알립니다."
+          }
+        },
+        {
+          "title": "해상도 선택",
+          "bullets": [
+            "네이티브 캔버스가 충분히 크면 720p는 HD 출력으로 축소됩니다.",
+            "네이티브 캔버스가 충분히 크면 1080p는 Full HD로 축소됩니다.",
+            "최대는 네이티브 출력 캔버스 크기를 유지합니다."
+          ]
+        },
+        {
+          "title": "품질 및 비트레이트 선택",
+          "paragraphs": [
+            "낮음, 중간 및 높음 프리셋은 출력 크기와 프레임 속도에서 비트레이트를 계산합니다. 중간은 선명도와 파일 크기의 균형을 맞추고 높음은 시각적 충실도를 우선합니다."
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "형식, 해상도 및 품질을 위한 Beam 내보내기 설정",
+            "caption": "대상 파일을 선택하기 전에 형식, 해상도 및 품질을 선택하세요."
+          }
+        },
+        {
+          "title": "내보내기 모니터링",
+          "paragraphs": [
+            "Beam은 렌더링 중 프레임 진행률을 표시합니다. 활성 내보내기를 취소하거나 진단 보고서를 복사할 수 있습니다. 실시간 편집기 변경 사항은 이미 렌더링 중인 파일을 수정하지 않습니다."
+          ]
+        },
+        {
+          "title": "결과 열기",
+          "paragraphs": [
+            "내보내기가 성공하면 Beam은 저장된 파일 이름을 표시하고 파일을 여는 작업을 제공합니다. 내보내기가 실패하면 [Discord](https://discord.gg/6Q6v2xUCB) 또는 [GitHub](https://github.com/ExtraBinoss/Beam/issues)에서 도움을 요청하기 전에 기술 보고서를 복사하세요."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "플랫폼 지원",
+      "description": "Windows, macOS 및 Linux에서 Beam 지원과 운영체제별 동작을 검토하세요.",
+      "lead": "Beam은 Windows, macOS 및 Linux에서 사용할 수 있습니다. 네이티브 권한과 창 시스템 기능으로 인해 플랫폼마다 일부 차이가 있습니다.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Beam은 네이티브 Windows 설치 프로그램으로 배포됩니다.",
+            "화면, 창, 영역, 카메라, 마이크 및 시스템 오디오 녹화를 지원합니다.",
+            "오버레이 위치와 크기를 저장하고 복원할 수 있습니다."
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "Beam은 macOS 13 이상을 실행하는 Apple Silicon Mac용 DMG로 배포됩니다.",
+            "이러한 소스를 사용하면 화면 녹화, 마이크 및 카메라 권한이 요청됩니다.",
+            "오버레이 위치와 크기를 저장하고 복원할 수 있습니다."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam이 손상되어 열 수 없음",
+            "text": "Beam을 `/Applications`로 이동한 후 `xattr -cr /Applications/Beam.app`을 실행하거나 시스템 설정 > 개인정보 보호 및 보안에서 계속 열기를 선택하세요."
+          },
+          "subsections": [
+            {
+              "title": "화면 및 시스템 오디오 녹화 허용",
+              "paragraphs": [
+                "Apple 메뉴 > 시스템 설정 > 개인정보 보호 및 보안 > 화면 및 시스템 오디오 녹화를 열고 Beam을 활성화하세요. Beam이 목록에 없으면 추가 버튼을 사용해 `/Applications/Beam.app`을 선택하세요. 이 권한을 변경한 후 Beam을 종료하고 다시 여세요."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-screen-system-audio.webp",
+                "alt": "Beam이 활성화된 macOS 화면 및 시스템 오디오 녹화 개인정보 설정",
+                "caption": "화면 및 시스템 오디오 녹화에서 Beam을 활성화하세요."
+              }
+            },
+            {
+              "title": "마이크 및 카메라 액세스 허용",
+              "paragraphs": [
+                "시스템 설정 > 개인정보 보호 및 보안에서 마이크를 열고 음성을 녹음할 때 Beam을 활성화하세요. 카메라 오버레이를 사용할 때는 카메라를 열고 Beam을 활성화하세요."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-microphone-camera.webp",
+                "alt": "Beam용 macOS 마이크 및 카메라 개인정보 설정",
+                "caption": "캡처하려는 각 소스의 개인정보 목록에서 Beam을 활성화해야 합니다."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "bullets": [
+            "Beam은 AppImage, DEB 및 RPM 패키지로 배포됩니다.",
+            "화면 및 창 캡처는 XDG Desktop Portal, PipeWire 및 FFmpeg를 사용합니다.",
+            "캡처가 시작되면 시스템 선택기가 권한을 요청합니다.",
+            "키보드 바로 가기와 마우스 클릭 메타데이터에는 명시적인 Polkit 동의가 필요합니다.",
+            "X11에서는 오버레이 위치와 크기를 복원할 수 있습니다.",
+            "네이티브 Wayland에서는 오버레이 크기를 복원할 수 있지만 전역 위치는 복원할 수 없습니다."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Wayland 위치 지정",
+            "text": "Wayland는 전역 창 좌표를 공개하지 않습니다. Beam은 XWayland를 강제하지 않습니다. 이 해결 방법이 일부 GPU 및 X11 구성과 호환되지 않을 수 있기 때문입니다."
+          }
+        }
+      ]
+    }
+  ]
+}

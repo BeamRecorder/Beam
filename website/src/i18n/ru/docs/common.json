@@ -1,0 +1,54 @@
+{
+  "locale": "ru-RU",
+  "label": "Русский",
+  "siteTitle": "Документация Beam",
+  "nav": {
+    "website": "Сайт Beam"
+  },
+  "sidebar": [
+    {
+      "text": "Начало",
+      "items": [
+        { "text": "Введение", "link": "/" },
+        { "text": "Начало работы", "link": "/getting-started" },
+        { "text": "Обновление Beam", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "Приложение для записи",
+      "items": [
+        { "text": "Обзор", "link": "/recorder/" },
+        { "text": "Интерфейс", "link": "/recorder/interface" },
+        { "text": "Возможности", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "Видеоредактор",
+      "items": [
+        { "text": "Обзор", "link": "/editor/" },
+        { "text": "Интерфейс", "link": "/editor/interface" },
+        { "text": "Возможности", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "Справочник",
+      "items": [
+        { "text": "Экспорт и обмен", "link": "/export" },
+        { "text": "Поддержка платформ", "link": "/platforms" },
+        { "text": "Файловая система", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": {
+    "github": "Открыть Beam на GitHub",
+    "discord": "Присоединиться к Discord Beam"
+  },
+  "theme": {
+    "switchToLight": "Переключить на светлую тему",
+    "switchToDark": "Переключить на тёмную тему"
+  },
+  "footer": {
+    "message": "Запись и монтаж с открытым исходным кодом.",
+    "copyright": "Выпущено по лицензии MIT."
+  }
+}

@@ -272,6 +272,36 @@ describe('useCameraZoom', () => {
     );
   });
 
+  it('applies fit, portrait and circle framing consistently to screen recordings', () => {
+    mountComposable();
+    const screen = options.compositionRef.value.clips[0] as VisualClip;
+    screen.crop = undefined;
+    const presets = ['fit', 'portrait', 'circle'] as const;
+    const source = { width: 1_280, height: 720 };
+
+    for (const preset of presets) {
+      screen.cameraFramingPreset = preset;
+      drawDecoratedMedia.mockClear();
+      state.drawVideoWindow(context(), 800, 450, frame(source.width, source.height));
+      const rendered = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+        rect: { x: number; y: number; width: number; height: number };
+        sourceRect?: { x: number; y: number; width: number; height: number };
+        mask?: string;
+      };
+      const expectedAspect = preset === 'fit' ? source.width / source.height : preset === 'portrait' ? 9 / 16 : 1;
+      expect(rendered.rect.width / rendered.rect.height).toBeCloseTo(expectedAspect, 8);
+      expect(rendered.rect.x).toBeCloseTo((800 - rendered.rect.width) / 2, 8);
+      expect(rendered.rect.y).toBeCloseTo((450 - rendered.rect.height) / 2, 8);
+      expect(rendered.mask).toBe(preset === 'circle' ? 'circle' : undefined);
+      if (preset === 'fit') expect(rendered.sourceRect).toEqual({ x: 0, y: 0, ...source });
+      else {
+        expect(rendered.sourceRect).toBeDefined();
+        expect(rendered.sourceRect!.x).toBeCloseTo((source.width - rendered.sourceRect!.width) / 2, 8);
+        expect(rendered.sourceRect!.y).toBeCloseTo((source.height - rendered.sourceRect!.height) / 2, 8);
+      }
+    }
+  });
+
   it('updates a transform draft without rebuilding the camera evaluator', () => {
     mountComposable();
     const createEvaluator = vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator');
