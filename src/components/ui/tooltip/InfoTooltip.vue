@@ -1,36 +1,34 @@
 <script setup lang="ts">
 import { Info } from '@lucide/vue';
 import Button from '../button/Button.vue';
-import Tooltip from './Tooltip.vue';
 
 withDefaults(
   defineProps<{
     content: string;
     label?: string;
     position?: 'top' | 'bottom' | 'left' | 'right';
-    maxWidth?: number;
     delay?: number;
   }>(),
   {
     label: undefined,
     position: 'top',
-    maxWidth: 260,
     delay: 100,
   },
 );
 </script>
 
 <template>
-  <Tooltip :content="content" :position="position" :max-width="maxWidth" :delay="delay" as="span">
-    <Button
-      variant="ghost"
-      size="xs"
-      :icon="Info"
-      icon-only
-      class="info-tooltip-trigger"
-      :aria-label="label ?? content"
-    />
-  </Tooltip>
+  <Button
+    variant="ghost"
+    size="xs"
+    :icon="Info"
+    icon-only
+    class="info-tooltip-trigger"
+    :tooltip="content"
+    :tooltip-position="position"
+    :tooltip-delay="delay"
+    :aria-label="label ?? content"
+  />
 </template>
 
 <style scoped>

@@ -243,7 +243,7 @@ const run = async () => {
           <div class="field">
             <div class="field-heading">
               <span class="field-label">{{ t('resolution') }}</span>
-              <InfoTooltip :content="resolutionDescriptions[resolution]" :label="t('resolution')" position="left" />
+              <InfoTooltip :content="resolutionDescriptions[resolution]" position="left" />
             </div>
             <ButtonGroup full>
               <Button
@@ -281,7 +281,7 @@ const run = async () => {
           <div class="field">
             <div class="field-heading">
               <span class="field-label">{{ t('frameRate') }}</span>
-              <InfoTooltip :content="frameRateDescriptions[frameRate]" :label="t('frameRate')" position="left" />
+              <InfoTooltip :content="frameRateDescriptions[frameRate]" position="left" />
             </div>
             <ButtonGroup full>
               <Button
@@ -311,7 +311,7 @@ const run = async () => {
           <div class="field">
             <div class="field-heading">
               <span class="field-label">{{ t('qualityAndBitrate') }}</span>
-              <InfoTooltip :content="presetDescriptions[preset]" :label="t('qualityAndBitrate')" position="left" />
+              <InfoTooltip :content="presetDescriptions[preset]" position="left" />
             </div>
             <ButtonGroup full>
               <Button

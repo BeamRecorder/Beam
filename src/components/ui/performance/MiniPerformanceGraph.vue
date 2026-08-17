@@ -16,16 +16,16 @@ const props = withDefaults(
     width: 82,
     height: 20,
     sampleCapacity: 48,
-    animationMs: 400,
+    animationMs: 240,
     fill: true,
   },
 );
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
-let displayedValues: number[] = [];
-let startValues: number[] = [];
-let targetValues: number[] = [];
+let activeSamples: number[] = [];
+let slidingSamples: number[] = [];
+let slideOffsetProgress = 1;
 let animationStartTime = 0;
 let animationFrame: number | null = null;
 let mounted = false;
@@ -68,39 +68,58 @@ function getPointY(value: number, height: number): number {
   return height - value * Math.max(1, height - 3) - 1.5;
 }
 
-function getPointX(index: number, total: number, width: number): number {
-  return total <= 1 ? width / 2 : (index / (total - 1)) * width;
-}
-
-function traceCurve(context: CanvasRenderingContext2D, values: readonly number[], width: number, height: number) {
-  const count = values.length;
+function traceSlidingPath(
+  context: CanvasRenderingContext2D,
+  samples: readonly number[],
+  progress: number,
+  capacity: number,
+  width: number,
+  height: number,
+) {
+  const count = samples.length;
   if (count === 0) return;
 
   if (count === 1) {
-    const y = getPointY(values[0] ?? 0, height);
+    const y = getPointY(samples[0] ?? 0, height);
     context.beginPath();
     context.moveTo(0, y);
     context.lineTo(width, y);
     return;
   }
 
-  const firstY = getPointY(values[0] ?? 0, height);
-  const firstX = getPointX(0, count, width);
+  const dx = width / Math.max(1, capacity - 1);
+  const isSliding = progress < 1 && count > capacity;
+  const pointsX: number[] = new Array(count);
+  const pointsY: number[] = new Array(count);
+
+  if (isSliding) {
+    // Pure horizontal translation: every peak keeps its exact immutable Y height!
+    const offset = progress * dx;
+    for (let i = 0; i < count; i++) {
+      pointsX[i] = i * dx - offset;
+      pointsY[i] = getPointY(samples[i] ?? 0, height);
+    }
+  } else {
+    for (let i = 0; i < count; i++) {
+      pointsX[i] = count < capacity ? (i / (count - 1)) * width : i * dx;
+      pointsY[i] = getPointY(samples[i] ?? 0, height);
+    }
+  }
 
   context.beginPath();
-  context.moveTo(firstX, firstY);
+  context.moveTo(pointsX[0]!, pointsY[0]!);
 
   for (let i = 1; i < count; i++) {
-    const prevX = getPointX(i - 1, count, width);
-    const prevY = getPointY(values[i - 1] ?? 0, height);
-    const currX = getPointX(i, count, width);
-    const currY = getPointY(values[i] ?? 0, height);
+    const prevX = pointsX[i - 1]!;
+    const prevY = pointsY[i - 1]!;
+    const currX = pointsX[i]!;
+    const currY = pointsY[i]!;
     const midX = (prevX + currX) / 2;
     context.bezierCurveTo(midX, prevY, midX, currY, currX, currY);
   }
 }
 
-function draw(values: readonly number[]) {
+function draw(samples: readonly number[], progress: number) {
   const canvas = canvasRef.value;
   if (!canvas) return;
 
@@ -123,14 +142,19 @@ function draw(values: readonly number[]) {
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
 
-  if (values.length === 0 || width <= 0 || height <= 0) return;
+  if (samples.length === 0 || width <= 0 || height <= 0) return;
+
+  const capacity =
+    props.sampleCapacity !== undefined && props.sampleCapacity > 0
+      ? Math.max(2, Math.round(props.sampleCapacity))
+      : samples.length;
 
   const color = resolveColor(canvas, props.color);
 
   context.lineCap = 'round';
   context.lineJoin = 'round';
 
-  traceCurve(context, values, width, height);
+  traceSlidingPath(context, samples, progress, capacity, width, height);
 
   // Stroke the crisp curve
   context.strokeStyle = color;
@@ -161,28 +185,19 @@ function draw(values: readonly number[]) {
 }
 
 function stepAnimation(timestamp: number) {
-  const duration = Math.max(1, props.animationMs ?? 400);
+  const duration = Math.max(1, props.animationMs ?? 240);
   const elapsed = timestamp - animationStartTime;
   const linear = Math.min(1, Math.max(0, elapsed / duration));
   const progress = 1 - Math.pow(1 - linear, 3);
-
-  const len = targetValues.length;
-  if (displayedValues.length !== len) {
-    displayedValues = new Array(len);
-  }
-
-  for (let i = 0; i < len; i++) {
-    const start = startValues[i] ?? targetValues[i] ?? 0;
-    const target = targetValues[i] ?? 0;
-    displayedValues[i] = start + (target - start) * progress;
-  }
-
-  draw(displayedValues);
+  slideOffsetProgress = progress;
 
   if (linear < 1) {
+    draw(slidingSamples, slideOffsetProgress);
     animationFrame = requestAnimationFrame(stepAnimation);
   } else {
     animationFrame = null;
+    slideOffsetProgress = 1;
+    draw(activeSamples, 1);
   }
 }
 
@@ -192,37 +207,33 @@ function onValuesUpdate() {
     animationFrame = null;
   }
 
-  targetValues = cleanValues(props.values, props.sampleCapacity);
+  const nextSamples = cleanValues(props.values, props.sampleCapacity);
+  const duration = props.animationMs ?? 240;
 
-  const duration = props.animationMs ?? 400;
-
-  if (!mounted || duration <= 0 || displayedValues.length === 0) {
-    displayedValues = targetValues.slice();
-    draw(displayedValues);
+  if (!mounted || duration <= 0 || activeSamples.length === 0) {
+    activeSamples = nextSamples.slice();
+    slideOffsetProgress = 1;
+    draw(activeSamples, 1);
     return;
   }
 
-  // Seamlessly adapt from wherever the graph is currently rendered
-  const targetLen = targetValues.length;
-  const currentLen = displayedValues.length;
+  const capacity =
+    props.sampleCapacity !== undefined && props.sampleCapacity > 0
+      ? Math.max(2, Math.round(props.sampleCapacity))
+      : nextSamples.length;
 
-  if (currentLen === targetLen) {
-    startValues = displayedValues.slice();
+  if (activeSamples.length >= capacity && nextSamples.length >= capacity) {
+    // Pure horizontal shift: prepend the previous head so it slides smoothly off-screen
+    slidingSamples = [activeSamples[0]!, ...nextSamples];
+    activeSamples = nextSamples.slice();
+    slideOffsetProgress = 0;
+    animationStartTime = performance.now();
+    animationFrame = requestAnimationFrame(stepAnimation);
   } else {
-    startValues = new Array(targetLen);
-    const maxCurr = Math.max(1, currentLen - 1);
-    const maxTarget = Math.max(1, targetLen - 1);
-    for (let i = 0; i < targetLen; i++) {
-      const pos = (i / maxTarget) * maxCurr;
-      const left = Math.floor(pos);
-      const right = Math.min(currentLen - 1, Math.ceil(pos));
-      const f = pos - left;
-      startValues[i] = (displayedValues[left] ?? 0) * (1 - f) + (displayedValues[right] ?? 0) * f;
-    }
+    activeSamples = nextSamples.slice();
+    slideOffsetProgress = 1;
+    draw(activeSamples, 1);
   }
-
-  animationStartTime = performance.now();
-  animationFrame = requestAnimationFrame(stepAnimation);
 }
 
 onMounted(() => {
