@@ -7,13 +7,17 @@ import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/cam
 import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { useTranslate } from '~/i18n/useTranslate';
 
-const props = defineProps<{
-  layout: CameraLayoutPreset;
-  framing: CameraFramingPreset;
-  hasLinkedScreen: boolean;
-  splitRatio: number;
-  splitPadding: number;
-}>();
+const props = withDefaults(
+  defineProps<{
+    layout: CameraLayoutPreset;
+    framing: CameraFramingPreset;
+    hasLinkedScreen: boolean;
+    splitRatio: number;
+    splitPadding: number;
+    supportsSplitLayouts?: boolean;
+  }>(),
+  { supportsSplitLayouts: true },
+);
 
 const emit = defineEmits<{
   (event: 'update:layout', preset: Exclude<CameraLayoutPreset, 'custom'>): void;
@@ -23,18 +27,31 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useTranslate('CameraLayoutPanel');
-const layouts = computed<Array<{ id: Exclude<CameraLayoutPreset, 'custom'>; label: string }>>(() => [
-  { id: 'floating-top-left', label: t('topLeft') },
-  { id: 'floating-top-right', label: t('topRight') },
-  { id: 'floating-bottom-left', label: t('bottomLeft') },
-  { id: 'floating-bottom-right', label: t('bottomRight') },
-  { id: 'floating-center', label: t('largeCenter') },
-  { id: 'fullscreen', label: t('fullscreen') },
-  { id: 'split-left', label: t('splitLeft') },
-  { id: 'split-right', label: t('splitRight') },
-  { id: 'split-top', label: t('splitTop') },
-  { id: 'split-bottom', label: t('splitBottom') },
-]);
+const layouts = computed<Array<{ id: Exclude<CameraLayoutPreset, 'custom'>; label: string }>>(() => {
+  const placements: Array<{ id: Exclude<CameraLayoutPreset, 'custom'>; label: string }> = [
+    { id: 'floating-top-left', label: t('topLeft') },
+    { id: 'floating-top-right', label: t('topRight') },
+    { id: 'floating-bottom-left', label: t('bottomLeft') },
+    { id: 'floating-bottom-right', label: t('bottomRight') },
+    {
+      id: 'floating-center',
+      label: t(props.supportsSplitLayouts ? 'largeCenter' : 'visualLargeCenter'),
+    },
+    {
+      id: 'fullscreen',
+      label: t(props.supportsSplitLayouts ? 'fullscreen' : 'visualFullscreen'),
+    },
+  ];
+  return props.supportsSplitLayouts === false
+    ? placements
+    : [
+        ...placements,
+        { id: 'split-left', label: t('splitLeft') },
+        { id: 'split-right', label: t('splitRight') },
+        { id: 'split-top', label: t('splitTop') },
+        { id: 'split-bottom', label: t('splitBottom') },
+      ];
+});
 const framings = computed<Array<{ id: Exclude<CameraFramingPreset, 'custom'>; label: string }>>(() => [
   { id: 'fill', label: t('fill') },
   { id: 'fit', label: t('fit') },
@@ -44,13 +61,15 @@ const framings = computed<Array<{ id: Exclude<CameraFramingPreset, 'custom'>; la
   { id: 'squircle', label: t('squircle') },
   { id: 'circle', label: t('circle') },
 ]);
-const splitUnavailable = computed(() => !props.hasLinkedScreen);
+const splitUnavailable = computed(() => props.supportsSplitLayouts !== false && !props.hasLinkedScreen);
 </script>
 
 <template>
   <section class="camera-layout-panel" aria-labelledby="camera-layout-title">
     <div class="section-header">
-      <span id="camera-layout-title" class="section-title">{{ t('title') }}</span>
+      <span id="camera-layout-title" class="section-title">{{
+        t(supportsSplitLayouts === false ? 'visualTitle' : 'title')
+      }}</span>
       <span v-if="layout === 'custom'" class="custom-status">{{ t('custom') }}</span>
     </div>
     <div class="layout-grid">
@@ -71,8 +90,8 @@ const splitUnavailable = computed(() => !props.hasLinkedScreen);
         </span>
       </Button>
     </div>
-    <p v-if="splitUnavailable" class="layout-hint">{{ t('splitRequiresScreen') }}</p>
-    <div v-if="isSplitCameraLayout(layout)" class="split-adjustment">
+    <p v-if="supportsSplitLayouts !== false && splitUnavailable" class="layout-hint">{{ t('splitRequiresScreen') }}</p>
+    <div v-if="supportsSplitLayouts !== false && isSplitCameraLayout(layout)" class="split-adjustment">
       <span class="section-title">{{ t('splitRatio') }}</span>
       <Slider
         :model-value="Math.round(splitRatio * 100)"

@@ -66,6 +66,8 @@
     "closeEditing": "एडिटिंग बंद करें",
     "edit": "एडिट करें",
     "blur": "ब्लर",
+    "removeBackground": "बैकग्राउंड हटाएँ",
+    "removeBackgroundDescription": "मुख्य वीडियो को किनारे से किनारे तक दिखाएँ।",
     "watermark": "वॉटरमार्क",
     "watermarkDescription": "वीडियो में Beam ब्रांडिंग जोड़ें।",
     "watermarkText": "टेक्स्ट",
@@ -404,7 +406,15 @@
     "create": "बनाएँ",
     "explore": "ब्राउज़ करें",
     "current": "वर्तमान",
-    "dateUnknown": "अज्ञात तारीख"
+    "dateUnknown": "अज्ञात तारीख",
+    "screenRecord": "स्क्रीन रिकॉर्डिंग",
+    "camera": "कैमरा",
+    "captions": "उपशीर्षक",
+    "searchProjects": "प्रोजेक्ट खोजें",
+    "searchPlaceholder": "प्रोजेक्ट खोजें...",
+    "noSearchResults": "कोई प्रोजेक्ट नहीं मिला।",
+    "clearSearch": "खोज साफ़ करें",
+    "refreshed": "अपडेट किया गया!"
   },
   "PropertiesPanel": {
     "properties": "गुण",

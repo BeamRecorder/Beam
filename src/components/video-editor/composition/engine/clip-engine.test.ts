@@ -35,7 +35,7 @@ const sessionVideoAsset = (id: string, sessionId = 'session-1'): MediaAsset => (
 
 const visual = (
   id: string,
-  kind: 'screen' | 'video' | 'webcam',
+  kind: 'screen' | 'video' | 'image' | 'webcam',
   assetId: string,
   overrides: Partial<VisualClip> = {},
 ): VisualClip => ({
@@ -107,7 +107,116 @@ const ungroupedSessionComposition = (screenSession = 'session-1', cameraSession 
     ],
   );
 
+const visualPresetComposition = (): ClipComposition =>
+  createComposition(
+    [videoAsset('screen-asset'), videoAsset('video-asset'), videoAsset('image-asset', 'image')],
+    [
+      visual('screen-clip', 'screen', 'screen-asset', {
+        groupId: undefined,
+        trackId: 'screen-clip-track',
+        transform: { x: 0.05, y: 0.1, width: 0.7, height: 0.6 },
+        crop: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+      }),
+      visual('video-clip', 'video', 'video-asset', {
+        groupId: undefined,
+        trackId: 'video-clip-track',
+        transform: { x: 0.2, y: 0.15, width: 0.4, height: 0.35 },
+        crop: { x: 0.05, y: 0.15, width: 0.75, height: 0.65 },
+      }),
+      visual('image-clip', 'image', 'image-asset', {
+        groupId: undefined,
+        trackId: 'image-clip-track',
+        transform: { x: 0.3, y: 0.25, width: 0.3, height: 0.25 },
+        crop: { x: 0.2, y: 0.05, width: 0.6, height: 0.85 },
+      }),
+    ],
+  );
+
 describe('camera layout engine operations', () => {
+  it.each([
+    ['floating-top-left', { x: 0.04, y: 0.04, width: 0.28, height: 0.28 }],
+    ['floating-top-right', { x: 0.68, y: 0.04, width: 0.28, height: 0.28 }],
+    ['floating-bottom-left', { x: 0.04, y: 0.68, width: 0.28, height: 0.28 }],
+    ['floating-bottom-right', { x: 0.68, y: 0.68, width: 0.28, height: 0.28 }],
+    ['floating-center', { x: 0.18, y: 0.18, width: 0.64, height: 0.64 }],
+    ['fullscreen', { x: 0, y: 0, width: 1, height: 1 }],
+  ] as const)('applies %s to screen, video, and image clips', (preset, transform) => {
+    const composition = visualPresetComposition();
+    const original = new Map(composition.clips.map((clip) => [clip.id, JSON.parse(JSON.stringify(clip))]));
+
+    for (const clipId of ['screen-clip', 'video-clip', 'image-clip']) {
+      const next = setCameraLayout(composition, clipId, preset);
+      const updated = next.clips.find((clip): clip is VisualClip => clip.id === clipId);
+
+      expect(updated).toMatchObject({
+        crop: undefined,
+        cameraLayoutPreset: preset,
+        cameraFramingPreset: preset === 'fullscreen' ? 'fill' : 'squircle',
+      });
+      expect(updated?.transform.x).toBeCloseTo(transform.x);
+      expect(updated?.transform.y).toBeCloseTo(transform.y);
+      expect(updated?.transform.width).toBeCloseTo(transform.width);
+      expect(updated?.transform.height).toBeCloseTo(transform.height);
+      for (const [otherId, before] of original) {
+        if (otherId !== clipId) expect(next.clips.find((clip) => clip.id === otherId)).toEqual(before);
+      }
+    }
+  });
+
+  it.each(['screen-clip', 'video-clip', 'image-clip'] as const)(
+    'applies framing presets to %s without changing its transform',
+    (clipId) => {
+      const composition = visualPresetComposition();
+      const before = composition.clips.find((clip): clip is VisualClip => clip.id === clipId)!;
+      const next = setCameraFraming(composition, clipId, 'portrait');
+      const updated = next.clips.find((clip): clip is VisualClip => clip.id === clipId);
+
+      expect(updated).toMatchObject({
+        transform: before.transform,
+        crop: undefined,
+        cameraLayoutPreset: 'custom',
+        cameraFramingPreset: 'portrait',
+      });
+      expect(next.clips.filter((clip) => clip.id !== clipId)).toEqual(
+        composition.clips.filter((clip) => clip.id !== clipId),
+      );
+    },
+  );
+
+  it.each(['screen-clip', 'video-clip', 'image-clip'] as const)(
+    'rejects split layouts for the non-camera visual clip %s',
+    (clipId) => {
+      const composition = visualPresetComposition();
+      const before = JSON.parse(JSON.stringify(composition)) as ClipComposition;
+
+      expect(() => setCameraLayout(composition, clipId, 'split-left')).toThrow(CompositionEngineError);
+      expect(composition).toEqual(before);
+    },
+  );
+
+  it.each(['screen-clip', 'video-clip', 'image-clip'] as const)(
+    'marks manual transform and crop edits as custom presets for %s',
+    (clipId) => {
+      const layout = setCameraLayout(visualPresetComposition(), clipId, 'floating-center');
+      const transformed = setTransform(layout, clipId, { x: 0.12, y: 0.2, width: 0.52, height: 0.36 });
+      const afterTransform = transformed.clips.find((clip): clip is VisualClip => clip.id === clipId)!;
+      expect(afterTransform).toMatchObject({
+        cameraLayoutPreset: 'custom',
+        cameraFramingPreset: 'squircle',
+        transform: { x: 0.12, y: 0.2, width: 0.52, height: 0.36 },
+      });
+
+      const framed = setCameraFraming(transformed, clipId, 'circle');
+      const cropped = setCrop(framed, clipId, { x: 0.15, y: 0.1, width: 0.7, height: 0.75 });
+      const afterCrop = cropped.clips.find((clip): clip is VisualClip => clip.id === clipId)!;
+      expect(afterCrop).toMatchObject({
+        cameraLayoutPreset: 'custom',
+        cameraFramingPreset: 'custom',
+        crop: { x: 0.15, y: 0.1, width: 0.7, height: 0.75 },
+      });
+    },
+  );
+
   it('mutates only the camera and linked screen atomically for a split layout', () => {
     const composition = compositionFixture();
     const beforeAudio = composition.clips.find((clip): clip is AudioClip => clip.kind === 'audio');

@@ -1,7 +1,7 @@
-import { computed, ref, toRaw, watch, type Ref } from 'vue';
+import { computed, getCurrentScope, onScopeDispose, ref, toRaw, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorState } from '../../../api/types/capture-api';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import type { Clip, ClipComposition } from '~/media/shared/composition-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import {
   BACKGROUND_MEDIA,
@@ -15,6 +15,12 @@ import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import { type CursorClickEffects, type CursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { CursorType, CursorShadowDirection } from '../../../api/types/cursor-presentation';
 import { propertyInteractionActive } from '../../../composables/property-interaction';
+import type { EditorPreferenceDefaults } from './editor-default-types';
+import {
+  applyFreshPresentationDefaults,
+  defaultsFromEditorState,
+  normalizeEditorPreferenceDefaults,
+} from './editor-defaults';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -37,6 +43,9 @@ export function useProjectEditorState(options: {
   cursorShadowColor: Ref<string>;
   cursorShadowDirection: Ref<CursorShadowDirection>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
+  editorDefaults: Ref<EditorPreferenceDefaults>;
+  selectedClip: Ref<Clip | null>;
+  selectedZoom: Ref<ZoomElement | null>;
 }) {
   const loading = ref(false);
   const scheduledSave = ref(false);
@@ -45,6 +54,9 @@ export function useProjectEditorState(options: {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let writeChain = Promise.resolve();
   let savedBackgroundId: string | null = null;
+  let loadGeneration = 0;
+  let defaultCaptureEnabled = true;
+  let scheduledDefaultCapture = false;
 
   const snapshot = (): ProjectEditorState => ({
     schemaVersion: 3,
@@ -78,8 +90,10 @@ export function useProjectEditorState(options: {
     },
   });
 
-  const saveNow = () => {
+  const saveNow = (captureDefaults = defaultCaptureEnabled) => {
     if (propertyInteractionActive.value) return Promise.resolve();
+    const shouldCaptureDefaults = captureDefaults || scheduledDefaultCapture;
+    scheduledDefaultCapture = false;
     if (timer) {
       clearTimeout(timer);
       timer = null;
@@ -88,6 +102,8 @@ export function useProjectEditorState(options: {
     if (loading.value || !options.project.value) return Promise.resolve();
     const projectId = options.project.value.id;
     let state: ProjectEditorState;
+    const selectedClip = options.selectedClip.value ? clone(options.selectedClip.value) : null;
+    const selectedZoom = options.selectedZoom.value ? clone(options.selectedZoom.value) : null;
     try {
       state = snapshot();
     } catch (error) {
@@ -99,6 +115,16 @@ export function useProjectEditorState(options: {
     writeChain = writeChain
       .catch(() => undefined)
       .then(() => capture.saveProjectEditorState(projectId, state))
+      .then(async () => {
+        if (!shouldCaptureDefaults) return;
+        const defaults = defaultsFromEditorState(options.editorDefaults.value, state, selectedClip, selectedZoom);
+        options.editorDefaults.value = defaults;
+        try {
+          await capture.updatePreferences({ extras: { editorDefaults: defaults } });
+        } catch {
+          console.error('Failed to save editor defaults.');
+        }
+      })
       .then(() => undefined)
       .finally(() => {
         pendingSaves.value = Math.max(0, pendingSaves.value - 1);
@@ -106,17 +132,32 @@ export function useProjectEditorState(options: {
     return writeChain;
   };
 
-  const scheduleSave = () => {
+  const scheduleSave = (captureDefaults = defaultCaptureEnabled) => {
     if (loading.value || !options.project.value || propertyInteractionActive.value) return;
     if (timer) clearTimeout(timer);
+    scheduledDefaultCapture ||= captureDefaults;
     scheduledSave.value = true;
-    timer = setTimeout(() => void saveNow().catch(() => console.error('Failed to save editor state.')), 250);
+    timer = setTimeout(() => void saveNow(false).catch(() => console.error('Failed to save editor state.')), 250);
   };
 
   const load = async (projectId: string) => {
+    const generation = ++loadGeneration;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    scheduledSave.value = false;
+    scheduledDefaultCapture = false;
+    defaultCaptureEnabled = false;
     loading.value = true;
     try {
-      const state = await capture.getProjectEditorState(projectId);
+      const [loadedState, preferences] = await Promise.all([
+        capture.getProjectEditorState(projectId),
+        capture.getPreferences().catch(() => null),
+      ]);
+      if (generation !== loadGeneration) return;
+      options.editorDefaults.value = normalizeEditorPreferenceDefaults(preferences?.extras?.editorDefaults);
+      const state = loadedState.isFresh
+        ? applyFreshPresentationDefaults(loadedState, options.editorDefaults.value)
+        : loadedState;
       options.composition.value = state.composition;
       options.zoomElements.value = state.zoom.elements;
       options.generatedSessions.value = state.zoom.generatedSessions;
@@ -146,9 +187,19 @@ export function useProjectEditorState(options: {
       options.cursorEffects.value = clone(cursor.clickEffects);
       options.cursorMotion.value = clone(cursor.motion);
     } finally {
-      loading.value = false;
+      if (generation === loadGeneration) loading.value = false;
     }
   };
+
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      loadGeneration += 1;
+      if (timer) clearTimeout(timer);
+      timer = null;
+      scheduledSave.value = false;
+      scheduledDefaultCapture = false;
+    });
+  }
 
   watch(
     [
@@ -169,7 +220,7 @@ export function useProjectEditorState(options: {
       options.cursorShadowColor,
       options.cursorShadowDirection,
     ],
-    scheduleSave,
+    () => scheduleSave(),
     { deep: true },
   );
 
@@ -199,5 +250,14 @@ export function useProjectEditorState(options: {
     { deep: true },
   );
 
-  return { load, saveNow, scheduleSave, isSaving, loading };
+  return {
+    load,
+    saveNow,
+    scheduleSave,
+    enableDefaultCapture: () => {
+      defaultCaptureEnabled = true;
+    },
+    isSaving,
+    loading,
+  };
 }

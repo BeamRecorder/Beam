@@ -2,6 +2,7 @@ import type { ExportProgress } from '../../../export/export-types';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import type { BlurClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
 import type { TimelineClipboardItem, TimelinePasteHighlight, TimelinePasteRequest } from './timeline-clipboard-types';
+import type { OutputCanvasSettings } from '../../canvas/output-canvas';
 
 export interface VisualTimelineTrack {
   id: string;
@@ -24,6 +25,7 @@ export interface TimelineTracksProps {
   isSnappingEnabled?: boolean;
   projectId?: string | null;
   recentPaste?: TimelinePasteHighlight | null;
+  canvas?: OutputCanvasSettings;
 }
 
 export interface TimelineTracksEmits {
@@ -45,4 +47,7 @@ export interface TimelineTracksEmits {
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
   (event: 'clipboard:copied', item: TimelineClipboardItem): void;
+  (event: 'preview:canvas', value: OutputCanvasSettings | null): void;
+  (event: 'update:canvas', value: OutputCanvasSettings): void;
+  (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
 }

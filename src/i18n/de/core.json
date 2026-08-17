@@ -66,6 +66,8 @@
     "closeEditing": "Bearbeitung schließen",
     "edit": "Bearbeiten",
     "blur": "Unschärfe",
+    "removeBackground": "Hintergrund entfernen",
+    "removeBackgroundDescription": "Zeigt das Hauptvideo randlos an.",
     "watermark": "Wasserzeichen",
     "watermarkDescription": "Beam-Branding zum Video hinzufügen.",
     "watermarkText": "Text",
@@ -404,7 +406,15 @@
     "create": "Erstellen",
     "explore": "Durchsuchen",
     "current": "Aktuell",
-    "dateUnknown": "Unbekanntes Datum"
+    "dateUnknown": "Unbekanntes Datum",
+    "screenRecord": "Bildschirmaufnahme",
+    "camera": "Kamera",
+    "captions": "Untertitel",
+    "searchProjects": "Projekte suchen",
+    "searchPlaceholder": "Projekte suchen...",
+    "noSearchResults": "Keine Projekte gefunden.",
+    "clearSearch": "Suche löschen",
+    "refreshed": "Aktualisiert!"
   },
   "PropertiesPanel": {
     "properties": "Eigenschaften",

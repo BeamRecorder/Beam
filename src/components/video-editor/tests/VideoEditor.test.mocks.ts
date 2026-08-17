@@ -533,59 +533,78 @@ vi.mock('../timeline/EditorTimeline.vue', async () => {
           depth: 2,
           mode: 'manual',
         };
-        const copiedClipItem = {
-          type: 'clip' as const,
-          scopeId: 'project-1',
-          category: 'visual' as const,
-          clip: copiedClip,
-          asset: copiedAsset,
-          descriptor: { kind: 'item' as const, name: copiedAsset?.fileName ?? 'screen.mp4' },
-        };
-        const copiedZoomItem = {
-          type: 'zoom' as const,
-          scopeId: 'project-1',
-          category: 'zoom' as const,
-          zoom: copiedZoom,
-          descriptor: { kind: 'zoom' as const, number: 1 },
-        };
         return () =>
-          h('div', [
-            h('span', {
+          h(
+            'div',
+            {
               class: 'mock-editor-timeline',
               'data-recent-paste-type': props.recentPaste?.type ?? '',
               'data-recent-paste-id': props.recentPaste?.id ?? '',
-            }),
-            h('button', { class: 'timeline-select-zoom', onClick: () => emit('select:zoom', 'z') }),
-            h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
-            h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
-            h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
-            h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
-            h('button', { class: 'timeline-copy', onClick: () => emit('clipboard:copied', copiedClipItem) }),
-            h('button', {
-              class: 'timeline-paste-invalid',
-              onClick: () =>
-                emit('paste:item', {
-                  timeMs: 1_000,
-                  item: { ...copiedClipItem, scopeId: 'other-project' },
-                }),
-            }),
-            h('button', {
-              class: 'timeline-paste-clip',
-              onClick: () =>
-                emit('paste:item', {
-                  timeMs: 1_000,
-                  item: copiedClipItem,
-                }),
-            }),
-            h('button', {
-              class: 'timeline-paste-zoom',
-              onClick: () =>
-                emit('paste:item', {
-                  timeMs: 1_000,
-                  item: copiedZoomItem,
-                }),
-            }),
-          ]);
+            },
+            [
+              h('button', { class: 'timeline-select-zoom', onClick: () => emit('select:zoom', 'z') }),
+              h('button', { class: 'timeline-select-clip', onClick: () => emit('select:clip', 'audio') }),
+              h('button', { class: 'timeline-toggle', onClick: () => emit('toggle:clip', 'audio') }),
+              h('button', { class: 'timeline-add-caption', onClick: () => emit('add:caption', 500) }),
+              h('button', { class: 'timeline-delete-clips', onClick: () => emit('delete:clips', ['audio']) }),
+              h('button', {
+                class: 'timeline-copy',
+                onClick: () =>
+                  emit('clipboard:copied', {
+                    type: 'clip',
+                    scopeId: 'project-1',
+                    category: 'visual',
+                    clip: copiedClip,
+                    asset: copiedAsset,
+                    descriptor: { kind: 'item', name: copiedAsset?.fileName ?? 'screen.mp4' },
+                  }),
+              }),
+              h('button', {
+                class: 'timeline-paste-invalid',
+                onClick: () =>
+                  emit('paste:item', {
+                    timeMs: 1_000,
+                    item: {
+                      type: 'clip',
+                      scopeId: 'other-project',
+                      category: 'visual',
+                      clip: copiedClip,
+                      asset: copiedAsset,
+                      descriptor: { kind: 'item', name: copiedAsset?.fileName ?? 'screen.mp4' },
+                    },
+                  }),
+              }),
+              h('button', {
+                class: 'timeline-paste-clip',
+                onClick: () =>
+                  emit('paste:item', {
+                    timeMs: 1_000,
+                    item: {
+                      type: 'clip',
+                      scopeId: 'project-1',
+                      category: 'visual',
+                      clip: copiedClip,
+                      asset: copiedAsset,
+                      descriptor: { kind: 'item', name: copiedAsset?.fileName ?? 'screen.mp4' },
+                    },
+                  }),
+              }),
+              h('button', {
+                class: 'timeline-paste-zoom',
+                onClick: () =>
+                  emit('paste:item', {
+                    timeMs: 1_000,
+                    item: {
+                      type: 'zoom',
+                      scopeId: 'project-1',
+                      category: 'zoom',
+                      zoom: copiedZoom,
+                      descriptor: { kind: 'zoom', number: 1 },
+                    },
+                  }),
+              }),
+            ],
+          );
       },
     }),
   };

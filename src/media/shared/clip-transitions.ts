@@ -1,10 +1,4 @@
-import type {
-  Clip,
-  ClipKind,
-  ClipTransition,
-  ClipTransitions,
-  TransitionPreset,
-} from './composition-types';
+import type { Clip, ClipKind, ClipTransition, ClipTransitions, TransitionPreset } from './composition-types';
 
 export const DEFAULT_TRANSITION_DURATION_MS = 500;
 export const MAX_TRANSITION_DURATION_MS = 5_000;
@@ -37,7 +31,8 @@ const visualKind = (kind: ClipKind) => kind !== 'audio';
 
 const presetAllowed = (kind: ClipKind, preset: TransitionPreset) =>
   (visualKind(kind) || preset.kind === 'fade') &&
-  (preset.kind === 'fade' || preset.kind === 'blur' ||
+  (preset.kind === 'fade' ||
+    preset.kind === 'blur' ||
     (preset.kind === 'slide' && ['left', 'right', 'up', 'down'].includes(preset.direction)) ||
     (preset.kind === 'zoom' && ['in', 'out'].includes(preset.direction)));
 
@@ -71,6 +66,10 @@ export function normalizeClipTransitions(
   };
 }
 
+export function normalizeCanvasTransitions(transitions: ClipTransitions, timelineDurationMs: number): ClipTransitions {
+  return normalizeClipTransitions(transitions, timelineDurationMs, 'screen');
+}
+
 const identity = (): ClipTransitionState => ({ opacity: 1, translateX: 0, translateY: 0, scale: 1, blur: 0 });
 
 function evaluatePreset(preset: TransitionPreset, progress: number): ClipTransitionState {
@@ -88,32 +87,52 @@ function evaluatePreset(preset: TransitionPreset, progress: number): ClipTransit
   return state;
 }
 
-export function resolveClipTransitionState(clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>, timeMs: number) {
-  const local = timeMs - clip.timelineStartMs;
-  if (local < 0 || local > clip.timelineDurationMs) return identity();
-  if (clip.transitions?.entry && local < clip.transitions.entry.durationMs) {
-    const linear = clamp01(local / clip.transitions.entry.durationMs);
-    return evaluatePreset(clip.transitions.entry.preset, 1 - (1 - linear) ** 3);
+export function resolveClipTransitionState(
+  clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>,
+  timeMs: number,
+) {
+  return resolveTransitionState(
+    clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
+    timeMs - clip.timelineStartMs,
+    clip.timelineDurationMs,
+  );
+}
+
+export function resolveTransitionState(
+  transitions: ClipTransitions,
+  localTimeMs: number,
+  timelineDurationMs: number,
+): ClipTransitionState {
+  if (localTimeMs < 0 || localTimeMs > timelineDurationMs) return identity();
+  if (transitions.entry && localTimeMs < transitions.entry.durationMs) {
+    const linear = clamp01(localTimeMs / transitions.entry.durationMs);
+    return evaluatePreset(transitions.entry.preset, 1 - (1 - linear) ** 3);
   }
-  const remaining = clip.timelineDurationMs - local;
-  if (clip.transitions?.exit && remaining < clip.transitions.exit.durationMs) {
-    const linear = clamp01(remaining / clip.transitions.exit.durationMs);
-    return evaluatePreset(clip.transitions.exit.preset, linear ** 3);
+  const remaining = timelineDurationMs - localTimeMs;
+  if (transitions.exit && remaining < transitions.exit.durationMs) {
+    const linear = clamp01(remaining / transitions.exit.durationMs);
+    return evaluatePreset(transitions.exit.preset, linear ** 3);
   }
   return identity();
 }
 
-export function resolveFrameIntroTransition(clips: readonly Clip[], timeMs: number): { clipId: string; state: ClipTransitionState } | null {
-  if (timeMs < 0) return null;
-  const candidate = clips
-    .filter((clip) => clip.enabled && clip.kind !== 'audio' && clip.kind !== 'caption' && clip.timelineStartMs === 0 && clip.transitions?.entry)
-    .sort((a, b) => b.order - a.order || a.id.localeCompare(b.id))[0];
-  const entry = candidate?.transitions?.entry;
-  if (!candidate || !entry || timeMs >= entry.durationMs) return null;
-  return { clipId: candidate.id, state: evaluatePreset(entry.preset, 1 - (1 - clamp01(timeMs / entry.durationMs)) ** 3) };
+export function resolveCanvasTransitionState(
+  transitions: ClipTransitions,
+  timeMs: number,
+  timelineDurationMs: number,
+): ClipTransitionState | null {
+  const normalized = normalizeCanvasTransitions(transitions, timelineDurationMs);
+  const remaining = timelineDurationMs - timeMs;
+  const active =
+    (normalized.entry && timeMs >= 0 && timeMs < normalized.entry.durationMs) ||
+    (normalized.exit && remaining >= 0 && remaining < normalized.exit.durationMs);
+  return active ? resolveTransitionState(normalized, timeMs, timelineDurationMs) : null;
 }
 
-export function audioTransitionGainAt(clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>, timeMs: number) {
+export function audioTransitionGainAt(
+  clip: Pick<Clip, 'timelineStartMs' | 'timelineDurationMs' | 'transitions'>,
+  timeMs: number,
+) {
   const local = timeMs - clip.timelineStartMs;
   if (local < 0 || local > clip.timelineDurationMs) return 0;
   const entry = clip.transitions?.entry;

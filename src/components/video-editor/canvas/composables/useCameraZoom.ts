@@ -236,6 +236,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           output.showBackground,
           screenTransform,
           options.isCropping?.() ? undefined : screen.crop,
+          options.isCropping?.() ? 'custom' : (screen.cameraFramingPreset ?? 'custom'),
         )
       : null;
     const source = screenGeometry?.source ?? { x: 0, y: 0, width: videoWidth, height: videoHeight };
@@ -314,6 +315,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
           title: screen.name,
           mirrored: screen.isMirrored,
           mirroredY: screen.isMirroredY,
+          mask: screenGeometry?.mask,
         });
       } else if (options.videoError()) {
         ctx.fillStyle = '#334155';

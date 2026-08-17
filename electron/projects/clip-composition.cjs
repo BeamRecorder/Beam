@@ -304,22 +304,24 @@ function normalizeComposition(value) {
         volume: finite(clip.volume) ? Math.max(0, Math.min(200, clip.volume)) : 100,
       };
     if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
-    const cameraPresets =
-      clip.kind === 'webcam'
-        ? (() => {
-            const cameraLayoutPreset = clip.cameraLayoutPreset === undefined ? 'custom' : clip.cameraLayoutPreset;
-            const cameraFramingPreset = clip.cameraFramingPreset === undefined ? 'custom' : clip.cameraFramingPreset;
-            const cameraSplitRatio = clip.cameraSplitRatio === undefined ? 0.5 : clip.cameraSplitRatio;
-            const cameraSplitPadding = clip.cameraSplitPadding === undefined ? 0 : clip.cameraSplitPadding;
-            if (!cameraLayoutPresets.has(cameraLayoutPreset) || !cameraFramingPresets.has(cameraFramingPreset))
-              throw new Error('Preset de caméra invalide');
-            if (!finite(cameraSplitRatio) || cameraSplitRatio < 0.2 || cameraSplitRatio > 0.8)
-              throw new Error('Répartition de caméra invalide');
-            if (!finite(cameraSplitPadding) || cameraSplitPadding < 0 || cameraSplitPadding > 0.08)
-              throw new Error('Espacement de caméra invalide');
-            return { cameraLayoutPreset, cameraFramingPreset, cameraSplitRatio, cameraSplitPadding };
-          })()
-        : {};
+    const cameraPresets = ['screen', 'video', 'image', 'webcam'].includes(clip.kind)
+      ? (() => {
+          const cameraLayoutPreset = clip.cameraLayoutPreset === undefined ? 'custom' : clip.cameraLayoutPreset;
+          const cameraFramingPreset = clip.cameraFramingPreset === undefined ? 'custom' : clip.cameraFramingPreset;
+          const cameraSplitRatio = clip.cameraSplitRatio === undefined ? 0.5 : clip.cameraSplitRatio;
+          const cameraSplitPadding = clip.cameraSplitPadding === undefined ? 0 : clip.cameraSplitPadding;
+          if (!cameraLayoutPresets.has(cameraLayoutPreset) || !cameraFramingPresets.has(cameraFramingPreset))
+            throw new Error('Preset de caméra invalide');
+          if (clip.kind !== 'webcam' && cameraLayoutPreset.startsWith('split-'))
+            throw new Error('Preset split réservé à une caméra');
+          if (clip.kind !== 'webcam') return { cameraLayoutPreset, cameraFramingPreset };
+          if (!finite(cameraSplitRatio) || cameraSplitRatio < 0.2 || cameraSplitRatio > 0.8)
+            throw new Error('Répartition de caméra invalide');
+          if (!finite(cameraSplitPadding) || cameraSplitPadding < 0 || cameraSplitPadding > 0.08)
+            throw new Error('Espacement de caméra invalide');
+          return { cameraLayoutPreset, cameraFramingPreset, cameraSplitRatio, cameraSplitPadding };
+        })()
+      : {};
     return {
       ...common,
       trackId: clip.trackId,
@@ -389,12 +391,16 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       ).map((clip) => ({
         ...clip,
         ...(value.schemaVersion < cameraLayoutSchemaVersion ? { transitions: { entry: null, exit: null } } : {}),
-        ...(clip.kind === 'webcam'
+        ...(['screen', 'video', 'image', 'webcam'].includes(clip.kind)
           ? {
               cameraLayoutPreset: 'custom',
               cameraFramingPreset: 'custom',
-              cameraSplitRatio: 0.5,
-              cameraSplitPadding: 0,
+              ...(clip.kind === 'webcam'
+                ? {
+                    cameraSplitRatio: 0.5,
+                    cameraSplitPadding: 0,
+                  }
+                : {}),
             }
           : {}),
       })),

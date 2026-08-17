@@ -44,6 +44,7 @@ function createProjectEditorAccess(options) {
     const editor = migrateEditor(directory, manifest);
     return {
       schemaVersion: 3,
+      isFresh: editor.applyGlobalDefaults === true,
       composition: materializeComposition(
         directory,
         normalizeComposition(editor.composition),

@@ -21,6 +21,7 @@ export type TransformClip = VisualClip | BlurClip | CaptionClip;
 export interface EditorCanvasProps {
   isPlaying: boolean;
   currentTime: number;
+  duration?: number;
   selectedCursor: CursorType;
   cursorSize: number;
   cursorColor: string;

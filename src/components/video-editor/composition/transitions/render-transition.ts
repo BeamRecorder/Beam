@@ -8,13 +8,9 @@ export function drawWithClipTransition(
   timeMs: number,
   canvas: { width: number; height: number },
   draw: () => void,
-  suppressEntry = false,
 ) {
   if (!clip.transitions?.entry && !clip.transitions?.exit) return draw();
-  const evaluatedClip = suppressEntry
-    ? { ...clip, transitions: { ...clip.transitions, entry: null } }
-    : clip;
-  const state = resolveClipTransitionState(evaluatedClip, timeMs);
+  const state = resolveClipTransitionState(clip, timeMs);
   ctx.save();
   ctx.globalAlpha *= state.opacity;
   ctx.translate(state.translateX * canvas.width, state.translateY * canvas.height);

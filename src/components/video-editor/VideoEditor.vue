@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue';
 import type { CaptureProject, ProjectEditorData } from '~/api/types/capture-api';
 import SidebarPanel from '~/components/video-editor/sidebar/SidebarPanel.vue';
 import PropertiesPanel from '~/components/video-editor/properties/PropertiesPanel.vue';
@@ -19,7 +19,11 @@ import { useTimelineZoom } from '~/components/video-editor/timeline/composables/
 import { Sparkles } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { useExportJob } from '~/components/export/useExportJob';
-import { OUTPUT_CANVAS_PRESETS, type OutputCanvasPreset } from '~/components/video-editor/canvas/output-canvas';
+import {
+  OUTPUT_CANVAS_PRESETS,
+  type OutputCanvasPreset,
+  type OutputCanvasSettings,
+} from '~/components/video-editor/canvas/output-canvas';
 import { deleteClip, setVolume } from '~/components/video-editor/composition/engine/clip-engine';
 import {
   isAudioClip,
@@ -34,6 +38,7 @@ import type { CursorType } from '~/components/video-editor/properties/cursor/use
 import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
 import { useTimelineClipboardFeedback } from '~/components/video-editor/timeline/composables/useTimelineClipboardFeedback';
+import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 
 const { t } = useTranslate('VideoEditor');
 const props = withDefaults(
@@ -93,6 +98,7 @@ const {
   shadowDirection,
   clickEffects,
 } = cursor;
+const renderedBackground = computed(() => (outputCanvas.value.showBackground ? selectedBackgroundMedia.value : null));
 const {
   composition,
   selectedClipId,
@@ -158,12 +164,14 @@ const {
 } = zoomState;
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
+const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
 const cursorPreview = ref<CursorType | null>(null);
 const transformHandlesMuted = ref(false);
 const canvasComposition = computed(
   () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
 );
+const renderedOutputCanvas = computed(() => timelineCanvasPreview.value ?? outputCanvas.value);
 const selectedTransformClip = computed(() => {
   const clip = selectedClip.value;
   return clip && (isVisualClip(clip) || isBlurClip(clip) || isCaptionClip(clip)) ? clip : null;
@@ -186,6 +194,11 @@ const selectEditorCanvas = () => {
   selectedClipId.value = null;
   activeTab.value = 'canvas';
   isCropping.value = false;
+};
+const propertiesPanelRef = ref<InstanceType<typeof PropertiesPanel> | null>(null);
+const openCanvasTransition = (edge: 'entry' | 'exit') => {
+  selectEditorCanvas();
+  void nextTick(() => propertiesPanelRef.value?.openCanvasTransitions(edge));
 };
 const deselectTransformClip = () => {
   selectedClipId.value = null;
@@ -390,6 +403,7 @@ const selectCanvasPreset = (preset: Exclude<OutputCanvasPreset, 'custom'>) => {
   outputCanvas.value = {
     ...OUTPUT_CANVAS_PRESETS[preset],
     showBackground: outputCanvas.value.showBackground,
+    transitions: outputCanvas.value.transitions ?? EMPTY_CLIP_TRANSITIONS,
     watermark: outputCanvas.value.watermark,
   };
 };
@@ -440,7 +454,7 @@ onBeforeUnmount(() => {
     @dragleave="mediaDrop.onMediaDragLeave"
     @drop="mediaDrop.onMediaDrop"
   >
-    <EditorAmbientBackground :background="selectedBackgroundMedia" />
+    <EditorAmbientBackground :background="renderedBackground" />
     <EditorMediaDropOverlay
       :visible="mediaDrop.isDraggingMedia.value || mediaDrop.isImportingMedia.value"
       :importing="mediaDrop.isImportingMedia.value"
@@ -467,6 +481,7 @@ onBeforeUnmount(() => {
       <div class="workspace-upper">
         <SidebarPanel :active-tab="activeTab" @select-tab="handleSelectTab" />
         <PropertiesPanel
+          ref="propertiesPanelRef"
           :active-tab="activeTab"
           :selected-clip="selectedClipInfo"
           :selected-caption-clip="selectedCaptionClip"
@@ -497,7 +512,7 @@ onBeforeUnmount(() => {
           :editor-data="editorData"
           :timeline-duration-ms="Math.round(duration * 1000)"
           :project-id="project?.id"
-          :canvas="outputCanvas"
+          :canvas="renderedOutputCanvas"
           @import:background="addBackground($event)"
           @update:selected-background="selectedBackground = $event"
           @update:blur-percent="backgroundBlurPercent = $event"
@@ -568,6 +583,7 @@ onBeforeUnmount(() => {
             ref="editorCanvasRef"
             :is-playing="isPlaying"
             :current-time="currentTime"
+            :duration="duration"
             :selected-cursor="cursorPreview ?? selectedCursor"
             :cursor-size="cursorSize"
             :cursor-color="cursorColor"
@@ -577,7 +593,7 @@ onBeforeUnmount(() => {
             :shadow-direction="shadowDirection"
             :click-effects="clickEffects"
             :motion="cursorMotion"
-            :selected-background="selectedBackgroundMedia"
+            :selected-background="renderedBackground"
             :background-blur-percent="backgroundBlurPercent"
             :frame-for="player.frameFor"
             :frame-version="frameVersion"
@@ -587,7 +603,7 @@ onBeforeUnmount(() => {
             :zoom-elements="zoomElements"
             :selected-zoom="selectedZoom"
             :composition="canvasComposition"
-            :output-canvas="outputCanvas"
+            :output-canvas="renderedOutputCanvas"
             :active-tab="activeTab"
             :selected-transform-clip="selectedTransformClip"
             :transform-handles-muted="transformHandlesMuted"
@@ -643,6 +659,7 @@ onBeforeUnmount(() => {
           :composition="composition"
           :selected-clip-id="selectedClipId"
           :recent-paste="recentPaste"
+          :canvas="outputCanvas"
           @select:zoom="selectEditorZoom"
           @select:clip="selectEditorClip"
           @toggle:clip="toggleClip"
@@ -659,6 +676,12 @@ onBeforeUnmount(() => {
           @paste:item="pasteTimelineItem"
           @paste:error="reportTimelinePasteError"
           @clipboard:copied="reportTimelineCopySuccess"
+          @preview:canvas="timelineCanvasPreview = $event"
+          @update:canvas="
+            outputCanvas = $event;
+            timelineCanvasPreview = null;
+          "
+          @open:canvas-transition="openCanvasTransition"
           @update:current-time="handleSeekIntent($event, 'scrub')"
           @update:is-playing="handlePlayingIntent"
         />

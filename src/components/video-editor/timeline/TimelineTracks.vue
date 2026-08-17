@@ -5,10 +5,13 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { useTimelineTracks } from './composables/useTimelineTracks';
 import { useTimelineContextMenu } from './composables/useTimelineContextMenu';
 import ContextMenu from '~/components/ui/context-menu/ContextMenu.vue';
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed } from 'vue';
 import TimelineCaptionTracks from './TimelineCaptionTracks.vue';
-import { getClipCategory } from './composables/useTimelineClipboard';
 import type { TimelineTracksEmits, TimelineTracksProps } from './composables/timeline-tracks-types';
+import TimelineCanvasTransitionTrack from './TimelineCanvasTransitionTrack.vue';
+import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
+import { DEFAULT_OUTPUT_CANVAS } from '../canvas/output-canvas';
+import { useTimelineClipboardShortcuts } from './composables/useTimelineClipboardShortcuts';
 
 const { t } = useTranslate('TimelineTracks');
 const props = withDefaults(defineProps<TimelineTracksProps>(), {
@@ -16,6 +19,7 @@ const props = withDefaults(defineProps<TimelineTracksProps>(), {
   includeAudioInExport: true,
   projectId: null,
   recentPaste: null,
+  canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
 });
 const emit = defineEmits<TimelineTracksEmits>();
 
@@ -68,10 +72,7 @@ const {
   DEFAULT_ZOOM_DURATION_MS,
   DEFAULT_CAPTION_DURATION_MS,
 } = useTimelineTracks(props, emit, t);
-void tracksScrollRef;
-void sidebarScrollRef;
-void tracksViewportRef;
-void ticksAreaRef;
+void [tracksScrollRef, sidebarScrollRef, tracksViewportRef, ticksAreaRef];
 
 const {
   contextMenuState,
@@ -95,34 +96,13 @@ const {
   t,
 });
 
-const selectedPasteTarget = computed(() => {
-  const clip = props.selectedClipId
-    ? (props.composition.clips.find((item) => item.id === props.selectedClipId) ?? null)
-    : null;
-  if (clip) return { category: getClipCategory(clip), trackId: clip.trackId ?? null } as const;
-  if (props.selectedZoomId) return { category: 'zoom' as const };
-  return null;
+useTimelineClipboardShortcuts({
+  composition: () => props.composition,
+  selectedClipId: () => props.selectedClipId,
+  selectedZoomId: () => props.selectedZoomId,
+  copySelected,
+  pasteClipboard,
 });
-const isEditableTarget = (target: EventTarget | null) => {
-  const element = target instanceof Element ? target : document.activeElement;
-  if (!(element instanceof Element)) return false;
-  const tag = element.tagName.toLowerCase();
-  return ['input', 'textarea', 'select'].includes(tag) || element.getAttribute('contenteditable') === 'true';
-};
-const handleClipboardKeyDown = (event: KeyboardEvent) => {
-  if (!(event.ctrlKey || event.metaKey) || isEditableTarget(event.target)) return;
-  const key = event.key.toLowerCase();
-  if (key === 'c') {
-    if (!props.selectedClipId && !props.selectedZoomId) return;
-    event.preventDefault();
-    copySelected();
-  } else if (key === 'v') {
-    event.preventDefault();
-    pasteClipboard(selectedPasteTarget.value);
-  }
-};
-onMounted(() => window.addEventListener('keydown', handleClipboardKeyDown));
-onUnmounted(() => window.removeEventListener('keydown', handleClipboardKeyDown));
 
 const exportProgressPercent = computed(() => {
   const current = props.exportProgress?.currentTimeMs;
@@ -130,6 +110,12 @@ const exportProgressPercent = computed(() => {
   if (current === undefined || total === undefined || total <= 0) return null;
   return Math.min(100, Math.max(0, (current / total) * 100));
 });
+const canvasTransitions = computed(() => props.canvas.transitions ?? EMPTY_CLIP_TRANSITIONS);
+const hasCanvasTransitions = computed(() => Boolean(canvasTransitions.value.entry || canvasTransitions.value.exit));
+const updateCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions>) =>
+  emit('update:canvas', { ...props.canvas, transitions });
+const previewCanvasTransitions = (transitions: NonNullable<typeof props.canvas.transitions> | null) =>
+  emit('preview:canvas', transitions ? { ...props.canvas, transitions } : null);
 </script>
 
 <template>
@@ -138,6 +124,13 @@ const exportProgressPercent = computed(() => {
       <div class="sidebar-ruler-spacer" />
       <div ref="sidebarScrollRef" class="sidebar-tracks-viewport">
         <div class="sidebar-tracks-stack">
+          <TimelineCanvasTransitionTrack
+            v-if="hasCanvasTransitions"
+            mode="sidebar"
+            :transitions="canvasTransitions"
+            :duration-ms="Math.round(duration * 1000)"
+            @open="emit('open:canvas-transition', $event)"
+          />
           <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
             <div
               v-for="track in visualTracks"
@@ -277,6 +270,15 @@ const exportProgressPercent = computed(() => {
         </div>
 
         <div class="tracks-stack">
+          <TimelineCanvasTransitionTrack
+            v-if="hasCanvasTransitions"
+            mode="track"
+            :transitions="canvasTransitions"
+            :duration-ms="Math.round(duration * 1000)"
+            @open="emit('open:canvas-transition', $event)"
+            @preview="previewCanvasTransitions"
+            @update="updateCanvasTransitions"
+          />
           <TransitionGroup name="track-reorder" tag="div" class="visual-tracks-group">
             <div
               v-for="track in visualTracks"

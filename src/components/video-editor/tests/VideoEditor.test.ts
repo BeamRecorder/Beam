@@ -21,6 +21,10 @@ describe('VideoEditor', () => {
     const mounted = mountEditor();
     const ambient = mounted.get('.mock-editor-ambient');
 
+    editorState.store.outputCanvas.value = {
+      ...editorState.store.outputCanvas.value,
+      showBackground: true,
+    };
     editorState.store.player.selectedBackground.value = { kind: 'color', color: '#ff0000' };
     await mounted.vm.$nextTick();
     expect(ambient.attributes('data-background-kind')).toBe('none');
@@ -42,6 +46,36 @@ describe('VideoEditor', () => {
     await mounted.get('.toggle-grid').trigger('click');
     expect(mounted.find('.canvas-3x3-grid').exists()).toBe(true);
     expect(mounted.get('.mock-editor-ambient').attributes('data-background-kind')).toBe('image');
+  });
+
+  it('hides the selected background from ambient and canvas rendering without clearing the selection', async () => {
+    const mounted = mountEditor();
+    const background = {
+      id: 'wallpaper-image',
+      name: 'Wallpaper image',
+      kind: 'image' as const,
+      path: '/wallpapers/image/wallpaper.webp',
+      extension: 'webp',
+    };
+
+    editorState.store.player.selectedBackground.value = background;
+    editorState.store.player.selectedBackgroundMedia.value = background;
+    editorState.store.outputCanvas.value = {
+      ...editorState.store.outputCanvas.value,
+      showBackground: false,
+    };
+    await mounted.vm.$nextTick();
+
+    expect(editorState.store.player.selectedBackground.value).toEqual(background);
+    expect(editorState.store.player.selectedBackgroundMedia.value).toEqual(background);
+    expect(mounted.get('.mock-editor-ambient').attributes('data-background-kind')).toBe('none');
+
+    const canvas = mounted.findComponent({ name: 'MockEditorCanvas' });
+    const attrs = canvas.vm.$attrs as Record<string, unknown>;
+    const selectedBackground = Object.prototype.hasOwnProperty.call(attrs, 'selectedBackground')
+      ? attrs.selectedBackground
+      : attrs['selected-background'];
+    expect(selectedBackground).toBeNull();
   });
 
   it('routes canvas, toolbar, timeline and property events to the editor state', async () => {

@@ -47,6 +47,25 @@ const PRESETS = {
 };
 const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const canvasTransitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
+
+const canvasTransition = (value) => {
+  if (!value || typeof value !== 'object' || !value.preset || !canvasTransitionKinds.has(value.preset.kind))
+    return null;
+  const preset = value.preset;
+  if (preset.kind === 'slide' && !['left', 'right', 'up', 'down'].includes(preset.direction)) return null;
+  if (preset.kind === 'zoom' && !['in', 'out'].includes(preset.direction)) return null;
+  if ((preset.kind === 'fade' || preset.kind === 'blur') && Object.keys(preset).some((key) => key !== 'kind'))
+    return null;
+  if (!finite(value.durationMs)) return null;
+  const durationMs = clamp(Math.round(value.durationMs), 1, 5000);
+  return { preset: { ...preset }, durationMs };
+};
+
+const canvasTransitions = (value) => {
+  const input = value && typeof value === 'object' ? value : {};
+  return { entry: canvasTransition(input.entry), exit: canvasTransition(input.exit) };
+};
 
 const defaultCursor = () => ({
   selectedCursor: 'automatic',
@@ -212,6 +231,7 @@ const canvasState = (value) => {
     width: Math.round(dimensions[0]),
     height: Math.round(dimensions[1]),
     showBackground: value.showBackground,
+    transitions: canvasTransitions(value.transitions),
     ...(value.watermark && typeof value.watermark === 'object' ? { watermark } : {}),
   };
 };
@@ -257,6 +277,7 @@ const migratePresentation = (value) => {
       width,
       height,
       showBackground: typeof canvasInput.showBackground === 'boolean' ? canvasInput.showBackground : true,
+      transitions: canvasInput.transitions,
       watermark: canvasInput.watermark,
     },
     selectedBackgroundId: typeof input.selectedBackgroundId === 'string' ? input.selectedBackgroundId : null,

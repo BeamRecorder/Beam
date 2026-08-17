@@ -4,6 +4,8 @@ import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '../../export/export-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
+import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
 import type {
   TimelineClipboardItem,
   TimelinePasteHighlight,
@@ -25,8 +27,13 @@ const props = withDefaults(
     isSnappingEnabled?: boolean;
     projectId?: string | null;
     recentPaste?: TimelinePasteHighlight | null;
+    canvas?: OutputCanvasSettings;
   }>(),
-  { isSnappingEnabled: true, includeAudioInExport: true },
+  {
+    isSnappingEnabled: true,
+    includeAudioInExport: true,
+    canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
+  },
 );
 const emit = defineEmits<{
   (event: 'update:currentTime', value: number): void;
@@ -48,6 +55,9 @@ const emit = defineEmits<{
   (event: 'paste:item', payload: TimelinePasteRequest): void;
   (event: 'paste:error', message: string): void;
   (event: 'clipboard:copied', item: TimelineClipboardItem): void;
+  (event: 'preview:canvas', value: OutputCanvasSettings | null): void;
+  (event: 'update:canvas', value: OutputCanvasSettings): void;
+  (event: 'open:canvas-transition', edge: 'entry' | 'exit'): void;
 }>();
 
 const handleKeyDown = (event: KeyboardEvent) => {
@@ -81,6 +91,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :is-snapping-enabled="isSnappingEnabled"
         :project-id="projectId"
         :recent-paste="recentPaste"
+        :canvas="canvas"
         @update:current-time="emit('update:currentTime', $event)"
         @update:zoom-level="emit('update:zoomLevel', $event)"
         @select:zoom="emit('select:zoom', $event)"
@@ -99,6 +110,9 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         @paste:item="emit('paste:item', $event)"
         @paste:error="emit('paste:error', $event)"
         @clipboard:copied="emit('clipboard:copied', $event)"
+        @preview:canvas="emit('preview:canvas', $event)"
+        @update:canvas="emit('update:canvas', $event)"
+        @open:canvas-transition="emit('open:canvas-transition', $event)"
       />
     </div>
   </div>

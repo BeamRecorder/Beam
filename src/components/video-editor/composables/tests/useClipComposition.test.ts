@@ -6,6 +6,7 @@ import type { CaptureProject, ProjectEditorData } from '../../../../api/types/ca
 import type { ClipComposition, MediaAsset, VisualClip } from '~/media/shared/composition-types';
 import type { DroppedMediaInspection } from '~/media/shared/media-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 
 const { capture, getAudioTracks } = vi.hoisted(() => ({
   capture: { pickProjectMedia: vi.fn() },
@@ -212,15 +213,22 @@ const editorData = (): ProjectEditorData => ({
 
 let wrapper: VueWrapper | undefined;
 
-const mountComposable = () => {
+const mountComposable = (defaults = normalizeEditorPreferenceDefaults(undefined)) => {
   const projectRef = ref<CaptureProject | null>(project);
   const editorRef = ref<ProjectEditorData | null>(null);
   const currentTimeSec = ref(1.5);
   const activeTab = ref('canvas');
+  const editorDefaults = ref(defaults);
   let state!: ReturnType<typeof useClipComposition>;
   const Harness = defineComponent({
     setup() {
-      state = useClipComposition({ project: projectRef, editorData: editorRef, currentTimeSec, activeTab });
+      state = useClipComposition({
+        project: projectRef,
+        editorData: editorRef,
+        currentTimeSec,
+        activeTab,
+        editorDefaults,
+      });
       return () => h('div');
     },
   });
@@ -230,6 +238,7 @@ const mountComposable = () => {
     editorRef,
     currentTimeSec,
     activeTab,
+    editorDefaults,
     get state() {
       return state;
     },
@@ -333,6 +342,83 @@ describe('useClipComposition', () => {
     await mounted.state.addElement('sound', 6_000);
     expect(mounted.state.composition.value.clips.some((clip) => clip.kind === 'audio')).toBe(true);
     expect(mounted.state.composition.value.clips.find((clip) => clip.kind === 'audio')?.timelineDurationMs).toBe(2_500);
+  });
+
+  it('uses visual defaults for a new image while preserving an existing clip presentation', () => {
+    const defaults = normalizeEditorPreferenceDefaults({
+      visual: {
+        image: {
+          transform: { x: 0.2, y: 0.15, width: 0.5, height: 0.45 },
+          appearance: { ...createDefaultClipAppearance('image'), cornerRadius: 'lg', frame: 'safari' },
+          isMirrored: true,
+          isMirroredY: false,
+          playbackRate: 1.5,
+          transitions: { entry: null, exit: null },
+          cameraLayoutPreset: 'floating-center',
+          cameraFramingPreset: 'circle',
+        },
+      },
+    });
+    const mounted = mountComposable(defaults);
+    const existingVisual: VisualClip = {
+      id: 'existing-image',
+      trackId: 'existing-image',
+      kind: 'image',
+      name: 'Existing image',
+      assetId: 'existing-image-asset',
+      timelineStartMs: 0,
+      timelineDurationMs: 1_000,
+      sourceInMs: 0,
+      sourceDurationMs: 1_000,
+      playbackRate: 1,
+      transitions: { entry: null, exit: null },
+      enabled: true,
+      order: 0,
+      transform: { x: -0.1, y: 0.05, width: 0.8, height: 0.7 },
+      appearance: createDefaultClipAppearance('image'),
+      isMirrored: false,
+      isMirroredY: true,
+    };
+    mounted.state.composition.value = {
+      ...mounted.state.composition.value,
+      assets: [{ ...imageAsset(), id: 'existing-image-asset' }],
+      clips: [existingVisual],
+    };
+
+    mounted.state.addImportedAsset(
+      imageAsset(),
+      {
+        kind: 'image',
+        durationMs: 5_000,
+        width: 800,
+        height: 600,
+        hasAudio: false,
+        canDecodeAudio: false,
+        audioCodec: null,
+      },
+      2_000,
+    );
+
+    const existingAfter = mounted.state.composition.value.clips.find((clip) => clip.id === existingVisual.id);
+    const inserted = mounted.state.composition.value.clips.find((clip) => clip.assetId === 'image-asset');
+    expect(existingAfter).toMatchObject({
+      transform: existingVisual.transform,
+      appearance: existingVisual.appearance,
+      playbackRate: existingVisual.playbackRate,
+      isMirrored: existingVisual.isMirrored,
+      isMirroredY: existingVisual.isMirroredY,
+    });
+    expect(inserted).toMatchObject({
+      kind: 'image',
+      timelineStartMs: 2_000,
+      timelineDurationMs: 5_000 / 1.5,
+      playbackRate: 1.5,
+      transform: defaults.visual?.image?.transform,
+      appearance: expect.objectContaining({ cornerRadius: 'lg', frame: 'safari' }),
+      isMirrored: true,
+      cameraLayoutPreset: 'floating-center',
+      cameraFramingPreset: 'circle',
+    });
   });
 
   it('adds and updates an assetless blur overlay at the playhead', async () => {

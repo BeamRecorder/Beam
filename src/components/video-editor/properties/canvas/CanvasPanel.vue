@@ -7,6 +7,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import BackgroundPresetComposer from './BackgroundPresetComposer.vue';
+import RemoveBackgroundControl from './RemoveBackgroundControl.vue';
 import { capture } from '../../../../api/capture';
 import {
   customColor,
@@ -28,12 +29,14 @@ const props = defineProps<{
   backgroundGroups: BackgroundMediaGroup[];
   projectId?: string | null;
   blurPercent: number;
+  showBackground: boolean;
   watermark?: WatermarkSettings;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:selectedBackground', value: BackgroundValue): void;
   (e: 'update:blurPercent', value: number): void;
+  (e: 'update:showBackground', value: boolean): void;
   (e: 'update:watermark', value: WatermarkSettings): void;
   (e: 'import:background', value: BackgroundMedia): void;
 }>();
@@ -532,6 +535,11 @@ onUnmounted(() => {
       />
     </div>
 
+    <RemoveBackgroundControl
+      :model-value="!showBackground"
+      @update:model-value="emit('update:showBackground', !$event)"
+    />
+
     <WatermarkControls :model-value="watermark" @update:model-value="emit('update:watermark', $event)" />
   </div>
 </template>
@@ -562,6 +570,7 @@ onUnmounted(() => {
 .import-btn {
   width: 100%;
 }
+
 /* Content Panel */
 .tab-content-panel {
   display: flex;

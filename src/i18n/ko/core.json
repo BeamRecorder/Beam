@@ -66,6 +66,8 @@
     "closeEditing": "편집 닫기",
     "edit": "편집",
     "blur": "흐림",
+    "removeBackground": "배경 제거",
+    "removeBackgroundDescription": "기본 비디오를 캔버스 전체에 표시합니다.",
     "watermark": "워터마크",
     "watermarkDescription": "동영상에 Beam 브랜딩을 추가합니다.",
     "watermarkText": "텍스트",
@@ -404,7 +406,15 @@
     "create": "만들기",
     "explore": "탐색",
     "current": "현재",
-    "dateUnknown": "알 수 없는 날짜"
+    "dateUnknown": "알 수 없는 날짜",
+    "screenRecord": "화면 녹화",
+    "camera": "카메라",
+    "captions": "자막",
+    "searchProjects": "프로젝트 검색",
+    "searchPlaceholder": "프로젝트 검색...",
+    "noSearchResults": "일치하는 프로젝트가 없습니다.",
+    "clearSearch": "검색 지우기",
+    "refreshed": "새로고침 완료!"
   },
   "PropertiesPanel": {
     "properties": "속성",

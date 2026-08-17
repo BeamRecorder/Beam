@@ -66,6 +66,8 @@
     "closeEditing": "Затваряне на редактирането",
     "edit": "Редактиране",
     "blur": "Замъгляване",
+    "removeBackground": "Премахване на фона",
+    "removeBackgroundDescription": "Показва основното видео от край до край.",
     "watermark": "Воден знак",
     "watermarkDescription": "Добавете марката Beam към видеото.",
     "watermarkText": "Текст",
@@ -404,7 +406,15 @@
     "create": "Създаване",
     "explore": "Разглеждане",
     "current": "Текущ",
-    "dateUnknown": "Неизвестна дата"
+    "dateUnknown": "Неизвестна дата",
+    "screenRecord": "Запис на екран",
+    "camera": "Камера",
+    "captions": "Субтитри",
+    "searchProjects": "Търсене на проекти",
+    "searchPlaceholder": "Търсене на проекти...",
+    "noSearchResults": "Няма намерени проекти.",
+    "clearSearch": "Изчистване на търсенето",
+    "refreshed": "Обновено!"
   },
   "PropertiesPanel": {
     "properties": "Свойства",

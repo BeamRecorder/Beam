@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProjectEditorData } from '../../../../api/types/capture-api';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import { ZOOM_ALGORITHM_VERSION } from '../../zoom/zoom-suggestions';
+import type { EditorPreferenceDefaults } from '../editor-default-types';
+import { normalizeEditorPreferenceDefaults } from '../editor-defaults';
 import { useProjectZoom } from '../useProjectZoom';
 
 const zoom = (id: string, mode: ZoomElement['mode'] = 'manual', sessionId = 'session'): ZoomElement => ({
@@ -46,14 +48,20 @@ const data = (overrides: Partial<ProjectEditorData> = {}): ProjectEditorData => 
   ...overrides,
 });
 
-const create = (initialData: ProjectEditorData | null = data(), duration = 5_000) => {
+const create = (
+  initialData: ProjectEditorData | null = data(),
+  duration = 5_000,
+  defaults: EditorPreferenceDefaults = normalizeEditorPreferenceDefaults(undefined),
+) => {
   const activeTab = ref('canvas');
   const editorData = ref(initialData);
   const durationMs = ref(duration);
+  const editorDefaults = ref(defaults);
   return {
-    state: useProjectZoom({ editorData, durationMs, activeTab }),
+    state: useProjectZoom({ editorData, durationMs, activeTab, editorDefaults }),
     durationMs,
     activeTab,
+    editorDefaults,
   };
 };
 
@@ -94,6 +102,27 @@ describe('useProjectZoom', () => {
     expect(activeTab.value).toBe('zoom');
     state.addZoomAtTime(Number.NaN);
     expect(state.zoomElements.value).toHaveLength(1);
+  });
+
+  it('uses zoom defaults for new zooms without changing existing zooms', () => {
+    const defaults = normalizeEditorPreferenceDefaults({
+      zoom: { durationMs: 1_750, depth: 5, mode: 'auto' },
+    });
+    const { state } = create(null, 10_000, defaults);
+    const existing = zoom('existing');
+    const existingSnapshot = { ...existing, focus: { ...existing.focus } };
+    state.zoomElements.value = [existing];
+
+    state.addZoomAtTime(3_000);
+
+    expect(state.zoomElements.value).toHaveLength(2);
+    expect(state.zoomElements.value[0]).toEqual(existingSnapshot);
+    expect(state.zoomElements.value[1]).toMatchObject({
+      startMs: 3_000,
+      endMs: 4_750,
+      depth: 5,
+      mode: 'auto',
+    });
   });
 
   it('replaces only automatic zooms for the active session', () => {

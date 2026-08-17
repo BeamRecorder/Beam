@@ -20,7 +20,9 @@ import {
   type NormalizedTransform,
   type VisualClip,
 } from '~/media/shared/composition-types';
-import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { EditorPreferenceDefaults } from './editor-default-types';
+import { audioDefaultsFor, blurDefaultsFor, captionDefaultsFor, visualClipDefaultProps } from './editor-defaults';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 import {
   addClip,
   deleteClip,
@@ -52,12 +54,12 @@ import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/cam
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
-
 export function useClipComposition(options: {
   project: Ref<CaptureProject | null | undefined>;
   editorData: Ref<ProjectEditorData | null | undefined>;
   currentTimeSec: Ref<number>;
   activeTab: Ref<string>;
+  editorDefaults: Ref<EditorPreferenceDefaults>;
 }) {
   const { t } = useTranslate('TimelineToolbar');
   const composition = ref<ClipComposition>(emptyComposition());
@@ -88,10 +90,10 @@ export function useClipComposition(options: {
             isMirroredY: clip.isMirroredY,
             clipTransform: clip.transform,
             ...clip.appearance,
+            cameraLayoutPreset: clip.cameraLayoutPreset ?? 'custom',
+            cameraFramingPreset: clip.cameraFramingPreset ?? 'custom',
             ...(clip.kind === 'webcam'
               ? {
-                  cameraLayoutPreset: clip.cameraLayoutPreset ?? 'custom',
-                  cameraFramingPreset: clip.cameraFramingPreset ?? 'custom',
                   cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
                   cameraSplitPadding: clip.cameraSplitPadding ?? 0,
                   hasLinkedScreen: Boolean(cameraScreenPartner(composition.value, clip, true)),
@@ -142,7 +144,11 @@ export function useClipComposition(options: {
   };
 
   const synchronizeRecording = () => {
-    composition.value = synchronizeRecordingClips(composition.value, options.editorData.value);
+    composition.value = synchronizeRecordingClips(
+      composition.value,
+      options.editorData.value,
+      options.editorDefaults.value,
+    );
   };
 
   const addImportedAsset = (
@@ -162,6 +168,7 @@ export function useClipComposition(options: {
     };
 
     if (asset.kind === 'audio') {
+      const defaults = audioDefaultsFor(options.editorDefaults.value);
       const audio: AudioClip = {
         id: crypto.randomUUID(),
         kind: 'audio',
@@ -169,14 +176,14 @@ export function useClipComposition(options: {
         assetId: asset.id,
         role: 'imported',
         timelineStartMs: startMs,
-        timelineDurationMs: duration,
+        timelineDurationMs: duration / defaults.playbackRate,
         sourceInMs: 0,
         sourceDurationMs: duration,
-        playbackRate: 1,
+        playbackRate: defaults.playbackRate,
         transitions: { entry: null, exit: null },
         enabled: true,
         order: composition.value.clips.length,
-        volume: 100,
+        volume: defaults.volume,
       };
       composition.value = addClip(composition.value, audio, normalizedAsset);
       selectClip(audio.id);
@@ -188,6 +195,7 @@ export function useClipComposition(options: {
     const topVisualOrder =
       Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1;
     const visualId = crypto.randomUUID();
+    const defaults = visualClipDefaultProps(options.editorDefaults.value, asset.kind, duration);
     const visual: VisualClip = {
       id: visualId,
       trackId: visualId,
@@ -195,21 +203,19 @@ export function useClipComposition(options: {
       name: asset.name,
       assetId: asset.id,
       timelineStartMs: startMs,
-      timelineDurationMs: duration,
+      timelineDurationMs: duration / defaults.playbackRate,
       sourceInMs: 0,
       sourceDurationMs: duration,
-      playbackRate: 1,
-      transitions: { entry: null, exit: null },
+      playbackRate: defaults.playbackRate,
+      transitions: defaults.transitions,
       enabled: true,
       order: topVisualOrder,
       groupId,
-      transform: { x: 0, y: 0, width: 1, height: 1 },
-      appearance: createDefaultClipAppearance(asset.kind),
-      isMirrored: false,
-      isMirroredY: false,
+      ...defaults,
     };
     let next = addClip(composition.value, visual, normalizedAsset);
     if (groupId) {
+      const audioDefaults = audioDefaultsFor(options.editorDefaults.value);
       const audio: AudioClip = {
         id: crypto.randomUUID(),
         kind: 'audio',
@@ -217,15 +223,15 @@ export function useClipComposition(options: {
         assetId: asset.id,
         role: 'imported',
         timelineStartMs: startMs,
-        timelineDurationMs: duration,
+        timelineDurationMs: duration / defaults.playbackRate,
         sourceInMs: 0,
         sourceDurationMs: duration,
-        playbackRate: 1,
+        playbackRate: defaults.playbackRate,
         transitions: { entry: null, exit: null },
         enabled: true,
         order: next.clips.length,
         groupId,
-        volume: 100,
+        volume: audioDefaults.volume,
       };
       next = addClip(next, audio);
     }
@@ -237,6 +243,7 @@ export function useClipComposition(options: {
   const addElement = async (kind: 'video' | 'image' | 'sound' | 'caption' | 'blur', requestedStartMs?: number) => {
     const startMs = Math.max(0, Math.round(requestedStartMs ?? options.currentTimeSec.value * 1_000));
     if (kind === 'blur') {
+      const defaults = blurDefaultsFor(options.editorDefaults.value);
       const clipId = crypto.randomUUID();
       const clip: BlurClip = {
         id: clipId,
@@ -252,28 +259,22 @@ export function useClipComposition(options: {
         transitions: { entry: null, exit: null },
         enabled: true,
         order: Math.min(0, ...composition.value.clips.filter(isCompositingClip).map((clip) => clip.order)) - 1,
-        transform: { x: 0.35, y: 0.35, width: 0.3, height: 0.3 },
-        shape: 'rectangle',
-        mode: 'blur',
-        strength: 60,
-        feather: 0,
-        cornerRadius: 0,
-        tintOpacity: 0,
-        color: '#000000',
+        ...defaults,
       };
       composition.value = addClip(composition.value, clip);
       selectClip(clip.id);
       return;
     }
     if (kind === 'caption') {
+      const defaults = captionDefaultsFor(options.editorDefaults.value);
       const clip: CaptionClip = {
         id: crypto.randomUUID(),
         kind: 'caption',
         name: 'Caption',
         timelineStartMs: startMs,
-        timelineDurationMs: 2_000,
+        timelineDurationMs: defaults.durationMs,
         sourceInMs: 0,
-        sourceDurationMs: 2_000,
+        sourceDurationMs: defaults.durationMs,
         playbackRate: 1,
         transitions: { entry: null, exit: null },
         enabled: true,
@@ -281,8 +282,9 @@ export function useClipComposition(options: {
         caption: {
           type: 'text',
           sentences: [],
-          style: { ...createDefaultCaptionStyle(), customText: 'Hello' },
+          style: { ...defaults.style, customText: 'Hello' },
         },
+        ...(defaults.transform ? { transform: defaults.transform } : {}),
       };
       composition.value = addClip(composition.value, clip);
       selectClip(clip.id);
@@ -416,18 +418,18 @@ export function useClipComposition(options: {
   const updateSelectedCrop = (crop: NormalizedCrop) => {
     if (selectedClipId.value) composition.value = setCrop(composition.value, selectedClipId.value, crop);
   };
-  const updateSelectedCamera = (update: (clipId: string) => ClipComposition) => {
+  const updateSelectedVisual = (update: (clipId: string) => ClipComposition) => {
     const clip = selectedClip.value;
-    if (clip?.kind === 'webcam') composition.value = update(clip.id);
+    if (clip && isVisualClip(clip)) composition.value = update(clip.id);
   };
   const updateSelectedCameraLayout = (preset: Exclude<CameraLayoutPreset, 'custom'>) =>
-    updateSelectedCamera((id) => setCameraLayout(composition.value, id, preset));
+    updateSelectedVisual((id) => setCameraLayout(composition.value, id, preset));
   const updateSelectedCameraFraming = (preset: Exclude<CameraFramingPreset, 'custom'>) =>
-    updateSelectedCamera((id) => setCameraFraming(composition.value, id, preset));
+    updateSelectedVisual((id) => setCameraFraming(composition.value, id, preset));
   const updateSelectedCameraSplitRatio = (ratio: number) =>
-    updateSelectedCamera((id) => setCameraSplitRatio(composition.value, id, ratio));
+    updateSelectedVisual((id) => setCameraSplitRatio(composition.value, id, ratio));
   const updateSelectedCameraSplitPadding = (padding: number) =>
-    updateSelectedCamera((id) => setCameraSplitPadding(composition.value, id, padding));
+    updateSelectedVisual((id) => setCameraSplitPadding(composition.value, id, padding));
   const updateSelectedMirrored = (mirrored: boolean) => {
     if (selectedClipId.value) composition.value = setMirrored(composition.value, selectedClipId.value, mirrored);
   };

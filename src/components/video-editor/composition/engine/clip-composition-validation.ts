@@ -6,7 +6,7 @@ import {
   type ClipComposition,
 } from '~/media/shared/composition-types';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
-import { isCameraFramingPreset, isCameraLayoutPreset } from '~/media/shared/camera-layout-types';
+import { isCameraFramingPreset, isCameraLayoutPreset, isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { assertValidVisualTracks } from './visual-track-layout';
 
 export const MIN_PLAYBACK_RATE = 0.25;
@@ -100,17 +100,23 @@ export function validateComposition(composition: ClipComposition): void {
       throw new CompositionEngineError('Invalid visual transform.');
     }
     if (
-      clip.kind === 'webcam' &&
-      (!isCameraLayoutPreset(clip.cameraLayoutPreset) ||
-        !isCameraFramingPreset(clip.cameraFramingPreset) ||
-        !finite(clip.cameraSplitRatio ?? Number.NaN) ||
-        clip.cameraSplitRatio! < 0.2 ||
-        clip.cameraSplitRatio! > 0.8 ||
-        !finite(clip.cameraSplitPadding ?? Number.NaN) ||
-        clip.cameraSplitPadding! < 0 ||
-        clip.cameraSplitPadding! > 0.08)
+      isVisualClip(clip) &&
+      ((clip.cameraLayoutPreset !== undefined && !isCameraLayoutPreset(clip.cameraLayoutPreset)) ||
+        (clip.cameraFramingPreset !== undefined && !isCameraFramingPreset(clip.cameraFramingPreset)) ||
+        (clip.kind !== 'webcam' &&
+          clip.cameraLayoutPreset !== undefined &&
+          isSplitCameraLayout(clip.cameraLayoutPreset)) ||
+        (clip.kind === 'webcam' &&
+          (!isCameraLayoutPreset(clip.cameraLayoutPreset) || !isCameraFramingPreset(clip.cameraFramingPreset))) ||
+        (clip.kind === 'webcam' &&
+          (!finite(clip.cameraSplitRatio ?? Number.NaN) ||
+            clip.cameraSplitRatio! < 0.2 ||
+            clip.cameraSplitRatio! > 0.8 ||
+            !finite(clip.cameraSplitPadding ?? Number.NaN) ||
+            clip.cameraSplitPadding! < 0 ||
+            clip.cameraSplitPadding! > 0.08)))
     ) {
-      throw new CompositionEngineError('Invalid camera preset.');
+      throw new CompositionEngineError('Invalid visual preset.');
     }
     if (isBlurClip(clip)) {
       if (

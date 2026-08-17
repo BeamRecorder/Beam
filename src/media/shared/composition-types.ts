@@ -25,6 +25,9 @@ export interface ClipTransitions {
   exit: ClipTransition | null;
 }
 
+/** Global visual transitions applied to the fully composited output frame. */
+export type CanvasTransitions = ClipTransitions;
+
 export interface NormalizedTransform {
   x: number;
   y: number;
@@ -173,9 +176,9 @@ export interface VisualClip extends ClipBase {
   appearance: ClipAppearance;
   isMirrored: boolean;
   isMirroredY: boolean;
-  /** Required for webcam clips in persisted v8 compositions. */
+  /** Persisted layout preset for visual clips; legacy clips default to custom. */
   cameraLayoutPreset?: CameraLayoutPreset;
-  /** Required for webcam clips in persisted v8 compositions. */
+  /** Persisted framing preset for visual clips; legacy clips default to custom. */
   cameraFramingPreset?: CameraFramingPreset;
   /** Camera share of the canvas for split layouts, from 0.2 to 0.8. */
   cameraSplitRatio?: number;

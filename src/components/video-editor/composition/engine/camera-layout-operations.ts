@@ -1,5 +1,5 @@
 import { isSplitCameraLayout, type CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import type { ClipComposition } from '~/media/shared/composition-types';
+import { isVisualClip, type ClipComposition } from '~/media/shared/composition-types';
 import { cameraLayoutTransform, linkedScreenTransform } from '../camera-layout';
 import { cameraScreenCanShareGroup, cameraScreenPartner } from '../camera-screen-link';
 import { CompositionEngineError, validateComposition } from './clip-composition-validation';
@@ -12,10 +12,12 @@ export function setCameraLayout(
   const next = JSON.parse(JSON.stringify(composition)) as ClipComposition;
   const camera = next.clips.find((clip) => clip.id === clipId);
   if (!camera) throw new CompositionEngineError(`Unknown clip: ${clipId}`);
-  if (camera.kind !== 'webcam') throw new CompositionEngineError('Only camera clips have camera layouts.');
+  if (!isVisualClip(camera)) throw new CompositionEngineError('Only visual clips have layout presets.');
+  if (isSplitCameraLayout(preset) && camera.kind !== 'webcam')
+    throw new CompositionEngineError('Split layouts are only available for linked camera clips.');
   const needsScreenPartner =
     isSplitCameraLayout(preset) || (camera.cameraLayoutPreset ? isSplitCameraLayout(camera.cameraLayoutPreset) : false);
-  const linkedScreen = cameraScreenPartner(next, camera, needsScreenPartner);
+  const linkedScreen = camera.kind === 'webcam' ? cameraScreenPartner(next, camera, needsScreenPartner) : null;
   if (isSplitCameraLayout(preset) && !linkedScreen) {
     throw new CompositionEngineError('A split camera layout requires a linked screen clip.');
   }

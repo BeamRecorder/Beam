@@ -226,18 +226,19 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
 
     <div v-else class="options-group">
       <CameraLayoutPanel
-        v-if="selectedClip.kind === 'webcam'"
+        v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)"
         :layout="selectedClip.cameraLayoutPreset ?? 'custom'"
         :framing="selectedClip.cameraFramingPreset ?? 'custom'"
         :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
         :split-ratio="selectedClip.cameraSplitRatio ?? 0.5"
         :split-padding="selectedClip.cameraSplitPadding ?? 0"
+        :supports-split-layouts="selectedClip.kind === 'webcam'"
         @update:layout="emit('update:cameraLayout', $event)"
         @update:framing="emit('update:cameraFraming', $event)"
         @update:split-ratio="emit('update:cameraSplitRatio', $event)"
         @update:split-padding="emit('update:cameraSplitPadding', $event)"
       />
-      <Divider v-if="selectedClip.kind === 'webcam'" spacing="xs" />
+      <Divider v-if="['screen', 'video', 'image', 'webcam'].includes(selectedClip.kind)" spacing="xs" />
 
       <!-- Placement Section -->
       <div

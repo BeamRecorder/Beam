@@ -66,6 +66,8 @@
     "closeEditing": "關閉編輯",
     "edit": "編輯",
     "blur": "模糊",
+    "removeBackground": "移除背景",
+    "removeBackgroundDescription": "讓主要影片鋪滿畫布。",
     "watermark": "浮水印",
     "watermarkDescription": "為影片加入 Beam 品牌標誌。",
     "watermarkText": "文字",
@@ -404,7 +406,15 @@
     "create": "建立",
     "explore": "瀏覽",
     "current": "目前",
-    "dateUnknown": "未知日期"
+    "dateUnknown": "未知日期",
+    "screenRecord": "螢幕錄影",
+    "camera": "相機",
+    "captions": "字幕",
+    "searchProjects": "搜尋專案",
+    "searchPlaceholder": "搜尋專案...",
+    "noSearchResults": "找不到相符的專案。",
+    "clearSearch": "清除搜尋",
+    "refreshed": "已重新整理！"
   },
   "PropertiesPanel": {
     "properties": "屬性",

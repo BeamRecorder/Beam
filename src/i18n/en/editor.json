@@ -1,13 +1,16 @@
 {
   "CameraLayoutPanel": {
     "title": "Camera Layout",
+    "visualTitle": "Clip Layout",
     "custom": "Custom",
     "topLeft": "Float top left",
     "topRight": "Float top right",
     "bottomLeft": "Float bottom left",
     "bottomRight": "Float bottom right",
     "largeCenter": "Large centered camera",
+    "visualLargeCenter": "Large centered clip",
     "fullscreen": "Fullscreen camera",
+    "visualFullscreen": "Fullscreen clip",
     "splitLeft": "Camera left split",
     "splitRight": "Camera right split",
     "splitTop": "Camera top split",

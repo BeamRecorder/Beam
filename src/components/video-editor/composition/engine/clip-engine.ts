@@ -78,12 +78,16 @@ export const createComposition = (
         cloneValue(clips).map((clip) => ({
           ...clip,
           transitions: clip.transitions ?? { entry: null, exit: null },
-          ...(clip.kind === 'webcam'
+          ...(isVisualClip(clip)
             ? {
                 cameraLayoutPreset: clip.cameraLayoutPreset ?? 'custom',
                 cameraFramingPreset: clip.cameraFramingPreset ?? 'custom',
-                cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
-                cameraSplitPadding: clip.cameraSplitPadding ?? 0,
+                ...(clip.kind === 'webcam'
+                  ? {
+                      cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
+                      cameraSplitPadding: clip.cameraSplitPadding ?? 0,
+                    }
+                  : {}),
               }
             : {}),
         })),
@@ -353,7 +357,7 @@ export function setTransform(
     return {
       ...clip,
       transform: { ...transform },
-      ...(clip.kind === 'webcam' ? { cameraLayoutPreset: 'custom' as const } : {}),
+      ...(isVisualClip(clip) ? { cameraLayoutPreset: 'custom' as const } : {}),
     };
   });
 }
@@ -381,7 +385,7 @@ export function setCrop(
     return {
       ...clip,
       crop: crop ? { ...crop } : undefined,
-      ...(clip.kind === 'webcam' ? { cameraFramingPreset: 'custom' as const } : {}),
+      cameraFramingPreset: 'custom' as const,
     };
   });
 }
@@ -392,7 +396,7 @@ export function setCameraFraming(
   preset: Exclude<CameraFramingPreset, 'custom'>,
 ): ClipComposition {
   return updateClip(composition, clipId, (clip) => {
-    if (clip.kind !== 'webcam') throw new CompositionEngineError('Only camera clips have camera framing.');
+    if (!isVisualClip(clip)) throw new CompositionEngineError('Only visual clips have framing presets.');
     return { ...clip, cameraFramingPreset: preset, crop: undefined };
   });
 }

@@ -460,6 +460,7 @@ test('migrates legacy composition fields and atomically persists the canonical e
     width: 2520,
     height: 1080,
     showBackground: true,
+    transitions: { entry: null, exit: null },
   });
 
   const screen = migrated.composition.clips.find((clip) => clip.id === 'legacy-screen');
@@ -863,8 +864,67 @@ test('preserves every supported non-custom canvas preset through editor-state pe
     const saved = store.saveEditorState(project.id, state);
     const loaded = store.editorState(project.id);
     assert.equal(saved.presentation.canvas.preset, preset);
-    assert.deepEqual(loaded.presentation.canvas, { preset, width, height, showBackground: true });
+    assert.deepEqual(loaded.presentation.canvas, {
+      preset,
+      width,
+      height,
+      showBackground: true,
+      transitions: { entry: null, exit: null },
+    });
   }
+});
+
+test('persists and normalizes global canvas transitions without changing legacy canvas fields', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-canvas-transitions-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Canvas transitions' });
+  const state = store.editorState(project.id);
+  const transitions = {
+    entry: { preset: { kind: 'fade' }, durationMs: 750 },
+    exit: { preset: { kind: 'slide', direction: 'left' }, durationMs: 1_250 },
+  };
+  state.presentation.canvas = {
+    ...state.presentation.canvas,
+    preset: 'custom',
+    width: 1280,
+    height: 720,
+    showBackground: true,
+    transitions,
+  };
+
+  const saved = store.saveEditorState(project.id, state);
+  assert.deepEqual(saved.presentation.canvas, {
+    preset: 'custom',
+    width: 1280,
+    height: 720,
+    showBackground: true,
+    transitions,
+  });
+  assert.deepEqual(store.editorState(project.id).presentation.canvas, saved.presentation.canvas);
+
+  const manifestPath = path.join(store.directoryFor(project.id), 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.editor.presentation.canvas.transitions = {
+    entry: { preset: { kind: 'slide', direction: 'diagonal' }, durationMs: 300 },
+    exit: { preset: { kind: 'fade' }, durationMs: 6_000 },
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const normalized = store.editorState(project.id);
+  assert.deepEqual(normalized.presentation.canvas.transitions, {
+    entry: null,
+    exit: { preset: { kind: 'fade' }, durationMs: 5_000 },
+  });
+  assert.deepEqual(normalized.presentation.canvas, {
+    preset: 'custom',
+    width: 1280,
+    height: 720,
+    showBackground: true,
+    transitions: {
+      entry: null,
+      exit: { preset: { kind: 'fade' }, durationMs: 5_000 },
+    },
+  });
 });
 
 test('rejects an unknown persisted composition version without replacing it with an empty composition', () => {
@@ -967,7 +1027,13 @@ test('persists and reads one atomic editor state', () => {
   assert.equal(saved.schemaVersion, 3);
   assert.equal(saved.composition.clips[0].id, 'clip-video');
   assert.match(saved.composition.assets[0].src, /^project-media:/);
-  assert.deepEqual(saved.presentation.canvas, { preset: '16:9', width: 1920, height: 1080, showBackground: true });
+  assert.deepEqual(saved.presentation.canvas, {
+    preset: '16:9',
+    width: 1920,
+    height: 1080,
+    showBackground: true,
+    transitions: { entry: null, exit: null },
+  });
   assert.deepEqual(saved.presentation.cursor.motion, {
     preset: 'custom',
     smoothing: 0.55,
@@ -1303,10 +1369,161 @@ test('migrates Golden Canvas 2 v4 screen fragments to v8 without losing visual p
   assert.equal(migratedSecond.appearance.shadowSize, 'custom');
 
   const persisted = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  assert.equal(persisted.editor.composition.schemaVersion, 7);
+  assert.equal(persisted.editor.composition.schemaVersion, 8);
   assert.deepEqual(
     persisted.editor.composition.clips.map((clip) => clip.trackId),
     migrated.composition.clips.map((clip) => clip.trackId),
   );
   assert.deepEqual(store.editorState(project.id), migrated);
+});
+
+test('project store reports hasScreen, hasCamera, and hasCaption only when actual files exist', () => {
+  const { directory: root } = setup();
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Feature Detection' });
+  const directory = store.directoryFor(project.id);
+  const mediaDir = path.join(directory, 'media');
+  fs.mkdirSync(mediaDir, { recursive: true });
+  fs.writeFileSync(path.join(mediaDir, 'screen.mp4'), 'dummy-screen-data');
+  fs.writeFileSync(path.join(mediaDir, 'webcam.mp4'), 'dummy-webcam-data');
+
+  const manifestPath = path.join(directory, 'project.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  manifest.editor.composition = {
+    schemaVersion: 8,
+    assets: [
+      { id: 'screen-asset', kind: 'video', name: 'Screen', fileName: 'screen.mp4', origin: 'project' },
+      { id: 'webcam-asset', kind: 'video', name: 'Webcam', fileName: 'webcam.mp4', origin: 'project' },
+      { id: 'missing-asset', kind: 'video', name: 'Missing', fileName: 'missing.mp4', origin: 'project' },
+    ],
+    keyboardCaptionSessions: [],
+    clips: [
+      {
+        id: 'screen-clip',
+        trackId: 'track-1',
+        kind: 'screen',
+        timeRange: { startMs: 0, endMs: 1000 },
+        sourceTimeRange: { startMs: 0, endMs: 1000 },
+        assetId: 'screen-asset',
+        crop: { top: 0, right: 0, bottom: 0, left: 0 },
+        order: 1,
+        volume: 1,
+        isMuted: false,
+        transitions: { entry: null, exit: null },
+      },
+      {
+        id: 'webcam-clip',
+        trackId: 'track-2',
+        kind: 'webcam',
+        timeRange: { startMs: 0, endMs: 1000 },
+        sourceTimeRange: { startMs: 0, endMs: 1000 },
+        assetId: 'webcam-asset',
+        crop: { top: 0, right: 0, bottom: 0, left: 0 },
+        order: 2,
+        volume: 1,
+        isMuted: false,
+        cameraLayoutPreset: 'custom',
+        cameraFramingPreset: 'custom',
+        transitions: { entry: null, exit: null },
+      },
+      {
+        id: 'caption-clip',
+        trackId: 'track-3',
+        kind: 'caption',
+        timeRange: { startMs: 0, endMs: 1000 },
+        caption: {
+          type: 'text',
+          sentences: [
+            { id: 's1', text: 'Hello', startMs: 0, endMs: 1000, words: [{ text: 'Hello', startMs: 0, endMs: 1000 }] },
+          ],
+          style: {
+            fontFamily: 'sans-serif',
+            fontWeight: 800,
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            textAlign: 'center',
+            lineHeight: 1.2,
+            letterSpacing: 0,
+            color: '#ffffff',
+            fontSize: 24,
+            wrap: true,
+            shadowColor: '#000000',
+            shadowBlur: 4,
+            backdropBlur: 0,
+            outlineColor: '#000000',
+            outlineWidth: 0,
+            extrusionDepth: 0,
+            placement: 'bottom',
+          },
+        },
+        order: 3,
+        transitions: { entry: null, exit: null },
+      },
+    ],
+  };
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  const list = store.list();
+  const summary = list.find((p) => p.id === project.id);
+  assert(summary);
+  assert.equal(summary.hasScreen, true);
+  assert.equal(summary.hasCamera, true);
+  assert.equal(summary.hasCaption, true);
+
+  // When webcam asset file is removed, hasCamera becomes false
+  fs.rmSync(path.join(mediaDir, 'webcam.mp4'));
+  const listAfterRemoval = store.list();
+  const summaryAfterRemoval = listAfterRemoval.find((p) => p.id === project.id);
+  assert.equal(summaryAfterRemoval.hasCamera, false);
+  assert.equal(summaryAfterRemoval.hasScreen, true);
+  assert.equal(summaryAfterRemoval.hasCaption, true);
+});
+
+test('marks a newly created project editor state as fresh', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-fresh-project-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Fresh project' });
+
+  assert.equal(store.editorState(project.id).isFresh, true);
+});
+
+test('clears the fresh marker after the first editor-state save', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-fresh-save-'));
+  const store = createProjectStore(root);
+  const project = store.create({ name: 'Fresh save' });
+  const state = store.editorState(project.id);
+
+  assert.equal(state.isFresh, true);
+  const saved = store.saveEditorState(project.id, state);
+
+  assert.equal(saved.isFresh, false);
+  assert.equal(store.editorState(project.id).isFresh, false);
+});
+
+test('does not mark existing or migrated projects without the marker as fresh', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-editor-existing-project-'));
+  const store = createProjectStore(root);
+  const existing = store.create({ name: 'Existing project' });
+  const existingDirectory = store.directoryFor(existing.id);
+  const existingManifestPath = path.join(existingDirectory, 'project.json');
+  const existingManifest = JSON.parse(fs.readFileSync(existingManifestPath, 'utf8'));
+  delete existingManifest.editor.applyGlobalDefaults;
+  fs.writeFileSync(existingManifestPath, `${JSON.stringify(existingManifest, null, 2)}\n`);
+
+  assert.equal(store.editorState(existing.id).isFresh, false);
+
+  const migrated = store.create({ name: 'Migrated project' });
+  const migratedDirectory = store.directoryFor(migrated.id);
+  const migratedManifestPath = path.join(migratedDirectory, 'project.json');
+  const migratedManifest = JSON.parse(fs.readFileSync(migratedManifestPath, 'utf8'));
+  migratedManifest.editor = {
+    schemaVersion: 2,
+    composition: { schemaVersion: 1, assets: [], clips: [] },
+    zoom: { elements: [], generatedSessions: [] },
+    presentation: migratedManifest.editor.presentation,
+  };
+  fs.writeFileSync(migratedManifestPath, `${JSON.stringify(migratedManifest, null, 2)}\n`);
+
+  assert.equal(store.editorState(migrated.id).isFresh, false);
 });

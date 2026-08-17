@@ -1,13 +1,16 @@
 {
   "CameraLayoutPanel": {
     "title": "Camera Layout",
+    "visualTitle": "Mise en page du clip",
     "custom": "Personnalisé",
     "topLeft": "Flottant en haut à gauche",
     "topRight": "Flottant en haut à droite",
     "bottomLeft": "Flottant en bas à gauche",
     "bottomRight": "Flottant en bas à droite",
     "largeCenter": "Grande caméra centrée",
+    "visualLargeCenter": "Grand clip centré",
     "fullscreen": "Caméra plein écran",
+    "visualFullscreen": "Clip plein écran",
     "splitLeft": "Caméra à gauche",
     "splitRight": "Caméra à droite",
     "splitTop": "Caméra en haut",

@@ -4,9 +4,9 @@ import {
   MAX_TRANSITION_DURATION_MS,
   TRANSITION_DEFINITIONS,
   audioTransitionGainAt,
+  resolveCanvasTransitionState,
   normalizeClipTransitions,
   resolveClipTransitionState,
-  resolveFrameIntroTransition,
 } from '../clip-transitions';
 import type { Clip, VisualClip } from '../composition-types';
 import { createDefaultClipAppearance } from '../composition-defaults';
@@ -73,7 +73,13 @@ describe('clip transition evaluator', () => {
 
   it('uses ease-in for exits and returns identity outside a clip', () => {
     const clip = timedClip({ entry: null, exit: { preset: { kind: 'slide', direction: 'down' }, durationMs: 500 } });
-    expect(resolveClipTransitionState(clip, 99)).toEqual({ opacity: 1, translateX: 0, translateY: 0, scale: 1, blur: 0 });
+    expect(resolveClipTransitionState(clip, 99)).toEqual({
+      opacity: 1,
+      translateX: 0,
+      translateY: 0,
+      scale: 1,
+      blur: 0,
+    });
     expect(resolveClipTransitionState(clip, 900).opacity).toBeCloseTo(0.064);
     expect(resolveClipTransitionState(clip, 1_100).opacity).toBe(0);
   });
@@ -114,27 +120,19 @@ describe('clip transition evaluator', () => {
     ).toEqual({ entry: null, exit: null });
   });
 
-  it('promotes the deterministic background visual entry transition and ignores captions/audio', () => {
-    const background = visualClip('background', 10, {
+  it('keeps clip-at-zero transitions local and resolves Canvas transitions explicitly', () => {
+    const clip = visualClip('clip', 10, {
       transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
     });
-    const foreground = visualClip('foreground', 0, {
-      transitions: { entry: { preset: { kind: 'blur' }, durationMs: 500 }, exit: null },
-    });
-    const disabled = visualClip('disabled', 20, {
-      enabled: false,
-      transitions: { entry: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 500 }, exit: null },
-    });
-    expect(resolveFrameIntroTransition([foreground, background, disabled], 0)?.clipId).toBe('background');
-    expect(resolveFrameIntroTransition([foreground, background], 500)).toBeNull();
-
-    const tieA = visualClip('a', 5, {
-      transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
-    });
-    const tieB = visualClip('b', 5, {
-      transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
-    });
-    expect(resolveFrameIntroTransition([tieB, tieA], 100)?.clipId).toBe('a');
+    expect(resolveClipTransitionState(clip, 0).opacity).toBe(0);
+    expect(resolveCanvasTransitionState({ entry: null, exit: null }, 0, 1_000)).toBeNull();
+    expect(
+      resolveCanvasTransitionState({ entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null }, 0, 1_000)
+        ?.opacity,
+    ).toBe(0);
+    expect(
+      resolveCanvasTransitionState({ entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null }, 500, 1_000),
+    ).toBeNull();
   });
 
   it('applies the same linear audio envelope at entry and exit boundaries', () => {
@@ -153,12 +151,46 @@ describe('clip transition evaluator', () => {
   });
 
   it('covers every directional variant and single-edge short-clip fitting', () => {
-    expect(resolveClipTransitionState(timedClip({ entry: { preset: { kind: 'slide', direction: 'right' }, durationMs: 500 }, exit: null }), 100).translateX).toBe(0.08);
-    expect(resolveClipTransitionState(timedClip({ entry: { preset: { kind: 'slide', direction: 'up' }, durationMs: 500 }, exit: null }), 100).translateY).toBe(-0.08);
-    expect(resolveClipTransitionState(timedClip({ entry: { preset: { kind: 'slide', direction: 'down' }, durationMs: 500 }, exit: null }), 100).translateY).toBe(0.08);
-    expect(resolveClipTransitionState(timedClip({ entry: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 500 }, exit: null }), 100).scale).toBe(1.04);
-    expect(normalizeClipTransitions({ entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } }, 40, 'audio')).toEqual({ entry: null, exit: { preset: { kind: 'fade' }, durationMs: 40 } });
-    expect(normalizeClipTransitions({ entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: { preset: { kind: 'fade' }, durationMs: 500 } }, 1, 'audio')).toEqual({ entry: { preset: { kind: 'fade' }, durationMs: 1 }, exit: null });
-    expect(resolveFrameIntroTransition([visualClip('late', 0, { timelineStartMs: 1 })], -1)).toBeNull();
+    expect(
+      resolveClipTransitionState(
+        timedClip({ entry: { preset: { kind: 'slide', direction: 'right' }, durationMs: 500 }, exit: null }),
+        100,
+      ).translateX,
+    ).toBe(0.08);
+    expect(
+      resolveClipTransitionState(
+        timedClip({ entry: { preset: { kind: 'slide', direction: 'up' }, durationMs: 500 }, exit: null }),
+        100,
+      ).translateY,
+    ).toBe(-0.08);
+    expect(
+      resolveClipTransitionState(
+        timedClip({ entry: { preset: { kind: 'slide', direction: 'down' }, durationMs: 500 }, exit: null }),
+        100,
+      ).translateY,
+    ).toBe(0.08);
+    expect(
+      resolveClipTransitionState(
+        timedClip({ entry: { preset: { kind: 'zoom', direction: 'out' }, durationMs: 500 }, exit: null }),
+        100,
+      ).scale,
+    ).toBe(1.04);
+    expect(
+      normalizeClipTransitions({ entry: null, exit: { preset: { kind: 'fade' }, durationMs: 500 } }, 40, 'audio'),
+    ).toEqual({ entry: null, exit: { preset: { kind: 'fade' }, durationMs: 40 } });
+    expect(
+      normalizeClipTransitions(
+        { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: { preset: { kind: 'fade' }, durationMs: 500 } },
+        1,
+        'audio',
+      ),
+    ).toEqual({ entry: { preset: { kind: 'fade' }, durationMs: 1 }, exit: null });
+    expect(resolveClipTransitionState(visualClip('late', 0, { timelineStartMs: 1 }), -1)).toEqual({
+      opacity: 1,
+      translateX: 0,
+      translateY: 0,
+      scale: 1,
+      blur: 0,
+    });
   });
 });

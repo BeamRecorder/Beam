@@ -20,7 +20,6 @@ import {
   layoutCaptionText,
   type CaptionTextMeasurer,
 } from '~/media/shared/caption-text-layout';
-import { computeWebcamLayout, webcamSettingsForAppearance } from '../../composition/webcam/webcam-zoom';
 import type { OutputCanvasSettings } from '../output-canvas';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
@@ -33,11 +32,11 @@ import {
   clampNormalizedCrop,
   mirrorCrop,
 } from './layer-transform-geometry';
-import { resolveCameraFraming } from '../../composition/camera-layout';
-import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
+import { editableVisualClipTransform, visualClipDisplayLayout } from '../../composition/visual-framing';
 import {
   clampEditedWebcamTransform,
   editableWebcamTransform,
+  webcamDisplayLayout,
   webcamResizePointerScale,
 } from './webcam-transform-editing';
 
@@ -121,30 +120,25 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const bounds = boundsFor(clip);
     if (!bounds) return null;
     if (clip.kind === 'webcam') {
-      const asset = options.composition().assets.find((entry) => entry.id === clip.assetId);
-      const layout = computeWebcamLayout(
-        bounds.dw,
-        bounds.dh,
-        bounds.scale,
-        {
-          ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
-          reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
-        },
+      return webcamDisplayLayout(
+        options.composition(),
+        clip,
+        bounds,
         transform,
-      );
-      const framing = resolveCameraFraming(
         options.isCropping() ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
-        layout,
-        asset?.width ?? layout.width,
-        asset?.height ?? layout.height,
-        clip.crop,
       );
-      return {
-        left: bounds.dx + framing.rect.x,
-        top: bounds.dy + framing.rect.y,
-        width: framing.rect.width,
-        height: framing.rect.height,
-      };
+    }
+    if (isVisualClip(clip)) {
+      const asset = options.composition().assets.find((entry) => entry.id === clip.assetId);
+      const visible = visualClipDisplayLayout(
+        clip,
+        transform,
+        { x: bounds.dx, y: bounds.dy, width: bounds.dw, height: bounds.dh },
+        asset?.width ?? bounds.dw,
+        asset?.height ?? bounds.dh,
+        options.isCropping() ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+      );
+      return usesGlobalCamera(clip) ? projectCameraRect(bounds, visible) : visible;
     }
     const rect = {
       left: bounds.dx + transform.x * bounds.dw,
@@ -311,6 +305,8 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const bounds = boundsFor(clip);
     if (clip.kind === 'webcam' && bounds)
       transform = editableWebcamTransform(options.composition(), clip, bounds, transform);
+    else if (isVisualClip(clip) && bounds)
+      transform = editableVisualClipTransform(options.composition(), clip, transform, bounds);
     event.stopPropagation();
     transformDraft.value = { ...transform };
     transformDrag = {
@@ -449,10 +445,10 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       const layout = displayLayoutFor(clip);
       if (!layout) continue;
       const insideShape =
-        clip.kind === 'webcam' && clip.cameraFramingPreset === 'squircle'
+        isVisualClip(clip) && clip.cameraFramingPreset === 'squircle'
           ? pointInsideSquircle(x, y, layout, RAYCAST_SLOP_PX)
           : (clip.kind === 'blur' && clip.shape === 'circle') ||
-              (clip.kind === 'webcam' && clip.cameraFramingPreset === 'circle')
+              (isVisualClip(clip) && clip.cameraFramingPreset === 'circle')
             ? pointInsideEllipse(x, y, layout, RAYCAST_SLOP_PX)
             : pointInsideRect(x, y, layout, RAYCAST_SLOP_PX);
       // The screen layer participates in occlusion, but its existing dedicated

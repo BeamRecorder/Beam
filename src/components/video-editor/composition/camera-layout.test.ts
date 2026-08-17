@@ -154,6 +154,19 @@ describe('camera layout geometry', () => {
     });
   });
 
+  it('keeps a screen squircle in the full transform box while preserving its resized ratio', () => {
+    const transform = { x: 0.2, y: 0.1, width: 0.6, height: 0.5 };
+    const clip = { transform, cameraFramingPreset: 'squircle' } as VisualClip;
+    const geometry = resolveScreenRenderGeometry(clip, 1_920, 1_080, 800, 600, false, transform, undefined, 'squircle');
+
+    expectRectToMatch(geometry.positioned, { x: 160, y: 60, width: 480, height: 300 });
+    expect(geometry.positioned.width / geometry.positioned.height).toBeCloseTo(1.6, 10);
+    expect(geometry.mask).toBe('squircle');
+    expect(geometry.source.width / geometry.source.height).toBeCloseTo(1.6, 10);
+    expect(geometry.source.x).toBeCloseTo(240, 10);
+    expect(geometry.source.y).toBeCloseTo(90, 10);
+  });
+
   const splitMappingCases: ReadonlyArray<{
     preset: Extract<CameraLayoutPreset, `split-${string}`>;
     expectedCenter: { cx: number; cy: number };

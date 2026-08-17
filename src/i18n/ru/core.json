@@ -66,6 +66,8 @@
     "closeEditing": "Закрыть редактирование",
     "edit": "Изменить",
     "blur": "Размытие",
+    "removeBackground": "Удалить фон",
+    "removeBackgroundDescription": "Показывает основное видео от края до края.",
     "watermark": "Водяной знак",
     "watermarkDescription": "Добавьте бренд Beam на видео.",
     "watermarkText": "Текст",
@@ -404,7 +406,15 @@
     "create": "Создать",
     "explore": "Обзор",
     "current": "Текущий",
-    "dateUnknown": "Дата неизвестна"
+    "dateUnknown": "Неизвестная дата",
+    "screenRecord": "Запись экрана",
+    "camera": "Камера",
+    "captions": "Субтитры",
+    "searchProjects": "Поиск проектов",
+    "searchPlaceholder": "Поиск проектов...",
+    "noSearchResults": "Проекты не найдены.",
+    "clearSearch": "Очистить поиск",
+    "refreshed": "Обновлено!"
   },
   "PropertiesPanel": {
     "properties": "Свойства",

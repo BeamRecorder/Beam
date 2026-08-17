@@ -66,6 +66,8 @@
     "closeEditing": "編集を閉じる",
     "edit": "編集",
     "blur": "ぼかし",
+    "removeBackground": "背景を削除",
+    "removeBackgroundDescription": "メイン動画をキャンバス全体に表示します。",
     "watermark": "ウォーターマーク",
     "watermarkDescription": "動画にBeamブランドを追加します。",
     "watermarkText": "テキスト",
@@ -404,7 +406,15 @@
     "create": "作成",
     "explore": "参照",
     "current": "現在",
-    "dateUnknown": "不明な日付"
+    "dateUnknown": "不明な日付",
+    "screenRecord": "画面録画",
+    "camera": "カメラ",
+    "captions": "字幕",
+    "searchProjects": "プロジェクトを検索",
+    "searchPlaceholder": "プロジェクトを検索...",
+    "noSearchResults": "一致するプロジェクトが見つかりません。",
+    "clearSearch": "検索をクリア",
+    "refreshed": "更新完了！"
   },
   "PropertiesPanel": {
     "properties": "プロパティ",

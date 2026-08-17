@@ -6,6 +6,7 @@ import type { CaptionClip, ClipComposition, MediaAsset, VisualClip } from '~/med
 import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
 import { useTimelineClipboard } from '../composables/useTimelineClipboard';
 
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
@@ -609,6 +610,81 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
   });
 
+  it('only renders the Canvas transition track when at least one global transition exists', async () => {
+    const mounted = await mountTracks();
+    expect(mounted!.find('.canvas-sidebar-row').exists()).toBe(false);
+    expect(mounted!.find('.canvas-track-row').exists()).toBe(false);
+  });
+
+  it('renders both Canvas transition edges and opens the corresponding edge from the timeline', async () => {
+    const mounted = await mountTracks({
+      canvas: {
+        ...DEFAULT_OUTPUT_CANVAS,
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      },
+    });
+
+    expect(mounted!.find('.canvas-sidebar-row').exists()).toBe(true);
+    expect(mounted!.findAll('.canvas-transition-zone')).toHaveLength(2);
+    expect(mounted!.get('.canvas-transition-zone.entry').attributes('aria-label')).toContain('fade');
+    expect(mounted!.get('.canvas-transition-zone.exit').attributes('aria-label')).toContain('blur');
+
+    await mounted!.get('.canvas-transition-zone.entry').trigger('click');
+    await mounted!.get('.canvas-transition-zone.exit').trigger('click');
+    expect(mounted!.emitted('open:canvas-transition')).toEqual([['entry'], ['exit']]);
+  });
+
+  it('relays an intermediate Canvas transition preview and commits only on pointerup', async () => {
+    const mounted = await mountTracks({
+      duration: 1,
+      canvas: {
+        ...DEFAULT_OUTPUT_CANVAS,
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      },
+    });
+    const track = mounted!.get('.canvas-track-content').element;
+    vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({
+      left: 100,
+      top: 0,
+      width: 1_000,
+      height: 40,
+      right: 1_100,
+      bottom: 40,
+    } as DOMRect);
+
+    mounted!
+      .get('.canvas-transition-zone.entry .duration-handle.end')
+      .element.dispatchEvent(pointerEvent('pointerdown', 300));
+    window.dispatchEvent(pointerEvent('pointermove', 700));
+
+    expect(mounted!.emitted('preview:canvas')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 600 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      }),
+    );
+    expect(mounted!.emitted('update:canvas')).toBeUndefined();
+
+    window.dispatchEvent(pointerEvent('pointerup', 700));
+    expect(mounted!.emitted('preview:canvas')).toContainEqual([null]);
+    expect(mounted!.emitted('update:canvas')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 600 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      }),
+    );
+  });
+
   it('renders split segments from one track in one visual row while preserving separate tracks', async () => {
     const segmented = composition();
     segmented.clips = segmented.clips.flatMap((clip) => {
@@ -1135,4 +1211,50 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
   });
 
+  it('displays real-time caption text, triggers throbber on edit, and supports hover marquee', async () => {
+    const initialComp = composition();
+    const targetCaption = initialComp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
+    targetCaption.caption = {
+      type: 'text',
+      sentences: [{ id: 's1', text: 'Live transcribed subtitle', startMs: 1_000, endMs: 4_000, words: [] }],
+      style: createDefaultCaptionStyle(),
+    };
+
+    const mounted = await mountTracks({
+      composition: initialComp,
+    });
+
+    const captionLabel = mounted!.find('.text-caption-track .caption-label-text');
+    expect(captionLabel.exists()).toBe(true);
+    expect(captionLabel.text()).toBe('Live transcribed subtitle');
+
+    // Update caption text (e.g. while editing in properties panel)
+    const updatedComp = composition();
+    const updatedCaption = updatedComp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
+    updatedCaption.caption = {
+      type: 'text',
+      sentences: [{ id: 's1', text: 'Updated subtitle text', startMs: 1_000, endMs: 4_000, words: [] }],
+      style: createDefaultCaptionStyle(),
+    };
+
+    await mounted!.setProps({ composition: updatedComp });
+    await flushPromises();
+
+    // Throbber is displayed while commit is in progress
+    const throbber = mounted!.find('.text-caption-track .editor-loading-throbber');
+    expect(throbber.exists()).toBe(true);
+
+    // Wait 70ms to complete the edit debounce
+    await new Promise((resolve) => setTimeout(resolve, 70));
+    await flushPromises();
+
+    // Throbber disappears and updated text is shown
+    expect(mounted!.find('.text-caption-track .editor-loading-throbber').exists()).toBe(false);
+    expect(mounted!.find('.text-caption-track .caption-label-text').text()).toBe('Updated subtitle text');
+
+    // Hover marquee triggers
+    const indicator = mounted!.find('.text-caption-track .annotation-indicator');
+    await indicator.trigger('pointerenter');
+    await indicator.trigger('pointerleave');
+  });
 });

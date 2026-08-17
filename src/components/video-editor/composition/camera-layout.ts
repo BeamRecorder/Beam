@@ -138,6 +138,7 @@ export interface ScreenRenderGeometry {
   source: CanvasRect;
   media: CanvasRect;
   positioned: CanvasRect;
+  mask?: 'circle' | 'squircle';
 }
 
 export function resolveScreenRenderGeometry(
@@ -149,6 +150,7 @@ export function resolveScreenRenderGeometry(
   showBackground: boolean,
   transform = clip.transform,
   crop = clip.crop,
+  framingPreset = clip.cameraFramingPreset ?? 'custom',
 ): ScreenRenderGeometry {
   const cropX = crop ? crop.x * sourceWidth : 0;
   const cropY = crop ? crop.y * sourceHeight : 0;
@@ -164,13 +166,29 @@ export function resolveScreenRenderGeometry(
   const media = showBackground
     ? framedMediaRect(cropWidth, cropHeight, canvasWidth, canvasHeight)
     : { x: 0, y: 0, width: canvasWidth, height: canvasHeight };
-  const positioned = {
+  const layout = {
     x: media.x + transform.x * media.width,
     y: media.y + transform.y * media.height,
     width: media.width * transform.width,
     height: media.height * transform.height,
   };
-  return { source, media, positioned };
+  if (framingPreset === 'custom') return { source, media, positioned: layout };
+  const flexibleSquircle = framingPreset === 'squircle' && clip.kind !== 'webcam';
+  const framing = resolveCameraFraming(flexibleSquircle ? 'fill' : framingPreset, layout, source.width, source.height);
+  const framedSource = framing.sourceRect
+    ? {
+        x: source.x + framing.sourceRect.x,
+        y: source.y + framing.sourceRect.y,
+        width: framing.sourceRect.width,
+        height: framing.sourceRect.height,
+      }
+    : source;
+  return {
+    source: framedSource,
+    media,
+    positioned: framing.rect,
+    mask: flexibleSquircle ? 'squircle' : framing.mask,
+  };
 }
 
 export function mapSourcePointToScreen(

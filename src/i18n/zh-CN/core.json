@@ -66,6 +66,8 @@
     "closeEditing": "关闭编辑",
     "edit": "编辑",
     "blur": "模糊",
+    "removeBackground": "移除背景",
+    "removeBackgroundDescription": "让主视频铺满画布。",
     "watermark": "水印",
     "watermarkDescription": "为视频添加 Beam 品牌标识。",
     "watermarkText": "文字",
@@ -404,7 +406,15 @@
     "create": "创建",
     "explore": "浏览",
     "current": "当前",
-    "dateUnknown": "未知日期"
+    "dateUnknown": "未知日期",
+    "screenRecord": "屏幕录制",
+    "camera": "摄像头",
+    "captions": "字幕",
+    "searchProjects": "搜索项目",
+    "searchPlaceholder": "搜索项目...",
+    "noSearchResults": "未找到匹配的项目。",
+    "clearSearch": "清除搜索",
+    "refreshed": "已刷新！"
   },
   "PropertiesPanel": {
     "properties": "属性",

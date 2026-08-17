@@ -122,4 +122,116 @@ describe('ProjectPicker', () => {
     expect(video.pause).toHaveBeenCalledOnce();
     expect(video.currentTime).toBe(0.1);
   });
+  it('renders content badges for screen recording, camera, and captions based on project features', async () => {
+    const featuredProjects = [
+      {
+        id: 'full',
+        name: 'Full Feature',
+        createdAt: '',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        sessionCount: 1,
+        previewSrc: null,
+        hasScreen: true,
+        hasCamera: true,
+        hasCaption: true,
+      },
+      {
+        id: 'screen-only',
+        name: 'Screen Only',
+        createdAt: '',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        sessionCount: 1,
+        previewSrc: null,
+        hasScreen: true,
+        hasCamera: false,
+        hasCaption: false,
+      },
+      {
+        id: 'none',
+        name: 'Empty Project',
+        createdAt: '',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        sessionCount: 0,
+        previewSrc: null,
+        hasScreen: false,
+        hasCamera: false,
+        hasCaption: false,
+      },
+    ];
+    capture.listProjects.mockResolvedValue(featuredProjects);
+    const wrapper = mount(ProjectPicker, { global: { stubs } });
+    await settle();
+
+    const cards = wrapper.findAll('.project-card');
+    expect(cards).toHaveLength(3);
+
+    // Card 0: full features
+    const firstBadges = cards[0].find('[data-testid="project-badges"]');
+    expect(firstBadges.exists()).toBe(true);
+    expect(firstBadges.find('[aria-label="Screen recording"]').exists()).toBe(true);
+    expect(firstBadges.find('[aria-label="Camera"]').exists()).toBe(true);
+    expect(firstBadges.find('[aria-label="Captions"]').exists()).toBe(true);
+
+    // Card 1: screen only
+    const secondBadges = cards[1].find('[data-testid="project-badges"]');
+    expect(secondBadges.exists()).toBe(true);
+    expect(secondBadges.find('[aria-label="Screen recording"]').exists()).toBe(true);
+    expect(secondBadges.find('[aria-label="Camera"]').exists()).toBe(false);
+    expect(secondBadges.find('[aria-label="Captions"]').exists()).toBe(false);
+
+    // Card 2: none
+    const thirdBadges = cards[2].find('[data-testid="project-badges"]');
+    expect(thirdBadges.exists()).toBe(false);
+  });
+  it('toggles search, filters projects in real time, and shows search empty state', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    const wrapper = mount(ProjectPicker, { global: { stubs } });
+    await settle();
+
+    expect(wrapper.findAll('.project-card')).toHaveLength(2);
+    expect(wrapper.find('.project-search-bar').exists()).toBe(false);
+
+    // Open search
+    await wrapper.get('button[aria-label="Search projects"]').trigger('click');
+    await settle();
+    expect(wrapper.find('.project-search-bar').exists()).toBe(true);
+
+    // Filter by "First"
+    const searchInput = wrapper.get('.project-search-bar input');
+    await searchInput.setValue('First');
+    await settle();
+    expect(wrapper.findAll('.project-card')).toHaveLength(1);
+    expect(wrapper.text()).toContain('First');
+    expect(wrapper.text()).not.toContain('Second');
+
+    // Filter with no match
+    await searchInput.setValue('NonExistent');
+    await settle();
+    expect(wrapper.findAll('.project-card')).toHaveLength(0);
+    expect(wrapper.text()).toContain('No projects match your search.');
+
+    // Clear search via clear button
+    const clearBtn = wrapper.findAll('button').find((b) => b.text().includes('Clear search'));
+    await clearBtn?.trigger('click');
+    await settle();
+    expect(wrapper.findAll('.project-card')).toHaveLength(2);
+  });
+  it('shows success checkmark feedback when refresh is clicked', async () => {
+    capture.listProjects.mockResolvedValue(projects);
+    const wrapper = mount(ProjectPicker, { global: { stubs } });
+    await settle();
+
+    const refreshBtn = wrapper.get('button.refresh-button');
+    expect(refreshBtn.classes()).not.toContain('is-success');
+
+    await refreshBtn.trigger('click');
+    await flushPromises();
+    expect(refreshBtn.classes()).toContain('is-success');
+    expect(refreshBtn.attributes('aria-label')).toBe('Projects refreshed');
+
+    // After timer expires, success state resets
+    await vi.advanceTimersByTimeAsync(1700);
+    await wrapper.vm.$nextTick();
+    expect(refreshBtn.classes()).not.toContain('is-success');
+  });
 });

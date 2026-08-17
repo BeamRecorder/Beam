@@ -1,4 +1,4 @@
-import { computed, onScopeDispose, ref, watch, type Ref } from 'vue';
+import { computed, nextTick, onScopeDispose, ref, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorData } from '../../../api/types/capture-api';
 import { useVideoPlayer } from './useVideoPlayer';
@@ -12,6 +12,7 @@ import { compositionDurationMs } from '~/media/shared';
 import { createDefaultCursorMotionSettings } from '../../../api/types/cursor-settings';
 import { compositionPlaybackSignature } from './composition-playback-signature';
 import { useToastStore } from '~/ui/toast/toastStore';
+import { normalizeEditorPreferenceDefaults } from './editor-defaults';
 
 export function useVideoEditor(options: {
   project: Ref<CaptureProject | null | undefined>;
@@ -28,17 +29,19 @@ export function useVideoEditor(options: {
   const cursor = useCursorReplacer();
   const cursorMotion = ref(createDefaultCursorMotionSettings());
   const includeAudioInExport = ref(true);
+  const editorDefaults = ref(normalizeEditorPreferenceDefaults(undefined));
 
   const compositionState = useClipComposition({
     project,
     editorData,
     currentTimeSec: player.currentTime,
     activeTab,
+    editorDefaults,
   });
   // Composition state is available before the asynchronous playback engine has
   // decoded metadata, so it is the authoritative duration for zoom generation.
   const durationMs = computed(() => compositionDurationMs(compositionState.composition.value));
-  const zoomState = useProjectZoom({ editorData, durationMs, activeTab });
+  const zoomState = useProjectZoom({ editorData, durationMs, activeTab, editorDefaults });
   const editorState = useProjectEditorState({
     project,
     composition: compositionState.composition,
@@ -58,6 +61,9 @@ export function useVideoEditor(options: {
     cursorShadowColor: cursor.shadowColor,
     cursorShadowDirection: cursor.shadowDirection,
     availableBackgrounds: player.backgroundGroups,
+    editorDefaults,
+    selectedClip: compositionState.selectedClip,
+    selectedZoom: zoomState.selectedZoom,
   });
 
   const refreshBackgroundLibrary = async () => player.setUserBackgrounds(await capture.listBackgroundLibrary());
@@ -114,7 +120,10 @@ export function useVideoEditor(options: {
         if (request !== editorLoad) return;
         compositionState.synchronizeRecording();
         zoomState.ensureAutomaticZooms();
-        editorState.scheduleSave();
+        editorState.scheduleSave(false);
+        await nextTick();
+        if (request !== editorLoad) return;
+        editorState.enableDefaultCapture();
       } catch (err: unknown) {
         if (request !== editorLoad) return;
         console.error('Failed to load editor state.', err);
@@ -176,6 +185,7 @@ export function useVideoEditor(options: {
     zoomState,
     exportRequest,
     includeAudioInExport,
+    editorDefaults,
     handleSelectTab: (tab: string) => {
       activeTab.value = tab;
     },

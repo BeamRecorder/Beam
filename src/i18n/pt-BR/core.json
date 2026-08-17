@@ -66,6 +66,8 @@
     "closeEditing": "Fechar edição",
     "edit": "Editar",
     "blur": "Desfoque",
+    "removeBackground": "Remover fundo",
+    "removeBackgroundDescription": "Exibe o vídeo principal de ponta a ponta.",
     "watermark": "Marca d’água",
     "watermarkDescription": "Adicione a marca Beam ao vídeo.",
     "watermarkText": "Texto",
@@ -404,7 +406,15 @@
     "create": "Criar",
     "explore": "Explorar",
     "current": "Atual",
-    "dateUnknown": "Data desconhecida"
+    "dateUnknown": "Data desconhecida",
+    "screenRecord": "Gravação de tela",
+    "camera": "Câmera",
+    "captions": "Legendas",
+    "searchProjects": "Pesquisar projetos",
+    "searchPlaceholder": "Pesquisar projetos...",
+    "noSearchResults": "Nenhum projeto encontrado.",
+    "clearSearch": "Limpar pesquisa",
+    "refreshed": "Atualizado!"
   },
   "PropertiesPanel": {
     "properties": "Propriedades",
