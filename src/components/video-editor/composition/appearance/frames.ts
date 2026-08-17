@@ -1,73 +1,25 @@
 import type { ClipFrame } from '~/media/shared/composition-types';
 import type { MediaRect } from './appearance-types';
 import type { Canvas2DContext } from '~/types/canvas';
+import {
+  normalizeFrameChromeScale,
+  resolveSafariFrameGeometry,
+  resolveWindowsFrameGeometry,
+  type FrameOptions,
+} from './frame-geometry';
 
-const SAFARI_REFERENCE = { width: 1800, height: 1150, toolbarHeight: 68 };
-export const normalizeFrameChromeScale = (value: number | undefined) =>
-  Number.isFinite(value) ? Math.min(2, Math.max(0.5, value ?? 1)) : 1;
-const safariToolbarHeight = (rect: MediaRect, chromeScale = 1) =>
-  Math.min(
-    rect.height - 2,
-    Math.max(
-      18,
-      ((rect.height * SAFARI_REFERENCE.toolbarHeight) / SAFARI_REFERENCE.height) *
-        normalizeFrameChromeScale(chromeScale),
-    ),
-  );
-const safariScale = (rect: MediaRect, chromeScale = 1) => {
-  const scale = normalizeFrameChromeScale(chromeScale);
-  const horizontalScale = Math.min(1, scale);
-  const baseX = rect.width / SAFARI_REFERENCE.width;
-  const chromeWidth = SAFARI_REFERENCE.width * baseX * horizontalScale;
-  return {
-    x: baseX * horizontalScale,
-    y: safariToolbarHeight(rect, scale) / SAFARI_REFERENCE.toolbarHeight,
-    offsetX: (rect.width - chromeWidth) / 2,
-  };
-};
-
-export interface WindowsFrameOptions {
-  showMenu?: boolean;
-  showScrollbars?: boolean;
-  chromeScale?: number;
-}
+export { normalizeFrameChromeScale };
+export type WindowsFrameOptions = FrameOptions;
 
 export const frameContentRect = (rect: MediaRect, frame: ClipFrame, windows: WindowsFrameOptions = {}): MediaRect => {
-  if (frame === 'safari') {
-    const header = safariToolbarHeight(rect, windows.chromeScale);
-    return {
-      x: rect.x + 1,
-      y: rect.y + header,
-      width: Math.max(1, rect.width - 2),
-      height: Math.max(1, rect.height - header - 1),
-    };
-  }
-  if (frame === 'windows-95') {
-    const chromeScale = normalizeFrameChromeScale(windows.chromeScale);
-    const scaleX = (rect.width / 800) * chromeScale,
-      scaleY = (rect.height / 520) * chromeScale;
-    const left = Math.max(3, 12 * scaleX),
-      titleHeight = Math.max(18, 31 * scaleY);
-    const top = titleHeight + (windows.showMenu === false ? Math.max(3, 5 * scaleY) : Math.max(14, 35 * scaleY));
-    const right = windows.showScrollbars === false ? left : Math.max(6, 30 * scaleX);
-    const bottom = windows.showScrollbars === false ? Math.max(3, 12 * scaleY) : Math.max(3, 22 * scaleY);
-    return {
-      x: rect.x + left,
-      y: rect.y + top,
-      width: Math.max(1, rect.width - left - right),
-      height: Math.max(1, rect.height - top - bottom),
-    };
-  }
+  if (frame === 'safari') return resolveSafariFrameGeometry(rect, windows.chromeScale).content;
+  if (frame === 'windows-95') return resolveWindowsFrameGeometry(rect, windows).content;
   return rect;
 };
 
 export const frameRadius = (frame: ClipFrame, fallback: number, rect: MediaRect) =>
   Math.min(
-    frame === 'safari'
-      ? Math.max(5, (rect.width * 18) / SAFARI_REFERENCE.width)
-      : frame === 'windows-95'
-        ? 0
-        : fallback,
+    frame === 'safari' ? resolveSafariFrameGeometry(rect).radius : frame === 'windows-95' ? 0 : fallback,
     rect.width / 2,
     rect.height / 2,
   );
@@ -86,12 +38,11 @@ function drawSafariToolbar(
   paintBackground: boolean,
   chromeScale = 1,
 ) {
-  const header = safariToolbarHeight(rect, chromeScale);
-  const scale = safariScale(rect, chromeScale);
-  const radius = frameRadius('safari', 0, rect);
-  const x = (value: number) => rect.x + scale.offsetX + value * scale.x;
-  const y = (value: number) => rect.y + value * scale.y;
-  const line = Math.max(0.6, Math.min(scale.x, scale.y));
+  const geometry = resolveSafariFrameGeometry(rect, chromeScale);
+  const { header, unit, detail, radius, showText } = geometry;
+  const x = (value: number) => rect.x + value * unit;
+  const y = (value: number) => rect.y + value * unit;
+  const line = Math.max(0.6, unit);
 
   if (paintBackground) {
     ctx.save();
@@ -115,11 +66,11 @@ function drawSafariToolbar(
   ctx.lineJoin = 'round';
   const circle = (cx: number, color: string) => {
     ctx.beginPath();
-    ctx.arc(x(cx), y(34), 7.5 * Math.min(scale.x, scale.y), 0, Math.PI * 2);
+    ctx.arc(x(cx), rect.y + header / 2, Math.max(1.5, 7.5 * unit), 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
     ctx.strokeStyle = 'rgba(0, 0, 0, .08)';
-    ctx.lineWidth = 0.75 * Math.min(scale.x, scale.y);
+    ctx.lineWidth = Math.max(0.5, 0.75 * unit);
     ctx.stroke();
     ctx.strokeStyle = 'rgba(75, 75, 75, .93)';
     ctx.lineWidth = line;
@@ -128,103 +79,72 @@ function drawSafariToolbar(
   circle(57, '#febc2e');
   circle(83, '#28c840');
 
-  // left-controls: sidebar, disclosure, backward and forward placeholders
-  ctx.strokeRect(x(124), y(24), 24 * scale.x, 20 * scale.y);
-  safariPath(ctx, [
-    [x(132), y(24)],
-    [x(132), y(44)],
-  ]);
-  safariPath(ctx, [
-    [x(164), y(31)],
-    [x(168), y(35)],
-    [x(172), y(31)],
-  ]);
-  safariPath(ctx, [
-    [x(217), y(26)],
-    [x(208), y(34)],
-    [x(217), y(42)],
-  ]);
-  safariPath(ctx, [
-    [x(251), y(26)],
-    [x(260), y(34)],
-    [x(251), y(42)],
-  ]);
+  const trafficRight = x(104);
+  let addressLeft = trafficRight + 10 * unit;
+  let addressRight = rect.x + rect.width - 14 * unit;
+  if (detail !== 'compact') {
+    const navX = trafficRight + 16 * unit;
+    const iconSize = 20 * unit;
+    ctx.strokeRect(navX, rect.y + (header - iconSize) / 2, 24 * unit, iconSize);
+    safariPath(ctx, [
+      [navX + 8 * unit, rect.y + (header - iconSize) / 2],
+      [navX + 8 * unit, rect.y + (header + iconSize) / 2],
+    ]);
+    safariPath(ctx, [
+      [navX + 84 * unit, y(26)],
+      [navX + 75 * unit, y(34)],
+      [navX + 84 * unit, y(42)],
+    ]);
+    safariPath(ctx, [
+      [navX + 112 * unit, y(26)],
+      [navX + 121 * unit, y(34)],
+      [navX + 112 * unit, y(42)],
+    ]);
+    addressLeft = navX + 146 * unit;
+  }
+  if (detail === 'full') {
+    const controlY = rect.y + header / 2;
+    const rightX = rect.x + rect.width - 104 * unit;
+    ctx.strokeRect(rightX, controlY - 7.5 * unit, 16 * unit, 15 * unit);
+    safariPath(ctx, [
+      [rightX + 8 * unit, controlY],
+      [rightX + 8 * unit, controlY - 13 * unit],
+      [rightX + 4 * unit, controlY - 9 * unit],
+    ]);
+    safariPath(ctx, [
+      [rightX + 45 * unit, controlY],
+      [rightX + 63 * unit, controlY],
+    ]);
+    safariPath(ctx, [
+      [rightX + 54 * unit, controlY - 9 * unit],
+      [rightX + 54 * unit, controlY + 9 * unit],
+    ]);
+    addressRight = rightX - 18 * unit;
+  }
 
-  // privacy-control placeholder
-  ctx.fillStyle = '#505050';
-  ctx.beginPath();
-  ctx.moveTo(x(509), y(23));
-  ctx.lineTo(x(519), y(27));
-  ctx.lineTo(x(517), y(39));
-  ctx.lineTo(x(509), y(45));
-  ctx.lineTo(x(501), y(39));
-  ctx.lineTo(x(499), y(27));
-  ctx.closePath();
-  ctx.fill();
-
-  // address-bar and centered address-content
+  const addressWidth = Math.max(12 * unit, addressRight - addressLeft);
+  const addressHeight = Math.min(header - 6 * unit, 34 * unit);
+  const addressY = rect.y + (header - addressHeight) / 2;
   ctx.fillStyle = '#f7f7f7';
   ctx.beginPath();
-  ctx.roundRect(x(538), y(17), 726 * scale.x, 34 * scale.y, 9 * Math.min(scale.x, scale.y));
+  ctx.roundRect(addressLeft, addressY, addressWidth, addressHeight, Math.min(addressHeight / 2, 9 * unit));
   ctx.fill();
   ctx.strokeStyle = '#d2d2d2';
   ctx.lineWidth = line;
   ctx.stroke();
-  ctx.strokeStyle = 'rgba(255, 255, 255, .8)';
-  safariPath(ctx, [
-    [x(548), y(18.5)],
-    [x(1254), y(18.5)],
-  ]);
-  ctx.strokeStyle = '#777777';
-  ctx.lineWidth = Math.max(0.6, line * 0.9);
-  ctx.beginPath();
-  ctx.roundRect(x(858), y(31), 10 * scale.x, 10 * scale.y, 1.5 * Math.min(scale.x, scale.y));
-  ctx.stroke();
-  safariPath(ctx, [
-    [x(860.5), y(31)],
-    [x(860.5), y(27.5)],
-    [x(865), y(25.5)],
-    [x(868), y(27.5)],
-    [x(868), y(31)],
-  ]);
-  const addressTitle = title || 'website.com';
-  ctx.fillStyle = '#565656';
-  ctx.font = `${Math.max(8, 16 * Math.min(scale.x, scale.y))}px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(addressTitle, x(876), y(34));
-  ctx.strokeStyle = 'rgba(75, 75, 75, .93)';
-  ctx.lineWidth = line;
-  ctx.beginPath();
-  ctx.arc(x(1244), y(34), 8 * Math.min(scale.x, scale.y), -0.8, Math.PI * 1.45);
-  ctx.stroke();
-  safariPath(ctx, [
-    [x(1250), y(27)],
-    [x(1251), y(33)],
-    [x(1245), y(31)],
-  ]);
-
-  // right-controls placeholders: share, add tab, tab overview
-  ctx.strokeRect(x(1662), y(28), 16 * scale.x, 15 * scale.y);
-  safariPath(ctx, [
-    [x(1670), y(34)],
-    [x(1670), y(21)],
-    [x(1666), y(25)],
-  ]);
-  safariPath(ctx, [
-    [x(1670), y(21)],
-    [x(1674), y(25)],
-  ]);
-  safariPath(ctx, [
-    [x(1707), y(34)],
-    [x(1725), y(34)],
-  ]);
-  safariPath(ctx, [
-    [x(1716), y(25)],
-    [x(1716), y(43)],
-  ]);
-  ctx.strokeRect(x(1755), y(25), 16 * scale.x, 15 * scale.y);
-  ctx.strokeRect(x(1759), y(29), 16 * scale.x, 15 * scale.y);
+  if (showText) {
+    const addressTitle = title || 'website.com';
+    ctx.fillStyle = '#565656';
+    ctx.font = `${Math.max(7, 16 * unit)}px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(addressLeft + 4 * unit, addressY, Math.max(1, addressWidth - 8 * unit), addressHeight);
+    ctx.clip();
+    ctx.fillText(addressTitle, addressLeft + addressWidth / 2, rect.y + header / 2);
+    ctx.restore();
+  }
   ctx.restore();
 
   ctx.save();
@@ -286,68 +206,77 @@ function drawWindows95Frame(
   color: string,
   windows: WindowsFrameOptions,
 ) {
-  const chromeScale = normalizeFrameChromeScale(windows.chromeScale);
-  const sx = (rect.width / 800) * chromeScale;
-  const sy = (rect.height / 520) * chromeScale;
-  const px = (value: number) => rect.x + Math.round(value * sx);
-  const py = (value: number) => rect.y + Math.round(value * sy);
-  const content = frameContentRect(rect, 'windows-95', windows);
+  const geometry = resolveWindowsFrameGeometry(rect, windows);
+  const { unit, outerInset, titleHeight, menuHeight, scrollbarSize, detail, content, showText } = geometry;
   if (paintBackground) {
     ctx.fillStyle = color;
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
   }
   drawOuterWindowsBevel(ctx, rect);
-  const titleX = px(3),
-    titleY = py(3),
-    titleRight = rect.x + rect.width - Math.max(3, Math.round(3 * chromeScale)),
+  const titleX = rect.x + outerInset,
+    titleY = rect.y + outerInset,
+    titleRight = rect.x + rect.width - outerInset,
     titleW = Math.max(1, titleRight - titleX),
-    titleH = Math.max(18, py(31) - titleY);
+    titleH = titleHeight;
   ctx.fillStyle = '#000080';
   ctx.fillRect(titleX, titleY, titleW, titleH);
   ctx.fillStyle = '#ffffff';
-  ctx.font = `${Math.max(9, Math.round(16 * Math.min(sx, sy)))}px "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif`;
+  ctx.font = `${Math.max(7, Math.round(16 * unit))}px "MS Sans Serif", "Microsoft Sans Serif", Tahoma, sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText(title, px(16), titleY + titleH / 2);
-  const buttonSize = Math.max(12, Math.round(18 * Math.min(sx, sy)));
-  const buttonY = titleY + Math.max(1, Math.round(4 * sy));
-  [3, 2, 1].forEach((offset, index) => {
-    const buttonX =
-      rect.x +
-      rect.width -
-      Math.max(3, Math.round(6 * chromeScale)) -
-      buttonSize -
-      Math.round((offset - 1) * 19 * chromeScale);
+  const buttonSize = Math.max(2, Math.min(titleH - 2, 18 * unit));
+  const buttonY = titleY + (titleH - buttonSize) / 2;
+  const buttonCount = detail === 'full' ? 3 : 1;
+  Array.from({ length: buttonCount }, (_, index) => buttonCount - index).forEach((offset, index) => {
+    const buttonX = titleRight - outerInset - buttonSize - (offset - 1) * (buttonSize + Math.max(1, unit));
     drawBevel(ctx, buttonX, buttonY, buttonSize, buttonSize, true, color);
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = Math.max(0.6, unit);
+    const glyphInset = Math.max(2, buttonSize * 0.28);
     if (index === 0) {
       ctx.beginPath();
-      ctx.moveTo(buttonX + 5, buttonY + buttonSize - 5);
-      ctx.lineTo(buttonX + buttonSize - 5, buttonY + buttonSize - 5);
+      ctx.moveTo(buttonX + glyphInset, buttonY + buttonSize - glyphInset);
+      ctx.lineTo(buttonX + buttonSize - glyphInset, buttonY + buttonSize - glyphInset);
       ctx.stroke();
     } else if (index === 1)
-      ctx.strokeRect(buttonX + 5, buttonY + 5, Math.max(2, buttonSize - 10), Math.max(2, buttonSize - 10));
+      ctx.strokeRect(
+        buttonX + glyphInset,
+        buttonY + glyphInset,
+        Math.max(2, buttonSize - glyphInset * 2),
+        Math.max(2, buttonSize - glyphInset * 2),
+      );
     else {
       ctx.beginPath();
-      ctx.moveTo(buttonX + 5, buttonY + 5);
-      ctx.lineTo(buttonX + buttonSize - 5, buttonY + buttonSize - 5);
-      ctx.moveTo(buttonX + buttonSize - 5, buttonY + 5);
-      ctx.lineTo(buttonX + 5, buttonY + buttonSize - 5);
+      ctx.moveTo(buttonX + glyphInset, buttonY + glyphInset);
+      ctx.lineTo(buttonX + buttonSize - glyphInset, buttonY + buttonSize - glyphInset);
+      ctx.moveTo(buttonX + buttonSize - glyphInset, buttonY + glyphInset);
+      ctx.lineTo(buttonX + glyphInset, buttonY + buttonSize - glyphInset);
       ctx.stroke();
     }
   });
-  if (windows.showMenu !== false) {
-    const menuY = py(31),
-      menuH = Math.max(14, py(65) - menuY);
+  if (showText) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(titleX + 4 * unit, titleY, Math.max(1, titleW - buttonCount * (buttonSize + unit) - 8 * unit), titleH);
+    ctx.clip();
+    ctx.fillText(title, titleX + 8 * unit, titleY + titleH / 2);
+    ctx.restore();
+  }
+  if (geometry.showMenu) {
+    const menuY = titleY + titleH,
+      menuH = menuHeight;
     ctx.fillStyle = color;
     ctx.fillRect(titleX, menuY, titleW, menuH);
     ctx.fillStyle = '#000000';
-    ctx.font = `${Math.max(8, Math.round(14 * Math.min(sx, sy)))}px "MS Sans Serif", sans-serif`;
+    ctx.font = `${Math.max(7, Math.round(14 * unit))}px "MS Sans Serif", sans-serif`;
     ctx.textBaseline = 'middle';
-    ctx.fillText('File', px(12), menuY + menuH / 2);
-    ctx.fillText('Edit', px(54), menuY + menuH / 2);
-    ctx.fillText('Search', px(94), menuY + menuH / 2);
+    if (showText) {
+      ctx.fillText('File', titleX + 8 * unit, menuY + menuH / 2);
+      if (detail === 'full') {
+        ctx.fillText('Edit', titleX + 50 * unit, menuY + menuH / 2);
+        ctx.fillText('Search', titleX + 90 * unit, menuY + menuH / 2);
+      }
+    }
   }
   const clientX = content.x - 2,
     clientY = content.y - 2,
@@ -355,40 +284,38 @@ function drawWindows95Frame(
     clientH = content.height + 4;
   if (paintBackground) drawBevel(ctx, clientX, clientY, clientW, clientH, false, '#ffffff');
   else drawBevelEdges(ctx, clientX, clientY, clientW, clientH, false);
-  if (windows.showScrollbars !== false) {
-    const scrollbar = Math.max(12, Math.round(18 * Math.min(sx, sy)));
-    const verticalX = rect.x + rect.width - scrollbar - Math.max(2, Math.round(4 * sx));
-    const horizontalY = rect.y + rect.height - scrollbar - Math.max(2, Math.round(4 * sy));
+  if (geometry.showScrollbars) {
+    const scrollbar = scrollbarSize;
+    const verticalX = content.x + content.width;
+    const horizontalY = content.y + content.height;
     drawBevel(ctx, verticalX, content.y, scrollbar, scrollbar, true, color);
-    drawBevel(
-      ctx,
-      verticalX,
-      rect.y + rect.height - scrollbar * 2 - Math.max(2, Math.round(4 * sy)),
-      scrollbar,
-      scrollbar,
-      true,
-      color,
-    );
+    drawBevel(ctx, verticalX, horizontalY - scrollbar, scrollbar, scrollbar, true, color);
+    const verticalTrackY = content.y + scrollbar;
+    const verticalTrackHeight = Math.max(0, horizontalY - content.y - scrollbar * 2);
     ctx.fillStyle = color;
-    ctx.fillRect(verticalX, content.y + scrollbar, scrollbar, Math.max(1, horizontalY - content.y - scrollbar));
+    ctx.fillRect(verticalX, verticalTrackY, scrollbar, verticalTrackHeight);
+    const verticalThumbHeight = Math.min(verticalTrackHeight, Math.max(4, 48 * unit));
     drawBevel(
       ctx,
       verticalX + 2,
-      content.y + scrollbar + 8,
+      verticalTrackY + Math.max(0, (verticalTrackHeight - verticalThumbHeight) * 0.2),
       Math.max(1, scrollbar - 4),
-      Math.max(12, Math.round(48 * sy)),
+      verticalThumbHeight,
       true,
       color,
     );
     drawBevel(ctx, content.x, horizontalY, scrollbar, scrollbar, true, color);
     drawBevel(ctx, verticalX - scrollbar, horizontalY, scrollbar, scrollbar, true, color);
+    const horizontalTrackX = content.x + scrollbar;
+    const horizontalTrackWidth = Math.max(0, verticalX - content.x - scrollbar * 2);
     ctx.fillStyle = color;
-    ctx.fillRect(content.x + scrollbar, horizontalY, Math.max(1, verticalX - content.x - scrollbar), scrollbar);
+    ctx.fillRect(horizontalTrackX, horizontalY, horizontalTrackWidth, scrollbar);
+    const horizontalThumbWidth = Math.min(horizontalTrackWidth, Math.max(4, 72 * unit));
     drawBevel(
       ctx,
-      content.x + scrollbar + 8,
+      horizontalTrackX + Math.max(0, (horizontalTrackWidth - horizontalThumbWidth) * 0.2),
       horizontalY + 2,
-      Math.max(12, Math.round(72 * sx)),
+      horizontalThumbWidth,
       Math.max(1, scrollbar - 4),
       true,
       color,
@@ -398,7 +325,7 @@ function drawWindows95Frame(
     ctx.strokeStyle = '#808080';
     ctx.lineWidth = 1;
     for (let i = 0; i < 3; i += 1) {
-      const offset = 5 + i * 4;
+      const offset = scrollbar * (0.3 + i * 0.18);
       ctx.beginPath();
       ctx.moveTo(verticalX + offset, horizontalY + scrollbar - 3);
       ctx.lineTo(verticalX + scrollbar - 3, horizontalY + offset);
@@ -428,7 +355,7 @@ export function drawFrameChrome(
       rect.y + 0.5,
       Math.max(0, rect.width - 1),
       Math.max(0, rect.height - 1),
-      frameRadius(frame, 0, rect),
+      resolveSafariFrameGeometry(rect, windows.chromeScale).radius,
     );
     ctx.stroke();
     ctx.restore();

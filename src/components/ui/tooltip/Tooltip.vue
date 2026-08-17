@@ -20,46 +20,54 @@ const props = withDefaults(
   {
     position: 'top',
     variant: 'default',
-    delay: 100,
+    delay: 0,
     as: 'div',
   },
 );
 
 const visible = ref(false);
 const wrapperRef = ref<HTMLElement | null>(null);
+const contentRef = ref<HTMLElement | null>(null);
 const tooltipStyle = ref<Record<string, string>>({});
+const resolvedPosition = ref<'top' | 'bottom' | 'left' | 'right'>(props.position);
 let showTimer: ReturnType<typeof setTimeout> | null = null;
 
 const updatePosition = () => {
   const wrapper = wrapperRef.value;
-  if (!wrapper) return;
+  const tooltip = contentRef.value;
+  if (!wrapper || !tooltip) return;
   const rect = wrapper.getBoundingClientRect();
   const offset = 8;
-  if (props.position === 'bottom') {
-    tooltipStyle.value = {
-      top: `${rect.bottom + offset}px`,
-      left: `${rect.left + rect.width / 2}px`,
-      transform: 'translateX(-50%)',
-    };
-  } else if (props.position === 'left') {
-    tooltipStyle.value = {
-      top: `${rect.top + rect.height / 2}px`,
-      left: `${rect.left - offset}px`,
-      transform: 'translate(-100%, -50%)',
-    };
-  } else if (props.position === 'right') {
-    tooltipStyle.value = {
-      top: `${rect.top + rect.height / 2}px`,
-      left: `${rect.right + offset}px`,
-      transform: 'translateY(-50%)',
-    };
-  } else {
-    tooltipStyle.value = {
-      top: `${rect.top - offset}px`,
-      left: `${rect.left + rect.width / 2}px`,
-      transform: 'translate(-50%, -100%)',
-    };
-  }
+  const margin = 0;
+  const { width, height } = tooltip.getBoundingClientRect();
+  const opposite = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' } as const;
+  const preferred = props.position ?? 'top';
+  const candidates: Array<'top' | 'bottom' | 'left' | 'right'> = [
+    preferred,
+    opposite[preferred],
+    'right',
+    'left',
+    'bottom',
+    'top',
+  ].filter((item, index, values) => values.indexOf(item) === index) as Array<'top' | 'bottom' | 'left' | 'right'>;
+  const point = (side: (typeof candidates)[number]) => {
+    if (side === 'bottom') return { top: rect.bottom + offset, left: rect.left + (rect.width - width) / 2 };
+    if (side === 'left') return { top: rect.top + (rect.height - height) / 2, left: rect.left - offset - width };
+    if (side === 'right') return { top: rect.top + (rect.height - height) / 2, left: rect.right + offset };
+    return { top: rect.top - offset - height, left: rect.left + (rect.width - width) / 2 };
+  };
+  const fits = ({ top, left }: { top: number; left: number }) =>
+    top >= margin &&
+    left >= margin &&
+    top + height <= window.innerHeight - margin &&
+    left + width <= window.innerWidth - margin;
+  const side = candidates.find((candidate) => fits(point(candidate))) ?? preferred;
+  const next = point(side);
+  resolvedPosition.value = side;
+  tooltipStyle.value = {
+    top: `${Math.min(Math.max(next.top, margin), window.innerHeight - height - margin)}px`,
+    left: `${Math.min(Math.max(next.left, margin), window.innerWidth - width - margin)}px`,
+  };
 };
 
 const show = () => {
@@ -126,8 +134,9 @@ onBeforeUnmount(() => {
     <Transition name="fade">
       <div
         v-if="visible && (content || $slots.content)"
+        ref="contentRef"
         class="tooltip-content"
-        :class="[position || 'top', `tooltip-${variant}`]"
+        :class="[resolvedPosition, `tooltip-${variant}`]"
         :style="{ ...tooltipStyle, ...(maxWidth ? { maxWidth: `${maxWidth}px` } : {}) }"
         role="tooltip"
       >

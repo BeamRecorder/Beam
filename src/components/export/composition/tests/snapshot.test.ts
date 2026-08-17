@@ -131,6 +131,22 @@ describe('createCompositionSnapshot', () => {
     expect(snapshot.canvas).toMatchObject({ width: 1080, height: 1350, showBackground: false });
   });
 
+  it('omits the selected background when the output canvas background is disabled', () => {
+    const snapshot = createCompositionSnapshot({
+      ...base(),
+      canvas: { ...DEFAULT_OUTPUT_CANVAS, showBackground: false },
+      background: {
+        id: 'wallpaper-image',
+        name: 'Wallpaper image',
+        kind: 'image',
+        path: 'wallpapers/image/wallpaper.webp',
+        extension: 'webp',
+      },
+    });
+
+    expect(snapshot.background).toBeNull();
+  });
+
   it('normalizes motion settings in the export snapshot', () => {
     const snapshot = createCompositionSnapshot({
       ...base(),

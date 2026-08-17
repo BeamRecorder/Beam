@@ -16,6 +16,7 @@ type PlaybackClipSignature = {
   sourceInMs: number;
   sourceDurationMs: number;
   playbackRate: number;
+  transitions: Clip['transitions'];
   volume?: number;
 };
 
@@ -38,6 +39,7 @@ const playbackClip = (clip: Clip): PlaybackClipSignature | null => {
     sourceInMs: clip.sourceInMs,
     sourceDurationMs: clip.sourceDurationMs,
     playbackRate: clip.playbackRate,
+    transitions: clip.transitions,
     ...(isAudioClip(clip) ? { volume: clip.volume } : {}),
   };
 };

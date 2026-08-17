@@ -3,15 +3,20 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useVirtualList } from '@vueuse/core';
 import {
   ArrowLeft,
+  Captions,
   Check,
   Film,
   FolderOpen,
+  Monitor,
   RefreshCw,
   MoreVertical,
   Plus,
   Pencil,
+  Search,
   ExternalLink,
   Trash2,
+  Video,
+  X,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import ButtonGroup from '~/ui/button/ButtonGroup.vue';
@@ -52,10 +57,47 @@ const selectedProjectId = ref<string | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
 
+const isSearchOpen = ref(false);
+const searchQuery = ref('');
+const searchInputRef = ref<InstanceType<typeof Input> | null>(null);
+
+const toggleSearch = () => {
+  isSearchOpen.value = !isSearchOpen.value;
+  if (isSearchOpen.value) {
+    void nextTick(() => {
+      searchInputRef.value?.focus();
+    });
+  } else {
+    searchQuery.value = '';
+  }
+};
+
+const clearSearch = () => {
+  searchQuery.value = '';
+  searchInputRef.value?.focus();
+};
+
+const handleSearchKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    if (searchQuery.value) {
+      searchQuery.value = '';
+    } else {
+      isSearchOpen.value = false;
+    }
+  }
+};
+
+const filteredProjects = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return projects.value;
+  return projects.value.filter((project) => project.name.toLowerCase().includes(query));
+});
+
 const projectRows = computed(() => {
   const rows: CaptureProject[][] = [];
-  for (let index = 0; index < projects.value.length; index += 2) {
-    rows.push(projects.value.slice(index, index + 2));
+  const listToDisplay = filteredProjects.value;
+  for (let index = 0; index < listToDisplay.length; index += 2) {
+    rows.push(listToDisplay.slice(index, index + 2));
   }
   return rows;
 });
@@ -112,6 +154,10 @@ const generateThumbnailsForProjects = async (projectList: CaptureProject[]) => {
   }
 };
 
+const isRefreshing = ref(false);
+const isRefreshSuccess = ref(false);
+let refreshSuccessTimeout: ReturnType<typeof setTimeout> | null = null;
+
 const loadProjects = async () => {
   if (cachedProjects && cachedProjects.length > 0) {
     projects.value = [...cachedProjects];
@@ -134,6 +180,23 @@ const loadProjects = async () => {
     errorMessage.value = error instanceof Error ? error.message : String(error);
   } finally {
     isLoading.value = false;
+  }
+};
+
+const handleRefresh = async () => {
+  if (isRefreshing.value || isLoading.value) return;
+  isRefreshing.value = true;
+  isRefreshSuccess.value = false;
+  if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
+  try {
+    cachedProjects = null;
+    await loadProjects();
+    isRefreshSuccess.value = true;
+    refreshSuccessTimeout = setTimeout(() => {
+      isRefreshSuccess.value = false;
+    }, 1600);
+  } finally {
+    isRefreshing.value = false;
   }
 };
 
@@ -230,6 +293,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (scrollTimeout) clearTimeout(scrollTimeout);
+  if (refreshSuccessTimeout) clearTimeout(refreshSuccessTimeout);
   // Stop all video elements to prevent holding media resources/decoders when closing
   const container = document.querySelector('.projects-viewport');
   if (container) {
@@ -406,29 +470,71 @@ defineExpose({
         </p>
       </div>
       <div class="heading-actions">
-        <Button
-          variant="ghost"
-          size="sm"
-          class="new-project-button"
-          :icon="Plus"
-          icon-only
-          :aria-label="t('newProject')"
-          :tooltip="t('newProject')"
-          @click="openNewProjectDialog"
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          class="refresh-button"
-          :icon="RefreshCw"
-          icon-only
-          :loading="isLoading"
-          :aria-label="t('refreshProjects')"
-          :tooltip="t('refreshProjects')"
-          @click="loadProjects"
-        />
+        <ButtonGroup class="heading-actions-group">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="search-toggle-button"
+            :class="{ 'is-active': isSearchOpen }"
+            :icon="Search"
+            icon-only
+            :aria-label="t('searchProjects')"
+            :tooltip="t('searchProjects')"
+            @click="toggleSearch"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            class="new-project-button"
+            :icon="Plus"
+            icon-only
+            :aria-label="t('newProject')"
+            :tooltip="t('newProject')"
+            @click="openNewProjectDialog"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            class="refresh-button"
+            :class="{ 'is-success': isRefreshSuccess }"
+            :icon="isRefreshSuccess ? Check : RefreshCw"
+            icon-only
+            :loading="isRefreshing"
+            :aria-label="isRefreshSuccess ? t('refreshed') : t('refreshProjects')"
+            :tooltip="isRefreshSuccess ? t('refreshed') : t('refreshProjects')"
+            @click="handleRefresh"
+          />
+        </ButtonGroup>
       </div>
     </div>
+
+    <Transition name="search-expand">
+      <div v-if="isSearchOpen" class="project-search-bar">
+        <Input
+          ref="searchInputRef"
+          v-model="searchQuery"
+          size="sm"
+          class="project-search-input"
+          :placeholder="t('searchPlaceholder')"
+          @keydown="handleSearchKeydown"
+        >
+          <template #prefix>
+            <Search class="search-field-icon" />
+          </template>
+          <template #suffix>
+            <button
+              v-if="searchQuery"
+              type="button"
+              class="search-clear-btn"
+              :aria-label="t('clearSearch')"
+              @click="clearSearch"
+            >
+              <X />
+            </button>
+          </template>
+        </Input>
+      </div>
+    </Transition>
 
     <div v-if="isLoading" class="project-grid project-skeleton-grid" :aria-label="t('loadingProjects')">
       <div v-for="index in 6" :key="index" class="project-card-skeleton">
@@ -454,6 +560,12 @@ defineExpose({
       <Film class="empty-icon" />
       <p>{{ t('noProjects') }}</p>
       <span>{{ t('recordDemoFirst') }}</span>
+    </div>
+
+    <div v-else-if="filteredProjects.length === 0" class="project-state search-empty-state">
+      <Search class="empty-icon" />
+      <p>{{ t('noSearchResults') }}</p>
+      <Button variant="link" size="sm" @click="clearSearch">{{ t('clearSearch') }}</Button>
     </div>
 
     <div
@@ -507,6 +619,36 @@ defineExpose({
                   @playing="isVideoLoaded[project.id] = true"
                   @timeupdate="handleVideoTimeUpdate(project.id, $event)"
                 />
+                <div
+                  v-if="project.hasScreen || project.hasCamera || project.hasCaption"
+                  class="project-badges-overlay"
+                  data-testid="project-badges"
+                >
+                  <span
+                    v-if="project.hasScreen"
+                    class="project-badge-icon"
+                    :title="t('screenRecord')"
+                    :aria-label="t('screenRecord')"
+                  >
+                    <Monitor />
+                  </span>
+                  <span
+                    v-if="project.hasCamera"
+                    class="project-badge-icon"
+                    :title="t('camera')"
+                    :aria-label="t('camera')"
+                  >
+                    <Video />
+                  </span>
+                  <span
+                    v-if="project.hasCaption"
+                    class="project-badge-icon"
+                    :title="t('captions')"
+                    :aria-label="t('captions')"
+                  >
+                    <Captions />
+                  </span>
+                </div>
                 <span v-if="project.id === currentProjectId" class="current-indicator" :aria-label="t('current')">
                   {{ t('current') }}
                 </span>
@@ -723,6 +865,75 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.search-toggle-button.is-active {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.refresh-button.is-success {
+  color: var(--color-success) !important;
+}
+
+.project-search-bar {
+  flex-shrink: 0;
+  padding-right: 16px;
+  overflow: hidden;
+}
+
+.project-picker.compact .project-search-bar {
+  padding-right: 12px;
+}
+
+.project-search-input {
+  width: 100%;
+}
+
+.search-field-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--text-muted);
+}
+
+.search-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--fast) ease;
+}
+
+.search-clear-btn:hover {
+  color: var(--text-primary);
+}
+
+.search-clear-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Motion transition for search bar */
+.search-expand-enter-active,
+.search-expand-leave-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 40px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.search-expand-enter-from,
+.search-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .project-picker-heading h1 {
@@ -954,6 +1165,46 @@ defineExpose({
   left: 0;
   right: 0;
   z-index: 10;
+}
+
+.project-badges-overlay {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  background: rgba(18, 17, 15, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 3;
+}
+
+:root.dark .project-badges-overlay {
+  background: rgba(14, 13, 11, 0.65);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.project-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f4f4f5;
+  opacity: 0.88;
+  transition: opacity var(--fast, 0.15s) ease;
+}
+
+.project-badge-icon:hover {
+  opacity: 1;
+}
+
+.project-badge-icon svg {
+  width: 11px;
+  height: 11px;
 }
 
 .current-indicator {

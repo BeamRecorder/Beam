@@ -5,7 +5,7 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { computed, type Component } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, type Component } from 'vue';
 import Tooltip from '../tooltip/Tooltip.vue';
 import { Loader } from '@lucide/vue';
 
@@ -42,6 +42,33 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'click', event: MouseEvent): void;
 }>();
+
+const content = ref<HTMLElement | null>(null);
+const contentLabel = ref<HTMLElement | null>(null);
+const contentOverflow = ref(0);
+let contentResizeObserver: ResizeObserver | null = null;
+
+const measureContentOverflow = () => {
+  const viewport = content.value;
+  const label = contentLabel.value;
+  const overflow = viewport && label ? Math.max(0, Math.ceil(label.scrollWidth - viewport.clientWidth)) : 0;
+  if (contentOverflow.value !== overflow) contentOverflow.value = overflow;
+};
+
+onMounted(() => {
+  void nextTick(measureContentOverflow);
+  if (typeof ResizeObserver === 'undefined') return;
+  contentResizeObserver = new ResizeObserver(measureContentOverflow);
+  if (content.value) contentResizeObserver.observe(content.value);
+  if (contentLabel.value) contentResizeObserver.observe(contentLabel.value);
+});
+onUpdated(measureContentOverflow);
+onBeforeUnmount(() => contentResizeObserver?.disconnect());
+
+const marqueeStyle = computed(() => ({
+  '--button-marquee-distance': `${contentOverflow.value}px`,
+  '--button-marquee-duration': `${Math.min(5, Math.max(1.4, contentOverflow.value / 28))}s`,
+}));
 
 const buttonClasses = computed(() => {
   return [
@@ -87,8 +114,14 @@ const handleClick = (event: MouseEvent) => {
       <span v-if="$slots.icon && !loading" class="btn-icon-wrapper">
         <slot name="icon" />
       </span>
-      <span v-if="$slots.default" class="btn-content">
-        <slot />
+      <span
+        v-if="$slots.default && !iconOnly"
+        ref="content"
+        class="btn-content"
+        :class="{ 'is-overflowing': contentOverflow > 1 }"
+        :style="marqueeStyle"
+      >
+        <span ref="contentLabel" class="btn-content-label"><slot /></span>
       </span>
     </button>
   </component>
@@ -290,6 +323,10 @@ const handleClick = (event: MouseEvent) => {
   padding: 0;
 }
 
+.btn-card .btn-content-label {
+  display: contents;
+}
+
 .btn-icon-only {
   width: 32px;
   height: 32px;
@@ -365,5 +402,9 @@ const handleClick = (event: MouseEvent) => {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.btn-content-label {
+  min-width: 0;
 }
 </style>

@@ -61,9 +61,27 @@ export function applyClipShadow(
     style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'bottom-right' ? offset : 0;
   ctx.shadowOffsetY = style.shadowDirection === 'top-left' ? -offset : style.shadowDirection === 'all' ? 0 : offset;
 }
-const clipRect = (ctx: Canvas2DContext, rect: MediaRect, radius: number) => {
+const mediaPath = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?: 'circle' | 'squircle') => {
   ctx.beginPath();
-  ctx.roundRect(rect.x, rect.y, rect.width, rect.height, Math.min(radius, rect.width / 2, rect.height / 2));
+  if (mask === 'circle') {
+    ctx.arc(rect.x + rect.width / 2, rect.y + rect.height / 2, Math.min(rect.width, rect.height) / 2, 0, Math.PI * 2);
+  } else if (mask === 'squircle') {
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+    for (let index = 0; index <= 64; index += 1) {
+      const angle = (index / 64) * Math.PI * 2;
+      const x = centerX + (rect.width / 2) * Math.sign(Math.cos(angle)) * Math.sqrt(Math.abs(Math.cos(angle)));
+      const y = centerY + (rect.height / 2) * Math.sign(Math.sin(angle)) * Math.sqrt(Math.abs(Math.sin(angle)));
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  } else {
+    ctx.roundRect(rect.x, rect.y, rect.width, rect.height, Math.min(radius, rect.width / 2, rect.height / 2));
+  }
+};
+const clipRect = (ctx: Canvas2DContext, rect: MediaRect, radius: number, mask?: 'circle' | 'squircle') => {
+  mediaPath(ctx, rect, radius, mask);
   ctx.clip();
 };
 export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMediaOptions) {
@@ -74,19 +92,22 @@ export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMedia
     chromeScale: appearance.frameChromeScale,
   };
   const content = frameContentRect(options.rect, appearance.frame, windowsOptions);
-  const outerRadius = Math.min(radiusForAppearance(appearance), options.rect.width / 2, options.rect.height / 2);
+  const outerRadius = Math.min(
+    options.mask === 'circle' ? Number.MAX_SAFE_INTEGER : radiusForAppearance(appearance),
+    options.rect.width / 2,
+    options.rect.height / 2,
+  );
   if (appearance.shadowSize !== 'none') {
     ctx.save();
     applyClipShadow(ctx, appearance, options.source, options.sourceRect, options.shadowScale);
     ctx.fillStyle = appearance.frame !== 'none' ? appearance.frameColor : '#000000';
-    ctx.beginPath();
-    ctx.roundRect(options.rect.x, options.rect.y, options.rect.width, options.rect.height, outerRadius);
+    mediaPath(ctx, options.rect, outerRadius, options.mask);
     ctx.fill();
     ctx.restore();
   }
   const title = appearance.frameTitle.trim() || options.title;
   ctx.save();
-  clipRect(ctx, options.rect, outerRadius);
+  clipRect(ctx, options.rect, outerRadius, options.mask);
   drawFrameChrome(ctx, options.rect, appearance.frame, title, true, appearance.frameColor, windowsOptions);
   ctx.save();
   const scaleX = options.mirrored ? -1 : 1;
@@ -120,13 +141,16 @@ export function drawDecoratedMedia(ctx: Canvas2DContext, options: DecoratedMedia
     ctx.save();
     ctx.strokeStyle = appearance.borderColor;
     ctx.lineWidth = appearance.borderWidth;
-    ctx.beginPath();
-    ctx.roundRect(
-      options.rect.x - appearance.borderWidth / 2,
-      options.rect.y - appearance.borderWidth / 2,
-      options.rect.width + appearance.borderWidth,
-      options.rect.height + appearance.borderWidth,
+    mediaPath(
+      ctx,
+      {
+        x: options.rect.x - appearance.borderWidth / 2,
+        y: options.rect.y - appearance.borderWidth / 2,
+        width: options.rect.width + appearance.borderWidth,
+        height: options.rect.height + appearance.borderWidth,
+      },
       outerRadius + appearance.borderWidth / 2,
+      options.mask,
     );
     ctx.stroke();
     ctx.restore();

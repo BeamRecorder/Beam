@@ -144,6 +144,10 @@
     "waveformUnavailable": "Форма волны недоступна",
     "trimStart": "Обрезать начало",
     "trimEnd": "Обрезать конец",
+    "holdSegment": "Удерживать сегмент",
+    "copy": "Копировать",
+    "paste": "Вставить",
+    "delete": "Удалить",
     "keyboardCaptions": "Сочетания клавиш",
     "textCaptions": "Текстовые субтитры"
   },
@@ -196,7 +200,13 @@
     "showDetails": "Подробности ошибки"
   },
   "VideoEditor": {
-    "exportBanner": "Идёт экспорт. Изменения в реальном времени не повлияют на экспортируемый файл."
+    "exportBanner": "Идёт экспорт. Изменения в реальном времени не повлияют на экспортируемый файл.",
+    "timelineCopied": "Скопировано",
+    "timelinePasted": "Вставлено",
+    "timelineCopiedItem": "Скопировано: {item}",
+    "timelinePastedItem": "Вставлено: {item}",
+    "timelineClipboardCaption": "Субтитр «{text}»",
+    "timelineClipboardZoom": "Масштабирование {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Предустановки",

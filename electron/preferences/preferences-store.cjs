@@ -9,8 +9,15 @@ const defaultAppearance = () => ({
   isPillRadius: false,
   surfaceTone: 'default',
   activePresetId: 'beam-sunset',
+  uiScale: {
+    global: 100,
+    overrides: { topbar: null, sidebar: null, properties: null, canvasControls: null, timeline: null },
+  },
 });
 const surfaceTones = new Set(['default', 'neutral', 'slate', 'deep']);
+const uiScaleRegions = ['topbar', 'sidebar', 'properties', 'canvasControls', 'timeline'];
+const uiScales = new Set([50, 75, 100, 125]);
+const validUiScale = (value) => uiScales.has(value);
 
 const defaults = (platform = process.platform) => ({
   schemaVersion: 3,
@@ -90,6 +97,14 @@ const normalizeAppearance = (value, fallbackTheme = 'light') => {
   const surfaceTone = surfaceTones.has(raw.surfaceTone) ? raw.surfaceTone : base.surfaceTone;
   const activePresetId =
     typeof raw.activePresetId === 'string' && raw.activePresetId.length > 0 ? raw.activePresetId.slice(0, 80) : null;
+  const rawUiScale = raw.uiScale && typeof raw.uiScale === 'object' ? raw.uiScale : {};
+  const rawOverrides = rawUiScale.overrides && typeof rawUiScale.overrides === 'object' ? rawUiScale.overrides : {};
+  const uiScale = {
+    global: validUiScale(rawUiScale.global) ? rawUiScale.global : base.uiScale.global,
+    overrides: Object.fromEntries(
+      uiScaleRegions.map((region) => [region, validUiScale(rawOverrides[region]) ? rawOverrides[region] : null]),
+    ),
+  };
   return {
     theme,
     primaryColor,
@@ -98,6 +113,7 @@ const normalizeAppearance = (value, fallbackTheme = 'light') => {
     isPillRadius,
     surfaceTone,
     activePresetId,
+    uiScale,
   };
 };
 const normalize = (value, platform = process.platform) => {

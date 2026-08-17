@@ -211,6 +211,7 @@ const context = () =>
     textAlign: '',
     textBaseline: '',
     lineJoin: '',
+    globalAlpha: 1,
   }) as unknown as CanvasRenderingContext2D;
 
 let wrapper: VueWrapper | undefined;
@@ -329,6 +330,27 @@ describe('useCompositionMedia', () => {
     expect(mounted.frameFor).toHaveBeenCalledWith('webcam');
   });
 
+  it('plays the same preview entry transition at timeline zero and after a small offset', () => {
+    const zeroStart = visual('video', 'zero-start', 'video-asset', 0);
+    zeroStart.transitions = { entry: { preset: { kind: 'fade' }, durationMs: 1_000 }, exit: null };
+    mountComposable({ ...composition(), clips: [zeroStart] });
+    const zeroContext = context();
+    state.drawVisualStack(zeroContext, { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+
+    wrapper?.unmount();
+    wrapper = undefined;
+
+    const offsetStart = visual('video', 'offset-start', 'video-asset', 0);
+    offsetStart.timelineStartMs = 1;
+    offsetStart.transitions = { entry: { preset: { kind: 'fade' }, durationMs: 1_000 }, exit: null };
+    mountComposable({ ...composition(), clips: [offsetStart] });
+    const offsetContext = context();
+    state.drawVisualStack(offsetContext, { dx: 0, dy: 0, dw: 800, dh: 400, scale: 1 }, vi.fn());
+
+    expect(zeroContext.globalAlpha).toBeCloseTo(0.875, 6);
+    expect(offsetContext.globalAlpha).toBeCloseTo(0.874248499, 6);
+  });
+
   it('keeps loading frames absent and renders captions and loaded images', () => {
     const mounted = mountComposable();
     const image = state.images.get('image-asset')!;
@@ -355,6 +377,44 @@ describe('useCompositionMedia', () => {
       ctx,
       expect.objectContaining({ sourceRect: { x: 192, y: 108, width: 1_536, height: 864 } }),
     );
+  });
+
+  it('applies fit, portrait and circle framing consistently to imported video and image clips', () => {
+    const mounted = mountComposable();
+    const image = state.images.get('image-asset')!;
+    Object.defineProperties(image, {
+      complete: { configurable: true, value: true },
+      naturalWidth: { configurable: true, value: 100 },
+      naturalHeight: { configurable: true, value: 80 },
+    });
+    const bounds = { dx: 10, dy: 20, dw: 800, dh: 400 };
+    const presets = ['fit', 'portrait', 'circle'] as const;
+
+    for (const kind of ['image', 'video'] as const) {
+      const source = kind === 'image' ? { width: 100, height: 80 } : { width: 640, height: 360 };
+      const clip = mounted.compositionRef.value.clips.find((entry) => entry.id === kind) as VisualClip;
+      for (const preset of presets) {
+        clip.cameraFramingPreset = preset;
+        drawDecoratedMedia.mockClear();
+        state.drawComposition(context(), bounds, kind);
+        const options = drawDecoratedMedia.mock.calls.at(-1)?.[1] as {
+          rect: { x: number; y: number; width: number; height: number };
+          sourceRect?: { x: number; y: number; width: number; height: number };
+          mask?: string;
+        };
+        const expectedAspect = preset === 'fit' ? source.width / source.height : preset === 'portrait' ? 9 / 16 : 1;
+        expect(options.rect.width / options.rect.height).toBeCloseTo(expectedAspect, 8);
+        expect(options.rect.x).toBeCloseTo(90 + (400 - options.rect.width) / 2, 8);
+        expect(options.rect.y).toBeCloseTo(100 + (160 - options.rect.height) / 2, 8);
+        expect(options.mask).toBe(preset === 'circle' ? 'circle' : undefined);
+        if (preset === 'fit') expect(options.sourceRect).toBeUndefined();
+        else {
+          expect(options.sourceRect).toBeDefined();
+          expect(options.sourceRect!.x).toBeCloseTo((source.width - options.sourceRect!.width) / 2, 8);
+          expect(options.sourceRect!.y).toBeCloseTo((source.height - options.sourceRect!.height) / 2, 8);
+        }
+      }
+    }
   });
 
   it('wraps caption text into multiple lines without passing a max width when enabled', () => {

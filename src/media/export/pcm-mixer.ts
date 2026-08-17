@@ -1,5 +1,6 @@
 import { AudioSample, AudioSampleSink, type InputAudioTrack } from 'mediabunny';
 import type { AudioClip } from '../shared/composition-types';
+import { audioTransitionGainAt } from '../shared/clip-transitions';
 
 export const EXPORT_AUDIO_RATE = 48_000;
 export const EXPORT_AUDIO_CHANNELS = 2;
@@ -101,8 +102,9 @@ class ClipPcmReader {
       const nextLeft = stereoChannel(block.channels, second, false);
       const nextRight = stereoChannel(block.channels, second, true);
       const outputFrame = timelineFrame - startFrame;
-      output[outputFrame * 2] += (left + (nextLeft - left) * fraction) * gain;
-      output[outputFrame * 2 + 1] += (right + (nextRight - right) * fraction) * gain;
+      const envelope = audioTransitionGainAt(this.clip, (timelineFrame / EXPORT_AUDIO_RATE) * 1_000);
+      output[outputFrame * 2] += (left + (nextLeft - left) * fraction) * gain * envelope;
+      output[outputFrame * 2 + 1] += (right + (nextRight - right) * fraction) * gain * envelope;
     }
   }
 

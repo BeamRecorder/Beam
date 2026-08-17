@@ -1,4 +1,30 @@
 {
+  "CameraLayoutPanel": {
+    "title": "Camera Layout",
+    "visualTitle": "Clip Layout",
+    "custom": "Custom",
+    "topLeft": "Float top left",
+    "topRight": "Float top right",
+    "bottomLeft": "Float bottom left",
+    "bottomRight": "Float bottom right",
+    "largeCenter": "Large centered camera",
+    "visualLargeCenter": "Large centered clip",
+    "fullscreen": "Fullscreen camera",
+    "visualFullscreen": "Fullscreen clip",
+    "splitLeft": "Camera left split",
+    "splitRight": "Camera right split",
+    "splitTop": "Camera top split",
+    "splitBottom": "Camera bottom split",
+    "splitRequiresScreen": "No matching screen recording is available at this point in the timeline.",
+    "splitRatio": "Camera share",
+    "splitPadding": "Background spacing",
+    "framing": "Framing",
+    "fill": "Fill",
+    "fit": "Fit",
+    "square": "Square",
+    "squircle": "Squircle",
+    "circle": "Circle"
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Shadow direction",
     "around": "Around",
@@ -145,7 +171,13 @@
     "unlinkMicrophoneTrack": "Unlink Microphone track",
     "waveformUnavailable": "Waveform unavailable",
     "trimStart": "Trim start",
-    "trimEnd": "Trim end"
+    "trimEnd": "Trim end",
+    "holdSegment": "Hold segment",
+    "copy": "Copy",
+    "paste": "Paste",
+    "delete": "Delete",
+    "copyUnavailable": "Select a timeline item before copying.",
+    "clipboardEmpty": "Copy a timeline item before pasting."
   },
   "TimelineVideoClip": {
     "trimStart": "Trim start",
@@ -216,7 +248,15 @@
     "mediaPlaybackAssetError": "{project} — “{name}” is unavailable (expected source: {path}). {message}",
     "mediaPlaybackIncompleteRecording": "{project} — “{name}” is unavailable (expected source: {path}). The recording session was not finalized.",
     "mediaPlaybackUnknownProject": "Current project",
-    "mediaPlaybackCopyError": "Copy error"
+    "mediaPlaybackCopyError": "Copy error",
+    "timelinePasteFailed": "Unable to paste: {message}",
+    "timelineClipboardDifferentProject": "The copied item belongs to another project.",
+    "timelineCopied": "Copied",
+    "timelinePasted": "Pasted",
+    "timelineCopiedItem": "Copied: {item}",
+    "timelinePastedItem": "Pasted: {item}",
+    "timelineClipboardCaption": "Caption “{text}”",
+    "timelineClipboardZoom": "Zoom {number}"
   },
   "BlurPropertiesPanel": {
     "presets": "Presets",

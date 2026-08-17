@@ -8,6 +8,7 @@ import {
   normalizeOutputCanvas,
   outputPreviewRect,
 } from '../output-canvas';
+import { resolveCanvasTransitionState } from '~/media/shared/clip-transitions';
 
 describe('output canvas geometry', () => {
   it('centers a 16:9 preview in a wide editor', () => {
@@ -69,4 +70,60 @@ describe('output canvas geometry', () => {
       height: 1080,
       showBackground: true,
     }));
+
+  it('normalizes legacy canvas settings without transitions to empty edges', () => {
+    const normalized = normalizeOutputCanvas({
+      preset: 'custom',
+      width: 1280,
+      height: 720,
+      showBackground: false,
+    });
+
+    expect(normalized.transitions).toEqual({ entry: null, exit: null });
+    expect(DEFAULT_OUTPUT_CANVAS.transitions).toEqual({ entry: null, exit: null });
+  });
+
+  it('preserves valid global transitions and resolves their active output state', () => {
+    const normalized = normalizeOutputCanvas({
+      preset: 'custom',
+      width: 1280,
+      height: 720,
+      showBackground: false,
+      transitions: {
+        entry: { preset: { kind: 'fade' }, durationMs: 750 },
+        exit: { preset: { kind: 'slide', direction: 'left' }, durationMs: 1_250 },
+      },
+    });
+
+    expect(normalized.transitions).toEqual({
+      entry: { preset: { kind: 'fade' }, durationMs: 750 },
+      exit: { preset: { kind: 'slide', direction: 'left' }, durationMs: 1_250 },
+    });
+    expect(resolveCanvasTransitionState(normalized.transitions!, 0, 2_000)).toMatchObject({ opacity: 0 });
+    expect(resolveCanvasTransitionState(normalized.transitions!, 1_000, 2_000)).toMatchObject({
+      translateX: expect.any(Number),
+    });
+    expect(resolveCanvasTransitionState(normalized.transitions!, 2_500, 2_000)).toBeNull();
+  });
+
+  it('tolerates invalid canvas transition presets and clamps durations', () => {
+    const normalized = normalizeOutputCanvas({
+      preset: '16:9',
+      width: 1920,
+      height: 1080,
+      showBackground: false,
+      transitions: {
+        entry: {
+          preset: { kind: 'slide', direction: 'diagonal' } as never,
+          durationMs: 300,
+        },
+        exit: { preset: { kind: 'fade' }, durationMs: 6_000 },
+      },
+    });
+
+    expect(normalized.transitions).toEqual({
+      entry: null,
+      exit: { preset: { kind: 'fade' }, durationMs: 5_000 },
+    });
+  });
 });

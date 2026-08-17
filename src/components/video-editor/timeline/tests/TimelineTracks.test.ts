@@ -6,6 +6,8 @@ import type { CaptionClip, ClipComposition, MediaAsset, VisualClip } from '~/med
 import type { MediaError } from '~/media/shared/media-types';
 import TimelineTracks from '../TimelineTracks.vue';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import { DEFAULT_OUTPUT_CANVAS } from '../../canvas/output-canvas';
+import { useTimelineClipboard } from '../composables/useTimelineClipboard';
 
 vi.mock('../composables/useCompositionAudioWaveforms', () => ({
   useCompositionAudioWaveforms: () => ({
@@ -41,14 +43,16 @@ const TimelineClipStub = defineComponent({
     waveformWidthPercent: { type: Number, default: 100 },
     waveformStatus: { type: String, default: undefined },
     waveformError: { type: Object, default: undefined },
+    pasteHighlight: { type: Boolean, default: false },
   },
-  emits: ['select', 'move', 'trim'],
+  emits: ['select', 'move', 'trim', 'contextmenu'],
   template: `
     <button
       type="button"
       class="timeline-clip"
-      :class="{ selected, disabled: !clip.enabled }"
+      :class="{ selected, disabled: !clip.enabled, 'paste-arrival': pasteHighlight }"
       @click.stop="$emit('select')"
+      @contextmenu.prevent="$emit('contextmenu', $event)"
       @pointerdown="$emit('move', $event)"
     >
       <span class="clip-label-text">{{ clip.name }}</span>
@@ -226,6 +230,41 @@ const composition = (extraClips: ClipComposition['clips'] = []): ClipComposition
   ],
 });
 
+const cameraTrackComposition = (): ClipComposition => {
+  const base = composition();
+  return {
+    ...base,
+    clips: [
+      visual({
+        id: 'camera-left',
+        kind: 'webcam',
+        name: 'Camera left segment',
+        trackId: 'camera-track',
+        timelineStartMs: 0,
+        timelineDurationMs: 2_000,
+        sourceDurationMs: 2_000,
+        order: 1,
+        groupId: 'camera-left-group',
+        assetId: 'webcam-asset',
+      }),
+      visual({
+        id: 'camera-right',
+        kind: 'webcam',
+        name: 'Camera right segment',
+        trackId: 'camera-track',
+        timelineStartMs: 4_000,
+        timelineDurationMs: 2_000,
+        sourceInMs: 2_000,
+        sourceDurationMs: 2_000,
+        order: 1,
+        groupId: 'camera-right-group',
+        assetId: 'webcam-asset',
+      }),
+      ...base.clips.filter((clip) => clip.id !== 'webcam-clip'),
+    ],
+  };
+};
+
 const zoom = (overrides: Partial<ZoomElement> = {}): ZoomElement => ({
   id: 'zoom-1',
   sessionId: 'session',
@@ -262,6 +301,7 @@ const mountTracks = async (overrides: Record<string, unknown> = {}) => {
       selectedZoomId: 'zoom-1',
       composition: composition(),
       selectedClipId: 'screen-clip',
+      projectId: 'project-a',
       ...overrides,
     },
     global: { stubs: { TimelineClip: TimelineClipStub } },
@@ -355,12 +395,20 @@ const pointerEvent = (type: string, clientX: number, clientY = 10) => {
   return event;
 };
 
+const contextMenuButton = (label: string): HTMLButtonElement | undefined =>
+  Array.from(document.body.querySelectorAll<HTMLButtonElement>('.context-menu-item')).find((element) =>
+    element.textContent?.includes(label),
+  );
+
 beforeEach(() => {
   vi.clearAllMocks();
+  useTimelineClipboard().clearClipboard();
   globalThis.ResizeObserver = TestResizeObserver as unknown as typeof ResizeObserver;
+  let nextRafId = 1;
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
-    callback(performance.now());
-    return 1;
+    const id = nextRafId++;
+    queueMicrotask(() => callback(performance.now()));
+    return id;
   });
   vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
 });
@@ -562,6 +610,81 @@ describe('TimelineTracks', () => {
     expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
   });
 
+  it('only renders the Canvas transition track when at least one global transition exists', async () => {
+    const mounted = await mountTracks();
+    expect(mounted!.find('.canvas-sidebar-row').exists()).toBe(false);
+    expect(mounted!.find('.canvas-track-row').exists()).toBe(false);
+  });
+
+  it('renders both Canvas transition edges and opens the corresponding edge from the timeline', async () => {
+    const mounted = await mountTracks({
+      canvas: {
+        ...DEFAULT_OUTPUT_CANVAS,
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      },
+    });
+
+    expect(mounted!.find('.canvas-sidebar-row').exists()).toBe(true);
+    expect(mounted!.findAll('.canvas-transition-zone')).toHaveLength(2);
+    expect(mounted!.get('.canvas-transition-zone.entry').attributes('aria-label')).toContain('fade');
+    expect(mounted!.get('.canvas-transition-zone.exit').attributes('aria-label')).toContain('blur');
+
+    await mounted!.get('.canvas-transition-zone.entry').trigger('click');
+    await mounted!.get('.canvas-transition-zone.exit').trigger('click');
+    expect(mounted!.emitted('open:canvas-transition')).toEqual([['entry'], ['exit']]);
+  });
+
+  it('relays an intermediate Canvas transition preview and commits only on pointerup', async () => {
+    const mounted = await mountTracks({
+      duration: 1,
+      canvas: {
+        ...DEFAULT_OUTPUT_CANVAS,
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 200 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      },
+    });
+    const track = mounted!.get('.canvas-track-content').element;
+    vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({
+      left: 100,
+      top: 0,
+      width: 1_000,
+      height: 40,
+      right: 1_100,
+      bottom: 40,
+    } as DOMRect);
+
+    mounted!
+      .get('.canvas-transition-zone.entry .duration-handle.end')
+      .element.dispatchEvent(pointerEvent('pointerdown', 300));
+    window.dispatchEvent(pointerEvent('pointermove', 700));
+
+    expect(mounted!.emitted('preview:canvas')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 600 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      }),
+    );
+    expect(mounted!.emitted('update:canvas')).toBeUndefined();
+
+    window.dispatchEvent(pointerEvent('pointerup', 700));
+    expect(mounted!.emitted('preview:canvas')).toContainEqual([null]);
+    expect(mounted!.emitted('update:canvas')?.[0]?.[0]).toEqual(
+      expect.objectContaining({
+        transitions: {
+          entry: { preset: { kind: 'fade' }, durationMs: 600 },
+          exit: { preset: { kind: 'blur' }, durationMs: 300 },
+        },
+      }),
+    );
+  });
+
   it('renders split segments from one track in one visual row while preserving separate tracks', async () => {
     const segmented = composition();
     segmented.clips = segmented.clips.flatMap((clip) => {
@@ -601,6 +724,28 @@ describe('TimelineTracks', () => {
     expect(sidebarRows).toHaveLength(3);
     await sidebarRows[0]!.get('.track-info').trigger('click');
     expect(mounted!.emitted('toggle:clip')).toHaveLength(1);
+  });
+
+  it('selects the webcam segment at the playhead from its track header, then falls back to the nearest segment', async () => {
+    const mounted = await mountTracks({ composition: cameraTrackComposition(), currentTime: 1 });
+    const cameraHeader = mounted!.get('[data-track-id="camera-track"] .track-info');
+
+    await cameraHeader.trigger('click');
+    expect(mounted!.emitted('select:clip')).toContainEqual(['camera-left']);
+    expect(mounted!.emitted('toggle:clip') ?? []).toHaveLength(0);
+
+    await mounted!.setProps({ currentTime: 6.5 });
+    await cameraHeader.trigger('click');
+    expect(mounted!.emitted('select:clip')).toContainEqual(['camera-right']);
+  });
+
+  it('keeps non-camera track headers on their existing toggle behavior', async () => {
+    const mounted = await mountTracks();
+    const imageHeader = mounted!.get('[data-track-id="image-track"] .track-info');
+
+    await imageHeader.trigger('click');
+    expect(mounted!.emitted('toggle:clip')).toContainEqual(['image-clip']);
+    expect(mounted!.emitted('select:clip') ?? []).toHaveLength(0);
   });
 
   it('keeps the keyboard track above text, uses Lucide icons, and reserves manual additions for text', async () => {
@@ -654,6 +799,28 @@ describe('TimelineTracks', () => {
       sourceId: 'imported-asset',
       message: 'The waveform could not be decoded.',
     });
+  });
+
+  it('highlights the recently pasted clip, zoom, and caption only for the matching item', async () => {
+    const mounted = await mountTracks({
+      recentPaste: { type: 'clip', id: 'screen-clip', timestamp: 1 },
+    });
+    const screen = mounted!
+      .findAllComponents(TimelineClipStub)
+      .find((component) => (component.props('clip') as VisualClip).id === 'screen-clip');
+    if (!screen) throw new Error('Expected the screen timeline clip stub.');
+    expect(screen.props('pasteHighlight')).toBe(true);
+    expect(screen.get('.timeline-clip').classes()).toContain('paste-arrival');
+
+    await mounted!.setProps({ recentPaste: { type: 'zoom', id: 'zoom-1', timestamp: 2 } });
+    expect(screen.props('pasteHighlight')).toBe(false);
+    expect(mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').classes()).toContain('paste-arrival');
+
+    await mounted!.setProps({ recentPaste: { type: 'clip', id: 'caption-clip', timestamp: 3 } });
+    expect(mounted!.get('.text-caption-track .annotation-indicator:not(.preview-ghost)').classes()).toContain(
+      'paste-arrival',
+    );
+    expect(mounted!.get('.cursor-zoom-indicator:not(.preview-ghost)').classes()).not.toContain('paste-arrival');
   });
 
   it('previews and adds zooms/captions only in available gaps', async () => {
@@ -908,5 +1075,186 @@ describe('TimelineTracks', () => {
     window.dispatchEvent(pointerEvent('pointermove', 50, 120));
     window.dispatchEvent(pointerEvent('pointerup', 50, 120));
     expect(mounted!.emitted('reorder:clip')).toContainEqual([{ id: 'image-clip', targetIndex: 1 }]);
+  });
+
+  it('opens context menu on right click, pastes at the playhead, and handles delete', async () => {
+    const mounted = await mountTracks();
+    const clipEl = mounted!.find('.tracks-stack .timeline-clip');
+    expect(clipEl.exists()).toBe(true);
+
+    await clipEl.trigger('contextmenu', { clientX: 200, clientY: 300 });
+    await flushPromises();
+
+    expect(mounted!.emitted('select:clip')).toContainEqual(['image-clip']);
+
+    const menuItems = document.body.querySelectorAll('.context-menu-item');
+    expect(menuItems.length).toBeGreaterThanOrEqual(3);
+    const itemTexts = Array.from(menuItems).map((el) => el.textContent?.trim());
+    expect(itemTexts.some((text) => text?.includes('Copy'))).toBe(true);
+    expect(itemTexts.some((text) => text?.includes('Paste'))).toBe(true);
+    expect(itemTexts.some((text) => text?.includes('Delete'))).toBe(true);
+
+    expect(contextMenuButton('Paste')?.disabled).toBe(true);
+
+    contextMenuButton('Copy')?.click();
+    await flushPromises();
+    expect(mounted!.emitted('clipboard:copied')).toHaveLength(1);
+
+    const cursorTrack = mounted!.find('.tracks-stack .cursor-track');
+    await cursorTrack.trigger('contextmenu', { clientX: 999, clientY: 350 });
+    await flushPromises();
+
+    const pasteBtn = contextMenuButton('Paste');
+    expect(pasteBtn?.disabled).toBe(false);
+    pasteBtn?.click();
+    await flushPromises();
+
+    const pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string; clip?: { id: string } }; timeMs: number; target?: { category: string } } | undefined;
+    expect(pastePayload?.timeMs).toBe(2_000);
+    expect(pastePayload?.item).toEqual(expect.objectContaining({ type: 'clip' }));
+    expect(pastePayload?.item.clip?.id).toBe('image-clip');
+    expect(pastePayload?.target?.category).toBe('zoom');
+
+    await clipEl.trigger('contextmenu', { clientX: 250, clientY: 350 });
+    await flushPromises();
+    contextMenuButton('Delete')?.click();
+    await flushPromises();
+
+    expect(mounted!.emitted('delete:clips')).toContainEqual([['image-clip']]);
+  });
+
+  it('allows cross-category pasting from the context menu', async () => {
+    const mounted = await mountTracks();
+    const clipEl = mounted!.find('.tracks-stack .timeline-clip');
+    const zoomButton = mounted!.find('.cursor-zoom-indicator:not(.preview-ghost)');
+
+    expect(zoomButton.exists()).toBe(true);
+
+    await clipEl.trigger('contextmenu', { clientX: 100, clientY: 100 });
+    await flushPromises();
+    contextMenuButton('Copy')?.click();
+    await flushPromises();
+
+    const captionTrack = mounted!.find('.tracks-stack .text-caption-track');
+    await captionTrack.trigger('contextmenu', { clientX: 300, clientY: 300 });
+    await flushPromises();
+    let pasteBtn = contextMenuButton('Paste');
+    expect(pasteBtn?.disabled).toBe(false);
+    pasteBtn?.click();
+    await flushPromises();
+    let pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string }; target?: { category: string } } | undefined;
+    expect(pastePayload?.item.type).toBe('clip');
+    expect(pastePayload?.target?.category).toBe('caption');
+
+    await zoomButton.trigger('contextmenu', { clientX: 150, clientY: 150 });
+    await flushPromises();
+    expect(mounted!.emitted('select:zoom')).toContainEqual(['zoom-1']);
+
+    contextMenuButton('Copy')?.click();
+    await flushPromises();
+
+    const visualTrack = mounted!.find('.tracks-stack .visual-track[data-track-id="screen-track"]');
+    await visualTrack.trigger('contextmenu', { clientX: 100, clientY: 100 });
+    await flushPromises();
+    pasteBtn = contextMenuButton('Paste');
+    expect(pasteBtn?.disabled).toBe(false);
+    pasteBtn?.click();
+    await flushPromises();
+    pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string }; target?: { category: string; trackId?: string | null } } | undefined;
+    expect(pastePayload?.item.type).toBe('zoom');
+    expect(pastePayload?.target).toEqual({ category: 'visual', trackId: 'screen-track' });
+
+    await zoomButton.trigger('contextmenu', { clientX: 150, clientY: 150 });
+    await flushPromises();
+    contextMenuButton('Delete')?.click();
+    await flushPromises();
+
+    expect(mounted!.emitted('delete:zoom')).toContainEqual(['zoom-1']);
+  });
+
+  it('supports Ctrl/Cmd copy and paste, ignores editable fields, and reports an empty clipboard', async () => {
+    const mounted = await mountTracks({ selectedZoomId: null });
+    const dispatchShortcut = (key: string, modifiers: Pick<KeyboardEventInit, 'ctrlKey' | 'metaKey'>) => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...modifiers }));
+    };
+
+    dispatchShortcut('c', { ctrlKey: true });
+    expect(mounted!.emitted('clipboard:copied')).toHaveLength(1);
+    dispatchShortcut('c', { metaKey: true });
+    expect(mounted!.emitted('clipboard:copied')).toHaveLength(2);
+    await mounted!.setProps({ currentTime: 6 });
+    dispatchShortcut('v', { metaKey: true });
+    await flushPromises();
+
+    let pastePayload = mounted!.emitted('paste:item')?.at(-1)?.[0] as
+      { item: { type: string; clip?: { id: string } }; timeMs: number } | undefined;
+    expect(pastePayload?.timeMs).toBe(6_000);
+    expect(pastePayload?.item).toEqual(expect.objectContaining({ type: 'clip' }));
+    expect(pastePayload?.item.clip?.id).toBe('screen-clip');
+
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    const pasteCountBeforeEditableShortcuts = mounted!.emitted('paste:item')?.length ?? 0;
+    dispatchShortcut('c', { ctrlKey: true });
+    dispatchShortcut('v', { ctrlKey: true });
+    await flushPromises();
+    expect(mounted!.emitted('paste:item')?.length ?? 0).toBe(pasteCountBeforeEditableShortcuts);
+    input.remove();
+
+    useTimelineClipboard().clearClipboard();
+    dispatchShortcut('v', { ctrlKey: true });
+    await flushPromises();
+    expect(mounted!.emitted('paste:error')).toContainEqual(['Copy a timeline item before pasting.']);
+  });
+
+  it('displays real-time caption text, triggers throbber on edit, and supports hover marquee', async () => {
+    const initialComp = composition();
+    const targetCaption = initialComp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
+    targetCaption.caption = {
+      type: 'text',
+      sentences: [{ id: 's1', text: 'Live transcribed subtitle', startMs: 1_000, endMs: 4_000, words: [] }],
+      style: createDefaultCaptionStyle(),
+    };
+
+    const mounted = await mountTracks({
+      composition: initialComp,
+    });
+
+    const captionLabel = mounted!.find('.text-caption-track .caption-label-text');
+    expect(captionLabel.exists()).toBe(true);
+    expect(captionLabel.text()).toBe('Live transcribed subtitle');
+
+    // Update caption text (e.g. while editing in properties panel)
+    const updatedComp = composition();
+    const updatedCaption = updatedComp.clips.find((c) => c.id === 'caption-clip') as CaptionClip;
+    updatedCaption.caption = {
+      type: 'text',
+      sentences: [{ id: 's1', text: 'Updated subtitle text', startMs: 1_000, endMs: 4_000, words: [] }],
+      style: createDefaultCaptionStyle(),
+    };
+
+    await mounted!.setProps({ composition: updatedComp });
+    await flushPromises();
+
+    // Throbber is displayed while commit is in progress
+    const throbber = mounted!.find('.text-caption-track .editor-loading-throbber');
+    expect(throbber.exists()).toBe(true);
+
+    // Wait 70ms to complete the edit debounce
+    await new Promise((resolve) => setTimeout(resolve, 70));
+    await flushPromises();
+
+    // Throbber disappears and updated text is shown
+    expect(mounted!.find('.text-caption-track .editor-loading-throbber').exists()).toBe(false);
+    expect(mounted!.find('.text-caption-track .caption-label-text').text()).toBe('Updated subtitle text');
+
+    // Hover marquee triggers
+    const indicator = mounted!.find('.text-caption-track .annotation-indicator');
+    await indicator.trigger('pointerenter');
+    await indicator.trigger('pointerleave');
   });
 });

@@ -2,11 +2,14 @@ import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { ZoomElement } from '../zoom/zoom-types';
 import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
+import { pasteZoomAt } from '../zoom/zoom-paste';
+import type { EditorPreferenceDefaults } from './editor-default-types';
 
 export function useProjectZoom(options: {
   editorData: Ref<ProjectEditorData | null | undefined>;
   durationMs: Ref<number>;
   activeTab: Ref<string>;
+  editorDefaults: Ref<EditorPreferenceDefaults>;
 }) {
   const { editorData, durationMs, activeTab } = options;
   const zoomElements = ref<ZoomElement[]>([]);
@@ -22,13 +25,14 @@ export function useProjectZoom(options: {
     if (!Number.isFinite(startMs)) return;
     const clampedStartMs = Math.max(0, Math.min(durationMs.value, Math.round(startMs)));
     if (clampedStartMs >= durationMs.value) return;
+    const defaults = options.editorDefaults.value.zoom;
     const zoom: ZoomElement = {
       id: crypto.randomUUID(),
       sessionId: editorData.value?.sessionId ?? 'manual',
       startMs: clampedStartMs,
-      endMs: Math.min(durationMs.value, clampedStartMs + 1_200),
-      depth: 2,
-      mode: 'manual',
+      endMs: Math.min(durationMs.value, clampedStartMs + Math.max(200, defaults?.durationMs ?? 1_200)),
+      depth: defaults?.depth ?? 2,
+      mode: defaults?.mode ?? 'manual',
       focus: { cx: 0.5, cy: 0.5 },
     };
     zoomElements.value.push(zoom);
@@ -91,8 +95,13 @@ export function useProjectZoom(options: {
   const previewZoom = updateZoom;
   const deleteSelectedZoom = () => {
     if (!selectedZoomId.value) return;
-    zoomElements.value = zoomElements.value.filter((element) => element.id !== selectedZoomId.value);
-    selectedZoomId.value = null;
+    deleteZoomById(selectedZoomId.value);
+  };
+  const deleteZoomById = (id: string) => {
+    zoomElements.value = zoomElements.value.filter((element) => element.id !== id);
+    if (selectedZoomId.value === id) {
+      selectedZoomId.value = null;
+    }
   };
   const previewMoveZoom = (id: string, startMs: number, endMs: number) => {
     zoomElements.value = zoomElements.value.map((element) =>
@@ -100,6 +109,13 @@ export function useProjectZoom(options: {
     );
   };
   const moveZoom = previewMoveZoom;
+  const pasteZoomAtTime = (copiedZoom: ZoomElement, startMs: number) => {
+    const pasted = pasteZoomAt(zoomElements.value, copiedZoom, startMs, durationMs.value);
+    zoomElements.value = pasted.elements;
+    selectedZoomId.value = pasted.zoomId;
+    activeTab.value = 'zoom';
+    return zoomElements.value.find((zoom) => zoom.id === pasted.zoomId)!;
+  };
 
   return {
     zoomElements,
@@ -116,7 +132,9 @@ export function useProjectZoom(options: {
     trimZoomEdge,
     previewMoveZoom,
     moveZoom,
+    pasteZoomAtTime,
     previewZoom,
     deleteSelectedZoom,
+    deleteZoomById,
   };
 }

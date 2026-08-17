@@ -130,9 +130,24 @@
 .clip-center-title {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   pointer-events: none;
   white-space: nowrap;
+  overflow: hidden;
+  max-width: calc(100% - 16px);
+}
+
+.caption-label-text {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.sparkles-icon {
+  flex-shrink: 0;
 }
 
 .caption-item-enter-active {
