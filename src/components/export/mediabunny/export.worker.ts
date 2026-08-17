@@ -1,11 +1,11 @@
 import { isAudioClip, type AudioClip, type VisualClip } from '~/media/shared/composition-types';
 import type { RenderableMedia } from '../composition/render';
-import type { ExportProgress, ExportRequest } from '../export-types';
+import { ExportValidationError, type ExportProgress, type ExportRequest } from '../export-types';
 import type { ExportRuntimeDiagnostics } from '../export-diagnostics-types';
 import { isExportWorkerRequest, type ExportWorkerResponse } from './export-worker-protocol';
 import { loadBitmap, openExportAssets, type ExportAssets } from './export-worker-assets';
 import { ExportWorkerOutput } from './export-worker-output';
-import { cursorTypeForKind } from '../../video-editor/properties/cursor/cursor-kind';
+import { resolveCursorAsset } from '../../video-editor/properties/cursor/cursor-packs';
 import { renderExportAudio, renderExportVideo } from './export-worker-pipelines';
 import { loadExportFonts } from './export-worker-fonts';
 import { WATERMARK_LOGO_KEY, WATERMARK_LOGO_PATH } from '../../video-editor/canvas/watermark-render';
@@ -305,40 +305,59 @@ async function loadImages(request: ExportRequest, owned: Map<string, ImageBitmap
 }
 
 async function loadCursors(request: ExportRequest, owned: Map<string, ImageBitmap>) {
+  const pack = request.snapshot.cursorPack;
+  if (!pack)
+    throw new ExportValidationError({
+      code: 'missing-asset',
+      message: `Cursor pack "${request.snapshot.cursorSettings.selection.packId}" is unavailable. Import it again before exporting.`,
+      assetId: request.snapshot.cursorSettings.selection.packId,
+    });
   if (!request.snapshot.cursor.available || request.snapshot.cursor.events.length === 0) return new Map();
-  const selected = request.snapshot.cursorSettings.selectedCursor;
-  const types = new Set(
-    selected === 'automatic'
-      ? request.snapshot.cursor.events
-          .filter((event) => event.event === 'shape')
-          .map((event) => cursorTypeForKind(event.cursorKind))
-      : [selected],
-  );
-  if (!types.size) types.add('default');
+  const selection = request.snapshot.cursorSettings.selection;
+  const assets = new Map();
+  if (selection.mode === 'fixed') {
+    const asset = pack.cursors.find((cursor) => cursor.id === selection.cursorId);
+    if (asset) assets.set(asset.id, asset);
+  } else {
+    for (const event of request.snapshot.cursor.events) {
+      if (event.event !== 'shape') continue;
+      const asset = resolveCursorAsset(pack, selection, event.cursorKind);
+      assets.set(asset.id, asset);
+    }
+  }
+  if (!assets.size) {
+    const fallback = resolveCursorAsset(pack, selection);
+    assets.set(fallback.id, fallback);
+  }
   const result = new Map<string, ImageBitmap>();
   await Promise.all(
-    [...types].map(async (type) => {
-      const path = `macOsPngCursors/${type}.png`;
-      const url = import.meta.env.DEV
-        ? new URL(`/${path}`, self.location.href).href
-        : new URL(`../${path}`, self.location.href).href;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Unable to load cursor ${type}.`);
-      const rasterWidth = Math.max(1, Math.ceil(request.snapshot.cursorSettings.size * 6));
+    [...assets.values()].map(async (asset) => {
+      const response = await fetch(asset.url);
+      if (!response.ok)
+        throw new ExportValidationError({
+          code: 'missing-asset',
+          message: `Unable to load cursor ${asset.id}.`,
+          assetId: asset.id,
+        });
+      const scale = request.snapshot.cursorSettings.size / asset.nominalSize;
+      const rasterWidth = Math.max(1, Math.ceil(asset.intrinsicSize.width * scale * 6));
+      const rasterHeight = Math.max(1, Math.ceil(asset.intrinsicSize.height * scale * 6));
       let bitmap: ImageBitmap;
       try {
         bitmap = await createImageBitmap(await response.blob(), {
           resizeWidth: rasterWidth,
-          resizeHeight: rasterWidth,
+          resizeHeight: rasterHeight,
           resizeQuality: 'high',
         });
       } catch (error) {
         const decoder = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-        throw new Error(`Unable to decode cursor "${type}" from ${url}; decoder: ${decoder}`, { cause: error });
+        throw new Error(`Unable to decode cursor "${asset.id}" from ${asset.url}; decoder: ${decoder}`, {
+          cause: error,
+        });
       }
-      bitmap = recolorCursor(bitmap, request.snapshot.cursorSettings.color);
-      owned.set(`cursor:${type}`, bitmap);
-      result.set(type, bitmap);
+      if (pack.colorMode === 'tintable') bitmap = recolorCursor(bitmap, request.snapshot.cursorSettings.color);
+      owned.set(`cursor:${pack.id}:${asset.id}`, bitmap);
+      result.set(asset.id, bitmap);
     }),
   );
   return result;
@@ -373,5 +392,12 @@ function recolorCursor(bitmap: ImageBitmap, color: string) {
 function postError(error: unknown) {
   if (error instanceof DOMException && error.name === 'AbortError') return;
   const value = error instanceof Error ? error : new Error('Export failed.');
-  post({ type: 'error', error: { name: value.name, message: value.message } });
+  post({
+    type: 'error',
+    error: {
+      name: value.name,
+      message: value.message,
+      ...(value instanceof ExportValidationError ? { issue: value.issue } : {}),
+    },
+  });
 }

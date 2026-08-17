@@ -1,5 +1,7 @@
 import { nextTick } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
+import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
+import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 
 const getCursorImage = vi.hoisted(() => vi.fn());
 vi.mock('../../properties/cursor/useCursorReplacer', () => ({
@@ -7,13 +9,32 @@ vi.mock('../../properties/cursor/useCursorReplacer', () => ({
   cursorTypeForKind: () => 'default',
 }));
 
-import { getRippleStyleColor, useCursorOverlay } from './useCursorOverlay';
+import { getRippleStyleColor, useCursorOverlay, type UseCursorOverlayOptions } from './useCursorOverlay';
 
 const second = (value: number) => value * 1_000_000_000;
 const effects = {
   left: { springEnabled: true, springIntensity: 80, rippleEnabled: true, rippleSize: 30, rippleColor: '#ff0000' },
   right: { springEnabled: false, springIntensity: 0, rippleEnabled: false, rippleSize: 20, rippleColor: '#0000ff' },
 };
+
+const wideCursorPack = (): CursorPackDescriptor => ({
+  id: 'imported:wide',
+  name: 'Wide cursor pack',
+  source: 'imported',
+  colorMode: 'original',
+  defaultCursorId: 'wide-default',
+  cursors: [
+    {
+      id: 'wide-default',
+      label: 'Wide default',
+      url: 'project-media://cursor/imported-wide/wide-default.svg',
+      intrinsicSize: { width: 40, height: 20 },
+      nominalSize: 20,
+      hotspot: { x: 5, y: 4 },
+    },
+  ],
+  automaticMap: { default: 'wide-default' },
+});
 
 const createContext = () =>
   ({
@@ -40,8 +61,9 @@ const createContext = () =>
     shadowOffsetY: 0,
   }) as unknown as CanvasRenderingContext2D;
 
-const baseOptions = () => ({
-  selectedCursor: () => 'automatic' as const,
+const baseOptions = (): UseCursorOverlayOptions => ({
+  cursorSelection: () => ({ packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null }),
+  cursorPack: () => MACOS_CURSOR_PACK,
   cursorSize: () => 24,
   cursorColor: () => '#ffffff',
   enableShadow: () => true,
@@ -80,7 +102,13 @@ describe('useCursorOverlay', () => {
     const overlay = useCursorOverlay(options);
     await nextTick();
     await Promise.resolve();
-    expect(getCursorImage).toHaveBeenCalledWith('default', 120, '#ffffff');
+    expect(getCursorImage).toHaveBeenCalledWith(
+      MACOS_CURSOR_PACK,
+      MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
+      120,
+      120,
+      '#ffffff',
+    );
     expect(options.onRenderOnce).toHaveBeenCalled();
     expect(overlay.customCursorImage.value).not.toBeNull();
   });
@@ -92,7 +120,13 @@ describe('useCursorOverlay', () => {
     const overlay = useCursorOverlay(options);
     await nextTick();
     await Promise.resolve();
-    expect(getCursorImage).toHaveBeenLastCalledWith('default', 120, '#ffffff');
+    expect(getCursorImage).toHaveBeenLastCalledWith(
+      MACOS_CURSOR_PACK,
+      MACOS_CURSOR_PACK.cursors.find((cursor) => cursor.id === 'default'),
+      120,
+      120,
+      '#ffffff',
+    );
     const ctx = createContext();
     const drawContent = vi.fn((draw: () => void) => draw());
     overlay.updateAndDrawRipplesAndCursor(
@@ -153,5 +187,59 @@ describe('useCursorOverlay', () => {
     expect(overlay.customCursorImage.value).toBeNull();
     expect(error).toHaveBeenCalledWith('Failed to load custom cursor image.');
     error.mockRestore();
+  });
+
+  it('warns while rendering a temporary macOS fallback for a missing pack', async () => {
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 32 } as HTMLImageElement);
+    const options = baseOptions();
+    options.cursorPack = () => null;
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+
+    const ctx = createContext();
+    overlay.updateAndDrawRipplesAndCursor(
+      ctx,
+      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+      1920,
+      1080,
+      800,
+      (draw) => draw(),
+    );
+
+    expect(ctx.fillText).toHaveBeenCalledWith('Cursor pack unavailable — import it again', expect.any(Number), 29);
+    expect(ctx.drawImage).toHaveBeenCalled();
+  });
+
+  it('preserves a non-square asset ratio and hotspot in the canvas preview', async () => {
+    const pack = wideCursorPack();
+    getCursorImage.mockResolvedValue({ complete: true, naturalWidth: 40 } as HTMLImageElement);
+    const options = baseOptions();
+    options.cursorPack = () => pack;
+    options.cursorSelection = () => ({ packId: pack.id, mode: 'fixed' as const, cursorId: 'wide-default' });
+    const overlay = useCursorOverlay(options);
+    await nextTick();
+    await Promise.resolve();
+    const image = overlay.customCursorImage.value;
+    expect(getCursorImage).toHaveBeenLastCalledWith(pack, pack.cursors[0], 240, 120, '#ffffff');
+    expect(image).not.toBeNull();
+
+    const ctx = createContext();
+    overlay.updateAndDrawRipplesAndCursor(
+      ctx,
+      { dx: 0, dy: 0, dw: 800, dh: 450, focusX: 0, focusY: 0, scale: 1 },
+      1920,
+      1080,
+      800,
+      (draw) => draw(),
+    );
+
+    expect(ctx.drawImage).toHaveBeenCalledWith(
+      image,
+      expect.closeTo(-2.5, 0.001),
+      expect.closeTo(-2, 0.001),
+      expect.closeTo(20, 0.001),
+      expect.closeTo(10, 0.001),
+    );
   });
 });

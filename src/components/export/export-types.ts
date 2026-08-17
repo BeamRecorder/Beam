@@ -3,6 +3,7 @@ import type { ZoomElement } from '../video-editor/zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from '../video-editor/canvas/output-canvas';
 import type { CursorPresentationSettings } from '../../api/types/cursor-presentation';
+import type { CursorPackDescriptor } from '../../api/types/cursor-pack';
 import type { ExportDiagnostics, ExportRuntimeDiagnostics } from './export-diagnostics-types';
 
 export type ExportFormat = 'webm' | 'mp4';
@@ -44,6 +45,7 @@ export interface CompositionSnapshot {
   zooms: ZoomElement[];
   cursor: ProjectEditorData['cursor'];
   cursorSettings: CursorRenderSettings;
+  cursorPack: CursorPackDescriptor | null;
   composition: ClipComposition;
 }
 export interface ExportRequest {

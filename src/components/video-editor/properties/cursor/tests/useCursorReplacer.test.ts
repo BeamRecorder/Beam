@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cursorOptions, cursorUrls, svgAtRasterSize, useCursorReplacer, cursorTypeForKind } from '../useCursorReplacer';
+import { useCursorReplacer } from '../useCursorReplacer';
+import type { CursorAssetDescriptor, CursorPackDescriptor } from '~/api/types/cursor-pack';
 
 class LoadingImage {
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
+
   set src(_value: string) {
     this.onload?.();
   }
@@ -12,92 +14,136 @@ class LoadingImage {
 class FailingImage {
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
+
   set src(_value: string) {
     this.onerror?.();
   }
 }
 
+class SvgBlob {
+  readonly value: string;
+
+  constructor(parts: unknown[]) {
+    this.value = parts.map(String).join('');
+  }
+}
+
+const makeAsset = (packId: string, id = 'default'): CursorAssetDescriptor => ({
+  id,
+  label: `${packId} ${id}`,
+  url: `project-media://cursor/${packId}/${id}`,
+  intrinsicSize: { width: 32, height: 16 },
+  nominalSize: 32,
+  hotspot: { x: 4, y: 3 },
+});
+
+const makePack = (
+  id: string,
+  name = id,
+  colorMode: CursorPackDescriptor['colorMode'] = 'tintable',
+): CursorPackDescriptor => ({
+  id,
+  name,
+  source: 'imported',
+  colorMode,
+  defaultCursorId: 'default',
+  cursors: [makeAsset(id)],
+  automaticMap: { default: 'default' },
+});
+
 describe('useCursorReplacer', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('exposes the documented defaults and a complete option catalogue', () => {
+  it('starts with the macOS automatic selection and sorts imported packs after it', () => {
     const cursor = useCursorReplacer();
-    expect([
-      cursor.selectedCursor.value,
-      cursor.cursorSize.value,
-      cursor.cursorColor.value,
-      cursor.enableShadow.value,
-      cursor.shadowBlur.value,
-      cursor.shadowColor.value,
-      cursor.shadowDirection.value,
-      cursor.clickEffects.value,
-    ]).toEqual([
-      'automatic',
-      45,
-      '#000000',
-      true,
-      6,
-      '#000000',
-      'bottom',
-      {
-        left: {
-          springEnabled: true,
-          springIntensity: 50,
-          rippleEnabled: true,
-          rippleSize: 30,
-          rippleColor: '#ff5a1f',
-        },
-        right: {
-          springEnabled: true,
-          springIntensity: 50,
-          rippleEnabled: true,
-          rippleSize: 30,
-          rippleColor: '#6366f1',
-        },
-      },
-    ]);
-    expect(cursorOptions).toHaveLength(Object.keys(cursorUrls).length);
-    expect(cursorOptions.every((option) => option.value in cursorUrls && option.thumbnail.endsWith('.svg'))).toBe(true);
+
+    expect(cursor.selection.value).toEqual({
+      packId: 'builtin:macos',
+      mode: 'automatic',
+      cursorId: null,
+    });
+    expect(cursor.cursorSize.value).toBe(45);
+    expect(cursor.cursorColor.value).toBe('#000000');
+    expect(cursor.enableShadow.value).toBe(true);
+    expect(cursor.shadowBlur.value).toBe(6);
+    expect(cursor.shadowColor.value).toBe('#000000');
+    expect(cursor.shadowDirection.value).toBe('bottom');
+
+    cursor.importedPacks.value = [makePack('pack:zeta', 'Zeta'), makePack('pack:alpha', 'Alpha')];
+
+    expect(cursor.packs.value.map((pack) => pack.id)).toEqual(['builtin:macos', 'pack:alpha', 'pack:zeta']);
+    expect(cursor.selectedPack.value?.id).toBe('builtin:macos');
   });
 
-  it('loads, resizes, recolors, and releases a cursor image', async () => {
+  it('loads a resized tintable SVG and caches it by pack, asset, dimensions and colour', async () => {
+    const pack = makePack('pack:tintable');
+    const asset = pack.cursors[0]!;
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      text: vi.fn().mockResolvedValue('<svg width="12" height="14" fill="#000000"/>'),
+      text: vi
+        .fn()
+        .mockResolvedValue('<svg width="32" height="16" viewBox="0 0 32 16"><path fill="currentColor"/></svg>'),
     });
-    const createObjectURL = vi.fn().mockReturnValue('blob:cursor');
+    const createObjectURL = vi.fn().mockReturnValue('blob:tintable');
     const revokeObjectURL = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('Image', LoadingImage);
+    vi.stubGlobal('Blob', SvgBlob);
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
-    const image = await useCursorReplacer().getCursorImage('default', 32, '#ff00ff');
+
+    const cursor = useCursorReplacer();
+    const image = await cursor.getCursorImage(pack, asset, 80, 40, '#ff00ff');
+    const secondImage = await cursor.getCursorImage(pack, asset, 80, 40, '#ff00ff');
+    const svgBlob = createObjectURL.mock.calls[0]?.[0] as SvgBlob;
+    const svg = svgBlob.value;
+
     expect(image).toBeInstanceOf(LoadingImage);
-    expect(fetchMock).toHaveBeenCalledWith(cursorUrls.default);
+    expect(secondImage).toBe(image);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(svg).toContain('width="80" height="40"');
+    expect(svg).toContain('color="#ff00ff"');
+    expect(svg).toContain('currentColor');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:tintable');
+  });
+
+  it('preserves original colours and does not split the cache by requested colour', async () => {
+    const pack = makePack('pack:original', 'Original', 'original');
+    const asset = pack.cursors[0]!;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue('<svg viewBox="0 0 32 16"><path fill="#00ff00"/></svg>'),
+    });
+    const createObjectURL = vi.fn().mockReturnValue('blob:original');
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('Image', LoadingImage);
+    vi.stubGlobal('Blob', SvgBlob);
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+
+    const cursor = useCursorReplacer();
+    const firstImage = await cursor.getCursorImage(pack, asset, 64, 32, '#ff00ff');
+    const secondImage = await cursor.getCursorImage(pack, asset, 64, 32, '#0000ff');
+    const svg = (createObjectURL.mock.calls[0]?.[0] as SvgBlob).value;
+
+    expect(secondImage).toBe(firstImage);
+    expect(fetchMock).toHaveBeenCalledOnce();
     expect(createObjectURL).toHaveBeenCalledOnce();
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:cursor');
+    expect(svg).toContain('#00ff00');
+    expect(svg).not.toContain('#ff00ff');
+    expect(svg).not.toContain('color="#ff00ff"');
   });
 
-  it('sets SVG raster dimensions from its viewBox while preserving its aspect ratio', () => {
-    expect(svgAtRasterSize('<svg width="32" height="16" viewBox="0 0 32 16"/>', 80)).toContain(
-      'width="80" height="40"',
-    );
-  });
-
-  it('replaces existing SVG dimensions instead of adding conflicting attributes', () => {
-    const resized = svgAtRasterSize('<svg width="32" height="32" viewBox="0 0 32 32"/>', 64);
-    expect(resized).toContain('width="64" height="64"');
-    expect(resized).not.toContain('width="32"');
-  });
-
-  it('keeps SVG dimensions valid when an invalid raster size is requested', () => {
-    expect(svgAtRasterSize('<svg viewBox="0 0 32 32"/>', 0)).toContain('width="1" height="1"');
-  });
-
-  it('fails on an unavailable asset and on an undecodable SVG', async () => {
+  it('reports unavailable assets and undecodable SVGs with the asset URL', async () => {
+    const missingPack = makePack('pack:missing');
+    const missingAsset = missingPack.cursors[0]!;
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
-    await expect(useCursorReplacer().getCursorImage('busy', 24, '#000000')).rejects.toThrow(
-      `Unable to load cursor asset: ${cursorUrls.busy} (404)`,
+
+    await expect(useCursorReplacer().getCursorImage(missingPack, missingAsset, 24, 12, '#000000')).rejects.toThrow(
+      `Unable to load cursor asset: ${missingAsset.url} (404)`,
     );
+
+    const invalidPack = makePack('pack:invalid');
+    const invalidAsset = invalidPack.cursors[0]!;
+    const revokeObjectURL = vi.fn();
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -105,21 +151,15 @@ describe('useCursorReplacer', () => {
         text: vi.fn().mockResolvedValue('<svg/>'),
       }),
     );
-    const revokeObjectURL = vi.fn();
     vi.stubGlobal('Image', FailingImage);
     vi.stubGlobal('URL', {
-      createObjectURL: vi.fn().mockReturnValue('blob:bad'),
+      createObjectURL: vi.fn().mockReturnValue('blob:invalid'),
       revokeObjectURL,
     });
-    await expect(useCursorReplacer().getCursorImage('busy', 24, '#000000')).rejects.toThrow(
-      `Unable to decode cursor asset: ${cursorUrls.busy}`,
-    );
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:bad');
-  });
 
-  it('maps semantic cursor kinds and never guesses custom cursors', () => {
-    expect(cursorTypeForKind('handpointing')).toBe('handpointing');
-    expect(cursorTypeForKind('custom')).toBe('default');
-    expect(cursorTypeForKind('unknown')).toBe('default');
+    await expect(useCursorReplacer().getCursorImage(invalidPack, invalidAsset, 24, 12, '#000000')).rejects.toThrow(
+      `Unable to decode cursor asset: ${invalidAsset.url}`,
+    );
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:invalid');
   });
 });

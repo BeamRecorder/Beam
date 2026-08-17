@@ -4,6 +4,7 @@ import type { ClipAppearance, ClipComposition } from '~/media/shared/composition
 import { drawCompositionLayers, renderCompositionFrame, type RenderableMedia } from '../render';
 import type { CompositionSnapshot } from '../../export-types';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
+import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
 
 const appearance: ClipAppearance = {
   cornerRadius: 'none',
@@ -69,7 +70,7 @@ const snapshot = (): CompositionSnapshot => ({
   zooms: [],
   cursor: { available: false, telemetry: [], missing: [], shapes: {}, catalog: {}, events: [] },
   cursorSettings: {
-    selectedCursor: 'automatic',
+    selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null },
     size: 24,
     color: '#000',
     shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
@@ -84,6 +85,7 @@ const snapshot = (): CompositionSnapshot => ({
       motionBlur: 0.4,
     },
   },
+  cursorPack: MACOS_CURSOR_PACK,
   composition: composition(),
 });
 
@@ -387,5 +389,44 @@ describe('composition rendering invariants', () => {
     expect(renderRadius(0.001)).toBeCloseTo(2, 3);
     expect(renderRadius(0.251)).toBeGreaterThan(22);
     expect(renderRadius(0.5)).toBeCloseTo(42, 1);
+  });
+
+  it('does not fall back to macOS when the selected cursor pack is missing', () => {
+    const value = snapshot();
+    value.cursorPack = null;
+    value.cursorSettings.selection = { packId: 'imported:missing', mode: 'automatic', cursorId: null };
+    value.cursor = {
+      available: true,
+      telemetry: [],
+      missing: [],
+      shapes: {},
+      catalog: {},
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 50,
+          pixelY: 25,
+          normalizedX: 0.5,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    const cursorImage = { complete: true, naturalWidth: 32 } as HTMLImageElement;
+    const ctx = context();
+
+    renderCompositionFrame(
+      ctx,
+      { source: {} as CanvasImageSource, width: 100, height: 50 },
+      value,
+      0,
+      null,
+      new Map([['default', cursorImage]]),
+    );
+
+    expect((ctx.drawImage as ReturnType<typeof vi.fn>).mock.calls.some(([source]) => source === cursorImage)).toBe(
+      false,
+    );
   });
 });

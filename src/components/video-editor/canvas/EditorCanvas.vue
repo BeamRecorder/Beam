@@ -203,7 +203,8 @@ drawVisualStack = (ctx, window, drawScreen) => {
 };
 
 const cursorOverlay = useCursorOverlay({
-  selectedCursor: () => props.selectedCursor,
+  cursorSelection: () => props.cursorSelection,
+  cursorPack: () => props.cursorPack,
   cursorSize: () => props.cursorSize,
   cursorColor: () => props.cursorColor,
   enableShadow: () => props.enableShadow,
@@ -241,7 +242,8 @@ watch(() => [props.composition, props.currentTime, props.frameVersion, props.isC
 watch(
   () =>
     [
-      props.selectedCursor,
+      props.cursorSelection,
+      props.cursorPack,
       props.cursorSize,
       props.cursorColor,
       props.enableShadow,

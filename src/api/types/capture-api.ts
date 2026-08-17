@@ -9,6 +9,7 @@ import type {
 } from '../../components/video-editor/composables/backgroundCatalog';
 import type { OutputCanvasSettings } from '../../components/video-editor/canvas/output-canvas';
 import type { CursorPresentationSettings } from './cursor-presentation';
+import type { CursorPackDescriptor, CursorPackImportResult } from './cursor-pack';
 import type {
   TeleprompterDocument,
   TeleprompterSessionContext,
@@ -21,6 +22,7 @@ export type * from './capture-config';
 export type * from './screen-region';
 export type * from './capture-session';
 export type * from './editor-window';
+export type * from './cursor-pack';
 export type * from '~/types/appearance';
 
 export interface ImportedFont {
@@ -132,6 +134,10 @@ export interface DesktopCaptureApi extends CaptureApi {
   listImportedFonts(): Promise<ImportedFont[]>;
   pickImportedFont(): Promise<ImportedFont | null>;
   onFontLibraryChanged(listener: () => void): () => void;
+  listCursorPacks(): Promise<CursorPackDescriptor[]>;
+  pickCursorPackImport(): Promise<CursorPackImportResult | null>;
+  onCursorPacksChanged(listener: () => void): () => void;
+  openCursorPackDiscovery(): Promise<void>;
   createProject(options?: CreateProjectOptions): Promise<CaptureProject>;
   renameProject(projectId: string, name: string): Promise<CaptureProject>;
   deleteProject(projectId: string): Promise<void>;

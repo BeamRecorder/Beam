@@ -3,7 +3,7 @@ const test = require('node:test');
 const { migratePresentation, presentationState } = require('../electron/projects/project-editor-state.cjs');
 
 const cursor = () => ({
-  selectedCursor: 'automatic',
+  selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
   size: 45,
   color: '#000000',
   shadow: { enabled: true, blur: 6, color: '#000000', direction: 'bottom' },
@@ -64,4 +64,85 @@ test('migrates every watermark presentation field from legacy editor state', () 
   });
 
   assert.deepEqual(state.canvas.watermark, expected);
+});
+
+test('migrates the legacy automatic cursor selection to the builtin macOS pack', () => {
+  const state = presentationState({
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+    cursor: { ...cursor(), selectedCursor: 'automatic' },
+  });
+
+  assert.deepEqual(state.cursor.selection, {
+    packId: 'builtin:macos',
+    mode: 'automatic',
+    cursorId: null,
+  });
+});
+
+test('migrates a legacy fixed macOS cursor without discarding presentation settings', () => {
+  const legacyCursor = { ...cursor(), selectedCursor: 'handpointing' };
+  delete legacyCursor.selection;
+  const state = presentationState({
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+    cursor: { ...legacyCursor, size: 92 },
+  });
+
+  assert.deepEqual(state.cursor.selection, {
+    packId: 'builtin:macos',
+    mode: 'fixed',
+    cursorId: 'handpointing',
+  });
+  assert.equal(state.cursor.size, 92);
+});
+
+test('preserves an unavailable imported pack selection for later reimport', () => {
+  const selection = { packId: 'a'.repeat(64), mode: 'fixed', cursorId: 'left_ptr' };
+  const state = presentationState({
+    canvas: canvas(undefined),
+    selectedBackgroundId: null,
+    background: null,
+    blurPercent: 0,
+    importedBackgrounds: [],
+    cursor: { ...cursor(), selection },
+  });
+
+  assert.deepEqual(state.cursor.selection, selection);
+});
+
+test('rejects an automatic selection that carries a fixed cursor id', () => {
+  assert.throws(
+    () =>
+      presentationState({
+        canvas: canvas(undefined),
+        selectedBackgroundId: null,
+        background: null,
+        blurPercent: 0,
+        importedBackgrounds: [],
+        cursor: { ...cursor(), selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: 'ignored' } },
+      }),
+    /curseur|présentation/i,
+  );
+});
+
+test('rejects a fixed cursor selection without a cursor id', () => {
+  assert.throws(
+    () =>
+      presentationState({
+        canvas: canvas(undefined),
+        selectedBackgroundId: null,
+        background: null,
+        blurPercent: 0,
+        importedBackgrounds: [],
+        cursor: { ...cursor(), selection: { packId: 'builtin:macos', mode: 'fixed', cursorId: null } },
+      }),
+    /curseur|présentation/i,
+  );
 });

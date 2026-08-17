@@ -37,6 +37,7 @@
     "@vueuse/core": "^14.3.0",
     "@vueuse/electron": "^14.3.0",
     "@vueuse/motion": "^3.0.3",
+    "@xmldom/xmldom": "^0.8.14",
     "electron-updater": "^6.6.2",
     "fontkit": "^2.0.4",
     "mediabunny": "^1.50.9",

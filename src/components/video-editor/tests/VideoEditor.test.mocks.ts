@@ -103,7 +103,9 @@ vi.mock('../composables/useVideoEditor', async () => {
         frameFor: vi.fn().mockReturnValue(null),
       };
       const cursor = {
-        selectedCursor: ref('automatic'),
+        selection: ref({ packId: 'builtin:macos', mode: 'automatic', cursorId: null }),
+        packs: ref([]),
+        selectedPack: ref(null),
         cursorSize: ref(24),
         cursorColor: ref('#fff'),
         enableShadow: ref(true),

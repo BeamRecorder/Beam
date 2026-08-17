@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
+import type { CursorPackDescriptor, CursorSelection } from '~/api/types/cursor-pack';
 import type {
   BackgroundMedia,
   BackgroundValue,
@@ -81,7 +81,8 @@ const props = withDefaults(
     activeTab: string;
     selectedClip?: SelectedClipProperties | null;
     selectedCaptionClip?: CaptionClip | null;
-    selectedCursor: CursorType;
+    cursorSelection: CursorSelection;
+    cursorPacks: CursorPackDescriptor[];
     cursorSize: number;
     cursorColor: string;
     enableShadow: boolean;
@@ -138,8 +139,8 @@ const panelTitle = computed(() => {
   return titleKey ? tSidebar(titleKey) : t('properties');
 });
 const emit = defineEmits<{
-  (event: 'update:selectedCursor', value: CursorType): void;
-  (event: 'preview:selectedCursor', value: CursorType | null): void;
+  (event: 'update:cursorSelection', value: CursorSelection): void;
+  (event: 'preview:cursorSelection', value: CursorSelection | null): void;
   (event: 'update:cursorSize', value: number): void;
   (event: 'update:cursorColor', value: string): void;
   (event: 'update:enableShadow', value: boolean): void;
@@ -355,7 +356,8 @@ const handleDelete = () => {
         />
         <CursorPanel
           v-else-if="activeTab === 'cursor'"
-          :selected-cursor="selectedCursor"
+          :selection="cursorSelection"
+          :packs="cursorPacks"
           :cursor-size="cursorSize"
           :cursor-color="cursorColor"
           :enable-shadow="enableShadow"
@@ -364,8 +366,8 @@ const handleDelete = () => {
           :shadow-direction="shadowDirection"
           :click-effects="clickEffects"
           :motion="motion"
-          @update:selected-cursor="emit('update:selectedCursor', $event)"
-          @preview:selected-cursor="emit('preview:selectedCursor', $event)"
+          @update:selection="emit('update:cursorSelection', $event)"
+          @preview:selection="emit('preview:cursorSelection', $event)"
           @update:cursor-size="emit('update:cursorSize', $event)"
           @update:cursor-color="emit('update:cursorColor', $event)"
           @update:enable-shadow="emit('update:enableShadow', $event)"

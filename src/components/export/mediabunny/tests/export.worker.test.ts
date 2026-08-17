@@ -83,7 +83,29 @@ const request = (overrides: Record<string, unknown> = {}) =>
       blurPercent: 0,
       zooms: [],
       cursor: { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] },
-      cursorSettings: { selectedCursor: 'automatic', size: 24, color: '#000000' },
+      cursorSettings: {
+        selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
+        size: 24,
+        color: '#000000',
+      },
+      cursorPack: {
+        id: 'builtin:macos',
+        name: 'macOS',
+        source: 'builtin',
+        colorMode: 'original',
+        defaultCursorId: 'default',
+        cursors: [
+          {
+            id: 'default',
+            label: 'Default',
+            url: '/cursor.svg',
+            intrinsicSize: { width: 32, height: 32 },
+            nominalSize: 32,
+            hotspot: { x: 10, y: 7 },
+          },
+        ],
+        automaticMap: { default: 'default' },
+      },
       composition: { assets: [], clips: [] },
     },
     ...overrides,
@@ -253,7 +275,10 @@ describe('export worker', () => {
       request({
         snapshot: {
           ...request().snapshot,
-          cursorSettings: { ...request().snapshot.cursorSettings, selectedCursor: 'default' },
+          cursorSettings: {
+            ...request().snapshot.cursorSettings,
+            selection: { packId: 'builtin:macos', mode: 'fixed', cursorId: 'default' },
+          },
         },
       }),
     );
@@ -265,7 +290,24 @@ describe('export worker', () => {
     await vi.waitFor(() => expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })));
   });
 
-  it('loads raster cursor assets instead of decoding SVG inside the worker', async () => {
+  it('blocks export with a missing-asset issue when the selected cursor pack is unavailable', async () => {
+    installCanvasRuntime();
+    const base = request();
+    const worker = await importWorker();
+    startWorker(worker, request({ snapshot: { ...base.snapshot, cursorPack: null } }));
+
+    await vi.waitFor(() =>
+      expect(worker.postMessage).toHaveBeenCalledWith({
+        type: 'error',
+        error: expect.objectContaining({
+          issue: expect.objectContaining({ code: 'missing-asset', assetId: 'builtin:macos' }),
+        }),
+      }),
+    );
+    expect(runtime.output.start).not.toHaveBeenCalled();
+  });
+
+  it('loads SVG cursor assets from the resolved pack without using legacy PNGs', async () => {
     installCanvasRuntime();
     runtime.output.start.mockRejectedValueOnce(new Error('encoder startup failed'));
     const base = request();
@@ -280,14 +322,17 @@ describe('export worker', () => {
             available: true,
             events: [{ event: 'shape', cursorKind: 'default', sessionNs: 0 }],
           },
-          cursorSettings: { ...base.snapshot.cursorSettings, selectedCursor: 'automatic' },
+          cursorSettings: {
+            ...base.snapshot.cursorSettings,
+            selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
+          },
         },
       }),
     );
 
     await vi.waitFor(() => expect(runtime.output.start).toHaveBeenCalledOnce());
-    expect(fetch).toHaveBeenCalledWith('http://localhost/macOsPngCursors/default.png');
-    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('macOsSvgCursors'));
+    expect(fetch).toHaveBeenCalledWith('/cursor.svg');
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('macOsPngCursors'));
     expect(createImageBitmap).toHaveBeenCalledWith(
       expect.any(Blob),
       expect.objectContaining({ resizeWidth: 144, resizeHeight: 144 }),

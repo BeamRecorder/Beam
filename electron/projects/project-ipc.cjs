@@ -1,4 +1,5 @@
 const fs = require('fs');
+const CURSOR_PACK_DISCOVERY_URL = 'https://github.com/search?q=cursors_scalable&type=code';
 
 function registerProjectIpc(
   ipcMain,
@@ -8,6 +9,7 @@ function registerProjectIpc(
   dialog,
   BrowserWindow,
   trustedRenderer,
+  cursorLibrary,
 ) {
   ipcMain.handle('projects:list', () => projectStore.list());
   ipcMain.handle('projects:media-url', (_event, payload = {}) => projectStore.mediaUrlFor(payload.source));
@@ -76,6 +78,30 @@ function registerProjectIpc(
     notifyFontLibraryChanged();
     return font;
   });
+  const notifyCursorPacksChanged = () => {
+    for (const window of BrowserWindow.getAllWindows()) window.webContents.send('cursor-packs:changed');
+  };
+  const requireTrustedCursorSender = (event) => {
+    if (!trustedRenderer?.(event.sender.getURL())) throw new Error('Renderer non autorisé');
+  };
+  ipcMain.handle('cursor-packs:list', (event) => {
+    requireTrustedCursorSender(event);
+    if (!cursorLibrary) throw new Error('Bibliothèque de curseurs indisponible');
+    return cursorLibrary.list();
+  });
+  ipcMain.handle('cursor-packs:pick-import', async (event) => {
+    requireTrustedCursorSender(event);
+    if (!cursorLibrary) throw new Error('Bibliothèque de curseurs indisponible');
+    const selected = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    if (selected.canceled || !selected.filePaths[0]) return null;
+    const result = cursorLibrary.importDirectory(selected.filePaths[0]);
+    notifyCursorPacksChanged();
+    return result;
+  });
+  ipcMain.handle('cursor-packs:open-discovery', (event) => {
+    requireTrustedCursorSender(event);
+    return require('electron').shell.openExternal(CURSOR_PACK_DISCOVERY_URL);
+  });
   ipcMain.handle('projects:delete', (_event, payload = {}) => projectStore.delete(payload.projectId));
   ipcMain.handle('projects:reveal', (_event, payload = {}) => {
     const { shell } = require('electron');
@@ -92,4 +118,4 @@ function registerProjectIpc(
   });
 }
 
-module.exports = { registerProjectIpc };
+module.exports = { CURSOR_PACK_DISCOVERY_URL, registerProjectIpc };

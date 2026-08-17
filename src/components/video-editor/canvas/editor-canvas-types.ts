@@ -2,7 +2,7 @@ import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { CursorClickEffects, CursorMotionSettings } from '../../../api/types/cursor-settings';
 import type { HistoryAction } from '../composables/useEditorUndoRedo';
 import type { BackgroundValue } from '../composables/backgroundCatalog';
-import type { CursorType } from '../properties/cursor/useCursorReplacer';
+import type { CursorPackDescriptor, CursorSelection } from '../../../api/types/cursor-pack';
 import type { ShadowDirection } from '../properties/cursor/shadow-types';
 import type { ZoomElement } from '../zoom/zoom-types';
 import type { MediaError, MediaFrame } from '~/media/shared';
@@ -21,7 +21,8 @@ export type TransformClip = VisualClip | BlurClip | CaptionClip;
 export interface EditorCanvasProps {
   isPlaying: boolean;
   currentTime: number;
-  selectedCursor: CursorType;
+  cursorSelection: CursorSelection;
+  cursorPack: CursorPackDescriptor | null;
   cursorSize: number;
   cursorColor: string;
   enableShadow: boolean;

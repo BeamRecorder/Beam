@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { createDefaultCursorClickEffects, createDefaultCursorMotionSettings } from '~/api/types/cursor-settings';
-import type { CursorType } from '~/api/types/cursor-presentation';
+import { MACOS_CURSOR_PACK } from '../properties/cursor/cursor-packs';
 import type { BackgroundMediaGroup, BackgroundValue } from '../composables/backgroundCatalog';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import { createDefaultCaptionStyle } from '~/media/shared/composition-defaults';
@@ -137,14 +137,14 @@ const canvas: OutputCanvasSettings = {
   height: 1080,
   showBackground: false,
 };
-const selectedCursor: CursorType = 'default';
 const shadowDirection: ShadowDirection = 'bottom-right';
 
 const baseProps = {
   activeTab: 'canvas',
   selectedClip: null,
   selectedCaptionClip: null,
-  selectedCursor,
+  cursorSelection: { packId: 'builtin:macos', mode: 'fixed' as const, cursorId: 'default' },
+  cursorPacks: [MACOS_CURSOR_PACK],
   cursorSize: 24,
   cursorColor: '#000000',
   enableShadow: false,

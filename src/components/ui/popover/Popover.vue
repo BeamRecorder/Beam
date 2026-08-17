@@ -9,6 +9,8 @@ const props = withDefaults(
     matchTriggerWidth?: boolean;
     flush?: boolean;
     closeOnWindowBlur?: boolean;
+    interaction?: 'click' | 'hover-focus-click';
+    closeDelay?: number;
   }>(),
   {
     align: 'left',
@@ -17,6 +19,8 @@ const props = withDefaults(
     matchTriggerWidth: true,
     flush: false,
     closeOnWindowBlur: true,
+    interaction: 'click',
+    closeDelay: 180,
   },
 );
 
@@ -29,17 +33,53 @@ const popoverRef = ref<HTMLElement | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
 const directionClass = ref(props.direction);
 const floatingStyle = ref<Record<string, string>>({});
+const pinned = ref(false);
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
 const VIEWPORT_MARGIN = 8;
 const parentPopoverId = inject<string | null>('popover-owner-id', null);
 const popoverId = `popover-${Math.random().toString(36).slice(2)}`;
 provide('popover-owner-id', popoverId);
 
 const toggle = () => {
+  if (props.interaction === 'hover-focus-click') {
+    pinned.value = !pinned.value;
+    isOpen.value = pinned.value || isOpen.value;
+    if (!pinned.value) isOpen.value = false;
+    return;
+  }
   isOpen.value = !isOpen.value;
 };
 
 const close = () => {
+  pinned.value = false;
   isOpen.value = false;
+};
+const cancelClose = () => {
+  if (closeTimer) clearTimeout(closeTimer);
+  closeTimer = null;
+};
+const openTransient = () => {
+  if (props.interaction !== 'hover-focus-click') return;
+  cancelClose();
+  isOpen.value = true;
+};
+const scheduleClose = () => {
+  if (props.interaction !== 'hover-focus-click' || pinned.value) return;
+  cancelClose();
+  closeTimer = setTimeout(() => {
+    const active = document.activeElement;
+    if ((popoverRef.value?.contains(active) || contentRef.value?.contains(active)) ?? false) return;
+    isOpen.value = false;
+  }, props.closeDelay);
+};
+const scheduleFocusClose = () => {
+  if (props.interaction !== 'hover-focus-click') return;
+  cancelClose();
+  closeTimer = setTimeout(() => {
+    const active = document.activeElement;
+    if ((popoverRef.value?.contains(active) || contentRef.value?.contains(active)) ?? false) return;
+    close();
+  }, props.closeDelay);
 };
 
 const adjustPosition = async () => {
@@ -138,6 +178,9 @@ const handleOutsideInteraction = (event: Event) => {
     close();
   }
 };
+const handleEscape = (event: KeyboardEvent) => {
+  if (props.interaction === 'hover-focus-click' && event.key === 'Escape' && isOpen.value) close();
+};
 
 onMounted(() => {
   window.addEventListener('pointerdown', handleOutsideInteraction, true);
@@ -146,6 +189,7 @@ onMounted(() => {
   window.addEventListener('resize', repositionOpenPopover);
   window.addEventListener('scroll', repositionOpenPopover, true);
   window.addEventListener('blur', closeOnWindowBlur);
+  document.addEventListener('keydown', handleEscape);
 });
 
 onUnmounted(() => {
@@ -157,6 +201,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', repositionOpenPopover);
   window.removeEventListener('scroll', repositionOpenPopover, true);
   window.removeEventListener('blur', closeOnWindowBlur);
+  document.removeEventListener('keydown', handleEscape);
+  cancelClose();
 });
 
 defineExpose({
@@ -168,7 +214,14 @@ defineExpose({
 
 <template>
   <div :class="['popover-container', { 'popover-block': block }]" ref="popoverRef">
-    <div :class="['popover-trigger', { 'popover-block': block }]" @click.stop="toggle">
+    <div
+      :class="['popover-trigger', { 'popover-block': block }]"
+      @click.stop="toggle"
+      @mouseenter="openTransient"
+      @mouseleave="scheduleClose"
+      @focusin="openTransient"
+      @focusout="scheduleFocusClose"
+    >
       <slot name="trigger" :isOpen="isOpen" />
     </div>
 
@@ -182,6 +235,10 @@ defineExpose({
           :data-popover-owner="parentPopoverId"
           :class="[align, directionClass, { 'popover-block': block, 'popover-flush': flush }]"
           :style="floatingStyle"
+          @mouseenter="cancelClose"
+          @mouseleave="scheduleClose"
+          @focusin="cancelClose"
+          @focusout="scheduleFocusClose"
         >
           <slot :close="close" />
         </div>

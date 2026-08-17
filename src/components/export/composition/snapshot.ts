@@ -6,6 +6,7 @@ import type { CursorRenderSettings, CompositionSnapshot } from '../export-types'
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas';
 import { normalizeOutputCanvas } from '../../video-editor/canvas/output-canvas';
 import { normalizeCursorMotionSettings } from '../../../api/types/cursor-settings';
+import type { CursorPackDescriptor } from '../../../api/types/cursor-pack';
 
 const cloneJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const copyZooms = (zooms: readonly ZoomElement[]) => zooms.map((zoom) => ({ ...zoom, focus: { ...zoom.focus } }));
@@ -40,6 +41,7 @@ export function createCompositionSnapshot(input: {
   zooms: ZoomElement[];
   composition: ClipComposition;
   cursorSettings: CursorRenderSettings;
+  cursorPack: CursorPackDescriptor | null;
 }): CompositionSnapshot {
   const canvas = normalizeOutputCanvas(input.canvas);
   return {
@@ -65,6 +67,7 @@ export function createCompositionSnapshot(input: {
       ...input.cursorSettings,
       motion: normalizeCursorMotionSettings(input.cursorSettings.motion),
     }),
+    cursorPack: input.cursorPack ? cloneJson(input.cursorPack) : null,
     composition: cloneJson(input.composition),
   };
 }

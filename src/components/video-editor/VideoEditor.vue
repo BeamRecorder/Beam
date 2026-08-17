@@ -30,7 +30,7 @@ import {
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
 import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
-import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
+import type { CursorSelection } from '~/api/types/cursor-pack';
 
 const { t } = useTranslate('VideoEditor');
 const props = withDefaults(
@@ -81,7 +81,9 @@ const {
   addBackground,
 } = player;
 const {
-  selectedCursor,
+  selection: cursorSelection,
+  packs: cursorPacks,
+  selectedPack: cursorPack,
   cursorSize,
   cursorColor,
   enableShadow,
@@ -150,7 +152,7 @@ const {
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
-const cursorPreview = ref<CursorType | null>(null);
+const cursorPreview = ref<CursorSelection | null>(null);
 const canvasComposition = computed(
   () => captionCompositionPreview.value ?? timelineCompositionPreview.value ?? composition.value,
 );
@@ -421,8 +423,9 @@ onBeforeUnmount(() => {
           :active-tab="activeTab"
           :selected-clip="selectedClipInfo"
           :selected-caption-clip="selectedCaptionClip"
-          v-model:selected-cursor="selectedCursor"
-          @preview:selected-cursor="cursorPreview = $event"
+          v-model:cursor-selection="cursorSelection"
+          :cursor-packs="cursorPacks"
+          @preview:cursor-selection="cursorPreview = $event"
           v-model:cursor-size="cursorSize"
           v-model:cursor-color="cursorColor"
           v-model:enable-shadow="enableShadow"
@@ -514,7 +517,8 @@ onBeforeUnmount(() => {
             ref="editorCanvasRef"
             :is-playing="isPlaying"
             :current-time="currentTime"
-            :selected-cursor="cursorPreview ?? selectedCursor"
+            :cursor-selection="cursorPreview ?? cursorSelection"
+            :cursor-pack="cursorPack"
             :cursor-size="cursorSize"
             :cursor-color="cursorColor"
             :enable-shadow="enableShadow"

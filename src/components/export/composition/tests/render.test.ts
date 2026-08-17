@@ -4,6 +4,8 @@ import type { CompositionSnapshot } from '../../export-types';
 import { DEFAULT_OUTPUT_CANVAS } from '../../../video-editor/canvas/output-canvas';
 import type { ClipComposition, ClipAppearance } from '~/media/shared/composition-types';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
+import type { CursorPackDescriptor } from '../../../../api/types/cursor-pack';
+import { MACOS_CURSOR_PACK } from '../../../video-editor/properties/cursor/cursor-packs';
 
 const screenAppearance: ClipAppearance = {
   cornerRadius: 'none',
@@ -74,7 +76,7 @@ const snapshot = (): CompositionSnapshot => ({
     events: [],
   },
   cursorSettings: {
-    selectedCursor: 'automatic',
+    selection: { packId: MACOS_CURSOR_PACK.id, mode: 'automatic', cursorId: null },
     size: 24,
     color: '#000',
     shadow: { enabled: false, blur: 0, color: '#000', direction: 'bottom' },
@@ -101,7 +103,27 @@ const snapshot = (): CompositionSnapshot => ({
       motionBlur: 0.4,
     },
   },
+  cursorPack: MACOS_CURSOR_PACK,
   composition: composition(),
+});
+
+const wideCursorPack = (): CursorPackDescriptor => ({
+  id: 'imported:wide',
+  name: 'Wide cursor pack',
+  source: 'imported',
+  colorMode: 'original',
+  defaultCursorId: 'wide-default',
+  cursors: [
+    {
+      id: 'wide-default',
+      label: 'Wide default',
+      url: 'project-media://cursor/imported-wide/wide-default.svg',
+      intrinsicSize: { width: 40, height: 20 },
+      nominalSize: 20,
+      hotspot: { x: 5, y: 4 },
+    },
+  ],
+  automaticMap: { default: 'wide-default' },
 });
 const context = () =>
   ({
@@ -583,5 +605,44 @@ describe('canonical composition rendering', () => {
     );
 
     expect(ctx.drawImage).toHaveBeenLastCalledWith(image, expect.any(Number), expect.any(Number), 50, 50);
+  });
+
+  it('preserves a non-square pack asset ratio and scales its hotspot', () => {
+    const value = snapshot();
+    const pack = wideCursorPack();
+    value.cursorPack = pack;
+    value.cursorSettings.selection = { packId: pack.id, mode: 'fixed', cursorId: 'wide-default' };
+    value.cursorSettings.size = 20;
+    value.cursor = {
+      available: true,
+      telemetry: [],
+      missing: [],
+      shapes: {},
+      catalog: {},
+      events: [
+        {
+          event: 'move',
+          sessionNs: 0,
+          pixelX: 50,
+          pixelY: 25,
+          normalizedX: 0.5,
+          normalizedY: 0.5,
+          visible: true,
+        },
+      ],
+    };
+    const ctx = context();
+    const image = { complete: true, naturalWidth: 40 } as HTMLImageElement;
+
+    renderCompositionFrame(
+      ctx,
+      { source: {} as CanvasImageSource, width: 100, height: 50 } as RenderableMedia,
+      value,
+      0,
+      null,
+      new Map([['wide-default', image]]),
+    );
+
+    expect(ctx.drawImage).toHaveBeenCalledWith(image, -5, -4, 40, 20);
   });
 });

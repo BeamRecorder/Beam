@@ -83,7 +83,20 @@ const request = (assets: unknown[], clips: unknown[]) =>
       blurPercent: 0,
       zooms: [],
       cursor: { available: false, events: [], telemetry: [], shapes: {}, catalog: {}, missing: [] },
-      cursorSettings: { selectedCursor: 'automatic', size: 24, color: '#000000' },
+      cursorSettings: {
+        selection: { packId: 'builtin:macos', mode: 'automatic', cursorId: null },
+        size: 24,
+        color: '#000000',
+      },
+      cursorPack: {
+        id: 'builtin:macos',
+        name: 'macOS',
+        source: 'builtin',
+        colorMode: 'original',
+        defaultCursorId: 'default',
+        cursors: [],
+        automaticMap: {},
+      },
       composition: { schemaVersion: 3, assets, clips, keyboardCaptionSessions: [] },
     },
   }) as unknown as ExportRequest;

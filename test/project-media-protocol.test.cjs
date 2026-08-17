@@ -157,6 +157,29 @@ test('serves opaque background-library URLs and preserves range semantics', asyn
   }
 });
 
+test('serves cursor-pack SVG assets with the SVG MIME type and range semantics', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'beam-cursor-media-'));
+  const file = path.join(root, '000-default.svg');
+  const url = 'project-media://cursor/pack-id/000-default';
+  fs.writeFileSync(file, '<svg>cursor</svg>');
+  const handler = createProjectMediaHandler({
+    projectStore: { mediaFileForUrl: () => null },
+    cursorLibrary: {
+      fileForUrl: (candidate) => (candidate === url ? file : null),
+    },
+  });
+
+  try {
+    const response = await handler(request(url, 'bytes=1-5'));
+    assert.equal(response.status, 206);
+    assert.equal(response.headers.get('content-type'), 'image/svg+xml');
+    assert.equal(response.headers.get('content-range'), 'bytes 1-5/17');
+    assert.deepEqual(await responseBody(response), Buffer.from('svg>c'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('uses image MIME types for AVIF and BMP assets', () => {
   assert.equal(mimeTypeFor('/tmp/background.avif'), 'image/avif');
   assert.equal(mimeTypeFor('/tmp/background.bmp'), 'image/bmp');
@@ -256,6 +279,7 @@ test('maps all supported media extensions to their MIME types', () => {
     '.flac': 'audio/flac',
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
+    '.svg': 'image/svg+xml',
     '.webp': 'image/webp',
   };
 

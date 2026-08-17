@@ -170,6 +170,14 @@ contextBridge.exposeInMainWorld(
       ipcRenderer.on('font-library:changed', callback);
       return () => ipcRenderer.removeListener('font-library:changed', callback);
     },
+    listCursorPacks: () => ipcRenderer.invoke('cursor-packs:list'),
+    pickCursorPackImport: () => ipcRenderer.invoke('cursor-packs:pick-import'),
+    onCursorPacksChanged: (listener) => {
+      const callback = () => listener();
+      ipcRenderer.on('cursor-packs:changed', callback);
+      return () => ipcRenderer.removeListener('cursor-packs:changed', callback);
+    },
+    openCursorPackDiscovery: () => ipcRenderer.invoke('cursor-packs:open-discovery'),
     createProject: (options = {}) => ipcRenderer.invoke('projects:create', options),
     renameProject: (projectId, name) => ipcRenderer.invoke('projects:rename', { projectId, name }),
     saveProjectThumbnail: (projectId, dataUrl) => ipcRenderer.invoke('projects:save-thumbnail', { projectId, dataUrl }),

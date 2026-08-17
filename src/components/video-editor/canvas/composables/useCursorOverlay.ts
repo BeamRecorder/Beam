@@ -1,12 +1,14 @@
 import { ref, watch } from 'vue';
 import type { ProjectEditorData } from '~/api/types/capture-session';
 import { buttonEventsBetween, cursorStateAt } from '../../composables/cursorPlayback';
-import { type CursorType, useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
+import { useCursorReplacer } from '../../properties/cursor/useCursorReplacer';
 import { ZOOM_DEPTH_SCALES } from '../../zoom/zoom-types';
 import { cursorClickSpringScale } from '../../composables/cursor-click-spring';
 import { cursorShadowOffset } from '../../properties/cursor/cursor-shadow';
 import type { ShadowDirection } from '../../properties/cursor/shadow-types';
-import { cursorHotspotAtSize, cursorPositionAt, cursorTypeAt } from '../../properties/cursor/cursor-rendering';
+import { cursorAssetAt, cursorGeometryAtSize, cursorPositionAt } from '../../properties/cursor/cursor-rendering';
+import type { CursorPackDescriptor, CursorSelection } from '../../../../api/types/cursor-pack';
+import { MACOS_CURSOR_PACK } from '../../properties/cursor/cursor-packs';
 import type { VisualClip } from '~/media/shared/composition-types';
 import { createCursorMotionPlayer, motionBlurTrail } from '../../composables/cursor-motion';
 import {
@@ -19,7 +21,8 @@ import type { OutputCanvasSettings } from '../output-canvas';
 import { cursorRippleAt } from '../../composables/cursor-ripple';
 
 export interface UseCursorOverlayOptions {
-  selectedCursor: () => CursorType;
+  cursorSelection: () => CursorSelection;
+  cursorPack: () => CursorPackDescriptor | null;
   cursorSize: () => number;
   cursorColor: () => string;
   enableShadow: () => boolean;
@@ -59,7 +62,9 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
   watch(
     () =>
       [
-        options.selectedCursor(),
+        options.cursorSelection().packId,
+        options.cursorSelection().mode,
+        options.cursorSelection().cursorId,
         options.currentTime(),
         options.cursorSize(),
         options.cursorColor(),
@@ -68,9 +73,17 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
     async () => {
       try {
         const state = cursorStateAt(options.editorData()?.cursor.events ?? [], options.currentTime());
+        const pack = options.cursorPack() ?? MACOS_CURSOR_PACK;
+        const selection = options.cursorPack()
+          ? options.cursorSelection()
+          : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
+        const asset = cursorAssetAt(pack, selection, state);
+        const geometry = cursorGeometryAtSize(asset, options.cursorSize() * maxZoomScale * options.deviceScale());
         customCursorImage.value = await getCursorImage(
-          cursorTypeAt(options.selectedCursor(), state),
-          options.cursorSize() * maxZoomScale * options.deviceScale(),
+          pack,
+          asset,
+          geometry.width,
+          geometry.height,
           options.cursorColor(),
         );
         options.onRenderOnce?.();
@@ -152,6 +165,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         warning(ctx, 'Cursor data missing', logicalWidth);
       return;
     }
+    if (!options.cursorPack()) warning(ctx, 'Cursor pack unavailable — import it again', logicalWidth);
     if (!(videoWidth > 0) || !(videoHeight > 0)) return;
     const time = options.currentTime();
     const player = playerFor(cursorData.events, videoWidth, videoHeight);
@@ -187,7 +201,11 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
       if (!state?.visible || !image?.complete || image.naturalWidth <= 0) return;
       if (!motionState) return;
       const size = options.cursorSize() * previewScale;
-      const hotspot = cursorHotspotAtSize(cursorTypeAt(options.selectedCursor(), motionState), size);
+      const pack = options.cursorPack() ?? MACOS_CURSOR_PACK;
+      const selection = options.cursorPack()
+        ? options.cursorSelection()
+        : { packId: MACOS_CURSOR_PACK.id, mode: 'automatic' as const, cursorId: null };
+      const geometry = cursorGeometryAtSize(cursorAssetAt(pack, selection, motionState), size);
       const click = buttonEventsBetween(cursorData.events, Math.max(0, time - 0.28), time)
         .reverse()
         .find((event) => settingsForButton(event.button)?.springEnabled);
@@ -216,7 +234,7 @@ export function useCursorOverlay(options: UseCursorOverlayOptions) {
         }
         ctx.translate(samplePosition.x, samplePosition.y);
         ctx.scale(scale, scale);
-        ctx.drawImage(image, -hotspot.x, -hotspot.y, size, size);
+        ctx.drawImage(image, -geometry.hotspot.x, -geometry.hotspot.y, geometry.width, geometry.height);
         ctx.restore();
       }
     });

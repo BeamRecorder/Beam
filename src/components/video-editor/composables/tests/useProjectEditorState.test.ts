@@ -7,6 +7,7 @@ import {
   createDefaultCursorMotionSettings,
 } from '../../../../api/types/cursor-settings';
 import type { CaptureProject, ProjectEditorState } from '../../../../api/types/capture-api';
+import type { CursorSelection } from '../../../../api/types/cursor-pack';
 import type { BackgroundMedia, BackgroundValue } from '../backgroundCatalog';
 import type { ZoomElement } from '../../zoom/zoom-types';
 import { createDefaultCursorPresentation } from '../../../../api/types/cursor-presentation';
@@ -44,7 +45,7 @@ const createState = () => {
     canvas: ref({ ...DEFAULT_OUTPUT_CANVAS }),
     cursorEffects: ref(createDefaultCursorClickEffects()),
     cursorMotion: ref(createDefaultCursorMotionSettings()),
-    selectedCursor: ref(cursor.selectedCursor),
+    cursorSelection: ref<CursorSelection>({ ...cursor.selection }),
     cursorSize: ref(cursor.size),
     cursorColor: ref(cursor.color),
     cursorShadowEnabled: ref(cursor.shadow.enabled),
@@ -122,6 +123,7 @@ describe('useProjectEditorState property persistence', () => {
         importedBackgrounds: [globalBackground],
         cursor: {
           ...createDefaultCursorPresentation(),
+          selection: { packId: 'pack-imported', mode: 'fixed', cursorId: 'left_ptr' },
           motion: { preset: 'custom', smoothing: 0.5, springMassMultiplier: 1.1, motionBlur: 0.2 },
         },
       },
@@ -137,6 +139,11 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.selectedBackground.value).toEqual(globalBackground);
     expect(state.backgroundBlurPercent.value).toBe(100);
     expect(state.canvas.value.width).toBe(1280);
+    expect(state.cursorSelection.value).toEqual({
+      packId: 'pack-imported',
+      mode: 'fixed',
+      cursorId: 'left_ptr',
+    });
     expect(state.cursorMotion.value).toEqual({
       preset: 'custom',
       smoothing: 0.5,
@@ -155,11 +162,17 @@ describe('useProjectEditorState property persistence', () => {
       color: '#ABCDEF',
     };
     state.selectedBackground.value = custom;
+    state.cursorSelection.value = { packId: 'pack-imported', mode: 'fixed', cursorId: 'arrow' };
     mocks.saveProjectEditorState.mockRejectedValueOnce(new Error('disk full')).mockResolvedValue(undefined);
     const editor = useProjectEditorState(state);
 
     await expect(editor.saveNow()).rejects.toThrow('disk full');
     expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.background).toEqual(custom);
+    expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.cursor.selection).toEqual({
+      packId: 'pack-imported',
+      mode: 'fixed',
+      cursorId: 'arrow',
+    });
     expect(mocks.saveProjectEditorState.mock.calls[0][1].schemaVersion).toBe(3);
     await editor.saveNow();
     expect(mocks.saveProjectEditorState).toHaveBeenCalledTimes(2);
