@@ -82,7 +82,7 @@ vi.mock('../composables/useCursorOverlay', () => ({
 vi.mock('../composables/useCameraZoom', async () => {
   const { ref } = await import('vue');
   return {
-    useCameraZoom: (options: { renderVisualStack: (...args: unknown[]) => void }) => {
+    useCameraZoom: (options: { renderVisualStack: (...args: unknown[]) => void; onRenderOnce?: () => void }) => {
       state.renderVisualStack = options.renderVisualStack;
       return {
         focusTargetStyle: ref({ left: '10px', top: '20px', width: '30px', height: '40px' }),
@@ -90,7 +90,14 @@ vi.mock('../composables/useCameraZoom', async () => {
         overlayWindowBounds: ref(null),
         drawVideoWindow: state.drawVideoWindow,
         drawInCameraSpace: state.drawInCameraSpace,
-        resetCamera: state.resetCamera,
+        resetCamera: () => {
+          state.resetCamera();
+          options.onRenderOnce?.();
+        },
+        resetCameraUnlessDragging: () => {
+          state.resetCamera();
+          options.onRenderOnce?.();
+        },
         beginSelectionMove: state.beginSelectionMove,
         moveSelection: state.moveSelection,
         endSelectionMove: state.endSelectionMove,
@@ -236,6 +243,7 @@ const props = () => ({
   frameVersion: 0,
   playbackState: 'paused' as const,
   playbackError: null,
+  previewQuality: 'full' as const,
   editorData: null,
   zoomElements: [],
   selectedZoom: null,
@@ -579,6 +587,30 @@ describe('EditorCanvas', () => {
     await nextTick();
     expect(state.syncPlayback).toHaveBeenLastCalledWith(false);
     expect(state.resetCamera).toHaveBeenCalled();
+  });
+
+  it('redraws the paused canvas when the selected manual zoom changes', async () => {
+    const mounted = mountEditor({ playbackState: 'paused', isPlaying: false });
+    await flushPromises();
+    while (frames.length) runFrame();
+    state.drawVideoWindow.mockClear();
+
+    await mounted.setProps({
+      selectedZoom: {
+        id: 'manual-zoom',
+        sessionId: 'session',
+        startMs: 0,
+        endMs: 2_000,
+        focus: { cx: 0.75, cy: 0.25 },
+        depth: 2,
+        mode: 'manual',
+      },
+    });
+    await nextTick();
+
+    expect(frames.length).toBeGreaterThan(0);
+    runFrame();
+    expect(state.drawVideoWindow).toHaveBeenCalled();
   });
 
   it('shows floating recenter button when zoomed and resets zoom on click', async () => {

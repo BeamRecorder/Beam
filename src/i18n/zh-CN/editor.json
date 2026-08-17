@@ -108,7 +108,6 @@
     "resetZoom": "重置缩放",
     "previewQuality": "预览质量",
     "previewQualityFull": "完整分辨率",
-    "previewQualityFullShort": "完整",
     "previewQualityHalf": "二分之一分辨率",
     "previewQualityQuarter": "四分之一分辨率",
     "previewQualityExportHint": "仅影响预览，导出仍保持完整质量。",

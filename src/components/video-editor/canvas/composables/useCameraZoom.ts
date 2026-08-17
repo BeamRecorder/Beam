@@ -69,6 +69,7 @@ export interface UseCameraZoomOptions {
   onDeselectZoom: () => void;
   selectVisualAt: (event: PointerEvent) => boolean;
   selectedTransformClipExists: () => boolean;
+  onRenderOnce?: () => void;
 }
 
 export function useCameraZoom(options: UseCameraZoomOptions) {
@@ -90,6 +91,10 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
 
   const resetCamera = () => {
     cameraEvaluator?.invalidate();
+    options.onRenderOnce?.();
+  };
+  const resetCameraUnlessDragging = () => {
+    if (!isMovingSelection.value) resetCamera();
   };
 
   const focusTargetStyle = computed(() => {
@@ -111,7 +116,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     return {
       width: `${targetWidth * scale}px`,
       height: `${targetHeight * scale}px`,
-      transform: `translate3d(${centerX + (left - focusX) * scale}px, ${centerY + (top - focusY) * scale}px, 0)`,
+      transform: `translate3d(${centerX + (left - focusX) * scale - bounds.dx}px, ${centerY + (top - focusY) * scale - bounds.dy}px, 0)`,
       willChange: isMovingSelection.value ? 'transform' : 'auto',
     };
   });
@@ -277,8 +282,13 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     ctx.clip();
     const currentTime = options.currentTime();
     const telemetry = options.editorData()?.cursor.telemetry ?? [];
+    const selectedZoom = options.selectedZoom();
+    const previewZooms =
+      !options.isPlaying() && selectedZoom?.mode === 'manual'
+        ? options.zoomElements().filter((zoom) => zoom.id !== selectedZoom.id)
+        : options.zoomElements();
     const key = JSON.stringify({
-      zooms: options.zoomElements(),
+      zooms: previewZooms,
       telemetry,
       canvas: output,
       source: screen ? [videoWidth, videoHeight] : null,
@@ -287,7 +297,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     if (!cameraEvaluator || key !== cameraEvaluatorKey) {
       cameraEvaluatorKey = key;
       cameraEvaluator = createCompositionCameraEvaluator({
-        zooms: options.zoomElements(),
+        zooms: previewZooms,
         telemetry,
         mapFocus: (focus, zoom, timeMs) => {
           const activeScreen = activeClipsAt(options.composition(), timeMs).find(
@@ -480,6 +490,7 @@ export function useCameraZoom(options: UseCameraZoomOptions) {
     overlayWindowBounds,
     focusTargetStyle,
     resetCamera,
+    resetCameraUnlessDragging,
     beginSelectionMove,
     moveSelection,
     endSelectionMove,

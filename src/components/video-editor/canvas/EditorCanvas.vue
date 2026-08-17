@@ -143,15 +143,15 @@ cameraZoom = useCameraZoom({
   onDeselectZoom: () => emit('deselect:zoom'),
   selectVisualAt: (event) => transformAndCrop.selectVisualAt(event, canvasRef.value),
   selectedTransformClipExists: () => Boolean(props.selectedTransformClip),
+  onRenderOnce: renderOnce,
 });
 watch(
   () => props.isPlaying,
   (playing) => {
     syncPlayback(playing);
-    if (!playing) cameraZoom.resetCamera();
+    cameraZoom.resetCamera();
   },
 );
-const isMasterPlaying = () => props.isPlaying;
 let currentRenderWindow: RenderedVideoWindow | null = null;
 const compositionMedia = useCompositionMedia({
   composition: () => props.composition,
@@ -227,6 +227,7 @@ watch(() => props.outputCanvas, renderOnce, { deep: true });
 watch(() => [props.composition, props.currentTime, props.frameVersion, props.isCropping] as const, renderOnce, {
   deep: true,
 });
+watch(() => [props.zoomElements, props.selectedZoom] as const, cameraZoom.resetCameraUnlessDragging, { deep: true });
 watch(
   () =>
     [
@@ -244,7 +245,6 @@ watch(
   { deep: true },
 );
 watch(transformAndCrop.transformDraft, renderOnce, { deep: true });
-watch(isMasterPlaying, renderOnce);
 const resizeCanvas = () => {
   const canvas = canvasRef.value;
   const container = containerRef.value;
@@ -401,7 +401,14 @@ defineExpose({ viewportZoom });
       </div>
     </Transition>
     <div class="canvas-viewport" :style="viewportZoom.viewportStyle.value">
-      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }" />
+      <div class="preview-frame" :style="{ '--preview-aspect-ratio': outputAspectRatio }">
+        <div
+          class="zoom-selection-box"
+          :class="{ locked: selectedZoom?.mode !== 'manual' }"
+          :style="cameraZoom.focusTargetStyle.value"
+          aria-hidden="true"
+        />
+      </div>
       <canvas
         ref="canvasRef"
         class="editor-canvas"
@@ -452,12 +459,6 @@ defineExpose({ viewportZoom });
           />
         </div>
       </div>
-      <div
-        class="zoom-selection-box"
-        :class="{ locked: selectedZoom?.mode !== 'manual' }"
-        :style="cameraZoom.focusTargetStyle.value"
-        aria-hidden="true"
-      />
       <div
         v-if="isCropping && selectedTransformClip"
         class="crop-container"

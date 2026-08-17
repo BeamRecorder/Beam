@@ -108,7 +108,6 @@
     "resetZoom": "Restablecer zoom",
     "previewQuality": "Calidad de vista previa",
     "previewQualityFull": "Resolución completa",
-    "previewQualityFullShort": "Completa",
     "previewQualityHalf": "Media resolución",
     "previewQualityQuarter": "Cuarto de resolución",
     "previewQualityExportHint": "Solo afecta a la vista previa. La exportación mantiene la calidad completa.",

@@ -353,8 +353,26 @@ describe('useCameraZoom', () => {
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
   });
 
+  it('keeps the selected manual zoom inactive while paused so its full target is visible', () => {
+    mountComposable();
+    options.zooms.value = [manualZoom];
+    options.selected.value = manualZoom;
+    options.currentTime.value = 1.5;
+
+    const pausedWindow = state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(pausedWindow).not.toBeNull();
+    expect(pausedWindow?.scale).toBeCloseTo(1, 6);
+
+    options.playing.value = true;
+    const playingWindow = state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(playingWindow?.scale).toBeGreaterThan(1);
+  });
+
   it('clamps a manual focus near the output edge when the preview has an inset background frame', () => {
     mountComposable();
+    options.playing.value = true;
     options.output.value = { preset: '16:9', width: 450, height: 800, showBackground: true };
     options.zooms.value = [
       {
