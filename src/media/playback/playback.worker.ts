@@ -32,7 +32,7 @@ let processingSeek = false;
 let pendingTick: Extract<PlaybackWorkerRequest, { type: 'tick' }> | null = null;
 let processingTick = false;
 let loadVersion = 0;
-let previewQuality: PreviewQuality = 'auto';
+let previewQuality: PreviewQuality = 'full';
 const loadTasks = new Set<Promise<void>>();
 const processingIdleWaiters = new Set<() => void>();
 

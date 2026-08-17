@@ -44,7 +44,7 @@ const mediaMetrics = (overrides: Partial<MediaProcessingMetrics> = {}): MediaPro
   ...overrides,
 });
 
-const createInputs = (quality: PreviewQuality = 'auto'): MonitorInputs => ({
+const createInputs = (quality: PreviewQuality = 'full'): MonitorInputs => ({
   isPlaying: ref(true),
   playbackState: ref('playing'),
   previewQuality: ref(quality),
@@ -136,7 +136,7 @@ describe('usePreviewPerformanceMonitor', () => {
   });
 
   it('escalates from warning to critical and recommends half then quarter quality', () => {
-    const inputs = createInputs('auto');
+    const inputs = createInputs('full');
     const scope = effectScope();
     const monitor = scope.run(() => usePreviewPerformanceMonitor({ ...inputs, now: () => clock }))!;
     activateAfterCooldown();
@@ -163,7 +163,7 @@ describe('usePreviewPerformanceMonitor', () => {
   });
 
   it('resets health, baselines, and recommendation when preview quality changes', async () => {
-    const inputs = createInputs('auto');
+    const inputs = createInputs('full');
     const scope = effectScope();
     const monitor = scope.run(() => usePreviewPerformanceMonitor({ ...inputs, now: () => clock }))!;
     activateAfterCooldown();

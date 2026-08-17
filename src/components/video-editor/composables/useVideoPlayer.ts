@@ -24,7 +24,7 @@ export function useVideoPlayer(availableBackgrounds: readonly BackgroundMedia[] 
   const playbackState = ref<PlaybackState>('idle');
   const playbackError = ref<MediaError | null>(null);
   const frameVersion = ref(0);
-  const previewQuality = ref<PreviewQuality>('auto');
+  const previewQuality = ref<PreviewQuality>('full');
   const playbackMetrics = ref<PlaybackMetrics | null>(null);
   const audioMetrics = ref<AudioPlaybackMetrics | null>(null);
   let engine: MediaPlaybackEngine | null = null;

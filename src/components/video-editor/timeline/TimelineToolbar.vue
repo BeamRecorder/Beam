@@ -41,7 +41,7 @@ const props = withDefaults(
     previewQuality?: PreviewQuality;
     performanceSnapshot?: PreviewPerformanceSnapshot | null;
   }>(),
-  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false, previewQuality: 'auto' },
+  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false, previewQuality: 'full' },
 );
 
 const emit = defineEmits<{

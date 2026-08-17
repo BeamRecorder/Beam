@@ -55,7 +55,8 @@ const health = (overrides: Partial<PreviewPerformanceHealthState> = {}): Preview
 
 describe('preview performance score functions', () => {
   it('scores long UI frames and keeps ordinary frame intervals healthy', () => {
-    expect(uiPerformanceScore([16, 17, 18, 19])).toBe(0);
+    expect(uiPerformanceScore([16, 16.2, 16.5, 16.6])).toBe(0);
+    expect(uiPerformanceScore([16, 17, 18, 19])).toBeLessThan(0.15);
     expect(uiPerformanceScore([40, 42, 45, 50])).toBeGreaterThan(0.5);
     expect(uiPerformanceScore([])).toBe(0);
     expect(uiPerformanceScore([16])).toBe(0);
@@ -145,7 +146,6 @@ describe('media processing pressure score', () => {
 
 describe('preview quality recommendations', () => {
   it.each([
-    ['warning', 'auto', 'half'],
     ['critical', 'full', 'half'],
     ['warning', 'half', 'quarter'],
     ['critical', 'half', 'quarter'],
@@ -154,7 +154,7 @@ describe('preview quality recommendations', () => {
   });
 
   it('does not recommend a change when healthy or already at quarter quality', () => {
-    expect(recommendedPreviewQuality('good', 'auto')).toBeNull();
+    expect(recommendedPreviewQuality('good', 'full')).toBeNull();
     expect(recommendedPreviewQuality('idle', 'full')).toBeNull();
     expect(recommendedPreviewQuality('critical', 'quarter')).toBeNull();
   });

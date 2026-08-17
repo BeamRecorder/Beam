@@ -34,10 +34,10 @@ const playback = vi.hoisted(() => {
     readonly listeners = new Map<string, (value: unknown) => void>();
     frame: MediaFrameLike | null = null;
 
-    previewQuality = 'auto';
+    previewQuality = 'full';
 
     constructor(options: { previewQuality?: string } = {}) {
-      this.previewQuality = options.previewQuality ?? 'auto';
+      this.previewQuality = options.previewQuality ?? 'full';
       instances.push(this as (typeof instances)[number]);
     }
 
@@ -136,14 +136,14 @@ const context = () =>
 let wrapper: VueWrapper | undefined;
 let selected!: Ref<BackgroundValue | null>;
 let blur!: Ref<number | undefined>;
-let previewQuality!: Ref<'auto' | 'full' | 'half' | 'quarter'>;
+let previewQuality!: Ref<'full' | 'half' | 'quarter'>;
 let renderCanvas!: ReturnType<typeof vi.fn>;
 let state!: ReturnType<typeof useCanvasBackground>;
 
 const mountComposable = () => {
   selected = ref<BackgroundValue | null>(null);
   blur = ref<number | undefined>(0);
-  previewQuality = ref<'auto' | 'full' | 'half' | 'quarter'>('auto');
+  previewQuality = ref<'full' | 'half' | 'quarter'>('full');
   renderCanvas = vi.fn();
   const Harness = defineComponent({
     setup() {
@@ -250,7 +250,7 @@ describe('useCanvasBackground', () => {
     await flushPromises();
     const engine = playback.instances[0]!;
     expect(engine.loadComposition).toHaveBeenCalledOnce();
-    expect(engine.previewQuality).toBe('auto');
+    expect(engine.previewQuality).toBe('full');
     expect(vi.mocked(document.createElement).mock.calls.some(([tag]) => tag === 'video')).toBe(false);
 
     const bitmap = {} as CanvasImageSource;

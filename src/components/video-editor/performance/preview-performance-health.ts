@@ -43,7 +43,7 @@ export function nextPreviewPerformanceHealth(
 
 export function recommendedPreviewQuality(status: PreviewPerformanceHealthState['status'], quality: PreviewQuality) {
   if (status !== 'warning' && status !== 'critical') return null;
-  if (quality === 'auto' || quality === 'full') return 'half' as const;
+  if (quality === 'full') return 'half' as const;
   if (quality === 'half') return 'quarter' as const;
   return null;
 }

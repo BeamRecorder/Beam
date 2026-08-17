@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch, type Component } from 'vue';
-import { Gauge, Info, Settings2 } from '@lucide/vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { Gauge, Info } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -15,12 +15,10 @@ const { t } = useTranslate('TimelineToolbar');
 type PreviewQualityOption = {
   id: PreviewQuality;
   label: string;
-  indicator?: string;
-  icon?: Component;
+  indicator: string;
 };
 
 const options = computed<PreviewQualityOption[]>(() => [
-  { id: 'auto', label: t('previewQualityAuto'), icon: Settings2 },
   { id: 'full', label: t('previewQualityFull'), indicator: '1x' },
   { id: 'half', label: t('previewQualityHalf'), indicator: '1/2' },
   { id: 'quarter', label: t('previewQualityQuarter'), indicator: '1/4' },
@@ -86,7 +84,7 @@ onBeforeUnmount(() => {
           icon-only
           class="preview-quality-trigger"
           :class="warningLevel ? `is-${warningLevel}` : undefined"
-          :tooltip="`${t('previewQuality')}: ${activeOption.indicator ?? activeOption.label}`"
+          :tooltip="`${t('previewQuality')}: ${activeOption.indicator}`"
           :tooltip-disabled="isOpen"
           :aria-label="`${t('previewQuality')}: ${activeOption.label}`"
         >
@@ -97,10 +95,7 @@ onBeforeUnmount(() => {
               aria-hidden="true"
             >
               <Gauge />
-              <span v-if="activeOption.icon" class="preview-quality-auto-indicator">
-                <component :is="activeOption.icon" />
-              </span>
-              <span v-else class="preview-quality-indicator">{{ activeOption.indicator }}</span>
+              <span class="preview-quality-indicator">{{ activeOption.indicator }}</span>
             </span>
           </template>
         </Button>
@@ -127,9 +122,7 @@ onBeforeUnmount(() => {
               size="xs"
               class="preview-quality-option"
               :class="{ active: modelValue === option.id }"
-              :icon="option.icon"
-              :icon-only="Boolean(option.icon)"
-              :tooltip="option.indicator ?? option.label"
+              :tooltip="option.indicator"
               tooltip-position="top"
               role="radio"
               :aria-label="option.label"
@@ -197,42 +190,11 @@ onBeforeUnmount(() => {
     border-color 0.3s ease,
     background-color 0.3s ease;
 }
-.preview-quality-auto-indicator {
-  position: absolute;
-  right: -8px;
-  bottom: -5px;
-  width: 14px;
-  height: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: var(--color-bg-element);
-  color: var(--text-secondary);
-  transition:
-    color 0.3s ease,
-    border-color 0.3s ease,
-    background-color 0.3s ease;
-}
-.preview-quality-auto-indicator > svg {
-  width: 10px;
-  height: 10px;
-  stroke-width: 2.2;
-}
 .preview-quality-icon.is-warning .preview-quality-indicator {
   color: var(--color-warning);
   border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
 }
-.preview-quality-icon.is-warning .preview-quality-auto-indicator {
-  color: var(--color-warning);
-  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
-}
 .preview-quality-icon.is-critical .preview-quality-indicator {
-  color: var(--color-error);
-  border-color: color-mix(in srgb, var(--color-error) 48%, transparent);
-}
-.preview-quality-icon.is-critical .preview-quality-auto-indicator {
   color: var(--color-error);
   border-color: color-mix(in srgb, var(--color-error) 48%, transparent);
 }
@@ -289,7 +251,7 @@ onBeforeUnmount(() => {
 }
 .preview-quality-options {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 3px;
 }
 .preview-quality-option {

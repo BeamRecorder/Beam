@@ -62,8 +62,8 @@ export class MediaPlaybackEngine {
   constructor(
     options: { workerFactory?: () => WorkerLike; audio?: AudioPlaybackScheduler; previewQuality?: PreviewQuality } = {},
   ) {
-    if (!isPreviewQuality(options.previewQuality ?? 'auto')) throw new RangeError('Invalid playback preview quality.');
-    this.previewQuality = options.previewQuality ?? 'auto';
+    if (!isPreviewQuality(options.previewQuality ?? 'full')) throw new RangeError('Invalid playback preview quality.');
+    this.previewQuality = options.previewQuality ?? 'full';
     this.worker = options.workerFactory?.() ?? new PlaybackWorker();
     this.audio = options.audio ?? new AudioPlaybackScheduler((error) => this.fail(error));
     this.worker.onmessage = (event: MessageEvent<unknown>) => this.receive(event.data);

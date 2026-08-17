@@ -78,7 +78,7 @@ describe('MediaPlaybackEngine', () => {
       type: 'load',
       generation: 2,
       clips: [{ clipId: 'clip-1', assetId: 'asset-1' }],
-      previewQuality: 'auto',
+      previewQuality: 'full',
     });
 
     await engine.play(0.5);

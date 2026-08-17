@@ -39,18 +39,19 @@ const percentile = (values: readonly number[], ratio: number) => {
 export function uiPerformanceScore(frameIntervals: readonly number[]) {
   if (frameIntervals.length < 2) return 0;
   const p95 = percentile(frameIntervals, 0.95);
-  const longFrameRatio = frameIntervals.filter((duration) => duration >= 50).length / frameIntervals.length;
-  return clampPerformanceScore(Math.max((p95 - 22) / 40, longFrameRatio / 0.2));
+  const fps = Math.max(0, Math.min(60, 1000 / Math.max(16.666, p95)));
+  return clampPerformanceScore((60 - fps) / 60);
 }
 
 export function workerPerformanceScore(current: PlaybackMetrics | null, previous: PlaybackMetrics | null) {
   if (!current || !previous) return 0;
   const dropped = Math.max(0, current.droppedFrames - previous.droppedFrames);
   const presented = Math.max(0, current.presentedFrames - previous.presentedFrames);
-  const dropRatio = dropped / Math.max(1, dropped + presented);
-  const dropScore = (dropRatio - 0.05) / 0.2;
-  const queueScore = (current.queueSize - 2) / 4;
-  return clampPerformanceScore(Math.max(dropScore, queueScore));
+  const total = dropped + presented;
+  if (total === 0) return 0;
+  const dropRatio = dropped / total;
+  const queueScore = Math.max(0, (current.queueSize - 1) / 5);
+  return clampPerformanceScore(Math.max(dropRatio, queueScore));
 }
 
 export function audioPerformanceScore(current: AudioPlaybackMetrics | null, previous: AudioPlaybackMetrics | null) {

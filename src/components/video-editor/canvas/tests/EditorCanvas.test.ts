@@ -313,6 +313,13 @@ const mountEditor = (overrides: Record<string, unknown> = {}) => {
 };
 
 describe('EditorCanvas', () => {
+  it('defaults to full preview quality', async () => {
+    const mounted = mountEditor();
+    await nextTick();
+
+    expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('full');
+  });
+
   it('uses a quality-scaled backing canvas while keeping the CSS preview and logical coordinates unchanged', async () => {
     Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
     const mounted = mountEditor({ previewQuality: 'quarter' });

@@ -106,7 +106,6 @@ const accessibleLabel = computed(
             :width="96"
             :height="28"
             :sample-timestamp="latestSampleTimestamp"
-            interactive
             :label="`${uiDetail.label}: ${statusLabel(uiDetail.score)}`"
           />
         </div>
@@ -120,7 +119,6 @@ const accessibleLabel = computed(
               :width="96"
               :height="28"
               :sample-timestamp="latestSampleTimestamp"
-              interactive
               :label="`${playbackDetail.label}: ${statusLabel(playbackDetail.score)}`"
             />
           </div>
@@ -135,7 +133,6 @@ const accessibleLabel = computed(
               :width="96"
               :height="28"
               :sample-timestamp="latestSampleTimestamp"
-              interactive
               :label="`${mediaDetail.label}: ${statusLabel(mediaDetail.score)}`"
             />
           </div>

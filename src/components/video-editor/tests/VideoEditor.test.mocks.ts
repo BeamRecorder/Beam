@@ -100,7 +100,7 @@ vi.mock('../composables/useVideoEditor', async () => {
         playbackState: ref('idle'),
         playbackError: ref(null),
         frameVersion: ref(0),
-        previewQuality: ref('auto'),
+        previewQuality: ref('full'),
         playbackMetrics: ref(null),
         audioMetrics: ref(null),
         selectedBackground: ref(null),

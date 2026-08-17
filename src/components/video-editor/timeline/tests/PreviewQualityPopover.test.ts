@@ -62,7 +62,7 @@ describe('PreviewQualityPopover', () => {
 
   const mountPopover = (performanceSnapshot: PreviewPerformanceSnapshot) =>
     mount(PreviewQualityPopover, {
-      props: { modelValue: 'auto', performanceSnapshot },
+      props: { modelValue: 'full', performanceSnapshot },
       global: {
         stubs: {
           Popover: PopoverStub,
@@ -115,15 +115,17 @@ describe('PreviewQualityPopover', () => {
     expect(wrapper.find('.preview-quality-suggestion').exists()).toBe(false);
   });
 
-  it('uses a translated icon and tooltip for Auto instead of showing the A indicator', () => {
+  it('uses full resolution as the default and exposes only the three proxy options', () => {
     const wrapper = mountPopover(snapshot('good', null));
     const options = wrapper.findAll('.preview-quality-option');
-    const auto = options[0];
 
-    expect(auto.text()).toBe('');
-    expect(auto.find('svg').exists()).toBe(true);
-    expect(auto.attributes('aria-label')).toBe('Auto');
-    expect(auto.attributes('data-tooltip')).toBe('Auto');
-    expect(options.slice(1).map((option) => option.text())).toEqual(['1x', '1/2', '1/4']);
+    expect(options).toHaveLength(3);
+    expect(options.map((option) => option.text())).toEqual(['1x', '1/2', '1/4']);
+    expect(options.map((option) => option.attributes('aria-label'))).toEqual([
+      'Full resolution',
+      'Half resolution',
+      'Quarter resolution',
+    ]);
+    expect(options[0]?.classes()).toContain('active');
   });
 });

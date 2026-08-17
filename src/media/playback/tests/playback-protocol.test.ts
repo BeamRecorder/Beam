@@ -55,7 +55,7 @@ afterAll(() => vi.unstubAllGlobals());
 describe('isPlaybackWorkerRequest', () => {
   it('accepts the lifecycle request variants', () => {
     expect(
-      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [], previewQuality: 'auto' }),
+      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [], previewQuality: 'full' }),
     ).toBe(true);
     expect(isPlaybackWorkerRequest({ type: 'pause', generation: 3 })).toBe(true);
     expect(isPlaybackWorkerRequest({ type: 'dispose' })).toBe(true);
@@ -100,7 +100,7 @@ describe('isPlaybackWorkerRequest', () => {
         generation: 0,
         assets: [source()],
         clips: [clip(overrides)],
-        previewQuality: 'auto',
+        previewQuality: 'full',
       });
 
     expect(boundaryClip({ playbackRate: 0.25, timelineStartSeconds: 0, sourceInSeconds: 0 })).toBe(true);
@@ -136,7 +136,7 @@ describe('isPlaybackWorkerRequest', () => {
         generation: 0,
         assets: [source()],
         clips: [clip(overrides)],
-        previewQuality: 'auto',
+        previewQuality: 'full',
       });
     const invalidSource = (overrides: Record<string, unknown>) =>
       isPlaybackWorkerRequest({
@@ -144,7 +144,7 @@ describe('isPlaybackWorkerRequest', () => {
         generation: 0,
         assets: [source(overrides)],
         clips: [clip()],
-        previewQuality: 'auto',
+        previewQuality: 'full',
       });
 
     expect(invalidClip({ playbackRate: 0.249 })).toBe(false);
@@ -161,14 +161,14 @@ describe('isPlaybackWorkerRequest', () => {
     expect(invalidSource({ label: undefined })).toBe(false);
     expect(invalidSource({ label: '' })).toBe(false);
     expect(
-      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [], previewQuality: 'auto' }),
+      isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [], previewQuality: 'full' }),
     ).toBe(false);
     expect(
       isPlaybackWorkerRequest({ type: 'seek', generation: 0, requestId: 0, timelineSeconds: 0, mode: 'jump' }),
     ).toBe(false);
   });
   it('accepts configure-preview for every supported quality', () => {
-    for (const previewQuality of ['auto', 'full', 'half', 'quarter']) {
+    for (const previewQuality of ['full', 'half', 'quarter']) {
       expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality })).toBe(true);
     }
   });
@@ -176,6 +176,7 @@ describe('isPlaybackWorkerRequest', () => {
   it('rejects missing and invalid preview qualities', () => {
     expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2 })).toBe(false);
     expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality: '720p' })).toBe(false);
+    expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality: 'auto' })).toBe(false);
     expect(isPlaybackWorkerRequest({ type: 'configure-preview', generation: 2, previewQuality: null })).toBe(false);
     expect(
       isPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [], clips: [], previewQuality: '720p' }),
@@ -417,7 +418,7 @@ describe('assertPlaybackWorkerRequest', () => {
 
   it('throws consistently for malformed load and seek payloads', () => {
     expect(() =>
-      assertPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [], previewQuality: 'auto' }),
+      assertPlaybackWorkerRequest({ type: 'load', generation: 0, assets: [{}], clips: [], previewQuality: 'full' }),
     ).toThrowError(TypeError);
     expect(() =>
       assertPlaybackWorkerRequest({
@@ -425,7 +426,7 @@ describe('assertPlaybackWorkerRequest', () => {
         generation: 0,
         assets: [],
         clips: [{ ...clip(), playbackRate: 5 }],
-        previewQuality: 'auto',
+        previewQuality: 'full',
       }),
     ).toThrowError(TypeError);
     expect(() =>

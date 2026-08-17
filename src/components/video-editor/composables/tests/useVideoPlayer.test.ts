@@ -8,6 +8,7 @@ import { createDefaultClipAppearance } from '~/media/shared/composition-defaults
 const playback = vi.hoisted(() => {
   const instances: FakePlayback[] = [];
   class FakePlayback {
+    readonly previewQuality: string;
     readonly listeners = new Map<string, (value: never) => void>();
     readonly loadComposition = vi.fn(async (_composition: ClipComposition, _timelineSeconds?: number) => {
       this.emit('state', 'paused');
@@ -30,7 +31,8 @@ const playback = vi.hoisted(() => {
     readonly dispose = vi.fn();
     readonly frameFor = vi.fn(() => null);
 
-    constructor() {
+    constructor(options: { previewQuality?: string } = {}) {
+      this.previewQuality = options.previewQuality ?? 'full';
       instances.push(this);
     }
     on(event: string, listener: (value: never) => void) {
@@ -100,6 +102,7 @@ describe('useVideoPlayer', () => {
     const player = useVideoPlayer([]);
     await player.loadComposition(composition);
     const engine = playback.instances.at(-1)!;
+    expect(engine.previewQuality).toBe('full');
     expect(player.duration.value).toBe(2.5);
     await player.setPlaying(true);
     expect(engine.play).toHaveBeenCalledWith(0);

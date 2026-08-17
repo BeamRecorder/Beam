@@ -46,7 +46,7 @@ describe('TimelineToolbar', () => {
         duration: 100,
         isPlaying: true,
         zoomLevel: 100,
-        previewQuality: 'auto',
+        previewQuality: 'full',
         performanceSnapshot: {
           status: 'warning',
           scores: { ui: 0.7, worker: 0.2, audio: 0.2, media: 0.2 },
@@ -60,7 +60,7 @@ describe('TimelineToolbar', () => {
     });
 
     expect(wrapper.get('.preview-quality-popover-stub').attributes('data-status')).toBe('warning');
-    expect(wrapper.get('.preview-quality-popover-stub').attributes('data-quality')).toBe('auto');
+    expect(wrapper.get('.preview-quality-popover-stub').attributes('data-quality')).toBe('full');
   });
 
   it('formats time cleanly, controls playback, adds elements and adjusts zoom', async () => {
@@ -156,7 +156,6 @@ describe('TimelineToolbar', () => {
   });
 
   it.each([
-    ['auto', null, 'Auto', 'Auto'],
     ['full', '1x', 'Full resolution', '1x'],
     ['half', '1/2', 'Half resolution', '1/2'],
     ['quarter', '1/4', 'Quarter resolution', '1/4'],
@@ -169,12 +168,7 @@ describe('TimelineToolbar', () => {
       });
 
       const trigger = wrapper.get('.preview-quality-trigger');
-      if (indicator) {
-        expect(trigger.get('.preview-quality-indicator').text()).toBe(indicator);
-      } else {
-        expect(trigger.find('.preview-quality-indicator').exists()).toBe(false);
-        expect(trigger.find('svg.lucide-settings-2').exists()).toBe(true);
-      }
+      expect(trigger.get('.preview-quality-indicator').text()).toBe(indicator);
       expect(trigger.attributes('data-tooltip')).toBe(`Preview quality: ${tooltipLabel}`);
       expect(trigger.attributes('aria-label')).toBe(`Preview quality: ${label}`);
     },
@@ -206,13 +200,10 @@ describe('TimelineToolbar', () => {
     expect(infoButton.attributes('aria-label')).toBe('Preview only. Export stays full quality.');
 
     const options = wrapper.findAll('.preview-quality-option');
-    expect(options).toHaveLength(4);
-    expect(options.map((option) => option.attributes('role'))).toEqual(['radio', 'radio', 'radio', 'radio']);
-    expect(options.map((option) => option.text())).toEqual(['', '1x', '1/2', '1/4']);
-    expect(options[0]?.find('svg.lucide-settings-2').exists()).toBe(true);
-    expect(options[0]?.attributes('data-tooltip')).toBe('Auto');
+    expect(options).toHaveLength(3);
+    expect(options.map((option) => option.attributes('role'))).toEqual(['radio', 'radio', 'radio']);
+    expect(options.map((option) => option.text())).toEqual(['1x', '1/2', '1/4']);
     expect(options.map((option) => option.attributes('aria-label'))).toEqual([
-      'Auto',
       'Full resolution',
       'Half resolution',
       'Quarter resolution',
@@ -222,10 +213,10 @@ describe('TimelineToolbar', () => {
 
     for (const [index, option] of options.entries()) {
       await option.trigger('click');
-      expect(wrapper.findAll('.preview-quality-option')).toHaveLength(4);
-      await wrapper.setProps({ previewQuality: (['auto', 'full', 'half', 'quarter'] as const)[index] });
+      expect(wrapper.findAll('.preview-quality-option')).toHaveLength(3);
+      await wrapper.setProps({ previewQuality: (['full', 'half', 'quarter'] as const)[index] });
       expect(wrapper.findAll('.preview-quality-option')[index]?.attributes('aria-checked')).toBe('true');
     }
-    expect(wrapper.emitted('update:previewQuality')).toEqual([['auto'], ['full'], ['half'], ['quarter']]);
+    expect(wrapper.emitted('update:previewQuality')).toEqual([['full'], ['half'], ['quarter']]);
   });
 });

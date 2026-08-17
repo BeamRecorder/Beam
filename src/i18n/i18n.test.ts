@@ -92,9 +92,7 @@ describe('internationalization', () => {
   it('provides every preview quality label in every supported locale', () => {
     const keys = [
       'previewQuality',
-      'previewQualityAuto',
       'previewQualityFull',
-      'previewQualityFullShort',
       'previewQualityHalf',
       'previewQualityQuarter',
       'previewQualityExportHint',

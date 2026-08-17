@@ -27,7 +27,7 @@ import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
 import { useCanvasClipToggleTransition } from './composables/useCanvasClipToggleTransition';
 import { previewRenderScale } from '~/media/playback';
 const { t } = useTranslate('EditorCanvas');
-const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'auto' });
+const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'full' });
 const emit = defineEmits<EditorCanvasEmits>();
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);

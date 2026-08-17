@@ -319,46 +319,4 @@ describe('MiniPerformanceGraph', () => {
     expect(context.lineTo).toHaveBeenCalledWith(80, expect.any(Number));
     expect(context.stroke).toHaveBeenCalled();
   });
-
-  it('renders a curve-following cursor and top-right FPS badge on interactive hover', async () => {
-    const wrapper = mount(MiniPerformanceGraph, {
-      props: {
-        label: 'Interactive graph',
-        width: 100,
-        height: 24,
-        values: [0.0, 0.5, 1.0],
-        color: '#fff',
-        interactive: true,
-        animationMs: 0,
-      },
-    });
-
-    const canvas = wrapper.get('canvas').element as HTMLCanvasElement;
-    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
-      left: 0,
-      top: 0,
-      width: 100,
-      height: 24,
-      right: 100,
-      bottom: 24,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    });
-
-    const root = wrapper.get('.mini-performance-graph-wrapper');
-    await root.trigger('pointermove', { clientX: 50 });
-    await nextTick();
-
-    const badge = wrapper.get('.mini-performance-graph-hover-badge');
-    expect(badge.classes()).toContain('is-visible');
-    expect(badge.text()).toMatch(/^\d+\.\d fps$/);
-
-    // Context should have drawn the hover guideline and tracker arc
-    expect(context.arc).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 2.5, 0, Math.PI * 2);
-
-    await root.trigger('pointerleave');
-    await nextTick();
-    expect(wrapper.get('.mini-performance-graph-hover-badge').classes()).not.toContain('is-visible');
-  });
 });
