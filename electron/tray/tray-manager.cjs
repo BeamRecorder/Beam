@@ -73,8 +73,8 @@ function createTrayManager({ applicationRoot, getWindow, getController, onShowHu
       process.platform === 'darwin'
         ? ['BeamTrayTemplate.png', 'BeamIcon.png']
         : process.platform === 'win32'
-          ? ['BeamIcon.ico', 'BeamIcon.png']
-          : ['BeamIcon.png', 'BeamIcon.ico'];
+          ? ['BeamTray.ico', 'BeamIcon.ico', 'BeamIcon.png']
+          : ['BeamTray.png', 'BeamIcon.png', 'BeamIcon.ico'];
     const roots = [
       path.join(applicationRoot, 'dist/brand'),
       path.join(applicationRoot, 'public/brand'),
