@@ -419,7 +419,10 @@
     "searchPlaceholder": "Поиск проектов...",
     "noSearchResults": "Проекты не найдены.",
     "clearSearch": "Очистить поиск",
-    "refreshed": "Обновлено!"
+    "refreshed": "Обновлено!",
+    "selectProjects": "Выбрать проекты",
+    "exitSelectionMode": "Выйти из выбора",
+    "selectAll": "Выбрать все"
   },
   "PropertiesPanel": {
     "properties": "Свойства",

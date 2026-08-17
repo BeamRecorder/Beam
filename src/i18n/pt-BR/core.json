@@ -418,8 +418,11 @@
     "searchProjects": "Pesquisar projetos",
     "searchPlaceholder": "Pesquisar projetos...",
     "noSearchResults": "Nenhum projeto encontrado.",
-    "clearSearch": "Limpar pesquisa",
-    "refreshed": "Atualizado!"
+    "clearSearch": "Limpar busca",
+    "refreshed": "Atualizado!",
+    "selectProjects": "Selecionar projetos",
+    "exitSelectionMode": "Sair da seleção",
+    "selectAll": "Selecionar tudo"
   },
   "PropertiesPanel": {
     "properties": "Propriedades",

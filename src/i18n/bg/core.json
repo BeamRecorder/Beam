@@ -419,7 +419,10 @@
     "searchPlaceholder": "Търсене на проекти...",
     "noSearchResults": "Няма намерени проекти.",
     "clearSearch": "Изчистване на търсенето",
-    "refreshed": "Обновено!"
+    "refreshed": "Обновено!",
+    "selectProjects": "Избор на проекти",
+    "exitSelectionMode": "Изход от избора",
+    "selectAll": "Избери всички"
   },
   "PropertiesPanel": {
     "properties": "Свойства",

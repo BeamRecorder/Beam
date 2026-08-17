@@ -419,7 +419,10 @@
     "searchPlaceholder": "プロジェクトを検索...",
     "noSearchResults": "一致するプロジェクトが見つかりません。",
     "clearSearch": "検索をクリア",
-    "refreshed": "更新完了！"
+    "refreshed": "更新しました！",
+    "selectProjects": "プロジェクトを選択",
+    "exitSelectionMode": "選択を解除",
+    "selectAll": "すべて選択"
   },
   "PropertiesPanel": {
     "properties": "プロパティ",

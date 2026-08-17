@@ -446,7 +446,10 @@
     "searchPlaceholder": "Rechercher un projet...",
     "noSearchResults": "Aucun projet ne correspond à votre recherche.",
     "clearSearch": "Effacer la recherche",
-    "refreshed": "Validé !"
+    "refreshed": "Validé !",
+    "selectProjects": "Sélectionner des projets",
+    "exitSelectionMode": "Quitter la sélection",
+    "selectAll": "Tout sélectionner"
   },
   "PropertiesPanel": {
     "properties": "Propriétés",

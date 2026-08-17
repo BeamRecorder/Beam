@@ -419,7 +419,10 @@
     "searchPlaceholder": "搜索项目...",
     "noSearchResults": "未找到匹配的项目。",
     "clearSearch": "清除搜索",
-    "refreshed": "已刷新！"
+    "refreshed": "已刷新！",
+    "selectProjects": "选择项目",
+    "exitSelectionMode": "退出选择",
+    "selectAll": "全选"
   },
   "PropertiesPanel": {
     "properties": "属性",

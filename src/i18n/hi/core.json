@@ -419,7 +419,10 @@
     "searchPlaceholder": "प्रोजेक्ट खोजें...",
     "noSearchResults": "कोई प्रोजेक्ट नहीं मिला।",
     "clearSearch": "खोज साफ़ करें",
-    "refreshed": "अपडेट किया गया!"
+    "refreshed": "अपडेट किया गया!",
+    "selectProjects": "प्रोजेक्ट चुनें",
+    "exitSelectionMode": "चयन से बाहर निकलें",
+    "selectAll": "सभी चुनें"
   },
   "PropertiesPanel": {
     "properties": "गुण",

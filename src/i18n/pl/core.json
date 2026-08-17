@@ -419,7 +419,10 @@
     "searchPlaceholder": "Szukaj projektów...",
     "noSearchResults": "Nie znaleziono pasujących projektów.",
     "clearSearch": "Wyczyść wyszukiwanie",
-    "refreshed": "Odświeżono!"
+    "refreshed": "Odświeżono!",
+    "selectProjects": "Zaznacz projekty",
+    "exitSelectionMode": "Wyjdź z zaznaczania",
+    "selectAll": "Zaznacz wszystko"
   },
   "PropertiesPanel": {
     "properties": "Właściwości",

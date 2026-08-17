@@ -419,7 +419,10 @@
     "searchPlaceholder": "프로젝트 검색...",
     "noSearchResults": "일치하는 프로젝트가 없습니다.",
     "clearSearch": "검색 지우기",
-    "refreshed": "새로고침 완료!"
+    "refreshed": "업데이트됨!",
+    "selectProjects": "프로젝트 선택",
+    "exitSelectionMode": "선택 종료",
+    "selectAll": "모두 선택"
   },
   "PropertiesPanel": {
     "properties": "속성",

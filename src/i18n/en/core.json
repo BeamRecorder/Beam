@@ -446,7 +446,10 @@
     "searchPlaceholder": "Search projects...",
     "noSearchResults": "No projects match your search.",
     "clearSearch": "Clear search",
-    "refreshed": "Projects refreshed"
+    "refreshed": "Projects refreshed",
+    "selectProjects": "Select projects",
+    "exitSelectionMode": "Exit selection",
+    "selectAll": "Select all"
   },
   "PropertiesPanel": {
     "properties": "Properties",

@@ -419,7 +419,10 @@
     "searchPlaceholder": "Tìm kiếm dự án...",
     "noSearchResults": "Không tìm thấy dự án phù hợp.",
     "clearSearch": "Xóa tìm kiếm",
-    "refreshed": "Đã làm mới!"
+    "refreshed": "Đã làm mới!",
+    "selectProjects": "Chọn dự án",
+    "exitSelectionMode": "Thoát lựa chọn",
+    "selectAll": "Chọn tất cả"
   },
   "PropertiesPanel": {
     "properties": "Thuộc tính",

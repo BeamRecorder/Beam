@@ -419,7 +419,10 @@
     "searchPlaceholder": "搜尋專案...",
     "noSearchResults": "找不到相符的專案。",
     "clearSearch": "清除搜尋",
-    "refreshed": "已重新整理！"
+    "refreshed": "已重新整理！",
+    "selectProjects": "選取專案",
+    "exitSelectionMode": "結束選取",
+    "selectAll": "全選"
   },
   "PropertiesPanel": {
     "properties": "屬性",
