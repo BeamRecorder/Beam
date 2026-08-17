@@ -20,9 +20,10 @@ const BigSlider = {
 };
 const Button = {
   inheritAttrs: true,
-  props: ['disabled'],
+  props: ['disabled', 'iconOnly', 'tooltip', 'icon'],
   emits: ['click'],
-  template: '<button v-bind="$attrs" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+  template:
+    '<button v-bind="$attrs" :disabled="disabled" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
 };
 
 describe('TimelineToolbar', () => {
@@ -118,30 +119,43 @@ describe('TimelineToolbar', () => {
     expect(zoomIn().attributes('disabled')).toBeDefined();
   });
 
-  it('offers preview quality options and emits the selected value', async () => {
+  it.each([
+    ['auto', 'A'],
+    ['full', '1×'],
+    ['half', '½'],
+    ['quarter', '¼'],
+  ] as const)('shows a compact %s preview-quality indicator with an accessible tooltip', (quality, indicator) => {
     const wrapper = mount(TimelineToolbar, {
-      props: {
-        currentTime: 0,
-        duration: 100,
-        isPlaying: false,
-        zoomLevel: 100,
-        previewQuality: 'half',
-      },
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: quality },
       global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
     });
 
     const trigger = wrapper.get('.preview-quality-trigger');
-    expect(trigger.text()).toContain('½');
-    expect(trigger.attributes('aria-label')).toContain('Preview');
+    expect(trigger.get('.preview-quality-indicator').text()).toBe(indicator);
+    expect(trigger.attributes('aria-label')).toMatch(/preview/i);
+  });
 
-    await trigger.trigger('click');
+  it('offers all preview quality options and emits each selected value', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: 'half' },
+      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
+    });
+
     const options = wrapper.findAll('.preview-quality-option');
     expect(options).toHaveLength(4);
+    expect(options.map((option) => option.attributes('role'))).toEqual(['radio', 'radio', 'radio', 'radio']);
     expect(options.find((option) => option.classes('active'))?.text()).toContain('Half');
 
-    const quarter = options.find((option) => option.text().includes('Quarter'));
-    expect(quarter).toBeDefined();
-    await quarter!.trigger('click');
-    expect(wrapper.emitted('update:previewQuality')).toEqual([['quarter']]);
+    for (const [quality, label] of [
+      ['auto', 'Auto'],
+      ['full', 'Full'],
+      ['half', 'Half'],
+      ['quarter', 'Quarter'],
+    ] as const) {
+      const option = options.find((candidate) => candidate.text().includes(label));
+      expect(option, `missing ${quality} option`).toBeDefined();
+      await option!.trigger('click');
+    }
+    expect(wrapper.emitted('update:previewQuality')).toEqual([['auto'], ['full'], ['half'], ['quarter']]);
   });
 });

@@ -25,8 +25,9 @@ import { useCanvasTransitionRenderer } from './composables/useCanvasTransitionRe
 import { measureCanvasCaptionText } from './canvas-text-measure';
 import { useCanvasLoadingState } from './composables/useCanvasLoadingState';
 import { useCanvasClipToggleTransition } from './composables/useCanvasClipToggleTransition';
+import { previewRenderScale } from '~/media/playback';
 const { t } = useTranslate('EditorCanvas');
-const props = defineProps<EditorCanvasProps>();
+const props = withDefaults(defineProps<EditorCanvasProps>(), { previewQuality: 'auto' });
 const emit = defineEmits<EditorCanvasEmits>();
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLDivElement | null>(null);
@@ -251,12 +252,14 @@ const resizeCanvas = () => {
   const width = Math.max(1, container.clientWidth);
   const height = Math.max(1, container.clientHeight);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  deviceScale.value = dpr;
+  const renderScale = previewRenderScale(width, height, dpr, props.previewQuality);
+  deviceScale.value = renderScale;
   logicalSize.value = { width, height };
-  canvas.width = Math.max(1, Math.round(width * dpr));
-  canvas.height = Math.max(1, Math.round(height * dpr));
+  canvas.width = Math.max(1, Math.round(width * renderScale));
+  canvas.height = Math.max(1, Math.round(height * renderScale));
   renderCanvas();
 };
+watch(() => props.previewQuality, resizeCanvas);
 const drawCanvasScene = (ctx: CanvasRenderingContext2D) => {
   const window = cameraZoom.drawVideoWindow(ctx, logicalSize.value.width, logicalSize.value.height, screenFrame.value);
   if (window) {
@@ -353,7 +356,6 @@ const handleIslandPointerUp = (event: PointerEvent) => {
 const handleIslandWheel = (event: WheelEvent) => {
   viewportZoom.handleWheel(event, containerRef.value?.getBoundingClientRect());
 };
-
 onMounted(() => {
   watermarkLogo = new Image();
   watermarkLogo.onload = renderOnce;
@@ -368,12 +370,8 @@ onUnmounted(() => {
   if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
   if (formatTransitionTimer) clearTimeout(formatTransitionTimer);
 });
-
-defineExpose({
-  viewportZoom,
-});
+defineExpose({ viewportZoom });
 </script>
-
 <template>
   <div
     class="canvas-island"

@@ -1,5 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { playbackPreviewDimensions } from '../playback-preview';
+import { playbackPreviewDimensions, previewRenderScale } from '../playback-preview';
+
+describe('previewRenderScale', () => {
+  it.each([
+    ['auto', 1_920, 1_080, 2, 2 / 3],
+    ['full', 1_920, 1_080, 2, 2],
+    ['half', 1_920, 1_080, 2, 1],
+    ['quarter', 1_920, 1_080, 2, 0.5],
+  ] as const)(
+    'calculates the %s composition scale with device pixel ratio',
+    (quality, width, height, dpr, expected) => {
+      expect(previewRenderScale(width, height, dpr, quality)).toBeCloseTo(expected);
+    },
+  );
+
+  it('caps auto quality by both dimensions without changing the composition aspect ratio', () => {
+    expect(previewRenderScale(3_840, 2_160, 2, 'auto')).toBeCloseTo(1 / 3);
+    expect(previewRenderScale(2_000, 4_000, 2, 'auto')).toBeCloseTo(0.18);
+    expect(previewRenderScale(640, 480, 2, 'auto')).toBe(1.5);
+  });
+
+  it('rejects invalid composition dimensions, pixel ratios, and qualities', () => {
+    expect(() => previewRenderScale(0, 720, 1, 'auto')).toThrow(RangeError);
+    expect(() => previewRenderScale(1_920, Number.NaN, 1, 'auto')).toThrow(RangeError);
+    expect(() => previewRenderScale(1_920, 1_080, 0, 'auto')).toThrow(RangeError);
+    expect(() => previewRenderScale(1_920, 1_080, 1, '720p' as never)).toThrow(RangeError);
+  });
+});
 
 describe('playbackPreviewDimensions', () => {
   it('supports auto, full, half, and quarter preview qualities', () => {

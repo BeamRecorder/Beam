@@ -39,13 +39,21 @@ const { state } = vi.hoisted(() => ({
     transformResizeCorners: undefined as { value: unknown } | undefined,
     transition: undefined as { value: boolean } | undefined,
     renderVisualStack: undefined as ((...args: unknown[]) => void) | undefined,
+    canvasBackgroundOptions: undefined as
+      | { previewQuality?: () => string; selectedBackground?: () => unknown; backgroundBlurPercent?: () => number }
+      | undefined,
   },
 }));
 
 vi.mock('../composables/useCanvasBackground', async () => {
   const { ref } = await import('vue');
   return {
-    useCanvasBackground: () => {
+    useCanvasBackground: (
+      selectedBackground: () => unknown,
+      backgroundBlurPercent: () => number,
+      previewQuality: () => string,
+    ) => {
+      state.canvasBackgroundOptions = { selectedBackground, backgroundBlurPercent, previewQuality };
       state.transition = ref(false);
       return {
         drawBackground: state.drawBackground,
@@ -287,12 +295,14 @@ beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 800 });
   Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, get: () => 450 });
   state.drawVideoWindow.mockReturnValue(null);
+  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 });
 });
 
 afterEach(() => {
   wrapper?.unmount();
   wrapper = undefined;
   vi.useRealTimers();
+  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 });
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -303,6 +313,42 @@ const mountEditor = (overrides: Record<string, unknown> = {}) => {
 };
 
 describe('EditorCanvas', () => {
+  it('uses a quality-scaled backing canvas while keeping the CSS preview and logical coordinates unchanged', async () => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
+    const mounted = mountEditor({ previewQuality: 'quarter' });
+    await nextTick();
+
+    const canvas = mounted.get('canvas').element as HTMLCanvasElement;
+    expect(canvas.width).toBe(400);
+    expect(canvas.height).toBe(225);
+    expect(canvas.style.width).toBe('');
+    expect(canvas.style.height).toBe('');
+    expect(mounted.get('.canvas-island').element.clientWidth).toBe(800);
+    expect(mounted.find('.preview-frame').attributes('style')).toContain('--preview-aspect-ratio: 1.7777777777777777');
+    expect(contextMock.setTransform).toHaveBeenCalledWith(0.5, 0, 0, 0.5, 0, 0);
+    expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('quarter');
+  });
+
+  it('resizes the backing canvas and render scale when preview quality changes at runtime', async () => {
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 });
+    const mounted = mountEditor({ previewQuality: 'full' });
+    await nextTick();
+    const canvas = mounted.get('canvas').element as HTMLCanvasElement;
+    expect(canvas.width).toBe(1_600);
+    expect(canvas.height).toBe(900);
+
+    await mounted.setProps({ previewQuality: 'half' });
+    await nextTick();
+    expect(canvas.width).toBe(800);
+    expect(canvas.height).toBe(450);
+    expect(canvas.style.width).toBe('');
+    expect(canvas.style.height).toBe('');
+    expect(mounted.get('.canvas-island').element.clientWidth).toBe(800);
+    expect(mounted.find('.preview-frame').attributes('style')).toContain('--preview-aspect-ratio: 1.7777777777777777');
+    expect(contextMock.setTransform).toHaveBeenLastCalledWith(1, 0, 0, 1, 0, 0);
+    expect(state.canvasBackgroundOptions?.previewQuality?.()).toBe('half');
+  });
+
   it('renders the fallback stack, loading state, preview frame, and canvas pointer handlers', async () => {
     const mounted = mountEditor({
       frameFor: () => null,
