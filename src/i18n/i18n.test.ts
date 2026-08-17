@@ -89,6 +89,28 @@ describe('internationalization', () => {
     }
   });
 
+  it('provides every preview quality label in every supported locale', () => {
+    const keys = [
+      'previewQuality',
+      'previewQualityAuto',
+      'previewQualityFull',
+      'previewQualityFullShort',
+      'previewQualityHalf',
+      'previewQualityQuarter',
+      'previewQualityExportHint',
+    ];
+
+    for (const locale of SUPPORTED_LOCALES) {
+      setCurrentLocale(locale);
+      for (const key of keys) {
+        expect(i18n.global.te(`TimelineToolbar.${key}`, locale), `${locale}: missing TimelineToolbar.${key}`).toBe(
+          true,
+        );
+        expect(i18n.global.t(`TimelineToolbar.${key}`)).not.toBe(`TimelineToolbar.${key}`);
+      }
+    }
+  });
+
   it('provides translated timeline clipboard feedback in every supported locale', () => {
     const expected = {
       en: ['Copied', 'Pasted'],

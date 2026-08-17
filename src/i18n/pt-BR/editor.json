@@ -104,7 +104,14 @@
     "snappingOn": "Ajuste magnético ativado",
     "snappingOff": "Ajuste magnético desativado",
     "zoom": "Zoom",
-    "resetZoom": "Redefinir zoom"
+    "resetZoom": "Redefinir zoom",
+    "previewQuality": "Qualidade da prévia",
+    "previewQualityAuto": "Automática",
+    "previewQualityFull": "Resolução completa",
+    "previewQualityFullShort": "Completa",
+    "previewQualityHalf": "Meia resolução",
+    "previewQualityQuarter": "Um quarto da resolução",
+    "previewQualityExportHint": "Apenas a prévia é afetada. A exportação mantém a qualidade total."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Clique para alternar a faixa de vídeo",

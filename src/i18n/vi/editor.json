@@ -104,7 +104,14 @@
     "snappingOn": "Đã bật tính năng hút dính (Magnet)",
     "snappingOff": "Đã tắt tính năng hút dính (Magnet)",
     "zoom": "Thu phóng",
-    "resetZoom": "Đặt lại thu phóng"
+    "resetZoom": "Đặt lại thu phóng",
+    "previewQuality": "Chất lượng xem trước",
+    "previewQualityAuto": "Tự động",
+    "previewQualityFull": "Độ phân giải đầy đủ",
+    "previewQualityFullShort": "Đầy đủ",
+    "previewQualityHalf": "Nửa độ phân giải",
+    "previewQualityQuarter": "Một phần tư độ phân giải",
+    "previewQualityExportHint": "Chỉ ảnh hưởng bản xem trước. Bản xuất vẫn giữ chất lượng đầy đủ."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Nhấp để bật/tắt rãnh Video",

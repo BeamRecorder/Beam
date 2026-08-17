@@ -104,7 +104,14 @@
     "snappingOn": "Magnetyczne przyciąganie włączone",
     "snappingOff": "Magnetyczne przyciąganie wyłączone",
     "zoom": "Powiększenie",
-    "resetZoom": "Zresetuj powiększenie"
+    "resetZoom": "Zresetuj powiększenie",
+    "previewQuality": "Jakość podglądu",
+    "previewQualityAuto": "Automatyczna",
+    "previewQualityFull": "Pełna rozdzielczość",
+    "previewQualityFullShort": "Pełna",
+    "previewQualityHalf": "Połowa rozdzielczości",
+    "previewQualityQuarter": "Ćwierć rozdzielczości",
+    "previewQualityExportHint": "Dotyczy tylko podglądu. Eksport pozostaje w pełnej jakości."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Kliknij, aby przełączyć ścieżkę wideo",

@@ -104,7 +104,14 @@
     "snappingOn": "Магнитното прилепване е включено",
     "snappingOff": "Магнитното прилепване е изключено",
     "zoom": "Мащаб",
-    "resetZoom": "Нулиране на мащаба"
+    "resetZoom": "Нулиране на мащаба",
+    "previewQuality": "Качество на визуализацията",
+    "previewQualityAuto": "Автоматично",
+    "previewQualityFull": "Пълна разделителна способност",
+    "previewQualityFullShort": "Пълна",
+    "previewQualityHalf": "Половин разделителна способност",
+    "previewQualityQuarter": "Четвърт разделителна способност",
+    "previewQualityExportHint": "Само за визуализацията. Експортът остава с пълно качество."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Щракнете за превключване на видеопистата",

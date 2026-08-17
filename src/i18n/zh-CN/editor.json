@@ -104,7 +104,14 @@
     "snappingOn": "磁性吸附已启用",
     "snappingOff": "磁性吸附已禁用",
     "zoom": "缩放",
-    "resetZoom": "重置缩放"
+    "resetZoom": "重置缩放",
+    "previewQuality": "预览质量",
+    "previewQualityAuto": "自动",
+    "previewQualityFull": "完整分辨率",
+    "previewQualityFullShort": "完整",
+    "previewQualityHalf": "二分之一分辨率",
+    "previewQualityQuarter": "四分之一分辨率",
+    "previewQualityExportHint": "仅影响预览，导出仍保持完整质量。"
   },
   "TimelineTracks": {
     "clickToToggleVideo": "点击切换视频轨道",

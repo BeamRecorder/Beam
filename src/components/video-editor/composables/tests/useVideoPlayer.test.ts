@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { effectScope } from 'vue';
+import { effectScope, nextTick } from 'vue';
 import { createBackgroundMedia } from '../backgroundCatalog';
 import { useVideoPlayer } from '../useVideoPlayer';
 import type { ClipComposition } from '~/media/shared';
@@ -26,6 +26,7 @@ const playback = vi.hoisted(() => {
       return 'presented' as const;
     });
     readonly setVolume = vi.fn();
+    readonly setPreviewQuality = vi.fn(async (_quality: string) => undefined);
     readonly dispose = vi.fn();
     readonly frameFor = vi.fn(() => null);
 
@@ -109,6 +110,17 @@ describe('useVideoPlayer', () => {
     await player.setPlaying(false);
     expect(engine.pause).toHaveBeenCalled();
     expect(player.isPlaying.value).toBe(false);
+  });
+
+  it('propagates preview quality to playback loads without adding it to export state', async () => {
+    const player = useVideoPlayer([]);
+    await player.loadComposition(composition);
+    player.previewQuality.value = 'half';
+    await nextTick();
+
+    const engine = playback.instances.at(-1)!;
+    expect(engine.setPreviewQuality).toHaveBeenCalledWith('half');
+    expect(player).not.toHaveProperty('exportRequest');
   });
 
   it('invalidates the cached frame before reloading and exposes the replacement frame', async () => {

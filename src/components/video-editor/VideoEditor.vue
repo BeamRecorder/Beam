@@ -87,6 +87,7 @@ const {
   playbackState,
   playbackError,
   frameVersion,
+  previewQuality,
   selectedBackground,
   selectedBackgroundMedia,
   backgroundBlurPercent,
@@ -608,6 +609,7 @@ onBeforeUnmount(() => {
             :background-blur-percent="backgroundBlurPercent"
             :frame-for="player.frameFor"
             :frame-version="frameVersion"
+            :preview-quality="previewQuality"
             :playback-state="playbackState"
             :playback-error="playbackError"
             :editor-data="editorData"
@@ -640,6 +642,7 @@ onBeforeUnmount(() => {
             :can-split="Boolean(selectedClipId)"
             v-model:zoom-level="timelineZoomLevel"
             v-model:is-snapping-enabled="isSnappingEnabled"
+            v-model:preview-quality="previewQuality"
             @update:is-playing="handlePlayingIntent"
             @update:current-time="handleSeekIntent"
             @add:element="addTimelineElement"

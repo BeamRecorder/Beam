@@ -92,6 +92,7 @@ const clipToggleTransition = useCanvasClipToggleTransition({
 const { drawBackground, syncPlayback, isTransitioningBackground } = useCanvasBackground(
   () => props.selectedBackground,
   () => props.backgroundBlurPercent,
+  () => props.previewQuality,
   renderOnce,
 );
 let cameraZoom: ReturnType<typeof useCameraZoom>;

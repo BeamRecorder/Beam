@@ -1,4 +1,5 @@
 import type { MediaError, MediaSourceDescriptor } from '../shared';
+import type { PreviewQuality } from './playback-preview';
 
 export type PlaybackSeekMode = 'seek' | 'scrub';
 export type PlaybackSeekResult = 'presented' | 'superseded';
@@ -19,8 +20,10 @@ export type PlaybackWorkerRequest =
       generation: number;
       assets: MediaSourceDescriptor[];
       clips: PlaybackClipDescriptor[];
+      previewQuality: PreviewQuality;
     }
   | { type: 'retime'; generation: number; clips: PlaybackClipDescriptor[] }
+  | { type: 'configure-preview'; generation: number; previewQuality: PreviewQuality }
   | { type: 'play'; generation: number; timelineSeconds: number }
   | { type: 'tick'; generation: number; timelineSeconds: number }
   | { type: 'pause'; generation: number }

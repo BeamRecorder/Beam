@@ -15,6 +15,8 @@ import {
   Volume2,
   Type,
   CircleDashed,
+  Gauge,
+  Check,
 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
@@ -23,6 +25,7 @@ import BigSlider from '~/ui/slider/BigSlider.vue';
 import Skeleton from '~/ui/skeleton/Skeleton.vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import { MAX_TIMELINE_ZOOM, MIN_TIMELINE_ZOOM, zoomTimelineByButton } from './composables/timeline-zoom';
+import type { PreviewQuality } from '~/media/playback';
 
 const { t } = useTranslate('TimelineToolbar');
 
@@ -35,8 +38,9 @@ const props = withDefaults(
     canSplit?: boolean;
     isSnappingEnabled?: boolean;
     loading?: boolean;
+    previewQuality?: PreviewQuality;
   }>(),
-  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false },
+  { zoomLevel: 100, canSplit: false, isSnappingEnabled: true, loading: false, previewQuality: 'auto' },
 );
 
 const emit = defineEmits<{
@@ -44,6 +48,7 @@ const emit = defineEmits<{
   (e: 'update:currentTime', value: number): void;
   (e: 'update:zoomLevel', value: number): void;
   (e: 'update:isSnappingEnabled', value: boolean): void;
+  (e: 'update:previewQuality', value: PreviewQuality): void;
   (e: 'add:element', type: 'video' | 'image' | 'sound' | 'caption' | 'blur'): void;
   (e: 'split'): void;
 }>();
@@ -65,6 +70,15 @@ const addItems = computed(
 const zoomPercentageText = computed(() => {
   return `${Math.round(props.zoomLevel)}%`;
 });
+const previewQualityOptions = computed(() => [
+  { id: 'auto' as const, label: t('previewQualityAuto'), shortLabel: t('previewQualityAuto') },
+  { id: 'full' as const, label: t('previewQualityFull'), shortLabel: t('previewQualityFullShort') },
+  { id: 'half' as const, label: t('previewQualityHalf'), shortLabel: '½' },
+  { id: 'quarter' as const, label: t('previewQualityQuarter'), shortLabel: '¼' },
+]);
+const activePreviewQuality = computed(() =>
+  previewQualityOptions.value.find((option) => option.id === props.previewQuality)!,
+);
 
 const formatTime = (time: number) => {
   if (!Number.isFinite(time) || time < 0) time = 0;
@@ -173,6 +187,44 @@ const handleZoomOut = () => {
 
       <!-- Right Section: Compact Segmented Zoom with Popover -->
       <div class="right-section">
+        <Popover align="right" direction="up" :match-trigger-width="false">
+          <template #trigger>
+            <Button
+              variant="ghost"
+              size="sm"
+              :icon="Gauge"
+              class="preview-quality-trigger"
+              :tooltip="`${t('previewQuality')}: ${activePreviewQuality.label}`"
+              :aria-label="`${t('previewQuality')}: ${activePreviewQuality.label}`"
+            >
+              {{ activePreviewQuality.shortLabel }}
+            </Button>
+          </template>
+          <template #default="{ close }">
+            <div class="preview-quality-popover" role="radiogroup" :aria-label="t('previewQuality')">
+              <div class="preview-quality-heading">
+                <span>{{ t('previewQuality') }}</span>
+                <small>{{ t('previewQualityExportHint') }}</small>
+              </div>
+              <button
+                v-for="option in previewQualityOptions"
+                :key="option.id"
+                type="button"
+                class="preview-quality-option"
+                :class="{ active: previewQuality === option.id }"
+                role="radio"
+                :aria-checked="previewQuality === option.id"
+                @click="
+                  emit('update:previewQuality', option.id);
+                  close();
+                "
+              >
+                <span>{{ option.label }}</span>
+                <Check v-if="previewQuality === option.id" aria-hidden="true" />
+              </button>
+            </div>
+          </template>
+        </Popover>
         <div class="zoom-controls">
           <Button
             variant="ghost"
@@ -330,6 +382,57 @@ const handleZoomOut = () => {
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
+  gap: 6px;
+}
+
+.preview-quality-trigger {
+  min-width: 64px;
+}
+
+.preview-quality-popover {
+  width: 220px;
+  padding: 6px;
+}
+
+.preview-quality-heading {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px 8px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preview-quality-heading small {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.preview-quality-option {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: 500 12px var(--font-sans);
+  cursor: pointer;
+}
+
+.preview-quality-option:hover,
+.preview-quality-option.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.preview-quality-option svg {
+  width: 14px;
+  height: 14px;
 }
 
 .zoom-controls {

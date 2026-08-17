@@ -78,6 +78,7 @@ describe('MediaPlaybackEngine', () => {
       type: 'load',
       generation: 2,
       clips: [{ clipId: 'clip-1', assetId: 'asset-1' }],
+      previewQuality: 'auto',
     });
 
     await engine.play(0.5);
@@ -247,6 +248,54 @@ describe('MediaPlaybackEngine', () => {
 
     expect(audio.loadComposition).not.toHaveBeenCalled();
     expect(audio.updateComposition).toHaveBeenCalledOnce();
+    engine.dispose();
+  });
+
+  it('configures preview quality, preserves the current frame until replacement, seeks, and resumes playback', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker);
+    const initialSeek = latestSeekRequest(worker)!;
+    const previousFrame = new FakeImageBitmap(1_920, 1_080);
+    worker.emit(frameResponse(initialSeek.generation, 'clip-1', 0.5, previousFrame));
+    await engine.play(0.5);
+    audio.now = 0.75;
+    worker.requests.length = 0;
+
+    const pending = engine.setPreviewQuality('quarter');
+    const configure = worker.requests.at(-1);
+    expect(configure).toMatchObject({ type: 'configure-preview', previewQuality: 'quarter' });
+    expect(engine.frameFor('clip-1')?.bitmap).toBe(previousFrame);
+    worker.emit({ type: 'ready', generation: configure!.generation });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+
+    const seek = [...worker.requests]
+      .reverse()
+      .find((request): request is Extract<PlaybackWorkerRequest, { type: 'seek' }> => request.type === 'seek');
+    expect(seek).toMatchObject({ type: 'seek', timelineSeconds: 0.75, mode: 'seek' });
+    expect(engine.frameFor('clip-1')?.bitmap).toBe(previousFrame);
+    expect(previousFrame.close).not.toHaveBeenCalled();
+    const replacement = new FakeImageBitmap(480, 270);
+    worker.emit(frameResponse(seek!.generation, 'clip-1', 0.75, replacement));
+    expect(previousFrame.close).toHaveBeenCalledOnce();
+    expect(engine.frameFor('clip-1')?.bitmap).toBe(replacement);
+    worker.emit({
+      type: 'seek-result',
+      generation: seek!.generation,
+      requestId: seek!.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await pending;
+
+    expect(audio.pause).toHaveBeenCalledWith(0.75);
+    expect(audio.play).toHaveBeenLastCalledWith(0.75, expect.any(Number));
+    expect(worker.requests.at(-1)).toMatchObject({ type: 'play', timelineSeconds: 0.75 });
+    expect(engine.frameFor('clip-1')?.bitmap).toBe(replacement);
     engine.dispose();
   });
 

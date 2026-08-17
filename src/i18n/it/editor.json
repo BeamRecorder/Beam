@@ -104,7 +104,14 @@
     "snappingOn": "Aggancio magnetico attivato",
     "snappingOff": "Aggancio magnetico disattivato",
     "zoom": "Zoom",
-    "resetZoom": "Reimposta zoom"
+    "resetZoom": "Reimposta zoom",
+    "previewQuality": "Qualità anteprima",
+    "previewQualityAuto": "Automatica",
+    "previewQualityFull": "Risoluzione completa",
+    "previewQualityFullShort": "Completa",
+    "previewQualityHalf": "Metà risoluzione",
+    "previewQualityQuarter": "Un quarto di risoluzione",
+    "previewQualityExportHint": "Solo anteprima. L’esportazione resta a piena qualità."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Fai clic per attivare/disattivare la traccia video",

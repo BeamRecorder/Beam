@@ -7,7 +7,10 @@ const PopoverMenuButton = {
   template: '<button class="add-menu-stub" @click="$emit(\'select\', \'caption\')">Add</button>',
 };
 const Popover = {
-  template: '<div class="popover-stub"><slot name="trigger" /><slot /></div>',
+  setup() {
+    return { close: () => undefined };
+  },
+  template: '<div class="popover-stub"><slot name="trigger" :isOpen="false" /><slot :close="close" /></div>',
 };
 const BigSlider = {
   props: ['modelValue', 'min', 'max', 'step', 'label'],
@@ -113,5 +116,32 @@ describe('TimelineToolbar', () => {
     expect(wrapper.emitted('update:zoomLevel')).toContainEqual([3_200]);
     await wrapper.setProps({ zoomLevel: 3_200 });
     expect(zoomIn().attributes('disabled')).toBeDefined();
+  });
+
+  it('offers preview quality options and emits the selected value', async () => {
+    const wrapper = mount(TimelineToolbar, {
+      props: {
+        currentTime: 0,
+        duration: 100,
+        isPlaying: false,
+        zoomLevel: 100,
+        previewQuality: 'half',
+      },
+      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
+    });
+
+    const trigger = wrapper.get('.preview-quality-trigger');
+    expect(trigger.text()).toContain('½');
+    expect(trigger.attributes('aria-label')).toContain('Preview');
+
+    await trigger.trigger('click');
+    const options = wrapper.findAll('.preview-quality-option');
+    expect(options).toHaveLength(4);
+    expect(options.find((option) => option.classes('active'))?.text()).toContain('Half');
+
+    const quarter = options.find((option) => option.text().includes('Quarter'));
+    expect(quarter).toBeDefined();
+    await quarter!.trigger('click');
+    expect(wrapper.emitted('update:previewQuality')).toEqual([['quarter']]);
   });
 });

@@ -15,6 +15,7 @@ import type {
   VisualClip,
 } from '~/media/shared/composition-types';
 import type { OutputCanvasSettings } from './output-canvas';
+import type { PreviewQuality } from '~/media/playback';
 
 export type TransformClip = VisualClip | BlurClip | CaptionClip;
 
@@ -35,6 +36,7 @@ export interface EditorCanvasProps {
   backgroundBlurPercent?: number;
   frameFor: (clipId: string) => MediaFrame | null;
   frameVersion: number;
+  previewQuality: PreviewQuality;
   playbackState: 'idle' | 'loading' | 'paused' | 'playing' | 'error' | 'disposed';
   playbackError: MediaError | null;
   editorData?: ProjectEditorData | null;

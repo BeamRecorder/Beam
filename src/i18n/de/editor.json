@@ -104,7 +104,14 @@
     "snappingOn": "Magnetisches Einrasten aktiviert",
     "snappingOff": "Magnetisches Einrasten deaktiviert",
     "zoom": "Zoom",
-    "resetZoom": "Zoom zurücksetzen"
+    "resetZoom": "Zoom zurücksetzen",
+    "previewQuality": "Vorschauqualität",
+    "previewQualityAuto": "Automatisch",
+    "previewQualityFull": "Volle Auflösung",
+    "previewQualityFullShort": "Voll",
+    "previewQualityHalf": "Halbe Auflösung",
+    "previewQualityQuarter": "Viertelauflösung",
+    "previewQualityExportHint": "Nur für die Vorschau. Der Export bleibt in voller Qualität."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Klicke, um die Videospur umzuschalten",

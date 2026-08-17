@@ -130,7 +130,14 @@
     "snappingOn": "Magnet Snapping Enabled",
     "snappingOff": "Magnet Snapping Disabled",
     "zoom": "Zoom",
-    "resetZoom": "Reset Zoom"
+    "resetZoom": "Reset Zoom",
+    "previewQuality": "Preview quality",
+    "previewQualityAuto": "Auto",
+    "previewQualityFull": "Full resolution",
+    "previewQualityFullShort": "Full",
+    "previewQualityHalf": "Half resolution",
+    "previewQualityQuarter": "Quarter resolution",
+    "previewQualityExportHint": "Preview only. Export stays full quality."
   },
   "TimelineTracks": {
     "clickToToggleVideo": "Click to toggle Video track",
