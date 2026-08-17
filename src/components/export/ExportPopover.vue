@@ -8,6 +8,7 @@ import Popover from '~/ui/popover/Popover.vue';
 import ProgressBar from '~/ui/progressbar/ProgressBar.vue';
 import Switch from '~/ui/switch/Switch.vue';
 import Accordion from '~/ui/accordion/Accordion.vue';
+import InfoTooltip from '~/ui/tooltip/InfoTooltip.vue';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { useExportJob } from './useExportJob';
 import { bitrateFor } from './export-presets';
@@ -91,6 +92,12 @@ const presetDescriptions = computed<Record<ExportPreset, string>>(() => ({
   low: t('lowDesc', { mbps: getMb('low') }),
   medium: t('mediumDesc', { mbps: getMb('medium') }),
   high: t('highDesc', { mbps: getMb('high') }),
+}));
+
+const frameRateDescriptions = computed<Record<ExportFrameRate, string>>(() => ({
+  24: t('frameRate24Desc'),
+  30: t('frameRate30Desc'),
+  60: t('frameRate60Desc'),
 }));
 
 const availability = ref<string | null>(null);
@@ -234,7 +241,10 @@ const run = async () => {
           </div>
 
           <div class="field">
-            <span class="field-label">{{ t('resolution') }}</span>
+            <div class="field-heading">
+              <span class="field-label">{{ t('resolution') }}</span>
+              <InfoTooltip :content="resolutionDescriptions[resolution]" :label="t('resolution')" position="left" />
+            </div>
             <ButtonGroup full>
               <Button
                 variant="tab"
@@ -266,11 +276,13 @@ const run = async () => {
                 {{ t('resMax') }}
               </Button>
             </ButtonGroup>
-            <span class="option-hint">{{ resolutionDescriptions[resolution] }}</span>
           </div>
 
           <div class="field">
-            <span class="field-label">{{ t('frameRate') }}</span>
+            <div class="field-heading">
+              <span class="field-label">{{ t('frameRate') }}</span>
+              <InfoTooltip :content="frameRateDescriptions[frameRate]" :label="t('frameRate')" position="left" />
+            </div>
             <ButtonGroup full>
               <Button
                 v-for="value in frameRates"
@@ -284,7 +296,6 @@ const run = async () => {
                 {{ value }} fps
               </Button>
             </ButtonGroup>
-            <span class="option-hint">{{ t('frameRateDesc') }}</span>
           </div>
 
           <Accordion v-model="moreOptionsOpen" :title="t('moreOptions')" class="more-options">
@@ -298,7 +309,10 @@ const run = async () => {
           </Accordion>
 
           <div class="field">
-            <span class="field-label">{{ t('qualityAndBitrate') }}</span>
+            <div class="field-heading">
+              <span class="field-label">{{ t('qualityAndBitrate') }}</span>
+              <InfoTooltip :content="presetDescriptions[preset]" :label="t('qualityAndBitrate')" position="left" />
+            </div>
             <ButtonGroup full>
               <Button
                 v-for="value in presets"
@@ -309,10 +323,9 @@ const run = async () => {
                 :class="{ active: preset === value }"
                 @click="preset = value"
               >
-                {{ value }}
+                {{ t(value) }}
               </Button>
             </ButtonGroup>
-            <span class="option-hint">{{ presetDescriptions[preset] }}</span>
           </div>
 
           <p v-if="displayError" class="error" role="alert">{{ displayError }}</p>
@@ -361,6 +374,13 @@ const run = async () => {
   display: grid;
   gap: 6px;
   width: 100%;
+}
+.field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  gap: 8px;
 }
 .field :deep(.btn-group) {
   width: 100% !important;

@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { mount } from '@vue/test-utils';
 import { nextTick, type Ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { i18n } from '~/i18n';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { ExportValidationError, type ExportRequest } from '../export-types';
 
@@ -54,8 +55,10 @@ const Popover = {
 };
 const Button = {
   inheritAttrs: false,
+  props: ['icon', 'iconOnly', 'tooltip', 'tooltipDisabled'],
   emits: ['click'],
-  template: '<button v-bind="$attrs" class="button-stub" @click="$emit(\'click\')"><slot /></button>',
+  template:
+    '<button v-bind="$attrs" class="button-stub" :data-tooltip="tooltip || undefined" :data-tooltip-disabled="tooltipDisabled ? \'true\' : undefined" :data-icon-only="iconOnly ? \'true\' : undefined" @click="$emit(\'click\')"><slot /></button>',
 };
 const ButtonGroup = {
   template: '<div class="button-group-stub"><slot /></div>',
@@ -176,6 +179,40 @@ describe('ExportPopover', () => {
         }),
       }),
     );
+  });
+
+  it('keeps export explanations compact behind an info tooltip', () => {
+    const wrapper = mountExport();
+    const fields = wrapper.findAll('.field');
+
+    for (const label of ['Resolution', 'Frame rate', 'Quality & Bitrate']) {
+      const field = fields.find((candidate) => candidate.find('.field-label').text() === label);
+      expect(field, `missing ${label} field`).toBeDefined();
+      expect(field?.find('.option-hint').exists(), `${label} should not render a long inline hint`).toBe(false);
+      expect(field?.find('[data-tooltip]').exists(), `${label} should expose an info tooltip`).toBe(true);
+    }
+  });
+
+  it('updates the FPS info tooltip when switching between 24, 30 and 60 fps', async () => {
+    const wrapper = mountExport();
+    const frameRateField = wrapper
+      .findAll('.field')
+      .find((field) => field.find('.field-label').text() === 'Frame rate');
+    const getTooltip = () => frameRateField?.find('[data-tooltip]').attributes('data-tooltip');
+
+    expect(getTooltip()).toBe(i18n.global.t('ExportPopover.frameRate60Desc'));
+
+    for (const [fps, description] of [
+      ['24', 'ExportPopover.frameRate24Desc'],
+      ['30', 'ExportPopover.frameRate30Desc'],
+      ['60', 'ExportPopover.frameRate60Desc'],
+    ] as const) {
+      await frameRateField
+        ?.findAll('.button-stub')
+        .find((button) => button.text() === `${fps} fps`)
+        ?.trigger('click');
+      expect(getTooltip()).toBe(i18n.global.t(description));
+    }
   });
 
   it('starts an export, displays its result, and opens the generated file', async () => {

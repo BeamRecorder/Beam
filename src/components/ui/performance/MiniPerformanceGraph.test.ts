@@ -109,19 +109,6 @@ describe('MiniPerformanceGraph', () => {
     expect(context.fill).toHaveBeenCalledTimes(2);
   });
 
-  it('schedules an animation frame when the curve receives new samples', async () => {
-    const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
-    const wrapper = mount(MiniPerformanceGraph, {
-      props: { label: 'Animated graph', values: [0.1], color: '#fff' },
-    });
-
-    await wrapper.setProps({ values: [0.1, 0.8] });
-    await nextTick();
-
-    expect(requestAnimationFrame).toHaveBeenCalled();
-    requestAnimationFrame.mockRestore();
-  });
-
   it('keeps a fixed sample window so adding a sample does not redistribute existing peaks', async () => {
     const wrapper = mount(MiniPerformanceGraph, {
       props: {
@@ -130,7 +117,6 @@ describe('MiniPerformanceGraph', () => {
         height: 24,
         values: [0.1, 1, 0.2, 0.4],
         color: '#fff',
-        animationMs: 0,
         sampleCapacity: 4,
       },
     });
@@ -157,7 +143,6 @@ describe('MiniPerformanceGraph', () => {
         height: 20,
         values: [0.5],
         color: '#fff',
-        animationMs: 0,
         sampleCapacity: 1,
       },
     });
@@ -165,21 +150,5 @@ describe('MiniPerformanceGraph', () => {
     expect(context.moveTo).toHaveBeenCalledWith(0, expect.any(Number));
     expect(context.lineTo).toHaveBeenCalledWith(80, expect.any(Number));
     expect(context.stroke).toHaveBeenCalled();
-  });
-
-  it('cancels scheduled animation frame on unmount', async () => {
-    const requestAnimationFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 42);
-    const cancelAnimationFrame = vi.spyOn(window, 'cancelAnimationFrame');
-    const wrapper = mount(MiniPerformanceGraph, {
-      props: { label: 'Unmount test', values: [0.1], color: '#fff', animationMs: 500 },
-    });
-
-    await wrapper.setProps({ values: [0.1, 0.8] });
-    await nextTick();
-
-    wrapper.unmount();
-    expect(cancelAnimationFrame).toHaveBeenCalled();
-    requestAnimationFrame.mockRestore();
-    cancelAnimationFrame.mockRestore();
   });
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -9,21 +9,19 @@ const props = withDefaults(
     width?: number;
     height?: number;
     label: string;
-    animationMs?: number;
     sampleCapacity?: number;
+    animationMs?: number;
   }>(),
-  { width: 82, height: 20, animationMs: 320, sampleCapacity: 48, fill: true },
+  {
+    width: 82,
+    height: 20,
+    sampleCapacity: 48,
+    animationMs: 0,
+    fill: true,
+  },
 );
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-
-let renderedValues: number[] = [];
-let targetValues: number[] = [];
-let startValues: number[] = [];
-let animationFrame: number | null = null;
-let animationStartTime = 0;
-let mounted = false;
-
 const colorCache = new Map<string, string>();
 
 function cleanValues(values: readonly number[], sampleCapacity?: number): number[] {
@@ -40,25 +38,6 @@ function cleanValues(values: readonly number[], sampleCapacity?: number): number
     sampleCapacity !== undefined && sampleCapacity > 0 ? Math.max(2, Math.round(sampleCapacity)) : normalized.length;
 
   return normalized.length > capacity ? normalized.slice(-capacity) : normalized;
-}
-
-function resampleValues(source: readonly number[], targetLength: number): number[] {
-  if (targetLength <= 0) return [];
-  if (source.length === 0) return new Array(targetLength).fill(0);
-  if (source.length === targetLength) return source.slice();
-
-  const result = new Array<number>(targetLength);
-  const maxSourceIndex = source.length - 1;
-  const maxTargetIndex = Math.max(1, targetLength - 1);
-
-  for (let i = 0; i < targetLength; i++) {
-    const sourcePos = (i / maxTargetIndex) * maxSourceIndex;
-    const left = Math.floor(sourcePos);
-    const right = Math.min(maxSourceIndex, Math.ceil(sourcePos));
-    const progress = sourcePos - left;
-    result[i] = (source[left] ?? 0) * (1 - progress) + (source[right] ?? 0) * progress;
-  }
-  return result;
 }
 
 function resolveColor(canvas: HTMLCanvasElement, color: string): string {
@@ -113,7 +92,7 @@ function traceCurve(context: CanvasRenderingContext2D, values: readonly number[]
   }
 }
 
-function draw(values: readonly number[]) {
+function draw() {
   const canvas = canvasRef.value;
   if (!canvas) return;
 
@@ -136,6 +115,7 @@ function draw(values: readonly number[]) {
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
 
+  const values = cleanValues(props.values, props.sampleCapacity);
   if (values.length === 0 || width <= 0 || height <= 0) return;
 
   const color = resolveColor(canvas, props.color);
@@ -145,7 +125,7 @@ function draw(values: readonly number[]) {
 
   traceCurve(context, values, width, height);
 
-  // Stroke the curve
+  // Stroke the crisp curve
   context.strokeStyle = color;
   context.lineWidth = 1.5;
   context.globalAlpha = 0.95;
@@ -173,76 +153,14 @@ function draw(values: readonly number[]) {
   context.globalAlpha = 1;
 }
 
-function stepAnimation(timestamp: number) {
-  const duration = Math.max(1, props.animationMs ?? 320);
-  const elapsed = timestamp - animationStartTime;
-  const linear = Math.min(1, Math.max(0, elapsed / duration));
-  const progress = 1 - Math.pow(1 - linear, 3);
-
-  const len = targetValues.length;
-  if (renderedValues.length !== len) {
-    renderedValues = new Array(len);
-  }
-
-  for (let i = 0; i < len; i++) {
-    const s = startValues[i] ?? targetValues[i] ?? 0;
-    const t = targetValues[i] ?? 0;
-    renderedValues[i] = s + (t - s) * progress;
-  }
-
-  draw(renderedValues);
-
-  if (linear < 1) {
-    animationFrame = requestAnimationFrame(stepAnimation);
-  } else {
-    animationFrame = null;
-  }
-}
-
-function update() {
-  if (animationFrame !== null) {
-    cancelAnimationFrame(animationFrame);
-    animationFrame = null;
-  }
-
-  targetValues = cleanValues(props.values, props.sampleCapacity);
-
-  if (!mounted || (props.animationMs ?? 0) <= 0 || renderedValues.length === 0) {
-    renderedValues = targetValues.slice();
-    draw(renderedValues);
-    return;
-  }
-
-  startValues = resampleValues(renderedValues, targetValues.length);
-  animationStartTime = performance.now();
-  animationFrame = requestAnimationFrame(stepAnimation);
-}
-
 onMounted(() => {
-  mounted = true;
-  update();
-});
-
-onUnmounted(() => {
-  if (animationFrame !== null) {
-    cancelAnimationFrame(animationFrame);
-    animationFrame = null;
-  }
+  draw();
 });
 
 watch(
-  () =>
-    [
-      props.values,
-      props.color,
-      props.fill,
-      props.width,
-      props.height,
-      props.animationMs,
-      props.sampleCapacity,
-    ] as const,
+  () => [props.values, props.color, props.fill, props.width, props.height, props.sampleCapacity] as const,
   () => {
-    update();
+    draw();
   },
   { deep: true },
 );

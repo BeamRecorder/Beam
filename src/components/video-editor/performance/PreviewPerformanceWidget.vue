@@ -78,7 +78,6 @@ const accessibleLabel = computed(
         :color="overallColor"
         :width="96"
         :height="28"
-        :animation-ms="460"
         :label="accessibleLabel"
       />
     </div>
@@ -104,7 +103,6 @@ const accessibleLabel = computed(
             :color="uiDetail.color"
             :width="96"
             :height="28"
-            :animation-ms="460"
             :label="`${uiDetail.label}: ${statusLabel(uiDetail.score)}`"
           />
         </div>
@@ -117,7 +115,6 @@ const accessibleLabel = computed(
               :color="playbackDetail.color"
               :width="96"
               :height="28"
-              :animation-ms="460"
               :label="`${playbackDetail.label}: ${statusLabel(playbackDetail.score)}`"
             />
           </div>
@@ -131,7 +128,6 @@ const accessibleLabel = computed(
               :color="mediaDetail.color"
               :width="96"
               :height="28"
-              :animation-ms="460"
               :label="`${mediaDetail.label}: ${statusLabel(mediaDetail.score)}`"
             />
           </div>
