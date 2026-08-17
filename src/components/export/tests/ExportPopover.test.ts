@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { mount } from '@vue/test-utils';
 import { nextTick, type Ref } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { i18n } from '~/i18n';
+import { i18n, setCurrentLocale } from '~/i18n';
 import { useToastStore } from '~/ui/toast/toastStore';
 import { ExportValidationError, type ExportRequest } from '../export-types';
 
@@ -145,6 +145,28 @@ describe('ExportPopover', () => {
     await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
     expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ format: 'mp4', preset: 'high' }));
     expect(wrapper.get('[role="alert"]').text()).toContain('MP4');
+  });
+
+  it('renders translated quality labels in French', () => {
+    setCurrentLocale('fr');
+    let wrapper: ReturnType<typeof mountExport> | undefined;
+
+    try {
+      wrapper = mountExport();
+      const qualityField = wrapper
+        .findAll('.field')
+        .find((field) => field.find('.field-label').text() === 'Qualité & Débit');
+      const labels = qualityField
+        ?.find('.button-group-stub')
+        .findAll('.button-stub')
+        .map((button) => button.text());
+
+      expect(labels).toEqual(['faible', 'moyen', 'élevé']);
+      expect(labels).not.toEqual(['low', 'medium', 'high']);
+    } finally {
+      wrapper?.unmount();
+      setCurrentLocale('en');
+    }
   });
 
   it('defaults to 60 fps when the source/timeline snapshot is 60 fps', async () => {

@@ -78,7 +78,11 @@ onBeforeUnmount(() => {
           :aria-label="`${t('previewQuality')}: ${activeOption.label}`"
         >
           <template #icon>
-            <span class="preview-quality-icon" aria-hidden="true">
+            <span
+              class="preview-quality-icon"
+              :class="warningLevel ? `is-${warningLevel}` : undefined"
+              aria-hidden="true"
+            >
               <Gauge />
               <span class="preview-quality-indicator">{{ activeOption.indicator }}</span>
             </span>
@@ -129,16 +133,26 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 .preview-quality-trigger.is-warning {
-  color: var(--color-warning);
+  color: var(--color-warning) !important;
   border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border));
 }
 .preview-quality-trigger.is-critical {
-  color: var(--color-error);
+  color: var(--color-error) !important;
   border-color: color-mix(in srgb, var(--color-error) 48%, var(--color-border));
 }
-.preview-quality-trigger.is-warning .preview-quality-indicator,
-.preview-quality-trigger.is-critical .preview-quality-indicator {
-  color: currentColor;
+.preview-quality-icon.is-warning {
+  color: var(--color-warning);
+}
+.preview-quality-icon.is-critical {
+  color: var(--color-error);
+}
+.preview-quality-icon.is-warning .preview-quality-indicator {
+  color: var(--color-warning);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 45%, transparent);
+}
+.preview-quality-icon.is-critical .preview-quality-indicator {
+  color: var(--color-error);
+  border: 1px solid color-mix(in srgb, var(--color-error) 48%, transparent);
 }
 .preview-quality-suggestion {
   --blur-reveal-max-height: 56px;

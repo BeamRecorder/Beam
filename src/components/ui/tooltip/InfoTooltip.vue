@@ -34,9 +34,6 @@ withDefaults(
 <style scoped>
 .info-tooltip-trigger {
   flex: 0 0 auto;
-}
-
-.info-tooltip-trigger :deep(.btn) {
   width: 20px;
   min-width: 20px;
   height: 20px;
@@ -45,7 +42,7 @@ withDefaults(
   border-radius: var(--radius-sm);
 }
 
-.info-tooltip-trigger :deep(.btn:hover) {
+.info-tooltip-trigger:hover {
   color: var(--text-primary);
 }
 
