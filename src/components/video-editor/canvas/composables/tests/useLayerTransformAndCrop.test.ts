@@ -2,9 +2,17 @@ import { defineComponent, h, nextTick, ref } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLayerTransformAndCrop, type UseLayerTransformAndCropOptions } from '../useLayerTransformAndCrop';
-import type { BlurClip, CaptionClip, ClipComposition, VisualClip } from '~/media/shared/composition-types';
+import type {
+  BlurClip,
+  CaptionClip,
+  ClipComposition,
+  NormalizedTransform,
+  VisualClip,
+} from '~/media/shared/composition-types';
 import type { VideoWindowBounds } from '../useCameraZoom';
 import { DEFAULT_OUTPUT_CANVAS } from '../../output-canvas';
+import { computeWebcamLayout, webcamSettingsForAppearance } from '../../../composition/webcam/webcam-zoom';
+import { resolveCameraFraming } from '../../../composition/camera-layout';
 import { createDefaultCaptionStyle, createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const screenClip = (): VisualClip => ({
@@ -41,6 +49,13 @@ const webcamClip = (): VisualClip => ({
   appearance: createDefaultClipAppearance('webcam'),
   isMirrored: true,
   isMirroredY: false,
+});
+
+const squircleWebcamClip = (overrides: Partial<VisualClip> = {}): VisualClip => ({
+  ...webcamClip(),
+  cameraLayoutPreset: 'custom',
+  cameraFramingPreset: 'squircle',
+  ...overrides,
 });
 
 const imageClip = (): VisualClip => ({
@@ -207,6 +222,35 @@ const mountComposable = (
     },
   };
 };
+
+const squircleTransformForVisibleFrame = (clip: VisualClip, windowBounds: VideoWindowBounds): NormalizedTransform => {
+  const settings = webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY);
+  const layout = computeWebcamLayout(windowBounds.dw, windowBounds.dh, windowBounds.scale, settings, clip.transform);
+  const framing = resolveCameraFraming(
+    'squircle',
+    { x: layout.x, y: layout.y, width: layout.width, height: layout.height },
+    1_280,
+    720,
+  );
+  const zoomFactor = settings.reactToZoom ? 1 / Math.max(1, windowBounds.scale) : 1;
+  const width = framing.rect.width / (windowBounds.dw * zoomFactor);
+  const height = framing.rect.height / (windowBounds.dh * zoomFactor);
+  return {
+    x: (framing.rect.x + framing.rect.width) / windowBounds.dw - width,
+    y: (framing.rect.y + framing.rect.height) / windowBounds.dh - height,
+    width,
+    height,
+  };
+};
+
+type SelectionStyle = {
+  display?: string;
+  left?: string;
+  top?: string;
+  width?: string;
+  height?: string;
+};
+const stylePixels = (style: SelectionStyle, property: keyof SelectionStyle) => Number.parseFloat(style[property] ?? '');
 
 beforeEach(() => {
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
@@ -434,7 +478,8 @@ describe('useLayerTransformAndCrop', () => {
 
     mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'move');
     mounted.state.moveTransformDrag(pointer(target, { clientX: -1000, clientY: -1000 }));
-    expect(mounted.state.transformDraft.value).toMatchObject({ x: 0, y: 0 });
+    expect(mounted.state.transformDraft.value).toMatchObject({ x: -0.125, y: -0.125 });
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({ left: '0px', top: '0px' });
     mounted.state.endTransformDrag(pointer(target));
 
     mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
@@ -443,6 +488,130 @@ describe('useLayerTransformAndCrop', () => {
     expect(transform.x + transform.width).toBeLessThanOrEqual(1);
     expect(transform.y + transform.height).toBeLessThanOrEqual(1);
   });
+
+  it('starts squircle moves and resizes from the visible framed rectangle, not the outer transform', () => {
+    const clip = squircleWebcamClip({
+      transform: { x: 0.1, y: 0.1, width: 0.25, height: 0.25 },
+    });
+    const mounted = mountComposable(clip);
+    const target = document.createElement('div');
+    Object.assign(target, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn().mockReturnValue(true),
+      releasePointerCapture: vi.fn(),
+    });
+
+    const visibleTransform = squircleTransformForVisibleFrame(clip, mounted.selectedBounds.value!);
+    expect(mounted.state.transformHandleStyle.value).toMatchObject({
+      left: '201.875px',
+      top: '101.25px',
+      width: '56.25px',
+      height: '56.25px',
+    });
+
+    mounted.state.beginTransformDrag(pointer(target), 'move');
+
+    expect(mounted.state.transformDraft.value).toEqual(visibleTransform);
+    expect(mounted.state.transformDraft.value).not.toEqual(clip.transform);
+  });
+
+  it('uses the inverse camera zoom when resizing the visible squircle frame', async () => {
+    const clip = squircleWebcamClip({
+      transform: { x: 0.1, y: 0.1, width: 0.25, height: 0.25 },
+    });
+    const mounted = mountComposable(clip);
+    const target = document.createElement('div');
+    Object.assign(target, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn().mockReturnValue(true),
+      releasePointerCapture: vi.fn(),
+    });
+    const initialStyle = mounted.state.transformHandleStyle.value;
+    const initialWidth = stylePixels(initialStyle, 'width');
+    const initialHeight = stylePixels(initialStyle, 'height');
+
+    mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
+    mounted.state.moveTransformDrag(pointer(target, { clientX: 200, clientY: 200 }));
+    mounted.state.endTransformDrag(pointer(target, { clientX: 200, clientY: 200 }));
+
+    const resizedTransform = vi.mocked(mounted.options.onUpdateTransform).mock.calls.at(-1)?.[0];
+    expect(resizedTransform).toBeDefined();
+    mounted.selectedRef.value = { ...clip, transform: resizedTransform! };
+    await nextTick();
+
+    const resizedStyle = mounted.state.transformHandleStyle.value;
+    expect(stylePixels(resizedStyle, 'width') - initialWidth).toBeCloseTo(100, 5);
+    expect(stylePixels(resizedStyle, 'height') - initialHeight).toBeCloseTo(100, 5);
+  });
+
+  it.each([
+    {
+      edge: 'left',
+      transform: { x: 0.1, y: 0.25, width: 0.45, height: 0.25 },
+      resizePointer: { clientX: 260, clientY: 100 },
+    },
+    {
+      edge: 'right',
+      transform: { x: 0.1, y: 0.25, width: 0.45, height: 0.25 },
+      resizePointer: { clientX: 260, clientY: 100 },
+    },
+    {
+      edge: 'top',
+      transform: { x: 0.25, y: 0.1, width: 0.25, height: 0.45 },
+      resizePointer: { clientX: 100, clientY: 260 },
+    },
+    {
+      edge: 'bottom',
+      transform: { x: 0.25, y: 0.1, width: 0.25, height: 0.45 },
+      resizePointer: { clientX: 100, clientY: 260 },
+    },
+  ] as const)(
+    'reaches the $edge canvas edge after a squircle resize and a new move',
+    async ({ edge, transform, resizePointer }) => {
+      const clip = squircleWebcamClip({ transform });
+      const mounted = mountComposable(clip);
+      const target = document.createElement('div');
+      Object.assign(target, {
+        setPointerCapture: vi.fn(),
+        hasPointerCapture: vi.fn().mockReturnValue(true),
+        releasePointerCapture: vi.fn(),
+      });
+
+      mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'resize', 'bottom-right');
+      mounted.state.moveTransformDrag(pointer(target, resizePointer));
+      mounted.state.endTransformDrag(pointer(target, resizePointer));
+      const resizedTransform = vi.mocked(mounted.options.onUpdateTransform).mock.calls.at(-1)?.[0];
+      expect(resizedTransform).toBeDefined();
+      mounted.selectedRef.value = { ...clip, transform: resizedTransform! };
+      await nextTick();
+
+      const beforeMove = mounted.state.transformHandleStyle.value;
+      const left = stylePixels(beforeMove, 'left');
+      const top = stylePixels(beforeMove, 'top');
+      const width = stylePixels(beforeMove, 'width');
+      const height = stylePixels(beforeMove, 'height');
+      const deltaX = edge === 'left' ? -left : edge === 'right' ? 800 - (left + width) : 0;
+      const deltaY = edge === 'top' ? -top : edge === 'bottom' ? 450 - (top + height) : 0;
+
+      mounted.state.beginTransformDrag(pointer(target, { clientX: 100, clientY: 100 }), 'move');
+      mounted.state.moveTransformDrag(pointer(target, { clientX: 100 + deltaX, clientY: 100 + deltaY }));
+      mounted.state.endTransformDrag(pointer(target, { clientX: 100 + deltaX, clientY: 100 + deltaY }));
+      const movedTransform = vi.mocked(mounted.options.onUpdateTransform).mock.calls.at(-1)?.[0];
+      expect(movedTransform).toBeDefined();
+      mounted.selectedRef.value = { ...clip, transform: movedTransform! };
+      await nextTick();
+
+      const finalStyle = mounted.state.transformHandleStyle.value;
+      const finalLeft = stylePixels(finalStyle, 'left');
+      const finalTop = stylePixels(finalStyle, 'top');
+      const finalWidth = stylePixels(finalStyle, 'width');
+      const finalHeight = stylePixels(finalStyle, 'height');
+      if (edge === 'left') expect(finalLeft).toBeCloseTo(0, 5);
+      if (edge === 'right') expect(finalLeft + finalWidth).toBeCloseTo(800, 5);
+      if (edge === 'top') expect(finalTop).toBeCloseTo(0, 5);
+      if (edge === 'bottom') expect(finalTop + finalHeight).toBeCloseTo(450, 5);
+    },
+  );
 
   it('resizes wrapped captions with side handles and keeps the font size unchanged', () => {
     const clip = captionClip();

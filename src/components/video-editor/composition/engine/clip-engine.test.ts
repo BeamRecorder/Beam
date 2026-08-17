@@ -163,59 +163,55 @@ describe('camera layout engine operations', () => {
     expect(next.clips.find((clip) => clip.kind === 'audio')).toEqual(beforeAudio);
   });
 
-  it('adds background spacing to both split regions and protects the layout from position edits', () => {
+  it('keeps split padding when a manual camera move makes only the camera custom', () => {
     const split = setCameraLayout(compositionFixture(), 'camera', 'split-left');
     const padded = setCameraSplitPadding(split, 'camera', 0.04);
-    const camera = padded.clips.find((clip): clip is VisualClip => clip.id === 'camera')!;
-    const screen = padded.clips.find((clip): clip is VisualClip => clip.id === 'screen')!;
+    const beforeCamera = padded.clips.find((clip): clip is VisualClip => clip.id === 'camera')!;
+    const beforeScreen = padded.clips.find((clip): clip is VisualClip => clip.id === 'screen')!;
+    const beforeAudio = padded.clips.find((clip): clip is AudioClip => clip.kind === 'audio')!;
 
-    expect(camera.cameraSplitPadding).toBe(0.04);
-    expect(camera.transform).toEqual({ x: 0.04, y: 0.04, width: 0.42, height: 0.92 });
-    expect(screen.transform).toEqual({ x: 0.54, y: 0.04, width: 0.42, height: 0.92 });
-    expect(setTransform(padded, 'camera', camera.transform).clips.find((clip) => clip.id === 'camera')).toEqual(camera);
-    const moved = setTransform(padded, 'camera', { ...camera.transform, x: 0.05 });
+    expect(beforeCamera.cameraSplitPadding).toBe(0.04);
+    expect(beforeCamera.transform).toEqual({ x: 0.04, y: 0.04, width: 0.42, height: 0.92 });
+    expect(beforeScreen.transform).toEqual({ x: 0.54, y: 0.04, width: 0.42, height: 0.92 });
+    expect(setTransform(padded, 'camera', beforeCamera.transform).clips.find((clip) => clip.id === 'camera')).toEqual(
+      beforeCamera,
+    );
+
+    const requested = { ...beforeCamera.transform, x: 0.12, y: 0.08 };
+    const moved = setTransform(padded, 'camera', requested);
     const movedCamera = moved.clips.find((clip): clip is VisualClip => clip.id === 'camera');
     const movedScreen = moved.clips.find((clip): clip is VisualClip => clip.id === 'screen');
-    expect(movedCamera).toMatchObject({ cameraLayoutPreset: 'split-left' });
-    expect(movedCamera?.cameraSplitRatio).toBeCloseTo(camera.cameraSplitRatio ?? 0.5);
-    expect(movedCamera?.cameraSplitPadding).toBeCloseTo(camera.cameraSplitPadding ?? 0.04);
-    expect(movedCamera?.transform.x).toBeCloseTo(camera.transform.x);
-    expect(movedCamera?.transform.y).toBeCloseTo(camera.transform.y);
-    expect(movedCamera?.transform.width).toBeCloseTo(camera.transform.width);
-    expect(movedCamera?.transform.height).toBeCloseTo(camera.transform.height);
-    expect(movedScreen?.transform.x).toBeCloseTo(screen.transform.x);
-    expect(movedScreen?.transform.y).toBeCloseTo(screen.transform.y);
-    expect(movedScreen?.transform.width).toBeCloseTo(screen.transform.width);
-    expect(movedScreen?.transform.height).toBeCloseTo(screen.transform.height);
+    expect(movedCamera).toMatchObject({
+      cameraLayoutPreset: 'custom',
+      cameraSplitRatio: beforeCamera.cameraSplitRatio,
+      cameraSplitPadding: beforeCamera.cameraSplitPadding,
+      cameraFramingPreset: beforeCamera.cameraFramingPreset,
+      transform: requested,
+    });
+    expect(movedScreen).toEqual(beforeScreen);
+    expect(moved.clips.find((clip): clip is AudioClip => clip.kind === 'audio')).toEqual(beforeAudio);
   });
 
-  it('converts a split-camera resize into ratio and padding while updating the linked screen', () => {
+  it('keeps the linked screen and audio unchanged when resizing a padded split camera', () => {
     const split = setCameraLayout(compositionFixture(), 'camera', 'split-right');
-    const beforeAudio = split.clips.find((clip): clip is AudioClip => clip.kind === 'audio');
-    const resized = setTransform(split, 'camera', {
-      x: 0.64,
-      y: 0.03,
-      width: 0.33,
-      height: 0.94,
-    });
+    const padded = setCameraSplitPadding(split, 'camera', 0.04);
+    const beforeCamera = padded.clips.find((clip): clip is VisualClip => clip.id === 'camera')!;
+    const beforeScreen = padded.clips.find((clip): clip is VisualClip => clip.id === 'screen')!;
+    const beforeAudio = padded.clips.find((clip): clip is AudioClip => clip.kind === 'audio')!;
+    const requested = { x: 0.44, y: 0.04, width: 0.52, height: 0.92 };
+    const resized = setTransform(padded, 'camera', requested);
     const camera = resized.clips.find((clip): clip is VisualClip => clip.id === 'camera');
     const screen = resized.clips.find((clip): clip is VisualClip => clip.id === 'screen');
 
     expect(camera).toMatchObject({
-      cameraLayoutPreset: 'split-right',
-      cameraFramingPreset: 'fill',
+      cameraLayoutPreset: 'custom',
+      cameraSplitRatio: beforeCamera.cameraSplitRatio,
+      cameraSplitPadding: beforeCamera.cameraSplitPadding,
+      cameraFramingPreset: beforeCamera.cameraFramingPreset,
+      transform: requested,
     });
-    expect(camera?.cameraSplitRatio).toBeCloseTo(0.39);
-    expect(camera?.cameraSplitPadding).toBeCloseTo(0.03);
-    expect(camera?.transform.x).toBeCloseTo(0.64);
-    expect(camera?.transform.y).toBeCloseTo(0.03);
-    expect(camera?.transform.width).toBeCloseTo(0.33);
-    expect(camera?.transform.height).toBeCloseTo(0.94);
-    expect(screen?.transform.x).toBeCloseTo(0.03);
-    expect(screen?.transform.y).toBeCloseTo(0.03);
-    expect(screen?.transform.width).toBeCloseTo(0.55);
-    expect(screen?.transform.height).toBeCloseTo(0.94);
-    expect(resized.clips.find((clip) => clip.kind === 'audio')).toEqual(beforeAudio);
+    expect(screen).toEqual(beforeScreen);
+    expect(resized.clips.find((clip): clip is AudioClip => clip.kind === 'audio')).toEqual(beforeAudio);
   });
 
   it('requires a linked screen for split layouts and leaves the composition untouched on failure', () => {

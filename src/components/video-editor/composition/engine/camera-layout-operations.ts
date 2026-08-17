@@ -1,5 +1,5 @@
 import { isSplitCameraLayout, type CameraLayoutPreset } from '~/media/shared/camera-layout-types';
-import type { ClipComposition, NormalizedTransform } from '~/media/shared/composition-types';
+import type { ClipComposition } from '~/media/shared/composition-types';
 import { cameraLayoutTransform, linkedScreenTransform } from '../camera-layout';
 import { cameraScreenCanShareGroup, cameraScreenPartner } from '../camera-screen-link';
 import { CompositionEngineError, validateComposition } from './clip-composition-validation';
@@ -100,18 +100,4 @@ export function setCameraSplitPadding(composition: ClipComposition, clipId: stri
   );
   validateComposition(next);
   return next;
-}
-
-export function setCameraSplitTransform(
-  composition: ClipComposition,
-  clipId: string,
-  transform: NormalizedTransform,
-): ClipComposition {
-  const camera = composition.clips.find((clip) => clip.id === clipId);
-  if (camera?.kind !== 'webcam' || !camera.cameraLayoutPreset || !isSplitCameraLayout(camera.cameraLayoutPreset))
-    throw new CompositionEngineError('Only split camera layouts use split transforms.');
-  const vertical = camera.cameraLayoutPreset === 'split-left' || camera.cameraLayoutPreset === 'split-right';
-  const padding = (1 - (vertical ? transform.height : transform.width)) / 2;
-  const ratio = (vertical ? transform.width : transform.height) + Math.max(0, padding) * 2;
-  return setCameraSplitPadding(setCameraSplitRatio(composition, clipId, ratio), clipId, padding);
 }

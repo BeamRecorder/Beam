@@ -15,9 +15,8 @@ import {
   type ClipTransition,
 } from '~/media/shared/composition-types';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
-import { isSplitCameraLayout, type CameraFramingPreset } from '~/media/shared/camera-layout-types';
+import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
-import { setCameraSplitTransform } from './camera-layout-operations';
 import {
   maximumVisualTrackDuration,
   normalizeClipOrders,
@@ -32,12 +31,7 @@ import {
   MIN_PLAYBACK_RATE,
   validateComposition,
 } from './clip-composition-validation';
-export {
-  setCameraLayout,
-  setCameraSplitPadding,
-  setCameraSplitRatio,
-  setCameraSplitTransform,
-} from './camera-layout-operations';
+export { setCameraLayout, setCameraSplitPadding, setCameraSplitRatio } from './camera-layout-operations';
 export {
   CompositionEngineError,
   MAX_PLAYBACK_RATE,
@@ -344,17 +338,6 @@ export function setTransform(
     transform.height <= 0
   ) {
     throw new CompositionEngineError('Invalid clip transform.');
-  }
-  const target = composition.clips.find((clip) => clip.id === clipId);
-  if (target?.kind === 'webcam' && isSplitCameraLayout(target.cameraLayoutPreset ?? 'custom')) {
-    if (
-      target.transform.x === transform.x &&
-      target.transform.y === transform.y &&
-      target.transform.width === transform.width &&
-      target.transform.height === transform.height
-    )
-      return composition;
-    return setCameraSplitTransform(composition, clipId, transform);
   }
   return updateClip(composition, clipId, (clip) => {
     if (clip.kind === 'audio') throw new CompositionEngineError('Audio clips do not have a transform.');

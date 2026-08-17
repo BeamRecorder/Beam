@@ -3,8 +3,10 @@ import {
   computeWebcamLayout,
   drawWebcamOverlay,
   getWebcamZoomFactor,
+  normalizeWebcamTransformToVisibleFraming,
   webcamSettingsForAppearance,
 } from '../webcam/webcam-zoom';
+import { resolveCameraFraming } from '../camera-layout';
 
 const context = () =>
   ({
@@ -51,6 +53,52 @@ describe('webcam zoom layout', () => {
     expect(getWebcamZoomFactor(3, false)).toBe(1);
     expect(getWebcamZoomFactor(0, true)).toBe(1);
     expect(getWebcamZoomFactor(Number.NaN, true)).toBe(1);
+  });
+
+  it('turns an inset squircle frame into the editable camera transform without moving it', () => {
+    const settings = webcamSettingsForAppearance(undefined);
+    const original = { x: 0.68, y: 0.68, width: 0.28, height: 0.28 };
+    const beforeLayout = computeWebcamLayout(800, 450, 1, settings, original);
+    const beforeFrame = resolveCameraFraming('squircle', beforeLayout, 1280, 720).rect;
+
+    const editable = normalizeWebcamTransformToVisibleFraming(800, 450, 1, settings, original, 'squircle', 1280, 720);
+    const afterLayout = computeWebcamLayout(800, 450, 1, settings, editable);
+    const afterFrame = resolveCameraFraming('squircle', afterLayout, 1280, 720).rect;
+
+    expect(editable.width).toBeCloseTo(0.1575);
+    expect(editable.height).toBeCloseTo(0.28);
+    expect(afterFrame).toEqual(beforeFrame);
+  });
+
+  it('preserves the currently visible framed rectangle while automatic zoom is active', () => {
+    const settings = webcamSettingsForAppearance(undefined);
+    const original = { x: 0.68, y: 0.68, width: 0.28, height: 0.28 };
+    const beforeLayout = computeWebcamLayout(800, 450, 2, settings, original);
+    const beforeFrame = resolveCameraFraming('squircle', beforeLayout, 1280, 720).rect;
+
+    const editable = normalizeWebcamTransformToVisibleFraming(800, 450, 2, settings, original, 'squircle', 1280, 720);
+    const afterLayout = computeWebcamLayout(800, 450, 2, settings, editable);
+    const afterFrame = resolveCameraFraming('squircle', afterLayout, 1280, 720).rect;
+
+    expect(afterFrame.x).toBeCloseTo(beforeFrame.x);
+    expect(afterFrame.y).toBeCloseTo(beforeFrame.y);
+    expect(afterFrame.width).toBeCloseTo(beforeFrame.width);
+    expect(afterFrame.height).toBeCloseTo(beforeFrame.height);
+  });
+
+  it('keeps fill framing unchanged while clamping malformed persisted bounds', () => {
+    expect(
+      normalizeWebcamTransformToVisibleFraming(
+        800,
+        450,
+        1,
+        webcamSettingsForAppearance(undefined),
+        { x: 0.9, y: -0.2, width: 0.5, height: 1.4 },
+        'fill',
+        1280,
+        720,
+      ),
+    ).toEqual({ x: 0.5, y: 0, width: 0.5, height: 1 });
   });
 
   it('keeps the webcam pinned to the bottom right as its size changes', () => {
