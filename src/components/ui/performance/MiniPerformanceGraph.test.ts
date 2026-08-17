@@ -117,6 +117,7 @@ describe('MiniPerformanceGraph', () => {
         height: 24,
         values: [0.1, 1, 0.2, 0.4],
         color: '#fff',
+        animationMs: 0,
         sampleCapacity: 4,
       },
     });

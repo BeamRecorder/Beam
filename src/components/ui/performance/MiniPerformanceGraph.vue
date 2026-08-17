@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = withDefaults(
   defineProps<{
@@ -16,12 +16,20 @@ const props = withDefaults(
     width: 82,
     height: 20,
     sampleCapacity: 48,
-    animationMs: 0,
+    animationMs: 400,
     fill: true,
   },
 );
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+
+let displayedValues: number[] = [];
+let startValues: number[] = [];
+let targetValues: number[] = [];
+let animationStartTime = 0;
+let animationFrame: number | null = null;
+let mounted = false;
+
 const colorCache = new Map<string, string>();
 
 function cleanValues(values: readonly number[], sampleCapacity?: number): number[] {
@@ -92,7 +100,7 @@ function traceCurve(context: CanvasRenderingContext2D, values: readonly number[]
   }
 }
 
-function draw() {
+function draw(values: readonly number[]) {
   const canvas = canvasRef.value;
   if (!canvas) return;
 
@@ -115,7 +123,6 @@ function draw() {
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
 
-  const values = cleanValues(props.values, props.sampleCapacity);
   if (values.length === 0 || width <= 0 || height <= 0) return;
 
   const color = resolveColor(canvas, props.color);
@@ -153,14 +160,87 @@ function draw() {
   context.globalAlpha = 1;
 }
 
+function stepAnimation(timestamp: number) {
+  const duration = Math.max(1, props.animationMs ?? 400);
+  const elapsed = timestamp - animationStartTime;
+  const linear = Math.min(1, Math.max(0, elapsed / duration));
+  const progress = 1 - Math.pow(1 - linear, 3);
+
+  const len = targetValues.length;
+  if (displayedValues.length !== len) {
+    displayedValues = new Array(len);
+  }
+
+  for (let i = 0; i < len; i++) {
+    const start = startValues[i] ?? targetValues[i] ?? 0;
+    const target = targetValues[i] ?? 0;
+    displayedValues[i] = start + (target - start) * progress;
+  }
+
+  draw(displayedValues);
+
+  if (linear < 1) {
+    animationFrame = requestAnimationFrame(stepAnimation);
+  } else {
+    animationFrame = null;
+  }
+}
+
+function onValuesUpdate() {
+  if (animationFrame !== null) {
+    cancelAnimationFrame(animationFrame);
+    animationFrame = null;
+  }
+
+  targetValues = cleanValues(props.values, props.sampleCapacity);
+
+  const duration = props.animationMs ?? 400;
+
+  if (!mounted || duration <= 0 || displayedValues.length === 0) {
+    displayedValues = targetValues.slice();
+    draw(displayedValues);
+    return;
+  }
+
+  // Seamlessly adapt from wherever the graph is currently rendered
+  const targetLen = targetValues.length;
+  const currentLen = displayedValues.length;
+
+  if (currentLen === targetLen) {
+    startValues = displayedValues.slice();
+  } else {
+    startValues = new Array(targetLen);
+    const maxCurr = Math.max(1, currentLen - 1);
+    const maxTarget = Math.max(1, targetLen - 1);
+    for (let i = 0; i < targetLen; i++) {
+      const pos = (i / maxTarget) * maxCurr;
+      const left = Math.floor(pos);
+      const right = Math.min(currentLen - 1, Math.ceil(pos));
+      const f = pos - left;
+      startValues[i] = (displayedValues[left] ?? 0) * (1 - f) + (displayedValues[right] ?? 0) * f;
+    }
+  }
+
+  animationStartTime = performance.now();
+  animationFrame = requestAnimationFrame(stepAnimation);
+}
+
 onMounted(() => {
-  draw();
+  mounted = true;
+  onValuesUpdate();
+});
+
+onUnmounted(() => {
+  if (animationFrame !== null) {
+    cancelAnimationFrame(animationFrame);
+    animationFrame = null;
+  }
 });
 
 watch(
-  () => [props.values, props.color, props.fill, props.width, props.height, props.sampleCapacity] as const,
+  () => [props.values, props.color, props.fill, props.width, props.height, props.sampleCapacity, props.animationMs] as const,
   () => {
-    draw();
+    onValuesUpdate();
   },
   { deep: true },
 );
