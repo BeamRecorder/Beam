@@ -1,25 +1,35 @@
 {
   "meta": {
-    "title": "Beam - Captura. Edita. Comparte.",
-    "description": "Beam es un grabador de pantalla y editor de vídeo de código abierto para crear demos de producto pulidas."
+    "title": "Beam — Grabador de pantalla y editor de vídeo gratuito",
+    "description": "Beam es un grabador de pantalla y editor de vídeo gratuito y de código abierto para crear demostraciones de producto pulidas en Windows, macOS y Linux."
   },
   "home": {
-    "heroLine1": "Captura el momento.",
-    "heroLine2": "Perfecciona la historia.",
-    "lede": "Beam combina la captura y la edición en una aplicación de escritorio enfocada, para crear demos de producto rápidas de hacer y fáciles de ver.",
+    "heroLine1": "Graba. Edita. Comparte.",
+    "lede": "Beam crea grabaciones de pantalla pulidas para que tus demos de producto sean más fáciles de crear y mejores de ver.",
     "watchDemo": "Ver la demo real",
     "viewSource": "Ver el código fuente",
     "playDemoAria": "Reproducir la demo de Beam",
     "demoAlt": "Editor de vídeo de Beam mostrando una grabación de producto",
-    "openDemo": "Abrir la demo interactiva",
-    "openSourceTitle": "Beam se construye con su comunidad.",
-    "openSourceText": "Lee el código, informa de un error o ayuda a mejorar el grabador.",
+    "openDemo": "Explorar el editor",
+    "openSourceTitle": "Creado de forma abierta.",
+    "openSourceText": "Beam evoluciona con las personas que lo utilizan. Sigue el desarrollo en GitHub, contribuye al proyecto o únete a la comunidad en Discord.",
     "viewGitHub": "Ver en GitHub",
     "joinDiscord": "Unirse a Discord",
     "contributorsAlt": "Colaboradores de Beam en GitHub",
-    "contributorsFallback": "Conoce a las personas que construyen Beam",
-    "contributors": "{count} colaborador contribuye a Beam | {count} colaboradores contribuyen a Beam",
-    "footer": "Grabador de pantalla y editor de código abierto."
+    "contributorsFallback": "Creado por la comunidad de Beam — y creciendo.",
+    "contributors": "Creado por {count} colaborador — y creciendo. | Creado por {count} colaboradores — y creciendo.",
+    "footer": "Grabador de pantalla y editor de vídeo gratuitos y de código abierto.",
+    "heroEyebrow": "Gratis y de código abierto",
+    "downloadFree": "Descargar Beam — Gratis",
+    "availabilityTitle": "Gratis en cualquier ordenador.",
+    "availabilityPlatforms": "Disponible para Windows, macOS y Linux.",
+    "editorTitle": "Haz que cada grabación merezca la pena.",
+    "editorText": "Recorta lo innecesario, ajusta el ritmo, añade zooms fluidos y subtítulos, y exporta una demo de producto pulida.",
+    "freeTitle": "Resultados profesionales. Cero suscripciones.",
+    "freeText": "Beam es una alternativa gratuita y de código abierto a las herramientas de grabación de pantalla de pago, creada para Windows, macOS y Linux.",
+    "freeSubscription": "Sin suscripción",
+    "freeOpenSource": "Código abierto",
+    "freePlatforms": "Multiplataforma"
   },
   "nav": {
     "homeAria": "Inicio de Beam",
@@ -30,7 +40,11 @@
     "starsAria": "Estrellas de GitHub",
     "install": "Instalar"
   },
-  "theme": { "switchTo": "Cambiar al tema {theme}", "light": "claro", "dark": "oscuro" },
+  "theme": {
+    "switchTo": "Cambiar al tema {theme}",
+    "light": "claro",
+    "dark": "oscuro"
+  },
   "install": {
     "downloadTitle": "Descargar Beam {version} para {platform}",
     "preparingTitle": "Preparando Beam {version} para {platform}",
@@ -73,10 +87,10 @@
   },
   "editor": {
     "aria": "Demostración interactiva del editor de Beam",
-    "title": "Prueba el editor real de Beam",
+    "title": "Explora el editor de Beam",
     "checking": "Comprobando el proyecto público de demostración de Beam...",
     "webCodecsUnavailable": "WebCodecs no está disponible en este navegador. El MP4 original se puede reproducir abajo.",
-    "ready": "Lienzo real de Beam, audio, motor de reproducción, zooms editables y línea de tiempo.",
+    "ready": "Edita un proyecto real de Beam directamente en tu navegador.",
     "decodeFailed": "Beam no pudo decodificar el MP4 de demostración en tu navegador. La grabación original sigue disponible.",
     "filesMissing": "Falta o no es válido {count} archivo público de demostración. | Faltan o no son válidos {count} archivos públicos de demostración.",
     "invalidEdit": "Esta edición está fuera de los límites válidos del medio.",
@@ -106,5 +120,8 @@
     "requestFailed": "Error en la solicitud",
     "expectedMp4": "Se esperaba MP4, se recibió {type}"
   },
-  "errors": { "githubStatus": "La API de GitHub devolvió {status}.", "githubUnavailable": "GitHub no está disponible." }
+  "errors": {
+    "githubStatus": "La API de GitHub devolvió {status}.",
+    "githubUnavailable": "GitHub no está disponible."
+  }
 }

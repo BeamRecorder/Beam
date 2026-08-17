@@ -1,0 +1,85 @@
+{
+  "meta": {
+    "title": "FAQ do Beam — alternativa ao Screen Studio, Tella, OpenScreen, OBS e Loom",
+    "description": "Compare o Beam com Screen Studio, Tella, OpenScreen, OBS Studio e Loom. Conheça um gravador e editor de tela gratuito, de código aberto e multiplataforma."
+  },
+  "intro": {
+    "eyebrow": "Perguntas frequentes",
+    "title": "Tudo o que você precisa saber sobre o Beam.",
+    "lede": "Respostas factuais sobre o Beam, seus recursos e outros gravadores de tela.",
+    "ariaLabel": "Perguntas frequentes sobre o Beam"
+  },
+  "categories": {
+    "application": "Aplicativo Beam",
+    "creation": "Gravação e edição",
+    "comparisons": "Comparações",
+    "community": "Comunidade"
+  },
+  "callout": {
+    "eyebrow": "Ainda tem dúvidas?",
+    "title": "Leia a documentação ou pergunte à comunidade.",
+    "docs": "Ler a documentação",
+    "github": "Abrir o GitHub"
+  },
+  "items": [
+    [
+      "O que é o Beam?",
+      "O Beam é um gravador de tela e editor de vídeo gratuito e de código aberto para criar demonstrações de produtos refinadas no Windows, macOS e Linux."
+    ],
+    [
+      "O Beam é realmente gratuito e de código aberto?",
+      "Sim. O Beam é distribuído sob a licença MIT e não exige assinatura. Seu repositório público no GitHub permite que a comunidade examine o código, relate bugs, solicite recursos e contribua com melhorias.",
+      "Ver o Beam no GitHub"
+    ],
+    [
+      "O Beam funciona no Windows, macOS e Linux?",
+      "Sim. O Beam é distribuído para Windows, macOS e Linux. Seu mecanismo de captura em Rust gerencia backends específicos de cada plataforma para tela, cursor, áudio, temporização e codificação, em vez de depender de um único gravador genérico no navegador para cada sistema operacional."
+    ],
+    [
+      "O que posso gravar com o Beam?",
+      "O Beam pode gravar uma tela inteira, uma janela de aplicativo ou uma região personalizada, com faixas opcionais de webcam, microfone e áudio do sistema."
+    ],
+    [
+      "A geração de legendas por IA envia o áudio para a nuvem?",
+      "Não. O Beam gera legendas localmente com o Whisper, sem enviar o áudio para a nuvem, sem chaves de API e sem uma assinatura adicional."
+    ],
+    [
+      "Quais ferramentas de edição estão incluídas?",
+      "O Beam inclui zooms editáveis, suavização e estilização do cursor, legendas locais, fundos do canvas, desfoque, controles de áudio e uma linha do tempo multipista criada para demonstrações de produtos e tutoriais."
+    ],
+    [
+      "Quais formatos de exportação o Beam oferece?",
+      "O Beam exporta gravações em MP4 ou WebM, com resoluções de até 4K."
+    ],
+    [
+      "Beam vs. Screen Studio: qual gravador de tela devo escolher?",
+      "O Screen Studio é um gravador comercial refinado, desenvolvido para macOS. O Beam é a melhor opção se você procura uma alternativa gratuita e de código aberto ao Screen Studio para Windows, macOS ou Linux, com captura nativa, zooms editáveis, efeitos de cursor, legendas locais e uma linha do tempo completa sem assinatura.",
+      "Consultar as informações oficiais sobre produto e preços do Screen Studio"
+    ],
+    [
+      "Beam vs. Tella: qual é a diferença?",
+      "O Tella se concentra em gravação hospedada, compartilhamento, incorporação e fluxos de trabalho para equipes por meio de planos pagos. O Beam é um gravador e editor de desktop local e gratuito: os projetos permanecem no seu computador, as legendas são processadas localmente e o código-fonte é aberto à comunidade. Escolha o Tella para compartilhamento gerenciado na nuvem; escolha o Beam para ter controle local e editar sem assinatura.",
+      "Consultar as informações oficiais dos planos do Tella"
+    ],
+    [
+      "Beam vs. OpenScreen: como os gravadores de código aberto se comparam?",
+      "Tanto o Beam quanto o OpenScreen buscam oferecer gravações refinadas sem assinatura. O Beam se diferencia por ser um projeto comunitário em desenvolvimento ativo, ter um mecanismo de captura em Rust com backends específicos de cada plataforma, legendas locais com o Whisper e um editor multipista integrado. O repositório original do OpenScreen anunciou seu lançamento final e foi arquivado em junho de 2026.",
+      "Consultar o histórico de lançamentos do OpenScreen original"
+    ],
+    [
+      "Beam vs. OBS Studio: qual é melhor para gravar demonstrações de produtos?",
+      "O OBS Studio é uma ferramenta poderosa, gratuita e de código aberto para transmissões ao vivo, mixagem de cenas em tempo real, placas de captura e fluxos de transmissão configuráveis. O Beam é mais focado em gravar e aprimorar demonstrações de produtos com ferramentas automáticas de apresentação, como zooms editáveis, movimento do cursor, legendas, fundos e uma linha do tempo de vídeo. Escolha o OBS para streaming e cenas ao vivo complexas; escolha o Beam para um fluxo direto de gravar, editar e exportar.",
+      "Consultar a lista oficial de recursos do OBS Studio"
+    ],
+    [
+      "Beam vs. Loom: devo usar um gravador local ou mensagens de vídeo na nuvem?",
+      "O Loom foi projetado para gravar, hospedar, compartilhar e colaborar rapidamente em mensagens de vídeo na nuvem, com limites de plano e recursos pagos de colaboração ou IA. O Beam é um gravador e editor de desktop gratuito e de código aberto para arquivos mantidos localmente e exportações refinadas. Escolha o Loom para comunicação assíncrona de equipe hospedada; escolha o Beam quando a propriedade local e a edição detalhada forem mais importantes.",
+      "Consultar os planos e limites oficiais do Loom"
+    ],
+    [
+      "Como posso contribuir com o Beam?",
+      "Você pode examinar o código-fonte, relatar problemas, propor recursos, contribuir com código pelo GitHub e entrar na comunidade do Beam no Discord para obter ajuda e acompanhar as novidades do projeto.",
+      "Contribuir com o Beam no GitHub"
+    ]
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "locale": "ja-JP",
+  "label": "日本語",
+  "siteTitle": "Beamドキュメント",
+  "nav": { "website": "Beamウェブサイト" },
+  "sidebar": [
+    {
+      "text": "ここから始める",
+      "items": [
+        { "text": "はじめに", "link": "/" },
+        { "text": "使い始める", "link": "/getting-started" },
+        { "text": "Beamを更新", "link": "/updates" }
+      ]
+    },
+    {
+      "text": "レコーダーアプリ",
+      "items": [
+        { "text": "概要", "link": "/recorder/" },
+        { "text": "インターフェース", "link": "/recorder/interface" },
+        { "text": "機能", "link": "/recorder/capabilities" }
+      ]
+    },
+    {
+      "text": "動画エディター",
+      "items": [
+        { "text": "概要", "link": "/editor/" },
+        { "text": "インターフェース", "link": "/editor/interface" },
+        { "text": "機能", "link": "/editor/capabilities" }
+      ]
+    },
+    {
+      "text": "リファレンス",
+      "items": [
+        { "text": "書き出しと共有", "link": "/export" },
+        { "text": "プラットフォーム対応", "link": "/platforms" },
+        { "text": "ファイルシステム", "link": "/filesystem" }
+      ]
+    }
+  ],
+  "social": { "github": "GitHubでBeamを見る", "discord": "Beam Discordに参加" },
+  "theme": { "switchToLight": "ライトテーマに切り替える", "switchToDark": "ダークテーマに切り替える" },
+  "footer": { "message": "オープンソースの画面録画・編集ツール。", "copyright": "MITライセンスで公開されています。" }
+}

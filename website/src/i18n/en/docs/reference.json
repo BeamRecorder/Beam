@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "Export and sharing",
+      "description": "Export a Beam composition to MP4 or WebM with the right resolution and quality preset.",
+      "lead": "Export renders the current composition directly to a local file using the settings supported by the machine.",
+      "sections": [
+        {
+          "title": "Choose a format",
+          "bullets": [
+            "WebM uses the WebM container with an encoder available on the current machine.",
+            "MP4 uses the MP4 container when Beam finds a compatible hardware or software encoder."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Encoder availability",
+            "text": "A format can be unavailable when the machine does not provide a compatible encoder. Beam reports this before or during export."
+          }
+        },
+        {
+          "title": "Choose a resolution",
+          "bullets": [
+            "720p scales down to an HD output when the native canvas is large enough.",
+            "1080p scales down to Full HD when the native canvas is large enough.",
+            "Max keeps the native output canvas dimensions."
+          ]
+        },
+        {
+          "title": "Choose quality and bitrate",
+          "paragraphs": [
+            "Low, medium, and high presets calculate a bitrate from the output dimensions and frame rate. Medium balances clarity and file size, while high prioritizes visual fidelity."
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "Beam export settings for format, resolution, and quality",
+            "caption": "Select format, resolution, and quality before choosing the destination file."
+          }
+        },
+        {
+          "title": "Monitor the export",
+          "paragraphs": [
+            "Beam displays frame progress while rendering. You can cancel an active export or copy its diagnostic report. Live editor changes do not modify a file that is already rendering."
+          ]
+        },
+        {
+          "title": "Open the result",
+          "paragraphs": [
+            "After a successful export, Beam reports the saved filename and provides an action to open the file. If export fails, copy the technical report before asking for help on [Discord](https://discord.gg/6Q6v2xUCB) or [GitHub](https://github.com/ExtraBinoss/Beam/issues)."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "Platform support",
+      "description": "Review Beam support and operating-system-specific behavior on Windows, macOS, and Linux.",
+      "lead": "Beam is available on Windows, macOS, and Linux. Native permissions and window-system capabilities create some differences between platforms.",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Beam is distributed as a native Windows installer.",
+            "Screen, window, region, camera, microphone, and system-audio recording are supported.",
+            "Overlay positions and sizes can be saved and restored."
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "Beam is distributed as a DMG for Apple Silicon Macs running macOS 13 or newer.",
+            "Screen Recording, Microphone, and Camera permissions are requested when those sources are used.",
+            "Overlay positions and sizes can be saved and restored."
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam is damaged and cannot be opened",
+            "text": "After moving Beam to `/Applications`, run `xattr -cr /Applications/Beam.app`, or choose Open Anyway in System Settings > Privacy & Security."
+          },
+          "subsections": [
+            {
+              "title": "Allow screen and system audio recording",
+              "paragraphs": [
+                "Open Apple menu > System Settings > Privacy & Security > Screen & System Audio Recording, then enable Beam. If Beam is not listed, use the add button and select `/Applications/Beam.app`. Quit and reopen Beam after changing this permission."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-screen-system-audio.webp",
+                "alt": "macOS Screen and System Audio Recording privacy settings with Beam enabled",
+                "caption": "Enable Beam under Screen & System Audio Recording."
+              }
+            },
+            {
+              "title": "Allow microphone and camera access",
+              "paragraphs": [
+                "In System Settings > Privacy & Security, open Microphone and enable Beam when recording voice. Open Camera and enable Beam when using the camera overlay."
+              ],
+              "screenshot": {
+                "path": "platforms/macos-microphone-camera.webp",
+                "alt": "macOS Microphone and Camera privacy settings for Beam",
+                "caption": "Beam must be enabled in the privacy list for each source you want to capture."
+              }
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "bullets": [
+            "Beam is distributed as AppImage, DEB, and RPM packages.",
+            "Screen and window capture uses XDG Desktop Portal, PipeWire, and FFmpeg.",
+            "The system picker requests permission when a capture begins.",
+            "Keyboard shortcut and mouse click metadata requires explicit Polkit consent.",
+            "X11 can restore overlay positions and sizes.",
+            "Native Wayland can restore overlay sizes but not global positions."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Wayland positioning",
+            "text": "Wayland does not expose global window coordinates. Beam does not force XWayland because that workaround can be incompatible with some GPU and X11 configurations."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+{
+  "pages": [
+    {
+      "slug": "editor/index",
+      "title": "Video editor overview",
+      "description": "Understand the Beam video editor workspace and non-destructive editing workflow.",
+      "lead": "The video editor turns recorded sessions and imported media into a composed product demo while keeping the original source material intact.",
+      "sections": [
+        {
+          "title": "One workspace",
+          "paragraphs": [
+            "The editor combines a preview canvas, a multi-track timeline, a focused property panel, playback controls, project actions, and export. Selecting an item reveals the controls relevant to that item."
+          ],
+          "screenshot": {
+            "path": "editor/editor-overview.webp",
+            "alt": "Overview of the Beam video editor workspace",
+            "caption": "Canvas, properties, playback, and timeline remain visible in the editing workspace."
+          }
+        },
+        {
+          "title": "Non-destructive composition",
+          "paragraphs": [
+            "Timeline edits describe how source clips are arranged and presented. Trimming, splitting, transforms, zooms, captions, and visual styling do not overwrite the original recording files."
+          ]
+        },
+        {
+          "title": "From recording to export",
+          "steps": [
+            "Open the editor after a recording or select an existing project.",
+            "Arrange clips and timing on the timeline.",
+            "Style the canvas, clips, cursor, zooms, captions, and audio.",
+            "Preview the complete composition.",
+            "Choose an export format, resolution, and quality preset."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "editor/interface",
+      "title": "Video editor interface",
+      "description": "Learn the canvas, sidebar, properties, timeline, playback, and export controls in Beam.",
+      "lead": "The editor keeps global project controls at the top, visual work in the center, properties at the side, and timing at the bottom.",
+      "sections": [
+        {
+          "title": "Top bar",
+          "bullets": [
+            "Exit to HUD returns to the recorder.",
+            "Undo and redo move through supported editing actions.",
+            "The project title and saving state identify the current project.",
+            "Discord opens the Beam community.",
+            "Export Video opens the export controls."
+          ]
+        },
+        {
+          "title": "Canvas and toolbar",
+          "paragraphs": [
+            "The canvas previews the composed frame. Its toolbar changes the output aspect ratio, enters crop mode, toggles the alignment grid, and controls viewport zoom without changing the exported composition."
+          ],
+          "screenshot": {
+            "path": "editor/canvas-properties.webp",
+            "alt": "Beam canvas beside the active properties panel",
+            "caption": "Select the canvas or a timeline item to reveal its editing controls."
+          }
+        },
+        {
+          "title": "Sidebar and properties",
+          "bullets": [
+            "Canvas controls the output background and presentation surface.",
+            "Clip controls the selected video, webcam, audio, blur, image, or caption clip.",
+            "Zoom edits a selected zoom block or generates automatic zooms.",
+            "Cursor controls appearance, click feedback, and motion.",
+            "Captions generates or styles text and keyboard captions.",
+            "Audio controls global, system, and microphone levels.",
+            "Settings controls application preferences and recorder access."
+          ]
+        },
+        {
+          "title": "Timeline toolbar",
+          "bullets": [
+            "Add imports video, image, sound, text, or blur items.",
+            "Split divides the selected clip at the playhead.",
+            "Magnet snapping aligns edits to nearby boundaries.",
+            "Playback controls jump to the beginning or end and play or pause.",
+            "Timeline zoom changes the visible time scale."
+          ]
+        },
+        {
+          "title": "Timeline tracks",
+          "paragraphs": [
+            "Tracks represent video, webcam, blur, zoom, text captions, keyboard captions, system audio, and microphone audio when those sources exist. Select, move, reorder, trim, split, enable, or unlink supported items from the composition."
+          ],
+          "screenshot": {
+            "path": "editor/timeline.webp",
+            "alt": "Beam multi-track timeline with visual, zoom, caption, and audio tracks",
+            "caption": "The timeline keeps presentation, captions, and sound aligned to one playhead."
+          }
+        }
+      ]
+    },
+    {
+      "slug": "editor/capabilities",
+      "title": "Video editor capabilities",
+      "description": "Edit timing, canvas styling, zooms, cursor motion, captions, audio, blur, and imported media in Beam.",
+      "lead": "Beam combines precise timeline operations with presentation controls designed for product demos.",
+      "sections": [
+        {
+          "title": "Timeline editing",
+          "bullets": [
+            "Move and reorder supported visual clips.",
+            "Trim clip boundaries and split at the playhead.",
+            "Enable snapping for precise alignment.",
+            "Zoom the timeline without changing the output.",
+            "Enable, disable, unlink, or delete supported composition items."
+          ]
+        },
+        {
+          "title": "Imported media",
+          "paragraphs": [
+            "Add supported video, image, and audio files from the timeline Add menu or by dropping local media into the editor. Imported items are inserted at the playhead after validation."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Codec support",
+            "text": "Media import and playback depend on the codecs available to Beam. Unsupported or invalid files are rejected with a reason."
+          }
+        },
+        {
+          "title": "Canvas and clip appearance",
+          "bullets": [
+            "Choose image, video, color, or gradient backgrounds and import custom background media.",
+            "Adjust background blur and the output canvas presentation.",
+            "Position, resize, crop, and mirror supported visual clips.",
+            "Apply corner radius, solid or adaptive shadows, borders, and window-style frames.",
+            "Adjust playback speed for supported clips."
+          ]
+        },
+        {
+          "title": "Zooms and cursor presentation",
+          "paragraphs": [
+            "Generate automatic zoom blocks from recorded click events or add manual focus points. Auto mode follows the recorded cursor while a zoom is active. Each zoom block controls timing, focus mode, position, and magnification. Cursor controls change style, size, color, shadow, click bounce, left and right ripple effects, smoothing, spring mass, and motion blur."
+          ],
+          "screenshot": {
+            "path": "editor/zoom-cursor-captions.webp",
+            "alt": "Beam zoom, cursor, and caption editing controls",
+            "caption": "Focus and presentation controls help direct attention without changing the source capture."
+          }
+        },
+        {
+          "title": "Captions",
+          "paragraphs": [
+            "Generate speech-to-text subtitles locally with Whisper from microphone or system audio. Download and verify a supported model, generate captions, then edit the resulting caption clips and visual style. Keyboard shortcut captions use safe interaction metadata recorded with permission."
+          ],
+          "notice": {
+            "kind": "tip",
+            "title": "Local transcription",
+            "text": "Whisper transcription runs on the device. It does not require a cloud upload or an API key."
+          }
+        },
+        {
+          "title": "Audio and blur",
+          "paragraphs": [
+            "Control global output volume and the enabled state or level of system and microphone tracks. Add blur clips to obscure or soften part of the composition with shape, strength, feather, corner radius, tint, and color controls."
+          ]
+        },
+        {
+          "title": "Export",
+          "paragraphs": [
+            "Render the current composition to MP4 or WebM with resolution and quality controls. See [export and sharing](/export) for the complete workflow."
+          ]
+        }
+      ]
+    }
+  ]
+}

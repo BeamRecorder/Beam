@@ -1,0 +1,145 @@
+{
+  "pages": [
+    {
+      "slug": "filesystem",
+      "title": "ファイルシステム",
+      "description": "Beamがプロジェクト、録画、環境設定、モデル、背景、ダウンロードした更新を保存する場所を理解します。",
+      "lead": "Beamは永続的なユーザーコンテンツと置き換え可能なアプリケーションキャッシュを分けて保存します。Beamのインストールをバックアップ、移動、確認、トラブルシューティングするときにこのリファレンスを使用してください。",
+      "sections": [
+        {
+          "title": "Beamがユーザーファイルを保存する場所",
+          "paragraphs": [
+            "BeamはOSの「ビデオ」フォルダーを解決し、その中に `Beam/user` を作成します。リダイレクトされた、またはローカライズされたビデオフォルダーでは解決先が変わるため、以下はハードコードされた場所ではなく通常の既定値です。"
+          ],
+          "bullets": [
+            "Windows: `%USERPROFILE%\\Videos\\Beam\\user`",
+            "macOS: `~/Movies/Beam/user`",
+            "Linux: `${XDG_VIDEOS_DIR:-~/Videos}/Beam/user`"
+          ],
+          "subsections": [
+            {
+              "title": "Windowsでフォルダーを開く",
+              "paragraphs": [
+                "<KeyboardChip shortcut=\"Win+R\" />を押し、`%USERPROFILE%\\Videos\\Beam\\user`を貼り付け、<KeyboardChip shortcut=\"Enter\" />を押します。Windowsは`%USERPROFILE%`を展開し、エクスプローラーでフォルダーを開きます。"
+              ]
+            },
+            {
+              "title": "macOSでフォルダーを開く",
+              "paragraphs": [
+                "Finderを開き、<KeyboardChip shortcut=\"Command+Shift+G\" />を押し、`~/Movies/Beam/user`を貼り付けて、<KeyboardChip shortcut=\"Enter\" />を押します。Finderは`~`をホームフォルダーに展開します。"
+              ]
+            },
+            {
+              "title": "Linuxでフォルダーを開く",
+              "paragraphs": [
+                "ファイルマネージャーを開き、<KeyboardChip shortcut=\"Ctrl+L\" />を押して`~/Videos/Beam/user`を入力し、<KeyboardChip shortcut=\"Enter\" />を押します。リダイレクトされたビデオディレクトリには、ターミナルで`xdg-open \"$(xdg-user-dir VIDEOS)/Beam/user\"`を実行します。"
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "フォルダーは必要に応じて作成されます",
+                "text": "一部のディレクトリは、その機能を初めて使った後にのみ表示されます。`projects/`を探す前に一度録画し、壁紙ライブラリを探す前に背景をインポートしてください。"
+              }
+            }
+          ]
+        },
+        {
+          "title": "ユーザーデータの構成",
+          "paragraphs": [
+            "`Beam/user`ディレクトリには、次の永続データが含まれることがあります：\n\n```text\nBeam/user/\n├── preferences.json\n├── projects/\n│   └── project-<readable-name>/\n├── media/\n│   └── wallpapers/\n│       ├── image/\n│       └── video/\n└── models/\n    └── whisper/\n```"
+          ],
+          "bullets": [
+            "`preferences.json`には、外観、レコーダーの動作、選択したデバイス、ショートカット、初回設定の状態、プリセット、保存されたウィンドウ位置が保存されます。必要に応じて正規化された既定値で作成または置き換えられます。",
+            "`projects/`には、すべてのBeamプロジェクトと録画セッションが保存されます。バックアップするうえで最も重要なディレクトリです。",
+            "`media/wallpapers/image/`と`media/wallpapers/video/`には、共有壁紙ライブラリにインポートした背景のコピーが保存されます。これらは任意です。",
+            "`models/whisper/`には、ダウンロードしたローカル文字起こしモデル、そのマニフェスト、一時的な`.partial`ダウンロードが保存されます。モデルは任意で、再度ダウンロードできます。"
+          ]
+        },
+        {
+          "title": "録画とプロジェクト",
+          "paragraphs": [
+            "各プロジェクトには`project-vivid-cosmic`のような読みやすいディレクトリ名が使われます。安定したプロジェクトUUIDは`project.json`内にあるため、ディレクトリ名がプロジェクトの識別子ではありません。プロジェクト名を変更するとディレクトリ名も変わることがあります。"
+          ],
+          "subsections": [
+            {
+              "title": "プロジェクトディレクトリ",
+              "paragraphs": [
+                "作成済みのプロジェクトは次のようになります：\n\n```text\nproject-<name>/\n├── project.json                         required\n├── thumbnail.webp                       optional\n├── media/                               optional imported editor media\n├── backgrounds/                         optional project backgrounds\n└── session-<uuid>/                      one or more recording sessions\n    ├── manifest.json                    completed session\n    ├── manifest.partial.json            interrupted/in-progress recovery state\n    ├── health.jsonl                     capture diagnostics\n    ├── timing.jsonl                     clock synchronization anchors\n    ├── screen/                          screen video segments\n    ├── system-audio/                    optional system-audio segments\n    ├── microphone/                      optional microphone segments\n    ├── camera/                          optional camera segments\n    ├── cursor/                          optional cursor and interaction data\n    └── session/teleprompter.json        optional teleprompter document\n```"
+              ]
+            },
+            {
+              "title": "必須のプロジェクトメタデータ",
+              "bullets": [
+                "`project.json`はプロジェクトマニフェストであり、正しい情報源です。スキーマバージョン、安定したプロジェクトID、表示名、タイムスタンプ、セッション参照、コンポジション、プレゼンテーション設定、キャプション、ズーム状態、インポートしたアセットへの参照が含まれます。",
+                "完了した各セッションには通常`manifest.json`があり、プラットフォーム、選択したソース、権限、警告、トラック形式、セグメント、メトリクス、完了状態を記述します。",
+                "`manifest.partial.json`は、キャプチャが進行中またはセッションが確定しなかった場合に復元可能なメタデータを保持します。復元されたセッションでは`manifest.json`の代わりにこれが使われることがあります。"
+              ],
+              "notice": {
+                "kind": "warning",
+                "title": "マニフェストを手動で編集しないでください",
+                "text": "マニフェストはファイル間の参照を持つバージョン管理されたアプリケーションデータです。手動で編集したり、個別のセッションファイルを移動したり、プロジェクト内のファイル名を変更したりすると、エディターでメディアを利用できなくなることがあります。"
+              }
+            },
+            {
+              "title": "トラックとメディアのディレクトリ",
+              "bullets": [
+                "`screen/`には、画面キャプチャに成功した場合に番号付きのMP4画面セグメントが含まれます。",
+                "`system-audio/`、`microphone/`、`camera/`には、それぞれ有効なソース向けに書き込まれた番号付きWebMセグメントが含まれます。",
+                "ソースを選択していなくても、5つのトラックディレクトリが存在することがあります。何が録画されたかは空のディレクトリの有無ではなく、セッションマニフェストの`tracks`エントリと状態で判断してください。",
+                "アクティブまたは中断されたブラウザメディア書き込み中は、一時的な`.partial`メディアファイルが存在することがあります。確定したセグメントはアトミックに名前が変更されます。",
+                "`media/`にはエディターにインポートした動画、画像、音声のコピーが含まれます。Beamで未使用のインポートアセットを削除すると、そのコピーも削除されることがあります。",
+                "`backgrounds/`には、そのプロジェクト専用にインポートした背景のコピーが含まれます。"
+              ]
+            },
+            {
+              "title": "カーソル、操作、診断",
+              "bullets": [
+                "`cursor/cursor.json`には、カーソルキャプチャが利用できる場合に記録されたカーソルイベントが含まれます。",
+                "`cursor/telemetry.json`には、カーソル追従などエディターの動作に使われる正規化されたカーソル移動サンプルが含まれます。",
+                "`cursor/shapes.json`はネイティブカーソルの形状を記述します。プラットフォームまたは互換性パスで必要な場合、`cursor/shapes/*.png`にキャプチャしたビットマップ形状が含まれることがあります。",
+                "`cursor/input.json`には、許可されたショートカットとクリック操作のメタデータが含まれます。入力したテキストは保存されません。",
+                "`health.jsonl`はキャプチャの健全性と中断を記録し、`timing.jsonl`はトラックの同期に使うタイミングアンカーを記録します。プロジェクトを移動または診断するときは、両方をセッションと一緒に保管してください。"
+              ]
+            },
+            {
+              "title": "任意のプレゼンテーションファイル",
+              "bullets": [
+                "`thumbnail.webp`は生成されたプロジェクトカードのプレビューで、再生成できます。",
+                "そのセッションのテレプロンプタードキュメントを保存した後にのみ、`session/teleprompter.json`が存在します。",
+                "生成されたキャプションとエディター設定は`project.json`に保存され、プロジェクト内に個別の字幕ファイルはありません。"
+              ],
+              "notice": {
+                "kind": "tip",
+                "title": "プロジェクトディレクトリ全体をバックアップ",
+                "text": "Beamが録画していない状態で、`project-<name>/`をひとつの単位としてコピーしてください。画面MP4だけでは、エディターのコンポジション、任意のトラック、カーソルデータ、キャプション、診断情報は含まれません。"
+              }
+            }
+          ]
+        },
+        {
+          "title": "更新",
+          "paragraphs": [
+            "ダウンロードした更新はOSのキャッシュに保存され、プロジェクトとは別に管理されます。`pending/`ディレクトリにはインストーラーまたは更新アーカイブと`update-info.json`が含まれることがあります。新しいバージョンが正常に起動するとBeamはアップデーターのキャッシュを削除しますが、インストール待ちの更新は保持します。"
+          ],
+          "bullets": [
+            "Windows: `%LOCALAPPDATA%\\beam-updater\\pending`",
+            "macOS: `~/Library/Caches/beam-updater/pending`",
+            "Linux: `${XDG_CACHE_HOME:-~/.cache}/beam-updater/pending`"
+          ],
+          "subsections": [
+            {
+              "title": "更新状態",
+              "paragraphs": [
+                "BeamはElectronのアプリケーションデータディレクトリにも`update-cache-state.json`を保存し、インストール済みの更新と保留中の更新を区別します。通常の親ディレクトリは、Windowsでは`%APPDATA%\\Beam`、macOSでは`~/Library/Application Support/Beam`、Linuxでは`${XDG_CONFIG_HOME:-~/.config}/Beam`です。"
+              ],
+              "notice": {
+                "kind": "info",
+                "title": "アップデーターのファイルは削除できます",
+                "text": "アップデーターのキャッシュをバックアップしたり移動したりしないでください。更新をダウンロード中または再起動待ちでない場合は削除でき、Beamは次回の更新を再びダウンロードします。更新のダウンロード中またはインストール準備完了時には絶対に削除しないでください。"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

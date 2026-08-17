@@ -1,0 +1,29 @@
+{
+  "title": "Beam documentation",
+  "description": "Learn how to record, edit, and share polished product demos with Beam.",
+  "hero": {
+    "name": "Beam Docs",
+    "text": "Record. Edit. Share.",
+    "tagline": "Practical guides for capturing and polishing product demos with Beam.",
+    "imageAlt": "Beam app icon",
+    "actions": [
+      { "theme": "brand", "text": "Get started", "link": "/getting-started" },
+      { "theme": "alt", "text": "View on GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Join Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    {
+      "title": "Recorder app",
+      "details": "Choose a source, prepare audio and camera tracks, then control the recording from the compact HUD.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "Video editor",
+      "details": "Shape timing, framing, zooms, cursor motion, captions, sound, and export from one workspace.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
+  ]
+}

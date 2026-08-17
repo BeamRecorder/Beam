@@ -59,12 +59,7 @@ class FakeAudioContext {
   readonly close = vi.fn(async () => undefined);
   readonly resume = vi.fn(async () => undefined);
   readonly gains: Array<{
-    gain: {
-      value: number;
-      setTargetAtTime: ReturnType<typeof vi.fn>;
-      setValueAtTime: ReturnType<typeof vi.fn>;
-      linearRampToValueAtTime: ReturnType<typeof vi.fn>;
-    };
+    gain: { value: number; setTargetAtTime: ReturnType<typeof vi.fn> };
     connect: ReturnType<typeof vi.fn>;
     disconnect: ReturnType<typeof vi.fn>;
   }> = [];
@@ -81,12 +76,7 @@ class FakeAudioContext {
 
   createGain() {
     const gain = {
-      gain: {
-        value: 1,
-        setTargetAtTime: vi.fn(),
-        setValueAtTime: vi.fn(),
-        linearRampToValueAtTime: vi.fn(),
-      },
+      gain: { value: 1, setTargetAtTime: vi.fn() },
       connect: vi.fn(),
       disconnect: vi.fn(),
     };
@@ -153,7 +143,7 @@ const clip = (id: string, overrides: Partial<AudioClip> = {}): AudioClip => ({
 });
 
 const composition = (clips: AudioClip[] = [clip('clip-1')], assets = [asset()]): ClipComposition => ({
-  schemaVersion: 7,
+  schemaVersion: 6,
   keyboardCaptionSessions: [],
   assets,
   clips,
@@ -352,54 +342,6 @@ describe('AudioPlaybackScheduler', () => {
     expect(context.gains[1]!.gain.value).toBe(1.5);
     scheduler.setVolume(125);
     expect(context.gains[0]!.gain.setTargetAtTime).toHaveBeenCalledWith(1, 0, 0.004);
-    scheduler.dispose();
-  });
-
-  it('programs audio transition ramps at their timeline boundaries', async () => {
-    runtime.buffersFactory.mockImplementation(() => iterator([{ timestamp: 0, duration: 3 }]));
-    const scheduler = new AudioPlaybackScheduler();
-    await scheduler.loadComposition(
-      composition([
-        clip('faded', {
-          timelineDurationMs: 3_000,
-          sourceDurationMs: 3_000,
-          transitions: {
-            entry: { preset: { kind: 'fade' }, durationMs: 500 },
-            exit: { preset: { kind: 'fade' }, durationMs: 500 },
-          },
-        }),
-      ]),
-    );
-    await scheduler.play(0, 1);
-
-    const gain = FakeAudioContext.instances[0]!.gains[1]!;
-    expect(gain.gain.value).toBe(0);
-    expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0, 0);
-    expect(gain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1, 0.5);
-    expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(1, 2.5);
-    expect(gain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, 3);
-    scheduler.dispose();
-  });
-
-  it('starts a seek in the middle of a fade at the matching gain', async () => {
-    runtime.buffersFactory.mockImplementation(() => iterator([{ timestamp: 0, duration: 3 }]));
-    const scheduler = new AudioPlaybackScheduler();
-    await scheduler.loadComposition(
-      composition([
-        clip('faded', {
-          timelineDurationMs: 3_000,
-          sourceDurationMs: 3_000,
-          transitions: { entry: { preset: { kind: 'fade' }, durationMs: 500 }, exit: null },
-        }),
-      ]),
-    );
-    await scheduler.play(250 / 1_000, 1);
-
-    const context = FakeAudioContext.instances[0]!;
-    const gain = context.gains[1]!;
-    expect(gain.gain.value).toBeCloseTo(0.5);
-    expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.5, 0);
-    expect(gain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1, 0.25);
     scheduler.dispose();
   });
 

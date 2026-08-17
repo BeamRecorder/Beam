@@ -1,2 +1,4 @@
 /install /index.html 200
 /install/ /index.html 200
+/docs/recording /docs/recorder/ 301
+/docs/editing-and-export /docs/editor/ 301

@@ -1,0 +1,29 @@
+{
+  "title": "Documentation Beam",
+  "description": "Découvrez comment enregistrer, monter et partager des démonstrations produit soignées avec Beam.",
+  "hero": {
+    "name": "Beam Docs",
+    "text": "Enregistrer. Monter. Partager.",
+    "tagline": "Des guides pratiques pour capturer et peaufiner vos démonstrations produit avec Beam.",
+    "imageAlt": "Icône de l'application Beam",
+    "actions": [
+      { "theme": "brand", "text": "Commencer", "link": "/getting-started" },
+      { "theme": "alt", "text": "Voir sur GitHub", "link": "https://github.com/ExtraBinoss/Beam" },
+      { "theme": "alt", "text": "Rejoindre Discord", "link": "https://discord.gg/6Q6v2xUCB" }
+    ]
+  },
+  "categories": [
+    {
+      "title": "Application d'enregistrement",
+      "details": "Choisissez une source, préparez les pistes audio et caméra, puis contrôlez l'enregistrement depuis le HUD compact.",
+      "link": "/recorder/",
+      "visual": "recorder"
+    },
+    {
+      "title": "Éditeur vidéo",
+      "details": "Ajustez le rythme, le cadrage, les zooms, les mouvements du curseur, les sous-titres, le son et l'export depuis un seul espace de travail.",
+      "link": "/editor/",
+      "visual": "editor"
+    }
+  ]
+}

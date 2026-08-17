@@ -1,0 +1,97 @@
+{
+  "pages": [
+    {
+      "slug": "getting-started",
+      "title": "시작하기",
+      "description": "Beam을 설치하고 필요한 권한을 부여한 뒤 첫 녹화를 만들어 보세요.",
+      "lead": "Beam은 집중된 녹화기와 비파괴 동영상 편집기를 하나의 데스크톱 애플리케이션으로 결합합니다.",
+      "sections": [
+        {
+          "title": "Beam 설치",
+          "paragraphs": [
+            "[Beam 릴리스 페이지](https://github.com/ExtraBinoss/Beam/releases/latest)에서 최신 릴리스를 다운로드하세요. 운영체제에 맞는 패키지를 선택하세요."
+          ],
+          "bullets": [
+            "Windows는 네이티브 설치 프로그램을 사용합니다.",
+            "macOS는 macOS 13 이상을 실행하는 Apple Silicon Mac용 DMG를 사용합니다.",
+            "Linux는 AppImage, DEB, RPM 패키지를 제공합니다."
+          ]
+        },
+        {
+          "title": "첫 녹화 만들기",
+          "steps": [
+            "Beam을 열고 녹화기 HUD에서 화면 또는 창을 선택하세요.",
+            "디스플레이, 애플리케이션 창 또는 사용자 지정 영역을 선택하세요.",
+            "필요한 마이크, 시스템 오디오 및 카메라 소스를 선택하세요.",
+            "녹화를 시작한 다음 녹화 바에서 일시 중지, 재개 또는 중지를 선택하세요.",
+            "녹화를 중지하고 Beam이 동영상 편집기에서 프로젝트를 열 때까지 기다리세요."
+          ],
+          "screenshot": {
+            "path": "getting-started/first-recording.webp",
+            "alt": "첫 녹화를 준비한 Beam 녹화기",
+            "caption": "시작하기 전에 캡처 및 미디어 소스를 선택하세요."
+          }
+        },
+        {
+          "title": "요청이 표시되면 권한 부여",
+          "paragraphs": [
+            "운영체제에서 화면 녹화, 마이크, 카메라 또는 상호 작용 권한을 요청할 수 있습니다. Beam은 관련 기능에 필요할 때만 액세스를 요청합니다."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "플랫폼별 차이",
+            "text": "Windows, macOS, Linux, X11, Wayland에서는 소스 선택과 권한 메시지가 서로 다릅니다. 중요한 녹화를 하기 전에 [플랫폼 지원](/platforms)을 검토하세요."
+          }
+        },
+        {
+          "title": "계속 알아보기",
+          "bullets": [
+            "[녹화기 인터페이스](/recorder/interface)를 알아보세요.",
+            "모든 [녹화기 기능](/recorder/capabilities)을 검토하세요.",
+            "[동영상 편집기 인터페이스](/editor/interface)를 이해하세요.",
+            "[내보내기 및 공유](/export)로 최종 파일을 준비하세요."
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "updates",
+      "title": "Beam 업데이트",
+      "description": "녹화기 또는 동영상 편집기에서 Beam 업데이트를 확인하고 다운로드하고 설치하세요.",
+      "lead": "설치된 Beam 빌드는 GitHub Releases에서 새 버전을 확인할 수 있지만 자동으로 다운로드하거나 설치하지는 않습니다.",
+      "sections": [
+        {
+          "title": "업데이트 제어 열기",
+          "paragraphs": [
+            "녹화기 HUD에서 설정을 열고 업데이트 섹션을 찾으세요. 동영상 편집기의 설정에서도 같은 제어 기능을 사용할 수 있습니다. 개발 빌드에는 업데이트가 설치된 앱에서만 제공된다는 메시지가 표시됩니다."
+          ],
+          "screenshot": {
+            "path": "getting-started/update-controls.webp",
+            "alt": "업데이트 제어를 표시하는 Beam 설정",
+            "caption": "업데이트 패널에는 설치된 버전과 사용 가능한 업데이트 작업이 표시됩니다."
+          }
+        },
+        {
+          "title": "업데이트 설치",
+          "steps": [
+            "업데이트 확인을 선택하세요.",
+            "버전을 사용할 수 있으면 변경 로그를 검토하고 다운로드를 선택하세요.",
+            "진행률 표시기가 업데이트를 다운로드하는 동안 Beam을 열어 두세요.",
+            "업데이트가 준비되면 작업을 저장하고 다시 시작을 선택하여 Beam을 닫고 설치 프로그램을 실행하세요."
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "업데이트는 직접 관리합니다",
+            "text": "Beam은 사용 가능한 업데이트를 자동으로 다운로드하지 않으며 정상적으로 종료할 때 설치하지도 않습니다. 다운로드가 완료된 상태에서 다시 시작을 선택한 경우에만 설치가 시작됩니다."
+          }
+        },
+        {
+          "title": "업데이트 프로그램이 실패한 경우",
+          "paragraphs": [
+            "오류 복사를 사용해 진단 메시지를 보관한 다음 [최신 Beam 릴리스](https://github.com/ExtraBinoss/Beam/releases/latest)에서 올바른 패키지를 직접 다운로드하세요. 프로젝트는 애플리케이션 설치 위치와 별도로 저장됩니다."
+          ]
+        }
+      ]
+    }
+  ]
+}

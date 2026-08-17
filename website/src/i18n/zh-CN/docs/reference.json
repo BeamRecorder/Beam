@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "slug": "export",
+      "title": "导出与分享",
+      "description": "使用合适的分辨率和质量预设，将 Beam 编排导出为 MP4 或 WebM。",
+      "lead": "导出会使用设备支持的设置，将当前编排直接渲染为本地文件。",
+      "sections": [
+        {
+          "title": "选择格式",
+          "bullets": [
+            "WebM 使用 WebM 容器和当前设备上可用的编码器。",
+            "当 Beam 找到兼容的硬件或软件编码器时，MP4 使用 MP4 容器。"
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "编码器可用性",
+            "text": "当设备没有提供兼容的编码器时，某种格式可能不可用。Beam 会在导出之前或期间报告这一点。"
+          }
+        },
+        {
+          "title": "选择分辨率",
+          "bullets": [
+            "当原生画布足够大时，720p 会缩小为高清输出。",
+            "当原生画布足够大时，1080p 会缩小为全高清输出。",
+            "“最大”保留原生输出画布尺寸。"
+          ]
+        },
+        {
+          "title": "选择质量和码率",
+          "paragraphs": [
+            "低、中和高预设会根据输出尺寸和帧率计算码率。中等质量平衡清晰度和文件大小，高质量优先保证视觉保真度。"
+          ],
+          "screenshot": {
+            "path": "reference/export-settings.webp",
+            "alt": "Beam 的格式、分辨率和质量导出设置",
+            "caption": "选择目标文件前，先选择格式、分辨率和质量。"
+          }
+        },
+        {
+          "title": "监控导出",
+          "paragraphs": [
+            "Beam 在渲染时显示帧进度。你可以取消正在进行的导出，或复制其诊断报告。实时的编辑器更改不会修改已经在渲染的文件。"
+          ]
+        },
+        {
+          "title": "打开结果",
+          "paragraphs": [
+            "导出成功后，Beam 会报告保存的文件名，并提供打开文件的操作。如果导出失败，请先复制技术报告，再在 [Discord](https://discord.gg/6Q6v2xUCB) 或 [GitHub](https://github.com/ExtraBinoss/Beam/issues) 上寻求帮助。"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "platforms",
+      "title": "平台支持",
+      "description": "查看 Beam 在 Windows、macOS 和 Linux 上的支持情况及操作系统特定行为。",
+      "lead": "Beam 支持 Windows、macOS 和 Linux。原生权限和窗口系统能力会造成平台之间的一些差异。",
+      "sections": [
+        {
+          "title": "Windows",
+          "bullets": [
+            "Beam 以原生 Windows 安装程序分发。",
+            "支持屏幕、窗口、区域、摄像头、麦克风和系统音频录制。",
+            "可以保存和恢复叠加层的位置和大小。"
+          ]
+        },
+        {
+          "title": "macOS",
+          "bullets": [
+            "Beam 以 DMG 分发，适用于运行 macOS 13 或更高版本的 Apple Silicon Mac。",
+            "使用这些来源时，系统会请求屏幕录制、麦克风和摄像头权限。",
+            "可以保存和恢复叠加层的位置和大小。"
+          ],
+          "notice": {
+            "kind": "warning",
+            "title": "Beam 已损坏，无法打开",
+            "text": "将 Beam 移动到 `/Applications` 后，运行 `xattr -cr /Applications/Beam.app`，或在“系统设置”>“隐私与安全性”中选择“仍要打开”。"
+          },
+          "subsections": [
+            {
+              "title": "允许屏幕和系统音频录制",
+              "paragraphs": [
+                "打开 Apple 菜单 >“系统设置”>“隐私与安全性”>“屏幕与系统音频录制”，然后启用 Beam。如果列表中没有 Beam，请使用添加按钮并选择 `/Applications/Beam.app`。更改此权限后退出并重新打开 Beam。"
+              ],
+              "screenshot": {
+                "path": "platforms/macos-screen-system-audio.webp",
+                "alt": "已启用 Beam 的 macOS 屏幕与系统音频录制隐私设置",
+                "caption": "在“屏幕与系统音频录制”下启用 Beam。"
+              }
+            },
+            {
+              "title": "允许麦克风和摄像头访问",
+              "paragraphs": [
+                "在“系统设置”>“隐私与安全性”中打开“麦克风”，录制语音时启用 Beam。使用摄像头叠加层时，打开“摄像头”并启用 Beam。"
+              ],
+              "screenshot": {
+                "path": "platforms/macos-microphone-camera.webp",
+                "alt": "Beam 的 macOS 麦克风和摄像头隐私设置",
+                "caption": "想要捕获某个来源，就必须在该来源的隐私列表中启用 Beam。"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Linux",
+          "bullets": [
+            "Beam 提供 AppImage、DEB 和 RPM 软件包。",
+            "屏幕和窗口捕获使用 XDG Desktop Portal、PipeWire 和 FFmpeg。",
+            "开始捕获时，系统选择器会请求权限。",
+            "键盘快捷键和鼠标点击元数据需要明确的 Polkit 同意。",
+            "X11 可以恢复叠加层的位置和大小。",
+            "原生 Wayland 可以恢复叠加层大小，但不能恢复全局位置。"
+          ],
+          "notice": {
+            "kind": "info",
+            "title": "Wayland 定位",
+            "text": "Wayland 不会公开全局窗口坐标。Beam 不会强制使用 XWayland，因为该变通方案可能与某些 GPU 和 X11 配置不兼容。"
+          }
+        }
+      ]
+    }
+  ]
+}
