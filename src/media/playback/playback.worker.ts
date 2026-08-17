@@ -93,15 +93,20 @@ async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }
   await waitForProcessingIdle();
   if (isStaleLoad(version)) return;
   try {
-    if (
-      message.clips.length !== consumers.size ||
-      message.clips.some((clip) => consumers.get(clip.clipId)?.asset.assetId !== clip.assetId)
-    ) {
-      throw new Error('Playback topology changed during a timing-only update.');
+    const nextClips = new Map(message.clips.map((clip) => [clip.clipId, clip]));
+    for (const [clipId, consumer] of consumers) {
+      if (nextClips.has(clipId)) continue;
+      await closeIterator(consumer.iterator);
+      consumer.iteratorGeneration += 1;
+      for (const frame of consumer.queue) closeFrame(frame);
+      consumers.delete(clipId);
     }
-    await Promise.all(
-      message.clips.map(async (clip) => {
-        const consumer = consumers.get(clip.clipId)!;
+    for (const clip of message.clips) {
+      const existing = consumers.get(clip.clipId);
+      if (existing) {
+        if (existing.asset.assetId !== clip.assetId)
+          throw new Error('Playback asset changed during a timing-only update.');
+        const consumer = existing;
         await closeIterator(consumer.iterator);
         consumer.iteratorGeneration += 1;
         consumer.iterator = null;
@@ -109,8 +114,12 @@ async function retime(message: Extract<PlaybackWorkerRequest, { type: 'retime' }
         for (const frame of consumer.queue) closeFrame(frame);
         consumer.queue.length = 0;
         consumer.clip = clip;
-      }),
-    );
+        continue;
+      }
+      const asset = assets.get(clip.assetId);
+      if (!asset) throw new Error('Playback asset is unavailable during a timing-only update.');
+      consumers.set(clip.clipId, createPlaybackConsumer(clip, asset));
+    }
     updateQueueMetric();
     post({ type: 'ready', generation: message.generation });
   } catch (error) {

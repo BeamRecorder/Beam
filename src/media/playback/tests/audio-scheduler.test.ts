@@ -252,6 +252,26 @@ describe('AudioPlaybackScheduler', () => {
     expect(opened.dispose).toHaveBeenCalledOnce();
   });
 
+  it('preloads disabled audio decoders and retimes enabled toggles without reopening them', async () => {
+    const opened = openedInput();
+    runtime.openMediaInput.mockResolvedValue(opened);
+    const scheduler = new AudioPlaybackScheduler();
+    const disabled = composition([clip('clip-1', { enabled: false })]);
+    await scheduler.loadComposition(disabled);
+    expect(runtime.openMediaInput).toHaveBeenCalledOnce();
+    const updateComposition = vi.spyOn(scheduler, 'updateComposition');
+    runtime.openMediaInput.mockClear();
+
+    await scheduler.loadComposition(composition([clip('clip-1', { enabled: true })]));
+    await scheduler.loadComposition(disabled);
+
+    expect(runtime.openMediaInput).not.toHaveBeenCalled();
+    expect(updateComposition).toHaveBeenCalledTimes(2);
+    expect(opened.dispose).not.toHaveBeenCalled();
+    scheduler.dispose();
+    expect(opened.dispose).toHaveBeenCalledOnce();
+  });
+
   it('keeps timer scheduling single-flight when a decoder is slower than the timer cadence', async () => {
     const delayed = deferred<{
       done: false;

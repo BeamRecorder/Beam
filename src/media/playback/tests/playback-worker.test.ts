@@ -253,6 +253,47 @@ describe('playback worker', () => {
     expect(runtime.CanvasSink).toHaveBeenCalledTimes(3);
   });
 
+  it('retimes video consumers while keeping other asset decoders preloaded', async () => {
+    const firstOpened = openedVideo();
+    const secondOpened = openedVideo();
+    runtime.openMediaInput.mockReset().mockResolvedValueOnce(firstOpened).mockResolvedValueOnce(secondOpened);
+
+    send({
+      type: 'load',
+      generation: 1,
+      assets: [source('asset-1'), source('asset-2')],
+      clips: [clip('clip-a', 'asset-1')],
+    });
+    await flush();
+
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(2);
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(1);
+    expect(messages()).toContainEqual({ type: 'ready', generation: 1 });
+
+    send({
+      type: 'retime',
+      generation: 2,
+      clips: [clip('clip-a', 'asset-1'), clip('clip-b', 'asset-2')],
+    });
+    await flush();
+
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(2);
+    expect(runtime.CanvasSink).toHaveBeenCalledTimes(2);
+    expect(messages()).toContainEqual({ type: 'ready', generation: 2 });
+    expect(firstOpened.dispose).not.toHaveBeenCalled();
+    expect(secondOpened.dispose).not.toHaveBeenCalled();
+
+    send({ type: 'retime', generation: 3, clips: [clip('clip-a', 'asset-1')] });
+    await flush();
+
+    expect(runtime.openMediaInput).toHaveBeenCalledTimes(2);
+    expect(messages()).toContainEqual({ type: 'ready', generation: 3 });
+    expect(firstOpened.dispose).not.toHaveBeenCalled();
+    expect(secondOpened.dispose).not.toHaveBeenCalled();
+    send({ type: 'dispose' });
+    await flush();
+  });
+
   it('starts active consumer iterators in parallel instead of waiting for the first decode', async () => {
     const firstNext = deferred<IteratorResult<Wrapped>>();
     const secondNext = deferred<IteratorResult<Wrapped>>();

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AudioPlaybackScheduler } from '../audio-scheduler';
 import { MediaPlaybackEngine } from '../media-playback-engine';
 import type { PlaybackWorkerRequest } from '../playback-types';
+import type { AudioClip, ClipComposition } from '../../shared';
 import {
   cleanupPlaybackGlobals,
   composition,
@@ -20,6 +21,43 @@ vi.mock('../playback.worker?worker', () => ({ default: class PlaybackWorker {} }
 
 beforeEach(resetPlaybackGlobals);
 afterEach(cleanupPlaybackGlobals);
+
+const audioAsset = {
+  id: 'audio-1',
+  kind: 'audio' as const,
+  name: 'Audio audio-1',
+  fileName: 'audio-1.wav',
+  durationMs: 2_000,
+  width: null,
+  height: null,
+  src: 'https://cdn.example.test/audio-1.wav',
+  origin: 'project' as const,
+};
+
+const audioClip = (enabled: boolean): AudioClip => ({
+  id: 'audio-clip',
+  kind: 'audio',
+  name: 'Audio clip',
+  assetId: audioAsset.id,
+  role: 'imported',
+  timelineStartMs: 0,
+  timelineDurationMs: 2_000,
+  sourceInMs: 0,
+  sourceDurationMs: 2_000,
+  playbackRate: 1,
+  enabled,
+  order: 1,
+  volume: 100,
+});
+
+const compositionWithAudio = (enabled: boolean): ClipComposition => {
+  const value = composition([videoClip('clip-1')]);
+  return {
+    ...value,
+    assets: [...value.assets, audioAsset],
+    clips: [...value.clips, audioClip(enabled)],
+  };
+};
 
 describe('MediaPlaybackEngine', () => {
   it('loads, seeks, plays, pauses, and reports timeline time', async () => {
@@ -133,6 +171,82 @@ describe('MediaPlaybackEngine', () => {
     expect(audio.loadComposition).not.toHaveBeenCalled();
     expect(engine.frameFor('clip-1')).not.toBeNull();
     expect(cached.close).not.toHaveBeenCalled();
+    engine.dispose();
+  });
+
+  it('retimes a video enabled toggle while preserving another clip frame and preloaded assets', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    const initial = composition([
+      videoClip('clip-1'),
+      videoClip('clip-2', 'unused', { enabled: false, timelineStartMs: 500 }),
+    ]);
+    await load(engine, worker, initial);
+    const cached = new FakeImageBitmap();
+    worker.emit(frameResponse(latestSeekRequest(worker)!.generation, 'clip-1', 0.5, cached));
+    audio.loadComposition.mockClear();
+    worker.requests.length = 0;
+
+    const next = composition([videoClip('clip-1'), videoClip('clip-2', 'unused', { timelineStartMs: 500 })]);
+    const pending = engine.loadComposition(next, 0.75);
+    await Promise.resolve();
+    const request = worker.requests.at(-1);
+    expect(request?.type).toBe('retime');
+    expect(worker.requests.filter((entry) => entry.type === 'load')).toHaveLength(0);
+    worker.emit({ type: 'ready', generation: request!.generation });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+    const seek = latestSeekRequest(worker)!;
+    worker.emit({
+      type: 'seek-result',
+      generation: seek.generation,
+      requestId: seek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await pending;
+
+    expect(audio.loadComposition).not.toHaveBeenCalled();
+    expect(audio.updateComposition).toHaveBeenCalledOnce();
+    expect(engine.frameFor('clip-1')).not.toBeNull();
+    expect(cached.close).not.toHaveBeenCalled();
+    engine.dispose();
+  });
+
+  it('retimes an audio enabled toggle without reloading video or audio decoders', async () => {
+    const worker = new FakeWorker();
+    const audio = new FakeAudio();
+    const engine = new MediaPlaybackEngine({
+      workerFactory: () => worker,
+      audio: audio as unknown as AudioPlaybackScheduler,
+    });
+    await load(engine, worker, compositionWithAudio(false));
+    audio.loadComposition.mockClear();
+    audio.updateComposition.mockClear();
+    worker.requests.length = 0;
+
+    const pending = engine.loadComposition(compositionWithAudio(true), 0.75);
+    await Promise.resolve();
+    const request = worker.requests.at(-1);
+    expect(request?.type).toBe('retime');
+    expect(worker.requests.filter((entry) => entry.type === 'load')).toHaveLength(0);
+    worker.emit({ type: 'ready', generation: request!.generation });
+    for (let index = 0; index < 4; index += 1) await Promise.resolve();
+    const seek = latestSeekRequest(worker)!;
+    worker.emit({
+      type: 'seek-result',
+      generation: seek.generation,
+      requestId: seek.requestId,
+      result: 'presented',
+      latencyMs: 1,
+    });
+    await pending;
+
+    expect(audio.loadComposition).not.toHaveBeenCalled();
+    expect(audio.updateComposition).toHaveBeenCalledOnce();
     engine.dispose();
   });
 

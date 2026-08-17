@@ -61,7 +61,7 @@ export class AudioPlaybackScheduler {
     this.stopPlayback();
     this.disposeDecoders();
     this.composition = composition;
-    const clips = composition.clips.filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled);
+    const clips = composition.clips.filter(isAudioClip);
     const assetIds = new Set(clips.map((clip) => clip.assetId));
     const issues: MediaError[] = [];
     const loadedDecoders = new Map<string, AudioAssetDecoder>();
@@ -127,11 +127,7 @@ export class AudioPlaybackScheduler {
   }
 
   updateComposition(composition: ClipComposition): void {
-    const assetIds = new Set(
-      composition.clips
-        .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
-        .map((clip) => clip.assetId),
-    );
+    const assetIds = new Set(composition.clips.filter(isAudioClip).map((clip) => clip.assetId));
     if (assetIds.size !== this.decoders.size || [...assetIds].some((assetId) => !this.decoders.has(assetId))) {
       throw new Error('Audio assets changed during a timing-only composition update.');
     }
@@ -141,22 +137,12 @@ export class AudioPlaybackScheduler {
 
   private canUpdateComposition(composition: ClipComposition): boolean {
     if (!this.composition) return false;
-    const nextAssetIds = new Set(
-      composition.clips
-        .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
-        .map((clip) => clip.assetId),
-    );
+    const nextAssetIds = new Set(composition.clips.filter(isAudioClip).map((clip) => clip.assetId));
     if (nextAssetIds.size !== this.decoders.size || [...nextAssetIds].some((assetId) => !this.decoders.has(assetId))) {
       return false;
     }
     const topology = (value: ClipComposition) => {
-      const assetIds = [
-        ...new Set(
-          value.clips
-            .filter((clip): clip is AudioClip => isAudioClip(clip) && clip.enabled)
-            .map((clip) => clip.assetId),
-        ),
-      ].sort();
+      const assetIds = [...new Set(value.clips.filter(isAudioClip).map((clip) => clip.assetId))].sort();
       return JSON.stringify(
         assetIds.map((assetId) => {
           const asset = value.assets.find((entry) => entry.id === assetId);

@@ -127,6 +127,8 @@ export class MediaPlaybackEngine {
     this.assertActive();
     if (!this.canRetimeComposition(composition)) throw new Error('Playback topology changed during retiming.');
     if (!Number.isFinite(timelineSeconds)) throw new RangeError('Playback time must be finite.');
+    const previousComposition = this.composition!;
+    const shouldReloadAudio = this.audioTopology(previousComposition) !== this.audioTopology(composition);
     this.pause();
     this.composition = composition;
     this.currentSeconds = this.clampTime(timelineSeconds);
@@ -135,14 +137,22 @@ export class MediaPlaybackEngine {
     this.pendingLoads.clear();
     try {
       const { clips, issues } = this.videoPlaybackPlan(composition);
+      const activeClipIds = new Set(clips.map((clip) => clip.clipId));
+      for (const clipId of this.currentFrameKeys.keys())
+        if (!activeClipIds.has(clipId)) this.currentFrameKeys.delete(clipId);
       const workerReady = new Promise<void>((resolve, reject) => {
         this.pendingLoads.set(requestGeneration, { resolve, reject });
       });
-      this.audio.updateComposition(composition);
+      const audioReady = shouldReloadAudio
+        ? this.audio.loadComposition(composition)
+        : Promise.resolve().then(() => {
+            this.audio.updateComposition(composition);
+            return [];
+          });
       this.post({ type: 'retime', generation: requestGeneration, clips });
-      await workerReady;
+      const [, audioIssues] = await Promise.all([workerReady, audioReady]);
       if (requestGeneration !== this.generation) return;
-      for (const issue of issues) this.reportIssue(issue);
+      for (const issue of [...issues, ...audioIssues]) this.reportIssue(issue);
       await this.seek(this.currentSeconds, 'seek');
     } catch (error) {
       if (requestGeneration !== this.generation) return;
@@ -370,9 +380,7 @@ export class MediaPlaybackEngine {
   private playbackTopology(composition: ClipComposition): string {
     const clips = composition.clips
       .flatMap((clip) => {
-        if (!clip.enabled) return [];
         if (isVisualClip(clip) && clip.kind !== 'image') return [{ id: clip.id, assetId: clip.assetId, type: 'video' }];
-        if (clip.kind === 'audio') return [{ id: clip.id, assetId: clip.assetId, type: 'audio' }];
         return [];
       })
       .sort((left, right) => left.id.localeCompare(right.id));
@@ -384,16 +392,31 @@ export class MediaPlaybackEngine {
     return JSON.stringify({ clips, assets });
   }
 
+  private audioTopology(composition: ClipComposition): string {
+    const assetIds = [
+      ...new Set(composition.clips.flatMap((clip) => (clip.kind === 'audio' ? [clip.assetId] : []))),
+    ].sort();
+    return JSON.stringify(
+      assetIds.map((assetId) => {
+        const asset = composition.assets.find((entry) => entry.id === assetId);
+        return { assetId, kind: asset?.kind, src: asset?.src };
+      }),
+    );
+  }
+
   private videoPlaybackPlan(composition: ClipComposition): {
     clips: PlaybackClipDescriptor[];
     assets: MediaSourceDescriptor[];
     issues: MediaError[];
   } {
     const requestedClips = this.videoClips(composition);
+    const requestedAssetIds = new Set(
+      composition.clips.flatMap((clip) => (isVisualClip(clip) && clip.kind !== 'image' ? [clip.assetId] : [])),
+    );
     const assetsById = new Map(composition.assets.map((asset) => [asset.id, asset]));
     const descriptors = new Map<string, MediaSourceDescriptor>();
     const issues = new Map<string, MediaError>();
-    for (const assetId of new Set(requestedClips.map((clip) => clip.assetId))) {
+    for (const assetId of requestedAssetIds) {
       const asset = assetsById.get(assetId);
       if (!asset) {
         issues.set(assetId, {
