@@ -2,19 +2,15 @@
 import { computed } from 'vue';
 import BigSlider from '~/ui/slider/BigSlider.vue';
 import { useTranslate } from '~/i18n/useTranslate';
-import ClipActionGroup from './ClipActionGroup.vue';
 
 const { t } = useTranslate('AudioClipPropertiesPanel');
-const { t: tClip } = useTranslate('ClipPropertiesPanel');
 
 const props = defineProps<{
-  clip: { name?: string; enabled?: boolean; volume?: number } | null;
+  clip: { volume?: number } | null;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:volume', value: number): void;
-  (e: 'update:enabled', value: boolean): void;
-  (e: 'delete'): void;
 }>();
 
 const volume = computed(() => props.clip?.volume ?? 100);
@@ -28,17 +24,6 @@ const volume = computed(() => props.clip?.volume ?? 100);
     </div>
     <div v-else class="options-group">
       <div class="section-block">
-        <div class="section-header">
-          <span class="section-title">{{ clip.name || t('audioClip') }}</span>
-          <ClipActionGroup
-            :enabled="clip.enabled ?? true"
-            :enabled-label="tClip('enabled')"
-            :disabled-label="tClip('disabled')"
-            :delete-label="t('deleteAudioClip')"
-            @toggle="emit('update:enabled', !(clip.enabled ?? true))"
-            @delete="emit('delete')"
-          />
-        </div>
         <BigSlider
           :model-value="volume"
           :default-value="100"
@@ -70,22 +55,6 @@ const volume = computed(() => props.clip?.volume ?? 100);
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 28px;
-  gap: 12px;
-}
-.section-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 700;
 }
 .empty-desc {
   color: var(--text-secondary);
