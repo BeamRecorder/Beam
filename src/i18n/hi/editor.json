@@ -200,7 +200,9 @@
     "showDetails": "त्रुटि विवरण"
   },
   "VideoEditor": {
-    "exportBanner": "एक्सपोर्ट हो रहा है। लाइव एडिटिंग से वर्तमान एक्सपोर्ट प्रभावित नहीं होगा।"
+    "exportBanner": "एक्सपोर्ट हो रहा है। लाइव एडिटिंग से वर्तमान एक्सपोर्ट प्रभावित नहीं होगा।",
+    "timelineCopied": "कॉपी किया गया",
+    "timelinePasted": "पेस्ट किया गया"
   },
   "BlurPropertiesPanel": {
     "presets": "प्रीसेट",

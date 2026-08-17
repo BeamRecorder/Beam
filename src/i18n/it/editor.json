@@ -200,7 +200,9 @@
     "showDetails": "Dettagli errore"
   },
   "VideoEditor": {
-    "exportBanner": "Esportazione in corso. Le modifiche live non influiranno sul file attualmente esportato."
+    "exportBanner": "Esportazione in corso. Le modifiche live non influiranno sul file attualmente esportato.",
+    "timelineCopied": "Copiato",
+    "timelinePasted": "Incollato"
   },
   "BlurPropertiesPanel": {
     "presets": "Predefiniti",

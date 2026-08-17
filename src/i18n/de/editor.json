@@ -200,7 +200,9 @@
     "showDetails": "Fehlerdetails"
   },
   "VideoEditor": {
-    "exportBanner": "Export läuft. Live-Änderungen wirken sich nicht auf die gerade exportierte Datei aus."
+    "exportBanner": "Export läuft. Live-Änderungen wirken sich nicht auf die gerade exportierte Datei aus.",
+    "timelineCopied": "Kopiert",
+    "timelinePasted": "Eingefügt"
   },
   "BlurPropertiesPanel": {
     "presets": "Voreinstellungen",

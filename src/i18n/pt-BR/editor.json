@@ -200,7 +200,9 @@
     "showDetails": "Detalhes do erro"
   },
   "VideoEditor": {
-    "exportBanner": "Exportação em andamento. As edições ao vivo não afetarão o arquivo que está sendo exportado."
+    "exportBanner": "Exportação em andamento. As edições ao vivo não afetarão o arquivo que está sendo exportado.",
+    "timelineCopied": "Copiado",
+    "timelinePasted": "Colado"
   },
   "BlurPropertiesPanel": {
     "presets": "Predefinições",

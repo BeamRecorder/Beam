@@ -200,7 +200,9 @@
     "showDetails": "Szczegóły błędu"
   },
   "VideoEditor": {
-    "exportBanner": "Eksportowanie w toku. Bieżące zmiany nie wpłyną na aktualnie eksportowany plik."
+    "exportBanner": "Eksportowanie w toku. Bieżące zmiany nie wpłyną na aktualnie eksportowany plik.",
+    "timelineCopied": "Skopiowano",
+    "timelinePasted": "Wklejono"
   },
   "BlurPropertiesPanel": {
     "presets": "Ustawienia wstępne",

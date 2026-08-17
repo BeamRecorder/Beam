@@ -200,7 +200,9 @@
     "showDetails": "Detalles del error"
   },
   "VideoEditor": {
-    "exportBanner": "Exportación en curso. Los cambios en directo no afectarán al archivo que se está exportando."
+    "exportBanner": "Exportación en curso. Los cambios en directo no afectarán al archivo que se está exportando.",
+    "timelineCopied": "Copiado",
+    "timelinePasted": "Pegado"
   },
   "BlurPropertiesPanel": {
     "presets": "Preajustes",

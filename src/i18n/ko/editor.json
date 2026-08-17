@@ -200,7 +200,9 @@
     "showDetails": "오류 세부 정보"
   },
   "VideoEditor": {
-    "exportBanner": "내보내는 중입니다. 현재 내보내는 파일에는 실시간 편집 내용이 적용되지 않습니다."
+    "exportBanner": "내보내는 중입니다. 현재 내보내는 파일에는 실시간 편집 내용이 적용되지 않습니다.",
+    "timelineCopied": "복사됨",
+    "timelinePasted": "붙여넣음"
   },
   "BlurPropertiesPanel": {
     "presets": "프리셋",

@@ -200,7 +200,9 @@
     "showDetails": "エラーの詳細"
   },
   "VideoEditor": {
-    "exportBanner": "書き出し中です。書き出し中のファイルにはライブ編集は反映されません。"
+    "exportBanner": "書き出し中です。書き出し中のファイルにはライブ編集は反映されません。",
+    "timelineCopied": "コピーしました",
+    "timelinePasted": "貼り付けました"
   },
   "BlurPropertiesPanel": {
     "presets": "プリセット",

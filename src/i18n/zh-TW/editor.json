@@ -200,7 +200,9 @@
     "showDetails": "錯誤詳細資料"
   },
   "VideoEditor": {
-    "exportBanner": "正在匯出。即時編輯不會影響目前正在匯出的檔案。"
+    "exportBanner": "正在匯出。即時編輯不會影響目前正在匯出的檔案。",
+    "timelineCopied": "已複製",
+    "timelinePasted": "已貼上"
   },
   "BlurPropertiesPanel": {
     "presets": "預設",
