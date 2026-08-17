@@ -12,6 +12,12 @@ const Popover = {
   },
   template: '<div class="popover-stub"><slot name="trigger" :isOpen="false" /><slot :close="close" /></div>',
 };
+const OpenPopover = {
+  setup() {
+    return { close: () => undefined };
+  },
+  template: '<div class="popover-stub"><slot name="trigger" :isOpen="true" /><slot :close="close" /></div>',
+};
 const BigSlider = {
   props: ['modelValue', 'min', 'max', 'step', 'label'],
   emits: ['update:modelValue'],
@@ -23,7 +29,7 @@ const Button = {
   props: ['disabled', 'iconOnly', 'tooltip', 'icon'],
   emits: ['click'],
   template:
-    '<button v-bind="$attrs" :disabled="disabled" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" @click="$emit(\'click\')"><slot name="icon" /><slot /></button>',
+    '<button v-bind="$attrs" :disabled="disabled" :data-icon-only="iconOnly ? \'true\' : undefined" :data-tooltip="tooltip || undefined" @click="$emit(\'click\')"><component v-if="icon" :is="icon" class="stub-icon" /><slot name="icon" /><slot /></button>',
 };
 
 describe('TimelineToolbar', () => {
@@ -121,40 +127,70 @@ describe('TimelineToolbar', () => {
 
   it.each([
     ['auto', 'A'],
-    ['full', '1×'],
-    ['half', '½'],
-    ['quarter', '¼'],
-  ] as const)('shows a compact %s preview-quality indicator with an accessible tooltip', (quality, indicator) => {
+    ['full', '1x'],
+    ['half', '1/2'],
+    ['quarter', '1/4'],
+  ] as const)(
+    'shows a compact %s preview-quality indicator with a short tooltip and long accessible label',
+    (quality, indicator) => {
+      const wrapper = mount(TimelineToolbar, {
+        props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: quality },
+        global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
+      });
+
+      const trigger = wrapper.get('.preview-quality-trigger');
+      expect(trigger.get('.preview-quality-indicator').text()).toBe(indicator);
+      expect(trigger.attributes('data-tooltip')).toBe(`Preview quality: ${indicator}`);
+      expect(trigger.attributes('aria-label')).toBe(
+        `Preview quality: ${
+          { auto: 'Auto', full: 'Full resolution', half: 'Half resolution', quarter: 'Quarter resolution' }[quality]
+        }`,
+      );
+    },
+  );
+
+  it('hides the trigger tooltip while the quality popover is open', () => {
     const wrapper = mount(TimelineToolbar, {
-      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: quality },
-      global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
+      props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: 'quarter' },
+      global: { stubs: { PopoverMenuButton, Popover: OpenPopover, BigSlider, Button } },
     });
 
     const trigger = wrapper.get('.preview-quality-trigger');
-    expect(trigger.get('.preview-quality-indicator').text()).toBe(indicator);
-    expect(trigger.attributes('aria-label')).toMatch(/preview/i);
+    expect(trigger.get('.preview-quality-indicator').text()).toBe('1/4');
+    expect(trigger.attributes('data-tooltip')).toBeUndefined();
   });
 
-  it('offers all preview quality options and emits each selected value', async () => {
+  it('keeps the popover light while exposing the hint through an info tooltip', async () => {
     const wrapper = mount(TimelineToolbar, {
       props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: 'half' },
       global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
     });
 
+    expect(wrapper.get('.preview-quality-heading').text()).toBe('Preview quality');
+    expect(wrapper.find('.preview-quality-heading small').exists()).toBe(false);
+    const infoButton = wrapper.get('.preview-quality-heading button');
+    expect(infoButton.find('.stub-icon').exists()).toBe(true);
+    expect(infoButton.attributes('data-tooltip')).toBe('Preview only. Export stays full quality.');
+    expect(infoButton.attributes('aria-label')).toBe('Preview only. Export stays full quality.');
+
     const options = wrapper.findAll('.preview-quality-option');
     expect(options).toHaveLength(4);
     expect(options.map((option) => option.attributes('role'))).toEqual(['radio', 'radio', 'radio', 'radio']);
-    expect(options.find((option) => option.classes('active'))?.text()).toContain('Half');
+    expect(options.map((option) => option.text())).toEqual(['A', '1x', '1/2', '1/4']);
+    expect(options.map((option) => option.attributes('aria-label'))).toEqual([
+      'Auto',
+      'Full resolution',
+      'Half resolution',
+      'Quarter resolution',
+    ]);
+    expect(options.find((option) => option.classes('active'))?.text()).toBe('1/2');
+    expect(options.find((option) => option.classes('active'))?.attributes('aria-checked')).toBe('true');
 
-    for (const [quality, label] of [
-      ['auto', 'Auto'],
-      ['full', 'Full'],
-      ['half', 'Half'],
-      ['quarter', 'Quarter'],
-    ] as const) {
-      const option = options.find((candidate) => candidate.text().includes(label));
-      expect(option, `missing ${quality} option`).toBeDefined();
-      await option!.trigger('click');
+    for (const [index, option] of options.entries()) {
+      await option.trigger('click');
+      expect(wrapper.findAll('.preview-quality-option')).toHaveLength(4);
+      await wrapper.setProps({ previewQuality: (['auto', 'full', 'half', 'quarter'] as const)[index] });
+      expect(wrapper.findAll('.preview-quality-option')[index]?.attributes('aria-checked')).toBe('true');
     }
     expect(wrapper.emitted('update:previewQuality')).toEqual([['auto'], ['full'], ['half'], ['quarter']]);
   });

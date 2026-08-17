@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Check, Gauge } from '@lucide/vue';
+import { Gauge, Info } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -12,22 +12,22 @@ const { t } = useTranslate('TimelineToolbar');
 
 const options = computed(() => [
   { id: 'auto' as const, label: t('previewQualityAuto'), indicator: 'A' },
-  { id: 'full' as const, label: t('previewQualityFull'), indicator: '1×' },
-  { id: 'half' as const, label: t('previewQualityHalf'), indicator: '½' },
-  { id: 'quarter' as const, label: t('previewQualityQuarter'), indicator: '¼' },
+  { id: 'full' as const, label: t('previewQualityFull'), indicator: '1x' },
+  { id: 'half' as const, label: t('previewQualityHalf'), indicator: '1/2' },
+  { id: 'quarter' as const, label: t('previewQualityQuarter'), indicator: '1/4' },
 ]);
 const activeOption = computed(() => options.value.find((option) => option.id === props.modelValue)!);
 </script>
 
 <template>
   <Popover align="right" direction="up" :match-trigger-width="false">
-    <template #trigger>
+    <template #trigger="{ isOpen }">
       <Button
         variant="ghost"
         size="sm"
         icon-only
         class="preview-quality-trigger"
-        :tooltip="`${t('previewQuality')}: ${activeOption.label}`"
+        :tooltip="isOpen ? '' : `${t('previewQuality')}: ${activeOption.indicator}`"
         :aria-label="`${t('previewQuality')}: ${activeOption.label}`"
       >
         <template #icon>
@@ -38,28 +38,35 @@ const activeOption = computed(() => options.value.find((option) => option.id ===
         </template>
       </Button>
     </template>
-    <template #default="{ close }">
+    <template #default>
       <div class="preview-quality-popover" role="radiogroup" :aria-label="t('previewQuality')">
         <div class="preview-quality-heading">
           <span>{{ t('previewQuality') }}</span>
-          <small>{{ t('previewQualityExportHint') }}</small>
+          <Button
+            variant="ghost"
+            size="xs"
+            icon-only
+            :icon="Info"
+            :tooltip="t('previewQualityExportHint')"
+            tooltip-position="left"
+            :aria-label="t('previewQualityExportHint')"
+          />
         </div>
-        <button
-          v-for="option in options"
-          :key="option.id"
-          type="button"
-          class="preview-quality-option"
-          :class="{ active: modelValue === option.id }"
-          role="radio"
-          :aria-checked="modelValue === option.id"
-          @click="
-            emit('update:modelValue', option.id);
-            close();
-          "
-        >
-          <span>{{ option.label }}</span>
-          <Check v-if="modelValue === option.id" aria-hidden="true" />
-        </button>
+        <div class="preview-quality-options">
+          <button
+            v-for="option in options"
+            :key="option.id"
+            type="button"
+            class="preview-quality-option"
+            :class="{ active: modelValue === option.id }"
+            role="radio"
+            :aria-label="option.label"
+            :aria-checked="modelValue === option.id"
+            @click="emit('update:modelValue', option.id)"
+          >
+            {{ option.indicator }}
+          </button>
+        </div>
       </div>
     </template>
   </Popover>
@@ -79,54 +86,56 @@ const activeOption = computed(() => options.value.find((option) => option.id ===
 }
 .preview-quality-indicator {
   position: absolute;
-  right: -7px;
+  right: -11px;
   bottom: -6px;
-  min-width: 13px;
-  padding: 0 2px;
+  min-width: 18px;
+  padding: 0 3px;
   border-radius: 5px;
   background: var(--color-bg-element);
   color: var(--text-secondary);
-  font: 700 8px/11px var(--font-sans);
+  font: 750 10px/13px var(--font-sans);
   text-align: center;
 }
 .preview-quality-popover {
-  width: 220px;
+  width: 172px;
   padding: 6px;
 }
 .preview-quality-heading {
-  display: grid;
-  gap: 2px;
-  padding: 6px 8px 8px;
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 700;
-}
-.preview-quality-heading small {
-  color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 500;
-}
-.preview-quality-option {
-  width: 100%;
-  min-height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
-  border: 0;
+  gap: 6px;
+  padding: 4px 4px 7px 7px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.preview-quality-heading > span {
+  max-width: 112px;
+}
+.preview-quality-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+.preview-quality-option {
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
-  font: 500 12px var(--font-sans);
+  font: 700 13px var(--font-sans);
   cursor: pointer;
 }
-.preview-quality-option:hover,
+.preview-quality-option:hover {
+  background: var(--color-bg-surface-hover);
+  color: var(--text-primary);
+}
 .preview-quality-option.active {
   background: var(--color-primary-light);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
   color: var(--color-primary);
-}
-.preview-quality-option svg {
-  width: 14px;
-  height: 14px;
 }
 </style>
