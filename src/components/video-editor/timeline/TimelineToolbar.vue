@@ -340,7 +340,7 @@ const handleZoomOut = () => {
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
-  gap: 6px;
+  gap: 10px;
 }
 
 .zoom-controls {

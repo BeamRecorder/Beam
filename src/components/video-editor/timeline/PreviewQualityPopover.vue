@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { Gauge, Info } from '@lucide/vue';
+import { computed, onBeforeUnmount, ref, watch, type Component } from 'vue';
+import { Gauge, Info, Settings2 } from '@lucide/vue';
 import Button from '~/ui/button/Button.vue';
 import Popover from '~/ui/popover/Popover.vue';
 import { useTranslate } from '~/i18n/useTranslate';
@@ -12,11 +12,18 @@ const props = defineProps<{ modelValue: PreviewQuality; performanceSnapshot?: Pr
 const emit = defineEmits<{ (event: 'update:modelValue', value: PreviewQuality): void }>();
 const { t } = useTranslate('TimelineToolbar');
 
-const options = computed(() => [
-  { id: 'auto' as const, label: t('previewQualityAuto'), indicator: 'A' },
-  { id: 'full' as const, label: t('previewQualityFull'), indicator: '1x' },
-  { id: 'half' as const, label: t('previewQualityHalf'), indicator: '1/2' },
-  { id: 'quarter' as const, label: t('previewQualityQuarter'), indicator: '1/4' },
+type PreviewQualityOption = {
+  id: PreviewQuality;
+  label: string;
+  indicator?: string;
+  icon?: Component;
+};
+
+const options = computed<PreviewQualityOption[]>(() => [
+  { id: 'auto', label: t('previewQualityAuto'), icon: Settings2 },
+  { id: 'full', label: t('previewQualityFull'), indicator: '1x' },
+  { id: 'half', label: t('previewQualityHalf'), indicator: '1/2' },
+  { id: 'quarter', label: t('previewQualityQuarter'), indicator: '1/4' },
 ]);
 const activeOption = computed(() => options.value.find((option) => option.id === props.modelValue)!);
 const warningLevel = computed<'warning' | 'critical' | null>(() => {
@@ -79,7 +86,7 @@ onBeforeUnmount(() => {
           icon-only
           class="preview-quality-trigger"
           :class="warningLevel ? `is-${warningLevel}` : undefined"
-          :tooltip="`${t('previewQuality')}: ${activeOption.indicator}`"
+          :tooltip="`${t('previewQuality')}: ${activeOption.indicator ?? activeOption.label}`"
           :tooltip-disabled="isOpen"
           :aria-label="`${t('previewQuality')}: ${activeOption.label}`"
         >
@@ -90,7 +97,10 @@ onBeforeUnmount(() => {
               aria-hidden="true"
             >
               <Gauge />
-              <span class="preview-quality-indicator">{{ activeOption.indicator }}</span>
+              <span v-if="activeOption.icon" class="preview-quality-auto-indicator">
+                <component :is="activeOption.icon" />
+              </span>
+              <span v-else class="preview-quality-indicator">{{ activeOption.indicator }}</span>
             </span>
           </template>
         </Button>
@@ -110,19 +120,24 @@ onBeforeUnmount(() => {
             />
           </div>
           <div class="preview-quality-options">
-            <button
+            <Button
               v-for="option in options"
               :key="option.id"
-              type="button"
+              variant="ghost"
+              size="xs"
               class="preview-quality-option"
               :class="{ active: modelValue === option.id }"
+              :icon="option.icon"
+              :icon-only="Boolean(option.icon)"
+              :tooltip="option.indicator ?? option.label"
+              tooltip-position="top"
               role="radio"
               :aria-label="option.label"
               :aria-checked="modelValue === option.id"
               @click="emit('update:modelValue', option.id)"
             >
               {{ option.indicator }}
-            </button>
+            </Button>
           </div>
         </div>
       </template>
@@ -137,7 +152,10 @@ onBeforeUnmount(() => {
 }
 .preview-quality-trigger {
   flex: 0 0 auto;
-  transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    background-color 0.3s ease;
 }
 .preview-quality-trigger.is-warning {
   color: var(--color-warning) !important;
@@ -174,13 +192,47 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
   font: 750 10px/13px var(--font-sans);
   text-align: center;
-  transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    background-color 0.3s ease;
+}
+.preview-quality-auto-indicator {
+  position: absolute;
+  right: -8px;
+  bottom: -5px;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: var(--color-bg-element);
+  color: var(--text-secondary);
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    background-color 0.3s ease;
+}
+.preview-quality-auto-indicator > svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 2.2;
 }
 .preview-quality-icon.is-warning .preview-quality-indicator {
   color: var(--color-warning);
   border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
 }
+.preview-quality-icon.is-warning .preview-quality-auto-indicator {
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
+}
 .preview-quality-icon.is-critical .preview-quality-indicator {
+  color: var(--color-error);
+  border-color: color-mix(in srgb, var(--color-error) 48%, transparent);
+}
+.preview-quality-icon.is-critical .preview-quality-auto-indicator {
   color: var(--color-error);
   border-color: color-mix(in srgb, var(--color-error) 48%, transparent);
 }
@@ -241,6 +293,7 @@ onBeforeUnmount(() => {
   gap: 3px;
 }
 .preview-quality-option {
+  width: 100%;
   height: 30px;
   padding: 0;
   border: 1px solid transparent;

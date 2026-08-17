@@ -11,24 +11,32 @@ const props = withDefaults(
     label: string;
     sampleCapacity?: number;
     animationMs?: number;
+    sampleTimestamp?: number;
+    interactive?: boolean;
+    formatHoverValue?: (value: number) => string;
   }>(),
   {
     width: 82,
     height: 20,
     sampleCapacity: 48,
-    animationMs: 240,
+    animationMs: 500,
     fill: true,
+    interactive: false,
+    formatHoverValue: undefined,
   },
 );
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+const isHovered = ref(false);
+const hoverText = ref('');
+const hoverX = ref(0);
+const hoverY = ref(0);
 
 let activeSamples: number[] = [];
-let slidingSamples: number[] = [];
 let slideOffsetProgress = 1;
 let animationStartTime = 0;
 let animationFrame: number | null = null;
-let mounted = false;
+let activeSampleTimestamp: number | undefined;
 
 const colorCache = new Map<string, string>();
 
@@ -68,7 +76,17 @@ function getPointY(value: number, height: number): number {
   return height - value * Math.max(1, height - 3) - 1.5;
 }
 
-function traceSlidingPath(
+function samplesEqual(left: readonly number[], right: readonly number[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function formatFps(score: number): string {
+  if (props.formatHoverValue) return props.formatHoverValue(score);
+  const fps = Math.max(0, Math.min(60, 60 * (1 - score)));
+  return `${fps.toFixed(1)} fps`;
+}
+
+function traceScrollingPath(
   context: CanvasRenderingContext2D,
   samples: readonly number[],
   progress: number,
@@ -79,35 +97,18 @@ function traceSlidingPath(
   const count = samples.length;
   if (count === 0) return;
 
-  if (count === 1) {
-    const y = getPointY(samples[0] ?? 0, height);
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(width, y);
-    return;
-  }
-
   const dx = width / Math.max(1, capacity - 1);
-  const isSliding = progress < 1 && count > capacity;
   const pointsX: number[] = new Array(count);
   const pointsY: number[] = new Array(count);
 
-  if (isSliding) {
-    // Pure horizontal translation: every peak keeps its exact immutable Y height!
-    const offset = progress * dx;
-    for (let i = 0; i < count; i++) {
-      pointsX[i] = i * dx - offset;
-      pointsY[i] = getPointY(samples[i] ?? 0, height);
-    }
-  } else {
-    for (let i = 0; i < count; i++) {
-      pointsX[i] = count < capacity ? (i / (count - 1)) * width : i * dx;
-      pointsY[i] = getPointY(samples[i] ?? 0, height);
-    }
+  for (let i = 0; i < count; i++) {
+    pointsX[i] = width - (count - 1 - i + progress) * dx;
+    pointsY[i] = getPointY(samples[i] ?? 0, height);
   }
 
   context.beginPath();
-  context.moveTo(pointsX[0]!, pointsY[0]!);
+  context.moveTo(0, pointsY[0]!);
+  context.lineTo(pointsX[0]!, pointsY[0]!);
 
   for (let i = 1; i < count; i++) {
     const prevX = pointsX[i - 1]!;
@@ -117,6 +118,8 @@ function traceSlidingPath(
     const midX = (prevX + currX) / 2;
     context.bezierCurveTo(midX, prevY, midX, currY, currX, currY);
   }
+
+  context.lineTo(width, pointsY[count - 1]!);
 }
 
 function draw(samples: readonly number[], progress: number) {
@@ -154,7 +157,7 @@ function draw(samples: readonly number[], progress: number) {
   context.lineCap = 'round';
   context.lineJoin = 'round';
 
-  traceSlidingPath(context, samples, progress, capacity, width, height);
+  traceScrollingPath(context, samples, progress, capacity, width, height);
 
   // Stroke the crisp curve
   context.strokeStyle = color;
@@ -181,17 +184,91 @@ function draw(samples: readonly number[], progress: number) {
     context.fill();
   }
 
+  // Draw interactive curve-following indicator if hovered
+  if (props.interactive && isHovered.value && samples.length > 0) {
+    const hX = hoverX.value;
+    const hY = hoverY.value;
+
+    if (typeof context.save === 'function') context.save();
+    context.beginPath();
+    context.moveTo(hX, 0);
+    context.lineTo(hX, height);
+    context.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    context.lineWidth = 1;
+    if (typeof context.setLineDash === 'function') context.setLineDash([2, 2]);
+    context.stroke();
+
+    if (typeof context.arc === 'function') {
+      context.beginPath();
+      context.arc(hX, hY, 2.5, 0, Math.PI * 2);
+      context.fillStyle = color;
+      context.fill();
+      context.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+      context.lineWidth = 1;
+      if (typeof context.setLineDash === 'function') context.setLineDash([]);
+      context.stroke();
+    }
+    if (typeof context.restore === 'function') context.restore();
+  }
+
   context.globalAlpha = 1;
 }
 
+function updateHover(clientX: number) {
+  if (!props.interactive) return;
+  const canvas = canvasRef.value;
+  if (!canvas || activeSamples.length === 0) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(1, props.width);
+  const height = Math.max(1, props.height);
+  const mouseX = Math.max(0, Math.min(width, clientX - rect.left));
+
+  const capacity =
+    props.sampleCapacity !== undefined && props.sampleCapacity > 0
+      ? Math.max(2, Math.round(props.sampleCapacity))
+      : activeSamples.length;
+
+  const dx = width / Math.max(1, capacity - 1);
+  const count = activeSamples.length;
+
+  // Calculate corresponding floating index along the scrolling curve
+  const u = (width - mouseX) / dx - slideOffsetProgress;
+  const exactIndex = count - 1 - u;
+  const leftIndex = Math.max(0, Math.min(count - 1, Math.floor(exactIndex)));
+  const rightIndex = Math.max(0, Math.min(count - 1, Math.ceil(exactIndex)));
+  const fraction = Math.max(0, Math.min(1, exactIndex - leftIndex));
+
+  const leftVal = activeSamples[leftIndex] ?? 0;
+  const rightVal = activeSamples[rightIndex] ?? leftVal;
+  const val = leftVal * (1 - fraction) + rightVal * fraction;
+
+  hoverX.value = mouseX;
+  hoverY.value = getPointY(val, height);
+  hoverText.value = formatFps(val);
+  isHovered.value = true;
+
+  draw(activeSamples, slideOffsetProgress);
+}
+
+function handlePointerMove(event: PointerEvent) {
+  updateHover(event.clientX);
+}
+
+function handlePointerLeave() {
+  if (!props.interactive) return;
+  isHovered.value = false;
+  draw(activeSamples, slideOffsetProgress);
+}
+
 function stepAnimation(timestamp: number) {
-  const duration = Math.max(1, props.animationMs ?? 240);
+  const duration = Math.max(1, props.animationMs ?? 500);
   const elapsed = timestamp - animationStartTime;
   const linear = Math.min(1, Math.max(0, elapsed / duration));
   slideOffsetProgress = linear;
 
   if (linear < 1) {
-    draw(slidingSamples, slideOffsetProgress);
+    draw(activeSamples, slideOffsetProgress);
     animationFrame = requestAnimationFrame(stepAnimation);
   } else {
     animationFrame = null;
@@ -201,40 +278,43 @@ function stepAnimation(timestamp: number) {
 }
 
 function onValuesUpdate() {
+  const nextSamples = cleanValues(props.values, props.sampleCapacity);
+  const hasTimestamp = typeof props.sampleTimestamp === 'number' && Number.isFinite(props.sampleTimestamp);
+  const hasNewSample = hasTimestamp
+    ? props.sampleTimestamp !== activeSampleTimestamp
+    : !samplesEqual(nextSamples, activeSamples);
+
+  if (!hasNewSample) {
+    if (!samplesEqual(nextSamples, activeSamples)) activeSamples = nextSamples.slice();
+    draw(activeSamples, slideOffsetProgress);
+    return;
+  }
+
   if (animationFrame !== null) {
     cancelAnimationFrame(animationFrame);
     animationFrame = null;
   }
 
-  const nextSamples = cleanValues(props.values, props.sampleCapacity);
-  const duration = props.animationMs ?? 240;
+  const duration = props.animationMs ?? 500;
+  activeSampleTimestamp = hasTimestamp ? props.sampleTimestamp : undefined;
 
-  if (!mounted || duration <= 0 || activeSamples.length === 0) {
+  if (duration <= 0) {
     activeSamples = nextSamples.slice();
-    slideOffsetProgress = 1;
-    draw(activeSamples, 1);
+    slideOffsetProgress = 0;
+    draw(activeSamples, 0);
     return;
-  }
-
-  const capacity =
-    props.sampleCapacity !== undefined && props.sampleCapacity > 0
-      ? Math.max(2, Math.round(props.sampleCapacity))
-      : nextSamples.length;
-
-  if (activeSamples.length >= capacity && nextSamples.length >= capacity) {
-    slidingSamples = [activeSamples[0]!, ...nextSamples];
-  } else {
-    slidingSamples = nextSamples.slice();
   }
 
   activeSamples = nextSamples.slice();
   slideOffsetProgress = 0;
+  draw(activeSamples, 0);
+  if (activeSamples.length === 0) return;
+
   animationStartTime = performance.now();
   animationFrame = requestAnimationFrame(stepAnimation);
 }
 
 onMounted(() => {
-  mounted = true;
   onValuesUpdate();
 });
 
@@ -246,21 +326,76 @@ onUnmounted(() => {
 });
 
 watch(
-  () => [props.values, props.color, props.fill, props.width, props.height, props.sampleCapacity, props.animationMs] as const,
+  () => [props.values, props.sampleTimestamp, props.sampleCapacity, props.animationMs] as const,
   () => {
     onValuesUpdate();
   },
   { deep: true },
 );
+
+watch(
+  () => [props.color, props.fill, props.width, props.height] as const,
+  () => {
+    draw(activeSamples, slideOffsetProgress);
+  },
+);
 </script>
 
 <template>
-  <canvas ref="canvasRef" class="mini-performance-graph" role="img" :aria-label="label">{{ label }}</canvas>
+  <div
+    class="mini-performance-graph-wrapper"
+    @pointermove="handlePointerMove"
+    @pointerleave="handlePointerLeave"
+  >
+    <canvas ref="canvasRef" class="mini-performance-graph" role="img" :aria-label="label">{{ label }}</canvas>
+    <div
+      v-if="interactive"
+      class="mini-performance-graph-hover-badge"
+      :class="{ 'is-visible': isHovered }"
+      aria-hidden="true"
+    >
+      {{ hoverText }}
+    </div>
+  </div>
 </template>
 
 <style scoped>
+.mini-performance-graph-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  user-select: none;
+}
 .mini-performance-graph {
   display: block;
   flex-shrink: 0;
+}
+.mini-performance-graph-hover-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: color-mix(in srgb, var(--color-bg-element) 75%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-primary);
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  z-index: 10;
+}
+.mini-performance-graph-hover-badge.is-visible {
+  opacity: 1;
+  transform: scale(1);
 }
 </style>

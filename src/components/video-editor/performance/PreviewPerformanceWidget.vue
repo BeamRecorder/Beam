@@ -38,6 +38,7 @@ const overallColor = computed(() => levelColor(overallLevel.value));
 const overallValues = computed(() =>
   props.snapshot.samples.map((sample) => Math.max(sample.ui, sample.worker, sample.audio, sample.media)),
 );
+const latestSampleTimestamp = computed(() => props.snapshot.samples.at(-1)?.timestampMs);
 const uiDetail = computed<Detail>(() => ({
   id: 'ui',
   label: t('ui'),
@@ -78,6 +79,7 @@ const accessibleLabel = computed(
         :color="overallColor"
         :width="96"
         :height="28"
+        :sample-timestamp="latestSampleTimestamp"
         :label="accessibleLabel"
       />
     </div>
@@ -103,6 +105,8 @@ const accessibleLabel = computed(
             :color="uiDetail.color"
             :width="96"
             :height="28"
+            :sample-timestamp="latestSampleTimestamp"
+            interactive
             :label="`${uiDetail.label}: ${statusLabel(uiDetail.score)}`"
           />
         </div>
@@ -115,6 +119,8 @@ const accessibleLabel = computed(
               :color="playbackDetail.color"
               :width="96"
               :height="28"
+              :sample-timestamp="latestSampleTimestamp"
+              interactive
               :label="`${playbackDetail.label}: ${statusLabel(playbackDetail.score)}`"
             />
           </div>
@@ -128,6 +134,8 @@ const accessibleLabel = computed(
               :color="mediaDetail.color"
               :width="96"
               :height="28"
+              :sample-timestamp="latestSampleTimestamp"
+              interactive
               :label="`${mediaDetail.label}: ${statusLabel(mediaDetail.score)}`"
             />
           </div>

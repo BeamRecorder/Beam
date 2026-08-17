@@ -30,7 +30,7 @@ const ButtonStub = defineComponent({
           'data-tooltip-disabled': props.tooltipDisabled ? 'true' : undefined,
           onClick: () => emit('click'),
         },
-        [props.icon ? h('span', { class: 'stub-icon' }) : null, slots.icon?.(), slots.default?.()],
+        [props.icon ? h(props.icon, { class: 'stub-icon' }) : null, slots.icon?.(), slots.default?.()],
       );
   },
 });
@@ -113,5 +113,17 @@ describe('PreviewQualityPopover', () => {
     await nextTick();
     expect(wrapper.get('.preview-quality-trigger').classes()).toContain('is-warning');
     expect(wrapper.find('.preview-quality-suggestion').exists()).toBe(false);
+  });
+
+  it('uses a translated icon and tooltip for Auto instead of showing the A indicator', () => {
+    const wrapper = mountPopover(snapshot('good', null));
+    const options = wrapper.findAll('.preview-quality-option');
+    const auto = options[0];
+
+    expect(auto.text()).toBe('');
+    expect(auto.find('svg').exists()).toBe(true);
+    expect(auto.attributes('aria-label')).toBe('Auto');
+    expect(auto.attributes('data-tooltip')).toBe('Auto');
+    expect(options.slice(1).map((option) => option.text())).toEqual(['1x', '1/2', '1/4']);
   });
 });

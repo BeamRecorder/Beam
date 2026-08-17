@@ -27,6 +27,7 @@ const GraphStub = defineComponent({
     label: { type: String, default: '' },
     width: { type: Number, default: 82 },
     height: { type: Number, default: 20 },
+    sampleTimestamp: { type: Number, default: undefined },
   },
   setup(props) {
     return () =>
@@ -37,6 +38,7 @@ const GraphStub = defineComponent({
         'data-color': props.color,
         'data-width': String(props.width),
         'data-height': String(props.height),
+        'data-sample-timestamp': props.sampleTimestamp == null ? undefined : String(props.sampleTimestamp),
       });
   },
 });
@@ -127,6 +129,21 @@ describe('PreviewPerformanceWidget', () => {
     expect(graph.attributes('data-width')).toBe('96');
     expect(graph.attributes('data-height')).toBe('28');
     expect(wrapper.find('.performance-status-dot').exists()).toBe(false);
+  });
+
+  it('passes the latest sample timestamp to every graph and preserves it across playback toggles', async () => {
+    const wrapper = mountWidget(snapshot('good', undefined, { playback: true, media: true }));
+    const timestamps = () => wrapper.findAll('.graph-stub').map((graph) => graph.attributes('data-sample-timestamp'));
+
+    expect(timestamps()).toEqual(['600', '600', '600', '600']);
+
+    await wrapper.setProps({
+      snapshot: snapshot('idle', undefined, { playback: false, media: true }),
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findAll('.graph-stub')).toHaveLength(3);
+    expect(timestamps()).toEqual(['600', '600', '600']);
   });
 
   it('keeps UI, combined playback and media curves in the hover details', () => {

@@ -141,17 +141,17 @@ describe('ExportPopover', () => {
     const wrapper = mountExport();
     const buttons = wrapper.findAll('.button-stub');
     await buttons.find((button) => button.text() === 'MP4')?.trigger('click');
-    await buttons.find((button) => button.text() === 'high')?.trigger('click');
+    await buttons.find((button) => button.text() === 'High')?.trigger('click');
     await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
     expect(mockJob.start).toHaveBeenCalledWith(expect.objectContaining({ format: 'mp4', preset: 'high' }));
     expect(wrapper.get('[role="alert"]').text()).toContain('MP4');
   });
 
-  it('renders translated quality labels in French', () => {
-    setCurrentLocale('fr');
+  it('renders translated quality labels in French and English', () => {
     let wrapper: ReturnType<typeof mountExport> | undefined;
 
     try {
+      setCurrentLocale('fr');
       wrapper = mountExport();
       const qualityField = wrapper
         .findAll('.field')
@@ -161,8 +161,19 @@ describe('ExportPopover', () => {
         .findAll('.button-stub')
         .map((button) => button.text());
 
-      expect(labels).toEqual(['faible', 'moyen', 'élevé']);
-      expect(labels).not.toEqual(['low', 'medium', 'high']);
+      expect(labels).toEqual(['Faible', 'Moyen', 'Élevé']);
+
+      wrapper.unmount();
+      setCurrentLocale('en');
+      wrapper = mountExport();
+      const englishQualityField = wrapper
+        .findAll('.field')
+        .find((field) => field.find('.field-label').text() === 'Quality & Bitrate');
+      const englishLabels = englishQualityField
+        ?.find('.button-group-stub')
+        .findAll('.button-stub')
+        .map((button) => button.text());
+      expect(englishLabels).toEqual(['Low', 'Medium', 'High']);
     } finally {
       wrapper?.unmount();
       setCurrentLocale('en');

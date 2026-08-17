@@ -156,26 +156,27 @@ describe('TimelineToolbar', () => {
   });
 
   it.each([
-    ['auto', 'A'],
-    ['full', '1x'],
-    ['half', '1/2'],
-    ['quarter', '1/4'],
+    ['auto', null, 'Auto', 'Auto'],
+    ['full', '1x', 'Full resolution', '1x'],
+    ['half', '1/2', 'Half resolution', '1/2'],
+    ['quarter', '1/4', 'Quarter resolution', '1/4'],
   ] as const)(
-    'shows a compact %s preview-quality indicator with a short tooltip and long accessible label',
-    (quality, indicator) => {
+    'shows a compact %s preview-quality indicator with a translated accessible label',
+    (quality, indicator, label, tooltipLabel) => {
       const wrapper = mount(TimelineToolbar, {
         props: { currentTime: 0, duration: 100, isPlaying: false, zoomLevel: 100, previewQuality: quality },
         global: { stubs: { PopoverMenuButton, Popover, BigSlider, Button } },
       });
 
       const trigger = wrapper.get('.preview-quality-trigger');
-      expect(trigger.get('.preview-quality-indicator').text()).toBe(indicator);
-      expect(trigger.attributes('data-tooltip')).toBe(`Preview quality: ${indicator}`);
-      expect(trigger.attributes('aria-label')).toBe(
-        `Preview quality: ${
-          { auto: 'Auto', full: 'Full resolution', half: 'Half resolution', quarter: 'Quarter resolution' }[quality]
-        }`,
-      );
+      if (indicator) {
+        expect(trigger.get('.preview-quality-indicator').text()).toBe(indicator);
+      } else {
+        expect(trigger.find('.preview-quality-indicator').exists()).toBe(false);
+        expect(trigger.find('svg.lucide-settings-2').exists()).toBe(true);
+      }
+      expect(trigger.attributes('data-tooltip')).toBe(`Preview quality: ${tooltipLabel}`);
+      expect(trigger.attributes('aria-label')).toBe(`Preview quality: ${label}`);
     },
   );
 
@@ -207,7 +208,9 @@ describe('TimelineToolbar', () => {
     const options = wrapper.findAll('.preview-quality-option');
     expect(options).toHaveLength(4);
     expect(options.map((option) => option.attributes('role'))).toEqual(['radio', 'radio', 'radio', 'radio']);
-    expect(options.map((option) => option.text())).toEqual(['A', '1x', '1/2', '1/4']);
+    expect(options.map((option) => option.text())).toEqual(['', '1x', '1/2', '1/4']);
+    expect(options[0]?.find('svg.lucide-settings-2').exists()).toBe(true);
+    expect(options[0]?.attributes('data-tooltip')).toBe('Auto');
     expect(options.map((option) => option.attributes('aria-label'))).toEqual([
       'Auto',
       'Full resolution',
