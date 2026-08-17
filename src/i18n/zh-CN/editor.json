@@ -243,6 +243,9 @@
     "autoHint": "自动模式会持续跟随录制的光标移动。",
     "magnification": "放大倍率",
     "zoomLevel": "缩放级别",
+    "motionBlur": "缩放运动模糊",
+    "motionBlurDesc": "在镜头缩放或平移时添加电影感快门模糊，并在预览和导出中保持一致。",
+    "motionBlurIntensity": "运动模糊强度",
     "deleteZoom": "删除缩放",
     "noZoomSelected": "未选择缩放",
     "noZoomSelectedDesc": "点击轨道上的缩放块，以调整深度、模式或位置。"

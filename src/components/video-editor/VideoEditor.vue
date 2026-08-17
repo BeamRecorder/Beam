@@ -29,7 +29,7 @@ import {
   type NormalizedCrop,
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomElement } from '~/components/video-editor/zoom/zoom-types';
 import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
 
 const { t } = useTranslate('VideoEditor');
@@ -147,6 +147,7 @@ const {
   previewZoom,
   deleteSelectedZoom,
 } = zoomState;
+const zoomMotionBlur = zoomState.zoomMotionBlur ?? ref({ ...DEFAULT_ZOOM_MOTION_BLUR });
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
 const captionCompositionPreview = ref<typeof composition.value | null>(null);
@@ -229,6 +230,7 @@ const cloneSerializable = <T,>(value: T): T => JSON.parse(JSON.stringify(value))
 const createEditorSnapshot = (): EditorStateSnapshot => ({
   composition: cloneSerializable(composition.value),
   zoomElements: cloneSerializable(zoomElements.value),
+  zoomMotionBlur: cloneSerializable(zoomMotionBlur.value),
   outputCanvas: cloneSerializable(outputCanvas.value),
   selectedBackground: selectedBackground.value ? cloneSerializable(selectedBackground.value) : null,
   backgroundBlurPercent: backgroundBlurPercent.value,
@@ -245,6 +247,7 @@ const {
   onRestoreSnapshot: async (snapshot) => {
     composition.value = snapshot.composition;
     zoomElements.value = snapshot.zoomElements;
+    if (snapshot.zoomMotionBlur) zoomMotionBlur.value = snapshot.zoomMotionBlur;
     outputCanvas.value = snapshot.outputCanvas;
     selectedBackground.value = snapshot.selectedBackground;
     backgroundBlurPercent.value = snapshot.backgroundBlurPercent;
@@ -307,7 +310,7 @@ watch(
   { deep: true },
 );
 watch(
-  [zoomElements, outputCanvas, selectedBackground, backgroundBlurPercent],
+  [zoomElements, zoomMotionBlur, outputCanvas, selectedBackground, backgroundBlurPercent],
   () => {
     if (historyInitialized && !editorState.loading.value) recordSnapshot(createEditorSnapshot, 300);
   },
@@ -444,6 +447,7 @@ onBeforeUnmount(() => {
           :selected-zoom="selectedZoom"
           :can-generate-zooms="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
+          :zoom-motion-blur="zoomMotionBlur"
           :composition="composition"
           :editor-data="editorData"
           :timeline-duration-ms="Math.round(duration * 1000)"
@@ -454,6 +458,7 @@ onBeforeUnmount(() => {
           @update:blur-percent="backgroundBlurPercent = $event"
           @update:canvas="outputCanvas = $event"
           @update:zoom="updateZoom"
+          @update:zoom-motion-blur="zoomState.updateZoomMotionBlur"
           @delete:zoom="deleteSelectedZoom"
           @generate:zooms="generateZooms()"
           @update:caption="commitCaption"
@@ -531,6 +536,7 @@ onBeforeUnmount(() => {
             :playback-error="playbackError"
             :editor-data="editorData"
             :zoom-elements="zoomElements"
+            :zoom-motion-blur="zoomMotionBlur"
             :selected-zoom="selectedZoom"
             :composition="canvasComposition"
             :output-canvas="outputCanvas"

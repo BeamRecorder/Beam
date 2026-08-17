@@ -90,6 +90,7 @@ let options!: {
   selected: ReturnType<typeof ref<ZoomElement | null>>;
   activeTab: ReturnType<typeof ref<string>>;
   output: ReturnType<typeof ref<{ preset: '16:9'; width: number; height: number; showBackground: boolean }>>;
+  zooms: ReturnType<typeof ref<ZoomElement[]>>;
   screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
   videoError: ReturnType<typeof ref<string | null>>;
   canvas: HTMLCanvasElement;
@@ -183,6 +184,7 @@ const mountComposable = () => {
     selected,
     activeTab,
     output,
+    zooms,
     screenTransformDraft,
     videoError,
     canvas,
@@ -309,6 +311,58 @@ describe('useCameraZoom', () => {
     expect(options.canvas.setPointerCapture).toHaveBeenCalledWith(4);
     expect(options.callbacks.onUpdateZoom).toHaveBeenCalled();
     expect(options.canvas.releasePointerCapture).toHaveBeenCalledWith(4);
+  });
+
+  it('clamps a manual focus near the output edge when the preview has an inset background frame', () => {
+    mountComposable();
+    options.output.value = { preset: '16:9', width: 450, height: 800, showBackground: true };
+    options.zooms.value = [
+      {
+        ...manualZoom,
+        focus: { cx: 1, cy: 0 },
+      },
+    ];
+    options.selected.value = options.zooms.value[0]!;
+    options.currentTime.value = 1.5;
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    const preview = { x: 273.4375, y: 0, width: 253.125, height: 450 };
+    const expectedMargin = 1 / (2 * 1.5);
+    expect(state.videoWindowBounds.value?.focusX).toBeCloseTo(preview.x + (1 - expectedMargin) * preview.width, 1);
+    expect(state.videoWindowBounds.value?.focusY).toBeCloseTo(preview.y + expectedMargin * preview.height, 1);
+  });
+
+  it('maps manual pointer focus to the full output preview instead of the inset media bounds', () => {
+    mountComposable();
+    options.output.value = { preset: '16:9', width: 450, height: 800, showBackground: true };
+    options.zooms.value = [{ ...manualZoom, focus: { cx: 0.5, cy: 0.5 } }];
+    options.selected.value = options.zooms.value[0]!;
+    options.currentTime.value = 1.5;
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    const rendered = state.overlayWindowBounds.value;
+    expect(rendered).not.toBeNull();
+    Object.defineProperty(options.canvas, 'clientWidth', { configurable: true, value: 800 });
+    Object.defineProperty(options.canvas, 'clientHeight', { configurable: true, value: 450 });
+    const targetFocus = { cx: 0.6, cy: 0.4 };
+    const targetX = rendered!.dx + targetFocus.cx * rendered!.dw;
+    const targetY = rendered!.dy + targetFocus.cy * rendered!.dh;
+    const canvasX = rendered!.dx + rendered!.dw / 2 + rendered!.scale * (targetX - rendered!.focusX!);
+    const canvasY = rendered!.dy + rendered!.dh / 2 + rendered!.scale * (targetY - rendered!.focusY!);
+    const pointer = (type: string) =>
+      Object.assign(new MouseEvent(type, { clientX: canvasX, clientY: canvasY, button: 0 }), {
+        pointerId: 8,
+      }) as unknown as PointerEvent;
+
+    state.beginSelectionMove(pointer('pointerdown'));
+    state.endSelectionMove(pointer('pointerup'));
+
+    expect(options.callbacks.onUpdateZoom).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        focus: { cx: expect.closeTo(targetFocus.cx, 6), cy: expect.closeTo(targetFocus.cy, 6) },
+      }),
+    );
   });
 
   it('renders camera-space content inside the sampled camera transform', () => {

@@ -243,6 +243,9 @@
     "autoHint": "Tryb automatyczny stale podąża za nagranym ruchem kursora.",
     "magnification": "Powiększenie",
     "zoomLevel": "Poziom powiększenia",
+    "motionBlur": "Rozmycie ruchu zoomu",
+    "motionBlurDesc": "Dodaje filmowe rozmycie migawki podczas zbliżania i panoramowania, identyczne w podglądzie i eksporcie.",
+    "motionBlurIntensity": "Intensywność rozmycia ruchu",
     "deleteZoom": "Usuń powiększenie",
     "noZoomSelected": "Nie wybrano powiększenia",
     "noZoomSelectedDesc": "Kliknij blok powiększenia na ścieżce, aby dostosować głębię, tryb lub położenie."

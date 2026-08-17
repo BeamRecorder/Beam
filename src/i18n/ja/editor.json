@@ -243,6 +243,9 @@
     "autoHint": "自動モードは録画されたカーソルの動きを継続的に追従します。",
     "magnification": "拡大率",
     "zoomLevel": "ズームレベル",
+    "motionBlur": "ズームのモーションブラー",
+    "motionBlurDesc": "カメラのズームやパンに映画的なシャッターブラーを加え、プレビューと書き出しで同じ結果にします。",
+    "motionBlurIntensity": "モーションブラーの強さ",
     "deleteZoom": "ズームを削除",
     "noZoomSelected": "ズームが選択されていません",
     "noZoomSelectedDesc": "トラック上のズームブロックをクリックして、深さ、モード、位置を調整してください。"

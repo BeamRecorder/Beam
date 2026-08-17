@@ -243,6 +243,9 @@
     "autoHint": "Der automatische Modus folgt kontinuierlich der aufgezeichneten Cursorbewegung.",
     "magnification": "Vergrößerung",
     "zoomLevel": "Zoomstufe",
+    "motionBlur": "Zoom-Bewegungsunschärfe",
+    "motionBlurDesc": "Fügt beim Zoomen und Schwenken eine filmische Verschlussunschärfe hinzu – identisch in Vorschau und Export.",
+    "motionBlurIntensity": "Stärke der Bewegungsunschärfe",
     "deleteZoom": "Zoom löschen",
     "noZoomSelected": "Kein Zoom ausgewählt",
     "noZoomSelectedDesc": "Klicke auf einen Zoomblock in der Spur, um Tiefe, Modus oder Position anzupassen."

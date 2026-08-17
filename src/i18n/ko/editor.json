@@ -243,6 +243,9 @@
     "autoHint": "자동 모드는 녹화된 커서 움직임을 계속 따라갑니다.",
     "magnification": "확대 배율",
     "zoomLevel": "확대/축소 수준",
+    "motionBlur": "줌 모션 블러",
+    "motionBlurDesc": "카메라 줌과 이동에 영화 같은 셔터 블러를 추가하며 미리보기와 내보내기에 동일하게 적용합니다.",
+    "motionBlurIntensity": "모션 블러 강도",
     "deleteZoom": "확대/축소 삭제",
     "noZoomSelected": "선택한 확대/축소가 없습니다",
     "noZoomSelectedDesc": "트랙의 확대/축소 블록을 클릭하여 깊이, 모드 또는 위치를 조정하세요."

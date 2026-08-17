@@ -19,13 +19,22 @@ import { buildBeamExportReport } from './export-diagnostics';
 const { t } = useTranslate('ExportPopover');
 
 export type ExportResolutionOption = '720p' | '1080p' | 'max';
+export type ExportFrameRate = 24 | 30 | 60;
+
+const recommendedFrameRate = (sourceFps: number): ExportFrameRate => {
+  if (sourceFps >= 50) return 60;
+  if (sourceFps <= 27) return 24;
+  return 30;
+};
 
 const props = defineProps<{ request: Omit<ExportRequest, 'format' | 'preset'> }>();
 const emit = defineEmits<{ (event: 'update:includeAudio', value: boolean): void }>();
 const format = ref<ExportFormat>('webm');
 const preset = ref<ExportPreset>('medium');
 const resolution = ref<ExportResolutionOption>('max');
+const frameRate = ref<ExportFrameRate>(recommendedFrameRate(props.request.snapshot.render.fps));
 const presets: ExportPreset[] = ['low', 'medium', 'high'];
+const frameRates: ExportFrameRate[] = [24, 30, 60];
 const moreOptionsOpen = ref(false);
 const includeAudio = computed({
   get: () => props.request.includeAudio !== false,
@@ -74,8 +83,7 @@ const resolutionDescriptions = computed<Record<ExportResolutionOption, string>>(
 
 const getMb = (p: ExportPreset) => {
   const { width, height } = activeDimensions.value;
-  const { fps } = props.request.snapshot.render;
-  const bps = bitrateFor(p, width, height, fps);
+  const bps = bitrateFor(p, width, height, frameRate.value);
   return (bps / 1_000_000).toFixed(1);
 };
 
@@ -103,7 +111,11 @@ const reportRequest = computed<ExportRequest>(() => {
     ...props.request,
     format: format.value,
     preset: preset.value,
-    snapshot: { ...props.request.snapshot, canvas: { ...props.request.snapshot.canvas, width, height } },
+    snapshot: {
+      ...props.request.snapshot,
+      render: { ...props.request.snapshot.render, fps: frameRate.value },
+      canvas: { ...props.request.snapshot.canvas, width, height },
+    },
   };
 });
 const exportReport = computed(() =>
@@ -134,6 +146,7 @@ const run = async () => {
     preset: preset.value,
     snapshot: {
       ...props.request.snapshot,
+      render: { ...props.request.snapshot.render, fps: frameRate.value },
       canvas: {
         ...props.request.snapshot.canvas,
         width,
@@ -254,6 +267,24 @@ const run = async () => {
               </Button>
             </ButtonGroup>
             <span class="option-hint">{{ resolutionDescriptions[resolution] }}</span>
+          </div>
+
+          <div class="field">
+            <span class="field-label">{{ t('frameRate') }}</span>
+            <ButtonGroup full>
+              <Button
+                v-for="value in frameRates"
+                :key="value"
+                variant="tab"
+                size="sm"
+                block
+                :class="{ active: frameRate === value }"
+                @click="frameRate = value"
+              >
+                {{ value }} fps
+              </Button>
+            </ButtonGroup>
+            <span class="option-hint">{{ t('frameRateDesc') }}</span>
           </div>
 
           <Accordion v-model="moreOptionsOpen" :title="t('moreOptions')" class="more-options">

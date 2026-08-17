@@ -2,7 +2,12 @@ import { computed, ref, toRaw, watch, type Ref } from 'vue';
 import { capture } from '../../../api/capture';
 import type { CaptureProject, ProjectEditorState } from '../../../api/types/capture-api';
 import type { ClipComposition } from '~/media/shared/composition-types';
-import type { ZoomElement } from '../zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_MOTION_BLUR,
+  normalizeZoomMotionBlur,
+  type ZoomElement,
+  type ZoomMotionBlurSettings,
+} from '../zoom/zoom-types';
 import {
   BACKGROUND_MEDIA,
   findMatchingBackgroundMedia,
@@ -23,6 +28,7 @@ export function useProjectEditorState(options: {
   composition: Ref<ClipComposition>;
   zoomElements: Ref<ZoomElement[]>;
   generatedSessions: Ref<ProjectEditorState['zoom']['generatedSessions']>;
+  zoomMotionBlur?: Ref<ZoomMotionBlurSettings>;
   importedBackgrounds: Ref<BackgroundMedia[]>;
   selectedBackground: Ref<BackgroundValue | null>;
   backgroundBlurPercent: Ref<number>;
@@ -38,6 +44,7 @@ export function useProjectEditorState(options: {
   cursorShadowDirection: Ref<CursorShadowDirection>;
   availableBackgrounds: Ref<Array<{ items: BackgroundMedia[] }>>;
 }) {
+  const zoomMotionBlur = options.zoomMotionBlur ?? ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
   const loading = ref(false);
   const scheduledSave = ref(false);
   const pendingSaves = ref(0);
@@ -52,6 +59,7 @@ export function useProjectEditorState(options: {
     zoom: {
       elements: options.zoomElements.value.map((zoom) => ({ ...toRaw(zoom), focus: { ...toRaw(zoom).focus } })),
       generatedSessions: options.generatedSessions.value.map((session) => ({ ...toRaw(session) })),
+      motionBlur: clone(zoomMotionBlur.value),
     },
     presentation: {
       canvas: clone(options.canvas.value),
@@ -120,6 +128,7 @@ export function useProjectEditorState(options: {
       options.composition.value = state.composition;
       options.zoomElements.value = state.zoom.elements;
       options.generatedSessions.value = state.zoom.generatedSessions;
+      zoomMotionBlur.value = normalizeZoomMotionBlur(state.zoom.motionBlur);
       options.importedBackgrounds.value = state.presentation.importedBackgrounds;
       const globalBackgrounds = options.availableBackgrounds.value.flatMap((group) => group.items);
       savedBackgroundId = state.presentation.selectedBackgroundId;
@@ -155,6 +164,7 @@ export function useProjectEditorState(options: {
       options.composition,
       options.zoomElements,
       options.generatedSessions,
+      zoomMotionBlur,
       options.importedBackgrounds,
       options.selectedBackground,
       options.backgroundBlurPercent,

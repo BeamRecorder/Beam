@@ -1,6 +1,10 @@
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { BackgroundValue } from '../../video-editor/composables/backgroundCatalog';
-import type { ZoomElement } from '../../video-editor/zoom/zoom-types';
+import {
+  normalizeZoomMotionBlur,
+  type ZoomElement,
+  type ZoomMotionBlurSettings,
+} from '../../video-editor/zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import type { CursorRenderSettings, CompositionSnapshot } from '../export-types';
 import type { OutputCanvasSettings } from '../../video-editor/canvas/output-canvas';
@@ -38,6 +42,7 @@ export function createCompositionSnapshot(input: {
   blurPercent: number;
   editorData: ProjectEditorData | null | undefined;
   zooms: ZoomElement[];
+  zoomMotionBlur?: ZoomMotionBlurSettings;
   composition: ClipComposition;
   cursorSettings: CursorRenderSettings;
 }): CompositionSnapshot {
@@ -60,6 +65,7 @@ export function createCompositionSnapshot(input: {
             : null,
     blurPercent: Math.max(0, Math.min(100, Math.round(input.blurPercent))),
     zooms: copyZooms(input.zooms),
+    zoomMotionBlur: normalizeZoomMotionBlur(input.zoomMotionBlur),
     cursor: copyCursor(input.editorData?.cursor),
     cursorSettings: cloneJson({
       ...input.cursorSettings,

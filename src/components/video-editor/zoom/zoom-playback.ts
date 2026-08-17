@@ -108,7 +108,7 @@ function zoomAtSortedTime(
         scale: lerp(startScale, endScale, t),
         focus: { cx: lerp(startFocus.cx, endFocus.cx, t), cy: lerp(startFocus.cy, endFocus.cy, t) },
         strength: 1,
-        mode: 'auto',
+        mode: pair.mode === 'auto' || next.mode === 'auto' ? 'auto' : 'manual',
       };
     }
   }

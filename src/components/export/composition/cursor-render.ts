@@ -1,7 +1,15 @@
 import type { VisualClip } from '~/media/shared/composition-types';
 import { cursorClickSpringScale } from '../../video-editor/composables/cursor-click-spring';
-import { createCursorMotionPlayer, motionBlurTrail } from '../../video-editor/composables/cursor-motion';
-import { buttonEventsBetween, cursorStateAt } from '../../video-editor/composables/cursorPlayback';
+import {
+  createCursorMotionPlayer,
+  motionBlurTrail,
+  type CursorMotionSample,
+} from '../../video-editor/composables/cursor-motion';
+import {
+  buttonEventsBetween,
+  cursorStateAt,
+  type CursorPlaybackState,
+} from '../../video-editor/composables/cursorPlayback';
 import { cursorShadowOffset } from '../../video-editor/properties/cursor/cursor-shadow';
 import {
   cursorHotspotAtSize,
@@ -22,21 +30,19 @@ const usableImage = (image: CursorImage | undefined) => {
 
 export function cursorPositionForKeyboardCaption(
   snapshot: CompositionSnapshot,
-  time: number,
+  _time: number,
   screen: VisualClip,
   sourceWidth: number,
   sourceHeight: number,
   width: number,
   height: number,
   cursorImages: ReadonlyMap<string, CursorImage> | undefined,
-  cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
+  motionState: CursorMotionSample | null,
   camera: { scale: number; focus: { cx: number; cy: number } },
 ) {
-  const state = cursorStateAt(snapshot.cursor.events, time);
-  const motionState = cursorMotionPlayer.sample(time, state);
   const cursorType = cursorTypeAt(snapshot.cursorSettings.selectedCursor, motionState);
   const image = cursorImages?.get(cursorType);
-  if (!snapshot.cursor.available || !state?.visible || !motionState?.visible || !usableImage(image)) return null;
+  if (!snapshot.cursor.available || !motionState?.visible || !usableImage(image)) return null;
   const raw = cursorPositionAt(
     motionState,
     { width: sourceWidth, height: sourceHeight },
@@ -65,9 +71,8 @@ export function drawCursorLayer(
   height: number,
   cursorImages: ReadonlyMap<string, CursorImage> | undefined,
   cursorMotionPlayer: ReturnType<typeof createCursorMotionPlayer>,
+  motionCursor: CursorMotionSample | null,
 ) {
-  const cursor = cursorStateAt(snapshot.cursor.events, time);
-  const motionCursor = cursorMotionPlayer.sample(time, cursor);
   const settings = snapshot.cursorSettings;
   // Cursor size and shadow blur are output pixels. Keep the value selected in
   // the editor stable when the user exports at a different video resolution.
@@ -77,7 +82,7 @@ export function drawCursorLayer(
     const effectButton = effectButtonForRecordedButton(button);
     return effectButton ? settings.clickEffects[effectButton] : null;
   };
-  const positionAt = (state: NonNullable<typeof cursor>) =>
+  const positionAt = (state: CursorPlaybackState) =>
     cursorPositionAt(
       state,
       { width: sourceWidth, height: sourceHeight },

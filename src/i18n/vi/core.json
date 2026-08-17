@@ -266,6 +266,8 @@
     "exportVideoAria": "Xuất video",
     "video": "video",
     "resolution": "Độ phân giải",
+    "frameRate": "Tốc độ khung hình",
+    "frameRateDesc": "24 cho nhịp điện ảnh, 30 cho video tiêu chuẩn hoặc 60 cho chuyển động mượt nhất.",
     "resMax": "Gốc (Tối đa)",
     "res1080p": "1080p",
     "res720p": "720p",

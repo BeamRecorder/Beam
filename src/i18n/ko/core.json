@@ -266,6 +266,8 @@
     "exportVideoAria": "동영상 내보내기",
     "video": "동영상",
     "resolution": "해상도",
+    "frameRate": "프레임 속도",
+    "frameRateDesc": "영화 같은 24 fps, 표준 영상용 30 fps 또는 가장 부드러운 60 fps를 선택하세요.",
     "resMax": "최대",
     "res1080p": "1080p",
     "res720p": "720p",

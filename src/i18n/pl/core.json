@@ -266,6 +266,8 @@
     "exportVideoAria": "Eksportuj wideo",
     "video": "wideo",
     "resolution": "Rozdzielczość",
+    "frameRate": "Liczba klatek",
+    "frameRateDesc": "24 dla kinowej płynności, 30 dla standardowego wideo lub 60 dla najpłynniejszego ruchu.",
     "resMax": "Maksymalna",
     "res1080p": "1080p",
     "res720p": "720p",

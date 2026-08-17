@@ -266,6 +266,8 @@
     "exportVideoAria": "Exporter la vidéo",
     "video": "vidéo",
     "resolution": "Résolution",
+    "frameRate": "Fréquence d’images",
+    "frameRateDesc": "24 pour un rendu cinéma, 30 pour la vidéo standard ou 60 pour les mouvements les plus fluides.",
     "resMax": "Max",
     "res1080p": "1080p",
     "res720p": "720p",

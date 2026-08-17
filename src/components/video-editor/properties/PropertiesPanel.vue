@@ -19,7 +19,11 @@ import CaptionClipPanel from '~/components/video-editor/properties/captions/Capt
 import KeyboardCaptionClipPanel from '~/components/video-editor/properties/captions/KeyboardCaptionClipPanel.vue';
 import ClipActionGroup from '~/components/video-editor/properties/clip/ClipActionGroup.vue';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
-import type { ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_MOTION_BLUR,
+  type ZoomElement,
+  type ZoomMotionBlurSettings,
+} from '~/components/video-editor/zoom/zoom-types';
 import type {
   BlurEffectMode,
   BlurEffectShape,
@@ -103,13 +107,14 @@ const props = withDefaults(
     selectedZoom: ZoomElement | null;
     canGenerateZooms: boolean;
     hasAutomaticZooms: boolean;
+    zoomMotionBlur?: ZoomMotionBlurSettings;
     composition: ClipComposition;
     editorData?: ProjectEditorData | null;
     timelineDurationMs: number;
     projectId?: string | null;
     canvas: OutputCanvasSettings;
   }>(),
-  { hasSystemAudio: false, hasMicAudio: false },
+  { hasSystemAudio: false, hasMicAudio: false, zoomMotionBlur: () => ({ ...DEFAULT_ZOOM_MOTION_BLUR }) },
 );
 const normalizedSelectedClip = computed(() =>
   props.selectedClip
@@ -158,6 +163,7 @@ const emit = defineEmits<{
   (event: 'import:background', value: BackgroundMedia): void;
   (event: 'update:canvas', value: OutputCanvasSettings): void;
   (event: 'update:zoom', value: ZoomElement): void;
+  (event: 'update:zoomMotionBlur', value: ZoomMotionBlurSettings): void;
   (event: 'delete:zoom'): void;
   (event: 'generate:zooms'): void;
   (event: 'update:caption', value: CaptionClip): void;
@@ -397,7 +403,9 @@ const handleDelete = () => {
           :selected-zoom="selectedZoom"
           :can-generate="canGenerateZooms"
           :has-automatic-zooms="hasAutomaticZooms"
+          :motion-blur="zoomMotionBlur"
           @update="emit('update:zoom', $event)"
+          @update:motion-blur="emit('update:zoomMotionBlur', $event)"
           @delete="emit('delete:zoom')"
           @generate="emit('generate:zooms')"
         />

@@ -4,6 +4,7 @@ import { drawWebcamOverlay, webcamSettingsForAppearance } from '../../video-edit
 import { coverSourceRect, framedMediaRect, outputPoint } from '../../video-editor/canvas/output-canvas';
 import { drawDecoratedMedia } from '../../video-editor/composition/appearance/render-decorated-media';
 import { createCursorMotionPlayer } from '../../video-editor/composables/cursor-motion';
+import { cursorStateAt } from '../../video-editor/composables/cursorPlayback';
 import { cursorPositionForKeyboardCaption, drawCursorLayer } from './cursor-render';
 import { captionContentAt } from '~/media/shared/caption-text-layout';
 import { drawCaptionText } from '../../video-editor/composition/captions/render-caption-text';
@@ -19,6 +20,12 @@ import {
 import type { Canvas2DContext } from '~/types/canvas';
 import { applyBlurEffect } from '../../video-editor/composition/effects/blur-effect';
 import { drawBeamWatermark, WATERMARK_LOGO_KEY } from '../../video-editor/canvas/watermark-render';
+import {
+  createZoomMotionBlurSamplePlan,
+  sourceOverAlpha,
+  ZOOM_MOTION_BLUR_SHUTTER_MS,
+} from '../../video-editor/zoom/zoom-motion-blur';
+import { normalizeZoomMotionBlur } from '../../video-editor/zoom/zoom-types';
 
 export interface RenderableMedia {
   source: CanvasImageSource;
@@ -230,53 +237,71 @@ export function renderCompositionFrame(
         height: media.height * screen.transform.height,
       }
     : null;
-  const camera = (cameraEvaluator ?? createSnapshotCameraEvaluator(snapshot, sourceWidth, sourceHeight)).sample(timeMs);
+  const resolvedCameraEvaluator = cameraEvaluator ?? createSnapshotCameraEvaluator(snapshot, sourceWidth, sourceHeight);
+  const camera = resolvedCameraEvaluator.sample(timeMs);
   const scale = camera.scale;
   const cameraFocus = camera.focus;
-
-  ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  drawSnapshotBackground(ctx, snapshot, background);
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-cameraFocus.cx * width, -cameraFocus.cy * height);
-  for (const clip of layers.visualStack) {
-    if (clip.kind === 'screen') {
-      if (!video || clip.id !== screen?.id || !positionedMedia) continue;
-      drawDecoratedMedia(ctx, {
-        source: video.source,
-        sourceRect: source,
-        rect: positionedMedia,
-        appearance: screen.appearance,
-        title: screen.name,
-        mirrored: screen.isMirrored,
-        mirroredY: screen.isMirroredY,
-      });
-      continue;
+  const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
+  const cameraAt = (sampleTimeMs: number) => {
+    const value = resolvedCameraEvaluator.sample(Math.max(0, sampleTimeMs));
+    return { focusX: value.focus.cx, focusY: value.focus.cy, scale: value.scale };
+  };
+  const blurPlan = createZoomMotionBlurSamplePlan({
+    previous: cameraAt(timeMs - halfShutterMs),
+    center: { focusX: cameraFocus.cx, focusY: cameraFocus.cy, scale },
+    current: cameraAt(timeMs + halfShutterMs),
+    intensity: (() => {
+      const settings = normalizeZoomMotionBlur(snapshot.zoomMotionBlur);
+      return settings.enabled ? settings.intensity : 0;
+    })(),
+    deltaMs: halfShutterMs * 2,
+  });
+  let accumulatedWeight = 0;
+  for (const blurSample of blurPlan) {
+    const sampleCamera = blurSample.camera;
+    ctx.save();
+    ctx.globalAlpha = sourceOverAlpha(blurSample.weight, accumulatedWeight);
+    accumulatedWeight += blurSample.weight;
+    ctx.translate(width / 2, height / 2);
+    ctx.scale(sampleCamera.scale, sampleCamera.scale);
+    ctx.translate(-sampleCamera.focusX * width, -sampleCamera.focusY * height);
+    drawSnapshotBackground(ctx, snapshot, background);
+    for (const clip of layers.visualStack) {
+      if (clip.kind === 'screen') {
+        if (!video || clip.id !== screen?.id || !positionedMedia) continue;
+        drawDecoratedMedia(ctx, {
+          source: video.source,
+          sourceRect: source,
+          rect: positionedMedia,
+          appearance: screen.appearance,
+          title: screen.name,
+          mirrored: screen.isMirrored,
+          mirroredY: screen.isMirroredY,
+        });
+        continue;
+      }
+      if (isBlurClip(clip)) {
+        drawBlurClip(ctx, clip, snapshot.canvas);
+        continue;
+      }
+      const sourceVisual = visuals?.get(clip.id);
+      if (!sourceVisual) continue;
+      if (clip.kind === 'webcam')
+        drawWebcamClip(ctx, clip, sourceVisual, snapshot.canvas, {
+          scale: sampleCamera.scale,
+          focusX: sampleCamera.focusX * width,
+          focusY: sampleCamera.focusY * height,
+        });
+      else drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
     }
-    if (isBlurClip(clip)) {
-      drawBlurClip(ctx, clip, snapshot.canvas);
-      continue;
-    }
-    const sourceVisual = visuals?.get(clip.id);
-    if (!sourceVisual) continue;
-    if (clip.kind === 'webcam')
-      drawWebcamClip(ctx, clip, sourceVisual, snapshot.canvas, {
-        scale,
-        focusX: cameraFocus.cx * width,
-        focusY: cameraFocus.cy * height,
-      });
-    else drawVisualClip(ctx, clip, sourceVisual, snapshot.canvas);
+    ctx.restore();
   }
-  ctx.restore();
   const resolvedCursorMotionPlayer = screen
     ? (cursorMotionPlayer ??
       createCursorMotionPlayer(snapshot.cursor.events, snapshot.cursorSettings.motion, sourceWidth, sourceHeight))
+    : null;
+  const cursorMotion = resolvedCursorMotionPlayer
+    ? resolvedCursorMotionPlayer.sample(time, cursorStateAt(snapshot.cursor.events, time))
     : null;
   const keyboardCursorPosition =
     screen && resolvedCursorMotionPlayer
@@ -289,7 +314,7 @@ export function renderCompositionFrame(
           width,
           height,
           cursorImages,
-          resolvedCursorMotionPlayer,
+          cursorMotion,
           camera,
         )
       : null;
@@ -311,6 +336,7 @@ export function renderCompositionFrame(
       height,
       cursorImages,
       resolvedCursorMotionPlayer,
+      cursorMotion,
     );
     ctx.restore();
   }

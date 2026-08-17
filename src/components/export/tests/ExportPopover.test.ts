@@ -144,6 +144,40 @@ describe('ExportPopover', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('MP4');
   });
 
+  it('defaults to 60 fps when the source/timeline snapshot is 60 fps', async () => {
+    const wrapper = mountExport();
+    const sixtyFps = wrapper.findAll('.button-stub').find((button) => button.text() === '60 fps');
+
+    expect(sixtyFps?.classes()).toContain('active');
+
+    await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
+
+    expect(mockJob.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        snapshot: expect.objectContaining({
+          render: expect.objectContaining({ fps: 60 }),
+        }),
+      }),
+    );
+  });
+
+  it.each([24, 30, 60] as const)('passes the selected %s fps option to the export job', async (fps) => {
+    const wrapper = mountExport();
+    await wrapper
+      .findAll('.button-stub')
+      .find((button) => button.text() === `${fps} fps`)
+      ?.trigger('click');
+    await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');
+
+    expect(mockJob.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        snapshot: expect.objectContaining({
+          render: expect.objectContaining({ fps }),
+        }),
+      }),
+    );
+  });
+
   it('starts an export, displays its result, and opens the generated file', async () => {
     const wrapper = mountExport();
     await wrapper.findAll('.export-popover .button-stub').at(-1)?.trigger('click');

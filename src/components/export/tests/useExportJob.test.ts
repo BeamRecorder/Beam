@@ -56,6 +56,32 @@ describe('useExportJob', () => {
     expect(job.result.value?.path).toBe('/tmp/demo.webm');
     expect(job.isExporting.value).toBe(false);
   });
+  it('counts every frame when preparing a 60 fps timeline export', async () => {
+    let preparation: { totalImages: number; totalTimeMs: number } | undefined;
+    let job!: ReturnType<typeof useExportJob>;
+    exportWithMediabunny.mockImplementation(async (...args: unknown[]) => {
+      const onStarted = args[3];
+      if (typeof onStarted === 'function') {
+        onStarted({ schemaVersion: 1 } as never);
+        preparation = {
+          totalImages: job.progress.value?.totalImages ?? 0,
+          totalTimeMs: job.progress.value?.totalTimeMs ?? 0,
+        };
+      }
+      return { path: '/tmp/demo.webm', format: 'webm', diagnostics: null };
+    });
+    job = useExportJob();
+
+    await job.start({
+      ...request,
+      snapshot: {
+        ...request.snapshot,
+        render: { ...request.snapshot.render, fps: 60 },
+      },
+    });
+
+    expect(preparation).toEqual({ totalImages: 120, totalTimeMs: 2000 });
+  });
   it('keeps destination selection separate from active export state', async () => {
     let choosingDuringCallback: boolean | undefined;
     let exportingDuringCallback: boolean | undefined;

@@ -266,6 +266,8 @@
     "exportVideoAria": "匯出影片",
     "video": "影片",
     "resolution": "解析度",
+    "frameRate": "影格率",
+    "frameRateDesc": "24 fps 適合電影感節奏，30 fps 適合標準影片，60 fps 可獲得最流暢的動態。",
     "resMax": "最大",
     "res1080p": "1080p",
     "res720p": "720p",

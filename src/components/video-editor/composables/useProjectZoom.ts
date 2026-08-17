@@ -1,6 +1,11 @@
 import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
-import type { ZoomElement } from '../zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_MOTION_BLUR,
+  normalizeZoomMotionBlur,
+  type ZoomElement,
+  type ZoomMotionBlurSettings,
+} from '../zoom/zoom-types';
 import { buildAutomaticZoomElements, ZOOM_ALGORITHM_VERSION } from '../zoom/zoom-suggestions';
 
 export function useProjectZoom(options: {
@@ -11,6 +16,7 @@ export function useProjectZoom(options: {
   const { editorData, durationMs, activeTab } = options;
   const zoomElements = ref<ZoomElement[]>([]);
   const generatedSessions = ref<ProjectEditorData['zoom']['generatedSessions']>([]);
+  const zoomMotionBlur = ref<ZoomMotionBlurSettings>({ ...DEFAULT_ZOOM_MOTION_BLUR });
   const selectedZoomId = ref<string | null>(null);
   const selectedZoom = computed(
     () => zoomElements.value.find((element) => element.id === selectedZoomId.value) ?? null,
@@ -100,10 +106,14 @@ export function useProjectZoom(options: {
     );
   };
   const moveZoom = previewMoveZoom;
+  const updateZoomMotionBlur = (value: ZoomMotionBlurSettings) => {
+    zoomMotionBlur.value = normalizeZoomMotionBlur(value);
+  };
 
   return {
     zoomElements,
     generatedSessions,
+    zoomMotionBlur,
     selectedZoomId,
     selectedZoom,
     canGenerateZooms,
@@ -116,6 +126,7 @@ export function useProjectZoom(options: {
     trimZoomEdge,
     previewMoveZoom,
     moveZoom,
+    updateZoomMotionBlur,
     previewZoom,
     deleteSelectedZoom,
   };

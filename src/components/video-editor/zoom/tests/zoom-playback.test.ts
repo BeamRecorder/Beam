@@ -126,5 +126,19 @@ describe('zoom playback', () => {
     expect(result?.scale).toBeGreaterThan(1.5);
     expect(result?.scale).toBeLessThan(2.2);
   });
+  it('keeps manual mode when connected manual regions pan into each other', () => {
+    const next: ZoomElement = {
+      ...zoom,
+      id: 'manual-next',
+      startMs: 6_800,
+      endMs: 10_000,
+      focus: { cx: 0.7, cy: 0.3 },
+      depth: 4,
+      mode: 'manual',
+    };
+    const result = zoomAtTime([{ ...zoom, mode: 'manual' }, next], 6_700);
+
+    expect(result?.mode).toBe('manual');
+  });
   it('uses zero strength before an incoming region', () => expect(regionStrength(zoom, 0)).toBe(0));
 });

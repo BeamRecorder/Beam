@@ -1,6 +1,11 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { migratePresentation, presentationState } = require('../electron/projects/project-editor-state.cjs');
+const {
+  defaultZoomMotionBlur,
+  migratePresentation,
+  presentationState,
+  zoomState,
+} = require('../electron/projects/project-editor-state.cjs');
 
 const cursor = () => ({
   selectedCursor: 'automatic',
@@ -64,4 +69,27 @@ test('migrates every watermark presentation field from legacy editor state', () 
   });
 
   assert.deepEqual(state.canvas.watermark, expected);
+});
+
+test('defaults zoom motion blur when loading legacy editor state', () => {
+  const state = zoomState({ elements: [], generatedSessions: [] });
+
+  assert.deepEqual(state.motionBlur, defaultZoomMotionBlur());
+});
+
+test('normalizes persisted zoom motion blur enabled state and intensity', () => {
+  const state = zoomState({
+    elements: [],
+    generatedSessions: [],
+    motionBlur: { enabled: false, intensity: 4 },
+  });
+
+  assert.deepEqual(state.motionBlur, { enabled: false, intensity: 1 });
+});
+
+test('rejects malformed persisted zoom motion blur settings', () => {
+  assert.throws(
+    () => zoomState({ elements: [], generatedSessions: [], motionBlur: { enabled: 'yes', intensity: 0.5 } }),
+    /Flou de mouvement du zoom invalide/,
+  );
 });

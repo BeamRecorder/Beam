@@ -263,6 +263,9 @@
     "autoHint": "Chế độ tự động liên tục bám theo chuyển động của con trỏ chuột đã ghi.",
     "magnification": "Mức phóng đại",
     "zoomLevel": "Mức thu phóng",
+    "motionBlur": "Nhòe chuyển động khi thu phóng",
+    "motionBlurDesc": "Thêm hiệu ứng nhòe màn trập điện ảnh khi camera thu phóng hoặc lia, giống nhau trong bản xem trước và bản xuất.",
+    "motionBlurIntensity": "Cường độ nhòe chuyển động",
     "deleteZoom": "Xóa điểm thu phóng",
     "noZoomSelected": "Chưa chọn điểm thu phóng nào",
     "noZoomSelectedDesc": "Nhấp vào một khối thu phóng trên dòng thời gian để điều chỉnh độ phóng, chế độ hoặc vị trí."

@@ -266,6 +266,8 @@
     "exportVideoAria": "動画を書き出す",
     "video": "動画",
     "resolution": "解像度",
+    "frameRate": "フレームレート",
+    "frameRateDesc": "映画らしい24 fps、標準的な30 fps、または最も滑らかな60 fpsを選べます。",
     "resMax": "最大",
     "res1080p": "1080p",
     "res720p": "720p",

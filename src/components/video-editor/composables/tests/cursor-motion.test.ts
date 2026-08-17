@@ -159,4 +159,41 @@ describe('cursor motion', () => {
     expect(fast.length).toBe(9);
     expect(fast[0].x).toBeLessThan(fast.at(-1)!.x);
   });
+
+  it('keeps normalized blur trails invariant between preview and export viewport sizes', () => {
+    const current = { x: 0.51, y: 0.2 };
+    const previous = { x: 0.5, y: 0.2 };
+    const preview = motionBlurTrail(current, previous, 0.1, 0.4, { width: 800, height: 450 });
+    const exported = motionBlurTrail(current, previous, 0.1, 0.4, { width: 1_920, height: 1_080 });
+
+    expect(exported).toHaveLength(preview.length);
+    exported.forEach((sample, index) => {
+      expect(sample.x).toBeCloseTo(preview[index]!.x, 12);
+      expect(sample.y).toBeCloseTo(preview[index]!.y, 12);
+      expect(sample.alpha).toBeCloseTo(preview[index]!.alpha, 12);
+    });
+  });
+
+  it('replays identical motion samples after an explicit seek reset', () => {
+    const settings = createDefaultCursorMotionSettings();
+    const recorded = events(move(0, 0, 0), move(1, 1, 1));
+    const raw = {
+      x: 0,
+      y: 0,
+      visible: true,
+      cursorId: null,
+      shapeId: null,
+      cursorKind: null,
+      hotspot: { x: 0, y: 0 },
+    };
+    const expectedPlayer = createCursorMotionPlayer(recorded, settings);
+    const expected = expectedPlayer.sample(0.35, { ...raw, x: 0.35, y: 0.35 });
+    const player = createCursorMotionPlayer(recorded, settings);
+    player.sample(0, raw);
+    player.sample(0.9, { ...raw, x: 0.9, y: 0.9 });
+    player.reset();
+    const replay = player.sample(0.35, { ...raw, x: 0.35, y: 0.35 });
+
+    expect(replay).toEqual(expected);
+  });
 });

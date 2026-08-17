@@ -243,6 +243,9 @@
     "autoHint": "La modalità automatica segue continuamente il movimento registrato del cursore.",
     "magnification": "Ingrandimento",
     "zoomLevel": "Livello zoom",
+    "motionBlur": "Sfocatura movimento zoom",
+    "motionBlurDesc": "Aggiunge una sfocatura cinematografica durante zoom e panoramiche, identica nell’anteprima e nell’esportazione.",
+    "motionBlurIntensity": "Intensità sfocatura movimento",
     "deleteZoom": "Elimina zoom",
     "noZoomSelected": "Nessuno zoom selezionato",
     "noZoomSelectedDesc": "Fai clic su un blocco zoom nella traccia per regolarne profondità, modalità o posizione."

@@ -240,7 +240,8 @@ describe('composition rendering invariants', () => {
     renderCompositionFrame(ctx, null, value, 0.2, null, undefined, new Map([['logo', visual]]));
 
     expect((ctx.scale as ReturnType<typeof vi.fn>).mock.calls.some(([scale]) => Number(scale) > 1)).toBe(true);
-    expect(visualDrawStates).toEqual([true]);
+    expect(visualDrawStates.length).toBeGreaterThanOrEqual(1);
+    expect(visualDrawStates.every(Boolean)).toBe(true);
   });
 
   it('keeps captions above visuals when no screen is present regardless of clip order', () => {

@@ -263,6 +263,9 @@
     "autoHint": "Le mode auto suit en continu le mouvement du curseur enregistré.",
     "magnification": "Grossissement",
     "zoomLevel": "Niveau de zoom",
+    "motionBlur": "Flou de mouvement du zoom",
+    "motionBlurDesc": "Ajoute un flou d’obturation cinématique pendant les zooms et panoramiques, identique dans l’aperçu et l’export.",
+    "motionBlurIntensity": "Intensité du flou de mouvement",
     "deleteZoom": "Supprimer le zoom",
     "noZoomSelected": "Aucun zoom sélectionné",
     "noZoomSelectedDesc": "Cliquez sur un bloc de zoom dans la timeline pour ajuster sa profondeur, son mode ou sa position."

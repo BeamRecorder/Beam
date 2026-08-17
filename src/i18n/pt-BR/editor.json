@@ -243,6 +243,9 @@
     "autoHint": "O modo automático acompanha continuamente o movimento gravado do cursor.",
     "magnification": "Ampliação",
     "zoomLevel": "Nível de zoom",
+    "motionBlur": "Desfoque de movimento do zoom",
+    "motionBlurDesc": "Adiciona desfoque cinematográfico durante zoom e panorâmica, idêntico na prévia e na exportação.",
+    "motionBlurIntensity": "Intensidade do desfoque",
     "deleteZoom": "Excluir zoom",
     "noZoomSelected": "Nenhum zoom selecionado",
     "noZoomSelectedDesc": "Clique em um bloco de zoom na faixa para ajustar profundidade, modo ou posição."

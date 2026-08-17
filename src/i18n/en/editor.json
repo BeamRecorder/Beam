@@ -263,6 +263,9 @@
     "autoHint": "Auto mode continuously follows the recorded cursor movement.",
     "magnification": "Magnification",
     "zoomLevel": "Zoom Level",
+    "motionBlur": "Zoom motion blur",
+    "motionBlurDesc": "Adds a cinematic shutter blur while the camera zooms or pans. Applied identically in preview and export.",
+    "motionBlurIntensity": "Motion blur intensity",
     "deleteZoom": "Delete Zoom",
     "noZoomSelected": "No Zoom Selected",
     "noZoomSelectedDesc": "Click a zoom block on the timeline track to adjust its depth, mode, or position."

@@ -5,7 +5,7 @@ const { fileURLToPath, pathToFileURL } = require('url');
 const { kindFor } = require('../backgrounds/background-library.cjs');
 const { emptyComposition, importMedia } = require('./clip-composition.cjs');
 const { normalizeInputSidecar, recordedPlatform } = require('./input-sidecar.cjs');
-const { createDefaultPresentation, zoomState } = require('./project-editor-state.cjs');
+const { createDefaultPresentation, defaultZoomMotionBlur, zoomState } = require('./project-editor-state.cjs');
 const { createProjectEditorAccess } = require('./project-editor-access.cjs');
 
 function createProjectStore(root) {
@@ -300,7 +300,9 @@ function createProjectStore(root) {
         },
         interactions: interactions || { version: 1, events: [] },
         recordedPlatform: recordedPlatform(sessionManifest.platform?.os),
-        zoom: manifest.editor?.zoom ? zoomState(manifest.editor.zoom) : { elements: [], generatedSessions: [] },
+        zoom: manifest.editor?.zoom
+          ? zoomState(manifest.editor.zoom)
+          : { elements: [], generatedSessions: [], motionBlur: defaultZoomMotionBlur() },
       };
     }
     return null;
@@ -436,7 +438,7 @@ function createProjectStore(root) {
         editor: {
           schemaVersion: 3,
           composition: emptyComposition(),
-          zoom: { elements: [], generatedSessions: [] },
+          zoom: { elements: [], generatedSessions: [], motionBlur: defaultZoomMotionBlur() },
           presentation: createDefaultPresentation(),
         },
       };

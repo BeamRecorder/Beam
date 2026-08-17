@@ -21,6 +21,7 @@ import { useTranslate } from '~/i18n/useTranslate';
 import { resolveCompositionSceneLayers } from '../composition/scene-layers';
 import { canvasGuideLines } from './canvas-guides';
 import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
+import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
 import { drawBeamWatermark, WATERMARK_LOGO_PATH } from './watermark-render';
 import { resolvePublicAssetUrl } from '~/utils/public-asset';
 const { t } = useTranslate('EditorCanvas');
@@ -127,6 +128,7 @@ cameraZoom = useCameraZoom({
   canvasRef: () => canvasRef.value,
   outputCanvas: () => props.outputCanvas,
   zoomElements: () => props.zoomElements,
+  zoomMotionBlur: () => props.zoomMotionBlur ?? DEFAULT_ZOOM_MOTION_BLUR,
   selectedZoom: () => props.selectedZoom,
   currentTime: () => props.currentTime,
   isPlaying: () => props.isPlaying,
