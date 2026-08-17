@@ -12,6 +12,12 @@ import type { ShadowDirection } from '../cursor/shadow-types';
 import { Unlink, RotateCcw, FlipHorizontal, FlipVertical, SlidersHorizontal } from '@lucide/vue';
 import type { ClipFrame, ClipShadowMode, ClipShadowSize, NormalizedTransform } from '~/media/shared/composition-types';
 import { useTranslate } from '~/i18n/useTranslate';
+import CameraLayoutPanel from '../camera/CameraLayoutPanel.vue';
+import {
+  isSplitCameraLayout,
+  type CameraFramingPreset,
+  type CameraLayoutPreset,
+} from '~/media/shared/camera-layout-types';
 
 const { t } = useTranslate('ClipPropertiesPanel');
 
@@ -43,6 +49,11 @@ const props = defineProps<{
     clipTransform?: NormalizedTransform;
     isMirrored?: boolean;
     isMirroredY?: boolean;
+    cameraLayoutPreset?: CameraLayoutPreset;
+    cameraFramingPreset?: CameraFramingPreset;
+    cameraSplitRatio?: number;
+    cameraSplitPadding?: number;
+    hasLinkedScreen?: boolean;
   } | null;
 }>();
 
@@ -70,6 +81,10 @@ const emit = defineEmits<{
     },
   ): void;
   (e: 'update:clipTransform', transform: NormalizedTransform): void;
+  (e: 'update:cameraLayout', preset: Exclude<CameraLayoutPreset, 'custom'>): void;
+  (e: 'update:cameraFraming', preset: Exclude<CameraFramingPreset, 'custom'>): void;
+  (e: 'update:cameraSplitRatio', ratio: number): void;
+  (e: 'update:cameraSplitPadding', padding: number): void;
   (e: 'reset:clipTransform'): void;
   (e: 'unlink'): void;
   (e: 'delete'): void;
@@ -230,8 +245,25 @@ const updatePlacement = (patch: Partial<NormalizedTransform>) => {
     <TimelineClickEmptyState v-if="!selectedClip" />
 
     <div v-else class="options-group">
+      <CameraLayoutPanel
+        v-if="selectedClip.kind === 'webcam'"
+        :layout="selectedClip.cameraLayoutPreset ?? 'custom'"
+        :framing="selectedClip.cameraFramingPreset ?? 'custom'"
+        :has-linked-screen="selectedClip.hasLinkedScreen ?? false"
+        :split-ratio="selectedClip.cameraSplitRatio ?? 0.5"
+        :split-padding="selectedClip.cameraSplitPadding ?? 0"
+        @update:layout="emit('update:cameraLayout', $event)"
+        @update:framing="emit('update:cameraFraming', $event)"
+        @update:split-ratio="emit('update:cameraSplitRatio', $event)"
+        @update:split-padding="emit('update:cameraSplitPadding', $event)"
+      />
+      <Divider v-if="selectedClip.kind === 'webcam'" spacing="xs" />
+
       <!-- Placement Section -->
-      <div v-if="clipTransform" class="section-block">
+      <div
+        v-if="clipTransform && !isSplitCameraLayout(selectedClip.cameraLayoutPreset ?? 'custom')"
+        class="section-block"
+      >
         <div class="section-header">
           <span class="section-title">{{ t('placement') }}</span>
           <Button

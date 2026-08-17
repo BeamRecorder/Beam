@@ -33,6 +33,7 @@ import type {
   ClipFrame,
   NormalizedTransform,
 } from '~/media/shared/composition-types';
+import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import type { OutputCanvasSettings } from '../canvas/output-canvas';
 import type { ShadowDirection } from './cursor/shadow-types';
@@ -72,6 +73,11 @@ export interface SelectedClipProperties {
   clipTransform?: NormalizedTransform;
   isMirrored?: boolean;
   isMirroredY?: boolean;
+  cameraLayoutPreset?: CameraLayoutPreset;
+  cameraFramingPreset?: CameraFramingPreset;
+  cameraSplitRatio?: number;
+  cameraSplitPadding?: number;
+  hasLinkedScreen?: boolean;
   volume?: number;
   blurMode?: BlurEffectMode;
   blurShape?: BlurEffectShape;
@@ -230,6 +236,10 @@ const emit = defineEmits<{
     },
   ): void;
   (event: 'update:clip-transform', transform: NormalizedTransform): void;
+  (event: 'update:camera-layout', preset: Exclude<CameraLayoutPreset, 'custom'>): void;
+  (event: 'update:camera-framing', preset: Exclude<CameraFramingPreset, 'custom'>): void;
+  (event: 'update:camera-split-ratio', ratio: number): void;
+  (event: 'update:camera-split-padding', padding: number): void;
   (event: 'reset:clip-transform'): void;
   (event: 'unlink-clip'): void;
   (event: 'delete-clip'): void;
@@ -342,11 +352,13 @@ const handleDelete = () => {
             v-else-if="activeTab === 'canvas'"
             :selected-background="selectedBackground"
             :blur-percent="blurPercent"
+            :show-background="canvas.showBackground"
             :watermark="canvas.watermark"
             :background-groups="backgroundGroups"
             :project-id="projectId"
             @update:selected-background="emit('update:selectedBackground', $event)"
             @update:blur-percent="emit('update:blurPercent', $event)"
+            @update:show-background="emit('update:canvas', { ...canvas, showBackground: $event })"
             @update:watermark="emit('update:canvas', { ...canvas, watermark: $event })"
             @import:background="emit('import:background', $event)"
           />
@@ -395,6 +407,10 @@ const handleDelete = () => {
             @update:shadow="emit('update:clip-shadow', $event)"
             @update:appearance="emit('update:clip-appearance', $event)"
             @update:clip-transform="emit('update:clip-transform', $event)"
+            @update:camera-layout="emit('update:camera-layout', $event)"
+            @update:camera-framing="emit('update:camera-framing', $event)"
+            @update:camera-split-ratio="emit('update:camera-split-ratio', $event)"
+            @update:camera-split-padding="emit('update:camera-split-padding', $event)"
             @reset:clip-transform="emit('reset:clip-transform')"
             @unlink="emit('unlink-clip')"
             @delete="emit('delete-clip')"

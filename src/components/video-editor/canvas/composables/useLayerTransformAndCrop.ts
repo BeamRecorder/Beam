@@ -25,7 +25,14 @@ import type { OutputCanvasSettings } from '../output-canvas';
 
 import { computeCanvasAlignmentSnapping, type AlignmentGuide } from './canvas-alignment';
 import { effectShapeRect } from '../../composition/effects/blur-effect';
-import { pointInsideEllipse, pointInsideRect, projectCameraRect } from './layer-transform-geometry';
+import {
+  pointInsideEllipse,
+  pointInsideRect,
+  pointInsideSquircle,
+  projectCameraRect,
+} from './layer-transform-geometry';
+import { resolveCameraFraming } from '../../composition/camera-layout';
+import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 
 const TRANSFORM_MIN = -3;
 const TRANSFORM_MAX = 3;
@@ -118,14 +125,30 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
     const bounds = boundsFor(clip);
     if (!bounds) return null;
     if (clip.kind === 'webcam') {
+      const asset = options.composition().assets.find((entry) => entry.id === clip.assetId);
       const layout = computeWebcamLayout(
         bounds.dw,
         bounds.dh,
         bounds.scale,
-        webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+        {
+          ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+          reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+        },
         transform,
       );
-      return { left: bounds.dx + layout.x, top: bounds.dy + layout.y, width: layout.width, height: layout.height };
+      const framing = resolveCameraFraming(
+        options.isCropping() ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
+        layout,
+        asset?.width ?? layout.width,
+        asset?.height ?? layout.height,
+        clip.crop,
+      );
+      return {
+        left: bounds.dx + framing.rect.x,
+        top: bounds.dy + framing.rect.y,
+        width: framing.rect.width,
+        height: framing.rect.height,
+      };
     }
     const rect = {
       left: bounds.dx + transform.x * bounds.dw,
@@ -446,9 +469,12 @@ export function useLayerTransformAndCrop(options: UseLayerTransformAndCropOption
       const layout = displayLayoutFor(clip);
       if (!layout) continue;
       const insideShape =
-        clip.kind === 'blur' && clip.shape === 'circle'
-          ? pointInsideEllipse(x, y, layout, RAYCAST_SLOP_PX)
-          : pointInsideRect(x, y, layout, RAYCAST_SLOP_PX);
+        clip.kind === 'webcam' && clip.cameraFramingPreset === 'squircle'
+          ? pointInsideSquircle(x, y, layout, RAYCAST_SLOP_PX)
+          : (clip.kind === 'blur' && clip.shape === 'circle') ||
+              (clip.kind === 'webcam' && clip.cameraFramingPreset === 'circle')
+            ? pointInsideEllipse(x, y, layout, RAYCAST_SLOP_PX)
+            : pointInsideRect(x, y, layout, RAYCAST_SLOP_PX);
       // The screen layer participates in occlusion, but its existing dedicated
       // selection path owns the actual screen selection.
       if (insideShape) return clip.kind === 'screen' ? null : clip.id;

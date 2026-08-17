@@ -50,8 +50,9 @@ export function createCompositionSnapshot(input: {
       sourceHeight: null,
     },
     canvas,
-    background:
-      input.background?.kind === 'color'
+    background: !canvas.showBackground
+      ? null
+      : input.background?.kind === 'color'
         ? { kind: 'color', color: input.background.color }
         : input.background?.kind === 'gradient'
           ? { kind: 'gradient', gradient: cloneJson(input.background.gradient) }

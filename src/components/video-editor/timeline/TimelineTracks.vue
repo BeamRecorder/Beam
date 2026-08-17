@@ -83,7 +83,7 @@ const {
   hoverAt,
   leaveTrack,
   addAt,
-  toggleGroup,
+  handleVisualTrackHeader,
   iconForVisual,
   labelForVisual,
   zoomScale,
@@ -122,7 +122,7 @@ const exportProgressPercent = computed(() => {
                 type="button"
                 class="track-info"
                 :title="track.representative.name"
-                @click="toggleGroup(track.clips)"
+                @click="handleVisualTrackHeader(track.clips)"
                 @pointerdown="beginReorder($event, track.id, track.representative.id)"
               >
                 <span class="track-drag-handle" @click.stop>

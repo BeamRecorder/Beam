@@ -10,7 +10,8 @@ const {
   validateTrackLayout,
 } = require('./composition-tracks.cjs');
 
-const schemaVersion = 7;
+const schemaVersion = 8;
+const cameraLayoutSchemaVersion = 7;
 const transitionSchemaVersion = 6;
 const typographySchemaVersion = 5;
 const visualTrackSchemaVersion = 4;
@@ -19,6 +20,29 @@ const captionTypeSchemaVersion = 2;
 const legacySchemaVersion = 1;
 const mediaKinds = new Set(['video', 'image', 'audio']);
 const clipKinds = new Set(['screen', 'video', 'image', 'webcam', 'blur', 'audio', 'caption']);
+const cameraLayoutPresets = new Set([
+  'custom',
+  'floating-top-left',
+  'floating-top-right',
+  'floating-bottom-left',
+  'floating-bottom-right',
+  'floating-center',
+  'fullscreen',
+  'split-left',
+  'split-right',
+  'split-top',
+  'split-bottom',
+]);
+const cameraFramingPresets = new Set([
+  'custom',
+  'fill',
+  'fit',
+  'square',
+  'portrait',
+  'landscape',
+  'squircle',
+  'circle',
+]);
 const extensions = {
   video: new Set(['.mp4', '.webm', '.mov', '.mkv']),
   image: new Set(['.png', '.jpg', '.jpeg', '.webp']),
@@ -33,7 +57,13 @@ const emptyComposition = () => ({ schemaVersion, assets: [], clips: [], keyboard
 const transitionKinds = new Set(['fade', 'slide', 'zoom', 'blur']);
 const transition = (value, clipKind) => {
   if (value === null) return null;
-  if (!value || typeof value !== 'object' || !Number.isInteger(value.durationMs) || value.durationMs <= 0 || value.durationMs > 5000)
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !Number.isInteger(value.durationMs) ||
+    value.durationMs <= 0 ||
+    value.durationMs > 5000
+  )
     throw new Error('Transition de clip invalide');
   const preset = value.preset;
   if (!preset || !transitionKinds.has(preset.kind) || (clipKind === 'audio' && preset.kind !== 'fade'))
@@ -274,6 +304,22 @@ function normalizeComposition(value) {
         volume: finite(clip.volume) ? Math.max(0, Math.min(200, clip.volume)) : 100,
       };
     if (!id(clip.trackId)) throw new Error('Identifiant de piste visuelle invalide');
+    const cameraPresets =
+      clip.kind === 'webcam'
+        ? (() => {
+            const cameraLayoutPreset = clip.cameraLayoutPreset === undefined ? 'custom' : clip.cameraLayoutPreset;
+            const cameraFramingPreset = clip.cameraFramingPreset === undefined ? 'custom' : clip.cameraFramingPreset;
+            const cameraSplitRatio = clip.cameraSplitRatio === undefined ? 0.5 : clip.cameraSplitRatio;
+            const cameraSplitPadding = clip.cameraSplitPadding === undefined ? 0 : clip.cameraSplitPadding;
+            if (!cameraLayoutPresets.has(cameraLayoutPreset) || !cameraFramingPresets.has(cameraFramingPreset))
+              throw new Error('Preset de caméra invalide');
+            if (!finite(cameraSplitRatio) || cameraSplitRatio < 0.2 || cameraSplitRatio > 0.8)
+              throw new Error('Répartition de caméra invalide');
+            if (!finite(cameraSplitPadding) || cameraSplitPadding < 0 || cameraSplitPadding > 0.08)
+              throw new Error('Espacement de caméra invalide');
+            return { cameraLayoutPreset, cameraFramingPreset, cameraSplitRatio, cameraSplitPadding };
+          })()
+        : {};
     return {
       ...common,
       trackId: clip.trackId,
@@ -281,6 +327,7 @@ function normalizeComposition(value) {
       transform: rectangle(clip.transform, 'Transformation'),
       ...(clip.crop ? { crop: rectangle(clip.crop, 'Recadrage') } : {}),
       appearance: appearance(clip.appearance),
+      ...cameraPresets,
       ...(typeof clip.isMirrored === 'boolean' && typeof clip.isMirroredY === 'boolean'
         ? { isMirrored: clip.isMirrored, isMirroredY: clip.isMirroredY }
         : (() => {
@@ -319,21 +366,37 @@ function migrateComposition(value, showBackground, historicalSessionIds = []) {
       visualTrackSchemaVersion,
       typographySchemaVersion,
       transitionSchemaVersion,
+      cameraLayoutSchemaVersion,
     ].includes(value.schemaVersion) ||
     !Array.isArray(value.assets) ||
     !Array.isArray(value.clips)
   )
     throw new Error(`Version de composition inconnue: ${String(value?.schemaVersion)}`);
-  if ([visualTrackSchemaVersion, typographySchemaVersion, transitionSchemaVersion].includes(value.schemaVersion)) {
+  if (
+    [visualTrackSchemaVersion, typographySchemaVersion, transitionSchemaVersion, cameraLayoutSchemaVersion].includes(
+      value.schemaVersion,
+    )
+  ) {
     return normalizeComposition({
       ...value,
       schemaVersion,
       keyboardCaptionSessions: Array.isArray(value.keyboardCaptionSessions)
         ? value.keyboardCaptionSessions
         : historicalSessionIds,
-      clips: repairMigratedTrackIds(value.clips).map(withHistoricalTypography).map((clip) => ({
+      clips: (value.schemaVersion === cameraLayoutSchemaVersion
+        ? repairMigratedTrackIds(value.clips)
+        : repairMigratedTrackIds(value.clips).map(withHistoricalTypography)
+      ).map((clip) => ({
         ...clip,
-        transitions: { entry: null, exit: null },
+        ...(value.schemaVersion < cameraLayoutSchemaVersion ? { transitions: { entry: null, exit: null } } : {}),
+        ...(clip.kind === 'webcam'
+          ? {
+              cameraLayoutPreset: 'custom',
+              cameraFramingPreset: 'custom',
+              cameraSplitRatio: 0.5,
+              cameraSplitPadding: 0,
+            }
+          : {}),
       })),
     });
   }

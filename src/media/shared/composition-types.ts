@@ -1,4 +1,6 @@
-export const COMPOSITION_SCHEMA_VERSION = 7 as const;
+import type { CameraFramingPreset, CameraLayoutPreset } from './camera-layout-types';
+
+export const COMPOSITION_SCHEMA_VERSION = 8 as const;
 export const SCREEN_CLIP_ID = 'screen';
 
 export type MediaKind = 'video' | 'image' | 'audio';
@@ -152,7 +154,7 @@ export interface ClipBase {
   sourceInMs: number;
   sourceDurationMs: number;
   playbackRate: number;
-  /** Required in persisted v7 compositions; optional while constructing legacy/test input before normalization. */
+  /** Required in persisted v8 compositions; optional while constructing legacy/test input before normalization. */
   transitions?: ClipTransitions;
   enabled: boolean;
   /** Lower values are nearer the foreground. */
@@ -171,6 +173,14 @@ export interface VisualClip extends ClipBase {
   appearance: ClipAppearance;
   isMirrored: boolean;
   isMirroredY: boolean;
+  /** Required for webcam clips in persisted v8 compositions. */
+  cameraLayoutPreset?: CameraLayoutPreset;
+  /** Required for webcam clips in persisted v8 compositions. */
+  cameraFramingPreset?: CameraFramingPreset;
+  /** Camera share of the canvas for split layouts, from 0.2 to 0.8. */
+  cameraSplitRatio?: number;
+  /** Inset around both split regions, normalized against the canvas. */
+  cameraSplitPadding?: number;
 }
 
 export interface BlurClip extends ClipBase {

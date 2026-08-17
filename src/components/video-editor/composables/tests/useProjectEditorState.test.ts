@@ -86,6 +86,7 @@ describe('useProjectEditorState property persistence', () => {
 
   it('loads and normalizes persisted composition, backgrounds, blur and cursor effects', async () => {
     const state = createState();
+    state.canvas.value.showBackground = true;
     const globalBackground: BackgroundMedia = {
       id: 'global',
       name: 'Global',
@@ -115,7 +116,7 @@ describe('useProjectEditorState property persistence', () => {
         generatedSessions: [{ sessionId: 'session', algorithmVersion: 1, generatedAt: 'now' }],
       },
       presentation: {
-        canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 1280 },
+        canvas: { ...DEFAULT_OUTPUT_CANVAS, width: 1280, showBackground: false },
         selectedBackgroundId: 'global',
         background: null,
         blurPercent: 250,
@@ -137,6 +138,7 @@ describe('useProjectEditorState property persistence', () => {
     expect(state.selectedBackground.value).toEqual(globalBackground);
     expect(state.backgroundBlurPercent.value).toBe(100);
     expect(state.canvas.value.width).toBe(1280);
+    expect(state.canvas.value.showBackground).toBe(false);
     expect(state.cursorMotion.value).toEqual({
       preset: 'custom',
       smoothing: 0.5,
@@ -148,6 +150,7 @@ describe('useProjectEditorState property persistence', () => {
 
   it('saves snapshots, preserves custom backgrounds and recovers the write chain after failure', async () => {
     const state = createState();
+    state.canvas.value.showBackground = false;
     const custom: BackgroundValue = {
       id: 'color:#abcdef',
       name: '#ABCDEF',
@@ -160,6 +163,7 @@ describe('useProjectEditorState property persistence', () => {
 
     await expect(editor.saveNow()).rejects.toThrow('disk full');
     expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.background).toEqual(custom);
+    expect(mocks.saveProjectEditorState.mock.calls[0][1].presentation.canvas.showBackground).toBe(false);
     expect(mocks.saveProjectEditorState.mock.calls[0][1].schemaVersion).toBe(3);
     await editor.saveNow();
     expect(mocks.saveProjectEditorState).toHaveBeenCalledTimes(2);

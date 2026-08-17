@@ -226,6 +226,41 @@ const composition = (extraClips: ClipComposition['clips'] = []): ClipComposition
   ],
 });
 
+const cameraTrackComposition = (): ClipComposition => {
+  const base = composition();
+  return {
+    ...base,
+    clips: [
+      visual({
+        id: 'camera-left',
+        kind: 'webcam',
+        name: 'Camera left segment',
+        trackId: 'camera-track',
+        timelineStartMs: 0,
+        timelineDurationMs: 2_000,
+        sourceDurationMs: 2_000,
+        order: 1,
+        groupId: 'camera-left-group',
+        assetId: 'webcam-asset',
+      }),
+      visual({
+        id: 'camera-right',
+        kind: 'webcam',
+        name: 'Camera right segment',
+        trackId: 'camera-track',
+        timelineStartMs: 4_000,
+        timelineDurationMs: 2_000,
+        sourceInMs: 2_000,
+        sourceDurationMs: 2_000,
+        order: 1,
+        groupId: 'camera-right-group',
+        assetId: 'webcam-asset',
+      }),
+      ...base.clips.filter((clip) => clip.id !== 'webcam-clip'),
+    ],
+  };
+};
+
 const zoom = (overrides: Partial<ZoomElement> = {}): ZoomElement => ({
   id: 'zoom-1',
   sessionId: 'session',
@@ -601,6 +636,28 @@ describe('TimelineTracks', () => {
     expect(sidebarRows).toHaveLength(3);
     await sidebarRows[0]!.get('.track-info').trigger('click');
     expect(mounted!.emitted('toggle:clip')).toHaveLength(1);
+  });
+
+  it('selects the webcam segment at the playhead from its track header, then falls back to the nearest segment', async () => {
+    const mounted = await mountTracks({ composition: cameraTrackComposition(), currentTime: 1 });
+    const cameraHeader = mounted!.get('[data-track-id="camera-track"] .track-info');
+
+    await cameraHeader.trigger('click');
+    expect(mounted!.emitted('select:clip')).toContainEqual(['camera-left']);
+    expect(mounted!.emitted('toggle:clip') ?? []).toHaveLength(0);
+
+    await mounted!.setProps({ currentTime: 6.5 });
+    await cameraHeader.trigger('click');
+    expect(mounted!.emitted('select:clip')).toContainEqual(['camera-right']);
+  });
+
+  it('keeps non-camera track headers on their existing toggle behavior', async () => {
+    const mounted = await mountTracks();
+    const imageHeader = mounted!.get('[data-track-id="image-track"] .track-info');
+
+    await imageHeader.trigger('click');
+    expect(mounted!.emitted('toggle:clip')).toContainEqual(['image-clip']);
+    expect(mounted!.emitted('select:clip') ?? []).toHaveLength(0);
   });
 
   it('keeps the keyboard track above text, uses Lucide icons, and reserves manual additions for text', async () => {

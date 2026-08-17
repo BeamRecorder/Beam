@@ -1,4 +1,5 @@
 export * from './composition-types';
+export * from './camera-layout-types';
 export * from './clip-transitions';
 export * from './composition-defaults';
 export * from './dropped-media';

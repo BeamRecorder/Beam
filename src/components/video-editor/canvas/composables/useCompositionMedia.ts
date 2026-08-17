@@ -18,6 +18,7 @@ import { applyBlurEffect } from '../../composition/effects/blur-effect';
 import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
 import { drawWithClipTransition } from '../../composition/transitions/render-transition';
 import { resolveFrameIntroTransition } from '~/media/shared/clip-transitions';
+import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 
 export interface UseCompositionMediaOptions {
   composition: () => ClipComposition;
@@ -168,11 +169,16 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
       window.dw,
       window.dh,
       scale,
-      webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+      {
+        ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+        reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+      },
       clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
       options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
       clip.appearance,
       clip.name,
+      undefined,
+      options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
     );
     ctx.restore();
   };
@@ -239,7 +245,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
         window.dw,
         window.dh,
         window.scale,
-        webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+        {
+          ...webcamSettingsForAppearance(clip.appearance, clip.isMirrored, clip.isMirroredY),
+          reactToZoom: !isSplitCameraLayout(clip.cameraLayoutPreset ?? 'custom'),
+        },
         clip.id === selected?.id && options.transformDraft() ? options.transformDraft()! : clip.transform,
         options.isCropping?.() && clip.id === selected?.id ? undefined : clip.crop,
         clip.appearance,
@@ -250,6 +259,7 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
               window.dh / Math.max(1, options.outputCanvas().height),
             )
           : 1,
+        options.isCropping?.() && clip.id === selected?.id ? 'custom' : (clip.cameraFramingPreset ?? 'custom'),
       );
       ctx.restore();
     }

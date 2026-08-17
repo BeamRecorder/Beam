@@ -410,6 +410,7 @@ describe('useClipComposition', () => {
       sourceInMs: 0,
       sourceDurationMs: 5_000,
       playbackRate: 1,
+      transitions: { entry: null, exit: null },
       enabled: true,
       order: 4,
       transform: { x: 0, y: 0, width: 1, height: 1 },

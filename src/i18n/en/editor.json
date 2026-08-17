@@ -1,4 +1,27 @@
 {
+  "CameraLayoutPanel": {
+    "title": "Camera Layout",
+    "custom": "Custom",
+    "topLeft": "Float top left",
+    "topRight": "Float top right",
+    "bottomLeft": "Float bottom left",
+    "bottomRight": "Float bottom right",
+    "largeCenter": "Large centered camera",
+    "fullscreen": "Fullscreen camera",
+    "splitLeft": "Camera left split",
+    "splitRight": "Camera right split",
+    "splitTop": "Camera top split",
+    "splitBottom": "Camera bottom split",
+    "splitRequiresScreen": "No matching screen recording is available at this point in the timeline.",
+    "splitRatio": "Camera share",
+    "splitPadding": "Background spacing",
+    "framing": "Framing",
+    "fill": "Fill",
+    "fit": "Fit",
+    "square": "Square",
+    "squircle": "Squircle",
+    "circle": "Circle"
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Shadow direction",
     "around": "Around",

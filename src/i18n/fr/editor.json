@@ -1,4 +1,27 @@
 {
+  "CameraLayoutPanel": {
+    "title": "Camera Layout",
+    "custom": "Personnalisé",
+    "topLeft": "Flottant en haut à gauche",
+    "topRight": "Flottant en haut à droite",
+    "bottomLeft": "Flottant en bas à gauche",
+    "bottomRight": "Flottant en bas à droite",
+    "largeCenter": "Grande caméra centrée",
+    "fullscreen": "Caméra plein écran",
+    "splitLeft": "Caméra à gauche",
+    "splitRight": "Caméra à droite",
+    "splitTop": "Caméra en haut",
+    "splitBottom": "Caméra en bas",
+    "splitRequiresScreen": "Aucun enregistrement d’écran correspondant n’est disponible à cet endroit de la timeline.",
+    "splitRatio": "Part de la caméra",
+    "splitPadding": "Espacement du fond",
+    "framing": "Cadrage",
+    "fill": "Fill",
+    "fit": "Fit",
+    "square": "Carré",
+    "squircle": "Squircle",
+    "circle": "Cercle"
+  },
   "ShadowDirectionGroup": {
     "shadowDirection": "Direction de l'ombre",
     "around": "Autour",

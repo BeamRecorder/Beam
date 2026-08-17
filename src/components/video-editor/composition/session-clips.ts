@@ -120,6 +120,9 @@ const sessionClip = (
     appearance: createDefaultClipAppearance(track.kind === 'camera' ? 'webcam' : 'screen'),
     isMirrored: false,
     isMirroredY: false,
+    ...(track.kind === 'camera'
+      ? { cameraFramingPreset: 'squircle' as const, cameraSplitRatio: 0.5, cameraSplitPadding: 0 }
+      : {}),
   } satisfies VisualClip;
 };
 

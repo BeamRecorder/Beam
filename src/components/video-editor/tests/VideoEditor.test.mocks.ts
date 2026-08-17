@@ -1,5 +1,7 @@
 import { vi } from 'vitest';
 import type { ClipComposition } from '~/media/shared/composition-types';
+import { COMPOSITION_SCHEMA_VERSION } from '~/media/shared/composition-types';
+import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const { editorState } = vi.hoisted(() => ({ editorState: { store: undefined as any } }));
 const capture = vi.hoisted(() => ({}));
@@ -21,7 +23,7 @@ vi.mock('../composables/useVideoEditor', async () => {
     useVideoEditor: vi.fn(() => {
       const activeTab = ref('canvas');
       const composition = ref<ClipComposition>({
-        schemaVersion: 6,
+        schemaVersion: COMPOSITION_SCHEMA_VERSION,
         keyboardCaptionSessions: [],
         assets: [
           {
@@ -58,10 +60,14 @@ vi.mock('../composables/useVideoEditor', async () => {
             sourceInMs: 0,
             sourceDurationMs: 2_000,
             playbackRate: 1,
+            transitions: { entry: null, exit: null },
             enabled: true,
             order: 0,
             trackId: 'screen-track',
             transform: { x: 0, y: 0, width: 1, height: 1 },
+            appearance: createDefaultClipAppearance('screen'),
+            isMirrored: false,
+            isMirroredY: false,
           },
           {
             id: 'audio',
@@ -74,6 +80,7 @@ vi.mock('../composables/useVideoEditor', async () => {
             sourceInMs: 0,
             sourceDurationMs: 2_000,
             playbackRate: 1,
+            transitions: { entry: null, exit: null },
             enabled: true,
             order: 1,
             volume: 100,
@@ -140,7 +147,10 @@ vi.mock('../composables/useVideoEditor', async () => {
         updateSelectedTransform: vi.fn(),
         previewSelectedTransform: vi.fn(),
         updateSelectedCrop: vi.fn(),
+        updateSelectedCameraLayout: vi.fn(),
+        updateSelectedCameraFraming: vi.fn(),
         updateSelectedMirrored: vi.fn(),
+        updateSelectedMirroredY: vi.fn(),
         updateSelectedRate: vi.fn(),
         updateSelectedVolume: vi.fn(),
         updateSelectedEnabled: vi.fn(),

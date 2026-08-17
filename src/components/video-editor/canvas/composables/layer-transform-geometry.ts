@@ -35,3 +35,12 @@ export const pointInsideEllipse = (x: number, y: number, rect: CanvasRect, slop 
   const centerY = rect.top + rect.height / 2;
   return ((x - centerX) / radiusX) ** 2 + ((y - centerY) / radiusY) ** 2 <= 1;
 };
+
+export const pointInsideSquircle = (x: number, y: number, rect: CanvasRect, slop = 0) => {
+  if (!pointInsideRect(x, y, rect, slop)) return false;
+  const radiusX = rect.width / 2 + slop;
+  const radiusY = rect.height / 2 + slop;
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  return Math.abs((x - centerX) / radiusX) ** 4 + Math.abs((y - centerY) / radiusY) ** 4 <= 1;
+};

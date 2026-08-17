@@ -4,9 +4,11 @@ import type {
   NormalizedTransform,
   WebcamAppearance,
 } from '~/media/shared/composition-types';
+import type { CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import { DEFAULT_CLIP_APPEARANCE, drawDecoratedMedia } from '../appearance/render-decorated-media';
 import type { MediaRect } from '../appearance/appearance-types';
 import type { Canvas2DContext } from '~/types/canvas';
+import { resolveCameraFraming } from '../camera-layout';
 
 export interface WebcamOverlaySettings {
   widthPercent: number;
@@ -133,27 +135,22 @@ export function drawWebcamOverlay(
   appearance?: ClipAppearance,
   title = 'Camera',
   shadowScale = 1,
+  framingPreset: CameraFramingPreset = 'custom',
 ) {
   const layout = computeWebcamLayout(canvasWidth, canvasHeight, appliedZoomScale, settings, transform);
   const sourceWidth = sourceDimensions.width;
   const sourceHeight = sourceDimensions.height;
-  const sourceRect: MediaRect | undefined =
-    crop && sourceWidth > 0 && sourceHeight > 0
-      ? {
-          x: crop.x * sourceWidth,
-          y: crop.y * sourceHeight,
-          width: crop.width * sourceWidth,
-          height: crop.height * sourceHeight,
-        }
-      : undefined;
+  const framing = resolveCameraFraming(framingPreset, layout, sourceWidth, sourceHeight, crop);
+  const sourceRect: MediaRect | undefined = framing.sourceRect;
   drawDecoratedMedia(ctx, {
     source,
     sourceRect,
-    rect: layout,
+    rect: framing.rect,
     appearance: { ...DEFAULT_CLIP_APPEARANCE, ...appearance },
     shadowScale,
     title,
     mirrored: settings.mirror,
     mirroredY: settings.mirrorY,
+    mask: framing.mask,
   });
 }

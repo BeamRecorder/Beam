@@ -80,6 +80,37 @@ describe('decorated media rendering', () => {
     expect(ctx.scale).toHaveBeenCalledWith(-1, -1);
     expect(ctx.drawImage).toHaveBeenCalledWith(source, 64, 36, 512, 288, 10, 20, 400, 240);
   });
+  it('clips circular framing with a real circular path', () => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 10, y: 20, width: 400, height: 240 },
+      appearance: appearance({ shadowSize: 'none' }),
+      title: 'Circle',
+      mask: 'circle',
+    });
+
+    expect(ctx.arc).toHaveBeenCalledWith(210, 140, 120, 0, Math.PI * 2);
+    expect(ctx.roundRect).not.toHaveBeenCalled();
+    expect(ctx.clip).toHaveBeenCalledOnce();
+    expect(ctx.drawImage).toHaveBeenCalledWith(source, 10, 20, 400, 240);
+  });
+  it('clips squircle framing with a superellipse path', () => {
+    const ctx = context();
+    drawDecoratedMedia(ctx, {
+      source,
+      rect: { x: 10, y: 20, width: 240, height: 240 },
+      appearance: appearance({ shadowSize: 'none' }),
+      title: 'Squircle',
+      mask: 'squircle',
+    });
+
+    expect(ctx.moveTo).toHaveBeenCalled();
+    expect(ctx.lineTo).toHaveBeenCalledTimes(64);
+    expect(ctx.closePath).toHaveBeenCalled();
+    expect(ctx.roundRect).not.toHaveBeenCalled();
+    expect(ctx.clip).toHaveBeenCalledOnce();
+  });
   it('draws Safari media inside its chrome and uses the supplied title', () => {
     const ctx = context();
     drawDecoratedMedia(ctx, {

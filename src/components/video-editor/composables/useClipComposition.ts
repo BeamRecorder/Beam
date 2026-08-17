@@ -32,6 +32,10 @@ import {
   setBlurEffect,
   setClipEnabled,
   setCrop,
+  setCameraFraming,
+  setCameraLayout,
+  setCameraSplitRatio,
+  setCameraSplitPadding,
   setMirrored,
   setMirroredY,
   setPlaybackRate,
@@ -42,7 +46,9 @@ import {
   updateClip,
 } from '../composition/engine/clip-engine';
 import { synchronizeRecordingClips } from '../composition/session-clips';
+import { cameraScreenPartner } from '../composition/camera-screen-link';
 import { useTranslate } from '~/i18n/useTranslate';
+import type { CameraFramingPreset, CameraLayoutPreset } from '~/media/shared/camera-layout-types';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const endMs = (clip: Clip) => clip.timelineStartMs + clip.timelineDurationMs;
@@ -82,6 +88,15 @@ export function useClipComposition(options: {
             isMirroredY: clip.isMirroredY,
             clipTransform: clip.transform,
             ...clip.appearance,
+            ...(clip.kind === 'webcam'
+              ? {
+                  cameraLayoutPreset: clip.cameraLayoutPreset ?? 'custom',
+                  cameraFramingPreset: clip.cameraFramingPreset ?? 'custom',
+                  cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
+                  cameraSplitPadding: clip.cameraSplitPadding ?? 0,
+                  hasLinkedScreen: Boolean(cameraScreenPartner(composition.value, clip, true)),
+                }
+              : {}),
           }
         : {}),
       ...(isBlurClip(clip)
@@ -401,6 +416,18 @@ export function useClipComposition(options: {
   const updateSelectedCrop = (crop: NormalizedCrop) => {
     if (selectedClipId.value) composition.value = setCrop(composition.value, selectedClipId.value, crop);
   };
+  const updateSelectedCamera = (update: (clipId: string) => ClipComposition) => {
+    const clip = selectedClip.value;
+    if (clip?.kind === 'webcam') composition.value = update(clip.id);
+  };
+  const updateSelectedCameraLayout = (preset: Exclude<CameraLayoutPreset, 'custom'>) =>
+    updateSelectedCamera((id) => setCameraLayout(composition.value, id, preset));
+  const updateSelectedCameraFraming = (preset: Exclude<CameraFramingPreset, 'custom'>) =>
+    updateSelectedCamera((id) => setCameraFraming(composition.value, id, preset));
+  const updateSelectedCameraSplitRatio = (ratio: number) =>
+    updateSelectedCamera((id) => setCameraSplitRatio(composition.value, id, ratio));
+  const updateSelectedCameraSplitPadding = (padding: number) =>
+    updateSelectedCamera((id) => setCameraSplitPadding(composition.value, id, padding));
   const updateSelectedMirrored = (mirrored: boolean) => {
     if (selectedClipId.value) composition.value = setMirrored(composition.value, selectedClipId.value, mirrored);
   };
@@ -456,6 +483,10 @@ export function useClipComposition(options: {
     updateSelectedTransform,
     updateSelectedBlur,
     updateSelectedCrop,
+    updateSelectedCameraLayout,
+    updateSelectedCameraFraming,
+    updateSelectedCameraSplitRatio,
+    updateSelectedCameraSplitPadding,
     updateSelectedMirrored,
     updateSelectedMirroredY,
     updateSelectedRate,

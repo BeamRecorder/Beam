@@ -16,7 +16,7 @@ export interface CompositionCameraEvaluator {
 export interface CompositionCameraInputs {
   zooms: readonly ZoomElement[];
   telemetry: readonly CursorTelemetryPoint[];
-  mapFocus?: (focus: ZoomFocus, zoom: AppliedZoom) => ZoomFocus;
+  mapFocus?: (focus: ZoomFocus, zoom: AppliedZoom, timeMs: number) => ZoomFocus;
 }
 
 interface SimulationState {
@@ -37,7 +37,7 @@ export function createCompositionCameraEvaluator(inputs: CompositionCameraInputs
   const targetAt = (timeMs: number): CameraTransform => {
     const zoom = zoomAt(timeMs);
     if (!zoom) return { focusX: 0.5, focusY: 0.5, scale: 1 };
-    const mapped = inputs.mapFocus ? inputs.mapFocus(zoom.focus, zoom) : zoom.focus;
+    const mapped = inputs.mapFocus ? inputs.mapFocus(zoom.focus, zoom, timeMs) : zoom.focus;
     const focus = clampFocusToScale(mapped, zoom.scale);
     return { focusX: focus.cx, focusY: focus.cy, scale: zoom.scale };
   };

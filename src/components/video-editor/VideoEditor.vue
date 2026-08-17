@@ -114,6 +114,10 @@ const {
   updateSelectedTransform,
   updateSelectedBlur,
   updateSelectedCrop,
+  updateSelectedCameraLayout,
+  updateSelectedCameraFraming,
+  updateSelectedCameraSplitRatio,
+  updateSelectedCameraSplitPadding,
   updateSelectedMirrored,
   updateSelectedMirroredY,
   updateSelectedRate,
@@ -489,6 +493,10 @@ onBeforeUnmount(() => {
           "
           @update:clip-appearance="updateSelectedAppearance($event)"
           @update:clip-transform="commitSelectedTransform"
+          @update:camera-layout="updateSelectedCameraLayout"
+          @update:camera-framing="updateSelectedCameraFraming"
+          @update:camera-split-ratio="updateSelectedCameraSplitRatio"
+          @update:camera-split-padding="updateSelectedCameraSplitPadding"
           @reset:clip-transform="commitSelectedTransform({ x: 0, y: 0, width: 1, height: 1 })"
           @back-to-hud="emit('back-to-hud')"
           @start-recording="emit('start-recording', $event)"

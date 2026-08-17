@@ -15,26 +15,40 @@ import {
   type ClipTransition,
 } from '~/media/shared/composition-types';
 import { normalizeClipTransitions } from '~/media/shared/clip-transitions';
+import { isSplitCameraLayout, type CameraFramingPreset } from '~/media/shared/camera-layout-types';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
+import { setCameraSplitTransform } from './camera-layout-operations';
 import {
-  assertValidVisualTracks,
   maximumVisualTrackDuration,
   normalizeClipOrders,
   reorderClipOrders,
   visualMoveDeltaBounds,
   visualTrimBounds,
 } from './visual-track-layout';
-
-export const MIN_PLAYBACK_RATE = 0.25;
-export const MAX_PLAYBACK_RATE = 4;
-export const MIN_CLIP_DURATION_MS = 40;
-
-export class CompositionEngineError extends Error {}
+import {
+  CompositionEngineError,
+  MAX_PLAYBACK_RATE,
+  MIN_CLIP_DURATION_MS,
+  MIN_PLAYBACK_RATE,
+  validateComposition,
+} from './clip-composition-validation';
+export {
+  setCameraLayout,
+  setCameraSplitPadding,
+  setCameraSplitRatio,
+  setCameraSplitTransform,
+} from './camera-layout-operations';
+export {
+  CompositionEngineError,
+  MAX_PLAYBACK_RATE,
+  MIN_CLIP_DURATION_MS,
+  MIN_PLAYBACK_RATE,
+  validateComposition,
+} from './clip-composition-validation';
 
 const finite = (value: number) => Number.isFinite(value);
 const integer = (value: number) => Math.round(value);
-// Composition state is deliberately JSON-serializable. JSON cloning unwraps Vue
-// proxies before copying, unlike structuredClone which throws on reactive state.
+// JSON cloning deliberately unwraps Vue proxies while preserving serializable composition state.
 const cloneValue = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const clone = (composition: ClipComposition): ClipComposition => cloneValue(composition);
 const createId = (): string => crypto.randomUUID();
@@ -67,7 +81,18 @@ export const createComposition = (
     assets: cloneValue(assets),
     clips: normalizeClipOrders(
       normalizeGroups(
-        cloneValue(clips).map((clip) => ({ ...clip, transitions: clip.transitions ?? { entry: null, exit: null } })),
+        cloneValue(clips).map((clip) => ({
+          ...clip,
+          transitions: clip.transitions ?? { entry: null, exit: null },
+          ...(clip.kind === 'webcam'
+            ? {
+                cameraLayoutPreset: clip.cameraLayoutPreset ?? 'custom',
+                cameraFramingPreset: clip.cameraFramingPreset ?? 'custom',
+                cameraSplitRatio: clip.cameraSplitRatio ?? 0.5,
+                cameraSplitPadding: clip.cameraSplitPadding ?? 0,
+              }
+            : {}),
+        })),
       ),
     ),
     keyboardCaptionSessions: [...new Set(keyboardCaptionSessions)],
@@ -75,122 +100,6 @@ export const createComposition = (
   validateComposition(composition);
   return composition;
 };
-
-export function validateComposition(composition: ClipComposition): void {
-  if (
-    !composition ||
-    composition.schemaVersion !== COMPOSITION_SCHEMA_VERSION ||
-    !Array.isArray(composition.assets) ||
-    !Array.isArray(composition.clips) ||
-    !Array.isArray(composition.keyboardCaptionSessions) ||
-    composition.keyboardCaptionSessions.some((sessionId) => typeof sessionId !== 'string' || !sessionId)
-  ) {
-    throw new CompositionEngineError('Invalid composition schema.');
-  }
-  const assetIds = new Set<string>();
-  for (const asset of composition.assets) {
-    if (
-      !asset?.id ||
-      assetIds.has(asset.id) ||
-      !['video', 'image', 'audio'].includes(asset.kind) ||
-      !finite(asset.durationMs) ||
-      asset.durationMs < 0
-    ) {
-      throw new CompositionEngineError('Invalid media asset.');
-    }
-    assetIds.add(asset.id);
-  }
-  const clipIds = new Set<string>();
-  const groupTiming = new Map<string, string>();
-  for (const clip of composition.clips) {
-    if (
-      !clip?.id ||
-      clipIds.has(clip.id) ||
-      !['screen', 'video', 'image', 'webcam', 'blur', 'audio', 'caption'].includes(clip.kind)
-    ) {
-      throw new CompositionEngineError('Invalid clip identity.');
-    }
-    clipIds.add(clip.id);
-    if (
-      ![
-        clip.timelineStartMs,
-        clip.timelineDurationMs,
-        clip.sourceInMs,
-        clip.sourceDurationMs,
-        clip.playbackRate,
-        clip.order,
-      ].every(finite) ||
-      clip.timelineStartMs < 0 ||
-      clip.timelineDurationMs < MIN_CLIP_DURATION_MS ||
-      clip.sourceInMs < 0 ||
-      clip.sourceDurationMs <= 0 ||
-      clip.playbackRate < MIN_PLAYBACK_RATE ||
-      clip.playbackRate > MAX_PLAYBACK_RATE
-    ) {
-      throw new CompositionEngineError('Invalid clip timing.');
-    }
-    if (!clip.transitions) throw new CompositionEngineError('Missing clip transitions.');
-    const normalizedTransitions = normalizeClipTransitions(clip.transitions, clip.timelineDurationMs, clip.kind);
-    if (JSON.stringify(normalizedTransitions) !== JSON.stringify(clip.transitions))
-      throw new CompositionEngineError('Invalid clip transitions.');
-    const expectedTimelineDuration = clip.sourceDurationMs / clip.playbackRate;
-    if (Math.abs(expectedTimelineDuration - clip.timelineDurationMs) > 2) {
-      throw new CompositionEngineError('Clip source and timeline durations disagree.');
-    }
-    if (clip.kind !== 'caption' && !isBlurClip(clip) && !assetIds.has(clip.assetId))
-      throw new CompositionEngineError(`Missing asset for clip: ${clip.id}`);
-    if (clip.kind === 'caption') {
-      const caption = clip.caption;
-      const textCaption = caption?.type === 'text' && Array.isArray(caption.sentences);
-      const keyboardCaption =
-        caption?.type === 'keyboard' &&
-        Array.isArray(caption.steps) &&
-        caption.steps.length > 0 &&
-        typeof caption.followCursor === 'boolean' &&
-        Boolean(caption.sourceSessionId);
-      if (!textCaption && !keyboardCaption) throw new CompositionEngineError('Invalid caption clip.');
-    }
-    if (
-      (isVisualClip(clip) || isBlurClip(clip)) &&
-      (![clip.transform.x, clip.transform.y, clip.transform.width, clip.transform.height].every(finite) ||
-        clip.transform.width <= 0 ||
-        clip.transform.height <= 0)
-    ) {
-      throw new CompositionEngineError('Invalid visual transform.');
-    }
-    if (isBlurClip(clip)) {
-      if (
-        !['rectangle', 'square', 'circle'].includes(clip.shape) ||
-        !['blur', 'frosted', 'pixelated', 'opaque'].includes(clip.mode)
-      )
-        throw new CompositionEngineError('Invalid blur effect.');
-      if (
-        ![clip.strength, clip.feather, clip.tintOpacity].every(finite) ||
-        clip.strength < 0 ||
-        clip.strength > 100 ||
-        clip.feather < 0 ||
-        clip.feather > 100 ||
-        (clip.cornerRadius !== undefined &&
-          (!finite(clip.cornerRadius) || clip.cornerRadius < 0 || clip.cornerRadius > 100)) ||
-        clip.tintOpacity < 0 ||
-        clip.tintOpacity > 100 ||
-        !/^#[\da-f]{6}$/i.test(clip.color)
-      )
-        throw new CompositionEngineError('Invalid blur effect settings.');
-    }
-    if (isAudioClip(clip) && (!finite(clip.volume) || clip.volume < 0 || clip.volume > 200))
-      throw new CompositionEngineError('Invalid clip volume.');
-    if (clip.groupId) {
-      const timing = `${clip.timelineStartMs}:${clip.timelineDurationMs}:${clip.playbackRate}`;
-      const known = groupTiming.get(clip.groupId);
-      if (known && known !== timing) throw new CompositionEngineError('Grouped clips must share timeline timing.');
-      groupTiming.set(clip.groupId, timing);
-    }
-  }
-  assertValidVisualTracks(composition.clips, (message) => {
-    throw new CompositionEngineError(message);
-  });
-}
 
 export function addAsset(composition: ClipComposition, asset: MediaAsset): ClipComposition {
   const next = clone(composition);
@@ -318,7 +227,11 @@ export function trimClip(
           timelineDurationMs: newTimelineDuration,
           sourceInMs: 0,
           sourceDurationMs: newSourceDuration,
-          transitions: normalizeClipTransitions(clip.transitions ?? EMPTY_CLIP_TRANSITIONS, newTimelineDuration, clip.kind),
+          transitions: normalizeClipTransitions(
+            clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
+            newTimelineDuration,
+            clip.kind,
+          ),
         };
       }
       const sourceDelta = integer(startDelta * rate);
@@ -329,7 +242,11 @@ export function trimClip(
         timelineDurationMs: newTimelineDuration,
         sourceInMs: newSourceInMs,
         sourceDurationMs: newSourceDuration,
-        transitions: normalizeClipTransitions(clip.transitions ?? EMPTY_CLIP_TRANSITIONS, newTimelineDuration, clip.kind),
+        transitions: normalizeClipTransitions(
+          clip.transitions ?? EMPTY_CLIP_TRANSITIONS,
+          newTimelineDuration,
+          clip.kind,
+        ),
       };
     }
     const newTimelineDuration = target - clip.timelineStartMs;
@@ -428,9 +345,33 @@ export function setTransform(
   ) {
     throw new CompositionEngineError('Invalid clip transform.');
   }
+  const target = composition.clips.find((clip) => clip.id === clipId);
+  if (target?.kind === 'webcam' && isSplitCameraLayout(target.cameraLayoutPreset ?? 'custom')) {
+    if (
+      target.transform.x === transform.x &&
+      target.transform.y === transform.y &&
+      target.transform.width === transform.width &&
+      target.transform.height === transform.height
+    )
+      return composition;
+    return setCameraSplitTransform(composition, clipId, transform);
+  }
   return updateClip(composition, clipId, (clip) => {
     if (clip.kind === 'audio') throw new CompositionEngineError('Audio clips do not have a transform.');
-    return { ...clip, transform: { ...transform } };
+    if (
+      'transform' in clip &&
+      clip.transform &&
+      clip.transform.x === transform.x &&
+      clip.transform.y === transform.y &&
+      clip.transform.width === transform.width &&
+      clip.transform.height === transform.height
+    )
+      return clip;
+    return {
+      ...clip,
+      transform: { ...transform },
+      ...(clip.kind === 'webcam' ? { cameraLayoutPreset: 'custom' as const } : {}),
+    };
   });
 }
 
@@ -454,7 +395,22 @@ export function setCrop(
     throw new CompositionEngineError('Invalid clip crop.');
   return updateClip(composition, clipId, (clip) => {
     if (!isVisualClip(clip)) throw new CompositionEngineError('Only visual clips can be cropped.');
-    return { ...clip, crop: crop ? { ...crop } : undefined };
+    return {
+      ...clip,
+      crop: crop ? { ...crop } : undefined,
+      ...(clip.kind === 'webcam' ? { cameraFramingPreset: 'custom' as const } : {}),
+    };
+  });
+}
+
+export function setCameraFraming(
+  composition: ClipComposition,
+  clipId: string,
+  preset: Exclude<CameraFramingPreset, 'custom'>,
+): ClipComposition {
+  return updateClip(composition, clipId, (clip) => {
+    if (clip.kind !== 'webcam') throw new CompositionEngineError('Only camera clips have camera framing.');
+    return { ...clip, cameraFramingPreset: preset, crop: undefined };
   });
 }
 
@@ -490,7 +446,11 @@ export function setClipTransition(
 ): ClipComposition {
   return updateClip(composition, clipId, (clip) => ({
     ...clip,
-    transitions: normalizeClipTransitions({ ...(clip.transitions ?? EMPTY_CLIP_TRANSITIONS), [edge]: transition }, clip.timelineDurationMs, clip.kind),
+    transitions: normalizeClipTransitions(
+      { ...(clip.transitions ?? EMPTY_CLIP_TRANSITIONS), [edge]: transition },
+      clip.timelineDurationMs,
+      clip.kind,
+    ),
   }));
 }
 
