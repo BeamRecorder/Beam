@@ -1,5 +1,7 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const Module = require('node:module');
+const path = require('node:path');
 const test = require('node:test');
 
 test('adds a tray stop action while recording and forwards it to the HUD window', () => {
@@ -123,8 +125,31 @@ function loadTrayIconPath(platform) {
   }
 }
 
-test('uses the PNG tray icon on Linux, the template icon on macOS, and ICO on Windows', () => {
-  assert.match(loadTrayIconPath('linux'), /BeamIcon\.png$/);
-  assert.match(loadTrayIconPath('win32'), /BeamIcon\.ico$/);
+test('uses dedicated tray icons on every platform', () => {
+  assert.match(loadTrayIconPath('linux'), /BeamTray\.png$/);
+  assert.match(loadTrayIconPath('win32'), /BeamTray\.ico$/);
   assert.match(loadTrayIconPath('darwin'), /BeamTrayTemplate\.png$/);
+});
+
+test('the Windows tray ICO contains exact notification-area sizes', () => {
+  const icon = fs.readFileSync(path.join(__dirname, '../public/brand/BeamTray.ico'));
+  const imageCount = icon.readUInt16LE(4);
+  const sizes = Array.from({ length: imageCount }, (_, index) => {
+    const entryOffset = 6 + index * 16;
+    const width = icon[entryOffset] || 256;
+    const height = icon[entryOffset + 1] || 256;
+    return [width, height];
+  });
+
+  assert.deepEqual(sizes, [
+    [16, 16],
+    [20, 20],
+    [24, 24],
+    [32, 32],
+    [40, 40],
+    [48, 48],
+    [64, 64],
+    [128, 128],
+    [256, 256],
+  ]);
 });
