@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Monitor, Film, ZoomIn, MousePointer, Type, Volume2, Settings } from '@lucide/vue';
 import { useTranslate } from '~/i18n/useTranslate';
 import UpdateAvailableBadge from '~/components/updates/UpdateAvailableBadge.vue';
 import ScrollShadow from '~/ui/scroll-shadow/ScrollShadow.vue';
+import Tooltip from '~/ui/tooltip/Tooltip.vue';
 
 const { t } = useTranslate('SidebarPanel');
 
@@ -14,6 +15,27 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'select-tab', tab: string): void;
 }>();
+const sidebarRef = ref<HTMLElement | null>(null);
+const showLabels = ref(true);
+let resizeObserver: ResizeObserver | null = null;
+
+const updateLabelVisibility = () => {
+  const sidebar = sidebarRef.value;
+  if (!sidebar) return;
+  const configuredScale = Number.parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--ui-scale-sidebar'),
+  );
+  const scale = Number.isFinite(configuredScale) && configuredScale > 0 ? configuredScale : 1;
+  showLabels.value = sidebar.clientWidth >= 82 * scale && sidebar.clientHeight >= 430 * scale;
+};
+
+onMounted(() => {
+  void nextTick(updateLabelVisibility);
+  if (typeof ResizeObserver === 'undefined') return;
+  resizeObserver = new ResizeObserver(updateLabelVisibility);
+  if (sidebarRef.value) resizeObserver.observe(sidebarRef.value);
+});
+onBeforeUnmount(() => resizeObserver?.disconnect());
 
 const menuItems = computed(() => [
   { id: 'canvas', label: t('canvas'), icon: Monitor },
@@ -26,56 +48,78 @@ const menuItems = computed(() => [
 </script>
 
 <template>
-  <aside class="sidebar-island">
+  <aside ref="sidebarRef" class="sidebar-island" :class="{ 'labels-hidden': !showLabels }">
     <ScrollShadow class="sidebar-scroll-wrapper" viewport-class="sidebar-viewport">
       <nav class="nav-menu">
-        <button
+        <Tooltip
           v-for="item in menuItems"
           :key="item.id"
-          class="nav-btn"
-          :class="{ active: activeTab === item.id }"
-          @click="emit('select-tab', item.id)"
-          :title="item.label"
+          class="nav-tooltip"
+          :style="{ display: 'block', width: '100%' }"
+          :content="item.label"
+          position="right"
+          :disabled="showLabels"
         >
-          <component :is="item.icon" class="nav-icon" />
-          <span class="nav-label">{{ item.label }}</span>
-        </button>
+          <button
+            type="button"
+            class="nav-btn"
+            :class="{ active: activeTab === item.id }"
+            :aria-label="item.label"
+            :title="item.label"
+            @click="emit('select-tab', item.id)"
+          >
+            <component :is="item.icon" class="nav-icon" />
+            <span v-if="showLabels" class="nav-label">{{ item.label }}</span>
+          </button>
+        </Tooltip>
       </nav>
     </ScrollShadow>
 
     <div class="sidebar-footer">
-      <button
-        class="nav-btn footer-btn"
-        :class="{ active: activeTab === 'settings' }"
-        @click="emit('select-tab', 'settings')"
-        :title="t('settings')"
+      <Tooltip
+        class="nav-tooltip"
+        :style="{ display: 'block', width: '100%' }"
+        :content="t('settings')"
+        position="right"
+        :disabled="showLabels"
       >
-        <Settings class="nav-icon" />
-        <span class="nav-label">{{ t('settings') }}</span>
-        <UpdateAvailableBadge />
-      </button>
+        <button
+          type="button"
+          class="nav-btn footer-btn"
+          :class="{ active: activeTab === 'settings' }"
+          :aria-label="t('settings')"
+          :title="t('settings')"
+          @click="emit('select-tab', 'settings')"
+        >
+          <Settings class="nav-icon" />
+          <span v-if="showLabels" class="nav-label">{{ t('settings') }}</span>
+          <UpdateAvailableBadge />
+        </button>
+      </Tooltip>
     </div>
   </aside>
 </template>
 
 <style scoped>
 .sidebar-island {
-  width: 92px;
+  width: calc(92px * var(--ui-scale-sidebar, 1));
   height: 100%;
   max-height: 100%;
   background: var(--color-bg-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 12px 6px;
+  padding: calc(12px * var(--ui-scale-sidebar, 1)) calc(6px * var(--ui-scale-sidebar, 1));
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow: hidden;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .sidebar-scroll-wrapper {
+  zoom: var(--ui-scale-sidebar, 1);
   width: 100%;
   height: 100%;
   flex: 1;
@@ -125,6 +169,7 @@ const menuItems = computed(() => [
 }
 
 .sidebar-footer {
+  zoom: var(--ui-scale-sidebar, 1);
   width: 100%;
   flex-shrink: 0;
   padding-top: 8px;
@@ -146,6 +191,11 @@ const menuItems = computed(() => [
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.labels-hidden .nav-btn {
+  height: 38px;
+  grid-template-rows: 18px;
 }
 
 .nav-btn:hover {

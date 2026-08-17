@@ -55,33 +55,35 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 
 <template>
   <div class="timeline-island-container">
-    <TimelineTracks
-      :current-time="currentTime"
-      :duration="duration"
-      :is-playing="isPlaying"
-      :zoom-level="zoomLevel"
-      :export-progress="exportProgress"
-      :include-audio-in-export="includeAudioInExport"
-      :zoom-elements="zoomElements"
-      :selected-zoom-id="selectedZoomId"
-      :composition="composition"
-      :selected-clip-id="selectedClipId"
-      :is-snapping-enabled="isSnappingEnabled"
-      @update:current-time="emit('update:currentTime', $event)"
-      @update:zoom-level="emit('update:zoomLevel', $event)"
-      @select:zoom="emit('select:zoom', $event)"
-      @select:clip="emit('select:clip', $event)"
-      @toggle:clip="emit('toggle:clip', $event)"
-      @delete:clips="emit('delete:clips', $event)"
-      @trim:clip="emit('trim:clip', $event)"
-      @move:clip="emit('move:clip', $event)"
-      @preview:composition="emit('preview:composition', $event)"
-      @trim:zoom="emit('trim:zoom', $event)"
-      @move:zoom="emit('move:zoom', $event)"
-      @add:zoom="emit('add:zoom', $event)"
-      @add:caption="emit('add:caption', $event)"
-      @reorder:clip="emit('reorder:clip', $event)"
-    />
+    <div class="timeline-scale-content">
+      <TimelineTracks
+        :current-time="currentTime"
+        :duration="duration"
+        :is-playing="isPlaying"
+        :zoom-level="zoomLevel"
+        :export-progress="exportProgress"
+        :include-audio-in-export="includeAudioInExport"
+        :zoom-elements="zoomElements"
+        :selected-zoom-id="selectedZoomId"
+        :composition="composition"
+        :selected-clip-id="selectedClipId"
+        :is-snapping-enabled="isSnappingEnabled"
+        @update:current-time="emit('update:currentTime', $event)"
+        @update:zoom-level="emit('update:zoomLevel', $event)"
+        @select:zoom="emit('select:zoom', $event)"
+        @select:clip="emit('select:clip', $event)"
+        @toggle:clip="emit('toggle:clip', $event)"
+        @delete:clips="emit('delete:clips', $event)"
+        @trim:clip="emit('trim:clip', $event)"
+        @move:clip="emit('move:clip', $event)"
+        @preview:composition="emit('preview:composition', $event)"
+        @trim:zoom="emit('trim:zoom', $event)"
+        @move:zoom="emit('move:zoom', $event)"
+        @add:zoom="emit('add:zoom', $event)"
+        @add:caption="emit('add:caption', $event)"
+        @reorder:clip="emit('reorder:clip', $event)"
+      />
+    </div>
   </div>
 </template>
 
@@ -97,5 +99,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.timeline-scale-content {
+  zoom: var(--ui-scale-timeline, 1);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 </style>

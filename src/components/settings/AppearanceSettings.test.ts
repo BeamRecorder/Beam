@@ -49,30 +49,117 @@ describe('AppearanceSettings.vue', () => {
     expect(store.theme).toBe('system');
   });
 
-  it('keeps customization collapsed until opened and groups advanced settings', async () => {
+  it('applies a global UI scale and allows each region to follow global or override it', async () => {
+    const wrapper = mount(AppearanceSettings);
+    await flushPromises();
+    const store = useThemeStore();
+
+    const advancedTrigger = wrapper.get('.advanced-toggle');
+    expect(advancedTrigger.attributes('aria-expanded')).toBe('false');
+    expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(false);
+    await advancedTrigger.trigger('click');
+    expect(advancedTrigger.attributes('aria-expanded')).toBe('true');
+    expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(true);
+
+    const globalSlider = wrapper.get('.ui-scale-slider input[type="range"]');
+    expect(wrapper.get('.ui-scale-slider.slider-wrapper').classes()).toContain('size-default');
+    expect(wrapper.get('.ui-scale-slider.slider-wrapper').classes()).not.toContain('size-compact');
+    const inputOnly = async (value: number) => {
+      (globalSlider.element as HTMLInputElement).value = String(value);
+      await globalSlider.trigger('input');
+    };
+    expect(globalSlider.attributes()).toMatchObject({ min: '50', max: '125', step: '25', value: '100' });
+    await inputOnly(83);
+    expect(store.uiScaleGlobal).toBe(100);
+    await globalSlider.trigger('change');
+    expect(store.uiScaleGlobal).toBe(100);
+    await inputOnly(75);
+    expect(store.uiScaleGlobal).toBe(100);
+    await globalSlider.trigger('change');
+    expect(store.uiScaleGlobal).toBe(75);
+    await inputOnly(50);
+    await globalSlider.trigger('change');
+    expect(store.uiScaleGlobal).toBe(50);
+    await inputOnly(125);
+    await globalSlider.trigger('change');
+    expect(store.uiScaleGlobal).toBe(125);
+    expect(store.resolvedUiScale('topbar')).toBe(125);
+
+    expect(wrapper.findAll('.scale-override-row')).toHaveLength(5);
+
+    const topbarRow = wrapper.get('.scale-override-row:first-child');
+    expect(topbarRow.get('.scale-override-slider.slider-wrapper').classes()).toContain('size-compact');
+    expect(topbarRow.get('.scale-override-slider.slider-wrapper').classes()).not.toContain('size-default');
+    const topbarSlider = topbarRow.get('.scale-override-slider input[type="range"]');
+    const useGlobal = topbarRow.get('.scale-override-heading button');
+    expect(topbarSlider.attributes()).toMatchObject({ min: '50', max: '125', step: '25', disabled: '' });
+    expect(useGlobal.attributes('aria-pressed')).toBe('true');
+
+    await useGlobal.trigger('click');
+    expect(store.uiScaleOverrides.topbar).toBe(125);
+    expect(topbarSlider.attributes('disabled')).toBeUndefined();
+    (topbarSlider.element as HTMLInputElement).value = '83';
+    await topbarSlider.trigger('input');
+    expect(store.uiScaleOverrides.topbar).toBe(125);
+    await topbarSlider.trigger('change');
+    expect(store.uiScaleOverrides.topbar).toBe(125);
+    expect(store.resolvedUiScale('topbar')).toBe(125);
+
+    await useGlobal.trigger('click');
+    expect(store.uiScaleOverrides.topbar).toBeNull();
+    expect(store.resolvedUiScale('topbar')).toBe(125);
+    expect(topbarSlider.attributes('disabled')).toBeDefined();
+  });
+
+  it('debounces persistence while the preset scale slider is adjusted', async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(AppearanceSettings);
+      await flushPromises();
+      const store = useThemeStore();
+      await wrapper.get('.advanced-toggle').trigger('click');
+      capture.updatePreferences.mockClear();
+      const slider = wrapper.get('.ui-scale-slider input[type="range"]');
+      const inputOnly = async (value: number) => {
+        (slider.element as HTMLInputElement).value = String(value);
+        await slider.trigger('input');
+      };
+      await inputOnly(50);
+      await inputOnly(75);
+      expect(store.uiScaleGlobal).toBe(100);
+      expect(capture.updatePreferences).not.toHaveBeenCalled();
+      await slider.trigger('change');
+      expect(store.uiScaleGlobal).toBe(75);
+      await vi.runOnlyPendingTimersAsync();
+      expect(capture.updatePreferences).toHaveBeenCalled();
+      expect(capture.updatePreferences.mock.calls.at(-1)?.[0]).toMatchObject({
+        appearance: { uiScale: { global: 75 } },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps Advanced closed and opens scaling and theme customization categories together', async () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
 
-    const trigger = wrapper.get('.customization-trigger');
-    const header = wrapper.get('.customization-header');
-    expect(header.findAll('.customization-trigger')).toHaveLength(1);
-    expect(trigger.get('.customization-chevron').element).toBe(trigger.element.lastElementChild);
+    const trigger = wrapper.get('.advanced-toggle');
     expect(trigger.attributes('aria-expanded')).toBe('false');
-    expect(wrapper.find('.customization-panel').exists()).toBe(false);
+    expect(wrapper.find('.appearance-advanced-panel').exists()).toBe(false);
 
     await trigger.trigger('click');
     expect(trigger.attributes('aria-expanded')).toBe('true');
-    wrapper.get('.customization-panel .preset-card');
-    wrapper.get('.customization-panel .primary-color-section');
-    wrapper.get('.customization-panel .secondary-color-section');
-    wrapper.get('.customization-panel .radius-presets-group');
-    wrapper.get('.customization-panel .surface-tone-select');
+    wrapper.get('.appearance-advanced-panel .advanced-category.ui-scale-setting');
+    wrapper.get('.appearance-advanced-panel .theme-customization-section');
+    expect(wrapper.findAll('.appearance-advanced-panel .advanced-category')).toHaveLength(2);
+    expect(wrapper.find('.appearance-advanced-panel .accordion').exists()).toBe(false);
   });
 
   it('aligns one color picker with each primary and secondary color section', async () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
-    await wrapper.get('.customization-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
 
     expect(wrapper.find('.primary-color-section .custom-picker-wrap .color-picker-wrapper').exists()).toBe(true);
     expect(wrapper.find('.secondary-color-section .custom-picker-wrap .color-picker-wrapper').exists()).toBe(true);
@@ -82,7 +169,7 @@ describe('AppearanceSettings.vue', () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
     const store = useThemeStore();
-    await wrapper.get('.customization-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
 
     const presetCards = wrapper.findAll('.preset-card');
     expect(presetCards.length).toBeGreaterThan(3);
@@ -103,7 +190,7 @@ describe('AppearanceSettings.vue', () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
     const store = useThemeStore();
-    await wrapper.get('.customization-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
 
     const swatchButtons = wrapper.findAll('.swatch-btn');
     expect(swatchButtons.length).toBeGreaterThan(5);
@@ -117,7 +204,7 @@ describe('AppearanceSettings.vue', () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
     const store = useThemeStore();
-    await wrapper.get('.customization-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
 
     const radiusButtons = wrapper.findAll('.radius-presets-group button');
     expect(radiusButtons).toHaveLength(6);
@@ -153,7 +240,7 @@ describe('AppearanceSettings.vue', () => {
     const wrapper = mount(AppearanceSettings);
     await flushPromises();
     const store = useThemeStore();
-    await wrapper.get('.customization-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
 
     const select = wrapper.get('.surface-tone-select');
     expect(select.get('.select-trigger').text()).toContain('Warm Sand');
@@ -174,11 +261,11 @@ describe('AppearanceSettings.vue', () => {
     store.setPrimaryColor('#000000');
     store.setRadius(2);
 
-    await wrapper.get('.customization-trigger').trigger('click');
+    await wrapper.get('.advanced-toggle').trigger('click');
     const resetBtn = wrapper.get('.appearance-reset-button');
     const resetActions = wrapper.get('.customization-actions');
-    expect(wrapper.get('.customization-header').classes()).toContain('customization-header');
-    expect(wrapper.get('.customization-panel').classes()).toContain('customization-panel');
+    expect(wrapper.get('.theme-customization-section').classes()).toContain('theme-customization-section');
+    expect(wrapper.get('.appearance-advanced-panel').classes()).toContain('appearance-advanced-panel');
     expect(resetActions.find('.tooltip-wrapper').exists()).toBe(false);
     resetActions.get(':scope > .btn-container.btn-block');
     expect(resetBtn.classes()).toEqual(expect.arrayContaining(['btn-ghost', 'btn-xs', 'btn-block']));

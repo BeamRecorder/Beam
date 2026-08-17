@@ -10,6 +10,8 @@ import {
   type SurfaceTone,
   type ThemeMode,
   type ThemePreset,
+  type UiScalePercent,
+  type UiScaleRegion,
 } from '../types/appearance';
 
 export const useThemeStore = defineStore('theme', () => {
@@ -25,11 +27,14 @@ export const useThemeStore = defineStore('theme', () => {
   const isPillRadius = ref<boolean>(DEFAULT_APPEARANCE.isPillRadius);
   const surfaceTone = ref<SurfaceTone>(DEFAULT_APPEARANCE.surfaceTone);
   const activePresetId = ref<string | null>(DEFAULT_APPEARANCE.activePresetId ?? null);
+  const uiScaleGlobal = ref<UiScalePercent>(DEFAULT_APPEARANCE.uiScale!.global);
+  const uiScaleOverrides = ref({ ...DEFAULT_APPEARANCE.uiScale!.overrides });
 
   const hydrated = ref(false);
   let synchronizingPreference = false;
   let synchronizedAppearance: string | null = null;
   let radiusPersistenceTimer: ReturnType<typeof setTimeout> | null = null;
+  let uiScalePersistenceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const mediaQuery =
     typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
@@ -43,6 +48,7 @@ export const useThemeStore = defineStore('theme', () => {
     isPillRadius: isPillRadius.value,
     surfaceTone: surfaceTone.value,
     activePresetId: activePresetId.value,
+    uiScale: { global: uiScaleGlobal.value, overrides: { ...uiScaleOverrides.value } },
   }));
   const appearanceSignature = () => JSON.stringify(appearance.value);
 
@@ -100,6 +106,13 @@ export const useThemeStore = defineStore('theme', () => {
     style.setProperty('--color-border', toneStyles.border);
     style.setProperty('--color-border-strong', toneStyles.borderStrong);
 
+    const resolvedScale = (region: UiScaleRegion) => (uiScaleOverrides.value[region] ?? uiScaleGlobal.value) / 100;
+    style.setProperty('--ui-scale-topbar', String(resolvedScale('topbar')));
+    style.setProperty('--ui-scale-sidebar', String(resolvedScale('sidebar')));
+    style.setProperty('--ui-scale-properties', String(resolvedScale('properties')));
+    style.setProperty('--ui-scale-canvas-controls', String(resolvedScale('canvasControls')));
+    style.setProperty('--ui-scale-timeline', String(resolvedScale('timeline')));
+
     logTheme('renderer appearance applied', {
       theme: theme.value,
       dark: isDark,
@@ -124,6 +137,10 @@ export const useThemeStore = defineStore('theme', () => {
     if (typeof appSettings?.isPillRadius === 'boolean') isPillRadius.value = appSettings.isPillRadius;
     if (appSettings?.surfaceTone) surfaceTone.value = appSettings.surfaceTone;
     if (appSettings?.activePresetId !== undefined) activePresetId.value = appSettings.activePresetId;
+    if (appSettings?.uiScale) {
+      uiScaleGlobal.value = appSettings.uiScale.global;
+      uiScaleOverrides.value = { ...DEFAULT_APPEARANCE.uiScale!.overrides, ...appSettings.uiScale.overrides };
+    }
     synchronizedAppearance = appearanceSignature();
     synchronizingPreference = false;
     applyAppearanceTokens();
@@ -155,6 +172,7 @@ export const useThemeStore = defineStore('theme', () => {
           isPillRadius: isPillRadius.value,
           surfaceTone: surfaceTone.value,
           activePresetId: activePresetId.value,
+          uiScale: { global: uiScaleGlobal.value, overrides: { ...uiScaleOverrides.value } },
         },
       })
       .catch(() => undefined);
@@ -168,8 +186,26 @@ export const useThemeStore = defineStore('theme', () => {
     }, 120);
   };
 
+  const scheduleUiScalePersistence = () => {
+    if (uiScalePersistenceTimer) clearTimeout(uiScalePersistenceTimer);
+    uiScalePersistenceTimer = setTimeout(() => {
+      uiScalePersistenceTimer = null;
+      persistAppearance();
+    }, 120);
+  };
+
   watch(
-    [theme, primaryColor, secondaryColor, radiusPx, isPillRadius, surfaceTone, activePresetId],
+    [
+      theme,
+      primaryColor,
+      secondaryColor,
+      radiusPx,
+      isPillRadius,
+      surfaceTone,
+      activePresetId,
+      uiScaleGlobal,
+      uiScaleOverrides,
+    ],
     (_values, oldValues) => {
       applyAppearanceTokens();
       if (appearanceSignature() === synchronizedAppearance) {
@@ -178,7 +214,10 @@ export const useThemeStore = defineStore('theme', () => {
       }
       synchronizedAppearance = null;
       const radiusChanged = oldValues && (radiusPx.value !== oldValues[3] || isPillRadius.value !== oldValues[4]);
-      if (radiusChanged) scheduleRadiusPersistence();
+      const uiScaleChanged =
+        oldValues && (uiScaleGlobal.value !== oldValues[7] || uiScaleOverrides.value !== oldValues[8]);
+      if (uiScaleChanged) scheduleUiScalePersistence();
+      else if (radiusChanged) scheduleRadiusPersistence();
       else persistAppearance();
     },
     { flush: 'pre' },
@@ -203,7 +242,9 @@ export const useThemeStore = defineStore('theme', () => {
           next.radiusPx === radiusPx.value &&
           next.isPillRadius === isPillRadius.value &&
           next.surfaceTone === surfaceTone.value &&
-          next.activePresetId === activePresetId.value))
+          next.activePresetId === activePresetId.value &&
+          JSON.stringify(next.uiScale ?? DEFAULT_APPEARANCE.uiScale) ===
+            JSON.stringify({ global: uiScaleGlobal.value, overrides: uiScaleOverrides.value })))
     )
       return;
     hydrateFromSettings(preferences.appearance, preferences.theme);
@@ -239,6 +280,16 @@ export const useThemeStore = defineStore('theme', () => {
     surfaceTone.value = tone;
   };
 
+  const setUiScale = (value: UiScalePercent) => {
+    uiScaleGlobal.value = value;
+  };
+
+  const setUiScaleOverride = (region: UiScaleRegion, value: UiScalePercent | null) => {
+    uiScaleOverrides.value = { ...uiScaleOverrides.value, [region]: value };
+  };
+
+  const resolvedUiScale = (region: UiScaleRegion) => uiScaleOverrides.value[region] ?? uiScaleGlobal.value;
+
   const resetToDefault = () => {
     applyPreset({
       id: 'beam-sunset',
@@ -251,6 +302,8 @@ export const useThemeStore = defineStore('theme', () => {
       surfaceTone: DEFAULT_APPEARANCE.surfaceTone,
     });
     theme.value = 'light';
+    uiScaleGlobal.value = DEFAULT_APPEARANCE.uiScale!.global;
+    uiScaleOverrides.value = { ...DEFAULT_APPEARANCE.uiScale!.overrides };
   };
 
   return {
@@ -261,6 +314,8 @@ export const useThemeStore = defineStore('theme', () => {
     isPillRadius,
     surfaceTone,
     activePresetId,
+    uiScaleGlobal,
+    uiScaleOverrides,
     appearance,
     isDarkMode,
     applyTheme,
@@ -270,6 +325,9 @@ export const useThemeStore = defineStore('theme', () => {
     setSecondaryColor,
     setRadius,
     setSurfaceTone,
+    setUiScale,
+    setUiScaleOverride,
+    resolvedUiScale,
     resetToDefault,
   };
 });
