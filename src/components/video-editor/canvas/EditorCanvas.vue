@@ -7,6 +7,7 @@ import CanvasLoadingSkeleton from './CanvasLoadingSkeleton.vue';
 import UndoRedoToast from './UndoRedoToast.vue';
 import { activeClipsAt } from '~/media/shared';
 import type { VisualClip } from '~/media/shared/composition-types';
+import type { CompositionSceneLayers } from '../composition/scene-layers';
 import { OUTPUT_FALLBACK_COLOR, OUTPUT_PREVIEW_RADIUS, outputPreviewRect } from './output-canvas';
 import { useCanvasBackground } from './composables/useCanvasBackground';
 import { useCompositionMedia } from './composables/useCompositionMedia';
@@ -15,7 +16,6 @@ import { useCameraZoom, type RenderedVideoWindow } from './composables/useCamera
 import { useLayerTransformAndCrop } from './composables/useLayerTransformAndCrop';
 import { useViewportZoom } from './composables/useViewportZoom';
 import { useTranslate } from '~/i18n/useTranslate';
-import { resolveCompositionSceneLayers } from '../composition/scene-layers';
 import { canvasGuideLines } from './canvas-guides';
 import type { EditorCanvasEmits, EditorCanvasProps } from './editor-canvas-types';
 import { DEFAULT_ZOOM_MOTION_BLUR } from '../zoom/zoom-types';
@@ -45,7 +45,13 @@ let resizeObserver: ResizeObserver | null = null;
 let animationFrameId: number | null = null;
 let watermarkLogo: HTMLImageElement | null = null;
 let drawVisualStack:
-  ((ctx: CanvasRenderingContext2D, videoWindow: RenderedVideoWindow, drawScreen: () => void) => void) | null = null;
+  | ((
+      ctx: CanvasRenderingContext2D,
+      videoWindow: RenderedVideoWindow,
+      drawScreen: () => void,
+      layers: CompositionSceneLayers,
+    ) => void)
+  | null = null;
 const viewportZoom = useViewportZoom();
 const liveScreenClip = computed<VisualClip | null>(
   () =>
@@ -120,7 +126,7 @@ cameraZoom = useCameraZoom({
   isCropping: () => props.isCropping,
   drawBackground,
   videoError: () => props.playbackError?.message ?? null,
-  renderVisualStack: (ctx, window, drawScreen) => drawVisualStack?.(ctx, window, drawScreen),
+  renderVisualStack: (ctx, window, drawScreen, layers) => drawVisualStack?.(ctx, window, drawScreen, layers),
   onUpdateZoom: (zoom) => emit('update:zoom', zoom),
   onPreviewZoom: (zoom) => emit('preview:zoom', zoom),
   onSelectScreenClip: (clipId) => emit('select:clip', clipId),
@@ -170,12 +176,11 @@ const drawNonScreenVisuals = (
   else compositionMedia.drawWebcamClips(ctx, window);
 };
 
-drawVisualStack = (ctx, window, drawScreen) => {
+drawVisualStack = (ctx, window, drawScreen, layers) => {
   if (compositionMedia.drawVisualStack) {
-    compositionMedia.drawVisualStack(ctx, window, drawScreen);
+    compositionMedia.drawVisualStack(ctx, window, drawScreen, layers);
     return;
   }
-  const layers = resolveCompositionSceneLayers(props.composition, props.currentTime * 1_000);
   for (const clip of layers.cameraVisuals) {
     if (clip.kind === 'screen') drawScreen();
     else compositionMedia.drawComposition(ctx, window, clip.id);

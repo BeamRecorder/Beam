@@ -12,12 +12,16 @@ interface ZoomMotionBlurOptions {
   intensity: number;
   deltaMs: number;
   sampleCount?: number;
+  viewportWidth?: number;
+  viewportHeight?: number;
 }
 
 export const ZOOM_MOTION_BLUR_INTENSITY = 0.55;
 export const ZOOM_MOTION_BLUR_SHUTTER_MS = (1_000 / 60) * 0.7;
 const MAX_SAMPLES = 5;
 const MIN_MOVEMENT = 0.000_1;
+const MIN_VISIBLE_TRAVEL_PX = 0.75;
+const HIGH_QUALITY_TRAVEL_PX = 18;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const safeCamera = (camera: CameraTransform): CameraTransform => ({
@@ -46,11 +50,29 @@ export function createZoomMotionBlurSamplePlan(options: ZoomMotionBlurOptions): 
   if (!(options.deltaMs > 0) || intensity <= 0 || movement + scaleMovement <= MIN_MOVEMENT)
     return [{ camera: center, weight: 1 }];
 
+  const viewportWidth = Math.max(0, Number.isFinite(options.viewportWidth) ? (options.viewportWidth ?? 0) : 0);
+  const viewportHeight = Math.max(0, Number.isFinite(options.viewportHeight) ? (options.viewportHeight ?? 0) : 0);
+  const hasViewport = viewportWidth > 0 && viewportHeight > 0;
+  const focusTravelPx = hasViewport
+    ? Math.hypot(
+        (blurEnd.focusX - blurStart.focusX) * viewportWidth,
+        (blurEnd.focusY - blurStart.focusY) * viewportHeight,
+      ) * Math.max(blurStart.scale, blurEnd.scale)
+    : 0;
+  const scaleTravelPx = hasViewport ? scaleMovement * Math.hypot(viewportWidth, viewportHeight) * 0.5 : 0;
+  const travelPx = focusTravelPx + scaleTravelPx;
+  if (!Number.isFinite(options.sampleCount) && hasViewport && travelPx < MIN_VISIBLE_TRAVEL_PX)
+    return [{ camera: center, weight: 1 }];
+
   const requested = Number.isFinite(options.sampleCount)
     ? Math.round(options.sampleCount ?? 3)
-    : intensity >= 0.7
-      ? 5
-      : 3;
+    : hasViewport
+      ? travelPx >= HIGH_QUALITY_TRAVEL_PX
+        ? 5
+        : 3
+      : intensity >= 0.7
+        ? 5
+        : 3;
   let sampleCount = clamp(requested, 3, MAX_SAMPLES);
   if (sampleCount % 2 === 0) sampleCount = Math.min(MAX_SAMPLES, sampleCount + 1);
   const rawWeights = Array.from({ length: sampleCount }, (_, index) => {

@@ -15,7 +15,7 @@ import { drawDecoratedMedia } from '../../composition/appearance/render-decorate
 import { drawCaptionText, type CaptionViewport } from '../../composition/captions/render-caption-text';
 import type { OutputCanvasSettings } from '../output-canvas';
 import { applyBlurEffect } from '../../composition/effects/blur-effect';
-import { resolveCompositionSceneLayers } from '../../composition/scene-layers';
+import { resolveCompositionSceneLayers, type CompositionSceneLayers } from '../../composition/scene-layers';
 import { drawWithClipTransition } from '../../composition/transitions/render-transition';
 import { isSplitCameraLayout } from '~/media/shared/camera-layout-types';
 import { resolveVisualClipFraming } from '../../composition/visual-framing';
@@ -189,8 +189,10 @@ export function useCompositionMedia(options: UseCompositionMediaOptions) {
     ctx: CanvasRenderingContext2D,
     window: { dx: number; dy: number; dw: number; dh: number; scale: number; focusX?: number; focusY?: number },
     drawScreen: () => void,
+    resolvedLayers?: CompositionSceneLayers,
   ) => {
-    const layers = resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
+    const layers =
+      resolvedLayers ?? resolveCompositionSceneLayers(options.composition(), options.currentTime() * 1_000);
     const timeMs = options.currentTime() * 1_000;
     for (const clip of layers.visualStack) {
       drawWithClipTransition(ctx, clip, timeMs, { width: window.dw, height: window.dh }, () => {

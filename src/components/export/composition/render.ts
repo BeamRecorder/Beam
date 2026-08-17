@@ -252,19 +252,26 @@ function renderCompositionFrameContent(
   const camera = resolvedCameraEvaluator.sample(timeMs);
   const scale = camera.scale;
   const cameraFocus = camera.focus;
-  const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
-  const cameraAt = (sampleTimeMs: number) => {
-    const value = resolvedCameraEvaluator.sample(Math.max(0, sampleTimeMs));
-    return { focusX: value.focus.cx, focusY: value.focus.cy, scale: value.scale };
-  };
   const blurSettings = normalizeZoomMotionBlur(snapshot.zoomMotionBlur);
-  const blurPlan = createZoomMotionBlurSamplePlan({
-    previous: cameraAt(timeMs - halfShutterMs),
-    center: { focusX: cameraFocus.cx, focusY: cameraFocus.cy, scale },
-    current: cameraAt(timeMs + halfShutterMs),
-    intensity: blurSettings.enabled ? blurSettings.intensity : 0,
-    deltaMs: halfShutterMs * 2,
-  });
+  const centerCamera = { focusX: cameraFocus.cx, focusY: cameraFocus.cy, scale };
+  const blurIntensity = blurSettings.enabled ? blurSettings.intensity : 0;
+  const blurPlan = (() => {
+    if (!(blurIntensity > 0)) return [{ camera: centerCamera, weight: 1 }];
+    const halfShutterMs = ZOOM_MOTION_BLUR_SHUTTER_MS / 2;
+    const cameraAt = (sampleTimeMs: number) => {
+      const value = resolvedCameraEvaluator.sample(Math.max(0, sampleTimeMs));
+      return { focusX: value.focus.cx, focusY: value.focus.cy, scale: value.scale };
+    };
+    return createZoomMotionBlurSamplePlan({
+      previous: cameraAt(timeMs - halfShutterMs),
+      center: centerCamera,
+      current: cameraAt(timeMs + halfShutterMs),
+      intensity: blurIntensity,
+      deltaMs: halfShutterMs * 2,
+      viewportWidth: width,
+      viewportHeight: height,
+    });
+  })();
   const drawCameraSample = (target: Canvas2DContext, blurSample: (typeof blurPlan)[number], fillFallback = false) => {
     const sampleCamera = blurSample.camera;
     if (fillFallback) {

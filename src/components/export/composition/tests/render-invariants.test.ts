@@ -301,7 +301,7 @@ describe('composition rendering invariants', () => {
       });
       vi.mocked(tracked.drawImage).mockImplementation(((drawn) => {
         if (drawn === source.source) operations.push({ kind: 'video', context: name });
-        if (surfaces.includes(drawn as FakeOffscreenCanvas)) operations.push({ kind: 'composite', context: name });
+        else if (name === 'target' && drawn) operations.push({ kind: 'composite', context: name });
       }) as CanvasRenderingContext2D['drawImage']);
       return tracked;
     };

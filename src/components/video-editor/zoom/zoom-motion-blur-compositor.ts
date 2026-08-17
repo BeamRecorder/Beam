@@ -2,6 +2,7 @@ import type { Canvas2DContext } from '~/types/canvas';
 import { sourceOverAlpha, type ZoomMotionBlurSample } from './zoom-motion-blur';
 
 export type MotionBlurSurface = OffscreenCanvas;
+const surfaceContexts = new WeakMap<MotionBlurSurface, Canvas2DContext>();
 
 export function createMotionBlurSurface(width: number, height: number): MotionBlurSurface | null {
   return typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(width, height) : null;
@@ -11,6 +12,14 @@ export function resizeMotionBlurSurface(surface: MotionBlurSurface, width: numbe
   if (surface.width !== width) surface.width = width;
   if (surface.height !== height) surface.height = height;
 }
+
+const contextForSurface = (surface: MotionBlurSurface) => {
+  const cached = surfaceContexts.get(surface);
+  if (cached) return cached;
+  const context = surface.getContext('2d', { alpha: false, desynchronized: true }) as Canvas2DContext | null;
+  if (context) surfaceContexts.set(surface, context);
+  return context;
+};
 
 export function compositeIsolatedMotionBlurSample(options: {
   target: Canvas2DContext;
@@ -23,7 +32,7 @@ export function compositeIsolatedMotionBlurSample(options: {
   draw: (context: Canvas2DContext, sample: ZoomMotionBlurSample) => void;
 }) {
   const { target, surface, logicalWidth, logicalHeight, pixelScale, sample, accumulatedWeight, draw } = options;
-  const context = surface.getContext('2d') as Canvas2DContext | null;
+  const context = contextForSurface(surface);
   if (!context) return false;
 
   context.setTransform(pixelScale, 0, 0, pixelScale, 0, 0);

@@ -9,7 +9,13 @@ import type { ZoomElement } from '../../../zoom/zoom-types';
 import { createDefaultClipAppearance } from '~/media/shared/composition-defaults';
 
 const drawDecoratedMedia = vi.hoisted(() => vi.fn());
+const motionBlurCompositor = vi.hoisted(() => ({
+  createMotionBlurSurface: vi.fn((width: number, height: number) => ({ width, height })),
+  resizeMotionBlurSurface: vi.fn(),
+  compositeIsolatedMotionBlurSample: vi.fn(() => true),
+}));
 vi.mock('../../../composition/appearance/render-decorated-media', () => ({ drawDecoratedMedia }));
+vi.mock('../../../zoom/zoom-motion-blur-compositor', () => motionBlurCompositor);
 
 const screenClip = (enabled = true): VisualClip => ({
   id: 'screen',
@@ -90,6 +96,7 @@ let options!: {
   selected: ReturnType<typeof ref<ZoomElement | null>>;
   activeTab: ReturnType<typeof ref<string>>;
   output: ReturnType<typeof ref<{ preset: '16:9'; width: number; height: number; showBackground: boolean }>>;
+  motionBlur: ReturnType<typeof ref<{ enabled: boolean; intensity: number }>>;
   zooms: ReturnType<typeof ref<ZoomElement[]>>;
   screenTransformDraft: ReturnType<typeof ref<NormalizedTransform | null>>;
   videoError: ReturnType<typeof ref<string | null>>;
@@ -97,12 +104,13 @@ let options!: {
   callbacks: Record<string, ReturnType<typeof vi.fn>>;
 };
 
-const mountComposable = () => {
+const mountComposable = (motionBlurSettings = { enabled: false, intensity: 0.55 }) => {
   const compositionRef = ref(composition());
   const currentTime = ref(0.5);
   const playing = ref(false);
   const selected = ref<ZoomElement | null>(manualZoom);
   const activeTab = ref('zoom');
+  const motionBlur = ref(motionBlurSettings);
   const zooms = ref<ZoomElement[]>([autoZoom]);
   const output = ref({ preset: '16:9' as const, width: 800, height: 450, showBackground: false });
   const screenTransformDraft = ref<NormalizedTransform | null>(null);
@@ -139,6 +147,7 @@ const mountComposable = () => {
         outputCanvas: () => output.value,
         zoomElements: () => zooms.value,
         selectedZoom: () => selected.value,
+        zoomMotionBlur: () => motionBlur.value,
         currentTime: () => currentTime.value,
         isPlaying: () => playing.value,
         editorData: () =>
@@ -184,6 +193,7 @@ const mountComposable = () => {
     selected,
     activeTab,
     output,
+    motionBlur,
     zooms,
     screenTransformDraft,
     videoError,
@@ -411,6 +421,37 @@ describe('useCameraZoom', () => {
       );
     expect(cameraScaleCalls.length).toBeGreaterThan(0);
     expect(drawDecoratedMedia).toHaveBeenCalled();
+  });
+
+  it('caps the preview motion-blur surface at 1.25x when the canvas DPR is 2', () => {
+    mountComposable({ enabled: true, intensity: 1 });
+    options.canvas.width = 1_600;
+    options.canvas.height = 900;
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(motionBlurCompositor.createMotionBlurSurface).toHaveBeenCalledWith(1_000, 563);
+    expect(motionBlurCompositor.resizeMotionBlurSurface).toHaveBeenCalledWith(expect.anything(), 1_000, 563);
+  });
+
+  it('does not sample shutter endpoints when zoom motion blur is disabled', () => {
+    const createEvaluator = compositionCamera.createCompositionCameraEvaluator;
+    const samples = vi.fn();
+    vi.spyOn(compositionCamera, 'createCompositionCameraEvaluator').mockImplementation((inputs) => {
+      const evaluator = createEvaluator(inputs);
+      return {
+        ...evaluator,
+        sample: (timeMs) => {
+          samples(timeMs);
+          return evaluator.sample(timeMs);
+        },
+      };
+    });
+    mountComposable({ enabled: false, intensity: 0.55 });
+
+    state.drawVideoWindow(context(), 800, 450, frame());
+
+    expect(samples).toHaveBeenCalledOnce();
   });
 
   it('applies the global camera when the scene contains only imported media', () => {
