@@ -2,7 +2,7 @@
 import { onMounted, onUnmounted } from 'vue';
 import TimelineTracks from './TimelineTracks.vue';
 import type { ExportProgress } from '../../export/export-types';
-import type { ZoomElement } from '../zoom/zoom-types';
+import { DEFAULT_ZOOM_DURATION_MS, type ZoomElement } from '../zoom/zoom-types';
 import type { ClipComposition } from '~/media/shared/composition-types';
 import { DEFAULT_OUTPUT_CANVAS, type OutputCanvasSettings } from '../canvas/output-canvas';
 import { EMPTY_CLIP_TRANSITIONS } from '~/media/shared/clip-transitions';
@@ -20,6 +20,7 @@ const props = withDefaults(
     exportProgress?: ExportProgress | null;
     includeAudioInExport?: boolean;
     zoomElements: ZoomElement[];
+    newZoomDurationMs?: number;
     selectedZoomId: string | null;
     composition: ClipComposition;
     selectedClipId: string | null;
@@ -32,6 +33,7 @@ const props = withDefaults(
   {
     isSnappingEnabled: true,
     includeAudioInExport: true,
+    newZoomDurationMs: DEFAULT_ZOOM_DURATION_MS,
     canvas: () => ({ ...DEFAULT_OUTPUT_CANVAS, transitions: { ...EMPTY_CLIP_TRANSITIONS } }),
   },
 );
@@ -85,6 +87,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
         :export-progress="exportProgress"
         :include-audio-in-export="includeAudioInExport"
         :zoom-elements="zoomElements"
+        :new-zoom-duration-ms="newZoomDurationMs"
         :selected-zoom-id="selectedZoomId"
         :composition="composition"
         :selected-clip-id="selectedClipId"

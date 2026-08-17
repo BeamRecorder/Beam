@@ -1,6 +1,7 @@
 import { computed, ref, watch, type Ref } from 'vue';
 import type { ProjectEditorData } from '../../../api/types/capture-api';
 import {
+  DEFAULT_ZOOM_DURATION_MS,
   DEFAULT_ZOOM_MOTION_BLUR,
   normalizeZoomMotionBlur,
   type ZoomElement,
@@ -36,7 +37,10 @@ export function useProjectZoom(options: {
       id: crypto.randomUUID(),
       sessionId: editorData.value?.sessionId ?? 'manual',
       startMs: clampedStartMs,
-      endMs: Math.min(durationMs.value, clampedStartMs + Math.max(200, defaults?.durationMs ?? 1_200)),
+      endMs: Math.min(
+        durationMs.value,
+        clampedStartMs + Math.max(200, defaults?.durationMs ?? DEFAULT_ZOOM_DURATION_MS),
+      ),
       depth: defaults?.depth ?? 2,
       mode: defaults?.mode ?? 'manual',
       focus: { cx: 0.5, cy: 0.5 },

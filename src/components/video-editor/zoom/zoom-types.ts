@@ -61,3 +61,4 @@ export const EMPTY_PROJECT_ZOOM_STATE: ProjectZoomState = {
 };
 
 export const DEFAULT_ZOOM_DEPTH: ZoomDepth = 2;
+export const DEFAULT_ZOOM_DURATION_MS = 1_200;

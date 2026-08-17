@@ -33,7 +33,11 @@ import {
   type NormalizedCrop,
   type NormalizedTransform,
 } from '~/media/shared/composition-types';
-import { DEFAULT_ZOOM_MOTION_BLUR, type ZoomElement } from '~/components/video-editor/zoom/zoom-types';
+import {
+  DEFAULT_ZOOM_DURATION_MS,
+  DEFAULT_ZOOM_MOTION_BLUR,
+  type ZoomElement,
+} from '~/components/video-editor/zoom/zoom-types';
 import type { CursorType } from '~/components/video-editor/properties/cursor/useCursorReplacer';
 import { pasteClipAt } from '~/components/video-editor/composition/engine/clip-paste';
 import type { TimelinePasteRequest } from '~/components/video-editor/timeline/composables/timeline-clipboard-types';
@@ -67,6 +71,7 @@ const {
   zoomState,
   exportRequest,
   includeAudioInExport,
+  editorDefaults,
   outputCanvas,
   handleSelectTab,
   initialPlaybackSettled,
@@ -163,6 +168,7 @@ const {
   deleteZoomById,
 } = zoomState;
 const zoomMotionBlur = zoomState.zoomMotionBlur ?? ref({ ...DEFAULT_ZOOM_MOTION_BLUR });
+const newZoomDurationMs = computed(() => editorDefaults.value.zoom?.durationMs ?? DEFAULT_ZOOM_DURATION_MS);
 const { isExporting, progress: exportProgress } = useExportJob();
 const timelineCompositionPreview = ref<typeof composition.value | null>(null);
 const timelineCanvasPreview = ref<OutputCanvasSettings | null>(null);
@@ -661,6 +667,7 @@ onBeforeUnmount(() => {
           :export-progress="exportProgress"
           :include-audio-in-export="includeAudioInExport"
           :zoom-elements="zoomElements"
+          :new-zoom-duration-ms="newZoomDurationMs"
           :selected-zoom-id="selectedZoomId"
           :composition="composition"
           :selected-clip-id="selectedClipId"
