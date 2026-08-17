@@ -19,7 +19,7 @@ const options = computed(() => [
   { id: 'quarter' as const, label: t('previewQualityQuarter'), indicator: '1/4' },
 ]);
 const activeOption = computed(() => options.value.find((option) => option.id === props.modelValue)!);
-const warningLevel = computed(() => {
+const warningLevel = computed<'warning' | 'critical' | null>(() => {
   const status = props.performanceSnapshot?.status;
   return status === 'warning' || status === 'critical' ? status : null;
 });
@@ -131,6 +131,7 @@ onBeforeUnmount(() => {
 }
 .preview-quality-trigger {
   flex: 0 0 auto;
+  transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
 }
 .preview-quality-trigger.is-warning {
   color: var(--color-warning) !important;
@@ -140,19 +141,42 @@ onBeforeUnmount(() => {
   color: var(--color-error) !important;
   border-color: color-mix(in srgb, var(--color-error) 48%, var(--color-border));
 }
+.preview-quality-icon {
+  position: relative;
+  display: inline-flex;
+  transition: color 0.3s ease;
+}
+.preview-quality-icon > svg {
+  width: 17px;
+  height: 17px;
+}
 .preview-quality-icon.is-warning {
   color: var(--color-warning);
 }
 .preview-quality-icon.is-critical {
   color: var(--color-error);
 }
+.preview-quality-indicator {
+  position: absolute;
+  right: -11px;
+  bottom: -6px;
+  min-width: 18px;
+  padding: 0 3px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: var(--color-bg-element);
+  color: var(--text-secondary);
+  font: 750 10px/13px var(--font-sans);
+  text-align: center;
+  transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+}
 .preview-quality-icon.is-warning .preview-quality-indicator {
   color: var(--color-warning);
-  border: 1px solid color-mix(in srgb, var(--color-warning) 45%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning) 45%, transparent);
 }
 .preview-quality-icon.is-critical .preview-quality-indicator {
   color: var(--color-error);
-  border: 1px solid color-mix(in srgb, var(--color-error) 48%, transparent);
+  border-color: color-mix(in srgb, var(--color-error) 48%, transparent);
 }
 .preview-quality-suggestion {
   --blur-reveal-max-height: 56px;
@@ -186,26 +210,6 @@ onBeforeUnmount(() => {
   color: var(--color-warning);
   font: 750 10px var(--font-sans);
   cursor: pointer;
-}
-.preview-quality-icon {
-  position: relative;
-  display: inline-flex;
-}
-.preview-quality-icon > svg {
-  width: 17px;
-  height: 17px;
-}
-.preview-quality-indicator {
-  position: absolute;
-  right: -11px;
-  bottom: -6px;
-  min-width: 18px;
-  padding: 0 3px;
-  border-radius: 5px;
-  background: var(--color-bg-element);
-  color: var(--text-secondary);
-  font: 750 10px/13px var(--font-sans);
-  text-align: center;
 }
 .preview-quality-popover {
   width: 172px;

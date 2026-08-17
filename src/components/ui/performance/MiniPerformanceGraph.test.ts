@@ -136,6 +136,78 @@ describe('MiniPerformanceGraph', () => {
     expect(updateCalls.every((call) => Number(call[4]) >= 0 && Number(call[4]) <= 100)).toBe(true);
   });
 
+  it('animates the window at a constant speed instead of easing into a visible tick', async () => {
+    const callbacks: FrameRequestCallback[] = [];
+    const requestFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callbacks.push(callback);
+      return callbacks.length;
+    });
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+
+    const wrapper = mount(MiniPerformanceGraph, {
+      props: {
+        label: 'Uniform graph',
+        width: 100,
+        height: 24,
+        values: [0.1, 0.2, 0.3],
+        color: '#fff',
+        animationMs: 500,
+        sampleCapacity: 3,
+      },
+    });
+
+    await wrapper.setProps({ values: [0.2, 0.3, 0.4] });
+    await nextTick();
+    expect(requestFrame).toHaveBeenCalledTimes(1);
+
+    now.mockReturnValue(250);
+    callbacks[0]!(250);
+
+    const calls = vi.mocked(context.bezierCurveTo).mock.calls;
+    const midpointFrame = calls.slice(-3);
+    // At 50% of the transition, the first visible point has moved exactly half
+    // a sample slot. An ease-out curve moves it almost all the way immediately.
+    expect(midpointFrame[0]?.[4]).toBeCloseTo(25, 5);
+
+    wrapper.unmount();
+    requestFrame.mockRestore();
+    cancelFrame.mockRestore();
+    now.mockRestore();
+  });
+
+  it('animates the initial sample window fill so peaks do not reflow on every early tick', async () => {
+    const callbacks: FrameRequestCallback[] = [];
+    const requestFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callbacks.push(callback);
+      return callbacks.length;
+    });
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0);
+
+    const wrapper = mount(MiniPerformanceGraph, {
+      props: {
+        label: 'Growing graph',
+        width: 100,
+        height: 24,
+        values: [0.1, 1, 0.2],
+        color: '#fff',
+        animationMs: 240,
+        sampleCapacity: 4,
+      },
+    });
+
+    await wrapper.setProps({ values: [0.1, 1, 0.2, 0.4] });
+    await nextTick();
+
+    expect(requestFrame).toHaveBeenCalled();
+
+    wrapper.unmount();
+    requestFrame.mockRestore();
+    cancelFrame.mockRestore();
+    now.mockRestore();
+  });
+
   it('renders a flat line across full width when given a single sample', () => {
     mount(MiniPerformanceGraph, {
       props: {

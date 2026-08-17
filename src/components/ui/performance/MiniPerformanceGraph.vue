@@ -188,8 +188,7 @@ function stepAnimation(timestamp: number) {
   const duration = Math.max(1, props.animationMs ?? 240);
   const elapsed = timestamp - animationStartTime;
   const linear = Math.min(1, Math.max(0, elapsed / duration));
-  const progress = 1 - Math.pow(1 - linear, 3);
-  slideOffsetProgress = progress;
+  slideOffsetProgress = linear;
 
   if (linear < 1) {
     draw(slidingSamples, slideOffsetProgress);
@@ -223,17 +222,15 @@ function onValuesUpdate() {
       : nextSamples.length;
 
   if (activeSamples.length >= capacity && nextSamples.length >= capacity) {
-    // Pure horizontal shift: prepend the previous head so it slides smoothly off-screen
     slidingSamples = [activeSamples[0]!, ...nextSamples];
-    activeSamples = nextSamples.slice();
-    slideOffsetProgress = 0;
-    animationStartTime = performance.now();
-    animationFrame = requestAnimationFrame(stepAnimation);
   } else {
-    activeSamples = nextSamples.slice();
-    slideOffsetProgress = 1;
-    draw(activeSamples, 1);
+    slidingSamples = nextSamples.slice();
   }
+
+  activeSamples = nextSamples.slice();
+  slideOffsetProgress = 0;
+  animationStartTime = performance.now();
+  animationFrame = requestAnimationFrame(stepAnimation);
 }
 
 onMounted(() => {

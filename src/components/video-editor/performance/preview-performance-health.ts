@@ -21,7 +21,7 @@ export function nextPreviewPerformanceHealth(
   previous: PreviewPerformanceHealthState,
   scores: PreviewPerformanceScores,
 ): PreviewPerformanceHealthState {
-  const severity = Math.max(scores.ui, scores.worker, scores.audio);
+  const severity = Math.max(scores.ui, scores.worker, scores.audio, scores.media);
   if (severity >= WARNING_SCORE) {
     const badSamples = previous.badSamples + 1;
     return {
